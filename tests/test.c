@@ -17754,7 +17754,8 @@ static size_t hw_gcm_decrypt_wb_min(const uint8_t *in, uint8_t *out, size_t len,
   const size_t len_blocks = len & kSizeTWithoutLower4Bits;
   if (!len_blocks) return 0;
   if (CRYPTO_is_ARMv8_GCM_8x_capable() && len >= min_len && key->rounds == 14) {
-    aesv8_gcm_8x_dec_256_wb(in, len_blocks * 8, out, Xi, ivec, key, Htable);
+    aesv8_gcm_8x_dec_256_wb(in, len_blocks * 8, out, (uint64_t *)Xi, ivec, key,
+                            Htable);
   } else {
     return 0;
   }
@@ -17940,28 +17941,28 @@ int test_aesv8_gcm_8x_dec_256_wb(void)
 #endif
 }
 
-// The whole-blocks contract: a bit_len that is not a nonzero multiple of 128
-// must return 0 and leave out / Xi / ivec untouched.
+// The whole-blocks contract: a len_bits value that is not a nonzero multiple
+// of 128 must return 0 and leave out / tag / ivec untouched.
 int test_aesv8_gcm_8x_dec_256_wb_guard(void)
 {
 #ifdef __x86_64__
   return 1;
 #else
-  uint8_t key[32], ivec[16], xi[16], ivec0[16], xi0[16];
+  uint8_t key[32], ivec[16], ivec0[16];
+  uint64_t xi[2], xi0[2];
   s2n_bignum_AES_KEY ek;
   uint64_t Htable_v8[2 * 16];
-  // Bad bit_lens must span the band aws-lc actually dispatches here (>= 256 B,
-  // i.e. >= 2048 bits); the small values alone never reach the dispatch-eligible
-  // range. Kept <= 32895 so that if the guard ever regressed and processed
-  // floor(bit_len/128) blocks, the write would still land inside bb1/bb2 (4096 B
-  // each) and be reported rather than overrunning.
-  static const size_t badbits[] = { 1, 8, 127, 129, 255, 1023,
-                                    2049, 4095, 8191, 32769 };
+  // Invalid lengths span values that would reach both the small-message and
+  // 8x paths if the guard regressed. Kept <= 32895 so that processing
+  // floor(len_bits/128) blocks would still land inside bb1/bb2 (4096 B each)
+  // and be reported rather than overrunning.
+  static const uint64_t badbits[] = { 1, 8, 127, 129, 255, 1023,
+                                      2049, 4095, 8191, 32769 };
   size_t i;
 
   printf("Testing the aesv8_gcm_8x_dec_256_wb whole-blocks guard\n");
 
-  random_bytes(key, 32); random_bytes(ivec, 16); random_bytes(xi, 16);
+  random_bytes(key, 32); random_bytes(ivec, 16); random_bytes((uint8_t *)xi, 16);
   memcpy(ivec0, ivec, 16); memcpy(xi0, xi, 16);
   ref_aes256_expand_key(key, &ek); ek.rounds = 14;
   uint8_t zero[16] = {0}, Hbytes[16];
@@ -17974,18 +17975,21 @@ int test_aesv8_gcm_8x_dec_256_wb_guard(void)
   memset(bb2, 0xa5, 4096);
 
   for (i = 0; i < sizeof(badbits)/sizeof(badbits[0]); ++i)
-   { size_t r = aesv8_gcm_8x_dec_256_wb(bb1, badbits[i], bb2, xi, ivec,
-                                        &ek, Htable_v8);
+   { uint64_t r = aesv8_gcm_8x_dec_256_wb(bb1, badbits[i], bb2, xi, ivec,
+                                          &ek, Htable_v8);
      if (r != 0)
-      { printf("### Disparity: guard bit_len=%zu returned %zu, expected 0\n",
+      { printf("### Disparity: guard len_bits=%"PRIu64
+               " returned %"PRIu64", expected 0\n",
                badbits[i], r);
         return 1; }
      if (memcmp(xi, xi0, 16) != 0 || memcmp(ivec, ivec0, 16) != 0)
-      { printf("### Disparity: guard bit_len=%zu modified Xi/ivec\n",
+      { printf("### Disparity: guard len_bits=%"PRIu64
+               " modified tag/ivec\n",
                badbits[i]);
         return 1; }
      { size_t j; for (j = 0; j < 4096; ++j) if (bb2[j] != 0xa5)
-        { printf("### Disparity: guard bit_len=%zu wrote to out\n",
+        { printf("### Disparity: guard len_bits=%"PRIu64
+                 " wrote to out\n",
                  badbits[i]);
           return 1; } }
    }

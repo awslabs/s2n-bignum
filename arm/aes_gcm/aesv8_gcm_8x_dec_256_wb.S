@@ -2,51 +2,76 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 
 // ----------------------------------------------------------------------------
-// AESV8_GCM_8X_DEC_256_WB (AES-256-GCM decryption, whole blocks only)
-// Inputs in[bit_len/8], bit_len, xi[16], ivec[16], key[244], htable[32];
-// outputs function return (number of bytes processed), out[bit_len/8],
-// xi[16], ivec[16]
+// AES-256-GCM bulk decryption, 8 blocks at a time: counter-mode decryption of
+// whole blocks with the GHASH tag update
+// Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[240], htable[24];
+// outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed
 //
-//    extern size_t aesv8_gcm_8x_dec_256_wb(const uint8_t *in, size_t bit_len,
-//                                          uint8_t *out,
-//                                          uint8_t xi[static 16],
-//                                          uint8_t ivec[static 16],
-//                                          const s2n_bignum_AES_KEY *key,
-//                                          const uint64_t htable[static 32]);
+//    extern uint64_t aesv8_gcm_8x_dec_256_wb(const uint8_t *in, uint64_t len_bits,
+//                                            uint8_t *out, uint64_t *tag,
+//                                            uint8_t *ivec,
+//                                            const s2n_bignum_AES_KEY *key,
+//                                            const uint64_t *htable);
 //
-// Standard ARM ABI: X0 = in, X1 = bit_len, X2 = out, X3 = xi, X4 = ivec,
-// X5 = key, X6 = htable
+// Processes the input "in" of "len_bits" bits under AES-256 in GCM mode: each
+// 16-byte block is decrypted in counter mode using the counter block "ivec"
+// and the AES round keys "key", the result is written to "out", and the
+// running GHASH authenticator "tag" is updated over the INPUT (ciphertext)
+// using the precomputed table of H-powers "htable". On return the updated
+// counter is written back to "ivec", the updated authenticator to "tag", and
+// the number of bytes processed, len_bits/8, is returned. "tag" and "ivec"
+// are the Xi and Yi blocks of AWS-LC's GCM context.
+//
+// Whole blocks only: "len_bits" must be a multiple of 128. For any other
+// value nothing is processed: the function returns 0 without reading or
+// writing memory, as it also does for len_bits = 0. A partial final block is
+// the caller's responsibility, as in AWS-LC's GCM layer, whose
+// crypto/fipsmodule/modes/gcm.c passes whole blocks only.
+//
+// The table "htable" is the twelve 16-byte entries (192 bytes) that
+// gcm_init_v8 writes at the start of its Htable, derived from the subkey
+// H = AES_K(0^128). They hold, in order, H, m(H,H^2), H^2, H^3, m(H^3,H^4),
+// H^4, H^5, m(H^5,H^6), H^6, H^7, m(H^7,H^8), H^8, where the powers are in
+// the bit-reflected ("twisted") representation that gcm_init_v8 uses and
+// m(A,B) packs the Karatsuba middle terms A.lo ^ A.hi (low 64 bits) and
+// B.lo ^ B.hi (high 64 bits) of two neighbouring powers into one entry. The
+// reference implementation in tests/ref_aes_gcm.c (ref_gcm_init_htable)
+// constructs the same table independently.
+// Of "key" only the 15 round keys (240 bytes) are read, not key->rounds, and
+// of "htable" only these 192 bytes.
+//
+// The input must satisfy in + len_bits/8 < 2^63, because the loop control
+// compares the input pointer with the main-loop end pointer as signed
+// integers (cmp x0, x5 followed by b.ge or b.lt). The buffers written ("out",
+// "tag" and "ivec") must not overlap each other, "in", "key" or "htable"; in
+// particular, in-place operation (out == in) is not covered by the proof.
+//
+// This routine does not enforce the NIST GCM message limit.
+// Callers must ensure the cumulative message length does not exceed 2^36 - 32 bytes (2^39 - 256 bits).
+//
+// Standard ARM ABI: X0 = in, X1 = len_bits, X2 = out, X3 = tag, X4 = ivec,
+//                   X5 = key, X6 = htable, returns X0
 // ----------------------------------------------------------------------------
 
-// WHOLE-BLOCKS-ONLY variant of aesv8_gcm_8x_dec_256 (derived from
-// aesv8_gcm_8x_dec_256.S, itself extracted from aws-lc
-// aesv8-gcm-armv8-unroll8.S).  Single function: aesv8_gcm_8x_dec_256_wb
-//
-// CONTRACT: bit_len (X1) MUST be a nonzero multiple of 128 (whole 16-byte
-// blocks).  A guard at entry (tst x1,#127; b.ne ret) returns 0 having touched
-// no memory otherwise; on success X0 = bit_len/8 = bytes processed (the same
-// return convention as the original's zero-length path).  The aws-lc caller
-// already satisfies the contract: crypto/fipsmodule/modes/gcm.c masks len to
-// kSizeTWithoutLower4Bits and passes len_blocks*8.
-//
-// DIVERGENCE FROM aesv8_gcm_8x_dec_256.S (intentional):
-//  1. The whole-blocks guard, inserted after the cbz zero-length check and
-//     before the callee-saved stores (so the abort path needs no epilogue).
-//     All subsequent offsets shift by +8; the post-saves proof entry point
-//     (lsr x9,x1,#3, C arguments still in X0..X6) moves from pc+0x18 to
-//     pc+0x20.
-//  2. The partial-block masking machinery in L256_dec_blocks_less_than_1
-//     is DELETED (dead under the contract): the ld1 of the existing output
-//     bytes (a 16-byte OVERREAD of the output buffer in the original), the
-//     bit_len%128 mask construction (mvn/lsr/csel chain), the GHASH-input
-//     mask (and v9 &= mask) and the output bif blend.  The final block is a
-//     plain full block: eor3 result stored with st1, unmasked GHASH
-//     accumulation.  This removes the original's read-modify-write of the
-//     last output block and its 16-byte input/output access beyond the
-//     message length.
-//
-// The parent file's prologue reorder (saves-first, C_ARGUMENTS entry past the
-// saves) is inherited unchanged.
+// Origin: derived from AWS-LC's aesv8_gcm_8x_dec_256
+// (crypto/fipsmodule/modes/asm/aesv8-gcm-armv8-unroll8.pl), with these
+// changes:
+//  - Entry: the whole-blocks guard (tst x1, #127; b.ne) follows the
+//    zero-length check and precedes the d8-d15 saves, so the reject path
+//    needs no epilogue. All four saves come before the argument moves, so the
+//    core correctness theorem starts at pc + 0x20 with the C arguments still
+//    in X0-X6.
+//  - Final block: the partial-block handling at L256_dec_blocks_less_than_1
+//    is removed, namely the load of the 16 output bytes the last block will
+//    occupy, the len_bits % 128 mask, the masking of the GHASH input and the
+//    bif blend of the output. The last block is stored and hashed whole, and
+//    the output buffer is never read.
+//  - Inputs of 1 to 4 blocks take a separate path (L256_dec_w5r_small), and
+//    exactly 8 remaining blocks a dedicated GHASH drain
+//    (L256_dec_exact8_drain).
+//  - Rescheduling: a flatter counter setup, ext instead of ins for the
+//    Karatsuba middle terms in the GHASH tail, shorter odd-block middle-term
+//    chains in the tail, and a main loop aligned to 16 bytes.
 // Proofs: arm/proofs/aesv8_gcm_8x_dec_256_wb.ml.
 #include "_internal_s2n_bignum_arm.h"
 
@@ -61,7 +86,7 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_dec_256_wb):
 	AARCH64_VALID_CALL_TARGET
 	CFI_START
 	cbz	x1, L256_dec_ret
-	tst	x1, #127				//whole-blocks contract: bit_len % 128 == 0
+	tst	x1, #127				//whole-blocks contract: len_bits % 128 == 0
 	b.ne	L256_dec_ret			//not whole blocks: process nothing, return 0
 	CFI_PUSH2N(d8,d9,-80,80)
 	CFI_STACKSAVE2X(d10,d11,16,24)
