@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
 
 #define DEBUG 0
 
@@ -87,6 +89,34 @@ void print_regs()
   printf(" SP7 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[108],regs[109],regs[110],regs[111]);
 }
 
+// The cosim campaign deliberately runs undefined encodings and faulting
+// instructions. Exit at once on those signals rather than dumping core:
+// the executor treats empty output as a trap either way, and a core dump
+// only adds delay. The handler runs on its own stack because the
+// instruction under test may leave the stack pointer unusable.
+
+static void trap_exit(int sig)
+{ _exit(128 + sig);
+}
+
+static void install_trap_handlers()
+{ static char altstack[256 * 1024];
+  static const int sigs[] = { SIGILL, SIGSEGV, SIGBUS, SIGFPE, SIGTRAP };
+  stack_t ss = { 0 };
+  struct sigaction sa = { 0 };
+  size_t i;
+
+  ss.ss_sp = altstack;
+  ss.ss_size = sizeof(altstack);
+  sigaltstack(&ss, NULL);
+
+  sa.sa_handler = trap_exit;
+  sa.sa_flags = SA_ONSTACK;
+  sigemptyset(&sa.sa_mask);
+  for (i = 0; i < sizeof(sigs) / sizeof(sigs[0]); ++i)
+    sigaction(sigs[i], &sa, NULL);
+}
+
 int main(int argc, char *argv[])
 { uint64_t retval, i;
 
@@ -98,6 +128,7 @@ int main(int argc, char *argv[])
      print_regs();
    }
 
+  install_trap_handlers();
   retval = harness(regs);
 
   if (DEBUG)

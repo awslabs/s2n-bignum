@@ -39,7 +39,7 @@ motivated users.
 | A2 | Precondition mismatch | Preconditions explicit in formal statements; signature cross-checking; *planned C-level contracts* |
 | A3 | Non-constant-time code | Formal constant-time proofs for all functions currently used by AWS-LC; empirical timing tests |
 | A4 | Out-of-bounds memory access | Formal memory-safety proofs for all functions currently used by AWS-LC; frame conditions; Valgrind |
-| B1 | Wrong ISA model or decoder | Co-simulation testing against real hardware on every CI run |
+| B1 | Wrong ISA model or decoder | Co-simulation testing against an independent execution backend in CI |
 | B2 | Buggy ELF loader | Loader errors typically cause proof failure; function-level random testing |
 | B3 | Model omissions (caches, speculative execution, etc.) | Standard for sequential user-mode verification; omissions documented |
 | C1 | HOL Light kernel or OCaml runtime bug | 20+ year track record; OCaml maturity; *independent proof checking (Candle, HOLTrace)* |
@@ -197,11 +197,14 @@ references, misunderstandings, or transcription mistakes could silently
 invalidate proofs.
 
 **Mitigation: co-simulation testing.** A continuous-integration test
-(`simulator.ml` + `simulator.c`) repeatedly picks random instruction
-encodings and random register/flag states, decodes them, executes them both
-symbolically through the formal model and natively on real hardware, and
-compares results. This exercises both the ISA semantics and the decoder on
-every test. It runs for 30 minutes on 8 cores per CI run and covers:
+(`simulator.ml` and the external execution backend) repeatedly picks
+instruction encodings and random register/flag states, decodes them, and
+compares symbolic execution through the formal model with execution through
+an independent backend. The backend may use native hardware, an emulator,
+or another formal model. This exercises both the ISA semantics and the
+decoder on every test. Campaign duration and case-count limits are
+configurable; CI also runs bounded cross-compilation tests through QEMU.
+The campaigns cover:
 
 - All register-to-register instruction forms with randomized operands.
 - Memory-accessing instructions via dedicated harnesses for various
@@ -214,6 +217,12 @@ quirk. Where instructions have genuinely underspecified behavior -- for
 example, the `IMUL` instruction sets flags differently on different x86
 microarchitectures -- the s2n-bignum model reflects this nondeterminism, and
 proofs are valid regardless of which behavior the hardware exhibits.
+
+The architecture-specific instruction-modeling documents describe how
+instruction cases and memory states are generated:
+
+- [Arm instruction modeling](arm/INSTRUCTION.md)
+- [x86-64 instruction modeling](x86/INSTRUCTION.md)
 
 ### B2. ELF object-code loader
 

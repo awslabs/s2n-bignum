@@ -1222,58 +1222,6 @@ let DISCHARGE_MEMSAFE_TAC:tactic =
   CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
   DISCHARGE_MEMACCESS_INBOUNDS_TAC;;
 
-(* Like SIMPLE_ARITH_TAC but allows `val` in assumptions since
-   contained_modulo bounds may involve val terms. Filters out
-   read/write/word simulation cruft that makes ASM_ARITH_TAC slow. *)
-let (MEMSAFE_ARITH_TAC:tactic) =
-  let numty = `:num` in
-  let is_num_relop tm =
-    exists (fun op -> is_binary op tm &&
-                      (let x,_ = dest_binary op tm in type_of x = numty))
-           ["=";"<";"<=";">";">="]
-  and avoiders = ["lowdigits"; "highdigits"; "bigdigit";
-                  "read"; "write"; "word"] in
-  let avoiderp tm =
-    match tm with Const(n,_) -> mem n avoiders | _ -> false in
-  let filtered tm =
-    (is_num_relop tm || (is_neg tm && is_num_relop (dest_neg tm))) &&
-    not(can (find_term avoiderp) tm) in
-  let tweak = GEN_REWRITE_RULE TRY_CONV [ARITH_RULE `~(n = 0) <=> 1 <= n`] in
-  W(fun (asl,w) ->
-    let asl' = filter (fun (_,th) -> filtered(concl th)) asl in
-    MAP_EVERY (MP_TAC o tweak o snd) asl' THEN CONV_TAC ARITH_RULE);;
-
-(* ASM-aware version of CONTAINED_TAC for loop-body proofs where
-   memory addresses involve symbolic loop variables. Uses MEMSAFE_ARITH_TAC
-   which filters assumptions to avoid the performance issues of ASM_ARITH_TAC
-   with hundreds of symbolic simulation assumptions. *)
-let CONTAINED_ASM_TAC =
-  GEN_REWRITE_TAC I [GSYM CONTAINED_MODULO_MOD2] THEN
-  GEN_REWRITE_TAC (BINOP_CONV o LAND_CONV o LAND_CONV o TOP_DEPTH_CONV)
-   [VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
-  CONV_TAC(BINOP_CONV(LAND_CONV MOD_DOWN_CONV)) THEN
-  GEN_REWRITE_TAC I [CONTAINED_MODULO_MOD2] THEN
-  ((GEN_REWRITE_TAC I [CONTAINED_MODULO_REFL] THEN
-    MEMSAFE_ARITH_TAC) ORELSE
-   (MATCH_MP_TAC CONTAINED_MODULO_OFFSET_SIMPLE THEN
-    MEMSAFE_ARITH_TAC) ORELSE
-   (MATCH_MP_TAC CONTAINED_MODULO_SIMPLE THEN MEMSAFE_ARITH_TAC));;
-
-(* ASM-aware version of DISCHARGE_MEMSAFE_TAC for loop bodies.
-   Uses MEMSAFE_ARITH_TAC for contained_modulo proofs with symbolic bounds. *)
-let DISCHARGE_MEMSAFE_ASM_TAC:tactic =
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND] THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[memaccess_inbounds; ALL; EX; FST; SND] THEN
-    REPEAT CONJ_TAC THEN
-    REPEAT ((DISJ1_TAC THEN CONTAINED_ASM_TAC) ORELSE DISJ2_TAC ORELSE
-                CONTAINED_ASM_TAC) THEN
-    NO_TAC;
-    REWRITE_TAC[APPEND; APPEND_NIL] THEN
-    FIRST_ASSUM ACCEPT_TAC];;
-
 let MLKEM_REJ_UNIFORM_MEMSAFE = prove
  (`!res buf buflen table (inlist:(12 word)list) e pc stackpointer.
       12 divides val buflen /\
