@@ -1419,6 +1419,11 @@ void call_mlkem_mulcache_compute(void) repeat(mlkem_mulcache_compute_x86((int16_
 void call_mlkem_ntt(void) repeat(mlkem_ntt_x86((int16_t*)b0,(int16_t*)b1))
 void call_mlkem_unpack(void) repeat(mlkem_unpack((uint16_t*)b0))
 
+void call_bignum_mod__4_4(void) repeat(bignum_mod(4,b0,4,b1,b2))
+void call_bignum_mod__6_6(void) repeat(bignum_mod(6,b0,6,b1,b2))
+void call_bignum_mod__16_16(void) repeat(bignum_mod(16,b0,16,b1,b2))
+void call_bignum_mod__32_32(void) repeat(bignum_mod(32,b0,32,b1,b2))
+
 void call_bignum_copy_row_from_table_8n__32_16(void) {}
 void call_bignum_copy_row_from_table_8n__32_32(void) {}
 void call_bignum_copy_row_from_table_16__32(void) {}
@@ -1467,6 +1472,11 @@ void call_mldsa_rej_uniform(void) repeat(mldsa_rej_uniform_VARIABLE_TIME((int32_
 void call_mldsa_rej_uniform_eta2(void) repeat(mldsa_rej_uniform_eta2_VARIABLE_TIME((int32_t*)b0,(const uint8_t*)b1,272,(const uint8_t*)b2))
 void call_mldsa_rej_uniform_eta4(void) repeat(mldsa_rej_uniform_eta4_VARIABLE_TIME((int32_t*)b0,(const uint8_t*)b1,272,(const uint8_t*)b2))
 void call_mldsa_reduce(void) {}
+
+void call_bignum_mod__4_4(void) repeat(bignum_mod(4,b0,4,b1,b2))
+void call_bignum_mod__6_6(void) repeat(bignum_mod(6,b0,6,b1,b2))
+void call_bignum_mod__16_16(void) repeat(bignum_mod(16,b0,16,b1,b2))
+void call_bignum_mod__32_32(void) repeat(bignum_mod(32,b0,32,b1,b2))
 
 void call_bignum_copy_row_from_table_8n__32_16(void) \
     repeat(bignum_copy_row_from_table_8n(b0,b1,32,16,0))
@@ -1728,6 +1738,10 @@ int main(int argc, char *argv[])
   timingtest(all,"bignum_madd (32x32 -> 64)",call_bignum_madd__32_64);
   timingtest(bmi,"bignum_madd_n25519",call_bignum_madd_n25519);
   timingtest(all,"bignum_madd_n25519_alt",call_bignum_madd_n25519_alt);
+  timingtest(all,"bignum_mod (4 -> 4)",call_bignum_mod__4_4);
+  timingtest(all,"bignum_mod (6 -> 6)",call_bignum_mod__6_6);
+  timingtest(all,"bignum_mod (16 -> 16)",call_bignum_mod__16_16);
+  timingtest(all,"bignum_mod (32 -> 32)",call_bignum_mod__32_32);
   timingtest(all,"bignum_mod_m25519 (8 -> 4)",call_bignum_mod_m25519__8);
   timingtest(all,"bignum_mod_m25519_4",call_bignum_mod_m25519_4);
   timingtest(all,"bignum_mod_n25519 (8 -> 4)",call_bignum_mod_n25519__8);

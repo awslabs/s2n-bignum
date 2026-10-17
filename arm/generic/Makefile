@@ -57,6 +57,7 @@ OBJ = bignum_add.o \
       bignum_le.o \
       bignum_lt.o \
       bignum_madd.o \
+      bignum_mod.o \
       bignum_modadd.o \
       bignum_moddouble.o \
       bignum_modexp.o \

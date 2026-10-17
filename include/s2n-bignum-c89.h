@@ -435,6 +435,10 @@ extern uint64_t bignum_madd (uint64_t k, uint64_t *z, uint64_t m, const uint64_t
 extern void bignum_madd_n25519 (uint64_t z[4], const uint64_t x[4], const uint64_t y[4], const uint64_t c[4]);
 extern void bignum_madd_n25519_alt (uint64_t z[4], const uint64_t x[4], const uint64_t y[4], const uint64_t c[4]);
 
+/* Reduce modulo m, z := x mod m, where m is k digits and x is n digits */
+/* Inputs x[n], m[k]; output z[k] */
+extern void bignum_mod (uint64_t k, uint64_t *z, uint64_t n, const uint64_t *x, const uint64_t *m);
+
 /* Reduce modulo group order, z := x mod m_25519 */
 /* Input x[k]; output z[4] */
 extern void bignum_mod_m25519 (uint64_t z[4], uint64_t k, const uint64_t *x);
