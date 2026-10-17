@@ -152,6 +152,9 @@ let iclasses =
   (*** DUP (element): broadcast Vn.<T>[index] across Vd ***)
   "0x001110000xxxxx000001xxxxxxxxxx";
 
+  (*** DUP (element), scalar: copy Vn.<T>[index] to <V>d, zeroing the rest ***)
+  "01011110000xxxxx000001xxxxxxxxxx";
+
   (*** EOR ***)
   "0x101110001xxxxx000111xxxxxxxxxx";
 
