@@ -75,6 +75,9 @@ proofs/cosim-runner.bin: proofs/cosim-runner.elf
 # instead of QEMU. proofs/sail-cosim-runner speaks the cosim protocol and runs
 # each case on Sail's `sail_riscv_sim`, patching a one-shot template program
 # (proofs/sail_cosim.S). Set SAIL_RISCV_SIM if the simulator is not on PATH.
+# GNU ld warns that the template has an RWX segment; this is expected (see
+# sail_cosim.S). -Wl,--no-warn-rwx-segments is not used because ld.lld
+# rejects it.
 proofs/sail-cosim.elf: proofs/sail_cosim.S proofs/sail_cosim.ld
 	$(RISCV_CC) -march=$(RISCV_MARCH) -mabi=ilp32 \
 		$(COSIM_LDFLAGS) -Wl,-T,proofs/sail_cosim.ld \

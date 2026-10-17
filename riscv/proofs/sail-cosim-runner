@@ -15,6 +15,15 @@ instruction bytes, the input registers and the input scratch words), runs it
 on the Sail simulator, and reads the result back from the signature region
 the simulator dumps on exit. See sail_cosim.S for the memory layout.
 
+Requests are checked and rejected with the same ERROR tokens as the QEMU
+monitor. The code slot is smaller, though: it holds at most 252 bytes of
+instructions (the monitor allows 508), and longer code gets
+`ERROR unsupported-code`. After each run, the runner also checks that SP is
+back at the scratch buffer, as the HOL template requires, and reports
+`ERROR sp-clobbered` otherwise. A simulator failure is reported as an
+`ERROR sail-...` token, and the end of the simulator's stderr is copied to
+the runner's stderr, which is not part of the protocol.
+
 Environment variables:
 
   SAIL_RISCV_SIM    Sail simulator command. Defaults to "sail_riscv_sim".
@@ -43,9 +52,13 @@ REGS_IN = 0x100
 SCRATCH = 0x200
 SIGNATURE_WORDS = 32 + SCRATCH_WORDS + 4   # regs_out, scratch, meta
 
+SCRATCH_POINTER = COSIM_ADDRESS + SCRATCH
+CODE_BUFFER_SIZE = 512       # longest code the QEMU monitor accepts at all
+
 BREAKPOINT = 3
 INSTRUCTION_LIMIT = 100000
 SIMULATOR_TIMEOUT = 30
+STDERR_TAIL_LINES = 20
 
 
 def find_section(image, name):
@@ -68,6 +81,16 @@ def find_section(image, name):
     raise ValueError("section %s not found in template" % name)
 
 
+def report_stderr(data):
+    """Copy the last lines of the simulator's stderr to our own stderr."""
+    if not data:
+        return
+    lines = data.decode(errors="replace").splitlines()
+    for line in lines[-STDERR_TAIL_LINES:]:
+        print("sail-cosim-runner: " + line, file=sys.stderr)
+    sys.stderr.flush()
+
+
 class Executor:
     def __init__(self):
         here = os.path.dirname(os.path.realpath(__file__))
@@ -80,9 +103,12 @@ class Executor:
             raise ValueError("template .cosim layout does not match the runner")
         self.simulator = shlex.split(
             os.environ.get("SAIL_RISCV_SIM", "sail_riscv_sim"))
-        self.directory = tempfile.mkdtemp(prefix="sail-cosim-")
-        self.elf_path = os.path.join(self.directory, "case.elf")
-        self.signature_path = os.path.join(self.directory, "case.sig")
+        self.temporary = tempfile.TemporaryDirectory(prefix="sail-cosim-")
+        self.elf_path = os.path.join(self.temporary.name, "case.elf")
+        self.signature_path = os.path.join(self.temporary.name, "case.sig")
+
+    def close(self):
+        self.temporary.cleanup()
 
     def run(self, code, state):
         image = bytearray(self.template)
@@ -100,70 +126,104 @@ class Executor:
         if os.path.exists(self.signature_path):
             os.remove(self.signature_path)
 
+        command = self.simulator + ["--rv32",
+                                    "--inst-limit", str(INSTRUCTION_LIMIT),
+                                    "--signature-granularity", "4",
+                                    "--test-signature", self.signature_path,
+                                    self.elf_path]
         try:
-            subprocess.run(
-                self.simulator + ["--rv32",
-                                  "--inst-limit", str(INSTRUCTION_LIMIT),
-                                  "--test-signature", self.signature_path,
-                                  self.elf_path],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                timeout=SIMULATOR_TIMEOUT, check=True)
+            result = subprocess.run(command, stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.PIPE,
+                                    timeout=SIMULATOR_TIMEOUT)
+        except subprocess.TimeoutExpired as error:
+            report_stderr(error.stderr)
+            return "ERROR sail-simulator-timeout"
+        except OSError as error:
+            print("sail-cosim-runner: cannot run %s: %s" % (command[0], error),
+                  file=sys.stderr, flush=True)
+            return "ERROR sail-simulator-not-started"
+        if result.returncode < 0:
+            report_stderr(result.stderr)
+            return "ERROR sail-simulator-signal-%d" % -result.returncode
+        if result.returncode != 0:
+            report_stderr(result.stderr)
+            return "ERROR sail-simulator-exit-%d" % result.returncode
+        try:
             with open(self.signature_path) as signature_file:
                 words = [int(line, 16) for line in signature_file.read().split()]
-        except (OSError, subprocess.SubprocessError, ValueError):
-            return "ERROR sail-simulator-failed"
+        except (OSError, ValueError):
+            report_stderr(result.stderr)
+            return "ERROR sail-signature-unreadable"
         if len(words) != SIGNATURE_WORDS:
             return "ERROR sail-signature-size"
 
         registers = words[0:32]
         scratch = words[32:32 + SCRATCH_WORDS]
-        mcause, mtval, mepc = words[96:99]
+        mcause, mtval, mepc, sp_at_trap = words[96:100]
         expected_break = COSIM_ADDRESS + CODE_SLOT + len(code)
         if mcause != BREAKPOINT or mepc != expected_break:
             return "TRAP mcause-%d mtval-%d" % (mcause, mtval)
+        # SP is not transported, but the HOL template requires it to be back
+        # at the scratch buffer when the code is done.
+        if sp_at_trap != SCRATCH_POINTER:
+            return "ERROR sp-clobbered"
         output = [0] + registers[1:REGISTER_WORDS] + scratch
         return "OK " + " ".join(str(word) for word in output)
 
 
+def parse_u32(word):
+    """Parse a decimal word as the QEMU monitor does, or return None."""
+    if not (word.isascii() and word.isdigit()):
+        return None
+    value = int(word)
+    return value if value < 1 << 32 else None
+
+
 def parse_run(tokens):
+    """Check a RUN request in the same order and with the same ERROR tokens
+    as `execute_request` in cosim_runner.c."""
     if not tokens:
         return None, "malformed-code"
     try:
         code = bytes.fromhex(tokens[0])
     except ValueError:
         return None, "malformed-code"
-    if len(code) == 0 or len(code) % 4 != 0:
+    if (len(code) == 0 or len(code) % 4 != 0
+            or len(code) > CODE_BUFFER_SIZE):
         return None, "malformed-code"
+    words = tokens[1:]
+    state = [parse_u32(word) for word in words[:STATE_WORDS]]
+    if len(state) < STATE_WORDS or None in state:
+        return None, "malformed-input-state"
+    if len(words) > STATE_WORDS:
+        return None, "wrong-input-state-size"
+    if state[0] != 0:
+        return None, "invalid-initial-state"
     if len(code) > CODE_SLOT_SIZE - 4:
-        return None, "code-too-large"
-    if len(tokens) != 1 + STATE_WORDS:
-        return None, "malformed-input-state"
-    try:
-        state = [int(word, 10) for word in tokens[1:]]
-    except ValueError:
-        return None, "malformed-input-state"
-    if any(word < 0 or word >= 1 << 32 for word in state):
-        return None, "malformed-input-state"
+        return None, "unsupported-code"
     return (code, state), None
 
 
 def main():
     executor = Executor()
-    print("READY 1 rv32im %d" % STATE_WORDS, flush=True)
-    for line in sys.stdin:
-        tokens = line.split()
-        if not tokens:
-            continue
-        if tokens[0] == "QUIT":
-            return 0
-        if tokens[0] != "RUN":
-            print("ERROR unknown-command", flush=True)
-            continue
-        request, error = parse_run(tokens[1:])
-        if error is not None:
-            print("ERROR " + error, flush=True)
-        else:
-            print(executor.run(*request), flush=True)
+    try:
+        print("READY 1 rv32im %d" % STATE_WORDS, flush=True)
+        for line in sys.stdin:
+            tokens = line.split()
+            if not tokens:
+                continue
+            if tokens[0] == "QUIT":
+                break
+            if tokens[0] != "RUN":
+                print("ERROR unknown-command", flush=True)
+                continue
+            request, error = parse_run(tokens[1:])
+            if error is not None:
+                print("ERROR " + error, flush=True)
+            else:
+                print(executor.run(*request), flush=True)
+    finally:
+        executor.close()
     return 0
 
 

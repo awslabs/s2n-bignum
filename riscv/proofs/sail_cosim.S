@@ -23,6 +23,8 @@
  * The signature region runs from `regs_out` to the end of `meta`.
  */
 
+        .option norvc
+
         .section .text.init, "ax", @progbits
         .globl  _start
 _start:
@@ -111,6 +113,9 @@ trap_handler:
         sw      zero, 4(t0)
 1:      j       1b
 
+/* `.cosim` holds both the code slot and the data the trap handler writes,
+   so it is writable and executable. GNU ld 2.39 and later warn that it is
+   in an RWX LOAD segment; the warning is expected. */
         .section .cosim, "awx", @progbits
         .globl  code_slot, regs_in, begin_signature, end_signature
 code_slot:
