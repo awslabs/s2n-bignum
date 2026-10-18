@@ -300,6 +300,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | OR operand operand
    | PADDD operand operand
    | PADDQ operand operand
+   | PALIGNR operand operand operand
    | PAND operand operand
    | PBLENDW operand operand operand
    | PCMPGTD operand operand
@@ -314,6 +315,8 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | PSHUFD operand operand operand
    | PSRAD operand operand
    | PSRLW operand operand
+   | PUNPCKHQDQ operand operand
+   | PUNPCKLQDQ operand operand
    | PUSH operand
    | PXOR operand operand
    | RCL operand operand
@@ -324,6 +327,9 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | SAR operand operand
    | SBB operand operand
    | SET condition operand
+   | SHA256MSG1 operand operand
+   | SHA256MSG2 operand operand
+   | SHA256RNDS2 operand operand
    | SHL operand operand
    | SHR operand operand
    | SHLD operand operand operand

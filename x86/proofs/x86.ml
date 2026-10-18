@@ -789,6 +789,146 @@ let x86_ADOX = new_definition
         (dest := (z:N word) ,,
          OF := ~(val x + val y + c = val z)) s`;;
 
+(* ------------------------------------------------------------------------- *)
+(* Intel SHA extensions (SHA-NI): SHA256RNDS2 / SHA256MSG1 / SHA256MSG2.      *)
+(*                                                                            *)
+(* Semantics per the Intel SDM.  The scalar SHA-256 round functions are the   *)
+(* same Ch / Maj / big-Sigma / small-sigma used by the FIPS 180-4 spec        *)
+(* (arm/proofs/sha256.ml sha_choose/sha_maj/sha_hash_sigma_0/1,               *)
+(* sha_msg_sigma_0/1); they are re-expressed here with raw word primitives so *)
+(* x86.ml stays self-contained (that dependency cone is not in the x86 base   *)
+(* load).  The Phase-2 bridge lemmas relate these to the spec primitives.     *)
+
+(* One SHA-256 compression round on a 256-bit packed {A,B,C,D,E,F,G,H} state  *)
+(* (A at bits [224,32), H at bits [0,32)), with round input wk = W_t + K_t.   *)
+let sha256_rnds2_round = new_definition
+ `sha256_rnds2_round (abcdefgh:256 word) (wk:int32) : 256 word =
+    let a = word_subword abcdefgh (224,32)
+    and b = word_subword abcdefgh (192,32)
+    and c = word_subword abcdefgh (160,32)
+    and d = word_subword abcdefgh (128,32)
+    and e = word_subword abcdefgh (96,32)
+    and f = word_subword abcdefgh (64,32)
+    and g = word_subword abcdefgh (32,32)
+    and h = word_subword abcdefgh (0,32) in
+    let ch = word_xor (word_and (word_xor f g) e) g in
+    let maj = word_or (word_and a b) (word_and (word_or a b) c) in
+    let bsig0 = word_xor (word_ror a 2) (word_xor (word_ror a 13) (word_ror a 22)) in
+    let bsig1 = word_xor (word_ror e 6) (word_xor (word_ror e 11) (word_ror e 25)) in
+    let t1 = word_add h (word_add bsig1 (word_add ch wk)) in
+    let t2 = word_add bsig0 maj in
+    let a' = word_add t1 t2 and e' = word_add d t1 in
+    (word_join:int32->224 word->256 word) a'
+     ((word_join:int32->192 word->224 word) a
+      ((word_join:int32->160 word->192 word) b
+       ((word_join:int32->128 word->160 word) c
+        ((word_join:int32->96 word->128 word) e'
+         ((word_join:int32->64 word->96 word) e
+          ((word_join:int32->32 word->64 word) f g))))))`;;
+
+(* SHA256RNDS2 dst, src, XMM0: two SHA-256 rounds.  src packs {A,B,E,F}       *)
+(* (A at [96,32) of the 128-bit lane down to F at [0,32)); dst packs          *)
+(* {C,D,G,H}; XMM0 low two dwords hold W+K for the two rounds (round 0 in     *)
+(* bits [0,32), round 1 in [32,32)).  Result overwrites dst with the new      *)
+(* {A,B,E,F}.  DEST[MAXVL-1:128] is unchanged (legacy SSE encoding).          *)
+let sha256_rnds2 = new_definition
+ `sha256_rnds2 (dst:int128) (src:int128) (wk:int128) : int128 =
+    let a0 = word_subword src (96,32) and b0 = word_subword src (64,32)
+    and e0 = word_subword src (32,32) and f0 = word_subword src (0,32)
+    and c0 = word_subword dst (96,32) and d0 = word_subword dst (64,32)
+    and g0 = word_subword dst (32,32) and h0 = word_subword dst (0,32) in
+    let st0 = (word_join:int32->224 word->256 word) a0
+     ((word_join:int32->192 word->224 word) b0
+      ((word_join:int32->160 word->192 word) c0
+       ((word_join:int32->128 word->160 word) d0
+        ((word_join:int32->96 word->128 word) e0
+         ((word_join:int32->64 word->96 word) f0
+          ((word_join:int32->32 word->64 word) g0 h0)))))) in
+    let st1 = sha256_rnds2_round st0 (word_subword wk (0,32)) in
+    let st2 = sha256_rnds2_round st1 (word_subword wk (32,32)) in
+    (word_join:int32->96 word->int128) (word_subword st2 (224,32))
+     ((word_join:int32->64 word->96 word) (word_subword st2 (192,32))
+      ((word_join:int32->32 word->64 word) (word_subword st2 (96,32))
+       (word_subword st2 (64,32))))`;;
+
+let x86_SHA256RNDS2 = new_definition
+  `x86_SHA256RNDS2 dest src wk s =
+     let d = read dest s and n = read src s and w = read wk s in
+     (dest := sha256_rnds2 d n w) s`;;
+
+(* SHA256MSG1 dst, src: first stage of the message schedule update.  dst      *)
+(* holds {W3,W2,W1,W0} (W0 at [0,32)), src[0,32) = W4.  Each output dword is  *)
+(* W_i + sigma0(W_{i+1}).                                                     *)
+let sha256_msg1 = new_definition
+ `sha256_msg1 (dst:int128) (src:int128) : int128 =
+    let w0 = word_subword dst (0,32) and w1 = word_subword dst (32,32)
+    and w2 = word_subword dst (64,32) and w3 = word_subword dst (96,32)
+    and w4 = word_subword src (0,32) in
+    let sig0 = \x:int32. word_xor (word_ror x 7)
+                          (word_xor (word_ror x 18) (word_ushr x 3)) in
+    (word_join:int32->96 word->int128) (word_add w3 (sig0 w4))
+     ((word_join:int32->64 word->96 word) (word_add w2 (sig0 w3))
+      ((word_join:int32->32 word->64 word) (word_add w1 (sig0 w2))
+       (word_add w0 (sig0 w1))))`;;
+
+let x86_SHA256MSG1 = new_definition
+  `x86_SHA256MSG1 dest src s =
+     let d = read dest s and n = read src s in
+     (dest := sha256_msg1 d n) s`;;
+
+(* SHA256MSG2 dst, src: second stage of the message schedule update.  dst     *)
+(* holds {W_{i+3}',W_{i+2}',W_{i+1}',W_i'} (the partial sums W_j + sigma0 +   *)
+(* W_{j-7} already accumulated), src holds {W14,W15,-,-} for the sigma1       *)
+(* terms; the two high dwords chain on the freshly computed low results.      *)
+let sha256_msg2 = new_definition
+ `sha256_msg2 (dst:int128) (src:int128) : int128 =
+    let wp0 = word_subword dst (0,32) and wp1 = word_subword dst (32,32)
+    and wp2 = word_subword dst (64,32) and wp3 = word_subword dst (96,32)
+    and w14 = word_subword src (64,32) and w15 = word_subword src (96,32) in
+    let sig1 = \x:int32. word_xor (word_ror x 17)
+                          (word_xor (word_ror x 19) (word_ushr x 10)) in
+    let w16 = word_add wp0 (sig1 w14) in
+    let w17 = word_add wp1 (sig1 w15) in
+    let w18 = word_add wp2 (sig1 w16) in
+    let w19 = word_add wp3 (sig1 w17) in
+    (word_join:int32->96 word->int128) w19
+     ((word_join:int32->64 word->96 word) w18
+      ((word_join:int32->32 word->64 word) w17 w16))`;;
+
+let x86_SHA256MSG2 = new_definition
+  `x86_SHA256MSG2 dest src s =
+     let d = read dest s and n = read src s in
+     (dest := sha256_msg2 d n) s`;;
+
+(* PALIGNR dst, src, imm8: concatenate dst:src (dst high), shift right by     *)
+(* imm8 bytes, take the low 128 bits.  imm8 >= 16 shifts in zeros (imm8 >= 32 *)
+(* gives all zero); the routine only uses byte counts 4 and 8.               *)
+let x86_PALIGNR = new_definition
+  `x86_PALIGNR dest src imm8 (s:x86state) =
+     let x:int128 = read dest s
+     and y:int128 = read src s
+     and c:byte = read imm8 s in
+     let cat:256 word = (word_join:int128->int128->256 word) x y in
+     let res:int128 = word_subword (word_ushr cat (8 * val c)) (0,128) in
+     (dest := res) s`;;
+
+(* PUNPCKLQDQ / PUNPCKHQDQ (legacy SSE, 128-bit): interleave the low / high   *)
+(* 64-bit halves of dest (goes to the low quad) and src (goes to the high     *)
+(* quad).  DEST[MAXVL-1:128] unchanged.                                       *)
+let x86_PUNPCKLQDQ = new_definition
+  `x86_PUNPCKLQDQ dest src (s:x86state) =
+     let x:int128 = read dest s and y:int128 = read src s in
+     let res = (word_join:int64->int64->int128)
+                 (word_subword y (0,64)) (word_subword x (0,64)) in
+     (dest := res) s`;;
+
+let x86_PUNPCKHQDQ = new_definition
+  `x86_PUNPCKHQDQ dest src (s:x86state) =
+     let x:int128 = read dest s and y:int128 = read src s in
+     let res = (word_join:int64->int64->int128)
+                 (word_subword y (64,64)) (word_subword x (64,64)) in
+     (dest := res) s`;;
+
 (* AESENC does not modify DEST[MAXVL-1:128] *)
 let x86_AESENC = new_definition
   `x86_AESENC dest src s =
@@ -2800,6 +2940,19 @@ let x86_execute = define
          add_store_event dest s ,,
         (\s. (x86_AESDECLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s))
         s
+    | SHA256RNDS2 dest src ->
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (x86_SHA256RNDS2 (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
+                              (OPERAND128_SSE (%_% xmm0) s)) s)) s
+    | SHA256MSG1 dest src ->
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (x86_SHA256MSG1 (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s)) s
+    | SHA256MSG2 dest src ->
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (x86_SHA256MSG2 (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s)) s
     | AESENC dest src ->
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
@@ -3113,6 +3266,11 @@ let x86_execute = define
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PADDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+    | PALIGNR dest src imm8 ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PALIGNR (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
+                        (OPERAND8 imm8 s) s)) s
     | PAND dest src ->
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
@@ -3178,6 +3336,14 @@ let x86_execute = define
     | PSRLW dest imm8 ->
        (add_load_event dest s ,, add_store_event dest s ,,
        (\s. x86_PSRLW (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
+    | PUNPCKHQDQ dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PUNPCKHQDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+    | PUNPCKLQDQ dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PUNPCKLQDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | PUSH src ->
        (add_load_event src s ,,
        (\s. (match operand_size src with
@@ -4712,11 +4878,14 @@ let X86_OPERATION_CLAUSES =
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ;
     x86_VMOVHPD; x86_MOVSX; x86_MOVUPS; x86_MOVSB_ALT;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
-    x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
+    x86_PADDD_ALT; x86_PADDQ_ALT; x86_PALIGNR; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
-    x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
+    x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT;
+    x86_PUNPCKHQDQ; x86_PUNPCKLQDQ; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
-    x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
+    x86_SAR; x86_SBB_ALT; x86_SET;
+    x86_SHA256RNDS2; x86_SHA256MSG1; x86_SHA256MSG2;
+    x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDB_ALT; x86_VPADDD_ALT; x86_VPADDQ_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHUW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPINSRW; x86_VINSERTI128; x86_VEXTRACTI128;
