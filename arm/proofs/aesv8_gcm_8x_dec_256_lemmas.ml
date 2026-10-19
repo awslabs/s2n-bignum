@@ -8,7 +8,7 @@
 (* (arm/proofs/aesv8_gcm_8x_dec_256_wb.ml), which loads this file.           *)
 (*                                                                            *)
 (* Contents:                                                                  *)
-(*   - the GHASH/Karatsuba bridge lemma layer (KARATSUBA_LIMBS,               *)
+(*   - the GHASH/Karatsuba bridge lemma layer (KARATSUBA_LIMBS_LET,           *)
 (*     GHASH_1BLOCK_CORRECT, GMULT_REDUCE_PROP3, GMULT_FULL_CORRECT_BA, ...); *)
 (*   - the SIMD-fold stepping layer (GCM_SIMD_SIMPLIFY_TAC, the per-step-     *)
 (*     discard steppers, ARM_VSTEPS_FOLD_TAC, ...);                           *)
@@ -131,7 +131,7 @@ let WORD_SUBWORD_SUBWORD = prove(
 (* WORD_RULE proofs.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-let KARATSUBA_LIMBS = prove(
+let KARATSUBA_LIMBS_LET = prove(
   `!(p_lo:int128) (p_hi:int128) (cross:int128).
    let t:(256)word = word_xor (word_xor (word_zx p_lo)
                                         (word_shl (word_zx cross) 64))
@@ -149,11 +149,6 @@ let JOIN_SUBWORD_RULES = prove(
   `(!a b:64 word. word_subword (word_join a b : int128) (0,64) : 64 word = b) /\
    (!a b:64 word. word_subword (word_join a b : int128) (64,64) : 64 word = a)`,
   CONJ_TAC THEN REPEAT GEN_TAC THEN BITBLAST_TAC);;
-
-let WORD_XOR_ACI = WORD_RULE
-  `(!x y:N word. word_xor x y = word_xor y x) /\
-   (!x y z:N word. word_xor (word_xor x y) z = word_xor x (word_xor y z)) /\
-   (!x y z:N word. word_xor x (word_xor y z) = word_xor y (word_xor x z))`;;
 
 let GHASH_1BLOCK_CORRECT = prove(
   `!acc block h:int128.
@@ -194,37 +189,14 @@ let INSERT_SUBWORD_KILL = prove(
 (* Helper: the low 64-bit lane of v0 = word_join aa bb XOR wa.  Used to make    *)
 (* the GMULT and Prop3 `word_pmul _ W` atoms syntactically identical (pmul is   *)
 (* opaque to BITBLAST, so the two wv-inputs must match before the lane blast).  *)
-let V0LO = prove(
-  `!aa bb:64 word. !wa:int128.
-     word_subword (word_xor (word_join aa bb:int128) wa) (0,64):64 word =
-     word_xor bb (word_subword wa (0,64):64 word)`,
-  REPEAT GEN_TAC THEN BITBLAST_TAC);;
-
 (* (b) The shared Prop3 reduction: the GMULT/assembly W-reduction byteform over  *)
 (* an abstract 256-bit accumulator t equals polyval_reduce_prop3 t.  aa/bb/cc/dd *)
 (* are t's four 64-bit lanes; w = 0xC200000000000000.  Reusable at any block     *)
 (* count (the N-block loop reduces the accumulated 256-bit sum exactly once).    *)
-let GMULT_REDUCE_PROP3 = prove(
-  `!t:256 word.
-     let aa = word_subword t (0,64):64 word in
-     let bb = word_subword t (64,64):64 word in
-     let cc = word_subword t (128,64):64 word in
-     let dd = word_subword t (192,64):64 word in
-     let w = word 13979173243358019584:64 word in
-     let wa:int128 = word_pmul aa w in
-     let v0:int128 = word_xor (word_join aa bb) wa in
-     let wv:int128 = word_pmul (word_subword v0 (0,64):64 word) w in
-     word_xor wv (word_xor (byteswap128 v0) (word_join dd cc)) = polyval_reduce_prop3 t`,
-  GEN_TAC THEN REWRITE_TAC[polyval_reduce_prop3; LET_DEF; LET_END_DEF] THEN
-  REWRITE_TAC[V0LO] THEN
-  ABBREV_TAC `wa:int128 = word_pmul (word_subword (t:256 word) (0,64):64 word) (word 13979173243358019584:64 word)` THEN
-  ABBREV_TAC `wv:int128 = word_pmul (word_xor (word_subword (t:256 word) (64,64):64 word) (word_subword (wa:int128) (0,64):64 word)) (word 13979173243358019584:64 word)` THEN
-  REWRITE_TAC[byteswap128] THEN BITBLAST_TAC);;
-
 (* The full GHASH multiply+reduce bridge: the byte-level Karatsuba/Prop3 the   *)
 (* assembly computes (left-hand side, in terms of 64-bit pmul limbs) equals    *)
 (* the spec-level polyval_dot.  Derived from (a) PMUL_KARATSUBA + (b)         *)
-(* GMULT_REDUCE_PROP3 + KARATSUBA_LIMBS (lanes of word_pmul a b = the limbs),   *)
+(* GMULT_REDUCE_PROP3 + KARATSUBA_LIMBS_LET (lanes of word_pmul a b = the limbs), *)
 (* instead of a single monolithic BITBLAST.                                     *)
 let GMULT_FULL_CORRECT_BA = prove(
   `!a b:int128.
@@ -251,7 +223,7 @@ let GMULT_FULL_CORRECT_BA = prove(
   (* Compose (a)+(b): polyval_dot a b = polyval_reduce_prop3 (word_pmul a b)  [def];
      word_pmul a b = the Karatsuba 256-word assembly K  [(a) PMUL_KARATSUBA];
      polyval_reduce_prop3 K = the W-reduction byteform over K's lanes  [GSYM (b) GMULT_REDUCE_PROP3];
-     K's lanes = the p_lo/cross/p_hi limbs  [KARATSUBA_LIMBS]; then the two byteforms are
+     K's lanes = the p_lo/cross/p_hi limbs  [KARATSUBA_LIMBS_LET]; then the two byteforms are
      identical up to pmul argument order  [WORD_PMUL_SYM]. *)
   REPEAT GEN_TAC THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN REWRITE_TAC[polyval_dot] THEN
@@ -259,7 +231,7 @@ let GMULT_FULL_CORRECT_BA = prove(
     [REWRITE_RULE[LET_DEF; LET_END_DEF] PMUL_KARATSUBA] THEN
   GEN_REWRITE_TAC RAND_CONV
     [GSYM (REWRITE_RULE[LET_DEF; LET_END_DEF] GMULT_REDUCE_PROP3)] THEN
-  REWRITE_TAC[REWRITE_RULE[LET_DEF; LET_END_DEF] KARATSUBA_LIMBS] THEN
+  REWRITE_TAC[REWRITE_RULE[LET_DEF; LET_END_DEF] KARATSUBA_LIMBS_LET] THEN
   REWRITE_TAC[WORD_PMUL_SYM] THEN REFL_TAC);;
 
 let SIMD_SIMPLIFY_RULES = [REV64_LOWER_LANE; REV64_UPPER_LANE; REV64_128];;
@@ -465,9 +437,7 @@ let QQ0SPLIT = prove(
 (* N-block GHASH bridge infrastructure, used by the 2..8-block bands.       *)
 (*                                                                            *)
 (* All library needs are at the top of this file: gmult_nblock_lemmas.ml is   *)
-(* self-contained (it proves its own GMULT_REDUCE_PROP3/V0LO), so load order  *)
-(* does not matter.  The V0LO/GMULT_REDUCE_PROP3 definitions earlier in       *)
-(* this file harmlessly shadow the identical library ones.                    *)
+(* self-contained, so load order does not matter.                             *)
 (* ========================================================================= *)
 (* ========================================================================= *)
 (* Helper lemmas for the 2-product GHASH bridge (byte-form-agnostic, so they  *)
