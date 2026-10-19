@@ -57,6 +57,46 @@ let CACHED_REWRITE_INSTANTIATION = prove
    [CACHED_ASM_REWRITE_TAC [];
     UNIFY_REFL_TAC]);;
 
+(* Rewriting a separation premise to its modular form must retain the
+   drivers for subregions, including their original hypotheses. *)
+
+let _ =
+  let cases =
+   [`nonoverlapping (p:int32,96) (a,1024)`,
+    `nonoverlapping (p:int32,96) (word_add a (word 16),16)`;
+    `nonoverlapping (p:int64,96) (a,1024)`,
+    `nonoverlapping (p:int64,96) (word_add a (word 16),16)`;
+    `nonoverlapping (word pc:int64,96) (a,1024)`,
+    `nonoverlapping (word pc:int64,96) (word_add a (word 16),16)`;
+    `p:int32 = a \/ nonoverlapping (p,96) (a,1024)`,
+    `nonoverlapping (p:int32,96) (word_add a (word 128),16)`;
+    `p:int64 = a \/ nonoverlapping (p,96) (a,1024)`,
+    `nonoverlapping (p:int64,96) (word_add a (word 128),16)`] in
+  List.iter (fun (premise,target) ->
+    List.iter (fun extra ->
+      let original =
+        if extra then ADD_ASSUM `hidden:bool` (ASSUME premise)
+        else ASSUME premise in
+      List.iter (fun fact ->
+        let drivers = NONOVERLAPPING_DRIVERS
+          [ASSUME `unused:bool`; fact;
+           ASSUME `word_add (u:int64) (word 4) = v`] in
+        if length drivers <> 3 then
+          failwith "nonoverlap driver discarded a separation premise";
+        List.iter (fun tm ->
+          let proof = NONOVERLAPPING_RULE (drivers,[]) tm in
+          if concl proof <> tm || hyp proof <> hyp original then
+            failwith "nonoverlap driver changed premise dependencies")
+          [target; rand(concl(PURE_ONCE_REWRITE_CONV
+                            [NONOVERLAPPING_SYM] target))])
+        [original;
+         REWRITE_RULE[NONOVERLAPPING_CLAUSES_GEN] original;
+         REWRITE_RULE[NONOVERLAPPING_CLAUSES] original])
+      [false;true];
+    if can (NONOVERLAPPING_RULE (NONOVERLAPPING_DRIVERS [],[])) target then
+      failwith "nonoverlap driver proved separation without its premise")
+    cases;;
+
 let CLARIFY_DERIVED_LABEL = prove
  (`!p q. p /\ (p ==> q) ==> q`,
   REPEAT STRIP_TAC THEN
