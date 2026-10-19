@@ -3023,6 +3023,15 @@ let NONOVERLAPPING_DRIVERS =
      [GSYM INT_OF_NUM_MUL; GSYM INT_OF_NUM_POW; GSYM INT_OF_NUM_ADD;
       INT_SUB_RZERO; INT_ADD_LID; INT_ADD_RID] in
   let OVERLAPPING_DRIVER th =
+    (* Only these outer forms can become a driver. Avoid traversing
+       unrelated word equations and arithmetic abbreviations first. *)
+    let original = concl th in
+    if not(is_binary "nonoverlapping" original ||
+           (match original with
+            | Comb(Comb(Comb(Const("nonoverlapping_modulo",_),_),_),_) -> true
+            | _ -> false) ||
+           is_disj original)
+    then failwith "OVERLAPPING_DRIVER" else
     let th1 = CONV_RULE (ONCE_DEPTH_CONV NONOVERLAP_REVERT_CONV) th in
     let tm = concl th1 in
     let th2 =
