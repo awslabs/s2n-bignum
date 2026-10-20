@@ -38,7 +38,7 @@ COSIM_LDFLAGS ?= -static -nostdlib -nostartfiles -Wl,--no-relax \
 	-Wl,--build-id=none
 
 .PHONY: build_tutorial tutorial build_shared_tests shared_tests \
-	sematest sematest-sail clean FORCE
+	test_execution sematest sematest-sail clean FORCE
 
 TUTORIAL_PROOFS := $(wildcard tutorial/*.ml)
 TUTORIAL_PROOF_BINS := $(TUTORIAL_PROOFS:.ml=.native)
@@ -67,6 +67,8 @@ build_tutorial: build_shared_tests $(MODEL_CHECK_BINS) $(TUTORIAL_PROOF_BINS)
 	! grep -RI "check_axioms" . ../common/ --exclude="Makefile"
 
 tutorial: build_tutorial shared_tests $(MODEL_CHECK_LOGS) $(TUTORIAL_PROOF_LOGS)
+
+test_execution: proofs/execution_tests.correct
 
 proofs/cosim-runner.elf: proofs/cosim_runner.c proofs/cosim_start.S \
 		proofs/cosim.ld
