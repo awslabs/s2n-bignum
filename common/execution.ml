@@ -51,7 +51,7 @@ let GEN_BASIC_STEP_TAC backend_name step_tm state_ty step_conv post_step_tac =
       (store_inst_term_to:term ref option) (asl,w) ->
     let sv = rand w and sv' = mk_var(sname,state_ty) in
     let atm = mk_comb(mk_comb(step_tm,sv),sv') in
-    let eth = step_conv decode_ths (map snd asl) atm in
+    let eth = step_conv decode_ths (!extra_context_read_filter(map snd asl)) atm in
 
     (match store_inst_term_to with
      | Some r -> r := rhs (concl eth)
@@ -114,14 +114,24 @@ let GEN_STEP_TAC basic_step_tac normalize_tac loaded_update log_update
   MAP_EVERY (TRY o NONSELFMODIFYING_STATE_UPDATE_TAC o
     MATCH_MP loaded_update o CONJUNCT1) subths THEN
   ASSUMPTION_STATE_UPDATE_TAC THEN
+  W(fun (asl,_) ->
+  (* Newly derived values can read the previous state. Keep its frame
+     until those reads have been simplified, then discard it. *)
+  let old_frames =
+    if exists (is_frame_read_rule o concl o snd) asl
+    then map snd (filter (is_maychange_state_fact o concl o snd) asl)
+    else [] in
   MAYCHANGE_STATE_UPDATE_TAC THEN
   DISCH_THEN(fun th ->
     let thl = STATE_UPDATE_NEW_RULE th in
     log_update th thl;
     if thl = [] then ALL_TAC else
     MP_TAC(end_itlist CONJ thl) THEN
+    MAP_EVERY ASSUME_TAC old_frames THEN
     ASSEMBLER_SIMPLIFY_TAC THEN
-    strip_component_tac th);;
+    strip_component_tac th THEN
+    DISCARD_ASSUMPTIONS_TAC(fun ath ->
+      exists (fun old -> concl ath = concl old) old_frames)));;
 
 let GEN_VERBOSE_STEP_TAC step_tac (exth1,exth2) sname g =
   Format.print_string("Stepping to state "^sname);
