@@ -1254,8 +1254,74 @@ let apply_extra_word_convs tm = FIRST_CONV (!extra_word_CONV) tm;;
 (* Rewrite rules to apply before rewriting reads from previous states *)
 let extra_early_rewrite_rules = ref [];;
 
+(* Symbolic execution commonly changes only the first few context facts.
+   Retain the rewrite net after each suffix of the previous rule list and
+   rebuild the changed prefix in the ordinary insertion order. A theorem
+   can be reused by identity, or when both versions are independent
+   assumptions of the identical conclusion term. Equal conclusions with
+   different hypotheses are never enough.
+
+   Each builder retains only its last context, with at most 4096 rules.
+   Changing the basic rewrite net invalidates all cached suffixes. *)
+
+let CACHED_CONTEXT_REWRITE_CONV rep cnvl builtin_net =
+  let previous = ref (empty_net,[]) in
+  let same_rule old current =
+    old == current ||
+    let tm = concl old in
+    tm == concl current &&
+    match hyp old,hyp current with
+    | [h],[h'] -> h == tm && h' == tm
+    | _ -> false in
+  fun ths ->
+    let builtin = builtin_net() in
+    let old_builtin,old_suffixes = !previous in
+    let old_suffixes =
+      if builtin == old_builtin then old_suffixes else [] in
+    let rec share old remaining net suffixes =
+      match old,remaining with
+      | (old_th,old_net)::older,th::rest when same_rule old_th th ->
+          share older rest old_net ((th,old_net)::suffixes)
+      | _ -> net,suffixes,remaining in
+    let initial,suffixes,remaining =
+      share old_suffixes (rev ths) builtin [] in
+    let rec extend net suffixes = function
+      | [] -> net,suffixes
+      | th::rest ->
+          let canonical = mk_rewrites false th [] in
+          let net = itlist (net_of_thm rep) canonical net in
+          extend net ((th,net)::suffixes) rest in
+    let net,suffixes = extend initial suffixes remaining in
+    previous := builtin,
+      (if length ths <= 4096 then rev suffixes else []);
+    cnvl(REWRITES_CONV net);;
+
+let CACHED_GEN_REWRITE_CONV cnvl =
+  CACHED_CONTEXT_REWRITE_CONV false cnvl (fun () -> empty_net);;
+
+let CACHED_REWRITE_CONV =
+  CACHED_CONTEXT_REWRITE_CONV true TOP_DEPTH_CONV basic_net;;
+
+let CACHED_ASM_REWRITE_TAC ths =
+  W(fun (asl,_) ->
+    CONV_TAC(CACHED_REWRITE_CONV(map snd asl @ ths)));;
+
+(* Keep ordinary preparation available for same-binary measurements. *)
+let context_rewrite_cache_enabled = ref false;;
+
+let ASSEMBLER_ASM tac rules =
+  W(fun (asl,_) ->
+    tac (map snd asl @ rules));;
 
 let ASSEMBLER_SIMPLIFY_TAC =
+  let cached_final_rewrite =
+    CACHED_GEN_REWRITE_CONV (LAND_CONV o TOP_DEPTH_CONV) in
+  let context_rewrite ths =
+    CONV_TAC((if !context_rewrite_cache_enabled then CACHED_REWRITE_CONV
+       else REWRITE_CONV) ths)
+  and final_rewrite ths =
+    CONV_TAC((if !context_rewrite_cache_enabled then cached_final_rewrite
+       else GEN_REWRITE_CONV (LAND_CONV o TOP_DEPTH_CONV)) ths) in
   let pth = prove
    (`!a b. a < a + bitval b <=> b`,
     REPEAT GEN_TAC THEN ASM_CASES_TAC `b:bool` THEN
@@ -1267,7 +1333,8 @@ let ASSEMBLER_SIMPLIFY_TAC =
       let c = concl th in not (is_eq c) || (lhs c <> rhs c)) asl in
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) !extra_early_rewrite_rules
       (asl,w)) THEN
-  ASM_REWRITE_TAC[WORD_XOR_REFL; WORD_ADD_0; WORD_AND_REFL; WORD_OR_REFL;
+  ASSEMBLER_ASM context_rewrite
+                 [WORD_XOR_REFL; WORD_ADD_0; WORD_AND_REFL; WORD_OR_REFL;
                   WORD_ZX_BITVAL; WORD_SUB_REFL; WORD_OR_0; WORD_ZX_0; NOT_LT;
                   WORD_SX_0; SUB_EQ_0; SUB_REFL; LE_REFL; LT_REFL; NOT_LE;
                   WORD_ZX_TRIVIAL; WORD_SX_TRIVIAL] THEN
@@ -1286,7 +1353,7 @@ let ASSEMBLER_SIMPLIFY_TAC =
      [WORD_RULE `word_sub x (word_add x y):int64 = word_neg y`;
       pth] THENC
     GEN_REWRITE_CONV ONCE_DEPTH_CONV [SYM(NUM_REDUCE_CONV `2 EXP 64`)])) THEN
-  ASM (GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)) [];;
+  ASSEMBLER_ASM final_rewrite [];;
 
 (* ------------------------------------------------------------------------- *)
 (* Not much commonality to all the ISAs but we do have a uniform             *)
