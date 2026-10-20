@@ -17809,8 +17809,8 @@ int test_aes_xts_roundtrip(void)
 }
 
 // ****************************************************************************
-// The 8-way _alt AES-GCM kernels, and known-answer tests of all the
-// AES-256-GCM kernels
+// The 8-way _alt AES-GCM kernels, and known-answer tests of all the AES-GCM
+// kernels
 // ****************************************************************************
 
 // Random-input test of aes256_gcm_dec_alt against ref_aes256_gcm_dec.  It has
@@ -17832,8 +17832,9 @@ int test_aes256_gcm_dec_alt(void)
 
 // The whole-blocks contract of the _alt kernels: a len_bits value that is
 // not a multiple of 128, or is zero, must return 0 and leave out / tag /
-// ivec untouched.
-static int test_aes_gcm_alt_guard(const char *name, aes_gcm_fn fn)
+// ivec untouched.  keybytes is 16 or 32, as for test_aes_gcm.
+static int test_aes_gcm_alt_guard(const char *name, int keybytes,
+                                  aes_gcm_fn fn)
 {
   uint8_t key[32], ivec[16], ivec0[16], zero[16], h[16];
   uint64_t xi[2], xi0[2], htable[24];
@@ -17848,11 +17849,16 @@ static int test_aes_gcm_alt_guard(const char *name, aes_gcm_fn fn)
 
   printf("Testing the %s whole-blocks guard\n", name);
 
-  random_bytes(key, 32); random_bytes(ivec, 16); random_bytes((uint8_t *)xi, 16);
+  random_bytes(key, keybytes); random_bytes(ivec, 16);
+  random_bytes((uint8_t *)xi, 16);
   memcpy(ivec0, ivec, 16); memcpy(xi0, xi, 16);
-  ref_aes256_expand_key(key, &ek);
   memset(zero, 0, 16);
-  ref_aes256_encrypt_block(zero, h, &ek);
+  if (keybytes == 16)
+   { ref_aes128_expand_key(key, &ek);
+     ref_aes128_encrypt_block(zero, h, &ek); }
+  else
+   { ref_aes256_expand_key(key, &ek);
+     ref_aes256_encrypt_block(zero, h, &ek); }
   ref_gcm_init_htable((uint8_t *)htable, h);
 
   random_bytes(bb1, 4096);
@@ -17918,28 +17924,31 @@ int test_aes256_gcm_dec_alt_guard(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_aes_gcm_alt_guard("aes256_gcm_dec_alt", aes256_gcm_dec_alt);
+  return test_aes_gcm_alt_guard("aes256_gcm_dec_alt", 32, aes256_gcm_dec_alt);
 #endif
 }
 
 #ifndef __x86_64__
 
 // Known-answer driver for one GCM_KAT(key, nonce, aad, plaintext, ciphertext,
-// tag) record of known_value_tests_gcm_256.h or wycheproof_tests_gcm_256.h,
-// run through an AES-256 kernel fn that encrypts if encrypt is nonzero and
-// decrypts otherwise.  The kernel does only the whole-block part of GCM (NIST
-// SP 800-38D, Sections 7.1 and 7.2): counter-mode encryption or decryption
-// from the counter block ivec, and the GHASH update of tag with each
-// ciphertext block.  The rest is done here with tests/ref_aes_gcm.c: the key
-// table for H = AES_K(0^128), the pre-counter block J0, the GHASH of the AAD
-// that starts the tag, and after the kernel the GHASH of the length block
-// [len(A)]_64 || [len(C)]_64 and the tag T = AES_K(J0) XOR S.  Every record
-// goes straight to the kernel, whatever its length, and the output, the tag,
-// the updated counter block and the return value are all checked.
-static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
-                           const char *keyhex, const char *noncehex,
-                           const char *aadhex, const char *pthex,
-                           const char *cthex, const char *taghex)
+// tag) record of known_value_tests_gcm_128.h, wycheproof_tests_gcm_128.h,
+// known_value_tests_gcm_256.h or wycheproof_tests_gcm_256.h, run through an
+// AES-GCM kernel fn for keybytes-byte keys (16 or 32) that encrypts if
+// encrypt is nonzero and decrypts otherwise.  The kernel does only the
+// whole-block part of GCM (NIST SP 800-38D, Sections 7.1 and 7.2):
+// counter-mode encryption or decryption from the counter block ivec, and the
+// GHASH update of tag with each ciphertext block.  The rest is done here with
+// tests/ref_aes_gcm.c: the key table for H = AES_K(0^128), the pre-counter
+// block J0, the GHASH of the AAD that starts the tag, and after the kernel
+// the GHASH of the length block [len(A)]_64 || [len(C)]_64 and the tag
+// T = AES_K(J0) XOR S.  Every record goes straight to the kernel, whatever
+// its length, and the output, the tag, the updated counter block and the
+// return value are all checked.
+static int run_gcm_kat(const char *name, aes_gcm_fn fn, int encrypt,
+                       int keybytes, const char *keyhex,
+                       const char *noncehex, const char *aadhex,
+                       const char *pthex, const char *cthex,
+                       const char *taghex)
 { static uint8_t pt[BUFFERSIZE], ct[BUFFERSIZE], out[BUFFERSIZE];
   uint8_t key[32], nonce[64], aad[240], tag_expect[16], tag_out[16];
   uint8_t zero[16], h[16], j0[16], ek_j0[16], ivec[16], ivec_expect[16];
@@ -17950,14 +17959,15 @@ static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
   size_t len = strlen(pthex) / 2, i;
   int bad = 0;
 
-  if (strlen(keyhex) != 64 || nonce_len == 0 || nonce_len > sizeof(nonce) ||
+  if (strlen(keyhex) != 2 * (size_t)keybytes ||
+      nonce_len == 0 || nonce_len > sizeof(nonce) ||
       aad_len > sizeof(aad) || len == 0 || len % 16 != 0 ||
       len > BUFFERSIZE || strlen(cthex) != 2 * len || strlen(taghex) != 32)
    { printf("### Malformed GCM_KAT record (nonce %zu, aad %zu, text %zu bytes)\n",
             nonce_len, aad_len, len);
      return 1;
    }
-  assign_bytearray_from_hexstring(key, keyhex, 32);
+  assign_bytearray_from_hexstring(key, keyhex, keybytes);
   assign_bytearray_from_hexstring(nonce, noncehex, (int)nonce_len);
   assign_bytearray_from_hexstring(aad, aadhex, (int)aad_len);
   assign_bytearray_from_hexstring(pt, pthex, (int)len);
@@ -17965,9 +17975,13 @@ static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
   assign_bytearray_from_hexstring(tag_expect, taghex, 16);
 
   // H = AES_K(0^128) and the table of its powers
-  ref_aes256_expand_key(key, &ek);
   memset(zero, 0, 16);
-  ref_aes256_encrypt_block(zero, h, &ek);
+  if (keybytes == 16)
+   { ref_aes128_expand_key(key, &ek);
+     ref_aes128_encrypt_block(zero, h, &ek); }
+  else
+   { ref_aes256_expand_key(key, &ek);
+     ref_aes256_encrypt_block(zero, h, &ek); }
   ref_gcm_init_htable((uint8_t *)htable, h);
 
   // J0 = IV || 0^31 || 1 for a 96-bit IV, else
@@ -17998,7 +18012,8 @@ static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
   ref_put_be64(block, (uint64_t)aad_len * 8);
   ref_put_be64(block + 8, (uint64_t)len * 8);
   ref_ghash_blocks((uint8_t *)xi, block, 1, h);
-  ref_aes256_encrypt_block(j0, ek_j0, &ek);
+  if (keybytes == 16) ref_aes128_encrypt_block(j0, ek_j0, &ek);
+  else ref_aes256_encrypt_block(j0, ek_j0, &ek);
   for (i = 0; i < 16; ++i) tag_out[i] = ek_j0[i] ^ ((uint8_t *)xi)[i];
 
   // The counter block comes back advanced once per block
@@ -18026,15 +18041,36 @@ static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
 }
 
 #define GCM_KAT(KEYHEX, NONCEHEX, ADHEX, INHEX, CTHEX, TAGHEX)                \
-  do { if (run_gcm_256_kat(name, fn, encrypt, KEYHEX, NONCEHEX, ADHEX,      \
-                           INHEX, CTHEX, TAGHEX)) ++failures;                \
+  do { if (run_gcm_kat(name, fn, encrypt, keybytes, KEYHEX, NONCEHEX,       \
+                       ADHEX, INHEX, CTHEX, TAGHEX)) ++failures;            \
        else ++successes;                                                     \
      } while (0)
+
+// Known-answer tests: the AWS-LC records of known_value_tests_gcm_128.h.
+static int test_known_values_gcm_128(const char *name, aes_gcm_fn fn,
+                                     int encrypt)
+{
+  const int keybytes = 16;
+  int failures = 0, successes = 0;
+  printf("Testing known value cases for %s\n", name);
+
+#include "known_value_tests_gcm_128.h"
+
+  if (failures != 0)
+   { printf("Failed %d known value tests, passed %d\n", failures, successes);
+     return failures;
+   }
+  else
+   { printf("Successfully passed %d known value tests\n", successes);
+     return 0;
+   }
+}
 
 // Known-answer tests: the AWS-LC records of known_value_tests_gcm_256.h.
 static int test_known_values_gcm_256(const char *name, aes_gcm_fn fn,
                                      int encrypt)
 {
+  const int keybytes = 32;
   int failures = 0, successes = 0;
   printf("Testing known value cases for %s\n", name);
 
@@ -18056,13 +18092,34 @@ static int test_known_values_gcm_256(const char *name, aes_gcm_fn fn,
 // only whole 16-byte blocks, so the many partial-length records are out of
 // contract, and the negative records (result = invalid) are
 // authentication-failure cases this harness does not assert. What is left --
-// keySize 256, tagSize 128, result = valid, plaintext a nonzero multiple of
-// 16 -- is 17 vectors, and they complement the AWS-LC set above: they carry
-// no AAD, but their IVs have eight lengths from 1 to 16 bytes, including IVs
-// shorter than 12 bytes, which the AWS-LC set lacks.
+// tagSize 128, result = valid, plaintext a nonzero multiple of 16 -- is 21
+// vectors with keySize 128 and 17 with keySize 256, and they complement the
+// AWS-LC sets above: their IVs have eight lengths from 1 to 16 bytes,
+// including IVs shorter than 12 bytes, which the AWS-LC sets lack. The
+// keySize 128 vectors carry 0 to 16 bytes of AAD, the keySize 256 ones none.
+static int test_wycheproof_gcm_128(const char *name, aes_gcm_fn fn,
+                                   int encrypt)
+{
+  const int keybytes = 16;
+  int failures = 0, successes = 0;
+  printf("Testing Wycheproof vectors for %s\n", name);
+
+#include "wycheproof_tests_gcm_128.h"
+
+  if (failures != 0)
+   { printf("Failed %d Wycheproof tests, passed %d\n", failures, successes);
+     return failures;
+   }
+  else
+   { printf("Successfully passed %d Wycheproof tests\n", successes);
+     return 0;
+   }
+}
+
 static int test_wycheproof_gcm_256(const char *name, aes_gcm_fn fn,
                                    int encrypt)
 {
+  const int keybytes = 32;
   int failures = 0, successes = 0;
   printf("Testing Wycheproof vectors for %s\n", name);
 
@@ -18079,6 +18136,24 @@ static int test_wycheproof_gcm_256(const char *name, aes_gcm_fn fn,
 }
 
 #endif
+
+int test_known_values_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_128("aes128_gcm_enc", aes128_gcm_enc, 1);
+#endif
+}
+
+int test_known_values_aes128_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_128("aes128_gcm_dec", aes128_gcm_dec, 0);
+#endif
+}
 
 int test_known_values_aes256_gcm_enc(void)
 {
@@ -18104,6 +18179,24 @@ int test_known_values_aes256_gcm_dec_alt(void)
   return 1;
 #else
   return test_known_values_gcm_256("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 0);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_128("aes128_gcm_enc", aes128_gcm_enc, 1);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_128("aes128_gcm_dec", aes128_gcm_dec, 0);
 #endif
 }
 
@@ -19120,9 +19213,13 @@ int main(int argc, char *argv[])
     functionaltest(aes&&sha3,"aes256_gcm_dec_alt",test_aes256_gcm_dec_alt);
     functionaltest(aes&&sha3,"aes256_gcm_dec_alt whole-blocks guard",test_aes256_gcm_dec_alt_guard);
     functionaltest(all,"aes_gcm_htable",test_aes_gcm_htable);
+    functionaltest(aes,"known value tests for aes128_gcm_enc",test_known_values_aes128_gcm_enc);
+    functionaltest(aes,"known value tests for aes128_gcm_dec",test_known_values_aes128_gcm_dec);
     functionaltest(aes,"known value tests for aes256_gcm_enc",test_known_values_aes256_gcm_enc);
     functionaltest(aes,"known value tests for aes256_gcm_dec",test_known_values_aes256_gcm_dec);
     functionaltest(aes&&sha3,"known value tests for aes256_gcm_dec_alt",test_known_values_aes256_gcm_dec_alt);
+    functionaltest(aes,"Wycheproof vectors for aes128_gcm_enc",test_wycheproof_aes128_gcm_enc);
+    functionaltest(aes,"Wycheproof vectors for aes128_gcm_dec",test_wycheproof_aes128_gcm_dec);
     functionaltest(aes,"Wycheproof vectors for aes256_gcm_enc",test_wycheproof_aes256_gcm_enc);
     functionaltest(aes,"Wycheproof vectors for aes256_gcm_dec",test_wycheproof_aes256_gcm_dec);
     functionaltest(aes&&sha3,"Wycheproof vectors for aes256_gcm_dec_alt",test_wycheproof_aes256_gcm_dec_alt);
