@@ -8,6 +8,7 @@
 (* ========================================================================= *)
 
 needs "common/interval.ml";;
+needs "common/component_snapshot.ml";;
 
 (* Returns true if t is `read <component_name> <state>`. *)
 let is_read_named_component component_name t =
@@ -130,6 +131,7 @@ let GEN_STEP_TAC basic_step_tac normalize_tac loaded_update log_update
     MAP_EVERY ASSUME_TAC old_frames THEN
     ASSEMBLER_SIMPLIFY_TAC THEN
     strip_component_tac th THEN
+    COMPONENT_SNAPSHOT_UPDATE_TAC th THEN
     DISCARD_ASSUMPTIONS_TAC(fun ath ->
       exists (fun old -> concl ath = concl old) old_frames)));;
 
@@ -151,7 +153,15 @@ let GEN_DISCARD_OLDSTATE_TAC state_ty print_log s =
   let rec unbound_statevars_of_read bound_svars tm =
     match tm with
     | Comb(Comb(Const("read",_),_),s) ->
-        if mem s bound_svars then [] else [s]
+        if type_of s = state_ty then
+          (if mem s bound_svars then [] else [s])
+        else
+          (* Inner snapshot reads are facts about a different state type.
+             Recurse to notice an outer-state read inside a composed read,
+             but do not discard independent inner facts as obsolete. *)
+          let _,args = strip_comb tm in
+          union (unbound_statevars_of_read bound_svars (hd args))
+                (unbound_statevars_of_read bound_svars s)
     | Comb(a,b) ->
         union (unbound_statevars_of_read bound_svars a)
               (unbound_statevars_of_read bound_svars b)
