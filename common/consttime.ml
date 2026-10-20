@@ -111,18 +111,37 @@ let gen_mk_safety_spec
       Some (find_term find_eq_returnaddress fnspec_precond)
     with Failure _ -> None in
 
-  (* An expression s to a term of :num type. *)
+  (* An expression s to a term of :num type. Handles numerals, C variables,
+     '*', '/' (as DIV), '-' (as truncated subtraction) and parentheses, with
+     C precedence and left associativity, e.g. "12*(k/4-1)". *)
   let rec elemsz_to_hol (s:string): term =
     let s = if starts_with ">=" s
       then String.sub s 2 (String.length s - 2) else s in
+    let l = String.length s in
+    (* The index of the last occurrence of one of cs outside parentheses. *)
+    let last_toplevel (cs:char list): int option =
+      let r = ref None and depth = ref 0 in
+      String.iteri (fun i c ->
+          if c = '(' then incr depth
+          else if c = ')' then decr depth
+          else if !depth = 0 && mem c cs then r := Some i)
+        s;
+      !r in
+    let split_at idx = String.sub s 0 idx, String.sub s (idx+1) (l - idx - 1) in
 
-    match String.index_opt s '*' with
+    match last_toplevel ['-'] with
     | Some idx ->
-      let expr_lhs = String.sub s 0 idx in
-      let l = String.length s in
-      let expr_rhs = String.sub s (idx+1) (l - idx - 1) in
-      mk_binary "*" (elemsz_to_hol expr_lhs, elemsz_to_hol expr_rhs)
+      let expr_lhs,expr_rhs = split_at idx in
+      mk_binary "-" (elemsz_to_hol expr_lhs, elemsz_to_hol expr_rhs)
     | None ->
+    match last_toplevel ['*'; '/'] with
+    | Some idx ->
+      let expr_lhs,expr_rhs = split_at idx in
+      mk_binary (if s.[idx] = '*' then "*" else "DIV")
+        (elemsz_to_hol expr_lhs, elemsz_to_hol expr_rhs)
+    | None ->
+    if l >= 2 && s.[0] = '(' && s.[l-1] = ')'
+    then elemsz_to_hol (String.sub s 1 (l - 2)) else
      (try mk_small_numeral (int_of_string s)
       with Failure _ ->
         let v = c_var_to_hol s in
