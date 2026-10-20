@@ -339,8 +339,8 @@ static void ref_aes128_gcm_dec(const uint8_t *in, uint64_t len_bits,
 // ***************************************************************************
 //
 // The kernel reads precomputed powers of H in the OpenSSL gcm_init_v8 layout;
-// the entries it uses are formalized as htable_mem_4 in
-// arm/proofs/aes_gcm_utils.ml. (The htable_mem predicate in
+// the entries the four-way kernels use are formalized as htable_mem_4 in
+// arm/proofs/utils/aes_gcm_spec.ml. (The htable_mem predicate in
 // common/polyval_ghash.ml packs the Karatsuba middle terms in the opposite
 // lane order and does not describe this table.) Rather than transliterate the
 // SIMD twiddling, we build the table directly from that formal specification
@@ -466,7 +466,8 @@ static uint64_t ref_karatsuba_mid(ref_u128 x)
 //   0:bswap(H^1) 16:mid(H^1,H^2) 32:bswap(H^2) 48:bswap(H^3) 64:mid(H^3,H^4)
 //   80:bswap(H^4) 96:bswap(H^5) 112:mid(H^5,H^6) 128:bswap(H^6) 144:bswap(H^7)
 //   160:mid(H^7,H^8) 176:bswap(H^8)
-// (The kernels only consult slots 0..80, i.e. H^1..H^4 and their midpoints.)
+// (The four-way kernels consult only slots 0..80, i.e. H^1..H^4 and their
+// midpoints.)
 
 static void ref_gcm_init_htable(uint8_t Htable[192], const uint8_t h_bytes[16])
 { ref_u128 hp[8]; // hp[k] = h_power(base, k) = (twisted H)^(k+1)
