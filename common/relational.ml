@@ -1333,8 +1333,26 @@ let ENSURES_OR_ENSURES_N_TAC tac_for_ensures tac_for_ensures_n: tactic =
 (* Initialization of breaking down an "ensures" triple                       *)
 (* ------------------------------------------------------------------------- *)
 
-let ENSURES_INIT_TAC sname =
-  ENSURES_OR_ENSURES_N_TAC
+let ENSURES_INIT_TAC =
+  let reflexive = prove
+   (`!(R:A->A->bool). (=) subsumed R ==> !s. R s s`,
+    REWRITE_TAC[subsumed] THEN MESON_TAC[]) in
+  fun ?(seed_frame=false) sname ->
+  W(fun (_,w) ->
+    (* A permitted memory range can absorb its individual word writes.
+       Starting from the empty frame instead accumulates those views until
+       the final subsumption check. Seeding is opt-in because existing
+       proofs can inspect the precise intermediate write frame. Seed only
+       when reflexivity is proved; retain the empty starter by default. *)
+    let frame = ensures_or_ensures_n w (rand w) (rand(rator w)) in
+    let starter =
+      if not seed_frame then None else
+      try
+        if not(maychange_term frame) then failwith "ENSURES_INIT_TAC";
+        let th = ISPEC frame reflexive in
+        Some(MP th (prove(lhand(concl th),SUBSUMED_ID_MAYCHANGE_TAC)))
+      with Failure _ -> None in
+    ENSURES_OR_ENSURES_N_TAC
       (GEN_REWRITE_TAC I [ensures])
       (GEN_REWRITE_TAC I [ensures_n])
       THEN
@@ -1344,7 +1362,10 @@ let ENSURES_INIT_TAC sname =
         let svar = mk_var(sname,ty) in
         X_GEN_TAC svar THEN
         DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-        ASSUME_TAC(ISPEC svar MAYCHANGE_STARTER));;
+        ASSUME_TAC
+          (match starter with
+           | Some th -> SPEC svar th
+           | None -> ISPEC svar MAYCHANGE_STARTER)));;
 
 
 (* ------------------------------------------------------------------------- *)
