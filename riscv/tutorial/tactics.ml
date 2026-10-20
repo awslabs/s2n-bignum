@@ -50,6 +50,34 @@ let CACHED_REWRITE_INSTANTIATION = prove
    [CACHED_ASM_REWRITE_TAC [];
     UNIFY_REFL_TAC]);;
 
+let FRESH_ABBREV_SCOPE = prove
+ (`!a:num. ?b:num. b = a + 1`,
+  GEN_TAC THEN FRESH_ABBREV_TAC `fresh:num = a + 1` THEN
+  EXISTS_TAC `fresh:num` THEN FIRST_ASSUM (ACCEPT_TAC o SYM));;
+
+let FRESH_ABBREV_INSTANTIATION = prove
+ (`!a:num. ?x:num. x < x + 1 /\ a = x`,
+  GEN_TAC THEN X_META_EXISTS_TAC `witness:num` THEN
+  FRESH_ABBREV_TAC `fresh:num = witness + 1` THEN
+  CONJ_TAC THENL
+   [FIRST_ASSUM(fun definition ->
+      CONV_TAC(RAND_CONV(GEN_REWRITE_CONV I [definition]))) THEN ASM_ARITH_TAC;
+    UNIFY_REFL_TAC]);;
+
+let _ =
+  let fact = ASSUME `a + 1 = b:num` in
+  let _,[(asl,w)],_ =
+    FRESH_ABBREV_TAC `fresh:num = a + 1` (["original",fact],`a + 1 > a`) in
+  if w <> `a + 1 > a` ||
+     concl(snd(hd(tl asl))) <> concl fact ||
+     concl(snd(hd asl)) <> `a + 1 = fresh:num`
+  then failwith "FRESH_ABBREV_TAC rewrote the original context or goal";
+  let hidden = ADD_ASSUM `fresh:num = 0` TRUTH in
+  if can (FRESH_ABBREV_TAC `fresh:num = a + 1`) (["hidden",hidden],`T`) ||
+     can (FRESH_ABBREV_TAC `fresh:num = fresh + 1`) ([],`T`) ||
+     can (FRESH_ABBREV_TAC `fresh:num = a + 1`) ([],`fresh:num = 0`)
+  then failwith "FRESH_ABBREV_TAC accepted a non-fresh name";;
+
 (* Rewriting a separation premise to its modular form must retain the
    drivers for subregions, including their original hypotheses. *)
 
@@ -323,3 +351,67 @@ let READ_ONLY_SYMBOLIC_EXECUTION = prove
       then failwith "immutable read was discarded during execution";
       ALL_TAC gl)) (1--4) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+(* Inner memory facts must survive machine-state cleanup. A nested inner
+   read of an obsolete machine state's parent must still be discarded. *)
+
+let _ =
+  let inner = ASSUME `read (bytes32 a) (m:int32->byte) = x`
+  and old = ASSUME `read PC (s0:riscvstate) = pc`
+  and nested = ASSUME
+    `read (bytes32 a) (read memory (s0:riscvstate)) = x` in
+  let _,[(asl,_)],_ =
+    DISCARD_OLDSTATE_TAC "s1"
+      (["inner",inner;"old",old;"nested",nested],`T`) in
+  if map fst asl <> ["inner"] then
+    failwith "old-state cleanup did not distinguish inner snapshot facts";;
+
+let _ =
+  let parent = ASSUME `read memory (s0:riscvstate) = m` in
+  let conv = COMPONENT_SNAPSHOT_READ_CONV [parent] in
+  let result = conv `read (memory :> bytes32 a) (s0:riscvstate)` in
+  if rhs(concl result) <> `read (bytes32 a) (m:int32->byte)` ||
+     hyp result <> [concl parent] then
+    failwith "COMPONENT_SNAPSHOT_READ_CONV lost its parent premise";
+  if can conv `read (memory :> bytes32 a) (s1:riscvstate)` then
+    failwith "COMPONENT_SNAPSHOT_READ_CONV used the wrong state";;
+
+let _ =
+  let saved = !component_snapshot_parents in
+  if can (WITH_COMPONENT_SNAPSHOTS_TAC []
+    (FAIL_TAC "expected snapshot failure")) ([],`T`) then
+    failwith "WITH_COMPONENT_SNAPSHOTS_TAC swallowed a failure";
+  if !component_snapshot_parents <> saved then
+    failwith "WITH_COMPONENT_SNAPSHOTS_TAC did not restore its option";;
+
+let SNAPSHOT_SYMBOLIC_EXECUTION = prove
+ (`!pc (p:int32) q x y.
+    aligned 4 p /\ aligned 4 q /\
+    nonoverlapping (word pc,LENGTH read_only_mc) (q,4) /\
+    nonoverlapping (q,4) (p,4)
+    ==> ensures riscv
+      (\s. aligned_bytes_loaded s (word pc) read_only_mc /\
+           read PC s = word pc /\
+           read A0 s = p /\ read A1 s = q /\
+           read (memory :> bytes32 p) s = x /\
+           read (memory :> bytes32 q) s = y)
+      (\s. read PC s = word(pc + 16) /\
+           read T1 s = x /\ read T2 s = x /\
+           read (memory :> bytes32 q) s = x)
+      (MAYCHANGE [PC;T0;T1;T2] ,,
+       MAYCHANGE [memory :> bytes32 q] ,, MAYCHANGE [events])`,
+  REWRITE_TAC[fst READ_ONLY_EXEC] THEN
+  REPEAT STRIP_TAC THEN ENSURES_INIT_TAC ~seed_frame:true "s0" THEN
+  ENSURES_READ_ONLY_MEMORY_TAC THEN
+  WITH_COMPONENT_SNAPSHOTS_TAC [`memory:(riscvstate,int32->byte)component`,
+                                "memory_snapshot"]
+   (MAP_EVERY (fun n ->
+      RISCV_SINGLE_STEP_TAC READ_ONLY_EXEC ("s" ^ string_of_int n) THEN
+      (fun (asl,_ as gl) ->
+        if length(filter (is_frame_read_rule o concl o snd) asl) <> 1 then
+          failwith "snapshot execution discarded an immutable fact";
+        ALL_TAC gl)) (1--4) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    W(fun (asl,_) ->
+      CONV_TAC(TOP_DEPTH_CONV(!extra_context_read_CONV(map snd asl)))) THEN
+    ASM_REWRITE_TAC[]));;
