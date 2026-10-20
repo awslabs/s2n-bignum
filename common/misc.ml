@@ -1254,6 +1254,10 @@ let apply_extra_word_convs tm = FIRST_CONV (!extra_word_CONV) tm;;
 (* Rewrite rules to apply before rewriting reads from previous states *)
 let extra_early_rewrite_rules = ref [];;
 
+(* Context-dependent reads, such as a memory fact guarded by a frame. *)
+let extra_context_read_CONV = ref (fun (_:thm list) -> NO_CONV);;
+let extra_context_read_filter = ref (fun (ths:thm list) -> ths);;
+
 (* Symbolic execution commonly changes only the first few context facts.
    Retain the rewrite net after each suffix of the previous rule list and
    rebuild the changed prefix in the ordinary insertion order. A theorem
@@ -1309,9 +1313,14 @@ let CACHED_ASM_REWRITE_TAC ths =
 (* Keep ordinary preparation available for same-binary measurements. *)
 let context_rewrite_cache_enabled = ref false;;
 
+let CONTEXT_READ_SIMPLIFY_TAC =
+  W(fun (asl,_) ->
+    CONV_TAC(LAND_CONV
+      (TOP_DEPTH_CONV(!extra_context_read_CONV (map snd asl)))));;
+
 let ASSEMBLER_ASM tac rules =
   W(fun (asl,_) ->
-    tac (map snd asl @ rules));;
+    tac (!extra_context_read_filter (map snd asl) @ rules));;
 
 let ASSEMBLER_SIMPLIFY_TAC =
   let cached_final_rewrite =
@@ -1333,6 +1342,7 @@ let ASSEMBLER_SIMPLIFY_TAC =
       let c = concl th in not (is_eq c) || (lhs c <> rhs c)) asl in
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) !extra_early_rewrite_rules
       (asl,w)) THEN
+  CONTEXT_READ_SIMPLIFY_TAC THEN
   ASSEMBLER_ASM context_rewrite
                  [WORD_XOR_REFL; WORD_ADD_0; WORD_AND_REFL; WORD_OR_REFL;
                   WORD_ZX_BITVAL; WORD_SUB_REFL; WORD_OR_0; WORD_ZX_0; NOT_LT;
@@ -1353,6 +1363,7 @@ let ASSEMBLER_SIMPLIFY_TAC =
      [WORD_RULE `word_sub x (word_add x y):int64 = word_neg y`;
       pth] THENC
     GEN_REWRITE_CONV ONCE_DEPTH_CONV [SYM(NUM_REDUCE_CONV `2 EXP 64`)])) THEN
+  CONTEXT_READ_SIMPLIFY_TAC THEN
   ASSEMBLER_ASM final_rewrite [];;
 
 (* ------------------------------------------------------------------------- *)
