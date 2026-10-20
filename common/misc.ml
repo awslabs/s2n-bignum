@@ -1367,20 +1367,64 @@ let DEABBREV_TAC tm =
     REPEAT(FIRST_X_ASSUM(SUBST_ALL_TAC o check (sfn o concl)));;
 
 (* ------------------------------------------------------------------------- *)
-(* A slight help for efficiency of justification in some cases.              *)
+(* Helpers for labelled theorem contexts.                                   *)
 (* ------------------------------------------------------------------------- *)
 
+(* ------------------------------------------------------------------------- *)
+(* Normalize context facts and retain their original proofs for restoration. *)
+(* ------------------------------------------------------------------------- *)
+
+(* A goal (asl,w) stores labelled assumption theorems and a target term w.    *)
+(* A theorem Gamma |- H records hypotheses Gamma and a conclusion H. The    *)
+(* interactive display shows H only; logically, the original facts justify  *)
+(* a proof under the union of their Gamma lists, not just the displayed Hs. *)
+(*                                                                          *)
+(* For example, the single context fact                                     *)
+(*                                                                          *)
+(*   (x = 3 /\ y = 5) |- x = 3                                             *)
+(*                                                                          *)
+(* has a stronger hypothesis than its displayed conclusion. The existing    *)
+(* CLARIFY_TAC operation normalizes every Gamma |- H to ASSUME H, that is    *)
+(* H |- H. Here it returns x = 3 |- x = 3, no longer exposing y = 5 in the   *)
+(* subgoal's supporting hypotheses. This can hide information from later    *)
+(* tactics, but is sound: the original Gamma proves H, so any proof using H *)
+(* can be justified under Gamma by restoring the original fact theorem.     *)
+(*                                                                          *)
+(* Both old and new implementations return these same normalized theorems, *)
+(* preserving their labels, order and target. They retain the original      *)
+(* proofs in a saved justification: a function called when the remaining    *)
+(* subgoal has been proved, to assemble a proof of the input goal.           *)
+(*                                                                          *)
+(* Construct the normalized context directly. In the justification, apply  *)
+(* the current type/term substitutions to each nontrivial original proof.   *)
+(* If the result theorem uses H as a hypothesis, PROVE_HYP with Gamma |- H   *)
+(* replaces H by Gamma. For the example, a result x = 3 |- w becomes         *)
+(* (x = 3 /\ y = 5) |- w. The original dependencies are thus restored, not  *)
+(* discarded from the completed proof.                                     *)
+(*                                                                          *)
+(* Unlike the old conjunction-based restoration, this builds no bundled    *)
+(* context or projections. Original ASSUME H facts need no restoration;     *)
+(* replacing H by H does nothing. Unused facts add no dependencies, whereas *)
+(* the old final application of the entire bundle could add them. The      *)
+(* result may therefore have fewer unused hypotheses, without changing the *)
+(* returned subgoal or the proof of any fact that is used.                  *)
+
 let (CLARIFY_TAC:tactic) =
-  let rec REASSUME oldasms th =
-    match oldasms with
-     [(l,oth)] -> LABEL_TAC l th
-    | (l,oth)::oasms ->
-        CONJUNCTS_THEN2 (LABEL_TAC l) (REASSUME oasms) th
-    | [] -> failwith "CLARIFY_TAC: sanity check" in
   fun ((asl,w) as gl) ->
     if asl = [] then ALL_TAC gl else
-    (POP_ASSUM_LIST(MP_TAC o end_itlist CONJ o rev) THEN
-     DISCH_THEN(REASSUME (rev asl))) gl;;
+    (* An original ASSUME H theorem is H |- H. Restoring it would replace
+       the temporary hypothesis H by the same H, changing nothing.
+       Skip the cheap exact case before instantiating its proof:
+       its sole hypothesis is the same term object as its conclusion. *)
+    let proofs = filter
+      (fun th -> match hyp th with
+         | [h] when h == concl th -> false
+         | _ -> true) (map snd asl) in
+    null_meta,
+    [map (fun (label,th) -> label,ASSUME(concl th)) asl,w],
+    (fun inst [th] ->
+      itlist (fun ath -> PROVE_HYP (INSTANTIATE_ALL inst ath))
+        proofs th);;
 
 (* ------------------------------------------------------------------------- *)
 (* Apply cacheing (memoization) to arbitrary function with naive assoc list. *)

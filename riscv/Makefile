@@ -37,13 +37,14 @@ COSIM_CFLAGS ?= -Os -Wall -Wextra -ffreestanding -fno-builtin \
 COSIM_LDFLAGS ?= -static -nostdlib -nostartfiles -Wl,--no-relax \
 	-Wl,--build-id=none
 
-.PHONY: build_tutorial tutorial sematest sematest-sail clean FORCE
+.PHONY: build_tutorial tutorial build_shared_tests shared_tests \
+	sematest sematest-sail clean FORCE
 
 TUTORIAL_PROOFS := $(wildcard tutorial/*.ml)
 TUTORIAL_PROOF_BINS := $(TUTORIAL_PROOFS:.ml=.native)
 TUTORIAL_PROOF_LOGS := $(TUTORIAL_PROOFS:.ml=.correct)
 
-MODEL_CHECKS := proofs/consttime.ml
+MODEL_CHECKS := proofs/consttime.ml $(wildcard proofs/execution_tests.ml)
 MODEL_CHECK_BINS := $(MODEL_CHECKS:.ml=.native)
 MODEL_CHECK_LOGS := $(MODEL_CHECKS:.ml=.correct)
 
@@ -56,10 +57,16 @@ tutorial/%.native: tutorial/%.ml $(MODEL_ML)
 %.correct: %.native
 	../tools/run-proof.sh "$<" "$@"
 
-build_tutorial: $(MODEL_CHECK_BINS) $(TUTORIAL_PROOF_BINS)
+build_shared_tests:
+	$(MAKE) -C ../common build_tests HOLDIR="$(HOLDIR)"
+
+shared_tests:
+	$(MAKE) -C ../common test HOLDIR="$(HOLDIR)"
+
+build_tutorial: build_shared_tests $(MODEL_CHECK_BINS) $(TUTORIAL_PROOF_BINS)
 	! grep -RI "check_axioms" . ../common/ --exclude="Makefile"
 
-tutorial: build_tutorial $(MODEL_CHECK_LOGS) $(TUTORIAL_PROOF_LOGS)
+tutorial: build_tutorial shared_tests $(MODEL_CHECK_LOGS) $(TUTORIAL_PROOF_LOGS)
 
 proofs/cosim-runner.elf: proofs/cosim_runner.c proofs/cosim_start.S \
 		proofs/cosim.ld
