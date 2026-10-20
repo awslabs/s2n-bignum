@@ -719,6 +719,58 @@ let ASSIGNS_IDEMPOT_RULE tm =
   let th = ISPEC tm ASSIGNS_ABSORB_SAME_COMPONENTS in
   MP th (WEAKLY_VALID_COMPONENT_CONV(lhand(concl th)));;
 
+(* Prove subsumption of two single-component assignment relations. *)
+
+let SUBSUMED_ASSIGNS_TAC =
+  MATCH_ACCEPT_TAC SUBSUMED_REFL ORELSE
+  (MATCH_MP_TAC SUBSUMED_ID_EXTENSIONALLY_VALID_COMPONENT THEN
+   CONV_TAC EXTENSIONALLY_VALID_COMPONENT_CONV THEN NO_TAC) ORELSE
+  CONV_TAC(BINOP_CONV(RAND_CONV COMPONENT_CANON_CONV)) THEN
+  REPEAT(MATCH_MP_TAC SUBSUMED_ASSIGNS_SUBCOMPONENTS) THEN
+  TRY(MATCH_ACCEPT_TAC SUBSUMED_ASSIGNS_SUBCOMPONENT) THEN
+  GEN_REWRITE_TAC (BINOP_CONV o TRY_CONV)
+   [ASSIGNS_BYTES8; ASSIGNS_BYTES16; ASSIGNS_BYTES32; ASSIGNS_BYTES64;
+    ASSIGNS_BYTES128; ASSIGNS_BYTES256] THEN
+  MATCH_MP_TAC SUBSUMED_ASSIGNS_BYTES THEN CONTAINED_TAC;;
+
+let ASSIGNS_ABSORB_SUBSUMED = prove
+ (`!(c:(A,B)component) (d:(A,C)component).
+    weakly_valid_component c /\
+    extensionally_valid_component d /\
+    ASSIGNS d subsumed ASSIGNS c
+    ==> ASSIGNS c ,, ASSIGNS d = ASSIGNS c`,
+  let lemma = prove
+   (`R ,, R = R /\ S subsumed R /\ (=) subsumed S
+     ==> R ,, S = R`,
+    REWRITE_TAC[subsumed; FUN_EQ_THM; seq] THEN MESON_TAC[]) in
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  MATCH_MP_TAC lemma THEN
+  ASM_SIMP_TAC
+   [ASSIGNS_ABSORB_SAME_COMPONENTS;
+    SUBSUMED_ID_EXTENSIONALLY_VALID_COMPONENT]);;
+
+(* Absorb writes to a contained view of the same parent, for example a
+   word write inside an already permitted memory range. Keep the exact
+   component path first and leave unsupported containment to the caller. *)
+
+let ASSIGNS_ABSORB_CONV =
+  let match_subsumed = PART_MATCH (lhand o rand) ASSIGNS_ABSORB_SUBSUMED in
+  fun tm ->
+    try ASSIGNS_IDEMPOT_CONV tm with Failure _ ->
+    let l,r = dest_binary ",," tm in
+    let c = rand l and d = rand r in
+    let parent_c,_ = dest_binary ":>" c
+    and parent_d,_ = dest_binary ":>" d in
+    if parent_c <> parent_d then failwith "ASSIGNS_ABSORB_CONV" else
+    let th = match_subsumed tm in
+    let pre = prove(lhand(concl th),
+      CONJ_TAC THENL
+       [CONV_TAC WEAKLY_VALID_COMPONENT_CONV;
+        CONJ_TAC THENL
+         [CONV_TAC EXTENSIONALLY_VALID_COMPONENT_CONV;
+          SUBSUMED_ASSIGNS_TAC]]) in
+    MP th pre;;
+
 (*** Examples
 
 ASSIGNS_IDEMPOT_RULE `memory :> bytes16 a :> bitelement 1`;;
@@ -992,8 +1044,8 @@ let maychange_term =
 (* uth = |- write c1 y1 (write c2 y2 (write .... s1)) = s2                   *)
 (* give back                                                                 *)
 (* th' = |- (MAYCHANGE [....] ,, MAYCHANGE [...] ... ) s0 s1                 *)
-(* Tries to absorb components already in the list, otherwise                 *)
-(* simply appends them individually. Not optimal but OK.                     *)
+(* Absorb components already in the list or contained in a permitted view;   *)
+(* append individual components when containment cannot be proved.           *)
 (* ------------------------------------------------------------------------- *)
 
 let MAYCHANGE_UPDATE_RULE =
@@ -1006,7 +1058,7 @@ let MAYCHANGE_UPDATE_RULE =
           let lth = MAYCHANGE_CANON_CONV ltm
           and rth = MAYCHANGE_CANON_CONV rtm in
           let tm' = mk_comb(mk_comb(cop,rand(concl lth)),rand(concl rth)) in
-          let n,eth = ASSIGNS_MOVE_BACK_CONV ASSIGNS_IDEMPOT_CONV tm' in
+          let n,eth = ASSIGNS_MOVE_BACK_CONV ASSIGNS_ABSORB_CONV tm' in
           if n <> 1 then JUSTADD_CONV tm else
           let th' = MK_COMB(AP_TERM cop lth,rth) in
           TRANS (TRANS th' eth) (SYM lth)
@@ -1041,7 +1093,7 @@ MAYCHANGE_UPDATE_RULE uth th;;
 
 (* ------------------------------------------------------------------------- *)
 (* Produce updated "MAYCHANGE" assumption from one in assumptions.           *)
-(* Absorbs simple duplicates but otherwise doesn't try to be clever.         *)
+(* Absorbs duplicates and contained views, retaining the original frame.      *)
 (* Works from antecedent in the goal specifying the state update.            *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1293,6 +1345,7 @@ let ENSURES_INIT_TAC sname =
         X_GEN_TAC svar THEN
         DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
         ASSUME_TAC(ISPEC svar MAYCHANGE_STARTER));;
+
 
 (* ------------------------------------------------------------------------- *)
 (* Additional pre-simulation canonizations.                                  *)
@@ -2240,23 +2293,6 @@ let ENSURES_WHILE_UP2_TAC, ENSURES_WHILE_DOWN2_TAC,
     MAP_EVERY EXISTS_TAC [a; b; pc1; pc2; iv] THEN
     BETA_TAC THEN
     CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]);;
-
-(* ------------------------------------------------------------------------- *)
-(* Tactic to show |- ASSIGNS c subsumed ASSIGNS d for two components.        *)
-(* Also allows the equality relation in place of "ASSIGNS c".                *)
-(* ------------------------------------------------------------------------- *)
-
-let SUBSUMED_ASSIGNS_TAC =
-  MATCH_ACCEPT_TAC SUBSUMED_REFL ORELSE
-  (MATCH_MP_TAC SUBSUMED_ID_EXTENSIONALLY_VALID_COMPONENT THEN
-   CONV_TAC EXTENSIONALLY_VALID_COMPONENT_CONV THEN NO_TAC) ORELSE
-  CONV_TAC(BINOP_CONV(RAND_CONV COMPONENT_CANON_CONV)) THEN
-  REPEAT(MATCH_MP_TAC SUBSUMED_ASSIGNS_SUBCOMPONENTS) THEN
-  TRY(MATCH_ACCEPT_TAC SUBSUMED_ASSIGNS_SUBCOMPONENT) THEN
-  GEN_REWRITE_TAC (BINOP_CONV o TRY_CONV)
-   [ASSIGNS_BYTES8; ASSIGNS_BYTES16; ASSIGNS_BYTES32; ASSIGNS_BYTES64;
-    ASSIGNS_BYTES128; ASSIGNS_BYTES256] THEN
-  MATCH_MP_TAC SUBSUMED_ASSIGNS_BYTES THEN CONTAINED_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactic to show one MAYCHANGE list is subsumed by another.                 *)
