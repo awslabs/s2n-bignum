@@ -1448,6 +1448,24 @@ let DEABBREV_TAC tm =
 (* Helpers for labelled theorem contexts.                                   *)
 (* ------------------------------------------------------------------------- *)
 
+(* Introduce a fresh scalar name without rewriting existing facts or the
+   goal. Callers that have already isolated the expression can rewrite only
+   that expression, rather than make ABBREV_TAC scan the entire context.
+   The defining equation is discharged by existential elimination. *)
+
+let FRESH_ABBREV_TAC tm (asl,w) =
+  let name,value = dest_eq tm in
+  if not(is_var name) || vfree_in name value || vfree_in name w ||
+     exists (fun (_,th) ->
+       vfree_in name (concl th) || exists (vfree_in name) (hyp th)) asl
+  then failwith "FRESH_ABBREV_TAC: name is not fresh";
+  let equation = mk_eq(value,name) in
+  let witness =
+    EXISTS(mk_exists(name,equation),value) (REFL value) in
+  null_meta,[("",ASSUME equation)::asl,w],
+  (fun inst [th] ->
+    CHOOSE(instantiate inst name,INSTANTIATE_ALL inst witness) th);;
+
 (* ------------------------------------------------------------------------- *)
 (* Normalize context facts and retain their original proofs for restoration. *)
 (* ------------------------------------------------------------------------- *)

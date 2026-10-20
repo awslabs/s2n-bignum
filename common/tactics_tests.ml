@@ -57,6 +57,34 @@ let CACHED_REWRITE_INSTANTIATION = prove
    [CACHED_ASM_REWRITE_TAC [];
     UNIFY_REFL_TAC]);;
 
+let FRESH_ABBREV_SCOPE = prove
+ (`!a:num. ?b:num. b = a + 1`,
+  GEN_TAC THEN FRESH_ABBREV_TAC `fresh:num = a + 1` THEN
+  EXISTS_TAC `fresh:num` THEN FIRST_ASSUM (ACCEPT_TAC o SYM));;
+
+let FRESH_ABBREV_INSTANTIATION = prove
+ (`!a:num. ?x:num. x < x + 1 /\ a = x`,
+  GEN_TAC THEN X_META_EXISTS_TAC `witness:num` THEN
+  FRESH_ABBREV_TAC `fresh:num = witness + 1` THEN
+  CONJ_TAC THENL
+   [FIRST_ASSUM(fun definition ->
+      CONV_TAC(RAND_CONV(GEN_REWRITE_CONV I [definition]))) THEN ASM_ARITH_TAC;
+    UNIFY_REFL_TAC]);;
+
+let _ =
+  let fact = ASSUME `a + 1 = b:num` in
+  let _,[(asl,w)],_ =
+    FRESH_ABBREV_TAC `fresh:num = a + 1` (["original",fact],`a + 1 > a`) in
+  if w <> `a + 1 > a` ||
+     concl(snd(hd(tl asl))) <> concl fact ||
+     concl(snd(hd asl)) <> `a + 1 = fresh:num`
+  then failwith "FRESH_ABBREV_TAC rewrote the original context or goal";
+  let hidden = ADD_ASSUM `fresh:num = 0` TRUTH in
+  if can (FRESH_ABBREV_TAC `fresh:num = a + 1`) (["hidden",hidden],`T`) ||
+     can (FRESH_ABBREV_TAC `fresh:num = fresh + 1`) ([],`T`) ||
+     can (FRESH_ABBREV_TAC `fresh:num = a + 1`) ([],`fresh:num = 0`)
+  then failwith "FRESH_ABBREV_TAC accepted a non-fresh name";;
+
 (* Rewriting a separation premise to its modular form must retain the
    drivers for subregions, including their original hypotheses. *)
 

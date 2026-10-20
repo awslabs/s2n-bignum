@@ -156,3 +156,35 @@ let _ =
   if rhs(concl result) <> `y:int32` ||
      exists (fun h -> h <> concl changed && h <> concl frame) (hyp result)
   then failwith "FRAME_READ_CONV reused an old value or hypothesis";;
+
+(* Inner memory facts must survive machine-state cleanup. A nested inner
+   read of an obsolete machine state's parent must still be discarded. *)
+
+let _ =
+  let inner = ASSUME `read (bytes32 a) (m:int32->byte) = x`
+  and old = ASSUME `read PC (s0:riscvstate) = pc`
+  and nested = ASSUME
+    `read (bytes32 a) (read memory (s0:riscvstate)) = x` in
+  let _,[(asl,_)],_ =
+    DISCARD_OLDSTATE_TAC "s1"
+      (["inner",inner;"old",old;"nested",nested],`T`) in
+  if map fst asl <> ["inner"] then
+    failwith "old-state cleanup did not distinguish inner snapshot facts";;
+
+let _ =
+  let parent = ASSUME `read memory (s0:riscvstate) = m` in
+  let conv = COMPONENT_SNAPSHOT_READ_CONV [parent] in
+  let result = conv `read (memory :> bytes32 a) (s0:riscvstate)` in
+  if rhs(concl result) <> `read (bytes32 a) (m:int32->byte)` ||
+     hyp result <> [concl parent] then
+    failwith "COMPONENT_SNAPSHOT_READ_CONV lost its parent premise";
+  if can conv `read (memory :> bytes32 a) (s1:riscvstate)` then
+    failwith "COMPONENT_SNAPSHOT_READ_CONV used the wrong state";;
+
+let _ =
+  let saved = !component_snapshot_parents in
+  if can (WITH_COMPONENT_SNAPSHOTS_TAC []
+    (FAIL_TAC "expected snapshot failure")) ([],`T`) then
+    failwith "WITH_COMPONENT_SNAPSHOTS_TAC swallowed a failure";
+  if !component_snapshot_parents <> saved then
+    failwith "WITH_COMPONENT_SNAPSHOTS_TAC did not restore its option";;

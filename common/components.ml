@@ -3358,10 +3358,15 @@ let COMPONENT_READ_OVER_WRITE_CONV =
   let pth_same = prove
    (`valid_component c ==> read c (write c y s) = y`,
     SIMP_TAC[valid_component])
+  and pth_sub = prove
+   (`valid_component c ==>
+       read c (write (c :> d) y s) = write d y (read c s)`,
+    SIMP_TAC[WRITE_COMPONENT_COMPOSE; valid_component])
   and pth_orth = prove
    (`orthogonal_components c d ==> read c (write d y s) = read c s`,
     SIMP_TAC[orthogonal_components]) in
   let rule_same = PART_MATCH (lhand o rand) pth_same
+  and rule_sub = PART_MATCH (lhand o rand) pth_sub
   and rule_orth = PART_MATCH (lhand o rand) pth_orth
   and orth_rule = ORTHOGONAL_COMPONENTS_RULE(NONOVERLAPPING_DRIVERS[],[]) in
   fun tm ->
@@ -3370,6 +3375,9 @@ let COMPONENT_READ_OVER_WRITE_CONV =
         rule_same_matched := true;
         MP th (VALID_COMPONENT_CONV(lhand(concl th)))
     with Failure _ ->
+      try let th = rule_sub tm in
+          MP th (VALID_COMPONENT_CONV(lhand(concl th)))
+      with Failure _ ->
       try let th = rule_orth tm in
           rule_orth_matched := true;
           MP th (orth_rule(lhand(concl th)))
