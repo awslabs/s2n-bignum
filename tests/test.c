@@ -14465,8 +14465,8 @@ int test_mldsa_intt(void)
 // It converts from AVX2 lane-interleaved layout to sequential layout.
 //
 // Mathematical specification:
-//   For each block b ∈ {0, 1, 2, 3}:
-//     For each position i ∈ {0, ..., 63}:
+//   For each block b in {0, 1, 2, 3}:
+//     For each position i in {0, ..., 63}:
 //       output[64*b + i] = input[64*b + (i mod 8) * 8 + (i div 8)]
 //
 // This transposes the organization from:

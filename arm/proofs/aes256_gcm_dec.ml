@@ -630,7 +630,7 @@ let AES256_GCM_DEC_EXEC = ARM_MK_EXEC_RULE aes256_gcm_dec_tmc;;
 
 (* Tail-loop variant of the input split.  The tail block is loaded by the         *)
 (* POST-INDEXED "ldp x22,x23,[x0],#16": the ARM model reads the second register    *)
-(* x23 from address in_p + word((64*loop_count + 16*i) + 8) — the "+ 8" stays a    *)
+(* x23 from address in_p + word((64*loop_count + 16*i) + 8) -- the "+ 8" stays a   *)
 (* separate num-level summand because the block offset (64*loop_count + 16*i) has   *)
 (* a symbolic i, so NUM_ADD_CONV cannot fold it.  The plain SPLIT + NORMALISE (no   *)
 (* ADD_ASSOC/NUM fold) reproduces exactly that address form, letting the           *)
