@@ -427,6 +427,7 @@ AES_XTS_OBJ = aes-xts/aes_xts_decrypt.o \
               aes-xts/aes_xts_encrypt.o
 
 AES_GCM_OBJ = aes_gcm/aes128_gcm_dec.o \
+              aes_gcm/aes128_gcm_dec_alt.o \
               aes_gcm/aes128_gcm_enc.o \
               aes_gcm/aes256_gcm_dec.o \
               aes_gcm/aes256_gcm_dec_alt.o \
