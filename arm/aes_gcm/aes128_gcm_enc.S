@@ -534,8 +534,8 @@
         .align        4
 S2N_BN_SYMBOL(aes128_gcm_enc):
 
-    // AARCH64_VALID_CALL_TARGET
         CFI_START
+        AARCH64_VALID_CALL_TARGET
         CFI_DEC_SP(STACK_SIZE)
 
 

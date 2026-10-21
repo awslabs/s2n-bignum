@@ -35,6 +35,7 @@ needs "arm/proofs/utils/aes_gcm_common.ml";;
 
 let aes128_gcm_dec_mc = define_assert_from_elf "aes128_gcm_dec_mc" "arm/aes_gcm/aes128_gcm_dec.o"
 [
+  0xd503245f;       (* arm_BTI *)
   0xd10383ff;       (* arm_SUB SP SP (rvalue (word 224)) *)
   0xa90053f3;       (* arm_STP X19 X20 SP (Immediate_Offset (iword (&0))) *)
   0xa9015bf5;       (* arm_STP X21 X22 SP (Immediate_Offset (iword (&16))) *)
@@ -784,7 +785,14 @@ let aes128_gcm_dec_mc = define_assert_from_elf "aes128_gcm_dec_mc" "arm/aes_gcm/
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
-let AES128_GCM_DEC_EXEC = ARM_MK_EXEC_RULE aes128_gcm_dec_mc;;
+(* The code begins with the BTI landing pad (bti c).  As for x86 IBT, the    *)
+(* proofs are about the trimmed code without it, which is also the code of a *)
+(* -DNO_IBT build, and the subroutine theorems for the full code are derived *)
+(* from them by ARM_ADD_IBT_RULE.                                            *)
+
+let aes128_gcm_dec_tmc = define_trimmed "aes128_gcm_dec_tmc" aes128_gcm_dec_mc;;
+
+let AES128_GCM_DEC_EXEC = ARM_MK_EXEC_RULE aes128_gcm_dec_tmc;;
 let EXEC = AES128_GCM_DEC_EXEC;;
 
 (* ------------------------------------------------------------------------- *)
@@ -1364,7 +1372,7 @@ let CLOSE_V8 : tactic =
 let ap inv i s = rhs(concl(REDEPTH_CONV BETA_CONV (list_mk_comb(inv,[i;s]))));;
 let leg_state off body =
   mk_abs(`s:armstate`,
-    list_mk_conj(`aligned_bytes_loaded s (word pc) aes128_gcm_dec_mc` ::
+    list_mk_conj(`aligned_bytes_loaded s (word pc) aes128_gcm_dec_tmc` ::
                  mk_eq(`read PC s`, mk_comb(`word:num->int64`, mk_binop `+` `pc:num` off)) ::
                  conjuncts body));;
 let inv_state off idx = leg_state off (ap swp_inv idx `s:armstate`);;
@@ -2259,14 +2267,14 @@ let AES128_GCM_DEC_CORRECT = prove
        ALLPAIRS nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
-        [(word pc, LENGTH aes128_gcm_dec_mc);
+        [(word pc, LENGTH aes128_gcm_dec_tmc);
          (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 96)] /\
        PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
     ==>
     ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aes128_gcm_dec_mc /\
+      (\s. aligned_bytes_loaded s (word pc) aes128_gcm_dec_tmc /\
            read PC s = word (pc + 0x2c) /\
            read SP s = stackpointer /\
            C_ARGUMENTS
@@ -2695,6 +2703,67 @@ let AES128_GCM_DEC_CORRECT = prove
  *** obligation is discharged with no residual subgoal.
  ***)
 
+let AES128_GCM_DEC_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!in_p out_p len_bits tag_p ivec_p key_p htable_p tag0 nonce c rk inblock
+    pc stackpointer returnaddress.
+    aligned 16 stackpointer /\
+    ALLPAIRS nonoverlapping
+      [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
+       (word_sub stackpointer (word 224), 224)]
+      [(word pc, LENGTH aes128_gcm_dec_tmc);
+       (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 96)] /\
+    PAIRWISE nonoverlapping
+      [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
+       (word_sub stackpointer (word 224), 224)]
+    ==>
+    ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aes128_gcm_dec_tmc /\
+           read PC s = word pc /\
+           read SP s = stackpointer /\
+           read X30 s = returnaddress /\
+           C_ARGUMENTS
+            [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
+           read (memory :> bytes128 tag_p)  s = word_reversefields 8 tag0 /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8 (ctr_block nonce c) /\
+           wordlist_from_memory(key_p,11) s =
+             MAP (word_reversefields 8) rk /\
+           (!i. i < val len_bits DIV 128
+                ==> read (memory :> bytes128 (word_add in_p (word(16*i)))) s =
+                    inblock i) /\
+           htable_mem_4 (ghash_twist (aes128_cipher (word 0) rk))
+                      htable_p s)
+      (\s. read PC s = returnaddress /\
+           (!i. i < val len_bits DIV 128
+                ==> read (memory :> bytes128 (word_add out_p (word(16*i)))) s =
+                    word_xor (aes_ctr_block aes128_cipher c nonce rk i) (inblock i)) /\
+           read (memory :> bytes128 tag_p) s =
+             word_reversefields 8
+              (nist_ghash (aes128_cipher (word 0) rk) tag0
+                 (list_of_seq (nist_input_block inblock)
+                              (val len_bits DIV 128))) /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8
+               (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read X0 s = word (val len_bits DIV 8))
+      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
+                  memory :> bytes(tag_p, 16);
+                  memory :> bytes(ivec_p, 16);
+                  memory :> bytes(word_sub stackpointer (word 224), 224)])`,
+  REWRITE_TAC[fst AES128_GCM_DEC_EXEC; htable_mem_4] THEN
+  CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
+  ARM_ADD_RETURN_STACK_TAC
+    ~pre_post_nsteps:(11, 11)
+    AES128_GCM_DEC_EXEC
+    (CONV_RULE(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV)
+       (REWRITE_RULE[fst AES128_GCM_DEC_EXEC; htable_mem_4]
+          AES128_GCM_DEC_CORRECT))
+    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30;
+      D8; D9; D10; D11; D12; D13; D14; D15]` 224);;
+
+(* The same for the full code, with its BTI landing pad. *)
+
 let AES128_GCM_DEC_SUBROUTINE_CORRECT = prove
  (`!in_p out_p len_bits tag_p ivec_p key_p htable_p tag0 nonce c rk inblock
     pc stackpointer returnaddress.
@@ -2743,16 +2812,8 @@ let AES128_GCM_DEC_SUBROUTINE_CORRECT = prove
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16);
                   memory :> bytes(word_sub stackpointer (word 224), 224)])`,
-  REWRITE_TAC[fst AES128_GCM_DEC_EXEC; htable_mem_4] THEN
-  CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
-  ARM_ADD_RETURN_STACK_TAC
-    ~pre_post_nsteps:(11, 11)
-    AES128_GCM_DEC_EXEC
-    (CONV_RULE(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV)
-       (REWRITE_RULE[fst AES128_GCM_DEC_EXEC; htable_mem_4]
-          AES128_GCM_DEC_CORRECT))
-    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30;
-      D8; D9; D10; D11; D12; D13; D14; D15]` 224);;
+  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE ~extra:[htable_mem_4; wordlist_from_memory]
+    aes128_gcm_dec_mc aes128_gcm_dec_tmc AES128_GCM_DEC_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Constant-time and memory-safety proofs (core kernel body + full subroutine).*)
@@ -2822,13 +2883,13 @@ let AES128_GCM_DEC_SAFE = prove
       ALLPAIRS nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
-        [(word pc, LENGTH aes128_gcm_dec_mc);
+        [(word pc, LENGTH aes128_gcm_dec_tmc);
          (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 96)] /\
       PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
       ==> ensures arm
-          (\s. aligned_bytes_loaded s (word pc) aes128_gcm_dec_mc /\
+          (\s. aligned_bytes_loaded s (word pc) aes128_gcm_dec_tmc /\
                read PC s = word (pc + 0x2c) /\
                read SP s = stackpointer /\
                C_ARGUMENTS [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
@@ -2936,6 +2997,49 @@ let AES128_GCM_DEC_SAFE = prove
 (* correctness theorem is: the 11-instruction prologue and epilogue save and *)
 (* restore the callee-saved registers in a 224-byte frame.                   *)
 (* ------------------------------------------------------------------------- *)
+let AES128_GCM_DEC_NOIBT_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+    forall e in_p len_bits out_p tag_p ivec_p key_p htable_p pc stackpointer returnaddress.
+      aligned 16 stackpointer /\
+      ALLPAIRS nonoverlapping
+        [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
+         (word_sub stackpointer (word 224), 224)]
+        [(word pc, LENGTH aes128_gcm_dec_tmc);
+         (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 96)] /\
+      PAIRWISE nonoverlapping
+        [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
+         (word_sub stackpointer (word 224), 224)]
+      ==> ensures arm
+          (\s. aligned_bytes_loaded s (word pc) aes128_gcm_dec_tmc /\
+               read PC s = word pc /\
+               read SP s = stackpointer /\
+               read X30 s = returnaddress /\
+               C_ARGUMENTS [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
+               read events s = e)
+          (\s. read PC s = returnaddress /\
+               (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events in_p out_p tag_p ivec_p key_p htable_p len_bits pc
+                           (word_sub stackpointer (word 224)) returnaddress /\
+                    memaccess_inbounds e2
+                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 176; htable_p, 96;
+                       out_p, 16 * val len_bits DIV 128; word_sub stackpointer (word 224), 224]
+                      [out_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16;
+                       word_sub stackpointer (word 224), 224]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
+                      memory :> bytes(tag_p, 16);
+                      memory :> bytes(ivec_p, 16);
+                      memory :> bytes(word_sub stackpointer (word 224), 224)])`,
+  ARM_ADD_RETURN_STACK_TAC
+    ~pre_post_nsteps:(11, 11)
+    AES128_GCM_DEC_EXEC AES128_GCM_DEC_SAFE
+    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30;
+      D8; D9; D10; D11; D12; D13; D14; D15]` 224 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* The same for the full code, with its BTI landing pad. *)
+
 let AES128_GCM_DEC_SUBROUTINE_SAFE = prove
  (`exists f_events.
     forall e in_p len_bits out_p tag_p ivec_p key_p htable_p pc stackpointer returnaddress.
@@ -2970,9 +3074,5 @@ let AES128_GCM_DEC_SUBROUTINE_SAFE = prove
                       memory :> bytes(tag_p, 16);
                       memory :> bytes(ivec_p, 16);
                       memory :> bytes(word_sub stackpointer (word 224), 224)])`,
-  ARM_ADD_RETURN_STACK_TAC
-    ~pre_post_nsteps:(11, 11)
-    AES128_GCM_DEC_EXEC AES128_GCM_DEC_SAFE
-    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30;
-      D8; D9; D10; D11; D12; D13; D14; D15]` 224 THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE
+    aes128_gcm_dec_mc aes128_gcm_dec_tmc AES128_GCM_DEC_NOIBT_SUBROUTINE_SAFE));;
