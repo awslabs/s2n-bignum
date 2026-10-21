@@ -233,6 +233,58 @@ jobs:
           S2N_BIGNUM_SEMATEST_SEED=1 \
           ./riscv/proofs/simulator.native
 
+  s2n-bignum-sematest-riscv-sail:
+    runs-on: ubuntu-24.04
+
+    env:
+      SAIL_RISCV_VERSION: "0.16"
+      SAIL_RISCV_SHA256: "f9bb8a32b8f3eddbdf69b3a29d96dff4ba1e77f45877165e0478418367da6bee"
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependent packages
+      run: |
+        sudo apt update
+        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl \
+          libgmp-dev xdot \
+          gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
+        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
+        chmod +x install.sh
+        echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
+        opam init --disable-sandboxing
+
+    - name: Install the Sail RISC-V model
+      run: |
+        wget https://github.com/riscv/sail-riscv/releases/download/${{ env.SAIL_RISCV_VERSION }}/sail-riscv-Linux-x86_64.tar.gz
+        echo "${{ env.SAIL_RISCV_SHA256 }}  sail-riscv-Linux-x86_64.tar.gz" | sha256sum -c
+        tar -xzf sail-riscv-Linux-x86_64.tar.gz
+        echo "SAIL_RISCV_SIM=`pwd`/sail-riscv-Linux-x86_64/bin/sail_riscv_sim" >> "$GITHUB_ENV"
+
+    - name: Install HOL Light
+      run: |
+        git clone https://github.com/jrh13/hol-light.git
+        cd hol-light
+        git checkout ${{ env.HOLLIGHT_COMMIT }}
+        make switch-5
+        eval $(opam env)
+        echo $(ocamlc -version)
+        echo $(camlp5 -v)
+        HOLLIGHT_USE_MODULE=1 make
+        cd ..
+
+    - name: Run RV32IM cosimulation tests on the Sail model
+      run: |
+        export HOLDIR=`pwd`/hol-light
+        make -C riscv \
+          HOLDIR="$HOLDIR" \
+          proofs/simulator.native proofs/sail-cosim.elf
+        env S2N_BIGNUM_RV32IM_EXECUTOR=./riscv/proofs/sail-cosim-runner \
+          S2N_BIGNUM_SEMATEST_SECONDS=2400 \
+          S2N_BIGNUM_SEMATEST_SEED=1 \
+          ./riscv/proofs/simulator.native
+
   s2n-bignum-tutorial:
     strategy:
       matrix:
