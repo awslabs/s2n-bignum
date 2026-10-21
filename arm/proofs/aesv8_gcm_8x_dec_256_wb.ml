@@ -12283,18 +12283,14 @@ let close_tail_residue rr =
        the `I` traversal raises on a no-match).  prove_tail_safe above does the
        same REWRITE_TAC[contained] before its own contained closer.
 
-       CONV_TAC NUM_REDUCE_CONV is deliberately NOT in this chain.  It cannot
-       close any conjunct here (nblk is symbolic), and it "succeeds" as a *no-op*
-       on the nonoverlapping, contained and `1 <= nblk` shapes alike -- so
-       wherever it sits ahead of a real handler it satisfies ORELSE, that handler
-       never runs, and the conjunct stays open, leaving the antecedent branch
-       with nothing for ANTS_TAC's DISCH_TAC to discharge.  The 9..16
-       bands can keep it only because nblk is a numeral there, so the reduction
-       genuinely closes their conjuncts. *)
-    (WB_FIRST_NONOVERLAPPING_TAC ORELSE
-     (REWRITE_TAC[contained] THEN CONTAINED_TAC) ORELSE
-     CONTAINED_TAC ORELSE
-     NBLK_ARITH_TAC);
+       As in the 9..16 chain below, MUST makes every alternative close its
+       conjunct or fail.  Unlike that chain there is no NUM_REDUCE step: nblk is
+       symbolic, so it would close none of these conjuncts. *)
+    FIRST (map MUST
+     [WB_FIRST_NONOVERLAPPING_TAC;
+      REWRITE_TAC[contained] THEN CONTAINED_TAC;
+      CONTAINED_TAC;
+      NBLK_ARITH_TAC]);
     ALL_TAC] THEN
   USE_WB_COMPOSED_TAIL_SAFE_TAC
    (GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN
@@ -12311,6 +12307,9 @@ let close_tail_residue rr =
 (* per-band closer for nblk 9..16, concretizing off the shared symbolic front. *)
 let close_916_band k =
   let r = k - 8 in
+  let structural_closers =
+    [REWRITE_TAC[contained] THEN CONTAINED_TAC; CONTAINED_TAC;
+     WB_FIRST_NONOVERLAPPING_TAC] in
   UNDISCH_TAC (mk_eq(`nblk:num`, mk_small_numeral k)) THEN DISCH_THEN SUBST_ALL_TAC THEN
   RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN
   (* s606, not s517: the shared front must walk all the way to the tail
@@ -12325,32 +12324,21 @@ let close_916_band k =
   ANTS_TAC THENL
    [REWRITE_TAC[ALLPAIRS; ALL; WB_MC_LEN] THEN
     REPEAT CONJ_TAC THEN
-    (* Order matters, and NUM_REDUCE must come LAST.  As a tactic,
-       CONV_TAC NUM_REDUCE_CONV *succeeds without closing* on any conjunct that
-       merely contains a reducible numeral: on `contained (in_p+128,16*1)
-       (in_p,16*9)` it returns the same goal with `16*1`/`16*9` folded to
-       `16`/`144`.  Listed first in an ORELSE it therefore swallows every
-       structural conjunct and shadows the alternatives that would close them,
-       leaving all six open -- which is silent, because a stage that leaves
-       subgoals does not fail.  The two arithmetic conjuncts (`1 <= 9`,
-       `128 * 9 < 2 EXP 64`) are the only ones NUM_REDUCE genuinely discharges.
-       Of the rest, both `contained` goals close under the unfold and all four
-       `nonoverlapping` goals under WB_FIRST_NONOVERLAPPING_TAC.  The >=17
-       antecedent chain above avoids the same trap. *)
-    ((REWRITE_TAC[contained] THEN CONTAINED_TAC) ORELSE
-     CONTAINED_TAC ORELSE
-     WB_FIRST_NONOVERLAPPING_TAC ORELSE
-     (* Last resort, and note the retry: NUM_REDUCE is useful here in two
-        different ways.  On the two arithmetic conjuncts it closes the goal
-        outright.  On a structural conjunct whose numerals are still unfolded
-        (`nonoverlapping (out_p,16 * 9) ...`) it closes nothing but normalizes
-        the spelling, after which the structural closers above do apply -- so
-        retry them rather than stopping.  TRY keeps the arithmetic case working,
-        where the retry has nothing left to do. *)
-     (CONV_TAC NUM_REDUCE_CONV THEN
-      TRY((REWRITE_TAC[contained] THEN CONTAINED_TAC) ORELSE
-          CONTAINED_TAC ORELSE
-          WB_FIRST_NONOVERLAPPING_TAC)));
+    (* MUST, the fail-closed guard of the shared leaf closers, makes every
+       alternative close its conjunct or fail, so one that merely rewrites (as
+       NUM_REDUCE does to any conjunct with a reducible numeral) cannot shadow
+       the alternatives after it; their order affects only speed.  Both
+       `contained` conjuncts close under the unfold and all four
+       `nonoverlapping` ones under WB_FIRST_NONOVERLAPPING_TAC.  NUM_REDUCE
+       closes the two arithmetic conjuncts (`1 <= 9`, `128 * 9 < 2 EXP 64`); on
+       a structural conjunct whose numerals are still unfolded (`nonoverlapping
+       (out_p,16 * 9) ...`) it only normalizes the spelling, so the structural
+       closers are retried after it.  TRY keeps the arithmetic case, where the
+       retry has nothing left to do. *)
+    FIRST (map MUST
+     (structural_closers @
+      [CONV_TAC NUM_REDUCE_CONV THEN
+       TRY(FIRST (map MUST structural_closers))]));
     ALL_TAC] THEN
   USE_WB_COMPOSED_TAIL_SAFE_TAC
    (GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN
@@ -12503,8 +12491,7 @@ let AESV8_GCM_8X_DEC_256_WB_SAFE = prove
 
    f_events_core is a placeholder for the core's trace; the only part that
    cannot be written down is which variable holds it, since
-   ASSUME_CALLEE_SAFETY_TAILED_TAC mints that name from a counter of its own
-   (fresh_f_events_var_counter, in ASSUME_CALLEE_SAFETY_TAC). *)
+   ASSUME_CALLEE_SAFETY_TAILED_TAC chooses that variable itself. *)
 let wrapper_witness_template =
  `\(in_p:int64) (key_p:int64) (htbl_p:int64) (out_p:int64) (xi_p:int64)
    (ivec_p:int64) (bit_len:int64) (pc:num) (sp:int64) (ra:int64).
@@ -12535,14 +12522,14 @@ let f_events_core_placeholder =
   find_term (fun t -> is_var t && name_of t = "f_events_core")
             wrapper_witness_template;;
 
-(* Plug the core's chosen f_events variable into the template above.  The corpus reads
-   that variable the same way, by its name prefix: EXISTS_E2_TAC and
-   FULL_UNIFY_F_EVENTS_TAC in common/consttime.ml. *)
+(* Plug the core's chosen f_events variable into the template above.  The core
+   theorem is closed, so the labelled CORE assumption has exactly one free
+   variable, the chosen one; reading it off that way does not depend on the
+   name ASSUME_CALLEE_SAFETY_TAC mints for it. *)
 let build_wrapper_witness (asl:(string*thm)list) : term =
-  let fev = find_term
-     (fun t -> is_var t && find_substring (name_of t) "f_events_callee" <> None)
-     (concl (assoc "CORE" asl)) in
-  subst [fev, f_events_core_placeholder] wrapper_witness_template;;
+  match frees (concl (assoc "CORE" asl)) with
+    [fev] -> subst [fev, f_events_core_placeholder] wrapper_witness_template
+  | _ -> failwith "build_wrapper_witness: CORE is not a closed core theorem";;
 
 let ARBITRARY_WRAPPER_SAFE_TAC coreth =
   ASSUME_CALLEE_SAFETY_TAILED_TAC coreth "CORE" THEN
