@@ -11277,28 +11277,39 @@ let rec DRIVE_TAC target maxsteps : tactic = fun (asl,w) ->
     (ARM_QSTEP_TAC EXEC ("s"^string_of_int (sidx+1)) THEN
      DRIVE_TAC target (maxsteps-1)) (asl,w);;
 
-(* ---- concrete-band prep: unfold list wrappers, keep nonoverlapping FOLDED,
-   split the conjunctive nonoverlapping asms, init state s0 ---- *)
-let BAND_PREP_TAC =
+(* ---- the opening of every simulated leg: unfold the list wrappers of the
+   nonoverlapping hypotheses (keeping nonoverlapping itself FOLDED, with the
+   code length as a numeral), split the resulting conjunctions into single
+   assumptions, init state s0 ---- *)
+let LEG_INIT_TAC =
   RULE_ASSUM_TAC(REWRITE_RULE[ALL; ALLPAIRS; PAIRWISE; MAP; WB_MC_LEN]) THEN
   REPEAT(FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC o check (is_conj o concl))) THEN
   ENSURES_INIT_TAC "s0";;
 
-(* ---- UNIFORM concrete-band closer: prep, then DRIVE from s0 to pc+4560, finalize.
+(* ---- UNIFORM concrete-band closer: open, then DRIVE from s0 to pc+4560, finalize.
    Works for ANY concrete nblk (1..16): every branch condition is concrete arithmetic
    the resolver reduces directly, so no band-specific step count or front prefix.
    The symbolic NBLK_ARITH lemmas are only needed for the symbolic >=17 leg. ---- *)
 let concrete_band_close_tac =
-  BAND_PREP_TAC THEN
+  LEG_INIT_TAC THEN
   DRIVE_TAC 4560 700 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
 
+(* ---- the case split shared by the band and residue dispatches: assert
+   x = lo \/ ... \/ x = hi, proved by side_tac, and leave the cases in order.
+   BOUNDS_ARITH_TAC proves such a disjunction from the named bounds alone,
+   without the rest of a leg's context. ---- *)
+let WB_CASES_TAC x (lo,hi) side_tac =
+  let disj = end_itlist (fun a b -> mk_disj(a,b))
+     (map (fun k -> mk_eq(x, mk_small_numeral k)) (lo--hi)) in
+  SUBGOAL_THEN disj MP_TAC THENL [side_tac; ALL_TAC] THEN STRIP_TAC;;
+
+let BOUNDS_ARITH_TAC bnds =
+  MAP_EVERY (MP_TAC o ASSUME) bnds THEN POP_ASSUM_LIST(K ALL_TAC) THEN ARITH_TAC;;
+
 (* ---- n-way concrete split of a bounded nblk leg (lo..hi), then close each band ---- *)
 let split_close_tac lo hi =
-  let disj = end_itlist (fun a b -> mk_disj(a,b))
-     (map (fun k -> mk_eq(`nblk:num`, mk_small_numeral k)) (lo--hi)) in
-  SUBGOAL_THEN disj MP_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  STRIP_TAC THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
+  WB_CASES_TAC `nblk:num` (lo,hi) ASM_ARITH_TAC THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
   CONV_TAC NUM_REDUCE_CONV THEN RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN REWRITE_TAC[] THEN
   concrete_band_close_tac;;
 
@@ -11510,16 +11521,27 @@ let wbn_tail_safeties =
     WB_TAIL_SAFE_5_EXISTS; WB_TAIL_SAFE_6_EXISTS;
     WB_TAIL_SAFE_7_EXISTS; WB_TAIL_SAFE_8_EXISTS];;
 
-(* Specialize a selected tail theorem to the current accumulated event trace,
-   using the state equation's RHS so the old state variable does not survive
-   ARM_BIGSTEP_TAC's cleanup. *)
-let MP_WB_TAIL_SAFE_TAC r sname args : tactic = fun (asl,w) ->
-  let st = mk_var(sname,`:armstate`) in
-  let evth = snd(List.find (fun (_,th) ->
+(* The accumulated event trace of state st: the RHS of its `read events st`
+   assumption. *)
+let events_of_state asl st =
+  rhs(concl(snd(find (fun (_,th) ->
     let c = concl th in
     is_eq c &&
-    (try rator(lhs c) = `read events` && rand(lhs c) = st with _ -> false)) asl) in
-  MP_TAC(SPECL (rhs(concl evth) :: args) (el (r-1) wbn_tail_safeties)) (asl,w);;
+    (try rator(lhs c) = `read events` && rand(lhs c) = st with _ -> false))
+    asl)));;
+
+(* Specialize the selected r-block tail theorem to a leg with block count nblk
+   whose residual tail reads tail_in and writes tail_out, at the current
+   accumulated event trace of state sname.  Using the state equation's RHS keeps
+   the old state variable from surviving ARM_BIGSTEP_TAC's cleanup. *)
+let MP_WB_TAIL_SAFE_TAC r sname nblk tail_in tail_out : tactic =
+  let args =
+    [`pc:num`; `stackpointer:int64`; `in_p:int64`; `out_p:int64`;
+     `xi_p:int64`; `ivec_p:int64`; `key_p:int64`; `htbl_p:int64`;
+     nblk; tail_in; tail_out] in
+  fun (asl,w) ->
+    let ev = events_of_state asl (mk_var(sname,`:armstate`)) in
+    MP_TAC(SPECL (ev :: args) (el (r-1) wbn_tail_safeties)) (asl,w);;
 
 (* These back-legs already finish at the enclosing safety theorem's final PC.
    Consume their ensures theorem directly instead of passing it through
@@ -11605,28 +11627,33 @@ let USE_WB_COMPOSED_TAIL_SAFE_TAC post_tac : tactic =
       SUBSUMED_MAYCHANGE_TAC;
       post_tac]);;
 
-(* Targeted stand-in for the blanket ASM_REWRITE_TAC[] at the head of a composed
-   tail's post-tactic.  A blanket call there stack-overflows on the 9..16 and >=17
-   legs: unlike the 5..8 legs, whose tail starts at s0, these reach the tail after a
-   long symbolic front, so the assumption list additionally carries that front's
-   per-state reads plus front_916_setup_tac's asserted USHR / AND-mask / DIVISION
-   identities, and the resulting rewrite net cycles.  ASM_SIMP_TAC is no better: same
-   assumption set, same net.  Two measures are needed, since narrowing the assumption
-   set alone still overflows:
+(* ---- net-safe rewriting for the composed tails.  On the 9..16 and >=17 legs,
+   which reach their tail after a long symbolic front, the assumption list carries
+   that front's per-state reads plus front_916_setup_tac's asserted USHR /
+   AND-mask / DIVISION identities, among which are cyclic equation pairs.  A
+   rewrite *net* (REWRITE_TAC, ASM_SIMP_TAC, any TOP_DEPTH traversal) re-descends
+   into its own output and diverges on such a pair, overflowing the stack
+   ("looping recursion?"); narrowing the assumption set alone does not prevent
+   it.  A single ONCE_DEPTH pass rewrites every redex at most once and cannot
+   cycle, so WB_BOUNDED_REWRITE_CONV ths k repeats such passes only while the
+   term keeps changing, and at most k times.
 
-   (a) Filter.  The postcondition here mentions only the freshly generalized final
-   state and the event list, so only three kinds of assumption can contribute:
-   variable definitions (the stripped `e2 = f_events ...`), reads of a state the goal
-   still mentions, and the `val (word ...)` size facts the enclosing spec's buffer
-   bounds are phrased over.  The rest are dropped rather than discharged.
+   wb_tail_rewrite_asms selects the assumptions a composed tail's goal can use.
+   That goal mentions only the freshly generalized final state and the event
+   list, so only three kinds of assumption can contribute: variable definitions
+   (the stripped `e2 = f_events ...`), reads of a state the goal still mentions,
+   and the `val (word ...)` size facts the enclosing spec's buffer bounds are
+   phrased over.  The rest are dropped rather than discharged. ---- *)
+let WB_BOUNDED_REWRITE_CONV ths k tm =
+  let conv = GEN_REWRITE_CONV ONCE_DEPTH_CONV ths in
+  let rec go k tm =
+    if k <= 0 then REFL tm else
+    let th = try conv tm with Failure _ -> REFL tm in
+    let tm' = rhs(concl th) in
+    if tm' = tm then th else TRANS th (go (k-1) tm') in
+  go k tm;;
 
-   (b) Bounded traversal, which is what actually breaks the loop.  A rewrite *net*
-   diverges on a cyclic equation pair, where a single ONCE_DEPTH pass terminates.
-   Each pass below is one ONCE_DEPTH traversal, so it rewrites every redex at most
-   once and cannot cycle; passes repeat only while the goal keeps changing, and at
-   most 12 times.  The trailing REWRITE_TAC[] closes the trivial conjuncts a blanket
-   call would. *)
-let WB_TAIL_POST_ASM_REWRITE_TAC : tactic = fun (asl,w) ->
+let wb_tail_rewrite_asms (asl,w) =
   let gvars = frees w in
   let usable th =
     let c = concl th in
@@ -11637,14 +11664,16 @@ let WB_TAIL_POST_ASM_REWRITE_TAC : tactic = fun (asl,w) ->
       | Const("read",_), [_; st] -> mem st gvars
       | Const("val",_), _ -> true
       | _ -> false)) in
-  let ths = map snd (filter (usable o snd) asl) in
-  let conv = GEN_REWRITE_CONV ONCE_DEPTH_CONV ths in
-  let rec go k tm =
-    if k <= 0 then REFL tm else
-    let th = try conv tm with Failure _ -> REFL tm in
-    let tm' = rhs(concl th) in
-    if tm' = tm then th else TRANS th (go (k-1) tm') in
-  (CONV_TAC (go 12) THEN REWRITE_TAC[]) (asl,w);;
+  map snd (filter (usable o snd) asl);;
+
+(* Targeted stand-in for the blanket ASM_REWRITE_TAC[] at the head of a composed
+   tail's post-tactic, which overflows on the 9..16 and >=17 legs (unlike the 5..8
+   legs, whose tail starts at s0); ASM_SIMP_TAC is no better, having the same
+   assumption set and the same net.  The trailing REWRITE_TAC[] closes the trivial
+   conjuncts a blanket call would. *)
+let WB_TAIL_POST_ASM_REWRITE_TAC : tactic = fun (asl,w) ->
+  (CONV_TAC (WB_BOUNDED_REWRITE_CONV (wb_tail_rewrite_asms (asl,w)) 12) THEN
+   REWRITE_TAC[]) (asl,w);;
 
 (* After MEMACCESS_INBOUNDS_APPEND splits the trace, the first conjunct is the
    reusable tail theorem's own `memaccess_inbounds` postcondition, which is already
@@ -11709,22 +11738,12 @@ let WB_TAIL_EVENTS_DISCHARGE_TAC : tactic = fun (asl,w) ->
      one, leaving the two epsilon terms still unequal.  It is a terminating
      orientation (the RHS is a strict subterm), so a full traversal cannot cycle.
 
-     The assumption-derived rules must NOT get TOP_DEPTH: it stack-overflows
-     ("looping recursion?") on exactly the cyclic-pair hazard documented on
-     WB_TAIL_POST_ASM_REWRITE_TAC above.  But a single ONCE_DEPTH pass
-     is also not enough -- the bounds needing rewriting sit *inside* the epsilon's
-     body, below the first redex the pass consumes, so goal and assumption normalize
-     to shapes that still differ there.  Use the same bounded-repetition shape as
-     that helper: each pass is one ONCE_DEPTH traversal, so it cannot cycle, and
-     passes repeat only while the term keeps changing. *)
-  let bounded_rewr ths k tm =
-    let conv = GEN_REWRITE_CONV ONCE_DEPTH_CONV ths in
-    let rec go k tm =
-      if k <= 0 then REFL tm else
-      let th = try conv tm with Failure _ -> REFL tm in
-      let tm' = rhs(concl th) in
-      if tm' = tm then th else TRANS th (go (k-1) tm') in
-    go k tm in
+     The assumption-derived rules must NOT get TOP_DEPTH: it overflows on the
+     cyclic-pair hazard described at WB_BOUNDED_REWRITE_CONV.  But a single
+     ONCE_DEPTH pass is also not enough -- the bounds needing rewriting sit
+     *inside* the epsilon's body, below the first redex the pass consumes, so goal
+     and assumption normalize to shapes that still differ there -- hence the
+     repeated passes of WB_BOUNDED_REWRITE_CONV. *)
   (* APPEND_NIL must run BOTH before and after the assumption-rule expansion.
      On the goal side the wrappers are present from the start, so the leading pass
      strips them.  On the assumption side they are not: there the trace is still the
@@ -11743,7 +11762,7 @@ let WB_TAIL_EVENTS_DISCHARGE_TAC : tactic = fun (asl,w) ->
   let append_nil_pass = TRY_CONV(GEN_REWRITE_CONV TOP_DEPTH_CONV [APPEND_NIL]) in
   let nconv =
     append_nil_pass THENC
-    (if rules = [] then ALL_CONV else bounded_rewr rules 12) THENC
+    (if rules = [] then ALL_CONV else WB_BOUNDED_REWRITE_CONV rules 12) THENC
     append_nil_pass THENC
     TRY_CONV(ONCE_DEPTH_CONV NUM_REDUCE_CONV) in
   let match_with f =
@@ -11762,13 +11781,10 @@ let WB_TAIL_EVENTS_DISCHARGE_TAC : tactic = fun (asl,w) ->
    call is the ASM_REWRITE_TAC[] inside
    DISCHARGE_MEMACCESS_INBOUNDS_USING_ASM_TAC, whose stated
    job is just to expand the stripped `e2 = f_events ...` definition so the
-   undischarged assumption and the goal take the same shape.  It is the same
-   failure mode WB_TAIL_POST_ASM_REWRITE_TAC and WB_TAIL_EVENTS_DISCHARGE_TAC above
-   are written around: a REWRITE_TAC builds a rewrite *net* and re-descends, so a
-   cyclic equation pair among the assumptions diverges.  The remedy is likewise the
-   same -- bound the TRAVERSAL rather than narrow the fact set, which is not
-   sufficient on its own.  The overflow needs the cycle to be reachable from the
-   goal.
+   undischarged assumption and the goal take the same shape.  It is the failure
+   mode described at WB_BOUNDED_REWRITE_CONV, and the remedy is the same: bound
+   the TRAVERSAL rather than narrow the fact set.  The overflow needs the cycle to
+   be reachable from the goal.
 
    On the shapes the stock tactic does close -- identical-term match, range
    widening, concrete goal, and APPEND-split with and without `e2` defined -- the
@@ -11778,25 +11794,14 @@ let WB_TAIL_EVENTS_DISCHARGE_TAC : tactic = fun (asl,w) ->
    call and a recursion cap on main_tac, which turns a non-shrinking trace into a
    Failure the enclosing ORELSE can act on instead of an exhausted OCaml stack.
 
-   Two bounds matter in the traversal.  Each pass
-   is a single ONCE_DEPTH traversal, so it rewrites every redex at most once and
-   cannot cycle; passes repeat, because the shapes needing normalization sit below
-   the first redex, inside the tail selector's epsilon body.  And repetition stops
-   when a term *repeats*, not merely when it stops changing: an oscillating
-   equation pair flips the term's parity on every pass, so a stabilization test
-   alone never fires and the conjunct is left unprovable. *)
+   The traversal is made of the same single ONCE_DEPTH passes as
+   WB_BOUNDED_REWRITE_CONV, repeated because the shapes needing normalization sit
+   below the first redex, inside the tail selector's epsilon body.  But here
+   repetition stops when a term *repeats*, not merely when it stops changing: an
+   oscillating equation pair flips the term's parity on every pass, so a
+   stabilization test alone never fires and the conjunct is left unprovable. *)
 let WB_BOUNDED_ASM_REWRITE_TAC (extra:thm list) : tactic = fun (asl,w) ->
-  let gvars = frees w in
-  let usable th =
-    let c = concl th in
-    is_eq c &&
-    (let l = lhs c in
-     is_var l ||
-     (match strip_comb l with
-      | Const("read",_), [_; st] -> mem st gvars
-      | Const("val",_), _ -> true
-      | _ -> false)) in
-  let rules = extra @ map snd (filter (usable o snd) asl) in
+  let rules = extra @ wb_tail_rewrite_asms (asl,w) in
   let conv = GEN_REWRITE_CONV ONCE_DEPTH_CONV rules in
   let rec go seen k tm =
     if k <= 0 then REFL tm else
@@ -11909,9 +11914,7 @@ let front_916_setup_tac =
   SUBGOAL_THEN `word_and (word_sub (word (16 * nblk)) (word 1)) (word 18446744073709551488):int64
        = word (128 * ((nblk - 1) DIV 8))` ASSUME_TAC THENL
    [MATCH_MP_TAC AND_MASK_16NBLK_ANY THEN NBLK_ARITH_GE9_TAC; ALL_TAC] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ALL; ALLPAIRS; PAIRWISE; MAP; WB_MC_LEN]) THEN
-  REPEAT(FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC o check (is_conj o concl))) THEN
-  ENSURES_INIT_TAC "s0" THEN
+  LEG_INIT_TAC THEN
   MP_TAC(SPEC `nblk:num` GUARD_LE_FALLTHRU) THEN ANTS_TAC THENL
    [CONJ_TAC THENL [NBLK_ARITH_GE9_TAC;
       MP_TAC(ASSUME `val (in_p:int64) + 16 * nblk < 2 EXP 63`) THEN NBLK_ARITH_GE9_TAC]; DISCH_TAC] THEN
@@ -12081,9 +12084,7 @@ let FRONT_58_CLOSE_TAC =
              (word 18446744073709551488):int64 = word 0`
    ASSUME_TAC THENL
    [MATCH_MP_TAC AND_MASK_16NBLK THEN ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ALL; ALLPAIRS; PAIRWISE; MAP; WB_MC_LEN]) THEN
-  REPEAT(FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC o check (is_conj o concl))) THEN
-  ENSURES_INIT_TAC "s0" THEN
+  LEG_INIT_TAC THEN
   MP_TAC(SPEC `nblk:num` GUARD_LE_FALLTHRU) THEN ANTS_TAC THENL
    [ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC; DISCH_TAC] THEN
   ARM_QSTEPS_TAC EXEC (1--267) THEN
@@ -12101,14 +12102,9 @@ let FRONT_58_CLOSE_TAC =
 let close_58_tail_band k =
   UNDISCH_TAC (mk_eq(`nblk:num`, mk_small_numeral k)) THEN DISCH_THEN SUBST_ALL_TAC THEN
   RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ALL; ALLPAIRS; PAIRWISE; MAP; WB_MC_LEN]) THEN
-  REPEAT(FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC o check (is_conj o concl))) THEN
-  ENSURES_INIT_TAC "s0" THEN
+  LEG_INIT_TAC THEN
   TRY STRIP_EXISTS_ASSUM_TAC THEN
-  MP_WB_TAIL_SAFE_TAC k "s0"
-   [`pc:num`; `stackpointer:int64`; `in_p:int64`; `out_p:int64`;
-    `xi_p:int64`; `ivec_p:int64`; `key_p:int64`; `htbl_p:int64`;
-    mk_small_numeral k; `in_p:int64`; `out_p:int64`] THEN
+  MP_WB_TAIL_SAFE_TAC k "s0" (mk_small_numeral k) `in_p:int64` `out_p:int64` THEN
   ANTS_TAC THENL
    [REWRITE_TAC[WB_CONTAINED_REFL; ALLPAIRS; ALL; WB_MC_LEN] THEN
     CONV_TAC NUM_REDUCE_CONV THEN
@@ -12195,9 +12191,7 @@ let pcbridge_i = MP WBN_PC_BRIDGE (ASSUME `9 <= nblk`);;
 
 let GE17_BODY_CLOSE_TAC =
   REPEAT STRIP_TAC THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ALL; ALLPAIRS; PAIRWISE; MAP; WB_MC_LEN]) THEN
-  REPEAT(FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC o check (is_conj o concl))) THEN
-  ENSURES_INIT_TAC "s0" THEN
+  LEG_INIT_TAC THEN
   TRY STRIP_EXISTS_ASSUM_TAC THEN
   ARM_QSTEPS_TAC EXEC (1--340) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[x0norm_i]) THEN
@@ -12230,9 +12224,7 @@ let TAIL_LEFTOVER_BYTES = prove
 (* tail setup: init, strip the accumulated e2, and simulate only the shared
    prepretail prefix to the tail compare at pc+0xee8. *)
 let GE17_TAIL_SETUP_TAC =
-  RULE_ASSUM_TAC(REWRITE_RULE[ALL; ALLPAIRS; PAIRWISE; MAP; WB_MC_LEN]) THEN
-  REPEAT(FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC o check (is_conj o concl))) THEN
-  ENSURES_INIT_TAC "s0" THEN
+  LEG_INIT_TAC THEN
   TRY STRIP_EXISTS_ASSUM_TAC THEN
   ARM_QSTEPS_TAC EXEC (1--310) THEN                (* pc+2576 -> pc+3816 *)
   MP_TAC TAIL_LEFTOVER_BYTES THEN ANTS_TAC THENL
@@ -12240,13 +12232,6 @@ let GE17_TAIL_SETUP_TAC =
   DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
   SUBGOAL_THEN `(nblk - 9) MOD 8 < 8` ASSUME_TAC THENL
    [MP_TAC(SPECL [`nblk - 9`; `8`] DIVISION) THEN REWRITE_TAC[ARITH_EQ] THEN ARITH_TAC; ALL_TAC];;
-
-let GE17_TAIL_SPLIT_TAC =
-  SUBGOAL_THEN
-   `(nblk-9)MOD 8 = 0 \/ (nblk-9)MOD 8 = 1 \/ (nblk-9)MOD 8 = 2 \/ (nblk-9)MOD 8 = 3 \/
-    (nblk-9)MOD 8 = 4 \/ (nblk-9)MOD 8 = 5 \/ (nblk-9)MOD 8 = 6 \/ (nblk-9)MOD 8 = 7` MP_TAC THENL
-   [MP_TAC(ASSUME `(nblk - 9) MOD 8 < 8`) THEN POP_ASSUM_LIST(K ALL_TAC) THEN ARITH_TAC; ALL_TAC] THEN
-   STRIP_TAC;;
 
 (* per-residue closer: drive the concrete residue tail to pc+4560, collapse the ladder
    down to this residue's f_ev_t<rr>, then discharge. *)
@@ -12256,11 +12241,9 @@ let close_tail_residue rr =
   SUBGOAL_THEN `16 * nblk = 128 * ((nblk - 9) DIV 8 + 1) + 16 * ((nblk - 9) MOD 8 + 1)` ASSUME_TAC THENL
    [MP_TAC(SPECL [`nblk - 9`; `8`] DIVISION) THEN REWRITE_TAC[ARITH_EQ] THEN
     MP_TAC(ASSUME `17 <= nblk`) THEN ARITH_TAC; ALL_TAC] THEN
-  MP_WB_TAIL_SAFE_TAC (rr+1) "s310"
-   [`pc:num`; `stackpointer:int64`; `in_p:int64`; `out_p:int64`;
-    `xi_p:int64`; `ivec_p:int64`; `key_p:int64`; `htbl_p:int64`; `nblk:num`;
-    `word_add in_p (word (128 * ((nblk - 9) DIV 8 + 1))):int64`;
-    `word_add out_p (word (128 * ((nblk - 9) DIV 8 + 1))):int64`] THEN
+  MP_WB_TAIL_SAFE_TAC (rr+1) "s310" `nblk:num`
+    `word_add in_p (word (128 * ((nblk - 9) DIV 8 + 1))):int64`
+    `word_add out_p (word (128 * ((nblk - 9) DIV 8 + 1))):int64` THEN
   ANTS_TAC THENL
    [REWRITE_TAC[ALLPAIRS; ALL; WB_MC_LEN] THEN
     REPEAT CONJ_TAC THEN
@@ -12316,11 +12299,8 @@ let close_916_band k =
      theorem's entry pc+3816, which is 89 steps past pc+3460.  And not s610 --
      by then X0 has advanced to in_p+144, so the eight precondition registers
      are simultaneously correct only at s606. *)
-  MP_WB_TAIL_SAFE_TAC r "s606"
-   [`pc:num`; `stackpointer:int64`; `in_p:int64`; `out_p:int64`;
-    `xi_p:int64`; `ivec_p:int64`; `key_p:int64`; `htbl_p:int64`;
-    mk_small_numeral k; `word_add in_p (word 128):int64`;
-    `word_add out_p (word 128):int64`] THEN
+  MP_WB_TAIL_SAFE_TAC r "s606" (mk_small_numeral k)
+    `word_add in_p (word 128):int64` `word_add out_p (word 128):int64` THEN
   ANTS_TAC THENL
    [REWRITE_TAC[ALLPAIRS; ALL; WB_MC_LEN] THEN
     REPEAT CONJ_TAC THEN
@@ -12364,10 +12344,7 @@ let CORE_SAFE_OPEN_TAC =
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
               MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
   REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `val (word (16 * nblk):int64) = 16 * nblk` ASSUME_TAC THENL
-   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `val (word (128 * nblk):int64) = 128 * nblk` ASSUME_TAC THENL
-   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC; ALL_TAC];;
+  VAL_INT64_TAC `16 * nblk` THEN VAL_INT64_TAC `128 * nblk`;;
 
 let CORE_SAFE_TAC =
   CORE_SAFE_OPEN_TAC THEN
@@ -12376,32 +12353,26 @@ let CORE_SAFE_TAC =
       split_close_tac 1 4;
       FRONT_58_ENTER_TAC THENL [
         FRONT_58_CLOSE_TAC;
-        SUBGOAL_THEN `nblk=5\/nblk=6\/nblk=7\/nblk=8` MP_TAC THENL
-         [MP_TAC(ASSUME `5 <= nblk`) THEN MP_TAC(ASSUME `nblk <= 8`) THEN
-          POP_ASSUM_LIST(K ALL_TAC) THEN ARITH_TAC; ALL_TAC] THEN
-        STRIP_TAC THENL
-         [close_58_tail_band 5; close_58_tail_band 6;
-          close_58_tail_band 7; close_58_tail_band 8]
+        WB_CASES_TAC `nblk:num` (5,8)
+          (BOUNDS_ARITH_TAC [`5 <= nblk`; `nblk <= 8`]) THENL
+         (map close_58_tail_band (5--8))
       ]
     ];
     ASM_CASES_TAC `nblk <= 16` THENL [
       front_916_setup_tac THEN front_916_sim_tac THEN ARM_QSTEPS_TAC EXEC (297--606) THEN
-      SUBGOAL_THEN `nblk=9\/nblk=10\/nblk=11\/nblk=12\/nblk=13\/nblk=14\/nblk=15\/nblk=16` MP_TAC THENL
-       [MP_TAC(ASSUME `9 <= nblk`) THEN MP_TAC(ASSUME `nblk <= 16`) THEN
-        POP_ASSUM_LIST(K ALL_TAC) THEN ARITH_TAC; ALL_TAC] THEN
-      STRIP_TAC THENL
-       [close_916_band 9; close_916_band 10; close_916_band 11; close_916_band 12;
-        close_916_band 13; close_916_band 14; close_916_band 15; close_916_band 16];
+      WB_CASES_TAC `nblk:num` (9,16)
+        (BOUNDS_ARITH_TAC [`9 <= nblk`; `nblk <= 16`]) THENL
+       (map close_916_band (9--16));
       GE17_ENTER_TAC THENL [
         GE17_FRONT_CLOSE_TAC;
         GE17_LOOP_OPEN_TAC THENL [
           GE17_COUNT_TAC;
           GE17_ENTRY_TAC;
           GE17_BODY_CLOSE_TAC;
-          GE17_TAIL_SETUP_TAC THEN GE17_TAIL_SPLIT_TAC THENL
-           [close_tail_residue 0; close_tail_residue 1; close_tail_residue 2;
-            close_tail_residue 3; close_tail_residue 4; close_tail_residue 5;
-            close_tail_residue 6; close_tail_residue 7]
+          GE17_TAIL_SETUP_TAC THEN
+          WB_CASES_TAC `(nblk - 9) MOD 8` (0,7)
+            (BOUNDS_ARITH_TAC [`(nblk - 9) MOD 8 < 8`]) THENL
+           (map close_tail_residue (0--7))
         ]
       ]
     ]
@@ -12531,6 +12502,20 @@ let build_wrapper_witness (asl:(string*thm)list) : term =
     [fev] -> subst [fev, f_events_core_placeholder] wrapper_witness_template
   | _ -> failwith "build_wrapper_witness: CORE is not a closed core theorem";;
 
+(* An early return of the entry guard, once the path's facts are assumed:
+   reduce the witness to the path's branch, simulate the n guard instructions
+   to the ret, and take e2 from the witness's `e2 = ...` conjunct, so the
+   template above is the only place the path's trace is written down.
+   close_tac closes the instantiated goal, whose trace has no memory events. *)
+let WB_GUARD_RETURN_TAC n close_tac =
+  ASM_REWRITE_TAC[COND_CLAUSES;MULT_CLAUSES;ADD_CLAUSES] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+    MODIFIABLE_SIMD_REGS;MODIFIABLE_GPRS;MODIFIABLE_UPPER_SIMD_REGS;
+    fst EXEC] THEN
+  ENSURES_INIT_TAC "s0" THEN ARM_STEPS_TAC EXEC (1--n) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  HINT_EXISTS_REFL_TAC THEN close_tac;;
+
 let ARBITRARY_WRAPPER_SAFE_TAC coreth =
   ASSUME_CALLEE_SAFETY_TAILED_TAC coreth "CORE" THEN
   W(fun (asl,w) -> EXISTS_TAC (build_wrapper_witness asl)) THEN
@@ -12558,17 +12543,8 @@ let ARBITRARY_WRAPPER_SAFE_TAC coreth =
       REWRITE_TAC[VAL_WORD_AND_MASK_WORD] THEN
       ASM_REWRITE_TAC[ARITH_RULE `2 EXP 7 = 128`];
       ALL_TAC] THEN
-    ASM_REWRITE_TAC[COND_CLAUSES;MULT_CLAUSES;ADD_CLAUSES] THEN
-    REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-      MODIFIABLE_SIMD_REGS;MODIFIABLE_GPRS;MODIFIABLE_UPPER_SIMD_REGS;
-      fst EXEC] THEN
-    ENSURES_INIT_TAC "s0" THEN ARM_STEPS_TAC EXEC (1--6) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    EXISTS_TAC
-     `[EventJump (word (pc + 5956),returnaddress);
-       EventJump (word (pc + 12),word (pc + 5952));
-       EventJump (word (pc + 4),word (pc + 8))]:(uarch_event)list` THEN
-    REWRITE_TAC[APPEND;memaccess_inbounds;ALL;EX;FST;SND]] THEN
+    WB_GUARD_RETURN_TAC 6
+      (REWRITE_TAC[APPEND;memaccess_inbounds;ALL;EX;FST;SND])] THEN
   ASM_CASES_TAC `val(bit_len:int64) = 0` THENL
    [(* Zero: cbz returns before the stack saves. *)
     SUBGOAL_THEN `nblk = 0` SUBST_ALL_TAC THENL
@@ -12578,17 +12554,9 @@ let ARBITRARY_WRAPPER_SAFE_TAC coreth =
     SUBGOAL_THEN `bit_len:int64 = word 0` SUBST_ALL_TAC THENL
      [ASM_REWRITE_TAC[GSYM VAL_EQ_0];
       ALL_TAC] THEN
-    ASM_REWRITE_TAC[COND_CLAUSES;MULT_CLAUSES;ADD_CLAUSES] THEN
-    REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-      MODIFIABLE_SIMD_REGS;MODIFIABLE_GPRS;MODIFIABLE_UPPER_SIMD_REGS;
-      fst EXEC] THEN
-    ENSURES_INIT_TAC "s0" THEN ARM_STEPS_TAC EXEC (1--4) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    EXISTS_TAC
-     `[EventJump (word (pc + 5956),returnaddress);
-       EventJump (word (pc + 4),word (pc + 5952))]:(uarch_event)list` THEN
-    REWRITE_TAC[APPEND;VAL_WORD_0] THEN CONV_TAC NUM_REDUCE_CONV THEN
-    REWRITE_TAC[memaccess_inbounds;ALL;EX;FST;SND];
+    WB_GUARD_RETURN_TAC 4
+      (REWRITE_TAC[APPEND;VAL_WORD_0] THEN CONV_TAC NUM_REDUCE_CONV THEN
+       REWRITE_TAC[memaccess_inbounds;ALL;EX;FST;SND]);
     ALL_TAC] THEN
   (* Valid nonzero: recover word (128*nblk), then use the valid-only core
      safety theorem inside the existing wrapper simulation. *)
@@ -12621,12 +12589,9 @@ let ARBITRARY_WRAPPER_SAFE_TAC coreth =
   RULE_ASSUM_TAC(REWRITE_RULE[WB_MC_LEN]) THEN
   WB_GUARD_FALLTHROUGH_TAC THEN ARM_STEPS_TAC EXEC (1--8) THEN
   W(fun (asl,w) ->
-     let s8ev = find (fun (_,th) -> let c = concl th in
-         is_eq c && (try rator(lhs c) = `read events` with _ -> false)
-                  && (try rand(lhs c) = `s8:armstate` with _ -> false)) asl in
      let pd =
        subst [`[]:(uarch_event)list`,`e:(uarch_event)list`]
-         (rhs (concl (snd s8ev))) in
+         (events_of_state asl `s8:armstate`) in
      USE_THEN "CORE" (fun cth -> MP_TAC (SPECL
        [`e:(uarch_event)list`;`pc:num`;
         `word_sub stackpointer (word 80):int64`;
