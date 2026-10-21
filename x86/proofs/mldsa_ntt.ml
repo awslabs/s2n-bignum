@@ -4633,7 +4633,10 @@ let MLDSA_NTT_CORRECT = prove
 
 (*** Rewrite with assumptions then throw them away ***)
 
-  ASM_REWRITE_TAC[] THEN DISCARD_STATE_TAC "s2337" THEN
+  W(fun (asl,_) ->
+    CONV_TAC(MEMOIZED_TOP_DEPTH_CONV
+      (GENERAL_REWRITE_CONV true I (basic_net()) (map snd asl)))) THEN
+  DISCARD_STATE_TAC "s2337" THEN
 
 (*** Remove one other non-arithmetical oddity ***)
 
