@@ -445,3 +445,53 @@ let BIGNUM_CMADD_SUBROUTINE_CORRECT = prove
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_CMADD_EXEC BIGNUM_CMADD_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/bignum_cmadd_safety.ml";;
+
+let cmadd_full_spec,cmadd_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_cmadd" subroutine_signatures)
+    BIGNUM_CMADD_SUBROUTINE_CORRECT
+    BIGNUM_CMADD_EXEC;;
+
+(* The safety proof splits on whether MIN (val n) (val p) is zero. The
+   nonzero case has a peeled first multiply-add iteration (f_ev_main1 for
+   MIN = 1) then a down-counter multiply loop, and a carry-propagation tail
+   that is itself a three-way split (no pad / one carry word / pad loop)
+   ending in the carry-out word. The zero case skips everything: with the
+   clamp giving MIN = 0 the first CBZ jumps straight to the final carry-out,
+   leaving z untouched. Everything is phrased with the clamp operand order
+   MIN n p to match the CSEL. *)
+
+let BIGNUM_CMADD_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e p z c n x pc returnaddress.
+           nonoverlapping (word pc,160) (z,8 * val p) /\
+           (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val p))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_cmadd_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p; z; c; n; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z p n pc returnaddress /\
+                         memaccess_inbounds e2 [x,val n * 8; z,val p * 8]
+                         [z,val p * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val p)])`,
+  ASSERT_CONCL_TAC cmadd_full_spec THEN
+  BIGNUM_CMADD_SAFETY_TAC BIGNUM_CMADD_EXEC
+    ~mul_start:0x38 ~mul_end:0x64 ~mul_first:14 ~mul_body:11 ~top_steps:3
+    ~one_carry_steps:9 ~carry_start:0x80 ~carry_end:0x98 ~carry_first:7
+    ~carry_exit:2);;

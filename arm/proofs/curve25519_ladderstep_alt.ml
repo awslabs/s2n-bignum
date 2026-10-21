@@ -2351,3 +2351,85 @@ let CURVE25519_LADDERSTEP_ALT_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_STACK_TAC CURVE25519_LADDERSTEP_ALT_EXEC
    CURVE25519_LADDERSTEP_ALT_CORRECT
    `[X19;X20;X21;X30]` 320);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The swap bit b is not a public     *)
+(* input: the event trace (no branches, CSEL-based selection) does not       *)
+(* depend on it.                                                             *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "curve25519_ladderstep_alt" subroutine_signatures)
+    CURVE25519_LADDERSTEP_ALT_CORRECT
+    CURVE25519_LADDERSTEP_ALT_EXEC;;
+
+let CURVE25519_LADDERSTEP_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e rr point pp b pc stackpointer.
+           aligned 16 stackpointer /\
+           ALLPAIRS nonoverlapping [rr,128; stackpointer,288]
+           [word pc,3924; point,64; pp,128] /\
+           nonoverlapping (rr,128) (stackpointer,288)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    curve25519_ladderstep_alt_mc /\
+                    read PC s = word (pc + 12) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [rr; point; pp; b] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 3908) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events point pp rr pc stackpointer /\
+                         memaccess_inbounds e2
+                         [point,64; pp,128; rr,128; stackpointer,288]
+                         [rr,128; stackpointer,288]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (rr,128); memory :> bytes (stackpointer,288)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars CURVE25519_LADDERSTEP_ALT_EXEC);;
+
+let CURVE25519_LADDERSTEP_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e rr point pp b pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALLPAIRS nonoverlapping
+         [(rr,128); (word_sub stackpointer (word 320),320)]
+         [(word pc,LENGTH curve25519_ladderstep_alt_mc); (point,64); (pp,128)] /\
+        nonoverlapping (rr,128) (word_sub stackpointer (word 320),320)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) curve25519_ladderstep_alt_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [rr; point; pp; b] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events point pp rr pc
+                              (word_sub stackpointer (word 320))
+                              returnaddress /\
+                         memaccess_inbounds e2
+                         [point,64; pp,128; rr,128;
+                          word_sub stackpointer (word 320),320]
+                         [rr,128; word_sub stackpointer (word 320),320]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(rr,128);
+                      memory :> bytes(word_sub stackpointer (word 320),320)])`,
+  REWRITE_TAC[fst CURVE25519_LADDERSTEP_ALT_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC CURVE25519_LADDERSTEP_ALT_EXEC
+    (REWRITE_RULE[fst CURVE25519_LADDERSTEP_ALT_EXEC]CURVE25519_LADDERSTEP_ALT_SAFE)
+    `[X19;X20;X21;X30]` 320 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

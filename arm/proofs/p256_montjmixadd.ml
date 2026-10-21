@@ -3103,3 +3103,81 @@ let P256_MONTJMIXADD_SUBROUTINE_CORRECT = time prove
                       memory :> bytes(word_sub stackpointer (word 208),208)])`,
   ARM_ADD_RETURN_STACK_TAC P256_MONTJMIXADD_EXEC
    P256_MONTJMIXADD_CORRECT `[X19;X20]` 208);;
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p256_montjmixadd" subroutine_signatures)
+    P256_MONTJMIXADD_CORRECT
+    P256_MONTJMIXADD_EXEC;;
+
+let P256_MONTJMIXADD_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 p2 pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,192))
+           [word pc,7804; p1,96; p2,64; p3,96] /\
+           nonoverlapping (p3,96) (word pc,7804)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) p256_montjmixadd_mc /\
+                    read PC s = word (pc + 8) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1; p2] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 7792) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p2 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,96; p2,64; p3,96; stackpointer,192]
+                         [p3,96; stackpointer,192]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,96); memory :> bytes (stackpointer,192)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P256_MONTJMIXADD_EXEC);;
+
+let P256_MONTJMIXADD_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 p2 pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 208),208))
+            [(word pc,LENGTH p256_montjmixadd_mc); (p1,96); (p2,64); (p3,96)] /\
+        nonoverlapping (p3,96) (word pc,LENGTH p256_montjmixadd_mc)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) p256_montjmixadd_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [p3; p1; p2] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p2 p3 pc
+                              (word_sub stackpointer (word 208))
+                              returnaddress /\
+                         memaccess_inbounds e2
+                         [p1,96; p2,64; p3,96;
+                          word_sub stackpointer (word 208),208]
+                         [p3,96;
+                          word_sub stackpointer (word 208),208]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 208),208)])`,
+  REWRITE_TAC[fst P256_MONTJMIXADD_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC P256_MONTJMIXADD_EXEC
+    (REWRITE_RULE[fst P256_MONTJMIXADD_EXEC]P256_MONTJMIXADD_SAFE)
+    `[X19;X20]` 208 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

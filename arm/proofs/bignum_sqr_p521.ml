@@ -2143,8 +2143,14 @@ let BIGNUM_SQR_P521_CORE_SAFE = time prove
                 MAYCHANGE SOME_FLAGS ,,
                 MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bignum (z,9)])`,
-  (* ASSERT_CONCL_TAC full_spec THEN <- pc2 != pc *)
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_SQR_P521_CORE_EXEC);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_sqr_p521" subroutine_signatures)
+    BIGNUM_SQR_P521_CORRECT
+    BIGNUM_SQR_P521_EXEC;;
 
 let BIGNUM_SQR_P521_SAFE = time prove
  (`exists f_events.
@@ -2169,6 +2175,7 @@ let BIGNUM_SQR_P521_SAFE = time prove
                 MAYCHANGE SOME_FLAGS ,,
                 MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bignum (z,9)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   ARM_SUB_LIST_OF_MC_TAC
     BIGNUM_SQR_P521_CORE_SAFE
     bignum_sqr_p521_core_mc_def

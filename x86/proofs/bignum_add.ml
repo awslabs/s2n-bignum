@@ -819,3 +819,723 @@ let BIGNUM_ADD_WINDOWS_SUBROUTINE_CORRECT = prove
                        memory :> bytes(word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_ADD_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_add" subroutine_signatures)
+    BIGNUM_ADD_CORRECT
+    BIGNUM_ADD_EXEC;;
+
+(* The core has three exits, so the trace of a subroutine variant ends with
+   one of three different RET events, which X86_ADD_RETURN_NOSTACK_TAC and
+   WINDOWS_X86_WRAP_NOSTACK_TAC cannot express through a single f_events
+   metavariable. Instead, as in the correctness proofs, the core and the two
+   NOIBT subroutine variants are proved by one tactic with an explicit trace.
+   Its parameters are the decoding theorem, the map pcoff from offsets in the
+   core to PC terms, the numbers npre and nret of extra instructions at the
+   entry and at each exit, the extra arguments fev_args of f_events, the
+   tactic intro_tac that introduces the remaining variables and the
+   assumptions, and the conjuncts stack_inv about the stack carried by the
+   invariants. *)
+
+let BIGNUM_ADD_SAFE_TAC execth pcoff npre nret fev_args intro_tac stack_inv =
+  let with_stack t =
+    let vs,bod = strip_abs t in
+    list_mk_abs(vs,list_mk_conj(conjuncts bod @ stack_inv))
+  and entry_steps k = 1--(k + npre)
+  and exit_steps k = 1--(k + nret)
+  and sim_tac = X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                  ~canonicalize_pc_diff:false execth in
+  let f_events =
+    let core =
+     `\(x:int64) (y:int64) (z:int64) (p:int64) (n:int64) (m:int64) (pc:num).
+        if MIN (val m) (val p) < MIN (val n) (val p) then
+          APPEND
+           (APPEND
+             (if val p = MIN (val n) (val p) then f_ev_b3s x y z p n m pc
+              else APPEND
+                    (if val p = MIN (val n) (val p) + 1 then f_ev_b4s x y z p n m pc
+                     else APPEND (f_ev_b4q x y z p n m pc)
+                           (APPEND (ENUMERATEL (val p - MIN (val n) (val p) - 1)
+                                               (f_ev_b4l x y z p n m pc))
+                                   (f_ev_b4p x y z p n m pc)))
+                    (f_ev_b3t x y z p n m pc))
+             (APPEND (f_ev_b2q x y z p n m pc)
+               (APPEND (ENUMERATEL (MIN (val n) (val p) - MIN (val m) (val p))
+                                   (f_ev_b2l x y z p n m pc))
+                       (f_ev_b2p x y z p n m pc))))
+           (if MIN (val m) (val p) = 0 then f_ev_b1s x y z p n m pc
+            else APPEND (f_ev_b1q x y z p n m pc)
+                  (APPEND (ENUMERATEL (MIN (val m) (val p)) (f_ev_b1l x y z p n m pc))
+                          (f_ev_b1p x y z p n m pc)))
+        else
+          APPEND
+           (APPEND
+             (if val p = MIN (val m) (val p) then f_ev_a3s x y z p n m pc
+              else APPEND
+                    (if val p = MIN (val m) (val p) + 1 then f_ev_a4s x y z p n m pc
+                     else APPEND (f_ev_a4q x y z p n m pc)
+                           (APPEND (ENUMERATEL (val p - MIN (val m) (val p) - 1)
+                                               (f_ev_a4l x y z p n m pc))
+                                   (f_ev_a4p x y z p n m pc)))
+                    (f_ev_a3t x y z p n m pc))
+             (if MIN (val m) (val p) = MIN (val n) (val p) then f_ev_a2s x y z p n m pc
+              else APPEND (f_ev_a2q x y z p n m pc)
+                    (APPEND (ENUMERATEL (MIN (val m) (val p) - MIN (val n) (val p))
+                                        (f_ev_a2l x y z p n m pc))
+                            (f_ev_a2p x y z p n m pc))))
+           (if MIN (val n) (val p) = 0 then f_ev_a1s x y z p n m pc
+            else APPEND (f_ev_a1q x y z p n m pc)
+                  (APPEND (ENUMERATEL (MIN (val n) (val p)) (f_ev_a1l x y z p n m pc))
+                          (f_ev_a1p x y z p n m pc))) :(uarch_event) list` in
+    let vs,bod = strip_abs core in
+    let ext f =
+      let rty = funpow (length vs) (snd o dest_fun_ty) (type_of f) in
+      mk_var(name_of f,itlist (mk_fun_ty o type_of) (vs @ fev_args) rty) in
+    let fevs = filter (starts_with "f_ev" o name_of) (frees bod) in
+    list_mk_abs(vs @ fev_args,
+      subst (map (fun f -> list_mk_comb(ext f,vs @ fev_args),
+                           list_mk_comb(f,vs)) fevs) bod) in
+  CONCRETIZE_F_EVENTS_TAC f_events THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  W64_GEN_TAC `p:num` THEN X_GEN_TAC `z:int64` THEN
+  W64_GEN_TAC `m:num` THEN X_GEN_TAC `x:int64` THEN
+  W64_GEN_TAC `n:num` THEN MAP_EVERY X_GEN_TAC [`y:int64`; `pc:num`] THEN
+  intro_tac THEN
+  SUBGOAL_THEN
+   `(if p < m then word p else word m):int64 = word (MIN m p) /\
+    (if p < n then word p else word n):int64 = word (MIN n p) /\
+    val (word (MIN m p):int64) = MIN m p /\
+    val (word (MIN n p):int64) = MIN n p`
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [REWRITE_TAC[MIN] THEN COND_CASES_TAC THEN COND_CASES_TAC THEN
+      REWRITE_TAC[] THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
+      REWRITE_TAC[MIN] THEN COND_CASES_TAC THEN COND_CASES_TAC THEN
+      REWRITE_TAC[] THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+      UNDISCH_TAC `p < 2 EXP 64` THEN ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+      UNDISCH_TAC `p < 2 EXP 64` THEN ARITH_TAC];
+    ALL_TAC] THEN
+
+  ASM_CASES_TAC `MIN m p < MIN n p` THENL
+   [SAFETY_COND_TAC `MIN m p < MIN n p` THEN
+    SUBGOAL_THEN
+     `word_sub (word p) (word (MIN n p)):int64 = word (p - MIN n p) /\
+      val (word (p - MIN n p):int64) = p - MIN n p /\
+      word_sub (word (MIN n p)) (word (MIN m p)):int64 =
+      word (MIN n p - MIN m p) /\
+      val (word (MIN n p - MIN m p):int64) = MIN n p - MIN m p /\
+      ~(MIN n p - MIN m p = 0) /\
+      MIN m p + (MIN n p - MIN m p) = MIN n p`
+    STRIP_ASSUME_TAC THENL
+     [REPEAT CONJ_TAC THENL
+       [IMP_REWRITE_TAC[WORD_SUB2] THEN ARITH_TAC;
+        MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+        UNDISCH_TAC `p < 2 EXP 64` THEN ARITH_TAC;
+        IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `MIN m p < MIN n p` THEN ARITH_TAC;
+        MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+        UNDISCH_TAC `p < 2 EXP 64` THEN ARITH_TAC;
+        UNDISCH_TAC `MIN m p < MIN n p` THEN ARITH_TAC;
+        UNDISCH_TAC `MIN m p < MIN n p` THEN ARITH_TAC];
+      ALL_TAC] THEN
+
+    (*** Branch B: the common part of x and y ***)
+
+    ENSURES_EVENTS_SEQUENCE_TAC (pcoff 0x7c)
+     (with_stack
+       `\s. read RSI s = z /\ read RCX s = x /\ read R9 s = y /\
+            read RDI s = word (p - MIN n p) /\
+            read R8 s = word (MIN n p - MIN m p) /\ read R10 s = word (MIN m p)`) THEN
+    CONJ_TAC THENL
+     [ASM_CASES_TAC `MIN m p = 0` THENL
+       [SAFETY_COND_TAC `MIN m p = 0` THEN
+        SUBGOAL_THEN `0 < MIN n p` ASSUME_TAC THENL
+         [MAP_EVERY UNDISCH_TAC [`MIN m p = 0`; `MIN m p < MIN n p`] THEN ARITH_TAC;
+          ALL_TAC] THEN
+        sim_tac (entry_steps 11) THEN
+        SAFETY_CLOSE_TAC;
+        ALL_TAC] THEN
+      SAFETY_COND_TAC `MIN m p = 0` THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `MIN m p` (pcoff 0x68) (pcoff 0x7c)
+       (with_stack
+         `\i s. read RSI s = z /\ read RCX s = x /\ read R9 s = y /\
+                read RDI s = word (p - MIN n p) /\
+                read R8 s = word (MIN n p - MIN m p) /\
+                read RDX s = word (MIN m p - i) /\ read R10 s = word i`) THEN
+      REPEAT CONJ_TAC THENL
+       [ASM_REWRITE_TAC[];
+        REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+        sim_tac (entry_steps 11) THEN
+        SAFETY_CLOSE_TAC;
+        X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+        SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `MIN m p` `MIN m p` THEN
+        SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `MIN m p` THEN
+        SUBGOAL_THEN `i < m /\ i < n /\ i < p` STRIP_ASSUME_TAC THENL
+         [MAP_EVERY UNDISCH_TAC [`i < MIN m p`; `MIN m p < MIN n p`] THEN
+          ARITH_TAC;
+          ALL_TAC] THEN
+        sim_tac (1--6) THEN
+        SAFETY_CLOSE_TAC;
+        sim_tac [] THEN
+        SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC];
+      ALL_TAC] THEN
+
+    (*** Branch B: the rest of y ***)
+
+    SAFETY_POST_REASSOC_TAC THEN
+    ENSURES_EVENTS_SEQUENCE_TAC (pcoff 0x90)
+     (with_stack
+       `\s. read RSI s = z /\ read RDI s = word (p - MIN n p) /\
+            read R10 s = word (MIN n p)`) THEN
+    CONJ_TAC THENL
+     [ENSURES_EVENTS_WHILE_UP2_TAC `MIN n p - MIN m p` (pcoff 0x7c) (pcoff 0x90)
+       (with_stack
+         `\i s. read RSI s = z /\ read R9 s = y /\
+                read RDI s = word (p - MIN n p) /\
+                read R8 s = word ((MIN n p - MIN m p) - i) /\
+                read R10 s = word (MIN m p + i)`) THEN
+      REPEAT CONJ_TAC THENL
+       [ASM_REWRITE_TAC[];
+        REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+        sim_tac [] THEN
+        SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;
+        X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+        SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `MIN n p - MIN m p` THEN
+        SUBGOAL_THEN
+         `val (word (MIN m p + i):int64) = MIN m p + i /\
+          word_add (word (MIN m p + i)) (word 1):int64 = word (MIN m p + (i + 1)) /\
+          MIN m p + i < n /\ MIN m p + i < p`
+        STRIP_ASSUME_TAC THENL
+         [REPEAT CONJ_TAC THENL
+           [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+            MAP_EVERY UNDISCH_TAC [`i < MIN n p - MIN m p`; `p < 2 EXP 64`] THEN
+            ARITH_TAC;
+            REWRITE_TAC[GSYM WORD_ADD; ADD_ASSOC];
+            UNDISCH_TAC `i < MIN n p - MIN m p` THEN ARITH_TAC;
+            UNDISCH_TAC `i < MIN n p - MIN m p` THEN ARITH_TAC];
+          ALL_TAC] THEN
+        sim_tac (1--6) THEN
+        SAFETY_CLOSE_TAC;
+        SAFETY_CARRY_REASSOC_TAC THEN
+        sim_tac [] THEN
+        SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC];
+      ALL_TAC] THEN
+
+    (*** Branch B: the return, or the carry word and the zero padding of z ***)
+
+    ASM_CASES_TAC `p = MIN n p` THENL
+     [SAFETY_COND_TAC `p = MIN n p` THEN
+      SUBGOAL_THEN `p - MIN n p = 0` ASSUME_TAC THENL
+       [UNDISCH_TAC `p = MIN n p` THEN ARITH_TAC; ALL_TAC] THEN
+      FIRST_X_ASSUM(K ALL_TAC o check (fun th -> concl th = `p = MIN n p`)) THEN
+      sim_tac (exit_steps 4) THEN
+      SAFETY_CLOSE_TAC;
+      ALL_TAC] THEN
+    SAFETY_COND_TAC `p = MIN n p` THEN
+    SUBGOAL_THEN
+     `~(p - MIN n p = 0) /\ MIN n p < p /\
+      val (word (MIN n p + 1):int64) = MIN n p + 1 /\
+      word_add (word (MIN n p)) (word 1):int64 = word (MIN n p + 1)`
+    STRIP_ASSUME_TAC THENL
+     [REPEAT CONJ_TAC THENL
+       [UNDISCH_TAC `~(p = MIN n p)` THEN ARITH_TAC;
+        UNDISCH_TAC `~(p = MIN n p)` THEN ARITH_TAC;
+        MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+        MAP_EVERY UNDISCH_TAC [`~(p = MIN n p)`; `p < 2 EXP 64`] THEN ARITH_TAC;
+        REWRITE_TAC[GSYM WORD_ADD]];
+      ALL_TAC] THEN
+    SAFETY_POST_REASSOC_TAC THEN
+    ENSURES_EVENTS_SEQUENCE_TAC (pcoff 0xac)
+     (with_stack
+       `\s. read RSI s = z /\ read RDI s = word (p - MIN n p) /\
+            read R10 s = word (MIN n p)`) THEN
+    CONJ_TAC THENL
+     [sim_tac (1--7) THEN
+      SAFETY_CLOSE_TAC;
+      ALL_TAC] THEN
+    ASM_CASES_TAC `p = MIN n p + 1` THENL
+     [SAFETY_COND_TAC `p = MIN n p + 1` THEN
+      SUBGOAL_THEN `word_sub (word (p - MIN n p)) (word 1):int64 = word 0`
+      ASSUME_TAC THENL
+       [SUBGOAL_THEN `p - MIN n p = 1` SUBST1_TAC THENL
+         [UNDISCH_TAC `p = MIN n p + 1` THEN ARITH_TAC;
+          CONV_TAC WORD_REDUCE_CONV];
+        ALL_TAC] THEN
+      FIRST_X_ASSUM(K ALL_TAC o check (fun th -> concl th = `p = MIN n p + 1`)) THEN
+      sim_tac (exit_steps 3) THEN
+      SAFETY_CLOSE_TAC;
+      ALL_TAC] THEN
+    SAFETY_COND_TAC `p = MIN n p + 1` THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `p - MIN n p - 1` (pcoff 0xac) (pcoff 0xac)
+     (with_stack
+       `\i s. read RSI s = z /\ read RDI s = word ((p - MIN n p) - i) /\
+              read R10 s = word (MIN n p + i)`) THEN
+    REPEAT CONJ_TAC THENL
+     [UNDISCH_TAC `~(p = MIN n p + 1)` THEN UNDISCH_TAC `~(p = MIN n p)` THEN ARITH_TAC;
+      REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+      sim_tac [] THEN
+      SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;
+      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+      SUBGOAL_THEN
+       `word_sub (word ((p - MIN n p) - i)) (word 1):int64 =
+        word ((p - MIN n p) - (i + 1)) /\
+        val (word ((p - MIN n p) - (i + 1)):int64) = (p - MIN n p) - (i + 1) /\
+        ~((p - MIN n p) - (i + 1) = 0) /\
+        val (word (MIN n p + (i + 1)):int64) = MIN n p + (i + 1) /\
+        word_add (word (MIN n p + i)) (word 1):int64 = word (MIN n p + (i + 1)) /\
+        MIN n p + (i + 1) < p`
+      STRIP_ASSUME_TAC THENL
+       [REPEAT CONJ_TAC THENL
+         [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+           [AP_TERM_TAC THEN UNDISCH_TAC `i < p - MIN n p - 1` THEN ARITH_TAC;
+            UNDISCH_TAC `i < p - MIN n p - 1` THEN ARITH_TAC];
+          MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+          UNDISCH_TAC `p < 2 EXP 64` THEN ARITH_TAC;
+          UNDISCH_TAC `i < p - MIN n p - 1` THEN ARITH_TAC;
+          MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+          MAP_EVERY UNDISCH_TAC [`i < p - MIN n p - 1`; `p < 2 EXP 64`] THEN ARITH_TAC;
+          REWRITE_TAC[GSYM WORD_ADD; ADD_ASSOC];
+          UNDISCH_TAC `i < p - MIN n p - 1` THEN ARITH_TAC];
+        ALL_TAC] THEN
+      sim_tac (1--4) THEN
+      SAFETY_CLOSE_TAC;
+      SUBGOAL_THEN
+       `word_sub (word ((p - MIN n p) - (p - MIN n p - 1))) (word 1):int64 = word 0`
+      ASSUME_TAC THENL
+       [SUBGOAL_THEN `(p - MIN n p) - (p - MIN n p - 1) = 1` SUBST1_TAC THENL
+         [UNDISCH_TAC `~(p = MIN n p)` THEN UNDISCH_TAC `MIN n p < p` THEN ARITH_TAC;
+          CONV_TAC WORD_REDUCE_CONV];
+        ALL_TAC] THEN
+      SAFETY_CARRY_REASSOC_TAC THEN
+      sim_tac (exit_steps 3) THEN
+      SAFETY_CLOSE_TAC];
+    SAFETY_COND_TAC `MIN m p < MIN n p` THEN
+    SUBGOAL_THEN
+     `word_sub (word p) (word (MIN m p)):int64 = word (p - MIN m p) /\
+      val (word (p - MIN m p):int64) = p - MIN m p /\
+      word_sub (word (MIN m p)) (word (MIN n p)):int64 =
+      word (MIN m p - MIN n p) /\
+      word_add (word (MIN m p - MIN n p)) (word 1):int64 =
+      word (MIN m p - MIN n p + 1) /\
+      MIN n p + (MIN m p - MIN n p) = MIN m p`
+    STRIP_ASSUME_TAC THENL
+     [REPEAT CONJ_TAC THENL
+       [IMP_REWRITE_TAC[WORD_SUB2] THEN ARITH_TAC;
+        MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+        UNDISCH_TAC `p < 2 EXP 64` THEN ARITH_TAC;
+        IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `~(MIN m p < MIN n p)` THEN
+        ARITH_TAC;
+        REWRITE_TAC[GSYM WORD_ADD];
+        UNDISCH_TAC `~(MIN m p < MIN n p)` THEN ARITH_TAC];
+      ALL_TAC] THEN
+
+    (*** Branch A: the common part of x and y ***)
+
+    ENSURES_EVENTS_SEQUENCE_TAC (pcoff 0x49)
+     (with_stack
+       `\s. read RSI s = z /\ read RCX s = x /\ read R9 s = y /\
+            read RDI s = word (p - MIN m p) /\
+            read RDX s = word (MIN m p - MIN n p + 1) /\
+            read R10 s = word (MIN n p)`) THEN
+    CONJ_TAC THENL
+     [ASM_CASES_TAC `MIN n p = 0` THENL
+       [SAFETY_COND_TAC `MIN n p = 0` THEN
+        SUBGOAL_THEN `~(MIN m p < 0)` ASSUME_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+        sim_tac (entry_steps 12) THEN
+        SAFETY_CLOSE_TAC;
+        ALL_TAC] THEN
+      SAFETY_COND_TAC `MIN n p = 0` THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `MIN n p` (pcoff 0x24) (pcoff 0x38)
+       (with_stack
+         `\i s. read RSI s = z /\ read RCX s = x /\ read R9 s = y /\
+                read RDI s = word (p - MIN m p) /\
+                read RDX s = word (MIN m p - MIN n p + 1) /\
+                read R8 s = word (MIN n p - i) /\ read R10 s = word i`) THEN
+      REPEAT CONJ_TAC THENL
+       [ASM_REWRITE_TAC[];
+        REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+        sim_tac (entry_steps 12) THEN
+        SAFETY_CLOSE_TAC;
+        X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+        SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `MIN n p` `MIN n p` THEN
+        SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `MIN n p` THEN
+        SUBGOAL_THEN `i < m /\ i < n /\ i < p` STRIP_ASSUME_TAC THENL
+         [MAP_EVERY UNDISCH_TAC [`i < MIN n p`; `~(MIN m p < MIN n p)`] THEN
+          ARITH_TAC;
+          ALL_TAC] THEN
+        sim_tac (1--6) THEN
+        SAFETY_CLOSE_TAC;
+        sim_tac (1--1) THEN
+        SAFETY_CLOSE_TAC];
+      ALL_TAC] THEN
+
+    (*** Branch A: the rest of x ***)
+
+    SAFETY_POST_REASSOC_TAC THEN
+    ENSURES_EVENTS_SEQUENCE_TAC (pcoff 0x4e)
+     (with_stack
+       `\s. read RSI s = z /\ read RDI s = word (p - MIN m p) /\
+            read R10 s = word (MIN m p)`) THEN
+    CONJ_TAC THENL
+     [ASM_CASES_TAC `MIN m p = MIN n p` THENL
+       [SAFETY_COND_TAC `MIN m p = MIN n p` THEN
+        SUBGOAL_THEN `MIN m p - MIN n p + 1 = 1` ASSUME_TAC THENL
+         [UNDISCH_TAC `MIN m p = MIN n p` THEN ARITH_TAC; ALL_TAC] THEN
+        sim_tac (1--2) THEN
+        SAFETY_CLOSE_TAC;
+        ALL_TAC] THEN
+      SAFETY_COND_TAC `MIN m p = MIN n p` THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `MIN m p - MIN n p` (pcoff 0x49) (pcoff 0x49)
+       (with_stack
+         `\i s. read RSI s = z /\ read RCX s = x /\
+                read RDI s = word (p - MIN m p) /\
+                read RDX s = word ((MIN m p - MIN n p + 1) - i) /\
+                read R10 s = word (MIN n p + i)`) THEN
+      REPEAT CONJ_TAC THENL
+       [UNDISCH_TAC `~(MIN m p = MIN n p)` THEN
+        UNDISCH_TAC `~(MIN m p < MIN n p)` THEN ARITH_TAC;
+        REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+        sim_tac [] THEN
+        SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;
+        X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+        SUBGOAL_THEN
+         `word_sub (word ((MIN m p - MIN n p + 1) - i)) (word 1):int64 =
+          word (MIN m p - MIN n p - i) /\
+          val (word (MIN m p - MIN n p - i):int64) = MIN m p - MIN n p - i /\
+          ~(MIN m p - MIN n p - i = 0) /\
+          (MIN m p - MIN n p + 1) - (i + 1) = MIN m p - MIN n p - i /\
+          val (word (MIN n p + i):int64) = MIN n p + i /\
+          word_add (word (MIN n p + i)) (word 1):int64 = word (MIN n p + (i + 1)) /\
+          MIN n p + i < m /\ MIN n p + i < p`
+        STRIP_ASSUME_TAC THENL
+         [REPEAT CONJ_TAC THENL
+           [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+             [AP_TERM_TAC THEN UNDISCH_TAC `i < MIN m p - MIN n p` THEN ARITH_TAC;
+              UNDISCH_TAC `i < MIN m p - MIN n p` THEN ARITH_TAC];
+            MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+            UNDISCH_TAC `p < 2 EXP 64` THEN ARITH_TAC;
+            UNDISCH_TAC `i < MIN m p - MIN n p` THEN ARITH_TAC;
+            UNDISCH_TAC `i < MIN m p - MIN n p` THEN ARITH_TAC;
+            MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+            MAP_EVERY UNDISCH_TAC [`i < MIN m p - MIN n p`; `p < 2 EXP 64`] THEN
+            ARITH_TAC;
+            REWRITE_TAC[GSYM WORD_ADD; ADD_ASSOC];
+            UNDISCH_TAC `i < MIN m p - MIN n p` THEN ARITH_TAC;
+            UNDISCH_TAC `i < MIN m p - MIN n p` THEN ARITH_TAC];
+          ALL_TAC] THEN
+        sim_tac (1--6) THEN
+        SAFETY_CLOSE_TAC;
+        SUBGOAL_THEN `(MIN m p - MIN n p + 1) - (MIN m p - MIN n p) = 1`
+        ASSUME_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+        SAFETY_CARRY_REASSOC_TAC THEN
+        sim_tac (1--2) THEN
+        SAFETY_CLOSE_TAC];
+      ALL_TAC] THEN
+
+    (*** Branch A: the return, or the carry word and the zero padding of z ***)
+
+    ASM_CASES_TAC `p = MIN m p` THENL
+     [SAFETY_COND_TAC `p = MIN m p` THEN
+      SUBGOAL_THEN `p - MIN m p = 0` ASSUME_TAC THENL
+       [UNDISCH_TAC `p = MIN m p` THEN ARITH_TAC; ALL_TAC] THEN
+      FIRST_X_ASSUM(K ALL_TAC o check (fun th -> concl th = `p = MIN m p`)) THEN
+      sim_tac (exit_steps 4) THEN
+      SAFETY_CLOSE_TAC;
+      ALL_TAC] THEN
+    SAFETY_COND_TAC `p = MIN m p` THEN
+    SUBGOAL_THEN
+     `~(p - MIN m p = 0) /\ MIN m p < p /\
+      val (word (MIN m p + 1):int64) = MIN m p + 1 /\
+      word_add (word (MIN m p)) (word 1):int64 = word (MIN m p + 1)`
+    STRIP_ASSUME_TAC THENL
+     [REPEAT CONJ_TAC THENL
+       [UNDISCH_TAC `~(p = MIN m p)` THEN ARITH_TAC;
+        UNDISCH_TAC `~(p = MIN m p)` THEN ARITH_TAC;
+        MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+        MAP_EVERY UNDISCH_TAC [`~(p = MIN m p)`; `p < 2 EXP 64`] THEN ARITH_TAC;
+        REWRITE_TAC[GSYM WORD_ADD]];
+      ALL_TAC] THEN
+    SAFETY_POST_REASSOC_TAC THEN
+    ENSURES_EVENTS_SEQUENCE_TAC (pcoff 0xac)
+     (with_stack
+       `\s. read RSI s = z /\ read RDI s = word (p - MIN m p) /\
+            read R10 s = word (MIN m p)`) THEN
+    CONJ_TAC THENL
+     [sim_tac (1--7) THEN
+      SAFETY_CLOSE_TAC;
+      ALL_TAC] THEN
+    ASM_CASES_TAC `p = MIN m p + 1` THENL
+     [SAFETY_COND_TAC `p = MIN m p + 1` THEN
+      SUBGOAL_THEN `word_sub (word (p - MIN m p)) (word 1):int64 = word 0`
+      ASSUME_TAC THENL
+       [SUBGOAL_THEN `p - MIN m p = 1` SUBST1_TAC THENL
+         [UNDISCH_TAC `p = MIN m p + 1` THEN ARITH_TAC;
+          CONV_TAC WORD_REDUCE_CONV];
+        ALL_TAC] THEN
+      FIRST_X_ASSUM(K ALL_TAC o check (fun th -> concl th = `p = MIN m p + 1`)) THEN
+      sim_tac (exit_steps 3) THEN
+      SAFETY_CLOSE_TAC;
+      ALL_TAC] THEN
+    SAFETY_COND_TAC `p = MIN m p + 1` THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `p - MIN m p - 1` (pcoff 0xac) (pcoff 0xac)
+     (with_stack
+       `\i s. read RSI s = z /\ read RDI s = word ((p - MIN m p) - i) /\
+              read R10 s = word (MIN m p + i)`) THEN
+    REPEAT CONJ_TAC THENL
+     [UNDISCH_TAC `~(p = MIN m p + 1)` THEN UNDISCH_TAC `~(p = MIN m p)` THEN ARITH_TAC;
+      REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+      sim_tac [] THEN
+      SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;
+      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+      SUBGOAL_THEN
+       `word_sub (word ((p - MIN m p) - i)) (word 1):int64 =
+        word ((p - MIN m p) - (i + 1)) /\
+        val (word ((p - MIN m p) - (i + 1)):int64) = (p - MIN m p) - (i + 1) /\
+        ~((p - MIN m p) - (i + 1) = 0) /\
+        val (word (MIN m p + (i + 1)):int64) = MIN m p + (i + 1) /\
+        word_add (word (MIN m p + i)) (word 1):int64 = word (MIN m p + (i + 1)) /\
+        MIN m p + (i + 1) < p`
+      STRIP_ASSUME_TAC THENL
+       [REPEAT CONJ_TAC THENL
+         [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+           [AP_TERM_TAC THEN UNDISCH_TAC `i < p - MIN m p - 1` THEN ARITH_TAC;
+            UNDISCH_TAC `i < p - MIN m p - 1` THEN ARITH_TAC];
+          MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+          UNDISCH_TAC `p < 2 EXP 64` THEN ARITH_TAC;
+          UNDISCH_TAC `i < p - MIN m p - 1` THEN ARITH_TAC;
+          MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+          MAP_EVERY UNDISCH_TAC [`i < p - MIN m p - 1`; `p < 2 EXP 64`] THEN ARITH_TAC;
+          REWRITE_TAC[GSYM WORD_ADD; ADD_ASSOC];
+          UNDISCH_TAC `i < p - MIN m p - 1` THEN ARITH_TAC];
+        ALL_TAC] THEN
+      sim_tac (1--4) THEN
+      SAFETY_CLOSE_TAC;
+      SUBGOAL_THEN
+       `word_sub (word ((p - MIN m p) - (p - MIN m p - 1))) (word 1):int64 = word 0`
+      ASSUME_TAC THENL
+       [SUBGOAL_THEN `(p - MIN m p) - (p - MIN m p - 1) = 1` SUBST1_TAC THENL
+         [UNDISCH_TAC `~(p = MIN m p)` THEN UNDISCH_TAC `MIN m p < p` THEN ARITH_TAC;
+          CONV_TAC WORD_REDUCE_CONV];
+        ALL_TAC] THEN
+      SAFETY_CARRY_REASSOC_TAC THEN
+      sim_tac (exit_steps 3) THEN
+      SAFETY_CLOSE_TAC]];;
+
+let BIGNUM_ADD_SAFE = time prove
+ (`exists f_events.
+       forall e p z m x n y pc.
+           nonoverlapping (word pc,181) (z,8 * val p) /\
+           (x = z \/ nonoverlapping (x,8 * val m) (z,8 * val p)) /\
+           (y = z \/ nonoverlapping (y,8 * val n) (z,8 * val p))
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) bignum_add_tmc /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [p; z; m; x; n; y] s /\
+                    read events s = e)
+               (\s.
+                    (read RIP s = word (pc + 92) \/
+                     read RIP s = word (pc + 158) \/
+                     read RIP s = word (pc + 180)) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z p n m pc /\
+                         memaccess_inbounds e2
+                         [x,val m * 8; y,val n * 8; z,val p * 8]
+                         [z,val p * 8]))
+               (MAYCHANGE [RIP; RAX; RDI; RDX; R8; R10] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bignum (z,val p)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  BIGNUM_ADD_SAFE_TAC BIGNUM_ADD_EXEC
+    (curry mk_comb `(+) (pc:num)` o mk_small_numeral) 0 0 []
+    (REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
+     DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC))
+    []);;
+
+let BIGNUM_ADD_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e p z m x n y pc stackpointer returnaddress.
+        ALL (nonoverlapping (z,8 * val p))
+        [word pc,LENGTH bignum_add_tmc; stackpointer,8] /\
+        (x = z \/ nonoverlapping (x,8 * val m) (z,8 * val p)) /\
+        (y = z \/ nonoverlapping (y,8 * val n) (z,8 * val p))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_add_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [p; z; m; x; n; y] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events x y z p n m pc stackpointer returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val m * 8; y,val n * 8; z,val p * 8; stackpointer,8]
+                      [z,val p * 8; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bignum (z,val p)])`,
+  BIGNUM_ADD_SAFE_TAC BIGNUM_ADD_EXEC
+    (curry mk_comb `(+) (pc:num)` o mk_small_numeral) 0 1
+    [`stackpointer:int64`; `returnaddress:int64`]
+    (MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
+     REWRITE_TAC[fst BIGNUM_ADD_EXEC; ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS;
+                 SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+     DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC))
+    [`read RSP s = stackpointer`;
+     `read (memory :> bytes64 stackpointer) s = returnaddress`]);;
+
+let BIGNUM_ADD_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e p z m x n y pc stackpointer returnaddress.
+        ALL (nonoverlapping (z,8 * val p))
+        [word pc,LENGTH bignum_add_mc; stackpointer,8] /\
+        (x = z \/ nonoverlapping (x,8 * val m) (z,8 * val p)) /\
+        (y = z \/ nonoverlapping (y,8 * val n) (z,8 * val p))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_add_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [p; z; m; x; n; y] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events x y z p n m pc stackpointer returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val m * 8; y,val n * 8; z,val p * 8; stackpointer,8]
+                      [z,val p * 8; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bignum (z,val p)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_ADD_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_ADD_WINDOWS_EXEC = X86_MK_EXEC_RULE bignum_add_windows_tmc;;
+
+let BIGNUM_ADD_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e p z m x n y pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+        [word pc,LENGTH bignum_add_windows_tmc; x,8 * val m; y,8 * val n] /\
+        ALL (nonoverlapping (z,8 * val p))
+        [word pc,LENGTH bignum_add_windows_tmc;
+         word_sub stackpointer (word 16),24] /\
+        (x = z \/ nonoverlapping (x,8 * val m) (z,8 * val p)) /\
+        (y = z \/ nonoverlapping (y,8 * val n) (z,8 * val p))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_add_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [p; z; m; x; n; y] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x y z p n m pc
+                      (word_sub stackpointer (word 16))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val m * 8; y,val n * 8; z,val p * 8;
+                       word_add stackpointer (word 40),8;
+                       word_add stackpointer (word 48),8;
+                       word_sub stackpointer (word 16),24]
+                      [z,val p * 8; word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val p);
+              memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  BIGNUM_ADD_SAFE_TAC BIGNUM_ADD_WINDOWS_EXEC
+    (curry mk_comb `(+) (pc:num)` o mk_small_numeral o
+     (fun n -> if n < 0x5c then n + 24
+               else if n < 0x9e then n + 26
+               else n + 28)) 8 3
+    [`stackpointer:int64`; `returnaddress:int64`]
+    (PURE_REWRITE_TAC[WINDOWS_ABI_STACK_THM] THEN
+     WORD_FORALL_OFFSET_TAC 16 THEN
+     MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
+     REWRITE_TAC[WORD_RULE `word_sub (word_add x (word 16)) (word 16):int64 = x`] THEN
+     REWRITE_TAC[fst BIGNUM_ADD_WINDOWS_EXEC; ALL; NONOVERLAPPING_CLAUSES;
+                 WINDOWS_C_ARGUMENTS; SOME_FLAGS;
+                 WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+     DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+     ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
+     ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
+     SAFETY_EXISTS_LAST_TAC)
+    [`read RSP s = stackpointer`;
+     `read (memory :> bytes64 (word_add stackpointer (word 16))) s =
+      returnaddress`;
+     `read (memory :> bytes64 (word_add stackpointer (word 8))) s = rdi_init`;
+     `read (memory :> bytes64 stackpointer) s = rsi_init`]);;
+
+let BIGNUM_ADD_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e p z m x n y pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+        [word pc,LENGTH bignum_add_windows_mc; x,8 * val m; y,8 * val n] /\
+        ALL (nonoverlapping (z,8 * val p))
+        [word pc,LENGTH bignum_add_windows_mc;
+         word_sub stackpointer (word 16),24] /\
+        (x = z \/ nonoverlapping (x,8 * val m) (z,8 * val p)) /\
+        (y = z \/ nonoverlapping (y,8 * val n) (z,8 * val p))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_add_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [p; z; m; x; n; y] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x y z p n m pc
+                      (word_sub stackpointer (word 16))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val m * 8; y,val n * 8; z,val p * 8;
+                       word_add stackpointer (word 40),8;
+                       word_add stackpointer (word 48),8;
+                       word_sub stackpointer (word 16),24]
+                      [z,val p * 8; word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val p);
+              memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_ADD_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

@@ -15,7 +15,12 @@ let mk_noibt_subroutine_safe_spec
   let correct_t = concl noibt_subroutine_correct_th in
 
   let uvs,body = strip_forall correct_t in
-  let retaddr::stackptr::_ = rev uvs in
+  (* stackpointer and returnaddress are usually the last two quantified
+     variables, but some correctness theorems leave them free *)
+  let find_var n =
+    try find (fun v -> name_of v = n) (uvs @ frees body)
+    with Failure _ -> failwith ("mk_noibt_subroutine_safe_spec: no " ^ n) in
+  let retaddr = find_var "returnaddress" and stackptr = find_var "stackpointer" in
   let new_assum,body = if is_imp body then dest_imp body else `T`,body in
   (* ^^^ use these new_uvs and new_assum..! *)
   (* get the subtracted offset ('word ..') from stackpointer. *)
@@ -25,7 +30,7 @@ let mk_noibt_subroutine_safe_spec
           fst (dest_binary "word_sub" t) = stackptr) new_assum in
       Some (rand ofs)
     with Failure _ ->
-      let _ = Printf.printf "(* Has no \"word_sub stackpointer (word ..)\"; stackofs is None *)\n" in
+      let _ = Printf.eprintf "(* Has no \"word_sub stackpointer (word ..)\"; stackofs is None *)\n" in
       None in
 
   let _::pre_fn::post_fn::new_frame::[] = snd (strip_comb body) in
@@ -34,7 +39,17 @@ let mk_noibt_subroutine_safe_spec
   let pre_bytes_loaded::pre_rip::pre_rsp::pre_retaddr::pre_c_args::_ =
     conjuncts pre_fn_clauses in
   let post_fn_var,post_fn_clauses = dest_abs post_fn in
-  let post_rip::post_rsp::_ = conjuncts post_fn_clauses in
+  (* the final RIP and RSP (which some correctness theorems leave out) *)
+  let find_post_read comp =
+    find (fun t -> is_eq t &&
+        (try let r,sv = dest_comb (lhs t) in rand r = comp && sv = post_fn_var
+         with Failure _ -> false))
+      (conjuncts post_fn_clauses) in
+  let post_rip = find_post_read `RIP` in
+  let post_rsp =
+    try find_post_read `RSP` with Failure _ ->
+      vsubst [post_fn_var,`s:x86state`; stackptr,`stackpointer:int64`]
+        `read RSP s = word_add stackpointer (word 8)` in
 
   let old_f_ev,sbody = dest_exists safe_t in
   let s_uvs,sbody = strip_forall sbody in
@@ -42,11 +57,21 @@ let mk_noibt_subroutine_safe_spec
   let new_uvs =
     if already_has_stackptr then s_uvs @ [retaddr]
     else s_uvs @ [stackptr;retaddr] in
+  (* drop the assumptions about variables that the SAFE theorem does not have,
+     as mk_safety_spec does *)
+  let new_assum =
+    match filter (fun c -> subset (intersect (frees c) uvs) new_uvs)
+                 (conjuncts new_assum) with
+    | [] -> `T`
+    | l -> list_mk_conj l in
 
   let safe_ensures =
     let sbody_noq = snd (strip_forall sbody) in
     if is_imp sbody_noq then snd (dest_imp sbody_noq) else sbody_noq in
   let ensures_const,(x86_const::pre::post::_) = strip_comb safe_ensures in
+  (* the state variables of the SAFE pre/postconditions, which also appear in
+     pre_read_events and post_e2_pred; those of the CORRECT may differ (s') *)
+  let pre_sv = bndvar pre and post_sv = bndvar post in
   let pre_read_events::_ = rev (conjuncts (snd (dest_abs pre))) in
   let post_e2_pred::_ = rev (conjuncts (snd (dest_abs post))) in
   (* post_e2_pred is:
@@ -68,6 +93,14 @@ let mk_noibt_subroutine_safe_spec
        else [type_of stackptr;type_of retaddr]) in
     itlist mk_fun_ty new_args retty in
   let new_f_events = mk_var("f_events",new_f_ev_ty) in
+  (* the Windows ABI passes the arguments after the fourth on the stack, above
+     the return address and the 32-byte shadow space *)
+  let stack_arg_reads =
+    try let cargs_const,cargs::_ = strip_comb pre_c_args in
+        if name_of cargs_const <> "WINDOWS_C_ARGUMENTS" then [] else
+        map (fun i -> mk_pair(list_mk_icomb "word_add" [stackptr;mk_word(40+8*i)],`8`))
+            (0--(length (dest_list cargs) - 5))
+    with Failure _ -> [] in
   let new_post_e2_pred =
     (* word_sub stackpointer (ofs) *)
     let stackptr_with_ofs =
@@ -99,26 +132,27 @@ let mk_noibt_subroutine_safe_spec
               not (can (find_term (fun t' -> t' = stackptr)) t)) old_readlist in
           let old_writelist_nosp = filter (fun t ->
               not (can (find_term (fun t' -> t' = stackptr)) t)) old_writelist in
-          (old_readlist_nosp @ [range_read]),
+          (old_readlist_nosp @ stack_arg_reads @ [range_read]),
           (old_writelist_nosp @ [range_write])
         else
           let stackofs_num_plus_8 =
             mk_small_numeral((dest_small_numeral stackofs_num) + 8) in
           let range_read = mk_pair (stackptr_with_ofs, stackofs_num_plus_8) in
           let range_write = mk_pair (stackptr_with_ofs, stackofs_num) in
-          (old_readlist @ [range_read]),
+          (old_readlist @ stack_arg_reads @ [range_read]),
           (old_writelist @ [range_write]) in
       list_mk_comb (meminb_const,[e2;mk_flist new_readlist; mk_flist new_writelist]) in
     mk_exists (e2, list_mk_conj [read_events; new_e2_eq; new_meminb]) in
 
-  let new_pre = mk_abs(pre_fn_var,
-    list_mk_conj [pre_bytes_loaded;pre_rip;pre_rsp;pre_retaddr;pre_c_args;pre_read_events]) in
-  let new_post = mk_abs(post_fn_var,
-    list_mk_conj [post_rip;post_rsp;new_post_e2_pred]) in
+  let new_pre = mk_abs(pre_sv, vsubst [pre_sv,pre_fn_var]
+    (list_mk_conj [pre_bytes_loaded;pre_rip;pre_rsp;pre_retaddr;pre_c_args;pre_read_events])) in
+  let new_post = mk_abs(post_sv, vsubst [post_sv,post_fn_var]
+    (list_mk_conj [post_rip;post_rsp;new_post_e2_pred])) in
 
   let new_body = list_mk_comb(ensures_const,[x86_const;new_pre;new_post;new_frame]) in
   mk_exists(new_f_events,
-    list_mk_forall(new_uvs,mk_imp(new_assum,new_body)));;
+    list_mk_forall(new_uvs,
+      if new_assum = `T` then new_body else mk_imp(new_assum,new_body)));;
 
 (* Usage:
   generate_four_variants_of_x86_safety_specs

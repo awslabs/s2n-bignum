@@ -357,3 +357,37 @@ let BIGNUM_LE_SUBROUTINE_CORRECT = prove
                 C_RETURN s' = if x <= y then word 1 else word 0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_LE_EXEC BIGNUM_LE_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/bignum_cmp_safety.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_le" subroutine_signatures)
+    BIGNUM_LE_SUBROUTINE_CORRECT
+    BIGNUM_LE_EXEC;;
+
+let BIGNUM_LE_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e m a n b pc returnaddress.
+           ensures arm
+           (\s.
+                aligned_bytes_loaded s (word pc) bignum_le_mc /\
+                read PC s = word pc /\
+                read X30 s = returnaddress /\
+                C_ARGUMENTS [m; a; n; b] s /\
+                read events s = e)
+           (\s.
+                read PC s = returnaddress /\
+                exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events a b n m pc returnaddress /\
+                    memaccess_inbounds e2 [a,val m * 8; b,val n * 8] [])
+           MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
+  ASSERT_CONCL_TAC full_spec THEN
+  BIGNUM_GT_LE_SAFE_TAC BIGNUM_LE_EXEC);;

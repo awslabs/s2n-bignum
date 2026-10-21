@@ -271,3 +271,95 @@ let BIGNUM_MUX16_SUBROUTINE_CORRECT = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bignum(z,val k)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_MUX16_EXEC BIGNUM_MUX16_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let mux16_full_spec,mux16_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mux16" subroutine_signatures)
+    BIGNUM_MUX16_SUBROUTINE_CORRECT
+    BIGNUM_MUX16_EXEC;;
+
+(* The selection index i is NOT a public input, so the single select loop
+   must run the same memory-access and branch trace for every i: it always
+   touches all 16 candidate words per output position. The only data-size
+   branch is on k (number of output words), handled by the loop count.      *)
+
+let BIGNUM_MUX16_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e k z xs i pc returnaddress.
+           nonoverlapping (word pc,284) (z,8 * val k) /\
+           nonoverlapping (xs,8 * 16 * val k) (z,8 * val k)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mux16_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; xs; i] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events xs z k pc returnaddress /\
+                         memaccess_inbounds e2
+                         [xs,(16 * val k) * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
+  ASSERT_CONCL_TAC mux16_full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES; fst BIGNUM_MUX16_EXEC] ["k"; "i"]
+   (Then(SUBGOAL_THEN `8 * 16 * k < 2 EXP 64` STRIP_ASSUME_TAC THENL
+          [EVERY_ASSUM(fun th -> try MP_TAC (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th) with Failure _ -> ALL_TAC) THEN ARITH_TAC; ALL_TAC] THEN
+         SUBGOAL_THEN `8 * k < 2 EXP 64` STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC],
+     Cases(`k = 0`,
+       Leg("k0",
+         (* k = 0: ADDS, BEQ taken, RET = 3 steps *)
+         ASM_REWRITE_TAC[] THEN
+         ARM_SAFETY_SIM_TAC BIGNUM_MUX16_EXEC (1--3) THEN
+         RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
+         RULE_ASSUM_TAC(REWRITE_RULE[GSYM APPEND_ASSOC]) THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Then(ASM_REWRITE_TAC[],
+        Loop(`k:num`, `pc + 0xc`, `pc + 0x118`,
+          `\j s. read X0 s = word k /\ read X3 s = word(i * k) /\
+                 read X7 s = word(k - j) /\
+                 read X1 s = word_add z (word(8 * j)) /\
+                 read X2 s = word_add xs (word(8 * j)) /\
+                 read X30 s = returnaddress`,
+          Leg("pre",
+            (* precond: pc -> pc+0xc, ADDS+BEQ-not-taken+MADD = 3 steps *)
+            REWRITE_TAC[SUB_0; MULT_CLAUSES; ADD_0; ENUMERATEL_APPEND_ZERO] THEN
+            ARM_SAFETY_SIM_TAC BIGNUM_MUX16_EXEC (1--3) THEN
+            CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+            RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
+            RULE_ASSUM_TAC(REWRITE_RULE[GSYM APPEND_ASSOC]) THEN
+            DISCHARGE_SAFETY_PROPERTY_TAC),
+          Leg("loop",
+            SUBGOAL_THEN `j:num < k` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+            VAL_INT64_TAC `j:num` THEN
+            SUBGOAL_THEN `word_sub (word(k - j):int64) (word 1) = word(k - (j + 1))` ASSUME_TAC THENL
+             [REWRITE_TAC[ARITH_RULE `k - (j + 1) = k - j - 1`] THEN
+              GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN
+              ASM_REWRITE_TAC[ARITH_RULE `1 <= k - j <=> j < k`]; ALL_TAC] THEN
+            SUBGOAL_THEN `val(word(k - (j + 1)):int64) = k - (j + 1)` ASSUME_TAC THENL
+             [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+            ARM_SAFETY_SIM_TAC BIGNUM_MUX16_EXEC (1--67) THEN
+            REPEAT CONJ_TAC THENL
+             [GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN REWRITE_TAC[];
+              CONV_TAC WORD_RULE;
+              CONV_TAC WORD_RULE;
+              ALL_TAC] THEN
+            DISCHARGE_SAFETY_PROPERTY_TAC),
+          Leg("post",
+            (* exit: pc+0x114 RET = 1 step *)
+            ASM_REWRITE_TAC[] THEN
+            ARM_SAFETY_SIM_TAC BIGNUM_MUX16_EXEC (1--1) THEN
+            RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
+            RULE_ASSUM_TAC(REWRITE_RULE[GSYM APPEND_ASSOC]) THEN
+            DISCHARGE_SAFETY_PROPERTY_TAC)))))));;

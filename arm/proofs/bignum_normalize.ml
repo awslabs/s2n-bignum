@@ -467,3 +467,167 @@ let BIGNUM_NORMALIZE_SUBROUTINE_CORRECT = time prove
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * val k)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_NORMALIZE_EXEC BIGNUM_NORMALIZE_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The cases k = 0 and k = 1 are      *)
+(* straight-line; otherwise the word-level loop runs k - 1 times, each time  *)
+(* with an inner loop over the k words, and the bit-level loop then runs k   *)
+(* times.                                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let normalize_full_spec,normalize_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_normalize" subroutine_signatures)
+    BIGNUM_NORMALIZE_SUBROUTINE_CORRECT
+    BIGNUM_NORMALIZE_EXEC;;
+
+let BIGNUM_NORMALIZE_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e k z pc returnaddress.
+           nonoverlapping (word pc,148) (z,8 * val k)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_normalize_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events z k pc returnaddress /\
+                         memaccess_inbounds e2 [z,val k * 8] [z,val k * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (z,8 * val k)])`,
+  ASSERT_CONCL_TAC normalize_full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES] ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN
+       ARM_SAFETY_SIM_TAC BIGNUM_NORMALIZE_EXEC (1--3) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Then(SUBGOAL_THEN `8 * k < 2 EXP 64` ASSUME_TAC THENL
+           [FIRST_ASSUM(MP_TAC o MATCH_MP
+             (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2)) THEN
+            ANTS_TAC THENL [UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC; ARITH_TAC];
+            ALL_TAC],
+     Cases(`k = 1`,
+      Leg("k1",
+        ASM_REWRITE_TAC[] THEN
+        ARM_SAFETY_SIM_TAC BIGNUM_NORMALIZE_EXEC (1--24) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Then(SUBGOAL_THEN `1 < k /\ ~(k < 1) /\ k - 1 < k` STRIP_ASSUME_TAC THENL
+            [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           SUBGOAL_THEN
+            `word_add z (word_shl (word(k - 1):int64) 3) =
+             word_add z (word(8 * (k - 1)))`
+           ASSUME_TAC THENL
+            [REWRITE_TAC[WORD_SHL_WORD; ARITH_RULE `2 EXP 3 * m = 8 * m`] THEN
+             CONV_TAC WORD_RULE;
+             ALL_TAC] THEN
+           SUBGOAL_THEN `val(word(k - 1):int64) = k - 1` ASSUME_TAC THENL
+            [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+             SIMPLE_ARITH_TAC;
+             ALL_TAC],
+      (*** The word-level normalization, by k - 1 shuffles of z ***)
+      Loop(`k - 1`, `pc + 0x14`, `pc + 0x48`,
+       `\i s. read X0 s = word k /\ read X1 s = z /\
+              read X7 s = word(k - 1 - i) /\ read X30 s = returnaddress`,
+       Leg("begin",
+         REWRITE_TAC[SUB_0] THEN
+         SUBGOAL_THEN `word_sub (word k) (word 1):int64 = word(k - 1)`
+         ASSUME_TAC THENL
+          [MATCH_MP_TAC WORD_SUB2 THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+         SUBGOAL_THEN `~(k - 1 = 0)` ASSUME_TAC THENL
+          [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+         ARM_SAFETY_SIM_TAC BIGNUM_NORMALIZE_EXEC (1--5) THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Loop(`k:num`, `pc + 0x24`, `pc + 0x40`,
+        `\j s. read X0 s = word k /\ read X1 s = z /\
+               read X7 s = word(k - 1 - i) /\ read X8 s = word j /\
+               read X30 s = returnaddress`,
+        Leg("outer_prol",
+          REWRITE_TAC[SUB_0] THEN
+          ARM_SAFETY_SIM_TAC BIGNUM_NORMALIZE_EXEC (1--4) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC),
+        Leg("shuf",
+          SUBGOAL_THEN `val(word j:int64) = j` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+            SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          SUBGOAL_THEN
+           `word_add z (word_shl (word j:int64) 3) = word_add z (word(8 * j))`
+          ASSUME_TAC THENL
+           [REWRITE_TAC[WORD_SHL_WORD; ARITH_RULE `2 EXP 3 * m = 8 * m`] THEN
+            CONV_TAC WORD_RULE;
+            ALL_TAC] THEN
+          SUBGOAL_THEN `word_add (word j:int64) (word 1) = word(j + 1)`
+          ASSUME_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(j + 1):int64) = j + 1` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+            SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          SUBGOAL_THEN
+           `(~(val(word_sub (word(j + 1):int64) (word k)) = 0) <=> j + 1 < k)`
+          ASSUME_TAC THENL
+           [REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+            MAP_EVERY VAL_INT64_TAC [`j + 1`; `k:num`] THEN
+            ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          ARM_SAFETY_SIM_TAC BIGNUM_NORMALIZE_EXEC (1--7) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("outer_epil",
+          SUBGOAL_THEN
+           `word_sub (word(k - 1 - i):int64) (word 1) = word(k - 1 - (i + 1))`
+          ASSUME_TAC THENL
+           [SUBGOAL_THEN `k - 1 - i = (k - 1 - (i + 1)) + 1` SUBST1_TAC THENL
+             [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+            ALL_TAC] THEN
+          SUBGOAL_THEN
+           `(~(val(word(k - 1 - (i + 1)):int64) = 0) <=> i + 1 < k - 1)`
+          ASSUME_TAC THENL
+           [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN
+            SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          ARM_SAFETY_SIM_TAC BIGNUM_NORMALIZE_EXEC (1--2) THEN
+          SAFETY_CLOSE_TAC)),
+       (*** The bit-level normalization ***)
+       Loop(`k:num`, `pc + 0x68`, `pc + 0x8c`,
+        `\i s. read X0 s = word k /\ read X1 s = z /\ read X7 s = word i /\
+               read X30 s = returnaddress`,
+        Leg("bitpre",
+          ARM_SAFETY_SIM_TAC BIGNUM_NORMALIZE_EXEC (1--8) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC),
+        Leg("bit",
+          SUBGOAL_THEN `val(word i:int64) = i` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+            SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          SUBGOAL_THEN
+           `word_add z (word_shl (word i:int64) 3) = word_add z (word(8 * i))`
+          ASSUME_TAC THENL
+           [REWRITE_TAC[WORD_SHL_WORD; ARITH_RULE `2 EXP 3 * m = 8 * m`] THEN
+            CONV_TAC WORD_RULE;
+            ALL_TAC] THEN
+          SUBGOAL_THEN `word_add (word i:int64) (word 1) = word(i + 1)`
+          ASSUME_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(i + 1):int64) = i + 1` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+            SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          SUBGOAL_THEN
+           `(~(val(word_sub (word(i + 1):int64) (word k)) = 0) <=> i + 1 < k)`
+          ASSUME_TAC THENL
+           [REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+            MAP_EVERY VAL_INT64_TAC [`i + 1`; `k:num`] THEN
+            ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          ARM_SAFETY_SIM_TAC BIGNUM_NORMALIZE_EXEC (1--9) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("epil",
+          ARM_SAFETY_SIM_TAC BIGNUM_NORMALIZE_EXEC (1--2) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC)))))))));;

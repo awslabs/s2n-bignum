@@ -3726,3 +3726,211 @@ let CURVE25519_PXSCALARMUL_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
                       memory :> bytes(word_sub stackpointer (word 424),424)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_PXSCALARMUL_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+needs "x86/proofs/utils/curve25519_pxscalarmul_safety.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "curve25519_pxscalarmul_alt" subroutine_signatures)
+    CURVE25519_PXSCALARMUL_ALT_CORRECT
+    CURVE25519_PXSCALARMUL_ALT_EXEC;;
+
+let CURVE25519_PXSCALARMUL_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e res scalar point pc stackpointer.
+           ALL (nonoverlapping (stackpointer,360))
+           [word pc,5838; res,64; scalar,32; point,32] /\
+           nonoverlapping (res,64) (word pc,5838)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc)
+                    (BUTLAST curve25519_pxscalarmul_alt_tmc) /\
+                    read RIP s = word (pc + 17) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [res; scalar; point] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 5820) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,32; res,64; stackpointer,360]
+                         [res,64; stackpointer,360]))
+               (MAYCHANGE
+                [RIP; RDI; RSI; RAX; RBX; RCX; RDX; RBP; R8; R9; R10; R11;
+                 R12; R13; R14; R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (res,64); memory :> bytes (stackpointer,360)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  CURVE25519_PXSCALARMUL_SAFETY_TAC CURVE25519_PXSCALARMUL_ALT_EXEC
+    ~loop_end:0x15d1 ~body:1270);;
+
+let CURVE25519_PXSCALARMUL_ALT_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 408),408))
+        [word pc,LENGTH curve25519_pxscalarmul_alt_tmc; scalar,32; point,32] /\
+        nonoverlapping (res,64)
+        (word pc,LENGTH curve25519_pxscalarmul_alt_tmc) /\
+        nonoverlapping (res,64) (word_sub stackpointer (word 408),416)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) curve25519_pxscalarmul_alt_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 408))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,32; res,64;
+                       word_sub stackpointer (word 408),416]
+                      [res,64; word_sub stackpointer (word 408),408]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,64);
+              memory :> bytes (word_sub stackpointer (word 408),408)])`,
+  X86_PROMOTE_RETURN_STACK_TAC curve25519_pxscalarmul_alt_tmc CURVE25519_PXSCALARMUL_ALT_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 408 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let CURVE25519_PXSCALARMUL_ALT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 408),408))
+        [word pc,LENGTH curve25519_pxscalarmul_alt_mc; scalar,32; point,32] /\
+        nonoverlapping (res,64)
+        (word pc,LENGTH curve25519_pxscalarmul_alt_mc) /\
+        nonoverlapping (res,64) (word_sub stackpointer (word 408),416)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) curve25519_pxscalarmul_alt_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 408))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,32; res,64;
+                       word_sub stackpointer (word 408),416]
+                      [res,64; word_sub stackpointer (word 408),408]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,64);
+              memory :> bytes (word_sub stackpointer (word 408),408)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_PXSCALARMUL_ALT_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let CURVE25519_PXSCALARMUL_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 424),424))
+        [word pc,LENGTH curve25519_pxscalarmul_alt_windows_tmc; scalar,32;
+         point,32] /\
+        nonoverlapping (res,64)
+        (word pc,LENGTH curve25519_pxscalarmul_alt_windows_tmc) /\
+        nonoverlapping (res,64) (word_sub stackpointer (word 424),432)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc)
+                 curve25519_pxscalarmul_alt_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 424))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,32; res,64;
+                       word_sub stackpointer (word 424),432]
+                      [res,64; word_sub stackpointer (word 424),424]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,64);
+              memory :> bytes (word_sub stackpointer (word 424),424)])`,
+  WINDOWS_X86_WRAP_STACK_TAC curve25519_pxscalarmul_alt_windows_tmc curve25519_pxscalarmul_alt_tmc
+    CURVE25519_PXSCALARMUL_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 408 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let CURVE25519_PXSCALARMUL_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 424),424))
+        [word pc,LENGTH curve25519_pxscalarmul_alt_windows_mc; scalar,32;
+         point,32] /\
+        nonoverlapping (res,64)
+        (word pc,LENGTH curve25519_pxscalarmul_alt_windows_mc) /\
+        nonoverlapping (res,64) (word_sub stackpointer (word 424),432)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc)
+                 curve25519_pxscalarmul_alt_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 424))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,32; res,64;
+                       word_sub stackpointer (word 424),432]
+                      [res,64; word_sub stackpointer (word 424),424]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,64);
+              memory :> bytes (word_sub stackpointer (word 424),424)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_PXSCALARMUL_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

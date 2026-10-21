@@ -97,3 +97,40 @@ let BIGNUM_MUX_6_SUBROUTINE_CORRECT = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_MUX_6_EXEC BIGNUM_MUX_6_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mux_6" subroutine_signatures)
+    BIGNUM_MUX_6_SUBROUTINE_CORRECT
+    BIGNUM_MUX_6_EXEC;;
+
+let BIGNUM_MUX_6_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e p z x y pc returnaddress.
+         nonoverlapping (word pc,104) (z,8 * 6) /\
+         (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6)) /\
+         (y = z \/ nonoverlapping (y,8 * 6) (z,8 * 6))
+         ==> ensures arm
+             (\s.
+                  aligned_bytes_loaded s (word pc) bignum_mux_6_mc /\
+                  read PC s = word pc /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [p; z; x; y] s /\
+                  read events s = e)
+             (\s.
+                  read PC s = returnaddress /\
+                  (exists e2.
+                       read events s = APPEND e2 e /\
+                       e2 = f_events x y z pc returnaddress /\
+                       memaccess_inbounds e2 [x,48; y,48; z,48] [z,48]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bignum (z,6)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MUX_6_EXEC);;

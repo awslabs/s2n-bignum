@@ -5435,6 +5435,8 @@ let X86_ADD_RETURN_NOSTACK_TAC =
 
 (* ------------------------------------------------------------------------- *)
 (* Version with register save/restore and stack adjustment.                  *)
+(* The optional inneroff also offsets the stack pointer of the core, for a   *)
+(* core whose own stack frame lies below the register saves.                 *)
 (* ------------------------------------------------------------------------- *)
 
 (* Useful lemmas *)
@@ -5462,7 +5464,7 @@ let swap_forall = prove
 
 
 let GEN_X86_ADD_RETURN_STACK_TAC =
-  fun execth coreth reglist stackoff (n,m) ->
+  fun ?(inneroff=0) execth coreth reglist stackoff (n,m) ->
     let regs = dest_list reglist in
     (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
     let is_coreth_safety = is_exists (concl coreth) in
@@ -5497,7 +5499,9 @@ let GEN_X86_ADD_RETURN_STACK_TAC =
                  WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     (if vfree_in `RSP` (concl coreth) then
       DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC stackoff THEN MP_TAC th) THEN
-      MATCH_MP_TAC MONO_FORALL THEN GEN_TAC
+      MATCH_MP_TAC MONO_FORALL THEN
+      (if inneroff = 0 then GEN_TAC
+       else WORD_FORALL_OFFSET_TAC inneroff THEN GEN_TAC)
      else
       MATCH_MP_TAC MONO_FORALL THEN GEN_TAC THEN
       DISCH_THEN(fun th ->
@@ -5547,10 +5551,10 @@ let GEN_X86_ADD_RETURN_STACK_TAC =
     X86_STEPS_TAC execth ((n+2)--(m+n+1)) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
 
-let X86_ADD_RETURN_STACK_TAC execth coreth reglist stackoff =
+let X86_ADD_RETURN_STACK_TAC ?inneroff execth coreth reglist stackoff =
   let n0 = length(dest_list reglist) in
   let n = if 8 * n0 = stackoff then n0 else n0 + 1 in
-  GEN_X86_ADD_RETURN_STACK_TAC execth coreth reglist stackoff (n,n+1);;
+  GEN_X86_ADD_RETURN_STACK_TAC ?inneroff execth coreth reglist stackoff (n,n+1);;
 
 (* ------------------------------------------------------------------------- *)
 (* Additional tools for refined "bytes_loaded ... (BUTLAST l)" variants.     *)
@@ -5611,8 +5615,8 @@ let X86_CORE_PROMOTE =
 let X86_PROMOTE_RETURN_NOSTACK_TAC mc core =
   X86_ADD_RETURN_NOSTACK_TAC (X86_MK_EXEC_RULE mc) (X86_CORE_PROMOTE core);;
 
-let X86_PROMOTE_RETURN_STACK_TAC mc core regs off =
-  X86_ADD_RETURN_STACK_TAC
+let X86_PROMOTE_RETURN_STACK_TAC ?inneroff mc core regs off =
+  X86_ADD_RETURN_STACK_TAC ?inneroff
     (X86_MK_EXEC_RULE mc) (X86_CORE_PROMOTE core) regs off;;
 
 (* ------------------------------------------------------------------------- *)
@@ -5762,7 +5766,7 @@ let WINDOWS_X86_WRAP_STACK_TAC =
     fun t -> try
         (length o dest_list o rand o find_term is_nargle) t
       with Failure _ -> failwith "Could not find WINDOWS_C_ARGUMENTS" in
-  fun winmc stdmc coreth reglist stdstackoff (asl,w) ->
+  fun ?(inneroff=0) winmc stdmc coreth reglist stdstackoff (asl,w) ->
     let stdregs = dest_list reglist in
     let n =
       let n0 = length stdregs in if 8 * n0 = stdstackoff then n0 else n0 + 1 in
@@ -5819,7 +5823,9 @@ let WINDOWS_X86_WRAP_STACK_TAC =
         CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall]))
       else ALL_TAC) THEN
      DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC stackoff THEN MP_TAC th) THEN
-     MATCH_MP_TAC MONO_FORALL THEN GEN_TAC
+     MATCH_MP_TAC MONO_FORALL THEN
+     (if inneroff = 0 then GEN_TAC
+      else WORD_FORALL_OFFSET_TAC inneroff THEN GEN_TAC)
     else
      DISCH_THEN(fun th ->
        WORD_FORALL_OFFSET_TAC stackoff THEN MP_TAC th)) THEN

@@ -2872,3 +2872,48 @@ let BIGNUM_MODIFIER_SUBROUTINE_CORRECT = time prove
               MAYCHANGE [memory :> bytes(z,8 * val k);
                          memory :> bytes(t,8 * val k)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_MODIFIER_EXEC BIGNUM_MODIFIER_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* The code is that of bignum_amontifier (with the main loop run k times)    *)
+(* followed by a Montgomery reduction outer loop with an inner loop, a       *)
+(* comparison loop and a masked subtraction, so the proof is ported from the *)
+(* bignum_amontifier one and extended by those regions in the same style.    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/bignum_modifier_safety.ml";;
+
+let modifier_full_spec,modifier_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_modifier" subroutine_signatures)
+    BIGNUM_MODIFIER_SUBROUTINE_CORRECT
+    BIGNUM_MODIFIER_EXEC;;
+
+let BIGNUM_MODIFIER_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e k z m t pc returnaddress.
+           nonoverlapping (z,8 * val k) (t,8 * val k) /\
+           ALLPAIRS nonoverlapping [z,8 * val k; t,8 * val k]
+           [word pc,972; m,8 * val k]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_modifier_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; m; t] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events m z t k pc returnaddress /\
+                         memaccess_inbounds e2
+                         [m,val k * 8; z,val k * 8; t,val k * 8]
+                         [z,val k * 8; t,val k * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * val k); memory :> bytes (t,8 * val k)])`,
+  ASSERT_CONCL_TAC modifier_full_spec THEN
+  BIGNUM_MODIFIER_SAFETY_TAC BIGNUM_MODIFIER_EXEC `k:num` 878);;

@@ -5493,27 +5493,7 @@ let EDWARDS25519_SCALARMULBASE_WINDOWS_SUBROUTINE_CORRECT = time prove
 
 needs "x86/proofs/consttime.ml";;
 needs "x86/proofs/subroutine_signatures.ml";;
-
-let LOCAL_MODINV_SAFETY_TAC (assump_name:string) (n:int) =
-  REMOVE_THEN assump_name (fun safety_th ->
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-        (edwards25519_scalarmulbase_tmc',
-          EDWARDS25519_SCALARMULBASE_EXEC,
-          0x189f,
-          (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p25519_tmc] THENC TRIM_LIST_CONV)
-            `TRIM_LIST (17,18) bignum_inv_p25519_tmc`,
-            safety_th)
-        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-        `pc + 0x189f`; `stackpointer:int64`] n
-    THENL [
-      EXISTS_E2_TAC(ref
-        [`scalar:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;`tables:num`;
-         (* inside the loop... *)
-         `i:num`;
-         `f_ev_loop:int64->int64->num->num->int64->num->num->(uarch_event)list`]);
-
-      LABEL_TAC assump_name safety_th
-    ]);;
+needs "x86/proofs/utils/edwards25519_scalarmulbase_safety.ml";;
 
 let full_spec,public_vars = mk_safety_spec
     ~readonly_objects:[`word tables:int64`,`48576`]
@@ -5522,15 +5502,11 @@ let full_spec,public_vars = mk_safety_spec
     EDWARDS25519_SCALARMULBASE_CORRECT
     EDWARDS25519_SCALARMULBASE_EXEC;;
 
-(* The hand-written precondition below uses the leaner
-   `nonoverlapping (res,64) (word pc,0x3076)` form. This is intentionally
-   weaker than what `mk_safety_spec`'s `~readonly_objects` would produce
-   (which folds `word tables,48576` into the same `nonoverlapping (res,64)`
-   ALL list). Strengthening to the full form to enable
-   `ASSERT_CONCL_TAC full_spec` propagates an extra `nonoverlapping (res,64)
-   (word tables,48576)` hypothesis through `STRIP_TAC`/`X86_STEPS_TAC` and
-   trips later automated steps. So `ASSERT_CONCL_TAC full_spec` is omitted
-   here. *)
+(* The precondition below does not assume that res and the tables are
+   disjoint, unlike the specification computed from the correctness
+   theorem (with ~readonly_objects); the proof does not need it, and the
+   extra hypothesis would get in the way of later automated steps. The
+   statement is checked to imply the computed specification. *)
 let EDWARDS25519_SCALARMULBASE_SAFE = time prove
  (`exists f_events.
        forall e tables res scalar pc stackpointer.
@@ -5564,108 +5540,12 @@ let EDWARDS25519_SCALARMULBASE_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bytes (res,64); memory :> bytes (stackpointer,488)])`,
-
-  (* Prepare the safety theorem of subroutine to be used! This is necessary to
-     keep introduction of metavariable in the right order. *)
-  ASSUME_CALLEE_SAFETY_TAILED_TAC CORE_INV_P25519_SAFE "H_INV" THEN
-
-  CONCRETIZE_F_EVENTS_TAC
-    `\(scalar:int64) (res:int64) (tables:num) (pc:num) (stackpointer:int64).
-      APPEND
-        (f_ev_epil scalar res tables pc stackpointer)
-        (APPEND
-          (ENUMERATEL 63 (\i.
-            f_ev_loop scalar res tables pc stackpointer i))
-          (f_ev_prol scalar res tables pc stackpointer))
-    :(uarch_event)list` THEN
-
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
-  REWRITE_TAC[BYTES_LOADED_DATA] THEN
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `63` `pc + 0x1f1` `pc + 0x180d`(*+2 insn *)
-   `\i s.
-      read (memory :> bytes(word tables,48576)) s =
-      num_of_bytelist edwards25519_scalarmulbase_constant_data /\
-      read RSP s = stackpointer /\
-      read (memory :> bytes64 (word_add stackpointer (word 448))) s = res /\
-      read (memory :> bytes64 (word_add stackpointer (word 480))) s =
-          word(tables + 0xc0 + 768 * i) /\
-      read (memory :> bytes64 (word_add stackpointer (word 456))) s =
-          word (4 * i)` THEN
-  REPEAT CONJ_TAC THENL [
-    ARITH_TAC;
-
-    ENSURES_INIT_TAC "s0" THEN
-    X86_STEPS_TAC EDWARDS25519_SCALARMULBASE_EXEC (1--39) THEN
-
-    (*** Fold the rip-relative LEA results so `read R10 s = word tables`
-         and `read R11 s = word_add (word tables) (word 96)`. ***)
-
-    UNDISCH_TAC `read R10 s39 =
-        word(val (word (pc + 174):(64)word) +
-             val (word_sx (iword (&tables - (&pc + &174)):int32):(64)word):num)` THEN
-    IMP_REWRITE_TAC[RIP_REL_ADDR_FOLD] THEN
-    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-    UNDISCH_TAC `read R11 s39 =
-        word_add
-        (word (val (word (pc + 174):(64)word) +
-               val (word_sx (iword (&tables - (&pc + &174)):int32):(64)word):num))
-        (word 96)` THEN
-    IMP_REWRITE_TAC[RIP_REL_ADDR_FOLD] THEN
-    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-
-    X86_STEPS_TAC EDWARDS25519_SCALARMULBASE_EXEC (40--97) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-    CONJ_TAC THENL [WORD_ARITH_TAC; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (*** The main loop invariant for adding the next table entry ***)
-
-    REPEAT STRIP_TAC THEN
-    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    X86_STEPS_TAC EDWARDS25519_SCALARMULBASE_EXEC (1--281) THEN
-    X86_STEPS_TAC EDWARDS25519_SCALARMULBASE_EXEC (282--
-      (281 + 19(*DOUBLE_TWICE4*) + 19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) +
-       82(*MUL_4*) + 82(*MUL_4*) + 82(*MUL_4*) + 19(*SUB_TWICE4*) +
-       19(*ADD_TWICE4*) + 19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) +
-       82(*MUL_4*) + 82(*MUL_4*) + 82(*MUL_4*) + 82(*MUL_4*))) THEN
-
-    X86_STEPS_TAC EDWARDS25519_SCALARMULBASE_EXEC (296--298) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [
-      REWRITE_TAC[GSYM WORD_ADD] THEN
-      MAP_EVERY VAL_INT64_TAC [`4 * i + 4`] THEN
-      ASM_REWRITE_TAC[] THEN
-      GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN
-      SIMPLE_ARITH_TAC; ALL_TAC
-    ] THEN
-    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-    SUBGOAL_THEN
-      `val (word_ushr (word (4 * i):int64) 6) = (4 * i) DIV 64`
-      SUBST_ALL_TAC THENL [
-      REWRITE_TAC[VAL_WORD_USHR] THEN
-      IMP_REWRITE_TAC[VAL_WORD;MOD_LT;DIMINDEX_64] THEN
-      SIMPLE_ARITH_TAC;
-      ALL_TAC
-    ] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    ALL_TAC] THEN
-
-  (*** Clean up ready for the final translation part ***)
-
-  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-  X86_STEPS_TAC EDWARDS25519_SCALARMULBASE_EXEC (3--26) THEN
-  LOCAL_MODINV_SAFETY_TAC "H_INV" 27 THEN
-  X86_STEPS_TAC EDWARDS25519_SCALARMULBASE_EXEC (28--(27+1+91*2)) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  ASSERT_CONCL_STRONGER_TAC full_spec THEN
+  EDWARDS25519_SCALARMULBASE_SAFETY_TAC
+    (edwards25519_scalarmulbase_tmc',EDWARDS25519_SCALARMULBASE_EXEC,
+     `edwards25519_scalarmulbase_constant_data`)
+    CORE_INV_P25519_SAFE
+    ~inv:0x189f ~loop_end:0x180d ~mul_4:82 ~mul_p25519:91);;
 
 let EDWARDS25519_SCALARMULBASE_NOIBT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
@@ -5816,40 +5696,11 @@ let EDWARDS25519_SCALARMULBASE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
         EDWARDS25519_SCALARMULBASE_SAFE)
        `[RBX; RBP; R12; R13; R14; R15]` 536 THEN
       DISCHARGE_SAFETY_PROPERTY_TAC)) in
-  ASSUME_CALLEE_SAFETY_TAILED_TAC subth "H_CALLEE" THEN
-  META_EXISTS_TAC THEN GEN_TAC THEN
-
-  REWRITE_TAC[BYTES_LOADED_DATA;
-              fst WINDOWS_EDWARDS25519_SCALARMULBASE_EXEC] THEN
-  REPLICATE_TAC 4 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 560 THEN
-  REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
-              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN REPEAT STRIP_TAC THEN
-  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
-  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
-  REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC WINDOWS_EDWARDS25519_SCALARMULBASE_EXEC (1--5) THEN
-  REMOVE_THEN "H_CALLEE" (fun subth ->
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-      (edwards25519_scalarmulbase_windows_tmc,
-      WINDOWS_EDWARDS25519_SCALARMULBASE_EXEC,
-      0x10,edwards25519_scalarmulbase_tmc,subth)
-          (* H_CALLEE quantifier order (from ASSUME_CALLEE_SAFETY_TAILED_TAC):
-             [e; tables; res; scalar; pc; stackpointer; returnaddress; e_tail].
-             SPECL the leading 7; e_tail is left as a metavariable bound by
-             META_EXISTS_TAC inside X86_SUBROUTINE_SIM_TAC. *)
-          [`e:(uarch_event)list`; `tables:num`;
-           `read RDI s`; `read RSI s`;
-          `pc + 0x10`; `read RSP s`; `read (memory :> bytes64 (read RSP s)) s`]
-          6) THENL [
-    EXISTS_E2_TAC(ref
-      [`tables:num`;`pc:num`;`stackpointer:int64`]);
-
-    ALL_TAC
-  ] THEN
-  X86_STEPS_TAC WINDOWS_EDWARDS25519_SCALARMULBASE_EXEC (7--9) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_WINDOWS_CALL_WRAP_SAFETY_TAC
+    ~rewrites:[BYTES_LOADED_DATA]
+    (edwards25519_scalarmulbase_windows_tmc,WINDOWS_EDWARDS25519_SCALARMULBASE_EXEC)
+    (edwards25519_scalarmulbase_tmc,subth)
+    [`tables:num`;`pc:num`;`stackpointer:int64`]);;
 
 let EDWARDS25519_SCALARMULBASE_WINDOWS_SUBROUTINE_SAFE = time prove
  (`exists f_events.

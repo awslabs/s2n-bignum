@@ -4809,3 +4809,87 @@ let P256_SCALARMULBASE_SUBROUTINE_CORRECT = time prove
    ARM_ADD_RETURN_STACK_TAC P256_SCALARMULBASE_EXEC
    P256_SCALARMULBASE_CORRECT `[X19; X20; X21; X22; X23; X24; X25; X30]`
      576);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The scalar is not a public input   *)
+(* but the block size is, and the table must be large enough for the block  *)
+(* size: (256 DIV blocksize + 1) * 2^(blocksize-1) entries of 64 bytes, the  *)
+(* length condition in p256_tabulates, assumed here as a precondition. The   *)
+(* main loop runs once per window of the scalar; each iteration loads all    *)
+(* 2^(blocksize-1) entries of the current block of the table, selecting one  *)
+(* by conditional moves, and calls the local mixed addition. The final       *)
+(* conversion to affine coordinates is the same as in p256_scalarmul.        *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/p256_scalarmulbase_safety.ml";;
+
+let P256_SCALARMULBASE_SAFE = time prove
+ (`exists f_events.
+     forall e res scalar blocksize tab len pc stackpointer.
+        2 <= val blocksize /\ val blocksize <= 31 /\
+        (256 DIV val blocksize + 1) * 2 EXP (val blocksize - 1) * 64 <= len /\
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (stackpointer,512))
+            [(word pc,LENGTH p256_scalarmulbase_mc); (res,64); (scalar,32);
+             (tab,len)] /\
+        nonoverlapping (res,64) (word pc,LENGTH p256_scalarmulbase_mc)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) p256_scalarmulbase_mc /\
+                  read PC s = word(pc + 0x14) /\
+                  read SP s = word_add stackpointer (word 224) /\
+                  C_ARGUMENTS [res;scalar;blocksize;tab] s /\
+                  read events s = e)
+             (\s. read PC s = word (pc + 0x294) /\
+                  (exists e2.
+                       read events s = APPEND e2 e /\
+                       e2 = f_events scalar blocksize tab len res pc
+                                     stackpointer /\
+                       memaccess_inbounds e2
+                       [scalar,32; tab,len; res,64; stackpointer,512]
+                       [res,64; stackpointer,512]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X30] ,,
+           MAYCHANGE [memory :> bytes(res,64);
+                      memory :> bytes(stackpointer,512)])`,
+  P256_SCALARMULBASE_SAFETY_TAC (p256_scalarmulbase_mc,P256_SCALARMULBASE_EXEC)
+    (0x195c,p256_montjmixadd_mc,P256_MONTJMIXADD_SUBROUTINE_SAFE)
+    (0x1404,bignum_montmul_p256_mc,BIGNUM_MONTMUL_P256_SUBROUTINE_SAFE)
+    (0x1738,bignum_montsqr_p256_mc,BIGNUM_MONTSQR_P256_SUBROUTINE_SAFE)
+    (0x2ac,bignum_demont_p256_mc,BIGNUM_DEMONT_P256_SUBROUTINE_SAFE)
+    (0x340,bignum_inv_p256_mc,BIGNUM_INV_P256_SUBROUTINE_SAFE));;
+
+let P256_SCALARMULBASE_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e res scalar blocksize tab len pc stackpointer returnaddress.
+        2 <= val blocksize /\ val blocksize <= 31 /\
+        (256 DIV val blocksize + 1) * 2 EXP (val blocksize - 1) * 64 <= len /\
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 576),576))
+            [(word pc,LENGTH p256_scalarmulbase_mc); (res,64); (scalar,32);
+             (tab,len)] /\
+        nonoverlapping (res,64) (word pc,LENGTH p256_scalarmulbase_mc)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) p256_scalarmulbase_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [res;scalar;blocksize;tab] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                       read events s = APPEND e2 e /\
+                       e2 = f_events scalar blocksize tab len res pc
+                                     (word_sub stackpointer (word 576))
+                                     returnaddress /\
+                       memaccess_inbounds e2
+                       [scalar,32; tab,len; res,64;
+                        word_sub stackpointer (word 576),576]
+                       [res,64; word_sub stackpointer (word 576),576]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(res,64);
+                      memory :> bytes(word_sub stackpointer (word 576),576)])`,
+  ARM_ADD_RETURN_STACK_TAC P256_SCALARMULBASE_EXEC
+    P256_SCALARMULBASE_SAFE `[X19; X20; X21; X22; X23; X24; X25; X30]` 576 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

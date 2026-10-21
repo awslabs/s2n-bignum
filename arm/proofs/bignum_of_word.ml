@@ -110,3 +110,77 @@ let BIGNUM_OF_WORD_SUBROUTINE_CORRECT = prove
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(z,val k)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_OF_WORD_EXEC BIGNUM_OF_WORD_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_of_word" subroutine_signatures)
+    BIGNUM_OF_WORD_SUBROUTINE_CORRECT
+    BIGNUM_OF_WORD_EXEC;;
+
+let BIGNUM_OF_WORD_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e k z n pc returnaddress.
+           nonoverlapping (word pc,32) (z,8 * val k)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_of_word_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; n] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events z k pc returnaddress /\
+                         memaccess_inbounds e2 [z,val k * 8] [z,val k * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN
+       ARM_SAFETY_SIM_TAC BIGNUM_OF_WORD_EXEC (1--2) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Cases(`k = 1`,
+      Leg("k1",
+        ASM_REWRITE_TAC[] THEN
+        ARM_SAFETY_SIM_TAC BIGNUM_OF_WORD_EXEC (1--5) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Loop(`k - 1`, `pc + 0x10`, `pc + 0x1c`,
+        `\i s. read X1 s = z /\ read X0 s = word(k - 1 - i) /\
+               read X30 s = returnaddress`,
+        Leg("pre",
+          SUBGOAL_THEN `word_sub (word k) (word 1):int64 = word(k - 1)`
+          ASSUME_TAC THENL [MATCH_MP_TAC WORD_SUB2 THEN SIMPLE_ARITH_TAC;
+                            ALL_TAC] THEN
+          SUBGOAL_THEN `~(val(word(k - 1):int64) = 0)` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          ARM_SAFETY_SIM_TAC BIGNUM_OF_WORD_EXEC (1--4) THEN
+          REWRITE_TAC[SUB_0] THEN DISCHARGE_SAFETY_PROPERTY_TAC),
+        Leg("loop",
+          SUBGOAL_THEN
+           `word_sub (word(k - 1 - i)) (word 1):int64 = word(k - 1 - (i + 1))`
+          ASSUME_TAC THENL
+           [SUBGOAL_THEN `k - 1 - i = (k - 1 - (i + 1)) + 1` SUBST1_TAC THENL
+             [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+            ALL_TAC] THEN
+          SUBGOAL_THEN
+           `(~(val(word(k - 1 - (i + 1)):int64) = 0) <=> i + 1 < k - 1)`
+          ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          ARM_SAFETY_SIM_TAC BIGNUM_OF_WORD_EXEC (1--3) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("post",
+          ARM_SAFETY_SIM_TAC BIGNUM_OF_WORD_EXEC (1--1) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC))))));;

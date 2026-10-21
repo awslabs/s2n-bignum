@@ -8855,3 +8855,365 @@ let BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_CORRECT = time prove
     BIGNUM_EMONTREDC_8N_CDIFF_CORRECT
    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30;
      D8; D9; D10; D11; D12; D13; D14; D15]` 288);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. As for correctness, the core is    *)
+(* proved first, then the subroutine from it. The preconditions are those of *)
+(* the correctness theorem, so k is a multiple of 8 with 16 <= k and there   *)
+(* is a single control flow shape: the loop precomputing the differences of  *)
+(* the words of m into m_precalc runs k / 4 - 1 times, and the main loop     *)
+(* runs k / 4 times, each iteration being the first 4-word step, an inner    *)
+(* loop of k / 4 - 2 iterations and the final step. As the code reuses X30   *)
+(* for data, the invariants keep track of the m_precalc pointer and of the   *)
+(* main loop counter kept on the stack.                                      *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+(* The stack pointer is called sp in the correctness theorems; mk_safety_spec
+   renames it to stackpointer. *)
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_emontredc_8n_cdiff" subroutine_signatures)
+    BIGNUM_EMONTREDC_8N_CDIFF_CORRECT
+    BIGNUM_EMONTREDC_8N_CDIFF_EXEC;;
+
+(* The inner loop and the final step read m_precalc at negative offsets from *)
+(* the post-incremented pointer; make these offsets positive in the events.  *)
+
+let BIGNUM_EMONTREDC_8N_CDIFF_NEGOFF_RULES = map (fun c ->
+  WORD_RULE(subst [mk_small_numeral c,`c:num`; mk_small_numeral(96-c),`d:num`]
+   `word_sub (word_add (x:int64) (word (96 * (j + 1)))) (word c) =
+    word_add x (word (96 * j + d))`)) [16;32;48;64];;
+
+let BIGNUM_EMONTREDC_8N_CDIFF_SAFE = time prove
+ (`exists f_events.
+       forall e k z m m_precalc w pc stackpointer.
+           ALL (nonoverlapping (z,8 * 2 * val k))
+           [word pc,LENGTH bignum_emontredc_8n_cdiff_mc; stackpointer,128;
+            m,8 * val k; m_precalc,8 * 12 * (val k DIV 4 - 1)] /\
+           ALL (nonoverlapping (stackpointer,128))
+           [word pc,LENGTH bignum_emontredc_8n_cdiff_mc; m,8 * val k;
+            m_precalc,8 * 12 * (val k DIV 4 - 1)] /\
+           ALL (nonoverlapping (m_precalc,8 * 12 * (val k DIV 4 - 1)))
+           [word pc,LENGTH bignum_emontredc_8n_cdiff_mc; m,8 * val k] /\
+           aligned 16 stackpointer /\
+           8 divides val k /\
+           val k < 2 EXP 32 /\
+           16 <= val k
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    bignum_emontredc_8n_cdiff_mc /\
+                    read PC s = word (pc + 52) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [k; z; m; w; m_precalc] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 2176) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events m z m_precalc k pc stackpointer /\
+                         memaccess_inbounds e2
+                         [z,(2 * val k) * 8; m,val k * 8;
+                          m_precalc,(12 * (val k DIV 4 - 1)) * 8;
+                          stackpointer,128]
+                         [z,(2 * val k) * 8;
+                          m_precalc,(12 * (val k DIV 4 - 1)) * 8;
+                          stackpointer,128]))
+               (MAYCHANGE
+                [Q29; Q2; Q12; Q27; Q17; Q30; Q28; Q21; Q31; Q23; Q24; Q3;
+                 Q16; Q26; Q11; Q5; Q8; Q4; Q15; Q9; Q18; Q20; Q19; Q14; Q25;
+                 Q1; Q7; Q10; Q13; Q0; Q6] ,,
+                MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25;
+                 X26; X27; X28; X29; X30] ,,
+                MAYCHANGE [memory :> bytes (z,8 * 2 * val k)] ,,
+                MAYCHANGE [memory :> bytes (stackpointer,128)] ,,
+                MAYCHANGE
+                [memory :> bytes (m_precalc,8 * 12 * (val k DIV 4 - 1))] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ~ths:[ALL; fst BIGNUM_EMONTREDC_8N_CDIFF_EXEC]
+    ["k"; "w"]
+   (Then(SUBGOAL_THEN `4 * k DIV 4 = k /\ 4 <= k DIV 4` STRIP_ASSUME_TAC THENL
+          [MP_TAC(ASSUME `8 divides k`) THEN REWRITE_TAC[divides] THEN
+           DISCH_THEN(X_CHOOSE_THEN `q:num` SUBST_ALL_TAC) THEN
+           REWRITE_TAC[ARITH_RULE `8 * q = 4 * (2 * q)`] THEN
+           SIMP_TAC[DIV_MULT; ARITH_EQ] THEN
+           UNDISCH_TAC `16 <= 8 * q` THEN ARITH_TAC;
+           ALL_TAC],
+    Seq(`pc + 0xd8`,
+     `\s. read SP s = stackpointer /\
+          read (memory :> bytes64 (word_add stackpointer (word 8))) s =
+          m_precalc /\
+          read (memory :> bytes64 (word_add stackpointer (word 16))) s =
+          word (k DIV 4) /\
+          read X1 s = z /\ read X2 s = m /\ read X30 s = m_precalc /\
+          read X12 s = word (k DIV 4 - 1)`,
+     (*** The loop precomputing the differences of the words of m ***)
+     Loop(`k DIV 4 - 1`, `pc + 0x54`, `pc + 0xc8`,
+      `\i s. read SP s = stackpointer /\
+             read X1 s = z /\
+             read X2 s = word_add m (word (32 * i)) /\
+             read X12 s = word (k DIV 4 - 1) /\
+             read X24 s = m_precalc /\
+             read X25 s = m /\
+             read X26 s = word (k DIV 4) /\
+             read X27 s = word (k DIV 4 - 1 - i) /\
+             read X30 s = word_add m_precalc (word (96 * i))`,
+      Leg("begin",
+        REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0; SUB_0;
+                    ENUMERATEL_APPEND_ZERO] THEN
+        SUBGOAL_THEN
+         `word_ushr (word k:int64) 2 = word (k DIV 4) /\
+          word_sub (word (k DIV 4)) (word 1):int64 = word (k DIV 4 - 1) /\
+          val (word (k DIV 4):int64) = k DIV 4 /\ ~(k DIV 4 < 1)`
+        STRIP_ASSUME_TAC THENL
+         [ASM_REWRITE_TAC[word_ushr] THEN CONV_TAC NUM_REDUCE_CONV THEN
+          REPEAT CONJ_TAC THENL
+           [MATCH_MP_TAC WORD_SUB2 THEN SIMPLE_ARITH_TAC;
+            MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+            SIMPLE_ARITH_TAC;
+            SIMPLE_ARITH_TAC];
+          ALL_TAC] THEN
+        ENSURES_INIT_TAC "s0" THEN
+        ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--8) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("precomp",
+        SUBGOAL_THEN
+         `word_sub (word (k DIV 4 - 1 - i)) (word 1):int64 =
+          word (k DIV 4 - 1 - (i + 1))`
+        ASSUME_TAC THENL
+         [SUBGOAL_THEN `k DIV 4 - 1 - i = (k DIV 4 - 1 - (i + 1)) + 1`
+          SUBST1_TAC THENL [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+          ALL_TAC] THEN
+        SUBGOAL_THEN
+         `(~(val (word (k DIV 4 - 1 - (i + 1)):int64) = 0) <=>
+           i + 1 < k DIV 4 - 1)`
+        ASSUME_TAC THENL
+         [SUBGOAL_THEN
+           `val (word (k DIV 4 - 1 - (i + 1)):int64) = k DIV 4 - 1 - (i + 1)`
+          SUBST1_TAC THENL
+           [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+            SIMPLE_ARITH_TAC;
+            SIMPLE_ARITH_TAC];
+          ALL_TAC] THEN
+        ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+        ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--29) THEN
+        SAFETY_REWRITE_READS_TAC ["X2"]
+         [WORD_RULE `word_add (word_add (m:int64) (word (32 * i))) (word 32) =
+                     word_add m (word (32 * (i + 1)))`] THEN
+        SAFETY_REWRITE_READS_TAC ["X30"]
+         [WORD_RULE `word_add (word_add (m:int64) (word (96 * i))) (word 96) =
+                     word_add m (word (96 * (i + 1)))`] THEN
+        SAFETY_REWRITE_READS_TAC ["PC"]
+         [SAFETY_COND_WORD_LIFT] THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("save",
+        ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+        ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--4) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC)),
+     (*** The main loop, one iteration per 4-word block of z ***)
+     Loop(`k DIV 4`, `pc + 0xe4`, `pc + 0x87c`,
+      `\i s. read SP s = stackpointer /\
+             read (memory :> bytes64 (word_add stackpointer (word 8))) s =
+             m_precalc /\
+             read (memory :> bytes64 (word_add stackpointer (word 16))) s =
+             word (k DIV 4 - i) /\
+             read X0 s = word (32 * (k DIV 4 - 1)) /\
+             read X1 s = word_add z (word (32 * i)) /\
+             read X2 s = m /\
+             read X30 s = m_precalc`,
+      Leg("mainpre",
+        REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0; SUB_0;
+                    ENUMERATEL_APPEND_ZERO] THEN
+        ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+        ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--3) THEN
+        SAFETY_REWRITE_READS_TAC ["X0"]
+         [WORD_SHL_WORD; ARITH_RULE `2 EXP 5 * n = 32 * n`] THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      (*** The inner loop over the other blocks of m ***)
+      Loop(`k DIV 4 - 2`, `pc + 0x434`, `pc + 0x690`,
+       `\j s. read SP s = stackpointer /\
+              read (memory :> bytes64 (word_add stackpointer (word 8))) s =
+              m_precalc /\
+              read (memory :> bytes64 (word_add stackpointer (word 16))) s =
+              word (k DIV 4 - i) /\
+              read X0 s = word (32 * (k DIV 4 - 1)) /\
+              read X1 s = word_add z (word (32 * i + 32 * (j + 1))) /\
+              read X2 s = word_add m (word (32 * (j + 1))) /\
+              read X30 s = word_add m_precalc (word (96 * (j + 1))) /\
+              read X27 s = word (k DIV 4 - 2 - j)`,
+       Leg("first",
+         REWRITE_TAC[ADD_CLAUSES; MULT_CLAUSES; SUB_0;
+                     ENUMERATEL_APPEND_ZERO] THEN
+         SUBGOAL_THEN
+          `val (word (32 * (k DIV 4 - 1)):int64) = 32 * (k DIV 4 - 1)`
+         ASSUME_TAC THENL
+          [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+           SIMPLE_ARITH_TAC;
+           ALL_TAC] THEN
+         SUBGOAL_THEN
+          `word_ushr (word (32 * (k DIV 4 - 1)):int64) 5 = word (k DIV 4 - 1) /\
+           word_sub (word (k DIV 4 - 1)) (word 1):int64 = word (k DIV 4 - 2)`
+         STRIP_ASSUME_TAC THENL
+          [CONJ_TAC THENL
+            [ASM_REWRITE_TAC[word_ushr] THEN CONV_TAC NUM_REDUCE_CONV THEN
+             SIMP_TAC[DIV_MULT; ARITH_EQ];
+             SUBGOAL_THEN `k DIV 4 - 1 = (k DIV 4 - 2) + 1` SUBST1_TAC THENL
+              [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE]];
+           ALL_TAC] THEN
+         ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+         ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--212) THEN
+         SAFETY_REWRITE_READS_TAC ["X1"]
+          [WORD_RULE `word_add (word_add (z:int64) (word (32 * i))) (word 32) =
+                      word_add z (word (32 * i + 32))`] THEN
+         ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("inner",
+         SUBGOAL_THEN
+          `word_sub (word (k DIV 4 - 2 - j)) (word 1):int64 =
+           word (k DIV 4 - 2 - (j + 1))`
+         ASSUME_TAC THENL
+          [SUBGOAL_THEN `k DIV 4 - 2 - j = (k DIV 4 - 2 - (j + 1)) + 1`
+           SUBST1_TAC THENL [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+           ALL_TAC] THEN
+         SUBGOAL_THEN
+          `(~(val (word (k DIV 4 - 2 - (j + 1)):int64) = 0) <=>
+            j + 1 < k DIV 4 - 2)`
+         ASSUME_TAC THENL
+          [SUBGOAL_THEN
+            `val (word (k DIV 4 - 2 - (j + 1)):int64) = k DIV 4 - 2 - (j + 1)`
+           SUBST1_TAC THENL
+            [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+             SIMPLE_ARITH_TAC;
+             SIMPLE_ARITH_TAC];
+           ALL_TAC] THEN
+         ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+         ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--151) THEN
+         SAFETY_REWRITE_READS_TAC ["X1"]
+          [WORD_RULE `word_add (word_add (z:int64) (word (32 * i + 32 * (j + 1))))
+                               (word 32) =
+                      word_add z (word (32 * i + 32 * ((j + 1) + 1)))`] THEN
+         SAFETY_REWRITE_READS_TAC ["X2"]
+          [WORD_RULE `word_add (word_add (m:int64) (word (32 * (j + 1)))) (word 32) =
+                      word_add m (word (32 * ((j + 1) + 1)))`] THEN
+         SAFETY_REWRITE_READS_TAC ["X30"]
+          [WORD_RULE `word_add (word_add (m:int64) (word (96 * (j + 1)))) (word 96) =
+                      word_add m (word (96 * ((j + 1) + 1)))`] THEN
+         SAFETY_REWRITE_READS_TAC ["PC"]
+          [SAFETY_COND_WORD_LIFT] THEN
+         SAFETY_REWRITE_READS_TAC ["events"]
+           BIGNUM_EMONTREDC_8N_CDIFF_NEGOFF_RULES THEN
+         ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("final",
+         SUBGOAL_THEN
+          `word_sub (word (k DIV 4 - i)) (word 1):int64 =
+           word (k DIV 4 - (i + 1))`
+         ASSUME_TAC THENL
+          [SUBGOAL_THEN `k DIV 4 - i = (k DIV 4 - (i + 1)) + 1` SUBST1_TAC
+           THENL [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+           ALL_TAC] THEN
+         SUBGOAL_THEN
+          `(~(val (word (k DIV 4 - (i + 1)):int64) = 0) <=> i + 1 < k DIV 4)`
+         ASSUME_TAC THENL
+          [SUBGOAL_THEN
+            `val (word (k DIV 4 - (i + 1)):int64) = k DIV 4 - (i + 1)`
+           SUBST1_TAC THENL
+            [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+             SIMPLE_ARITH_TAC;
+             SIMPLE_ARITH_TAC];
+           ALL_TAC] THEN
+         SUBGOAL_THEN `k DIV 4 - 2 + 1 = k DIV 4 - 1` (LABEL_TAC "k4m1") THENL
+          [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+         ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+         REMOVE_THEN "k4m1" (fun th ->
+           SAFETY_REWRITE_READS_TAC ["X1"; "X2"] [th]) THEN
+         ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--123) THEN
+         SAFETY_REWRITE_READS_TAC ["X1"]
+          [WORD_RULE
+            `word_add (word_sub (word_add (z:int64) (word (32 * i + 32 * n)))
+                                (word (32 * n))) (word 32) =
+             word_add z (word (32 * (i + 1)))`] THEN
+         SAFETY_REWRITE_READS_TAC ["X2"]
+          [WORD_RULE `word_sub (word_add (m:int64) (word n)) (word n) = m`] THEN
+         SAFETY_REWRITE_READS_TAC ["PC"]
+          [SAFETY_COND_WORD_LIFT] THEN
+         SAFETY_REWRITE_READS_TAC ["events"]
+           BIGNUM_EMONTREDC_8N_CDIFF_NEGOFF_RULES THEN
+         ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC)),
+      Leg("end",
+        ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+        ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--1) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))))));;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_emontredc_8n_cdiff" subroutine_signatures)
+    BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_CORRECT
+    BIGNUM_EMONTREDC_8N_CDIFF_EXEC;;
+
+let BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e k z m m_precalc w pc stackpointer returnaddress.
+           ALL (nonoverlapping (z,8 * 2 * val k))
+           [word pc,LENGTH bignum_emontredc_8n_cdiff_mc;
+            word_sub stackpointer (word 288),288; m,8 * val k;
+            m_precalc,8 * 12 * (val k DIV 4 - 1)] /\
+           ALL (nonoverlapping (word_sub stackpointer (word 288),288))
+           [word pc,LENGTH bignum_emontredc_8n_cdiff_mc; m,8 * val k;
+            m_precalc,8 * 12 * (val k DIV 4 - 1)] /\
+           ALL (nonoverlapping (m_precalc,8 * 12 * (val k DIV 4 - 1)))
+           [word pc,LENGTH bignum_emontredc_8n_cdiff_mc; m,8 * val k] /\
+           aligned 16 stackpointer /\
+           8 divides val k /\
+           val k < 2 EXP 32 /\
+           16 <= val k
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    bignum_emontredc_8n_cdiff_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; m; w; m_precalc] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events m z m_precalc k pc
+                         (word_sub stackpointer (word 288))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [z,(2 * val k) * 8; m,val k * 8;
+                          m_precalc,(12 * (val k DIV 4 - 1)) * 8;
+                          word_sub stackpointer (word 288),288]
+                         [z,(2 * val k) * 8;
+                          m_precalc,(12 * (val k DIV 4 - 1)) * 8;
+                          word_sub stackpointer (word 288),288]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (z,8 * 2 * val k)] ,,
+                MAYCHANGE
+                [memory :> bytes (word_sub stackpointer (word 288),288)] ,,
+                MAYCHANGE
+                [memory :> bytes (m_precalc,8 * 12 * (val k DIV 4 - 1))])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(13,13)
+    BIGNUM_EMONTREDC_8N_CDIFF_EXEC BIGNUM_EMONTREDC_8N_CDIFF_SAFE
+   `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30;
+     D8; D9; D10; D11; D12; D13; D14; D15]` 288 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

@@ -3724,3 +3724,102 @@ let CURVE25519_X25519BASE_ALT_SUBROUTINE_CORRECT = time prove
     (REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_ALT_EXEC]
      CURVE25519_X25519BASE_ALT_CORRECT)
     `[X19; X20; X21; X22; X23; X24]` 496);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/curve25519_x25519base_safety.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~readonly_objects:[`word tables:int64`,`48576`]
+    ~keep_maychanges:true
+    (assoc "curve25519_x25519base_alt" subroutine_signatures)
+    CURVE25519_X25519BASE_ALT_CORRECT
+    CURVE25519_X25519BASE_ALT_EXEC;;
+
+let CURVE25519_X25519BASE_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e tables res scalar pc stackpointer.
+           aligned 16 stackpointer /\
+           adrp_within_bounds (word tables) (word (pc + 48)) /\
+           ALL (nonoverlapping (stackpointer,448))
+           [word pc,8788; word tables,48576; res,32; scalar,32] /\
+           nonoverlapping (res,32) (word pc,8788)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    (curve25519_x25519base_alt_mc pc tables) /\
+                    read PC s = word (pc + 16) /\
+                    // This clause is manually added
+                    bytes_loaded s (word tables)
+                      curve25519_x25519base_alt_constant_data /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [res; scalar] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 8768) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar res tables pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; res,32; stackpointer,448;
+                          word tables,48576]
+                         [res,32; stackpointer,448]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22; X23] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (res,32); memory :> bytes (stackpointer,448)])`,
+  (* ASSERT_CONCL_TAC full_spec THEN <- this fails due to the extra precond *)
+  CURVE25519_X25519BASE_SAFETY_TAC
+    (curve25519_x25519base_alt_mc',CURVE25519_X25519BASE_ALT_EXEC,
+     `curve25519_x25519base_alt_constant_data`)
+    CORE_INV_P25519_SAFE
+    ~inv:0x10a8 ~loop:(0xc8,0x1020) ~init:10 ~mul_4:94 ~mul_p25519:100
+    ~out_steps:0);;
+
+let CURVE25519_X25519BASE_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e tables res scalar pc stackpointer returnaddress.
+          aligned 16 stackpointer /\
+          adrp_within_bounds (word tables) (word(pc + 0x30)) /\
+          ALL (nonoverlapping (word_sub stackpointer (word 496),496))
+              [(word pc,0x2254); (word tables,48576); (res,32); (scalar,32)] /\
+          nonoverlapping (res,32) (word pc,0x2254)
+          ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                      (curve25519_x25519base_alt_mc pc tables) /\
+                    read PC s = word pc /\
+                    bytes_loaded s (word tables)
+                      curve25519_x25519base_alt_constant_data /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [res; scalar] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar res tables pc
+                            (word_sub stackpointer (word 496)) returnaddress /\
+                         memaccess_inbounds e2
+                            [scalar,32; res,32;
+                              word_sub stackpointer (word 496),496;
+                              word tables,48576]
+                            [res,32;
+                              word_sub stackpointer (word 496),496]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(res,32);
+                            memory :> bytes(word_sub stackpointer (word 496),496)])`,
+  REWRITE_TAC[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_ALT_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC CURVE25519_X25519BASE_ALT_EXEC
+    (REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_ALT_EXEC]
+     CURVE25519_X25519BASE_ALT_SAFE)
+    `[X19; X20; X21; X22; X23; X24]` 496 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

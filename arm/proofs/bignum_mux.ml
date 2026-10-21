@@ -119,3 +119,88 @@ let BIGNUM_MUX_SUBROUTINE_CORRECT = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bignum(z,val k)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_MUX_EXEC BIGNUM_MUX_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mux" subroutine_signatures)
+    BIGNUM_MUX_SUBROUTINE_CORRECT
+    BIGNUM_MUX_EXEC;;
+
+(* The per-iteration store z[k-(i+1)] stays within the output buffer, hence
+   disjoint from the (nonoverlapping) code region. *)
+let BIGNUM_MUX_STORE_NONOV = prove
+ (`!(pc:num) (z:int64) (k:num) (i:num).
+     nonoverlapping (word pc,36) (z,8 * k) /\ i < k
+     ==> nonoverlapping (word pc,36) (word_add z (word(8 * (k - (i + 1)))),8)`,
+  REPEAT STRIP_TAC THEN NONOVERLAPPING_TAC);;
+
+let BIGNUM_MUX_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e b k x y z pc returnaddress.
+           nonoverlapping (word pc,36) (z,8 * val k) /\
+           (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k)) /\
+           (y = z \/ nonoverlapping (y,8 * val k) (z,8 * val k))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mux_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [b; k; z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z k pc returnaddress /\
+                         memaccess_inbounds e2
+                         [x,val k * 8; y,val k * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ["b"; "k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN
+       ARM_SAFETY_SIM_TAC BIGNUM_MUX_EXEC (1--2) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Loop(`k:num`, `pc + 0x8`, `pc + 0x20`,
+       `\i s. read X2 s = z /\
+              read X3 s = x /\
+              read X4 s = y /\
+              read X1 s = word(k - i) /\
+              read X30 s = returnaddress`,
+       Leg("pre",
+         ARM_SAFETY_SIM_TAC BIGNUM_MUX_EXEC (1--2) THEN
+         ASM_REWRITE_TAC[SUB_0] THEN DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("loop",
+         VAL_INT64_TAC `i:num` THEN
+         (* pre-establish the counter decrement, so the store address
+            canonicalizes to z + 8*(k-(i+1)), and the store's nonoverlapping
+            with the code region. *)
+         SUBGOAL_THEN `word_sub (word(k - i)) (word 1):int64 = word(k - (i+1))`
+           ASSUME_TAC THENL
+          [ IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+             [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ]; ALL_TAC ] THEN
+         MP_TAC(ISPECL [`pc:num`; `z:int64`; `k:num`; `i:num`] BIGNUM_MUX_STORE_NONOV) THEN
+         ANTS_TAC THENL [ ASM_REWRITE_TAC[]; DISCH_TAC ] THEN
+         REWRITE_TAC[] THEN
+         ARM_SAFETY_SIM_TAC BIGNUM_MUX_EXEC (1--6) THEN
+         SUBGOAL_THEN `val(word(k - (i+1)):int64) = k - (i+1)` ASSUME_TAC THENL
+          [ MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+            SIMPLE_ARITH_TAC; ALL_TAC ] THEN
+         ASM_REWRITE_TAC[] THEN
+         SUBGOAL_THEN `(~(k - (i + 1) = 0)) <=> i + 1 < k` SUBST1_TAC THENL
+          [ SIMPLE_ARITH_TAC; ALL_TAC ] THEN
+         CONJ_TAC THENL [ COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC ] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("post",
+         ARM_SAFETY_SIM_TAC BIGNUM_MUX_EXEC (1--1) THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC)))));;

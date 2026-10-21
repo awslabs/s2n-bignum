@@ -7539,3 +7539,194 @@ let P521_JMIXADD_WINDOWS_SUBROUTINE_CORRECT = time prove
                       memory :> bytes(word_sub stackpointer (word 560),560)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE P521_JMIXADD_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p521_jmixadd" subroutine_signatures)
+    P521_JMIXADD_CORRECT
+    P521_JMIXADD_EXEC;;
+
+let P521_JMIXADD_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 p2 pc stackpointer.
+           ALL (nonoverlapping (stackpointer,496))
+           [word pc,0x5941; p1,216; p2,144; p3,216] /\
+           nonoverlapping (p3,216) (word pc,0x5941)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST p521_jmixadd_tmc) /\
+                    read RIP s = word (pc + 0x11) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1; p2] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 0x592f) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p2 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,216; p2,144; p3,216; stackpointer,496]
+                         [p3,216; stackpointer,496]))
+               (MAYCHANGE
+                [RIP; RAX; RBX; RCX; RDX; RBP; R8; R9; R10; R11; R12; R13;
+                 R14; R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,216); memory :> bytes (stackpointer,496)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P521_JMIXADD_EXEC);;
+
+let P521_JMIXADD_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 p2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 544),544))
+        [word pc,LENGTH p521_jmixadd_tmc; p1,216; p2,144] /\
+        ALL (nonoverlapping (p3,216))
+        [word pc,LENGTH p521_jmixadd_tmc;
+         word_sub stackpointer (word 544),552]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p521_jmixadd_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [p3; p1; p2] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p2 p3 pc (word_sub stackpointer (word 544))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,216; p2,144; p3,216;
+                       word_sub stackpointer (word 544),552]
+                      [p3,216; word_sub stackpointer (word 544),544]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,216);
+              memory :> bytes (word_sub stackpointer (word 544),544)])`,
+  X86_PROMOTE_RETURN_STACK_TAC p521_jmixadd_tmc P521_JMIXADD_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 544
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P521_JMIXADD_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 p2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 544),544))
+        [word pc,LENGTH p521_jmixadd_mc; p1,216; p2,144] /\
+        ALL (nonoverlapping (p3,216))
+        [word pc,LENGTH p521_jmixadd_mc;
+         word_sub stackpointer (word 544),552]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p521_jmixadd_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [p3; p1; p2] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p2 p3 pc (word_sub stackpointer (word 544))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,216; p2,144; p3,216;
+                       word_sub stackpointer (word 544),552]
+                      [p3,216; word_sub stackpointer (word 544),544]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,216);
+              memory :> bytes (word_sub stackpointer (word 544),544)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P521_JMIXADD_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let P521_JMIXADD_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 p2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 560),560))
+        [word pc,LENGTH p521_jmixadd_windows_tmc; p1,216; p2,144] /\
+        ALL (nonoverlapping (p3,216))
+        [word pc,LENGTH p521_jmixadd_windows_tmc;
+         word_sub stackpointer (word 560),568]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p521_jmixadd_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [p3; p1; p2] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p2 p3 pc (word_sub stackpointer (word 560))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,216; p2,144; p3,216;
+                       word_sub stackpointer (word 560),568]
+                      [p3,216; word_sub stackpointer (word 560),560]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,216);
+              memory :> bytes (word_sub stackpointer (word 560),560)])`,
+  WINDOWS_X86_WRAP_STACK_TAC p521_jmixadd_windows_tmc p521_jmixadd_tmc
+    P521_JMIXADD_SAFE `[RBX; RBP; R12; R13; R14; R15]` 544
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P521_JMIXADD_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 p2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 560),560))
+        [word pc,LENGTH p521_jmixadd_windows_mc; p1,216; p2,144] /\
+        ALL (nonoverlapping (p3,216))
+        [word pc,LENGTH p521_jmixadd_windows_mc;
+         word_sub stackpointer (word 560),568]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p521_jmixadd_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [p3; p1; p2] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p2 p3 pc (word_sub stackpointer (word 560))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,216; p2,144; p3,216;
+                       word_sub stackpointer (word 560),568]
+                      [p3,216; word_sub stackpointer (word 560),560]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,216);
+              memory :> bytes (word_sub stackpointer (word 560),560)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P521_JMIXADD_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

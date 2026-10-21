@@ -1288,3 +1288,38 @@ let WORD_DIVSTEP59_SUBROUTINE_CORRECT = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(m,32)])`,
   ARM_ADD_RETURN_NOSTACK_TAC WORD_DIVSTEP59_EXEC WORD_DIVSTEP59_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "word_divstep59" subroutine_signatures)
+    WORD_DIVSTEP59_SUBROUTINE_CORRECT
+    WORD_DIVSTEP59_EXEC;;
+
+let WORD_DIVSTEP59_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e m d f g pc returnaddress.
+         nonoverlapping (word pc,2436) (m,32)
+         ==> ensures arm
+             (\s.
+                  aligned_bytes_loaded s (word pc) word_divstep59_mc /\
+                  read PC s = word pc /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [m; d; f; g] s /\
+                  read events s = e)
+             (\s.
+                  read PC s = returnaddress /\
+                  (exists e2.
+                       read events s = APPEND e2 e /\
+                       e2 = f_events m pc returnaddress /\
+                       memaccess_inbounds e2 [m,32] [m,32]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes (m,32)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars WORD_DIVSTEP59_EXEC);;

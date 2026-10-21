@@ -1469,3 +1469,195 @@ let MLKEM_INTT_WINDOWS_SUBROUTINE_CORRECT  = prove
   CONV_TAC TWEAK_CONV THEN
   MATCH_ACCEPT_TAC(ADD_IBT_RULE
   (CONV_RULE TWEAK_CONV MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT)));;
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "mlkem_intt_x86" subroutine_signatures)
+    MLKEM_INTT_CORRECT
+    MLKEM_INTT_TMC_EXEC;;
+
+let MLKEM_INTT_SAFE =
+  REWRITE_RULE [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS]
+  (time prove
+ (`exists f_events.
+       forall e a zetas pc.
+           aligned 32 a /\
+           aligned 32 zetas /\
+           nonoverlapping (word pc,3341) (a,512) /\
+           nonoverlapping (word pc,3341) (zetas,1248) /\
+           nonoverlapping (a,512) (zetas,1248)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST mlkem_intt_tmc) /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [a; zetas] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 3341) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events zetas a pc /\
+                         memaccess_inbounds e2 [a,512; zetas,1248] [a,512]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9;
+                 ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+                MAYCHANGE [RAX] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [memory :> bytes (a,512)])`,
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS] THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_INTT_TMC_EXEC));;
+
+let MLKEM_INTT_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a zetas pc stackpointer returnaddress.
+        aligned 32 a /\
+        aligned 32 zetas /\
+        nonoverlapping (word pc,LENGTH mlkem_intt_tmc) (a,512) /\
+        nonoverlapping (word pc,LENGTH mlkem_intt_tmc) (zetas,1248) /\
+        nonoverlapping (a,512) (zetas,1248) /\
+        nonoverlapping (a,512) (stackpointer,8) /\
+        nonoverlapping (zetas,1248) (stackpointer,8)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mlkem_intt_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [a; zetas] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events zetas a pc stackpointer returnaddress /\
+                      memaccess_inbounds e2
+                      [a,512; zetas,1248; stackpointer,8]
+                      [a,512; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (a,512)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_intt_tmc MLKEM_INTT_SAFE
+    THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let MLKEM_INTT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a zetas pc stackpointer returnaddress.
+        aligned 32 a /\
+        aligned 32 zetas /\
+        nonoverlapping (word pc,LENGTH mlkem_intt_mc) (a,512) /\
+        nonoverlapping (word pc,LENGTH mlkem_intt_mc) (zetas,1248) /\
+        nonoverlapping (a,512) (zetas,1248) /\
+        nonoverlapping (a,512) (stackpointer,8) /\
+        nonoverlapping (zetas,1248) (stackpointer,8)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mlkem_intt_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [a; zetas] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events zetas a pc stackpointer returnaddress /\
+                      memaccess_inbounds e2
+                      [a,512; zetas,1248; stackpointer,8]
+                      [a,512; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (a,512)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLKEM_INTT_NOIBT_SUBROUTINE_SAFE));;
+
+let MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a zetas pc stackpointer returnaddress.
+        aligned 32 a /\
+        aligned 32 zetas /\
+        nonoverlapping (word pc,LENGTH mlkem_intt_windows_tmc) (a,512) /\
+        nonoverlapping (word pc,LENGTH mlkem_intt_windows_tmc) (zetas,1248) /\
+        nonoverlapping (word pc,LENGTH mlkem_intt_windows_tmc)
+        (word_sub stackpointer (word 176),184) /\
+        nonoverlapping (a,512) (zetas,1248) /\
+        nonoverlapping (a,512) (word_sub stackpointer (word 176),184) /\
+        nonoverlapping (zetas,1248) (word_sub stackpointer (word 176),184)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mlkem_intt_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [a; zetas] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events zetas a pc (word_sub stackpointer (word 176))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [a,512; zetas,1248;
+                       word_sub stackpointer (word 176),184]
+                      [a,512; word_sub stackpointer (word 176),176]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (word_sub stackpointer (word 176),176)] ,,
+             MAYCHANGE [memory :> bytes (a,512)])`,
+  X86_WINDOWS_XMM_WRAP_SAFETY_TAC
+    (mlkem_intt_windows_tmc,MLKEM_INTT_WINDOWS_TMC_EXEC)
+    (mlkem_intt_tmc,MLKEM_INTT_SAFE)
+    ~gprs:[`RDI`; `RSI`] ~xmms:[6; 7; 8; 9; 10; 11; 12; 13; 14; 15] ~off:92
+    ~pre:15 ~post:14);;
+
+let MLKEM_INTT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a zetas pc stackpointer returnaddress.
+        aligned 32 a /\
+        aligned 32 zetas /\
+        nonoverlapping (word pc,LENGTH mlkem_intt_windows_mc) (a,512) /\
+        nonoverlapping (word pc,LENGTH mlkem_intt_windows_mc) (zetas,1248) /\
+        nonoverlapping (word pc,LENGTH mlkem_intt_windows_mc)
+        (word_sub stackpointer (word 176),184) /\
+        nonoverlapping (a,512) (zetas,1248) /\
+        nonoverlapping (a,512) (word_sub stackpointer (word 176),184) /\
+        nonoverlapping (zetas,1248) (word_sub stackpointer (word 176),184)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mlkem_intt_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [a; zetas] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events zetas a pc (word_sub stackpointer (word 176))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [a,512; zetas,1248;
+                       word_sub stackpointer (word 176),184]
+                      [a,512; word_sub stackpointer (word 176),176]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (word_sub stackpointer (word 176),176)] ,,
+             MAYCHANGE [memory :> bytes (a,512)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

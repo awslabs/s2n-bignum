@@ -65,3 +65,46 @@ let BIGNUM_EVEN_SUBROUTINE_CORRECT = prove
                C_RETURN s = if EVEN x then word 1 else word 0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_EVEN_EXEC BIGNUM_EVEN_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_even" subroutine_signatures)
+    BIGNUM_EVEN_SUBROUTINE_CORRECT
+    BIGNUM_EVEN_EXEC;;
+
+(* The code reads a[0] unless k = 0. *)
+
+let BIGNUM_EVEN_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e k a pc returnaddress.
+           ensures arm
+           (\s.
+                aligned_bytes_loaded s (word pc) bignum_even_mc /\
+                read PC s = word pc /\
+                read X30 s = returnaddress /\
+                C_ARGUMENTS [k; a] s /\
+                read events s = e)
+           (\s.
+                read PC s = returnaddress /\
+                (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a k pc returnaddress /\
+                     memaccess_inbounds e2 [a,val k * 8] []))
+           MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN
+       ARM_SAFETY_SIM_TAC BIGNUM_EVEN_EXEC (1--3) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Leg("pos",
+       ARM_SAFETY_SIM_TAC BIGNUM_EVEN_EXEC (1--5) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC))));;

@@ -887,7 +887,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_copy_row_from_table_8n" subroutine_signatures)
     BIGNUM_COPY_ROW_FROM_TABLE_8N_SUBROUTINE_CORRECT
     BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC;;
@@ -917,224 +917,129 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_SUBROUTINE_SAFE = prove(
                          memaccess_inbounds e2
                          [table,(val height * val width) * 8; z,val width * 8]
                          [z,val width * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (z,8 * val width)])`,
 
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-    `\(table:int64) (z:int64) (width:int64) (height:int64) (pc:num)
-        (returnaddress:int64).
-      if val width = 0 then
-        f_ev_width0 table z width height pc returnaddress
-      else
-        APPEND
-          (APPEND
-            (APPEND
-              (f_ev_outerloop_epil table z width height pc returnaddress)
-              (APPEND
-                (ENUMERATEL (val height) (\i.
-                  (APPEND
-                    (f_ev_innerloop_epil table z width height pc returnaddress i)
-                    (APPEND
-                      (ENUMERATEL ((val width) DIV 8) (\j.
-                        f_ev_innerloop table z width height pc returnaddress i j))
-                      (f_ev_innerloop_prol table z width height pc returnaddress i))
-                  )
-                ))
-                (f_ev_outerloop_prol table z width height pc returnaddress))
-            )
-            (APPEND
-              (ENUMERATEL ((val width) DIV 8)
-                (\i. f_ev_initzero table z width height pc returnaddress i))
-              (f_ev_initzero_prol table z width height pc returnaddress)))
-          (f_ev_begin  table z width height pc returnaddress)
-    :(uarch_event)list` THEN
-
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC (* e2 *) THEN
-
-  REPEAT_N 2 GEN_TAC THEN
-  MAP_EVERY W64_GEN_TAC [`h:num`;`w:num`;`idx:num`] THEN
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
-              fst BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC] THEN
-  REPEAT STRIP_TAC THEN
-
-  (*** Get basic bounds from the nonoverlapping assumptions ***)
-
-  SUBGOAL_THEN `8 * w < 2 EXP 64` STRIP_ASSUME_TAC THENL
-   [EVERY_ASSUM(fun th ->
-      try MP_TAC
-       (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th)
-      with Failure _ -> ALL_TAC) THEN ARITH_TAC;
-    ALL_TAC] THEN
-
-  ASM_CASES_TAC `h = 0` THENL [ ASM_ARITH_TAC; ALL_TAC] THEN
-  ASM_CASES_TAC `w = 0` THENL [
-    ASM_REWRITE_TAC[] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC [1;2;3] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `8 * (w DIV 8) = w` ASSUME_TAC THENL [
-    SIMPLE_ARITH_TAC; ALL_TAC
-  ] THEN
-
-  ASM_REWRITE_TAC[] THEN
-
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x14`
+  ARM_SAFETY_SKELETON_TAC
+    ~ths:[NONOVERLAPPING_CLAUSES; fst BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC]
+    ["height"; "width"; "idx"]
+   (Then(SUBGOAL_THEN `8 * width < 2 EXP 64` STRIP_ASSUME_TAC THENL
+          [EVERY_ASSUM(fun th ->
+             try MP_TAC (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ]
+                           NONOVERLAPPING_IMP_SMALL_2) th)
+             with Failure _ -> ALL_TAC) THEN ARITH_TAC;
+           ALL_TAC] THEN
+         SUBGOAL_THEN `~(height = 0)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC],
+    Cases(`width = 0`,
+     Leg("width0",
+       ASM_REWRITE_TAC[] THEN
+       ARM_SAFETY_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC [1;2;3] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Then(SUBGOAL_THEN `8 * (width DIV 8) = width` ASSUME_TAC THENL
+           [SIMPLE_ARITH_TAC; ALL_TAC],
+     Seq(`pc + 0x14`,
       `\s. read X30 s = returnaddress /\ read X0 s = z /\ read X1 s = table /\
-          read X2 s = word h /\ read X3 s = word w /\ read X4 s = word idx /\
-          read X5 s = word w /\ read X6 s = z` THEN CONJ_TAC THENL [
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--5) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    ALL_TAC] THEN
-
-  REWRITE_TAC[] THEN
-
-  (* bignum_copy_row_from_table_initzero *)
-  ENSURES_EVENTS_WHILE_UP2_TAC
-    `w DIV 8` `pc + 0x14` `pc + 0x30`
-    `\i s.  read X30 s = returnaddress /\ read X0 s = z /\ read X1 s = table /\
-            read X2 s = word h /\ read X3 s = word w /\ read X4 s = word idx /\
-            read X5 s = word (8 * (w DIV 8 - i)) /\
-            read X6 s = word_add z (word (64 * i))` THEN REPEAT CONJ_TAC THENL [
-    SIMPLE_ARITH_TAC;
-
-    (* precond *)
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC [] THEN
-    CONJ_TAC THENL [ASM_REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (* main loop *)
-    REPEAT STRIP_TAC THEN
-    REWRITE_TAC[] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--7) THEN
-    CONJ_TAC THENL [
-      MAP_EVERY VAL_INT64_TAC [`8 * (w DIV 8 - i)`;`8`] THEN
-      ASM_REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
-      SIMPLE_ARITH_TAC; ALL_TAC
-    ] THEN
-    CONJ_TAC THENL [
-      REWRITE_TAC[LEFT_SUB_DISTRIB;WORD_SUB] THEN
-      (REPEAT COND_CASES_TAC THEN TRY SIMPLE_ARITH_TAC) THEN
-      CONV_TAC WORD_RULE; ALL_TAC
-    ] THEN
-    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (* postcond *)
-    ALL_TAC
-  ] THEN
-
-  REWRITE_TAC[] THEN
-  REWRITE_TAC[METIS[APPEND_ASSOC]
-      `(exists e2. P e2 /\
-        e2 = APPEND (APPEND (APPEND epil (APPEND loop prol)) tail) tail2 /\
-        Q e2)
-       <=>
-       (exists e2. P e2 /\
-        e2 = APPEND (APPEND epil (APPEND loop prol)) (APPEND tail tail2) /\
-        Q e2)`] THEN
-  ASM_REWRITE_TAC[] (* to simplify word w in precondition... *) THEN
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `h:num` `pc + 0x38` `pc + 0xa8`
-    `\i s.  read X30 s = returnaddress /\ read X0 s = z /\ read X1 s = table /\
-            read X2 s = word h /\ read X3 s = word w /\ read X4 s = word idx /\
-            read X5 s = word i /\ read X8 s = word_add table (word (8 * i * w))`
-  THEN REPEAT CONJ_TAC THENL [
-    SIMPLE_ARITH_TAC;
-
-    (* loop start *)
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--2) THEN
-    CONJ_TAC THENL [REWRITE_TAC[MULT_CLAUSES;ADD_0] THEN CONV_TAC WORD_RULE;
-      ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (* loop body *)
-    ALL_TAC;
-
-    (* loop postcond *)
-    REWRITE_TAC[] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--1) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC
-  ] THEN
-
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[] THEN
-  REWRITE_TAC [ENUMERATEL_ADD1] THEN
-  REWRITE_TAC[METIS[APPEND_ASSOC]
-      `(exists e2. P e2 /\
-        e2 = APPEND (APPEND (APPEND epil (APPEND loop prol)) tail) tail2 /\
-        Q e2)
-       <=>
-       (exists e2. P e2 /\
-        e2 = APPEND (APPEND epil (APPEND loop prol)) (APPEND tail tail2) /\
-        Q e2)`] THEN
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `w DIV 8` `pc + 0x4c` `pc + 0x9c`
-    `\j s.  read X30 s = returnaddress /\ read X0 s = z /\ read X1 s = table /\
-            read X2 s = word h /\ read X3 s = word w /\ read X4 s = word idx /\
-            read X5 s = word i /\ read X7 s = word (w - 8 * j) /\
-            // pointers
-            read X8 s = word_add table (word (8 * (i * w + 8 * j))) /\
-            read X9 s = word_add z (word (64 * j))`
-  THEN REPEAT CONJ_TAC THENL [
-    SIMPLE_ARITH_TAC;
-
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--5) THEN
-    CONJ_TAC THENL [REWRITE_TAC[MULT_0;SUB_0] THEN NO_TAC; ALL_TAC] THEN
-    CONJ_TAC THENL [REWRITE_TAC[MULT_0;ADD_0] THEN NO_TAC; ALL_TAC] THEN
-    CONJ_TAC THENL [REWRITE_TAC[MULT_CLAUSES;WORD_ADD_0] THEN NO_TAC; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (* loop body *)
-    ALL_TAC;
-
-    REWRITE_TAC[] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--3) THEN
-    CONJ_TAC THENL [
-      REWRITE_TAC[VAL_WORD_SUB_EQ_0;VAL_WORD_ADD;DIMINDEX_64] THEN
-      MAP_EVERY VAL_INT64_TAC [`i:num`;`1`;`h:num`] THEN
-      ASM_REWRITE_TAC[] THEN IMP_REWRITE_TAC[MOD_LT] THEN
-      SIMPLE_ARITH_TAC; ALL_TAC
-    ] THEN
-    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-    CONJ_TAC THENL [AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC
-  ] THEN
-
-  REWRITE_TAC[] THEN REPEAT STRIP_TAC THEN
-  ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--20)
-  THEN
-  CONJ_TAC THENL [
-    REWRITE_TAC[VAL_WORD_SUB_EQ_0;VAL_WORD_ADD;DIMINDEX_64] THEN
-    MAP_EVERY VAL_INT64_TAC [`w - 8 * i'`;`8`] THEN
-    ASM_REWRITE_TAC[] THEN
-    SIMPLE_ARITH_TAC; ALL_TAC
-  ] THEN
-  CONJ_TAC THENL [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-    [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
-    ALL_TAC] THEN
-  CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-  CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-
-  (* A helper lemma to discharge memory inbounds reasoning :) *)
-  SUBGOAL_THEN `((i * w + 8 * i') + 6) + 2 <= h * w` ASSUME_TAC THENL [
-    REWRITE_TAC[GSYM ADD_ASSOC] THEN CONV_TAC NUM_REDUCE_CONV THEN
-    TRANS_TAC LE_TRANS `i * w + w` THEN CONJ_TAC THENL
-    [ SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-    TRANS_TAC LE_TRANS `(h-1) * w + w` THEN CONJ_TAC THENL [
-      REWRITE_TAC[LE_ADD_RCANCEL] THEN REWRITE_TAC[LE_MULT_RCANCEL] THEN
-      SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-    MATCH_MP_TAC LE_MULT_ADD THEN SIMPLE_ARITH_TAC; ALL_TAC
-  ] THEN
-
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+           read X2 s = word height /\ read X3 s = word width /\
+           read X4 s = word idx /\ read X5 s = word width /\ read X6 s = z`,
+      Leg("begin",
+        ARM_SAFETY_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--5) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      (*** Zeroing z, 8 words at a time ***)
+      Loop(`width DIV 8`, `pc + 0x14`, `pc + 0x30`,
+       `\i s. read X30 s = returnaddress /\ read X0 s = z /\
+              read X1 s = table /\ read X2 s = word height /\
+              read X3 s = word width /\ read X4 s = word idx /\
+              read X5 s = word (8 * (width DIV 8 - i)) /\
+              read X6 s = word_add z (word (64 * i))`,
+       Leg("initzero_prol",
+         ARM_SAFETY_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC [] THEN
+         CONJ_TAC THENL
+          [ASM_REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+         CONJ_TAC THENL
+          [REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("initzero",
+         ARM_SAFETY_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--7) THEN
+         CONJ_TAC THENL
+          [MAP_EVERY VAL_INT64_TAC [`8 * (width DIV 8 - i)`; `8`] THEN
+           ASM_REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN SIMPLE_ARITH_TAC;
+           ALL_TAC] THEN
+         CONJ_TAC THENL
+          [REWRITE_TAC[LEFT_SUB_DISTRIB; WORD_SUB] THEN
+           (REPEAT COND_CASES_TAC THEN TRY SIMPLE_ARITH_TAC) THEN
+           CONV_TAC WORD_RULE;
+           ALL_TAC] THEN
+         CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       (*** The rows of the table ***)
+       Loop(`height:num`, `pc + 0x38`, `pc + 0xa8`,
+        `\i s. read X30 s = returnaddress /\ read X0 s = z /\
+               read X1 s = table /\ read X2 s = word height /\
+               read X3 s = word width /\ read X4 s = word idx /\
+               read X5 s = word i /\
+               read X8 s = word_add table (word (8 * i * width))`,
+        Leg("outerloop_prol",
+          ARM_SAFETY_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--2) THEN
+          CONJ_TAC THENL
+           [REWRITE_TAC[MULT_CLAUSES; ADD_0] THEN CONV_TAC WORD_RULE;
+            ALL_TAC] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC),
+        (*** The words of a row, 8 at a time ***)
+        Loop(`width DIV 8`, `pc + 0x4c`, `pc + 0x9c`,
+         `\j s. read X30 s = returnaddress /\ read X0 s = z /\
+                read X1 s = table /\ read X2 s = word height /\
+                read X3 s = word width /\ read X4 s = word idx /\
+                read X5 s = word i /\ read X7 s = word (width - 8 * j) /\
+                read X8 s =
+                word_add table (word (8 * (i * width + 8 * j))) /\
+                read X9 s = word_add z (word (64 * j))`,
+         Leg("innerloop_prol",
+           ARM_SAFETY_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--5) THEN
+           CONJ_TAC THENL [REWRITE_TAC[MULT_0; SUB_0] THEN NO_TAC; ALL_TAC] THEN
+           CONJ_TAC THENL [REWRITE_TAC[MULT_0; ADD_0] THEN NO_TAC; ALL_TAC] THEN
+           CONJ_TAC THENL [REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0] THEN NO_TAC;
+                           ALL_TAC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("innerloop",
+           ARM_SAFETY_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--20) THEN
+           CONJ_TAC THENL
+            [REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_ADD; DIMINDEX_64] THEN
+             MAP_EVERY VAL_INT64_TAC [`width - 8 * j`; `8`] THEN
+             ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC;
+             ALL_TAC] THEN
+           CONJ_TAC THENL
+            [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+              [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+             ALL_TAC] THEN
+           CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+           CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+           (* A helper lemma for the bounds of the loads *)
+           SUBGOAL_THEN `((i * width + 8 * j) + 6) + 2 <= height * width`
+           ASSUME_TAC THENL
+            [REWRITE_TAC[GSYM ADD_ASSOC] THEN CONV_TAC NUM_REDUCE_CONV THEN
+             TRANS_TAC LE_TRANS `i * width + width` THEN CONJ_TAC THENL
+              [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+             TRANS_TAC LE_TRANS `(height - 1) * width + width` THEN
+             CONJ_TAC THENL
+              [REWRITE_TAC[LE_ADD_RCANCEL; LE_MULT_RCANCEL] THEN
+               SIMPLE_ARITH_TAC;
+               ALL_TAC] THEN
+             MATCH_MP_TAC LE_MULT_ADD THEN SIMPLE_ARITH_TAC;
+             ALL_TAC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("innerloop_epil",
+           ARM_SAFETY_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--3) THEN
+           CONJ_TAC THENL
+            [REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_ADD; DIMINDEX_64] THEN
+             MAP_EVERY VAL_INT64_TAC [`i:num`; `1`; `height:num`] THEN
+             ASM_REWRITE_TAC[] THEN IMP_REWRITE_TAC[MOD_LT] THEN
+             SIMPLE_ARITH_TAC;
+             ALL_TAC] THEN
+           CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+           CONJ_TAC THENL
+            [AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC)),
+        Leg("outerloop_epil",
+          ARM_SAFETY_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--1) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC)))))))));;

@@ -645,3 +645,600 @@ let BIGNUM_ADD_SUBROUTINE_CORRECT = prove
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_ADD_EXEC BIGNUM_ADD_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let add_full_spec,add_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_add" subroutine_signatures)
+    BIGNUM_ADD_SUBROUTINE_CORRECT
+    BIGNUM_ADD_EXEC;;
+
+(* The proof splits on whether MIN m p < MIN n p. If not (the XLONG case),
+   the BCC at 0x14 is not taken; otherwise (YLONG) it is taken to the
+   mirrored code at 0x6c, whose events are the f_ev_y* ones. In both cases the
+   witness lists the parts in execution order clamp, main loop, top loop,
+   padding, left-associated as APPEND (APPEND (APPEND pad top) main) clamp,
+   with the bare loop bodies as ENUMERATEL arguments. *)
+
+let BIGNUM_ADD_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e p z m x n y pc returnaddress.
+           nonoverlapping (word pc,224) (z,8 * val p) /\
+           (x = z \/ nonoverlapping (x,8 * val m) (z,8 * val p)) /\
+           (y = z \/ nonoverlapping (y,8 * val n) (z,8 * val p))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_add_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p; z; m; x; n; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z p n m pc returnaddress /\
+                         memaccess_inbounds e2
+                         [x,val m * 8; y,val n * 8; z,val p * 8]
+                         [z,val p * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val p)])`,
+  ASSERT_CONCL_TAC add_full_spec THEN
+  CONCRETIZE_F_EVENTS_TAC
+   `\(x:int64) (y:int64) (z:int64) (p:int64) (n:int64) (m:int64) (pc:num) (returnaddress:int64).
+      if MIN (val m) (val p) < MIN (val n) (val p) then
+        APPEND (APPEND (APPEND
+            (if MIN (val n) (val p) = val p then f_ev_ynopad x y z p n m pc returnaddress
+             else if MIN (val n) (val p) + 1 = val p then f_ev_ypad1 x y z p n m pc returnaddress
+             else APPEND (f_ev_ypadpost x y z p n m pc returnaddress)
+                    (APPEND (ENUMERATEL (val p - MIN (val n) (val p) - 1)
+                              (f_ev_ypadbody x y z p n m pc returnaddress))
+                            (f_ev_ypadpre x y z p n m pc returnaddress)))
+            (if MIN (val n) (val p) = MIN (val m) (val p) then f_ev_ytop0 x y z p n m pc returnaddress
+             else APPEND (f_ev_ytoppost x y z p n m pc returnaddress)
+                    (APPEND (ENUMERATEL (MIN (val n) (val p) - MIN (val m) (val p))
+                              (f_ev_ytopbody x y z p n m pc returnaddress))
+                            (f_ev_ytoppre x y z p n m pc returnaddress))))
+            (if MIN (val m) (val p) = 0 then f_ev_ymain0 x y z p n m pc returnaddress
+             else APPEND (f_ev_ymainpost x y z p n m pc returnaddress)
+                    (APPEND (ENUMERATEL (MIN (val m) (val p))
+                              (f_ev_ymainbody x y z p n m pc returnaddress))
+                            (f_ev_ymainpre x y z p n m pc returnaddress))))
+          (f_ev_yclamp x y z p n m pc returnaddress)
+      else
+        APPEND (APPEND (APPEND
+            (if MIN (val m) (val p) = val p then f_ev_nopad x y z p n m pc returnaddress
+             else if MIN (val m) (val p) + 1 = val p then f_ev_pad1 x y z p n m pc returnaddress
+             else APPEND (f_ev_padpost x y z p n m pc returnaddress)
+                    (APPEND (ENUMERATEL (val p - MIN (val m) (val p) - 1)
+                              (f_ev_padbody x y z p n m pc returnaddress))
+                            (f_ev_padpre x y z p n m pc returnaddress)))
+            (if MIN (val m) (val p) = MIN (val n) (val p) then f_ev_top0 x y z p n m pc returnaddress
+             else APPEND (f_ev_toppost x y z p n m pc returnaddress)
+                    (APPEND (ENUMERATEL (MIN (val m) (val p) - MIN (val n) (val p))
+                              (f_ev_topbody x y z p n m pc returnaddress))
+                            (f_ev_toppre x y z p n m pc returnaddress))))
+            (if MIN (val n) (val p) = 0 then f_ev_main0 x y z p n m pc returnaddress
+             else APPEND (f_ev_mainpost x y z p n m pc returnaddress)
+                    (APPEND (ENUMERATEL (MIN (val n) (val p))
+                              (f_ev_mainbody x y z p n m pc returnaddress))
+                            (f_ev_mainpre x y z p n m pc returnaddress))))
+          (f_ev_clamp x y z p n m pc returnaddress)
+      :(uarch_event) list` THEN
+  REPEAT META_EXISTS_TAC THEN X_GEN_TAC `e:(uarch_event)list` THEN
+  W64_GEN_TAC `p:num` THEN X_GEN_TAC `z:int64` THEN W64_GEN_TAC `m:num` THEN
+  X_GEN_TAC `x:int64` THEN W64_GEN_TAC `n:num` THEN X_GEN_TAC `y:int64` THEN
+  MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst BIGNUM_ADD_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `8 * p < 2 EXP 64` STRIP_ASSUME_TAC THENL
+   [EVERY_ASSUM(fun th -> try MP_TAC (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th) with Failure _ -> ALL_TAC) THEN ARITH_TAC; ALL_TAC] THEN
+  ASM_CASES_TAC `MIN m p < MIN n p` THEN
+  FIRST_ASSUM(fun th -> REWRITE_TAC[th]) THENL
+   [(*** YLONG: MIN m p < MIN n p ***)
+
+    SUBGOAL_THEN `MIN n p <= p /\ MIN m p <= p /\ MIN m p <= MIN n p /\ MIN n p < 2 EXP 64 /\ MIN m p < 2 EXP 64`
+      STRIP_ASSUME_TAC THENL [MAP_EVERY UNDISCH_TAC [`MIN m p < MIN n p`; `8 * p < 2 EXP 64`] THEN ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `(if p <= m then word p else word m):int64 = word(MIN m p) /\
+                  (if p <= n then word p else word n):int64 = word(MIN n p)` STRIP_ASSUME_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `MIN a b = if b <= a then b else a`] THEN
+      CONJ_TAC THEN COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    SUBGOAL_THEN `val(word(MIN n p):int64) = MIN n p /\ val(word(MIN m p):int64) = MIN m p` STRIP_ASSUME_TAC THENL
+     [CONJ_TAC THEN IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    (* ===== clamp, to 0x6c (BCC taken as MIN m p < MIN n p), peeling f_ev_yclamp;
+       on both paths it sets X2 = MIN m p and X4 = MIN n p. ===== *)
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x6c`
+     `\s. read X0 s = word p /\ read X1 s = z /\ read X2 s = word(MIN m p) /\
+          read X3 s = x /\ read X4 s = word(MIN n p) /\ read X5 s = y /\
+          read X30 s = returnaddress` THEN
+    CONJ_TAC THENL
+     [SUBGOAL_THEN `MIN m p < MIN n p` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+        BIGNUM_ADD_EXEC (1--6) THEN
+      ASM_REWRITE_TAC[] THEN
+      CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+      ALL_TAC] THEN
+    REWRITE_TAC[] THEN
+    (* ===== main loop: SEQUENCE at 0x98, peeling main (now the outermost right
+       argument). ===== *)
+    GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x98`
+     `\s. read X0 s = word(p - MIN n p) /\ read X1 s = z /\ read X4 s = word(MIN n p - MIN m p) /\
+          read X3 s = x /\ read X5 s = y /\ read X6 s = word(MIN m p) /\ read X30 s = returnaddress` THEN
+    CONJ_TAC THENL
+     [ ASM_CASES_TAC `MIN m p = 0` THENL
+        [ASM_REWRITE_TAC[] THEN
+         SUBGOAL_THEN `word_sub (word p) (word(MIN n p)):int64 = word(p - MIN n p)` ASSUME_TAC THENL
+          [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+            [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+           BIGNUM_ADD_EXEC (1--4) THEN
+         ASM_REWRITE_TAC[SUB_0; WORD_SUB_0] THEN
+         CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC;
+         ALL_TAC] THEN
+       ASM_REWRITE_TAC[] THEN
+       SUBGOAL_THEN `~(val(word(MIN m p):int64) = 0)` ASSUME_TAC THENL
+        [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       ENSURES_EVENTS_WHILE_UP2_TAC `MIN m p` `pc + 0x7c` `pc + 0x98`
+        `\i s. read X0 s = word(p - MIN n p) /\ read X1 s = z /\ read X4 s = word(MIN n p - MIN m p) /\
+               read X3 s = x /\ read X5 s = y /\ read X2 s = word(MIN m p - i) /\ read X6 s = word i /\
+               read X30 s = returnaddress` THEN
+       REWRITE_TAC[LT_NZ] THEN
+       CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       CONJ_TAC THENL
+        [ REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+          SUBGOAL_THEN `word_sub (word p) (word(MIN n p)):int64 = word(p - MIN n p)` ASSUME_TAC THENL
+           [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+             [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+          SUBGOAL_THEN `word_sub (word(MIN n p)) (word(MIN m p)):int64 = word(MIN n p - MIN m p)` ASSUME_TAC THENL
+           [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+             [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--4) THEN
+          ASM_REWRITE_TAC[] THEN
+          CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC;
+          ALL_TAC] THEN
+       CONJ_TAC THENL
+        [ X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+          SUBGOAL_THEN `i < MIN m p` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word i:int64) = i` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `word_sub (word(MIN m p - i):int64) (word 1) = word(MIN m p - (i + 1))` ASSUME_TAC THENL
+           [REWRITE_TAC[ARITH_RULE `MIN m p - (i + 1) = MIN m p - i - 1`] THEN
+            GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+             [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(MIN m p - i):int64) = MIN m p - i` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(MIN m p - (i + 1)):int64) = MIN m p - (i + 1)` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `i < p /\ i < m /\ i < n` STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `(MIN m p - (i + 1) = 0 <=> ~(i + 1 < MIN m p))` ASSUME_TAC THENL
+           [UNDISCH_TAC `i < MIN m p` THEN POP_ASSUM_LIST(K ALL_TAC) THEN SPEC_TAC(`MIN m p`,`q:num`) THEN ARITH_TAC; ALL_TAC] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--7) THEN
+          ASM_REWRITE_TAC[] THEN
+          REPEAT CONJ_TAC THENL
+           [GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[];
+            CONV_TAC WORD_RULE;
+            ALL_TAC] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC;
+          ASM_REWRITE_TAC[ARITH_RULE `MIN m p - MIN m p = 0`] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--0) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC];
+       ALL_TAC] THEN
+    REWRITE_TAC[] THEN
+    (* ===== top loop: SEQUENCE at 0xb0, peeling top (no abbreviation, as the
+       discharge needs the concrete trace). ===== *)
+    GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xb0`
+     `\s. read X0 s = word(p - MIN n p) /\ read X1 s = z /\ read X6 s = word(MIN n p) /\
+          read X30 s = returnaddress` THEN
+    CONJ_TAC THENL
+     [ (* YLONG entered under MIN m p < MIN n p, so top loop count MIN n p - MIN m p > 0 always;
+          the MIN n p = MIN m p (zero-trip) case is vacuous. Resolve the top `if` to its else-branch. *)
+       SUBGOAL_THEN `~(MIN n p = MIN m p)` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       ASM_REWRITE_TAC[] THEN
+       SUBGOAL_THEN `~(val(word(MIN n p - MIN m p):int64) = 0) /\ 0 < MIN n p - MIN m p` STRIP_ASSUME_TAC THENL
+        [CONJ_TAC THENL [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+       ENSURES_EVENTS_WHILE_UP2_TAC `MIN n p - MIN m p` `pc + 0x98` `pc + 0xb0`
+        `\i s. read X0 s = word(p - MIN n p) /\ read X1 s = z /\ read X5 s = y /\
+               read X4 s = word(MIN n p - MIN m p - i) /\ read X6 s = word(MIN m p + i) /\
+               read X30 s = returnaddress` THEN
+       REWRITE_TAC[LT_NZ] THEN
+       CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       CONJ_TAC THENL
+        [ REWRITE_TAC[SUB_0; ADD_0; ENUMERATEL_APPEND_ZERO] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--0) THEN
+          ASM_REWRITE_TAC[] THEN
+          CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC;
+          ALL_TAC] THEN
+       CONJ_TAC THENL
+        [ X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+          SUBGOAL_THEN `i < MIN n p - MIN m p` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(MIN m p + i):int64) = MIN m p + i` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `word_sub (word(MIN n p - MIN m p - i):int64) (word 1) = word(MIN n p - MIN m p - (i + 1))` ASSUME_TAC THENL
+           [REWRITE_TAC[ARITH_RULE `a - (i + 1) = a - i - 1`] THEN
+            GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+             [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(MIN n p - MIN m p - i):int64) = MIN n p - MIN m p - i` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(MIN n p - MIN m p - (i + 1)):int64) = MIN n p - MIN m p - (i + 1)` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `MIN m p + i < p /\ MIN m p + i < n` STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `(MIN n p - MIN m p - (i + 1) = 0 <=> ~(i + 1 < MIN n p - MIN m p))` ASSUME_TAC THENL
+           [UNDISCH_TAC `i < MIN n p - MIN m p` THEN POP_ASSUM_LIST(K ALL_TAC) THEN SPEC_TAC(`MIN n p - MIN m p`,`q:num`) THEN ARITH_TAC; ALL_TAC] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--6) THEN
+          ASM_REWRITE_TAC[] THEN
+          REPEAT CONJ_TAC THENL
+           [GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[];
+            REWRITE_TAC[ARITH_RULE `MIN m p + (i + 1) = (MIN m p + i) + 1`] THEN CONV_TAC WORD_RULE;
+            ALL_TAC] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC;
+          ASM_REWRITE_TAC[] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--0) THEN
+          SUBGOAL_THEN `MIN m p + (MIN n p - MIN m p) = MIN n p` SUBST1_TAC THENL
+           [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          ASM_REWRITE_TAC[ARITH_RULE `a - a = 0`] THEN
+          RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
+          RULE_ASSUM_TAC(REWRITE_RULE[GSYM APPEND_ASSOC]) THEN
+          REWRITE_TAC[APPEND_NIL; GSYM APPEND_ASSOC] THEN
+          RULE_ASSUM_TAC(REWRITE_RULE[APPEND_NIL]) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC];
+       ALL_TAC] THEN
+    REWRITE_TAC[] THEN
+    (* ===== padding, decided by the CBNZ X0 (= p - MIN n p) at 0xb0: no padding,
+       one word or a loop. ===== *)
+    GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
+    ASM_CASES_TAC `MIN n p = p` THENL
+     [ SUBGOAL_THEN `p - MIN n p = 0` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       ASM_REWRITE_TAC[] THEN
+       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+         BIGNUM_ADD_EXEC (1--3) THEN
+       CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC;
+       ALL_TAC] THEN
+    SUBGOAL_THEN `MIN n p < p /\ 0 < p - MIN n p` STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN `~(val(word(p - MIN n p):int64) = 0)` ASSUME_TAC THENL
+     [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    (* One padding word (witness f_ev_ypad1): CBNZ taken, CSET and STR of the
+       carry, B, ADD, SUB zeroing X0, CBNZ not taken, MOV and RET, 9 steps to the
+       return; f_ev_ypad1 is one free variable, so the discharge assigns it the
+       whole trace. *)
+    ASM_CASES_TAC `MIN n p + 1 = p` THENL
+     [ SUBGOAL_THEN `p - MIN n p = 1 /\ p - MIN n p - 1 = 0` STRIP_ASSUME_TAC THENL
+        [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       ASM_REWRITE_TAC[] THEN
+       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+         BIGNUM_ADD_EXEC (1--9) THEN
+       CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC;
+       ALL_TAC] THEN
+    (* The padding loop, p >= MIN n p + 2. The witness APPEND (APPEND padpost
+       (APPEND padloop padpre)) prev already has the shape of the WHILE rule, so
+       there is no SEQUENCE or reassociation. The loop runs p - MIN n p - 1 times
+       from the STR XZR at 0xc8 to 0xd8, after the CBNZ at 0xd4: the pre-leg from
+       0xb0 is 7 steps (CBNZ taken, CSET, STR of the carry, B, ADD, SUB, CBNZ), the
+       body 4 (STR, ADD, SUB, CBNZ) and the post-leg 2 (MOV, RET). Invariant
+       X0 = word(p - MIN n p - 1 - i), X6 = word((MIN n p + 1) + i). *)
+    SUBGOAL_THEN `~(MIN n p + 1 = p) /\ MIN n p + 1 < p /\ 0 < p - MIN n p - 1 /\
+                  ~(p - MIN n p - 1 = 0) /\ ~(p - MIN n p = 1) /\ MIN n p + 1 <= p`
+      STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    ASM_REWRITE_TAC[] THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `p - MIN n p - 1` `pc + 0xc8` `pc + 0xd8`
+     `\i s. read X1 s = z /\ read X6 s = word((MIN n p + 1) + i) /\
+            read X0 s = word(p - MIN n p - 1 - i) /\ read X30 s = returnaddress` THEN
+    REWRITE_TAC[LT_NZ] THEN
+    CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [ REWRITE_TAC[SUB_0; ADD_0; ENUMERATEL_APPEND_ZERO] THEN
+       SUBGOAL_THEN `~(val(word(p - MIN n p):int64) = 0)` ASSUME_TAC THENL
+        [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `word_sub (word(p - MIN n p):int64) (word 1) = word(p - MIN n p - 1)` ASSUME_TAC THENL
+        [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+          [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+       SUBGOAL_THEN `val(word(p - MIN n p - 1):int64) = p - MIN n p - 1` ASSUME_TAC THENL
+        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+         BIGNUM_ADD_EXEC (1--7) THEN
+       ASM_REWRITE_TAC[ARITH_RULE `(MIN n p + 1) + 0 = MIN n p + 1`] THEN
+       TRY(CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC]) THEN
+       CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC;
+       ALL_TAC] THEN
+    CONJ_TAC THENL
+     [ X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+       SUBGOAL_THEN `i < p - MIN n p - 1` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `val(word((MIN n p + 1) + i):int64) = (MIN n p + 1) + i` ASSUME_TAC THENL
+        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `word_sub (word(p - MIN n p - 1 - i):int64) (word 1) = word(p - MIN n p - 1 - (i + 1))` ASSUME_TAC THENL
+        [REWRITE_TAC[ARITH_RULE `a - (i + 1) = a - i - 1`] THEN
+         GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+          [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+       SUBGOAL_THEN `val(word(p - MIN n p - 1 - i):int64) = p - MIN n p - 1 - i` ASSUME_TAC THENL
+        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `val(word(p - MIN n p - 1 - (i + 1)):int64) = p - MIN n p - 1 - (i + 1)` ASSUME_TAC THENL
+        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `(MIN n p + 1) + i < p` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `(p - MIN n p - 1 - (i + 1) = 0 <=> ~(i + 1 < p - MIN n p - 1))` ASSUME_TAC THENL
+        [UNDISCH_TAC `i < p - MIN n p - 1` THEN POP_ASSUM_LIST(K ALL_TAC) THEN SPEC_TAC(`p - MIN n p - 1`,`q:num`) THEN ARITH_TAC; ALL_TAC] THEN
+       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+         BIGNUM_ADD_EXEC (1--4) THEN
+       ASM_REWRITE_TAC[] THEN
+       REPEAT CONJ_TAC THENL
+        [GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[];
+         REWRITE_TAC[ARITH_RULE `(MIN n p + 1) + (i + 1) = ((MIN n p + 1) + i) + 1`] THEN CONV_TAC WORD_RULE;
+         ALL_TAC] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC;
+       ASM_REWRITE_TAC[] THEN
+       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+         BIGNUM_ADD_EXEC (1--2) THEN
+       CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC];
+
+    (*** XLONG: ~(MIN m p < MIN n p) ***)
+
+    SUBGOAL_THEN `MIN m p <= p /\ MIN n p <= p /\ MIN n p <= MIN m p /\ MIN m p < 2 EXP 64 /\ MIN n p < 2 EXP 64`
+      STRIP_ASSUME_TAC THENL [MAP_EVERY UNDISCH_TAC [`~(MIN m p < MIN n p)`; `8 * p < 2 EXP 64`] THEN ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `(if p <= m then word p else word m):int64 = word(MIN m p) /\
+                  (if p <= n then word p else word n):int64 = word(MIN n p)` STRIP_ASSUME_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `MIN a b = if b <= a then b else a`] THEN
+      CONJ_TAC THEN COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    SUBGOAL_THEN `val(word(MIN m p):int64) = MIN m p /\ val(word(MIN n p):int64) = MIN n p` STRIP_ASSUME_TAC THENL
+     [CONJ_TAC THEN IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    (* ===== clamp, to 0x18 (BCC not taken as ~(MIN m p < MIN n p)), peeling
+       f_ev_clamp. ===== *)
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x18`
+     `\s. read X0 s = word p /\ read X1 s = z /\ read X2 s = word(MIN m p) /\
+          read X3 s = x /\ read X4 s = word(MIN n p) /\ read X5 s = y /\
+          read X30 s = returnaddress` THEN
+    CONJ_TAC THENL
+     [SUBGOAL_THEN `~(MIN m p < MIN n p)` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+        BIGNUM_ADD_EXEC (1--6) THEN
+      ASM_REWRITE_TAC[] THEN
+      CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+      ALL_TAC] THEN
+    REWRITE_TAC[] THEN
+    (* ===== main loop: SEQUENCE at 0x44, peeling main (now the outermost right
+       argument). ===== *)
+    GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x44`
+     `\s. read X0 s = word(p - MIN m p) /\ read X1 s = z /\ read X2 s = word(MIN m p - MIN n p) /\
+          read X3 s = x /\ read X5 s = y /\ read X6 s = word(MIN n p) /\ read X30 s = returnaddress` THEN
+    CONJ_TAC THENL
+     [ ASM_CASES_TAC `MIN n p = 0` THENL
+        [ASM_REWRITE_TAC[] THEN
+         SUBGOAL_THEN `word_sub (word p) (word(MIN m p)):int64 = word(p - MIN m p)` ASSUME_TAC THENL
+          [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+            [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+           BIGNUM_ADD_EXEC (1--4) THEN
+         ASM_REWRITE_TAC[SUB_0; WORD_SUB_0] THEN
+         CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC;
+         ALL_TAC] THEN
+       ASM_REWRITE_TAC[] THEN
+       SUBGOAL_THEN `~(val(word(MIN n p):int64) = 0)` ASSUME_TAC THENL
+        [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       ENSURES_EVENTS_WHILE_UP2_TAC `MIN n p` `pc + 0x28` `pc + 0x44`
+        `\i s. read X0 s = word(p - MIN m p) /\ read X1 s = z /\ read X2 s = word(MIN m p - MIN n p) /\
+               read X3 s = x /\ read X5 s = y /\ read X4 s = word(MIN n p - i) /\ read X6 s = word i /\
+               read X30 s = returnaddress` THEN
+       REWRITE_TAC[LT_NZ] THEN
+       CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       CONJ_TAC THENL
+        [ REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+          SUBGOAL_THEN `word_sub (word p) (word(MIN m p)):int64 = word(p - MIN m p)` ASSUME_TAC THENL
+           [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+             [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+          SUBGOAL_THEN `word_sub (word(MIN m p)) (word(MIN n p)):int64 = word(MIN m p - MIN n p)` ASSUME_TAC THENL
+           [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+             [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--4) THEN
+          ASM_REWRITE_TAC[] THEN
+          CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC;
+          ALL_TAC] THEN
+       CONJ_TAC THENL
+        [ X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+          SUBGOAL_THEN `i < MIN n p` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word i:int64) = i` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `word_sub (word(MIN n p - i):int64) (word 1) = word(MIN n p - (i + 1))` ASSUME_TAC THENL
+           [REWRITE_TAC[ARITH_RULE `MIN n p - (i + 1) = MIN n p - i - 1`] THEN
+            GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+             [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(MIN n p - i):int64) = MIN n p - i` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(MIN n p - (i + 1)):int64) = MIN n p - (i + 1)` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `i < p /\ i < m /\ i < n` STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `(MIN n p - (i + 1) = 0 <=> ~(i + 1 < MIN n p))` ASSUME_TAC THENL
+           [UNDISCH_TAC `i < MIN n p` THEN POP_ASSUM_LIST(K ALL_TAC) THEN SPEC_TAC(`MIN n p`,`q:num`) THEN ARITH_TAC; ALL_TAC] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--7) THEN
+          ASM_REWRITE_TAC[] THEN
+          REPEAT CONJ_TAC THENL
+           [GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[];
+            CONV_TAC WORD_RULE;
+            ALL_TAC] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC;
+          ASM_REWRITE_TAC[ARITH_RULE `MIN n p - MIN n p = 0`] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--0) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC];
+       ALL_TAC] THEN
+    REWRITE_TAC[] THEN
+    (* ===== top loop: SEQUENCE at 0x60, peeling top (no abbreviation, as the
+       discharge needs the concrete trace). ===== *)
+    GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x60`
+     `\s. read X0 s = word(p - MIN m p) /\ read X1 s = z /\ read X6 s = word(MIN m p) /\
+          read X30 s = returnaddress` THEN
+    CONJ_TAC THENL
+     [ ASM_CASES_TAC `MIN m p = MIN n p` THENL
+        [ASM_REWRITE_TAC[ARITH_RULE `MIN n p - MIN n p = 0`] THEN
+         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+           BIGNUM_ADD_EXEC (1--1) THEN
+         CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC;
+         ALL_TAC] THEN
+       ASM_REWRITE_TAC[] THEN
+       SUBGOAL_THEN `~(val(word(MIN m p - MIN n p):int64) = 0) /\ 0 < MIN m p - MIN n p` STRIP_ASSUME_TAC THENL
+        [CONJ_TAC THENL [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+       ENSURES_EVENTS_WHILE_UP2_TAC `MIN m p - MIN n p` `pc + 0x48` `pc + 0x60`
+        `\i s. read X0 s = word(p - MIN m p) /\ read X1 s = z /\ read X3 s = x /\
+               read X2 s = word(MIN m p - MIN n p - i) /\ read X6 s = word(MIN n p + i) /\
+               read X30 s = returnaddress` THEN
+       REWRITE_TAC[LT_NZ] THEN
+       CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       CONJ_TAC THENL
+        [ REWRITE_TAC[SUB_0; ADD_0; ENUMERATEL_APPEND_ZERO] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--1) THEN
+          ASM_REWRITE_TAC[] THEN
+          CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC;
+          ALL_TAC] THEN
+       CONJ_TAC THENL
+        [ X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+          SUBGOAL_THEN `i < MIN m p - MIN n p` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(MIN n p + i):int64) = MIN n p + i` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `word_sub (word(MIN m p - MIN n p - i):int64) (word 1) = word(MIN m p - MIN n p - (i + 1))` ASSUME_TAC THENL
+           [REWRITE_TAC[ARITH_RULE `a - (i + 1) = a - i - 1`] THEN
+            GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+             [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(MIN m p - MIN n p - i):int64) = MIN m p - MIN n p - i` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `val(word(MIN m p - MIN n p - (i + 1)):int64) = MIN m p - MIN n p - (i + 1)` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `MIN n p + i < p /\ MIN n p + i < m` STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          SUBGOAL_THEN `(MIN m p - MIN n p - (i + 1) = 0 <=> ~(i + 1 < MIN m p - MIN n p))` ASSUME_TAC THENL
+           [UNDISCH_TAC `i < MIN m p - MIN n p` THEN POP_ASSUM_LIST(K ALL_TAC) THEN SPEC_TAC(`MIN m p - MIN n p`,`q:num`) THEN ARITH_TAC; ALL_TAC] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--6) THEN
+          ASM_REWRITE_TAC[] THEN
+          REPEAT CONJ_TAC THENL
+           [GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[];
+            REWRITE_TAC[ARITH_RULE `MIN n p + (i + 1) = (MIN n p + i) + 1`] THEN CONV_TAC WORD_RULE;
+            ALL_TAC] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC;
+          ASM_REWRITE_TAC[] THEN
+          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+            BIGNUM_ADD_EXEC (1--0) THEN
+          SUBGOAL_THEN `MIN n p + (MIN m p - MIN n p) = MIN m p` SUBST1_TAC THENL
+           [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+          ASM_REWRITE_TAC[ARITH_RULE `a - a = 0`] THEN
+          RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
+          RULE_ASSUM_TAC(REWRITE_RULE[GSYM APPEND_ASSOC]) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC];
+       ALL_TAC] THEN
+    REWRITE_TAC[] THEN
+    (* ===== padding, decided by the CBNZ X0 (= p - MIN m p) at 0x60: no padding,
+       one word or a loop. ===== *)
+    GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
+    ASM_CASES_TAC `MIN m p = p` THENL
+     [ SUBGOAL_THEN `p - MIN m p = 0` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       ASM_REWRITE_TAC[] THEN
+       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+         BIGNUM_ADD_EXEC (1--3) THEN
+       CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC;
+       ALL_TAC] THEN
+    SUBGOAL_THEN `MIN m p < p /\ 0 < p - MIN m p` STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN `~(val(word(p - MIN m p):int64) = 0)` ASSUME_TAC THENL
+     [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    (* One padding word (witness f_ev_pad1): CBNZ taken, CSET and STR of the
+       carry, B, ADD, SUB zeroing X0, CBNZ not taken, MOV and RET, 9 steps to the
+       return; f_ev_pad1 is one free variable, so the discharge assigns it the
+       whole trace. *)
+    ASM_CASES_TAC `MIN m p + 1 = p` THENL
+     [ SUBGOAL_THEN `p - MIN m p = 1 /\ p - MIN m p - 1 = 0` STRIP_ASSUME_TAC THENL
+        [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       ASM_REWRITE_TAC[] THEN
+       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+         BIGNUM_ADD_EXEC (1--9) THEN
+       CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC;
+       ALL_TAC] THEN
+    (* The padding loop, p >= MIN m p + 2. The witness APPEND (APPEND padpost
+       (APPEND padloop padpre)) prev already has the shape of the WHILE rule, so
+       there is no SEQUENCE or reassociation. The loop runs p - MIN m p - 1 times
+       from the STR XZR at 0xc8 to 0xd8, after the CBNZ at 0xd4: the pre-leg from
+       0x60 is 7 steps (CBNZ taken, CSET, STR of the carry, B, ADD, SUB, CBNZ), the
+       body 4 (STR, ADD, SUB, CBNZ) and the post-leg 2 (MOV, RET). Invariant
+       X0 = word(p - MIN m p - 1 - i), X6 = word((MIN m p + 1) + i). *)
+    SUBGOAL_THEN `~(MIN m p + 1 = p) /\ MIN m p + 1 < p /\ 0 < p - MIN m p - 1 /\
+                  ~(p - MIN m p - 1 = 0) /\ ~(p - MIN m p = 1) /\ MIN m p + 1 <= p`
+      STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    ASM_REWRITE_TAC[] THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `p - MIN m p - 1` `pc + 0xc8` `pc + 0xd8`
+     `\i s. read X1 s = z /\ read X6 s = word((MIN m p + 1) + i) /\
+            read X0 s = word(p - MIN m p - 1 - i) /\ read X30 s = returnaddress` THEN
+    REWRITE_TAC[LT_NZ] THEN
+    CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [ REWRITE_TAC[SUB_0; ADD_0; ENUMERATEL_APPEND_ZERO] THEN
+       SUBGOAL_THEN `~(val(word(p - MIN m p):int64) = 0)` ASSUME_TAC THENL
+        [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `word_sub (word(p - MIN m p):int64) (word 1) = word(p - MIN m p - 1)` ASSUME_TAC THENL
+        [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+          [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+       SUBGOAL_THEN `val(word(p - MIN m p - 1):int64) = p - MIN m p - 1` ASSUME_TAC THENL
+        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+         BIGNUM_ADD_EXEC (1--7) THEN
+       ASM_REWRITE_TAC[ARITH_RULE `(MIN m p + 1) + 0 = MIN m p + 1`] THEN
+       TRY(CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC]) THEN
+       CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC;
+       ALL_TAC] THEN
+    CONJ_TAC THENL
+     [ X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+       SUBGOAL_THEN `i < p - MIN m p - 1` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `val(word((MIN m p + 1) + i):int64) = (MIN m p + 1) + i` ASSUME_TAC THENL
+        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `word_sub (word(p - MIN m p - 1 - i):int64) (word 1) = word(p - MIN m p - 1 - (i + 1))` ASSUME_TAC THENL
+        [REWRITE_TAC[ARITH_RULE `a - (i + 1) = a - i - 1`] THEN
+         GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+          [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+       SUBGOAL_THEN `val(word(p - MIN m p - 1 - i):int64) = p - MIN m p - 1 - i` ASSUME_TAC THENL
+        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `val(word(p - MIN m p - 1 - (i + 1)):int64) = p - MIN m p - 1 - (i + 1)` ASSUME_TAC THENL
+        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `(MIN m p + 1) + i < p` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+       SUBGOAL_THEN `(p - MIN m p - 1 - (i + 1) = 0 <=> ~(i + 1 < p - MIN m p - 1))` ASSUME_TAC THENL
+        [UNDISCH_TAC `i < p - MIN m p - 1` THEN POP_ASSUM_LIST(K ALL_TAC) THEN SPEC_TAC(`p - MIN m p - 1`,`q:num`) THEN ARITH_TAC; ALL_TAC] THEN
+       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+         BIGNUM_ADD_EXEC (1--4) THEN
+       ASM_REWRITE_TAC[] THEN
+       REPEAT CONJ_TAC THENL
+        [GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[];
+         REWRITE_TAC[ARITH_RULE `(MIN m p + 1) + (i + 1) = ((MIN m p + 1) + i) + 1`] THEN CONV_TAC WORD_RULE;
+         ALL_TAC] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC;
+       ASM_REWRITE_TAC[] THEN
+       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+         BIGNUM_ADD_EXEC (1--2) THEN
+       CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC]]);;

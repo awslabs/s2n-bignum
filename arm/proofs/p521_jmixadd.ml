@@ -3304,3 +3304,82 @@ let P521_JMIXADD_SUBROUTINE_CORRECT = time prove
    P521_JMIXADD_CORRECT
     `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30]`
    608);;
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p521_jmixadd" subroutine_signatures)
+    P521_JMIXADD_CORRECT
+    P521_JMIXADD_EXEC;;
+
+let P521_JMIXADD_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 p2 pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,512))
+           [word pc,4968; p1,216; p2,144; p3,216] /\
+           nonoverlapping (p3,216) (word pc,4968)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) p521_jmixadd_mc /\
+                    read PC s = word (pc + 28) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1; p2] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 644) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p2 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,216; p2,144; p3,216; stackpointer,512]
+                         [p3,216; stackpointer,512]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25;
+                 X26; X27; X28; X30] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,216); memory :> bytes (stackpointer,512)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P521_JMIXADD_EXEC);;
+
+let P521_JMIXADD_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 p2 pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 608),608))
+            [(word pc,LENGTH p521_jmixadd_mc); (p1,216); (p2,144); (p3,216)] /\
+        nonoverlapping (p3,216) (word pc,LENGTH p521_jmixadd_mc)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) p521_jmixadd_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [p3; p1; p2] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p2 p3 pc
+                              (word_sub stackpointer (word 608))
+                              returnaddress /\
+                         memaccess_inbounds e2
+                         [p1,216; p2,144; p3,216;
+                          word_sub stackpointer (word 608),608]
+                         [p3,216;
+                          word_sub stackpointer (word 608),608]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,216);
+                      memory :> bytes(word_sub stackpointer (word 608),608)])`,
+  REWRITE_TAC[fst P521_JMIXADD_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC P521_JMIXADD_EXEC
+    (REWRITE_RULE[fst P521_JMIXADD_EXEC]P521_JMIXADD_SAFE)
+    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30]` 608 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

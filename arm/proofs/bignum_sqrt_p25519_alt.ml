@@ -1278,3 +1278,84 @@ let BIGNUM_SQRT_P25519_ALT_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_STACK_TAC
    BIGNUM_SQRT_P25519_ALT_EXEC BIGNUM_SQRT_P25519_ALT_CORRECT
    `[X19;X30]` 144);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The code is a fixed sequence of    *)
+(* calls to local multiplication and repeated-squaring subroutines; the      *)
+(* squaring loop counts are constants at each call site, so symbolic         *)
+(* execution follows all the calls and loops to the end.                     *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_sqrt_p25519_alt" subroutine_signatures)
+    BIGNUM_SQRT_P25519_ALT_CORRECT
+    BIGNUM_SQRT_P25519_ALT_EXEC;;
+
+let BIGNUM_SQRT_P25519_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,128))
+           [word pc,1540; z,8 * 4; x,8 * 4] /\
+           nonoverlapping (word pc,1540) (z,8 * 4)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    bignum_sqrt_p25519_alt_mc /\
+                    read PC s = word (pc + 8) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 784) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc stackpointer /\
+                         memaccess_inbounds e2 [x,32; z,32; stackpointer,128]
+                         [z,32; stackpointer,128]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X30] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 4);
+                 memory :> bytes (stackpointer,128)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_SQRT_P25519_ALT_EXEC);;
+
+let BIGNUM_SQRT_P25519_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 144),144))
+            [word pc,LENGTH bignum_sqrt_p25519_alt_mc; z,8 * 4; x,8 * 4] /\
+        nonoverlapping (word pc,LENGTH bignum_sqrt_p25519_alt_mc) (z,8 * 4)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) bignum_sqrt_p25519_alt_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc
+                              (word_sub stackpointer (word 144))
+                              returnaddress /\
+                         memaccess_inbounds e2
+                         [x,32; z,32; word_sub stackpointer (word 144),144]
+                         [z,32; word_sub stackpointer (word 144),144]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(z,8 * 4);
+                      memory :> bytes(word_sub stackpointer (word 144),144)])`,
+  REWRITE_TAC[fst BIGNUM_SQRT_P25519_ALT_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC BIGNUM_SQRT_P25519_ALT_EXEC
+    (REWRITE_RULE[fst BIGNUM_SQRT_P25519_ALT_EXEC] BIGNUM_SQRT_P25519_ALT_SAFE)
+    `[X19;X30]` 144 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

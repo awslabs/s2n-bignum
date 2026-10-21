@@ -443,14 +443,18 @@ let SHA3_KECCAK_F1600_ALT2_SUBROUTINE_CORRECT = prove
     ASM_REWRITE_TAC[]]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof.                                    *)
+(* Constant-time and memory safety proof. As for correctness, the register   *)
+(* saves and restores are mixed into the main code, so the invariant of the  *)
+(* loop over the 24 rounds keeps track of the saved registers and of the     *)
+(* return address on the stack, as well as of the round counter and of the   *)
+(* pointers kept there.                                                      *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "sha3_keccak_f1600_alt2" subroutine_signatures)
     SHA3_KECCAK_F1600_ALT2_SUBROUTINE_CORRECT
     SHA3_KECCAK_F1600_ALT2_EXEC;;
@@ -473,15 +477,104 @@ let SHA3_KECCAK_F1600_ALT2_SUBROUTINE_SAFE = time prove
                     read events s = e)
                (\s.
                     read PC s = returnaddress /\
-                    exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 =
-                        f_events rc a pc (word_sub stackpointer (word 208))
-                        returnaddress /\
-                        memaccess_inbounds e2
-                        [a,200; rc,192;
-                         word_sub stackpointer (word 208),208]
-                        [a,200; word_sub stackpointer (word 208),208])
-               (\s s'. true)`,
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events rc a pc (word_sub stackpointer (word 208))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [a,200; rc,192; word_sub stackpointer (word 208),208]
+                         [a,200; word_sub stackpointer (word 208),208]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (a,200);
+                 memory :> bytes (word_sub stackpointer (word 208),208)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SHA3_KECCAK_F1600_ALT2_EXEC);;
+  CONCRETIZE_F_EVENTS_TAC
+   `\(rc:int64) (a:int64) (pc:num) (sp:int64) (retaddr:int64).
+      APPEND (f_ev_writeback rc a pc sp retaddr)
+       (APPEND (ENUMERATEL 24 (f_ev_round rc a pc sp retaddr))
+               (f_ev_init rc a pc sp retaddr)):(uarch_event) list` THEN
+
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC [`a:int64`; `rc:int64`; `pc:num`] THEN
+  WORD_FORALL_OFFSET_TAC 208 THEN
+  MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
+  REWRITE_TAC[fst SHA3_KECCAK_F1600_ALT2_EXEC] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+
+  (*** The registers saved in the main code, as for correctness ***)
+
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
+  ENSURES_PRESERVED_TAC "x22_init" `X22` THEN
+  ENSURES_PRESERVED_TAC "x23_init" `X23` THEN
+  ENSURES_PRESERVED_TAC "x24_init" `X24` THEN
+  ENSURES_PRESERVED_TAC "x25_init" `X25` THEN
+  ENSURES_PRESERVED_TAC "x26_init" `X26` THEN
+  ENSURES_PRESERVED_TAC "x27_init" `X27` THEN
+  ENSURES_PRESERVED_TAC "x28_init" `X28` THEN
+  ENSURES_PRESERVED_TAC "x29_init" `X29` THEN
+
+  (*** The loop over the rounds ***)
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `24` `pc + 0xc0` `pc + 0x338`
+   `\i s.
+     read SP s = stackpointer /\
+     read (memory :> bytes64(word_add stackpointer (word 8))) s =
+     returnaddress /\
+     read (memory :> bytes64 stackpointer) s = x29_init /\
+     read (memory :> bytes64(word_add stackpointer (word 16))) s = x19_init /\
+     read (memory :> bytes64(word_add stackpointer (word 24))) s = x20_init /\
+     read (memory :> bytes64(word_add stackpointer (word 32))) s = x21_init /\
+     read (memory :> bytes64(word_add stackpointer (word 40))) s = x22_init /\
+     read (memory :> bytes64(word_add stackpointer (word 48))) s = x23_init /\
+     read (memory :> bytes64(word_add stackpointer (word 56))) s = x24_init /\
+     read (memory :> bytes64(word_add stackpointer (word 64))) s = x25_init /\
+     read (memory :> bytes64(word_add stackpointer (word 72))) s = x26_init /\
+     read (memory :> bytes64(word_add stackpointer (word 80))) s = x27_init /\
+     read (memory :> bytes64(word_add stackpointer (word 88))) s = x28_init /\
+     read (memory :> bytes64(word_add stackpointer (word 144))) s = word i /\
+     read (memory :> bytes64(word_add stackpointer (word 192))) s = rc /\
+     read (memory :> bytes64(word_add stackpointer (word 200))) s = a` THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** The register saves and the loads of the state ***)
+
+    REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC SHA3_KECCAK_F1600_ALT2_EXEC (1--48) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** One round, reading its constant from rc, and the loop test ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC SHA3_KECCAK_F1600_ALT2_EXEC (1--158) THEN
+    SUBGOAL_THEN
+     `~(val (word_add (word i) (word 18446744073709551593):int64) = 0) <=>
+      i + 1 < 24`
+    (fun th -> SAFETY_REWRITE_READS_TAC ["PC"; "events"] [th]) THENL
+     [REWRITE_TAC[WORD_BLAST `word_add x (word 18446744073709551593):int64 =
+                              word_sub x (word 23)`] THEN
+      ASM_REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN CONV_TAC WORD_REDUCE_CONV THEN
+      UNDISCH_TAC `i < 24` THEN ARITH_TAC;
+      ALL_TAC] THEN
+    SAFETY_REWRITE_READS_TAC ["PC"] [SAFETY_COND_WORD_LIFT] THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[GSYM WORD_ADD] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The writeback of the state, the register restores and the return ***)
+
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC SHA3_KECCAK_F1600_ALT2_EXEC (1--38) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;

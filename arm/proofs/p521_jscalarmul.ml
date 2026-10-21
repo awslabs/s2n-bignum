@@ -6119,87 +6119,7 @@ let P521_JSCALARMUL_SUBROUTINE_CORRECT = time prove
 
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
-
-(* BIGNUM_SQR_P521_SUBROUTINE_SAFE, but a slightly different maychange set *)
-let LOCAL_SQR_P521_SUBR_SAFE =
-  prove(`exists f_events.
-         forall e z x pc stackpointer returnaddress.
-            aligned 16 stackpointer /\
-            nonoverlapping (z,8 * 9) (word_sub stackpointer (word 48),48) /\
-            ALL (nonoverlapping (z,8 * 9))
-              [word_sub stackpointer (word 48),48;
-               word pc,LENGTH bignum_sqr_p521_mc] /\
-            ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-              [word pc,LENGTH bignum_sqr_p521_mc; x,8 * 9]
-            ==> ensures arm
-                 (\s.
-                      aligned_bytes_loaded s (word pc) bignum_sqr_p521_mc /\
-                      read PC s = word pc /\
-                      read SP s = stackpointer /\
-                      read X30 s = returnaddress /\
-                      C_ARGUMENTS [z; x] s /\
-                      read events s = e)
-                 (\s.
-                      read PC s = returnaddress /\
-                      (exists e2.
-                           read events s = APPEND e2 e /\
-                           e2 = f_events x z pc (word_sub stackpointer (word 48))
-                           returnaddress /\
-                           memaccess_inbounds e2
-                           [x,72; z,72; word_sub stackpointer (word 48),48]
-                           [z,72; word_sub stackpointer (word 48),48]))
-                 (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
-                            X14; X15; X16; X17] ,,
-                  MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-                  MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
-                  MAYCHANGE [memory :> bignum(z,9);
-                            memory :> bytes(word_sub stackpointer (word 48),48)])`,
-    ARM_ADD_RETURN_STACK_TAC BIGNUM_SQR_P521_EXEC
-      (let th = REWRITE_RULE [fst BIGNUM_SQR_P521_CORE_EXEC]
-          BIGNUM_SQR_P521_SAFE in
-        CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) th)
-      `[X19;X20;X21;X22;X23;X24]` 48 THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC);;
-
-(* BIGNUM_MUL_P521_SUBROUTINE_SAFE, but a slightly different maychange set *)
-let LOCAL_MUL_P521_SUBR_SAFE =
-  prove(`exists f_events.
-         forall e z x y pc stackpointer returnaddress.
-             aligned 16 stackpointer /\
-             nonoverlapping (z,8 * 9) (word pc,LENGTH bignum_mul_p521_mc) /\
-             ALL (nonoverlapping (word_sub stackpointer (word 144),144))
-             [word pc,LENGTH bignum_mul_p521_mc; x,8 * 9; y,8 * 9; z,8 * 9]
-             ==> ensures arm
-                 (\s.
-                      aligned_bytes_loaded s (word pc) bignum_mul_p521_mc /\
-                      read PC s = word pc /\
-                      read SP s = stackpointer /\
-                      read X30 s = returnaddress /\
-                      C_ARGUMENTS [z; x; y] s /\
-                      read events s = e)
-                 (\s.
-                      read PC s = returnaddress /\
-                      (exists e2.
-                           read events s = APPEND e2 e /\
-                           e2 = f_events x y z pc
-                              (word_sub stackpointer (word 144))
-                              returnaddress /\
-                           memaccess_inbounds e2
-                              [x,72; y,72; z,72;
-                                word_sub stackpointer (word 144),144]
-                              [z,72; word_sub stackpointer (word 144),144]))
-                 (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
-                             X14; X15; X16; X17] ,,
-                  MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-                  MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
-                  MAYCHANGE [memory :> bignum(z,9);
-                             memory :> bytes(word_sub stackpointer (word 144),144)])`,
-    ARM_ADD_RETURN_STACK_TAC BIGNUM_MUL_P521_EXEC
-      (let th = REWRITE_RULE [fst BIGNUM_MUL_P521_CORE_EXEC]
-          BIGNUM_MUL_P521_SAFE in
-        CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) th)
-      `[X19;X20;X21;X22;X23;X24;X25;X26]` 144 THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC);;
+needs "arm/proofs/utils/p521_callee_safety.ml";;
 
 let LOCAL_SQR_P521_SAFETY_TAC (assump_name:string) =
   W(fun (asl,w) ->
@@ -6647,147 +6567,120 @@ let P521_JSCALARMUL_SAFE = time prove
   ASSUME_CALLEE_SAFETY_TAILED_TAC BIGNUM_MOD_P521_9_SUBROUTINE_SAFE
     "H_MOD_P521_9_SAFE" THEN
 
-  CONCRETIZE_F_EVENTS_TAC
-    `\(scalar:int64) (point:int64) (res:int64) (pc:num) (stackpointer:int64).
-      APPEND
-        (f_ev_loop_post scalar point res pc stackpointer)
-        (APPEND
-          (ENUMERATEL 104 (f_ev_loop scalar point res pc stackpointer))
-            (f_ev_loop_pre scalar point res pc stackpointer))
-      :(uarch_event) list` THEN
+  ARM_SAFETY_SKELETON_TAC ~ths:[fst P521_JSCALARMUL_EXEC; ALL] []
+   ((*** Main loop invariant setup. ***)
+    Loop(`104`, `pc + 0x3e8`, `pc + 0x119c`,
+      `\i s.
+         read SP s = word_add stackpointer (word 816) /\
+         read X20 s = res /\
+         read X19 s = word (5 * (104 - i))`,
+      Leg("pre",
+        (*** Initial holding of invariant ***)
+        ENSURES_INIT_TAC "s0" THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (1--4) THEN
+        LOCAL_MOD_N521_SAFETY_TAC "H_MOD_N521_9_SAFE" 5 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (6--9) THEN
+        LOCAL_MOD_P521_SAFETY_TAC "H_MOD_P521_9_SAFE" 10 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (11--13) THEN
+        LOCAL_MOD_P521_SAFETY_TAC "H_MOD_P521_9_SAFE" 14 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (15--17) THEN
+        LOCAL_MOD_P521_SAFETY_TAC "H_MOD_P521_9_SAFE" 18 THEN
 
-  REPEAT META_EXISTS_TAC THEN
-  STRIP_TAC (* event e *) THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (19--103) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 104 THEN
 
-  REWRITE_TAC[fst P521_JSCALARMUL_EXEC] THEN
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  REWRITE_TAC[ALL; C_ARGUMENTS] THEN
-  REPEAT STRIP_TAC THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (105--108) THEN
+        LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 109 THEN
 
-  (*** Main loop invariant setup. ***)
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (110--112) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 113 THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `104` `pc + 0x3e8` `pc + 0x119c` (* dest was +4 *)
-   `\i s.
-      read SP s = word_add stackpointer (word 816) /\
-      read X20 s = res /\
-      read X19 s = word (5 * (104 - i))` THEN
-  REPEAT CONJ_TAC THENL [
-    ARITH_TAC;
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (114--117) THEN
+        LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 118 THEN
 
-    (*** Initial holding of invariant ***)
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (119--121) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 122 THEN
 
-    ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (1--4) THEN
-    LOCAL_MOD_N521_SAFETY_TAC "H_MOD_N521_9_SAFE" 5 THEN
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (6--9) THEN
-    LOCAL_MOD_P521_SAFETY_TAC "H_MOD_P521_9_SAFE" 10 THEN
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (11--13) THEN
-    LOCAL_MOD_P521_SAFETY_TAC "H_MOD_P521_9_SAFE" 14 THEN
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (15--17) THEN
-    LOCAL_MOD_P521_SAFETY_TAC "H_MOD_P521_9_SAFE" 18 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (123--126) THEN
+        LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 127 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (19--103) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 104 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (128--130) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 131 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (105--108) THEN
-    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 109 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (132--135) THEN
+        LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 136 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (110--112) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 113 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (137--139) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 140 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (114--117) THEN
-    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 118 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (141--144) THEN
+        LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 145 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (119--121) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 122 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (146--148) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 149 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (123--126) THEN
-    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 127 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (150--153) THEN
+        LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 154 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (128--130) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 131 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (155--157) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 158 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (132--135) THEN
-    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 136 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (159--162) THEN
+        LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 163 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (137--139) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 140 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (164--166) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 167 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (141--144) THEN
-    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 145 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (168--266) THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (146--148) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 149 THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("loop",
+        ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (150--153) THEN
-    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 154 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (1--4) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 5 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (155--157) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 158 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (6--8) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 9 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (159--162) THEN
-    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 163 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (10--12) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 13 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (164--166) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 167 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (14--16) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 17 THEN
 
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (168--266) THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (18--20) THEN
+        LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 21 THEN
 
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (22--877) THEN
 
-    (*** Defer the main invariant preservation proof till below ***)
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (878--881) THEN
+        LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 882 THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (883--883) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
-    ALL_TAC;
+        CONJ_TAC THENL [
+          REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+          IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN
+          SIMPLE_ARITH_TAC;
+          ALL_TAC
+        ] THEN
+        CONJ_TAC THENL [
+          IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+            AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC
+          ];
+          ALL_TAC
+        ] THEN
 
-    (*** Final copying to the output and specializing invariant ***)
-
-    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    ARM_STEPS_TAC P521_JSCALARMUL_EXEC (1--28) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC
-  ] THEN
-
-  REPEAT STRIP_TAC THEN
-  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-
-  ARM_STEPS_TAC P521_JSCALARMUL_EXEC (1--4) THEN
-  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 5 THEN
-
-  ARM_STEPS_TAC P521_JSCALARMUL_EXEC (6--8) THEN
-  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 9 THEN
-
-  ARM_STEPS_TAC P521_JSCALARMUL_EXEC (10--12) THEN
-  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 13 THEN
-
-  ARM_STEPS_TAC P521_JSCALARMUL_EXEC (14--16) THEN
-  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 17 THEN
-
-  ARM_STEPS_TAC P521_JSCALARMUL_EXEC (18--20) THEN
-  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 21 THEN
-
-  ARM_STEPS_TAC P521_JSCALARMUL_EXEC (22--877) THEN
-
-  ARM_STEPS_TAC P521_JSCALARMUL_EXEC (878--881) THEN
-  LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 882 THEN
-  ARM_STEPS_TAC P521_JSCALARMUL_EXEC (883--883) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-
-  CONJ_TAC THENL [
-    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
-    IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN
-    SIMPLE_ARITH_TAC;
-    ALL_TAC
-  ] THEN
-  CONJ_TAC THENL [
-    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
-      AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC
-    ];
-    ALL_TAC
-  ] THEN
-
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("post",
+        (*** Final copying to the output and specializing invariant ***)
+        ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+        ARM_STEPS_TAC P521_JSCALARMUL_EXEC (1--28) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))));;
 
 let P521_JSCALARMUL_SUBROUTINE_SAFE = time prove
  (`exists f_events. forall e res scalar point pc stackpointer returnaddress.

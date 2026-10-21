@@ -56,3 +56,36 @@ let WORD_CTZ_SUBROUTINE_CORRECT = prove
                C_RETURN s = word(word_ctz a))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   ARM_ADD_RETURN_NOSTACK_TAC WORD_CTZ_EXEC WORD_CTZ_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "word_ctz" subroutine_signatures)
+    WORD_CTZ_SUBROUTINE_CORRECT
+    WORD_CTZ_EXEC;;
+
+let WORD_CTZ_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e a pc returnaddress.
+         ensures arm
+         (\s.
+              aligned_bytes_loaded s (word pc) word_ctz_mc /\
+              read PC s = word pc /\
+              read X30 s = returnaddress /\
+              C_ARGUMENTS [a] s /\
+              read events s = e)
+         (\s.
+              read PC s = returnaddress /\
+              (exists e2.
+                   read events s = APPEND e2 e /\
+                   e2 = f_events pc returnaddress /\
+                   memaccess_inbounds e2 [] []))
+         MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars WORD_CTZ_EXEC);;

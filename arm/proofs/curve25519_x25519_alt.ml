@@ -5368,3 +5368,166 @@ let CURVE25519_X25519_ALT_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_STACK_TAC CURVE25519_X25519_ALT_EXEC
     CURVE25519_X25519_ALT_CORRECT
     `[X19; X20; X21; X22; X23; X24]` 368);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The scalar is not a public input.  *)
+(* The Montgomery ladder runs a fixed 251 iterations; each reads the stack   *)
+(* copy of the scalar at a word indexed by the (public) counter X20 and      *)
+(* swaps with CSEL; three final doublings follow. Then comes the inlined     *)
+(* modular inverse, a fixed-count divstep loop entered in the middle (loop   *)
+(* head taken at the B target, as for bignum_inv_p25519). The output pointer *)
+(* is kept in X23 throughout.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "curve25519_x25519_alt" subroutine_signatures)
+    CURVE25519_X25519_ALT_CORRECT
+    CURVE25519_X25519_ALT_EXEC;;
+
+(* Close the non-trace conjuncts left after simulating a loop leg: the PC and
+   the loop counters.                                                       *)
+
+let CURVE25519_X25519_ALT_PEEL_TAC =
+  REPEAT(W(fun (asl,w) ->
+    if is_conj w then
+      CONJ_TAC THENL
+       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
+              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN NO_TAC);
+              CONV_TAC WORD_RULE];
+        ALL_TAC]
+    else NO_TAC));;
+
+let CURVE25519_X25519_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e res scalar point pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,320))
+           [word pc,15052; res,32; scalar,32; point,32] /\
+           nonoverlapping (res,32) (word pc,15052)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) curve25519_x25519_alt_mc /\
+                    read PC s = word (pc + 16) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [res; scalar; point] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 15032) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,32; res,32; stackpointer,320]
+                         [res,32; stackpointer,320]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22; X23] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (res,32); memory :> bytes (stackpointer,320)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ~ths:[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] []
+   (Loop(`251`, `pc + 0x6c8`, `pc + 0x155c`,
+      `\i s. read SP s = stackpointer /\ read X23 s = res /\
+             read X20 s = word(253 - i)`,
+      Leg("pre1",
+        (* ladder pre-leg: pc + 0x10 -> pc + 0x6c8, 430 steps *)
+        REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+        ARM_SAFETY_SIM_TAC CURVE25519_X25519_ALT_EXEC (1--430) THEN
+        CURVE25519_X25519_ALT_PEEL_TAC THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("loop1",
+        SUBGOAL_THEN `val(word(253 - i):int64) = 253 - i` ASSUME_TAC THENL
+         [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+        SUBGOAL_THEN `word_sub (word(253 - i)) (word 1):int64 = word(253 - (i + 1))`
+        ASSUME_TAC THENL
+         [SUBGOAL_THEN `253 - i = (253 - (i + 1)) + 1` SUBST1_TAC THENL
+           [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+          ALL_TAC] THEN
+        SUBGOAL_THEN `val(word(253 - (i + 1)):int64) = 253 - (i + 1)` ASSUME_TAC THENL
+         [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+        SUBGOAL_THEN `(3 <= 253 - (i + 1) <=> i + 1 < 251)` ASSUME_TAC THENL
+         [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+        SUBGOAL_THEN `(3 <= val(word_sub (word(253 - i)) (word 1):int64) <=> i + 1 < 251)`
+        ASSUME_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+        SUBGOAL_THEN `(253 - i) DIV 64 < 4` ASSUME_TAC THENL
+         [SIMP_TAC[RDIV_LT_EQ; ARITH_EQ] THEN ASM_ARITH_TAC; ALL_TAC] THEN
+        SUBGOAL_THEN
+         `word (8 * val (word_ushr (word(253 - i):int64) 6)):int64 =
+          word (8 * ((253 - i) DIV 64))` ASSUME_TAC THENL
+         [AP_TERM_TAC THEN AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
+          ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+        ARM_SAFETY_SIM_TAC CURVE25519_X25519_ALT_EXEC (1--933) THEN
+        CURVE25519_X25519_ALT_PEEL_TAC THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Then(REWRITE_TAC[],
+       Loop(`9`, `pc + 0x2e04`, `pc + 0x2e04`,
+         `\i s. read SP s = stackpointer /\ read X23 s = res /\
+                read X20 s = word_add stackpointer (word 160) /\
+                read X21 s = word(10 - i)`,
+         Leg("pre2",
+           (* inverse pre-leg: pc + 0x155c -> doublings -> B -> pc + 0x2e04, 1312 steps *)
+           REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+           ARM_SAFETY_SIM_TAC CURVE25519_X25519_ALT_EXEC (1--1312) THEN
+           CURVE25519_X25519_ALT_PEEL_TAC THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("loop2",
+           SUBGOAL_THEN `word_sub (word(10 - i)) (word 1):int64 = word(10 - (i + 1))`
+           ASSUME_TAC THENL
+            [SUBGOAL_THEN `10 - i = (10 - (i + 1)) + 1` SUBST1_TAC THENL
+              [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+             ALL_TAC] THEN
+           SUBGOAL_THEN `~(val(word(10 - (i + 1)):int64) = 0)` ASSUME_TAC THENL
+            [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           SUBGOAL_THEN `~(val(word_sub (word(10 - i)) (word 1):int64) = 0)` ASSUME_TAC THENL
+            [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+           ARM_SAFETY_SIM_TAC CURVE25519_X25519_ALT_EXEC (1--877) THEN
+           CURVE25519_X25519_ALT_PEEL_TAC THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("post2",
+           (* inverse post-leg: pc + 0x2e04 -> BNE (not taken) -> pc + 0x3ab8,
+              813 steps *)
+           REWRITE_TAC[ARITH_RULE `10 - 9 = 1`] THEN
+           SUBGOAL_THEN `val(word_sub (word 1) (word 1):int64) = 0` ASSUME_TAC THENL
+            [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
+           ARM_SAFETY_SIM_TAC CURVE25519_X25519_ALT_EXEC (1--813) THEN
+           CURVE25519_X25519_ALT_PEEL_TAC THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC))))));;
+
+let CURVE25519_X25519_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e res scalar point pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 368),368))
+            [(word pc,0x4420); (res,32); (scalar,32); (point,32)] /\
+        nonoverlapping (res,32) (word pc,0x4420)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) curve25519_x25519_alt_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [res; scalar; point] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc
+                              (word_sub stackpointer (word 368))
+                              returnaddress /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,32; res,32;
+                          word_sub stackpointer (word 368),368]
+                         [res,32; word_sub stackpointer (word 368),368]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(res,32);
+                      memory :> bytes(word_sub stackpointer (word 368),368)])`,
+  REWRITE_TAC[fst CURVE25519_X25519_ALT_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC CURVE25519_X25519_ALT_EXEC
+    (REWRITE_RULE[fst CURVE25519_X25519_ALT_EXEC] CURVE25519_X25519_ALT_SAFE)
+    `[X19; X20; X21; X22; X23; X24]` 368 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

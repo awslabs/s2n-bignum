@@ -1808,3 +1808,180 @@ let WORD_DIVSTEP59_WINDOWS_SUBROUTINE_CORRECT = time prove
                    memory :> bytes(word_sub stackpointer (word 48),48)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_DIVSTEP59_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "word_divstep59" subroutine_signatures)
+    WORD_DIVSTEP59_CORRECT
+    WORD_DIVSTEP59_EXEC;;
+
+let WORD_DIVSTEP59_SAFE = time prove
+ (`exists f_events.
+       forall e m d f g pc.
+           nonoverlapping (word pc,3355) (m,32)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST word_divstep59_tmc) /\
+                    read RIP s = word (pc + 6) /\
+                    C_ARGUMENTS [m; d; f; g] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 3348) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events m pc /\
+                         memaccess_inbounds e2 [m,32] [m,32]))
+               (MAYCHANGE
+                [RIP; RDI; RSI; RAX; RBX; RCX; RDX; RBP; R8; R9; R10; R11;
+                 R12; R13] ,,
+                MAYCHANGE [memory :> bytes (m,32)] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars WORD_DIVSTEP59_EXEC);;
+
+let WORD_DIVSTEP59_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e m d f g pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 32),40) (m,32) /\
+        ALL (nonoverlapping (word pc,LENGTH word_divstep59_tmc))
+        [word_sub stackpointer (word 32),32; m,32]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) word_divstep59_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [m; d; f; g] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events m pc (word_sub stackpointer (word 32))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [m,32; word_sub stackpointer (word 32),40]
+                      [m,32; word_sub stackpointer (word 32),32]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (m,32);
+              memory :> bytes (word_sub stackpointer (word 32),32)])`,
+  X86_PROMOTE_RETURN_STACK_TAC word_divstep59_tmc WORD_DIVSTEP59_SAFE
+    `[RBX; RBP; R12; R13]` 32 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let WORD_DIVSTEP59_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e m d f g pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 32),40) (m,32) /\
+        ALL (nonoverlapping (word pc,LENGTH word_divstep59_mc))
+        [word_sub stackpointer (word 32),32; m,32]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) word_divstep59_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [m; d; f; g] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events m pc (word_sub stackpointer (word 32))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [m,32; word_sub stackpointer (word 32),40]
+                      [m,32; word_sub stackpointer (word 32),32]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (m,32);
+              memory :> bytes (word_sub stackpointer (word 32),32)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_DIVSTEP59_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let WORD_DIVSTEP59_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e m d f g pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 48),56) (m,32) /\
+        ALL (nonoverlapping (word pc,LENGTH word_divstep59_windows_tmc))
+        [word_sub stackpointer (word 48),48; m,32]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) word_divstep59_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [m; d; f; g] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events m pc (word_sub stackpointer (word 48))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [m,32; word_sub stackpointer (word 48),56]
+                      [m,32; word_sub stackpointer (word 48),48]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (m,32);
+              memory :> bytes (word_sub stackpointer (word 48),48)])`,
+  WINDOWS_X86_WRAP_STACK_TAC word_divstep59_windows_tmc word_divstep59_tmc
+    WORD_DIVSTEP59_SAFE `[RBX; RBP; R12; R13]` 32 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let WORD_DIVSTEP59_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e m d f g pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 48),56) (m,32) /\
+        ALL (nonoverlapping (word pc,LENGTH word_divstep59_windows_mc))
+        [word_sub stackpointer (word 48),48; m,32]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) word_divstep59_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [m; d; f; g] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events m pc (word_sub stackpointer (word 48))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [m,32; word_sub stackpointer (word 48),56]
+                      [m,32; word_sub stackpointer (word 48),48]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (m,32);
+              memory :> bytes (word_sub stackpointer (word 48),48)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_DIVSTEP59_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

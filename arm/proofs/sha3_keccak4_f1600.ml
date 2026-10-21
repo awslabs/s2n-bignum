@@ -1274,8 +1274,48 @@ let SHA3_KECCAK4_F1600_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "sha3_keccak4_f1600" subroutine_signatures)
+    SHA3_KECCAK4_F1600_CORRECT
+    SHA3_KECCAK4_F1600_EXEC;;
+
+let SHA3_KECCAK4_F1600_SAFE = time prove
+ (`exists f_events.
+       forall e a rc pc stackpointer.
+           aligned 16 stackpointer /\
+           nonoverlapping (a,800) (stackpointer,216) /\
+           ALLPAIRS nonoverlapping [a,800; stackpointer,216]
+           [word pc,3120; rc,192]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) sha3_keccak4_f1600_mc /\
+                    read PC s = word (pc + 44) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [a; rc] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 3072) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events rc a pc stackpointer /\
+                         memaccess_inbounds e2
+                         [a,800; rc,192; stackpointer,40;
+                          word_add stackpointer (word 208),8]
+                         [a,800; stackpointer,40;
+                          word_add stackpointer (word 208),8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30] ,,
+                MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15] ,,
+                MAYCHANGE
+                [memory :> bytes (a,800); memory :> bytes (stackpointer,40);
+                 memory :> bytes (word_add stackpointer (word 208),8)])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars SHA3_KECCAK4_F1600_EXEC);;
+
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "sha3_keccak4_f1600" subroutine_signatures)
     SHA3_KECCAK4_F1600_SUBROUTINE_CORRECT
     SHA3_KECCAK4_F1600_EXEC;;
@@ -1307,6 +1347,18 @@ let SHA3_KECCAK4_F1600_SUBROUTINE_SAFE = time prove
                         [a,800; rc,192;
                          word_sub stackpointer (word 224),224]
                         [a,800; word_sub stackpointer (word 224),224])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (a,800);
+                 memory :> bytes (word_sub stackpointer (word 224),224)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SHA3_KECCAK4_F1600_EXEC);;
+  let TWEAK_CONV =
+   ONCE_DEPTH_CONV
+    (WORDLIST_FROM_MEMORY_CONV THENC
+     ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) in
+  CONV_TAC TWEAK_CONV THEN
+  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(11,11) SHA3_KECCAK4_F1600_EXEC
+   (CONV_RULE TWEAK_CONV SHA3_KECCAK4_F1600_SAFE)
+  `[D8; D9; D10; D11; D12; D13; D14; D15;
+    X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30]` 224 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

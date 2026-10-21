@@ -1295,3 +1295,83 @@ let BIGNUM_CMOD_SUBROUTINE_CORRECT = prove
               (~(val m = 0) ==> C_RETURN s = word(a MOD val m)))
          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_CMOD_EXEC BIGNUM_CMOD_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let cmod_full_spec,cmod_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_cmod" subroutine_signatures)
+    BIGNUM_CMOD_SUBROUTINE_CORRECT
+    BIGNUM_CMOD_EXEC;;
+
+(* Constant-time and memory safety for the single-word modulus. After a
+   straight-line reciprocal (word_recip) prologue, a single down-counter loop
+   reads the k input digits x[k-1], ..., x[0] (its only memory access), then a
+   straight-line reciprocal-multiplication tail reduces to the result. The
+   event trace is one ENUMERATEL over k; the k = 0 case returns immediately. *)
+
+let BIGNUM_CMOD_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e k x m pc returnaddress.
+           ensures arm
+           (\s.
+                aligned_bytes_loaded s (word pc) bignum_cmod_mc /\
+                read PC s = word pc /\
+                read X30 s = returnaddress /\
+                C_ARGUMENTS [k; x; m] s /\
+                read events s = e)
+           (\s.
+                read PC s = returnaddress /\
+                (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events x k pc returnaddress /\
+                     memaccess_inbounds e2 [x,val k * 8] []))
+           MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
+  ASSERT_CONCL_TAC cmod_full_spec THEN
+  SAFETY_SKELETON_TAC
+   (X_GEN_TAC `e:(uarch_event)list` THEN
+    W64_GEN_TAC `k:num` THEN X_GEN_TAC `x:int64` THEN W64_GEN_TAC `m:num` THEN
+    MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
+    REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; fst BIGNUM_CMOD_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI])
+   (Cases(`k = 0`,
+      Leg("k0",
+        ASM_REWRITE_TAC[] THEN
+        ARM_SAFETY_SIM_TAC BIGNUM_CMOD_EXEC (1--2) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Then(ASM_REWRITE_TAC[],
+       Loop(`k:num`, `pc + 0xbc`, `pc + 0xe4`,
+         `\i s. read X0 s = word(k - i) /\ read X1 s = x /\ read X30 s = returnaddress`,
+         Leg("pre",
+           (* precond: pc -> 0xbc, SIM 1--47 *)
+           REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_CMOD_EXEC (1--47) THEN
+           CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("loop",
+           SUBGOAL_THEN `~(k - i = 0)` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           SUBGOAL_THEN `word_sub (word(k - i):int64) (word 1) = word(k - (i + 1))` ASSUME_TAC THENL
+            [REWRITE_TAC[ARITH_RULE `k - (i + 1) = k - i - 1`] THEN
+             GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+              [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+           SUBGOAL_THEN `val(word(k - i):int64) = k - i` ASSUME_TAC THENL
+            [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           SUBGOAL_THEN `val(word(k - (i + 1)):int64) = k - (i + 1)` ASSUME_TAC THENL
+            [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           SUBGOAL_THEN `(k - (i + 1) = 0 <=> ~(i + 1 < k))` ASSUME_TAC THENL
+            [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_CMOD_EXEC (1--10) THEN
+           ASM_REWRITE_TAC[] THEN
+           CONJ_TAC THENL
+            [GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("post",
+           (* postcond: loop exit 0xe4 -> RET 0x140, SIM 1--24 *)
+           REWRITE_TAC[] THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_CMOD_EXEC (1--24) THEN
+           CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC))))));;

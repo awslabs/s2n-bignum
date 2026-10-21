@@ -279,3 +279,152 @@ let BIGNUM_EQ_SUBROUTINE_CORRECT = prove
                 C_RETURN s' = if x = y then word 1 else word 0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_EQ_EXEC BIGNUM_EQ_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_eq" subroutine_signatures)
+    BIGNUM_EQ_SUBROUTINE_CORRECT
+    BIGNUM_EQ_EXEC;;
+
+let BIGNUM_EQ_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e m a n b pc returnaddress.
+           ensures arm
+           (\s.
+                aligned_bytes_loaded s (word pc) bignum_eq_mc /\
+                read PC s = word pc /\
+                read X30 s = returnaddress /\
+                C_ARGUMENTS [m; a; n; b] s /\
+                read events s = e)
+           (\s.
+                read PC s = returnaddress /\
+                exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events a b n m pc returnaddress /\
+                    memaccess_inbounds e2 [a,val m * 8; b,val n * 8] [])
+           MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ~ths:[fst BIGNUM_EQ_EXEC] ["m"; "n"]
+   (Then(VAL_INT64_TAC `1` THEN VAL_INT64_TAC `MIN m n`,
+    Seq(`pc + 0x38`,
+     `\s. read X0 s = word(MIN m n) /\ read X1 s = a /\ read X3 s = b /\
+          read X30 s = returnaddress`,
+     Cases(`m:num = n`,
+      Leg("pre_eq",
+        UNDISCH_THEN `m:num = n` SUBST_ALL_TAC THEN
+        REWRITE_TAC[ARITH_RULE `MIN n n = n`; LT_REFL] THEN
+        ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC (1--4) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Cases(`n:num < m`,
+       Then(SUBGOAL_THEN `MIN m n = n` SUBST1_TAC THENL
+             [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+            SUBGOAL_THEN `0 < m - n /\ m - n < 2 EXP 64` STRIP_ASSUME_TAC THENL
+             [SIMPLE_ARITH_TAC; ALL_TAC],
+        Loop(`m - n`, `pc + 0x24`, `pc + 0x38`,
+         `\i s. read X0 s = word(m - i) /\ read X1 s = a /\
+                read X2 s = word n /\ read X3 s = b /\
+                read X30 s = returnaddress`,
+         Leg("xtop_pre",
+           REWRITE_TAC[SUB_0] THEN
+           SUBGOAL_THEN `n:num <= m` ASSUME_TAC THENL
+            [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC (1--4) THEN
+           SUBGOAL_THEN `~(val(word_sub (word m) (word n):int64) = 0)`
+            (fun th -> REWRITE_TAC[th]) THENL
+            [REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+             IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+             ALL_TAC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("xtop_loop",
+           SUBGOAL_THEN `m - (i + 1) < m` ASSUME_TAC THENL
+            [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           VAL_INT64_TAC `i:num` THEN VAL_INT64_TAC `m - i:num` THEN
+           SUBGOAL_THEN
+            `word_sub (word(m - i)) (word 1):int64 = word(m - (i + 1))`
+           ASSUME_TAC THENL
+            [SUBGOAL_THEN `m - i = (m - (i + 1)) + 1` SUBST1_TAC THENL
+              [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+             ALL_TAC] THEN
+           VAL_INT64_TAC `m - (i + 1)` THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC (1--5) THEN
+           CONJ_TAC THENL
+            [IMP_REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_EQ; DIMINDEX_64] THEN
+             SIMPLE_ARITH_TAC;
+             ALL_TAC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("xtop_post",
+           ASM_SIMP_TAC[ARITH_RULE `n < m ==> m - (m - n) = n`] THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC [] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC))),
+       Then(SUBGOAL_THEN `MIN m n = m` SUBST1_TAC THENL
+             [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+            SUBGOAL_THEN `0 < n - m /\ n - m < 2 EXP 64` STRIP_ASSUME_TAC THENL
+             [SIMPLE_ARITH_TAC; ALL_TAC],
+        Loop(`n - m`, `pc + 0xc`, `pc + 0x20`,
+         `\i s. read X0 s = word m /\ read X1 s = a /\
+                read X2 s = word(n - i) /\ read X3 s = b /\
+                read X30 s = returnaddress`,
+         Leg("ytop_pre",
+           REWRITE_TAC[SUB_0] THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC (1--3) THEN
+           SUBGOAL_THEN `~(n:num <= m)` (fun th -> REWRITE_TAC[th]) THENL
+            [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("ytop_loop",
+           SUBGOAL_THEN `n - (i + 1) < n` ASSUME_TAC THENL
+            [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           VAL_INT64_TAC `i:num` THEN VAL_INT64_TAC `n - i:num` THEN
+           SUBGOAL_THEN
+            `word_sub (word(n - i)) (word 1):int64 = word(n - (i + 1))`
+           ASSUME_TAC THENL
+            [SUBGOAL_THEN `n - i = (n - (i + 1)) + 1` SUBST1_TAC THENL
+              [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+             ALL_TAC] THEN
+           VAL_INT64_TAC `n - (i + 1)` THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC (1--5) THEN
+           CONJ_TAC THENL
+            [IMP_REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_EQ; DIMINDEX_64] THEN
+             SIMPLE_ARITH_TAC;
+             ALL_TAC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("ytop_post",
+           ASM_REWRITE_TAC[] THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC (1--1) THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC))))),
+     Cases(`MIN m n = 0`,
+      Leg("main0",
+        ASM_REWRITE_TAC[] THEN
+        ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC (1--4) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Loop(`MIN m n`, `pc + 0x3c`, `pc + 0x54`,
+       `\i s. read X0 s = word(MIN m n - i) /\ read X1 s = a /\ read X3 s = b /\
+              read X30 s = returnaddress`,
+       Leg("main_pre",
+         REWRITE_TAC[SUB_0] THEN
+         ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC (1--1) THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("main_loop",
+         SUBGOAL_THEN `MIN m n - (i + 1) < m /\ MIN m n - (i + 1) < n`
+         STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+         VAL_INT64_TAC `i:num` THEN VAL_INT64_TAC `MIN m n - i` THEN
+         SUBGOAL_THEN
+          `word_sub (word(MIN m n - i)) (word 1):int64 =
+           word(MIN m n - (i + 1))`
+         ASSUME_TAC THENL
+          [SUBGOAL_THEN `MIN m n - i = (MIN m n - (i + 1)) + 1` SUBST1_TAC THENL
+            [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+           ALL_TAC] THEN
+         VAL_INT64_TAC `MIN m n - (i + 1)` THEN
+         ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC (1--6) THEN
+         SAFETY_CLOSE_TAC),
+       Leg("main_post",
+         ASM_REWRITE_TAC[] THEN
+         ARM_SAFETY_SIM_TAC BIGNUM_EQ_EXEC (1--3) THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC)))))));;

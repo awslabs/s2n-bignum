@@ -5420,6 +5420,9 @@ let full_spec,public_vars = mk_safety_spec
     CURVE25519_X25519BASE_CORRECT
     CURVE25519_X25519BASE_EXEC;;
 
+(* As for edwards25519_scalarmulbase, the precondition below does not
+   assume that res and the tables are disjoint, unlike the computed
+   specification; the statement is checked to imply it. *)
 let CURVE25519_X25519BASE_SAFE = time prove
  (`exists f_events.
        forall e tables res scalar pc stackpointer.
@@ -5453,6 +5456,7 @@ let CURVE25519_X25519BASE_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bytes (res,32); memory :> bytes (stackpointer,488)])`,
+  ASSERT_CONCL_STRONGER_TAC full_spec THEN
   (* Prepare the safety theorem of subroutine to be used; this keeps
      introduction of metavariables in the right order. *)
   ASSUME_CALLEE_SAFETY_TAILED_TAC CORE_INV_P25519_SAFE
@@ -5723,39 +5727,11 @@ let CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
         CURVE25519_X25519BASE_SAFE)
        `[RBX; RBP; R12; R13; R14; R15]` 536 THEN
       DISCHARGE_SAFETY_PROPERTY_TAC)) in
-  ASSUME_CALLEE_SAFETY_TAILED_TAC subth "H_CALLEE" THEN
-  META_EXISTS_TAC THEN GEN_TAC THEN
-
-  REWRITE_TAC[BYTES_LOADED_DATA] THEN
-  REPLICATE_TAC 4 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 560 THEN
-  REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
-              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN REPEAT STRIP_TAC THEN
-  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
-  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
-  REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC WINDOWS_CURVE25519_X25519BASE_EXEC (1--5) THEN
-  REMOVE_THEN "H_CALLEE" (fun subth ->
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-      (curve25519_x25519base_windows_tmc,
-      WINDOWS_CURVE25519_X25519BASE_EXEC,
-      0x10,curve25519_x25519base_tmc,subth)
-          (* H_CALLEE quantifier order (from ASSUME_CALLEE_SAFETY_TAILED_TAC):
-             [e; tables; res; scalar; pc; stackpointer; returnaddress; e_tail].
-             SPECL the leading 7; e_tail is left as a metavariable bound by
-             META_EXISTS_TAC inside X86_SUBROUTINE_SIM_TAC. *)
-          [`e:(uarch_event)list`; `tables:num`;
-           `read RDI s`; `read RSI s`;
-          `pc + 0x10`; `read RSP s`; `read (memory :> bytes64 (read RSP s)) s`]
-          6) THENL [
-    EXISTS_E2_TAC(ref
-      [`tables:num`;`pc:num`;`stackpointer:int64`]);
-
-    ALL_TAC
-  ] THEN
-  X86_STEPS_TAC WINDOWS_CURVE25519_X25519BASE_EXEC (7--9) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_WINDOWS_CALL_WRAP_SAFETY_TAC
+    ~rewrites:[BYTES_LOADED_DATA]
+    (curve25519_x25519base_windows_tmc,WINDOWS_CURVE25519_X25519BASE_EXEC)
+    (curve25519_x25519base_tmc,subth)
+    [`tables:num`;`pc:num`;`stackpointer:int64`]);;
 
 let CURVE25519_X25519BASE_WINDOWS_SUBROUTINE_SAFE = time prove
  (`exists f_events.
@@ -5797,3 +5773,21 @@ let CURVE25519_X25519BASE_WINDOWS_SUBROUTINE_SAFE = time prove
   MATCH_ACCEPT_TAC(ADD_IBT_RULE
                      ~bridge:(Some CURVE25519_X25519BASE_WINDOWS_MC_BRIDGE)
                      CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* The alias curve25519_x25519base_byte runs the same code, and its          *)
+(* subroutine correctness theorems have the same assumptions, so its safety  *)
+(* specifications are the same.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+let CURVE25519_X25519BASE_BYTE_NOIBT_SUBROUTINE_SAFE =
+  CURVE25519_X25519BASE_NOIBT_SUBROUTINE_SAFE;;
+
+let CURVE25519_X25519BASE_BYTE_SUBROUTINE_SAFE =
+  CURVE25519_X25519BASE_SUBROUTINE_SAFE;;
+
+let CURVE25519_X25519BASE_BYTE_NOIBT_WINDOWS_SUBROUTINE_SAFE =
+  CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_SAFE;;
+
+let CURVE25519_X25519BASE_BYTE_WINDOWS_SUBROUTINE_SAFE =
+  CURVE25519_X25519BASE_WINDOWS_SUBROUTINE_SAFE;;

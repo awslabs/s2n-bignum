@@ -352,3 +352,95 @@ let BIGNUM_MODDOUBLE_SUBROUTINE_CORRECT = prove
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(z,val k)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_MODDOUBLE_EXEC BIGNUM_MODDOUBLE_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_moddouble" subroutine_signatures)
+    BIGNUM_MODDOUBLE_SUBROUTINE_CORRECT
+    BIGNUM_MODDOUBLE_EXEC;;
+
+(* One iteration of either loop (n steps): the counter word(k - i) is
+   decremented and tested for zero. *)
+
+let BIGNUM_MODDOUBLE_BODY_TAC n =
+  VAL_INT64_TAC `i:num` THEN REWRITE_TAC[] THEN
+  ARM_SAFETY_SIM_TAC BIGNUM_MODDOUBLE_EXEC (1--n) THEN
+  SUBGOAL_THEN
+   `(~(val(word_sub (word(k-i)) (word 1):int64) = 0)) <=> i + 1 < k`
+    SUBST1_TAC THENL
+   [REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+    IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+    ALL_TAC] THEN
+  CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+  CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+  CONJ_TAC THENL [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+    [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let BIGNUM_MODDOUBLE_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e k z x m pc returnaddress.
+           nonoverlapping (word pc,104) (z,8 * val k) /\
+           nonoverlapping (m,8 * val k) (z,8 * val k) /\
+           (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_moddouble_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; x; m] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x m z k pc returnaddress /\
+                         memaccess_inbounds e2
+                         [x,val k * 8; m,val k * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ARM_SAFETY_SIM_TAC BIGNUM_MODDOUBLE_EXEC (1--3) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Seq(`pc + 0x40`,
+       `\s. read X0 s = word k /\ read X1 s = z /\ read X3 s = m /\
+            read X5 s = word k /\ read X30 s = returnaddress`,
+       (*** Part 1: doubling/subtraction loop ***)
+       Loop(`k:num`, `pc + 0x10`, `pc + 0x34`,
+         `\i s. read X0 s = word k /\ read X1 s = z /\ read X2 s = x /\
+                read X3 s = m /\
+                read X4 s = word(8 * i) /\ read X5 s = word(k - i) /\
+                read X30 s = returnaddress`,
+         Leg("pre",
+           ARM_SAFETY_SIM_TAC BIGNUM_MODDOUBLE_EXEC (1--4) THEN
+           ASM_REWRITE_TAC[SUB_0; MULT_0; WORD_SUB_0; WORD_ADD_0] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("l1", BIGNUM_MODDOUBLE_BODY_TAC 9),
+         Leg("mid",
+           ARM_SAFETY_SIM_TAC BIGNUM_MODDOUBLE_EXEC (1--3) THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC)),
+       (*** Part 2: masked addition loop ***)
+       Loop(`k:num`, `pc + 0x44`, `pc + 0x64`,
+         `\i s. read X0 s = word k /\ read X1 s = z /\ read X3 s = m /\
+                read X4 s = word(8 * i) /\ read X5 s = word(k - i) /\
+                read X30 s = returnaddress`,
+         Leg("l2pre",
+           ASM_REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_MODDOUBLE_EXEC (1--1) THEN
+           ASM_REWRITE_TAC[SUB_0; MULT_0; WORD_ADD_0] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("l2", BIGNUM_MODDOUBLE_BODY_TAC 8),
+         Leg("l2post",
+           ARM_SAFETY_SIM_TAC BIGNUM_MODDOUBLE_EXEC (1--1) THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC))))));;

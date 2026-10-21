@@ -498,3 +498,62 @@ let BIGNUM_MOD_P384_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_MOD_P384_EXEC BIGNUM_MOD_P384_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/bignum_mod_safety.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mod_p384" subroutine_signatures)
+    BIGNUM_MOD_P384_CORRECT
+    BIGNUM_MOD_P384_EXEC;;
+
+let BIGNUM_MOD_P384_SAFE = time prove
+ (`exists f_events.
+        forall e z k x pc.
+            nonoverlapping (word pc,0x144) (z,48)
+            ==> ensures arm
+                (\s.
+                     aligned_bytes_loaded s (word pc) bignum_mod_p384_mc /\
+                     read PC s = word pc /\
+                     C_ARGUMENTS [z; k; x] s /\
+                     read events s = e)
+                (\s.
+                     read PC s = word (pc + 0xec) /\
+                     (exists e2.
+                          read events s = APPEND e2 e /\
+                          e2 = f_events x z k pc /\
+                          memaccess_inbounds e2 [x,val k * 8; z,48] [z,48]))
+                (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14; X15; X16; X17] ,,
+                 MAYCHANGE SOME_FLAGS ,,
+                 MAYCHANGE [events] ,,
+                 MAYCHANGE [memory :> bignum (z,6)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  BIGNUM_MOD_SAFETY_TAC BIGNUM_MOD_P384_EXEC 6 (0x5c,23) (0xe0,32));;
+
+let BIGNUM_MOD_P384_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+        forall e z k x pc returnaddress.
+          nonoverlapping (word pc,0x144) (z,48)
+          ==> ensures arm
+                (\s.
+                     aligned_bytes_loaded s (word pc) bignum_mod_p384_mc /\
+                     read PC s = word pc /\
+                     read X30 s = returnaddress /\
+                     C_ARGUMENTS [z; k; x] s /\
+                     read events s = e)
+                (\s.
+                     read PC s = returnaddress /\
+                     (exists e2.
+                          read events s = APPEND e2 e /\
+                          e2 = f_events x z k pc returnaddress /\
+                          memaccess_inbounds e2 [x,val k * 8; z,48] [z,48]))
+                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                 MAYCHANGE [memory :> bignum(z,6)])`,
+  ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_MOD_P384_EXEC BIGNUM_MOD_P384_SAFE
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;

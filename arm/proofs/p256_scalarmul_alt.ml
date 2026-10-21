@@ -7481,3 +7481,93 @@ let P256_SCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
                      memory :> bytes(word_sub stackpointer (word 1248),1248)])`,
    ARM_ADD_RETURN_STACK_TAC P256_SCALARMUL_ALT_EXEC
    P256_SCALARMUL_ALT_CORRECT `[X19; X20; X21; X30]` 1248);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The scalar is not a public input.  *)
+(* The structure follows the proof for p256_montjscalarmul: a fixed          *)
+(* 63-iteration main loop (four doublings, constant-time table selection and *)
+(* an addition per iteration), with all point operations and field           *)
+(* operations done by local subroutines whose own safety theorems are used   *)
+(* through ARM_SUBROUTINE_SIM_TAC.                                           *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/p256_scalarmul_safety.ml";;
+
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p256_scalarmul_alt" subroutine_signatures)
+    P256_SCALARMUL_ALT_CORRECT
+    P256_SCALARMUL_ALT_EXEC;;
+
+let P256_SCALARMUL_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e res scalar point pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,1216))
+           [word pc,25164; res,64; scalar,32; point,64] /\
+           nonoverlapping (res,64) (word pc,25164)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) p256_scalarmul_alt_mc /\
+                    read PC s = word (pc + 12) /\
+                    read SP s = word_add stackpointer (word 224) /\
+                    C_ARGUMENTS [res; scalar; point] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 2072) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,64; res,64; stackpointer,1216]
+                         [res,64; stackpointer,1216]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [X19; X20; X21; X30] ,,
+                MAYCHANGE
+                [memory :> bytes (res,64); memory :> bytes (stackpointer,1216)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  P256_SCALARMUL_SAFETY_TAC (p256_scalarmul_alt_mc,P256_SCALARMUL_ALT_EXEC)
+    (0x1ea8,p256_montjadd_alt_mc,P256_MONTJADD_ALT_SUBROUTINE_SAFE)
+    (0x3cc8,p256_montjdouble_alt_mc,P256_MONTJDOUBLE_ALT_SUBROUTINE_SAFE)
+    (0x4d04,p256_montjmixadd_alt_mc,P256_MONTJMIXADD_ALT_SUBROUTINE_SAFE)
+    (0x1cb8,bignum_tomont_p256_mc,BIGNUM_TOMONT_P256_SUBROUTINE_SAFE)
+    (0x1980,bignum_montmul_p256_alt_mc,BIGNUM_MONTMUL_P256_ALT_SUBROUTINE_SAFE)
+    (0x1b48,bignum_montsqr_p256_alt_mc,BIGNUM_MONTSQR_P256_ALT_SUBROUTINE_SAFE)
+    (0x828,bignum_demont_p256_mc,BIGNUM_DEMONT_P256_SUBROUTINE_SAFE)
+    (0x8bc,bignum_inv_p256_mc,BIGNUM_INV_P256_SUBROUTINE_SAFE)
+    ~frame:224);;
+
+let P256_SCALARMUL_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 1248),1248))
+            [(word pc,0x624c); (res,64); (scalar,32); (point,64)] /\
+        nonoverlapping (res,64) (word pc,0x624c)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) p256_scalarmul_alt_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [res;scalar;point] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc
+                                       (word_sub stackpointer (word 1248))
+                                       returnaddress /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,64; res,64;
+                          word_sub stackpointer (word 1248),1248]
+                         [res,64;
+                          word_sub stackpointer (word 1248),1248]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE[memory :> bytes(res,64);
+                     memory :> bytes(word_sub stackpointer (word 1248),1248)])`,
+  ARM_ADD_RETURN_STACK_TAC P256_SCALARMUL_ALT_EXEC
+    P256_SCALARMUL_ALT_SAFE `[X19; X20; X21; X30]` 1248 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

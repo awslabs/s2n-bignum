@@ -1576,3 +1576,81 @@ let EDWARDS25519_EPDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
                       memory :> bytes(word_sub stackpointer (word 176),176)])`,
   ARM_ADD_RETURN_STACK_TAC EDWARDS25519_EPDOUBLE_ALT_EXEC
     EDWARDS25519_EPDOUBLE_ALT_CORRECT `[X19; X20]` 176);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "edwards25519_epdouble_alt" subroutine_signatures)
+    EDWARDS25519_EPDOUBLE_ALT_CORRECT
+    EDWARDS25519_EPDOUBLE_ALT_EXEC;;
+
+let EDWARDS25519_EPDOUBLE_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,160))
+           [word pc,3132; p3,128; p1,96] /\
+           nonoverlapping (p3,128) (word pc,3132)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    edwards25519_epdouble_alt_mc /\
+                    read PC s = word (pc + 8) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 3120) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,96; p3,128; stackpointer,160]
+                         [p3,128; stackpointer,160]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,128); memory :> bytes (stackpointer,160)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars EDWARDS25519_EPDOUBLE_ALT_EXEC);;
+
+let EDWARDS25519_EPDOUBLE_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 176),176))
+            [(word pc,LENGTH edwards25519_epdouble_alt_mc); (p1,96); (p3,128)] /\
+        nonoverlapping (p3,128) (word pc,LENGTH edwards25519_epdouble_alt_mc)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) edwards25519_epdouble_alt_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [p3; p1] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p3 pc
+                              (word_sub stackpointer (word 176))
+                              returnaddress /\
+                         memaccess_inbounds e2
+                         [p1,96; p3,128; word_sub stackpointer (word 176),176]
+                         [p3,128; word_sub stackpointer (word 176),176]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,128);
+                      memory :> bytes(word_sub stackpointer (word 176),176)])`,
+  REWRITE_TAC[fst EDWARDS25519_EPDOUBLE_ALT_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC EDWARDS25519_EPDOUBLE_ALT_EXEC
+    (REWRITE_RULE[fst EDWARDS25519_EPDOUBLE_ALT_EXEC]EDWARDS25519_EPDOUBLE_ALT_SAFE)
+    `[X19; X20]` 176 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

@@ -4747,3 +4747,204 @@ let MLDSA_INTT_WINDOWS_SUBROUTINE_CORRECT = prove
   CONV_TAC TWEAK_CONV THEN
   MATCH_ACCEPT_TAC(ADD_IBT_RULE
   (CONV_RULE TWEAK_CONV MLDSA_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT)));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "mldsa_intt" subroutine_signatures)
+    MLDSA_INTT_CORRECT
+    MLDSA_INTT_TMC_EXEC;;
+
+let MLDSA_INTT_SAFE =
+  REWRITE_RULE [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS]
+  (time prove
+ (`exists f_events.
+       forall e a zetas pc.
+           aligned 32 a /\
+           aligned 32 zetas /\
+           nonoverlapping (word pc,12089) (a,1024) /\
+           nonoverlapping (word pc,12089) (zetas,2496) /\
+           nonoverlapping (a,1024) (zetas,2496)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST mldsa_intt_tmc) /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [a; zetas] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 12088) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events zetas a pc /\
+                         memaccess_inbounds e2 [a,1024; zetas,2496] [a,1024]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9;
+                 ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+                MAYCHANGE [RAX] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [memory :> bytes (a,1024)])`,
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS] THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLDSA_INTT_TMC_EXEC));;
+
+let MLDSA_INTT_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a zetas pc stackpointer returnaddress.
+        aligned 32 a /\
+        aligned 32 zetas /\
+        nonoverlapping (word pc,LENGTH mldsa_intt_tmc) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_intt_tmc) (zetas,2496) /\
+        nonoverlapping (a,1024) (zetas,2496) /\
+        nonoverlapping (a,1024) (stackpointer,8) /\
+        nonoverlapping (zetas,2496) (stackpointer,8)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mldsa_intt_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [a; zetas] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events zetas a pc stackpointer returnaddress /\
+                      memaccess_inbounds e2
+                      [a,1024; zetas,2496; stackpointer,8]
+                      [a,1024; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (a,1024)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_intt_tmc MLDSA_INTT_SAFE
+    THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let MLDSA_INTT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a zetas pc stackpointer returnaddress.
+        aligned 32 a /\
+        aligned 32 zetas /\
+        nonoverlapping (word pc,LENGTH mldsa_intt_mc) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_intt_mc) (zetas,2496) /\
+        nonoverlapping (a,1024) (zetas,2496) /\
+        nonoverlapping (a,1024) (stackpointer,8) /\
+        nonoverlapping (zetas,2496) (stackpointer,8)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mldsa_intt_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [a; zetas] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events zetas a pc stackpointer returnaddress /\
+                      memaccess_inbounds e2
+                      [a,1024; zetas,2496; stackpointer,8]
+                      [a,1024; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (a,1024)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_INTT_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_INTT_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a zetas pc stackpointer returnaddress.
+        aligned 32 a /\
+        aligned 32 zetas /\
+        nonoverlapping (word pc,LENGTH mldsa_intt_windows_tmc) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_intt_windows_tmc) (zetas,2496) /\
+        nonoverlapping (a,1024) (zetas,2496) /\
+        nonoverlapping (word_sub stackpointer (word 176),184) (a,1024) /\
+        nonoverlapping (word_sub stackpointer (word 176),176) (zetas,2496) /\
+        nonoverlapping (word pc,LENGTH mldsa_intt_windows_tmc)
+        (word_sub stackpointer (word 176),176)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mldsa_intt_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [a; zetas] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events zetas a pc (word_sub stackpointer (word 176))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [a,1024; zetas,2496;
+                       word_sub stackpointer (word 176),184]
+                      [a,1024; word_sub stackpointer (word 176),176]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (word_sub stackpointer (word 176),176)] ,,
+             MAYCHANGE [memory :> bytes (a,1024)])`,
+  X86_WINDOWS_XMM_WRAP_SAFETY_TAC
+    (mldsa_intt_windows_tmc,MLDSA_INTT_WINDOWS_TMC_EXEC)
+    (mldsa_intt_tmc,MLDSA_INTT_SAFE)
+    ~gprs:[`RDI`; `RSI`] ~xmms:[6; 7; 8; 9; 10; 11; 12; 13; 14; 15] ~off:92
+    ~pre:15 ~post:14);;
+
+let MLDSA_INTT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a zetas pc stackpointer returnaddress.
+        aligned 32 a /\
+        aligned 32 zetas /\
+        nonoverlapping (word pc,LENGTH mldsa_intt_windows_mc) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_intt_windows_mc) (zetas,2496) /\
+        nonoverlapping (a,1024) (zetas,2496) /\
+        nonoverlapping (word_sub stackpointer (word 176),184) (a,1024) /\
+        nonoverlapping (word_sub stackpointer (word 176),176) (zetas,2496) /\
+        nonoverlapping (word pc,LENGTH mldsa_intt_windows_mc)
+        (word_sub stackpointer (word 176),176)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mldsa_intt_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [a; zetas] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events zetas a pc (word_sub stackpointer (word 176))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [a,1024; zetas,2496;
+                       word_sub stackpointer (word 176),184]
+                      [a,1024; word_sub stackpointer (word 176),176]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (word_sub stackpointer (word 176),176)] ,,
+             MAYCHANGE [memory :> bytes (a,1024)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_INTT_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

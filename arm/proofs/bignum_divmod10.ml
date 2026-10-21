@@ -219,3 +219,80 @@ let BIGNUM_DIVMOD10_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bignum(z,val k)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_DIVMOD10_EXEC BIGNUM_DIVMOD10_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_divmod10" subroutine_signatures)
+    BIGNUM_DIVMOD10_SUBROUTINE_CORRECT
+    BIGNUM_DIVMOD10_EXEC;;
+
+(* The per-iteration load/store z[k-(i+1)] stays within the buffer, hence
+   disjoint from the (nonoverlapping) code region. *)
+let BIGNUM_DIVMOD10_STORE_NONOV = prove
+ (`!(pc:num) (z:int64) (k:num) (i:num).
+     nonoverlapping (word pc,76) (z,8 * k) /\ i < k
+     ==> nonoverlapping (word pc,76) (word_add z (word(8 * (k - (i + 1)))),8)`,
+  REPEAT STRIP_TAC THEN NONOVERLAPPING_TAC);;
+
+let BIGNUM_DIVMOD10_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e k z pc returnaddress.
+           nonoverlapping (word pc,76) (z,8 * val k)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_divmod10_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events z k pc returnaddress /\
+                         memaccess_inbounds e2 [z,val k * 8] [z,val k * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN
+       ARM_SAFETY_SIM_TAC BIGNUM_DIVMOD10_EXEC (1--2) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Loop(`k:num`, `pc + 0x14`, `pc + 0x44`,
+       `\i s. read X1 s = z /\
+              read X0 s = word(k - i) /\
+              read X30 s = returnaddress`,
+       Leg("pre",
+         (* pre *)
+         ARM_SAFETY_SIM_TAC BIGNUM_DIVMOD10_EXEC (1--5) THEN
+         ASM_REWRITE_TAC[SUB_0] THEN DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("loop",
+         VAL_INT64_TAC `i:num` THEN
+         SUBGOAL_THEN `word_sub (word(k - i)) (word 1):int64 = word(k - (i+1))` ASSUME_TAC THENL
+         [ IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+         [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ]; ALL_TAC ] THEN
+         MP_TAC(ISPECL [`pc:num`; `z:int64`; `k:num`; `i:num`] BIGNUM_DIVMOD10_STORE_NONOV) THEN
+         ANTS_TAC THENL [ ASM_REWRITE_TAC[]; DISCH_TAC ] THEN
+         REWRITE_TAC[] THEN
+         ARM_SAFETY_SIM_TAC BIGNUM_DIVMOD10_EXEC (1--12) THEN
+         SUBGOAL_THEN `val(word(k - (i+1)):int64) = k - (i+1)` ASSUME_TAC THENL
+         [ MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
+         ASM_REWRITE_TAC[] THEN
+         SUBGOAL_THEN `(~(k - (i + 1) = 0)) <=> i + 1 < k` SUBST1_TAC THENL
+         [ SIMPLE_ARITH_TAC; ALL_TAC ] THEN
+         CONJ_TAC THENL [ COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC ] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("post",
+         (* post *)
+         REWRITE_TAC[] THEN
+         ARM_SAFETY_SIM_TAC BIGNUM_DIVMOD10_EXEC (1--2) THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC)))));;

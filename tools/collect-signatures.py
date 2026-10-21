@@ -10,6 +10,7 @@
 # Please run this script from the root directory of s2n-bignum.
 
 import os
+import re
 
 
 class FnDecl:
@@ -95,7 +96,7 @@ def parseFnDecl(s:str, filename:str) -> FnDecl:
 def getMemInoutFromComment(s:str) -> FnMemInputOutput:
   # Return (array name, byte length)
   def parseArr(s:str):
-    # s is something like 'x[n]'
+    # s is something like 'x[n]' or a multidimensional 'm[2][2]'
     s = s.strip()
     i = s.find('[')
     if i == -1:
@@ -103,7 +104,19 @@ def getMemInoutFromComment(s:str) -> FnMemInputOutput:
     i2 = s.rfind(']')
 
     assert(i2 != -1), f"'{s}'"
-    return s[:i], s[i+1:i2]
+    name = s[:i]
+    # Extract each bracketed dimension. For a multidimensional array the total
+    # number of elements is the product of the dimensions (e.g. m[2][2] -> 4).
+    dims = re.findall(r'\[([^\]]*)\]', s[i:])
+    if len(dims) <= 1:
+      return name, s[i+1:i2]
+    # All dimensions must be concrete for a product to make sense.
+    assert all(d.strip().isdigit() for d in dims), \
+      f"multidimensional array with symbolic dimension: '{s}'"
+    prod = 1
+    for d in dims:
+      prod *= int(d.strip())
+    return name, str(prod)
 
   def splitUsingCommaOrAnd(s):
     ibegin = 0

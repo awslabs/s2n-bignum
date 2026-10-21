@@ -2461,3 +2461,193 @@ let SECP256K1_JDOUBLE_WINDOWS_SUBROUTINE_CORRECT = time prove
                       memory :> bytes(word_sub stackpointer (word 440),440)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE SECP256K1_JDOUBLE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "secp256k1_jdouble" subroutine_signatures)
+    SECP256K1_JDOUBLE_CORRECT
+    SECP256K1_JDOUBLE_EXEC;;
+
+let SECP256K1_JDOUBLE_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 pc stackpointer.
+           ALL (nonoverlapping (stackpointer,384))
+           [word pc,0xe0b; p1,96; p3,96] /\
+           nonoverlapping (p3,96) (word pc,0xe0b)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_tmc) /\
+                    read RIP s = word (pc + 0x10) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 0xdfa) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,96; p3,96; stackpointer,384]
+                         [p3,96; stackpointer,384]))
+               (MAYCHANGE
+                [RIP; RAX; RBX; RCX; RDX; R8; R9; R10; R11; R12; R13; R14; R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,96); memory :> bytes (stackpointer,384)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SECP256K1_JDOUBLE_EXEC);;
+
+let SECP256K1_JDOUBLE_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 424),424))
+        [word pc,LENGTH secp256k1_jdouble_tmc; p1,96] /\
+        ALL (nonoverlapping (p3,96))
+        [word pc,LENGTH secp256k1_jdouble_tmc;
+         word_sub stackpointer (word 424),432]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) secp256k1_jdouble_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 424))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,96; p3,96;
+                       word_sub stackpointer (word 424),432]
+                      [p3,96; word_sub stackpointer (word 424),424]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,96);
+              memory :> bytes (word_sub stackpointer (word 424),424)])`,
+  X86_PROMOTE_RETURN_STACK_TAC secp256k1_jdouble_tmc SECP256K1_JDOUBLE_SAFE
+    `[RBX; R12; R13; R14; R15]` 424
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let SECP256K1_JDOUBLE_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 424),424))
+        [word pc,LENGTH secp256k1_jdouble_mc; p1,96] /\
+        ALL (nonoverlapping (p3,96))
+        [word pc,LENGTH secp256k1_jdouble_mc;
+         word_sub stackpointer (word 424),432]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) secp256k1_jdouble_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 424))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,96; p3,96;
+                       word_sub stackpointer (word 424),432]
+                      [p3,96; word_sub stackpointer (word 424),424]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,96);
+              memory :> bytes (word_sub stackpointer (word 424),424)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SECP256K1_JDOUBLE_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let SECP256K1_JDOUBLE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 440),440))
+        [word pc,LENGTH secp256k1_jdouble_windows_tmc; p1,96] /\
+        ALL (nonoverlapping (p3,96))
+        [word pc,LENGTH secp256k1_jdouble_windows_tmc;
+         word_sub stackpointer (word 440),448]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) secp256k1_jdouble_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 440))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,96; p3,96;
+                       word_sub stackpointer (word 440),448]
+                      [p3,96; word_sub stackpointer (word 440),440]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,96);
+              memory :> bytes (word_sub stackpointer (word 440),440)])`,
+  WINDOWS_X86_WRAP_STACK_TAC secp256k1_jdouble_windows_tmc secp256k1_jdouble_tmc
+    SECP256K1_JDOUBLE_SAFE `[RBX; R12; R13; R14; R15]` 424
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let SECP256K1_JDOUBLE_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 440),440))
+        [word pc,LENGTH secp256k1_jdouble_windows_mc; p1,96] /\
+        ALL (nonoverlapping (p3,96))
+        [word pc,LENGTH secp256k1_jdouble_windows_mc;
+         word_sub stackpointer (word 440),448]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) secp256k1_jdouble_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 440))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,96; p3,96;
+                       word_sub stackpointer (word 440),448]
+                      [p3,96; word_sub stackpointer (word 440),440]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,96);
+              memory :> bytes (word_sub stackpointer (word 440),440)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SECP256K1_JDOUBLE_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

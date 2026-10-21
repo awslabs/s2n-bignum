@@ -804,3 +804,335 @@ let BIGNUM_COPY_ROW_FROM_TABLE_WINDOWS_SUBROUTINE_CORRECT = prove(
                   memory :> bytes(word_sub stackpointer (word 16), 16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPY_ROW_FROM_TABLE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_copy_row_from_table" subroutine_signatures)
+    BIGNUM_COPY_ROW_FROM_TABLE_CORRECT
+    BIGNUM_COPY_ROW_FROM_TABLE_EXEC;;
+
+let BIGNUM_COPY_ROW_FROM_TABLE_SAFE = time prove
+ (`exists f_events.
+       forall e z table height width idx pc.
+           nonoverlapping (word pc,LENGTH bignum_copy_row_from_table_tmc)
+           (z,8 * val width) /\
+           nonoverlapping (word pc,LENGTH bignum_copy_row_from_table_tmc)
+           (table,8 * val height * val width) /\
+           nonoverlapping (z,8 * val width)
+           (table,8 * val height * val width) /\
+           8 * val width < 2 EXP 64 /\
+           val idx < val height
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc)
+                    (BUTLAST bignum_copy_row_from_table_tmc) /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [z; table; height; width; idx] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s =
+                    word
+                    (pc + LENGTH (BUTLAST bignum_copy_row_from_table_tmc)) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events table z width height pc /\
+                         memaccess_inbounds e2
+                         [table,(val height * val width) * 8; z,val width * 8]
+                         [z,val width * 8]))
+               (MAYCHANGE [RIP] ,,
+                MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bytes (z,8 * val width)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  X86_SAFETY_SKELETON_TAC
+    ~ths:[NONOVERLAPPING_CLAUSES; fst BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC;
+          fst BIGNUM_COPY_ROW_FROM_TABLE_EXEC]
+    ["height"; "width"; "idx"]
+   (Then(SUBGOAL_THEN `~(height = 0)` ASSUME_TAC THENL
+          [UNDISCH_TAC `idx < height` THEN ARITH_TAC; ALL_TAC],
+    Cases(`width = 0`,
+     Leg("w0",
+       FIRST_X_ASSUM(SUBST_ALL_TAC o
+         check (fun th -> concl th = `width = 0`)) THEN
+       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+         ~canonicalize_pc_diff:false
+         BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC (1--4) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Seq(`pc + 0x20`,
+      `\s. read RDI s = z /\ read RSI s = table /\ read RDX s = word height /\
+           read RCX s = word width /\ read R8 s = word idx`,
+      (*** Initial zeroing of the output ***)
+      Loop(`width:num`, `pc + 0x10`, `pc + 0x20`,
+       `\i s. read RDI s = z /\ read RSI s = table /\
+              read RDX s = word height /\ read RCX s = word width /\
+              read R8 s = word idx /\ read R9 s = word (width - i) /\
+              read RAX s = word_add z (word (8 * i))`,
+       Leg("zprol",
+         REWRITE_TAC[SUB_0] THEN
+         X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+           ~canonicalize_pc_diff:false
+           BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC (1--6) THEN
+         SAFETY_CLOSE_TAC),
+       Leg("zero",
+         SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `width:num` THEN
+         X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+           ~canonicalize_pc_diff:false
+           BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC (1--4) THEN
+         SAFETY_CLOSE_TAC),
+       Leg("zepil",
+         X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+           ~canonicalize_pc_diff:false
+           BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC [] THEN
+         SAFETY_CLOSE_TAC)),
+      (*** The outer loop over the table rows ***)
+      Loop(`height:num`, `pc + 0x2a`, `pc + 0x5b`,
+       `\i s. read RDI s = z /\ read RSI s = table /\
+              read RDX s = word height /\ read RCX s = word width /\
+              read R8 s = word idx /\ read R9 s = word i /\
+              read RAX s = word_add table (word (8 * i * width))`,
+       Leg("oprol",
+         REWRITE_TAC[SUB_0] THEN
+         X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+           ~canonicalize_pc_diff:false
+           BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC (1--2) THEN
+         SAFETY_CLOSE_TAC),
+       (*** The inner loop over the words of a row ***)
+       Loop(`width:num`, `pc + 0x31`, `pc + 0x48`,
+        `\j s. read RDI s = z /\ read RSI s = table /\
+               read RDX s = word height /\ read RCX s = word width /\
+               read R8 s = word idx /\ read R9 s = word i /\
+               read RAX s = word_add table (word (8 * i * width)) /\
+               read R10 s = word j`,
+        Leg("iprol",
+          REWRITE_TAC[SUB_0] THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false
+            BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC [1] THEN
+          SAFETY_CLOSE_TAC),
+        Leg("inner",
+          SAFETY_UPCOUNT_FACTS_TAC `j:num` `j:num` `width:num` `width:num` THEN
+          SUBGOAL_THEN `i * width + j < height * width` ASSUME_TAC THENL
+           [TRANS_TAC LTE_TRANS `i * width + width` THEN CONJ_TAC THENL
+             [UNDISCH_TAC `j < width` THEN ARITH_TAC;
+              REWRITE_TAC[ARITH_RULE `i * width + width = (i + 1) * width`;
+                          LE_MULT_RCANCEL] THEN
+              UNDISCH_TAC `i < height` THEN ARITH_TAC];
+            ALL_TAC] THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false
+            BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC (1--7) THEN
+          SUBGOAL_THEN
+           `~(val (word (j + 1):int64) = val (word width:int64)) <=>
+            j + 1 < width`
+          ASSUME_TAC THENL
+           [ASM_REWRITE_TAC[] THEN UNDISCH_TAC `j < width` THEN ARITH_TAC;
+            ALL_TAC] THEN
+          SAFETY_CLOSE_TAC),
+        Leg("iepil",
+          SAFETY_UPCOUNT_FACTS_TAC
+            `i:num` `i:num` `height:num` `height:num` THEN
+          SUBGOAL_THEN
+           `~(val (word (i + 1):int64) = val (word height:int64)) <=>
+            i + 1 < height`
+          ASSUME_TAC THENL
+           [ASM_REWRITE_TAC[] THEN UNDISCH_TAC `i < height` THEN ARITH_TAC;
+            ALL_TAC] THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false
+            BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC (1--5) THEN
+          SAFETY_CLOSE_TAC)),
+       Leg("oepil",
+         X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+           ~canonicalize_pc_diff:false
+           BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC [] THEN
+         SAFETY_CLOSE_TAC)))))));;
+
+let BIGNUM_COPY_ROW_FROM_TABLE_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e z table height width idx pc stackpointer returnaddress.
+        nonoverlapping (word pc,LENGTH bignum_copy_row_from_table_tmc)
+        (z,8 * val width) /\
+        nonoverlapping (word pc,LENGTH bignum_copy_row_from_table_tmc)
+        (table,8 * val height * val width) /\
+        nonoverlapping (z,8 * val width) (table,8 * val height * val width) /\
+        nonoverlapping (z,8 * val width) (stackpointer,8) /\
+        8 * val width < 2 EXP 64 /\
+        val idx < val height
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_copy_row_from_table_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; table; height; width; idx] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events table z width height pc stackpointer
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [table,(val height * val width) * 8; z,val width * 8;
+                       stackpointer,8]
+                      [z,val width * 8; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (z,8 * val width)])`,
+  REWRITE_TAC[fst BIGNUM_COPY_ROW_FROM_TABLE_EXEC] THEN
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_copy_row_from_table_tmc
+   (REWRITE_RULE [fst BIGNUM_COPY_ROW_FROM_TABLE_EXEC;
+                  fst BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC]
+     BIGNUM_COPY_ROW_FROM_TABLE_SAFE) THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e z table height width idx pc stackpointer returnaddress.
+        nonoverlapping (word pc,LENGTH bignum_copy_row_from_table_mc)
+        (z,8 * val width) /\
+        nonoverlapping (word pc,LENGTH bignum_copy_row_from_table_mc)
+        (table,8 * val height * val width) /\
+        nonoverlapping (z,8 * val width) (table,8 * val height * val width) /\
+        nonoverlapping (z,8 * val width) (stackpointer,8) /\
+        8 * val width < 2 EXP 64 /\
+        val idx < val height
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_copy_row_from_table_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; table; height; width; idx] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events table z width height pc stackpointer
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [table,(val height * val width) * 8; z,val width * 8;
+                       stackpointer,8]
+                      [z,val width * 8; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (z,8 * val width)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPY_ROW_FROM_TABLE_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_COPY_ROW_FROM_TABLE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e z table height width idx pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+        [word pc,LENGTH bignum_copy_row_from_table_windows_tmc;
+         table,8 * val height * val width] /\
+        nonoverlapping
+        (word pc,LENGTH bignum_copy_row_from_table_windows_tmc)
+        (z,8 * val width) /\
+        nonoverlapping
+        (word pc,LENGTH bignum_copy_row_from_table_windows_tmc)
+        (table,8 * val height * val width) /\
+        nonoverlapping (z,8 * val width) (table,8 * val height * val width) /\
+        nonoverlapping (z,8 * val width) (word_sub stackpointer (word 16),24) /\
+        8 * val width < 2 EXP 64 /\
+        val idx < val height
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc)
+                 bignum_copy_row_from_table_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; table; height; width; idx] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events table z width height pc
+                      (word_sub stackpointer (word 16))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [table,(val height * val width) * 8; z,val width * 8;
+                       word_add stackpointer (word 40),8;
+                       word_sub stackpointer (word 16),24]
+                      [z,val width * 8; word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,8 * val width);
+              memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  REWRITE_TAC[fst WINDOWS_BIGNUM_COPY_ROW_FROM_TABLE_EXEC] THEN
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_copy_row_from_table_windows_tmc
+   bignum_copy_row_from_table_tmc
+   (REWRITE_RULE [fst BIGNUM_COPY_ROW_FROM_TABLE_EXEC;
+                  fst BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC]
+     BIGNUM_COPY_ROW_FROM_TABLE_SAFE) THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_COPY_ROW_FROM_TABLE_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e z table height width idx pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+        [word pc,LENGTH bignum_copy_row_from_table_windows_mc;
+         table,8 * val height * val width] /\
+        nonoverlapping (word pc,LENGTH bignum_copy_row_from_table_windows_mc)
+        (z,8 * val width) /\
+        nonoverlapping (word pc,LENGTH bignum_copy_row_from_table_windows_mc)
+        (table,8 * val height * val width) /\
+        nonoverlapping (z,8 * val width) (table,8 * val height * val width) /\
+        nonoverlapping (z,8 * val width) (word_sub stackpointer (word 16),24) /\
+        8 * val width < 2 EXP 64 /\
+        val idx < val height
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc)
+                 bignum_copy_row_from_table_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; table; height; width; idx] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events table z width height pc
+                      (word_sub stackpointer (word 16))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [table,(val height * val width) * 8; z,val width * 8;
+                       word_add stackpointer (word 40),8;
+                       word_sub stackpointer (word 16),24]
+                      [z,val width * 8; word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,8 * val width);
+              memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPY_ROW_FROM_TABLE_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

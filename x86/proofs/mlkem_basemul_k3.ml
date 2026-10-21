@@ -1997,3 +1997,224 @@ let MLKEM_BASEMUL_K3_WINDOWS_SUBROUTINE_CORRECT = prove(
                MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176), 176)] ,,
                MAYCHANGE [memory :> bytes(dst, 512)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLKEM_BASEMUL_K3_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "mlkem_basemul_k3" subroutine_signatures)
+    MLKEM_BASEMUL_K3_CORRECT
+    mlkem_basemul_k3_tmc_EXEC;;
+
+let MLKEM_BASEMUL_K3_SAFE = time prove
+ (`exists f_events.
+       forall e src1 src2 src2t dst pc.
+           aligned 32 src1 /\
+           aligned 32 src2 /\
+           aligned 32 src2t /\
+           aligned 32 dst /\
+           ALL (nonoverlapping (dst,512)) [src1,1536; src2,1536; src2t,768] /\
+           nonoverlapping (dst,512) (word pc,3852)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST mlkem_basemul_k3_tmc) /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [dst; src1; src2; src2t] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 3852) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events src1 src2 src2t dst pc /\
+                         memaccess_inbounds e2
+                         [src1,1536; src2,1536; src2t,768; dst,512]
+                         [dst,512]))
+               (MAYCHANGE [events] ,,
+                MAYCHANGE [RIP] ,,
+                MAYCHANGE [RAX] ,,
+                MAYCHANGE
+                [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9;
+                 ZMM10; ZMM11; ZMM12; ZMM13; ZMM14] ,,
+                MAYCHANGE [memory :> bytes (dst,512)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars mlkem_basemul_k3_tmc_EXEC);;
+
+let MLKEM_BASEMUL_K3_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e src1 src2 src2t dst pc stackpointer returnaddress.
+        aligned 32 src1 /\
+        aligned 32 src2 /\
+        aligned 32 src2t /\
+        aligned 32 dst /\
+        ALL (nonoverlapping (dst,512)) [src1,1536; src2,1536; src2t,768] /\
+        nonoverlapping (dst,512) (word pc,LENGTH mlkem_basemul_k3_tmc) /\
+        nonoverlapping (dst,512) (stackpointer,8)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mlkem_basemul_k3_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [dst; src1; src2; src2t] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events src1 src2 src2t dst pc stackpointer
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [src1,1536; src2,1536; src2t,768; dst,512;
+                       stackpointer,8]
+                      [dst,512; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (dst,512)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_basemul_k3_tmc MLKEM_BASEMUL_K3_SAFE
+    THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let MLKEM_BASEMUL_K3_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e src1 src2 src2t dst pc stackpointer returnaddress.
+        aligned 32 src1 /\
+        aligned 32 src2 /\
+        aligned 32 src2t /\
+        aligned 32 dst /\
+        ALL (nonoverlapping (dst,512)) [src1,1536; src2,1536; src2t,768] /\
+        nonoverlapping (dst,512) (word pc,LENGTH mlkem_basemul_k3_mc) /\
+        nonoverlapping (dst,512) (stackpointer,8)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mlkem_basemul_k3_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [dst; src1; src2; src2t] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events src1 src2 src2t dst pc stackpointer
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [src1,1536; src2,1536; src2t,768; dst,512;
+                       stackpointer,8]
+                      [dst,512; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (dst,512)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLKEM_BASEMUL_K3_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_BASEMUL_K3_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e src1 src2 src2t dst pc stackpointer returnaddress.
+        aligned 32 src1 /\
+        aligned 32 src2 /\
+        aligned 32 src2t /\
+        aligned 32 dst /\
+        nonoverlapping (word pc,LENGTH mlkem_basemul_k3_windows_tmc)
+        (word_sub stackpointer (word 176),176) /\
+        nonoverlapping (src1,1536) (word_sub stackpointer (word 176),176) /\
+        nonoverlapping (src2,1536) (word_sub stackpointer (word 176),176) /\
+        nonoverlapping (src2t,768) (word_sub stackpointer (word 176),176) /\
+        nonoverlapping (dst,512) (src1,1536) /\
+        nonoverlapping (dst,512) (src2,1536) /\
+        nonoverlapping (dst,512) (src2t,768) /\
+        nonoverlapping (dst,512)
+        (word pc,LENGTH mlkem_basemul_k3_windows_tmc) /\
+        nonoverlapping (dst,512) (word_sub stackpointer (word 176),184)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mlkem_basemul_k3_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [dst; src1; src2; src2t] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events src1 src2 src2t dst pc
+                      (word_sub stackpointer (word 176))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [src1,1536; src2,1536; src2t,768; dst,512;
+                       word_sub stackpointer (word 176),184]
+                      [dst,512; word_sub stackpointer (word 176),176]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (word_sub stackpointer (word 176),176)] ,,
+             MAYCHANGE [memory :> bytes (dst,512)])`,
+  X86_WINDOWS_XMM_WRAP_SAFETY_TAC ~pre_ants:(REWRITE_TAC[ALL])
+    (mlkem_basemul_k3_windows_tmc,mlkem_basemul_k3_windows_tmc_EXEC)
+    (mlkem_basemul_k3_tmc,MLKEM_BASEMUL_K3_SAFE)
+    ~gprs:[`RDI`; `RSI`] ~xmms:[6; 7; 8; 9; 10; 11; 12; 13; 14] ~off:105
+    ~pre:18 ~post:15);;
+
+let MLKEM_BASEMUL_K3_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e src1 src2 src2t dst pc stackpointer returnaddress.
+        aligned 32 src1 /\
+        aligned 32 src2 /\
+        aligned 32 src2t /\
+        aligned 32 dst /\
+        nonoverlapping (word pc,LENGTH mlkem_basemul_k3_windows_mc)
+        (word_sub stackpointer (word 176),176) /\
+        nonoverlapping (src1,1536) (word_sub stackpointer (word 176),176) /\
+        nonoverlapping (src2,1536) (word_sub stackpointer (word 176),176) /\
+        nonoverlapping (src2t,768) (word_sub stackpointer (word 176),176) /\
+        nonoverlapping (dst,512) (src1,1536) /\
+        nonoverlapping (dst,512) (src2,1536) /\
+        nonoverlapping (dst,512) (src2t,768) /\
+        nonoverlapping (dst,512) (word pc,LENGTH mlkem_basemul_k3_windows_mc) /\
+        nonoverlapping (dst,512) (word_sub stackpointer (word 176),184)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mlkem_basemul_k3_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [dst; src1; src2; src2t] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events src1 src2 src2t dst pc
+                      (word_sub stackpointer (word 176))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [src1,1536; src2,1536; src2t,768; dst,512;
+                       word_sub stackpointer (word 176),184]
+                      [dst,512; word_sub stackpointer (word 176),176]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (word_sub stackpointer (word 176),176)] ,,
+             MAYCHANGE [memory :> bytes (dst,512)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLKEM_BASEMUL_K3_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

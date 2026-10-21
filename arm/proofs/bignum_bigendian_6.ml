@@ -263,3 +263,57 @@ let BIGNUM_BIGENDIAN_6_SUBROUTINE_CORRECT = time prove
            MAYCHANGE [memory :> bignum(z,6)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_BIGENDIAN_6_EXEC
     BIGNUM_BIGENDIAN_6_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_bigendian_6" subroutine_signatures)
+    BIGNUM_BIGENDIAN_6_SUBROUTINE_CORRECT
+    BIGNUM_BIGENDIAN_6_EXEC;;
+
+let BIGNUM_BIGENDIAN_6_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e z x pc returnaddress.
+         nonoverlapping (word pc,412) (z,8 * 6) /\
+         (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6))
+         ==> ensures arm
+             (\s.
+                  aligned_bytes_loaded s (word pc) bignum_bigendian_6_mc /\
+                  read PC s = word pc /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  read events s = e)
+             (\s.
+                  read PC s = returnaddress /\
+                  (exists e2.
+                       read events s = APPEND e2 e /\
+                       e2 = f_events x z pc returnaddress /\
+                       memaccess_inbounds e2 [x,48; z,48] [z,48]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bignum (z,6)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_BIGENDIAN_6_EXEC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The aliases bignum_frombebytes_6 and bignum_tobebytes_6 run the same      *)
+(* code, and their signatures and correctness theorems give the same safety  *)
+(* specification.                                                            *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_FROMBEBYTES_6_SUBROUTINE_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_frombebytes_6" subroutine_signatures)
+       BIGNUM_FROMBEBYTES_6_SUBROUTINE_CORRECT BIGNUM_BIGENDIAN_6_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_BIGENDIAN_6_SUBROUTINE_SAFE);;
+
+let BIGNUM_TOBEBYTES_6_SUBROUTINE_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_tobebytes_6" subroutine_signatures)
+       BIGNUM_TOBEBYTES_6_SUBROUTINE_CORRECT BIGNUM_BIGENDIAN_6_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_BIGENDIAN_6_SUBROUTINE_SAFE);;

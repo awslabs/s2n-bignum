@@ -246,3 +246,82 @@ let BIGNUM_SQR_8_16_ALT_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_STACK_TAC
     BIGNUM_SQR_8_16_ALT_EXEC BIGNUM_SQR_8_16_ALT_CORRECT
     `[X19;X20;X21;X22;X23;X24;X25;X26]` 64);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_sqr_8_16_alt" subroutine_signatures)
+    BIGNUM_SQR_8_16_ALT_CORRECT
+    BIGNUM_SQR_8_16_ALT_EXEC;;
+
+let BIGNUM_SQR_8_16_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc.
+           nonoverlapping (word pc,700) (z,8 * 16)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_sqr_8_16_alt_mc /\
+                    read PC s = word (pc + 16) /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 680) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc /\
+                         memaccess_inbounds e2 [x,64; z,128] [z,128]))
+               (MAYCHANGE
+                [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14;
+                 X15; X16; X17; X19; X20; X21; X22; X23; X24; X25; X26] ,,
+                MAYCHANGE [memory :> bytes (z,8 * 16)] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars BIGNUM_SQR_8_16_ALT_EXEC);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_sqr_8_16_alt" subroutine_signatures)
+    BIGNUM_SQR_8_16_ALT_SUBROUTINE_CORRECT
+    BIGNUM_SQR_8_16_ALT_EXEC;;
+
+let BIGNUM_SQR_8_16_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e z x pc stackpointer returnaddress.
+         aligned 16 stackpointer /\
+         ALL (nonoverlapping (word_sub stackpointer (word 64),64))
+         [word pc,700; z,8 * 16; x,8 * 8] /\
+         nonoverlapping (word pc,700) (z,8 * 16)
+         ==> ensures arm
+             (\s.
+                  aligned_bytes_loaded s (word pc) bignum_sqr_8_16_alt_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  read events s = e)
+             (\s.
+                  read PC s = returnaddress /\
+                  (exists e2.
+                       read events s = APPEND e2 e /\
+                       e2 =
+                       f_events x z pc (word_sub stackpointer (word 64))
+                       returnaddress /\
+                       memaccess_inbounds e2
+                       [x,64; z,128; word_sub stackpointer (word 64),64]
+                       [z,128; word_sub stackpointer (word 64),64]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE
+              [memory :> bytes (z,8 * 16);
+               memory :> bytes (word_sub stackpointer (word 64),64)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_ADD_RETURN_STACK_TAC
+    BIGNUM_SQR_8_16_ALT_EXEC BIGNUM_SQR_8_16_ALT_SAFE
+    `[X19;X20;X21;X22;X23;X24;X25;X26]` 64 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

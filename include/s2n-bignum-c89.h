@@ -1297,9 +1297,12 @@ extern void sha3_keccak2_f1600_alt(uint64_t a[50],const uint64_t rc[24]);
 /* Batched 4-way Keccak-f1600 permutation for SHA3 */
 /* Inputs a[100], rc[24]; output a[100] */
 extern void sha3_keccak4_f1600(uint64_t a[100],const uint64_t rc[24]);
+/* The x86 variant also takes the byte-rotation tables rho8[4] and rho56[4] */
 #ifdef __x86_64__
+/* Inputs a[100], rc[24], rho8[4], rho56[4]; output a[100] */
 extern void sha3_keccak4_f1600_alt(uint64_t a[100],const uint64_t rc[24],const uint64_t rho8[4],const uint64_t rho56[4]);
 #else
+/* Inputs a[100], rc[24]; output a[100] */
 extern void sha3_keccak4_f1600_alt(uint64_t a[100],const uint64_t rc[24]);
 #endif
 extern void sha3_keccak4_f1600_alt2(uint64_t a[100],const uint64_t rc[24]);

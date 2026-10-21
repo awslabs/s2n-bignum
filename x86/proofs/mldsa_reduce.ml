@@ -765,3 +765,179 @@ let MLDSA_REDUCE_WINDOWS_SUBROUTINE_CORRECT = prove
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)] ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "mldsa_reduce" subroutine_signatures)
+    MLDSA_REDUCE_CORRECT
+    MLDSA_REDUCE_TMC_EXEC;;
+
+let MLDSA_REDUCE_SAFE = time prove
+ (`exists f_events.
+       forall e a pc.
+           aligned 32 a /\ nonoverlapping (word pc,1154) (a,1024)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST mldsa_reduce_tmc) /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [a] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 1154) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events a pc /\
+                         memaccess_inbounds e2 [a,1024] [a,1024]))
+               (MAYCHANGE [RIP] ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [ZMM0; ZMM1; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10;
+                 ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+                MAYCHANGE [RAX] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [memory :> bytes (a,1024)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLDSA_REDUCE_TMC_EXEC);;
+
+let MLDSA_REDUCE_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a pc stackpointer returnaddress.
+        aligned 32 a /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_tmc) (a,1024) /\
+        nonoverlapping (stackpointer,8) (a,1024)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mldsa_reduce_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [a] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events a pc stackpointer returnaddress /\
+                      memaccess_inbounds e2 [a,1024; stackpointer,8]
+                      [a,1024; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (a,1024)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_reduce_tmc MLDSA_REDUCE_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let MLDSA_REDUCE_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a pc stackpointer returnaddress.
+        aligned 32 a /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_mc) (a,1024) /\
+        nonoverlapping (stackpointer,8) (a,1024)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mldsa_reduce_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [a] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events a pc stackpointer returnaddress /\
+                      memaccess_inbounds e2 [a,1024; stackpointer,8]
+                      [a,1024; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (a,1024)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_REDUCE_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a pc stackpointer returnaddress.
+        aligned 32 a /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_windows_tmc) (a,1024) /\
+        nonoverlapping (word_sub stackpointer (word 176),184) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_windows_tmc)
+        (word_sub stackpointer (word 176),176)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mldsa_reduce_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [a] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events a pc (word_sub stackpointer (word 176))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [a,1024; word_sub stackpointer (word 176),184]
+                      [a,1024; word_sub stackpointer (word 176),176]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (word_sub stackpointer (word 176),176)] ,,
+             MAYCHANGE [memory :> bytes (a,1024)])`,
+  X86_WINDOWS_XMM_WRAP_SAFETY_TAC
+    (mldsa_reduce_windows_tmc,MLDSA_REDUCE_WINDOWS_TMC_EXEC)
+    (mldsa_reduce_tmc,MLDSA_REDUCE_SAFE)
+    ~gprs:[`RDI`] ~xmms:[6; 7; 8; 9; 10; 11; 12; 13; 14; 15] ~off:81 ~pre:13
+    ~post:13);;
+
+let MLDSA_REDUCE_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e a pc stackpointer returnaddress.
+        aligned 32 a /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_windows_mc) (a,1024) /\
+        nonoverlapping (word_sub stackpointer (word 176),184) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_windows_mc)
+        (word_sub stackpointer (word 176),176)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) mldsa_reduce_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [a] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events a pc (word_sub stackpointer (word 176))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [a,1024; word_sub stackpointer (word 176),184]
+                      [a,1024; word_sub stackpointer (word 176),176]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (word_sub stackpointer (word 176),176)] ,,
+             MAYCHANGE [memory :> bytes (a,1024)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

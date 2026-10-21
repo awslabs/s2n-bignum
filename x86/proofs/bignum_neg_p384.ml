@@ -254,7 +254,8 @@ let BIGNUM_NEG_P384_NOIBT_SUBROUTINE_SAFE = time prove
                          e2 = f_events x z pc stackpointer returnaddress /\
                          memaccess_inbounds e2
                             [x,48; z,48; stackpointer,8] [z,48]))
-               (\s s'. true)`,
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum(z,6)])`,
   X86_PROMOTE_RETURN_NOSTACK_TAC bignum_neg_p384_tmc BIGNUM_NEG_P384_SAFE THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
@@ -278,7 +279,8 @@ let BIGNUM_NEG_P384_SUBROUTINE_SAFE = time prove
                          e2 = f_events x z pc stackpointer returnaddress /\
                          memaccess_inbounds e2
                             [x,48; z,48; stackpointer,8] [z,48]))
-               (\s s'. true)`,
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum(z,6)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_NEG_P384_NOIBT_SUBROUTINE_SAFE));;
 
 (* ------------------------------------------------------------------------- *)

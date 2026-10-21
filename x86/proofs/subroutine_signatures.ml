@@ -5912,6 +5912,8 @@ let subroutine_signatures = [
    [(* input buffers *)
     ("a", "100"(* num elems *), 8(* elem bytesize *));
     ("rc", "24"(* num elems *), 8(* elem bytesize *));
+    ("rho8", "4"(* num elems *), 8(* elem bytesize *));
+    ("rho56", "4"(* num elems *), 8(* elem bytesize *));
    ],
    [(* output buffers *)
     ("a", "100"(* num elems *), 8(* elem bytesize *));
@@ -6127,7 +6129,7 @@ let subroutine_signatures = [
    [(* input buffers *)
    ],
    [(* output buffers *)
-    ("m", "2][2"(* num elems *), 8(* elem bytesize *));
+    ("m", "4"(* num elems *), 8(* elem bytesize *));
    ],
    [(* temporary buffers *)
    ])

@@ -224,3 +224,57 @@ let BIGNUM_LITTLEENDIAN_4_SUBROUTINE_CORRECT = time prove
            MAYCHANGE [memory :> bignum(z,4)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_LITTLEENDIAN_4_EXEC
     BIGNUM_LITTLEENDIAN_4_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_littleendian_4" subroutine_signatures)
+    BIGNUM_LITTLEENDIAN_4_SUBROUTINE_CORRECT
+    BIGNUM_LITTLEENDIAN_4_EXEC;;
+
+let BIGNUM_LITTLEENDIAN_4_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e z x pc returnaddress.
+         nonoverlapping (word pc,276) (z,8 * 4) /\
+         (x = z \/ nonoverlapping (x,8 * 4) (z,8 * 4))
+         ==> ensures arm
+             (\s.
+                  aligned_bytes_loaded s (word pc) bignum_littleendian_4_mc /\
+                  read PC s = word pc /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  read events s = e)
+             (\s.
+                  read PC s = returnaddress /\
+                  (exists e2.
+                       read events s = APPEND e2 e /\
+                       e2 = f_events x z pc returnaddress /\
+                       memaccess_inbounds e2 [x,32; z,32] [z,32]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bignum (z,4)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_LITTLEENDIAN_4_EXEC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The aliases bignum_fromlebytes_4 and bignum_tolebytes_4 run the same      *)
+(* code, and their signatures and correctness theorems give the same safety  *)
+(* specification.                                                            *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_FROMLEBYTES_4_SUBROUTINE_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_fromlebytes_4" subroutine_signatures)
+       BIGNUM_FROMLEBYTES_4_SUBROUTINE_CORRECT BIGNUM_LITTLEENDIAN_4_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_LITTLEENDIAN_4_SUBROUTINE_SAFE);;
+
+let BIGNUM_TOLEBYTES_4_SUBROUTINE_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_tolebytes_4" subroutine_signatures)
+       BIGNUM_TOLEBYTES_4_SUBROUTINE_CORRECT BIGNUM_LITTLEENDIAN_4_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_LITTLEENDIAN_4_SUBROUTINE_SAFE);;

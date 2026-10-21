@@ -383,3 +383,130 @@ let BIGNUM_MOD_P256K1_SUBROUTINE_CORRECT = time prove
            MAYCHANGE [memory :> bignum(z,4)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_MOD_P256K1_EXEC
     BIGNUM_MOD_P256K1_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* Single down-counter loop (k>=4) reading x[k-1..0]; branchy k<4 small path  *)
+(* (k in {0,1,2,3}) each straight-line with early exits.                      *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let modp_full_spec,modp_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mod_p256k1" subroutine_signatures)
+    BIGNUM_MOD_P256K1_SUBROUTINE_CORRECT
+    BIGNUM_MOD_P256K1_EXEC;;
+
+let BIGNUM_MOD_P256K1_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e z k x pc returnaddress.
+           nonoverlapping (word pc,208) (z,32)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mod_p256k1_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; k; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z k pc returnaddress /\
+                         memaccess_inbounds e2 [x,val k * 8; z,32] [z,32]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,4)])`,
+  ASSERT_CONCL_TAC modp_full_spec THEN
+  ARM_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES; fst BIGNUM_MOD_P256K1_EXEC] ["k"]
+   ((*** k=0 straight-line small path: CMP,BCC-taken->0x9c, zero regs, CBZ-taken->store,RET ***)
+    Cases(`k = 0`,
+      Leg("k0",
+        ASM_REWRITE_TAC[] THEN
+        ARM_SAFETY_SIM_TAC BIGNUM_MOD_P256K1_EXEC (1--10) THEN
+        CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Then(ASM_REWRITE_TAC[],
+       Cases(`k = 1`,
+         Leg("k1",
+           ASM_REWRITE_TAC[] THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_MOD_P256K1_EXEC (1--13) THEN
+           CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Then(ASM_REWRITE_TAC[],
+          Cases(`k = 2`,
+            Leg("k2",
+              ASM_REWRITE_TAC[] THEN
+              ARM_SAFETY_SIM_TAC BIGNUM_MOD_P256K1_EXEC (1--16) THEN
+              CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+              DISCHARGE_SAFETY_PROPERTY_TAC),
+            Then(ASM_REWRITE_TAC[],
+             Cases(`k = 3`,
+               Leg("k3",
+                 ASM_REWRITE_TAC[] THEN
+                 ARM_SAFETY_SIM_TAC BIGNUM_MOD_P256K1_EXEC (1--18) THEN
+                 CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+                 DISCHARGE_SAFETY_PROPERTY_TAC),
+               Then(SUBGOAL_THEN `4 <= k` ASSUME_TAC THENL
+                     [ASM_ARITH_TAC;
+                      ALL_TAC] THEN
+                    ASM_REWRITE_TAC[],
+                (*** k=4 straight-line: setup then CBZ X1@0x44 taken (k-4=0) -> epilogue 0x90, STP,STP,RET.
+                     Separated because the UP2 loop count k-4 must be nonzero. ***)
+                Cases(`k = 4`,
+                  Leg("k4",
+                    ASM_REWRITE_TAC[] THEN
+                    ARM_SAFETY_SIM_TAC BIGNUM_MOD_P256K1_EXEC (1--21) THEN
+                    CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+                    DISCHARGE_SAFETY_PROPERTY_TAC),
+                  Then(SUBGOAL_THEN `5 <= k /\ ~(k - 4 = 0)` STRIP_ASSUME_TAC THENL
+                        [ASM_ARITH_TAC; ALL_TAC] THEN
+                       ASM_REWRITE_TAC[],
+                   (* k < 2 EXP 64 and val(word k)=k are in context from W64_GEN_TAC; 4<=k established above.
+                      ARM_SIM in the pre leg uses these to resolve the CMP X1 4 / BCC-not-taken. *)
+                   Loop(`k - 4`, `pc + 0x48`, `pc + 0x90`,
+                     `\i s. read X0 s = z /\ read X2 s = x /\ read X1 s = word(k - 4 - i) /\
+                            read X12 s = word 0x1000003D1 /\ read X30 s = returnaddress`,
+                     Leg("pre",
+                       (* precond: 0x0 -> 0x48, setup. CMP,BCC-nt,SUB,LSL,ADD,LDP,LDP,MOV,ORR,ADDS,ADCS,ADCS,ADCS,
+                          CSEL x4, CBZ-nt = 18 steps. Setup reads x[k-4..k-1] (2 LDPs at base x+8*(k-4)). *)
+                       REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+                       SUBGOAL_THEN `word_sub (word k) (word 4):int64 = word(k - 4)` ASSUME_TAC THENL
+                        [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+                          [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+                       SUBGOAL_THEN `~(val(word(k - 4):int64) = 0)` ASSUME_TAC THENL
+                        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+                       SUBGOAL_THEN `word_add (word_shl (word(k - 4):int64) 3) x = word_add x (word(8 * (k - 4)))`
+                         ASSUME_TAC THENL
+                        [REWRITE_TAC[WORD_SHL_WORD] THEN REWRITE_TAC[ARITH_RULE `2 EXP 3 * m = 8 * m`] THEN
+                         CONV_TAC WORD_RULE;
+                         ALL_TAC] THEN
+                       ARM_SAFETY_SIM_TAC BIGNUM_MOD_P256K1_EXEC (1--18) THEN
+                       ASM_REWRITE_TAC[] THEN
+                       CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+                       DISCHARGE_SAFETY_PROPERTY_TAC),
+                     Leg("loop",
+                       SUBGOAL_THEN `i < k - 4` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+                       SUBGOAL_THEN `val(word(k - 4 - i):int64) = k - 4 - i` ASSUME_TAC THENL
+                        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+                       SUBGOAL_THEN `word_sub (word(k - 4 - i):int64) (word 1) = word(k - 4 - (i + 1))` ASSUME_TAC THENL
+                        [REWRITE_TAC[ARITH_RULE `k - 4 - (i + 1) = k - 4 - i - 1`] THEN
+                         GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+                          [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+                       SUBGOAL_THEN `val(word(k - 4 - (i + 1)):int64) = k - 4 - (i + 1)` ASSUME_TAC THENL
+                        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+                       SUBGOAL_THEN `k - 4 - i - 1 < k` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+                       SUBGOAL_THEN `(k - 4 - (i + 1) = 0 <=> ~(i + 1 < k - 4))` ASSUME_TAC THENL
+                        [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+                       ARM_SAFETY_SIM_TAC BIGNUM_MOD_P256K1_EXEC (1--18) THEN
+                       ASM_REWRITE_TAC[] THEN
+                       CONJ_TAC THENL
+                        [GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
+                       DISCHARGE_SAFETY_PROPERTY_TAC),
+                     Leg("post",
+                       (* postcond: loop exit 0x90 -> STP,STP,RET = 3 steps -> returnaddress *)
+                       REWRITE_TAC[] THEN
+                       ARM_SAFETY_SIM_TAC BIGNUM_MOD_P256K1_EXEC (1--3) THEN
+                       CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+                       DISCHARGE_SAFETY_PROPERTY_TAC))))))))))))));;

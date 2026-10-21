@@ -257,3 +257,144 @@ let BIGNUM_CTZ_WINDOWS_SUBROUTINE_CORRECT = prove
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_CTZ_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec ~keep_maychanges:true
+    (assoc "bignum_ctz" subroutine_signatures) BIGNUM_CTZ_CORRECT BIGNUM_CTZ_EXEC;;
+
+let BIGNUM_CTZ_SAFE = prove
+ (`exists f_events.
+       forall e k a pc.
+           ensures x86
+           (\s.
+                bytes_loaded s (word pc) (BUTLAST bignum_ctz_tmc) /\
+                read RIP s = word pc /\
+                C_ARGUMENTS [k; a] s /\
+                read events s = e)
+           (\s.
+                read RIP s = word (pc + 54) /\
+                (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a k pc /\
+                     memaccess_inbounds e2 [a,val k * 8] []))
+           (MAYCHANGE [RIP; RDI; RDX; RCX; RAX] ,,
+            MAYCHANGE SOME_FLAGS ,,
+            MAYCHANGE [events])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  X86_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN X86_SIM_TAC BIGNUM_CTZ_EXEC (1--3) THEN DISCHARGE_SAFETY_PROPERTY_TAC),
+     Loop(`k:num`, `pc + 0x13`, `pc + 0x28`,
+       `\i s. read RSI s = a /\ read RDI s = word(k - i)`,
+       Leg("pre",
+         X86_SIM_TAC BIGNUM_CTZ_EXEC (1--6) THEN ASM_REWRITE_TAC[SUB_0] THEN DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("loop",
+         ASM_REWRITE_TAC[] THEN
+         X86_SAFETY_SIM_TAC BIGNUM_CTZ_EXEC (1--6) THEN
+         SUBGOAL_THEN `val(word(k - i):int64) = k - i` ASSUME_TAC THENL
+         [ MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
+         SUBGOAL_THEN `word_sub (word(k - i)) (word 1):int64 = word(k - (i+1))` SUBST_ALL_TAC THENL
+         [ IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ]; ALL_TAC ] THEN
+         SUBGOAL_THEN `word (8 * val(word(k - i):int64) + 18446744073709551608):int64 = word (8 * (k - (i + 1)))` SUBST_ALL_TAC THENL
+         [ ASM_REWRITE_TAC[] THEN REWRITE_TAC[WORD_BLAST `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
+         IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ]; ALL_TAC ] THEN
+         ASM_REWRITE_TAC[] THEN
+         SUBGOAL_THEN `(~(val(word(k - (i+1)):int64) = 0)) <=> i + 1 < k` SUBST1_TAC THENL
+         [ IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
+         CONJ_TAC THENL [ COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC ] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("post",
+         X86_SAFETY_SIM_TAC BIGNUM_CTZ_EXEC (1--4) THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC)))));;
+
+let BIGNUM_CTZ_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e k a pc stackpointer returnaddress.
+        ensures x86
+            (\s. bytes_loaded s (word pc) bignum_ctz_tmc /\
+                 read RIP s = word pc /\ read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [k; a] s /\ read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2. read events s = APPEND e2 e /\
+                      e2 = f_events a k pc stackpointer returnaddress /\
+                      memaccess_inbounds e2 [a,val k * 8; stackpointer,8]
+                      [stackpointer,0]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_ctz_tmc BIGNUM_CTZ_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_CTZ_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e k a pc stackpointer returnaddress.
+        ensures x86
+            (\s. bytes_loaded s (word pc) bignum_ctz_mc /\
+                 read RIP s = word pc /\ read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [k; a] s /\ read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2. read events s = APPEND e2 e /\
+                      e2 = f_events a k pc stackpointer returnaddress /\
+                      memaccess_inbounds e2 [a,val k * 8; stackpointer,8]
+                      [stackpointer,0]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_CTZ_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_CTZ_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e k a pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+        [word pc,LENGTH bignum_ctz_windows_tmc; a,8 * val k]
+        ==> ensures x86
+            (\s. bytes_loaded s (word pc) bignum_ctz_windows_tmc /\
+                 read RIP s = word pc /\ read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [k; a] s /\ read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2. read events s = APPEND e2 e /\
+                      e2 = f_events a k pc (word_sub stackpointer (word 16)) returnaddress /\
+                      memaccess_inbounds e2
+                      [a,val k * 8; word_sub stackpointer (word 16),24]
+                      [word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_ctz_windows_tmc bignum_ctz_tmc
+    BIGNUM_CTZ_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_CTZ_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e k a pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+        [word pc,LENGTH bignum_ctz_windows_mc; a,8 * val k]
+        ==> ensures x86
+            (\s. bytes_loaded s (word pc) bignum_ctz_windows_mc /\
+                 read RIP s = word pc /\ read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [k; a] s /\ read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2. read events s = APPEND e2 e /\
+                      e2 = f_events a k pc (word_sub stackpointer (word 16)) returnaddress /\
+                      memaccess_inbounds e2
+                      [a,val k * 8; word_sub stackpointer (word 16),24]
+                      [word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_CTZ_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

@@ -1933,7 +1933,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_montsqr_p384" subroutine_signatures)
     BIGNUM_MONTSQR_P384_SUBROUTINE_CORRECT
     BIGNUM_MONTSQR_P384_EXEC;;
@@ -1955,6 +1955,12 @@ let BIGNUM_MONTSQR_P384_SUBROUTINE_SAFE = time prove
                          read events s = APPEND e2 e /\
                          e2 = f_events x z pc returnaddress /\
                          memaccess_inbounds e2 [x,48; z,48] [z,48]))
-               (\s s'. true)`,
+               (MAYCHANGE
+                [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
+                 X14; X15; X16; X17] ,,
+                MAYCHANGE MODIFIABLE_SIMD_REGS ,,
+                MAYCHANGE [memory :> bytes (z,8 * 6)] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MONTSQR_P384_EXEC);;

@@ -2144,7 +2144,7 @@ let P256_MONTJDOUBLE_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bytes (p3,96); memory :> bytes (stackpointer,192)])`,
-  (* ASSERT_CONCL_TAC full_spec THEN <- fails because pc2 is renamed to pc *)
+  ASSERT_CONCL_TAC full_spec THEN
   REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P256_MONTJDOUBLE_EXEC);;
 

@@ -6651,3 +6651,226 @@ let SM2_MONTJSCALARMUL_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
                      memory :> bytes(word_sub stackpointer (word 1392),1392)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE SM2_MONTJSCALARMUL_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+needs "x86/proofs/utils/sm2_montjscalarmul_safety.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "sm2_montjscalarmul_alt" subroutine_signatures)
+    SM2_MONTJSCALARMUL_ALT_CORRECT
+    SM2_MONTJSCALARMUL_ALT_EXEC;;
+
+let SM2_MONTJSCALARMUL_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e res scalar point pc stackpointer.
+           ALL (nonoverlapping (stackpointer,1320))
+           [word pc,18264; res,96; scalar,32; point,96] /\
+           nonoverlapping (res,96) (word pc,18264)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) sm2_montjscalarmul_alt_tmc /\
+                    read RIP s = word (pc + 17) /\
+                    read RSP s = word_add stackpointer (word 296) /\
+                    C_ARGUMENTS [res; scalar; point] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 2929) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,96; res,96; stackpointer,1320]
+                         [res,96; stackpointer,1320]))
+               (MAYCHANGE [RIP] ,,
+                MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [RBX; RBP; R12; R13; R14; R15] ,,
+                MAYCHANGE
+                [memory :> bytes (res,96);
+                 memory :> bytes (stackpointer,1320)])`,
+
+  ASSERT_CONCL_TAC full_spec THEN
+  SM2_MONTJSCALARMUL_SAFETY_TAC (sm2_montjscalarmul_alt_tmc,SM2_MONTJSCALARMUL_ALT_EXEC)
+   (0xb83,sm2_montjadd_alt_tmc,
+    X86_SIMD_SHARPEN_RULE SM2_MONTJADD_ALT_NOIBT_SUBROUTINE_SAFE
+      (X86_PROMOTE_RETURN_STACK_TAC sm2_montjadd_alt_tmc SM2_MONTJADD_ALT_SAFE
+      `[RBX; RBP; R12; R13; R14; R15]` 272 THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC))
+   (0x32d7,sm2_montjdouble_alt_tmc,
+    X86_SIMD_SHARPEN_RULE SM2_MONTJDOUBLE_ALT_NOIBT_SUBROUTINE_SAFE
+      (X86_PROMOTE_RETURN_STACK_TAC sm2_montjdouble_alt_tmc SM2_MONTJDOUBLE_ALT_SAFE
+      `[RBX; R12; R13; R14; R15]` 232 THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC)));;
+
+let SM2_MONTJSCALARMUL_ALT_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 1368),1368))
+        [word pc,LENGTH sm2_montjscalarmul_alt_tmc; scalar,32; point,96] /\
+        ALL (nonoverlapping (res,96))
+        [word pc,LENGTH sm2_montjscalarmul_alt_tmc;
+         word_sub stackpointer (word 1368),1376]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) sm2_montjscalarmul_alt_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 1368))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,96; res,96;
+                       word_sub stackpointer (word 1368),1376]
+                      [res,96; word_sub stackpointer (word 1368),1368]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,96);
+              memory :> bytes (word_sub stackpointer (word 1368),1368)])`,
+  X86_ADD_RETURN_STACK_TAC SM2_MONTJSCALARMUL_ALT_EXEC
+     SM2_MONTJSCALARMUL_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 1368
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let SM2_MONTJSCALARMUL_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 1368),1368))
+        [word pc,LENGTH sm2_montjscalarmul_alt_mc; scalar,32; point,96] /\
+        ALL (nonoverlapping (res,96))
+        [word pc,LENGTH sm2_montjscalarmul_alt_mc;
+         word_sub stackpointer (word 1368),1376]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) sm2_montjscalarmul_alt_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 1368))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,96; res,96;
+                       word_sub stackpointer (word 1368),1376]
+                      [res,96; word_sub stackpointer (word 1368),1368]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,96);
+              memory :> bytes (word_sub stackpointer (word 1368),1368)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SM2_MONTJSCALARMUL_ALT_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let SM2_MONTJSCALARMUL_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 1392),1392))
+        [word pc,LENGTH sm2_montjscalarmul_alt_windows_tmc; scalar,32; point,96] /\
+        ALL (nonoverlapping (res,96))
+        [word pc,LENGTH sm2_montjscalarmul_alt_windows_tmc;
+         word_sub stackpointer (word 1392),1400]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) sm2_montjscalarmul_alt_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 1392))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,96; res,96;
+                       word_sub stackpointer (word 1392),1400]
+                      [res,96; word_sub stackpointer (word 1392),1392]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,96);
+              memory :> bytes (word_sub stackpointer (word 1392),1392)])`,
+  let WINDOWS_SM2_MONTJSCALARMUL_ALT_EXEC =
+    X86_MK_EXEC_RULE sm2_montjscalarmul_alt_windows_tmc
+  and baseth =
+    X86_SIMD_SHARPEN_RULE SM2_MONTJSCALARMUL_ALT_NOIBT_SUBROUTINE_SAFE
+    (X86_ADD_RETURN_STACK_TAC SM2_MONTJSCALARMUL_ALT_EXEC
+     SM2_MONTJSCALARMUL_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 1368 THEN
+     DISCHARGE_SAFETY_PROPERTY_TAC) in
+  let subth =
+    CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+     (REWRITE_RULE[bignum_triple_from_memory] baseth) in
+
+  X86_WINDOWS_CALL_WRAP_SAFETY_TAC
+    ~pre_tac:(REWRITE_TAC[bignum_triple_from_memory;
+                          WORD_RULE `word(8 * 4) = word 32 /\ word(16 * 4) = word 64`])
+    ~normalize_stack:true
+    (sm2_montjscalarmul_alt_windows_tmc,WINDOWS_SM2_MONTJSCALARMUL_ALT_EXEC)
+    (sm2_montjscalarmul_alt_tmc,subth)
+    [`pc:num`;`stackpointer:int64`]);;
+
+let SM2_MONTJSCALARMUL_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 1392),1392))
+        [word pc,LENGTH sm2_montjscalarmul_alt_windows_mc; scalar,32; point,96] /\
+        ALL (nonoverlapping (res,96))
+        [word pc,LENGTH sm2_montjscalarmul_alt_windows_mc;
+         word_sub stackpointer (word 1392),1400]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) sm2_montjscalarmul_alt_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 1392))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,96; res,96;
+                       word_sub stackpointer (word 1392),1400]
+                      [res,96; word_sub stackpointer (word 1392),1392]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,96);
+              memory :> bytes (word_sub stackpointer (word 1392),1392)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SM2_MONTJSCALARMUL_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

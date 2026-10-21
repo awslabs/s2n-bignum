@@ -1625,3 +1625,96 @@ let BIGNUM_MUL_8_16_SUBROUTINE_CORRECT = prove
    ((CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) o REWRITE_RULE
      [fst BIGNUM_MUL_8_16_EXEC;fst BIGNUM_MUL_8_16_CORE_EXEC]) BIGNUM_MUL_8_16_CORRECT)
    `[X19;X20;X21;X22;X23;X24]` 48);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mul_8_16" subroutine_signatures)
+    BIGNUM_MUL_8_16_CORRECT
+    BIGNUM_MUL_8_16_EXEC;;
+
+let BIGNUM_MUL_8_16_SAFE = time prove
+ (`exists f_events.
+       forall e z x y pc.
+           ALL (nonoverlapping (z,8 * 16))
+           [word pc,LENGTH bignum_mul_8_16_mc; x,8 * 8; y,8 * 8]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mul_8_16_mc /\
+                    read PC s = word (pc + 12) /\
+                    C_ARGUMENTS [z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s =
+                    word (pc + 12 + LENGTH bignum_mul_8_16_core_mc) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z pc /\
+                         memaccess_inbounds e2 [x,64; y,64; z,128] [z,128]))
+               (MAYCHANGE
+                [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
+                 X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
+                MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5] ,,
+                MAYCHANGE [memory :> bytes (z,8 * 16)] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  REWRITE_TAC[fst BIGNUM_MUL_8_16_CORE_EXEC; GSYM ADD_ASSOC] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars BIGNUM_MUL_8_16_EXEC);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mul_8_16" subroutine_signatures)
+    BIGNUM_MUL_8_16_SUBROUTINE_CORRECT
+    BIGNUM_MUL_8_16_EXEC;;
+
+let BIGNUM_MUL_8_16_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x y pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           nonoverlapping (z,8 * 16) (word_sub stackpointer (word 48),48) /\
+           ALLPAIRS nonoverlapping
+           [z,8 * 16; word_sub stackpointer (word 48),48]
+           [word pc,2000; x,8 * 8; y,8 * 8]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mul_8_16_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events x y z pc (word_sub stackpointer (word 48))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [x,64; y,64; z,128;
+                          word_sub stackpointer (word 48),48]
+                         [z,128; word_sub stackpointer (word 48),48]))
+               (MAYCHANGE
+                [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
+                 X14; X15; X16; X17] ,,
+                MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5] ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 16);
+                 memory :> bytes (word_sub stackpointer (word 48),48)] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_ADD_RETURN_STACK_TAC
+   BIGNUM_MUL_8_16_EXEC
+   ((CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) o REWRITE_RULE
+     [fst BIGNUM_MUL_8_16_EXEC;fst BIGNUM_MUL_8_16_CORE_EXEC]) BIGNUM_MUL_8_16_SAFE)
+   `[X19;X20;X21;X22;X23;X24]` 48 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
