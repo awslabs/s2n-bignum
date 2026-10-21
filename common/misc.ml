@@ -1522,6 +1522,75 @@ let (CLARIFY_TAC:tactic) =
       itlist (fun ath -> PROVE_HYP (INSTANTIATE_ALL inst ath))
         proofs th);;
 
+(* A conversion takes a term t and returns a theorem Gamma |- t = u.
+   TOP_DEPTH_CONV applies its step throughout the term. For f 0 + f 0,
+   ordinary traversal separately proves the rewrite of each f 0.
+   MEMOIZED_TOP_DEPTH_CONV remembers that theorem and reuses it at the
+   second occurrence, with the same hypotheses Gamma.
+
+   Follow the ordinary traversal order. Key results by exact terms,
+   including types and variable names, not by rewrite patterns. A pattern
+   table would make distinct symbolic leaves match many stored entries.
+
+   The step conversion must keep its meaning for this cache's lifetime.
+   In particular, a result using context facts must not outlive those
+   proofs. Prepare one conversion for the context in use, retain it while
+   processing that context, and prepare a new one when its proofs change.
+   Equal displayed conclusions do not suffice:
+   their proofs may have different hypotheses. Reusing a theorem never
+   erases its hypotheses or turns it into an unconditional equality.
+
+   Keep at most max_entries successful conversion theorems; reaching the
+   limit clears the table before the next insertion. This bounds entry
+   count, not term sizes. Zero selects ordinary TOP_DEPTH_CONV; negative
+   limits fail. Unknown or unchanged subterms keep the ordinary failure
+   path instead of adding reflexive results to the cache. *)
+
+let MEMOIZED_TOP_DEPTH_CONV ?(max_entries=16384) step =
+  if max_entries < 0 then
+    failwith "MEMOIZED_TOP_DEPTH_CONV: negative cache limit"
+  else if max_entries = 0 then TOP_DEPTH_CONV step else
+  let thenqc first second tm =
+    try let th = first tm in
+        try TRANS th (second(rhs(concl th)))
+        with Failure _ -> th
+    with Failure _ -> second tm
+  and thencqc first second tm =
+    let th = first tm in
+    try TRANS th (second(rhs(concl th)))
+    with Failure _ -> th in
+  let combq conv tm =
+    match tm with
+    | Comb(l,r) ->
+        (try let th = conv l in
+             try MK_COMB(th,conv r)
+             with Failure _ -> AP_THM th r
+         with Failure _ -> AP_TERM l (conv r))
+    | _ -> failwith "MEMOIZED_TOP_DEPTH_CONV: not a combination" in
+  let subq conv tm =
+    match tm with
+    | Abs(_,_) -> ABS_CONV conv tm
+    | _ -> combq conv tm in
+  let module Results = Hashtbl.Make(struct
+    type t = term
+    let equal = (=)
+    (* Look past shared heads and type constructors to symbolic arguments.
+       Equality still compares the whole term, not its hash. *)
+    let hash = Hashtbl.hash_param 128 512
+  end) in
+  let cache = Results.create 1021 in
+  let rec repeatq tm = thencqc step repeatq tm
+  and visit tm =
+    try Results.find cache tm
+    with Not_found ->
+      let th =
+        thenqc repeatq
+          (thencqc (subq visit) (thencqc step visit)) tm in
+      if Results.length cache >= max_entries then Results.clear cache;
+      Results.add cache tm th;
+      th in
+  TRY_CONV visit;;
+
 (* ------------------------------------------------------------------------- *)
 (* Apply cacheing (memoization) to arbitrary function with naive assoc list. *)
 (* ------------------------------------------------------------------------- *)
