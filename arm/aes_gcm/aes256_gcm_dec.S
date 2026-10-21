@@ -179,8 +179,6 @@
 #define STACK_SIZE_VREGS 64  /* (4*16) */
 #define STACK_SIZE 224  /* (STACK_SIZE_GPRS + STACK_SIZE_VREGS + UNROLL*16) */
 
-#define STACK_BASE_GPRS 0  /* (0) */
-#define STACK_BASE_VREGS 96  /* (STACK_SIZE_GPRS) */
 #define STACK_BASE_AES_ST 160  /* (STACK_SIZE_GPRS + STACK_SIZE_VREGS) */
 #define STACK_BASE_AES_CTR 172  /* STACK_BASE_AES_ST + 12: counter word of an AES state slot */
 
@@ -189,34 +187,6 @@
 /* ****************************************************************** */
 
 #define S2N_BN_PASTE(a, b) a##b
-
-#define save_vregs \
-        stp  d8,  d9, [sp, #(STACK_BASE_VREGS+16*0)] __LF \
-        stp d10, d11, [sp, #(STACK_BASE_VREGS+16*1)] __LF \
-        stp d12, d13, [sp, #(STACK_BASE_VREGS+16*2)] __LF \
-        stp d14, d15, [sp, #(STACK_BASE_VREGS+16*3)]
-
-#define restore_vregs \
-        ldp  d8,  d9, [sp, #(STACK_BASE_VREGS+16*0)] __LF \
-        ldp d10, d11, [sp, #(STACK_BASE_VREGS+16*1)] __LF \
-        ldp d12, d13, [sp, #(STACK_BASE_VREGS+16*2)] __LF \
-        ldp d14, d15, [sp, #(STACK_BASE_VREGS+16*3)]
-
-#define save_gprs \
-        stp x19, x20, [sp, #(STACK_BASE_GPRS+16*0)] __LF \
-        stp x21, x22, [sp, #(STACK_BASE_GPRS+16*1)] __LF \
-        stp x23, x24, [sp, #(STACK_BASE_GPRS+16*2)] __LF \
-        stp x25, x26, [sp, #(STACK_BASE_GPRS+16*3)] __LF \
-        stp x27, x28, [sp, #(STACK_BASE_GPRS+16*4)] __LF \
-        stp x29, x30, [sp, #(STACK_BASE_GPRS+16*5)]
-
-#define restore_gprs \
-        ldp x19, x20, [sp, #(STACK_BASE_GPRS+16*0)] __LF \
-        ldp x21, x22, [sp, #(STACK_BASE_GPRS+16*1)] __LF \
-        ldp x23, x24, [sp, #(STACK_BASE_GPRS+16*2)] __LF \
-        ldp x25, x26, [sp, #(STACK_BASE_GPRS+16*3)] __LF \
-        ldp x27, x28, [sp, #(STACK_BASE_GPRS+16*4)] __LF \
-        ldp x29, x30, [sp, #(STACK_BASE_GPRS+16*5)]
 
 // Derive number of iterations of unrolled loop and single-block loop
 #define prepare_loop_counts \
@@ -517,8 +487,16 @@ S2N_BN_SYMBOL(aes256_gcm_dec):
 
 
 Laes256_gcm_dec_preamble_start:
-        save_gprs
-        save_vregs
+        CFI_STACKSAVE2X(x19,x20,0,8)
+        CFI_STACKSAVE2X(x21,x22,16,24)
+        CFI_STACKSAVE2X(x23,x24,32,40)
+        CFI_STACKSAVE2X(x25,x26,48,56)
+        CFI_STACKSAVE2X(x27,x28,64,72)
+        CFI_STACKSAVE2X(x29,x30,80,88)
+        CFI_STACKSAVE2X(d8,d9,96,104)
+        CFI_STACKSAVE2X(d10,d11,112,120)
+        CFI_STACKSAVE2X(d12,d13,128,136)
+        CFI_STACKSAVE2X(d14,d15,144,152)
 
         lsr byte_len, len_bits, #3
 
@@ -1274,8 +1252,16 @@ Laes256_gcm_dec_loop_1x_end:
         rev ctr_tmp_w, ctr
         str ctr_tmp_w, [ivec, #12]
 
-        restore_vregs
-        restore_gprs
+        CFI_STACKLOAD2(d8,d9,96)
+        CFI_STACKLOAD2(d10,d11,112)
+        CFI_STACKLOAD2(d12,d13,128)
+        CFI_STACKLOAD2(d14,d15,144)
+        CFI_STACKLOAD2(x19,x20,0)
+        CFI_STACKLOAD2(x21,x22,16)
+        CFI_STACKLOAD2(x23,x24,32)
+        CFI_STACKLOAD2(x25,x26,48)
+        CFI_STACKLOAD2(x27,x28,64)
+        CFI_STACKLOAD2(x29,x30,80)
 
 Laes256_gcm_dec_postamble_end:
         CFI_INC_SP(STACK_SIZE)
