@@ -11374,18 +11374,22 @@ let WB_CONTAINED_REFL = prove
  (`!(x:N word) n. contained (x,n) (x,n)`,
   REWRITE_TAC[CONTAINED] THEN MESON_TAC[]);;
 
-let rec WB_FIRST_CONTAINED_DISJ_TAC : tactic = fun (asl,w) ->
-  if is_disj w then
-    try (DISJ1_TAC THEN CONTAINED_TAC) (asl,w)
-    with Failure _ ->
-      (DISJ2_TAC THEN WB_FIRST_CONTAINED_DISJ_TAC) (asl,w)
-  else CONTAINED_TAC (asl,w);;
-
 let WB_FIRST_NONOVERLAPPING_TAC : tactic = fun (asl,w) ->
   try FIRST_ASSUM ACCEPT_TAC (asl,w)
   with Failure _ ->
     (ONCE_REWRITE_TAC[NONOVERLAPPING_SYM] THEN
      FIRST_ASSUM ACCEPT_TAC) (asl,w);;
+
+(* DISCHARGE_SAFETY_PROPERTY_TAC with its closing memaccess_inbounds tactic
+   replaced by meminb_tac -- the shape of the shared DISCHARGE_SAFE_ROBUST. *)
+let WB_SAFETY_PROPERTY_TAC (meminb_tac:tactic) : tactic =
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
+  W (fun (asl,w) ->
+    (if is_conj w then
+       CONJ_TAC THENL [FULL_UNIFY_F_EVENTS_TAC; ALL_TAC]
+     else ALL_TAC) THEN
+    meminb_tac);;
 
 let mk_tail_safe_goal r =
   subst [mk_small_numeral r,`rr:num`]
@@ -11454,21 +11458,13 @@ let prove_tail_safe r =
     RULE_ASSUM_TAC(REWRITE_RULE[ALL; ALLPAIRS; WB_MC_LEN]) THEN
     REPEAT(FIRST_X_ASSUM
       (CONJUNCTS_THEN ASSUME_TAC o check (is_conj o concl))) THEN
-    SUBGOAL_THEN
-      `nonoverlapping (word pc,5960) (out_p:int64,16 * nblk)`
-      ASSUME_TAC THENL
-     [ONCE_REWRITE_TAC[NONOVERLAPPING_SYM] THEN ASM_REWRITE_TAC[];
-      ALL_TAC] THEN
-    SUBGOAL_THEN
-      `nonoverlapping (word pc,5960) (xi_p:int64,16)`
-      ASSUME_TAC THENL
-     [ONCE_REWRITE_TAC[NONOVERLAPPING_SYM] THEN ASM_REWRITE_TAC[];
-      ALL_TAC] THEN
-    SUBGOAL_THEN
-      `nonoverlapping (word pc,5960) (ivec_p:int64,16)`
-      ASSUME_TAC THENL
-     [ONCE_REWRITE_TAC[NONOVERLAPPING_SYM] THEN ASM_REWRITE_TAC[];
-      ALL_TAC] THEN
+    MAP_EVERY (fun t ->
+        SUBGOAL_THEN t ASSUME_TAC THENL
+         [ONCE_REWRITE_TAC[NONOVERLAPPING_SYM] THEN ASM_REWRITE_TAC[];
+          ALL_TAC])
+     [`nonoverlapping (word pc,5960) (out_p:int64,16 * nblk)`;
+      `nonoverlapping (word pc,5960) (xi_p:int64,16)`;
+      `nonoverlapping (word pc,5960) (ivec_p:int64,16)`] THEN
     SUBGOAL_THEN tail_code_nonoverlap ASSUME_TAC THENL
      [MATCH_MP_TAC NONOVERLAPPING_SUBREGIONS THEN
       MAP_EVERY EXISTS_TAC
@@ -11483,13 +11479,8 @@ let prove_tail_safe r =
     ENSURES_INIT_TAC "s0" THEN
     DRIVE_TAC 4560 400 THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    SAFE_META_EXISTS_TAC allowed_vars_e THEN
-    CONJ_TAC THENL [EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
-    W (fun (asl,w) ->
-      (if is_conj w then
-         CONJ_TAC THENL [FULL_UNIFY_F_EVENTS_TAC; ALL_TAC]
-       else ALL_TAC) THEN
-      W (fun (asl,w) ->
+    WB_SAFETY_PROPERTY_TAC
+     (W (fun (asl,w) ->
         let _,[evs; target_reads; target_writes] = strip_comb w in
         MATCH_MP_TAC
           (REWRITE_RULE[IMP_IMP]
@@ -11499,11 +11490,7 @@ let prove_tail_safe r =
       CONJ_TAC THENL
        [REWRITE_TAC[ALL; EX; MEM] THEN
         ASM_REWRITE_TAC[WB_CONTAINED_REFL];
-        (!memaccess_inbounds_normalize_tac) THEN
-        REWRITE_TAC[MESON[APPEND] `APPEND ([]:(A)list) [] = []`] THEN
-        REWRITE_TAC[memaccess_inbounds; memaccess_inbounds_def; ALL; EX] THEN
-        REWRITE_TAC[contained] THEN
-        REPEAT CONJ_TAC THEN WB_FIRST_CONTAINED_DISJ_TAC]));;
+        DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC THEN NO_TAC]));;
 
 let WB_TAIL_SAFE_1_EXISTS = prove_tail_safe 1;;
 let WB_TAIL_SAFE_2_EXISTS = prove_tail_safe 2;;
@@ -11585,47 +11572,41 @@ let FINAL_COMPOSED_TAIL_ENSURES = prove
                   check (fun th -> is_binary "subsumed" (concl th))) THEN
     ASM_REWRITE_TAC[]]);;
 
-let USE_WB_TAIL_SAFE_TAC post_tac : tactic =
+(* Consume a tail theorem, discharged from the goal, through one of the two
+   finishing lemmas above: front closes the lemma's conjuncts that precede the
+   tail's own ensures, which is then the tail theorem, followed by its frame and,
+   by post_tac, the enclosing postcondition. *)
+let CONSUME_WB_TAIL_TAC lemma (front:tactic list) post_tac : tactic =
   DISCH_THEN(fun tailth ->
     let _,args = strip_comb(concl tailth) in
     let tail_pre = el 1 args
     and tail_post = el 2 args
     and tail_frame = el 3 args in
-    MATCH_MP_TAC FINAL_TAIL_ENSURES THEN
+    MATCH_MP_TAC lemma THEN
     MAP_EVERY EXISTS_TAC [tail_pre; tail_post; tail_frame] THEN
     REPEAT CONJ_TAC THENL
-     [BETA_TAC THEN ASM_REWRITE_TAC[];
-      ACCEPT_TAC tailth;
-      REWRITE_TAC[ETA_AX; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-                  MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS;
-                  MODIFIABLE_UPPER_SIMD_REGS] THEN
-      SUBSUMED_MAYCHANGE_TAC;
-      post_tac]);;
+     (front @
+      [ACCEPT_TAC tailth;
+       REWRITE_TAC[ETA_AX; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                   MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS;
+                   MODIFIABLE_UPPER_SIMD_REGS] THEN
+       SUBSUMED_MAYCHANGE_TAC;
+       post_tac]));;
 
-let USE_WB_COMPOSED_TAIL_SAFE_TAC post_tac : tactic =
-  DISCH_THEN(fun tailth ->
-    let _,args = strip_comb(concl tailth) in
-    let tail_pre = el 1 args
-    and tail_post = el 2 args
-    and tail_frame = el 3 args in
-    MATCH_MP_TAC FINAL_COMPOSED_TAIL_ENSURES THEN
-    MAP_EVERY EXISTS_TAC [tail_pre; tail_post; tail_frame] THEN
-    REPEAT CONJ_TAC THENL
-     [MONOTONE_MAYCHANGE_TAC;
-      (* On legs whose tail is entered after a long symbolic front, the front
-         leaves the leftover-byte count in X5 as the unreduced difference
-         `word_sub (in_p + 16*nblk) (in_p + 128*k)`, so the blanket rewrite
-         closes 9 of the 10 precondition conjuncts and leaves one word
-         equation.  WORD_RULE finishes it.  The 5..8 legs enter the tail at s0,
-         where every conjunct is literally an assumption and nothing is left --
-         hence TRY, which keeps the step available without being load-bearing. *)
-      BETA_TAC THEN ASM_REWRITE_TAC[] THEN TRY(CONV_TAC WORD_RULE);
-      ACCEPT_TAC tailth;
-      REWRITE_TAC[ETA_AX; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-                  MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS;
-                  MODIFIABLE_UPPER_SIMD_REGS] THEN
-      SUBSUMED_MAYCHANGE_TAC;
-      post_tac]);;
+let USE_WB_TAIL_SAFE_TAC =
+  CONSUME_WB_TAIL_TAC FINAL_TAIL_ENSURES [BETA_TAC THEN ASM_REWRITE_TAC[]];;
+
+let USE_WB_COMPOSED_TAIL_SAFE_TAC =
+  CONSUME_WB_TAIL_TAC FINAL_COMPOSED_TAIL_ENSURES
+   [MONOTONE_MAYCHANGE_TAC;
+    (* On legs whose tail is entered after a long symbolic front, the front
+       leaves the leftover-byte count in X5 as the unreduced difference
+       `word_sub (in_p + 16*nblk) (in_p + 128*k)`, so the blanket rewrite
+       closes 9 of the 10 precondition conjuncts and leaves one word
+       equation.  WORD_RULE finishes it.  The 5..8 legs enter the tail at s0,
+       where every conjunct is literally an assumption and nothing is left --
+       hence TRY, which keeps the step available without being load-bearing. *)
+    BETA_TAC THEN ASM_REWRITE_TAC[] THEN TRY(CONV_TAC WORD_RULE)];;
 
 (* ---- net-safe rewriting for the composed tails.  On the 9..16 and >=17 legs,
    which reach their tail after a long symbolic front, the assumption list carries
@@ -11889,13 +11870,8 @@ let WB_DISCHARGE_MEMACCESS_INBOUNDS_TAC =
   REPEAT CONJ_TAC THEN close_one;;
 
 let DISCHARGE_WB_COMPOSED_TAIL_TAC =
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
-  W (fun (asl,w) ->
-    (if is_conj w then
-       CONJ_TAC THENL [FULL_UNIFY_F_EVENTS_TAC; ALL_TAC]
-     else ALL_TAC) THEN
-    REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND] THEN
+  WB_SAFETY_PROPERTY_TAC
+   (REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND] THEN
     CONJ_TAC THENL
      [WB_TAIL_EVENTS_DISCHARGE_TAC;
       WB_DISCHARGE_MEMACCESS_INBOUNDS_TAC]);;
@@ -12263,8 +12239,9 @@ let close_tail_residue rr =
        leads with GEN_REWRITE_TAC I [GSYM CONTAINED_MODULO_MOD2] and so only
        applies to a top-level contained_modulo -- on a folded `contained` it
        *raises* REWRITES_CONV rather than failing (of the rewrite tactics only
-       the `I` traversal raises on a no-match).  prove_tail_safe above does the
-       same REWRITE_TAC[contained] before its own contained closer.
+       the `I` traversal raises on a no-match).  The
+       DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC that prove_tail_safe above
+       uses does the same REWRITE_TAC[contained] before its contained closer.
 
        As in the 9..16 chain below, MUST makes every alternative close its
        conjunct or fail.  Unlike that chain there is no NUM_REDUCE step: nblk is
