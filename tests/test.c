@@ -17813,11 +17813,22 @@ int test_aes_xts_roundtrip(void)
 // kernels
 // ****************************************************************************
 
-// Random-input test of aes256_gcm_dec_alt against ref_aes256_gcm_dec.  It has
-// the ABI of the 4-way kernels above, so test_aes_gcm drives it as it does
-// them: random keys, counter blocks, starting tags and inputs of 1 to 256
-// whole blocks, with the key table from ref_gcm_init_htable, comparing the
-// output, the updated tag and the updated counter block.
+// Random-input tests of aes128_gcm_dec_alt and aes256_gcm_dec_alt against
+// ref_aes128_gcm_dec and ref_aes256_gcm_dec.  They have the ABI of the 4-way
+// kernels above, so test_aes_gcm drives them as it does those: random keys,
+// counter blocks, starting tags and inputs of 1 to 256 whole blocks, with
+// the key table from ref_gcm_init_htable, comparing the output, the updated
+// tag and the updated counter block.
+int test_aes128_gcm_dec_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_dec_alt", 16, aes128_gcm_dec_alt,
+                      ref_aes128_gcm_dec);
+#endif
+}
+
 int test_aes256_gcm_dec_alt(void)
 {
 #ifdef __x86_64__
@@ -17918,6 +17929,15 @@ static int test_aes_gcm_alt_guard(const char *name, int keybytes,
 }
 
 #endif
+
+int test_aes128_gcm_dec_alt_guard(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm_alt_guard("aes128_gcm_dec_alt", 16, aes128_gcm_dec_alt);
+#endif
+}
 
 int test_aes256_gcm_dec_alt_guard(void)
 {
@@ -18155,6 +18175,15 @@ int test_known_values_aes128_gcm_dec(void)
 #endif
 }
 
+int test_known_values_aes128_gcm_dec_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_128("aes128_gcm_dec_alt", aes128_gcm_dec_alt, 0);
+#endif
+}
+
 int test_known_values_aes256_gcm_enc(void)
 {
 #ifdef __x86_64__
@@ -18197,6 +18226,15 @@ int test_wycheproof_aes128_gcm_dec(void)
   return 1;
 #else
   return test_wycheproof_gcm_128("aes128_gcm_dec", aes128_gcm_dec, 0);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_dec_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_128("aes128_gcm_dec_alt", aes128_gcm_dec_alt, 0);
 #endif
 }
 
@@ -18247,7 +18285,8 @@ int test_aes256_gcm_enc_alt_guard(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_aes_gcm_alt_guard("aes256_gcm_enc_alt", aes256_gcm_enc_alt);
+  return test_aes_gcm_alt_guard("aes256_gcm_enc_alt", 32,
+                                aes256_gcm_enc_alt);
 #endif
 }
 
@@ -19210,16 +19249,20 @@ int main(int argc, char *argv[])
     functionaltest(aes,"aes128_gcm_dec",test_aes128_gcm_dec);
     functionaltest(aes,"aes256_gcm_enc",test_aes256_gcm_enc);
     functionaltest(aes,"aes256_gcm_dec",test_aes256_gcm_dec);
+    functionaltest(aes&&sha3,"aes128_gcm_dec_alt",test_aes128_gcm_dec_alt);
+    functionaltest(aes&&sha3,"aes128_gcm_dec_alt whole-blocks guard",test_aes128_gcm_dec_alt_guard);
     functionaltest(aes&&sha3,"aes256_gcm_dec_alt",test_aes256_gcm_dec_alt);
     functionaltest(aes&&sha3,"aes256_gcm_dec_alt whole-blocks guard",test_aes256_gcm_dec_alt_guard);
     functionaltest(all,"aes_gcm_htable",test_aes_gcm_htable);
     functionaltest(aes,"known value tests for aes128_gcm_enc",test_known_values_aes128_gcm_enc);
     functionaltest(aes,"known value tests for aes128_gcm_dec",test_known_values_aes128_gcm_dec);
+    functionaltest(aes&&sha3,"known value tests for aes128_gcm_dec_alt",test_known_values_aes128_gcm_dec_alt);
     functionaltest(aes,"known value tests for aes256_gcm_enc",test_known_values_aes256_gcm_enc);
     functionaltest(aes,"known value tests for aes256_gcm_dec",test_known_values_aes256_gcm_dec);
     functionaltest(aes&&sha3,"known value tests for aes256_gcm_dec_alt",test_known_values_aes256_gcm_dec_alt);
     functionaltest(aes,"Wycheproof vectors for aes128_gcm_enc",test_wycheproof_aes128_gcm_enc);
     functionaltest(aes,"Wycheproof vectors for aes128_gcm_dec",test_wycheproof_aes128_gcm_dec);
+    functionaltest(aes&&sha3,"Wycheproof vectors for aes128_gcm_dec_alt",test_wycheproof_aes128_gcm_dec_alt);
     functionaltest(aes,"Wycheproof vectors for aes256_gcm_enc",test_wycheproof_aes256_gcm_enc);
     functionaltest(aes,"Wycheproof vectors for aes256_gcm_dec",test_wycheproof_aes256_gcm_dec);
     functionaltest(aes&&sha3,"Wycheproof vectors for aes256_gcm_dec_alt",test_wycheproof_aes256_gcm_dec_alt);
