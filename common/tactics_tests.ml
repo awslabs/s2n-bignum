@@ -57,6 +57,72 @@ let CACHED_REWRITE_INSTANTIATION = prove
    [CACHED_ASM_REWRITE_TAC [];
     UNIFY_REFL_TAC]);;
 
+let _ =
+  let rule = ASSUME `!n:num. f n = n + 1` in
+  let step = GEN_REWRITE_CONV I [rule] ORELSEC NUM_RED_CONV in
+  let ordinary = TOP_DEPTH_CONV step
+  and memoized = MEMOIZED_TOP_DEPTH_CONV step
+  and bounded = MEMOIZED_TOP_DEPTH_CONV ~max_entries:2 step
+  and disabled = MEMOIZED_TOP_DEPTH_CONV ~max_entries:0 step in
+  List.iter (fun target ->
+    let expected = ordinary target in
+    List.iter (fun conv ->
+      let actual = conv target in
+      if not(aconv (concl actual) (concl expected)) ||
+         hyp actual <> hyp expected then
+        failwith "memoized depth changed its result or hypotheses")
+      [memoized;bounded;disabled])
+    [`f 0 + f 0:num`; `f 1:num`; `f 2:num`; `f 0:num`;
+     `\n:num. f n`; `\j:num. f j`; `x:num`];
+  if can (MEMOIZED_TOP_DEPTH_CONV ~max_entries:(-1)) step then
+    failwith "memoized depth accepted a negative cache limit";;
+
+let _ =
+  let rule = ASSUME `!n:num. f n = n + 1` in
+  let step = GEN_REWRITE_CONV I [rule] ORELSEC NUM_RED_CONV in
+  let ordinary = TOP_DEPTH_CONV step
+  and memoized = MEMOIZED_TOP_DEPTH_CONV step in
+  let inputs = map (fun n ->
+    mk_comb(`f:num->num`,mk_var("memo_symbol_" ^ string_of_int n,`:num`)))
+    (0--31) in
+  List.iter (fun target ->
+    let actual = memoized target and expected = ordinary target in
+    if concl actual <> concl expected || hyp actual <> hyp expected then
+      failwith "memoized depth confused distinct symbolic variables")
+    (inputs @ rev inputs);
+  let calls = ref 0 in
+  let atoms = [`f 0:num`; `f 1:num`; `f 2:num`] in
+  let step tm =
+    if mem tm atoms then incr calls;
+    GEN_REWRITE_CONV I [rule] tm in
+  let bounded = MEMOIZED_TOP_DEPTH_CONV ~max_entries:2 step in
+  List.iter (fun tm -> ignore(bounded tm)) (atoms @ [hd atoms]);
+  if !calls <> 4 then
+    failwith "memoized depth did not respect its cache limit";;
+
+let _ =
+  let calls = ref 0 in
+  let atom = `f 0:num` in
+  let rule = ASSUME `f 0:num = 1` in
+  let step tm =
+    if tm = atom then incr calls;
+    GEN_REWRITE_CONV I [rule] tm in
+  let target = `f 0 + f 0:num` in
+  ignore(TOP_DEPTH_CONV step target);
+  if !calls <> 2 then failwith "memoized depth control fixture changed";
+  calls := 0;
+  let memoized = MEMOIZED_TOP_DEPTH_CONV step in
+  let result = memoized target in
+  if !calls <> 1 || hyp result <> hyp rule then
+    failwith "memoized depth did not share a repeated contextual subterm";
+  ignore(memoized target);
+  if !calls <> 1 then failwith "memoized depth missed a repeated result";
+  let changed = ADD_ASSUM `hidden:bool` rule in
+  let fresh = MEMOIZED_TOP_DEPTH_CONV (GEN_REWRITE_CONV I [changed]) in
+  let result = fresh target in
+  if not(mem `hidden:bool` (hyp result)) then
+    failwith "memoized depth reused a theorem from another context";;
+
 let FRESH_ABBREV_SCOPE = prove
  (`!a:num. ?b:num. b = a + 1`,
   GEN_TAC THEN FRESH_ABBREV_TAC `fresh:num = a + 1` THEN

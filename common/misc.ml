@@ -1522,6 +1522,101 @@ let (CLARIFY_TAC:tactic) =
       itlist (fun ath -> PROVE_HYP (INSTANTIATE_ALL inst ath))
         proofs th);;
 
+(* Bounded memoization for TOP_DEPTH_CONV. A conversion has type
+   conv = term -> thm and proves an equality for its input. For fixed step,
+   cache successful recursive results t -> (Gamma |- t = u). Keys use
+   structural term equality (=), including types and variable names, not
+   matching or alpha-equivalence. Values are complete theorems, including
+   hypotheses. Cache misses follow TOP_DEPTH_CONV's rewrite/traversal order.
+
+   Example: the RV32 inverse-NTT output conversion interleaves phase
+   unfolding with rewriting by execution abbreviations. Schematically:
+
+   Delta |- P x i = E     unfold/reduce; fold earlier abbreviations
+   Gamma |- E = v         execution abbreviation
+   -------------------------------------------------------------
+   Delta, Gamma |- P x i = v
+
+   P x i denotes a phase coefficient, E its word expression and v an
+   abbreviation variable. Delta is empty for purely definitional reduction;
+   otherwise it contains hypotheses used by earlier abbreviation rewrites.
+   The composed theorem has the union of Delta and Gamma as hypotheses.
+   A Gentleman-Sande butterfly has outputs a+b and w(a-b), represented by
+   word operations and Barrett multiplication.
+   Both outputs contain earlier-layer phase expressions for a and b.
+   TOP_DEPTH_CONV reconstructs their conversion theorems at each occurrence,
+   even if term nodes are physically shared. Retaining the composed result
+   avoids repeated unfolding, reduction and equality proof construction.
+   Hoisting the conversion builder avoids setup, not these term conversions.
+
+   The cache key does not include rewrite rules or their hypotheses.
+   The caller must keep step's rewrites and theorem dependencies fixed.
+   For contextual rewriting, capture the actual assumption theorems, not
+   just their conclusions. In mldsa-native's RV32 caller, ths = map snd asl
+   after execution, and context_step is prepared as
+     GENERAL_REWRITE_CONV true I (basic_net()) ths.
+   One memoizer for context_step ORELSEC layout_step is retained across
+   all 256 coefficient goals. It does not span changing instruction
+   contexts. If the rules, their hypotheses or another input to step change,
+   construct a new memoizer. There is no automatic invalidation.
+   A hit returns Gamma |- t = u unchanged, not an unconditional equality.
+
+   Keep at most max_entries successful results, default 16384; clear the
+   table before inserting when full. This bounds entries, not memory bytes.
+   Zero selects ordinary TOP_DEPTH_CONV; negative limits fail. Failed
+   recursive conversions are not cached; the outer TRY_CONV supplies REFL
+   when no rewrite succeeds.
+
+   Alternatively, a caller can prove and retain phase-coefficient equations
+   P x i = v layer by layer and rewrite subsequent layers with them.
+   That changes proof decomposition; this helper memoizes the existing
+   conversion without requiring it. *)
+
+let MEMOIZED_TOP_DEPTH_CONV ?(max_entries=16384) step =
+  if max_entries < 0 then
+    failwith "MEMOIZED_TOP_DEPTH_CONV: negative cache limit"
+  else if max_entries = 0 then TOP_DEPTH_CONV step else
+  let thenqc first second tm =
+    try let th = first tm in
+        try TRANS th (second(rhs(concl th)))
+        with Failure _ -> th
+    with Failure _ -> second tm
+  and thencqc first second tm =
+    let th = first tm in
+    try TRANS th (second(rhs(concl th)))
+    with Failure _ -> th in
+  let combq conv tm =
+    match tm with
+    | Comb(l,r) ->
+        (try let th = conv l in
+             try MK_COMB(th,conv r)
+             with Failure _ -> AP_THM th r
+         with Failure _ -> AP_TERM l (conv r))
+    | _ -> failwith "MEMOIZED_TOP_DEPTH_CONV: not a combination" in
+  let subq conv tm =
+    match tm with
+    | Abs(_,_) -> ABS_CONV conv tm
+    | _ -> combq conv tm in
+  let module Results = Hashtbl.Make(struct
+    type t = term
+    let equal = (=)
+    (* Look past shared heads and type constructors to symbolic arguments.
+       Equality still compares the whole term, not its hash. *)
+    let hash = Hashtbl.hash_param 128 512
+  end) in
+  let cache = Results.create 1021 in
+  let rec repeatq tm = thencqc step repeatq tm
+  and visit tm =
+    try Results.find cache tm
+    with Not_found ->
+      let th =
+        thenqc repeatq
+          (thencqc (subq visit) (thencqc step visit)) tm in
+      if Results.length cache >= max_entries then Results.clear cache;
+      Results.add cache tm th;
+      th in
+  TRY_CONV visit;;
+
 (* ------------------------------------------------------------------------- *)
 (* Apply cacheing (memoization) to arbitrary function with naive assoc list. *)
 (* ------------------------------------------------------------------------- *)
