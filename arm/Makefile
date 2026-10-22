@@ -426,7 +426,8 @@ UNOPT_OBJ = p256/unopt/bignum_montmul_p256_base.o \
 AES_XTS_OBJ = aes-xts/aes_xts_decrypt.o \
               aes-xts/aes_xts_encrypt.o
 
-AES_GCM_OBJ = aes_gcm/aes128_gcm_dec.o \
+AES_GCM_OBJ = aes_gcm/aesv8_gcm_8x_enc_256_wb.o \
+              aes_gcm/aes128_gcm_dec.o \
               aes_gcm/aes128_gcm_enc.o \
               aes_gcm/aes256_gcm_dec.o \
               aes_gcm/aes256_gcm_dec_alt.o \
@@ -562,6 +563,14 @@ aes_gcm/aes128_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_dec.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_dec_alt.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
+# The 8x whole-blocks encrypt proof loads the shared spec/common lemmas, the
+# constant-time safety infrastructure, and the FIPS-197 and GHASH lemma stacks.
+aes_gcm/aesv8_gcm_8x_enc_256_wb.native: $(AES_GCM_PROOF_UTILS) \
+                                        proofs/consttime.ml \
+                                        ../common/fips197.ml \
+                                        ../common/polyval_ghash.ml \
+                                        ../common/ghash_nist_bridge.ml \
+                                        ../common/karatsuba_pmul.ml
 
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \

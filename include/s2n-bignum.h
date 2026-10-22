@@ -75,6 +75,16 @@ extern uint64_t aes256_gcm_dec_alt(const uint8_t *in, uint64_t len_bits, uint8_t
 extern uint64_t aes256_gcm_enc(const uint8_t *in, uint64_t len_bits, uint8_t *out,
         uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
 
+// AESV8_GCM_8X_ENC_256_WB (AES-256-GCM bulk encryption of whole blocks with GHASH tag update, 8 blocks at a time)
+// Derived from AWS-LC's aesv8_gcm_8x_enc_256. For len_bits not a multiple of 128 nothing is processed: returns 0 without touching memory.
+// Requires in + len_bits/8 < 2^63 (signed pointer compares); in-place operation (out == in) is not covered.
+// Of key it reads only the 15 round keys (240 bytes), not key->rounds; of htable, the 192-byte table of H^1..H^8 and their Karatsuba middle terms.
+// This routine does not enforce the NIST GCM message limit.
+// Callers must ensure the cumulative message length does not exceed 2^36 - 32 bytes (2^39 - 256 bits).
+// Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[240], htable[24]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed
+extern uint64_t aesv8_gcm_8x_enc_256_wb(const uint8_t *in, uint64_t len_bits, uint8_t *out,
+        uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
+
 // Add, z := x + y
 // Inputs x[m], y[n]; outputs function return (carry-out) and z[p]
 extern uint64_t bignum_add (uint64_t p, uint64_t *z, uint64_t m, const uint64_t *x, uint64_t n, const uint64_t *y);
