@@ -66,7 +66,8 @@
 //  - Entry: the whole-blocks guard (tst x1, #127; b.ne) follows the
 //    zero-length check and precedes the d8-d15 saves, so the reject path
 //    needs no epilogue. All four saves come before the argument moves, so the
-//    core correctness theorem starts at pc + 0x20 with the C arguments still
+//    core correctness theorem, which like the other theorems is about the
+//    code of a -DNO_IBT build, starts at pc + 0x1c with the C arguments still
 //    in X0-X6.
 //  - Final block: the partial-block handling at L256_dec_blocks_less_than_1
 //    is removed, namely the load of the 16 output bytes the last block will
