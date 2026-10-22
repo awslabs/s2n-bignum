@@ -123,6 +123,107 @@ let _ =
   if not(mem `hidden:bool` (hyp result)) then
     failwith "memoized depth reused a theorem from another context";;
 
+let DEFERRED_FUNCTION_WITNESS = prove
+ (`?f:num->num. !x:num. f x = x + 1`,
+  WITH_DEFERRED_ABBREVS_TAC (fun abbreviate ->
+    X_META_EXISTS_TAC `f:num->num` THEN GEN_TAC THEN
+    W(fun (_,w as goal) ->
+      let definition = abbreviate goal `\n:num. n + 1` in
+      let applied = AP_THM definition (rand(lhs w)) in
+      let folded = SYM(CONV_RULE(LAND_CONV BETA_CONV) applied) in
+      UNIFY_ACCEPT_TAC [`f:num->num`] folded)));;
+
+let DEFERRED_DEPENDENT_WITNESSES = prove
+ (`?a:num. a = 3`,
+  WITH_DEFERRED_ABBREVS_TAC (fun abbreviate ->
+    X_META_EXISTS_TAC `a:num` THEN
+    W(fun goal ->
+      let first = abbreviate goal `1` in
+      let second =
+        abbreviate goal (mk_binop `(+):num->num->num`
+          (rhs(concl first)) `2`) in
+      let folded =
+        CONV_RULE(RAND_CONV
+          (GEN_REWRITE_CONV DEPTH_CONV [SYM first] THENC
+           NUM_REDUCE_CONV)) (SYM second) in
+      UNIFY_ACCEPT_TAC [`a:num`] folded)));;
+
+let DEFERRED_POLYMORPHIC_WITNESS = prove
+ (`?f:A->A. !x:A. f x = x`,
+  WITH_DEFERRED_ABBREVS_TAC (fun abbreviate ->
+    X_META_EXISTS_TAC `f:A->A` THEN GEN_TAC THEN
+    W(fun (_,w as goal) ->
+      let definition = abbreviate goal `\n:A. n` in
+      let folded =
+        SYM(CONV_RULE(LAND_CONV BETA_CONV)
+          (AP_THM definition (rand(lhs w)))) in
+      UNIFY_ACCEPT_TAC [`f:A->A`] folded)));;
+
+let DEFERRED_NESTED_WITNESS = prove
+ (`?f:num->num. !x:num. f x = x + 1`,
+  WITH_DEFERRED_ABBREVS_TAC (fun outer ->
+    WITH_DEFERRED_ABBREVS_TAC (fun inner ->
+      X_META_EXISTS_TAC `f:num->num` THEN GEN_TAC THEN
+      W(fun (_,w as goal) ->
+        let first = outer goal `\n:num. n + 1` in
+        let second = inner goal (rhs(concl first)) in
+        let applied = AP_THM (TRANS first second) (rand(lhs w)) in
+        let folded = SYM(CONV_RULE(LAND_CONV BETA_CONV) applied) in
+        UNIFY_ACCEPT_TAC [`f:num->num`] folded))));;
+
+let _ =
+  let goal = `?q:A. q = (p:A)` in
+  let tac =
+    WITH_DEFERRED_ABBREVS_TAC (fun abbreviate ->
+      X_META_EXISTS_TAC `q:A` THEN
+      W(fun goal ->
+        UNIFY_ACCEPT_TAC [`q:A`] (SYM(abbreviate goal `p:A`)))) in
+  let _,subgoals,justify = tac ([],goal) in
+  if subgoals <> [] then failwith "deferred instantiation left a goal";
+  let inst = [],[`0`,`p:num`],[`:num`,`:A`] in
+  let result = justify inst [] in
+  if hyp result <> [] || concl result <> instantiate inst goal then
+    failwith "deferred abbreviation lost term or type instantiation";;
+
+let _ =
+  let premise = `p:bool` in
+  let goal = `?a:num. a = 7` in
+  let result = TAC_PROOF
+   ((["premise",ASSUME premise],goal),
+    WITH_DEFERRED_ABBREVS_TAC (fun abbreviate ->
+      X_META_EXISTS_TAC `a:num` THEN
+      W(fun goal ->
+        UNIFY_ACCEPT_TAC [`a:num`]
+          (ADD_ASSUM premise (SYM(abbreviate goal `7`)))))) in
+  if hyp result <> [premise] || concl result <> goal then
+    failwith "deferred abbreviation lost an existing hypothesis";
+  let unused = prove
+   (`1 = 1`,WITH_DEFERRED_ABBREVS_TAC (fun _ -> REFL_TAC)) in
+  if hyp unused <> [] then
+    failwith "unused deferred wrapper introduced a hypothesis";;
+
+let _ =
+  if can (fun () -> prove
+    (`?a:num. !x:num. a = x`,
+     WITH_DEFERRED_ABBREVS_TAC (fun abbreviate ->
+       X_META_EXISTS_TAC `a:num` THEN GEN_TAC THEN
+       W(fun (_,w as goal) ->
+         UNIFY_ACCEPT_TAC [`a:num`]
+           (SYM(abbreviate goal (rhs w))))))) ()
+  then failwith "deferred abbreviation captured a local variable";
+  if can (fun () -> prove
+    (`?f:num->num. !x:num. f 0 = x`,
+     WITH_DEFERRED_ABBREVS_TAC (fun abbreviate ->
+       X_META_EXISTS_TAC `f:num->num` THEN GEN_TAC THEN
+       W(fun (_,w as goal) ->
+         let function_value = mk_abs(`n:num`,rhs w) in
+         let definition = abbreviate goal function_value in
+         let folded =
+           SYM(CONV_RULE(LAND_CONV BETA_CONV)
+             (AP_THM definition `0`)) in
+         UNIFY_ACCEPT_TAC [`f:num->num`] folded)))) ()
+  then failwith "deferred function captured a private local variable";;
+
 let FRESH_ABBREV_SCOPE = prove
  (`!a:num. ?b:num. b = a + 1`,
   GEN_TAC THEN FRESH_ABBREV_TAC `fresh:num = a + 1` THEN
