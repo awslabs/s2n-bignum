@@ -17230,6 +17230,7 @@ int test_known_values_p384(void)
 // Reference implementation of AES-256-XTS for comparison testing
 
 #include "ref_aes_xts.c"
+#include "ref_aes_gcm.c"
 
 // Helpers for writing XTS tests
 void assign_bytearray_from_hexstring(uint8_t *bytearr, const char *hexstr, int len)
@@ -17329,6 +17330,14 @@ int test_known_values_xts_decrypt(void)
 static void random_bytes(uint8_t *buf, size_t n)
 { size_t i;
   for (i = 0; i < n; ++i) buf[i] = (uint8_t)(rand() & 0xFF);
+}
+
+// Random bytes with a random bit density, so the AES-GCM tests exercise the
+// full spectrum from sparse to dense inputs.
+static void random_bytes_density(uint8_t *buf, size_t n)
+{ int d = ((unsigned) rand() & 0xFFFF) % 65;
+  size_t i;
+  for (i = 0; i < n; ++i) buf[i] = (uint8_t)(random64d(d) & 0xFF);
 }
 
 int test_aes_xts_encrypt(void)
@@ -17440,6 +17449,128 @@ int test_aes_xts_decrypt(void)
    }
   printf("All OK\n");
   return 0;
+#endif
+}
+
+// ****************************************************************************
+// Random-input testing of the AES-GCM bulk encryption/decryption kernels
+// ****************************************************************************
+//
+// The four kernels aes128_gcm_enc, aes128_gcm_dec, aes256_gcm_enc and
+// aes256_gcm_dec share one ABI: they process a whole number of 16-byte blocks,
+// encrypting or decrypting in counter mode from the supplied counter block,
+// folding the ciphertext into the GHASH accumulator "tag" and incrementing the
+// counter per block.  The GHASH subkey H = AES_K(0^128) is supplied indirectly
+// via the precomputed table of its powers.  Each kernel is compared against
+// the clean reference in tests/ref_aes_gcm.c over the output, the updated tag
+// and the updated counter block, for random keys, counters, starting tags and
+// message lengths, using the bit-density generator.
+
+typedef uint64_t (*aes_gcm_fn)(const uint8_t *in, uint64_t len_bits,
+                               uint8_t *out, uint64_t *tag, uint8_t *ivec,
+                               const s2n_bignum_AES_KEY *key,
+                               const uint64_t *htable);
+typedef void (*ref_aes_gcm_fn)(const uint8_t *in, uint64_t len_bits,
+                               uint8_t *out, uint8_t *tag, uint8_t *ivec,
+                               const s2n_bignum_AES_KEY *key);
+
+#ifndef __x86_64__
+static int test_aes_gcm(const char *name, int keybytes,
+                        aes_gcm_fn fn, ref_aes_gcm_fn ref)
+{
+  uint64_t t;
+  uint8_t key[32], h[16], zero[16], htable[192];
+  uint8_t iv_asm[16], iv_ref[16], tag_asm[16], tag_ref[16];
+  s2n_bignum_AES_KEY ek;
+  size_t len, nblocks;
+
+  printf("Testing %s against reference with %d cases\n", name, tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { // Random key, and derive H and the table of its powers
+     random_bytes_density(key, keybytes);
+     memset(zero, 0, 16);
+     if (keybytes == 16)
+      { ref_aes128_expand_key(key, &ek);
+        ref_aes128_encrypt_block(zero, h, &ek); }
+     else
+      { ref_aes256_expand_key(key, &ek);
+        ref_aes256_encrypt_block(zero, h, &ek); }
+     ref_gcm_init_htable(htable, h);
+
+     // Random number of whole blocks from 1 to 256, biased toward small
+     // counts to exercise the four-block boundaries
+     nblocks = 1 + (rand() % 256);
+     if ((rand() & 3) == 0) nblocks = 1 + (rand() % 8);
+     len = 16 * nblocks;
+
+     // Random counter block, starting tag and input
+     random_bytes_density(iv_asm, 16);
+     memcpy(iv_ref, iv_asm, 16);
+     random_bytes_density(tag_asm, 16);
+     memcpy(tag_ref, tag_asm, 16);
+     random_bytes_density(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     fn(bb1, (uint64_t)len * 8, bb2, (uint64_t *)tag_asm, iv_asm, &ek,
+        (uint64_t *)htable);
+     ref(bb1, (uint64_t)len * 8, bb3, tag_ref, iv_ref, &ek);
+
+     if (memcmp(bb2, bb3, len) != 0 ||
+         memcmp(tag_asm, tag_ref, 16) != 0 ||
+         memcmp(iv_asm, iv_ref, 16) != 0)
+      { printf("### Disparity: %s len=%zu\n", name, len);
+        printf("    key=");
+        for (int i = 0; i < keybytes; ++i) printf("%02x", key[i]);
+        printf("\n    data %s, tag %s, ctr %s\n",
+               memcmp(bb2, bb3, len) ? "DIFF" : "ok",
+               memcmp(tag_asm, tag_ref, 16) ? "DIFF" : "ok",
+               memcmp(iv_asm, iv_ref, 16) ? "DIFF" : "ok");
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: %s len=%zu\n", name, len);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+}
+#endif
+
+int test_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_enc", 16, aes128_gcm_enc, ref_aes128_gcm_enc);
+#endif
+}
+
+int test_aes128_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_dec", 16, aes128_gcm_dec, ref_aes128_gcm_dec);
+#endif
+}
+
+int test_aes256_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes256_gcm_enc", 32, aes256_gcm_enc, ref_aes256_gcm_enc);
+#endif
+}
+
+int test_aes256_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes256_gcm_dec", 32, aes256_gcm_dec, ref_aes256_gcm_dec);
 #endif
 }
 
@@ -18426,6 +18557,10 @@ int main(int argc, char *argv[])
     functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
     functionaltest(aes,"aes_xts_encrypt",test_aes_xts_encrypt);
     functionaltest(aes,"aes_xts_decrypt",test_aes_xts_decrypt);
+    functionaltest(aes,"aes128_gcm_enc",test_aes128_gcm_enc);
+    functionaltest(aes,"aes128_gcm_dec",test_aes128_gcm_dec);
+    functionaltest(aes,"aes256_gcm_enc",test_aes256_gcm_enc);
+    functionaltest(aes,"aes256_gcm_dec",test_aes256_gcm_dec);
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);

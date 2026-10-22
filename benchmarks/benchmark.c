@@ -1446,6 +1446,27 @@ void call_aes_xts_decrypt_128(void) {}
 void call_aes_xts_decrypt_256(void) {}
 void call_aes_xts_decrypt_512(void) {}
 
+void call_aes128_gcm_enc_16(void) {}
+void call_aes128_gcm_enc_64(void) {}
+void call_aes128_gcm_enc_256(void) {}
+void call_aes128_gcm_enc_1024(void) {}
+void call_aes128_gcm_enc_4096(void) {}
+void call_aes128_gcm_dec_16(void) {}
+void call_aes128_gcm_dec_64(void) {}
+void call_aes128_gcm_dec_256(void) {}
+void call_aes128_gcm_dec_1024(void) {}
+void call_aes128_gcm_dec_4096(void) {}
+void call_aes256_gcm_enc_16(void) {}
+void call_aes256_gcm_enc_64(void) {}
+void call_aes256_gcm_enc_256(void) {}
+void call_aes256_gcm_enc_1024(void) {}
+void call_aes256_gcm_enc_4096(void) {}
+void call_aes256_gcm_dec_16(void) {}
+void call_aes256_gcm_dec_64(void) {}
+void call_aes256_gcm_dec_256(void) {}
+void call_aes256_gcm_dec_1024(void) {}
+void call_aes256_gcm_dec_4096(void) {}
+
 #else
 
 void call_mldsa_caddq(void) repeat(mldsa_caddq((int32_t*)b0))
@@ -1537,6 +1558,55 @@ void call_aes_xts_decrypt_64(void) { repeat(aes_xts_decrypt_helper(64)); }
 void call_aes_xts_decrypt_128(void) { repeat(aes_xts_decrypt_helper(128)); }
 void call_aes_xts_decrypt_256(void) { repeat(aes_xts_decrypt_helper(256)); }
 void call_aes_xts_decrypt_512(void) { repeatfewer(10,aes_xts_decrypt_helper(512)); }
+
+// Helpers for the AES-GCM bulk kernels, all sharing one ABI: the round keys
+// (key->rd_key, 11 or 15 of them), a 16-byte counter (aes_iv), a 16-byte tag
+// (b3) and the 192-byte table of H-powers (bb[0]).  Timing is independent of
+// their exact contents, which are just seeded from the buffers.
+static s2n_bignum_AES_KEY aes_gcm_key;
+static void aes_gcm_setup(int rounds)
+{
+  int j;
+  for (j = 0; j < 30; ++j) aes_gcm_key.rd_key[j] = b1[j % BUFFERSIZE];
+  aes_gcm_key.rounds = rounds;
+  for (j = 0; j < 16; ++j) aes_iv[j] = (uint8_t)(b3[j] & 0xFF);
+}
+
+static void aes128_gcm_enc_helper(size_t len)
+{ aes_gcm_setup(10);
+  aes128_gcm_enc((uint8_t*)b0, (uint64_t)len * 8, (uint8_t*)b2, (uint64_t*)b3, aes_iv, &aes_gcm_key, bb[0]); }
+void call_aes128_gcm_enc_16(void) { repeat(aes128_gcm_enc_helper(16)); }
+void call_aes128_gcm_enc_64(void) { repeat(aes128_gcm_enc_helper(64)); }
+void call_aes128_gcm_enc_256(void) { repeat(aes128_gcm_enc_helper(256)); }
+void call_aes128_gcm_enc_1024(void) { repeatfewer(10,aes128_gcm_enc_helper(1024)); }
+void call_aes128_gcm_enc_4096(void) { repeatfewer(40,aes128_gcm_enc_helper(4096)); }
+
+static void aes128_gcm_dec_helper(size_t len)
+{ aes_gcm_setup(10);
+  aes128_gcm_dec((uint8_t*)b0, (uint64_t)len * 8, (uint8_t*)b2, (uint64_t*)b3, aes_iv, &aes_gcm_key, bb[0]); }
+void call_aes128_gcm_dec_16(void) { repeat(aes128_gcm_dec_helper(16)); }
+void call_aes128_gcm_dec_64(void) { repeat(aes128_gcm_dec_helper(64)); }
+void call_aes128_gcm_dec_256(void) { repeat(aes128_gcm_dec_helper(256)); }
+void call_aes128_gcm_dec_1024(void) { repeatfewer(10,aes128_gcm_dec_helper(1024)); }
+void call_aes128_gcm_dec_4096(void) { repeatfewer(40,aes128_gcm_dec_helper(4096)); }
+
+static void aes256_gcm_enc_helper(size_t len)
+{ aes_gcm_setup(14);
+  aes256_gcm_enc((uint8_t*)b0, (uint64_t)len * 8, (uint8_t*)b2, (uint64_t*)b3, aes_iv, &aes_gcm_key, bb[0]); }
+void call_aes256_gcm_enc_16(void) { repeat(aes256_gcm_enc_helper(16)); }
+void call_aes256_gcm_enc_64(void) { repeat(aes256_gcm_enc_helper(64)); }
+void call_aes256_gcm_enc_256(void) { repeat(aes256_gcm_enc_helper(256)); }
+void call_aes256_gcm_enc_1024(void) { repeatfewer(10,aes256_gcm_enc_helper(1024)); }
+void call_aes256_gcm_enc_4096(void) { repeatfewer(40,aes256_gcm_enc_helper(4096)); }
+
+static void aes256_gcm_dec_helper(size_t len)
+{ aes_gcm_setup(14);
+  aes256_gcm_dec((uint8_t*)b0, (uint64_t)len * 8, (uint8_t*)b2, (uint64_t*)b3, aes_iv, &aes_gcm_key, bb[0]); }
+void call_aes256_gcm_dec_16(void) { repeat(aes256_gcm_dec_helper(16)); }
+void call_aes256_gcm_dec_64(void) { repeat(aes256_gcm_dec_helper(64)); }
+void call_aes256_gcm_dec_256(void) { repeat(aes256_gcm_dec_helper(256)); }
+void call_aes256_gcm_dec_1024(void) { repeatfewer(10,aes256_gcm_dec_helper(1024)); }
+void call_aes256_gcm_dec_4096(void) { repeatfewer(40,aes256_gcm_dec_helper(4096)); }
 
 #endif
 
@@ -2030,6 +2100,26 @@ int main(int argc, char *argv[])
   timingtest(aes,"aes_xts_decrypt (128 bytes)",call_aes_xts_decrypt_128);
   timingtest(aes,"aes_xts_decrypt (256 bytes)",call_aes_xts_decrypt_256);
   timingtest(aes,"aes_xts_decrypt (512 bytes)",call_aes_xts_decrypt_512);
+  timingtest(aes,"aes128_gcm_enc (16 bytes)",call_aes128_gcm_enc_16);
+  timingtest(aes,"aes128_gcm_enc (64 bytes)",call_aes128_gcm_enc_64);
+  timingtest(aes,"aes128_gcm_enc (256 bytes)",call_aes128_gcm_enc_256);
+  timingtest(aes,"aes128_gcm_enc (1024 bytes)",call_aes128_gcm_enc_1024);
+  timingtest(aes,"aes128_gcm_enc (4096 bytes)",call_aes128_gcm_enc_4096);
+  timingtest(aes,"aes128_gcm_dec (16 bytes)",call_aes128_gcm_dec_16);
+  timingtest(aes,"aes128_gcm_dec (64 bytes)",call_aes128_gcm_dec_64);
+  timingtest(aes,"aes128_gcm_dec (256 bytes)",call_aes128_gcm_dec_256);
+  timingtest(aes,"aes128_gcm_dec (1024 bytes)",call_aes128_gcm_dec_1024);
+  timingtest(aes,"aes128_gcm_dec (4096 bytes)",call_aes128_gcm_dec_4096);
+  timingtest(aes,"aes256_gcm_enc (16 bytes)",call_aes256_gcm_enc_16);
+  timingtest(aes,"aes256_gcm_enc (64 bytes)",call_aes256_gcm_enc_64);
+  timingtest(aes,"aes256_gcm_enc (256 bytes)",call_aes256_gcm_enc_256);
+  timingtest(aes,"aes256_gcm_enc (1024 bytes)",call_aes256_gcm_enc_1024);
+  timingtest(aes,"aes256_gcm_enc (4096 bytes)",call_aes256_gcm_enc_4096);
+  timingtest(aes,"aes256_gcm_dec (16 bytes)",call_aes256_gcm_dec_16);
+  timingtest(aes,"aes256_gcm_dec (64 bytes)",call_aes256_gcm_dec_64);
+  timingtest(aes,"aes256_gcm_dec (256 bytes)",call_aes256_gcm_dec_256);
+  timingtest(aes,"aes256_gcm_dec (1024 bytes)",call_aes256_gcm_dec_1024);
+  timingtest(aes,"aes256_gcm_dec (4096 bytes)",call_aes256_gcm_dec_4096);
 
   // Summarize performance in arithmetic and geometric means
 

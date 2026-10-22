@@ -33,6 +33,13 @@ let iclasses =
   "xx0100010xxxxxxxxxxxxxxx0xxxx0xx";
   "xx0100010xxxxxxxxxxxxxx0xxxx0xxx";
   "xx0100010xxxxxxxxxxxxx0xxxx0xxxx";
+
+  (*** ADD, SUB immediate: further non-SP register pairs whose encodings do not
+   *** share a zero-bit position with the templates above (e.g. add w19, w13, n).
+   *** Rn bit1 and one Rd bit forced to 0 keep both registers clear of SP.     ***)
+  "xx0100010xxxxxxxxxxxxxxxx0xxx0xx";
+  "xx0100010xxxxxxxxxxxxxxxx0xx0xxx";
+  "xx0100010xxxxxxxxxxxxxxxx0xxxxx0";
   "10010001000000001000001100110110"; (* unmatched case... *)
   "1001000100xxxxxxxxxxxx1110100010"; (* another: add x2, x29, #xxx *)
   (*** Rd of ADDS/SUBS cannot be SP *)
@@ -151,6 +158,9 @@ let iclasses =
 
   (*** DUP (element): broadcast Vn.<T>[index] across Vd ***)
   "0x001110000xxxxx000001xxxxxxxxxx";
+
+  (*** DUP (element), scalar form: mov Dd, Vn.<T>[index] ***)
+  "01011110000xxxxx000001xxxxxxxxxx";
 
   (*** EOR ***)
   "0x101110001xxxxx000111xxxxxxxxxx";
@@ -323,6 +333,9 @@ let iclasses =
   "0x001111001xxxxx010101xxxxxxxxxx";
   "0x0011110001xxxx010101xxxxxxxxxx";
   "0x00111100001xxx010101xxxxxxxxxx";
+
+  (*** SHL (scalar): 64-bit form only, immh bit 3 set ***)
+  "0101111101xxxxxx010101xxxxxxxxxx";
 
   (*** SHRN ***)
   "00001111001xxxxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
@@ -728,6 +741,11 @@ let check_insns () =
 
     (*** ret ***)
     "1101011001011111000000xxxxx00000";
+
+    (*** bti c: the BTI landing pad at the head of an indirectly-called   ***)
+    (*** subroutine.  A hint with no register or memory effect, so there  ***)
+    (*** is nothing to simulate; arm_BTI models it as a no-op.            ***)
+    "11010101000000110010010001011111";
   ] in
 
   (* Check that iclasses and skipping_iclasses has no overlapping bitpattern. *)
