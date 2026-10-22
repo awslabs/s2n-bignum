@@ -1466,6 +1466,56 @@ let FRESH_ABBREV_TAC tm (asl,w) =
   (fun inst [th] ->
     CHOOSE(instantiate inst name,INSTANTIATE_ALL inst witness) th);;
 
+(* A tactic returns subgoals and a justification: a function which takes
+   their proof theorems and assembles a theorem of the input goal. Later
+   tactics can discover type/term substitutions which that function must
+   apply to its saved theorems.
+
+   For example, a proof of ?f. !x. f x = x + 1 chooses \n. n + 1 for f.
+   In a safety proof the chosen function instead contains thousands of
+   trace events. Substituting it into every saved instruction theorem
+   repeatedly traverses the large function.
+
+   WITH_DEFERRED_ABBREVS_TAC lets the whole tactic builder use a fresh
+   name n for a term t. Its goal-aware naming conversion returns the
+   theorem t = n |- t = n and saves |- ?n. t = n, proved by choosing t.
+   The builder can choose n as an existential witness and keep the
+   defining equation as a temporary theorem hypothesis.
+
+   First assemble the builder's complete proof using the short names.
+   Then CHOOSE (existential elimination) discharges each defining equation
+   with its saved existence proof, applying the discovered substitutions
+   to both. Remove newer definitions first so they may use earlier names.
+   No naming equation remains in the result.
+
+   Unlike an abbreviation inside the final witness-closing tactic, this
+   scope includes the outer existential introduction and its saved
+   justifications. Names are local to this invocation. GEN and CHOOSE
+   still reject captures of locally quantified variables; no new axiom
+   or unproved rewrite is introduced. *)
+
+let WITH_DEFERRED_ABBREVS_TAC build ((asl,w) as goal) =
+  let definitions = ref [] in
+  let root_variables = variables w in
+  let abbreviate ((current_asl,current_w):goal) value =
+    let context_terms context =
+      flat(map (fun (_,th) -> concl th::hyp th) context) in
+    let avoid =
+      value::w::current_w::root_variables @
+      context_terms asl @ context_terms current_asl @
+      map (fun (name,_) -> name) !definitions in
+    let name = variant avoid (genvar(type_of value)) in
+    let equation = mk_eq(value,name) in
+    let witness =
+      EXISTS(mk_exists(name,equation),value) (REFL value) in
+    definitions := (name,witness)::!definitions;
+    ASSUME equation in
+  let meta,goals,justify = build abbreviate goal in
+  meta,goals,(fun inst ths ->
+    List.fold_left (fun th (name,witness) ->
+      CHOOSE(instantiate inst name,INSTANTIATE_ALL inst witness) th)
+      (justify inst ths) !definitions);;
+
 (* ------------------------------------------------------------------------- *)
 (* Normalize context facts and retain their original proofs for restoration. *)
 (* ------------------------------------------------------------------------- *)
