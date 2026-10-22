@@ -533,8 +533,34 @@ let ABBREV_TRACE_TAC (stored_abbrevs:thm list ref)=
 let rec WHILE_TAC (flag:bool ref) tac w =
   (if !flag then tac THEN WHILE_TAC flag tac else ALL_TAC) w;;
 
-(* public_vars describe the HOL Light variables that will contain public
-   information. This is for faster symbolic simulation. *)
+(* public_vars identifies public inputs for faster symbolic simulation.
+
+   The safety claim has shape ?f_events. !public_args e. ensures ...,
+   with final-state clauses
+
+     read events s = APPEND e2 e /\ e2 = f_events public_args /\ ...
+
+   Here e is the initial trace and e2 the events collected during execution.
+   X_META_EXISTS_TAC below leaves f_events as an unknown witness. Each step
+   changes the state from which this same final condition must be reached.
+   The step's justification reconstructs a proof from the preceding state;
+   its saved goal-rewrite theorems contain f_events. The decoded machine
+   instruction theorem does not contain this postcondition or witness.
+
+   At the end, the trace equation determines t = \public_args. trace.
+   Ordinary UNIFY_REFL_TAC would discover the substitution f_events |-> t.
+   This substitution is passed through the saved justifications, including
+   X_META_EXISTS_TAC's outer EXISTS rule. Instantiating their theorems
+   repeatedly traverses the large t, including checks for variable capture.
+
+   UNIFY_TRACE_FUNCTION_TAC instead names t with a fresh function variable
+   n, proves trace = n public_args under the hypothesis t = n, and unifies
+   f_events with n. The functions assemble the original existential theorem
+   with this short substitution. Only afterwards does the enclosing
+   WITH_DEFERRED_ABBREVS_TAC eliminate t = n using |- ?n. t = n.
+   No trace function is expanded through all the saved justifications.
+   Memory bounds and the final safety claim are unchanged. This applies
+   to every invocation; no per-proof option is needed. *)
 let GEN_PROVE_SAFETY_SPEC_TAC =
   let pth =
     prove(`forall (e:((A)address_uarch_event)list) e2.
@@ -545,11 +571,65 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
               ([]:((A)address_uarch_event)list) [] []`,
           MESON_TAC[memaccess_inbounds_def;ALL]) in
 
+  (* Solve goals `Gamma |- actual = f a1 ... ak`, including `actual = f`
+     when `k = 0`. The right-hand head `f` must be a term variable not
+     free in `actual`. Here `f` is the unknown trace-function witness
+     `f_events` left by `X_META_EXISTS_TAC`; this is not a tactic for
+     arbitrary equalities.
+
+     Construct `value = \b1 ... bk. actual` exactly as `UNIFY_REFL_TAC`
+     does: `bi` is `ai` when `ai` is a variable, otherwise a fresh
+     variable of its type. Require `value a1 ... ak` to beta-reduce to
+     `actual`; fail if it does not. With the supplied
+     deferred-abbreviation callback, introduce a fresh `n` and use
+     `value = n` to prove `actual = n a1 ... ak`. Close the goal with no
+     subgoals and the substitution `f |-> n`, retaining `value = n` as a
+     theorem hypothesis, not an added assumption-list entry.
+
+     `UNIFY_REFL_TAC` instead substitutes `f |-> value` and needs no
+     naming hypothesis. This helper constructs the same witness but is
+     not a standalone drop-in replacement: `WITH_DEFERRED_ABBREVS_TAC`
+     must enclose the original existential proof and remove `value = n`
+     after assembly. In that scope it proves the same original goal
+     without passing the large `value` through the saved justifications.
+     The ordinary `GEN`/`CHOOSE` scope checks still reject inadmissible
+     local-variable dependencies. *)
+  let UNIFY_TRACE_FUNCTION_TAC abbreviate ((asl,w) as goal) =
+    let actual,expected = dest_eq w in
+    let function_var,args = strip_comb expected in
+    if not(is_var function_var) || vfree_in function_var actual
+    then failwith "UNIFY_TRACE_FUNCTION_TAC: not a fresh metavariable" else
+    let formal_args =
+      map (fun v -> if is_var v then v else genvar(type_of v)) args in
+    (* Abstract variable arguments; give non-variable arguments fresh
+       binders as `UNIFY_REFL_TAC` does. Binding the variable public
+       arguments keeps them out of `value`'s free variables when `GEN`
+       rules are restored. A dependency on any other local variable must
+       still pass those rules. *)
+    let value = list_mk_abs(formal_args,actual) in
+    let beta_equation = prove
+      (mk_eq(actual,list_mk_comb(value,args)),
+       CONV_TAC(RAND_CONV(DEPTH_CONV BETA_CONV)) THEN REFL_TAC) in
+    let definition = abbreviate goal value in
+    (* Under `value = n`:
+         `beta_equation`: `|- actual = value args`
+         `applied`:      `value = n |- value args = n args`
+       `TRANS` proves `actual = n args`. Unification finds
+       `f_events |-> n`, not `f_events |-> value`; the equality
+       hypothesis stays in the proof. *)
+    let applied =
+      List.fold_left (fun th arg -> AP_THM th arg) definition args in
+    UNIFY_ACCEPT_TAC [function_var] (TRANS beta_equation applied) goal in
+
   let mainfn ?(public_vars:term list option)
     ?(tac_before_maychange_simp:tactic option) exec
     (extra_unpack_thms:thm list) single_step_tac
     :tactic =
 
+    (* The scope must start BEFORE X_META_EXISTS_TAC below. Its EXISTS
+       justification is part of the proof assembled before name removal.
+       Wrapping only UNIFY_TRACE_FUNCTION_TAC would end the scope too early. *)
+    WITH_DEFERRED_ABBREVS_TAC (fun abbreviate ->
     REWRITE_TAC[C_ARGUMENTS;ALL;ALLPAIRS;SOME_FLAGS;fst exec] THEN
     REWRITE_TAC extra_unpack_thms THEN
 
@@ -571,6 +651,8 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
         let read_pc_eq = find_term (fun t -> is_eq t && is_read_pc (lhs t)) post in
         snd (dest_eq read_pc_eq) in
 
+      (* Do not choose the large function now. Leave this metavariable for
+         the final trace equation, and retain the outer EXISTS justification. *)
       X_META_EXISTS_TAC f_events THEN
       REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
       TRY DISCH_TAC THEN
@@ -628,13 +710,15 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
         REWRITE_TAC[APPEND] THEN UNIFY_REFL_TAC;
         ALL_TAC
       ] THEN
-      (* e2 = f_events <public info> *)
-      CONJ_TAC THENL [UNIFY_REFL_TAC; ALL_TAC] THEN
+      (* e2 = f_events <public info>. Keep the naming hypothesis through
+         the remaining bounds proof and the driver's outer justification;
+         the wrapper above discharges it after the original goal is proved. *)
+      CONJ_TAC THENL [UNIFY_TRACE_FUNCTION_TAC abbreviate; ALL_TAC] THEN
       (* memaccess_inbounds *)
       (MATCH_ACCEPT_TAC qth ORELSE
       (POP_ASSUM MP_TAC THEN
        W (fun (asl,w) -> REWRITE_TAC(APPEND :: (map GSYM !stored_abbrevs))) THEN
-       PRINT_GOAL_TAC THEN FAIL_TAC "Could not prove memaccess_inbounds")))
+       PRINT_GOAL_TAC THEN FAIL_TAC "Could not prove memaccess_inbounds"))))
   in mainfn;;
 
 let ASSERT_CONCL_TAC (t:term): tactic =

@@ -1466,6 +1466,91 @@ let FRESH_ABBREV_TAC tm (asl,w) =
   (fun inst [th] ->
     CHOOSE(instantiate inst name,INSTANTIATE_ALL inst witness) th);;
 
+(* Keep temporary names until the enclosed tactic's proof is assembled.
+
+   A HOL Light tactic returns subgoals and a justification: an ML function
+   which takes their proof theorems and assembles a theorem of the input
+   goal. It also receives the type/term substitutions discovered by later
+   tactics. Saved functions instantiate and combine theorem values using
+   inference rules; this is not replaying the tactics or a stored proof
+   term. Closed THEN branches can assemble their theorem immediately.
+
+   For ?f. P f, X_META_EXISTS_TAC can leave f unknown until a later tactic
+   discovers its witness t. Its justification then applies EXISTS with t.
+   Other saved justifications must also instantiate their theorems with
+   f |-> t. If t is a large function, repeated capture-avoiding substitution
+   can dominate assembly. Instead, substitute a fresh variable n and keep
+   the equation t = n until the original existential goal is proved.
+
+   Interface: build receives abbreviate : goal -> conv. Given the current
+   goal and a term t, abbreviate returns t = n |- t = n for a fresh n, and
+   saves the assumption-free theorem |- ?n. t = n, proved by choosing t.
+   This is a theorem-producing conversion, not an assumption-list tactic:
+   it neither rewrites the goal/context nor introduces a global constant.
+   Using its equality propagates t = n as a theorem hypothesis. Call it
+   during tactic application, not from a later justification.
+
+   After the complete justification of build has run, the proof has shape
+
+     Gamma, t = n |- original_goal.
+
+   CHOOSE with |- ?n. t = n removes the temporary hypothesis, yielding
+   Gamma |- original_goal. The name must not be free in original_goal or
+   any other surviving hypothesis; the ordinary GEN/CHOOSE checks enforce
+   this. For ?f. P f, the outer EXISTS step removes n from the conclusion
+   before CHOOSE runs. Wrapping only the tactic which closes P n is too
+   narrow: its conclusion still contains n, so one would have to unfold n
+   back to t before the outer justifications run, losing the speedup.
+
+   Apply later type/term substitutions to both n and its existence proof.
+   Discharge newer names first: if t2 uses n1, its equation t2 = n2 must
+   disappear before eliminating n1. Elimination works on the assembled
+   theorem, not by substituting t through the saved proof functions.
+   Existing hypotheses are retained and no naming equation remains.
+
+   The shared safety driver encloses its outer existential in this scope.
+   Custom tactic builders can do likewise; ordinary abbreviation tactics
+   are unchanged. A witness cannot gain a free dependency on a variable
+   quantified inside its existential: the enclosing GEN/CHOOSE rules still
+   reject this. No new axiom is introduced. *)
+
+let WITH_DEFERRED_ABBREVS_TAC build ((asl,w) as goal) =
+  (* These proofs belong to this tactic application, not a global table.
+     Keep the list intact: validity checks and final theorem extraction
+     may invoke the same justification more than once. *)
+  let definitions = ref [] in
+  (* variant checks free occurrences only. Include bound variables from
+     the original target too: the builder can later expose them with GEN.
+     This avoids name clashes; the proof rules still check scope. *)
+  let root_variables = variables w in
+  let abbreviate ((current_asl,current_w):goal) value =
+    (* Context entries are theorems. Their hidden hypotheses matter for
+       freshness just as much as their displayed conclusions do. *)
+    let context_terms context =
+      flat(map (fun (_,th) -> concl th::hyp th) context) in
+    let avoid =
+      value::w::current_w::root_variables @
+      context_terms asl @ context_terms current_asl @
+      map (fun (name,_) -> name) !definitions in
+    let name = variant avoid (genvar(type_of value)) in
+    let equation = mk_eq(value,name) in
+    (* Choosing value proves ?name. value = name from value = value.
+       ASSUME below is only a temporary hypothesis, not an axiom. *)
+    let witness =
+      EXISTS(mk_exists(name,equation),value) (REFL value) in
+    (* Prepending records reverse creation order for dependent names. *)
+    definitions := (name,witness)::!definitions;
+    ASSUME equation in
+  let meta,goals,justify = build abbreviate goal in
+  meta,goals,(fun inst ths ->
+    (* The fold starts with justify inst ths: assemble the entire enclosed
+       proof first, with its small witness substitution. Only then remove
+       names. Moving CHOOSE into abbreviate or an inner closing tactic
+       would put it before the outer existential justification. *)
+    List.fold_left (fun th (name,witness) ->
+      CHOOSE(instantiate inst name,INSTANTIATE_ALL inst witness) th)
+      (justify inst ths) !definitions);;
+
 (* ------------------------------------------------------------------------- *)
 (* Normalize context facts and retain their original proofs for restoration. *)
 (* ------------------------------------------------------------------------- *)
