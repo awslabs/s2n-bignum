@@ -4,8 +4,9 @@
  *)
 
 (* ========================================================================= *)
-(* Specification vocabulary for the AES-GCM bulk kernels aes128_gcm_enc,     *)
-(* aes128_gcm_dec, aes256_gcm_enc and aes256_gcm_dec.                        *)
+(* Specification vocabulary for the AES-GCM bulk kernels: the 4-way          *)
+(* aes128_gcm_enc, aes128_gcm_dec, aes256_gcm_enc and aes256_gcm_dec, and    *)
+(* the 8-way _alt kernels such as aes256_gcm_dec_alt.                        *)
 (*                                                                           *)
 (* NIST SP 800-38D is big-endian: a 128-bit block is read as a byte string   *)
 (* with the first byte most significant.  The kernels hold blocks in the     *)
@@ -56,7 +57,7 @@ let nist_input_block = new_definition
     word_reversefields 8 (inblock i)`;;
 
 (* ------------------------------------------------------------------------- *)
-(* The GHASH key table, restricted to the entries the kernels actually read. *)
+(* The GHASH key table, restricted to the entries the 4-way kernels read.    *)
 (* The 4-way unrolled loop uses H^1..H^4 and their Karatsuba middle terms,   *)
 (* i.e. the first 6 entries (offsets 0..80) of the table gcm_init_v8         *)
 (* produces.  Each middle-term entry holds the lower power's term in its low *)
@@ -108,7 +109,7 @@ let htable_mem_8 = new_definition
 (* ------------------------------------------------------------------------- *)
 (* The number of blocks a whole-blocks kernel processes for the C argument   *)
 (* len_bits.  The 8-way unrolled kernels take whole blocks only: for any     *)
-(* len_bits that is not a multiple of 128 they process nothing and return   *)
+(* len_bits that is not a multiple of 128 they process nothing and return    *)
 (* 0, and a zero len_bits is zero blocks either way.                         *)
 (* ------------------------------------------------------------------------- *)
 

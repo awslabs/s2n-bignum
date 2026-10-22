@@ -7,11 +7,11 @@
 // Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[240], htable[24];
 // outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed
 //
-//    extern uint64_t aesv8_gcm_8x_dec_256_wb(const uint8_t *in, uint64_t len_bits,
-//                                            uint8_t *out, uint64_t *tag,
-//                                            uint8_t *ivec,
-//                                            const s2n_bignum_AES_KEY *key,
-//                                            const uint64_t *htable);
+//    extern uint64_t aes256_gcm_dec_alt(const uint8_t *in, uint64_t len_bits,
+//                                       uint8_t *out, uint64_t *tag,
+//                                       uint8_t *ivec,
+//                                       const s2n_bignum_AES_KEY *key,
+//                                       const uint64_t *htable);
 //
 // Processes the input "in" of "len_bits" bits under AES-256 in GCM mode: each
 // 16-byte block is decrypted in counter mode using the counter block "ivec"
@@ -46,6 +46,13 @@
 // "tag" and "ivec") must not overlap each other, "in", "key" or "htable"; in
 // particular, in-place operation (out == in) is not covered by the proof.
 //
+// This is an alternative to aes256_gcm_dec with the same arguments, for
+// processors with FEAT_SHA3, whose eor3 it uses. Unlike aes256_gcm_dec it
+// reads the whole 192-byte table, not just its first 96 bytes, it requires
+// in + len_bits/8 < 2^63, and when len_bits is not a multiple of 128 it
+// returns 0 without touching memory, where aes256_gcm_dec processes the
+// whole blocks.
+//
 // This routine does not enforce the NIST GCM message limit.
 // Callers must ensure the cumulative message length does not exceed 2^36 - 32 bytes (2^39 - 256 bits).
 //
@@ -75,17 +82,17 @@
 //    aligned in the default build. There is no alignment directive, so that
 //    a -DNO_IBT build is exactly this code without the bti c landing pad,
 //    as the proofs require; it enters the main loop at 12 mod 16.
-// Proofs: arm/proofs/aesv8_gcm_8x_dec_256_wb.ml.
+// Proofs: arm/proofs/aes256_gcm_dec_alt.ml.
 #include "_internal_s2n_bignum_arm.h"
 
         .arch armv8.2-a+crypto+sha3
         .text
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(aesv8_gcm_8x_dec_256_wb)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(aesv8_gcm_8x_dec_256_wb)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(aesv8_gcm_8x_dec_256_wb)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(aes256_gcm_dec_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(aes256_gcm_dec_alt)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(aes256_gcm_dec_alt)
 .align	4
-S2N_BN_SYMBOL(aesv8_gcm_8x_dec_256_wb):
+S2N_BN_SYMBOL(aes256_gcm_dec_alt):
 	CFI_START
 	AARCH64_VALID_CALL_TARGET
 	cbz	x1, L256_dec_ret
@@ -2047,7 +2054,7 @@ L256_dec_ret:	//reached only from the entry guard, before any save
 	.cfi_restore d15
 	mov	w0, #0x0
 	CFI_RET
-S2N_BN_SIZE_DIRECTIVE(aesv8_gcm_8x_dec_256_wb)
+S2N_BN_SIZE_DIRECTIVE(aes256_gcm_dec_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

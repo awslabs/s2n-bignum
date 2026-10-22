@@ -429,8 +429,8 @@ AES_XTS_OBJ = aes-xts/aes_xts_decrypt.o \
 AES_GCM_OBJ = aes_gcm/aes128_gcm_dec.o \
               aes_gcm/aes128_gcm_enc.o \
               aes_gcm/aes256_gcm_dec.o \
-              aes_gcm/aes256_gcm_enc.o \
-              aes_gcm/aesv8_gcm_8x_dec_256_wb.o
+              aes_gcm/aes256_gcm_dec_alt.o \
+              aes_gcm/aes256_gcm_enc.o
 
 OBJ = $(POINT_OBJ) $(BIGNUM_OBJ) $(AES_XTS_OBJ) $(AES_GCM_OBJ)
 
@@ -554,26 +554,14 @@ tutorial/safety.native: tutorial/safety.ml proofs/bignum_mux_4.ml \
                         curve25519/bignum_mod_n25519.o ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
-# The four software-pipelined AES-GCM proofs share the specification and
-# lemmas in arm/proofs/utils/aes_gcm_{spec,common}.ml.
+# The AES-GCM proofs share the specification and lemmas in
+# arm/proofs/utils/aes_gcm_{spec,common}.ml.
 AES_GCM_PROOF_UTILS = proofs/utils/aes_gcm_spec.ml proofs/utils/aes_gcm_common.ml
 aes_gcm/aes128_gcm_dec.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes128_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_dec.native: $(AES_GCM_PROOF_UTILS)
+aes_gcm/aes256_gcm_dec_alt.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
-# The 8x whole-blocks decrypt proof also loads its local lemma layer, the
-# counter/decrypt/reconstruction utilities, and the common GHASH lemmas.
-aes_gcm/aesv8_gcm_8x_dec_256_wb.native: $(AES_GCM_PROOF_UTILS) \
-                                        proofs/utils/aes_gcm_htable_kat.ml \
-                                        proofs/aesv8_gcm_8x_dec_256_lemmas.ml \
-                                        proofs/utils/aes_ctr_spec.ml \
-                                        proofs/utils/aes_gcm_dec_spec.ml \
-                                        proofs/utils/gcm_ctr_helpers.ml \
-                                        proofs/utils/aes_gcm_reconstruct.ml \
-                                        proofs/utils/aes_xts_common.ml \
-                                        ../common/ghash_nist_bridge.ml \
-                                        ../common/ghash_nblock_karatsuba.ml \
-                                        ../common/gmult_nblock_lemmas.ml
 
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \
