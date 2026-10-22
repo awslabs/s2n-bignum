@@ -88,7 +88,7 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_dec_256_wb):
 	cbz	x1, L256_dec_ret
 	tst	x1, #127				//whole-blocks contract: len_bits % 128 == 0
 	b.ne	L256_dec_ret			//not whole blocks: process nothing, return 0
-	CFI_PUSH2N(d8,d9,-80,80)
+	CFI_PUSH2N(d8,d9,80)
 	CFI_STACKSAVE2X(d10,d11,16,24)
 	CFI_STACKSAVE2X(d12,d13,32,40)
 	CFI_STACKSAVE2X(d14,d15,48,56)
@@ -1559,11 +1559,13 @@ L256_dec_epilogue:  //cascade and exact-8 drain converge here
 	st1	{ v19.16b }, [x3]
 L256_dec_frame_restore:	//the one frame restore; the 1-4 block path rejoins here
 	mov	x0, x9
+	.cfi_remember_state
 	CFI_STACKLOAD2(d10,d11,16)
 	CFI_STACKLOAD2(d12,d13,32)
 	CFI_STACKLOAD2(d14,d15,48)
 	CFI_POP2N(d8,d9,80)
-	CFI_RET
+	ret
+	.cfi_restore_state			//the code below still runs with the frame live
 
 
 L256_dec_exact8_drain:  //dedicated exact-8 GHASH drain (no no-op partial-tag eors)
@@ -2031,9 +2033,18 @@ eor3	v0.16b, v26.16b, v0.16b, v15.16b	//eor3 v0.16b, v26.16b, v0.16b, v15.16b	//
 L256_dec_w5r_done:	//rejoin the one epilogue: single `ret` for nblk >= 1
 	b	L256_dec_frame_restore
 
-L256_dec_ret:
+L256_dec_ret:	//reached only from the entry guard, before any save
+	.cfi_def_cfa_offset 0
+	.cfi_restore d8
+	.cfi_restore d9
+	.cfi_restore d10
+	.cfi_restore d11
+	.cfi_restore d12
+	.cfi_restore d13
+	.cfi_restore d14
+	.cfi_restore d15
 	mov	w0, #0x0
-	ret
+	CFI_RET
 S2N_BN_SIZE_DIRECTIVE(aesv8_gcm_8x_dec_256_wb)
 
 #if defined(__linux__) && defined(__ELF__)
