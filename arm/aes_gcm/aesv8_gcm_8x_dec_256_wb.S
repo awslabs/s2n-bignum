@@ -71,7 +71,10 @@
 //    (L256_dec_exact8_drain).
 //  - Rescheduling: a flatter counter setup, ext instead of ins for the
 //    Karatsuba middle terms in the GHASH tail, shorter odd-block middle-term
-//    chains in the tail, and a main loop aligned to 16 bytes.
+//    chains in the tail, and a main loop at offset 0x4c0, which is 16-byte
+//    aligned in the default build. There is no alignment directive, so that
+//    a -DNO_IBT build is exactly this code without the bti c landing pad,
+//    as the proofs require; it enters the main loop at 12 mod 16.
 // Proofs: arm/proofs/aesv8_gcm_8x_dec_256_wb.ml.
 #include "_internal_s2n_bignum_arm.h"
 
@@ -459,7 +462,6 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_dec_256_wb):
 	add	v30.4s, v30.4s, v31.4s		//CTR block 12
 	b.ge	L256_dec_prepretail					//do prepretail
 
-	.balign	16			//Neoverse-V1: main loop must enter at addr mod 16 = 0
 L256_dec_main_loop:	//main	loop start
 	rev32	v5.16b, v30.16b				//CTR block 8k+13
 	ldp	q26, q27, [x11, #0]					//load rk0, rk1
