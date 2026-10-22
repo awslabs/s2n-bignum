@@ -62,7 +62,7 @@ extern uint64_t aes256_gcm_dec(const uint8_t *in, uint64_t len_bits, uint8_t *ou
         uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
 
 // AES256_GCM_DEC_ALT (AES-256-GCM bulk decryption of whole blocks with GHASH tag update, 8 blocks at a time)
-// Unlike aes256_gcm_dec it needs FEAT_SHA3, reads the whole 192-byte htable (H^1..H^8), requires in + len_bits/8 < 2^63,
+// Unlike aes256_gcm_dec it needs FEAT_SHA3, reads the complete 192-byte H table produced by gcm_init_v8, requires in + len_bits/8 < 2^63,
 // and returns 0 without touching memory when len_bits is not a multiple of 128.
 // This routine does not enforce the NIST GCM message limit.
 // Callers must ensure the cumulative message length does not exceed 2^36 - 32 bytes (2^39 - 256 bits).

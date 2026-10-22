@@ -12793,6 +12793,26 @@ let AES256_GCM_DEC_ALT_SUBROUTINE_CORRECT = prove
     AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
+(* The exported theorem at the all-zero key.  With rk the FIPS-197 schedule  *)
+(* of that key, the key table precondition of                                *)
+(* AES256_GCM_DEC_ALT_SUBROUTINE_CORRECT rewrites, by                        *)
+(* HTABLE_MEM_8_AESAVS_ZERO_KEY_256 at the top of this file, to the twelve   *)
+(* 16-byte entries that gcm_init_v8 writes for the key, which are also the   *)
+(* bytes the C test aes_gcm_htable checks.  So the table described by the    *)
+(* exported statement itself, not only by the vocabulary it uses, is the     *)
+(* real one; the load fails here if the precondition is not of that form.    *)
+(* ------------------------------------------------------------------------- *)
+
+let AES256_GCM_DEC_ALT_ZERO_KEY_CORRECT =
+  let th = PURE_REWRITE_RULE[HTABLE_MEM_8_AESAVS_ZERO_KEY_256]
+   (INST [`AESAVS_ZERO_KEY_256_SCHEDULE`,`rk:int128 list`]
+     (SPEC_ALL AES256_GCM_DEC_ALT_SUBROUTINE_CORRECT)) in
+  if can (find_term (fun t -> is_const t && fst(dest_const t) = "htable_mem_8"))
+         (concl th)
+  then failwith "AES256_GCM_DEC_ALT_ZERO_KEY_CORRECT: table not rewritten"
+  else GEN_ALL th;;
+
+(* ------------------------------------------------------------------------- *)
 (* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
