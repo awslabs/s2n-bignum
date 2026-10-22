@@ -3415,15 +3415,6 @@ let D_ZERO_LE8 = prove
 (* word(16*nblk); no pointer facts).  Usage in the steppers: discharge it     *)
 (* into the assumptions BEFORE ARM_STEPS_TAC (7--8) so the stepper folds the  *)
 (* branch.                                                                     *)
-let IVAL_WORD_SMALL_64 = prove
- (`!n. n < 2 EXP 63 ==> ival (word n:int64) = &n`,
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `val (word n:int64) = n` ASSUME_TAC THENL
-   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC;
-    ALL_TAC] THEN
-  ASM_SIMP_TAC[IVAL_EQ_VAL; DIMINDEX_64;
-               ARITH_RULE `n < 2 EXP 63 ==> n < 2 EXP (64 - 1)`]);;
-
 let GUARD_LE_FALLTHRU = prove
  (`!nblk. 5 <= nblk /\ 16 * nblk < 2 EXP 63
       ==> (~(~(val (word_sub (word (16 * nblk):int64) (word 64)) = 0) /\
@@ -3436,7 +3427,7 @@ let GUARD_LE_FALLTHRU = prove
    [MP_TAC(SPECL [`16 * nblk`; `64`] (INST_TYPE[`:64`,`:N`] WORD_SUB)) THEN
     ASM_SIMP_TAC[ARITH_RULE `5 <= nblk ==> 64 <= 16 * nblk`] THEN
     DISCH_THEN(SUBST1_TAC o SYM) THEN REFL_TAC; ALL_TAC] THEN
-  ASM_SIMP_TAC[IVAL_WORD_SMALL_64;
+  ASM_SIMP_TAC[IVAL_WORD_SMALL;
                ARITH_RULE `16 * nblk < 2 EXP 63 ==> 16 * nblk - 64 < 2 EXP 63`] THEN
   REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
   SUBGOAL_THEN `(16 * nblk - 64) MOD 2 EXP 64 = 16 * nblk - 64` SUBST1_TAC THENL
@@ -11041,27 +11032,8 @@ let WBN_DEC_VALID_CALL_CORRECT = prove
            memory :> bytes (word_sub stackpointer (word 80),80)])`,
   WBN_EXPORT_FROM_SPINE_TAC WBN_DEC_SUBROUTINE_BYTELIST);;
 
-(* The number of complete blocks processed by the public decrypt entry point.
-   Both entry-reject paths map to zero blocks: a zero bit length is already
-   zero under DIV, while a non-multiple of 128 is rejected before any memory
-   access.  The name is decrypt-specific so that it cannot clash with an
-   encrypt-side counterpart loaded alongside it. *)
-let gcm_dec_wb_blocks = new_definition
- `gcm_dec_wb_blocks (bit_len:int64) =
-    if val bit_len MOD 128 = 0 then val bit_len DIV 128 else 0`;;
-
-let GCM_DEC_WB_BLOCKS_VALID = prove
- (`!bit_len:int64.
-      val bit_len MOD 128 = 0
-      ==> val bit_len = 128 * gcm_dec_wb_blocks bit_len`,
-  REWRITE_TAC[gcm_dec_wb_blocks] THEN REPEAT STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN
-  MP_TAC(SPECL [`val(bit_len:int64)`; `128`]
-    (CONJUNCT2 DIVISION_SIMP)) THEN
-  ASM_ARITH_TAC);;
-
 (* THE EXPORTED SUBROUTINE CONTRACT (the AAPCS64-callable headline result),
-   for an arbitrary bit_len.  gcm_dec_wb_blocks bit_len is the number of
+   for an arbitrary bit_len.  gcm_wb_blocks bit_len is the number of
    blocks processed, and every data-dependent clause is indexed by it, so one
    postcondition describes all three paths:
    - a non-multiple of 128 is rejected by the entry guard (cbz falls through,
@@ -11077,18 +11049,18 @@ let GCM_DEC_WB_BLOCKS_VALID = prove
 let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT = prove
  (`!pc stackpointer in_p bit_len out_p xi_p ivec_p key_p htbl_p inblock rk
     tag0 nonce c returnaddress.
-    val in_p + 16 * gcm_dec_wb_blocks bit_len < 2 EXP 63 /\
+    val in_p + 16 * gcm_wb_blocks bit_len < 2 EXP 63 /\
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
-    [out_p,16 * gcm_dec_wb_blocks bit_len; xi_p,16; ivec_p,16]
+    [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16]
     [word pc, LENGTH aesv8_gcm_8x_dec_256_wb_mc;
-     in_p,16 * gcm_dec_wb_blocks bit_len; key_p,240; htbl_p,192;
+     in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192;
      word_sub stackpointer (word 80),80] /\
     PAIRWISE nonoverlapping
-    [out_p,16 * gcm_dec_wb_blocks bit_len; xi_p,16; ivec_p,16] /\
+    [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16] /\
     ALL (nonoverlapping (word_sub stackpointer (word 80),80))
     [word pc, LENGTH aesv8_gcm_8x_dec_256_wb_mc;
-     in_p,16 * gcm_dec_wb_blocks bit_len; key_p,240; htbl_p,192]
+     in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192]
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
               read PC s = word pc /\
@@ -11096,7 +11068,7 @@ let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT = prove
               read X30 s = returnaddress /\
               C_ARGUMENTS
               [in_p; bit_len; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
-              (!j. j < gcm_dec_wb_blocks bit_len
+              (!j. j < gcm_wb_blocks bit_len
                    ==> read (memory :> bytes128
                               (word_add in_p (word (16 * j)))) s = inblock j) /\
               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
@@ -11106,8 +11078,8 @@ let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT = prove
               MAP (word_reversefields 8) rk /\
               htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htbl_p s)
          (\s. read PC s = returnaddress /\
-              C_RETURN s = word (16 * gcm_dec_wb_blocks bit_len) /\
-              (!j. j < gcm_dec_wb_blocks bit_len
+              C_RETURN s = word (16 * gcm_wb_blocks bit_len) /\
+              (!j. j < gcm_wb_blocks bit_len
                    ==> read (memory :> bytes128
                               (word_add out_p (word (16 * j)))) s =
                        word_xor (aes_ctr_block aes256_cipher c nonce rk j)
@@ -11116,23 +11088,23 @@ let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT = prove
               word_reversefields 8
               (nist_ghash (aes256_cipher (word 0) rk) tag0
               (list_of_seq (nist_input_block inblock)
-                           (gcm_dec_wb_blocks bit_len))) /\
+                           (gcm_wb_blocks bit_len))) /\
               read (memory :> bytes128 ivec_p) s =
               word_reversefields 8
-                (ctr_block nonce (gcm_dec_wb_blocks bit_len + c)))
+                (ctr_block nonce (gcm_wb_blocks bit_len + c)))
          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE
           [memory :> bytes
-             (out_p,16 * gcm_dec_wb_blocks bit_len);
+             (out_p,16 * gcm_wb_blocks bit_len);
            memory :> bytes (xi_p,16);
            memory :> bytes (ivec_p,16);
            memory :> bytes (word_sub stackpointer (word 80),80)])`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
-  ABBREV_TAC `nblk = gcm_dec_wb_blocks bit_len` THEN
+  ABBREV_TAC `nblk = gcm_wb_blocks bit_len` THEN
   ASM_CASES_TAC `val(bit_len:int64) MOD 128 = 0` THENL
    [(* Whole blocks, including zero: bit_len = word (128 * nblk). *)
     SUBGOAL_THEN `val(bit_len:int64) = 128 * nblk` ASSUME_TAC THENL
-     [EXPAND_TAC "nblk" THEN ASM_SIMP_TAC[GCM_DEC_WB_BLOCKS_VALID];
+     [EXPAND_TAC "nblk" THEN ASM_SIMP_TAC[GCM_WB_BLOCKS_VALID];
       ALL_TAC] THEN
     SUBGOAL_THEN `128 * nblk < 2 EXP 64` ASSUME_TAC THENL
      [MP_TAC(ISPEC `bit_len:int64` VAL_BOUND_64) THEN ASM_REWRITE_TAC[];
@@ -11148,7 +11120,7 @@ let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT = prove
   (* A non-multiple of 128: cbz falls through, tst/b.ne rejects, and no
      memory is touched. *)
   SUBGOAL_THEN `nblk = 0` SUBST_ALL_TAC THENL
-   [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_dec_wb_blocks] THEN
+   [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_wb_blocks] THEN
     ASM_REWRITE_TAC[COND_CLAUSES];
     ALL_TAC] THEN
   SUBGOAL_THEN `~(val(bit_len:int64) = 0)` ASSUME_TAC THENL
@@ -12455,7 +12427,7 @@ let wrapper_witness_template =
             EventLoad (word_add sp (word 16),16)]
            (APPEND
              (f_events_core in_p key_p htbl_p out_p xi_p ivec_p
-               (gcm_dec_wb_blocks bit_len) pc sp)
+               (gcm_wb_blocks bit_len) pc sp)
              [EventStore (word_add sp (word 48),16);
               EventStore (word_add sp (word 32),16);
               EventStore (word_add sp (word 16),16); EventStore (sp,16);
@@ -12499,12 +12471,12 @@ let ARBITRARY_WRAPPER_SAFE_TAC coreth =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES;PAIRWISE;ALLPAIRS;ALL] THEN
   REWRITE_TAC[C_ARGUMENTS;C_RETURN;SOME_FLAGS] THEN REPEAT GEN_TAC THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN BETA_TAC THEN
-  ABBREV_TAC `nblk = gcm_dec_wb_blocks bit_len` THEN
+  ABBREV_TAC `nblk = gcm_wb_blocks bit_len` THEN
   ASM_CASES_TAC `val(bit_len:int64) MOD 128 = 0` THENL
    [ALL_TAC;
     (* Invalid non-multiple: reject before any memory access. *)
     SUBGOAL_THEN `nblk = 0` SUBST_ALL_TAC THENL
-     [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_dec_wb_blocks] THEN
+     [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_wb_blocks] THEN
       ASM_REWRITE_TAC[COND_CLAUSES];
       ALL_TAC] THEN
     SUBGOAL_THEN `~(val(bit_len:int64) = 0)` ASSUME_TAC THENL
@@ -12525,7 +12497,7 @@ let ARBITRARY_WRAPPER_SAFE_TAC coreth =
   ASM_CASES_TAC `val(bit_len:int64) = 0` THENL
    [(* Zero: cbz returns before the stack saves. *)
     SUBGOAL_THEN `nblk = 0` SUBST_ALL_TAC THENL
-     [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_dec_wb_blocks] THEN
+     [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_wb_blocks] THEN
       ASM_REWRITE_TAC[COND_CLAUSES] THEN CONV_TAC NUM_REDUCE_CONV;
       ALL_TAC] THEN
     SUBGOAL_THEN `bit_len:int64 = word 0` SUBST_ALL_TAC THENL
@@ -12538,14 +12510,14 @@ let ARBITRARY_WRAPPER_SAFE_TAC coreth =
   (* Valid nonzero: recover word (128*nblk), then use the valid-only core
      safety theorem inside the existing wrapper simulation. *)
   SUBGOAL_THEN `1 <= nblk` ASSUME_TAC THENL
-   [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_dec_wb_blocks] THEN
+   [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_wb_blocks] THEN
     ASM_REWRITE_TAC[] THEN
     MP_TAC(SPECL [`val(bit_len:int64)`; `128`]
       (CONJUNCT2 DIVISION_SIMP)) THEN
     ASM_ARITH_TAC;
     ALL_TAC] THEN
   SUBGOAL_THEN `val(bit_len:int64) = 128 * nblk` ASSUME_TAC THENL
-   [EXPAND_TAC "nblk" THEN ASM_SIMP_TAC[GCM_DEC_WB_BLOCKS_VALID];
+   [EXPAND_TAC "nblk" THEN ASM_SIMP_TAC[GCM_WB_BLOCKS_VALID];
     ALL_TAC] THEN
   SUBGOAL_THEN `128 * nblk < 2 EXP 64` ASSUME_TAC THENL
    [MP_TAC(ISPEC `bit_len:int64` VAL_BOUND_64) THEN ASM_REWRITE_TAC[];
@@ -12611,7 +12583,7 @@ let full_spec,public_vars = mk_safety_spec
    - access bounds sized by the C objects: in/out len_bits/8, tag 16, ivec 16,
      key 240, htable 24 * 8 = 192, and the 80-byte frame;
    - by keep_maychanges, the correctness theorem's MAYCHANGE frame, based on
-     gcm_dec_wb_blocks.
+     gcm_wb_blocks.
    Apart from the loaded code it constrains no memory contents (no key
    schedule, table, tag, counter or data precondition), so it holds for every
    content.
@@ -12622,18 +12594,18 @@ let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_SAFE = prove
  (`exists f_events.
      forall e pc stackpointer in_p bit_len out_p xi_p ivec_p key_p htbl_p
             returnaddress.
-         val in_p + 16 * gcm_dec_wb_blocks bit_len < 2 EXP 63 /\
+         val in_p + 16 * gcm_wb_blocks bit_len < 2 EXP 63 /\
          aligned 16 stackpointer /\
          ALLPAIRS nonoverlapping
-         [out_p,16 * gcm_dec_wb_blocks bit_len; xi_p,16; ivec_p,16]
+         [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16]
          [word pc,LENGTH aesv8_gcm_8x_dec_256_wb_mc;
-          in_p,16 * gcm_dec_wb_blocks bit_len; key_p,240; htbl_p,192;
+          in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192;
           word_sub stackpointer (word 80),80] /\
          PAIRWISE nonoverlapping
-         [out_p,16 * gcm_dec_wb_blocks bit_len; xi_p,16; ivec_p,16] /\
+         [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16] /\
          ALL (nonoverlapping (word_sub stackpointer (word 80),80))
          [word pc,LENGTH aesv8_gcm_8x_dec_256_wb_mc;
-          in_p,16 * gcm_dec_wb_blocks bit_len; key_p,240; htbl_p,192]
+          in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192]
          ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     aesv8_gcm_8x_dec_256_wb_mc /\
@@ -12657,7 +12629,7 @@ let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_SAFE = prove
                         word_sub stackpointer (word 80),80]))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
-              [memory :> bytes (out_p,16 * gcm_dec_wb_blocks bit_len);
+              [memory :> bytes (out_p,16 * gcm_wb_blocks bit_len);
                memory :> bytes (xi_p,16);
                memory :> bytes (ivec_p,16);
                memory :> bytes (word_sub stackpointer (word 80),80)])`,

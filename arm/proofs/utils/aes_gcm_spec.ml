@@ -104,3 +104,14 @@ let htable_mem_8 = new_definition
               (karatsuba_mid(h_power h 6) : 64 word) /\
   read (memory :> bytes128 (word_add ptr (word 176))) s =
     byteswap128(h_power h 7)`;;
+
+(* ------------------------------------------------------------------------- *)
+(* The number of blocks a whole-blocks kernel processes for the C argument   *)
+(* len_bits.  The 8-way unrolled kernels take whole blocks only: for any     *)
+(* len_bits that is not a multiple of 128 they process nothing and return   *)
+(* 0, and a zero len_bits is zero blocks either way.                         *)
+(* ------------------------------------------------------------------------- *)
+
+let gcm_wb_blocks = new_definition
+ `gcm_wb_blocks (bit_len:int64) =
+    if val bit_len MOD 128 = 0 then val bit_len DIV 128 else 0`;;

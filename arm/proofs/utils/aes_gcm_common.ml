@@ -924,6 +924,34 @@ let HTABLE_MEM_8_KEY_CONV cipher_def ks_def : conv =
   HTABLE_MEM_8_CONV;;
 
 (* ------------------------------------------------------------------------- *)
+(* The whole-blocks count: a multiple of 128 is 128 times its block count.   *)
+(* ------------------------------------------------------------------------- *)
+
+let GCM_WB_BLOCKS_VALID = prove
+ (`!bit_len:int64.
+      val bit_len MOD 128 = 0
+      ==> val bit_len = 128 * gcm_wb_blocks bit_len`,
+  REWRITE_TAC[gcm_wb_blocks] THEN REPEAT STRIP_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  MP_TAC(SPECL [`val(bit_len:int64)`; `128`]
+    (CONJUNCT2 DIVISION_SIMP)) THEN
+  ASM_ARITH_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* A 64-bit word below 2^63 reads the same as a signed and as an unsigned    *)
+(* number, as the signed compares of lengths and pointers need.              *)
+(* ------------------------------------------------------------------------- *)
+
+let IVAL_WORD_SMALL = prove
+ (`!n. n < 2 EXP 63 ==> ival (word n:int64) = &n`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `val (word n:int64) = n` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  ASM_SIMP_TAC[IVAL_EQ_VAL; DIMINDEX_64;
+               ARITH_RULE `n < 2 EXP 63 ==> n < 2 EXP (64 - 1)`]);;
+
+(* ------------------------------------------------------------------------- *)
 (* Stepping the software-pipelined loop bodies.                              *)
 (* ------------------------------------------------------------------------- *)
 
