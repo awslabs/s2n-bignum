@@ -83,8 +83,8 @@
         S2N_BN_SYM_PRIVACY_DIRECTIVE(aesv8_gcm_8x_dec_256_wb)
 .align	4
 S2N_BN_SYMBOL(aesv8_gcm_8x_dec_256_wb):
-	AARCH64_VALID_CALL_TARGET
 	CFI_START
+	AARCH64_VALID_CALL_TARGET
 	cbz	x1, L256_dec_ret
 	tst	x1, #127				//whole-blocks contract: len_bits % 128 == 0
 	b.ne	L256_dec_ret			//not whole blocks: process nothing, return 0
