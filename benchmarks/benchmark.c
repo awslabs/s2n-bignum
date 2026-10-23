@@ -2186,12 +2186,12 @@ int main(int argc, char *argv[])
   timingtest(aes&&sha3,"aes256_gcm_dec_alt (4096 bytes)",call_aes256_gcm_dec_alt_4096);
 
   // AES-256-GCM 8x encrypt kernel needs both AES and SHA3 (eor3)
-  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (256 bytes)",call_aesv8_gcm_8x_enc_256_wb_256);
-  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (128 bytes)",call_aesv8_gcm_8x_enc_256_wb_128);
-  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (64 bytes)",call_aesv8_gcm_8x_enc_256_wb_64);
-  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (48 bytes)",call_aesv8_gcm_8x_enc_256_wb_48);
-  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (32 bytes)",call_aesv8_gcm_8x_enc_256_wb_32);
   timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (16 bytes)",call_aesv8_gcm_8x_enc_256_wb_16);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (32 bytes)",call_aesv8_gcm_8x_enc_256_wb_32);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (48 bytes)",call_aesv8_gcm_8x_enc_256_wb_48);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (64 bytes)",call_aesv8_gcm_8x_enc_256_wb_64);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (128 bytes)",call_aesv8_gcm_8x_enc_256_wb_128);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (256 bytes)",call_aesv8_gcm_8x_enc_256_wb_256);
   timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (512 bytes)",call_aesv8_gcm_8x_enc_256_wb_512);
   timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (1024 bytes)",call_aesv8_gcm_8x_enc_256_wb_1024);
   timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (4096 bytes)",call_aesv8_gcm_8x_enc_256_wb_4096);
