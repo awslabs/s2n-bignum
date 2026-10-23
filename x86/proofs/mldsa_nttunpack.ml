@@ -404,12 +404,11 @@ let unpack_nttunpack = new_definition
 (* ------------------------------------------------------------------------- *)
 
 let NTTUNPACK_UNORDER_EQUIV = prove
-  (`!i. i < 256 ==> nttunpack_unorder i = mldsa_avx2_ntt_order'(bitreverse8 i)`,
-  CONV_TAC EXPAND_CASES_CONV THEN
-  REWRITE_TAC[nttunpack_unorder; mldsa_avx2_ntt_order'; bitreverse8; bitmap; numbit; bitval] THEN
+ (`!i. i < 256 ==> nttunpack_unorder i = mldsa_avx2_ntt_order'(bitreverse8 i)`,
+  REWRITE_TAC[nttunpack_unorder; mldsa_avx2_ntt_order'; bitreverse8] THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
-  CONV_TAC NUM_REDUCE_CONV);;
+  CONV_TAC EXPAND_CASES_CONV THEN
+  CONV_TAC(DEPTH_CONV(NUM_RED_CONV ORELSEC BITMAP_CONV)));;
 
 (* ------------------------------------------------------------------------- *)
 (* Main correctness theorem                                                  *)
