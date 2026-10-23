@@ -7,7 +7,7 @@
 // Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[240], htable[24];
 // outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed
 //
-//    extern uint64_t aesv8_gcm_8x_enc_256_wb(const uint8_t *in, uint64_t len_bits,
+//    extern uint64_t aes256_gcm_enc_alt(const uint8_t *in, uint64_t len_bits,
 //                                            uint8_t *out, uint64_t *tag,
 //                                            uint8_t *ivec,
 //                                            const s2n_bignum_AES_KEY *key,
@@ -72,15 +72,15 @@
 #include "_internal_s2n_bignum_arm.h"
 
         .arch	armv8.2-a+crypto+sha3
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(aesv8_gcm_8x_enc_256_wb)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(aesv8_gcm_8x_enc_256_wb)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(aesv8_gcm_8x_enc_256_wb)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(aes256_gcm_enc_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(aes256_gcm_enc_alt)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(aes256_gcm_enc_alt)
         .text
         .balign 4
 
 #define STACK_SIZE 80 // 4*16 (d8-d15) + 16 (modulo constant scratch)
 
-S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
+S2N_BN_SYMBOL(aes256_gcm_enc_alt):
         CFI_START
         AARCH64_VALID_CALL_TARGET
 
@@ -2166,7 +2166,7 @@ L256_enc_small_reduce:  //shared final GHASH reduction + tbl(v12) reverse + tag 
         .cfi_endproc
 
 
-S2N_BN_SIZE_DIRECTIVE(aesv8_gcm_8x_enc_256_wb)
+S2N_BN_SIZE_DIRECTIVE(aes256_gcm_enc_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

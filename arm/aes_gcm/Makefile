@@ -33,7 +33,7 @@ OBJ = aes128_gcm_dec.o \
       aes256_gcm_dec.o \
       aes256_gcm_dec_alt.o \
       aes256_gcm_enc.o \
-      aesv8_gcm_8x_enc_256_wb.o
+      aes256_gcm_enc_alt.o
 
 
 %.o : %.S ; $(CC) -E -I../../include $< | $(GAS) -o $@ -

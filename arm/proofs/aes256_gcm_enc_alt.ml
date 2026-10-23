@@ -4,7 +4,7 @@
  *)
 
 (* ========================================================================= *)
-(* AES-256-GCM 8x whole-blocks encrypt kernel aesv8_gcm_8x_enc_256_wb.       *)
+(* AES-256-GCM 8x whole-blocks encrypt kernel aes256_gcm_enc_alt.       *)
 (*                                                                           *)
 (* Correctness and safety proofs for the kernel derived from AWS-LC's        *)
 (* aesv8_gcm_8x_enc_256.  The input bit length must be a multiple of 128     *)
@@ -26,11 +26,11 @@ needs "common/polyval_ghash.ml";;
 (* The machine code.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-(* print_literal_from_elf "arm/aes_gcm/aesv8_gcm_8x_enc_256_wb.o";;          *)
+(* print_literal_from_elf "arm/aes_gcm/aes256_gcm_enc_alt.o";;          *)
 
-let aesv8_gcm_8x_enc_256_wb_mc =
-  define_assert_from_elf "aesv8_gcm_8x_enc_256_wb_mc"
-                         "arm/aes_gcm/aesv8_gcm_8x_enc_256_wb.o"
+let aes256_gcm_enc_alt_mc =
+  define_assert_from_elf "aes256_gcm_enc_alt_mc"
+                         "arm/aes_gcm/aes256_gcm_enc_alt.o"
 [
   0xd503245f;       (* arm_BTI *)
   0xb4008f01;       (* arm_CBZ X1 (word 4576) *)
@@ -1662,10 +1662,10 @@ let aesv8_gcm_8x_enc_256_wb_mc =
 (* TRIMMED code -- the pad removed -- and the default build's theorem is     *)
 (* then derived from the -DNO_IBT one by ARM_ADD_IBT_RULE.                   *)
 
-let aesv8_gcm_8x_enc_256_wb_tmc =
-  define_trimmed "aesv8_gcm_8x_enc_256_wb_tmc" aesv8_gcm_8x_enc_256_wb_mc;;
+let aes256_gcm_enc_alt_tmc =
+  define_trimmed "aes256_gcm_enc_alt_tmc" aes256_gcm_enc_alt_mc;;
 
-let AESV8_GCM_8X_ENC_256_WB_EXEC = ARM_MK_EXEC_RULE aesv8_gcm_8x_enc_256_wb_tmc;;
+let AES256_GCM_ENC_ALT_EXEC = ARM_MK_EXEC_RULE aes256_gcm_enc_alt_tmc;;
 
 (* ========================================================================= *)
 (* Local lemmas: reversefields equivalences, AES-256 and counter-block       *)
@@ -2034,7 +2034,7 @@ let WB_WADD_RULE = REWRITE_RULE[WORD_RULE
 (* hash=951408941 both), and block 41--200 21.9s->18.9s (~13.5%, ~3.0s),     *)
 (* reproduced twice.                                                         *)
 let NSTEP n =
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [n] THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [n] THEN
   RULE_ASSUM_TAC(fun th -> SUBWORD_NORM_RULE (NORMOFF_RULE (WB_WADD_RULE th)));;
 
 (* ------------------------------------------------------------------------- *)
@@ -2077,7 +2077,7 @@ let is_ghash_acc th =
 (* 260--289 14.35s->11.58s (~19%, 2.8s), each reproduced twice. MAIN_LOOP is *)
 (* the file's largest drive (1--339), so the whole-body speedup is ~19%.     *)
 let NSTEP_G n =
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [n] THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [n] THEN
   RULE_ASSUM_TAC(fun th ->
     if is_ghash_acc th then th
     else SUBWORD_NORM_RULE (NORMOFF_RULE (WB_WADD_RULE th)));;
@@ -2128,7 +2128,7 @@ let LDP_STEP4_TAC n =
   let sprev = "s"^string_of_int (n-1) in
   let sn = "s"^string_of_int n in
   INBLOCKS_TAC sprev THEN
-  ARM_VERBOSE_STEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC sn THEN
+  ARM_VERBOSE_STEP_TAC AES256_GCM_ENC_ALT_EXEC sn THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
     `word_add (word_add b (word m)) (word nn):int64 = word_add b (word(m+nn))`]) THEN
   RULE_ASSUM_TAC NORMOFF_RULE THEN
@@ -2574,7 +2574,7 @@ let LDP_SETUP_TAC n =
   let sprev = "s"^string_of_int (n-1) in
   let sn = "s"^string_of_int n in
   SETUP_INBLOCKS_TAC sprev THEN
-  ARM_VERBOSE_STEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC sn THEN
+  ARM_VERBOSE_STEP_TAC AES256_GCM_ENC_ALT_EXEC sn THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
     `word_add (word_add b (word m)) (word nn):int64 = word_add b (word(m+nn))`]) THEN
   RULE_ASSUM_TAC NORMOFF_RULE THEN
@@ -2906,7 +2906,7 @@ let MAIN_LOOP_OUT_DISJSPLIT = ARITH_RULE
    j = 8*(i+1) + 2 \/ j = 8*(i+1) + 3 \/ j = 8*(i+1) + 4 \/
    j = 8*(i+1) + 5 \/ j = 8*(i+1) + 6 \/ j = 8*(i+1) + 7`;;
 
-let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
+let AES256_GCM_ENC_ALT_MAIN_LOOP = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb k pc.
     ~(k = 0) /\
@@ -2914,13 +2914,13 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
     end_p = word_add in_p (word (128 * (k + 1))) /\
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb)]
       [(in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (tag_p, 16); (ivec_p, 16); (mod_p, 8)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x4c0) /\
            read X0 s = word_add in_p (word (128 * (0 + 1))) /\
            read X2 s = word_add out_p (word (128 * (0 + 1))) /\
@@ -2963,7 +2963,7 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
                 ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
                     word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)) /\
            ((read NF s <=> read VF s) <=> (0 = k)))
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xa10) /\
            read X0 s = word_add in_p (word (128 * (k + 1))) /\
            read X2 s = word_add out_p (word (128 * (k + 1))) /\
@@ -3147,8 +3147,8 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
       REPEAT CONJ_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
       ASM_ARITH_TAC;
       ALL_TAC] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-      `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+      `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
     MAP_EVERY NSTEP_G (1--294) THEN
     LDP_STEP4_TAC 295 THEN
     MAP_EVERY NSTEP_G (296--302) THEN
@@ -3319,12 +3319,12 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
 
     (* Subgoal 4: back-edge taken (0 < i < k => b.lt branches back) *)
     REPEAT STRIP_TAC THEN
-    ARM_SIM_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1] THEN
+    ARM_SIM_TAC AES256_GCM_ENC_ALT_EXEC [1] THEN
     ASM_REWRITE_TAC[];
 
     (* Subgoal 5: exit fall-through (i = k => GE, b.lt not taken) *)
     REPEAT STRIP_TAC THEN
-    ARM_SIM_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1] THEN
+    ARM_SIM_TAC AES256_GCM_ENC_ALT_EXEC [1] THEN
     ASM_REWRITE_TAC[]]);;
 
 (* the SETUP Q30 (rev32 next-group counter) reconstruction.  A               *)
@@ -3514,7 +3514,7 @@ let SETUP_RECON_TAC_GEN : tactic =
 (*                                                                           *)
 (* This region: 0x30-0x8c builds the 8 CTR keystream inputs v0..v7 (rev32 of *)
 (* the counter) + loads rk0/rk1; 0x90-0x418 runs the 14 AES rounds on v0..v7 *)
-(* (= AESV8_GCM_8X_ENC_256_AES_SETUP region), with the tag loaded into Q19   *)
+(* (= AES256_GCM_ENC_ALT_AES_SETUP region), with the tag loaded into Q19   *)
 (* at 0x2e0 (ld1 v19; ext; rev64 => PLAIN tag0, confirmed by                 *)
 (* PLAIN_Q19_CHECK); 0x41c sets X4 = in_p + byte_len (tail end-ptr) and does *)
 (* the b.ge tail check (NOT taken when k>=1); 0x428-0x460 loads the 8        *)
@@ -3578,7 +3578,7 @@ let SETUP_RECON_TAC_GEN : tactic =
 (*       plain Q19 = nist_ghash..(8*0) = tag0, proved trivially).            *)
 (* ========================================================================= *)
 
-let AESV8_GCM_8X_ENC_256_SETUP_GEN = prove
+let AES256_GCM_ENC_ALT_SETUP_GEN = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
      tag0 nonce c rk inblock nb k pc.
     ~(k = 0) /\
@@ -3589,13 +3589,13 @@ let AESV8_GCM_8X_ENC_256_SETUP_GEN = prove
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb)]
       [(in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (tag_p, 16); (ivec_p, 16); (word_add stackpointer (word 0x40), 8)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -3616,7 +3616,7 @@ let AESV8_GCM_8X_ENC_256_SETUP_GEN = prove
            (!j. j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j))
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x4c0) /\
            read X0 s = word_add in_p (word (128 * (0 + 1))) /\
            read X2 s = word_add out_p (word (128 * (0 + 1))) /\
@@ -3668,8 +3668,8 @@ let AESV8_GCM_8X_ENC_256_SETUP_GEN = prove
               NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-      `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+      `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_8; htable_mem_4]) THEN
   SUBGOAL_THEN `~(nb = 4)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `5 <= nb` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
@@ -3706,7 +3706,7 @@ let AESV8_GCM_8X_ENC_256_SETUP_GEN = prove
 (* PREPRETAIL_GEN's precond at 0x9f0 in the k=0 (8*0) form (flag conjunct    *)
 (* dropped).  0-hyp.                                                         *)
 (* ------------------------------------------------------------------------- *)
-let AESV8_GCM_8X_ENC_256_SETUP_G1 = prove
+let AES256_GCM_ENC_ALT_SETUP_G1 = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
      tag0 nonce c rk inblock nb k pc.
     k = 0 /\
@@ -3717,13 +3717,13 @@ let AESV8_GCM_8X_ENC_256_SETUP_G1 = prove
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb)]
       [(in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (tag_p, 16); (ivec_p, 16); (word_add stackpointer (word 0x40), 8)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -3744,7 +3744,7 @@ let AESV8_GCM_8X_ENC_256_SETUP_G1 = prove
            (!j. j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j))
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xa10) /\
            read X0 s = word_add in_p (word (128 * (0 + 1))) /\
            read X2 s = word_add out_p (word (128 * (0 + 1))) /\
@@ -3795,8 +3795,8 @@ let AESV8_GCM_8X_ENC_256_SETUP_G1 = prove
               NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-      `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+      `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_8; htable_mem_4]) THEN
   SUBGOAL_THEN `~(nb = 4)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `5 <= nb` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
@@ -3954,7 +3954,7 @@ let NSTEP_GP_WADD_RULE = REWRITE_RULE[WORD_RULE
 (* that lack it.  Measured ~4.7% on the full (10--136) WB_TAIL drive, twice, *)
 (* bit-identical goal signature (see has_wadd_nest / has_word_of_sum above). *)
 let NSTEP_GP n =
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [n] THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [n] THEN
   RULE_ASSUM_TAC(fun th ->
     if is_ghash_acc_pp th then th
     else
@@ -4057,20 +4057,20 @@ let PP_DISPATCH : tactic = fun (asl,w as gl) ->
 (* case-split k=0).  The non-generalized duplicate was removed (review E7),  *)
 (* so this is now the sole prepretail-stage theorem.                         *)
 (* ------------------------------------------------------------------------- *)
-let AESV8_GCM_8X_ENC_256_PREPRETAIL_GEN = prove
+let AES256_GCM_ENC_ALT_PREPRETAIL_GEN = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb k pc.
     8 * (k + 1) <= nb /\
     end_p = word_add in_p (word (128 * (k + 1))) /\
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb)]
       [(in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (tag_p, 16); (ivec_p, 16); (mod_p, 8)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xa10) /\
            read X0 s = word_add in_p (word (128 * (k + 1))) /\
            read X2 s = word_add out_p (word (128 * (k + 1))) /\
@@ -4112,7 +4112,7 @@ let AESV8_GCM_8X_ENC_256_PREPRETAIL_GEN = prove
            (!j. j < 8 * (k + 1)
                 ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
                     word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)))
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * (k + 1))) /\
            read X2 s = word_add out_p (word (128 * (k + 1))) /\
@@ -4171,8 +4171,8 @@ let AESV8_GCM_8X_ENC_256_PREPRETAIL_GEN = prove
               ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   MAP_EVERY NSTEP_GP (1--308) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN PP_DISPATCH);;
@@ -4515,7 +4515,7 @@ let TAIL_Q19_FOLD_REM1 =
 let FOLD_Q19_REM1 : tactic =
   fold_q19_at `read Q19 s82 : int128` `8 * g + 1` TAIL_Q19_FOLD_REM1;;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM1 = prove
+let AES256_GCM_ENC_ALT_TAIL_REM1 = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 1 /\
@@ -4523,12 +4523,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM1 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -4579,8 +4579,8 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM1 = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   (* Assert the single tail input block; WITHOUT this the plaintext load stays *)
   (* a raw memory read and the whole ciphertext/GHASH chain drops.             *)
   SUBGOAL_THEN
@@ -4730,7 +4730,7 @@ let TAIL_Q19_FOLD_REM2 =
 let FOLD_Q19_REM2 : tactic =
   fold_q19_at `read Q19 s53 : int128` `8 * g + 2` TAIL_Q19_FOLD_REM2;;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM2 = prove
+let AES256_GCM_ENC_ALT_TAIL_REM2 = prove
  (`!q27_init in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 2 /\
@@ -4738,12 +4738,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM2 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -4816,8 +4816,8 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM2 = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   (* Assert the 2 tail input blocks; WITHOUT this the plaintext loads stay      *)
   (* raw memory reads and the ciphertext/GHASH chain drops.                     *)
   SUBGOAL_THEN
@@ -4900,19 +4900,19 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM2 = prove
 (* accumulator facts after the 102-step AES history; a fresh entry tracks    *)
 (* them). Proof = TAIL_REM2 drain drive; contract = TAIL_REM2 state @0x14bc. *)
 (* ========================================================================= *)
-let AESV8_GCM_8X_ENC_256_FAST2_TAIL = prove
+let AES256_GCM_ENC_ALT_FAST2_TAIL = prove
  (`!in_p out_p tag_p ivec_p htable_p mod_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 2 /\
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x1844) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -4960,8 +4960,8 @@ let AESV8_GCM_8X_ENC_256_FAST2_TAIL = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   SUBGOAL_THEN
    `read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g) /\
@@ -5026,19 +5026,19 @@ let AESV8_GCM_8X_ENC_256_FAST2_TAIL = prove
 (* v29; eor3 v9), then the single-block drain (7 subs roll v30               *)
 (* base+8=ctr(8g+10) -> base+1=ctr(nb+2)).  Q19 folds at s31.                *)
 (* ========================================================================= *)
-let AESV8_GCM_8X_ENC_256_FAST1_TAIL = prove
+let AES256_GCM_ENC_ALT_FAST1_TAIL = prove
  (`!in_p out_p tag_p ivec_p htable_p mod_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 1 /\
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x18ec) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -5084,8 +5084,8 @@ let AESV8_GCM_8X_ENC_256_FAST1_TAIL = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   SUBGOAL_THEN
    `read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g)`
@@ -5207,7 +5207,7 @@ let TAIL_Q19_FOLD_REM3 =
 let FOLD_Q19_REM3 : tactic =
   fold_q19_at `read Q19 s107 : int128` `8 * g + 3` TAIL_Q19_FOLD_REM3;;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM3 = prove
+let AES256_GCM_ENC_ALT_TAIL_REM3 = prove
  (`!q27_init in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 3 /\
@@ -5215,12 +5215,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM3 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -5293,8 +5293,8 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM3 = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   SUBGOAL_THEN
    `    read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g) /\
@@ -5424,7 +5424,7 @@ let TAIL_Q19_FOLD_REM4 =
 let FOLD_Q19_REM4 : tactic =
   fold_q19_at `read Q19 s106 : int128` `8 * g + 4` TAIL_Q19_FOLD_REM4;;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM4 = prove
+let AES256_GCM_ENC_ALT_TAIL_REM4 = prove
  (`!q27_init in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 4 /\
@@ -5432,12 +5432,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM4 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -5510,8 +5510,8 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM4 = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   SUBGOAL_THEN
    `    read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g) /\
@@ -5589,19 +5589,19 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM4 = prove
 let FOLD_Q19_REM4_FAST4 : tactic =
   fold_q19_at `read Q19 s67 : int128` `8 * g + 4` TAIL_Q19_FOLD_REM4;;
 
-let AESV8_GCM_8X_ENC_256_FAST4_TAIL = prove
+let AES256_GCM_ENC_ALT_FAST4_TAIL = prove
  (`!in_p out_p tag_p ivec_p htable_p mod_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 4 /\
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x161c) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -5653,8 +5653,8 @@ let AESV8_GCM_8X_ENC_256_FAST4_TAIL = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   SUBGOAL_THEN
    `    read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g) /\
@@ -5726,19 +5726,19 @@ let AESV8_GCM_8X_ENC_256_FAST4_TAIL = prove
 (* eor3-fused 3-block drain (5 subs roll v30 base+8=ctr(8g+10) ->            *)
 (* base+3=ctr(nb+2)).  Q19 folds at s57 via the cascade REM3 fold.           *)
 (* ========================================================================= *)
-let AESV8_GCM_8X_ENC_256_FAST3_TAIL = prove
+let AES256_GCM_ENC_ALT_FAST3_TAIL = prove
  (`!in_p out_p tag_p ivec_p htable_p mod_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 3 /\
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x175c) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -5788,8 +5788,8 @@ let AESV8_GCM_8X_ENC_256_FAST3_TAIL = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   SUBGOAL_THEN
    `    read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g) /\
@@ -5925,7 +5925,7 @@ let FOLD_Q19_REM5 : tactic =
      fold state s126->s115 (drain entry step 57 + 58 to the MODULO low-fold @0x1480). *)
   fold_q19_at `read Q19 s115 : int128` `8 * g + 5` TAIL_Q19_FOLD_REM5;;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM5 = prove
+let AES256_GCM_ENC_ALT_TAIL_REM5 = prove
  (`!q27_init in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 5 /\
@@ -5933,12 +5933,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM5 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -6011,8 +6011,8 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM5 = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   SUBGOAL_THEN
    `    read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g) /\
@@ -6154,7 +6154,7 @@ let FOLD_Q19_REM6 : tactic =
   (* rem6 -> eor3-fused rem4_drain; fold s134->s123 (drain entry 65 + 58).        *)
   fold_q19_at `read Q19 s123 : int128` `8 * g + 6` TAIL_Q19_FOLD_REM6;;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM6 = prove
+let AES256_GCM_ENC_ALT_TAIL_REM6 = prove
  (`!q27_init in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 6 /\
@@ -6162,12 +6162,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM6 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -6240,8 +6240,8 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM6 = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   SUBGOAL_THEN
    `    read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g) /\
@@ -6388,7 +6388,7 @@ let FOLD_Q19_REM7 : tactic =
   (* rem7 -> eor3-fused rem4_drain; fold s140->s129 (drain entry 71 + 58).        *)
   fold_q19_at `read Q19 s129 : int128` `8 * g + 7` TAIL_Q19_FOLD_REM7;;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM7 = prove
+let AES256_GCM_ENC_ALT_TAIL_REM7 = prove
  (`!q27_init in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb g pc.
     nb = 8 * g + 7 /\
@@ -6396,12 +6396,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM7 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -6474,8 +6474,8 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM7 = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   SUBGOAL_THEN
    `    read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g) /\
@@ -6645,7 +6645,7 @@ let TAIL_Q19_FOLD_G =
 let FOLD_Q19_S114_G : tactic =
   fold_q19_at `read Q19 s115 : int128` `8 * g + 8` TAIL_Q19_FOLD_G;;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM8 = prove
+let AES256_GCM_ENC_ALT_TAIL_REM8 = prove
  (`!q18_init q27_init in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb g pc.
     8 * g + 8 = nb /\
@@ -6653,12 +6653,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM8 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read Q18 s = q18_init /\
            read Q27 s = q27_init /\
@@ -6727,8 +6727,8 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM8 = prove
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   SUBGOAL_THEN
    `read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g) /\
@@ -6851,7 +6851,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM8 = prove
 (* STRIP-first stashes it unreduced).                                        *)
 (* ========================================================================= *)
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
+let AES256_GCM_ENC_ALT_TAIL_REM = prove
  (`!q18_init q27_init in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce c rk inblock nb r g pc.
     nb = 8 * g + r /\
@@ -6860,12 +6860,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read Q18 s = q18_init /\
            read Q27 s = q27_init /\
@@ -6933,7 +6933,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
   SUBGOAL_THEN `r=1\/r=2\/r=3\/r=4\/r=5\/r=6\/r=7\/r=8` MP_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
   STRIP_TAC THENL
-   [    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+   [    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -6966,66 +6966,9 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
                     word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)))` THEN
      CONJ_TAC THENL
       [GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
-       MATCH_MP_TAC AESV8_GCM_8X_ENC_256_TAIL_REM1 THEN
+       MATCH_MP_TAC AES256_GCM_ENC_ALT_TAIL_REM1 THEN
        REPEAT CONJ_TAC THEN (ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[])]);
-    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
-           read PC s = word (pc + 0xee0) /\
-           read X0 s = word_add in_p (word (128 * g)) /\
-           read X2 s = word_add out_p (word (128 * g)) /\
-           read X3 s = tag_p /\
-           read X9 s = word (16 * nb) /\
-           read X4 s = word_add in_p (word (16 * nb)) /\
-           read X16 s = ivec_p /\
-           read X5 s = end_p /\
-           read X6 s = htable_p /\
-           read X10 s = mod_p /\
-           read X11 s = key_p /\
-           read (memory :> bytes64 mod_p) s = word 0xc200000000000000 /\
-           read (memory :> bytes128 ivec_p) s =
-             word_reversefields 8 (ctr_block nonce c) /\
-           read Q27 s = q27_init /\
-           read Q28 s = word_reversefields 8 (EL 14 rk) /\
-           read Q30 s = word_reversefields 32 (ctr_block nonce (8 * g + c + 8)) /\
-           read Q31 s = word 79228162514264337593543950336 /\
-           read Q19 s =
-             nist_ghash (aes256_cipher (word 0) rk) tag0
-                 (list_of_seq (nist_cipher_block aes256_cipher c nonce rk inblock) (8 * g)) /\
-           word_xor (read Q0 s) (word_reversefields 8 (EL 14 rk)) =
-             word_reversefields 8
-               (aes256_cipher (ctr_block nonce (8 * g + c)) rk) /\
-           word_xor (read Q1 s) (word_reversefields 8 (EL 14 rk)) =
-             word_reversefields 8
-               (aes256_cipher (ctr_block nonce (8 * g + c + 1)) rk) /\
-           word_xor (read Q2 s) (word_reversefields 8 (EL 14 rk)) =
-             word_reversefields 8
-               (aes256_cipher (ctr_block nonce (8 * g + c + 2)) rk) /\
-           word_xor (read Q3 s) (word_reversefields 8 (EL 14 rk)) =
-             word_reversefields 8
-               (aes256_cipher (ctr_block nonce (8 * g + c + 3)) rk) /\
-           word_xor (read Q4 s) (word_reversefields 8 (EL 14 rk)) =
-             word_reversefields 8
-               (aes256_cipher (ctr_block nonce (8 * g + c + 4)) rk) /\
-           word_xor (read Q5 s) (word_reversefields 8 (EL 14 rk)) =
-             word_reversefields 8
-               (aes256_cipher (ctr_block nonce (8 * g + c + 5)) rk) /\
-           word_xor (read Q6 s) (word_reversefields 8 (EL 14 rk)) =
-             word_reversefields 8
-               (aes256_cipher (ctr_block nonce (8 * g + c + 6)) rk) /\
-           word_xor (read Q7 s) (word_reversefields 8 (EL 14 rk)) =
-             word_reversefields 8
-               (aes256_cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
-           htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
-                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
-                    inblock j) /\
-           (!j. j < 8 * g
-                ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                    word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)))` THEN
-     CONJ_TAC THENL
-      [GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
-       MATCH_MP_TAC AESV8_GCM_8X_ENC_256_TAIL_REM2 THEN
-       REPEAT CONJ_TAC THEN (ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[])]);
-    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -7080,9 +7023,9 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
                     word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)))` THEN
      CONJ_TAC THENL
       [GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
-       MATCH_MP_TAC AESV8_GCM_8X_ENC_256_TAIL_REM3 THEN
+       MATCH_MP_TAC AES256_GCM_ENC_ALT_TAIL_REM2 THEN
        REPEAT CONJ_TAC THEN (ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[])]);
-    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -7137,9 +7080,9 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
                     word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)))` THEN
      CONJ_TAC THENL
       [GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
-       MATCH_MP_TAC AESV8_GCM_8X_ENC_256_TAIL_REM4 THEN
+       MATCH_MP_TAC AES256_GCM_ENC_ALT_TAIL_REM3 THEN
        REPEAT CONJ_TAC THEN (ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[])]);
-    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -7194,9 +7137,9 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
                     word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)))` THEN
      CONJ_TAC THENL
       [GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
-       MATCH_MP_TAC AESV8_GCM_8X_ENC_256_TAIL_REM5 THEN
+       MATCH_MP_TAC AES256_GCM_ENC_ALT_TAIL_REM4 THEN
        REPEAT CONJ_TAC THEN (ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[])]);
-    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -7251,9 +7194,9 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
                     word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)))` THEN
      CONJ_TAC THENL
       [GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
-       MATCH_MP_TAC AESV8_GCM_8X_ENC_256_TAIL_REM6 THEN
+       MATCH_MP_TAC AES256_GCM_ENC_ALT_TAIL_REM5 THEN
        REPEAT CONJ_TAC THEN (ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[])]);
-    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -7308,9 +7251,66 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
                     word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)))` THEN
      CONJ_TAC THENL
       [GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
-       MATCH_MP_TAC AESV8_GCM_8X_ENC_256_TAIL_REM7 THEN
+       MATCH_MP_TAC AES256_GCM_ENC_ALT_TAIL_REM6 THEN
        REPEAT CONJ_TAC THEN (ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[])]);
-    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
+           read PC s = word (pc + 0xee0) /\
+           read X0 s = word_add in_p (word (128 * g)) /\
+           read X2 s = word_add out_p (word (128 * g)) /\
+           read X3 s = tag_p /\
+           read X9 s = word (16 * nb) /\
+           read X4 s = word_add in_p (word (16 * nb)) /\
+           read X16 s = ivec_p /\
+           read X5 s = end_p /\
+           read X6 s = htable_p /\
+           read X10 s = mod_p /\
+           read X11 s = key_p /\
+           read (memory :> bytes64 mod_p) s = word 0xc200000000000000 /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8 (ctr_block nonce c) /\
+           read Q27 s = q27_init /\
+           read Q28 s = word_reversefields 8 (EL 14 rk) /\
+           read Q30 s = word_reversefields 32 (ctr_block nonce (8 * g + c + 8)) /\
+           read Q31 s = word 79228162514264337593543950336 /\
+           read Q19 s =
+             nist_ghash (aes256_cipher (word 0) rk) tag0
+                 (list_of_seq (nist_cipher_block aes256_cipher c nonce rk inblock) (8 * g)) /\
+           word_xor (read Q0 s) (word_reversefields 8 (EL 14 rk)) =
+             word_reversefields 8
+               (aes256_cipher (ctr_block nonce (8 * g + c)) rk) /\
+           word_xor (read Q1 s) (word_reversefields 8 (EL 14 rk)) =
+             word_reversefields 8
+               (aes256_cipher (ctr_block nonce (8 * g + c + 1)) rk) /\
+           word_xor (read Q2 s) (word_reversefields 8 (EL 14 rk)) =
+             word_reversefields 8
+               (aes256_cipher (ctr_block nonce (8 * g + c + 2)) rk) /\
+           word_xor (read Q3 s) (word_reversefields 8 (EL 14 rk)) =
+             word_reversefields 8
+               (aes256_cipher (ctr_block nonce (8 * g + c + 3)) rk) /\
+           word_xor (read Q4 s) (word_reversefields 8 (EL 14 rk)) =
+             word_reversefields 8
+               (aes256_cipher (ctr_block nonce (8 * g + c + 4)) rk) /\
+           word_xor (read Q5 s) (word_reversefields 8 (EL 14 rk)) =
+             word_reversefields 8
+               (aes256_cipher (ctr_block nonce (8 * g + c + 5)) rk) /\
+           word_xor (read Q6 s) (word_reversefields 8 (EL 14 rk)) =
+             word_reversefields 8
+               (aes256_cipher (ctr_block nonce (8 * g + c + 6)) rk) /\
+           word_xor (read Q7 s) (word_reversefields 8 (EL 14 rk)) =
+             word_reversefields 8
+               (aes256_cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
+           htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
+           (!j. j < nb
+                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
+                    inblock j) /\
+           (!j. j < 8 * g
+                ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
+                    word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)))` THEN
+     CONJ_TAC THENL
+      [GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
+       MATCH_MP_TAC AES256_GCM_ENC_ALT_TAIL_REM7 THEN
+       REPEAT CONJ_TAC THEN (ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[])]);
+    (MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC `(\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read Q18 s = q18_init /\
            read Q27 s = q27_init /\
@@ -7360,7 +7360,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
                     word_xor (aes_ctr_block aes256_cipher c nonce rk (j)) (inblock j)))` THEN
      CONJ_TAC THENL
       [GEN_TAC THEN BETA_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
-       MATCH_MP_TAC AESV8_GCM_8X_ENC_256_TAIL_REM8 THEN
+       MATCH_MP_TAC AES256_GCM_ENC_ALT_TAIL_REM8 THEN
        REPEAT CONJ_TAC THEN (ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[])])]);;
 
 
@@ -7384,7 +7384,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
 (* only out_p mem (+ regs); PP writes out_p mem; TAIL writes out+tag+ivec.   *)
 
 let LENGTH_WB_MC =
-  (REWRITE_CONV [fst AESV8_GCM_8X_ENC_256_WB_EXEC]) `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`;;
+  (REWRITE_CONV [fst AES256_GCM_ENC_ALT_EXEC]) `LENGTH aes256_gcm_enc_alt_tmc`;;
 
 (* Helper for the option-D TAIL leg: an ensures with an existential          *)
 (* precondition follows from the ensures for every witness. Trivial from the *)
@@ -7398,7 +7398,7 @@ let ENSURES_EXISTS2_PRECONDITION = prove
   FIRST_X_ASSUM(MP_TAC o SPECL [`v:B`; `w:C`]) THEN
   DISCH_THEN(MP_TAC o SPEC `s:A`) THEN ASM_REWRITE_TAC[]);;
 
-let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
+let AES256_GCM_ENC_ALT_GEN_CORRECT = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
      tag0 nonce c rk inblock nb k pc.
     ~(k = 0) /\
@@ -7410,16 +7410,16 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -7534,7 +7534,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
       `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
       `end_p:int64`; `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
       `inblock:num->int128`; `nb:num`; `k:num`; `pc:num`]
-     AESV8_GCM_8X_ENC_256_SETUP_GEN) THEN
+     AES256_GCM_ENC_ALT_SETUP_GEN) THEN
     REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN
     DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[NONOVERLAPPING_CLAUSES] THEN ASM_ARITH_TAC;
     ALL_TAC] THEN
@@ -7603,7 +7603,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
       `key_p:int64`; `htable_p:int64`; `word_add stackpointer (word 0x40):int64`;
       `end_p:int64`; `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
       `inblock:num->int128`; `nb:num`; `k:num`; `pc:num`]
-     AESV8_GCM_8X_ENC_256_MAIN_LOOP) THEN
+     AES256_GCM_ENC_ALT_MAIN_LOOP) THEN
     REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN
     DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[NONOVERLAPPING_CLAUSES] THEN ASM_ARITH_TAC;
     ALL_TAC] THEN
@@ -7696,7 +7696,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
     (* handles PC via the ensures) - actually pass PREPRETAIL's FULL post        *)
     (* (lines 4308-4379: read PC .. /\ body), i.e. exactly PREPRETAIL's post.    *)
     ENSURES_POSTCONDITION_TAC
-     `\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+     `\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
           read PC s = word (pc + 0xee0) /\
           read X0 s = word_add in_p (word (128 * (k + 1))) /\
           read X2 s = word_add out_p (word (128 * (k + 1))) /\
@@ -7753,7 +7753,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
         `key_p:int64`; `htable_p:int64`; `word_add stackpointer (word 0x40):int64`;
         `end_p:int64`; `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
         `inblock:num->int128`; `nb:num`; `k:num`; `pc:num`]
-       AESV8_GCM_8X_ENC_256_PREPRETAIL_GEN) THEN
+       AES256_GCM_ENC_ALT_PREPRETAIL_GEN) THEN
       REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN
       DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[NONOVERLAPPING_CLAUSES] THEN ASM_ARITH_TAC];
     (* NOTE-live: ENSURES_POSTCONDITION_TAC's post lambda must MATCH PP's post   *)
@@ -7800,7 +7800,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
     `key_p:int64`; `htable_p:int64`; `word_add stackpointer (word 0x40):int64`;
     `end_p:int64`; `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
     `inblock:num->int128`; `nb:num`; `nb - 8 * (k + 1)`; `k + 1`; `pc:num`]
-   AESV8_GCM_8X_ENC_256_TAIL_REM) THEN
+   AES256_GCM_ENC_ALT_TAIL_REM) THEN
   REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   (* align TAIL_REM's ISPECL'd (g:=k+1) counters 8*(k+1)+c+M with the
      intermediate state's 8*k+c+(M+8) form.  The old bare-num rules 8*(k+1)+N=8*k+(N+8)
@@ -7817,7 +7817,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
   DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[NONOVERLAPPING_CLAUSES] THEN ASM_ARITH_TAC);;
 
 (* ========================================================================= *)
-(* STEP 1c - AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1: the g=1                  *)
+(* STEP 1c - AES256_GCM_ENC_ALT_FIXED_CORRECT_G1: the g=1                  *)
 (* leg (loop_count = 0, i.e. nblocks 9..16).  At g=1 the main loop is        *)
 (* SKIPPED (the 2nd setup guard b.ge@0x49c is TAKEN, SETUP_G1 lands directly *)
 (* at pc+0x9f0 = PREPRETAIL).  So this is WB_CORRECT_GEN's 4-leg compose     *)
@@ -7827,7 +7827,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
 (* literal-0 form.  Buffer bound `val in_p + 16*nb < 2 EXP 63` carried for   *)
 (* WB_TAIL_REM.                                                              *)
 (* ========================================================================= *)
-let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1 = prove
+let AES256_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
      tag0 nonce c rk inblock nb k pc.
     k = 0 /\
@@ -7839,16 +7839,16 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1 = prove
     val in_p + 128 * (0 + 1) < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -7950,7 +7950,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1 = prove
       `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
       `end_p:int64`; `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
       `inblock:num->int128`; `nb:num`; `0`; `pc:num`]
-     AESV8_GCM_8X_ENC_256_SETUP_G1) THEN
+     AES256_GCM_ENC_ALT_SETUP_G1) THEN
     REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN
     DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[NONOVERLAPPING_CLAUSES] THEN ASM_ARITH_TAC;
     ALL_TAC] THEN
@@ -8043,7 +8043,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1 = prove
     (* handles PC via the ensures) - actually pass PREPRETAIL's FULL post        *)
     (* (lines 4308-4379: read PC .. /\ body), i.e. exactly PREPRETAIL's post.    *)
     ENSURES_POSTCONDITION_TAC
-     `\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+     `\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
           read PC s = word (pc + 0xee0) /\
           read X0 s = word_add in_p (word (128 * (0 + 1))) /\
           read X2 s = word_add out_p (word (128 * (0 + 1))) /\
@@ -8100,7 +8100,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1 = prove
         `key_p:int64`; `htable_p:int64`; `word_add stackpointer (word 0x40):int64`;
         `end_p:int64`; `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
         `inblock:num->int128`; `nb:num`; `0`; `pc:num`]
-       AESV8_GCM_8X_ENC_256_PREPRETAIL_GEN) THEN
+       AES256_GCM_ENC_ALT_PREPRETAIL_GEN) THEN
       REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN
       DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[NONOVERLAPPING_CLAUSES] THEN ASM_ARITH_TAC];
     (* NOTE-live: ENSURES_POSTCONDITION_TAC's post lambda must MATCH PP's post   *)
@@ -8147,7 +8147,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1 = prove
     `key_p:int64`; `htable_p:int64`; `word_add stackpointer (word 0x40):int64`;
     `end_p:int64`; `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
     `inblock:num->int128`; `nb:num`; `nb - 8 * (0 + 1)`; `0 + 1`; `pc:num`]
-   AESV8_GCM_8X_ENC_256_TAIL_REM) THEN
+   AES256_GCM_ENC_ALT_TAIL_REM) THEN
   REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   (* c-form counter alignment (g:=0+1), as GEN_CORRECT; old bare-num rules
      8*(0+1)+N=8*0+(N+8) no longer fire under symbolic c. *)
@@ -8163,7 +8163,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1 = prove
   DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[NONOVERLAPPING_CLAUSES] THEN ASM_ARITH_TAC);;
 
 (* ========================================================================= *)
-(* STEP 5b - AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT.                  *)
+(* STEP 5b - AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT.                  *)
 (* The externally-used spec: lifts _WB_CORRECT through the 2 entry guards,   *)
 (* the d8-d15 save/restore frame (80 bytes), and the final RET.              *)
 (*                                                                           *)
@@ -8381,7 +8381,7 @@ let SETUP0_DISPATCH : tactic = fun (asl,w as gl) ->
       ASM_REWRITE_TAC[ARITH_RULE `(128 * nb) DIV 8 = 16 * nb`] gl
   else ASM_REWRITE_TAC[] gl;;
 
-let AESV8_GCM_8X_ENC_256_SETUP0 = prove
+let AES256_GCM_ENC_ALT_SETUP0 = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      tag0 nonce c rk inblock nb pc.
     1 <= nb /\ nb <= 8 /\ ~(nb = 2) /\ ~(nb = 4) /\ ~(nb = 1) /\ ~(nb = 3) /\
@@ -8389,13 +8389,13 @@ let AESV8_GCM_8X_ENC_256_SETUP0 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb)]
       [(in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (tag_p, 16); (ivec_p, 16); (word_add stackpointer (word 0x40), 8)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -8416,7 +8416,7 @@ let AESV8_GCM_8X_ENC_256_SETUP0 = prove
            (!j. j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j))
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = in_p /\
            read X2 s = out_p /\
@@ -8471,8 +8471,8 @@ let AESV8_GCM_8X_ENC_256_SETUP0 = prove
               NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-      `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+      `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_8; htable_mem_4]) THEN
   SUBGOAL_THEN `~(nb = 4)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `5 <= nb` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
@@ -8496,7 +8496,7 @@ let AESV8_GCM_8X_ENC_256_SETUP0 = prove
 (* group, no main loop).  Q18/Q27 are unpinned at SETUP0's exit -> option-D  *)
 (* existential mid-state (mirror of the WB_CORRECT PREPRETAIL->TAIL leg).    *)
 (* ========================================================================= *)
-let AESV8_GCM_8X_ENC_256_SETUP0_TAIL = prove
+let AES256_GCM_ENC_ALT_SETUP0_TAIL = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      tag0 nonce c rk inblock nb pc.
     1 <= nb /\ nb <= 8 /\ ~(nb = 2) /\ ~(nb = 4) /\ ~(nb = 1) /\ ~(nb = 3) /\
@@ -8504,16 +8504,16 @@ let AESV8_GCM_8X_ENC_256_SETUP0_TAIL = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -8616,7 +8616,7 @@ let AESV8_GCM_8X_ENC_256_SETUP0_TAIL = prove
       SUBSUMED_MAYCHANGE_TAC;
       ALL_TAC] THEN
     ENSURES_POSTCONDITION_TAC
-     `      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+     `      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = in_p /\
            read X2 s = out_p /\
@@ -8675,7 +8675,7 @@ let AESV8_GCM_8X_ENC_256_SETUP0_TAIL = prove
         `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
         `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
         `inblock:num->int128`; `nb:num`; `pc:num`]
-       AESV8_GCM_8X_ENC_256_SETUP0) THEN
+       AES256_GCM_ENC_ALT_SETUP0) THEN
       REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN
       DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[NONOVERLAPPING_CLAUSES] THEN
       ASM_ARITH_TAC];
@@ -8705,7 +8705,7 @@ let AESV8_GCM_8X_ENC_256_SETUP0_TAIL = prove
     `word_add in_p (word (128 * 0)):int64`;
     `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
     `inblock:num->int128`; `nb:num`; `nb:num`; `0`; `pc:num`]
-   AESV8_GCM_8X_ENC_256_TAIL_REM) THEN
+   AES256_GCM_ENC_ALT_TAIL_REM) THEN
   REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[NONOVERLAPPING_CLAUSES] THEN
   ASM_ARITH_TAC);;
@@ -8737,7 +8737,7 @@ let FAST2_MID_D2 : tactic = fun (asl,w as gl) ->
             (REWRITE_TAC[ARITH_RULE `128 * 0 = 0`; WORD_ADD_0] THEN REFL_TAC)
          else (REFL_TAC ORELSE CONV_TAC WORD_BLAST)))) gl  (*Q25 index closer       *)
   else (REWRITE_TAC[htable_mem_8; htable_mem_4] THEN ASM_REWRITE_TAC[]) gl;;
-let AESV8_GCM_8X_ENC_256_FAST2 = prove
+let AES256_GCM_ENC_ALT_FAST2 = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      tag0 nonce c rk inblock nb pc.
     nb = 2 /\
@@ -8745,16 +8745,16 @@ let AESV8_GCM_8X_ENC_256_FAST2 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -8825,8 +8825,8 @@ let AESV8_GCM_8X_ENC_256_FAST2 = prove
   CONJ_TAC THENL
    [(* SEGMENT A: 0x38 -> 0x1660 *)
     ENSURES_INIT_TAC "s0" THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-      `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+      `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
     SUBGOAL_THEN `read (memory :> bytes128 (word_add in_p (word (16 * 0)))) s0 = inblock 0`
       ASSUME_TAC THENL [FIRST_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC; ALL_TAC] THEN
     SUBGOAL_THEN `read (memory :> bytes128 (word_add in_p (word (16 * 1)))) s0 = inblock 1`
@@ -8858,7 +8858,7 @@ let AESV8_GCM_8X_ENC_256_FAST2 = prove
      [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
       `htable_p:int64`; `word_add stackpointer (word 0x40):int64`;
       `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`; `inblock:num->int128`;
-      `nb:num`; `0`; `pc:num`] AESV8_GCM_8X_ENC_256_FAST2_TAIL) THEN
+      `nb:num`; `0`; `pc:num`] AES256_GCM_ENC_ALT_FAST2_TAIL) THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                 LENGTH_WB_MC; htable_mem_8; htable_mem_4; ALLPAIRS; PAIRWISE; ALL;
                 NONOVERLAPPING_CLAUSES] THEN
@@ -8874,7 +8874,7 @@ let AESV8_GCM_8X_ENC_256_FAST2 = prove
 (* 0-3 only) at 0x1750, then ENSURES_SEQUENCE-splits at 0x191c (the fast4    *)
 (* tail-setup start, keystreams as preconds) into FAST4_TAIL.                *)
 (* ========================================================================= *)
-let AESV8_GCM_8X_ENC_256_FAST4 = prove
+let AES256_GCM_ENC_ALT_FAST4 = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      tag0 nonce c rk inblock nb pc.
     nb = 4 /\
@@ -8882,16 +8882,16 @@ let AESV8_GCM_8X_ENC_256_FAST4 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -8966,8 +8966,8 @@ let AESV8_GCM_8X_ENC_256_FAST4 = prove
   CONJ_TAC THENL
    [(* SEGMENT A: 0x38 -> 0x191c (dispatch + 4-block AES) *)
     ENSURES_INIT_TAC "s0" THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-      `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+      `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
     SUBGOAL_THEN `~(nb = 2)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
     SUBGOAL_THEN `read (memory :> bytes128 (word_add in_p (word (16 * 0)))) s0 = inblock 0`
       ASSUME_TAC THENL [FIRST_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC; ALL_TAC] THEN
@@ -9004,7 +9004,7 @@ let AESV8_GCM_8X_ENC_256_FAST4 = prove
      [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
       `htable_p:int64`; `word_add stackpointer (word 0x40):int64`;
       `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`; `inblock:num->int128`;
-      `nb:num`; `0`; `pc:num`] AESV8_GCM_8X_ENC_256_FAST4_TAIL) THEN
+      `nb:num`; `0`; `pc:num`] AES256_GCM_ENC_ALT_FAST4_TAIL) THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                 LENGTH_WB_MC; htable_mem_8; htable_mem_4; ALLPAIRS; PAIRWISE; ALL;
                 NONOVERLAPPING_CLAUSES] THEN
@@ -9020,7 +9020,7 @@ let AESV8_GCM_8X_ENC_256_FAST4 = prove
 (* SEQUENCE-splits at 0x1b04 (fast1 tail-setup start, keystream Q0 as        *)
 (* precond) into FAST1_TAIL.                                                 *)
 (* ========================================================================= *)
-let AESV8_GCM_8X_ENC_256_FAST1 = prove
+let AES256_GCM_ENC_ALT_FAST1 = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      tag0 nonce c rk inblock nb pc.
     nb = 1 /\
@@ -9028,16 +9028,16 @@ let AESV8_GCM_8X_ENC_256_FAST1 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -9106,8 +9106,8 @@ let AESV8_GCM_8X_ENC_256_FAST1 = prove
   CONJ_TAC THENL
    [(* SEGMENT A: 0x38 -> 0x1b04 (dispatch + 1-block AES) *)
     ENSURES_INIT_TAC "s0" THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-      `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+      `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
     SUBGOAL_THEN `read (memory :> bytes128 (word_add in_p (word (16 * 0)))) s0 = inblock 0`
       ASSUME_TAC THENL [FIRST_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC; ALL_TAC] THEN
     SUBGOAL_THEN `~(nb = 2)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
@@ -9132,7 +9132,7 @@ let AESV8_GCM_8X_ENC_256_FAST1 = prove
      [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
       `htable_p:int64`; `word_add stackpointer (word 0x40):int64`;
       `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`; `inblock:num->int128`;
-      `nb:num`; `0`; `pc:num`] AESV8_GCM_8X_ENC_256_FAST1_TAIL) THEN
+      `nb:num`; `0`; `pc:num`] AES256_GCM_ENC_ALT_FAST1_TAIL) THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                 LENGTH_WB_MC; htable_mem_8; htable_mem_4; ALLPAIRS; PAIRWISE; ALL;
                 NONOVERLAPPING_CLAUSES] THEN
@@ -9148,7 +9148,7 @@ let AESV8_GCM_8X_ENC_256_FAST1 = prove
 (* ENSURES_SEQUENCE-splits at 0x1cf0 (fast3 tail-setup start, 3 keystreams   *)
 (* as preconds) into FAST3_TAIL.                                             *)
 (* ========================================================================= *)
-let AESV8_GCM_8X_ENC_256_FAST3 = prove
+let AES256_GCM_ENC_ALT_FAST3 = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      tag0 nonce c rk inblock nb pc.
     nb = 3 /\
@@ -9156,16 +9156,16 @@ let AESV8_GCM_8X_ENC_256_FAST3 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -9238,8 +9238,8 @@ let AESV8_GCM_8X_ENC_256_FAST3 = prove
   CONJ_TAC THENL
    [(* SEGMENT A: 0x38 -> 0x1cf0 (dispatch + 3-block AES) *)
     ENSURES_INIT_TAC "s0" THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-      `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+      `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
     SUBGOAL_THEN `read (memory :> bytes128 (word_add in_p (word (16 * 0)))) s0 = inblock 0`
       ASSUME_TAC THENL [FIRST_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC; ALL_TAC] THEN
     SUBGOAL_THEN `read (memory :> bytes128 (word_add in_p (word (16 * 1)))) s0 = inblock 1`
@@ -9279,7 +9279,7 @@ let AESV8_GCM_8X_ENC_256_FAST3 = prove
      [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
       `htable_p:int64`; `word_add stackpointer (word 0x40):int64`;
       `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`; `inblock:num->int128`;
-      `nb:num`; `0`; `pc:num`] AESV8_GCM_8X_ENC_256_FAST3_TAIL) THEN
+      `nb:num`; `0`; `pc:num`] AES256_GCM_ENC_ALT_FAST3_TAIL) THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                 LENGTH_WB_MC; htable_mem_8; htable_mem_4; ALLPAIRS; PAIRWISE; ALL;
                 NONOVERLAPPING_CLAUSES] THEN
@@ -9289,7 +9289,7 @@ let AESV8_GCM_8X_ENC_256_FAST3 = prove
      ASM_REWRITE_TAC[])]);;
 
 
-let AESV8_GCM_8X_ENC_256_CORRECT = prove
+let AES256_GCM_ENC_ALT_CORRECT = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      tag0 nonce c rk inblock nb pc.
     1 <= nb /\
@@ -9297,16 +9297,16 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -9356,7 +9356,7 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
         `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
         `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
         `inblock:num->int128`; `nb:num`; `pc:num`]
-       AESV8_GCM_8X_ENC_256_FAST1) THEN
+       AES256_GCM_ENC_ALT_FAST1) THEN
       REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
       DISCH_THEN MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
       (NONOVERLAPPING_TAC ORELSE CONV_TAC WORD_RULE ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[]);
@@ -9367,7 +9367,7 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
         `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
         `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
         `inblock:num->int128`; `nb:num`; `pc:num`]
-       AESV8_GCM_8X_ENC_256_FAST2) THEN
+       AES256_GCM_ENC_ALT_FAST2) THEN
       REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
       DISCH_THEN MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
       (NONOVERLAPPING_TAC ORELSE CONV_TAC WORD_RULE ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[]);
@@ -9378,7 +9378,7 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
           `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
           `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
           `inblock:num->int128`; `nb:num`; `pc:num`]
-         AESV8_GCM_8X_ENC_256_FAST3) THEN
+         AES256_GCM_ENC_ALT_FAST3) THEN
         REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
         DISCH_THEN MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
         (NONOVERLAPPING_TAC ORELSE CONV_TAC WORD_RULE ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[]);
@@ -9390,7 +9390,7 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
           `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
           `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
           `inblock:num->int128`; `nb:num`; `pc:num`]
-         AESV8_GCM_8X_ENC_256_FAST4) THEN
+         AES256_GCM_ENC_ALT_FAST4) THEN
         REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
         DISCH_THEN MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
         (NONOVERLAPPING_TAC ORELSE CONV_TAC WORD_RULE ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[]);
@@ -9402,7 +9402,7 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
           `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
           `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
           `inblock:num->int128`; `nb:num`; `pc:num`]
-         AESV8_GCM_8X_ENC_256_SETUP0_TAIL) THEN
+         AES256_GCM_ENC_ALT_SETUP0_TAIL) THEN
         REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
         DISCH_THEN MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
         (NONOVERLAPPING_TAC ORELSE CONV_TAC WORD_RULE ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[])]]]];
@@ -9413,7 +9413,7 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
       `word_add in_p (word (128 * (0 + 1))):int64`;
       `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
       `inblock:num->int128`; `nb:num`; `0`; `pc:num`]
-     AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1) THEN
+     AES256_GCM_ENC_ALT_FIXED_CORRECT_G1) THEN
     REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
     DISCH_THEN MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
     (NONOVERLAPPING_TAC ORELSE CONV_TAC WORD_RULE ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[]);
@@ -9424,7 +9424,7 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
       `word_add in_p (word (128 * (((nb - 1) DIV 8 - 1) + 1))):int64`;
       `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
       `inblock:num->int128`; `nb:num`; `(nb - 1) DIV 8 - 1`; `pc:num`]
-     AESV8_GCM_8X_ENC_256_GEN_CORRECT) THEN
+     AES256_GCM_ENC_ALT_GEN_CORRECT) THEN
     REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
     DISCH_THEN MATCH_MP_TAC THEN MP_TAC(SPECL [`nb - 1`; `8`] DIVISION) THEN REWRITE_TAC[ARITH_EQ] THEN
     ABBREV_TAC `q = (nb - 1) DIV 8` THEN ABBREV_TAC `r = (nb - 1) MOD 8` THEN
@@ -9481,7 +9481,7 @@ let WB_MASK7_EQ_MOD = prove
 
 (* On the whole-blocks path the bit length is 128 times the block count.      *)
 
-let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
+let AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p
      tag0 nonce c rk inblock len_bits pc stackpointer returnaddress.
     aligned 16 stackpointer /\
@@ -9489,13 +9489,13 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
     ALLPAIRS nonoverlapping
       [(out_p, 16 * gcm_wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 80), 80)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * gcm_wb_blocks len_bits); (key_p, 240); (htable_p, 192)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * gcm_wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 80), 80)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word pc /\
            read SP s = stackpointer /\
            read X30 s = returnaddress /\
@@ -9564,17 +9564,17 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
     ASSUME_TAC THENL [ASM_REWRITE_TAC[VAL_EQ_0]; ALL_TAC] THEN
     REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN
     ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1] THEN
+    ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [1] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `~(val(len_bits:int64) = 0)`;
                                ASSUME `~(len_bits:int64 = word 0)`;
                                COND_CLAUSES]) THEN
-    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [2] THEN
-    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [3] THEN
+    ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [2] THEN
+    ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [3] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[
       ASSUME `~(word_and (len_bits:int64) (word 0x7f) = word 0)`;
       ASSUME `~(val(word_and (len_bits:int64) (word 0x7f)) = 0)`;
       COND_CLAUSES]) THEN
-    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [4;5] THEN
+    ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [4;5] THEN
     ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[list_of_seq; nist_ghash] THEN
     REWRITE_TAC[ARITH_RULE `j < 0 <=> F`]] THEN
@@ -9591,7 +9591,7 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
      [ASM_REWRITE_TAC[GSYM VAL_EQ_0]; ALL_TAC] THEN
     REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN
     ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1;2;3] THEN
+    ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [1;2;3] THEN
     ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[list_of_seq; nist_ghash] THEN
     REWRITE_TAC[ARITH_RULE `j < 0 <=> F`];
@@ -9633,7 +9633,7 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
   RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(
     EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV THENC
     REWRITE_CONV[WORD_ADD_0]))) THEN
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1] THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [1] THEN
   (* The `cbz x1` test reduces to the numeric form `128 * nb = 0` (the model    *)
   (* simplifies `val(word(128*nb))` via the `128*nb < 2^64` fact), which        *)
   (* WB_GUARD1_NONZERO_GEN's word/val-shaped conjuncts do not rewrite; discharge *)
@@ -9644,12 +9644,12 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
     (CONJ (ASSUME `1 <= nb`) (ASSUME `128 * nb < 2 EXP 64`));
     ASSUME `~(128 * nb = 0)`;
     COND_CLAUSES]) THEN
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [2] THEN
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [3] THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [2] THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [3] THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_GUARD2_MASK_GEN
     (CONJ (ASSUME `1 <= nb`) (ASSUME `128 * nb < 2 EXP 64`));
     VAL_WORD_0; COND_CLAUSES]) THEN
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC (4--14) THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC (4--14) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_X9_NORM
     (ASSUME `128 * nb < 2 EXP 64`)]) THEN
   MP_TAC(SPECL
@@ -9660,7 +9660,7 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
     `tag0:int128`; `nonce:(96)word`; `c:num`;
     `rk:int128 list`;
     `inblock:num->int128`; `nb:num`; `pc:num`]
-   (REWRITE_RULE[KEY15_SPLIT] AESV8_GCM_8X_ENC_256_CORRECT)) THEN
+   (REWRITE_RULE[KEY15_SPLIT] AES256_GCM_ENC_ALT_CORRECT)) THEN
   REWRITE_TAC[LENGTH_WB_MC] THEN
   ANTS_TAC THENL
    [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
@@ -9672,15 +9672,15 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS;
               htable_mem_8; htable_mem_4] THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s15" THEN
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC (16--22) THEN
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s15" THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC (16--22) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   SIMP_TAC[WORD_ZX_ZX; DIMINDEX_64; DIMINDEX_128; LE_REFL; ARITH] THEN
   CONV_TAC WORD_RULE);;
 
 (* ------------------------------------------------------------------------- *)
 (* The default build keeps the `bti c` landing pad, so its machine code is    *)
-(* aesv8_gcm_8x_enc_256_wb_mc rather than the trimmed variant proved above.   *)
+(* aes256_gcm_enc_alt_mc rather than the trimmed variant proved above.   *)
 (* The statement is written out and discharged by ARM_ADD_IBT_RULE, matching  *)
 (* the x86 convention (cf. x86/proofs/sha3_keccak_f1600.ml); nothing is       *)
 (* re-proved.  `~extra` supplies htable_mem_8's definition, which the wrap    *)
@@ -9688,7 +9688,7 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
 (* alone -- that cannot be done through an opaque state predicate.            *)
 (* ------------------------------------------------------------------------- *)
 
-let AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT = prove
+let AES256_GCM_ENC_ALT_SUBROUTINE_CORRECT = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p
      tag0 nonce c rk inblock len_bits pc stackpointer returnaddress.
     aligned 16 stackpointer /\
@@ -9696,13 +9696,13 @@ let AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT = prove
     ALLPAIRS nonoverlapping
       [(out_p, 16 * gcm_wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 80), 80)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_mc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_mc);
        (in_p, 16 * gcm_wb_blocks len_bits); (key_p, 240); (htable_p, 192)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * gcm_wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 80), 80)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_mc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_mc /\
            read PC s = word pc /\
            read SP s = stackpointer /\
            read X30 s = returnaddress /\
@@ -9735,8 +9735,8 @@ let AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT = prove
                   memory :> bytes(ivec_p, 16);
                   memory :> bytes(word_sub stackpointer (word 80), 80)])`,
   MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE ~extra:[htable_mem_8; htable_mem_4; wordlist_from_memory]
-                     aesv8_gcm_8x_enc_256_wb_mc aesv8_gcm_8x_enc_256_wb_tmc
-                     AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT));;
+                     aes256_gcm_enc_alt_mc aes256_gcm_enc_alt_tmc
+                     AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ========================================================================= *)
 (* SAFETY companions (constant-time + memory-safety).  Pure additions; the   *)
@@ -9751,7 +9751,7 @@ needs "arm/proofs/subroutine_signatures.ml";;
 (* Entry pc+0x38, exit pc+0x11c4; MAYCHANGE frame (ABI, Q8..Q15, out/tag/     *)
 (* ivec); f_events depends on the public pointers + stackpointer + pc.        *)
 
-let AESV8_GCM_8X_ENC_256_FAST1_SAFE = prove
+let AES256_GCM_ENC_ALT_FAST1_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      nb pc.
@@ -9760,16 +9760,16 @@ let AESV8_GCM_8X_ENC_256_FAST1_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -9795,9 +9795,9 @@ let AESV8_GCM_8X_ENC_256_FAST1_SAFE = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  PROVE_SAFETY_SPEC_TAC AESV8_GCM_8X_ENC_256_WB_EXEC);;
+  PROVE_SAFETY_SPEC_TAC AES256_GCM_ENC_ALT_EXEC);;
 
-let AESV8_GCM_8X_ENC_256_FAST2_SAFE = prove
+let AES256_GCM_ENC_ALT_FAST2_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      nb pc.
@@ -9806,16 +9806,16 @@ let AESV8_GCM_8X_ENC_256_FAST2_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -9841,9 +9841,9 @@ let AESV8_GCM_8X_ENC_256_FAST2_SAFE = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  PROVE_SAFETY_SPEC_TAC AESV8_GCM_8X_ENC_256_WB_EXEC);;
+  PROVE_SAFETY_SPEC_TAC AES256_GCM_ENC_ALT_EXEC);;
 
-let AESV8_GCM_8X_ENC_256_FAST3_SAFE = prove
+let AES256_GCM_ENC_ALT_FAST3_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      nb pc.
@@ -9852,16 +9852,16 @@ let AESV8_GCM_8X_ENC_256_FAST3_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -9887,9 +9887,9 @@ let AESV8_GCM_8X_ENC_256_FAST3_SAFE = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  PROVE_SAFETY_SPEC_TAC AESV8_GCM_8X_ENC_256_WB_EXEC);;
+  PROVE_SAFETY_SPEC_TAC AES256_GCM_ENC_ALT_EXEC);;
 
-let AESV8_GCM_8X_ENC_256_FAST4_SAFE = prove
+let AES256_GCM_ENC_ALT_FAST4_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      nb pc.
@@ -9898,16 +9898,16 @@ let AESV8_GCM_8X_ENC_256_FAST4_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -9933,14 +9933,14 @@ let AESV8_GCM_8X_ENC_256_FAST4_SAFE = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  PROVE_SAFETY_SPEC_TAC AESV8_GCM_8X_ENC_256_WB_EXEC);;
+  PROVE_SAFETY_SPEC_TAC AES256_GCM_ENC_ALT_EXEC);;
 
 
 (* --- Setup segment safety: SETUP0_SAFE (nb in {5,6,7,8}, pc+0x38 ->      *)
-(* pc+0xee0).  Mirrors AESV8_GCM_8X_ENC_256_SETUP0's stepping (NSTEP +      *)
+(* pc+0xee0).  Mirrors AES256_GCM_ENC_ALT_SETUP0's stepping (NSTEP +      *)
 (* DISPATCH4/SMALL_NOT_TAKEN + WB_BRANCH_COND_TRUE) but closes with the     *)
 (* safety property.  Event trace is nb-independent over {5,6,7,8}.          *)
-let AESV8_GCM_8X_ENC_256_SETUP0_SAFE = prove
+let AES256_GCM_ENC_ALT_SETUP0_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      nb pc.
@@ -9949,16 +9949,16 @@ let AESV8_GCM_8X_ENC_256_SETUP0_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -10022,14 +10022,14 @@ let AESV8_GCM_8X_ENC_256_SETUP0_SAFE = prove
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 (* --- Tail-cascade leg safety: TAIL_REM1..8_SAFE (entry pc+0xee0, exit       *)
-(* pc+0x11c4).  Mirrors AESV8_GCM_8X_ENC_256_TAIL_REM<k>'s NSTEP_GP drive +    *)
+(* pc+0x11c4).  Mirrors AES256_GCM_ENC_ALT_TAIL_REM<k>'s NSTEP_GP drive +    *)
 (* TAIL_X5 branch resolution, but drops the functional Q19-fold/data closers   *)
 (* (safety needs only PC+events+inbounds) and closes with the safety property. *)
 (* Lean precondition: the key/htable/ivec/counter/inblock CONTENTS are dead    *)
 (* for safety (only the ACCESS addresses matter), so only pointer registers    *)
 (* are pinned.  nb = 8*g+k gives the rem=k arm; g symbolic.                    *)
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM1_SAFE = prove
+let AES256_GCM_ENC_ALT_TAIL_REM1_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb g pc.
     nb = 8 * g + 1 /\
@@ -10037,12 +10037,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM1_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -10086,7 +10086,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM1_SAFE = prove
   ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM2_SAFE = prove
+let AES256_GCM_ENC_ALT_TAIL_REM2_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb g pc.
     nb = 8 * g + 2 /\
@@ -10094,12 +10094,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM2_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -10143,7 +10143,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM2_SAFE = prove
   ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM3_SAFE = prove
+let AES256_GCM_ENC_ALT_TAIL_REM3_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb g pc.
     nb = 8 * g + 3 /\
@@ -10151,12 +10151,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM3_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -10200,7 +10200,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM3_SAFE = prove
   ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM4_SAFE = prove
+let AES256_GCM_ENC_ALT_TAIL_REM4_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb g pc.
     nb = 8 * g + 4 /\
@@ -10208,12 +10208,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM4_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -10257,7 +10257,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM4_SAFE = prove
   ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM5_SAFE = prove
+let AES256_GCM_ENC_ALT_TAIL_REM5_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb g pc.
     nb = 8 * g + 5 /\
@@ -10265,12 +10265,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM5_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -10314,7 +10314,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM5_SAFE = prove
   ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM6_SAFE = prove
+let AES256_GCM_ENC_ALT_TAIL_REM6_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb g pc.
     nb = 8 * g + 6 /\
@@ -10322,12 +10322,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM6_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -10371,7 +10371,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM6_SAFE = prove
   ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM7_SAFE = prove
+let AES256_GCM_ENC_ALT_TAIL_REM7_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb g pc.
     nb = 8 * g + 7 /\
@@ -10379,12 +10379,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM7_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -10428,7 +10428,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM7_SAFE = prove
   ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM8_SAFE = prove
+let AES256_GCM_ENC_ALT_TAIL_REM8_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb g pc.
     8 * g + 8 = nb /\
@@ -10436,12 +10436,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM8_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -10487,11 +10487,11 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM8_SAFE = prove
 
 
 (* --- Tail dispatch safety: TAIL_REM_SAFE (rem in 1..8, g>=0).  Mirrors       *)
-(* AESV8_GCM_8X_ENC_256_TAIL_REM's r=1\/..\/r=8 case split: X_CHOOSE each      *)
+(* AES256_GCM_ENC_ALT_TAIL_REM's r=1\/..\/r=8 case split: X_CHOOSE each      *)
 (* arm's event-trace witness, provide the explicit r-indexed dispatch function *)
 (* as f_events, then close each branch by the matching TAIL_REM<k>_SAFE.       *)
 
-let AESV8_GCM_8X_ENC_256_TAIL_REM_SAFE = prove
+let AES256_GCM_ENC_ALT_TAIL_REM_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb r g pc.
     nb = 8 * g + r /\ 1 <= r /\ r <= 8 /\
@@ -10499,12 +10499,12 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xee0) /\
            read X0 s = word_add in_p (word (128 * g)) /\
            read X2 s = word_add out_p (word (128 * g)) /\
@@ -10530,14 +10530,14 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM_SAFE = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  X_CHOOSE_TAC `w1:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_TAIL_REM1_SAFE THEN
-  X_CHOOSE_TAC `w2:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_TAIL_REM2_SAFE THEN
-  X_CHOOSE_TAC `w3:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_TAIL_REM3_SAFE THEN
-  X_CHOOSE_TAC `w4:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_TAIL_REM4_SAFE THEN
-  X_CHOOSE_TAC `w5:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_TAIL_REM5_SAFE THEN
-  X_CHOOSE_TAC `w6:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_TAIL_REM6_SAFE THEN
-  X_CHOOSE_TAC `w7:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_TAIL_REM7_SAFE THEN
-  X_CHOOSE_TAC `w8:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_TAIL_REM8_SAFE THEN
+  X_CHOOSE_TAC `w1:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AES256_GCM_ENC_ALT_TAIL_REM1_SAFE THEN
+  X_CHOOSE_TAC `w2:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AES256_GCM_ENC_ALT_TAIL_REM2_SAFE THEN
+  X_CHOOSE_TAC `w3:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AES256_GCM_ENC_ALT_TAIL_REM3_SAFE THEN
+  X_CHOOSE_TAC `w4:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AES256_GCM_ENC_ALT_TAIL_REM4_SAFE THEN
+  X_CHOOSE_TAC `w5:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AES256_GCM_ENC_ALT_TAIL_REM5_SAFE THEN
+  X_CHOOSE_TAC `w6:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AES256_GCM_ENC_ALT_TAIL_REM6_SAFE THEN
+  X_CHOOSE_TAC `w7:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AES256_GCM_ENC_ALT_TAIL_REM7_SAFE THEN
+  X_CHOOSE_TAC `w8:int64->int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list` AES256_GCM_ENC_ALT_TAIL_REM8_SAFE THEN
   EXISTS_TAC
    `\(r:num) (in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
      (key_p:int64) (htable_p:int64) (mod_p:int64) (g:num) (pc:num).
@@ -10577,7 +10577,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM_SAFE = prove
 (* stays the abstract f_events_callee), then bigstep TAIL_REM_SAFE with e_tail  *)
 (* = that abstract setup trace (a single term -> no CONS blowup).  f_events     *)
 (* takes nb because the tail's event trace depends on nb (= r).                 *)
-let AESV8_GCM_8X_ENC_256_SETUP0_TAIL_SAFE = prove
+let AES256_GCM_ENC_ALT_SETUP0_TAIL_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      nb pc.
@@ -10586,16 +10586,16 @@ let AESV8_GCM_8X_ENC_256_SETUP0_TAIL_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -10624,8 +10624,8 @@ let AESV8_GCM_8X_ENC_256_SETUP0_TAIL_SAFE = prove
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
               MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
   REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_TAIL_REM_SAFE "H_TAIL" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_SETUP0_SAFE "H_SETUP0" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_TAIL_REM_SAFE "H_TAIL" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_SETUP0_SAFE "H_SETUP0" THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(nb:num) (in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
       (key_p:int64) (htable_p:int64) (stackpointer:int64) (pc:num).
@@ -10648,7 +10648,7 @@ let AESV8_GCM_8X_ENC_256_SETUP0_TAIL_SAFE = prove
    [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
     ASM_REWRITE_TAC[];
     ALL_TAC] THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s1" THEN
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s1" THEN
   (* ===== BIGSTEP 2: TAIL_REM (pc+0xee0 -> pc+0x11c4), g=0, r=nb ===== *)
   USE_THEN "H_TAIL" (fun th ->
     MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
@@ -10666,7 +10666,7 @@ let AESV8_GCM_8X_ENC_256_SETUP0_TAIL_SAFE = prove
     ALL_TAC] THEN
   ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
   META_EXISTS_TAC THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s2" THENL [
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s2" THENL [
     BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
     ALL_TAC ] THEN
   (* ===== CLOSE ===== *)
@@ -10683,7 +10683,7 @@ let AESV8_GCM_8X_ENC_256_SETUP0_TAIL_SAFE = prove
 (* (pointer regs only; content facts dead for safety).  Pointer regs unchanged  *)
 (* entry->exit; straight-line NSTEP_GP (1--308) drive.  f_events takes k         *)
 (* (access addresses depend on the group index).                                *)
-let AESV8_GCM_8X_ENC_256_PREPRETAIL_GEN_SAFE = prove
+let AES256_GCM_ENC_ALT_PREPRETAIL_GEN_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb k pc.
     8 * (k + 1) <= nb /\
@@ -10691,12 +10691,12 @@ let AESV8_GCM_8X_ENC_256_PREPRETAIL_GEN_SAFE = prove
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xa10) /\
            read X0 s = word_add in_p (word (128 * (k + 1))) /\
            read X2 s = word_add out_p (word (128 * (k + 1))) /\
@@ -10753,7 +10753,7 @@ let AESV8_GCM_8X_ENC_256_PREPRETAIL_GEN_SAFE = prove
 (* single-full-group case.  Mirrors SETUP_G1's NSTEP/LDP_SETUP drive + the      *)
 (* SETUP_BRANCH_COND_FALSE_GEN / _TRUE_2 guard rewrites; post strengthened with *)
 (* the PREPRETAIL_GEN entry registers, closed via SETUP_RECON_TAC_GEN.          *)
-let AESV8_GCM_8X_ENC_256_SETUP_G1_SAFE = prove
+let AES256_GCM_ENC_ALT_SETUP_G1_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
      nb k pc.
@@ -10765,16 +10765,16 @@ let AESV8_GCM_8X_ENC_256_SETUP_G1_SAFE = prove
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -10858,7 +10858,7 @@ let AESV8_GCM_8X_ENC_256_SETUP_G1_SAFE = prove
 (* --- PREPRETAIL_TAIL_SAFE (pc+0xa10 -> pc+0x11c4): reusable last-group +      *)
 (* tail composite (PREPRETAIL_GEN_SAFE o TAIL_REM_SAFE, g=k+1, r=nb-8*(k+1)),   *)
 (* general k.  Double abstract bigstep; f_events takes nb,k.                     *)
-let AESV8_GCM_8X_ENC_256_PREPRETAIL_TAIL_SAFE = prove
+let AES256_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb k pc.
     8 * (k + 1) <= nb /\
@@ -10868,12 +10868,12 @@ let AESV8_GCM_8X_ENC_256_PREPRETAIL_TAIL_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0xa10) /\
            read X0 s = word_add in_p (word (128 * (k + 1))) /\
            read X2 s = word_add out_p (word (128 * (k + 1))) /\
@@ -10902,8 +10902,8 @@ let AESV8_GCM_8X_ENC_256_PREPRETAIL_TAIL_SAFE = prove
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
               MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
   REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_TAIL_REM_SAFE "H_TAIL" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_PREPRETAIL_GEN_SAFE "H_PP" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_TAIL_REM_SAFE "H_TAIL" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_PREPRETAIL_GEN_SAFE "H_PP" THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
       (key_p:int64) (htable_p:int64) (mod_p:int64) (nb:num) (k:num) (pc:num).
@@ -10929,7 +10929,7 @@ let AESV8_GCM_8X_ENC_256_PREPRETAIL_TAIL_SAFE = prove
     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
      CONV_TAC WORD_RULE);
     ALL_TAC] THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s1" THEN
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s1" THEN
   (* ===== BIGSTEP 2: TAIL_REM (pc+0xee0 -> pc+0x11c4), g=k+1, r=nb-8*(k+1) ===== *)
   USE_THEN "H_TAIL" (fun th ->
     MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
@@ -10945,7 +10945,7 @@ let AESV8_GCM_8X_ENC_256_PREPRETAIL_TAIL_SAFE = prove
     ALL_TAC] THEN
   ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
   META_EXISTS_TAC THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s2" THENL [
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s2" THENL [
     BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
     ALL_TAC ] THEN
   (* ===== CLOSE ===== *)
@@ -10960,7 +10960,7 @@ let AESV8_GCM_8X_ENC_256_PREPRETAIL_TAIL_SAFE = prove
 (* --- Whole-core safety for nb 9-16: FIXED_CORRECT_G1_SAFE (pc+0x38 ->         *)
 (* pc+0x11c4, k=0).  SETUP_G1_SAFE o PREPRETAIL_TAIL_SAFE (double bigstep).      *)
 (* f_events takes nb.                                                           *)
-let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1_SAFE = prove
+let AES256_GCM_ENC_ALT_FIXED_CORRECT_G1_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
      nb k pc.
@@ -10973,16 +10973,16 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1_SAFE = prove
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -11011,8 +11011,8 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1_SAFE = prove
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
               MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
   REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_PREPRETAIL_TAIL_SAFE "H_PT" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_SETUP_G1_SAFE "H_SETUP" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE "H_PT" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_SETUP_G1_SAFE "H_SETUP" THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(nb:num) (in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
       (key_p:int64) (htable_p:int64) (stackpointer:int64) (pc:num).
@@ -11038,7 +11038,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1_SAFE = prove
     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
      CONV_TAC WORD_RULE);
     ALL_TAC] THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s1" THEN
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s1" THEN
   (* ===== BIGSTEP 2: PREPRETAIL_TAIL (pc+0xa10 -> pc+0x11c4), k=0 ===== *)
   USE_THEN "H_PT" (fun th ->
     MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
@@ -11054,7 +11054,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1_SAFE = prove
     ALL_TAC] THEN
   ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
   META_EXISTS_TAC THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s2" THENL [
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s2" THENL [
     BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
     ALL_TAC ] THEN
   (* ===== CLOSE ===== *)
@@ -11070,7 +11070,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1_SAFE = prove
 (* general (main-loop) case.  Identical to SETUP_G1_SAFE except the closing     *)
 (* branch is SETUP_BRANCH_COND_FALSE_2_GEN (~(k=0): fall into the main loop at   *)
 (* pc+0x4c0 rather than skip to prepretail).  Post = MAIN_LOOP entry registers.  *)
-let AESV8_GCM_8X_ENC_256_SETUP_GEN_SAFE = prove
+let AES256_GCM_ENC_ALT_SETUP_GEN_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
      nb k pc.
@@ -11082,16 +11082,16 @@ let AESV8_GCM_8X_ENC_256_SETUP_GEN_SAFE = prove
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -11180,14 +11180,14 @@ let AESV8_GCM_8X_ENC_256_SETUP_GEN_SAFE = prove
 (* BRIDGE_GE + IV_ADD (in_p cancels -> i+1<k), events via ENUMERATEL_ADD1.        *)
 let LDP_STEP4_LEAN n =
   let sn = "s"^string_of_int n in
-  ARM_VERBOSE_STEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC sn THEN
+  ARM_VERBOSE_STEP_TAC AES256_GCM_ENC_ALT_EXEC sn THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
     `word_add (word_add b (word m)) (word nn):int64 = word_add b (word(m+nn))`]) THEN
   RULE_ASSUM_TAC NORMOFF_RULE THEN
   RULE_ASSUM_TAC SUBWORD_NORM_RULE THEN
   DISCARD_OLDSTATE_TAC sn;;
 
-let AESV8_GCM_8X_ENC_256_MAIN_LOOP_SAFE = prove
+let AES256_GCM_ENC_ALT_MAIN_LOOP_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb k pc.
     ~(k = 0) /\
@@ -11197,12 +11197,12 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x4c0) /\
            read X0 s = word_add in_p (word (128 * (0 + 1))) /\
            read X2 s = word_add out_p (word (128 * (0 + 1))) /\
@@ -11277,8 +11277,8 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP_SAFE = prove
   (* ===== loop body: pc+0x4c0 -> b.gt@pc+0xa0c (340 steps incl branch) ===== *)
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
-    `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES256_GCM_ENC_ALT_EXEC]
+    `LENGTH aes256_gcm_enc_alt_tmc`]) THEN
   MAP_EVERY NSTEP_G (1--294) THEN
   LDP_STEP4_LEAN 295 THEN
   MAP_EVERY NSTEP_G (296--302) THEN
@@ -11320,7 +11320,7 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP_SAFE = prove
 (* --- LOOP_TAIL_SAFE (pc+0x4c0 -> pc+0x11c4): MAIN_LOOP_SAFE o                  *)
 (* PREPRETAIL_TAIL_SAFE (double abstract bigstep, param k).  The loop+prepretail *)
 (* +tail composite for nb>=17.                                                   *)
-let AESV8_GCM_8X_ENC_256_LOOP_TAIL_SAFE = prove
+let AES256_GCM_ENC_ALT_LOOP_TAIL_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p mod_p end_p nb k pc.
     ~(k = 0) /\
@@ -11331,12 +11331,12 @@ let AESV8_GCM_8X_ENC_256_LOOP_TAIL_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x4c0) /\
            read X0 s = word_add in_p (word (128 * (0 + 1))) /\
            read X2 s = word_add out_p (word (128 * (0 + 1))) /\
@@ -11365,8 +11365,8 @@ let AESV8_GCM_8X_ENC_256_LOOP_TAIL_SAFE = prove
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
               MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
   REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_PREPRETAIL_TAIL_SAFE "H_PT" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_MAIN_LOOP_SAFE "H_ML" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE "H_PT" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_MAIN_LOOP_SAFE "H_ML" THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
       (key_p:int64) (htable_p:int64) (mod_p:int64) (nb:num) (k:num) (pc:num).
@@ -11392,7 +11392,7 @@ let AESV8_GCM_8X_ENC_256_LOOP_TAIL_SAFE = prove
     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
      CONV_TAC WORD_RULE);
     ALL_TAC] THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s1" THEN
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s1" THEN
   (* ===== BIGSTEP 2: PREPRETAIL_TAIL (pc+0xa10 -> pc+0x11c4), param k ===== *)
   USE_THEN "H_PT" (fun th ->
     MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
@@ -11407,7 +11407,7 @@ let AESV8_GCM_8X_ENC_256_LOOP_TAIL_SAFE = prove
     ALL_TAC] THEN
   ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
   META_EXISTS_TAC THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s2" THENL [
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s2" THENL [
     BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
     ALL_TAC ] THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -11421,7 +11421,7 @@ let AESV8_GCM_8X_ENC_256_LOOP_TAIL_SAFE = prove
 (* --- Whole-core safety for nb>=17: GEN_CORRECT_SAFE (pc+0x38 -> pc+0x11c4,     *)
 (* k>=1).  SETUP_GEN_SAFE o LOOP_TAIL_SAFE (double bigstep).  f_events takes      *)
 (* nb,k.  Completes the nb>=17 core-safety leg; all 4 nb-legs now covered.        *)
-let AESV8_GCM_8X_ENC_256_GEN_CORRECT_SAFE = prove
+let AES256_GCM_ENC_ALT_GEN_CORRECT_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
      nb k pc.
@@ -11434,16 +11434,16 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -11472,8 +11472,8 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT_SAFE = prove
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
               MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
   REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_LOOP_TAIL_SAFE "H_LT" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_SETUP_GEN_SAFE "H_SG" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_LOOP_TAIL_SAFE "H_LT" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_SETUP_GEN_SAFE "H_SG" THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(nb:num) (k:num) (in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
       (key_p:int64) (htable_p:int64) (stackpointer:int64) (pc:num).
@@ -11499,7 +11499,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT_SAFE = prove
     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
      CONV_TAC WORD_RULE);
     ALL_TAC] THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s1" THEN
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s1" THEN
   (* ===== BIGSTEP 2: LOOP_TAIL (pc+0x4c0 -> pc+0x11c4), param k ===== *)
   USE_THEN "H_LT" (fun th ->
     MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
@@ -11515,7 +11515,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT_SAFE = prove
     ALL_TAC] THEN
   ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
   META_EXISTS_TAC THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s2" THENL [
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s2" THENL [
     BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
     ALL_TAC ] THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -11528,8 +11528,8 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT_SAFE = prove
 
 (* --- Whole-core safety (all nb): dispatch over the 4 nb-legs (FAST1-4,      *)
 (* SETUP0_TAIL, FIXED_CORRECT_G1, GEN_CORRECT), mirroring                      *)
-(* AESV8_GCM_8X_ENC_256_CORRECT's nb-tree.  Entry pc+0x38, exit pc+0x11c4.     *)
-let AESV8_GCM_8X_ENC_256_SAFE = prove
+(* AES256_GCM_ENC_ALT_CORRECT's nb-tree.  Entry pc+0x38, exit pc+0x11c4.     *)
+let AES256_GCM_ENC_ALT_SAFE = prove
  (`exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
      nb pc.
@@ -11538,16 +11538,16 @@ let AESV8_GCM_8X_ENC_256_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
-                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+                   (word pc, LENGTH aes256_gcm_enc_alt_tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
        (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
            read X1 s = word bit_len /\
@@ -11573,13 +11573,13 @@ let AESV8_GCM_8X_ENC_256_SAFE = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  X_CHOOSE_TAC `w1:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_FAST1_SAFE THEN
-  X_CHOOSE_TAC `w2:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_FAST2_SAFE THEN
-  X_CHOOSE_TAC `w3:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_FAST3_SAFE THEN
-  X_CHOOSE_TAC `w4:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_FAST4_SAFE THEN
-  X_CHOOSE_TAC `wst:num->int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_SETUP0_TAIL_SAFE THEN
-  X_CHOOSE_TAC `wg1:num->int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1_SAFE THEN
-  X_CHOOSE_TAC `wgen:num->num->int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_GEN_CORRECT_SAFE THEN
+  X_CHOOSE_TAC `w1:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AES256_GCM_ENC_ALT_FAST1_SAFE THEN
+  X_CHOOSE_TAC `w2:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AES256_GCM_ENC_ALT_FAST2_SAFE THEN
+  X_CHOOSE_TAC `w3:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AES256_GCM_ENC_ALT_FAST3_SAFE THEN
+  X_CHOOSE_TAC `w4:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AES256_GCM_ENC_ALT_FAST4_SAFE THEN
+  X_CHOOSE_TAC `wst:num->int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AES256_GCM_ENC_ALT_SETUP0_TAIL_SAFE THEN
+  X_CHOOSE_TAC `wg1:num->int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AES256_GCM_ENC_ALT_FIXED_CORRECT_G1_SAFE THEN
+  X_CHOOSE_TAC `wgen:num->num->int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AES256_GCM_ENC_ALT_GEN_CORRECT_SAFE THEN
   EXISTS_TAC
    `\(nb:num) (in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
      (key_p:int64) (htable_p:int64) (stackpointer:int64) (pc:num).
@@ -11648,22 +11648,22 @@ let AESV8_GCM_8X_ENC_256_SAFE = prove
 (* correctness theorem's MAYCHANGE frame.                                       *)
 let enc_safety_full_spec_tmc,enc_safety_public_vars_tmc = mk_safety_spec
     ~keep_maychanges:true
-    (assoc "aesv8_gcm_8x_enc_256_wb" subroutine_signatures)
-    AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT
-    AESV8_GCM_8X_ENC_256_WB_EXEC;;
+    (assoc "aes256_gcm_enc_alt" subroutine_signatures)
+    AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT
+    AES256_GCM_ENC_ALT_EXEC;;
 
 let enc_safety_full_spec,enc_safety_public_vars = mk_safety_spec
     ~keep_maychanges:true
-    (assoc "aesv8_gcm_8x_enc_256_wb" subroutine_signatures)
-    AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT
-    AESV8_GCM_8X_ENC_256_WB_EXEC;;
+    (assoc "aes256_gcm_enc_alt" subroutine_signatures)
+    AES256_GCM_ENC_ALT_SUBROUTINE_CORRECT
+    AES256_GCM_ENC_ALT_EXEC;;
 
 (* --- NOIBT subroutine safety (REQUIRED): 3-path wrapper mirroring            *)
-(* AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT.  f_events dispatches on the   *)
+(* AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT.  f_events dispatches on the   *)
 (* public length guards (misaligned / zero / main); main = prologue + CORE_SAFE *)
 (* callee bigstep (in-frame SP = word_sub sp 0x50) + epilogue.                  *)
 (* The statement is the mk_safety_spec-generated enc_safety_full_spec_tmc.      *)
-let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE = prove
+let AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_SAFE = prove
  (`exists f_events.
     forall e in_p out_p tag_p ivec_p key_p htable_p len_bits pc stackpointer returnaddress.
         aligned 16 stackpointer /\
@@ -11671,14 +11671,14 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE = prove
         ALLPAIRS nonoverlapping
         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16;
          word_sub stackpointer (word 80),80]
-        [word pc,LENGTH aesv8_gcm_8x_enc_256_wb_tmc;
+        [word pc,LENGTH aes256_gcm_enc_alt_tmc;
          in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192] /\
         PAIRWISE nonoverlapping
         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16;
          word_sub stackpointer (word 80),80]
         ==> ensures arm
             (\s.
-                 aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+                 aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_tmc /\
                  read PC s = word pc /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
@@ -11708,7 +11708,7 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE = prove
               memory :> bytes (tag_p,16); memory :> bytes (ivec_p,16);
               memory :> bytes (word_sub stackpointer (word 80),80)])`,
   ASSERT_CONCL_TAC enc_safety_full_spec_tmc THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_SAFE "H_CORE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AES256_GCM_ENC_ALT_SAFE "H_CORE" THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; LENGTH_WB_MC; ALLPAIRS;
               PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; KEY15_SPLIT] THEN
   CONCRETIZE_F_EVENTS_TAC
@@ -11745,15 +11745,15 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE = prove
      [ASM_REWRITE_TAC[VAL_EQ_0]; ALL_TAC] THEN
     REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN
     ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1] THEN
+    ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [1] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `~(val(len_bits:int64) = 0)`;
                                ASSUME `~(len_bits:int64 = word 0)`; COND_CLAUSES]) THEN
-    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [2] THEN
-    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [3] THEN
+    ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [2] THEN
+    ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [3] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[
       ASSUME `~(word_and (len_bits:int64) (word 0x7f) = word 0)`;
       ASSUME `~(val(word_and (len_bits:int64) (word 0x7f)) = 0)`; COND_CLAUSES]) THEN
-    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [4;5] THEN
+    ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [4;5] THEN
     ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[COND_CLAUSES] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC] THEN
@@ -11766,7 +11766,7 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE = prove
      [ASM_REWRITE_TAC[GSYM VAL_EQ_0]; ALL_TAC] THEN
     REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN
     ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1;2;3] THEN
+    ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [1;2;3] THEN
     ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[VAL_WORD_0; COND_CLAUSES] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
@@ -11797,18 +11797,18 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE = prove
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(
     EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV THENC REWRITE_CONV[WORD_ADD_0]))) THEN
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1] THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [1] THEN
   SUBGOAL_THEN `~(128 * nb = 0)` ASSUME_TAC THENL
    [UNDISCH_TAC `1 <= nb` THEN ARITH_TAC; ALL_TAC] THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_GUARD1_NONZERO_GEN
     (CONJ (ASSUME `1 <= nb`) (ASSUME `128 * nb < 2 EXP 64`));
     ASSUME `~(128 * nb = 0)`; COND_CLAUSES]) THEN
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [2] THEN
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [3] THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [2] THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC [3] THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_GUARD2_MASK_GEN
     (CONJ (ASSUME `1 <= nb`) (ASSUME `128 * nb < 2 EXP 64`));
     VAL_WORD_0; COND_CLAUSES]) THEN
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC (4--14) THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC (4--14) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_X9_NORM (ASSUME `128 * nb < 2 EXP 64`)]) THEN
   USE_THEN "H_CORE" (fun th0 ->
     let th = REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
@@ -11825,10 +11825,10 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE = prove
      ASM_REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS]); ALL_TAC] THEN
   ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
   META_EXISTS_TAC THEN
-  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s15" THENL
+  ARM_BIGSTEP_TAC AES256_GCM_ENC_ALT_EXEC "s15" THENL
    [ CONV_TAC(LAND_CONV CONS_TO_APPEND_CONV) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
      UNIFY_REFL_TAC; ALL_TAC ] THEN
-  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC (16--22) THEN
+  ARM_STEPS_TAC AES256_GCM_ENC_ALT_EXEC (16--22) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[COND_CLAUSES] THEN
   ABBREV_TAC `spoff:int64 = word_sub stackpointer (word 80)` THEN
@@ -11849,8 +11849,8 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE = prove
 );;
 
 (* --- IBT subroutine safety (REQUIRED): derived from the NOIBT one by
-   ARM_ADD_IBT_RULE, mirroring AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT. --- *)
-let AESV8_GCM_8X_ENC_256_SUBROUTINE_SAFE = prove
+   ARM_ADD_IBT_RULE, mirroring AES256_GCM_ENC_ALT_SUBROUTINE_CORRECT. --- *)
+let AES256_GCM_ENC_ALT_SUBROUTINE_SAFE = prove
  (`exists f_events.
     forall e in_p out_p tag_p ivec_p key_p htable_p len_bits pc stackpointer returnaddress.
         aligned 16 stackpointer /\
@@ -11858,14 +11858,14 @@ let AESV8_GCM_8X_ENC_256_SUBROUTINE_SAFE = prove
         ALLPAIRS nonoverlapping
         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16;
          word_sub stackpointer (word 80),80]
-        [word pc,LENGTH aesv8_gcm_8x_enc_256_wb_mc;
+        [word pc,LENGTH aes256_gcm_enc_alt_mc;
          in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192] /\
         PAIRWISE nonoverlapping
         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16;
          word_sub stackpointer (word 80),80]
         ==> ensures arm
             (\s.
-                 aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_mc /\
+                 aligned_bytes_loaded s (word pc) aes256_gcm_enc_alt_mc /\
                  read PC s = word pc /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
@@ -11896,5 +11896,5 @@ let AESV8_GCM_8X_ENC_256_SUBROUTINE_SAFE = prove
               memory :> bytes (word_sub stackpointer (word 80),80)])`,
   ASSERT_CONCL_TAC enc_safety_full_spec THEN
   MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE
-                     aesv8_gcm_8x_enc_256_wb_mc aesv8_gcm_8x_enc_256_wb_tmc
-                     AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE));;
+                     aes256_gcm_enc_alt_mc aes256_gcm_enc_alt_tmc
+                     AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_SAFE));;

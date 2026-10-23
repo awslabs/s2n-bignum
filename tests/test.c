@@ -18070,24 +18070,24 @@ int test_wycheproof_aes256_gcm_dec_alt(void)
 
 // ****************************************************************************
 // Testing of the AES-256-GCM whole-blocks encryption kernel
-// aesv8_gcm_8x_enc_256_wb
+// aes256_gcm_enc_alt
 // ****************************************************************************
 
 // Random-input test against ref_aes256_gcm_enc.  Shares the ABI of the kernels
 // above, so test_aes_gcm drives it the same way.
-int test_aesv8_gcm_8x_enc_256_wb(void)
+int test_aes256_gcm_enc_alt(void)
 {
 #ifdef __x86_64__
   return 1;
 #else
-  return test_aes_gcm("aesv8_gcm_8x_enc_256_wb", 32, aesv8_gcm_8x_enc_256_wb,
+  return test_aes_gcm("aes256_gcm_enc_alt", 32, aes256_gcm_enc_alt,
                       ref_aes256_gcm_enc);
 #endif
 }
 
 // The whole-blocks contract: a len_bits value that is not a nonzero multiple
 // of 128 must return 0 and leave out / tag / ivec untouched.
-int test_aesv8_gcm_8x_enc_256_wb_guard(void)
+int test_aes256_gcm_enc_alt_guard(void)
 {
 #ifdef __x86_64__
   return 1;
@@ -18103,7 +18103,7 @@ int test_aesv8_gcm_8x_enc_256_wb_guard(void)
                                       2049, 4095, 8191, 32769 };
   size_t i;
 
-  printf("Testing the aesv8_gcm_8x_enc_256_wb whole-blocks guard\n");
+  printf("Testing the aes256_gcm_enc_alt whole-blocks guard\n");
 
   random_bytes(key, 32); random_bytes(ivec, 16); random_bytes((uint8_t *)xi, 16);
   memcpy(ivec0, ivec, 16); memcpy(xi0, xi, 16);
@@ -18116,7 +18116,7 @@ int test_aesv8_gcm_8x_enc_256_wb_guard(void)
   memset(bb2, 0xa5, 4096);
 
   for (i = 0; i < sizeof(badbits)/sizeof(badbits[0]); ++i)
-   { uint64_t r = aesv8_gcm_8x_enc_256_wb(bb1, badbits[i], bb2, xi, ivec,
+   { uint64_t r = aes256_gcm_enc_alt(bb1, badbits[i], bb2, xi, ivec,
                                           &ek, htable);
      if (r != 0)
       { printf("### Disparity: guard len_bits=%"PRIu64
@@ -18198,7 +18198,7 @@ static int run_gcm_256_kat_enc_wb(const char *keyhex, const char *noncehex,
   memcpy(ivec, j0, 16);
   ref_gcm_inc32(ivec);
   memset(out, 0, len);
-  ret = aesv8_gcm_8x_enc_256_wb(pt, (uint64_t)len * 8, out, xi, ivec, &ek,
+  ret = aes256_gcm_enc_alt(pt, (uint64_t)len * 8, out, xi, ivec, &ek,
                                 htable);
 
   // S = the tag after the length block; T = AES_K(J0) XOR S
@@ -18213,20 +18213,20 @@ static int run_gcm_256_kat_enc_wb(const char *keyhex, const char *noncehex,
   for (i = 0; i <= len / 16; ++i) ref_gcm_inc32(ivec_expect);
 
   if (ret != len)
-   { printf("### Disparity: aesv8_gcm_8x_enc_256_wb returned %"PRIu64
+   { printf("### Disparity: aes256_gcm_enc_alt returned %"PRIu64
             " for len=%zu\n", ret, len);
      bad = 1; }
   if (memcmp(out, ct, len) != 0)
-   { printf("### Disparity: aesv8_gcm_8x_enc_256_wb ciphertext len=%zu\n", len);
+   { printf("### Disparity: aes256_gcm_enc_alt ciphertext len=%zu\n", len);
      bad = 1; }
   if (memcmp(tag_out, tag_expect, 16) != 0)
-   { printf("### Disparity: aesv8_gcm_8x_enc_256_wb tag len=%zu\n", len);
+   { printf("### Disparity: aes256_gcm_enc_alt tag len=%zu\n", len);
      bad = 1; }
   if (memcmp(ivec, ivec_expect, 16) != 0)
-   { printf("### Disparity: aesv8_gcm_8x_enc_256_wb counter len=%zu\n", len);
+   { printf("### Disparity: aes256_gcm_enc_alt counter len=%zu\n", len);
      bad = 1; }
   if (!bad && VERBOSE)
-   { printf("OK: aesv8_gcm_8x_enc_256_wb len=%zu\n", len);
+   { printf("OK: aes256_gcm_enc_alt len=%zu\n", len);
    }
   return bad;
 }
@@ -18247,7 +18247,7 @@ int test_known_values_gcm_256_encrypt_wb(void)
   return 1;
 #else
   int failures = 0, successes = 0;
-  printf("Testing known value cases for aesv8_gcm_8x_enc_256_wb\n");
+  printf("Testing known value cases for aes256_gcm_enc_alt\n");
 
 #include "known_value_tests_gcm_256.h"
 
@@ -18269,7 +18269,7 @@ int test_wycheproof_gcm_256_encrypt_wb(void)
   return 1;
 #else
   int failures = 0, successes = 0;
-  printf("Testing Wycheproof vectors for aesv8_gcm_8x_enc_256_wb\n");
+  printf("Testing Wycheproof vectors for aes256_gcm_enc_alt\n");
 
 #include "wycheproof_tests_gcm_256.h"
 
@@ -19237,10 +19237,10 @@ int main(int argc, char *argv[])
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
-    functionaltest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb",test_aesv8_gcm_8x_enc_256_wb);
-    functionaltest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb whole-blocks guard",test_aesv8_gcm_8x_enc_256_wb_guard);
-    functionaltest(aes&&sha3,"known value tests for aesv8_gcm_8x_enc_256_wb",test_known_values_gcm_256_encrypt_wb);
-    functionaltest(aes&&sha3,"Wycheproof vectors for aesv8_gcm_8x_enc_256_wb",test_wycheproof_gcm_256_encrypt_wb);
+    functionaltest(aes&&sha3,"aes256_gcm_enc_alt",test_aes256_gcm_enc_alt);
+    functionaltest(aes&&sha3,"aes256_gcm_enc_alt whole-blocks guard",test_aes256_gcm_enc_alt_guard);
+    functionaltest(aes&&sha3,"known value tests for aes256_gcm_enc_alt",test_known_values_gcm_256_encrypt_wb);
+    functionaltest(aes&&sha3,"Wycheproof vectors for aes256_gcm_enc_alt",test_wycheproof_gcm_256_encrypt_wb);
   }
 
   if (extrastrigger) function_to_test = "_";
