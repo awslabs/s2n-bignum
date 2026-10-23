@@ -1773,7 +1773,7 @@ let GHASH_REDUCE_RAW_IS_POLYVAL_G2 = prove
   CONV_TAC WORD_BLAST);;
 
 (* ------------------------------------------------------------------------- *)
-(* P4 bridge (b): the Karatsuba multiply-accumulate fold.                    *)
+(* Bridge (b): the Karatsuba multiply-accumulate fold.                       *)
 (*                                                                           *)
 (* Given the three Karatsuba partial products of a single 128x128 carryless  *)
 (* multiply  a * b  --  lo*lo, the cross term (a_lo^a_hi)*(b_lo^b_hi), and   *)
@@ -1794,7 +1794,7 @@ let GHASH_REDUCE_RAW_IS_POLYVAL_G2 = prove
 (* the swap settles and the proof diverges.                                  *)
 (*                                                                           *)
 (* This is the per-block fold primitive the main-loop / prepretail / tail    *)
-(* bodies compose (P6): each GHASH block is `word_pmul (acc_xor_block)       *)
+(* bodies compose: each GHASH block is `word_pmul (acc_xor_block)            *)
 (* (h_power ...)`; the batched multi-block accumulation over v8..v15 then    *)
 (* closes with the existing common/ lemma GHASH_POLYVAL_ACC_BATCHED (which   *)
 (* already reduces `ghash_polyval_acc h a (CONS b bs)` to a prop3 of the     *)
@@ -1820,7 +1820,7 @@ let GHASH_REDUCE_RAW_KARATSUBA_IS_DOT = prove
   REWRITE_TAC[GSYM(REWRITE_RULE[LET_DEF;LET_END_DEF] PMUL_KARATSUBA_JOIN)]);;
 
 (* ========================================================================= *)
-(* P5 - Main-loop invariant (the software-pipelined core).                   *)
+(* Main-loop invariant (the software-pipelined core).                        *)
 (*                                                                           *)
 (* The x8 main loop (pc+0x498 .. back-edge b.lt pc+0x9e4 -> 0x498) is        *)
 (* software-pipelined: iteration i GHASH-folds the PREVIOUS group of 8       *)
@@ -1868,7 +1868,7 @@ let GHASH_REDUCE_RAW_KARATSUBA_IS_DOT = prove
 (*          the                                                              *)
 (*        block count nb to the loop count k (max store byte = 128k+128 =    *)
 (*          16*nb).                                                          *)
-(*        (This is the P9 nb-vs-k tie surfacing early.)                      *)
+(*        (This is the composition's nb-vs-k tie, surfacing early.)          *)
 (* CONFIRMED-CORRECT invariant-at-(i+1) forms (goal conclusion matched       *)
 (* verbatim after stepping): X0/X2 128*((i+1)+1), Q30 index 8*(i+1)+13, Q19  *)
 (* byteswap128 nist_ghash..(8*(i+1)), Q31, all key/htable/tag/ivec mem,      *)
@@ -2170,7 +2170,7 @@ let IV_ADD = prove
   CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* SETUP branch-discharge lemmas (P7).                                       *)
+(* SETUP branch-discharge lemmas.                                            *)
 (*                                                                           *)
 (* The pipeline-fill setup has two `cmp x0,x5; b.ge` guards - the tail check *)
 (* at 0x420/0x424 and the prepretail check at 0x458/0x494 - both comparing   *)
@@ -3260,7 +3260,7 @@ let AES256_GCM_ENC_ALT_MAIN_LOOP = prove
     (*       signed cmp no-overflow).  word_sub cancels in_p, leaving a pure      *)
     (*       k-bounded word fact.  This is a real invariant-completeness gap      *)
     (*       - add the end_p antecedent and                                       *)
-    (*       re-close init/back-edge/exit; reconcile with P7 setup / P9 (end_p    *)
+    (*       re-close init/back-edge/exit; reconcile with the setup (end_p        *)
     (*       is how the iteration count k is pinned).                             *)
     (* (C) is now CLOSED.  Added the two end_p antecedents to                     *)
     (* MAIN_LOOP (`end_p = word_add in_p (word (128*(k+1)))` and the no-wrap      *)
@@ -3307,7 +3307,7 @@ let AES256_GCM_ENC_ALT_MAIN_LOOP = prove
            callee-saved).  The MAIN_LOOP conclusion frame was therefore
            widened with `MAYCHANGE [Q8;..;Q15]`, as in the 4-way kernels; the
            low-half writes are restored by the d8-d15 epilogue at the
-           subroutine wrapper (P10).  With the widened frame,
+           subroutine wrapper.  With the widened frame,
            MONOTONE_MAYCHANGE_TAC discharges the subsumption (the 8 ciphertext
            stores bytes128(out_p+128*(i+1)+16m) <= bytes(out_p,16*nb) follow
            from the `8*(k+1)<=nb` antecedent via CONTAINED_TAC).  *)
@@ -3503,7 +3503,7 @@ let SETUP_RECON_TAC_GEN : tactic =
     else ASM_REWRITE_TAC[] gl;;
 
 (* ========================================================================= *)
-(* P7 - SETUP (pipeline fill).  Core entry pc+0x30 (just after the           *)
+(* SETUP (pipeline fill).  Core entry pc+0x30 (just after the                *)
 (* prologue's stack adjust + callee-save spills + mod-const store +          *)
 (* X9/X16/X11/X10 remaps) through the pipeline-fill store to pc+0x498 (the   *)
 (* main-loop top).                                                           *)
@@ -3529,7 +3529,7 @@ let SETUP_RECON_TAC_GEN : tactic =
 (* mod_p is the on-stack modulo constant at stackpointer+0x40 (mov x10,      *)
 (* sp,#0x40 @0x2c; the 0xc2..0 const was stored there @0x28).  We state the  *)
 (* core with mod_p = word_add stackpointer (word 0x40); the subroutine       *)
-(* wrapper (P10) ties stackpointer to the caller SP - 0x50.                  *)
+(* wrapper ties stackpointer to the caller SP - 0x50.                        *)
 (*                                                                           *)
 (* The body is a 282-step symbolic execution plus counter/ciphertext/AES     *)
 (* reconstruction, following the MAIN_LOOP body close and the AES_SETUP      *)
@@ -3565,7 +3565,7 @@ let SETUP_RECON_TAC_GEN : tactic =
 (*         2.                                                                *)
 (*       (The `8*(k+2)=nb` premise is the hypothesis for this; VERIFY        *)
 (*         it                                                                *)
-(*       against the real branch + reconcile with the P8 tail / P9           *)
+(*       against the real branch + reconcile with the tail and the           *)
 (*         assembly.)                                                        *)
 (*     - FINAL_STATE reconstruction mirrors the MAIN_LOOP body cheap-close   *)
 (*       (XOR_AES256_CIPHER_RECONSTRUCT + aes_ctr_block/ADD_CLAUSES +        *)
@@ -3820,7 +3820,7 @@ let AES256_GCM_ENC_ALT_SETUP_G1 = prove
   REPEAT CONJ_TAC THEN SETUP_RECON_TAC_GEN);;
 
 (* ========================================================================= *)
-(* P7 - PREPRETAIL (pipeline DRAIN):  pc+0x9e8  ->  pc+0xeb8                 *)
+(* PREPRETAIL (pipeline DRAIN):  pc+0x9e8  ->  pc+0xeb8                      *)
 (* (.L256_enc_tail)                                                          *)
 (*                                                                           *)
 (* The software pipeline runs one 8-block GHASH group BEHIND the ciphertext  *)
@@ -3835,8 +3835,9 @@ let AES256_GCM_ENC_ALT_SETUP_G1 = prove
 (* verified: no add/sub/mov to those regs in 0x9e8..0xeb4).                  *)
 (*                                                                           *)
 (* The PREPRETAIL precondition is EXACTLY the MAIN_LOOP postcondition at i = *)
-(* k (the state at pc+0x9e8), plus aligned_bytes_loaded; they are bridged at *)
-(* P9 by ENSURES_SEQUENCE_TAC.  The Q19 drain fold is STRUCTURALLY IDENTICAL *)
+(* k (the state at pc+0x9e8), plus aligned_bytes_loaded; they are bridged in *)
+(* the composition by ENSURES_SEQUENCE_TAC.  The Q19 drain fold is          *)
+(* STRUCTURALLY IDENTICAL                                                   *)
 (* to the MAIN_LOOP body's (same leading `ext v19`@0xa50 PRE- byteswap, same *)
 (* pmull/pmull2/eor3 Karatsuba chain, same trailing raw MODULO `eor3         *)
 (* v19,v19,v21,v17`@0xe98, NO trailing `ext v19`), so it closes via the      *)
@@ -4050,7 +4051,7 @@ let PP_DISPATCH : tactic = fun (asl,w as gl) ->
 (* drain (REWRITE+STRIP+INIT + MAP_EVERY NSTEP_GP (1--308) + FINAL_STATE +   *)
 (* PP_DISPATCH) with NO branch and ZERO uses of `~(k = 0)` (NSTEP_GP is      *)
 (* k-independent; PP_DISPATCH/Q19_FOLD_TAC_K use 8*k symbolically but never  *)
-(* case-split k=0).  The non-generalized duplicate was removed (review E7),  *)
+(* case-split k=0).  The non-generalized duplicate was removed,              *)
 (* so this is now the sole prepretail-stage theorem.                         *)
 (* ------------------------------------------------------------------------- *)
 let AES256_GCM_ENC_ALT_PREPRETAIL_GEN = prove
@@ -4174,7 +4175,7 @@ let AES256_GCM_ENC_ALT_PREPRETAIL_GEN = prove
   REPEAT CONJ_TAC THEN PP_DISPATCH);;
 
 (* ========================================================================= *)
-(* P8 - TAIL cascade (WHOLE-BLOCKS variant, pc+0xec0 -> pc+0x11a4).          *)
+(* TAIL cascade (WHOLE-BLOCKS variant, pc+0xec0 -> pc+0x11a4).               *)
 (*                                                                           *)
 (* This is the pipeline EPILOGUE: it processes the FINAL in-flight 8-block   *)
 (* group (keystreams pre-loaded in Q0..Q7 at prepretail exit, output blocks  *)
@@ -4199,7 +4200,7 @@ let AES256_GCM_ENC_ALT_PREPRETAIL_GEN = prove
 (*                                                                           *)
 (* The Q19 drain fold is STRUCTURALLY the SAME KIND as PREPRETAIL /          *)
 (* MAIN_LOOP (pmull/pmull2/eor3 Karatsuba over the 8 fresh cipherblocks,     *)
-(* reduce), so it reuses the P6/P7 machinery (NSTEP_GP / RECON_GRR /         *)
+(* reduce), so it reuses the main-loop machinery (NSTEP_GP / RECON_GRR /     *)
 (* Q19_FOLD_TAC-style).                                                      *)
 (*                                                                           *)
 (* The precondition is PREPRETAIL's postcondition verbatim (pc+0xec0 state). *)
@@ -7457,7 +7458,7 @@ let AES256_GCM_ENC_ALT_GEN_CORRECT = prove
   (* and `read PC s = word pc'` conjuncts to BOTH legs' mid-state - so the `q`   *)
   (* arg must OMIT them (include ONLY the register/memory `Q s` remainder).      *)
   (* Also it fires MAYCHANGE_IDEMPOT_TAC internally, which DIES if the ABI macro *)
-  (* is folded (memory P5 gotcha) - so UNFOLD it first.                          *)
+  (* is folded - so UNFOLD it first.                                             *)
   (* Expand the _WB_CORRECT precondition's ALLPAIRS + PAIRWISE into individual  *)
   (* nonoverlapping atoms BEFORE stripping, so each segment leg's antecedent     *)
   (* (out_p vs tag_p/ivec_p live in _WB_CORRECT's PAIRWISE) is available as an    *)
