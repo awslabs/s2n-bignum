@@ -1750,17 +1750,14 @@ let ghash_reduce_raw = new_definition
                        (ext p1) in
     word_xor (word_xor p3 (word_pmul (LO q18) w)) (ext q18) : int128`;;
 
-(* NOTE (review E2): ghash_reduce_raw is DELIBERATELY kept, not deleted as a  *)
-(* duplicate of the shared polyval_reduce_g2.  Its body is exactly the term   *)
-(* ARM_STEPS_TAC (1--8) emits for Q19, so it is the GSYM-fold target RECON_GRR *)
-(* uses to collapse the raw hardware reduce back into a named form (across the *)
-(* main loop, prepretail and the tail/fast arms).  The shared polyval_reduce_g2 *)
-(* has a structurally different body (ks / explicit word_join(LO,HI) / a       *)
-(* reorganized w2) and so CANNOT match the hardware emission as a fold target. *)
-(* No duplicate GHASH semantics are introduced: GHASH_REDUCE_RAW_IS_POLYVAL_G2 *)
-(* just below proves the two equal under the p2<->p3 permutation              *)
-(* (ghash_reduce_raw p1 p2 p3 = polyval_reduce_g2 p1 p3 p2), and every         *)
-(* downstream per-block fold bridges to polyval_dot through that lemma.        *)
+(* ghash_reduce_raw is kept as a fold target.  Its body is the term            *)
+(* ARM_STEPS_TAC (1--8) emits for Q19, so RECON_GRR can fold that raw reduce   *)
+(* back into a named form by GSYM, in the main loop, prepretail and the tail   *)
+(* and fast arms.  The shared polyval_reduce_g2 arranges the same computation  *)
+(* differently, so folding into it directly would first need the emitted term  *)
+(* normalised.  GHASH_REDUCE_RAW_IS_POLYVAL_G2 relates the two                 *)
+(* (ghash_reduce_raw p1 p2 p3 = polyval_reduce_g2 p1 p3 p2), and the per-block *)
+(* folds reach polyval_dot through it, so no second GHASH semantics arises.    *)
 
 let GHASH_REDUCE_RAW_IS_POLYVAL_G2 = prove
  (`!p1 p2 p3. ghash_reduce_raw p1 p2 p3 = polyval_reduce_g2 p1 p3 p2`,
