@@ -9301,10 +9301,9 @@ let AESV8_GCM_8X_ENC_256_FAST3 = prove
 
 let AESV8_GCM_8X_ENC_256_CORRECT = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
-     tag0 nonce ctr0 c rk inblock nb pc.
+     tag0 nonce c rk inblock nb pc.
     1 <= nb /\
     bit_len = 128 * nb /\
-    word_reversefields 8 ctr0 = ctr_block nonce c /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -9332,7 +9331,8 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
              word 0xc200000000000000 /\
            wordlist_from_memory(key_p,15) s = MAP (word_reversefields 8) rk /\
            read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
-           read (memory :> bytes128 ivec_p) s = ctr0 /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8 (ctr_block nonce c) /\
            htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
            (!j. j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
@@ -9340,7 +9340,7 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
       (\s. read PC s = word (pc + 0x11c4) /\
            read X9 s = word (16 * nb) /\
            read (memory :> bytes128 ivec_p) s =
-             word_reversefields 8 (ctr_block nonce (c + nb)) /\
+             word_reversefields 8 (ctr_block nonce (nb + c)) /\
            read (memory :> bytes128 tag_p) s =
              word_reversefields 8
                (nist_ghash (aes256_cipher (word 0) rk) tag0
@@ -9355,23 +9355,6 @@ let AESV8_GCM_8X_ENC_256_CORRECT = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
   REPEAT STRIP_TAC THEN
-  (* the exported sec.2 shape reads ivec = ctr0 with the decomposition
-     hypothesis; recover the c-form the internal legs expect. *)
-  SUBGOAL_THEN `ctr0:int128 = word_reversefields 8 (ctr_block nonce c)` SUBST_ALL_TAC THENL
-   [UNDISCH_TAC `word_reversefields 8 ctr0 = ctr_block nonce c` THEN
-    DISCH_THEN(SUBST1_TAC o SYM) THEN REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS];
-    ALL_TAC] THEN
-  (* the internal legs conclude `ctr_block nonce (nb + c)` (mechanical
-     transform of the original `nb + 2`), but the FROZEN exported statement uses
-     the sec.2 form `ctr_block nonce (c + nb)`.  Normalise the goal's ivec post to
-     the legs' AC-order so `DISCH_THEN MATCH_MP_TAC` unifies in all 7 branches.
-     Specific to this term (not a bare `c + nb = nb + c`, which loops like ADD_SYM
-     and would also hit `pc + 0x11c4`). *)
-  SUBGOAL_THEN
-    `word_reversefields 8 (ctr_block nonce (c + nb)) =
-     word_reversefields 8 (ctr_block nonce (nb + c))`
-    (fun th -> REWRITE_TAC[th]) THENL
-   [AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `nb <= 8 \/ (9 <= nb /\ nb <= 16) \/ 17 <= nb` MP_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
   STRIP_TAC THENL
@@ -9520,9 +9503,8 @@ let WB_LEN_EQ_128_BLOCKS = prove
 
 let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p
-     tag0 nonce ctr0 c rk inblock len_bits pc stackpointer returnaddress.
+     tag0 nonce c rk inblock len_bits pc stackpointer returnaddress.
     aligned 16 stackpointer /\
-    word_reversefields 8 ctr0 = ctr_block nonce c /\
     val in_p + 16 * wb_blocks len_bits < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
@@ -9540,7 +9522,8 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
            C_ARGUMENTS
             [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
            read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
-           read (memory :> bytes128 ivec_p) s = ctr0 /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8 (ctr_block nonce c) /\
            wordlist_from_memory(key_p,15) s =
              MAP (word_reversefields 8) rk /\
            htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
@@ -9550,7 +9533,7 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
       (\s. read PC s = returnaddress /\
            C_RETURN s = word (16 * wb_blocks len_bits) /\
            read (memory :> bytes128 ivec_p) s =
-             word_reversefields 8 (ctr_block nonce (c + wb_blocks len_bits)) /\
+             word_reversefields 8 (ctr_block nonce (wb_blocks len_bits + c)) /\
            read (memory :> bytes128 tag_p) s =
              word_reversefields 8
                (nist_ghash (aes256_cipher (word 0) rk) tag0
@@ -9571,13 +9554,6 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
   (* into the pointwise reads the interior legs consume.                       *)
   REWRITE_TAC[KEY15_SPLIT] THEN
   REPEAT STRIP_TAC THEN
-  (* All three paths start from the same normalised counter block.            *)
-  SUBGOAL_THEN `ctr0:int128 = word_reversefields 8 (ctr_block nonce c)`
-  SUBST_ALL_TAC THENL
-   [UNDISCH_TAC `word_reversefields 8 ctr0 = ctr_block nonce c` THEN
-    DISCH_THEN(SUBST1_TAC o SYM) THEN
-    REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS];
-    ALL_TAC] THEN
   (* Abbreviate the block count.  This is not cosmetic: keeping `wb_blocks`   *)
   (* folded stops `val len_bits = 128 * nb` from looping as a rewrite, which  *)
   (* it would if wb_blocks unfolded to `val len_bits DIV 128` on the right.   *)
@@ -9701,8 +9677,7 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
     `key_p:int64`; `htable_p:int64`;
     `word_sub stackpointer (word 0x50):int64`;
     `128 * nb`;
-    `tag0:int128`; `nonce:(96)word`;
-    `word_reversefields 8 (ctr_block nonce c):int128`; `c:num`;
+    `tag0:int128`; `nonce:(96)word`; `c:num`;
     `rk:int128 list`;
     `inblock:num->int128`; `nb:num`; `pc:num`]
    (REWRITE_RULE[KEY15_SPLIT] AESV8_GCM_8X_ENC_256_CORRECT)) THEN
@@ -9735,9 +9710,8 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
 
 let AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p
-     tag0 nonce ctr0 c rk inblock len_bits pc stackpointer returnaddress.
+     tag0 nonce c rk inblock len_bits pc stackpointer returnaddress.
     aligned 16 stackpointer /\
-    word_reversefields 8 ctr0 = ctr_block nonce c /\
     val in_p + 16 * wb_blocks len_bits < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
@@ -9755,7 +9729,8 @@ let AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT = prove
            C_ARGUMENTS
             [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
            read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
-           read (memory :> bytes128 ivec_p) s = ctr0 /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8 (ctr_block nonce c) /\
            wordlist_from_memory(key_p,15) s =
              MAP (word_reversefields 8) rk /\
            htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
@@ -9765,7 +9740,7 @@ let AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT = prove
       (\s. read PC s = returnaddress /\
            C_RETURN s = word (16 * wb_blocks len_bits) /\
            read (memory :> bytes128 ivec_p) s =
-             word_reversefields 8 (ctr_block nonce (c + wb_blocks len_bits)) /\
+             word_reversefields 8 (ctr_block nonce (wb_blocks len_bits + c)) /\
            read (memory :> bytes128 tag_p) s =
              word_reversefields 8
                (nist_ghash (aes256_cipher (word 0) rk) tag0
@@ -11687,39 +11662,23 @@ let AESV8_GCM_8X_ENC_256_SAFE = prove
     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE (REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN ASM_REWRITE_TAC[]) ORELSE CONV_TAC WORD_RULE)])
 ;;
 
-(* --- C6: the two exported safety statements below are the terms that          *)
-(* mk_safety_spec generates from the correctness theorems and the C signature,   *)
-(* pinned with ASSERT_CONCL_TAC so the load fails unless the written statement   *)
-(* is exactly the generated one.  The enc correctness theorems carry a GLOBAL    *)
-(* counter hypothesis `word_reversefields 8 ctr0 = ctr_block nonce c` (the dec   *)
-(* kernel keeps the analogous content inside the state predicate instead), which *)
-(* mk_safety_spec would copy verbatim into the safety spec and so re-introduce   *)
-(* a memory-content constraint that review E3 removed.  We therefore feed it a   *)
-(* content-free form of the correctness theorem: ctr0 is instantiated to         *)
-(* word_reversefields 8 (ctr_block nonce c), which discharges the hypothesis by  *)
-(* the reversefields involution.  The generated bounds size the in/out buffers   *)
-(* from the C length len_bits/8 (tag 16, ivec 16, key 240, htable 24*8=192, the  *)
-(* 80-byte frame); apart from the loaded code no memory contents are             *)
-(* constrained.  ~keep_maychanges keeps the correctness MAYCHANGE frame.         *)
-let enc_safety_contentfree th =
-  GENL [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-        `key_p:int64`; `htable_p:int64`; `tag0:int128`; `nonce:(96)word`;
-        `c:num`; `rk:((128)word)list`; `inblock:num->(128)word`;
-        `len_bits:int64`; `pc:num`; `stackpointer:int64`; `returnaddress:int64`]
-    (REWRITE_RULE[WORD_REVERSEFIELDS_REVERSEFIELDS]
-      (INST [`word_reversefields 8 (ctr_block nonce c):int128`, `ctr0:int128`]
-        (SPEC_ALL th)));;
-
+(* The two exported safety statements below are the terms mk_safety_spec       *)
+(* generates from the correctness theorems and the C signature, pinned with     *)
+(* ASSERT_CONCL_TAC so the load fails unless the written statement is exactly   *)
+(* the generated one.  The bounds size in/out from len_bits/8, then tag 16,     *)
+(* ivec 16, key 240, htable 24*8 = 192 and the 80-byte frame; apart from the    *)
+(* loaded code they constrain no memory contents.  ~keep_maychanges keeps the   *)
+(* correctness theorem's MAYCHANGE frame.                                       *)
 let enc_safety_full_spec_tmc,enc_safety_public_vars_tmc = mk_safety_spec
     ~keep_maychanges:true
     (assoc "aesv8_gcm_8x_enc_256_wb" subroutine_signatures)
-    (enc_safety_contentfree AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT)
+    AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT
     AESV8_GCM_8X_ENC_256_WB_EXEC;;
 
 let enc_safety_full_spec,enc_safety_public_vars = mk_safety_spec
     ~keep_maychanges:true
     (assoc "aesv8_gcm_8x_enc_256_wb" subroutine_signatures)
-    (enc_safety_contentfree AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT)
+    AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT
     AESV8_GCM_8X_ENC_256_WB_EXEC;;
 
 (* --- NOIBT subroutine safety (REQUIRED): 3-path wrapper mirroring            *)
