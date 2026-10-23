@@ -18,10 +18,6 @@ needs "arm/proofs/base.ml";;
 
 needs "arm/proofs/utils/aes_gcm_common.ml";;
 
-needs "common/fips197.ml";;
-
-needs "common/polyval_ghash.ml";;
-
 (* ------------------------------------------------------------------------- *)
 (* The machine code.                                                         *)
 (* ------------------------------------------------------------------------- *)
