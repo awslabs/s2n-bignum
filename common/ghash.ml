@@ -511,25 +511,17 @@ let POLY_EQUIV_GHASH_REDUCE = prove
 
 (* ------------------------------------------------------------------------- *)
 (* A faster numeral conversion for word_pmul than Library/words.ml's         *)
-(* WORD_PMUL_CONV, which the squaring chain below and the one in             *)
-(* common/polyval.ml call once per step. Bit-identical; only search is cut.  *)
+(* WORD_PMUL_CONV, used by the squaring chains here and in common/polyval.ml. *)
 (*                                                                           *)
-(* WORD_PMUL_CONV recurses by peeling bit 0 off the FIRST argument, but its   *)
-(* base case is `x * word 0 = 0`, which tests the SECOND -- and the second    *)
-(* argument is only ever shifted LEFT, so it never reaches word 0. The        *)
-(* recursion therefore runs the full dimindex (256 here) even though the      *)
-(* first operand, a 128-bit value in a 256-bit word, is exhausted after 128;  *)
-(* the surplus half is `word_pmul (word 0) _` folded through 256-bit xors on  *)
-(* a zero addend. Adding the `word 0 * y = 0` base case halves the recursion  *)
-(* (256 -> 128, counted), and short-circuiting the zero addend skips the      *)
-(* numeral WORD_XOR_CONV that the `bit 0 = F` branch would otherwise pay.     *)
-(* MEASURED warm, twice: this chain 139.0 -> 90.5 s, and polyval_chain in     *)
-(* common/polyval.ml 120.8 -> 71.6 s, every chain element aconv-identical.    *)
+(* WORD_PMUL_CONV consumes the first operand with word_ushr, but its only     *)
+(* base case tests whether the second operand is zero. In these chains the   *)
+(* first operand is a 128-bit word and the second is zero-extended to 256    *)
+(* bits, so the first can become zero well before the second has been shifted *)
+(* out. Testing both zero cases avoids the remaining recursive steps, and    *)
+(* simplifying a zero xor avoids an unnecessary numeral conversion.          *)
 (* ------------------------------------------------------------------------- *)
 
 let WORD_PMUL_NUM_CONV =
-  let pth_xor_l = WORD_RULE `word_xor (word 0:N word) x = x`
-  and pth_xor_r = WORD_RULE `word_xor x (word 0:N word) = x` in
   let in_conv =
     GEN_REWRITE_CONV I [GSYM(CONJUNCT2 WORD_PMUL_ZX)] THENC
     RAND_CONV WORD_ZX_CONV
@@ -542,7 +534,7 @@ let WORD_PMUL_NUM_CONV =
       GEN_REWRITE_CONV I [COND_CLAUSES])
      (BINOP2_CONV WORD_USHR_CONV WORD_SHL_CONV)
   and xor_conv =
-    GEN_REWRITE_CONV I [pth_xor_l; pth_xor_r] ORELSEC WORD_XOR_CONV in
+    GEN_REWRITE_CONV I [WORD_XOR_0] ORELSEC WORD_XOR_CONV in
   let rec conv tm =
     try base_conv tm with Failure _ ->
     (step_conv THENC RAND_CONV conv THENC xor_conv) tm in
@@ -606,12 +598,10 @@ let [X_POWPOW_128; X_POWPOW_64] =
                (RAND_CONV(RAND_CONV NUM_SUC_CONV))
                (ONCE_DEPTH_CONV WORD_PMUL_NUM_CONV THENC
                 (* GHASH_REDUCE1, not the ghash_reduce1 definition: the defn
-                   leaves a `word_pmul _ (word 0x87)` that WORD_RED_CONV then
-                   evaluates 384 times at ~0.58s each (245s of this phrase).
-                   GHASH_REDUCE1 states the same reduction as shifts/xors, so
-                   the numerals reduce cheaply. Chain is bit-identical. *)
+                   leaves a `word_pmul _ (word 0x87)`, while GHASH_REDUCE1
+                   states the same reduction as shifts and xors. *)
                 REWRITE_CONV[ghash_reduce; GHASH_REDUCE1] THENC
-                DEPTH_CONV(WORD_RED_CONV ORELSEC WORD_PMUL_NUM_CONV)))) th1 in
+                DEPTH_CONV(WORD_PMUL_NUM_CONV ORELSEC WORD_RED_CONV)))) th1 in
     th2::lis in
   let lis = rev(rules 128) in
   let th_0 = SIMP_RULE[EXP; RING_POW_1; POLY_VAR_BOOL_POLY] (el 0 lis)
