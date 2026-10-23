@@ -1958,7 +1958,7 @@ L256_enc_small_4_aesloop:
 	eor3	v9.16b, v9.16b, v1.16b, v29.16b	//final-2 - result
 	st1	{ v9.16b}, [x2], #16
 	ldr	q23, [x6, #48]			//h3l | h3h
-	rev64	v8.16b, v9.16b			//no-op tag eor + movi removed (s097)
+	rev64	v8.16b, v9.16b			//no-op tag eor + movi dropped from the original
 	ldr	q9, [x0], #16			//final-1 - load plaintext
 	ext	v27.16b, v8.16b, v8.16b, #8
 	pmull2	v28.1q, v8.2d, v23.2d		//final-2 high
@@ -1971,7 +1971,7 @@ L256_enc_small_4_aesloop:
 	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//fused mid (pair-1)
 	st1	{ v9.16b}, [x2], #16
 	ldr	q22, [x6, #32]			//h2l | h2h
-	rev64	v8.16b, v9.16b			//no-op tag eor + movi removed (s097)
+	rev64	v8.16b, v9.16b			//no-op tag eor + movi dropped from the original
 	ldr	q9, [x0], #16			//final - load plaintext
 	ext	v27.16b, v8.16b, v8.16b, #8
 	pmull2	v13.1q, v8.2d, v22.2d		//final-1 high -> v13

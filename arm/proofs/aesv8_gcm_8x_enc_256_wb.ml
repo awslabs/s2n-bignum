@@ -4,16 +4,14 @@
  *)
 
 (* ========================================================================= *)
-(* AES-256-GCM encryption kernel (8x-unrolled), WHOLE-BLOCKS-ONLY variant.   *)
+(* AES-256-GCM 8x whole-blocks encrypt kernel aesv8_gcm_8x_enc_256_wb.       *)
 (*                                                                           *)
-(* Correctness proof for the aws-lc-derived 8x-unrolled AES-256-GCM encrypt  *)
-(* kernel aesv8_gcm_8x_enc_256.  This is the whole-blocks-only variant: the  *)
-(* input bit length must be a nonzero multiple of 128 (a runtime guard tst   *)
-(* x1,#127; b.ne returns 0 otherwise), and the partial-final-block masking   *)
-(* machinery is removed (final block is a plain full block).  The proof      *)
-(* re-anchors the aesv8_gcm_8x_enc_256 scripts to the +8-shifted PCs. This   *)
-(* file freezes the machine code (via define_assert_from_elf) and builds the *)
-(* execution rule.                                                           *)
+(* Correctness and safety proofs for the kernel derived from AWS-LC's        *)
+(* aesv8_gcm_8x_enc_256.  The input bit length must be a multiple of 128     *)
+(* (a runtime guard returns 0 otherwise), so there is no partial-final-block *)
+(* masking.  Stated in the shared AES-GCM vocabulary of                      *)
+(* arm/proofs/utils/aes_gcm_spec.ml.  The theorems are proved for the code   *)
+(* without the BTI landing pad and lifted over it with ARM_ADD_IBT_RULE.     *)
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
@@ -1670,47 +1668,10 @@ let aesv8_gcm_8x_enc_256_wb_tmc =
 let AESV8_GCM_8X_ENC_256_WB_EXEC = ARM_MK_EXEC_RULE aesv8_gcm_8x_enc_256_wb_tmc;;
 
 (* ========================================================================= *)
-(* P2 - Layer-1 specification glue for AES-256 CTR + GHASH.                  *)
-(*                                                                           *)
-(* These are the local CTR wrappers, Htable predicate, reversefields         *)
-(* equivalences, hardware-primitive reconstruction lemmas and Karatsuba      *)
-(* reduction lemmas needed by the correctness proof.  They mirror the x4     *)
-(* AES-128-GCM kernel proofs (s2n-bignum-dev branch `gcm`,                   *)
-(* arm/proofs/aes_gcm_enc_kernel_x4_reload_round_keys_full.ml), retargeted   *)
-(* to AES-256 (15-entry key schedule / 14 aese/aesmc rounds) and to the 8x   *)
-(* Htable layout (H^1..H^8, offsets 0..176).  Cipher-agnostic lemmas are     *)
-(* ported verbatim.                                                          *)
+(* Local lemmas: reversefields equivalences, AES-256 and counter-block       *)
+(* reconstruction, and the Karatsuba/GHASH reduction facts the 8x kernel     *)
+(* needs on top of arm/proofs/utils/aes_gcm_common.ml.                       *)
 (* ========================================================================= *)
-
-(* ------------------------------------------------------------------------- *)
-(* Some specification concepts.                                              *)
-(* ------------------------------------------------------------------------- *)
-
-
-(**** This is the form that we actually XOR little-endian bytes with
- **** in the algorithm, so we switch back out of NIST big-endian
- ****)
-
-(* aes_ctr_block is now indexed by the
-   ABSOLUTE NIST counter (index = counter), matching nebeid's decrypt convention
-   (awslabs/s2n-bignum#445).  The old +2 baseline was the fixed first-call counter;
-   generalizing the initial counter to a free `c` moves that offset out to the
-   callers, which now write `aes_ctr_block aes256_cipher c nonce rk (j)` for block position j.
-   The old fixed-counter statement is the c := 2 instance. *)
-
-(* The ciphertext block at buffer position i: keystream (counter c+i) XOR plaintext,
-   little-endian.  `c` is the free initial NIST counter of the call. *)
-
-
-(* The NIST convention is big-endian, however                                *)
-
-
-(* Restricted Htable predicate for the 8x-unrolled kernel: the main loop
-   uses H^1..H^8 and their Karatsuba mid terms (12 entries, offsets 0..176).
-   This extends the x4 kernel's htable_mem_4 with the H^5..H^8 slots.
-   NB the karatsuba_mid join order (high power in the high 64-bit lane)
-   follows the x4 htable_mem_4 convention; it is reconciled against the
-   actual x8 Htable loads in the main-loop phase (P5). *)
 
 (* ------------------------------------------------------------------------- *)
 (* Reconstruction of high-level concepts from the computed expressions.      *)
@@ -1726,15 +1687,6 @@ let WORD_SUBWORD_REVERSEFIELDS_32 = prove
    word_subword (word_reversefields 32 x:int128) (96,32):int32 =
    word_subword x (0,32)`,
   CONV_TAC WORD_BLAST);;
-
-(* ------------------------------------------------------------------------- *)
-(* (BS_INVOL / BS_EXT / BS_INVOL2 / BS_INJ / EXT_TO_JOIN) that moved the RHS *)
-(* byteswap onto the LHS to fold the x8 Q19 reduce was SUPERSEDED by the     *)
-(* s029 plain-invariant route (Q19 stated WITHOUT the byteswap128 wrapper),  *)
-(* which folds via GHASH_REDUCE_RAW_DIST8_PLAIN + KARATSUBA_IS_DOT_HW. Those *)
-(* five lemmas were unreferenced and are deleted; see Q19_FOLD_TAC /         *)
-(* TAIL_Q19_FOLD.                                                            *)
-(* ------------------------------------------------------------------------- *)
 
 let WORD_SUBWORD_CTR_BLOCK_32 = prove
  (`word_subword (ctr_block nonce cnt) (0,32):int32 = word cnt /\
@@ -1773,10 +1725,8 @@ let CTR_BLOCK_RECONSTRUCT_REV32 = prove
 (* out-block conjunct after XOR_AES256_CIPHER_RECONSTRUCT + MAP +            *)
 (* WORD_REVERSEFIELDS_REVERSEFIELDS: those rewrites collapse the per-element *)
 (* `word_reversefields`, but leave the key as the explicit list `[EL 0 rk;   *)
-(* ...; EL 14 rk]` rather than `rk`.  The x4 proof sidesteps this by         *)
-(* `ASM_CASES_TAC \`LENGTH rk = 11\`` + `EXPAND_TAC "rk"` at the top of its  *)
-(* _CORRECT (making `rk` a concrete cons-list); this lemma is the cleaner    *)
-(* route for the x8 statement, which keeps `rk` a free variable.             *)
+(* ...; EL 14 rk]` rather than `rk`; this lemma folds it back, so `rk`       *)
+(* stays a free variable in the statement.                                   *)
 let AES256_CIPHER_KEYLIST = prove
  (`aes256_cipher p
      [EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk; EL 7 rk;
@@ -1786,32 +1736,8 @@ let AES256_CIPHER_KEYLIST = prove
   CONV_TAC(DEPTH_CONV EL_CONV) THEN
   REWRITE_TAC[]);;
 
-(* BYTESWAP128_G2_PROP3 belonged to the superseded byteswap-flip Q19 fold    *)
-(* route (see the note above POLYVAL_REDUCE_G2's neighbours); both were      *)
-(* unreferenced under the live s029 plain-invariant route.                   *)
-
 (* ========================================================================= *)
-(* P3 - First register-only AES-256 block bridge.                            *)
-(*                                                                           *)
-(* Smallest meaningful contiguous computational unit of the kernel: the      *)
-(* eight interleaved 14-round aese/aesmc chains that form the first AES-256  *)
-(* counter-mode pass in the setup region (pc+0x90 .. pc+0x41c).  This is     *)
-(* register-only: the eight counter blocks are taken as opaque inputs in     *)
-(* Q0..Q7, the fifteen round keys rk0,rk1 come in Q26,Q27 and rk2..rk14 are  *)
-(* reloaded in-region from the key schedule in memory at key_p (offsets      *)
-(* 32..224).  The region ends at the round-13 aese of every block, just      *)
-(* before the data-dependent tail branch; the final rk14 xor is folded into  *)
-(* the subsequent eor3 with plaintext, so the raw Qi value here is exactly   *)
-(* the pre-rk14-xor AES chain.  Each output therefore satisfies `word_xor    *)
-(* (read Qi s) rk14 = word_reversefields 8 (aes256_cipher ...)`, i.e.        *)
-(* AES256_CIPHER_RECONSTRUCT (proved in P2) applied verbatim.                *)
-(*                                                                           *)
-(* NB the eight blocks are FULLY INTERLEAVED instruction-by-instruction in   *)
-(* the machine code (block3-r0, block4-r0, block2-r0, block0-r0, ...), so    *)
-(* there is no shorter contiguous single-block range to carve out; the whole *)
-(* 227-instruction region is the atomic AES unit.  It validates the AES      *)
-(* bridge (14 aese / 13 aesmc + in-memory key reload) before any GHASH or    *)
-(* ciphertext-memory complexity is added in later phases.                    *)
+(* GHASH: the kernel's two-pmull reduction and its POLYVAL meaning.          *)
 (* ========================================================================= *)
 
 let ghash_reduce_raw = new_definition
@@ -1880,8 +1806,7 @@ let GHASH_REDUCE_RAW_IS_POLYVAL_G2 = prove
 (* closes with the existing common/ lemma GHASH_POLYVAL_ACC_BATCHED (which   *)
 (* already reduces `ghash_polyval_acc h a (CONS b bs)` to a prop3 of the     *)
 (* pmul + ghash_wide sum), and NIST_DOT_IS_POLYVAL_DOT / nist_ghash bridge   *)
-(* the polyval accumulator to the nist_ghash tag - exactly the x4 loop-body  *)
-(* composition at reload_full.ml:1256-1275.                                  *)
+(* the polyval accumulator to the nist_ghash tag.                            *)
 (* ------------------------------------------------------------------------- *)
 
 let GHASH_REDUCE_RAW_KARATSUBA_IS_DOT = prove
@@ -2019,8 +1944,7 @@ let is_inp_memfact th =
 (* comes back still-normal - yet the bare CONV_RULE(TOP_DEPTH_CONV           *)
 (* WORD_SIMPLE_SUBWORD_ CONV) below re-traverses all ~140 carried facts      *)
 (* every step, rebuilding each as theorems, a redundant no-op.  Over a       *)
-(* 139-step drive that is ~19k redundant deep-conv passes (the TAIL was ~2h; *)
-(* s057 STATE.md profiling).                                                 *)
+(* 139-step drive that is ~19k redundant deep-conv passes (the TAIL took ~2h). *)
 (*                                                                           *)
 (* WORD_SIMPLE_SUBWORD_CONV (hol-light Library/words.ml:4566) can ONLY fire  *)
 (* on a `word_subword _ (NUMERAL,NUMERAL)` subterm - its outer match         *)
@@ -2124,8 +2048,7 @@ let NSTEP n =
 (* that conv pushes word_subword INTO the joins, collapsing                  *)
 (* `word_subword(word_join a b)(0,64)`->b etc.  This destroys the `LO p1` /  *)
 (* `ext p1` structure `ghash_reduce_raw`'s definition needs, so the body-end *)
-(* Q19 residual can no longer be folded back to ghash_reduce_raw (the        *)
-(* 5-session Q19 dead-end, sessions 017-021).                                *)
+(* Q19 residual can no longer be folded back to ghash_reduce_raw.            *)
 (*                                                                           *)
 (* NSTEP_G is NSTEP with the per-step subword conv SKIPPED on any assumption *)
 (* whose read-component is Q17/Q18/Q19, preserving the accumulators' ext/LO  *)
@@ -2357,7 +2280,7 @@ let DISPATCH_NOT_TAKEN = prove
   ASM_SIMP_TAC[GSYM VAL_EQ; VAL_WORD; DIMINDEX_64; MOD_LT] THEN
   ASM_ARITH_TAC);;
 
-(* s115: TAKEN twin of DISPATCH_NOT_TAKEN - for nb=2 the fast2 dispatch `cmp *)
+(* TAKEN twin of DISPATCH_NOT_TAKEN - for nb=2 the fast2 dispatch `cmp       *)
 (* x9,#32; b.eq L256_enc_fast2` branches TAKEN (x9 = (128*2)DIV8 = 32).      *)
 let DISPATCH_TAKEN = prove
  (`!nb:num. nb = 2
@@ -2386,7 +2309,7 @@ let DISPATCH4_NOT_TAKEN = prove
   ASM_SIMP_TAC[GSYM VAL_EQ; VAL_WORD; DIMINDEX_64; MOD_LT] THEN
   ASM_ARITH_TAC);;
 
-(* s121: TAKEN twin - for nb=4 the fast4 dispatch branches TAKEN             *)
+(* TAKEN twin - for nb=4 the fast4 dispatch branches TAKEN                   *)
 (* (x9=(128*4)DIV8=64).                                                      *)
 let DISPATCH4_TAKEN = prove
  (`!nb:num. nb = 4
@@ -2672,8 +2595,8 @@ let LDP_SETUP_TAC n =
      (* ldp read (at BARE `in_p`) fails to match SETUP_INBLOCKS_TAC's memfact   *)
      (* address `word_add in_p (word (16*0))`, so that load stays opaque        *)
      (* (`read Q8 s = read(memory:>bytes128 in_p) s_prev`) and DISCARD_OLDSTATE *)
-     (* drops the register fact.  this LOAD-side mismatch (NOT the              *)
-     (* stp store, as s034 wrongly diagnosed) is why Q8..Q15 were lost - Q8 is  *)
+     (* drops the register fact.  This LOAD-side mismatch (NOT the              *)
+     (* stp store) is why Q8..Q15 were lost - Q8 is                             *)
      (* already absent at s255 (right after the first ldp@0x428), BEFORE any    *)
      (* store.  With the norm, all 8 ciphertext regs survive to s282.           *)
      let norm th =
@@ -2693,10 +2616,9 @@ let LDP_SETUP_TAC n =
 (* that let the pipelined-GHASH Q19 fold DISTRIBUTE                          *)
 (* the summed-lane hardware reduce over the 8 in-flight blocks, so each      *)
 (* block individually fires GHASH_REDUCE_RAW_KARATSUBA_IS_DOT - replacing    *)
-(* the dead-end byteswap128(prop3 A) = prop3 B lane-match (sessions          *)
-(* 020-024).                                                                 *)
+(* the byteswap128(prop3 A) = prop3 B lane-match.                            *)
 (*                                                                           *)
-(* PROOF RECIPE (the crux - prior sessions failed because WORD_BITWISE_RULE  *)
+(* PROOF RECIPE (the crux - WORD_BITWISE_RULE alone fails because it         *)
 (* cannot crack opaque `word_pmul a w`): first distribute the opaque pmuls   *)
 (* with `WORD_PMUL_XOR` (hol-light Library/words.ml) so every pmul atom is   *)
 (* SHARED across both sides, then push word_xor into the word_join lanes and *)
@@ -2749,7 +2671,7 @@ let GHASH_REDUCE_RAW_XOR = prove
 
 (* ------------------------------------------------------------------------- *)
 (* blocks EXT_BS / GHASH_REDUCE_RAW_DIST8 / DOTSUM_IS_PROP3SUM               *)
-(* (canonical-order lane reduce) were superseded by the s029 plain route and *)
+(* (canonical-order lane reduce) were superseded by the plain-invariant route and *)
 (* left unreferenced. The live per-block reduce is KARATSUBA_IS_DOT_HW +     *)
 (* REORD_CROSS + GHASH_REDUCE_RAW_DIST8_PLAIN below.                         *)
 (* ------------------------------------------------------------------------- *)
@@ -2770,7 +2692,7 @@ let GHASH_REDUCE_RAW_XOR = prove
 (* (block j is paired with h-power h^{7-j}).  KARATSUBA_IS_DOT_HW handles    *)
 (* the per-block cross-lane form, and REORD_CROSS AC-reorders the cross lane *)
 (* [1;0;3;2..] -> [1;0;2;3..] so the shared-order reduce fires - both        *)
-(* consumed by GHASH_REDUCE_RAW_DIST8_PLAIN (the live s029 route).           *)
+(* consumed by GHASH_REDUCE_RAW_DIST8_PLAIN (the plain-invariant route).     *)
 (* ------------------------------------------------------------------------- *)
 
 (* Per-block: the cross lane in the body uses `karatsuba_mid b` and an a-arg *)
@@ -2827,8 +2749,7 @@ let KDOT_B0 = prove
     ALL_TAC] THEN
   REWRITE_TAC[GSYM WORD_SUBWORD_XOR] THEN REWRITE_TAC[KARATSUBA_IS_DOT_HW]);;
 
-(* (route c - HUMAN-directed re-examination of the x8 Q19                    *)
-(* invariant): the body-order 8-block distribution with ALL blocks in the    *)
+(* Q19 fold: the body-order 8-block distribution with ALL blocks in the    *)
 (* CLEAN (non-crossed) form - block order [1;0;2;3;4;5;6;7] on lo.lo/hi.hi,  *)
 (* [1;0;3;2;5;4;7;6] on the cross lane - reduces to the canonical XOR-sum of *)
 (* the eight per-block polyval_dots.  It FIRES on the body-end Q19 residual  *)
@@ -2880,7 +2801,7 @@ let GHASH_REDUCE_RAW_DIST8_PLAIN = prove
   CONV_TAC WORD_BITWISE_RULE);;
 
 (* ------------------------------------------------------------------------- *)
-(* Q19 GHASH-fold tactic (blocker A - sessions 017-022).                     *)
+(* Q19 GHASH-fold tactic                                                     *)
 (*                                                                           *)
 (* Applied to the body-end Q19 residual conjunct                             *)
 (*      `<raw ghash reduce of the 8 in-flight ciphertext blocks> =           *)
@@ -2910,8 +2831,8 @@ let GHASH_REDUCE_RAW_DIST8_PLAIN = prove
 (* comment; everything ABOVE it is genuinely proved.                         *)
 let RECON_GRR = REWRITE_RULE[LET_DEF; LET_END_DEF] (GSYM ghash_reduce_raw);;
 
-(* - ROUTE (c), blocker A CLOSED (no CHEAT).  The 5-session Q19              *)
-(* dead-end (s018-028) was caused by the P5 invariant stating the Q19        *)
+(* The invariant states the Q19 accumulator PLAIN.  An earlier version       *)
+(* failed because it stated the Q19                                          *)
 (* accumulator conjunct WITH a `byteswap128` wrapper                         *)
 (*      read Q19 s = byteswap128(nist_ghash..8i)                             *)
 (* whereas the x8 body PRESERVES the PLAIN form                              *)
@@ -2921,7 +2842,7 @@ let RECON_GRR = REWRITE_RULE[LET_DEF; LET_END_DEF] (GSYM ghash_reduce_raw);;
 (* leading `ext v19`@0x4cc and NO trailing ext (byteswap-parity 0).  Under   *)
 (* the byteswapped invariant the body-end reduce (parity 0) could never      *)
 (* match the byteswap-wrapped RHS (parity 1) - the odd-parity gap that       *)
-(* BS_INVOL/BS_INJ only move side-to-side (s028).  With the PLAIN invariant  *)
+(* BS_INVOL/BS_INJ only move side-to-side.  With the PLAIN invariant         *)
 (* the body-end reduce (parity 0) matches the plain RHS (parity 0) and the   *)
 (* fold closes cleanly via the flat 8-`polyval_dot`-sum route.  Established  *)
 (* empirically by re-deriving the H2 body residual: block 0                  *)
@@ -2977,105 +2898,6 @@ let Q19_FOLD_TAC =
   REWRITE_TAC[GSYM PROP3_XOR] THEN
   AP_TERM_TAC THEN CONV_TAC WORD_BITWISE_RULE;;
 
-(* ---- historical note (blocker A resolution, sessions 018-029)             *)
-(* --------------- The comment below documents the DEAD routes so future     *)
-(* sessions don't retry them.  Route (c) [drop the byteswap128 invariant     *)
-(* wrapper] closed the fold. OLD (superseded) tactic tail, kept for the      *)
-(* diagnosis it records:                                                     *)
-(*      ... MATCH_MP_TAC BS_INVOL ... then CHEAT'd the lane-match            *)
-(*      Final lane-match `byteswap128(prop3 A) = prop3 B` - CHEAT'd (the ONE *)
-  (* remaining piece of blocker A).  A = g2 Karatsuba lanes over the 8 in-     *)
-  (* flight cipherblocks; B = the clean cipherblock (x) h_power chain; they    *)
-  (* differ by the store-order byteswap.                                       *)
-  (*                                                                           *)
-  (* DIAGNOSIS (decisive; redirects the s020-022 lane-split idea):             *)
-  (* the reduction to a "pure word_join/subword/xor identity over ~40 int128   *)
-  (* vars" is NOT closable by BITBLAST after abstracting the pmul atoms to      *)
-  (* fresh vars.  Verified end-to-end on the warm server (goal captured, all   *)
-  (* stages measured):                                                         *)
-  (*  - Reassemble the 8 cipherblocks (69329->7443 chars), strip the outer     *)
-  (*    byteswap via GSYM BS_INVOL2+AP_TERM, ABBREV cb0..7/h0..7/sofar         *)
-  (*    (-> 3060), REWRITE karatsuba_mid + align the mid-pmul arg order with   *)
-  (*    the x4 WORD_XOR_SYM MESON rule (reload_full 1083-1085).                 *)
-  (*  - Result: 24 pmul atoms per side; 21 of 24 MATCH; exactly 3 GENUINELY    *)
-  (*    MISMATCH - the accumulator (cb0) block: LHS uses `byteswap128 sofar`   *)
-  (*    (the hardware Q19 is stored byteswapped, invariant Q19 =               *)
-  (*    byteswap128(nist_ghash..8i)) so its lo/hi lanes pair sofar_hi with     *)
-  (*    cb0_lo; RHS uses plain `word_xor sofar cb0` (sofar_lo with cb0_lo).    *)
-  (*  - Abstracting all pmul atoms then BITBLAST => `EQT_ELIM` (goal FALSE      *)
-  (*    under free sofar): the accumulator's store-order byteswap is           *)
-  (*    load-bearing, it is NOT a term-by-term pmul match.                     *)
-  (*  - CONFIRMED prop3 does NOT commute with byteswap under ANY lane          *)
-  (*    permutation of its 256-bit arg (half-swap and lane-reverse both        *)
-  (*    disproved by a 0.3s BITBLAST over a free `t:256 word`).  So there is   *)
-  (*    no `byteswap128(prop3 t) = prop3(perm t)` shortcut - the identity is   *)
-  (*    a GF(2^128) REDUCTION fact (both sides = the same field element), not  *)
-  (*    a lane shuffle.                                                        *)
-  (* NEXT-SESSION ROUTE (algebraic, avoids the byteswap-vs-reduce BITBLAST):   *)
-  (* DON'T reduce to a lane-match.  Compose at the polyval_dot / nist_ghash    *)
-  (* level like x4 reload_full 1256-1275: bridge each per-block hardware       *)
-  (* reduce to `polyval_dot (acc_block) (h_power)` via                         *)
-  (* GHASH_REDUCE_RAW_KARATSUBA_IS_DOT (@~2017), accumulate via                *)
-  (* GHASH_POLYVAL_ACC_BATCHED, and match the RHS byteswap128(nist_ghash)      *)
-  (* through NIST_GHASH_IS_POLYVAL (accumulator passes UNCHANGED - verified).  *)
-  (* CAVEAT: after RECON_GRR the LHS is `ghash_reduce_raw P0 P1 P2` where       *)
-  (* P0/P1/P2 are word_xor SUMS of all 8 blocks' Karatsuba pieces, so          *)
-  (* GHASH_REDUCE_RAW_KARATSUBA_IS_DOT (single a.b product) does NOT fire      *)
-  (* directly on the summed lanes - the per-block dot must be established      *)
-  (* BEFORE the lanes are summed (i.e. reorganise the fold so each block's     *)
-  (* reduce is folded individually), OR find/prove the batched analogue        *)
-  (* `ghash_reduce_raw <Sum lo.lo> <Sum cross> <Sum hi.hi> = Sum polyval_dot`. *)
-  (*                                                                           *)
-  (* (advisor#2-directed two-sided-strip route) - FALSIFIED, and               *)
-  (* the falsification is DECISIVE about the true residual.  Verified LIVE on  *)
-  (* the real q19_raw, s028_advisor_route.ml,                                  *)
-  (* s028_parity_check.ml):                                                    *)
-  (*  * After RECON_GRR + GHASH_REDUCE_RAW_IS_POLYVAL_G2 the goal is           *)
-  (*      polyval_reduce_g2 P0 P2 P1  =  byteswap128(nist_ghash ..8(i+1))       *)
-  (*    LHS outer head = polyval_reduce_g2 (byteswap-PARITY 0, NO outer        *)
-  (*    byteswap); RHS outer head = byteswap128 (parity 1).                    *)
-  (*  * Advisor's RHS fold (NIST_GHASH_IS_POLYVAL + GHASH_POLYVAL_ACC_BATCHED, *)
-  (*    keeping the byteswap) gives RHS = byteswap128(polyval_reduce_prop3 W_R)*)
-  (*    as predicted, BUT the LHS stays bare polyval_reduce_g2 (parity 0);     *)
-  (*    BYTESWAP128_G2_PROP3 does NOT fire (its pattern needs                  *)
-  (*    byteswap128(polyval_reduce_g2 ..)).  POLYVAL_REDUCE_G2 then gives      *)
-  (*      polyval_reduce_prop3 W_L = byteswap128(polyval_reduce_prop3 W_R)      *)
-  (*    = EXACTLY the s023 asymmetric "wound" prop3 A = byteswap128(prop3 B).   *)
-  (*  * ROOT CAUSE of the parity gap: x4's LHS is byteswap-wrapped (parity 1)  *)
-  (*    because x4 has a TRAILING `ext v11` at body-end; x8 has NO trailing    *)
-  (*    `ext v19` (objdump s018/019).  x4's two-sided strip (reload_full       *)
-  (*    1236-1245 / 1043-1052) REQUIRES both sides byteswap128(..) before      *)
-  (*    REWRITE_TAC[byteswap128;..].  x8 cannot reach that: the odd            *)
-  (*    byteswap-parity gap is not removable by BS_INVOL/BS_INJ/BS_INVOL2.     *)
-  (*  * The true residual `prop3 W_L = byteswap128(prop3 W_R)` is NOT the naive *)
-  (*    free-sofar shape: block-0 on the LHS carries (byteswap128 sofar (x)cb0) *)
-  (*    while the RHS carries plain (sofar (x) cb0) (s027/s023).  It should be  *)
-  (*    TRUE (invariant self-consistent: init/back-edge/exit close; advisor    *)
-  (*    verified the invariant is char-identical to x4's working one; KATs     *)
-  (*    pass) - the block-0 half-swap must compensate the outer byteswap.      *)
-  (*  * BUT: unfolding polyval_reduce_prop3 + BITBLAST is INTRACTABLE (churns   *)
-  (*    even on ONE free 256-word - the word_pmul-by-0xC2.. constant is opaque *)
-  (*    to BITBLAST; confirmed s028, had to `holctl interrupt`).  And s023     *)
-  (*    proved prop3 does NOT commute with byteswap128 under ANY lane perm.    *)
-  (*    So neither a lane shuffle (s023 dead) nor a bit-blast closes it.       *)
-  (*  * THIS IS THE 3rd advisor/route to hit the SAME byteswap-parity wall     *)
-  (*    (lane-shuffle s020-023; flat-sum s025-027; two-sided-strip s028).      *)
-  (*    ESCALATED to human (session-028 summary "Questions for human"): the    *)
-  (*    remaining obligation is a GF(2^128) field identity                     *)
-  (*      prop3(A[block0 = word_xor(byteswap128 sofar) cb0])                    *)
-  (*        = byteswap128(prop3(B[block0 = word_xor sofar cb0]))                *)
-  (*    where byteswap128 = 64-bit HALF-SWAP (def @polyval_ghash.ml:416, NOT   *)
-  (*    a byte reversal).  Likely needs a NEW field-level lemma via            *)
-  (*    POLYVAL_REDUCE_PROP3_CORRECT (prop3 t * x^128 == poly_of_word t mod Q) *)
-  (*    giving byteswap128 (half-swap) a polynomial meaning - real math, not   *)
-  (*    plumbing.  Do NOT open a 4th shortcut route without human direction.   *)
-  (* the human's diagnosis                                                     *)
-  (* was correct - the parity gap was NOT intrinsic; it was the invariant's    *)
-  (* byteswap128 wrapper.  Dropping it (plain `read Q19 = nist_ghash..8i` in    *)
-  (* pre/inv/post) makes the body-end reduce (parity 0) match the plain RHS     *)
-  (* (parity 0), and the fold closes via GHASH_REDUCE_RAW_DIST8_PLAIN + the     *)
-  (* flat-sum route with NO byteswap crossing.  See the new Q19_FOLD_TAC above. *)
-
 (* PERF: the body cheap-close dispatcher rewrites the                        *)
 (* out-forall bound `j < 8*((i+1)+1)` into its 9-way disjunction split via   *)
 (* an INLINE `ARITH_RULE`.  That ARITH_RULE costs ~5.85s to PROVE, and the   *)
@@ -3084,7 +2906,7 @@ let Q19_FOLD_TAC =
 (* ENTIRE post-drive close cost (profiled: every other sub-tactic in the     *)
 (* cheap-close is ~0.02s).  Hoist it to a single top-level theorem computed  *)
 (* ONCE and REWRITE_TAC[..] with it per goal - byte-identical rewrite, hence *)
-(* proof-preserving.  MEASURED (, shared drive+FINAL_STATE                   *)
+(* proof-preserving.  MEASURED (shared drive+FINAL_STATE                     *)
 (* setpoint, interleaved A/B, twice): the whole post-drive closer            *)
 (* 113.34s/109.95s -> 12.44s/12.41s (NEW closes hyps=0), i.e. whole          *)
 (* MAIN_LOOP ~270s -> ~171s (~-37%).                                         *)
@@ -3291,7 +3113,7 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
     (*     8 new indices), re-ASSUME the advanced out-forall, THEN DISCARD_OLDSTATE.*)
     (*     The 8 NEW-block store facts survive concretely at s339 (verified) so     *)
     (*     new blocks close via the case-split; only OLD blocks need this.          *)
-    (* (2) Q19 GHASH fold (~367k chars): x4 reload_full 1043-1107 scaled 4->8 -     *)
+    (* (2) Q19 GHASH fold (~367k chars): the 4-way kernels' fold scaled 4->8 -      *)
     (*     byteswap128 BITBLAST wrapper, MAP_EVERY ABBREV_TAC                        *)
     (*     sofar/cipherblock_0..7/h0..h7, TRANS_TAC EQ_TRANS to                     *)
     (*     polyval_reduce_prop3(<8-term pmul chain>), PMUL_KARATSUBA_JOIN_ALT +     *)
@@ -3349,7 +3171,7 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
     (* j<8*(i+1), so at i+1 it is j<8*(i+2)); the eor3 3-way store XOR is        *)
     (* AC-normalized to the XOR_AES256_CIPHER_RECONSTRUCT shape; then            *)
     (* AES256_CIPHER_KEYLIST collapses the residual explicit key list            *)
-    (* `[EL 0 rk;..;EL 14 rk]` back to `rk` (the piece prior sessions missed -   *)
+    (* `[EL 0 rk;..;EL 14 rk]` back to `rk` (needed because                      *)
     (* XOR_AES256_CIPHER_RECONSTRUCT + MAP leaves the list, not `rk`).           *)
     (* split the RAW post-FINAL_STATE conjunction                              *)
     (* FIRST (before the cheap-close), so the Q19 GHASH-fold conjunct can be    *)
@@ -3424,7 +3246,7 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
     (*       way to the final lane-match `byteswap128(prop3 A)=prop3 B` - that    *)
     (*       ONE lane-identity was the last open part of blocker A (inside        *)
     (*       Q19_FOLD_TAC).  Everything from the raw ghash reduce down to the     *)
-    (*       lane-match is genuinely proved (5-session Q19 dead-end resolved).    *)
+    (*       lane-match is genuinely proved .                                     *)
     (*   (B) OLD out-forall (!j. j<8*(i+1) ==> read(out+16j) s = ...): the        *)
     (*       incoming invariant out-forall is DROPPED by ASSUMPTION_STATE_UPDATE  *)
     (* at the first ciphertext store (step 330).  ROOT CAUSE:                     *)
@@ -3451,7 +3273,7 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
     (*       `end_p = word_add in_p (word (128 * (k + 1)))` (+ a k bound for the  *)
     (*       signed cmp no-overflow).  word_sub cancels in_p, leaving a pure      *)
     (*       k-bounded word fact.  This is a real invariant-completeness gap      *)
-    (*       (like s008's v8..v15 and s015's +2) - add the end_p antecedent and   *)
+    (*       - add the end_p antecedent and                                       *)
     (*       re-close init/back-edge/exit; reconcile with P7 setup / P9 (end_p    *)
     (*       is how the iteration count k is pinned).                             *)
     (* (C) is now CLOSED.  Added the two end_p antecedents to                     *)
@@ -3493,13 +3315,11 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
         (* BLOCKER B RESOLVED: the sole residual reaching this
            branch is the MAYCHANGE FRAME-subsumption goal `(<accumulated>) s0
            s339` (NOT the out-forall - that closes in the first dispatcher's
-           cheap-close, since it SURVIVES to s339: re-observed s030, the
-           s015/016 "dropped at store 330" finding was stale).  The body
+           cheap-close, since it SURVIVES to s339).  The body
            physically clobbers the FULL Q8..Q15 (the in-flight ciphertext
            blocks), whose low 64 bits the ABI frame forbids (v8-v15 are
            callee-saved).  The MAIN_LOOP conclusion frame was therefore
-           widened with `MAYCHANGE [Q8;..;Q15]` (mirroring the proved x4
-           kernel aes_gcm_enc_kernel_x4_reload_round_keys_full.ml:764); the
+           widened with `MAYCHANGE [Q8;..;Q15]`, as in the 4-way kernels; the
            low-half writes are restored by the d8-d15 epilogue at the
            subroutine wrapper (P10).  With the widened frame,
            MONOTONE_MAYCHANGE_TAC discharges the subsumption (the 8 ciphertext
@@ -3523,8 +3343,7 @@ let AESV8_GCM_8X_ENC_256_MAIN_LOOP = prove
 (* symbolic 96-bit nonce whole.  Lane-decomposition is instant: each 32-bit  *)
 (* lane shares the symbolic nonce structurally so WORD_BLAST matches it      *)
 (* without blasting. Combine with CTR_BLOCK_RECONSTRUCT_REV32 (@~1538) to    *)
-(* assemble the full word_reversefields 32 (ctr_block nonce 15).  Validated  *)
-(* s035.                                                                     *)
+(* assemble the full word_reversefields 32 (ctr_block nonce 15).             *)
 let SETUP_Q30_LANES = prove
  (`(word_add (word_add
       (word_reversefields 8
@@ -3567,7 +3386,7 @@ let SETUP_Q30_LANES = prove
 (* where <KS_j> is SETUP's rev32-built next-group keystream counter.  Peel   *)
 (* the outer word_xor(-)(inblock j) + RF8 + aes256_cipher(-)rk via AP_THM/   *)
 (* AP_TERM, leaving RF8<KS_j> = ctr_block nonce (j+2), which ctr_block +     *)
-(* WORD_BLAST closes DIRECTLY (~60s).  NB the s034/s035 "monolithic BLAST    *)
+(* WORD_BLAST closes DIRECTLY (~60s).  NB an apparent "monolithic BLAST      *)
 (* hangs / type-ambiguity" was a floating-type-var artifact of find_term     *)
 (* capture - on the real goal (fully typed) WORD_BLAST is fine because the   *)
 (* symbolic 96-bit nonce appears identically on both sides.                  *)
@@ -3719,7 +3538,7 @@ let SETUP_RECON_TAC_GEN : tactic =
 (* none of X4/X16 (only X0,X2,X5,X6,X10,X11), SETUP must produce X4 =        *)
 (* in_p+16*nb (the scratch end-ptr, block-aligned byte_len = 16*nb) and X16  *)
 (* = ivec_p (the saved ivec ptr for the counter writeback @0x1180); these    *)
-(* were the two conjuncts fixed in MAIN_LOOP this session (s031).            *)
+(* are the two conjuncts MAIN_LOOP's precondition requires.                  *)
 (*                                                                           *)
 (* mod_p is the on-stack modulo constant at stackpointer+0x40 (mov x10,      *)
 (* sp,#0x40 @0x2c; the 0xc2..0 const was stored there @0x28).  We state the  *)
@@ -3730,7 +3549,7 @@ let SETUP_RECON_TAC_GEN : tactic =
 (* reconstruction, following the MAIN_LOOP body close and the AES_SETUP      *)
 (* recipe.                                                                   *)
 (*                                                                           *)
-(* DE-RISKING (body proof recipe, VALIDATED on the warm server):             *)
+(* DE-RISKING (body proof recipe):                                           *)
 (*     - INIT + a SETUP-specific input SUBGOAL for blocks 0..7 at            *)
 (*       word_add in_p (word (16*j)) (NOT the loop body's 128*(i+1)+off)     *)
 (*         proves                                                            *)
@@ -3743,7 +3562,7 @@ let SETUP_RECON_TAC_GEN : tactic =
 (*         verbatim.                                                         *)
 (*       ldp[x0]#32 at steps 255/256/264/265 (256/264/265 need               *)
 (*         LDP_STEP4-style);                                                 *)
-(*       stp[x2]#32 at 270/271/278/280; apply the s009 LENGTH->4604 rewrite. *)
+(*       stp[x2]#32 at 270/271/278/280; apply the LENGTH->4604 rewrite.      *)
 (*     - THE TWO BRANCH DISCHARGES (the real work): step 254 = b.ge@0x424    *)
 (*       (tail                                                               *)
 (*       check) and step 282 = b.ge@0x494 (prepretail check).  Each emits a  *)
@@ -3758,7 +3577,7 @@ let SETUP_RECON_TAC_GEN : tactic =
 (*       LAST 8-group is drained by prepretail -> k+1 = m-1 -> k = nb DIV 8  *)
 (*         -                                                                 *)
 (*         2.                                                                *)
-(*       (The `8*(k+2)=nb` premise is the s031 hypothesis for this; VERIFY   *)
+(*       (The `8*(k+2)=nb` premise is the hypothesis for this; VERIFY        *)
 (*         it                                                                *)
 (*       against the real branch + reconcile with the P8 tail / P9           *)
 (*         assembly.)                                                        *)
@@ -3766,7 +3585,7 @@ let SETUP_RECON_TAC_GEN : tactic =
 (*       (XOR_AES256_CIPHER_RECONSTRUCT + aes_ctr_block/ADD_CLAUSES +        *)
 (*       AES256_CIPHER_KEYLIST for Q8..Q15; CTR_BLOCK_RECONSTRUCT_* for      *)
 (*         Q0..Q4;                                                           *)
-(*       plain Q19 = nist_ghash..(8*0) = tag0, PROVED trivially s031).       *)
+(*       plain Q19 = nist_ghash..(8*0) = tag0, proved trivially).            *)
 (* ========================================================================= *)
 
 let AESV8_GCM_8X_ENC_256_SETUP_GEN = prove
@@ -4037,8 +3856,8 @@ let AESV8_GCM_8X_ENC_256_SETUP_G1 = prove
 (* v19,v19,v21,v17`@0xe98, NO trailing `ext v19`), so it closes via the      *)
 (* ALREADY-PROVEN Q19_FOLD_TAC (route-c plain form).                         *)
 (*                                                                           *)
-(* - BODY CLOSED CHEAT-FREE.  The s037 "accumulators drop                    *)
-(* mid-drive" diagnosis was WRONG: probing register presence + concreteness  *)
+(* - The accumulators do NOT drop                                            *)
+(* mid-drive: probing register presence + concreteness                       *)
 (* at s30/s150/s250/s301/s308 shows Q17/Q18/Q19 are all PRESENT and CONCRETE *)
 (* (no old-state refs) through s308; the drive `MAP_EVERY NSTEP_GP (1--308)` *)
 (* reaches pc+0xeb8 with Q19 = the concrete sz365k raw fold.  FINAL_STATE +  *)
@@ -4113,8 +3932,8 @@ let is_ghash_acc_pp th =
     | _ -> false)) c;;
 
 (* PERF: fold the three per-step RULE_ASSUM_TAC passes into                  *)
-(* ONE, and extend the is_ghash_acc_pp guard (already on the subword pass    *)
-(* since s057) to ALSO cover the word_add-nest REWRITE and NORMOFF passes.   *)
+(* ONE, and extend the is_ghash_acc_pp guard (already on the subword pass)   *)
+(* to ALSO cover the word_add-nest REWRITE and NORMOFF passes.               *)
 (* Rationale: those two passes are PROOF-PRESERVING no-ops on the giant      *)
 (* Q17..Q21 GHASH accumulators - the word_add-nest rule fires only on        *)
 (* `word_add(word_add _ (word _))(word _)` (register-pointer shape, absent   *)
@@ -4126,7 +3945,7 @@ let is_ghash_acc_pp th =
 (* per-step assumption cost FLAT in accumulator size instead of growing; on  *)
 (* every OTHER fact the composed sweep is bit-identical to the old three     *)
 (* passes. VALIDATED: on the SAME                                            *)
-(* post-prefix state, driving a fixed drain block with the old (s057) vs     *)
+(* post-prefix state, driving a fixed drain block with the old vs            *)
 (* this stepper yields a BIT-IDENTICAL goal (full sorted-hyps+concl          *)
 (* signature: len=150012 hash=311606506 both), confirming proof-preserving;  *)
 (* and it is measurably faster per step - block 41--70 23.8s->20.6s          *)
@@ -4395,8 +4214,7 @@ let AESV8_GCM_8X_ENC_256_PREPRETAIL_GEN = prove
 (* The Q19 drain fold is STRUCTURALLY the SAME KIND as PREPRETAIL /          *)
 (* MAIN_LOOP (pmull/pmull2/eor3 Karatsuba over the 8 fresh cipherblocks,     *)
 (* reduce), so it reuses the P6/P7 machinery (NSTEP_GP / RECON_GRR /         *)
-(* Q19_FOLD_TAC-style). The x4 template is                                   *)
-(* aes_gcm_enc_kernel_x4_fast_tail.ml (single-acc tail).                     *)
+(* Q19_FOLD_TAC-style).                                                      *)
 (*                                                                           *)
 (* The precondition is PREPRETAIL's postcondition verbatim (pc+0xec0 state). *)
 (* NB the return value X0 = X9 = byte_len (mov x0,x9@0x11a4) is NOT asserted *)
@@ -4558,9 +4376,9 @@ let DISCARD_REGS deadl : tactic =
   REPEAT(FIRST_X_ASSUM(fun th ->
     if List.mem (reg_of th) deadl then K ALL_TAC th else fail()));;
 
-(* PERF: s069 dropped only {Q17,Q18,Q20,Q21} and only at s136                *)
+(* PERF: the original discard dropped only {Q17,Q18,Q20,Q21} and only at s136 *)
 (* (post-fold). Two extensions, both PROOF-PRESERVING (full WB_TAIL still    *)
-(* closes 0 subgoals) and MEASURED on the checkpoint                         *)
+(* closes 0 subgoals) and MEASURED                                           *)
 (* (current-source steppers, WHOLE WB_TAIL, twice): 140.94s -> 138.04s =     *)
 (* -2.90s / -2.06% (both reps >= 2%). (1) Drop Q27 MID-DRIVE at s115.  Q27   *)
 (* is the tail's Karatsuba partial-product lane                              *)
@@ -4570,7 +4388,7 @@ let DISCARD_REGS deadl : tactic =
 (*         s95/100/105/110/111/112 all FAIL with `AP_TERM_TAC`, s115 closes  *)
 (*           0                                                               *)
 (*           - so s115 is the                                                *)
-(*         earliest proven-sound point).  s069's post-fold drop let          *)
+(*         earliest proven-sound point).  The post-fold drop let             *)
 (*           ARM_STEPS_TAC re-stamp its                                      *)
 (*         87k over steps 116..136 (~21 steps) + FINAL_STATE; dropping it at *)
 (*           s115 is a multi-                                                *)
@@ -4587,7 +4405,7 @@ let DISCARD_REGS deadl : tactic =
 (*         + FINAL_STATE + the out-forall closer walk a minimal assumption   *)
 (*           list.  (Q27 is                                                  *)
 (*         absent here - already dropped at s115.)                           *)
-(* PERF s072: Q28/Q31 removed from this post-fold list - they are now        *)
+(* PERF: Q28/Q31 removed from this post-fold list - they are now             *)
 (* dropped at tail entry (dead from entry; see DISCARD_DEAD_HTABLE / the     *)
 (* body).                                                                    *)
 let DISCARD_DEAD_REDUCE_SCRATCH : tactic =
@@ -4611,10 +4429,10 @@ let DISCARD_DEAD_REDUCE_SCRATCH : tactic =
 (* MAYCHANGE frame mentions it. Dropping them right after the s1..9 prefix   *)
 (* (before the 10--136 drive) is PROOF- PRESERVING (full WB_TAIL still       *)
 (* closes 0 subgoals) and removes 15 of ~101 carried facts from every        *)
-(* subsequent ARM_STEPS re-stamp.  MEASURED on the                           *)
-(* checkpoint (current-source steppers, WHOLE WB_TAIL, interleaved A/B,      *)
+(* subsequent ARM_STEPS re-stamp.  MEASURED                                  *)
+(* (current-source steppers, WHOLE WB_TAIL, interleaved A/B,                 *)
 (* twice): OLD 137.74/137.79s vs NEW 130.30/130.48s = -5.40%/-5.30% (both >= *)
-(* 2%), both closed=true. Complements the s069/s070 register discards (those *)
+(* 2%), both closed=true. Complements the register discards (those           *)
 (* shrink the reduce scratch; this drops the drive-long dead memory operands *)
 (* the register-only reg_of never reached).                                  *)
 let DISCARD_DEAD_KEYMEM : tactic =
@@ -4636,7 +4454,7 @@ let DISCARD_DEAD_KEYMEM : tactic =
 (* facts at offsets {96,112,128,144,160,176} (byteswap128(h_power 4..7) and  *)
 (* the word_join karatsuba_mid pairs for h 4..7) are NEVER read by any tail  *)
 (* instruction, and the postcondition mentions no htable memory - DEAD FROM  *)
-(* ENTRY.  Like the s071 round-key drop, dropping them right after the s1..9 *)
+(* ENTRY.  Like the round-key drop, dropping them right after the s1..9      *)
 (* prefix removes 6 of the ~101 carried facts from every subsequent          *)
 (* ARM_STEPS re-stamp.  PROOF-PRESERVING (full WB_TAIL still closes 0        *)
 (* subgoals).  DISCARD_DEAD_KEYMEM/DISCARD_REGS miss them (one keys on       *)
@@ -4774,7 +4592,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM1 = prove
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
     `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
   (* Assert the single tail input block; WITHOUT this the plaintext load stays *)
-  (* a raw memory read and the whole ciphertext/GHASH chain drops (s079).      *)
+  (* a raw memory read and the whole ciphertext/GHASH chain drops.             *)
   SUBGOAL_THEN
    `read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g)`
@@ -5011,7 +4829,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM2 = prove
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AESV8_GCM_8X_ENC_256_WB_EXEC]
     `LENGTH aesv8_gcm_8x_enc_256_wb_tmc`]) THEN
   (* Assert the 2 tail input blocks; WITHOUT this the plaintext loads stay      *)
-  (* raw memory reads and the ciphertext/GHASH chain drops (s079).              *)
+  (* raw memory reads and the ciphertext/GHASH chain drops.                     *)
   SUBGOAL_THEN
    `read (memory :> bytes128 (word_add in_p (word (128 * g)))) s0 =
     inblock (8 * g) /\
@@ -5086,7 +4904,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM2 = prove
 
 (* ========================================================================= *)
 (* ========================================================================= *)
-(* s115: dedicated REM2_DRAIN leg (0x14bc -> 0x11c4) = the shared rem=2      *)
+(* Dedicated REM2_DRAIN leg (0x14bc -> 0x11c4) = the shared rem=2            *)
 (* eor3-fused 2-block drain, entered FRESH. Extracted so the fast2 early-    *)
 (* dispatch leg can reach it via ENSURES_SEQUENCE (its inline drain dropped  *)
 (* accumulator facts after the 102-step AES history; a fresh entry tracks    *)
@@ -5775,8 +5593,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM4 = prove
 (* 1/2/3 keystreams) then the SHARED rem4_drain (0x13a0), ending pc+0x11cc.  *)
 (* Q30 = ctr(8g+10) at entry (base+8, unchanged from counter build) and the  *)
 (* 4 tail-setup subs roll it to 8g+6 = nb+2, so the counter closer REUSES    *)
-(* TAIL_REM4's verbatim.  Fold Q19 at s71 (12 tail-setup + 59 drain) [s122:  *)
-(* -3 movs -6 no-op].                                                        *)
+(* TAIL_REM4's verbatim.  Fold Q19 at s71 (12 tail-setup + 59 drain).        *)
 (* ========================================================================= *)
 
 let FOLD_Q19_REM4_FAST4 : tactic =
@@ -6749,8 +6566,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM7 = prove
 (* k+1 -> g so it holds for ALL g>=0; the drive is g-independent (x5=128     *)
 (* regardless of g), so the proof transfers verbatim modulo two fixes:       *)
 (*     - the fold reindex `8*g+8=(8*g+6)+2` must be LHS-scoped (else it eats *)
-(*       the RHS list-count 8*g+8 before its SUC^8 expansion - the s080      *)
-(*         bug);                                                             *)
+(*       the RHS list-count 8*g+8 before its SUC^8 expansion);              *)
 (*     - block 8*g+6's keystream ctr 8*g+8 collapses to `nb` during the      *)
 (*       drive                                                               *)
 (*       (the 8*g+8=nb hyp rewrites 8*g+8->nb L->R), so re-expand nb->8*g+8  *)
@@ -6767,16 +6583,6 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM7 = prove
 (* drain (3 subs roll v30 base+8=ctr(8g+10) -> base+5=ctr(nb+2)).  Q19 folds *)
 (* at s82 via the cascade REM5 fold.                                         *)
 (* ========================================================================= *)
-(* AESV8_GCM_8X_ENC_256_FAST5_TAIL DELETED (fast5/6/7 removed;               *)
-(* nb=5,6,7 use SETUP0_TAIL).                                                *)
-
-(* AESV8_GCM_8X_ENC_256_FAST6_TAIL DELETED (fast5/6/7 removed;               *)
-(* nb=5,6,7 use SETUP0_TAIL).                                                *)
-
-(* AESV8_GCM_8X_ENC_256_FAST7_TAIL DELETED (fast5/6/7 removed;               *)
-(* nb=5,6,7 use SETUP0_TAIL).                                                *)
-
-(* restored 4 helpers over-deleted by the FAST7_TAIL span-deletion           *)
 let TAIL_X5_128_G = prove
  (`!(in_p:int64) nb g.
      8 * g + 8 = nb
@@ -6969,7 +6775,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM8 = prove
   DISCARD_DEAD_KEYMEM THEN
   DISCARD_DEAD_HTABLE THEN
   DISCARD_REGS ["Q31"; "Q28"] THEN
-  (* s098: eor3-fused drain (-9 instrs, drain 117->108) - same step-index shift as WB_TAIL: *)
+  (* eor3-fused drain (-9 instrs, drain 117->108) - same step-index shift as WB_TAIL:       *)
   (* Q27 last-read s93 (drop after s96), final reduce s114 (was s123), writebacks s115..s118 *)
   (* (was s124..s127).                                                                       *)
   MAP_EVERY NSTEP_GP (10--97) THEN
@@ -7052,7 +6858,7 @@ let AESV8_GCM_8X_ENC_256_TAIL_REM8 = prove
 (* q18_init/q27_init + all 8 keystreams + the 15 key-mem facts (REM8's       *)
 (* precond); the weakening drops whatever each smaller arm omits.  BETA_TAC  *)
 (* before STRIP_TAC is load-bearing (the precond is a lambda redex;          *)
-(* STRIP-first stashes it unreduced - the s052 lesson).                      *)
+(* STRIP-first stashes it unreduced).                                        *)
 (* ========================================================================= *)
 
 let AESV8_GCM_8X_ENC_256_TAIL_REM = prove
@@ -7669,7 +7475,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
   (* Expand the _WB_CORRECT precondition's ALLPAIRS + PAIRWISE into individual  *)
   (* nonoverlapping atoms BEFORE stripping, so each segment leg's antecedent     *)
   (* (out_p vs tag_p/ivec_p live in _WB_CORRECT's PAIRWISE) is available as an    *)
-  (* assumption for ASM_SIMP/ASM_REWRITE.  (s049: SETUP's precond needs out_p vs  *)
+  (* assumption for ASM_SIMP/ASM_REWRITE.  (SETUP's precond needs out_p vs        *)
   (* tag_p & ivec_p, which are PAIRWISE facts in _WB_CORRECT, not in its ALLPAIRS.)*)
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
@@ -7946,8 +7752,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
       (* STRIP runs first it stashes the antecedent as ONE unreduced redex and    *)
       (* aligned never lands in the asms.  Then REPEAT(CONJ_TAC ...) peels the     *)
       (* aligned + PC conjuncts (both now in asms) off the mid's conjunction and   *)
-      (* EXISTS the actual Q18/Q27 reads on the residual existential.  (s052:      *)
-      (* dev-server-validated - SEQ1+SEQ2+SEQ3+TAIL all close, real prove, 0 hyp.) *)
+      (* EXISTS the actual Q18/Q27 reads on the residual existential.             *)
       X_GEN_TAC `s:armstate` THEN BETA_TAC THEN STRIP_TAC THEN
       REPEAT(CONJ_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC]) THEN
       EXISTS_TAC `read Q18 s:int128` THEN EXISTS_TAC `read Q27 s:int128` THEN
@@ -7982,7 +7787,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
   (* the \s. binder (REWRITE descends), so the precondition becomes            *)
   (*   `\s. ?v w. aligned .. /\ read PC .. /\ B` and the helper matches.        *)
   (* If the aligned/PC conjuncts don't fully hoist, also try LEFT_EXISTS_AND_  *)
-  (* THM / GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV).  (s049 live-note.)    *)
+  (* THM / GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV).                       *)
   REWRITE_TAC[GSYM RIGHT_EXISTS_AND_THM; GSYM LEFT_EXISTS_AND_THM] THEN
   MATCH_MP_TAC ENSURES_EXISTS2_PRECONDITION THEN
   MAP_EVERY X_GEN_TAC [`v18:int128`; `v27:int128`] THEN
@@ -8028,7 +7833,7 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT = prove
 (* at pc+0x9f0 = PREPRETAIL).  So this is WB_CORRECT_GEN's 4-leg compose     *)
 (* MINUS the MAIN_LOOP SEQUENCE 2: SETUP_G1 -> PREPRETAIL_GEN(k=0) ->        *)
 (* WB_TAIL_REM (g = 0+1, r = nb-8).  SETUP_G1 post @0x9f0 == WB_CORRECT_GEN  *)
-(* SEQ2-mid at k:=0 (s084 boundary check), so all mids/ISPECL are written in *)
+(* SEQ2-mid at k:=0 (boundary check), so all mids/ISPECL are written in      *)
 (* literal-0 form.  Buffer bound `val in_p + 16*nb < 2 EXP 63` carried for   *)
 (* WB_TAIL_REM.                                                              *)
 (* ========================================================================= *)
@@ -8294,8 +8099,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1 = prove
       (* STRIP runs first it stashes the antecedent as ONE unreduced redex and    *)
       (* aligned never lands in the asms.  Then REPEAT(CONJ_TAC ...) peels the     *)
       (* aligned + PC conjuncts (both now in asms) off the mid's conjunction and   *)
-      (* EXISTS the actual Q18/Q27 reads on the residual existential.  (s052:      *)
-      (* dev-server-validated - SEQ1+SEQ2+SEQ3+TAIL all close, real prove, 0 hyp.) *)
+      (* EXISTS the actual Q18/Q27 reads on the residual existential.             *)
       X_GEN_TAC `s:armstate` THEN BETA_TAC THEN STRIP_TAC THEN
       REPEAT(CONJ_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC]) THEN
       EXISTS_TAC `read Q18 s:int128` THEN EXISTS_TAC `read Q27 s:int128` THEN
@@ -8330,7 +8134,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1 = prove
   (* the \s. binder (REWRITE descends), so the precondition becomes            *)
   (*   `\s. ?v w. aligned .. /\ read PC .. /\ B` and the helper matches.        *)
   (* If the aligned/PC conjuncts don't fully hoist, also try LEFT_EXISTS_AND_  *)
-  (* THM / GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV).  (s049 live-note.)    *)
+  (* THM / GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV).                       *)
   REWRITE_TAC[GSYM RIGHT_EXISTS_AND_THM; GSYM LEFT_EXISTS_AND_THM] THEN
   MATCH_MP_TAC ENSURES_EXISTS2_PRECONDITION THEN
   MAP_EVERY X_GEN_TAC [`v18:int128`; `v27:int128`] THEN
@@ -8373,7 +8177,7 @@ let AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1 = prove
 (* The externally-used spec: lifts _WB_CORRECT through the 2 entry guards,   *)
 (* the d8-d15 save/restore frame (80 bytes), and the final RET.              *)
 (*                                                                           *)
-(* Wrapper shape (disasm-verified vs _wb.o, s049/s053):                      *)
+(* Wrapper shape (disasm-verified against the object):                       *)
 (*      PROLOGUE 0x00 cbz x1,0x11c0 ; 0x04 tst x1,#0x7f ; 0x08 b.ne 0x11c0 ; *)
 (*        0x0c sub sp,#0x50 ; stp d8..d15 ; lsr x9,x1,#3 ; mov x16,x4 ;      *)
 (*        mov x11,x5 ; mov x5,#0xc2..; stp x5,xzr,[sp,#64] ; add             *)
@@ -8400,8 +8204,8 @@ let WB_X9_NORM = prove
   MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC);;
 
 (* ========================================================================= *)
-(* GENERALIZATION ARC - full functional correctness over ALL                 *)
-(* whole-block counts nblocks >= 0 (see orchestrator GENERALIZE_PLAN).       *)
+(* GENERALIZATION - functional correctness over all whole-block counts       *)
+(* nblocks >= 0.                                                             *)
 (* ========================================================================= *)
 
 (* ---- loop_count = 0 branch mechanics (nblocks in 1..8)                    *)
@@ -8483,7 +8287,7 @@ let WB_BRANCH_COND_TRUE = prove
 (*                                                                           *)
 (* Drive = the WB_SETUP drive truncated at the branch: NSTEP(1--253) + NSTEP *)
 (* 254 (the b.ge) + WB_BRANCH_COND_TRUE resolves PC to pc+0xec0.  Closers    *)
-(* (all validated s077): keystreams via KSCLOSE (AES256_CIPHER_RECONSTRUCT + *)
+(* : keystreams via KSCLOSE (AES256_CIPHER_RECONSTRUCT +                     *)
 (* CTR_BLOCK_RECONSTRUCT_REV8 + ctr_block/WORD_BLAST); Q30 via the index-10  *)
 (* lane lemma SETUP_Q30_LANES_10 (the +7+1=8 analogue of SETUP_Q30_LANES) +  *)
 (* CTR_BLOCK_RECONSTRUCT_REV32; Q19 via NIST_GHASH_NIL; X4 via the word_ushr *)
@@ -8520,7 +8324,7 @@ let SETUP_Q30_LANES_10 = prove
     REWRITE_TAC[ctr_block] THEN
     SPEC_TAC(`word c:int32`,`wc:int32`) THEN GEN_TAC THEN CONV_TAC WORD_BLAST]);;
 
-(* Keystream closer (KSCLOSE from s076 recipe): the pre-rk14 aese chain      *)
+(* Keystream closer (KSCLOSE): the pre-rk14 aese chain                       *)
 (* register Qj, XORed with rk14, is rev8(aes256_cipher(ctr_block nonce       *)
 (* (j+2)) rk).                                                               *)
 (* symbolic-c: the OLD terminal `REWRITE_TAC[ctr_block] THEN CONV_TAC
@@ -8920,7 +8724,7 @@ let AESV8_GCM_8X_ENC_256_SETUP0_TAIL = prove
 
 
 (* ========================================================================= *)
-(* s115: FAST2 leg (pc+0x38 -> pc+0x11c4, nb=2) = the 32B early-dispatch     *)
+(* FAST2 leg (pc+0x38 -> pc+0x11c4, nb=2) = the 32B early-dispatch           *)
 (* fast path. ENSURES_SEQUENCE at 0x1660: segment A = dispatch(DISPATCH_     *)
 (* TAKEN)+2-block AES; segment B = FAST2_TAIL. Split at 0x1660 (NOT 0x14bc)  *)
 (* so the tail-setup eor3 block-ct write is tracked (fresh entry).           *)
@@ -9494,15 +9298,6 @@ let AESV8_GCM_8X_ENC_256_FAST3 = prove
     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE CONV_TAC WORD_RULE ORELSE
      ASM_REWRITE_TAC[])]);;
 
-
-(* AESV8_GCM_8X_ENC_256_FAST5 DELETED (fast5/6/7 removed;                    *)
-(* nb=5,6,7 use SETUP0_TAIL).                                                *)
-
-(* AESV8_GCM_8X_ENC_256_FAST6 DELETED (fast5/6/7 removed;                    *)
-(* nb=5,6,7 use SETUP0_TAIL).                                                *)
-
-(* AESV8_GCM_8X_ENC_256_FAST7 DELETED (fast5/6/7 removed;                    *)
-(* nb=5,6,7 use SETUP0_TAIL).                                                *)
 
 let AESV8_GCM_8X_ENC_256_CORRECT = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
