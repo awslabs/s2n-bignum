@@ -808,6 +808,150 @@ let DEC_GHASH_NORM_TAC : tactic =
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV);;
 
 (* ------------------------------------------------------------------------- *)
+(* The 8-power key table htable_mem_8: its 12 entries as flat conjuncts, and *)
+(* their values at a concrete key.                                           *)
+(* ------------------------------------------------------------------------- *)
+
+let HTABLE_MEM_8_FLAT = prove
+ (`!(hk:int128) (ptr:int64) (s:armstate).
+    htable_mem_8 hk ptr s <=>
+    read (memory :> bytes128 ptr) s =
+      byteswap128 (h_power hk 0) /\
+    read (memory :> bytes128 (word_add ptr (word 16))) s =
+      word_join (karatsuba_mid (h_power hk 1))
+                (karatsuba_mid (h_power hk 0)) /\
+    read (memory :> bytes128 (word_add ptr (word 32))) s =
+      byteswap128 (h_power hk 1) /\
+    read (memory :> bytes128 (word_add ptr (word 48))) s =
+      byteswap128 (h_power hk 2) /\
+    read (memory :> bytes128 (word_add ptr (word 64))) s =
+      word_join (karatsuba_mid (h_power hk 3))
+                (karatsuba_mid (h_power hk 2)) /\
+    read (memory :> bytes128 (word_add ptr (word 80))) s =
+      byteswap128 (h_power hk 3) /\
+    read (memory :> bytes128 (word_add ptr (word 96))) s =
+      byteswap128 (h_power hk 4) /\
+    read (memory :> bytes128 (word_add ptr (word 112))) s =
+      word_join (karatsuba_mid (h_power hk 5))
+                (karatsuba_mid (h_power hk 4)) /\
+    read (memory :> bytes128 (word_add ptr (word 128))) s =
+      byteswap128 (h_power hk 5) /\
+    read (memory :> bytes128 (word_add ptr (word 144))) s =
+      byteswap128 (h_power hk 6) /\
+    read (memory :> bytes128 (word_add ptr (word 160))) s =
+      word_join (karatsuba_mid (h_power hk 7))
+                (karatsuba_mid (h_power hk 6)) /\
+    read (memory :> bytes128 (word_add ptr (word 176))) s =
+      byteswap128 (h_power hk 7)`,
+  REWRITE_TAC[htable_mem_8; htable_mem_4; GSYM CONJ_ASSOC]);;
+
+(* polyval_dot and ghash_twist on word literals, and the powers h_power h 0, *)
+(* ..., h_power h n of a word literal h, each computed from the one before,  *)
+(* so n products in all.                                                     *)
+
+let POLYVAL_DOT_CONV : conv =
+  let red = DEPTH_CONV(WORD_RED_CONV ORELSEC WORD_PMUL_CONV ORELSEC
+                       NUM_RED_CONV) in
+  fun tm ->
+    match tm with
+      Comb(Comb(Const("polyval_dot",_),Comb(Const("word",_),a)),
+           Comb(Const("word",_),b)) when is_numeral a && is_numeral b ->
+        (REWR_CONV polyval_dot THENC RAND_CONV WORD_PMUL_CONV THENC
+         REWR_CONV polyval_reduce_prop3 THENC TOP_DEPTH_CONV let_CONV THENC
+         red) tm
+    | _ -> failwith "POLYVAL_DOT_CONV";;
+
+let GHASH_TWIST_CONV : conv =
+  let red = DEPTH_CONV(WORD_RED_CONV ORELSEC NUM_RED_CONV) in
+  fun tm ->
+    match tm with
+      Comb(Const("ghash_twist",_),Comb(Const("word",_),a)) when is_numeral a ->
+        (REWR_CONV ghash_twist THENC REWRITE_CONV[POLYVAL_TWIST_CONST] THENC
+         red) tm
+    | _ -> failwith "GHASH_TWIST_CONV";;
+
+let H_POWERS_RULE h n =
+  let pth0 = INST [h,`h:int128`] (CONJUNCT1 h_power)
+  and pths = INST [h,`h:int128`] (CONJUNCT2 h_power) in
+  let step th k =
+    (RAND_CONV num_CONV THENC REWR_CONV pths THENC
+     LAND_CONV(K th) THENC POLYVAL_DOT_CONV)
+    (mk_comb(rator(lhs(concl th)),mk_small_numeral k)) in
+  let rec powers th k =
+    if k > n then [] else let th' = step th k in th'::powers th' (k + 1) in
+  pth0::powers pth0 1;;
+
+(* htable_mem_8 h ptr s as 12 reads of word literals, for a table base h     *)
+(* that GHASH_TWIST_CONV and WORD_RED_CONV reduce to a word literal, such as *)
+(* ghash_twist (word H).                                                     *)
+
+let HTABLE_MEM_8_CONV : conv =
+  let base_conv = DEPTH_CONV(GHASH_TWIST_CONV ORELSEC WORD_RED_CONV ORELSEC
+                             NUM_RED_CONV)
+  and red = DEPTH_CONV(WORD_RED_CONV ORELSEC NUM_RED_CONV)
+  and word128 = `word:num->int128` in
+  fun tm ->
+    match tm with
+      Comb(Comb(Comb(Const("htable_mem_8",_),h),_),_) ->
+        let hth = base_conv h in
+        let h' = rand(concl hth) in
+        if not(is_comb h' && rator h' = word128 && is_numeral(rand h'))
+        then failwith "HTABLE_MEM_8_CONV: table base is not a word literal"
+        else (RATOR_CONV(RATOR_CONV(RAND_CONV(K hth))) THENC
+              REWR_CONV HTABLE_MEM_8_FLAT THENC
+              REWRITE_CONV(H_POWERS_RULE h' 7) THENC
+              REWRITE_CONV[byteswap128; karatsuba_mid] THENC red) tm
+    | _ -> failwith "HTABLE_MEM_8_CONV";;
+
+(* The same at a concrete key: first each "cipher (word p) KS" in the table  *)
+(* base, where cipher_def and ks_def define cipher and KS (as for the key    *)
+(* schedules in common/fips197.ml), is evaluated to a word literal by        *)
+(* FIPS197_ENCRYPT_FAST_CONV.  For example                                   *)
+(*   HTABLE_MEM_8_KEY_CONV aes256_cipher AESAVS_ZERO_KEY_256_SCHEDULE        *)
+(*    `htable_mem_8 (ghash_twist (aes256_cipher (word 0)                     *)
+(*                     AESAVS_ZERO_KEY_256_SCHEDULE)) ptr s`                 *)
+
+let HTABLE_MEM_8_KEY_CONV cipher_def ks_def : conv =
+  let cipher = repeat rator (lhs(snd(strip_forall(concl cipher_def))))
+  and ks = lhs(concl ks_def) in
+  let enc_conv tm =
+    match tm with
+      Comb(Comb(c,Comb(Const("word",_),p)),k)
+      when c = cipher && k = ks && is_numeral p ->
+        FIPS197_ENCRYPT_FAST_CONV cipher_def ks_def tm
+    | _ -> failwith "HTABLE_MEM_8_KEY_CONV" in
+  RATOR_CONV(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV enc_conv))) THENC
+  HTABLE_MEM_8_CONV;;
+
+(* ------------------------------------------------------------------------- *)
+(* The whole-blocks count: a multiple of 128 is 128 times its block count.   *)
+(* ------------------------------------------------------------------------- *)
+
+let GCM_WB_BLOCKS_VALID = prove
+ (`!bit_len:int64.
+      val bit_len MOD 128 = 0
+      ==> val bit_len = 128 * gcm_wb_blocks bit_len`,
+  REWRITE_TAC[gcm_wb_blocks] THEN REPEAT STRIP_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  MP_TAC(SPECL [`val(bit_len:int64)`; `128`]
+    (CONJUNCT2 DIVISION_SIMP)) THEN
+  ASM_ARITH_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* A 64-bit word below 2^63 reads the same as a signed and as an unsigned    *)
+(* number, as the signed compares of lengths and pointers need.              *)
+(* ------------------------------------------------------------------------- *)
+
+let IVAL_WORD_SMALL = prove
+ (`!n. n < 2 EXP 63 ==> ival (word n:int64) = &n`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `val (word n:int64) = n` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  ASM_SIMP_TAC[IVAL_EQ_VAL; DIMINDEX_64;
+               ARITH_RULE `n < 2 EXP 63 ==> n < 2 EXP (64 - 1)`]);;
+
+(* ------------------------------------------------------------------------- *)
 (* Stepping the software-pipelined loop bodies.                              *)
 (* ------------------------------------------------------------------------- *)
 

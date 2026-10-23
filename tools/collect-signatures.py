@@ -328,6 +328,7 @@ onlyInArm = [
   "aes128_gcm_dec",
   "aes128_gcm_enc",
   "aes256_gcm_dec",
+  "aes256_gcm_dec_alt",
   "aes256_gcm_enc",
   "aes_xts_decrypt",
   "aes_xts_encrypt",

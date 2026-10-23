@@ -339,7 +339,8 @@ static void ref_aes128_gcm_dec(const uint8_t *in, uint64_t len_bits,
 // ***************************************************************************
 //
 // The kernel reads precomputed powers of H in the OpenSSL gcm_init_v8 layout;
-// the entries the four-way kernels use are formalized as htable_mem_4 in
+// the entries the four-way kernels use are formalized as htable_mem_4, and
+// the whole table read by the 8-way _alt kernels as htable_mem_8, both in
 // arm/proofs/utils/aes_gcm_spec.ml. (The htable_mem predicate in
 // common/polyval_ghash.ml packs the Karatsuba middle terms in the opposite
 // lane order and does not describe this table.) Rather than transliterate the
@@ -461,13 +462,14 @@ static uint64_t ref_karatsuba_mid(ref_u128 x)
 }
 
 // Build the 192-byte Htable for GHASH subkey H (16 bytes, = AES_K(0)).
-// Layout (gcm_init_v8's; slots 0..80 are htable_mem_4), 12 x 16-byte slots,
+// Layout (gcm_init_v8's; slots 0..80 are htable_mem_4, all twelve are
+// htable_mem_8), 12 x 16-byte slots,
 // where mid(A,B) holds mid(A) in the low 64 bits and mid(B) in the high 64:
 //   0:bswap(H^1) 16:mid(H^1,H^2) 32:bswap(H^2) 48:bswap(H^3) 64:mid(H^3,H^4)
 //   80:bswap(H^4) 96:bswap(H^5) 112:mid(H^5,H^6) 128:bswap(H^6) 144:bswap(H^7)
 //   160:mid(H^7,H^8) 176:bswap(H^8)
 // (The four-way kernels consult only slots 0..80, i.e. H^1..H^4 and their
-// midpoints.)
+// midpoints; the 8-way _alt kernels read all twelve, through offset 176.)
 
 static void ref_gcm_init_htable(uint8_t Htable[192], const uint8_t h_bytes[16])
 { ref_u128 hp[8]; // hp[k] = h_power(base, k) = (twisted H)^(k+1)

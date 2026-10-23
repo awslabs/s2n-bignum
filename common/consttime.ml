@@ -34,6 +34,63 @@ find_stack_access_size `MAYCHANGE [memory :> bytes (stackpointer,264)]`;;
 find_stack_access_size `MAYCHANGE [memory :> bytes(z,8 * 8);
                     memory :> bytes(word_sub stackpointer (word 224),224)]`;;
 
+(* Parse a C buffer-size expression into a term of :num type.
+   - Without '/', the expression is split at its first '*', so a product comes
+     out the way HOL Light writes it: "a*b*c" gives a * b * c, which is
+     a * (b * c).
+   - With '/', multiplication and integer division have equal precedence and
+     associate to the left, as in C, so the expression is split at its
+     rightmost operator at every level: "a/b*c" gives (a DIV b) * c and
+     "a*b*c/d" gives ((a * b) * c) DIV d.
+   A missing operand fails as malformed. *)
+let elemsz_to_hol c_var_to_hol (s:string): term =
+  let choose i j =
+    match i,j with
+    | None,None -> None
+    | Some i,None -> Some(i,'*')
+    | None,Some j -> Some(j,'/')
+    | Some i,Some j -> if i > j then Some(i,'*') else Some(j,'/') in
+  let has_div = String.contains s '/' in
+  let rec parse (s:string): term =
+    let s = if starts_with ">=" s
+      then String.sub s 2 (String.length s - 2) else s in
+    let split =
+      if has_div then choose (String.rindex_opt s '*') (String.rindex_opt s '/')
+      else choose (String.index_opt s '*') None in
+    match split with
+    | Some(idx,op) ->
+        if idx = 0 || idx = String.length s - 1 then
+          failwith ("elemsz_to_hol: malformed expression: " ^ s)
+        else
+          let expr_lhs = String.sub s 0 idx in
+          let expr_rhs = String.sub s (idx+1) (String.length s - idx - 1) in
+          let hol_op = if op = '*' then "*" else "DIV" in
+          mk_binary hol_op (parse expr_lhs, parse expr_rhs)
+    | None ->
+        try mk_small_numeral (int_of_string s)
+        with Failure _ ->
+          let v = c_var_to_hol s in
+          match dest_type (type_of v) with
+          | ("num",_) -> v
+          | _ -> (* word ty *) mk_icomb (`val:(N)word->num`,v) in
+  parse s;;
+
+let () =
+  let test_var s =
+    assoc s ["len_bits",`len_bits:int64`; "k",`k:int64`;
+             "a",`a:num`; "b",`b:num`; "c",`c:num`; "d",`d:num`] in
+  let parse = elemsz_to_hol test_var in
+  assert (parse "a*b" = `a * b`);
+  assert (parse "a*b*c" = `a * (b * c)`);
+  assert (parse ">=3*k" = `3 * val (k:int64)`);
+  assert (parse "len_bits/8" = `val (len_bits:int64) DIV 8`);
+  assert (parse "a/b/c" = `(a DIV b) DIV c`);
+  assert (parse "a*b/c" = `(a * b) DIV c`);
+  assert (parse "a/b*c" = `(a DIV b) * c`);
+  assert (parse "a*b*c/d" = `((a * b) * c) DIV d`);
+  assert (forall (fun s -> not (can parse s))
+                 ["*a"; "a*"; "a**b"; "/a"; "a/"; "a//b"; "a*/b"]);;
+
 (* Create a safety spec. This returns a safety spec using ensures, as well
    as the universally quantified variables that are public information.
 
@@ -111,25 +168,6 @@ let gen_mk_safety_spec
       Some (find_term find_eq_returnaddress fnspec_precond)
     with Failure _ -> None in
 
-  (* An expression s to a term of :num type. *)
-  let rec elemsz_to_hol (s:string): term =
-    let s = if starts_with ">=" s
-      then String.sub s 2 (String.length s - 2) else s in
-
-    match String.index_opt s '*' with
-    | Some idx ->
-      let expr_lhs = String.sub s 0 idx in
-      let l = String.length s in
-      let expr_rhs = String.sub s (idx+1) (l - idx - 1) in
-      mk_binary "*" (elemsz_to_hol expr_lhs, elemsz_to_hol expr_rhs)
-    | None ->
-     (try mk_small_numeral (int_of_string s)
-      with Failure _ ->
-        let v = c_var_to_hol s in
-        match dest_type (type_of v) with
-        | ("num",_) -> v
-        | _ -> (* word ty *) mk_icomb (`val:(N)word->num`,v)) in
-
   (* memreads/writes without stackpointer and pc; (base pointer, size) list. *)
   let (memreads:(term*term)list), (memwrites:(term*term)list) =
     let fn =
@@ -137,7 +175,9 @@ let gen_mk_safety_spec
         c_mem_addr_to_hol (c_var_to_hol c_varname),
         (try mk_small_numeral (elemty_size * int_of_string range)
          with Failure _ ->
-           mk_binary "*" (elemsz_to_hol range, mk_small_numeral elemty_size))) in
+           mk_binary "*"
+             (elemsz_to_hol c_var_to_hol range,
+              mk_small_numeral elemty_size))) in
 
     map fn (meminputs @ memoutputs @ memtemps),
     map fn (memoutputs @ memtemps) in
