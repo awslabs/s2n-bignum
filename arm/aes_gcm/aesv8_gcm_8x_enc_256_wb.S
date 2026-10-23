@@ -1407,7 +1407,10 @@ L256_enc_blocks_more_than_4:	//blocks	left >  4
 	eor	v18.16b, v18.16b, v27.16b				//GHASH final-4 block - mid
 	eor	v17.16b, v17.16b, v28.16b					//GHASH final-4 block - high
 L256_enc_blocks_more_than_3:	//blocks	left >  3
-	b	L256_enc_rem4_drain	//rem 5/6/7 finish on the eor3-fused rem4 drain; mt3 body below now DEAD (st1 re-done at rem4_drain entry). ZERO PC SHIFT: overwrites the redundant leading st1, .text unchanged.
+	b	L256_enc_rem4_drain	//rem 5/6/7 finish on the shared eor3-fused rem4 drain
+// The rest of this block is unreachable: the branch above replaced its first
+// instruction (an st1, which rem4_drain performs on entry).  It is kept so that
+// the code after it, and the proof's PCs, do not move.
 
 	ldr	q25, [x6, #80]				//load h4l | h4h
 	rev64	v8.16b, v9.16b						//GHASH final-3 block
