@@ -18099,7 +18099,7 @@ int test_aesv8_gcm_8x_enc_256_wb_guard(void)
   // 8x paths if the guard regressed.  Kept <= 32895 so that processing
   // floor(len_bits/128) blocks would still land inside bb1/bb2 (4096 B each)
   // and be reported rather than overrunning.
-  static const uint64_t badbits[] = { 1, 8, 127, 129, 255, 1023,
+  static const uint64_t badbits[] = { 0, 1, 8, 127, 129, 255, 1023,
                                       2049, 4095, 8191, 32769 };
   size_t i;
 
