@@ -81,8 +81,8 @@
 #define STACK_SIZE 80 // 4*16 (d8-d15) + 16 (modulo constant scratch)
 
 S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
-        AARCH64_VALID_CALL_TARGET
         CFI_START
+        AARCH64_VALID_CALL_TARGET
 
         cbz	x1, L256_enc_ret
         tst	x1, #127				//whole-blocks contract: bit_len % 128 == 0
@@ -1533,16 +1533,30 @@ L256_enc_epilogue:  //both paths converge here (pristine 0x11a8)
 	mov	x0, x9					//return sizes
 // -- END derived generator body --
 
+        .cfi_remember_state
         CFI_STACKLOAD2(d10,d11,16)
         CFI_STACKLOAD2(d12,d13,32)
         CFI_STACKLOAD2(d14,d15,48)
         CFI_STACKLOAD2(d8,d9,0)
         CFI_INC_SP(STACK_SIZE)
         ret
+        .cfi_restore_state
 
+// Frameless return for the entry guards, reached before the frame is set up.
 L256_enc_ret:
+        .cfi_remember_state
+        .cfi_def_cfa_offset 0
+        .cfi_restore d8
+        .cfi_restore d9
+        .cfi_restore d10
+        .cfi_restore d11
+        .cfi_restore d12
+        .cfi_restore d13
+        .cfi_restore d14
+        .cfi_restore d15
         mov	w0, #0x0
-        CFI_RET
+        ret
+        .cfi_restore_state
 
 
 L256_enc_exact8_drain:  //dedicated exact-8 GHASH drain (no no-op tag eors)
@@ -2146,6 +2160,7 @@ L256_enc_small_reduce:  //shared final GHASH reduction + tbl(v12) reverse + tag 
 	tbl	v19.16b, {v19.16b}, v12.16b	//ext+rev64 -> tbl (16B reverse)
 	st1	{ v19.16b }, [x3]
 	b	L256_enc_epilogue
+        .cfi_endproc
 
 
 S2N_BN_SIZE_DIRECTIVE(aesv8_gcm_8x_enc_256_wb)
