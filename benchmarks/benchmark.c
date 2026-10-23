@@ -1456,6 +1456,11 @@ void call_aes128_gcm_dec_64(void) {}
 void call_aes128_gcm_dec_256(void) {}
 void call_aes128_gcm_dec_1024(void) {}
 void call_aes128_gcm_dec_4096(void) {}
+void call_aes128_gcm_dec_alt_16(void) {}
+void call_aes128_gcm_dec_alt_64(void) {}
+void call_aes128_gcm_dec_alt_256(void) {}
+void call_aes128_gcm_dec_alt_1024(void) {}
+void call_aes128_gcm_dec_alt_4096(void) {}
 void call_aes256_gcm_enc_16(void) {}
 void call_aes256_gcm_enc_64(void) {}
 void call_aes256_gcm_enc_256(void) {}
@@ -1594,6 +1599,20 @@ void call_aes128_gcm_dec_64(void) { repeat(aes128_gcm_dec_helper(64)); }
 void call_aes128_gcm_dec_256(void) { repeat(aes128_gcm_dec_helper(256)); }
 void call_aes128_gcm_dec_1024(void) { repeatfewer(10,aes128_gcm_dec_helper(1024)); }
 void call_aes128_gcm_dec_4096(void) { repeatfewer(40,aes128_gcm_dec_helper(4096)); }
+
+// aes128_gcm_dec_alt reads the whole 192-byte table and needs FEAT_SHA3.  Its
+// lengths must be whole blocks, as all the sizes here are: it returns 0
+// without touching memory otherwise.  The 16- and 64-byte calls take its
+// separate path for at most 4 blocks, and only lengths above 256 bytes run
+// its 8-block main loop.
+static void aes128_gcm_dec_alt_helper(size_t len)
+{ aes_gcm_setup(10);
+  aes128_gcm_dec_alt((uint8_t*)b0, (uint64_t)len * 8, (uint8_t*)b2, (uint64_t*)b3, aes_iv, &aes_gcm_key, bb[0]); }
+void call_aes128_gcm_dec_alt_16(void) { repeat(aes128_gcm_dec_alt_helper(16)); }
+void call_aes128_gcm_dec_alt_64(void) { repeat(aes128_gcm_dec_alt_helper(64)); }
+void call_aes128_gcm_dec_alt_256(void) { repeat(aes128_gcm_dec_alt_helper(256)); }
+void call_aes128_gcm_dec_alt_1024(void) { repeatfewer(10,aes128_gcm_dec_alt_helper(1024)); }
+void call_aes128_gcm_dec_alt_4096(void) { repeatfewer(40,aes128_gcm_dec_alt_helper(4096)); }
 
 static void aes256_gcm_enc_helper(size_t len)
 { aes_gcm_setup(14);
@@ -2129,6 +2148,12 @@ int main(int argc, char *argv[])
   timingtest(aes,"aes128_gcm_dec (256 bytes)",call_aes128_gcm_dec_256);
   timingtest(aes,"aes128_gcm_dec (1024 bytes)",call_aes128_gcm_dec_1024);
   timingtest(aes,"aes128_gcm_dec (4096 bytes)",call_aes128_gcm_dec_4096);
+  // aes128_gcm_dec_alt needs FEAT_SHA3 as well as FEAT_AES: it uses eor3.
+  timingtest(aes&&sha3,"aes128_gcm_dec_alt (16 bytes)",call_aes128_gcm_dec_alt_16);
+  timingtest(aes&&sha3,"aes128_gcm_dec_alt (64 bytes)",call_aes128_gcm_dec_alt_64);
+  timingtest(aes&&sha3,"aes128_gcm_dec_alt (256 bytes)",call_aes128_gcm_dec_alt_256);
+  timingtest(aes&&sha3,"aes128_gcm_dec_alt (1024 bytes)",call_aes128_gcm_dec_alt_1024);
+  timingtest(aes&&sha3,"aes128_gcm_dec_alt (4096 bytes)",call_aes128_gcm_dec_alt_4096);
   timingtest(aes,"aes256_gcm_enc (16 bytes)",call_aes256_gcm_enc_16);
   timingtest(aes,"aes256_gcm_enc (64 bytes)",call_aes256_gcm_enc_64);
   timingtest(aes,"aes256_gcm_enc (256 bytes)",call_aes256_gcm_enc_256);
