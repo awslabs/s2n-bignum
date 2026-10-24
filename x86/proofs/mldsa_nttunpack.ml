@@ -459,10 +459,9 @@ let MLDSA_NTTUNPACK_CORRECT = prove
   REWRITE_TAC[GSYM BYTES256_WBYTES] THEN STRIP_TAC THEN
 
   (* Step through each instruction with SIMD simplification *)
-  MAP_EVERY (fun n ->
-    X86_STEPS_TAC MLDSA_NTTUNPACK_TMC_EXEC [n] THEN
-    SIMD_SIMPLIFY_TAC[])
-   (1--192) THEN
+  (let step = X86_STEPS_TAC MLDSA_NTTUNPACK_TMC_EXEC
+   and simplify = SIMD_SIMPLIFY_TAC[] in
+   MAP_EVERY (fun n -> step [n] THEN simplify) (1--192)) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
   (* Extract all the memory writes from the execution *)
