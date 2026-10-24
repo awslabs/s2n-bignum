@@ -460,10 +460,9 @@ let MLDSA_REDUCE_BARRED = prove
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
   STRIP_TAC THEN
 
-   MAP_EVERY (fun n ->
-      X86_STEPS_TAC MLDSA_REDUCE_TMC_EXEC [n] THEN
-      SIMD_SIMPLIFY_TAC[mldsa_barred])
-             (1--198) THEN
+   (let step = X86_STEPS_TAC MLDSA_REDUCE_TMC_EXEC
+    and simplify = SIMD_SIMPLIFY_TAC[mldsa_barred] in
+    MAP_EVERY (fun n -> step [n] THEN simplify) (1--198)) THEN
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 

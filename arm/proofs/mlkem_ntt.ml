@@ -483,9 +483,9 @@ let MLKEM_NTT_CORRECT = prove
 
   (*** Simulate all the way to the end, in effect unrolling loops ***)
 
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_NTT_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[barmul] [])
-            (1--904) THEN
+  (let step = ARM_STEPS_TAC MLKEM_NTT_EXEC
+   and simplify = SIMD_SIMPLIFY_ABBREV_TAC[barmul] [] in
+   MAP_EVERY (fun n -> step [n] THEN simplify) (1--904)) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
   (*** Reverse the restructuring by splitting the 128-bit words up ***)
