@@ -390,9 +390,11 @@ let MLDSA_POINTWISE_ACC_L7_CORRECT = prove
      CONV_TAC INT_REDUCE_CONV];
    ALL_TAC] THEN
 
-  MAP_EVERY (fun n -> X86_STEPS_TAC MLDSA_POINTWISE_ACC_L7_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC[mldsa_pointwise_montred])
-        (1--2179) THEN
+  (let step = X86_STEPS_TAC MLDSA_POINTWISE_ACC_L7_TMC_EXEC
+   and simplify = SIMD_SIMPLIFY_TAC[mldsa_pointwise_montred] in
+   MAP_EVERY (fun n -> step [n] THEN
+                      simplify)
+        (1--2179)) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
 

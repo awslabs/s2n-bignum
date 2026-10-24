@@ -879,9 +879,11 @@ let MLDSA_INTT_CORRECT = prove
   REPEAT STRIP_TAC THEN
 
   (*** Simulate all the way to the end, in effect unrolling loops ***)
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLDSA_INTT_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[arm_mldsa_barmul] [])
-            (1--2071) THEN
+  (let step = ARM_STEPS_TAC MLDSA_INTT_EXEC
+   and simplify = SIMD_SIMPLIFY_ABBREV_TAC[arm_mldsa_barmul] [] in
+   MAP_EVERY (fun n -> step [n] THEN
+                      simplify)
+            (1--2071)) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
   (*** Reverse the restructuring by splitting the 128-bit words up ***)

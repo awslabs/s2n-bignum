@@ -772,9 +772,11 @@ let MLDSA_USE_HINT_32_CORRECT = prove
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
 
   (* Simulate 878 instructions (the assembly is bound-independent). *)
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLDSA_USE_HINT_32_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC[])
-        (1--878) THEN
+  (let step = ARM_STEPS_TAC MLDSA_USE_HINT_32_EXEC
+   and simplify = SIMD_SIMPLIFY_TAC[] in
+   MAP_EVERY (fun n -> step [n] THEN
+                      simplify)
+        (1--878)) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
   (* Pick up the postcondition's input-bound antecedents

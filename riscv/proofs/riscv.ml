@@ -166,6 +166,9 @@ let RISCV_NORMALIZE_PC_TH ths pc_th =
    with `ADDI A0 A0 1`, the result rewrites `riscv s s'` to the PC update
    followed by the `A0` update and any generated events. *)
 
+let RISCV_COMPONENT_REWRITE_CONV =
+  CACHED_GEN_REWRITE_CONV (SUB_COMPONENTS_CONV o TOP_DEPTH_CONV);;
+
 let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
   let pc_th =
     try
@@ -215,6 +218,9 @@ let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
         aligned_bytes_loaded_mc_ths
     with Failure _ ->
       failwith "RISCV_CONV: cannot match code loading to the current PC" in
+  let component_rewrite =
+    (if !context_rewrite_cache_enabled then RISCV_COMPONENT_REWRITE_CONV
+       else GEN_REWRITE_CONV (SUB_COMPONENTS_CONV o TOP_DEPTH_CONV)) ths in
   (K eth THENC
    REWRITE_CONV
     [riscv_execute; riscv_ADD; riscv_ADDI; riscv_SUB; riscv_SLLI;
@@ -245,7 +251,7 @@ let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
      GEN_REWRITE_CONV (RAND_CONV o TOP_DEPTH_CONV) [GSYM ADD_ASSOC] THENC
      RAND_CONV NUM_REDUCE_CONV) THENC
    TOP_DEPTH_CONV COMPONENT_WRITE_OVER_WRITE_CONV THENC
-   GEN_REWRITE_CONV (SUB_COMPONENTS_CONV o TOP_DEPTH_CONV) ths THENC
+   component_rewrite THENC
    GEN_REWRITE_CONV TOP_DEPTH_CONV [WORD_VAL] THENC
    ONCE_DEPTH_CONV WORD_PC_PLUS_CONV THENC
    ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV THENC

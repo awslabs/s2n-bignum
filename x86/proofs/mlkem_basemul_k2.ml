@@ -957,9 +957,11 @@ let MLKEM_BASEMUL_K2_CORRECT = prove(
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes16 any) s = x`] THEN
   REPEAT STRIP_TAC THEN
 
-  MAP_EVERY (fun n -> X86_STEPS_TAC mlkem_basemul_k2_tmc_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC [montmul_x86; montmul_odd_x86])
-            (1--470) THEN
+  (let step = X86_STEPS_TAC mlkem_basemul_k2_tmc_EXEC
+   and simplify = SIMD_SIMPLIFY_TAC [montmul_x86; montmul_odd_x86] in
+   MAP_EVERY (fun n -> step [n] THEN
+                      simplify)
+            (1--470)) THEN
 
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN

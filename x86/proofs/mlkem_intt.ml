@@ -1155,10 +1155,12 @@ let MLKEM_INTT_CORRECT = prove
   CONV_TAC(LAND_CONV(READ_MEMORY_SPLIT_CONV 2)) THEN
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC THEN
 
-  MAP_EVERY (fun n -> X86_STEPS_TAC MLKEM_INTT_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul; barred_x86]
-                              [ntt_montmul_add; ntt_montmul_sub])
-        (1--663) THEN
+  (let step = X86_STEPS_TAC MLKEM_INTT_TMC_EXEC
+   and simplify = SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul; barred_x86]
+                              [ntt_montmul_add; ntt_montmul_sub] in
+   MAP_EVERY (fun n -> step [n] THEN
+                      simplify)
+        (1--663)) THEN
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 

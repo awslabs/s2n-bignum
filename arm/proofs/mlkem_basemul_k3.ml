@@ -366,8 +366,10 @@ let MLKEM_BASEMUL_K3_CORRECT = prove
      Note that we simplify eagerly after every step.
      This reduces the proof time *)
   REPEAT STRIP_TAC THEN
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_BASEMUL_K3_EXEC [n] THEN
-             (SIMD_SIMPLIFY_TAC [montred])) (1--1080) THEN
+  (let step = ARM_STEPS_TAC MLKEM_BASEMUL_K3_EXEC
+   and simplify = SIMD_SIMPLIFY_TAC [montred] in
+   MAP_EVERY (fun n -> step [n] THEN
+             (simplify)) (1--1080)) THEN
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV EXPAND_CASES_CONV)) THEN STRIP_TAC THEN

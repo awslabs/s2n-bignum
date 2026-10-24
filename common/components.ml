@@ -3023,6 +3023,15 @@ let NONOVERLAPPING_DRIVERS =
      [GSYM INT_OF_NUM_MUL; GSYM INT_OF_NUM_POW; GSYM INT_OF_NUM_ADD;
       INT_SUB_RZERO; INT_ADD_LID; INT_ADD_RID] in
   let OVERLAPPING_DRIVER th =
+    (* Only these outer forms can become a driver. Avoid traversing
+       unrelated word equations and arithmetic abbreviations first. *)
+    let original = concl th in
+    if not(is_binary "nonoverlapping" original ||
+           (match original with
+            | Comb(Comb(Comb(Const("nonoverlapping_modulo",_),_),_),_) -> true
+            | _ -> false) ||
+           is_disj original)
+    then failwith "OVERLAPPING_DRIVER" else
     let th1 = CONV_RULE (ONCE_DEPTH_CONV NONOVERLAP_REVERT_CONV) th in
     let tm = concl th1 in
     let th2 =
@@ -3349,10 +3358,15 @@ let COMPONENT_READ_OVER_WRITE_CONV =
   let pth_same = prove
    (`valid_component c ==> read c (write c y s) = y`,
     SIMP_TAC[valid_component])
+  and pth_sub = prove
+   (`valid_component c ==>
+       read c (write (c :> d) y s) = write d y (read c s)`,
+    SIMP_TAC[WRITE_COMPONENT_COMPOSE; valid_component])
   and pth_orth = prove
    (`orthogonal_components c d ==> read c (write d y s) = read c s`,
     SIMP_TAC[orthogonal_components]) in
   let rule_same = PART_MATCH (lhand o rand) pth_same
+  and rule_sub = PART_MATCH (lhand o rand) pth_sub
   and rule_orth = PART_MATCH (lhand o rand) pth_orth
   and orth_rule = ORTHOGONAL_COMPONENTS_RULE(NONOVERLAPPING_DRIVERS[],[]) in
   fun tm ->
@@ -3361,6 +3375,9 @@ let COMPONENT_READ_OVER_WRITE_CONV =
         rule_same_matched := true;
         MP th (VALID_COMPONENT_CONV(lhand(concl th)))
     with Failure _ ->
+      try let th = rule_sub tm in
+          MP th (VALID_COMPONENT_CONV(lhand(concl th)))
+      with Failure _ ->
       try let th = rule_orth tm in
           rule_orth_matched := true;
           MP th (orth_rule(lhand(concl th)))

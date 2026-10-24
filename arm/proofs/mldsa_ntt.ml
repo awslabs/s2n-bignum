@@ -773,9 +773,11 @@ let MLDSA_NTT_CORRECT = prove
 
   (*** Simulate all the way to the end, in effect unrolling loops ***)
 
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLDSA_NTT_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[arm_mldsa_barmul] [])
-            (1--1959) THEN
+  (let step = ARM_STEPS_TAC MLDSA_NTT_EXEC
+   and simplify = SIMD_SIMPLIFY_ABBREV_TAC[arm_mldsa_barmul] [] in
+   MAP_EVERY (fun n -> step [n] THEN
+                      simplify)
+            (1--1959)) THEN
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
