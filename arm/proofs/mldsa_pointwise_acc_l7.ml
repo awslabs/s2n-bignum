@@ -236,9 +236,11 @@ let MLDSA_POINTWISE_ACC_L7_CORRECT = prove
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
 
   (* Simulate all 2215 instructions with SIMD simplification *)
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLDSA_POINTWISE_ACC_L7_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC[arm_mldsa_pointwise_montred'])
-        (1--2215) THEN
+  (let step = ARM_STEPS_TAC MLDSA_POINTWISE_ACC_L7_EXEC
+   and simplify = SIMD_SIMPLIFY_TAC[arm_mldsa_pointwise_montred'] in
+   MAP_EVERY (fun n -> step [n] THEN
+                      simplify)
+        (1--2215)) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
   (* Discard unused input memory (a, b) bytes128 reads *)

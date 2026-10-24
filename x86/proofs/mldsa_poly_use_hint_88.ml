@@ -1290,7 +1290,9 @@ let MLDSA_POLY_USE_HINT_88_BODY_BLOCK_TAC : tactic =
         `!b. i <= b /\ b < 32 ==> read(memory :> bytes256(word_add a (word(32*b)))) s0 = xb b`) (concl th)
       then MP_TAC(SPEC `b:num` th) else failwith "no") THEN
     ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN ACCEPT_TAC]; ALL_TAC] THEN
-  EVERY (map (fun n -> X86_STEPS_TAC MLDSA_POLY_USE_HINT_88_EXEC [n] THEN SIMD_SIMPLIFY_TAC[] THEN ABBREV_BIG_TAC) (1--28)) THEN
+  (let step = X86_STEPS_TAC MLDSA_POLY_USE_HINT_88_EXEC
+   and simplify = SIMD_SIMPLIFY_TAC[] in
+   EVERY (map (fun n -> step [n] THEN simplify THEN ABBREV_BIG_TAC) (1--28))) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN
   TRY(REWRITE_TAC[ARITH_RULE `32 * (i + 1) = 32 * i + 32`] THEN CONV_TAC WORD_RULE) THEN

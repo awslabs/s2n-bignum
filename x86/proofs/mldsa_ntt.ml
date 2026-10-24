@@ -4611,11 +4611,13 @@ let MLDSA_NTT_CORRECT = prove
 
 (*** Do the entire simulation (very slow!) ****)
 
-  MAP_EVERY (fun n -> X86_STEPS_TAC MLDSA_NTT_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[mldsa_montmul]
+  (let step = X86_STEPS_TAC MLDSA_NTT_TMC_EXEC
+   and simplify = SIMD_SIMPLIFY_ABBREV_TAC[mldsa_montmul]
                         [WORD_ADD_MLDSA_MONTMUL;
-                         WORD_ADD_MLDSA_MONTMUL_ALT; WORD_SUB_MLDSA_MONTMUL])
-        (1--2337) THEN
+                         WORD_ADD_MLDSA_MONTMUL_ALT; WORD_SUB_MLDSA_MONTMUL] in
+   MAP_EVERY (fun n -> step [n] THEN
+                      simplify)
+        (1--2337)) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
 (**** Reverse the restructuring by splitting the 256-bit words up ***)
