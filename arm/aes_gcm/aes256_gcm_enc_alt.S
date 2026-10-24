@@ -1310,26 +1310,6 @@ L256_enc_tail_slides:		//rem in {1,3,4,5,6,7} rejoin here (addresses unchanged)
 	sub	v30.4s, v30.4s, v31.4s
 	ldr	q21, [x6, #16]				//load h2k | h1k
 	b	L256_enc_blocks_less_than_1
-L256_enc_blocks_more_than_7:	//blocks	left >  7
-	st1	{ v9.16b}, [x2], #16				//AES final-7 block  - store result
-
-	rev64	v8.16b, v9.16b						//GHASH final-7 block
-
-	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
-
-	ldr	q9, [x0], #16				//AES final-6 block - load plaintext
-
-	pmull2	v17.1q, v8.2d, v25.2d				//GHASH final-7 block - high
-	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-7 block - mid
-	ins	v18.d[0], v24.d[1]					//GHASH final-7 block - mid
-
-	movi	v16.8b, #0						//supress further partial tag feed in
-
-	eor	v27.8b, v27.8b, v8.8b				//GHASH final-7 block - mid
-	eor3	v9.16b, v9.16b, v1.16b, v29.16b			//AES final-6 block - result
-
-	pmull	v18.1q, v27.1d, v18.1d				//GHASH final-7 block - mid
-	pmull	v19.1q, v8.1d, v25.1d				//GHASH final-7 block - low
 L256_enc_blocks_more_than_6:	//blocks	left >  6
 
 	st1	{ v9.16b}, [x2], #16				//AES final-6 block - store result
@@ -1408,34 +1388,6 @@ L256_enc_blocks_more_than_4:	//blocks	left >  4
 	eor	v17.16b, v17.16b, v28.16b					//GHASH final-4 block - high
 L256_enc_blocks_more_than_3:	//blocks	left >  3
 	b	L256_enc_rem4_drain	//rem 5/6/7 finish on the shared eor3-fused rem4 drain
-// The rest of this block is unreachable: the branch above replaced its first
-// instruction (an st1, which rem4_drain performs on entry).  It is kept so that
-// the code after it, and the proof's PCs, do not move.
-
-	ldr	q25, [x6, #80]				//load h4l | h4h
-	rev64	v8.16b, v9.16b						//GHASH final-3 block
-
-	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
-
-	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-3 block - mid
-	pmull2	v28.1q, v8.2d, v25.2d				//GHASH final-3 block - high
-
-	eor	v17.16b, v17.16b, v28.16b					//GHASH final-3 block - high
-	eor	v27.8b, v27.8b, v8.8b				//GHASH final-3 block - mid
-	ldr	q24, [x6, #64]				//load h4k | h3k
-	ext	v11.16b, v24.16b, v24.16b, #8			//[R2b] h3k(hi lane) to low lane
-
-	// [R2b] ins v27.d[1] removed (final-3, pmull low, h3k in v11)
-	ldr	q9, [x0], #16				//AES final-2 block - load plaintext
-
-	pmull	v27.1q, v27.1d, v11.1d				//[R2b] final-3 mid (pmull low, h3k in v11)
-	pmull	v26.1q, v8.1d, v25.1d				//GHASH final-3 block - low
-
-	eor3	v9.16b, v9.16b, v5.16b, v29.16b			//AES final-2 block - result
-	movi	v16.8b, #0						//supress further partial tag feed in
-
-	eor	v18.16b, v18.16b, v27.16b				//GHASH final-3 block - mid
-	eor	v19.16b, v19.16b, v26.16b					//GHASH final-3 block - low
 L256_enc_blocks_more_than_2:	//blocks	left >  2
 
 	ldr	q23, [x6, #48]				//load h3l | h3h
@@ -1532,7 +1484,7 @@ L256_enc_blocks_less_than_1:	//final whole block (whole-blocks contract: never p
 	ext	v19.16b, v19.16b, v19.16b, #8
 	rev64	v19.16b, v19.16b
 	st1	{ v19.16b }, [x3]
-L256_enc_epilogue:  //both paths converge here (pristine 0x11a8)
+L256_enc_epilogue:  //both paths converge here
 	mov	x0, x9					//return sizes
 // -- END derived generator body --
 
@@ -1890,9 +1842,9 @@ L256_enc_small:  //fused nb<=4 short path (single entry test cmp x9,#64/b.le).
 	add	v28.4s, v31.4s, v31.4s	//+2
 	add	v10.4s, v28.4s, v31.4s	//+3
 	add	v11.4s, v28.4s, v28.4s	//+4
-	// base+8 build removed; each body builds its final counter directly
-	// reversal index synthesized ONCE in the shared prefix (route B),
-	// deleted from the four small_N bodies (was 4x10 instrs). Q12 now lives across dispatch.
+	// each small_N body builds its final counter directly
+	// reversal index synthesized ONCE in the shared prefix (route B);
+	// Q12 lives across dispatch.
 	movz	x7, #0x0e0f
 	movk	x7, #0x0c0d, lsl #16
 	movk	x7, #0x0a0b, lsl #32
@@ -1910,7 +1862,7 @@ L256_enc_small:  //fused nb<=4 short path (single entry test cmp x9,#64/b.le).
 	cmp	x9, #48
 	b.eq	L256_enc_small_3
 L256_enc_small_4:  //nb==4 (64B): 4-block AES + fast4 eor3-fused drain (tbl v12)
-	add	v30.4s, v29.4s, v11.4s	//final counter = base+4 = ctr(nb+2), direct
+	add	v30.4s, v29.4s, v11.4s	//final counter = base+4 = ctr(c+nb), direct
 	add	v8.4s, v29.4s, v31.4s	//counter1
 	rev32	v1.16b, v8.16b
 	add	v9.4s, v29.4s, v28.4s	//counter2
@@ -1961,7 +1913,7 @@ L256_enc_small_4_aesloop:
 	eor3	v9.16b, v9.16b, v1.16b, v29.16b	//final-2 - result
 	st1	{ v9.16b}, [x2], #16
 	ldr	q23, [x6, #48]			//h3l | h3h
-	rev64	v8.16b, v9.16b			//no-op tag eor + movi dropped from the original
+	rev64	v8.16b, v9.16b			//byteswap ct block for GHASH fold
 	ldr	q9, [x0], #16			//final-1 - load plaintext
 	ext	v27.16b, v8.16b, v8.16b, #8
 	pmull2	v28.1q, v8.2d, v23.2d		//final-2 high
@@ -1974,7 +1926,7 @@ L256_enc_small_4_aesloop:
 	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//fused mid (pair-1)
 	st1	{ v9.16b}, [x2], #16
 	ldr	q22, [x6, #32]			//h2l | h2h
-	rev64	v8.16b, v9.16b			//no-op tag eor + movi dropped from the original
+	rev64	v8.16b, v9.16b			//byteswap ct block for GHASH fold
 	ldr	q9, [x0], #16			//final - load plaintext
 	ext	v27.16b, v8.16b, v8.16b, #8
 	pmull2	v13.1q, v8.2d, v22.2d		//final-1 high -> v13
@@ -1999,13 +1951,13 @@ L256_enc_small_4_aesloop:
 	eor3	v18.16b, v18.16b, v16.16b, v15.16b	//fused mid (pair-2)
 	b	L256_enc_small_reduce
 L256_enc_small_3:  //nb==3 (48B): 3-block AES + 3-block drain (tbl v12)
-	add	v30.4s, v29.4s, v10.4s	//final counter = base+3 = ctr(nb+2), direct
+	add	v30.4s, v29.4s, v10.4s	//final counter = base+3 = ctr(c+nb), direct
 	add	v8.4s, v29.4s, v31.4s	//counter1
 	rev32	v1.16b, v8.16b
 	add	v9.4s, v29.4s, v28.4s	//counter2
 	rev32	v2.16b, v9.16b
 	// index synth hoisted to shared prefix (Q12 already set on entry)
-	// v26=rk0, v27=rk1 loaded. v30=base+8 (=ctr(8g+10)), v31=incr, v19=folded tag.
+	// v26=rk0, v27=rk1 loaded. v30=base+3 (=ctr(c+nb), built directly), v31=incr, v19=folded tag.
 	mov	x12, x11			//AES re-roll walking rk ptr
 	mov	w13, #13
 L256_enc_small_3_aesloop:
@@ -2070,7 +2022,7 @@ L256_enc_small_3_aesloop:
 	eor3	v18.16b, v16.16b, v5.16b, v15.16b	//mid
 	b	L256_enc_small_reduce
 L256_enc_small_2:  //nb==2 (32B): 2-block AES + eor3-fused 2-block drain (tbl v12)
-	add	v30.4s, v29.4s, v28.4s	//final counter = base+2 = ctr(nb+2), direct
+	add	v30.4s, v29.4s, v28.4s	//final counter = base+2 = ctr(c+nb), direct
 	add	v8.4s, v29.4s, v31.4s	//counter1
 	rev32	v1.16b, v8.16b
 	// index synth hoisted to shared prefix (Q12 already set on entry)
@@ -2120,9 +2072,9 @@ L256_enc_small_2_aesloop:
 	str	q30, [x16]			//ivec store
 	b	L256_enc_small_reduce
 L256_enc_small_1:  //nb==1 (16B): 1-block AES + single-block drain (tbl v12)
-	add	v30.4s, v29.4s, v31.4s	//final counter = base+1 = ctr(nb+2), direct
+	add	v30.4s, v29.4s, v31.4s	//final counter = base+1 = ctr(c+nb), direct
 	// index synth hoisted to shared prefix (Q12 already set on entry)
-	// v26=rk0, v27=rk1 loaded (before dispatch). v30=base+8 (=ctr(8g+10)), v31=incr, v19=folded tag.
+	// v26=rk0, v27=rk1 loaded (before dispatch). v30=base+1 (=ctr(c+nb), built directly), v31=incr, v19=folded tag.
 	mov	x12, x11			//AES re-roll walking rk ptr
 	mov	w13, #13
 L256_enc_small_1_aesloop:
@@ -2138,7 +2090,7 @@ L256_enc_small_1_aesloop:
 	ext	v16.16b, v19.16b, v19.16b, #8	//partial tag
 	mov	v29.16b, v28.16b		//v29 = rk14
 	eor3	v9.16b, v8.16b, v0.16b, v29.16b
-	// 7 subs roll v30 base+8 (=ctr(8g+10)) -> base+1 = ctr(nb+2), interleaved w/ loads
+	// v30 = base+1 = ctr(c+nb), built directly above; counter store interleaved w/ loads
 	ldr	q20, [x6]			//h1l | h1h
 	ldr	q21, [x6, #16]			//h2k | h1k
 	rev64	v8.16b, v9.16b			//GHASH block
@@ -2150,7 +2102,7 @@ L256_enc_small_1_aesloop:
 	eor	v16.8b, v16.8b, v8.8b		//mid
 	pmull	v18.1q, v16.1d, v21.1d		//mid -> v18 (h1k low lane)
 	rev32	v30.16b, v30.16b
-	str	q30, [x16]			//store the updated counter (base+1 = ctr(nb+2))
+	str	q30, [x16]			//store the updated counter (base+1 = ctr(c+nb))
 L256_enc_small_reduce:  //shared final GHASH reduction + tbl(v12) reverse + tag store
 	ldr	d16, [x10]			//MODULO - load modulo constant
 	ext	v21.16b, v17.16b, v17.16b, #8	//MODULO - other top alignment
