@@ -4,7 +4,7 @@ on:
   pull_request:
 
 env:
-  HOLLIGHT_COMMIT: "217dd32e798d98926d3ab81ed3dfcdf435831e1f"
+  HOLLIGHT_COMMIT: "dbba4e6b42161b91132f7bfd8a52400ff60d37e0"
 
 jobs:
   s2n-bignum-tests:
@@ -104,7 +104,7 @@ jobs:
 
     - name: Install HOL Light
       run: |
-        git clone https://github.com/jrh13/hol-light.git
+        git clone https://github.com/aqjune-aws/hol-light.git
         cd hol-light
         git checkout ${{ env.HOLLIGHT_COMMIT }}
         make switch-5
@@ -161,7 +161,7 @@ jobs:
 
     - name: Install HOL Light
       run: |
-        git clone https://github.com/jrh13/hol-light.git
+        git clone https://github.com/aqjune-aws/hol-light.git
         cd hol-light
         git checkout ${{ env.HOLLIGHT_COMMIT }}
         make switch-5
@@ -212,7 +212,7 @@ jobs:
 
     - name: Install HOL Light
       run: |
-        git clone https://github.com/jrh13/hol-light.git
+        git clone https://github.com/aqjune-aws/hol-light.git
         cd hol-light
         git checkout ${{ env.HOLLIGHT_COMMIT }}
         make switch-5
@@ -264,7 +264,7 @@ jobs:
 
     - name: Install HOL Light
       run: |
-        git clone https://github.com/jrh13/hol-light.git
+        git clone https://github.com/aqjune-aws/hol-light.git
         cd hol-light
         git checkout ${{ env.HOLLIGHT_COMMIT }}
         make switch-5
@@ -307,7 +307,7 @@ jobs:
 
     - name: Install HOL Light
       run: |
-        git clone https://github.com/jrh13/hol-light.git
+        git clone https://github.com/aqjune-aws/hol-light.git
         cd hol-light
         git checkout ${{ env.HOLLIGHT_COMMIT }}
         make switch-5
@@ -402,7 +402,7 @@ jobs:
 
     - name: Install HOL Light
       run: |
-        git clone https://github.com/jrh13/hol-light.git
+        git clone https://github.com/aqjune-aws/hol-light.git
         cd hol-light
         git checkout ${{ env.HOLLIGHT_COMMIT }}
         make switch-5
@@ -440,7 +440,7 @@ jobs:
 
     - name: Install HOL Light
       run: |
-        git clone https://github.com/jrh13/hol-light.git
+        git clone https://github.com/aqjune-aws/hol-light.git
         cd hol-light
         git checkout ${{ env.HOLLIGHT_COMMIT }}
         make switch-5
