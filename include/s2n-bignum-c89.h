@@ -70,6 +70,15 @@ extern uint64_t aes256_gcm_dec_alt(const uint8_t *in, uint64_t len_bits, uint8_t
 extern uint64_t aes256_gcm_enc(const uint8_t *in, uint64_t len_bits, uint8_t *out,
         uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
 
+/* AES256_GCM_ENC_ALT (AES-256-GCM bulk encryption of whole blocks with GHASH tag update, 8 blocks at a time) */
+/* Unlike aes256_gcm_enc it needs FEAT_SHA3, reads the complete 192-byte H table produced by gcm_init_v8, requires in + len_bits/8 < 2^63, */
+/* and returns 0 without touching memory when len_bits is not a multiple of 128.  In-place operation (out == in) is not covered. */
+/* This routine does not enforce the NIST GCM message limit. */
+/* Callers must ensure the cumulative message length does not exceed 2^36 - 32 bytes (2^39 - 256 bits). */
+/* Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[240], htable[24]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed */
+extern uint64_t aes256_gcm_enc_alt(const uint8_t *in, uint64_t len_bits, uint8_t *out,
+        uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
+
 /* Add, z := x + y */
 /* Inputs x[m], y[n]; outputs function return (carry-out) and z[p] */
 extern uint64_t bignum_add (uint64_t p, uint64_t *z, uint64_t m, const uint64_t *x, uint64_t n, const uint64_t *y);

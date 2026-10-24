@@ -1446,6 +1446,11 @@ void call_aes_xts_decrypt_128(void) {}
 void call_aes_xts_decrypt_256(void) {}
 void call_aes_xts_decrypt_512(void) {}
 
+void call_aes256_gcm_enc_alt_16(void) {}
+void call_aes256_gcm_enc_alt_64(void) {}
+void call_aes256_gcm_enc_alt_256(void) {}
+void call_aes256_gcm_enc_alt_1024(void) {}
+void call_aes256_gcm_enc_alt_4096(void) {}
 void call_aes128_gcm_enc_16(void) {}
 void call_aes128_gcm_enc_64(void) {}
 void call_aes128_gcm_enc_256(void) {}
@@ -1626,6 +1631,18 @@ void call_aes256_gcm_dec_alt_64(void) { repeat(aes256_gcm_dec_alt_helper(64)); }
 void call_aes256_gcm_dec_alt_256(void) { repeat(aes256_gcm_dec_alt_helper(256)); }
 void call_aes256_gcm_dec_alt_1024(void) { repeatfewer(10,aes256_gcm_dec_alt_helper(1024)); }
 void call_aes256_gcm_dec_alt_4096(void) { repeatfewer(40,aes256_gcm_dec_alt_helper(4096)); }
+
+// aes256_gcm_enc_alt, the encryption counterpart: the same table, FEAT_SHA3
+// and whole-block requirements, the same short path for at most 4 blocks,
+// and its 8-block main loop only for lengths above 256 bytes.
+static void aes256_gcm_enc_alt_helper(size_t len)
+{ aes_gcm_setup(14);
+  aes256_gcm_enc_alt((uint8_t*)b0, (uint64_t)len * 8, (uint8_t*)b2, (uint64_t*)b3, aes_iv, &aes_gcm_key, bb[0]); }
+void call_aes256_gcm_enc_alt_16(void) { repeat(aes256_gcm_enc_alt_helper(16)); }
+void call_aes256_gcm_enc_alt_64(void) { repeat(aes256_gcm_enc_alt_helper(64)); }
+void call_aes256_gcm_enc_alt_256(void) { repeat(aes256_gcm_enc_alt_helper(256)); }
+void call_aes256_gcm_enc_alt_1024(void) { repeatfewer(10,aes256_gcm_enc_alt_helper(1024)); }
+void call_aes256_gcm_enc_alt_4096(void) { repeatfewer(40,aes256_gcm_enc_alt_helper(4096)); }
 
 #endif
 
@@ -2145,6 +2162,13 @@ int main(int argc, char *argv[])
   timingtest(aes&&sha3,"aes256_gcm_dec_alt (256 bytes)",call_aes256_gcm_dec_alt_256);
   timingtest(aes&&sha3,"aes256_gcm_dec_alt (1024 bytes)",call_aes256_gcm_dec_alt_1024);
   timingtest(aes&&sha3,"aes256_gcm_dec_alt (4096 bytes)",call_aes256_gcm_dec_alt_4096);
+
+  // AES-256-GCM 8x encrypt kernel needs both AES and SHA3 (eor3)
+  timingtest(aes&&sha3,"aes256_gcm_enc_alt (16 bytes)",call_aes256_gcm_enc_alt_16);
+  timingtest(aes&&sha3,"aes256_gcm_enc_alt (64 bytes)",call_aes256_gcm_enc_alt_64);
+  timingtest(aes&&sha3,"aes256_gcm_enc_alt (256 bytes)",call_aes256_gcm_enc_alt_256);
+  timingtest(aes&&sha3,"aes256_gcm_enc_alt (1024 bytes)",call_aes256_gcm_enc_alt_1024);
+  timingtest(aes&&sha3,"aes256_gcm_enc_alt (4096 bytes)",call_aes256_gcm_enc_alt_4096);
 
   // Summarize performance in arithmetic and geometric means
 
