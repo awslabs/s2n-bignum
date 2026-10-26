@@ -1590,8 +1590,18 @@ let x86_SHL = new_definition
           AF := read AF s
         else UNDEFINED_VALUES[AF])) s`;;
 
+(*** With masked counts > dimindex(:N) (only possible for 16-bit operands
+ *** since the count is masked to 5 bits) the result and all flags are
+ *** undefined, and implementations really do differ. The ALT forms below
+ *** drop the test in the 32-bit and 64-bit cases, where the count is
+ *** always "n MOD 32" or "n MOD 64", so symbolic simulation is unchanged.
+ ***)
+
 let x86_SHLD = new_definition
  `x86_SHLD dest src c s =
+    if dimindex(:N) < c then
+      (UNDEFINED_VALUES[dest] ,, UNDEFINED_VALUES[CF;OF;SF;ZF;PF;AF]) s
+    else
       let h:N word = read dest s
       and l:N word = read src s in
       let concat:(N tybit0)word = word_join h l in
@@ -1630,6 +1640,9 @@ let x86_SHR = new_definition
 
 let x86_SHRD = new_definition
  `x86_SHRD dest src c s =
+    if dimindex(:N) < c then
+      (UNDEFINED_VALUES[dest] ,, UNDEFINED_VALUES[CF;OF;SF;ZF;PF;AF]) s
+    else
       let h:N word = read src s
       and l:N word = read dest s in
       let concat:(N tybit0)word = word_join h l in
@@ -4699,6 +4712,25 @@ let x86_VPSRLW_ALT = EXPAND_SIMD_RULE x86_VPSRLW;;
 let x86_VPUNPCKHQDQ_ALT = EXPAND_SIMD_RULE x86_VPUNPCKHQDQ;;
 let x86_VPUNPCKLQDQ_ALT = EXPAND_SIMD_RULE x86_VPUNPCKLQDQ;;
 
+(*** For 32-bit and 64-bit operands the count is "n MOD 32" or "n MOD 64",
+ *** so the test for a count larger than the operand size is always false.
+ ***)
+
+let x86_SHLD_ALT,x86_SHRD_ALT =
+  let lemma = prove
+   (`(!n. dimindex(:64) < n MOD 64 <=> F) /\
+     (!n. dimindex(:32) < n MOD 32 <=> F)`,
+    REWRITE_TAC[DIMINDEX_64; DIMINDEX_32; NOT_LT] THEN
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC LT_IMP_LE THEN
+    REWRITE_TAC[MOD_LT_EQ] THEN CONV_TAC NUM_REDUCE_CONV) in
+  let mk def =
+    let inst ty m =
+      let th = SPEC_ALL (INST_TYPE [ty,`:N`] def) in
+      let c' = mk_comb(mk_comb(`(MOD)`,`n:num`),m) in
+      GEN_ALL(PURE_REWRITE_RULE[lemma; COND_CLAUSES] (INST [c',`c:num`] th)) in
+    CONJ (inst `:64` `64`) (inst `:32` `32`) in
+  mk x86_SHLD,mk x86_SHRD;;
+
 let X86_OPERATION_CLAUSES =
   map (CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
        REWRITE_RULE[WORD_ZX_TRIVIAL] o
@@ -4716,7 +4748,7 @@ let X86_OPERATION_CLAUSES =
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
     x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
-    x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
+    x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD_ALT; x86_SHR; x86_SHRD_ALT;
     x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDB_ALT; x86_VPADDD_ALT; x86_VPADDQ_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHUW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPINSRW; x86_VINSERTI128; x86_VEXTRACTI128;
@@ -4738,7 +4770,10 @@ let X86_OPERATION_CLAUSES =
     INST_TYPE[`:32`,`:N`] x86_CMP;
     INST_TYPE[`:8`,`:N`] x86_CMP;
     INST_TYPE[`:32`,`:N`] x86_SBB;
-    INST_TYPE[`:32`,`:N`] x86_SUB];;
+    INST_TYPE[`:32`,`:N`] x86_SUB;
+    (*** 16-bit SHLD/SHRD, where the count can exceed the size ***)
+    INST_TYPE[`:16`,`:N`] x86_SHLD;
+    INST_TYPE[`:16`,`:N`] x86_SHRD];;
 
 (* ------------------------------------------------------------------------- *)
 (* Trivial reassociation and reduction of "word((pc + m) + n)"               *)
