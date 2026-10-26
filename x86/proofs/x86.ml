@@ -2823,28 +2823,38 @@ let x86_execute = define
            64 -> x86_ADOX (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_ADOX (OPERAND32 dest s) (OPERAND32 src s)) s)) s
     | AESDEC dest src ->
+        if aligned_OPERAND128 src s then
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
         (\s. (x86_AESDEC (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s)) s
+        else (\s'. F)
     | AESDECLAST dest src ->
+        if aligned_OPERAND128 src s then
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
         (\s. (x86_AESDECLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s))
         s
+        else (\s'. F)
     | AESENC dest src ->
+        if aligned_OPERAND128 src s then
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
         (\s. (x86_AESENC (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s)) s
+        else (\s'. F)
     | AESENCLAST dest src ->
+        if aligned_OPERAND128 src s then
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
         (\s. (x86_AESENCLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s))
         s
+        else (\s'. F)
     | AESKEYGENASSIST dest src imm8 ->
+        if aligned_OPERAND128 src s then
         (add_load_event src s ,,
          add_store_event dest s ,,
         (\s. (x86_AESKEYGENASSIST (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
                                   (OPERAND8 imm8 s)) s)) s
+        else (\s'. F)
     | AND dest src ->
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
@@ -3144,30 +3154,42 @@ let x86_execute = define
          | 16 -> x86_OR (OPERAND16 dest s) (OPERAND16 src s)
          | 8 -> x86_OR (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | PADDD dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PADDD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PADDQ dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PADDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PAND dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PAND (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PBLENDW dest src imm8 ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PBLENDW (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
                         (OPERAND8 imm8 s) s)) s
+       else (\s'. F)
     | PCMPGTD dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PCMPGTD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PCMPGTW dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PCMPGTW (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PEXT dest src1 src2 ->
        (add_load_event src1 s ,, add_load_event src2 s ,,
         add_store_event dest s ,,
@@ -3202,14 +3224,18 @@ let x86_execute = define
          | 32 -> x86_POPCNT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_POPCNT (OPERAND16 dest s) (OPERAND16 src s)) s)) s
     | PSHUFB dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event src s ,, add_load_event dest s ,,
         add_store_event dest s ,,
        (\s. x86_PSHUFB (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PSHUFD dest src imm8 ->
+       if aligned_OPERAND128 src s then
        (add_load_event src s ,, add_load_event dest s ,,
         add_store_event dest s ,,
        (\s. x86_PSHUFD (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
                        (OPERAND8 imm8 s) s)) s
+       else (\s'. F)
     | PSRAD dest imm8 ->
        (add_load_event dest s ,, add_store_event dest s ,,
        (\s. x86_PSRAD (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
@@ -3224,9 +3250,11 @@ let x86_execute = define
          | 16 -> x86_PUSH (OPERAND16 src s)
          | 8 -> x86_PUSH (OPERAND64 src s)) s)) s
     | PXOR dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PXOR (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | RCL dest src ->
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
