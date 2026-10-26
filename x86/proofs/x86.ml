@@ -879,6 +879,10 @@ let x86_BSWAP = new_definition
  *** assemblers even support that kind of thing for immediates. So the
  *** dispatch needs to treat different operands differently, unless we
  *** choose to define some more generic "bit" of a state components.
+ *** For now the decoder only accepts a memory operand with an imm8
+ *** bit offset, for which the offset is masked as for a register.
+ *** ZF is unaffected according to Intel but undefined according to
+ *** AMD, so it is undefined here.
  ***)
 
 let x86_BT = new_definition
@@ -887,7 +891,7 @@ let x86_BT = new_definition
         let c = val y MOD dimindex(:N) in
         let b = bit c x in
         (CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`;;
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`;;
 
 let x86_BTC = new_definition
  `x86_BTC dest src s =
@@ -896,7 +900,7 @@ let x86_BTC = new_definition
         let b = bit c x in
         (dest :> bitelement c := ~b ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`;;
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`;;
 
 let x86_BTR = new_definition
  `x86_BTR dest src s =
@@ -905,7 +909,7 @@ let x86_BTR = new_definition
         let b = bit c x in
         (dest :> bitelement c := F ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`;;
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`;;
 
 let x86_BTS = new_definition
  `x86_BTS dest src s =
@@ -914,7 +918,7 @@ let x86_BTS = new_definition
         let b = bit c x in
         (dest :> bitelement c := T ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`;;
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`;;
 
 let x86_CLC = new_definition
  `x86_CLC s =
@@ -4577,7 +4581,7 @@ let x86_BTC_ALT = prove
         let b = bit c x in
         (dest := word_xor x (word_shl (word 1) c) ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`,
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`,
   REWRITE_TAC[x86_BTC] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[FUN_EQ_THM; seq; assign; UNWIND_THM1] THEN
   X_GEN_TAC `s':x86state` THEN
@@ -4597,7 +4601,7 @@ let x86_BTR_ALT = prove
         let b = bit c x in
         (dest := word_and x (word_not(word_shl (word 1) c)) ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`,
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`,
   REWRITE_TAC[x86_BTR] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[FUN_EQ_THM; seq; assign; UNWIND_THM1] THEN
   X_GEN_TAC `s':x86state` THEN
@@ -4618,7 +4622,7 @@ let x86_BTS_ALT = prove
         let b = bit c x in
         (dest := word_or x (word_shl (word 1) c) ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`,
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`,
   REWRITE_TAC[x86_BTS] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[FUN_EQ_THM; seq; assign; UNWIND_THM1] THEN
   X_GEN_TAC `s':x86state` THEN
