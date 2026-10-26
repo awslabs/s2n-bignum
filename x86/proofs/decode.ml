@@ -1252,8 +1252,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
     read_opcode_ModRM_operand rex sz l >>= \((opc,rm),l).
-    read_imm (to_wordsize sz) l >>= \(imm,l).
-    SOME (MOV rm imm,l)
+    if opc = word 0 then
+      read_imm (to_wordsize sz) l >>= \(imm,l).
+      SOME (MOV rm imm,l)
+    else NONE
   | [0b110100:6; x; v] -> if has_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
     read_opcode_ModRM_operand rex sz l >>= \((opc,rm),l).
