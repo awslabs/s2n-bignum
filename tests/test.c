@@ -19081,7 +19081,7 @@ int main(int argc, char *argv[])
   functionaltest(bmi,"secp256k1_jmixadd",test_secp256k1_jmixadd);
   functionaltest(all,"secp256k1_jmixadd_alt",test_secp256k1_jmixadd_alt);
   functionaltest(all,"sha3_keccak_f1600",test_sha3_keccak_f1600);
-  functionaltest(all,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
+  functionaltest(sha3 || !arm,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
   functionaltest(all,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
   functionaltest(bmi,"sm2_montjadd",test_sm2_montjadd);
   functionaltest(all,"sm2_montjadd_alt",test_sm2_montjadd_alt);

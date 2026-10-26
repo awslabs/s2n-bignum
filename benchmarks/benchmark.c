@@ -2104,7 +2104,7 @@ int main(int argc, char *argv[])
   timingtest(arm,"sha3_keccak_f1600_alt2",call_sha3_keccak_f1600_alt2);
   timingtest(sha3,"sha3_keccak2_f1600",call_sha3_keccak2_f1600);
   timingtest(sha3,"sha3_keccak2_f1600_alt",call_sha3_keccak2_f1600_alt);
-  timingtest(all,"sha3_keccak4_f1600",call_sha3_keccak4_f1600);
+  timingtest(sha3 || !arm,"sha3_keccak4_f1600",call_sha3_keccak4_f1600);
   timingtest(all,"sha3_keccak4_f1600_alt",call_sha3_keccak4_f1600_alt);
   timingtest(sha3,"sha3_keccak4_f1600_alt2",call_sha3_keccak4_f1600_alt2);
   timingtest(bmi,"sm2_montjadd",call_sm2_montjadd);
