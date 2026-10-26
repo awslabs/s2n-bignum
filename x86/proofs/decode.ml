@@ -399,7 +399,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
          | (T, Rep0, SG0) -> SOME (AESDECLAST (mmreg reg sz) (simd_of_RM sz rm), l)
          | _ -> NONE)
       | [0xf6:8] ->
-        let sz = op_size T (rex_W rex) T pfxs in
+        let sz = if rex_W rex then Full_64 else Lower_32 in
         read_ModRM_operand rex sz l >>= \((reg,rm),l).
         (match pfxs with
         | (T, Rep0, SG0) -> SOME (ADCX reg rm,l)
