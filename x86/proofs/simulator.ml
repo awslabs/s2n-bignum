@@ -279,6 +279,8 @@ let iclasses = iclasses_regreg @
  [0x48; 0x93];              (* XCHG (% rbx) (% rax) *)
  [0x96];                    (* XCHG (% esi) (% eax) *)
  [0x66; 0x0f; 0x38; 0xf6; 0xc1]; (* ADCX (% eax) (% ecx) *)
+ [0x0f; 0xbc; 0xc1];        (* BSF (% eax) (% ecx) *)
+ [0x0f; 0xbd; 0xc1];        (* BSR (% eax) (% ecx) *)
  [0x48; 0x0f; 0xb7; 0xc2];  (* MOVZX (% rax) (% dx) *)
  [0x0f; 0xb7; 0xc2];        (* MOVZX (% eax) (% dx) *)
  [0x48; 0x0f; 0xb6; 0xc2];  (* MOVZX (% rax) (% dl) *)

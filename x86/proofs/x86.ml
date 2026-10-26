@@ -845,19 +845,24 @@ let x86_AND = new_definition
  *** moderately recent extensions.
  ***)
 
+(*** On a zero input the destination is undefined. The "destx" argument
+ *** is the whole 64-bit register even for 32-bit operands, since some
+ *** implementations leave the top half alone and others may clear it.
+ ***)
+
 let x86_BSF = new_definition
- `x86_BSF dest src s =
+ `x86_BSF dest destx src s =
         let x:N word = read src s in
         let z:N word = word(word_ctz x) in
-        ((if x = word 0 then UNDEFINED_VALUES[dest] else dest := (z:N word)) ,,
+        ((if x = word 0 then UNDEFINED_VALUES[destx] else dest := (z:N word)) ,,
          ZF := (val x = 0) ,,
          UNDEFINED_VALUES[CF;OF;SF;PF;AF]) s`;;
 
 let x86_BSR = new_definition
- `x86_BSR dest src s =
+ `x86_BSR dest destx src s =
         let x:N word = read src s in
         let z:N word = word(dimindex(:N) - 1 - word_clz x) in
-        ((if x = word 0 then UNDEFINED_VALUES[dest] else dest := (z:N word)) ,,
+        ((if x = word 0 then UNDEFINED_VALUES[destx] else dest := (z:N word)) ,,
          ZF := (val x = 0) ,,
          UNDEFINED_VALUES[CF;OF;SF;PF;AF]) s`;;
 
@@ -2510,6 +2515,11 @@ let GPR32 = define
 let GPR32_Z = define
  `GPR32_Z (Gpr reg Lower_32) = registers :> element reg :> zerotop_32`;;
 
+(*** The whole 64-bit register containing a 32-bit one ***)
+
+let GPR32_FULL = define
+ `GPR32_FULL (Gpr reg Lower_32) = registers :> element reg`;;
+
 let GPR64 = define
  `GPR64 (Gpr reg Full_64) = registers :> element reg`;;
 
@@ -2601,6 +2611,10 @@ let OPERAND32 = define
   OPERAND32 (Memop w ea) s =
        (if w = Doubleword then memory :> bytes32 (bsid_semantics ea s)
         else ARB)`;;
+
+let OPERAND32_FULL = define
+ `OPERAND32_FULL (Register r) (s:x86state) =
+        (if register_size r = 32 then GPR32_FULL r else ARB)`;;
 
 let OPERAND16 = define
  `OPERAND16 (Register r) s =
@@ -2839,16 +2853,22 @@ let x86_execute = define
         (add_load_event src s ,,
          add_store_event dest s ,,
         (\s. (match operand_size dest with
-           64 -> x86_BSF (OPERAND64 dest s) (OPERAND64 src s)
-         | 32 -> x86_BSF (OPERAND32 dest s) (OPERAND32 src s)
-         | 16 -> x86_BSF (OPERAND16 dest s) (OPERAND16 src s)) s)) s
+           64 -> x86_BSF (OPERAND64 dest s) (OPERAND64 dest s)
+                        (OPERAND64 src s)
+         | 32 -> x86_BSF (OPERAND32 dest s) (OPERAND32_FULL dest s)
+                        (OPERAND32 src s)
+         | 16 -> x86_BSF (OPERAND16 dest s) (OPERAND16 dest s)
+                        (OPERAND16 src s)) s)) s
     | BSR dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
         (\s. (match operand_size dest with
-           64 -> x86_BSR (OPERAND64 dest s) (OPERAND64 src s)
-         | 32 -> x86_BSR (OPERAND32 dest s) (OPERAND32 src s)
-         | 16 -> x86_BSR (OPERAND16 dest s) (OPERAND16 src s)) s)) s
+           64 -> x86_BSR (OPERAND64 dest s) (OPERAND64 dest s)
+                        (OPERAND64 src s)
+         | 32 -> x86_BSR (OPERAND32 dest s) (OPERAND32_FULL dest s)
+                        (OPERAND32 src s)
+         | 16 -> x86_BSR (OPERAND16 dest s) (OPERAND16 dest s)
+                        (OPERAND16 src s)) s)) s
     | BSWAP dest ->
         (add_load_event dest s ,,
          add_store_event dest s ,,
@@ -4306,6 +4326,22 @@ let OPERAND_CLAUSES = prove
    OPERAND32 (%r13d) s = R13 :> zerotop_32 /\
    OPERAND32 (%r14d) s = R14 :> zerotop_32 /\
    OPERAND32 (%r15d) s = R15 :> zerotop_32 /\
+   OPERAND32_FULL (%eax) s = RAX /\
+   OPERAND32_FULL (%ecx) s = RCX /\
+   OPERAND32_FULL (%edx) s = RDX /\
+   OPERAND32_FULL (%ebx) s = RBX /\
+   OPERAND32_FULL (%esp) s = RSP /\
+   OPERAND32_FULL (%ebp) s = RBP /\
+   OPERAND32_FULL (%esi) s = RSI /\
+   OPERAND32_FULL (%edi) s = RDI /\
+   OPERAND32_FULL (%r8d) s = R8 /\
+   OPERAND32_FULL (%r9d) s = R9 /\
+   OPERAND32_FULL (%r10d) s = R10 /\
+   OPERAND32_FULL (%r11d) s = R11 /\
+   OPERAND32_FULL (%r12d) s = R12 /\
+   OPERAND32_FULL (%r13d) s = R13 /\
+   OPERAND32_FULL (%r14d) s = R14 /\
+   OPERAND32_FULL (%r15d) s = R15 /\
    OPERAND32 (## n) s = rvalue(word n:32 word) /\
    OPERAND32 (Imm32 w32) s = rvalue w32 /\
    OPERAND32 (Imm16 w16) s = rvalue(word_sx w16) /\
@@ -4382,7 +4418,8 @@ let OPERAND_CLAUSES = prove
   REWRITE_TAC[simple_immediate; base_displacement; QWORD] THEN
   REWRITE_TAC[OPERAND256; OPERAND128; OPERAND128_SSE; OPERAND64; OPERAND32; OPERAND16; OPERAND8;
               register_size; regsize; simdregister_size; simdregsize;
-              SIMD256; SIMD128; SIMD128_SSE; GPR64; GPR32_Z; GPR32; GPR16; GPR8] THEN
+              SIMD256; SIMD128; SIMD128_SSE; GPR64; GPR32_Z; GPR32; GPR16; GPR8;
+              OPERAND32_FULL; GPR32_FULL] THEN
   REWRITE_TAC[COMPONENT_COMPOSE_ASSOC]);;
 
 (* ------------------------------------------------------------------------- *)
