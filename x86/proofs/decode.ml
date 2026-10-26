@@ -170,7 +170,7 @@ let RM_INDUCTION,RM_RECURSION = define_type
 
 let read_sib_displacement = new_definition
  `read_sib_displacement (md:2 word) (reg:4 word) l =
-  if reg = word 5 /\ md = word 0 then
+  if (word_zx reg:3 word) = word 5 /\ md = word 0 then
     read_int32 l >>= \(w,l).
     SOME((word_sx w,NONE),l)
   else
@@ -1902,7 +1902,8 @@ let mk_sib_disp_thm =
       (ONCE_DEPTH_CONV WORD_RED_CONV THENC
        REWRITE_CONV [read_disp_thms md; obind])
       (SPEC_ALL (SPEC md' read_sib_displacement)) in
-    let conv = ONCE_DEPTH_CONV (WORD_RED_CONV ORELSEC GPR_CONV) THENC
+    let conv = ONCE_DEPTH_CONV WORD_ZX_CONV THENC
+      ONCE_DEPTH_CONV (WORD_RED_CONV ORELSEC GPR_CONV) THENC
       REWRITE_CONV [] in
     fun reg ->
       let reg' = mk_comb (word4, mk_numeral (num reg)) in
