@@ -529,8 +529,9 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       SOME (SET (decode_condition c) rm,l)
     | [0b101:3; op:2; 0b011:3] -> if has_pfxs pfxs then NONE else
       let sz = op_size_W rex T pfxs in
-      read_ModRM_operand rex sz l >>= \((reg,rm),l).
-      SOME (decode_BT op rm reg,l)
+      read_ModRM rex l >>= \((reg,rm),l).
+      if is_memop rm then NONE else
+      SOME (decode_BT op (operand_of_RM sz rm) (%(gpr_adjust reg sz)),l)
     | [0xa:4; x; 0b100:3] -> if has_pfxs pfxs then NONE else
       let sz = op_size_W rex T pfxs in
       read_ModRM_operand rex sz l >>= \((reg,rm),l).
