@@ -15232,8 +15232,8 @@ int test_p256_montjscalarmul_alt(void)
      reference_scalarmul(k,b2,b0,gen_p256,p_256,n_256,a_256);
 
      // Map (x,y) into Montgomery form (x',y')
-     bignum_tomont_p256(b2,b2);
-     bignum_tomont_p256(b2+k,b2+k);
+     bignum_tomont_p256_alt(b2,b2);
+     bignum_tomont_p256_alt(b2+k,b2+k);
 
      // Pick a nonzero z coordinate and scale things, except if
      // z = 0, in which case randomize x and y as well. This is
@@ -15762,8 +15762,8 @@ int test_p384_montjscalarmul_alt(void)
      reference_scalarmul(k,b2,b0,gen_p384,p_384,n_384,a_384);
 
      // Map (x,y) into Montgomery form (x',y')
-     bignum_tomont_p384(b2,b2);
-     bignum_tomont_p384(b2+k,b2+k);
+     bignum_tomont_p384_alt(b2,b2);
+     bignum_tomont_p384_alt(b2+k,b2+k);
 
      // Pick a nonzero z coordinate and scale things, except if
      // z = 0, in which case randomize x and y as well. This is
