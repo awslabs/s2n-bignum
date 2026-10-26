@@ -323,11 +323,17 @@ let decode = new_definition `!w:int32. decode w =
   | [0b001110000:9; ld; 0b1:1; Rm:5; 0b011010:6; Rn:5; Rt:5] ->
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
 
+  // LDP with Rt = Rt2 is CONSTRAINED UNPREDICTABLE, with UNDEF among the
+  // permitted outcomes, so reject it here. The orthogonality check in
+  // arm_LDP misses Rt = Rt2 = 31: XZR is a constant, and constants are
+  // orthogonal to every component, themselves included.
   | [x; 0b010100:6; pre; 0b1:1; ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    if ld /\ Rt = Rt2 then NONE else
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)
       ((if pre then Preimmediate_Offset else Postimmediate_Offset)
         (iword (ival imm7 * &(if x then 8 else 4)))))
   | [x; 0b01010010:8; ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    if ld /\ Rt = Rt2 then NONE else
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)
       (Immediate_Offset (iword (ival imm7 * &(if x then 8 else 4)))))
 
