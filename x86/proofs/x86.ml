@@ -3254,7 +3254,9 @@ let x86_execute = define
        (add_load_event src s ,,
        (\s. (match operand_size src with
            64 -> x86_PUSH (OPERAND64 src s)
-         | 16 -> x86_PUSH (OPERAND16 src s)) s)) s
+         | 32 -> x86_PUSH (OPERAND64 src s)
+         | 16 -> x86_PUSH (OPERAND16 src s)
+         | 8 -> x86_PUSH (OPERAND64 src s)) s)) s
     | PXOR dest src ->
        if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
