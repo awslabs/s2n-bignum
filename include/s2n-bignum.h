@@ -1327,17 +1327,20 @@ extern void secp256k1_jmixadd(uint64_t p3[S2N_BIGNUM_STATIC 12],const uint64_t p
 extern void secp256k1_jmixadd_alt(uint64_t p3[S2N_BIGNUM_STATIC 12],const uint64_t p1[S2N_BIGNUM_STATIC 12],const uint64_t p2[S2N_BIGNUM_STATIC 8]);
 
 // Keccak-f1600 permutation for SHA3
+// On AArch64, sha3_keccak_f1600_alt needs FEAT_SHA3
 // Inputs a[25], rc[24]; output a[25]
 extern void sha3_keccak_f1600(uint64_t a[S2N_BIGNUM_STATIC 25],const uint64_t rc[S2N_BIGNUM_STATIC 24]);
 extern void sha3_keccak_f1600_alt(uint64_t a[S2N_BIGNUM_STATIC 25],const uint64_t rc[S2N_BIGNUM_STATIC 24]);
 extern void sha3_keccak_f1600_alt2(uint64_t a[S2N_BIGNUM_STATIC 25],const uint64_t rc[S2N_BIGNUM_STATIC 24]);
 
 // Batched 2-way Keccak-f1600 permutation for SHA3
+// On AArch64, both sha3_keccak2_f1600 and sha3_keccak2_f1600_alt need FEAT_SHA3
 // Inputs a[50], rc[24]; output a[50]
 extern void sha3_keccak2_f1600(uint64_t a[S2N_BIGNUM_STATIC 50],const uint64_t rc[S2N_BIGNUM_STATIC 24]);
 extern void sha3_keccak2_f1600_alt(uint64_t a[S2N_BIGNUM_STATIC 50],const uint64_t rc[S2N_BIGNUM_STATIC 24]);
 
 // Batched 4-way Keccak-f1600 permutation for SHA3
+// On AArch64, sha3_keccak4_f1600 and sha3_keccak4_f1600_alt2 need FEAT_SHA3
 // Inputs a[100], rc[24]; output a[100]
 extern void sha3_keccak4_f1600(uint64_t a[S2N_BIGNUM_STATIC 100],const uint64_t rc[S2N_BIGNUM_STATIC 24]);
 #ifdef __x86_64__
