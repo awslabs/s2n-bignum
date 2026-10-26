@@ -274,7 +274,11 @@ let iclasses = iclasses_regreg @
 
 (*** The elements here were added manually for additional checks. ***)
 
-[[0x48; 0x0f; 0xb7; 0xc2];  (* MOVZX (% rax) (% dx) *)
+[[0x41; 0x90];              (* XCHG (% r8d) (% eax) *)
+ [0x49; 0x90];              (* XCHG (% r8) (% rax) *)
+ [0x48; 0x93];              (* XCHG (% rbx) (% rax) *)
+ [0x96];                    (* XCHG (% esi) (% eax) *)
+ [0x48; 0x0f; 0xb7; 0xc2];  (* MOVZX (% rax) (% dx) *)
  [0x0f; 0xb7; 0xc2];        (* MOVZX (% eax) (% dx) *)
  [0x48; 0x0f; 0xb6; 0xc2];  (* MOVZX (% rax) (% dl) *)
  [0x0f; 0xb6; 0xc2];        (* MOVZX (% eax) (% dl) *)

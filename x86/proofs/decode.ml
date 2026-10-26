@@ -639,8 +639,12 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     if opc = word 0 then
       SOME (POP rm,l)
     else NONE
-  | [0x90:8] -> if has_unhandled_pfxs pfxs then NONE else
-    SOME (NOP,l)
+  | [0b10010:5; r:3] -> if has_unhandled_pfxs pfxs then NONE else
+    let reg = rex_reg (rex_B rex) r in
+    if reg = word 0 then SOME (NOP,l) else
+    if has_operand_override pfxs then NONE else
+    let sz = op_size_W rex T pfxs in
+    SOME (XCHG (%(gpr_adjust reg sz)) (%(gpr_adjust (word 0) sz)),l)
   | [0xa4:8] ->
     (match pfxs with
      | (F, Rep0, SG0) -> SOME (MOVSB F (%rdi) (%rsi) (Imm8(word 1)),l)
