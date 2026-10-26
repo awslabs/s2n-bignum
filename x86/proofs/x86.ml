@@ -3124,7 +3124,8 @@ let x86_execute = define
         x86_NOP s
     | NOP_N dest ->
         (match operand_size dest with
-           32 -> x86_NOP_N (OPERAND32 dest s)
+           64 -> x86_NOP_N (OPERAND64 dest s)
+         | 32 -> x86_NOP_N (OPERAND32 dest s)
          | 16 -> x86_NOP_N (OPERAND16 dest s)) s
     | NOT dest ->
         (add_load_event dest s ,,
@@ -3219,7 +3220,9 @@ let x86_execute = define
        (add_load_event src s ,,
        (\s. (match operand_size src with
            64 -> x86_PUSH (OPERAND64 src s)
-         | 16 -> x86_PUSH (OPERAND16 src s)) s)) s
+         | 32 -> x86_PUSH (OPERAND64 src s)
+         | 16 -> x86_PUSH (OPERAND16 src s)
+         | 8 -> x86_PUSH (OPERAND64 src s)) s)) s
     | PXOR dest src ->
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
