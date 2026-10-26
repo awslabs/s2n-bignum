@@ -3124,7 +3124,8 @@ let x86_execute = define
         x86_NOP s
     | NOP_N dest ->
         (match operand_size dest with
-           32 -> x86_NOP_N (OPERAND32 dest s)
+           64 -> x86_NOP_N (OPERAND64 dest s)
+         | 32 -> x86_NOP_N (OPERAND32 dest s)
          | 16 -> x86_NOP_N (OPERAND16 dest s)) s
     | NOT dest ->
         (add_load_event dest s ,,
