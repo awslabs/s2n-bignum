@@ -18,6 +18,14 @@ int supports_bmi2_and_adx(void)
   return (c & (1ul<<8)) && (c & (1ul<<19));
 }
 
+// Intel SHA extensions (SHA-NI) are advertised in CPUID leaf 7, sub-leaf 0,
+// EBX bit 29 (which cpuid_extendedfeatures returns).
+
+int supports_intel_sha_ni(void)
+{ int b = cpuid_extendedfeatures();
+  return (b & (1ul<<29)) != 0;
+}
+
 enum arch_name get_arch_name()
 { return ARCH_X86_64;
 }
@@ -36,6 +44,11 @@ int supports_arm_aes(void)
 
 int supports_bmi2_and_adx(void)
 { // AArch64 does not support BMI2 or ADX extension.
+  return 0;
+}
+
+int supports_intel_sha_ni(void)
+{ // Not an x86 machine; Intel SHA-NI is an x86-only extension.
   return 0;
 }
 
