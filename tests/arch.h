@@ -1,5 +1,6 @@
 // On x86 machines, restrict the set of tested functions appropriately
-// if the machine does not seem to support the BMI2 and ADX extensions.
+// if the machine does not seem to support the BMI2 and ADX extensions,
+// or AVX2.
 
 enum arch_name { ARCH_X86_64, ARCH_AARCH64 };
 
@@ -16,6 +17,28 @@ int cpuid_extendedfeatures(void)
 int supports_bmi2_and_adx(void)
 { int c = cpuid_extendedfeatures();
   return (c & (1ul<<8)) && (c & (1ul<<19));
+}
+
+int cpuid_basicfeatures(void)
+{ int a = 1, b = 0, c = 0, d = 0;
+  asm ("cpuid\n\t"
+    : "=a" (a), "=b" (b), "=c" (c), "=d" (d)
+    : "0" (a), "2" (c));
+  return c;
+}
+
+// AVX2 needs the processor feature (CPUID.(EAX=7,ECX=0):EBX[5]) and the
+// operating system to save the YMM state (CPUID.1:ECX.OSXSAVE[27] and
+// XCR0 bits 1 and 2). The ML-KEM rejection sampler also uses PEXT and
+// POPCNT, which every processor with AVX2 has.
+
+int supports_avx2(void)
+{ int c = cpuid_basicfeatures();
+  unsigned int xcr0, xcr0_hi;
+  if (!(c & (1ul<<27)) || !(c & (1ul<<28))) return 0;
+  asm ("xgetbv" : "=a" (xcr0), "=d" (xcr0_hi) : "c" (0));
+  if ((xcr0 & 6) != 6) return 0;
+  return (cpuid_extendedfeatures() & (1ul<<5)) != 0;
 }
 
 enum arch_name get_arch_name()
@@ -36,6 +59,11 @@ int supports_arm_aes(void)
 
 int supports_bmi2_and_adx(void)
 { // AArch64 does not support BMI2 or ADX extension.
+  return 0;
+}
+
+int supports_avx2(void)
+{ // AArch64 does not support AVX2.
   return 0;
 }
 
