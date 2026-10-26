@@ -242,7 +242,7 @@ let random64() = randomnd 64 (Random.int 65);;
 let random_regstate () =
   let d = Random.int 65 in
   map (fun _ -> randomnd 64 d) (0--3) @
-  [num(Random.int 256 land 0b11010101)] @
+  [num(Random.int 4096 land 0b100011010101)] @
   map (fun _ -> randomnd 64 d) (5--79) @
   map (fun _ -> randomnd 64 d) (80--111);;
 
@@ -274,7 +274,15 @@ let iclasses = iclasses_regreg @
 
 (*** The elements here were added manually for additional checks. ***)
 
-[[0x48; 0x0f; 0xb7; 0xc2];  (* MOVZX (% rax) (% dx) *)
+[[0x41; 0x90];              (* XCHG (% r8d) (% eax) *)
+ [0x49; 0x90];              (* XCHG (% r8) (% rax) *)
+ [0x48; 0x93];              (* XCHG (% rbx) (% rax) *)
+ [0x96];                    (* XCHG (% esi) (% eax) *)
+ [0x66; 0x0f; 0x38; 0xf6; 0xc1]; (* ADCX (% eax) (% ecx) *)
+ [0x0f; 0xbc; 0xc1];        (* BSF (% eax) (% ecx) *)
+ [0x0f; 0xbd; 0xc1];        (* BSR (% eax) (% ecx) *)
+ [0x48; 0x0f; 0xa3; 0xc8];  (* BT (% rax) (% rcx) *)
+ [0x48; 0x0f; 0xb7; 0xc2];  (* MOVZX (% rax) (% dx) *)
  [0x0f; 0xb7; 0xc2];        (* MOVZX (% eax) (% dx) *)
  [0x48; 0x0f; 0xb6; 0xc2];  (* MOVZX (% rax) (% dl) *)
  [0x0f; 0xb6; 0xc2];        (* MOVZX (% eax) (% dl) *)
