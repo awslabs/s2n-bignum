@@ -310,9 +310,11 @@ let decode_hi = new_definition `decode_hi x v sz (opc:3 word) rm l =
   // | F,_,7 -> SOME (IDIV rm,l)
   | T,_,0 -> SOME (INC rm,l)
   | T,_,1 -> SOME (DEC rm,l)
-  | T,T,2 -> SOME (CALL rm,l)
-  | T,T,4 -> SOME (JMP rm,l)
-  | T,T,6 -> SOME (PUSH rm,l)
+  // Indirect CALL/JMP (T,T,2 and T,T,4) and PUSH r/m (T,T,6) are not
+  // supported; the cases are kept, as NONE, for the decoding tables.
+  | T,T,2 -> NONE
+  | T,T,4 -> NONE
+  | T,T,6 -> NONE
   | _ -> NONE`;;
 
 let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
@@ -670,12 +672,6 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     (match rm with
     | RM_mem ea -> SOME (LEA (%(gpr_adjust reg sz)) ea,l)
     | _ -> NONE)
-  | [0x8f:8] -> if has_pfxs pfxs then NONE else
-    let sz = op_size_W rex T pfxs in
-    read_opcode_ModRM_operand rex sz l >>= \((opc,rm),l).
-    if opc = word 0 then
-      SOME (POP rm,l)
-    else NONE
   | [0b10010:5; r:3] -> if has_unhandled_pfxs pfxs then NONE else
     let reg = rex_reg (rex_B rex) r in
     if reg = word 0 then SOME (NOP,l) else
