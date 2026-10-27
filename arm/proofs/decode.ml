@@ -81,6 +81,12 @@ let arm_ldst_d = new_definition `arm_ldst_d ld Rt =
   (if ld then arm_LDR else arm_STR) (DREG' Rt)`;;
 let arm_ldstb = new_definition `arm_ldstb ld Rt =
   (if ld then arm_LDRB else arm_STRB) (WREG' Rt)`;;
+let arm_ldsth = new_definition `arm_ldsth ld Rt =
+  (if ld then arm_LDRH else arm_STRH) (WREG' Rt)`;;
+let arm_ldrsb = new_definition `arm_ldrsb w Rt =
+  if w then arm_LDRSB (WREG' Rt) else arm_LDRSB (XREG' Rt)`;;
+let arm_ldrsh = new_definition `arm_ldrsh w Rt =
+  if w then arm_LDRSH (WREG' Rt) else arm_LDRSH (XREG' Rt)`;;
 let arm_ldstp = new_definition `arm_ldstp ld x Rt Rt2 =
   if x then (if ld then arm_LDP else arm_STP) (XREG' Rt) (XREG' Rt2)
        else (if ld then arm_LDP else arm_STP) (WREG' Rt) (WREG' Rt2)`;;
@@ -396,6 +402,61 @@ let decode = new_definition `!w:int32. decode w =
   // LDURB/STURB
   | [0b001110000:9; is_ld; 0:1; imm9:9; 0:2; Rn:5; Rt:5] ->
     SOME (arm_ldstb is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+
+  // LDRH/STRH: post-index, pre-index, unscaled (LDURH/STURH), unsigned
+  // offset, and register offset with LSL #0 or #1 (no extensions)
+  | [0b011110000:9; is_ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
+    SOME (arm_ldsth is_ld Rt (XREG_SP Rn)
+      (Postimmediate_Offset (word_sx imm9)))
+  | [0b011110000:9; is_ld; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
+    SOME (arm_ldsth is_ld Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
+  | [0b011110000:9; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_ldsth is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+  | [0b011110010:9; is_ld; imm12:12; Rn:5; Rt:5] ->
+    SOME (arm_ldsth is_ld Rt (XREG_SP Rn)
+      (Immediate_Offset (word (val imm12 * 2))))
+  | [0b011110000:9; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldsth is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 1 else Register_Offset (XREG' Rm)))
+
+  // LDRSB/LDRSH (W destination if w = opc<0> is set, else X) and LDRSW,
+  // with the same addressing modes (LDURSB/LDURSH/LDURSW for unscaled)
+  | [0b001110001:9; w; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsb w Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
+  | [0b001110001:9; w; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsb w Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
+  | [0b001110001:9; w; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsb w Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+  | [0b001110011:9; w; imm12:12; Rn:5; Rt:5] ->
+    SOME (arm_ldrsb w Rt (XREG_SP Rn) (Immediate_Offset (word_zx imm12)))
+  | [0b001110001:9; w; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsb w Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
+  | [0b011110001:9; w; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsh w Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
+  | [0b011110001:9; w; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsh w Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
+  | [0b011110001:9; w; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsh w Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+  | [0b011110011:9; w; imm12:12; Rn:5; Rt:5] ->
+    SOME (arm_ldrsh w Rt (XREG_SP Rn)
+      (Immediate_Offset (word (val imm12 * 2))))
+  | [0b011110001:9; w; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsh w Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 1 else Register_Offset (XREG' Rm)))
+  | [0b1011100010:10; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
+      (Postimmediate_Offset (word_sx imm9)))
+  | [0b1011100010:10; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
+      (Preimmediate_Offset (word_sx imm9)))
+  | [0b1011100010:10; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+  | [0b1011100110:10; imm12:12; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
+      (Immediate_Offset (word (val imm12 * 4))))
+  | [0b1011100010:10; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 2 else Register_Offset (XREG' Rm)))
 
   // LD1/ST1 (multiple structures), 1 register,
   //   Post-immediate offset and post-register offset, and no offset.
@@ -1753,7 +1814,8 @@ let PURE_DECODE_CONV =
     List.iter (fun tm -> add_conv (tm, 1, REG_CONV) rw) [`XREG'`; `WREG'`; `QREG'`; `DREG'`; `XREG_SP`; `WREG_SP`];
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop;
-              arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
+              arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldsth;
+              arm_ldrsb; arm_ldrsh; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
               arm_ldst2; arm_ldstp_2q; arm_ldstp_4q; arm_ldstp_4d; arm_ldst3] rw;
     (* .. that have bitmatch exprs inside *)
     List.iter (fun def_th ->

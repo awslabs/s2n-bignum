@@ -639,10 +639,56 @@ let cosimulate_ldst1_4reg() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LDRH/STRH and the sign-extending loads LDRSB, LDRSH and
+ *** LDRSW, with all their supported addressing modes: unscaled immediate
+ *** (LDURH, STURH, LDURSB, ...), unsigned immediate, register offset with
+ *** optional shift, pre-index and post-index. The base register is never
+ *** the transfer register, and when it is SP any writeback keeps it
+ *** 16-byte aligned. Accesses stay within the 256 bytes above SP.
+ ***)
+
+let cosimulate_ldst_hsw() =
+  let op = Random.int 5 and mode = Random.int 5 and rn = Random.int 32 in
+  let size = if op = 2 then 0 else if op = 4 then 2 else 1 in
+  let opc = if op < 2 then op else if op = 4 then 2 else 2 + Random.int 2 in
+  let bytes = 1 lsl size in
+  let rt = (rn + 1 + Random.int 31) mod 32 in
+  let rec pick() = let c = Random.int 31 in
+                   if c = rn || c = rt then pick() else c in
+  let rm = pick() in
+  let stackoff = if rn = 31 then 16 * Random.int 8 else Random.int 128 in
+  let room = 256 - bytes - stackoff in
+  let anyoff() = Random.int (room + 1 + stackoff) - stackoff in
+  let wboff() = if rn = 31 then 16 * Random.int 16 - stackoff
+                else anyoff() in
+  let head =
+    pow2 30 */ num size +/ pow2 27 */ num 0b111 +/
+    pow2 22 */ num opc +/ pow2 5 */ num rn +/ num rt in
+  let imm9 off = pow2 12 */ num ((off + 512) mod 512) in
+  let pre,code,inc =
+    match mode with
+      0 -> [],head +/ imm9 (anyoff()),0
+    | 1 -> let imm12 = Random.int (room / bytes + 1) in
+           [],head +/ pow2 24 */ num 1 +/ pow2 10 */ num imm12,0
+    | 2 -> let s = Random.int 2 in
+           let shift = if s = 1 then size else 0 in
+           let regoff = Random.int ((room lsr shift) + 1) in
+           [movz_Xn_imm rm regoff],
+           head +/ pow2 21 */ num 1 +/ pow2 16 */ num rm +/
+           pow2 13 */ num 0b011 +/ pow2 12 */ num s +/ pow2 10 */ num 0b10,0
+    | 3 -> let off = wboff() in
+           [],head +/ imm9 off +/ pow2 10 */ num 0b11,off
+    | _ -> let off = if rn = 31 then wboff() else Random.int 512 - 256 in
+           [],head +/ imm9 off +/ pow2 10 */ num 0b01,off in
+  let restore =
+    if rn = 31 then sub_Xn_SP_imm 31 (stackoff + inc) else sub_Xn_SP_Xn rn in
+  [add_Xn_SP_imm rn stackoff] @ pre @ [code; restore];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
-    cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg
+    cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg;
+    cosimulate_ldst_hsw
     ];;
 
 let run_random_memopsimulation() =
