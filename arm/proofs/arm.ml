@@ -1292,6 +1292,54 @@ let ADRP_ADD_FOLD = prove(`forall (pc:int64) (x:int64).
   REWRITE_TAC[adrp_within_bounds] THEN
   BITBLAST_TAC);;
 
+(*** The same for ADRP followed by LDR of a Q register from a 16-byte aligned
+ *** address, as with an R_AARCH64_LDST128_ABS_LO12_NC relocation.
+ ***)
+
+let ADRP_LDR_Q_FOLD = prove(`forall (pc:int64) (x:int64).
+  adrp_within_bounds x pc /\ aligned 16 x
+  ==>
+  word_add
+    (word_add
+        (word_and pc (word 0xFFFFFFFFFFFFF000))
+        (word_sx
+            (word_join
+                (word_join
+                    (word_subword
+                        (word_sub
+                            (word_and x (word 0xFFFFFFFFFFFFF000))
+                            (word_and pc (word 0xFFFFFFFFFFFFF000)):(64)word)
+                        (14,19):(19)word)
+                    (word_subword
+                        (word_sub
+                            (word_and x (word 0xFFFFFFFFFFFFF000))
+                            (word_and pc (word 0xFFFFFFFFFFFFF000)):(64)word)
+                        (12,2):(2)word)
+                    :(21)word)
+                (word 0:(12)word)
+            :(33)word)
+        :(64)word)
+    )
+    (word (val (word_subword x (4,8):(12)word) * 16):(64)word)
+    = x`,
+  REPEAT GEN_TAC THEN
+  SUBGOAL_THEN `aligned 16 (x:int64) <=> word_and x (word 15) = word 0`
+  SUBST1_TAC THENL
+   [REWRITE_TAC[aligned; DIMINDEX_64; GSYM VAL_EQ_0] THEN
+    REWRITE_TAC[ARITH_RULE `15 = 2 EXP 4 - 1`; VAL_WORD_AND_MASK_WORD] THEN
+    CONV_TAC(ONCE_DEPTH_CONV DIVIDES_CONV) THEN REWRITE_TAC[DIVIDES_MOD] THEN
+    CONV_TAC NUM_REDUCE_CONV;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `!y:12 word. word(val y * 16):int64 = word_shl (word_zx y) 4`
+   (fun th -> REWRITE_TAC[th])
+  THENL
+   [GEN_TAC THEN REWRITE_TAC[word_zx; WORD_SHL_WORD] THEN
+    AP_TERM_TAC THEN ARITH_TAC;
+    ALL_TAC] THEN
+  REWRITE_TAC[adrp_within_bounds] THEN
+  BITBLAST_TAC);;
+
 (* ========================================================================= *)
 (* Lifting a theorem about BTI-trimmed code to the full code carrying its    *)
 (* leading `BTI c` landing pad.  Arm counterpart of the x86 ADD_IBT_RULE.    *)

@@ -27,7 +27,7 @@ let mlkem_native_poly_mulcache_compute_gcc12_O2_mc,
       | s -> failwith ("unknown symbol: " ^ s))
     "mlkem_native_poly_mulcache_compute_gcc12_O2_mc"
     "arm/mlkem_native/mlkem_native_poly_mulcache_compute_gcc12_O2.o"
-(fun w BL ADR ADRP ADD_rri64 -> [
+(fun w BL ADR ADRP ADD_rri64 LDR_Q_rri -> [
   ADRP (mk_var("mlk_zetas_data",`:num`),0,0,8);
   ADD_rri64 (mk_var("mlk_zetas_data",`:num`),0,8,8);
   w 0x91020105;         (* arm_ADD X5 X8 (rvalue (word 128)) *)

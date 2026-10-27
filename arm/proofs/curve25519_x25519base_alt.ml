@@ -38,7 +38,7 @@ let curve25519_x25519base_alt_mc,const_data_list =
       | s -> failwith ("unknown symbol: " ^ s))
     "curve25519_x25519base_alt_mc"
     "arm/curve25519/curve25519_x25519base_alt.o"
-(fun w BL ADR ADRP ADD_rri64 -> [
+(fun w BL ADR ADRP ADD_rri64 LDR_Q_rri -> [
   w 0xa9bf53f3;         (* arm_STP X19 X20 SP (Preimmediate_Offset (iword (-- &16))) *)
   w 0xa9bf5bf5;         (* arm_STP X21 X22 SP (Preimmediate_Offset (iword (-- &16))) *)
   w 0xa9bf63f7;         (* arm_STP X23 X24 SP (Preimmediate_Offset (iword (-- &16))) *)

@@ -614,7 +614,9 @@ type arm_reloc =
   | Arm_call26 (* BL *)
   | Arm_adr_prel_lo21 (* ADR *)
   | Arm_adr_prel_pg_hi21 (* ADRP; this is ARM64_RELOC_PAGE21 in Mach-O *)
-  | Arm_add_abs_lo12_nc (* ADD; this is ARM64_RELOC_PAGEOFF12 in Mach-O  *);;
+  | Arm_add_abs_lo12_nc (* ADD; this is ARM64_RELOC_PAGEOFF12 in Mach-O  *)
+  | Arm_ldst128_abs_lo12_nc (* LDR of a Q register; in Mach-O this is also
+                               ARM64_RELOC_PAGEOFF12, used for any offset *);;
 (* Note: there is no ARM64_RELOC_ADDEND in this list! It is immediately
    processed by load_macho. *)
 
@@ -654,6 +656,7 @@ let load_elf_arm (bs:bytes):
       | 274 (* R_AARCH64_ADR_PREL_LO21 *) -> Arm_adr_prel_lo21
       | 275 (* R_AARCH64_ADR_PREL_PG_HI21  *) -> Arm_adr_prel_pg_hi21
       | 277 (* R_AARCH64_ADD_ABS_LO12_NC  *) -> Arm_add_abs_lo12_nc
+      | 299 (* R_AARCH64_LDST128_ABS_LO12_NC *) -> Arm_ldst128_abs_lo12_nc
       | 280 (* R_AARCH64_CONDBR19 *) -> Arm_condbr19
       | 283 (* R_AARCH64_CALL26 *) -> Arm_call26
       | n -> failwith (sprintf "unexpected relocation type: %d" n))

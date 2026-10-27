@@ -1632,6 +1632,31 @@ let decode_encode_ADD_rri64 = prove (
   CONV_TAC (DEPTH_CONV UNWIND_CONV THENC ONCE_DEPTH_CONV DIMINDEX_CONV THENC
     NUM_REDUCE_CONV) THEN IMP_REWRITE_TAC [MOD_LT] THEN ARITH_TAC);;
 
+let encode_LDR_Q_rri = new_definition `encode_LDR_Q_rri (dstreg:(5)word) (srcreg:(5)word) (imm12:(12)word) =
+  0x3DC00000 + val (imm12) * 2 EXP 10 +
+               val srcreg * 2 EXP 5 +
+               val dstreg`;;
+
+let decode_encode_LDR_Q_rri = prove (
+  `decode (word (encode_LDR_Q_rri dstreg srcreg imm12)) =
+    SOME (arm_LDR (QREG' dstreg) (XREG_SP srcreg)
+                  (Immediate_Offset (word (val imm12 * 16))))`,
+  MATCH_MP_TAC (
+    let th = SPEC `word (encode_LDR_Q_rri dstreg srcreg imm12):int32` decode in
+    let tm = rhs (concl th) in
+    let A, tr = bm_build_tree (rhs (concl th)) in
+    let a = Array.init 32 (fun i -> Some ((0x3DC00000 land (1 lsl i)) != 0)) in
+    (DISCH_ALL o REWRITE_RULE [arm_ldst_q] o
+      INST [`T`,`is_ld:bool`] o TRANS th)
+      (hd (snd (snd (get_dt a (bm_add_pos tr tm)))))) THEN
+  REWRITE_TAC [encode_LDR_Q_rri] THEN
+  MAP_EVERY SPEC_TAC [`imm12:12 word`,`imm12:12 word`;`dstreg:(5)word`,`dstreg:(5)word`;
+      `srcreg:(5)word`,`srcreg:(5)word`] THEN
+  REWRITE_TAC [FORALL_VAL_GEN; VAL_WORD; CONSPAT_pat_set; NILPAT_pat_set;
+    word1; bitval] THEN
+  CONV_TAC (DEPTH_CONV UNWIND_CONV THENC ONCE_DEPTH_CONV DIMINDEX_CONV THENC
+    NUM_REDUCE_CONV) THEN IMP_REWRITE_TAC [MOD_LT] THEN ARITH_TAC);;
+
 
 let split_32_64 F =
   let a = F `:32` and b = F `:64` in
@@ -1905,7 +1930,8 @@ let PURE_DECODE_CONV =
     (* adding decode_encode* lemmas after decode gives higher priority
        to these rules *)
     add_thms [decode_encode_BL; decode_encode_ADR;
-              decode_encode_ADRP; decode_encode_ADD_rri64] rw;
+              decode_encode_ADRP; decode_encode_ADD_rri64;
+              decode_encode_LDR_Q_rri] rw;
 
     rw in
   let the_conv = WEAK_CBV_CONV decode_rw in
@@ -1995,10 +2021,12 @@ let make_fn_word_list, make_fn_word_list_reloc =
           let dstreg = opcode land 31 in
           Printf.bprintf buf "  ADRP (mk_var(\"%s\",`:num`),%d,%d,%d)%s\n" sym addend pc dstreg s
 
-          | Some (Arm_add_abs_lo12_nc,sym,addend) ->
+          | Some ((Arm_add_abs_lo12_nc|Arm_ldst128_abs_lo12_nc),sym,addend) ->
           let dstreg = opcode land 31 in
           let srcreg = (opcode lsr 5) land 31 in
-          Printf.bprintf buf "  ADD_rri64 (mk_var(\"%s\",`:num`),%d,%d,%d)%s\n"
+          Printf.bprintf buf "  %s (mk_var(\"%s\",`:num`),%d,%d,%d)%s\n"
+              (if opcode land 0xFFC00000 = 0x3DC00000 then "LDR_Q_rri"
+               else "ADD_rri64")
               sym addend dstreg srcreg s
 
           | Some (Arm_condbr19,sym,0) -> failwith "unsupported Arm_condbr19") l in
@@ -2015,7 +2043,8 @@ let make_fn_word_list, make_fn_word_list_reloc =
     (* The input argument of function X must match that of append_reloc_X.
      * ex) BL: append_reloc_BL
      *)
-    print_list_reloc next_rel "(fun w BL ADR ADRP ADD_rri64 -> [\n" "]);;\n" "w " bstext;;
+    print_list_reloc next_rel "(fun w BL ADR ADRP ADD_rri64 LDR_Q_rri -> [\n"
+      "]);;\n" "w " bstext;;
 (*
 let trim_ret_core dec =
   let m1 = Array.length dec - 1 in
@@ -2273,6 +2302,17 @@ let term_of_relocs_arm, assert_relocs =
          sym,`sym:num`; mk_small_numeral addend,`addend:num`] reloc_ADD_rri64)
         next_instbytes in
 
+  (* R_AARCH64_LDST128_ABS_LO12_NC *)
+  let reloc_LDR_Q_rri = `APPEND (bytelist_of_num 4
+      (encode_LDR_Q_rri (word dstreg) (word srcreg)
+        (word_subword (word (sym + addend):int64) (4,8):(12)word)))` in
+  let append_reloc_LDR_Q_rri (sym,addend,dstreg,srcreg: term*int*int*int) next_instbytes =
+      curry mk_comb (vsubst
+        [mk_small_numeral dstreg,`dstreg:num`;
+         mk_small_numeral srcreg,`srcreg:num`;
+         sym,`sym:num`; mk_small_numeral addend,`addend:num`] reloc_LDR_Q_rri)
+        next_instbytes in
+
   ((* term_of_relocs_arm *)
    term_of_relocs (fun bstext,ty,pcoffset,sym,addend -> 4,
     let opcode = get_int_le bstext pcoffset 4 in
@@ -2291,13 +2331,17 @@ let term_of_relocs_arm, assert_relocs =
       then append_reloc_ADRP (sym,addend,pcoffset,(opcode land 31))
       else failwith "Cannot apply R_AARCH64_ADR_PREL_PG_HI21"
 
-    else if ty = Arm_add_abs_lo12_nc then
-      if opcode land 0xFFFFFC00 = 0x91000000 (* ADD with zero imm. *)
-      then
-        let dstreg = opcode land 31 in
-        let srcreg = (opcode lsr 5) land 31 in
-        append_reloc_ADD_rri64 (sym,addend,dstreg,srcreg)
-      else failwith "Cannot apply R_AARCH64_ADD_ABS_LO12_NC"
+    else if ty = Arm_add_abs_lo12_nc || ty = Arm_ldst128_abs_lo12_nc then
+      let dstreg = opcode land 31 in
+      let srcreg = (opcode lsr 5) land 31 in
+      if ty = Arm_add_abs_lo12_nc &&
+         opcode land 0xFFFFFC00 = 0x91000000 (* ADD with zero imm. *)
+      then append_reloc_ADD_rri64 (sym,addend,dstreg,srcreg)
+      else if opcode land 0xFFFFFC00 = 0x3DC00000 (* LDR Q with zero imm. *)
+      then append_reloc_LDR_Q_rri (sym,addend,dstreg,srcreg)
+      else failwith ("Cannot apply " ^
+        (if ty = Arm_add_abs_lo12_nc then "R_AARCH64_ADD_ABS_LO12_NC"
+         else "R_AARCH64_LDST128_ABS_LO12_NC"))
 
     else failwith "unsupported relocation kind")),
 
@@ -2332,7 +2376,8 @@ let term_of_relocs_arm, assert_relocs =
           (assert_reloc_maker append_reloc_BL) (* BL *)
           (assert_reloc_maker append_reloc_ADR) (* ADR *)
           (assert_reloc_maker append_reloc_ADRP) (* ADRP *)
-          (assert_reloc_maker append_reloc_ADD_rri64) (* ADD_rri64 *) in
+          (assert_reloc_maker append_reloc_ADD_rri64) (* ADD_rri64 *)
+          (assert_reloc_maker append_reloc_LDR_Q_rri) (* LDR_Q_rri *) in
       if type_of tm = `:byte list` then
         match rev_itlist I opcode_fn_implemented (0,tm) with
         | _,Const("NIL",_) -> ()
