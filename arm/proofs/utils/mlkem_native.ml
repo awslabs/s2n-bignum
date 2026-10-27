@@ -109,3 +109,47 @@ let BARRED_CONDADD_REM = prove
     SPEC_TAC(`&3329:int`,`p:int`) THEN CONV_TAC INTEGER_RULE) in
   REWRITE_TAC[MATCH_MP lemma (CONGBOUND_RULE `barred x`)] THEN
   BITBLAST_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Reading arrays given as lists, and building byte arrays incrementally.    *)
+(* ------------------------------------------------------------------------- *)
+
+let READ_MEMORY_BYTES16_NUM_OF_WORDLIST = prove
+ (`!a:int64 (l:int16 list) n j s:armstate.
+        read (memory :> bytes(a,2 * n)) s = num_of_wordlist l /\
+        LENGTH l = n /\ j < n
+        ==> read (memory :> bytes16(word_add a (word(2 * j)))) s = EL j l`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC STRIP_ASSUME_TAC) THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  MP_TAC(ISPECL [`l:int16 list`; `j:num`] NUM_OF_WORDLIST_EL) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  FIRST_X_ASSUM(fun th ->
+    if is_eq(concl th) && is_comb(lhs(concl th)) &&
+       can (term_match [] `read c s`) (lhs(concl th))
+    then REWRITE_TAC[GSYM th] else failwith "") THEN
+  REWRITE_TAC[BYTES16_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES] THEN
+  REWRITE_TAC[DIMINDEX_16] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[ARITH_RULE `16 * j = 8 * (2 * j)`;
+              ARITH_RULE `65536 = 2 EXP (8 * 2)`;
+              READ_BYTES_DIV; READ_BYTES_MOD] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+let READ_MEMORY_BYTES_SNOC = prove
+ (`!x:int64 n s:armstate.
+        read (memory :> bytes(x,n + 1)) s =
+        read (memory :> bytes(x,n)) s +
+        2 EXP (8 * n) * val(read (memory :> bytes8(word_add x (word n))) s)`,
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE; READ_BYTES_BYTES8]);;
+
+let SUB_LIST_0_SNOC2 = prove
+ (`!l:A list n.
+        n + 2 <= LENGTH l
+        ==> SUB_LIST(0,n + 2) l =
+            APPEND (SUB_LIST(0,n) l) [EL n l; EL (n + 1) l]`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[SUB_LIST_SPLIT; ADD_CLAUSES] THEN
+  AP_TERM_TAC THEN REWRITE_TAC[ARITH_RULE `2 = 1 + 1`; SUB_LIST_SPLIT] THEN
+  REWRITE_TAC[SUB_LIST_1] THEN
+  ASM_SIMP_TAC[ARITH_RULE `n + 2 <= l ==> n < l /\ n + 1 < l`] THEN
+  REWRITE_TAC[APPEND]);;
