@@ -398,7 +398,8 @@ let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
 
   (* Now, read the following load commands *)
   let curr_file_offset = ref 0x20 in
-  let sections = ref [] in (* a list of (section name, begin ofs, len) *)
+  (* a list of (section name, begin ofs, len, address) *)
+  let sections = ref [] in
   (* a list of struct nlist_64:
      (symbol name(string), n_type, n_sect, n_desc) *)
   let raw_symbols = ref [] in
@@ -425,8 +426,10 @@ let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
                   !curr_file_offset in
         let section_name = get_string file ofs in
         let file_offset = get_int_le file (48 + ofs) 4 in
+        let section_addr = get_int_le file (32 + ofs) 8 in
         let section_size = get_int_le file (40 + ofs) 8 in
-        sections := !sections @ [(section_name,file_offset,section_size)];
+        sections := !sections @
+          [(section_name,file_offset,section_size,section_addr)];
 
         (* Read struct relocation_info[]. *)
         (* file offset and count of relocation entries *)
@@ -484,13 +487,14 @@ let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
   List.iter (fun symbol_name, n_type, n_sect, n_desc, n_value ->
     if n_type = 0xe (* N_SECT: The symbol is defined in a section at n_sect *) &&
       n_sect != 0 && (n_sect - 1) < List.length !sections &&
-      (let secname,_,_ = List.nth !sections (n_sect - 1) in secname = "__const") &&
+      (let secname,_,_,_ = List.nth !sections (n_sect - 1) in
+       secname = "__const") &&
       (* Some symbols starting with "ltmp" are auto-generated. They are ignored by
         tools like:
         https://github.com/microsoft/llvm-mctoll/blob/master/MachODump.cpp#L228 *)
       not (starts_with "ltmp" symbol_name)
     then begin
-      const_symbols := !const_symbols @ [(symbol_name, n_value(*byte offset *))]
+      const_symbols := !const_symbols @ [(symbol_name, n_value(*address*))]
     end) !raw_symbols;
 
   (* Sort the readonly symbols by their addresses.
@@ -502,23 +506,24 @@ let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
   (* Now get the final results *)
   (* Helper functions *)
   let find_section (name:string): int * bytes =
-    let res = find (fun section_name,_,_ -> section_name = name) !sections in
+    let res = find (fun section_name,_,_,_ -> section_name = name) !sections in
     match res with
-    | _,beginofs,len -> (beginofs,Bytes.sub file beginofs len)
+    | _,beginofs,len,_ -> (beginofs,Bytes.sub file beginofs len)
     | _ -> failwith ("Could not find a unique \"" ^ name ^ "\" section") in
-  let rec extract_bytes (start_ofs:int) (end_ofs: int option) sections: bytes =
-    match sections with
-    | [] -> failwith "no available section"
-    | s::sections' ->
-      let symname,secofs,seclen = s in
-      if start_ofs < seclen then
-        let symbol_len = if end_ofs <> None
-          then (option_get end_ofs - start_ofs)
-          else seclen - start_ofs in
-        Bytes.sub file (secofs + start_ofs) symbol_len
-      else
-        let end_ofs = option_map (fun x -> x - seclen) end_ofs in
-        extract_bytes (start_ofs - seclen) end_ofs sections' in
+  (* The bytes from address start_addr up to end_addr, or to the end of the
+     section containing start_addr. The symbol values are addresses, and the
+     sections are placed at addresses respecting their alignments, so there
+     can be gaps between them. *)
+  let extract_bytes (start_addr:int) (end_addr: int option): bytes =
+    let _,secofs,seclen,secaddr =
+      try find (fun _,_,len,addr -> addr <= start_addr &&
+                                    start_addr < addr + len) !sections
+      with Failure _ -> failwith "no available section" in
+    let start_ofs = start_addr - secaddr in
+    let symbol_len = match end_addr with
+      | Some e when e <= secaddr + seclen -> e - start_addr
+      | _ -> seclen - start_ofs in
+    Bytes.sub file (secofs + start_ofs) symbol_len in
 
   (* 1. The __text section data *)
   snd (find_section "__text"),
@@ -532,7 +537,7 @@ let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
       let sname,ofs = List.nth !const_symbols j in
       let ofs_end = if j = length !const_symbols - 1 then None
         else Some (snd (List.nth !const_symbols (j+1))) in
-      res := !res @ [sname, extract_bytes ofs ofs_end !sections]
+      res := !res @ [sname, extract_bytes ofs ofs_end]
     done;
     !res end in
     consts @ (match catch find_section "__const" with
