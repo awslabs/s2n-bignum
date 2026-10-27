@@ -727,6 +727,10 @@ let check_insns () =
     (*** ldur / stur, immediate, size 128 only ***)
     "001111001x0xxxxxxxxx00xxxxxxxxxx";
 
+    (*** ldur / stur for 32-bit and 64-bit values, and ldurb / sturb ***)
+    "1x1110000x0xxxxxxxxx00xxxxxxxxxx";
+    "001110000x0xxxxxxxxx00xxxxxxxxxx";
+
     (*** ld3 / st3, multiple structures, 3 reg, post-imm and register ***)
     "0x0011001x0xxxxx0100xxxxxxxxxxxx";
 
