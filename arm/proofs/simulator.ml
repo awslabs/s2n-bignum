@@ -684,11 +684,73 @@ let cosimulate_ldst_hsw() =
     if rn = 31 then sub_Xn_SP_imm 31 (stackoff + inc) else sub_Xn_SP_Xn rn in
   [add_Xn_SP_imm rn stackoff] @ pre @ [code; restore];;
 
+(*** This covers the extended register offsets UXTW, SXTW and SXTX, as
+ *** well as LSL, with or without the shift, for LDR and STR of 32-bit and
+ *** 64-bit values, LDRB/STRB, LDRH/STRH, LDRSB, LDRSH and LDRSW. For UXTW
+ *** and SXTW the top 32 bits of the offset register are random junk, and
+ *** for the signed extensions (and LSL, by wraparound) the offset can be
+ *** negative. The offset register can also be the zero register.
+ ***)
+
+let movn_Wn_imm rd imm =
+  pow2 21 */ num_of_string "0b00010010100" +/
+  pow2 5 */ num(imm mod 65536) +/
+  num rd;;
+
+let movn_Xn_imm rd imm =
+  pow2 21 */ num_of_string "0b10010010100" +/
+  pow2 5 */ num(imm mod 65536) +/
+  num rd;;
+
+let movk_Xn_imm_lsl32 rd imm =
+  pow2 21 */ num_of_string "0b11110010110" +/
+  pow2 5 */ num(imm mod 65536) +/
+  num rd;;
+
+let cosimulate_ldst_ext() =
+  let size,opc =
+    match Random.int 7 with
+      0 -> 2,Random.int 2
+    | 1 -> 3,Random.int 2
+    | 2 -> 0,Random.int 2
+    | 3 -> 1,Random.int 2
+    | 4 -> 0,2 + Random.int 2
+    | 5 -> 1,2 + Random.int 2
+    | _ -> 2,2 in
+  let ext = Random.int 4 and s = Random.int 2 and rn = Random.int 32 in
+  let option = el ext [0b010; 0b110; 0b111; 0b011] in
+  let shift = if s = 1 then size else 0 in
+  let bytes = 1 lsl size in
+  let rt = (rn + 1 + Random.int 31) mod 32 in
+  let rec pick() = let c = Random.int 32 in
+                   if c = rn || c = rt then pick() else c in
+  let rm = pick() in
+  let stackoff = if rn = 31 then 16 * Random.int 16 else Random.int 256 in
+  let stackoff = min stackoff (256 - bytes) in
+  let lo = if ext = 0 then 0 else -(stackoff asr shift)
+  and hi = (256 - bytes - stackoff) asr shift in
+  let k = if rm = 31 then 0 else lo + Random.int (hi - lo + 1) in
+  let junk = Random.int 65536 in
+  let pre =
+    if rm = 31 then []
+    else if ext < 2 then
+      [if k >= 0 then movz_Xn_imm rm k else movn_Wn_imm rm (-k - 1);
+       movk_Xn_imm_lsl32 rm junk]
+    else [if k >= 0 then movz_Xn_imm rm k else movn_Xn_imm rm (-k - 1)] in
+  let code =
+    pow2 30 */ num size +/ pow2 27 */ num 0b111 +/
+    pow2 22 */ num opc +/ pow2 21 +/ pow2 16 */ num rm +/
+    pow2 13 */ num option +/ pow2 12 */ num s +/ pow2 10 */ num 0b10 +/
+    pow2 5 */ num rn +/ num rt in
+  let restore =
+    if rn = 31 then sub_Xn_SP_imm 31 stackoff else sub_Xn_SP_Xn rn in
+  [add_Xn_SP_imm rn stackoff] @ pre @ [code; restore];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg;
-    cosimulate_ldst_hsw
+    cosimulate_ldst_hsw; cosimulate_ldst_ext
     ];;
 
 let run_random_memopsimulation() =

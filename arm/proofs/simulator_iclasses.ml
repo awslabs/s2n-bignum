@@ -52,12 +52,17 @@ let iclasses =
   (*** ADD, ADDS, SUB, SUBS, shifted registers ***)
   "xxx01011xx0xxxxxxxxxxxxxxxxxxxxx";
 
-  (*** ADD, extended registers. No SP registers ***)
-  "10001011001xxxxx010000xxxx0xxxx0"; (* uxtw *)
-  "10001011001xxxxx010000xxx0xxxx0x"; (* uxtw *)
-  "10001011001xxxxx010000xx0xxxx0xx"; (* uxtw *)
-  "10001011001xxxxx010000x0xxxx0xxx"; (* uxtw *)
-  "10001011001xxxxx0100000xxxx0xxxx"; (* uxtw *)
+  (*** ADD, ADDS, SUB, SUBS, extended registers. No SP registers ***)
+  "xxx01011001xxxxxxxx0xxxxxx0xxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxx0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx100xxxx0xxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxx0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxx0xxxx"; (* shift 4 *)
 
   (*** AND, ANDS, EOR, ORR with immediate operand, no negated forms ***)
   (*** Again we want to avoid using SP except for in ANDS ***)
@@ -224,6 +229,11 @@ let iclasses =
 
   (*** MOVI (op=0, cmode=1010, 16-bit shifted, q=1 only) -- shares opcode with SSHLL ***)
   "0100111100000xxx101001xxxxxxxxxx";
+
+  (*** MVNI (32-bit shifted, 16-bit shifted, 32-bit shifting ones) ***)
+  "0x10111100000xxx0xx001xxxxxxxxxx";
+  "0x10111100000xxx10x001xxxxxxxxxx";
+  "0x10111100000xxx110x01xxxxxxxxxx";
 
   (*** ORR (vector, immediate, 32-bit) ***)
   "0x00111100000xxx000101xxxxxxxxxx"; (* 32-bit ORR imm, immh=0 *)
@@ -628,32 +638,32 @@ let check_insns () =
     "00111000010xxxxxxxxx11xxxxxxxxxx";
     "0011100101xxxxxxxxxxxxxxxxxxxxxx";
 
-    (*** ldrb / strb (shifted register, no shift S = 0) ***)
-    "001110000x1xxxxxxxx010xxxxxxxxxx";
+    (*** ldrb / strb (register, including extended register) ***)
+    "001110000x1xxxxxxxxx10xxxxxxxxxx";
 
     (*** ldrh / strh / ldrsh (immediate ofs, including unscaled) ***)
     "01111000xx0xxxxxxxxx00xxxxxxxxxx";
     "01111000xx0xxxxxxxxxx1xxxxxxxxxx";
     "01111001xxxxxxxxxxxxxxxxxxxxxxxx";
 
-    (*** ldrh / strh / ldrsh (shifted register) ***)
-    "01111000xx1xxxxx011x10xxxxxxxxxx";
+    (*** ldrh / strh / ldrsh (register, including extended register) ***)
+    "01111000xx1xxxxxxxxx10xxxxxxxxxx";
 
     (*** ldrsb (immediate ofs, including unscaled) ***)
     "001110001x0xxxxxxxxx00xxxxxxxxxx";
     "001110001x0xxxxxxxxxx1xxxxxxxxxx";
     "001110011xxxxxxxxxxxxxxxxxxxxxxx";
 
-    (*** ldrsb (shifted register) ***)
-    "001110001x1xxxxx011x10xxxxxxxxxx";
+    (*** ldrsb (register, including extended register) ***)
+    "001110001x1xxxxxxxxx10xxxxxxxxxx";
 
     (*** ldrsw (immediate ofs, including unscaled) ***)
     "10111000100xxxxxxxxx00xxxxxxxxxx";
     "10111000100xxxxxxxxxx1xxxxxxxxxx";
     "1011100110xxxxxxxxxxxxxxxxxxxxxx";
 
-    (*** ldrsw (shifted register) ***)
-    "10111000101xxxxx011x10xxxxxxxxxx";
+    (*** ldrsw (register, including extended register) ***)
+    "10111000101xxxxxxxxx10xxxxxxxxxx";
 
     (*** ld1 (1 register, Post-immediate offset) ***)
     "0x001100110111110111xxxxxxxxxxxx";

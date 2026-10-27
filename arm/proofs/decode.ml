@@ -87,6 +87,9 @@ let arm_ldrsb = new_definition `arm_ldrsb w Rt =
   if w then arm_LDRSB (WREG' Rt) else arm_LDRSB (XREG' Rt)`;;
 let arm_ldrsh = new_definition `arm_ldrsh w Rt =
   if w then arm_LDRSH (WREG' Rt) else arm_LDRSH (XREG' Rt)`;;
+let arm_extoff = new_definition `arm_extoff sx S k Rm =
+  let r = Extendedreg (WREG' Rm) (if sx then SXTW else UXTW) in
+  if S then Shiftreg_Offset r k else Register_Offset r`;;
 let arm_ldstp = new_definition `arm_ldstp ld x Rt Rt2 =
   if x then (if ld then arm_LDP else arm_STP) (XREG' Rt) (XREG' Rt2)
        else (if ld then arm_LDP else arm_STP) (WREG' Rt) (WREG' Rt2)`;;
@@ -144,8 +147,18 @@ let arm_adv_simd_expand_imm = new_definition
       SOME(word_duplicate (word_join (word 0:byte) abcdefgh:int16))
     else if cmode = word 0b1010 \/ cmode = word 0b1011 then
        SOME(word_duplicate (word_join abcdefgh (word 0:byte):int16))
-    else if cmode = word 0b0100 then
+    else if cmode = word 0b0000 \/ cmode = word 0b0001 then
+      SOME(word_duplicate (word_zx abcdefgh:int32))
+    else if cmode = word 0b0010 \/ cmode = word 0b0011 then
+      SOME(word_duplicate
+        (word_join (word_zx abcdefgh:(24)word) (word 0:byte):int32))
+    else if cmode = word 0b0100 \/ cmode = word 0b0101 then
       SOME(word_duplicate (word_join (word_zx abcdefgh:int16) (word 0:int16):int32))
+    else if cmode = word 0b0110 \/ cmode = word 0b0111 then
+      SOME(word_duplicate (word_join abcdefgh (word 0:(24)word):int32))
+    else if cmode = word 0b1100 then
+      SOME(word_duplicate
+        (word_join (word_zx abcdefgh:(24)word) (word 255:byte):int32))
     else if cmode = word 0b1101 then
       SOME(word_duplicate (word_join (word_zx abcdefgh:int16) (word 65535:int16):int32))
     else // Other cases are uncovered.
@@ -319,6 +332,14 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldst ld x Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) (if x then 3 else 2)
             else Register_Offset (XREG' Rm)))
+    // Register offset with UXTW or SXTW (sx) extension, or SXTX
+  | [1:1; x; 0b1110000:7; ld; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst ld x Rt (XREG_SP Rn)
+      (arm_extoff sx S (if x then 3 else 2) Rm))
+  | [1:1; x; 0b1110000:7; ld; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst ld x Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) (if x then 3 else 2)
+            else Register_Offset (XREG' Rm)))
   | [0b001110000:9; ld; 0b0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
   | [0b001110000:9; ld; 0b0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
@@ -327,6 +348,13 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Immediate_Offset (word_zx imm12)))
     // LDRB/STRB shifted register, no shift: option:011 S:0
   | [0b001110000:9; ld; 0b1:1; Rm:5; 0b011010:6; Rn:5; Rt:5] ->
+    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
+    // ... and with LSL #0 written explicitly (S:1), extensions or SXTX
+  | [0b001110000:9; ld; 0b1:1; Rm:5; 0b011110:6; Rn:5; Rt:5] ->
+    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
+  | [0b001110000:9; ld; 0b1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldstb ld Rt (XREG_SP Rn) (arm_extoff sx F 0 Rm))
+  | [0b001110000:9; ld; 0b1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
 
   | [x; 0b010100:6; pre; 0b1:1; ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
@@ -418,6 +446,11 @@ let decode = new_definition `!w:int32. decode w =
   | [0b011110000:9; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_ldsth is_ld Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) 1 else Register_Offset (XREG' Rm)))
+  | [0b011110000:9; is_ld; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldsth is_ld Rt (XREG_SP Rn) (arm_extoff sx S 1 Rm))
+  | [0b011110000:9; is_ld; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldsth is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 1 else Register_Offset (XREG' Rm)))
 
   // LDRSB/LDRSH (W destination if w = opc<0> is set, else X) and LDRSW,
   // with the same addressing modes (LDURSB/LDURSH/LDURSW for unscaled)
@@ -431,6 +464,10 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldrsb w Rt (XREG_SP Rn) (Immediate_Offset (word_zx imm12)))
   | [0b001110001:9; w; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_ldrsb w Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
+  | [0b001110001:9; w; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsb w Rt (XREG_SP Rn) (arm_extoff sx F 0 Rm))
+  | [0b001110001:9; w; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsb w Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
   | [0b011110001:9; w; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
     SOME (arm_ldrsh w Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
   | [0b011110001:9; w; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
@@ -441,6 +478,11 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldrsh w Rt (XREG_SP Rn)
       (Immediate_Offset (word (val imm12 * 2))))
   | [0b011110001:9; w; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsh w Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 1 else Register_Offset (XREG' Rm)))
+  | [0b011110001:9; w; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsh w Rt (XREG_SP Rn) (arm_extoff sx S 1 Rm))
+  | [0b011110001:9; w; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_ldrsh w Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) 1 else Register_Offset (XREG' Rm)))
   | [0b1011100010:10; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
@@ -455,6 +497,11 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
       (Immediate_Offset (word (val imm12 * 4))))
   | [0b1011100010:10; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 2 else Register_Offset (XREG' Rm)))
+  | [0b1011100010:10; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn) (arm_extoff sx S 2 Rm))
+  | [0b1011100010:10; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) 2 else Register_Offset (XREG' Rm)))
 
@@ -702,6 +749,18 @@ let decode = new_definition `!w:int32. decode w =
             let imm2 = if q then word_duplicate imm else word_zx imm in
             SOME (arm_BIC_VEC (QREG' Rd) (QREG' Rd) (rvalue imm2) datasize)
          | NONE -> NONE
+      // MVNI, 32-bit shifted (cmode = 0xx0), 16-bit shifted (10x0) and
+      // 32-bit shifting ones (110x)
+      else if cmode = word 0b0000 \/ cmode = word 0b0010 \/
+              cmode = word 0b0100 \/ cmode = word 0b0110 \/
+              cmode = word 0b1000 \/ cmode = word 0b1010 \/
+              cmode = word 0b1100 \/ cmode = word 0b1101 then
+        let abcdefgh:(8)word = word_join abc defgh in
+        match arm_adv_simd_expand_imm abcdefgh (word 1:(1)word) cmode with
+          SOME imm ->
+            if q then SOME (arm_MOVI (QREG' Rd) (word_not imm))
+            else SOME (arm_MOVI (DREG' Rd) (word_not imm))
+         | NONE -> NONE
       else NONE
     else if cmode = (word 0b0000:(4)word) then
       // USHR
@@ -767,10 +826,9 @@ let decode = new_definition `!w:int32. decode w =
       // decode discrimination tree (it would share a leaf and shadow the
       // immh=0 modified-immediate encodings).  We therefore decode SQSHRUN
       // here, inside the asimdimm clause that owns this region.  immh=0 was
-      // already handled above (cmode=1000 / immh=0 is MVNI, currently
-      // unsupported -> NONE); here immh<>0.  esize is Rd's (narrow) element
-      // size; the source lanes are 2*esize wide.  immh top bit set
-      // (2*esize = 128) is reserved/UNDEFINED.
+      // already handled above (cmode=1000 / immh=0 is MVNI); here immh<>0.
+      // esize is Rd's (narrow) element size; the source lanes are 2*esize
+      // wide.  immh top bit set (2*esize = 128) is reserved/UNDEFINED.
       let immb = abc in
       let Rn = defgh in
       if bit 3 immh then NONE // "UNDEFINED"
@@ -1815,7 +1873,8 @@ let PURE_DECODE_CONV =
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop;
               arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldsth;
-              arm_ldrsb; arm_ldrsh; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
+              arm_ldrsb; arm_ldrsh; arm_extoff; arm_ldstp; arm_ldstp_q;
+              arm_ldstp_d;
               arm_ldst2; arm_ldstp_2q; arm_ldstp_4q; arm_ldstp_4d; arm_ldst3] rw;
     (* .. that have bitmatch exprs inside *)
     List.iter (fun def_th ->
