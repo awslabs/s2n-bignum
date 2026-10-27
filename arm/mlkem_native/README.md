@@ -21,15 +21,20 @@ recorded in `binaries/builds.json` there. We use the "multilevel" builds
 `mlkem_native_<function>_<compiler>_<level>.S` contains the code of the
 function `mlkem_<function>` in the binary
 `binaries/multilevel/<compiler>/<level>/libmlkem.so`, except that the
-`basemul_k2` files are for `mlkem512_polyvec_basemul_acc_montgomery_cached`.
+`basemul_k2`, `basemul_k3` and `basemul_k4` files are for
+`mlkem512_polyvec_basemul_acc_montgomery_cached`,
+`mlkem768_polyvec_basemul_acc_montgomery_cached` and
+`mlkem1024_polyvec_basemul_acc_montgomery_cached` respectively.
 
-| File                                     | Compiler     |
-|------------------------------------------|--------------|
-| mlkem_native_basemul_k2_gcc12_O2.S       | gcc 12.3.0   |
+| File                                          | Compiler     |
+|-----------------------------------------------|--------------|
+| mlkem_native_basemul_k2_gcc12_O2.S            | gcc 12.3.0   |
+| mlkem_native_basemul_k3_gcc12_O2.S            | gcc 12.3.0   |
+| mlkem_native_basemul_k4_gcc12_O2.S            | gcc 12.3.0   |
 | mlkem_native_poly_mulcache_compute_gcc12_O2.S | gcc 12.3.0   |
-| mlkem_native_poly_reduce_clang17_O2.S    | clang 17.0.6 |
-| mlkem_native_poly_reduce_gcc12_O2.S      | gcc 12.3.0   |
-| mlkem_native_poly_tobytes_gcc12_O2.S     | gcc 12.3.0   |
+| mlkem_native_poly_reduce_clang17_O2.S         | clang 17.0.6 |
+| mlkem_native_poly_reduce_gcc12_O2.S           | gcc 12.3.0   |
+| mlkem_native_poly_tobytes_gcc12_O2.S          | gcc 12.3.0   |
 
 The SHA-256 hashes of the binaries used, which match those recorded in
 `binaries/builds.json`, are:
