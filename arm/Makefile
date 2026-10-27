@@ -441,7 +441,8 @@ OBJ = $(POINT_OBJ) $(BIGNUM_OBJ) $(AES_XTS_OBJ) $(AES_GCM_OBJ)
 # from pre-built binaries (see mlkem_native/README.md). These are only
 # for the proofs and are not included in the library.
 
-MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_poly_reduce_gcc12_O2.o
+MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_poly_reduce_clang17_O2.o \
+                   mlkem_native/mlkem_native_poly_reduce_gcc12_O2.o
 
 # Tutorial assembly files
 
