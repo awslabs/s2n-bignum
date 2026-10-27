@@ -22,9 +22,10 @@ recorded in `binaries/builds.json` there. We use the "multilevel" builds
 function `mlkem_<function>` in the binary
 `binaries/multilevel/<compiler>/<level>/libmlkem.so`.
 
-| File                                | Compiler   | libmlkem.so SHA-256 |
-|-------------------------------------|------------|---------------------|
-| mlkem_native_poly_reduce_gcc12_O2.S | gcc 12.3.0 | ed9a4710c0ec93ef... |
+| File                                  | Compiler     | libmlkem.so SHA-256 |
+|---------------------------------------|--------------|---------------------|
+| mlkem_native_poly_reduce_clang17_O2.S | clang 17.0.6 | b7589e6e7ae228dd... |
+| mlkem_native_poly_reduce_gcc12_O2.S   | gcc 12.3.0   | ed9a4710c0ec93ef... |
 
 ## Checking a transcription
 
