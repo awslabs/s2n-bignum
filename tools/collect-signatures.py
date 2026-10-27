@@ -330,6 +330,7 @@ onlyInArm = [
   "aes256_gcm_dec",
   "aes256_gcm_dec_alt",
   "aes256_gcm_enc",
+  "aes256_gcm_enc_alt",
   "aes_xts_decrypt",
   "aes_xts_encrypt",
   "bignum_copy_row_from_table_8n",
