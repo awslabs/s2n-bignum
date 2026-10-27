@@ -20,10 +20,12 @@ recorded in `binaries/builds.json` there. We use the "multilevel" builds
 `-O<level> -g -gdwarf-4 -gsplit-dwarf -fPIC`. The file
 `mlkem_native_<function>_<compiler>_<level>.S` contains the code of the
 function `mlkem_<function>` in the binary
-`binaries/multilevel/<compiler>/<level>/libmlkem.so`.
+`binaries/multilevel/<compiler>/<level>/libmlkem.so`, except that the
+`basemul_k2` files are for `mlkem512_polyvec_basemul_acc_montgomery_cached`.
 
 | File                                  | Compiler     | libmlkem.so SHA-256 |
 |---------------------------------------|--------------|---------------------|
+| mlkem_native_basemul_k2_gcc12_O2.S    | gcc 12.3.0   | ed9a4710c0ec93ef... |
 | mlkem_native_poly_reduce_clang17_O2.S | clang 17.0.6 | b7589e6e7ae228dd... |
 | mlkem_native_poly_reduce_gcc12_O2.S   | gcc 12.3.0   | ed9a4710c0ec93ef... |
 | mlkem_native_poly_tobytes_gcc12_O2.S  | gcc 12.3.0   | ed9a4710c0ec93ef... |
