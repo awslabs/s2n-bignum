@@ -23,12 +23,23 @@ function `mlkem_<function>` in the binary
 `binaries/multilevel/<compiler>/<level>/libmlkem.so`, except that the
 `basemul_k2` files are for `mlkem512_polyvec_basemul_acc_montgomery_cached`.
 
-| File                                  | Compiler     | libmlkem.so SHA-256 |
-|---------------------------------------|--------------|---------------------|
-| mlkem_native_basemul_k2_gcc12_O2.S    | gcc 12.3.0   | ed9a4710c0ec93ef... |
-| mlkem_native_poly_reduce_clang17_O2.S | clang 17.0.6 | b7589e6e7ae228dd... |
-| mlkem_native_poly_reduce_gcc12_O2.S   | gcc 12.3.0   | ed9a4710c0ec93ef... |
-| mlkem_native_poly_tobytes_gcc12_O2.S  | gcc 12.3.0   | ed9a4710c0ec93ef... |
+| File                                     | Compiler     |
+|------------------------------------------|--------------|
+| mlkem_native_basemul_k2_gcc12_O2.S       | gcc 12.3.0   |
+| mlkem_native_poly_mulcache_compute_gcc12_O2.S | gcc 12.3.0   |
+| mlkem_native_poly_reduce_clang17_O2.S    | clang 17.0.6 |
+| mlkem_native_poly_reduce_gcc12_O2.S      | gcc 12.3.0   |
+| mlkem_native_poly_tobytes_gcc12_O2.S     | gcc 12.3.0   |
+
+The SHA-256 hashes of the binaries used, which match those recorded in
+`binaries/builds.json`, are:
+
+```
+binaries/multilevel/clang17/O2/libmlkem.so
+  b7589e6e7ae228dd0dfa30424b0375e99a281979f70a5a40e6d163058fb50955
+binaries/multilevel/gcc12/O2/libmlkem.so
+  ed9a4710c0ec93ef1eab794f3e854dfadf92b45e08c76101cffdf1a36b035692
+```
 
 ## Checking a transcription
 
@@ -44,3 +55,11 @@ python3 mlkem_native/check_transcription.py \
   <mlkem-native>/binaries/multilevel/gcc12/O2/libmlkem.so \
   mlkem_poly_reduce
 ```
+
+Some functions use constant tables, which are transcribed into a read-only
+data section and referenced using ADRP and ADD with relocations, as for the
+hand-written code in s2n-bignum. For these, pairs of data symbols in the
+object file and the binary are given as additional arguments, e.g.
+`mlk_zetas mlk_zetas` for `mlkem_native_poly_mulcache_compute_gcc12_O2`. The
+script then checks that the tables are identical and that the relocated
+instructions in the binary compute the addresses of the tables there.
