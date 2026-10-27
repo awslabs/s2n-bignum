@@ -36,6 +36,7 @@ function `mlkem_<function>` in the binary
 | mlkem_native_poly_reduce_clang17_O2.S         | clang 17.0.6 |
 | mlkem_native_poly_reduce_gcc12_O2.S           | gcc 12.3.0   |
 | mlkem_native_poly_tobytes_gcc12_O2.S          | gcc 12.3.0   |
+| mlkem_native_poly_tomont_gcc12_O2.S           | gcc 12.3.0   |
 
 The SHA-256 hashes of the binaries used, which match those recorded in
 `binaries/builds.json`, are:
@@ -63,10 +64,14 @@ python3 mlkem_native/check_transcription.py \
 ```
 
 Some functions use constant tables, which are transcribed into a read-only
-data section and referenced using ADRP and ADD with relocations, as for the
-hand-written code in s2n-bignum. For these, pairs of data symbols in the
-object file and the binary are given as additional arguments, e.g.
+data section and referenced with relocations, as for the hand-written code
+in s2n-bignum: ADRP and ADD compute the address of a table, or ADRP and an
+LDR of a Q register load a vector from it. For these, pairs of data symbols
+in the object file and the binary are given as additional arguments, e.g.
 `mlk_zetas mlk_zetas` for `mlkem_native_poly_mulcache_compute_gcc12_O2` and
-`mlkem_native_poly_ntt_gcc12_O2`. The script then checks that the tables are
-identical and that the relocated instructions in the binary compute the
+`mlkem_native_poly_ntt_gcc12_O2`. Where the data in the binary has no
+symbol, its address there can be given in hexadecimal instead, e.g.
+`mlkem_native_poly_tomont_gcc12_O2_constants 0x6220` for
+`mlkem_native_poly_tomont_gcc12_O2`. The script then checks that the tables
+are identical and that the relocated instructions in the binary compute the
 addresses of the tables there.

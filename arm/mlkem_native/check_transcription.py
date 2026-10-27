@@ -16,10 +16,13 @@
 #     <mlkem-native>/binaries/multilevel/gcc12/O2/libmlkem.so \
 #     mlkem_poly_reduce
 #
-# If the code refers to read-only data using ADRP and ADD with relocations,
-# the pairs of data symbols given are checked to have identical contents,
-# and the relocated instructions are checked to compute the address of the
-# corresponding data symbol in the binary (allowing for an addend).
+# If the code refers to read-only data using ADRP and ADD or LDR with
+# relocations, the pairs of data symbols given are checked to have identical
+# contents, and the relocated instructions are checked to compute the address
+# of the corresponding data in the binary (allowing for an addend). For data
+# without a symbol in the binary, such as constants that the compiler has put
+# in a literal pool, its address in the binary can be given in hexadecimal
+# instead of a symbol name.
 
 import struct
 import sys
@@ -58,6 +61,14 @@ class Elf:
     pos = sec[4] + sym[3] - sec[3]
     return self.data[pos:pos + sym[4]]
 
+  def bytes_at(self, addr, size):
+    # Contents of the section with the given virtual address range
+    for sec in self.sections:
+      if sec[1] == 1 and sec[3] <= addr and addr + size <= sec[3] + sec[5]:
+        pos = sec[4] + addr - sec[3]
+        return self.data[pos:pos + size]
+    sys.exit(self.path + ': no data at address 0x%x' % addr)
+
   def relocations(self, shndx):
     # Map from offsets in section shndx to (type, symbol, addend)
     relocs = {}
@@ -88,11 +99,17 @@ if len(mine) != len(theirs):
 
 datamap = {}
 for i in range(5, len(sys.argv), 2):
-  dsym, bdsym = obj.symbol(sys.argv[i]), binary.symbol(sys.argv[i + 1])
-  if obj.contents(dsym) != binary.contents(bdsym):
+  dsym = obj.symbol(sys.argv[i])
+  if sys.argv[i + 1].startswith('0x'):
+    baddr = int(sys.argv[i + 1], 16)
+    bdata = binary.bytes_at(baddr, dsym[4])
+  else:
+    bdsym = binary.symbol(sys.argv[i + 1])
+    baddr, bdata = bdsym[3], binary.contents(bdsym)
+  if obj.contents(dsym) != bdata:
     print('DIFFERENT: data %s and %s' % (sys.argv[i], sys.argv[i + 1]))
     ok = False
-  datamap[(dsym[2], dsym[3])] = bdsym[3]
+  datamap[(dsym[2], dsym[3])] = baddr
 
 relocs = obj.relocations(fsym[2])
 for i in range(0, min(len(mine), len(theirs)), 4):
@@ -126,6 +143,9 @@ for i in range(0, min(len(mine), len(theirs)), 4):
   elif rtype == 277:             # R_AARCH64_ADD_ABS_LO12_NC
     good = (w0 & 0xffc003ff) == (w1 & 0xffc003ff) and \
            (w1 >> 10) & 0xfff == target & 0xfff
+  elif rtype == 299:             # R_AARCH64_LDST128_ABS_LO12_NC
+    good = (w0 & 0xffc003ff) == (w1 & 0xffc003ff) and \
+           ((w1 >> 10) & 0xfff) * 16 == target & 0xfff
   else:
     good = False
   if not good:
