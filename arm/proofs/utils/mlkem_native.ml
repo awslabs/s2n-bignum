@@ -250,6 +250,35 @@ let CONGBOUND_MONTRED_SCALAR = prove
   ASM_INT_ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
+(* The same Montgomery reduction as vectorized by the compiler, in the form  *)
+(* that the simulation gives for each lane.                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let montred_neon = define
+ `montred_neon (x:int32):int16 =
+  word_subword
+   (word_add
+     (word_mul ((word_sx:int16->int32)
+                  (word_mul (word_subword x (0,16)) (word 62209)))
+               (word 4294963967))
+     x)
+   (16,16)`;;
+
+let MONTRED_NEON_SCALAR = prove
+ (`!t:int32. montred_neon t = montred_scalar t`,
+  GEN_TAC THEN
+  REWRITE_TAC[montred_neon; montred_scalar; SXFROM_15_SUBWORD] THEN
+  SUBGOAL_THEN `word_zx(word_mul (t:int32) (word 4294963969)):int16 =
+                word_mul (word_subword t (0,16)) (word 62209)`
+  SUBST1_TAC THENL
+   [SIMP_TAC[WORD_ZX_MUL; DIMINDEX_16; DIMINDEX_32; ARITH] THEN
+    REWRITE_TAC[WORD_ZX_SUBWORD; DIMINDEX_16] THEN CONV_TAC WORD_REDUCE_CONV;
+    SPEC_TAC(`word_mul (word_sx (word_mul (word_subword (t:int32) (0,16))
+                                          (word 62209):int16))
+                       (word 4294963967):int32`, `m:int32`) THEN
+    BITBLAST_TAC]);;
+
+(* ------------------------------------------------------------------------- *)
 (* The table of zetas used by the C code, as the values in the source code   *)
 (* and as the bytes of the read-only data in the compiled code. The latter   *)
 (* is defined here so that it can be shared by several proofs; the proofs    *)
