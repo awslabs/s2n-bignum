@@ -437,6 +437,12 @@ AES_GCM_OBJ = aes_gcm/aes128_gcm_dec.o \
 
 OBJ = $(POINT_OBJ) $(BIGNUM_OBJ) $(AES_XTS_OBJ) $(AES_GCM_OBJ)
 
+# Code compiled from mlkem-native's portable C implementation, transcribed
+# from pre-built binaries (see mlkem_native/README.md). These are only
+# for the proofs and are not included in the library.
+
+MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_poly_reduce_gcc12_O2.o
+
 # Tutorial assembly files
 
 TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
@@ -482,8 +488,8 @@ BASE_ML=proofs/arm.ml \
 HOLDIR?=$(HOME)/hol-light
 HOLLIGHT:=$(HOLDIR)/hol.sh
 
-PROOF_BINS = $(OBJ:.o=.native)
-PROOF_LOGS = $(OBJ:.o=.correct)
+PROOF_BINS = $(OBJ:.o=.native) $(MLKEM_NATIVE_OBJ:.o=.native)
+PROOF_LOGS = $(OBJ:.o=.correct) $(MLKEM_NATIVE_OBJ:.o=.correct)
 TUTORIAL_PROOF_BINS = $(TUTORIAL_PROOFS:.ml=.native)
 TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 
@@ -569,6 +575,9 @@ aes_gcm/aes256_gcm_dec_alt.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_enc_alt.native: $(AES_GCM_PROOF_UTILS)
 
+# The proofs of mlkem-native's compiled code share some lemmas.
+$(MLKEM_NATIVE_OBJ:.o=.native): proofs/utils/mlkem_native.ml
+
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \
                                      tutorial/aes_encrypt.o tutorial/aes_decrypt.o ; \
@@ -604,5 +613,5 @@ FORCE: ;
 # A portable way of getting the number of max. cores:
 # https://stackoverflow.com/a/23569003/1488216
 NUM_CORES_FOR_SEMATEST = $(shell getconf _NPROCESSORS_ONLN)
-sematest: FORCE $(OBJ) proofs/simulator_iclasses.ml proofs/simulator.native
+sematest: FORCE $(OBJ) $(MLKEM_NATIVE_OBJ) proofs/simulator_iclasses.ml proofs/simulator.native
 	../tools/run-sematest.sh arm $(NUM_CORES_FOR_SEMATEST)
