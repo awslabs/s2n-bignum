@@ -27,7 +27,7 @@ let mlkem_native_poly_ntt_gcc12_O2_mc,
       | s -> failwith ("unknown symbol: " ^ s))
     "mlkem_native_poly_ntt_gcc12_O2_mc"
     "arm/mlkem_native/mlkem_native_poly_ntt_gcc12_O2.o"
-(fun w BL ADR ADRP ADD_rri64 -> [
+(fun w BL ADR ADRP ADD_rri64 LDR_Q_rri -> [
   ADRP (mk_var("mlk_zetas_data",`:num`),0,0,12);
   w 0xaa0003ed;         (* arm_MOV X13 X0 *)
   ADD_rri64 (mk_var("mlk_zetas_data",`:num`),0,12,12);

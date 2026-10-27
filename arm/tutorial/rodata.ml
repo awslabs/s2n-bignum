@@ -23,7 +23,7 @@ needs "arm/proofs/base.ml";;
 let rodata_mc,rodata_constants_data = define_assert_relocs_from_elf
     "rodata_mc"
     "arm/tutorial/rodata.o"
-(fun w BL ADR ADRP ADD_rri64 -> [
+(fun w BL ADR ADRP ADD_rri64 LDR_Q_rri -> [
 (* int f(uint64_t) *)
   w 0xaa0003e3;         (* arm_MOV X3 X0 *)
 
@@ -281,7 +281,7 @@ let rodata_local_mc,rodata_local_constants_data = define_assert_relocs_from_elf
       | s -> "unused_" ^ s)
     "rodata_local_mc"
     "arm/tutorial/rodata_local.o"
-(fun w BL ADR ADRP ADD_rri64 -> [
+(fun w BL ADR ADRP ADD_rri64 LDR_Q_rri -> [
     w 0xaa0003e3;         (* arm_MOV X3 X0 *)
     ADRP (mk_var("rodata",`:num`),0,4,10);
     ADD_rri64 (mk_var("rodata",`:num`),0,10,10);
