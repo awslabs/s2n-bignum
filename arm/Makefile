@@ -441,7 +441,8 @@ OBJ = $(POINT_OBJ) $(BIGNUM_OBJ) $(AES_XTS_OBJ) $(AES_GCM_OBJ)
 # from pre-built binaries (see mlkem_native/README.md). These are only
 # for the proofs and are not included in the library.
 
-MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_poly_reduce_clang17_O2.o \
+MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
+                   mlkem_native/mlkem_native_poly_reduce_clang17_O2.o \
                    mlkem_native/mlkem_native_poly_reduce_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_tobytes_gcc12_O2.o
 
@@ -462,6 +463,13 @@ TUTORIAL_OBJ = $(filter-out tutorial/aes_encrypt_decrypt.o tutorial/safety.o, $(
 %.o : %.S
 	cat $< | $(PREPROCESS) | $(SPLIT) | grep -v -E '^\s+.quad\s+0x[0-9a-f]+$$' | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
 	$(OBJDUMP) $@ | ( ( ! grep --ignore-case -E 'w18|[^0]x18' ) || ( rm $@ ; exit 1 ) )
+	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
+
+# The compiled code from mlkem-native is for Linux, where x18 is just a
+# temporary register (and the compilers do use it), so the check that x18
+# is not used is not applied to it.
+
+mlkem_native/%.o : mlkem_native/%.S
 	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
 
 libs2nbignum.a: $(OBJ) ; ar -rc libs2nbignum.a $(OBJ)

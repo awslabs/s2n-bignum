@@ -153,3 +153,98 @@ let SUB_LIST_0_SNOC2 = prove
   REWRITE_TAC[SUB_LIST_1] THEN
   ASM_SIMP_TAC[ARITH_RULE `n + 2 <= l ==> n < l /\ n + 1 < l`] THEN
   REWRITE_TAC[APPEND]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The scalar Montgomery reduction mlk_montgomery_reduce, as compiled. This  *)
+(* subtracts a multiple of 3329 rather than adding one as "montred" does,    *)
+(* so the results can differ by 3329 and the overflow condition is slightly  *)
+(* different, but it satisfies the analogous congruence and bounds.          *)
+(* ------------------------------------------------------------------------- *)
+
+let montred_scalar = define
+ `montred_scalar (t:int32):int16 =
+  word_zx(word_ishr
+   (word_add t
+     (word_mul (word_sxfrom 15 (word_subword (word_mul t (word 4294963969))
+                                             (0,16):int32))
+               (word 4294963967)))
+   16)`;;
+
+let SXFROM_15_SUBWORD = prove
+ (`!w:int32. word_sxfrom 15 (word_subword w (0,16):int32) =
+             word_sx(word_zx w:int16)`,
+  BITBLAST_TAC);;
+
+let MONTRED_SCALAR_LEMMA = prove
+ (`!t:int32.
+        &2 pow 16 * ival(montred_scalar t) =
+        ival(word_add t
+              (word_mul (word_sx(word_zx(word_mul t (word 4294963969)):int16))
+                        (word 4294963967)))`,
+  GEN_TAC THEN REWRITE_TAC[montred_scalar; SXFROM_15_SUBWORD] THEN
+  CONV_TAC(LAND_CONV(LAND_CONV INT_REDUCE_CONV)) THEN
+  MATCH_MP_TAC(BITBLAST_RULE
+   `word_zx x:int16 = word 0
+    ==> &65536 * ival(word_zx(word_ishr (x:int32) 16):int16) = ival x`) THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) WORD_ZX_ADD o lhand o snd) THEN
+  REWRITE_TAC[DIMINDEX_16; DIMINDEX_32; ARITH] THEN DISCH_THEN SUBST1_TAC THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) WORD_ZX_MUL o rand o lhand o snd) THEN
+  REWRITE_TAC[DIMINDEX_16; DIMINDEX_32; ARITH] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[WORD_BLAST `word_zx(word_sx (x:int16):int32) = x`] THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) WORD_ZX_MUL o
+    lhand o rand o lhand o snd) THEN
+  REWRITE_TAC[DIMINDEX_16; DIMINDEX_32; ARITH] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[GSYM VAL_EQ_0; VAL_WORD_ADD; VAL_WORD_MUL; VAL_WORD] THEN
+  CONV_TAC MOD_DOWN_CONV THEN REWRITE_TAC[GSYM DIVIDES_MOD; DIMINDEX_16] THEN
+  CONV_TAC WORD_REDUCE_CONV THEN MATCH_MP_TAC(NUMBER_RULE
+   `(a * b + 1 == 0) (mod d) ==> d divides (x + (x * a) * b)`) THEN
+  REWRITE_TAC[CONG] THEN ARITH_TAC);;
+
+let INT_DIV_65536_BOUNDS = prove
+ (`(!x w. &65536 * x <= w ==> x <= w div &65536) /\
+   (!x w. w <= &65536 * x ==> w div &65536 <= x)`,
+  CONJ_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
+  MP_TAC(SPECL [`w:int`; `&65536:int`] INT_DIVISION) THEN
+  CONV_TAC INT_REDUCE_CONV THEN ASM_INT_ARITH_TAC);;
+
+let CONGBOUND_MONTRED_SCALAR = prove
+ (`!a a' l u.
+      (ival a == a') (mod &3329) /\ l <= ival a /\ ival a <= u
+      ==> --(&2038402305) <= l /\ u <= &2038398975
+          ==> (ival(montred_scalar a) == &(inverse_mod 3329 65536) * a')
+              (mod &3329) /\
+              (l - &109081343) div &2 pow 16 <= ival(montred_scalar a) /\
+              ival(montred_scalar a) <= (u + &109084672) div &2 pow 16`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
+  CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC(ONCE_DEPTH_CONV INVERSE_MOD_CONV) THEN
+  CONV_TAC(ONCE_DEPTH_CONV INT_POW_CONV) THEN
+  MP_TAC(SPECL [`&169:int`; `&65536:int`; `&3329:int`] (INTEGER_RULE
+   `!d e n:int. (e * d == &1) (mod n)
+                ==> !x y. ((x == d * y) (mod n) <=>
+                           (e * x == y) (mod n))`)) THEN
+  ANTS_TAC THENL
+   [REWRITE_TAC[GSYM INT_REM_EQ] THEN INT_ARITH_TAC;
+    DISCH_THEN(fun th -> REWRITE_TAC[th])] THEN
+  MATCH_MP_TAC(MESON[INT_DIV_65536_BOUNDS]
+   `P /\ l <= &65536 * x /\ &65536 * x <= u
+    ==> P /\ l div &65536 <= x /\ x <= u div &65536`) THEN
+  REWRITE_TAC[CONV_RULE(ONCE_DEPTH_CONV INT_POW_CONV)
+               MONTRED_SCALAR_LEMMA] THEN
+  REWRITE_TAC[WORD_RULE
+   `word_add c (word_mul a b) = iword(ival c + ival a * ival b)`] THEN
+  ASM_SIMP_TAC[IVAL_WORD_SX; DIMINDEX_16; DIMINDEX_32; ARITH] THEN
+  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
+  W(fun (asl,w) ->
+    let t = find_term (fun t -> type_of t = `:int16` &&
+                               can (term_match [] `word_zx x:int16`) t) w in
+    MP_TAC(ISPEC t IVAL_BOUND)) THEN
+  REWRITE_TAC[DIMINDEX_16] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  CONV_TAC(ONCE_DEPTH_CONV INT_POW_CONV) THEN STRIP_TAC THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) IVAL_IWORD o
+    find_term (can (term_match [] `ival(iword x:int32)`)) o snd) THEN
+  REWRITE_TAC[DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  CONV_TAC(ONCE_DEPTH_CONV INT_POW_CONV) THEN
+  ANTS_TAC THENL [ASM_INT_ARITH_TAC; DISCH_THEN SUBST1_TAC] THEN
+  ASM_REWRITE_TAC[INTEGER_RULE
+   `!p x y a:int. (x + y * --p == a) (mod p) <=> (x == a) (mod p)`] THEN
+  ASM_INT_ARITH_TAC);;
