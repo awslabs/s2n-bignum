@@ -370,3 +370,71 @@ let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_SAFE = time prove
     CONV_TAC WORD_RULE;
     ALL_TAC] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The same code in the whole image, at address 0x4140, with the constants   *)
+(* at 0x6220 (see mlkem_native_libmlkem_gcc12_O2.ml).                        *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+
+let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_poly_tomont_gcc12_O2_mc
+    0x4140 [0x6220];;
+
+let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_DATA_RULE
+    (hd mlkem_native_poly_tomont_gcc12_O2_data) 0x6220;;
+
+let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (`!a x pc returnaddress.
+    aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+    nonoverlapping (a,512) (word pc,0x6480)
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc)
+             mlkem_native_libmlkem_gcc12_O2_mc /\
+           read PC s = word (pc + 0x4140) /\
+           read X30 s = returnaddress /\
+           C_ARGUMENTS [a] s /\
+           (!i. i < 256
+                ==> read(memory :> bytes16(word_add a (word (2 * i)))) s =
+                    x i))
+      (\s. read PC s = returnaddress /\
+           !i. i < 256
+               ==> let z_i = read(memory :> bytes16
+                                (word_add a (word (2 * i)))) s in
+                   (ival z_i == (tomont_3329 (ival o x)) i) (mod &3329) /\
+                   abs(ival z_i) <= &3328)
+      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(a,512)])`,
+  MLKEM_NATIVE_IMAGE_TAC
+   (INST [`pc + 0x4140`,`pc:num`; `pc + 0x6220`,`consts:num`]
+     (SPEC_ALL MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_CORRECT))
+   [MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE]);;
+
+let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e a pc returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           nonoverlapping (a,512) (word pc,0x6480)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                     mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read PC s = word (pc + 0x4140) /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 = f_events a pc returnaddress /\
+                        memaccess_inbounds e2
+                         [a,512; word (pc + 0x6220),32] [a,512])
+               (\s s'. true)`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_SAFE
+   [`pc + 0x4140`,`pc:num`; `pc + 0x6220`,`consts:num`]
+   [MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE]);;
