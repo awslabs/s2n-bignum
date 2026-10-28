@@ -96,3 +96,32 @@ symbol, its address there can be given in hexadecimal instead, e.g.
 `mlkem_native_poly_tomont_gcc12_O2`. The script then checks that the tables
 are identical and that the relocated instructions in the binary compute the
 addresses of the tables there.
+
+## The whole binary
+
+For proofs about functions that call others, and eventually about the API
+functions, `mlkem_native_libmlkem_gcc12_O2.S` is a transcription of the
+start of the first loadable segment of the gcc 12 `-O2` binary, from
+address 0 up to the end of the read-only data at 0x6480. This covers the
+procedure linkage table, all the code and the constant tables. It was
+generated from the disassembly, with the ELF header and other data as
+`.quad` directives, and it assembles to exactly the bytes in the binary,
+with no relocations. Since the ADRP instructions compute addresses relative
+to the page of the instruction, the code works in the same way wherever it
+is loaded, as long as that is at a multiple of 4096. To check it, the
+symbol is given as `-` and the binary symbol as the address 0x0:
+
+```
+make mlkem_native/mlkem_native_libmlkem_gcc12_O2.o
+python3 mlkem_native/check_transcription.py \
+  mlkem_native/mlkem_native_libmlkem_gcc12_O2.o - \
+  <mlkem-native>/binaries/multilevel/gcc12/O2/libmlkem.so 0x0
+```
+
+The proof file `../proofs/mlkem_native_libmlkem_gcc12_O2.ml` defines the
+image, and has tools to transfer the theorems for the individual functions
+to the same code in the image, at `pc + <address>` when the image is loaded
+at `pc`. When `pc` is a multiple of 4096, and the image does not wrap around
+the end of the address space, the relocated instructions in the individual
+transcriptions are the same as those in the image, so the code of each
+function and its data are parts of the image.

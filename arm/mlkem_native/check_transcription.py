@@ -23,6 +23,12 @@
 # without a symbol in the binary, such as constants that the compiler has put
 # in a literal pool, its address in the binary can be given in hexadecimal
 # instead of a symbol name.
+#
+# Alternatively, with SYMBOL given as "-" and BINARY_SYMBOL as an address in
+# hexadecimal, the whole .text section of FILE.o is checked to be identical,
+# without any relocations, to the contents of the loaded segment of BINARY
+# starting at that address. This is for the transcription of a whole image,
+# e.g. mlkem_native/mlkem_native_libmlkem_gcc12_O2.o with address 0x0.
 
 import struct
 import sys
@@ -69,6 +75,27 @@ class Elf:
         return self.data[pos:pos + size]
     sys.exit(self.path + ': no data at address 0x%x' % addr)
 
+  def segment_bytes(self, addr, size):
+    # Contents of the loadable segment with the given virtual address range
+    phoff, = struct.unpack_from('<Q', self.data, 0x20)
+    phentsize, phnum = struct.unpack_from('<HH', self.data, 0x36)
+    for i in range(phnum):
+      p_type, _, p_offset, p_vaddr, _, p_filesz, _, _ = \
+        struct.unpack_from('<IIQQQQQQ', self.data, phoff + i * phentsize)
+      if p_type == 1 and p_vaddr <= addr and addr + size <= p_vaddr + p_filesz:
+        pos = p_offset + addr - p_vaddr
+        return self.data[pos:pos + size]
+    sys.exit(self.path + ': no segment with data at address 0x%x' % addr)
+
+  def section_index(self, name):
+    shstrndx, = struct.unpack_from('<H', self.data, 0x3e)
+    strtab = self.sections[shstrndx]
+    for i, sh in enumerate(self.sections):
+      start = strtab[4] + sh[0]
+      if self.data[start:self.data.index(b'\0', start)].decode() == name:
+        return i
+    sys.exit(self.path + ': no section ' + name)
+
   def relocations(self, shndx):
     # Map from offsets in section shndx to (type, symbol, addend)
     relocs = {}
@@ -88,6 +115,26 @@ if len(sys.argv) < 5 or len(sys.argv) % 2 == 0:
            ' [DATA_SYMBOL BINARY_DATA_SYMBOL ...]')
 
 obj, binary = Elf(sys.argv[1]), Elf(sys.argv[3])
+
+if sys.argv[2] == '-':
+  if len(sys.argv) != 5 or not sys.argv[4].startswith('0x'):
+    sys.exit('usage: check_transcription.py FILE.o - BINARY ADDRESS')
+  text = obj.section_index('.text')
+  sec = obj.sections[text]
+  mine = obj.data[sec[4]:sec[4] + sec[5]]
+  theirs = binary.segment_bytes(int(sys.argv[4], 16), len(mine))
+  if obj.relocations(text):
+    print('DIFFERENT: the .text section has relocations')
+  elif mine != theirs:
+    diffs = [i for i in range(0, len(mine), 4) if mine[i:i+4] != theirs[i:i+4]]
+    print('DIFFERENT: %d words, the first at offset 0x%x' %
+          (len(diffs), diffs[0]))
+  else:
+    print('OK: the .text section and the segment from %s are identical '
+          '(%d bytes)' % (sys.argv[4], len(mine)))
+    sys.exit(0)
+  sys.exit(1)
+
 fsym, bsym = obj.symbol(sys.argv[2]), binary.symbol(sys.argv[4])
 mine, theirs = obj.contents(fsym), binary.contents(bsym)
 ok = True
