@@ -460,7 +460,13 @@ MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
 # there, and so have no object files of their own
 
 MLKEM_NATIVE_IMAGE_PROOFS = \
-  mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2
+  mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_invntt_tomont_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_mulcache_compute_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_ntt_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_reduce_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_tobytes_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_tomont_k3_gcc12_O2
 
 # Tutorial assembly files
 
@@ -637,10 +643,25 @@ proofs/aes_gcm_spec_checks.native: proofs/aes_gcm_spec_checks.ml $(BASE_ML) \
 $(MLKEM_NATIVE_OBJ:.o=.native): proofs/utils/mlkem_native.ml \
   proofs/mlkem_native_libmlkem_gcc12_O2.ml \
   mlkem_native/mlkem_native_libmlkem_gcc12_O2.o
-mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2.native: \
-  proofs/mlkem_native_keccakf1600x4_permute_gcc12_O2.ml $(BASE_ML) \
-  mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native ; \
+$(MLKEM_NATIVE_IMAGE_PROOFS:=.native): mlkem_native/%.native: \
+  proofs/%.ml $(BASE_ML) proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native_libmlkem_gcc12_O2.ml \
+  mlkem_native/mlkem_native_libmlkem_gcc12_O2.o ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2.native: \
+  mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_invntt_tomont_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_invntt_tomont_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_mulcache_compute_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_mulcache_compute_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_ntt_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_ntt_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_reduce_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_reduce_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_tobytes_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_tobytes_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_tomont_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_tomont_gcc12_O2.native
 
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \

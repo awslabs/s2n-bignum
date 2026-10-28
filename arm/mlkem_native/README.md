@@ -136,4 +136,10 @@ s2n-bignum.
 Functions that call others are verified directly in the image, using those
 theorems for the calls. So far this is done for
 `mlkem_keccakf1600x4_permute`, at address 0x33a0, which calls
-`mlkem_keccakf1600_permute` four times, the last time as a tail call.
+`mlkem_keccakf1600_permute` four times, the last time as a tail call, and
+for the functions `mlkem768_polyvec_<op>` that apply `mlkem_poly_<op>` to
+each polynomial of a vector, for `<op>` one of `invntt_tomont`,
+`mulcache_compute`, `ntt`, `reduce`, `tobytes` and `tomont` (in the files
+`mlkem_native_polyvec_<op>_k3_gcc12_O2.ml`). As in `common/fips203.ml`, a
+vector of k polynomials is given by its 256 * k coefficients, of which
+those of polynomial j are `\i. x(256 * j + i)`.
