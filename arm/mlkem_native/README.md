@@ -132,3 +132,8 @@ code in the image, `..._IMAGE_SUBROUTINE_CORRECT` and
 of constant time and memory safety for `mlkem_keccakf1600_permute` keeps
 the frame of the correctness theorem, as for the subroutines of other
 functions in s2n-bignum.
+
+Functions that call others are verified directly in the image, using those
+theorems for the calls. So far this is done for
+`mlkem_keccakf1600x4_permute`, at address 0x33a0, which calls
+`mlkem_keccakf1600_permute` four times, the last time as a tail call.
