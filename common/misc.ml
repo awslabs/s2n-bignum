@@ -1259,12 +1259,15 @@ let ASSEMBLER_SIMPLIFY_TAC =
   let pth = prove
    (`!a b. a < a + bitval b <=> b`,
     REPEAT GEN_TAC THEN ASM_CASES_TAC `b:bool` THEN
-    ASM_REWRITE_TAC[BITVAL_CLAUSES] THEN ARITH_TAC) in
+    ASM_REWRITE_TAC[BITVAL_CLAUSES] THEN ARITH_TAC)
+  and t_tm = `T` and nf_tm = `~F` in
   (fun (asl,w) ->
     (* filter assumptions of form 'e = e' because it can make asm_rewrite
-       tactics in ASSEMBLER_SIMPLIFY_TAC run forever *)
+       tactics in ASSEMBLER_SIMPLIFY_TAC run forever, and likewise T and ~F,
+       which give the rewrites T = T and F = F *)
     let asl = filter (fun (_,th) ->
-      let c = concl th in not (is_eq c) || (lhs c <> rhs c)) asl in
+      let c = concl th in
+      (not (is_eq c) || (lhs c <> rhs c)) && c <> t_tm && c <> nf_tm) asl in
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) !extra_early_rewrite_rules
       (asl,w)) THEN
   ASM_REWRITE_TAC[WORD_XOR_REFL; WORD_ADD_0; WORD_AND_REFL; WORD_OR_REFL;
