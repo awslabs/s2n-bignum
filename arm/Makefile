@@ -594,8 +594,11 @@ aes_gcm/aes256_gcm_dec_alt.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_enc_alt.native: $(AES_GCM_PROOF_UTILS)
 
-# The proofs of mlkem-native's compiled code share some lemmas.
-$(MLKEM_NATIVE_OBJ:.o=.native): proofs/utils/mlkem_native.ml
+# The proofs of mlkem-native's compiled code share some lemmas, and give
+# versions of the theorems for the same code in the whole image.
+$(MLKEM_NATIVE_OBJ:.o=.native): proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native_libmlkem_gcc12_O2.ml \
+  mlkem_native/mlkem_native_libmlkem_gcc12_O2.o
 
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \

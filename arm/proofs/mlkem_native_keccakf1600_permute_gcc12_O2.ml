@@ -790,7 +790,7 @@ let mlkem_native_keccakf1600_permute_signature =
 
 let full_spec,public_vars = mk_safety_spec
     ~readonly_objects:[`word rc:int64`,`192`]
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     mlkem_native_keccakf1600_permute_signature
     MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_CORRECT
     MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_EXEC;;
@@ -798,6 +798,42 @@ let full_spec,public_vars = mk_safety_spec
 (*** The whole execution is simulated, as for sha3_keccak_f1600_alt2. The ***)
 (*** address of the table is folded, and the loop test compares pointers ***)
 (*** into the table, so their differences are simplified in the steps.   ***)
+(*** The theorem keeps the frame, as needed for the proofs of callers.   ***)
+(*** Since the code saves and restores callee-saved registers, they are  ***)
+(*** first added to the frame as for the correctness proof, with their   ***)
+(*** initial values as extra (public) variables, and the result, with    ***)
+(*** those variables universally quantified, is proved by simulation.    ***)
+
+let SAFETY_PRESERVED_TAC pretac vs tac (asl,w) =
+  let f,bod = dest_exists w in
+  let xs,ibod = strip_forall bod in
+  let h,ens = dest_imp ibod in
+  let _,gls,_ = pretac ([],ens) in
+  let ens' = snd(hd gls) in
+  let lth = prove(mk_exists(f,list_mk_forall(xs @ vs,mk_imp(h,ens'))),tac) in
+  X_CHOOSE_THEN f (fun th ->
+    EXISTS_TAC f THEN REPEAT GEN_TAC THEN DISCH_TAC THEN pretac THEN
+    MATCH_MP_TAC(SPEC_ALL th) THEN FIRST_ASSUM ACCEPT_TAC) lth (asl,w);;
+
+let KECCAK_PRESERVED_TAC =
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
+  ENSURES_PRESERVED_TAC "x22_init" `X22` THEN
+  ENSURES_PRESERVED_TAC "x23_init" `X23` THEN
+  ENSURES_PRESERVED_TAC "x24_init" `X24` THEN
+  ENSURES_PRESERVED_TAC "x25_init" `X25` THEN
+  ENSURES_PRESERVED_TAC "x26_init" `X26` THEN
+  ENSURES_PRESERVED_TAC "x27_init" `X27` THEN
+  ENSURES_PRESERVED_TAC "x28_init" `X28`;;
+
+let keccak_saved_regs =
+  [`x19_init:int64`; `x20_init:int64`; `x21_init:int64`; `x22_init:int64`;
+   `x23_init:int64`; `x24_init:int64`; `x25_init:int64`; `x26_init:int64`;
+   `x27_init:int64`; `x28_init:int64`];;
 
 let keccak_extra_word_CONV_backup = !extra_word_CONV;;
 
@@ -836,14 +872,100 @@ let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_SAFE = time prove
                          [a,200; word_sub stackpointer (word 192),192;
                           word rc,192]
                          [a,200; word_sub stackpointer (word 192),192]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [X18] ,,
+                MAYCHANGE
+                [memory :> bytes (a,200);
+                 memory :> bytes (word_sub stackpointer (word 192),192)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  GEN_PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars
-    ~tac_before_maychange_simp:
-      (TRY(FIRST_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD)))
-    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_EXEC
-    [ALIGNED_BYTES_LOADED_APPEND_CLAUSE; MODIFIABLE_SIMD_REGS;
-     MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]
-    ARM_SINGLE_STEP_TAC);;
+  SAFETY_PRESERVED_TAC KECCAK_PRESERVED_TAC keccak_saved_regs
+   (GEN_PROVE_SAFETY_SPEC_TAC ~public_vars:(public_vars @ keccak_saved_regs)
+      ~tac_before_maychange_simp:
+        (TRY(FIRST_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD)))
+      MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_EXEC
+      [ALIGNED_BYTES_LOADED_APPEND_CLAUSE; MODIFIABLE_SIMD_REGS;
+       MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]
+      ARM_SINGLE_STEP_TAC));;
 
 extra_word_CONV := keccak_extra_word_CONV_backup;;
+
+(* ------------------------------------------------------------------------- *)
+(* The same code in the whole image, at address 0x2dd0 with the table of     *)
+(* round constants at 0x62b0 (see mlkem_native_libmlkem_gcc12_O2.ml).        *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_keccakf1600_permute_gcc12_O2_mc
+    0x2dd0 [0x62b0];;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_DATA_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_DATA_RULE
+    (hd mlkem_native_keccakf1600_permute_gcc12_O2_data) 0x62b0;;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (`!a A pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 192),192))
+            [(word pc,0x6480); (a,200)] /\
+        nonoverlapping (a,200) (word pc,0x6480)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mc /\
+                  read PC s = word (pc + 0x2dd0) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a] s /\
+                  wordlist_from_memory(a,25) s = A)
+             (\s. read PC s = returnaddress /\
+                  wordlist_from_memory(a,25) s = keccak 24 A)
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(a,200);
+                memory :> bytes(word_sub stackpointer (word 192),192)])`,
+  MLKEM_NATIVE_IMAGE_TAC
+   (INST [`pc + 0x2dd0`,`pc:num`; `pc + 0x62b0`,`rc:num`]
+     (SPEC_ALL MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_CORRECT))
+   [MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_DATA_IN_IMAGE]);;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e a pc stackpointer returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (word_sub stackpointer (word 192),192))
+           [word pc,0x6480; a,200] /\
+           nonoverlapping (a,200) (word pc,0x6480)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read PC s = word (pc + 0x2dd0) /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events a pc (word_sub stackpointer (word 192))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [a,200; word_sub stackpointer (word 192),192;
+                          word (pc + 0x62b0),192]
+                         [a,200; word_sub stackpointer (word 192),192]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [X18] ,,
+                MAYCHANGE
+                [memory :> bytes (a,200);
+                 memory :> bytes (word_sub stackpointer (word 192),192)])`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC
+   MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_SAFE
+   [`pc + 0x2dd0`,`pc:num`; `pc + 0x62b0`,`rc:num`]
+   [MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_DATA_IN_IMAGE]);;
