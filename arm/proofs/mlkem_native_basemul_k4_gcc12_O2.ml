@@ -473,7 +473,7 @@ needs "arm/proofs/subroutine_signatures.ml";;
 (*** The C signature is the same as that of mlkem_basemul_k4 ***)
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mlkem_basemul_k4" subroutine_signatures)
     MLKEM_NATIVE_BASEMUL_K4_GCC12_O2_SUBROUTINE_CORRECT
     MLKEM_NATIVE_BASEMUL_K4_GCC12_O2_EXEC;;
@@ -499,7 +499,8 @@ let MLKEM_NATIVE_BASEMUL_K4_GCC12_O2_SUBROUTINE_SAFE = time prove
                         memaccess_inbounds e2
                          [srcA,2048; srcB,2048; srcBt,1024; dst,512]
                          [dst,512])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+                MAYCHANGE [memory :> bytes(dst, 512)])`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(srcA:int64) (srcB:int64) (srcBt:int64) (dst:int64) (pc:num)
@@ -513,7 +514,8 @@ let MLKEM_NATIVE_BASEMUL_K4_GCC12_O2_SUBROUTINE_SAFE = time prove
     :(uarch_event)list` THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
   REPEAT GEN_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL;
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALL;
               fst MLKEM_NATIVE_BASEMUL_K4_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
@@ -677,7 +679,8 @@ let MLKEM_NATIVE_BASEMUL_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                         memaccess_inbounds e2
                          [srcA,2048; srcB,2048; srcBt,1024; dst,512]
                          [dst,512])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+                MAYCHANGE [memory :> bytes(dst, 512)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_BASEMUL_K4_GCC12_O2_SUBROUTINE_SAFE
    [`pc + 0x1850`,`pc:num`]
    [MLKEM_NATIVE_BASEMUL_K4_GCC12_O2_IN_IMAGE]);;

@@ -128,10 +128,10 @@ function and its data are parts of the image.
 
 The proof for each function ends with the versions of its theorems for the
 code in the image, `..._IMAGE_SUBROUTINE_CORRECT` and
-`..._IMAGE_SUBROUTINE_SAFE`. For use in the proofs of callers, the theorem
-of constant time and memory safety for `mlkem_keccakf1600_permute` keeps
-the frame of the correctness theorem, as for the subroutines of other
-functions in s2n-bignum.
+`..._IMAGE_SUBROUTINE_SAFE`. For use in the proofs of callers, the
+theorems of constant time and memory safety keep the frames of the
+correctness theorems, as for the subroutines of other functions in
+s2n-bignum.
 
 Functions that call others are verified directly in the image, using those
 theorems for the calls. So far this is done for

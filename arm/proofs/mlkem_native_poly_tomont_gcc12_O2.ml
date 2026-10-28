@@ -267,7 +267,7 @@ needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
     ~readonly_objects:[`word consts:int64`,`32`]
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mlkem_tomont" subroutine_signatures)
     MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_CORRECT
     MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_EXEC;;
@@ -296,7 +296,8 @@ let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_SAFE = time prove
                         e2 = f_events a consts pc returnaddress /\
                         memaccess_inbounds e2
                          [a,512; word consts,32] [a,512])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,512)])`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(a:int64) (consts:num) (pc:num) (returnaddress:int64).
@@ -308,7 +309,8 @@ let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_SAFE = time prove
     :(uarch_event)list` THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
   REPEAT GEN_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL;
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALL;
               fst MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
@@ -433,7 +435,8 @@ let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                         e2 = f_events a pc returnaddress /\
                         memaccess_inbounds e2
                          [a,512; word (pc + 0x6220),32] [a,512])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,512)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_SAFE
    [`pc + 0x4140`,`pc:num`; `pc + 0x6220`,`consts:num`]
    [MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IN_IMAGE;

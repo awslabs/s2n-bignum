@@ -837,7 +837,8 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_BLOCK_SAFE = prove
                  read events s = APPEND e2 e /\
                  e2 = f_ev_blk a zetas pc returnaddress start len /\
                  memaccess_inbounds e2 [a,512; word zetas,256] [a,512])
-          (\s s'. true)`,
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+           MAYCHANGE [memory :> bytes(a,512)])`,
   CONCRETIZE_F_EVENTS_TAC
    `\(a:int64) (zetas:num) (pc:num) (returnaddress:int64) (start:num)
      (len:num).
@@ -847,7 +848,9 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_BLOCK_SAFE = prove
                 (f_ev_blkhead a zetas pc returnaddress start len))
      :(uarch_event)list` THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT STRIP_TAC THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + 0x74` `pc + 0xac`
    `\j s. read X1 s = word_add a (word(2 * (start + j))) /\
           read X2 s = word_add a (word(2 * (start + len))) /\
@@ -935,7 +938,8 @@ let lsafe_goal l =
                  read events s = APPEND e2 e /\
                  e2 = f_ev_lay a zetas pc returnaddress /\
                  memaccess_inbounds e2 [a,512; word zetas,256] [a,512])
-          (\s s'. true)` in
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+           MAYCHANGE [memory :> bytes(a,512)])` in
   rhs(concl(NUM_REDUCE_CONV(subst [mk_small_numeral l,`L:num`] tm)));;
 
 (*** The event template for layer l ***)
@@ -1044,7 +1048,9 @@ let NTT_LAYER_SAFE_TAC l =
       LSAFE_SIM_TAC ALL_TAC 2] in
   CONCRETIZE_F_EVENTS_TAC (lsafe_template l) THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT STRIP_TAC THEN
   if l = 0 then blk0_tac else
   ENSURES_EVENTS_WHILE_UP2_TAC k `pc + 0xbc` `pc + 0xc4`
    (mk_abs(`i:num`,lsafe_blockend_tm l `i + 1`)) THEN
@@ -1120,7 +1126,8 @@ let ntt_layer_events_inst l ev =
 let NTT_SAFE_TOP_TAC =
   CONCRETIZE_F_EVENTS_TAC ntt_top_template THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL] THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xc4` (ntt_safe_layerend_tm 6) THEN
   CONJ_TAC THENL [ALL_TAC; LSAFE_SIM_TAC ALL_TAC 3] THEN
@@ -1142,7 +1149,7 @@ let NTT_SAFE_TOP_TAC =
 
 let full_spec,public_vars = mk_safety_spec
     ~readonly_objects:[`word zetas:int64`,`256`]
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mlkem_reduce" subroutine_signatures)
     MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_CORRECT
     MLKEM_NATIVE_POLY_NTT_GCC12_O2_EXEC;;
@@ -1165,7 +1172,8 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_SAFE = time prove
                   read events s = APPEND e2 e /\
                   e2 = f_events a zetas pc returnaddress /\
                   memaccess_inbounds e2 [a,512; word zetas,256] [a,512])
-           (\s s'. true)`,
+           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+            MAYCHANGE [memory :> bytes(a,512)])`,
   ASSERT_CONCL_TAC full_spec THEN NTT_SAFE_TOP_TAC);;
 
 (* ------------------------------------------------------------------------- *)
@@ -1228,7 +1236,8 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                   e2 = f_events a pc returnaddress /\
                   memaccess_inbounds e2
                    [a,512; word (pc + 0x6380),256] [a,512])
-           (\s s'. true)`,
+           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+            MAYCHANGE [memory :> bytes(a,512)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_SAFE
    [`pc + 0x42b4`,`pc:num`; `pc + 0x6380`,`zetas:num`]
    [MLKEM_NATIVE_POLY_NTT_GCC12_O2_IN_IMAGE;
