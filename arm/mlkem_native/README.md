@@ -31,6 +31,7 @@ function `mlkem_<function>` in the binary
 | mlkem_native_basemul_k2_gcc12_O2.S            | gcc 12.3.0   |
 | mlkem_native_basemul_k3_gcc12_O2.S            | gcc 12.3.0   |
 | mlkem_native_basemul_k4_gcc12_O2.S            | gcc 12.3.0   |
+| mlkem_native_poly_invntt_tomont_gcc12_O2.S    | gcc 12.3.0   |
 | mlkem_native_poly_mulcache_compute_gcc12_O2.S | gcc 12.3.0   |
 | mlkem_native_poly_ntt_gcc12_O2.S              | gcc 12.3.0   |
 | mlkem_native_poly_reduce_clang17_O2.S         | clang 17.0.6 |
