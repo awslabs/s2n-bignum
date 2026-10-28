@@ -24,7 +24,8 @@ function `mlkem_<function>` in the binary
 `basemul_k2`, `basemul_k3` and `basemul_k4` files are for
 `mlkem512_polyvec_basemul_acc_montgomery_cached`,
 `mlkem768_polyvec_basemul_acc_montgomery_cached` and
-`mlkem1024_polyvec_basemul_acc_montgomery_cached` respectively.
+`mlkem1024_polyvec_basemul_acc_montgomery_cached` respectively, and the
+`rej_uniform` file is for `mlk_rej_uniform_c.constprop.0` (see below).
 
 | File                                          | Compiler     |
 |-----------------------------------------------|--------------|
@@ -38,6 +39,24 @@ function `mlkem_<function>` in the binary
 | mlkem_native_poly_reduce_gcc12_O2.S           | gcc 12.3.0   |
 | mlkem_native_poly_tobytes_gcc12_O2.S          | gcc 12.3.0   |
 | mlkem_native_poly_tomont_gcc12_O2.S           | gcc 12.3.0   |
+| mlkem_native_rej_uniform_gcc12_O2.S           | gcc 12.3.0   |
+
+The rejection sampling in mlkem-native is done by the static function
+`mlk_rej_uniform_c`, which has the target number of coefficients as an
+argument as well as an offset from which to start. In the binary, gcc has
+replaced it by a specialized copy `mlk_rej_uniform_c.constprop.0` with the
+target fixed at 256, which is what `mlkem_poly_rej_uniform` and
+`mlkem_poly_rej_uniform_x4` call, so this takes the arguments `r`,
+`offset`, `buf` and `buflen`. Since the callers all pass a buffer length
+of 168 or 504, the compiler has also dropped the initial check that there
+is at least one group of 3 bytes in the buffer, so the specification
+requires `3 <= buflen`. The callers also set X3 only once for several
+calls, relying on it not being changed, which the ABI would allow, so the
+specifications state exactly which registers may be changed. As for the
+hand-written kernel, there is a proof of memory safety but not of
+constant time, since the control flow depends on the values sampled.
+Correctness and memory safety are proved together, since the simulation
+of the loop is the same.
 
 The SHA-256 hashes of the binaries used, which match those recorded in
 `binaries/builds.json`, are:
