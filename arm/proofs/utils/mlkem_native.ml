@@ -279,10 +279,45 @@ let MONTRED_NEON_SCALAR = prove
     BITBLAST_TAC]);;
 
 (* ------------------------------------------------------------------------- *)
+(* Splitting off the 8 coefficients handled by one iteration of a loop that  *)
+(* the compiler has vectorized.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+let CHUNK8_INPUT_SPLIT = prove
+ (`!P i. i < 32
+         ==> ((!j. 8 * i <= j /\ j < 256 ==> P j) <=>
+              (!j. 8 * (i + 1) <= j /\ j < 256 ==> P j) /\
+              (!k. k < 8 ==> P(8 * i + k)))`,
+  REPEAT STRIP_TAC THEN EQ_TAC THENL
+   [REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    STRIP_TAC THEN X_GEN_TAC `j:num` THEN STRIP_TAC THEN
+    ASM_CASES_TAC `8 * (i + 1) <= j` THEN ASM_SIMP_TAC[] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `j - 8 * i`) THEN
+    ASM_SIMP_TAC[ARITH_RULE `8 * i <= j ==> 8 * i + (j - 8 * i) = j`] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
+
+let CHUNK8_OUTPUT_SPLIT = prove
+ (`!P i. (!j. j < 8 * (i + 1) ==> P j) <=>
+         (!j. j < 8 * i ==> P j) /\ (!k. k < 8 ==> P(8 * i + k))`,
+  REPEAT GEN_TAC THEN EQ_TAC THENL
+   [REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    STRIP_TAC THEN X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+    ASM_CASES_TAC `j < 8 * i` THEN ASM_SIMP_TAC[] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `j - 8 * i`) THEN
+    ASM_SIMP_TAC[ARITH_RULE `~(j < 8 * i) ==> 8 * i + (j - 8 * i) = j`] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
+
+let CHUNK8_ADDR = prove
+ (`!a i k. word_add a (word(2 * (8 * i + k))):int64 =
+           word_add (word_add a (word(16 * i))) (word(2 * k))`,
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  REPEAT GEN_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
+
+(* ------------------------------------------------------------------------- *)
 (* The table of zetas used by the C code, as the values in the source code   *)
 (* and as the bytes of the read-only data in the compiled code. The latter   *)
 (* is defined here so that it can be shared by several proofs; the proofs    *)
-(* still check that it is the same as the data in their object files, since *)
+(* still check that it is the same as the data in their object files, since  *)
 (* define_assert_relocs_from_elf can then only make a benign redefinition.   *)
 (* ------------------------------------------------------------------------- *)
 
