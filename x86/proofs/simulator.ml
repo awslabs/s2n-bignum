@@ -1245,7 +1245,8 @@ let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list 
        ([],goal)
       with
         _,[_,endres],_ ->
-         (if endres = `T` || only_undefinedness endres then
+         (if endres = `T` then true
+          else if only_undefinedness endres then
             (Format.print_string "Modulo undefinedness "; true)
           else
             let _,[_,gsd],_ =
