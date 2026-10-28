@@ -330,7 +330,7 @@ let mlkem_native_poly_mulcache_compute_signature =
    []);;
 let full_spec,public_vars = mk_safety_spec
     ~readonly_objects:[`word zetas:int64`,`256`]
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     mlkem_native_poly_mulcache_compute_signature
     MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SUBROUTINE_CORRECT
     MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_EXEC;;
@@ -359,7 +359,8 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SUBROUTINE_SAFE = time prove
                         memaccess_inbounds e2
                          [src,512; dst,256; word zetas,256]
                          [dst,256])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(dst,256)])`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(src:int64) (dst:int64) (zetas:num) (pc:num) (returnaddress:int64).
@@ -371,7 +372,8 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SUBROUTINE_SAFE = time prove
     :(uarch_event)list` THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
   REPEAT GEN_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL;
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALL;
               fst MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
@@ -493,7 +495,8 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                         memaccess_inbounds e2
                          [src,512; dst,256; word (pc + 0x6380),256]
                          [dst,256])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(dst,256)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC
    MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SUBROUTINE_SAFE
    [`pc + 0x4240`,`pc:num`; `pc + 0x6380`,`zetas:num`]

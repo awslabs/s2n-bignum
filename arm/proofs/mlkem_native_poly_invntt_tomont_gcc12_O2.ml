@@ -1100,7 +1100,8 @@ needs "arm/proofs/subroutine_signatures.ml";;
 
 let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK_SAFE = prove
  (`exists f_ev_blk.
-   forall e a consts zetas pc sp start len k w17 w18 w30 returnaddress.
+   forall e a consts zetas pc sp start len k w17 w18 w30 returnaddress
+          x19v.
      ALL (nonoverlapping (a,512))
          [(word pc,0x148); (word zetas,256); (sp,16)] /\
      1 <= len /\ start + 2 * len <= 256 /\ 1 <= k /\ k < 256
@@ -1117,6 +1118,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK_SAFE = prove
                read SP s = sp /\
                read(memory :> bytes64(word_add sp (word 8))) s =
                returnaddress /\
+               read(memory :> bytes64 sp) s = x19v /\
                read events s = e)
           (\s. aligned_bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
@@ -1131,13 +1133,16 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK_SAFE = prove
                read SP s = sp /\
                read(memory :> bytes64(word_add sp (word 8))) s =
                returnaddress /\
+               read(memory :> bytes64 sp) s = x19v /\
                exists e2.
                  read events s = APPEND e2 e /\
                  e2 = f_ev_blk a consts zetas pc start len /\
                  memaccess_inbounds e2
                   [a,512; sp,16; word consts,32; word zetas,256]
                   [a,512; sp,16])
-          (\s s'. true)`,
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [X18; X19; X30] ,,
+           MAYCHANGE [memory :> bytes(a,512)])`,
   CONCRETIZE_F_EVENTS_TAC
    `\(a:int64) (consts:num) (zetas:num) (pc:num) (start:num) (len:num).
       APPEND (f_ev_blkend a consts zetas pc start len)
@@ -1146,7 +1151,9 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK_SAFE = prove
                 (f_ev_blkhead a consts zetas pc start len))
      :(uarch_event)list` THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT STRIP_TAC THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + 0xc4` `pc + 0x110`
    `\j s. read X2 s = word_add a (word(2 * (start + len + j))) /\
           read X3 s = word_add a (word(2 * (start + 2 * len))) /\
@@ -1157,7 +1164,8 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK_SAFE = prove
           read X16 s = word_add a (word 2) /\
           read X17 s = w17 /\ read X18 s = w18 /\ read X30 s = w30 /\
           read SP s = sp /\
-          read(memory :> bytes64(word_add sp (word 8))) s = returnaddress` THEN
+          read(memory :> bytes64(word_add sp (word 8))) s = returnaddress /\
+          read(memory :> bytes64 sp) s = x19v` THEN
   REPEAT CONJ_TAC THENL
    [ASM_ARITH_TAC;
 
@@ -1217,7 +1225,7 @@ let INVNTT_GCC12_O2_BLOCK_EVENTS =
 let lsafe_goal l =
   let tm =
   `exists f_ev_lay.
-    forall e a consts zetas pc sp returnaddress.
+    forall e a consts zetas pc sp returnaddress x19v.
      ALL (nonoverlapping (a,512))
          [(word pc,0x148); (word zetas,256); (sp,16)]
      ==> ensures arm
@@ -1232,6 +1240,7 @@ let lsafe_goal l =
                read SP s = sp /\
                read(memory :> bytes64(word_add sp (word 8))) s =
                returnaddress /\
+               read(memory :> bytes64 sp) s = x19v /\
                read events s = e)
           (\s. aligned_bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
@@ -1244,13 +1253,16 @@ let lsafe_goal l =
                read SP s = sp /\
                read(memory :> bytes64(word_add sp (word 8))) s =
                returnaddress /\
+               read(memory :> bytes64 sp) s = x19v /\
                exists e2.
                  read events s = APPEND e2 e /\
                  e2 = f_ev_lay a consts zetas pc /\
                  memaccess_inbounds e2
                   [a,512; sp,16; word consts,32; word zetas,256]
                   [a,512; sp,16])
-          (\s s'. true)` in
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [X18; X19; X30] ,,
+           MAYCHANGE [memory :> bytes(a,512)])` in
   rhs(concl(NUM_REDUCE_CONV(subst [mk_small_numeral l,`L:num`] tm)));;
 
 (*** The event template for layer l ***)
@@ -1288,7 +1300,7 @@ let invntt_block_events_inst l b ev =
   SPECL [ev; `a:int64`; `consts:num`; `zetas:num`; `pc:num`;
          `sp:int64`; red `2 * LEN * B`; red `LEN:num`;
          red `2 EXP L - 1 - B`; red `word L:int64`; `word 1:int64`;
-         `word 256:int64`; `returnaddress:int64`]
+         `word 256:int64`; `returnaddress:int64`; `x19v:int64`]
         INVNTT_GCC12_O2_BLOCK_EVENTS;;
 
 (*** Register state at the block head and block end (b blocks done) ***)
@@ -1303,7 +1315,8 @@ let lsafe_blockhead_tm,lsafe_blockend_tm =
         read X17 s = word L /\ read X18 s = word 1 /\
         read X30 s = word 256 /\
         read SP s = sp /\
-        read(memory :> bytes64(word_add sp (word 8))) s = returnaddress` in
+        read(memory :> bytes64(word_add sp (word 8))) s = returnaddress /\
+        read(memory :> bytes64 sp) s = x19v` in
   let mk l b =
     rhs(concl(NUM_REDUCE_CONV(subst
      [mk_small_numeral l,`L:num`; mk_small_numeral(1 lsl (8 - l)),`LEN:num`;
@@ -1366,7 +1379,9 @@ let INVNTT_LAYER_SAFE_TAC l =
       LSAFE_SIM_TAC ALL_TAC 2] in
   CONCRETIZE_F_EVENTS_TAC (lsafe_template l) THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT STRIP_TAC THEN
   if l = 1 then blk0_tac else
   ENSURES_EVENTS_WHILE_UP2_TAC k `pc + 0x120` `pc + 0x128`
    (mk_abs(`i:num`,lsafe_blockend_tm l `i + 1`)) THEN
@@ -1406,7 +1421,7 @@ let INVNTT_GCC12_O2_LAYER_EVENTS =
 
 let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE_SAFE = prove
  (`exists f_ev_scale.
-    forall e a consts zetas pc sp returnaddress.
+    forall e a consts zetas pc sp returnaddress x19v.
      adrp_within_bounds (word(consts + 16)) (word(pc + 0x4)) /\
      adrp_within_bounds (word consts) (word(pc + 0x14)) /\
      aligned 16 (word consts:int64) /\ aligned 16 sp /\
@@ -1419,7 +1434,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE_SAFE = prove
                     pc consts zetas) /\
                read PC s = word pc /\
                read X0 s = a /\ read SP s = word_add sp (word 16) /\
-               read X30 s = returnaddress /\
+               read X30 s = returnaddress /\ read X19 s = x19v /\
                read events s = e)
           (\s. aligned_bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
@@ -1429,13 +1444,16 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE_SAFE = prove
                read SP s = sp /\
                read(memory :> bytes64(word_add sp (word 8))) s =
                returnaddress /\
+               read(memory :> bytes64 sp) s = x19v /\
                exists e2.
                  read events s = APPEND e2 e /\
                  e2 = f_ev_scale a consts zetas pc sp /\
                  memaccess_inbounds e2
                   [a,512; sp,16; word consts,32; word zetas,256]
                   [a,512; sp,16])
-          (\s s'. true)`,
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [X18; X19; X30; SP] ,,
+           MAYCHANGE [memory :> bytes(a,512); memory :> bytes(sp,16)])`,
   CONCRETIZE_F_EVENTS_TAC
    `\(a:int64) (consts:num) (zetas:num) (pc:num) (sp:int64).
       APPEND (f_ev_sexit a consts zetas pc sp)
@@ -1443,7 +1461,9 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE_SAFE = prove
                 (f_ev_sprol a consts zetas pc sp))
      :(uarch_event)list` THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT STRIP_TAC THEN
   SUBGOAL_THEN `aligned 16 (word(consts + 16):int64)` ASSUME_TAC THENL
    [REWRITE_TAC[WORD_ADD] THEN
     CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN
@@ -1459,7 +1479,8 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE_SAFE = prove
           read X1 s = word_add a (word 512) /\
           read X15 s = a /\
           read SP s = sp /\
-          read(memory :> bytes64(word_add sp (word 8))) s = returnaddress` THEN
+          read(memory :> bytes64(word_add sp (word 8))) s = returnaddress /\
+          read(memory :> bytes64 sp) s = x19v` THEN
   REPEAT CONJ_TAC THENL
    [ARITH_TAC;
 
@@ -1534,26 +1555,32 @@ let invntt_safe_layer_tm,invntt_safe_scaleend_tm =
         read X17 s = word L /\ read X18 s = word 1 /\
         read X30 s = word 256 /\ read SP s = stackpointer /\
         read(memory :> bytes64(word_add stackpointer (word 8))) s =
-        returnaddress`
+        returnaddress /\
+        read(memory :> bytes64 stackpointer) s = x19_init`
   and stm =
    `\s. read X15 s = a /\ read SP s = stackpointer /\
         read(memory :> bytes64(word_add stackpointer (word 8))) s =
-        returnaddress` in
+        returnaddress /\
+        read(memory :> bytes64 stackpointer) s = x19_init` in
   (fun l -> rhs(concl(NUM_REDUCE_CONV(subst [mk_small_numeral l,`L:num`]
                                              tm)))),stm;;
 
 let invntt_layer_events_inst l ev =
   SPECL [ev; `a:int64`; `consts:num`; `zetas:num`; `pc:num`;
-         `stackpointer:int64`; `returnaddress:int64`]
+         `stackpointer:int64`; `returnaddress:int64`; `x19_init:int64`]
         (el (l - 1) INVNTT_GCC12_O2_LAYER_EVENTS);;
 
 let INVNTT_SAFE_TOP_TAC =
   CONCRETIZE_F_EVENTS_TAC invntt_top_template THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
   REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL] THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REPEAT STRIP_TAC THEN
   RULE_ASSUM_TAC(CONV_RULE(TRY_CONV NORMALIZE_ALIGNED_WORD_CONV)) THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
 
   (*** Restoring X19 and X30 and returning after the last layer ***)
 
@@ -1577,13 +1604,15 @@ let INVNTT_SAFE_TOP_TAC =
   CONJ_TAC THENL
    [MP_TAC(SPECL [`e:(uarch_event)list`; `a:int64`; `consts:num`;
                   `zetas:num`; `pc:num`; `stackpointer:int64`;
-                  `returnaddress:int64`] INVNTT_GCC12_O2_SCALE_EVENTS) THEN
+                  `returnaddress:int64`; `x19_init:int64`]
+                 INVNTT_GCC12_O2_SCALE_EVENTS) THEN
     ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN
     DISCH_THEN ENSURES_WEAKEN_TAC THEN REPEAT CONJ_TAC THENL
      [GEN_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
       GEN_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
       ASM_MESON_TAC[];
-      REWRITE_TAC[subsumed]];
+      REWRITE_TAC[SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+      SUBSUMED_MAYCHANGE_TAC];
     CONV_TAC(DEPTH_CONV BETA_CONV) THEN
     REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
     TRY STRIP_EXISTS_ASSUM_TAC THEN
@@ -1597,7 +1626,7 @@ let INVNTT_SAFE_TOP_TAC =
 
 let full_spec,public_vars = mk_safety_spec
     ~readonly_objects:[`word consts:int64`,`32`; `word zetas:int64`,`256`]
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mlkem_reduce" subroutine_signatures)
     MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_CORRECT
     MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_EXEC;;
@@ -1635,7 +1664,9 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_SAFE = time prove
                    [a,512; word_sub stackpointer (word 16),16;
                     word consts,32; word zetas,256]
                    [a,512; word_sub stackpointer (word 16),16])
-           (\s s'. true)`,
+           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+            MAYCHANGE [memory :> bytes(a,512);
+                       memory :> bytes(word_sub stackpointer (word 16),16)])`,
   ASSERT_CONCL_TAC full_spec THEN INVNTT_SAFE_TOP_TAC);;
 
 (* ------------------------------------------------------------------------- *)
@@ -1719,7 +1750,9 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                    [a,512; word_sub stackpointer (word 16),16;
                     word (pc + 0x6230),32; word (pc + 0x6380),256]
                    [a,512; word_sub stackpointer (word 16),16])
-           (\s s'. true)`,
+           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+            MAYCHANGE [memory :> bytes(a,512);
+                       memory :> bytes(word_sub stackpointer (word 16),16)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC
    MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_SAFE
    [`pc + 0x4394`,`pc:num`; `pc + 0x6230`,`consts:num`;

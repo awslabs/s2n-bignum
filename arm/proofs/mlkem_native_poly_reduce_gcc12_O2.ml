@@ -215,7 +215,7 @@ needs "arm/proofs/subroutine_signatures.ml";;
 (*** The C signature is the same as that of mlkem_reduce ***)
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mlkem_reduce" subroutine_signatures)
     MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_CORRECT
     MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_EXEC;;
@@ -238,7 +238,8 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_SAFE = time prove
                         read events s = APPEND e2 e /\
                         e2 = f_events a pc returnaddress /\
                         memaccess_inbounds e2 [a,512] [a,512])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,512)])`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(a:int64) (pc:num) (returnaddress:int64).
@@ -251,6 +252,7 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_SAFE = time prove
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
   REPEAT GEN_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               fst MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
@@ -355,7 +357,8 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                         read events s = APPEND e2 e /\
                         e2 = f_events a pc returnaddress /\
                         memaccess_inbounds e2 [a,512] [a,512])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,512)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_SAFE
    [`pc + 0x4190`,`pc:num`]
    [MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IN_IMAGE]);;
