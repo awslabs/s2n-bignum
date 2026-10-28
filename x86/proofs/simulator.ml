@@ -1058,17 +1058,33 @@ let rec split_first_n (ls: 'a list) (n: int) =
     | h::t -> let l1, l2 = split_first_n t (n-1) in (h::l1, l2)
     | [] -> failwith "n cannot be smaller than the length of ls";;
 
+(*** Accept a residual goal if it only constrains undefined values. Each
+ *** conjunct must have one of the forms below, and it then suggests a
+ *** value for its undefined variable. Since a conjunct can be impossible
+ *** on its own (word_zx u = word 4294967296) or contradict another one
+ *** (u /\ ~u), check that one choice of all the variables makes the whole
+ *** residue true, instead of just checking the conjuncts' shapes.
+ ***)
+
 let only_undefinedness =
-  let zx_tm = `word_zx:int32->int64` in
+  let zx_tm = `word_zx:int32->int64`
+  and trunc_tm = `word_zx:int64->int32` in
   let is_undefname s =
      String.length s >= 10 && String.sub s 0 10 = "undefined_" in
   let is_undef t = is_var t && is_undefname (fst(dest_var t)) in
-  let is_nundef tm = match tm with
-      Comb(Comb(Const("=",_),l),r) when is_undef l -> true
-    | Comb(Comb(Const("=",_),Comb(z,l)),r) when z = zx_tm && is_undef l -> true
-    | Comb(Const("~",_),l) when is_undef l -> true
-    | _ -> is_undef tm in
-  forall is_nundef o conjuncts;;
+  let witness tm = match tm with
+      Comb(Comb(Const("=",_),l),r) when is_undef l -> r,l
+    | Comb(Comb(Const("=",_),Comb(z,l)),r) when z = zx_tm && is_undef l ->
+        mk_comb(trunc_tm,r),l
+    | Comb(Const("~",_),l) when is_undef l -> `F`,l
+    | _ -> if is_undef tm then `T`,tm else failwith "witness" in
+  let add_witness (t,v) theta =
+    if exists (fun (_,v') -> v' = v) theta then theta else (t,v)::theta in
+  let eval_conv = WORD_REDUCE_CONV THENC REWRITE_CONV[] in
+  fun tm ->
+    try let theta = itlist add_witness (map witness (conjuncts tm)) [] in
+        rhs(concl(eval_conv(vsubst theta tm))) = `T`
+    with Failure _ -> false;;
 
 (* This makes MESON quiet. *)
 verbose := false;;
