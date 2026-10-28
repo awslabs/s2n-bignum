@@ -138,8 +138,13 @@ theorems for the calls. So far this is done for
 `mlkem_keccakf1600x4_permute`, at address 0x33a0, which calls
 `mlkem_keccakf1600_permute` four times, the last time as a tail call, and
 for the functions `mlkem768_polyvec_<op>` that apply `mlkem_poly_<op>` to
-each polynomial of a vector, for `<op>` one of `invntt_tomont`,
+each polynomial of a vector, for `<op>` one of `add`, `invntt_tomont`,
 `mulcache_compute`, `ntt`, `reduce`, `tobytes` and `tomont` (in the files
 `mlkem_native_polyvec_<op>_k3_gcc12_O2.ml`). As in `common/fips203.ml`, a
 vector of k polynomials is given by its 256 * k coefficients, of which
 those of polynomial j are `\i. x(256 * j + i)`.
+
+The functions without transcriptions of their own are also verified
+directly in the image, in the files
+`../proofs/mlkem_native_<function>_gcc12_O2.ml` for `mlkem_<function>`.
+So far these are `mlkem_poly_add` and `mlkem_poly_sub`.

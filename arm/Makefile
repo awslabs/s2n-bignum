@@ -456,11 +456,15 @@ MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
                    mlkem_native/mlkem_native_rej_uniform_gcc12_O2.o
 
 # Proofs about functions in the whole image of the gcc 12 -O2 binary,
-# mlkem_native/mlkem_native_libmlkem_gcc12_O2.o, that call other functions
-# there, and so have no object files of their own
+# mlkem_native/mlkem_native_libmlkem_gcc12_O2.o, which have no object files
+# of their own, since they are only verified there (including all those
+# that call other functions)
 
 MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2 \
+  mlkem_native/mlkem_native_poly_add_gcc12_O2 \
+  mlkem_native/mlkem_native_poly_sub_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_invntt_tomont_k3_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_mulcache_compute_k3_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_ntt_k3_gcc12_O2 \
@@ -621,6 +625,8 @@ $(MLKEM_NATIVE_IMAGE_PROOFS:=.native): mlkem_native/%.native: \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_add_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_invntt_tomont_k3_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_invntt_tomont_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_mulcache_compute_k3_gcc12_O2.native: \
