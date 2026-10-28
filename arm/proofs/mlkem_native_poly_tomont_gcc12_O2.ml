@@ -102,40 +102,6 @@ let TOMONT_LANE = prove
   REWRITE_TAC[GSYM INT_REM_EQ] THEN CONV_TAC INT_REDUCE_CONV);;
 
 (* ------------------------------------------------------------------------- *)
-(* Splitting off the 8 coefficients handled by one iteration of the loop.   *)
-(* ------------------------------------------------------------------------- *)
-
-let TOMONT_INPUT_SPLIT = prove
- (`!P i. i < 32
-         ==> ((!j. 8 * i <= j /\ j < 256 ==> P j) <=>
-              (!j. 8 * (i + 1) <= j /\ j < 256 ==> P j) /\
-              (!k. k < 8 ==> P(8 * i + k)))`,
-  REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
-    STRIP_TAC THEN X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-    ASM_CASES_TAC `8 * (i + 1) <= j` THEN ASM_SIMP_TAC[] THEN
-    FIRST_X_ASSUM(MP_TAC o SPEC `j - 8 * i`) THEN
-    ASM_SIMP_TAC[ARITH_RULE `8 * i <= j ==> 8 * i + (j - 8 * i) = j`] THEN
-    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
-
-let TOMONT_OUTPUT_SPLIT = prove
- (`!P i. (!j. j < 8 * (i + 1) ==> P j) <=>
-         (!j. j < 8 * i ==> P j) /\ (!k. k < 8 ==> P(8 * i + k))`,
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
-    STRIP_TAC THEN X_GEN_TAC `j:num` THEN DISCH_TAC THEN
-    ASM_CASES_TAC `j < 8 * i` THEN ASM_SIMP_TAC[] THEN
-    FIRST_X_ASSUM(MP_TAC o SPEC `j - 8 * i`) THEN
-    ASM_SIMP_TAC[ARITH_RULE `~(j < 8 * i) ==> 8 * i + (j - 8 * i) = j`] THEN
-    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
-
-let TOMONT_ADDR = prove
- (`!a i k. word_add a (word(2 * (8 * i + k))):int64 =
-           word_add (word_add a (word(16 * i))) (word(2 * k))`,
-  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
-  REPEAT GEN_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
-
-(* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
@@ -212,10 +178,10 @@ let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_CORRECT = prove
 
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
     FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I
-      [MATCH_MP TOMONT_INPUT_SPLIT (ASSUME `i < 32`)]) THEN
+      [MATCH_MP CHUNK8_INPUT_SPLIT (ASSUME `i < 32`)]) THEN
     DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
     CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
-    REWRITE_TAC[TOMONT_ADDR; ADD_CLAUSES] THEN
+    REWRITE_TAC[CHUNK8_ADDR; ADD_CLAUSES] THEN
     CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
     REWRITE_TAC[WORD_ADD_0] THEN STRIP_TAC THEN
     MP_TAC(READ_MEMORY_MERGE_CONV 3
@@ -233,9 +199,9 @@ let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_CORRECT = prove
      [REWRITE_TAC[ARITH_RULE `16 * (i + 1) = 16 * i + 16`] THEN
       CONV_TAC WORD_RULE;
       ALL_TAC] THEN
-    REWRITE_TAC[TOMONT_OUTPUT_SPLIT] THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[CHUNK8_OUTPUT_SPLIT] THEN ASM_REWRITE_TAC[] THEN
     CONV_TAC EXPAND_CASES_CONV THEN
-    REWRITE_TAC[TOMONT_ADDR; ADD_CLAUSES] THEN
+    REWRITE_TAC[CHUNK8_ADDR; ADD_CLAUSES] THEN
     CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
     REWRITE_TAC[WORD_ADD_0] THEN
     CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[] THEN
