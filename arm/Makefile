@@ -455,6 +455,13 @@ MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_tomont_gcc12_O2.o \
                    mlkem_native/mlkem_native_rej_uniform_gcc12_O2.o
 
+# Proofs about functions in the whole image of the gcc 12 -O2 binary,
+# mlkem_native/mlkem_native_libmlkem_gcc12_O2.o, that call other functions
+# there, and so have no object files of their own
+
+MLKEM_NATIVE_IMAGE_PROOFS = \
+  mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2
+
 # Tutorial assembly files
 
 TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
@@ -507,8 +514,10 @@ BASE_ML=proofs/arm.ml \
 HOLDIR?=$(HOME)/hol-light
 HOLLIGHT:=$(HOLDIR)/hol.sh
 
-PROOF_BINS = $(OBJ:.o=.native) $(MLKEM_NATIVE_OBJ:.o=.native)
-PROOF_LOGS = $(OBJ:.o=.correct) $(MLKEM_NATIVE_OBJ:.o=.correct)
+PROOF_BINS = $(OBJ:.o=.native) $(MLKEM_NATIVE_OBJ:.o=.native) \
+             $(MLKEM_NATIVE_IMAGE_PROOFS:=.native)
+PROOF_LOGS = $(OBJ:.o=.correct) $(MLKEM_NATIVE_OBJ:.o=.correct) \
+             $(MLKEM_NATIVE_IMAGE_PROOFS:=.correct)
 TUTORIAL_PROOF_BINS = $(TUTORIAL_PROOFS:.ml=.native)
 TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 
@@ -599,6 +608,10 @@ aes_gcm/aes256_gcm_enc_alt.native: $(AES_GCM_PROOF_UTILS)
 $(MLKEM_NATIVE_OBJ:.o=.native): proofs/utils/mlkem_native.ml \
   proofs/mlkem_native_libmlkem_gcc12_O2.ml \
   mlkem_native/mlkem_native_libmlkem_gcc12_O2.o
+mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2.native: \
+  proofs/mlkem_native_keccakf1600x4_permute_gcc12_O2.ml $(BASE_ML) \
+  mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \
