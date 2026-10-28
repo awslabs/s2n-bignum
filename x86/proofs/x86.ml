@@ -1580,6 +1580,11 @@ let x86_SET = new_definition
           (dest := (if condition_semantics cc s then
                     word 1:byte else word 0)) s`;;
 
+(*** CF is undefined for SHL and SHR if the masked count is at least the
+ *** operand size, which is only possible for 8-bit and 16-bit operands.
+ *** The ALT forms below drop the test in the 32-bit and 64-bit cases.
+ ***)
+
 let x86_SHL = new_definition
  `x86_SHL dest c s =
       let x = read dest s in
@@ -1588,8 +1593,9 @@ let x86_SHL = new_definition
        ZF := (if c = 0 then read ZF s else val z = 0) ,,
        SF := (if c = 0 then read SF s else ival z < &0) ,,
        PF := (if c = 0 then read PF s else word_evenparity(word_zx z:byte)) ,,
-       CF := (if c = 0 then read CF s
-              else bit (dimindex(:N)-1) (word_shl x (c - 1))) ,,
+       (if dimindex(:N) <= c then UNDEFINED_VALUES[CF]
+        else CF := (if c = 0 then read CF s
+                    else bit (dimindex(:N)-1) (word_shl x (c - 1)))) ,,
        (if c = 0 then
           OF := read OF s
         else if c = 1 then
@@ -1637,7 +1643,9 @@ let x86_SHR = new_definition
        ZF := (if c = 0 then read ZF s else val z = 0) ,,
        SF := (if c = 0 then read SF s else ival z < &0) ,,
        PF := (if c = 0 then read PF s else word_evenparity(word_zx z:byte)) ,,
-       CF := (if c = 0 then read CF s else bit 0 (word_ushr x (c - 1))) ,,
+       (if dimindex(:N) <= c then UNDEFINED_VALUES[CF]
+        else CF := (if c = 0 then read CF s
+                    else bit 0 (word_ushr x (c - 1)))) ,,
        (if c = 0 then
           OF := read OF s
         else if c = 1 then
@@ -4803,6 +4811,21 @@ let x86_SHLD_ALT,x86_SHRD_ALT =
     CONJ (inst `:64` `64`) (inst `:32` `32`) in
   mk x86_SHLD,mk x86_SHRD;;
 
+let x86_SHL_ALT,x86_SHR_ALT =
+  let lemma = prove
+   (`(!n. dimindex(:64) <= n MOD 64 <=> F) /\
+     (!n. dimindex(:32) <= n MOD 32 <=> F)`,
+    REWRITE_TAC[DIMINDEX_64; DIMINDEX_32; NOT_LE; MOD_LT_EQ] THEN
+    CONV_TAC NUM_REDUCE_CONV) in
+  let mk def =
+    let inst ty m =
+      let th = SPEC_ALL (INST_TYPE [ty,`:N`] def) in
+      let c' = mk_comb(mk_comb(`(MOD)`,`n:num`),m) in
+      GEN_ALL(PURE_REWRITE_RULE[lemma; COND_CLAUSES] (INST [c',`c:num`] th)) in
+    end_itlist CONJ [inst `:64` `64`; inst `:32` `32`;
+                     INST_TYPE [`:16`,`:N`] def; INST_TYPE [`:8`,`:N`] def] in
+  mk x86_SHL,mk x86_SHR;;
+
 let X86_OPERATION_CLAUSES =
   map (CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
        REWRITE_RULE[WORD_ZX_TRIVIAL] o
@@ -4820,7 +4843,7 @@ let X86_OPERATION_CLAUSES =
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
     x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
-    x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD_ALT; x86_SHR; x86_SHRD_ALT;
+    x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL_ALT; x86_SHLD_ALT; x86_SHR_ALT; x86_SHRD_ALT;
     x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDB_ALT; x86_VPADDD_ALT; x86_VPADDQ_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHUW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPINSRW; x86_VINSERTI128; x86_VEXTRACTI128;
