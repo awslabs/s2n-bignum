@@ -308,12 +308,6 @@ let current_pc (asl,w) =
                                    with Failure _ -> false) asl) in
   rhs(concl th);;
 
-(*** Remove trivial assumptions: ARM_CONV rewrites with all assumptions ***)
-(*** and loops on any term containing T if one of them is just T        ***)
-
-let DISCARD_TRUE_TAC =
-  REPEAT(FIRST_X_ASSUM(K ALL_TAC o check ((=) `T`) o concl));;
-
 (*** Decide a condition by arithmetic, keeping it as an assumption ***)
 
 let DECIDE_PROP_TAC c =
@@ -473,10 +467,9 @@ let REJ_STEP_TAC idx posth n =
       [ASSUME(mk_eq(mk_comb(`val:12 word->num`,e0),`n0:num`));
        ASSUME(mk_eq(mk_comb(`val:12 word->num`,e1),`n1:num`))])
    else ALL_TAC) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[posth]) THEN DISCARD_TRUE_TAC THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[posth]) THEN
   REJ_NORM_TAC THEN TRY DECIDE_COND_TAC THEN
-  TRY W32S_DECIDE_FLAGS_TAC THEN TRY DECIDE_BRANCH_TAC THEN
-  DISCARD_TRUE_TAC;;
+  TRY W32S_DECIDE_FLAGS_TAC THEN TRY DECIDE_BRANCH_TAC;;
 
 (*** Simulate from the head of the group until the PC is the target ***)
 
@@ -487,7 +480,6 @@ let rec REJ_RUN_TAC idx posth n target (asl,w) =
 
 let REJ_CASE_TAC idx target =
   let pos = subst [idx,`i:num`] `word(3 * i + 6):int64` in
-  DISCARD_TRUE_TAC THEN
   FIRST_ASSUM(fun th ->
     if (try rand(concl th) = pos with Failure _ -> false)
     then REJ_RUN_TAC idx th 1 target
