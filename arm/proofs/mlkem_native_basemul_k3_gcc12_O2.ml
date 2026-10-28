@@ -519,3 +519,106 @@ let MLKEM_NATIVE_BASEMUL_K3_GCC12_O2_SUBROUTINE_SAFE = time prove
     CONV_TAC WORD_RULE;
     ALL_TAC]) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The same code in the whole image, at address 0x5f40 (see                  *)
+(* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+
+let MLKEM_NATIVE_BASEMUL_K3_GCC12_O2_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_basemul_k3_gcc12_O2_mc
+    0x5f40 [];;
+
+let MLKEM_NATIVE_BASEMUL_K3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (`!srcA srcB srcBt dst x0 y0 y0t x1 y1 y1t x2 y2 y2t pc returnaddress.
+     aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+     ALL (nonoverlapping (dst, 512))
+         [(word pc, 0x6480); (srcA, 1536); (srcB, 1536); (srcBt, 768)]
+     ==>
+     ensures arm
+       (\s. aligned_bytes_loaded s (word pc)
+              mlkem_native_libmlkem_gcc12_O2_mc /\
+            read PC s = word (pc + 0x5f40) /\
+            read X30 s = returnaddress /\
+            C_ARGUMENTS [dst; srcA; srcB; srcBt] s  /\
+            (!i. i < 256
+                 ==> read(memory :> bytes16
+                      (word_add srcA (word (2 * i)))) s = x0 i) /\
+            (!i. i < 256
+                 ==> read(memory :> bytes16
+                      (word_add srcB (word (2 * i)))) s = y0 i) /\
+            (!i. i < 128
+                 ==> read(memory :> bytes16
+                      (word_add srcBt (word (2 * i)))) s = y0t i) /\
+            (!i. i < 256
+                 ==> read(memory :> bytes16
+                      (word_add srcA (word (512 + 2 * i)))) s = x1 i) /\
+            (!i. i < 256
+                 ==> read(memory :> bytes16
+                      (word_add srcB (word (512 + 2 * i)))) s = y1 i) /\
+            (!i. i < 128
+                 ==> read(memory :> bytes16
+                      (word_add srcBt (word (256 + 2 * i)))) s = y1t i) /\
+            (!i. i < 256
+                 ==> read(memory :> bytes16
+                      (word_add srcA (word (1024 + 2 * i)))) s = x2 i) /\
+            (!i. i < 256
+                 ==> read(memory :> bytes16
+                      (word_add srcB (word (1024 + 2 * i)))) s = y2 i) /\
+            (!i. i < 128
+                 ==> read(memory :> bytes16
+                      (word_add srcBt (word (512 + 2 * i)))) s = y2t i))
+       (\s. read PC s = returnaddress /\
+            ((!i. i < 256
+                  ==> abs(ival(x0 i)) <= &2 pow 12 /\
+                       abs(ival(x1 i)) <= &2 pow 12 /\
+                       abs(ival(x2 i)) <= &2 pow 12)
+             ==> (!i. i < 128
+                      ==> (ival(read(memory :> bytes16
+                             (word_add dst (word (4 * i)))) s) ==
+                           basemul3_even
+                            (ival o x0) (ival o y0) (ival o y0t) (ival o x1)
+                            (ival o y1) (ival o y1t) (ival o x2) (ival o y2)
+                            (ival o y2t)
+                            i) (mod &3329) /\
+                          (ival(read(memory :> bytes16
+                             (word_add dst (word (4 * i + 2)))) s) ==
+                           basemul3_odd
+                            (ival o x0) (ival o y0) (ival o x1) (ival o y1)
+                            (ival o x2) (ival o y2)
+                            i) (mod &3329))))
+       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+        MAYCHANGE [memory :> bytes(dst, 512)])`,
+  MLKEM_NATIVE_IMAGE_TAC
+   (INST [`pc + 0x5f40`,`pc:num`]
+     (SPEC_ALL MLKEM_NATIVE_BASEMUL_K3_GCC12_O2_SUBROUTINE_CORRECT))
+   [MLKEM_NATIVE_BASEMUL_K3_GCC12_O2_IN_IMAGE]);;
+
+let MLKEM_NATIVE_BASEMUL_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e srcA srcB srcBt dst pc returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           ALL (nonoverlapping (dst,512))
+           [word pc,0x6480; srcA,1536; srcB,1536; srcBt,768]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read PC s = word (pc + 0x5f40) /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [dst; srcA; srcB; srcBt] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 = f_events srcA srcB srcBt dst pc returnaddress /\
+                        memaccess_inbounds e2
+                         [srcA,1536; srcB,1536; srcBt,768; dst,512]
+                         [dst,512])
+               (\s s'. true)`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_BASEMUL_K3_GCC12_O2_SUBROUTINE_SAFE
+   [`pc + 0x5f40`,`pc:num`]
+   [MLKEM_NATIVE_BASEMUL_K3_GCC12_O2_IN_IMAGE]);;

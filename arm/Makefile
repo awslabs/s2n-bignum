@@ -623,8 +623,11 @@ proofs/aes_gcm_spec_checks.native: proofs/aes_gcm_spec_checks.ml $(BASE_ML) \
                                    ../common/fips197_kats.ml ../common/gcm_kats.ml ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
-# The proofs of mlkem-native's compiled code share some lemmas.
-$(MLKEM_NATIVE_OBJ:.o=.native): proofs/utils/mlkem_native.ml
+# The proofs of mlkem-native's compiled code share some lemmas, and give
+# versions of the theorems for the same code in the whole image.
+$(MLKEM_NATIVE_OBJ:.o=.native): proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native_libmlkem_gcc12_O2.ml \
+  mlkem_native/mlkem_native_libmlkem_gcc12_O2.o
 
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \

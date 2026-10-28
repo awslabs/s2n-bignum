@@ -125,3 +125,10 @@ at `pc`. When `pc` is a multiple of 4096, and the image does not wrap around
 the end of the address space, the relocated instructions in the individual
 transcriptions are the same as those in the image, so the code of each
 function and its data are parts of the image.
+
+The proof for each function ends with the versions of its theorems for the
+code in the image, `..._IMAGE_SUBROUTINE_CORRECT` and
+`..._IMAGE_SUBROUTINE_SAFE`. For use in the proofs of callers, the theorem
+of constant time and memory safety for `mlkem_keccakf1600_permute` keeps
+the frame of the correctness theorem, as for the subroutines of other
+functions in s2n-bignum.

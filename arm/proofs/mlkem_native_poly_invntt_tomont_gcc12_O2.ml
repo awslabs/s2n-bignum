@@ -1637,3 +1637,93 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_SAFE = time prove
                    [a,512; word_sub stackpointer (word 16),16])
            (\s s'. true)`,
   ASSERT_CONCL_TAC full_spec THEN INVNTT_SAFE_TOP_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The same code in the whole image, at address 0x4394, with the constants   *)
+(* at 0x6230 and the zetas at 0x6380 (see                                    *)
+(* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+
+let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_poly_invntt_tomont_gcc12_O2_mc
+    0x4394 [0x6230; 0x6380];;
+
+let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_DATA_RULE
+    (find (fun th -> name_of(lhs(concl th)) =
+                    "mlkem_native_poly_invntt_tomont_gcc12_O2_data")
+       mlkem_native_poly_invntt_tomont_gcc12_O2_data) 0x6230;;
+
+let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_ZETAS_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_DATA_RULE mlk_zetas_data 0x6380;;
+
+let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (`!a x pc stackpointer returnaddress.
+    aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+    aligned 16 stackpointer /\
+    ALL (nonoverlapping (a,512))
+        [(word pc,0x6480); (word_sub stackpointer (word 16),16)] /\
+    nonoverlapping (word_sub stackpointer (word 16),16) (word pc,0x6480)
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc)
+             mlkem_native_libmlkem_gcc12_O2_mc /\
+           read PC s = word (pc + 0x4394) /\
+           read SP s = stackpointer /\
+           read X30 s = returnaddress /\
+           C_ARGUMENTS [a] s /\
+           (!i. i < 256
+                ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
+                    x i))
+      (\s. read PC s = returnaddress /\
+           !i. i < 256
+               ==> let zi =
+                     read(memory :> bytes16(word_add a (word(2 * i)))) s in
+                   (ival zi == inverse_ntt (ival o x) i) (mod &3329) /\
+                   abs(ival zi) <= &26624)
+      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+       MAYCHANGE [memory :> bytes(a,512);
+                  memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MLKEM_NATIVE_IMAGE_TAC
+   (INST [`pc + 0x4394`,`pc:num`; `pc + 0x6230`,`consts:num`;
+          `pc + 0x6380`,`zetas:num`]
+     (SPEC_ALL MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_CORRECT))
+   [MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE;
+    MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_ZETAS_IN_IMAGE]);;
+
+let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+     forall e a pc stackpointer returnaddress.
+       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 16 stackpointer /\
+       ALL (nonoverlapping (a,512))
+           [word pc,0x6480; word_sub stackpointer (word 16),16] /\
+       nonoverlapping (word_sub stackpointer (word 16),16)
+         (word pc,0x6480)
+       ==> ensures arm
+           (\s. aligned_bytes_loaded s (word pc)
+                  mlkem_native_libmlkem_gcc12_O2_mc /\
+                read PC s = word (pc + 0x4394) /\
+                read SP s = stackpointer /\
+                read X30 s = returnaddress /\
+                C_ARGUMENTS [a] s /\
+                read events s = e)
+           (\s. read PC s = returnaddress /\
+                exists e2.
+                  read events s = APPEND e2 e /\
+                  e2 = f_events a pc
+                         (word_sub stackpointer (word 16)) returnaddress /\
+                  memaccess_inbounds e2
+                   [a,512; word_sub stackpointer (word 16),16;
+                    word (pc + 0x6230),32; word (pc + 0x6380),256]
+                   [a,512; word_sub stackpointer (word 16),16])
+           (\s s'. true)`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC
+   MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_SAFE
+   [`pc + 0x4394`,`pc:num`; `pc + 0x6230`,`consts:num`;
+    `pc + 0x6380`,`zetas:num`]
+   [MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE;
+    MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_ZETAS_IN_IMAGE]);;
