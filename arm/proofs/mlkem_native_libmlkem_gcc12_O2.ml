@@ -360,6 +360,36 @@ let READ_MEMORY_BYTES32_OF_NUM = prove
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
   REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
 
+(*** A byte array from its bytes, and a byte array as a single word ***)
+
+let READ_MEMORY_BYTES_OF_BYTES8 = prove
+ (`!a:int64 n x s:armstate.
+        (!j. j < n
+             ==> read (memory :> bytes8(word_add a (word j))) s =
+                 word((x DIV 2 EXP (8 * j)) MOD 256))
+        ==> read (memory :> bytes(a,n)) s = x MOD 2 EXP (8 * n)`,
+  GEN_TAC THEN INDUCT_TAC THENL
+   [REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_TRIVIAL] THEN
+    REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1];
+    REPEAT STRIP_TAC] THEN
+  REWRITE_TAC[ADD1; READ_MEMORY_BYTES_SNOC] THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL [`x:num`; `s:armstate`]) THEN
+  ANTS_TAC THENL
+   [ASM_MESON_TAC[ARITH_RULE `j < n ==> j < SUC n`];
+    DISCH_THEN SUBST1_TAC] THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC `n:num`) THEN
+  REWRITE_TAC[LT] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_8] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[MOD_MOD_REFL; LEFT_ADD_DISTRIB; MULT_CLAUSES; EXP_ADD] THEN
+  REWRITE_TAC[ARITH_RULE `2 EXP 8 = 256`; MOD_MULT_MOD] THEN ARITH_TAC);;
+
+let READ_MEMORY_WBYTES_VAL = prove
+ (`!a:int64 (x:N word) s:armstate.
+        read (memory :> wbytes a) s = x <=>
+        read (memory :> bytes(a,dimindex(:N) DIV 8)) s = val x`,
+  REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [GSYM VAL_EQ] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; VAL_READ_WBYTES]);;
+
 (*** Bit fields of numbers and of words made from them ***)
 
 let DIV_MOD_EXP_LOW = prove
@@ -402,6 +432,26 @@ let MOD_32_64 = prove
  (`!x. x MOD 4294967296 MOD 18446744073709551616 = x MOD 4294967296`,
   GEN_TAC THEN MATCH_MP_TAC MOD_LT THEN
   MP_TAC(SPECL [`x:num`; `4294967296`] MOD_LT_EQ) THEN ARITH_TAC);;
+
+(*** Unsigned 32-bit arguments word n, as the code zero-extends them ***)
+
+let WORD_ZX_32_SMALL = prove
+ (`!n. n < 2 EXP 32
+       ==> word_zx(word_zx(word n:int64):int32):int64 = word n /\
+           val(word_zx(word n:int64):int32) = n`,
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REPEAT STRIP_TAC THEN TRY(ONCE_REWRITE_TAC[GSYM VAL_EQ]) THEN
+  REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+   `n < 4294967296 ==> n < 18446744073709551616`]);;
+
+let ARGS_32_TAC ns =
+  MAP_EVERY (fun n ->
+    MP_TAC(SPEC n WORD_ZX_32_SMALL) THEN
+    ANTS_TAC THENL
+     [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))]) ns;;
 
 let BYTES_BITBLAST_TAC (asl,w) =
   let bts = setify (find_terms (fun t ->

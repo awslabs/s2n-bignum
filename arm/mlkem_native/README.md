@@ -153,7 +153,8 @@ directly in the image, in the files
 far these are `mlkem_poly_add`, `mlkem_poly_sub`, `mlkem_poly_frombytes`,
 `mlkem_poly_compress_d4`, `mlkem_poly_compress_d10`,
 `mlkem_poly_decompress_d4`, `mlkem_poly_decompress_d10`,
-`mlkem_poly_frommsg`, `mlkem_poly_tomsg` and `mlkem_poly_cbd2`. As in
+`mlkem_poly_frommsg`, `mlkem_poly_tomsg`, `mlkem_poly_cbd2` and
+`mlkem_keccakf1600_extract_bytes`. As in
 `mlkem_decode` in `common/fips203.ml`, the contents of a byte array are
 given as a number, so that coefficient i of the result of
 `mlkem_poly_frombytes` is bits 12 * i to 12 * i + 11 of the number given by
@@ -165,6 +166,12 @@ e.g. (3329 * y + 8) DIV 16 for decompression from 4 bits, but without using
 number of 1 bits among bits 4 * i and 4 * i + 1 of the number given by the
 128 bytes, minus the number among bits 4 * i + 2 and 4 * i + 3, but as a
 16-bit integer rather than modulo 3329.
+
+For the Keccak functions, the state is a 1600-bit word S, as in
+`common/fips202.ml`, which is `read (memory :> wbytes a) s` for the 200
+bytes at its address a. Then `mlkem_keccakf1600_extract_bytes` gives bytes
+off to off + len - 1 of the state, which as a number are
+(val S DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len).
 
 Some of these functions, such as `mlkem_poly_compress_d4`, have a stack
 protector: they copy the stack guard to the stack and check it before
