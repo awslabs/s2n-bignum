@@ -1379,37 +1379,37 @@ let cosimulate_mul_rsp_harness() = fun () ->
 
 (* Fixed: operand size = 64 *)
 let cosimulate_push_harness() = fun () ->
-  let reg = Random.int 6 in
-  let push_inst = 0x50 + reg in
+  let reg = Random.int 16 in
+  let push_inst = if reg < 8 then [0x50 + reg] else [0x41; 0x48 + reg] in
   if reg = 4 then
     [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
      [0x48; 0x8b; 0x44; 0x24; 0xf8]; (* mov rax, [rsp - 8] *)
-     [push_inst]; (* push rsp *)
+     push_inst; (* push rsp *)
      [0x48; 0x8b; 0x24; 0x24]; (* mov rsp, [rsp] *)
      [0x48; 0x89; 0x44; 0x24; 0xf8]; (* mov [rsp - 8], rax *)
      [0x48; 0x8d; 0x64; 0x24; 0xf0]; (* lea rsp, [rsp - 16] *)
     ]
   else
     [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
-     [push_inst]; (* push REG *)
+     push_inst; (* push REG *)
      [0x48; 0x8d; 0x64; 0x24; 0xf8] (* lea rsp, [rsp - 8] *)
     ];;
 
 (* Fixed: operand size = 64 *)
 let cosimulate_pop_harness() = fun () ->
-  let reg = Random.int 6 in
-  let pop_inst = 0x58 + reg in
+  let reg = Random.int 16 in
+  let pop_inst = if reg < 8 then [0x58 + reg] else [0x41; 0x50 + reg] in
   if reg = 4 then
     [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
      [0x48; 0x8b; 0x04; 0x24]; (* mov rax, [rsp] *)
      [0x48; 0x89; 0x24; 0x24]; (* mov [rsp], rsp *)
-     [pop_inst]; (* pop rsp *)
+     pop_inst; (* pop rsp *)
      [0x48; 0x89; 0x04; 0x24]; (* mov [rsp], rax *)
      [0x48; 0x8d; 0x64; 0x24; 0xf0] (* lea rsp, [rsp - 16] *)
     ]
   else
     [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
-     [pop_inst]; (* pop REG *)
+     pop_inst; (* pop REG *)
      [0x48; 0x8d; 0x64; 0x24; 0xe8] (* lea rsp, [rsp - 24] *)
     ];;
 
