@@ -160,6 +160,9 @@ let extra_simp_tac =
               WORD_RULE `word_sub y (word_add x y):N word = word_neg x`;
               WORD_RULE `word_sub (word_add x y) x:N word = y`;
               WORD_RULE `word_sub (word_add x y) y:N word = x`;
+              (* Code addresses cancel, as in the call sequences *)
+              WORD_RULE `word_sub (word(x + a)) (word(x + b)):N word =
+                         word_sub (word a) (word b)`;
               WORD_ADD_0; WORD_SUB_0] THEN
   CONV_TAC(DEPTH_CONV
    (WORD_NUM_RED_CONV ORELSEC apply_extra_word_convs)) THEN REWRITE_TAC[];;
@@ -212,7 +215,12 @@ let arm_cosim_executor = lazy
   (start_cosim_executor "S2N_BIGNUM_AARCH64_EXECUTOR"
     "tools/simulate-persistent arm" "aarch64" 128);;
 
-let cosimulate_instructions (memopidx: int option) icodes =
+(*** The instructions are normally simulated one step each. With a branch
+ *** they need not all run, so nsteps can give the number of steps instead.
+ ***)
+
+let cosimulate_instructions_steps (nsteps: int option)
+      (memopidx: int option) icodes =
   let icodestring =
     end_itlist (fun s t -> s^","^t) (map string_of_num_hex icodes) in
   let _ =
@@ -278,18 +286,92 @@ let cosimulate_instructions (memopidx: int option) icodes =
      (goal,
       PURE_REWRITE_TAC [fst execth] THEN
       (tac_before (memopidx <> None) THEN
-       tac_main memopidx execth (1--length icodes) THEN
+       tac_main memopidx execth
+         (1--(match nsteps with Some n -> n | None -> length icodes)) THEN
        tac_after (memopidx <> None))) in
     (decoded,result)
   | Cosim_trap _ ->
     let decoded = mk_flist(map mk_numeral icodes) in
     decoded,not(can ARM_MK_EXEC_RULE(REFL ibyteterm));;
 
+let cosimulate_instructions = cosimulate_instructions_steps None;;
+
 (*** Pick random instances from register-to-register iclasses and run ***)
 
 let run_random_regsimulation () =
   let icode:num = random_instruction iclasses in
   cosimulate_instructions None [icode];;
+
+(* ------------------------------------------------------------------------- *)
+(* Branches. In each sequence both outcomes of a conditional branch run the  *)
+(* same number of instructions, returned with the sequence, so that it can   *)
+(* be simulated a fixed number of steps; W0 tells which way the branch went. *)
+(* The flags and the tested registers come from the random input state.     *)
+(* ------------------------------------------------------------------------- *)
+
+let cosimulate_branch() =
+  let movz_w0 n = num(0x52800000 + 32 * n)
+  and b_rel d = num(0x14000000 + (d + 0x4000000) mod 0x4000000)
+  and nop = num 0xd503201f in
+  (* A random conditional branch of d instructions (d may be negative):
+     B.cond, CBZ/CBNZ or TBZ/TBNZ, testing a random register 1-31.
+     A random register is seldom zero, so CBZ/CBNZ is usually preceded
+     by ubfx Xt,Xt,#b,#1 (giving 0 or 1) or lsl Xt,Xt,#32 (zero low half).
+     The result is the list of those instructions and the branch. *)
+  let cond_rel d =
+    let rt = 1 + Random.int 31 and op = Random.int 2 in
+    match Random.int 3 with
+      0 -> [],num(0x54000000 + 32 * ((d + 0x80000) mod 0x80000) + Random.int 16)
+    | 1 -> let sf = Random.int 2 and b = Random.int 64 in
+           (match Random.int 4 with
+              0 | 1 -> [num(0xd3400000 + 0x10400 * b + 33 * rt)]
+            | 2 -> [num(0xd3607c00 + 33 * rt)]
+            | _ -> []),
+           num(0x80000000 * sf + 0x34000000 + 0x1000000 * op +
+               32 * ((d + 0x80000) mod 0x80000) + rt)
+    | _ -> let b = Random.int 64 in
+           [],num(0x80000000 * (b / 32) + 0x36000000 + 0x1000000 * op +
+                  0x80000 * (b mod 32) + 32 * ((d + 0x4000) mod 0x4000) + rt) in
+  match Random.int 4 with
+    0 -> (* Forward: br L; movz w0,#1; b E; L: movz w0,#2; nop; E: *)
+         let pre,br = cond_rel 3 in
+         pre @ [br; movz_w0 1; b_rel 3; movz_w0 2; nop],length pre + 3
+  | 1 -> (* Backward: b A; B: movz w0,#2; b E; A: br B; movz w0,#1; b E; E: *)
+         let pre,br = cond_rel (-2) in
+         pre @ [b_rel 3; movz_w0 2; b_rel 4; br; movz_w0 1; b_rel 1],
+         length pre + 4
+  | 2 -> (* Forward B: b L; movz w0,#1; L: movz w0,#2 *)
+         [b_rel 2; movz_w0 1; movz_w0 2],2
+  | _ -> (* Backward B: b A; B: b E; A: b B; E: *)
+         [b_rel 2; b_rel 2; b_rel (-1)],3;;
+
+(* ------------------------------------------------------------------------- *)
+(* Calls. The return address that BL leaves in X30 and the result of ADR     *)
+(* both depend on the code address, so the sequence keeps only their        *)
+(* difference, in Xt for a random t in 0-29, and then clears X30.           *)
+(* ------------------------------------------------------------------------- *)
+
+let cosimulate_call() =
+  let t = Random.int 30 and imm = Random.int 0x200000 in
+  let adr = num(0x10000000 + 0x20000000 * (imm mod 4) + 32 * (imm / 4) + t)
+  and sub = num(0xcb1e0000 + 33 * t)
+  and movz_x30 = num 0xd280001e
+  and bl_rel d = num(0x94000000 + (d + 0x4000000) mod 0x4000000)
+  and b_rel d = num(0x14000000 + (d + 0x4000000) mod 0x4000000)
+  and bti_c = num 0xd503245f and ret = num 0xd65f03c0 in
+  if Random.bool() then
+    (* Forward: bl F; adr xt,#imm; sub xt,xt,x30; movz x30,#0; b E;
+                F: bti c; ret; E: *)
+    [bl_rel 5; adr; sub; movz_x30; b_rel 3; bti_c; ret],7
+  else
+    (* Backward: b S; F: ret; S: bl F; adr xt,#imm; sub xt,xt,x30;
+                 movz x30,#0; E: *)
+    [b_rel 2; ret; bl_rel (-1); adr; sub; movz_x30],6;;
+
+let run_random_branchsimulation () =
+  let icodes,nsteps =
+    if Random.int 4 = 0 then cosimulate_call() else cosimulate_branch() in
+  cosimulate_instructions_steps (Some nsteps) None icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Setting up safe self-contained tests for load-store instructions.         *)
@@ -765,32 +847,39 @@ let run_random_memopsimulation() =
 (* ------------------------------------------------------------------------- *)
 
 let run_random_simulation() =
-  if Random.int 100 < 90 then
+  let rn = Random.int 100 in
+  if rn < 85 then
     let decoded, result = run_random_regsimulation() in
-    decoded,result,true
+    decoded,result,0
+  else if rn < 90 then
+    let decoded, result = run_random_branchsimulation() in
+    decoded,result,2
   else
     let decoded, result = run_random_memopsimulation() in
-    decoded,result,false;;
+    decoded,result,1;;
 
 let time_limit_sec = sematest_seconds 2400.0;;
 let case_limit = sematest_case_limit ();;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
+let tested_br_instances = ref 0;;
 
 let rec run_random_simulations start_t =
-  let decoded,result,isreg = run_random_simulation() in
+  let decoded,result,simty = run_random_simulation() in
   if result then begin
-    tested_reg_instances := !tested_reg_instances + (if isreg then 1 else 0);
-    tested_mem_instances := !tested_mem_instances + (if isreg then 0 else 1);
+    tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
+    tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
+    tested_br_instances := !tested_br_instances + (if simty = 2 then 1 else 0);
     let fey = if is_numeral (lhand decoded)
               then " (fails correctly) instruction codes " else " " in
     let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
             Format.print_newline() in
-    let total = !tested_reg_instances + !tested_mem_instances in
+    let total = !tested_reg_instances + !tested_mem_instances +
+                !tested_br_instances in
     if sematest_finished time_limit_sec case_limit start_t total then
-      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, total: %d)\n"
+      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, tested branch instances: %d, total: %d)\n"
           time_limit_sec !tested_reg_instances !tested_mem_instances
-          (!tested_reg_instances + !tested_mem_instances) in
+          !tested_br_instances total in
       None
     else run_random_simulations start_t
   end
