@@ -1854,6 +1854,17 @@ let cosimulate_pop_harness() = fun () ->
      [0x48; 0x8d; 0x64; 0x24; 0xe8] (* lea rsp, [rsp - 24] *)
     ];;
 
+(* PUSH imm8 or imm32, sign-extended to 64 bits *)
+let cosimulate_push_imm_harness() = fun () ->
+  let push_inst =
+    if Random.bool() then [0x6a; Random.int 256]
+    else [0x68; Random.int 256; Random.int 256; Random.int 256;
+          Random.int 256] in
+  [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
+   push_inst; (* push imm *)
+   [0x48; 0x8d; 0x64; 0x24; 0xf8] (* lea rsp, [rsp - 8] *)
+  ];;
+
 (* Mode: base + scale*index + displacement
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters *)
@@ -2059,6 +2070,8 @@ let mem_iclasses = [
   (cosimulate_mem_rsp_harness([0x0B]), false);
   (* PUSH r64 *)
   (cosimulate_push_harness(), false);
+  (* PUSH imm8/imm32 *)
+  (cosimulate_push_imm_harness(), false);
   (* POP r64 *)
   (cosimulate_pop_harness(), false);
   (* SBB r/m64, r64 *)
