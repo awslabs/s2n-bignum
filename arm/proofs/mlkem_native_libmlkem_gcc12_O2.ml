@@ -390,6 +390,20 @@ let READ_MEMORY_WBYTES_VAL = prove
   REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [GSYM VAL_EQ] THEN
   REWRITE_TAC[READ_COMPONENT_COMPOSE; VAL_READ_WBYTES]);;
 
+(*** The case of a Keccak state, and its wbytes form from its bytes ***)
+
+let READ_MEMORY_WBYTES_1600 =
+  CONV_RULE(DEPTH_CONV DIMINDEX_CONV THENC ONCE_DEPTH_CONV NUM_DIV_CONV)
+   (INST_TYPE [`:1600`,`:N`] READ_MEMORY_WBYTES_VAL);;
+
+let KECCAK_STATE_WBYTES_TAC sv =
+  let pat = subst [sv,`S:1600 word`]
+   `read (memory :> bytes (a,200)) s = val(S:1600 word)` in
+  FIRST_ASSUM(fun th ->
+    if can (term_match [sv] pat) (concl th)
+    then ASSUME_TAC(REWRITE_RULE[GSYM READ_MEMORY_WBYTES_1600] th)
+    else NO_TAC);;
+
 (*** Bit fields of numbers and of words made from them ***)
 
 let DIV_MOD_EXP_LOW = prove
