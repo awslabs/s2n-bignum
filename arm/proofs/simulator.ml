@@ -160,6 +160,9 @@ let extra_simp_tac =
               WORD_RULE `word_sub y (word_add x y):N word = word_neg x`;
               WORD_RULE `word_sub (word_add x y) x:N word = y`;
               WORD_RULE `word_sub (word_add x y) y:N word = x`;
+              (* SP minus an immediate cancels, as in cosimulate_sp_arith *)
+              WORD_RULE `word_add (word_sub x y) y:N word = x`;
+              WORD_RULE `word_sub x (word_sub x y):N word = y`;
               (* Code addresses cancel, as in the call sequences *)
               WORD_RULE `word_sub (word(x + a)) (word(x + b)):N word =
                          word_sub (word a) (word b)`;
@@ -396,6 +399,11 @@ let sub_Xn_SP_Xn rn =
   pow2 5 */ num 0b11111 +/
   num rn;;
 
+(*** Base registers for some of the load-store generators below. SP (31)
+ *** is drawn more often than 1 in 32, since stack frames use it a lot. ***)
+
+let random_base_reg() = if Random.int 4 = 0 then 31 else Random.int 32;;
+
 let movz_Xn_imm rd imm =
   pow2 21 */ num_of_string "0b11010010100" +/
   pow2 5 */ num(imm mod 65536) +/
@@ -460,7 +468,7 @@ let cosimulate_ldstp() =
   let isld = Random.int 2 in
   let rt2 = Random.int 32 in
   let rt = (rt2 + 1 + Random.int 31) mod 32 in
-  let rn = Random.int 32 in
+  let rn = random_base_reg() in
   let headroom = if size_rd = 0 then 8*2 else 16*2 in
   let rawstackoff = Random.int (256 - headroom) in
   let stackoff =
@@ -504,7 +512,7 @@ let cosimulate_ldstp_gpr() =
   let index_mode =
     if index_rd = 0 then 0b001 else if index_rd = 1 then 0b011 else 0b010 in
   let isld = Random.int 2 in
-  let rn = Random.int 32 in
+  let rn = random_base_reg() in
   (* XZR (31) is drawn more often than 1 in 32, as the library uses it *)
   let rec pick avoid =
     let r = if Random.int 8 = 0 then 31 else Random.int 32 in
@@ -783,7 +791,7 @@ let cosimulate_ldst1_4reg() =
 
 let cosimulate_ldst_imm() =
   (* kind: 0 = X, 1 = W, 2 = byte, 3 = Q, 4 = D *)
-  let kind = Random.int 5 and isld = Random.int 2 and rn = Random.int 32 in
+  let kind = Random.int 5 and isld = Random.int 2 and rn = random_base_reg() in
   (* mode: 0 = unsigned offset, 1 = pre-index, 2 = post-index,
            3 = unscaled offset (LDUR/STUR, Q only) *)
   let mode = Random.int (if kind = 3 then 4 else 3) in
@@ -830,11 +838,30 @@ let cosimulate_ldst_imm() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** ADD and SUB (immediate) with SP, which the generators above use only
+ *** with small unshifted immediates. The stack address cancels as there:
+ ***   add/sub xd, sp, #imm{, lsl #12}; sub xd, sp, xd
+ ***   add/sub sp, sp, #imm{, lsl #12}; sub/add sp, sp, #imm{, lsl #12}
+ ***   mov x29, sp; sub sp, sp, #imm{, lsl #12}; mov sp, x29; sub x29, sp, x29
+ ***)
+
+let cosimulate_sp_arith() =
+  let addsub op d n imm sh =
+    num(0x91000000 + 0x40000000 * op + 0x400000 * sh + 0x400 * imm +
+        32 * n + d) in
+  let imm = Random.int 4096 and sh = Random.int 2 and op = Random.int 2 in
+  match Random.int 3 with
+    0 -> let rd = Random.int 31 in
+         [addsub op rd 31 imm sh; sub_Xn_SP_Xn rd]
+  | 1 -> [addsub op 31 31 imm sh; addsub (1 - op) 31 31 imm sh]
+  | _ -> [addsub 0 29 31 0 0; addsub 1 31 31 imm sh; addsub 0 31 29 0 0;
+          sub_Xn_SP_Xn 29];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldstp_gpr; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg;
-    cosimulate_ldst_imm
+    cosimulate_ldst_imm; cosimulate_sp_arith
     ];;
 
 let run_random_memopsimulation() =
