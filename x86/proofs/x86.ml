@@ -4399,6 +4399,14 @@ let OPERAND_CLAUSES = prove
    OPERAND16 (%bp) s = RBP :> bottom_32 :> bottom_16 /\
    OPERAND16 (%si) s = RSI :> bottom_32 :> bottom_16 /\
    OPERAND16 (%di) s = RDI :> bottom_32 :> bottom_16 /\
+   OPERAND16 (% r8w) s =  R8 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (% r9w) s =  R9 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r10w) s = R10 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r11w) s = R11 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r12w) s = R12 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r13w) s = R13 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r14w) s = R14 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r15w) s = R15 :> bottom_32 :> bottom_16 /\
    OPERAND16 (Imm16 w16) s = rvalue w16 /\
    OPERAND16 (Imm8 w8) s = rvalue(word_sx w8) /\
    OPERAND16 (Memop Word bsid) s =
@@ -4434,6 +4442,7 @@ let OPERAND_CLAUSES = prove
               r8d; r9d; r10d; r11d; r12d; r13d; r14d; r15d;
               ax; cx; dx; bx; sp; bp; si; di; ah;
               al; ch; cl; dh; dl; bh; bl; spl; bpl; sil; dil;
+              r8w; r9w; r10w; r11w; r12w; r13w; r14w; r15w;
               r8b; r9b; r10b; r11b; r12b; r13b; r14b; r15b;
               EAX; ECX; EDX; EBX; ESP; EBP; ESI; EDI;
               R8D; R9D; R10D; R11D; R12D; R13D; R14D; R15D;
@@ -4857,15 +4866,24 @@ let X86_OPERATION_CLAUSES =
     x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT; x86_VPBROADCASTQ_ALT; x86_VPERM2I128_ALT;
     x86_VMOVMSKPS_ALT; x86_VPABSD_ALT; x86_VPMOVMSKB_ALT; x86_VPMOVSXBD_ALT;
     x86_VPMOVZXBD_ALT; x86_VPMOVZXBW_ALT; x86_VPSUBB_ALT; x86_VPTEST_ALT; x86_VZEROUPPER_ALT;
-    (*** 32/8-bit backups since the ALT forms are 64-bit only ***)
+    (*** 32/16/8-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
+    INST_TYPE[`:16`,`:N`] x86_ADC;
+    INST_TYPE[`:8`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
     INST_TYPE[`:32`,`:N`] x86_ADOX;
     INST_TYPE[`:32`,`:N`] x86_ADD;
+    INST_TYPE[`:16`,`:N`] x86_ADD;
+    INST_TYPE[`:8`,`:N`] x86_ADD;
     INST_TYPE[`:32`,`:N`] x86_CMP;
+    INST_TYPE[`:16`,`:N`] x86_CMP;
     INST_TYPE[`:8`,`:N`] x86_CMP;
     INST_TYPE[`:32`,`:N`] x86_SBB;
+    INST_TYPE[`:16`,`:N`] x86_SBB;
+    INST_TYPE[`:8`,`:N`] x86_SBB;
     INST_TYPE[`:32`,`:N`] x86_SUB;
+    INST_TYPE[`:16`,`:N`] x86_SUB;
+    INST_TYPE[`:8`,`:N`] x86_SUB;
     (*** 16-bit SHLD/SHRD, where the count can exceed the size ***)
     INST_TYPE[`:16`,`:N`] x86_SHLD;
     INST_TYPE[`:16`,`:N`] x86_SHRD];;
