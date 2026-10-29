@@ -188,6 +188,20 @@ specification of the Keccak code in s2n-bignum, is shown to be
 proof, as
 `MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600`.
 
+These are used by the static function `mlk_keccak_absorb_once`, at 0x23b0
+in the image, which absorbs a whole message into a state for the SHA-3 and
+SHAKE functions, and is verified in
+`../proofs/mlkem_native_keccak_absorb_once_gcc12_O2.ml`. As in
+`keccak_sponge` in `common/fips202.ml`, a message of mlen bytes, as a
+number M, is padded to the number
+P = M + 2 EXP (8 * mlen) * num_of_bytelist(keccak_pad r p mlen), which is
+mlen DIV r + 1 blocks of r bytes, for the rate r and the first byte p of
+the padding. The final state is then keccak_absorb r P (mlen DIV r), after
+the whole blocks of the message, XORed with the last block of P, so that
+keccak_f1600 of it is keccak_absorb r P (mlen DIV r + 1), the state in
+`keccak_sponge` after absorbing. In mlkem-native, that last permutation is
+the first step of squeezing.
+
 Some of these functions, such as `mlkem_poly_compress_d4`, have a stack
 protector: they copy the stack guard to the stack and check it before
 returning. They read the address of the guard from the global offset table
