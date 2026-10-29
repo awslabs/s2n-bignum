@@ -6,12 +6,12 @@
 (* ========================================================================= *)
 (* The code and read-only data of mlkem-native's libmlkem.so compiled by     *)
 (* gcc 12 with -O2 (see mlkem_native/README.md), as one image, and tools to  *)
-(* transfer the results for the individual functions to the same code in    *)
+(* transfer the results for the individual functions to the same code in     *)
 (* the image. All the theorems about the image assume that it is loaded at   *)
 (* an address pc that is a multiple of 4096, as the dynamic loader does, and *)
-(* that it does not wrap around the end of the address space, i.e.          *)
-(* pc + 0x6480 <= 2 EXP 64. The functions in it are then at pc + <address>, *)
-(* where <address> is the address of the function in the binary.            *)
+(* that it does not wrap around the end of the address space, i.e.           *)
+(* pc + 0x6480 <= 2 EXP 64. The functions in it are then at pc + <address>,  *)
+(* where <address> is the address of the function in the binary.             *)
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
@@ -200,10 +200,10 @@ let MLKEM_NATIVE_IMAGE_DATA_RULE data_def d =
 
 (* ------------------------------------------------------------------------- *)
 (* Prove the version of a theorem for a function in the image, given the     *)
-(* theorem for the function with the variables for the addresses of the     *)
+(* theorem for the function with the variables for the addresses of the      *)
 (* code and of the data instantiated to pc + v and pc + d1, ..., and its     *)
 (* other variables free with the same names as in the goal, and the          *)
-(* theorems from the two rules above for its code and data. The hypotheses  *)
+(* theorems from the two rules above for its code and data. The hypotheses   *)
 (* about the addresses of the code and data, such as the bounds for ADRP     *)
 (* and alignment for LDR of a Q register, follow from those for the image.   *)
 (* ------------------------------------------------------------------------- *)
@@ -231,10 +231,10 @@ let MLKEM_NATIVE_IMAGE_TAC =
       ASM_SIMP_TAC loadths];;
 
 (* ------------------------------------------------------------------------- *)
-(* The same for a theorem of constant time and memory safety, of the form   *)
+(* The same for a theorem of constant time and memory safety, of the form    *)
 (* |- ?f_events. !e ... . P ==> ensures arm (...) (... f_events ...) (...).  *)
-(* The function of the events in the image is that of the function with the *)
-(* instantiations, as a function of the arguments of f_events in the goal.  *)
+(* The function of the events in the image is that of the function with the  *)
+(* instantiations, as a function of the arguments of f_events in the goal.   *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_IMAGE_SAFE_TAC th inst loadths =
@@ -252,12 +252,12 @@ let MLKEM_NATIVE_IMAGE_SAFE_TAC th inst loadths =
 
 (* ------------------------------------------------------------------------- *)
 (* Vectors of polynomials. As in common/fips203.ml, a vector of k            *)
-(* polynomials is given by its 256 * k coefficients, those of polynomial j  *)
-(* being \i. x(256 * j + i). POLYVEC_SPLIT_TAC k splits an assumption       *)
-(* !i. i < 256 * k ==> P i into one for each polynomial, POLYVEC_JOIN_TAC k *)
-(* reduces such a goal to the cases for the polynomials, and               *)
-(* POLYVEC_CASES_TAC reduces a goal !j. j < k ==> Q j to Q 0, ...,          *)
-(* Q (k - 1), with the indices and offsets evaluated in each case.          *)
+(* polynomials is given by its 256 * k coefficients, those of polynomial j   *)
+(* being \i. x(256 * j + i). POLYVEC_SPLIT_TAC k splits an assumption        *)
+(* !i. i < 256 * k ==> P i into one for each polynomial, POLYVEC_JOIN_TAC k  *)
+(* reduces such a goal to the cases for the polynomials, and                 *)
+(* POLYVEC_CASES_TAC reduces a goal !j. j < k ==> Q j to Q 0, ...,           *)
+(* Q (k - 1), with the indices and offsets evaluated in each case.           *)
 (* ------------------------------------------------------------------------- *)
 
 let POLYVEC_SPLIT = prove

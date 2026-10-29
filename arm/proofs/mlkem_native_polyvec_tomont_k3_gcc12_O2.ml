@@ -4,7 +4,7 @@
  *)
 
 (* ========================================================================= *)
-(* Conversion of a vector of 3 polynomials to Montgomery form.              *)
+(* Conversion of a vector of 3 polynomials to Montgomery form.               *)
 (* This is the code for mlkem768_polyvec_tomont from mlkem-native's          *)
 (* portable C implementation compiled by gcc 12 with -O2 (see                *)
 (* mlkem_native/README.md), which calls mlkem_poly_tomont for each of the    *)
