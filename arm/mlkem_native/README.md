@@ -153,8 +153,8 @@ directly in the image, in the files
 far these are `mlkem_poly_add`, `mlkem_poly_sub`, `mlkem_poly_frombytes`,
 `mlkem_poly_compress_d4`, `mlkem_poly_compress_d10`,
 `mlkem_poly_decompress_d4`, `mlkem_poly_decompress_d10`,
-`mlkem_poly_frommsg`, `mlkem_poly_tomsg`, `mlkem_poly_cbd2` and
-`mlkem_keccakf1600_extract_bytes`. As in
+`mlkem_poly_frommsg`, `mlkem_poly_tomsg`, `mlkem_poly_cbd2`,
+`mlkem_keccakf1600_extract_bytes` and `mlkem_keccakf1600_xor_bytes`. As in
 `mlkem_decode` in `common/fips203.ml`, the contents of a byte array are
 given as a number, so that coefficient i of the result of
 `mlkem_poly_frombytes` is bits 12 * i to 12 * i + 11 of the number given by
@@ -171,7 +171,11 @@ For the Keccak functions, the state is a 1600-bit word S, as in
 `common/fips202.ml`, which is `read (memory :> wbytes a) s` for the 200
 bytes at its address a. Then `mlkem_keccakf1600_extract_bytes` gives bytes
 off to off + len - 1 of the state, which as a number are
-(val S DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len).
+(val S DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len), and
+`mlkem_keccakf1600_xor_bytes` XORs len bytes of data, as a number m, into
+the state from byte off, giving word_xor S (word(2 EXP (8 * off) * m)). For
+off = 0 and len the rate, this is the XOR of a block into the state in
+`keccak_absorb` there.
 
 Some of these functions, such as `mlkem_poly_compress_d4`, have a stack
 protector: they copy the stack guard to the stack and check it before
