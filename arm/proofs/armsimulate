@@ -58,6 +58,9 @@ if [[ -n "$COSIM_RUN" ]]; then
 else
   "$temp" "$@"
 fi
+status=$?
 
-# Remove all per-case build products.
+# Remove all per-case build products, keeping the exit status: after a
+# trap it is 128 plus the signal number, which the executor reports.
 rm -f $temp $temp_s $temp_o
+exit $status
