@@ -217,6 +217,11 @@ For `mlkem_sha3_256` and `mlkem_sha3_512`, the input is given as a list of
 bytes, and the result, as a number, is that of `sha3_256` or `sha3_512` in
 `common/fips202.ml`, using the lemmas about `keccak_sponge` at the end of
 `../proofs/utils/keccak_fips202.ml`. They keep the state on the stack.
+Likewise, for `mlkem_shake256` with an output of outlen bytes, the result is
+that of `list_of_seq (shake256 inp) outlen`. It extracts
+MIN (outlen - 136 * i) 136 bytes of the state in iteration i of its loop,
+and it aligns the state on the stack to 32 bytes, so its address depends on
+whether the stack pointer is a multiple of 32.
 
 Some of these functions, such as `mlkem_poly_compress_d4` and
 `mlkem_sha3_256`, have a stack protector: they copy the stack guard to the
