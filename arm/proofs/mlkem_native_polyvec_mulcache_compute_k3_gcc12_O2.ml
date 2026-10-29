@@ -5,13 +5,13 @@
 
 (* ========================================================================= *)
 (* Computation of the multiplication cache for a vector of 3 polynomials.    *)
-(* This is the code for mlkem768_polyvec_mulcache_compute from              *)
-(* mlkem-native's portable C implementation compiled by gcc 12 with -O2     *)
-(* (see mlkem_native/README.md), which calls mlkem_poly_mulcache_compute    *)
-(* for each of the polynomials, the last time as a tail call. It is         *)
-(* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),     *)
-(* where it is at address 0x5ff0, using the theorems for                    *)
-(* mlkem_poly_mulcache_compute at 0x4240 in the image.                      *)
+(* This is the code for mlkem768_polyvec_mulcache_compute from               *)
+(* mlkem-native's portable C implementation compiled by gcc 12 with -O2      *)
+(* (see mlkem_native/README.md), which calls mlkem_poly_mulcache_compute     *)
+(* for each of the polynomials, the last time as a tail call. It is          *)
+(* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),      *)
+(* where it is at address 0x5ff0, using the theorems for                     *)
+(* mlkem_poly_mulcache_compute at 0x4240 in the image.                       *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_mulcache_compute_gcc12_O2.ml";;

@@ -72,7 +72,7 @@ let MLKEM_NATIVE_BASEMUL_K4_GCC12_O2_EXEC =
   ARM_MK_EXEC_RULE mlkem_native_basemul_k4_gcc12_O2_mc;;
 
 (* ------------------------------------------------------------------------- *)
-(* Definitions used to state specification, as for mlkem_basemul_k4.        *)
+(* Definitions used to state specification, as for mlkem_basemul_k4.         *)
 (* ------------------------------------------------------------------------- *)
 
 let pmull = define

@@ -6,7 +6,7 @@
 (* ========================================================================= *)
 (* Scalar product of 2-element polynomial vectors in NTT domain.             *)
 (* This is the code for mlkem512_polyvec_basemul_acc_montgomery_cached from  *)
-(* mlkem-native's portable C implementation compiled by gcc 12 with -O2     *)
+(* mlkem-native's portable C implementation compiled by gcc 12 with -O2      *)
 (* (see mlkem_native/README.md).                                             *)
 (* ========================================================================= *)
 
@@ -77,7 +77,7 @@ let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_EXEC =
   ARM_MK_EXEC_RULE mlkem_native_basemul_k2_gcc12_O2_mc;;
 
 (* ------------------------------------------------------------------------- *)
-(* Definitions used to state specification, as for mlkem_basemul_k2.        *)
+(* Definitions used to state specification, as for mlkem_basemul_k2.         *)
 (* ------------------------------------------------------------------------- *)
 
 let pmull = define
