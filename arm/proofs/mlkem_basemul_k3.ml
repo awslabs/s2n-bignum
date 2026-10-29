@@ -398,11 +398,7 @@ let MLKEM_BASEMUL_K3_CORRECT = prove
 
   (* Solve the congruence goals *)
 
-  ASSUM_LIST((fun ths -> W(MP_TAC o CONJUNCT1 o GEN_CONGBOUND_RULE ths o
-    rand o lhand o rator o snd))) THEN
-  REWRITE_TAC[GSYM INT_REM_EQ] THEN CONV_TAC INT_REM_DOWN_CONV THEN
-  MATCH_MP_TAC EQ_IMP THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-  CONV_TAC INT_RING);;
+  CONGBOUND_INT_RING_TAC);;
 
 let MLKEM_BASEMUL_K3_SUBROUTINE_CORRECT = prove
  (`!srcA srcB srcBt dst x0 y0 y0t x1 y1 y1t x2 y2 y2t pc stackpointer returnaddress.
