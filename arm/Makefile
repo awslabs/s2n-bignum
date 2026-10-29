@@ -462,6 +462,7 @@ MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
 
 MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_keccakf1600_extract_bytes_gcc12_O2 \
+  mlkem_native/mlkem_native_keccakf1600_xor_bytes_gcc12_O2 \
   mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2 \
   mlkem_native/mlkem_native_poly_add_gcc12_O2 \
   mlkem_native/mlkem_native_poly_cbd2_gcc12_O2 \
