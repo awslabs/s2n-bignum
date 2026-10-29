@@ -180,6 +180,14 @@ the state from byte off, giving word_xor S (word(2 EXP (8 * off) * m)). For
 off = 0 and len the rate, this is the XOR of a block into the state in
 `keccak_absorb` there.
 
+The permutation `keccak 24` of `../proofs/utils/keccak_spec.ml`, the
+specification of the Keccak code in s2n-bignum, is shown to be
+`keccak_f1600` of `common/fips202.ml` on the state as a 1600-bit word in
+`../proofs/utils/keccak_fips202.ml`, and the theorem for
+`mlkem_keccakf1600_permute` is restated in that form at the end of its
+proof, as
+`MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600`.
+
 Some of these functions, such as `mlkem_poly_compress_d4`, have a stack
 protector: they copy the stack guard to the stack and check it before
 returning. They read the address of the guard from the global offset table
