@@ -286,3 +286,41 @@ let cosim_execute executor code state =
   | "ERROR"::details ->
       failwith ("instruction executor error: " ^ String.concat " " details)
   | _ -> failwith "malformed instruction-executor response";;
+
+(*
+ * An instruction that needs a CPU feature the host lacks traps with SIGILL
+ * (reported as "TRAP exit-132") although the model accepts it. Where the
+ * simulator knows which features an instruction needs, and the host's
+ * features are known, such a case is skipped and reported instead of
+ * failing. The host's features are the words of the first /proc/cpuinfo
+ * line with the given label ("flags" on x86, "Features" on AArch64).
+ * Elsewhere, or under an emulator on a host of another architecture,
+ * they are unknown and nothing is skipped.
+ *)
+
+let cosim_host_features label =
+  try
+    let ic = open_in "/proc/cpuinfo" in
+    let rec loop () =
+      match (try Some (input_line ic) with End_of_file -> None) with
+      | None -> None
+      | Some l ->
+          (match String.index_opt l ':' with
+           | Some i when String.trim (String.sub l 0 i) = label ->
+               Some (List.filter (fun w -> w <> "")
+                       (String.split_on_char ' '
+                          (String.sub l (i + 1) (String.length l - i - 1))))
+           | _ -> loop ()) in
+    let result = loop () in
+    close_in ic; result
+  with Sys_error _ -> None;;
+
+let cosim_missing_features host details required =
+  match host, details with
+  | Some flags, ["exit-132"] ->
+      List.filter (fun f -> not (List.mem f flags)) required
+  | _ -> [];;
+
+(* Set by a simulator when it skips a case, to the missing features *)
+
+let cosim_skipped_features = ref ([]:string list);;

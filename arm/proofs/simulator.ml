@@ -218,6 +218,25 @@ let arm_cosim_executor = lazy
   (start_cosim_executor "S2N_BIGNUM_AARCH64_EXECUTOR"
     "tools/simulate-persistent arm" "aarch64" 128);;
 
+(*** The CPU features beyond the baseline that an instruction needs, so that
+ *** a case can be skipped on a host without them (see common/cosim.ml). ***)
+
+let arm_host_features = lazy (cosim_host_features "Features");;
+
+let arm_required_features instr =
+  let name = try fst(dest_const(fst(strip_comb instr))) with Failure _ -> "" in
+  match name with
+    "arm_AESE" | "arm_AESD" | "arm_AESMC" | "arm_AESIMC" -> ["aes"]
+  | "arm_PMULL_VEC" | "arm_PMULL2_VEC" ->
+      if (try dest_small_numeral (rand instr) = 64 with Failure _ -> false)
+      then ["pmull"] else []
+  | "arm_SHA256H" | "arm_SHA256H2" | "arm_SHA256SU0" | "arm_SHA256SU1" ->
+      ["sha2"]
+  | "arm_SHA512H" | "arm_SHA512H2" | "arm_SHA512SU0" | "arm_SHA512SU1" ->
+      ["sha512"]
+  | "arm_EOR3" | "arm_BCAX" | "arm_RAX1" | "arm_XAR" -> ["sha3"]
+  | _ -> [];;
+
 (*** The instructions are normally simulated one step each. With a branch
  *** they need not all run, so nsteps can give the number of steps instead.
  ***)
@@ -293,9 +312,20 @@ let cosimulate_instructions_steps (nsteps: int option)
          (1--(match nsteps with Some n -> n | None -> length icodes)) THEN
        tac_after (memopidx <> None))) in
     (decoded,result)
-  | Cosim_trap _ ->
+  | Cosim_trap details ->
     let decoded = mk_flist(map mk_numeral icodes) in
-    decoded,not(can ARM_MK_EXEC_RULE(REFL ibyteterm));;
+    (match (try Some(ARM_MK_EXEC_RULE(REFL ibyteterm)) with Failure _ -> None)
+     with
+       None -> decoded,true
+     | Some execth ->
+         let instrs = map (rand o rand o snd o strip_forall o concl o
+                           option_get)
+                        (filter option_is_some (Array.to_list (snd execth))) in
+         let missing =
+           cosim_missing_features (Lazy.force arm_host_features) details
+             (setify (itlist ((@) o arm_required_features) instrs [])) in
+         if missing = [] then decoded,false
+         else (cosim_skipped_features := missing; mk_flist instrs,true));;
 
 let cosimulate_instructions = cosimulate_instructions_steps None;;
 
@@ -891,23 +921,33 @@ let case_limit = sematest_case_limit ();;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
 let tested_br_instances = ref 0;;
+let skipped_instances = ref 0;;
 
 let rec run_random_simulations start_t =
   let decoded,result,simty = run_random_simulation() in
+  let missing = !cosim_skipped_features in
+  cosim_skipped_features := [];
   if result then begin
-    tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
-    tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
-    tested_br_instances := !tested_br_instances + (if simty = 2 then 1 else 0);
-    let fey = if is_numeral (lhand decoded)
-              then " (fails correctly) instruction codes " else " " in
-    let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
-            Format.print_newline() in
+    if missing <> [] then begin
+      skipped_instances := !skipped_instances + 1;
+      Format.print_string("SKIPPED (host lacks " ^ String.concat ", " missing ^
+                          "): " ^ string_of_term decoded);
+      Format.print_newline()
+    end else begin
+      tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
+      tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
+      tested_br_instances := !tested_br_instances + (if simty = 2 then 1 else 0);
+      let fey = if is_numeral (lhand decoded)
+                then " (fails correctly) instruction codes " else " " in
+      Format.print_string("OK:" ^ fey ^ string_of_term decoded);
+      Format.print_newline()
+    end;
     let total = !tested_reg_instances + !tested_mem_instances +
                 !tested_br_instances in
     if sematest_finished time_limit_sec case_limit start_t total then
-      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, tested branch instances: %d, total: %d)\n"
+      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, tested branch instances: %d, total: %d, skipped instances: %d)\n"
           time_limit_sec !tested_reg_instances !tested_mem_instances
-          !tested_br_instances total in
+          !tested_br_instances total !skipped_instances in
       None
     else run_random_simulations start_t
   end
