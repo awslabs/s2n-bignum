@@ -143,7 +143,8 @@ each polynomial of a vector, for `<op>` one of `add`, `frombytes`,
 `tomont` (in the files `mlkem_native_polyvec_<op>_k3_gcc12_O2.ml`). As in
 `common/fips203.ml`, a vector of k polynomials is given by its 256 * k
 coefficients, of which those of polynomial j are `\i. x(256 * j + i)`.
-Likewise `mlkem768_polyvec_decompress_du` applies
+Likewise `mlkem768_polyvec_compress_du` and
+`mlkem768_polyvec_decompress_du` apply `mlkem_poly_compress_d10` and
 `mlkem_poly_decompress_d10` to each polynomial.
 
 The functions without transcriptions of their own are also verified
@@ -168,4 +169,6 @@ returning. They read the address of the guard from the global offset table
 part of the image. So their specifications have the GOT entry as a
 precondition, `read (memory :> bytes64 (word(pc + 0x1fff8))) s = guard`,
 and require that neither the GOT entry nor the guard is overwritten, so
-that the check succeeds and `__stack_chk_fail` is never called.
+that the check succeeds and `__stack_chk_fail` is never called. The
+specifications of functions that call them, such as
+`mlkem768_polyvec_compress_du`, have the same conditions.
