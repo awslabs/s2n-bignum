@@ -689,10 +689,69 @@ let cosimulate_ldst1_4reg() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LDR/STR (immediate) of 64-bit, 32-bit and byte general
+ *** registers and of 128-bit and 64-bit SIMD&FP registers, with an
+ *** unsigned (scaled) offset, pre-index or post-index, and LDUR/STUR of
+ *** 128-bit registers. Register 31 is the zero register for a general
+ *** register Rt. Rt is never the same register as Rn: with writeback
+ *** that is CONSTRAINED UNPREDICTABLE, and in any case the harness only
+ *** knows the base address relative to SP.
+ ***)
+
+let cosimulate_ldst_imm() =
+  (* kind: 0 = X, 1 = W, 2 = byte, 3 = Q, 4 = D *)
+  let kind = Random.int 5 and isld = Random.int 2 and rn = Random.int 32 in
+  (* mode: 0 = unsigned offset, 1 = pre-index, 2 = post-index,
+           3 = unscaled offset (LDUR/STUR, Q only) *)
+  let mode = Random.int (if kind = 3 then 4 else 3) in
+  let bytes = el kind [8; 4; 1; 16; 8] in
+  let rt =
+    if kind >= 3 || rn = 31 then Random.int 32
+    else (rn + 1 + Random.int 31) mod 32 in
+  let stackoff =
+    if rn = 31 then 16 * Random.int ((256 - bytes) / 16 + 1)
+    else Random.int (256 - bytes + 1) in
+  (* imm12 for the unsigned offset, imm9 for the others. The access stays
+     inside [SP,SP+256) and a writeback never moves the base below SP. *)
+  let imm12 = Random.int ((256 - bytes - stackoff) / bytes + 1) in
+  let imm9 =
+    if mode = 2 then Random.int (256 + stackoff) - stackoff
+    else
+      let lo = - stackoff and hi = min 255 (256 - bytes - stackoff) in
+      lo + Random.int (hi - lo + 1) in
+  let postinc = if mode = 1 || mode = 2 then imm9 else 0 in
+  let idx = num((imm9 + 512) mod 512) in
+  let idxmode = num(el mode [0; 3; 1; 0]) in
+  let code =
+    (if mode = 0 then
+       (match kind with
+          0 | 1 -> pow2 31 */ num 1 +/ pow2 30 */ num (1 - kind) +/
+                   pow2 23 */ num 0b1110010
+        | 2 -> pow2 23 */ num 0b001110010
+        | 3 -> pow2 24 */ num 0b111101 +/ pow2 23
+        | _ -> pow2 30 */ num 0b11 +/ pow2 24 */ num 0b111101) +/
+       pow2 10 */ num imm12
+     else
+       (match kind with
+          0 | 1 -> pow2 31 */ num 1 +/ pow2 30 */ num (1 - kind) +/
+                   pow2 23 */ num 0b1110000
+        | 2 -> pow2 23 */ num 0b001110000
+        | 3 -> pow2 23 */ num 0b1111001
+        | _ -> pow2 30 */ num 0b11 +/ pow2 23 */ num 0b1111000) +/
+       pow2 12 */ idx +/ pow2 10 */ idxmode) +/
+    pow2 22 */ num isld +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldstp_gpr; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
-    cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg
+    cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg;
+    cosimulate_ldst_imm
     ];;
 
 let run_random_memopsimulation() =
