@@ -143,6 +143,8 @@ each polynomial of a vector, for `<op>` one of `add`, `frombytes`,
 `tomont` (in the files `mlkem_native_polyvec_<op>_k3_gcc12_O2.ml`). As in
 `common/fips203.ml`, a vector of k polynomials is given by its 256 * k
 coefficients, of which those of polynomial j are `\i. x(256 * j + i)`.
+Likewise `mlkem768_polyvec_decompress_du` applies
+`mlkem_poly_decompress_d10` to each polynomial.
 
 The functions without transcriptions of their own are also verified
 directly in the image, in the files
