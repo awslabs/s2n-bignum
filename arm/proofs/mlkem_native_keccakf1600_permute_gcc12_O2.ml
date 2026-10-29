@@ -10,6 +10,8 @@
 (* mlkem_native/README.md). Unlike the hand-written kernels, it reads its    *)
 (* own table of round constants from the read-only data rather than taking   *)
 (* it as an argument, and it does two rounds in each iteration of its loop.  *)
+(* At the end, the theorem for the code in the whole image is also stated    *)
+(* for the state as a 1600-bit word, with keccak_f1600 of common/fips202.ml. *)
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
@@ -969,3 +971,73 @@ let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
    [`pc + 0x2dd0`,`pc:num`; `pc + 0x62b0`,`rc:num`]
    [MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IN_IMAGE;
     MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_DATA_IN_IMAGE]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The same for the state as a 1600-bit word, read by wbytes, with the       *)
+(* permutation keccak_f1600 of common/fips202.ml (see                        *)
+(* utils/keccak_fips202.ml), and tactics for callers, which carry the state  *)
+(* between calls as 200 bytes.                                               *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/utils/keccak_fips202.ml";;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600 =
+  prove
+ (`!a (S:1600 word) pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 192),192))
+            [(word pc,0x6480); (a,200)] /\
+        nonoverlapping (a,200) (word pc,0x6480)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mc /\
+                  read PC s = word (pc + 0x2dd0) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a] s /\
+                  read (memory :> wbytes a) s = S)
+             (\s. read PC s = returnaddress /\
+                  read (memory :> wbytes a) s = keccak_f1600 S)
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(a,200);
+                memory :> bytes(word_sub stackpointer (word 192),192)])`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`a:int64`; `wordlist_of_num 25 (val(S:1600 word)):int64 list`;
+                `pc:num`; `stackpointer:int64`; `returnaddress:int64`]
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP (MESON[ENSURES_PREPOSTCONDITION_THM]
+   `ensures step P Q C
+    ==> (!x. P' x ==> P x) /\ (!x. Q x ==> Q' x)
+        ==> ensures step P' Q' C`)) THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[READ_MEMORY_WBYTES_KECCAK] THEN SIMP_TAC[];
+    MESON_TAC[KECCAK_F1600_MEMORY]]);;
+
+(*** The state at a as a 1600-bit word, from it as 200 bytes ***)
+
+let KECCAK_STATE_AT_TAC a =
+  FIRST_ASSUM(fun th ->
+    match concl th with
+      Comb(Comb(Const("=",_),
+                Comb(Comb(Const("read",_),
+                          Comb(Comb(Const(":>",_),Const("memory",_)),
+                               Comb(Const("bytes",_),aa))),_)),
+           Comb(Const("val",_),_))
+        when aa = mk_pair(a,`200`) ->
+          ASSUME_TAC(REWRITE_RULE[GSYM READ_MEMORY_WBYTES_1600] th)
+    | _ -> NO_TAC);;
+
+(*** Apply ttac to the 1600-bit word for the state at a ***)
+
+let KECCAK_STATE_THEN a (ttac:term->tactic) =
+  FIRST_ASSUM(fun th ->
+    match concl th with
+      Comb(Comb(Const("=",_),
+                Comb(Comb(Const("read",_),
+                          Comb(Comb(Const(":>",_),Const("memory",_)),
+                               Comb(Const("wbytes",_),aa))),_)),v)
+        when aa = a -> ttac v
+    | _ -> NO_TAC);;
