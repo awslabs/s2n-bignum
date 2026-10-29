@@ -11,9 +11,9 @@
 (* of the four states, the last time as a tail call. It is verified in the   *)
 (* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at       *)
 (* address 0x33a0, using the theorems for mlkem_keccakf1600_permute at       *)
-(* 0x2dd0 in the image. The specification is the same as for                *)
-(* sha3_keccak4_f1600, except that the table of round constants is not an   *)
-(* argument, since it is part of the image.                                 *)
+(* 0x2dd0 in the image. The specification is the same as for                 *)
+(* sha3_keccak4_f1600, except that the table of round constants is not an    *)
+(* argument, since it is part of the image.                                  *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keccakf1600_permute_gcc12_O2.ml";;
