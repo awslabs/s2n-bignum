@@ -202,6 +202,17 @@ keccak_f1600 of it is keccak_absorb r P (mlen DIV r + 1), the state in
 `keccak_sponge` after absorbing. In mlkem-native, that last permutation is
 the first step of squeezing.
 
+The SHAKE128 functions `mlkem_shake128_init`, `mlkem_shake128_absorb_once`,
+`mlkem_shake128_squeezeblocks` and `mlkem_shake128_release` work on a
+context of 224 bytes, of which the first 200 are the state.
+`mlkem_shake128_absorb_once` calls `mlk_keccak_absorb_once` with r = 168
+and p = 0x1F, as for `shake128`. For a state S,
+`mlkem_shake128_squeezeblocks` outputs nblocks blocks of 168 bytes, block i
+being the first 168 bytes of keccak_squeeze (i + 1) S, and leaves the state
+keccak_squeeze nblocks S, so that after `mlkem_shake128_absorb_once` these
+are the bytes of the output of `shake128`. Finally `mlkem_shake128_init`
+does nothing and `mlkem_shake128_release` zeroes the context.
+
 Some of these functions, such as `mlkem_poly_compress_d4`, have a stack
 protector: they copy the stack guard to the stack and check it before
 returning. They read the address of the guard from the global offset table
