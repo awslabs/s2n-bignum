@@ -148,12 +148,21 @@ The functions without transcriptions of their own are also verified
 directly in the image, in the files
 `../proofs/mlkem_native_<function>_gcc12_O2.ml` for `mlkem_<function>`. So
 far these are `mlkem_poly_add`, `mlkem_poly_sub`, `mlkem_poly_frombytes`,
-`mlkem_poly_decompress_d4`, `mlkem_poly_decompress_d10`,
-`mlkem_poly_frommsg` and `mlkem_poly_tomsg`. As in `mlkem_decode` in
-`common/fips203.ml`, the contents of a byte array are given as a number, so
-that coefficient i of the result of `mlkem_poly_frombytes` is bits 12 * i
-to 12 * i + 11 of the number given by the 384 bytes. The compression and
-decompression of coefficients are given by the same arithmetic as
-`mlkem_compress` and `mlkem_decompress` there, e.g. (3329 * y + 8) DIV 16
-for decompression from 4 bits, but without using `common/fips203.ml`, which
-takes several minutes to load.
+`mlkem_poly_compress_d4`, `mlkem_poly_decompress_d4`,
+`mlkem_poly_decompress_d10`, `mlkem_poly_frommsg` and `mlkem_poly_tomsg`.
+As in `mlkem_decode` in `common/fips203.ml`, the contents of a byte array
+are given as a number, so that coefficient i of the result of
+`mlkem_poly_frombytes` is bits 12 * i to 12 * i + 11 of the number given by
+the 384 bytes. The compression and decompression of coefficients are given
+by the same arithmetic as `mlkem_compress` and `mlkem_decompress` there,
+e.g. (3329 * y + 8) DIV 16 for decompression from 4 bits, but without using
+`common/fips203.ml`, which takes several minutes to load.
+
+Some of these functions, such as `mlkem_poly_compress_d4`, have a stack
+protector: they copy the stack guard to the stack and check it before
+returning. They read the address of the guard from the global offset table
+(GOT) at 0x1fff8, in the read-write segment of the binary, which is not
+part of the image. So their specifications have the GOT entry as a
+precondition, `read (memory :> bytes64 (word(pc + 0x1fff8))) s = guard`,
+and require that neither the GOT entry nor the guard is overwritten, so
+that the check succeeds and `__stack_chk_fail` is never called.

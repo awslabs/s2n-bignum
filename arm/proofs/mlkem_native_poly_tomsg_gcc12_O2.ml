@@ -63,22 +63,6 @@ let COMPRESS_D1_ARITH = prove
   EXISTS_TAC `(1073741824 + v * 1290168) - q * 2147483648` THEN
   ASM_ARITH_TAC);;
 
-let WORD_SX_SMALL = prove
- (`!y:int16. val y < 32768 ==> (word_sx y:int32) = word_zx y`,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_SX_ZX_GEN; DIMINDEX_16] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  SUBGOAL_THEN `~bit 15 (y:int16)` (fun th -> REWRITE_TAC[th]) THENL
-   [REWRITE_TAC[BIT_VAL] THEN
-    ASM_SIMP_TAC[DIV_LT; ARITH_RULE `2 EXP 15 = 32768`] THEN
-    CONV_TAC NUM_REDUCE_CONV;
-    REWRITE_TAC[BITVAL_CLAUSES] THEN CONV_TAC WORD_REDUCE_CONV THEN
-    REWRITE_TAC[WORD_OR_0]]);;
-
-let MOD_32_64 = prove
- (`!x. x MOD 4294967296 MOD 18446744073709551616 = x MOD 4294967296`,
-  GEN_TAC THEN MATCH_MP_TAC MOD_LT THEN
-  MP_TAC(SPECL [`x:num`; `4294967296`] MOD_LT_EQ) THEN ARITH_TAC);;
-
 let TOMSG_BIT = prove
  (`!y:int16.
         val y < 3329
@@ -105,12 +89,6 @@ let TOMSG_BIT = prove
 (* ------------------------------------------------------------------------- *)
 (* Splitting off the bits for one byte from the number for the message.      *)
 (* ------------------------------------------------------------------------- *)
-
-let NSUM_LT_ADD = prove
- (`!f m n. nsum {i | i < m + n} f =
-           nsum {i | i < m} f + nsum {i | i < n} (\i. f(m + i))`,
-  GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THEN
-  ASM_REWRITE_TAC[ADD_CLAUSES; NSUM_CLAUSES_NUMSEG_LT; ADD_ASSOC]);;
 
 let NSUM_BYTE = prove
  (`!f m. nsum {k | k < 8} (\k. f(m + k) * 2 EXP (m + k)) =
