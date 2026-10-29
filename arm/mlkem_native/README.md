@@ -213,13 +213,19 @@ keccak_squeeze nblocks S, so that after `mlkem_shake128_absorb_once` these
 are the bytes of the output of `shake128`. Finally `mlkem_shake128_init`
 does nothing and `mlkem_shake128_release` zeroes the context.
 
-Some of these functions, such as `mlkem_poly_compress_d4`, have a stack
-protector: they copy the stack guard to the stack and check it before
-returning. They read the address of the guard from the global offset table
-(GOT) at 0x1fff8, in the read-write segment of the binary, which is not
-part of the image. So their specifications have the GOT entry as a
-precondition, `read (memory :> bytes64 (word(pc + 0x1fff8))) s = guard`,
-and require that neither the GOT entry nor the guard is overwritten, so
-that the check succeeds and `__stack_chk_fail` is never called. The
-specifications of functions that call them, such as
-`mlkem768_polyvec_compress_du`, have the same conditions.
+For `mlkem_sha3_256` and `mlkem_sha3_512`, the input is given as a list of
+bytes, and the result, as a number, is that of `sha3_256` or `sha3_512` in
+`common/fips202.ml`, using the lemmas about `keccak_sponge` at the end of
+`../proofs/utils/keccak_fips202.ml`. They keep the state on the stack.
+
+Some of these functions, such as `mlkem_poly_compress_d4` and
+`mlkem_sha3_256`, have a stack protector: they copy the stack guard to the
+stack and check it before returning. They read the address of the guard
+from the global offset table (GOT) at 0x1fff8, in the read-write segment of
+the binary, which is not part of the image. So their specifications have
+the GOT entry as a precondition,
+`read (memory :> bytes64 (word(pc + 0x1fff8))) s = guard`, and require that
+neither the GOT entry nor the guard is overwritten, so that the check
+succeeds and `__stack_chk_fail` is never called. The specifications of
+functions that call them, such as `mlkem768_polyvec_compress_du`, have the
+same conditions.
