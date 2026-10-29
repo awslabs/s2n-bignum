@@ -472,6 +472,7 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_poly_sub_gcc12_O2 \
   mlkem_native/mlkem_native_poly_tomsg_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_decompress_du_k3_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_frombytes_k3_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_invntt_tomont_k3_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_mulcache_compute_k3_gcc12_O2 \
@@ -635,6 +636,8 @@ mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_add_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_decompress_du_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_decompress_d10_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_frombytes_k3_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_frombytes_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_invntt_tomont_k3_gcc12_O2.native: \
