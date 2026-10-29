@@ -1301,8 +1301,8 @@ let arm_FMOV_FtoI = define
     `;;
 
 let arm_FMOV_ItoF = define
- `arm_FMOV_ItoF Rd Rn (part:num) =
-    \s. let fltval:(64)word = read Rn s in
+ `arm_FMOV_ItoF Rd (Rn:(armstate,N word)component) (part:num) =
+    \s. let fltval:N word = read Rn s in
         let d:(128)word = read Rd s in
         if part = 0
         then (Rd := word_zx fltval:(128)word) s
@@ -1393,6 +1393,15 @@ let arm_ORR_VEC = define
 
 let arm_RET = define
  `arm_RET Rn =
+    \s. let pc = word_sub (read PC s) (word 4) in
+        let pc_next = read Rn s in
+        (PC := pc_next ,,
+         events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+
+(*** BR is the same as RET except for the hint to branch prediction ***)
+
+let arm_BR = define
+ `arm_BR Rn =
     \s. let pc = word_sub (read PC s) (word 4) in
         let pc_next = read Rn s in
         (PC := pc_next ,,
@@ -4174,7 +4183,7 @@ let ARM_OPERATION_CLAUSES =
       [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDV_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
        arm_ADRP; arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
        arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIF; arm_BIT;
-       arm_BL; arm_BL_ABSOLUTE; arm_Bcond;
+       arm_BL; arm_BL_ABSOLUTE; arm_BR; arm_Bcond;
        arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ;
        arm_CMGE_VEC_ALT; arm_CMGT_VEC_ALT; arm_CMHI_VEC_ALT; arm_CMLE_VEC_ZERO_ALT; arm_CNT_ALT;
        arm_CSEL; arm_CSINC; arm_CSINV; arm_CSNEG;

@@ -304,6 +304,8 @@ let decode = new_definition `!w:int32. decode w =
                   (XREG' Rd) (XREG' Rn) (XREG' Rm) (XREG' Ra)
                 else (if o0 then arm_MSUB else arm_MADD)
                   (WREG' Rd) (WREG' Rn) (WREG' Rm) (WREG' Ra))
+  | [0b1101011000011111000000:22; Rn:5; 0:5] ->
+    SOME (arm_BR (XREG' Rn))
   | [0b1101011001011111000000:22; Rn:5; 0:5] ->
     SOME (arm_RET (XREG' Rn))
   | [sf; 0b10110101100000000001:20; N; Rn:5; Rd:5] ->
@@ -419,9 +421,11 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11:2; 0b1111000:7; is_ld; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
 
-  // LDUR/STUR, only size 128
+  // LDUR/STUR, only sizes 128 and 64
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+  | [0b11:2; 0b1111000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
 
   // LDUR/STUR, only sizes 64 and 32
   | [0b1:1; x; 0b1110000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
@@ -733,12 +737,13 @@ let decode = new_definition `!w:int32. decode w =
   | [0:1; q; 1:1; 0b011110:6; immh:4; abc:3; cmode:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI (op=1), USHR (Vector), USRA (Vector), SLI (Vector), SRI (vector)
     if val immh = 0 then
-      // MOVI, 128-bit only
-      if cmode = word 0b1110 /\ q then
+      // MOVI, 64-bit elements (the scalar form MOVI Dd if q = 0)
+      if cmode = word 0b1110 then
         let abcdefgh:(8)word = word_join abc defgh in
         let imm = arm_adv_simd_expand_imm abcdefgh (word 1:(1)word) cmode in
         match imm with
-        | SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
+        | SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                      else SOME (arm_MOVI (DREG' Rd) imm)
         | NONE -> NONE
       // BIC (vector immediate), 16-bit size only
       else if cmode = word 0b1001 \/ cmode = word 0b1011 then
@@ -895,6 +900,10 @@ let decode = new_definition `!w:int32. decode w =
   | [0b1001111001100111000000:22; Rn:5; Rd:5] ->
     // FMOV (double, from general)
     SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 0)
+
+  | [0b0001111000100111000000:22; Rn:5; Rd:5] ->
+    // FMOV (single, from general)
+    SOME (arm_FMOV_ItoF (QREG' Rd) (WREG' Rn) 0)
 
   | [0b1001111010101111000000:22; Rn:5; Rd:5] ->
     // FMOV (double high part, from general)
@@ -1086,15 +1095,14 @@ let decode = new_definition `!w:int32. decode w =
       SOME (arm_SHL_VEC (QREG' Rd) (QREG' Rn) amt esize datasize)
 
   | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b101001:6; Rn:5; Rd:5] ->
-    // SSHLL, SSHLL2 (or MOVI with cmode=1010 when immh=0 and Q=1)
+    // SSHLL, SSHLL2 (or MOVI with cmode=1010 when immh=0)
     if immh = (word 0b0:(4)word) then
-      if q then
-        let abcdefgh:(8)word = word_join immb Rn in
-        let imm = arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1010) in
-        match imm with
-        | SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
-        | NONE -> NONE
-      else NONE
+      let abcdefgh:(8)word = word_join immb Rn in
+      let imm = arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1010) in
+      match imm with
+      | SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                    else SOME (arm_MOVI (DREG' Rd) imm)
+      | NONE -> NONE
     else if bit 3 immh then NONE // "UNDEFINED"
     else
       let esize = 8 * 2 EXP (3 - word_clz immh) in
@@ -1106,15 +1114,14 @@ let decode = new_definition `!w:int32. decode w =
 
   | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b100001:6; Rn:5; Rd:5] ->
     // SHRN (Q=0, low half) / SHRN2 (Q=1, high half)
-    // (or MOVI with cmode=1000 when immh=0 and Q=1)
+    // (or MOVI with cmode=1000 when immh=0)
     if immh = (word 0b0:(4)word) then
-      if q then
-        let abcdefgh:(8)word = word_join immb Rn in
-        let imm = arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1000) in
-        match imm with
-        | SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
-        | NONE -> NONE
-      else NONE
+      let abcdefgh:(8)word = word_join immb Rn in
+      let imm = arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1000) in
+      match imm with
+      | SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                    else SOME (arm_MOVI (DREG' Rd) imm)
+      | NONE -> NONE
     else if bit 3 immh then NONE // "UNDEFINED"
     else
       let esize = 8 * 2 EXP (3 - word_clz immh) in
@@ -1199,8 +1206,13 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_SQRDMULH_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
 
   | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b001001:6; Rn:5; Rd:5] ->
-    // SRSHR
-    if immh = (word 0b0: (4)word) then NONE // "asimdimm case"
+    // SRSHR, or MOVI 32-bit with LSL #8 (op=0, cmode=0010) when immh=0
+    if immh = (word 0b0: (4)word) then
+      let abcdefgh:(8)word = word_join immb Rn in
+      match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b0010) with
+        SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                    else SOME (arm_MOVI (DREG' Rd) imm)
+      | NONE -> NONE
     else if bit 3 immh /\ ~q then NONE // "UNDEFINED"
     else
       let esize = 8 * 2 EXP (3 - word_clz immh) in
@@ -1242,20 +1254,32 @@ let decode = new_definition `!w:int32. decode w =
 
   | [0:1; q; 0:1; 0b011110:6; 0b0000:4; abc:3; 0b0100:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI (op=0, cmode=0100, 32-bit element with LSL #16)
-    if q then
-      let abcdefgh:(8)word = word_join abc defgh in
-      match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b0100) with
-        SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
-      | NONE -> NONE
-    else NONE
+    let abcdefgh:(8)word = word_join abc defgh in
+    (match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b0100) with
+       SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                   else SOME (arm_MOVI (DREG' Rd) imm)
+     | NONE -> NONE)
+  | [0:1; q; 0:1; 0b011110:6; 0b0000:4; abc:3; 0b0110:4; 0b01:2; defgh:5; Rd:5] ->
+    // MOVI (op=0, cmode=0110, 32-bit element with LSL #24)
+    let abcdefgh:(8)word = word_join abc defgh in
+    (match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b0110) with
+       SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                   else SOME (arm_MOVI (DREG' Rd) imm)
+     | NONE -> NONE)
+  | [0:1; q; 0:1; 0b011110:6; 0b0000:4; abc:3; 0b1100:4; 0b01:2; defgh:5; Rd:5] ->
+    // MOVI (op=0, cmode=1100, 32-bit element with MSL #8)
+    let abcdefgh:(8)word = word_join abc defgh in
+    (match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1100) with
+       SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                   else SOME (arm_MOVI (DREG' Rd) imm)
+     | NONE -> NONE)
   | [0:1; q; 0:1; 0b011110:6; 0b0000:4; abc:3; 0b1101:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI (op=0, cmode=1101, 32-bit element with MSL #16)
-    if q then
-      let abcdefgh:(8)word = word_join abc defgh in
-      match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1101) with
-        SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
-      | NONE -> NONE
-    else NONE
+    let abcdefgh:(8)word = word_join abc defgh in
+    (match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1101) with
+       SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                   else SOME (arm_MOVI (DREG' Rd) imm)
+     | NONE -> NONE)
 
   | [0:1; q; 0b001110:6; size:2; 0:1; Rm:5; 0:1; op; 0b1010:4; Rn:5; Rd:5] ->
     // TRN1 and TRN2
@@ -1441,7 +1465,11 @@ let decode = new_definition `!w:int32. decode w =
       SOME (arm_UMOV (XREG' Rd) (QREG' Rn) (val (word_subword imm5 (4,1): 1 word)) 8)
     else if ~q /\ word_subword imm5 (0,3) = (word 0b100: 3 word) then // v.s
       SOME (arm_UMOV (WREG' Rd) (QREG' Rn) (val (word_subword imm5 (3,2): 2 word)) 4)
-    else NONE // v.h, v.b are unsupported
+    else if ~q /\ word_subword imm5 (0,2) = (word 0b10: 2 word) then // v.h
+      SOME (arm_UMOV (WREG' Rd) (QREG' Rn) (val (word_subword imm5 (2,3): 3 word)) 2)
+    else if ~q /\ bit 0 imm5 then // v.b
+      SOME (arm_UMOV (WREG' Rd) (QREG' Rn) (val (word_subword imm5 (1,4): 4 word)) 1)
+    else NONE
 
   | [0:1; q; 0b101110:6; size:2; 1:1; Rm:5; 0b110000:6; Rn:5; Rd:5] ->
     // UMULL (vector, Q = 0). UMULL2 (vector, Q = 1)

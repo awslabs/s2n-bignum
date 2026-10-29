@@ -43,6 +43,7 @@ let iclasses =
   "xx0100010xxxxxxxxxxxxx0xxxxxxxx0"; (* e.g. add x16, x15, #2 *)
   "10010001000000001000001100110110"; (* unmatched case... *)
   "1001000100xxxxxxxxxxxx1110100010"; (* another: add x2, x29, #xxx *)
+  "xx0100010xxxxxxxxxxxxxx0xxxxxx0x"; (* e.g. add x25, x22, #32 *)
   (*** Rd of ADDS/SUBS cannot be SP *)
   "xx1100010xxxxxxxxxxxxxxxxx0xxxxx";
   "xx1100010xxxxxxxxxxxxxxxx0xxxxxx";
@@ -64,6 +65,12 @@ let iclasses =
   "xxx01011001xxxxxxxx100xx0xxxx0xx"; (* shift 4 *)
   "xxx01011001xxxxxxxx100x0xxxx0xxx"; (* shift 4 *)
   "xxx01011001xxxxxxxx1000xxxx0xxxx"; (* shift 4 *)
+  (*** CMP, CMN, extended registers: Rd is ZR, Rn is not SP ***)
+  "xx101011001xxxxxxxx0xxxxxx011111"; (* shift 0-3 *)
+  "xx101011001xxxxxxxx0xxxxx0x11111"; (* shift 0-3 *)
+  "xx101011001xxxxxxxx0xxxx0xx11111"; (* shift 0-3 *)
+  "xx101011001xxxxxxxx0xxx0xxx11111"; (* shift 0-3 *)
+  "xx101011001xxxxxxxx0xx0xxxx11111"; (* shift 0-3 *)
 
   (*** AND, ANDS, EOR, ORR with immediate operand, no negated forms ***)
   (*** Again we want to avoid using SP except for in ANDS ***)
@@ -183,8 +190,8 @@ let iclasses =
   "100111101010111x000000xxxxxxxxxx";
   "100111100110011x000000xxxxxxxxxx";
 
-  (*** FMOV to general, single ***)
-  "0001111000100110000000xxxxxxxxxx";
+  (*** FMOV to and from general, single ***)
+  "000111100010011x000000xxxxxxxxxx";
 
   (*** INS, or MOV (element) ***)
   "01101110000xxxx10xxxx1xxxxxxxxxx";
@@ -217,19 +224,11 @@ let iclasses =
   "0x001110xx1xxxxx100101xxxxxxxxxx";
 
   (*** MOVI ***)
-  "0110111100000xxx111001xxxxxxxxxx"; (* q=1, cmode=1110, 64-bit *)
-  "0x00111100000xxx000001xxxxxxxxxx"; (* 32-bit MOVI, immh=0 *)
-  "0100111100000xxx010001xxxxxxxxxx"; (* q=1, op=0, cmode=0100, LSL #16 *)
-  "0100111100000xxx110101xxxxxxxxxx"; (* q=1, op=0, cmode=1101, MSL #16 *)
-
-  (*** MOVI (op=0, cmode=1110, byte) ***)
-  "0x00111100000xxx111001xxxxxxxxxx";
-
-  (*** MOVI (op=0, cmode=1000, 16-bit, q=1 only) -- shares opcode with SHRN ***)
-  "0100111100000xxx100001xxxxxxxxxx";
-
-  (*** MOVI (op=0, cmode=1010, 16-bit shifted, q=1 only) -- shares opcode with SSHLL ***)
-  "0100111100000xxx101001xxxxxxxxxx";
+  "0x10111100000xxx111001xxxxxxxxxx"; (* op=1, cmode=1110, 64-bit *)
+  "0x00111100000xxx0xx001xxxxxxxxxx"; (* op=0, 32-bit shifted *)
+  "0x00111100000xxx10x001xxxxxxxxxx"; (* op=0, 16-bit shifted *)
+  "0x00111100000xxx110x01xxxxxxxxxx"; (* op=0, 32-bit shifting ones *)
+  "0x00111100000xxx111001xxxxxxxxxx"; (* op=0, cmode=1110, byte *)
 
   (*** MVNI (32-bit shifted, 16-bit shifted, 32-bit shifting ones) ***)
   "0x10111100000xxx0xx001xxxxxxxxxx";
@@ -470,9 +469,11 @@ let iclasses =
   (*** UMIN, vector ***)
   "0x101110xx1xxxxx011011xxxxxxxxxx";
 
-  (*** UMOV (.d, .s) ***)
+  (*** UMOV (.d, .s, .h, .b) ***)
   "01001110000x1000001111xxxxxxxxxx";
   "00001110000xx100001111xxxxxxxxxx";
+  "00001110000xxx10001111xxxxxxxxxx";
+  "00001110000xxxx1001111xxxxxxxxxx";
 
   (*** UMADDL, UMSUBL ***)
   "10011011101xxxxxxxxxxxxxxxxxxxxx";
@@ -602,8 +603,8 @@ let check_insns () =
     "01010100xxxxxxxxxxxxxxxxxxx0xxxx";
 
     (*** cbz, cbnz ***)
-    "10110100xxxxxxxxxxxxxxxxxxxxxxxx";
-    "10110101xxxxxxxxxxxxxxxxxxxxxxxx";
+    "x0110100xxxxxxxxxxxxxxxxxxxxxxxx";
+    "x0110101xxxxxxxxxxxxxxxxxxxxxxxx";
 
     (*** tbz, tbnz ***)
     "x0110110xxxxxxxxxxxxxxxxxxxxxxxx";
@@ -735,8 +736,9 @@ let check_insns () =
     (*** ld1r (post immediate ofs) ***)
     "0x001101110111111100xxxxxxxxxxxx";
 
-    (*** ldur / stur, immediate, size 128 only ***)
+    (*** ldur / stur, immediate, sizes 128 and 64 (SIMD & FP) ***)
     "001111001x0xxxxxxxxx00xxxxxxxxxx";
+    "111111000x0xxxxxxxxx00xxxxxxxxxx";
 
     (*** ldur / stur for 32-bit and 64-bit values, and ldurb / sturb ***)
     "1x1110000x0xxxxxxxxx00xxxxxxxxxx";
@@ -777,9 +779,11 @@ let check_insns () =
     "xx0100010xxxxxxxxxxxxxxxxxx11111";
     "xx0100010xxxxxxxxxxxxx11111xxxxx";
     "11001011001xxxxxxxxxxx11111xxxxx";
+    "10001011001xxxxxxxxxxx11111xxxxx";
 
-    (*** ret ***)
+    (*** ret, br ***)
     "1101011001011111000000xxxxx00000";
+    "1101011000011111000000xxxxx00000";
 
     (*** bti c: the BTI landing pad at the head of an indirectly-called   ***)
     (*** subroutine.  A hint with no register or memory effect, so there  ***)

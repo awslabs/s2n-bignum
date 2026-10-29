@@ -544,6 +544,30 @@ let cosimulate_ldstu() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LDUR/STUR for 128-bit and 64-bit SIMD&FP registers,   ***)
+(*** with negative as well as positive offsets.                          ***)
+let cosimulate_ldstu_simd() =
+  let q = Random.int 2
+  and isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let bytes = if q = 1 then 16 else 8 in
+  let stackoff =
+    if rn = 31 then 16 * Random.int ((257 - bytes) / 16)
+    else Random.int (257 - bytes) in
+  let off = Random.int (257 - bytes) - stackoff in
+  let code =
+    pow2 30 */ num(if q = 1 then 0b00 else 0b11) +/
+    pow2 23 */ num(0b1111000 + q) +/
+    pow2 22 */ num isld +/
+    pow2 12 */ num((off + 512) mod 512) +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 (*** This covers LD1R ***)
 
 let cosimulate_ld1r() =
@@ -750,7 +774,7 @@ let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg;
-    cosimulate_ldst_hsw; cosimulate_ldst_ext
+    cosimulate_ldst_hsw; cosimulate_ldst_ext; cosimulate_ldstu_simd
     ];;
 
 let run_random_memopsimulation() =
