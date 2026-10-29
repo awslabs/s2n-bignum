@@ -242,7 +242,7 @@ let random64() = randomnd 64 (Random.int 65);;
 let random_regstate () =
   let d = Random.int 65 in
   map (fun _ -> randomnd 64 d) (0--3) @
-  [num(Random.int 4096 land 0b100011010101)] @
+  [num(Random.int 4096 land 0b110011010101)] @
   map (fun _ -> randomnd 64 d) (5--79) @
   map (fun _ -> randomnd 64 d) (80--111);;
 
