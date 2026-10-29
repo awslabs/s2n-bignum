@@ -304,3 +304,34 @@ let POLYVEC_JOIN_TAC k =
   MATCH_MP_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
                 (SPEC kt POLYVEC_JOIN)) THEN
   POLYVEC_CASES_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* Byte arrays. As in mlkem_decode in common/fips203.ml, the contents of a   *)
+(* byte array are given as a number n, and READ_MEMORY_BYTES8_OF_NUM gives   *)
+(* its bytes. BYTES_BITBLAST_TAC proves a goal of bit operations on such     *)
+(* bytes word((n DIV 2 EXP k) MOD 256) by bit-blasting with them as atoms.   *)
+(* ------------------------------------------------------------------------- *)
+
+let READ_MEMORY_BYTES8_OF_NUM = prove
+ (`!a:int64 m n k s:armstate.
+        read (memory :> bytes(a,m)) s = n /\ k < m
+        ==> read (memory :> bytes8(word_add a (word k))) s =
+            word((n DIV 2 EXP (8 * k)) MOD 256)`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (SUBST1_TAC o SYM) ASSUME_TAC) THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[BYTES8_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES;
+              VAL_WORD; DIMINDEX_8] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL] THEN
+  REWRITE_TAC[ARITH_RULE `256 = 2 EXP (8 * 1)`; READ_BYTES_DIV;
+              READ_BYTES_MOD] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+let BYTES_BITBLAST_TAC (asl,w) =
+  let bts = setify (find_terms (fun t ->
+     type_of t = `:byte` &&
+     can (term_match [] `word(x MOD 256):byte`) t) w) in
+  let vs = map (fun _ -> genvar `:byte`) bts in
+  let th = BITBLAST_RULE (subst (zip vs bts) w) in
+  ACCEPT_TAC (INST (zip bts vs) th) (asl,w);;
