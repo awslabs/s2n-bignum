@@ -1582,7 +1582,7 @@ let cosimulate_mul_full_harness() = fun () ->
   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
   let sib = scale * int_of_float (2.0**6.0) + 0b001011 in
   [[0x48; 0xc7; 0xc1; index; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
-   [0x48; 0x89; 0xd8]; (* MOV r8, rbx *)
+   [0x49; 0x89; 0xd8]; (* MOV r8, rbx *)
    [0x48; 0x8d; 0x5c; 0x24; base]; (* LEA rbx, [rsp+base] *)
    [0x48; 0xf7; 0x64; sib; disp];  (* MUL [rbx + scale*rcx + displacement] *)
    [0x4c; 0x89; 0xc3]; (* MOV rbx, r8 *)
@@ -1597,7 +1597,7 @@ let cosimulate_mul_base_disp_harness() = fun () ->
   let stack_start = Random.int 128 in
   let rest = 248 - stack_start in
   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
-  [[0x48; 0x89; 0xd8]; (* MOV r8, rbx *)
+  [[0x49; 0x89; 0xd8]; (* MOV r8, rbx *)
    [0x48; 0x8d; 0x5c; 0x24; stack_start]; (* LEA rbx, [rsp+stack_start] *)
    [0x48; 0xf7; 0x63; disp];  (* MUL [rbx + displacement] *)
    [0x4c; 0x89; 0xc3]; (* MOV rbx, r8 *)
