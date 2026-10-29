@@ -573,7 +573,8 @@ let match_bitpattern =
    iclasses. *)
 
 let check_insns () =
-  (* These commands are not going to be simulated. *)
+  (* These are not in iclasses. Memory operations, branches and calls are
+     cosimulated by separate generators in simulator.ml; ADRP is not. *)
   let skipping_iclasses = [
     (*** adr ***)
     "0xx10000xxxxxxxxxxxxxxxxxxxxxxxx";
