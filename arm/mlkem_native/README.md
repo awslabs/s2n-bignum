@@ -146,9 +146,9 @@ coefficients, of which those of polynomial j are `\i. x(256 * j + i)`.
 Likewise `mlkem768_polyvec_compress_du` and
 `mlkem768_polyvec_decompress_du` apply `mlkem_poly_compress_d10` and
 `mlkem_poly_decompress_d10` to each polynomial. Similarly
-`mlkem_keccakf1600x4_extract_bytes` applies
-`mlkem_keccakf1600_extract_bytes` (see below) to each of four consecutive
-Keccak states.
+`mlkem_keccakf1600x4_extract_bytes` and `mlkem_keccakf1600x4_xor_bytes`
+apply `mlkem_keccakf1600_extract_bytes` and `mlkem_keccakf1600_xor_bytes`
+(see below) to each of four consecutive Keccak states.
 
 The functions without transcriptions of their own are also verified
 directly in the image, in the files
