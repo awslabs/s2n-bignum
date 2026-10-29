@@ -416,7 +416,7 @@ let KECCAK_BLOCK_LAST = prove
 (* ------------------------------------------------------------------------- *)
 (* The output of keccak_sponge in terms of the state after absorbing all but *)
 (* the last permutation, as for mlk_keccak_absorb_once in mlkem-native, and  *)
-(* the first n bytes of it for n up to the rate.                             *)
+(* the first n bytes of it, or of any block of it, for n up to the rate.     *)
 (* ------------------------------------------------------------------------- *)
 
 let LENGTH_KECCAK_PAD = prove
@@ -525,4 +525,54 @@ let KECCAK_SPONGE_BYTES = prove
      [CONJ_TAC THENL [MATCH_MP_TAC DIV_LT; MATCH_MP_TAC MOD_LT] THEN
       ASM_ARITH_TAC;
       REWRITE_TAC[ADD_CLAUSES; num_CONV `1`; keccak_squeeze]];
+    MATCH_MP_TAC NUM_OF_BYTELIST_STATE_BYTES THEN ASM_REWRITE_TAC[]]);;
+
+let NUM_OF_BYTELIST_LIST_OF_SEQ_ADD = prove
+ (`!(f:num->byte) a b.
+        num_of_bytelist(list_of_seq f (a + b)) =
+        num_of_bytelist(list_of_seq f a) +
+        2 EXP (8 * a) * num_of_bytelist(list_of_seq (\j. f(a + j)) b)`,
+  GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THEN
+  REWRITE_TAC[ADD_CLAUSES; list_of_seq; num_of_bytelist; MULT_CLAUSES] THEN
+  ASM_REWRITE_TAC[NUM_OF_BYTELIST_APPEND; LENGTH_LIST_OF_SEQ;
+                  num_of_bytelist] THEN
+  REWRITE_TAC[LEFT_ADD_DISTRIB; EXP_ADD; MULT_CLAUSES; ADD_CLAUSES] THEN
+  ARITH_TAC);;
+
+let KECCAK_SPONGE_BLOCK = prove
+ (`!c d (m:byte list) r P k n.
+        (1600 - c) DIV 8 = r /\ 0 < r /\ n <= r /\
+        P = num_of_bytelist m +
+            2 EXP (8 * LENGTH m) * num_of_bytelist(keccak_pad r d (LENGTH m))
+        ==> num_of_bytelist
+             (list_of_seq (\j. keccak_sponge c d m (r * k + j)) n) =
+            val(keccak_squeeze (k + 1)
+                 (word_xor (keccak_absorb r P (LENGTH m DIV r))
+                           (word((P DIV 2 EXP (8 * r * LENGTH m DIV r)) MOD
+                                 2 EXP (8 * r))))) MOD 2 EXP (8 * n)`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `n <= 200` ASSUME_TAC THENL
+   [MAP_EVERY UNDISCH_TAC [`(1600 - c) DIV 8 = r`; `n <= r`] THEN ARITH_TAC;
+    ALL_TAC] THEN
+  W(fun (_,w) ->
+    let sv = rand(lhand(rand w)) in
+    MATCH_MP_TAC EQ_TRANS THEN
+    EXISTS_TAC (mk_comb(`num_of_bytelist`,
+      list_mk_comb(`list_of_seq:(num->byte)->num->byte list`,
+       [mk_abs(`j:num`,
+          list_mk_comb(`word_subword:1600 word->num#num->byte`,
+            [sv; `8 * j,8`]));
+        `n:num`])))) THEN
+  CONJ_TAC THENL
+   [AP_TERM_TAC THEN MATCH_MP_TAC LIST_OF_SEQ_EQ THEN
+    X_GEN_TAC `j:num` THEN DISCH_TAC THEN REWRITE_TAC[] THEN
+    MP_TAC(SPECL [`c:num`; `d:num`; `m:byte list`; `r:num`; `P:num`;
+                  `r * k + j`] KECCAK_SPONGE_SQUEEZE) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+    SUBGOAL_THEN `(r * k + j) DIV r = k /\ (r * k + j) MOD r = j`
+     (CONJUNCTS_THEN SUBST1_TAC) THENL
+     [CONJ_TAC THENL
+       [MATCH_MP_TAC DIV_UNIQ THEN EXISTS_TAC `j:num` THEN ASM_ARITH_TAC;
+        MATCH_MP_TAC MOD_UNIQ THEN EXISTS_TAC `k:num` THEN ASM_ARITH_TAC];
+      REFL_TAC];
     MATCH_MP_TAC NUM_OF_BYTELIST_STATE_BYTES THEN ASM_REWRITE_TAC[]]);;
