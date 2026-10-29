@@ -21,6 +21,12 @@ let iclasses =
   (*** ADC, ADCS, SBC, SBCS with register-register operands ***)
   "xxx11010000xxxxx000000xxxxxxxxxx";
 
+  (*** The same with XZR operands, which the template above seldom draws:
+   *** e.g. adc x0, x0, xzr; adc x0, xzr, xzr; ngc x0, x1 ***)
+  "xxx1101000011111000000xxxxxxxxxx";
+  "xxx110100001111100000011111xxxxx";
+  "xxx11010000xxxxx00000011111xxxxx";
+
   (*** ADD, ADDS, SUB, SUBS with immediate operand ***)
 
   (*** We want to avoid any use of SP since our crude simulation
@@ -51,6 +57,15 @@ let iclasses =
 
   (*** ADD, ADDS, SUB, SUBS, shifted registers ***)
   "xxx01011xx0xxxxxxxxxxxxxxxxxxxxx";
+
+  (*** The same unshifted, and with XZR operands, which the template above
+   *** seldom draws: e.g. adds x0, x0, x1; cmp x2, x0; cmn x11, x1;
+   *** neg x0, x0; cmp x0, xzr. Shift type 11 and shifts of 32 or more
+   *** are left out so that these are all defined. ***)
+  "xxx01011000xxxxx000000xxxxxxxxxx";
+  "xx1010110x0xxxxx0xxxxxxxxxx11111";
+  "x1x010110x0xxxxx0xxxxx11111xxxxx";
+  "xxx010110x0111110xxxxxxxxxxxxxxx";
 
   (*** ADD, extended registers. No SP registers ***)
   "10001011001xxxxx010000xxxx0xxxx0"; (* uxtw *)
@@ -84,8 +99,25 @@ let iclasses =
   (*** CSEL, CSINC, CSINV, CSNEG register-register ***)
   "xx011010100xxxxxxxxx0xxxxxxxxxxx";
 
+  (*** The same with XZR operands: e.g. cset x0, ne; csetm x1, ne;
+   *** csel x5, x3, xzr, eq; csel x1, xzr, x1, eq ***)
+  "xx01101010011111xxxx0x11111xxxxx";
+  "xx01101010011111xxxx0xxxxxxxxxxx";
+  "xx011010100xxxxxxxxx0x11111xxxxx";
+
   (*** AND, BIC, ..., ORN, shifted registers ***)
   "xxx01010xxxxxxxxxxxxxxxxxxxxxxxx";
+
+  (*** The same unshifted, and with XZR operands, which the template above
+   *** seldom draws: e.g. eor x1, x1, x0; mov x2, x0; mov x0, xzr;
+   *** mvn x0, x0; tst x1, x2. Shifts of 32 or more are left out so that
+   *** these are all defined. ***)
+  "xxx01010000xxxxx000000xxxxxxxxxx";
+  "x0101010000xxxxx00000011111xxxxx";
+  "x01010100001111100000011111xxxxx";
+  "x0101010xx1xxxxx0xxxxx11111xxxxx";
+  "xxx01010xxx111110xxxxxxxxxxxxxxx";
+  "xxx01010xxxxxxxx0xxxxxxxxxx11111";
 
   (*** MOVN, MOVZ, MOVK ***)
   "xxx100101xxxxxxxxxxxxxxxxxxxxxxx";
@@ -104,6 +136,9 @@ let iclasses =
 
   (*** MADD, MSUB ***)
   "x0011011000xxxxxxxxxxxxxxxxxxxxx";
+
+  (*** The same with Ra = XZR: mul, mneg ***)
+  "x0011011000xxxxxx11111xxxxxxxxxx";
 
   (*** UMULH ***)
   "10011011110xxxxx011111xxxxxxxxxx";

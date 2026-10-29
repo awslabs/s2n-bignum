@@ -505,8 +505,9 @@ let cosimulate_ldstp_gpr() =
     if index_rd = 0 then 0b001 else if index_rd = 1 then 0b011 else 0b010 in
   let isld = Random.int 2 in
   let rn = Random.int 32 in
+  (* XZR (31) is drawn more often than 1 in 32, as the library uses it *)
   let rec pick avoid =
-    let r = Random.int 32 in
+    let r = if Random.int 8 = 0 then 31 else Random.int 32 in
     if List.mem r avoid then pick avoid else r in
   let rt2 = pick (if rn = 31 then [] else [rn]) in
   let rt =
