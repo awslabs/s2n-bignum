@@ -1096,12 +1096,19 @@ verbose := false;;
  ***)
 
 let extra_simp_tac =
+  (* pth and the last rule cancel code addresses, as in the call sequences *)
+  let pth = prove
+   (`word(val(word(x + a):N word) + b):N word = word(x + (a + b))`,
+    REWRITE_TAC[WORD_ADD; WORD_VAL; WORD_ADD_ASSOC]) in
   REWRITE_TAC[WORD_RULE `word_sub x (word_add x y):N word = word_neg y`;
               WORD_RULE `word_sub y (word_add x y):N word = word_neg x`;
               WORD_RULE `word_sub (word_add x y) x:N word = y`;
               WORD_RULE `word_sub (word_add x y) y:N word = x`;
               WORD_RULE `word_add x (word(1 * val(word_not (word_add x y)))) =
-                         word_neg (word_add y (word 1):N word)`] THEN
+                         word_neg (word_add y (word 1):N word)`;
+              pth; INT_SUB_REFL;
+              WORD_RULE `word_sub (word(x + a)) (word(x + b)):N word =
+                         word_sub (word a) (word b)`] THEN
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REWRITE_TAC[];;
 
 let extra_movsb_tac =
@@ -1185,7 +1192,12 @@ let x86_cosim_executor = lazy
   (start_cosim_executor "S2N_BIGNUM_X86_64_EXECUTOR"
     "tools/simulate-persistent x86" "x86_64" 112);;
 
-let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list =
+(*** The instructions are normally simulated one step each. With a branch
+ *** they need not all run, so nsteps can give the number of steps instead.
+ ***)
+
+let cosimulate_instructions_steps (nsteps: int option)
+      (memopidx: int option) (add_assum: int) ibytes_list =
   let ibyte_to_icode_fn =
     fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) (List.rev ibyte) num_0) in
   let icodes = map ibyte_to_icode_fn ibytes_list in
@@ -1240,7 +1252,8 @@ let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list 
       match
        (PURE_REWRITE_TAC [fst execth] THEN
         (tac_before (memopidx <> None) THEN
-         tac_main memopidx execth (1--length icodes) THEN
+         tac_main memopidx execth
+           (1--(match nsteps with Some n -> n | None -> length icodes)) THEN
          tac_after (memopidx <> None)))
        ([],goal)
       with
@@ -1260,11 +1273,86 @@ let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list 
     let decoded = mk_flist(map mk_numeral icodes) in
     decoded,not(can X86_MK_EXEC_RULE(REFL ibyteterm));;
 
+let cosimulate_instructions = cosimulate_instructions_steps None;;
+
 (*** Pick random instances from register-to-register iclasses and run ***)
 
 let run_random_regsimulation () =
   let ibytes:int list = random_instruction iclasses in
   cosimulate_instructions None 0 [ibytes];;
+
+(* ------------------------------------------------------------------------- *)
+(* Branches. In each sequence both outcomes of a conditional branch run the  *)
+(* same number of instructions, given with the sequence, so that it can be   *)
+(* simulated a fixed number of steps; EAX tells which way the branch went.   *)
+(* The flags come from the random input state.                               *)
+(* ------------------------------------------------------------------------- *)
+
+let branch_iclasses =
+  let mov_eax n = [0xb8; n; 0x00; 0x00; 0x00] in
+  (* Forward Jcc rel8 and rel32, all 16 conditions:
+       jcc L; mov eax,1; jmp E; L: mov eax,2; nop; E:              *)
+  map (fun cc -> [[0x70 + cc; 0x07]; mov_eax 1; [0xeb; 0x06];
+                  mov_eax 2; [0x90]],3) (0--15) @
+  map (fun cc -> [[0x0f; 0x80 + cc; 0x07; 0x00; 0x00; 0x00];
+                  mov_eax 1; [0xeb; 0x06]; mov_eax 2; [0x90]],3) (0--15) @
+  (* Backward Jcc rel8 and rel32, all 16 conditions:
+       jmp A; B: mov eax,2; jmp E; A: jcc B; mov eax,1; jmp E; E:  *)
+  map (fun cc -> [[0xeb; 0x07]; mov_eax 2; [0xeb; 0x09];
+                  [0x70 + cc; 0xf7]; mov_eax 1; [0xeb; 0x00]],4) (0--15) @
+  map (fun cc -> [[0xeb; 0x07]; mov_eax 2; [0xeb; 0x0d];
+                  [0x0f; 0x80 + cc; 0xf3; 0xff; 0xff; 0xff];
+                  mov_eax 1; [0xeb; 0x00]],4) (0--15) @
+  (* Forward JMP rel8 and rel32: jmp L; mov eax,1; L: mov eax,2 *)
+  [[[0xeb; 0x05]; mov_eax 1; mov_eax 2],2;
+   [[0xe9; 0x05; 0x00; 0x00; 0x00]; mov_eax 1; mov_eax 2],2;
+  (* Backward JMP rel8 and rel32: jmp A; B: jmp E; A: jmp B; E: *)
+   [[0xeb; 0x02]; [0xeb; 0x02]; [0xeb; 0xfc]],3;
+   [[0xe9; 0x05; 0x00; 0x00; 0x00]; [0xe9; 0x05; 0x00; 0x00; 0x00];
+    [0xe9; 0xf6; 0xff; 0xff; 0xff]],3];;
+
+(* ------------------------------------------------------------------------- *)
+(* Calls. The return address that CALL pushes and the result of a RIP-       *)
+(* relative LEA both depend on the code address, so the sequence keeps only  *)
+(* their difference, in REG (any register but RSP) and in the stack slot,    *)
+(* and then sets the flags by CMP REG,REG, since after the SUB they depend   *)
+(* on the code address too. RSP is raised by 16 to keep the push inside the  *)
+(* buffer. The result is the sequence and the number of steps.               *)
+(* ------------------------------------------------------------------------- *)
+
+let cosimulate_call_harness() =
+  let reg = let r = Random.int 15 in if r < 4 then r else r + 1 in
+  let rex = if reg < 8 then 0x48 else 0x4c
+  and modrm = 8 * (reg mod 8)
+  and d = 4 * Random.bits() + Random.int 4 in
+  let tail =
+    [[rex; 0x8d; 0x05 + modrm; d land 0xff; (d lsr 8) land 0xff;
+      (d lsr 16) land 0xff; d lsr 24];                (* lea REG, [rip+d] *)
+     [rex; 0x2b; 0x44 + modrm; 0x24; 0xf8];           (* sub REG, [rsp-8] *)
+     [rex; 0x89; 0x44 + modrm; 0x24; 0xf8];           (* mov [rsp-8], REG *)
+     [rex + reg / 8; 0x39; 0xc0 + 9 * (reg mod 8)];   (* cmp REG, REG *)
+     [0x48; 0x8d; 0x64; 0x24; 0xf0]] in               (* lea rsp, [rsp-16] *)
+  if Random.bool() then
+    (* Forward: call F; ...; jmp E; F: ret; E: *)
+    [[0x48; 0x8d; 0x64; 0x24; 0x10];                  (* lea rsp, [rsp+16] *)
+     [0xe8; 0x1b; 0x00; 0x00; 0x00]] @ tail @         (* call F *)
+    [[0xeb; 0x01]; [0xc3]],9                          (* jmp E; F: ret; E: *)
+  else
+    (* Backward: jmp S; F: ret; S: call F; ...; E: *)
+    [[0x48; 0x8d; 0x64; 0x24; 0x10];                  (* lea rsp, [rsp+16] *)
+     [0xeb; 0x01]; [0xc3];                            (* jmp S; F: ret *)
+     [0xe8; 0xfa; 0xff; 0xff; 0xff]] @ tail,9;;       (* S: call F *)
+
+(*** The call sequences are slow to simulate, so they are drawn rarely ***)
+
+let run_random_branchsimulation () =
+  if Random.int 16 = 0 then
+    let ibytes_list,nsteps = cosimulate_call_harness() in
+    cosimulate_instructions_steps (Some nsteps) (Some 1) 0 ibytes_list
+  else
+    let ibytes_list,nsteps = el (Random.int (length branch_iclasses))
+                                branch_iclasses in
+    cosimulate_instructions_steps (Some nsteps) None 0 ibytes_list;;
 
 (* ------------------------------------------------------------------------- *)
 (* Setting up safe self-contained tests for memory accessing instructions.   *)
@@ -1737,9 +1825,12 @@ let run_random_simplememopsimulation() =
 
 let run_random_simulation() =
   let rn = Random.int 100 in
-  if rn < 80 then
+  if rn < 75 then
     let decoded, result = run_random_regsimulation() in
     decoded,result,0
+  else if rn < 80 then
+    let decoded, result = run_random_branchsimulation() in
+    decoded,result,3
   else if rn < 90 then
     let decoded, result = run_random_memopsimulation() in
     decoded,result,1
@@ -1752,6 +1843,7 @@ let case_limit = sematest_case_limit ();;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
 let tested_smp_instances = ref 0;;
+let tested_br_instances = ref 0;;
 
 let rec run_random_simulations start_t =
   let decoded,result,simty = run_random_simulation() in
@@ -1759,16 +1851,17 @@ let rec run_random_simulations start_t =
     tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
     tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
     tested_smp_instances := !tested_smp_instances + (if simty = 2 then 1 else 0);
+    tested_br_instances := !tested_br_instances + (if simty = 3 then 1 else 0);
     let fey = if is_numeral decoded
               then " (fails correctly) instruction code " else " " in
     let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
             Format.print_newline() in
     let total = !tested_reg_instances + !tested_mem_instances +
-                !tested_smp_instances in
+                !tested_smp_instances + !tested_br_instances in
     if sematest_finished time_limit_sec case_limit start_t total then
-      let _ = Printf.printf "Finished (time limit: %fs, tested register-only: %d, general memory: %d, special memory: %d, total: %d)\n"
+      let _ = Printf.printf "Finished (time limit: %fs, tested register-only: %d, general memory: %d, special memory: %d, branch: %d, total: %d)\n"
           time_limit_sec !tested_reg_instances !tested_mem_instances !tested_smp_instances
-          (!tested_reg_instances + !tested_mem_instances + !tested_smp_instances) in
+          !tested_br_instances total in
       None
     else run_random_simulations start_t
   end
