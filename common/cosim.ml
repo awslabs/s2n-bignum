@@ -53,6 +53,12 @@
  *     |                                          |
  *
  * READY identifies the protocol version, architecture, and state-word count.
+ * Further words on the READY line are metadata. A word features=f1,f2,...
+ * lists the optional CPU features with which the executor runs instructions
+ * (possibly none, as in "features="), using the names of Linux's
+ * /proc/cpuinfo: "flags" on x86 (such as avx2, bmi2, adx, abm, vpclmulqdq)
+ * and "Features" on AArch64 (such as aes, pmull, sha2, sha3, sha512). An
+ * executor that omits the word leaves its features unknown.
  * RUN carries hexadecimal instruction bytes followed by unsigned decimal
  * state words. OK returns the resulting state. TRAP reports an execution
  * trap, while ERROR reports a malformed request or executor failure.
@@ -70,6 +76,7 @@ type cosim_executor =
    cosim_arch: string;
    cosim_state_words: int;
    cosim_metadata: string list;
+   cosim_features: string list option;
    cosim_pid: int;
    cosim_from_child: in_channel;
    cosim_to_child: out_channel;
@@ -216,6 +223,19 @@ let cosim_spawn command =
       pid,Unix.in_channel_of_descr parent_from_child,
           Unix.out_channel_of_descr parent_to_child;;
 
+(* The value of a features=... metadata word, and its list of names *)
+
+let cosim_features_metadata metadata =
+  let prefix = "features=" in
+  let n = String.length prefix in
+  List.map (fun w -> String.sub w n (String.length w - n))
+    (List.filter (fun w -> String.length w >= n && String.sub w 0 n = prefix)
+       metadata);;
+
+let cosim_feature_list s =
+  List.filter (fun f -> f <> "")
+    (List.map String.trim (String.split_on_char ',' s));;
+
 let start_cosim_executor env_name default_command expected_arch expected_words =
   let command =
     match cosim_getenv env_name with
@@ -228,6 +248,7 @@ let start_cosim_executor env_name default_command expected_arch expected_words =
      cosim_arch = expected_arch;
      cosim_state_words = expected_words;
      cosim_metadata = [];
+     cosim_features = None;
      cosim_pid = pid;
      cosim_from_child = from_child;
      cosim_to_child = to_child;
@@ -253,7 +274,19 @@ let start_cosim_executor env_name default_command expected_arch expected_words =
     fail ("instruction-executor state-word count " ^
           string_of_int state_words ^
           " does not match " ^ string_of_int expected_words);
-  let executor = { partial with cosim_metadata = metadata } in
+  let features =
+    match cosim_features_metadata metadata with
+    | [] -> None
+    | [s] -> Some (cosim_feature_list s)
+    | _ -> fail ("instruction executor reports its features twice: " ^
+                 command) in
+  Printf.printf "Instruction executor %s features: %s\n%!" arch
+    (match features with
+     | Some [] -> "none"
+     | Some names -> String.concat ", " names
+     | None -> "unknown");
+  let executor =
+    { partial with cosim_metadata = metadata; cosim_features = features } in
   at_exit (fun () -> close_cosim_executor executor);
   executor;;
 
