@@ -319,3 +319,31 @@ let cosim_execute executor code state =
   | "ERROR"::details ->
       failwith ("instruction executor error: " ^ String.concat " " details)
   | _ -> failwith "malformed instruction-executor response";;
+
+(*
+ * An instruction that needs a CPU feature the executor lacks would trap
+ * with SIGILL, or, for TZCNT and LZCNT on x86 without BMI1 and LZCNT, run
+ * as BSF and BSR and give different results. Where the simulator knows
+ * which features the decoded instructions need, and the executor reports
+ * its features (see READY above), a case that needs one the executor lacks
+ * is therefore skipped and reported without being run. A trap from a case
+ * that is run, including a SIGILL, is a failure if the model accepts the
+ * instructions.
+ *)
+
+let cosim_executor_features executor = executor.cosim_features;;
+
+(* The required features missing from those reported, if any are reported *)
+
+let cosim_lacking_features features required =
+  match features with
+  | Some names -> List.filter (fun f -> not (List.mem f names)) required
+  | None -> [];;
+
+let cosim_skip_reason missing =
+  "executor lacks " ^ String.concat ", " missing;;
+
+(* Set by a simulator when it skips a case, to the features that the
+   executor lacks *)
+
+let cosim_skipped_features = ref ([]:string list);;

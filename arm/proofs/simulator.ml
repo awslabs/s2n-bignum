@@ -220,6 +220,27 @@ let arm_cosim_executor = lazy
   (start_cosim_executor "S2N_BIGNUM_AARCH64_EXECUTOR"
     "tools/simulate-persistent arm" "aarch64" 128);;
 
+(*** The CPU features beyond the baseline that an instruction needs, so that
+ *** a case can be skipped without being run if the executor reports that
+ *** it lacks them (see common/cosim.ml). ***)
+
+let arm_executor_features =
+  lazy (cosim_executor_features (Lazy.force arm_cosim_executor));;
+
+let arm_required_features instr =
+  let name = try fst(dest_const(fst(strip_comb instr))) with Failure _ -> "" in
+  match name with
+    "arm_AESE" | "arm_AESD" | "arm_AESMC" | "arm_AESIMC" -> ["aes"]
+  | "arm_PMULL_VEC" | "arm_PMULL2_VEC" ->
+      if (try dest_small_numeral (rand instr) = 64 with Failure _ -> false)
+      then ["pmull"] else []
+  | "arm_SHA256H" | "arm_SHA256H2" | "arm_SHA256SU0" | "arm_SHA256SU1" ->
+      ["sha2"]
+  | "arm_SHA512H" | "arm_SHA512H2" | "arm_SHA512SU0" | "arm_SHA512SU1" ->
+      ["sha512"]
+  | "arm_EOR3" | "arm_BCAX" | "arm_RAX1" | "arm_XAR" -> ["sha3"]
+  | _ -> [];;
+
 (*** The instructions are normally simulated one step each. With a branch
  *** they need not all run, so nsteps can give the number of steps instead.
  ***)
@@ -243,6 +264,25 @@ let cosimulate_instructions_steps (nsteps: int option)
     mk_flist(map (curry mk_comb `word:num->byte` o mk_numeral) ibytes) in
 
   let input_state = random_regstate() in
+
+  (*** Decode first, so that a case that needs a CPU feature the executor
+   *** lacks can be skipped without being run (see common/cosim.ml).
+   ***)
+
+  let execth_opt =
+    try Some(ARM_MK_EXEC_RULE(REFL ibyteterm)) with Failure _ -> None in
+  let instrs_of execth =
+    map (rand o rand o snd o strip_forall o concl o option_get)
+        (filter option_is_some (Array.to_list (snd execth))) in
+  let lacking =
+    match execth_opt with
+      Some execth ->
+        cosim_lacking_features (Lazy.force arm_executor_features)
+          (setify (itlist ((@) o arm_required_features) (instrs_of execth) []))
+    | None -> [] in
+  if lacking <> [] then
+    (cosim_skipped_features := lacking;
+     mk_flist (instrs_of (option_get execth_opt)),true) else
 
   let command_arg =
     (* Split q registers that are 128 bits to 64 + 64 bits *)
@@ -282,11 +322,12 @@ let cosimulate_instructions_steps (nsteps: int option)
        mk_flist(map mk_numeral output_state),`output_state:num list`]
       template in
 
-    let execth = ARM_MK_EXEC_RULE(REFL ibyteterm) in
+    let execth =
+      match execth_opt with
+        Some th -> th
+      | None -> ARM_MK_EXEC_RULE(REFL ibyteterm) in
 
-    let decoded = mk_flist
-     (map (rand o rand o snd o strip_forall o concl o option_get)
-          (filter option_is_some (Array.to_list (snd execth))))
+    let decoded = mk_flist (instrs_of execth)
     and result =
     can prove
      (goal,
@@ -298,7 +339,7 @@ let cosimulate_instructions_steps (nsteps: int option)
     (decoded,result)
   | Cosim_trap _ ->
     let decoded = mk_flist(map mk_numeral icodes) in
-    decoded,not(can ARM_MK_EXEC_RULE(REFL ibyteterm));;
+    (match execth_opt with None -> decoded,true | Some _ -> decoded,false);;
 
 let cosimulate_instructions = cosimulate_instructions_steps None;;
 
@@ -760,23 +801,33 @@ let case_limit = sematest_case_limit ();;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
 let tested_br_instances = ref 0;;
+let skipped_instances = ref 0;;
 
 let rec run_random_simulations start_t =
   let decoded,result,simty = run_random_simulation() in
+  let missing = !cosim_skipped_features in
+  cosim_skipped_features := [];
   if result then begin
-    tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
-    tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
-    tested_br_instances := !tested_br_instances + (if simty = 2 then 1 else 0);
-    let fey = if is_numeral (lhand decoded)
-              then " (fails correctly) instruction codes " else " " in
-    let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
-            Format.print_newline() in
+    if missing <> [] then begin
+      skipped_instances := !skipped_instances + 1;
+      Format.print_string("SKIPPED (" ^ cosim_skip_reason missing ^ "): " ^
+                          string_of_term decoded);
+      Format.print_newline()
+    end else begin
+      tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
+      tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
+      tested_br_instances := !tested_br_instances + (if simty = 2 then 1 else 0);
+      let fey = if is_numeral (lhand decoded)
+                then " (fails correctly) instruction codes " else " " in
+      Format.print_string("OK:" ^ fey ^ string_of_term decoded);
+      Format.print_newline()
+    end;
     let total = !tested_reg_instances + !tested_mem_instances +
                 !tested_br_instances in
     if sematest_finished time_limit_sec case_limit start_t total then
-      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, tested branch instances: %d, total: %d)\n"
+      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, tested branch instances: %d, total: %d, skipped instances: %d)\n"
           time_limit_sec !tested_reg_instances !tested_mem_instances
-          !tested_br_instances total in
+          !tested_br_instances total !skipped_instances in
       None
     else run_random_simulations start_t
   end

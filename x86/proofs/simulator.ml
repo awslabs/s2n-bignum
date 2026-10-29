@@ -1215,6 +1215,47 @@ let x86_cosim_executor = lazy
   (start_cosim_executor "S2N_BIGNUM_X86_64_EXECUTOR"
     "tools/simulate-persistent x86" "x86_64" 112);;
 
+(*** The CPU features beyond baseline x86-64 that an instruction needs, so
+ *** that a case can be skipped if the executor reports that it lacks them
+ *** (see common/cosim.ml). The VEX instructions are named with a leading
+ *** V. The harness itself (template.S) loads and saves the YMM registers
+ *** with VMOVDQU, so every case traps on an executor without AVX, such as
+ *** qemu-x86_64 -cpu Snowridge; fail at once if it reports that. ***)
+
+let x86_executor_features =
+  lazy (let features =
+          cosim_executor_features (Lazy.force x86_cosim_executor) in
+        (match features with
+           Some names when not (mem "avx" names) ->
+             failwith "x86 executor lacks AVX, which the harness needs"
+         | _ -> ());
+        features);;
+
+let x86_required_features instr =
+  let name = try fst(dest_const(fst(strip_comb instr))) with Failure _ -> "" in
+  let ymm = can (find_term (fun t ->
+     is_const t && let n = fst(dest_const t) in
+                   String.length n >= 4 && String.sub n 0 3 = "ymm")) instr in
+  match name with
+    "POPCNT" -> ["popcnt"]
+  | "LZCNT" -> ["abm"]
+  | "TZCNT" -> ["bmi1"]
+  | "ADCX" | "ADOX" -> ["adx"]
+  | "MULX4" | "PEXT" -> ["bmi2"]
+  | "AESENC" | "AESENCLAST" | "AESDEC" | "AESDECLAST"
+  | "AESKEYGENASSIST" -> ["aes"]
+  | "PSHUFB" -> ["ssse3"]
+  | "PBLENDW" | "PINSRD" | "PINSRQ" -> ["sse4_1"]
+  | "VPCLMULQDQ" -> if ymm then ["avx2"; "vpclmulqdq"]
+                    else ["avx"; "pclmulqdq"]
+  | "VMOVDQA" | "VMOVDQU" | "VMOVSHDUP" | "VMOVSLDUP" | "VPTEST"
+  | "VZEROUPPER" | "VMOVMSKPS" -> ["avx"]
+  | "VPBROADCASTW" | "VPBROADCASTD" | "VPBROADCASTQ" | "VPBLENDD"
+  | "VPSLLVD" | "VPSRLVD" | "VPSRLVQ" | "VPERMD" | "VPERMQ"
+  | "VPERM2I128" | "VINSERTI128" | "VEXTRACTI128" -> ["avx2"]
+  | _ -> if String.length name > 1 && String.get name 0 = 'V'
+         then [if ymm then "avx2" else "avx"] else [];;
+
 (*** The instructions are normally simulated one step each. With a branch
  *** they need not all run, so nsteps can give the number of steps instead.
  ***)
@@ -1236,6 +1277,26 @@ let cosimulate_instructions_steps (nsteps: int option)
     mk_flist(map (curry mk_comb `word:num->byte` o mk_small_numeral) ibytes) in
 
   let input_state = random_regstate() in
+
+  (*** Decode first, so that a case that needs a CPU feature the executor
+   *** lacks can be skipped without being run (see common/cosim.ml).
+   ***)
+
+  let execth_opt =
+    try Some(X86_MK_EXEC_RULE(REFL ibyteterm)) with Failure _ -> None in
+  let instrs_of execth =
+    map (snd o dest_pair o rand o rand o snd o
+         strip_forall o concl o option_get)
+        (filter option_is_some (Array.to_list (snd execth))) in
+  let lacking =
+    match execth_opt with
+      Some execth ->
+        cosim_lacking_features (Lazy.force x86_executor_features)
+          (setify (itlist ((@) o x86_required_features) (instrs_of execth) []))
+    | None -> [] in
+  if lacking <> [] then
+    (cosim_skipped_features := lacking;
+     mk_flist (instrs_of (option_get execth_opt)),true) else
 
   let execution =
     cosim_execute (Lazy.force x86_cosim_executor)
@@ -1265,7 +1326,10 @@ let cosimulate_instructions_steps (nsteps: int option)
        add_assum_subst]
       template in
 
-    let execth = X86_MK_EXEC_RULE(REFL ibyteterm) in
+    let execth =
+      match execth_opt with
+        Some th -> th
+      | None -> X86_MK_EXEC_RULE(REFL ibyteterm) in
 
     let inst_th = option_get (snd execth).(0) in
     let decoded = mk_flist
@@ -1295,7 +1359,7 @@ let cosimulate_instructions_steps (nsteps: int option)
     (decoded,result)
   | Cosim_trap _ ->
     let decoded = mk_flist(map mk_numeral icodes) in
-    decoded,not(can X86_MK_EXEC_RULE(REFL ibyteterm));;
+    (match execth_opt with None -> decoded,true | Some _ -> decoded,false);;
 
 let cosimulate_instructions = cosimulate_instructions_steps None;;
 
@@ -1883,24 +1947,34 @@ let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
 let tested_smp_instances = ref 0;;
 let tested_br_instances = ref 0;;
+let skipped_instances = ref 0;;
 
 let rec run_random_simulations start_t =
   let decoded,result,simty = run_random_simulation() in
+  let missing = !cosim_skipped_features in
+  cosim_skipped_features := [];
   if result then begin
-    tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
-    tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
-    tested_smp_instances := !tested_smp_instances + (if simty = 2 then 1 else 0);
-    tested_br_instances := !tested_br_instances + (if simty = 3 then 1 else 0);
-    let fey = if is_numeral decoded
-              then " (fails correctly) instruction code " else " " in
-    let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
-            Format.print_newline() in
+    if missing <> [] then begin
+      skipped_instances := !skipped_instances + 1;
+      Format.print_string("SKIPPED (" ^ cosim_skip_reason missing ^ "): " ^
+                          string_of_term decoded);
+      Format.print_newline()
+    end else begin
+      tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
+      tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
+      tested_smp_instances := !tested_smp_instances + (if simty = 2 then 1 else 0);
+      tested_br_instances := !tested_br_instances + (if simty = 3 then 1 else 0);
+      let fey = if is_numeral decoded
+                then " (fails correctly) instruction code " else " " in
+      Format.print_string("OK:" ^ fey ^ string_of_term decoded);
+      Format.print_newline()
+    end;
     let total = !tested_reg_instances + !tested_mem_instances +
                 !tested_smp_instances + !tested_br_instances in
     if sematest_finished time_limit_sec case_limit start_t total then
-      let _ = Printf.printf "Finished (time limit: %fs, tested register-only: %d, general memory: %d, special memory: %d, branch: %d, total: %d)\n"
+      let _ = Printf.printf "Finished (time limit: %fs, tested register-only: %d, general memory: %d, special memory: %d, branch: %d, total: %d, skipped: %d)\n"
           time_limit_sec !tested_reg_instances !tested_mem_instances !tested_smp_instances
-          !tested_br_instances total in
+          !tested_br_instances total !skipped_instances in
       None
     else run_random_simulations start_t
   end
