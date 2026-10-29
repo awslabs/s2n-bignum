@@ -153,14 +153,18 @@ directly in the image, in the files
 far these are `mlkem_poly_add`, `mlkem_poly_sub`, `mlkem_poly_frombytes`,
 `mlkem_poly_compress_d4`, `mlkem_poly_compress_d10`,
 `mlkem_poly_decompress_d4`, `mlkem_poly_decompress_d10`,
-`mlkem_poly_frommsg` and `mlkem_poly_tomsg`. As in `mlkem_decode` in
-`common/fips203.ml`, the contents of a byte array are given as a number, so
-that coefficient i of the result of `mlkem_poly_frombytes` is bits 12 * i
-to 12 * i + 11 of the number given by the 384 bytes. The compression and
-decompression of coefficients are given by the same arithmetic as
-`mlkem_compress` and `mlkem_decompress` there, e.g. (3329 * y + 8) DIV 16
-for decompression from 4 bits, but without using `common/fips203.ml`, which
-takes several minutes to load.
+`mlkem_poly_frommsg`, `mlkem_poly_tomsg` and `mlkem_poly_cbd2`. As in
+`mlkem_decode` in `common/fips203.ml`, the contents of a byte array are
+given as a number, so that coefficient i of the result of
+`mlkem_poly_frombytes` is bits 12 * i to 12 * i + 11 of the number given by
+the 384 bytes. The compression and decompression of coefficients are given
+by the same arithmetic as `mlkem_compress` and `mlkem_decompress` there,
+e.g. (3329 * y + 8) DIV 16 for decompression from 4 bits, but without using
+`common/fips203.ml`, which takes several minutes to load. Likewise, as for
+`mlkem_cbd 2`, coefficient i of the result of `mlkem_poly_cbd2` is the
+number of 1 bits among bits 4 * i and 4 * i + 1 of the number given by the
+128 bytes, minus the number among bits 4 * i + 2 and 4 * i + 3, but as a
+16-bit integer rather than modulo 3329.
 
 Some of these functions, such as `mlkem_poly_compress_d4`, have a stack
 protector: they copy the stack guard to the stack and check it before
