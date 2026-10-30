@@ -245,6 +245,17 @@ MIN (outlen - 136 * i) 136 bytes of the state in iteration i of its loop,
 and it aligns the state on the stack to 32 bytes, so its address depends on
 whether the stack pointer is a multiple of 32.
 
+Using these, `mlkem768_check_sk`, and likewise `mlkem512_check_sk` and
+`mlkem1024_check_sk`, is the hash check of the decapsulation key in
+FIPS 203. With the encapsulation key in it as a list of bytes ek and the
+hash stored after it as a number h, it returns 0 if h is
+`num_of_bytelist(sha3_256 ek)` and -5 otherwise, comparing them in constant
+time. The functions `mlkem512_poly_getnoise_eta2` and
+`mlkem1024_poly_getnoise_eta2` sample a polynomial with eta = 2 from a seed
+and a nonce, as PRF and SamplePolyCBD in FIPS 203: the result is that of
+`mlkem_poly_cbd2` on the first 128 bytes of `shake256` of the seed followed
+by the nonce.
+
 Some of these functions, such as `mlkem_poly_compress_d4` and
 `mlkem_sha3_256`, have a stack protector: they copy the stack guard to the
 stack and check it before returning. They read the address of the guard
