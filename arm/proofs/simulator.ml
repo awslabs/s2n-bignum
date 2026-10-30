@@ -888,11 +888,66 @@ let cosimulate_sp_arith() =
   | _ -> [addsub 0 29 31 0 0; addsub 1 31 31 imm sh; addsub 0 31 29 0 0;
           sub_Xn_SP_Xn 29];;
 
+(*** Instructions that use SP as an ordinary register, run with SP set to a
+ *** random register's value so that all their results can be compared,
+ *** flags and 32-bit WSP values included:
+ ***   mov x29, sp; mov sp, xs; <instruction>; mov x28, sp; mov sp, x29;
+ ***   sub x29, sp, x29
+ *** The instruction is ADD, ADDS, SUB or SUBS (extended register or
+ *** immediate) with SP as Rn, Rd or both, where with S set Rd = 31 is the
+ *** zero register (CMN, CMP), or AND, ORR or EOR (immediate) with a valid
+ *** bit mask and SP as Rd. Its other registers are never x29, which holds
+ *** the real SP, and it does not write x28.
+ ***)
+
+let cosimulate_sp_subst() =
+  let addsub op d n imm sh =
+    num(0x91000000 + 0x40000000 * op + 0x400000 * sh + 0x400 * imm +
+        32 * n + d) in
+  let src() = let r = Random.int 30 in if r = 29 then 30 else r in
+  let dst() = let r = Random.int 29 in if r = 28 then 30 else r in
+  let sf = Random.int 2 in
+  let code =
+    match Random.int 3 with
+      2 -> let opc = Random.int 3 in
+           let rn = if Random.int 4 = 0 then 31 else src() in
+           let len = 1 + Random.int (5 + sf) in
+           let esize = 1 lsl len in
+           let ones = Random.int (esize - 1) in
+           let rot = Random.int esize in
+           let imms = ((0b111111 lsl (len + 1)) land 0b111111) lor ones in
+           num(0x12000000 + 0x80000000 * sf + 0x20000000 * opc +
+               0x400000 * (if len = 6 then 1 else 0) + 0x10000 * rot +
+               0x400 * imms + 32 * rn + 31)
+    | k -> let op = Random.int 2 in
+           let s = Random.int 2 in
+           let rn,rd,s =
+             match Random.int 3 with
+               0 -> 31,dst(),s
+             | 1 -> 31,31,s
+             | _ -> src(),31,0 in
+           if k = 0 then
+             let rm = if Random.int 4 = 0 then 31 else src() in
+             let option = Random.int 8 in
+             let imm3 = Random.int 5 in
+             num(0x0b200000 + 0x80000000 * sf + 0x40000000 * op +
+                 0x20000000 * s + 0x10000 * rm + 0x2000 * option +
+                 0x400 * imm3 + 32 * rn + rd)
+           else
+             let sh = Random.int 2 in
+             let imm = Random.int 4096 in
+             num(0x11000000 + 0x80000000 * sf + 0x40000000 * op +
+                 0x20000000 * s + 0x400000 * sh + 0x400 * imm +
+                 32 * rn + rd) in
+  let xs = src() in
+  [addsub 0 29 31 0 0; addsub 0 31 xs 0 0; code;
+   addsub 0 28 31 0 0; addsub 0 31 29 0 0; sub_Xn_SP_Xn 29];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldstp_gpr; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg;
-    cosimulate_ldst_imm; cosimulate_sp_arith
+    cosimulate_ldst_imm; cosimulate_sp_arith; cosimulate_sp_subst
     ];;
 
 let run_random_memopsimulation() =
