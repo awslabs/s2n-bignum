@@ -140,12 +140,17 @@ theorems for the calls. So far this is done for
 for the functions `mlkem768_polyvec_<op>` that apply `mlkem_poly_<op>` to
 each polynomial of a vector, for `<op>` one of `add`, `frombytes`,
 `invntt_tomont`, `mulcache_compute`, `ntt`, `reduce`, `tobytes` and
-`tomont` (in the files `mlkem_native_polyvec_<op>_k3_gcc12_O2.ml`). As in
+`tomont` (in the files `mlkem_native_polyvec_<op>_k3_gcc12_O2.ml`), and
+likewise for `mlkem512_polyvec_<op>` and `mlkem1024_polyvec_<op>` (in the
+files `..._k2_gcc12_O2.ml` and `..._k4_gcc12_O2.ml`), some of which are
+compiled as loops over the polynomials, unrolled in the proofs. As in
 `common/fips203.ml`, a vector of k polynomials is given by its 256 * k
 coefficients, of which those of polynomial j are `\i. x(256 * j + i)`.
 Likewise `mlkem768_polyvec_compress_du` and
 `mlkem768_polyvec_decompress_du` apply `mlkem_poly_compress_d10` and
-`mlkem_poly_decompress_d10` to each polynomial. Similarly
+`mlkem_poly_decompress_d10` to each polynomial, as do the ML-KEM-512
+versions, while the ML-KEM-1024 ones use `mlkem_poly_compress_d11` and
+`mlkem_poly_decompress_d11`. Similarly
 `mlkem_keccakf1600x4_extract_bytes` and `mlkem_keccakf1600x4_xor_bytes`
 apply `mlkem_keccakf1600_extract_bytes` and `mlkem_keccakf1600_xor_bytes`
 (see below) to each of four consecutive Keccak states.
