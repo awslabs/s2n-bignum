@@ -286,3 +286,51 @@ let cosim_execute executor code state =
   | "ERROR"::details ->
       failwith ("instruction executor error: " ^ String.concat " " details)
   | _ -> failwith "malformed instruction-executor response";;
+
+(*
+ * An instruction that needs a CPU feature the host lacks traps with SIGILL
+ * (reported as "TRAP exit-132") although the model accepts it. Where the
+ * simulator knows which features an instruction needs, such a case is
+ * skipped and reported instead of failing if the host lacks one of them.
+ * The host's features are the words of the first /proc/cpuinfo line with
+ * the given label ("flags" on x86, "Features" on AArch64). Elsewhere, or
+ * under an emulator on a host of another architecture, they are unknown,
+ * and the case is skipped if its instructions need any such feature at
+ * all, since an emulated CPU may lack it: qemu-x86_64 8.2 with -cpu max has
+ * no VPCLMULQDQ, for example. A SIGILL from instructions that need no such
+ * feature is always a failure.
+ *)
+
+let cosim_host_features label =
+  try
+    let ic = open_in "/proc/cpuinfo" in
+    let rec loop () =
+      match (try Some (input_line ic) with End_of_file -> None) with
+      | None -> None
+      | Some l ->
+          (match String.index_opt l ':' with
+           | Some i when String.trim (String.sub l 0 i) = label ->
+               Some (List.filter (fun w -> w <> "")
+                       (String.split_on_char ' '
+                          (String.sub l (i + 1) (String.length l - i - 1))))
+           | _ -> loop ()) in
+    let result = loop () in
+    close_in ic; result
+  with Sys_error _ -> None;;
+
+let cosim_missing_features host details required =
+  match host, details with
+  | Some flags, ["exit-132"] ->
+      List.filter (fun f -> not (List.mem f flags)) required
+  | None, ["exit-132"] -> required
+  | _ -> [];;
+
+let cosim_skip_reason host missing =
+  (match host with
+   | Some _ -> "host lacks "
+   | None -> "host features unknown, needs ") ^ String.concat ", " missing;;
+
+(* Set by a simulator when it skips a case, to the features that the host
+   lacks, or may lack if its features are unknown *)
+
+let cosim_skipped_features = ref ([]:string list);;

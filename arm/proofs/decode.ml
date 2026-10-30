@@ -323,11 +323,17 @@ let decode = new_definition `!w:int32. decode w =
   | [0b001110000:9; ld; 0b1:1; Rm:5; 0b011010:6; Rn:5; Rt:5] ->
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
 
+  // LDP with Rt = Rt2 is CONSTRAINED UNPREDICTABLE, with UNDEF among the
+  // permitted outcomes, so reject it here. The orthogonality check in
+  // arm_LDP misses Rt = Rt2 = 31: XZR is a constant, and constants are
+  // orthogonal to every component, themselves included.
   | [x; 0b010100:6; pre; 0b1:1; ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    if ld /\ Rt = Rt2 then NONE else
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)
       ((if pre then Preimmediate_Offset else Postimmediate_Offset)
         (iword (ival imm7 * &(if x then 8 else 4)))))
   | [x; 0b01010010:8; ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    if ld /\ Rt = Rt2 then NONE else
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)
       (Immediate_Offset (iword (ival imm7 * &(if x then 8 else 4)))))
 
@@ -940,14 +946,6 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11001110011:11; Rm:5; 0b100011:6; Rn:5; Rd:5] ->
     // RAX1
     SOME (arm_RAX1 (QREG' Rd) (QREG' Rn) (QREG' Rm))
-
-  | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b111001:6; Rn:5; Rd:5] ->
-    // MOVI (op=0, cmode=1110, byte immediate)
-    if immh = (word 0b0:(4)word) then
-      let abcdefgh:(8)word = word_join immb Rn in
-      if q then SOME (arm_MOVI (QREG' Rd) (word_duplicate abcdefgh))
-      else SOME (arm_MOVI (DREG' Rd) (word_duplicate abcdefgh))
-    else NONE
 
   | [0:1; 1:1; 0b0111110:7; immh:4; immb:3; 0b010101:6; Rn:5; Rd:5] ->
     // SHL (scalar): only the 64-bit form is defined (top bit of immh set)
