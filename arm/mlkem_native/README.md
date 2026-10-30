@@ -340,3 +340,9 @@ and the last one for ML-KEM-768 with `mlkem_poly_rej_uniform`. Their
 specifications have the hypothesis that there are at least 256 samples for
 each entry within the first 504 + 168 * k bytes, with the same k for all
 entries. They have no constant-time and memory safety proofs yet either.
+
+`mlkem512_check_pk`, `mlkem768_check_pk` and `mlkem1024_check_pk` do the
+modulus check of FIPS 203 on an encapsulation key: they decode the vector
+in its first 384 * k bytes, reduce it, encode it again and compare the
+result with the key in constant time, so they return 0 if all the 12-bit
+fields of those bytes are below q = 3329, and -4 otherwise.
