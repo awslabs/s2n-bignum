@@ -45,7 +45,7 @@ go: test; ./test +100 | grep -v OK
 
 complete: test ctCheck; $(VALGRIND) ./test +500
 
-test: test.c known_value_tests_p384.h tweetnacl_excerpt.c ref_aws_lc_gcm_glue.h ../include/s2n-bignum.h ../$(ARCH)/libs2nbignum.a; $(CC) -Wall -std=gnu99 -o test test.c -L../$(ARCH) -ls2nbignum -lm
+test: test.c known_value_tests_p384.h known_value_tests_gcm_128.h wycheproof_tests_gcm_128.h tweetnacl_excerpt.c ref_aws_lc_gcm_glue.h ../include/s2n-bignum.h ../$(ARCH)/libs2nbignum.a; $(CC) -Wall -std=gnu99 -o test test.c -L../$(ARCH) -ls2nbignum -lm
 
 clean: ;
 	rm -f test
