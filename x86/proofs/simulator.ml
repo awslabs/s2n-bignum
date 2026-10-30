@@ -1548,8 +1548,9 @@ let x86_cosim_executor = lazy
     "tools/simulate-persistent x86" "x86_64" 112);;
 
 (*** The CPU features beyond baseline x86-64 that an instruction needs, so
- *** that a case can be skipped on a host without them (see common/cosim.ml).
- *** The VEX instructions are named with a leading V. ***)
+ *** that a case can be skipped on a host that lacks them or whose features
+ *** are unknown (see common/cosim.ml). The VEX instructions are named with
+ *** a leading V. ***)
 
 let x86_host_features = lazy (cosim_host_features "flags");;
 
@@ -2362,8 +2363,9 @@ let rec run_random_simulations start_t =
   if result then begin
     if missing <> [] then begin
       skipped_instances := !skipped_instances + 1;
-      Format.print_string("SKIPPED (host lacks " ^ String.concat ", " missing ^
-                          "): " ^ string_of_term decoded);
+      let reason = cosim_skip_reason (Lazy.force x86_host_features) missing in
+      Format.print_string("SKIPPED (" ^ reason ^ "): " ^
+                          string_of_term decoded);
       Format.print_newline()
     end else begin
       tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);

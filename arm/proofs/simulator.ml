@@ -219,7 +219,8 @@ let arm_cosim_executor = lazy
     "tools/simulate-persistent arm" "aarch64" 128);;
 
 (*** The CPU features beyond the baseline that an instruction needs, so that
- *** a case can be skipped on a host without them (see common/cosim.ml). ***)
+ *** a case can be skipped on a host that lacks them or whose features are
+ *** unknown (see common/cosim.ml). ***)
 
 let arm_host_features = lazy (cosim_host_features "Features");;
 
@@ -930,8 +931,9 @@ let rec run_random_simulations start_t =
   if result then begin
     if missing <> [] then begin
       skipped_instances := !skipped_instances + 1;
-      Format.print_string("SKIPPED (host lacks " ^ String.concat ", " missing ^
-                          "): " ^ string_of_term decoded);
+      let reason = cosim_skip_reason (Lazy.force arm_host_features) missing in
+      Format.print_string("SKIPPED (" ^ reason ^ "): " ^
+                          string_of_term decoded);
       Format.print_newline()
     end else begin
       tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
