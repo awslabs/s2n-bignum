@@ -74,6 +74,21 @@ let iclasses =
   "10001011001xxxxx010000x0xxxx0xxx"; (* uxtw *)
   "10001011001xxxxx0100000xxxx0xxxx"; (* uxtw *)
 
+  (*** ADD, ADDS, SUB, SUBS, extended registers: both sizes, every extend
+   *** option and the shifts 0-4 (5-7 are unallocated). A zero bit keeps Rn,
+   *** and Rd unless S is set, clear of SP. The last two are CMN and CMP
+   *** (ADDS and SUBS with Rd = XZR), which the others seldom draw. ***)
+  "xx001011001xxxxxxxx0xxxxxx0xxxx0";
+  "xx001011001xxxxxxxx0xxxxx0xxxx0x";
+  "xx001011001xxxxxxxx100xxxx0xxxx0";
+  "xx001011001xxxxxxxx100xxx0xxxx0x";
+  "xx101011001xxxxxxxx0xxxxxx0xxxxx";
+  "xx101011001xxxxxxxx0xxxxx0xxxxxx";
+  "xx101011001xxxxxxxx100xxxx0xxxxx";
+  "xx101011001xxxxxxxx100xxx0xxxxxx";
+  "xx101011001xxxxxxxx0xxxxxx011111";
+  "xx101011001xxxxxxxx100xxxx011111";
+
   (*** AND, ANDS, EOR, ORR with immediate operand, no negated forms ***)
   (*** Again we want to avoid using SP except for in ANDS ***)
 
