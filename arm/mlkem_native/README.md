@@ -324,3 +324,9 @@ is the first 256 of them. It has no constant-time and memory safety proof
 yet: since the number of iterations depends on the output of SHAKE128
 (which is public), such a proof would need theorems for the hash functions
 that combine their correctness and their events.
+
+`mlkem_poly_rej_uniform_x4` samples four polynomials in the same way from
+four seeds 64 bytes apart, using the fourfold SHAKE128 functions. Its loop
+squeezes one more block of each until all four have 256 samples, so its
+specification has the same hypothesis for each seed, with the same k, and
+it has no constant-time and memory safety proof yet either.
