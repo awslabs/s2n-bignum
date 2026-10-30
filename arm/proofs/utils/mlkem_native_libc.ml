@@ -152,7 +152,11 @@ let randombytes_safety_contract = new_definition
               MAYCHANGE [memory :> bytes(buf,val len)])`;;
 
 (* ------------------------------------------------------------------------- *)
-(* The PLT stubs and GOT entries in the image, and zeroing by memset.        *)
+(* The PLT stubs and GOT entries in the image, and zeroing by memset. After  *)
+(* a call of memset with c = 0, MEMSET_ZERO_BYTES_TAC adds the fact that the *)
+(* region is zero, from the postcondition of the contract for each byte, in  *)
+(* which the address of byte i for a destination word_add a (word k) may     *)
+(* have been normalized to word_add a (word(k + i)) by the simulation.       *)
 (* ------------------------------------------------------------------------- *)
 
 let mlkem_native_plt_memcpy = 0x810
@@ -174,6 +178,20 @@ let MEMSET_ZERO_BYTES = prove
                READ_MEMORY_BYTES_OF_BYTES8) THEN
   ASM_SIMP_TAC[DIV_0; MOD_0] THEN DISCH_THEN MATCH_MP_TAC THEN
   CONV_TAC WORD_REDUCE_CONV);;
+
+let MEMSET_ZERO_BYTES_OFFSET = prove
+ (`!a k n s:armstate.
+        (!i. i < n
+             ==> read (memory :> bytes8(word_add a (word(k + i)))) s =
+                 word_zx(word 0:int64))
+        ==> read (memory :> bytes(word_add a (word k),n)) s = 0`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC MEMSET_ZERO_BYTES THEN
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN ASM_SIMP_TAC[]);;
+
+let MEMSET_ZERO_BYTES_TAC =
+  FIRST_ASSUM(fun th ->
+    ASSUME_TAC(try MATCH_MP MEMSET_ZERO_BYTES_OFFSET th
+               with Failure _ -> MATCH_MP MEMSET_ZERO_BYTES th));;
 
 (* ------------------------------------------------------------------------- *)
 (* Simulating a call. LIBC_PLT_TAC execth k does the four steps of the PLT   *)

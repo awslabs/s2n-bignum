@@ -287,5 +287,14 @@ events of a call are a function of its arguments and that it only accesses
 those regions, and the events of the callers are given in terms of those
 functions. So far, these are used for `mlkem_shake128x4_absorb_once`, which
 zeroes the context with memset before calling `mlk_keccak_absorb_once_x4`
-with r = 168 and p = 0x1F, as for `shake128`, and
-`mlkem_shake128x4_release`, which zeroes it.
+with r = 168 and p = 0x1F, as for `shake128`, for
+`mlkem_shake128x4_release`, which zeroes it, and for `mlkem_shake256x4`,
+which computes SHAKE256 of four inputs of the same length, with the results
+as for `mlkem_shake256`. It absorbs them with `mlk_keccak_absorb_once_x4`
+with r = 136 into a context on the stack, which it zeroes with memset
+before and after, squeezes the whole blocks of 136 bytes directly into the
+outputs, and the rest into buffers on the stack, from which it copies them
+with memcpy. Its last two arguments, the fourth input and the length of the
+inputs, are on the stack, so its specification has them as
+`read (memory :> bytes64 stackpointer) s = in3` and
+`read (memory :> bytes64 (word_add stackpointer (word 8))) s = word inlen`.
