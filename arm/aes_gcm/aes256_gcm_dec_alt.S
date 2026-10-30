@@ -437,33 +437,33 @@ S2N_BN_SYMBOL(aes256_gcm_dec_alt):
 	ldp	q14, q15, [x0], #32			//AES block 6, 7 - load ciphertext
 	cmp	x0, x5				//check if we have <= 8 blocks
 
-	eor3	v1.16b, v9.16b, v1.16b, v28.16b	//eor3 v1.16b, v9.16b, v1.16b, v28.16b				//AES block 1 - result
-	eor3	v0.16b, v8.16b, v0.16b, v28.16b	//eor3 v0.16b, v8.16b, v0.16b, v28.16b				//AES block 0 - result
+	eor3	v1.16b, v9.16b, v1.16b, v28.16b	//AES block 1 - result
+	eor3	v0.16b, v8.16b, v0.16b, v28.16b	//AES block 0 - result
 	stp	q0, q1, [x2], #32			//AES block 0, 1 - store result
 
 	rev32	v0.16b, v30.16b				//CTR block 8
 	add	v30.4s, v30.4s, v31.4s		//CTR block 8
-	eor3	v3.16b, v11.16b, v3.16b, v28.16b	//eor3 v3.16b, v11.16b, v3.16b, v28.16b				//AES block 3 - result
+	eor3	v3.16b, v11.16b, v3.16b, v28.16b	//AES block 3 - result
 
-	eor3	v5.16b, v13.16b, v5.16b, v28.16b	//eor3 v5.16b, v13.16b, v5.16b, v28.16b				//AES block 5 - result
+	eor3	v5.16b, v13.16b, v5.16b, v28.16b	//AES block 5 - result
 
-	eor3	v4.16b, v12.16b, v4.16b, v28.16b	//eor3 v4.16b, v12.16b, v4.16b, v28.16b				//AES block 4 - result
+	eor3	v4.16b, v12.16b, v4.16b, v28.16b	//AES block 4 - result
 	rev32	v1.16b, v30.16b				//CTR block 9
 	add	v30.4s, v30.4s, v31.4s		//CTR block 9
 
-	eor3	v2.16b, v10.16b, v2.16b, v28.16b	//eor3 v2.16b, v10.16b, v2.16b, v28.16b				//AES block 2 - result
+	eor3	v2.16b, v10.16b, v2.16b, v28.16b	//AES block 2 - result
 	stp	q2, q3, [x2], #32			//AES block 2, 3 - store result
 
 	rev32	v2.16b, v30.16b				//CTR block 10
 	add	v30.4s, v30.4s, v31.4s		//CTR block 10
 
-	eor3	v6.16b, v14.16b, v6.16b, v28.16b	//eor3 v6.16b, v14.16b, v6.16b, v28.16b				//AES block 6 - result
+	eor3	v6.16b, v14.16b, v6.16b, v28.16b	//AES block 6 - result
 
 	rev32	v3.16b, v30.16b				//CTR block 11
 	add	v30.4s, v30.4s, v31.4s		//CTR block 11
 	stp	q4, q5, [x2], #32			//AES block 4, 5 - store result
 
-	eor3	v7.16b, v15.16b, v7.16b, v28.16b	//eor3 v7.16b, v15.16b, v7.16b, v28.16b				//AES block 7 - result
+	eor3	v7.16b, v15.16b, v7.16b, v28.16b	//AES block 7 - result
 	stp	q6, q7, [x2], #32			//AES block 6, 7 - store result
 
 	rev32	v4.16b, v30.16b				//CTR block 12
@@ -627,7 +627,7 @@ L256_dec_main_loop:	//main	loop start
 	aese	v6.16b, v28.16b
 	aesmc	v6.16b, v6.16b			//AES block 8k+14 - round 5
 
-	eor3	v17.16b, v17.16b, v29.16b, v9.16b	//eor3 v17.16b, v17.16b, v29.16b, v9.16b			//GHASH block 8k+2, 8k+3 - high
+	eor3	v17.16b, v17.16b, v29.16b, v9.16b	//GHASH block 8k+2, 8k+3 - high
 	trn1	v29.2d, v11.2d, v10.2d				//GHASH block 8k+2, 8k+3 - mid
 	rev64	v13.16b, v13.16b						//GHASH block 8k+5
 
@@ -662,7 +662,7 @@ L256_dec_main_loop:	//main	loop start
 
 	pmull2	v29.1q, v10.2d, v21.2d				//GHASH block 8k+2 - mid
 	pmull	v21.1q, v10.1d, v21.1d				//GHASH block 8k+3 - mid
-	eor3	v19.16b, v19.16b, v22.16b, v20.16b	//eor3 v19.16b, v19.16b, v22.16b, v20.16b			//GHASH block 8k+2, 8k+3 - low
+	eor3	v19.16b, v19.16b, v22.16b, v20.16b	//GHASH block 8k+2, 8k+3 - low
 
 	ldr	q23, [x6, #48]				//load h3l | h3h
 	ldr	q25, [x6, #80]				//load h4l | h4h
@@ -677,7 +677,7 @@ L256_dec_main_loop:	//main	loop start
 
 	ldr	q20, [x6]				//load h1l | h1h
 	ldr	q22, [x6, #32]				//load h2l | h2h
-	eor3	v18.16b, v18.16b, v21.16b, v29.16b	//eor3 v18.16b, v18.16b, v21.16b, v29.16b			//GHASH block 8k+2, 8k+3 - mid
+	eor3	v18.16b, v18.16b, v21.16b, v29.16b	//GHASH block 8k+2, 8k+3 - mid
 	aese	v7.16b, v27.16b
 	aesmc	v7.16b, v7.16b			//AES block 8k+15 - round 7
 
@@ -728,7 +728,7 @@ L256_dec_main_loop:	//main	loop start
 	trn2	v14.2d, v15.2d, v14.2d				//GHASH block 8k+6, 8k+7 - mid
 
 	add	v30.4s, v30.4s, v31.4s		//CTR block 8k+15
-	eor3	v17.16b, v17.16b, v8.16b, v10.16b	//eor3 v17.16b, v17.16b, v8.16b, v10.16b			//GHASH block 8k+4, 8k+5 - high
+	eor3	v17.16b, v17.16b, v8.16b, v10.16b	//GHASH block 8k+4, 8k+5 - high
 	aese	v3.16b, v26.16b
 	aesmc	v3.16b, v3.16b			//AES block 8k+11 - round 9
 
@@ -762,12 +762,12 @@ L256_dec_main_loop:	//main	loop start
 	pmull	v21.1q, v14.1d, v21.1d				//GHASH block 8k+7 - mid
 	aese	v0.16b, v26.16b
 	aesmc	v0.16b, v0.16b			//AES block 8k+8 - round 9
-	eor3	v19.16b, v19.16b, v25.16b, v23.16b	//eor3 v19.16b, v19.16b, v25.16b, v23.16b			//GHASH block 8k+4, 8k+5 - low
+	eor3	v19.16b, v19.16b, v25.16b, v23.16b	//GHASH block 8k+4, 8k+5 - low
 
 	aese	v4.16b, v26.16b
 	aesmc	v4.16b, v4.16b			//AES block 8k+12 - round 9
-	eor3	v18.16b, v18.16b, v24.16b, v16.16b	//eor3 v18.16b, v18.16b, v24.16b, v16.16b			//GHASH block 8k+4, 8k+5 - mid
-	eor3	v17.16b, v17.16b, v11.16b, v12.16b	//eor3 v17.16b, v17.16b, v11.16b, v12.16b			//GHASH block 8k+6, 8k+7 - high
+	eor3	v18.16b, v18.16b, v24.16b, v16.16b	//GHASH block 8k+4, 8k+5 - mid
+	eor3	v17.16b, v17.16b, v11.16b, v12.16b	//GHASH block 8k+6, 8k+7 - high
 
 	aese	v2.16b, v27.16b
 	aesmc	v2.16b, v2.16b			//AES block 8k+10 - round 10
@@ -783,7 +783,7 @@ L256_dec_main_loop:	//main	loop start
 	aese	v4.16b, v27.16b
 	aesmc	v4.16b, v4.16b			//AES block 8k+12 - round 10
 
-	eor3	v19.16b, v19.16b, v22.16b, v20.16b	//eor3 v19.16b, v19.16b, v22.16b, v20.16b			//GHASH block 8k+6, 8k+7 - low
+	eor3	v19.16b, v19.16b, v22.16b, v20.16b	//GHASH block 8k+6, 8k+7 - low
 	rev32	v20.16b, v30.16b					//CTR block 8k+16
 	ldr	d16, [x10]			//MODULO - load modulo constant
 
@@ -797,7 +797,7 @@ L256_dec_main_loop:	//main	loop start
 	aese	v6.16b, v28.16b
 	aesmc	v6.16b, v6.16b			//AES block 8k+14 - round 11
 
-	eor3	v18.16b, v18.16b, v21.16b, v13.16b	//eor3 v18.16b, v18.16b, v21.16b, v13.16b			//GHASH block 8k+6, 8k+7 - mid
+	eor3	v18.16b, v18.16b, v21.16b, v13.16b	//GHASH block 8k+6, 8k+7 - mid
 	rev32	v22.16b, v30.16b					//CTR block 8k+17
 	aese	v2.16b, v28.16b
 	aesmc	v2.16b, v2.16b			//AES block 8k+10 - round 11
@@ -824,7 +824,7 @@ L256_dec_main_loop:	//main	loop start
 	add	v30.4s, v30.4s, v31.4s		//CTR block 8k+18
 	pmull	v29.1q, v17.1d, v16.1d			//MODULO - top 64b align with mid
 
-	eor3	v18.16b, v18.16b, v17.16b, v19.16b	//eor3 v18.16b, v18.16b, v17.16b, v19.16b		 	//MODULO - karatsuba tidy up
+	eor3	v18.16b, v18.16b, v17.16b, v19.16b	//MODULO - karatsuba tidy up
 	aese	v1.16b, v26.16b
 	aesmc	v1.16b, v1.16b			//AES block 8k+9 - round 12
 	aese	v4.16b, v28.16b
@@ -836,7 +836,7 @@ L256_dec_main_loop:	//main	loop start
 	aese	v3.16b, v26.16b
 	aesmc	v3.16b, v3.16b			//AES block 8k+11 - round 12
 
-	eor3	v18.16b, v18.16b, v29.16b, v21.16b	//eor3 v18.16b, v18.16b, v29.16b, v21.16b			//MODULO - fold into mid
+	eor3	v18.16b, v18.16b, v29.16b, v21.16b	//MODULO - fold into mid
 	aese	v0.16b, v26.16b
 	aesmc	v0.16b, v0.16b			//AES block 8k+8 - round 12
 	aese	v4.16b, v26.16b
@@ -851,8 +851,8 @@ L256_dec_main_loop:	//main	loop start
 	aese	v5.16b, v27.16b						//AES block 8k+13 - round 13
 
 	rev32	v25.16b, v30.16b					//CTR block 8k+19
-	eor3	v2.16b, v10.16b, v2.16b, v28.16b	//eor3 v2.16b, v10.16b, v2.16b, v28.16b				//AES block 8k+10 - result
-	eor3	v1.16b, v9.16b, v1.16b, v28.16b	//eor3 v1.16b, v9.16b, v1.16b, v28.16b				//AES block 8k+9 - result
+	eor3	v2.16b, v10.16b, v2.16b, v28.16b	//AES block 8k+10 - result
+	eor3	v1.16b, v9.16b, v1.16b, v28.16b	//AES block 8k+9 - result
 
 	ext	v21.16b, v18.16b, v18.16b, #8				//MODULO - other mid alignment
 	aese	v7.16b, v27.16b						//AES block 8k+15 - round 13
@@ -861,16 +861,16 @@ L256_dec_main_loop:	//main	loop start
 	pmull	v17.1q, v18.1d, v16.1d			//MODULO - mid 64b align with low
 	aese	v4.16b, v27.16b						//AES block 8k+12 - round 13
 
-	eor3	v5.16b, v13.16b, v5.16b, v28.16b	//eor3 v5.16b, v13.16b, v5.16b, v28.16b				//AES block 8k+13 - result
-	eor3	v0.16b, v8.16b, v0.16b, v28.16b	//eor3 v0.16b, v8.16b, v0.16b, v28.16b				//AES block 8k+8 - result
+	eor3	v5.16b, v13.16b, v5.16b, v28.16b	//AES block 8k+13 - result
+	eor3	v0.16b, v8.16b, v0.16b, v28.16b	//AES block 8k+8 - result
 	aese	v3.16b, v27.16b						//AES block 8k+11 - round 13
 
 	stp	q0, q1, [x2], #32			//AES block 8k+8, 8k+9 - store result
 	mov	v0.16b, v20.16b					//CTR block 8k+16
-	eor3	v4.16b, v12.16b, v4.16b, v28.16b	//eor3 v4.16b, v12.16b, v4.16b, v28.16b				//AES block 8k+12 - result
+	eor3	v4.16b, v12.16b, v4.16b, v28.16b	//AES block 8k+12 - result
 
-	eor3	v19.16b, v19.16b, v21.16b, v17.16b	//eor3 v19.16b, v19.16b, v21.16b, v17.16b		 	//MODULO - fold into low
-	eor3	v3.16b, v11.16b, v3.16b, v28.16b	//eor3 v3.16b, v11.16b, v3.16b, v28.16b				//AES block 8k+11 - result
+	eor3	v19.16b, v19.16b, v21.16b, v17.16b	//MODULO - fold into low
+	eor3	v3.16b, v11.16b, v3.16b, v28.16b	//AES block 8k+11 - result
 	stp	q2, q3, [x2], #32			//AES block 8k+10, 8k+11 - store result
 
 	mov	v3.16b, v25.16b					//CTR block 8k+19
@@ -879,9 +879,9 @@ L256_dec_main_loop:	//main	loop start
 
 	mov	v1.16b, v22.16b					//CTR block 8k+17
 	stp	q4, q5, [x2], #32			//AES block 8k+12, 8k+13 - store result
-	eor3	v7.16b, v15.16b, v7.16b, v28.16b	//eor3 v7.16b, v15.16b, v7.16b, v28.16b				//AES block 8k+15 - result
+	eor3	v7.16b, v15.16b, v7.16b, v28.16b	//AES block 8k+15 - result
 
-	eor3	v6.16b, v14.16b, v6.16b, v28.16b	//eor3 v6.16b, v14.16b, v6.16b, v28.16b				//AES block 8k+14 - result
+	eor3	v6.16b, v14.16b, v6.16b, v28.16b	//AES block 8k+14 - result
 	rev32	v4.16b, v30.16b				//CTR block 8k+20
 	add	v30.4s, v30.4s, v31.4s		//CTR block 8k+20
 
@@ -1009,7 +1009,7 @@ L256_dec_prepretail:	//PREPRETAIL
 	aese	v3.16b, v26.16b
 	aesmc	v3.16b, v3.16b			//AES block 8k+11 - round 3
 
-	eor3	v17.16b, v17.16b, v29.16b, v9.16b	//eor3 v17.16b, v17.16b, v29.16b, v9.16b			//GHASH block 8k+2, 8k+3 - high
+	eor3	v17.16b, v17.16b, v29.16b, v9.16b	//GHASH block 8k+2, 8k+3 - high
 	trn1	v29.2d, v11.2d, v10.2d				//GHASH block 8k+2, 8k+3 - mid
 	trn2	v10.2d, v11.2d, v10.2d				//GHASH block 8k+2, 8k+3 - mid
 
@@ -1023,7 +1023,7 @@ L256_dec_prepretail:	//PREPRETAIL
 	aese	v0.16b, v27.16b
 	aesmc	v0.16b, v0.16b			//AES block 8k+8 - round 4
 
-	eor3	v19.16b, v19.16b, v22.16b, v20.16b	//eor3 v19.16b, v19.16b, v22.16b, v20.16b			//GHASH block 8k+2, 8k+3 - low
+	eor3	v19.16b, v19.16b, v22.16b, v20.16b	//GHASH block 8k+2, 8k+3 - low
 	ldr	q20, [x6]				//load h1l | h1h
 	ldr	q22, [x6, #32]				//load h2l | h2h
 	aese	v7.16b, v27.16b
@@ -1071,7 +1071,7 @@ L256_dec_prepretail:	//PREPRETAIL
 	rev64	v15.16b, v15.16b						//GHASH block 8k+7
 	rev64	v13.16b, v13.16b						//GHASH block 8k+5
 
-	eor3	v18.16b, v18.16b, v21.16b, v29.16b	//eor3 v18.16b, v18.16b, v21.16b, v29.16b			//GHASH block 8k+2, 8k+3 - mid
+	eor3	v18.16b, v18.16b, v21.16b, v29.16b	//GHASH block 8k+2, 8k+3 - mid
 
 	trn1	v16.2d, v13.2d, v12.2d				//GHASH block 8k+4, 8k+5 - mid
 
@@ -1122,7 +1122,7 @@ L256_dec_prepretail:	//PREPRETAIL
 	aesmc	v6.16b, v6.16b			//AES block 8k+14 - round 7
 	aese	v2.16b, v27.16b
 	aesmc	v2.16b, v2.16b			//AES block 8k+10 - round 7
-	eor3	v17.16b, v17.16b, v8.16b, v10.16b	//eor3 v17.16b, v17.16b, v8.16b, v10.16b			//GHASH block 8k+4, 8k+5 - high
+	eor3	v17.16b, v17.16b, v8.16b, v10.16b	//GHASH block 8k+4, 8k+5 - high
 
 	aese	v0.16b, v27.16b
 	aesmc	v0.16b, v0.16b			//AES block 8k+8 - round 7
@@ -1172,8 +1172,8 @@ L256_dec_prepretail:	//PREPRETAIL
 	pmull	v20.1q, v15.1d, v20.1d				//GHASH block 8k+7 - low
 
 	ldp	q27, q28, [x11, #160]				//load rk10, rk11
-	eor3	v19.16b, v19.16b, v25.16b, v23.16b	//eor3 v19.16b, v19.16b, v25.16b, v23.16b			//GHASH block 8k+4, 8k+5 - low
-	eor3	v18.16b, v18.16b, v24.16b, v16.16b	//eor3 v18.16b, v18.16b, v24.16b, v16.16b			//GHASH block 8k+4, 8k+5 - mid
+	eor3	v19.16b, v19.16b, v25.16b, v23.16b	//GHASH block 8k+4, 8k+5 - low
+	eor3	v18.16b, v18.16b, v24.16b, v16.16b	//GHASH block 8k+4, 8k+5 - mid
 
 	aese	v2.16b, v26.16b
 	aesmc	v2.16b, v2.16b			//AES block 8k+10 - round 9
@@ -1182,11 +1182,11 @@ L256_dec_prepretail:	//PREPRETAIL
 	aese	v5.16b, v26.16b
 	aesmc	v5.16b, v5.16b			//AES block 8k+13 - round 9
 
-	eor3	v17.16b, v17.16b, v11.16b, v12.16b	//eor3 v17.16b, v17.16b, v11.16b, v12.16b			//GHASH block 8k+6, 8k+7 - high
-	eor3	v19.16b, v19.16b, v22.16b, v20.16b	//eor3 v19.16b, v19.16b, v22.16b, v20.16b			//GHASH block 8k+6, 8k+7 - low
+	eor3	v17.16b, v17.16b, v11.16b, v12.16b	//GHASH block 8k+6, 8k+7 - high
+	eor3	v19.16b, v19.16b, v22.16b, v20.16b	//GHASH block 8k+6, 8k+7 - low
 	ldr	d16, [x10]			//MODULO - load modulo constant
 
-	eor3	v18.16b, v18.16b, v21.16b, v13.16b	//eor3 v18.16b, v18.16b, v21.16b, v13.16b			//GHASH block 8k+6, 8k+7 - mid
+	eor3	v18.16b, v18.16b, v21.16b, v13.16b	//GHASH block 8k+6, 8k+7 - mid
 
 	aese	v4.16b, v27.16b
 	aesmc	v4.16b, v4.16b			//AES block 8k+12 - round 10
@@ -1202,7 +1202,7 @@ L256_dec_prepretail:	//PREPRETAIL
 	aese	v3.16b, v27.16b
 	aesmc	v3.16b, v3.16b			//AES block 8k+11 - round 10
 
-	eor3	v18.16b, v18.16b, v17.16b, v19.16b	//eor3 v18.16b, v18.16b, v17.16b, v19.16b		 	//MODULO - karatsuba tidy up
+	eor3	v18.16b, v18.16b, v17.16b, v19.16b	//MODULO - karatsuba tidy up
 
 	aese	v7.16b, v27.16b
 	aesmc	v7.16b, v7.16b			//AES block 8k+15 - round 10
@@ -1235,7 +1235,7 @@ L256_dec_prepretail:	//PREPRETAIL
 	aese	v3.16b, v26.16b
 	aesmc	v3.16b, v3.16b			//AES block 8k+11 - round 12
 
-	eor3	v18.16b, v18.16b, v29.16b, v21.16b	//eor3 v18.16b, v18.16b, v29.16b, v21.16b			//MODULO - fold into mid
+	eor3	v18.16b, v18.16b, v29.16b, v21.16b	//MODULO - fold into mid
 
 	aese	v3.16b, v27.16b						//AES block 8k+11 - round 13
 	aese	v2.16b, v26.16b
@@ -1265,7 +1265,7 @@ L256_dec_prepretail:	//PREPRETAIL
 	aese	v1.16b, v27.16b						//AES block 8k+9 - round 13
 
 	aese	v5.16b, v27.16b						//AES block 8k+13 - round 13
-	eor3	v19.16b, v19.16b, v21.16b, v17.16b	//eor3 v19.16b, v19.16b, v21.16b, v17.16b		 	//MODULO - fold into low
+	eor3	v19.16b, v19.16b, v21.16b, v17.16b	//MODULO - fold into low
 	add	v30.4s, v30.4s, v31.4s		//CTR block 8k+15
 
 	aese	v7.16b, v27.16b						//AES block 8k+15 - round 13
@@ -1283,7 +1283,7 @@ L256_dec_tail:	//TAIL
 
 	ldp	q20, q21, [x6, #96]			//load h5l | h5h
 
-	eor3	v12.16b, v9.16b, v0.16b, v29.16b	//eor3 v12.16b, v9.16b, v0.16b, v29.16b				//AES block 8k+8 - result
+	eor3	v12.16b, v9.16b, v0.16b, v29.16b	//AES block 8k+8 - result
 	ldp	q22, q23, [x6, #128]			//load h6l | h6h
 	b.gt	L256_dec_exact8_drain	//exact-8 -> dedicated stripped drain
 
@@ -1359,7 +1359,7 @@ L256_dec_blocks_more_than_7:	//blocks	left >  7
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
 	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-7 block - mid
-	eor3	v12.16b, v9.16b, v1.16b, v29.16b	//eor3 v12.16b, v9.16b, v1.16b, v29.16b				//AES final-6 block - result
+	eor3	v12.16b, v9.16b, v1.16b, v29.16b	//AES final-6 block - result
 
 	pmull2	v17.1q, v8.2d, v25.2d				//GHASH final-7 block - high
 
@@ -1382,7 +1382,7 @@ L256_dec_blocks_more_than_6:	//blocks	left >  6
 
 	pmull	v26.1q, v8.1d, v23.1d				//GHASH final-6 block - low
 
-	eor3	v12.16b, v9.16b, v2.16b, v29.16b	//eor3 v12.16b, v9.16b, v2.16b, v29.16b				//AES final-5 block - result
+	eor3	v12.16b, v9.16b, v2.16b, v29.16b	//AES final-5 block - result
 	eor	v19.16b, v19.16b, v26.16b					//GHASH final-6 block - low
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-6 block - mid
 
@@ -1410,7 +1410,7 @@ L256_dec_blocks_more_than_5:	//blocks	left >  5
 	pmull	v27.1q, v27.1d, v10.1d				//GHASH final-5 block - mid (pmull low, h2k in v10)
 
 	eor	v17.16b, v17.16b, v28.16b					//GHASH final-5 block - high
-	eor3	v12.16b, v9.16b, v3.16b, v29.16b	//eor3 v12.16b, v9.16b, v3.16b, v29.16b				//AES final-4 block - result
+	eor3	v12.16b, v9.16b, v3.16b, v29.16b	//AES final-4 block - result
 	eor	v19.16b, v19.16b, v26.16b					//GHASH final-5 block - low
 
 	eor	v18.16b, v18.16b, v27.16b				//GHASH final-5 block - mid
@@ -1439,7 +1439,7 @@ L256_dec_blocks_more_than_4:	//blocks	left >  4
 	st1	{ v12.16b}, [x2], #16			 	//AES final-4 block - store result
 
 	eor	v18.16b, v18.16b, v27.16b				//GHASH final-4 block - mid
-	eor3	v12.16b, v9.16b, v4.16b, v29.16b	//eor3 v12.16b, v9.16b, v4.16b, v29.16b				//AES final-3 block - result
+	eor3	v12.16b, v9.16b, v4.16b, v29.16b	//AES final-3 block - result
 L256_dec_blocks_more_than_3:	//blocks	left >  3
 
 	ldr	q25, [x6, #80]				//load h4l | h4h
@@ -1452,7 +1452,7 @@ L256_dec_blocks_more_than_3:	//blocks	left >  3
 	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-3 block - mid
 	st1	{ v12.16b}, [x2], #16			 	//AES final-3 block - store result
 
-	eor3	v12.16b, v9.16b, v5.16b, v29.16b	//eor3 v12.16b, v9.16b, v5.16b, v29.16b				//AES final-2 block - result
+	eor3	v12.16b, v9.16b, v5.16b, v29.16b	//AES final-2 block - result
 
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-3 block - mid
 
@@ -1480,7 +1480,7 @@ L256_dec_blocks_more_than_2:	//blocks	left >  2
 
 	pmull	v26.1q, v8.1d, v23.1d				//GHASH final-2 block - low
 	st1	{ v12.16b}, [x2], #16			  	//AES final-2 block - store result
-	eor3	v12.16b, v9.16b, v6.16b, v29.16b	//eor3 v12.16b, v9.16b, v6.16b, v29.16b				//AES final-1 block - result
+	eor3	v12.16b, v9.16b, v6.16b, v29.16b	//AES final-1 block - result
 
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-2 block - mid
 	eor	v19.16b, v19.16b, v26.16b					//GHASH final-2 block - low
@@ -1511,7 +1511,7 @@ L256_dec_blocks_more_than_1:	//blocks	left >  1
 
 	eor	v19.16b, v19.16b, v26.16b					//GHASH final-1 block - low
 
-	eor3	v12.16b, v9.16b, v7.16b, v29.16b	//eor3 v12.16b, v9.16b, v7.16b, v29.16b				//AES final block - result
+	eor3	v12.16b, v9.16b, v7.16b, v29.16b	//AES final block - result
 	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-1 block - high
 
 	pmull	v27.1q, v27.1d, v10.1d				//GHASH final-1 block - mid (pmull low, h2k in v10)
@@ -1597,7 +1597,7 @@ L256_dec_exact8_drain:  //dedicated exact-8 GHASH drain (no no-op partial-tag eo
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
 	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-7 block - mid
-	eor3	v12.16b, v9.16b, v1.16b, v29.16b	//eor3 v12.16b, v9.16b, v1.16b, v29.16b				//AES final-6 block - result
+	eor3	v12.16b, v9.16b, v1.16b, v29.16b	//AES final-6 block - result
 
 	pmull2	v17.1q, v8.2d, v25.2d				//GHASH final-7 block - high
 
@@ -1620,7 +1620,7 @@ L256_dec_exact8_drain:  //dedicated exact-8 GHASH drain (no no-op partial-tag eo
 
 	pmull	v14.1q, v8.1d, v23.1d				//final-6 low -> v14 (defer)
 
-	eor3	v12.16b, v9.16b, v2.16b, v29.16b	//eor3 v12.16b, v9.16b, v2.16b, v29.16b				//AES final-5 block - result
+	eor3	v12.16b, v9.16b, v2.16b, v29.16b	//AES final-5 block - result
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-6 block - mid
 
 	pmull	v15.1q, v27.1d, v24.1d				//final-6 mid -> v15 (defer)
@@ -1644,11 +1644,11 @@ L256_dec_exact8_drain:  //dedicated exact-8 GHASH drain (no no-op partial-tag eo
 
 	pmull	v27.1q, v27.1d, v10.1d				//GHASH final-5 block - mid (pmull low, h2k in v10)
 
-	eor3	v17.16b, v17.16b, v28.16b, v13.16b	//eor3 v17.16b, v17.16b, v28.16b, v13.16b	//GHASH final-6 and final-5 blocks - high
-	eor3	v12.16b, v9.16b, v3.16b, v29.16b	//eor3 v12.16b, v9.16b, v3.16b, v29.16b				//AES final-4 block - result
-	eor3	v19.16b, v19.16b, v26.16b, v14.16b	//eor3 v19.16b, v19.16b, v26.16b, v14.16b	//GHASH final-6 and final-5 blocks - low
+	eor3	v17.16b, v17.16b, v28.16b, v13.16b	//GHASH final-6 and final-5 blocks - high
+	eor3	v12.16b, v9.16b, v3.16b, v29.16b	//AES final-4 block - result
+	eor3	v19.16b, v19.16b, v26.16b, v14.16b	//GHASH final-6 and final-5 blocks - low
 
-	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//eor3 v18.16b, v18.16b, v27.16b, v15.16b	//GHASH final-6 and final-5 blocks - mid
+	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//GHASH final-6 and final-5 blocks - mid
 
 	// ---- exact-8 drain: block 4 (from L256_dec_blocks_more_than_4) ----
 	// 1st of pair (final-4,final-3): products deferred to v13/v14/v15,
@@ -1670,7 +1670,7 @@ L256_dec_exact8_drain:  //dedicated exact-8 GHASH drain (no no-op partial-tag eo
 
 	st1	{ v12.16b}, [x2], #16			 	//AES final-4 block - store result
 
-	eor3	v12.16b, v9.16b, v4.16b, v29.16b	//eor3 v12.16b, v9.16b, v4.16b, v29.16b				//AES final-3 block - result
+	eor3	v12.16b, v9.16b, v4.16b, v29.16b	//AES final-3 block - result
 
 	// ---- exact-8 drain: block 3 (from L256_dec_blocks_more_than_3) ----
 	// 2nd of pair: folds block 4's deferred v13/v14/v15 via eor3.
@@ -1684,7 +1684,7 @@ L256_dec_exact8_drain:  //dedicated exact-8 GHASH drain (no no-op partial-tag eo
 	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-3 block - mid
 	st1	{ v12.16b}, [x2], #16			 	//AES final-3 block - store result
 
-	eor3	v12.16b, v9.16b, v5.16b, v29.16b	//eor3 v12.16b, v9.16b, v5.16b, v29.16b				//AES final-2 block - result
+	eor3	v12.16b, v9.16b, v5.16b, v29.16b	//AES final-2 block - result
 
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-3 block - mid
 
@@ -1693,11 +1693,11 @@ L256_dec_exact8_drain:  //dedicated exact-8 GHASH drain (no no-op partial-tag eo
 	pmull2	v28.1q, v8.2d, v25.2d				//GHASH final-3 block - high
 
 	pmull	v27.1q, v27.1d, v11.1d				//GHASH final-3 block - mid (pmull low, h4k in v11)
-	eor3	v19.16b, v19.16b, v26.16b, v14.16b	//eor3 v19.16b, v19.16b, v26.16b, v14.16b	//GHASH final-4 and final-3 blocks - low
+	eor3	v19.16b, v19.16b, v26.16b, v14.16b	//GHASH final-4 and final-3 blocks - low
 
-	eor3	v17.16b, v17.16b, v28.16b, v13.16b	//eor3 v17.16b, v17.16b, v28.16b, v13.16b	//GHASH final-4 and final-3 blocks - high
+	eor3	v17.16b, v17.16b, v28.16b, v13.16b	//GHASH final-4 and final-3 blocks - high
 
-	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//eor3 v18.16b, v18.16b, v27.16b, v15.16b	//GHASH final-4 and final-3 blocks - mid
+	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//GHASH final-4 and final-3 blocks - mid
 
 	// ---- exact-8 drain: block 2 (from L256_dec_blocks_more_than_2) ----
 	// 1st of pair (final-2,final-1): products deferred to v13/v14/v15,
@@ -1713,7 +1713,7 @@ L256_dec_exact8_drain:  //dedicated exact-8 GHASH drain (no no-op partial-tag eo
 
 	pmull	v14.1q, v8.1d, v23.1d				//final-2 low -> v14 (defer)
 	st1	{ v12.16b}, [x2], #16			  	//AES final-2 block - store result
-	eor3	v12.16b, v9.16b, v6.16b, v29.16b	//eor3 v12.16b, v9.16b, v6.16b, v29.16b				//AES final-1 block - result
+	eor3	v12.16b, v9.16b, v6.16b, v29.16b	//AES final-1 block - result
 
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-2 block - mid
 
@@ -1738,16 +1738,16 @@ L256_dec_exact8_drain:  //dedicated exact-8 GHASH drain (no no-op partial-tag eo
 
 	ext	v10.16b, v21.16b, v21.16b, #8			//GHASH final-1 block - mid (h2k to the low lane by ext, off the v27 critical path)
 
-	eor3	v19.16b, v19.16b, v26.16b, v14.16b	//eor3 v19.16b, v19.16b, v26.16b, v14.16b	//GHASH final-2 and final-1 blocks - low
+	eor3	v19.16b, v19.16b, v26.16b, v14.16b	//GHASH final-2 and final-1 blocks - low
 
-	eor3	v12.16b, v9.16b, v7.16b, v29.16b	//eor3 v12.16b, v9.16b, v7.16b, v29.16b				//AES final block - result
+	eor3	v12.16b, v9.16b, v7.16b, v29.16b	//AES final block - result
 	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-1 block - high
 
 	pmull	v27.1q, v27.1d, v10.1d				//GHASH final-1 block - mid (pmull low, h2k in v10)
 
-	eor3	v17.16b, v17.16b, v28.16b, v13.16b	//eor3 v17.16b, v17.16b, v28.16b, v13.16b	//GHASH final-2 and final-1 blocks - high
+	eor3	v17.16b, v17.16b, v28.16b, v13.16b	//GHASH final-2 and final-1 blocks - high
 
-	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//eor3 v18.16b, v18.16b, v27.16b, v15.16b	//GHASH final-2 and final-1 blocks - mid
+	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//GHASH final-2 and final-1 blocks - mid
 
 	// ---- exact-8 drain: block 0 (from L256_dec_blocks_less_than_1) ----
 
@@ -1886,7 +1886,7 @@ L256_dec_w5r_g4:	//one block, GHASH with H^4
 	aese	v0.16b, v13.16b
 	aesmc	v0.16b, v0.16b			//blk 0 - round 12
 	aese	v0.16b, v14.16b				//blk 0 - round 13
-eor3	v0.16b, v26.16b, v0.16b, v15.16b	//eor3 v0.16b, v26.16b, v0.16b, v15.16b	//H^4 block - result
+eor3	v0.16b, v26.16b, v0.16b, v15.16b	//H^4 block - result
 	str	q0, [x2], #16
 
 L256_dec_w5r_g3:	//one block, GHASH with H^3
@@ -1931,7 +1931,7 @@ L256_dec_w5r_g3:	//one block, GHASH with H^3
 	aese	v0.16b, v13.16b
 	aesmc	v0.16b, v0.16b			//blk 0 - round 12
 	aese	v0.16b, v14.16b				//blk 0 - round 13
-eor3	v0.16b, v26.16b, v0.16b, v15.16b	//eor3 v0.16b, v26.16b, v0.16b, v15.16b	//H^3 block - result
+eor3	v0.16b, v26.16b, v0.16b, v15.16b	//H^3 block - result
 	str	q0, [x2], #16
 
 L256_dec_w5r_g2:	//one block, GHASH with H^2
@@ -1976,7 +1976,7 @@ L256_dec_w5r_g2:	//one block, GHASH with H^2
 	aese	v0.16b, v13.16b
 	aesmc	v0.16b, v0.16b			//blk 0 - round 12
 	aese	v0.16b, v14.16b				//blk 0 - round 13
-eor3	v0.16b, v26.16b, v0.16b, v15.16b	//eor3 v0.16b, v26.16b, v0.16b, v15.16b	//H^2 block - result
+eor3	v0.16b, v26.16b, v0.16b, v15.16b	//H^2 block - result
 	str	q0, [x2], #16
 
 L256_dec_w5r_g1:	//one block, GHASH with H^1
@@ -2037,7 +2037,7 @@ L256_dec_w5r_g1:	//one block, GHASH with H^1
 	rev32	v30.16b, v29.16b			//counter after the last block
 	aese	v0.16b, v14.16b				//blk 0 - round 13
 	str	q30, [x16]				//store the updated counter
-eor3	v0.16b, v26.16b, v0.16b, v15.16b	//eor3 v0.16b, v26.16b, v0.16b, v15.16b	//H^1 block - result
+eor3	v0.16b, v26.16b, v0.16b, v15.16b	//H^1 block - result
 	str	q0, [x2], #16
 
 L256_dec_w5r_done:	//rejoin the one epilogue: single `ret` for nblk >= 1

@@ -51,6 +51,15 @@ extern void aes_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
 extern uint64_t aes128_gcm_dec(const uint8_t *in, uint64_t len_bits, uint8_t *out,
         uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
 
+// AES128_GCM_DEC_ALT (AES-128-GCM bulk decryption of whole blocks with GHASH tag update, 8 blocks at a time)
+// Unlike aes128_gcm_dec it needs FEAT_SHA3, reads the complete 192-byte H table produced by gcm_init_v8, requires in + len_bits/8 < 2^63,
+// and returns 0 without touching memory when len_bits is not a multiple of 128.
+// This routine does not enforce the NIST GCM message limit.
+// Callers must ensure the cumulative message length does not exceed 2^36 - 32 bytes (2^39 - 256 bits).
+// Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[176], htable[24]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed
+extern uint64_t aes128_gcm_dec_alt(const uint8_t *in, uint64_t len_bits, uint8_t *out,
+        uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
+
 // AES128_GCM_ENC (AES-128-GCM bulk encryption of whole blocks with GHASH tag update)
 // Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[176], htable[12]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed
 extern uint64_t aes128_gcm_enc(const uint8_t *in, uint64_t len_bits, uint8_t *out,
