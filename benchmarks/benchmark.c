@@ -1456,6 +1456,11 @@ void call_aes128_gcm_enc_64(void) {}
 void call_aes128_gcm_enc_256(void) {}
 void call_aes128_gcm_enc_1024(void) {}
 void call_aes128_gcm_enc_4096(void) {}
+void call_aes128_gcm_enc_alt_16(void) {}
+void call_aes128_gcm_enc_alt_64(void) {}
+void call_aes128_gcm_enc_alt_256(void) {}
+void call_aes128_gcm_enc_alt_1024(void) {}
+void call_aes128_gcm_enc_alt_4096(void) {}
 void call_aes128_gcm_dec_16(void) {}
 void call_aes128_gcm_dec_64(void) {}
 void call_aes128_gcm_dec_256(void) {}
@@ -1631,6 +1636,17 @@ void call_aes256_gcm_dec_alt_64(void) { repeat(aes256_gcm_dec_alt_helper(64)); }
 void call_aes256_gcm_dec_alt_256(void) { repeat(aes256_gcm_dec_alt_helper(256)); }
 void call_aes256_gcm_dec_alt_1024(void) { repeatfewer(10,aes256_gcm_dec_alt_helper(1024)); }
 void call_aes256_gcm_dec_alt_4096(void) { repeatfewer(40,aes256_gcm_dec_alt_helper(4096)); }
+
+// AES128 8x encrypt reads 176 bytes of round keys and the 192-byte H table,
+// and uses AES/PMULL and SHA3 instructions. All these lengths are whole blocks.
+static void aes128_gcm_enc_alt_helper(size_t len)
+{ aes_gcm_setup(10);
+  aes128_gcm_enc_alt((uint8_t*)b0, (uint64_t)len * 8, (uint8_t*)b2, (uint64_t*)b3, aes_iv, &aes_gcm_key, bb[0]); }
+void call_aes128_gcm_enc_alt_16(void) { repeat(aes128_gcm_enc_alt_helper(16)); }
+void call_aes128_gcm_enc_alt_64(void) { repeat(aes128_gcm_enc_alt_helper(64)); }
+void call_aes128_gcm_enc_alt_256(void) { repeat(aes128_gcm_enc_alt_helper(256)); }
+void call_aes128_gcm_enc_alt_1024(void) { repeatfewer(10,aes128_gcm_enc_alt_helper(1024)); }
+void call_aes128_gcm_enc_alt_4096(void) { repeatfewer(40,aes128_gcm_enc_alt_helper(4096)); }
 
 // aes256_gcm_enc_alt, the encryption counterpart: the same table, FEAT_SHA3
 // and whole-block requirements, the same short path for at most 4 blocks,
@@ -2141,6 +2157,11 @@ int main(int argc, char *argv[])
   timingtest(aes,"aes128_gcm_enc (256 bytes)",call_aes128_gcm_enc_256);
   timingtest(aes,"aes128_gcm_enc (1024 bytes)",call_aes128_gcm_enc_1024);
   timingtest(aes,"aes128_gcm_enc (4096 bytes)",call_aes128_gcm_enc_4096);
+  timingtest(aes&&sha3,"aes128_gcm_enc_alt (16 bytes)",call_aes128_gcm_enc_alt_16);
+  timingtest(aes&&sha3,"aes128_gcm_enc_alt (64 bytes)",call_aes128_gcm_enc_alt_64);
+  timingtest(aes&&sha3,"aes128_gcm_enc_alt (256 bytes)",call_aes128_gcm_enc_alt_256);
+  timingtest(aes&&sha3,"aes128_gcm_enc_alt (1024 bytes)",call_aes128_gcm_enc_alt_1024);
+  timingtest(aes&&sha3,"aes128_gcm_enc_alt (4096 bytes)",call_aes128_gcm_enc_alt_4096);
   timingtest(aes,"aes128_gcm_dec (16 bytes)",call_aes128_gcm_dec_16);
   timingtest(aes,"aes128_gcm_dec (64 bytes)",call_aes128_gcm_dec_64);
   timingtest(aes,"aes128_gcm_dec (256 bytes)",call_aes128_gcm_dec_256);
