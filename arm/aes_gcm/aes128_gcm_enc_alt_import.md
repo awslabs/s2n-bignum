@@ -15,6 +15,18 @@ Its executable code occupies 5,588 bytes with BTI and 5,584 bytes without BTI.
 The proof SHA256 is
 `d924ed9b989270191fc18c47d9548043781d8d5cef44b7a8c6e2cfac7e13625c`.
 
+The current native tests share the AES-128 KAT and Wycheproof drivers across
+the existing encrypt/decrypt kernels and this encrypt alternative. They use
+all 18 nonempty whole-block, full-tag records from AWS-LC's
+`aes_128_gcm_tests.txt`, plus all 21 valid nonempty whole-block AES-128,
+128-bit-tag records from its vendored Wycheproof `aes_gcm_test.json`.
+The headers are the same vector sets used by the AES-128 decrypt alternative
+in s2n-bignum PR #482 at `8914d805effbabf66a70b1ad225c8f8f83eafa66`.
+`tests/verify_aes128_gcm_import.py` checks every field and complete eligible
+record set against the original corpora, alongside the eleven verbatim
+AWS-LC C reference bodies. The independent random differential, counter
+rollover and no-access guard tests remain in place.
+
 The sections below describe the original October 26, 2026 AWS-LC import
 baseline, including its historical hashes, instruction addresses and native
 checks. They establish the import's lineage; their 3,756/3,752-byte sizes and

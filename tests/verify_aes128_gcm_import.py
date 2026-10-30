@@ -8,6 +8,7 @@ Usage: python3 verify_aes128_gcm_import.py [path/to/aws-lc]
 The AWS-LC checkout is a read-only source; no AWS-LC build is required.
 """
 import hashlib
+import json
 from pathlib import Path
 import re
 import sys
@@ -41,34 +42,72 @@ if seen != expected:
     raise SystemExit("FAIL: AWS-LC reference function set differs: " + repr(seen ^ expected))
 print("All 11 AWS-LC C function bodies are verbatim source substrings.")
 
-# Parse the ten fixed records in the named new KAT function. Matching all six
-# fields at the recorded KEY line prevents vector invention or mixed records.
-kat_start = source.index(b"int test_known_values_aes128_gcm_enc_alt(void)")
-kat_end = source.index(b"  size_t i;", kat_start)
-kat_source = source[kat_start:kat_end]
-records = re.findall(
-    rb'\{\s*(\d+),\s*((?:"[0-9a-fA-F]*"\s*,?\s*){6})\}', kat_source)
-if len(records) != 10:
-    raise SystemExit("FAIL: expected ten fixed AWS-LC AES128 vectors")
+# Check the shared whole-block vector suites against their original corpora.
+# Match every field and the complete eligible record set, so invented, mixed,
+# duplicated or omitted records cannot pass the provenance check.
 vector_path = AWS_LC / "crypto/cipher_extra/test/aes_128_gcm_tests.txt"
 upstream_lines = vector_path.read_text().splitlines()
 field_names = ["KEY", "NONCE", "AD", "IN", "CT", "TAG"]
+eligible = {}
+for index, text in enumerate(upstream_lines):
+    if not text.startswith("KEY:"):
+        continue
+    fields = {}
+    for entry in upstream_lines[index:]:
+        if not entry.strip():
+            break
+        if ":" in entry:
+            name, value = entry.split(":", 1)
+            fields[name] = value.strip().strip('"')
+    if (len(fields.get("KEY", "")) == 32 and
+            len(fields.get("TAG", "")) == 32 and fields.get("IN") and
+            len(fields["IN"]) % 32 == 0):
+        eligible[index + 1] = [fields[name] for name in field_names]
+kat_source = (HERE / "known_value_tests_gcm_128.h").read_bytes()
+records = re.findall(
+    rb"// Vector \d+ \(aes_128_gcm_tests.txt line (\d+)\):[^\n]*\n"
+    rb"\s*GCM_KAT\((.*?)\);", kat_source, re.S)
+if len(records) != 18 or len(eligible) != 18:
+    raise SystemExit("FAIL: expected all 18 whole-block AWS-LC AES128 vectors")
+seen_lines = set()
 for key_line, quoted in records:
     line = int(key_line)
-    if not upstream_lines[line - 1].startswith("KEY:"):
-        raise SystemExit("FAIL: vector source line is not KEY: " + str(line))
-    fields = {}
-    for text in upstream_lines[line - 1:]:
-        if not text.strip():
-            break
-        if ":" in text:
-            name, value = text.split(":", 1)
-            fields[name] = value.strip().strip('"')
     values = [v.decode() for v in re.findall(rb'"([0-9a-fA-F]*)"', quoted)]
-    if values != [fields[name] for name in field_names]:
+    if line in seen_lines or values != eligible.get(line):
         raise SystemExit("FAIL: vector fields differ at upstream KEY line " + str(line))
-    if len(values[0]) != 32 or not values[3] or len(values[3]) % 32:
-        raise SystemExit("FAIL: vector is not nonempty AES128 whole blocks")
+    seen_lines.add(line)
     print("OK: AWS-LC AES128 KAT KEY line %d all six fields verbatim, %d bytes" %
           (line, len(values[3]) // 2))
-print("All 10 AES128 KAT records match their AWS-LC provenance.")
+if seen_lines != set(eligible):
+    raise SystemExit("FAIL: AWS-LC whole-block AES128 vector set differs")
+print("All 18 shared AES128 KAT records match their AWS-LC provenance.")
+
+wycheproof_path = AWS_LC / (
+    "third_party/vectors/upstream/wycheproof/testvectors_v1/aes_gcm_test.json")
+wycheproof = json.loads(wycheproof_path.read_text())
+eligible = {}
+field_names = ["key", "iv", "aad", "msg", "ct", "tag"]
+for group in wycheproof["testGroups"]:
+    if group["keySize"] != 128 or group["tagSize"] != 128:
+        continue
+    for test in group["tests"]:
+        if test["result"] == "valid" and test["msg"] and len(test["msg"]) % 32 == 0:
+            eligible[test["tcId"]] = [test[name] for name in field_names]
+wycheproof_source = (HERE / "wycheproof_tests_gcm_128.h").read_bytes()
+records = re.findall(
+    rb"// Wycheproof tcId (\d+):[^\n]*\n\s*GCM_KAT\((.*?)\);",
+    wycheproof_source, re.S)
+if len(records) != 21 or len(eligible) != 21:
+    raise SystemExit("FAIL: expected all 21 valid whole-block AES128 Wycheproof vectors")
+seen_ids = set()
+for tc_id, quoted in records:
+    tc_id = int(tc_id)
+    values = [v.decode() for v in re.findall(rb'"([0-9a-fA-F]*)"', quoted)]
+    if tc_id in seen_ids or values != eligible.get(tc_id):
+        raise SystemExit("FAIL: Wycheproof fields differ at tcId " + str(tc_id))
+    seen_ids.add(tc_id)
+    print("OK: AES128 Wycheproof tcId %d all six fields verbatim, %d bytes" %
+          (tc_id, len(values[3]) // 2))
+if seen_ids != set(eligible):
+    raise SystemExit("FAIL: valid whole-block AES128 Wycheproof vector set differs")
+print("All 21 shared AES128 Wycheproof records match their upstream provenance.")

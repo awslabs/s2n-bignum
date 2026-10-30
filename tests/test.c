@@ -18032,29 +18032,27 @@ static int run_gcm_kat(const char *name, aes_gcm_fn fn, int keybytes, int encryp
   return bad;
 }
 
-static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
-                           const char *keyhex, const char *noncehex,
-                           const char *aadhex, const char *pthex,
-                           const char *cthex, const char *taghex)
-{
-  return run_gcm_kat(name, fn, 32, encrypt, keyhex, noncehex, aadhex,
-                     pthex, cthex, taghex);
-}
-
 #define GCM_KAT(KEYHEX, NONCEHEX, ADHEX, INHEX, CTHEX, TAGHEX)                \
-  do { if (run_gcm_256_kat(name, fn, encrypt, KEYHEX, NONCEHEX, ADHEX,      \
-                           INHEX, CTHEX, TAGHEX)) ++failures;                \
+  do { if (run_gcm_kat(name, fn, keybytes, encrypt, KEYHEX, NONCEHEX,       \
+                       ADHEX, INHEX, CTHEX, TAGHEX)) ++failures;              \
        else ++successes;                                                     \
      } while (0)
 
-// Known-answer tests: the AWS-LC records of known_value_tests_gcm_256.h.
-static int test_known_values_gcm_256(const char *name, aes_gcm_fn fn,
-                                     int encrypt)
+// Known-answer tests: the AWS-LC records for the selected AES key size.
+static int test_known_values_gcm(const char *name, aes_gcm_fn fn,
+                                  int keybytes, int encrypt)
 {
   int failures = 0, successes = 0;
   printf("Testing known value cases for %s\n", name);
 
+  if (keybytes == 16)
+   {
+#include "known_value_tests_gcm_128.h"
+   }
+  else
+   {
 #include "known_value_tests_gcm_256.h"
+   }
 
   if (failures != 0)
    { printf("Failed %d known value tests, passed %d\n", failures, successes);
@@ -18072,17 +18070,25 @@ static int test_known_values_gcm_256(const char *name, aes_gcm_fn fn,
 // only whole 16-byte blocks, so the many partial-length records are out of
 // contract, and the negative records (result = invalid) are
 // authentication-failure cases this harness does not assert. What is left --
-// keySize 256, tagSize 128, result = valid, plaintext a nonzero multiple of
-// 16 -- is 17 vectors, and they complement the AWS-LC set above: they carry
-// no AAD, but their IVs have eight lengths from 1 to 16 bytes, including IVs
-// shorter than 12 bytes, which the AWS-LC set lacks.
-static int test_wycheproof_gcm_256(const char *name, aes_gcm_fn fn,
-                                   int encrypt)
+// tagSize 128, result = valid, plaintext a nonzero multiple of 16 -- is 21
+// vectors with keySize 128 and 17 with keySize 256, and they complement the
+// AWS-LC sets above: their IVs have eight lengths from 1 to 16 bytes,
+// including IVs shorter than 12 bytes, which the AWS-LC sets lack. The
+// keySize 128 vectors carry 0 to 16 bytes of AAD, the keySize 256 ones none.
+static int test_wycheproof_gcm(const char *name, aes_gcm_fn fn,
+                                int keybytes, int encrypt)
 {
   int failures = 0, successes = 0;
   printf("Testing Wycheproof vectors for %s\n", name);
 
+  if (keybytes == 16)
+   {
+#include "wycheproof_tests_gcm_128.h"
+   }
+  else
+   {
 #include "wycheproof_tests_gcm_256.h"
+   }
 
   if (failures != 0)
    { printf("Failed %d Wycheproof tests, passed %d\n", failures, successes);
@@ -18094,14 +18100,34 @@ static int test_wycheproof_gcm_256(const char *name, aes_gcm_fn fn,
    }
 }
 
+#undef GCM_KAT
+
 #endif
+
+int test_known_values_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm("aes128_gcm_enc", aes128_gcm_enc, 16, 1);
+#endif
+}
+
+int test_known_values_aes128_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm("aes128_gcm_dec", aes128_gcm_dec, 16, 0);
+#endif
+}
 
 int test_known_values_aes256_gcm_enc(void)
 {
 #ifdef __x86_64__
   return 1;
 #else
-  return test_known_values_gcm_256("aes256_gcm_enc", aes256_gcm_enc, 1);
+  return test_known_values_gcm("aes256_gcm_enc", aes256_gcm_enc, 32, 1);
 #endif
 }
 
@@ -18110,7 +18136,7 @@ int test_known_values_aes256_gcm_dec(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_known_values_gcm_256("aes256_gcm_dec", aes256_gcm_dec, 0);
+  return test_known_values_gcm("aes256_gcm_dec", aes256_gcm_dec, 32, 0);
 #endif
 }
 
@@ -18119,7 +18145,25 @@ int test_known_values_aes256_gcm_dec_alt(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_known_values_gcm_256("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 0);
+  return test_known_values_gcm("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 32, 0);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm("aes128_gcm_enc", aes128_gcm_enc, 16, 1);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm("aes128_gcm_dec", aes128_gcm_dec, 16, 0);
 #endif
 }
 
@@ -18128,7 +18172,7 @@ int test_wycheproof_aes256_gcm_enc(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_wycheproof_gcm_256("aes256_gcm_enc", aes256_gcm_enc, 1);
+  return test_wycheproof_gcm("aes256_gcm_enc", aes256_gcm_enc, 32, 1);
 #endif
 }
 
@@ -18137,7 +18181,7 @@ int test_wycheproof_aes256_gcm_dec(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_wycheproof_gcm_256("aes256_gcm_dec", aes256_gcm_dec, 0);
+  return test_wycheproof_gcm("aes256_gcm_dec", aes256_gcm_dec, 32, 0);
 #endif
 }
 
@@ -18146,7 +18190,7 @@ int test_wycheproof_aes256_gcm_dec_alt(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_wycheproof_gcm_256("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 0);
+  return test_wycheproof_gcm("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 32, 0);
 #endif
 }
 
@@ -18750,99 +18794,16 @@ int test_known_values_aes128_gcm_enc_alt(void)
 #ifdef __x86_64__
   return 1;
 #else
-  // Field values copied verbatim from AWS-LC revision
-  // 532ff233935aa07b45f8e1fd83f5dc0c9b95c049, file
-  // crypto/cipher_extra/test/aes_128_gcm_tests.txt. An upstream "" field
-  // denotes the empty byte string. Each record carries its KEY line number.
-  // These ten complete whole-block records cover AAD lengths 0, 32, 80,
-  // 160, 240; IV lengths 12 and 64; and message lengths 16 through 256.
-  static const struct {
-    unsigned line;
-    const char *key, *nonce, *aad, *pt, *ct, *tag;
-  } vectors[] = {
-    { 116,
-      "b09a4d99112e1637d7f89a058988b417",
-      "74348f7126c0cac836e9de5d",
-      "7883ad259fa5d856ce283419f6da371b444b9b64ea0ddb371b17ec0a9ada27b0eb61b53bd3605f21a848b1e7ed91162f3d51f25481f32d61ec902a7f2cbd6938a7ce466a37e4467e4ec2b2c82b4e66ca",
-      "6b3c4cfd1eb139b62d91ed5d1d8b0f3b52278d5c48787ce46f12b9f026e3eed1bfbc8c6684c6662f06614c69440b3d7cff7c46b2e4aebaa4b5b89236a3cc75535bc600104f240d01de91e0fb3bcad02c",
-      "5e1b783b20fd740310333eddde99a06b5740428cb1a910812219fabd394b72a22a6e3ca31df0afae0a965f0bc0ae631feeaa5ce4c9a38cd5233140b8557bde9f878e65e8932b9e3c3f6e57a73cda36cc",
-      "784b73ee7824adf7279c0a18e46d9a2b" },
-    { 228,
-      "a65b520a2ab67a24fb8fc669c41f2753",
-      "3bd6c7e8d29242abecc4c108",
-      "2538529cc6eec03f70df2ab085027ce015279484981422f31e58aeee31e79703d72752af2b8822dce9b385f1530f19e692e00e20ef973d333f4bd585ecf122bd4ed9b0626cef46baff0302c71411d27e372361f36c7245096faff21f0236f3dd675646760d5687b3cf1544dbcaa863f1267bce04bca976616b890c7c6ff3448d16072c3938f9b62377609950ff7818cbdd21fba2560bf1954a93517962181b18",
-      "9d1559d283f7a38847088116f2156b19a8feab0731f04d0d499c6b0d21b8563a89a9c284230c1298b28a622cbdd38dbceb098ab896a7259caaabfcc7b0d9ea797178c18aaaa351c7f516342dcb9d3e91405882c8faa9a28f7c67f3db8913b31c0dcd56472d8ebbfb20cda2896a66bff2706b12ae0d9bc8c6c123c02f1f0bbaa418c1806482423eac72d718cad0dbccd208eb81663a9d9043d6ae7a52cf32b1fa",
-      "c3194fbb5c319a94c0f61c432a730ce7611a005cfc78266ac4e5d7c95351e71d613f06f52d9d008b9d886f4d9a57bcc232d47e0c75ab755dfccc057a9c7558d7fb696a8c29843a8b9199e2406d23cd6507d35a872fa54cb95e2cb9af45405ebc6b6ee353e8a80debc393329bb9499c61c6344a6380c118f30fcd76376a9765517652e1b21ecafa63c0d19c1875658f1eda89c15ac2daf1a6f526ca72ee792a4f",
-      "fc16cd532c926ba01e2e6b15327bfb3a" },
-    { 340,
-      "cfea8c059d7b866051aa54b8977befe3",
-      "e54e684ef16a2fa8e25786d9",
-      "376d8e02071a93c892293902e369b8c7c44a4c9541b5050347b016243935408d0c9557b0f66c6cd493c1b8da68c8635f4c868e685674aed42f196ee9b6e56ee44510eb9b9e89108d878be917454dca0c62d207fa462a563a267270d6b1602d6795717475bc6fb5c87b747589328e39b1d4db3cb19f0fbe9791aa4232e33abd9e14b5fa3abe4705ee988c657677fa063aa349f1a05de045f3ee66da03af18b6b8b83e29b203e12bb02a4cbaf79eab3cfeb83a5a997daaf8f36fa9e12faee86c9cb351ff361351d98ee3a10af999799955a02fc46ddf56c23070319b3fe0cb42d07d811ae976f242670e618eed113b4342",
-      "5a20333c4dd9b7378bfb773b7d64ab80379d16c0a56eb1f48f53c19d0fc4519d0b5f478e37f16d6e5085af31dc63488f9f2cbde3e49ba954b674b0a4e20df811098f7b8e716efaee6a4109f16afe128ddb0e54034d66bd00d13a6c69c9ef2e5a065825701f5e85634e118c69ff0fd71bfccc25030fe94e778e7f474136cd3722eb5bfd88bc99fb45dbc3060a24ac2bdadc5c82d883c5c63ccc0f7aaf5384f4c7fb07310b66a7c767d025c1a02dc9aa3d7aa921a72084906ae6039f837454493aac3e3549ad3722a735dfce4211819a2d7ec279221d43360edd9a4cb930815c8565c22b94b4849a979d5e2a57b2da8ecb",
-      "06ccc7336773919c2b1bd832e7c48ae4a569db96545363ae0b28061fede28a25ab6cc0382aae3e6b31efaa4c225073640d0148878524a7f381f53b4d21a43e39afd4c12cfdcda442d5023a8d2a8ad49f4a002ecc8354c86520524017e561fe891b6962682d168a860210e0def1cb4be1bfc6590121c1b1988254757fc5a37ef916827a5fc258ae772773a6902b084817f3641c21d3d1d1e8818b9851dd05aa49ea74e16778593f6f486957345462732ab92b1e4b06c32b5ad3270c5ef3d80b4e4bd08451e92c26acebcac1a4592e08ea434a1fbc6dfedc677151ae9471661913db19723184d9ef4bb49342606f784d98",
-      "e7be877dad60c889d397726bf1b6ea89" },
-    { 440,
-      "00000000000000000000000000000000",
-      "000000000000000000000000",
-      "",
-      "00000000000000000000000000000000",
-      "0388dace60b6a392f328c2b971b2fe78",
-      "ab6e47d42cec13bdf53a67b21257bddf" },
-    { 447,
-      "feffe9928665731c6d6a8f9467308308",
-      "cafebabefacedbaddecaf888",
-      "",
-      "d9313225f88406e5a55909c5aff5269a86a7a9531534f7da2e4c303d8a318a721c3c0c95956809532fcf0e2449a6b525b16aedf5aa0de657ba637b391aafd255",
-      "42831ec2217774244b7221b784d0d49ce3aa212f2c02a4e035c17e2329aca12e21d514b25466931c7d8f6a5aac84aa051ba30b396a0aac973d58e091473f5985",
-      "4d5c2af327cd64a62cf35abd2ba6fab4" },
-    { 486,
-      "00000000000000000000000000000000",
-      "000000000000000000000000",
-      "",
-      "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      "0388dace60b6a392f328c2b971b2fe78f795aaab494b5923f7fd89ff948bc1e0200211214e7394da2089b6acd093abe0",
-      "9dd0a376b08e40eb00c35f29f9ea61a4" },
-    { 502,
-      "00000000000000000000000000000000",
-      "000000000000000000000000",
-      "",
-      "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      "0388dace60b6a392f328c2b971b2fe78f795aaab494b5923f7fd89ff948bc1e0200211214e7394da2089b6acd093abe0c94da219118e297d7b7ebcbcc9c388f28ade7d85a8ee35616f7124a9d527029195b84d1b96c690ff2f2de30bf2ec89e00253786e126504f0dab90c48a30321de3345e6b0461e7c9e6c6b7afedde83f40",
-      "cac45f60e31efd3b5a43b98a22ce1aa1" },
-    { 510,
-      "00000000000000000000000000000000",
-      "ffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      "",
-      "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      "56b3373ca9ef6e4a2b64fe1e9a17b61425f10d47a75a5fce13efc6bc784af24f4141bdd48cf7c770887afd573cca5418a9aeffcd7c5ceddfc6a78397b9a85b499da558257267caab2ad0b23ca476a53cb17fb41c4b8b475cb4f3f7165094c229c9e8c4dc0a2a5ff1903e501511221376a1cdb8364c5061a20cae74bc4acd76ceb0abc9fd3217ef9f8c90be402ddf6d8697f4f880dff15bfb7a6b28241ec8fe183c2d59e3f9dfff653c7126f0acb9e64211f42bae12af462b1070bef1ab5e3606",
-      "566f8ef683078bfdeeffa869d751a017" },
-    { 526,
-      "843ffcf5d2b72694d19ed01d01249412",
-      "dbcca32ebf9b804617c3aa9e",
-      "00000000000000000000000000000000101112131415161718191a1b1c1d1e1f",
-      "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
-      "6268c6fa2a80b2d137467f092f657ac04d89be2beaa623d61b5a868c8f03ff95d3dcee23ad2f1ab3a6c80eaf4b140eb05de3457f0fbc111a6b43d0763aa422a3013cf1dc37fe417d1fbfc449b75d4cc5",
-      "3b629ccfbc1119b7319e1dce2cd6fd6d" },
-    { 534,
-      "843ffcf5d2b72694d19ed01d01249412",
-      "dbcca32ebf9b804617c3aa9e",
-      "00000000000000000000000000000000101112131415161718191a1b1c1d1e1f",
-      "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeef0ff1f2f3f4f5f6f7f8f9fafbfcfdfeff",
-      "6268c6fa2a80b2d137467f092f657ac04d89be2beaa623d61b5a868c8f03ff95d3dcee23ad2f1ab3a6c80eaf4b140eb05de3457f0fbc111a6b43d0763aa422a3013cf1dc37fe417d1fbfc449b75d4cc5171683438d95cdb9bbeb9e0f771e60484e0531669a50df3843d0b654039d14a56948d45502afe33d64680fd9fb7cafd976558a270c1286c0b80dce026c26f90f5cb290af458b63c666ff8dd83b266fa752a1b62ae016cebb26975eeff4f9638b2e131a695689b2eb9042b2a8273cf3846112df8b0a53d2dd66b159b42e1b20b95bd887995aca84caf4a23253b66491e75ff0c0d1e50f0dc770109add44bc7623409e72cf10263241bf3b8611572a4835",
-      "7ee6139e43de0ce7b0ddeac2be67e1fb" },
-  };
-  size_t i;
+  return test_known_values_gcm("aes128_gcm_enc_alt", aes128_gcm_enc_alt, 16, 1);
+#endif
+}
 
-  printf("Testing 10 AWS-LC known value cases for aes128_gcm_enc_alt\n");
-  for (i = 0; i < sizeof(vectors) / sizeof(vectors[0]); ++i)
-    if (run_gcm_kat("aes128_gcm_enc_alt", aes128_gcm_enc_alt, 16, 1,
-                    vectors[i].key, vectors[i].nonce, vectors[i].aad,
-                    vectors[i].pt, vectors[i].ct, vectors[i].tag))
-     { printf("### AWS-LC AES128 GCM vector KEY at source line %u failed\n",
-              vectors[i].line);
-       return 1; }
-  printf("Successfully passed 10 AWS-LC known value tests\n");
-  return 0;
+int test_wycheproof_aes128_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm("aes128_gcm_enc_alt", aes128_gcm_enc_alt, 16, 1);
 #endif
 }
 
@@ -18875,7 +18836,7 @@ int test_known_values_aes256_gcm_enc_alt(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_known_values_gcm_256("aes256_gcm_enc_alt", aes256_gcm_enc_alt, 1);
+  return test_known_values_gcm("aes256_gcm_enc_alt", aes256_gcm_enc_alt, 32, 1);
 #endif
 }
 
@@ -18884,7 +18845,7 @@ int test_wycheproof_aes256_gcm_enc_alt(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_wycheproof_gcm_256("aes256_gcm_enc_alt", aes256_gcm_enc_alt, 1);
+  return test_wycheproof_gcm("aes256_gcm_enc_alt", aes256_gcm_enc_alt, 32, 1);
 #endif
 }
 
@@ -19832,9 +19793,13 @@ int main(int argc, char *argv[])
     functionaltest(aes&&sha3,"aes256_gcm_dec_alt",test_aes256_gcm_dec_alt);
     functionaltest(aes&&sha3,"aes256_gcm_dec_alt whole-blocks guard",test_aes256_gcm_dec_alt_guard);
     functionaltest(all,"aes_gcm_htable",test_aes_gcm_htable);
+    functionaltest(aes,"known value tests for aes128_gcm_enc",test_known_values_aes128_gcm_enc);
+    functionaltest(aes,"known value tests for aes128_gcm_dec",test_known_values_aes128_gcm_dec);
     functionaltest(aes,"known value tests for aes256_gcm_enc",test_known_values_aes256_gcm_enc);
     functionaltest(aes,"known value tests for aes256_gcm_dec",test_known_values_aes256_gcm_dec);
     functionaltest(aes&&sha3,"known value tests for aes256_gcm_dec_alt",test_known_values_aes256_gcm_dec_alt);
+    functionaltest(aes,"Wycheproof vectors for aes128_gcm_enc",test_wycheproof_aes128_gcm_enc);
+    functionaltest(aes,"Wycheproof vectors for aes128_gcm_dec",test_wycheproof_aes128_gcm_dec);
     functionaltest(aes,"Wycheproof vectors for aes256_gcm_enc",test_wycheproof_aes256_gcm_enc);
     functionaltest(aes,"Wycheproof vectors for aes256_gcm_dec",test_wycheproof_aes256_gcm_dec);
     functionaltest(aes&&sha3,"Wycheproof vectors for aes256_gcm_dec_alt",test_wycheproof_aes256_gcm_dec_alt);
@@ -19846,6 +19811,7 @@ int main(int argc, char *argv[])
     functionaltest(aes&&sha3,"aes128_gcm_enc_alt whole-blocks guard",test_aes128_gcm_enc_alt_guard);
     functionaltest(aes&&sha3,"aes128_gcm_enc_alt counter rollover",test_aes128_gcm_enc_alt_rollover);
     functionaltest(aes&&sha3,"known value tests for aes128_gcm_enc_alt",test_known_values_aes128_gcm_enc_alt);
+    functionaltest(aes&&sha3,"Wycheproof vectors for aes128_gcm_enc_alt",test_wycheproof_aes128_gcm_enc_alt);
     functionaltest(aes&&sha3,"aes256_gcm_enc_alt",test_aes256_gcm_enc_alt);
     functionaltest(aes&&sha3,"aes256_gcm_enc_alt whole-blocks guard",test_aes256_gcm_enc_alt_guard);
     functionaltest(aes&&sha3,"known value tests for aes256_gcm_enc_alt",test_known_values_aes256_gcm_enc_alt);
