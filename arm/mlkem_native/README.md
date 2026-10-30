@@ -213,6 +213,15 @@ keccak_squeeze nblocks S, so that after `mlkem_shake128_absorb_once` these
 are the bytes of the output of `shake128`. Finally `mlkem_shake128_init`
 does nothing and `mlkem_shake128_release` zeroes the context.
 
+The functions for four SHAKE128 states at once, used to generate the
+matrix, work on a context of 800 bytes, the four states one after another.
+For them, the theorem for `mlkem_keccakf1600x4_permute` is also restated
+for 1600-bit words, as
+`MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600`.
+Then `mlkem_shake128x4_squeezeblocks` outputs nblocks blocks of 168 bytes
+from each state into four buffers, as `mlkem_shake128_squeezeblocks` does
+for one, and `mlkem_shake128x4_init` does nothing.
+
 For `mlkem_sha3_256` and `mlkem_sha3_512`, the input is given as a list of
 bytes, and the result, as a number, is that of `sha3_256` or `sha3_512` in
 `common/fips202.ml`, using the lemmas about `keccak_sponge` at the end of
