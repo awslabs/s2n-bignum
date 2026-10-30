@@ -534,7 +534,16 @@ let rec WHILE_TAC (flag:bool ref) tac w =
   (if !flag then tac THEN WHILE_TAC flag tac else ALL_TAC) w;;
 
 (* public_vars describe the HOL Light variables that will contain public
-   information. This is for faster symbolic simulation. *)
+   information. This is for faster symbolic simulation.
+
+   The goal chooses a function f_events describing the complete trace.
+   UNIFY_REFL_TAC would substitute its large lambda expression into every
+   saved instruction proof when the tactic's justification runs. Instead,
+   choose a short name for the same function and keep its defining equation
+   until the complete proof, including the outer existential, is assembled.
+   WITH_DEFERRED_ABBREVS_TAC then removes that equation by existential
+   elimination. This changes proof construction, not the safety claim, and
+   applies to every invocation; no per-proof option is needed. *)
 let GEN_PROVE_SAFETY_SPEC_TAC =
   let pth =
     prove(`forall (e:((A)address_uarch_event)list) e2.
@@ -545,11 +554,32 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
               ([]:((A)address_uarch_event)list) [] []`,
           MESON_TAC[memaccess_inbounds_def;ALL]) in
 
+  (* Construct the same function and beta-conversion proof as UNIFY_REFL_TAC,
+     but unify f_events with its temporary name rather than the function.
+     The enclosing wrapper removes the naming equation only after all saved
+     instruction justifications have used this short substitution. *)
+  let UNIFY_TRACE_FUNCTION_TAC abbreviate ((asl,w) as goal) =
+    let actual,expected = dest_eq w in
+    let function_var,args = strip_comb expected in
+    if not(is_var function_var) || vfree_in function_var actual
+    then failwith "UNIFY_TRACE_FUNCTION_TAC: not a fresh metavariable" else
+    let formal_args =
+      map (fun v -> if is_var v then v else genvar(type_of v)) args in
+    let value = list_mk_abs(formal_args,actual) in
+    let beta_equation = prove
+      (mk_eq(actual,list_mk_comb(value,args)),
+       CONV_TAC(RAND_CONV(DEPTH_CONV BETA_CONV)) THEN REFL_TAC) in
+    let definition = abbreviate goal value in
+    let applied =
+      List.fold_left (fun th arg -> AP_THM th arg) definition args in
+    UNIFY_ACCEPT_TAC [function_var] (TRANS beta_equation applied) goal in
+
   let mainfn ?(public_vars:term list option)
     ?(tac_before_maychange_simp:tactic option) exec
     (extra_unpack_thms:thm list) single_step_tac
     :tactic =
 
+    WITH_DEFERRED_ABBREVS_TAC (fun abbreviate ->
     REWRITE_TAC[C_ARGUMENTS;ALL;ALLPAIRS;SOME_FLAGS;fst exec] THEN
     REWRITE_TAC extra_unpack_thms THEN
 
@@ -629,12 +659,12 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
         ALL_TAC
       ] THEN
       (* e2 = f_events <public info> *)
-      CONJ_TAC THENL [UNIFY_REFL_TAC; ALL_TAC] THEN
+      CONJ_TAC THENL [UNIFY_TRACE_FUNCTION_TAC abbreviate; ALL_TAC] THEN
       (* memaccess_inbounds *)
       (MATCH_ACCEPT_TAC qth ORELSE
       (POP_ASSUM MP_TAC THEN
        W (fun (asl,w) -> REWRITE_TAC(APPEND :: (map GSYM !stored_abbrevs))) THEN
-       PRINT_GOAL_TAC THEN FAIL_TAC "Could not prove memaccess_inbounds")))
+       PRINT_GOAL_TAC THEN FAIL_TAC "Could not prove memaccess_inbounds"))))
   in mainfn;;
 
 let ASSERT_CONCL_TAC (t:term): tactic =

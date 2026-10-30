@@ -155,9 +155,9 @@ let MLKEM_MULCACHE_COMPUTE_CORRECT = prove
      Note that we simplify eagerly after every step.
      This reduces the proof time *)
   REPEAT STRIP_TAC THEN
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_MULCACHE_COMPUTE_EXEC [n] THEN
-             (SIMD_SIMPLIFY_TAC [barmul]))
-            (1--180) THEN
+  (let step = ARM_STEPS_TAC MLKEM_MULCACHE_COMPUTE_EXEC
+   and simplify = SIMD_SIMPLIFY_TAC [barmul] in
+   MAP_EVERY (fun n -> step [n] THEN simplify) (1--180)) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC [] THEN
 

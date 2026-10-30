@@ -1254,8 +1254,83 @@ let apply_extra_word_convs tm = FIRST_CONV (!extra_word_CONV) tm;;
 (* Rewrite rules to apply before rewriting reads from previous states *)
 let extra_early_rewrite_rules = ref [];;
 
+(* Context-dependent reads, such as a memory fact guarded by a frame. *)
+let extra_context_read_CONV = ref (fun (_:thm list) -> NO_CONV);;
+let extra_context_read_filter = ref (fun (ths:thm list) -> ths);;
+
+(* Symbolic execution commonly changes only the first few context facts.
+   Retain the rewrite net after each suffix of the previous rule list and
+   rebuild the changed prefix in the ordinary insertion order. A theorem
+   can be reused by identity, or when both versions are independent
+   assumptions of the identical conclusion term. Equal conclusions with
+   different hypotheses are never enough.
+
+   Each builder retains only its last context, with at most 4096 rules.
+   Changing the basic rewrite net invalidates all cached suffixes. *)
+
+let CACHED_CONTEXT_REWRITE_CONV rep cnvl builtin_net =
+  let previous = ref (empty_net,[]) in
+  let same_rule old current =
+    old == current ||
+    let tm = concl old in
+    tm == concl current &&
+    match hyp old,hyp current with
+    | [h],[h'] -> h == tm && h' == tm
+    | _ -> false in
+  fun ths ->
+    let builtin = builtin_net() in
+    let old_builtin,old_suffixes = !previous in
+    let old_suffixes =
+      if builtin == old_builtin then old_suffixes else [] in
+    let rec share old remaining net suffixes =
+      match old,remaining with
+      | (old_th,old_net)::older,th::rest when same_rule old_th th ->
+          share older rest old_net ((th,old_net)::suffixes)
+      | _ -> net,suffixes,remaining in
+    let initial,suffixes,remaining =
+      share old_suffixes (rev ths) builtin [] in
+    let rec extend net suffixes = function
+      | [] -> net,suffixes
+      | th::rest ->
+          let canonical = mk_rewrites false th [] in
+          let net = itlist (net_of_thm rep) canonical net in
+          extend net ((th,net)::suffixes) rest in
+    let net,suffixes = extend initial suffixes remaining in
+    previous := builtin,
+      (if length ths <= 4096 then rev suffixes else []);
+    cnvl(REWRITES_CONV net);;
+
+let CACHED_GEN_REWRITE_CONV cnvl =
+  CACHED_CONTEXT_REWRITE_CONV false cnvl (fun () -> empty_net);;
+
+let CACHED_REWRITE_CONV =
+  CACHED_CONTEXT_REWRITE_CONV true TOP_DEPTH_CONV basic_net;;
+
+let CACHED_ASM_REWRITE_TAC ths =
+  W(fun (asl,_) ->
+    CONV_TAC(CACHED_REWRITE_CONV(map snd asl @ ths)));;
+
+(* Keep ordinary preparation available for same-binary measurements. *)
+let context_rewrite_cache_enabled = ref false;;
+
+let CONTEXT_READ_SIMPLIFY_TAC =
+  W(fun (asl,_) ->
+    CONV_TAC(LAND_CONV
+      (TOP_DEPTH_CONV(!extra_context_read_CONV (map snd asl)))));;
+
+let ASSEMBLER_ASM tac rules =
+  W(fun (asl,_) ->
+    tac (!extra_context_read_filter (map snd asl) @ rules));;
 
 let ASSEMBLER_SIMPLIFY_TAC =
+  let cached_final_rewrite =
+    CACHED_GEN_REWRITE_CONV (LAND_CONV o TOP_DEPTH_CONV) in
+  let context_rewrite ths =
+    CONV_TAC((if !context_rewrite_cache_enabled then CACHED_REWRITE_CONV
+       else REWRITE_CONV) ths)
+  and final_rewrite ths =
+    CONV_TAC((if !context_rewrite_cache_enabled then cached_final_rewrite
+       else GEN_REWRITE_CONV (LAND_CONV o TOP_DEPTH_CONV)) ths) in
   let pth = prove
    (`!a b. a < a + bitval b <=> b`,
     REPEAT GEN_TAC THEN ASM_CASES_TAC `b:bool` THEN
@@ -1267,7 +1342,9 @@ let ASSEMBLER_SIMPLIFY_TAC =
       let c = concl th in not (is_eq c) || (lhs c <> rhs c)) asl in
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) !extra_early_rewrite_rules
       (asl,w)) THEN
-  ASM_REWRITE_TAC[WORD_XOR_REFL; WORD_ADD_0; WORD_AND_REFL; WORD_OR_REFL;
+  CONTEXT_READ_SIMPLIFY_TAC THEN
+  ASSEMBLER_ASM context_rewrite
+                 [WORD_XOR_REFL; WORD_ADD_0; WORD_AND_REFL; WORD_OR_REFL;
                   WORD_ZX_BITVAL; WORD_SUB_REFL; WORD_OR_0; WORD_ZX_0; NOT_LT;
                   WORD_SX_0; SUB_EQ_0; SUB_REFL; LE_REFL; LT_REFL; NOT_LE;
                   WORD_ZX_TRIVIAL; WORD_SX_TRIVIAL] THEN
@@ -1286,7 +1363,8 @@ let ASSEMBLER_SIMPLIFY_TAC =
      [WORD_RULE `word_sub x (word_add x y):int64 = word_neg y`;
       pth] THENC
     GEN_REWRITE_CONV ONCE_DEPTH_CONV [SYM(NUM_REDUCE_CONV `2 EXP 64`)])) THEN
-  ASM (GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)) [];;
+  CONTEXT_READ_SIMPLIFY_TAC THEN
+  ASSEMBLER_ASM final_rewrite [];;
 
 (* ------------------------------------------------------------------------- *)
 (* Not much commonality to all the ISAs but we do have a uniform             *)
@@ -1367,20 +1445,228 @@ let DEABBREV_TAC tm =
     REPEAT(FIRST_X_ASSUM(SUBST_ALL_TAC o check (sfn o concl)));;
 
 (* ------------------------------------------------------------------------- *)
-(* A slight help for efficiency of justification in some cases.              *)
+(* Helpers for labelled theorem contexts.                                   *)
 (* ------------------------------------------------------------------------- *)
 
+(* Introduce a fresh scalar name without rewriting existing facts or the
+   goal. Callers that have already isolated the expression can rewrite only
+   that expression, rather than make ABBREV_TAC scan the entire context.
+   The defining equation is discharged by existential elimination. *)
+
+let FRESH_ABBREV_TAC tm (asl,w) =
+  let name,value = dest_eq tm in
+  if not(is_var name) || vfree_in name value || vfree_in name w ||
+     exists (fun (_,th) ->
+       vfree_in name (concl th) || exists (vfree_in name) (hyp th)) asl
+  then failwith "FRESH_ABBREV_TAC: name is not fresh";
+  let equation = mk_eq(value,name) in
+  let witness =
+    EXISTS(mk_exists(name,equation),value) (REFL value) in
+  null_meta,[("",ASSUME equation)::asl,w],
+  (fun inst [th] ->
+    CHOOSE(instantiate inst name,INSTANTIATE_ALL inst witness) th);;
+
+(* A tactic returns subgoals and a justification: a function which takes
+   their proof theorems and assembles a theorem of the input goal. Later
+   tactics can discover type/term substitutions which that function must
+   apply to its saved theorems.
+
+   For example, a proof of ?f. !x. f x = x + 1 chooses \n. n + 1 for f.
+   In a safety proof the chosen function instead contains thousands of
+   trace events. Substituting it into every saved instruction theorem
+   repeatedly traverses the large function.
+
+   WITH_DEFERRED_ABBREVS_TAC lets the whole tactic builder use a fresh
+   name n for a term t. Its goal-aware naming conversion returns the
+   theorem t = n |- t = n and saves |- ?n. t = n, proved by choosing t.
+   The builder can choose n as an existential witness and keep the
+   defining equation as a temporary theorem hypothesis.
+
+   First assemble the builder's complete proof using the short names.
+   Then CHOOSE (existential elimination) discharges each defining equation
+   with its saved existence proof, applying the discovered substitutions
+   to both. Remove newer definitions first so they may use earlier names.
+   No naming equation remains in the result.
+
+   The shared safety driver uses this scope unconditionally, including
+   its outer existential introduction and saved justifications. Custom
+   tactic builders can use the same helper; ordinary abbreviation tactics
+   are unchanged. Names are local to this invocation. GEN and CHOOSE still
+   reject captures of locally quantified variables; no new axiom or
+   unproved rewrite is introduced. *)
+
+let WITH_DEFERRED_ABBREVS_TAC build ((asl,w) as goal) =
+  let definitions = ref [] in
+  let root_variables = variables w in
+  let abbreviate ((current_asl,current_w):goal) value =
+    let context_terms context =
+      flat(map (fun (_,th) -> concl th::hyp th) context) in
+    let avoid =
+      value::w::current_w::root_variables @
+      context_terms asl @ context_terms current_asl @
+      map (fun (name,_) -> name) !definitions in
+    let name = variant avoid (genvar(type_of value)) in
+    let equation = mk_eq(value,name) in
+    let witness =
+      EXISTS(mk_exists(name,equation),value) (REFL value) in
+    definitions := (name,witness)::!definitions;
+    ASSUME equation in
+  let meta,goals,justify = build abbreviate goal in
+  meta,goals,(fun inst ths ->
+    List.fold_left (fun th (name,witness) ->
+      CHOOSE(instantiate inst name,INSTANTIATE_ALL inst witness) th)
+      (justify inst ths) !definitions);;
+
+(* ------------------------------------------------------------------------- *)
+(* Normalize context facts and retain their original proofs for restoration. *)
+(* ------------------------------------------------------------------------- *)
+
+(* A goal (asl,w) stores labelled assumption theorems and a target term w.    *)
+(* A theorem Gamma |- H records hypotheses Gamma and a conclusion H. The    *)
+(* interactive display shows H only; logically, the original facts justify  *)
+(* a proof under the union of their Gamma lists, not just the displayed Hs. *)
+(*                                                                          *)
+(* For example, the single context fact                                     *)
+(*                                                                          *)
+(*   (x = 3 /\ y = 5) |- x = 3                                             *)
+(*                                                                          *)
+(* has a stronger hypothesis than its displayed conclusion. The existing    *)
+(* CLARIFY_TAC operation normalizes every Gamma |- H to ASSUME H, that is    *)
+(* H |- H. Here it returns x = 3 |- x = 3, no longer exposing y = 5 in the   *)
+(* subgoal's supporting hypotheses. This can hide information from later    *)
+(* tactics, but is sound: the original Gamma proves H, so any proof using H *)
+(* can be justified under Gamma by restoring the original fact theorem.     *)
+(*                                                                          *)
+(* Both old and new implementations return these same normalized theorems, *)
+(* preserving their labels, order and target. They retain the original      *)
+(* proofs in a saved justification: a function called when the remaining    *)
+(* subgoal has been proved, to assemble a proof of the input goal.           *)
+(*                                                                          *)
+(* Construct the normalized context directly. In the justification, apply  *)
+(* the current type/term substitutions to each nontrivial original proof.   *)
+(* If the result theorem uses H as a hypothesis, PROVE_HYP with Gamma |- H   *)
+(* replaces H by Gamma. For the example, a result x = 3 |- w becomes         *)
+(* (x = 3 /\ y = 5) |- w. The original dependencies are thus restored, not  *)
+(* discarded from the completed proof.                                     *)
+(*                                                                          *)
+(* Unlike the old conjunction-based restoration, this builds no bundled    *)
+(* context or projections. Original ASSUME H facts need no restoration;     *)
+(* replacing H by H does nothing. Unused facts add no dependencies, whereas *)
+(* the old final application of the entire bundle could add them. The      *)
+(* result may therefore have fewer unused hypotheses, without changing the *)
+(* returned subgoal or the proof of any fact that is used.                  *)
+
 let (CLARIFY_TAC:tactic) =
-  let rec REASSUME oldasms th =
-    match oldasms with
-     [(l,oth)] -> LABEL_TAC l th
-    | (l,oth)::oasms ->
-        CONJUNCTS_THEN2 (LABEL_TAC l) (REASSUME oasms) th
-    | [] -> failwith "CLARIFY_TAC: sanity check" in
   fun ((asl,w) as gl) ->
     if asl = [] then ALL_TAC gl else
-    (POP_ASSUM_LIST(MP_TAC o end_itlist CONJ o rev) THEN
-     DISCH_THEN(REASSUME (rev asl))) gl;;
+    (* An original ASSUME H theorem is H |- H. Restoring it would replace
+       the temporary hypothesis H by the same H, changing nothing.
+       Skip the cheap exact case before instantiating its proof:
+       its sole hypothesis is the same term object as its conclusion. *)
+    let proofs = filter
+      (fun th -> match hyp th with
+         | [h] when h == concl th -> false
+         | _ -> true) (map snd asl) in
+    null_meta,
+    [map (fun (label,th) -> label,ASSUME(concl th)) asl,w],
+    (fun inst [th] ->
+      itlist (fun ath -> PROVE_HYP (INSTANTIATE_ALL inst ath))
+        proofs th);;
+
+(* Bounded memoization for TOP_DEPTH_CONV. A conversion has type
+   conv = term -> thm and proves an equality for its input. For fixed step,
+   cache successful recursive results t -> (Gamma |- t = u). Keys use
+   structural term equality (=), including types and variable names, not
+   matching or alpha-equivalence. Values are complete theorems, including
+   hypotheses. Cache misses follow TOP_DEPTH_CONV's rewrite/traversal order.
+
+   Example: the RV32 inverse-NTT output conversion interleaves phase
+   unfolding with rewriting by execution abbreviations. Schematically:
+
+   Delta |- P x i = E     unfold/reduce; fold earlier abbreviations
+   Gamma |- E = v         execution abbreviation
+   -------------------------------------------------------------
+   Delta, Gamma |- P x i = v
+
+   P x i denotes a phase coefficient, E its word expression and v an
+   abbreviation variable. Delta is empty for purely definitional reduction;
+   otherwise it contains hypotheses used by earlier abbreviation rewrites.
+   The composed theorem has the union of Delta and Gamma as hypotheses.
+   A Gentleman-Sande butterfly has outputs a+b and w(a-b), represented by
+   word operations and Barrett multiplication.
+   Both outputs contain earlier-layer phase expressions for a and b.
+   TOP_DEPTH_CONV reconstructs their conversion theorems at each occurrence,
+   even if term nodes are physically shared. Retaining the composed result
+   avoids repeated unfolding, reduction and equality proof construction.
+   Hoisting the conversion builder avoids setup, not these term conversions.
+
+   The cache key does not include rewrite rules or their hypotheses.
+   The caller must keep step's rewrites and theorem dependencies fixed.
+   For contextual rewriting, capture the actual assumption theorems, not
+   just their conclusions. In mldsa-native's RV32 caller, ths = map snd asl
+   after execution, and context_step is prepared as
+     GENERAL_REWRITE_CONV true I (basic_net()) ths.
+   One memoizer for context_step ORELSEC layout_step is retained across
+   all 256 coefficient goals. It does not span changing instruction
+   contexts. If the rules, their hypotheses or another input to step change,
+   construct a new memoizer. There is no automatic invalidation.
+   A hit returns Gamma |- t = u unchanged, not an unconditional equality.
+
+   Keep at most max_entries successful results, default 16384; clear the
+   table before inserting when full. This bounds entries, not memory bytes.
+   Zero selects ordinary TOP_DEPTH_CONV; negative limits fail. Failed
+   recursive conversions are not cached; the outer TRY_CONV supplies REFL
+   when no rewrite succeeds.
+
+   Alternatively, a caller can prove and retain phase-coefficient equations
+   P x i = v layer by layer and rewrite subsequent layers with them.
+   That changes proof decomposition; this helper memoizes the existing
+   conversion without requiring it. *)
+
+let MEMOIZED_TOP_DEPTH_CONV ?(max_entries=16384) step =
+  if max_entries < 0 then
+    failwith "MEMOIZED_TOP_DEPTH_CONV: negative cache limit"
+  else if max_entries = 0 then TOP_DEPTH_CONV step else
+  let thenqc first second tm =
+    try let th = first tm in
+        try TRANS th (second(rhs(concl th)))
+        with Failure _ -> th
+    with Failure _ -> second tm
+  and thencqc first second tm =
+    let th = first tm in
+    try TRANS th (second(rhs(concl th)))
+    with Failure _ -> th in
+  let combq conv tm =
+    match tm with
+    | Comb(l,r) ->
+        (try let th = conv l in
+             try MK_COMB(th,conv r)
+             with Failure _ -> AP_THM th r
+         with Failure _ -> AP_TERM l (conv r))
+    | _ -> failwith "MEMOIZED_TOP_DEPTH_CONV: not a combination" in
+  let subq conv tm =
+    match tm with
+    | Abs(_,_) -> ABS_CONV conv tm
+    | _ -> combq conv tm in
+  let module Results = Hashtbl.Make(struct
+    type t = term
+    let equal = (=)
+    (* Look past shared heads and type constructors to symbolic arguments.
+       Equality still compares the whole term, not its hash. *)
+    let hash = Hashtbl.hash_param 128 512
+  end) in
+  let cache = Results.create 1021 in
+  let rec repeatq tm = thencqc step repeatq tm
+  and visit tm =
+    try Results.find cache tm
+    with Not_found ->
+      let th =
+        thenqc repeatq
+          (thencqc (subq visit) (thencqc step visit)) tm in
+      if Results.length cache >= max_entries then Results.clear cache;
+      Results.add cache tm th;
+      th in
+  TRY_CONV visit;;
 
 (* ------------------------------------------------------------------------- *)
 (* Apply cacheing (memoization) to arbitrary function with naive assoc list. *)

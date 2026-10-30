@@ -719,6 +719,58 @@ let ASSIGNS_IDEMPOT_RULE tm =
   let th = ISPEC tm ASSIGNS_ABSORB_SAME_COMPONENTS in
   MP th (WEAKLY_VALID_COMPONENT_CONV(lhand(concl th)));;
 
+(* Prove subsumption of two single-component assignment relations. *)
+
+let SUBSUMED_ASSIGNS_TAC =
+  MATCH_ACCEPT_TAC SUBSUMED_REFL ORELSE
+  (MATCH_MP_TAC SUBSUMED_ID_EXTENSIONALLY_VALID_COMPONENT THEN
+   CONV_TAC EXTENSIONALLY_VALID_COMPONENT_CONV THEN NO_TAC) ORELSE
+  CONV_TAC(BINOP_CONV(RAND_CONV COMPONENT_CANON_CONV)) THEN
+  REPEAT(MATCH_MP_TAC SUBSUMED_ASSIGNS_SUBCOMPONENTS) THEN
+  TRY(MATCH_ACCEPT_TAC SUBSUMED_ASSIGNS_SUBCOMPONENT) THEN
+  GEN_REWRITE_TAC (BINOP_CONV o TRY_CONV)
+   [ASSIGNS_BYTES8; ASSIGNS_BYTES16; ASSIGNS_BYTES32; ASSIGNS_BYTES64;
+    ASSIGNS_BYTES128; ASSIGNS_BYTES256] THEN
+  MATCH_MP_TAC SUBSUMED_ASSIGNS_BYTES THEN CONTAINED_TAC;;
+
+let ASSIGNS_ABSORB_SUBSUMED = prove
+ (`!(c:(A,B)component) (d:(A,C)component).
+    weakly_valid_component c /\
+    extensionally_valid_component d /\
+    ASSIGNS d subsumed ASSIGNS c
+    ==> ASSIGNS c ,, ASSIGNS d = ASSIGNS c`,
+  let lemma = prove
+   (`R ,, R = R /\ S subsumed R /\ (=) subsumed S
+     ==> R ,, S = R`,
+    REWRITE_TAC[subsumed; FUN_EQ_THM; seq] THEN MESON_TAC[]) in
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  MATCH_MP_TAC lemma THEN
+  ASM_SIMP_TAC
+   [ASSIGNS_ABSORB_SAME_COMPONENTS;
+    SUBSUMED_ID_EXTENSIONALLY_VALID_COMPONENT]);;
+
+(* Absorb writes to a contained view of the same parent, for example a
+   word write inside an already permitted memory range. Keep the exact
+   component path first and leave unsupported containment to the caller. *)
+
+let ASSIGNS_ABSORB_CONV =
+  let match_subsumed = PART_MATCH (lhand o rand) ASSIGNS_ABSORB_SUBSUMED in
+  fun tm ->
+    try ASSIGNS_IDEMPOT_CONV tm with Failure _ ->
+    let l,r = dest_binary ",," tm in
+    let c = rand l and d = rand r in
+    let parent_c,_ = dest_binary ":>" c
+    and parent_d,_ = dest_binary ":>" d in
+    if parent_c <> parent_d then failwith "ASSIGNS_ABSORB_CONV" else
+    let th = match_subsumed tm in
+    let pre = prove(lhand(concl th),
+      CONJ_TAC THENL
+       [CONV_TAC WEAKLY_VALID_COMPONENT_CONV;
+        CONJ_TAC THENL
+         [CONV_TAC EXTENSIONALLY_VALID_COMPONENT_CONV;
+          SUBSUMED_ASSIGNS_TAC]]) in
+    MP th pre;;
+
 (*** Examples
 
 ASSIGNS_IDEMPOT_RULE `memory :> bytes16 a :> bitelement 1`;;
@@ -986,14 +1038,26 @@ let maychange_term =
   | _ -> false in
   can (find_term pred);;
 
+(* A frame applied to two states, not a formula that merely mentions one.
+   For example, a guarded immutable-read rule also contains MAYCHANGE but
+   must not be selected or discarded as the current execution frame. *)
+let is_maychange_state_fact = function
+  | Comb(Comb(frame,_),_) ->
+      let head,args = strip_comb frame in
+      (match head,args with
+       | Const("MAYCHANGE",_),[_] -> true
+       | Const(",,",_),[_;_] -> maychange_term frame
+       | _ -> false)
+  | _ -> false;;
+
 (* ------------------------------------------------------------------------- *)
 (* Produce a modified update list given theorems                             *)
 (* th = |- (MAYCHANGE [....] ,, MAYCHANGE [...] ... ) s0 s1                  *)
 (* uth = |- write c1 y1 (write c2 y2 (write .... s1)) = s2                   *)
 (* give back                                                                 *)
 (* th' = |- (MAYCHANGE [....] ,, MAYCHANGE [...] ... ) s0 s1                 *)
-(* Tries to absorb components already in the list, otherwise                 *)
-(* simply appends them individually. Not optimal but OK.                     *)
+(* Absorb components already in the list or contained in a permitted view;   *)
+(* append individual components when containment cannot be proved.           *)
 (* ------------------------------------------------------------------------- *)
 
 let MAYCHANGE_UPDATE_RULE =
@@ -1006,7 +1070,7 @@ let MAYCHANGE_UPDATE_RULE =
           let lth = MAYCHANGE_CANON_CONV ltm
           and rth = MAYCHANGE_CANON_CONV rtm in
           let tm' = mk_comb(mk_comb(cop,rand(concl lth)),rand(concl rth)) in
-          let n,eth = ASSIGNS_MOVE_BACK_CONV ASSIGNS_IDEMPOT_CONV tm' in
+          let n,eth = ASSIGNS_MOVE_BACK_CONV ASSIGNS_ABSORB_CONV tm' in
           if n <> 1 then JUSTADD_CONV tm else
           let th' = MK_COMB(AP_TERM cop lth,rth) in
           TRANS (TRANS th' eth) (SYM lth)
@@ -1041,15 +1105,20 @@ MAYCHANGE_UPDATE_RULE uth th;;
 
 (* ------------------------------------------------------------------------- *)
 (* Produce updated "MAYCHANGE" assumption from one in assumptions.           *)
-(* Absorbs simple duplicates but otherwise doesn't try to be clever.         *)
+(* Absorbs duplicates and contained views, retaining the original frame.      *)
 (* Works from antecedent in the goal specifying the state update.            *)
 (* ------------------------------------------------------------------------- *)
 
 let MAYCHANGE_STATE_UPDATE_TAC =
-  DISCH_THEN(fun uth ->
+  let update = DISCH_THEN(fun uth ->
     MP_TAC uth THEN
-    FIRST_X_ASSUM(ASSUME_TAC o MAYCHANGE_UPDATE_RULE uth o
-           check(maychange_term o concl)));;
+    FIRST_ASSUM(fun th ->
+      let frame = check(is_maychange_state_fact o concl) th in
+      let th' = MAYCHANGE_UPDATE_RULE uth frame in
+      UNDISCH_THEN (concl th) (K(ASSUME_TAC th')))) in
+  fun (asl,_ as goal) ->
+    if exists (is_maychange_state_fact o concl o snd) asl
+    then update goal else ALL_TAC goal;;
 
 (* ------------------------------------------------------------------------- *)
 (* A property P always becomes true "eventually". This correctly reflects    *)
@@ -1281,8 +1350,26 @@ let ENSURES_OR_ENSURES_N_TAC tac_for_ensures tac_for_ensures_n: tactic =
 (* Initialization of breaking down an "ensures" triple                       *)
 (* ------------------------------------------------------------------------- *)
 
-let ENSURES_INIT_TAC sname =
-  ENSURES_OR_ENSURES_N_TAC
+let ENSURES_INIT_TAC =
+  let reflexive = prove
+   (`!(R:A->A->bool). (=) subsumed R ==> !s. R s s`,
+    REWRITE_TAC[subsumed] THEN MESON_TAC[]) in
+  fun ?(seed_frame=false) sname ->
+  W(fun (_,w) ->
+    (* A permitted memory range can absorb its individual word writes.
+       Starting from the empty frame instead accumulates those views until
+       the final subsumption check. Seeding is opt-in because existing
+       proofs can inspect the precise intermediate write frame. Seed only
+       when reflexivity is proved; retain the empty starter by default. *)
+    let frame = ensures_or_ensures_n w (rand w) (rand(rator w)) in
+    let starter =
+      if not seed_frame then None else
+      try
+        if not(maychange_term frame) then failwith "ENSURES_INIT_TAC";
+        let th = ISPEC frame reflexive in
+        Some(MP th (prove(lhand(concl th),SUBSUMED_ID_MAYCHANGE_TAC)))
+      with Failure _ -> None in
+    ENSURES_OR_ENSURES_N_TAC
       (GEN_REWRITE_TAC I [ensures])
       (GEN_REWRITE_TAC I [ensures_n])
       THEN
@@ -1292,7 +1379,174 @@ let ENSURES_INIT_TAC sname =
         let svar = mk_var(sname,ty) in
         X_GEN_TAC svar THEN
         DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-        ASSUME_TAC(ISPEC svar MAYCHANGE_STARTER));;
+        ASSUME_TAC
+          (match starter with
+           | Some th -> SPEC svar th
+           | None -> ISPEC svar MAYCHANGE_STARTER)));;
+
+(* ------------------------------------------------------------------------- *)
+(* Tactic to show one MAYCHANGE list is subsumed by another.                 *)
+(* Defined before guarded reads so their fallback can use the same proof.   *)
+(* ------------------------------------------------------------------------- *)
+
+let SUBSUMED_MAYCHANGE_TAC =
+  let lemma_step = prove
+   (`(D ,, D = D ==> C1 subsumed D) /\
+     (D ,, D = D ==> C2 subsumed D)
+     ==> (D ,, D = D ==> (C1 ,, C2) subsumed D)`,
+    MESON_TAC[SUBSUMED_FOR_SEQ])
+  and lemma_start = prove
+   (`D ,, D = D /\
+     (D ,, D = D ==> C1 subsumed D) /\
+     (D ,, D = D ==> C2 subsumed D)
+    ==> (C1 ,, C2) subsumed D`,
+    MESON_TAC[SUBSUMED_FOR_SEQ]) in
+  let rec tac gl =
+   ((MATCH_MP_TAC SUBSUMED_SEQ_LEFT THEN CONJ_TAC THENL
+      [tac; SUBSUMED_ID_MAYCHANGE_TAC]) ORELSE
+    (MATCH_MP_TAC SUBSUMED_SEQ_RIGHT THEN CONJ_TAC THENL
+      [SUBSUMED_ID_MAYCHANGE_TAC; tac]) ORELSE
+    SUBSUMED_ASSIGNS_TAC) gl in
+  (* Anything is subsumed by (\s s'. true) *)
+  MATCH_ACCEPT_TAC SUBSUMED_TRIVIAL ORELSE (
+  CONV_TAC(BINOP_CONV MAYCHANGE_CANON_CONV) THEN
+  TRY(MATCH_MP_TAC lemma_start THEN CONJ_TAC THENL
+       [MAYCHANGE_IDEMPOT_TAC THEN NO_TAC; CONJ_TAC] THEN
+      REPEAT(MATCH_MP_TAC lemma_step THEN CONJ_TAC) THEN
+      DISCH_THEN(K ALL_TAC)) THEN
+  ((POP_ASSUM_LIST(K ALL_TAC) THEN tac) ORELSE tac));;
+
+(* ------------------------------------------------------------------------- *)
+(* Keep immutable memory facts independent of the current execution state.  *)
+(* Prove preservation from the complete permitted frame before promoting    *)
+(* a read; unsupported or mutable reads retain the ordinary update path.    *)
+(* ------------------------------------------------------------------------- *)
+
+let is_frame_read_rule tm =
+  try
+    let s,body = dest_forall tm in
+    let frame,eq = dest_imp body in
+    let head,args = strip_comb(lhs eq) in
+    name_of head = "read" && length args = 2 && el 1 args = s &&
+    is_maychange_state_fact frame && rand frame = s
+  with Failure _ -> false;;
+
+let FRAME_PRESERVES_COMPONENT_RULE cxt frame c =
+  let orthogonal_rule = ORTHOGONAL_COMPONENTS_RULE cxt in
+  let state_ty = hd(dest_type(type_of frame) |> snd) in
+  let u,v = genvar state_ty,genvar state_ty in
+  let rec preserve frame =
+    let premise = mk_comb(mk_comb(frame,u),v) in
+    let th =
+      match frame with
+      | Comb(Comb(Const(",,",_),left),right) ->
+          MP (ISPECL [c;left;right;u;v] SEQ_PRESERVES_COMPONENT)
+            (CONJ (preserve left)
+              (CONJ (preserve right) (ASSUME premise)))
+      | Comb(Const("MAYCHANGE",_),cs) ->
+          let pth = ISPECL [c;cs;u;v]
+              MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT in
+          let all = lhand(lhand(concl pth)) in
+          (* Orthogonality may depend on context nonoverlap facts. Keep
+             their hypotheses in the result rather than demand a closed
+             theorem with [prove]. *)
+          let all_th = TAC_PROOF(([],all),
+            REWRITE_TAC[ALL] THEN REPEAT CONJ_TAC THEN
+            CONV_TAC(EQT_INTRO o orthogonal_rule)) in
+          MP pth (CONJ all_th (ASSUME premise))
+      | _ -> failwith "FRAME_PRESERVES_COMPONENT_RULE" in
+    GENL [u;v] (DISCH premise th) in
+  preserve frame;;
+
+let ENSURES_READ_ONLY_MEMORY_TAC =
+  W(fun (asl,_) ->
+    let frame_th = find (is_maychange_state_fact o concl o snd) asl |> snd in
+    let frame_tm = concl frame_th in
+    let frame,s = rator(rator frame_tm),rand frame_tm in
+    let ths = map snd asl in
+    let cxt = NONOVERLAPPING_DRIVERS ths,FILTER_CANONIZE_ASSUMPTIONS ths in
+    (* Use one fresh bound state for all rules. Their common frame can
+       then be compared by identity during alpha-equivalence checks. *)
+    let s' = genvar(type_of s) in
+    let promote th =
+      let l,value = dest_eq(concl th) in
+      let read_op,args = strip_comb l in
+      if name_of read_op <> "read" || length args <> 2 ||
+         el 1 args <> s then failwith "not a current read";
+      let c = hd args in
+      let parent,_ = dest_binary ":>" c in
+      if name_of parent <> "memory" || vfree_in s c || vfree_in s value
+      then failwith "not a plain memory read";
+      let preservation = FRAME_PRESERVES_COMPONENT_RULE cxt frame c in
+      let premise = mk_comb(mk_comb(frame,s),s') in
+      let read_th = MP (SPECL [s;s'] preservation) (ASSUME premise) in
+      GEN s' (DISCH premise (TRANS read_th th)) in
+    MAP_EVERY (fun th ->
+      try
+        let promoted = promote th in
+        UNDISCH_THEN (concl th) (K(ASSUME_TAC promoted))
+      with Failure _ -> ALL_TAC) ths);;
+
+let FRAME_READ_CONV =
+  let cached = ref ([],empty_net) in
+  fun ths ->
+  let rules = filter (is_frame_read_rule o concl) ths in
+  let frames = filter (is_maychange_state_fact o concl) ths in
+  (* A contextual containment premise can leave a stored word appended to
+     the seeded frame. Re-establish the guard by subsumption, keeping its
+     arithmetic hypotheses. Reuse derived guards only in this fixed context. *)
+  let derived_frames = ref [] in
+  let frame_for premise =
+    try find (fun frame -> concl frame = premise) frames with Failure _ ->
+    try assoc premise !derived_frames with Failure _ ->
+    let required = rator(rator premise) in
+    let first = rand(rator premise) and last = rand premise in
+    let frame =
+      tryfind (fun frame ->
+        let actual = concl frame in
+        if rand(rator actual) <> first || rand actual <> last then
+          failwith "FRAME_READ_CONV: different frame states";
+        let inclusion = list_mk_icomb "subsumed"
+          [rator(rator actual);required] in
+        let included = TAC_PROOF((map (fun th -> "",th) ths,inclusion),
+          SUBSUMED_MAYCHANGE_TAC) in
+        MP (SPECL [first;last] (REWRITE_RULE[subsumed] included)) frame)
+        frames in
+    derived_frames := (premise,frame)::!derived_frames;
+    frame in
+  let keys = map concl rules in
+  let old_keys,old_net = !cached in
+  let net =
+    (* Unchanged assumptions retain their conclusion terms. Comparing
+       those identities avoids traversing every quantified frame twice
+       per instruction. Rebuild for reconstructed terms, even if equal. *)
+    if forall2 (==) keys old_keys then old_net else
+    let net = itlist (fun (i,tm) net ->
+    (* Match a short assumption of the rule, not a cached context proof.
+       Every use below supplies the current theorem and current frame. *)
+    let th = SPEC_ALL(ASSUME tm) in
+    let locals = intersect (frees(concl th)) (freesl(hyp th)) in
+    enter locals
+      (lhs(rand(concl th)),(i,PART_MATCH (lhs o rand) th)) net)
+      (map2 (fun i tm -> i,tm) (0--(length keys - 1)) keys) empty_net in
+    cached := keys,net;
+    net in
+  let actual_rules = Array.of_list rules in
+  (fun tm ->
+    match tm with
+    | Comb(Comb(Const("read",_),_),_) ->
+        tryfind (fun (i,matcher) ->
+          let th = PROVE_HYP actual_rules.(i) (matcher tm) in
+          let premise = lhand(concl th) in
+          let eq = MP th (frame_for premise) in
+          if lhs(concl eq) = rhs(concl eq)
+          then failwith "FRAME_READ_CONV: unchanged" else eq)
+          (lookup tm net)
+    | _ -> failwith "FRAME_READ_CONV");;
+
+extra_context_read_CONV := FRAME_READ_CONV;;
+extra_context_read_filter :=
+  filter (not o is_frame_read_rule o concl);;
 
 (* ------------------------------------------------------------------------- *)
 (* Additional pre-simulation canonizations.                                  *)
@@ -2241,55 +2495,6 @@ let ENSURES_WHILE_UP2_TAC, ENSURES_WHILE_DOWN2_TAC,
     BETA_TAC THEN
     CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Tactic to show |- ASSIGNS c subsumed ASSIGNS d for two components.        *)
-(* Also allows the equality relation in place of "ASSIGNS c".                *)
-(* ------------------------------------------------------------------------- *)
-
-let SUBSUMED_ASSIGNS_TAC =
-  MATCH_ACCEPT_TAC SUBSUMED_REFL ORELSE
-  (MATCH_MP_TAC SUBSUMED_ID_EXTENSIONALLY_VALID_COMPONENT THEN
-   CONV_TAC EXTENSIONALLY_VALID_COMPONENT_CONV THEN NO_TAC) ORELSE
-  CONV_TAC(BINOP_CONV(RAND_CONV COMPONENT_CANON_CONV)) THEN
-  REPEAT(MATCH_MP_TAC SUBSUMED_ASSIGNS_SUBCOMPONENTS) THEN
-  TRY(MATCH_ACCEPT_TAC SUBSUMED_ASSIGNS_SUBCOMPONENT) THEN
-  GEN_REWRITE_TAC (BINOP_CONV o TRY_CONV)
-   [ASSIGNS_BYTES8; ASSIGNS_BYTES16; ASSIGNS_BYTES32; ASSIGNS_BYTES64;
-    ASSIGNS_BYTES128; ASSIGNS_BYTES256] THEN
-  MATCH_MP_TAC SUBSUMED_ASSIGNS_BYTES THEN CONTAINED_TAC;;
-
-(* ------------------------------------------------------------------------- *)
-(* Tactic to show one MAYCHANGE list is subsumed by another.                 *)
-(* ------------------------------------------------------------------------- *)
-
-let SUBSUMED_MAYCHANGE_TAC =
-  let lemma_step = prove
-   (`(D ,, D = D ==> C1 subsumed D) /\
-     (D ,, D = D ==> C2 subsumed D)
-     ==> (D ,, D = D ==> (C1 ,, C2) subsumed D)`,
-    MESON_TAC[SUBSUMED_FOR_SEQ])
-  and lemma_start = prove
-   (`D ,, D = D /\
-     (D ,, D = D ==> C1 subsumed D) /\
-     (D ,, D = D ==> C2 subsumed D)
-    ==> (C1 ,, C2) subsumed D`,
-    MESON_TAC[SUBSUMED_FOR_SEQ]) in
-  let rec tac gl =
-   ((MATCH_MP_TAC SUBSUMED_SEQ_LEFT THEN CONJ_TAC THENL
-      [tac; SUBSUMED_ID_MAYCHANGE_TAC]) ORELSE
-    (MATCH_MP_TAC SUBSUMED_SEQ_RIGHT THEN CONJ_TAC THENL
-      [SUBSUMED_ID_MAYCHANGE_TAC; tac]) ORELSE
-    SUBSUMED_ASSIGNS_TAC) gl in
-  (* Anything is subsumed by (\s s'. true) *)
-  MATCH_ACCEPT_TAC SUBSUMED_TRIVIAL ORELSE (
-  CONV_TAC(BINOP_CONV MAYCHANGE_CANON_CONV) THEN
-  TRY(MATCH_MP_TAC lemma_start THEN CONJ_TAC THENL
-       [MAYCHANGE_IDEMPOT_TAC THEN NO_TAC; CONJ_TAC] THEN
-      REPEAT(MATCH_MP_TAC lemma_step THEN CONJ_TAC) THEN
-      DISCH_THEN(K ALL_TAC)) THEN
-  ((POP_ASSUM_LIST(K ALL_TAC) THEN tac) ORELSE tac));;
-
-
 (*** Example
 
 g `(MAYCHANGE [X1] ,, MAYCHANGE [X2] ,,
@@ -2310,7 +2515,8 @@ let MONOTONE_MAYCHANGE_TAC =
    (`R s s' ==> R subsumed R' ==> R' s s'`,
     REWRITE_TAC[subsumed] THEN MESON_TAC[]) in
   FIRST_ASSUM
-   (MATCH_MP_TAC o MATCH_MP pth o check (maychange_term o concl)) THEN
+   (MATCH_MP_TAC o MATCH_MP pth o
+    check (is_maychange_state_fact o concl)) THEN
   REWRITE_TAC[ETA_AX] THEN SUBSUMED_MAYCHANGE_TAC;;
 
 (* ------------------------------------------------------------------------- *)
