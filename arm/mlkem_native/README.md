@@ -215,8 +215,12 @@ does nothing and `mlkem_shake128_release` zeroes the context.
 
 The functions for four SHAKE128 states at once, used to generate the
 matrix, work on a context of 800 bytes, the four states one after another.
-For them, the theorem for `mlkem_keccakf1600x4_permute` is also restated
-for 1600-bit words, as
+The static function `mlk_keccak_absorb_once_x4`, at 0x27a0 in the image,
+which gcc specializes to p = 0x1F, absorbs four messages of the same length
+into the four states as `mlk_keccak_absorb_once` does into one, using
+`mlkem_keccakf1600x4_xor_bytes` and `mlkem_keccakf1600x4_permute`, except
+that its callers zero the states first. For it and its callers, the theorem
+for `mlkem_keccakf1600x4_permute` is also restated for 1600-bit words, as
 `MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600`.
 Then `mlkem_shake128x4_squeezeblocks` outputs nblocks blocks of 168 bytes
 from each state into four buffers, as `mlkem_shake128_squeezeblocks` does
