@@ -330,3 +330,13 @@ four seeds 64 bytes apart, using the fourfold SHAKE128 functions. Its loop
 squeezes one more block of each until all four have 256 samples, so its
 specification has the same hypothesis for each seed, with the same k, and
 it has no constant-time and memory safety proof yet either.
+
+`mlkem512_gen_matrix`, `mlkem768_gen_matrix` and `mlkem1024_gen_matrix`
+generate the matrix of a parameter set from a seed of 32 bytes. Entry
+(i,j) is sampled as above from the seed followed by the bytes j and i, as
+for the matrix in FIPS 203, or i and j for the transposed matrix if the
+flag is nonzero, four entries at a time with `mlkem_poly_rej_uniform_x4`
+and the last one for ML-KEM-768 with `mlkem_poly_rej_uniform`. Their
+specifications have the hypothesis that there are at least 256 samples for
+each entry within the first 504 + 168 * k bytes, with the same k for all
+entries. They have no constant-time and memory safety proofs yet either.
