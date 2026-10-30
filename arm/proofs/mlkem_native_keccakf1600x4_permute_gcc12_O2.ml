@@ -212,3 +212,59 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   LOCAL_KECCAK_SAFETY_TAC "H_KECCAK" 14 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The same for the four states as 1600-bit words, read by wbytes, with the  *)
+(* permutation keccak_f1600 of common/fips202.ml, as for                     *)
+(* mlkem_keccakf1600_permute.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600
+  = prove
+ (`!a (S0:1600 word) (S1:1600 word) (S2:1600 word) (S3:1600 word)
+    pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 16 stackpointer /\
+        nonoverlapping (a,800) (word_sub stackpointer (word 208),208) /\
+        ALLPAIRS nonoverlapping
+          [(a,800); (word_sub stackpointer (word 208),208)]
+          [(word pc,0x6480)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mc /\
+                  read PC s = word (pc + 0x33a0) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a] s /\
+                  read (memory :> wbytes a) s = S0 /\
+                  read (memory :> wbytes (word_add a (word 200))) s = S1 /\
+                  read (memory :> wbytes (word_add a (word 400))) s = S2 /\
+                  read (memory :> wbytes (word_add a (word 600))) s = S3)
+             (\s. read PC s = returnaddress /\
+                  read (memory :> wbytes a) s = keccak_f1600 S0 /\
+                  read (memory :> wbytes (word_add a (word 200))) s =
+                  keccak_f1600 S1 /\
+                  read (memory :> wbytes (word_add a (word 400))) s =
+                  keccak_f1600 S2 /\
+                  read (memory :> wbytes (word_add a (word 600))) s =
+                  keccak_f1600 S3)
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(a,800);
+                memory :> bytes(word_sub stackpointer (word 208),208)])`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL
+   [`a:int64`; `wordlist_of_num 25 (val(S0:1600 word)):int64 list`;
+    `wordlist_of_num 25 (val(S1:1600 word)):int64 list`;
+    `wordlist_of_num 25 (val(S2:1600 word)):int64 list`;
+    `wordlist_of_num 25 (val(S3:1600 word)):int64 list`;
+    `pc:num`; `stackpointer:int64`; `returnaddress:int64`]
+    MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP (MESON[ENSURES_PREPOSTCONDITION_THM]
+   `ensures step P Q C
+    ==> (!x. P' x ==> P x) /\ (!x. Q x ==> Q' x)
+        ==> ensures step P' Q' C`)) THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[READ_MEMORY_WBYTES_KECCAK] THEN SIMP_TAC[];
+    MESON_TAC[KECCAK_F1600_MEMORY]]);;
