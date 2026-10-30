@@ -435,6 +435,14 @@ let sub_Xn_SP_Xn rn =
 
 let random_base_reg() = if Random.int 4 = 0 then 31 else Random.int 32;;
 
+(*** An offset or data register for such a base: never the base itself,
+ *** except that with an SP base 31 is the zero register, which is then
+ *** allowed and drawn 1 in 8 times. ***)
+
+let other_reg rn =
+  if rn = 31 then (if Random.int 8 = 0 then 31 else Random.int 31)
+  else (rn + 1 + Random.int 31) mod 32;;
+
 let movz_Xn_imm rd imm =
   pow2 21 */ num_of_string "0b11010010100" +/
   pow2 5 */ num(imm mod 65536) +/
@@ -447,13 +455,11 @@ let movz_Xn_imm rd imm =
 
 let cosimulate_ldstr() =
   let simd = Random.int 2
-  and rn = Random.int 32
+  and rn = random_base_reg()
   and isld = Random.int 2 in
   let full = if simd = 1 then 1 else Random.int 2 in
-  let rm = (rn + 1 + Random.int 31) mod 32
-  and rt =
-    if simd = 1 then Random.int 32
-    else (rn + 1 + Random.int 31) mod 32 in
+  let rm = other_reg rn
+  and rt = if simd = 1 then Random.int 32 else other_reg rn in
   let headroom =
     if simd = 1 then 16
     else if full = 1 then 8 else 4 in
@@ -589,27 +595,33 @@ let cosimulate_ldstp_gpr() =
  ***
  ***  - it is LD2/ST2 (since post-register is not supported there)
  ***  - the offset register is the same as the base (confuses test harness)
- ***  - the base register is SP (alters final stack pointer in test harness)
  ***  - or just on a 50-50 probability, to avoid biasing to register case
+ ***
+ *** With an SP base, the post-register increment is set by a MOVZ and
+ *** taken back off SP at the end, as in cosimulate_ldst_1_2reg.
  ***)
 
 let cosimulate_ldst_12() =
   let datasize = Random.int 2
   and isld = Random.int 2
   and esize = Random.int 4
-  and rn = Random.int 32
+  and rn = random_base_reg()
   and rt = Random.int 32 in
   let ldst2 = Random.int 2 in
   let someoffset = if ldst2 = 1 then 1 else Random.int 2 in
   let regoffr = Random.int 32 in
   let regoff =
     if someoffset = 0 then 0
-    else if ldst2 = 1 || regoffr = rn || rn = 31 || Random.bool() then 31
+    else if ldst2 = 1 || regoffr = rn || Random.bool() then 31
     else regoffr in
   let stackoff =
     if rn = 31 then Random.int 14 * 16
     else Random.int 224 in
-  let postinc = someoffset * 8 * (datasize + 1) * (ldst2 + 1) in
+  let postreg = someoffset = 1 && regoff <> 31 in
+  let regpostinc = 1 + Random.int 64 in
+  let postinc =
+    if postreg then regpostinc
+    else someoffset * 8 * (datasize + 1) * (ldst2 + 1) in
   let code =
     pow2 30 */ num datasize +/
     pow2 24 */ num 0b001100 +/
@@ -621,7 +633,9 @@ let cosimulate_ldst_12() =
     pow2 5 */ num rn +/
     num rt in
   if rn = 31 then
-    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+    [add_Xn_SP_imm 31 stackoff] @
+    (if postreg then [movz_Xn_imm regoff regpostinc] else []) @
+    [code; sub_Xn_SP_imm 31 (stackoff + postinc)]
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
@@ -670,10 +684,10 @@ let cosimulate_ldst_1_2reg() =
  ***)
 
 let cosimulate_ldstrb() =
-  let rn = Random.int 32
+  let rn = random_base_reg()
   and isld = Random.int 2 in
-  let rm = (rn + 1 + Random.int 31) mod 32
-  and rt = (rn + 1 + Random.int 31) mod 32 in
+  let rm = other_reg rn
+  and rt = other_reg rn in
   let stackoff =
     if rn = 31 then Random.int 15 * 16
     else Random.int 256 in
@@ -696,8 +710,8 @@ let cosimulate_ldstu() =
   let is_not_b = Random.int 2 in
   let x = if is_not_b = 1 then Random.int 2 else 0 in
   let isld = Random.int 2
-  and rn = Random.int 32 in
-  let rt = (rn + 1 + Random.int 31) mod 32 in
+  and rn = random_base_reg() in
+  let rt = other_reg rn in
   let stackoff =
     if rn = 31 then Random.int 15 * 16
     else Random.int 249 in
@@ -742,17 +756,19 @@ let cosimulate_ldst3() =
   let datasize = Random.int 2
   and isld = Random.int 2
   and esize = Random.int 4
-  and rn = Random.int 32
+  and rn = random_base_reg()
   and rt = Random.int 32 in
   let someoffset = 1 in
   let regoffr = Random.int 32 in
   let regoff =
-    if regoffr = rn || rn = 31 || Random.bool() then 31
+    if regoffr = rn || Random.bool() then 31
     else regoffr in
   let stackoff =
     if rn = 31 then Random.int 13 * 16
     else Random.int 208 in
-  let postinc = 24 * (datasize + 1)  in
+  let postreg = regoff <> 31 in
+  let regpostinc = 1 + Random.int 64 in
+  let postinc = if postreg then regpostinc else 24 * (datasize + 1) in
   let code =
     pow2 30 */ num datasize +/
     pow2 24 */ num 0b001100 +/
@@ -764,7 +780,9 @@ let cosimulate_ldst3() =
     pow2 5 */ num rn +/
     num rt in
   if rn = 31 then
-    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+    [add_Xn_SP_imm 31 stackoff] @
+    (if postreg then [movz_Xn_imm regoff regpostinc] else []) @
+    [code; sub_Xn_SP_imm 31 (stackoff + postinc)]
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
@@ -778,24 +796,28 @@ let cosimulate_ldst1_4reg() =
   let datasize = Random.int 2
   and isld = Random.int 2
   and esize = Random.int 4
-  and rn = Random.int 32
+  and rn = random_base_reg()
   and rt = Random.int 32 in
   let someoffset = Random.int 2 in
   let regoffr = Random.int 32 in
   (* No-offset form has Rm = 0 and bit23 = 0; the post forms set bit23 = 1,
      with Rm = 31 selecting post-immediate and Rm = Xm post-register. As in
-     cosimulate_ldst3, avoid a base of SP or Rm aliasing the base for the
-     post-register form. *)
+     cosimulate_ldst3, avoid Rm aliasing the base for the post-register
+     form; with an SP base, a MOVZ sets the increment. *)
   let regoff =
     if someoffset = 0 then 0
-    else if regoffr = rn || rn = 31 || Random.bool() then 31
+    else if regoffr = rn || Random.bool() then 31
     else regoffr in
   let stackoff =
     if rn = 31 then Random.int 12 * 16
     else Random.int 192 in
   (* Four 8- or 16-byte registers span 32 or 64 bytes. The post-immediate
      form (Rm = 31) writes the base back by that span. *)
-  let postinc = if someoffset = 1 && regoff = 31 then 32 * (datasize + 1) else 0 in
+  let postreg = someoffset = 1 && regoff <> 31 in
+  let regpostinc = 1 + Random.int 64 in
+  let postinc =
+    if postreg then regpostinc
+    else if someoffset = 1 then 32 * (datasize + 1) else 0 in
   let code =
     pow2 30 */ num datasize +/
     pow2 24 */ num 0b001100 +/
@@ -807,7 +829,9 @@ let cosimulate_ldst1_4reg() =
     pow2 5 */ num rn +/
     num rt in
   if rn = 31 then
-    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+    [add_Xn_SP_imm 31 stackoff] @
+    (if postreg then [movz_Xn_imm regoff regpostinc] else []) @
+    [code; sub_Xn_SP_imm 31 (stackoff + postinc)]
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
