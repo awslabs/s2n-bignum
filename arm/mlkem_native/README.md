@@ -267,3 +267,25 @@ neither the GOT entry nor the guard is overwritten, so that the check
 succeeds and `__stack_chk_fail` is never called. The specifications of
 functions that call them, such as `mlkem768_polyvec_compress_du`, have the
 same conditions.
+
+Most of the functions above the hash layer call memset and memcpy from the
+C library, and randombytes, through the PLT and GOT of the binary, which
+are not part of the image. (The binary also calls `__stack_chk_fail`, but
+only when the check of the stack guard fails, which the proofs show never
+happens.) Their behaviour is assumed, as notional high-level contracts in
+`../proofs/utils/mlkem_native_libc.ml` that are hypotheses of the theorems
+for their callers. For example, `memset_contract mf ea el ev` states the
+behaviour of memset at the address mf, which the caller reads from the GOT,
+in any state where the region (ea,el), containing its code and data, has
+the contents ev, which the caller must not overwrite: it sets the len bytes
+at dst to the low byte of c, and may change the registers that the ABI
+allows and X18 and X30, but no other memory. memcpy copies len bytes
+between regions that do not overlap, and randombytes writes len bytes, with
+no assumption about their values or about its result. For constant time and
+memory safety, `memset_safety_contract` and the others state that the
+events of a call are a function of its arguments and that it only accesses
+those regions, and the events of the callers are given in terms of those
+functions. So far, these are used for `mlkem_shake128x4_absorb_once`, which
+zeroes the context with memset before calling `mlk_keccak_absorb_once_x4`
+with r = 168 and p = 0x1F, as for `shake128`, and
+`mlkem_shake128x4_release`, which zeroes it.
