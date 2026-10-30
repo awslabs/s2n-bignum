@@ -4,7 +4,7 @@ on:
   pull_request:
 
 env:
-  HOLLIGHT_COMMIT: "217dd32e798d98926d3ab81ed3dfcdf435831e1f"
+  HOLLIGHT_COMMIT: "6090208e0bfe25dfdc47b9666bb000e32c0d37e3"
 
 jobs:
   s2n-bignum-tests:
