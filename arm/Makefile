@@ -461,6 +461,9 @@ MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
 # that call other functions)
 
 MLKEM_NATIVE_IMAGE_PROOFS = \
+  mlkem_native/mlkem_native_check_sk_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_check_sk_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_check_sk_k4_gcc12_O2 \
   mlkem_native/mlkem_native_keccak_absorb_once_gcc12_O2 \
   mlkem_native/mlkem_native_keccak_absorb_once_x4_gcc12_O2 \
   mlkem_native/mlkem_native_keccakf1600_extract_bytes_gcc12_O2 \
@@ -481,6 +484,8 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_poly_decompress_d5_gcc12_O2 \
   mlkem_native/mlkem_native_poly_frombytes_gcc12_O2 \
   mlkem_native/mlkem_native_poly_frommsg_gcc12_O2 \
+  mlkem_native/mlkem_native_poly_getnoise_eta2_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_poly_getnoise_eta2_k4_gcc12_O2 \
   mlkem_native/mlkem_native_poly_sub_gcc12_O2 \
   mlkem_native/mlkem_native_poly_tomsg_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2 \
@@ -674,6 +679,12 @@ $(MLKEM_NATIVE_IMAGE_PROOFS:=.native): mlkem_native/%.native: \
   proofs/mlkem_native_libmlkem_gcc12_O2.ml \
   mlkem_native/mlkem_native_libmlkem_gcc12_O2.o ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native/mlkem_native_check_sk_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_sha3_256_gcc12_O2.native
+mlkem_native/mlkem_native_check_sk_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_sha3_256_gcc12_O2.native
+mlkem_native/mlkem_native_check_sk_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_sha3_256_gcc12_O2.native
 mlkem_native/mlkem_native_keccak_absorb_once_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native \
   mlkem_native/mlkem_native_keccakf1600_xor_bytes_gcc12_O2.native
@@ -689,6 +700,12 @@ mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native
 mlkem_native/mlkem_native_keccakf1600x4_xor_bytes_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccakf1600_xor_bytes_gcc12_O2.native
+mlkem_native/mlkem_native_poly_getnoise_eta2_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_shake256_gcc12_O2.native \
+  mlkem_native/mlkem_native_poly_cbd2_gcc12_O2.native
+mlkem_native/mlkem_native_poly_getnoise_eta2_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_shake256_gcc12_O2.native \
+  mlkem_native/mlkem_native_poly_cbd2_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_add_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2.native: \
