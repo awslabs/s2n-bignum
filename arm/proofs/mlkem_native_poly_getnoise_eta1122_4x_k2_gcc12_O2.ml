@@ -1,0 +1,664 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+(* ========================================================================= *)
+(* Sampling of two noise polynomials with eta = 3 and two with eta = 2 from  *)
+(* a seed and nonces. This is the code for mlkem512_poly_getnoise_eta1122_4x *)
+(* from mlkem-native's portable C implementation compiled by gcc 12 with -O2 *)
+(* (see mlkem_native/README.md), which computes 192 bytes of SHAKE256 of the *)
+(* seed and each of the four nonces into buffers on the stack with           *)
+(* mlkem_shake256x4, applies mlkem_poly_cbd3 to the first two and            *)
+(* mlkem_poly_cbd2 to the first 128 bytes of the others, and zeroes the      *)
+(* buffers, the first ones with memset. It is verified in the whole image    *)
+(* (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x4934,   *)
+(* using the theorems for mlkem_shake256x4 at 0x2a20, mlkem_poly_cbd3 at     *)
+(* 0x4ec4 and mlkem_poly_cbd2 at 0x4e40 in the image and assuming the        *)
+(* contracts for memset and memcpy in utils/mlkem_native_libc.ml.            *)
+(* ========================================================================= *)
+
+needs "arm/proofs/utils/mlkem_native_libc.ml";;
+needs "arm/proofs/mlkem_native_shake256x4_gcc12_O2.ml";;
+needs "arm/proofs/mlkem_native_poly_cbd2_gcc12_O2.ml";;
+needs "arm/proofs/mlkem_native_poly_cbd3_gcc12_O2.ml";;
+needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+
+(*** The code in the image, and the PLT stub for memset:
+
+    4934: sub     sp, sp, #0x480
+    4938: stp     x19, x20, [sp, #16]
+    493c: add     x20, sp, #0x7f
+    4940: and     x20, x20, #0xffffffffffffffe0
+    4944: stp     x21, x22, [sp, #32]
+    4948: add     x10, x20, #0x340
+    494c: add     x9, x20, #0x380
+    4950: stp     x23, x24, [sp, #48]
+    4954: add     x19, x20, #0x300
+    4958: mov     x22, x2
+    495c: stp     x25, x26, [sp, #64]
+    4960: add     x8, x20, #0x3c0
+    4964: add     x25, x20, #0x240
+    4968: stp     x27, x30, [sp, #80]
+    496c: add     x26, x20, #0x180
+    4970: mov     x21, x3
+    4974: ldp     q0, q1, [x4]
+    4978: mov     x3, x25
+    497c: adrp    x4, 1f000 <mlk_zetas+0x18c80>
+    4980: ldr     x4, [x4, #4088]
+    4984: mov     x24, x0
+    4988: mov     x23, x1
+    498c: mov     x0, x20
+    4990: ldr     x2, [x4]
+    4994: str     x2, [sp, #1144]
+    4998: mov     x2, #0x0
+    499c: stp     q0, q1, [x9]
+    49a0: mov     x2, x26
+    49a4: stp     q0, q1, [x10]
+    49a8: mov     x4, #0xc0
+    49ac: add     x27, x20, x4
+    49b0: strb    w5, [x19, #32]
+    49b4: mov     x5, x19
+    49b8: strb    w6, [x19, #96]
+    49bc: mov     x6, x10
+    49c0: strb    w7, [x19, #160]
+    49c4: mov     x7, x9
+    49c8: mov     x9, #0x21
+    49cc: stp     x8, x9, [sp]
+    49d0: ldrb    w9, [sp, #1152]
+    49d4: stp     q0, q1, [x8]
+    49d8: mov     x1, x27
+    49dc: strb    w9, [x19, #224]
+    49e0: stp     q0, q1, [x19]
+    49e4: bl      2a20 <mlkem_shake256x4>
+    49e8: mov     x1, x20
+    49ec: mov     x0, x24
+    49f0: bl      4ec4 <mlkem_poly_cbd3>
+    49f4: mov     x1, x27
+    49f8: mov     x0, x23
+    49fc: bl      4ec4 <mlkem_poly_cbd3>
+    4a00: mov     x1, x26
+    4a04: mov     x0, x22
+    4a08: bl      4e40 <mlkem_poly_cbd2>
+    4a0c: mov     x1, x25
+    4a10: mov     x0, x21
+    4a14: bl      4e40 <mlkem_poly_cbd2>
+    4a18: mov     x0, x20
+    4a1c: mov     x2, #0x300
+    4a20: mov     w1, #0x0
+    4a24: bl      840 <memset@plt>
+    4a28: movi    v0.4s, #0x0
+    4a2c: stp     q0, q0, [x19]
+    4a30: stp     q0, q0, [x19, #32]
+    4a34: stp     q0, q0, [x19, #64]
+    4a38: stp     q0, q0, [x19, #96]
+    4a3c: stp     q0, q0, [x19, #128]
+    4a40: stp     q0, q0, [x19, #160]
+    4a44: stp     q0, q0, [x19, #192]
+    4a48: stp     q0, q0, [x19, #224]
+    4a4c: adrp    x0, 1f000 <mlk_zetas+0x18c80>
+    4a50: ldr     x0, [x0, #4088]
+    4a54: ldr     x2, [sp, #1144]
+    4a58: ldr     x1, [x0]
+    4a5c: subs    x2, x2, x1
+    4a60: mov     x1, #0x0
+    4a64: b.ne    4a84 <mlkem512_poly_getnoise_eta1122_4x+0x150>
+    4a68: ldp     x19, x20, [sp, #16]
+    4a6c: ldp     x21, x22, [sp, #32]
+    4a70: ldp     x23, x24, [sp, #48]
+    4a74: ldp     x25, x26, [sp, #64]
+    4a78: ldp     x27, x30, [sp, #80]
+    4a7c: add     sp, sp, #0x480
+    4a80: ret
+    4a84: bl      830 <__stack_chk_fail@plt>
+
+    840: adrp    x16, 1f000 <mlk_zetas+0x18c80>
+    844: ldr     x17, [x16, #4072]
+    848: add     x16, x16, #0xfe8
+    84c: br      x17
+ ***)
+
+let MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC =
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [0x4934,0x4a88; 0x840,0x850];;
+
+(* ------------------------------------------------------------------------- *)
+(* The buffers are aligned to 32 bytes within the stack frame, so their      *)
+(* addresses depend on whether the stack pointer is a multiple of 32 or just *)
+(* of 16: the four outputs of SHAKE256, of 192 bytes each, and then its four *)
+(* inputs, the seed and a nonce, at intervals of 64 bytes. The seed is       *)
+(* copied to the inputs as two 128-bit words.                                *)
+(* ------------------------------------------------------------------------- *)
+
+let GETNOISE4_ALIGNED_16_32 = prove
+ (`(!x:int64. aligned 16 x <=> word_and x (word 15) = word 0) /\
+   (!x:int64. aligned 32 x <=> word_and x (word 31) = word 0)`,
+  CONJ_TAC THEN GEN_TAC THEN REWRITE_TAC[aligned; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIVIDES_CONV) THEN REWRITE_TAC[] THENL
+   [MP_TAC(ISPECL [`x:int64`; `4`] (CONJUNCT1 WORD_AND_MASK_WORD));
+    MP_TAC(ISPECL [`x:int64`; `5`] (CONJUNCT1 WORD_AND_MASK_WORD))] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[DIVIDES_MOD; GSYM VAL_EQ_0; VAL_WORD; DIMINDEX_64] THEN
+  SIMP_TAC[MOD_LT; ARITH_RULE `x MOD 16 < 16`; ARITH_RULE `x MOD 32 < 32`;
+           ARITH_RULE `x < 16 ==> x < 2 EXP 64`;
+           ARITH_RULE `x < 32 ==> x < 2 EXP 64`]);;
+
+let GETNOISE4_BUFFER_ADDRESS = prove
+ (`!sp:int64.
+        aligned 16 sp
+        ==> word_and (word_add sp (word 1919)) (word 18446744073709551584) =
+            word_add sp (word(if aligned 32 sp then 1888 else 1904))`,
+  REWRITE_TAC[GETNOISE4_ALIGNED_16_32] THEN GEN_TAC THEN
+  COND_CASES_TAC THEN POP_ASSUM MP_TAC THEN
+  W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w)));;
+
+let GETNOISE4_BUFFER_TAC =
+  SUBGOAL_THEN
+   `word_and (word_add stackpointer (word 1919))
+             (word 18446744073709551584):int64 =
+    word_add stackpointer
+     (word(if aligned 32 stackpointer then 1888 else 1904))`
+  SUBST_ALL_TAC THENL
+   [MATCH_MP_TAC GETNOISE4_BUFFER_ADDRESS THEN ASM_REWRITE_TAC[]; ALL_TAC];;
+
+(*** Offset k of the buffer, as normalized by the simulation ***)
+
+let GETNOISE4_AT k =
+  let off = `if aligned 32 (stackpointer:int64) then 1888 else 1904` in
+  let t = if k = 0 then off
+          else mk_binop `(+):num->num->num` off (mk_small_numeral k) in
+  mk_comb(mk_comb(`word_add:int64->int64->int64`,`stackpointer:int64`),
+          mk_comb(`word:num->int64`,t));;
+
+let GETNOISE4_READ_MEMORY_BYTES128_HALVES = prove
+ (`!a:int64 n s:armstate.
+        read (memory :> bytes(a,32)) s = n
+        ==> read (memory :> bytes128 a) s = word(n MOD 2 EXP 128) /\
+            read (memory :> bytes128(word_add a (word 16))) s =
+            word(n DIV 2 EXP 128)`,
+  REPEAT GEN_TAC THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[BYTES128_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES;
+              VAL_WORD; DIMINDEX_128] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL] THEN
+  REWRITE_TAC[ARITH_RULE `340282366920938463463374607431768211456 =
+                          2 EXP (8 * 16)`; READ_BYTES_DIV; READ_BYTES_MOD] THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+(*** The 33 bytes of one input to SHAKE256 from the seed and a nonce ***)
+
+let GETNOISE4_BYTES_32_OF_HALVES = prove
+ (`!a:int64 n s:armstate.
+        n < 2 EXP 256 /\
+        read (memory :> bytes128 a) s = word(n MOD 2 EXP 128) /\
+        read (memory :> bytes128(word_add a (word 16))) s =
+        word(n DIV 2 EXP 128)
+        ==> read (memory :> bytes(a,32)) s = n`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[BYTES128_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES;
+              VAL_WORD; DIMINDEX_128] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL] THEN
+  REWRITE_TAC[ARITH_RULE `32 = 16 + 16`; READ_BYTES_COMBINE] THEN
+  MP_TAC(ISPECL [`a:int64`; `16`; `read memory s`] READ_BYTES_BOUND) THEN
+  MP_TAC(ISPECL [`word_add a (word 16):int64`; `16`; `read memory s`]
+                READ_BYTES_BOUND) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN SIMP_TAC[MOD_LT] THEN
+  REPEAT DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN `n DIV 340282366920938463463374607431768211456 <
+                340282366920938463463374607431768211456`
+   (fun th -> REWRITE_TAC[MATCH_MP MOD_LT th]) THENL
+   [UNDISCH_TAC `n < 2 EXP 256` THEN SIMP_TAC[RDIV_LT_EQ; ARITH_EQ] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[];
+    MESON_TAC[DIVISION_SIMP; ADD_SYM; MULT_SYM]]);;
+
+let GETNOISE4_INPUT = prove
+ (`!a:int64 (sd:byte list) b s:armstate.
+        LENGTH sd = 32 /\
+        read (memory :> bytes128 a) s =
+        word(num_of_bytelist sd MOD 2 EXP 128) /\
+        read (memory :> bytes128(word_add a (word 16))) s =
+        word(num_of_bytelist sd DIV 2 EXP 128) /\
+        read (memory :> bytes8(word_add a (word 32))) s = b
+        ==> LENGTH(APPEND sd [b]) = 33 /\
+            read (memory :> bytes(a,33)) s = num_of_bytelist(APPEND sd [b])`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  SUBGOAL_THEN `read (memory :> bytes(a,32)) s = num_of_bytelist sd`
+  ASSUME_TAC THENL
+   [MATCH_MP_TAC GETNOISE4_BYTES_32_OF_HALVES THEN ASM_REWRITE_TAC[] THEN
+    MP_TAC(ISPEC `sd:byte list` NUM_OF_BYTELIST_BOUND) THEN
+    ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[];
+    ALL_TAC] THEN
+  ASM_REWRITE_TAC[LENGTH_APPEND; LENGTH; NUM_OF_BYTELIST_APPEND] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[ARITH_RULE `33 = 32 + 1`; READ_MEMORY_BYTES_SNOC] THEN
+  ASM_REWRITE_TAC[num_of_bytelist] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  ARITH_TAC);;
+
+(*** Offsets in the buffers as single numbers ***)
+
+let GETNOISE4_ADDRESS_CONV =
+  REWRITE_CONV[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD; GSYM ADD_ASSOC] THENC
+  DEPTH_CONV NUM_ADD_CONV;;
+
+let GETNOISE4_NORMALIZE_TAC =
+  RULE_ASSUM_TAC(fun th ->
+    if free_in `stackpointer:int64` (concl th)
+    then CONV_RULE GETNOISE4_ADDRESS_CONV th else th);;
+
+(*** The input k in the buffer, at state s44, with the nonce byte b ***)
+
+let GETNOISE4_INPUT_TAC =
+  let th = CONV_RULE NUM_REDUCE_CONV GETNOISE4_INPUT in
+  fun k b ->
+    let a = GETNOISE4_AT (768 + 64 * k) in
+    MP_TAC(SPECL [a; `sd:byte list`; b; `s44:armstate`] th) THEN
+    ANTS_TAC THENL
+     [CONV_TAC GETNOISE4_ADDRESS_CONV THEN ASM_REWRITE_TAC[] THEN
+      CONV_TAC WORD_BLAST;
+      STRIP_TAC];;
+
+(*** The GOT entries in the form in the precondition of the callee ***)
+
+let GETNOISE4_GOT_TAC =
+  MAP_EVERY (fun t ->
+    FIRST_ASSUM(fun th ->
+      if can (term_match [] t) (concl th)
+      then ASSUME_TAC(REWRITE_RULE[GSYM WORD_ADD] th) else NO_TAC))
+   [`read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+     g:int64`;
+    `read (memory :> bytes64 (word_add (word pc) (word 131048))) s =
+     g:int64`;
+    `read (memory :> bytes64 (word_add (word pc) (word 131024))) s =
+     g:int64`];;
+
+(*** The setup for both proofs, with bounds on the offset of the buffer ***)
+
+let GETNOISE4_SETUP_TAC =
+  SUBGOAL_THEN `aligned 16 (stackpointer:int64)` ASSUME_TAC THENL
+   [UNDISCH_TAC `aligned 16 (word_add stackpointer (word 2944):int64)` THEN
+    CONV_TAC(LAND_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN REWRITE_TAC[];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `1888 <= (if aligned 32 (stackpointer:int64) then 1888 else 1904) /\
+    (if aligned 32 (stackpointer:int64) then 1888 else 1904) <= 1904`
+  STRIP_ASSUME_TAC THENL [COND_CASES_TAC THEN ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
+              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD;
+              SPECL [`pc:num`; `0x1ffd0`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
+                              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD;
+                              SPECL [`pc:num`; `0x1ffd0`] WORD_ADD]) THEN
+  GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  MAP_EVERY (fun n ->
+    let r = "X"^string_of_int n in
+    ENSURES_PRESERVED_TAC ("x"^string_of_int n^"_init")
+     (mk_const(r,[]))) (19--27);;
+
+
+(*** The first 128 of the 192 bytes of SHAKE256, for mlkem_poly_cbd2 ***)
+
+let GETNOISE4_PREFIX = prove
+ (`!a (f:num->byte) s:armstate.
+        read (memory :> bytes(a,192)) s = num_of_bytelist(list_of_seq f 192)
+        ==> read (memory :> bytes(a,128)) s =
+            num_of_bytelist(list_of_seq f 128)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`a:int64`; `192`; `128`; `read memory s`] READ_BYTES_MOD) THEN
+  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[ARITH_RULE `MIN 192 128 = 128`] THEN
+  DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[ARITH_RULE `192 = 128 + 64`;
+              NUM_OF_BYTELIST_LIST_OF_SEQ_ADD] THEN
+  ONCE_REWRITE_TAC[ARITH_RULE `x + n * y:num = y * n + x`] THEN
+  REWRITE_TAC[MOD_MULT_ADD] THEN MATCH_MP_TAC MOD_LT THEN
+  MP_TAC(ISPEC `list_of_seq (f:num->byte) 128` NUM_OF_BYTELIST_BOUND) THEN
+  REWRITE_TAC[LENGTH_LIST_OF_SEQ] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[]);;
+
+let GETNOISE4_PREFIX_TAC k =
+  let a = GETNOISE4_AT (192 * k) in
+  FIRST_ASSUM(fun th ->
+    match concl th with
+      Comb(Comb(Const("=",_),
+                Comb(Comb(Const("read",_),
+                          Comb(Comb(Const(":>",_),Const("memory",_)),
+                               Comb(Const("bytes",_),aa))),_)),_)
+        when aa = mk_pair(a,`192`) ->
+          ASSUME_TAC(MATCH_MP GETNOISE4_PREFIX th)
+    | _ -> NO_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness proof, assuming the contracts for memset and memcpy as for    *)
+(* mlkem_shake256x4. The seed is 32 bytes at seed, given as a list of bytes  *)
+(* sd, and the nonces are the low bytes of the sixth to eighth arguments and *)
+(* of the ninth, on the stack. As in mlkem512_poly_getnoise_eta1_4x, the     *)
+(* first two results are mlkem_poly_cbd3 applied to the first 192 bytes of   *)
+(* shake256 of the seed followed by the nonce, and as in                     *)
+(* mlkem512_poly_getnoise_eta2 the other two are mlkem_poly_cbd2 applied to  *)
+(* the first 128 bytes. The stack is the 1152 bytes of the function and the  *)
+(* 1792 used by mlkem_shake256x4 below them.                                 *)
+(* ------------------------------------------------------------------------- *)
+
+let LOCAL_SHAKE256X4_TAC =
+  ARM_SUBROUTINE_SIM_TAC
+   (mlkem_native_libmlkem_gcc12_O2_mc,
+    MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC,
+    0x0,mlkem_native_libmlkem_gcc12_O2_mc,
+    MLKEM_NATIVE_SHAKE256X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT);;
+
+let LOCAL_CBD3_TAC =
+  ARM_SUBROUTINE_SIM_TAC
+   (mlkem_native_libmlkem_gcc12_O2_mc,
+    MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC,
+    0x0,mlkem_native_libmlkem_gcc12_O2_mc,
+    MLKEM_NATIVE_POLY_CBD3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT);;
+
+let LOCAL_CBD2_TAC =
+  ARM_SUBROUTINE_SIM_TAC
+   (mlkem_native_libmlkem_gcc12_O2_mc,
+    MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC,
+    0x0,mlkem_native_libmlkem_gcc12_O2_mc,
+    MLKEM_NATIVE_POLY_CBD2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT);;
+
+let GETNOISE4_N nonce len =
+  vsubst [nonce,`nonce:int64`; len,`len:num`]
+   `num_of_bytelist(list_of_seq
+     (shake256(APPEND (sd:byte list) [word_zx(nonce:int64)])) len)`;;
+
+let MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
+  = prove
+ (`!r0 r1 r2 r3 seed (sd:byte list) nonce0 nonce1 nonce2 nonce3
+    guard mf mc ea el ev pc stackpointer returnaddress.
+        memset_contract mf ea el ev /\ memcpy_contract mc ea el ev /\
+        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 16 stackpointer /\ LENGTH sd = 32 /\
+        PAIRWISE nonoverlapping
+         [(r0,512); (r1,512); (r2,512); (r3,512);
+          (word_sub stackpointer (word 2944),2944)] /\
+        ALLPAIRS nonoverlapping
+         [(r0,512); (r1,512); (r2,512); (r3,512);
+          (word_sub stackpointer (word 2944),2944)]
+         [(seed,32); (stackpointer,1); (word pc,0x6480);
+          (word(pc + 0x1fff8),8); (guard,8); (word(pc + 0x1ffe8),8);
+          (word(pc + 0x1ffd0),8); (ea,el)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mc /\
+                  read PC s = word (pc + 0x4934) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS
+                   [r0; r1; r2; r3; seed; nonce0; nonce1; nonce2] s /\
+                  read (memory :> bytes8 stackpointer) s =
+                  word_zx(nonce3:int64) /\
+                  read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                  read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                  read (memory :> bytes64(word(pc + 0x1ffd0))) s = mc /\
+                  read (memory :> bytes(ea,el)) s = ev /\
+                  read (memory :> bytes(seed,32)) s = num_of_bytelist sd)
+             (\s. read PC s = returnaddress /\
+                  (let n = num_of_bytelist
+                           (list_of_seq
+                             (shake256 (APPEND sd [word_zx nonce0])) 192) in
+                   !i. i < 256
+                       ==> read(memory :> bytes16(word_add r0 (word(2 * i))))
+                                s =
+                           iword(&((n DIV 2 EXP (6 * i)) MOD 2 +
+                                   (n DIV 2 EXP (6 * i + 1)) MOD 2 +
+                                   (n DIV 2 EXP (6 * i + 2)) MOD 2) -
+                                 &((n DIV 2 EXP (6 * i + 3)) MOD 2 +
+                                   (n DIV 2 EXP (6 * i + 4)) MOD 2 +
+                                   (n DIV 2 EXP (6 * i + 5)) MOD 2))) /\
+                  (let n = num_of_bytelist
+                           (list_of_seq
+                             (shake256 (APPEND sd [word_zx nonce1])) 192) in
+                   !i. i < 256
+                       ==> read(memory :> bytes16(word_add r1 (word(2 * i))))
+                                s =
+                           iword(&((n DIV 2 EXP (6 * i)) MOD 2 +
+                                   (n DIV 2 EXP (6 * i + 1)) MOD 2 +
+                                   (n DIV 2 EXP (6 * i + 2)) MOD 2) -
+                                 &((n DIV 2 EXP (6 * i + 3)) MOD 2 +
+                                   (n DIV 2 EXP (6 * i + 4)) MOD 2 +
+                                   (n DIV 2 EXP (6 * i + 5)) MOD 2))) /\
+                  (let n = num_of_bytelist
+                           (list_of_seq
+                             (shake256 (APPEND sd [word_zx nonce2])) 128) in
+                   !i. i < 256
+                       ==> read(memory :> bytes16(word_add r2 (word(2 * i))))
+                                s =
+                           iword(&((n DIV 2 EXP (4 * i)) MOD 2 +
+                                   (n DIV 2 EXP (4 * i + 1)) MOD 2) -
+                                 &((n DIV 2 EXP (4 * i + 2)) MOD 2 +
+                                   (n DIV 2 EXP (4 * i + 3)) MOD 2))) /\
+                  (let n = num_of_bytelist
+                           (list_of_seq
+                             (shake256 (APPEND sd [word_zx nonce3])) 128) in
+                   !i. i < 256
+                       ==> read(memory :> bytes16(word_add r3 (word(2 * i))))
+                                s =
+                           iword(&((n DIV 2 EXP (4 * i)) MOD 2 +
+                                   (n DIV 2 EXP (4 * i + 1)) MOD 2) -
+                                 &((n DIV 2 EXP (4 * i + 2)) MOD 2 +
+                                   (n DIV 2 EXP (4 * i + 3)) MOD 2))))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(r0,512); memory :> bytes(r1,512);
+                memory :> bytes(r2,512); memory :> bytes(r3,512);
+                memory :> bytes(word_sub stackpointer (word 2944),2944)])`,
+  MAP_EVERY X_GEN_TAC
+   [`r0:int64`; `r1:int64`; `r2:int64`; `r3:int64`; `seed:int64`;
+    `sd:byte list`; `nonce0:int64`; `nonce1:int64`; `nonce2:int64`;
+    `nonce3:int64`; `guard:int64`; `mf:int64`; `mc:int64`; `ea:int64`;
+    `el:num`; `ev:num`; `pc:num`] THEN
+  WORD_FORALL_OFFSET_TAC 2944 THEN
+  MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(CONJUNCTS_THEN2
+   (fun th -> ASSUME_TAC th THEN
+              LABEL_TAC "H_MEMSET" (REWRITE_RULE[memset_contract] th))
+   (CONJUNCTS_THEN2 ASSUME_TAC (REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC))) THEN
+  GETNOISE4_SETUP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+  FIRST_ASSUM(MP_TAC o MATCH_MP GETNOISE4_READ_MEMORY_BYTES128_HALVES o check
+   (can (term_match [] `read (memory :> bytes(seed,32)) s = n`) o concl)) THEN
+  STRIP_TAC THEN
+
+  (*** The inputs to SHAKE256, the seed and the nonces, in the buffer ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (1--4) THEN
+  GETNOISE4_BUFFER_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (5--19) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (20--44) THEN
+  GETNOISE4_NORMALIZE_TAC THEN
+  GETNOISE4_INPUT_TAC 0 `word_zx(nonce0:int64):byte` THEN
+  GETNOISE4_INPUT_TAC 1 `word_zx(nonce1:int64):byte` THEN
+  GETNOISE4_INPUT_TAC 2 `word_zx(nonce2:int64):byte` THEN
+  GETNOISE4_INPUT_TAC 3 `word_zx(nonce3:int64):byte` THEN
+
+  (*** The calls ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (45--45) THEN
+  GETNOISE4_GOT_TAC THEN
+  LOCAL_SHAKE256X4_TAC
+   [`read X0 s`; `read X1 s`; `read X2 s`; `read X3 s`; `192`;
+    `read X5 s`; `read X6 s`; `read X7 s`;
+    `word_add (stackpointer:int64)
+      (word((if aligned 32 stackpointer then 1888 else 1904) + 960))`;
+    `33`; `APPEND (sd:byte list) [word_zx(nonce0:int64)]`;
+    `APPEND (sd:byte list) [word_zx(nonce1:int64)]`;
+    `APPEND (sd:byte list) [word_zx(nonce2:int64)]`;
+    `APPEND (sd:byte list) [word_zx(nonce3:int64)]`;
+    `guard:int64`; `mf:int64`; `mc:int64`; `ea:int64`; `el:num`; `ev:num`;
+    `pc:num`; `read SP s`; `read X30 s`] 46 THEN
+  MAP_EVERY (fun (k,nonce) ->
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+     ((k-3)--(k-1)) THEN
+    LOCAL_CBD3_TAC [`read X0 s`; `read X1 s`; GETNOISE4_N nonce `192`;
+                    `pc:num`; `read X30 s`] k)
+   [50,`nonce0:int64`; 54,`nonce1:int64`] THEN
+  GETNOISE4_PREFIX_TAC 2 THEN GETNOISE4_PREFIX_TAC 3 THEN
+  MAP_EVERY (fun (k,nonce) ->
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+     ((k-3)--(k-1)) THEN
+    LOCAL_CBD2_TAC [`read X0 s`; `read X1 s`; GETNOISE4_N nonce `128`;
+                    `pc:num`; `read X30 s`] k)
+   [58,`nonce2:int64`; 62,`nonce3:int64`] THEN
+
+  (*** Zeroing the buffers, the check of the stack guard and the return ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (63--66) THEN
+  LIBC_PLT_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC 66 THEN
+  LIBC_CALL_TAC "H_MEMSET"
+   MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   [`read X0 s`; `read X1 s`; `read X2 s`; `read X30 s`] 71 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (72--81) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (82--94) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof, assuming the corresponding         *)
+(* contracts for memset and memcpy. The events do not depend on the seed or  *)
+(* the nonces.                                                               *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let GETNOISE4_SAFE_CALL_TAC name ilist n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,
+    MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      ilist n THENL
+     [EXISTS_E2_TAC
+       (ref [`pc:num`; `r0:int64`; `r1:int64`; `r2:int64`; `r3:int64`;
+             `seed:int64`; `guard:int64`; `mf:int64`; `mc:int64`;
+             `stackpointer:int64`; `returnaddress:int64`]);
+      LABEL_TAC name safety_th]);;
+
+let MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  time prove
+ (`!mf mc ea el ev.
+     memset_safety_contract mf ea el ev /\
+     memcpy_safety_contract mc ea el ev
+     ==> exists f_events.
+          forall e r0 r1 r2 r3 seed guard pc stackpointer returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 16 stackpointer /\
+           PAIRWISE nonoverlapping
+            [r0,512; r1,512; r2,512; r3,512;
+             word_sub stackpointer (word 2944),2944] /\
+           ALLPAIRS nonoverlapping
+            [r0,512; r1,512; r2,512; r3,512;
+             word_sub stackpointer (word 2944),2944]
+            [seed,32; stackpointer,1; word pc,0x6480; word(pc + 0x1fff8),8;
+             guard,8; word(pc + 0x1ffe8),8; word(pc + 0x1ffd0),8; ea,el]
+           ==> ensures arm
+                (\s. aligned_bytes_loaded s (word pc)
+                       mlkem_native_libmlkem_gcc12_O2_mc /\
+                     read PC s = word (pc + 0x4934) /\
+                     read SP s = stackpointer /\
+                     read X30 s = returnaddress /\
+                     C_ARGUMENTS [r0; r1; r2; r3; seed] s /\
+                     read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                     read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                     read (memory :> bytes64(word(pc + 0x1ffd0))) s = mc /\
+                     read (memory :> bytes(ea,el)) s = ev /\
+                     read events s = e)
+                (\s. read PC s = returnaddress /\
+                     (exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 = f_events r0 r1 r2 r3 seed guard mf mc pc
+                               (word_sub stackpointer (word 2944))
+                               returnaddress /\
+                        memaccess_inbounds e2
+                         [seed,32; stackpointer,1; r0,512; r1,512; r2,512;
+                          r3,512; word_sub stackpointer (word 2944),2944;
+                          word(pc + 0x1fff8),8; guard,8;
+                          word(pc + 0x62b0),192; word(pc + 0x6290),32;
+                          word(pc + 0x6250),64; word(pc + 0x1ffe8),8;
+                          word(pc + 0x1ffd0),8; ea,el]
+                         [r0,512; r1,512; r2,512; r3,512;
+                          word_sub stackpointer (word 2944),2944]))
+                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                 MAYCHANGE [X18] ,,
+                 MAYCHANGE
+                  [memory :> bytes(r0,512); memory :> bytes(r1,512);
+                   memory :> bytes(r2,512); memory :> bytes(r3,512);
+                   memory :> bytes(word_sub stackpointer (word 2944),2944)])`,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  FIRST_ASSUM(fun th ->
+    ASSUME_CALLEE_SAFETY_TAILED_TAC
+     (MATCH_MP MLKEM_NATIVE_SHAKE256X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE th)
+     "H_SHAKE256X4") THEN
+  FIRST_X_ASSUM(fun th ->
+    ASSUME_CALLEE_SAFETY_TAILED_TAC
+     (REWRITE_RULE[memset_safety_contract] (CONJUNCT1 th)) "H_MEMSET") THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_CBD3_GCC12_O2_IMAGE_SUBROUTINE_SAFE "H_CBD3" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_CBD2_GCC12_O2_IMAGE_SUBROUTINE_SAFE "H_CBD2" THEN
+  META_EXISTS_TAC THEN REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  GETNOISE4_SETUP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (1--4) THEN
+  GETNOISE4_BUFFER_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (5--19) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (20--44) THEN
+  GETNOISE4_NORMALIZE_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (45--45) THEN
+  GETNOISE4_GOT_TAC THEN
+  GETNOISE4_SAFE_CALL_TAC "H_SHAKE256X4"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+    `read X3 s`; `192`; `read X5 s`; `read X6 s`; `read X7 s`;
+    `word_add (stackpointer:int64)
+      (word((if aligned 32 stackpointer then 1888 else 1904) + 960))`;
+    `33`; `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 46 THEN
+  MAP_EVERY (fun (k,name) ->
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+     ((k-3)--(k-1)) THEN
+    GETNOISE4_SAFE_CALL_TAC name
+     [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `pc:num`;
+      `read X30 s`] k)
+   [50,"H_CBD3"; 54,"H_CBD3"; 58,"H_CBD2"; 62,"H_CBD2"] THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (63--66) THEN
+  LIBC_PLT_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC 66 THEN
+  LIBC_SAFE_CALL_TAC "H_MEMSET"
+   MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+    `read X30 s`]
+   (ref [`pc:num`; `r0:int64`; `r1:int64`; `r2:int64`; `r3:int64`;
+         `seed:int64`; `guard:int64`; `mf:int64`; `mc:int64`;
+         `stackpointer:int64`; `returnaddress:int64`]) 71 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (72--81) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC
+   (82--94) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

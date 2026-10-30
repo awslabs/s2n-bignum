@@ -298,3 +298,17 @@ with memcpy. Its last two arguments, the fourth input and the length of the
 inputs, are on the stack, so its specification has them as
 `read (memory :> bytes64 stackpointer) s = in3` and
 `read (memory :> bytes64 (word_add stackpointer (word 8))) s = word inlen`.
+
+Using it, `mlkem512_poly_getnoise_eta1_4x`, `mlkem768_poly_getnoise_eta1_4x`
+and `mlkem1024_poly_getnoise_eta1_4x` sample four noise polynomials with
+eta = eta1 from a seed and four nonces, as PRF and SamplePolyCBD in
+FIPS 203. As for `mlkem512_poly_getnoise_eta2`, each result is that of
+`mlkem_poly_cbd3` (for ML-KEM-512) or `mlkem_poly_cbd2` on the first 192
+or 128 bytes of `shake256` of the seed followed by the nonce. Similarly,
+`mlkem512_poly_getnoise_eta1122_4x` samples two polynomials with eta = 3
+and two with eta = 2. The fourth nonce is on the stack. The functions
+`mlkem*_poly_getnoise_eta1_4x` skip the fourth polynomial if its pointer is
+null, which the callers for ML-KEM-768 use, so their specifications only
+give the fourth result if the pointer is not null, and its region in the
+frame is empty if it is null: a caller giving a buffer there must show
+that it is not at address 0.
