@@ -312,3 +312,15 @@ null, which the callers for ML-KEM-768 use, so their specifications only
 give the fourth result if the pointer is not null, and its region in the
 frame is empty if it is null: a caller giving a buffer there must show
 that it is not at address 0.
+
+`mlkem_poly_rej_uniform` samples a polynomial uniformly modulo q from a
+seed of 34 bytes, as SampleNTT in FIPS 203 does for one entry of the
+matrix, using `mlkem_shake128_absorb_once`, `mlkem_shake128_squeezeblocks`
+and `mlk_rej_uniform_c`. Its loop squeezes one more block of 168 bytes
+until there are 256 samples, so its specification has the hypothesis that
+there are at least 256 samples, 12-bit fields below 3329, among the first
+504 + 168 * k bytes of `shake128` of the seed for some k, and the result
+is the first 256 of them. It has no constant-time and memory safety proof
+yet: since the number of iterations depends on the output of SHAKE128
+(which is public), such a proof would need theorems for the hash functions
+that combine their correctness and their events.

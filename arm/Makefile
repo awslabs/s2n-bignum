@@ -490,6 +490,7 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_poly_getnoise_eta1_4x_k4_gcc12_O2 \
   mlkem_native/mlkem_native_poly_getnoise_eta2_k2_gcc12_O2 \
   mlkem_native/mlkem_native_poly_getnoise_eta2_k4_gcc12_O2 \
+  mlkem_native/mlkem_native_poly_rej_uniform_gcc12_O2 \
   mlkem_native/mlkem_native_poly_sub_gcc12_O2 \
   mlkem_native/mlkem_native_poly_tomsg_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2 \
@@ -730,6 +731,13 @@ mlkem_native/mlkem_native_poly_getnoise_eta2_k2_gcc12_O2.native: \
 mlkem_native/mlkem_native_poly_getnoise_eta2_k4_gcc12_O2.native: \
   mlkem_native/mlkem_native_shake256_gcc12_O2.native \
   mlkem_native/mlkem_native_poly_cbd2_gcc12_O2.native
+mlkem_native/mlkem_native_poly_rej_uniform_gcc12_O2.native: \
+  mlkem_native/mlkem_native_rej_uniform_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake128_absorb_once_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake128_init_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake128_release_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake128_squeezeblocks_gcc12_O2.native \
+  proofs/utils/mlkem_native_libc.ml
 mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_add_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2.native: \
