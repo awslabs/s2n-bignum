@@ -17925,8 +17925,8 @@ int test_aes256_gcm_dec_alt_guard(void)
 #ifndef __x86_64__
 
 // Known-answer driver for one GCM_KAT(key, nonce, aad, plaintext, ciphertext,
-// tag) record of known_value_tests_gcm_256.h or wycheproof_tests_gcm_256.h,
-// run through an AES-256 kernel fn that encrypts if encrypt is nonzero and
+// tag) record, run through an AES-128 or AES-256 kernel fn, according to
+// keybytes, that encrypts if encrypt is nonzero and
 // decrypts otherwise.  The kernel does only the whole-block part of GCM (NIST
 // SP 800-38D, Sections 7.1 and 7.2): counter-mode encryption or decryption
 // from the counter block ivec, and the GHASH update of tag with each
@@ -17936,7 +17936,7 @@ int test_aes256_gcm_dec_alt_guard(void)
 // [len(A)]_64 || [len(C)]_64 and the tag T = AES_K(J0) XOR S.  Every record
 // goes straight to the kernel, whatever its length, and the output, the tag,
 // the updated counter block and the return value are all checked.
-static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
+static int run_gcm_kat(const char *name, aes_gcm_fn fn, int keybytes, int encrypt,
                            const char *keyhex, const char *noncehex,
                            const char *aadhex, const char *pthex,
                            const char *cthex, const char *taghex)
@@ -17950,14 +17950,16 @@ static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
   size_t len = strlen(pthex) / 2, i;
   int bad = 0;
 
-  if (strlen(keyhex) != 64 || nonce_len == 0 || nonce_len > sizeof(nonce) ||
+  if ((keybytes != 16 && keybytes != 32) ||
+      strlen(keyhex) != 2 * (size_t)keybytes ||
+      nonce_len == 0 || nonce_len > sizeof(nonce) ||
       aad_len > sizeof(aad) || len == 0 || len % 16 != 0 ||
       len > BUFFERSIZE || strlen(cthex) != 2 * len || strlen(taghex) != 32)
    { printf("### Malformed GCM_KAT record (nonce %zu, aad %zu, text %zu bytes)\n",
             nonce_len, aad_len, len);
      return 1;
    }
-  assign_bytearray_from_hexstring(key, keyhex, 32);
+  assign_bytearray_from_hexstring(key, keyhex, keybytes);
   assign_bytearray_from_hexstring(nonce, noncehex, (int)nonce_len);
   assign_bytearray_from_hexstring(aad, aadhex, (int)aad_len);
   assign_bytearray_from_hexstring(pt, pthex, (int)len);
@@ -17965,9 +17967,13 @@ static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
   assign_bytearray_from_hexstring(tag_expect, taghex, 16);
 
   // H = AES_K(0^128) and the table of its powers
-  ref_aes256_expand_key(key, &ek);
   memset(zero, 0, 16);
-  ref_aes256_encrypt_block(zero, h, &ek);
+  if (keybytes == 16)
+   { ref_aes128_expand_key(key, &ek);
+     ref_aes128_encrypt_block(zero, h, &ek); }
+  else
+   { ref_aes256_expand_key(key, &ek);
+     ref_aes256_encrypt_block(zero, h, &ek); }
   ref_gcm_init_htable((uint8_t *)htable, h);
 
   // J0 = IV || 0^31 || 1 for a 96-bit IV, else
@@ -17998,7 +18004,8 @@ static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
   ref_put_be64(block, (uint64_t)aad_len * 8);
   ref_put_be64(block + 8, (uint64_t)len * 8);
   ref_ghash_blocks((uint8_t *)xi, block, 1, h);
-  ref_aes256_encrypt_block(j0, ek_j0, &ek);
+  if (keybytes == 16) ref_aes128_encrypt_block(j0, ek_j0, &ek);
+  else ref_aes256_encrypt_block(j0, ek_j0, &ek);
   for (i = 0; i < 16; ++i) tag_out[i] = ek_j0[i] ^ ((uint8_t *)xi)[i];
 
   // The counter block comes back advanced once per block
@@ -18026,19 +18033,26 @@ static int run_gcm_256_kat(const char *name, aes_gcm_fn fn, int encrypt,
 }
 
 #define GCM_KAT(KEYHEX, NONCEHEX, ADHEX, INHEX, CTHEX, TAGHEX)                \
-  do { if (run_gcm_256_kat(name, fn, encrypt, KEYHEX, NONCEHEX, ADHEX,      \
-                           INHEX, CTHEX, TAGHEX)) ++failures;                \
+  do { if (run_gcm_kat(name, fn, keybytes, encrypt, KEYHEX, NONCEHEX,       \
+                       ADHEX, INHEX, CTHEX, TAGHEX)) ++failures;              \
        else ++successes;                                                     \
      } while (0)
 
-// Known-answer tests: the AWS-LC records of known_value_tests_gcm_256.h.
-static int test_known_values_gcm_256(const char *name, aes_gcm_fn fn,
-                                     int encrypt)
+// Known-answer tests: the AWS-LC records for the selected AES key size.
+static int test_known_values_gcm(const char *name, aes_gcm_fn fn,
+                                  int keybytes, int encrypt)
 {
   int failures = 0, successes = 0;
   printf("Testing known value cases for %s\n", name);
 
+  if (keybytes == 16)
+   {
+#include "known_value_tests_gcm_128.h"
+   }
+  else
+   {
 #include "known_value_tests_gcm_256.h"
+   }
 
   if (failures != 0)
    { printf("Failed %d known value tests, passed %d\n", failures, successes);
@@ -18056,17 +18070,25 @@ static int test_known_values_gcm_256(const char *name, aes_gcm_fn fn,
 // only whole 16-byte blocks, so the many partial-length records are out of
 // contract, and the negative records (result = invalid) are
 // authentication-failure cases this harness does not assert. What is left --
-// keySize 256, tagSize 128, result = valid, plaintext a nonzero multiple of
-// 16 -- is 17 vectors, and they complement the AWS-LC set above: they carry
-// no AAD, but their IVs have eight lengths from 1 to 16 bytes, including IVs
-// shorter than 12 bytes, which the AWS-LC set lacks.
-static int test_wycheproof_gcm_256(const char *name, aes_gcm_fn fn,
-                                   int encrypt)
+// tagSize 128, result = valid, plaintext a nonzero multiple of 16 -- is 21
+// vectors with keySize 128 and 17 with keySize 256, and they complement the
+// AWS-LC sets above: their IVs have eight lengths from 1 to 16 bytes,
+// including IVs shorter than 12 bytes, which the AWS-LC sets lack. The
+// keySize 128 vectors carry 0 to 16 bytes of AAD, the keySize 256 ones none.
+static int test_wycheproof_gcm(const char *name, aes_gcm_fn fn,
+                                int keybytes, int encrypt)
 {
   int failures = 0, successes = 0;
   printf("Testing Wycheproof vectors for %s\n", name);
 
+  if (keybytes == 16)
+   {
+#include "wycheproof_tests_gcm_128.h"
+   }
+  else
+   {
 #include "wycheproof_tests_gcm_256.h"
+   }
 
   if (failures != 0)
    { printf("Failed %d Wycheproof tests, passed %d\n", failures, successes);
@@ -18078,14 +18100,34 @@ static int test_wycheproof_gcm_256(const char *name, aes_gcm_fn fn,
    }
 }
 
+#undef GCM_KAT
+
 #endif
+
+int test_known_values_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm("aes128_gcm_enc", aes128_gcm_enc, 16, 1);
+#endif
+}
+
+int test_known_values_aes128_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm("aes128_gcm_dec", aes128_gcm_dec, 16, 0);
+#endif
+}
 
 int test_known_values_aes256_gcm_enc(void)
 {
 #ifdef __x86_64__
   return 1;
 #else
-  return test_known_values_gcm_256("aes256_gcm_enc", aes256_gcm_enc, 1);
+  return test_known_values_gcm("aes256_gcm_enc", aes256_gcm_enc, 32, 1);
 #endif
 }
 
@@ -18094,7 +18136,7 @@ int test_known_values_aes256_gcm_dec(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_known_values_gcm_256("aes256_gcm_dec", aes256_gcm_dec, 0);
+  return test_known_values_gcm("aes256_gcm_dec", aes256_gcm_dec, 32, 0);
 #endif
 }
 
@@ -18103,7 +18145,25 @@ int test_known_values_aes256_gcm_dec_alt(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_known_values_gcm_256("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 0);
+  return test_known_values_gcm("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 32, 0);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm("aes128_gcm_enc", aes128_gcm_enc, 16, 1);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm("aes128_gcm_dec", aes128_gcm_dec, 16, 0);
 #endif
 }
 
@@ -18112,7 +18172,7 @@ int test_wycheproof_aes256_gcm_enc(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_wycheproof_gcm_256("aes256_gcm_enc", aes256_gcm_enc, 1);
+  return test_wycheproof_gcm("aes256_gcm_enc", aes256_gcm_enc, 32, 1);
 #endif
 }
 
@@ -18121,7 +18181,7 @@ int test_wycheproof_aes256_gcm_dec(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_wycheproof_gcm_256("aes256_gcm_dec", aes256_gcm_dec, 0);
+  return test_wycheproof_gcm("aes256_gcm_dec", aes256_gcm_dec, 32, 0);
 #endif
 }
 
@@ -18130,7 +18190,620 @@ int test_wycheproof_aes256_gcm_dec_alt(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_wycheproof_gcm_256("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 0);
+  return test_wycheproof_gcm("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 32, 0);
+#endif
+}
+
+// ****************************************************************************
+// AWS-LC C enclosing mode and exact AArch64 substitution boundary
+// ****************************************************************************
+// Upstream notices for the copied functions:
+// crypto/internal.h:
+// Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
+// Copyright (c) 1998-2001 The OpenSSL Project.  All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// crypto/fipsmodule/modes/gcm.c:
+// Copyright (c) 2008 The OpenSSL Project.  All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// crypto/fipsmodule/modes/gcm_nohw.c:
+// Copyright (c) 2019, Google Inc.
+// SPDX-License-Identifier: ISC
+//
+// These marked function definitions are byte-verbatim upstream source. Only
+// surrounding type/callback/macro glue is local; see ref_aws_lc_gcm_glue.h.
+#ifndef __x86_64__
+#include "ref_aws_lc_gcm_glue.h"
+
+// AWS-LC verbatim BEGIN CRYPTO_load_u32_be: crypto/internal.h:948
+static inline uint32_t CRYPTO_load_u32_be(const void *in) {
+  uint32_t v;
+  OPENSSL_memcpy(&v, in, sizeof(v));
+#if defined(OPENSSL_BIG_ENDIAN)
+  return v;
+#else
+  return CRYPTO_bswap4(v);
+#endif
+}
+// AWS-LC verbatim END CRYPTO_load_u32_be
+
+// AWS-LC verbatim BEGIN CRYPTO_store_u32_be: crypto/internal.h:958
+static inline void CRYPTO_store_u32_be(void *out, uint32_t v) {
+
+#if !defined(OPENSSL_BIG_ENDIAN)
+  v = CRYPTO_bswap4(v);
+#endif
+  OPENSSL_memcpy(out, &v, sizeof(v));
+
+}
+// AWS-LC verbatim END CRYPTO_store_u32_be
+
+// AWS-LC verbatim BEGIN CRYPTO_load_u64_be: crypto/internal.h:985
+static inline uint64_t CRYPTO_load_u64_be(const void *ptr) {
+  uint64_t ret;
+  OPENSSL_memcpy(&ret, ptr, sizeof(ret));
+#if defined(OPENSSL_BIG_ENDIAN)
+  return ret;
+#else
+  return CRYPTO_bswap8(ret);
+#endif
+}
+// AWS-LC verbatim END CRYPTO_load_u64_be
+
+// AWS-LC verbatim BEGIN CRYPTO_store_u64_be: crypto/internal.h:995
+static inline void CRYPTO_store_u64_be(void *out, uint64_t v) {
+#if defined(OPENSSL_BIG_ENDIAN)
+#else
+  v = CRYPTO_bswap8(v);
+#endif
+  OPENSSL_memcpy(out, &v, sizeof(v));
+
+}
+// AWS-LC verbatim END CRYPTO_store_u64_be
+
+// AWS-LC verbatim BEGIN gcm_mul64_nohw: crypto/fipsmodule/modes/gcm_nohw.c:25
+static void gcm_mul64_nohw(uint64_t *out_lo, uint64_t *out_hi, uint64_t a,
+                           uint64_t b) {
+  // One term every four bits means the largest term is 64/4 = 16, which barely
+  // overflows into the next term. Using one term every five bits would cost 25
+  // multiplications instead of 16. It is faster to mask off the bottom four
+  // bits of |a|, giving a largest term of 60/4 = 15, and apply the bottom bits
+  // separately.
+  uint64_t a0 = a & UINT64_C(0x1111111111111110);
+  uint64_t a1 = a & UINT64_C(0x2222222222222220);
+  uint64_t a2 = a & UINT64_C(0x4444444444444440);
+  uint64_t a3 = a & UINT64_C(0x8888888888888880);
+
+  uint64_t b0 = b & UINT64_C(0x1111111111111111);
+  uint64_t b1 = b & UINT64_C(0x2222222222222222);
+  uint64_t b2 = b & UINT64_C(0x4444444444444444);
+  uint64_t b3 = b & UINT64_C(0x8888888888888888);
+
+  uint128_t c0 = (a0 * (uint128_t)b0) ^ (a1 * (uint128_t)b3) ^
+                 (a2 * (uint128_t)b2) ^ (a3 * (uint128_t)b1);
+  uint128_t c1 = (a0 * (uint128_t)b1) ^ (a1 * (uint128_t)b0) ^
+                 (a2 * (uint128_t)b3) ^ (a3 * (uint128_t)b2);
+  uint128_t c2 = (a0 * (uint128_t)b2) ^ (a1 * (uint128_t)b1) ^
+                 (a2 * (uint128_t)b0) ^ (a3 * (uint128_t)b3);
+  uint128_t c3 = (a0 * (uint128_t)b3) ^ (a1 * (uint128_t)b2) ^
+                 (a2 * (uint128_t)b1) ^ (a3 * (uint128_t)b0);
+
+  // Multiply the bottom four bits of |a| with |b|.
+  uint64_t a0_mask = UINT64_C(0) - (a & 1);
+  uint64_t a1_mask = UINT64_C(0) - ((a >> 1) & 1);
+  uint64_t a2_mask = UINT64_C(0) - ((a >> 2) & 1);
+  uint64_t a3_mask = UINT64_C(0) - ((a >> 3) & 1);
+  uint128_t extra = (a0_mask & b) ^ ((uint128_t)(a1_mask & b) << 1) ^
+                    ((uint128_t)(a2_mask & b) << 2) ^
+                    ((uint128_t)(a3_mask & b) << 3);
+
+  *out_lo = (((uint64_t)c0) & UINT64_C(0x1111111111111111)) ^
+            (((uint64_t)c1) & UINT64_C(0x2222222222222222)) ^
+            (((uint64_t)c2) & UINT64_C(0x4444444444444444)) ^
+            (((uint64_t)c3) & UINT64_C(0x8888888888888888)) ^ ((uint64_t)extra);
+  *out_hi = (((uint64_t)(c0 >> 64)) & UINT64_C(0x1111111111111111)) ^
+            (((uint64_t)(c1 >> 64)) & UINT64_C(0x2222222222222222)) ^
+            (((uint64_t)(c2 >> 64)) & UINT64_C(0x4444444444444444)) ^
+            (((uint64_t)(c3 >> 64)) & UINT64_C(0x8888888888888888)) ^
+            ((uint64_t)(extra >> 64));
+}
+// AWS-LC verbatim END gcm_mul64_nohw
+
+// AWS-LC verbatim BEGIN gcm_init_nohw: crypto/fipsmodule/modes/gcm_nohw.c:184
+void gcm_init_nohw(u128 Htable[16], const uint64_t Xi[2]) {
+  // We implement GHASH in terms of POLYVAL, as described in RFC 8452. This
+  // avoids a shift by 1 in the multiplication, needed to account for bit
+  // reversal losing a bit after multiplication, that is,
+  // rev128(X) * rev128(Y) = rev255(X*Y).
+  //
+  // Per Appendix A, we run mulX_POLYVAL. Note this is the same transformation
+  // applied by |gcm_init_clmul|, etc. Note |Xi| has already been byteswapped.
+  //
+  // See also slide 16 of
+  // https://crypto.stanford.edu/RealWorldCrypto/slides/gueron.pdf
+  Htable[0].lo = Xi[1];
+  Htable[0].hi = Xi[0];
+
+  uint64_t carry = Htable[0].hi >> 63;
+  carry = 0u - carry;
+
+  Htable[0].hi <<= 1;
+  Htable[0].hi |= Htable[0].lo >> 63;
+  Htable[0].lo <<= 1;
+
+  // The irreducible polynomial is 1 + x^121 + x^126 + x^127 + x^128, so we
+  // conditionally add 0xc200...0001.
+  Htable[0].lo ^= carry & 1;
+  Htable[0].hi ^= carry & UINT64_C(0xc200000000000000);
+
+  // This implementation does not use the rest of |Htable|.
+}
+// AWS-LC verbatim END gcm_init_nohw
+
+// AWS-LC verbatim BEGIN gcm_polyval_nohw: crypto/fipsmodule/modes/gcm_nohw.c:213
+static void gcm_polyval_nohw(uint64_t Xi[2], const u128 *H) {
+  // Karatsuba multiplication. The product of |Xi| and |H| is stored in |r0|
+  // through |r3|. Note there is no byte or bit reversal because we are
+  // evaluating POLYVAL.
+  uint64_t r0, r1;
+  gcm_mul64_nohw(&r0, &r1, Xi[0], H->lo);
+  uint64_t r2, r3;
+  gcm_mul64_nohw(&r2, &r3, Xi[1], H->hi);
+  uint64_t mid0, mid1;
+  gcm_mul64_nohw(&mid0, &mid1, Xi[0] ^ Xi[1], H->hi ^ H->lo);
+  mid0 ^= r0 ^ r2;
+  mid1 ^= r1 ^ r3;
+  r2 ^= mid1;
+  r1 ^= mid0;
+
+  // Now we multiply our 256-bit result by x^-128 and reduce. |r2| and
+  // |r3| shifts into position and we must multiply |r0| and |r1| by x^-128. We
+  // have:
+  //
+  //       1 = x^121 + x^126 + x^127 + x^128
+  //  x^-128 = x^-7 + x^-2 + x^-1 + 1
+  //
+  // This is the GHASH reduction step, but with bits flowing in reverse.
+
+  // The x^-7, x^-2, and x^-1 terms shift bits past x^0, which would require
+  // another reduction steps. Instead, we gather the excess bits, incorporate
+  // them into |r0| and |r1| and reduce once. See slides 17-19
+  // of https://crypto.stanford.edu/RealWorldCrypto/slides/gueron.pdf.
+  r1 ^= (r0 << 63) ^ (r0 << 62) ^ (r0 << 57);
+
+  // 1
+  r2 ^= r0;
+  r3 ^= r1;
+
+  // x^-1
+  r2 ^= r0 >> 1;
+  r2 ^= r1 << 63;
+  r3 ^= r1 >> 1;
+
+  // x^-2
+  r2 ^= r0 >> 2;
+  r2 ^= r1 << 62;
+  r3 ^= r1 >> 2;
+
+  // x^-7
+  r2 ^= r0 >> 7;
+  r2 ^= r1 << 57;
+  r3 ^= r1 >> 7;
+
+  Xi[0] = r2;
+  Xi[1] = r3;
+}
+// AWS-LC verbatim END gcm_polyval_nohw
+
+// AWS-LC verbatim BEGIN gcm_gmult_nohw: crypto/fipsmodule/modes/gcm_nohw.c:266
+void gcm_gmult_nohw(uint8_t Xi[16], const u128 Htable[16]) {
+  uint64_t swapped[2];
+  swapped[0] = CRYPTO_load_u64_be(Xi + 8);
+  swapped[1] = CRYPTO_load_u64_be(Xi);
+  gcm_polyval_nohw(swapped, &Htable[0]);
+  CRYPTO_store_u64_be(Xi, swapped[1]);
+  CRYPTO_store_u64_be(Xi + 8, swapped[0]);
+}
+// AWS-LC verbatim END gcm_gmult_nohw
+
+// AWS-LC verbatim BEGIN gcm_ghash_nohw: crypto/fipsmodule/modes/gcm_nohw.c:275
+void gcm_ghash_nohw(uint8_t Xi[16], const u128 Htable[16], const uint8_t *inp,
+                    size_t len) {
+  uint64_t swapped[2];
+  swapped[0] = CRYPTO_load_u64_be(Xi + 8);
+  swapped[1] = CRYPTO_load_u64_be(Xi);
+
+  while (len >= 16) {
+    swapped[0] ^= CRYPTO_load_u64_be(inp + 8);
+    swapped[1] ^= CRYPTO_load_u64_be(inp);
+    gcm_polyval_nohw(swapped, &Htable[0]);
+    inp += 16;
+    len -= 16;
+  }
+
+  CRYPTO_store_u64_be(Xi, swapped[1]);
+  CRYPTO_store_u64_be(Xi + 8, swapped[0]);
+}
+// AWS-LC verbatim END gcm_ghash_nohw
+
+// AWS-LC verbatim BEGIN hw_gcm_encrypt: crypto/fipsmodule/modes/gcm.c:106
+static size_t hw_gcm_encrypt(const uint8_t *in, uint8_t *out, size_t len,
+                             const AES_KEY *key, uint8_t ivec[16],
+                             uint8_t Xi[16], const u128 Htable[16]) {
+  const size_t len_blocks = len & kSizeTWithoutLower4Bits;
+  if (!len_blocks) {
+    return 0;
+  }
+
+  // The 8x-unrolled assembly implementation starts outperforming
+  // the 4x-unrolled one starting around input length of 256 bytes
+  // in the case of the EVP API.
+  // In the case of the AEAD API, it can be used for all input lengths
+  // but we are not identifying which API calls the code below.
+  if (CRYPTO_is_ARMv8_GCM_8x_capable() && len >= 256) {
+    switch(key->rounds) {
+    case 10:
+      aesv8_gcm_8x_enc_128(in, len_blocks * 8, out, Xi, ivec, key, Htable);
+      break;
+    case 12:
+      aesv8_gcm_8x_enc_192(in, len_blocks * 8, out, Xi, ivec, key, Htable);
+      break;
+    case 14:
+      aesv8_gcm_8x_enc_256(in, len_blocks * 8, out, Xi, ivec, key, Htable);
+      break;
+    default:
+      // The subsequent logic after returning can process
+      // the input or return an error.
+      return 0;
+      break;
+    }
+  } else {
+    aes_gcm_enc_kernel(in, len_blocks * 8, out, Xi, ivec, key, Htable);
+  }
+
+  return len_blocks;
+}
+// AWS-LC verbatim END hw_gcm_encrypt
+
+// AWS-LC verbatim BEGIN CRYPTO_gcm128_encrypt_ctr32: crypto/fipsmodule/modes/gcm.c:596
+int CRYPTO_gcm128_encrypt_ctr32(GCM128_CONTEXT *ctx, const AES_KEY *key,
+                                const uint8_t *in, uint8_t *out, size_t len,
+                                ctr128_f stream) {
+#ifdef GCM_FUNCREF
+  void (*gcm_gmult_p)(uint8_t Xi[16], const u128 Htable[16]) =
+      ctx->gcm_key.gmult;
+  void (*gcm_ghash_p)(uint8_t Xi[16], const u128 Htable[16], const uint8_t *inp,
+                      size_t len) = ctx->gcm_key.ghash;
+#endif
+
+  uint64_t mlen = ctx->len.msg + len;
+  if (mlen > ((UINT64_C(1) << 36) - 32) ||
+      (sizeof(len) == 8 && mlen < len)) {
+    return 0;
+  }
+  ctx->len.msg = mlen;
+
+  if (ctx->ares) {
+    // First call to encrypt finalizes GHASH(AAD)
+    GCM_MUL(ctx, Xi);
+    ctx->ares = 0;
+  }
+
+#if defined(GHASH_ASM_X86_64) && !defined(MY_ASSEMBLER_IS_TOO_OLD_FOR_512AVX)
+  if (ctx->gcm_key.use_hw_gcm_crypt && crypto_gcm_avx512_enabled() && len > 0) {
+    aes_gcm_encrypt_avx512(key, ctx, &ctx->mres, in, len, out);
+    return 1;
+  }
+#endif
+
+  unsigned n = ctx->mres;
+  if (n) {
+    while (n && len) {
+      ctx->Xi[n] ^= *(out++) = *(in++) ^ ctx->EKi[n];
+      --len;
+      n = (n + 1) % 16;
+    }
+    if (n == 0) {
+      GCM_MUL(ctx, Xi);
+    } else {
+      ctx->mres = n;
+      return 1;
+    }
+  }
+
+#if defined(HW_GCM)
+  // Check |len| to work around a C language bug. See https://crbug.com/1019588.
+  if (ctx->gcm_key.use_hw_gcm_crypt && len > 0) {
+    // |hw_gcm_encrypt| may not process all the input given to it. It may
+    // not process *any* of its input if it is deemed too small.
+    size_t bulk = hw_gcm_encrypt(in, out, len, key, ctx->Yi, ctx->Xi,
+                                 ctx->gcm_key.Htable);
+    in += bulk;
+    out += bulk;
+    len -= bulk;
+  }
+#endif
+
+  uint32_t ctr = CRYPTO_load_u32_be(ctx->Yi + 12);
+  while (len >= GHASH_CHUNK) {
+    (*stream)(in, out, GHASH_CHUNK / 16, key, ctx->Yi);
+    ctr += GHASH_CHUNK / 16;
+    CRYPTO_store_u32_be(ctx->Yi + 12, ctr);
+    GHASH(ctx, out, GHASH_CHUNK);
+    out += GHASH_CHUNK;
+    in += GHASH_CHUNK;
+    len -= GHASH_CHUNK;
+  }
+  size_t len_blocks = len & kSizeTWithoutLower4Bits;
+  if (len_blocks != 0) {
+    size_t j = len_blocks / 16;
+
+    (*stream)(in, out, j, key, ctx->Yi);
+    ctr += (unsigned int)j;
+    CRYPTO_store_u32_be(ctx->Yi + 12, ctr);
+    in += len_blocks;
+    len -= len_blocks;
+    GHASH(ctx, out, len_blocks);
+    out += len_blocks;
+  }
+  if (len) {
+    (*ctx->gcm_key.block)(ctx->Yi, ctx->EKi, key);
+    ++ctr;
+    CRYPTO_store_u32_be(ctx->Yi + 12, ctr);
+    // This is needed to avoid a compiler warning on powerpc64le using GCC 12.2:
+    // .../aws-lc/crypto/fipsmodule/modes/gcm.c:688:18: error: writing 1 byte into a region of size 0 [-Werror=stringop-overflow=]
+    // 688 |       ctx->Xi[n] ^= out[n] = in[n] ^ ctx->EKi[n];
+    //     |                  ^~
+    if ((n + len) > 16) {
+      abort();
+      return 0;
+    }
+    while (len--) {
+      ctx->Xi[n] ^= out[n] = in[n] ^ ctx->EKi[n];
+      ++n;
+    }
+  }
+
+  ctx->mres = n;
+  return 1;
+}
+// AWS-LC verbatim END CRYPTO_gcm128_encrypt_ctr32
+
+// The upstream CTR callback encrypts blocks without advancing its caller's
+// counter; CRYPTO_gcm128_encrypt_ctr32 owns that update.
+static void aws_lc_test_ctr32(const uint8_t *in, uint8_t *out, size_t blocks,
+                              const s2n_bignum_AES_KEY *key,
+                              const uint8_t ivec[16])
+{
+  uint8_t counter[16], keystream[16];
+  memcpy(counter, ivec, 16);
+  for (size_t b = 0; b < blocks; ++b) {
+    ref_aes128_encrypt_block(counter, keystream, key);
+    for (size_t i = 0; i < 16; ++i) out[16*b+i] = in[16*b+i] ^ keystream[i];
+    ref_gcm_inc32(counter);
+  }
+}
+
+// The first v8 table slot stores hi then lo, exactly the u128 layout expected
+// by upstream nohw POLYVAL. Verify that representation independently every case.
+static void aws_lc_test_init_context(GCM128_CONTEXT *ctx,
+                                    const uint8_t h[16], const uint8_t iv[16],
+                                    const uint8_t tag[16], int hardware)
+{
+  memset(ctx, 0, sizeof(*ctx));
+  memcpy(ctx->Yi, iv, 16);
+  memcpy(ctx->Xi, tag, 16);
+  ref_gcm_init_htable((uint8_t *)ctx->gcm_key.Htable, h);
+  ctx->gcm_key.gmult = aws_lc_gcm_gmult_nohw;
+  ctx->gcm_key.ghash = aws_lc_gcm_ghash_nohw;
+  ctx->gcm_key.block = ref_aes128_encrypt_block;
+  ctx->gcm_key.use_hw_gcm_crypt = hardware;
+}
+
+static int test_aws_lc_gcm128_one(size_t blocks, int rollover)
+{
+  uint8_t key[16], h[16], zero[16] = {0}, iv[16], tag[16];
+  uint8_t iv_asm[16], tag_asm[16];
+  s2n_bignum_AES_KEY ek;
+  GCM128_CONTEXT c, optimized;
+  u128 nohw_table[16] = {{0}};
+  uint64_t h_words[2];
+  size_t len = 16 * blocks;
+  int rc, ro;
+
+  random_bytes_density(key, sizeof(key));
+  ref_aes128_expand_key(key, &ek);
+  ref_aes128_encrypt_block(zero, h, &ek);
+  random_bytes_density(iv, sizeof(iv));
+  if (rollover) {
+    uint32_t count = UINT32_MAX - (uint32_t)(blocks / 2);
+    aws_lc_store_u32_be(iv + 12, count);
+  }
+  random_bytes_density(tag, sizeof(tag));
+  random_bytes_density(bb1, len);
+  memset(bb2, 0xa5, len + 16);
+  memset(bb3, 0x5a, len + 16);
+  aws_lc_test_init_context(&c, h, iv, tag, 0);
+  optimized = c;
+  h_words[0] = aws_lc_load_u64_be(h);
+  h_words[1] = aws_lc_load_u64_be(h + 8);
+  aws_lc_gcm_init_nohw(nohw_table, h_words);
+  if (memcmp(nohw_table, c.gcm_key.Htable, sizeof(u128)) != 0) {
+    printf("### Disparity: AWS-LC nohw/v8 Htable base layout\n");
+    return 1;
+  }
+
+  rc = aws_lc_gcm128_encrypt_ctr32(&c, &ek, bb1, bb3, len, aws_lc_test_ctr32);
+  if (len >= 256) {
+    // This is the exact enclosing operation with only the clean hardware
+    // substitution enabled. hw_gcm_encrypt selects the target case 10.
+    optimized.gcm_key.use_hw_gcm_crypt = 1;
+    ro = aws_lc_gcm128_encrypt_ctr32(&optimized, &ek, bb1, bb2, len,
+                                    aws_lc_test_ctr32);
+    if (rc != ro || optimized.len.msg != c.len.msg ||
+        optimized.mres != c.mres || optimized.ares != c.ares) {
+      printf("### Disparity: AWS-LC enclosing AES128 GCM state len=%zu\n", len);
+      return 1;
+    }
+    memcpy(iv_asm, optimized.Yi, 16);
+    memcpy(tag_asm, optimized.Xi, 16);
+  } else {
+    // AWS-LC dispatches <256 bytes to its other kernel. Cover the imported
+    // short paths directly against the same byte-verbatim upstream C mode.
+    memcpy(iv_asm, iv, 16);
+    memcpy(tag_asm, tag, 16);
+    uint64_t processed = aes128_gcm_enc_alt(bb1, len * 8, bb2,
+        (uint64_t *)(void *)tag_asm, iv_asm, &ek,
+        (const uint64_t *)(const void *)optimized.gcm_key.Htable);
+    if (processed != len) {
+      printf("### Disparity: AWS-LC AES128 GCM return len=%zu\n", len);
+      return 1;
+    }
+  }
+  if (rc != 1 || memcmp(bb2, bb3, len) || memcmp(iv_asm, c.Yi, 16) ||
+      memcmp(tag_asm, c.Xi, 16) || bb2[len] != 0xa5 || bb3[len] != 0x5a) {
+    printf("### Disparity: AWS-LC verbatim AES128 GCM len=%zu rollover=%d\n",
+           len, rollover);
+    return 1;
+  }
+  if (VERBOSE) printf("OK: AWS-LC verbatim AES128 GCM len=%zu rollover=%d\n",
+                       len, rollover);
+  return 0;
+}
+
+int test_aws_lc_aes128_gcm_enc_alt(void)
+{
+  printf("Testing aes128_gcm_enc_alt against byte-verbatim AWS-LC C with %d cases\n",
+         tests);
+  for (size_t blocks = 1; blocks <= 33; ++blocks)
+    if (test_aws_lc_gcm128_one(blocks, 0) || test_aws_lc_gcm128_one(blocks, 1))
+      return 1;
+  for (int t = 0; t < tests; ++t)
+    if (test_aws_lc_gcm128_one(1 + (rand() % 256), t & 1)) return 1;
+  printf("All OK\n");
+  return 0;
+}
+
+// Prevent test-only upstream aliases from affecting unrelated tests.
+#undef AES_KEY
+#undef OPENSSL_memcpy
+#undef CRYPTO_bswap4
+#undef CRYPTO_bswap8
+#undef CRYPTO_load_u32_be
+#undef CRYPTO_store_u32_be
+#undef CRYPTO_load_u64_be
+#undef CRYPTO_store_u64_be
+#undef gcm_mul64_nohw
+#undef gcm_init_nohw
+#undef gcm_polyval_nohw
+#undef gcm_gmult_nohw
+#undef gcm_ghash_nohw
+#undef hw_gcm_encrypt
+#undef CRYPTO_gcm128_encrypt_ctr32
+#undef GCM_FUNCREF
+#undef HW_GCM
+#undef GHASH_CHUNK
+#undef GCM_MUL
+#undef GHASH
+#undef CRYPTO_is_ARMv8_GCM_8x_capable
+#undef aesv8_gcm_8x_enc_128
+#undef aesv8_gcm_8x_enc_192
+#undef aesv8_gcm_8x_enc_256
+#undef aes_gcm_enc_kernel
+#else
+int test_aws_lc_aes128_gcm_enc_alt(void) { return 1; }
+#endif
+
+// ****************************************************************************
+// Testing of the AES-128-GCM 8x whole-blocks encryption kernel
+// ****************************************************************************
+
+int test_aes128_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_enc_alt", 16, aes128_gcm_enc_alt,
+                      ref_aes128_gcm_enc);
+#endif
+}
+
+int test_aes128_gcm_enc_alt_guard(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm_alt_guard("aes128_gcm_enc_alt", aes128_gcm_enc_alt);
+#endif
+}
+
+// Explicit inc32 rollover cases complement the arbitrary counters and tags
+// in test_aes_gcm: exercise every 8-block tail residue on either side of the
+// first main-loop boundaries, with wrap during the first, fourth or eighth
+// block, and exactly on the final block.
+int test_aes128_gcm_enc_alt_rollover(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint8_t key[16], zero[16] = {0}, h[16], iv[16], iv_ref[16];
+  uint8_t tag[16], tag_ref[16];
+  uint64_t htable[24];
+  s2n_bignum_AES_KEY ek;
+  size_t nblocks, i, len;
+
+  printf("Testing aes128_gcm_enc_alt counter rollover\n");
+  for (nblocks = 1; nblocks <= 32; ++nblocks)
+   { const uint32_t counters[] =
+       { UINT32_MAX, UINT32_MAX - 3, UINT32_MAX - 7,
+         (uint32_t)(0U - (uint32_t)nblocks) };
+     for (i = 0; i < sizeof(counters) / sizeof(counters[0]); ++i)
+      { uint32_t counter = counters[i];
+        uint64_t ret;
+        len = 16 * nblocks;
+        random_bytes_density(key, sizeof(key));
+        ref_aes128_expand_key(key, &ek);
+        ref_aes128_encrypt_block(zero, h, &ek);
+        ref_gcm_init_htable((uint8_t *)htable, h);
+        random_bytes_density(iv, sizeof(iv));
+        iv[12] = (uint8_t)(counter >> 24);
+        iv[13] = (uint8_t)(counter >> 16);
+        iv[14] = (uint8_t)(counter >> 8);
+        iv[15] = (uint8_t)counter;
+        memcpy(iv_ref, iv, sizeof(iv));
+        random_bytes_density(tag, sizeof(tag));
+        memcpy(tag_ref, tag, sizeof(tag));
+        random_bytes_density(bb1, len);
+        ret = aes128_gcm_enc_alt(bb1, 8 * len, bb2, (uint64_t *)tag,
+                                 iv, &ek, htable);
+        ref_aes128_gcm_enc(bb1, 8 * len, bb3, tag_ref, iv_ref, &ek);
+        if (ret != len || memcmp(bb2, bb3, len) ||
+            memcmp(tag, tag_ref, sizeof(tag)) ||
+            memcmp(iv, iv_ref, sizeof(iv)))
+         { printf("### Disparity: aes128_gcm_enc_alt rollover "
+                  "blocks=%zu counter=%08"PRIx32"\n", nblocks, counter);
+           return 1; }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_known_values_aes128_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm("aes128_gcm_enc_alt", aes128_gcm_enc_alt, 16, 1);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm("aes128_gcm_enc_alt", aes128_gcm_enc_alt, 16, 1);
 #endif
 }
 
@@ -18163,7 +18836,7 @@ int test_known_values_aes256_gcm_enc_alt(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_known_values_gcm_256("aes256_gcm_enc_alt", aes256_gcm_enc_alt, 1);
+  return test_known_values_gcm("aes256_gcm_enc_alt", aes256_gcm_enc_alt, 32, 1);
 #endif
 }
 
@@ -18172,7 +18845,7 @@ int test_wycheproof_aes256_gcm_enc_alt(void)
 #ifdef __x86_64__
   return 1;
 #else
-  return test_wycheproof_gcm_256("aes256_gcm_enc_alt", aes256_gcm_enc_alt, 1);
+  return test_wycheproof_gcm("aes256_gcm_enc_alt", aes256_gcm_enc_alt, 32, 1);
 #endif
 }
 
@@ -19120,15 +19793,25 @@ int main(int argc, char *argv[])
     functionaltest(aes&&sha3,"aes256_gcm_dec_alt",test_aes256_gcm_dec_alt);
     functionaltest(aes&&sha3,"aes256_gcm_dec_alt whole-blocks guard",test_aes256_gcm_dec_alt_guard);
     functionaltest(all,"aes_gcm_htable",test_aes_gcm_htable);
+    functionaltest(aes,"known value tests for aes128_gcm_enc",test_known_values_aes128_gcm_enc);
+    functionaltest(aes,"known value tests for aes128_gcm_dec",test_known_values_aes128_gcm_dec);
     functionaltest(aes,"known value tests for aes256_gcm_enc",test_known_values_aes256_gcm_enc);
     functionaltest(aes,"known value tests for aes256_gcm_dec",test_known_values_aes256_gcm_dec);
     functionaltest(aes&&sha3,"known value tests for aes256_gcm_dec_alt",test_known_values_aes256_gcm_dec_alt);
+    functionaltest(aes,"Wycheproof vectors for aes128_gcm_enc",test_wycheproof_aes128_gcm_enc);
+    functionaltest(aes,"Wycheproof vectors for aes128_gcm_dec",test_wycheproof_aes128_gcm_dec);
     functionaltest(aes,"Wycheproof vectors for aes256_gcm_enc",test_wycheproof_aes256_gcm_enc);
     functionaltest(aes,"Wycheproof vectors for aes256_gcm_dec",test_wycheproof_aes256_gcm_dec);
     functionaltest(aes&&sha3,"Wycheproof vectors for aes256_gcm_dec_alt",test_wycheproof_aes256_gcm_dec_alt);
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
+    functionaltest(aes&&sha3,"aes128_gcm_enc_alt AWS-LC verbatim",test_aws_lc_aes128_gcm_enc_alt);
+    functionaltest(aes&&sha3,"aes128_gcm_enc_alt",test_aes128_gcm_enc_alt);
+    functionaltest(aes&&sha3,"aes128_gcm_enc_alt whole-blocks guard",test_aes128_gcm_enc_alt_guard);
+    functionaltest(aes&&sha3,"aes128_gcm_enc_alt counter rollover",test_aes128_gcm_enc_alt_rollover);
+    functionaltest(aes&&sha3,"known value tests for aes128_gcm_enc_alt",test_known_values_aes128_gcm_enc_alt);
+    functionaltest(aes&&sha3,"Wycheproof vectors for aes128_gcm_enc_alt",test_wycheproof_aes128_gcm_enc_alt);
     functionaltest(aes&&sha3,"aes256_gcm_enc_alt",test_aes256_gcm_enc_alt);
     functionaltest(aes&&sha3,"aes256_gcm_enc_alt whole-blocks guard",test_aes256_gcm_enc_alt_guard);
     functionaltest(aes&&sha3,"known value tests for aes256_gcm_enc_alt",test_known_values_aes256_gcm_enc_alt);
