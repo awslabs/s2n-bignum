@@ -464,6 +464,9 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_check_sk_k2_gcc12_O2 \
   mlkem_native/mlkem_native_check_sk_k3_gcc12_O2 \
   mlkem_native/mlkem_native_check_sk_k4_gcc12_O2 \
+  mlkem_native/mlkem_native_gen_matrix_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_gen_matrix_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_gen_matrix_k4_gcc12_O2 \
   mlkem_native/mlkem_native_keccak_absorb_once_gcc12_O2 \
   mlkem_native/mlkem_native_keccak_absorb_once_x4_gcc12_O2 \
   mlkem_native/mlkem_native_keccakf1600_extract_bytes_gcc12_O2 \
@@ -694,6 +697,13 @@ mlkem_native/mlkem_native_check_sk_k3_gcc12_O2.native: \
   mlkem_native/mlkem_native_sha3_256_gcc12_O2.native
 mlkem_native/mlkem_native_check_sk_k4_gcc12_O2.native: \
   mlkem_native/mlkem_native_sha3_256_gcc12_O2.native
+mlkem_native/mlkem_native_gen_matrix_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_rej_uniform_x4_gcc12_O2.native
+mlkem_native/mlkem_native_gen_matrix_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_rej_uniform_gcc12_O2.native \
+  mlkem_native/mlkem_native_poly_rej_uniform_x4_gcc12_O2.native
+mlkem_native/mlkem_native_gen_matrix_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_rej_uniform_x4_gcc12_O2.native
 mlkem_native/mlkem_native_keccak_absorb_once_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native \
   mlkem_native/mlkem_native_keccakf1600_xor_bytes_gcc12_O2.native
