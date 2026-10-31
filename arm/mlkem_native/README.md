@@ -313,6 +313,26 @@ give the fourth result if the pointer is not null, and its region in the
 frame is empty if it is null: a caller giving a buffer there must show
 that it is not at address 0.
 
+Since the theorems are `ensures` statements, whose postconditions hold at
+some point of an execution, a theorem of correctness and one of constant
+time and memory safety for the same function cannot be combined after the
+fact, as the points might differ. A caller whose events depend on the
+results of a function, as for the rejection sampling below, therefore needs
+a theorem that combines the two, with both postconditions. These are
+`..._IMAGE_SUBROUTINE_FULL` for `mlkem_keccakf1600_extract_bytes`,
+`mlkem_keccakf1600_xor_bytes`, `mlkem_keccakf1600_permute`,
+`mlk_keccak_absorb_once`, `mlkem_shake128_absorb_once` and
+`mlkem_shake128_squeezeblocks` and their versions for four states, except
+that for `mlkem_keccakf1600x4_permute` there is only
+`..._IMAGE_SUBROUTINE_FULL_F1600`, for 1600-bit words, as there is also for
+`mlkem_keccakf1600_permute`. They are proved with the facts of the
+correctness proof and the events of the safety proof in the same
+intermediate conditions and loop invariants, using the combined theorems
+for the callees. That of `mlkem_shake128x4_absorb_once` needs both the
+result and the events of memset, so it assumes `memset_full_contract` in
+`../proofs/utils/mlkem_native_libc_full.ml`, which states both in the same
+postcondition and implies `memset_contract` and `memset_safety_contract`.
+
 `mlkem_poly_rej_uniform` samples a polynomial uniformly modulo q from a
 seed of 34 bytes, as SampleNTT in FIPS 203 does for one entry of the
 matrix, using `mlkem_shake128_absorb_once`, `mlkem_shake128_squeezeblocks`
@@ -322,8 +342,7 @@ there are at least 256 samples, 12-bit fields below 3329, among the first
 504 + 168 * k bytes of `shake128` of the seed for some k, and the result
 is the first 256 of them. It has no constant-time and memory safety proof
 yet: since the number of iterations depends on the output of SHAKE128
-(which is public), such a proof would need theorems for the hash functions
-that combine their correctness and their events.
+(which is public), such a proof needs the combined theorems above.
 
 `mlkem_poly_rej_uniform_x4` samples four polynomials in the same way from
 four seeds 64 bytes apart, using the fourfold SHAKE128 functions. Its loop

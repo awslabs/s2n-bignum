@@ -268,3 +268,91 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600
   CONJ_TAC THENL
    [REWRITE_TAC[READ_MEMORY_WBYTES_KECCAK] THEN SIMP_TAC[];
     MESON_TAC[KECCAK_F1600_MEMORY]]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, using that   *)
+(* of mlkem_keccakf1600_permute for the states as 1600-bit words.            *)
+(* ------------------------------------------------------------------------- *)
+
+let LOCAL_KECCAK_CS_TAC sv n =
+  KECCAK_STATE_WBYTES_TAC sv THEN
+  REMOVE_THEN "H_KECCAK" (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,
+       MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      [`e:(uarch_event)list`; `read X0 s`; sv; `pc:num`; `read SP s`;
+       `read X30 s`] n THENL
+     [EXISTS_E2_TAC (ref [`pc:num`; `a:int64`; `stackpointer:int64`;
+                          `returnaddress:int64`]);
+      LABEL_TAC "H_KECCAK" safety_th]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]);;
+
+let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL_F1600 =
+  prove
+ (`exists f_events.
+       forall e a (S0:1600 word) (S1:1600 word) (S2:1600 word) (S3:1600 word)
+              pc stackpointer returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 16 stackpointer /\
+           nonoverlapping (a,800) (word_sub stackpointer (word 208),208) /\
+           ALLPAIRS nonoverlapping
+           [a,800; word_sub stackpointer (word 208),208]
+           [word pc,0x6480]
+           ==> ensures arm
+               (\s. aligned_bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read PC s = word (pc + 0x33a0) /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    read (memory :> wbytes a) s = S0 /\
+                    read (memory :> wbytes (word_add a (word 200))) s = S1 /\
+                    read (memory :> wbytes (word_add a (word 400))) s = S2 /\
+                    read (memory :> wbytes (word_add a (word 600))) s = S3 /\
+                    read events s = e)
+               (\s. read PC s = returnaddress /\
+                    read (memory :> wbytes a) s = keccak_f1600 S0 /\
+                    read (memory :> wbytes (word_add a (word 200))) s =
+                    keccak_f1600 S1 /\
+                    read (memory :> wbytes (word_add a (word 400))) s =
+                    keccak_f1600 S2 /\
+                    read (memory :> wbytes (word_add a (word 600))) s =
+                    keccak_f1600 S3 /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events a pc (word_sub stackpointer (word 208))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [a,800; word_sub stackpointer (word 208),208;
+                          word (pc + 0x62b0),192]
+                         [a,800; word_sub stackpointer (word 208),208]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [X18] ,,
+                MAYCHANGE
+                [memory :> bytes (a,800);
+                 memory :> bytes (word_sub stackpointer (word 208),208)])`,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL_F1600
+    "H_KECCAK" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES;
+              READ_MEMORY_WBYTES_1600] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_EXEC (1--3) THEN
+  LOCAL_KECCAK_CS_TAC `S0:1600 word` 4 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_EXEC (5--6) THEN
+  LOCAL_KECCAK_CS_TAC `S1:1600 word` 7 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_EXEC (8--9) THEN
+  LOCAL_KECCAK_CS_TAC `S2:1600 word` 10 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_EXEC (11--13) THEN
+  LOCAL_KECCAK_CS_TAC `S3:1600 word` 14 THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

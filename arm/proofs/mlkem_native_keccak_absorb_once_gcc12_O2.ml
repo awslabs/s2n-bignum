@@ -977,3 +977,436 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
 
     ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THEN
     ABSORB_SAFE_TAIL_TAC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, with the     *)
+(* facts of the correctness proof and the events of the safety proof in the  *)
+(* same intermediate condition and loop invariant, using the combined        *)
+(* theorems for the callees. In the last block the equation for mlen in      *)
+(* terms of q and t is kept as r * q + t = mlen, so that it does not rewrite *)
+(* mlen in the events, and only the goal for the state is rewritten with it. *)
+(* ------------------------------------------------------------------------- *)
+
+let ABSORB_CS_INTRO_TAC =
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL
+    "H_XOR" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL_F1600
+    "H_PERMUTE" THEN
+  CONCRETIZE_F_EVENTS_TAC
+    `\(m:int64) (st:int64) (r:num) (mlen:num) (pc:num) (stackpointer:int64)
+      (returnaddress:int64).
+      APPEND
+       (if mlen MOD r = 0
+        then f_ev_t0 m st r mlen pc stackpointer returnaddress
+        else if mlen MOD r = r - 1
+        then f_ev_t1 m st r mlen pc stackpointer returnaddress
+        else f_ev_t2 m st r mlen pc stackpointer returnaddress)
+       (if mlen < r
+        then f_ev_short m st r mlen pc stackpointer returnaddress
+        else APPEND (f_ev_epil m st r mlen pc stackpointer returnaddress)
+              (APPEND
+                (ENUMERATEL (mlen DIV r)
+                  (\i. f_ev_loop m st r mlen pc stackpointer returnaddress i))
+                (f_ev_prol m st r mlen pc stackpointer returnaddress)))
+     :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; PAIRWISE; NONOVERLAPPING_CLAUSES;
+              READ_MEMORY_WBYTES_1600;
+              fst MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `200 + mlen <= 18446744073709551616` ASSUME_TAC THENL
+   [MATCH_MP_TAC NONOVERLAPPING_IMP_SMALL_RIGHT_ALT THEN
+    MAP_EVERY EXISTS_TAC [`val(st:int64)`; `val(m:int64)`] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[] THEN
+    RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  ABBREV_TAC
+   `P = M + 2 EXP (8 * mlen) * num_of_bytelist(keccak_pad r p mlen)` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
+  ENSURES_PRESERVED_TAC "x22_init" `X22` THEN
+  ENSURES_PRESERVED_TAC "x23_init" `X23`;;
+
+let ABSORB_CS_MID =
+ `\s. read X19 s = st /\ read X20 s = word(mlen MOD r) /\
+      read X21 s = word_add m (word(r * mlen DIV r)) /\
+      read X23 s = word r /\
+      read SP s = word_add stackpointer (word 192) /\
+      read (memory :> bytes64 (word_add stackpointer (word 192))) s =
+      x19_init /\
+      read (memory :> bytes64 (word_add stackpointer (word 200))) s =
+      x20_init /\
+      read (memory :> bytes64 (word_add stackpointer (word 208))) s =
+      x21_init /\
+      read (memory :> bytes64 (word_add stackpointer (word 216))) s =
+      x22_init /\
+      read (memory :> bytes64 (word_add stackpointer (word 224))) s =
+      x23_init /\
+      read (memory :> bytes64 (word_add stackpointer (word 232))) s =
+      returnaddress /\
+      read (memory :> bytes8 (word_add stackpointer (word 255))) s =
+      word p /\
+      read (memory :> bytes(m,mlen)) s = M /\
+      read (memory :> bytes(st,200)) s =
+      val(keccak_absorb r P (mlen DIV r))`;;
+
+let ABSORB_CS_INV =
+ `\k s. read X19 s = st /\ read X20 s = word(mlen - r * k) /\
+        read X21 s = word_add m (word(r * k)) /\
+        read X22 s = word r /\ read X23 s = word r /\
+        read SP s = word_add stackpointer (word 192) /\
+        read (memory :> bytes64 (word_add stackpointer (word 192))) s =
+        x19_init /\
+        read (memory :> bytes64 (word_add stackpointer (word 200))) s =
+        x20_init /\
+        read (memory :> bytes64 (word_add stackpointer (word 208))) s =
+        x21_init /\
+        read (memory :> bytes64 (word_add stackpointer (word 216))) s =
+        x22_init /\
+        read (memory :> bytes64 (word_add stackpointer (word 224))) s =
+        x23_init /\
+        read (memory :> bytes64 (word_add stackpointer (word 232))) s =
+        returnaddress /\
+        read (memory :> bytes8 (word_add stackpointer (word 255))) s =
+        word p /\
+        read (memory :> bytes(m,mlen)) s = M /\
+        read (memory :> bytes(st,200)) s = val(keccak_absorb r P k)`;;
+
+let ABSORB_CS_SHORT_TAC =
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (1--18) THEN
+  ARGS_32_TAC [`r:num`] THEN ABSORB_BYTE_TAC THEN ABSORB_VAL_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (19--19) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ASM_SIMP_TAC[DIV_LT; MOD_LT; MULT_CLAUSES; WORD_ADD_0] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[keccak_absorb; VAL_WORD_0] THEN KECCAK_ZERO_STATE_TAC;
+    DISCHARGE_SAFETY_PROPERTY_TAC];;
+
+let ABSORB_CS_CALL_TAC name ilist vars n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,
+       MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      ilist n THENL
+     [ABSORB_EXISTS_E2_TAC (ref vars); LABEL_TAC name safety_th]);;
+
+let ABSORB_CS_LOOP_TAC =
+  ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r` `pc + 0x2400` `pc + 0x242c`
+    ABSORB_CS_INV THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
+
+    (*** Initialization of the loop, with the state zeroed ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (1--18) THEN
+    ARGS_32_TAC [`r:num`] THEN ABSORB_BYTE_TAC THEN ABSORB_VAL_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (19--20) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MULT_CLAUSES; SUB_0; WORD_ADD_0] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[keccak_absorb; VAL_WORD_0] THEN KECCAK_ZERO_STATE_TAC;
+      DISCHARGE_SAFETY_PROPERTY_TAC];
+
+    (*** The loop body: XOR in a block, permute, and the loop test ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    MP_TAC(SPECL [`mlen:num`; `r:num`; `i:num`] ABSORB_BLOCK_BOUND) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+    SUBGOAL_THEN `0 + r <= 200` ASSUME_TAC THENL
+     [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    MP_TAC(SPECL [`m:int64`; `mlen:num`; `M:num`; `r * i`; `r:num`;
+                  `s0:armstate`] READ_MEMORY_BYTES_SUB) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (1--5) THEN
+    ARGS_32_TAC [`r:num`] THEN
+    KECCAK_STATE_AT_TAC `st:int64` THEN
+    ABSORB_CS_CALL_TAC "H_XOR"
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `0`; `r:num`;
+       `keccak_absorb r P i`; `(M DIV 2 EXP (8 * r * i)) MOD 2 EXP (8 * r)`;
+       `pc:num`; `read X30 s`]
+      (ABSORB_SAFE_VARS @ [`i:num`]) 6 THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (7--9) THEN
+    KECCAK_STATE_AT_TAC `st:int64` THEN
+    KECCAK_STATE_THEN `st:int64` (fun v ->
+      ABSORB_CS_CALL_TAC "H_PERMUTE"
+        [`e:(uarch_event)list`; `read X0 s`; v; `pc:num`; `read SP s`;
+         `read X30 s`]
+        (ABSORB_SAFE_VARS @ [`i:num`]) 10) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (11--12) THEN
+    SUBGOAL_THEN `word_sub (word (mlen - r * i)) (word r):int64 =
+                  word(mlen - r * (i + 1))` SUBST_ALL_TAC THENL
+     [W(MP_TAC o PART_MATCH (lhand o rand) WORD_SUB2 o lhand o snd) THEN
+      ANTS_TAC THENL [UNDISCH_TAC `r * i + r <= mlen` THEN ARITH_TAC;
+                      DISCH_THEN SUBST1_TAC] THEN
+      AP_TERM_TAC THEN ARITH_TAC;
+      ALL_TAC] THEN
+    SUBGOAL_THEN
+     `val(word(mlen - r * (i + 1)):int64) = mlen - r * (i + 1) /\
+      val(word r:int64) = r`
+     (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+     [CONJ_TAC THEN MATCH_MP_TAC VAL_WORD_EQ THEN
+      REWRITE_TAC[DIMINDEX_64] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+      ALL_TAC] THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (13--13) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    MP_TAC(SPECL [`mlen:num`; `r:num`; `i:num`] ABSORB_LOOP_TEST) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+      REWRITE_TAC[ARITH_RULE `r * (i + 1) = r * i + r`];
+      ALL_TAC] THEN
+    CONJ_TAC THENL
+     [AP_TERM_TAC THEN REWRITE_TAC[GSYM ADD1; keccak_absorb] THEN
+      AP_TERM_TAC THEN AP_TERM_TAC THEN
+      REWRITE_TAC[MULT_CLAUSES; EXP] THEN EXPAND_TAC "P" THEN
+      CONV_TAC SYM_CONV THEN AP_TERM_TAC THEN
+      MATCH_MP_TAC KECCAK_BLOCK_FULL THEN
+      UNDISCH_TAC `r * i + r <= mlen` THEN ARITH_TAC;
+      ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The loop exit ***)
+
+    REWRITE_TAC[] THEN REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[ABSORB_MOD_EQ] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC];;
+
+let ABSORB_CS_XOR_TAC off len data n =
+  KECCAK_STATE_AT_TAC `st:int64` THEN
+  KECCAK_STATE_THEN `st:int64` (fun v ->
+    ABSORB_CS_CALL_TAC "H_XOR"
+     [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; off; len; v; data;
+      `pc:num`; `read X30 s`] ABSORB_SAFE_VARS n) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]);;
+
+let ABSORB_CS_EVENTS_TAC =
+  TRY(FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o
+        check (fun th -> concl th = `mlen DIV r = q`))) THEN
+  TRY(FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o
+        check (fun th -> concl th = `mlen MOD r = t`))) THEN
+  ABSORB_DISCHARGE_TAC;;
+
+let ABSORB_CS_MLEN_TAC =
+  FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o
+    check (fun th -> concl th = `r * q + t = mlen`));;
+
+let ABSORB_CS_TAIL_TAC =
+  ABBREV_TAC `q = mlen DIV r` THEN ABBREV_TAC `t = mlen MOD r` THEN
+  SUBGOAL_THEN `r * q + t = mlen /\ t < r` STRIP_ASSUME_TAC THENL
+   [MAP_EVERY EXPAND_TAC ["q"; "t"] THEN
+    MP_TAC(SPECL [`mlen:num`; `r:num`] DIVISION) THEN
+    ASM_SIMP_TAC[ARITH_RULE `0 < r ==> ~(r = 0)`] THEN ARITH_TAC;
+    ALL_TAC] THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  SUBGOAL_THEN `M < 2 EXP (8 * mlen)` ASSUME_TAC THENL
+   [UNDISCH_TAC `read (memory :> bytes (m,mlen)) s0 = M` THEN
+    DISCH_THEN(SUBST1_TAC o SYM) THEN
+    REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_BOUND];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `(P DIV 2 EXP (8 * r * q)) MOD 2 EXP (8 * r) =
+    M DIV 2 EXP (8 * r * q) +
+    2 EXP (8 * t) * num_of_bytelist(keccak_pad r p mlen)`
+  SUBST1_TAC THENL
+   [MAP_EVERY EXPAND_TAC ["P"; "q"; "t"] THEN
+    MATCH_MP_TAC KECCAK_BLOCK_LAST THEN ASM_SIMP_TAC[KECCAK_PAD_BOUND];
+    ALL_TAC] THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (1--2) THEN
+  ARGS_32_TAC [`t:num`] THEN
+  MP_TAC(SPEC `r:num` WORD_ZX_SUB1_SMALL) THEN
+  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+                  DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+  SUBGOAL_THEN `val(word t:int64) = t` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+    ALL_TAC] THEN
+  ASM_CASES_TAC `t = 0` THENL
+   [(*** A whole number of blocks: p at byte 0 and 128 at byte r - 1 ***)
+
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (3--9) THEN
+    ABSORB_BYTE_FACT_TAC "s9" `p:num` THEN
+    ABSORB_CS_XOR_TAC `0` `1` `p:num` 10 THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (11--17) THEN
+    ARGS_32_TAC [`r - 1`] THEN
+    ABSORB_BYTE_FACT_TAC "s17" `128` THEN
+    SUBGOAL_THEN `r - 1 + 1 <= 200` ASSUME_TAC THENL
+     [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    ABSORB_CS_XOR_TAC `r - 1` `1` `128` 18 THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (19--22) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL
+     [ABSORB_CS_MLEN_TAC THEN
+      AP_TERM_TAC THEN REWRITE_TAC[GSYM WORD_XOR_ASSOC] THEN AP_TERM_TAC THEN
+      ASM_SIMP_TAC[KECCAK_PAD_NUM] THEN
+      REWRITE_TAC[ADD_CLAUSES] THEN
+      ASM_SIMP_TAC[MOD_MULT; ARITH_RULE `0 < r ==> ~(r = 0)`] THEN
+      SUBGOAL_THEN `M DIV 2 EXP (8 * r * q) = 0` SUBST1_TAC THENL
+       [MATCH_MP_TAC DIV_LT THEN
+        UNDISCH_TAC `M < 2 EXP (8 * (r * q + t))` THEN
+        ASM_REWRITE_TAC[ADD_CLAUSES];
+        ALL_TAC] THEN
+      REWRITE_TAC[MULT_CLAUSES; EXP; ADD_CLAUSES; SUB_0] THEN
+      COND_CASES_TAC THENL
+       [UNDISCH_TAC `0 = r - 1` THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+        MP_TAC(INST_TYPE [`:1600`,`:N`]
+         (SPECL [`p:num`; `1`; `7`] WORD_XOR_DISJOINT_ADD)) THEN
+        CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
+        MATCH_MP_TAC WORD_XOR_DISJOINT_ADD THEN
+        TRANS_TAC LTE_TRANS `2 EXP 8` THEN CONJ_TAC THENL
+         [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+          REWRITE_TAC[LE_EXP] THEN SIMPLE_ARITH_TAC]];
+      ABSORB_CS_EVENTS_TAC];
+    ALL_TAC] THEN
+
+  (*** Otherwise, first the t bytes of the message after the blocks ***)
+
+  SUBGOAL_THEN
+   `0 + t <= 200 /\ M DIV 2 EXP (8 * r * q) < 2 EXP (8 * t)`
+  STRIP_ASSUME_TAC THENL
+   [CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    SIMP_TAC[RDIV_LT_EQ; EXP_EQ_0; ARITH_EQ; GSYM EXP_ADD] THEN
+    REWRITE_TAC[GSYM LEFT_ADD_DISTRIB] THEN
+    UNDISCH_TAC `M < 2 EXP (8 * mlen)` THEN
+    FIRST_ASSUM(SUBST1_TAC o SYM o
+      check (fun th -> concl th = `r * q + t = mlen`)) THEN
+    REWRITE_TAC[];
+    ALL_TAC] THEN
+  MP_TAC(SPECL [`m:int64`; `mlen:num`; `M:num`; `r * q`; `t:num`;
+                `s2:armstate`] READ_MEMORY_BYTES_SUB) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[LE_REFL]; ALL_TAC] THEN
+  ASM_SIMP_TAC[MOD_LT] THEN DISCH_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (3--8) THEN
+  ARGS_32_TAC [`t:num`] THEN
+  ABSORB_CS_XOR_TAC `0` `t:num` `M DIV 2 EXP (8 * r * q)` 9 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (10--10) THEN
+  ARGS_32_TAC [`r - 1`] THEN PTR_DECIDE_FLAGS_TAC THEN
+  ABSORB_CASE_FLAG_TAC `t = r - 1` THENL
+   [(*** The padding is just the single byte p + 128 at byte r - 1 ***)
+
+    FIRST_X_ASSUM(SUBST_ALL_TAC o
+      check (fun th -> concl th = `t = r - 1`)) THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (11--18) THEN
+    ABSORB_ORR_BYTE_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (19--19) THEN
+    ARGS_32_TAC [`r - 1`] THEN
+    ABSORB_BYTE_FACT_TAC "s19" `p + 128` THEN
+    SUBGOAL_THEN `r - 1 + 1 <= 200` ASSUME_TAC THENL
+     [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    ABSORB_CS_XOR_TAC `r - 1` `1` `p + 128` 20 THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (21--24) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL
+     [FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o
+        check (fun th -> concl th = `r * q + r - 1 = mlen`)) THEN
+      SUBGOAL_THEN `(r * q + r - 1) MOD r = r - 1` ASSUME_TAC THENL
+       [SUBGOAL_THEN `r * q + r - 1 = q * r + (r - 1)` SUBST1_TAC THENL
+         [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+        ASM_SIMP_TAC[MOD_MULT_ADD; MOD_LT; ARITH_RULE `0 < r ==> r - 1 < r`];
+        ALL_TAC] THEN
+      AP_TERM_TAC THEN REWRITE_TAC[GSYM WORD_XOR_ASSOC] THEN AP_TERM_TAC THEN
+      ASM_SIMP_TAC[KECCAK_PAD_NUM] THEN REWRITE_TAC[MULT_CLAUSES; EXP] THEN
+      MATCH_MP_TAC WORD_XOR_DISJOINT_ADD THEN ASM_REWRITE_TAC[];
+      ABSORB_CS_EVENTS_TAC];
+
+    (*** Otherwise p at byte t and 128 at byte r - 1 ***)
+
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (11--17) THEN
+    ARGS_32_TAC [`t:num`] THEN
+    ABSORB_BYTE_FACT_TAC "s17" `p:num` THEN
+    SUBGOAL_THEN `t + 1 <= 200 /\ r - 1 + 1 <= 200` STRIP_ASSUME_TAC THENL
+     [CONJ_TAC THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    ABSORB_CS_XOR_TAC `t:num` `1` `p:num` 18 THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (19--25) THEN
+    ARGS_32_TAC [`r - 1`] THEN
+    ABSORB_BYTE_FACT_TAC "s25" `128` THEN
+    ABSORB_CS_XOR_TAC `r - 1` `1` `128` 26 THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC (27--30) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL
+     [ABSORB_CS_MLEN_TAC THEN ABSORB_TAIL_ARITH_TAC THEN
+      SUBGOAL_THEN
+       `2 EXP (8 * (r - 1)) = 2 EXP (8 * t) * 2 EXP (8 * (r - t - 1))`
+      SUBST1_TAC THENL
+       [REWRITE_TAC[GSYM EXP_ADD] THEN AP_TERM_TAC THEN SIMPLE_ARITH_TAC;
+        ALL_TAC] THEN
+      W(fun (_,w) -> MP_TAC(ISPECL
+        [`2 EXP (8 * t) * p`; `128`; `8 * t + 8 * (r - t - 1)`]
+        (INST_TYPE [`:1600`,`:N`] WORD_XOR_DISJOINT_ADD))) THEN
+      REWRITE_TAC[EXP_ADD] THEN ANTS_TAC THENL
+       [REWRITE_TAC[LT_MULT_LCANCEL; EXP_EQ_0; ARITH_EQ] THEN
+        TRANS_TAC LTE_TRANS `2 EXP 8` THEN CONJ_TAC THENL
+         [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+          REWRITE_TAC[LE_EXP] THEN SIMPLE_ARITH_TAC];
+        REWRITE_TAC[GSYM MULT_ASSOC] THEN DISCH_THEN SUBST1_TAC] THEN
+      REWRITE_TAC[GSYM LEFT_ADD_DISTRIB] THEN
+      MATCH_MP_TAC WORD_XOR_DISJOINT_ADD THEN ASM_REWRITE_TAC[];
+      ABSORB_CS_EVENTS_TAC]];;
+
+let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  prove
+ (`exists f_events.
+     forall e st r m mlen p M pc stackpointer returnaddress.
+       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 16 stackpointer /\
+       0 < r /\ r <= 200 /\ p < 128 /\
+       PAIRWISE nonoverlapping
+        [st,200; m,mlen; word_sub stackpointer (word 256),256] /\
+       ALL (nonoverlapping (word pc,0x6480))
+        [st,200; word_sub stackpointer (word 256),256]
+       ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc)
+                   mlkem_native_libmlkem_gcc12_O2_mc /\
+                 read PC s = word (pc + 0x23b0) /\
+                 read SP s = stackpointer /\
+                 read X30 s = returnaddress /\
+                 C_ARGUMENTS [st; word r; m; word mlen; word p] s /\
+                 read (memory :> bytes(m,mlen)) s = M /\
+                 read events s = e)
+            (\s. read PC s = returnaddress /\
+                 read (memory :> wbytes st) s =
+                 word_xor
+                  (keccak_absorb r
+                    (M + 2 EXP (8 * mlen) *
+                         num_of_bytelist(keccak_pad r p mlen))
+                    (mlen DIV r))
+                  (word((M + 2 EXP (8 * mlen) *
+                             num_of_bytelist(keccak_pad r p mlen)) DIV
+                        2 EXP (8 * r * mlen DIV r) MOD 2 EXP (8 * r))) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events m st r mlen pc
+                           (word_sub stackpointer (word 256)) returnaddress /\
+                    memaccess_inbounds e2
+                     [m,mlen; st,200; word_sub stackpointer (word 256),256;
+                      word(pc + 0x62b0),192]
+                     [st,200; word_sub stackpointer (word 256),256]))
+            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+             MAYCHANGE
+              [memory :> bytes(st,200);
+               memory :> bytes(word_sub stackpointer (word 256),256)])`,
+  ABSORB_CS_INTRO_TAC THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x242c` ABSORB_CS_MID THEN CONJ_TAC THENL
+   [ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THENL
+     [ABSORB_CS_SHORT_TAC; ABSORB_CS_LOOP_TAC];
+    ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THEN
+    ABSORB_CS_TAIL_TAC]);;

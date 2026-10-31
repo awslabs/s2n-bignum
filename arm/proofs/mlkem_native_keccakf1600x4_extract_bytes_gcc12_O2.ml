@@ -238,3 +238,107 @@ let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   LOCAL_EXTRACT_BYTES_SAFETY_TAC "H_EXTRACT_BYTES" 36 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, using that   *)
+(* of mlkem_keccakf1600_extract_bytes for the states as 1600-bit words.      *)
+(* ------------------------------------------------------------------------- *)
+
+let EXTRACT_BYTES_X4_CS_CALL_TAC sv n =
+  KECCAK_STATE_WBYTES_TAC sv THEN
+  REMOVE_THEN "H_EXTRACT_BYTES" (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,
+       MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `off:num`;
+       `len:num`; sv; `pc:num`; `read X30 s`] n THENL
+     [EXISTS_E2_TAC (ref [`pc:num`; `a:int64`; `d0:int64`; `d1:int64`;
+                          `d2:int64`; `d3:int64`; `off:num`; `len:num`;
+                          `stackpointer:int64`; `returnaddress:int64`]);
+      LABEL_TAC "H_EXTRACT_BYTES" safety_th]);;
+
+let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  prove
+ (`exists f_events.
+     forall e a d0 d1 d2 d3 off len (S0:1600 word) (S1:1600 word)
+            (S2:1600 word) (S3:1600 word) pc stackpointer returnaddress.
+       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 16 stackpointer /\ off + len <= 200 /\
+       PAIRWISE nonoverlapping
+        [d0,len; d1,len; d2,len; d3,len;
+         word_sub stackpointer (word 64),64] /\
+       ALLPAIRS nonoverlapping
+        [d0,len; d1,len; d2,len; d3,len;
+         word_sub stackpointer (word 64),64]
+        [word pc,0x6480; a,800]
+       ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc)
+                   mlkem_native_libmlkem_gcc12_O2_mc /\
+                 read PC s = word (pc + 0x2cd0) /\
+                 read SP s = stackpointer /\
+                 read X30 s = returnaddress /\
+                 C_ARGUMENTS [a; d0; d1; d2; d3; word off; word len] s /\
+                 read (memory :> wbytes a) s = S0 /\
+                 read (memory :> wbytes (word_add a (word 200))) s = S1 /\
+                 read (memory :> wbytes (word_add a (word 400))) s = S2 /\
+                 read (memory :> wbytes (word_add a (word 600))) s = S3 /\
+                 read events s = e)
+            (\s. read PC s = returnaddress /\
+                 read (memory :> bytes(d0,len)) s =
+                 (val S0 DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len) /\
+                 read (memory :> bytes(d1,len)) s =
+                 (val S1 DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len) /\
+                 read (memory :> bytes(d2,len)) s =
+                 (val S2 DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len) /\
+                 read (memory :> bytes(d3,len)) s =
+                 (val S3 DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events a d0 d1 d2 d3 off len pc
+                           (word_sub stackpointer (word 64)) returnaddress /\
+                    memaccess_inbounds e2
+                     [a,800; d0,len; d1,len; d2,len; d3,len;
+                      word_sub stackpointer (word 64),64]
+                     [d0,len; d1,len; d2,len; d3,len;
+                      word_sub stackpointer (word 64),64]))
+            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes(d0,len); memory :> bytes(d1,len);
+                        memory :> bytes(d2,len); memory :> bytes(d3,len);
+                        memory :> bytes(word_sub stackpointer (word 64),64)])`,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL
+    "H_EXTRACT_BYTES" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES;
+              READ_MEMORY_WBYTES_1600] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
+  ENSURES_PRESERVED_TAC "x22_init" `X22` THEN
+  ENSURES_PRESERVED_TAC "x23_init" `X23` THEN
+  ENSURES_PRESERVED_TAC "x24_init" `X24` THEN
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_EXEC
+   (1--13) THEN
+  ARGS_32_TAC [`off:num`; `len:num`] THEN
+  EXTRACT_BYTES_X4_CS_CALL_TAC `S0:1600 word` 14 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_EXEC
+   (15--19) THEN
+  ARGS_32_TAC [`off:num`; `len:num`] THEN
+  EXTRACT_BYTES_X4_CS_CALL_TAC `S1:1600 word` 20 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_EXEC
+   (21--25) THEN
+  ARGS_32_TAC [`off:num`; `len:num`] THEN
+  EXTRACT_BYTES_X4_CS_CALL_TAC `S2:1600 word` 26 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_EXEC
+   (27--35) THEN
+  ARGS_32_TAC [`off:num`; `len:num`] THEN
+  EXTRACT_BYTES_X4_CS_CALL_TAC `S3:1600 word` 36 THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
