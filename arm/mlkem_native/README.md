@@ -360,3 +360,18 @@ numbers for byte arrays and lists of words) to the definitions of FIPS 203
 and to the forms of K-PKE in the NTT domain in `common/fips203_theory.ml`
 are in `arm/proofs/utils/mlkem_native_fips203.ml`. It has no constant-time
 and memory safety proof yet either.
+
+`mlkem768_indcpa_enc` is the encryption of K-PKE for ML-KEM-768, and its
+specification is in terms of FIPS 203 too: the ciphertext of 1088 bytes
+that it writes is `kpke_encrypt mlkem768 ek msg r` for the encryption key
+`ek` of 1184 bytes and the message `msg` and the randomness `r` of 32
+bytes each. It has the same hypothesis on SampleNTT, for the matrix from
+the last 32 bytes of `ek`, and the hypothesis that the stack does not
+contain address 0, since it passes a buffer in its stack frame as the
+fourth output of `mlkem768_poly_getnoise_eta1_4x`, which skips that output
+if the pointer is null. The key is not checked, and the code computes with
+its 12-bit fields as they are, which gives the result of FIPS 203 for any
+key since FIPS 203 decodes them modulo q. The tactics for these functions,
+which call many others on buffers in their stack frames, are in
+`arm/proofs/utils/mlkem_native_indcpa.ml`. It has no constant-time and
+memory safety proof yet either.
