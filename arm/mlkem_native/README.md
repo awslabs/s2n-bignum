@@ -381,7 +381,15 @@ in its first 384 * k bytes, reduce it, encode it again and compare the
 result with the key in constant time, so they return 0 if all the 12-bit
 fields of those bytes are below q = 3329, and -4 otherwise. Their theorems
 of constant time and memory safety state that their events depend only on
-the addresses of the key, the stack and the image.
+the addresses of the key, the stack and the image. Since the encapsulation
+branches on their results, they also have combined theorems
+`..._IMAGE_SUBROUTINE_FULL`, as do the functions that they call:
+`mlkem768_polyvec_frombytes`, `mlkem768_polyvec_reduce` and
+`mlkem768_polyvec_tobytes`, the same for the other parameter sets, and
+`mlkem_poly_frombytes`, `mlkem_poly_reduce` and `mlkem_poly_tobytes`.
+Likewise, for the decapsulation, which branches on the result of the hash
+check, `mlkem768_check_sk` and the others have combined theorems, using one
+for `mlkem_sha3_256`.
 
 `mlkem768_indcpa_keypair_derand` is the key generation of K-PKE for
 ML-KEM-768, and its specification is in terms of FIPS 203 itself: the

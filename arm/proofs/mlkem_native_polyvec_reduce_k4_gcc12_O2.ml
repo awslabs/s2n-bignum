@@ -181,3 +181,86 @@ let MLKEM_NATIVE_POLYVEC_REDUCE_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   LOCAL_REDUCE_SAFETY_TAC "H_REDUCE" 14 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, using that   *)
+(* of mlkem_poly_reduce, for mlkem1024_check_pk, whose result the            *)
+(* encapsulation branches on.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+let LOCAL_FULL_TAC ilist n =
+  REMOVE_THEN "H_POLY" (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,
+       MLKEM_NATIVE_POLYVEC_REDUCE_K4_GCC12_O2_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      (`e:(uarch_event)list`::ilist) n THENL
+     [EXISTS_E2_TAC (ref [`pc:num`; `a:int64`; `stackpointer:int64`;
+                          `returnaddress:int64`]);
+      LABEL_TAC "H_POLY" safety_th]);;
+
+let MLKEM_NATIVE_POLYVEC_REDUCE_K4_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  prove
+ (`exists f_events.
+     forall e a x pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 16 stackpointer /\
+        nonoverlapping (a,2048) (word_sub stackpointer (word 16),16) /\
+        ALLPAIRS nonoverlapping
+          [(a,2048); (word_sub stackpointer (word 16),16)]
+          [(word pc,0x6480)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mc /\
+                  read PC s = word (pc + 0x1940) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a] s /\
+                  (!i. i < 1024
+                       ==> read(memory :> bytes16
+                            (word_add a (word(2 * i)))) s =
+                           x i) /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (!i. i < 1024
+                       ==> ival(read(memory :> bytes16
+                                  (word_add a (word(2 * i)))) s) =
+                           ival(x i) rem &3329) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 =
+                     f_events a pc (word_sub stackpointer (word 16))
+                     returnaddress /\
+                     memaccess_inbounds e2
+                     [a,2048; word_sub stackpointer (word 16),16]
+                     [a,2048; word_sub stackpointer (word 16),16]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE
+               [memory :> bytes(a,2048);
+                memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_FULL
+    "H_POLY" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_INIT_TAC "s0" THEN POLYVEC_SPLIT_TAC 4 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_REDUCE_K4_GCC12_O2_EXEC (1--3) THEN
+  LOCAL_FULL_TAC [`read X0 s`; `x:num->int16`; `pc:num`; `read X30 s`] 4 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_REDUCE_K4_GCC12_O2_EXEC (5--6) THEN
+  LOCAL_FULL_TAC [`read X0 s`; `\i. (x:num->int16)(256 + i)`; `pc:num`;
+                  `read X30 s`] 7 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_REDUCE_K4_GCC12_O2_EXEC (8--9) THEN
+  LOCAL_FULL_TAC [`read X0 s`; `\i. (x:num->int16)(512 + i)`; `pc:num`;
+                  `read X30 s`] 10 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_REDUCE_K4_GCC12_O2_EXEC (11--13) THEN
+  LOCAL_FULL_TAC [`read X0 s`; `\i. (x:num->int16)(768 + i)`; `pc:num`;
+                  `read X30 s`] 14 THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [ALL_TAC; DISCHARGE_SAFETY_PROPERTY_TAC] THEN
+  POLYVEC_JOIN_TAC 4 THEN ASM_SIMP_TAC[]);;

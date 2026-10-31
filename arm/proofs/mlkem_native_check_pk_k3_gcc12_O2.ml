@@ -842,3 +842,223 @@ let MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
   REPEAT CONJ_TAC THENL
    [ARITH_TAC; CHECKPK3_SAFE_PART1_TAC; CHECKPK3_SAFE_BODY_TAC;
     CHECKPK3_SAFE_EXIT_TAC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, for          *)
+(* mlkem768_enc_derand, which branches on the result. It uses the combined   *)
+(* theorems for the callees and the invariant of the correctness proof with  *)
+(* the events. The offset boff of the buffers is an abbreviation of the      *)
+(* conditional, which is restored before the events are matched, so that     *)
+(* they are a function of the stack pointer.                                 *)
+(* ------------------------------------------------------------------------- *)
+
+let CHECKPK_FULL_ALLOWED = CHECKPK_ALLOWED @ [`boff:num`];;
+
+let CHECKPK_UNABBREV_TAC =
+  FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o check
+   (fun th -> is_eq(concl th) && rhs(concl th) = `boff:num`));;
+
+let CHECKPK3_FULL_CALL_TAC name ilist n =
+  CHECKPK_NORMALIZE_TAC THEN
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,
+       MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      ilist n THENL
+     [EXISTS_E2_TAC (ref CHECKPK_FULL_ALLOWED); LABEL_TAC name safety_th]);;
+
+let CHECKPK3_FULL_INTRO_TAC =
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  FIRST_X_ASSUM(fun th ->
+    ASSUME_CALLEE_SAFETY_TAILED_TAC
+     (REWRITE_RULE[memset_safety_contract] th) "H_MEMSET") THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_GCC12_O2_IMAGE_SUBROUTINE_FULL
+    "H_FROMBYTES" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLYVEC_REDUCE_K3_GCC12_O2_IMAGE_SUBROUTINE_FULL
+    "H_REDUCE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLYVEC_TOBYTES_K3_GCC12_O2_IMAGE_SUBROUTINE_FULL
+    "H_TOBYTES" THEN
+  CONCRETIZE_F_EVENTS_TAC
+   `\(pk:int64) (guard:int64) (mf:int64) (pc:num) (stackpointer:int64)
+     (returnaddress:int64).
+     APPEND (f_ev_epil pk guard mf pc stackpointer returnaddress)
+      (APPEND
+        (ENUMERATEL 72
+          (\i. f_ev_loop pk guard mf pc stackpointer returnaddress i))
+        (f_ev_prol pk guard mf pc stackpointer returnaddress))
+     :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              C_RETURN; ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES;
+              fst MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `aligned 16 (stackpointer:int64)` ASSUME_TAC THENL
+   [UNDISCH_TAC `aligned 16 (word_add stackpointer (word 2784):int64)` THEN
+    CONV_TAC(LAND_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN REWRITE_TAC[];
+    ALL_TAC] THEN
+  ASSUME_TAC(MATCH_MP CHECKPK3_BUFFER_ADDRESS
+              (ASSUME `aligned 16 (stackpointer:int64)`)) THEN
+  SUBGOAL_THEN
+   `64 <= (if aligned 32 (stackpointer:int64) then 64 else 80) /\
+    (if aligned 32 (stackpointer:int64) then 64 else 80) <= 80`
+  STRIP_ASSUME_TAC THENL [COND_CASES_TAC THEN ARITH_TAC; ALL_TAC] THEN
+  ABBREV_TAC `boff = if aligned 32 (stackpointer:int64) then 64 else 80` THEN
+  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
+              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
+                              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD]) THEN
+  GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_PRESERVED_TAC "x21_init" `X21`;;
+
+let CHECKPK3_FULL_PART1_TAC =
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (1--3) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (4--7) THEN
+  CHECKPK_BUFFER_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (8--15) THEN
+  CHECKPK3_FULL_CALL_TAC "H_FROMBYTES"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `n:num`; `pc:num`;
+    `read SP s`; `read X30 s`] 16 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (17--18) THEN
+  CHECKPK3_FULL_CALL_TAC "H_REDUCE"
+   [`e:(uarch_event)list`; `read X0 s`;
+    `\i. word((n DIV 2 EXP (12 * i)) MOD 2 EXP 12):int16`;
+    `pc:num`; `read SP s`; `read X30 s`] 19 THEN
+  CHECKPK_LIST_TAC `s19:armstate` THEN CHECKPK_NORMALIZE_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (20--22) THEN
+  CHECKPK3_FULL_CALL_TAC "H_TOBYTES"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; CHECKPK_L; `pc:num`;
+    `read SP s`; `read X30 s`] 23 THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[CHECKPK_LIST_PROPS]) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (24--29) THEN
+  CHECKPK_NORMALIZE_TAC THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; WORD_ADD_0; EXP; MOD_1] THEN
+  ASM_REWRITE_TAC[] THEN
+  CHECKPK_UNABBREV_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let CHECKPK3_FULL_BODY_TAC =
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+  ABBREV_TAC(mk_eq(`mm:num`,CHECKPK_M)) THEN
+  GHOST_INTRO_TAC `q3:int128` `read Q3` THEN
+  GHOST_INTRO_TAC `q2:int128` `read Q2` THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  CHECKPK_CHUNK_TAC `pk:int64` `n:num` THEN
+  CHECKPK_CHUNK_TAC `word_add stackpointer (word(boff + 1536)):int64`
+                    `mm:num` THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (1--7) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE
+   [MP (SPECL [`stackpointer:int64`; `boff:num`; `i:num`] CHECKPK3_TEST)
+       (CONJ (ASSUME `boff <= 80`) (ASSUME `i < 72`))]) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+    AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;
+    ALL_TAC] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+    AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;
+    ALL_TAC] THEN
+  CONJ_TAC THENL
+   [ASM_REWRITE_TAC[CHECKPK_OR_STEP; CHECKPK_MOD_STEP] THEN
+    REWRITE_TAC[CONJ_ACI; EQ_SYM_EQ];
+    ALL_TAC] THEN
+  FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o check
+   (fun th -> is_eq(concl th) && rhs(concl th) = `mm:num`)) THEN
+  CHECKPK_UNABBREV_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let CHECKPK3_FULL_EXIT_TAC =
+  REWRITE_TAC[] THEN
+  ABBREV_TAC(mk_eq(`mm:num`,CHECKPK_M)) THEN
+  GHOST_INTRO_TAC `q3:int128` `read Q3` THEN
+  GHOST_INTRO_TAC `q2:int128` `read Q2` THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  CHECKPK3_DONE_TAC THEN
+  MAP_EVERY (fun k ->
+    ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC [k] THEN
+    SIMD_SIMPLIFY_TAC[]) (1--21) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (22--28) THEN
+  LIBC_PLT_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC 28 THEN
+  LIBC_SAFE_CALL_TAC "H_MEMSET" MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+    `read X30 s`] (ref CHECKPK_FULL_ALLOWED) 33 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (34--37) THEN
+  LIBC_PLT_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC 37 THEN
+  LIBC_SAFE_CALL_TAC "H_MEMSET" MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+    `read X30 s`] (ref CHECKPK_FULL_ALLOWED) 42 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (43--43) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_EXEC (44--54) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [FIRST_X_ASSUM(fun th ->
+      if is_iff(concl th) && lhand(concl th) = `q3:int128 = word 0`
+      then REWRITE_TAC[SYM th] else NO_TAC) THEN
+    W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w));
+    FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o check
+     (fun th -> is_eq(concl th) && rhs(concl th) = `mm:num`)) THEN
+    CHECKPK_UNABBREV_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC];;
+
+let MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (`!mf ea el ev.
+   memset_safety_contract mf ea el ev
+   ==> exists f_events.
+        forall e pk n guard pc stackpointer returnaddress.
+          aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+          aligned 16 stackpointer /\
+          nonoverlapping (pk,1152) (word pc,0x6480) /\
+          ALLPAIRS nonoverlapping
+           [(word_sub stackpointer (word 2784),2784)]
+           [(pk,1152); (word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
+            (word(pc + 0x1ffe8),8); (ea,el)]
+          ==> ensures arm
+               (\s. aligned_bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read PC s = word (pc + 0x5740) /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [pk] s /\
+                    read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                    read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                    read (memory :> bytes(ea,el)) s = ev /\
+                    read (memory :> bytes(pk,1152)) s = n /\
+                    read events s = e)
+               (\s. read PC s = returnaddress /\
+                    C_RETURN s =
+                    (if !i. i < 768
+                            ==> (n DIV 2 EXP (12 * i)) MOD 2 EXP 12 < 3329
+                     then word 0 else word 0xfffffffc) /\
+                    (exists e2.
+                       read events s = APPEND e2 e /\
+                       e2 = f_events pk guard mf pc
+                              (word_sub stackpointer (word 2784))
+                              returnaddress /\
+                       memaccess_inbounds e2
+                        [pk,1152; word_sub stackpointer (word 2784),2784;
+                         word(pc + 0x1fff8),8; guard,8; word(pc + 0x1ffe8),8;
+                         ea,el]
+                        [word_sub stackpointer (word 2784),2784]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+                MAYCHANGE
+                 [memory :> bytes(word_sub stackpointer (word 2784),2784)])`,
+  CHECKPK3_FULL_INTRO_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `72` `pc + 0x57a8` `pc + 0x57c4`
+   CHECKPK3_INV_FRAME THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC; CHECKPK3_FULL_PART1_TAC; CHECKPK3_FULL_BODY_TAC;
+    CHECKPK3_FULL_EXIT_TAC]);;
