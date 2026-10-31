@@ -389,3 +389,10 @@ of `mlkem_keygen mlkem768 d z` for its 64 bytes of coins `d` and `z`. It
 has the same hypothesis as `mlkem768_indcpa_keypair_derand`. The lemmas
 and tactics for the ML-KEM functions are in
 `arm/proofs/utils/mlkem_native_kem.ml`.
+
+`mlkem768_enc_derand` is the encapsulation with the message as an
+argument, including the input check of FIPS 203: if the encapsulation key
+`ek` passes it (`mlkem_ek_check`), the function returns 0 and writes the
+shared secret and the ciphertext of `mlkem_encaps_internal mlkem768 ek m`
+for the message `m`, and otherwise it returns -4. It has the same
+hypotheses as `mlkem768_indcpa_enc`.
