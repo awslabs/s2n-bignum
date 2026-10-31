@@ -346,3 +346,17 @@ modulus check of FIPS 203 on an encapsulation key: they decode the vector
 in its first 384 * k bytes, reduce it, encode it again and compare the
 result with the key in constant time, so they return 0 if all the 12-bit
 fields of those bytes are below q = 3329, and -4 otherwise.
+
+`mlkem768_indcpa_keypair_derand` is the key generation of K-PKE for
+ML-KEM-768, and its specification is in terms of FIPS 203 itself: the
+public key and the secret key that it writes are those of `kpke_keygen
+mlkem768 d` in `common/fips203.ml`, for the seed `d` of 32 bytes. It has
+the hypothesis that SampleNTT terminates for each entry of the matrix
+(`mlkem_samplentt_terminates`), that is, that the output of SHAKE128 for it
+eventually has 256 fields below q, which gives a k as in the specification
+of `mlkem768_gen_matrix`. The lemmas relating the specifications of the
+functions it calls (congruences modulo q and bounds on coefficients,
+numbers for byte arrays and lists of words) to the definitions of FIPS 203
+and to the forms of K-PKE in the NTT domain in `common/fips203_theory.ml`
+are in `arm/proofs/utils/mlkem_native_fips203.ml`. It has no constant-time
+and memory safety proof yet either.
