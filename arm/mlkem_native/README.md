@@ -380,15 +380,19 @@ memory safety proof yet either.
 message of 32 bytes that it writes is `kpke_decrypt mlkem768 dk ct` for
 the decryption key `dk` of 1152 bytes and the ciphertext `ct` of 1088
 bytes, again for any key, since FIPS 203 decodes its 12-bit fields modulo
-q. It has no constant-time and memory safety proof yet either.
+q. Its theorem of constant time and memory safety, which assumes
+`memset_safety_contract`, states that its events depend only on the
+addresses of its arguments, the stack and the image, not on the key or
+the ciphertext.
 
 The K-PKE functions for ML-KEM-512 and ML-KEM-1024
 (`mlkem512_indcpa_keypair_derand`, `mlkem512_indcpa_enc`,
 `mlkem512_indcpa_dec` and those with `mlkem1024`) have the same
-specifications for `mlkem512` and `mlkem1024`. The hypothesis that the
-stack does not contain address 0 is needed whenever a buffer in the stack
-frame is the fourth output of `poly_getnoise_eta1_4x`: for ML-KEM-512 by
-the key generation but not by the encryption, which uses
+specifications for `mlkem512` and `mlkem1024`, and the decryptions have
+the same theorems of constant time and memory safety. The hypothesis that
+the stack does not contain address 0 is needed whenever a buffer in the
+stack frame is the fourth output of `poly_getnoise_eta1_4x`: for
+ML-KEM-512 by the key generation but not by the encryption, which uses
 `mlkem512_poly_getnoise_eta1122_4x` and `mlkem512_poly_getnoise_eta2`, and
 for ML-KEM-1024 by both. For ML-KEM-1024 the products of the rows of the
 matrix and the vector are computed in a loop, which the proofs unroll.
