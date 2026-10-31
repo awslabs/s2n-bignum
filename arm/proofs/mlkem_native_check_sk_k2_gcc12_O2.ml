@@ -400,3 +400,85 @@ let MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   ARM_STEPS_TAC MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC (50--58) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, using the    *)
+(* combined theorem for mlkem_sha3_256, for the decapsulation, which         *)
+(* branches on the result.                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  prove
+ (`exists f_events.
+     forall e sk (ek:byte list) h guard pc stackpointer returnaddress.
+       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 16 stackpointer /\ LENGTH ek = 800 /\
+       nonoverlapping (sk,1632) (word_sub stackpointer (word 592),592) /\
+       ALLPAIRS nonoverlapping
+        [word_sub stackpointer (word 592),592]
+        [word pc,0x6480; word(pc + 0x1fff8),8; guard,8]
+       ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc)
+                   mlkem_native_libmlkem_gcc12_O2_mc /\
+                 read PC s = word (pc + 0x3ba0) /\
+                 read SP s = stackpointer /\
+                 read X30 s = returnaddress /\
+                 C_ARGUMENTS [sk] s /\
+                 read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                 read (memory :> bytes(word_add sk (word 768),800)) s =
+                 num_of_bytelist ek /\
+                 read (memory :> bytes(word_add sk (word 1568),32)) s = h /\
+                 read events s = e)
+            (\s. read PC s = returnaddress /\
+                 C_RETURN s =
+                 (if h = num_of_bytelist(sha3_256 ek) then word 0
+                  else word 0xfffffffb) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events sk guard pc
+                           (word_sub stackpointer (word 592)) returnaddress /\
+                    memaccess_inbounds e2
+                     [word_add sk (word 768),800;
+                      word_add sk (word 1568),32;
+                      word_sub stackpointer (word 592),592;
+                      word(pc + 0x1fff8),8; guard,8; word(pc + 0x62b0),192]
+                     [word_sub stackpointer (word 592),592]))
+            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+             MAYCHANGE
+              [memory :> bytes(word_sub stackpointer (word 592),592)])`,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_SHA3_256_GCC12_O2_IMAGE_SUBROUTINE_FULL "H_SHA3_256" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              C_RETURN; ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  CHECK_SK_SETUP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+  CHECK_SK_HALVES_TAC `word_add (sk:int64) (word 1568)` `h:num` "hl" "hh" THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC (1--4) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC (5--12) THEN
+  CHECK_SK_BUFFER_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC (13--14) THEN
+  CHECK_SK_GOT_TAC THEN
+  REMOVE_THEN "H_SHA3_256" (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,
+       MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `ek:byte list`;
+       `800`; `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 15 THENL
+     [EXISTS_E2_TAC (ref [`pc:num`; `sk:int64`; `guard:int64`;
+                          `stackpointer:int64`; `returnaddress:int64`]);
+      LABEL_TAC "H_SHA3_256" safety_th]) THEN
+  CHECK_SK_HALVES_TAC CHECK_SK_BUFFER `num_of_bytelist(sha3_256 ek)`
+    "nl" "nh" THEN
+  MAP_EVERY (fun k ->
+    ARM_STEPS_TAC MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC [k] THEN
+    SIMD_SIMPLIFY_TAC[]) (16--45) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC [46] THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC (47--49) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC (50--58) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [CHECK_SK_COMPARE_TAC; DISCHARGE_SAFETY_PROPERTY_TAC]);;
