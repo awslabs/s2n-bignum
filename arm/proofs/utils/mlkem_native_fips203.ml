@@ -892,7 +892,8 @@ let BASEMUL3_ROW_ODD = prove
   REPEAT GEN_TAC THEN CONV_TAC INTEGER_RULE);;
 
 (* ------------------------------------------------------------------------- *)
-(* The hash function G, encoding of coefficients mod q and compression.      *)
+(* The hash function G, encoding of coefficients mod q, compression and      *)
+(* decompression.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_G_BYTES = prove
@@ -986,10 +987,31 @@ let MLKEM_DECOMPRESS_1 = prove
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[mlkem_decompress; mlkem_round] THEN
   CONV_TAC INT_REDUCE_CONV THEN CONV_TAC NUM_REDUCE_CONV);;
 
+let MLKEM_DECOMPRESS_NUM = prove
+ (`!d x. ~(d = 0)
+         ==> mlkem_decompress d (&x) =
+             &((3329 * x + 2 EXP (d - 1)) DIV 2 EXP d)`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[mlkem_decompress; mlkem_round] THEN
+  REWRITE_TAC[INT_OF_NUM_POW; INT_OF_NUM_MUL; INT_OF_NUM_ADD;
+              INT_OF_NUM_DIV; INT_OF_NUM_EQ] THEN
+  SUBGOAL_THEN `2 EXP d = 2 * 2 EXP (d - 1)` SUBST1_TAC THENL
+   [REWRITE_TAC[GSYM(CONJUNCT2 EXP)] THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  REWRITE_TAC[ARITH_RULE `2 * 3329 * x + 2 * e = 2 * (3329 * x + e)`] THEN
+  SIMP_TAC[DIV_MULT2; ARITH_EQ]);;
+
 let MLKEM_DECODE_1 = prove
  (`!m i. mlkem_decode 1 m i = &((num_of_bytelist m DIV 2 EXP i) MOD 2)`,
   REWRITE_TAC[mlkem_decode] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[ARITH_EQ; MULT_CLAUSES; EXP_1]);;
+
+let MLKEM_DECODE_SMALL = prove
+ (`!d b i. d < 12
+           ==> mlkem_decode d b i =
+               &((num_of_bytelist b DIV 2 EXP (d * i)) MOD 2 EXP d)`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[mlkem_decode] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC);;
 
 let TT_DECODE_CONG = prove
  (`!ek (t:int16) idx.
@@ -1068,6 +1090,15 @@ let IVAL_WORD_ADD_BOUNDED = prove
   REPEAT STRIP_TAC THEN
   GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o BINOP_CONV) [GSYM IWORD_IVAL] THEN
   REWRITE_TAC[GSYM IWORD_INT_ADD] THEN MATCH_MP_TAC IVAL_IWORD THEN
+  REWRITE_TAC[DIMINDEX_16] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_REWRITE_TAC[] THEN CONV_TAC INT_REDUCE_CONV THEN ASM_REWRITE_TAC[]);;
+
+let IVAL_WORD_SUB_BOUNDED = prove
+ (`!x y:int16. --(&32768) <= ival x - ival y /\ ival x - ival y < &32768
+               ==> ival(word_sub x y) = ival x - ival y`,
+  REPEAT STRIP_TAC THEN
+  GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o BINOP_CONV) [GSYM IWORD_IVAL] THEN
+  REWRITE_TAC[GSYM IWORD_INT_SUB] THEN MATCH_MP_TAC IVAL_IWORD THEN
   REWRITE_TAC[DIMINDEX_16] THEN CONV_TAC NUM_REDUCE_CONV THEN
   ASM_REWRITE_TAC[] THEN CONV_TAC INT_REDUCE_CONV THEN ASM_REWRITE_TAC[]);;
 
