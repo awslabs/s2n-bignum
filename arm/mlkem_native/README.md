@@ -382,6 +382,17 @@ the decryption key `dk` of 1152 bytes and the ciphertext `ct` of 1088
 bytes, again for any key, since FIPS 203 decodes its 12-bit fields modulo
 q. It has no constant-time and memory safety proof yet either.
 
+The K-PKE functions for ML-KEM-512 and ML-KEM-1024
+(`mlkem512_indcpa_keypair_derand`, `mlkem512_indcpa_enc`,
+`mlkem512_indcpa_dec` and those with `mlkem1024`) have the same
+specifications for `mlkem512` and `mlkem1024`. The hypothesis that the
+stack does not contain address 0 is needed whenever a buffer in the stack
+frame is the fourth output of `poly_getnoise_eta1_4x`: for ML-KEM-512 by
+the key generation but not by the encryption, which uses
+`mlkem512_poly_getnoise_eta1122_4x` and `mlkem512_poly_getnoise_eta2`, and
+for ML-KEM-1024 by both. For ML-KEM-1024 the products of the rows of the
+matrix and the vector are computed in a loop, which the proofs unroll.
+
 `mlkem768_keypair_derand` is the key generation of ML-KEM-768 with the
 randomness as an argument, and its specification is in terms of the
 internal ML-KEM algorithms of FIPS 203: the keys that it writes are those
