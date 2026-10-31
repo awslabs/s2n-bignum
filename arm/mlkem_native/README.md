@@ -426,3 +426,10 @@ and they return -3, or they behave as `mlkem768_keypair_derand` and
 `mlkem768_keypair` this needs the hypothesis that SampleNTT terminates for
 the matrix from any seed. None of these functions has constant-time and
 memory safety proofs yet.
+
+The ML-KEM functions for ML-KEM-512 and ML-KEM-1024
+(`mlkem512_keypair_derand`, `mlkem512_enc_derand`, `mlkem512_dec`,
+`mlkem512_keypair`, `mlkem512_enc` and those with `mlkem1024`) have the
+same specifications for `mlkem512` and `mlkem1024`, with the hypotheses of
+the K-PKE functions that they call. They have no constant-time and memory
+safety proofs yet either.
