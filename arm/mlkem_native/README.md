@@ -375,3 +375,9 @@ key since FIPS 203 decodes them modulo q. The tactics for these functions,
 which call many others on buffers in their stack frames, are in
 `arm/proofs/utils/mlkem_native_indcpa.ml`. It has no constant-time and
 memory safety proof yet either.
+
+`mlkem768_indcpa_dec` is the decryption of K-PKE for ML-KEM-768: the
+message of 32 bytes that it writes is `kpke_decrypt mlkem768 dk ct` for
+the decryption key `dk` of 1152 bytes and the ciphertext `ct` of 1088
+bytes, again for any key, since FIPS 203 decodes its 12-bit fields modulo
+q. It has no constant-time and memory safety proof yet either.
