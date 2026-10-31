@@ -402,8 +402,15 @@ of `mlkem768_gen_matrix`. The lemmas relating the specifications of the
 functions it calls (congruences modulo q and bounds on coefficients,
 numbers for byte arrays and lists of words) to the definitions of FIPS 203
 and to the forms of K-PKE in the NTT domain in `common/fips203_theory.ml`
-are in `arm/proofs/utils/mlkem_native_fips203.ml`. It has no constant-time
-and memory safety proof yet either.
+are in `arm/proofs/utils/mlkem_native_fips203.ml`. Its theorem of constant
+time and memory safety, which assumes `memset_full_contract` (for the
+matrix generation) and `memcpy_safety_contract`, states that its events
+depend only on the addresses and on rho, the seed of the matrix, which is
+part of the public key: they are given as a function of
+`FST(mlkem_g(APPEND d [word 3]))`, and the theorem also states that the
+public key ends with it. Since rho is computed by SHA3-512, this uses a
+theorem for `mlkem_sha3_512` that combines its correctness and its events
+(`..._IMAGE_SUBROUTINE_FULL`).
 
 `mlkem768_indcpa_enc` is the encryption of K-PKE for ML-KEM-768, and its
 specification is in terms of FIPS 203 too: the ciphertext of 1088 bytes
@@ -417,8 +424,10 @@ if the pointer is null. The key is not checked, and the code computes with
 its 12-bit fields as they are, which gives the result of FIPS 203 for any
 key since FIPS 203 decodes them modulo q. The tactics for these functions,
 which call many others on buffers in their stack frames, are in
-`arm/proofs/utils/mlkem_native_indcpa.ml`. It has no constant-time and
-memory safety proof yet either.
+`arm/proofs/utils/mlkem_native_indcpa.ml`. Its theorem of constant time and
+memory safety, with the same contracts, states that its events depend only
+on the addresses and on rho, the last 32 bytes of the key, not on the
+message or the randomness.
 
 `mlkem768_indcpa_dec` is the decryption of K-PKE for ML-KEM-768: the
 message of 32 bytes that it writes is `kpke_decrypt mlkem768 dk ct` for
@@ -432,11 +441,11 @@ the ciphertext.
 The K-PKE functions for ML-KEM-512 and ML-KEM-1024
 (`mlkem512_indcpa_keypair_derand`, `mlkem512_indcpa_enc`,
 `mlkem512_indcpa_dec` and those with `mlkem1024`) have the same
-specifications for `mlkem512` and `mlkem1024`, and the decryptions have
-the same theorems of constant time and memory safety. The hypothesis that
-the stack does not contain address 0 is needed whenever a buffer in the
-stack frame is the fourth output of `poly_getnoise_eta1_4x`: for
-ML-KEM-512 by the key generation but not by the encryption, which uses
+specifications for `mlkem512` and `mlkem1024`, and the same theorems of
+constant time and memory safety. The hypothesis that the stack does not
+contain address 0 is needed whenever a buffer in the stack frame is the
+fourth output of `poly_getnoise_eta1_4x`: for ML-KEM-512 by the key
+generation but not by the encryption, which uses
 `mlkem512_poly_getnoise_eta1122_4x` and `mlkem512_poly_getnoise_eta2`, and
 for ML-KEM-1024 by both. For ML-KEM-1024 the products of the rows of the
 matrix and the vector are computed in a loop, which the proofs unroll.
