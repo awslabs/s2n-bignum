@@ -1040,7 +1040,8 @@ mlkem_native/mlkem_native_poly_rej_uniform_x4_gcc12_O2.native: \
   mlkem_native/mlkem_native_shake128x4_init_gcc12_O2.native \
   mlkem_native/mlkem_native_shake128x4_release_gcc12_O2.native \
   mlkem_native/mlkem_native_shake128x4_squeezeblocks_gcc12_O2.native \
-  proofs/utils/mlkem_native_libc.ml
+  proofs/utils/mlkem_native_libc.ml \
+  proofs/utils/mlkem_native_libc_full.ml
 mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_add_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2.native: \
