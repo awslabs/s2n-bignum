@@ -257,3 +257,111 @@ let MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC (37--40) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, using that   *)
+(* of mlkem_poly_frombytes, for mlkem1024_check_pk, whose result the         *)
+(* encapsulation branches on.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+let LOCAL_FULL_TAC ilist n =
+  REMOVE_THEN "H_POLY" (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,
+       MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      (`e:(uarch_event)list`::ilist) n THENL
+     [EXISTS_E2_TAC (ref [`pc:num`; `r:int64`; `a:int64`;
+                          `stackpointer:int64`; `returnaddress:int64`]);
+      LABEL_TAC "H_POLY" safety_th]);;
+
+let MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  prove
+ (`exists f_events.
+     forall e r a n pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 16 stackpointer /\
+        PAIRWISE nonoverlapping
+          [(r,2048); (a,1536); (word_sub stackpointer (word 32),32)] /\
+        ALLPAIRS nonoverlapping
+          [(r,2048); (a,1536); (word_sub stackpointer (word 32),32)]
+          [(word pc,0x6480)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mc /\
+                  read PC s = word (pc + 0x17b0) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [r; a] s /\
+                  read (memory :> bytes(a,1536)) s = n /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (!i. i < 1024
+                       ==> read(memory :> bytes16
+                            (word_add r (word(2 * i)))) s =
+                           word((n DIV 2 EXP (12 * i)) MOD 2 EXP 12)) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 =
+                     f_events a r pc (word_sub stackpointer (word 32))
+                     returnaddress /\
+                     memaccess_inbounds e2
+                     [a,1536; r,2048; word_sub stackpointer (word 32),32]
+                     [r,2048; word_sub stackpointer (word 32),32]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE
+               [memory :> bytes(r,2048);
+                memory :> bytes(word_sub stackpointer (word 32),32)])`,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL
+    "H_POLY" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
+  ENSURES_INIT_TAC "s0" THEN
+  FIRST_ASSUM(fun th ->
+    if can (term_match [] `read (memory :> bytes(a,1536)) s = n`) (concl th)
+    then MAP_EVERY (fun j ->
+      ASSUME_TAC(CONV_RULE(DEPTH_CONV NUM_MULT_CONV THENC
+                           REWRITE_CONV[WORD_ADD_0])
+        (MATCH_MP POLYVEC_FROMBYTES_SPLIT
+           (CONJ th (ARITH_RULE(mk_binop `(<):num->num->bool`
+                       (mk_small_numeral j) `4`)))))) [0;1;2;3]
+    else failwith "") THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC (1--9) THEN
+  LOCAL_FULL_TAC [`read X0 s`; `read X1 s`;
+                  `(n DIV 2 EXP 0) MOD 2 EXP 3072`; `pc:num`;
+                  `read X30 s`] 10 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC (11--12) THEN
+  PTR_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC (13--17) THEN
+  LOCAL_FULL_TAC [`read X0 s`; `read X1 s`;
+                  `(n DIV 2 EXP 3072) MOD 2 EXP 3072`; `pc:num`;
+                  `read X30 s`] 18 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC (19--20) THEN
+  PTR_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC (21--25) THEN
+  LOCAL_FULL_TAC [`read X0 s`; `read X1 s`;
+                  `(n DIV 2 EXP 6144) MOD 2 EXP 3072`; `pc:num`;
+                  `read X30 s`] 26 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC (27--28) THEN
+  PTR_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC (29--33) THEN
+  LOCAL_FULL_TAC [`read X0 s`; `read X1 s`;
+                  `(n DIV 2 EXP 9216) MOD 2 EXP 3072`; `pc:num`;
+                  `read X30 s`] 34 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC (35--36) THEN
+  PTR_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC (37--40) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [ALL_TAC; DISCHARGE_SAFETY_PROPERTY_TAC] THEN
+  POLYVEC_JOIN_TAC 4 THEN REWRITE_TAC[ARITH_RULE `4096 = 2 EXP 12`] THEN
+  REPEAT CONJ_TAC THEN X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  ASM_SIMP_TAC[POLYVEC_FROMBYTES_FIELD; ADD_CLAUSES]);;
