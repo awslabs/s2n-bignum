@@ -818,3 +818,199 @@ let MLKEM_NATIVE_INDCPA_DEC_K3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
                 memory :> bytes(word_sub stackpointer (word 4992),4992)])`,
   DE3_INTRO_TAC THEN ASM_CASES_TAC `aligned 32 (stackpointer:int64)` THENL
    [DE3_CASE_TAC 96; DE3_CASE_TAC 112]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof, assuming the corresponding         *)
+(* contract for memset. The events depend only on the addresses of the       *)
+(* arguments, the stack and the image, not on the ciphertext or the key. The *)
+(* buffers are kept at stackpointer + b with b the conditional offset (96 or *)
+(* 112), so the two cases need not be separated.                             *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let DE3_SAFE_BUFFER_TAC =
+  SUBGOAL_THEN
+   `word_and (word_add stackpointer (word 127))
+             (word 18446744073709551584):int64 =
+    word_add stackpointer (word(if aligned 32 stackpointer then 96 else 112))`
+  SUBST_ALL_TAC THENL
+   [MATCH_MP_TAC DE3_BUFFER_ADDRESS THEN ASM_REWRITE_TAC[]; ALL_TAC];;
+
+(*** Stack addresses in the form word_add stackpointer (word n) ***)
+
+let DE3_NORMALIZE_TAC =
+  let conv =
+    REWRITE_CONV[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD; GSYM ADD_ASSOC] THENC
+    DEPTH_CONV NUM_ADD_CONV in
+  RULE_ASSUM_TAC(fun th ->
+    if free_in `stackpointer:int64` (concl th)
+    then CONV_RULE conv th else th);;
+
+let DE3_ALLOWED =
+  [`pc:num`; `m:int64`; `c:int64`; `sk:int64`; `guard:int64`; `mf:int64`;
+   `stackpointer:int64`; `returnaddress:int64`];;
+
+let DE3_SAFE_CALL_TAC name ilist n =
+  DE3_NORMALIZE_TAC THEN
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,DE3_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      ilist n THENL
+     [EXISTS_E2_TAC (ref DE3_ALLOWED); LABEL_TAC name safety_th]);;
+
+let DE3_SAFE_INTRO_TAC =
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  FIRST_X_ASSUM(fun th ->
+    ASSUME_CALLEE_SAFETY_TAILED_TAC
+     (REWRITE_RULE[memset_safety_contract] th) "H_MEMSET") THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE
+    "H_DECOMPRESS_DU" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_DECOMPRESS_D4_GCC12_O2_IMAGE_SUBROUTINE_SAFE
+    "H_DECOMPRESS_DV" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE
+    "H_FROMBYTES" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLYVEC_NTT_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE "H_NTT" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE
+    "H_MULCACHE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_BASEMUL_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE "H_BASEMUL" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_SAFE
+    "H_INVNTT" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_SUB_GCC12_O2_IMAGE_SUBROUTINE_SAFE "H_SUB" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE "H_REDUCE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SUBROUTINE_SAFE "H_TOMSG" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              C_RETURN; ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `aligned 16 (stackpointer:int64)` ASSUME_TAC THENL
+   [UNDISCH_TAC `aligned 16 (word_add stackpointer (word 4992):int64)` THEN
+    CONV_TAC(LAND_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN REWRITE_TAC[];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `96 <= (if aligned 32 (stackpointer:int64) then 96 else 112) /\
+    (if aligned 32 (stackpointer:int64) then 96 else 112) <= 112`
+  STRIP_ASSUME_TAC THENL [COND_CASES_TAC THEN ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
+              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
+                              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD]) THEN
+  GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  MAP_EVERY (fun n ->
+    ENSURES_PRESERVED_TAC ("x"^string_of_int n^"_init")
+     (parse_term("X"^string_of_int n))) (19--28);;
+
+let DE3_SAFE_MAIN_TAC =
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC DE3_EXEC (1--3) THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC DE3_EXEC (4--7) THEN DE3_SAFE_BUFFER_TAC THEN
+  ARM_STEPS_TAC DE3_EXEC (8--21) THEN
+  DE3_SAFE_CALL_TAC "H_DECOMPRESS_DU"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `pc:num`; `read SP s`;
+    `read X30 s`] 22 THEN
+  ARM_STEPS_TAC DE3_EXEC (23--25) THEN
+  DE3_SAFE_CALL_TAC "H_DECOMPRESS_DV"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `pc:num`; `read X30 s`]
+   26 THEN
+  ARM_STEPS_TAC DE3_EXEC (27--30) THEN
+  DE3_SAFE_CALL_TAC "H_FROMBYTES"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `pc:num`; `read SP s`;
+    `read X30 s`] 31 THEN
+  ARM_STEPS_TAC DE3_EXEC (32--34) THEN
+  DE3_SAFE_CALL_TAC "H_NTT"
+   [`e:(uarch_event)list`; `read X0 s`; `pc:num`; `read SP s`; `read X30 s`]
+   35 THEN
+  ARM_STEPS_TAC DE3_EXEC (36--38) THEN
+  DE3_SAFE_CALL_TAC "H_MULCACHE"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `pc:num`; `read SP s`;
+    `read X30 s`] 39 THEN
+  ARM_STEPS_TAC DE3_EXEC (40--44) THEN
+  DE3_SAFE_CALL_TAC "H_BASEMUL"
+   [`e:(uarch_event)list`; `read X1 s`; `read X2 s`; `read X3 s`;
+    `read X0 s`; `pc:num`; `read X30 s`] 45 THEN
+  ARM_STEPS_TAC DE3_EXEC (46--47) THEN
+  DE3_SAFE_CALL_TAC "H_INVNTT"
+   [`e:(uarch_event)list`; `read X0 s`; `pc:num`; `read SP s`; `read X30 s`]
+   48 THEN
+  ARM_STEPS_TAC DE3_EXEC (49--51) THEN
+  DE3_SAFE_CALL_TAC "H_SUB"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `pc:num`; `read X30 s`]
+   52 THEN
+  ARM_STEPS_TAC DE3_EXEC (53--54) THEN
+  DE3_SAFE_CALL_TAC "H_REDUCE"
+   [`e:(uarch_event)list`; `read X0 s`; `pc:num`; `read X30 s`] 55 THEN
+  ARM_STEPS_TAC DE3_EXEC (56--58) THEN
+  DE3_SAFE_CALL_TAC "H_TOMSG"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `pc:num`; `read X30 s`]
+   59 THEN
+  MAP_EVERY (fun (k0,k) ->
+    ARM_STEPS_TAC DE3_EXEC (k0--k) THEN LIBC_PLT_TAC DE3_EXEC k THEN
+    LIBC_SAFE_CALL_TAC "H_MEMSET" DE3_EXEC
+     [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+      `read X30 s`] (ref DE3_ALLOWED) (k + 5))
+   [60,63; 69,72; 78,81; 87,90; 96,99] THEN
+  ARM_STEPS_TAC DE3_EXEC (105--105) THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC DE3_EXEC (106--119) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let MLKEM_NATIVE_INDCPA_DEC_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (`!mf ea el ev.
+     memset_safety_contract mf ea el ev
+     ==> exists f_events.
+          forall e m c sk guard pc stackpointer returnaddress.
+            aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+            aligned 16 stackpointer /\
+            nonoverlapping (m,32) (word_sub stackpointer (word 4992),4992) /\
+            nonoverlapping (c,1088) (word pc,0x6480) /\
+            nonoverlapping (sk,1152) (word pc,0x6480) /\
+            ALLPAIRS nonoverlapping
+             [(m,32); (word_sub stackpointer (word 4992),4992)]
+             [(c,1088); (sk,1152); (word pc,0x6480); (word(pc + 0x1fff8),8);
+              (guard,8); (word(pc + 0x1ffe8),8); (ea,el)]
+            ==> ensures arm
+                 (\s. aligned_bytes_loaded s (word pc)
+                        mlkem_native_libmlkem_gcc12_O2_mc /\
+                      read PC s = word (pc + 0x55e0) /\
+                      read SP s = stackpointer /\
+                      read X30 s = returnaddress /\
+                      C_ARGUMENTS [m; c; sk] s /\
+                      read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                      read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                      read (memory :> bytes(ea,el)) s = ev /\
+                      read events s = e)
+                 (\s. read PC s = returnaddress /\
+                      C_RETURN s = word 0 /\
+                      (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events m c sk guard mf pc
+                                (word_sub stackpointer (word 4992))
+                                returnaddress /\
+                         memaccess_inbounds e2
+                          [c,1088; sk,1152; m,32;
+                           word_sub stackpointer (word 4992),4992;
+                           word(pc + 0x1fff8),8; guard,8; word(pc + 0x1ffe8),8;
+                           ea,el; word(pc + 0x6200),16; word(pc + 0x6230),32;
+                           word(pc + 0x6380),256]
+                          [m,32; word_sub stackpointer (word 4992),4992]))
+                 (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                  MAYCHANGE [X18] ,,
+                  MAYCHANGE
+                   [memory :> bytes(m,32);
+                    memory :> bytes(word_sub stackpointer (word 4992),4992)])`,
+  DE3_SAFE_INTRO_TAC THEN DE3_SAFE_MAIN_TAC);;
