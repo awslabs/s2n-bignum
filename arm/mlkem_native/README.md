@@ -396,3 +396,12 @@ argument, including the input check of FIPS 203: if the encapsulation key
 shared secret and the ciphertext of `mlkem_encaps_internal mlkem768 ek m`
 for the message `m`, and otherwise it returns -4. It has the same
 hypotheses as `mlkem768_indcpa_enc`.
+
+`mlkem768_dec` is the decapsulation, including the input check of FIPS
+203: if the decapsulation key `dk` and the ciphertext `c` pass it
+(`mlkem_decaps_check`), the function returns 0 and writes the shared
+secret of `mlkem_decaps_internal mlkem768 dk c`, including the implicit
+rejection, and otherwise it returns -5. The comparison of the ciphertexts
+and the selection of the shared secret are loops in constant time, which
+are verified with invariants. It has the same hypotheses as
+`mlkem768_indcpa_enc`, for the matrix from the seed in `dk`.
