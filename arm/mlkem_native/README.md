@@ -381,3 +381,11 @@ message of 32 bytes that it writes is `kpke_decrypt mlkem768 dk ct` for
 the decryption key `dk` of 1152 bytes and the ciphertext `ct` of 1088
 bytes, again for any key, since FIPS 203 decodes its 12-bit fields modulo
 q. It has no constant-time and memory safety proof yet either.
+
+`mlkem768_keypair_derand` is the key generation of ML-KEM-768 with the
+randomness as an argument, and its specification is in terms of the
+internal ML-KEM algorithms of FIPS 203: the keys that it writes are those
+of `mlkem_keygen mlkem768 d z` for its 64 bytes of coins `d` and `z`. It
+has the same hypothesis as `mlkem768_indcpa_keypair_derand`. The lemmas
+and tactics for the ML-KEM functions are in
+`arm/proofs/utils/mlkem_native_kem.ml`.
