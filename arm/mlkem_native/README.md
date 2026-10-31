@@ -345,7 +345,9 @@ entries. They have no constant-time and memory safety proofs yet either.
 modulus check of FIPS 203 on an encapsulation key: they decode the vector
 in its first 384 * k bytes, reduce it, encode it again and compare the
 result with the key in constant time, so they return 0 if all the 12-bit
-fields of those bytes are below q = 3329, and -4 otherwise.
+fields of those bytes are below q = 3329, and -4 otherwise. Their theorems
+of constant time and memory safety state that their events depend only on
+the addresses of the key, the stack and the image.
 
 `mlkem768_indcpa_keypair_derand` is the key generation of K-PKE for
 ML-KEM-768, and its specification is in terms of FIPS 203 itself: the
