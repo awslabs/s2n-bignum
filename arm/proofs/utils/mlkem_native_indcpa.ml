@@ -111,18 +111,22 @@ let INDCPA_MEMFACT_TAC tm =
     ALL_TAC];;
 
 (* ------------------------------------------------------------------------- *)
-(* The stages: noise polynomials from SamplePolyCBD and PRF (eta = 2), their *)
+(* The stages: noise polynomials from SamplePolyCBD and PRF with eta = 2 or  *)
+(* 3 (2 for INDCPA_NOISE_TAC, INDCPA_NOISE1_TAC and INDCPA_NTT_TAC), their   *)
 (* NTTs, the multiplication cache, inverse NTTs and reductions. In each case *)
 (* a ghost v names the result of the call in state s at stackpointer + base, *)
 (* and its properties are derived from the postcondition.                    *)
 (* ------------------------------------------------------------------------- *)
 
-let INDCPA_NOISE_TAC v base k seed nonce s =
+let INDCPA_NOISE_ETA_TAC eta v base k seed nonce s =
   let goal = parse_term(Printf.sprintf
    "!j i. j < %d /\\ i < 256 \
     ==> (ival((%s:num->int16)(256 * j + i)) == \
-         coeff i (mlkem_cbd 2 (mlkem_prf 2 %s (%s)))) (mod &3329) /\\ \
-        abs(ival((%s:num->int16)(256 * j + i))) <= &2" k v seed nonce v) in
+         coeff i (mlkem_cbd %d (mlkem_prf %d %s (%s)))) (mod &3329) /\\ \
+        abs(ival((%s:num->int16)(256 * j + i))) <= &%d"
+   k v eta eta seed nonce v eta) in
+  let cong = if eta = 2 then MLKEM_NATIVE_CBD2_CONG
+             else MLKEM_NATIVE_CBD3_CONG in
   INDCPA_GHOST_TAC v base (256 * k) s THEN
   SUBGOAL_THEN goal ASSUME_TAC THENL
    [REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
@@ -130,10 +134,12 @@ let INDCPA_NOISE_TAC v base k seed nonce s =
     REWRITE_TAC[ADD_CLAUSES] THEN REPEAT CONJ_TAC THEN
     X_GEN_TAC `i:num` THEN DISCH_TAC THEN INDCPA_UNGHOST_TAC v THEN
     INDCPA_POST_SIMP_TAC (mk_var(s,`:armstate`)) THEN
-    MATCH_MP_TAC MLKEM_NATIVE_CBD2_CONG THEN ASM_REWRITE_TAC[mlkem_prf] THEN
+    MATCH_MP_TAC cong THEN ASM_REWRITE_TAC[mlkem_prf] THEN
     CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
     CONV_TAC NUM_REDUCE_CONV;
     ALL_TAC];;
+
+let INDCPA_NOISE_TAC = INDCPA_NOISE_ETA_TAC 2;;
 
 let INDCPA_NOISE1_TAC v base seed nonce s =
   let goal = parse_term(Printf.sprintf
@@ -150,14 +156,17 @@ let INDCPA_NOISE1_TAC v base seed nonce s =
     CONV_TAC NUM_REDUCE_CONV;
     ALL_TAC];;
 
-let INDCPA_NTT_TAC v base k src seed nonce s =
+let INDCPA_NTT_ETA_TAC eta v base k src seed nonce s =
   let goal = parse_term(Printf.sprintf
    "!j i. j < %d /\\ i < 256 \
     ==> (ival((%s:num->int16)(256 * j + i)) == \
-         mlkem_ntt (mlkem_cbd 2 (mlkem_prf 2 %s (%s))) i) (mod &3329) /\\ \
-        abs(ival((%s:num->int16)(256 * j + i))) <= &23594" k v seed nonce v) in
+         mlkem_ntt (mlkem_cbd %d (mlkem_prf %d %s (%s))) i) (mod &3329) /\\ \
+        abs(ival((%s:num->int16)(256 * j + i))) <= &23594"
+   k v eta eta seed nonce v) in
   let xs = parse_term
     (Printf.sprintf "\\n. (%s:num->int16)(256 * j + n)" src) in
+  let bnd = parse_term(Printf.sprintf
+    "abs(x:int) <= &%d ==> abs x <= &8191" eta) in
   let st = mk_var(s,`:armstate`) and srct = mk_var(src,`:num->int16`) in
   INDCPA_GHOST_TAC v base (256 * k) s THEN
   SUBGOAL_THEN goal ASSUME_TAC THENL
@@ -165,8 +174,7 @@ let INDCPA_NTT_TAC v base k src seed nonce s =
     INDCPA_POST_TAC st "forward_ntt" srct (MP_TAC o SPEC `j:num`) THEN
     ANTS_TAC THENL
      [ASM_REWRITE_TAC[] THEN X_GEN_TAC `n:num` THEN DISCH_TAC THEN
-      MATCH_MP_TAC(INT_ARITH `abs(x:int) <= &2 ==> abs x <= &8191`) THEN
-      ASM_SIMP_TAC[];
+      MATCH_MP_TAC(INT_ARITH bnd) THEN ASM_SIMP_TAC[];
       ALL_TAC] THEN
     DISCH_THEN(MP_TAC o SPEC `i:num`) THEN ASM_REWRITE_TAC[] THEN
     CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
@@ -175,6 +183,8 @@ let INDCPA_NTT_TAC v base k src seed nonce s =
     EXISTS_TAC xs THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
     ASM_SIMP_TAC[MLKEM_CBD_IN_RQ];
     INDCPA_DROP_POST_TAC st "forward_ntt" srct];;
+
+let INDCPA_NTT_TAC = INDCPA_NTT_ETA_TAC 2;;
 
 let INDCPA_MULCACHE_TAC v base k src s =
   let st = mk_var(s,`:armstate`) and srct = mk_var(src,`:num->int16`) in
@@ -378,63 +388,62 @@ let INDCPA_NONZERO_TAC frame off =
     DISCH_TAC];;
 
 (* ------------------------------------------------------------------------- *)
-(* The multiplications of a row of a matrix by a vector in the NTT domain    *)
-(* for ML-KEM-768, by mlkem768_polyvec_basemul_acc_montgomery_cached. The    *)
-(* facts about the inputs are restated in the form of the precondition of    *)
-(* the callee, (abase,aname,aoff) giving the row as aname(aoff + i) at       *)
+(* The multiplications of a row of a matrix by a vector of k polynomials in  *)
+(* the NTT domain, by the polyvec_basemul_acc_montgomery_cached functions    *)
+(* for k = 2, 3 and 4 (ML-KEM-512, ML-KEM-768 and ML-KEM-1024). The facts    *)
+(* about the inputs are restated in the form of the precondition of the      *)
+(* callee, (abase,aname,aoff) giving the row as aname(aoff + i) at           *)
 (* stackpointer + abase, and similarly for the vector and its cache. After   *)
-(* the call, those facts are removed, and INDCPA_BASEMUL3_ROW_TAC derives    *)
+(* the call, those facts are removed, and INDCPA_BASEMULK_ROW_TAC derives    *)
 (* the congruence for the coefficients 2 * p and 2 * p + 1 of the result     *)
 (* from the postcondition, the definitions defs of the arithmetic of the     *)
-(* callee, and rewrites arws for the entries of the row.                     *)
+(* callee, and rewrites arws for the entries of the row. The tactics with 3  *)
+(* in their names are those for k = 3.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let INDCPA_BASEMUL3_PRE_TERMS
+let INDCPA_BASEMULK_PRE_TERMS k
       (abase,aname,aoff) (bbase,bname) (tbase,tname) s =
-  let off base k = if k = 0 then Printf.sprintf "%d + 2 * i" base
-                   else Printf.sprintf "%d + %d + 2 * i" base k in
+  let off base c = if c = 0 then Printf.sprintf "%d + 2 * i" base
+                   else Printf.sprintf "%d + %d + 2 * i" base c in
   let gapp g c = if c = 0 then g^" i" else Printf.sprintf "%s(%d + i)" g c in
   let facts =
-   [abase,0,256,gapp aname aoff; abase,512,256,gapp aname (aoff + 256);
-    abase,1024,256,gapp aname (aoff + 512);
-    bbase,0,256,gapp bname 0; bbase,512,256,gapp bname 256;
-    bbase,1024,256,gapp bname 512;
-    tbase,0,128,gapp tname 0; tbase,256,128,gapp tname 128;
-    tbase,512,128,gapp tname 256] in
-  map (fun (base,k,n,rhs) ->
+    map (fun j -> abase,512 * j,256,gapp aname (aoff + 256 * j)) (0--(k-1)) @
+    map (fun j -> bbase,512 * j,256,gapp bname (256 * j)) (0--(k-1)) @
+    map (fun j -> tbase,256 * j,128,gapp tname (128 * j)) (0--(k-1)) in
+  map (fun (base,c,n,rhs) ->
     parse_term(Printf.sprintf
       "!i. i < %d ==> read (memory :> bytes16 (word_add stackpointer \
-       (word(%s)))) (%s:armstate) = (%s:int16)" n (off base k) s rhs))
+       (word(%s)))) (%s:armstate) = (%s:int16)" n (off base c) s rhs))
    facts;;
 
-let INDCPA_BASEMUL3_PRE_TAC a b t s =
-  MAP_EVERY INDCPA_MEMFACT_TAC (INDCPA_BASEMUL3_PRE_TERMS a b t s);;
+let INDCPA_BASEMULK_PRE_TAC k a b t s =
+  MAP_EVERY INDCPA_MEMFACT_TAC (INDCPA_BASEMULK_PRE_TERMS k a b t s);;
 
 (*** Drop the restricted facts for a call, carried to later states ***)
 
-let INDCPA_BASEMUL3_DROP_PRE_TAC a b t =
-  let tms = INDCPA_BASEMUL3_PRE_TERMS a b t "ss" in
+let INDCPA_BASEMULK_DROP_PRE_TAC k a b t =
+  let tms = INDCPA_BASEMULK_PRE_TERMS k a b t "ss" in
   let sv = `ss:armstate` in
   REPEAT(FIRST_X_ASSUM(fun th ->
     let c = concl th in
     if exists (fun p -> can (term_match (subtract (frees p) [sv]) p) c) tms
     then ALL_TAC else NO_TAC));;
 
-let INDCPA_BASEMUL3_ARGS (aname,aoff) bname tname =
+let INDCPA_BASEMULK_ARGS k (aname,aoff) bname tname =
   let g v c = if c = 0 then parse_term(v^":num->int16") else
     parse_term(Printf.sprintf "\\i. (%s:num->int16)(%d + i)" v c) in
-  [`read X1 s`; `read X2 s`; `read X3 s`; `read X0 s`;
-   g aname aoff; g bname 0; g tname 0;
-   g aname (aoff + 256); g bname 256; g tname 128;
-   g aname (aoff + 512); g bname 512; g tname 256;
-   `pc:num`; `read X30 s`];;
+  [`read X1 s`; `read X2 s`; `read X3 s`; `read X0 s`] @
+  itlist (fun j l -> g aname (aoff + 256 * j) :: g bname (256 * j) ::
+                     g tname (128 * j) :: l) (0--(k-1)) [] @
+  [`pc:num`; `read X30 s`];;
 
-let INDCPA_BASEMUL3_ROW_TAC v dst blabel arws defs =
+let INDCPA_BASEMULK_ROW_TAC k v dst blabel arws defs =
+  let cn = Printf.sprintf "basemul%d_even" k in
   let isrow th =
     match concl th with
       Comb(Comb(Const("==>",_),_),c) ->
         can (find_term (fun t -> t = mk_small_numeral dst)) c &&
-        INDCPA_HAS_CONST "basemul3_even" c
+        INDCPA_HAS_CONST cn c
     | _ -> false in
   X_GEN_TAC `p:num` THEN DISCH_TAC THEN
   SUBGOAL_THEN `2 * p < 256 /\ 2 * p + 1 < 256` STRIP_ASSUME_TAC THENL
@@ -451,3 +460,11 @@ let INDCPA_BASEMUL3_ROW_TAC v dst blabel arws defs =
   CONV_TAC(ONCE_DEPTH_CONV INVERSE_MOD_CONV) THEN
   CONV_TAC(ONCE_DEPTH_CONV INDCPA_CANON_CONV) THEN
   ASM_SIMP_TAC arws;;
+
+let INDCPA_BASEMUL3_PRE_TAC = INDCPA_BASEMULK_PRE_TAC 3;;
+
+let INDCPA_BASEMUL3_DROP_PRE_TAC = INDCPA_BASEMULK_DROP_PRE_TAC 3;;
+
+let INDCPA_BASEMUL3_ARGS = INDCPA_BASEMULK_ARGS 3;;
+
+let INDCPA_BASEMUL3_ROW_TAC = INDCPA_BASEMULK_ROW_TAC 3;;

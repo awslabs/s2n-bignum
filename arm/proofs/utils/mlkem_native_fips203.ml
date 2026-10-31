@@ -575,7 +575,7 @@ let MLKEM_NATIVE_SAMPLE_COEFF = prove
 
 (* ------------------------------------------------------------------------- *)
 (* SamplePolyCBD (FIPS 203 Algorithm 8): the coefficients of mlkem_cbd, and  *)
-(* those computed by mlkem_poly_cbd2.                                        *)
+(* those computed by mlkem_poly_cbd2 and mlkem_poly_cbd3 (eta = 2 and 3).    *)
 (* ------------------------------------------------------------------------- *)
 
 let NSUM_LT_2 = prove
@@ -641,6 +641,47 @@ let MLKEM_NATIVE_CBD2_CONG = prove
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM INT_OF_NUM_LT] THEN
   REPEAT DISCH_TAC THEN
   SUBGOAL_THEN `ival(iword(&(a + b1) - &(c + d)):int16) = &(a + b1) - &(c + d)`
+  SUBST1_TAC THENL
+   [MATCH_MP_TAC IVAL_IWORD THEN REWRITE_TAC[DIMINDEX_16] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[GSYM INT_OF_NUM_ADD] THEN
+    POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN INT_ARITH_TAC;
+    ALL_TAC] THEN
+  CONJ_TAC THENL
+   [MESON_TAC[INT_REM_MOD_SELF; INT_CONG_SYM];
+    REWRITE_TAC[GSYM INT_OF_NUM_ADD] THEN
+    POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN INT_ARITH_TAC]);;
+
+let MLKEM_NATIVE_CBD3_CONG = prove
+ (`!b i x:int16.
+        i < 256 /\
+        x = iword(&((num_of_bytelist b DIV 2 EXP (6 * i)) MOD 2 +
+                    (num_of_bytelist b DIV 2 EXP (6 * i + 1)) MOD 2 +
+                    (num_of_bytelist b DIV 2 EXP (6 * i + 2)) MOD 2) -
+                  &((num_of_bytelist b DIV 2 EXP (6 * i + 3)) MOD 2 +
+                    (num_of_bytelist b DIV 2 EXP (6 * i + 4)) MOD 2 +
+                    (num_of_bytelist b DIV 2 EXP (6 * i + 5)) MOD 2))
+        ==> (ival x == coeff i (mlkem_cbd 3 b)) (mod &3329) /\
+            abs(ival x) <= &3`,
+  REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC SUBST1_TAC) THEN
+  ASM_SIMP_TAC[MLKEM_CBD3_COEFF] THEN
+  MAP_EVERY (fun t -> MP_TAC(SPECL [t; `2`] MOD_LT_EQ))
+   [`num_of_bytelist b DIV 2 EXP (6 * i + 5)`;
+    `num_of_bytelist b DIV 2 EXP (6 * i + 4)`;
+    `num_of_bytelist b DIV 2 EXP (6 * i + 3)`;
+    `num_of_bytelist b DIV 2 EXP (6 * i + 2)`;
+    `num_of_bytelist b DIV 2 EXP (6 * i + 1)`;
+    `num_of_bytelist b DIV 2 EXP (6 * i)`] THEN
+  REWRITE_TAC[ARITH_EQ] THEN
+  SPEC_TAC(`(num_of_bytelist b DIV 2 EXP (6 * i + 5)) MOD 2`,`f:num`) THEN
+  SPEC_TAC(`(num_of_bytelist b DIV 2 EXP (6 * i + 4)) MOD 2`,`e:num`) THEN
+  SPEC_TAC(`(num_of_bytelist b DIV 2 EXP (6 * i + 3)) MOD 2`,`d:num`) THEN
+  SPEC_TAC(`(num_of_bytelist b DIV 2 EXP (6 * i + 2)) MOD 2`,`c:num`) THEN
+  SPEC_TAC(`(num_of_bytelist b DIV 2 EXP (6 * i + 1)) MOD 2`,`b1:num`) THEN
+  SPEC_TAC(`(num_of_bytelist b DIV 2 EXP (6 * i)) MOD 2`,`a:num`) THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM INT_OF_NUM_LT] THEN
+  REPEAT DISCH_TAC THEN
+  SUBGOAL_THEN `ival(iword(&(a + b1 + c) - &(d + e + f)):int16) =
+                &(a + b1 + c) - &(d + e + f)`
   SUBST1_TAC THENL
    [MATCH_MP_TAC IVAL_IWORD THEN REWRITE_TAC[DIMINDEX_16] THEN
     CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[GSYM INT_OF_NUM_ADD] THEN
@@ -812,24 +853,94 @@ let FIPS203_MULTIPLY_NTTS_IN_ZQ = prove
   CONV_TAC INT_REDUCE_CONV THEN
   REWRITE_TAC[INT_REM_POS_EQ; INT_LT_REM_EQ] THEN CONV_TAC INT_REDUCE_CONV);;
 
+let ISUM_LT_2 = prove
+ (`!f. isum {j | j < 2} f = f 0 + f 1`,
+  GEN_TAC THEN SUBGOAL_THEN `{j | j < 2} = 0..1` SUBST1_TAC THENL
+   [REWRITE_TAC[EXTENSION; IN_ELIM_THM; IN_NUMSEG] THEN ARITH_TAC;
+    CONV_TAC(LAND_CONV EXPAND_ISUM_CONV) THEN REWRITE_TAC[INT_ADD_ASSOC]]);;
+
 let ISUM_LT_3 = prove
  (`!f. isum {j | j < 3} f = f 0 + f 1 + f 2`,
   GEN_TAC THEN SUBGOAL_THEN `{j | j < 3} = 0..2` SUBST1_TAC THENL
    [REWRITE_TAC[EXTENSION; IN_ELIM_THM; IN_NUMSEG] THEN ARITH_TAC;
     CONV_TAC(LAND_CONV EXPAND_ISUM_CONV) THEN REWRITE_TAC[INT_ADD_ASSOC]]);;
 
+let ISUM_LT_4 = prove
+ (`!f. isum {j | j < 4} f = f 0 + f 1 + f 2 + f 3`,
+  GEN_TAC THEN SUBGOAL_THEN `{j | j < 4} = 0..3` SUBST1_TAC THENL
+   [REWRITE_TAC[EXTENSION; IN_ELIM_THM; IN_NUMSEG] THEN ARITH_TAC;
+    CONV_TAC(LAND_CONV EXPAND_ISUM_CONV) THEN REWRITE_TAC[INT_ADD_ASSOC]]);;
+
 (* ------------------------------------------------------------------------- *)
 (* The products of a row of a matrix by a vector in the NTT domain for k =   *)
-(* 3, as computed by mlkem768_polyvec_basemul_acc_montgomery_cached up to    *)
-(* the factor 169 = 2^-16 mod q, in terms of MultiplyNTTs, for even and odd  *)
-(* coefficients. The entries of the row in the computation, A', may be just  *)
-(* congruent to those in FIPS 203, A.                                        *)
+(* 2, 3 and 4, as computed by the polyvec_basemul_acc_montgomery_cached      *)
+(* functions up to the factor 169 = 2^-16 mod q, in terms of MultiplyNTTs,   *)
+(* for even and odd coefficients. The entries of the row in the computation, *)
+(* A', may be just congruent to those in FIPS 203, A.                        *)
 (* ------------------------------------------------------------------------- *)
 
 let INT_CONG_RMUL_REM = prove
  (`!t c y n:int. (t == c * y rem n) (mod n) <=> (t == c * y) (mod n)`,
   REPEAT GEN_TAC THEN MP_TAC(SPECL [`y:int`; `n:int`] INT_REM_MOD_SELF) THEN
   CONV_TAC INTEGER_RULE);;
+
+let BASEMUL2_ROW_EVEN = prove
+ (`!(A:num->num->int) (A':num->num->int) (Y:num->num->int) (YT:num->int)
+    (SH:num->num->int) (t:int) p.
+     (!j. j < 2 ==> (A' j (2 * p) == A j (2 * p)) (mod &3329) /\
+                    (A' j (2 * p + 1) == A j (2 * p + 1)) (mod &3329) /\
+                    (Y j (2 * p) == SH j (2 * p)) (mod &3329) /\
+                    (Y j (2 * p + 1) == SH j (2 * p + 1)) (mod &3329) /\
+                    (YT j == Y j (2 * p + 1) *
+                             &17 pow (2 * bitreverse7 p + 1)) (mod &3329)) /\
+     (t == &169 * ((A' 1 (2 * p + 1) * YT 1 + A' 1 (2 * p) * Y 1 (2 * p)) +
+                   (A' 0 (2 * p + 1) * YT 0 + A' 0 (2 * p) * Y 0 (2 * p))))
+     (mod &3329)
+     ==> (t == &169 * ring_sum mlkem_zq {j | j < 2}
+                       (\j. fips203_multiply_ntts (A j) (SH j) (2 * p)))
+         (mod &3329)`,
+  REPEAT GEN_TAC THEN
+  CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN STRIP_TAC THEN
+  REWRITE_TAC[mlkem_zq] THEN
+  SIMP_TAC[RING_SUM_INTEGER_MOD_RING; FINITE_NUMSEG_LT; ARITH_EQ;
+           REWRITE_RULE[mlkem_zq] FIPS203_MULTIPLY_NTTS_IN_ZQ] THEN
+  REWRITE_TAC[INTEGER_MOD_RING_CLAUSES; ISUM_LT_2;
+              FIPS203_MULTIPLY_NTTS_INT] THEN
+  REWRITE_TAC[EVEN_DOUBLE; ARITH_RULE `(2 * p) DIV 2 = p`] THEN
+  CONV_TAC INT_REM_DOWN_CONV THEN REWRITE_TAC[INT_CONG_RMUL_REM] THEN
+  POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
+  SPEC_TAC(`(&17:int) pow (2 * bitreverse7 p + 1)`,`z:int`) THEN GEN_TAC THEN
+  SPEC_TAC(`&3329:int`,`q:int`) THEN SPEC_TAC(`&169:int`,`ri:int`) THEN
+  REPEAT GEN_TAC THEN CONV_TAC INTEGER_RULE);;
+
+let BASEMUL2_ROW_ODD = prove
+ (`!(A:num->num->int) (A':num->num->int) (Y:num->num->int)
+    (SH:num->num->int) (t:int) p.
+     (!j. j < 2 ==> (A' j (2 * p) == A j (2 * p)) (mod &3329) /\
+                    (A' j (2 * p + 1) == A j (2 * p + 1)) (mod &3329) /\
+                    (Y j (2 * p) == SH j (2 * p)) (mod &3329) /\
+                    (Y j (2 * p + 1) == SH j (2 * p + 1)) (mod &3329)) /\
+     (t == &169 *
+           ((A' 1 (2 * p + 1) * Y 1 (2 * p) + A' 1 (2 * p) * Y 1 (2 * p + 1)) +
+            (A' 0 (2 * p + 1) * Y 0 (2 * p) + A' 0 (2 * p) * Y 0 (2 * p + 1))))
+     (mod &3329)
+     ==> (t == &169 * ring_sum mlkem_zq {j | j < 2}
+                       (\j. fips203_multiply_ntts (A j) (SH j) (2 * p + 1)))
+         (mod &3329)`,
+  REPEAT GEN_TAC THEN
+  CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN STRIP_TAC THEN
+  REWRITE_TAC[mlkem_zq] THEN
+  SIMP_TAC[RING_SUM_INTEGER_MOD_RING; FINITE_NUMSEG_LT; ARITH_EQ;
+           REWRITE_RULE[mlkem_zq] FIPS203_MULTIPLY_NTTS_IN_ZQ] THEN
+  REWRITE_TAC[INTEGER_MOD_RING_CLAUSES; ISUM_LT_2;
+              FIPS203_MULTIPLY_NTTS_INT] THEN
+  REWRITE_TAC[EVEN_ADD; EVEN_MULT; ARITH_EVEN; ADD_SUB] THEN
+  CONV_TAC INT_REM_DOWN_CONV THEN REWRITE_TAC[INT_CONG_RMUL_REM] THEN
+  POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
+  SPEC_TAC(`&3329:int`,`q:int`) THEN SPEC_TAC(`&169:int`,`ri:int`) THEN
+  REPEAT GEN_TAC THEN CONV_TAC INTEGER_RULE);;
 
 let BASEMUL3_ROW_EVEN = prove
  (`!(A:num->num->int) (A':num->num->int) (Y:num->num->int) (YT:num->int)
@@ -884,6 +995,68 @@ let BASEMUL3_ROW_ODD = prove
   SIMP_TAC[RING_SUM_INTEGER_MOD_RING; FINITE_NUMSEG_LT; ARITH_EQ;
            REWRITE_RULE[mlkem_zq] FIPS203_MULTIPLY_NTTS_IN_ZQ] THEN
   REWRITE_TAC[INTEGER_MOD_RING_CLAUSES; ISUM_LT_3;
+              FIPS203_MULTIPLY_NTTS_INT] THEN
+  REWRITE_TAC[EVEN_ADD; EVEN_MULT; ARITH_EVEN; ADD_SUB] THEN
+  CONV_TAC INT_REM_DOWN_CONV THEN REWRITE_TAC[INT_CONG_RMUL_REM] THEN
+  POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
+  SPEC_TAC(`&3329:int`,`q:int`) THEN SPEC_TAC(`&169:int`,`ri:int`) THEN
+  REPEAT GEN_TAC THEN CONV_TAC INTEGER_RULE);;
+
+let BASEMUL4_ROW_EVEN = prove
+ (`!(A:num->num->int) (A':num->num->int) (Y:num->num->int) (YT:num->int)
+    (SH:num->num->int) (t:int) p.
+     (!j. j < 4 ==> (A' j (2 * p) == A j (2 * p)) (mod &3329) /\
+                    (A' j (2 * p + 1) == A j (2 * p + 1)) (mod &3329) /\
+                    (Y j (2 * p) == SH j (2 * p)) (mod &3329) /\
+                    (Y j (2 * p + 1) == SH j (2 * p + 1)) (mod &3329) /\
+                    (YT j == Y j (2 * p + 1) *
+                             &17 pow (2 * bitreverse7 p + 1)) (mod &3329)) /\
+     (t == &169 * ((A' 3 (2 * p + 1) * YT 3 + A' 3 (2 * p) * Y 3 (2 * p)) +
+                   (A' 2 (2 * p + 1) * YT 2 + A' 2 (2 * p) * Y 2 (2 * p)) +
+                   (A' 1 (2 * p + 1) * YT 1 + A' 1 (2 * p) * Y 1 (2 * p)) +
+                   (A' 0 (2 * p + 1) * YT 0 + A' 0 (2 * p) * Y 0 (2 * p))))
+     (mod &3329)
+     ==> (t == &169 * ring_sum mlkem_zq {j | j < 4}
+                       (\j. fips203_multiply_ntts (A j) (SH j) (2 * p)))
+         (mod &3329)`,
+  REPEAT GEN_TAC THEN
+  CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN STRIP_TAC THEN
+  REWRITE_TAC[mlkem_zq] THEN
+  SIMP_TAC[RING_SUM_INTEGER_MOD_RING; FINITE_NUMSEG_LT; ARITH_EQ;
+           REWRITE_RULE[mlkem_zq] FIPS203_MULTIPLY_NTTS_IN_ZQ] THEN
+  REWRITE_TAC[INTEGER_MOD_RING_CLAUSES; ISUM_LT_4;
+              FIPS203_MULTIPLY_NTTS_INT] THEN
+  REWRITE_TAC[EVEN_DOUBLE; ARITH_RULE `(2 * p) DIV 2 = p`] THEN
+  CONV_TAC INT_REM_DOWN_CONV THEN REWRITE_TAC[INT_CONG_RMUL_REM] THEN
+  POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
+  SPEC_TAC(`(&17:int) pow (2 * bitreverse7 p + 1)`,`z:int`) THEN GEN_TAC THEN
+  SPEC_TAC(`&3329:int`,`q:int`) THEN SPEC_TAC(`&169:int`,`ri:int`) THEN
+  REPEAT GEN_TAC THEN CONV_TAC INTEGER_RULE);;
+
+let BASEMUL4_ROW_ODD = prove
+ (`!(A:num->num->int) (A':num->num->int) (Y:num->num->int)
+    (SH:num->num->int) (t:int) p.
+     (!j. j < 4 ==> (A' j (2 * p) == A j (2 * p)) (mod &3329) /\
+                    (A' j (2 * p + 1) == A j (2 * p + 1)) (mod &3329) /\
+                    (Y j (2 * p) == SH j (2 * p)) (mod &3329) /\
+                    (Y j (2 * p + 1) == SH j (2 * p + 1)) (mod &3329)) /\
+     (t == &169 *
+           ((A' 3 (2 * p + 1) * Y 3 (2 * p) + A' 3 (2 * p) * Y 3 (2 * p + 1)) +
+            (A' 2 (2 * p + 1) * Y 2 (2 * p) + A' 2 (2 * p) * Y 2 (2 * p + 1)) +
+            (A' 1 (2 * p + 1) * Y 1 (2 * p) + A' 1 (2 * p) * Y 1 (2 * p + 1)) +
+            (A' 0 (2 * p + 1) * Y 0 (2 * p) + A' 0 (2 * p) * Y 0 (2 * p + 1))))
+     (mod &3329)
+     ==> (t == &169 * ring_sum mlkem_zq {j | j < 4}
+                       (\j. fips203_multiply_ntts (A j) (SH j) (2 * p + 1)))
+         (mod &3329)`,
+  REPEAT GEN_TAC THEN
+  CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN STRIP_TAC THEN
+  REWRITE_TAC[mlkem_zq] THEN
+  SIMP_TAC[RING_SUM_INTEGER_MOD_RING; FINITE_NUMSEG_LT; ARITH_EQ;
+           REWRITE_RULE[mlkem_zq] FIPS203_MULTIPLY_NTTS_IN_ZQ] THEN
+  REWRITE_TAC[INTEGER_MOD_RING_CLAUSES; ISUM_LT_4;
               FIPS203_MULTIPLY_NTTS_INT] THEN
   REWRITE_TAC[EVEN_ADD; EVEN_MULT; ARITH_EVEN; ADD_SUB] THEN
   CONV_TAC INT_REM_DOWN_CONV THEN REWRITE_TAC[INT_CONG_RMUL_REM] THEN
