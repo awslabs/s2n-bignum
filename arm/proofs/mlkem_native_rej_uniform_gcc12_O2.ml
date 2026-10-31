@@ -1001,3 +1001,430 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
    (INST [`pc + 0x4a90`,`pc:num`]
      (SPEC_ALL MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_SAFE))
    [MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IN_IMAGE]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, for the      *)
+(* callers, whose events depend on the samples. The events are a function of *)
+(* the arguments and the list of fields inlist. They are given by a template *)
+(* with the index of the last group of 3 bytes that is read,                 *)
+(* mlkem_native_rej_groups, and with the events of each group by cases on    *)
+(* which of its two fields are accepted and, for the last group, on whether  *)
+(* the result is then full. The loop invariant is that of the correctness    *)
+(* proof for the groups up to the last one, and states the final result      *)
+(* after it.                                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+let mlkem_native_rej_groups = new_definition
+ `mlkem_native_rej_groups offset buflen (inlist:(12 word)list) =
+    minimal n. buflen < 3 * (n + 2) \/
+               256 <= offset +
+                      LENGTH(REJ_SAMPLE(SUB_LIST(0,2 * (n + 1)) inlist))`;;
+
+let REJ_FULL_TEMPLATE =
+ `\(r:int64) (offset:num) (buf:int64) (buflen:num) (inlist:(12 word)list)
+   (pc:num) (returnaddress:int64).
+   if offset = 256 then f_ev_full r offset buf buflen inlist pc returnaddress
+   else
+    APPEND (f_ev_ret r offset buf buflen inlist pc returnaddress)
+     (APPEND
+       (ENUMERATEL (mlkem_native_rej_groups offset buflen inlist + 1)
+         (\i. if i = mlkem_native_rej_groups offset buflen inlist
+              then
+               (if val(EL (2 * i) inlist) < 3329
+                then
+                 (if offset + LENGTH(REJ_SAMPLE(SUB_LIST(0,2 * i) inlist)) =
+                     255
+                  then f_ev_bx r offset buf buflen inlist pc returnaddress i
+                  else if val(EL (2 * i + 1) inlist) < 3329
+                  then
+                   (if offset + LENGTH(REJ_SAMPLE(SUB_LIST(0,2 * i) inlist)) =
+                       254
+                    then f_ev_ax r offset buf buflen inlist pc returnaddress i
+                    else f_ev_ab r offset buf buflen inlist pc returnaddress i)
+                  else f_ev_bb r offset buf buflen inlist pc returnaddress i)
+                else
+                 (if val(EL (2 * i + 1) inlist) < 3329
+                  then
+                   (if offset + LENGTH(REJ_SAMPLE(SUB_LIST(0,2 * i) inlist)) =
+                       255
+                    then f_ev_cx r offset buf buflen inlist pc returnaddress i
+                    else f_ev_cb r offset buf buflen inlist pc returnaddress i)
+                  else f_ev_db r offset buf buflen inlist pc returnaddress i))
+              else
+               (if val(EL (2 * i) inlist) < 3329
+                then
+                 (if val(EL (2 * i + 1) inlist) < 3329
+                  then f_ev_a r offset buf buflen inlist pc returnaddress i
+                  else f_ev_b r offset buf buflen inlist pc returnaddress i)
+                else
+                 (if val(EL (2 * i + 1) inlist) < 3329
+                  then f_ev_c r offset buf buflen inlist pc returnaddress i
+                  else f_ev_d r offset buf buflen inlist pc returnaddress i))))
+       (f_ev_prol r offset buf buflen inlist pc returnaddress))
+   :(uarch_event)list`;;
+
+let REJ_FULL_INTRO_TAC =
+  CONCRETIZE_F_EVENTS_TAC REJ_FULL_TEMPLATE THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC
+   [`r:int64`; `offset:num`; `buf:int64`; `buflen:num`;
+    `inlist:(12 word)list`; `pc:num`; `returnaddress:int64`] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; NONOVERLAPPING_CLAUSES; ALL;
+              SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  MP_TAC(ISPECL
+   [`buf:int64`; `LENGTH(inlist:(12 word)list)`;
+    `buflen:num`; `inlist:(12 word)list`]
+   (INST_TYPE [`:12`,`:N`] WORDLIST_FROM_MEMORY_EQ_ALT)) THEN
+  ASM_REWRITE_TAC[DIMINDEX_12] THEN DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+  REWRITE_TAC[GSYM REJ_SAMPLE] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[GSYM REJ_SAMPLE] THEN
+  ABBREV_TAC `outlist = SUB_LIST (0,256 - offset) (REJ_SAMPLE inlist)` THEN
+  MP_TAC(ISPECL
+   [`word_add r (word(2 * offset)):int64`; `LENGTH(outlist:int16 list)`;
+    `2 * LENGTH(outlist:int16 list)`; `outlist:int16 list`]
+   (INST_TYPE [`:16`,`:N`] WORDLIST_FROM_MEMORY_EQ_ALT)) THEN
+  REWRITE_TAC[DIMINDEX_16; ARITH_RULE `16 * l = 8 * 2 * l`] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[th]);;
+
+let REJ_FULL_256_TAC =
+  REWRITE_TAC[EQT_INTRO(ASSUME `offset = 256`)] THEN
+  SUBGOAL_THEN `outlist:int16 list = []` SUBST_ALL_TAC THENL
+   [EXPAND_TAC "outlist" THEN
+    REWRITE_TAC[ASSUME `offset = 256`; SUB_REFL; SUB_LIST_CLAUSES];
+    ALL_TAC] THEN
+  REWRITE_TAC[LENGTH; MULT_CLAUSES; ADD_CLAUSES; READ_COMPONENT_COMPOSE;
+              READ_BYTES_TRIVIAL; num_of_wordlist] THEN
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_EXEC (1--3) THEN
+  W32_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_EXEC (4--4) THEN
+  TRY DECIDE_BRANCH_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_EXEC (5--5) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let REJ_FULL_N_TAC =
+  SUBGOAL_THEN `offset < 256` ASSUME_TAC THENL
+   [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[EQF_INTRO(ASSUME `~(offset = 256)`)] THEN
+  SUBGOAL_THEN
+   `?N. buflen < 3 * (N + 2) \/
+        256 <= offset + LENGTH(REJ_SAMPLE(SUB_LIST(0,2 * (N + 1)) inlist))`
+  MP_TAC THENL
+   [EXISTS_TAC `buflen:num` THEN ARITH_TAC;
+    GEN_REWRITE_TAC LAND_CONV [num_WOP]] THEN
+  DISCH_THEN(X_CHOOSE_THEN `N:num`
+   (CONJUNCTS_THEN2 ASSUME_TAC ASSUME_TAC)) THEN
+  SUBGOAL_THEN `mlkem_native_rej_groups offset buflen inlist = N`
+  SUBST1_TAC THENL
+   [REWRITE_TAC[mlkem_native_rej_groups] THEN
+    MATCH_MP_TAC MINIMAL_UNIQUE THEN ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  FIRST_X_ASSUM(MP_TAC o check (is_forall o concl)) THEN
+  REWRITE_TAC[DE_MORGAN_THM; NOT_LT; NOT_LE] THEN DISCH_TAC;;
+
+let rej_inv_full = `\i s.
+  read X3 s = word buflen /\ read X8 s = r /\
+  read X9 s = word_zx(word_sub (word 3) (word_zx buf:int32)) /\
+  read X10 s = word 255 /\ read X11 s = word 3328 /\
+  read X30 s = returnaddress /\
+  read(memory :> bytes(buf,buflen)) s = num_of_wordlist inlist /\
+  (if i <= N then
+    read X0 s =
+    word(offset + LENGTH(REJ_SAMPLE(SUB_LIST(0,2 * i) inlist))) /\
+    read X2 s = word_add buf (word(3 * i)) /\
+    read(memory :> bytes(word_add r (word(2 * offset)),
+                         2 * LENGTH(REJ_SAMPLE(SUB_LIST(0,2 * i) inlist)))) s =
+    num_of_wordlist(REJ_SAMPLE(SUB_LIST(0,2 * i) inlist))
+   else
+    read X0 s = word(offset + LENGTH(outlist:int16 list)) /\
+    read(memory :> bytes(word_add r (word(2 * offset)),2 * LENGTH outlist)) s =
+    num_of_wordlist outlist)`;;
+
+let REJ_FULL_PROL_TAC =
+  REWRITE_TAC[LE_0] THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_EXEC (1--3) THEN
+  W32_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_EXEC (4--4) THEN
+  DECIDE_BRANCH_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_EXEC (5--9) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[MULT_CLAUSES; SUB_LIST_CLAUSES; REJ_SAMPLE_EMPTY; LENGTH;
+              ADD_CLAUSES; WORD_ADD_0; READ_COMPONENT_COMPOSE;
+              READ_BYTES_TRIVIAL; num_of_wordlist] THEN
+  CONJ_TAC THENL [WORD_SMALL_TAC; DISCHARGE_SAFETY_PROPERTY_TAC];;
+
+(*** The conditions in the template for group i, decided from the facts  ***)
+(*** for it before the simulation, which loses the abbreviations n0, n1 ***)
+
+let rej_free_conds tm =
+  let rec go bound tm acc =
+    match tm with
+      Comb(Comb(Comb(Const("COND",_),p),a),b) ->
+        let acc' = if intersect (frees p) bound = [] && not (mem p acc)
+                   then p::acc else acc in
+        go bound p (go bound a (go bound b acc'))
+    | Comb(l,r) -> go bound l (go bound r acc)
+    | Abs(v,b) -> go (v::bound) b acc
+    | _ -> acc in
+  go [] tm [];;
+
+let REJ_DECIDE_ONE_TAC p =
+  let tac = (ASM_REWRITE_TAC[] THEN NO_TAC) ORELSE SIMPLE_ARITH_TAC ORELSE
+            (ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC) in
+  (SUBGOAL_THEN p (fun th -> REWRITE_TAC[EQT_INTRO th]) THENL
+    [tac; ALL_TAC]) ORELSE
+  (SUBGOAL_THEN (mk_neg p) (fun th -> REWRITE_TAC[EQF_INTRO th]) THENL
+    [tac; ALL_TAC]);;
+
+let REJ_DECIDE_CONDS_TAC =
+  W(fun (asl,w) ->
+    let ps = rej_free_conds w in
+    EVERY (map (fun p -> TRY(REJ_DECIDE_ONE_TAC p)) ps));;
+
+let REJ_PRESELECT_TAC =
+  REWRITE_TAC[ENUMERATEL_ADD1] THEN REJ_DECIDE_CONDS_TAC THEN
+  REJ_DECIDE_CONDS_TAC;;
+
+let REJ_OLD_EVENTS_TAC =
+  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+  W(fun (asl,w) ->
+    let is_e2eq t =
+      is_eq t && is_var(lhs t) && fst(dest_var(lhs t)) = "e2" in
+    let is_macc t =
+      match strip_comb t with
+        Const("memaccess_inbounds",_),_ -> true | _ -> false in
+    let eqths = mapfilter (fun (_,th) ->
+      let c = concl th in
+      if is_e2eq c then th
+      else if is_conj c && is_e2eq(lhand c) then CONJUNCT1 th
+      else failwith "") asl
+    and mths = mapfilter (fun (_,th) ->
+      let c = concl th in
+      if is_conj c && is_e2eq(lhand c) then CONJUNCT2 th
+      else if is_macc c then th else failwith "") asl in
+    FIRST(map (fun eqth -> FIRST(map (fun mth ->
+      ACCEPT_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV) (SUBS[eqth] mth)))
+      mths)) eqths));;
+
+let REJ_FULL_DISCHARGE_TAC =
+  TRY(FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o check (fun th ->
+        is_eq(concl th) && rhs(concl th) = `L:int16 list`))) THEN
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
+  MATCH_MP_TAC(TAUT `b /\ a ==> a /\ b`) THEN
+  CONJ_TAC THENL
+   [ONCE_REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[memaccess_inbounds; memaccess_inbounds_def;
+                  ALL; EX; FST; SND] THEN
+      REPEAT CONJ_TAC THEN
+      TRY(REPEAT ((DISJ1_TAC THEN CONTAINED_ASM_TAC) ORELSE DISJ2_TAC ORELSE
+                  CONTAINED_ASM_TAC) THEN NO_TAC);
+      REJ_OLD_EVENTS_TAC];
+    FULL_UNIFY_F_EVENTS_TAC ORELSE
+    (CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+     REWRITE_TAC[APPEND; APPEND_NIL; GSYM APPEND_ASSOC] THEN NO_TAC)];;
+
+let REJ_FULL_CLOSE_TAC =
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THEN
+  FIRST
+   [REJ_FULL_DISCHARGE_TAC;
+    REWRITE_TAC[LENGTH_APPEND; LENGTH] THEN AP_TERM_TAC THEN
+    SIMPLE_ARITH_TAC;
+    REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+    AP_TERM_TAC THEN AP_TERM_TAC THEN SIMPLE_ARITH_TAC;
+    MATCH_MP_TAC READ_BYTES16_APPEND THEN ASM_REWRITE_TAC[APPEND] THEN
+    REPEAT(MATCH_MP_TAC READ_BYTES16_CONS THEN CONJ_TAC THENL
+            [READ16_TAC; ALL_TAC]) THEN
+    REWRITE_TAC[READ_BYTES16_NIL]];;
+
+let REJ_FULL_NORMAL_TAC =
+  SUBGOAL_THEN `i <= N /\ i + 1 <= N /\ i + 1 < N + 1 /\ ~(i = N)`
+  STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+  FIRST_ASSUM(fun th ->
+    if is_forall(concl th) && free_in `N:num` (concl th)
+    then STRIP_ASSUME_TAC(MP (SPEC `i:num` th) (ASSUME `i < N`))
+    else failwith "") THEN
+  SUBGOAL_THEN `2 * i + 2 <= LENGTH(inlist:(12 word)list)` ASSUME_TAC
+  THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN
+   `SUB_LIST(0,2 * (i + 1)) inlist =
+    APPEND (SUB_LIST(0,2 * i) inlist)
+           [EL (2 * i) inlist:12 word; EL (2 * i + 1) inlist]`
+  (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THENL
+   [ASM_SIMP_TAC[ARITH_RULE `2 * (i + 1) = 2 * i + 2`; SUB_LIST_0_SNOC2];
+    ALL_TAC] THEN
+  REJ_GROUP_TAC `i:num` THEN
+  (SUBGOAL_THEN `offset + LENGTH(L:int16 list) < 256` ASSUME_TAC THENL
+    [ASM_ARITH_TAC; ALL_TAC]) THEN
+  REJ_PRESELECT_TAC THEN
+  REJ_CASE_TAC `i:num` `word (pc + 84):int64` THEN REJ_FULL_CLOSE_TAC;;
+
+let REJ_FULL_LAST_TAC =
+  SUBGOAL_THEN `i:num = N` SUBST_ALL_TAC THENL
+   [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[LE_REFL; LT_REFL; ARITH_RULE `~(N + 1 <= N)`] THEN
+  SUBGOAL_THEN `?k. buflen = 3 * k /\ LENGTH(inlist:(12 word)list) = 2 * k`
+  STRIP_ASSUME_TAC THENL
+   [SUBGOAL_THEN `EVEN(LENGTH(inlist:(12 word)list))` MP_TAC THENL
+     [SUBGOAL_THEN `3 * LENGTH(inlist:(12 word)list) = 2 * buflen` MP_TAC
+      THENL [ASM_ARITH_TAC; DISCH_THEN(MP_TAC o AP_TERM `EVEN`)] THEN
+      REWRITE_TAC[EVEN_MULT; ARITH];
+      REWRITE_TAC[EVEN_EXISTS] THEN MATCH_MP_TAC MONO_EXISTS THEN
+      ASM_ARITH_TAC];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `3 * (N + 1) <= buflen /\
+    offset + LENGTH(REJ_SAMPLE(SUB_LIST(0,2 * N) inlist)) < 256`
+  STRIP_ASSUME_TAC THENL
+   [ASM_CASES_TAC `N = 0` THENL
+     [ASM_REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; SUB_LIST_CLAUSES;
+                      REJ_SAMPLE_EMPTY; LENGTH] THEN ASM_ARITH_TAC;
+      FIRST_X_ASSUM(MP_TAC o SPEC `N - 1` o check (is_forall o concl)) THEN
+      ASM_SIMP_TAC[ARITH_RULE
+       `~(N = 0) ==> N - 1 < N /\ N - 1 + 1 = N /\ N - 1 + 2 = N + 1`]];
+    ALL_TAC] THEN
+  SUBGOAL_THEN `2 * N + 2 <= LENGTH(inlist:(12 word)list)` ASSUME_TAC THENL
+   [ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN
+   `buflen < 3 * (N + 2) ==> LENGTH(inlist:(12 word)list) <= 2 * (N + 1)`
+  ASSUME_TAC THENL
+   [ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC o MATCH_MP (ARITH_RULE
+     `3 * k < 3 * (N + 2) ==> k <= N + 1`)) THEN ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `outlist =
+    APPEND (REJ_SAMPLE(SUB_LIST(0,2 * N) inlist))
+     (SUB_LIST(0,256 - offset - LENGTH(REJ_SAMPLE(SUB_LIST(0,2 * N) inlist)))
+       (REJ_SAMPLE [EL (2 * N) inlist; EL (2 * N + 1) inlist]))`
+  SUBST1_TAC THENL
+   [FIRST_X_ASSUM(SUBST1_TAC o SYM o check (fun th ->
+      rhs(concl th) = `outlist:int16 list`)) THEN
+    MP_TAC(ISPECL [`inlist:(12 word)list`; `2 * (N + 1)`; `256 - offset`]
+      SUB_LIST_REJ_SAMPLE_PREFIX) THEN
+    ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN SUBST1_TAC] THEN
+    SIMP_TAC[ARITH_RULE `2 * (N + 1) = 2 * N + 2`; SUB_LIST_0_SNOC2;
+             ASSUME `2 * N + 2 <= LENGTH(inlist:(12 word)list)`] THEN
+    REWRITE_TAC[REJ_SAMPLE_APPEND] THEN
+    MATCH_MP_TAC SUB_LIST_APPEND_RIGHT THEN ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  DISCARD_MATCHING_ASSUMPTIONS
+   [`buflen = 3 * k`; `LENGTH(inlist:(12 word)list) = 2 * k`] THEN
+  SUBGOAL_THEN
+   `SUB_LIST(0,2 * (N + 1)) inlist =
+    APPEND (SUB_LIST(0,2 * N) inlist)
+           [EL (2 * N) inlist:12 word; EL (2 * N + 1) inlist]`
+  (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+   [SIMP_TAC[ARITH_RULE `2 * (N + 1) = 2 * N + 2`; SUB_LIST_0_SNOC2;
+             ASSUME `2 * N + 2 <= LENGTH(inlist:(12 word)list)`];
+    ALL_TAC] THEN
+  REJ_GROUP_TAC `N:num` THEN
+  MP_TAC(MATCH_MP (ARITH_RULE
+   `offset + LENGTH(L:int16 list) < 256
+    ==> 255 <= offset + LENGTH L \/
+        254 <= offset + LENGTH L /\ offset + LENGTH L < 255 \/
+        offset + LENGTH L < 254`)
+   (ASSUME `offset + LENGTH(L:int16 list) < 256`)) THEN
+  DISCH_THEN(REPEAT_TCL DISJ_CASES_THEN STRIP_ASSUME_TAC) THEN
+  RESOLVE_EXIT_TAC THEN SUBLIST_EVAL_TAC THEN
+  REJ_PRESELECT_TAC THEN
+  REJ_CASE_TAC `N:num` `word (pc + 152):int64` THEN REJ_FULL_CLOSE_TAC;;
+
+let REJ_FULL_EPIL_TAC =
+  REWRITE_TAC[ARITH_RULE `~(N + 1 <= N)`] THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_EXEC (1--1) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  REJ_FULL_DISCHARGE_TAC;;
+
+let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_FULL = prove
+ (`exists f_events.
+  forall e r offset buf buflen (inlist:(12 word)list) pc returnaddress.
+      offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
+      8 * buflen = 12 * LENGTH inlist /\
+      ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
+          [(word pc,0x9c); (buf,buflen)]
+      ==> ensures arm
+           (\s. aligned_bytes_loaded s (word pc)
+                  mlkem_native_rej_uniform_gcc12_O2_mc /\
+                read PC s = word pc /\
+                read X30 s = returnaddress /\
+                C_ARGUMENTS [r; word offset; buf; word buflen] s /\
+                wordlist_from_memory(buf,LENGTH inlist) s = inlist /\
+                read events s = e)
+           (\s. read PC s = returnaddress /\
+                (let inlist' = MAP (word_zx:12 word->16 word) inlist in
+                 let outlist =
+                   SUB_LIST (0,256 - offset)
+                            (FILTER (\x. val x < 3329) inlist') in
+                 let outlen = LENGTH outlist in
+                 C_RETURN s = word(offset + outlen) /\
+                 wordlist_from_memory(word_add r (word(2 * offset)),outlen) s =
+                 outlist) /\
+                (exists e2.
+                   read events s = APPEND e2 e /\
+                   e2 = f_events r offset buf buflen inlist pc returnaddress /\
+                   memaccess_inbounds e2 [buf,buflen]
+                     [word_add r (word(2 * offset)),2 * (256 - offset)]))
+           (MAYCHANGE [PC; X0; X1; X2; X4; X5; X6; X7; X8; X9; X10; X11] ,,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+            MAYCHANGE [memory :> bytes(word_add r (word(2 * offset)),
+                                       2 * (256 - offset))])`,
+  REJ_FULL_INTRO_TAC THEN
+  ASM_CASES_TAC `offset = 256` THENL
+   [REJ_FULL_256_TAC;
+    REJ_FULL_N_TAC THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `N + 1` `pc + 0x54` `pc + 0x98`
+      rej_inv_full THEN
+    REPEAT CONJ_TAC THENL
+     [ARITH_TAC;
+      REJ_FULL_PROL_TAC;
+      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+      ASM_CASES_TAC `i < N` THENL [REJ_FULL_NORMAL_TAC; REJ_FULL_LAST_TAC];
+      REJ_FULL_EPIL_TAC]]);;
+
+let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (`exists f_events.
+     forall e r offset buf buflen (inlist:(12 word)list) pc returnaddress.
+      aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+      offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
+      8 * buflen = 12 * LENGTH inlist /\
+      ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
+          [(word pc,0x6480); (buf,buflen)]
+      ==> ensures arm
+           (\s. aligned_bytes_loaded s (word pc)
+                  mlkem_native_libmlkem_gcc12_O2_mc /\
+                read PC s = word (pc + 0x4a90) /\
+                read X30 s = returnaddress /\
+                C_ARGUMENTS [r; word offset; buf; word buflen] s /\
+                wordlist_from_memory(buf,LENGTH inlist) s = inlist /\
+                read events s = e)
+           (\s. read PC s = returnaddress /\
+                (let inlist' = MAP (word_zx:12 word->16 word) inlist in
+                 let outlist =
+                   SUB_LIST (0,256 - offset)
+                            (FILTER (\x. val x < 3329) inlist') in
+                 let outlen = LENGTH outlist in
+                 C_RETURN s = word(offset + outlen) /\
+                 wordlist_from_memory(word_add r (word(2 * offset)),outlen) s =
+                 outlist) /\
+                (exists e2.
+                   read events s = APPEND e2 e /\
+                   e2 = f_events r offset buf buflen inlist pc returnaddress /\
+                   memaccess_inbounds e2 [buf,buflen]
+                     [word_add r (word(2 * offset)),2 * (256 - offset)]))
+           (MAYCHANGE [PC; X0; X1; X2; X4; X5; X6; X7; X8; X9; X10; X11] ,,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+            MAYCHANGE [memory :> bytes(word_add r (word(2 * offset)),
+                                       2 * (256 - offset))])`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC
+   MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_FULL
+   [`pc + 0x4a90`,`pc:num`]
+   [MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IN_IMAGE]);;
