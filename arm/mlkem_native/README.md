@@ -54,10 +54,13 @@ is at least one group of 3 bytes in the buffer, so the specification
 requires `3 <= buflen`. The callers also set X3 only once for several
 calls, relying on it not being changed, which the ABI would allow, so the
 specifications state exactly which registers may be changed. As for the
-hand-written kernel, there is a proof of memory safety but not of
-constant time, since the control flow depends on the values sampled.
-Correctness and memory safety are proved together, since the simulation
-of the loop is the same.
+hand-written kernel, there is a proof of memory safety but not of constant
+time, since the control flow depends on the values sampled. Correctness and
+memory safety are proved together, since the simulation of the loop is the
+same. For the callers, whose input is the output of SHAKE128 from a public
+seed, there is also a combined theorem `..._IMAGE_SUBROUTINE_FULL` (see
+below) whose events are a function of the arguments and of the list of
+12-bit fields.
 
 The SHA-256 hashes of the binaries used, which match those recorded in
 `binaries/builds.json`, are:
@@ -340,15 +343,22 @@ and `mlk_rej_uniform_c`. Its loop squeezes one more block of 168 bytes
 until there are 256 samples, so its specification has the hypothesis that
 there are at least 256 samples, 12-bit fields below 3329, among the first
 504 + 168 * k bytes of `shake128` of the seed for some k, and the result
-is the first 256 of them. It has no constant-time and memory safety proof
-yet: since the number of iterations depends on the output of SHAKE128
-(which is public), such a proof needs the combined theorems above.
+is the first 256 of them. Its theorem of constant time and memory safety,
+which assumes `memset_safety_contract`, states that its events depend only
+on the addresses and on the seed, which is public, through the samples and
+the number of iterations of the loop, the least k for which there are 256
+samples. It has the same hypothesis about the samples, since otherwise the
+loop would not terminate, and it is proved using the combined theorems
+above for the hash functions and `mlk_rej_uniform_c`.
 
 `mlkem_poly_rej_uniform_x4` samples four polynomials in the same way from
 four seeds 64 bytes apart, using the fourfold SHAKE128 functions. Its loop
 squeezes one more block of each until all four have 256 samples, so its
-specification has the same hypothesis for each seed, with the same k, and
-it has no constant-time and memory safety proof yet either.
+specification has the same hypothesis for each seed, with the same k. So
+does its theorem of constant time and memory safety, which is as for
+`mlkem_poly_rej_uniform` with the least k for which all four have 256
+samples, but assumes `memset_full_contract`, since
+`mlkem_shake128x4_absorb_once` does.
 
 `mlkem512_gen_matrix`, `mlkem768_gen_matrix` and `mlkem1024_gen_matrix`
 generate the matrix of a parameter set from a seed of 32 bytes. Entry
@@ -358,7 +368,12 @@ flag is nonzero, four entries at a time with `mlkem_poly_rej_uniform_x4`
 and the last one for ML-KEM-768 with `mlkem_poly_rej_uniform`. Their
 specifications have the hypothesis that there are at least 256 samples for
 each entry within the first 504 + 168 * k bytes, with the same k for all
-entries. They have no constant-time and memory safety proofs yet either.
+entries. So do their theorems of constant time and memory safety, which
+assume `memset_full_contract` and state that their events depend only on
+the addresses, the seed and the flag. Like the correctness proofs, they are
+by cases on whether the stack pointer is a multiple of 32, which gives the
+addresses of the buffers for the seeds, and on the flag, which gives the
+order of the indices.
 
 `mlkem512_check_pk`, `mlkem768_check_pk` and `mlkem1024_check_pk` do the
 modulus check of FIPS 203 on an encapsulation key: they decode the vector
