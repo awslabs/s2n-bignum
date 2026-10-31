@@ -469,6 +469,7 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_check_sk_k4_gcc12_O2 \
   mlkem_native/mlkem_native_dec_k3_gcc12_O2 \
   mlkem_native/mlkem_native_enc_derand_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_enc_k3_gcc12_O2 \
   mlkem_native/mlkem_native_gen_matrix_k2_gcc12_O2 \
   mlkem_native/mlkem_native_gen_matrix_k3_gcc12_O2 \
   mlkem_native/mlkem_native_gen_matrix_k4_gcc12_O2 \
@@ -483,6 +484,7 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2 \
   mlkem_native/mlkem_native_keccakf1600x4_xor_bytes_gcc12_O2 \
   mlkem_native/mlkem_native_keypair_derand_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_keypair_k3_gcc12_O2 \
   mlkem_native/mlkem_native_poly_add_gcc12_O2 \
   mlkem_native/mlkem_native_poly_cbd2_gcc12_O2 \
   mlkem_native/mlkem_native_poly_cbd3_gcc12_O2 \
@@ -738,6 +740,11 @@ mlkem_native/mlkem_native_enc_derand_k3_gcc12_O2.native: \
   proofs/utils/mlkem_native_fips203.ml \
   proofs/utils/mlkem_native_kem.ml \
   proofs/utils/mlkem_native_libc.ml
+mlkem_native/mlkem_native_enc_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_enc_derand_k3_gcc12_O2.native \
+  proofs/utils/mlkem_native_fips203.ml \
+  proofs/utils/mlkem_native_kem.ml \
+  proofs/utils/mlkem_native_libc.ml
 mlkem_native/mlkem_native_gen_matrix_k2_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_rej_uniform_x4_gcc12_O2.native
 mlkem_native/mlkem_native_gen_matrix_k3_gcc12_O2.native: \
@@ -795,6 +802,11 @@ mlkem_native/mlkem_native_indcpa_keypair_derand_k3_gcc12_O2.native: \
 mlkem_native/mlkem_native_keypair_derand_k3_gcc12_O2.native: \
   mlkem_native/mlkem_native_indcpa_keypair_derand_k3_gcc12_O2.native \
   mlkem_native/mlkem_native_sha3_256_gcc12_O2.native \
+  proofs/utils/mlkem_native_fips203.ml \
+  proofs/utils/mlkem_native_kem.ml \
+  proofs/utils/mlkem_native_libc.ml
+mlkem_native/mlkem_native_keypair_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_keypair_derand_k3_gcc12_O2.native \
   proofs/utils/mlkem_native_fips203.ml \
   proofs/utils/mlkem_native_kem.ml \
   proofs/utils/mlkem_native_libc.ml

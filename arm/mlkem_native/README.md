@@ -405,3 +405,13 @@ rejection, and otherwise it returns -5. The comparison of the ciphertexts
 and the selection of the shared secret are loops in constant time, which
 are verified with invariants. It has the same hypotheses as
 `mlkem768_indcpa_enc`, for the matrix from the seed in `dk`.
+
+`mlkem768_keypair` and `mlkem768_enc` get their randomness with
+`randombytes`, for which there is a contract like those of the C library
+functions, which writes its buffer with no assumption about the values and
+returns a status. Their specifications say that either `randombytes` fails
+and they return -3, or they behave as `mlkem768_keypair_derand` and
+`mlkem768_enc_derand` for some seeds or message of 32 bytes. For
+`mlkem768_keypair` this needs the hypothesis that SampleNTT terminates for
+the matrix from any seed. None of these functions has constant-time and
+memory safety proofs yet.
