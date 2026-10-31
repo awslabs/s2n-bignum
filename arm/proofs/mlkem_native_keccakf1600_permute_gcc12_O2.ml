@@ -1041,3 +1041,272 @@ let KECCAK_STATE_THEN a (ttac:term->tactic) =
                                Comb(Const("wbytes",_),aa))),_)),v)
         when aa = a -> ttac v
     | _ -> NO_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, as for       *)
+(* mlkem_keccakf1600_extract_bytes. The loop is that of the correctness      *)
+(* proof, but with the loop test and branch at the end of the body, as       *)
+(* ENSURES_EVENTS_WHILE_UP2_TAC requires; the events of the last iteration   *)
+(* include the branch out of the loop. The versions in the image follow, for *)
+(* the state as a list of words and as a 1600-bit word.                      *)
+(* ------------------------------------------------------------------------- *)
+
+let keccak_inv_cs = parse_term ("\\i s.
+   read SP s = stackpointer /\\
+   read (memory :> bytes64(word_add stackpointer (word 80))) s =
+   returnaddress /\\
+   read (memory :> bytes64 stackpointer) s = x19_init /\\
+   read (memory :> bytes64(word_add stackpointer (word 8))) s = x20_init /\\
+   read (memory :> bytes64(word_add stackpointer (word 16))) s = x21_init /\\
+   read (memory :> bytes64(word_add stackpointer (word 24))) s = x22_init /\\
+   read (memory :> bytes64(word_add stackpointer (word 32))) s = x23_init /\\
+   read (memory :> bytes64(word_add stackpointer (word 40))) s = x24_init /\\
+   read (memory :> bytes64(word_add stackpointer (word 48))) s = x25_init /\\
+   read (memory :> bytes64(word_add stackpointer (word 56))) s = x26_init /\\
+   read (memory :> bytes64(word_add stackpointer (word 64))) s = x27_init /\\
+   read (memory :> bytes64(word_add stackpointer (word 72))) s = x28_init /\\
+   read (memory :> bytes64(word_add stackpointer (word 96))) s =
+   word_add (word rc) (word(16 * i)) /\\
+   read (memory :> bytes64(word_add stackpointer (word 176))) s =
+   word_add (word rc) (word 192) /\\
+   read (memory :> bytes64(word_add stackpointer (word 184))) s = a /\\
+   read (memory :> bytes(word rc,192)) s = num_of_wordlist round_constants /\\
+   " ^ keccak_lanes_str ^ " = keccak (2 * i) A");;
+
+let PERMUTE_CS_INTRO_TAC =
+  CONCRETIZE_F_EVENTS_TAC
+   `\(a:int64) (rc:num) (pc:num) (stackpointer:int64)
+     (returnaddress:int64).
+     APPEND (f_ev_epil a rc pc stackpointer returnaddress)
+      (APPEND
+        (ENUMERATEL 12
+          (\i. f_ev_loop a rc pc stackpointer returnaddress i))
+        (f_ev_prol a rc pc stackpointer returnaddress))
+     :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[fst MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_EXEC] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
+  ENSURES_PRESERVED_TAC "x22_init" `X22` THEN
+  ENSURES_PRESERVED_TAC "x23_init" `X23` THEN
+  ENSURES_PRESERVED_TAC "x24_init" `X24` THEN
+  ENSURES_PRESERVED_TAC "x25_init" `X25` THEN
+  ENSURES_PRESERVED_TAC "x26_init" `X26` THEN
+  ENSURES_PRESERVED_TAC "x27_init" `X27` THEN
+  ENSURES_PRESERVED_TAC "x28_init" `X28`;;
+
+let PERMUTE_CS_INIT_TAC =
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  FIRST_ASSUM(ASSUME_TAC o MATCH_MP KECCAK_RC_BYTES) THEN
+  BIGNUM_DIGITIZE_TAC "A_" `read (memory :> bytes (a,8 * 25)) s0` THEN
+  FIRST_ASSUM(MP_TAC o CONV_RULE(LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_EXEC (1--3) THEN
+  FIRST_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_EXEC (4--44) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[keccak; MULT_CLAUSES; WORD_ADD_0] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let PERMUTE_CS_BODY1_TAC =
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+  GHOST_STATELIST_TAC THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  MP_TAC(ISPECL [`word rc:int64`; `round_constants`; `24`; `2 * i + 1`;
+                 `s0:armstate`] READ_MEMORY_BYTES64_NUM_OF_WORDLIST) THEN
+  MP_TAC(ISPECL [`word rc:int64`; `round_constants`; `24`; `2 * i`;
+                 `s0:armstate`] READ_MEMORY_BYTES64_NUM_OF_WORDLIST) THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
+  ASM_REWRITE_TAC[LENGTH_ROUND_CONSTANTS] THEN
+  ASM_SIMP_TAC[ARITH_RULE `i < 12 ==> 2 * i < 24 /\ 2 * i + 1 < 24`] THEN
+  REWRITE_TAC[ARITH_RULE
+   `8 * (2 * i) = 16 * i /\ 8 * (2 * i + 1) = 16 * i + 8`] THEN
+  REPEAT DISCH_TAC THEN
+  KECCAK_INTRO_ABBREVS_TAC THEN
+  MAP_EVERY (fun n ->
+    ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_EXEC [n] THEN
+    KECCAK_ABBREV_STEP_TAC) (1--299);;
+
+let PERMUTE_CS_TEST = prove
+ (`!rc i. i < 12
+          ==> (val(word_sub (word_add (word rc) (word 192))
+                            (word_add (word_add (word rc) (word (16 * i)))
+                                      (word 16)):int64) = 0 <=>
+               ~(i + 1 < 12))`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[WORD_RULE
+   `word_sub (word_add a x) (word_add (word_add a y) z):int64 =
+    word_sub x (word_add y z)`] THEN
+  REWRITE_TAC[VAL_WORD_SUB_EQ_0; GSYM WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+   `i < 12 ==> 16 * i + 16 < 18446744073709551616`] THEN
+  ASM_ARITH_TAC);;
+
+let PERMUTE_CS_BODY2_TAC =
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCARD_STATE_TAC "s299" THEN
+  REWRITE_TAC[MP (SPECL [`rc:num`; `i:num`] PERMUTE_CS_TEST)
+                 (ASSUME `i < 12`)] THEN
+  CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+    AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;
+    ALL_TAC] THEN
+  CONJ_TAC THENL [KECCAK_SECOND_ROUND_TAC; ALL_TAC] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let PERMUTE_CS_TAIL_TAC =
+  REWRITE_TAC[] THEN GHOST_STATELIST_TAC THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_EXEC (1--29) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [CONV_TAC(LAND_CONV WORDLIST_FROM_MEMORY_CONV) THEN
+    ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
+    DISCHARGE_SAFETY_PROPERTY_TAC];;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_FULL =
+  prove
+ (`exists f_events.
+       forall e a rc A pc stackpointer returnaddress.
+           adrp_within_bounds (word rc) (word (pc + 4)) /\
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (word_sub stackpointer (word 192),192))
+           [word pc,1488; a,200; word rc,192] /\
+           nonoverlapping (a,200) (word pc,1488)
+           ==> ensures arm
+               (\s. aligned_bytes_loaded s (word pc)
+                    (mlkem_native_keccakf1600_permute_gcc12_O2_mc pc rc) /\
+                    read PC s = word pc /\
+                    bytes_loaded s (word rc)
+                    mlkem_native_keccakf1600_permute_gcc12_O2_data /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    wordlist_from_memory(a,25) s = A /\
+                    read events s = e)
+               (\s. read PC s = returnaddress /\
+                    wordlist_from_memory(a,25) s = keccak 24 A /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events a rc pc (word_sub stackpointer (word 192))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [a,200; word_sub stackpointer (word 192),192;
+                          word rc,192]
+                         [a,200; word_sub stackpointer (word 192),192]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [X18] ,,
+                MAYCHANGE
+                [memory :> bytes (a,200);
+                 memory :> bytes (word_sub stackpointer (word 192),192)])`,
+  PERMUTE_CS_INTRO_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `12` `pc + 0xb0` `pc + 0x55c`
+   keccak_inv_cs THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+    PERMUTE_CS_INIT_TAC;
+    PERMUTE_CS_BODY1_TAC THEN PERMUTE_CS_BODY2_TAC;
+    PERMUTE_CS_TAIL_TAC]);;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  prove
+ (`exists f_events.
+       forall e a A pc stackpointer returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (word_sub stackpointer (word 192),192))
+           [word pc,0x6480; a,200] /\
+           nonoverlapping (a,200) (word pc,0x6480)
+           ==> ensures arm
+               (\s. aligned_bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read PC s = word (pc + 0x2dd0) /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    wordlist_from_memory(a,25) s = A /\
+                    read events s = e)
+               (\s. read PC s = returnaddress /\
+                    wordlist_from_memory(a,25) s = keccak 24 A /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events a pc (word_sub stackpointer (word 192))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [a,200; word_sub stackpointer (word 192),192;
+                          word (pc + 0x62b0),192]
+                         [a,200; word_sub stackpointer (word 192),192]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [X18] ,,
+                MAYCHANGE
+                [memory :> bytes (a,200);
+                 memory :> bytes (word_sub stackpointer (word 192),192)])`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC
+   MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_FULL
+   [`pc + 0x2dd0`,`pc:num`; `pc + 0x62b0`,`rc:num`]
+   [MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_DATA_IN_IMAGE]);;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL_F1600 =
+  prove
+ (`exists f_events.
+       forall e a (S:1600 word) pc stackpointer returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (word_sub stackpointer (word 192),192))
+           [word pc,0x6480; a,200] /\
+           nonoverlapping (a,200) (word pc,0x6480)
+           ==> ensures arm
+               (\s. aligned_bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read PC s = word (pc + 0x2dd0) /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    read (memory :> wbytes a) s = S /\
+                    read events s = e)
+               (\s. read PC s = returnaddress /\
+                    read (memory :> wbytes a) s = keccak_f1600 S /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events a pc (word_sub stackpointer (word 192))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [a,200; word_sub stackpointer (word 192),192;
+                          word (pc + 0x62b0),192]
+                         [a,200; word_sub stackpointer (word 192),192]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [X18] ,,
+                MAYCHANGE
+                [memory :> bytes (a,200);
+                 memory :> bytes (word_sub stackpointer (word 192),192)])`,
+  MP_TAC MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL THEN
+  MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC THEN DISCH_TAC THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `a:int64`;
+    `wordlist_of_num 25 (val(S:1600 word)):int64 list`;
+    `pc:num`; `stackpointer:int64`; `returnaddress:int64`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP (MESON[ENSURES_PREPOSTCONDITION_THM]
+   `ensures step P Q C
+    ==> (!x. P' x ==> P x) /\ (!x. Q x ==> Q' x)
+        ==> ensures step P' Q' C`)) THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[READ_MEMORY_WBYTES_KECCAK] THEN SIMP_TAC[];
+    MESON_TAC[KECCAK_F1600_MEMORY]]);;
