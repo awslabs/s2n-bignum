@@ -1114,7 +1114,8 @@ mlkem_native/mlkem_native_shake128_squeezeblocks_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native
 mlkem_native/mlkem_native_shake128x4_absorb_once_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccak_absorb_once_x4_gcc12_O2.native \
-  proofs/utils/mlkem_native_libc.ml
+  proofs/utils/mlkem_native_libc.ml \
+  proofs/utils/mlkem_native_libc_full.ml
 mlkem_native/mlkem_native_shake128x4_release_gcc12_O2.native: \
   proofs/utils/mlkem_native_libc.ml
 mlkem_native/mlkem_native_shake128x4_squeezeblocks_gcc12_O2.native: \
