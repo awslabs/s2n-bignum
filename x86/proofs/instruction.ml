@@ -330,11 +330,13 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | INC operand
    | JUMP condition operand
    | LEA operand bsid
+   | LEAVE
    | LZCNT operand operand
    | MOV operand operand
    | MOVD operand operand
    | MOVQ operand operand
    | MOVSB bool operand operand operand
+   | MOVSQ bool operand operand operand
    | MOVSX operand operand
    | MOVZX operand operand
    | MOVAPS operand operand
@@ -403,6 +405,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | SHUFPS operand operand operand
    | STCF
    | STD
+   | STOSQ bool operand operand operand
    | SUB operand operand
    | TEST operand operand
    | TZCNT operand operand
