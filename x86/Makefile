@@ -428,6 +428,14 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
 
 OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 
+# Code compiled from mlkem-native's portable C implementation, transcribed
+# from a binary built in the same way as its pre-built binaries (see
+# mlkem_native/README.md). These are only for the proofs and are not
+# included in the library.
+
+MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_poly_reduce_gcc12_O2.o \
+                   mlkem_native/mlkem_native_poly_tobytes_gcc12_O2.o
+
 # Tutorial assembly files
 
 TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
@@ -488,8 +496,8 @@ BASE_ML=proofs/base.ml \
 HOLDIR?=$(HOME)/hol-light
 HOLLIGHT:=$(HOLDIR)/hol.sh
 
-PROOF_BINS = $(OBJ:.o=.native)
-PROOF_LOGS = $(OBJ:.o=.correct)
+PROOF_BINS = $(OBJ:.o=.native) $(MLKEM_NATIVE_OBJ:.o=.native)
+PROOF_LOGS = $(OBJ:.o=.correct) $(MLKEM_NATIVE_OBJ:.o=.correct)
 TUTORIAL_PROOF_BINS = $(TUTORIAL_PROOFS:.ml=.native)
 TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 
@@ -504,6 +512,13 @@ proofs/subroutine_signatures.ml: ../include/s2n-bignum.h ; cd .. && python3 tool
 
 .SECONDEXPANSION:
 %.native: proofs/$$(*F).ml $(BASE_ML) %.o %.obj ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+
+# The compiled code from mlkem-native is only for the standard ABI, so
+# there are no Windows ABI variants of it
+
+mlkem_native/%.native: proofs/%.ml $(BASE_ML) proofs/utils/mlkem_native.ml \
+                       mlkem_native/%.o ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
 # Run them and print the standard output+error at *.correct
 
