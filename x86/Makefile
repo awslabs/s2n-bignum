@@ -436,6 +436,7 @@ OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
                    mlkem_native/mlkem_native_basemul_k3_gcc12_O2.o \
                    mlkem_native/mlkem_native_basemul_k4_gcc12_O2.o \
+                   mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_invntt_tomont_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_mulcache_compute_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_ntt_gcc12_O2.o \
@@ -527,6 +528,9 @@ proofs/subroutine_signatures.ml: ../include/s2n-bignum.h ; cd .. && python3 tool
 mlkem_native/%.native: proofs/%.ml $(BASE_ML) proofs/utils/mlkem_native.ml \
                        mlkem_native/%.o ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+
+mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native: \
+  proofs/utils/keccak_spec.ml
 
 # Run them and print the standard output+error at *.correct
 
