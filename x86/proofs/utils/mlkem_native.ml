@@ -321,6 +321,60 @@ let MONTRED_X86_SCALAR = prove
   SIMP_TAC[WORD_ZX_MUL; DIMINDEX_16; DIMINDEX_32; ARITH] THEN
   CONV_TAC WORD_REDUCE_CONV THEN REWRITE_TAC[WORD_ADD_SYM]);;
 
+(*** A 32-bit product formed from the 16-bit high and low halves given by
+ *** PMULHW and PMULLW
+ ***)
+
+let WORD_JOIN_MULHI_MULLO = prove
+ (`!a b:int16.
+     word_join (word_subword (word_mul (word_sx a) (word_sx b):int32)
+                             (16,16):int16)
+               (word_mul a b:int16):int32 =
+     word_mul (word_sx a) (word_sx b)`,
+  REPEAT GEN_TAC THEN
+  SUBGOAL_THEN
+   `word_mul a b:int16 = word_zx(word_mul (word_sx a) (word_sx b):int32)`
+  SUBST1_TAC THENL
+   [SIMP_TAC[WORD_ZX_MUL; DIMINDEX_16; DIMINDEX_32; ARITH] THEN
+    REWRITE_TAC[WORD_BLAST `word_zx(word_sx (x:int16):int32) = x`];
+    SPEC_TAC(`word_mul (word_sx a) (word_sx b):int32`,`p:int32`) THEN
+    BITBLAST_TAC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Splitting off the 8 coefficients handled by one iteration of a loop that  *)
+(* the compiler has vectorized.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+let CHUNK8_INPUT_SPLIT = prove
+ (`!P i. i < 32
+         ==> ((!j. 8 * i <= j /\ j < 256 ==> P j) <=>
+              (!j. 8 * (i + 1) <= j /\ j < 256 ==> P j) /\
+              (!k. k < 8 ==> P(8 * i + k)))`,
+  REPEAT STRIP_TAC THEN EQ_TAC THENL
+   [REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    STRIP_TAC THEN X_GEN_TAC `j:num` THEN STRIP_TAC THEN
+    ASM_CASES_TAC `8 * (i + 1) <= j` THEN ASM_SIMP_TAC[] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `j - 8 * i`) THEN
+    ASM_SIMP_TAC[ARITH_RULE `8 * i <= j ==> 8 * i + (j - 8 * i) = j`] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
+
+let CHUNK8_OUTPUT_SPLIT = prove
+ (`!P i. (!j. j < 8 * (i + 1) ==> P j) <=>
+         (!j. j < 8 * i ==> P j) /\ (!k. k < 8 ==> P(8 * i + k))`,
+  REPEAT GEN_TAC THEN EQ_TAC THENL
+   [REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    STRIP_TAC THEN X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+    ASM_CASES_TAC `j < 8 * i` THEN ASM_SIMP_TAC[] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `j - 8 * i`) THEN
+    ASM_SIMP_TAC[ARITH_RULE `~(j < 8 * i) ==> 8 * i + (j - 8 * i) = j`] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
+
+let CHUNK8_ADDR = prove
+ (`!a i k. word_add a (word(2 * (8 * i + k))):int64 =
+           word_add (word_add a (word(16 * i))) (word(2 * k))`,
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  REPEAT GEN_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
+
 (* ------------------------------------------------------------------------- *)
 (* The table of zetas used by the C code, as the values in the source code   *)
 (* and as the bytes of the read-only data in the compiled code. The latter   *)
@@ -420,3 +474,76 @@ let READ_INSTANCE_TAC tm =
       AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC)) in
   SUBGOAL_THEN tm ASSUME_TAC THENL
    [FIRST_ASSUM(fun th -> tryth th); ALL_TAC];;
+
+(* ------------------------------------------------------------------------- *)
+(* Congruence and bound propagation, also handling montred_scalar.           *)
+(* ------------------------------------------------------------------------- *)
+
+let rec MLKEM_NATIVE_CONGBOUND_RULE lfn tm =
+  try apply lfn tm with Failure _ ->
+  match tm with
+    Comb(Const("montred_scalar",_),t) ->
+      let th1 = WEAKEN_INTCONG_RULE (num 3329)
+                 (MLKEM_NATIVE_CONGBOUND_RULE lfn t) in
+      CONV_RULE(ONCE_DEPTH_CONV INVERSE_MOD_CONV)
+       (CONCL_BOUNDS_RULE(SIDE_ELIM_RULE
+         (MATCH_MP CONGBOUND_MONTRED_SCALAR th1)))
+  | _ -> ASM_CONGBOUND_STEP (MLKEM_NATIVE_CONGBOUND_RULE lfn) tm;;
+
+(* ------------------------------------------------------------------------- *)
+(* Reading a 128-bit vector of constants from loaded read-only data, and     *)
+(* the XMM registers as parts of the YMM registers.                          *)
+(* ------------------------------------------------------------------------- *)
+
+let BYTES_LOADED_BYTES128 = prove
+ (`!a l k s.
+        bytes_loaded s a l /\ k + 16 <= LENGTH l
+        ==> read (memory :> bytes128(word_add a (word k))) s =
+            word((num_of_bytelist l DIV 2 EXP (8 * k)) MOD 2 EXP 128)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[bytes_loaded; READ_BYTELIST_EQ_BYTES] THEN
+  STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[bytes128; READ_COMPONENT_COMPOSE; asword; through; read] THEN
+  REWRITE_TAC[READ_BYTES_DIV; ARITH_RULE `2 EXP 128 = 2 EXP (8 * 16)`;
+              READ_BYTES_MOD] THEN
+  AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+let XMM_EXISTSTOP = prove
+ (`!c s:S. read (c :> zerotop_128) s = l
+           ==> ?h. read c s = (word_join:int128->int128->int256) h l`,
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
+  EXISTS_TAC `word_subword (read c (s:S):int256) (128,128):int128` THEN
+  REWRITE_TAC[READ_ZEROTOP_128] THEN CONV_TAC WORD_BLAST);;
+
+let XMM_EXISTSTOP_RULE =
+  REWRITE_RULE (map GSYM
+   [XMM0; XMM1; XMM2; XMM3; XMM4; XMM5; XMM6; XMM7;
+    XMM8; XMM9; XMM10; XMM11; XMM12; XMM13; XMM14; XMM15]) o
+  C ISPEC XMM_EXISTSTOP;;
+
+let XMM_EXISTSTOP_TAC top y =
+  FIRST_X_ASSUM(MP_TAC o MATCH_MP (XMM_EXISTSTOP_RULE y)) THEN
+  DISCH_THEN(X_CHOOSE_TAC(mk_var(top,`:int128`)));;
+
+(* ------------------------------------------------------------------------- *)
+(* Folding the address of a RIP-relative operand of the instruction ending   *)
+(* at pc + ofs, given as data - (pc + c) in the relocated code, to data + k. *)
+(* ------------------------------------------------------------------------- *)
+
+let RIPREL_FOLD = prove
+ (`!pc ofs data c k.
+     riprel32_within_bounds (data + k) (pc + ofs) /\ &ofs - c = &k
+     ==> word (val (word (pc + ofs):int64) +
+               val (word_sx (iword (&data - (&pc + c)):int32):int64)):int64 =
+         word (data + k)`,
+  REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
+  DISCH_THEN(MP_TAC o MATCH_MP WORD32_ADD_SUB_OF_LT) THEN
+  REWRITE_TAC[word_add; modular] THEN MATCH_MP_TAC EQ_IMP THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN
+  REPEAT(AP_TERM_TAC ORELSE AP_THM_TAC) THEN
+  REWRITE_TAC[GSYM INT_OF_NUM_ADD] THEN ASM_INT_ARITH_TAC);;
+
+let RIPREL_FOLD_TAC data ofs c k =
+  MP_TAC(SPECL [`pc:num`; ofs; data; c; k] RIPREL_FOLD) THEN
+  REWRITE_TAC[ADD_CLAUSES] THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN INT_ARITH_TAC; DISCH_TAC];;

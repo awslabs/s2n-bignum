@@ -38,6 +38,7 @@ program of the example passes with it. The file
 | mlkem_native_poly_mulcache_compute_gcc12_O2.S | gcc 12.3.0   |
 | mlkem_native_poly_reduce_gcc12_O2.S           | gcc 12.3.0   |
 | mlkem_native_poly_tobytes_gcc12_O2.S          | gcc 12.3.0   |
+| mlkem_native_poly_tomont_gcc12_O2.S           | gcc 12.3.0   |
 
 The SHA-256 hash of the binary used is:
 
@@ -70,8 +71,11 @@ data section and referenced with RIP-relative addressing, giving
 relocations in the object file. For these, pairs of data symbols in the
 object file and the binary are given as additional arguments, e.g.
 `mlk_zetas mlk_zetas` for `mlkem_native_poly_mulcache_compute_gcc12_O2`.
-The script then checks that the tables are identical and that the relocated
-displacements in the binary give the addresses of the tables there.
+Where the data in the binary has no symbol, its address there can be given
+in hexadecimal instead, e.g. `mlkem_native_poly_tomont_gcc12_O2_constants
+0x8070` for `mlkem_native_poly_tomont_gcc12_O2`. The script then checks
+that the tables are identical and that the relocated displacements in the
+binary give the addresses of the tables there.
 
 ## The compiled code
 
