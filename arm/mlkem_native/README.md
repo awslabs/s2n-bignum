@@ -454,25 +454,39 @@ matrix and the vector are computed in a loop, which the proofs unroll.
 randomness as an argument, and its specification is in terms of the
 internal ML-KEM algorithms of FIPS 203: the keys that it writes are those
 of `mlkem_keygen mlkem768 d z` for its 64 bytes of coins `d` and `z`. It
-has the same hypothesis as `mlkem768_indcpa_keypair_derand`. The lemmas
-and tactics for the ML-KEM functions are in
-`arm/proofs/utils/mlkem_native_kem.ml`.
+has the same hypothesis as `mlkem768_indcpa_keypair_derand`. Its theorem of
+constant time and memory safety, which assumes `memset_full_contract` and
+`memcpy_safety_contract`, states as for `mlkem768_indcpa_keypair_derand`
+that its events depend only on the addresses and on rho, and that the
+public key ends with rho. The lemmas and tactics for the ML-KEM functions
+are in `arm/proofs/utils/mlkem_native_kem.ml`.
 
-`mlkem768_enc_derand` is the encapsulation with the message as an
-argument, including the input check of FIPS 203: if the encapsulation key
-`ek` passes it (`mlkem_ek_check`), the function returns 0 and writes the
-shared secret and the ciphertext of `mlkem_encaps_internal mlkem768 ek m`
-for the message `m`, and otherwise it returns -4. It has the same
-hypotheses as `mlkem768_indcpa_enc`.
+`mlkem768_enc_derand` is the encapsulation with the message as an argument,
+including the input check of FIPS 203: if the encapsulation key `ek` passes
+it (`mlkem_ek_check`), the function returns 0 and writes the shared secret
+and the ciphertext of `mlkem_encaps_internal mlkem768 ek m` for the message
+`m`, and otherwise it returns -4. It has the same hypotheses as
+`mlkem768_indcpa_enc`. Its theorem of constant time and memory safety, with
+the same contracts, states that its events depend only on the addresses and
+on the encapsulation key, not on the message. Since the code branches on
+the result of the modulus check, this uses the combined theorem for
+`mlkem768_check_pk`, and the events are given by cases on whether the stack
+pointer is a multiple of 32 and on `mlkem_ek_check`.
 
-`mlkem768_dec` is the decapsulation, including the input check of FIPS
-203: if the decapsulation key `dk` and the ciphertext `c` pass it
-(`mlkem_decaps_check`), the function returns 0 and writes the shared
-secret of `mlkem_decaps_internal mlkem768 dk c`, including the implicit
-rejection, and otherwise it returns -5. The comparison of the ciphertexts
-and the selection of the shared secret are loops in constant time, which
-are verified with invariants. It has the same hypotheses as
-`mlkem768_indcpa_enc`, for the matrix from the seed in `dk`.
+`mlkem768_dec` is the decapsulation, including the input check of FIPS 203:
+if the decapsulation key `dk` and the ciphertext `c` pass it
+(`mlkem_decaps_check`), the function returns 0 and writes the shared secret
+of `mlkem_decaps_internal mlkem768 dk c`, including the implicit rejection,
+and otherwise it returns -5. The comparison of the ciphertexts and the
+selection of the shared secret are loops in constant time, which are
+verified with invariants. It has the same hypotheses as
+`mlkem768_indcpa_enc`, for the matrix from the seed in `dk`. Its theorem of
+constant time and memory safety, with the same contracts, states that its
+events depend only on the addresses and on the encapsulation key and the
+hash stored in `dk`, which are public, and not on the rest of the key or on
+the ciphertext. Since the code branches on the result of the hash check,
+this uses the combined theorem for `mlkem768_check_sk`, and the loops are
+verified with the same invariants with their events.
 
 `mlkem768_keypair` and `mlkem768_enc` get their randomness with
 `randombytes`, for which there is a contract like those of the C library
@@ -481,12 +495,18 @@ returns a status. Their specifications say that either `randombytes` fails
 and they return -3, or they behave as `mlkem768_keypair_derand` and
 `mlkem768_enc_derand` for some seeds or message of 32 bytes. For
 `mlkem768_keypair` this needs the hypothesis that SampleNTT terminates for
-the matrix from any seed. None of these functions has constant-time and
-memory safety proofs yet.
+the matrix from any seed. Their theorems of constant time and memory safety
+also assume `randombytes_safety_contract`, and state that their events do
+not depend on the random bytes. Those of `mlkem768_keypair` depend only on
+the addresses, on whether `randombytes` fails and, if it does not, on rho:
+they are given in terms of the result and of the last 32 bytes of the
+public key, which are rho by the theorem for `mlkem768_keypair_derand`.
+Those of `mlkem768_enc` depend only on the addresses, on the encapsulation
+key and on whether `randombytes` fails.
 
 The ML-KEM functions for ML-KEM-512 and ML-KEM-1024
 (`mlkem512_keypair_derand`, `mlkem512_enc_derand`, `mlkem512_dec`,
 `mlkem512_keypair`, `mlkem512_enc` and those with `mlkem1024`) have the
 same specifications for `mlkem512` and `mlkem1024`, with the hypotheses of
-the K-PKE functions that they call. They have no constant-time and memory
-safety proofs yet either.
+the K-PKE functions that they call, and the same theorems of constant time
+and memory safety.

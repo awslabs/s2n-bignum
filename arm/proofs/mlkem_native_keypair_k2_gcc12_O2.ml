@@ -220,3 +220,188 @@ let MLKEM_NATIVE_KEYPAIR_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
                 memory :> bytes(word_sub stackpointer (word 9664),9664)])`,
   KR2_INTRO_TAC THEN ASM_CASES_TAC `aligned 32 (stackpointer:int64)` THENL
    [KR2_CASE_TAC 9568; KR2_CASE_TAC 9584]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof, assuming the combined contract for *)
+(* memset and the safety contracts for memcpy and randombytes. The events    *)
+(* depend only on the addresses, on whether randombytes fails and, if it     *)
+(* does not, on rho, which is the end of the public key by the theorem for   *)
+(* mlkem512_keypair_derand. So they are given in terms of the result and of  *)
+(* the last 32 bytes of the public key, by cases on whether the stack        *)
+(* pointer is a multiple of 32 and on whether the result is 0.               *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let KR_SAFE_TEMPLATE =
+ `\(pk:int64) (sk:int64) (guard:int64) (mf:int64) (mc:int64) (mr:int64)
+   (pc:num) (sp:int64) (ra:int64) (r:int64) (n:num).
+   if aligned 32 sp
+   then (if r = word 0
+         then f_ev_a1 pk sk guard mf mc mr pc sp ra (bytelist_of_num 32 n)
+         else f_ev_a0 pk sk guard mf mc mr pc sp ra)
+   else (if r = word 0
+         then f_ev_u1 pk sk guard mf mc mr pc sp ra (bytelist_of_num 32 n)
+         else f_ev_u0 pk sk guard mf mc mr pc sp ra)
+   :(uarch_event)list`;;
+
+let KR_SAFE_ALLOWED =
+  [`pc:num`; `pk:int64`; `sk:int64`; `guard:int64`; `mf:int64`;
+   `mc:int64`; `mr:int64`; `stackpointer:int64`; `returnaddress:int64`;
+   `d:byte list`];;
+
+let KEM_BYTELIST_32 = prove
+ (`!l:byte list. LENGTH l = 32 ==> bytelist_of_num 32 (num_of_bytelist l) = l`,
+  MESON_TAC[BYTELIST_OF_NUM_OF_BYTELIST]);;
+
+let KR2_SAFE_INTRO_TAC =
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
+   (CONJUNCTS_THEN2 ASSUME_TAC ASSUME_TAC)) THEN
+  FIRST_X_ASSUM(fun th ->
+    if can (term_match [] `randombytes_safety_contract mr ea el ev`)
+           (concl th)
+    then ASSUME_CALLEE_SAFETY_TAILED_TAC
+          (REWRITE_RULE[randombytes_safety_contract] th) "H_RANDOMBYTES"
+    else NO_TAC) THEN
+  FIRST_X_ASSUM(fun th1 ->
+    if can (term_match [] `memset_full_contract mf ea el ev`) (concl th1)
+    then FIRST_X_ASSUM(fun th2 ->
+      ASSUME_CALLEE_SAFETY_TAILED_TAC
+       (MATCH_MP
+         MLKEM_NATIVE_KEYPAIR_DERAND_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE
+         (CONJ th1 th2)) "H_INNER")
+    else NO_TAC) THEN
+  CONCRETIZE_F_EVENTS_TAC KR_SAFE_TEMPLATE THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              C_RETURN; ALL; ALLPAIRS; PAIRWISE] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[NONOVERLAPPING_CLAUSES]) THEN
+  SUBGOAL_THEN `aligned 16 (stackpointer:int64)` ASSUME_TAC THENL
+   [UNDISCH_TAC `aligned 16 (word_add stackpointer (word 9664):int64)` THEN
+    CONV_TAC(LAND_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN REWRITE_TAC[];
+    ALL_TAC] THEN
+  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
+              SPECL [`pc:num`; `0x1ffd8`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
+                              SPECL [`pc:num`; `0x1ffd8`] WORD_ADD]) THEN
+  GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  MAP_EVERY (fun n ->
+    ENSURES_PRESERVED_TAC ("x"^string_of_int n^"_init")
+     (parse_term("X"^string_of_int n))) (19--28);;
+
+let KR2_SAFE_CALL_TAC name ilist n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,KR2_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      ilist n THENL
+     [EXISTS_E2_TAC (ref KR_SAFE_ALLOWED); LABEL_TAC name safety_th]);;
+
+let KR2_SAFE_CASE_TAC b =
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC KR2_EXEC (1--3) THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC KR2_EXEC (4--7) THEN KR2_BUFFER_TAC THEN
+  ARM_STEPS_TAC KR2_EXEC (8--14) THEN
+  LIBC_PLT_TAC KR2_EXEC 14 THEN
+  LIBC_SAFE_CALL_TAC "H_RANDOMBYTES" KR2_EXEC
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X30 s`]
+   (ref KR_SAFE_ALLOWED) 19 THEN
+  ABBREV_TAC `rv = read X0 s19` THEN
+  ABBREV_TAC (mk_eq(`rnd:num`,
+   subst [KEM_SP b,`a:int64`] `read (memory :> bytes(a,64)) s19`)) THEN
+  ASM_CASES_TAC `val(word_zx(rv:int64):int32) = 0` THENL
+   [ARM_STEPS_TAC KR2_EXEC (20--24) THEN KEM_GOT_TAC THEN
+    FIRST_ASSUM(STRIP_ASSUME_TAC o
+      CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV THENC
+                ONCE_DEPTH_CONV NUM_ADD_CONV) o
+      MATCH_MP KEM_RANDOM_SPLIT o
+      check (fun th -> rand(concl th) = `rnd:num`)) THEN
+    FIRST_ASSUM(MP_TAC o SPEC KR2_D o check (is_forall o concl)) THEN
+    REWRITE_TAC[LENGTH_BYTELIST_OF_NUM] THEN DISCH_TAC THEN
+    SUBGOAL_THEN (mk_eq(mk_comb(`LENGTH:byte list->num`,KR2_D),`32`))
+    ASSUME_TAC THENL [REWRITE_TAC[LENGTH_BYTELIST_OF_NUM]; ALL_TAC] THEN
+    ABBREV_TAC(mk_eq(`d:byte list`,KR2_D)) THEN
+    KR2_SAFE_CALL_TAC "H_INNER"
+     [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+      `d:byte list`; `guard:int64`; `pc:num`; `read SP s`; `read X30 s`]
+     25 THEN
+    ARM_STEPS_TAC KR2_EXEC (26--29) THEN MLKEM_NATIVE_ADRP_TAC THEN
+    ARM_STEPS_TAC KR2_EXEC (30--38) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONV_TAC WORD_REDUCE_CONV THEN REWRITE_TAC[] THEN
+    SIMP_TAC[KEM_BYTELIST_32; LENGTH_MLKEM_G] THEN
+    REWRITE_TAC[APPEND_NIL] THEN
+    ABBREV_TAC `rho = FST(mlkem_g(APPEND d [word 2]))` THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ARM_STEPS_TAC KR2_EXEC (20--26) THEN MLKEM_NATIVE_ADRP_TAC THEN
+    ARM_STEPS_TAC KR2_EXEC (27--35) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONV_TAC WORD_REDUCE_CONV THEN REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC];;
+
+let MLKEM_NATIVE_KEYPAIR_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  prove
+ (`!mf mc mr ea el ev.
+   memset_full_contract mf ea el ev /\
+   memcpy_safety_contract mc ea el ev /\
+   randombytes_safety_contract mr ea el ev
+   ==> exists f_events.
+        forall e pk sk guard pc stackpointer returnaddress.
+          aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+          aligned 16 stackpointer /\
+          (!d. LENGTH d = 32
+               ==> !i j. i < 2 /\ j < 2
+                         ==> mlkem_samplentt_terminates
+                              (APPEND (FST(mlkem_g(APPEND d [word 2])))
+                                      [word j; word i])) /\
+          nonoverlapping (word 0,1) (word_sub stackpointer (word 9664),9664) /\
+          PAIRWISE nonoverlapping
+           [(pk,800); (sk,1632); (word_sub stackpointer (word 9664),9664)] /\
+          ALLPAIRS nonoverlapping
+           [(pk,800); (sk,1632); (word_sub stackpointer (word 9664),9664)]
+           [(word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
+            (word(pc + 0x1ffe8),8); (word(pc + 0x1ffd0),8);
+            (word(pc + 0x1ffd8),8); (ea,el)]
+          ==> ensures arm
+               (\s. aligned_bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read PC s = word (pc + 0x3d24) /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [pk; sk] s /\
+                    read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                    read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                    read (memory :> bytes64(word(pc + 0x1ffd0))) s = mc /\
+                    read (memory :> bytes64(word(pc + 0x1ffd8))) s = mr /\
+                    read (memory :> bytes(ea,el)) s = ev /\
+                    read events s = e)
+               (\s. read PC s = returnaddress /\
+                    (exists e2.
+                       read events s = APPEND e2 e /\
+                       e2 = f_events pk sk guard mf mc mr pc
+                              (word_sub stackpointer (word 9664))
+                              returnaddress (C_RETURN s)
+                              (read (memory :> bytes(word_add pk (word 768),
+                                                     32)) s) /\
+                       memaccess_inbounds e2
+                        [pk,800; sk,1632;
+                         word_sub stackpointer (word 9664),9664;
+                         word(pc + 0x1fff8),8; guard,8; word(pc + 0x1ffe8),8;
+                         word(pc + 0x1ffd0),8; word(pc + 0x1ffd8),8; ea,el;
+                         word(pc + 0x62b0),192; word(pc + 0x6290),32;
+                         word(pc + 0x6380),256; word(pc + 0x6220),32]
+                        [pk,800; sk,1632;
+                         word_sub stackpointer (word 9664),9664]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+                MAYCHANGE
+                 [memory :> bytes(pk,800); memory :> bytes(sk,1632);
+                  memory :> bytes(word_sub stackpointer (word 9664),9664)])`,
+  KR2_SAFE_INTRO_TAC THEN
+  ASM_CASES_TAC `aligned 32 (stackpointer:int64)` THENL
+   [KR2_SAFE_CASE_TAC 9568; KR2_SAFE_CASE_TAC 9584]);;
