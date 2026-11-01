@@ -441,7 +441,8 @@ MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_ntt_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_reduce_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_tobytes_gcc12_O2.o \
-                   mlkem_native/mlkem_native_poly_tomont_gcc12_O2.o
+                   mlkem_native/mlkem_native_poly_tomont_gcc12_O2.o \
+                   mlkem_native/mlkem_native_rej_uniform_gcc12_O2.o
 
 # Tutorial assembly files
 
