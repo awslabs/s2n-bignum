@@ -176,3 +176,12 @@ code in the image, `..._IMAGE_SUBROUTINE_CORRECT` and
 `..._IMAGE_SUBROUTINE_SAFE`, and for `mlkem_keccakf1600_permute` also
 `..._IMAGE_SUBROUTINE_FULL`. As on AArch64, the safety theorems keep the
 frames of the correctness theorems, for use in the proofs of callers.
+
+Functions that call others are verified directly in the image, using those
+theorems for the calls. So far this is done for
+`mlkem_keccakf1600x4_permute`, at address 0x4740, which calls
+`mlkem_keccakf1600_permute` four times, the last time as a tail call. As
+for the functions they call, the theorems give the stack used, below the
+return address, and the stack pointer after the return, which callers need,
+and in the theorems of constant time and memory safety the stack that may
+be read includes the return address.

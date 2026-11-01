@@ -446,6 +446,14 @@ MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_tomont_gcc12_O2.o \
                    mlkem_native/mlkem_native_rej_uniform_gcc12_O2.o
 
+# Proofs about functions in the whole image of the gcc 12 -O2 binary,
+# mlkem_native/mlkem_native_libmlkem_gcc12_O2.o, which have no object files
+# of their own, since they are only verified there (including all those
+# that call other functions)
+
+MLKEM_NATIVE_IMAGE_PROOFS = \
+  mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2
+
 # Tutorial assembly files
 
 TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
@@ -506,8 +514,10 @@ BASE_ML=proofs/base.ml \
 HOLDIR?=$(HOME)/hol-light
 HOLLIGHT:=$(HOLDIR)/hol.sh
 
-PROOF_BINS = $(OBJ:.o=.native) $(MLKEM_NATIVE_OBJ:.o=.native)
-PROOF_LOGS = $(OBJ:.o=.correct) $(MLKEM_NATIVE_OBJ:.o=.correct)
+PROOF_BINS = $(OBJ:.o=.native) $(MLKEM_NATIVE_OBJ:.o=.native) \
+             $(MLKEM_NATIVE_IMAGE_PROOFS:=.native)
+PROOF_LOGS = $(OBJ:.o=.correct) $(MLKEM_NATIVE_OBJ:.o=.correct) \
+             $(MLKEM_NATIVE_IMAGE_PROOFS:=.correct)
 TUTORIAL_PROOF_BINS = $(TUTORIAL_PROOFS:.ml=.native)
 TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 
@@ -538,6 +548,20 @@ $(MLKEM_NATIVE_OBJ:.o=.native): proofs/mlkem_native_libmlkem_gcc12_O2.ml \
 
 mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native: \
   proofs/utils/keccak_spec.ml
+
+# The proofs of functions only verified in the image, which depend on
+# those of the functions they call. Since they load the proofs of the
+# functions with their own transcriptions, which read the object files,
+# those are kept rather than deleted as intermediate files.
+
+$(MLKEM_NATIVE_IMAGE_PROOFS:=.native): mlkem_native/%.native: \
+  proofs/%.ml $(BASE_ML) proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native_libmlkem_gcc12_O2.ml \
+  mlkem_native/mlkem_native_libmlkem_gcc12_O2.o ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+.SECONDARY: $(MLKEM_NATIVE_OBJ)
+mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2.native: \
+  mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native
 
 # Run them and print the standard output+error at *.correct
 
