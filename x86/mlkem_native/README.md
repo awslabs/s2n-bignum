@@ -43,6 +43,7 @@ program of the example passes with it. The file
 | mlkem_native_basemul_k3_gcc12_O2.S            | gcc 12.3.0   |
 | mlkem_native_basemul_k4_gcc12_O2.S            | gcc 12.3.0   |
 | mlkem_native_poly_mulcache_compute_gcc12_O2.S | gcc 12.3.0   |
+| mlkem_native_poly_ntt_gcc12_O2.S              | gcc 12.3.0   |
 | mlkem_native_poly_reduce_gcc12_O2.S           | gcc 12.3.0   |
 | mlkem_native_poly_tobytes_gcc12_O2.S          | gcc 12.3.0   |
 | mlkem_native_poly_tomont_gcc12_O2.S           | gcc 12.3.0   |
@@ -77,12 +78,13 @@ Some functions use constant tables, which are transcribed into a read-only
 data section and referenced with RIP-relative addressing, giving
 relocations in the object file. For these, pairs of data symbols in the
 object file and the binary are given as additional arguments, e.g.
-`mlk_zetas mlk_zetas` for `mlkem_native_poly_mulcache_compute_gcc12_O2`.
-Where the data in the binary has no symbol, its address there can be given
-in hexadecimal instead, e.g. `mlkem_native_poly_tomont_gcc12_O2_constants
-0x8070` for `mlkem_native_poly_tomont_gcc12_O2`. The script then checks
-that the tables are identical and that the relocated displacements in the
-binary give the addresses of the tables there.
+`mlk_zetas mlk_zetas` for `mlkem_native_poly_mulcache_compute_gcc12_O2` and
+`mlkem_native_poly_ntt_gcc12_O2`. Where the data in the binary has no
+symbol, its address there can be given in hexadecimal instead, e.g.
+`mlkem_native_poly_tomont_gcc12_O2_constants 0x8070` for
+`mlkem_native_poly_tomont_gcc12_O2`. The script then checks that the tables
+are identical and that the relocated displacements in the binary give the
+addresses of the tables there.
 
 ## The compiled code
 
@@ -95,7 +97,8 @@ The compiled code also uses the "red zone", the 128 bytes below the stack
 pointer, which the System V ABI allows a function to use for data that is
 not needed across calls, without moving the stack pointer. For example
 `mlkem768_polyvec_basemul_acc_montgomery_cached` spills a 32-bit register
-there. The subroutine forms of the theorems include the slot used in the
-stack region that the function may change, and the theorems for the code
-after the pushes of the callee-saved registers have its address as their
+there, and `mlkem_poly_ntt` keeps its count of the layers there. The
+subroutine forms of the theorems include the slot used in the stack region
+that the function may change, and the theorems for the code after the
+pushes of the callee-saved registers have its address as their
 `stackpointer` parameter.
