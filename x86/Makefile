@@ -434,6 +434,8 @@ OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 # included in the library.
 
 MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
+                   mlkem_native/mlkem_native_basemul_k3_gcc12_O2.o \
+                   mlkem_native/mlkem_native_basemul_k4_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_mulcache_compute_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_reduce_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_tobytes_gcc12_O2.o \

@@ -31,12 +31,17 @@ archive was linked with `ld -shared -Bsymbolic -soname libmlkem.so`, using
 the version script `binaries/libmlkem.map`, to give `libmlkem.so`. The test
 program of the example passes with it. The file
 `mlkem_native_<function>_gcc12_O2.S` contains the code of the function
-`mlkem_<function>` in this binary, except that the `basemul_k2` file is for
-`mlkem512_polyvec_basemul_acc_montgomery_cached`.
+`mlkem_<function>` in this binary, except that the `basemul_k2`,
+`basemul_k3` and `basemul_k4` files are for
+`mlkem512_polyvec_basemul_acc_montgomery_cached`,
+`mlkem768_polyvec_basemul_acc_montgomery_cached` and
+`mlkem1024_polyvec_basemul_acc_montgomery_cached` respectively.
 
 | File                                          | Compiler     |
 |-----------------------------------------------|--------------|
 | mlkem_native_basemul_k2_gcc12_O2.S            | gcc 12.3.0   |
+| mlkem_native_basemul_k3_gcc12_O2.S            | gcc 12.3.0   |
+| mlkem_native_basemul_k4_gcc12_O2.S            | gcc 12.3.0   |
 | mlkem_native_poly_mulcache_compute_gcc12_O2.S | gcc 12.3.0   |
 | mlkem_native_poly_reduce_gcc12_O2.S           | gcc 12.3.0   |
 | mlkem_native_poly_tobytes_gcc12_O2.S          | gcc 12.3.0   |
@@ -85,3 +90,12 @@ Unlike the hand-written code, the compiled code uses the legacy SSE2 forms
 of vector instructions rather than the AVX2 ones, and 16-bit forms of
 scalar instructions, some of which have been added to the x86 model in
 `../proofs` for it.
+
+The compiled code also uses the "red zone", the 128 bytes below the stack
+pointer, which the System V ABI allows a function to use for data that is
+not needed across calls, without moving the stack pointer. For example
+`mlkem768_polyvec_basemul_acc_montgomery_cached` spills a 32-bit register
+there. The subroutine forms of the theorems include the slot used in the
+stack region that the function may change, and the theorems for the code
+after the pushes of the callee-saved registers have its address as their
+`stackpointer` parameter.
