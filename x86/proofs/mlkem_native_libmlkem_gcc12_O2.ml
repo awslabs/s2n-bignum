@@ -183,3 +183,98 @@ let MLKEM_NATIVE_IMAGE_SAFE_TAC th inst loadths =
       let wit = list_mk_abs(zs,subst (zip zs xs) (app f (concl fth'))) in
       EXISTS_TAC wit THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
       MLKEM_NATIVE_IMAGE_TAC fth' loadths)) th;;
+
+(* ------------------------------------------------------------------------- *)
+(* Vectors of polynomials. As in common/fips203.ml, a vector of k            *)
+(* polynomials is given by its 256 * k coefficients, those of polynomial j   *)
+(* being \i. x(256 * j + i). POLYVEC_SPLIT_TAC k splits an assumption        *)
+(* !i. i < 256 * k ==> P i into one for each polynomial, POLYVEC_JOIN_TAC k  *)
+(* reduces such a goal to the cases for the polynomials, and                 *)
+(* POLYVEC_CASES_TAC reduces a goal !j. j < k ==> Q j to Q 0, ...,           *)
+(* Q (k - 1), with the indices and offsets evaluated in each case.           *)
+(* ------------------------------------------------------------------------- *)
+
+let POLYVEC_SPLIT = prove
+ (`!k j P. (!i. i < 256 * k ==> P i) /\ j < k
+           ==> !i. i < 256 ==> P(256 * j + i)`,
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+  TRANS_TAC LTE_TRANS `256 * (j + 1)` THEN
+  ASM_REWRITE_TAC[LE_MULT_LCANCEL] THEN ASM_ARITH_TAC);;
+
+let POLYVEC_JOIN = prove
+ (`!k P. (!j. j < k ==> !i. i < 256 ==> P(256 * j + i))
+         ==> !i. i < 256 * k ==> P i`,
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC `i DIV 256`) THEN
+  ASM_SIMP_TAC[RDIV_LT_EQ; ARITH_EQ] THEN
+  DISCH_THEN(MP_TAC o SPEC `i MOD 256`) THEN
+  REWRITE_TAC[MOD_LT_EQ; ARITH_EQ; DIVISION_SIMP]);;
+
+let POLYVEC_INDEX_CONV =
+  TOP_DEPTH_CONV BETA_CONV THENC
+  REWRITE_CONV[LEFT_ADD_DISTRIB; MULT_ASSOC] THENC NUM_REDUCE_CONV THENC
+  REWRITE_CONV[ADD_CLAUSES];;
+
+let POLYVEC_SPLIT_TAC k =
+  let kt = mk_small_numeral k in
+  let sth = CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV) (SPEC kt POLYVEC_SPLIT) in
+  let jths = map (fun j ->
+    let jt = mk_small_numeral j in
+    jt,EQT_ELIM(NUM_LT_CONV(mk_binop `(<):num->num->bool` jt kt)))
+    (0--(k-1)) in
+  let n = mk_small_numeral(256 * k) in
+  FIRST_X_ASSUM(fun th ->
+    let i,bod = dest_forall(concl th) in
+    if rand(lhand bod) <> n then failwith "POLYVEC_SPLIT_TAC" else
+    MAP_EVERY (fun (jt,jth) ->
+      ASSUME_TAC(CONV_RULE POLYVEC_INDEX_CONV
+        (MATCH_MP (SPEC jt sth) (CONJ th jth)))) jths);;
+
+let POLYVEC_CASES_TAC =
+  CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC POLYVEC_INDEX_CONV;;
+
+let POLYVEC_JOIN_TAC k =
+  let kt = mk_small_numeral k in
+  MATCH_MP_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+                (SPEC kt POLYVEC_JOIN)) THEN
+  POLYVEC_CASES_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* Decide the test at the end of an iteration of a loop over the             *)
+(* polynomials, which compares a pointer with its final value, both offsets  *)
+(* from the same base, after the conditional jump. This evaluates the        *)
+(* condition in the resulting instruction pointer and in the events.         *)
+(* ------------------------------------------------------------------------- *)
+
+let PTR_DECIDE_RIP_TAC =
+  let wth = WORD_RULE
+   `word_sub (word_add a x) (word_add a y):int64 = word_sub x y` in
+  let pat = `val(word_sub (word_add a x) (word_add a y):int64) = 0` in
+  let is_test t =
+    let t' = if is_neg t then rand t else t in
+    can (term_match [] pat) t' in
+  let tconv = REWRITE_CONV[wth] THENC WORD_REDUCE_CONV THENC
+              NUM_REDUCE_CONV in
+  let conv t =
+    if is_cond t && is_test(lhand(rator t)) then
+      (RATOR_CONV(LAND_CONV tconv) THENC REWRITE_CONV[]) t
+    else failwith "PTR_DECIDE_RIP_TAC" in
+  RULE_ASSUM_TAC(fun th ->
+    if can (find_term (can conv)) (concl th)
+    then CONV_RULE(ONCE_DEPTH_CONV conv) th else th);;
+
+(* ------------------------------------------------------------------------- *)
+(* ALIGNED_OFFSETS_TAC a k [n1; ...] adds aligned k (word_add a (word ni))   *)
+(* to the assumptions for each ni, a multiple of k, given aligned k a there, *)
+(* e.g. for the polynomials of an aligned vector.                            *)
+(* ------------------------------------------------------------------------- *)
+
+let ALIGNED_OFFSETS_TAC a k ns =
+  MAP_EVERY (fun n ->
+    let tm = list_mk_comb(`aligned:num->int64->bool`,
+       [mk_small_numeral k;
+        mk_comb(mk_comb(`word_add:int64->int64->int64`,a),
+                mk_comb(`word:num->int64`,mk_small_numeral n))]) in
+    SUBGOAL_THEN tm ASSUME_TAC THENL
+     [CONV_TAC NORMALIZE_ALIGNED_WORD_CONV THEN FIRST_ASSUM ACCEPT_TAC;
+      ALL_TAC]) ns;;

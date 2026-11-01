@@ -452,7 +452,25 @@ MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
 # that call other functions)
 
 MLKEM_NATIVE_IMAGE_PROOFS = \
-  mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2
+  mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_invntt_tomont_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_invntt_tomont_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_invntt_tomont_k4_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_mulcache_compute_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_mulcache_compute_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_mulcache_compute_k4_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_ntt_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_ntt_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_ntt_k4_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_reduce_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_reduce_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_reduce_k4_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_tobytes_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_tobytes_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_tobytes_k4_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_tomont_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_tomont_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_tomont_k4_gcc12_O2
 
 # Tutorial assembly files
 
@@ -562,6 +580,42 @@ $(MLKEM_NATIVE_IMAGE_PROOFS:=.native): mlkem_native/%.native: \
 .SECONDARY: $(MLKEM_NATIVE_OBJ)
 mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_invntt_tomont_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_invntt_tomont_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_invntt_tomont_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_invntt_tomont_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_invntt_tomont_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_invntt_tomont_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_mulcache_compute_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_mulcache_compute_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_mulcache_compute_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_mulcache_compute_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_mulcache_compute_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_mulcache_compute_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_ntt_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_ntt_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_ntt_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_ntt_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_ntt_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_ntt_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_reduce_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_reduce_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_reduce_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_reduce_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_reduce_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_reduce_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_tobytes_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_tobytes_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_tobytes_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_tobytes_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_tobytes_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_tobytes_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_tomont_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_tomont_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_tomont_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_tomont_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_tomont_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_tomont_gcc12_O2.native
 
 # Run them and print the standard output+error at *.correct
 
