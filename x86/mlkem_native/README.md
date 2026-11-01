@@ -35,6 +35,7 @@ program of the example passes with it. The file
 
 | File                                          | Compiler     |
 |-----------------------------------------------|--------------|
+| mlkem_native_poly_mulcache_compute_gcc12_O2.S | gcc 12.3.0   |
 | mlkem_native_poly_reduce_gcc12_O2.S           | gcc 12.3.0   |
 | mlkem_native_poly_tobytes_gcc12_O2.S          | gcc 12.3.0   |
 
@@ -63,6 +64,14 @@ python3 mlkem_native/check_transcription.py \
   <build>/multilevel/gcc12/O2/libmlkem.so \
   mlkem_poly_reduce
 ```
+
+Some functions use constant tables, which are transcribed into a read-only
+data section and referenced with RIP-relative addressing, giving
+relocations in the object file. For these, pairs of data symbols in the
+object file and the binary are given as additional arguments, e.g.
+`mlk_zetas mlk_zetas` for `mlkem_native_poly_mulcache_compute_gcc12_O2`.
+The script then checks that the tables are identical and that the relocated
+displacements in the binary give the addresses of the tables there.
 
 ## The compiled code
 
