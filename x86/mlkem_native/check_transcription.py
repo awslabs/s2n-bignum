@@ -77,24 +77,35 @@ class Elf:
     sys.exit(self.path + ': no data at address 0x%x' % addr)
 
   def segment_bytes(self, addr, size):
-    # Contents of the loadable segments from the given virtual address, which
-    # must be contiguous in the file over the range
+    # Contents of memory from the given virtual address when the binary is
+    # loaded. Each loadable segment maps whole pages (of its alignment) of
+    # the file, so the bytes up to the end of the page containing the end of
+    # its data are those of the file, except that any part beyond the data
+    # in the file but within the segment in memory (as for .bss) is zero.
     phoff, = struct.unpack_from('<Q', self.data, 0x20)
     phentsize, phnum = struct.unpack_from('<HH', self.data, 0x36)
-    out = b''
+    segs = []
+    for i in range(phnum):
+      p_type, _, p_offset, p_vaddr, _, p_filesz, p_memsz, p_align = \
+        struct.unpack_from('<IIQQQQQQ', self.data, phoff + i * phentsize)
+      if p_type == 1:
+        page = max(p_align, 1)
+        start = p_vaddr - p_vaddr % page
+        end = -(-(p_vaddr + max(p_filesz, p_memsz)) // page) * page
+        segs.append((start, end, p_offset - (p_vaddr - start),
+                     p_vaddr + p_filesz, p_memsz > p_filesz))
+    out = bytearray()
     while len(out) < size:
       a = addr + len(out)
-      for i in range(phnum):
-        p_type, _, p_offset, p_vaddr, _, p_filesz, _, _ = \
-          struct.unpack_from('<IIQQQQQQ', self.data, phoff + i * phentsize)
-        if p_type == 1 and p_vaddr <= a < p_vaddr + p_filesz:
-          n = min(size - len(out), p_vaddr + p_filesz - a)
-          pos = p_offset + a - p_vaddr
-          out += self.data[pos:pos + n]
+      for start, end, off, fend, bss in segs:
+        if start <= a < end:
+          n = min(size - len(out), end - a)
+          for k in range(a, a + n):
+            out.append(0 if bss and k >= fend else self.data[off + k - start])
           break
       else:
         sys.exit(self.path + ': no segment with data at address 0x%x' % a)
-    return out
+    return bytes(out)
 
   def section_index(self, name):
     shstrndx, = struct.unpack_from('<H', self.data, 0x3e)

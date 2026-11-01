@@ -135,3 +135,38 @@ subroutine forms of the theorems include the slot used in the stack region
 that the function may change, and the theorems for the code after the
 pushes of the callee-saved registers have its address as their
 `stackpointer` parameter.
+
+## The whole binary
+
+For proofs about functions that call others, and eventually about the API
+functions, `mlkem_native_libmlkem_gcc12_O2.S` is a transcription of the
+binary as it is loaded, from address 0 up to the end of the read-only data
+at 0x82a0. This covers its first two loadable segments, one with the ELF
+header and dynamic linking information and one with the procedure linkage
+table and all the code, the start of the third, with the constant tables,
+and the padding between them. It was generated from the disassembly, with
+the data as `.quad` directives, and it assembles to exactly these bytes,
+with no relocations. To check it, the symbol is given as `-` and the binary
+symbol as the address 0x0, and the whole `.text` section of the object file
+is then compared with the contents of memory from that address when the
+binary is loaded:
+
+```
+make mlkem_native/mlkem_native_libmlkem_gcc12_O2.o
+python3 mlkem_native/check_transcription.py \
+  mlkem_native/mlkem_native_libmlkem_gcc12_O2.o - \
+  <build>/multilevel/gcc12/O2/libmlkem.so 0x0
+```
+
+The proof file `../proofs/mlkem_native_libmlkem_gcc12_O2.ml` defines the
+image, and has tools to transfer the theorems for the individual functions
+to the same code in the image, at `pc + <address>` when the image is loaded
+at `pc`. The code refers to other code and data in the image only by
+displacements from the instruction pointer, so the relocated displacements
+in the individual transcriptions are then the same as those in the image,
+wherever it is, and the code of each function and its data are parts of the
+image. The theorems about the image only assume that `pc` is a multiple of
+16, since the vectors of constants read by SSE instructions must be
+aligned. Unlike those for AArch64, they do not assume that it is at a
+multiple of 4096, as it is when the dynamic loader loads it, or that it
+does not wrap around the end of the address space.
