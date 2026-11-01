@@ -453,6 +453,11 @@ MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
 
 MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2 \
+  mlkem_native/mlkem_native_poly_add_gcc12_O2 \
+  mlkem_native/mlkem_native_poly_sub_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_add_k4_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_invntt_tomont_k2_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_invntt_tomont_k3_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_invntt_tomont_k4_gcc12_O2 \
@@ -580,6 +585,12 @@ $(MLKEM_NATIVE_IMAGE_PROOFS:=.native): mlkem_native/%.native: \
 .SECONDARY: $(MLKEM_NATIVE_OBJ)
 mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_add_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_add_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_add_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_add_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_invntt_tomont_k2_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_invntt_tomont_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_invntt_tomont_k3_gcc12_O2.native: \

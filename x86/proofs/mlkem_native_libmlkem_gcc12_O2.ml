@@ -278,3 +278,19 @@ let ALIGNED_OFFSETS_TAC a k ns =
     SUBGOAL_THEN tm ASSUME_TAC THENL
      [CONV_TAC NORMALIZE_ALIGNED_WORD_CONV THEN FIRST_ASSUM ACCEPT_TAC;
       ALL_TAC]) ns;;
+
+(* ------------------------------------------------------------------------- *)
+(* For a vector instruction with a memory operand at base + index, the       *)
+(* address is computed as word_add a (word(1 * n)) when the index register   *)
+(* is word n, so INDEX_ADDR_TAC restates the assumptions about the 128-bit   *)
+(* words at word_add a (word(16 * i)), and their alignment, in that form.    *)
+(* ------------------------------------------------------------------------- *)
+
+let INDEX_ADDR_TAC =
+  let pth = ARITH_RULE `16 * i = 1 * 16 * i` in
+  RULE_ASSUM_TAC(fun th ->
+    let c = concl th in
+    if can (term_match []
+          `read (memory :> bytes128 (word_add a (word(16 * i)))) s = v`) c ||
+       can (term_match [] `aligned 16 (word_add a (word(16 * i)):int64)`) c
+    then ONCE_REWRITE_RULE[pth] th else th);;
