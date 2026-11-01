@@ -455,7 +455,9 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2 \
   mlkem_native/mlkem_native_poly_add_gcc12_O2 \
   mlkem_native/mlkem_native_poly_frombytes_gcc12_O2 \
+  mlkem_native/mlkem_native_poly_frommsg_gcc12_O2 \
   mlkem_native/mlkem_native_poly_sub_gcc12_O2 \
+  mlkem_native/mlkem_native_poly_tomsg_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_add_k4_gcc12_O2 \

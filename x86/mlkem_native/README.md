@@ -198,8 +198,9 @@ return address.
 The functions without transcriptions of their own are also verified
 directly in the image, in the files
 `../proofs/mlkem_native_<function>_gcc12_O2.ml` for `mlkem_<function>`. So
-far these are `mlkem_poly_add`, `mlkem_poly_sub` and
-`mlkem_poly_frombytes`. The compiler has vectorized `mlkem_poly_add` and
-`mlkem_poly_sub` with aligned SSE loads and stores, so their specifications
-require the polynomials to be aligned, as they are in mlkem-native, as do
-those of `mlkem_poly_tomont` and of the functions that call these.
+far these are `mlkem_poly_add`, `mlkem_poly_sub`, `mlkem_poly_frombytes`,
+`mlkem_poly_frommsg` and `mlkem_poly_tomsg`. The compiler has vectorized
+`mlkem_poly_add` and `mlkem_poly_sub` with aligned SSE loads and stores, so
+their specifications require the polynomials to be aligned, as they are in
+mlkem-native, as do those of `mlkem_poly_tomont` and of the functions that
+call these.
