@@ -1508,3 +1508,119 @@ let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_SAFE = prove
   ASM_REWRITE_TAC[] THEN
   DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_WEAKEN_RULE) THEN
   SIMP_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The same code in the whole image, at address 0x3e70, with the table of    *)
+(* round constants at 0x80c0 (see mlkem_native_libmlkem_gcc12_O2.ml).        *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_keccakf1600_permute_gcc12_O2_mc
+    0x3e70 [0x80c0];;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_RC_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_DATA_RULE
+    (hd mlkem_native_keccakf1600_permute_gcc12_O2_data) 0x80c0;;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (`!a A pc stackpointer returnaddress.
+        aligned 16 (word pc:int64) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 256),264))
+            [(word pc,0x82a0); (a,200)] /\
+        nonoverlapping (a,200) (word pc,0x82a0)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mc /\
+                  read RIP s = word (pc + 0x3e70) /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [a] s /\
+                  wordlist_from_memory(a,25) s = A)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  wordlist_from_memory(a,25) s = keccak 24 A)
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(a,200);
+                         memory :> bytes(word_sub stackpointer (word 256),
+                                         256)])`,
+  MLKEM_NATIVE_IMAGE_TAC
+   (INST [`pc + 0x3e70`,`pc:num`; `pc + 0x80c0`,`rc:num`]
+     (SPEC_ALL MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_CORRECT))
+   [MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_RC_IN_IMAGE]);;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e a pc stackpointer returnaddress.
+           aligned 16 (word pc:int64) /\
+           ALL (nonoverlapping (word_sub stackpointer (word 256),264))
+               [(word pc,0x82a0); (a,200)] /\
+           nonoverlapping (a,200) (word pc,0x82a0)
+           ==> ensures x86
+               (\s. bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read RIP s = word (pc + 0x3e70) /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    read events s = e)
+               (\s. read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events a pc
+                                (word_sub stackpointer (word 256))
+                                returnaddress /\
+                         memaccess_inbounds e2
+                           [a,200; word (pc + 0x80c0),192;
+                            word_sub stackpointer (word 256),264]
+                           [a,200; word_sub stackpointer (word 256),256]))
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,200);
+                           memory :> bytes(word_sub stackpointer (word 256),
+                                           256)])`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC
+   MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_SAFE
+   [`pc + 0x3e70`,`pc:num`; `pc + 0x80c0`,`rc:num`]
+   [MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_RC_IN_IMAGE]);;
+
+let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (`exists f_events.
+       forall e a A pc stackpointer returnaddress.
+           aligned 16 (word pc:int64) /\
+           ALL (nonoverlapping (word_sub stackpointer (word 256),264))
+               [(word pc,0x82a0); (a,200)] /\
+           nonoverlapping (a,200) (word pc,0x82a0)
+           ==> ensures x86
+               (\s. bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read RIP s = word (pc + 0x3e70) /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    wordlist_from_memory(a,25) s = A /\
+                    read events s = e)
+               (\s. read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    wordlist_from_memory(a,25) s = keccak 24 A /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events a pc
+                                (word_sub stackpointer (word 256))
+                                returnaddress /\
+                         memaccess_inbounds e2
+                           [a,200; word (pc + 0x80c0),192;
+                            word_sub stackpointer (word 256),264]
+                           [a,200; word_sub stackpointer (word 256),256]))
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,200);
+                           memory :> bytes(word_sub stackpointer (word 256),
+                                           256)])`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC
+   MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_FULL
+   [`pc + 0x3e70`,`pc:num`; `pc + 0x80c0`,`rc:num`]
+   [MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_RC_IN_IMAGE]);;

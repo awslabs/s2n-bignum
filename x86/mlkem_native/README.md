@@ -170,3 +170,9 @@ image. The theorems about the image only assume that `pc` is a multiple of
 aligned. Unlike those for AArch64, they do not assume that it is at a
 multiple of 4096, as it is when the dynamic loader loads it, or that it
 does not wrap around the end of the address space.
+
+The proof for each function ends with the versions of its theorems for the
+code in the image, `..._IMAGE_SUBROUTINE_CORRECT` and
+`..._IMAGE_SUBROUTINE_SAFE`, and for `mlkem_keccakf1600_permute` also
+`..._IMAGE_SUBROUTINE_FULL`. As on AArch64, the safety theorems keep the
+frames of the correctness theorems, for use in the proofs of callers.

@@ -922,3 +922,82 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_SAFE = prove
   X86_ADD_RETURN_NOSTACK_TAC MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_EXEC
     (CONV_RULE TWEAK_CONV MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_MEMSAFE) THEN
   DISCHARGE_MEMSAFE_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The same code in the whole image, at address 0x6040 (see                  *)
+(* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+
+let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_rej_uniform_gcc12_O2_mc
+    0x6040 [];;
+
+let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (`!r offset buf buflen (inlist:(12 word)list) pc stackpointer returnaddress.
+      aligned 16 (word pc:int64) /\
+      offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
+      8 * buflen = 12 * LENGTH inlist /\
+      ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
+          [(word pc,0x82a0); (buf,buflen); (stackpointer,8)]
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc)
+                  mlkem_native_libmlkem_gcc12_O2_mc /\
+                read RIP s = word (pc + 0x6040) /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                C_ARGUMENTS [r; word offset; buf; word buflen] s /\
+                wordlist_from_memory(buf,LENGTH inlist) s = inlist)
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                let inlist' = MAP (word_zx:12 word->16 word) inlist in
+                let outlist =
+                  SUB_LIST (0,256 - offset)
+                           (FILTER (\x. val x < 3329) inlist') in
+                let outlen = LENGTH outlist in
+                C_RETURN s = word(offset + outlen) /\
+                wordlist_from_memory(word_add r (word(2 * offset)),outlen) s =
+                outlist)
+           (MAYCHANGE [RSP] ,,
+            MAYCHANGE [RIP; RAX; RCX; RDX; RSI; RDI; R8; R9; R10] ,,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+            MAYCHANGE [memory :> bytes(word_add r (word(2 * offset)),
+                                       2 * (256 - offset))])`,
+  MLKEM_NATIVE_IMAGE_TAC
+   (INST [`pc + 0x6040`,`pc:num`]
+     (SPEC_ALL MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_CORRECT))
+   [MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IN_IMAGE]);;
+
+let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (`!r offset buf buflen (inlist:(12 word)list) pc e stackpointer
+    returnaddress.
+      aligned 16 (word pc:int64) /\
+      offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
+      8 * buflen = 12 * LENGTH inlist /\
+      ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
+          [(word pc,0x82a0); (buf,buflen); (stackpointer,8)]
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc)
+                  mlkem_native_libmlkem_gcc12_O2_mc /\
+                read RIP s = word (pc + 0x6040) /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                C_ARGUMENTS [r; word offset; buf; word buflen] s /\
+                wordlist_from_memory(buf,LENGTH inlist) s = inlist /\
+                read events s = e)
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                (exists e2.
+                   read events s = APPEND e2 e /\
+                   memaccess_inbounds e2 [buf,buflen; stackpointer,8]
+                     [word_add r (word(2 * offset)),2 * (256 - offset)]))
+           (MAYCHANGE [RSP] ,,
+            MAYCHANGE [RIP; RAX; RCX; RDX; RSI; RDI; R8; R9; R10] ,,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+            MAYCHANGE [memory :> bytes(word_add r (word(2 * offset)),
+                                       2 * (256 - offset))])`,
+  MLKEM_NATIVE_IMAGE_TAC
+   (INST [`pc + 0x6040`,`pc:num`]
+     (SPEC_ALL MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_SAFE))
+   [MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IN_IMAGE]);;

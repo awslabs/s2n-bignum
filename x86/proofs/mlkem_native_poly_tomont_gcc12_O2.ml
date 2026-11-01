@@ -522,3 +522,78 @@ let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_SAFE = time prove
   X86_ADD_RETURN_NOSTACK_TAC MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_EXEC
     MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SAFE THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The same code in the whole image, at address 0x55a0, with the vectors of  *)
+(* constants at 0x8070 (see mlkem_native_libmlkem_gcc12_O2.ml).              *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+
+let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_poly_tomont_gcc12_O2_mc
+    0x55a0 [0x8070];;
+
+let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_DATA_RULE
+    (hd mlkem_native_poly_tomont_gcc12_O2_data) 0x8070;;
+
+let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (`!a x pc stackpointer returnaddress.
+    aligned 16 (word pc:int64) /\
+    aligned 16 a /\
+    ALL (nonoverlapping (a,512)) [(word pc,0x82a0); (stackpointer,8)]
+    ==> ensures x86
+      (\s. bytes_loaded s (word pc)
+             mlkem_native_libmlkem_gcc12_O2_mc /\
+           read RIP s = word (pc + 0x55a0) /\
+           read RSP s = stackpointer /\
+           read (memory :> bytes64 stackpointer) s = returnaddress /\
+           C_ARGUMENTS [a] s /\
+           (!i. i < 256
+                ==> read(memory :> bytes16(word_add a (word (2 * i)))) s =
+                    x i))
+      (\s. read RIP s = returnaddress /\
+           read RSP s = word_add stackpointer (word 8) /\
+           !i. i < 256
+               ==> let z_i = read(memory :> bytes16
+                                (word_add a (word (2 * i)))) s in
+                   (ival z_i == (tomont_3329 (ival o x)) i) (mod &3329) /\
+                   abs(ival z_i) <= &3328)
+      (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(a,512)])`,
+  MLKEM_NATIVE_IMAGE_TAC
+   (INST [`pc + 0x55a0`,`pc:num`; `pc + 0x8070`,`consts:num`]
+     (SPEC_ALL MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_CORRECT))
+   [MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE]);;
+
+let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e a pc stackpointer returnaddress.
+           aligned 16 (word pc:int64) /\
+           aligned 16 a /\
+           ALL (nonoverlapping (a,512)) [word pc,0x82a0; stackpointer,8]
+           ==> ensures x86
+               (\s. bytes_loaded s (word pc)
+                     mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read RIP s = word (pc + 0x55a0) /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    read events s = e)
+               (\s. read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events a pc stackpointer
+                                       returnaddress /\
+                         memaccess_inbounds e2
+                          [a,512; word (pc + 0x8070),48;
+                           stackpointer,8] [a,512]))
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,512)])`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_SAFE
+   [`pc + 0x55a0`,`pc:num`; `pc + 0x8070`,`consts:num`]
+   [MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE]);;

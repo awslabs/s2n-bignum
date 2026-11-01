@@ -1249,3 +1249,83 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_SAFE = time prove
     MLKEM_NATIVE_POLY_NTT_GCC12_O2_SAFE
     `[R15; R14; R13; R12; RBP; RBX]` 52 (11,7) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The same code in the whole image, at address 0x5780, with the table of    *)
+(* zetas at 0x81a0 (see mlkem_native_libmlkem_gcc12_O2.ml).                  *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O2_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_poly_ntt_gcc12_O2_mc
+    0x5780 [0x81a0];;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O2_ZETAS_IN_IMAGE =
+  MLKEM_NATIVE_IMAGE_DATA_RULE mlk_zetas_data 0x81a0;;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (`!a (x:num->int16) pc stackpointer returnaddress.
+    aligned 16 (word pc:int64) /\
+    nonoverlapping (a,512) (word pc,0x82a0) /\
+    ALL (nonoverlapping (word_sub stackpointer (word 52),60))
+        [(word pc,0x82a0); (a,512)]
+    ==> ensures x86
+      (\s. bytes_loaded s (word pc)
+             mlkem_native_libmlkem_gcc12_O2_mc /\
+           read RIP s = word (pc + 0x5780) /\
+           read RSP s = stackpointer /\
+           read (memory :> bytes64 stackpointer) s = returnaddress /\
+           C_ARGUMENTS [a] s /\
+           (!i. i < 256
+                ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
+                    x i))
+      (\s. read RIP s = returnaddress /\
+           read RSP s = word_add stackpointer (word 8) /\
+           ((!i. i < 256 ==> abs(ival(x i)) <= &8191)
+            ==> !i. i < 256
+                    ==> let zi =
+                          read(memory :> bytes16(word_add a (word(2 * i)))) s
+                        in (ival zi == forward_ntt (ival o x) i) (mod &3329) /\
+                           abs(ival zi) <= &23594))
+      (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(a,512);
+                  memory :> bytes(word_sub stackpointer (word 52),52)])`,
+  MLKEM_NATIVE_IMAGE_TAC
+   (INST [`pc + 0x5780`,`pc:num`; `pc + 0x81a0`,`zetas:num`]
+     (SPEC_ALL MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_CORRECT))
+   [MLKEM_NATIVE_POLY_NTT_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_POLY_NTT_GCC12_O2_ZETAS_IN_IMAGE]);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+     forall e a pc stackpointer returnaddress.
+       aligned 16 (word pc:int64) /\
+       nonoverlapping (a,512) (word pc,0x82a0) /\
+       ALL (nonoverlapping (word_sub stackpointer (word 52),60))
+           [word pc,0x82a0; a,512]
+       ==> ensures x86
+           (\s. bytes_loaded s (word pc)
+                  mlkem_native_libmlkem_gcc12_O2_mc /\
+                read RIP s = word (pc + 0x5780) /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                C_ARGUMENTS [a] s /\
+                read events s = e)
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                exists e2.
+                  read events s = APPEND e2 e /\
+                  e2 = f_events a pc (word_sub stackpointer (word 52))
+                         returnaddress /\
+                  memaccess_inbounds e2
+                   [a,512; word (pc + 0x81a0),256;
+                    word_sub stackpointer (word 52),60]
+                   [a,512; word_sub stackpointer (word 52),52])
+           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+            MAYCHANGE [memory :> bytes(a,512);
+                       memory :> bytes(word_sub stackpointer (word 52),52)])`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_SAFE
+   [`pc + 0x5780`,`pc:num`; `pc + 0x81a0`,`zetas:num`]
+   [MLKEM_NATIVE_POLY_NTT_GCC12_O2_IN_IMAGE;
+    MLKEM_NATIVE_POLY_NTT_GCC12_O2_ZETAS_IN_IMAGE]);;
