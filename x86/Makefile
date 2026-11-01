@@ -433,7 +433,8 @@ OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 # mlkem_native/README.md). These are only for the proofs and are not
 # included in the library.
 
-MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_poly_mulcache_compute_gcc12_O2.o \
+MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
+                   mlkem_native/mlkem_native_poly_mulcache_compute_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_reduce_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_tobytes_gcc12_O2.o \
                    mlkem_native/mlkem_native_poly_tomont_gcc12_O2.o

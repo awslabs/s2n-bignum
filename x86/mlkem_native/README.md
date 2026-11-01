@@ -31,10 +31,12 @@ archive was linked with `ld -shared -Bsymbolic -soname libmlkem.so`, using
 the version script `binaries/libmlkem.map`, to give `libmlkem.so`. The test
 program of the example passes with it. The file
 `mlkem_native_<function>_gcc12_O2.S` contains the code of the function
-`mlkem_<function>` in this binary.
+`mlkem_<function>` in this binary, except that the `basemul_k2` file is for
+`mlkem512_polyvec_basemul_acc_montgomery_cached`.
 
 | File                                          | Compiler     |
 |-----------------------------------------------|--------------|
+| mlkem_native_basemul_k2_gcc12_O2.S            | gcc 12.3.0   |
 | mlkem_native_poly_mulcache_compute_gcc12_O2.S | gcc 12.3.0   |
 | mlkem_native_poly_reduce_gcc12_O2.S           | gcc 12.3.0   |
 | mlkem_native_poly_tobytes_gcc12_O2.S          | gcc 12.3.0   |

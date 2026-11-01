@@ -321,6 +321,27 @@ let MONTRED_X86_SCALAR = prove
   SIMP_TAC[WORD_ZX_MUL; DIMINDEX_16; DIMINDEX_32; ARITH] THEN
   CONV_TAC WORD_REDUCE_CONV THEN REWRITE_TAC[WORD_ADD_SYM]);;
 
+(*** Folding either order of the final addition into montred_scalar ***)
+
+let MONTRED_X86_FOLD = prove
+ (`(!t:int32.
+      word_zx(word_ishr
+       (word_add
+         (word_mul (word_sx (word_mul (word_zx t:int16) (word 62209)):int32)
+                   (word 4294963967))
+         t)
+       16):int16 =
+      montred_scalar t) /\
+   (!t:int32.
+      word_zx(word_ishr
+       (word_add t
+         (word_mul (word_sx (word_mul (word_zx t:int16) (word 62209)):int32)
+                   (word 4294963967)))
+       16):int16 =
+      montred_scalar t)`,
+  REWRITE_TAC[GSYM MONTRED_X86_SCALAR; montred_x86] THEN
+  REWRITE_TAC[WORD_ADD_SYM]);;
+
 (*** A 32-bit product formed from the 16-bit high and low halves given by
  *** PMULHW and PMULLW
  ***)
@@ -547,3 +568,23 @@ let RIPREL_FOLD_TAC data ofs c k =
   MP_TAC(SPECL [`pc:num`; ofs; data; c; k] RIPREL_FOLD) THEN
   REWRITE_TAC[ADD_CLAUSES] THEN
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN INT_ARITH_TAC; DISCH_TAC];;
+
+(* ------------------------------------------------------------------------- *)
+(* The test of a 64-bit loop counter i in RAX against n after incrementing   *)
+(* it, which the simulation gives as the sum with 2^64 + 1 - n.              *)
+(* ------------------------------------------------------------------------- *)
+
+let VAL_WORD_ADD_LOOP_TEST = prove
+ (`!i n m:num. 1 < n /\ n <= 2 EXP 64 /\ i < n /\ m + n = 2 EXP 64 + 1
+           ==> (~(val(word_add (word i) (word m):int64) = 0) <=> i + 1 < n)`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+  RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN `i MOD 18446744073709551616 = i /\
+                m MOD 18446744073709551616 = m`
+   (fun th -> REWRITE_TAC[th]) THENL
+   [CONJ_TAC THEN MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  ASM_CASES_TAC `i + 1 = n` THEN ASM_REWRITE_TAC[LT_REFL] THENL
+   [SUBGOAL_THEN `i + m = 18446744073709551616` SUBST1_TAC THENL
+     [ASM_ARITH_TAC; CONV_TAC NUM_REDUCE_CONV];
+    SUBGOAL_THEN `(i + m) MOD 18446744073709551616 = i + m` SUBST1_TAC THENL
+     [MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC; ASM_ARITH_TAC]]);;
