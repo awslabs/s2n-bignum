@@ -182,11 +182,11 @@ theorems for the calls. So far this is done for
 `mlkem_keccakf1600x4_permute`, at address 0x4740, which calls
 `mlkem_keccakf1600_permute` four times, the last time as a tail call, and
 for the functions `mlkem<n>_polyvec_<op>` that apply `mlkem_poly_<op>` to
-each polynomial of a vector, for `<op>` one of `add`, `invntt_tomont`,
-`mulcache_compute`, `ntt`, `reduce`, `tobytes` and `tomont` and `<n>` one
-of 512, 768 and 1024 (in the files
+each polynomial of a vector, for `<op>` one of `add`, `frombytes`,
+`invntt_tomont`, `mulcache_compute`, `ntt`, `reduce`, `tobytes` and
+`tomont` and `<n>` one of 512, 768 and 1024 (in the files
 `mlkem_native_polyvec_<op>_k<k>_gcc12_O2.ml` for vectors of k = 2, 3 or 4
-polynomials), three of which are compiled as loops over the polynomials,
+polynomials), four of which are compiled as loops over the polynomials,
 unrolled in the proofs. As in `common/fips203.ml`, a vector of k
 polynomials is given by its 256 * k coefficients, of which those of
 polynomial j are `\i. x(256 * j + i)`. As for the functions they call, the
@@ -198,7 +198,8 @@ return address.
 The functions without transcriptions of their own are also verified
 directly in the image, in the files
 `../proofs/mlkem_native_<function>_gcc12_O2.ml` for `mlkem_<function>`. So
-far these are `mlkem_poly_add` and `mlkem_poly_sub`, which the compiler has
-vectorized with aligned SSE loads and stores, so their specifications
+far these are `mlkem_poly_add`, `mlkem_poly_sub` and
+`mlkem_poly_frombytes`. The compiler has vectorized `mlkem_poly_add` and
+`mlkem_poly_sub` with aligned SSE loads and stores, so their specifications
 require the polynomials to be aligned, as they are in mlkem-native, as do
 those of `mlkem_poly_tomont` and of the functions that call these.
