@@ -42,6 +42,7 @@ program of the example passes with it. The file
 | mlkem_native_basemul_k2_gcc12_O2.S            | gcc 12.3.0   |
 | mlkem_native_basemul_k3_gcc12_O2.S            | gcc 12.3.0   |
 | mlkem_native_basemul_k4_gcc12_O2.S            | gcc 12.3.0   |
+| mlkem_native_poly_invntt_tomont_gcc12_O2.S    | gcc 12.3.0   |
 | mlkem_native_poly_mulcache_compute_gcc12_O2.S | gcc 12.3.0   |
 | mlkem_native_poly_ntt_gcc12_O2.S              | gcc 12.3.0   |
 | mlkem_native_poly_reduce_gcc12_O2.S           | gcc 12.3.0   |
@@ -82,9 +83,12 @@ object file and the binary are given as additional arguments, e.g.
 `mlkem_native_poly_ntt_gcc12_O2`. Where the data in the binary has no
 symbol, its address there can be given in hexadecimal instead, e.g.
 `mlkem_native_poly_tomont_gcc12_O2_constants 0x8070` for
-`mlkem_native_poly_tomont_gcc12_O2`. The script then checks that the tables
-are identical and that the relocated displacements in the binary give the
-addresses of the tables there.
+`mlkem_native_poly_tomont_gcc12_O2`, and
+`mlkem_native_poly_invntt_tomont_gcc12_O2_constants 0x8080 mlk_zetas
+mlk_zetas` for `mlkem_native_poly_invntt_tomont_gcc12_O2`, which uses both
+kinds of table. The script then checks that the tables are identical and
+that the relocated displacements in the binary give the addresses of the
+tables there.
 
 ## The compiled code
 
