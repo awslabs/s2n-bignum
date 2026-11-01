@@ -20,12 +20,13 @@ on all platforms.
 
 The `binary` branch of mlkem-native (commit `83fb34a`) only has binaries
 for AArch64, so the code is transcribed from the disassembly of a binary
-built in the same way on an x86-64 Linux machine. Following its
-`scripts/build-binaries`, as recorded in `binaries/builds.json` there, the
-"multilevel" build (`examples/multilevel_build`) of mlkem-native commit
-`03392e41` was compiled in the nix shell `.#gcc12` (gcc 12.3.0 and binutils
-2.41) with `CFLAGS` set to `-O2 -g -gdwarf-4 -gsplit-dwarf -fPIC` and
-`-fdebug-prefix-map` for the source directory. The object files were
+built in the same way on an x86-64 Linux machine, except for the stack
+protector (see below). Following its `scripts/build-binaries`, as recorded
+in `binaries/builds.json` there, the "multilevel" build
+(`examples/multilevel_build`) of mlkem-native commit `03392e41` was
+compiled in the nix shell `.#gcc12` (gcc 12.3.0 and binutils 2.41) with
+`CFLAGS` set to `-O2 -g -gdwarf-4 -gsplit-dwarf -fPIC -fno-stack-protector`
+and `-fdebug-prefix-map` for the source directory. The object files were
 archived with `ar rcsD`, in the sorted order of their paths, and the
 archive was linked with `ld -shared -Bsymbolic -soname libmlkem.so`, using
 the version script `binaries/libmlkem.map`, to give `libmlkem.so`. The test
@@ -53,12 +54,22 @@ The SHA-256 hash of the binary used is:
 
 ```
 multilevel/gcc12/O2/libmlkem.so
-  ed13c628dfb86048ffe7163833052ad933ab63c1aa3b8110025ed0cf4f5b5e89
+  864eca00b2123faab8a1c54caffbb4bee4c7ed5e3905a84c9f32bc4d522cb388
 ```
 
 A binary built in another directory has a different hash, since the split
 debug information records the paths of its files, but the contents of its
 loaded segments are the same.
+
+Unlike the AArch64 binaries, this one is built without gcc's stack
+protector, which the nix shell otherwise enables. On x86-64 Linux, the
+stack protector reads the guard at offset 0x28 from the base of the FS
+segment, in thread-local storage, rather than through the global offset
+table as on AArch64, and the x86 model has no segment bases. With the stack
+protector, 44 functions copy the guard to the stack and check it before
+returning. The other functions, including all of those here, are the same
+in both binaries apart from their addresses, and the read-only data is at
+the same addresses. This is a provisional choice, which may be revisited.
 
 ## Checking a transcription
 
