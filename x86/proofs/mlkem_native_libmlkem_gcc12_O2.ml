@@ -547,3 +547,18 @@ let MLKEM_NATIVE_IMAGE_RIPREL_CONST_RULE next target k =
   let eth = (REWRITE_CONV[WORD_VAL_ADD_64; GSYM ADD_ASSOC] THENC
              NUM_REDUCE_CONV) lt in
   REWRITE_RULE[GSYM eth] th;;
+
+(*** MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC n d adds the alignment of such an
+ *** address, for an aligned SSE load of a vector at a multiple d of 16,
+ *** given that of pc
+ ***)
+
+let MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC next target =
+  let tm = subst [mk_small_numeral next,`n:num`;
+                  mk_small_numeral (target - next),`d:num`]
+    `aligned 16 (word (val (word (pc + n):int64) + d):int64)` in
+  SUBGOAL_THEN tm ASSUME_TAC THENL
+   [REWRITE_TAC[WORD_VAL_ADD_64; GSYM ADD_ASSOC] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN REWRITE_TAC[WORD_ADD] THEN
+    CONV_TAC NORMALIZE_ALIGNED_WORD_CONV THEN FIRST_ASSUM ACCEPT_TAC;
+    ALL_TAC];;
