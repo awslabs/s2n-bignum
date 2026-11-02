@@ -199,8 +199,9 @@ The functions without transcriptions of their own are also verified
 directly in the image, in the files
 `../proofs/mlkem_native_<function>_gcc12_O2.ml` for `mlkem_<function>`. So
 far these are `mlkem_poly_add`, `mlkem_poly_sub`, `mlkem_poly_frombytes`,
-`mlkem_poly_frommsg`, `mlkem_poly_tomsg` and `mlkem_poly_decompress_d4`.
-The compiler has vectorized `mlkem_poly_add` and `mlkem_poly_sub` with
-aligned SSE loads and stores, so their specifications require the
-polynomials to be aligned, as they are in mlkem-native, as do those of
-`mlkem_poly_tomont` and of the functions that call these.
+`mlkem_poly_frommsg`, `mlkem_poly_tomsg`, `mlkem_poly_decompress_d4` and
+`mlkem_poly_decompress_d10`. The compiler has vectorized `mlkem_poly_add`
+and `mlkem_poly_sub` with aligned SSE loads and stores, so their
+specifications require the polynomials to be aligned, as they are in
+mlkem-native, as do those of `mlkem_poly_tomont` and of the functions that
+call these.

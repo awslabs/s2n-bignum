@@ -297,9 +297,10 @@ let INDEX_ADDR_TAC =
 
 (* ------------------------------------------------------------------------- *)
 (* Byte arrays. As in mlkem_decode in common/fips203.ml, the contents of a   *)
-(* byte array are given as a number n, and READ_MEMORY_BYTES8_OF_NUM gives   *)
-(* its bytes. BYTES_BITBLAST_TAC proves a goal of bit operations on such     *)
-(* bytes word((n DIV 2 EXP k) MOD 256) by bit-blasting with them as atoms.   *)
+(* byte array are given as a number n, and READ_MEMORY_BYTES8_OF_NUM and     *)
+(* READ_MEMORY_BYTES16_OF_NUM give its bytes and pairs of bytes.             *)
+(* BYTES_BITBLAST_TAC proves a goal of bit operations on such bytes          *)
+(* word((n DIV 2 EXP k) MOD 256) by bit-blasting with them as atoms.         *)
 (* ------------------------------------------------------------------------- *)
 
 let READ_MEMORY_BYTES8_OF_NUM = prove
@@ -314,6 +315,22 @@ let READ_MEMORY_BYTES8_OF_NUM = prove
               VAL_WORD; DIMINDEX_8] THEN
   CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL] THEN
   REWRITE_TAC[ARITH_RULE `256 = 2 EXP (8 * 1)`; READ_BYTES_DIV;
+              READ_BYTES_MOD] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+let READ_MEMORY_BYTES16_OF_NUM = prove
+ (`!a:int64 m n k s:x86state.
+        read (memory :> bytes(a,m)) s = n /\ k + 2 <= m
+        ==> read (memory :> bytes16(word_add a (word k))) s =
+            word((n DIV 2 EXP (8 * k)) MOD 65536)`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (SUBST1_TAC o SYM) ASSUME_TAC) THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[BYTES16_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES;
+              VAL_WORD; DIMINDEX_16] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL] THEN
+  REWRITE_TAC[ARITH_RULE `65536 = 2 EXP (8 * 2)`; READ_BYTES_DIV;
               READ_BYTES_MOD] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
   REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
@@ -357,3 +374,90 @@ let MOD_32_64 = prove
 let WORD_SX_64_32 = prove
  (`!x:int64. word_sx x:int32 = word_zx x`,
   BITBLAST_TAC);;
+
+(*** Bit fields of numbers and of words made from them ***)
+
+let DIV_MOD_EXP_LOW = prove
+ (`!x m k l. k + l <= m
+             ==> ((x MOD 2 EXP m) DIV 2 EXP k) MOD 2 EXP l =
+                 (x DIV 2 EXP k) MOD 2 EXP l`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[DIV_MOD; GSYM EXP_ADD; MOD_MOD_EXP_MIN] THEN
+  ASM_SIMP_TAC[ARITH_RULE `k + l <= m ==> MIN m (k + l) = k + l`]);;
+
+let WORD_SUBWORD_WORD = prove
+ (`!x k l. k + l <= dimindex(:N)
+           ==> word_subword (word x:N word) (k,l):M word =
+               word((x DIV 2 EXP k) MOD 2 EXP l)`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[word_subword; VAL_WORD] THEN
+  AP_TERM_TAC THEN ASM_SIMP_TAC[DIV_MOD_EXP_LOW]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constants in the image. MLKEM_NATIVE_IMAGE_CONST_RULE d k gives           *)
+(*                                                                           *)
+(* |- !s pc. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc      *)
+(*           ==> read (memory :> bytes<k> (word(pc + d))) s = word v         *)
+(*                                                                           *)
+(* for the k-bit value v (k = 8, 16, 32, 64 or 128) at address d in the      *)
+(* image, and MLKEM_NATIVE_IMAGE_RIPREL_CONST_RULE n d k gives the same with *)
+(* the address in the form that the simulation gives for a RIP-relative      *)
+(* operand in an instruction ending at n, word(val(word(pc + n)) + (d - n)). *)
+(* ------------------------------------------------------------------------- *)
+
+let READ_MEMORY_WBYTES_LOADED = prove
+ (`!(a:int64) (l:byte list) s:x86state.
+        bytes_loaded s a l /\ LENGTH l = dimindex(:N) DIV 8
+        ==> read (memory :> wbytes a) s:N word = word(num_of_bytelist l)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[bytes_loaded] THEN
+  DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
+  REWRITE_TAC[READ_BYTELIST_EQ_BYTES] THEN STRIP_TAC THEN
+  GEN_REWRITE_TAC LAND_CONV [GSYM WORD_VAL] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; VAL_READ_WBYTES] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_COMPONENT_COMPOSE]) THEN
+  FIRST_X_ASSUM(fun th -> REWRITE_TAC[GSYM th]) THEN ASM_REWRITE_TAC[]);;
+
+let MLKEM_NATIVE_IMAGE_CONST_RULE =
+  let rec take n l =
+    if n = 0 then [] else
+    match l with h::t -> h::take (n - 1) t | [] -> failwith "take" in
+  let rec drop n l =
+    if n = 0 then l else
+    match l with _::t -> drop (n - 1) t | [] -> failwith "drop" in
+  let imagel = dest_list(rhs(concl mlkem_native_libmlkem_gcc12_O2_mc)) in
+  let wbths = [8,BYTES8_WBYTES; 16,BYTES16_WBYTES; 32,BYTES32_WBYTES;
+               64,BYTES64_WBYTES; 128,BYTES128_WBYTES] in
+  let bl_tm = `bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc` in
+  fun d k ->
+    let l = mk_list(take (k / 8) (drop d imagel),`:byte`) in
+    let th1 = UNDISCH(SPEC_ALL(BYTES_LOADED_SUBPROGRAM_RULE
+                mlkem_native_libmlkem_gcc12_O2_mc (REFL l) d)) in
+    let a = rand(rator(concl th1)) in
+    let lth = ISPECL [a; l; `s:x86state`]
+               (INST_TYPE [mk_finty(Num.num_of_int k),`:N`]
+                          READ_MEMORY_WBYTES_LOADED) in
+    let lenth = prove(rand(lhand(concl lth)),
+      REWRITE_TAC[LENGTH] THEN CONV_TAC(DEPTH_CONV DIMINDEX_CONV) THEN
+      CONV_TAC NUM_REDUCE_CONV) in
+    let th2 = MP lth (CONJ th1 lenth) in
+    let th3 = CONV_RULE(RAND_CONV(RAND_CONV
+      (REWRITE_CONV[num_of_bytelist] THENC DEPTH_CONV WORD_RED_CONV THENC
+       NUM_REDUCE_CONV))) th2 in
+    let th4 = REWRITE_RULE[GSYM(assoc k wbths)] th3 in
+    GENL [`s:x86state`; `pc:num`] (DISCH bl_tm th4);;
+
+let WORD_VAL_ADD_64 = prove
+ (`!x n. word(val(word x:int64) + n):int64 = word(x + n)`,
+  REWRITE_TAC[WORD_ADD; WORD_VAL]);;
+
+let MLKEM_NATIVE_IMAGE_RIPREL_CONST_RULE next target k =
+  let th = MLKEM_NATIVE_IMAGE_CONST_RULE target k in
+  let disp = target - next in
+  let lt = mk_comb(`word:num->int64`,
+    mk_binop `(+):num->num->num`
+     (mk_comb(`val:int64->num`,
+        mk_comb(`word:num->int64`,
+          mk_binop `(+):num->num->num` `pc:num` (mk_small_numeral next))))
+     (mk_small_numeral disp)) in
+  let eth = (REWRITE_CONV[WORD_VAL_ADD_64; GSYM ADD_ASSOC] THENC
+             NUM_REDUCE_CONV) lt in
+  REWRITE_RULE[GSYM eth] th;;
