@@ -241,6 +241,9 @@ zero quadwords at the two ends of the state and clears the quadwords in
 between from the first multiple of 8 above its start, and the tactics
 `MEMSET_PREP_TAC`, `MEMSET_STEP_TAC` and `MEMSET_DONE_TAC` in
 `../proofs/mlkem_native_libmlkem_gcc12_O2.ml` put the parts together for
-any alignment. Where the hypotheses are the same, the correctness and
-safety theorems are derived from the combined ones
+any alignment. The same is done for `mlkem_shake128_absorb_once`,
+`mlkem_shake128_squeezeblocks`, `mlkem_shake128_init` and
+`mlkem_shake128_release`, of which `mlkem_shake128_release` zeroes the
+context in the same way. Where the hypotheses are the same, the correctness
+and safety theorems are derived from the combined ones
 `..._IMAGE_SUBROUTINE_FULL`.
