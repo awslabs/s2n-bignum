@@ -29,6 +29,7 @@ endif
 # List of object files
 
 OBJ = aes128_gcm_dec.o \
+      aes128_gcm_dec_alt.o \
       aes128_gcm_enc.o \
       aes256_gcm_dec.o \
       aes256_gcm_dec_alt.o \
