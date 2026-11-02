@@ -596,7 +596,7 @@ $(MLKEM_NATIVE_OBJ:.o=.native): proofs/mlkem_native_libmlkem_gcc12_O2.ml \
   mlkem_native/mlkem_native_libmlkem_gcc12_O2.o
 
 mlkem_native/mlkem_native_keccakf1600_permute_gcc12_O2.native: \
-  proofs/utils/keccak_spec.ml
+  proofs/utils/keccak_spec.ml proofs/utils/keccak_fips202.ml
 
 # The proofs of functions only verified in the image, which depend on
 # those of the functions they call. Since they load the proofs of the
