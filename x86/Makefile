@@ -475,6 +475,12 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_add_k4_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_compress_du_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_compress_du_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_compress_du_k4_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_decompress_du_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_decompress_du_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_polyvec_decompress_du_k4_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_frombytes_k2_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_frombytes_k3_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_frombytes_k4_gcc12_O2 \
@@ -615,6 +621,18 @@ mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_add_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_add_k4_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_add_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_compress_du_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_compress_d10_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_compress_du_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_compress_d10_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_compress_du_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_compress_d11_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_decompress_du_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_decompress_d10_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_decompress_du_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_decompress_d10_gcc12_O2.native
+mlkem_native/mlkem_native_polyvec_decompress_du_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_decompress_d11_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_frombytes_k2_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_frombytes_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_frombytes_k3_gcc12_O2.native: \

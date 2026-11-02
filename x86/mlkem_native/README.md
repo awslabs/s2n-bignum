@@ -188,12 +188,16 @@ apply `mlkem_poly_<op>` to each polynomial of a vector, for `<op>` one of
 `add`, `frombytes`, `invntt_tomont`, `mulcache_compute`, `ntt`, `reduce`,
 `tobytes` and `tomont` and `<n>` one of 512, 768 and 1024 (in the files
 `mlkem_native_polyvec_<op>_k<k>_gcc12_O2.ml` for vectors of k = 2, 3 or 4
-polynomials), four of which are compiled as loops over the polynomials,
-unrolled in the proofs. As in `common/fips203.ml`, a vector of k
-polynomials is given by its 256 * k coefficients, of which those of
-polynomial j are `\i. x(256 * j + i)`. As for the functions they call, the
-theorems give the stack used, below the return address, and the stack
-pointer after the return, which callers need, and in the theorems of
+polynomials), and for `mlkem<n>_polyvec_compress_du` and
+`mlkem<n>_polyvec_decompress_du`, which apply `mlkem_poly_compress_d10` and
+`mlkem_poly_decompress_d10` for 512 and 768 and `mlkem_poly_compress_d11`
+and `mlkem_poly_decompress_d11` for 1024 (with `<op>` `compress_du` and
+`decompress_du` in the file names), six of which are compiled as loops over
+the polynomials, unrolled in the proofs. As in `common/fips203.ml`, a
+vector of k polynomials is given by its 256 * k coefficients, of which
+those of polynomial j are `\i. x(256 * j + i)`. As for the functions they
+call, the theorems give the stack used, below the return address, and the
+stack pointer after the return, which callers need, and in the theorems of
 constant time and memory safety the stack that may be read includes the
 return address.
 
@@ -213,7 +217,9 @@ aligned, as they are in mlkem-native, as do those of `mlkem_poly_tomont`
 and of the functions that call these. Likewise `mlkem_poly_decompress_d11`
 uses aligned stores for its output and `mlkem_poly_compress_d11` aligned
 loads for its input, so their specifications require those polynomials to
-be aligned. As for `mlkem_keccakf1600_permute`, there are also combined
-theorems `..._IMAGE_SUBROUTINE_FULL` for the functions that extract bytes
-from Keccak states and XOR bytes into them, one or four states at a time,
-for callers whose events depend on the results.
+be aligned, as do those of `mlkem1024_polyvec_decompress_du` and
+`mlkem1024_polyvec_compress_du`, which call them. As for
+`mlkem_keccakf1600_permute`, there are also combined theorems
+`..._IMAGE_SUBROUTINE_FULL` for the functions that extract bytes from
+Keccak states and XOR bytes into them, one or four states at a time, for
+callers whose events depend on the results.
