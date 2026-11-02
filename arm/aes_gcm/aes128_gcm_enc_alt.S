@@ -1,5 +1,10 @@
+// Copyright (c) 2020-2022 The OpenSSL Project Authors
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+// SPDX-License-Identifier: Apache-2.0
+
+// Written by Xiaokang Qian <xiaokang.qian@arm.com> for the OpenSSL project,
+// derived from https://github.com/ARM-software/AArch64cryptolib, original
+// author Samuel Lee <Samuel.Lee@arm.com>.
 
 // ----------------------------------------------------------------------------
 // AES-128-GCM bulk encryption, 8 blocks at a time: counter-mode encryption of
@@ -53,9 +58,15 @@
 //                   X5 = key, X6 = htable, returns X0
 // ----------------------------------------------------------------------------
 
-// Origin: AES128 adaptation of s2n-bignum AES256 encrypt at 330672965f9ee29eaa27df14c484806d7b8ef0bc; original AWS-LC lineage: aesv8_gcm_8x_enc_256
-// (crypto/fipsmodule/modes/asm/aesv8-gcm-armv8-unroll8.pl, flavor linux64),
-// with these changes:
+// Origin: aes256_gcm_enc_alt reduced to AES-128, from s2n-bignum commit
+// 330672965f9ee29eaa27df14c484806d7b8ef0bc. It retains that kernel's schedule
+// and optimizations, with ten AES rounds and eleven round keys instead of
+// fourteen rounds and fifteen keys. Its schedule is not the output of
+// AWS-LC's aesv8_gcm_8x_enc_128.
+//
+// The AES-256 kernel derives from the OpenSSL generator carried by AWS-LC
+// as crypto/fipsmodule/modes/asm/aesv8-gcm-armv8-unroll8.pl (the linux64
+// aesv8_gcm_8x_enc_256 output). That kernel already includes these changes:
 //  - Entry: a whole-blocks guard (tst x1, #127; b.ne L128_enc_ret) follows
 //    the zero-length check (cbz x1, L128_enc_ret) and precedes the d8-d15
 //    saves, so the reject path returns 0 having touched no memory unless
@@ -67,8 +78,9 @@
 //    final block is a plain full block, and the output buffer is never read.
 //    The AWS-LC caller already satisfies the contract: its
 //    crypto/fipsmodule/modes/gcm.c masks the length to whole blocks.
-//  - The body has since been rescheduled for speed, so it is not a verbatim
-//    copy of the generator's output.
+//  - The counter setup, pipelined GHASH/AES body, exact-eight drain and
+//    fused one-to-four-block path are rescheduled for speed. This kernel
+//    keeps those optimizations while reducing the AES round schedule.
 #include "_internal_s2n_bignum_arm.h"
 
         .arch	armv8.2-a+crypto+sha3
@@ -100,7 +112,7 @@ S2N_BN_SYMBOL(aes128_gcm_enc_alt):
         stp	x5, xzr, [sp, #64]
         add	x10, sp, #64
 
-// -- BEGIN derived generator body (aesv8_gcm_8x_enc_256) --
+// -- BEGIN aes256_gcm_enc_alt schedule reduced to AES-128 --
 	ld1	{ v0.16b}, [x16]					//CTR block 0
 
 	mov	x5, x9
@@ -137,9 +149,9 @@ S2N_BN_SYMBOL(aes128_gcm_enc_alt):
 	rev32	v5.16b, v17.16b		//CTR block 5 (rev32)
 	rev32	v6.16b, v18.16b		//CTR block 6 (rev32)
 	rev32	v7.16b, v30.16b		//CTR block 7 (rev32)
-	// SETUP AES rewritten round-major, keystream blocks 0,1 issued FIRST each round so
-	// the g=0 tail (which consumes v0,v1) sees them complete before the 6 wasted blocks 2-7.
-	// Pure permutation of the generator's 80 aese/72 aesmc + 6 key loads (same .o multiset).
+	// Keep aes256_gcm_enc_alt's round-major setup, reduced to ten rounds.
+	// Issue blocks 0 and 1 first so the g=0 tail can use v0 and v1 early.
+	// The eight AES-128 blocks use 80 aese, 72 aesmc and six key loads.
 	ldp	q26, q27, [x11, #0]			//load rk0, rk1
 	ld1	{ v19.16b}, [x3]				//load tag
 	ext	v19.16b, v19.16b, v19.16b, #8
@@ -1288,7 +1300,7 @@ L128_enc_blocks_less_than_1:	//final whole block (whole-blocks contract: never p
 	st1	{ v19.16b }, [x3]
 L128_enc_epilogue:  //both paths converge here
 	mov	x0, x9					//return sizes
-// -- END derived generator body --
+// -- END aes256_gcm_enc_alt schedule reduced to AES-128 --
 
         .cfi_remember_state
         CFI_STACKLOAD2(d10,d11,16)
