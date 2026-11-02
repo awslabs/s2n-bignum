@@ -351,10 +351,9 @@ let MLDSA_CADDQ_CORRECT = time prove
   ASM_REWRITE_TAC[WORD_ADD_0] THEN
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
   STRIP_TAC THEN
-  MAP_EVERY (fun n ->
-      X86_STEPS_TAC MLDSA_CADDQ_TMC_EXEC [n] THEN
-      SIMD_SIMPLIFY_TAC[mldsa_caddq])
-             (1--132) THEN
+  (let step = X86_STEPS_TAC MLDSA_CADDQ_TMC_EXEC
+   and simplify = SIMD_SIMPLIFY_TAC[mldsa_caddq] in
+   MAP_EVERY (fun n -> step [n] THEN simplify) (1--132)) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
      CONV_RULE(SIMD_SIMPLIFY_CONV[mldsa_caddq]) o
