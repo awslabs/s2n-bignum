@@ -79,17 +79,17 @@ needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
     2eb4: add    rcx,0x10
     2eb8: movq   xmm0,rax
     2ebd: movdqa xmm6,xmm0
-    2ec1: punpcklbwxmm0,xmm4
-    2ec5: punpcklbwxmm6,xmm4
+    2ec1: punpcklbw xmm0,xmm4
+    2ec5: punpcklbw xmm6,xmm4
     2ec9: pshufd xmm0,xmm0,0x4e
     2ece: movdqa xmm5,xmm6
-    2ed2: punpcklwdxmm6,xmm2
+    2ed2: punpcklwd xmm6,xmm2
     2ed6: movdqa xmm7,xmm0
-    2eda: punpcklwdxmm5,xmm2
+    2eda: punpcklwd xmm5,xmm2
     2ede: pshufd xmm6,xmm6,0x4e
-    2ee3: punpcklwdxmm7,xmm2
+    2ee3: punpcklwd xmm7,xmm2
     2ee7: movdqa xmm1,xmm5
-    2eeb: punpcklwdxmm0,xmm2
+    2eeb: punpcklwd xmm0,xmm2
     2eef: pslld  xmm1,0x1
     2ef4: pshufd xmm0,xmm0,0x4e
     2ef9: paddd  xmm1,xmm5
@@ -109,12 +109,12 @@ needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
     2f37: paddd  xmm5,xmm6
     2f3b: movdqa xmm6,xmm1
     2f3f: psrld  xmm5,0x5
-    2f44: punpcklwdxmm6,xmm5
-    2f48: punpcklwdxmm1,xmm5
+    2f44: punpcklwd xmm6,xmm5
+    2f48: punpcklwd xmm1,xmm5
     2f4c: movdqa xmm5,xmm0
     2f50: pshufd xmm6,xmm6,0x4e
     2f55: pslld  xmm5,0x1
-    2f5a: punpcklwdxmm1,xmm6
+    2f5a: punpcklwd xmm1,xmm6
     2f5e: paddd  xmm5,xmm0
     2f62: movq   QWORD PTR [rcx-0x10],xmm1
     2f67: movdqa xmm1,xmm7
@@ -133,10 +133,10 @@ needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
     2fa0: psrld  xmm0,0x5
     2fa5: psrld  xmm1,0x5
     2faa: movdqa xmm5,xmm1
-    2fae: punpcklwdxmm1,xmm0
-    2fb2: punpcklwdxmm5,xmm0
+    2fae: punpcklwd xmm1,xmm0
+    2fb2: punpcklwd xmm5,xmm0
     2fb6: pshufd xmm5,xmm5,0x4e
-    2fbb: punpcklwdxmm1,xmm5
+    2fbb: punpcklwd xmm1,xmm5
     2fbf: movq   QWORD PTR [rcx-0x8],xmm1
     2fc4: cmp    rdx,rsi
     2fc7: jne    2e08 <mlkem_poly_decompress_d5+0x28>

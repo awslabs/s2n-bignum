@@ -57,8 +57,8 @@ needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
     2829: or     rax,rdi
     282c: movq   xmm0,rax
     2831: movdqa xmm2,xmm0
-    2835: punpcklwdxmm0,xmm3
-    2839: punpcklwdxmm2,xmm3
+    2835: punpcklwd xmm0,xmm3
+    2839: punpcklwd xmm2,xmm3
     283d: pshufd xmm0,xmm0,0x4e
     2842: movdqa xmm1,xmm2
     2846: pslld  xmm1,0x1
@@ -79,10 +79,10 @@ needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
     2888: pslld  xmm2,0x8
     288d: paddd  xmm2,xmm0
     2891: psrld  xmm2,0xa
-    2896: punpcklwdxmm5,xmm2
-    289a: punpcklwdxmm1,xmm2
+    2896: punpcklwd xmm5,xmm2
+    289a: punpcklwd xmm1,xmm2
     289e: pshufd xmm5,xmm5,0x4e
-    28a3: punpcklwdxmm1,xmm5
+    28a3: punpcklwd xmm1,xmm5
     28a7: movq   QWORD PTR [rcx-0x8],xmm1
     28ac: cmp    rdx,rsi
     28af: jne    27b0 <mlkem_poly_decompress_d10+0x20>
