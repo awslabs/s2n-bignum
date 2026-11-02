@@ -223,3 +223,24 @@ be aligned, as do those of `mlkem1024_polyvec_decompress_du` and
 `..._IMAGE_SUBROUTINE_FULL` for the functions that extract bytes from
 Keccak states and XOR bytes into them, one or four states at a time, for
 callers whose events depend on the results.
+
+The SHA-3 and SHAKE functions are also verified directly in the image, with
+the same specifications as on AArch64 (see
+`../../arm/mlkem_native/README.md`) apart from the stack, starting with the
+static function `mlk_keccak_absorb_once`, at 0x32b0 in the image, which
+absorbs a whole message into a state. For these, the permutation
+`keccak 24` of `../proofs/utils/keccak_spec.ml` is shown to be
+`keccak_f1600` of `common/fips202.ml` on the state as a 1600-bit word in
+`../proofs/utils/keccak_fips202.ml`, as for AArch64, and the theorem for
+`mlkem_keccakf1600_permute` is restated in that form at the end of its
+proof. gcc zeroes the state with REP STOSQ, as an inline memset, so the
+specifications of `mlk_keccak_absorb_once` and of the functions that call
+it assume that the direction flag DF is clear, as the ABI requires on
+entry. Since the state is not known to be aligned, the inline memset stores
+zero quadwords at the two ends of the state and clears the quadwords in
+between from the first multiple of 8 above its start, and the tactics
+`MEMSET_PREP_TAC`, `MEMSET_STEP_TAC` and `MEMSET_DONE_TAC` in
+`../proofs/mlkem_native_libmlkem_gcc12_O2.ml` put the parts together for
+any alignment. Where the hypotheses are the same, the correctness and
+safety theorems are derived from the combined ones
+`..._IMAGE_SUBROUTINE_FULL`.
