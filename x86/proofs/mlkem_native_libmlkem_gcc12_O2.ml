@@ -562,3 +562,168 @@ let MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC next target =
     CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN REWRITE_TAC[WORD_ADD] THEN
     CONV_TAC NORMALIZE_ALIGNED_WORD_CONV THEN FIRST_ASSUM ACCEPT_TAC;
     ALL_TAC];;
+
+(* ------------------------------------------------------------------------- *)
+(* Vector operations in the compiled code. Coefficients loaded four or eight *)
+(* at a time, their sign extension by PCMPGTW and PUNPCKLWD (and to 64 bits  *)
+(* by PCMPGTD and PUNPCKLDQ) when they are known to be small, shifts as      *)
+(* multiplications, the second byte of a register (as AH), and PACKUSWB,     *)
+(* which saturates 16-bit lanes to bytes and puts them together as a number, *)
+(* for lanes already masked to bytes.                                        *)
+(* ------------------------------------------------------------------------- *)
+
+let READ_MEMORY_BYTES64_JOIN_16 = prove
+ (`!a s (x:num->int16) k.
+        (!j. j < 256
+             ==> read(memory :> bytes16(word_add a (word(2 * j)))) s = x j) /\
+        k < 64
+        ==> read (memory :> bytes64 (word_add a (word(8 * k)))) s =
+            word_join (word_join (x(4 * k + 3)) (x(4 * k + 2)):int32)
+                      (word_join (x(4 * k + 1)) (x(4 * k)):int32)`,
+  REPEAT STRIP_TAC THEN
+  MAP_EVERY (fun j ->
+    FIRST_ASSUM(MP_TAC o SPEC j) THEN
+    ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_TAC])
+   [`4 * k`; `4 * k + 1`; `4 * k + 2`; `4 * k + 3`] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[ARITH_RULE `2 * 4 * k = 8 * k`;
+    ARITH_RULE `2 * (4 * k + 1) = 8 * k + 2`;
+    ARITH_RULE `2 * (4 * k + 2) = 8 * k + 4`;
+    ARITH_RULE `2 * (4 * k + 3) = 8 * k + 6`]) THEN
+  CONV_TAC(READ_MEMORY_SPLIT_CONV 2) THEN
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN
+  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN
+  W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w)));;
+
+let READ_MEMORY_BYTES128_JOIN_16 = prove
+ (`!a s (x:num->int16) k.
+        (!j. j < 256
+             ==> read(memory :> bytes16(word_add a (word(2 * j)))) s = x j) /\
+        k < 32
+        ==> read (memory :> bytes128 (word_add a (word(16 * k)))) s =
+            word_join
+             (word_join (word_join (x(8 * k + 7)) (x(8 * k + 6)):int32)
+                        (word_join (x(8 * k + 5)) (x(8 * k + 4)):int32):int64)
+             (word_join (word_join (x(8 * k + 3)) (x(8 * k + 2)):int32)
+                        (word_join (x(8 * k + 1)) (x(8 * k)):int32):int64)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`a:int64`; `s:x86state`; `x:num->int16`; `2 * k`]
+               READ_MEMORY_BYTES64_JOIN_16) THEN
+  MP_TAC(SPECL [`a:int64`; `s:x86state`; `x:num->int16`; `2 * k + 1`]
+               READ_MEMORY_BYTES64_JOIN_16) THEN
+  ASM_REWRITE_TAC[] THEN
+  ANTS_TAC THENL [UNDISCH_TAC `k < 32` THEN ARITH_TAC; DISCH_TAC] THEN
+  ANTS_TAC THENL [UNDISCH_TAC `k < 32` THEN ARITH_TAC; DISCH_TAC] THEN
+  CONV_TAC(READ_MEMORY_SPLIT_CONV 1) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[ARITH_RULE `8 * 2 * k = 16 * k`;
+    ARITH_RULE `8 * (2 * k + 1) = 16 * k + 8`;
+    ARITH_RULE `4 * 2 * k = 8 * k`;
+    ARITH_RULE `4 * (2 * k + 1) = 8 * k + 4`;
+    ARITH_RULE `(8 * k + 4) + 1 = 8 * k + 5`;
+    ARITH_RULE `(8 * k + 4) + 2 = 8 * k + 6`;
+    ARITH_RULE `(8 * k + 4) + 3 = 8 * k + 7`]) THEN
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  ASM_REWRITE_TAC[] THEN CONJ_TAC THEN
+  W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w)));;
+
+let WORD_JOIN_SIGN_SMALL = prove
+ (`!y:int16.
+        val y < 32768
+        ==> word_join ((if word_igt (word 0) y then word 65535 else word 0):
+                       int16) y =
+            (word_zx y:int32)`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `~(word_igt (word 0) (y:int16))` (fun th -> REWRITE_TAC[th])
+  THENL
+   [REWRITE_TAC[WORD_IGT; IVAL_VAL; DIMINDEX_16; IVAL_WORD_0] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    SUBGOAL_THEN `~bit 15 (y:int16)` (fun th -> REWRITE_TAC[th]) THENL
+     [REWRITE_TAC[BIT_VAL] THEN
+      ASM_SIMP_TAC[DIV_LT; ARITH_RULE `2 EXP 15 = 32768`] THEN
+      CONV_TAC NUM_REDUCE_CONV;
+      REWRITE_TAC[BITVAL_CLAUSES] THEN INT_ARITH_TAC];
+    BITBLAST_TAC]);;
+
+let WORD_JOIN_SIGN_SMALL_64 = prove
+ (`!y:int32.
+        val y < 2147483648
+        ==> word_join ((if word_igt (word 0) y then word 4294967295
+                        else word 0):int32) y =
+            (word_zx y:int64)`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `~(word_igt (word 0) (y:int32))` (fun th -> REWRITE_TAC[th])
+  THENL
+   [REWRITE_TAC[WORD_IGT; IVAL_VAL; DIMINDEX_32; IVAL_WORD_0] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    SUBGOAL_THEN `~bit 31 (y:int32)` (fun th -> REWRITE_TAC[th]) THENL
+     [REWRITE_TAC[BIT_VAL] THEN
+      ASM_SIMP_TAC[DIV_LT; ARITH_RULE `2 EXP 31 = 2147483648`] THEN
+      CONV_TAC NUM_REDUCE_CONV;
+      REWRITE_TAC[BITVAL_CLAUSES] THEN INT_ARITH_TAC];
+    BITBLAST_TAC]);;
+
+let WORD_SHL_MUL_WORD = prove
+ (`!(x:N word) k. word_shl x k = word_mul x (word(2 EXP k))`,
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_SHL; VAL_WORD_MUL; VAL_WORD] THEN
+  CONV_TAC MOD_DOWN_CONV THEN REWRITE_TAC[MULT_SYM]);;
+
+let WORD_VAL_DIV_256_MOD_256 = prove
+ (`!x:N word. word((val x DIV 256) MOD 256):byte = word_subword x (8,8)`,
+  REWRITE_TAC[word_subword] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[]);;
+
+let PACKUSWB_SAT_255 = prove
+ (`!y:int16.
+        word(MIN (if bit 15 (word_and y (word 255))
+                  then 0 else val(word_and y (word 255))) 255):byte =
+        word_zx(word_and y (word 255))`,
+  GEN_TAC THEN
+  SUBGOAL_THEN `~bit 15 (word_and (y:int16) (word 255)) /\
+                val(word_and (y:int16) (word 255)) <= 255`
+   STRIP_ASSUME_TAC THENL
+   [CONJ_TAC THENL
+     [REWRITE_TAC[BIT_WORD_AND] THEN
+      CONV_TAC(ONCE_DEPTH_CONV BIT_WORD_CONV) THEN REWRITE_TAC[];
+      MP_TAC(ISPECL [`y:int16`; `word 255:int16`]
+                    (CONJUNCT2 VAL_WORD_AND_LE)) THEN
+      CONV_TAC(ONCE_DEPTH_CONV WORD_REDUCE_CONV) THEN ARITH_TAC];
+    ASM_REWRITE_TAC[word_zx] THEN AP_TERM_TAC THEN ASM_ARITH_TAC]);;
+
+let PACKUSWB_JOIN = prove
+ (`!(b0:byte) (b1:byte) (b2:byte) (b3:byte) (b4:byte) (b5:byte) (b6:byte)
+    (b7:byte) (b8:byte) (b9:byte) (b10:byte) (b11:byte) (b12:byte)
+    (b13:byte) (b14:byte) (b15:byte).
+     word((val b0 * 1 + val b1 * 256 + val b2 * 65536 + val b3 * 16777216 +
+           val b4 * 4294967296 + val b5 * 1099511627776 +
+           val b6 * 281474976710656 + val b7 * 72057594037927936) +
+          val b8 * 2 EXP 64 + val b9 * 4722366482869645213696 +
+          val b10 * 1208925819614629174706176 +
+          val b11 * 309485009821345068724781056 +
+          val b12 * 79228162514264337593543950336 +
+          val b13 * 20282409603651670423947251286016 +
+          val b14 * 5192296858534827628530496329220096 +
+          val b15 * 1329227995784915872903807060280344576):int128 =
+     word_join
+      (word_join (word_join (word_join b15 b14:int16)
+                            (word_join b13 b12:int16):int32)
+                 (word_join (word_join b11 b10:int16)
+                            (word_join b9 b8:int16):int32):int64)
+      (word_join (word_join (word_join b7 b6:int16)
+                            (word_join b5 b4:int16):int32)
+                 (word_join (word_join b3 b2:int16)
+                            (word_join b1 b0:int16):int32):int64)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM VAL_EQ] THEN
+  SIMP_TAC[VAL_WORD_JOIN_SIMPLE; DIMINDEX_8; DIMINDEX_16; DIMINDEX_32;
+           DIMINDEX_64; DIMINDEX_128; ARITH] THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_128] THEN
+  MAP_EVERY (fun t -> MP_TAC(ISPEC t VAL_BOUND))
+   (map (fun k -> mk_var("b"^string_of_int k,`:byte`)) (0--15)) THEN
+  REWRITE_TAC[DIMINDEX_8] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  MAP_EVERY (fun k ->
+    SPEC_TAC(mk_comb(`val:byte->num`,mk_var("b"^string_of_int k,`:byte`)),
+             mk_var("n"^string_of_int k,`:num`))) (0--15) THEN
+  REPEAT STRIP_TAC THEN
+  W(fun (_,w) -> MP_TAC(SPECL [lhand(lhand w);
+    `340282366920938463463374607431768211456`] MOD_LT)) THEN
+  ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN SUBST1_TAC] THEN
+  ARITH_TAC);;
