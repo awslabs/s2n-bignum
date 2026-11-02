@@ -297,10 +297,11 @@ let INDEX_ADDR_TAC =
 
 (* ------------------------------------------------------------------------- *)
 (* Byte arrays. As in mlkem_decode in common/fips203.ml, the contents of a   *)
-(* byte array are given as a number n, and READ_MEMORY_BYTES8_OF_NUM and     *)
-(* READ_MEMORY_BYTES16_OF_NUM give its bytes and pairs of bytes.             *)
-(* BYTES_BITBLAST_TAC proves a goal of bit operations on such bytes          *)
-(* word((n DIV 2 EXP k) MOD 256) by bit-blasting with them as atoms.         *)
+(* byte array are given as a number n, and READ_MEMORY_BYTES8_OF_NUM,        *)
+(* READ_MEMORY_BYTES16_OF_NUM and READ_MEMORY_BYTES32_OF_NUM give its 8-,    *)
+(* 16- and 32-bit parts. BYTES_BITBLAST_TAC proves a goal of bit operations  *)
+(* on such bytes word((n DIV 2 EXP k) MOD 256) by bit-blasting with them as  *)
+(* atoms.                                                                    *)
 (* ------------------------------------------------------------------------- *)
 
 let READ_MEMORY_BYTES8_OF_NUM = prove
@@ -334,6 +335,68 @@ let READ_MEMORY_BYTES16_OF_NUM = prove
               READ_BYTES_MOD] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
   REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+let READ_MEMORY_BYTES32_OF_NUM = prove
+ (`!a:int64 m n k s:x86state.
+        read (memory :> bytes(a,m)) s = n /\ k + 4 <= m
+        ==> read (memory :> bytes32(word_add a (word k))) s =
+            word((n DIV 2 EXP (8 * k)) MOD 4294967296)`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (SUBST1_TAC o SYM) ASSUME_TAC) THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[BYTES32_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES;
+              VAL_WORD; DIMINDEX_32] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL] THEN
+  REWRITE_TAC[ARITH_RULE `4294967296 = 2 EXP (8 * 4)`; READ_BYTES_DIV;
+              READ_BYTES_MOD] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+(*** A byte array from its bytes, and a byte array as a single word ***)
+
+let READ_MEMORY_BYTES_OF_BYTES8 = prove
+ (`!a:int64 n x s:x86state.
+        (!j. j < n
+             ==> read (memory :> bytes8(word_add a (word j))) s =
+                 word((x DIV 2 EXP (8 * j)) MOD 256))
+        ==> read (memory :> bytes(a,n)) s = x MOD 2 EXP (8 * n)`,
+  GEN_TAC THEN INDUCT_TAC THENL
+   [REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_TRIVIAL] THEN
+    REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1];
+    REPEAT STRIP_TAC] THEN
+  REWRITE_TAC[ADD1; READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE;
+              READ_BYTES_BYTES8] THEN
+  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL [`x:num`; `s:x86state`]) THEN
+  ANTS_TAC THENL
+   [ASM_MESON_TAC[ARITH_RULE `j < n ==> j < SUC n`];
+    DISCH_THEN SUBST1_TAC] THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC `n:num`) THEN
+  REWRITE_TAC[LT] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_8] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[MOD_MOD_REFL; LEFT_ADD_DISTRIB; MULT_CLAUSES; EXP_ADD] THEN
+  REWRITE_TAC[ARITH_RULE `2 EXP 8 = 256`; MOD_MULT_MOD] THEN ARITH_TAC);;
+
+let READ_MEMORY_WBYTES_VAL = prove
+ (`!a:int64 (x:N word) s:x86state.
+        read (memory :> wbytes a) s = x <=>
+        read (memory :> bytes(a,dimindex(:N) DIV 8)) s = val x`,
+  REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [GSYM VAL_EQ] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; VAL_READ_WBYTES]);;
+
+(*** The case of a Keccak state, and its wbytes form from its bytes ***)
+
+let READ_MEMORY_WBYTES_1600 =
+  CONV_RULE(DEPTH_CONV DIMINDEX_CONV THENC ONCE_DEPTH_CONV NUM_DIV_CONV)
+   (INST_TYPE [`:1600`,`:N`] READ_MEMORY_WBYTES_VAL);;
+
+let KECCAK_STATE_WBYTES_TAC sv =
+  let pat = subst [sv,`S:1600 word`]
+   `read (memory :> bytes (a,200)) s = val(S:1600 word)` in
+  FIRST_ASSUM(fun th ->
+    if can (term_match [sv] pat) (concl th)
+    then ASSUME_TAC(REWRITE_RULE[GSYM READ_MEMORY_WBYTES_1600] th)
+    else NO_TAC);;
 
 let BYTES_BITBLAST_TAC (asl,w) =
   let bts = setify (find_terms (fun t ->
@@ -374,6 +437,29 @@ let MOD_32_64 = prove
 let WORD_SX_64_32 = prove
  (`!x:int64. word_sx x:int32 = word_zx x`,
   BITBLAST_TAC);;
+
+(*** Unsigned 32-bit arguments word n, as the code zero-extends them,
+ *** including those loaded from the stack as 32-bit words
+ ***)
+
+let WORD_ZX_32_SMALL = prove
+ (`!n. n < 2 EXP 32
+       ==> word_zx(word_zx(word n:int64):int32):int64 = word n /\
+           val(word_zx(word n:int64):int32) = n /\
+           word_zx(word n:int32):int64 = word n`,
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REPEAT STRIP_TAC THEN TRY(ONCE_REWRITE_TAC[GSYM VAL_EQ]) THEN
+  REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+   `n < 4294967296 ==> n < 18446744073709551616`]);;
+
+let ARGS_32_TAC ns =
+  MAP_EVERY (fun n ->
+    MP_TAC(SPEC n WORD_ZX_32_SMALL) THEN
+    ANTS_TAC THENL
+     [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))]) ns;;
 
 (*** Bit fields of numbers and of words made from them ***)
 

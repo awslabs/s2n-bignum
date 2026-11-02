@@ -180,11 +180,13 @@ frames of the correctness theorems, for use in the proofs of callers.
 Functions that call others are verified directly in the image, using those
 theorems for the calls. So far this is done for
 `mlkem_keccakf1600x4_permute`, at address 0x4740, which calls
-`mlkem_keccakf1600_permute` four times, the last time as a tail call, and
-for the functions `mlkem<n>_polyvec_<op>` that apply `mlkem_poly_<op>` to
-each polynomial of a vector, for `<op>` one of `add`, `frombytes`,
-`invntt_tomont`, `mulcache_compute`, `ntt`, `reduce`, `tobytes` and
-`tomont` and `<n>` one of 512, 768 and 1024 (in the files
+`mlkem_keccakf1600_permute` four times, the last time as a tail call, for
+`mlkem_keccakf1600x4_extract_bytes` and `mlkem_keccakf1600x4_xor_bytes`,
+which do the same with the functions for one state and take their seventh
+argument on the stack, and for the functions `mlkem<n>_polyvec_<op>` that
+apply `mlkem_poly_<op>` to each polynomial of a vector, for `<op>` one of
+`add`, `frombytes`, `invntt_tomont`, `mulcache_compute`, `ntt`, `reduce`,
+`tobytes` and `tomont` and `<n>` one of 512, 768 and 1024 (in the files
 `mlkem_native_polyvec_<op>_k<k>_gcc12_O2.ml` for vectors of k = 2, 3 or 4
 polynomials), four of which are compiled as loops over the polynomials,
 unrolled in the proofs. As in `common/fips203.ml`, a vector of k
@@ -200,8 +202,13 @@ directly in the image, in the files
 `../proofs/mlkem_native_<function>_gcc12_O2.ml` for `mlkem_<function>`. So
 far these are `mlkem_poly_add`, `mlkem_poly_sub`, `mlkem_poly_frombytes`,
 `mlkem_poly_frommsg`, `mlkem_poly_tomsg`, `mlkem_poly_decompress_d4`,
-`mlkem_poly_decompress_d10` and `mlkem_poly_compress_d10`. The compiler has
-vectorized `mlkem_poly_add` and `mlkem_poly_sub` with aligned SSE loads and
-stores, so their specifications require the polynomials to be aligned, as
-they are in mlkem-native, as do those of `mlkem_poly_tomont` and of the
-functions that call these.
+`mlkem_poly_decompress_d10`, `mlkem_poly_compress_d10`,
+`mlkem_keccakf1600_extract_bytes` and `mlkem_keccakf1600_xor_bytes`. The
+compiler has vectorized `mlkem_poly_add` and `mlkem_poly_sub` with aligned
+SSE loads and stores, so their specifications require the polynomials to be
+aligned, as they are in mlkem-native, as do those of `mlkem_poly_tomont`
+and of the functions that call these. As for `mlkem_keccakf1600_permute`,
+there are also combined theorems `..._IMAGE_SUBROUTINE_FULL` for the
+functions that extract bytes from Keccak states and XOR bytes into them,
+one or four states at a time, for callers whose events depend on the
+results.
