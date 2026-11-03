@@ -261,4 +261,8 @@ callers zero them. Its seventh argument, the length of the messages, is on
 the stack, and it passes the seventh argument of
 `mlkem_keccakf1600x4_xor_bytes` on the stack as a 64-bit word, of which the
 callee reads 32 bits, in the form given by `STACK_ARG32_TAC` in
-`../proofs/mlkem_native_libmlkem_gcc12_O2.ml`.
+`../proofs/mlkem_native_libmlkem_gcc12_O2.ml`. The same is done for
+`mlkem_shake128x4_absorb_once`, which zeroes the context of 800 bytes with
+an inline memset as above before calling it,
+`mlkem_shake128x4_squeezeblocks`, `mlkem_shake128x4_init` and
+`mlkem_shake128x4_release`, which zeroes the context in the same way.
