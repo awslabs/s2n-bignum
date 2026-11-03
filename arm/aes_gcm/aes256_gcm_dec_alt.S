@@ -1,5 +1,10 @@
+// Copyright (c) 2020-2022 The OpenSSL Project Authors
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+// SPDX-License-Identifier: Apache-2.0
+
+// Written by Xiaokang Qian <xiaokang.qian@arm.com> for the OpenSSL project,
+// derived from https://github.com/ARM-software/AArch64cryptolib, original
+// author Samuel Lee <Samuel.Lee@arm.com>.
 
 // ----------------------------------------------------------------------------
 // AES-256-GCM bulk decryption, 8 blocks at a time: counter-mode decryption of
