@@ -66,7 +66,10 @@ the specification requires 3 <= buflen. As for AArch64, the specifications
 state exactly which registers may be changed, and there is a proof of
 memory safety but not of constant time, since the control flow depends on
 the values sampled. Correctness and memory safety are proved together,
-since the simulation of the loop is the same.
+since the simulation of the loop is the same. For the callers, whose input
+is the output of SHAKE128 from a public seed, there is also a combined
+theorem `..._IMAGE_SUBROUTINE_FULL`, as for AArch64, whose events are a
+function of the arguments and of the list of 12-bit fields.
 
 The SHA-256 hash of the binary used is:
 
