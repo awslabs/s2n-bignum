@@ -514,7 +514,8 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_shake128x4_init_gcc12_O2 \
   mlkem_native/mlkem_native_shake128x4_release_gcc12_O2 \
   mlkem_native/mlkem_native_shake128x4_squeezeblocks_gcc12_O2 \
-  mlkem_native/mlkem_native_shake256_gcc12_O2
+  mlkem_native/mlkem_native_shake256_gcc12_O2 \
+  mlkem_native/mlkem_native_shake256x4_gcc12_O2
 
 # Tutorial assembly files
 
@@ -714,6 +715,10 @@ mlkem_native/mlkem_native_shake128x4_squeezeblocks_gcc12_O2.native: \
 mlkem_native/mlkem_native_shake256_gcc12_O2.native: \
   mlkem_native/mlkem_native_keccak_absorb_once_gcc12_O2.native \
   mlkem_native/mlkem_native_keccakf1600_extract_bytes_gcc12_O2.native
+mlkem_native/mlkem_native_shake256x4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_keccak_absorb_once_x4_gcc12_O2.native \
+  mlkem_native/mlkem_native_keccakf1600x4_extract_bytes_gcc12_O2.native \
+  mlkem_native/mlkem_native_keccakf1600x4_permute_gcc12_O2.native
 
 # Run them and print the standard output+error at *.correct
 

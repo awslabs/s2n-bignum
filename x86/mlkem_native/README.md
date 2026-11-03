@@ -266,3 +266,13 @@ callee reads 32 bits, in the form given by `STACK_ARG32_TAC` in
 an inline memset as above before calling it,
 `mlkem_shake128x4_squeezeblocks`, `mlkem_shake128x4_init` and
 `mlkem_shake128x4_release`, which zeroes the context in the same way.
+Finally `mlkem_shake256x4` realigns its stack frame to 32 bytes, as
+`mlkem_shake256` does its state, and where the code for AArch64 calls
+`memset` and `memcpy` gcc inlines them: the rest of each output is copied
+from a buffer on the stack with REP MOVSQ for the quadwords between the
+first and the last 8 bytes, or with smaller moves for fewer than 8 bytes.
+Each of the four copies is a lemma in the proof, for correctness and for
+the events, of which the latter gives the events of the copy as a function
+of the addresses and the length, and the simulation of a REP MOVSQ of a
+symbolic number of quadwords is completed by `MEMCPY_MOVSQ_STEP_TAC` in the
+proof.
