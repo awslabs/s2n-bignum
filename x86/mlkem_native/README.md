@@ -279,3 +279,15 @@ the events, of which the latter gives the events of the copy as a function
 of the addresses and the length, and the simulation of a REP MOVSQ of a
 symbolic number of quadwords is completed by `MEMCPY_MOVSQ_STEP_TAC` in the
 proof.
+
+`mlkem_poly_rej_uniform`, which samples a polynomial uniformly modulo q
+from a seed of 34 bytes using `mlkem_shake128_absorb_once`,
+`mlkem_shake128_squeezeblocks` and `mlk_rej_uniform_c`, is verified in the
+image with the same specification as on AArch64 apart from the stack, and
+with the same theorem of constant time and memory safety, by which its
+events depend only on the addresses and on the seed, which is public,
+through the samples and the number of iterations of the loop. Like
+`mlkem_shake256`, it realigns its stack frame to 32 bytes, so the addresses
+of the state and the buffer in it depend on the stack pointer, which the
+proof keeps symbolic, and it zeroes the buffer with REP STOSQ, so its
+specification assumes that DF is clear.
