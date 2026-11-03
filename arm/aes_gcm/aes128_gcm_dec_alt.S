@@ -58,8 +58,9 @@
 // returns 0 without touching memory, where aes128_gcm_dec processes the
 // whole blocks.
 //
-// This routine does not enforce the NIST GCM message limit.
-// Callers must ensure the cumulative message length does not exceed 2^36 - 32 bytes (2^39 - 256 bits).
+// This routine does not enforce the NIST GCM message limit. Callers must
+// ensure the cumulative message length does not exceed 2^36 - 32 bytes
+// (2^39 - 256 bits).
 //
 // Standard ARM ABI: X0 = in, X1 = len_bits, X2 = out, X3 = tag, X4 = ivec,
 //                   X5 = key, X6 = htable, returns X0
@@ -97,7 +98,7 @@
 //    next block's accumulations with eor3, and rejoins the shared reduction
 //    at L128_dec_reduce.
 //  - One to four blocks: after the prologue, cmp x9, #64; b.le sends them to
-//    L128_dec_w5r_small, placed after the drain (the small-message path of
+//    L128_dec_small, placed after the drain (the small-message path of
 //    aes256_gcm_dec_alt with the AES-128 round keys). It seeds the GHASH
 //    accumulator with Xi' * H^nblk, decrypts the blocks one at a time,
 //    folding block j in with H^(nblk-j), reduces once, and rejoins the
@@ -120,8 +121,8 @@ S2N_BN_SYMBOL(aes128_gcm_dec_alt):
 	CFI_START
 	AARCH64_VALID_CALL_TARGET
 	cbz	x1, L128_dec_ret
-	tst	x1, #127				//whole blocks only: len_bits % 128 == 0
-	b.ne	L128_dec_ret			//otherwise process nothing, return 0
+	tst	x1, #127				//whole-blocks contract: len_bits % 128 == 0
+	b.ne	L128_dec_ret			//not whole blocks: process nothing, return 0
 	CFI_PUSH2N(d8,d9,80)
 	CFI_STACKSAVE2X(d10,d11,16,24)
 	CFI_STACKSAVE2X(d12,d13,32,40)
@@ -134,7 +135,7 @@ S2N_BN_SYMBOL(aes128_gcm_dec_alt):
 	add	x10, sp, #64
 
 	cmp	x9, #64				//nblk <= 4 ?
-	b.le	L128_dec_w5r_small
+	b.le	L128_dec_small
 
 	mov	x5, x9
 	ld1	{ v0.16b}, [x16]					//CTR block 0
@@ -1147,7 +1148,7 @@ L128_dec_blocks_more_than_7:	//blocks	left >  7
 	pmull	v19.1q, v8.1d, v25.1d				//GHASH final-7 block - low
 	ext	v27.16b, v8.16b, v8.16b, #8			//GHASH final-7 block - mid
 
-	movi	v16.8b, #0						//supress further partial tag feed in
+	movi	v16.8b, #0						//suppress further partial tag feed in
 	ldr	q9, [x0], #16				//AES final-6 block - load ciphertext
 
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-7 block - mid
@@ -1169,7 +1170,7 @@ L128_dec_blocks_more_than_6:	//blocks	left >  6
 
 	pmull	v26.1q, v8.1d, v23.1d				//GHASH final-6 block - low
 	ldr	q9, [x0], #16				//AES final-5 block - load ciphertext
-	movi	v16.8b, #0						//supress further partial tag feed in
+	movi	v16.8b, #0						//suppress further partial tag feed in
 
 	pmull	v27.1q, v27.1d, v24.1d				//GHASH final-6 block - mid
 	st1	{ v12.16b}, [x2], #16			 	//AES final-6 block - store result
@@ -1197,7 +1198,7 @@ L128_dec_blocks_more_than_5:	//blocks	left >  5
 
 	ins	v27.d[1], v27.d[0]					//GHASH final-5 block - mid
 	pmull	v26.1q, v8.1d, v22.1d				//GHASH final-5 block - low
-	movi	v16.8b, #0						//supress further partial tag feed in
+	movi	v16.8b, #0						//suppress further partial tag feed in
 
 	pmull2	v27.1q, v27.2d, v21.2d				//GHASH final-5 block - mid
 	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-5 block - high
@@ -1213,7 +1214,7 @@ L128_dec_blocks_more_than_4:	//blocks	left >  4
 	ldr	q9, [x0], #16				//AES final-3 block - load ciphertext
 
 	ext	v27.16b, v8.16b, v8.16b, #8			//GHASH final-4 block - mid
-	movi	v16.8b, #0						//supress further partial tag feed in
+	movi	v16.8b, #0						//suppress further partial tag feed in
 	pmull2	v28.1q, v8.2d, v20.2d				//GHASH final-4 block - high
 
 	pmull	v26.1q, v8.1d, v20.1d				//GHASH final-4 block - low
@@ -1249,7 +1250,7 @@ L128_dec_blocks_more_than_3:	//blocks	left >  3
 	pmull	v26.1q, v8.1d, v25.1d				//GHASH final-3 block - low
 	pmull2	v28.1q, v8.2d, v25.2d				//GHASH final-3 block - high
 
-	movi	v16.8b, #0						//supress further partial tag feed in
+	movi	v16.8b, #0						//suppress further partial tag feed in
 	eor3	v12.16b, v9.16b, v5.16b, v29.16b	//AES final-2 block - result
 	eor	v19.16b, v19.16b, v26.16b					//GHASH final-3 block - low
 
@@ -1265,7 +1266,7 @@ L128_dec_blocks_more_than_2:	//blocks	left >  2
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 	ldr	q23, [x6, #48]				//load h3l | h3h
-	movi	v16.8b, #0						//supress further partial tag feed in
+	movi	v16.8b, #0						//suppress further partial tag feed in
 
 	ext	v27.16b, v8.16b, v8.16b, #8			//GHASH final-2 block - mid
 
@@ -1292,7 +1293,7 @@ L128_dec_blocks_more_than_1:	//blocks	left >  1
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
-	movi	v16.8b, #0						//supress further partial tag feed in
+	movi	v16.8b, #0						//suppress further partial tag feed in
 
 	ext	v27.16b, v8.16b, v8.16b, #8			//GHASH final-1 block - mid
 
@@ -1313,7 +1314,7 @@ L128_dec_blocks_more_than_1:	//blocks	left >  1
 	eor	v19.16b, v19.16b, v26.16b					//GHASH final-1 block - low
 
 	eor	v18.16b, v18.16b, v27.16b				//GHASH final-1 block - mid
-L128_dec_blocks_less_than_1:	//final block, always whole: stored and hashed as 16 bytes
+L128_dec_blocks_less_than_1:	//final block (always whole)
 
 	ldr	q20, [x6]				//load h1l | h1h
 
@@ -1381,7 +1382,7 @@ L128_dec_ret:	//reached only from the entry guard, before any save
 	ret
 	.cfi_restore_state			//the code below still runs with the frame live
 
-L128_dec_exact8_drain:	//exact-8 GHASH drain: partial-tag feed only in the first block
+L128_dec_exact8_drain:	//dedicated exact-8 GHASH drain
 	// ---- exact-8 drain: final-7 block ----
 	rev64	v8.16b, v9.16b						//GHASH final-7 block
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
@@ -1484,7 +1485,7 @@ L128_dec_exact8_drain:	//exact-8 GHASH drain: partial-tag feed only in the first
 	eor	v18.16b, v18.16b, v16.16b				//GHASH final block - mid
 	b	L128_dec_reduce
 
-L128_dec_w5r_small:	//nblk <= 4: seed Xi' * H^nblk, then fall through one block per step
+L128_dec_small:	//nblk <= 4: seed Xi' * H^nblk, then one block per step
 	ld1	{ v30.16b}, [x16]				//CTR block 0 (raw)
 	ld1	{ v19.16b}, [x3]				//load Xi
 	mov	x15, #0x100000000			//counter increment
@@ -1501,16 +1502,16 @@ L128_dec_w5r_small:	//nblk <= 4: seed Xi' * H^nblk, then fall through one block 
 	ldp	q9, q10, [x11, #128]			//rk8, rk9
 	ldr	q11, [x11, #160]			//rk10
 	cmp	x9, #32
-	b.gt	L128_dec_w5r_h1
+	b.gt	L128_dec_small_ge3
 	cmp	x9, #16
-	b.eq	L128_dec_w5r_stub_1
-	b	L128_dec_w5r_stub_2
-L128_dec_w5r_h1:
+	b.eq	L128_dec_small_seed_1
+	b	L128_dec_small_seed_2
+L128_dec_small_ge3:
 	cmp	x9, #48
-	b.eq	L128_dec_w5r_stub_3
-	b	L128_dec_w5r_stub_4
+	b.eq	L128_dec_small_seed_3
+	b	L128_dec_small_seed_4
 
-L128_dec_w5r_stub_4:	//entry for nblk=4: seed acc = Xi' * H^4
+L128_dec_small_seed_4:	//entry for nblk=4: seed acc = Xi' * H^4
 	ldr	q24, [x6, #80]				//h4l | h4h
 	ldr	d25, [x6, #72]				//h4k (64-bit)
 	ext	v21.16b, v16.16b, v16.16b, #8		//Xi' mid
@@ -1518,9 +1519,9 @@ L128_dec_w5r_stub_4:	//entry for nblk=4: seed acc = Xi' * H^4
 	pmull2	v17.1q, v16.2d, v24.2d			//Xi' high
 	pmull	v19.1q, v16.1d, v24.1d			//Xi' low
 	pmull	v18.1q, v21.1d, v25.1d			//Xi' mid
-	b	L128_dec_w5r_g4
+	b	L128_dec_small_blk_4
 
-L128_dec_w5r_stub_3:	//entry for nblk=3: seed acc = Xi' * H^3
+L128_dec_small_seed_3:	//entry for nblk=3: seed acc = Xi' * H^3
 	ldr	q24, [x6, #48]				//h3l | h3h
 	ldr	d25, [x6, #64]				//h3k (64-bit)
 	ext	v21.16b, v16.16b, v16.16b, #8		//Xi' mid
@@ -1528,9 +1529,9 @@ L128_dec_w5r_stub_3:	//entry for nblk=3: seed acc = Xi' * H^3
 	pmull2	v17.1q, v16.2d, v24.2d			//Xi' high
 	pmull	v19.1q, v16.1d, v24.1d			//Xi' low
 	pmull	v18.1q, v21.1d, v25.1d			//Xi' mid
-	b	L128_dec_w5r_g3
+	b	L128_dec_small_blk_3
 
-L128_dec_w5r_stub_2:	//entry for nblk=2: seed acc = Xi' * H^2
+L128_dec_small_seed_2:	//entry for nblk=2: seed acc = Xi' * H^2
 	ldr	q24, [x6, #32]				//h2l | h2h
 	ldr	d25, [x6, #24]				//h2k (64-bit)
 	ext	v21.16b, v16.16b, v16.16b, #8		//Xi' mid
@@ -1538,9 +1539,9 @@ L128_dec_w5r_stub_2:	//entry for nblk=2: seed acc = Xi' * H^2
 	pmull2	v17.1q, v16.2d, v24.2d			//Xi' high
 	pmull	v19.1q, v16.1d, v24.1d			//Xi' low
 	pmull	v18.1q, v21.1d, v25.1d			//Xi' mid
-	b	L128_dec_w5r_g2
+	b	L128_dec_small_blk_2
 
-L128_dec_w5r_stub_1:	//entry for nblk=1: seed acc = Xi' * H^1
+L128_dec_small_seed_1:	//entry for nblk=1: seed acc = Xi' * H^1
 	ldr	q24, [x6, #0]				//h1l | h1h
 	ldr	d25, [x6, #16]				//h1k (64-bit)
 	ext	v21.16b, v16.16b, v16.16b, #8		//Xi' mid
@@ -1548,9 +1549,9 @@ L128_dec_w5r_stub_1:	//entry for nblk=1: seed acc = Xi' * H^1
 	pmull2	v17.1q, v16.2d, v24.2d			//Xi' high
 	pmull	v19.1q, v16.1d, v24.1d			//Xi' low
 	pmull	v18.1q, v21.1d, v25.1d			//Xi' mid
-	b	L128_dec_w5r_g1
+	b	L128_dec_small_blk_1
 
-L128_dec_w5r_g4:	//one block, GHASH with H^4
+L128_dec_small_blk_4:	//one block, GHASH with H^4
 	ldr	q26, [x0], #16				//ciphertext 0
 	rev32	v0.16b, v29.16b			//CTR block 0
 	add	v29.4s, v29.4s, v31.4s
@@ -1587,7 +1588,7 @@ L128_dec_w5r_g4:	//one block, GHASH with H^4
 	eor3	v0.16b, v26.16b, v0.16b, v11.16b	//H^4 block - result
 	str	q0, [x2], #16
 
-L128_dec_w5r_g3:	//one block, GHASH with H^3
+L128_dec_small_blk_3:	//one block, GHASH with H^3
 	ldr	q26, [x0], #16				//ciphertext 0
 	rev32	v0.16b, v29.16b			//CTR block 0
 	add	v29.4s, v29.4s, v31.4s
@@ -1624,7 +1625,7 @@ L128_dec_w5r_g3:	//one block, GHASH with H^3
 	eor3	v0.16b, v26.16b, v0.16b, v11.16b	//H^3 block - result
 	str	q0, [x2], #16
 
-L128_dec_w5r_g2:	//one block, GHASH with H^2
+L128_dec_small_blk_2:	//one block, GHASH with H^2
 	ldr	q26, [x0], #16				//ciphertext 0
 	rev32	v0.16b, v29.16b			//CTR block 0
 	add	v29.4s, v29.4s, v31.4s
@@ -1661,7 +1662,7 @@ L128_dec_w5r_g2:	//one block, GHASH with H^2
 	eor3	v0.16b, v26.16b, v0.16b, v11.16b	//H^2 block - result
 	str	q0, [x2], #16
 
-L128_dec_w5r_g1:	//one block, GHASH with H^1
+L128_dec_small_blk_1:	//one block, GHASH with H^1
 	ldr	q26, [x0], #16				//ciphertext 0
 	rev32	v0.16b, v29.16b			//CTR block 0
 	add	v29.4s, v29.4s, v31.4s
@@ -1714,7 +1715,7 @@ L128_dec_w5r_g1:	//one block, GHASH with H^1
 	eor3	v0.16b, v26.16b, v0.16b, v11.16b	//H^1 block - result
 	str	q0, [x2], #16
 
-L128_dec_w5r_done:	//rejoin the one epilogue: single `ret` for nblk >= 1
+L128_dec_small_done:	//rejoin the one epilogue: single `ret` for nblk >= 1
 	b	L128_dec_frame_restore
 	.cfi_endproc
 
