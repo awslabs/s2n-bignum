@@ -439,9 +439,10 @@ let decode_hi = new_definition `decode_hi x (v:bool) sz (opc:3 word) rm l =
   // | F,_,7 -> SOME (IDIV rm,l)
   | T,_,0 -> SOME (INC rm,l)
   | T,_,1 -> SOME (DEC rm,l)
-  // Indirect CALL/JMP (T,T,2 and T,T,4) and PUSH r/m (T,T,6) are
-  // deliberately not supported, and so are decoded as NONE below. No case
-  // uses v, so its type is given explicitly above.
+  // Indirect CALL/JMP (T,T,2 and T,T,4) are deliberately not supported,
+  // and so are decoded as NONE below; PUSH r/m (T,T,6) is decoded by the
+  // caller, with a 64-bit operand. No case uses v, so its type is given
+  // explicitly above.
   | _ -> NONE`;;
 
 let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
@@ -1618,8 +1619,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     SOME (STD,l)
   | [0xf:4; x; 0b11:2; v] -> if has_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
-    read_opcode_ModRM_operand rex sz l >>= \((opc,rm),l).
-    decode_hi x v (to_wordsize sz) opc rm l
+    read_opcode_ModRM rex l >>= \((opc,rm),l).
+    if x /\ v /\ opc = word 6 then SOME (PUSH (operand_of_RM Full_64 rm),l)
+    else let rm = operand_of_RM sz rm in
+         decode_hi x v (to_wordsize sz) opc rm l
   | _ -> NONE`;;
 
 let decode = new_definition `decode l =
