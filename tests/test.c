@@ -18330,6 +18330,101 @@ int test_wycheproof_aes256_gcm_dec_alt(void)
 }
 
 // ****************************************************************************
+// Testing of the AES-128-GCM 8x whole-blocks encryption kernel
+// aes128_gcm_enc_alt, on the drivers shared with the other AES-GCM kernels
+// ****************************************************************************
+
+int test_aes128_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_enc_alt", 16, aes128_gcm_enc_alt,
+                      ref_aes128_gcm_enc);
+#endif
+}
+
+int test_aes128_gcm_enc_alt_guard(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm_alt_guard("aes128_gcm_enc_alt", 16, aes128_gcm_enc_alt);
+#endif
+}
+
+// Explicit inc32 rollover cases complement the arbitrary counters and tags
+// in test_aes_gcm: exercise every 8-block tail residue on either side of the
+// first main-loop boundaries, with wrap during the first, fourth or eighth
+// block, and exactly on the final block.
+int test_aes128_gcm_enc_alt_rollover(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint8_t key[16], zero[16] = {0}, h[16], iv[16], iv_ref[16];
+  uint8_t tag[16], tag_ref[16];
+  uint64_t htable[24];
+  s2n_bignum_AES_KEY ek;
+  size_t nblocks, i, len;
+
+  printf("Testing aes128_gcm_enc_alt counter rollover\n");
+  for (nblocks = 1; nblocks <= 32; ++nblocks)
+   { const uint32_t counters[] =
+       { UINT32_MAX, UINT32_MAX - 3, UINT32_MAX - 7,
+         (uint32_t)(0U - (uint32_t)nblocks) };
+     for (i = 0; i < sizeof(counters) / sizeof(counters[0]); ++i)
+      { uint32_t counter = counters[i];
+        uint64_t ret;
+        len = 16 * nblocks;
+        random_bytes_density(key, sizeof(key));
+        ref_aes128_expand_key(key, &ek);
+        ref_aes128_encrypt_block(zero, h, &ek);
+        ref_gcm_init_htable((uint8_t *)htable, h);
+        random_bytes_density(iv, sizeof(iv));
+        iv[12] = (uint8_t)(counter >> 24);
+        iv[13] = (uint8_t)(counter >> 16);
+        iv[14] = (uint8_t)(counter >> 8);
+        iv[15] = (uint8_t)counter;
+        memcpy(iv_ref, iv, sizeof(iv));
+        random_bytes_density(tag, sizeof(tag));
+        memcpy(tag_ref, tag, sizeof(tag));
+        random_bytes_density(bb1, len);
+        ret = aes128_gcm_enc_alt(bb1, 8 * len, bb2, (uint64_t *)tag,
+                                 iv, &ek, htable);
+        ref_aes128_gcm_enc(bb1, 8 * len, bb3, tag_ref, iv_ref, &ek);
+        if (ret != len || memcmp(bb2, bb3, len) ||
+            memcmp(tag, tag_ref, sizeof(tag)) ||
+            memcmp(iv, iv_ref, sizeof(iv)))
+         { printf("### Disparity: aes128_gcm_enc_alt rollover "
+                  "blocks=%zu counter=%08"PRIx32"\n", nblocks, counter);
+           return 1; }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_known_values_aes128_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_128("aes128_gcm_enc_alt", aes128_gcm_enc_alt, 1);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_128("aes128_gcm_enc_alt", aes128_gcm_enc_alt, 1);
+#endif
+}
+
+// ****************************************************************************
 // Testing of the AES-256-GCM 8x whole-blocks encryption kernel
 // aes256_gcm_enc_alt, on the drivers shared with the other AES-GCM kernels
 // ****************************************************************************
@@ -19333,6 +19428,11 @@ int main(int argc, char *argv[])
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
+    functionaltest(aes&&sha3,"aes128_gcm_enc_alt",test_aes128_gcm_enc_alt);
+    functionaltest(aes&&sha3,"aes128_gcm_enc_alt whole-blocks guard",test_aes128_gcm_enc_alt_guard);
+    functionaltest(aes&&sha3,"aes128_gcm_enc_alt counter rollover",test_aes128_gcm_enc_alt_rollover);
+    functionaltest(aes&&sha3,"known value tests for aes128_gcm_enc_alt",test_known_values_aes128_gcm_enc_alt);
+    functionaltest(aes&&sha3,"Wycheproof vectors for aes128_gcm_enc_alt",test_wycheproof_aes128_gcm_enc_alt);
     functionaltest(aes&&sha3,"aes256_gcm_enc_alt",test_aes256_gcm_enc_alt);
     functionaltest(aes&&sha3,"aes256_gcm_enc_alt whole-blocks guard",test_aes256_gcm_enc_alt_guard);
     functionaltest(aes&&sha3,"known value tests for aes256_gcm_enc_alt",test_known_values_aes256_gcm_enc_alt);
