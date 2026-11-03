@@ -311,3 +311,21 @@ give the addresses in them and in the stack of the callees below them as
 constant offsets from a variable for the bottom of the stack of
 `mlkem_poly_rej_uniform_x4`, with the facts about its alignment and its
 position in the frame.
+
+The noise sampling functions `mlkem512_poly_getnoise_eta2` and
+`mlkem1024_poly_getnoise_eta2`, which apply `mlkem_poly_cbd2` to 128 bytes
+of SHAKE256 of the seed and a nonce, and `mlkem512_poly_getnoise_eta1_4x`,
+`mlkem768_poly_getnoise_eta1_4x`, `mlkem1024_poly_getnoise_eta1_4x` and
+`mlkem512_poly_getnoise_eta1122_4x`, which do the same for four nonces at
+once with `mlkem_shake256x4` and `mlkem_poly_cbd3` or `mlkem_poly_cbd2`,
+skipping the fourth polynomial in the first three if its pointer is null,
+are verified in the image with the same specifications as on AArch64 apart
+from the stack and DF, and with the same theorems of constant time and
+memory safety, by which their events depend only on the addresses and, for
+the first three with four nonces, on whether the fourth pointer is null. As
+for the matrix generation, the proofs give the addresses in the stack frame
+as constant offsets from a variable for the bottom of the stack of the
+callee, here with the facts about it proved by BITBLAST. The functions with
+four nonces realign the stack pointer themselves at the start, keeping the
+address of their arguments on the stack in R10, and read the low 32 bits of
+each of the 64-bit words for the last three nonces.
