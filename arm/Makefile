@@ -569,6 +569,12 @@ aes_gcm/aes256_gcm_dec_alt.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_enc_alt.native: $(AES_GCM_PROOF_UTILS)
 
+# Checks of the AES-GCM specification files under common/ that no proof
+# depends on, run once here rather than at every load by the AES-GCM proofs.
+SPEC_CHECK_PROOFS = proofs/aes_gcm_spec_checks.ml
+proofs/aes_gcm_spec_checks.native: proofs/aes_gcm_spec_checks.ml $(BASE_ML) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \
                                      tutorial/aes_encrypt.o tutorial/aes_decrypt.o ; \
@@ -588,12 +594,12 @@ tutorial/rel_reordertac.native: tutorial/rel_reordertac2.o
 
 unopt: $(UNOPT_OBJ)
 
-build_proofs: $(UNOPT_OBJ) $(PROOF_BINS)
+build_proofs: $(UNOPT_OBJ) $(PROOF_BINS) $(SPEC_CHECK_PROOFS:.ml=.native)
 # Conservatively check that there is no redefinition of "check_axioms"
 # '-I' excludes binary files (*.native).
 	! grep -RI "check_axioms" . ../common/ --exclude="Makefile"
 build_tutorial: $(TUTORIAL_OBJ) $(TUTORIAL_PROOF_BINS);
-run_proofs: build_proofs $(PROOF_LOGS);
+run_proofs: build_proofs $(PROOF_LOGS) $(SPEC_CHECK_PROOFS:.ml=.correct);
 
 proofs: run_proofs ; ../tools/count-proofs.sh .
 tutorial: build_tutorial $(TUTORIAL_PROOF_LOGS);

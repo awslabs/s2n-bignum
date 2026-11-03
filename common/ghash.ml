@@ -1,9 +1,11 @@
 (* ========================================================================= *)
 (* GHASH polynomial both via machine words and as an element of GF(2)[X].    *)
+(* Its irreducibility, which nothing else depends on, is proved in           *)
+(* common/gf128_irreducible.ml.                                              *)
 (* ========================================================================= *)
 
 needs "common/misc.ml";;
-needs "Library/rabin_test.ml";;
+needs "Library/ringtheory.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* General trivia                                                            *)
@@ -510,176 +512,11 @@ let POLY_EQUIV_GHASH_REDUCE = prove
   CONV_TAC NUM_REDUCE_CONV);;
 
 (* ------------------------------------------------------------------------- *)
-(* A faster numeral conversion for word_pmul than Library/words.ml's         *)
-(* WORD_PMUL_CONV, used by the squaring chains here and in common/polyval.ml. *)
-(*                                                                           *)
-(* WORD_PMUL_CONV consumes the first operand with word_ushr, but its only     *)
-(* base case tests whether the second operand is zero. In these chains the   *)
-(* first operand is a 128-bit word and the second is zero-extended to 256    *)
-(* bits, so the first can become zero well before the second has been shifted *)
-(* out. Testing both zero cases avoids the remaining recursive steps, and    *)
-(* simplifying a zero xor avoids an unnecessary numeral conversion.          *)
+(* Polynomials over GF(2) form a Bezout ring, so coprimality has Bezout      *)
+(* witnesses; common/polyval.ml uses this to cancel powers of X.             *)
 (* ------------------------------------------------------------------------- *)
-
-let WORD_PMUL_NUM_CONV =
-  let in_conv =
-    GEN_REWRITE_CONV I [GSYM(CONJUNCT2 WORD_PMUL_ZX)] THENC
-    RAND_CONV WORD_ZX_CONV
-  and base_conv =
-    GEN_REWRITE_CONV I [CONJUNCT1 WORD_PMUL_0; CONJUNCT2 WORD_PMUL_0]
-  and step_conv =
-    GEN_REWRITE_CONV I [WORD_PMUL_STEP] THENC
-    BINOP2_CONV
-     (RATOR_CONV(LAND_CONV BIT_WORD_CONV) THENC
-      GEN_REWRITE_CONV I [COND_CLAUSES])
-     (BINOP2_CONV WORD_USHR_CONV WORD_SHL_CONV)
-  and xor_conv =
-    GEN_REWRITE_CONV I [WORD_XOR_0] ORELSEC WORD_XOR_CONV in
-  let rec conv tm =
-    try base_conv tm with Failure _ ->
-    (step_conv THENC RAND_CONV conv THENC xor_conv) tm in
-  let fullconv = in_conv THENC conv in
-  fun tm ->
-    match tm with
-      Comb(Comb(Const("word_pmul",_),
-                Comb(Const("word",_),m)),
-            Comb(Const("word",_),n))
-      when is_numeral m && is_numeral n -> fullconv tm
-  | _ -> failwith "WORD_PMUL_NUM_CONV";;
-
-(* ------------------------------------------------------------------------- *)
-(* Some explicit computations of high powers of X.                           *)
-(* ------------------------------------------------------------------------- *)
-
-let [X_POWPOW_128; X_POWPOW_64] =
-  let base = prove
-   (`(ring_pow bool_poly (poly_var bool_ring one) (2 EXP 0) ==
-      poly_of_word(word 0x2:int128)) (mod_ghash)`,
-    MATCH_MP_TAC MOD_GHASH_REFL_GEN THEN
-    REWRITE_TAC[POLY_VARPOW_BOOL_POLY] THEN
-    REWRITE_TAC[EXP; POLY_RING_VAR_POW_1; bool_poly] THEN
-    REWRITE_TAC[poly_of_word] THEN
-    GEN_REWRITE_TAC I [FUN_EQ_THM] THEN
-    GEN_REWRITE_TAC I [FORALL_FUN_FROM_1] THEN
-    X_GEN_TAC `k:num` THEN REWRITE_TAC[] THEN
-    REWRITE_TAC[MESON[] `(\x:1. a) = (\x. b) <=> a = b`] THEN
-    REWRITE_TAC[BOOL_RING; MESON[] `(if p then T else F) <=> p`] THEN
-    REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
-     (ARITH_RULE `k = 0 \/ k = 1 \/ 2 <= k`) THEN
-    ASM_REWRITE_TAC[] THEN CONV_TAC WORD_REDUCE_CONV THEN
-    CONV_TAC NUM_REDUCE_CONV THEN
-    MATCH_MP_TAC(TAUT `~q /\ ~p ==> (p <=> q)`) THEN
-    CONJ_TAC THENL [ASM_ARITH_TAC; REWRITE_TAC[BIT_WORD]] THEN
-    UNDISCH_TAC `2 <= k` THEN
-    REWRITE_TAC[TAUT `r ==> ~(p /\ q) <=> p ==> r ==> ~q`] THEN
-    CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-    SPEC_TAC(`k:num`,`k:num`) THEN CONV_TAC EXPAND_CASES_CONV THEN
-    CONV_TAC NUM_REDUCE_CONV)
-  and step = prove
-   (`!(x:int128) n.
-     (ring_pow bool_poly (poly_var bool_ring one) (2 EXP n) ==
-      poly_of_word x) (mod_ghash)
-     ==> (ring_pow bool_poly (poly_var bool_ring one) (2 EXP SUC n) ==
-          poly_of_word(ghash_reduce(word_pmul x x))) (mod_ghash)`,
-    REPEAT GEN_TAC THEN
-    DISCH_THEN(MP_TAC o MATCH_MP MOD_GHASH_MUL o W CONJ) THEN
-    SIMP_TAC[GSYM RING_POW_2; POLY_VARPOW_BOOL_POLY] THEN
-    SIMP_TAC[RING_POW_POW; POLY_VAR_BOOL_POLY] THEN
-    REWRITE_TAC[EXP; MULT_SYM] THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] MOD_GHASH_TRANS) THEN
-    REWRITE_TAC[GSYM POLY_OF_WORD_PMUL_2N] THEN
-    ONCE_REWRITE_TAC[MOD_GHASH_SYM] THEN
-    REWRITE_TAC[POLY_EQUIV_GHASH_REDUCE]) in
-  let rec rules n =
-    if n = 0 then [base] else
-    let lis = rules(n - 1) in
-    let th1 = MATCH_MP step (hd lis) in
-    let th2 = CONV_RULE(RATOR_CONV(BINOP2_CONV
-               (RAND_CONV(RAND_CONV NUM_SUC_CONV))
-               (ONCE_DEPTH_CONV WORD_PMUL_NUM_CONV THENC
-                (* GHASH_REDUCE1, not the ghash_reduce1 definition: the defn
-                   leaves a `word_pmul _ (word 0x87)`, while GHASH_REDUCE1
-                   states the same reduction as shifts and xors. *)
-                REWRITE_CONV[ghash_reduce; GHASH_REDUCE1] THENC
-                DEPTH_CONV(WORD_PMUL_NUM_CONV ORELSEC WORD_RED_CONV)))) th1 in
-    th2::lis in
-  let lis = rev(rules 128) in
-  let th_0 = SIMP_RULE[EXP; RING_POW_1; POLY_VAR_BOOL_POLY] (el 0 lis)
-  and th_64 = el 64 lis
-  and th_128 = el 128 lis in
-  map
-   (REWRITE_RULE[GSYM BOOL_POLY_SUB; POLY_OF_WORD_0] o
-    CONV_RULE WORD_REDUCE_CONV o
-    REWRITE_RULE[GSYM POLY_OF_WORD_XOR; BOOL_POLY_SUB])
-   [MATCH_MP MOD_GHASH_SUB (CONJ th_128 th_0);
-    MATCH_MP MOD_GHASH_SUB (CONJ th_64 th_0)];;
-
-(* ------------------------------------------------------------------------- *)
-(* Now use the Rabin test to prove irreducibility.                           *)
-(* ------------------------------------------------------------------------- *)
-
-let FINITE_BOOL_RING = prove
- (`FINITE(ring_carrier bool_ring)`,
-  REWRITE_TAC[BOOL_RING; FINITE_BOOL]);;
-
-let CARD_BOOL_RING = prove
- (`CARD(ring_carrier bool_ring) = 2`,
-  REWRITE_TAC[BOOL_RING; CARD_BOOL]);;
 
 let BEZOUT_BOOL_POLY = prove
  (`bezout_ring bool_poly`,
   REWRITE_TAC[bool_poly] THEN
   MESON_TAC[PID_EQ_UFD_BEZOUT_RING; PID_POLY_RING; FIELD_BOOL_RING]);;
-
-let RING_IRREDUCIBLE_GHASH_POLYNOMIAL = prove
- (`ring_irreducible bool_poly ghash_poly`,
-  let lemma = prove
-   (`!s t. s IN ring_carrier bool_poly /\
-           t IN ring_carrier bool_poly /\
-           ring_add bool_poly (ring_mul bool_poly s ghash_poly)
-                              (ring_mul bool_poly t p') =
-           ring_1 bool_poly
-           ==> (p == p') (mod_ghash) ==> ring_coprime bool_poly (ghash_poly,p)`,
-    REPEAT GEN_TAC THEN STRIP_TAC THEN
-    SIMP_TAC[cong; mod_ghash; IN_IDEAL_GENERATED_SING_EQ; GHASH_BOOL_POLY] THEN
-    STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I [ring_divides]) THEN
-    ASM_SIMP_TAC[RING_SUB; IMP_CONJ; LEFT_IMP_EXISTS_THM] THEN
-    DISCH_TAC THEN X_GEN_TAC `d:(1->num)->bool` THEN REPEAT STRIP_TAC THEN
-    ASM_SIMP_TAC[BEZOUT_RING_COPRIME; BEZOUT_BOOL_POLY] THEN
-    EXISTS_TAC `ring_sub bool_poly s (ring_mul bool_poly t d)` THEN
-    EXISTS_TAC `t:(1->num)->bool` THEN
-    ASM_SIMP_TAC[RING_SUB; RING_MUL] THEN
-    REPEAT(POP_ASSUM MP_TAC) THEN
-    SPEC_TAC(`bool_poly`,`r:((1->num)->bool)ring`) THEN
-    RING_TAC) in
-  REWRITE_TAC[bool_poly] THEN MATCH_MP_TAC RABIN_IRREDUCIBILITY_SUFFICIENT THEN
-  EXISTS_TAC `128` THEN REWRITE_TAC[POLY_DEG_GHASH_POLY] THEN
-  REWRITE_TAC[FIELD_BOOL_RING; FINITE_BOOL_RING; CARD_BOOL_RING] THEN
-  REWRITE_TAC[GSYM bool_poly; GHASH_BOOL_POLY] THEN CONJ_TAC THENL
-   [DISCH_THEN(MP_TAC o AP_TERM
-     `poly_deg bool_ring:((1->num)->bool)->num`) THEN
-    REWRITE_TAC[POLY_DEG_GHASH_POLY] THEN
-    REWRITE_TAC[bool_poly; POLY_RING; POLY_DEG_0; ARITH_EQ];
-    REWRITE_TAC[ARITH_EQ] THEN
-    REWRITE_TAC[GSYM(NUM_REDUCE_CONV `2 EXP 7`)]] THEN
-  SIMP_TAC[IMP_CONJ; PRIME_DIVEXP_EQ] THEN
-  SIMP_TAC[DIVIDES_PRIME_PRIME; PRIME_2; ARITH_EQ] THEN
-  ONCE_REWRITE_TAC[TAUT `p ==> q ==> r <=> q ==> p ==> r`] THEN
-  REWRITE_TAC[FORALL_UNWIND_THM2; PRIME_2] THEN
-  CONV_TAC(ONCE_DEPTH_CONV NUM_EXP_CONV) THEN
-  CONV_TAC(ONCE_DEPTH_CONV NUM_DIV_CONV) THEN
-  REWRITE_TAC[GSYM MOD_GHASH_0; X_POWPOW_128] THEN
-  MP_TAC X_POWPOW_64 THEN MATCH_MP_TAC lemma THEN
-  MAP_EVERY EXISTS_TAC
-   [`poly_of_word(word 0x34f319a5fb685836214ec51f73e3547b:129 word)`;
-    `poly_of_word(word 0x9e4af928ddbc838a41a8cafd2c95b018:129 word)`] THEN
-  REWRITE_TAC[BOOL_POLY_OF_WORD] THEN
-  MP_TAC(INST_TYPE [`:129`,`:N`] GHASH_POLY_OF_WORD) THEN
-  MP_TAC(INST_TYPE [`:128`,`:M`; `:129`,`:N`] POLY_OF_WORD_ZX) THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
-  DISCH_THEN(fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
-  DISCH_THEN SUBST1_TAC THEN CONV_TAC(ONCE_DEPTH_CONV WORD_ZX_CONV) THEN
-  REWRITE_TAC[GSYM POLY_OF_WORD_PMUL_2N; GSYM POLY_OF_WORD_XOR] THEN
-  CONV_TAC(DEPTH_CONV(WORD_PMUL_CONV ORELSEC WORD_RED_CONV)) THEN
-  REWRITE_TAC[POLY_OF_WORD_1]);;

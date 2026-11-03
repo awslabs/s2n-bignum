@@ -15,7 +15,7 @@
 (*   INNER_CONG: (a+b) * dot(h,h) == dot(a XOR b, h) * h  (mod Q)            *)
 (*   GHASH_POLYVAL_ACC_2: 2-block Horner equals batched form                 *)
 (*                                                                           *)
-(* Q(x) structural facts (integral-domain/irreducibility, cancellation,      *)
+(* Q(x) structural facts (integral domain, cancellation,                    *)
 (* congruence-to-word-equality) live in common/polyval.ml.                   *)
 (* ========================================================================= *)
 
