@@ -9,7 +9,9 @@
 (* This file defines AES key expansion and cipher following the NIST spec    *)
 (* exactly (SubBytes before ShiftRows). It is independent from the           *)
 (* hardware-oriented definitions in common/aes.ml and arm/x86 proofs.        *)
-(* Equivalence will be proved separately.                                    *)
+(* For the ARM aese/aesmc rounds the equivalence is proved by                *)
+(* AES128_CIPHER_RECONSTRUCT and AES256_CIPHER_RECONSTRUCT in                *)
+(* arm/proofs/utils/aes_gcm_common.ml.                                       *)
 (*                                                                           *)
 (* Key expansion reuses aes_subword from common/aes.ml (SubWord is the       *)
 (* same in both NIST and hardware models).                                   *)
@@ -363,7 +365,7 @@ prove(`word_xor (word 0x046681e5e0cb199a48f8d37a2806264c : 128 word)
   CONV_TAC(DEPTH_CONV WORD_RED_CONV) THEN REFL_TAC);;
 
 (* ========================================================================= *)
-(* AES Cipher (FIPS 197 Algorithm 1) — unrolled                              *)
+(* AES Cipher (FIPS 197 Algorithm 1) -- unrolled                             *)
 (* ========================================================================= *)
 
 let fips197_round = new_definition
@@ -535,7 +537,7 @@ let FIPS197_ENCRYPT_FAST_CONV cipher_def ks_def =
   FIPS197_FINAL_ROUND_REDUCE_FAST_CONV;;
 
 (* ========================================================================= *)
-(* KAT: FIPS 197 Appendix B — AES-128 full encryption                        *)
+(* KAT: FIPS 197 Appendix B -- AES-128 full encryption                       *)
 (* Plaintext:  0x3243f6a8885a308d313198a2e0370734                            *)
 (* Key:        0x2b7e151628aed2a6abf7158809cf4f3c                            *)
 (* Ciphertext: 0x3925841d02dc09fbdc118597196a0b32                            *)
@@ -596,7 +598,7 @@ prove(`aes256_cipher (word 0x6bc1bee22e409f96e93d7e117393172a)
     AES256_CORE_KEY_SCHEDULE)) THEN REFL_TAC);;
 
 (* ========================================================================= *)
-(* KAT: AESAVS Appendix B GFSbox — AES-128 with all-zero key                 *)
+(* KAT: AESAVS Appendix B GFSbox -- AES-128 with all-zero key                *)
 (* Source: "The Advanced Encryption Standard Algorithm Validation Suite"     *)
 (* ========================================================================= *)
 
@@ -669,7 +671,8 @@ prove(`aes256_cipher (word 0x014730f80ac625fe84f026c60bfd547d)
 (* ========================================================================= *)
 (* KAT: AES-256 with the McGrew-Viega GCM Test Case 15 key                   *)
 (* (the AES-128 GCM test key 0xFEFFE992...67308308 repeated to 32 bytes).    *)
-(* Used by the AES-256-GCM 4-block KAT (TC15) in common/gcm.ml.              *)
+(* Used by the known-answer theorem for the GHASH key table of this key in   *)
+(* arm/proofs/aes256_gcm_dec_alt.ml.                                         *)
 (* ========================================================================= *)
 
 let NIST_TC15_KEY_SCHEDULE = new_definition

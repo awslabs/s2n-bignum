@@ -1,3 +1,8 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (* ========================================================================= *)
 (* GHASH specification and Horner unrolling lemma.                           *)
 (*                                                                           *)
@@ -15,7 +20,7 @@
 (*   INNER_CONG: (a+b) * dot(h,h) == dot(a XOR b, h) * h  (mod Q)            *)
 (*   GHASH_POLYVAL_ACC_2: 2-block Horner equals batched form                 *)
 (*                                                                           *)
-(* Q(x) structural facts (integral domain, cancellation,                    *)
+(* Q(x) structural facts (integral domain, cancellation,                     *)
 (* congruence-to-word-equality) live in common/polyval.ml.                   *)
 (* ========================================================================= *)
 
@@ -64,19 +69,6 @@ let GHASH_ACC_APPEND = prove
                  ghash_polyval_acc h (ghash_polyval_acc h acc xs) ys`,
   GEN_TAC THEN LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC[APPEND; ghash_polyval_acc]);;
-
-(* Step congruence: result * x^128 == (acc + x) * H (mod Q)                  *)
-let GHASH_ACC_STEP_CONG = prove
- (`!h acc x.
-   (ring_mul bool_poly
-     (poly_of_word (ghash_polyval_acc h acc [x]))
-     (ring_pow bool_poly (poly_var bool_ring one) 128)
-    == ring_mul bool_poly
-         (ring_add bool_poly (poly_of_word acc) (poly_of_word x))
-         (poly_of_word h))
-   (mod_polyval)`,
-  REWRITE_TAC[ghash_polyval_acc; GSYM POLY_OF_WORD_XOR;
-              POLYVAL_DOT_CORRECT]);;
 
 let BOOL_POLY_MUL_COMM23 = prove
  (`!a b c. a IN ring_carrier bool_poly /\
@@ -380,7 +372,9 @@ let GHASH_POLYVAL_ACC_BATCHED = prove(
         MESON_TAC[RING_ADD_ASSOC; RING_ADD; RING_MUL; BOOL_POLY_OF_WORD]]]]);;
 
 (* ========================================================================= *)
-(* Htable precondition and Karatsuba middle term                             *)
+(* The Karatsuba middle term and the 64-bit half swap, the two operations    *)
+(* used to describe gcm_init_v8's table of powers of H (htable_mem_4 and     *)
+(* htable_mem_8 in arm/proofs/utils/aes_gcm_spec.ml)                         *)
 (* ========================================================================= *)
 
 let karatsuba_mid = new_definition
@@ -388,58 +382,10 @@ let karatsuba_mid = new_definition
    word_xor (word_subword h (0,64) : 64 word)
             (word_subword h (64,64) : 64 word)`;;
 
-let htable_powers = new_definition
-  `htable_powers (h:int128) (powers:(int128)list) (n:num) <=>
-   LENGTH powers = n /\
-   !k. k < n ==> EL k powers = h_power h k`;;
-
-let GHASH_BATCHED_FROM_HTABLE = prove(
-  `!(h:int128) (a:int128) (b:int128) (bs:(int128)list) (powers:(int128)list).
-    htable_powers h powers (SUC(LENGTH bs))
-    ==> ghash_polyval_acc h a (CONS b bs) =
-        polyval_reduce_prop3(
-          word_xor (word_pmul (word_xor a b) (EL (LENGTH bs) powers) : 256 word)
-                   (ghash_wide h (LENGTH bs - 1) bs))`,
-  REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC o REWRITE_RULE[htable_powers]) THEN
-  STRIP_TAC THEN
-  SUBGOAL_THEN `EL (LENGTH (bs:(int128)list)) powers = h_power (h:int128) (LENGTH bs)` SUBST1_TAC THENL
-   [FIRST_X_ASSUM MATCH_MP_TAC THEN ARITH_TAC;
-    REWRITE_TAC[GHASH_POLYVAL_ACC_BATCHED]]);;
-
-(* =========================================================================  *)
-(* Memory-level Htable predicate matching H table initialization output layout*)
-(* 12 x 128-bit entries (192 bytes) for H^1..H^8 with Karatsuba middle terms  *)
-(* Layout: groups of 3 entries [H^{2k+1}, pack(mid,mid), H^{2k+2}]            *)
-(* ========================================================================== *)
-
 let byteswap128 = new_definition
   `byteswap128 (x:int128) : int128 =
    word_join (word_subword x (0,64) : 64 word)
              (word_subword x (64,64) : 64 word)`;;
-
-let htable_mem = new_definition
-  `htable_mem (h:int128) (ptr:int64) (s:armstate) <=>
-   read (memory :> bytes128 ptr) s = byteswap128(h_power h 0) /\
-   read (memory :> bytes128 (word_add ptr (word 16))) s =
-     word_join (karatsuba_mid(h_power h 0) : 64 word)
-               (karatsuba_mid(h_power h 1) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 32))) s = byteswap128(h_power h 1) /\
-   read (memory :> bytes128 (word_add ptr (word 48))) s = byteswap128(h_power h 2) /\
-   read (memory :> bytes128 (word_add ptr (word 64))) s =
-     word_join (karatsuba_mid(h_power h 2) : 64 word)
-               (karatsuba_mid(h_power h 3) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 80))) s = byteswap128(h_power h 3) /\
-   read (memory :> bytes128 (word_add ptr (word 96))) s = byteswap128(h_power h 4) /\
-   read (memory :> bytes128 (word_add ptr (word 112))) s =
-     word_join (karatsuba_mid(h_power h 4) : 64 word)
-               (karatsuba_mid(h_power h 5) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 128))) s = byteswap128(h_power h 5) /\
-   read (memory :> bytes128 (word_add ptr (word 144))) s = byteswap128(h_power h 6) /\
-   read (memory :> bytes128 (word_add ptr (word 160))) s =
-     word_join (karatsuba_mid(h_power h 6) : 64 word)
-               (karatsuba_mid(h_power h 7) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 176))) s = byteswap128(h_power h 7)`;;
 
 (* ========================================================================= *)
 (* The x-shift / twist: multiplication by x mod Q(x)                         *)
@@ -479,17 +425,6 @@ let POLY_OF_WORD_2 = prove(
     REWRITE_TAC[POLY_DEG_VAR; BOOL_RING] THEN
     CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
     ARITH_TAC]);;
-
-(* Q(x) = x^128 + TWIST_CONST (at 256 bits) *)
-let POLYVAL_DECOMP = prove(
-  `polyval_poly = ring_add bool_poly
-    (poly_of_word(word(2 EXP 128) : 256 word))
-    (poly_of_word(word 0xC2000000000000000000000000000001 : 256 word))`,
-  MP_TAC(INST_TYPE [`:256`,`:N`] POLYVAL_POLY_OF_WORD) THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  CONV_TAC NUM_REDUCE_CONV THEN DISCH_THEN SUBST1_TAC THEN
-  REWRITE_TAC[GSYM POLY_OF_WORD_XOR] THEN
-  AP_TERM_TAC THEN CONV_TAC WORD_REDUCE_CONV);;
 
 (* GHASH_TWIST_CORRECT: the twist computes x * H mod Q(x).                   *)
 (* Proof: decompose word_pmul h (word 2) = word_shl (word_zx h) 1 at 256     *)

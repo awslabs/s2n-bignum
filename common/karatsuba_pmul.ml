@@ -1,3 +1,8 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (* ========================================================================= *)
 (* Karatsuba carry-less multiplication lemma for GHASH.                      *)
 (* Shows: word_pmul a b = Karatsuba decomposition using 3 half-size pmuls.   *)
@@ -18,8 +23,6 @@ let zx_64_128 = prove
  (`!w:64 word. poly_of_word(word_zx w : 128 word) = poly_of_word w`,
   GEN_TAC THEN MATCH_MP_TAC POLY_OF_WORD_ZX THEN
   REWRITE_TAC[DIMINDEX_64; DIMINDEX_128] THEN ARITH_TAC);;
-
-let POLY_VAR_POW_OF_WORD_256 = INST_TYPE [`:256`,`:N`] POLY_VAR_POW_OF_WORD;;
 
 let pmul_shl_zx = prove(
   `(!w:128 word.

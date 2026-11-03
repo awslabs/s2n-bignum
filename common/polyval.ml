@@ -1,3 +1,8 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (* ========================================================================= *)
 (* POLYVAL: The POLYVAL polynomial Q(x) from RFC 8452 (AES-GCM-SIV).         *)
 (* Q(x) = x^128 + x^127 + x^126 + x^121 + 1.                                 *)
@@ -291,25 +296,9 @@ let POLY_VAR_POW_OF_WORD = prove
 let POLY_VAR_POW_OF_WORD_256 = INST_TYPE [`:256`,`:N`] POLY_VAR_POW_OF_WORD;;
 
 (* ------------------------------------------------------------------------- *)
-(* Helper: char 2 self-inverse property.                                     *)
-(* ------------------------------------------------------------------------- *)
-
-let BOOL_POLY_ADD_SELF = prove
- (`!x. x IN ring_carrier bool_poly
-       ==> ring_add bool_poly x x = ring_0 bool_poly`,
-  GEN_TAC THEN DISCH_TAC THEN
-  MP_TAC(ISPECL [`bool_poly`; `x:((1->num)->bool)`] RING_ADD_RNEG) THEN
-  ASM_REWRITE_TAC[BOOL_POLY_NEG; I_DEF]);;
-
-(* ------------------------------------------------------------------------- *)
 (* Expand word_pmul by W = 0xC200000000000000 into shifts + XORs.            *)
 (* W = 2^63 + 2^62 + 2^57, so pmul by W = shl 63 XOR shl 62 XOR shl 57.      *)
 (* ------------------------------------------------------------------------- *)
-
-let W_EXPAND = prove
- (`word 0xC200000000000000 : 64 word =
-   word_xor (word_xor (word(2 EXP 63)) (word(2 EXP 62))) (word(2 EXP 57))`,
-  CONV_TAC(DEPTH_CONV(NUM_EXP_CONV ORELSEC WORD_RED_CONV)));;
 
 let W128_EXPAND = prove
  (`word 0xC200000000000000 : 128 word =

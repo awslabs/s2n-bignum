@@ -1,19 +1,22 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (* ========================================================================= *)
-(* NIST GHASH ↔ POLYVAL bridge (Gueron Proposition 1)                        *)
+(* NIST GHASH <-> POLYVAL bridge (Gueron Proposition 1)                      *)
 (*                                                                           *)
-(* Formalizes the connection between:                                        *)
-(*   - NIST SP 800-38D GHASH (bit-reflected, mod P(x)=x^128+x^7+x^2+x+1)     *)
-(*   - POLYVAL (natural bit order, mod Q(x)=x^128+x^127+x^126+x^121+1)       *)
+(* Connects:                                                                 *)
+(*   - NIST SP 800-38D GHASH (bit-reflected, mod P(x)=x^128+x^7+x^2+x+1):    *)
+(*     nist_dot and nist_ghash of common/ghash_nist_defs.ml;                 *)
+(*   - POLYVAL (natural bit order, mod Q(x)=x^128+x^127+x^126+x^121+1):      *)
+(*     polyval_dot and ghash_polyval_acc of common/polyval_ghash.ml.         *)
 (*                                                                           *)
-(* Key definitions:                                                          *)
-(*   bit_reflect128 a = word_reversefields 1 a  (bit i ↦ bit 127-i)          *)
-(*   nist_ghash h acc xs = ghash_polyval_acc (ghash_twist h) acc xs          *)
-(*                                                                           *)
-(* Key theorems:                                                             *)
-(*   BIT_REFLECT128: bit-level characterization                              *)
-(*   REFLECT128_INVOLUTION: self-inverse                                     *)
-(*   REFLECT128_XOR: distributes over XOR                                    *)
-(*   NIST_GHASH_IS_POLYVAL: bridge to ghash_polyval_acc                      *)
+(* Main theorems:                                                            *)
+(*   GUERON_PROP1: bit_reflect128(ghash_reduce(word_pmul (REF a) (REF b)))   *)
+(*                 = polyval_dot a (ghash_twist b)   (REF = bit_reflect128)  *)
+(*   NIST_GHASH_IS_POLYVAL: nist_ghash h = ghash_polyval_acc (ghash_twist h) *)
+(*   NIST_GHASH_APPEND: nist_ghash over APPEND xs ys folds xs, then ys       *)
 (* ========================================================================= *)
 
 
@@ -97,39 +100,7 @@ let PMUL_REFLECT128 = prove
 
 (* ========================================================================= *)
 (* Step 3: Helper lemmas for the product reversal identity                   *)
-(*                                                                           *)
-(* The exponent bijection {128-e : e in {128,7,2,1,0}} = {128,127,126,121,0} *)
-(* connects ghash_poly and polyval_poly as reciprocal polynomials.           *)
-(* GHASH_POLYVAL_RING_SUM uses this to reindex ring_sum.                     *)
 (* ========================================================================= *)
-
-let GHASH_POLYVAL_EXPONENT_BIJECTION = prove(
-  `IMAGE (\e. 128 - e) {128,7,2,1,0} = {128,127,126,121,0}`,
-  REWRITE_TAC[IMAGE; EXTENSION; IN_ELIM_THM; IN_INSERT; NOT_IN_EMPTY] THEN
-  X_GEN_TAC `x:num` THEN EQ_TAC THENL
-   [DISCH_THEN(X_CHOOSE_THEN `e:num` STRIP_ASSUME_TAC) THEN
-    ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;
-    STRIP_TAC THEN ASM_REWRITE_TAC[] THENL
-     [EXISTS_TAC `0`; EXISTS_TAC `1`; EXISTS_TAC `2`; EXISTS_TAC `7`; EXISTS_TAC `128`] THEN
-    ARITH_TAC]);;
-
-let GHASH_EXPONENT_INJ = prove(
-  `!x y. x IN {128,7,2,1,0} /\ y IN {128,7,2,1,0} /\ 128 - x = 128 - y ==> x = y`,
-  REWRITE_TAC[IN_INSERT; NOT_IN_EMPTY] THEN
-  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC);;
-
-(* Key ring_sum reindexing: ghash_poly exponents to polyval_poly exponents   *)
-let GHASH_POLYVAL_RING_SUM = prove(
-  `!n. ring_sum bool_poly {128,7,2,1,0}
-         (\e. ring_pow bool_poly (poly_var bool_ring one) (n + 128 - e)) =
-       ring_sum bool_poly {128,127,126,121,0}
-         (\f. ring_pow bool_poly (poly_var bool_ring one) (n + f))`,
-  GEN_TAC THEN
-  MP_TAC(ISPECL [`bool_poly`; `\e:num. 128 - e`;
-    `\f:num. ring_pow bool_poly (poly_var bool_ring one) (n + f)`;
-    `{128,7,2,1,0}`] RING_SUM_IMAGE) THEN
-  REWRITE_TAC[GHASH_EXPONENT_INJ; GHASH_POLYVAL_EXPONENT_BIJECTION; o_DEF] THEN
-  DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]));;
 
 (* Bit helpers for the product reversal proof                                *)
 let BIT_LT_127 = prove(
@@ -158,46 +129,6 @@ let BIT_WORD_ZX_REFLECT = prove(
   ASM_CASES_TAC `i < 128` THEN ASM_REWRITE_TAC[] THEN
   ASM_SIMP_TAC[ARITH_RULE `i < 128 ==> i < 256`] THEN
   REWRITE_TAC[BIT_TRIVIAL; DIMINDEX_128] THEN ASM_ARITH_TAC);;
-
-let WORD_ZX_SAME = prove(
-  `!w:N word. word_zx w : N word = w`,
-  GEN_TAC THEN REWRITE_TAC[WORD_EQ_BITS_ALT; BIT_WORD_ZX; LE_REFL] THEN
-  SIMP_TAC[DIMINDEX_GE_1; LE_REFL; ARITH_RULE `1 <= n ==> n <= n`] THEN
-  GEN_TAC THEN ASM_CASES_TAC `i < dimindex(:N)` THEN ASM_REWRITE_TAC[] THEN
-  MP_TAC(ISPECL [`w:N word`; `i:num`] BIT_TRIVIAL) THEN
-  ASM_SIMP_TAC[NOT_LT]);;
-
-let WORD_OF_POLY_GHASH = prove(
-  `word_of_poly ghash_poly : (256)word =
-   word 340282366920938463463374607431768211591`,
-  MP_TAC(INST_TYPE [`:256`,`:N`] GHASH_POLY_OF_WORD) THEN
-  REWRITE_TAC[DIMINDEX_256; ARITH_RULE `128 < 256`] THEN
-  DISCH_THEN(fun th ->
-    GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [th]) THEN
-  REWRITE_TAC[WORD_OF_POLY_OF_WORD_GEN; WORD_ZX_SAME]);;
-
-let WORD_OF_POLY_POLYVAL = prove(
-  `word_of_poly polyval_poly : (256)word =
-   word 598152598103212142806713177126155059201`,
-  MP_TAC(INST_TYPE [`:256`,`:N`] POLYVAL_POLY_OF_WORD) THEN
-  REWRITE_TAC[DIMINDEX_256; ARITH_RULE `128 < 256`] THEN
-  DISCH_THEN(fun th ->
-    GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [th]) THEN
-  REWRITE_TAC[WORD_OF_POLY_OF_WORD_GEN; WORD_ZX_SAME]);;
-
-let GHASH_WORD_DECOMP = prove(
-  `(word 340282366920938463463374607431768211591 : (256)word) =
-   word_add (word_shl (word 1 : (256)word) 128) (word 135)`,
-  CONV_TAC WORD_RULE);;
-
-let POLYVAL_WORD_DECOMP = prove(
-  `(word 598152598103212142806713177126155059201 : (256)word) =
-   word_add (word_add (word_add (word_shl (word 1 : (256)word) 128)
-                                (word_shl (word 1 : (256)word) 127))
-                      (word_add (word_shl (word 1 : (256)word) 126)
-                                (word_shl (word 1 : (256)word) 121)))
-            (word 1)`,
-  CONV_TAC WORD_RULE);;
 
 (* XOR decompositions of the ghash/polyval word constants (via BITBLAST)     *)
 let GHASH_WORD_FULL_XOR = BITBLAST_RULE
@@ -284,25 +215,12 @@ let BIT_POLYVAL_WORD = prove(
   TRY(CONV_TAC NUM_REDUCE_CONV) THEN
   ASM_CASES_TAC `i = 0` THEN ASM_REWRITE_TAC[]);;
 
-(* Reciprocal relationship: ghash bit a <=> polyval bit (128-a)              *)
-let GHASH_POLYVAL_RECIPROCAL = prove(
-  `!a. a <= 128 ==>
-    (bit a (word 340282366920938463463374607431768211591 : (256)word) <=>
-     bit (128 - a) (word 598152598103212142806713177126155059201 : (256)word))`,
-  GEN_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[BIT_GHASH_WORD; BIT_POLYVAL_WORD] THEN
-  REWRITE_TAC[IN_INSERT; NOT_IN_EMPTY] THEN
-  MAP_EVERY (fun n -> ASM_CASES_TAC (mk_eq(`a:num`, mk_small_numeral n)) THEN
-    ASM_REWRITE_TAC[] THEN TRY(CONV_TAC NUM_REDUCE_CONV))
-    [128; 7; 2; 1; 0] THEN
-  ASM_ARITH_TAC);;
-
 (* ========================================================================= *)
-(* Step 4: Product reversal identity for ghash_poly × m ↔ polyval_poly × m'  *)
+(* Step 4: Product reversal, ghash_poly * m <-> polyval_poly * m'            *)
 (*                                                                           *)
 (* For m:int128 with ~bit 127 m, the 254-reversal of word_pmul(zx m)(P)      *)
 (* equals word_pmul(zx(REF m))(Q), bit by bit.                               *)
-(* This is the word-level form of REV_254(m·P) = REV_126(m)·Q.               *)
+(* This is the word-level form of REV_254(m*P) = REV_126(m)*Q.               *)
 (* ========================================================================= *)
 
 let PMUL_GHASH_POLYVAL_REFLECT = prove(
@@ -395,14 +313,14 @@ let PMUL_GHASH_POLYVAL_REFLECT = prove(
 (* ========================================================================= *)
 (* Step 5: Define nist_ghash and prove bridge to ghash_polyval_acc           *)
 (*                                                                           *)
-(* The NIST GHASH Horner iteration Y_j = (Y_{j-1} ⊕ X_j) • H                 *)
-(* where • = ⊗₂ ⊗₂ x^{-127} (Gueron eq 3.10)                                 *)
-(* equals polyval_dot(·, x·H) by eq 4.6.                                     *)
-(* So nist_ghash = ghash_polyval_acc with ghash_twist(H) = x·H mod Q(x).     *)
+(* The NIST GHASH Horner iteration Y_j = (Y_{j-1} XOR X_j) . H               *)
+(* where a . b = a * b * x^-127 (Gueron eq 3.10)                             *)
+(* equals polyval_dot(_, x*H) by eq 4.6.                                     *)
+(* So nist_ghash = ghash_polyval_acc with ghash_twist(H) = x*H mod Q(x).     *)
 (* ========================================================================= *)
 
 (* ========================================================================= *)
-(* Step 6: GUERON_PROP1 — the main theorem                                   *)
+(* Step 6: GUERON_PROP1 -- the main theorem                                  *)
 (*                                                                           *)
 (* bit_reflect128(ghash_reduce(word_pmul(REF a)(REF b)))                     *)
 (*   = polyval_dot a (ghash_twist b)                                         *)
@@ -411,16 +329,15 @@ let PMUL_GHASH_POLYVAL_REFLECT = prove(
 (*   1. MOD_POLYVAL_WORD_EQ reduces to mod_polyval congruence                *)
 (*   2. MOD_POLYVAL_CANCEL_VARPOW_GEN cancels x^128 from both sides          *)
 (*   3. MOD_POLYVAL_TRANS splits into KEY CONGRUENCE + RHS                   *)
-(*   4. RHS: a*x*b ≡ polyval_dot(a,ghash_twist b)*x^128 mod Q                *)
+(*   4. RHS: a*x*b == polyval_dot(a,ghash_twist b)*x^128 mod Q               *)
 (*      solved by GHASH_TWIST_CORRECT + POLYVAL_DOT_CORRECT                  *)
-(*   5. KEY CONGRUENCE: REF(S)*x^128 ≡ a*x*b mod Q                           *)
+(*   5. KEY CONGRUENCE: REF(S)*x^128 == a*x*b mod Q                          *)
 (*      From POLY_EQUIV_GHASH_REDUCE: P | G where                            *)
 (*        G = poly_of_word S + poly_of_word(word_pmul(REF a)(REF b))         *)
 (*      Extract quotient M with deg(M) <= 126.                               *)
 (*      The 254-reversal of G = polyval_poly * REV_126(M) by                 *)
 (*      PMUL_GHASH_POLYVAL_REFLECT, and equals REF(S)*x^128 + a*x*b          *)
 (*      by PMUL_REFLECT128 + BIT_REFLECT128.                                 *)
-(*      TODO: formalize the reversal divisibility polynomial equality.       *)
 (* ========================================================================= *)
 
 (* Helper lemmas for the degree bound in GUERON_PROP1                        *)
@@ -515,12 +432,6 @@ let BIT_PMUL_128_BOUND = prove(
 
 (* Infrastructure for GUERON_PROP1 proof                                     *)
 
-let GHASH_POLY_IN_CARRIER = prove(
-  `ghash_poly IN ring_carrier bool_poly`,
-  MP_TAC(INST_TYPE [`:256`,`:N`] GHASH_POLY_OF_WORD) THEN
-  REWRITE_TAC[DIMINDEX_256; ARITH_RULE `128 < 256`] THEN
-  DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[BOOL_POLY_OF_WORD]);;
-
 let GHASH_IDEAL_MEMBERSHIP = prove(
   `!w:(256)word. ring_add bool_poly (poly_of_word(ghash_reduce w)) (poly_of_word w)
                  IN ideal_generated bool_poly {ghash_poly}`,
@@ -538,7 +449,7 @@ let GHASH_QUOTIENT_EXISTS = prove(
   SUBGOAL_THEN `ideal_generated bool_poly {ghash_poly} =
     {ring_mul bool_poly ghash_poly x | x | x IN ring_carrier bool_poly}`
     SUBST1_TAC THENL
-   [MATCH_MP_TAC IDEAL_GENERATED_SING_ALT THEN REWRITE_TAC[GHASH_POLY_IN_CARRIER];
+   [MATCH_MP_TAC IDEAL_GENERATED_SING_ALT THEN REWRITE_TAC[GHASH_BOOL_POLY];
     REWRITE_TAC[IN_ELIM_THM] THEN MESON_TAC[]]);;
 
 let QUOTIENT_DEGREE_BOUND = prove(
@@ -562,7 +473,7 @@ let QUOTIENT_DEGREE_BOUND = prove(
     REWRITE_TAC[INTEGRAL_DOMAIN_BOOL_RING] THEN
     CONJ_TAC THENL
      [MP_TAC(SPEC `ghash_poly` RING_POLYNOMIAL_OF_CARRIER) THEN
-      REWRITE_TAC[GHASH_POLY_IN_CARRIER]; ALL_TAC] THEN
+      REWRITE_TAC[GHASH_BOOL_POLY]; ALL_TAC] THEN
     CONJ_TAC THENL
      [MP_TAC(SPEC `q:(1->num)->bool` RING_POLYNOMIAL_OF_CARRIER) THEN
       ASM_REWRITE_TAC[]; ALL_TAC] THEN
@@ -616,7 +527,7 @@ let RHS_PMUL_BOUND_DIRECT = prove(
      REWRITE_TAC[CARD_CLAUSES; ODD]];
    ASM_REWRITE_TAC[]]);;
 
-(* GUERON_PROP1 — the main theorem.
+(* GUERON_PROP1 -- the main theorem.
    Proof structure:
    1. Reduce to mod_polyval congruence via MOD_POLYVAL_WORD_EQ
    2. Cancel x^128 via MOD_POLYVAL_CANCEL_VARPOW_GEN
@@ -638,7 +549,7 @@ let GUERON_PROP1 = prove(
   EXISTS_TAC `ring_mul bool_poly (ring_pow bool_poly (poly_var bool_ring one) 1)
     (poly_of_word (word_pmul (a:int128) (b:int128) : (256)word))` THEN
   CONJ_TAC THENL
-   [(* KEY CONGRUENCE: REF(S)*x^128 ≡ x*pmul(a,b) mod Q *)
+   [(* KEY CONGRUENCE: REF(S)*x^128 == x*pmul(a,b) mod Q *)
     REWRITE_TAC[cong; mod_polyval; BOOL_POLY_SUB] THEN
     REPEAT CONJ_TAC THENL
      [MATCH_MP_TAC RING_MUL THEN REWRITE_TAC[GSYM bool_poly; BOOL_POLY_OF_WORD; POLY_VARPOW_BOOL_POLY];
@@ -830,7 +741,7 @@ let GUERON_PROP1 = prove(
       SUBGOAL_THEN `~bit (255 - k) (S:int128)` (fun th -> REWRITE_TAC[th]) THEN
       MATCH_MP_TAC BIT_TRIVIAL_128 THEN
       UNDISCH_TAC `~(128 <= k)` THEN ARITH_TAC];
-    (* RHS branch: a*x*b ≡ polyval_dot(a, ghash_twist b)*x^128 mod Q *)
+    (* RHS branch: a*x*b == polyval_dot(a, ghash_twist b)*x^128 mod Q *)
     ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
     MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
     EXISTS_TAC `ring_mul bool_poly (poly_of_word (a:int128)) (poly_of_word (ghash_twist (b:int128)))` THEN
@@ -840,7 +751,7 @@ let GUERON_PROP1 = prove(
       MATCH_MP_TAC MOD_POLYVAL_MUL THEN REWRITE_TAC[BOOL_POLY_OF_WORD] THEN
       CONJ_TAC THENL
        [REWRITE_TAC[MOD_POLYVAL_REFL; BOOL_POLY_OF_WORD];
-        REWRITE_TAC[GHASH_TWIST_CORRECT]]]])
+        REWRITE_TAC[GHASH_TWIST_CORRECT]]]]);;
 
 (* ========================================================================= *)
 (* NIST GHASH "dot" operation and recursive GHASH definition.                *)

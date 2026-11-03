@@ -220,16 +220,14 @@ static void ref_aes_gcm_kernel(int keybytes, int encrypt,
 }
 
 // ***************************************************************************
-// Htable construction: feeds the assembly kernel's "Htable" argument
+// Htable construction: feeds the assembly kernels' "Htable" argument
 // ***************************************************************************
 //
-// The kernel reads precomputed powers of H in the OpenSSL gcm_init_v8 layout;
+// The kernels read precomputed powers of H in the OpenSSL gcm_init_v8 layout;
 // the entries the four-way kernels use are formalized as htable_mem_4, and
 // the whole table read by the 8-way _alt kernels as htable_mem_8, both in
-// arm/proofs/utils/aes_gcm_spec.ml. (The htable_mem predicate in
-// common/polyval_ghash.ml packs the Karatsuba middle terms in the opposite
-// lane order and does not describe this table.) Rather than transliterate the
-// SIMD twiddling, we build the table directly from that formal specification
+// arm/proofs/utils/aes_gcm_spec.ml. Rather than transliterate the SIMD
+// twiddling, we build the table directly from that formal specification
 // using GF(2)[x] arithmetic on 128-bit values, where a 128-bit value is a pair
 // (lo,hi) of 64-bit words (lo = bits 0..63):
 //

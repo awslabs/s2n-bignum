@@ -1,3 +1,8 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (* ========================================================================= *)
 (* GHASH polynomial both via machine words and as an element of GF(2)[X].    *)
 (* Its irreducibility, which nothing else depends on, is proved in           *)
