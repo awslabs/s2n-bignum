@@ -290,4 +290,10 @@ through the samples and the number of iterations of the loop. Like
 `mlkem_shake256`, it realigns its stack frame to 32 bytes, so the addresses
 of the state and the buffer in it depend on the stack pointer, which the
 proof keeps symbolic, and it zeroes the buffer with REP STOSQ, so its
-specification assumes that DF is clear.
+specification assumes that DF is clear. The same is done for
+`mlkem_poly_rej_uniform_x4`, which samples four polynomials from four seeds
+64 bytes apart using the fourfold SHAKE128 functions. Its loop test
+combines the comparisons of three of the numbers of samples with 255 by
+SETBE and OR, and compares the fourth only if the first three are complete,
+so the template of its events gives those of the first test and of each
+iteration of the loop by two functions, for the two cases.

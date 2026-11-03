@@ -473,6 +473,7 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_poly_frombytes_gcc12_O2 \
   mlkem_native/mlkem_native_poly_frommsg_gcc12_O2 \
   mlkem_native/mlkem_native_poly_rej_uniform_gcc12_O2 \
+  mlkem_native/mlkem_native_poly_rej_uniform_x4_gcc12_O2 \
   mlkem_native/mlkem_native_poly_sub_gcc12_O2 \
   mlkem_native/mlkem_native_poly_tomsg_gcc12_O2 \
   mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2 \
@@ -643,6 +644,12 @@ mlkem_native/mlkem_native_poly_rej_uniform_gcc12_O2.native: \
   mlkem_native/mlkem_native_shake128_init_gcc12_O2.native \
   mlkem_native/mlkem_native_shake128_release_gcc12_O2.native \
   mlkem_native/mlkem_native_shake128_squeezeblocks_gcc12_O2.native
+mlkem_native/mlkem_native_poly_rej_uniform_x4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_poly_rej_uniform_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake128x4_absorb_once_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake128x4_init_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake128x4_release_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake128x4_squeezeblocks_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_add_k2_gcc12_O2.native: \
   mlkem_native/mlkem_native_poly_add_gcc12_O2.native
 mlkem_native/mlkem_native_polyvec_add_k3_gcc12_O2.native: \
