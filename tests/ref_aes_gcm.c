@@ -1,74 +1,28 @@
-// Naive reference implementation of AES-GCM (AES-128 and AES-256) for testing
+// Naive reference implementation of the AES-GCM kernels' contract (AES-128
+// and AES-256) for testing
 //
 // Based directly on:
 //   - FIPS 197          (AES block cipher)
 //   - NIST SP 800-38D   (GCM mode: GCTR, GHASH, J0, tag)
-//   - McGrew & Viega, "The Galois/Counter Mode of Operation (GCM)"
-//     (the original GCM submission; source of the test vectors)
 //
 // Prioritizes clarity and transparency over performance. Everything operates
 // on byte arrays in the natural big-endian GHASH convention of the standard;
 // there is no use of the optimized "Htable" representation here (that lives in
-// ref_gcm_init_htable below, used only to feed the assembly kernel).
+// ref_gcm_init_htable below, used only to feed the assembly kernels).
+//
+// The AES-256 key expansion and block encryption, and the S-box, round
+// constants and xtime used for AES-128 here, are those of tests/ref_aes_xts.c,
+// which must be included before this file.
 
 // ***************************************************************************
-// AES-128 core: FIPS 197 (reuses the S-box / xtime style of ref_aes_xts.c)
+// AES-128 core: FIPS 197
 // ***************************************************************************
-
-// FIPS 197, Figure 7: S-box substitution values
-
-static const uint8_t ref_gcm_sbox[256] =
-{ 0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,
-  0x30,0x01,0x67,0x2b,0xfe,0xd7,0xab,0x76,
-  0xca,0x82,0xc9,0x7d,0xfa,0x59,0x47,0xf0,
-  0xad,0xd4,0xa2,0xaf,0x9c,0xa4,0x72,0xc0,
-  0xb7,0xfd,0x93,0x26,0x36,0x3f,0xf7,0xcc,
-  0x34,0xa5,0xe5,0xf1,0x71,0xd8,0x31,0x15,
-  0x04,0xc7,0x23,0xc3,0x18,0x96,0x05,0x9a,
-  0x07,0x12,0x80,0xe2,0xeb,0x27,0xb2,0x75,
-  0x09,0x83,0x2c,0x1a,0x1b,0x6e,0x5a,0xa0,
-  0x52,0x3b,0xd6,0xb3,0x29,0xe3,0x2f,0x84,
-  0x53,0xd1,0x00,0xed,0x20,0xfc,0xb1,0x5b,
-  0x6a,0xcb,0xbe,0x39,0x4a,0x4c,0x58,0xcf,
-  0xd0,0xef,0xaa,0xfb,0x43,0x4d,0x33,0x85,
-  0x45,0xf9,0x02,0x7f,0x50,0x3c,0x9f,0xa8,
-  0x51,0xa3,0x40,0x8f,0x92,0x9d,0x38,0xf5,
-  0xbc,0xb6,0xda,0x21,0x10,0xff,0xf3,0xd2,
-  0xcd,0x0c,0x13,0xec,0x5f,0x97,0x44,0x17,
-  0xc4,0xa7,0x7e,0x3d,0x64,0x5d,0x19,0x73,
-  0x60,0x81,0x4f,0xdc,0x22,0x2a,0x90,0x88,
-  0x46,0xee,0xb8,0x14,0xde,0x5e,0x0b,0xdb,
-  0xe0,0x32,0x3a,0x0a,0x49,0x06,0x24,0x5c,
-  0xc2,0xd3,0xac,0x62,0x91,0x95,0xe4,0x79,
-  0xe7,0xc8,0x37,0x6d,0x8d,0xd5,0x4e,0xa9,
-  0x6c,0x56,0xf4,0xea,0x65,0x7a,0xae,0x08,
-  0xba,0x78,0x25,0x2e,0x1c,0xa6,0xb4,0xc6,
-  0xe8,0xdd,0x74,0x1f,0x4b,0xbd,0x8b,0x8a,
-  0x70,0x3e,0xb5,0x66,0x48,0x03,0xf6,0x0e,
-  0x61,0x35,0x57,0xb9,0x86,0xc1,0x1d,0x9e,
-  0xe1,0xf8,0x98,0x11,0x69,0xd9,0x8e,0x94,
-  0x9b,0x1e,0x87,0xe9,0xce,0x55,0x28,0xdf,
-  0x8c,0xa1,0x89,0x0d,0xbf,0xe6,0x42,0x68,
-  0x41,0x99,0x2d,0x0f,0xb0,0x54,0xbb,0x16
-};
-
-// FIPS 197, Section 5.2: round constants
-
-static const uint8_t ref_gcm_rcon[11] =
-{ 0x00, 0x01, 0x02, 0x04, 0x08, 0x10,
-  0x20, 0x40, 0x80, 0x1b, 0x36
-};
-
-// FIPS 197, Section 4.2.1: xtime (multiply by {02} in GF(2^8))
-
-static uint8_t ref_gcm_xtime(uint8_t x)
-{ return (x << 1) ^ ((x >> 7) * 0x1b);
-}
 
 // AES-128 key expansion: FIPS 197, Section 5.2 (Nk=4, Nr=10).
 // Produces the encryption key schedule in s2n_bignum_AES_KEY format:
 //   rd_key = 11 round keys (176 bytes) as little-endian uint64_t pairs,
-//   rounds = 10. This is the layout the assembly kernel reads from "key".
+//   rounds = 10, as AWS-LC's AES_set_encrypt_key stores it (the AES-GCM
+//   kernels read only rd_key).
 
 static void ref_aes128_expand_key(const uint8_t key[16],
                                   s2n_bignum_AES_KEY *ek)
@@ -85,10 +39,10 @@ static void ref_aes128_expand_key(const uint8_t key[16],
      if (i % 4 == 0)
       { // RotWord + SubWord + Rcon
         uint8_t u = t[0];
-        t[0] = ref_gcm_sbox[t[1]] ^ ref_gcm_rcon[i/4];
-        t[1] = ref_gcm_sbox[t[2]];
-        t[2] = ref_gcm_sbox[t[3]];
-        t[3] = ref_gcm_sbox[u];
+        t[0] = ref_aes_sbox[t[1]] ^ ref_aes_rcon[i/4];
+        t[1] = ref_aes_sbox[t[2]];
+        t[2] = ref_aes_sbox[t[3]];
+        t[3] = ref_aes_sbox[u];
       }
 
      w[4*i+0] = w[4*(i-4)+0] ^ t[0];
@@ -116,7 +70,7 @@ static void ref_aes128_encrypt_block(const uint8_t in[16], uint8_t out[16],
    { uint8_t t[16];
 
      // SubBytes
-     for (i = 0; i < 16; ++i) t[i] = ref_gcm_sbox[s[i]];
+     for (i = 0; i < 16; ++i) t[i] = ref_aes_sbox[s[i]];
 
      // ShiftRows (row r shifts left by r positions)
      s[0]  = t[0];  s[1]  = t[5];  s[2]  = t[10]; s[3]  = t[15];
@@ -128,10 +82,10 @@ static void ref_aes128_encrypt_block(const uint8_t in[16], uint8_t out[16],
      if (r < 10)
       { for (i = 0; i < 4; ++i)
          { uint8_t a = s[4*i], b = s[4*i+1], c = s[4*i+2], d = s[4*i+3];
-           s[4*i]   = ref_gcm_xtime(a) ^ ref_gcm_xtime(b) ^ b ^ c ^ d;
-           s[4*i+1] = a ^ ref_gcm_xtime(b) ^ ref_gcm_xtime(c) ^ c ^ d;
-           s[4*i+2] = a ^ b ^ ref_gcm_xtime(c) ^ ref_gcm_xtime(d) ^ d;
-           s[4*i+3] = ref_gcm_xtime(a) ^ a ^ b ^ c ^ ref_gcm_xtime(d);
+           s[4*i]   = ref_aes_xtime(a) ^ ref_aes_xtime(b) ^ b ^ c ^ d;
+           s[4*i+1] = a ^ ref_aes_xtime(b) ^ ref_aes_xtime(c) ^ c ^ d;
+           s[4*i+2] = a ^ b ^ ref_aes_xtime(c) ^ ref_aes_xtime(d) ^ d;
+           s[4*i+3] = ref_aes_xtime(a) ^ a ^ b ^ c ^ ref_aes_xtime(d);
          }
       }
 
@@ -189,18 +143,19 @@ static void ref_ghash_blocks(uint8_t y[16], const uint8_t *data,
 }
 
 // ***************************************************************************
-// Kernel-level reference: mirrors the exact contract of aes128_gcm_enc
+// Kernel-level reference: the contract of the AES-GCM bulk kernels
 // ***************************************************************************
 //
-// The assembly kernel processes only whole 16-byte blocks. For each block it
-//   - forms a keystream block by AES-encrypting the 16-byte counter "ivec",
-//   - XORs it with the plaintext to make the ciphertext block,
-//   - folds the ciphertext block into the running GHASH accumulator "tag",
-//   - increments the counter (GCM inc32: rightmost 32 bits, mod 2^32).
+// The assembly kernels process only whole 16-byte blocks. For each block they
+//   - form a keystream block by AES-encrypting the 16-byte counter "ivec",
+//   - XOR it with the input block to make the output block,
+//   - fold the ciphertext block (the output when encrypting, the input when
+//     decrypting) into the running GHASH accumulator "tag",
+//   - increment the counter (GCM inc32: rightmost 32 bits, mod 2^32).
 // On return ivec holds the final counter and tag the final GHASH value.
 //
 // The GHASH subkey is H = AES_K(0^128), exactly as encoded (in optimized form)
-// in the Htable that the kernel reads. Here we compute GHASH directly with H,
+// in the Htable that the kernels read. Here we compute GHASH directly with H,
 // independently of that table.
 
 static void ref_gcm_inc32(uint8_t ctr[16])
@@ -212,123 +167,53 @@ static void ref_gcm_inc32(uint8_t ctr[16])
   ctr[14] = (uint8_t)(c >> 8);  ctr[15] = (uint8_t)c;
 }
 
-static void ref_aes128_gcm_enc(const uint8_t *in, uint64_t len_bits,
-                                   uint8_t *out, uint8_t tag[16],
-                                   uint8_t ivec[16],
-                                   const s2n_bignum_AES_KEY *ek)
-{ uint8_t h[16], zero[16], ks[16];
-  uint64_t byte_len = len_bits >> 3;
-  uint64_t nblocks  = byte_len >> 4;
+// AES key expansion and one block encryption for keybytes = 16 (AES-128)
+// or 32 (AES-256)
+
+static void ref_aes_expand_key(int keybytes, const uint8_t *key,
+                               s2n_bignum_AES_KEY *ek)
+{ if (keybytes == 16) ref_aes128_expand_key(key, ek);
+  else ref_aes256_expand_key(key, ek);
+}
+
+static void ref_aes_encrypt_block(int keybytes, const uint8_t in[16],
+                                  uint8_t out[16],
+                                  const s2n_bignum_AES_KEY *ek)
+{ if (keybytes == 16) ref_aes128_encrypt_block(in, out, ek);
+  else ref_aes256_encrypt_block(in, out, ek);
+}
+
+// The kernels' contract for keybytes-byte keys, encrypting if encrypt is
+// nonzero and decrypting otherwise, on the floor(len_bits/128) whole blocks
+// of the input. (The 4-way kernels process exactly these blocks for any
+// len_bits; the _alt kernels only accept a nonzero multiple of 128.)
+
+static void ref_aes_gcm_kernel(int keybytes, int encrypt,
+                               const uint8_t *in, uint64_t len_bits,
+                               uint8_t *out, uint8_t tag[16],
+                               uint8_t ivec[16],
+                               const s2n_bignum_AES_KEY *ek)
+{ uint8_t h[16], zero[16], ks[16], ct[16];
+  uint64_t nblocks = len_bits / 128;
   uint64_t b;
   int j;
 
   // H = AES_K(0^128)
   memset(zero, 0, 16);
-  ref_aes128_encrypt_block(zero, h, ek);
+  ref_aes_encrypt_block(keybytes, zero, h, ek);
 
   for (b = 0; b < nblocks; ++b)
-   { ref_aes128_encrypt_block(ivec, ks, ek);
-     for (j = 0; j < 16; ++j) out[16*b + j] = in[16*b + j] ^ ks[j];
+   { const uint8_t *x = in + 16*b;
+     uint8_t *y = out + 16*b;
+
+     // CTR mode, the same for encryption and decryption
+     ref_aes_encrypt_block(keybytes, ivec, ks, ek);
+     for (j = 0; j < 16; ++j) ct[j] = encrypt ? (uint8_t)(x[j] ^ ks[j]) : x[j];
+     for (j = 0; j < 16; ++j) y[j] = x[j] ^ ks[j];
 
      // Fold the ciphertext block into the GHASH accumulator
-     for (j = 0; j < 16; ++j) tag[j] ^= out[16*b + j];
+     for (j = 0; j < 16; ++j) tag[j] ^= ct[j];
      ref_ghash_mul(tag, tag, h);
-
-     ref_gcm_inc32(ivec);
-   }
-}
-
-// Reference for the AES-256-GCM encryption kernel. Identical in structure to
-// the AES-128 one above; the ONLY difference is that AES-256 is used for
-// both the CTR keystream and the GHASH subkey H = AES256_K(0^128). The AES-256
-// block cipher and its key schedule are reused verbatim from ref_aes_xts.c
-// (ref_aes256_expand_key / ref_aes256_encrypt_block), which is #included before
-// this file in the test harness. GCM mode, GHASH and counter handling are
-// exactly as for AES-128.
-static void ref_aes256_gcm_enc(const uint8_t *in, uint64_t len_bits,
-                                      uint8_t *out, uint8_t tag[16],
-                                      uint8_t ivec[16],
-                                      const s2n_bignum_AES_KEY *ek)
-{ uint8_t h[16], zero[16], ks[16];
-  uint64_t byte_len = len_bits >> 3;
-  uint64_t nblocks  = byte_len >> 4;
-  uint64_t b;
-  int j;
-
-  // H = AES256_K(0^128)
-  memset(zero, 0, 16);
-  ref_aes256_encrypt_block(zero, h, ek);
-
-  for (b = 0; b < nblocks; ++b)
-   { ref_aes256_encrypt_block(ivec, ks, ek);
-     for (j = 0; j < 16; ++j) out[16*b + j] = in[16*b + j] ^ ks[j];
-
-     // Fold the ciphertext block into the GHASH accumulator
-     for (j = 0; j < 16; ++j) tag[j] ^= out[16*b + j];
-     ref_ghash_mul(tag, tag, h);
-
-     ref_gcm_inc32(ivec);
-   }
-}
-
-// Reference for the AES-256-GCM decryption kernel. This is ref_aes256_gcm_enc
-// with the GHASH folding the INPUT (ciphertext) block rather than the output, the
-// only enc/dec difference; AES-256 (14 rounds) drives both the CTR keystream and
-// H = AES256_K(0^128). Uses ref_aes256_encrypt_block (from tests/ref_aes_xts.c).
-static void ref_aes256_gcm_dec(const uint8_t *in, uint64_t len_bits,
-                                      uint8_t *out, uint8_t tag[16],
-                                      uint8_t ivec[16],
-                                      const s2n_bignum_AES_KEY *ek)
-{ uint8_t h[16], zero[16], ks[16];
-  uint64_t byte_len = len_bits >> 3;
-  uint64_t nblocks  = byte_len >> 4;
-  uint64_t b;
-  int j;
-
-  // H = AES256_K(0^128)
-  memset(zero, 0, 16);
-  ref_aes256_encrypt_block(zero, h, ek);
-
-  for (b = 0; b < nblocks; ++b)
-   { // Fold the ciphertext (input) block into the GHASH accumulator
-     for (j = 0; j < 16; ++j) tag[j] ^= in[16*b + j];
-     ref_ghash_mul(tag, tag, h);
-
-     // CTR-decrypt: plaintext = ciphertext XOR AES256_K(counter)
-     ref_aes256_encrypt_block(ivec, ks, ek);
-     for (j = 0; j < 16; ++j) out[16*b + j] = in[16*b + j] ^ ks[j];
-
-     ref_gcm_inc32(ivec);
-   }
-}
-
-// Reference for the AES-128-GCM decryption kernel. Identical to the encrypt kernel
-// above except that GHASH folds the INPUT (ciphertext) block rather than the
-// output (plaintext): in decryption the authenticated data is the ciphertext,
-// which is what the kernel reads. The CTR keystream and counter handling are
-// unchanged (CTR mode is symmetric).
-static void ref_aes128_gcm_dec(const uint8_t *in, uint64_t len_bits,
-                                   uint8_t *out, uint8_t tag[16],
-                                   uint8_t ivec[16],
-                                   const s2n_bignum_AES_KEY *ek)
-{ uint8_t h[16], zero[16], ks[16];
-  uint64_t byte_len = len_bits >> 3;
-  uint64_t nblocks  = byte_len >> 4;
-  uint64_t b;
-  int j;
-
-  // H = AES_K(0^128)
-  memset(zero, 0, 16);
-  ref_aes128_encrypt_block(zero, h, ek);
-
-  for (b = 0; b < nblocks; ++b)
-   { // Fold the ciphertext (input) block into the GHASH accumulator
-     for (j = 0; j < 16; ++j) tag[j] ^= in[16*b + j];
-     ref_ghash_mul(tag, tag, h);
-
-     // CTR-decrypt: plaintext = ciphertext XOR AES_K(counter)
-     ref_aes128_encrypt_block(ivec, ks, ek);
-     for (j = 0; j < 16; ++j) out[16*b + j] = in[16*b + j] ^ ks[j];
 
      ref_gcm_inc32(ivec);
    }
@@ -507,29 +392,11 @@ static void ref_gcm_init_htable(uint8_t Htable[192], const uint8_t h_bytes[16])
 }
 
 // ***************************************************************************
-// Full AES-128-GCM (NIST SP 800-38D): used only to validate this reference
-// against published known-answer test vectors (McGrew & Viega).
+// Helpers for the GCM known-answer tests: the length block and GHASH over
+// data of any length (NIST SP 800-38D, Sections 6.4 and 7.1)
 // ***************************************************************************
 
-// GCTR (SP 800-38D Section 6.5): counter-mode over arbitrary-length data,
-// starting from initial counter block icb, incrementing the low 32 bits.
-
-static void ref_gctr(const s2n_bignum_AES_KEY *ek, const uint8_t icb[16],
-                     const uint8_t *in, uint8_t *out, size_t len)
-{ uint8_t cb[16], ks[16];
-  size_t off = 0;
-  memcpy(cb, icb, 16);
-  while (off < len)
-   { size_t n = (len - off < 16) ? (len - off) : 16;
-     size_t j;
-     ref_aes128_encrypt_block(cb, ks, ek);
-     for (j = 0; j < n; ++j) out[off + j] = in[off + j] ^ ks[j];
-     ref_gcm_inc32(cb);
-     off += n;
-   }
-}
-
-// Append a 64-bit big-endian value into a buffer at position *pos.
+// Store a 64-bit value big-endian at p.
 
 static void ref_put_be64(uint8_t *p, uint64_t v)
 { int i;
@@ -573,47 +440,4 @@ static void ref_ghash_full(const uint8_t h[16],
   ref_ghash_mul(y, y, h);
 
   memcpy(out, y, 16);
-}
-
-// AES-128-GCM authenticated encryption (SP 800-38D Section 7.1).
-// Produces ciphertext ct (same length as pt) and a 16-byte tag.
-// Supports a 96-bit IV (the common case, used by the test vectors) and the
-// general case where J0 itself is computed via GHASH.
-
-static void ref_aes128_gcm_encrypt(const uint8_t key[16],
-                                   const uint8_t *iv, size_t ivlen,
-                                   const uint8_t *aad, size_t aadlen,
-                                   const uint8_t *pt, size_t ptlen,
-                                   uint8_t *ct, uint8_t tag[16])
-{ s2n_bignum_AES_KEY ek;
-  uint8_t h[16], zero[16], j0[16], icb[16], s[16], ej0[16];
-  int j;
-
-  ref_aes128_expand_key(key, &ek);
-
-  memset(zero, 0, 16);
-  ref_aes128_encrypt_block(zero, h, &ek); // H = AES_K(0)
-
-  // Compute the pre-counter block J0 (SP 800-38D Section 7.1, step 2)
-  if (ivlen == 12)
-   { memcpy(j0, iv, 12);
-     j0[12] = 0; j0[13] = 0; j0[14] = 0; j0[15] = 1;
-   }
-  else
-   { // J0 = GHASH_H(IV || 0^s || [len(IV)]_64)
-     ref_ghash_full(h, NULL, 0, iv, ivlen, j0);
-     // ref_ghash_full appends [0]_64 || [len(IV)]_64; for J0 the standard uses
-     // a single length block [0]_64 || [len(IV)]_64 after the (padded) IV,
-     // which is exactly GHASH with empty AAD over the IV as "ciphertext".
-   }
-
-  // C = GCTR_K(inc32(J0), P)
-  memcpy(icb, j0, 16);
-  ref_gcm_inc32(icb);
-  ref_gctr(&ek, icb, pt, ct, ptlen);
-
-  // S = GHASH_H(A, C); T = MSB_128(GCTR_K(J0, S)) = AES_K(J0) XOR S
-  ref_ghash_full(h, aad, aadlen, ct, ptlen, s);
-  ref_aes128_encrypt_block(j0, ej0, &ek);
-  for (j = 0; j < 16; ++j) tag[j] = ej0[j] ^ s[j];
 }
