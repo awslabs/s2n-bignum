@@ -250,3 +250,15 @@ the same way, and the hash functions keep the state on the stack, where
 frame depends on the stack pointer, which the proof keeps symbolic. Where
 the hypotheses are the same, the correctness and safety theorems are
 derived from the combined ones `..._IMAGE_SUBROUTINE_FULL`.
+
+The functions for four states at once are verified in the same way, with
+the theorem for `mlkem_keccakf1600x4_permute` also restated for the states
+as 1600-bit words, starting with the static function
+`mlk_keccak_absorb_once_x4`, specialized by gcc to the first byte 0x1F of
+the padding as `mlk_keccak_absorb_once_x4.constprop.0`, at 0x35d0 in the
+image. As on AArch64, the four states must be zero at the start, since its
+callers zero them. Its seventh argument, the length of the messages, is on
+the stack, and it passes the seventh argument of
+`mlkem_keccakf1600x4_xor_bytes` on the stack as a 64-bit word, of which the
+callee reads 32 bits, in the form given by `STACK_ARG32_TAC` in
+`../proofs/mlkem_native_libmlkem_gcc12_O2.ml`.

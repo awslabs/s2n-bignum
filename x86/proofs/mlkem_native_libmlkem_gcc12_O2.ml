@@ -461,6 +461,41 @@ let ARGS_32_TAC ns =
      [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
       DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))]) ns;;
 
+(*** A 32-bit argument on the stack that the caller pushes as a 64-bit
+ *** word, as the bytes32 that the callee reads, by STACK_ARG32_TAC a
+ *** for the address a of the fact for its bytes64
+ ***)
+
+let READ_MEMORY_BYTES32_OF_BYTES64 = prove
+ (`!a:int64 n s:x86state.
+        read (memory :> bytes64 a) s = word n /\ n < 2 EXP 32
+        ==> read (memory :> bytes32 a) s = word n`,
+  REPEAT GEN_TAC THEN CONV_TAC NUM_REDUCE_CONV THEN STRIP_TAC THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  FIRST_X_ASSUM(MP_TAC o AP_TERM `val:int64->num`) THEN
+  REWRITE_TAC[BYTES64_WBYTES; BYTES32_WBYTES; READ_COMPONENT_COMPOSE;
+              VAL_READ_WBYTES; VAL_WORD; DIMINDEX_64; DIMINDEX_32] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+   `n < 4294967296 ==> n < 18446744073709551616`] THEN
+  DISCH_THEN(MP_TAC o C AP_THM `2 EXP (8 * 4)` o AP_TERM `(MOD)`) THEN
+  REWRITE_TAC[READ_BYTES_MOD] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT]);;
+
+let STACK_ARG32_TAC a =
+  FIRST_ASSUM(fun th ->
+    match concl th with
+      Comb(Comb(Const("=",_),
+                Comb(Comb(Const("read",_),
+                          Comb(Comb(Const(":>",_),Const("memory",_)),
+                               Comb(Const("bytes64",_),aa))),_)),
+           Comb(Const("word",_),n)) when aa = a ->
+        SUBGOAL_THEN (mk_binop `(<):num->num->bool` n `2 EXP 32`)
+         (fun lth -> ASSUME_TAC
+            (MATCH_MP READ_MEMORY_BYTES32_OF_BYTES64 (CONJ th lth))) THENL
+         [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC; ALL_TAC]
+    | _ -> NO_TAC);;
+
 (*** Bit fields of numbers and of words made from them ***)
 
 let DIV_MOD_EXP_LOW = prove
