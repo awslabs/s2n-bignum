@@ -297,3 +297,17 @@ combines the comparisons of three of the numbers of samples with 255 by
 SETBE and OR, and compares the fourth only if the first three are complete,
 so the template of its events gives those of the first test and of each
 iteration of the loop by two functions, for the two cases.
+
+`mlkem512_gen_matrix`, `mlkem768_gen_matrix` and `mlkem1024_gen_matrix`,
+which generate the matrix or its transpose from a seed by sampling its
+entries four at a time with `mlkem_poly_rej_uniform_x4`, and the last of
+the nine for ML-KEM-768 with `mlkem_poly_rej_uniform`, from copies of the
+seed with the indices of the entries in four buffers on the stack, are
+verified in the image with the same specifications as on AArch64 apart from
+the stack, and with the same theorems of constant time and memory safety,
+by which their events depend only on the addresses, the seed and the flag
+for the transpose. They also align the buffers to 32 bytes, and the proofs
+give the addresses in them and in the stack of the callees below them as
+constant offsets from a variable for the bottom of the stack of
+`mlkem_poly_rej_uniform_x4`, with the facts about its alignment and its
+position in the frame.
