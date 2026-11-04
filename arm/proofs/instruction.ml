@@ -2766,6 +2766,43 @@ let arm_XTN2 = define
             usimd8 (\x. word_subword x (0,8): (8)word) n in
         (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
 
+(*** ADDHN: add the 2*esize-bit lanes of Vn and Vm and narrow each sum to  ***)
+(*** its high esize bits, in the low 64 bits of Vd (the rest cleared).     ***)
+(*** ADDHN2 writes them to the high 64 bits, keeping the low 64 bits of Vd ***)
+(*** (Q=1 form). esize is Rd's (destination, narrow) element size.         ***)
+let arm_ADDHN = define
+ `arm_ADDHN Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\x. word_subword x (32,32): (32)word)
+                   (simd2 word_add n m)
+          else if esize = 16 then
+            usimd4 (\x. word_subword x (16,16): (16)word)
+                   (simd4 word_add n m)
+          else // esize=8
+            usimd8 (\x. word_subword x (8,8): (8)word)
+                   (simd8 word_add n m) in
+        (Rd := (word_zx res:(128)word)) s`;;
+
+let arm_ADDHN2 = define
+ `arm_ADDHN2 Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\x. word_subword x (32,32): (32)word)
+                   (simd2 word_add n m)
+          else if esize = 16 then
+            usimd4 (\x. word_subword x (16,16): (16)word)
+                   (simd4 word_add n m)
+          else // esize=8
+            usimd8 (\x. word_subword x (8,8): (8)word)
+                   (simd8 word_add n m) in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
 
 let word_split_lohi = new_definition
  `(word_split_lohi:(N tybit0)word->((N)word # (N)word)) x =
@@ -4092,6 +4129,8 @@ let EXPAND_SIMD_RULE =
   CONV_RULE (DEPTH_CONV DIMINDEX_CONV) o REWRITE_RULE all_simd_rules;;
 
 let arm_ADD_VEC_ALT =    EXPAND_SIMD_RULE arm_ADD_VEC;;
+let arm_ADDHN_ALT =      EXPAND_SIMD_RULE arm_ADDHN;;
+let arm_ADDHN2_ALT =     EXPAND_SIMD_RULE arm_ADDHN2;;
 let arm_ABS_VEC_ALT =    EXPAND_SIMD_RULE arm_ABS_VEC;;
 let arm_CMGE_VEC_ALT =   EXPAND_SIMD_RULE arm_CMGE_VEC;;
 let arm_CMGT_VEC_ALT =   EXPAND_SIMD_RULE arm_CMGT_VEC;;
@@ -4366,7 +4405,7 @@ let arm_ST4_ALT = end_itlist CONJ
 let ARM_OPERATION_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
     (*** Alphabetically sorted, new alphabet appears in the next line ***)
-      [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDV_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
+      [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDHN_ALT; arm_ADDHN2_ALT; arm_ADDV_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
        arm_ADRP; arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
        arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIF; arm_BIT;
        arm_BL; arm_BL_ABSOLUTE; arm_BR; arm_Bcond;
