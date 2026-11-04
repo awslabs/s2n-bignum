@@ -200,10 +200,13 @@ The functions and data come from the symbol table, the size of the image
 from the section headers, the PLT entries and GOT slots from the
 disassembly and the dynamic relocations, the vectors of constants without
 symbols from the ADRP and LDR instructions that load them, and the labels
-in the functions from their control flow graphs. It works for all 48
-builds in the `binary` branch of mlkem-native. For a build other than
-gcc 12 `-O2` this gives the names that its proofs would use, but not the
-proofs themselves, since the code is different.
+in the functions from their control flow graphs, as the header of the file
+explains with diagrams. At the end, the file lists the code of each
+function with its labels, the names of the addresses of its constants, and
+arrows for its branches. It works for all 48 builds in the `binary` branch
+of mlkem-native. For a build other than gcc 12 `-O2` this gives the names
+that its proofs would use, but not the proofs themselves, since the code is
+different.
 
 The proof for each function ends with the versions of its theorems for the
 code in the image, `..._IMAGE_SUBROUTINE_CORRECT` and
