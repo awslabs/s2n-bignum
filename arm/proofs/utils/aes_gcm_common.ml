@@ -966,6 +966,29 @@ let ALT_ZERO_KEY_RULE name cipher_def ks_def h0 th =
   else GEN_ALL th';;
 
 (* ------------------------------------------------------------------------- *)
+(* The signed values of the pointer arithmetic of the 8-way kernels, which   *)
+(* compare pointers with signed conditions.                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let IVAL_WORD_SUB_SMALL = prove
+ (`!a b. a < 2 EXP 63 /\ b < 2 EXP 63
+         ==> ival(word_sub (word a) (word b):int64) = &a - &b`,
+  REWRITE_TAC[IVAL_IWORD_GALOIS; WORD_IWORD; IWORD_INT_SUB; DIMINDEX_64] THEN
+  ARITH_TAC);;
+
+let IVAL_PTR_ADD = prove
+ (`!(p:int64) a. val p + a < 2 EXP 63 ==> ival(word_add p (word a)) = &(val p + a)`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `val(word_add (p:int64) (word a)) = val p + a` ASSUME_TAC THENL
+   [REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+    CONV_TAC MOD_DOWN_CONV THEN MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  ASM_REWRITE_TAC[INT_IVAL; DIMINDEX_64] THEN
+  COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
+  POP_ASSUM MP_TAC THEN REWRITE_TAC[INT_OF_NUM_POW; INT_OF_NUM_LT] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC);;
+
+(* ------------------------------------------------------------------------- *)
 (* The whole-blocks count: a multiple of 128 is 128 times its block count.   *)
 (* ------------------------------------------------------------------------- *)
 

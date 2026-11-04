@@ -992,7 +992,7 @@ let close_goal9 : tactic =
 
 (* The frame conjunct, <declared frame> s0 s177 in the body.  The stepper
    leaves several MAYCHANGE assumptions over various pairs of states, so each
-   is tried in turn: weaken it along subsumption (pth) and check with
+   is tried in turn: weaken it along subsumption (SUBSUMED_APPLY) and check with
    SUBSUMED_MAYCHANGE_TAC, after expanding
    MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI so that the register lists can
    be compared; the cumulative one, from s0 to the final state, succeeds.
@@ -1002,7 +1002,6 @@ let close_goal9 : tactic =
 let close_goal10 : tactic =
   fun (asl,w) ->
     let is_mc c = try can(find_term(fun x->match x with Const("MAYCHANGE",_)->true|_->false)) c with _->false in
-    let pth = prove(`R s s' ==> R subsumed R' ==> R' s s'`, REWRITE_TAC[subsumed] THEN MESON_TAC[]) in
     (TRY(SUBGOAL_THEN `4*i+3 < nblocks` ASSUME_TAC THENL
       [MAP_EVERY (fun t -> TRY(UNDISCH_TAC t))
          [`nblocks DIV 4 = loop_count`; `i < loop_count - 1`; `i < loop_count - 2`; `2 <= loop_count`] THEN ARITH_TAC;
@@ -1014,7 +1013,7 @@ let close_goal10 : tactic =
      (fun (asl2,w2) ->
         let mcths = List.filter_map (fun (_,th) -> if is_mc(concl th) then Some th else None) asl2 in
         (FIRST (map (fun th -> fun g ->
-            (MATCH_MP_TAC(MATCH_MP pth th) THEN
+            (MATCH_MP_TAC(MATCH_MP SUBSUMED_APPLY th) THEN
              REWRITE_TAC[ETA_AX; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
              SUBSUMED_MAYCHANGE_TAC) g) mcths)) (asl2,w2))) (asl,w);;
 

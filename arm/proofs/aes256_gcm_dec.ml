@@ -2448,12 +2448,11 @@ let drain_step_all =
 let DRAIN_PTR_TAC : tactic =
   AP_TERM_TAC THEN AP_TERM_TAC THEN UNDISCH_TAC `1 <= loop_count` THEN ARITH_TAC;;
 (* X13: word_zx (word_add (word_zx (word_zx (word (4(lc-1)+c)))) (word 4)) =
-   word_zx (word (4*lc+c)).  The drain does add w13,w13,#4 at 0x57c; ZX_WT
+   word_zx (word (4*lc+c)).  The drain does add w13,w13,#4 at 0x57c; ZX_COUNTER_UD
    collapses the int32 -> int64 -> int32 round trip, GSYM WORD_ADD merges the
    +4, then AP_TERM_TAC and ARITH_TAC. *)
-let ZX_WT = prove(`word_zx(word_zx(w:int32):int64):int32 = w`, CONV_TAC WORD_BLAST);;
 let DRAIN_X13_TAC : tactic =
-  REWRITE_TAC[ZX_WT] THEN REWRITE_TAC[GSYM WORD_ADD] THEN
+  REWRITE_TAC[ZX_COUNTER_UD] THEN REWRITE_TAC[GSYM WORD_ADD] THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN UNDISCH_TAC `1 <= loop_count` THEN ARITH_TAC;;
 (* The settled tag.  SWP_Q30_SEED_TAC proves the tag step of the body (the
    code's reduction is nist_ghash .. (4*(i+1)) with its halves swapped) for a
@@ -2794,7 +2793,7 @@ let TAIL_STEP_CLOSE : tactic = fun (asl,w) ->
   else if is_eq w && has "nist_ghash" w then TAIL_Q30_CLOSE (asl,w)
   else FIRST
     [ (AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);
-      (REWRITE_TAC[ZX_WT] THEN REWRITE_TAC[GSYM WORD_ADD] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);
+      (REWRITE_TAC[ZX_COUNTER_UD] THEN REWRITE_TAC[GSYM WORD_ADD] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);
       TAIL_X9_CLOSE;
       close_frame_dec;
       (ASM_REWRITE_TAC[htable_mem_4]) ] (asl,w);;
@@ -2816,7 +2815,6 @@ let IVEC_SPLIT_TAIL : tactic =
       can (find_term (fun t -> is_const t && fst(dest_const t) = "bytes128")) (lhs c)));;
 (* word_zx to the same width is the identity: it collapses the int32 layers of
    the code's counter word tower. *)
-let WORD_ZX_ID32 = prove(`!x:int32. word_zx x:int32 = x`, GEN_TAC THEN CONV_TAC WORD_BLAST);;
 (* The counter cell tower (four int32 word_zx around word_bytereverse) is
    word_bytereverse of the inner word. *)
 let ZXTOWER_COLLAPSE_32 = prove
@@ -2854,7 +2852,7 @@ let IVEC_RECOMB_TAIL (kidx:term) : tactic =
             can (find_term (fun t -> is_const t && fst(dest_const t)="bytes32")) (lhs c)
         with _ -> false) asl in
      let normed = map (fun (_,th) -> REWRITE_RULE
-        [ZXTOWER_COLLAPSE_32; WORD_ZX_ID32; ZX_WT; ADD_CLAUSES; MULT_CLAUSES] th) ivec_cells in
+        [ZXTOWER_COLLAPSE_32; WORD_ZX_TRIVIAL; ZX_COUNTER_UD; ADD_CLAUSES; MULT_CLAUSES] th) ivec_cells in
      REWRITE_TAC normed) THEN
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[ctr_block] THEN
@@ -3079,7 +3077,7 @@ let X9_FOLD = prove
   MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
   MATCH_MP_TAC(ARITH_RULE `x < 4 ==> x < 2 EXP 64`) THEN
   REWRITE_TAC[MOD_LT_EQ] THEN CONV_TAC NUM_REDUCE_CONV);;
-let NIST_GHASH_NIL = prove
+let NIST_GHASH_LIST_OF_SEQ_0 = prove
  (`!h tag0 f. nist_ghash h tag0 (list_of_seq f 0) = tag0`, REWRITE_TAC[LIST_OF_SEQ; nist_ghash]);;
 let leg_lc0_tac =
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -3123,7 +3121,7 @@ let leg_lc0_tac =
       (GEN_REWRITE_TAC (LAND_CONV) [el 1 (CONJUNCTS READ_MEMORY_BYTESIZED_SPLIT)] THEN
        CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN ASM_REWRITE_TAC[]) (asl,w)
     else if is_eq w && can(find_term(fun t->match t with Const("nist_ghash",_)->true|_->false)) w then
-      (REWRITE_TAC[NIST_GHASH_NIL] THEN POP_ASSUM_LIST(K ALL_TAC) THEN CONV_TAC WORD_BLAST) (asl,w)
+      (REWRITE_TAC[NIST_GHASH_LIST_OF_SEQ_0] THEN POP_ASSUM_LIST(K ALL_TAC) THEN CONV_TAC WORD_BLAST) (asl,w)
     else if is_eq w && can(find_term(fun t->t=`ivhi:int64`)) (lhs w) then
       (REWRITE_TAC[MATCH_MP BASE_CTR_DEC (ivjoin())]) (asl,w)
     else if is_eq w && (try fst(dest_const(fst(strip_comb(lhs w))))="word_ushr" with _->false)

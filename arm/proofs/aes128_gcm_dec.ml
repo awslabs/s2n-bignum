@@ -2207,7 +2207,7 @@ let ITER1_CLOSE : tactic =
 
 let MAYCHANGE_ABI_CLOSE =
   FIRST_X_ASSUM(fun th -> if maychange_term(concl th) then
-     MATCH_MP_TAC(MATCH_MP (MESON[subsumed] `R s s' ==> R subsumed R' ==> R' s s'`) th) else NO_TAC) THEN
+     MATCH_MP_TAC(MATCH_MP SUBSUMED_APPLY th) else NO_TAC) THEN
    REWRITE_TAC[ETA_AX] THEN REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN SUBSUMED_MAYCHANGE_TAC;;
 
 (* The per-conjunct closer of iter_1: the frame goals by MAYCHANGE_ABI_CLOSE,

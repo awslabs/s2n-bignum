@@ -707,16 +707,24 @@ let int128_list_to_bytes = define
   int128_list_to_bytes (CONS w ws) =
     APPEND (int128_to_bytes w) (int128_list_to_bytes ws)`;;
 
-(* LENGTH of the flattened byte list = 16 * number of blocks.                *)
-let LENGTH_INT128_TO_BYTES = prove
- (`!w:int128. LENGTH(int128_to_bytes w) = 16`,
-  REWRITE_TAC[int128_to_bytes; LENGTH] THEN CONV_TAC NUM_REDUCE_CONV);;
-
 let LENGTH_INT128_LIST_TO_BYTES = prove
  (`!ws. LENGTH(int128_list_to_bytes ws) = 16 * LENGTH ws`,
   LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC[int128_list_to_bytes; LENGTH; LENGTH_APPEND;
-                  LENGTH_INT128_TO_BYTES] THEN ARITH_TAC);;
+                  LENGTH_OF_INT128_TO_BYTES] THEN ARITH_TAC);;
+
+(* The input buffer read as whole blocks: for a 16 * n-byte prefix of x,     *)
+(* block k < n is the bytes128 read at in_p + 16 * k.  By induction on n:   *)
+(* the top block of a 16 * (n + 1)-byte read, and the 16 * n-byte prefix    *)
+(* read the induction hypothesis takes, are READ_BYTES_AND_BYTE128_MERGE.   *)
+let INPUT_PREFIX_TO_BYTE128_LANES = prove
+ (`!n (in_p:int64) (x:byte list) s.
+    16 * n <= LENGTH x /\
+    read (memory :> bytes (in_p, 16 * n)) s = num_of_bytelist (SUB_LIST (0, 16 * n) x)
+    ==> !k. k < n ==> read (memory :> bytes128 (word_add in_p (word (16 * k)))) s =
+                      bytes_to_int128 (SUB_LIST (16 * k, 16) x)`,
+  INDUCT_TAC THEN REWRITE_TAC[LT; ARITH_RULE `16 * SUC n = 16 * n + 16`] THEN
+  ASM_MESON_TAC[READ_BYTES_AND_BYTE128_MERGE; ARITH_RULE `a + 16 <= l ==> a <= l`]);;
 
 (* ========================================================================= *)
 (* Byte-extraction sublemmas for the whole-block byte_list_at bridges of the *)
@@ -777,7 +785,7 @@ let EL_INT128_LIST_TO_BYTES = prove
    [REWRITE_TAC[LT] THEN ARITH_TAC; ALL_TAC] THEN
   X_GEN_TAC `i:num` THEN DISCH_TAC THEN
   SUBGOAL_THEN `LENGTH(int128_to_bytes h) = 16` ASSUME_TAC THENL
-   [REWRITE_TAC[LENGTH_INT128_TO_BYTES]; ALL_TAC] THEN
+   [REWRITE_TAC[LENGTH_OF_INT128_TO_BYTES]; ALL_TAC] THEN
   ASM_CASES_TAC `i < 16` THENL
    [ASM_SIMP_TAC[EL_APPEND] THEN
     SUBGOAL_THEN `i DIV 16 = 0 /\ i MOD 16 = i`
@@ -3398,12 +3406,6 @@ let POLYVAL_REDUCE_G2_KARATSUBA_JOIN = prove
 (* polyval_reduce_prop3 in BODY_Q19_CLOSE_ALGEBRA.  All are WORD_BLAST       *)
 (* identities over free variables.                                           *)
 (* ------------------------------------------------------------------------- *)
-
-(* fact 1: the two byte-reversal spellings coincide (the machine uses        *)
-(* word_reversefields 8, the spec and kara side word_bytereverse).           *)
-let WRF8_IS_BYTEREVERSE = prove
- (`!x:int128. word_reversefields 8 x = word_bytereverse x`,
-  GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
 (* fact 2: karatsuba_mid is byteswap-invariant (it XORs the two 64-bit       *)
 (* halves, and byteswap128 swaps them).  It lets the htable mid cell         *)

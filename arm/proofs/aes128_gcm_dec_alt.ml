@@ -1553,20 +1553,8 @@ let AES128_GCM_DEC_ALT_EXEC = ARM_MK_EXEC_RULE aes128_gcm_dec_alt_tmc;;
    numeral with RULE_ASSUM_TAC(REWRITE_RULE[WB_MC_LEN]). *)
 let WB_MC_LEN = fst AES128_GCM_DEC_ALT_EXEC;;
 
-(* The input buffer, read as whole blocks.  First for a 16 * n-byte prefix   *)
-(* of x, by induction on n: the top block of a 16 * (n + 1)-byte read, and   *)
-(* the 16 * n-byte prefix read the induction hypothesis takes, are           *)
-(* READ_BYTES_AND_BYTE128_MERGE.  Then for the whole buffer, the form every  *)
-(* consumer has.                                                             *)
-let INPUT_PREFIX_TO_BYTE128_LANES = prove
- (`!n (in_p:int64) (x:byte list) s.
-    16 * n <= LENGTH x /\
-    read (memory :> bytes (in_p, 16 * n)) s = num_of_bytelist (SUB_LIST (0, 16 * n) x)
-    ==> !k. k < n ==> read (memory :> bytes128 (word_add in_p (word (16 * k)))) s =
-                      bytes_to_int128 (SUB_LIST (16 * k, 16) x)`,
-  INDUCT_TAC THEN REWRITE_TAC[LT; ARITH_RULE `16 * SUC n = 16 * n + 16`] THEN
-  ASM_MESON_TAC[READ_BYTES_AND_BYTE128_MERGE; ARITH_RULE `a + 16 <= l ==> a <= l`]);;
-
+(* The input buffer, read as whole blocks, in the form every consumer has    *)
+(* (INPUT_PREFIX_TO_BYTE128_LANES for the whole buffer).                     *)
 let INPUT_BYTES_TO_BYTE128_LANES = prove
  (`!n (in_p:int64) (x:byte list) s.
     LENGTH x = 16 * n /\
@@ -3791,10 +3779,10 @@ let SUB_LIST_INT128_LIST_TO_BYTES_EL = prove
          EL j cts`,
   LIST_INDUCT_TAC THEN INDUCT_TAC THEN
   ASM_SIMP_TAC[int128_list_to_bytes; LENGTH; CONJUNCT1 LT; LT_SUC; EL; HD; TL;
-               MULT_CLAUSES; SUB_LIST_APPEND_LEFT; LENGTH_INT128_TO_BYTES; LE_REFL;
+               MULT_CLAUSES; SUB_LIST_APPEND_LEFT; LENGTH_OF_INT128_TO_BYTES; LE_REFL;
                SUB_LIST_OF_INT128_TO_BYTES; BYTES_TO_INT128_OF_INT128_TO_BYTES;
                MATCH_MP SUB_LIST_APPEND_RIGHT_GENERAL
-                        (SPEC_ALL LENGTH_INT128_TO_BYTES);
+                        (SPEC_ALL LENGTH_OF_INT128_TO_BYTES);
                GE; LE_ADD; ADD_SUB2]);;
 
 (* byte_list_at (gcm_dec128_pt_bytes ..) -> the per-block bytes128 reads.  At
@@ -4008,19 +3996,11 @@ let WBN_EXPORT_FROM_SPINE_TAC spine =
 (* buffers satisfy.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-(* signed sub of two small words: by IVAL_IWORD_GALOIS the word is iword of
-   the integer difference, which lies in the signed range *)
-let IVAL_WSUB_SMALL = prove
- (`!a d. a < 2 EXP 63 /\ d < 2 EXP 63
-      ==> ival (word_sub (word a) (word d):int64) = &a - &d`,
-  REWRITE_TAC[IVAL_IWORD_GALOIS; WORD_IWORD; IWORD_INT_SUB; DIMINDEX_64] THEN
-  ARITH_TAC);;
-
 (* the generic signed pointer-compare flag resolver:
    cmp x0,x5 with x0 = p + a, x5 = (word d) + p; b.ge/b.lt read NF<=>VF,
    which under no-2^63-straddle collapses to a < d: the two pointers are
    word (val p + a) and word (val p + d), both below 2^63, so
-   IVAL_WORD_SMALL and IVAL_WSUB_SMALL give their signed values *)
+   IVAL_WORD_SMALL and IVAL_WORD_SUB_SMALL give their signed values *)
 let WB_PTRCMP_FLAGS = prove
  (`!(in_p:int64) a d.
       val in_p + a < 2 EXP 63 /\ val in_p + d < 2 EXP 63
@@ -4030,7 +4010,7 @@ let WB_PTRCMP_FLAGS = prove
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[WORD_RULE `word_add (p:int64) (word a) = word (val p + a)`;
               WORD_RULE `word_add (word a) (p:int64) = word (val p + a)`] THEN
-  ASM_SIMP_TAC[IVAL_WSUB_SMALL; IVAL_WORD_SMALL] THEN ARITH_TAC);;
+  ASM_SIMP_TAC[IVAL_WORD_SUB_SMALL; IVAL_WORD_SMALL] THEN ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* The >=17 front: the entry pc+0x1c to the loop head 0x3b4 (pc+948).        *)
@@ -4699,12 +4679,12 @@ let build_q19_reduce_clean pl_t ph_t pm_t =
   let mk_proj sel concrete = mk_eq(mk_comb(sel, subst [quadsT, `QUADS:(int128#int128#int128#int128)list`]
               `kara_acc (project_triples QUADS) (word 0:int128) (word 0:int128) (word 0:int128)`), concrete) in
   let PROJ_PL = BETA_RULE(prove(mk_proj `FST:int128#int128#int128->int128` pl_t,
-     projtac THEN REWRITE_TAC[WRF8_IS_BYTEREVERSE; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
+     projtac THEN REWRITE_TAC[GSYM BREV_RF8_128; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
   let PROJ_PH = BETA_RULE(prove(mk_proj `\t:int128#int128#int128. FST(SND t)` ph_t,
-     projtac THEN REWRITE_TAC[WRF8_IS_BYTEREVERSE; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
+     projtac THEN REWRITE_TAC[GSYM BREV_RF8_128; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
   let PROJ_PM = BETA_RULE(prove(mk_imp(list_mk_conj kqok_hyps, mk_proj `\t:int128#int128#int128. SND(SND t)` pm_t),
      STRIP_TAC THEN projtac THEN ASM_REWRITE_TAC[] THEN
-     REWRITE_TAC[WRF8_IS_BYTEREVERSE; LANE_COLLAPSE_PM_A; LANE_COLLAPSE_PM_B; PM_LANE_HI'; PM_LANE_LO'; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
+     REWRITE_TAC[GSYM BREV_RF8_128; LANE_COLLAPSE_PM_A; LANE_COLLAPSE_PM_B; PM_LANE_HI'; PM_LANE_LO'; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
   let kp = rand(lhs(concl PROJ_PL)) in
   let KARA_QUAD_OK_T = prove(mk_imp(list_mk_conj kqok_hyps, mk_comb(`kara_quad_ok`, quadsT)),
     STRIP_TAC THEN REWRITE_TAC[kara_quad_ok] THEN REPEAT CONJ_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -4770,12 +4750,12 @@ let build_q19_reduce_clean_idx idx pl_t ph_t pm_t =
   let mk_proj sel concrete = mk_eq(mk_comb(sel, subst [quadsT, `QUADS:(int128#int128#int128#int128)list`]
               `kara_acc (project_triples QUADS) (word 0:int128) (word 0:int128) (word 0:int128)`), concrete) in
   let PROJ_PL = BETA_RULE(prove(mk_proj `FST:int128#int128#int128->int128` pl_t,
-     projtac THEN REWRITE_TAC[WRF8_IS_BYTEREVERSE; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
+     projtac THEN REWRITE_TAC[GSYM BREV_RF8_128; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
   let PROJ_PH = BETA_RULE(prove(mk_proj `\t:int128#int128#int128. FST(SND t)` ph_t,
-     projtac THEN REWRITE_TAC[WRF8_IS_BYTEREVERSE; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
+     projtac THEN REWRITE_TAC[GSYM BREV_RF8_128; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
   let PROJ_PM = BETA_RULE(prove(mk_imp(list_mk_conj kqok_hyps, mk_proj `\t:int128#int128#int128. SND(SND t)` pm_t),
      STRIP_TAC THEN projtac THEN ASM_REWRITE_TAC[] THEN
-     REWRITE_TAC[WRF8_IS_BYTEREVERSE; LANE_COLLAPSE_PM_A; LANE_COLLAPSE_PM_B; PM_LANE_HI'; PM_LANE_LO'; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
+     REWRITE_TAC[GSYM BREV_RF8_128; LANE_COLLAPSE_PM_A; LANE_COLLAPSE_PM_B; PM_LANE_HI'; PM_LANE_LO'; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
   let kp = rand(lhs(concl PROJ_PL)) in
   let KARA_QUAD_OK_T = prove(mk_imp(list_mk_conj kqok_hyps, mk_comb(`kara_quad_ok`, quadsT)),
     STRIP_TAC THEN REWRITE_TAC[kara_quad_ok] THEN REPEAT CONJ_TAC THEN ASM_REWRITE_TAC[] THEN

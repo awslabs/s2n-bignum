@@ -571,7 +571,7 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
     (* (128*k)) (word 128) (= end_p, already substituted by ASM_REWRITE), so *)
     (* the flag close is not syntactic: it rewrites with BRIDGE_GE (the      *)
     (* NF<>VF biconditional = signed GE ival end_p <= ival X0), linearises   *)
-    (* both additive ivals with IV_ADD under the no-wrap bound, and finishes *)
+    (* both additive ivals with IVAL_PTR_ADD under the no-wrap bound, and finishes *)
     (* by arithmetic using i < k.                                            *)
     REPEAT CONJ_TAC THEN
     (* Fire the flag close only on the flag-shaped goal, the one whose
@@ -587,9 +587,9 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
        (if (can (term_match [] `xxx:bool <=> (i:num) + 1 = k`) w)
         then
          (REWRITE_TAC[BRIDGE_GE] THEN
-          MP_TAC(SPECL [`in_p:int64`; `128 * i + 256`] IV_ADD) THEN
+          MP_TAC(SPECL [`in_p:int64`; `128 * i + 256`] IVAL_PTR_ADD) THEN
           ANTS_TAC THENL [flag_arith; ALL_TAC] THEN
-          MP_TAC(SPECL [`in_p:int64`; `128 * k + 128`] IV_ADD) THEN
+          MP_TAC(SPECL [`in_p:int64`; `128 * k + 128`] IVAL_PTR_ADD) THEN
           ANTS_TAC THENL [flag_arith; ALL_TAC] THEN
           REWRITE_TAC[GSYM WORD_ADD] THEN
           DISCH_THEN SUBST1_TAC THEN DISCH_THEN SUBST1_TAC THEN
@@ -6920,7 +6920,7 @@ let AES_GCM_ENC_ALT_SETUP_GEN_SAFE = prove
 (* the functional NSTEP_G drive, with the incremented ldps at steps          *)
 (* 295/303/304 handled by LDP_STEP4_LEAN (LDP_STEP4_TAC without the          *)
 (* INBLOCKS_TAC re-derivation, which safety does not need) and the b.lt at   *)
-(* step 340; the back-edge PC is closed via BRIDGE_GE + IV_ADD (in_p         *)
+(* step 340; the back-edge PC is closed via BRIDGE_GE + IVAL_PTR_ADD (in_p         *)
 (* cancels, leaving i+1 < k), the events via ENUMERATEL_ADD1.                *)
 let LDP_STEP4_LEAN n =
   let sn = "s"^string_of_int n in
@@ -7031,14 +7031,14 @@ let AES_GCM_ENC_ALT_MAIN_LOOP_SAFE = prove
   LDP_STEP4_LEAN (loop_ldp2+1) THEN
   MAP_EVERY NSTEP_G ((loop_ldp2+2)--loop_backedge) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  (* PC branch: <b.lt cond> <=> i+1<k, via BRIDGE_GE + IV_ADD *)
+  (* PC branch: <b.lt cond> <=> i+1<k, via BRIDGE_GE + IVAL_PTR_ADD *)
   CONJ_TAC THENL
    [REWRITE_TAC[BRIDGE_GE] THEN
     SUBGOAL_THEN
       `ival(word_add in_p (word (128 * (k + 1)))) = &(val(in_p:int64) + 128 * (k + 1)) /\
        ival(word_add in_p (word (128 * (i + 1) + 128))) = &(val(in_p:int64) + (128 * (i + 1) + 128))`
       (CONJUNCTS_THEN SUBST1_TAC) THENL
-     [CONJ_TAC THEN MATCH_MP_TAC IV_ADD THEN
+     [CONJ_TAC THEN MATCH_MP_TAC IVAL_PTR_ADD THEN
       UNDISCH_TAC `val(in_p:int64) + 128 * (k + 1) < 2 EXP 63` THEN
       UNDISCH_TAC `(i:num) < k` THEN ARITH_TAC;
       ALL_TAC] THEN

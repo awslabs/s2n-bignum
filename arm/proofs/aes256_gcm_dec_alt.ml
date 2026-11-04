@@ -2585,27 +2585,6 @@ let WB_TAIL_8_TAC ivtac =
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REPEAT CONJ_TAC THEN MONOTONE_MAYCHANGE_TAC THEN ASM_REWRITE_TAC[];;
 
-(* The input buffer as whole blocks: for a 16 * n-byte prefix of x, block k < n
-   is the bytes128 read at in_p + 16 * k (by induction on n, with
-   READ_BYTES_AND_BYTE128_MERGE of aes_xts_common.ml). *)
-let INPUT_BYTES_TO_BYTE128_LANES = prove
- (`!n (in_p:int64) (x:byte list) s.
-    16 * n <= LENGTH x /\
-    read (memory :> bytes (in_p, 16 * n)) s = num_of_bytelist (SUB_LIST (0, 16 * n) x)
-    ==> !k. k < n ==> read (memory :> bytes128 (word_add in_p (word (16 * k)))) s =
-                      bytes_to_int128 (SUB_LIST (16 * k, 16) x)`,
-  INDUCT_TAC THENL [REWRITE_TAC[LT]; ALL_TAC] THEN
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  MP_TAC(SPECL [`in_p:int64`; `16 * n`; `x:byte list`; `s:armstate`] READ_BYTES_AND_BYTE128_MERGE) THEN
-  ANTS_TAC THENL [REWRITE_TAC[ARITH_RULE `16 * n + 16 = 16 * SUC n`] THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  ANTS_TAC THENL [REWRITE_TAC[ARITH_RULE `16 * n + 16 = 16 * SUC n`] THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  STRIP_TAC THEN
-  X_GEN_TAC `k:num` THEN REWRITE_TAC[LT] THEN STRIP_TAC THENL
-   [ASM_REWRITE_TAC[];
-    FIRST_X_ASSUM(MP_TAC o SPECL [`in_p:int64`; `x:byte list`; `s:armstate`]) THEN
-    ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-    DISCH_THEN(MP_TAC o SPEC `k:num`) THEN ASM_REWRITE_TAC[]]);;
-
 (* The statement of WB_FRONT_BUF.  Its postcondition wb_front_postcond (below)
    is the simulated state s273 at the seam, with the 8 in-flight keystream
    towers folded to aes13; it is built with term builders, so that the front is
@@ -2787,7 +2766,7 @@ let WBN_FRONT_PREP_BUF_UNI_TAC =
   SUBGOAL_THEN `SUB_LIST (0, 16 * nblk) (ibytes:byte list) = ibytes` ASSUME_TAC THENL
    [MATCH_MP_TAC SUB_LIST_LENGTH_IMPLIES THEN ASM_REWRITE_TAC[LE_REFL]; ALL_TAC] THEN
   SUBGOAL_THEN `read (memory :> bytes128 in_p) s0 = bytes_to_int128 (SUB_LIST (0,16) ibytes)` ASSUME_TAC THENL
-   [MP_TAC(SPECL [`nblk:num`; `in_p:int64`; `ibytes:byte list`; `s0:armstate`] INPUT_BYTES_TO_BYTE128_LANES) THEN
+   [MP_TAC(SPECL [`nblk:num`; `in_p:int64`; `ibytes:byte list`; `s0:armstate`] INPUT_PREFIX_TO_BYTE128_LANES) THEN
     ASM_REWRITE_TAC[LE_REFL] THEN DISCH_THEN(MP_TAC o SPEC `0`) THEN
     ANTS_TAC THENL [NBLK_ARITH_UNI_TAC; ALL_TAC] THEN
     REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0] THEN DISCH_THEN(fun th -> REWRITE_TAC[th]); ALL_TAC] THEN
@@ -3037,7 +3016,7 @@ let WB_PREP_TAC k =
       `!i. i < kkk ==> read (memory :> bytes128 (word_add in_p (word (16 * i)))) s265 =
               bytes_to_int128 (SUB_LIST (16 * i, 16) (ibytes:byte list))`)
       MP_TAC THENL
-    [MATCH_MP_TAC INPUT_BYTES_TO_BYTE128_LANES THEN
+    [MATCH_MP_TAC INPUT_PREFIX_TO_BYTE128_LANES THEN
      SUBGOAL_THEN (subst [n16,`sss:num`] `SUB_LIST (0,sss) (ibytes:byte list) = ibytes`)
        (fun th -> ASM_REWRITE_TAC[th; LE_REFL;
           ARITH_RULE(mk_eq(mk_binop `( * ):num->num->num` `16` (mk_small_numeral k), n16))]) THEN
@@ -4348,7 +4327,7 @@ let s42_fused_specl_args k =
 let s42_lane_discharge k =
   EVERY(map (fun i ->
     let ni = mk_small_numeral i and nk = mk_small_numeral k in
-    MP_TAC(SPECL [nk; `in_p:int64`; `ibytes:byte list`; `x:armstate`] INPUT_BYTES_TO_BYTE128_LANES) THEN
+    MP_TAC(SPECL [nk; `in_p:int64`; `ibytes:byte list`; `x:armstate`] INPUT_PREFIX_TO_BYTE128_LANES) THEN
     REWRITE_TAC[ARITH_RULE(mk_eq(mk_binop `( * ):num->num->num` `16` nk, mk_small_numeral(16*k)))] THEN
     ANTS_TAC THENL [ASM_REWRITE_TAC[LE_REFL]; ALL_TAC] THEN
     DISCH_THEN(fun lth -> MP_TAC(SPEC ni lth)) THEN
@@ -5014,16 +4993,6 @@ let AES256_GCM_DEC_ALT_DISPATCH = prove
 (* buffers satisfy.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-(* exact ival of an in-range pointer offset (for the signed pointer compares
-   cmp x0,x5 at 0x3fc/0x45c/0xa00 feeding b.ge/b.lt) *)
-let IVAL_PTR_ADD = prove
- (`!(p:int64) a. val p + a < 2 EXP 63 ==> ival (word_add p (word a)) = &(val p + a)`,
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `word_add p (word a):int64 = word (val p + a)` SUBST1_TAC THENL
-   [REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
-    CONV_TAC MOD_DOWN_CONV THEN REFL_TAC; ALL_TAC] THEN
-  MATCH_MP_TAC IVAL_WORD_LT THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC);;
-
 (* ival (word_neg (word d)) = -- &d needs d <= 2^63 *)
 let IVAL_NEG_SMALL = prove
  (`!d. d <= 2 EXP 63 ==> ival (word_neg (word d):int64) = -- &d`,
@@ -5032,26 +5001,6 @@ let IVAL_NEG_SMALL = prove
   REWRITE_TAC[DIMINDEX_64] THEN CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
   REWRITE_TAC[INT_ARITH `--(&9223372036854775808):int <= -- &d /\ -- &d < &9223372036854775808 <=> &d <= &9223372036854775808`] THEN
   ASM_REWRITE_TAC[INT_OF_NUM_LE] THEN ASM_ARITH_TAC);;
-
-(* signed sub of two small words *)
-let IVAL_WSUB_SMALL = prove
- (`!a d. a < 2 EXP 63 /\ d < 2 EXP 63
-      ==> ival (word_sub (word a) (word d):int64) = &a - &d`,
-  REPEAT STRIP_TAC THEN
-  DISJ_CASES_TAC(ARITH_RULE `a < d \/ d <= a:num`) THENL
-   [SUBGOAL_THEN `word_sub (word a) (word d):int64 = word_neg (word (d - a))` SUBST1_TAC THENL
-     [GEN_REWRITE_TAC LAND_CONV [WORD_RULE `word_sub (word a) (word d):int64 = word_neg (word_sub (word d) (word a))`] THEN
-      AP_TERM_TAC THEN REWRITE_TAC[WORD_SUB] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `ival (word_neg (word (d - a)):int64) = -- &(d - a)` SUBST1_TAC THENL
-     [MATCH_MP_TAC IVAL_NEG_SMALL THEN ASM_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `&(d - a):int = &d - &a` SUBST1_TAC THENL
-     [REWRITE_TAC[INT_OF_NUM_SUB] THEN ASM_ARITH_TAC; INT_ARITH_TAC];
-    SUBGOAL_THEN `word_sub (word a) (word d):int64 = word (a - d)` SUBST1_TAC THENL
-     [REWRITE_TAC[WORD_SUB] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `ival (word (a - d):int64) = &(a - d)` SUBST1_TAC THENL
-     [MATCH_MP_TAC IVAL_WORD_LT THEN ASM_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `&(a - d):int = &a - &d` SUBST1_TAC THENL
-     [REWRITE_TAC[INT_OF_NUM_SUB] THEN ASM_ARITH_TAC; INT_ARITH_TAC]]);;
 
 (* small pointer has exact ival *)
 let IVAL_SMALL_PTR = prove
@@ -5084,7 +5033,7 @@ let WB_PTRCMP_FLAGS = prove
                 word_sub (word a) (word d)` SUBST1_TAC THENL
    [CONV_TAC WORD_RULE; ALL_TAC] THEN
   SUBGOAL_THEN `ival (word_sub (word a) (word d):int64) = &a - &d` SUBST1_TAC THENL
-   [MATCH_MP_TAC IVAL_WSUB_SMALL THEN ASM_ARITH_TAC; ALL_TAC] THEN
+   [MATCH_MP_TAC IVAL_WORD_SUB_SMALL THEN ASM_ARITH_TAC; ALL_TAC] THEN
   REWRITE_TAC[GSYM INT_OF_NUM_ADD] THEN
   REWRITE_TAC[INT_ARITH `(&v + &a) - (&v + &d):int = &a - &d`] THEN
   REWRITE_TAC[INT_ARITH `&a - &d:int < &0 <=> &a:int < &d`; INT_OF_NUM_LT]);;
@@ -5265,7 +5214,7 @@ let WBN_LANES_PREBRANCH_GE9_TAC =
                   bytes_to_int128 (SUB_LIST (16 * k, 16) (ibytes:byte list))`
    MP_TAC THENL
    [MP_TAC(SPECL [`nblk:num`; `in_p:int64`; `ibytes:byte list`; `s267:armstate`]
-      INPUT_BYTES_TO_BYTE128_LANES) THEN
+      INPUT_PREFIX_TO_BYTE128_LANES) THEN
     ASM_REWRITE_TAC[LE_REFL] THEN
     DISCH_THEN(fun lth -> X_GEN_TAC `k:num` THEN DISCH_TAC THEN
       MP_TAC(SPEC `k:num` lth) THEN ANTS_TAC THENL
@@ -5547,12 +5496,12 @@ let build_q19_reduce_clean_idx idx pl_t ph_t pm_t =
   let mk_proj sel concrete = mk_eq(mk_comb(sel, subst [quadsT, `QUADS:(int128#int128#int128#int128)list`]
               `kara_acc (project_triples QUADS) (word 0:int128) (word 0:int128) (word 0:int128)`), concrete) in
   let PROJ_PL = BETA_RULE(prove(mk_proj `FST:int128#int128#int128->int128` pl_t,
-     projtac THEN REWRITE_TAC[WRF8_IS_BYTEREVERSE; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
+     projtac THEN REWRITE_TAC[GSYM BREV_RF8_128; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
   let PROJ_PH = BETA_RULE(prove(mk_proj `\t:int128#int128#int128. FST(SND t)` ph_t,
-     projtac THEN REWRITE_TAC[WRF8_IS_BYTEREVERSE; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
+     projtac THEN REWRITE_TAC[GSYM BREV_RF8_128; LANE_COLLAPSE; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
   let PROJ_PM = BETA_RULE(prove(mk_imp(list_mk_conj kqok_hyps, mk_proj `\t:int128#int128#int128. SND(SND t)` pm_t),
      STRIP_TAC THEN projtac THEN ASM_REWRITE_TAC[] THEN
-     REWRITE_TAC[WRF8_IS_BYTEREVERSE; LANE_COLLAPSE_PM_A; LANE_COLLAPSE_PM_B; PM_LANE_HI'; PM_LANE_LO'; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
+     REWRITE_TAC[GSYM BREV_RF8_128; LANE_COLLAPSE_PM_A; LANE_COLLAPSE_PM_B; PM_LANE_HI'; PM_LANE_LO'; BYTESWAP128_INVOLUTION] THEN CONV_TAC WORD_RULE)) in
   let kp = rand(lhs(concl PROJ_PL)) in
   let KARA_QUAD_OK_T = prove(mk_imp(list_mk_conj kqok_hyps, mk_comb(`kara_quad_ok`, quadsT)),
     STRIP_TAC THEN REWRITE_TAC[kara_quad_ok] THEN REPEAT CONJ_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -6009,7 +5958,7 @@ let WBN_RAWCT_READ = prove
            bytes_to_int128 (SUB_LIST (16 * (8*(i+1)+m), 16) ibytes)`,
   STRIP_TAC THEN
   MP_TAC(SPECL [`nblk:num`; `in_p:int64`; `ibytes:byte list`; `s:armstate`]
-    INPUT_BYTES_TO_BYTE128_LANES) THEN
+    INPUT_PREFIX_TO_BYTE128_LANES) THEN
   ANTS_TAC THENL
    [ASM_REWRITE_TAC[LE_REFL] THEN
     SUBGOAL_THEN `SUB_LIST (0, 16 * nblk) (ibytes:byte list) = ibytes` SUBST1_TAC THENL
@@ -6491,7 +6440,7 @@ let wbn_prepretail_post_ext =
 (* the seam in spec form.  This lemma gives the value of the read, the first *)
 (* tail block (global block 8*(k+1))                                         *)
 (*   bytes_to_int128 (SUB_LIST (16*8*(k+1),16) ibytes),                      *)
-(* by INPUT_BYTES_TO_BYTE128_LANES at lane 8*(k+1), from 8*(k+1) < nblk and  *)
+(* by INPUT_PREFIX_TO_BYTE128_LANES at lane 8*(k+1), from 8*(k+1) < nblk and  *)
 (* the whole-buffer input fact.  WBN_PREPRETAIL_EXT2_TAC applies it at s311, *)
 (* the state before the ldr.                                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -6504,7 +6453,7 @@ let WBN_Q9_SPEC = prove
          bytes_to_int128 (SUB_LIST (16 * (8 * (k + 1)),16) ibytes)`,
   REPEAT STRIP_TAC THEN
   MP_TAC(SPECL [`nblk:num`; `in_p:int64`; `ibytes:byte list`; `s:armstate`]
-    INPUT_BYTES_TO_BYTE128_LANES) THEN
+    INPUT_PREFIX_TO_BYTE128_LANES) THEN
   ANTS_TAC THENL
    [CONJ_TAC THENL
      [ASM_ARITH_TAC;
@@ -7516,10 +7465,10 @@ let SUB_LIST_INT128_LIST_TO_BYTES_EL = prove
    SUBST1_TAC THENL
    [REWRITE_TAC[LIST_EQ] THEN
     REWRITE_TAC[LENGTH_SUB_LIST; LENGTH_INT128_LIST_TO_BYTES;
-                LENGTH_INT128_TO_BYTES] THEN
+                LENGTH_OF_INT128_TO_BYTES] THEN
     CONJ_TAC THENL
      [ASM_SIMP_TAC[ARITH_RULE `j < n ==> MIN 16 (16 * n - 16 * j) = 16`];
-      X_GEN_TAC `i:num` THEN REWRITE_TAC[LENGTH_INT128_TO_BYTES] THEN
+      X_GEN_TAC `i:num` THEN REWRITE_TAC[LENGTH_OF_INT128_TO_BYTES] THEN
       DISCH_TAC THEN
       MP_TAC(ISPECL [`16 * j`; `int128_list_to_bytes (cts:int128 list)`;
                      `16 * j + i`; `16`] EL_SUB_LIST_GENERAL) THEN

@@ -363,7 +363,7 @@ let INBLOCKS_TAC sname =
 (* top), X5 = end_p.  After the cheap-close ASM_REWRITE, the invariant's     *)
 (* flag conjunct q(i+1) has been reduced to the raw NF<>VF biconditional     *)
 (* over `word_sub X0 end_p`.  BRIDGE_GE recognises that biconditional as the *)
-(* signed GE `ival end_p <= ival X0`; IV_ADD linearises each additive ival   *)
+(* signed GE `ival end_p <= ival X0`; IVAL_PTR_ADD linearises each additive ival   *)
 (* under the buffer-end no-wrap bound `val in_p + 128*(k+1) < 2^63`;         *)
 (* INT/ARITH then reduces the whole thing to `i + 1 = k` using the body      *)
 (* hypothesis `i < k`.  The no-wrap bound is an antecedent of MAIN_LOOP.     *)
@@ -374,21 +374,6 @@ let BRIDGE_GE = prove
      ((ival (word_sub a c) < &0) <=>
       ~(ival a - ival c = ival (word_sub a c))) <=> ival c <= ival a`,
   REPEAT GEN_TAC THEN BITBLAST_TAC);;
-
-let IV_ADD = prove
- (`!(in_p:int64) off.
-     val in_p + off < 2 EXP 63
-     ==> ival(word_add in_p (word off)) = &(val in_p + off)`,
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `val(word_add (in_p:int64) (word off)) = val in_p + off`
-    ASSUME_TAC THENL
-   [REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
-    CONV_TAC MOD_DOWN_CONV THEN MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC;
-    ALL_TAC] THEN
-  ASM_REWRITE_TAC[INT_IVAL; DIMINDEX_64] THEN
-  COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-  POP_ASSUM MP_TAC THEN REWRITE_TAC[INT_OF_NUM_POW; INT_OF_NUM_LT] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* SETUP branch-discharge lemmas.                                            *)
@@ -464,7 +449,7 @@ let SETUP_GE_FALSE = prove
      val in_p + 128 * (k + 1) < 2 EXP 63
      ==> ~(ival (word_add in_p (word (128 * (k + 1)))) <= ival in_p)`,
   REPEAT STRIP_TAC THEN
-  MP_TAC(SPECL [`in_p:int64`; `128 * (k + 1)`] IV_ADD) THEN
+  MP_TAC(SPECL [`in_p:int64`; `128 * (k + 1)`] IVAL_PTR_ADD) THEN
   ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `ival(in_p:int64) = &(val in_p)` ASSUME_TAC THENL
    [REWRITE_TAC[INT_IVAL; DIMINDEX_64] THEN
@@ -583,23 +568,6 @@ let DISPATCH3_TAKEN = prove
   REWRITE_TAC[WORD_RULE `word_sub (word 48:int64) (word 48) = word 0`] THEN
   REWRITE_TAC[VAL_WORD_0]);;
 
-(* The nb <= 4 entry test `cmp x9,#0x40; b.le L256_enc_small`: ARM_STEP      *)
-(* emits the b.le condition as the full `ZF \/ ~(NF<=>VF)`.  The ZF disjunct *)
-(* `val(word_sub(word((128*nb)DIV8))(word 64))=0` is resolved by             *)
-(* DISPATCH4_TAKEN / DISPATCH4_NOT_TAKEN (same #0x40 immediate); the two     *)
-(* lemmas below resolve the remaining `~(NF<=>VF)` (signed less-than)        *)
-(* disjunct.  IVAL_WORD_SUB_SMALL is a helper.                               *)
-let IVAL_WORD_SUB_SMALL = prove
- (`!a b. a < 2 EXP 63 /\ b < 2 EXP 63
-     ==> ival(word_sub (word a) (word b):int64) = &a - &b`,
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[WORD_IWORD; GSYM IWORD_INT_SUB] THEN
-  MATCH_MP_TAC IVAL_IWORD THEN
-  REWRITE_TAC[DIMINDEX_64; ARITH_RULE `64 - 1 = 63`] THEN
-  SUBGOAL_THEN `&a:int < &2 pow 63 /\ &b:int < &2 pow 63` MP_TAC THENL
-   [REWRITE_TAC[GSYM INT_OF_NUM_POW; INT_OF_NUM_LT] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-  MP_TAC(SPEC `a:num` INT_POS) THEN MP_TAC(SPEC `b:num` INT_POS) THEN INT_ARITH_TAC);;
-
 (* nb >= 5 (x9 = 16*nb >= 80 > 64): the signed less-than disjunct is F, so   *)
 (* with DISPATCH4_NOT_TAKEN killing the ZF disjunct the b.le is not taken.   *)
 (* Used by the SETUP legs and SETUP0.                                        *)
@@ -639,9 +607,9 @@ let SETUP_GE_FALSE_2 = prove
      ==> ~(ival (word_add in_p (word (128 * (k + 1)))) <=
            ival (word_add in_p (word 128)))`,
   REPEAT STRIP_TAC THEN
-  MP_TAC(SPECL [`in_p:int64`; `128 * (k + 1)`] IV_ADD) THEN
+  MP_TAC(SPECL [`in_p:int64`; `128 * (k + 1)`] IVAL_PTR_ADD) THEN
   ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  MP_TAC(SPECL [`in_p:int64`; `128`] IV_ADD) THEN
+  MP_TAC(SPECL [`in_p:int64`; `128`] IVAL_PTR_ADD) THEN
   ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   DISCH_THEN SUBST_ALL_TAC THEN DISCH_THEN SUBST_ALL_TAC THEN
   RULE_ASSUM_TAC(REWRITE_RULE[INT_OF_NUM_LE]) THEN ASM_ARITH_TAC);;
