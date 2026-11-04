@@ -4531,40 +4531,9 @@ let prove_wb_wrapper k buf_thm =
         MATCH_MP_TAC buf_thm THEN ASM_REWRITE_TAC[]]]);;
 
 (* ---- key condensation: the round-key list and its 15 bytes128 reads ---- *)
-let RK_ETA_15 = prove
- (`!rk:int128 list. LENGTH rk = 15
-     ==> rk = [EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk;
-               EL 7 rk; EL 8 rk; EL 9 rk; EL 10 rk; EL 11 rk; EL 12 rk;
-               EL 13 rk; EL 14 rk]`,
-  GEN_TAC THEN REWRITE_TAC[LENGTH_EQ_LIST_OF_SEQ] THEN
-  DISCH_THEN(fun th -> GEN_REWRITE_TAC LAND_CONV [th]) THEN
-  REWRITE_TAC(map num_CONV (map mk_small_numeral (rev(1--15)))) THEN
-  REWRITE_TAC[LIST_OF_SEQ; o_DEF] THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  CONV_TAC NUM_REDUCE_CONV);;
+let RK_ETA_15 = prove_rk_eta 15;;
 
-let KEY_READS_FROM_WORDLIST = prove
- (`!(key_p:int64) (rk:int128 list) s.
-     wordlist_from_memory (key_p,15) s = rk
-     ==> read (memory :> bytes128 key_p) s = EL 0 rk /\
-         read (memory :> bytes128 (word_add key_p (word 16))) s = EL 1 rk /\
-         read (memory :> bytes128 (word_add key_p (word 32))) s = EL 2 rk /\
-         read (memory :> bytes128 (word_add key_p (word 48))) s = EL 3 rk /\
-         read (memory :> bytes128 (word_add key_p (word 64))) s = EL 4 rk /\
-         read (memory :> bytes128 (word_add key_p (word 80))) s = EL 5 rk /\
-         read (memory :> bytes128 (word_add key_p (word 96))) s = EL 6 rk /\
-         read (memory :> bytes128 (word_add key_p (word 112))) s = EL 7 rk /\
-         read (memory :> bytes128 (word_add key_p (word 128))) s = EL 8 rk /\
-         read (memory :> bytes128 (word_add key_p (word 144))) s = EL 9 rk /\
-         read (memory :> bytes128 (word_add key_p (word 160))) s = EL 10 rk /\
-         read (memory :> bytes128 (word_add key_p (word 176))) s = EL 11 rk /\
-         read (memory :> bytes128 (word_add key_p (word 192))) s = EL 12 rk /\
-         read (memory :> bytes128 (word_add key_p (word 208))) s = EL 13 rk /\
-         read (memory :> bytes128 (word_add key_p (word 224))) s = EL 14 rk`,
-  REPEAT GEN_TAC THEN
-  CONV_TAC(LAND_CONV(LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
-  DISCH_THEN(SUBST1_TAC o SYM) THEN
-  REWRITE_TAC(map num_CONV (map mk_small_numeral (rev(1--14)))) THEN
-  REWRITE_TAC[EL; HD; TL]);;
+let KEY_READS_FROM_WORDLIST = prove_key_reads 15;;
 
 (* ---- the readable-band prover ----
    For band k: (1) prove_wb_wrapper k buf_thm gives the internal byte-list

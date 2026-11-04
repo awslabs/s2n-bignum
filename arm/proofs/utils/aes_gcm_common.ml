@@ -422,58 +422,50 @@ let KEYSTREAM_FOLD256 = prove
 let rk15 = `[EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk; EL 7 rk;
              EL 8 rk; EL 9 rk; EL 10 rk; EL 11 rk; EL 12 rk; EL 13 rk; EL 14 rk]:(int128)list = rk`;;
 
-(* KEY15_SPLIT: turn the compound wordlist_from_memory(key_p,15) precondition
-   into 15 atomic per-slot reads, so that the interior big step of
+(* prove_key_split nrk turns the compound precondition
+   wordlist_from_memory(key_p,nrk) s = MAP (word_reversefields 8) rk into
+   nrk atomic per-slot reads, so that the interior big step of
    ARM_ADD_RETURN_STACK_TAC can carry them through the prologue, which it
-   does not do for the single list equation. *)
-let KEY15_SPLIT = prove
- (`(wordlist_from_memory (key_p:int64,15) (s:armstate) =
-    MAP (word_reversefields 8) (rk:int128 list)) <=>
-   LENGTH rk = 15 /\
-   read (memory :> bytes128 key_p) s = word_reversefields 8 (EL 0 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 16))) s =
-     word_reversefields 8 (EL 1 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 32))) s =
-     word_reversefields 8 (EL 2 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 48))) s =
-     word_reversefields 8 (EL 3 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 64))) s =
-     word_reversefields 8 (EL 4 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 80))) s =
-     word_reversefields 8 (EL 5 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 96))) s =
-     word_reversefields 8 (EL 6 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 112))) s =
-     word_reversefields 8 (EL 7 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 128))) s =
-     word_reversefields 8 (EL 8 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 144))) s =
-     word_reversefields 8 (EL 9 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 160))) s =
-     word_reversefields 8 (EL 10 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 176))) s =
-     word_reversefields 8 (EL 11 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 192))) s =
-     word_reversefields 8 (EL 12 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 208))) s =
-     word_reversefields 8 (EL 13 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 224))) s =
-     word_reversefields 8 (EL 14 rk)`,
-  CONV_TAC(LAND_CONV(LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
-  ASM_CASES_TAC `LENGTH(rk:int128 list) = 15` THENL
-   [FIRST_ASSUM(fun lenth ->
-      MP_TAC(GEN_REWRITE_RULE I [LENGTH_EQ_LIST_OF_SEQ] lenth)) THEN
-    CONV_TAC(LAND_CONV(RAND_CONV LIST_OF_SEQ_CONV)) THEN
-    DISCH_THEN(fun th ->
-      GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o RAND_CONV) [th]) THEN
-    REWRITE_TAC[MAP] THEN
-    CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
-    REWRITE_TAC[CONS_11; GSYM CONJ_ASSOC] THEN
-    ASM_REWRITE_TAC[] THEN CONV_TAC TAUT;
-    ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(MP_TAC o AP_TERM `LENGTH:int128 list->num`) THEN
-    REWRITE_TAC[LENGTH; LENGTH_MAP] THEN CONV_TAC NUM_REDUCE_CONV THEN
-    ASM_REWRITE_TAC[]]);;
+   does not do for the single list equation.  KEY15_SPLIT is the AES-256
+   case; the AES-128 proofs use prove_key_split 11. *)
+let key_slot_addr i =
+  if i = 0 then `key_p:int64`
+  else mk_comb(mk_comb(`word_add:int64->int64->int64`,`key_p:int64`),
+               mk_comb(`word:num->int64`,mk_small_numeral(16 * i)));;
+
+let el_rk i =
+  mk_comb(mk_comb(`EL:num->int128 list->int128`,mk_small_numeral i),
+          `rk:int128 list`);;
+
+let prove_key_split nrk =
+  let n = mk_small_numeral nrk in
+  let read i =
+    vsubst [key_slot_addr i,`a:int64`; mk_small_numeral i,`i:num`]
+      `read (memory :> bytes128 a) (s:armstate) =
+       word_reversefields 8 (EL i (rk:int128 list))` in
+  let len = vsubst [n,`n:num`] `LENGTH(rk:int128 list) = n` in
+  prove
+   (mk_iff(vsubst [n,`n:num`]
+             `wordlist_from_memory (key_p:int64,n) (s:armstate) =
+              MAP (word_reversefields 8) (rk:int128 list)`,
+           list_mk_conj(len :: map read (0--(nrk-1)))),
+    CONV_TAC(LAND_CONV(LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
+    ASM_CASES_TAC len THENL
+     [FIRST_ASSUM(fun lenth ->
+        MP_TAC(GEN_REWRITE_RULE I [LENGTH_EQ_LIST_OF_SEQ] lenth)) THEN
+      CONV_TAC(LAND_CONV(RAND_CONV LIST_OF_SEQ_CONV)) THEN
+      DISCH_THEN(fun th ->
+        GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o RAND_CONV) [th]) THEN
+      REWRITE_TAC[MAP] THEN
+      CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
+      REWRITE_TAC[CONS_11; GSYM CONJ_ASSOC] THEN
+      ASM_REWRITE_TAC[] THEN CONV_TAC TAUT;
+      ASM_REWRITE_TAC[] THEN
+      DISCH_THEN(MP_TAC o AP_TERM `LENGTH:int128 list->num`) THEN
+      REWRITE_TAC[LENGTH; LENGTH_MAP] THEN CONV_TAC NUM_REDUCE_CONV THEN
+      ASM_REWRITE_TAC[]]);;
+
+let KEY15_SPLIT = prove_key_split 15;;
 
 (* ------------------------------------------------------------------------- *)
 (* The keystream and output blocks in terms of the specification.            *)

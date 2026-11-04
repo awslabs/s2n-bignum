@@ -717,6 +717,36 @@ let LENGTH_INT128_LIST_TO_BYTES = prove
 (* block k < n is the bytes128 read at in_p + 16 * k.  By induction on n:   *)
 (* the top block of a 16 * (n + 1)-byte read, and the 16 * n-byte prefix    *)
 (* read the induction hypothesis takes, are READ_BYTES_AND_BYTE128_MERGE.   *)
+(* The round-key list rk of nrk keys as the list of its elements
+   (prove_rk_eta nrk), and the nrk bytes128 reads of the key schedule at
+   key_p (prove_key_reads nrk): RK_ETA_11 or RK_ETA_15 and
+   KEY_READS_FROM_WORDLIST in the two proofs. *)
+let prove_rk_eta nrk =
+  let rk = `rk:int128 list` in
+  prove
+   (mk_forall(rk,
+      mk_imp(vsubst [mk_small_numeral nrk,`n:num`] `LENGTH(rk:int128 list) = n`,
+             mk_eq(rk,mk_list(map el_rk (0--(nrk-1)),`:int128`)))),
+    GEN_TAC THEN REWRITE_TAC[LENGTH_EQ_LIST_OF_SEQ] THEN
+    DISCH_THEN(fun th -> GEN_REWRITE_TAC LAND_CONV [th]) THEN
+    REWRITE_TAC(map num_CONV (map mk_small_numeral (rev(1--nrk)))) THEN
+    REWRITE_TAC[LIST_OF_SEQ; o_DEF] THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+    CONV_TAC NUM_REDUCE_CONV);;
+
+let prove_key_reads nrk =
+  let read i = vsubst [key_slot_addr i,`a:int64`; el_rk i,`r:int128`]
+                 `read (memory :> bytes128 a) (s:armstate) = r` in
+  prove
+   (list_mk_forall([`key_p:int64`; `rk:int128 list`; `s:armstate`],
+      mk_imp(vsubst [mk_small_numeral nrk,`n:num`]
+               `wordlist_from_memory (key_p:int64,n) (s:armstate) = (rk:int128 list)`,
+             list_mk_conj(map read (0--(nrk-1))))),
+    REPEAT GEN_TAC THEN
+    CONV_TAC(LAND_CONV(LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
+    DISCH_THEN(SUBST1_TAC o SYM) THEN
+    REWRITE_TAC(map num_CONV (map mk_small_numeral (rev(1--(nrk-1))))) THEN
+    REWRITE_TAC[EL; HD; TL]);;
+
 let INPUT_PREFIX_TO_BYTE128_LANES = prove
  (`!n (in_p:int64) (x:byte list) s.
     16 * n <= LENGTH x /\
@@ -2954,7 +2984,8 @@ let ghash_wholes = [GCM_DEC_GHASH_BLOCKS_WHOLE_1;GCM_DEC_GHASH_BLOCKS_WHOLE_2;
 (*     of a byte list, with the LIST_OF_SEQ_NIST_INPUT bridges to            *)
 (*     gcm_dec_ghash_blocks.                                                 *)
 (*   - wordlist_from_memory key condensation: KEY_READS_FROM_WORDLIST and    *)
-(*     RK_ETA_15 relate the round-key list rk to the 15 bytes128 key reads.  *)
+(*     RK_ETA_11 or RK_ETA_15 relate the round-key list rk to its bytes128   *)
+(*     key reads.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
 (* ---- karatsuba_mid ignores the byteswap of its argument ---- *)

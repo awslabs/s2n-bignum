@@ -1471,46 +1471,8 @@ let AES128_CIPHER_KEYLIST = prove
   CONV_TAC(DEPTH_CONV EL_CONV) THEN
   REWRITE_TAC[]);;
 
-(* The AES-128 counterpart of the shared KEY15_SPLIT: eleven key slots. *)
-let KEY11_SPLIT = prove
- (`(wordlist_from_memory (key_p:int64,11) (s:armstate) =
-    MAP (word_reversefields 8) (rk:int128 list)) <=>
-   LENGTH rk = 11 /\
-   read (memory :> bytes128 key_p) s = word_reversefields 8 (EL 0 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 16))) s =
-     word_reversefields 8 (EL 1 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 32))) s =
-     word_reversefields 8 (EL 2 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 48))) s =
-     word_reversefields 8 (EL 3 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 64))) s =
-     word_reversefields 8 (EL 4 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 80))) s =
-     word_reversefields 8 (EL 5 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 96))) s =
-     word_reversefields 8 (EL 6 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 112))) s =
-     word_reversefields 8 (EL 7 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 128))) s =
-     word_reversefields 8 (EL 8 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 144))) s =
-     word_reversefields 8 (EL 9 rk) /\
-   read (memory :> bytes128 (word_add key_p (word 160))) s =
-     word_reversefields 8 (EL 10 rk)`,
-  CONV_TAC(LAND_CONV(LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
-  ASM_CASES_TAC `LENGTH(rk:int128 list) = 11` THENL
-   [FIRST_ASSUM(fun lenth ->
-      MP_TAC(GEN_REWRITE_RULE I [LENGTH_EQ_LIST_OF_SEQ] lenth)) THEN
-    CONV_TAC(LAND_CONV(RAND_CONV LIST_OF_SEQ_CONV)) THEN
-    DISCH_THEN(fun th ->
-      GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o RAND_CONV) [th]) THEN
-    REWRITE_TAC[MAP] THEN CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
-    REWRITE_TAC[CONS_11; GSYM CONJ_ASSOC] THEN
-    ASM_REWRITE_TAC[] THEN CONV_TAC TAUT;
-    ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(MP_TAC o AP_TERM `LENGTH:int128 list->num`) THEN
-    REWRITE_TAC[LENGTH; LENGTH_MAP] THEN CONV_TAC NUM_REDUCE_CONV THEN
-    ASM_REWRITE_TAC[]]);;
+(* The AES-128 counterpart of KEY15_SPLIT: eleven key slots. *)
+let KEY11_SPLIT = prove_key_split 11;;
 
 (* ------------------------------------------------------------------------- *)
 (* The proof, shared with the other key size: this kernel's parameters, then *)
