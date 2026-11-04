@@ -18,6 +18,11 @@ needs "arm/proofs/base.ml";;
 needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml";;
 needs "arm/proofs/utils/keccak_spec.ml";;
 
+(* Names for the labels of this transcription, whose code is at pc. *)
+
+install_layout (layout_copies
+ ["keccakf1600_permute","mlkem_keccakf1600_permute"]);;
+
 (**** print_literal_relocs_from_elf
         ~map_symbol_name:(fun _ ->
           "mlkem_native_keccakf1600_permute_gcc12_O2_data")

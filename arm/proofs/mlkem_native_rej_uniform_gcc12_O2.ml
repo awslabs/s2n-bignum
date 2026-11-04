@@ -18,6 +18,11 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml";;
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/utils/mlkem_native.ml";;
 
+(* Names for the labels of this transcription, whose code is at pc. *)
+
+install_layout (layout_copies
+ ["rej_uniform","mlk_rej_uniform_c"]);;
+
 (**** print_literal_from_elf
         "arm/mlkem_native/mlkem_native_rej_uniform_gcc12_O2.o";;
  ****)

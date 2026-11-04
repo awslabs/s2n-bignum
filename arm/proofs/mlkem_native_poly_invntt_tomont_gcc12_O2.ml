@@ -17,6 +17,11 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml";;
 needs "arm/proofs/utils/mlkem_native.ml";;
 needs "common/int_linear.ml";;
 
+(* Names for the labels of this transcription, whose code is at pc. *)
+
+install_layout (layout_copies
+ ["poly_invntt_tomont","mlkem_poly_invntt_tomont"]);;
+
 (**** print_literal_relocs_from_elf
         ~map_symbol_name:(function
           | "mlkem_native_poly_invntt_tomont_gcc12_O2_zetas" ->
