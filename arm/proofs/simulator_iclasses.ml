@@ -976,21 +976,13 @@ let check_insns () =
         iclasses
   then failwith "check_insns" else
 
-  (* Object files that are not checked: the transcription of the whole image
-     of mlkem-native's clang 17 -O3 binary (see arm/mlkem_native/README.md)
-     contains instructions that the model does not decode yet, such as LD1
-     of single lanes and LD2/ST2 without an offset. Only some functions in
-     it are verified, and they use instructions that the model covers. *)
-  let unchecked_objs = ["arm/mlkem_native/clang17_O3/libmlkem.o"] in
-
   let rec traverse_objs dirpath (checkfn:string->unit):unit =
     let dirs = Sys.readdir dirpath in
     Array.iter (fun p ->
         let p = (Filename.concat dirpath p) in
         if Sys.is_directory p then
           traverse_objs p checkfn
-        else if Filename.extension p = ".o" && p <> "arm/proofs/simulator.o" &&
-                not (mem p unchecked_objs) then
+        else if Filename.extension p = ".o" && p <> "arm/proofs/simulator.o" then
           checkfn p
         else ()
       ) dirs in
