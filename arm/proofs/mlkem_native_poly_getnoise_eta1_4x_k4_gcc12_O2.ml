@@ -120,7 +120,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 let MLKEM_NATIVE_POLY_GETNOISE_ETA1_4X_K4_GCC12_O2_EXEC =
   ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x19e0,0x1b38; 0x840,0x850];;
+   [layout_range "mlkem1024_poly_getnoise_eta1_4x";
+    layout_range "plt_memset"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The buffers are aligned to 32 bytes within the stack frame, so their      *)
@@ -292,12 +293,14 @@ let GETNOISE4_SETUP_TAC =
    `1888 <= (if aligned 32 (stackpointer:int64) then 1888 else 1904) /\
     (if aligned 32 (stackpointer:int64) then 1888 else 1904) <= 1904`
   STRIP_ASSUME_TAC THENL [COND_CASES_TAC THEN ARITH_TAC; ALL_TAC] THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD;
-              SPECL [`pc:num`; `0x1ffd0`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-                              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD;
-                              SPECL [`pc:num`; `0x1ffd0`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_memset:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_memcpy:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD;
+                              SPECL [`pc:num`; `got_memset:num`] WORD_ADD;
+                              SPECL [`pc:num`;
+                                     `got_memcpy:num`] WORD_ADD]) THEN
   GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
@@ -399,7 +402,7 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA1_4X_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
  (`!r0 r1 r2 r3 seed (sd:byte list) nonce0 nonce1 nonce2 nonce3
     guard mf mc ea el ev pc stackpointer returnaddress.
         memset_contract mf ea el ev /\ memcpy_contract mc ea el ev /\
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\ LENGTH sd = 32 /\
         PAIRWISE nonoverlapping
          [(r0,512); (r1,512); (r2,512);
@@ -409,22 +412,24 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA1_4X_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
          [(r0,512); (r1,512); (r2,512);
           (r3,if r3 = word 0 then 0 else 512);
           (word_sub stackpointer (word 2688),2688)]
-         [(seed,32); (stackpointer,1); (word pc,0x6480);
-          (word(pc + 0x1fff8),8); (guard,8); (word(pc + 0x1ffe8),8);
-          (word(pc + 0x1ffd0),8); (ea,el)]
+         [(seed,32); (stackpointer,1); (word pc,libmlkem_size);
+          (word(pc + got_stack_chk_guard),8); (guard,8);
+          (word(pc + got_memset),8);
+          (word(pc + got_memcpy),8); (ea,el)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x19e0) /\
+                  read PC s = word (pc + mlkem1024_poly_getnoise_eta1_4x) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS
                    [r0; r1; r2; r3; seed; nonce0; nonce1; nonce2] s /\
                   read (memory :> bytes8 stackpointer) s =
                   word_zx(nonce3:int64) /\
-                  read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                  read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
-                  read (memory :> bytes64(word(pc + 0x1ffd0))) s = mc /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                  read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                  read (memory :> bytes64(word(pc + got_memcpy))) s = mc /\
                   read (memory :> bytes(ea,el)) s = ev /\
                   read (memory :> bytes(seed,32)) s = num_of_bytelist sd)
              (\s. read PC s = returnaddress /\
@@ -588,7 +593,7 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA1_4X_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
      memcpy_safety_contract mc ea el ev
      ==> exists f_events.
           forall e r0 r1 r2 r3 seed guard pc stackpointer returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
            aligned 16 stackpointer /\
            PAIRWISE nonoverlapping
             [r0,512; r1,512; r2,512; r3,(if r3 = word 0 then 0 else 512);
@@ -596,18 +601,20 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA1_4X_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
            ALLPAIRS nonoverlapping
             [r0,512; r1,512; r2,512; r3,(if r3 = word 0 then 0 else 512);
              word_sub stackpointer (word 2688),2688]
-            [seed,32; stackpointer,1; word pc,0x6480; word(pc + 0x1fff8),8;
-             guard,8; word(pc + 0x1ffe8),8; word(pc + 0x1ffd0),8; ea,el]
+            [seed,32; stackpointer,1; word pc,libmlkem_size;
+             word(pc + got_stack_chk_guard),8;
+             guard,8; word(pc + got_memset),8; word(pc + got_memcpy),8; ea,el]
            ==> ensures arm
                 (\s. aligned_bytes_loaded s (word pc)
                        mlkem_native_libmlkem_gcc12_O2_mc /\
-                     read PC s = word (pc + 0x19e0) /\
+                     read PC s = word (pc + mlkem1024_poly_getnoise_eta1_4x) /\
                      read SP s = stackpointer /\
                      read X30 s = returnaddress /\
                      C_ARGUMENTS [r0; r1; r2; r3; seed] s /\
-                     read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                     read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
-                     read (memory :> bytes64(word(pc + 0x1ffd0))) s = mc /\
+                     read (memory :> bytes64(word(pc + got_stack_chk_guard))) s
+                      = guard /\
+                     read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                     read (memory :> bytes64(word(pc + got_memcpy))) s = mc /\
                      read (memory :> bytes(ea,el)) s = ev /\
                      read events s = e)
                 (\s. read PC s = returnaddress /\
@@ -620,9 +627,11 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA1_4X_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                          [seed,32; stackpointer,1; r0,512; r1,512; r2,512;
                           r3,(if r3 = word 0 then 0 else 512);
                           word_sub stackpointer (word 2688),2688;
-                          word(pc + 0x1fff8),8; guard,8;
-                          word(pc + 0x62b0),192; word(pc + 0x6250),64;
-                          word(pc + 0x1ffe8),8; word(pc + 0x1ffd0),8; ea,el]
+                          word(pc + got_stack_chk_guard),8; guard,8;
+                          word(pc + rodata_mlk_KeccakF_RoundConstants),192;
+                          word(pc + mlkem_poly_cbd2_consts),64;
+                          word(pc + got_memset),8; word(pc + got_memcpy),8;
+                          ea,el]
                          [r0,512; r1,512; r2,512;
                           r3,(if r3 = word 0 then 0 else 512);
                           word_sub stackpointer (word 2688),2688]))

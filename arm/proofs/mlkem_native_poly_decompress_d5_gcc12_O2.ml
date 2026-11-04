@@ -68,10 +68,12 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D5_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x20b0,0x2170];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem_poly_decompress_d5"];;
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D5_GCC12_O2_CONSTANTS =
-  MLKEM_NATIVE_IMAGE_CONST_RULE 0x6210 128;;
+  MLKEM_NATIVE_IMAGE_CONST_RULE (layout "mlkem_poly_decompress_d5_consts")
+   128;;
 
 (* ------------------------------------------------------------------------- *)
 (* The five bytes for eight coefficients, as parts of a 40-bit word.         *)
@@ -175,12 +177,12 @@ let D5D_FIELD_TAC k =
 let MLKEM_NATIVE_POLY_DECOMPRESS_D5_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   prove
  (`!r a n pc returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-        ALL (nonoverlapping (r,512)) [(word pc,0x6480); (a,160)]
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        ALL (nonoverlapping (r,512)) [(word pc,libmlkem_size); (a,160)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x20b0) /\
+                  read PC s = word (pc + mlkem_poly_decompress_d5) /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [r; a] s /\
                   read (memory :> bytes(a,160)) s = n)
@@ -199,7 +201,8 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D5_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `32` `pc + 0x20c8` `pc + 0x2164`
+  ENSURES_WHILE_UP_TAC `32` `pc + mlkem_poly_decompress_d5_loop1`
+   `pc + mlkem_poly_decompress_d5_loop1_test`
    `\i s. read X1 s = word_add a (word(5 * i)) /\
           read X6 s = word_add r (word(16 * i)) /\
           read X9 s = word_add a (word 160) /\
@@ -306,7 +309,7 @@ let mlkem_native_poly_decompress_d5_signature =
    []);;
 
 let full_spec,public_vars = mk_safety_spec
-    ~readonly_objects:[`word(pc + 0x6210):int64`,`16`]
+    ~readonly_objects:[`word(pc + mlkem_poly_decompress_d5_consts):int64`,`16`]
     ~keep_maychanges:true
     mlkem_native_poly_decompress_d5_signature
     MLKEM_NATIVE_POLY_DECOMPRESS_D5_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
@@ -316,13 +319,13 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D5_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
        forall e r a pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-           ALL (nonoverlapping (r,512)) [word pc,0x6480; a,160]
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           ALL (nonoverlapping (r,512)) [word pc,libmlkem_size; a,160]
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x20b0) /\
+                    read PC s = word (pc + mlkem_poly_decompress_d5) /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\
                     read events s = e)
@@ -332,7 +335,8 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D5_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                          read events s = APPEND e2 e /\
                          e2 = f_events a r pc returnaddress /\
                          memaccess_inbounds e2
-                         [a,160; r,512; word (pc + 0x6210),16]
+                         [a,160; r,512;
+                          word (pc + mlkem_poly_decompress_d5_consts),16]
                          [r,512]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bytes (r,512)])`,
@@ -352,7 +356,8 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D5_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
               fst MLKEM_NATIVE_POLY_DECOMPRESS_D5_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + 0x20c8` `pc + 0x216c`
+  ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + mlkem_poly_decompress_d5_loop1`
+   `pc + mlkem_poly_decompress_d5_loop1_exit`
     `\i s. read X30 s = returnaddress /\
            read X1 s = word_add a (word(5 * i)) /\
            read X6 s = word_add r (word(16 * i)) /\

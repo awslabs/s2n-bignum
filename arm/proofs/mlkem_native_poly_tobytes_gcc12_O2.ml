@@ -10,6 +10,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
+needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml";;
 needs "arm/proofs/utils/mlkem_native.ml";;
 
 (**** print_literal_from_elf
@@ -53,14 +54,14 @@ let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_EXEC =
 
 let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_CORRECT = prove
  (`!r a (l:int16 list) pc.
-        ALL (nonoverlapping (r,384)) [(word pc,0x3c); (a,512)]
+        ALL (nonoverlapping (r,384)) [(word pc,poly_tobytes_size); (a,512)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_poly_tobytes_gcc12_O2_mc /\
                   read PC s = word pc /\
                   C_ARGUMENTS [r;a] s /\
                   read (memory :> bytes(a,512)) s = num_of_wordlist l)
-             (\s. read PC s = word(pc + 0x38) /\
+             (\s. read PC s = word(pc + poly_tobytes_ret) /\
                   (LENGTH l = 256 /\ ALL (\x. val x < 4096) l
                    ==> read(memory :> bytes(r,384)) s =
                        num_of_wordlist (MAP word_zx l:(12 word)list)))
@@ -73,7 +74,8 @@ let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_CORRECT = prove
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `128` `pc + 0x8` `pc + 0x30`
+  ENSURES_WHILE_UP_TAC `128` `pc + poly_tobytes_loop1`
+   `pc + poly_tobytes_loop1_test`
    `\i s. read X0 s = word_add r (word(3 * i)) /\
           read X1 s = word_add a (word(4 * i)) /\
           read X4 s = word_add r (word 384) /\
@@ -188,7 +190,7 @@ let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_CORRECT = prove
 
 let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_SUBROUTINE_CORRECT = prove
  (`!r a (l:int16 list) pc returnaddress.
-        ALL (nonoverlapping (r,384)) [(word pc,0x3c); (a,512)]
+        ALL (nonoverlapping (r,384)) [(word pc,poly_tobytes_size); (a,512)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_poly_tobytes_gcc12_O2_mc /\
@@ -256,7 +258,8 @@ let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_SUBROUTINE_SAFE = time prove
               fst MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `128` `pc + 0x8` `pc + 0x38`
+  ENSURES_EVENTS_WHILE_UP2_TAC `128` `pc + poly_tobytes_loop1`
+   `pc + poly_tobytes_loop1_exit`
     `\i s. read X30 s = returnaddress /\
            read X0 s = word_add r (word(3 * i)) /\
            read X1 s = word_add a (word(4 * i)) /\
@@ -314,16 +317,16 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IN_IMAGE =
   MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_poly_tobytes_gcc12_O2_mc
-    0x2260 [];;
+    (layout "mlkem_poly_tobytes") [];;
 
 let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!r a (l:int16 list) pc returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-        ALL (nonoverlapping (r,384)) [(word pc,0x6480); (a,512)]
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        ALL (nonoverlapping (r,384)) [(word pc,libmlkem_size); (a,512)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x2260) /\
+                  read PC s = word (pc + mlkem_poly_tobytes) /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [r;a] s /\
                   read (memory :> bytes(a,512)) s = num_of_wordlist l)
@@ -334,20 +337,20 @@ let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(r,384)])`,
   MLKEM_NATIVE_IMAGE_TAC
-   (INST [`pc + 0x2260`,`pc:num`]
+   (INST [`pc + mlkem_poly_tobytes`,`pc:num`]
      (SPEC_ALL MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_SUBROUTINE_CORRECT))
    [MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IN_IMAGE]);;
 
 let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
  (`exists f_events.
        forall e r a pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-           ALL (nonoverlapping (r,384)) [word pc,0x6480; a,512]
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           ALL (nonoverlapping (r,384)) [word pc,libmlkem_size; a,512]
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x2260) /\
+                    read PC s = word (pc + mlkem_poly_tobytes) /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\
                     read events s = e)
@@ -361,7 +364,7 @@ let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                 MAYCHANGE [memory :> bytes(r,384)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC
    MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_SUBROUTINE_SAFE
-   [`pc + 0x2260`,`pc:num`]
+   [`pc + mlkem_poly_tobytes`,`pc:num`]
    [MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IN_IMAGE]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -408,7 +411,7 @@ let TOBYTES_FULL_TEST_TAC =
 let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_SUBROUTINE_FULL = prove
  (`exists f_events.
        forall e r a (l:int16 list) pc returnaddress.
-           ALL (nonoverlapping (r,384)) [word pc,0x3c; a,512]
+           ALL (nonoverlapping (r,384)) [word pc,poly_tobytes_size; a,512]
            ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mlkem_native_poly_tobytes_gcc12_O2_mc /\
@@ -442,7 +445,8 @@ let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_SUBROUTINE_FULL = prove
               MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALL;
               fst MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `128` `pc + 0x8` `pc + 0x38`
+  ENSURES_EVENTS_WHILE_UP2_TAC `128` `pc + poly_tobytes_loop1`
+   `pc + poly_tobytes_loop1_exit`
    `\i s. read X30 s = returnaddress /\
           read X0 s = word_add r (word(3 * i)) /\
           read X1 s = word_add a (word(4 * i)) /\
@@ -547,12 +551,12 @@ let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_SUBROUTINE_FULL = prove
 let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
  (`exists f_events.
        forall e r a (l:int16 list) pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-           ALL (nonoverlapping (r,384)) [word pc,0x6480; a,512]
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           ALL (nonoverlapping (r,384)) [word pc,libmlkem_size; a,512]
            ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x2260) /\
+                    read PC s = word (pc + mlkem_poly_tobytes) /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\
                     read (memory :> bytes(a,512)) s = num_of_wordlist l /\
@@ -569,5 +573,5 @@ let MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
                 MAYCHANGE [memory :> bytes(r,384)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC
    MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_SUBROUTINE_FULL
-   [`pc + 0x2260`,`pc:num`]
+   [`pc + mlkem_poly_tobytes`,`pc:num`]
    [MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IN_IMAGE]);;

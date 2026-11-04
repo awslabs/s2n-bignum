@@ -56,7 +56,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x2974,0x29f8];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem_shake128x4_squeezeblocks"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactics for the four states, the number of blocks and the loop counter.   *)
@@ -124,20 +125,20 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
  (`!out0 out1 out2 out3 nblocks st
     (S0:1600 word) (S1:1600 word) (S2:1600 word) (S3:1600 word)
     pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         PAIRWISE nonoverlapping
          [(out0,168 * nblocks); (out1,168 * nblocks); (out2,168 * nblocks);
           (out3,168 * nblocks); (st,800);
           (word_sub stackpointer (word 272),272)] /\
-        ALL (nonoverlapping (word pc,0x6480))
+        ALL (nonoverlapping (word pc,libmlkem_size))
          [(out0,168 * nblocks); (out1,168 * nblocks); (out2,168 * nblocks);
           (out3,168 * nblocks); (st,800);
           (word_sub stackpointer (word 272),272)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x2974) /\
+                  read PC s = word (pc + mlkem_shake128x4_squeezeblocks) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [out0; out1; out2; out3; word nblocks; st] s /\
@@ -202,7 +203,9 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
 
   (*** The loop, with i blocks done ***)
 
-  ENSURES_WHILE_UP2_TAC `nblocks:num` `pc + 0x29a0` `pc + 0x29e0`
+  ENSURES_WHILE_UP2_TAC `nblocks:num`
+   `pc + mlkem_shake128x4_squeezeblocks_loop1`
+   `pc + mlkem_shake128x4_squeezeblocks_loop1_exit`
    `\i s. read X19 s = word_add out3 (word(168 * i)) /\
           read X20 s = word_add out2 (word(168 * i)) /\
           read X21 s = word_add out1 (word(168 * i)) /\
@@ -346,18 +349,18 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
      forall e out0 out1 out2 out3 nblocks st pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\
        PAIRWISE nonoverlapping
         [out0,168 * nblocks; out1,168 * nblocks; out2,168 * nblocks;
          out3,168 * nblocks; st,800; word_sub stackpointer (word 272),272] /\
-       ALL (nonoverlapping (word pc,0x6480))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [out0,168 * nblocks; out1,168 * nblocks; out2,168 * nblocks;
          out3,168 * nblocks; st,800; word_sub stackpointer (word 272),272]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x2974) /\
+                 read PC s = word (pc + mlkem_shake128x4_squeezeblocks) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [out0; out1; out2; out3; word nblocks; st] s /\
@@ -371,7 +374,7 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                      [out0,168 * nblocks; out1,168 * nblocks;
                       out2,168 * nblocks; out3,168 * nblocks; st,800;
                       word_sub stackpointer (word 272),272;
-                      word(pc + 0x62b0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [out0,168 * nblocks; out1,168 * nblocks;
                       out2,168 * nblocks; out3,168 * nblocks; st,800;
                       word_sub stackpointer (word 272),272]))
@@ -419,7 +422,9 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num` `pc + 0x29a0` `pc + 0x29e0`
+  ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num`
+   `pc + mlkem_shake128x4_squeezeblocks_loop1`
+   `pc + mlkem_shake128x4_squeezeblocks_loop1_exit`
    `\i s. read X19 s = word_add out3 (word(168 * i)) /\
           read X20 s = word_add out2 (word(168 * i)) /\
           read X21 s = word_add out1 (word(168 * i)) /\
@@ -526,18 +531,18 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_FULL =
      forall e out0 out1 out2 out3 nblocks st
             (S0:1600 word) (S1:1600 word) (S2:1600 word) (S3:1600 word)
             pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\
        PAIRWISE nonoverlapping
         [out0,168 * nblocks; out1,168 * nblocks; out2,168 * nblocks;
          out3,168 * nblocks; st,800; word_sub stackpointer (word 272),272] /\
-       ALL (nonoverlapping (word pc,0x6480))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [out0,168 * nblocks; out1,168 * nblocks; out2,168 * nblocks;
          out3,168 * nblocks; st,800; word_sub stackpointer (word 272),272]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x2974) /\
+                 read PC s = word (pc + mlkem_shake128x4_squeezeblocks) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [out0; out1; out2; out3; word nblocks; st] s /\
@@ -578,7 +583,7 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_FULL =
                      [out0,168 * nblocks; out1,168 * nblocks;
                       out2,168 * nblocks; out3,168 * nblocks; st,800;
                       word_sub stackpointer (word 272),272;
-                      word(pc + 0x62b0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [out0,168 * nblocks; out1,168 * nblocks;
                       out2,168 * nblocks; out3,168 * nblocks; st,800;
                       word_sub stackpointer (word 272),272]))
@@ -629,7 +634,9 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_FULL =
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
   SQX4_BOUND_TAC THEN SQX4_PRESERVED_TAC THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num` `pc + 0x29a0` `pc + 0x29e0`
+  ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num`
+   `pc + mlkem_shake128x4_squeezeblocks_loop1`
+   `pc + mlkem_shake128x4_squeezeblocks_loop1_exit`
    `\i s. read X19 s = word_add out3 (word(168 * i)) /\
           read X20 s = word_add out2 (word(168 * i)) /\
           read X21 s = word_add out1 (word(168 * i)) /\

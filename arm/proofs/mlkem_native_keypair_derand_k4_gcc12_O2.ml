@@ -66,7 +66,7 @@ needs "arm/proofs/utils/mlkem_native_kem.ml";;
 
 let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_EXEC =
   ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x810,0x820; 0x1240,0x12d4];;
+   [layout_range "plt_memcpy"; layout_range "mlkem1024_keypair_derand"];;
 
 let KK4_EXEC = MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_EXEC;;
 
@@ -190,7 +190,7 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
  (`!pk sk coins (d:byte list) (z:byte list) guard mf mc ea el ev
     pc stackpointer returnaddress.
         memset_contract mf ea el ev /\ memcpy_contract mc ea el ev /\
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\ LENGTH d = 32 /\ LENGTH z = 32 /\
         (!i j. i < 4 /\ j < 4
                ==> mlkem_samplentt_terminates
@@ -201,18 +201,20 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
          [(pk,1568); (sk,3168); (word_sub stackpointer (word 19360),19360)] /\
         ALLPAIRS nonoverlapping
          [(pk,1568); (sk,3168); (word_sub stackpointer (word 19360),19360)]
-         [(coins,64); (word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
-          (word(pc + 0x1ffe8),8); (word(pc + 0x1ffd0),8); (ea,el)]
+         [(coins,64); (word pc,libmlkem_size);
+          (word(pc + got_stack_chk_guard),8); (guard,8);
+          (word(pc + got_memset),8); (word(pc + got_memcpy),8); (ea,el)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x1240) /\
+                  read PC s = word (pc + mlkem1024_keypair_derand) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [pk; sk; coins] s /\
-                  read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                  read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
-                  read (memory :> bytes64(word(pc + 0x1ffd0))) s = mc /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                  read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                  read (memory :> bytes64(word(pc + got_memcpy))) s = mc /\
                   read (memory :> bytes(ea,el)) s = ev /\
                   read (memory :> bytes(coins,32)) s = num_of_bytelist d /\
                   read (memory :> bytes(word_add coins (word 32),32)) s =
@@ -260,7 +262,7 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
    memset_full_contract mf ea el ev /\ memcpy_safety_contract mc ea el ev
    ==> exists f_events.
         forall e pk sk coins (d:byte list) guard pc stackpointer returnaddress.
-          aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+          aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
           aligned 16 stackpointer /\ LENGTH d = 32 /\
           (!i j. i < 4 /\ j < 4
                  ==> mlkem_samplentt_terminates
@@ -274,18 +276,20 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
           ALLPAIRS nonoverlapping
            [(pk,1568); (sk,3168);
             (word_sub stackpointer (word 19360),19360)]
-           [(coins,64); (word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
-            (word(pc + 0x1ffe8),8); (word(pc + 0x1ffd0),8); (ea,el)]
+           [(coins,64); (word pc,libmlkem_size);
+            (word(pc + got_stack_chk_guard),8); (guard,8);
+            (word(pc + got_memset),8); (word(pc + got_memcpy),8); (ea,el)]
           ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x1240) /\
+                    read PC s = word (pc + mlkem1024_keypair_derand) /\
                     read SP s = stackpointer /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [pk; sk; coins] s /\
-                    read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                    read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
-                    read (memory :> bytes64(word(pc + 0x1ffd0))) s = mc /\
+                    read (memory :> bytes64(word(pc + got_stack_chk_guard))) s
+                     = guard /\
+                    read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                    read (memory :> bytes64(word(pc + got_memcpy))) s = mc /\
                     read (memory :> bytes(ea,el)) s = ev /\
                     read (memory :> bytes(coins,32)) s = num_of_bytelist d /\
                     read events s = e)
@@ -302,10 +306,13 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                        memaccess_inbounds e2
                         [coins,64; pk,1568; sk,3168;
                          word_sub stackpointer (word 19360),19360;
-                         word(pc + 0x1fff8),8; guard,8; word(pc + 0x1ffe8),8;
-                         word(pc + 0x1ffd0),8; ea,el; word(pc + 0x62b0),192;
-                         word(pc + 0x6250),64; word(pc + 0x6380),256;
-                         word(pc + 0x6220),32]
+                         word(pc + got_stack_chk_guard),8; guard,8;
+                         word(pc + got_memset),8;
+                         word(pc + got_memcpy),8; ea,el;
+                         word(pc + rodata_mlk_KeccakF_RoundConstants),192;
+                         word(pc + mlkem_poly_cbd2_consts),64;
+                         word(pc + rodata_mlk_zetas),256;
+                         word(pc + mlkem_poly_tomont_consts),32]
                         [pk,1568; sk,3168;
                          word_sub stackpointer (word 19360),19360]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,

@@ -111,7 +111,7 @@ needs "arm/proofs/mlkem_native_polyvec_tobytes_k4_gcc12_O2.ml";;
 
 let MLKEM_NATIVE_CHECK_PK_K4_GCC12_O2_EXEC =
   ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x1010,0x1148; 0x840,0x850];;
+   [layout_range "mlkem1024_check_pk"; layout_range "plt_memset"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The reduced vector, as a list of 16-bit coefficients for the encoding,    *)
@@ -383,10 +383,12 @@ let CHECKPK4_INTRO_TAC =
   SPEC_TAC(`if aligned 32 (stackpointer:int64) then 64 else 80`,
            `boff:num`) THEN
   GEN_TAC THEN STRIP_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-                              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD;
+                              SPECL [`pc:num`;
+                                     `got_memset:num`] WORD_ADD]) THEN
   GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
@@ -574,22 +576,24 @@ let CHECKPK4_EXIT_TAC =
 let MLKEM_NATIVE_CHECK_PK_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!pk n guard mf ea el ev pc stackpointer returnaddress.
         memset_contract mf ea el ev /\
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
-        nonoverlapping (pk,1536) (word pc,0x6480) /\
+        nonoverlapping (pk,1536) (word pc,libmlkem_size) /\
         ALLPAIRS nonoverlapping
          [(word_sub stackpointer (word 3680),3680)]
-         [(pk,1536); (word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
-          (word(pc + 0x1ffe8),8); (ea,el)]
+         [(pk,1536); (word pc,libmlkem_size);
+          (word(pc + got_stack_chk_guard),8); (guard,8);
+          (word(pc + got_memset),8); (ea,el)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x1010) /\
+                  read PC s = word (pc + mlkem1024_check_pk) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [pk] s /\
-                  read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                  read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                  read (memory :> bytes64(word(pc + got_memset))) s = mf /\
                   read (memory :> bytes(ea,el)) s = ev /\
                   read (memory :> bytes(pk,1536)) s = n)
              (\s. read PC s = returnaddress /\
@@ -601,7 +605,8 @@ let MLKEM_NATIVE_CHECK_PK_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
               MAYCHANGE
                [memory :> bytes(word_sub stackpointer (word 3680),3680)])`,
   CHECKPK4_INTRO_TAC THEN
-  ENSURES_WHILE_UP2_TAC `96` `pc + 0x1078` `pc + 0x1094`
+  ENSURES_WHILE_UP2_TAC `96` `pc + mlkem1024_check_pk_loop1`
+   `pc + mlkem1024_check_pk_loop1_exit`
    CHECKPK4_INV_FRAME THEN
   REPEAT CONJ_TAC THENL
    [ARITH_TAC; CHECKPK4_PART1_TAC; CHECKPK4_BODY_TAC; CHECKPK4_EXIT_TAC]);;
@@ -687,10 +692,12 @@ let CHECKPK4_SAFE_INTRO_TAC =
    `64 <= (if aligned 32 (stackpointer:int64) then 64 else 80) /\
     (if aligned 32 (stackpointer:int64) then 64 else 80) <= 80`
   STRIP_ASSUME_TAC THENL [COND_CASES_TAC THEN ARITH_TAC; ALL_TAC] THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-                              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD;
+                              SPECL [`pc:num`;
+                                     `got_memset:num`] WORD_ADD]) THEN
   GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
@@ -805,22 +812,24 @@ let MLKEM_NATIVE_CHECK_PK_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
    memset_safety_contract mf ea el ev
    ==> exists f_events.
         forall e pk guard pc stackpointer returnaddress.
-          aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+          aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
           aligned 16 stackpointer /\
-          nonoverlapping (pk,1536) (word pc,0x6480) /\
+          nonoverlapping (pk,1536) (word pc,libmlkem_size) /\
           ALLPAIRS nonoverlapping
            [(word_sub stackpointer (word 3680),3680)]
-           [(pk,1536); (word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
-            (word(pc + 0x1ffe8),8); (ea,el)]
+           [(pk,1536); (word pc,libmlkem_size);
+            (word(pc + got_stack_chk_guard),8); (guard,8);
+            (word(pc + got_memset),8); (ea,el)]
           ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x1010) /\
+                    read PC s = word (pc + mlkem1024_check_pk) /\
                     read SP s = stackpointer /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [pk] s /\
-                    read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                    read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                    read (memory :> bytes64(word(pc + got_stack_chk_guard))) s
+                     = guard /\
+                    read (memory :> bytes64(word(pc + got_memset))) s = mf /\
                     read (memory :> bytes(ea,el)) s = ev /\
                     read events s = e)
                (\s. read PC s = returnaddress /\
@@ -831,14 +840,16 @@ let MLKEM_NATIVE_CHECK_PK_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                               returnaddress /\
                        memaccess_inbounds e2
                         [pk,1536; word_sub stackpointer (word 3680),3680;
-                         word(pc + 0x1fff8),8; guard,8; word(pc + 0x1ffe8),8;
+                         word(pc + got_stack_chk_guard),8; guard,8;
+                         word(pc + got_memset),8;
                          ea,el]
                         [word_sub stackpointer (word 3680),3680]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
                 MAYCHANGE
                  [memory :> bytes(word_sub stackpointer (word 3680),3680)])`,
   CHECKPK4_SAFE_INTRO_TAC THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `96` `pc + 0x1078` `pc + 0x1094`
+  ENSURES_EVENTS_WHILE_UP2_TAC `96` `pc + mlkem1024_check_pk_loop1`
+   `pc + mlkem1024_check_pk_loop1_exit`
    CHECKPK4_SAFE_INV THEN
   REPEAT CONJ_TAC THENL
    [ARITH_TAC; CHECKPK4_SAFE_PART1_TAC; CHECKPK4_SAFE_BODY_TAC;
@@ -909,10 +920,12 @@ let CHECKPK4_FULL_INTRO_TAC =
     (if aligned 32 (stackpointer:int64) then 64 else 80) <= 80`
   STRIP_ASSUME_TAC THENL [COND_CASES_TAC THEN ARITH_TAC; ALL_TAC] THEN
   ABBREV_TAC `boff = if aligned 32 (stackpointer:int64) then 64 else 80` THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-                              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD;
+                              SPECL [`pc:num`;
+                                     `got_memset:num`] WORD_ADD]) THEN
   GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
@@ -1020,22 +1033,24 @@ let MLKEM_NATIVE_CHECK_PK_K4_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
    memset_safety_contract mf ea el ev
    ==> exists f_events.
         forall e pk n guard pc stackpointer returnaddress.
-          aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+          aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
           aligned 16 stackpointer /\
-          nonoverlapping (pk,1536) (word pc,0x6480) /\
+          nonoverlapping (pk,1536) (word pc,libmlkem_size) /\
           ALLPAIRS nonoverlapping
            [(word_sub stackpointer (word 3680),3680)]
-           [(pk,1536); (word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
-            (word(pc + 0x1ffe8),8); (ea,el)]
+           [(pk,1536); (word pc,libmlkem_size);
+            (word(pc + got_stack_chk_guard),8); (guard,8);
+            (word(pc + got_memset),8); (ea,el)]
           ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x1010) /\
+                    read PC s = word (pc + mlkem1024_check_pk) /\
                     read SP s = stackpointer /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [pk] s /\
-                    read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                    read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                    read (memory :> bytes64(word(pc + got_stack_chk_guard))) s
+                     = guard /\
+                    read (memory :> bytes64(word(pc + got_memset))) s = mf /\
                     read (memory :> bytes(ea,el)) s = ev /\
                     read (memory :> bytes(pk,1536)) s = n /\
                     read events s = e)
@@ -1051,14 +1066,16 @@ let MLKEM_NATIVE_CHECK_PK_K4_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
                               returnaddress /\
                        memaccess_inbounds e2
                         [pk,1536; word_sub stackpointer (word 3680),3680;
-                         word(pc + 0x1fff8),8; guard,8; word(pc + 0x1ffe8),8;
+                         word(pc + got_stack_chk_guard),8; guard,8;
+                         word(pc + got_memset),8;
                          ea,el]
                         [word_sub stackpointer (word 3680),3680]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
                 MAYCHANGE
                  [memory :> bytes(word_sub stackpointer (word 3680),3680)])`,
   CHECKPK4_FULL_INTRO_TAC THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `96` `pc + 0x1078` `pc + 0x1094`
+  ENSURES_EVENTS_WHILE_UP2_TAC `96` `pc + mlkem1024_check_pk_loop1`
+   `pc + mlkem1024_check_pk_loop1_exit`
    CHECKPK4_INV_FRAME THEN
   REPEAT CONJ_TAC THENL
    [ARITH_TAC; CHECKPK4_FULL_PART1_TAC; CHECKPK4_FULL_BODY_TAC;

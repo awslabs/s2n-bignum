@@ -28,7 +28,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_SHAKE128_RELEASE_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x2544,0x2568];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem_shake128_release"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -36,12 +37,12 @@ let MLKEM_NATIVE_SHAKE128_RELEASE_GCC12_O2_EXEC =
 
 let MLKEM_NATIVE_SHAKE128_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!st pc returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-        nonoverlapping (st,224) (word pc,0x6480)
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        nonoverlapping (st,224) (word pc,libmlkem_size)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x2544) /\
+                  read PC s = word (pc + mlkem_shake128_release) /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [st] s)
              (\s. read PC s = returnaddress /\
@@ -76,12 +77,12 @@ needs "arm/proofs/subroutine_signatures.ml";;
 let MLKEM_NATIVE_SHAKE128_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
  (`exists f_events.
        forall e st pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-           nonoverlapping (st,224) (word pc,0x6480)
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           nonoverlapping (st,224) (word pc,libmlkem_size)
            ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x2544) /\
+                    read PC s = word (pc + mlkem_shake128_release) /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [st] s /\
                     read events s = e)

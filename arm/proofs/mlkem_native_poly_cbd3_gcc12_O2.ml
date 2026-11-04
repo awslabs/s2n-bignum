@@ -54,12 +54,14 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_POLY_CBD3_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x4ec4,0x4f50];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem_poly_cbd3"];;
 
 (*** The vectors of 32-bit shifts, negative for right shifts ***)
 
 let MLKEM_NATIVE_POLY_CBD3_GCC12_O2_CONSTANTS =
-  map (fun d -> MLKEM_NATIVE_IMAGE_CONST_RULE d 128) [0x6290; 0x62a0];;
+  map (fun d -> MLKEM_NATIVE_IMAGE_CONST_RULE d 128)
+   [layout "mlkem_poly_cbd3_const1"; layout "mlkem_poly_cbd3_const2"];;
 
 (*** The three bytes for four coefficients, as parts of a 24-bit word ***)
 
@@ -181,12 +183,12 @@ let CBD3_LANE_RULE tth th =
 
 let MLKEM_NATIVE_POLY_CBD3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!r a n pc returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-        ALL (nonoverlapping (r,512)) [(word pc,0x6480); (a,192)]
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        ALL (nonoverlapping (r,512)) [(word pc,libmlkem_size); (a,192)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x4ec4) /\
+                  read PC s = word (pc + mlkem_poly_cbd3) /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [r; a] s /\
                   read (memory :> bytes(a,192)) s = n)
@@ -209,7 +211,8 @@ let MLKEM_NATIVE_POLY_CBD3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `64` `pc + 0x4ef0` `pc + 0x4f44`
+  ENSURES_WHILE_UP_TAC `64` `pc + mlkem_poly_cbd3_loop1`
+   `pc + mlkem_poly_cbd3_loop1_test`
    `\i s. read X2 s = word_add a (word(3 * i)) /\
           read X4 s = word_add r (word(8 * i)) /\
           read X6 s = word_add a (word 192) /\
@@ -321,7 +324,7 @@ let mlkem_native_poly_cbd3_signature =
    []);;
 
 let full_spec,public_vars = mk_safety_spec
-    ~readonly_objects:[`word(pc + 0x6290):int64`,`32`]
+    ~readonly_objects:[`word(pc + mlkem_poly_cbd3_const1):int64`,`32`]
     ~keep_maychanges:true
     mlkem_native_poly_cbd3_signature
     MLKEM_NATIVE_POLY_CBD3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
@@ -331,13 +334,13 @@ let MLKEM_NATIVE_POLY_CBD3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
        forall e r a pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-           ALL (nonoverlapping (r,512)) [word pc,0x6480; a,192]
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           ALL (nonoverlapping (r,512)) [word pc,libmlkem_size; a,192]
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x4ec4) /\
+                    read PC s = word (pc + mlkem_poly_cbd3) /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\
                     read events s = e)
@@ -347,7 +350,7 @@ let MLKEM_NATIVE_POLY_CBD3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                          read events s = APPEND e2 e /\
                          e2 = f_events a r pc returnaddress /\
                          memaccess_inbounds e2
-                         [a,192; r,512; word (pc + 0x6290),32]
+                         [a,192; r,512; word (pc + mlkem_poly_cbd3_consts),32]
                          [r,512]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bytes (r,512)])`,
@@ -367,7 +370,8 @@ let MLKEM_NATIVE_POLY_CBD3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
               fst MLKEM_NATIVE_POLY_CBD3_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `64` `pc + 0x4ef0` `pc + 0x4f4c`
+  ENSURES_EVENTS_WHILE_UP2_TAC `64` `pc + mlkem_poly_cbd3_loop1`
+   `pc + mlkem_poly_cbd3_loop1_exit`
     `\i s. read X30 s = returnaddress /\
            read X2 s = word_add a (word(3 * i)) /\
            read X4 s = word_add r (word(8 * i)) /\

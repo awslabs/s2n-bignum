@@ -34,7 +34,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x33a0,0x33c8];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem_keccakf1600x4_permute"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The four calls of mlkem_keccakf1600_permute, keeping the states in memory *)
@@ -69,16 +70,16 @@ let LOCAL_KECCAK_TAC =
 let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   prove
  (`!a A1 A2 A3 A4 pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         nonoverlapping (a,800) (word_sub stackpointer (word 208),208) /\
         ALLPAIRS nonoverlapping
           [(a,800); (word_sub stackpointer (word 208),208)]
-          [(word pc,0x6480)]
+          [(word pc,libmlkem_size)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x33a0) /\
+                  read PC s = word (pc + mlkem_keccakf1600x4_permute) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [a] s /\
@@ -136,7 +137,8 @@ let mlkem_native_keccakf1600x4_permute_signature =
    []);;
 
 let full_spec,public_vars = mk_safety_spec
-    ~readonly_objects:[`word(pc + 0x62b0):int64`,`192`]
+    ~readonly_objects:
+      [`word(pc + rodata_mlk_KeccakF_RoundConstants):int64`,`192`]
     ~keep_maychanges:true
     mlkem_native_keccakf1600x4_permute_signature
     MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
@@ -158,17 +160,17 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
        forall e a pc stackpointer returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
            aligned 16 stackpointer /\
            nonoverlapping (a,800) (word_sub stackpointer (word 208),208) /\
            ALLPAIRS nonoverlapping
            [a,800; word_sub stackpointer (word 208),208]
-           [word pc,0x6480]
+           [word pc,libmlkem_size]
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x33a0) /\
+                    read PC s = word (pc + mlkem_keccakf1600x4_permute) /\
                     read SP s = stackpointer /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [a] s /\
@@ -182,7 +184,7 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                          returnaddress /\
                          memaccess_inbounds e2
                          [a,800; word_sub stackpointer (word 208),208;
-                          word (pc + 0x62b0),192]
+                          word (pc + rodata_mlk_KeccakF_RoundConstants),192]
                          [a,800; word_sub stackpointer (word 208),208]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [X18] ,,
@@ -223,16 +225,16 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600
   = prove
  (`!a (S0:1600 word) (S1:1600 word) (S2:1600 word) (S3:1600 word)
     pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         nonoverlapping (a,800) (word_sub stackpointer (word 208),208) /\
         ALLPAIRS nonoverlapping
           [(a,800); (word_sub stackpointer (word 208),208)]
-          [(word pc,0x6480)]
+          [(word pc,libmlkem_size)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x33a0) /\
+                  read PC s = word (pc + mlkem_keccakf1600x4_permute) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [a] s /\
@@ -293,16 +295,16 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL_F1600 =
  (`exists f_events.
        forall e a (S0:1600 word) (S1:1600 word) (S2:1600 word) (S3:1600 word)
               pc stackpointer returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
            aligned 16 stackpointer /\
            nonoverlapping (a,800) (word_sub stackpointer (word 208),208) /\
            ALLPAIRS nonoverlapping
            [a,800; word_sub stackpointer (word 208),208]
-           [word pc,0x6480]
+           [word pc,libmlkem_size]
            ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x33a0) /\
+                    read PC s = word (pc + mlkem_keccakf1600x4_permute) /\
                     read SP s = stackpointer /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [a] s /\
@@ -326,7 +328,7 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL_F1600 =
                          returnaddress /\
                          memaccess_inbounds e2
                          [a,800; word_sub stackpointer (word 208),208;
-                          word (pc + 0x62b0),192]
+                          word (pc + rodata_mlk_KeccakF_RoundConstants),192]
                          [a,800; word_sub stackpointer (word 208),208]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [X18] ,,

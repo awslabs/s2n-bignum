@@ -31,7 +31,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_POLYVEC_ADD_K2_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x46e0,0x4708];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem512_polyvec_add"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -47,17 +48,17 @@ let LOCAL_ADD_TAC =
 let MLKEM_NATIVE_POLYVEC_ADD_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
   = prove
  (`!r b x y pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         PAIRWISE nonoverlapping
           [(r,1024); (b,1024); (word_sub stackpointer (word 32),32)] /\
         ALLPAIRS nonoverlapping
           [(r,1024); (b,1024); (word_sub stackpointer (word 32),32)]
-          [(word pc,0x6480)]
+          [(word pc,libmlkem_size)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x46e0) /\
+                  read PC s = word (pc + mlkem512_polyvec_add) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [r; b] s /\
@@ -133,18 +134,18 @@ let MLKEM_NATIVE_POLYVEC_ADD_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
        forall e r b pc stackpointer returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
            aligned 16 stackpointer /\
            PAIRWISE nonoverlapping
            [r,1024; b,1024; word_sub stackpointer (word 32),32] /\
            ALLPAIRS nonoverlapping
            [r,1024; b,1024; word_sub stackpointer (word 32),32]
-           [word pc,0x6480]
+           [word pc,libmlkem_size]
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x46e0) /\
+                    read PC s = word (pc + mlkem512_polyvec_add) /\
                     read SP s = stackpointer /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [r; b] s /\

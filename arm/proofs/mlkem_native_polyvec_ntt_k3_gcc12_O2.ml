@@ -29,7 +29,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_POLYVEC_NTT_K3_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x5f00,0x5f20];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem768_polyvec_ntt"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -44,16 +45,16 @@ let LOCAL_NTT_TAC =
 
 let MLKEM_NATIVE_POLYVEC_NTT_K3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         nonoverlapping (a,1536) (word_sub stackpointer (word 16),16) /\
         ALLPAIRS nonoverlapping
           [(a,1536); (word_sub stackpointer (word 16),16)]
-          [(word pc,0x6480)]
+          [(word pc,libmlkem_size)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x5f00) /\
+                  read PC s = word (pc + mlkem768_polyvec_ntt) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [a] s /\
@@ -112,7 +113,7 @@ let mlkem_native_polyvec_ntt_k3_signature =
    []);;
 
 let full_spec,public_vars = mk_safety_spec
-    ~readonly_objects:[`word(pc + 0x6380):int64`,`256`]
+    ~readonly_objects:[`word(pc + rodata_mlk_zetas):int64`,`256`]
     ~keep_maychanges:true
     mlkem_native_polyvec_ntt_k3_signature
     MLKEM_NATIVE_POLYVEC_NTT_K3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
@@ -133,17 +134,17 @@ let MLKEM_NATIVE_POLYVEC_NTT_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
        forall e a pc stackpointer returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
            aligned 16 stackpointer /\
            nonoverlapping (a,1536) (word_sub stackpointer (word 16),16) /\
            ALLPAIRS nonoverlapping
            [a,1536; word_sub stackpointer (word 16),16]
-           [word pc,0x6480]
+           [word pc,libmlkem_size]
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x5f00) /\
+                    read PC s = word (pc + mlkem768_polyvec_ntt) /\
                     read SP s = stackpointer /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [a] s /\
@@ -157,7 +158,7 @@ let MLKEM_NATIVE_POLYVEC_NTT_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                          returnaddress /\
                          memaccess_inbounds e2
                          [a,1536; word_sub stackpointer (word 16),16;
-                          word (pc + 0x6380),256]
+                          word (pc + rodata_mlk_zetas),256]
                          [a,1536; word_sub stackpointer (word 16),16]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [X18] ,,

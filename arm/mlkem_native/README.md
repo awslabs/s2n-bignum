@@ -129,6 +129,22 @@ the end of the address space, the relocated instructions in the individual
 transcriptions are the same as those in the image, so the code of each
 function and its data are parts of the image.
 
+The proofs do not contain the addresses in the binary themselves. They
+use the names listed in `../proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml`
+and installed by `common/layout.ml`: the address and size of each function,
+the addresses of the tables and vectors of constants in the read-only data,
+the entries of the PLT and the GOT, the size of the image, and labels inside
+the functions, such as the headers and exits of loops, given as offsets
+from the start of the function. In a HOL term, a name is replaced by its
+value as a numeral when the term is parsed, so that
+`read PC s = word(pc + mlkem768_dec)` is the same term as with the address
+of `mlkem768_dec` written out, and the theorems are unchanged; in OCaml it
+is `layout "mlkem768_dec"`. The header of the layout file explains how the
+labels are named. It is maintained by hand for now, with the values of the
+symbol table, the dynamic relocations and the disassembly of the binary.
+`../proofs/mlkem_native_libmlkem_clang17_O2_layout.ml` is the same for the
+function transcribed from the clang 17 binary.
+
 The proof for each function ends with the versions of its theorems for the
 code in the image, `..._IMAGE_SUBROUTINE_CORRECT` and
 `..._IMAGE_SUBROUTINE_SAFE`. For use in the proofs of callers, the
