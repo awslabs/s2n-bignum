@@ -12,6 +12,7 @@
 (* vector of constants at 0x6210.                                            *)
 (* ========================================================================= *)
 
+needs "arm/proofs/utils/mlkem_native.ml";;
 needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
