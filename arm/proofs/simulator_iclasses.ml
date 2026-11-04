@@ -811,8 +811,9 @@ let check_insns () =
     (*** ld2 / st2 (2 register, no offset) ***)
     "0x0011000x0000001000xxxxxxxxxxxx";
 
-    (*** ld1r (post immediate ofs) ***)
-    "0x001101110111111100xxxxxxxxxxxx";
+    (*** ld1r (no offset, post-immediate and post-register ofs) ***)
+    "0x001101010000001100xxxxxxxxxxxx";
+    "0x001101110xxxxx1100xxxxxxxxxxxx";
 
     (*** ldur / stur, immediate, sizes 128 and 64 (SIMD & FP) ***)
     "001111001x0xxxxxxxxx00xxxxxxxxxx";

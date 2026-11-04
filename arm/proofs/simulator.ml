@@ -768,25 +768,38 @@ let cosimulate_ldstu_simd() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
-(*** This covers LD1R ***)
+(*** This covers LD1R with the addressing modes no-offset, post-immediate
+ *** offset and post-register offset. As in cosimulate_ldst3, the base is
+ *** SP only with the post-immediate offset, and the offset register is
+ *** never the base or the zero register.
+ ***)
 
 let cosimulate_ld1r() =
   let q = Random.int 2
   and size = Random.int 4
   and rn = Random.int 32
-  and rt = Random.int 32 in
+  and rt = Random.int 32
+  and mode = Random.int 3 in
+  let rm =
+    if mode = 0 || (mode = 2 && rn = 31) then 31
+    else if mode = 1 then 0
+    else (rn + 1 + Random.int 30) mod 31 in
   let stackoff =
     if rn = 31 then Random.int 14 * 16
     else Random.int 224 in
-  let stackoff' = (8 lsl size)/8 + stackoff in
+  let postinc = if mode <> 1 && rm = 31 then (8 lsl size)/8 else 0 in
   let code =
     pow2 30 */ num q +/
-    pow2 12 */ num 0b001101110111111100 +/
+    pow2 24 */ num 0b001101 +/
+    pow2 23 */ num (if mode = 1 then 0 else 1) +/
+    pow2 22 */ num 1 +/
+    pow2 16 */ num rm +/
+    pow2 12 */ num 0b1100 +/
     pow2 10 */ num size +/
     pow2 5 */ num rn +/
     num rt in
   if rn = 31 then
-    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff']
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
