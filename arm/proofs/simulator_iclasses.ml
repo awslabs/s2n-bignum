@@ -759,6 +759,12 @@ let check_insns () =
     (*** ld3 / st3, multiple structures, 3 reg, no offset ***)
     "0x0011000x0000000100xxxxxxxxxxxx";
 
+    (*** ld4 / st4, multiple structures, 4 reg, post-imm and register ***)
+    "0x0011001x0xxxxx0000xxxxxxxxxxxx";
+
+    (*** ld4 / st4, multiple structures, 4 reg, no offset ***)
+    "0x0011000x0000000000xxxxxxxxxxxx";
+
     (*** stp ***)
     "x010100010xxxxxxxxxxxxxxxxxxxxxx";
     "x010100110xxxxxxxxxxxxxxxxxxxxxx";
