@@ -10,6 +10,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
+needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml";;
 needs "arm/proofs/utils/mlkem_native.ml";;
 
 (**** print_literal_from_elf
@@ -94,7 +95,7 @@ let REDUCE_ELEMENT = prove
 
 let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_CORRECT = prove
  (`!a x pc.
-        nonoverlapping (word pc,0x4c) (a,512)
+        nonoverlapping (word pc,poly_reduce_size) (a,512)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_poly_reduce_gcc12_O2_mc /\
@@ -103,7 +104,7 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_CORRECT = prove
                   !i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
-             (\s. read PC s = word(pc + 0x48) /\
+             (\s. read PC s = word(pc + poly_reduce_ret) /\
                   !i. i < 256
                       ==> ival(read(memory :> bytes16
                                  (word_add a (word(2 * i)))) s) =
@@ -117,7 +118,8 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_CORRECT = prove
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `256` `pc + 0x10` `pc + 0x40`
+  ENSURES_WHILE_UP_TAC `256` `pc + poly_reduce_loop1`
+   `pc + poly_reduce_loop1_test`
    `\i s. read X0 s = word_add a (word(2 * i)) /\
           read X5 s = word_add a (word 512) /\
           read X7 s = word 20159 /\ read X6 s = word 33554432 /\
@@ -185,7 +187,7 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_CORRECT = prove
 
 let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_CORRECT = prove
  (`!a x pc returnaddress.
-        nonoverlapping (word pc,0x4c) (a,512)
+        nonoverlapping (word pc,poly_reduce_size) (a,512)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_poly_reduce_gcc12_O2_mc /\
@@ -256,7 +258,8 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_SAFE = time prove
               fst MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `256` `pc + 0x10` `pc + 0x48`
+  ENSURES_EVENTS_WHILE_UP2_TAC `256` `pc + poly_reduce_loop1`
+   `pc + poly_reduce_loop1_exit`
     `\i s. read X30 s = returnaddress /\
            read X0 s = word_add a (word(2 * i)) /\
            read X5 s = word_add a (word 512)` THEN
@@ -311,16 +314,16 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IN_IMAGE =
   MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_poly_reduce_gcc12_O2_mc
-    0x4190 [];;
+    (layout "mlkem_poly_reduce") [];;
 
 let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!a x pc returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-        nonoverlapping (word pc,0x6480) (a,512)
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        nonoverlapping (word pc,libmlkem_size) (a,512)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x4190) /\
+                  read PC s = word (pc + mlkem_poly_reduce) /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [a] s /\
                   !i. i < 256
@@ -334,20 +337,20 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(a,512)])`,
   MLKEM_NATIVE_IMAGE_TAC
-   (INST [`pc + 0x4190`,`pc:num`]
+   (INST [`pc + mlkem_poly_reduce`,`pc:num`]
      (SPEC_ALL MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_CORRECT))
    [MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IN_IMAGE]);;
 
 let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
  (`exists f_events.
        forall e a pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-           nonoverlapping (word pc,0x6480) (a,512)
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           nonoverlapping (word pc,libmlkem_size) (a,512)
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x4190) /\
+                    read PC s = word (pc + mlkem_poly_reduce) /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [a] s /\
                     read events s = e)
@@ -360,7 +363,7 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bytes(a,512)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_SAFE
-   [`pc + 0x4190`,`pc:num`]
+   [`pc + mlkem_poly_reduce`,`pc:num`]
    [MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IN_IMAGE]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -374,7 +377,7 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
 let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_FULL = prove
  (`exists f_events.
        forall e a x pc returnaddress.
-           nonoverlapping (word pc,0x4c) (a,512)
+           nonoverlapping (word pc,poly_reduce_size) (a,512)
            ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mlkem_native_poly_reduce_gcc12_O2_mc /\
@@ -411,7 +414,8 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_FULL = prove
               MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               fst MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `256` `pc + 0x10` `pc + 0x48`
+  ENSURES_EVENTS_WHILE_UP2_TAC `256` `pc + poly_reduce_loop1`
+   `pc + poly_reduce_loop1_exit`
    `\i s. read X30 s = returnaddress /\
           read X0 s = word_add a (word(2 * i)) /\
           read X5 s = word_add a (word 512) /\
@@ -485,12 +489,12 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_FULL = prove
 let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
  (`exists f_events.
        forall e a x pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
-           nonoverlapping (word pc,0x6480) (a,512)
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           nonoverlapping (word pc,libmlkem_size) (a,512)
            ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x4190) /\
+                    read PC s = word (pc + mlkem_poly_reduce) /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [a] s /\
                     (!i. i < 256
@@ -509,5 +513,5 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bytes(a,512)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_FULL
-   [`pc + 0x4190`,`pc:num`]
+   [`pc + mlkem_poly_reduce`,`pc:num`]
    [MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IN_IMAGE]);;

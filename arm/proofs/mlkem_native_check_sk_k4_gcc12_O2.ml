@@ -80,7 +80,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_CHECK_SK_K4_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x1150,0x1238];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem1024_check_sk"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The buffer for the hash is aligned to 32 bytes within the stack frame, so *)
@@ -225,8 +226,9 @@ let CHECK_SK_SETUP_TAC =
    `528 <= (if aligned 32 (stackpointer:int64) then 544 else 528) /\
     (if aligned 32 (stackpointer:int64) then 544 else 528) <= 544`
   STRIP_ASSUME_TAC THENL [COND_CASES_TAC THEN ARITH_TAC; ALL_TAC] THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD]) THEN
   GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
@@ -264,20 +266,22 @@ let CHECK_SK_HALVES_TAC a v l h =
 
 let MLKEM_NATIVE_CHECK_SK_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!sk (ek:byte list) h guard pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\ LENGTH ek = 1568 /\
         nonoverlapping (sk,3168) (word_sub stackpointer (word 592),592) /\
         ALLPAIRS nonoverlapping
          [(word_sub stackpointer (word 592),592)]
-         [(word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8)]
+         [(word pc,libmlkem_size); (word(pc + got_stack_chk_guard),8);
+          (guard,8)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x1150) /\
+                  read PC s = word (pc + mlkem1024_check_sk) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [sk] s /\
-                  read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
                   read (memory :> bytes(word_add sk (word 1536),1568)) s =
                   num_of_bytelist ek /\
                   read (memory :> bytes(word_add sk (word 3104),32)) s = h)
@@ -337,20 +341,21 @@ let MLKEM_NATIVE_CHECK_SK_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
      forall e sk guard pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\
        nonoverlapping (sk,3168) (word_sub stackpointer (word 592),592) /\
        ALLPAIRS nonoverlapping
         [word_sub stackpointer (word 592),592]
-        [word pc,0x6480; word(pc + 0x1fff8),8; guard,8]
+        [word pc,libmlkem_size; word(pc + got_stack_chk_guard),8; guard,8]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x1150) /\
+                 read PC s = word (pc + mlkem1024_check_sk) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [sk] s /\
-                 read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                 read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                   guard /\
                  read events s = e)
             (\s. read PC s = returnaddress /\
                  (exists e2.
@@ -361,7 +366,8 @@ let MLKEM_NATIVE_CHECK_SK_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                      [word_add sk (word 1536),1568;
                       word_add sk (word 3104),32;
                       word_sub stackpointer (word 592),592;
-                      word(pc + 0x1fff8),8; guard,8; word(pc + 0x62b0),192]
+                      word(pc + got_stack_chk_guard),8; guard,8;
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [word_sub stackpointer (word 592),592]))
             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
              MAYCHANGE
@@ -411,20 +417,21 @@ let MLKEM_NATIVE_CHECK_SK_K4_GCC12_O2_IMAGE_SUBROUTINE_FULL =
   prove
  (`exists f_events.
      forall e sk (ek:byte list) h guard pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\ LENGTH ek = 1568 /\
        nonoverlapping (sk,3168) (word_sub stackpointer (word 592),592) /\
        ALLPAIRS nonoverlapping
         [word_sub stackpointer (word 592),592]
-        [word pc,0x6480; word(pc + 0x1fff8),8; guard,8]
+        [word pc,libmlkem_size; word(pc + got_stack_chk_guard),8; guard,8]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x1150) /\
+                 read PC s = word (pc + mlkem1024_check_sk) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [sk] s /\
-                 read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                 read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                   guard /\
                  read (memory :> bytes(word_add sk (word 1536),1568)) s =
                  num_of_bytelist ek /\
                  read (memory :> bytes(word_add sk (word 3104),32)) s = h /\
@@ -441,7 +448,8 @@ let MLKEM_NATIVE_CHECK_SK_K4_GCC12_O2_IMAGE_SUBROUTINE_FULL =
                      [word_add sk (word 1536),1568;
                       word_add sk (word 3104),32;
                       word_sub stackpointer (word 592),592;
-                      word(pc + 0x1fff8),8; guard,8; word(pc + 0x62b0),192]
+                      word(pc + got_stack_chk_guard),8; guard,8;
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [word_sub stackpointer (word 592),592]))
             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
              MAYCHANGE

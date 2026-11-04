@@ -36,7 +36,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x1730,0x176c];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem1024_polyvec_decompress_du"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The input and output for the polynomials, as parts of those for the       *)
@@ -82,17 +83,17 @@ let LOCAL_DECOMPRESS_D11_TAC =
 let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   prove
  (`!r a n pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         PAIRWISE nonoverlapping
           [(r,2048); (a,1408); (word_sub stackpointer (word 32),32)] /\
         ALLPAIRS nonoverlapping
           [(r,2048); (a,1408); (word_sub stackpointer (word 32),32)]
-          [(word pc,0x6480)]
+          [(word pc,libmlkem_size)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x1730) /\
+                  read PC s = word (pc + mlkem1024_polyvec_decompress_du) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [r; a] s /\
@@ -182,7 +183,8 @@ let mlkem_native_polyvec_decompress_du_k4_signature =
    []);;
 
 let full_spec,public_vars = mk_safety_spec
-    ~readonly_objects:[`word(pc + 0x6210):int64`,`16`]
+    ~readonly_objects:
+      [`word(pc + mlkem_poly_decompress_d11_consts):int64`,`16`]
     ~keep_maychanges:true
     mlkem_native_polyvec_decompress_du_k4_signature
     MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
@@ -204,18 +206,18 @@ let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
        forall e r a pc stackpointer returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
            aligned 16 stackpointer /\
            PAIRWISE nonoverlapping
            [r,2048; a,1408; word_sub stackpointer (word 32),32] /\
            ALLPAIRS nonoverlapping
            [r,2048; a,1408; word_sub stackpointer (word 32),32]
-           [word pc,0x6480]
+           [word pc,libmlkem_size]
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x1730) /\
+                    read PC s = word (pc + mlkem1024_polyvec_decompress_du) /\
                     read SP s = stackpointer /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\
@@ -229,7 +231,7 @@ let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                          returnaddress /\
                          memaccess_inbounds e2
                          [a,1408; r,2048; word_sub stackpointer (word 32),32;
-                          word (pc + 0x6210),16]
+                          word (pc + mlkem_poly_decompress_d11_consts),16]
                          [r,2048; word_sub stackpointer (word 32),32]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE

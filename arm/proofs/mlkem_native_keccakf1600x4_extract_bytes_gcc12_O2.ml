@@ -53,7 +53,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x2cd0,0x2d50];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem_keccakf1600x4_extract_bytes"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The four states, each a 1600-bit word as for           *)
@@ -76,7 +77,7 @@ let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
   = prove
  (`!a d0 d1 d2 d3 off len (S0:1600 word) (S1:1600 word) (S2:1600 word)
     (S3:1600 word) pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\ off + len <= 200 /\
         PAIRWISE nonoverlapping
          [(d0,len); (d1,len); (d2,len); (d3,len);
@@ -84,11 +85,11 @@ let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
         ALLPAIRS nonoverlapping
          [(d0,len); (d1,len); (d2,len); (d3,len);
           (word_sub stackpointer (word 64),64)]
-         [(word pc,0x6480); (a,800)]
+         [(word pc,libmlkem_size); (a,800)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x2cd0) /\
+                  read PC s = word (pc + mlkem_keccakf1600x4_extract_bytes) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [a; d0; d1; d2; d3; word off; word len] s /\
@@ -172,7 +173,7 @@ let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
      forall e a d0 d1 d2 d3 off len pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\ off + len <= 200 /\
        PAIRWISE nonoverlapping
         [d0,len; d1,len; d2,len; d3,len;
@@ -180,11 +181,11 @@ let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        ALLPAIRS nonoverlapping
         [d0,len; d1,len; d2,len; d3,len;
          word_sub stackpointer (word 64),64]
-        [word pc,0x6480; a,800]
+        [word pc,libmlkem_size; a,800]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x2cd0) /\
+                 read PC s = word (pc + mlkem_keccakf1600x4_extract_bytes) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [a; d0; d1; d2; d3; word off; word len] s /\
@@ -263,7 +264,7 @@ let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL =
  (`exists f_events.
      forall e a d0 d1 d2 d3 off len (S0:1600 word) (S1:1600 word)
             (S2:1600 word) (S3:1600 word) pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\ off + len <= 200 /\
        PAIRWISE nonoverlapping
         [d0,len; d1,len; d2,len; d3,len;
@@ -271,11 +272,11 @@ let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL =
        ALLPAIRS nonoverlapping
         [d0,len; d1,len; d2,len; d3,len;
          word_sub stackpointer (word 64),64]
-        [word pc,0x6480; a,800]
+        [word pc,libmlkem_size; a,800]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x2cd0) /\
+                 read PC s = word (pc + mlkem_keccakf1600x4_extract_bytes) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [a; d0; d1; d2; d3; word off; word len] s /\

@@ -10,6 +10,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
+needs "arm/proofs/mlkem_native_libmlkem_clang17_O2_layout.ml";;
 needs "arm/proofs/utils/mlkem_native.ml";;
 
 (**** print_literal_from_elf
@@ -101,7 +102,7 @@ let REDUCE_ELEMENT = prove
 
 let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_CORRECT = prove
  (`!a x pc.
-        nonoverlapping (word pc,0x50) (a,512)
+        nonoverlapping (word pc,poly_reduce_size) (a,512)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_poly_reduce_clang17_O2_mc /\
@@ -110,7 +111,7 @@ let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_CORRECT = prove
                   !i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
-             (\s. read PC s = word(pc + 0x4c) /\
+             (\s. read PC s = word(pc + poly_reduce_ret) /\
                   !i. i < 256
                       ==> ival(read(memory :> bytes16
                                  (word_add a (word(2 * i)))) s) =
@@ -124,7 +125,8 @@ let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_CORRECT = prove
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `256` `pc + 0x10` `pc + 0x44`
+  ENSURES_WHILE_UP_TAC `256` `pc + poly_reduce_loop1`
+   `pc + poly_reduce_loop1_test`
    `\i s. read X0 s = a /\ read X8 s = word(2 * i) /\
           read X9 s = word 20159 /\ read X10 s = word 33554432 /\
           read X11 s = word 4294963967 /\
@@ -187,7 +189,7 @@ let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_CORRECT = prove
 
 let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_CORRECT = prove
  (`!a x pc returnaddress.
-        nonoverlapping (word pc,0x50) (a,512)
+        nonoverlapping (word pc,poly_reduce_size) (a,512)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_poly_reduce_clang17_O2_mc /\
@@ -256,7 +258,8 @@ let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_SAFE = time prove
               fst MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `256` `pc + 0x10` `pc + 0x4c`
+  ENSURES_EVENTS_WHILE_UP2_TAC `256` `pc + poly_reduce_loop1`
+   `pc + poly_reduce_loop1_exit`
     `\i s. read X30 s = returnaddress /\
            read X0 s = a /\
            read X8 s = word(2 * i)` THEN

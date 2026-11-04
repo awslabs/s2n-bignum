@@ -26,7 +26,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x24d0,0x24e4];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem_shake128_absorb_once"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The result is as for mlk_keccak_absorb_once, with      *)
@@ -37,16 +38,16 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_EXEC =
 let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   prove
  (`!st m mlen M pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         PAIRWISE nonoverlapping
          [(st,200); (m,mlen); (word_sub stackpointer (word 256),256)] /\
-        ALL (nonoverlapping (word pc,0x6480))
+        ALL (nonoverlapping (word pc,libmlkem_size))
          [(st,200); (word_sub stackpointer (word 256),256)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x24d0) /\
+                  read PC s = word (pc + mlkem_shake128_absorb_once) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [st; m; word mlen] s /\
@@ -88,16 +89,16 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
      forall e st m mlen pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\
        PAIRWISE nonoverlapping
         [st,200; m,mlen; word_sub stackpointer (word 256),256] /\
-       ALL (nonoverlapping (word pc,0x6480))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [st,200; word_sub stackpointer (word 256),256]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x24d0) /\
+                 read PC s = word (pc + mlkem_shake128_absorb_once) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [st; m; word mlen] s /\
@@ -109,7 +110,7 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                            (word_sub stackpointer (word 256)) returnaddress /\
                     memaccess_inbounds e2
                      [m,mlen; st,200; word_sub stackpointer (word 256),256;
-                      word(pc + 0x62b0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [st,200; word_sub stackpointer (word 256),256]))
             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
              MAYCHANGE
@@ -147,16 +148,16 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
   prove
  (`exists f_events.
      forall e st m mlen M pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\
        PAIRWISE nonoverlapping
         [st,200; m,mlen; word_sub stackpointer (word 256),256] /\
-       ALL (nonoverlapping (word pc,0x6480))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [st,200; word_sub stackpointer (word 256),256]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x24d0) /\
+                 read PC s = word (pc + mlkem_shake128_absorb_once) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [st; m; word mlen] s /\
@@ -178,7 +179,7 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
                            (word_sub stackpointer (word 256)) returnaddress /\
                     memaccess_inbounds e2
                      [m,mlen; st,200; word_sub stackpointer (word 256),256;
-                      word(pc + 0x62b0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [st,200; word_sub stackpointer (word 256),256]))
             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
              MAYCHANGE
