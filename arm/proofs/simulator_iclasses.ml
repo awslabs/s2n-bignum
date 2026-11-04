@@ -44,6 +44,24 @@ let iclasses =
   "10010001000000001000001100110110"; (* unmatched case... *)
   "1001000100xxxxxxxxxxxx1110100010"; (* another: add x2, x29, #xxx *)
   "xx0100010xxxxxxxxxxxxxx0xxxxxx0x"; (* e.g. add x25, x22, #32 *)
+  (*** ADD, SUB immediate: the remaining pairs of registers, that is,
+   *** every pair of a bit position of Rn and one of Rd that are both
+   *** forced to 0, so that no register is SP. ***)
+  "xx0100010xxxxxxxxxxxxxxxxx0xxx0x";
+  "xx0100010xxxxxxxxxxxxxxxxx0xx0xx";
+  "xx0100010xxxxxxxxxxxxxxxxx0x0xxx";
+  "xx0100010xxxxxxxxxxxxxxxxx00xxxx";
+  "xx0100010xxxxxxxxxxxxxxxx0x0xxxx";
+  "xx0100010xxxxxxxxxxxxxxx0xxxxxx0";
+  "xx0100010xxxxxxxxxxxxxxx0xxxxx0x";
+  "xx0100010xxxxxxxxxxxxxxx0xxx0xxx";
+  "xx0100010xxxxxxxxxxxxxxx0xx0xxxx";
+  "xx0100010xxxxxxxxxxxxxx0xxxxxxx0";
+  "xx0100010xxxxxxxxxxxxxx0xxxxx0xx";
+  "xx0100010xxxxxxxxxxxxxx0xxx0xxxx";
+  "xx0100010xxxxxxxxxxxxx0xxxxxxx0x";
+  "xx0100010xxxxxxxxxxxxx0xxxxxx0xx";
+  "xx0100010xxxxxxxxxxxxx0xxxxx0xxx";
   (*** Rd of ADDS/SUBS cannot be SP *)
   "xx1100010xxxxxxxxxxxxxxxxx0xxxxx";
   "xx1100010xxxxxxxxxxxxxxxx0xxxxxx";
@@ -65,6 +83,48 @@ let iclasses =
   "xxx01011001xxxxxxxx100xx0xxxx0xx"; (* shift 4 *)
   "xxx01011001xxxxxxxx100x0xxxx0xxx"; (* shift 4 *)
   "xxx01011001xxxxxxxx1000xxxx0xxxx"; (* shift 4 *)
+  (*** ADD, SUB, extended registers: the remaining pairs of registers,
+   *** as for the immediate operand above. ***)
+  "xxx01011001xxxxxxxx0xxxxxx0xxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxxx0xx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxxx0x0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxxx00xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0x0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xx0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxx0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx100xxxx0xxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxxx0xx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxxx0x0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxxx00xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xx0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0x0xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxx0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xx0xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxx0xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxx0xxx"; (* shift 4 *)
   (*** CMP, CMN, extended registers: Rd is ZR, Rn is not SP ***)
   "xx101011001xxxxxxxx0xxxxxx011111"; (* shift 0-3 *)
   "xx101011001xxxxxxxx0xxxxx0x11111"; (* shift 0-3 *)
@@ -140,8 +200,9 @@ let iclasses =
   (*** BIC (vector registers) ***)
   "0x001110011xxxxx000111xxxxxxxxxx";
 
-  (*** BIC (vector immediate, 8h) ***)
-  "0x10111100000xxx10x101xxxxxxxxxx"; (* 8h, cmode=10x1 *)
+  (*** BIC (vector immediate, 2s, 4s and 4h, 8h) ***)
+  "0x10111100000xxx0xx101xxxxxxxxxx"; (* 2s, 4s, cmode=0xx1 *)
+  "0x10111100000xxx10x101xxxxxxxxxx"; (* 4h, 8h, cmode=10x1 *)
 
   (*** BIT ***)
   "0x101110101xxxxx000111xxxxxxxxxx";
@@ -272,7 +333,7 @@ let iclasses =
   "1101101011000000000011xxxxxxxxxx";
 
   (*** REV64 ***)
-  "01001110xx100000000010xxxxxxxxxx";
+  "0x001110xx100000000010xxxxxxxxxx";
 
   (*** REV32 ***)
   "01101110xx100000000010xxxxxxxxxx";
@@ -644,8 +705,10 @@ let check_insns () =
     (*** ldr / str, shifted register, size 128 no extensions ***)
     "001111001x1xxxxx011x10xxxxxxxxxx";
 
-    (*** ldr / str, register (LSL, UXTW, SXTW, SXTX), size 64 (SIMD & FP) ***)
+    (*** ldr / str, register (LSL, UXTW, SXTW, SXTX), sizes 64 and 32 ***)
+    (*** (SIMD & FP)                                                   ***)
     "111111000x1xxxxxx1xx10xxxxxxxxxx";
+    "101111000x1xxxxxx1xx10xxxxxxxxxx";
 
     (*** ldrb (immediate ofs) ***)
     "00111000010xxxxxxxxx01xxxxxxxxxx";
@@ -748,8 +811,20 @@ let check_insns () =
     (*** ld2 / st2 (2 register, no offset) ***)
     "0x0011000x0000001000xxxxxxxxxxxx";
 
-    (*** ld1r (post immediate ofs) ***)
-    "0x001101110111111100xxxxxxxxxxxx";
+    (*** ld1 (single structure) of one lane: no offset, post-immediate and ***)
+    (*** post-register ofs, for bytes, halfwords, words and doublewords   ***)
+    "0x00110101000000000xxxxxxxxxxxxx";
+    "0x001101110xxxxx000xxxxxxxxxxxxx";
+    "0x00110101000000010xx0xxxxxxxxxx";
+    "0x001101110xxxxx010xx0xxxxxxxxxx";
+    "0x00110101000000100x00xxxxxxxxxx";
+    "0x001101110xxxxx100x00xxxxxxxxxx";
+    "0x00110101000000100001xxxxxxxxxx";
+    "0x001101110xxxxx100001xxxxxxxxxx";
+
+    (*** ld1r (no offset, post-immediate and post-register ofs) ***)
+    "0x001101010000001100xxxxxxxxxxxx";
+    "0x001101110xxxxx1100xxxxxxxxxxxx";
 
     (*** ldur / stur, immediate, sizes 128 and 64 (SIMD & FP) ***)
     "001111001x0xxxxxxxxx00xxxxxxxxxx";
@@ -805,6 +880,14 @@ let check_insns () =
     "11001011001xxxxxxxxxxx11111xxxxx";
     "10001011001xxxxxxxxxxx11111xxxxx";
 
+    (*** and, orr, eor (immediate) with SP as the destination: the      ***)
+    (*** simulation runs on the stack and cannot change SP, as for the  ***)
+    (*** add and sub with SP above. E.g. and sp, x9, #0xffffffffffffffe0 ***)
+    (*** which aligns the stack down to 32 bytes.                       ***)
+    "x00100100xxxxxxxxxxxxxxxxxx11111";
+    "x01100100xxxxxxxxxxxxxxxxxx11111";
+    "x10100100xxxxxxxxxxxxxxxxxx11111";
+
     (*** ret, br ***)
     "1101011001011111000000xxxxx00000";
     "1101011000011111000000xxxxx00000";
@@ -831,21 +914,13 @@ let check_insns () =
         iclasses
   then failwith "check_insns" else
 
-  (* Object files that are not checked: the transcription of the whole image
-     of mlkem-native's clang 17 -O3 binary (see arm/mlkem_native/README.md)
-     contains instructions that the model does not decode yet, such as LD1
-     of single lanes and LD2/ST2 without an offset. Only some functions in
-     it are verified, and they use instructions that the model covers. *)
-  let unchecked_objs = ["arm/mlkem_native/clang17_O3/libmlkem.o"] in
-
   let rec traverse_objs dirpath (checkfn:string->unit):unit =
     let dirs = Sys.readdir dirpath in
     Array.iter (fun p ->
         let p = (Filename.concat dirpath p) in
         if Sys.is_directory p then
           traverse_objs p checkfn
-        else if Filename.extension p = ".o" && p <> "arm/proofs/simulator.o" &&
-                not (mem p unchecked_objs) then
+        else if Filename.extension p = ".o" && p <> "arm/proofs/simulator.o" then
           checkfn p
         else ()
       ) dirs in

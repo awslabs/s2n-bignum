@@ -13,6 +13,7 @@ let XREG' = new_definition `XREG' (n:5 word) = XREG (val n)`;;
 let WREG' = new_definition `WREG' (n:5 word) = WREG (val n)`;;
 let QREG' = new_definition `QREG' (n:5 word) = QREG (val n)`;;
 let DREG' = new_definition `DREG' (n:5 word) = DREG (val n)`;;
+let SREG' = new_definition `SREG' (n:5 word) = SREG (val n)`;;
 let HREG' = new_definition `HREG' (n:5 word) = HREG (val n)`;;
 
 let QLANE = define
@@ -80,6 +81,8 @@ let arm_ldst_q = new_definition `arm_ldst_q ld Rt =
   (if ld then arm_LDR else arm_STR) (QREG' Rt)`;;
 let arm_ldst_d = new_definition `arm_ldst_d ld Rt =
   (if ld then arm_LDR else arm_STR) (DREG' Rt)`;;
+let arm_ldst_s = new_definition `arm_ldst_s ld Rt =
+  (if ld then arm_LDR else arm_STR) (SREG' Rt)`;;
 let arm_ldst_h = new_definition `arm_ldst_h ld Rt =
   (if ld then arm_LDR else arm_STR) (HREG' Rt)`;;
 let arm_ldstb = new_definition `arm_ldstb ld Rt =
@@ -386,11 +389,13 @@ let decode = new_definition `!w:int32. decode w =
 
   // SIMD ld,st operations
   // LDR/STR (immediate, SIMD&FP), Unsigned offset, no writeback
-  // Currently only supports sizes 128, 64 and 16 (not 32 or 8)
+  // Currently only supports sizes 128, 64, 32 and 16 (not 8)
   | [0b00:2; 0b111101:6; 0b1:1; is_ld; imm12:12; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 16))))
   | [0b11:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
     SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 8))))
+  | [0b10:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
+    SOME (arm_ldst_s is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 4))))
   | [0b01:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
     SOME (arm_ldst_h is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 2))))
   // Post-immediate offset, sizes 128 and 64
@@ -411,6 +416,15 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11:2; 0b1111000:7; is_ld; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_d is_ld Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) 3 else Register_Offset (XREG' Rm)))
+  // Register offset, size 32, with LSL #0 or #2, UXTW, SXTW or SXTX
+  | [0b10:2; 0b1111000:7; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_s is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 2 else Register_Offset (XREG' Rm)))
+  | [0b10:2; 0b1111000:7; is_ld; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_s is_ld Rt (XREG_SP Rn) (arm_extoff sx S 2 Rm))
+  | [0b10:2; 0b1111000:7; is_ld; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_s is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 2 else Register_Offset (XREG' Rm)))
   // LDP/STP (signed offset, SIMD&FP), only sizes 128 and 64
   | [0b10:2; 0b1011010:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)
@@ -619,12 +633,51 @@ let decode = new_definition `!w:int32. decode w =
       let datasize = if q then 128 else 64 in
       SOME (arm_ldst2 is_ld Rt (XREG_SP Rn) No_Offset datasize esize)
 
-  // LD1R, Post-immediate offset, size 64 and 128
-  | [0b0:1; q; 0b001101110111111100:18; size:2; Rn:5; Rt:5] ->
-    let esize = 8 * (2 EXP (val size)) in
-    let datasize = if q then 128 else 64 in
-    let off = word (esize DIV 8) in
-    SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) (Postimmediate_Offset off) esize datasize)
+  // LD1R, no offset, post-immediate offset and post-register offset
+  | [0b0:1; q; 0b001101:6; p; 0b10:2; Rm:5; 0b1100:4; size:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let esize = 8 * (2 EXP (val size)) in
+      let datasize = if q then 128 else 64 in
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word (esize DIV 8))
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) off esize datasize)
+
+  // LD1 (single structure) of one lane, no offset, post-immediate offset
+  // and post-register offset. The lane index is Q:S:size for bytes, Q:S:size<1>
+  // for halfwords (with size<0> = 0), Q:S for words (size = 00) and Q for
+  // doublewords (S = 0, size = 01). The other combinations are unallocated.
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b000:3; S:1; size:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 1)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1 (QREG' Rt) (XREG_SP Rn) off 8
+                    (8 * val Q + 4 * val S + val size))
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b010:3; S:1; h:1; 0:1; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 2)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1 (QREG' Rt) (XREG_SP Rn) off 16
+                    (4 * val Q + 2 * val S + val h))
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b100:3; S:1; 0b00:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 4)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1 (QREG' Rt) (XREG_SP Rn) off 32 (2 * val Q + val S))
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b100:3; 0:1; 0b01:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 8)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1 (QREG' Rt) (XREG_SP Rn) off 64 (val Q))
 
   // LD3/ST3 (multiple structures), 3 registers, Post-immediate and register offset
   | [0:1; q; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0100:4; size:2; Rn:5; Rt:5] ->
@@ -798,8 +851,10 @@ let decode = new_definition `!w:int32. decode w =
         | SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
                       else SOME (arm_MOVI (DREG' Rd) imm)
         | NONE -> NONE
-      // BIC (vector immediate), 16-bit size only
-      else if cmode = word 0b1001 \/ cmode = word 0b1011 then
+      // BIC (vector immediate), 32-bit (0xx1) and 16-bit (10x1) sizes
+      else if cmode = word 0b0001 \/ cmode = word 0b0011 \/
+              cmode = word 0b0101 \/ cmode = word 0b0111 \/
+              cmode = word 0b1001 \/ cmode = word 0b1011 then
         let abcdefgh:(8)word = word_join abc defgh in
         let datasize = if q then 128 else 64 in
         match arm_adv_simd_expand_imm abcdefgh (word 1:(1)word) cmode with
@@ -1037,11 +1092,11 @@ let decode = new_definition `!w:int32. decode w =
 
   | [0:1; q; 0b001110:6; size:2; 0b100000000010:12; Rn:5; Rd:5] ->
     // REV64
-    if ~q then NONE // datasize = 64 is unsupported yet
-    else if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
     else
       let esize:(64)word = word_shl (word 0b1000: (64)word) (val size) in
-      SOME (arm_REV64_VEC (QREG' Rd) (QREG' Rn) (val esize))
+      let datasize = if q then 128 else 64 in
+      SOME (arm_REV64_VEC (QREG' Rd) (QREG' Rn) (val esize) datasize)
 
   | [0:1; q; 0b101110:6; size:2; 0b100000000010:12; Rn:5; Rd:5] ->
     // REV32
@@ -1802,7 +1857,11 @@ let REG_CONV =
       TRANS (CONV_RULE (RAND_CONV (RAND_CONV WORD_RED_CONV))
         (SPEC (mk_comb (`word:num->5 word`, mk_numeral (num i))) th'))) A in
     F XREG' xs, F WREG' ws, F QREG' qs,F DREG' ds in
-  (* There are no named H registers, so HREG' (word n) becomes HREG n *)
+  (* There are no named S or H registers, so SREG' (word n) becomes SREG n
+     and HREG' (word n) becomes HREG n *)
+  let ss' = Array.init 32 (fun i ->
+    CONV_RULE (RAND_CONV (RAND_CONV WORD_RED_CONV))
+      (SPEC (mk_comb (`word:num->5 word`, mk_numeral (num i))) SREG')) in
   let hs' = Array.init 32 (fun i ->
     CONV_RULE (RAND_CONV (RAND_CONV WORD_RED_CONV))
       (SPEC (mk_comb (`word:num->5 word`, mk_numeral (num i))) HREG')) in
@@ -1817,6 +1876,8 @@ let REG_CONV =
     qs'.(Num.int_of_num (dest_numeral n))
   | Comb(Const("DREG'",_),Comb(Const("word",_),n)) ->
     ds'.(Num.int_of_num (dest_numeral n))
+  | Comb(Const("SREG'",_),Comb(Const("word",_),n)) ->
+    ss'.(Num.int_of_num (dest_numeral n))
   | Comb(Const("HREG'",_),Comb(Const("word",_),n)) ->
     hs'.(Num.int_of_num (dest_numeral n))
   | Comb(Const("XREG_SP",_),Comb(Const("word",_),n)) ->
@@ -2007,10 +2068,10 @@ let PURE_DECODE_CONV =
     add_conv (`_MATCH:A->(A->B->bool)->B`, 2, MATCH_CONV) rw;
 
     (* components and instructions *)
-    List.iter (fun tm -> add_conv (tm, 1, REG_CONV) rw) [`XREG'`; `WREG'`; `QREG'`; `DREG'`; `HREG'`; `XREG_SP`; `WREG_SP`];
+    List.iter (fun tm -> add_conv (tm, 1, REG_CONV) rw) [`XREG'`; `WREG'`; `QREG'`; `DREG'`; `SREG'`; `HREG'`; `XREG_SP`; `WREG_SP`];
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop;
-              arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldst_h; arm_ldstb; arm_ldsth;
+              arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldst_s; arm_ldst_h; arm_ldstb; arm_ldsth;
               arm_ldrsb; arm_ldrsh; arm_extoff; arm_ldstp; arm_ldstp_q;
               arm_ldstp_d;
               arm_ldst2; arm_ldstp_2q; arm_ldstp_4q; arm_ldstp_4d; arm_ldst3;

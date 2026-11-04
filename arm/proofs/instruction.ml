@@ -1414,20 +1414,23 @@ let arm_REV = define
         (Rd := d) s`;;
 
 let arm_REV64_VEC = define
- `arm_REV64_VEC Rd Rn esize =
+ `arm_REV64_VEC Rd Rn esize datasize =
     \s. let n:(128)word = read Rn (s:armstate) in
         let n_reversed32 = usimd2 (\x. word_join
           (word_subword x (0,32):(32)word) (word_subword x (32,32):(32)word)
           : (64)word) n in
-        if esize = 32 then (Rd := n_reversed32) s else
         let n_reversed16 = usimd4 (\x. word_join
           (word_subword x (0,16):(16)word) (word_subword x (16,16):(16)word)
           : (32)word) n_reversed32 in
-        if esize = 16 then (Rd := n_reversed16) s else
         let n_reversed8 = usimd8 (\x. word_join
           (word_subword x (0,8):(8)word) (word_subword x (8,8):(8)word)
           : (16)word) n_reversed16 in
-        (Rd := n_reversed8) s`;;
+        let d:(128)word =
+          if esize = 32 then n_reversed32
+          else if esize = 16 then n_reversed16
+          else n_reversed8 in
+        if datasize = 128 then (Rd := d) s
+        else (Rd := word_zx (word_subword d (0,64):(64)word):(128)word) s`;;
 
 let arm_REV32_VEC = define
  `arm_REV32_VEC Rd Rn esize =
@@ -3446,6 +3449,37 @@ let arm_LD1R = define
              else (=))
          else ASSIGNS entirety) s`;;
 
+(*** LD1 (single structure) loads one element of esize bits into lane
+ *** `lane` of Rt and leaves the other lanes unchanged. ***)
+
+let arm_LD1 = define
+  `arm_LD1 (Rt:(armstate,(128)word)component) Rn off esize lane =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           (let d:(128)word = read Rt s in
+            let (inserted:128 word) =
+              (if esize = 64 then
+                word_insert d (64 * lane,64)
+                  ((read (memory :> wbytes addr) s):(64)word)
+              else if esize = 32 then
+                word_insert d (32 * lane,32)
+                  ((read (memory :> wbytes addr) s):(32)word)
+              else if esize = 16 then
+                word_insert d (16 * lane,16)
+                  ((read (memory :> wbytes addr) s):(16)word)
+              else
+                word_insert d (8 * lane,8)
+                  ((read (memory :> wbytes addr) s):(8)word)) in
+            (Rt := inserted)) ,,
+            events := CONS (EventLoad (addr,esize DIV 8)) (read events s) ,,
+            (if offset_writesback off
+             then Rn := word_add base (offset_writeback off s)
+             else (=))
+         else ASSIGNS entirety) s`;;
+
 let arm_LD3 = define
  `arm_LD3 [Rt1;Rt2;Rt3] Rn off datasize esize =
     \s:armstate.
@@ -4489,5 +4523,5 @@ let ARM_LOAD_STORE_CLAUSES =
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDRH; arm_STRH;
        arm_LDRSB; arm_LDRSH; arm_LDRSW; arm_LDP; arm_STP;
        arm_LDP4; arm_STP4;
-       arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT;
+       arm_LD2_ALT; arm_ST2_ALT; arm_LD1; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT;
        arm_LD4_ALT; arm_ST4_ALT];;
