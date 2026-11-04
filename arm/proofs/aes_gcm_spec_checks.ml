@@ -15,5 +15,12 @@ needs "arm/proofs/base.ml";;
 
 needs "common/gf128_irreducible.ml";;
 
+(* Known-answer tests of FIPS 197 AES and of NIST SP 800-38D GCM.            *)
+
+needs "common/fips197_kats.ml";;
+needs "common/gcm_kats.ml";;
+
 List.iter (fun th -> Printf.printf "%s\n" (string_of_thm th))
-  [RING_IRREDUCIBLE_GHASH_POLYNOMIAL; RING_IRREDUCIBLE_POLYVAL_POLYNOMIAL];;
+  [RING_IRREDUCIBLE_GHASH_POLYNOMIAL; RING_IRREDUCIBLE_POLYVAL_POLYNOMIAL;
+   GCM_AE_TC1; GCM_AE_TC2; GCM_AE_TC3; GCM_AE_TC13; GCM_AE_TC14; GCM_AE_TC15;
+   GCM_AD_TC3; GCM_AD_TC3_BAD_TAG];;

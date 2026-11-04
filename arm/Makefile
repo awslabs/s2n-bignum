@@ -558,8 +558,14 @@ tutorial/safety.native: tutorial/safety.ml proofs/bignum_mux_4.ml \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
 # The AES-GCM proofs share the specification and lemmas in
-# arm/proofs/utils/aes_gcm_{spec,common}.ml.
-AES_GCM_PROOF_UTILS = proofs/utils/aes_gcm_spec.ml proofs/utils/aes_gcm_common.ml
+# arm/proofs/utils/aes_gcm_{spec,common}.ml, which load the GHASH, POLYVAL,
+# AES and GCM theories in common/.
+AES_GCM_SPEC = ../common/aes.ml ../common/fips197.ml ../common/gcm.ml \
+               ../common/ghash.ml ../common/ghash_nist_defs.ml \
+               ../common/ghash_nist_bridge.ml ../common/karatsuba_pmul.ml \
+               ../common/polyval.ml ../common/polyval_ghash.ml
+AES_GCM_PROOF_UTILS = proofs/utils/aes_gcm_spec.ml proofs/utils/aes_gcm_common.ml \
+                      proofs/consttime.ml ../common/consttime.ml $(AES_GCM_SPEC)
 aes_gcm/aes128_gcm_dec.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes128_gcm_dec_alt.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes128_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
@@ -572,7 +578,9 @@ aes_gcm/aes256_gcm_enc_alt.native: $(AES_GCM_PROOF_UTILS)
 # Checks of the AES-GCM specification files under common/ that no proof
 # depends on, run once here rather than at every load by the AES-GCM proofs.
 SPEC_CHECK_PROOFS = proofs/aes_gcm_spec_checks.ml
-proofs/aes_gcm_spec_checks.native: proofs/aes_gcm_spec_checks.ml $(BASE_ML) ; \
+proofs/aes_gcm_spec_checks.native: proofs/aes_gcm_spec_checks.ml $(BASE_ML) \
+                                   $(AES_GCM_SPEC) ../common/gf128_irreducible.ml \
+                                   ../common/fips197_kats.ml ../common/gcm_kats.ml ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
