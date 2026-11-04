@@ -5,15 +5,23 @@ MLKEM_NATIVE_OBJ += \
   mlkem_native/clang17_O3/libmlkem.o
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
+  mlkem_native/clang17_O3/poly_add \
   mlkem_native/clang17_O3/poly_frommsg \
-  mlkem_native/clang17_O3/poly_reduce
+  mlkem_native/clang17_O3/poly_reduce \
+  mlkem_native/clang17_O3/poly_sub
 
 mlkem_native/clang17_O3/libmlkem.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml
+mlkem_native/clang17_O3/poly_add.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_frommsg.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_reduce.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/poly_sub.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/clang17_O3/libmlkem.native
