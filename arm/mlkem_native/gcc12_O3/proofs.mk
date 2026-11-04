@@ -10,6 +10,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/poly_add \
   mlkem_native/gcc12_O3/poly_compress_d10 \
   mlkem_native/gcc12_O3/poly_compress_d5 \
+  mlkem_native/gcc12_O3/poly_frommsg \
   mlkem_native/gcc12_O3/poly_reduce \
   mlkem_native/gcc12_O3/poly_sub \
   mlkem_native/gcc12_O3/poly_tomont \
@@ -44,6 +45,9 @@ mlkem_native/gcc12_O3/poly_compress_d10.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_compress_d5.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/poly_frommsg.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_reduce.native: \
