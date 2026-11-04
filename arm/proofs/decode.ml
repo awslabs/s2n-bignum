@@ -619,12 +619,16 @@ let decode = new_definition `!w:int32. decode w =
       let datasize = if q then 128 else 64 in
       SOME (arm_ldst2 is_ld Rt (XREG_SP Rn) No_Offset datasize esize)
 
-  // LD1R, Post-immediate offset, size 64 and 128
-  | [0b0:1; q; 0b001101110111111100:18; size:2; Rn:5; Rt:5] ->
-    let esize = 8 * (2 EXP (val size)) in
-    let datasize = if q then 128 else 64 in
-    let off = word (esize DIV 8) in
-    SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) (Postimmediate_Offset off) esize datasize)
+  // LD1R, no offset, post-immediate offset and post-register offset
+  | [0b0:1; q; 0b001101:6; p; 0b10:2; Rm:5; 0b1100:4; size:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let esize = 8 * (2 EXP (val size)) in
+      let datasize = if q then 128 else 64 in
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word (esize DIV 8))
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) off esize datasize)
 
   // LD3/ST3 (multiple structures), 3 registers, Post-immediate and register offset
   | [0:1; q; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0100:4; size:2; Rn:5; Rt:5] ->
