@@ -45,7 +45,7 @@ let cipher_block = new_definition
     word_xor (aes_ctr_block enc c nonce rk i) (inblock i)`;;
 
 (* The output and input blocks in NIST byte order, as hashed by GHASH: the   *)
-(* encryption kernels hash their output and the decryption kernels their    *)
+(* encryption kernels hash their output and the decryption kernels their     *)
 (* input, i.e. both hash the ciphertext.                                     *)
 
 let nist_cipher_block = new_definition
@@ -60,10 +60,10 @@ let nist_input_block = new_definition
 (* The GHASH key table, restricted to the entries the 4-way kernels read.    *)
 (* The 4-way unrolled loop uses H^1..H^4 and their Karatsuba middle terms,   *)
 (* i.e. the first 6 entries (offsets 0..80) of the table gcm_init_v8         *)
-(* produces.  Each middle-term entry holds the lower power's term in its low *)
-(* 64-bit lane, the opposite order from htable_mem in common/polyval_ghash.  *)
-(* The single-block tail loop only uses H^1 and H^2, but the precondition is *)
-(* shared, so all four powers are asserted.                                  *)
+(* produces.  Each middle-term entry holds the lower power's Karatsuba term  *)
+(* in its low 64-bit lane.  The single-block tail loop multiplies only by    *)
+(* H^1 and its middle term, but one precondition covers every input length,  *)
+(* so all six entries are asserted.                                          *)
 (* ------------------------------------------------------------------------- *)
 
 let htable_mem_4 = new_definition
@@ -107,10 +107,10 @@ let htable_mem_8 = new_definition
     byteswap128(h_power h 7)`;;
 
 (* ------------------------------------------------------------------------- *)
-(* The number of blocks a whole-blocks kernel processes for the C argument   *)
-(* len_bits.  The 8-way unrolled kernels take whole blocks only: for any     *)
-(* len_bits that is not a multiple of 128 they process nothing and return    *)
-(* 0, and a zero len_bits is zero blocks either way.                         *)
+(* The number of blocks a whole-blocks kernel processes for a bit length     *)
+(* bit_len (the C argument len_bits).  The 8-way unrolled kernels take whole *)
+(* blocks only: for any bit_len that is not a multiple of 128 they process   *)
+(* nothing and return 0, and a zero bit_len is zero blocks either way.       *)
 (* ------------------------------------------------------------------------- *)
 
 let gcm_wb_blocks = new_definition

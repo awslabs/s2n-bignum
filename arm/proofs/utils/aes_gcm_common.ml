@@ -4,9 +4,15 @@
  *)
 
 (* ========================================================================= *)
-(* Shared lemmas and tactics for the four software-pipelined AES-GCM kernel  *)
-(* proofs (aes128_gcm_enc/dec, aes256_gcm_enc/dec).  The specification       *)
-(* vocabulary they are stated in is in aes_gcm_spec.ml.                      *)
+(* Shared lemmas and tactics for the AES-GCM kernel proofs.  All eight       *)
+(* proofs load this file.  The proofs of the 4-way software-pipelined        *)
+(* kernels (aes128_gcm_enc/dec, aes256_gcm_enc/dec) use most of it,          *)
+(* including the scalar-counter lemmas, the pipelined stepper, the leg       *)
+(* composition helpers and the safety closers.  The proofs of the 8-way      *)
+(* _alt kernels use the AES and GHASH lemmas and the htable_mem_8,           *)
+(* whole-blocks count and IVAL_WORD_SMALL sections, which serve only them.   *)
+(* The specification vocabulary all of them are stated in is in              *)
+(* aes_gcm_spec.ml.                                                          *)
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
@@ -62,10 +68,12 @@ let JOIN_XOR_LANES = prove
    = word_xor a b`,
   CONV_TAC BITBLAST_RULE);;
 
-(* Recombining the two 64-bit lanes of a 128-bit word.  The AES-128 encrypt *)
-(* kernel carries block 4i+1 XOR the last round key across the back edge in *)
-(* the scalar lanes X23 (high) / X28 (low), staged by stp x28,x23,[sp,#176]  *)
-(* and reloaded into Q13; this folds the reload back to the full block.      *)
+(* Recombining the two 64-bit lanes of a 128-bit word.  The encrypt kernels  *)
+(* carry one input block XOR the last round key across the loop back edge    *)
+(* in two scalar registers (block 4i+1 in X23 (high) and X28 (low) for       *)
+(* AES-128, block 4i+3 in X26 and X24 for AES-256), store them to a stack    *)
+(* slot with stp and reload the slot into a vector register (Q13, Q4); this  *)
+(* folds the reload back to the full block.                                  *)
 let JOIN_SUBWORD_RECOMBINE = prove
  (`word_join (word_subword (x:int128) (64,64):int64) (word_subword x (0,64):int64) : int128 = x`,
   CONV_TAC BITBLAST_RULE);;
@@ -380,8 +388,8 @@ let aes7c = define_aes_partial "aes7c" 7;;
 let aes11c = define_aes_partial "aes11c" 11;;
 let aes14p = define_aes_prefinal "aes14p" 14;;
 
-(* completion: aes14p ^ rk14 = the full 14-round AES-256 keystream
-   (byte-reversed). *)
+(* aes14p XOR the last round key is the whole AES-256 keystream block, in
+   lane order. *)
 let AES14P_COMPLETE = prove
  (`[EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk; EL 7 rk;
     EL 8 rk; EL 9 rk; EL 10 rk; EL 11 rk; EL 12 rk; EL 13 rk; EL 14 rk]:(int128)list = rk
@@ -400,8 +408,8 @@ let AES14P_VIA_AES6C = AES_PREFINAL_VIA_PARTIAL aes14p 14 aes6c 6;;
 let AES14P_VIA_AES7C = AES_PREFINAL_VIA_PARTIAL aes14p 14 aes7c 7;;
 let AES14P_VIA_AES11C = AES_PREFINAL_VIA_PARTIAL aes14p 14 aes11c 11;;
 
-(* keystream^input fold: word_xor(aes14p c)(word_xor inb rk14) =
-   word_xor(rev8(cipher(ctr c)))(inb). *)
+(* The keystream fold: aes14p XOR (input block XOR the last round key) is
+   the lane-order AES-256 cipher of the counter block XOR the input block. *)
 let KEYSTREAM_FOLD256 = prove
  (`[EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk; EL 7 rk;
     EL 8 rk; EL 9 rk; EL 10 rk; EL 11 rk; EL 12 rk; EL 13 rk; EL 14 rk]:(int128)list = rk
@@ -410,14 +418,14 @@ let KEYSTREAM_FOLD256 = prove
   DISCH_THEN(fun th -> MP_TAC(MATCH_MP AES14P_COMPLETE th)) THEN
   DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN CONV_TAC WORD_BITWISE_RULE);;
 
-(* rk-list hyp (15-elt for 256). *)
+(* The AES-256 round-key list hypothesis [EL 0 rk; ...; EL 14 rk] = rk. *)
 let rk15 = `[EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk; EL 7 rk;
              EL 8 rk; EL 9 rk; EL 10 rk; EL 11 rk; EL 12 rk; EL 13 rk; EL 14 rk]:(int128)list = rk`;;
 
 (* KEY15_SPLIT: turn the compound wordlist_from_memory(key_p,15) precondition
-   into 15 atomic per-slot reads so ARM_ADD_RETURN_STACK_TAC's interior
-   big-step can propagate them through the prologue (a single list-equation is
-   left orphaned). *)
+   into 15 atomic per-slot reads, so that the interior big step of
+   ARM_ADD_RETURN_STACK_TAC can carry them through the prologue, which it
+   does not do for the single list equation. *)
 let KEY15_SPLIT = prove
  (`(wordlist_from_memory (key_p:int64,15) (s:armstate) =
     MAP (word_reversefields 8) (rk:int128 list)) <=>
@@ -502,7 +510,7 @@ let CT_TO_NCB = prove
 (* The counter block in scalar registers.  After "ldp x11,x12,[x4]" the two  *)
 (* 64-bit halves of the lane-order IV are in X11 (low) and X12 (high), and   *)
 (* the running counter, byte-reversed out of the top word of X12, is in X13. *)
-(* The loops rebuild the lane-order counter block as                         *)
+(* The loops rebuild the lane-order counter block from these, e.g.           *)
 (*   w14 = rev(w13);  x14 = orr x12 (w14 lsl 32);  Q0 = word_join x14 x11.   *)
 (* These lemmas connect that reconstruction back to ctr_block.               *)
 (* ------------------------------------------------------------------------- *)
@@ -515,7 +523,7 @@ let SCALAR_IV_SPLIT = prove
 (* Setup-block obligations for the scalar counter registers, phrased         *)
 (* directly from the IV-halves join relation so that all widths stay         *)
 (* concrete (avoids the type-variable ambiguity that arises if ivhi is       *)
-(* substituted before BITBLAST_RULE).                                           *)
+(* substituted before BITBLAST_RULE).                                        *)
 
 let X11_SETUP = prove
  (`word_join (ivhi:int64) (ivlo:int64):int128 =
@@ -557,9 +565,9 @@ let ZX_COUNTER_INC = prove
    word_add (word_zx x:int32) (word 1)`,
   CONV_TAC BITBLAST_RULE);;
 
-(* The kernels assemble the counter block on the stack:                     *)
-(*   stp x11,x14,[sp,#OFF];  ldr q0,[sp,#OFF]                                *)
-(* The load reads back the two stored halves as word_join x14 x11, which     *)
+(* The counter blocks are assembled on the stack, for example as             *)
+(*   stp x11,xN,[sp,#OFF];  ldr qM,[sp,#OFF]                                 *)
+(* The load reads back the two stored halves as word_join xN x11, which      *)
 (* reconstructs the lane-order counter block.                                *)
 
 let CTR_BLOCK_BUILD_INSERT = prove
@@ -573,11 +581,11 @@ let CTR_BLOCK_BUILD_INSERT = prove
    = word_reversefields 8 (ctr_block nonce cval)`,
   REWRITE_TAC[ctr_block] THEN CONV_TAC BITBLAST_RULE);;
 
-(* Each block's counter word is "add w14,w13,#N" from a fixed base w13, then *)
+(* Each block's counter word is "add wK,w13,#N" from the base w13, then      *)
 (* byte-reversed; the W-register up/down-conversions leave a word_zx nest    *)
-(* around either the bare base (word (4*i+2), four zx layers) or the offset  *)
-(* form word_add (word_zx (word_zx (word (4*i+2)))) (word N).  These two     *)
-(* rules (int32) collapse both to word n / word_add (word n) (word m).       *)
+(* around either the bare base (word n, four zx layers) or the offset form   *)
+(* word_add (word_zx (word_zx (word n))) (word m).  These two rules (int32)  *)
+(* collapse both to word n and word_add (word n) (word m).                   *)
 let CTR_ZX_NORM = prove
  (`(word_zx (word_zx (word_zx (word_zx (word n:int32):int64):int32):int64):int32 = word n) /\
    (!m. word_zx (word_zx (word_add (word_zx (word_zx (word n:int32):int64):int32)
@@ -588,8 +596,8 @@ let CTR_ZX_NORM = prove
 let ZXNEST4 = prove
  (`word_zx (word_zx (word_zx (word_zx (x:int32):int64):int32):int64):int32 = x`, CONV_TAC BITBLAST_RULE);;
 
-(* Given the initial IV halves, the block built in the loop for any counter *)
-(* value cval is the lane-order counter block for cval.                     *)
+(* Given the initial IV halves, the block built in the loop for any counter  *)
+(* value cval is the lane-order counter block for cval.                      *)
 
 let CTR_BLOCK_BUILD_V = prove
  (`word_join (ivhi:int64) (ivlo:int64):int128 =
@@ -603,8 +611,9 @@ let CTR_BLOCK_BUILD_V = prove
   REWRITE_TAC[ctr_block] THEN DISCH_THEN(CONJUNCTS_THEN SUBST1_TAC) THEN
   CONV_TAC BITBLAST_RULE);;
 
-(* mk_cbv cval : the CTR_BLOCK_BUILD_V instance folding the reassembled
-   reversed-lane counter (built from the ctr-2 lanes + word cval) to
+(* mk_cbv cval: the CTR_BLOCK_BUILD_V instance that folds the reassembled
+   lane-order counter block (built from the lanes of the initial counter
+   block ctr_block nonce c and word cval) to
    word_reversefields 8 (ctr_block nonce cval). *)
 let mk_cbv cval =
   let inst = INST [`word_subword (word_reversefields 8 (ctr_block nonce c):int128) (64,64):int64`,`ivhi:int64`;
@@ -612,11 +621,11 @@ let mk_cbv cval =
                    cval,`cval:num`] CTR_BLOCK_BUILD_V in
   MP inst (prove(lhand(concl inst), REWRITE_TAC[ctr_block] THEN CONV_TAC BITBLAST_RULE));;
 
-(* The simulator does not merge two 64-bit stores into a 128-bit load, so   *)
-(* after "stp x11,x14,[sp,#OFF]" the following "ldr q0,[sp,#OFF]" would     *)
-(* leave Q0 symbolic.  This tactic, spliced in after the stp step and        *)
-(* before the ldr step for state s<N>, derives the merged 128-bit read       *)
-(* read (bytes128 (sp+OFF)) s<N> = word_join x14 x11 from the two bytes64    *)
+(* The simulator does not merge two 64-bit stores into a 128-bit load, so    *)
+(* after "stp xA,xB,[sp,#OFF]" a following "ldr qM,[sp,#OFF]" would leave    *)
+(* QM symbolic.  This tactic, spliced in after the stp step and before the   *)
+(* ldr step for state s<N>, derives the merged 128-bit read                  *)
+(* read (bytes128 (sp+OFF)) s<N> = word_join xB xA from the two bytes64      *)
 (* store facts, so that the simulator can resolve the load.                  *)
 let MERGE_CTR128_TAC off sname =
   MP_TAC(ISPECL [`memory`;
@@ -685,8 +694,8 @@ let POLYVAL_REDUCE_G2 = prove
     `word_xor (word_xor w1 p1) ks = word_xor (word_xor ks p1) w1`]) THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN BITBLAST_TAC);;
 
-(* Variants of the Karatsuba lemmas of common/karatsuba_pmul.ml that fit *)
-(* the code's operand orders.                                           *)
+(* Variants of the Karatsuba lemmas of common/karatsuba_pmul.ml that fit     *)
+(* the code's operand orders.                                                *)
 
 let PMUL_KARATSUBA_JOIN = prove
  (`!(a:int128) (b:int128).
@@ -757,12 +766,12 @@ let KARATSUBA_JOIN_XOR4 = prove
                         (word_xor (karatsuba_join p1' p2' p3') (karatsuba_join p1 p2 p3)))`,
   REPEAT GEN_TAC THEN REWRITE_TAC[karatsuba_join] THEN BITBLAST_TAC);;
 
-(* Abstract every FULLY-APPLIED (2-arg) word_pmul subterm as a fresh
-   int128/int256 var, so a subsequent BITBLAST proves only the surrounding
-   word_join/word_subword/word_xor SHUFFLE (fast, tiny BDD) instead of
-   modelling the 64x64 carryless-multiply circuit (30GB blowup).  CRITICAL:
-   match only 2-arg pmuls -- the bare `word_pmul` const and partial
-   applications must NOT be abstracted (that only renames the head). *)
+(* Abbreviate every fully applied (two-argument) word_pmul subterm by a
+   fresh int128/int256 variable, so that a following BITBLAST proves only
+   the surrounding word_join/word_subword/word_xor shuffle instead of
+   modelling the 64x64 carry-less multiplier.  Only two-argument
+   applications are abstracted: abbreviating the bare word_pmul constant or
+   a partial application would only rename the head. *)
 let ABBREV_PMULS : tactic =
   fun (asl,w) ->
     let is_full_pmul t = match strip_comb t with Const("word_pmul",_),[_;_] -> true | _ -> false in
@@ -770,9 +779,10 @@ let ABBREV_PMULS : tactic =
     let mk i t = ABBREV_TAC (mk_eq(mk_var(Printf.sprintf "pm_%d" i, type_of t), t)) in
     (EVERY (List.mapi mk pmuls)) (asl,w);;
 
-(* Karatsuba-mid folding lemmas: canonicalize BOTH word_xor orders of a
-   subword-half pair to karatsuba_mid, so the machine's alternating-order mid
-   sub-pmuls and KARATSUBA_JOIN_ALT's mid coincide as atoms. *)
+(* Karatsuba middle-term folding: rewrite both word_xor orders of the two
+   64-bit halves of a word to karatsuba_mid, so that the middle products the
+   code computes (in either operand order) and the middle term of
+   PMUL_KARATSUBA_JOIN_ALT become the same atom. *)
 let CMID_HILO = prove
  (`!a:int128. word_xor (word_subword a (64,64)) (word_subword a (0,64)):int64 = karatsuba_mid a`,
   REWRITE_TAC[karatsuba_mid] THEN CONV_TAC WORD_BITWISE_RULE);;
@@ -780,6 +790,11 @@ let CMID_HILO = prove
 let CMID_LOHI = prove
  (`!a:int128. word_xor (word_subword a (0,64)) (word_subword a (64,64)):int64 = karatsuba_mid a`,
   REWRITE_TAC[karatsuba_mid] THEN CONV_TAC WORD_BITWISE_RULE);;
+
+(* The decrypt kernels hash their input blocks, and their GHASH operands are *)
+(* the loaded blocks after rev64, which the stepper expands into joins of    *)
+(* single bytes.  INBLOCK_REASSEMBLE folds each 64-bit lane of such a join   *)
+(* back to a lane of the byte-reversed block, i.e. of nist_input_block.      *)
 
 let INBLOCK_REASSEMBLE = prove
  (`(word_join
@@ -799,6 +814,12 @@ let INBLOCK_REASSEMBLE = prove
       (word_join (word_subword x (48,8):byte) (word_subword x (56,8):byte):int16):int32):int64
     = word_subword (word_reversefields 8 x) (64,64))`,
   CONV_TAC BITBLAST_RULE);;
+
+(* The decrypt-specific normalization of the GHASH terms: fold the byte      *)
+(* joins with INBLOCK_REASSEMBLE, name the blocks by nist_input_block, and   *)
+(* push word_subword through word_xor and byteswap128, which gives the       *)
+(* operand form that the reduction lemmas shared with the encrypt proofs     *)
+(* expect.                                                                   *)
 
 let DEC_GHASH_NORM_TAC : tactic =
   REWRITE_TAC[INBLOCK_REASSEMBLE] THEN
@@ -955,29 +976,29 @@ let IVAL_WORD_SMALL = prove
 (* Stepping the software-pipelined loop bodies.                              *)
 (* ------------------------------------------------------------------------- *)
 
-(* Split a 128-bit input-block read into two 64-bit halves whose addresses  *)
-(* are folded back to the canonical in_p + word(off) form.  The kernels     *)
-(* load input blocks as scalars ("ldp x22,x23,[x0,#K]"), reading the halves *)
-(* at x0+K and x0+K+8; READ_MEMORY_SPLIT_CONV gives the high half at        *)
-(* (in_p + word off) + word 8, which the simulator would not match against  *)
-(* x0+K+8, so NORMALIZE_RELATIVE_ADDRESS_CONV reassociates and GSYM         *)
-(* ADD_ASSOC + NUM_ADD_CONV fold the numeric offset.                        *)
+(* Split a 128-bit input-block read into two 64-bit halves whose addresses   *)
+(* are folded back to the canonical in_p + word(off) form.  The encrypt      *)
+(* kernels load input blocks as scalar pairs ("ldp xA,xB,[x0,#K]"), reading  *)
+(* the halves at x0+K and x0+K+8; READ_MEMORY_SPLIT_CONV gives the high half *)
+(* at (in_p + word off) + word 8, which the simulator would not match        *)
+(* against x0+K+8, so NORMALIZE_RELATIVE_ADDRESS_CONV reassociates and GSYM  *)
+(* ADD_ASSOC + NUM_ADD_CONV fold the numeric offset.                         *)
 let SPLIT_INPUT_CONV =
   READ_MEMORY_SPLIT_CONV 1 THENC
   ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV THENC
   ONCE_DEPTH_CONV(REWR_CONV(GSYM ADD_ASSOC)) THENC
   ONCE_DEPTH_CONV NUM_ADD_CONV;;
 
-(* Tail-loop variant.  The tail block is loaded by the post-indexed        *)
-(* "ldp x22,x23,[x0],#16", so x23 is read from in_p + word((64*loop_count  *)
-(* + 16*i) + 8), where the "+ 8" cannot be folded into the symbolic block  *)
-(* offset; plain splitting and normalization gives exactly that form.      *)
+(* Tail-loop variant.  The tail block is loaded by a post-indexed            *)
+(* "ldp xA,xB,[x0],#16", so xB is read from in_p + word((64*loop_count       *)
+(* + 16*i) + 8), where the "+ 8" cannot be folded into the symbolic block    *)
+(* offset; plain splitting and normalization gives exactly that form.        *)
 let SPLIT_INPUT_TAIL_CONV =
   READ_MEMORY_SPLIT_CONV 1 THENC
   ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV;;
 
-(* The final round key is XORed into the input block in scalar registers,  *)
-(* giving word_xor (word_join <in_hi ^ rk_hi> <in_lo ^ rk_lo>) <rounds>;     *)
+(* The final round key is XORed into the input block in scalar registers,    *)
+(* giving word_xor (word_join <in_hi XOR rk_hi> <in_lo XOR rk_lo>) <rounds>; *)
 (* this rewrites it to the word_xor <rounds> (word_xor rk inblock) shape the *)
 (* XOR_AES*_CIPHER_RECONSTRUCT lemmas consume.  The output copy and the      *)
 (* GHASH copy have the outer operands in opposite orders, so both are given. *)
@@ -1000,13 +1021,14 @@ let SCALAR_RK_RECONSTRUCT = prove
     = word_xor nineround (word_xor (word_reversefields 8 rk10) inb))`,
   CONJ_TAC THEN CONV_TAC BITBLAST_RULE);;
 
-(* Surgical address-fold: inside `word_add in_p (word (...))` ONLY, fold a
-   nested num offset (64*i+c)+d -> 64*i+(c+d) (GSYM ADD_ASSOC + NUM_ADD).
-   Scoped to in_p reads so it can NOT mangle nist_cipher_block block indices /
-   counter arith elsewhere in the tower.  The prefetch loads `ldp ..,[x0,#K]`
-   (x0=in_p+64i+64 after post-inc) settle as in_p+word((64i+64)+K);
-   NORMALIZE_RELATIVE gives that nested form, this folds it to
-   in_p+word(64i+80..) to match the s0 input-split anchors. *)
+(* Address fold for input reads: inside word_add in_p (word (...)) only,
+   fold a nested numeral offset (64*i+c)+d to 64*i+(c+d) (GSYM ADD_ASSOC and
+   NUM_ADD_CONV).  The scope keeps it away from the block indices of
+   nist_cipher_block and the counter arithmetic elsewhere in the goal.  The
+   prefetch loads "ldp ..,[x0,#K]" (x0 = in_p+64i+64 after the post-indexed
+   load) give in_p+word((64i+64)+K) after NORMALIZE_RELATIVE_ADDRESS_CONV;
+   this folds that to in_p+word(64i+L), with the numeral L = 64+K, the form
+   of the input-split facts about s0. *)
 let IN_P_ADDR_FOLD_CONV : conv =
   let inner = (REWR_CONV(GSYM ADD_ASSOC) THENC RAND_CONV NUM_ADD_CONV) in
   ONCE_DEPTH_CONV(fun t -> match t with
@@ -1122,8 +1144,9 @@ let SWP_STEP_TAC_P (p:swp_prune) keeplist exec sname : tactic =
                   | None -> old_state_read c) (asl,w)) THEN
   (if p.stale_gc then DISCARD_STALE_TAC sname else ALL_TAC);;
 
-(* The plain policy of the 128-bit proofs: anchor pointers and slots, no
-   families, current-state foralls only, with the stale sweep. *)
+(* The plain policy of the AES-128 proofs (aes128_gcm_enc, aes128_gcm_dec):
+   anchor pointers and slots, no families, current-state foralls only, with
+   the stale sweep. *)
 let swp_prune_plain anchors slots =
   { anchors = anchors; slots = slots; families = []; exempt = (fun _ -> false);
     all_foralls = false; stale_gc = true };;
@@ -1187,9 +1210,9 @@ let (MUST:tactic->tactic) = fun t (asl,w) ->
   let gs = t (asl,w) in let _,subs,_ = gs in
   if subs = [] then gs else failwith "MUST: goal not closed";;
 
-(* Weaker guard used by the decrypt-128 closers: fail only if the tactic made
-   no progress at all, so a closer may leave subgoals for the rest of the leg
-   to finish. *)
+(* Weaker guard used by the aes128_gcm_dec closers: fail only if the tactic
+   made no progress at all, so a closer may leave subgoals for the rest of
+   the leg to finish. *)
 let (MUST_PROGRESS:tactic->tactic) = fun t (asl,w) ->
   let (m,gls,f) = t (asl,w) in
   (match gls with [(_,w')] when w' = w -> failwith "MUST_PROGRESS: not closed" | _ -> (m,gls,f));;
@@ -1302,8 +1325,9 @@ let DISCHARGE_SAFE_ROBUST : tactic =
     if is_conj w then CONJ_TAC THENL [FULL_UNIFY_F_EVENTS_TAC; ALL_TAC] else ALL_TAC) THEN
   MEMACC_VIA_ASM;;
 
-(* Surgical cond reducers (constant condition), no beta-mangle of f_ev_*
-   redexes. *)
+(* Rewrite a conditional whose test is known (v = k or ~(v = k) is an
+   assumption) by pure rewriting, without beta-reducing the f_ev_* event
+   function applications. *)
 let REDUCE_IFEQ (v:term) (k:term) : tactic =
   PURE_ONCE_REWRITE_TAC[EQT_INTRO(ASSUME(mk_eq(v,k)))] THEN PURE_REWRITE_TAC[COND_CLAUSES];;
 let REDUCE_IFNE (v:term) (k:term) : tactic =
@@ -1311,7 +1335,7 @@ let REDUCE_IFNE (v:term) (k:term) : tactic =
 let REDUCE_IF0 (lv:term)  = REDUCE_IFEQ lv `0`;;
 let REDUCE_IFN0 (lv:term) = REDUCE_IFNE lv `0`;;
 
-(* Leaf closers for the safety proofs.  Every alternative must CLOSE its     *)
+(* Leaf closers for the safety proofs.  Every alternative must close its     *)
 (* conjunct (THEN NO_TAC): a closer that merely rewrites can then never      *)
 (* leave a residual that leaks into the next leg.  The `extra` list lets a   *)
 (* proof add its own reconcilers to the equation chain.                      *)
@@ -1354,8 +1378,8 @@ let BEQ_NZ_V (cv:term) (k:term) : tactic =
       ALL_TAC]) (asl,w);;
 let BEQ_NZ (k:term) : tactic = BEQ_NZ_V `loop_count:num` k;;
 
-(* Common opening of a SWP safety goal: introduce the arguments, abbreviate  *)
-(* the block counts and establish their word bounds.                         *)
+(* Common opening of a 4-way safety goal: introduce the arguments,           *)
+(* abbreviate the block counts and establish their word bounds.              *)
 let OPEN_SWP_SAFE exec : tactic =
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
   GEN_TAC THEN W64_GEN_TAC `len_bits:num` THEN REPEAT GEN_TAC THEN
