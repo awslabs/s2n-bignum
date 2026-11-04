@@ -107,7 +107,7 @@ needs "arm/proofs/subroutine_signatures.ml";;
 (* The kernel's in-flight keystream tower: rounds 0..8 (aese then aesmc) and *)
 (* the final aese with k9.  The last round key k10 is XORed in later,        *)
 (* together with the ciphertext, by one eor3 per block, so naming this       *)
-(* partial tower keeps the register contracts between the front, the loop   *)
+(* partial tower keeps the register contracts between the front, the loop    *)
 (* and the tail at one application per block.                                *)
 let aes9 = new_definition
  `aes9 (p:int128) (k0:int128) (k1:int128) (k2:int128) (k3:int128)
@@ -215,7 +215,7 @@ let EL_AES128_CTR = prove
   REWRITE_TAC[aes128_ctr] THEN REPEAT STRIP_TAC THEN
   ASM_SIMP_TAC[EL_AES128_CTR_REC; aes128_ctr_output_block; ADD_CLAUSES]);;
 
-(* The output as a byte list (int128_list_to_bytes above).                  *)
+(* The output as a byte list (int128_list_to_bytes above).                   *)
 let aes128_ctr_bytes = new_definition
  `aes128_ctr_bytes (ctr0:int128) (pts:int128 list) (keys:int128 list)
     : byte list =
@@ -1761,7 +1761,7 @@ let mk_wbn_prebranch_goal postcond =
               `ensures arm PPP QQQ CCC` in
   list_mk_forall(wb_front_vars, mk_imp(wbn_front_hyps_uni_tm, ens));;
 
-(* The pre-branch postcondition: the s201 state at the 0x340 b.ge.          *)
+(* The pre-branch postcondition: the s201 state at the 0x340 b.ge.           *)
 let wbn_front_prebranch_postcond = wbp_post
  ([`aligned_bytes_loaded s (word pc) aes128_gcm_dec_alt_tmc`;
    `read PC s = word (pc + 832)`] @
@@ -1842,9 +1842,9 @@ let ARM_STEPS_FOLD_KEEPGH_TAC exec snums =
               DISCARD_OLDSTATE_KEEPGH_TAC s THEN CLARIFY_TAC) (statenames "s" snums);;
 
 (* The sub v30.4s cascade: the stepper leaves word_subword (word_join ..)    *)
-(* unreduced, so without this each sub would nest the whole previous Q30    *)
-(* four times; a top-down WORD_SIMPLE_SUBWORD_CONV on Q30 after every       *)
-(* cascade step keeps it as flat word_sub chains on the four lanes.         *)
+(* unreduced, so without this each sub would nest the whole previous Q30     *)
+(* four times; a top-down WORD_SIMPLE_SUBWORD_CONV on Q30 after every        *)
+(* cascade step keeps it as flat word_sub chains on the four lanes.          *)
 let Q30_NORM_TAC : tactic =
   RULE_ASSUM_TAC(fun th ->
     let c = concl th in
@@ -2329,10 +2329,10 @@ let WB3_GMULT3_BRIDGE_TAC : tactic =
   XOR_LANE_CLOSE_TAC;;
 
 (* r = 3: s203 eor3 (block-0 plaintext), s204-s243 the cascade to the taken *)
-(* b.gt at 0xc84, s244-s288 the three GHASH rounds (h3, h2, h) with the     *)
-(* stores at s245/s259/s284 and the block-1/2 plaintext eor3s at s257/s271, *)
-(* Q18 (the mid accumulator) named midacc at s288, s289-s296 the reduction, *)
-(* s297/s298 ext/rev64, s299 tag store, s300/s301 the ivec write-back.      *)
+(* b.gt at 0xc84, s244-s288 the three GHASH rounds (h3, h2, h) with the      *)
+(* stores at s245/s259/s284 and the block-1/2 plaintext eor3s at s257/s271,  *)
+(* Q18 (the mid accumulator) named midacc at s288, s289-s296 the reduction,  *)
+(* s297/s298 ext/rev64, s299 tag store, s300/s301 the ivec write-back.       *)
 let WB_TAIL_3_TAC ivtac =
   ARM_STEPS_RESOLVE_TAC AES128_GCM_DEC_ALT_EXEC (200--203) THEN
   WB_PT_CAPTURE_TAC "s203" `Q12` `cph0:int128` `ctr0:int128` THEN
@@ -2499,18 +2499,18 @@ let WB_TAIL_GEN2_7 = prove(wbn_tail_backleg_goal5_return 7,
 
 let AES128_GCM_DEC_ALT_BUF_7BLOCK = prove_band 7 WB_TAIL_GEN2_7;;
 
-(* r = 8 takes the first b.gt (0xbe8) to the exact-8 drain (0xe9c), so      *)
-(* there is no `sub v30`: Q30 is still gcm_ctr_raw (word 8) ctr0 at the     *)
-(* ivec write-back, and WB_IVEC_CLOSE_TAC 8's sub_chain rewrites would be   *)
-(* the looping x = word_sub x (word 0).  The same close without them.       *)
-(* That path also skips the movi zeroing of v17/v18/v19; its                *)
-(* `ext v18.16b,v24.16b,v24.16b,#8` (s207) overwrites the seam's            *)
-(* unconstrained Q18 whole, and the pmull at s215 reads only its lane 0.    *)
-(* The drain (s205-s297) feeds the partial tag into its first block only,   *)
-(* defers three blocks' products to v13-v15 and folds each into the next    *)
-(* block's accumulations with eor3, and rejoins the cascade at reduce       *)
-(* (0xe40) by the `b` at s297.  The 8-block GHASH bridge closes it          *)
-(* unchanged, the reordering being GF(2)-linear.                            *)
+(* r = 8 takes the first b.gt (0xbe8) to the exact-8 drain (0xe9c), so       *)
+(* there is no `sub v30`: Q30 is still gcm_ctr_raw (word 8) ctr0 at the      *)
+(* ivec write-back, and WB_IVEC_CLOSE_TAC 8's sub_chain rewrites would be    *)
+(* the looping x = word_sub x (word 0).  The same close without them.        *)
+(* That path also skips the movi zeroing of v17/v18/v19; its                 *)
+(* `ext v18.16b,v24.16b,v24.16b,#8` (s207) overwrites the seam's             *)
+(* unconstrained Q18 whole, and the pmull at s215 reads only its lane 0.     *)
+(* The drain (s205-s297) feeds the partial tag into its first block only,    *)
+(* defers three blocks' products to v13-v15 and folds each into the next     *)
+(* block's accumulations with eor3, and rejoins the cascade at reduce        *)
+(* (0xe40) by the `b` at s297.  The 8-block GHASH bridge closes it           *)
+(* unchanged, the reordering being GF(2)-linear.                             *)
 let WB_IVEC_CLOSE8_TAC =
   REWRITE_TAC[GCM_CTR_INC_ITER_AS_ADD] THEN
   REWRITE_TAC[gcm_ctr_raw_def; SUBW_RAW_96; SUBW_RAW_64; SUBW_RAW_32; SUBW_RAW_0] THEN
@@ -4841,7 +4841,7 @@ let ARM_STEPS_FOLD_KEEPDATA_TAC exec snums =
 (* ------------------------------------------------------------------------- *)
 
 (* The s247 seam state, built like wb_front_postcond, with Q19 stated at a   *)
-(* fresh xi' as the substitution source for wbn_prepretail_post below (as   *)
+(* fresh xi' as the substitution source for wbn_prepretail_post below (as    *)
 (* written, with xi' unconstrained, it is not a true postcondition).  It     *)
 (* drops what the tail does not read: the tag_p, ivec_p, [sp+72] and in_p    *)
 (* block 0 cells, and Q9, which the extended post below restates in spec     *)

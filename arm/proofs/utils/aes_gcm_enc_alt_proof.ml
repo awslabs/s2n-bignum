@@ -571,8 +571,8 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
     (* (128*k)) (word 128) (= end_p, already substituted by ASM_REWRITE), so *)
     (* the flag close is not syntactic: it rewrites with BRIDGE_GE (the      *)
     (* NF<>VF biconditional = signed GE ival end_p <= ival X0), linearises   *)
-    (* both additive ivals with IVAL_PTR_ADD under the no-wrap bound, and finishes *)
-    (* by arithmetic using i < k.                                            *)
+    (* both additive ivals with IVAL_PTR_ADD under the no-wrap bound, and    *)
+    (* finishes by arithmetic using i < k.                                   *)
     REPEAT CONJ_TAC THEN
     (* Fire the flag close only on the flag-shaped goal, the one whose
        conclusion is `<flag biconditional> <=> (i + 1 = k)`; this keeps
@@ -6098,7 +6098,7 @@ let AES_GCM_ENC_ALT_SETUP0_SAFE = prove
 (* the safety property.  Lean precondition: the key/htable/ivec/counter/     *)
 (* inblock contents do not matter for safety (only the access addresses do), *)
 (* so only the pointer registers are pinned.  nb = 8*g+r gives the rem = r   *)
-(* arm; g is symbolic.  prove_tail_rem_safe r x5th steps proves the arm r,  *)
+(* arm; g is symbolic.  prove_tail_rem_safe r x5th steps proves the arm r,   *)
 (* where x5th is TAIL_X5_REM<r> and the drive has steps instructions; the    *)
 (* arm r = 8 (TAIL_X5_128_G, stated for 8*g+8 = nb) is proved separately.    *)
 
@@ -6920,7 +6920,7 @@ let AES_GCM_ENC_ALT_SETUP_GEN_SAFE = prove
 (* the functional NSTEP_G drive, with the incremented ldps at steps          *)
 (* 295/303/304 handled by LDP_STEP4_LEAN (LDP_STEP4_TAC without the          *)
 (* INBLOCKS_TAC re-derivation, which safety does not need) and the b.lt at   *)
-(* step 340; the back-edge PC is closed via BRIDGE_GE + IVAL_PTR_ADD (in_p         *)
+(* step 340; the back-edge PC is closed via BRIDGE_GE + IVAL_PTR_ADD (in_p   *)
 (* cancels, leaving i+1 < k), the events via ENUMERATEL_ADD1.                *)
 let LDP_STEP4_LEAN n =
   let sn = "s"^string_of_int n in

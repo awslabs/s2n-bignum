@@ -79,8 +79,8 @@ let HTABLE_MEM_8_AESAVS_ZERO_KEY_128 = prove
                        AESAVS_ZERO_KEY_128_SCHEDULE)) THEN
   REFL_TAC);;
 
-(* FIPS-197 Appendix B key 2b7e151628aed2a6abf7158809cf4f3c:                *)
-(* H = 7df76b0c1ab899b33e42f047b91b546f.                                    *)
+(* FIPS-197 Appendix B key 2b7e151628aed2a6abf7158809cf4f3c:                 *)
+(* H = 7df76b0c1ab899b33e42f047b91b546f.                                     *)
 
 let HTABLE_MEM_8_AES128_APPENDIX_B_KEY = prove
  (`!ptr s.

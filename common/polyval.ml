@@ -17,8 +17,8 @@
 (*   4. Q(x) structural facts: integral-domain structure, congruence         *)
 (*      linchpin (MOD_POLYVAL_WORD_EQ), and x^n cancellation                 *)
 (*      (MOD_POLYVAL_CANCEL_VARPOW{,_GEN}).                                  *)
-(* The irreducibility of Q(x), which nothing here depends on, is proved in  *)
-(* common/gf128_irreducible.ml.                                             *)
+(* The irreducibility of Q(x), which nothing here depends on, is proved in   *)
+(* common/gf128_irreducible.ml.                                              *)
 (*                                                                           *)
 (* See: RFC 8452, Section 3 and Appendix A.                                  *)
 (* See: Gueron, "A New Interpretation for the GHASH Authenticator of         *)
@@ -484,7 +484,7 @@ let POLYVAL_REDUCE_PROP3_CORRECT = prove
 
 (* ========================================================================= *)
 (* Generic poly_of_word / pmul plumbing used by the Q(x) structural proofs   *)
-(* below (and by common/karatsuba_pmul.ml, which loads after this           *)
+(* below (and by common/karatsuba_pmul.ml, which loads after this            *)
 (* file). None of this material depends on Q(x).                             *)
 (* ========================================================================= *)
 

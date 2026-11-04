@@ -6409,7 +6409,7 @@ let wbn_prepretail_post_ext =
 (* the seam in spec form.  This lemma gives the value of the read, the first *)
 (* tail block (global block 8*(k+1))                                         *)
 (*   bytes_to_int128 (SUB_LIST (16*8*(k+1),16) ibytes),                      *)
-(* by INPUT_PREFIX_TO_BYTE128_LANES at lane 8*(k+1), from 8*(k+1) < nblk and  *)
+(* by INPUT_PREFIX_TO_BYTE128_LANES at lane 8*(k+1), from 8*(k+1) < nblk and *)
 (* the whole-buffer input fact.  WBN_PREPRETAIL_EXT2_TAC applies it at s311, *)
 (* the state before the ldr.                                                 *)
 (* ------------------------------------------------------------------------- *)

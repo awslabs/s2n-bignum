@@ -714,9 +714,9 @@ let LENGTH_INT128_LIST_TO_BYTES = prove
                   LENGTH_OF_INT128_TO_BYTES] THEN ARITH_TAC);;
 
 (* The input buffer read as whole blocks: for a 16 * n-byte prefix of x,     *)
-(* block k < n is the bytes128 read at in_p + 16 * k.  By induction on n:   *)
-(* the top block of a 16 * (n + 1)-byte read, and the 16 * n-byte prefix    *)
-(* read the induction hypothesis takes, are READ_BYTES_AND_BYTE128_MERGE.   *)
+(* block k < n is the bytes128 read at in_p + 16 * k.  By induction on n:    *)
+(* the top block of a 16 * (n + 1)-byte read, and the 16 * n-byte prefix     *)
+(* read the induction hypothesis takes, are READ_BYTES_AND_BYTE128_MERGE.    *)
 (* The round-key list rk of nrk keys as the list of its elements
    (prove_rk_eta nrk), and the nrk bytes128 reads of the key schedule at
    key_p (prove_key_reads nrk): RK_ETA_11 or RK_ETA_15 and
