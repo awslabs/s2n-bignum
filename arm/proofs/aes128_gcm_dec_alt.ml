@@ -68,12 +68,11 @@
 (* code (GHASH/Karatsuba bridge, SIMD-fold steppers, counter core, byte-list *)
 (* lemmas, decrypt specification, shared tactics) is in                      *)
 (* arm/proofs/utils/aes_gcm_dec_alt_common.ml, shared with the AES-256       *)
-(* proof.  This file holds, in order: the key-table known-answer instances   *)
-(* at two AES-128 keys; the AES-128 vocabulary (aes9, aes128_encrypt, the    *)
-(* CTR output specification gcm_dec128_pt_bytes); the machine code; the      *)
-(* <=8-block chain (shared front, band tails, small-input path, readable     *)
-(* band and dispatch theorems); the export lemmas; the nblk > 8 proof        *)
-(* (front, main loop, prepretail, recomposition); the spines and the         *)
+(* proof.  This file holds, in order: the AES-128 vocabulary (aes9,          *)
+(* aes128_encrypt, the CTR output specification gcm_dec128_pt_bytes); the    *)
+(* machine code; the <=8-block chain (shared front, band tails, small-input  *)
+(* path, readable band and dispatch theorems); the export lemmas; the nblk > *)
+(* 8 proof (front, main loop, prepretail, recomposition); the spines and the *)
 (* exported theorems; the constant-time and memory-safety proof; the         *)
 (* no-access theorems for rejected lengths.                                  *)
 (* ========================================================================= *)
@@ -81,113 +80,6 @@
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/aes_gcm_dec_alt_common.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
-
-(* ========================================================================= *)
-(* Known-answer instances of htable_mem_8 at two concrete AES-128 keys.      *)
-(*                                                                           *)
-(* In the shared AES-GCM vocabulary the GHASH key is                         *)
-(* H = aes128_cipher (word 0) rk, with rk the FIPS-197 key schedule, and the *)
-(* key table precondition of the 8-way kernels is                            *)
-(* htable_mem_8 (ghash_twist H) htbl_p s.  Below that precondition is        *)
-(* evaluated, for the all-zero key and for the FIPS-197 Appendix B key (the  *)
-(* key schedules of common/fips197.ml), to the 12 table entries.  They are   *)
-(* the bytes gcm_init_v8 writes for those keys, and the bytes                *)
-(* ref_gcm_init_htable writes in the C test "aes_gcm_htable" (tests/test.c), *)
-(* so they tie the precondition to the real table: stated with a wrong H,    *)
-(* such as the byte-reversed one at the end, it does not match them.         *)
-(* ========================================================================= *)
-
-(* All-zero key: H = 66e94bd4ef8a2c3b884cfa59ca342b2e. *)
-
-let HTABLE_MEM_8_AESAVS_ZERO_KEY_128 = prove
- (`!ptr s.
-     htable_mem_8
-       (ghash_twist (aes128_cipher (word 0) AESAVS_ZERO_KEY_128_SCHEDULE))
-       ptr s <=>
-     read (memory :> bytes128 ptr) s =
-       word 0x1099f4b39468565ccdd297a9df145877 /\
-     read (memory :> bytes128 (word_add ptr (word 16))) s =
-       word 0x62d81a7fe5da3296dd4b631a4b7c0e2b /\
-     read (memory :> bytes128 (word_add ptr (word 32))) s =
-       word 0xea0b3a488cb9209b88d320376963120d /\
-     read (memory :> bytes128 (word_add ptr (word 48))) s =
-       word 0x35c1a04f8bfb23958695e702c322faf9 /\
-     read (memory :> bytes128 (word_add ptr (word 64))) s =
-       word 0xb2261b4d0cb1e020b354474d48d9d96c /\
-     read (memory :> bytes128 (word_add ptr (word 80))) s =
-       word 0xe4adc23e440c7165568bd97348bd9145 /\
-     read (memory :> bytes128 (word_add ptr (word 96))) s =
-       word 0x7d845b630bb0a55df9151b1f632d10b4 /\
-     read (memory :> bytes128 (word_add ptr (word 112))) s =
-       word 0xa674eba8f9d7f2508491407c689db5e9 /\
-     read (memory :> bytes128 (word_add ptr (word 128))) s =
-       word 0x4af32418184aee1eec87cfb0e19d1c4e /\
-     read (memory :> bytes128 (word_add ptr (word 144))) s =
-       word 0xf109e6e0b31d1eee7d1998bcfc545474 /\
-     read (memory :> bytes128 (word_add ptr (word 160))) s =
-       word 0x7498729da40cd2808c107e5c4f494a9a /\
-     read (memory :> bytes128 (word_add ptr (word 176))) s =
-       word 0xa47c653dfbeac924d0e417a05fe61ba4`,
-  REPEAT GEN_TAC THEN
-  CONV_TAC(LAND_CONV(HTABLE_MEM_8_KEY_CONV aes128_cipher
-                       AESAVS_ZERO_KEY_128_SCHEDULE)) THEN
-  REFL_TAC);;
-
-(* FIPS-197 Appendix B key 2b7e151628aed2a6abf7158809cf4f3c:                *)
-(* H = 7df76b0c1ab899b33e42f047b91b546f.                                    *)
-
-let HTABLE_MEM_8_AES128_APPENDIX_B_KEY = prove
- (`!ptr s.
-     htable_mem_8
-       (ghash_twist (aes128_cipher (word 0) AES128_APPENDIX_B_KEY_SCHEDULE))
-       ptr s <=>
-     read (memory :> bytes128 ptr) s =
-       word 0x7c85e08f7236a8defbeed61835713366 /\
-     read (memory :> bytes128 (word_add ptr (word 16))) s =
-       word 0xed6f9f19824188b7876b369747479bb8 /\
-     read (memory :> bytes128 (word_add ptr (word 32))) s =
-       word 0x75fc1bd05afdf91d989384c9d8bc71aa /\
-     read (memory :> bytes128 (word_add ptr (word 48))) s =
-       word 0x079dada037f75a219393f2f6b5901aa5 /\
-     read (memory :> bytes128 (word_add ptr (word 64))) s =
-       word 0x5c266e54fcbe70c8940e5f5682674084 /\
-     read (memory :> bytes128 (word_add ptr (word 80))) s =
-       word 0x4cd5a7571d1a07eb10f3c903e1a47723 /\
-     read (memory :> bytes128 (word_add ptr (word 96))) s =
-       word 0x1868d687e354011277b65543fd05070d /\
-     read (memory :> bytes128 (word_add ptr (word 112))) s =
-       word 0x90da1b5ab6308b846fde83c41e51061f /\
-     read (memory :> bytes128 (word_add ptr (word 128))) s =
-       word 0x43c1c170f6d1cb18d31bda2a40e1409c /\
-     read (memory :> bytes128 (word_add ptr (word 144))) s =
-       word 0x71a7fa7ec9a2db6a9942b75d8497af5b /\
-     read (memory :> bytes128 (word_add ptr (word 160))) s =
-       word 0xdff6bfdf58dc7226e8e54d234d357431 /\
-     read (memory :> bytes128 (word_add ptr (word 176))) s =
-       word 0xbfae27a59d0f85db6058987ac5d3f7fd`,
-  REPEAT GEN_TAC THEN
-  CONV_TAC(LAND_CONV(HTABLE_MEM_8_KEY_CONV aes128_cipher
-                       AES128_APPENDIX_B_KEY_SCHEDULE)) THEN
-  REFL_TAC);;
-
-(* The byte-reversed key word_reversefields 8 H (the little-endian reading   *)
-(* of AES_K(0^128)) describes a different table: at the all-zero key none of *)
-(* its 12 entries equals the real one, so a key-table precondition stated    *)
-(* with it is not satisfied by the table gcm_init_v8 builds.                 *)
-
-let HTABLE_MEM_8_AESAVS_ZERO_KEY_128_REVERSED_H = prove
- (`!ptr s.
-     htable_mem_8
-       (ghash_twist (aes128_cipher (word 0) AESAVS_ZERO_KEY_128_SCHEDULE))
-       ptr s
-     ==> ~htable_mem_8
-            (ghash_twist (word_reversefields 8
-               (aes128_cipher (word 0) AESAVS_ZERO_KEY_128_SCHEDULE)))
-            ptr s`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[HTABLE_MEM_8_AESAVS_ZERO_KEY_128] THEN
-  CONV_TAC(RAND_CONV(RAND_CONV(HTABLE_MEM_8_KEY_CONV aes128_cipher
-                                 AESAVS_ZERO_KEY_128_SCHEDULE))) THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[] THEN CONV_TAC WORD_REDUCE_CONV);;
 
 (* ========================================================================= *)
 (* Binary-independent proof machinery.                                       *)
@@ -6635,24 +6527,17 @@ let AES128_GCM_DEC_ALT_SUBROUTINE_CORRECT = prove
     aes128_gcm_dec_alt_mc aes128_gcm_dec_alt_tmc
     AES128_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT));;
 (* ------------------------------------------------------------------------- *)
-(* The exported theorem at the all-zero key.  With rk the FIPS-197 schedule  *)
-(* of that key, the key table precondition of                                *)
-(* AES128_GCM_DEC_ALT_SUBROUTINE_CORRECT rewrites, by                        *)
-(* HTABLE_MEM_8_AESAVS_ZERO_KEY_128 at the top of this file, to the twelve   *)
-(* 16-byte entries that gcm_init_v8 writes for the key, which are also the   *)
-(* bytes the C test aes_gcm_htable checks.  So the table described by the    *)
-(* exported statement itself, not only by the vocabulary it uses, is the     *)
-(* real one; the load fails here if the precondition is not of that form.    *)
+(* The exported theorem at the all-zero key:                                 *)
+(* AES128_GCM_DEC_ALT_SUBROUTINE_CORRECT with rk the FIPS-197 schedule of    *)
+(* that key and the key-table precondition evaluated to the real table (see  *)
+(* ALT_ZERO_KEY_RULE in arm/proofs/utils/aes_gcm_common.ml).                 *)
 (* ------------------------------------------------------------------------- *)
 
 let AES128_GCM_DEC_ALT_ZERO_KEY_CORRECT =
-  let th = PURE_REWRITE_RULE[HTABLE_MEM_8_AESAVS_ZERO_KEY_128]
-   (INST [`AESAVS_ZERO_KEY_128_SCHEDULE`,`rk:int128 list`]
-     (SPEC_ALL AES128_GCM_DEC_ALT_SUBROUTINE_CORRECT)) in
-  if can (find_term (fun t -> is_const t && fst(dest_const t) = "htable_mem_8"))
-         (concl th)
-  then failwith "AES128_GCM_DEC_ALT_ZERO_KEY_CORRECT: table not rewritten"
-  else GEN_ALL th;;
+  ALT_ZERO_KEY_RULE "AES128_GCM_DEC_ALT_ZERO_KEY_CORRECT"
+    aes128_cipher AESAVS_ZERO_KEY_128_SCHEDULE
+    `word 0x1099f4b39468565ccdd297a9df145877:int128`
+    AES128_GCM_DEC_ALT_SUBROUTINE_CORRECT;;
 
 (* ------------------------------------------------------------------------- *)
 (* Constant-time and memory safety proof.                                    *)

@@ -1654,28 +1654,17 @@ let AES128_GCM_ENC_ALT_SUBROUTINE_CORRECT = prove
                      AES128_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
-(* The exported theorem at the all-zero key.  With rk the FIPS-197 schedule  *)
-(* of that key (AESAVS_ZERO_KEY_128_SCHEDULE, common/fips197.ml), the shared *)
-(* HTABLE_MEM_8_KEY_CONV evaluates the key-table precondition of             *)
-(* AES128_GCM_ENC_ALT_SUBROUTINE_CORRECT to the twelve 16-byte entries that  *)
-(* gcm_init_v8 writes for the key, which are also the bytes the C test       *)
-(* aes_gcm_htable checks.  So the table described by the exported statement  *)
-(* itself, not only by the vocabulary it uses, is the real one: the load     *)
-(* fails here unless the precondition evaluates and its first entry is that  *)
-(* table's 0x1099f4b39468565ccdd297a9df145877.                               *)
+(* The exported theorem at the all-zero key:                                 *)
+(* AES128_GCM_ENC_ALT_SUBROUTINE_CORRECT with rk the FIPS-197 schedule of    *)
+(* that key and the key-table precondition evaluated to the real table (see  *)
+(* ALT_ZERO_KEY_RULE in arm/proofs/utils/aes_gcm_common.ml).                 *)
 (* ------------------------------------------------------------------------- *)
 
 let AES128_GCM_ENC_ALT_ZERO_KEY_CORRECT =
-  let th = CONV_RULE (ONCE_DEPTH_CONV
-             (HTABLE_MEM_8_KEY_CONV aes128_cipher AESAVS_ZERO_KEY_128_SCHEDULE))
-    (INST [`AESAVS_ZERO_KEY_128_SCHEDULE`,`rk:int128 list`]
-      (SPEC_ALL AES128_GCM_ENC_ALT_SUBROUTINE_CORRECT)) in
-  if can (find_term (fun t -> is_const t && fst(dest_const t) = "htable_mem_8"))
-         (concl th) ||
-     not (can (find_term ((=) `word 0x1099f4b39468565ccdd297a9df145877:int128`))
-              (concl th))
-  then failwith "AES128_GCM_ENC_ALT_ZERO_KEY_CORRECT: table not the real one"
-  else GEN_ALL th;;
+  ALT_ZERO_KEY_RULE "AES128_GCM_ENC_ALT_ZERO_KEY_CORRECT"
+    aes128_cipher AESAVS_ZERO_KEY_128_SCHEDULE
+    `word 0x1099f4b39468565ccdd297a9df145877:int128`
+    AES128_GCM_ENC_ALT_SUBROUTINE_CORRECT;;
 
 let AES128_GCM_ENC_ALT_NOIBT_SUBROUTINE_SAFE = prove
  (`exists f_events.

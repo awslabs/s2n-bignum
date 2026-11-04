@@ -945,6 +945,27 @@ let HTABLE_MEM_8_KEY_CONV cipher_def ks_def : conv =
   HTABLE_MEM_8_CONV;;
 
 (* ------------------------------------------------------------------------- *)
+(* The exported correctness theorem of an 8-way kernel at the all-zero key.  *)
+(* With rk the FIPS-197 schedule of that key (ks_def), HTABLE_MEM_8_KEY_CONV *)
+(* evaluates the key-table precondition to the twelve 16-byte entries that   *)
+(* gcm_init_v8 writes for the key, which are the table the spec checks       *)
+(* HTABLE_MEM_8_AESAVS_ZERO_KEY_128 and HTABLE_MEM_8_AESAVS_ZERO_KEY_256 pin *)
+(* (arm/proofs/aes_gcm_spec_checks.ml) and the bytes the C test              *)
+(* aes_gcm_htable checks.  So the table described by the exported statement  *)
+(* itself, not only by the vocabulary it uses, is the real one: the rule     *)
+(* fails unless the precondition evaluates and its first entry is h0.        *)
+(* ------------------------------------------------------------------------- *)
+
+let ALT_ZERO_KEY_RULE name cipher_def ks_def h0 th =
+  let th' = CONV_RULE (ONCE_DEPTH_CONV (HTABLE_MEM_8_KEY_CONV cipher_def ks_def))
+              (INST [lhs(concl ks_def),`rk:int128 list`] (SPEC_ALL th)) in
+  if can (find_term (fun t -> is_const t && fst(dest_const t) = "htable_mem_8"))
+         (concl th') ||
+     not (can (find_term ((=) h0)) (concl th'))
+  then failwith (name ^ ": table not the real one")
+  else GEN_ALL th';;
+
+(* ------------------------------------------------------------------------- *)
 (* The whole-blocks count: a multiple of 128 is 128 times its block count.   *)
 (* ------------------------------------------------------------------------- *)
 

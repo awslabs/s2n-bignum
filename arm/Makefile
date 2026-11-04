@@ -590,11 +590,11 @@ AES_GCM_ENC_ALT_UTILS = proofs/utils/aes_gcm_enc_alt_common.ml \
 aes_gcm/aes128_gcm_enc_alt.native: $(AES_GCM_ENC_ALT_UTILS)
 aes_gcm/aes256_gcm_enc_alt.native: $(AES_GCM_ENC_ALT_UTILS)
 
-# Checks of the AES-GCM specification files under common/ that no proof
+# Checks of the AES-GCM specification files that no proof
 # depends on, run once here rather than at every load by the AES-GCM proofs.
 SPEC_CHECK_PROOFS = proofs/aes_gcm_spec_checks.ml
 proofs/aes_gcm_spec_checks.native: proofs/aes_gcm_spec_checks.ml $(BASE_ML) \
-                                   $(AES_GCM_SPEC) ../common/gf128_irreducible.ml \
+                                   $(AES_GCM_PROOF_UTILS) ../common/gf128_irreducible.ml \
                                    ../common/fips197_kats.ml ../common/gcm_kats.ml ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 

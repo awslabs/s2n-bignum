@@ -18026,9 +18026,9 @@ int test_aes256_gcm_enc_alt(void)
 // writes for these H.  Read little-endian, their 16-byte entries are the 12
 // literals proved for the precondition
 // htable_mem_8 (ghash_twist (aesNNN_cipher (word 0) rk)) at these keys in
-// arm/proofs/aes256_gcm_dec_alt.ml (HTABLE_MEM_8_AESAVS_ZERO_KEY_256,
-// HTABLE_MEM_8_NIST_TC15_KEY) and arm/proofs/aes128_gcm_dec_alt.ml
-// (HTABLE_MEM_8_AESAVS_ZERO_KEY_128, HTABLE_MEM_8_AES128_APPENDIX_B_KEY).
+// arm/proofs/aes_gcm_spec_checks.ml (HTABLE_MEM_8_AESAVS_ZERO_KEY_256,
+// HTABLE_MEM_8_NIST_TC15_KEY, HTABLE_MEM_8_AESAVS_ZERO_KEY_128 and
+// HTABLE_MEM_8_AES128_APPENDIX_B_KEY).
 
 int test_aes_gcm_htable(void)
 { static const uint8_t key[4][32] =
