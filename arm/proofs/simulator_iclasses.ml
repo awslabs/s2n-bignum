@@ -295,6 +295,12 @@ let iclasses =
   (*** SSUBW2 ***)
   "01001110xx1xxxxx001100xxxxxxxxxx";
 
+  (*** ADDHN ***)
+  "00001110xx1xxxxx010000xxxxxxxxxx";
+
+  (*** ADDHN2 ***)
+  "01001110xx1xxxxx010000xxxxxxxxxx";
+
   (*** USUBL ***)
   "00101110xx1xxxxx001000xxxxxxxxxx";
 
