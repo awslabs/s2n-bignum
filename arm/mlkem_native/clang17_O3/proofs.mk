@@ -5,6 +5,7 @@ MLKEM_NATIVE_OBJ += \
   mlkem_native/clang17_O3/libmlkem.o
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
+  mlkem_native/clang17_O3/basemul_k2 \
   mlkem_native/clang17_O3/poly_add \
   mlkem_native/clang17_O3/poly_frommsg \
   mlkem_native/clang17_O3/poly_mulcache_compute \
@@ -25,6 +26,10 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/shake128x4_init \
   mlkem_native/clang17_O3/shake128x4_release
 
+mlkem_native/clang17_O3/basemul_k2.native: \
+  proofs/utils/mlkem_native.ml \
+  proofs/utils/mlkem_native_overlap.ml \
+  mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/libmlkem.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml
