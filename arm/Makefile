@@ -574,6 +574,14 @@ aes_gcm/aes256_gcm_dec.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_dec_alt.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
 aes_gcm/aes256_gcm_enc_alt.native: $(AES_GCM_PROOF_UTILS)
+# The two 8-way decrypt proofs also share arm/proofs/utils/aes_gcm_dec_alt_common.ml,
+# which loads the AES-XTS byte-list utilities and the lane-order AES specification.
+AES_GCM_DEC_ALT_UTILS = proofs/utils/aes_gcm_dec_alt_common.ml \
+                        proofs/utils/aes_encrypt_spec.ml proofs/utils/aes_decrypt_spec.ml \
+                        proofs/utils/aes_xts_common.ml proofs/utils/aes_xts_common_spec.ml \
+                        proofs/utils/aes_xts_encrypt_spec.ml proofs/utils/aes_xts_decrypt_spec.ml
+aes_gcm/aes128_gcm_dec_alt.native: $(AES_GCM_DEC_ALT_UTILS)
+aes_gcm/aes256_gcm_dec_alt.native: $(AES_GCM_DEC_ALT_UTILS)
 
 # Checks of the AES-GCM specification files under common/ that no proof
 # depends on, run once here rather than at every load by the AES-GCM proofs.
