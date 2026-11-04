@@ -8,6 +8,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/keccakf1600_permute \
   mlkem_native/gcc12_O3/keccakf1600x4_permute \
   mlkem_native/gcc12_O3/poly_add \
+  mlkem_native/gcc12_O3/poly_cbd3 \
   mlkem_native/gcc12_O3/poly_compress_d10 \
   mlkem_native/gcc12_O3/poly_compress_d11 \
   mlkem_native/gcc12_O3/poly_compress_d5 \
@@ -55,6 +56,11 @@ mlkem_native/gcc12_O3/libmlkem.native: \
   proofs/utils/mlkem_native_image.ml
 mlkem_native/gcc12_O3/poly_add.native: \
   proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/poly_cbd3.native: \
+  proofs/utils/mlkem_native.ml \
+  proofs/utils/mlkem_native_overlap.ml \
+  proofs/utils/mlkem_native_interleave.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_compress_d10.native: \
   proofs/utils/mlkem_native.ml \
