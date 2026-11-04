@@ -5,6 +5,7 @@ MLKEM_NATIVE_OBJ += \
   mlkem_native/gcc12_O3/libmlkem.o
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
+  mlkem_native/gcc12_O3/keccak_absorb_once \
   mlkem_native/gcc12_O3/keccakf1600_extract_bytes \
   mlkem_native/gcc12_O3/keccakf1600_permute \
   mlkem_native/gcc12_O3/keccakf1600_xor_bytes \
@@ -37,6 +38,12 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/shake128x4_release \
   mlkem_native/gcc12_O3/shake128x4_squeezeblocks
 
+mlkem_native/gcc12_O3/keccak_absorb_once.native: \
+  mlkem_native/gcc12_O3/keccakf1600_permute.native \
+  mlkem_native/gcc12_O3/keccakf1600_xor_bytes.native \
+  proofs/utils/keccak_fips202.ml \
+  mlkem_native/gcc12_O3/libmlkem.native \
+  proofs/utils/keccak_spec.ml
 mlkem_native/gcc12_O3/keccakf1600_extract_bytes.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
