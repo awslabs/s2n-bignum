@@ -4,15 +4,14 @@
  *)
 
 (* ========================================================================= *)
-(* Sampling of a noise polynomial with eta = 2 from a seed and a nonce.      *)
-(* This is the code for mlkem512_poly_getnoise_eta2 from mlkem-native's      *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
+(* Sampling of a noise polynomial with eta = 2 from a seed and a nonce. This *)
+(* is the code for mlkem512_poly_getnoise_eta2 from mlkem-native's portable  *)
+(* C implementation compiled by gcc 12 with -O2 (see                         *)
 (* mlkem_native/README.md), which computes 128 bytes of SHAKE256 of the seed *)
 (* and the nonce into a buffer on the stack, applies mlkem_poly_cbd2 to them *)
 (* and zeroes the buffer. It is verified in the whole image (see             *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x4890, using  *)
-(* the theorems for mlkem_shake256 at 0x2570 and mlkem_poly_cbd2 at 0x4e40   *)
-(* in the image.                                                             *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for mlkem_shake256 *)
+(* and mlkem_poly_cbd2 in the image.                                         *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_shake256_gcc12_O2.ml";;
@@ -21,47 +20,48 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    4890: stp     x19, x20, [sp, #-240]!
-    4894: mov     x3, #0x21
-    4898: add     x19, sp, #0x3f
-    489c: stp     x21, x30, [sp, #16]
-    48a0: and     x19, x19, #0xffffffffffffffe0
-    48a4: adrp    x4, 1f000 <mlk_zetas+0x18c80>
-    48a8: ldr     x4, [x4, #4088]
-    48ac: add     x20, x19, #0x80
-    48b0: ldp     q0, q1, [x1]
-    48b4: mov     x21, x0
-    48b8: ldr     x0, [x4]
-    48bc: str     x0, [sp, #232]
-    48c0: mov     x0, #0x0
-    48c4: strb    w2, [x20, #32]
-    48c8: mov     x2, x20
-    48cc: mov     x0, x19
-    48d0: mov     x1, #0x80
-    48d4: stp     q0, q1, [x20]
-    48d8: bl      2570 <mlkem_shake256>
-    48dc: mov     x1, x19
-    48e0: mov     x0, x21
-    48e4: bl      4e40 <mlkem_poly_cbd2>
-    48e8: movi    v0.4s, #0x0
-    48ec: stp     q0, q0, [x19]
-    48f0: stp     q0, q0, [x19, #32]
-    48f4: stp     q0, q0, [x19, #64]
-    48f8: stp     q0, q0, [x19, #96]
-    48fc: stp     xzr, xzr, [x19, #128]
-    4900: stp     xzr, xzr, [x20, #16]
-    4904: strb    wzr, [x20, #32]
-    4908: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    490c: ldr     x0, [x0, #4088]
-    4910: ldr     x2, [sp, #232]
-    4914: ldr     x1, [x0]
-    4918: subs    x2, x2, x1
-    491c: mov     x1, #0x0
-    4920: b.ne    4930 <mlkem512_poly_getnoise_eta2+0xa0>
-    4924: ldp     x21, x30, [sp, #16]
-    4928: ldp     x19, x20, [sp], #240
-    492c: ret
-    4930: bl      830 <__stack_chk_fail@plt>
+    mlkem512_poly_getnoise_eta2:
+       +0x0: stp     x19, x20, [sp, #-240]!
+       +0x4: mov     x3, #0x21
+       +0x8: add     x19, sp, #0x3f
+       +0xc: stp     x21, x30, [sp, #16]
+      +0x10: and     x19, x19, #0xffffffffffffffe0
+      +0x14: adrp    x4, <page>
+      +0x18: ldr     x4, [x4, #4088]  // got_stack_chk_guard
+      +0x1c: add     x20, x19, #0x80
+      +0x20: ldp     q0, q1, [x1]
+      +0x24: mov     x21, x0
+      +0x28: ldr     x0, [x4]
+      +0x2c: str     x0, [sp, #232]
+      +0x30: mov     x0, #0x0
+      +0x34: strb    w2, [x20, #32]
+      +0x38: mov     x2, x20
+      +0x3c: mov     x0, x19
+      +0x40: mov     x1, #0x80
+      +0x44: stp     q0, q1, [x20]
+      +0x48: bl      <mlkem_shake256>
+      +0x4c: mov     x1, x19
+      +0x50: mov     x0, x21
+      +0x54: bl      <mlkem_poly_cbd2>
+      +0x58: movi    v0.4s, #0x0
+      +0x5c: stp     q0, q0, [x19]
+      +0x60: stp     q0, q0, [x19, #32]
+      +0x64: stp     q0, q0, [x19, #64]
+      +0x68: stp     q0, q0, [x19, #96]
+      +0x6c: stp     xzr, xzr, [x19, #128]
+      +0x70: stp     xzr, xzr, [x20, #16]
+      +0x74: strb    wzr, [x20, #32]
+      +0x78: adrp    x0, <page>
+      +0x7c: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0x80: ldr     x2, [sp, #232]
+      +0x84: ldr     x1, [x0]
+      +0x88: subs    x2, x2, x1
+      +0x8c: mov     x1, #0x0
+      +0x90: b.ne    <mlkem512_poly_getnoise_eta2+0xa0>
+      +0x94: ldp     x21, x30, [sp, #16]
+      +0x98: ldp     x19, x20, [sp], #240
+      +0x9c: ret
+      +0xa0: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_POLY_GETNOISE_ETA2_K2_GCC12_O2_EXEC =

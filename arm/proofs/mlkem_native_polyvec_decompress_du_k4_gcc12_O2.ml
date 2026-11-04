@@ -9,8 +9,8 @@
 (* portable C implementation compiled by gcc 12 with -O2 (see                *)
 (* mlkem_native/README.md), which calls mlkem_poly_decompress_d11 for each   *)
 (* of the polynomials, in a loop. It is verified in the whole image (see     *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x1730, using  *)
-(* the theorems for mlkem_poly_decompress_d11 at 0x2170 in the image.        *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlkem_poly_decompress_d11 in the image.                                   *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_decompress_d11_gcc12_O2.ml";;
@@ -18,21 +18,22 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    1730: stp     x19, x20, [sp, #-32]!
-    1734: mov     x19, x1
-    1738: mov     x20, x0
-    173c: stp     x21, x30, [sp, #16]
-    1740: add     x21, x1, #0x580
-    1744: mov     x1, x19
-    1748: mov     x0, x20
-    174c: add     x19, x19, #0x160
-    1750: bl      2170 <mlkem_poly_decompress_d11>
-    1754: add     x20, x20, #0x200
-    1758: cmp     x19, x21
-    175c: b.ne    1744 <mlkem1024_polyvec_decompress_du+0x14>
-    1760: ldp     x21, x30, [sp, #16]
-    1764: ldp     x19, x20, [sp], #32
-    1768: ret
+    mlkem1024_polyvec_decompress_du:
+       +0x0: stp     x19, x20, [sp, #-32]!
+       +0x4: mov     x19, x1
+       +0x8: mov     x20, x0
+       +0xc: stp     x21, x30, [sp, #16]
+      +0x10: add     x21, x1, #0x580
+      +0x14: mov     x1, x19
+      +0x18: mov     x0, x20
+      +0x1c: add     x19, x19, #0x160
+      +0x20: bl      <mlkem_poly_decompress_d11>
+      +0x24: add     x20, x20, #0x200
+      +0x28: cmp     x19, x21
+      +0x2c: b.ne    <mlkem1024_polyvec_decompress_du+0x14>
+      +0x30: ldp     x21, x30, [sp, #16]
+      +0x34: ldp     x19, x20, [sp], #32
+      +0x38: ret
  ***)
 
 let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_GCC12_O2_EXEC =

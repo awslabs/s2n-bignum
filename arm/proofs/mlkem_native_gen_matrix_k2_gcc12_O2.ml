@@ -11,63 +11,63 @@
 (* the two indices of each entry of the matrix to it, samples the four       *)
 (* entries with mlkem_poly_rej_uniform_x4, and zeroes the buffers. It is     *)
 (* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),      *)
-(* where it is at address 0x33d0, using the theorem for                      *)
-(* mlkem_poly_rej_uniform_x4 at 0x4b30 in the image.                         *)
+(* using the theorem for mlkem_poly_rej_uniform_x4 in the image.             *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_rej_uniform_x4_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    33d0: stp     x19, x30, [sp, #-304]!
-    33d4: adrp    x5, 1f000 <mlk_zetas+0x18c80>
-    33d8: ldr     x5, [x5, #4088]
-    33dc: add     x19, sp, #0x2f
-    33e0: and     x19, x19, #0xffffffffffffffe0
-    33e4: mov     x3, x19
-    33e8: add     x4, x19, #0x100
-    33ec: ldr     x6, [x5]
-    33f0: str     x6, [sp, #296]
-    33f4: mov     x6, #0x0
-    33f8: ldp     q0, q1, [x1]
-    33fc: stp     q0, q1, [x3]
-    3400: add     x3, x3, #0x40
-    3404: cmp     x4, x3
-    3408: b.ne    33f8 <mlkem512_gen_matrix+0x28>
-    340c: cmp     w2, #0x0
-    3410: mov     w7, #0x101
-    3414: cset    w6, ne
-    3418: cset    w5, eq
-    341c: mov     x4, x19
-    3420: add     x3, x0, #0x600
-    3424: add     x2, x0, #0x400
-    3428: add     x1, x0, #0x200
-    342c: strh    wzr, [x19, #32]
-    3430: strb    w5, [x19, #96]
-    3434: strb    w6, [x19, #97]
-    3438: strb    w6, [x19, #160]
-    343c: strb    w5, [x19, #161]
-    3440: strh    w7, [x19, #224]
-    3444: bl      4b30 <mlkem_poly_rej_uniform_x4>
-    3448: movi    v0.4s, #0x0
-    344c: stp     q0, q0, [x19]
-    3450: stp     q0, q0, [x19, #32]
-    3454: stp     q0, q0, [x19, #64]
-    3458: stp     q0, q0, [x19, #96]
-    345c: stp     q0, q0, [x19, #128]
-    3460: stp     q0, q0, [x19, #160]
-    3464: stp     q0, q0, [x19, #192]
-    3468: stp     q0, q0, [x19, #224]
-    346c: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    3470: ldr     x0, [x0, #4088]
-    3474: ldr     x2, [sp, #296]
-    3478: ldr     x1, [x0]
-    347c: subs    x2, x2, x1
-    3480: mov     x1, #0x0
-    3484: b.ne    3490 <mlkem512_gen_matrix+0xc0>
-    3488: ldp     x19, x30, [sp], #304
-    348c: ret
-    3490: bl      830 <__stack_chk_fail@plt>
+    mlkem512_gen_matrix:
+       +0x0: stp     x19, x30, [sp, #-304]!
+       +0x4: adrp    x5, <page>
+       +0x8: ldr     x5, [x5, #4088]  // got_stack_chk_guard
+       +0xc: add     x19, sp, #0x2f
+      +0x10: and     x19, x19, #0xffffffffffffffe0
+      +0x14: mov     x3, x19
+      +0x18: add     x4, x19, #0x100
+      +0x1c: ldr     x6, [x5]
+      +0x20: str     x6, [sp, #296]
+      +0x24: mov     x6, #0x0
+      +0x28: ldp     q0, q1, [x1]
+      +0x2c: stp     q0, q1, [x3]
+      +0x30: add     x3, x3, #0x40
+      +0x34: cmp     x4, x3
+      +0x38: b.ne    <mlkem512_gen_matrix+0x28>
+      +0x3c: cmp     w2, #0x0
+      +0x40: mov     w7, #0x101
+      +0x44: cset    w6, ne
+      +0x48: cset    w5, eq
+      +0x4c: mov     x4, x19
+      +0x50: add     x3, x0, #0x600
+      +0x54: add     x2, x0, #0x400
+      +0x58: add     x1, x0, #0x200
+      +0x5c: strh    wzr, [x19, #32]
+      +0x60: strb    w5, [x19, #96]
+      +0x64: strb    w6, [x19, #97]
+      +0x68: strb    w6, [x19, #160]
+      +0x6c: strb    w5, [x19, #161]
+      +0x70: strh    w7, [x19, #224]
+      +0x74: bl      <mlkem_poly_rej_uniform_x4>
+      +0x78: movi    v0.4s, #0x0
+      +0x7c: stp     q0, q0, [x19]
+      +0x80: stp     q0, q0, [x19, #32]
+      +0x84: stp     q0, q0, [x19, #64]
+      +0x88: stp     q0, q0, [x19, #96]
+      +0x8c: stp     q0, q0, [x19, #128]
+      +0x90: stp     q0, q0, [x19, #160]
+      +0x94: stp     q0, q0, [x19, #192]
+      +0x98: stp     q0, q0, [x19, #224]
+      +0x9c: adrp    x0, <page>
+      +0xa0: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0xa4: ldr     x2, [sp, #296]
+      +0xa8: ldr     x1, [x0]
+      +0xac: subs    x2, x2, x1
+      +0xb0: mov     x1, #0x0
+      +0xb4: b.ne    <mlkem512_gen_matrix+0xc0>
+      +0xb8: ldp     x19, x30, [sp], #304
+      +0xbc: ret
+      +0xc0: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_GEN_MATRIX_K2_GCC12_O2_EXEC =

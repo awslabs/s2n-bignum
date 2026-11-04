@@ -4,15 +4,14 @@
  *)
 
 (* ========================================================================= *)
-(* Compression of a vector of 2 polynomials to 10 bits per coefficient.      *)
-(* This is the code for mlkem512_polyvec_compress_du from mlkem-native's     *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
+(* Compression of a vector of 2 polynomials to 10 bits per coefficient. This *)
+(* is the code for mlkem512_polyvec_compress_du from mlkem-native's portable *)
+(* C implementation compiled by gcc 12 with -O2 (see                         *)
 (* mlkem_native/README.md), which calls mlkem_poly_compress_d10 for each of  *)
 (* the polynomials, the last time as a tail call. It is verified in the      *)
-(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at       *)
-(* address 0x44e0, using the theorems for mlkem_poly_compress_d10 at 0x1cd0  *)
-(* in the image. Besides its own 32 bytes, the stack below that is used by   *)
-(* mlkem_poly_compress_d10 for the first call.                               *)
+(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems   *)
+(* for mlkem_poly_compress_d10 in the image. Besides its own 32 bytes, the   *)
+(* stack below that is used by mlkem_poly_compress_d10 for the first call.   *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_compress_d10_gcc12_O2.ml";;
@@ -20,16 +19,17 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    44e0: stp     x19, x20, [sp, #-32]!
-    44e4: mov     x19, x0
-    44e8: mov     x20, x1
-    44ec: str     x30, [sp, #16]
-    44f0: bl      1cd0 <mlkem_poly_compress_d10>
-    44f4: ldr     x30, [sp, #16]
-    44f8: add     x1, x20, #0x200
-    44fc: add     x0, x19, #0x140
-    4500: ldp     x19, x20, [sp], #32
-    4504: b       1cd0 <mlkem_poly_compress_d10>
+    mlkem512_polyvec_compress_du:
+       +0x0: stp     x19, x20, [sp, #-32]!
+       +0x4: mov     x19, x0
+       +0x8: mov     x20, x1
+       +0xc: str     x30, [sp, #16]
+      +0x10: bl      <mlkem_poly_compress_d10>
+      +0x14: ldr     x30, [sp, #16]
+      +0x18: add     x1, x20, #0x200
+      +0x1c: add     x0, x19, #0x140
+      +0x20: ldp     x19, x20, [sp], #32
+      +0x24: b       <mlkem_poly_compress_d10>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K2_GCC12_O2_EXEC =

@@ -10,8 +10,8 @@
 (* SHA3-256 hash of the encapsulation key in the decapsulation key into a    *)
 (* buffer on the stack, compares it in constant time with the hash stored in *)
 (* the decapsulation key, and zeroes the buffer. It is verified in the whole *)
-(* image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address     *)
-(* 0x3ba0, using the theorems for mlkem_sha3_256 at 0x2650 in the image.     *)
+(* image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for     *)
+(* mlkem_sha3_256 in the image.                                              *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_sha3_256_gcc12_O2.ml";;
@@ -19,64 +19,65 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    3ba0: stp     x19, x20, [sp, #-96]!
-    3ba4: mov     x20, x0
-    3ba8: add     x1, x0, #0x300
-    3bac: adrp    x3, 1f000 <mlk_zetas+0x18c80>
-    3bb0: ldr     x3, [x3, #4088]
-    3bb4: str     x30, [sp, #16]
-    3bb8: add     x19, sp, #0x3f
-    3bbc: mov     x2, #0x320
-    3bc0: ldr     x4, [x3]
-    3bc4: str     x4, [sp, #88]
-    3bc8: mov     x4, #0x0
-    3bcc: and     x19, x19, #0xffffffffffffffe0
-    3bd0: mov     x0, x19
-    3bd4: bl      2650 <mlkem_sha3_256>
-    3bd8: ldp     q1, q3, [x19]
-    3bdc: ldr     q0, [x20, #1568]
-    3be0: ldr     q2, [x20, #1584]
-    3be4: eor     v0.16b, v0.16b, v1.16b
-    3be8: movi    v1.4s, #0x0
-    3bec: eor     v2.16b, v2.16b, v3.16b
-    3bf0: orr     v4.16b, v0.16b, v2.16b
-    3bf4: eor     v0.16b, v0.16b, v2.16b
-    3bf8: ext     v3.16b, v4.16b, v1.16b, #8
-    3bfc: ext     v2.16b, v0.16b, v1.16b, #8
-    3c00: orr     v3.16b, v3.16b, v4.16b
-    3c04: eor     v2.16b, v2.16b, v0.16b
-    3c08: ext     v4.16b, v3.16b, v1.16b, #4
-    3c0c: ext     v0.16b, v2.16b, v1.16b, #4
-    3c10: orr     v4.16b, v4.16b, v3.16b
-    3c14: eor     v0.16b, v0.16b, v2.16b
-    3c18: ext     v3.16b, v4.16b, v1.16b, #2
-    3c1c: ext     v2.16b, v0.16b, v1.16b, #2
-    3c20: orr     v3.16b, v3.16b, v4.16b
-    3c24: eor     v2.16b, v2.16b, v0.16b
-    3c28: ext     v0.16b, v3.16b, v1.16b, #1
-    3c2c: ext     v1.16b, v2.16b, v1.16b, #1
-    3c30: orr     v0.16b, v0.16b, v3.16b
-    3c34: eor     v1.16b, v1.16b, v2.16b
-    3c38: umov    w1, v0.b[0]
-    3c3c: umov    w2, v1.b[0]
-    3c40: neg     w1, w1
-    3c44: eor     w1, w2, w1, asr #16
-    3c48: cmp     w2, w1, uxtb
-    3c4c: mov     w0, #0xfffffffb
-    3c50: csel    w0, wzr, w0, eq
-    3c54: stp     xzr, xzr, [x19]
-    3c58: stp     xzr, xzr, [x19, #16]
-    3c5c: adrp    x1, 1f000 <mlk_zetas+0x18c80>
-    3c60: ldr     x1, [x1, #4088]
-    3c64: ldr     x3, [sp, #88]
-    3c68: ldr     x2, [x1]
-    3c6c: subs    x3, x3, x2
-    3c70: mov     x2, #0x0
-    3c74: b.ne    3c84 <mlkem512_check_sk+0xe4>
-    3c78: ldr     x30, [sp, #16]
-    3c7c: ldp     x19, x20, [sp], #96
-    3c80: ret
-    3c84: bl      830 <__stack_chk_fail@plt>
+    mlkem512_check_sk:
+       +0x0: stp     x19, x20, [sp, #-96]!
+       +0x4: mov     x20, x0
+       +0x8: add     x1, x0, #0x300
+       +0xc: adrp    x3, <page>
+      +0x10: ldr     x3, [x3, #4088]  // got_stack_chk_guard
+      +0x14: str     x30, [sp, #16]
+      +0x18: add     x19, sp, #0x3f
+      +0x1c: mov     x2, #0x320
+      +0x20: ldr     x4, [x3]
+      +0x24: str     x4, [sp, #88]
+      +0x28: mov     x4, #0x0
+      +0x2c: and     x19, x19, #0xffffffffffffffe0
+      +0x30: mov     x0, x19
+      +0x34: bl      <mlkem_sha3_256>
+      +0x38: ldp     q1, q3, [x19]
+      +0x3c: ldr     q0, [x20, #1568]
+      +0x40: ldr     q2, [x20, #1584]
+      +0x44: eor     v0.16b, v0.16b, v1.16b
+      +0x48: movi    v1.4s, #0x0
+      +0x4c: eor     v2.16b, v2.16b, v3.16b
+      +0x50: orr     v4.16b, v0.16b, v2.16b
+      +0x54: eor     v0.16b, v0.16b, v2.16b
+      +0x58: ext     v3.16b, v4.16b, v1.16b, #8
+      +0x5c: ext     v2.16b, v0.16b, v1.16b, #8
+      +0x60: orr     v3.16b, v3.16b, v4.16b
+      +0x64: eor     v2.16b, v2.16b, v0.16b
+      +0x68: ext     v4.16b, v3.16b, v1.16b, #4
+      +0x6c: ext     v0.16b, v2.16b, v1.16b, #4
+      +0x70: orr     v4.16b, v4.16b, v3.16b
+      +0x74: eor     v0.16b, v0.16b, v2.16b
+      +0x78: ext     v3.16b, v4.16b, v1.16b, #2
+      +0x7c: ext     v2.16b, v0.16b, v1.16b, #2
+      +0x80: orr     v3.16b, v3.16b, v4.16b
+      +0x84: eor     v2.16b, v2.16b, v0.16b
+      +0x88: ext     v0.16b, v3.16b, v1.16b, #1
+      +0x8c: ext     v1.16b, v2.16b, v1.16b, #1
+      +0x90: orr     v0.16b, v0.16b, v3.16b
+      +0x94: eor     v1.16b, v1.16b, v2.16b
+      +0x98: umov    w1, v0.b[0]
+      +0x9c: umov    w2, v1.b[0]
+      +0xa0: neg     w1, w1
+      +0xa4: eor     w1, w2, w1, asr #16
+      +0xa8: cmp     w2, w1, uxtb
+      +0xac: mov     w0, #0xfffffffb
+      +0xb0: csel    w0, wzr, w0, eq
+      +0xb4: stp     xzr, xzr, [x19]
+      +0xb8: stp     xzr, xzr, [x19, #16]
+      +0xbc: adrp    x1, <page>
+      +0xc0: ldr     x1, [x1, #4088]  // got_stack_chk_guard
+      +0xc4: ldr     x3, [sp, #88]
+      +0xc8: ldr     x2, [x1]
+      +0xcc: subs    x3, x3, x2
+      +0xd0: mov     x2, #0x0
+      +0xd4: b.ne    <mlkem512_check_sk+0xe4>
+      +0xd8: ldr     x30, [sp, #16]
+      +0xdc: ldp     x19, x20, [sp], #96
+      +0xe0: ret
+      +0xe4: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC =

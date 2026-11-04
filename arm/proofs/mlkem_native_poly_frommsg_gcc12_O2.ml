@@ -4,11 +4,10 @@
  *)
 
 (* ========================================================================= *)
-(* Conversion of a 32-byte message to a polynomial.                          *)
-(* This is the code for mlkem_poly_frommsg from mlkem-native's portable C    *)
-(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
-(* It is verified in the whole image (see                                    *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x22e0.        *)
+(* Conversion of a 32-byte message to a polynomial. This is the code for     *)
+(* mlkem_poly_frommsg from mlkem-native's portable C implementation compiled *)
+(* by gcc 12 with -O2 (see mlkem_native/README.md). It is verified in the    *)
+(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml).                      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -16,29 +15,30 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    22e0: mov     x6, x0
-    22e4: mov     x5, x1
-    22e8: mov     x3, #0x0
-    22ec: mov     w8, #0x1
-    22f0: mov     w7, #0x681
-    22f4: nop
-    22f8: lsl     w4, w3, #3
-    22fc: mov     w1, #0x0
-    2300: lsl     w0, w8, w1
-    2304: ldrb    w2, [x5, x3]
-    2308: and     w0, w0, #0xff
-    230c: and     w0, w0, w2
-    2310: neg     w0, w0
-    2314: add     w2, w1, w4
-    2318: and     w0, w7, w0, asr #16
-    231c: add     w1, w1, #0x1
-    2320: strh    w0, [x6, x2, lsl #1]
-    2324: cmp     w1, #0x8
-    2328: b.ne    2300 <mlkem_poly_frommsg+0x20>
-    232c: add     x3, x3, #0x1
-    2330: cmp     x3, #0x20
-    2334: b.ne    22f8 <mlkem_poly_frommsg+0x18>
-    2338: ret
+    mlkem_poly_frommsg:
+       +0x0: mov     x6, x0
+       +0x4: mov     x5, x1
+       +0x8: mov     x3, #0x0
+       +0xc: mov     w8, #0x1
+      +0x10: mov     w7, #0x681
+      +0x14: nop
+      +0x18: lsl     w4, w3, #3
+      +0x1c: mov     w1, #0x0
+      +0x20: lsl     w0, w8, w1
+      +0x24: ldrb    w2, [x5, x3]
+      +0x28: and     w0, w0, #0xff
+      +0x2c: and     w0, w0, w2
+      +0x30: neg     w0, w0
+      +0x34: add     w2, w1, w4
+      +0x38: and     w0, w7, w0, asr #16
+      +0x3c: add     w1, w1, #0x1
+      +0x40: strh    w0, [x6, x2, lsl #1]
+      +0x44: cmp     w1, #0x8
+      +0x48: b.ne    <mlkem_poly_frommsg+0x20>
+      +0x4c: add     x3, x3, #0x1
+      +0x50: cmp     x3, #0x20
+      +0x54: b.ne    <mlkem_poly_frommsg+0x18>
+      +0x58: ret
  ***)
 
 let MLKEM_NATIVE_POLY_FROMMSG_GCC12_O2_EXEC =

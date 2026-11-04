@@ -13,10 +13,9 @@
 (* transforms them, computes t = A s + e in the NTT domain, and writes the   *)
 (* encoding of t followed by rho as the public key and the encoding of s as  *)
 (* the secret key, zeroing its buffers. It is verified in the whole image    *)
-(* (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x50c0,   *)
-(* using the theorems for mlkem_sha3_512, mlkem768_gen_matrix,               *)
-(* mlkem768_poly_getnoise_eta1_4x, mlkem768_polyvec_ntt,                     *)
-(* mlkem768_polyvec_mulcache_compute,                                        *)
+(* (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for           *)
+(* mlkem_sha3_512, mlkem768_gen_matrix, mlkem768_poly_getnoise_eta1_4x,      *)
+(* mlkem768_polyvec_ntt, mlkem768_polyvec_mulcache_compute,                  *)
 (* mlkem768_polyvec_basemul_acc_montgomery_cached, mlkem768_polyvec_tomont,  *)
 (* mlkem768_polyvec_add, mlkem768_polyvec_reduce and                         *)
 (* mlkem768_polyvec_tobytes in the image, and the contract for memset.       *)
@@ -36,152 +35,153 @@ needs "arm/proofs/utils/mlkem_native_indcpa.ml";;
 
 (*** The code in the image:
 
-    50c0: mov     x12, #0x2810
-    50c4: sub     sp, sp, x12
-    50c8: mov     x3, #0x2740
-    50cc: mov     x4, #0x2700
-    50d0: mov     x5, #0x1200
-    50d4: mov     x6, #0x1e00
-    50d8: stp     x19, x20, [sp, #16]
-    50dc: add     x19, sp, #0x9f
-    50e0: and     x19, x19, #0xffffffffffffffe0
-    50e4: stp     x21, x22, [sp, #32]
-    50e8: mov     x7, #0x1800
-    50ec: add     x21, x19, x4
-    50f0: stp     x23, x24, [sp, #48]
-    50f4: add     x23, x19, x3
-    50f8: add     x20, x19, x5
-    50fc: stp     x25, x26, [sp, #64]
-    5100: add     x25, x19, #0x2, lsl #12
-    5104: add     x26, x19, x6
-    5108: stp     x27, x28, [sp, #80]
-    510c: add     x24, x19, x7
-    5110: mov     w27, #0x3
-    5114: str     x30, [sp, #96]
-    5118: mov     w22, #0xffffffff
-    511c: stp     x0, x1, [sp, #112]
-    5120: mov     x1, x23
-    5124: add     x28, x21, #0x20
-    5128: ldp     q0, q1, [x2]
-    512c: adrp    x2, 1f000 <mlk_zetas+0x18c80>
-    5130: ldr     x2, [x2, #4088]
-    5134: ldr     x0, [x2]
-    5138: str     x0, [sp, #10248]
-    513c: mov     x0, #0x0
-    5140: stp     q0, q1, [x23]
-    5144: mov     x0, x21
-    5148: mov     x2, #0x21
-    514c: strb    w27, [x25, #1888]
-    5150: bl      26f4 <mlkem_sha3_512>
-    5154: mov     x1, x21
-    5158: mov     x0, x19
-    515c: mov     w2, #0x0
-    5160: bl      4f50 <mlkem768_gen_matrix>
-    5164: strb    w22, [sp]
-    5168: mov     x4, x28
-    516c: add     x2, x20, #0x400
-    5170: add     x1, x20, #0x200
-    5174: mov     x0, x20
-    5178: mov     w7, #0x2
-    517c: mov     w6, #0x1
-    5180: mov     w5, #0x0
-    5184: mov     x3, #0x0
-    5188: bl      60a0 <mlkem768_poly_getnoise_eta1_4x>
-    518c: mov     x1, x25
-    5190: mov     x4, x28
-    5194: mov     w5, w27
-    5198: mov     x8, #0x2400
-    519c: add     x2, x26, #0x400
-    51a0: strb    w22, [sp]
-    51a4: mov     w7, #0x5
-    51a8: mov     w6, #0x4
-    51ac: mov     x3, #0x0
-    51b0: add     x27, x19, x8
-    51b4: mov     x0, x26
-    51b8: bl      60a0 <mlkem768_poly_getnoise_eta1_4x>
-    51bc: mov     x0, x20
-    51c0: bl      5f00 <mlkem768_polyvec_ntt>
-    51c4: mov     x0, x26
-    51c8: bl      5f00 <mlkem768_polyvec_ntt>
-    51cc: mov     x25, x24
-    51d0: mov     x28, x19
-    51d4: mov     x1, x20
-    51d8: mov     x0, x27
-    51dc: mov     w22, #0x0
-    51e0: bl      5ff0 <mlkem768_polyvec_mulcache_compute>
-    51e4: mov     x1, x28
-    51e8: mov     x0, x25
-    51ec: mov     x3, x27
-    51f0: mov     x2, x20
-    51f4: add     w22, w22, #0x1
-    51f8: bl      5f40 <mlkem768_polyvec_basemul_acc_montgomery_cached>
-    51fc: add     x28, x28, #0x600
-    5200: add     x25, x25, #0x200
-    5204: cmp     w22, #0x3
-    5208: b.ne    51e4 <mlkem768_indcpa_keypair_derand+0x124>
-    520c: mov     x0, x24
-    5210: bl      6080 <mlkem768_polyvec_tomont>
-    5214: mov     x1, x26
-    5218: mov     x0, x24
-    521c: bl      6044 <mlkem768_polyvec_add>
-    5220: mov     x0, x24
-    5224: bl      6024 <mlkem768_polyvec_reduce>
-    5228: mov     x0, x20
-    522c: bl      6024 <mlkem768_polyvec_reduce>
-    5230: ldr     x0, [sp, #120]
-    5234: mov     x1, x20
-    5238: bl      5e90 <mlkem768_polyvec_tobytes>
-    523c: ldr     x22, [sp, #112]
-    5240: mov     x1, x24
-    5244: mov     x0, x22
-    5248: bl      5e90 <mlkem768_polyvec_tobytes>
-    524c: ldp     q0, q1, [x21]
-    5250: add     x25, x22, #0x480
-    5254: mov     x0, x27
-    5258: mov     x2, #0x300
-    525c: mov     w1, #0x0
-    5260: stp     q0, q1, [x25]
-    5264: bl      840 <memset@plt>
-    5268: mov     x2, #0x600
-    526c: mov     x0, x20
-    5270: mov     w1, #0x0
-    5274: bl      840 <memset@plt>
-    5278: mov     x2, #0x600
-    527c: mov     x0, x24
-    5280: mov     w1, #0x0
-    5284: bl      840 <memset@plt>
-    5288: mov     x2, #0x600
-    528c: mov     x0, x26
-    5290: mov     w1, #0x0
-    5294: bl      840 <memset@plt>
-    5298: mov     x2, #0x1200
-    529c: mov     x0, x19
-    52a0: mov     w1, #0x0
-    52a4: bl      840 <memset@plt>
-    52a8: stp     xzr, xzr, [x23]
-    52ac: stp     xzr, xzr, [x23, #16]
-    52b0: strb    wzr, [x23, #32]
-    52b4: movi    v0.4s, #0x0
-    52b8: stp     q0, q0, [x21]
-    52bc: stp     q0, q0, [x21, #32]
-    52c0: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    52c4: ldr     x0, [x0, #4088]
-    52c8: ldr     x2, [sp, #10248]
-    52cc: ldr     x1, [x0]
-    52d0: subs    x2, x2, x1
-    52d4: mov     x1, #0x0
-    52d8: b.ne    5304 <mlkem768_indcpa_keypair_derand+0x244>
-    52dc: ldp     x19, x20, [sp, #16]
-    52e0: mov     w0, #0x0
-    52e4: ldp     x21, x22, [sp, #32]
-    52e8: mov     x12, #0x2810
-    52ec: ldp     x23, x24, [sp, #48]
-    52f0: ldp     x25, x26, [sp, #64]
-    52f4: ldp     x27, x28, [sp, #80]
-    52f8: ldr     x30, [sp, #96]
-    52fc: add     sp, sp, x12
-    5300: ret
-    5304: bl      830 <__stack_chk_fail@plt>
+    mlkem768_indcpa_keypair_derand:
+        +0x0: mov     x12, #0x2810
+        +0x4: sub     sp, sp, x12
+        +0x8: mov     x3, #0x2740
+        +0xc: mov     x4, #0x2700
+       +0x10: mov     x5, #0x1200
+       +0x14: mov     x6, #0x1e00
+       +0x18: stp     x19, x20, [sp, #16]
+       +0x1c: add     x19, sp, #0x9f
+       +0x20: and     x19, x19, #0xffffffffffffffe0
+       +0x24: stp     x21, x22, [sp, #32]
+       +0x28: mov     x7, #0x1800
+       +0x2c: add     x21, x19, x4
+       +0x30: stp     x23, x24, [sp, #48]
+       +0x34: add     x23, x19, x3
+       +0x38: add     x20, x19, x5
+       +0x3c: stp     x25, x26, [sp, #64]
+       +0x40: add     x25, x19, #0x2, lsl #12
+       +0x44: add     x26, x19, x6
+       +0x48: stp     x27, x28, [sp, #80]
+       +0x4c: add     x24, x19, x7
+       +0x50: mov     w27, #0x3
+       +0x54: str     x30, [sp, #96]
+       +0x58: mov     w22, #0xffffffff
+       +0x5c: stp     x0, x1, [sp, #112]
+       +0x60: mov     x1, x23
+       +0x64: add     x28, x21, #0x20
+       +0x68: ldp     q0, q1, [x2]
+       +0x6c: adrp    x2, <page>
+       +0x70: ldr     x2, [x2, #4088]  // got_stack_chk_guard
+       +0x74: ldr     x0, [x2]
+       +0x78: str     x0, [sp, #10248]
+       +0x7c: mov     x0, #0x0
+       +0x80: stp     q0, q1, [x23]
+       +0x84: mov     x0, x21
+       +0x88: mov     x2, #0x21
+       +0x8c: strb    w27, [x25, #1888]
+       +0x90: bl      <mlkem_sha3_512>
+       +0x94: mov     x1, x21
+       +0x98: mov     x0, x19
+       +0x9c: mov     w2, #0x0
+       +0xa0: bl      <mlkem768_gen_matrix>
+       +0xa4: strb    w22, [sp]
+       +0xa8: mov     x4, x28
+       +0xac: add     x2, x20, #0x400
+       +0xb0: add     x1, x20, #0x200
+       +0xb4: mov     x0, x20
+       +0xb8: mov     w7, #0x2
+       +0xbc: mov     w6, #0x1
+       +0xc0: mov     w5, #0x0
+       +0xc4: mov     x3, #0x0
+       +0xc8: bl      <mlkem768_poly_getnoise_eta1_4x>
+       +0xcc: mov     x1, x25
+       +0xd0: mov     x4, x28
+       +0xd4: mov     w5, w27
+       +0xd8: mov     x8, #0x2400
+       +0xdc: add     x2, x26, #0x400
+       +0xe0: strb    w22, [sp]
+       +0xe4: mov     w7, #0x5
+       +0xe8: mov     w6, #0x4
+       +0xec: mov     x3, #0x0
+       +0xf0: add     x27, x19, x8
+       +0xf4: mov     x0, x26
+       +0xf8: bl      <mlkem768_poly_getnoise_eta1_4x>
+       +0xfc: mov     x0, x20
+      +0x100: bl      <mlkem768_polyvec_ntt>
+      +0x104: mov     x0, x26
+      +0x108: bl      <mlkem768_polyvec_ntt>
+      +0x10c: mov     x25, x24
+      +0x110: mov     x28, x19
+      +0x114: mov     x1, x20
+      +0x118: mov     x0, x27
+      +0x11c: mov     w22, #0x0
+      +0x120: bl      <mlkem768_polyvec_mulcache_compute>
+      +0x124: mov     x1, x28
+      +0x128: mov     x0, x25
+      +0x12c: mov     x3, x27
+      +0x130: mov     x2, x20
+      +0x134: add     w22, w22, #0x1
+      +0x138: bl      <mlkem768_polyvec_basemul_acc_montgomery_cached>
+      +0x13c: add     x28, x28, #0x600
+      +0x140: add     x25, x25, #0x200
+      +0x144: cmp     w22, #0x3
+      +0x148: b.ne    <mlkem768_indcpa_keypair_derand+0x124>
+      +0x14c: mov     x0, x24
+      +0x150: bl      <mlkem768_polyvec_tomont>
+      +0x154: mov     x1, x26
+      +0x158: mov     x0, x24
+      +0x15c: bl      <mlkem768_polyvec_add>
+      +0x160: mov     x0, x24
+      +0x164: bl      <mlkem768_polyvec_reduce>
+      +0x168: mov     x0, x20
+      +0x16c: bl      <mlkem768_polyvec_reduce>
+      +0x170: ldr     x0, [sp, #120]
+      +0x174: mov     x1, x20
+      +0x178: bl      <mlkem768_polyvec_tobytes>
+      +0x17c: ldr     x22, [sp, #112]
+      +0x180: mov     x1, x24
+      +0x184: mov     x0, x22
+      +0x188: bl      <mlkem768_polyvec_tobytes>
+      +0x18c: ldp     q0, q1, [x21]
+      +0x190: add     x25, x22, #0x480
+      +0x194: mov     x0, x27
+      +0x198: mov     x2, #0x300
+      +0x19c: mov     w1, #0x0
+      +0x1a0: stp     q0, q1, [x25]
+      +0x1a4: bl      <memset@plt>
+      +0x1a8: mov     x2, #0x600
+      +0x1ac: mov     x0, x20
+      +0x1b0: mov     w1, #0x0
+      +0x1b4: bl      <memset@plt>
+      +0x1b8: mov     x2, #0x600
+      +0x1bc: mov     x0, x24
+      +0x1c0: mov     w1, #0x0
+      +0x1c4: bl      <memset@plt>
+      +0x1c8: mov     x2, #0x600
+      +0x1cc: mov     x0, x26
+      +0x1d0: mov     w1, #0x0
+      +0x1d4: bl      <memset@plt>
+      +0x1d8: mov     x2, #0x1200
+      +0x1dc: mov     x0, x19
+      +0x1e0: mov     w1, #0x0
+      +0x1e4: bl      <memset@plt>
+      +0x1e8: stp     xzr, xzr, [x23]
+      +0x1ec: stp     xzr, xzr, [x23, #16]
+      +0x1f0: strb    wzr, [x23, #32]
+      +0x1f4: movi    v0.4s, #0x0
+      +0x1f8: stp     q0, q0, [x21]
+      +0x1fc: stp     q0, q0, [x21, #32]
+      +0x200: adrp    x0, <page>
+      +0x204: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0x208: ldr     x2, [sp, #10248]
+      +0x20c: ldr     x1, [x0]
+      +0x210: subs    x2, x2, x1
+      +0x214: mov     x1, #0x0
+      +0x218: b.ne    <mlkem768_indcpa_keypair_derand+0x244>
+      +0x21c: ldp     x19, x20, [sp, #16]
+      +0x220: mov     w0, #0x0
+      +0x224: ldp     x21, x22, [sp, #32]
+      +0x228: mov     x12, #0x2810
+      +0x22c: ldp     x23, x24, [sp, #48]
+      +0x230: ldp     x25, x26, [sp, #64]
+      +0x234: ldp     x27, x28, [sp, #80]
+      +0x238: ldr     x30, [sp, #96]
+      +0x23c: add     sp, sp, x12
+      +0x240: ret
+      +0x244: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_INDCPA_KEYPAIR_DERAND_K3_GCC12_O2_EXEC =

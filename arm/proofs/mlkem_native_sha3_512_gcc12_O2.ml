@@ -9,10 +9,10 @@
 (* mlkem_native/README.md), which absorbs the input into a state on the      *)
 (* stack with mlk_keccak_absorb_once, permutes it and extracts the 64 bytes  *)
 (* of the hash, and then zeroes the state. It is verified in the whole image *)
-(* (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x26f4,   *)
-(* using the theorems for mlk_keccak_absorb_once at 0x23b0,                  *)
-(* mlkem_keccakf1600_permute at 0x2dd0 and mlkem_keccakf1600_extract_bytes   *)
-(* at 0x2c60 in the image. The result is sha3_512 of common/fips202.ml.      *)
+(* (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for           *)
+(* mlk_keccak_absorb_once, mlkem_keccakf1600_permute and                     *)
+(* mlkem_keccakf1600_extract_bytes in the image. The result is sha3_512 of   *)
+(* common/fips202.ml.                                                        *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keccak_absorb_once_gcc12_O2.ml";;
@@ -21,47 +21,48 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    26f4: stp     x19, x20, [sp, #-240]!
-    26f8: mov     x3, x2
-    26fc: mov     x2, x1
-    2700: adrp    x5, 1f000 <mlk_zetas+0x18c80>
-    2704: ldr     x5, [x5, #4088]
-    2708: str     x30, [sp, #16]
-    270c: add     x19, sp, #0x20
-    2710: mov     w4, #0x6
-    2714: mov     x20, x0
-    2718: mov     w1, #0x48
-    271c: ldr     x0, [x5]
-    2720: str     x0, [sp, #232]
-    2724: mov     x0, #0x0
-    2728: mov     x0, x19
-    272c: bl      23b0 <mlk_keccak_absorb_once>
-    2730: mov     x0, x19
-    2734: bl      2dd0 <mlkem_keccakf1600_permute>
-    2738: mov     x1, x20
-    273c: mov     x0, x19
-    2740: mov     w3, #0x40
-    2744: mov     w2, #0x0
-    2748: bl      2c60 <mlkem_keccakf1600_extract_bytes>
-    274c: str     xzr, [x19, #192]
-    2750: movi    v0.4s, #0x0
-    2754: stp     q0, q0, [x19]
-    2758: stp     q0, q0, [x19, #32]
-    275c: stp     q0, q0, [x19, #64]
-    2760: stp     q0, q0, [x19, #96]
-    2764: stp     q0, q0, [x19, #128]
-    2768: stp     q0, q0, [x19, #160]
-    276c: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    2770: ldr     x0, [x0, #4088]
-    2774: ldr     x2, [sp, #232]
-    2778: ldr     x1, [x0]
-    277c: subs    x2, x2, x1
-    2780: mov     x1, #0x0
-    2784: b.ne    2794 <mlkem_sha3_512+0xa0>
-    2788: ldr     x30, [sp, #16]
-    278c: ldp     x19, x20, [sp], #240
-    2790: ret
-    2794: bl      830 <__stack_chk_fail@plt>
+    mlkem_sha3_512:
+       +0x0: stp     x19, x20, [sp, #-240]!
+       +0x4: mov     x3, x2
+       +0x8: mov     x2, x1
+       +0xc: adrp    x5, <page>
+      +0x10: ldr     x5, [x5, #4088]  // got_stack_chk_guard
+      +0x14: str     x30, [sp, #16]
+      +0x18: add     x19, sp, #0x20
+      +0x1c: mov     w4, #0x6
+      +0x20: mov     x20, x0
+      +0x24: mov     w1, #0x48
+      +0x28: ldr     x0, [x5]
+      +0x2c: str     x0, [sp, #232]
+      +0x30: mov     x0, #0x0
+      +0x34: mov     x0, x19
+      +0x38: bl      <mlk_keccak_absorb_once>
+      +0x3c: mov     x0, x19
+      +0x40: bl      <mlkem_keccakf1600_permute>
+      +0x44: mov     x1, x20
+      +0x48: mov     x0, x19
+      +0x4c: mov     w3, #0x40
+      +0x50: mov     w2, #0x0
+      +0x54: bl      <mlkem_keccakf1600_extract_bytes>
+      +0x58: str     xzr, [x19, #192]
+      +0x5c: movi    v0.4s, #0x0
+      +0x60: stp     q0, q0, [x19]
+      +0x64: stp     q0, q0, [x19, #32]
+      +0x68: stp     q0, q0, [x19, #64]
+      +0x6c: stp     q0, q0, [x19, #96]
+      +0x70: stp     q0, q0, [x19, #128]
+      +0x74: stp     q0, q0, [x19, #160]
+      +0x78: adrp    x0, <page>
+      +0x7c: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0x80: ldr     x2, [sp, #232]
+      +0x84: ldr     x1, [x0]
+      +0x88: subs    x2, x2, x1
+      +0x8c: mov     x1, #0x0
+      +0x90: b.ne    <mlkem_sha3_512+0xa0>
+      +0x94: ldr     x30, [sp, #16]
+      +0x98: ldp     x19, x20, [sp], #240
+      +0x9c: ret
+      +0xa0: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_SHA3_512_GCC12_O2_EXEC =

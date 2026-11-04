@@ -4,13 +4,12 @@
  *)
 
 (* ========================================================================= *)
-(* Compression of a polynomial to 10 bits per coefficient.                   *)
-(* This is the code for mlkem_poly_compress_d10 from mlkem-native's portable *)
-(* C implementation compiled by gcc 12 with -O2 (see                         *)
-(* mlkem_native/README.md), with a stack protector. It is verified in the    *)
-(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at       *)
-(* address 0x1cd0, with the address of the stack guard in the global offset  *)
-(* table at 0x1fff8.                                                         *)
+(* Compression of a polynomial to 10 bits per coefficient. This is the code  *)
+(* for mlkem_poly_compress_d10 from mlkem-native's portable C implementation *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), with a stack    *)
+(* protector. It is verified in the whole image (see                         *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), with the address of the stack guard   *)
+(* in the global offset table.                                               *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -18,59 +17,60 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    1cd0: adrp    x3, 1f000 <mlk_zetas+0x18c80>
-    1cd4: ldr     x3, [x3, #4088]
-    1cd8: str     x30, [sp, #-32]!
-    1cdc: mov     x8, #0xbc00
-    1ce0: mov     x6, x1
-    1ce4: add     x12, sp, #0x10
-    1ce8: mov     x2, x0
-    1cec: movk    x8, #0x9d7d, lsl #16
-    1cf0: ldr     x0, [x3]
-    1cf4: str     x0, [sp, #24]
-    1cf8: mov     x0, #0x0
-    1cfc: mov     x7, #0x100000000
-    1d00: mov     w3, #0x4
-    1d04: nop
-    1d08: sub     w1, w3, #0x4
-    1d0c: mov     x4, x12
-    1d10: ldrsh   x0, [x6, w1, uxtw #1]
-    1d14: add     w1, w1, #0x1
-    1d18: madd    x0, x0, x8, x7
-    1d1c: ubfx    x0, x0, #33, #10
-    1d20: strh    w0, [x4], #2
-    1d24: cmp     w3, w1
-    1d28: b.ne    1d10 <mlkem_poly_compress_d10+0x40>
-    1d2c: ldrh    w4, [sp, #18]
-    1d30: add     w3, w3, #0x4
-    1d34: ldrh    w1, [sp, #20]
-    1d38: add     x2, x2, #0x5
-    1d3c: ldrh    w0, [sp, #22]
-    1d40: ldrh    w5, [sp, #16]
-    1d44: lsl     w9, w4, #2
-    1d48: lsl     w11, w1, #4
-    1d4c: sturb   w5, [x2, #-5]
-    1d50: lsl     w10, w0, #6
-    1d54: orr     w4, w11, w4, lsr #6
-    1d58: orr     w1, w10, w1, lsr #4
-    1d5c: lsr     w0, w0, #2
-    1d60: orr     w5, w9, w5, lsr #8
-    1d64: sturb   w5, [x2, #-4]
-    1d68: sturb   w4, [x2, #-3]
-    1d6c: sturb   w1, [x2, #-2]
-    1d70: sturb   w0, [x2, #-1]
-    1d74: cmp     w3, #0x104
-    1d78: b.ne    1d08 <mlkem_poly_compress_d10+0x38>
-    1d7c: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    1d80: ldr     x0, [x0, #4088]
-    1d84: ldr     x2, [sp, #24]
-    1d88: ldr     x1, [x0]
-    1d8c: subs    x2, x2, x1
-    1d90: mov     x1, #0x0
-    1d94: b.ne    1da0 <mlkem_poly_compress_d10+0xd0>
-    1d98: ldr     x30, [sp], #32
-    1d9c: ret
-    1da0: bl      830 <__stack_chk_fail@plt>
+    mlkem_poly_compress_d10:
+       +0x0: adrp    x3, <page>
+       +0x4: ldr     x3, [x3, #4088]  // got_stack_chk_guard
+       +0x8: str     x30, [sp, #-32]!
+       +0xc: mov     x8, #0xbc00
+      +0x10: mov     x6, x1
+      +0x14: add     x12, sp, #0x10
+      +0x18: mov     x2, x0
+      +0x1c: movk    x8, #0x9d7d, lsl #16
+      +0x20: ldr     x0, [x3]
+      +0x24: str     x0, [sp, #24]
+      +0x28: mov     x0, #0x0
+      +0x2c: mov     x7, #0x100000000
+      +0x30: mov     w3, #0x4
+      +0x34: nop
+      +0x38: sub     w1, w3, #0x4
+      +0x3c: mov     x4, x12
+      +0x40: ldrsh   x0, [x6, w1, uxtw #1]
+      +0x44: add     w1, w1, #0x1
+      +0x48: madd    x0, x0, x8, x7
+      +0x4c: ubfx    x0, x0, #33, #10
+      +0x50: strh    w0, [x4], #2
+      +0x54: cmp     w3, w1
+      +0x58: b.ne    <mlkem_poly_compress_d10+0x40>
+      +0x5c: ldrh    w4, [sp, #18]
+      +0x60: add     w3, w3, #0x4
+      +0x64: ldrh    w1, [sp, #20]
+      +0x68: add     x2, x2, #0x5
+      +0x6c: ldrh    w0, [sp, #22]
+      +0x70: ldrh    w5, [sp, #16]
+      +0x74: lsl     w9, w4, #2
+      +0x78: lsl     w11, w1, #4
+      +0x7c: sturb   w5, [x2, #-5]
+      +0x80: lsl     w10, w0, #6
+      +0x84: orr     w4, w11, w4, lsr #6
+      +0x88: orr     w1, w10, w1, lsr #4
+      +0x8c: lsr     w0, w0, #2
+      +0x90: orr     w5, w9, w5, lsr #8
+      +0x94: sturb   w5, [x2, #-4]
+      +0x98: sturb   w4, [x2, #-3]
+      +0x9c: sturb   w1, [x2, #-2]
+      +0xa0: sturb   w0, [x2, #-1]
+      +0xa4: cmp     w3, #0x104
+      +0xa8: b.ne    <mlkem_poly_compress_d10+0x38>
+      +0xac: adrp    x0, <page>
+      +0xb0: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0xb4: ldr     x2, [sp, #24]
+      +0xb8: ldr     x1, [x0]
+      +0xbc: subs    x2, x2, x1
+      +0xc0: mov     x1, #0x0
+      +0xc4: b.ne    <mlkem_poly_compress_d10+0xd0>
+      +0xc8: ldr     x30, [sp], #32
+      +0xcc: ret
+      +0xd0: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D10_GCC12_O2_EXEC =

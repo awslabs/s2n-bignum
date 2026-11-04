@@ -8,12 +8,12 @@
 (* This is the code for mlkem_shake128x4_absorb_once from mlkem-native's     *)
 (* portable C implementation compiled by gcc 12 with -O2 (see                *)
 (* mlkem_native/README.md), which zeroes the 800 bytes of the context with   *)
-(* memset from the C library, called through the PLT at 0x840 of the image,  *)
-(* and then calls mlk_keccak_absorb_once_x4 with the rate 168 of SHAKE128,   *)
-(* as a tail call. It is verified in the whole image (see                    *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x2910, using  *)
-(* the theorems for mlk_keccak_absorb_once_x4 at 0x27a0 in the image and     *)
-(* assuming the contracts for memset in utils/mlkem_native_libc.ml.          *)
+(* memset from the C library, called through the PLT of the image, and then  *)
+(* calls mlk_keccak_absorb_once_x4 with the rate 168 of SHAKE128, as a tail  *)
+(* call. It is verified in the whole image (see                              *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlk_keccak_absorb_once_x4 in the image and assuming the contracts for     *)
+(* memset in utils/mlkem_native_libc.ml.                                     *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native_libc.ml";;
@@ -22,36 +22,38 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image, and the PLT stub for memset:
 
-    2910: stp     x19, x20, [sp, #-64]!
-    2914: mov     x20, x1
-    2918: mov     x19, x0
-    291c: mov     w1, #0x0
-    2920: stp     x21, x22, [sp, #16]
-    2924: mov     x22, x3
-    2928: mov     x21, x2
-    292c: mov     x2, #0x320
-    2930: stp     x23, x24, [sp, #32]
-    2934: mov     x23, x4
-    2938: mov     x24, x5
-    293c: str     x30, [sp, #48]
-    2940: bl      840 <memset@plt>
-    2944: ldr     x30, [sp, #48]
-    2948: mov     x6, x24
-    294c: mov     x5, x23
-    2950: mov     x4, x22
-    2954: ldp     x23, x24, [sp, #32]
-    2958: mov     x3, x21
-    295c: ldp     x21, x22, [sp, #16]
-    2960: mov     x2, x20
-    2964: mov     x0, x19
-    2968: mov     w1, #0xa8
-    296c: ldp     x19, x20, [sp], #64
-    2970: b       27a0 <mlk_keccak_absorb_once_x4.constprop.0>
+    mlkem_shake128x4_absorb_once:
+       +0x0: stp     x19, x20, [sp, #-64]!
+       +0x4: mov     x20, x1
+       +0x8: mov     x19, x0
+       +0xc: mov     w1, #0x0
+      +0x10: stp     x21, x22, [sp, #16]
+      +0x14: mov     x22, x3
+      +0x18: mov     x21, x2
+      +0x1c: mov     x2, #0x320
+      +0x20: stp     x23, x24, [sp, #32]
+      +0x24: mov     x23, x4
+      +0x28: mov     x24, x5
+      +0x2c: str     x30, [sp, #48]
+      +0x30: bl      <memset@plt>
+      +0x34: ldr     x30, [sp, #48]
+      +0x38: mov     x6, x24
+      +0x3c: mov     x5, x23
+      +0x40: mov     x4, x22
+      +0x44: ldp     x23, x24, [sp, #32]
+      +0x48: mov     x3, x21
+      +0x4c: ldp     x21, x22, [sp, #16]
+      +0x50: mov     x2, x20
+      +0x54: mov     x0, x19
+      +0x58: mov     w1, #0xa8
+      +0x5c: ldp     x19, x20, [sp], #64
+      +0x60: b       <mlk_keccak_absorb_once_x4.constprop.0>
 
-    840: adrp    x16, 1f000 <mlk_zetas+0x18c80>
-    844: ldr     x17, [x16, #4072]
-    848: add     x16, x16, #0xfe8
-    84c: br      x17
+    memset@plt:
+      +0x0: adrp    x16, <page>
+      +0x4: ldr     x17, [x16, #4072]  // got_memset
+      +0x8: add     x16, x16, #0xfe8  // got_memset
+      +0xc: br      x17
  ***)
 
 let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_EXEC =
@@ -60,11 +62,11 @@ let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_EXEC =
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof, assuming the contract for memset at the address mf in  *)
-(* the GOT entry at 0x1ffe8, with its code and data in the region (ea,el).   *)
-(* The result is as for mlk_keccak_absorb_once on each message, with r = 168 *)
-(* and p = 0x1F as in shake128 in common/fips202.ml. The stack is the 304    *)
-(* bytes used by mlk_keccak_absorb_once_x4, which include the 64 of the      *)
-(* function before the tail call.                                            *)
+(* the GOT entry, with its code and data in the region (ea,el). The result   *)
+(* is as for mlk_keccak_absorb_once on each message, with r = 168 and p =    *)
+(* 0x1F as in shake128 in common/fips202.ml. The stack is the 304 bytes used *)
+(* by mlk_keccak_absorb_once_x4, which include the 64 of the function before *)
+(* the tail call.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ABSORB_X4_TAC =

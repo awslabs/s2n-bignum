@@ -1191,8 +1191,8 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_SAFE = time prove
   ASSERT_CONCL_TAC full_spec THEN NTT_SAFE_TOP_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* The same code in the whole image, at address 0x42b4, with the zetas at    *)
-(* 0x6380 (see mlkem_native_libmlkem_gcc12_O2.ml).                           *)
+(* The same code in the whole image, with the zetas (see                     *)
+(* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;

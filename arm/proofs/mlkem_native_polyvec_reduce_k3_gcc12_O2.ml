@@ -4,13 +4,13 @@
  *)
 
 (* ========================================================================= *)
-(* Barrett reduction of a vector of 3 polynomials.                           *)
-(* This is the code for mlkem768_polyvec_reduce from mlkem-native's          *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md), which calls mlkem_poly_reduce for each of the    *)
-(* polynomials, the last time as a tail call. It is verified in the whole    *)
-(* image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address     *)
-(* 0x6024, using the theorems for mlkem_poly_reduce at 0x4190 in the image.  *)
+(* Barrett reduction of a vector of 3 polynomials. This is the code for      *)
+(* mlkem768_polyvec_reduce from mlkem-native's portable C implementation     *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which calls     *)
+(* mlkem_poly_reduce for each of the polynomials, the last time as a tail    *)
+(* call. It is verified in the whole image (see                              *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlkem_poly_reduce in the image.                                           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_reduce_gcc12_O2.ml";;
@@ -18,14 +18,15 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    6024: stp     x19, x30, [sp, #-16]!
-    6028: mov     x19, x0
-    602c: bl      4190 <mlkem_poly_reduce>
-    6030: add     x0, x19, #0x200
-    6034: bl      4190 <mlkem_poly_reduce>
-    6038: add     x0, x19, #0x400
-    603c: ldp     x19, x30, [sp], #16
-    6040: b       4190 <mlkem_poly_reduce>
+    mlkem768_polyvec_reduce:
+       +0x0: stp     x19, x30, [sp, #-16]!
+       +0x4: mov     x19, x0
+       +0x8: bl      <mlkem_poly_reduce>
+       +0xc: add     x0, x19, #0x200
+      +0x10: bl      <mlkem_poly_reduce>
+      +0x14: add     x0, x19, #0x400
+      +0x18: ldp     x19, x30, [sp], #16
+      +0x1c: b       <mlkem_poly_reduce>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_REDUCE_K3_GCC12_O2_EXEC =

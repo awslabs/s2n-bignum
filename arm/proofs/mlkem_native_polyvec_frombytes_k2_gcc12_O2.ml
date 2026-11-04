@@ -5,13 +5,12 @@
 
 (* ========================================================================= *)
 (* Unpacking of a vector of 2 polynomials from bytes, 12 bits per            *)
-(* coefficient. This is the code for mlkem512_polyvec_frombytes from         *)
-(* mlkem-native's portable C implementation compiled by gcc 12 with -O2 (see *)
+(* coefficient. This is the code for mlkem512_polyvec_frombytes from mlkem-  *)
+(* native's portable C implementation compiled by gcc 12 with -O2 (see       *)
 (* mlkem_native/README.md), which calls mlkem_poly_frombytes for each of the *)
 (* polynomials, the last time as a tail call. It is verified in the whole    *)
-(* image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address     *)
-(* 0x4570, using the theorems for mlkem_poly_frombytes at 0x22a0 in the      *)
-(* image.                                                                    *)
+(* image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for     *)
+(* mlkem_poly_frombytes in the image.                                        *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_frombytes_gcc12_O2.ml";;
@@ -19,16 +18,17 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    4570: stp     x19, x20, [sp, #-32]!
-    4574: mov     x19, x0
-    4578: mov     x20, x1
-    457c: str     x30, [sp, #16]
-    4580: bl      22a0 <mlkem_poly_frombytes>
-    4584: ldr     x30, [sp, #16]
-    4588: add     x1, x20, #0x180
-    458c: add     x0, x19, #0x200
-    4590: ldp     x19, x20, [sp], #32
-    4594: b       22a0 <mlkem_poly_frombytes>
+    mlkem512_polyvec_frombytes:
+       +0x0: stp     x19, x20, [sp, #-32]!
+       +0x4: mov     x19, x0
+       +0x8: mov     x20, x1
+       +0xc: str     x30, [sp, #16]
+      +0x10: bl      <mlkem_poly_frombytes>
+      +0x14: ldr     x30, [sp, #16]
+      +0x18: add     x1, x20, #0x180
+      +0x1c: add     x0, x19, #0x200
+      +0x20: ldp     x19, x20, [sp], #32
+      +0x24: b       <mlkem_poly_frombytes>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_GCC12_O2_EXEC =

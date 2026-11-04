@@ -4,11 +4,10 @@
  *)
 
 (* ========================================================================= *)
-(* Conversion of a polynomial to a 32-byte message.                          *)
-(* This is the code for mlkem_poly_tomsg from mlkem-native's portable C      *)
-(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
-(* It is verified in the whole image (see                                    *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x2340.        *)
+(* Conversion of a polynomial to a 32-byte message. This is the code for     *)
+(* mlkem_poly_tomsg from mlkem-native's portable C implementation compiled   *)
+(* by gcc 12 with -O2 (see mlkem_native/README.md). It is verified in the    *)
+(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml).                      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -16,31 +15,32 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    2340: mov     w8, #0xafb8
-    2344: mov     x4, x0
-    2348: mov     x6, x1
-    234c: mov     x3, #0x0
-    2350: movk    w8, #0x13, lsl #16
-    2354: mov     w7, #0x40000000
-    2358: lsl     w5, w3, #3
-    235c: mov     w2, #0x0
-    2360: mov     w1, #0x0
-    2364: strb    wzr, [x4, x3]
-    2368: add     w0, w1, w5
-    236c: ldrsh   w0, [x6, x0, lsl #1]
-    2370: madd    w0, w0, w8, w7
-    2374: lsr     w0, w0, #31
-    2378: lsl     w0, w0, w1
-    237c: orr     w2, w2, w0
-    2380: and     w2, w2, #0xff
-    2384: add     w1, w1, #0x1
-    2388: strb    w2, [x4, x3]
-    238c: cmp     w1, #0x8
-    2390: b.ne    2368 <mlkem_poly_tomsg+0x28>
-    2394: add     x3, x3, #0x1
-    2398: cmp     x3, #0x20
-    239c: b.ne    2358 <mlkem_poly_tomsg+0x18>
-    23a0: ret
+    mlkem_poly_tomsg:
+       +0x0: mov     w8, #0xafb8
+       +0x4: mov     x4, x0
+       +0x8: mov     x6, x1
+       +0xc: mov     x3, #0x0
+      +0x10: movk    w8, #0x13, lsl #16
+      +0x14: mov     w7, #0x40000000
+      +0x18: lsl     w5, w3, #3
+      +0x1c: mov     w2, #0x0
+      +0x20: mov     w1, #0x0
+      +0x24: strb    wzr, [x4, x3]
+      +0x28: add     w0, w1, w5
+      +0x2c: ldrsh   w0, [x6, x0, lsl #1]
+      +0x30: madd    w0, w0, w8, w7
+      +0x34: lsr     w0, w0, #31
+      +0x38: lsl     w0, w0, w1
+      +0x3c: orr     w2, w2, w0
+      +0x40: and     w2, w2, #0xff
+      +0x44: add     w1, w1, #0x1
+      +0x48: strb    w2, [x4, x3]
+      +0x4c: cmp     w1, #0x8
+      +0x50: b.ne    <mlkem_poly_tomsg+0x28>
+      +0x54: add     x3, x3, #0x1
+      +0x58: cmp     x3, #0x20
+      +0x5c: b.ne    <mlkem_poly_tomsg+0x18>
+      +0x60: ret
  ***)
 
 let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC =

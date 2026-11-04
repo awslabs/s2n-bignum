@@ -8,9 +8,9 @@
 (* mlkem_shake128x4_release from mlkem-native's portable C implementation    *)
 (* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which zeroes    *)
 (* the 800 bytes of the context with memset from the C library, called       *)
-(* through the PLT at 0x840 of the image. It is verified in the whole image  *)
-(* (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x2a04,   *)
-(* assuming the contracts for memset in utils/mlkem_native_libc.ml.          *)
+(* through the PLT of the image. It is verified in the whole image (see      *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), assuming the contracts for memset in  *)
+(* utils/mlkem_native_libc.ml.                                               *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native_libc.ml";;
@@ -18,18 +18,20 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image, and the PLT stub for memset:
 
-    2a04: stp     x19, x30, [sp, #-16]!
-    2a08: mov     x2, #0x320
-    2a0c: mov     x19, x0
-    2a10: mov     w1, #0x0
-    2a14: bl      840 <memset@plt>
-    2a18: ldp     x19, x30, [sp], #16
-    2a1c: ret
+    mlkem_shake128x4_release:
+       +0x0: stp     x19, x30, [sp, #-16]!
+       +0x4: mov     x2, #0x320
+       +0x8: mov     x19, x0
+       +0xc: mov     w1, #0x0
+      +0x10: bl      <memset@plt>
+      +0x14: ldp     x19, x30, [sp], #16
+      +0x18: ret
 
-    840: adrp    x16, 1f000 <mlk_zetas+0x18c80>
-    844: ldr     x17, [x16, #4072]
-    848: add     x16, x16, #0xfe8
-    84c: br      x17
+    memset@plt:
+      +0x0: adrp    x16, <page>
+      +0x4: ldr     x17, [x16, #4072]  // got_memset
+      +0x8: add     x16, x16, #0xfe8  // got_memset
+      +0xc: br      x17
  ***)
 
 let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_EXEC =
@@ -38,8 +40,8 @@ let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_EXEC =
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof, assuming the contract for memset at the address mf in  *)
-(* the GOT entry at 0x1ffe8, with its code and data in the region (ea,el),   *)
-(* which must not overlap the context or the stack.                          *)
+(* the GOT entry, with its code and data in the region (ea,el), which must   *)
+(* not overlap the context or the stack.                                     *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =

@@ -4,11 +4,11 @@
  *)
 
 (* ========================================================================= *)
-(* Decompression of a polynomial from 4 bits per coefficient.                *)
-(* This is the code for mlkem_poly_decompress_d4 from mlkem-native's         *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md). It is verified in the whole image (see           *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x1da4.        *)
+(* Decompression of a polynomial from 4 bits per coefficient. This is the    *)
+(* code for mlkem_poly_decompress_d4 from mlkem-native's portable C          *)
+(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
+(* It is verified in the whole image (see                                    *)
+(* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -16,25 +16,26 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    1da4: add     x4, x0, #0x200
-    1da8: mov     w3, #0xd01
-    1dac: nop
-    1db0: ldrb    w2, [x1]
-    1db4: add     x0, x0, #0x4
-    1db8: and     w2, w2, #0xf
-    1dbc: mul     w2, w2, w3
-    1dc0: add     w2, w2, #0x8
-    1dc4: lsr     w2, w2, #4
-    1dc8: sturh   w2, [x0, #-4]
-    1dcc: ldrb    w2, [x1], #1
-    1dd0: lsr     w2, w2, #4
-    1dd4: mul     w2, w2, w3
-    1dd8: add     w2, w2, #0x8
-    1ddc: lsr     w2, w2, #4
-    1de0: sturh   w2, [x0, #-2]
-    1de4: cmp     x4, x0
-    1de8: b.ne    1db0 <mlkem_poly_decompress_d4+0xc>
-    1dec: ret
+    mlkem_poly_decompress_d4:
+       +0x0: add     x4, x0, #0x200
+       +0x4: mov     w3, #0xd01
+       +0x8: nop
+       +0xc: ldrb    w2, [x1]
+      +0x10: add     x0, x0, #0x4
+      +0x14: and     w2, w2, #0xf
+      +0x18: mul     w2, w2, w3
+      +0x1c: add     w2, w2, #0x8
+      +0x20: lsr     w2, w2, #4
+      +0x24: sturh   w2, [x0, #-4]
+      +0x28: ldrb    w2, [x1], #1
+      +0x2c: lsr     w2, w2, #4
+      +0x30: mul     w2, w2, w3
+      +0x34: add     w2, w2, #0x8
+      +0x38: lsr     w2, w2, #4
+      +0x3c: sturh   w2, [x0, #-2]
+      +0x40: cmp     x4, x0
+      +0x44: b.ne    <mlkem_poly_decompress_d4+0xc>
+      +0x48: ret
  ***)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D4_GCC12_O2_EXEC =

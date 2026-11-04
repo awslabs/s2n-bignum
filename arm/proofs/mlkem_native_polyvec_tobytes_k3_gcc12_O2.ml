@@ -9,8 +9,8 @@
 (* portable C implementation compiled by gcc 12 with -O2 (see                *)
 (* mlkem_native/README.md), which calls mlkem_poly_tobytes for each of the   *)
 (* polynomials, the last time as a tail call. It is verified in the whole    *)
-(* image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address     *)
-(* 0x5e90, using the theorems for mlkem_poly_tobytes at 0x2260 in the image. *)
+(* image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for     *)
+(* mlkem_poly_tobytes in the image.                                          *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_tobytes_gcc12_O2.ml";;
@@ -18,19 +18,20 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    5e90: stp     x19, x20, [sp, #-32]!
-    5e94: mov     x19, x0
-    5e98: mov     x20, x1
-    5e9c: str     x30, [sp, #16]
-    5ea0: bl      2260 <mlkem_poly_tobytes>
-    5ea4: add     x1, x20, #0x200
-    5ea8: add     x0, x19, #0x180
-    5eac: bl      2260 <mlkem_poly_tobytes>
-    5eb0: ldr     x30, [sp, #16]
-    5eb4: add     x1, x20, #0x400
-    5eb8: add     x0, x19, #0x300
-    5ebc: ldp     x19, x20, [sp], #32
-    5ec0: b       2260 <mlkem_poly_tobytes>
+    mlkem768_polyvec_tobytes:
+       +0x0: stp     x19, x20, [sp, #-32]!
+       +0x4: mov     x19, x0
+       +0x8: mov     x20, x1
+       +0xc: str     x30, [sp, #16]
+      +0x10: bl      <mlkem_poly_tobytes>
+      +0x14: add     x1, x20, #0x200
+      +0x18: add     x0, x19, #0x180
+      +0x1c: bl      <mlkem_poly_tobytes>
+      +0x20: ldr     x30, [sp, #16]
+      +0x24: add     x1, x20, #0x400
+      +0x28: add     x0, x19, #0x300
+      +0x2c: ldp     x19, x20, [sp], #32
+      +0x30: b       <mlkem_poly_tobytes>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_TOBYTES_K3_GCC12_O2_EXEC =
