@@ -329,3 +329,14 @@ callee, here with the facts about it proved by BITBLAST. The functions with
 four nonces realign the stack pointer themselves at the start, keeping the
 address of their arguments on the stack in R10, and read the low 32 bits of
 each of the 64-bit words for the last three nonces.
+
+`mlkem512_check_sk`, `mlkem768_check_sk` and `mlkem1024_check_sk`, which
+compute the SHA3-256 hash of the encapsulation key in the decapsulation key
+and compare it in constant time with the hash stored in the key, are
+verified in the image with the same specifications as on AArch64 apart from
+the stack and DF, with the theorem of constant time and memory safety and a
+combined theorem with correctness, as for `mlkem_sha3_256`, for the
+decapsulation, which branches on the result. The comparison is done in the
+low halves of YMM registers, whose upper halves are unknown after the call
+to `mlkem_sha3_256`, so the proofs give them names there, and its result is
+proved by BITBLAST.
