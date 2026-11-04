@@ -838,19 +838,8 @@ let GCM_CTR_INC_LANES = prove(
   GEN_TAC THEN REWRITE_TAC[gcm_ctr_inc] THEN BITBLAST_TAC);;
 
 (* ========================================================================= *)
-(* NIST SP 800-38D inc32 and the byteswap bridge to gcm_ctr_inc.             *)
+(* The byteswap bridge from gcm_ctr_inc to NIST SP 800-38D inc32             *)
 (* ========================================================================= *)
-
-(* inc32 per NIST SP 800-38D Section 6.2.  Self-contained (word primitives
-   only, zero dependencies).  It is the same definition as common/gcm.ml's
-   inc32, so loading both files is a benign redefinition.  It is kept local
-   because common/gcm.ml also loads the rest of the SP 800-38D specification
-   and its KATs, which this proof does not require. *)
-let inc32 = new_definition
- `inc32 (cb:128 word) : 128 word =
-    let top96:96 word = word_subword cb (32,96) in
-    let bot32:32 word = word_subword cb (0,32) in
-    word_join top96 (word_add bot32 (word 1 : 32 word)) : 128 word`;;
 
 (* GCM_CTR_INC_INC32: the NIST inc32 and the kernel's gcm_ctr_inc are        *)
 (* conjugate by a full 128-bit byte reversal.  inc32 increments the low 32   *)
@@ -11719,29 +11708,10 @@ let WBN_END_OUTPUT_BYTE_LIST = prove
 (* reversal of the load, unconditionally (the 32-bit wrap is the intended    *)
 (* mod 2^32 rollover).  GCM_CTR_INC_ITER_CTR_BLOCK lets the exported         *)
 (* theorems name the nonce, through WBN_OUTPUT_POINTWISE_NONCE and           *)
-(* GCM_CTR_INC_ITER_NIST_IVEC below.  ctr_block is the NIST counter block of *)
-(* arm/proofs/utils/aes_gcm_spec.ml (loaded through aes_gcm_common.ml).      *)
+(* GCM_CTR_INC_ITER_NIST_IVEC below.  ctr_block, inc32 on it                 *)
+(* (INC32_CTR_BLOCK, ITER_INC32_CTR_BLOCK) and its relation to GCTR are      *)
+(* in arm/proofs/utils/aes_gcm_spec.ml (loaded through aes_gcm_common.ml).   *)
 (* ------------------------------------------------------------------------- *)
-
-(* NIST inc32 on a nonce||counter block increments the 32-bit counter,
-   unconditionally: word (c + 1):int32 = word_add (word c) (word 1), the wrap
-   being the intended mod 2^32 counter rollover. *)
-let INC32_CTR_BLOCK = prove
- (`!(nonce:96 word) c. inc32 (ctr_block nonce c) = ctr_block nonce (c + 1)`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[inc32; ctr_block] THEN
-  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-  REWRITE_TAC[WORD_BLAST
-    `word_subword (word_join (nonce:96 word) (wc:int32):int128) (0,32):32 word = wc`;
-              WORD_BLAST
-    `word_subword (word_join (nonce:96 word) (wc:int32):int128) (32,96):96 word = nonce`] THEN
-  REWRITE_TAC[WORD_ADD] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
-
-(* Iterated: j applications of inc32 advance the counter by j. *)
-let ITER_INC32_CTR_BLOCK = prove
- (`!j (nonce:96 word) c. ITER j inc32 (ctr_block nonce c) = ctr_block nonce (c + j)`,
-  INDUCT_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC[ITER; ADD_CLAUSES] THEN
-  ASM_REWRITE_TAC[INC32_CTR_BLOCK] THEN REWRITE_TAC[INC32_CTR_BLOCK] THEN
-  AP_TERM_TAC THEN ARITH_TAC);;
 
 (* The bridge: gcm_ctr_inc_iter j ctr0 is the NIST nonce||counter block
    advanced by j, provided the byte-reversed ctr0 is nonce||c.  By
