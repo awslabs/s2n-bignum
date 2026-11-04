@@ -710,7 +710,8 @@ let cosimulate_ldst_hsw() =
 
 (*** This covers the extended register offsets UXTW, SXTW and SXTX, as
  *** well as LSL, with or without the shift, for LDR and STR of 32-bit and
- *** 64-bit values, LDRB/STRB, LDRH/STRH, LDRSB, LDRSH and LDRSW. For UXTW
+ *** 64-bit values and of D registers, LDRB/STRB, LDRH/STRH, LDRSB, LDRSH
+ *** and LDRSW (v = 1 selects the SIMD&FP register for the D case). For UXTW
  *** and SXTW the top 32 bits of the offset register are random junk, and
  *** for the signed extensions (and LSL, by wraparound) the offset can be
  *** negative. The offset register can also be the zero register.
@@ -732,15 +733,16 @@ let movk_Xn_imm_lsl32 rd imm =
   num rd;;
 
 let cosimulate_ldst_ext() =
-  let size,opc =
-    match Random.int 7 with
-      0 -> 2,Random.int 2
-    | 1 -> 3,Random.int 2
-    | 2 -> 0,Random.int 2
-    | 3 -> 1,Random.int 2
-    | 4 -> 0,2 + Random.int 2
-    | 5 -> 1,2 + Random.int 2
-    | _ -> 2,2 in
+  let size,opc,v =
+    match Random.int 8 with
+      0 -> 2,Random.int 2,0
+    | 1 -> 3,Random.int 2,0
+    | 2 -> 0,Random.int 2,0
+    | 3 -> 1,Random.int 2,0
+    | 4 -> 0,2 + Random.int 2,0
+    | 5 -> 1,2 + Random.int 2,0
+    | 6 -> 2,2,0
+    | _ -> 3,Random.int 2,1 in
   let ext = Random.int 4 and s = Random.int 2 and rn = Random.int 32 in
   let option = el ext [0b010; 0b110; 0b111; 0b011] in
   let shift = if s = 1 then size else 0 in
@@ -762,7 +764,7 @@ let cosimulate_ldst_ext() =
        movk_Xn_imm_lsl32 rm junk]
     else [if k >= 0 then movz_Xn_imm rm k else movn_Xn_imm rm (-k - 1)] in
   let code =
-    pow2 30 */ num size +/ pow2 27 */ num 0b111 +/
+    pow2 30 */ num size +/ pow2 27 */ num 0b111 +/ pow2 26 */ num v +/
     pow2 22 */ num opc +/ pow2 21 +/ pow2 16 */ num rm +/
     pow2 13 */ num option +/ pow2 12 */ num s +/ pow2 10 */ num 0b10 +/
     pow2 5 */ num rn +/ num rt in
