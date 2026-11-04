@@ -880,6 +880,14 @@ let check_insns () =
     "11001011001xxxxxxxxxxx11111xxxxx";
     "10001011001xxxxxxxxxxx11111xxxxx";
 
+    (*** and, orr, eor (immediate) with SP as the destination: the      ***)
+    (*** simulation runs on the stack and cannot change SP, as for the  ***)
+    (*** add and sub with SP above. E.g. and sp, x9, #0xffffffffffffffe0 ***)
+    (*** which aligns the stack down to 32 bytes.                       ***)
+    "x00100100xxxxxxxxxxxxxxxxxx11111";
+    "x01100100xxxxxxxxxxxxxxxxxx11111";
+    "x10100100xxxxxxxxxxxxxxxxxx11111";
+
     (*** ret, br ***)
     "1101011001011111000000xxxxx00000";
     "1101011000011111000000xxxxx00000";
