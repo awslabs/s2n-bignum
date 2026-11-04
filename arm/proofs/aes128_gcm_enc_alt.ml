@@ -8881,18 +8881,6 @@ let WB_GUARD2_MASK_GEN = prove
 (* the output forall is vacuous.                                             *)
 (* ------------------------------------------------------------------------- *)
 
-(* `tst x1,#127` sets ZF exactly when the length is a whole block count. *)
-
-let WB_MASK7_EQ_MOD = prove
- (`!x:int64. word_and x (word 0x7f) = word 0 <=> val x MOD 128 = 0`,
-  GEN_TAC THEN
-  REWRITE_TAC[ARITH_RULE `0x7f = 2 EXP 7 - 1`; WORD_AND_MASK_WORD] THEN
-  REWRITE_TAC[ARITH_RULE `2 EXP 7 = 128`; GSYM VAL_EQ_0] THEN
-  SUBGOAL_THEN `val(word(val(x:int64) MOD 128):int64) = val x MOD 128`
-  SUBST1_TAC THENL
-   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ARITH_TAC;
-    REFL_TAC]);;
-
 (* ------------------------------------------------------------------------- *)
 (* AES128_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT: the subroutine theorem, for  *)
 (* every len_bits.  It lifts CORRECT through the two entry guards, the       *)
@@ -11379,39 +11367,16 @@ let AES128_GCM_ENC_ALT_SUBROUTINE_SAFE = prove
 (* ------------------------------------------------------------------------- *)
 (* No-access early-return guarantee.                                         *)
 (*                                                                           *)
-(* The exported CORRECT and SAFE theorems above still carry key/table/tag/   *)
-(* counter, stack and separation premises even on a rejected call.  This     *)
-(* extra pair exposes the guarantee that actually holds on the rejected path *)
-(* -- len_bits = 0, or not a whole number of 128-bit blocks: the routine     *)
-(* returns 0 and performs no memory event (no load, store or stack access),  *)
-(* assuming nothing about the data, key, table, counter, stack pointer or    *)
-(* separation, and no 2^63 bound.  The guard decides from len_bits (in X1)   *)
-(* alone -- `cbz x1` on zero, `tst x1,#0x7f; b.ne` on a non-multiple of 128  *)
-(* -- and falls into the shared mov w0,#0 / ret, so only PC, X0, the flags   *)
-(* and the (branch-only) event trace change; no memory region is touched.    *)
-(* `memaccess_inbounds e2 [] []` over the newly appended events e2 states    *)
-(* that they contain no EventLoad/EventStore; the EventJump entries a branch *)
-(* emits are permitted.  (The direct `read events s = e` cannot be used: a   *)
-(* taken branch appends an EventJump, so the trace grows even with no memory *)
-(* access; this follows the _SAFE specs' event idiom.)  The theorems are not *)
-(* named *_SUBROUTINE_CORRECT/_SAFE, so tools/count-proofs.sh does not count *)
-(* them and arm/proofs/specifications.txt does not list them.                *)
+(* The exported CORRECT and SAFE theorems still carry the key, table, tag,   *)
+(* counter, stack and separation premises on a rejected call.  These two     *)
+(* theorems state what holds there without any of them: when len_bits is     *)
+(* zero or not a whole number of 128-bit blocks, the routine returns 0 with  *)
+(* no memory access (see ALT_GUARD_REJECT_TAC in aes_gcm_common.ml).  They   *)
+(* are not named *_SUBROUTINE_CORRECT/_SAFE, so tools/count-proofs.sh does   *)
+(* not count them and arm/proofs/specifications.txt does not list them.      *)
+(* The padded form follows from the trimmed one by ARM_ADD_IBT_RULE, and     *)
+(* needs no ~extra, as the precondition has no opaque state predicate.       *)
 (* ------------------------------------------------------------------------- *)
-
-(* Supply the APPEND-prefix witness for the newly appended events from the   *)
-(* simulated final trace (`read events s = CONS .. (CONS .. e)` reassociated *)
-(* as `APPEND e2 e`), so that `memaccess_inbounds e2 [] []` can then be      *)
-(* discharged for the jump-only trace.                                       *)
-let EVENTS_NOMEM_TAC:tactic =
-  W(fun (asl,w) ->
-     let _,bod = dest_exists w in
-     let eqc = fst(dest_conj bod) in
-     let tr = lhs eqc and appe = rhs eqc in
-     let e_tm = rand appe in
-     let rec pref tm = if tm = e_tm then []
-                       else let c,t = dest_comb tm in (rand c)::pref t in
-     let lst = pref tr in
-     EXISTS_TAC (mk_list(lst,type_of(hd lst))));;
 
 let AES128_GCM_ENC_ALT_NOIBT_REJECT_NOACCESS = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p len_bits pc returnaddress e.
@@ -11427,49 +11392,8 @@ let AES128_GCM_ENC_ALT_NOIBT_REJECT_NOACCESS = prove
            C_RETURN s = word 0 /\
            (?e2. read events s = APPEND e2 e /\ memaccess_inbounds e2 [] []))
       (MAYCHANGE [PC; X0] ,, MAYCHANGE [events] ,, MAYCHANGE SOME_FLAGS)`,
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
-  REPEAT GEN_TAC THEN
-  DISCH_THEN(DISJ_CASES_THEN ASSUME_TAC) THENL
-   [(* Zero length: `cbz x1` is taken straight to L128_enc_ret. *)
-    SUBGOAL_THEN `len_bits:int64 = word 0` SUBST_ALL_TAC THENL
-     [ASM_REWRITE_TAC[GSYM VAL_EQ_0]; ALL_TAC] THEN
-    ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC AES128_GCM_ENC_ALT_EXEC [1;2;3] THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    EVENTS_NOMEM_TAC THEN
-    REWRITE_TAC[APPEND; memaccess_inbounds; ALL; EX; FST; SND];
-    (* Not a whole number of blocks: `cbz x1` falls through, `tst x1,#0x7f`  *)
-    (* leaves ZF clear so `b.ne` is taken, and L128_enc_ret returns 0.       *)
-    SUBGOAL_THEN `~(val(len_bits:int64) = 0)` ASSUME_TAC THENL
-     [DISCH_TAC THEN
-      UNDISCH_TAC `~(val(len_bits:int64) MOD 128 = 0)` THEN
-      ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
-    SUBGOAL_THEN `~(len_bits:int64 = word 0)` ASSUME_TAC THENL
-     [ASM_REWRITE_TAC[GSYM VAL_EQ_0]; ALL_TAC] THEN
-    SUBGOAL_THEN `~(word_and (len_bits:int64) (word 0x7f) = word 0)`
-    ASSUME_TAC THENL [ASM_REWRITE_TAC[WB_MASK7_EQ_MOD]; ALL_TAC] THEN
-    SUBGOAL_THEN `~(val(word_and (len_bits:int64) (word 0x7f)) = 0)`
-    ASSUME_TAC THENL [ASM_REWRITE_TAC[VAL_EQ_0]; ALL_TAC] THEN
-    ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC AES128_GCM_ENC_ALT_EXEC [1] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `~(val(len_bits:int64) = 0)`;
-                               ASSUME `~(len_bits:int64 = word 0)`;
-                               COND_CLAUSES]) THEN
-    ARM_STEPS_TAC AES128_GCM_ENC_ALT_EXEC [2] THEN
-    ARM_STEPS_TAC AES128_GCM_ENC_ALT_EXEC [3] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[
-      ASSUME `~(word_and (len_bits:int64) (word 0x7f) = word 0)`;
-      ASSUME `~(val(word_and (len_bits:int64) (word 0x7f)) = 0)`;
-      COND_CLAUSES]) THEN
-    ARM_STEPS_TAC AES128_GCM_ENC_ALT_EXEC [4;5] THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    EVENTS_NOMEM_TAC THEN
-    REWRITE_TAC[APPEND; memaccess_inbounds; ALL; EX; FST; SND]]);;
+  ALT_GUARD_REJECT_TAC AES128_GCM_ENC_ALT_EXEC);;
 
-(* The default build keeps the `bti c` landing pad; reconstitute the padded  *)
-(* statement for aes128_gcm_enc_alt_mc with ARM_ADD_IBT_RULE, as the         *)
-(* exported SAFE theorem does.  No `~extra` is needed: the precondition has  *)
-(* no opaque state predicate.                                                *)
 let AES128_GCM_ENC_ALT_REJECT_NOACCESS = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p len_bits pc returnaddress e.
     val len_bits = 0 \/ ~(val len_bits MOD 128 = 0)
@@ -11487,17 +11411,3 @@ let AES128_GCM_ENC_ALT_REJECT_NOACCESS = prove
   MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE
                      aes128_gcm_enc_alt_mc aes128_gcm_enc_alt_tmc
                      AES128_GCM_ENC_ALT_NOIBT_REJECT_NOACCESS));;
-
-(* Load-time check that the two REJECT_NOACCESS theorems have the intended   *)
-(* shape: no hypotheses, a memaccess_inbounds conclusion and the right code  *)
-(* constant.  They are not exported specifications, so nothing else          *)
-(* checks them.                                                              *)
-let () =
-  let has_const th name =
-    can (find_term (fun t -> is_const t && fst(dest_const t) = name)) (concl th) in
-  let ok th codename =
-    hyp th = [] && has_const th "memaccess_inbounds" && has_const th codename in
-  if not (ok AES128_GCM_ENC_ALT_NOIBT_REJECT_NOACCESS "aes128_gcm_enc_alt_tmc")
-  then failwith "AES128_GCM_ENC_ALT_NOIBT_REJECT_NOACCESS: unexpected shape";
-  if not (ok AES128_GCM_ENC_ALT_REJECT_NOACCESS "aes128_gcm_enc_alt_mc")
-  then failwith "AES128_GCM_ENC_ALT_REJECT_NOACCESS: unexpected shape";;

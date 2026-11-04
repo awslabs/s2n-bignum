@@ -1411,3 +1411,71 @@ let DRAIN_ADDR_K (k:term) : tactic =
    [ASM_ARITH_TAC; ALL_TAC] THEN
   REWRITE_TAC[LEFT_ADD_DISTRIB; RIGHT_ADD_DISTRIB; MULT_CLAUSES; ADD_CLAUSES; ADD_ASSOC] THEN
   CONV_TAC WORD_RULE;;
+
+(* ------------------------------------------------------------------------- *)
+(* The entry guard of the 8-way (_alt) kernels.  After the bti c landing     *)
+(* pad, which the trimmed code lacks, each kernel starts with                *)
+(*   cbz x1, Lret; tst x1, #127; b.ne Lret                                   *)
+(* where Lret is a frameless "mov w0, #0; ret", so when len_bits is zero     *)
+(* or not a multiple of 128 it returns 0 after 3 or 5 instructions, with     *)
+(* no memory access.  ALT_GUARD_REJECT_TAC exec proves the kernels'          *)
+(* REJECT_NOACCESS theorems from their execution theorem exec: the new       *)
+(* events of the run, e2 in the postcondition, are only jumps, which         *)
+(* memaccess_inbounds e2 [] [] states (a taken branch appends an EventJump,  *)
+(* so the trace itself does change).                                         *)
+(* ------------------------------------------------------------------------- *)
+
+(* `tst x1,#127` sets ZF exactly when the length is a whole block count. *)
+
+let WB_MASK7_EQ_MOD = prove
+ (`!x:int64. word_and x (word 0x7f) = word 0 <=> val x MOD 128 = 0`,
+  GEN_TAC THEN
+  REWRITE_TAC[ARITH_RULE `0x7f = 2 EXP 7 - 1`; WORD_AND_MASK_WORD] THEN
+  REWRITE_TAC[ARITH_RULE `2 EXP 7 = 128`; GSYM VAL_EQ_0] THEN
+  SUBGOAL_THEN `val(word(val(x:int64) MOD 128):int64) = val x MOD 128`
+  SUBST1_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ARITH_TAC;
+    REFL_TAC]);;
+
+(* The branch conditions of the guard for a length that is not a whole       *)
+(* number of blocks: cbz falls through and b.ne is taken.                    *)
+
+let ALT_GUARD_FACTS = prove
+ (`!l:int64.
+     ~(val l MOD 128 = 0)
+     ==> ~(val l = 0) /\ ~(l = word 0) /\
+         ~(word_and l (word 127) = word 0) /\
+         ~(val(word_and l (word 127)) = 0)`,
+  GEN_TAC THEN DISCH_TAC THEN
+  REWRITE_TAC[GSYM VAL_EQ_0; ARITH_RULE `127 = 2 EXP 7 - 1`;
+              VAL_WORD_AND_MASK_WORD] THEN
+  REWRITE_TAC[ARITH_RULE `2 EXP 7 = 128`] THEN
+  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+  UNDISCH_TAC `~(val(l:int64) MOD 128 = 0)` THEN
+  ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV);;
+
+(* Supply the witness e2 for `?e2. read events s = APPEND e2 e /\ ..` from   *)
+(* the simulated final trace `read events s = CONS .. (CONS .. e)`.          *)
+
+let EVENTS_NOMEM_TAC:tactic =
+  W(fun (asl,w) ->
+     let _,bod = dest_exists w in
+     let eqc = fst(dest_conj bod) in
+     let tr = lhs eqc and appe = rhs eqc in
+     let e_tm = rand appe in
+     let rec pref tm = if tm = e_tm then []
+                       else let c,t = dest_comb tm in (rand c)::pref t in
+     let lst = pref tr in
+     EXISTS_TAC (mk_list(lst,type_of(hd lst))));;
+
+let ALT_GUARD_REJECT_TAC exec =
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(DISJ_CASES_THEN ASSUME_TAC) THENL
+   [FIRST_X_ASSUM(SUBST_ALL_TAC o REWRITE_RULE[VAL_EQ_0]) THEN
+    ENSURES_INIT_TAC "s0" THEN ARM_STEPS_TAC exec (1--3);
+    FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP ALT_GUARD_FACTS) THEN
+    ENSURES_INIT_TAC "s0" THEN ARM_STEPS_TAC exec (1--5)] THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  EVENTS_NOMEM_TAC THEN
+  REWRITE_TAC[APPEND; memaccess_inbounds; ALL; EX; FST; SND];;

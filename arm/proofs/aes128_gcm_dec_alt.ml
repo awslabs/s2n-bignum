@@ -12186,3 +12186,51 @@ let AES128_GCM_DEC_ALT_SUBROUTINE_SAFE = prove
   MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE
     aes128_gcm_dec_alt_mc aes128_gcm_dec_alt_tmc
     AES128_GCM_DEC_ALT_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* No-access early-return guarantee.                                         *)
+(*                                                                           *)
+(* The exported CORRECT and SAFE theorems still carry the key, table, tag,   *)
+(* counter, stack and separation premises on a rejected call.  These two     *)
+(* theorems state what holds there without any of them: when len_bits is     *)
+(* zero or not a whole number of 128-bit blocks, the routine returns 0 with  *)
+(* no memory access (see ALT_GUARD_REJECT_TAC in aes_gcm_common.ml).  They   *)
+(* are not named *_SUBROUTINE_CORRECT/_SAFE, so tools/count-proofs.sh does   *)
+(* not count them and arm/proofs/specifications.txt does not list them.      *)
+(* The padded form follows from the trimmed one by ARM_ADD_IBT_RULE, and     *)
+(* needs no ~extra, as the precondition has no opaque state predicate.       *)
+(* ------------------------------------------------------------------------- *)
+
+let AES128_GCM_DEC_ALT_NOIBT_REJECT_NOACCESS = prove
+ (`!in_p out_p tag_p ivec_p key_p htable_p len_bits pc returnaddress e.
+    val len_bits = 0 \/ ~(val len_bits MOD 128 = 0)
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aes128_gcm_dec_alt_tmc /\
+           read PC s = word pc /\
+           read X30 s = returnaddress /\
+           C_ARGUMENTS
+            [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
+           read events s = e)
+      (\s. read PC s = returnaddress /\
+           C_RETURN s = word 0 /\
+           (?e2. read events s = APPEND e2 e /\ memaccess_inbounds e2 [] []))
+      (MAYCHANGE [PC; X0] ,, MAYCHANGE [events] ,, MAYCHANGE SOME_FLAGS)`,
+  ALT_GUARD_REJECT_TAC AES128_GCM_DEC_ALT_EXEC);;
+
+let AES128_GCM_DEC_ALT_REJECT_NOACCESS = prove
+ (`!in_p out_p tag_p ivec_p key_p htable_p len_bits pc returnaddress e.
+    val len_bits = 0 \/ ~(val len_bits MOD 128 = 0)
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aes128_gcm_dec_alt_mc /\
+           read PC s = word pc /\
+           read X30 s = returnaddress /\
+           C_ARGUMENTS
+            [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
+           read events s = e)
+      (\s. read PC s = returnaddress /\
+           C_RETURN s = word 0 /\
+           (?e2. read events s = APPEND e2 e /\ memaccess_inbounds e2 [] []))
+      (MAYCHANGE [PC; X0] ,, MAYCHANGE [events] ,, MAYCHANGE SOME_FLAGS)`,
+  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE
+                     aes128_gcm_dec_alt_mc aes128_gcm_dec_alt_tmc
+                     AES128_GCM_DEC_ALT_NOIBT_REJECT_NOACCESS));;
