@@ -803,6 +803,47 @@ let cosimulate_ld1r() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LD1 of a single lane, for bytes, halfwords, words and
+ *** doublewords, with the addressing modes no-offset, post-immediate offset
+ *** and post-register offset, in the same way as cosimulate_ld1r.
+ ***)
+
+let cosimulate_ld1_lane() =
+  let esz = Random.int 4
+  and rn = Random.int 32
+  and rt = Random.int 32
+  and mode = Random.int 3 in
+  let index = Random.int (16 lsr esz) in
+  let q,s,size,opcode =
+    match esz with
+      0 -> index lsr 3,(index lsr 2) land 1,index land 3,0b000
+    | 1 -> index lsr 2,(index lsr 1) land 1,(index land 1) lsl 1,0b010
+    | 2 -> index lsr 1,index land 1,0,0b100
+    | _ -> index,0,1,0b100 in
+  let rm =
+    if mode = 0 || (mode = 2 && rn = 31) then 31
+    else if mode = 1 then 0
+    else (rn + 1 + Random.int 30) mod 31 in
+  let stackoff =
+    if rn = 31 then Random.int 14 * 16
+    else Random.int 224 in
+  let postinc = if mode <> 1 && rm = 31 then 1 lsl esz else 0 in
+  let code =
+    pow2 30 */ num q +/
+    pow2 24 */ num 0b001101 +/
+    pow2 23 */ num (if mode = 1 then 0 else 1) +/
+    pow2 22 */ num 1 +/
+    pow2 16 */ num rm +/
+    pow2 13 */ num opcode +/
+    pow2 12 */ num s +/
+    pow2 10 */ num size +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 (*** This covers LD3 and ST3 with the addressing modes no-offset,
  *** post-immediate offset and post-register offset.
  ***)
@@ -1218,7 +1259,7 @@ let memclasses =
     cosimulate_ldst_imm; cosimulate_sp_arith; cosimulate_sp_subst;
     cosimulate_ldst_hsw; cosimulate_ldst_ext; cosimulate_ldstu_simd;
     cosimulate_ldst4;
-    cosimulate_ldst_h_simd
+    cosimulate_ldst_h_simd; cosimulate_ld1_lane
     ];;
 
 let run_random_memopsimulation() =
