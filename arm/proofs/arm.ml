@@ -230,6 +230,43 @@ let DREG_EXPAND_CLAUSES = prove
    D31 = Q31 :> zerotop_64`,
   REWRITE_TAC(!component_alias_thms));;
 
+(*** There are no named S registers; decoding gives SREG n directly ***)
+
+let SREG_EXPAND_CLAUSES = prove
+ (`SREG 0 = (Q0 :> zerotop_64) :> zerotop_32 /\
+   SREG 1 = (Q1 :> zerotop_64) :> zerotop_32 /\
+   SREG 2 = (Q2 :> zerotop_64) :> zerotop_32 /\
+   SREG 3 = (Q3 :> zerotop_64) :> zerotop_32 /\
+   SREG 4 = (Q4 :> zerotop_64) :> zerotop_32 /\
+   SREG 5 = (Q5 :> zerotop_64) :> zerotop_32 /\
+   SREG 6 = (Q6 :> zerotop_64) :> zerotop_32 /\
+   SREG 7 = (Q7 :> zerotop_64) :> zerotop_32 /\
+   SREG 8 = (Q8 :> zerotop_64) :> zerotop_32 /\
+   SREG 9 = (Q9 :> zerotop_64) :> zerotop_32 /\
+   SREG 10 = (Q10 :> zerotop_64) :> zerotop_32 /\
+   SREG 11 = (Q11 :> zerotop_64) :> zerotop_32 /\
+   SREG 12 = (Q12 :> zerotop_64) :> zerotop_32 /\
+   SREG 13 = (Q13 :> zerotop_64) :> zerotop_32 /\
+   SREG 14 = (Q14 :> zerotop_64) :> zerotop_32 /\
+   SREG 15 = (Q15 :> zerotop_64) :> zerotop_32 /\
+   SREG 16 = (Q16 :> zerotop_64) :> zerotop_32 /\
+   SREG 17 = (Q17 :> zerotop_64) :> zerotop_32 /\
+   SREG 18 = (Q18 :> zerotop_64) :> zerotop_32 /\
+   SREG 19 = (Q19 :> zerotop_64) :> zerotop_32 /\
+   SREG 20 = (Q20 :> zerotop_64) :> zerotop_32 /\
+   SREG 21 = (Q21 :> zerotop_64) :> zerotop_32 /\
+   SREG 22 = (Q22 :> zerotop_64) :> zerotop_32 /\
+   SREG 23 = (Q23 :> zerotop_64) :> zerotop_32 /\
+   SREG 24 = (Q24 :> zerotop_64) :> zerotop_32 /\
+   SREG 25 = (Q25 :> zerotop_64) :> zerotop_32 /\
+   SREG 26 = (Q26 :> zerotop_64) :> zerotop_32 /\
+   SREG 27 = (Q27 :> zerotop_64) :> zerotop_32 /\
+   SREG 28 = (Q28 :> zerotop_64) :> zerotop_32 /\
+   SREG 29 = (Q29 :> zerotop_64) :> zerotop_32 /\
+   SREG 30 = (Q30 :> zerotop_64) :> zerotop_32 /\
+   SREG 31 = (Q31 :> zerotop_64) :> zerotop_32`,
+  REWRITE_TAC(!component_alias_thms));;
+
 (*** There are no named H registers; decoding gives HREG n directly ***)
 
 let HREG_EXPAND_CLAUSES = prove
@@ -320,7 +357,7 @@ let ARM_EXEC_CONV =
    (GEN_REWRITE_CONV I ARM_OPERATION_CLAUSES THENC
     REWRITE_CONV [condition_semantics])) THENC
   REWRITE_CONV[WREG_EXPAND_CLAUSES; DREG_EXPAND_CLAUSES;
-               HREG_EXPAND_CLAUSES] THENC
+               SREG_EXPAND_CLAUSES; HREG_EXPAND_CLAUSES] THENC
   REWRITE_CONV[READ_RVALUE; ARM_ZERO_REGISTER;
                ASSIGN_ZEROTOP_16; ASSIGN_ZEROTOP_32; ASSIGN_ZEROTOP_64;
                READ_ZEROTOP_16; WRITE_ZEROTOP_16;

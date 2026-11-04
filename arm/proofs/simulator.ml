@@ -805,8 +805,9 @@ let cosimulate_ldst_hsw() =
 
 (*** This covers the extended register offsets UXTW, SXTW and SXTX, as
  *** well as LSL, with or without the shift, for LDR and STR of 32-bit and
- *** 64-bit values and of D registers, LDRB/STRB, LDRH/STRH, LDRSB, LDRSH
- *** and LDRSW (v = 1 selects the SIMD&FP register for the D case). For UXTW
+ *** 64-bit values and of D and S registers, LDRB/STRB, LDRH/STRH, LDRSB,
+ *** LDRSH and LDRSW (v = 1 selects the SIMD&FP register for the D and S
+ *** cases). For UXTW
  *** and SXTW the top 32 bits of the offset register are random junk, and
  *** for the signed extensions (and LSL, by wraparound) the offset can be
  *** negative. The offset register can also be the zero register.
@@ -829,7 +830,7 @@ let movk_Xn_imm_lsl32 rd imm =
 
 let cosimulate_ldst_ext() =
   let size,opc,v =
-    match Random.int 8 with
+    match Random.int 9 with
       0 -> 2,Random.int 2,0
     | 1 -> 3,Random.int 2,0
     | 2 -> 0,Random.int 2,0
@@ -837,7 +838,8 @@ let cosimulate_ldst_ext() =
     | 4 -> 0,2 + Random.int 2,0
     | 5 -> 1,2 + Random.int 2,0
     | 6 -> 2,2,0
-    | _ -> 3,Random.int 2,1 in
+    | 7 -> 3,Random.int 2,1
+    | _ -> 2,Random.int 2,1 in
   let ext = Random.int 4 and s = Random.int 2 and rn = Random.int 32 in
   let option = el ext [0b010; 0b110; 0b111; 0b011] in
   let shift = if s = 1 then size else 0 in
@@ -867,12 +869,12 @@ let cosimulate_ldst_ext() =
     if rn = 31 then sub_Xn_SP_imm 31 stackoff else sub_Xn_SP_Xn rn in
   [add_Xn_SP_imm rn stackoff] @ pre @ [code; restore];;
 
-(*** This covers LDR/STR (immediate, SIMD&FP) of 16-bit H registers with
- *** an unsigned offset, i.e. imm12 scaled by 2. Unless the base is SP
- *** it may lie below SP, so that large offsets are exercised too; the
- *** accessed halfword is always inside the 256 bytes above SP. A base
- *** below SP is set as SP plus a negative register (MOVN, then ADD), so
- *** that the address is a sum of SP and constants.
+(*** This covers LDR/STR (immediate, SIMD&FP) of 16-bit H registers and
+ *** 32-bit S registers with an unsigned offset, i.e. imm12 scaled by the
+ *** size. Unless the base is SP it may lie below SP, so that large offsets
+ *** are exercised too; the accessed element is always inside the 256 bytes
+ *** above SP. A base below SP is set as SP plus a negative register (MOVN,
+ *** then ADD), so that the address is a sum of SP and constants.
  ***)
 
 let add_Xn_SP_Xn rn =
@@ -882,19 +884,21 @@ let add_Xn_SP_Xn rn =
   pow2 5 */ num 0b11111 +/
   num rn;;
 
-let cosimulate_ldst_h_simd() =
-  let isld = Random.int 2
+let cosimulate_ldst_hs_simd() =
+  let size = 1 + Random.int 2
+  and isld = Random.int 2
   and rn = Random.int 32
   and rt = Random.int 32 in
+  let bytes = 1 lsl size in
   let stackoff, imm12 =
     if rn = 31 then
       let stackoff = 16 * Random.int 16 in
-      stackoff, Random.int ((254 - stackoff) / 2 + 1)
+      stackoff, Random.int ((256 - bytes - stackoff) / bytes + 1)
     else
-      let target = Random.int 255 and imm12 = Random.int 2048 in
-      target - 2 * imm12, imm12 in
+      let target = Random.int (257 - bytes) and imm12 = Random.int 2048 in
+      target - bytes * imm12, imm12 in
   let code =
-    pow2 30 */ num 0b01 +/
+    pow2 30 */ num size +/
     pow2 24 */ num 0b111101 +/
     pow2 22 */ num isld +/
     pow2 10 */ num imm12 +/
@@ -914,7 +918,7 @@ let memclasses =
     cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg;
     cosimulate_ldst_hsw; cosimulate_ldst_ext; cosimulate_ldstu_simd;
     cosimulate_ldst4;
-    cosimulate_ldst_h_simd; cosimulate_ld1_lane
+    cosimulate_ldst_hs_simd; cosimulate_ld1_lane
     ];;
 
 let run_random_memopsimulation() =
