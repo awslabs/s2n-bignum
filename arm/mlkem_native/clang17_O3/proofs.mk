@@ -5,31 +5,21 @@ MLKEM_NATIVE_OBJ += \
   mlkem_native/clang17_O3/libmlkem.o
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
-  mlkem_native/clang17_O3/basemul_k2 \
+  mlkem_native/clang17_O3/keccakf1600_permute \
   mlkem_native/clang17_O3/poly_add \
   mlkem_native/clang17_O3/poly_frommsg \
-  mlkem_native/clang17_O3/poly_mulcache_compute \
   mlkem_native/clang17_O3/poly_reduce \
   mlkem_native/clang17_O3/poly_sub \
   mlkem_native/clang17_O3/poly_tomont \
-  mlkem_native/clang17_O3/polyvec_add_k2 \
-  mlkem_native/clang17_O3/polyvec_add_k3 \
-  mlkem_native/clang17_O3/polyvec_add_k4 \
-  mlkem_native/clang17_O3/polyvec_reduce_k2 \
-  mlkem_native/clang17_O3/polyvec_reduce_k3 \
-  mlkem_native/clang17_O3/polyvec_reduce_k4 \
-  mlkem_native/clang17_O3/polyvec_tomont_k2 \
-  mlkem_native/clang17_O3/polyvec_tomont_k3 \
-  mlkem_native/clang17_O3/polyvec_tomont_k4 \
   mlkem_native/clang17_O3/shake128_init \
   mlkem_native/clang17_O3/shake128_release \
   mlkem_native/clang17_O3/shake128x4_init \
   mlkem_native/clang17_O3/shake128x4_release
 
-mlkem_native/clang17_O3/basemul_k2.native: \
-  proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/keccakf1600_permute.native: \
+  mlkem_native/clang17_O3/libmlkem.native \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_fips202.ml
 mlkem_native/clang17_O3/libmlkem.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml
@@ -39,11 +29,6 @@ mlkem_native/clang17_O3/poly_add.native: \
 mlkem_native/clang17_O3/poly_frommsg.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/clang17_O3/libmlkem.native
-mlkem_native/clang17_O3/poly_mulcache_compute.native: \
-  proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
-  proofs/utils/mlkem_native_interleave.ml \
-  mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_reduce.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/clang17_O3/libmlkem.native
@@ -52,33 +37,6 @@ mlkem_native/clang17_O3/poly_sub.native: \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_tomont.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
-mlkem_native/clang17_O3/polyvec_add_k2.native: \
-  mlkem_native/clang17_O3/poly_add.native \
-  mlkem_native/clang17_O3/libmlkem.native
-mlkem_native/clang17_O3/polyvec_add_k3.native: \
-  mlkem_native/clang17_O3/poly_add.native \
-  mlkem_native/clang17_O3/libmlkem.native
-mlkem_native/clang17_O3/polyvec_add_k4.native: \
-  mlkem_native/clang17_O3/poly_add.native \
-  mlkem_native/clang17_O3/libmlkem.native
-mlkem_native/clang17_O3/polyvec_reduce_k2.native: \
-  mlkem_native/clang17_O3/poly_reduce.native \
-  mlkem_native/clang17_O3/libmlkem.native
-mlkem_native/clang17_O3/polyvec_reduce_k3.native: \
-  mlkem_native/clang17_O3/poly_reduce.native \
-  mlkem_native/clang17_O3/libmlkem.native
-mlkem_native/clang17_O3/polyvec_reduce_k4.native: \
-  mlkem_native/clang17_O3/poly_reduce.native \
-  mlkem_native/clang17_O3/libmlkem.native
-mlkem_native/clang17_O3/polyvec_tomont_k2.native: \
-  mlkem_native/clang17_O3/poly_tomont.native \
-  mlkem_native/clang17_O3/libmlkem.native
-mlkem_native/clang17_O3/polyvec_tomont_k3.native: \
-  mlkem_native/clang17_O3/poly_tomont.native \
-  mlkem_native/clang17_O3/libmlkem.native
-mlkem_native/clang17_O3/polyvec_tomont_k4.native: \
-  mlkem_native/clang17_O3/poly_tomont.native \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/shake128_init.native: \
   mlkem_native/clang17_O3/libmlkem.native
