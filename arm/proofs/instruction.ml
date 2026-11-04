@@ -3455,6 +3455,60 @@ let arm_ST3 = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+(*** LD4/ST4 are the analogs of LD3/ST3 for four consecutive registers:    ***)
+(*** element i of the j-th register is element 4 * i + j of the memory.    ***)
+
+let arm_LD4 = define
+ `arm_LD4 [Rt1;Rt2;Rt3;Rt4] Rn off datasize esize =
+    \s:armstate.
+        let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if Rn = SP ==> aligned 16 address then
+          (if datasize = 128 then
+             let raw:512 word = read (memory :> wbytes eaddr) s in
+             let [il1;il2;il3;il4]:int128 list =
+               word_deinterleave 4 esize raw in
+             (Rt1 := il1) ,, (Rt2 := il2) ,, (Rt3 := il3) ,, (Rt4 := il4)
+           else
+             let raw:256 word = read (memory :> wbytes eaddr) s in
+             let [il1;il2;il3;il4]:int64 list =
+               word_deinterleave 4 esize raw in
+             (Rt1 := word_zx il1) ,,
+             (Rt2 := word_zx il2) ,,
+             (Rt3 := word_zx il3) ,,
+             (Rt4 := word_zx il4)) ,,
+           events := CONS (EventLoad (eaddr,4 * datasize DIV 8))
+                          (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add address (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+let arm_ST4 = define
+ `arm_ST4 [Rt1;Rt2;Rt3;Rt4] Rn off datasize esize =
+    \s:armstate.
+        let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if Rn = SP ==> aligned 16 address then
+           let raw1:int128 = read Rt1 s
+           and raw2 = read Rt2 s
+           and raw3 = read Rt3 s
+           and raw4 = read Rt4 s in
+           (if datasize = 128 then
+             let ilv:512 word = word_interleave esize [raw1;raw2;raw3;raw4] in
+             (memory :> wbytes eaddr) := ilv
+           else
+             let ilv:256 word = word_interleave esize
+                [word_zx raw1:int64; word_zx raw2; word_zx raw3;
+                 word_zx raw4] in
+             (memory :> wbytes eaddr) := ilv) ,,
+           events := CONS (EventStore (eaddr,4 * datasize DIV 8))
+                          (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add address (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
 (* ------------------------------------------------------------------------- *)
 (* SHA-related SIMD operations                                               *)
 (* ------------------------------------------------------------------------- *)
@@ -4204,6 +4258,106 @@ let arm_ST3_ALT = end_itlist CONJ
       [`arm_ST3 [Rt1; Rt2; Rt3] Rn off 128 esize`;
        `arm_ST3 [Rt1; Rt2; Rt3] Rn off 64 esize`]);;
 
+let WORD_DEINTERLEAVE_4 = prove
+ (`(word_deinterleave:num->num->M word->(N word)list) 4 n z =
+   [word_subdeinterleave 4 n z 0; word_subdeinterleave 4 n z 1;
+    word_subdeinterleave 4 n z 2; word_subdeinterleave 4 n z 3]`,
+  REWRITE_TAC[word_deinterleave; LIST_OF_SEQ_CLAUSES]);;
+
+let READ_MEMORY_QUADS_SPLIT = prove
+ (`(!m (x:A word) s:S.
+        read (m :> wbytes x) s :256 word =
+        word_join (word_join (read (m :> bytes64 (word_add x (word 24))) s)
+                             (read (m :> bytes64 (word_add x (word 16))) s)
+                             :int128)
+                  (word_join (read (m :> bytes64 (word_add x (word 8))) s)
+                             (read (m :> bytes64 x) s):int128)) /\
+   (!m (x:A word) s:S.
+        read (m :> wbytes x) s :512 word =
+        word_join (word_join (read (m :> bytes128 (word_add x (word 48))) s)
+                             (read (m :> bytes128 (word_add x (word 32))) s)
+                             :int256)
+                  (word_join (read (m :> bytes128 (word_add x (word 16))) s)
+                             (read (m :> bytes128 x) s):int256))`,
+  REWRITE_TAC[GSYM VAL_EQ] THEN
+  SIMP_TAC[VAL_WORD_JOIN_SIMPLE; DIMINDEX_64; DIMINDEX_128; DIMINDEX_256;
+           ARITH; DIMINDEX_CONV `dimindex(:512)`] THEN
+  REWRITE_TAC[BYTES64_WBYTES; BYTES128_WBYTES] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; VAL_READ_WBYTES] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[ARITH_RULE `32 = 8 + 8 + 8 + 8 /\ 64 = 16 + 16 + 16 + 16`] THEN
+  REWRITE_TAC[READ_BYTES_COMBINE; WORD_ADD_ASSOC_CONSTS] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC);;
+
+let WRITE_MEMORY_QUADS_SPLIT = prove
+ (`(!m (x:A word) y s:S.
+     valid_component m
+      ==>  write (m :> wbytes x) (y:256 word) s =
+           write (m :> bytes64 x) (word_subword y (0,64))
+            (write (m :> bytes64 (word_add x (word 8)))
+                   (word_subword y (64,64))
+             (write (m :> bytes64 (word_add x (word 16)))
+                    (word_subword y (128,64))
+              (write (m :> bytes64 (word_add x (word 24)))
+                     (word_subword y (192,64)) s)))) /\
+   (!m (x:A word) y s:S.
+     valid_component m
+      ==>  write (m :> wbytes x) (y:512 word) s =
+           write (m :> bytes128 x) (word_subword y (0,128))
+            (write (m :> bytes128 (word_add x (word 16)))
+                   (word_subword y (128,128))
+             (write (m :> bytes128 (word_add x (word 32)))
+                    (word_subword y (256,128))
+              (write (m :> bytes128 (word_add x (word 48)))
+                     (word_subword y (384,128)) s))))`,
+  REWRITE_TAC[WRITE_COMPONENT_COMPOSE] THEN
+  REWRITE_TAC[valid_component] THEN REPEAT STRIP_TAC THEN
+  ASM_REWRITE_TAC[bytes128; bytes64; wbytes; WRITE_COMPONENT_COMPOSE;
+                  asword; through; read; write] THEN
+  REWRITE_TAC[GSYM WRITE_BYTES_COMBINE; ARITH_ADD; ARITH_SUC] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  CONV_TAC(ONCE_DEPTH_CONV(NUM_MULT_CONV ORELSEC NUM_DIV_CONV)) THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+  SIMP_TAC[VAL_BOUND_64; VAL_BOUND_128; MOD_LT; ARITH_RULE
+   `(h < 2 EXP 64 /\ l < 2 EXP 64 ==> l + 2 EXP 64 * h < 2 EXP 128) /\
+    (h < 2 EXP 64 /\ l < 2 EXP 128 ==> l + 2 EXP 128 * h < 2 EXP 192) /\
+    (h < 2 EXP 128 /\ l < 2 EXP 128 ==> l + 2 EXP 128 * h < 2 EXP 256) /\
+    (h < 2 EXP 128 /\ l < 2 EXP 256 ==> l + 2 EXP 256 * h < 2 EXP 384)`] THEN
+  CONV_TAC WORD_BLAST);;
+
+let ASSIGN_MEMORY_QUADS_SPLIT = prove
+ (`(memory :> wbytes x) := (y:256 word) =
+   (memory :> bytes64 (word_add x (word 24))) := word_subword y (192,64) ,,
+   (memory :> bytes64 (word_add x (word 16))) := word_subword y (128,64) ,,
+   (memory :> bytes64 (word_add x (word 8))) := word_subword y (64,64) ,,
+   (memory :> bytes64 x) := word_subword y (0,64) /\
+   (memory :> wbytes x) := (z:512 word) =
+   (memory :> bytes128 (word_add x (word 48))) := word_subword z (384,128) ,,
+   (memory :> bytes128 (word_add x (word 32))) := word_subword z (256,128) ,,
+   (memory :> bytes128 (word_add x (word 16))) := word_subword z (128,128) ,,
+   (memory :> bytes128 x) := word_subword z (0,128)`,
+  REWRITE_TAC[FUN_EQ_THM; assign; seq; UNWIND_THM1] THEN
+  SIMP_TAC[WRITE_MEMORY_QUADS_SPLIT;
+           VALID_COMPONENT_CONV `valid_component memory`]);;
+
+let arm_LD4_ALT = end_itlist CONJ
+ (map (REWRITE_RULE[GSYM SEQ_ASSOC] o
+       CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+       REWRITE_RULE[WORD_DEINTERLEAVE_4; READ_MEMORY_QUADS_SPLIT] o
+       CONV_RULE NUM_REDUCE_CONV o
+       GEN_REWRITE_CONV I [arm_LD4])
+      [`arm_LD4 [Rt1; Rt2; Rt3; Rt4] Rn off 128 esize`;
+       `arm_LD4 [Rt1; Rt2; Rt3; Rt4] Rn off 64 esize`]);;
+
+let arm_ST4_ALT = end_itlist CONJ
+  (map (REWRITE_RULE[GSYM SEQ_ASSOC] o
+        REWRITE_RULE[ASSIGN_MEMORY_QUADS_SPLIT] o
+        CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+        CONV_RULE NUM_REDUCE_CONV o
+        GEN_REWRITE_CONV I [arm_ST4])
+      [`arm_ST4 [Rt1; Rt2; Rt3; Rt4] Rn off 128 esize`;
+       `arm_ST4 [Rt1; Rt2; Rt3; Rt4] Rn off 64 esize`]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Collection of standard forms of non-aliased instructions                  *)
 (* We separate the load/store instructions for a different treatment.        *)
@@ -4296,4 +4450,5 @@ let ARM_LOAD_STORE_CLAUSES =
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDRH; arm_STRH;
        arm_LDRSB; arm_LDRSH; arm_LDRSW; arm_LDP; arm_STP;
        arm_LDP4; arm_STP4;
-       arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT];;
+       arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT;
+       arm_LD4_ALT; arm_ST4_ALT];;

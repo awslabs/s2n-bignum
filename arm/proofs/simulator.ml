@@ -408,8 +408,8 @@ let cosimulate_ldstp() =
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
 
-(*** The post-register and no-offset modes are exercised only for LD1/ST1
- *** since they are not currently supported for LD2/ST2.
+(*** The post-register mode is exercised only for LD1/ST1 since it is
+ *** not currently supported for LD2/ST2.
  ***
  *** The register field is forced to 0 in the no-offset case to unify
  *** the encoding scheme, and is forced to 31 (i.e. post-immediate in
@@ -428,7 +428,7 @@ let cosimulate_ldst_12() =
   and rn = Random.int 32
   and rt = Random.int 32 in
   let ldst2 = Random.int 2 in
-  let someoffset = if ldst2 = 1 then 1 else Random.int 2 in
+  let someoffset = Random.int 2 in
   let regoffr = Random.int 32 in
   let regoff =
     if someoffset = 0 then 0
@@ -590,21 +590,26 @@ let cosimulate_ld1r() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LD3 and ST3 with the addressing modes no-offset,
+ *** post-immediate offset and post-register offset.
+ ***)
+
 let cosimulate_ldst3() =
   let datasize = Random.int 2
   and isld = Random.int 2
   and esize = Random.int 4
   and rn = Random.int 32
   and rt = Random.int 32 in
-  let someoffset = 1 in
+  let someoffset = Random.int 2 in
   let regoffr = Random.int 32 in
   let regoff =
-    if regoffr = rn || rn = 31 || Random.bool() then 31
+    if someoffset = 0 then 0
+    else if regoffr = rn || rn = 31 || Random.bool() then 31
     else regoffr in
   let stackoff =
     if rn = 31 then Random.int 13 * 16
     else Random.int 208 in
-  let postinc = 24 * (datasize + 1)  in
+  let postinc = someoffset * 24 * (datasize + 1)  in
   let code =
     pow2 30 */ num datasize +/
     pow2 24 */ num 0b001100 +/
@@ -663,6 +668,42 @@ let cosimulate_ldst1_4reg() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LD4 and ST4 (multiple structures, interleaved) with the
+ *** addressing modes no-offset, post-immediate and post-register, in the
+ *** same way as cosimulate_ldst1_4reg covers LD1/ST1 with 4 registers.
+ ***)
+
+let cosimulate_ldst4() =
+  let datasize = Random.int 2
+  and isld = Random.int 2
+  and esize = Random.int 4
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let someoffset = Random.int 2 in
+  let regoffr = Random.int 32 in
+  let regoff =
+    if someoffset = 0 then 0
+    else if regoffr = rn || rn = 31 || Random.bool() then 31
+    else regoffr in
+  let stackoff =
+    if rn = 31 then Random.int 12 * 16
+    else Random.int 192 in
+  let postinc = if someoffset = 1 && regoff = 31 then 32 * (datasize + 1) else 0 in
+  let code =
+    pow2 30 */ num datasize +/
+    pow2 24 */ num 0b001100 +/
+    pow2 23 */ num someoffset +/
+    pow2 22 */ num isld +/
+    pow2 16 */ num regoff +/
+    pow2 12 */ num 0b0000 +/
+    pow2 10 */ num esize +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 (*** This covers LDRH/STRH and the sign-extending loads LDRSB, LDRSH and
  *** LDRSW, with all their supported addressing modes: unscaled immediate
  *** (LDURH, STURH, LDURSB, ...), unsigned immediate, register offset with
@@ -710,7 +751,8 @@ let cosimulate_ldst_hsw() =
 
 (*** This covers the extended register offsets UXTW, SXTW and SXTX, as
  *** well as LSL, with or without the shift, for LDR and STR of 32-bit and
- *** 64-bit values, LDRB/STRB, LDRH/STRH, LDRSB, LDRSH and LDRSW. For UXTW
+ *** 64-bit values and of D registers, LDRB/STRB, LDRH/STRH, LDRSB, LDRSH
+ *** and LDRSW (v = 1 selects the SIMD&FP register for the D case). For UXTW
  *** and SXTW the top 32 bits of the offset register are random junk, and
  *** for the signed extensions (and LSL, by wraparound) the offset can be
  *** negative. The offset register can also be the zero register.
@@ -732,15 +774,16 @@ let movk_Xn_imm_lsl32 rd imm =
   num rd;;
 
 let cosimulate_ldst_ext() =
-  let size,opc =
-    match Random.int 7 with
-      0 -> 2,Random.int 2
-    | 1 -> 3,Random.int 2
-    | 2 -> 0,Random.int 2
-    | 3 -> 1,Random.int 2
-    | 4 -> 0,2 + Random.int 2
-    | 5 -> 1,2 + Random.int 2
-    | _ -> 2,2 in
+  let size,opc,v =
+    match Random.int 8 with
+      0 -> 2,Random.int 2,0
+    | 1 -> 3,Random.int 2,0
+    | 2 -> 0,Random.int 2,0
+    | 3 -> 1,Random.int 2,0
+    | 4 -> 0,2 + Random.int 2,0
+    | 5 -> 1,2 + Random.int 2,0
+    | 6 -> 2,2,0
+    | _ -> 3,Random.int 2,1 in
   let ext = Random.int 4 and s = Random.int 2 and rn = Random.int 32 in
   let option = el ext [0b010; 0b110; 0b111; 0b011] in
   let shift = if s = 1 then size else 0 in
@@ -762,7 +805,7 @@ let cosimulate_ldst_ext() =
        movk_Xn_imm_lsl32 rm junk]
     else [if k >= 0 then movz_Xn_imm rm k else movn_Xn_imm rm (-k - 1)] in
   let code =
-    pow2 30 */ num size +/ pow2 27 */ num 0b111 +/
+    pow2 30 */ num size +/ pow2 27 */ num 0b111 +/ pow2 26 */ num v +/
     pow2 22 */ num opc +/ pow2 21 +/ pow2 16 */ num rm +/
     pow2 13 */ num option +/ pow2 12 */ num s +/ pow2 10 */ num 0b10 +/
     pow2 5 */ num rn +/ num rt in
@@ -774,7 +817,8 @@ let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg;
-    cosimulate_ldst_hsw; cosimulate_ldst_ext; cosimulate_ldstu_simd
+    cosimulate_ldst_hsw; cosimulate_ldst_ext; cosimulate_ldstu_simd;
+    cosimulate_ldst4
     ];;
 
 let run_random_memopsimulation() =

@@ -119,6 +119,12 @@ let arm_ldst3 = new_definition `arm_ldst3 ld Rt1 =
   let Rt2:(5 word) = word ((val Rt1 + 1) MOD 32) in
   let Rt3:(5 word) = word ((val Rt1 + 2) MOD 32) in
   (if ld then arm_LD3 else arm_ST3) [QREG' Rt1; QREG' Rt2; QREG' Rt3]`;;
+let arm_ldst4 = new_definition `arm_ldst4 ld Rt1 =
+  let Rt2:(5 word) = word ((val Rt1 + 1) MOD 32) in
+  let Rt3:(5 word) = word ((val Rt1 + 2) MOD 32) in
+  let Rt4:(5 word) = word ((val Rt1 + 3) MOD 32) in
+  (if ld then arm_LD4 else arm_ST4)
+    [QREG' Rt1; QREG' Rt2; QREG' Rt3; QREG' Rt4]`;;
 
 (* The 'AdvSimdExpandImm' shared function in the A64 ISA specification.
    This definition takes one 8-bit word and expands it to 64 bit according to
@@ -391,6 +397,15 @@ let decode = new_definition `!w:int32. decode w =
   | [0b00:2; 0b1111001:7; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2;  Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) 4 else Register_Offset (XREG' Rm)))
+  // Register offset, size 64, with LSL #0 or #3, UXTW, SXTW or SXTX
+  | [0b11:2; 0b1111000:7; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 3 else Register_Offset (XREG' Rm)))
+  | [0b11:2; 0b1111000:7; is_ld; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (arm_extoff sx S 3 Rm))
+  | [0b11:2; 0b1111000:7; is_ld; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 3 else Register_Offset (XREG' Rm)))
   // LDP/STP (signed offset, SIMD&FP), only sizes 128 and 64
   | [0b10:2; 0b1011010:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)
@@ -591,6 +606,14 @@ let decode = new_definition `!w:int32. decode w =
     let esize = 8 * 2 EXP (val size) in
     SOME (arm_ldst2 is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 32)) 128 esize)
 
+  // LD2/ST2 (multiple structures), 2 registers, no offset
+  | [0:1; q; 0b0011000:7; is_ld; 0b000000:6; 0b1000:4; size:2; Rn:5; Rt:5] ->
+    if size = word 0b11 /\ ~q then NONE // "UNDEFINED"
+    else
+      let esize = 8 * 2 EXP (val size) in
+      let datasize = if q then 128 else 64 in
+      SOME (arm_ldst2 is_ld Rt (XREG_SP Rn) No_Offset datasize esize)
+
   // LD1R, Post-immediate offset, size 64 and 128
   | [0b0:1; q; 0b001101110111111100:18; size:2; Rn:5; Rt:5] ->
     let esize = 8 * (2 EXP (val size)) in
@@ -608,6 +631,31 @@ let decode = new_definition `!w:int32. decode w =
            (if val Rm = 31 then (Postimmediate_Offset offset)
                            else Postreg_Offset (XREG' Rm))
            datasize esize)
+
+  // LD3/ST3 (multiple structures), 3 registers, no offset
+  | [0:1; q; 0b0011000:7; is_ld; 0b000000:6; 0b0100:4; size:2; Rn:5; Rt:5] ->
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_ldst3 is_ld Rt (XREG_SP Rn) No_Offset datasize esize)
+
+  // LD4/ST4 (multiple structures), 4 registers, Post-immediate and register offset
+  | [0:1; q; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0000:4; size:2; Rn:5; Rt:5] ->
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    let offset = if q then word 64 else word 32 in
+    SOME (arm_ldst4 is_ld Rt (XREG_SP Rn)
+           (if val Rm = 31 then (Postimmediate_Offset offset)
+                           else Postreg_Offset (XREG' Rm))
+           datasize esize)
+
+  // LD4/ST4 (multiple structures), 4 registers, no offset
+  | [0:1; q; 0b0011000:7; is_ld; 0b000000:6; 0b0000:4; size:2; Rn:5; Rt:5] ->
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_ldst4 is_ld Rt (XREG_SP Rn) No_Offset datasize esize)
 
   // SIMD operations
   | [0:1; q; u; 0b01110:5; size:2; 1:1; Rm:5; 0b100001:6; Rn:5; Rd:5] ->
@@ -1941,7 +1989,8 @@ let PURE_DECODE_CONV =
               arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldsth;
               arm_ldrsb; arm_ldrsh; arm_extoff; arm_ldstp; arm_ldstp_q;
               arm_ldstp_d;
-              arm_ldst2; arm_ldstp_2q; arm_ldstp_4q; arm_ldstp_4d; arm_ldst3] rw;
+              arm_ldst2; arm_ldstp_2q; arm_ldstp_4q; arm_ldstp_4d; arm_ldst3;
+              arm_ldst4] rw;
     (* .. that have bitmatch exprs inside *)
     List.iter (fun def_th ->
         let Some (conceal_th, opaque_const, opaque_arity, opaque_def, opaque_conv) =

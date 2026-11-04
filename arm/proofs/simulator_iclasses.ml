@@ -638,6 +638,9 @@ let check_insns () =
     (*** ldr / str, shifted register, size 128 no extensions ***)
     "001111001x1xxxxx011x10xxxxxxxxxx";
 
+    (*** ldr / str, register (LSL, UXTW, SXTW, SXTX), size 64 (SIMD & FP) ***)
+    "111111000x1xxxxxx1xx10xxxxxxxxxx";
+
     (*** ldrb (immediate ofs) ***)
     "00111000010xxxxxxxxx01xxxxxxxxxx";
     "00111000010xxxxxxxxx11xxxxxxxxxx";
@@ -736,6 +739,9 @@ let check_insns () =
     (*** st2 (2 register, Post-immediate offset) ***)
     "0x001100100111111000xxxxxxxxxxxx";
 
+    (*** ld2 / st2 (2 register, no offset) ***)
+    "0x0011000x0000001000xxxxxxxxxxxx";
+
     (*** ld1r (post immediate ofs) ***)
     "0x001101110111111100xxxxxxxxxxxx";
 
@@ -749,6 +755,15 @@ let check_insns () =
 
     (*** ld3 / st3, multiple structures, 3 reg, post-imm and register ***)
     "0x0011001x0xxxxx0100xxxxxxxxxxxx";
+
+    (*** ld3 / st3, multiple structures, 3 reg, no offset ***)
+    "0x0011000x0000000100xxxxxxxxxxxx";
+
+    (*** ld4 / st4, multiple structures, 4 reg, post-imm and register ***)
+    "0x0011001x0xxxxx0000xxxxxxxxxxxx";
+
+    (*** ld4 / st4, multiple structures, 4 reg, no offset ***)
+    "0x0011000x0000000000xxxxxxxxxxxx";
 
     (*** stp ***)
     "x010100010xxxxxxxxxxxxxxxxxxxxxx";
