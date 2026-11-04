@@ -452,6 +452,9 @@ MLKEM_NATIVE_OBJ = mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o \
 # that call other functions)
 
 MLKEM_NATIVE_IMAGE_PROOFS = \
+  mlkem_native/mlkem_native_check_pk_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_check_pk_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_check_pk_k4_gcc12_O2 \
   mlkem_native/mlkem_native_check_sk_k2_gcc12_O2 \
   mlkem_native/mlkem_native_check_sk_k3_gcc12_O2 \
   mlkem_native/mlkem_native_check_sk_k4_gcc12_O2 \
@@ -637,6 +640,18 @@ $(MLKEM_NATIVE_IMAGE_PROOFS:=.native): mlkem_native/%.native: \
   mlkem_native/mlkem_native_libmlkem_gcc12_O2.o ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 .SECONDARY: $(MLKEM_NATIVE_OBJ)
+mlkem_native/mlkem_native_check_pk_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_polyvec_frombytes_k2_gcc12_O2.native \
+  mlkem_native/mlkem_native_polyvec_reduce_k2_gcc12_O2.native \
+  mlkem_native/mlkem_native_polyvec_tobytes_k2_gcc12_O2.native
+mlkem_native/mlkem_native_check_pk_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_polyvec_frombytes_k3_gcc12_O2.native \
+  mlkem_native/mlkem_native_polyvec_reduce_k3_gcc12_O2.native \
+  mlkem_native/mlkem_native_polyvec_tobytes_k3_gcc12_O2.native
+mlkem_native/mlkem_native_check_pk_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_polyvec_frombytes_k4_gcc12_O2.native \
+  mlkem_native/mlkem_native_polyvec_reduce_k4_gcc12_O2.native \
+  mlkem_native/mlkem_native_polyvec_tobytes_k4_gcc12_O2.native
 mlkem_native/mlkem_native_check_sk_k2_gcc12_O2.native: \
   mlkem_native/mlkem_native_sha3_256_gcc12_O2.native
 mlkem_native/mlkem_native_check_sk_k3_gcc12_O2.native: \

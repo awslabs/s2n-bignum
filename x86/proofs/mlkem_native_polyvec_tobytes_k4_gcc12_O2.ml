@@ -265,3 +265,111 @@ let MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
   X86_STEPS_TAC MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC (39--42) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, using that   *)
+(* of mlkem_poly_tobytes, for mlkem1024_check_pk, whose result the           *)
+(* encapsulation branches on.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+let LOCAL_FULL_TAC ilist n =
+  REMOVE_THEN "H_POLY" (fun safety_th ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mc,
+       MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
+      (`e:(uarch_event)list`::ilist) n THENL
+     [EXISTS_E2_TAC (ref [`pc:num`; `r:int64`; `a:int64`; `stackpointer:int64`;
+                          `returnaddress:int64`]);
+      LABEL_TAC "H_POLY" safety_th]);;
+
+let MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_IMAGE_SUBROUTINE_FULL = time prove
+ (`exists f_events.
+       forall e r a (l:int16 list) pc stackpointer returnaddress.
+           aligned 16 (word pc:int64) /\
+           ALL (nonoverlapping (r,1536)) [(word pc,0x82a0); (a,2048)] /\
+           ALL (nonoverlapping (word_sub stackpointer (word 32),40))
+               [(word pc,0x82a0); (a,2048); (r,1536)]
+           ==> ensures x86
+               (\s. bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read RIP s = word (pc + 0x1fc0) /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    C_ARGUMENTS [r; a] s /\
+                    read (memory :> bytes(a,2048)) s = num_of_wordlist l /\
+                    read events s = e)
+               (\s. read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (LENGTH l = 1024 /\ ALL (\x. val x < 4096) l
+                     ==> read(memory :> bytes(r,1536)) s =
+                         num_of_wordlist (MAP word_zx l:(12 word)list)) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events r a pc
+                                (word_sub stackpointer (word 32))
+                                returnaddress /\
+                         memaccess_inbounds e2
+                          [a,2048; r,1536; word_sub stackpointer (word 32),40]
+                          [r,1536; word_sub stackpointer (word 32),32]))
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                 [memory :> bytes(r,1536);
+                  memory :> bytes(word_sub stackpointer (word 32),32)])`,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL "H_POLY" THEN
+  META_EXISTS_TAC THEN
+  MAP_EVERY X_GEN_TAC
+   [`e:(uarch_event)list`; `r:int64`; `a:int64`; `l:int16 list`; `pc:num`] THEN
+  WORD_FORALL_OFFSET_TAC 32 THEN
+  MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN
+  ENSURES_PRESERVED_TAC "rbp_init" `RBP` THEN
+  ENSURES_PRESERVED_TAC "r12_init" `R12` THEN
+  ENSURES_INIT_TAC "s0" THEN
+  FIRST_ASSUM(fun th ->
+    if can (term_match [] `read (memory :> bytes(a,2048)) s = n`)
+           (concl th)
+    then MAP_EVERY (fun j ->
+      ASSUME_TAC(CONV_RULE(NUM_REDUCE_CONV THENC REWRITE_CONV[WORD_ADD_0])
+        (MATCH_MP POLYVEC_TOBYTES_SPLIT
+           (CONJ th (ARITH_RULE(mk_binop `(<):num->num->bool`
+                       (mk_small_numeral j) `4`)))))) [0;1;2;3]
+    else failwith "") THEN
+  X86_STEPS_TAC MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC (1--11) THEN
+  LOCAL_FULL_TAC [`read RDI s`; `read RSI s`;
+                  `SUB_LIST(0,256) (l:int16 list)`; `pc:num`; `read RSP s`;
+                  `read (memory :> bytes64(read RSP s)) s`] 12 THEN
+  X86_STEPS_TAC MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC (13--14) THEN
+  PTR_DECIDE_RIP_TAC THEN
+  X86_STEPS_TAC MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC (15--19) THEN
+  LOCAL_FULL_TAC [`read RDI s`; `read RSI s`;
+                  `SUB_LIST(256,256) (l:int16 list)`; `pc:num`;
+                  `read RSP s`;
+                  `read (memory :> bytes64(read RSP s)) s`] 20 THEN
+  X86_STEPS_TAC MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC (21--22) THEN
+  PTR_DECIDE_RIP_TAC THEN
+  X86_STEPS_TAC MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC (23--27) THEN
+  LOCAL_FULL_TAC [`read RDI s`; `read RSI s`;
+                  `SUB_LIST(512,256) (l:int16 list)`; `pc:num`;
+                  `read RSP s`;
+                  `read (memory :> bytes64(read RSP s)) s`] 28 THEN
+  X86_STEPS_TAC MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC (29--30) THEN
+  PTR_DECIDE_RIP_TAC THEN
+  X86_STEPS_TAC MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC (31--35) THEN
+  LOCAL_FULL_TAC [`read RDI s`; `read RSI s`;
+                  `SUB_LIST(768,256) (l:int16 list)`; `pc:num`;
+                  `read RSP s`;
+                  `read (memory :> bytes64(read RSP s)) s`] 36 THEN
+  X86_STEPS_TAC MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC (37--38) THEN
+  PTR_DECIDE_RIP_TAC THEN
+  X86_STEPS_TAC MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC (39--42) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [ALL_TAC; DISCHARGE_SAFETY_PROPERTY_TAC] THEN STRIP_TAC THEN
+  MATCH_MP_TAC POLYVEC_TOBYTES_JOIN THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[WORD_ADD_0] THEN
+  ASM_SIMP_TAC[LENGTH_SUB_LIST; ALL_SUB_LIST; MIN; ARITH]);;

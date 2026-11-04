@@ -392,3 +392,190 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
   MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_SAFE
    [`pc + 0x5660`,`pc:num`]
    [MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IN_IMAGE]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, for the      *)
+(* modulus check of the encapsulation key, whose result the encapsulation    *)
+(* branches on. The loop is that of the correctness proof, but with the loop *)
+(* test at the end of the body, as ENSURES_EVENTS_WHILE_UP2_TAC requires,    *)
+(* and the versions as a subroutine and in the image follow.                 *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_FULL = time prove
+ (`exists f_events.
+       forall e a x pc.
+           nonoverlapping (word pc,0x50) (a,512)
+           ==> ensures x86
+               (\s. bytes_loaded s (word pc)
+                      mlkem_native_poly_reduce_gcc12_O2_mc /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [a] s /\
+                    (!i. i < 256
+                         ==> read(memory :> bytes16
+                                   (word_add a (word(2 * i)))) s = x i) /\
+                    read events s = e)
+               (\s. read RIP s = word (pc + 0x4f) /\
+                    (!i. i < 256
+                         ==> ival(read(memory :> bytes16
+                                    (word_add a (word(2 * i)))) s) =
+                             ival(x i) rem &3329) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events a pc /\
+                         memaccess_inbounds e2 [a,512] [a,512]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,512)])`,
+  CONCRETIZE_F_EVENTS_TAC
+    `\(a:int64) (pc:num).
+      APPEND
+        (f_ev_epil a pc)
+        (APPEND
+          (ENUMERATEL 256 (\i. f_ev_loop a pc i))
+          (f_ev_prol a pc))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC [`a:int64`; `x:num->int16`; `pc:num`] THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+              fst MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_EXEC] THEN
+  REPEAT STRIP_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `256` `pc + 0x10` `pc + 0x4f`
+   `\i s. read RCX s = word_add a (word(2 * i)) /\
+          read RSI s = word_add a (word 512) /\
+          (!j. j < i
+               ==> ival(read(memory :> bytes16(word_add a (word(2 * j)))) s) =
+                   ival(x j) rem &3329) /\
+          (!j. i <= j /\ j < 256
+               ==> read(memory :> bytes16(word_add a (word(2 * j)))) s =
+                   x j)` THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** Initialization of the pointers ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_EXEC (1--3) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0; CONJUNCT1 LT; LE_0] THEN
+    ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The loop body, with the loop test ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    SUBGOAL_THEN
+     `read (memory :> bytes16 (word_add a (word (2 * i)))) s0 = x i /\
+      (!j. i + 1 <= j /\ j < 256
+           ==> read (memory :> bytes16 (word_add a (word (2 * j)))) s0 = x j)`
+    STRIP_ASSUME_TAC THENL
+     [CONJ_TAC THENL [ALL_TAC; GEN_TAC THEN STRIP_TAC] THEN
+      FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+      ALL_TAC] THEN
+    X86_STEPS_TAC MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_EXEC (1--19) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN
+     `~(val(word_sub (word_add (word_add a (word (2 * i))) (word 2))
+                     (word_add a (word 512)):int64) = 0) <=>
+      i + 1 < 256`
+    SUBST_ALL_TAC THENL
+     [REWRITE_TAC[WORD_RULE
+       `word_sub (word_add (word_add a x) y) (word_add a z):int64 =
+        word_sub (word_add x y) z`] THEN
+      REWRITE_TAC[VAL_WORD_SUB_EQ_0; GSYM WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+       `i < 256 ==> 2 * i + 2 < 18446744073709551616`] THEN
+      UNDISCH_TAC `i < 256` THEN ARITH_TAC;
+      ALL_TAC] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `2 * (i + 1) = 2 * i + 2`] THEN
+      CONV_TAC WORD_RULE;
+      ALL_TAC] THEN
+    CONJ_TAC THENL
+     [X_GEN_TAC `j:num` THEN
+      REWRITE_TAC[ARITH_RULE `j < i + 1 <=> j < i \/ j = i`] THEN
+      STRIP_TAC THEN ASM_SIMP_TAC[] THEN
+      MLKEM_NATIVE_WORD_SIMP_TAC THEN
+      REWRITE_TAC[CONDADD_GCC12_O2] THEN
+      CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+      REWRITE_TAC[BARRETT_GCC12_O2; BARRED_GCC12_O2; BARRED_CONDADD_REM];
+      ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The loop exit ***)
+
+    REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_FULL = time prove
+ (`exists f_events.
+       forall e a x pc stackpointer returnaddress.
+           nonoverlapping (word pc,0x50) (a,512) /\
+           nonoverlapping (stackpointer,8) (a,512)
+           ==> ensures x86
+               (\s. bytes_loaded s (word pc)
+                      mlkem_native_poly_reduce_gcc12_O2_mc /\
+                    read RIP s = word pc /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    (!i. i < 256
+                         ==> read(memory :> bytes16
+                                   (word_add a (word(2 * i)))) s = x i) /\
+                    read events s = e)
+               (\s. read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (!i. i < 256
+                         ==> ival(read(memory :> bytes16
+                                    (word_add a (word(2 * i)))) s) =
+                             ival(x i) rem &3329) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events a pc stackpointer returnaddress /\
+                         memaccess_inbounds e2 [a,512; stackpointer,8]
+                                               [a,512]))
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,512)])`,
+  X86_ADD_RETURN_NOSTACK_TAC MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_EXEC
+    MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_FULL THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (`exists f_events.
+       forall e a x pc stackpointer returnaddress.
+           aligned 16 (word pc:int64) /\
+           nonoverlapping (word pc,0x82a0) (a,512) /\
+           nonoverlapping (stackpointer,8) (a,512)
+           ==> ensures x86
+               (\s. bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mc /\
+                    read RIP s = word (pc + 0x5660) /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    (!i. i < 256
+                         ==> read(memory :> bytes16
+                                   (word_add a (word(2 * i)))) s = x i) /\
+                    read events s = e)
+               (\s. read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (!i. i < 256
+                         ==> ival(read(memory :> bytes16
+                                    (word_add a (word(2 * i)))) s) =
+                             ival(x i) rem &3329) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events a pc stackpointer returnaddress /\
+                         memaccess_inbounds e2 [a,512; stackpointer,8]
+                                               [a,512]))
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,512)])`,
+  MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_SUBROUTINE_FULL
+   [`pc + 0x5660`,`pc:num`]
+   [MLKEM_NATIVE_POLY_REDUCE_GCC12_O2_IN_IMAGE]);;

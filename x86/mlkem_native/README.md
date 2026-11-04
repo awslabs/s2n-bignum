@@ -176,7 +176,8 @@ does not wrap around the end of the address space.
 
 The proof for each function ends with the versions of its theorems for the
 code in the image, `..._IMAGE_SUBROUTINE_CORRECT` and
-`..._IMAGE_SUBROUTINE_SAFE`, and for `mlkem_keccakf1600_permute` also
+`..._IMAGE_SUBROUTINE_SAFE`, and for `mlkem_keccakf1600_permute`,
+`mlkem_poly_reduce` and `mlkem_poly_tobytes` also
 `..._IMAGE_SUBROUTINE_FULL`. As on AArch64, the safety theorems keep the
 frames of the correctness theorems, for use in the proofs of callers.
 
@@ -340,3 +341,19 @@ decapsulation, which branches on the result. The comparison is done in the
 low halves of YMM registers, whose upper halves are unknown after the call
 to `mlkem_sha3_256`, so the proofs give them names there, and its result is
 proved by BITBLAST.
+
+`mlkem512_check_pk`, `mlkem768_check_pk` and `mlkem1024_check_pk` do the
+modulus check of FIPS 203 on an encapsulation key: they decode the vector
+in its first 384 * k bytes, reduce it, encode it again and compare the
+result with the key in constant time, so they return 0 if all the 12-bit
+fields of those bytes are below q = 3329, and -4 otherwise. They are
+verified in the image with the same specifications as on AArch64 apart from
+the stack and DF, and their theorems of constant time and memory safety
+state that their events depend only on the addresses of the key, the stack
+and the image. Since the encapsulation branches on their results, they also
+have combined theorems `..._IMAGE_SUBROUTINE_FULL`, as do the functions
+that they call: `mlkem512_polyvec_frombytes`, `mlkem512_polyvec_reduce` and
+`mlkem512_polyvec_tobytes`, the same for the other parameter sets, and
+`mlkem_poly_frombytes`, `mlkem_poly_reduce` and `mlkem_poly_tobytes`. As
+for `mlkem512_check_sk`, the buffers are aligned to 32 bytes in the stack
+frame, and the comparison is done in the low halves of YMM registers.
