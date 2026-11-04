@@ -1157,13 +1157,55 @@ let cosimulate_ldst_ext() =
     if rn = 31 then sub_Xn_SP_imm 31 stackoff else sub_Xn_SP_Xn rn in
   [add_Xn_SP_imm rn stackoff] @ pre @ [code; restore];;
 
+(*** This covers LDR/STR (immediate, SIMD&FP) of 16-bit H registers with
+ *** an unsigned offset, i.e. imm12 scaled by 2. Unless the base is SP
+ *** it may lie below SP, so that large offsets are exercised too; the
+ *** accessed halfword is always inside the 256 bytes above SP. A base
+ *** below SP is set as SP plus a negative register (MOVN, then ADD), so
+ *** that the address is a sum of SP and constants.
+ ***)
+
+let add_Xn_SP_Xn rn =
+  pow2 21 */ num 0b10001011001 +/
+  pow2 16 */ num rn +/
+  pow2 10 */ num 0b011000 +/
+  pow2 5 */ num 0b11111 +/
+  num rn;;
+
+let cosimulate_ldst_h_simd() =
+  let isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let stackoff, imm12 =
+    if rn = 31 then
+      let stackoff = 16 * Random.int 16 in
+      stackoff, Random.int ((254 - stackoff) / 2 + 1)
+    else
+      let target = Random.int 255 and imm12 = Random.int 2048 in
+      target - 2 * imm12, imm12 in
+  let code =
+    pow2 30 */ num 0b01 +/
+    pow2 24 */ num 0b111101 +/
+    pow2 22 */ num isld +/
+    pow2 10 */ num imm12 +/
+    pow2 5 */ num rn +/
+    num rt in
+  let setbase =
+    if stackoff >= 0 then [add_Xn_SP_imm rn stackoff]
+    else [movn_Xn_imm rn (- stackoff - 1); add_Xn_SP_Xn rn] in
+  if rn = 31 then
+    setbase @ [code; sub_Xn_SP_imm 31 stackoff]
+  else
+    setbase @ [code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldstp_gpr; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg;
     cosimulate_ldst_imm; cosimulate_sp_arith; cosimulate_sp_subst;
     cosimulate_ldst_hsw; cosimulate_ldst_ext; cosimulate_ldstu_simd;
-    cosimulate_ldst4
+    cosimulate_ldst4;
+    cosimulate_ldst_h_simd
     ];;
 
 let run_random_memopsimulation() =

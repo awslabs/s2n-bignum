@@ -230,6 +230,43 @@ let DREG_EXPAND_CLAUSES = prove
    D31 = Q31 :> zerotop_64`,
   REWRITE_TAC(!component_alias_thms));;
 
+(*** There are no named H registers; decoding gives HREG n directly ***)
+
+let HREG_EXPAND_CLAUSES = prove
+ (`HREG 0 = ((Q0 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 1 = ((Q1 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 2 = ((Q2 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 3 = ((Q3 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 4 = ((Q4 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 5 = ((Q5 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 6 = ((Q6 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 7 = ((Q7 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 8 = ((Q8 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 9 = ((Q9 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 10 = ((Q10 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 11 = ((Q11 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 12 = ((Q12 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 13 = ((Q13 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 14 = ((Q14 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 15 = ((Q15 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 16 = ((Q16 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 17 = ((Q17 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 18 = ((Q18 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 19 = ((Q19 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 20 = ((Q20 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 21 = ((Q21 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 22 = ((Q22 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 23 = ((Q23 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 24 = ((Q24 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 25 = ((Q25 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 26 = ((Q26 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 27 = ((Q27 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 28 = ((Q28 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 29 = ((Q29 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 30 = ((Q30 :> zerotop_64) :> zerotop_32) :> zerotop_16 /\
+   HREG 31 = ((Q31 :> zerotop_64) :> zerotop_32) :> zerotop_16`,
+  REWRITE_TAC(!component_alias_thms));;
+
 let READ_SHIFTEDREG_CLAUSES = prove
  (`read (Shiftedreg Rn LSL n) s = word_shl (read Rn s) n /\
    read (Shiftedreg Rn LSR n) s = word_ushr (read Rn s) n /\
@@ -283,9 +320,11 @@ let ARM_EXEC_CONV =
     GEN_REWRITE_CONV ONCE_DEPTH_CONV [CONJUNCT2 SEQ_ID]) ORELSEC
    (GEN_REWRITE_CONV I ARM_OPERATION_CLAUSES THENC
     REWRITE_CONV [condition_semantics])) THENC
-  REWRITE_CONV[WREG_EXPAND_CLAUSES; DREG_EXPAND_CLAUSES; WSP] THENC
+  REWRITE_CONV[WREG_EXPAND_CLAUSES; DREG_EXPAND_CLAUSES;
+               HREG_EXPAND_CLAUSES; WSP] THENC
   REWRITE_CONV[READ_RVALUE; ARM_ZERO_REGISTER;
-               ASSIGN_ZEROTOP_32; ASSIGN_ZEROTOP_64;
+               ASSIGN_ZEROTOP_16; ASSIGN_ZEROTOP_32; ASSIGN_ZEROTOP_64;
+               READ_ZEROTOP_16; WRITE_ZEROTOP_16;
                READ_ZEROTOP_32; WRITE_ZEROTOP_32;
                READ_ZEROTOP_64; WRITE_ZEROTOP_64;
                READ_SHIFTEDREG_CLAUSES; READ_EXTENDEDREG_CLAUSES;
