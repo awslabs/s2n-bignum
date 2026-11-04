@@ -17,6 +17,7 @@
 
 needs "common/fips202.ml";;
 needs "arm/proofs/utils/keccak_spec.ml";;
+needs "common/mlkem_mldsa.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Round constants as explicit words.                                        *)
