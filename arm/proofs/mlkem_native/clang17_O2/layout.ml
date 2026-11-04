@@ -108,6 +108,24 @@
 (* called several times, and ret if there are several returns. adrpK is the  *)
 (* K-th ADRP instruction.                                                    *)
 (*                                                                           *)
+(* The addresses of the ADRP instructions are needed because an ADRP         *)
+(* computes the 4096-byte page of its target relative to its own page, and   *)
+(* the LDR or ADD after it adds the offset of the target in that page:       *)
+(*                                                                           *)
+(*   adrpK:       adrp  x0, <page>        x0 = page(pc + adrpK) + 4096 * n   *)
+(*                ldr   q0, [x0, #off]    q0 = the 16 bytes at x0 + off      *)
+(*                                                                           *)
+(* So what it computes depends on where the ADRP is. In the whole image the  *)
+(* code and the data move together, and it is enough that the image is at a  *)
+(* multiple of 4096 (ADRP_WITHIN_BOUNDS_ALIGNED in                           *)
+(* utils/mlkem_native_image.ml). But the proofs about a function that is     *)
+(* also transcribed on its own, with the addresses of its tables as          *)
+(* parameters, need adrpK: the hypothesis adrp_within_bounds (word zetas)    *)
+(* (word(pc + poly_invntt_tomont_adrp3)) says that the table is within the   *)
+(* range of the ADRP at that address, and the lemma ADRP_LDR_Q_FOLD, applied *)
+(* at that address, gives the address of the table from the page and the     *)
+(* offset.                                                                   *)
+(*                                                                           *)
 (* The read-only data are the tables with symbols, named after the symbol    *)
 (* with "rodata_" in front (e.g. rodata_mlk_zetas, since mlk_zetas is the    *)
 (* HOL constant for its contents), and the vectors of constants without      *)
@@ -122,6 +140,25 @@
 (*                ldr   x17, [x16, #off]   its slot got_g in the GOT and     *)
 (*                add   x16, x16, #off     jumps there                       *)
 (*                br    x17                                                  *)
+(*                                                                           *)
+(* At the end of this file, the code of each function is listed as objdump   *)
+(* disassembles it, with each instruction at its offset from the start of    *)
+(* the function, the labels at an instruction on the line before it, the     *)
+(* name of the address that an ADRP with an LDR or ADD computes on the line  *)
+(* after the LDR or ADD, and the branches inside the function as arrows on   *)
+(* the right, from each branch to its target (marked with <). The operand of *)
+(* a branch is the first label at its target, or its offset. Where there are *)
+(* too many branches at once to draw them all, only the operand shows the    *)
+(* target. For example:                                                      *)
+(*                                                                           *)
+(*   loop2:                                                                  *)
+(*     +0x20  lsl     w0, w8, w1            <+                               *)
+(*     +0x24  ldrb    w2, [x5, x3]           |                               *)
+(*            ...                            |                               *)
+(*   loop2_test:                             |                               *)
+(*     +0x44  cmp     w1, #0x8               |                               *)
+(*   loop2_back:                             |                               *)
+(*     +0x48  b.ne    loop2                 -+                               *)
 (* ========================================================================= *)
 
 needs "common/layout.ml";;
@@ -1140,3 +1177,12399 @@ install_layout (layout_labels [
     "after_mlkem_poly_cbd2_3",0xdc; "after_mlkem_poly_cbd2_4",0xec;
     "join1",0xec; "adrp2",0x158; "ret",0x188;
     "after_stack_chk_fail",0x190]]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The code of the functions, with the labels and the branches.              *)
+(* ------------------------------------------------------------------------- *)
+
+(*** mlkem1024_gen_matrix: 0x850, 0x21c bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  str     x28, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0x110
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     w20, w2
+    +0x20  mov     x19, x0
+    +0x24  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x28  ldr     x8, [x8]
+    +0x2c  str     x8, [sp, #264]
+    +0x30  ldp     q0, q1, [x1]
+    +0x34  stp     q0, q1, [sp]
+    +0x38  stp     q0, q1, [sp, #64]
+    +0x3c  stp     q0, q1, [sp, #128]
+    +0x40  stp     q0, q1, [sp, #192]
+    +0x44  cbz     w2, +0x60                    -+
+    +0x48  mov     w9, wzr                       |
+    +0x4c  mov     w10, #0x100                   |
+    +0x50  mov     w11, #0x200                   |
+    +0x54  strh    wzr, [sp, #32]                |
+    +0x58  mov     w8, #0x3                      |
+    +0x5c  b       join1                        ---+
+    +0x60  mov     w8, wzr                      <+ |
+    +0x64  mov     w10, #0x1                       |
+    +0x68  mov     w11, #0x2                       |
+    +0x6c  mov     w9, #0x3                        |
+    +0x70  strh    wzr, [sp, #32]                  |
+  join1:                                           |
+    +0x74  add     x1, x19, #0x200              <--+
+    +0x78  add     x2, x19, #0x400
+    +0x7c  add     x3, x19, #0x600
+    +0x80  mov     x4, sp
+    +0x84  mov     x0, x19
+    +0x88  strh    w10, [sp, #96]
+    +0x8c  strh    w11, [sp, #160]
+    +0x90  strb    w9, [sp, #224]
+    +0x94  strb    w8, [sp, #225]
+    +0x98  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_1:
+    +0x9c  cbz     w20, +0xc0                   -+
+    +0xa0  mov     w8, #0x1                      |
+    +0xa4  mov     w10, #0x101                   |
+    +0xa8  mov     w11, #0x201                   |
+    +0xac  mov     w9, #0x3                      |
+    +0xb0  strh    w8, [sp, #32]                 |
+    +0xb4  strh    w10, [sp, #96]                |
+    +0xb8  strh    w11, [sp, #160]               |
+    +0xbc  b       join2                        ---+
+    +0xc0  mov     w10, #0x100                  <+ |
+    +0xc4  mov     w11, #0x101                     |
+    +0xc8  mov     w12, #0x102                     |
+    +0xcc  mov     w9, #0x1                        |
+    +0xd0  mov     w8, #0x3                        |
+    +0xd4  strh    w10, [sp, #32]                  |
+    +0xd8  strh    w11, [sp, #96]                  |
+    +0xdc  strh    w12, [sp, #160]                 |
+  join2:                                           |
+    +0xe0  add     x0, x19, #0x800              <--+
+    +0xe4  add     x1, x19, #0xa00
+    +0xe8  add     x2, x19, #0xc00
+    +0xec  add     x3, x19, #0xe00
+    +0xf0  mov     x4, sp
+    +0xf4  strb    w8, [sp, #224]
+    +0xf8  strb    w9, [sp, #225]
+    +0xfc  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_2:
+   +0x100  cbz     w20, +0x11c                  -+
+   +0x104  mov     w8, #0x2                      |
+   +0x108  mov     w10, #0x102                   |
+   +0x10c  mov     w9, #0x3                      |
+   +0x110  strh    w8, [sp, #32]                 |
+   +0x114  strh    w10, [sp, #96]                |
+   +0x118  b       join3                        ---+
+   +0x11c  mov     w10, #0x200                  <+ |
+   +0x120  mov     w11, #0x201                     |
+   +0x124  mov     w9, #0x2                        |
+   +0x128  mov     w8, #0x3                        |
+   +0x12c  strh    w10, [sp, #32]                  |
+   +0x130  strh    w11, [sp, #96]                  |
+  join3:                                           |
+   +0x134  mov     w11, #0x1200                 <--+
+   +0x138  mov     w10, #0x202
+   +0x13c  add     x1, x19, x11
+   +0x140  mov     w11, #0x1400
+   +0x144  add     x2, x19, x11
+   +0x148  mov     w11, #0x1600
+   +0x14c  add     x0, x19, #0x1, lsl #12
+   +0x150  add     x3, x19, x11
+   +0x154  mov     x4, sp
+   +0x158  strh    w10, [sp, #160]
+   +0x15c  strb    w8, [sp, #224]
+   +0x160  strb    w9, [sp, #225]
+   +0x164  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_3:
+   +0x168  cbz     w20, +0x17c                  -+
+   +0x16c  mov     w8, #0x3                      |
+   +0x170  mov     w9, #0x103                    |
+   +0x174  mov     w10, #0x203                   |
+   +0x178  b       join4                        ---+
+   +0x17c  mov     w8, #0x300                   <+ |
+   +0x180  mov     w9, #0x301                      |
+   +0x184  mov     w10, #0x302                     |
+  join4:                                           |
+   +0x188  strh    w9, [sp, #96]                <--+
+   +0x18c  mov     w9, #0x1800
+   +0x190  strh    w10, [sp, #160]
+   +0x194  mov     w10, #0x1a00
+   +0x198  add     x0, x19, x9
+   +0x19c  add     x1, x19, x10
+   +0x1a0  mov     w9, #0x1c00
+   +0x1a4  mov     w10, #0x1e00
+   +0x1a8  strh    w8, [sp, #32]
+   +0x1ac  mov     w8, #0x303
+   +0x1b0  add     x2, x19, x9
+   +0x1b4  add     x3, x19, x10
+   +0x1b8  mov     x4, sp
+   +0x1bc  mov     x19, sp
+   +0x1c0  strh    w8, [sp, #224]
+   +0x1c4  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_4:
+   +0x1c8  movi    v0.2d, #0x0
+  adrp2:
+   +0x1cc  adrp    x8, <page>
+   +0x1d0  stp     q0, q0, [sp]
+   +0x1d4  stp     q0, q0, [sp, #32]
+   +0x1d8  stp     q0, q0, [sp, #64]
+   +0x1dc  stp     q0, q0, [sp, #96]
+   +0x1e0  stp     q0, q0, [sp, #128]
+   +0x1e4  stp     q0, q0, [sp, #160]
+   +0x1e8  stp     q0, q0, [sp, #192]
+   +0x1ec  stp     q0, q0, [sp, #224]
+   +0x1f0  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x1f4  ldr     x9, [sp, #264]
+   +0x1f8  ldr     x8, [x8]
+   +0x1fc  cmp     x8, x9
+   +0x200  b.ne    +0x218                       -+
+   +0x204  mov     sp, x29                       |
+   +0x208  ldp     x20, x19, [sp, #32]           |
+   +0x20c  ldr     x28, [sp, #16]                |
+   +0x210  ldp     x29, x30, [sp], #48           |
+  ret:                                           |
+   +0x214  ret                                   |
+   +0x218  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem1024_indcpa_keypair_derand: 0xa6c, 0x40c bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  stp     x28, x27, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0x3, lsl #12
+    +0x20  sub     x9, x9, #0xcc0
+    +0x24  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x28  adrp    x8, <page>
+    +0x2c  mov     x20, x1
+    +0x30  mov     x19, x0
+    +0x34  add     x9, sp, #0x3, lsl #12
+    +0x38  add     x0, sp, #0x3, lsl #12
+    +0x3c  add     x1, sp, #0x3, lsl #12
+    +0x40  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x44  add     x9, x9, #0xc20
+    +0x48  add     x0, x0, #0xc60
+    +0x4c  add     x1, x1, #0xc20
+    +0x50  add     x24, sp, #0x3, lsl #12
+    +0x54  ldr     x8, [x8]
+    +0x58  add     x24, x24, #0xc60
+    +0x5c  str     x8, [sp, #15544]
+    +0x60  mov     w8, #0x4
+    +0x64  ldp     q0, q1, [x2]
+    +0x68  mov     w2, #0x21
+    +0x6c  strb    w8, [x9, #32]
+    +0x70  str     q0, [sp, #15392]
+    +0x74  str     q1, [sp, #15408]
+    +0x78  bl      mlkem_sha3_512
+  after_mlkem_sha3_512:
+    +0x7c  add     x28, sp, #0x1, lsl #12
+    +0x80  add     x0, sp, #0x1, lsl #12
+    +0x84  add     x28, x28, #0xc20
+    +0x88  add     x4, sp, #0x1, lsl #12
+    +0x8c  ldr     q0, [sp, #15456]
+    +0x90  mov     w8, #0x1
+    +0x94  ldr     q1, [sp, #15472]
+    +0x98  mov     w9, #0x2
+    +0x9c  mov     w26, #0x3
+    +0xa0  add     x1, x28, #0x200
+    +0xa4  add     x2, x28, #0x400
+    +0xa8  add     x3, x28, #0x600
+    +0xac  add     x0, x0, #0xc20
+    +0xb0  add     x4, x4, #0x420
+    +0xb4  add     x27, sp, #0x1, lsl #12
+    +0xb8  str     q0, [sp, #5152]
+    +0xbc  str     q1, [sp, #5168]
+    +0xc0  add     x27, x27, #0x420
+    +0xc4  str     q0, [sp, #5216]
+    +0xc8  str     q1, [sp, #5232]
+    +0xcc  str     q0, [sp, #5280]
+    +0xd0  str     q1, [sp, #5296]
+    +0xd4  str     q1, [sp, #5360]
+    +0xd8  str     q0, [sp, #5344]
+    +0xdc  strh    w8, [sp, #5248]
+    +0xe0  strh    w9, [sp, #5312]
+    +0xe4  strh    wzr, [sp, #5184]
+    +0xe8  strh    w26, [sp, #5376]
+    +0xec  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_1:
+    +0xf0  add     x21, x28, #0x800
+    +0xf4  add     x4, sp, #0x1, lsl #12
+    +0xf8  mov     w8, #0x100
+    +0xfc  mov     w9, #0x101
+   +0x100  mov     w10, #0x102
+   +0x104  mov     w11, #0x103
+   +0x108  add     x1, x28, #0xa00
+   +0x10c  add     x2, x28, #0xc00
+   +0x110  add     x3, x28, #0xe00
+   +0x114  add     x4, x4, #0x420
+   +0x118  mov     x0, x21
+   +0x11c  strh    w8, [sp, #5184]
+   +0x120  strh    w9, [sp, #5248]
+   +0x124  strh    w10, [sp, #5312]
+   +0x128  strh    w11, [sp, #5376]
+   +0x12c  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_2:
+   +0x130  mov     w8, #0x200
+   +0x134  mov     w9, #0x201
+   +0x138  add     x22, x28, #0x1, lsl #12
+   +0x13c  mov     w12, #0x1200
+   +0x140  add     x4, sp, #0x1, lsl #12
+   +0x144  mov     w10, #0x202
+   +0x148  strh    w8, [sp, #5184]
+   +0x14c  mov     w8, #0x1400
+   +0x150  strh    w9, [sp, #5248]
+   +0x154  mov     w9, #0x1600
+   +0x158  mov     w11, #0x203
+   +0x15c  add     x1, x28, x12
+   +0x160  add     x2, x28, x8
+   +0x164  add     x3, x28, x9
+   +0x168  add     x4, x4, #0x420
+   +0x16c  mov     x0, x22
+   +0x170  strh    w10, [sp, #5312]
+   +0x174  strh    w11, [sp, #5376]
+   +0x178  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_3:
+   +0x17c  mov     w8, #0x300
+   +0x180  mov     w9, #0x301
+   +0x184  mov     w12, #0x1800
+   +0x188  add     x4, sp, #0x1, lsl #12
+   +0x18c  add     x23, x28, x12
+   +0x190  mov     w10, #0x302
+   +0x194  strh    w8, [sp, #5184]
+   +0x198  mov     w8, #0x1a00
+   +0x19c  strh    w9, [sp, #5248]
+   +0x1a0  add     x1, x28, x8
+   +0x1a4  mov     w8, #0x1c00
+   +0x1a8  mov     w9, #0x1e00
+   +0x1ac  mov     w11, #0x303
+   +0x1b0  add     x2, x28, x8
+   +0x1b4  add     x3, x28, x9
+   +0x1b8  add     x4, x4, #0x420
+   +0x1bc  mov     x0, x23
+   +0x1c0  strh    w10, [sp, #5312]
+   +0x1c4  strh    w11, [sp, #5376]
+   +0x1c8  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_4:
+   +0x1cc  movi    v0.2d, #0x0
+   +0x1d0  add     x24, x24, #0x20
+   +0x1d4  add     x25, sp, #0x420
+   +0x1d8  add     x0, sp, #0x420
+   +0x1dc  add     x1, x25, #0x200
+   +0x1e0  add     x2, x25, #0x400
+   +0x1e4  add     x3, x25, #0x600
+   +0x1e8  mov     x4, x24
+   +0x1ec  str     q0, [sp, #5392]
+   +0x1f0  mov     w5, wzr
+   +0x1f4  str     q0, [sp, #5376]
+   +0x1f8  mov     w6, #0x1
+   +0x1fc  str     q0, [sp, #5360]
+   +0x200  mov     w7, #0x2
+   +0x204  str     q0, [sp, #5344]
+   +0x208  str     q0, [sp, #5328]
+   +0x20c  str     q0, [sp, #5312]
+   +0x210  str     q0, [sp, #5296]
+   +0x214  str     q0, [sp, #5280]
+   +0x218  str     q0, [sp, #5264]
+   +0x21c  str     q0, [sp, #5248]
+   +0x220  str     q0, [sp, #5232]
+   +0x224  str     q0, [sp, #5216]
+   +0x228  str     q0, [sp, #5200]
+   +0x22c  str     q0, [sp, #5184]
+   +0x230  str     q0, [sp, #5168]
+   +0x234  str     q0, [sp, #5152]
+   +0x238  strb    w26, [sp]
+   +0x23c  bl      mlkem1024_poly_getnoise_eta1_4x
+  after_mlkem1024_poly_getnoise_eta1_4x_1:
+   +0x240  add     x0, sp, #0x1, lsl #12
+   +0x244  add     x1, x27, #0x200
+   +0x248  add     x2, x27, #0x400
+   +0x24c  add     x3, x27, #0x600
+   +0x250  mov     w8, #0x7
+   +0x254  add     x0, x0, #0x420
+   +0x258  mov     x4, x24
+   +0x25c  mov     w5, #0x4
+   +0x260  mov     w6, #0x5
+   +0x264  mov     w7, #0x6
+   +0x268  strb    w8, [sp]
+   +0x26c  bl      mlkem1024_poly_getnoise_eta1_4x
+  after_mlkem1024_poly_getnoise_eta1_4x_2:
+   +0x270  add     x0, sp, #0x420
+   +0x274  bl      mlkem1024_polyvec_ntt
+  after_mlkem1024_polyvec_ntt_1:
+   +0x278  add     x0, sp, #0x1, lsl #12
+   +0x27c  add     x0, x0, #0x420
+   +0x280  bl      mlkem1024_polyvec_ntt
+  after_mlkem1024_polyvec_ntt_2:
+   +0x284  add     x0, sp, #0x20
+   +0x288  add     x1, sp, #0x420
+   +0x28c  add     x26, sp, #0x20
+   +0x290  bl      mlkem1024_polyvec_mulcache_compute
+  after_mlkem1024_polyvec_mulcache_compute:
+   +0x294  add     x1, sp, #0x1, lsl #12
+   +0x298  add     x0, sp, #0xc20
+   +0x29c  add     x1, x1, #0xc20
+   +0x2a0  add     x2, sp, #0x420
+   +0x2a4  add     x3, sp, #0x20
+   +0x2a8  add     x24, sp, #0xc20
+   +0x2ac  bl      mlkem1024_polyvec_basemul_acc_montgomery_cached
+  after_mlkem1024_polyvec_basemul_acc_montgomery_cached_1:
+   +0x2b0  add     x0, x24, #0x200
+   +0x2b4  add     x2, sp, #0x420
+   +0x2b8  add     x3, sp, #0x20
+   +0x2bc  mov     x1, x21
+   +0x2c0  bl      mlkem1024_polyvec_basemul_acc_montgomery_cached
+  after_mlkem1024_polyvec_basemul_acc_montgomery_cached_2:
+   +0x2c4  add     x0, x24, #0x400
+   +0x2c8  add     x2, sp, #0x420
+   +0x2cc  add     x3, sp, #0x20
+   +0x2d0  mov     x1, x22
+   +0x2d4  bl      mlkem1024_polyvec_basemul_acc_montgomery_cached
+  after_mlkem1024_polyvec_basemul_acc_montgomery_cached_3:
+   +0x2d8  add     x0, x24, #0x600
+   +0x2dc  add     x2, sp, #0x420
+   +0x2e0  add     x3, sp, #0x20
+   +0x2e4  mov     x1, x23
+   +0x2e8  bl      mlkem1024_polyvec_basemul_acc_montgomery_cached
+  after_mlkem1024_polyvec_basemul_acc_montgomery_cached_4:
+   +0x2ec  add     x0, sp, #0xc20
+   +0x2f0  bl      mlkem1024_polyvec_tomont
+  after_mlkem1024_polyvec_tomont:
+   +0x2f4  add     x1, sp, #0x1, lsl #12
+   +0x2f8  add     x0, sp, #0xc20
+   +0x2fc  add     x1, x1, #0x420
+   +0x300  bl      mlkem1024_polyvec_add
+  after_mlkem1024_polyvec_add:
+   +0x304  add     x0, sp, #0xc20
+   +0x308  bl      mlkem1024_polyvec_reduce
+  after_mlkem1024_polyvec_reduce_1:
+   +0x30c  add     x0, sp, #0x420
+   +0x310  bl      mlkem1024_polyvec_reduce
+  after_mlkem1024_polyvec_reduce_2:
+   +0x314  add     x1, sp, #0x420
+   +0x318  mov     x0, x20
+   +0x31c  bl      mlkem1024_polyvec_tobytes
+  after_mlkem1024_polyvec_tobytes_1:
+   +0x320  add     x1, sp, #0xc20
+   +0x324  mov     x0, x19
+   +0x328  bl      mlkem1024_polyvec_tobytes
+  after_mlkem1024_polyvec_tobytes_2:
+   +0x32c  ldr     q0, [sp, #15456]
+   +0x330  add     x0, sp, #0x20
+   +0x334  ldr     q1, [sp, #15472]
+   +0x338  mov     w1, wzr
+   +0x33c  mov     w2, #0x400
+   +0x340  str     q0, [x19, #1536]
+   +0x344  str     q1, [x19, #1552]
+   +0x348  bl      memset
+  after_memset_1:
+   +0x34c  add     x0, sp, #0x420
+   +0x350  mov     w1, wzr
+   +0x354  mov     w2, #0x800
+   +0x358  bl      memset
+  after_memset_2:
+   +0x35c  add     x0, sp, #0xc20
+   +0x360  mov     w1, wzr
+   +0x364  mov     w2, #0x800
+   +0x368  bl      memset
+  after_memset_3:
+   +0x36c  add     x0, sp, #0x1, lsl #12
+   +0x370  add     x0, x0, #0x420
+   +0x374  mov     w1, wzr
+   +0x378  mov     w2, #0x800
+   +0x37c  bl      memset
+  after_memset_4:
+   +0x380  add     x0, sp, #0x1, lsl #12
+   +0x384  add     x0, x0, #0xc20
+   +0x388  mov     w1, wzr
+   +0x38c  mov     w2, #0x2000
+   +0x390  bl      memset
+  after_memset_5:
+   +0x394  add     x8, sp, #0x3, lsl #12
+   +0x398  add     x8, x8, #0xc20
+   +0x39c  movi    v0.2d, #0x0
+   +0x3a0  strb    wzr, [x8, #32]
+   +0x3a4  add     x8, sp, #0x3, lsl #12
+   +0x3a8  add     x8, x8, #0xc20
+   +0x3ac  str     q0, [sp, #15408]
+   +0x3b0  str     q0, [sp, #15392]
+   +0x3b4  add     x8, sp, #0x3, lsl #12
+   +0x3b8  str     q0, [sp, #15504]
+   +0x3bc  add     x8, x8, #0xc60
+   +0x3c0  str     q0, [sp, #15488]
+   +0x3c4  str     q0, [sp, #15472]
+   +0x3c8  str     q0, [sp, #15456]
+  adrp2:
+   +0x3cc  adrp    x8, <page>
+   +0x3d0  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x3d4  ldr     x9, [sp, #15544]
+   +0x3d8  ldr     x8, [x8]
+   +0x3dc  cmp     x8, x9
+   +0x3e0  b.ne    +0x408                                           -+
+   +0x3e4  mov     w0, wzr                                           |
+   +0x3e8  mov     sp, x29                                           |
+   +0x3ec  ldp     x20, x19, [sp, #80]                               |
+   +0x3f0  ldp     x22, x21, [sp, #64]                               |
+   +0x3f4  ldp     x24, x23, [sp, #48]                               |
+   +0x3f8  ldp     x26, x25, [sp, #32]                               |
+   +0x3fc  ldp     x28, x27, [sp, #16]                               |
+   +0x400  ldp     x29, x30, [sp], #96                               |
+  ret:                                                               |
+   +0x404  ret                                                       |
+   +0x408  bl      stack_chk_fail                                   <+
+ ***)
+
+(*** mlkem1024_indcpa_enc: 0xe78, 0x5e4 bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  stp     x28, x27, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0x4, lsl #12
+    +0x20  sub     x9, x9, #0xa60
+    +0x24  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x28  adrp    x8, <page>
+    +0x2c  mov     x19, x0
+    +0x30  add     x0, sp, #0x1, lsl #12
+    +0x34  mov     x22, x1
+    +0x38  add     x0, x0, #0xa20
+    +0x3c  mov     x1, x2
+    +0x40  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x44  add     x24, sp, #0x2, lsl #12
+    +0x48  mov     x20, x3
+    +0x4c  mov     x21, x2
+    +0x50  add     x24, x24, #0x220
+    +0x54  ldr     x8, [x8]
+    +0x58  str     x8, [sp, #19032]
+    +0x5c  bl      mlkem1024_polyvec_frombytes
+  after_mlkem1024_polyvec_frombytes:
+    +0x60  ldr     q0, [x21, #1536]
+    +0x64  add     x0, sp, #0x620
+    +0x68  ldr     q1, [x21, #1552]
+    +0x6c  mov     x1, x22
+    +0x70  str     q0, [sp, #18976]
+    +0x74  str     q1, [sp, #18992]
+    +0x78  bl      mlkem_poly_frommsg
+  after_mlkem_poly_frommsg:
+    +0x7c  add     x25, sp, #0x2, lsl #12
+    +0x80  add     x0, sp, #0x2, lsl #12
+    +0x84  add     x25, x25, #0xa20
+    +0x88  add     x4, sp, #0x2, lsl #12
+    +0x8c  ldr     q0, [sp, #18976]
+    +0x90  mov     w8, #0x100
+    +0x94  ldr     q1, [sp, #18992]
+    +0x98  mov     w9, #0x200
+    +0x9c  mov     w10, #0x300
+    +0xa0  add     x1, x25, #0x200
+    +0xa4  add     x2, x25, #0x400
+    +0xa8  add     x3, x25, #0x600
+    +0xac  add     x0, x0, #0xa20
+    +0xb0  add     x4, x4, #0x220
+    +0xb4  add     x26, sp, #0x2, lsl #12
+    +0xb8  str     q0, [sp, #8736]
+    +0xbc  str     q1, [sp, #8752]
+    +0xc0  add     x26, x26, #0x220
+    +0xc4  str     q0, [sp, #8800]
+    +0xc8  str     q1, [sp, #8816]
+    +0xcc  str     q0, [sp, #8864]
+    +0xd0  str     q1, [sp, #8880]
+    +0xd4  strh    w8, [x24, #96]
+    +0xd8  strh    w9, [x24, #160]
+    +0xdc  strh    w10, [x24, #224]
+    +0xe0  str     q1, [sp, #8944]
+    +0xe4  str     q0, [sp, #8928]
+    +0xe8  strh    wzr, [x24, #32]
+    +0xec  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_1:
+    +0xf0  add     x21, x25, #0x800
+    +0xf4  add     x4, sp, #0x2, lsl #12
+    +0xf8  mov     w8, #0x1
+    +0xfc  mov     w9, #0x101
+   +0x100  mov     w10, #0x201
+   +0x104  mov     w11, #0x301
+   +0x108  add     x1, x25, #0xa00
+   +0x10c  add     x2, x25, #0xc00
+   +0x110  add     x3, x25, #0xe00
+   +0x114  add     x4, x4, #0x220
+   +0x118  mov     x0, x21
+   +0x11c  strh    w8, [x24, #32]
+   +0x120  strh    w9, [x24, #96]
+   +0x124  strh    w10, [x24, #160]
+   +0x128  strh    w11, [x24, #224]
+   +0x12c  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_2:
+   +0x130  mov     w8, #0x2
+   +0x134  mov     w9, #0x102
+   +0x138  add     x22, x25, #0x1, lsl #12
+   +0x13c  mov     w12, #0x1200
+   +0x140  add     x4, sp, #0x2, lsl #12
+   +0x144  mov     w10, #0x202
+   +0x148  strh    w8, [x24, #32]
+   +0x14c  mov     w8, #0x1400
+   +0x150  strh    w9, [x24, #96]
+   +0x154  mov     w9, #0x1600
+   +0x158  mov     w11, #0x302
+   +0x15c  add     x1, x25, x12
+   +0x160  add     x2, x25, x8
+   +0x164  add     x3, x25, x9
+   +0x168  add     x4, x4, #0x220
+   +0x16c  mov     x0, x22
+   +0x170  strh    w10, [x24, #160]
+   +0x174  strh    w11, [x24, #224]
+   +0x178  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_3:
+   +0x17c  mov     w8, #0x103
+   +0x180  mov     w9, #0x203
+   +0x184  mov     w11, #0x1800
+   +0x188  add     x4, sp, #0x2, lsl #12
+   +0x18c  add     x23, x25, x11
+   +0x190  mov     w27, #0x3
+   +0x194  strh    w8, [x24, #96]
+   +0x198  mov     w8, #0x1a00
+   +0x19c  strh    w9, [x24, #160]
+   +0x1a0  add     x1, x25, x8
+   +0x1a4  mov     w8, #0x1c00
+   +0x1a8  mov     w9, #0x1e00
+   +0x1ac  mov     w10, #0x303
+   +0x1b0  add     x2, x25, x8
+   +0x1b4  add     x3, x25, x9
+   +0x1b8  add     x4, x4, #0x220
+   +0x1bc  mov     x0, x23
+   +0x1c0  strh    w27, [x24, #32]
+   +0x1c4  strh    w10, [x24, #224]
+   +0x1c8  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4_4:
+   +0x1cc  movi    v0.2d, #0x0
+   +0x1d0  add     x0, sp, #0x2, lsl #12
+   +0x1d4  add     x1, x26, #0x200
+   +0x1d8  add     x2, x26, #0x400
+   +0x1dc  add     x3, x26, #0x600
+   +0x1e0  add     x0, x0, #0x220
+   +0x1e4  mov     x4, x20
+   +0x1e8  mov     w5, wzr
+   +0x1ec  str     q0, [sp, #8976]
+   +0x1f0  mov     w6, #0x1
+   +0x1f4  str     q0, [sp, #8960]
+   +0x1f8  mov     w7, #0x2
+   +0x1fc  str     q0, [sp, #8944]
+   +0x200  str     q0, [sp, #8928]
+   +0x204  str     q0, [sp, #8912]
+   +0x208  str     q0, [sp, #8896]
+   +0x20c  str     q0, [sp, #8880]
+   +0x210  str     q0, [sp, #8864]
+   +0x214  str     q0, [sp, #8848]
+   +0x218  str     q0, [sp, #8832]
+   +0x21c  str     q0, [sp, #8816]
+   +0x220  str     q0, [sp, #8800]
+   +0x224  str     q0, [sp, #8784]
+   +0x228  str     q0, [sp, #8768]
+   +0x22c  str     q0, [sp, #8752]
+   +0x230  str     q0, [sp, #8736]
+   +0x234  strb    w27, [sp]
+   +0x238  bl      mlkem1024_poly_getnoise_eta1_4x
+  after_mlkem1024_poly_getnoise_eta1_4x_1:
+   +0x23c  add     x28, sp, #0x1, lsl #12
+   +0x240  add     x0, sp, #0x1, lsl #12
+   +0x244  add     x28, x28, #0x220
+   +0x248  mov     w8, #0x7
+   +0x24c  add     x1, x28, #0x200
+   +0x250  add     x2, x28, #0x400
+   +0x254  add     x3, x28, #0x600
+   +0x258  add     x0, x0, #0x220
+   +0x25c  mov     x4, x20
+   +0x260  mov     w5, #0x4
+   +0x264  mov     w6, #0x5
+   +0x268  mov     w7, #0x6
+   +0x26c  strb    w8, [sp]
+   +0x270  bl      mlkem1024_poly_getnoise_eta1_4x
+  after_mlkem1024_poly_getnoise_eta1_4x_2:
+   +0x274  add     x0, sp, #0x420
+   +0x278  mov     x1, x20
+   +0x27c  mov     w2, #0x8
+   +0x280  add     x24, sp, #0x420
+   +0x284  bl      mlkem1024_poly_getnoise_eta2
+  after_mlkem1024_poly_getnoise_eta2:
+   +0x288  add     x0, sp, #0x2, lsl #12
+   +0x28c  add     x0, x0, #0x220
+   +0x290  bl      mlkem1024_polyvec_ntt
+  after_mlkem1024_polyvec_ntt:
+   +0x294  add     x1, sp, #0x2, lsl #12
+   +0x298  add     x0, sp, #0x20
+   +0x29c  add     x1, x1, #0x220
+   +0x2a0  add     x27, sp, #0x20
+   +0x2a4  bl      mlkem1024_polyvec_mulcache_compute
+  after_mlkem1024_polyvec_mulcache_compute:
+   +0x2a8  add     x1, sp, #0x2, lsl #12
+   +0x2ac  add     x2, sp, #0x2, lsl #12
+   +0x2b0  add     x0, sp, #0xa20
+   +0x2b4  add     x1, x1, #0xa20
+   +0x2b8  add     x2, x2, #0x220
+   +0x2bc  add     x3, sp, #0x20
+   +0x2c0  add     x20, sp, #0xa20
+   +0x2c4  bl      mlkem1024_polyvec_basemul_acc_montgomery_cached
+  after_mlkem1024_polyvec_basemul_acc_montgomery_cached_1:
+   +0x2c8  add     x2, sp, #0x2, lsl #12
+   +0x2cc  add     x0, x20, #0x200
+   +0x2d0  add     x2, x2, #0x220
+   +0x2d4  add     x3, sp, #0x20
+   +0x2d8  mov     x1, x21
+   +0x2dc  bl      mlkem1024_polyvec_basemul_acc_montgomery_cached
+  after_mlkem1024_polyvec_basemul_acc_montgomery_cached_2:
+   +0x2e0  add     x2, sp, #0x2, lsl #12
+   +0x2e4  add     x0, x20, #0x400
+   +0x2e8  add     x2, x2, #0x220
+   +0x2ec  add     x3, sp, #0x20
+   +0x2f0  mov     x1, x22
+   +0x2f4  bl      mlkem1024_polyvec_basemul_acc_montgomery_cached
+  after_mlkem1024_polyvec_basemul_acc_montgomery_cached_3:
+   +0x2f8  add     x2, sp, #0x2, lsl #12
+   +0x2fc  add     x0, x20, #0x600
+   +0x300  add     x2, x2, #0x220
+   +0x304  add     x3, sp, #0x20
+   +0x308  mov     x1, x23
+   +0x30c  bl      mlkem1024_polyvec_basemul_acc_montgomery_cached
+  after_mlkem1024_polyvec_basemul_acc_montgomery_cached_4:
+   +0x310  add     x1, sp, #0x1, lsl #12
+   +0x314  add     x2, sp, #0x2, lsl #12
+   +0x318  add     x0, sp, #0x820
+   +0x31c  add     x1, x1, #0xa20
+   +0x320  add     x2, x2, #0x220
+   +0x324  add     x3, sp, #0x20
+   +0x328  add     x21, sp, #0x820
+   +0x32c  bl      mlkem1024_polyvec_basemul_acc_montgomery_cached
+  after_mlkem1024_polyvec_basemul_acc_montgomery_cached_5:
+   +0x330  add     x0, sp, #0xa20
+   +0x334  bl      mlkem1024_polyvec_invntt_tomont
+  after_mlkem1024_polyvec_invntt_tomont:
+   +0x338  add     x0, sp, #0x820
+   +0x33c  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont:
+   +0x340  add     x1, sp, #0x1, lsl #12
+   +0x344  add     x0, sp, #0xa20
+   +0x348  add     x1, x1, #0x220
+   +0x34c  bl      mlkem1024_polyvec_add
+  after_mlkem1024_polyvec_add:
+   +0x350  add     x0, sp, #0x820
+   +0x354  add     x1, sp, #0x420
+   +0x358  bl      mlkem_poly_add
+  after_mlkem_poly_add_1:
+   +0x35c  add     x0, sp, #0x820
+   +0x360  add     x1, sp, #0x620
+   +0x364  bl      mlkem_poly_add
+  after_mlkem_poly_add_2:
+   +0x368  add     x0, sp, #0xa20
+   +0x36c  bl      mlkem1024_polyvec_reduce
+  after_mlkem1024_polyvec_reduce:
+   +0x370  add     x0, sp, #0x820
+   +0x374  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce:
+   +0x378  add     x1, sp, #0xa20
+   +0x37c  mov     x0, x19
+   +0x380  bl      mlkem1024_polyvec_compress_du
+  after_mlkem1024_polyvec_compress_du:
+   +0x384  add     x0, x19, #0x580
+   +0x388  add     x1, sp, #0x820
+   +0x38c  bl      mlkem_poly_compress_d5
+  after_mlkem_poly_compress_d5:
+   +0x390  add     x0, sp, #0x20
+   +0x394  mov     w1, wzr
+   +0x398  mov     w2, #0x400
+   +0x39c  bl      memset
+  after_memset_1:
+   +0x3a0  movi    v0.2d, #0x0
+   +0x3a4  add     x8, sp, #0x620
+   +0x3a8  add     x0, sp, #0xa20
+   +0x3ac  mov     w1, wzr
+   +0x3b0  mov     w2, #0x800
+   +0x3b4  str     q0, [sp, #1552]
+   +0x3b8  str     q0, [sp, #1536]
+   +0x3bc  str     q0, [sp, #1520]
+   +0x3c0  str     q0, [sp, #1504]
+   +0x3c4  str     q0, [sp, #1488]
+   +0x3c8  str     q0, [sp, #1472]
+   +0x3cc  str     q0, [sp, #1456]
+   +0x3d0  str     q0, [sp, #1440]
+   +0x3d4  str     q0, [sp, #1424]
+   +0x3d8  str     q0, [sp, #1408]
+   +0x3dc  str     q0, [sp, #1392]
+   +0x3e0  str     q0, [sp, #1376]
+   +0x3e4  str     q0, [sp, #1360]
+   +0x3e8  str     q0, [sp, #1344]
+   +0x3ec  str     q0, [sp, #1328]
+   +0x3f0  str     q0, [sp, #1312]
+   +0x3f4  str     q0, [sp, #1296]
+   +0x3f8  str     q0, [sp, #1280]
+   +0x3fc  str     q0, [sp, #1264]
+   +0x400  str     q0, [sp, #1248]
+   +0x404  str     q0, [sp, #1232]
+   +0x408  str     q0, [sp, #1216]
+   +0x40c  str     q0, [sp, #1200]
+   +0x410  str     q0, [sp, #1184]
+   +0x414  str     q0, [sp, #1168]
+   +0x418  str     q0, [sp, #1152]
+   +0x41c  str     q0, [sp, #1136]
+   +0x420  str     q0, [sp, #1120]
+   +0x424  str     q0, [sp, #1104]
+   +0x428  str     q0, [sp, #1088]
+   +0x42c  str     q0, [sp, #1072]
+   +0x430  str     q0, [sp, #1056]
+   +0x434  str     q0, [sp, #2064]
+   +0x438  str     q0, [sp, #2048]
+   +0x43c  str     q0, [sp, #2032]
+   +0x440  str     q0, [sp, #2016]
+   +0x444  str     q0, [sp, #2000]
+   +0x448  str     q0, [sp, #1984]
+   +0x44c  str     q0, [sp, #1968]
+   +0x450  str     q0, [sp, #1952]
+   +0x454  str     q0, [sp, #1936]
+   +0x458  str     q0, [sp, #1920]
+   +0x45c  str     q0, [sp, #1904]
+   +0x460  str     q0, [sp, #1888]
+   +0x464  str     q0, [sp, #1872]
+   +0x468  str     q0, [sp, #1856]
+   +0x46c  str     q0, [sp, #1840]
+   +0x470  str     q0, [sp, #1824]
+   +0x474  str     q0, [sp, #1808]
+   +0x478  str     q0, [sp, #1792]
+   +0x47c  str     q0, [sp, #1776]
+   +0x480  str     q0, [sp, #1760]
+   +0x484  str     q0, [sp, #1744]
+   +0x488  str     q0, [sp, #1728]
+   +0x48c  str     q0, [sp, #1712]
+   +0x490  str     q0, [sp, #1696]
+   +0x494  str     q0, [sp, #1680]
+   +0x498  str     q0, [sp, #1664]
+   +0x49c  str     q0, [sp, #1648]
+   +0x4a0  str     q0, [sp, #1632]
+   +0x4a4  str     q0, [sp, #1616]
+   +0x4a8  str     q0, [sp, #1600]
+   +0x4ac  str     q0, [sp, #1584]
+   +0x4b0  str     q0, [sp, #1568]
+   +0x4b4  str     q0, [sp, #2576]
+   +0x4b8  str     q0, [sp, #2560]
+   +0x4bc  str     q0, [sp, #2544]
+   +0x4c0  str     q0, [sp, #2528]
+   +0x4c4  str     q0, [sp, #2512]
+   +0x4c8  str     q0, [sp, #2496]
+   +0x4cc  str     q0, [sp, #2480]
+   +0x4d0  str     q0, [sp, #2464]
+   +0x4d4  str     q0, [sp, #2448]
+   +0x4d8  str     q0, [sp, #2432]
+   +0x4dc  str     q0, [sp, #2416]
+   +0x4e0  str     q0, [sp, #2400]
+   +0x4e4  str     q0, [sp, #2384]
+   +0x4e8  str     q0, [sp, #2368]
+   +0x4ec  str     q0, [sp, #2352]
+   +0x4f0  str     q0, [sp, #2336]
+   +0x4f4  str     q0, [sp, #2320]
+   +0x4f8  str     q0, [sp, #2304]
+   +0x4fc  str     q0, [sp, #2288]
+   +0x500  str     q0, [sp, #2272]
+   +0x504  str     q0, [sp, #2256]
+   +0x508  str     q0, [sp, #2240]
+   +0x50c  str     q0, [sp, #2224]
+   +0x510  str     q0, [sp, #2208]
+   +0x514  str     q0, [sp, #2192]
+   +0x518  str     q0, [sp, #2176]
+   +0x51c  str     q0, [sp, #2160]
+   +0x520  str     q0, [sp, #2144]
+   +0x524  str     q0, [sp, #2128]
+   +0x528  str     q0, [sp, #2112]
+   +0x52c  str     q0, [sp, #2096]
+   +0x530  str     q0, [sp, #2080]
+   +0x534  bl      memset
+  after_memset_2:
+   +0x538  add     x0, sp, #0x1, lsl #12
+   +0x53c  add     x0, x0, #0x220
+   +0x540  mov     w1, wzr
+   +0x544  mov     w2, #0x800
+   +0x548  bl      memset
+  after_memset_3:
+   +0x54c  add     x0, sp, #0x1, lsl #12
+   +0x550  add     x0, x0, #0xa20
+   +0x554  mov     w1, wzr
+   +0x558  mov     w2, #0x800
+   +0x55c  bl      memset
+  after_memset_4:
+   +0x560  add     x8, sp, #0x1, lsl #12
+   +0x564  add     x0, sp, #0x2, lsl #12
+   +0x568  add     x8, x8, #0xa20
+   +0x56c  add     x0, x0, #0x220
+   +0x570  mov     w1, wzr
+   +0x574  mov     w2, #0x800
+   +0x578  bl      memset
+  after_memset_5:
+   +0x57c  add     x0, sp, #0x2, lsl #12
+   +0x580  add     x0, x0, #0xa20
+   +0x584  mov     w1, wzr
+   +0x588  mov     w2, #0x2000
+   +0x58c  bl      memset
+  after_memset_6:
+   +0x590  movi    v0.2d, #0x0
+   +0x594  add     x8, sp, #0x4, lsl #12
+   +0x598  add     x8, x8, #0xa20
+   +0x59c  str     q0, [sp, #18992]
+   +0x5a0  str     q0, [sp, #18976]
+  adrp2:
+   +0x5a4  adrp    x8, <page>
+   +0x5a8  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x5ac  ldr     x9, [sp, #19032]
+   +0x5b0  ldr     x8, [x8]
+   +0x5b4  cmp     x8, x9
+   +0x5b8  b.ne    +0x5e0                                           -+
+   +0x5bc  mov     w0, wzr                                           |
+   +0x5c0  mov     sp, x29                                           |
+   +0x5c4  ldp     x20, x19, [sp, #80]                               |
+   +0x5c8  ldp     x22, x21, [sp, #64]                               |
+   +0x5cc  ldp     x24, x23, [sp, #48]                               |
+   +0x5d0  ldp     x26, x25, [sp, #32]                               |
+   +0x5d4  ldp     x28, x27, [sp, #16]                               |
+   +0x5d8  ldp     x29, x30, [sp], #96                               |
+  ret:                                                               |
+   +0x5dc  ret                                                       |
+   +0x5e0  bl      stack_chk_fail                                   <+
+ ***)
+
+(*** mlkem1024_indcpa_dec: 0x145c, 0x234 bytes
+
+     +0x0  stp     x29, x30, [sp, #-80]!
+     +0x4  str     x28, [sp, #16]
+     +0x8  stp     x24, x23, [sp, #32]
+     +0xc  stp     x22, x21, [sp, #48]
+    +0x10  stp     x20, x19, [sp, #64]
+    +0x14  mov     x29, sp
+    +0x18  sub     x9, sp, #0x1, lsl #12
+    +0x1c  sub     x9, x9, #0x810
+    +0x20  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x24  adrp    x8, <page>
+    +0x28  mov     x21, x0
+    +0x2c  add     x0, sp, #0x1, lsl #12
+    +0x30  mov     x19, x2
+    +0x34  mov     x20, x1
+    +0x38  add     x22, sp, #0x1, lsl #12
+    +0x3c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x40  ldr     x8, [x8]
+    +0x44  str     x8, [sp, #6152]
+    +0x48  bl      mlkem1024_polyvec_decompress_du
+  after_mlkem1024_polyvec_decompress_du:
+    +0x4c  add     x1, x20, #0x580
+    +0x50  add     x0, sp, #0x600
+    +0x54  add     x20, sp, #0x600
+    +0x58  bl      mlkem_poly_decompress_d5
+  after_mlkem_poly_decompress_d5:
+    +0x5c  add     x0, sp, #0x800
+    +0x60  mov     x1, x19
+    +0x64  add     x19, sp, #0x800
+    +0x68  bl      mlkem1024_polyvec_frombytes
+  after_mlkem1024_polyvec_frombytes:
+    +0x6c  add     x0, sp, #0x1, lsl #12
+    +0x70  bl      mlkem1024_polyvec_ntt
+  after_mlkem1024_polyvec_ntt:
+    +0x74  mov     x0, sp
+    +0x78  add     x1, sp, #0x1, lsl #12
+    +0x7c  mov     x24, sp
+    +0x80  bl      mlkem1024_polyvec_mulcache_compute
+  after_mlkem1024_polyvec_mulcache_compute:
+    +0x84  add     x0, sp, #0x400
+    +0x88  add     x1, sp, #0x800
+    +0x8c  add     x2, sp, #0x1, lsl #12
+    +0x90  mov     x3, sp
+    +0x94  add     x23, sp, #0x400
+    +0x98  bl      mlkem1024_polyvec_basemul_acc_montgomery_cached
+  after_mlkem1024_polyvec_basemul_acc_montgomery_cached:
+    +0x9c  add     x0, sp, #0x400
+    +0xa0  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont:
+    +0xa4  add     x0, sp, #0x600
+    +0xa8  add     x1, sp, #0x400
+    +0xac  bl      mlkem_poly_sub
+  after_mlkem_poly_sub:
+    +0xb0  add     x0, sp, #0x600
+    +0xb4  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce:
+    +0xb8  add     x1, sp, #0x600
+    +0xbc  mov     x0, x21
+    +0xc0  bl      mlkem_poly_tomsg
+  after_mlkem_poly_tomsg:
+    +0xc4  mov     x0, sp
+    +0xc8  mov     w1, wzr
+    +0xcc  mov     w2, #0x400
+    +0xd0  bl      memset
+  after_memset_1:
+    +0xd4  movi    v0.2d, #0x0
+    +0xd8  add     x0, sp, #0x800
+    +0xdc  mov     w1, wzr
+    +0xe0  mov     w2, #0x800
+    +0xe4  str     q0, [sp, #1520]
+    +0xe8  str     q0, [sp, #1504]
+    +0xec  str     q0, [sp, #1488]
+    +0xf0  str     q0, [sp, #1472]
+    +0xf4  str     q0, [sp, #1456]
+    +0xf8  str     q0, [sp, #1440]
+    +0xfc  str     q0, [sp, #1424]
+   +0x100  str     q0, [sp, #1408]
+   +0x104  str     q0, [sp, #1392]
+   +0x108  str     q0, [sp, #1376]
+   +0x10c  str     q0, [sp, #1360]
+   +0x110  str     q0, [sp, #1344]
+   +0x114  str     q0, [sp, #1328]
+   +0x118  str     q0, [sp, #1312]
+   +0x11c  str     q0, [sp, #1296]
+   +0x120  str     q0, [sp, #1280]
+   +0x124  str     q0, [sp, #1264]
+   +0x128  str     q0, [sp, #1248]
+   +0x12c  str     q0, [sp, #1232]
+   +0x130  str     q0, [sp, #1216]
+   +0x134  str     q0, [sp, #1200]
+   +0x138  str     q0, [sp, #1184]
+   +0x13c  str     q0, [sp, #1168]
+   +0x140  str     q0, [sp, #1152]
+   +0x144  str     q0, [sp, #1136]
+   +0x148  str     q0, [sp, #1120]
+   +0x14c  str     q0, [sp, #1104]
+   +0x150  str     q0, [sp, #1088]
+   +0x154  str     q0, [sp, #1072]
+   +0x158  str     q0, [sp, #1056]
+   +0x15c  str     q0, [sp, #1040]
+   +0x160  str     q0, [sp, #1024]
+   +0x164  str     q0, [sp, #2032]
+   +0x168  str     q0, [sp, #2016]
+   +0x16c  str     q0, [sp, #2000]
+   +0x170  str     q0, [sp, #1984]
+   +0x174  str     q0, [sp, #1968]
+   +0x178  str     q0, [sp, #1952]
+   +0x17c  str     q0, [sp, #1936]
+   +0x180  str     q0, [sp, #1920]
+   +0x184  str     q0, [sp, #1904]
+   +0x188  str     q0, [sp, #1888]
+   +0x18c  str     q0, [sp, #1872]
+   +0x190  str     q0, [sp, #1856]
+   +0x194  str     q0, [sp, #1840]
+   +0x198  str     q0, [sp, #1824]
+   +0x19c  str     q0, [sp, #1808]
+   +0x1a0  str     q0, [sp, #1792]
+   +0x1a4  str     q0, [sp, #1776]
+   +0x1a8  str     q0, [sp, #1760]
+   +0x1ac  str     q0, [sp, #1744]
+   +0x1b0  str     q0, [sp, #1728]
+   +0x1b4  str     q0, [sp, #1712]
+   +0x1b8  str     q0, [sp, #1696]
+   +0x1bc  str     q0, [sp, #1680]
+   +0x1c0  str     q0, [sp, #1664]
+   +0x1c4  str     q0, [sp, #1648]
+   +0x1c8  str     q0, [sp, #1632]
+   +0x1cc  str     q0, [sp, #1616]
+   +0x1d0  str     q0, [sp, #1600]
+   +0x1d4  str     q0, [sp, #1584]
+   +0x1d8  str     q0, [sp, #1568]
+   +0x1dc  str     q0, [sp, #1552]
+   +0x1e0  str     q0, [sp, #1536]
+   +0x1e4  bl      memset
+  after_memset_2:
+   +0x1e8  add     x0, sp, #0x1, lsl #12
+   +0x1ec  mov     w1, wzr
+   +0x1f0  mov     w2, #0x800
+   +0x1f4  bl      memset
+  after_memset_3: adrp2:
+   +0x1f8  adrp    x8, <page>
+   +0x1fc  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x200  ldr     x9, [sp, #6152]
+   +0x204  ldr     x8, [x8]
+   +0x208  cmp     x8, x9
+   +0x20c  b.ne    +0x230                                           -+
+   +0x210  mov     w0, wzr                                           |
+   +0x214  mov     sp, x29                                           |
+   +0x218  ldp     x20, x19, [sp, #64]                               |
+   +0x21c  ldp     x22, x21, [sp, #48]                               |
+   +0x220  ldp     x24, x23, [sp, #32]                               |
+   +0x224  ldr     x28, [sp, #16]                                    |
+   +0x228  ldp     x29, x30, [sp], #80                               |
+  ret:                                                               |
+   +0x22c  ret                                                       |
+   +0x230  bl      stack_chk_fail                                   <+
+ ***)
+
+(*** mlkem1024_check_pk: 0x1690, 0x150 bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  stp     x28, x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0xe10
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x19, x0
+    +0x20  add     x0, sp, #0x600
+    +0x24  mov     x1, x19
+    +0x28  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x2c  ldr     x8, [x8]
+    +0x30  str     x8, [sp, #3592]
+    +0x34  bl      mlkem1024_polyvec_frombytes
+  after_mlkem1024_polyvec_frombytes:
+    +0x38  add     x0, sp, #0x600
+    +0x3c  bl      mlkem1024_polyvec_reduce
+  after_mlkem1024_polyvec_reduce:
+    +0x40  mov     x0, sp
+    +0x44  add     x1, sp, #0x600
+    +0x48  mov     x20, sp
+    +0x4c  bl      mlkem1024_polyvec_tobytes
+  after_mlkem1024_polyvec_tobytes:
+    +0x50  movi    v0.2d, #0x0
+    +0x54  mov     x8, xzr
+    +0x58  movi    v1.2d, #0x0
+    +0x5c  movi    v2.2d, #0x0
+    +0x60  movi    v3.2d, #0x0
+  loop1:
+    +0x64  add     x9, x19, x8                  <+
+    +0x68  add     x10, x20, x8                  |
+    +0x6c  add     x8, x8, #0x20                 |
+    +0x70  cmp     x8, #0x600                    |
+    +0x74  ldp     q4, q5, [x9]                  |
+    +0x78  ldp     q6, q7, [x10]                 |
+    +0x7c  eor     v4.16b, v6.16b, v4.16b        |
+    +0x80  orr     v2.16b, v4.16b, v2.16b        |
+    +0x84  eor     v5.16b, v7.16b, v5.16b        |
+    +0x88  orr     v3.16b, v5.16b, v3.16b        |
+    +0x8c  eor     v0.16b, v4.16b, v0.16b        |
+  loop1_test:                                    |
+    +0x90  eor     v1.16b, v5.16b, v1.16b        |
+  loop1_back:                                    |
+    +0x94  b.ne    loop1                        -+
+  loop1_exit:
+    +0x98  orr     v2.16b, v3.16b, v2.16b
+    +0x9c  mov     w20, wzr
+    +0xa0  ext     v3.16b, v2.16b, v2.16b, #8
+    +0xa4  mov     x0, sp
+    +0xa8  eor     v0.16b, v1.16b, v0.16b
+    +0xac  mov     w1, w20
+    +0xb0  mov     w2, #0x600
+    +0xb4  mov     w8, #0xfffffffc
+    +0xb8  mov     x21, sp
+    +0xbc  orr     v1.8b, v2.8b, v3.8b
+    +0xc0  ext     v2.16b, v0.16b, v0.16b, #8
+    +0xc4  fmov    x9, d1
+    +0xc8  orr     x9, x9, x9, lsr #32
+    +0xcc  lsr     x10, x9, #16
+    +0xd0  eor     v0.8b, v0.8b, v2.8b
+    +0xd4  orr     w9, w9, w10
+    +0xd8  fmov    x10, d0
+    +0xdc  orr     w9, w9, w9, lsr #8
+    +0xe0  eor     x10, x10, x10, lsr #32
+    +0xe4  sub     w9, w20, w9, uxtb
+    +0xe8  eor     x10, x10, x10, lsr #16
+    +0xec  lsr     x11, x10, #8
+    +0xf0  eor     w10, w10, w11
+    +0xf4  eor     w9, w10, w9, lsr #16
+    +0xf8  and     w9, w9, #0xff
+    +0xfc  cmp     w9, w10, uxtb
+   +0x100  csel    w19, w20, w8, eq
+   +0x104  bl      memset
+  after_memset_1:
+   +0x108  add     x0, sp, #0x600
+   +0x10c  mov     w1, w20
+   +0x110  mov     w2, #0x800
+   +0x114  add     x20, sp, #0x600
+   +0x118  bl      memset
+  after_memset_2: adrp2:
+   +0x11c  adrp    x8, <page>
+   +0x120  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x124  ldr     x9, [sp, #3592]
+   +0x128  ldr     x8, [x8]
+   +0x12c  cmp     x8, x9
+   +0x130  b.ne    +0x14c                       -+
+   +0x134  mov     w0, w19                       |
+   +0x138  mov     sp, x29                       |
+   +0x13c  ldp     x20, x19, [sp, #32]           |
+   +0x140  ldp     x28, x21, [sp, #16]           |
+   +0x144  ldp     x29, x30, [sp], #48           |
+  ret:                                           |
+   +0x148  ret                                   |
+   +0x14c  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem1024_check_sk: 0x17e0, 0xe0 bytes
+
+     +0x0  stp     x29, x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x29, sp
+     +0xc  sub     x9, sp, #0x40
+    +0x10  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x14  adrp    x8, <page>
+    +0x18  mov     x19, x0
+    +0x1c  add     x1, x0, #0x600
+    +0x20  mov     x0, sp
+    +0x24  mov     w2, #0x620
+    +0x28  mov     x20, sp
+    +0x2c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x30  ldr     x8, [x8]
+    +0x34  str     x8, [sp, #56]
+    +0x38  bl      mlkem_sha3_256
+  after_mlkem_sha3_256:
+    +0x3c  ldp     q2, q3, [sp]
+    +0x40  mov     w8, wzr
+    +0x44  ldr     q0, [x19, #3104]
+    +0x48  ldr     q1, [x19, #3120]
+    +0x4c  eor     v0.16b, v2.16b, v0.16b
+    +0x50  eor     v1.16b, v3.16b, v1.16b
+    +0x54  orr     v2.16b, v1.16b, v0.16b
+    +0x58  ext     v3.16b, v2.16b, v2.16b, #8
+    +0x5c  eor     v0.16b, v1.16b, v0.16b
+    +0x60  orr     v1.8b, v2.8b, v3.8b
+    +0x64  ext     v2.16b, v0.16b, v0.16b, #8
+    +0x68  fmov    x9, d1
+    +0x6c  orr     x9, x9, x9, lsr #32
+    +0x70  eor     v0.8b, v0.8b, v2.8b
+    +0x74  lsr     x10, x9, #16
+    +0x78  fmov    x11, d0
+    +0x7c  orr     w9, w9, w10
+    +0x80  movi    v0.2d, #0x0
+    +0x84  orr     w9, w9, w9, lsr #8
+    +0x88  eor     x10, x11, x11, lsr #32
+    +0x8c  sub     w9, w8, w9, uxtb
+    +0x90  eor     x10, x10, x10, lsr #16
+    +0x94  lsr     x11, x10, #8
+    +0x98  eor     w10, w10, w11
+  adrp2:
+    +0x9c  adrp    x11, <page>
+    +0xa0  eor     w9, w10, w9, lsr #16
+    +0xa4  stp     q0, q0, [sp]
+    +0xa8  and     w9, w9, #0xff
+    +0xac  ldr     x11, [x11, #4088]
+                   // got_stack_chk_guard
+    +0xb0  cmp     w9, w10, uxtb
+    +0xb4  ldr     x12, [sp, #56]
+    +0xb8  mov     w9, #0xfffffffb
+    +0xbc  csel    w0, w8, w9, eq
+    +0xc0  ldr     x11, [x11]
+    +0xc4  cmp     x11, x12
+    +0xc8  b.ne    +0xdc                        -+
+    +0xcc  mov     sp, x29                       |
+    +0xd0  ldp     x20, x19, [sp, #16]           |
+    +0xd4  ldp     x29, x30, [sp], #32           |
+  ret:                                           |
+    +0xd8  ret                                   |
+    +0xdc  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem1024_keypair_derand: 0x18c0, 0x88 bytes
+
+     +0x0  str     x30, [sp, #-48]!
+     +0x4  stp     x22, x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x22, x2
+    +0x10  mov     x19, x1
+    +0x14  mov     x21, x0
+    +0x18  bl      mlkem1024_indcpa_keypair_derand
+  after_mlkem1024_indcpa_keypair_derand:
+    +0x1c  mov     w20, w0
+    +0x20  cbz     w0, +0x48                        -+
+    +0x24  mov     x0, x21                           |
+    +0x28  mov     w1, wzr                           |
+    +0x2c  mov     w2, #0x620                        |
+    +0x30  bl      memset                            |
+  after_memset_1:                                    |
+    +0x34  mov     x0, x19                           |
+    +0x38  mov     w1, wzr                           |
+    +0x3c  mov     w2, #0xc60                        |
+    +0x40  bl      memset                            |
+  after_memset_2:                                    |
+    +0x44  b       join1                            ---+
+    +0x48  add     x0, x19, #0x600                  <+ |
+    +0x4c  mov     x1, x21                             |
+    +0x50  mov     w2, #0x620                          |
+    +0x54  bl      memcpy                              |
+  after_memcpy:                                        |
+    +0x58  add     x0, x19, #0xc20                     |
+    +0x5c  mov     x1, x21                             |
+    +0x60  mov     w2, #0x620                          |
+    +0x64  bl      mlkem_sha3_256                      |
+  after_mlkem_sha3_256:                                |
+    +0x68  ldp     q1, q0, [x22, #32]                  |
+    +0x6c  str     q1, [x19, #3136]                    |
+    +0x70  str     q0, [x19, #3152]                    |
+  join1:                                               |
+    +0x74  mov     w0, w20                          <--+
+    +0x78  ldp     x20, x19, [sp, #32]
+    +0x7c  ldp     x22, x21, [sp, #16]
+    +0x80  ldr     x30, [sp], #48
+  ret:
+    +0x84  ret
+ ***)
+
+(*** mlkem1024_keypair: 0x1948, 0xf4 bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  str     x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0x50
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x19, x1
+    +0x20  mov     x21, x0
+    +0x24  mov     x0, sp
+    +0x28  mov     w1, #0x40
+    +0x2c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x30  ldr     x8, [x8]
+    +0x34  str     x8, [sp, #72]
+    +0x38  bl      randombytes
+  after_randombytes:
+    +0x3c  cbz     w0, +0x48                        -+
+    +0x40  mov     w20, #0xfffffffd                  |
+    +0x44  b       join1                            -----+
+    +0x48  mov     x2, sp                           <+   |
+    +0x4c  mov     x0, x21                               |
+    +0x50  mov     x1, x19                               |
+    +0x54  bl      mlkem1024_indcpa_keypair_derand       |
+  after_mlkem1024_indcpa_keypair_derand:                 |
+    +0x58  mov     w20, w0                               |
+    +0x5c  cbz     w0, +0x84                        -+   |
+    +0x60  mov     x0, x21                           |   |
+    +0x64  mov     w1, wzr                           |   |
+    +0x68  mov     w2, #0x620                        |   |
+    +0x6c  bl      memset                            |   |
+  after_memset_1:                                    |   |
+    +0x70  mov     x0, x19                           |   |
+    +0x74  mov     w1, wzr                           |   |
+    +0x78  mov     w2, #0xc60                        |   |
+    +0x7c  bl      memset                            |   |
+  after_memset_2:                                    |   |
+    +0x80  b       join1                            ---+ |
+    +0x84  add     x0, x19, #0x600                  <+ | |
+    +0x88  mov     x1, x21                             | |
+    +0x8c  mov     w2, #0x620                          | |
+    +0x90  bl      memcpy                              | |
+  after_memcpy:                                        | |
+    +0x94  add     x0, x19, #0xc20                     | |
+    +0x98  mov     x1, x21                             | |
+    +0x9c  mov     w2, #0x620                          | |
+    +0xa0  bl      mlkem_sha3_256                      | |
+  after_mlkem_sha3_256:                                | |
+    +0xa4  ldp     q0, q1, [sp, #32]                   | |
+    +0xa8  str     q0, [x19, #3136]                    | |
+    +0xac  str     q1, [x19, #3152]                    | |
+  join1:                                               | |
+    +0xb0  movi    v0.2d, #0x0                      <--+-+
+    +0xb4  mov     x8, sp
+    +0xb8  stp     q0, q0, [sp]
+    +0xbc  stp     q0, q0, [sp, #32]
+  adrp2:
+    +0xc0  adrp    x8, <page>
+    +0xc4  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0xc8  ldr     x9, [sp, #72]
+    +0xcc  ldr     x8, [x8]
+    +0xd0  cmp     x8, x9
+    +0xd4  b.ne    +0xf0                            -+
+    +0xd8  mov     w0, w20                           |
+    +0xdc  mov     sp, x29                           |
+    +0xe0  ldp     x20, x19, [sp, #32]               |
+    +0xe4  ldr     x21, [sp, #16]                    |
+    +0xe8  ldp     x29, x30, [sp], #48               |
+  ret:                                               |
+    +0xec  ret                                       |
+    +0xf0  bl      stack_chk_fail                   <+
+ ***)
+
+(*** mlkem1024_enc_derand: 0x1a3c, 0x1e4 bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  str     x28, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0xe20
+    +0x20  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x24  adrp    x8, <page>
+    +0x28  mov     x19, x1
+    +0x2c  mov     x21, x0
+    +0x30  add     x0, sp, #0x600
+    +0x34  mov     x1, x2
+    +0x38  mov     x22, x3
+    +0x3c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x40  mov     x20, x2
+    +0x44  ldr     x8, [x8]
+    +0x48  str     x8, [sp, #3608]
+    +0x4c  bl      mlkem1024_polyvec_frombytes
+  after_mlkem1024_polyvec_frombytes:
+    +0x50  add     x0, sp, #0x600
+    +0x54  bl      mlkem1024_polyvec_reduce
+  after_mlkem1024_polyvec_reduce:
+    +0x58  mov     x0, sp
+    +0x5c  add     x1, sp, #0x600
+    +0x60  mov     x23, sp
+    +0x64  bl      mlkem1024_polyvec_tobytes
+  after_mlkem1024_polyvec_tobytes:
+    +0x68  movi    v0.2d, #0x0
+    +0x6c  mov     x8, xzr
+    +0x70  movi    v1.2d, #0x0
+    +0x74  movi    v2.2d, #0x0
+    +0x78  movi    v3.2d, #0x0
+  loop1:
+    +0x7c  add     x9, x20, x8                  <+
+    +0x80  add     x10, x23, x8                  |
+    +0x84  add     x8, x8, #0x20                 |
+    +0x88  cmp     x8, #0x600                    |
+    +0x8c  ldp     q4, q5, [x9]                  |
+    +0x90  ldp     q6, q7, [x10]                 |
+    +0x94  eor     v4.16b, v6.16b, v4.16b        |
+    +0x98  orr     v2.16b, v4.16b, v2.16b        |
+    +0x9c  eor     v5.16b, v7.16b, v5.16b        |
+    +0xa0  orr     v3.16b, v5.16b, v3.16b        |
+    +0xa4  eor     v0.16b, v4.16b, v0.16b        |
+  loop1_test:                                    |
+    +0xa8  eor     v1.16b, v5.16b, v1.16b        |
+  loop1_back:                                    |
+    +0xac  b.ne    loop1                        -+
+  loop1_exit:
+    +0xb0  orr     v2.16b, v3.16b, v2.16b
+    +0xb4  mov     w23, wzr
+    +0xb8  ext     v3.16b, v2.16b, v2.16b, #8
+    +0xbc  mov     x0, sp
+    +0xc0  eor     v0.16b, v1.16b, v0.16b
+    +0xc4  mov     w1, wzr
+    +0xc8  mov     w2, #0x600
+    +0xcc  mov     x24, sp
+    +0xd0  orr     v1.8b, v2.8b, v3.8b
+    +0xd4  ext     v2.16b, v0.16b, v0.16b, #8
+    +0xd8  fmov    x8, d1
+    +0xdc  orr     x8, x8, x8, lsr #32
+    +0xe0  lsr     x9, x8, #16
+    +0xe4  eor     v0.8b, v0.8b, v2.8b
+    +0xe8  orr     w8, w8, w9
+    +0xec  fmov    x9, d0
+    +0xf0  orr     w8, w8, w8, lsr #8
+    +0xf4  eor     x9, x9, x9, lsr #32
+    +0xf8  sub     w8, w23, w8, uxtb
+    +0xfc  eor     x9, x9, x9, lsr #16
+   +0x100  lsr     x10, x9, #8
+   +0x104  eor     w25, w9, w10
+   +0x108  eor     w8, w25, w8, lsr #16
+   +0x10c  and     w26, w8, #0xff
+   +0x110  bl      memset
+  after_memset_1:
+   +0x114  add     x0, sp, #0x600
+   +0x118  mov     w1, wzr
+   +0x11c  mov     w2, #0x800
+   +0x120  add     x23, sp, #0x600
+   +0x124  bl      memset
+  after_memset_2:
+   +0x128  cmp     w26, w25, uxtb
+   +0x12c  b.ne    +0x180                       -----+
+   +0x130  ldp     q0, q1, [x22]                     |
+   +0x134  add     x0, x23, #0x20                    |
+   +0x138  mov     x1, x20                           |
+   +0x13c  mov     w2, #0x620                        |
+   +0x140  str     q0, [sp, #1536]                   |
+   +0x144  str     q1, [sp, #1552]                   |
+   +0x148  bl      mlkem_sha3_256                    |
+  after_mlkem_sha3_256:                              |
+   +0x14c  mov     x0, sp                            |
+   +0x150  add     x1, sp, #0x600                    |
+   +0x154  mov     w2, #0x40                         |
+   +0x158  bl      mlkem_sha3_512                    |
+  after_mlkem_sha3_512:                              |
+   +0x15c  add     x3, x24, #0x20                    |
+   +0x160  add     x1, sp, #0x600                    |
+   +0x164  mov     x0, x21                           |
+   +0x168  mov     x2, x20                           |
+   +0x16c  bl      mlkem1024_indcpa_enc              |
+  after_mlkem1024_indcpa_enc:                        |
+   +0x170  cbnz    w0, join1                    ---+ |
+   +0x174  ldp     q0, q1, [sp]                    | |
+   +0x178  stp     q0, q1, [x19]                   | |
+   +0x17c  b       join1                        -+ | |
+   +0x180  mov     w0, #0xfffffffc              <----+
+  join1:                                         | |
+   +0x184  movi    v0.2d, #0x0                  <+-+
+   +0x188  mov     x8, sp
+   +0x18c  stp     q0, q0, [sp]
+   +0x190  stp     q0, q0, [sp, #32]
+   +0x194  str     q0, [sp, #1584]
+   +0x198  add     x8, sp, #0x600
+   +0x19c  str     q0, [sp, #1568]
+   +0x1a0  str     q0, [sp, #1552]
+   +0x1a4  str     q0, [sp, #1536]
+  adrp2:
+   +0x1a8  adrp    x8, <page>
+   +0x1ac  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x1b0  ldr     x9, [sp, #3608]
+   +0x1b4  ldr     x8, [x8]
+   +0x1b8  cmp     x8, x9
+   +0x1bc  b.ne    +0x1e0                       -+
+   +0x1c0  mov     sp, x29                       |
+   +0x1c4  ldp     x20, x19, [sp, #80]           |
+   +0x1c8  ldp     x22, x21, [sp, #64]           |
+   +0x1cc  ldp     x24, x23, [sp, #48]           |
+   +0x1d0  ldp     x26, x25, [sp, #32]           |
+   +0x1d4  ldr     x28, [sp, #16]                |
+   +0x1d8  ldp     x29, x30, [sp], #96           |
+  ret:                                           |
+   +0x1dc  ret                                   |
+   +0x1e0  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem1024_enc: 0x1c20, 0x9c bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  str     x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0x30
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x20, x1
+    +0x20  mov     x21, x0
+    +0x24  mov     x0, sp
+    +0x28  mov     w1, #0x20
+    +0x2c  mov     x19, x2
+    +0x30  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x34  ldr     x8, [x8]
+    +0x38  str     x8, [sp, #40]
+    +0x3c  bl      randombytes
+  after_randombytes:
+    +0x40  cbz     w0, +0x4c                    -+
+    +0x44  mov     w0, #0xfffffffd               |
+    +0x48  b       join1                        ---+
+    +0x4c  mov     x3, sp                       <+ |
+    +0x50  mov     x0, x21                         |
+    +0x54  mov     x1, x20                         |
+    +0x58  mov     x2, x19                         |
+    +0x5c  bl      mlkem1024_enc_derand            |
+  join1: after_mlkem1024_enc_derand:               |
+    +0x60  movi    v0.2d, #0x0                  <--+
+    +0x64  mov     x8, sp
+    +0x68  stp     q0, q0, [sp]
+  adrp2:
+    +0x6c  adrp    x8, <page>
+    +0x70  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x74  ldr     x9, [sp, #40]
+    +0x78  ldr     x8, [x8]
+    +0x7c  cmp     x8, x9
+    +0x80  b.ne    +0x98                        -+
+    +0x84  mov     sp, x29                       |
+    +0x88  ldp     x20, x19, [sp, #32]           |
+    +0x8c  ldr     x21, [sp, #16]                |
+    +0x90  ldp     x29, x30, [sp], #48           |
+  ret:                                           |
+    +0x94  ret                                   |
+    +0x98  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem1024_dec: 0x1cbc, 0x2a8 bytes
+
+     +0x0  stp     x29, x30, [sp, #-64]!
+     +0x4  stp     x28, x23, [sp, #16]
+     +0x8  stp     x22, x21, [sp, #32]
+     +0xc  stp     x20, x19, [sp, #48]
+    +0x10  mov     x29, sp
+    +0x14  sub     x9, sp, #0x6e0
+    +0x18  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x1c  adrp    x8, <page>
+    +0x20  add     x22, x2, #0x600
+    +0x24  mov     x21, x2
+    +0x28  mov     x20, x1
+    +0x2c  mov     x19, x0
+    +0x30  mov     x0, sp
+    +0x34  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x38  mov     x1, x22
+    +0x3c  mov     w2, #0x620
+    +0x40  mov     x23, sp
+    +0x44  ldr     x8, [x8]
+    +0x48  str     x8, [sp, #1752]
+    +0x4c  bl      mlkem_sha3_256
+  after_mlkem_sha3_256:
+    +0x50  ldp     q2, q3, [sp]
+    +0x54  mov     w8, wzr
+    +0x58  ldr     q0, [x21, #3104]
+    +0x5c  ldr     q1, [x21, #3120]
+    +0x60  eor     v0.16b, v2.16b, v0.16b
+    +0x64  eor     v1.16b, v3.16b, v1.16b
+    +0x68  orr     v2.16b, v1.16b, v0.16b
+    +0x6c  ext     v3.16b, v2.16b, v2.16b, #8
+    +0x70  eor     v0.16b, v1.16b, v0.16b
+    +0x74  orr     v1.8b, v2.8b, v3.8b
+    +0x78  ext     v2.16b, v0.16b, v0.16b, #8
+    +0x7c  fmov    x9, d1
+    +0x80  orr     x9, x9, x9, lsr #32
+    +0x84  eor     v0.8b, v0.8b, v2.8b
+    +0x88  lsr     x10, x9, #16
+    +0x8c  orr     w9, w9, w10
+    +0x90  fmov    x10, d0
+    +0x94  movi    v0.2d, #0x0
+    +0x98  orr     w9, w9, w9, lsr #8
+    +0x9c  eor     x10, x10, x10, lsr #32
+    +0xa0  sub     w8, w8, w9, uxtb
+    +0xa4  eor     x9, x10, x10, lsr #16
+    +0xa8  lsr     x10, x9, #8
+    +0xac  eor     w9, w9, w10
+    +0xb0  eor     w8, w9, w8, lsr #16
+    +0xb4  stp     q0, q0, [sp]
+    +0xb8  and     w8, w8, #0xff
+    +0xbc  cmp     w8, w9, uxtb
+    +0xc0  b.ne    +0x22c                       -------+
+    +0xc4  add     x0, sp, #0x680                      |
+    +0xc8  mov     x1, x20                             |
+    +0xcc  mov     x2, x21                             |
+    +0xd0  bl      mlkem1024_indcpa_dec                |
+  after_mlkem1024_indcpa_dec:                          |
+    +0xd4  mov     w23, w0                             |
+    +0xd8  cbnz    w0, join1                    -----+ |
+    +0xdc  add     x8, x21, #0xc20                   | |
+    +0xe0  add     x0, sp, #0x640                    | |
+    +0xe4  add     x1, sp, #0x680                    | |
+    +0xe8  mov     w2, #0x40                         | |
+    +0xec  add     x23, sp, #0x640                   | |
+    +0xf0  ldp     q0, q1, [x8]                      | |
+    +0xf4  str     q0, [sp, #1696]                   | |
+    +0xf8  str     q1, [sp, #1712]                   | |
+    +0xfc  bl      mlkem_sha3_512                    | |
+  after_mlkem_sha3_512:                              | |
+   +0x100  add     x3, x23, #0x20                    | |
+   +0x104  mov     x0, sp                            | |
+   +0x108  add     x1, sp, #0x680                    | |
+   +0x10c  mov     x2, x22                           | |
+   +0x110  mov     x22, sp                           | |
+   +0x114  bl      mlkem1024_indcpa_enc              | |
+  after_mlkem1024_indcpa_enc:                        | |
+   +0x118  mov     w23, w0                           | |
+   +0x11c  cbnz    w0, join1                    ---+ | |
+   +0x120  movi    v0.2d, #0x0                     | | |
+   +0x124  mov     x8, xzr                         | | |
+   +0x128  movi    v1.2d, #0x0                     | | |
+   +0x12c  movi    v2.2d, #0x0                     | | |
+   +0x130  movi    v3.2d, #0x0                     | | |
+  loop1:                                           | | |
+   +0x134  add     x9, x20, x8                  <+ | | |
+   +0x138  add     x10, x22, x8                  | | | |
+   +0x13c  add     x8, x8, #0x20                 | | | |
+   +0x140  cmp     x8, #0x620                    | | | |
+   +0x144  ldp     q4, q5, [x9]                  | | | |
+   +0x148  ldp     q6, q7, [x10]                 | | | |
+   +0x14c  eor     v4.16b, v6.16b, v4.16b        | | | |
+   +0x150  orr     v2.16b, v4.16b, v2.16b        | | | |
+   +0x154  eor     v5.16b, v7.16b, v5.16b        | | | |
+   +0x158  orr     v3.16b, v5.16b, v3.16b        | | | |
+   +0x15c  eor     v0.16b, v4.16b, v0.16b        | | | |
+  loop1_test:                                    | | | |
+   +0x160  eor     v1.16b, v5.16b, v1.16b        | | | |
+  loop1_back:                                    | | | |
+   +0x164  b.ne    loop1                        -+ | | |
+  loop1_exit:                                      | | |
+   +0x168  orr     v2.16b, v3.16b, v2.16b          | | |
+   +0x16c  mov     w22, wzr                        | | |
+   +0x170  ext     v3.16b, v2.16b, v2.16b, #8      | | |
+   +0x174  mov     x8, sp                          | | |
+   +0x178  eor     v0.16b, v1.16b, v0.16b          | | |
+   +0x17c  add     x0, x8, #0x20                   | | |
+   +0x180  ext     v1.16b, v0.16b, v0.16b, #8      | | |
+   +0x184  mov     x1, x20                         | | |
+   +0x188  mov     w2, #0x620                      | | |
+   +0x18c  orr     v2.8b, v2.8b, v3.8b             | | |
+   +0x190  fmov    x9, d2                          | | |
+   +0x194  eor     v0.8b, v0.8b, v1.8b             | | |
+   +0x198  fmov    x11, d0                         | | |
+   +0x19c  orr     x9, x9, x9, lsr #32             | | |
+   +0x1a0  lsr     x10, x9, #16                    | | |
+   +0x1a4  orr     w9, w9, w10                     | | |
+   +0x1a8  eor     x10, x11, x11, lsr #32          | | |
+   +0x1ac  orr     w9, w9, w9, lsr #8              | | |
+   +0x1b0  eor     x10, x10, x10, lsr #16          | | |
+   +0x1b4  sub     w9, w22, w9, uxtb               | | |
+   +0x1b8  lsr     x11, x10, #8                    | | |
+   +0x1bc  eor     w10, w10, w11                   | | |
+   +0x1c0  eor     w9, w10, w9, lsr #16            | | |
+   +0x1c4  ldr     q0, [x21, #3136]                | | |
+   +0x1c8  ldr     q1, [x21, #3152]                | | |
+   +0x1cc  eor     w21, w9, w10                    | | |
+   +0x1d0  stp     q0, q1, [sp]                    | | |
+   +0x1d4  bl      memcpy                          | | |
+  after_memcpy:                                    | | |
+   +0x1d8  mov     x2, sp                          | | |
+   +0x1dc  mov     x0, x19                         | | |
+   +0x1e0  mov     w1, #0x20                       | | |
+   +0x1e4  mov     w3, #0x640                      | | |
+   +0x1e8  bl      mlkem_shake256                  | | |
+  after_mlkem_shake256:                            | | |
+   +0x1ec  mov     x8, xzr                         | | |
+   +0x1f0  sub     w9, w22, w21, uxtb              | | |
+   +0x1f4  add     x10, sp, #0x640                 | | |
+  loop2:                                           | | |
+   +0x1f8  ldrb    w11, [x19, x8]               <+ | | |
+   +0x1fc  mov     w12, w9                       | | | |
+   +0x200  ldrb    w13, [x10, x8]                | | | |
+   +0x204  lsr     w12, w12, #16                 | | | |
+   +0x208  and     w11, w11, w12                 | | | |
+   +0x20c  bic     w13, w13, w12                 | | | |
+   +0x210  orr     w11, w11, w13                 | | | |
+   +0x214  strb    w11, [x19, x8]                | | | |
+   +0x218  add     x8, x8, #0x1                  | | | |
+  loop2_test:                                    | | | |
+   +0x21c  cmp     x8, #0x20                     | | | |
+  loop2_back:                                    | | | |
+   +0x220  b.ne    loop2                        -+ | | |
+  loop2_exit:                                      | | |
+   +0x224  mov     w23, wzr                        | | |
+   +0x228  b       join1                        -+ | | |
+   +0x22c  mov     w23, #0xfffffffb             <------+
+  join1:                                         | | |
+   +0x230  mov     x0, sp                       <+-+-+
+   +0x234  mov     w1, wzr
+   +0x238  mov     w2, #0x640
+   +0x23c  mov     x19, sp
+   +0x240  bl      memset
+  after_memset:
+   +0x244  movi    v0.2d, #0x0
+   +0x248  add     x8, sp, #0x640
+   +0x24c  str     q0, [sp, #1648]
+   +0x250  str     q0, [sp, #1632]
+   +0x254  str     q0, [sp, #1616]
+   +0x258  str     q0, [sp, #1600]
+   +0x25c  str     q0, [sp, #1712]
+   +0x260  add     x8, sp, #0x680
+   +0x264  str     q0, [sp, #1696]
+   +0x268  str     q0, [sp, #1680]
+   +0x26c  str     q0, [sp, #1664]
+  adrp2:
+   +0x270  adrp    x8, <page>
+   +0x274  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x278  ldr     x9, [sp, #1752]
+   +0x27c  ldr     x8, [x8]
+   +0x280  cmp     x8, x9
+   +0x284  b.ne    +0x2a4                       -+
+   +0x288  mov     w0, w23                       |
+   +0x28c  mov     sp, x29                       |
+   +0x290  ldp     x20, x19, [sp, #48]           |
+   +0x294  ldp     x22, x21, [sp, #32]           |
+   +0x298  ldp     x28, x23, [sp, #16]           |
+   +0x29c  ldp     x29, x30, [sp], #64           |
+  ret:                                           |
+   +0x2a0  ret                                   |
+   +0x2a4  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem1024_polyvec_compress_du: 0x1f64, 0x40 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_compress_d11
+  after_mlkem_poly_compress_d11_1:
+    +0x14  add     x0, x20, #0x160
+    +0x18  add     x1, x19, #0x200
+    +0x1c  bl      mlkem_poly_compress_d11
+  after_mlkem_poly_compress_d11_2:
+    +0x20  add     x0, x20, #0x2c0
+    +0x24  add     x1, x19, #0x400
+    +0x28  bl      mlkem_poly_compress_d11
+  after_mlkem_poly_compress_d11_3:
+    +0x2c  add     x0, x20, #0x420
+    +0x30  add     x1, x19, #0x600
+    +0x34  ldp     x20, x19, [sp, #16]
+    +0x38  ldr     x30, [sp], #32
+    +0x3c  b       mlkem_poly_compress_d11
+ ***)
+
+(*** mlkem1024_polyvec_decompress_du: 0x1fa4, 0x40 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_decompress_d11
+  after_mlkem_poly_decompress_d11_1:
+    +0x14  add     x0, x20, #0x200
+    +0x18  add     x1, x19, #0x160
+    +0x1c  bl      mlkem_poly_decompress_d11
+  after_mlkem_poly_decompress_d11_2:
+    +0x20  add     x0, x20, #0x400
+    +0x24  add     x1, x19, #0x2c0
+    +0x28  bl      mlkem_poly_decompress_d11
+  after_mlkem_poly_decompress_d11_3:
+    +0x2c  add     x0, x20, #0x600
+    +0x30  add     x1, x19, #0x420
+    +0x34  ldp     x20, x19, [sp, #16]
+    +0x38  ldr     x30, [sp], #32
+    +0x3c  b       mlkem_poly_decompress_d11
+ ***)
+
+(*** mlkem1024_polyvec_tobytes: 0x1fe4, 0x40 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_tobytes
+  after_mlkem_poly_tobytes_1:
+    +0x14  add     x0, x20, #0x180
+    +0x18  add     x1, x19, #0x200
+    +0x1c  bl      mlkem_poly_tobytes
+  after_mlkem_poly_tobytes_2:
+    +0x20  add     x0, x20, #0x300
+    +0x24  add     x1, x19, #0x400
+    +0x28  bl      mlkem_poly_tobytes
+  after_mlkem_poly_tobytes_3:
+    +0x2c  add     x0, x20, #0x480
+    +0x30  add     x1, x19, #0x600
+    +0x34  ldp     x20, x19, [sp, #16]
+    +0x38  ldr     x30, [sp], #32
+    +0x3c  b       mlkem_poly_tobytes
+ ***)
+
+(*** mlkem1024_polyvec_frombytes: 0x2024, 0x40 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_frombytes
+  after_mlkem_poly_frombytes_1:
+    +0x14  add     x0, x20, #0x200
+    +0x18  add     x1, x19, #0x180
+    +0x1c  bl      mlkem_poly_frombytes
+  after_mlkem_poly_frombytes_2:
+    +0x20  add     x0, x20, #0x400
+    +0x24  add     x1, x19, #0x300
+    +0x28  bl      mlkem_poly_frombytes
+  after_mlkem_poly_frombytes_3:
+    +0x2c  add     x0, x20, #0x600
+    +0x30  add     x1, x19, #0x480
+    +0x34  ldp     x20, x19, [sp, #16]
+    +0x38  ldr     x30, [sp], #32
+    +0x3c  b       mlkem_poly_frombytes
+ ***)
+
+(*** mlkem1024_polyvec_ntt: 0x2064, 0x28 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_ntt
+  after_mlkem_poly_ntt_1:
+     +0xc  add     x0, x19, #0x200
+    +0x10  bl      mlkem_poly_ntt
+  after_mlkem_poly_ntt_2:
+    +0x14  add     x0, x19, #0x400
+    +0x18  bl      mlkem_poly_ntt
+  after_mlkem_poly_ntt_3:
+    +0x1c  add     x0, x19, #0x600
+    +0x20  ldp     x30, x19, [sp], #16
+    +0x24  b       mlkem_poly_ntt
+ ***)
+
+(*** mlkem1024_polyvec_invntt_tomont: 0x208c, 0x28 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont_1:
+     +0xc  add     x0, x19, #0x200
+    +0x10  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont_2:
+    +0x14  add     x0, x19, #0x400
+    +0x18  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont_3:
+    +0x1c  add     x0, x19, #0x600
+    +0x20  ldp     x30, x19, [sp], #16
+    +0x24  b       mlkem_poly_invntt_tomont
+ ***)
+
+(*** mlkem1024_polyvec_basemul_acc_montgomery_cached: 0x20b4, 0x25c bytes
+
+     +0x0  add     x8, x3, #0x400
+     +0x4  add     x10, x0, #0x200
+     +0x8  cmp     x8, x0
+     +0xc  add     x9, x2, #0x800
+    +0x10  ccmp    x10, x3, #0x0, hi
+    +0x14  add     x11, x1, #0x800
+    +0x18  cset    w8, hi
+    +0x1c  cmp     x9, x0
+    +0x20  ccmp    x10, x2, #0x0, hi
+    +0x24  cset    w9, hi
+    +0x28  cmp     x10, x1
+    +0x2c  ccmp    x11, x0, #0x0, hi
+    +0x30  b.hi    join1                   ---------+
+    +0x34  tbnz    w8, #0, join1           -------+ |
+    +0x38  cbnz    w9, join1               -----+ | |
+    +0x3c  mov     w9, #0xf3010000              | | |
+    +0x40  mov     x8, xzr                      | | |
+    +0x44  mvni    v1.4s, #0xd, lsl #8          | | |
+    +0x48  dup     v0.4s, w9                    | | |
+  loop1:                                        | | |
+    +0x4c  add     x10, x1, x8             <+   | | |
+    +0x50  add     x9, x2, x8               |   | | |
+    +0x54  add     x11, x10, #0x200         |   | | |
+    +0x58  ldr     q20, [x3]                |   | | |
+    +0x5c  ldr     q23, [x3, #256]          |   | | |
+    +0x60  ld2     {v6.8h-v7.8h}, [x10]     |   | | |
+    +0x64  ld2     {v16.8h-v17.8h}, [x9]    |   | | |
+    +0x68  ld2     {v18.8h-v19.8h}, [x11]   |   | | |
+    +0x6c  add     x11, x9, #0x200          |   | | |
+    +0x70  smull   v3.4s, v16.4h, v6.4h     |   | | |
+    +0x74  smull2  v2.4s, v16.8h, v6.8h     |   | | |
+    +0x78  ld2     {v21.8h-v22.8h}, [x11]   |   | | |
+    +0x7c  smull   v5.4s, v17.4h, v6.4h     |   | | |
+    +0x80  add     x11, x10, #0x400         |   | | |
+    +0x84  smull2  v4.4s, v17.8h, v6.8h     |   | | |
+    +0x88  add     x10, x10, #0x600         |   | | |
+    +0x8c  smlal   v3.4s, v20.4h, v7.4h     |   | | |
+    +0x90  smlal2  v2.4s, v20.8h, v7.8h     |   | | |
+    +0x94  ld2     {v24.8h-v25.8h}, [x11]   |   | | |
+    +0x98  smlal   v5.4s, v16.4h, v7.4h     |   | | |
+    +0x9c  add     x11, x9, #0x400          |   | | |
+    +0xa0  smlal2  v4.4s, v16.8h, v7.8h     |   | | |
+    +0xa4  add     x9, x9, #0x600           |   | | |
+    +0xa8  smlal   v3.4s, v23.4h, v19.4h    |   | | |
+    +0xac  smlal2  v2.4s, v23.8h, v19.8h    |   | | |
+    +0xb0  ld2     {v6.8h-v7.8h}, [x11]     |   | | |
+    +0xb4  smlal   v5.4s, v21.4h, v19.4h    |   | | |
+    +0xb8  smlal2  v4.4s, v21.8h, v19.8h    |   | | |
+    +0xbc  smlal   v3.4s, v21.4h, v18.4h    |   | | |
+    +0xc0  ldr     q16, [x3, #512]          |   | | |
+    +0xc4  smlal2  v2.4s, v21.8h, v18.8h    |   | | |
+    +0xc8  ld2     {v26.8h-v27.8h}, [x10]   |   | | |
+    +0xcc  smlal   v5.4s, v22.4h, v18.4h    |   | | |
+    +0xd0  smlal   v3.4s, v16.4h, v25.4h    |   | | |
+    +0xd4  smlal2  v4.4s, v22.8h, v18.8h    |   | | |
+    +0xd8  smlal2  v2.4s, v16.8h, v25.8h    |   | | |
+    +0xdc  ldr     q16, [x3, #768]          |   | | |
+    +0xe0  smlal   v5.4s, v6.4h, v25.4h     |   | | |
+    +0xe4  ld2     {v17.8h-v18.8h}, [x9]    |   | | |
+    +0xe8  smlal   v3.4s, v6.4h, v24.4h     |   | | |
+    +0xec  add     x9, x0, x8               |   | | |
+    +0xf0  smlal2  v4.4s, v6.8h, v25.8h     |   | | |
+    +0xf4  add     x8, x8, #0x20            |   | | |
+    +0xf8  smlal2  v2.4s, v6.8h, v24.8h     |   | | |
+    +0xfc  add     x3, x3, #0x10            |   | | |
+   +0x100  smlal   v5.4s, v7.4h, v24.4h     |   | | |
+   +0x104  cmp     x8, #0x200               |   | | |
+   +0x108  smlal   v3.4s, v16.4h, v27.4h    |   | | |
+   +0x10c  smlal2  v4.4s, v7.8h, v24.8h     |   | | |
+   +0x110  smlal2  v2.4s, v16.8h, v27.8h    |   | | |
+   +0x114  smlal   v5.4s, v17.4h, v27.4h    |   | | |
+   +0x118  smlal   v3.4s, v17.4h, v26.4h    |   | | |
+   +0x11c  smlal2  v4.4s, v17.8h, v27.8h    |   | | |
+   +0x120  smlal2  v2.4s, v17.8h, v26.8h    |   | | |
+   +0x124  smlal   v5.4s, v18.4h, v26.4h    |   | | |
+   +0x128  mul     v6.4s, v3.4s, v0.4s      |   | | |
+   +0x12c  smlal2  v4.4s, v18.8h, v26.8h    |   | | |
+   +0x130  mul     v7.4s, v2.4s, v0.4s      |   | | |
+   +0x134  mul     v16.4s, v5.4s, v0.4s     |   | | |
+   +0x138  sshr    v6.4s, v6.4s, #16        |   | | |
+   +0x13c  mul     v17.4s, v4.4s, v0.4s     |   | | |
+   +0x140  mul     v6.4s, v6.4s, v1.4s      |   | | |
+   +0x144  sshr    v7.4s, v7.4s, #16        |   | | |
+   +0x148  sshr    v16.4s, v16.4s, #16      |   | | |
+   +0x14c  mul     v7.4s, v7.4s, v1.4s      |   | | |
+   +0x150  addhn   v18.4h, v6.4s, v3.4s     |   | | |
+   +0x154  mul     v3.4s, v16.4s, v1.4s     |   | | |
+   +0x158  sshr    v6.4s, v17.4s, #16       |   | | |
+   +0x15c  addhn2  v18.8h, v7.4s, v2.4s     |   | | |
+   +0x160  mul     v2.4s, v6.4s, v1.4s      |   | | |
+   +0x164  addhn   v19.4h, v3.4s, v5.4s     |   | | |
+   +0x168  addhn2  v19.8h, v2.4s, v4.4s     |   | | |
+  loop1_test:                               |   | | |
+   +0x16c  st2     {v18.8h-v19.8h}, [x9]    |   | | |
+  loop1_back:                               |   | | |
+   +0x170  b.ne    loop1                   -+   | | |
+  loop1_exit:                                   | | |
+   +0x174  b       join2                   ---+ | | |
+  join1:                                      | | | |
+   +0x178  mov     x8, xzr                 <----+-+-+
+   +0x17c  mov     w9, #0xf3010000            |
+   +0x180  mov     w10, #0xfffff2ff           |
+  loop2:                                      |
+   +0x184  add     x11, x1, x8             <+ |
+   +0x188  add     x13, x2, x8              | |
+   +0x18c  ldrsh   w12, [x3]                | |
+   +0x190  ldrsh   w4, [x3, #256]           | |
+   +0x194  ldrsh   w14, [x11, #2]           | |
+   +0x198  ldrsh   w16, [x13]               | |
+   +0x19c  ldrsh   w15, [x11]               | |
+   +0x1a0  ldrsh   w17, [x13, #2]           | |
+   +0x1a4  mul     w12, w12, w14            | |
+   +0x1a8  ldrsh   w18, [x11, #514]         | |
+   +0x1ac  mul     w14, w16, w14            | |
+   +0x1b0  ldrsh   w6, [x13, #512]          | |
+   +0x1b4  madd    w12, w16, w15, w12       | |
+   +0x1b8  ldrsh   w5, [x11, #512]          | |
+   +0x1bc  madd    w14, w17, w15, w14       | |
+   +0x1c0  ldrsh   w16, [x13, #514]         | |
+   +0x1c4  madd    w12, w4, w18, w12        | |
+   +0x1c8  ldrsh   w15, [x11, #1026]        | |
+   +0x1cc  madd    w14, w6, w18, w14        | |
+   +0x1d0  ldrsh   w17, [x3, #512]          | |
+   +0x1d4  madd    w12, w6, w5, w12         | |
+   +0x1d8  ldrsh   w4, [x13, #1024]         | |
+   +0x1dc  madd    w14, w16, w5, w14        | |
+   +0x1e0  ldrsh   w18, [x11, #1024]        | |
+   +0x1e4  ldrsh   w16, [x13, #1026]        | |
+   +0x1e8  madd    w12, w17, w15, w12       | |
+   +0x1ec  madd    w14, w4, w15, w14        | |
+   +0x1f0  ldrsh   w17, [x11, #1538]        | |
+   +0x1f4  ldrsh   w15, [x3, #768]          | |
+   +0x1f8  madd    w12, w4, w18, w12        | |
+   +0x1fc  ldrsh   w4, [x13, #1536]         | |
+   +0x200  madd    w14, w16, w18, w14       | |
+   +0x204  ldrsh   w11, [x11, #1536]        | |
+   +0x208  add     x3, x3, #0x2             | |
+   +0x20c  ldrsh   w13, [x13, #1538]        | |
+   +0x210  madd    w12, w15, w17, w12       | |
+   +0x214  madd    w14, w4, w17, w14        | |
+   +0x218  madd    w12, w4, w11, w12        | |
+   +0x21c  madd    w11, w13, w11, w14       | |
+   +0x220  mul     w13, w12, w9             | |
+   +0x224  mul     w14, w11, w9             | |
+   +0x228  asr     w13, w13, #16            | |
+   +0x22c  asr     w14, w14, #16            | |
+   +0x230  madd    w12, w13, w10, w12       | |
+   +0x234  add     x13, x0, x8              | |
+   +0x238  madd    w11, w14, w10, w11       | |
+   +0x23c  add     x8, x8, #0x4             | |
+   +0x240  lsr     w12, w12, #16            | |
+   +0x244  cmp     x8, #0x200               | |
+   +0x248  lsr     w11, w11, #16            | |
+   +0x24c  strh    w12, [x13]               | |
+  loop2_test:                               | |
+   +0x250  strh    w11, [x13, #2]           | |
+  loop2_back:                               | |
+   +0x254  b.ne    loop2                   -+ |
+  join2: loop2_exit: ret:                     |
+   +0x258  ret                             <--+
+ ***)
+
+(*** mlkem1024_polyvec_mulcache_compute: 0x2310, 0x40 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_mulcache_compute
+  after_mlkem_poly_mulcache_compute_1:
+    +0x14  add     x0, x20, #0x100
+    +0x18  add     x1, x19, #0x200
+    +0x1c  bl      mlkem_poly_mulcache_compute
+  after_mlkem_poly_mulcache_compute_2:
+    +0x20  add     x0, x20, #0x200
+    +0x24  add     x1, x19, #0x400
+    +0x28  bl      mlkem_poly_mulcache_compute
+  after_mlkem_poly_mulcache_compute_3:
+    +0x2c  add     x0, x20, #0x300
+    +0x30  add     x1, x19, #0x600
+    +0x34  ldp     x20, x19, [sp, #16]
+    +0x38  ldr     x30, [sp], #32
+    +0x3c  b       mlkem_poly_mulcache_compute
+ ***)
+
+(*** mlkem1024_polyvec_reduce: 0x2350, 0x28 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce_1:
+     +0xc  add     x0, x19, #0x200
+    +0x10  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce_2:
+    +0x14  add     x0, x19, #0x400
+    +0x18  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce_3:
+    +0x1c  add     x0, x19, #0x600
+    +0x20  ldp     x30, x19, [sp], #16
+    +0x24  b       mlkem_poly_reduce
+ ***)
+
+(*** mlkem1024_polyvec_add: 0x2378, 0x40 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_add
+  after_mlkem_poly_add_1:
+    +0x14  add     x0, x20, #0x200
+    +0x18  add     x1, x19, #0x200
+    +0x1c  bl      mlkem_poly_add
+  after_mlkem_poly_add_2:
+    +0x20  add     x0, x20, #0x400
+    +0x24  add     x1, x19, #0x400
+    +0x28  bl      mlkem_poly_add
+  after_mlkem_poly_add_3:
+    +0x2c  add     x0, x20, #0x600
+    +0x30  add     x1, x19, #0x600
+    +0x34  ldp     x20, x19, [sp, #16]
+    +0x38  ldr     x30, [sp], #32
+    +0x3c  b       mlkem_poly_add
+ ***)
+
+(*** mlkem1024_polyvec_tomont: 0x23b8, 0x28 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_tomont
+  after_mlkem_poly_tomont_1:
+     +0xc  add     x0, x19, #0x200
+    +0x10  bl      mlkem_poly_tomont
+  after_mlkem_poly_tomont_2:
+    +0x14  add     x0, x19, #0x400
+    +0x18  bl      mlkem_poly_tomont
+  after_mlkem_poly_tomont_3:
+    +0x1c  add     x0, x19, #0x600
+    +0x20  ldp     x30, x19, [sp], #16
+    +0x24  b       mlkem_poly_tomont
+ ***)
+
+(*** mlkem1024_poly_getnoise_eta1_4x: 0x23e0, 0x190 bytes
+
+     +0x0  stp     x29, x30, [sp, #-80]!
+     +0x4  stp     x28, x25, [sp, #16]
+     +0x8  stp     x24, x23, [sp, #32]
+     +0xc  stp     x22, x21, [sp, #48]
+    +0x10  stp     x20, x19, [sp, #64]
+    +0x14  mov     x29, sp
+    +0x18  sub     x9, sp, #0x330
+    +0x1c  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x20  adrp    x8, <page>
+    +0x24  ldrb    w10, [x29, #80]
+    +0x28  add     x11, sp, #0x20
+    +0x2c  add     x12, sp, #0x120
+    +0x30  add     x9, x11, #0x80
+    +0x34  add     x24, x12, #0x80
+    +0x38  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x3c  add     x25, x12, #0x100
+    +0x40  add     x20, x12, #0x180
+    +0x44  mov     x19, x3
+    +0x48  mov     x21, x2
+    +0x4c  mov     x22, x1
+    +0x50  ldr     x8, [x8]
+    +0x54  mov     x23, x0
+    +0x58  add     x0, sp, #0x120
+    +0x5c  mov     x1, x24
+    +0x60  mov     x2, x25
+    +0x64  mov     x3, x20
+    +0x68  str     x8, [sp, #808]
+    +0x6c  add     x8, x11, #0x40
+    +0x70  ldp     q0, q1, [x4]
+    +0x74  strb    w5, [sp, #64]
+    +0x78  add     x11, x11, #0xc0
+    +0x7c  strb    w6, [sp, #128]
+    +0x80  add     x5, sp, #0x20
+    +0x84  strb    w7, [sp, #192]
+    +0x88  mov     w4, #0x80
+    +0x8c  strb    w10, [sp, #256]
+    +0x90  mov     w10, #0x21
+    +0x94  mov     x6, x8
+    +0x98  mov     x7, x9
+    +0x9c  stp     q0, q1, [sp, #32]
+    +0xa0  str     q0, [sp, #96]
+    +0xa4  str     q1, [sp, #112]
+    +0xa8  stp     q0, q1, [sp, #160]
+    +0xac  stp     q0, q1, [sp, #224]
+    +0xb0  stp     x11, x10, [sp]
+    +0xb4  bl      mlkem_shake256x4
+  after_mlkem_shake256x4:
+    +0xb8  add     x1, sp, #0x120
+    +0xbc  mov     x0, x23
+    +0xc0  bl      mlkem_poly_cbd2
+  after_mlkem_poly_cbd2_1:
+    +0xc4  mov     x0, x22
+    +0xc8  mov     x1, x24
+    +0xcc  bl      mlkem_poly_cbd2
+  after_mlkem_poly_cbd2_2:
+    +0xd0  mov     x0, x21
+    +0xd4  mov     x1, x25
+    +0xd8  bl      mlkem_poly_cbd2
+  after_mlkem_poly_cbd2_3:
+    +0xdc  cbz     x19, join1                   -+
+    +0xe0  mov     x0, x19                       |
+    +0xe4  mov     x1, x20                       |
+    +0xe8  bl      mlkem_poly_cbd2               |
+  join1: after_mlkem_poly_cbd2_4:                |
+    +0xec  movi    v0.2d, #0x0                  <+
+    +0xf0  add     x8, sp, #0x120
+    +0xf4  stp     q0, q0, [sp, #288]
+    +0xf8  stp     q0, q0, [sp, #320]
+    +0xfc  stp     q0, q0, [sp, #352]
+   +0x100  stp     q0, q0, [sp, #384]
+   +0x104  stp     q0, q0, [sp, #416]
+   +0x108  stp     q0, q0, [sp, #448]
+   +0x10c  stp     q0, q0, [sp, #480]
+   +0x110  stp     q0, q0, [sp, #512]
+   +0x114  stp     q0, q0, [sp, #544]
+   +0x118  stp     q0, q0, [sp, #576]
+   +0x11c  stp     q0, q0, [sp, #608]
+   +0x120  stp     q0, q0, [sp, #640]
+   +0x124  stp     q0, q0, [sp, #672]
+   +0x128  stp     q0, q0, [sp, #704]
+   +0x12c  stp     q0, q0, [sp, #736]
+   +0x130  stp     q0, q0, [sp, #768]
+   +0x134  stp     q0, q0, [sp, #64]
+   +0x138  stp     q0, q0, [sp, #96]
+   +0x13c  add     x8, sp, #0x20
+   +0x140  stp     q0, q0, [sp, #32]
+   +0x144  stp     q0, q0, [sp, #128]
+   +0x148  stp     q0, q0, [sp, #160]
+   +0x14c  stp     q0, q0, [sp, #192]
+   +0x150  stp     q0, q0, [sp, #224]
+   +0x154  stp     q0, q0, [sp, #256]
+  adrp2:
+   +0x158  adrp    x8, <page>
+   +0x15c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x160  ldr     x9, [sp, #808]
+   +0x164  ldr     x8, [x8]
+   +0x168  cmp     x8, x9
+   +0x16c  b.ne    +0x18c                       -+
+   +0x170  mov     sp, x29                       |
+   +0x174  ldp     x20, x19, [sp, #64]           |
+   +0x178  ldp     x22, x21, [sp, #48]           |
+   +0x17c  ldp     x24, x23, [sp, #32]           |
+   +0x180  ldp     x28, x25, [sp, #16]           |
+   +0x184  ldp     x29, x30, [sp], #80           |
+  ret:                                           |
+   +0x188  ret                                   |
+   +0x18c  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem1024_poly_getnoise_eta2: 0x2570, 0xac bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  stp     x28, x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0xd0
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x19, x0
+    +0x20  add     x0, sp, #0x40
+    +0x24  mov     w3, #0x21
+    +0x28  add     x20, sp, #0x40
+    +0x2c  mov     x21, sp
+    +0x30  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x34  ldr     x8, [x8]
+    +0x38  str     x8, [sp, #200]
+    +0x3c  ldp     q0, q1, [x1]
+    +0x40  strb    w2, [sp, #32]
+    +0x44  mov     x2, sp
+    +0x48  mov     w1, #0x80
+    +0x4c  stp     q0, q1, [sp]
+    +0x50  bl      mlkem_shake256
+  after_mlkem_shake256:
+    +0x54  add     x1, sp, #0x40
+    +0x58  mov     x0, x19
+    +0x5c  bl      mlkem_poly_cbd2
+  after_mlkem_poly_cbd2:
+    +0x60  movi    v0.2d, #0x0
+  adrp2:
+    +0x64  adrp    x8, <page>
+    +0x68  stp     q0, q0, [sp, #64]
+    +0x6c  stp     q0, q0, [sp, #96]
+    +0x70  stp     q0, q0, [sp, #128]
+    +0x74  stp     q0, q0, [sp, #160]
+    +0x78  strb    wzr, [sp, #32]
+    +0x7c  stp     q0, q0, [sp]
+    +0x80  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x84  ldr     x9, [sp, #200]
+    +0x88  ldr     x8, [x8]
+    +0x8c  cmp     x8, x9
+    +0x90  b.ne    +0xa8                        -+
+    +0x94  mov     sp, x29                       |
+    +0x98  ldp     x20, x19, [sp, #32]           |
+    +0x9c  ldp     x28, x21, [sp, #16]           |
+    +0xa0  ldp     x29, x30, [sp], #48           |
+  ret:                                           |
+    +0xa4  ret                                   |
+    +0xa8  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem_poly_compress_d4: 0x261c, 0x5b0 bytes
+
+     +0x0  sub     sp, sp, #0x140
+     +0x4  stp     d15, d14, [sp, #240]
+     +0x8  stp     d13, d12, [sp, #256]
+     +0xc  stp     d11, d10, [sp, #272]
+    +0x10  stp     d9, d8, [sp, #288]
+    +0x14  str     x29, [sp, #304]
+    +0x18  add     x8, x1, #0x200
+    +0x1c  cmp     x8, x0
+    +0x20  b.ls    join1                                -----+
+    +0x24  add     x8, x0, #0x80                             |
+    +0x28  cmp     x8, x1                                    |
+    +0x2c  b.ls    join1                                ---+ |
+    +0x30  mov     w10, #0xafb0                            | |
+    +0x34  mov     x8, xzr                                 | |
+    +0x38  movk    w10, #0x13, lsl #16                     | |
+    +0x3c  add     x9, x1, #0x8                            | |
+    +0x40  dup     v0.4s, w10                              | |
+  loop1:                                                   | |
+    +0x44  ldurh   w10, [x9, #-8]                       <+ | |
+    +0x48  sub     x11, x9, #0x4                         | | |
+    +0x4c  sub     x12, x9, #0x2                         | | |
+    +0x50  movi    v3.4s, #0x8, lsl #24                  | | |
+    +0x54  fmov    s1, w10                               | | |
+    +0x58  ldurh   w10, [x9, #-6]                        | | |
+    +0x5c  movi    v4.4s, #0x8, lsl #24                  | | |
+    +0x60  ld1     {v1.h}[1], [x11]                      | | |
+    +0x64  mov     x11, x9                               | | |
+    +0x68  fmov    s2, w10                               | | |
+    +0x6c  add     x10, x9, #0x6                         | | |
+    +0x70  ld1     {v1.h}[2], [x11], #2                  | | |
+    +0x74  ld1     {v2.h}[1], [x12]                      | | |
+    +0x78  ld1     {v2.h}[2], [x11]                      | | |
+    +0x7c  add     x11, x9, #0x4                         | | |
+    +0x80  add     x9, x9, #0x10                         | | |
+    +0x84  ld1     {v1.h}[3], [x11]                      | | |
+    +0x88  ld1     {v2.h}[3], [x10]                      | | |
+    +0x8c  sxtl    v1.4s, v1.4h                          | | |
+    +0x90  sxtl    v2.4s, v2.4h                          | | |
+    +0x94  mla     v4.4s, v1.4s, v0.4s                   | | |
+    +0x98  mla     v3.4s, v2.4s, v0.4s                   | | |
+    +0x9c  ushr    v2.4s, v4.4s, #28                     | | |
+    +0xa0  ushr    v1.4s, v3.4s, #24                     | | |
+    +0xa4  xtn     v2.4h, v2.4s                          | | |
+    +0xa8  xtn     v1.4h, v1.4s                          | | |
+    +0xac  bic     v1.4h, #0xf                           | | |
+    +0xb0  orr     v1.8b, v1.8b, v2.8b                   | | |
+    +0xb4  xtn     v1.8b, v1.8h                          | | |
+    +0xb8  str     s1, [x0, x8]                          | | |
+    +0xbc  add     x8, x8, #0x4                          | | |
+  loop1_test:                                            | | |
+    +0xc0  cmp     x8, #0x80                             | | |
+  loop1_back:                                            | | |
+    +0xc4  b.ne    loop1                                -+ | |
+  loop1_exit:                                              | |
+    +0xc8  b       join2                                -------+
+  join1: adrp1:                                            | | |
+    +0xcc  adrp    x9, <page>                           <--+-+ |
+  adrp2:                                                       |
+    +0xd0  adrp    x10, <page>                                 |
+  adrp3:                                                       |
+    +0xd4  adrp    x11, <page>                                 |
+    +0xd8  mov     x8, xzr                                     |
+    +0xdc  ldr     q0, [x9, #3168]                             |
+                   // mlkem_poly_compress_d4_const1            |
+  adrp4:                                                       |
+    +0xe0  adrp    x9, <page>                                  |
+    +0xe4  str     q0, [sp, #96]                               |
+    +0xe8  ldr     q0, [x10, #3184]                            |
+                   // mlkem_poly_compress_d4_const2            |
+  adrp5:                                                       |
+    +0xec  adrp    x10, <page>                                 |
+    +0xf0  str     q0, [sp, #80]                               |
+    +0xf4  ldr     q0, [x11, #3200]                            |
+                   // mlkem_poly_compress_d4_const3            |
+  adrp6:                                                       |
+    +0xf8  adrp    x11, <page>                                 |
+    +0xfc  str     q0, [sp, #64]                               |
+   +0x100  ldr     q0, [x9, #3216]                             |
+                   // mlkem_poly_compress_d4_const4            |
+  adrp7:                                                       |
+   +0x104  adrp    x9, <page>                                  |
+   +0x108  str     q0, [sp, #48]                               |
+   +0x10c  ldr     q0, [x10, #3232]                            |
+                   // mlkem_poly_compress_d4_const5            |
+   +0x110  mov     w10, #0xafb0                                |
+   +0x114  movk    w10, #0x13, lsl #16                         |
+   +0x118  str     q0, [sp, #32]                               |
+   +0x11c  ldr     q0, [x11, #3248]                            |
+                   // mlkem_poly_compress_d4_const6            |
+   +0x120  dup     v16.4s, w10                                 |
+   +0x124  str     q0, [sp, #16]                               |
+   +0x128  ldr     q0, [x9, #3264]                             |
+                   // mlkem_poly_compress_d4_const7            |
+   +0x12c  str     q0, [sp]                                    |
+  loop2:                                                       |
+   +0x130  ldp     q21, q22, [x1, #32]                  <+     |
+   +0x134  add     x9, sp, #0x70                         |     |
+   +0x138  movi    v7.4s, #0x8, lsl #24                  |     |
+   +0x13c  movi    v15.4s, #0x8, lsl #24                 |     |
+   +0x140  ldp     q23, q24, [x1]                        |     |
+   +0x144  zip1    v18.4h, v21.4h, v22.4h                |     |
+   +0x148  ext     v31.8b, v21.8b, v18.8b, #4            |     |
+   +0x14c  ldp     q19, q20, [x1, #96]                   |     |
+   +0x150  zip1    v6.4h, v23.4h, v24.4h                 |     |
+   +0x154  trn2    v4.4h, v23.4h, v24.4h                 |     |
+   +0x158  mov     v6.s[1], v31.s[1]                     |     |
+   +0x15c  ldp     q25, q26, [x1, #224]                  |     |
+   +0x160  zip1    v3.4h, v19.4h, v20.4h                 |     |
+   +0x164  mov     v4.s[1], v18.s[1]                     |     |
+   +0x168  sxtl    v6.4s, v6.4h                          |     |
+   +0x16c  ext     v10.8b, v19.8b, v3.8b, #4             |     |
+   +0x170  ldp     q0, q1, [x1, #64]                     |     |
+   +0x174  zip1    v31.4h, v25.4h, v26.4h                |     |
+   +0x178  mla     v15.4s, v6.4s, v16.4s                 |     |
+   +0x17c  sxtl    v4.4s, v4.4h                          |     |
+   +0x180  ext     v13.8b, v25.8b, v31.8b, #4            |     |
+   +0x184  ldp     q29, q30, [x1, #160]                  |     |
+   +0x188  zip1    v11.4h, v0.4h, v1.4h                  |     |
+   +0x18c  trn2    v5.4h, v0.4h, v1.4h                   |     |
+   +0x190  st1     {v0.2d-v1.2d}, [x9]                   |     |
+   +0x194  mov     v11.s[1], v10.s[1]                    |     |
+   +0x198  ldp     q27, q28, [x1, #192]                  |     |
+   +0x19c  zip1    v17.4h, v29.4h, v30.4h                |     |
+   +0x1a0  mov     v5.s[1], v3.s[1]                      |     |
+   +0x1a4  sxtl    v11.4s, v11.4h                        |     |
+   +0x1a8  ext     v10.8b, v29.8b, v17.8b, #4            |     |
+   +0x1ac  ldp     q8, q9, [x1, #128]                    |     |
+   +0x1b0  zip1    v14.4h, v27.4h, v28.4h                |     |
+   +0x1b4  add     x1, x1, #0x100                        |     |
+   +0x1b8  mov     v14.s[1], v13.s[1]                    |     |
+   +0x1bc  zip1    v12.4h, v8.4h, v9.4h                  |     |
+   +0x1c0  movi    v13.4s, #0x8, lsl #24                 |     |
+   +0x1c4  trn2    v18.4h, v8.4h, v9.4h                  |     |
+   +0x1c8  sxtl    v1.4s, v14.4h                         |     |
+   +0x1cc  mov     v12.s[1], v10.s[1]                    |     |
+   +0x1d0  movi    v10.4s, #0x8, lsl #24                 |     |
+   +0x1d4  mla     v7.4s, v1.4s, v16.4s                  |     |
+   +0x1d8  mov     v18.s[1], v17.s[1]                    |     |
+   +0x1dc  sxtl    v3.4s, v12.4h                         |     |
+   +0x1e0  mla     v10.4s, v11.4s, v16.4s                |     |
+   +0x1e4  mla     v13.4s, v3.4s, v16.4s                 |     |
+   +0x1e8  ushr    v3.4s, v7.4s, #28                     |     |
+   +0x1ec  trn2    v12.4h, v27.4h, v28.4h                |     |
+   +0x1f0  movi    v7.4s, #0x8, lsl #24                  |     |
+   +0x1f4  ushr    v2.4s, v13.4s, #28                    |     |
+   +0x1f8  ushr    v1.4s, v10.4s, #28                    |     |
+   +0x1fc  ushr    v0.4s, v15.4s, #28                    |     |
+   +0x200  ldr     q15, [sp, #96]                        |     |
+   +0x204  mov     v12.s[1], v31.s[1]                    |     |
+   +0x208  zip2    v31.8h, v23.8h, v24.8h                |     |
+   +0x20c  tbl     v6.16b, {v0.16b-v3.16b}, v15.16b      |     |
+   +0x210  movi    v3.4s, #0x8, lsl #24                  |     |
+   +0x214  sxtl    v1.4s, v18.4h                         |     |
+   +0x218  ld1     {v17.2d-v18.2d}, [x9]                 |     |
+   +0x21c  sxtl    v0.4s, v5.4h                          |     |
+   +0x220  add     x9, x0, x8                            |     |
+   +0x224  movi    v5.4s, #0x8, lsl #24                  |     |
+   +0x228  add     x8, x8, #0x40                         |     |
+   +0x22c  mla     v3.4s, v4.4s, v16.4s                  |     |
+   +0x230  cmp     x8, #0x80                             |     |
+   +0x234  sxtl    v2.4s, v12.4h                         |     |
+   +0x238  mla     v7.4s, v0.4s, v16.4s                  |     |
+   +0x23c  mov     v0.16b, v19.16b                       |     |
+   +0x240  stp     q3, q6, [sp, #208]                    |     |
+   +0x244  zip2    v4.4h, v23.4h, v24.4h                 |     |
+   +0x248  movi    v6.4s, #0x8, lsl #24                  |     |
+   +0x24c  mov     v3.16b, v21.16b                       |     |
+   +0x250  mov     v3.h[3], v22.h[2]                     |     |
+   +0x254  mla     v5.4s, v1.4s, v16.4s                  |     |
+   +0x258  mla     v6.4s, v2.4s, v16.4s                  |     |
+   +0x25c  mov     v0.h[3], v20.h[2]                     |     |
+   +0x260  zip2    v2.4h, v17.4h, v18.4h                 |     |
+   +0x264  mov     v1.16b, v29.16b                       |     |
+   +0x268  stp     q6, q5, [sp, #176]                    |     |
+   +0x26c  zip2    v5.4h, v8.4h, v9.4h                   |     |
+   +0x270  mov     v4.s[1], v3.s[1]                      |     |
+   +0x274  zip2    v6.4h, v27.4h, v28.4h                 |     |
+   +0x278  mov     v3.16b, v25.16b                       |     |
+   +0x27c  mov     v1.h[3], v30.h[2]                     |     |
+   +0x280  mov     v2.s[1], v0.s[1]                      |     |
+   +0x284  mov     v3.h[3], v26.h[2]                     |     |
+   +0x288  sxtl    v0.4s, v4.4h                          |     |
+   +0x28c  mov     v5.s[1], v1.s[1]                      |     |
+   +0x290  sxtl    v1.4s, v2.4h                          |     |
+   +0x294  movi    v2.4s, #0x8, lsl #24                  |     |
+   +0x298  mov     v6.s[1], v3.s[1]                      |     |
+   +0x29c  sxtl    v3.4s, v5.4h                          |     |
+   +0x2a0  movi    v5.4s, #0x8, lsl #24                  |     |
+   +0x2a4  mla     v2.4s, v0.4s, v16.4s                  |     |
+   +0x2a8  movi    v0.4s, #0x8, lsl #24                  |     |
+   +0x2ac  sxtl    v4.4s, v6.4h                          |     |
+   +0x2b0  movi    v6.4s, #0x8, lsl #24                  |     |
+   +0x2b4  mla     v5.4s, v1.4s, v16.4s                  |     |
+   +0x2b8  mla     v0.4s, v4.4s, v16.4s                  |     |
+   +0x2bc  uzp2    v1.4h, v23.4h, v24.4h                 |     |
+   +0x2c0  mla     v6.4s, v3.4s, v16.4s                  |     |
+   +0x2c4  zip2    v3.4h, v21.4h, v22.4h                 |     |
+   +0x2c8  zip2    v4.4h, v29.4h, v30.4h                 |     |
+   +0x2cc  ushr    v13.4s, v0.4s, #28                    |     |
+   +0x2d0  uzp2    v0.4h, v17.4h, v18.4h                 |     |
+   +0x2d4  uzp2    v1.4h, v1.4h, v23.4h                  |     |
+   +0x2d8  ushr    v12.4s, v6.4s, #28                    |     |
+   +0x2dc  ushr    v11.4s, v5.4s, #28                    |     |
+   +0x2e0  ushr    v10.4s, v2.4s, #28                    |     |
+   +0x2e4  uzp2    v6.4h, v0.4h, v17.4h                  |     |
+   +0x2e8  mov     v1.s[1], v3.s[1]                      |     |
+   +0x2ec  zip2    v2.4h, v19.4h, v20.4h                 |     |
+   +0x2f0  tbl     v0.16b, {v10.16b-v13.16b}, v15.16b    |     |
+   +0x2f4  ldr     q10, [sp, #80]                        |     |
+   +0x2f8  movi    v11.4s, #0x8, lsl #24                 |     |
+   +0x2fc  sxtl    v3.4s, v1.4h                          |     |
+   +0x300  uzp2    v1.4h, v27.4h, v28.4h                 |     |
+   +0x304  str     q0, [sp, #160]                        |     |
+   +0x308  uzp2    v0.4h, v8.4h, v9.4h                   |     |
+   +0x30c  mov     v6.s[1], v2.s[1]                      |     |
+   +0x310  mla     v11.4s, v3.4s, v16.4s                 |     |
+   +0x314  uzp2    v1.4h, v1.4h, v27.4h                  |     |
+   +0x318  uzp2    v2.4h, v0.4h, v8.4h                   |     |
+   +0x31c  zip2    v0.4h, v25.4h, v26.4h                 |     |
+   +0x320  tbl     v5.16b, {v21.16b-v22.16b}, v10.16b    |     |
+   +0x324  str     q11, [sp, #144]                       |     |
+   +0x328  tbl     v3.16b, {v29.16b-v30.16b}, v10.16b    |     |
+   +0x32c  mov     v1.s[1], v0.s[1]                      |     |
+   +0x330  tbl     v0.16b, {v19.16b-v20.16b}, v10.16b    |     |
+   +0x334  tbl     v10.16b, {v25.16b-v26.16b}, v10.16b   |     |
+   +0x338  zip2    v11.8h, v27.8h, v28.8h                |     |
+   +0x33c  mov     v2.s[1], v4.s[1]                      |     |
+   +0x340  zip2    v4.8h, v8.8h, v9.8h                   |     |
+   +0x344  mov     v31.s[1], v5.s[1]                     |     |
+   +0x348  zip2    v5.8h, v17.8h, v18.8h                 |     |
+   +0x34c  mov     v11.s[1], v10.s[1]                    |     |
+   +0x350  mov     v4.s[1], v3.s[1]                      |     |
+   +0x354  sxtl    v3.4s, v31.4h                         |     |
+   +0x358  movi    v31.4s, #0x8, lsl #24                 |     |
+   +0x35c  mov     v5.s[1], v0.s[1]                      |     |
+   +0x360  movi    v0.4s, #0x8, lsl #24                  |     |
+   +0x364  sxtl    v10.4s, v11.4h                        |     |
+   +0x368  sxtl    v4.4s, v4.4h                          |     |
+   +0x36c  mla     v31.4s, v10.4s, v16.4s                |     |
+   +0x370  movi    v10.4s, #0x8, lsl #24                 |     |
+   +0x374  mla     v0.4s, v4.4s, v16.4s                  |     |
+   +0x378  movi    v4.4s, #0x8, lsl #24                  |     |
+   +0x37c  sxtl    v5.4s, v5.4h                          |     |
+   +0x380  ushr    v14.4s, v31.4s, #28                   |     |
+   +0x384  mla     v10.4s, v5.4s, v16.4s                 |     |
+   +0x388  ushr    v13.4s, v0.4s, #28                    |     |
+   +0x38c  mla     v4.4s, v3.4s, v16.4s                  |     |
+   +0x390  sxtl    v3.4s, v6.4h                          |     |
+   +0x394  movi    v31.4s, #0x8, lsl #24                 |     |
+   +0x398  ushr    v12.4s, v10.4s, #28                   |     |
+   +0x39c  ushr    v11.4s, v4.4s, #28                    |     |
+   +0x3a0  movi    v0.4s, #0x8, lsl #24                  |     |
+   +0x3a4  tbl     v6.16b, {v11.16b-v14.16b}, v15.16b    |     |
+   +0x3a8  ldp     q13, q12, [sp, #32]                   |     |
+   +0x3ac  sxtl    v2.4s, v2.4h                          |     |
+   +0x3b0  mla     v31.4s, v3.4s, v16.4s                 |     |
+   +0x3b4  mla     v0.4s, v2.4s, v16.4s                  |     |
+   +0x3b8  tbl     v3.16b, {v23.16b-v24.16b}, v13.16b    |     |
+   +0x3bc  tbl     v5.16b, {v17.16b-v18.16b}, v13.16b    |     |
+   +0x3c0  tbl     v2.16b, {v21.16b-v22.16b}, v12.16b    |     |
+   +0x3c4  tbl     v4.16b, {v19.16b-v20.16b}, v12.16b    |     |
+   +0x3c8  tbl     v10.16b, {v29.16b-v30.16b}, v12.16b   |     |
+   +0x3cc  tbl     v11.16b, {v8.16b-v9.16b}, v13.16b     |     |
+   +0x3d0  tbl     v12.16b, {v25.16b-v26.16b}, v12.16b   |     |
+   +0x3d4  tbl     v13.16b, {v27.16b-v28.16b}, v13.16b   |     |
+   +0x3d8  mov     v3.s[1], v2.s[1]                      |     |
+   +0x3dc  mov     v5.s[1], v4.s[1]                      |     |
+   +0x3e0  movi    v2.4s, #0x8, lsl #24                  |     |
+   +0x3e4  movi    v4.4s, #0x8, lsl #24                  |     |
+   +0x3e8  mov     v13.s[1], v12.s[1]                    |     |
+   +0x3ec  sxtl    v3.4s, v3.4h                          |     |
+   +0x3f0  mov     v11.s[1], v10.s[1]                    |     |
+   +0x3f4  sxtl    v5.4s, v5.4h                          |     |
+   +0x3f8  mla     v2.4s, v3.4s, v16.4s                  |     |
+   +0x3fc  movi    v3.4s, #0x8, lsl #24                  |     |
+   +0x400  mla     v4.4s, v5.4s, v16.4s                  |     |
+   +0x404  movi    v5.4s, #0x8, lsl #24                  |     |
+   +0x408  sxtl    v10.4s, v13.4h                        |     |
+   +0x40c  sxtl    v11.4s, v11.4h                        |     |
+   +0x410  mla     v3.4s, v10.4s, v16.4s                 |     |
+   +0x414  mla     v5.4s, v11.4s, v16.4s                 |     |
+   +0x418  movi    v10.4s, #0x8, lsl #24                 |     |
+   +0x41c  sxtl    v1.4s, v1.4h                          |     |
+   +0x420  ushr    v14.4s, v3.4s, #28                    |     |
+   +0x424  ushr    v13.4s, v5.4s, #28                    |     |
+   +0x428  ushr    v12.4s, v4.4s, #28                    |     |
+   +0x42c  ushr    v11.4s, v2.4s, #28                    |     |
+   +0x430  mla     v10.4s, v1.4s, v16.4s                 |     |
+   +0x434  tbl     v1.16b, {v11.16b-v14.16b}, v15.16b    |     |
+   +0x438  ldr     q14, [sp, #64]                        |     |
+   +0x43c  zip2    v2.8h, v21.8h, v22.8h                 |     |
+   +0x440  zip2    v11.8h, v29.8h, v30.8h                |     |
+   +0x444  tbl     v4.16b, {v23.16b-v24.16b}, v14.16b    |     |
+   +0x448  tbl     v5.16b, {v17.16b-v18.16b}, v14.16b    |     |
+   +0x44c  tbl     v12.16b, {v8.16b-v9.16b}, v14.16b     |     |
+   +0x450  zip2    v13.8h, v25.8h, v26.8h                |     |
+   +0x454  tbl     v14.16b, {v27.16b-v28.16b}, v14.16b   |     |
+   +0x458  mov     v4.s[1], v2.s[1]                      |     |
+   +0x45c  mov     v12.s[1], v11.s[1]                    |     |
+   +0x460  movi    v2.4s, #0x8, lsl #24                  |     |
+   +0x464  mov     v14.s[1], v13.s[1]                    |     |
+   +0x468  ldp     q13, q11, [sp]                        |     |
+   +0x46c  zip2    v3.8h, v19.8h, v20.8h                 |     |
+   +0x470  sxtl    v4.4s, v4.4h                          |     |
+   +0x474  mla     v2.4s, v4.4s, v16.4s                  |     |
+   +0x478  mov     v5.s[1], v3.s[1]                      |     |
+   +0x47c  tbl     v4.16b, {v21.16b-v22.16b}, v11.16b    |     |
+   +0x480  tbl     v21.16b, {v23.16b-v24.16b}, v13.16b   |     |
+   +0x484  movi    v3.4s, #0x8, lsl #24                  |     |
+   +0x488  movi    v22.4s, #0x8, lsl #24                 |     |
+   +0x48c  sxtl    v5.4s, v5.4h                          |     |
+   +0x490  mov     v21.s[1], v4.s[1]                     |     |
+   +0x494  tbl     v4.16b, {v19.16b-v20.16b}, v11.16b    |     |
+   +0x498  tbl     v19.16b, {v17.16b-v18.16b}, v13.16b   |     |
+   +0x49c  ldr     q17, [sp, #176]                       |     |
+   +0x4a0  sxtl    v24.4s, v14.4h                        |     |
+   +0x4a4  mla     v3.4s, v5.4s, v16.4s                  |     |
+   +0x4a8  movi    v5.4s, #0x8, lsl #24                  |     |
+   +0x4ac  mla     v22.4s, v24.4s, v16.4s                |     |
+   +0x4b0  tbl     v20.16b, {v29.16b-v30.16b}, v11.16b   |     |
+   +0x4b4  tbl     v24.16b, {v25.16b-v26.16b}, v11.16b   |     |
+   +0x4b8  tbl     v25.16b, {v27.16b-v28.16b}, v13.16b   |     |
+   +0x4bc  ushr    v29.4s, v17.4s, #24                   |     |
+   +0x4c0  ldr     q17, [sp, #192]                       |     |
+   +0x4c4  sxtl    v23.4s, v12.4h                        |     |
+   +0x4c8  mov     v19.s[1], v4.s[1]                     |     |
+   +0x4cc  ushr    v28.4s, v17.4s, #24                   |     |
+   +0x4d0  mla     v5.4s, v23.4s, v16.4s                 |     |
+   +0x4d4  ushr    v27.4s, v7.4s, #24                    |     |
+   +0x4d8  tbl     v23.16b, {v8.16b-v9.16b}, v13.16b     |     |
+   +0x4dc  ldr     q7, [sp, #208]                        |     |
+   +0x4e0  movi    v18.4s, #0x8, lsl #24                 |     |
+   +0x4e4  mov     v25.s[1], v24.s[1]                    |     |
+   +0x4e8  ushr    v26.4s, v7.4s, #24                    |     |
+   +0x4ec  sxtl    v7.4s, v19.4h                         |     |
+   +0x4f0  mov     v23.s[1], v20.s[1]                    |     |
+   +0x4f4  movi    v19.4s, #0x8, lsl #24                 |     |
+   +0x4f8  mla     v18.4s, v7.4s, v16.4s                 |     |
+   +0x4fc  tbl     v7.16b, {v26.16b-v29.16b}, v15.16b    |     |
+   +0x500  ushr    v29.4s, v10.4s, #24                   |     |
+   +0x504  ushr    v28.4s, v0.4s, #24                    |     |
+   +0x508  movi    v0.4s, #0x8, lsl #24                  |     |
+   +0x50c  ushr    v27.4s, v31.4s, #24                   |     |
+   +0x510  sxtl    v20.4s, v25.4h                        |     |
+   +0x514  movi    v4.4s, #0x8, lsl #24                  |     |
+   +0x518  sxtl    v17.4s, v23.4h                        |     |
+   +0x51c  mla     v19.4s, v20.4s, v16.4s                |     |
+   +0x520  ldr     q20, [sp, #144]                       |     |
+   +0x524  sxtl    v21.4s, v21.4h                        |     |
+   +0x528  mla     v0.4s, v17.4s, v16.4s                 |     |
+   +0x52c  ushr    v26.4s, v20.4s, #24                   |     |
+   +0x530  mla     v4.4s, v21.4s, v16.4s                 |     |
+   +0x534  ushr    v23.4s, v22.4s, #24                   |     |
+   +0x538  tbl     v17.16b, {v26.16b-v29.16b}, v15.16b   |     |
+   +0x53c  ushr    v27.4s, v19.4s, #24                   |     |
+   +0x540  ushr    v26.4s, v0.4s, #24                    |     |
+   +0x544  ushr    v22.4s, v5.4s, #24                    |     |
+   +0x548  ushr    v25.4s, v18.4s, #24                   |     |
+   +0x54c  ushr    v21.4s, v3.4s, #24                    |     |
+   +0x550  ushr    v24.4s, v4.4s, #24                    |     |
+   +0x554  ushr    v20.4s, v2.4s, #24                    |     |
+   +0x558  movi    v4.16b, #0xf0                         |     |
+   +0x55c  ldr     q5, [sp, #224]                        |     |
+   +0x560  tbl     v0.16b, {v20.16b-v23.16b}, v15.16b    |     |
+   +0x564  tbl     v2.16b, {v24.16b-v27.16b}, v15.16b    |     |
+   +0x568  and     v3.16b, v7.16b, v4.16b                |     |
+   +0x56c  orr     v18.16b, v3.16b, v5.16b               |     |
+   +0x570  ldr     q5, [sp, #160]                        |     |
+   +0x574  and     v3.16b, v17.16b, v4.16b               |     |
+   +0x578  and     v0.16b, v0.16b, v4.16b                |     |
+   +0x57c  orr     v19.16b, v3.16b, v5.16b               |     |
+   +0x580  orr     v20.16b, v0.16b, v6.16b               |     |
+   +0x584  and     v0.16b, v2.16b, v4.16b                |     |
+   +0x588  orr     v21.16b, v0.16b, v1.16b               |     |
+  loop2_test:                                            |     |
+   +0x58c  st4     {v18.16b-v21.16b}, [x9]               |     |
+  loop2_back:                                            |     |
+   +0x590  b.ne    loop2                                -+     |
+  join2: loop2_exit:                                           |
+   +0x594  ldp     d9, d8, [sp, #288]                   <------+
+   +0x598  ldp     d11, d10, [sp, #272]
+   +0x59c  ldp     d13, d12, [sp, #256]
+   +0x5a0  ldp     d15, d14, [sp, #240]
+   +0x5a4  ldr     x29, [sp, #304]
+   +0x5a8  add     sp, sp, #0x140
+  ret:
+   +0x5ac  ret
+ ***)
+
+(*** mlkem_poly_compress_d10: 0x2bcc, 0x9c bytes
+
+     +0x0  mov     w9, #0xbc00
+     +0x4  mov     x8, xzr
+     +0x8  movk    w9, #0x9d7d, lsl #16
+     +0xc  add     x10, x1, #0x6
+    +0x10  add     x11, x0, #0x2
+    +0x14  mov     x12, #0x100000000
+  loop1:
+    +0x18  add     x13, x10, x8          <+
+    +0x1c  add     x8, x8, #0x8           |
+    +0x20  cmp     x8, #0x200             |
+    +0x24  ldursh  x15, [x13, #-4]        |
+    +0x28  ldursh  x14, [x13, #-6]        |
+    +0x2c  ldursh  x16, [x13, #-2]        |
+    +0x30  madd    x15, x15, x9, x12      |
+    +0x34  ldrsh   x13, [x13]             |
+    +0x38  madd    x14, x14, x9, x12      |
+    +0x3c  madd    x16, x16, x9, x12      |
+    +0x40  lsr     x18, x15, #31          |
+    +0x44  lsr     x17, x14, #33          |
+    +0x48  ubfx    x14, x14, #41, #2      |
+    +0x4c  and     w18, w18, #0xfc        |
+    +0x50  madd    x13, x13, x9, x12      |
+    +0x54  orr     w14, w18, w14          |
+    +0x58  lsr     x18, x16, #29          |
+    +0x5c  ubfx    x15, x15, #39, #4      |
+    +0x60  and     w18, w18, #0xf0        |
+    +0x64  orr     w15, w18, w15          |
+    +0x68  lsr     x18, x13, #27          |
+    +0x6c  ubfx    x16, x16, #37, #6      |
+    +0x70  and     w18, w18, #0xc0        |
+    +0x74  orr     w16, w18, w16          |
+    +0x78  lsr     x13, x13, #35          |
+    +0x7c  sturb   w17, [x11, #-2]        |
+    +0x80  sturb   w14, [x11, #-1]        |
+    +0x84  strb    w15, [x11]             |
+    +0x88  strb    w16, [x11, #1]         |
+    +0x8c  strb    w13, [x11, #2]         |
+  loop1_test:                             |
+    +0x90  add     x11, x11, #0x5         |
+  loop1_back:                             |
+    +0x94  b.ne    loop1                 -+
+  loop1_exit: ret:
+    +0x98  ret
+ ***)
+
+(*** mlkem_poly_decompress_d4: 0x2c68, 0x3cc bytes
+
+     +0x0  add     x8, x1, #0x80
+     +0x4  cmp     x8, x0
+     +0x8  b.ls    join1                       -----+
+     +0xc  add     x8, x0, #0x200                   |
+    +0x10  cmp     x8, x1                           |
+    +0x14  b.ls    join1                       ---+ |
+    +0x18  mov     x8, xzr                        | |
+    +0x1c  add     x9, x0, #0x2                   | |
+    +0x20  mov     w10, #0xd01                    | |
+    +0x24  mov     w11, #0x8                      | |
+  loop1:                                          | |
+    +0x28  ldrb    w12, [x1, x8]               <+ | |
+    +0x2c  and     w12, w12, #0xf               | | |
+    +0x30  madd    w12, w12, w10, w11           | | |
+    +0x34  lsr     w12, w12, #4                 | | |
+    +0x38  sturh   w12, [x9, #-2]               | | |
+    +0x3c  ldrb    w12, [x1, x8]                | | |
+    +0x40  add     x8, x8, #0x1                 | | |
+    +0x44  cmp     x8, #0x80                    | | |
+    +0x48  lsr     w12, w12, #4                 | | |
+    +0x4c  madd    w12, w12, w10, w11           | | |
+    +0x50  lsr     w12, w12, #4                 | | |
+  loop1_test:                                   | | |
+    +0x54  strh    w12, [x9], #4                | | |
+  loop1_back:                                   | | |
+    +0x58  b.ne    loop1                       -+ | |
+  loop1_exit: ret1:                               | |
+    +0x5c  ret                                    | |
+  join1:                                          | |
+    +0x60  movi    v1.16b, #0xf                <--+-+
+    +0x64  ldr     q2, [x1]
+    +0x68  mov     w8, #0xd01
+    +0x6c  add     x9, x0, #0x1e0
+    +0x70  ushr    v3.16b, v2.16b, #4
+    +0x74  and     v2.16b, v2.16b, v1.16b
+    +0x78  dup     v0.8h, w8
+    +0x7c  uxtl2   v4.8h, v2.16b
+    +0x80  mov     x8, x0
+    +0x84  uxtl    v2.8h, v2.8b
+    +0x88  uxtl2   v5.8h, v3.16b
+    +0x8c  umull   v6.4s, v2.4h, v0.4h
+    +0x90  uxtl    v3.8h, v3.8b
+    +0x94  umull2  v2.4s, v2.8h, v0.8h
+    +0x98  umull2  v7.4s, v4.8h, v0.8h
+    +0x9c  rshrn   v16.4h, v6.4s, #4
+    +0xa0  umull   v6.4s, v3.4h, v0.4h
+    +0xa4  umull   v4.4s, v4.4h, v0.4h
+    +0xa8  umull2  v3.4s, v3.8h, v0.8h
+    +0xac  rshrn2  v16.8h, v2.4s, #4
+    +0xb0  rshrn   v17.4h, v6.4s, #4
+    +0xb4  umull   v2.4s, v5.4h, v0.4h
+    +0xb8  rshrn   v18.4h, v4.4s, #4
+    +0xbc  umull2  v4.4s, v5.8h, v0.8h
+    +0xc0  rshrn2  v17.8h, v3.4s, #4
+    +0xc4  rshrn2  v18.8h, v7.4s, #4
+    +0xc8  rshrn   v19.4h, v2.4s, #4
+    +0xcc  st2     {v16.8h-v17.8h}, [x8], #32
+    +0xd0  rshrn2  v19.8h, v4.4s, #4
+    +0xd4  st2     {v18.8h-v19.8h}, [x8]
+    +0xd8  add     x8, x0, #0x40
+    +0xdc  ldr     q2, [x1, #16]
+    +0xe0  and     v3.16b, v2.16b, v1.16b
+    +0xe4  ushr    v2.16b, v2.16b, #4
+    +0xe8  uxtl2   v4.8h, v3.16b
+    +0xec  uxtl    v3.8h, v3.8b
+    +0xf0  uxtl2   v5.8h, v2.16b
+    +0xf4  umull   v6.4s, v3.4h, v0.4h
+    +0xf8  uxtl    v2.8h, v2.8b
+    +0xfc  umull2  v3.4s, v3.8h, v0.8h
+   +0x100  umull2  v7.4s, v4.8h, v0.8h
+   +0x104  umull   v4.4s, v4.4h, v0.4h
+   +0x108  rshrn   v16.4h, v6.4s, #4
+   +0x10c  umull   v6.4s, v2.4h, v0.4h
+   +0x110  umull2  v2.4s, v2.8h, v0.8h
+   +0x114  rshrn2  v16.8h, v3.4s, #4
+   +0x118  rshrn   v3.4h, v4.4s, #4
+   +0x11c  rshrn   v17.4h, v6.4s, #4
+   +0x120  umull   v6.4s, v5.4h, v0.4h
+   +0x124  umull2  v5.4s, v5.8h, v0.8h
+   +0x128  rshrn2  v3.8h, v7.4s, #4
+   +0x12c  rshrn2  v17.8h, v2.4s, #4
+   +0x130  rshrn   v4.4h, v6.4s, #4
+   +0x134  st2     {v16.8h-v17.8h}, [x8]
+   +0x138  add     x8, x0, #0x60
+   +0x13c  rshrn2  v4.8h, v5.4s, #4
+   +0x140  st2     {v3.8h-v4.8h}, [x8]
+   +0x144  add     x8, x0, #0x80
+   +0x148  ldr     q2, [x1, #32]
+   +0x14c  and     v3.16b, v2.16b, v1.16b
+   +0x150  ushr    v2.16b, v2.16b, #4
+   +0x154  uxtl2   v4.8h, v3.16b
+   +0x158  uxtl    v3.8h, v3.8b
+   +0x15c  uxtl2   v5.8h, v2.16b
+   +0x160  umull   v6.4s, v3.4h, v0.4h
+   +0x164  uxtl    v2.8h, v2.8b
+   +0x168  umull2  v3.4s, v3.8h, v0.8h
+   +0x16c  umull2  v7.4s, v4.8h, v0.8h
+   +0x170  umull   v4.4s, v4.4h, v0.4h
+   +0x174  rshrn   v16.4h, v6.4s, #4
+   +0x178  umull   v6.4s, v2.4h, v0.4h
+   +0x17c  umull2  v2.4s, v2.8h, v0.8h
+   +0x180  rshrn2  v16.8h, v3.4s, #4
+   +0x184  rshrn   v3.4h, v4.4s, #4
+   +0x188  rshrn   v17.4h, v6.4s, #4
+   +0x18c  umull   v6.4s, v5.4h, v0.4h
+   +0x190  umull2  v5.4s, v5.8h, v0.8h
+   +0x194  rshrn2  v3.8h, v7.4s, #4
+   +0x198  rshrn2  v17.8h, v2.4s, #4
+   +0x19c  rshrn   v4.4h, v6.4s, #4
+   +0x1a0  st2     {v16.8h-v17.8h}, [x8]
+   +0x1a4  add     x8, x0, #0xa0
+   +0x1a8  rshrn2  v4.8h, v5.4s, #4
+   +0x1ac  st2     {v3.8h-v4.8h}, [x8]
+   +0x1b0  add     x8, x0, #0xc0
+   +0x1b4  ldr     q2, [x1, #48]
+   +0x1b8  and     v3.16b, v2.16b, v1.16b
+   +0x1bc  ushr    v2.16b, v2.16b, #4
+   +0x1c0  uxtl2   v4.8h, v3.16b
+   +0x1c4  uxtl    v3.8h, v3.8b
+   +0x1c8  uxtl2   v5.8h, v2.16b
+   +0x1cc  umull   v6.4s, v3.4h, v0.4h
+   +0x1d0  uxtl    v2.8h, v2.8b
+   +0x1d4  umull2  v3.4s, v3.8h, v0.8h
+   +0x1d8  umull2  v7.4s, v4.8h, v0.8h
+   +0x1dc  umull   v4.4s, v4.4h, v0.4h
+   +0x1e0  rshrn   v16.4h, v6.4s, #4
+   +0x1e4  umull   v6.4s, v2.4h, v0.4h
+   +0x1e8  umull2  v2.4s, v2.8h, v0.8h
+   +0x1ec  rshrn2  v16.8h, v3.4s, #4
+   +0x1f0  rshrn   v3.4h, v4.4s, #4
+   +0x1f4  rshrn   v17.4h, v6.4s, #4
+   +0x1f8  umull   v6.4s, v5.4h, v0.4h
+   +0x1fc  umull2  v5.4s, v5.8h, v0.8h
+   +0x200  rshrn2  v3.8h, v7.4s, #4
+   +0x204  rshrn2  v17.8h, v2.4s, #4
+   +0x208  rshrn   v4.4h, v6.4s, #4
+   +0x20c  st2     {v16.8h-v17.8h}, [x8]
+   +0x210  add     x8, x0, #0xe0
+   +0x214  rshrn2  v4.8h, v5.4s, #4
+   +0x218  st2     {v3.8h-v4.8h}, [x8]
+   +0x21c  add     x8, x0, #0x100
+   +0x220  ldr     q2, [x1, #64]
+   +0x224  and     v3.16b, v2.16b, v1.16b
+   +0x228  ushr    v2.16b, v2.16b, #4
+   +0x22c  uxtl2   v4.8h, v3.16b
+   +0x230  uxtl    v3.8h, v3.8b
+   +0x234  uxtl2   v5.8h, v2.16b
+   +0x238  umull   v6.4s, v3.4h, v0.4h
+   +0x23c  uxtl    v2.8h, v2.8b
+   +0x240  umull2  v3.4s, v3.8h, v0.8h
+   +0x244  umull2  v7.4s, v4.8h, v0.8h
+   +0x248  umull   v4.4s, v4.4h, v0.4h
+   +0x24c  rshrn   v16.4h, v6.4s, #4
+   +0x250  umull   v6.4s, v2.4h, v0.4h
+   +0x254  umull2  v2.4s, v2.8h, v0.8h
+   +0x258  rshrn2  v16.8h, v3.4s, #4
+   +0x25c  rshrn   v3.4h, v4.4s, #4
+   +0x260  rshrn   v17.4h, v6.4s, #4
+   +0x264  umull   v6.4s, v5.4h, v0.4h
+   +0x268  umull2  v5.4s, v5.8h, v0.8h
+   +0x26c  rshrn2  v3.8h, v7.4s, #4
+   +0x270  rshrn2  v17.8h, v2.4s, #4
+   +0x274  rshrn   v4.4h, v6.4s, #4
+   +0x278  st2     {v16.8h-v17.8h}, [x8]
+   +0x27c  add     x8, x0, #0x120
+   +0x280  rshrn2  v4.8h, v5.4s, #4
+   +0x284  st2     {v3.8h-v4.8h}, [x8]
+   +0x288  add     x8, x0, #0x140
+   +0x28c  ldr     q2, [x1, #80]
+   +0x290  and     v3.16b, v2.16b, v1.16b
+   +0x294  ushr    v2.16b, v2.16b, #4
+   +0x298  uxtl2   v4.8h, v3.16b
+   +0x29c  uxtl    v3.8h, v3.8b
+   +0x2a0  uxtl2   v5.8h, v2.16b
+   +0x2a4  umull   v6.4s, v3.4h, v0.4h
+   +0x2a8  uxtl    v2.8h, v2.8b
+   +0x2ac  umull2  v3.4s, v3.8h, v0.8h
+   +0x2b0  umull2  v7.4s, v4.8h, v0.8h
+   +0x2b4  umull   v4.4s, v4.4h, v0.4h
+   +0x2b8  rshrn   v16.4h, v6.4s, #4
+   +0x2bc  umull   v6.4s, v2.4h, v0.4h
+   +0x2c0  umull2  v2.4s, v2.8h, v0.8h
+   +0x2c4  rshrn2  v16.8h, v3.4s, #4
+   +0x2c8  rshrn   v3.4h, v4.4s, #4
+   +0x2cc  rshrn   v17.4h, v6.4s, #4
+   +0x2d0  umull   v6.4s, v5.4h, v0.4h
+   +0x2d4  umull2  v5.4s, v5.8h, v0.8h
+   +0x2d8  rshrn2  v3.8h, v7.4s, #4
+   +0x2dc  rshrn2  v17.8h, v2.4s, #4
+   +0x2e0  rshrn   v4.4h, v6.4s, #4
+   +0x2e4  st2     {v16.8h-v17.8h}, [x8]
+   +0x2e8  add     x8, x0, #0x160
+   +0x2ec  rshrn2  v4.8h, v5.4s, #4
+   +0x2f0  st2     {v3.8h-v4.8h}, [x8]
+   +0x2f4  add     x8, x0, #0x180
+   +0x2f8  ldr     q2, [x1, #96]
+   +0x2fc  and     v3.16b, v2.16b, v1.16b
+   +0x300  ushr    v2.16b, v2.16b, #4
+   +0x304  uxtl2   v4.8h, v3.16b
+   +0x308  uxtl    v3.8h, v3.8b
+   +0x30c  uxtl2   v5.8h, v2.16b
+   +0x310  umull   v6.4s, v3.4h, v0.4h
+   +0x314  uxtl    v2.8h, v2.8b
+   +0x318  umull2  v3.4s, v3.8h, v0.8h
+   +0x31c  umull   v7.4s, v4.4h, v0.4h
+   +0x320  rshrn   v16.4h, v6.4s, #4
+   +0x324  umull   v6.4s, v2.4h, v0.4h
+   +0x328  umull2  v4.4s, v4.8h, v0.8h
+   +0x32c  rshrn2  v16.8h, v3.4s, #4
+   +0x330  rshrn   v18.4h, v7.4s, #4
+   +0x334  umull2  v2.4s, v2.8h, v0.8h
+   +0x338  rshrn   v17.4h, v6.4s, #4
+   +0x33c  umull   v3.4s, v5.4h, v0.4h
+   +0x340  rshrn2  v18.8h, v4.4s, #4
+   +0x344  umull2  v4.4s, v5.8h, v0.8h
+   +0x348  rshrn2  v17.8h, v2.4s, #4
+   +0x34c  rshrn   v19.4h, v3.4s, #4
+   +0x350  st2     {v16.8h-v17.8h}, [x8]
+   +0x354  add     x8, x0, #0x1a0
+   +0x358  rshrn2  v19.8h, v4.4s, #4
+   +0x35c  st2     {v18.8h-v19.8h}, [x8]
+   +0x360  add     x8, x0, #0x1c0
+   +0x364  ldr     q2, [x1, #112]
+   +0x368  and     v1.16b, v2.16b, v1.16b
+   +0x36c  ushr    v2.16b, v2.16b, #4
+   +0x370  uxtl2   v3.8h, v1.16b
+   +0x374  uxtl    v1.8h, v1.8b
+   +0x378  umull2  v6.4s, v3.8h, v0.8h
+   +0x37c  umull   v5.4s, v1.4h, v0.4h
+   +0x380  umull2  v1.4s, v1.8h, v0.8h
+   +0x384  umull   v3.4s, v3.4h, v0.4h
+   +0x388  uxtl2   v4.8h, v2.16b
+   +0x38c  rshrn   v16.4h, v5.4s, #4
+   +0x390  uxtl    v2.8h, v2.8b
+   +0x394  rshrn   v18.4h, v3.4s, #4
+   +0x398  umull   v5.4s, v2.4h, v0.4h
+   +0x39c  rshrn2  v16.8h, v1.4s, #4
+   +0x3a0  umull   v1.4s, v4.4h, v0.4h
+   +0x3a4  umull2  v2.4s, v2.8h, v0.8h
+   +0x3a8  umull2  v0.4s, v4.8h, v0.8h
+   +0x3ac  rshrn2  v18.8h, v6.4s, #4
+   +0x3b0  rshrn   v17.4h, v5.4s, #4
+   +0x3b4  rshrn   v19.4h, v1.4s, #4
+   +0x3b8  rshrn2  v17.8h, v2.4s, #4
+   +0x3bc  rshrn2  v19.8h, v0.4s, #4
+   +0x3c0  st2     {v16.8h-v17.8h}, [x8]
+   +0x3c4  st2     {v18.8h-v19.8h}, [x9]
+  ret2:
+   +0x3c8  ret
+ ***)
+
+(*** mlkem_poly_decompress_d10: 0x3034, 0x214 bytes
+
+     +0x0  add     x8, x1, #0x140
+     +0x4  cmp     x8, x0
+     +0x8  b.ls    join1                                -----+
+     +0xc  add     x8, x0, #0x200                            |
+    +0x10  cmp     x8, x1                                    |
+    +0x14  b.ls    join1                                ---+ |
+    +0x18  mov     x8, xzr                                 | |
+    +0x1c  add     x9, x1, #0x2                            | |
+    +0x20  mov     w10, #0xd01                             | |
+    +0x24  mov     w11, #0x200                             | |
+  loop1:                                                   | |
+    +0x28  ldurb   w12, [x9, #-2]                       <+ | |
+    +0x2c  ldurb   w13, [x9, #-1]                        | | |
+    +0x30  ldrb    w14, [x9]                             | | |
+    +0x34  ldrb    w15, [x9, #1]                         | | |
+    +0x38  ldrb    w17, [x9, #2]                         | | |
+    +0x3c  bfi     w12, w13, #8, #2                      | | |
+    +0x40  lsr     w13, w13, #2                          | | |
+    +0x44  lsr     w16, w14, #4                          | | |
+    +0x48  bfi     w13, w14, #6, #4                      | | |
+    +0x4c  lsr     w14, w15, #6                          | | |
+    +0x50  bfi     w16, w15, #4, #6                      | | |
+    +0x54  orr     w14, w14, w17, lsl #2                 | | |
+    +0x58  madd    w12, w12, w10, w11                    | | |
+    +0x5c  add     x9, x9, #0x5                          | | |
+    +0x60  madd    w13, w13, w10, w11                    | | |
+    +0x64  madd    w15, w16, w10, w11                    | | |
+    +0x68  lsr     w12, w12, #10                         | | |
+    +0x6c  madd    w14, w14, w10, w11                    | | |
+    +0x70  add     x16, x0, x8                           | | |
+    +0x74  lsr     w13, w13, #10                         | | |
+    +0x78  lsr     w15, w15, #10                         | | |
+    +0x7c  lsr     w14, w14, #10                         | | |
+    +0x80  add     x8, x8, #0x8                          | | |
+    +0x84  cmp     x8, #0x200                            | | |
+    +0x88  strh    w12, [x16]                            | | |
+    +0x8c  strh    w13, [x16, #2]                        | | |
+    +0x90  strh    w15, [x16, #4]                        | | |
+  loop1_test:                                            | | |
+    +0x94  strh    w14, [x16, #6]                        | | |
+  loop1_back:                                            | | |
+    +0x98  b.ne    loop1                                -+ | |
+  loop1_exit:                                              | |
+    +0x9c  b       join2                                -------+
+  join1: adrp1:                                            | | |
+    +0xa0  adrp    x9, <page>                           <--+-+ |
+  adrp2:                                                       |
+    +0xa4  adrp    x10, <page>                                 |
+  adrp3:                                                       |
+    +0xa8  adrp    x12, <page>                                 |
+  adrp4:                                                       |
+    +0xac  adrp    x11, <page>                                 |
+    +0xb0  movi    v5.4s, #0x3, lsl #8                         |
+    +0xb4  mov     x8, xzr                                     |
+    +0xb8  ldr     q0, [x9, #3280]                             |
+                   // mlkem_poly_decompress_d10_const1         |
+  adrp5:                                                       |
+    +0xbc  adrp    x9, <page>                                  |
+    +0xc0  ldr     q1, [x10, #3296]                            |
+                   // mlkem_poly_decompress_d10_const2         |
+    +0xc4  mov     w10, #0xd01                                 |
+    +0xc8  ldr     q3, [x12, #3328]                            |
+                   // mlkem_poly_decompress_d10_const4         |
+  adrp6:                                                       |
+    +0xcc  adrp    x12, <page>                                 |
+    +0xd0  ldr     q2, [x11, #3312]                            |
+                   // mlkem_poly_decompress_d10_const3         |
+    +0xd4  mov     w11, #0x3c0                                 |
+    +0xd8  ldr     q4, [x9, #3344]                             |
+                   // mlkem_poly_decompress_d10_const5         |
+    +0xdc  mov     w9, #0x3f0                                  |
+    +0xe0  dup     v6.4h, w10                                  |
+    +0xe4  ldr     q16, [x12, #3360]                           |
+                   // mlkem_poly_decompress_d10_const6         |
+    +0xe8  dup     v7.4s, w11                                  |
+    +0xec  dup     v18.4s, w10                                 |
+    +0xf0  dup     v17.4s, w9                                  |
+  loop2:                                                       |
+    +0xf4  ldr     s20, [x1, #16]                       <+     |
+    +0xf8  ldr     q19, [x1], #20                        |     |
+    +0xfc  umov    w9, v19.b[1]                          |     |
+   +0x100  umov    w10, v19.b[2]                         |     |
+   +0x104  umov    w11, v19.b[6]                         |     |
+   +0x108  umov    w12, v19.b[3]                         |     |
+   +0x10c  tbl     v24.16b, {v19.16b-v20.16b}, v1.16b    |     |
+   +0x110  tbl     v25.16b, {v19.16b}, v0.16b            |     |
+   +0x114  fmov    s21, w9                               |     |
+   +0x118  umov    w9, v19.b[7]                          |     |
+   +0x11c  fmov    s22, w10                              |     |
+   +0x120  umov    w10, v19.b[8]                         |     |
+   +0x124  fmov    s23, w12                              |     |
+   +0x128  mov     v21.h[1], w11                         |     |
+   +0x12c  umov    w11, v19.b[11]                        |     |
+   +0x130  tbl     v24.16b, {v24.16b}, v2.16b            |     |
+   +0x134  mov     v22.h[1], w9                          |     |
+   +0x138  umov    w9, v19.b[12]                         |     |
+   +0x13c  mov     v21.h[2], w11                         |     |
+   +0x140  mov     v23.h[1], w10                         |     |
+   +0x144  umov    w10, v19.b[13]                        |     |
+   +0x148  mov     v22.h[2], w9                          |     |
+   +0x14c  umov    w9, v20.b[0]                          |     |
+   +0x150  shl     v24.4s, v24.4s, #8                    |     |
+   +0x154  tbl     v26.16b, {v19.16b-v20.16b}, v3.16b    |     |
+   +0x158  and     v24.16b, v24.16b, v5.16b              |     |
+   +0x15c  mov     v21.h[3], w9                          |     |
+   +0x160  umov    w9, v20.b[1]                          |     |
+   +0x164  mov     v23.h[2], w10                         |     |
+   +0x168  orr     v24.16b, v24.16b, v25.16b             |     |
+   +0x16c  tbl     v25.16b, {v19.16b-v20.16b}, v4.16b    |     |
+   +0x170  mov     v22.h[3], w9                          |     |
+   +0x174  umov    w9, v20.b[2]                          |     |
+   +0x178  tbl     v19.16b, {v19.16b-v20.16b}, v16.16b   |     |
+   +0x17c  bic     v21.4h, #0xff, lsl #8                 |     |
+   +0x180  tbl     v26.16b, {v26.16b}, v2.16b            |     |
+   +0x184  tbl     v25.16b, {v25.16b}, v2.16b            |     |
+   +0x188  mov     v23.h[3], w9                          |     |
+   +0x18c  add     x9, x0, x8                            |     |
+   +0x190  bic     v22.4h, #0xff, lsl #8                 |     |
+   +0x194  add     x8, x8, #0x20                         |     |
+   +0x198  ushr    v22.4h, v22.4h, #4                    |     |
+   +0x19c  ushr    v21.4h, v21.4h, #2                    |     |
+   +0x1a0  tbl     v19.16b, {v19.16b}, v2.16b            |     |
+   +0x1a4  shl     v26.4s, v26.4s, #6                    |     |
+   +0x1a8  uxtl    v20.4s, v22.4h                        |     |
+   +0x1ac  cmp     x8, #0x200                            |     |
+   +0x1b0  shl     v22.4s, v25.4s, #4                    |     |
+   +0x1b4  bic     v23.4h, #0xff, lsl #8                 |     |
+   +0x1b8  uxtl    v21.4s, v21.4h                        |     |
+   +0x1bc  ushr    v23.4h, v23.4h, #6                    |     |
+   +0x1c0  and     v26.16b, v26.16b, v7.16b              |     |
+   +0x1c4  and     v22.16b, v22.16b, v17.16b             |     |
+   +0x1c8  orr     v21.16b, v26.16b, v21.16b             |     |
+   +0x1cc  orr     v20.16b, v22.16b, v20.16b             |     |
+   +0x1d0  uxtl    v22.4s, v23.4h                        |     |
+   +0x1d4  shl     v19.4s, v19.4s, #2                    |     |
+   +0x1d8  xtn     v23.4h, v24.4s                        |     |
+   +0x1dc  xtn     v21.4h, v21.4s                        |     |
+   +0x1e0  xtn     v20.4h, v20.4s                        |     |
+   +0x1e4  orr     v19.16b, v19.16b, v22.16b             |     |
+   +0x1e8  umull   v22.4s, v23.4h, v6.4h                 |     |
+   +0x1ec  umull   v21.4s, v21.4h, v6.4h                 |     |
+   +0x1f0  umull   v20.4s, v20.4h, v6.4h                 |     |
+   +0x1f4  mul     v19.4s, v19.4s, v18.4s                |     |
+   +0x1f8  rshrn   v22.4h, v22.4s, #10                   |     |
+   +0x1fc  rshrn   v23.4h, v21.4s, #10                   |     |
+   +0x200  rshrn   v24.4h, v20.4s, #10                   |     |
+   +0x204  rshrn   v25.4h, v19.4s, #10                   |     |
+  loop2_test:                                            |     |
+   +0x208  st4     {v22.4h-v25.4h}, [x9]                 |     |
+  loop2_back:                                            |     |
+   +0x20c  b.ne    loop2                                -+     |
+  join2: loop2_exit: ret:                                      |
+   +0x210  ret                                          <------+
+ ***)
+
+(*** mlkem_poly_compress_d5: 0x3248, 0xcc bytes
+
+     +0x0  mov     w9, #0xafc0
+     +0x4  mov     x8, xzr
+     +0x8  movk    w9, #0x13, lsl #16
+     +0xc  add     x10, x1, #0x8
+    +0x10  add     x11, x0, #0x2
+    +0x14  mov     w12, #0x4000000
+  loop1:
+    +0x18  ldursh  w14, [x10, #-6]     <+
+    +0x1c  ldursh  w15, [x10, #-4]      |
+    +0x20  ldursh  w13, [x10, #-8]      |
+    +0x24  ldursh  w16, [x10, #-2]      |
+    +0x28  madd    w14, w14, w9, w12    |
+    +0x2c  madd    w15, w15, w9, w12    |
+    +0x30  ldrsh   w17, [x10]           |
+    +0x34  madd    w13, w13, w9, w12    |
+    +0x38  ldrsh   w18, [x10, #2]       |
+    +0x3c  madd    w16, w16, w9, w12    |
+    +0x40  lsr     w15, w15, #25        |
+    +0x44  and     w15, w15, #0x7c      |
+    +0x48  lsr     w0, w14, #27         |
+    +0x4c  bfxil   w15, w14, #30, #2    |
+    +0x50  lsr     w14, w16, #20        |
+    +0x54  ldrsh   w1, [x10, #4]        |
+    +0x58  and     w14, w14, #0x80      |
+    +0x5c  extr    w13, w0, w13, #27    |
+    +0x60  add     x0, x11, x8          |
+    +0x64  orr     w14, w15, w14        |
+    +0x68  madd    w17, w17, w9, w12    |
+    +0x6c  ldrsh   w2, [x10, #6]        |
+    +0x70  madd    w18, w18, w9, w12    |
+    +0x74  madd    w15, w1, w9, w12     |
+    +0x78  sturb   w13, [x0, #-2]       |
+    +0x7c  sturb   w14, [x0, #-1]       |
+    +0x80  lsr     w13, w17, #23        |
+    +0x84  lsr     w14, w18, #26        |
+    +0x88  madd    w1, w2, w9, w12      |
+    +0x8c  bfxil   w13, w16, #28, #4    |
+    +0x90  and     w14, w14, #0x3e      |
+    +0x94  lsr     w16, w15, #21        |
+    +0x98  bfxil   w14, w17, #31, #1    |
+    +0x9c  and     w16, w16, #0xc0      |
+    +0xa0  add     x8, x8, #0x5         |
+    +0xa4  orr     w14, w14, w16        |
+    +0xa8  lsr     w16, w1, #24         |
+    +0xac  bfxil   w16, w15, #29, #3    |
+    +0xb0  add     x10, x10, #0x10      |
+    +0xb4  cmp     x8, #0xa0            |
+    +0xb8  strb    w13, [x0]            |
+    +0xbc  strb    w14, [x0, #1]        |
+  loop1_test:                           |
+    +0xc0  strb    w16, [x0, #2]        |
+  loop1_back:                           |
+    +0xc4  b.ne    loop1               -+
+  loop1_exit: ret:
+    +0xc8  ret
+ ***)
+
+(*** mlkem_poly_compress_d11: 0x3314, 0x108 bytes
+
+     +0x0  mov     x9, #0x7800
+     +0x4  mov     x8, xzr
+     +0x8  movk    x9, #0x3afb, lsl #16
+     +0xc  add     x10, x1, #0xe
+    +0x10  movk    x9, #0x1, lsl #32
+    +0x14  add     x11, x0, #0x5
+    +0x18  mov     x12, #0x100000000
+  loop1:
+    +0x1c  add     x13, x10, x8          <+
+    +0x20  add     x8, x8, #0x10          |
+    +0x24  cmp     x8, #0x200             |
+    +0x28  ldursh  x15, [x13, #-12]       |
+    +0x2c  ldursh  x14, [x13, #-14]       |
+    +0x30  ldursh  x16, [x13, #-10]       |
+    +0x34  madd    x15, x15, x9, x12      |
+    +0x38  ldursh  x0, [x13, #-4]         |
+    +0x3c  madd    x14, x14, x9, x12      |
+    +0x40  ldursh  x17, [x13, #-8]        |
+    +0x44  lsr     x3, x15, #30           |
+    +0x48  madd    x16, x16, x9, x12      |
+    +0x4c  lsr     x2, x14, #33           |
+    +0x50  ubfx    x14, x14, #41, #3      |
+    +0x54  and     w3, w3, #0xf8          |
+    +0x58  ldursh  x18, [x13, #-6]        |
+    +0x5c  orr     w14, w3, w14           |
+    +0x60  lsr     x4, x16, #33           |
+    +0x64  madd    x0, x0, x9, x12        |
+    +0x68  ldursh  x1, [x13, #-2]         |
+    +0x6c  madd    x17, x17, x9, x12      |
+    +0x70  ldrsh   x13, [x13]             |
+    +0x74  madd    x18, x18, x9, x12      |
+    +0x78  lsr     x15, x15, #38          |
+    +0x7c  sturb   w14, [x11, #-4]        |
+    +0x80  lsr     x14, x16, #35          |
+    +0x84  lsr     x3, x0, #33            |
+    +0x88  bfi     w15, w4, #6, #26       |
+    +0x8c  sturb   w2, [x11, #-5]         |
+    +0x90  lsr     x16, x17, #32          |
+    +0x94  lsr     x2, x18, #29           |
+    +0x98  bfxil   w16, w4, #10, #1       |
+    +0x9c  ubfx    x17, x17, #40, #4      |
+    +0xa0  and     w2, w2, #0xf0          |
+    +0xa4  madd    x13, x13, x9, x12      |
+    +0xa8  sturb   w14, [x11, #-2]        |
+    +0xac  lsr     x14, x18, #37          |
+    +0xb0  madd    x1, x1, x9, x12        |
+    +0xb4  sturb   w15, [x11, #-3]        |
+    +0xb8  orr     w15, w2, w17           |
+    +0xbc  bfi     w14, w3, #7, #25       |
+    +0xc0  lsr     x17, x13, #28          |
+    +0xc4  sturb   w16, [x11, #-1]        |
+    +0xc8  lsr     x16, x1, #31           |
+    +0xcc  ubfx    x18, x1, #39, #5       |
+    +0xd0  and     w17, w17, #0xe0        |
+    +0xd4  strb    w15, [x11]             |
+    +0xd8  lsr     x15, x0, #34           |
+    +0xdc  bfxil   w16, w3, #9, #2        |
+    +0xe0  strb    w14, [x11, #1]         |
+    +0xe4  orr     w14, w17, w18          |
+    +0xe8  lsr     x13, x13, #36          |
+    +0xec  strb    w15, [x11, #2]         |
+    +0xf0  strb    w16, [x11, #3]         |
+    +0xf4  strb    w14, [x11, #4]         |
+    +0xf8  strb    w13, [x11, #5]         |
+  loop1_test:                             |
+    +0xfc  add     x11, x11, #0xb         |
+  loop1_back:                             |
+   +0x100  b.ne    loop1                 -+
+  loop1_exit: ret:
+   +0x104  ret
+ ***)
+
+(*** mlkem_poly_decompress_d5: 0x341c, 0x6c4 bytes
+
+     +0x0  stp     d15, d14, [sp, #-80]!
+     +0x4  stp     d13, d12, [sp, #16]
+     +0x8  stp     d11, d10, [sp, #32]
+     +0xc  stp     d9, d8, [sp, #48]
+    +0x10  str     x29, [sp, #64]
+    +0x14  sub     sp, sp, #0x2c0
+    +0x18  add     x8, x1, #0xa0
+    +0x1c  cmp     x8, x0
+    +0x20  b.ls    join1                                -----+
+    +0x24  add     x8, x0, #0x200                            |
+    +0x28  cmp     x8, x1                                    |
+    +0x2c  b.ls    join1                                ---+ |
+  adrp1:                                                   | |
+    +0x30  adrp    x9, <page>                              | |
+  adrp2:                                                   | |
+    +0x34  adrp    x10, <page>                             | |
+    +0x38  mov     w11, #0xd01                             | |
+    +0x3c  movi    d0, #0xff000000ff                       | |
+    +0x40  mov     x8, xzr                                 | |
+    +0x44  ldr     d1, [x9, #384]                          | |
+                   // mlkem_poly_decompress_d5_const31     | |
+    +0x48  add     x9, x1, #0x2                            | |
+    +0x4c  ldr     d2, [x10, #392]                         | |
+                   // mlkem_poly_decompress_d5_const32     | |
+    +0x50  dup     v3.8h, w11                              | |
+  loop1:                                                   | |
+    +0x54  ldrb    w10, [x9]                            <+ | |
+    +0x58  ldrb    w11, [x9, #1]                         | | |
+    +0x5c  fmov    s4, w10                               | | |
+    +0x60  ldurb   w10, [x9, #-2]                        | | |
+    +0x64  mov     v4.s[1], w11                          | | |
+    +0x68  ldurb   w11, [x9, #-1]                        | | |
+    +0x6c  and     w12, w10, #0x1f                       | | |
+    +0x70  lsr     w10, w10, #5                          | | |
+    +0x74  dup     v5.2s, w11                            | | |
+    +0x78  bfi     w10, w11, #3, #2                      | | |
+    +0x7c  fmov    w13, s4                               | | |
+    +0x80  fmov    s6, w12                               | | |
+    +0x84  mov     w14, v4.s[1]                          | | |
+    +0x88  ldrb    w11, [x9, #2]                         | | |
+    +0x8c  ushl    v4.2s, v4.2s, v2.2s                   | | |
+    +0x90  add     x9, x9, #0x5                          | | |
+    +0x94  ubfiz   w13, w13, #1, #4                      | | |
+    +0x98  and     v5.8b, v5.8b, v0.8b                   | | |
+    +0x9c  mov     v6.b[1], w10                          | | |
+    +0xa0  ushl    v5.2s, v5.2s, v1.2s                   | | |
+    +0xa4  ubfiz   w12, w14, #4, #1                      | | |
+    +0xa8  ubfiz   w10, w11, #2, #3                      | | |
+    +0xac  dup     v7.2s, w13                            | | |
+    +0xb0  fmov    s16, w12                              | | |
+    +0xb4  orr     v7.8b, v5.8b, v7.8b                   | | |
+    +0xb8  bic     v5.2s, #0x20                          | | |
+    +0xbc  mov     w13, v7.s[1]                          | | |
+    +0xc0  fmov    s7, w10                               | | |
+    +0xc4  mov     v6.b[2], v5.b[0]                      | | |
+    +0xc8  orr     v16.8b, v4.8b, v16.8b                 | | |
+    +0xcc  bic     v4.2s, #0xe0                          | | |
+    +0xd0  lsr     w10, w14, #6                          | | |
+    +0xd4  mov     v17.16b, v7.16b                       | | |
+    +0xd8  mov     w12, v4.s[1]                          | | |
+    +0xdc  mov     v17.s[1], w11                         | | |
+    +0xe0  mov     v6.b[3], w13                          | | |
+    +0xe4  fmov    s4, w10                               | | |
+    +0xe8  and     v17.8b, v17.8b, v0.8b                 | | |
+    +0xec  mov     v6.b[4], v16.b[0]                     | | |
+    +0xf0  ushr    v17.2s, v17.2s, #3                    | | |
+    +0xf4  orr     v4.8b, v7.8b, v4.8b                   | | |
+    +0xf8  mov     w10, v17.s[1]                         | | |
+    +0xfc  mov     v6.b[5], w12                          | | |
+   +0x100  mov     v6.b[6], v4.b[0]                      | | |
+   +0x104  mov     v6.b[7], w10                          | | |
+   +0x108  uxtl    v6.8h, v6.8b                          | | |
+   +0x10c  umull   v7.4s, v6.4h, v3.4h                   | | |
+   +0x110  umull2  v6.4s, v6.8h, v3.8h                   | | |
+   +0x114  rshrn   v7.4h, v7.4s, #5                      | | |
+   +0x118  rshrn2  v7.8h, v6.4s, #5                      | | |
+   +0x11c  str     q7, [x0, x8]                          | | |
+   +0x120  add     x8, x8, #0x10                         | | |
+  loop1_test:                                            | | |
+   +0x124  cmp     x8, #0x200                            | | |
+  loop1_back:                                            | | |
+   +0x128  b.ne    loop1                                -+ | |
+  loop1_exit:                                              | |
+   +0x12c  b       join2                                -------+
+  join1: adrp3:                                            | | |
+   +0x130  adrp    x9, <page>                           <--+-+ |
+  adrp4:                                                       |
+   +0x134  adrp    x10, <page>                                 |
+  adrp5:                                                       |
+   +0x138  adrp    x11, <page>                                 |
+   +0x13c  mov     x8, xzr                                     |
+   +0x140  ldr     q0, [x9, #3376]                             |
+                   // mlkem_poly_decompress_d5_const1          |
+  adrp6:                                                       |
+   +0x144  adrp    x9, <page>                                  |
+   +0x148  str     q0, [sp, #400]                              |
+   +0x14c  ldr     q0, [x10, #3392]                            |
+                   // mlkem_poly_decompress_d5_const2          |
+  adrp7:                                                       |
+   +0x150  adrp    x10, <page>                                 |
+   +0x154  str     q0, [sp, #384]                              |
+   +0x158  ldr     q0, [x11, #3408]                            |
+                   // mlkem_poly_decompress_d5_const3          |
+  adrp8:                                                       |
+   +0x15c  adrp    x11, <page>                                 |
+   +0x160  str     q0, [sp, #368]                              |
+   +0x164  ldr     q0, [x9, #3424]                             |
+                   // mlkem_poly_decompress_d5_const4          |
+  adrp9:                                                       |
+   +0x168  adrp    x9, <page>                                  |
+   +0x16c  str     q0, [sp, #352]                              |
+   +0x170  ldr     q0, [x10, #3440]                            |
+                   // mlkem_poly_decompress_d5_const5          |
+  adrp10:                                                      |
+   +0x174  adrp    x10, <page>                                 |
+   +0x178  str     q0, [sp, #336]                              |
+   +0x17c  ldr     q0, [x11, #3456]                            |
+                   // mlkem_poly_decompress_d5_const6          |
+  adrp11:                                                      |
+   +0x180  adrp    x11, <page>                                 |
+   +0x184  str     q0, [sp, #320]                              |
+   +0x188  ldr     q0, [x9, #3472]                             |
+                   // mlkem_poly_decompress_d5_const7          |
+  adrp12:                                                      |
+   +0x18c  adrp    x9, <page>                                  |
+   +0x190  str     q0, [sp, #304]                              |
+   +0x194  ldr     q0, [x10, #3488]                            |
+                   // mlkem_poly_decompress_d5_const8          |
+  adrp13:                                                      |
+   +0x198  adrp    x10, <page>                                 |
+   +0x19c  str     q0, [sp, #288]                              |
+   +0x1a0  ldr     q0, [x11, #3504]                            |
+                   // mlkem_poly_decompress_d5_const9          |
+  adrp14:                                                      |
+   +0x1a4  adrp    x11, <page>                                 |
+   +0x1a8  str     q0, [sp, #272]                              |
+   +0x1ac  ldr     q0, [x9, #3520]                             |
+                   // mlkem_poly_decompress_d5_const10         |
+  adrp15:                                                      |
+   +0x1b0  adrp    x9, <page>                                  |
+   +0x1b4  str     q0, [sp, #256]                              |
+   +0x1b8  ldr     q0, [x10, #3536]                            |
+                   // mlkem_poly_decompress_d5_const11         |
+  adrp16:                                                      |
+   +0x1bc  adrp    x10, <page>                                 |
+   +0x1c0  str     q0, [sp, #240]                              |
+   +0x1c4  ldr     q0, [x11, #3552]                            |
+                   // mlkem_poly_decompress_d5_const12         |
+  adrp17:                                                      |
+   +0x1c8  adrp    x11, <page>                                 |
+   +0x1cc  str     q0, [sp, #224]                              |
+   +0x1d0  ldr     q0, [x9, #3568]                             |
+                   // mlkem_poly_decompress_d5_const13         |
+  adrp18:                                                      |
+   +0x1d4  adrp    x9, <page>                                  |
+   +0x1d8  str     q0, [sp, #208]                              |
+   +0x1dc  ldr     q0, [x10, #3584]                            |
+                   // mlkem_poly_decompress_d5_const14         |
+  adrp19:                                                      |
+   +0x1e0  adrp    x10, <page>                                 |
+   +0x1e4  str     q0, [sp, #192]                              |
+   +0x1e8  ldr     q0, [x11, #3600]                            |
+                   // mlkem_poly_decompress_d5_const15         |
+  adrp20:                                                      |
+   +0x1ec  adrp    x11, <page>                                 |
+   +0x1f0  str     q0, [sp, #176]                              |
+   +0x1f4  ldr     q0, [x9, #3616]                             |
+                   // mlkem_poly_decompress_d5_const16         |
+  adrp21:                                                      |
+   +0x1f8  adrp    x9, <page>                                  |
+   +0x1fc  str     q0, [sp, #160]                              |
+   +0x200  ldr     q0, [x10, #3632]                            |
+                   // mlkem_poly_decompress_d5_const17         |
+  adrp22:                                                      |
+   +0x204  adrp    x10, <page>                                 |
+   +0x208  str     q0, [sp, #144]                              |
+   +0x20c  ldr     q0, [x11, #3648]                            |
+                   // mlkem_poly_decompress_d5_const18         |
+  adrp23:                                                      |
+   +0x210  adrp    x11, <page>                                 |
+   +0x214  str     q0, [sp, #128]                              |
+   +0x218  ldr     q0, [x9, #3664]                             |
+                   // mlkem_poly_decompress_d5_const19         |
+  adrp24:                                                      |
+   +0x21c  adrp    x9, <page>                                  |
+   +0x220  str     q0, [sp, #112]                              |
+   +0x224  ldr     q0, [x10, #3680]                            |
+                   // mlkem_poly_decompress_d5_const20         |
+  adrp25:                                                      |
+   +0x228  adrp    x10, <page>                                 |
+   +0x22c  str     q0, [sp, #96]                               |
+   +0x230  ldr     q0, [x11, #3696]                            |
+                   // mlkem_poly_decompress_d5_const21         |
+   +0x234  str     q0, [sp, #80]                               |
+   +0x238  ldr     q0, [x9, #3712]                             |
+                   // mlkem_poly_decompress_d5_const22         |
+  adrp26:                                                      |
+   +0x23c  adrp    x9, <page>                                  |
+   +0x240  str     q0, [sp, #64]                               |
+   +0x244  ldr     q0, [x10, #3728]                            |
+                   // mlkem_poly_decompress_d5_const23         |
+  adrp27:                                                      |
+   +0x248  adrp    x10, <page>                                 |
+   +0x24c  str     q0, [sp, #48]                               |
+   +0x250  ldr     q0, [x9, #3744]                             |
+                   // mlkem_poly_decompress_d5_const24         |
+  adrp28:                                                      |
+   +0x254  adrp    x9, <page>                                  |
+   +0x258  str     q0, [sp, #32]                               |
+   +0x25c  ldr     q0, [x10, #3760]                            |
+                   // mlkem_poly_decompress_d5_const25         |
+  adrp29:                                                      |
+   +0x260  adrp    x10, <page>                                 |
+   +0x264  str     q0, [sp, #16]                               |
+   +0x268  ldr     q0, [x9, #3776]                             |
+                   // mlkem_poly_decompress_d5_const26         |
+  adrp30:                                                      |
+   +0x26c  adrp    x9, <page>                                  |
+   +0x270  str     q0, [sp]                                    |
+   +0x274  ldr     q0, [x10, #3792]                            |
+                   // mlkem_poly_decompress_d5_const27         |
+  adrp31:                                                      |
+   +0x278  adrp    x10, <page>                                 |
+   +0x27c  str     q0, [sp, #688]                              |
+   +0x280  ldr     q0, [x9, #3808]                             |
+                   // mlkem_poly_decompress_d5_const28         |
+   +0x284  mov     w9, #0xd01                                  |
+   +0x288  str     q0, [sp, #672]                              |
+   +0x28c  ldr     q0, [x10, #3824]                            |
+                   // mlkem_poly_decompress_d5_const29         |
+  adrp32:                                                      |
+   +0x290  adrp    x10, <page>                                 |
+   +0x294  dup     v13.8h, w9                                  |
+   +0x298  str     q0, [sp, #656]                              |
+   +0x29c  ldr     q0, [x10, #3840]                            |
+                   // mlkem_poly_decompress_d5_const30         |
+   +0x2a0  str     q0, [sp, #640]                              |
+  loop2:                                                       |
+   +0x2a4  add     x9, x1, x8                           <+     |
+   +0x2a8  ldr     q22, [sp, #368]                       |     |
+   +0x2ac  ldp     q16, q6, [sp, #384]                   |     |
+   +0x2b0  movi    v23.16b, #0x1f                        |     |
+   +0x2b4  add     x8, x8, #0x50                         |     |
+   +0x2b8  cmp     x8, #0xa0                             |     |
+   +0x2bc  ldp     q5, q2, [x9, #16]                     |     |
+   +0x2c0  ldp     q3, q1, [x9, #48]                     |     |
+   +0x2c4  tbl     v7.16b, {v2.16b-v3.16b}, v6.16b       |     |
+   +0x2c8  ldr     q4, [x9]                              |     |
+   +0x2cc  ldr     q18, [sp, #288]                       |     |
+   +0x2d0  ldr     q20, [sp, #176]                       |     |
+   +0x2d4  tbl     v6.16b, {v4.16b-v5.16b}, v16.16b      |     |
+   +0x2d8  ldr     q16, [sp, #336]                       |     |
+   +0x2dc  tbl     v19.16b, {v2.16b-v3.16b}, v18.16b     |     |
+   +0x2e0  tbl     v21.16b, {v2.16b-v3.16b}, v20.16b     |     |
+   +0x2e4  tbl     v17.16b, {v2.16b-v3.16b}, v16.16b     |     |
+   +0x2e8  tbl     v0.16b, {v6.16b-v7.16b}, v22.16b      |     |
+   +0x2ec  ldr     q6, [sp, #320]                        |     |
+   +0x2f0  tbl     v16.16b, {v4.16b-v5.16b}, v6.16b      |     |
+   +0x2f4  ldr     q6, [sp, #224]                        |     |
+   +0x2f8  tbl     v7.16b, {v2.16b-v3.16b}, v6.16b       |     |
+   +0x2fc  ldr     q2, [sp, #352]                        |     |
+   +0x300  tbl     v2.16b, {v0.16b-v1.16b}, v2.16b       |     |
+   +0x304  tbl     v0.16b, {v16.16b-v17.16b}, v22.16b    |     |
+   +0x308  ldp     q22, q3, [sp, #256]                   |     |
+   +0x30c  tbl     v18.16b, {v4.16b-v5.16b}, v3.16b      |     |
+   +0x310  ldr     q3, [sp, #208]                        |     |
+   +0x314  tbl     v6.16b, {v4.16b-v5.16b}, v3.16b       |     |
+   +0x318  ldr     q3, [sp, #160]                        |     |
+   +0x31c  tbl     v20.16b, {v4.16b-v5.16b}, v3.16b      |     |
+   +0x320  ldr     q3, [sp, #304]                        |     |
+   +0x324  tbl     v4.16b, {v0.16b-v1.16b}, v3.16b       |     |
+   +0x328  and     v3.16b, v2.16b, v23.16b               |     |
+   +0x32c  uxtl    v5.8h, v3.8b                          |     |
+   +0x330  tbl     v0.16b, {v18.16b-v19.16b}, v22.16b    |     |
+   +0x334  ldr     q19, [sp, #144]                       |     |
+   +0x338  uxtl2   v16.8h, v3.16b                        |     |
+   +0x33c  umull   v3.4s, v5.4h, v13.4h                  |     |
+   +0x340  umull2  v17.4s, v5.8h, v13.8h                 |     |
+   +0x344  ldr     q5, [sp, #240]                        |     |
+   +0x348  movi    v18.16b, #0x18                        |     |
+   +0x34c  tbl     v5.16b, {v0.16b-v1.16b}, v5.16b       |     |
+   +0x350  tbl     v0.16b, {v6.16b-v7.16b}, v22.16b      |     |
+   +0x354  shl     v6.16b, v4.16b, #3                    |     |
+   +0x358  ushr    v7.16b, v4.16b, #2                    |     |
+   +0x35c  and     v6.16b, v6.16b, v18.16b               |     |
+   +0x360  and     v18.16b, v7.16b, v23.16b              |     |
+   +0x364  ldr     q7, [sp, #192]                        |     |
+   +0x368  usra    v6.16b, v2.16b, #5                    |     |
+   +0x36c  movi    v2.16b, #0x1e                         |     |
+   +0x370  tbl     v7.16b, {v0.16b-v1.16b}, v7.16b       |     |
+   +0x374  tbl     v0.16b, {v20.16b-v21.16b}, v19.16b    |     |
+   +0x378  add     v19.16b, v5.16b, v5.16b               |     |
+   +0x37c  umull   v22.4s, v16.4h, v13.4h                |     |
+   +0x380  and     v2.16b, v19.16b, v2.16b               |     |
+   +0x384  ldr     q19, [sp, #128]                       |     |
+   +0x388  usra    v2.16b, v4.16b, #7                    |     |
+   +0x38c  movi    v4.16b, #0x10                         |     |
+   +0x390  tbl     v19.16b, {v0.16b-v1.16b}, v19.16b     |     |
+   +0x394  ushr    v1.16b, v7.16b, #1                    |     |
+   +0x398  shl     v0.16b, v7.16b, #4                    |     |
+   +0x39c  and     v20.16b, v1.16b, v23.16b              |     |
+   +0x3a0  movi    v1.16b, #0x1c                         |     |
+   +0x3a4  and     v4.16b, v0.16b, v4.16b                |     |
+   +0x3a8  shl     v0.16b, v19.16b, #2                   |     |
+   +0x3ac  usra    v4.16b, v5.16b, #4                    |     |
+   +0x3b0  ushr    v15.16b, v19.16b, #3                  |     |
+   +0x3b4  and     v5.16b, v0.16b, v1.16b                |     |
+   +0x3b8  uxtl2   v1.8h, v6.16b                         |     |
+   +0x3bc  usra    v5.16b, v7.16b, #6                    |     |
+   +0x3c0  umull2  v7.4s, v1.8h, v13.8h                  |     |
+   +0x3c4  umull   v1.4s, v1.4h, v13.4h                  |     |
+   +0x3c8  uxtl    v6.8h, v6.8b                          |     |
+   +0x3cc  umull2  v0.4s, v16.8h, v13.8h                 |     |
+   +0x3d0  umull2  v25.4s, v6.8h, v13.8h                 |     |
+   +0x3d4  str     q1, [sp, #560]                        |     |
+   +0x3d8  umull   v1.4s, v6.4h, v13.4h                  |     |
+   +0x3dc  uxtl    v6.8h, v18.8b                         |     |
+   +0x3e0  uxtl2   v16.8h, v18.16b                       |     |
+   +0x3e4  umull   v21.4s, v6.4h, v13.4h                 |     |
+   +0x3e8  umull2  v23.4s, v6.8h, v13.8h                 |     |
+   +0x3ec  uxtl2   v6.8h, v2.16b                         |     |
+   +0x3f0  uxtl    v18.8h, v2.8b                         |     |
+   +0x3f4  umull2  v2.4s, v6.8h, v13.8h                  |     |
+   +0x3f8  umull   v24.4s, v16.4h, v13.4h                |     |
+   +0x3fc  umull2  v26.4s, v16.8h, v13.8h                |     |
+   +0x400  umull2  v16.4s, v18.8h, v13.8h                |     |
+   +0x404  stp     q2, q7, [sp, #608]                    |     |
+   +0x408  umull   v2.4s, v6.4h, v13.4h                  |     |
+   +0x40c  uxtl    v6.8h, v4.8b                          |     |
+   +0x410  uxtl2   v4.8h, v4.16b                         |     |
+   +0x414  umull   v28.4s, v18.4h, v13.4h                |     |
+   +0x418  umull   v18.4s, v4.4h, v13.4h                 |     |
+   +0x41c  str     q2, [sp, #544]                        |     |
+   +0x420  umull2  v8.4s, v4.8h, v13.8h                  |     |
+   +0x424  uxtl2   v4.8h, v20.16b                        |     |
+   +0x428  umull   v30.4s, v6.4h, v13.4h                 |     |
+   +0x42c  umull2  v2.4s, v4.8h, v13.8h                  |     |
+   +0x430  uxtl    v20.8h, v20.8b                        |     |
+   +0x434  rshrn   v18.4h, v18.4s, #5                    |     |
+   +0x438  umull2  v27.4s, v20.8h, v13.8h                |     |
+   +0x43c  rshrn   v9.4h, v30.4s, #5                     |     |
+   +0x440  str     q2, [sp, #576]                        |     |
+   +0x444  umull   v2.4s, v4.4h, v13.4h                  |     |
+   +0x448  uxtl    v4.8h, v5.8b                          |     |
+   +0x44c  uxtl2   v5.8h, v5.16b                         |     |
+   +0x450  umull   v12.4s, v4.4h, v13.4h                 |     |
+   +0x454  umull   v14.4s, v5.4h, v13.4h                 |     |
+   +0x458  str     q2, [sp, #512]                        |     |
+   +0x45c  umull2  v11.4s, v4.8h, v13.8h                 |     |
+   +0x460  umull2  v31.4s, v6.8h, v13.8h                 |     |
+   +0x464  rshrn   v6.4h, v3.4s, #5                      |     |
+   +0x468  rshrn   v19.4h, v14.4s, #5                    |     |
+   +0x46c  rshrn   v10.4h, v12.4s, #5                    |     |
+   +0x470  umull   v14.4s, v20.4h, v13.4h                |     |
+   +0x474  rshrn   v7.4h, v21.4s, #5                     |     |
+   +0x478  uxtl2   v20.8h, v15.16b                       |     |
+   +0x47c  uxtl    v2.8h, v15.8b                         |     |
+   +0x480  umull2  v4.4s, v20.8h, v13.8h                 |     |
+   +0x484  str     q2, [sp, #592]                        |     |
+   +0x488  umull2  v30.4s, v2.8h, v13.8h                 |     |
+   +0x48c  rshrn   v2.4h, v17.4s, #5                     |     |
+   +0x490  umull   v15.4s, v20.4h, v13.4h                |     |
+   +0x494  rshrn2  v6.8h, v1.4s, #5                      |     |
+   +0x498  rshrn   v20.4h, v0.4s, #5                     |     |
+   +0x49c  umull2  v5.4s, v5.8h, v13.8h                  |     |
+   +0x4a0  rshrn   v21.4h, v26.4s, #5                    |     |
+   +0x4a4  rshrn2  v10.8h, v11.4s, #5                    |     |
+   +0x4a8  rshrn   v3.4h, v23.4s, #5                     |     |
+   +0x4ac  rshrn2  v7.8h, v28.4s, #5                     |     |
+   +0x4b0  rshrn   v4.4h, v4.4s, #5                      |     |
+   +0x4b4  ldp     q26, q28, [sp, #96]                   |     |
+   +0x4b8  rshrn2  v9.8h, v14.4s, #5                     |     |
+   +0x4bc  rshrn   v0.4h, v31.4s, #5                     |     |
+   +0x4c0  rshrn2  v2.8h, v25.4s, #5                     |     |
+   +0x4c4  str     q4, [sp, #528]                        |     |
+   +0x4c8  rshrn2  v19.8h, v5.4s, #5                     |     |
+   +0x4cc  tbl     v5.16b, {v9.16b-v10.16b}, v26.16b     |     |
+   +0x4d0  rshrn2  v0.8h, v27.4s, #5                     |     |
+   +0x4d4  ldr     q25, [sp, #64]                        |     |
+   +0x4d8  rshrn   v30.4h, v30.4s, #5                    |     |
+   +0x4dc  ldr     q31, [sp, #32]                        |     |
+   +0x4e0  rshrn   v17.4h, v15.4s, #5                    |     |
+   +0x4e4  mov     v1.16b, v10.16b                       |     |
+   +0x4e8  ldr     q14, [sp]                             |     |
+   +0x4ec  tbl     v4.16b, {v9.16b-v10.16b}, v25.16b     |     |
+   +0x4f0  rshrn2  v3.8h, v16.4s, #5                     |     |
+   +0x4f4  rshrn   v11.4h, v22.4s, #5                    |     |
+   +0x4f8  ldr     q22, [sp, #80]                        |     |
+   +0x4fc  rshrn   v12.4h, v24.4s, #5                    |     |
+   +0x500  rshrn   v23.4h, v8.4s, #5                     |     |
+   +0x504  stp     q4, q5, [sp, #480]                    |     |
+   +0x508  ldr     q4, [sp, #688]                        |     |
+   +0x50c  tbl     v8.16b, {v2.16b-v3.16b}, v22.16b      |     |
+   +0x510  tbl     v5.16b, {v0.16b-v1.16b}, v4.16b       |     |
+   +0x514  tbl     v4.16b, {v9.16b-v10.16b}, v31.16b     |     |
+   +0x518  mov     v5.h[7], v30.h[0]                     |     |
+   +0x51c  str     q4, [sp, #464]                        |     |
+   +0x520  tbl     v4.16b, {v9.16b-v10.16b}, v14.16b     |     |
+   +0x524  str     q4, [sp, #448]                        |     |
+   +0x528  tbl     v4.16b, {v2.16b-v3.16b}, v28.16b      |     |
+   +0x52c  stp     q5, q4, [sp, #416]                    |     |
+   +0x530  ldr     q4, [sp, #672]                        |     |
+   +0x534  ldr     q5, [sp, #48]                         |     |
+   +0x538  tbl     v15.16b, {v0.16b-v1.16b}, v4.16b      |     |
+   +0x53c  ldr     q4, [sp, #656]                        |     |
+   +0x540  tbl     v9.16b, {v2.16b-v3.16b}, v5.16b       |     |
+   +0x544  tbl     v10.16b, {v0.16b-v1.16b}, v4.16b      |     |
+   +0x548  ldr     q4, [sp, #640]                        |     |
+   +0x54c  mov     v15.h[7], v30.h[1]                    |     |
+   +0x550  tbl     v29.16b, {v0.16b-v1.16b}, v4.16b      |     |
+   +0x554  ldr     q0, [sp, #560]                        |     |
+   +0x558  ldr     q4, [sp, #16]                         |     |
+   +0x55c  mov     v10.h[7], v30.h[2]                    |     |
+   +0x560  rshrn2  v11.8h, v0.4s, #5                     |     |
+   +0x564  ldr     q0, [sp, #512]                        |     |
+   +0x568  tbl     v27.16b, {v2.16b-v3.16b}, v4.16b      |     |
+   +0x56c  mov     v29.h[7], v30.h[3]                    |     |
+   +0x570  rshrn2  v18.8h, v0.4s, #5                     |     |
+   +0x574  ldr     q0, [sp, #544]                        |     |
+   +0x578  mov     v8.d[1], v15.d[1]                     |     |
+   +0x57c  mov     v9.d[1], v10.d[1]                     |     |
+   +0x580  rshrn2  v12.8h, v0.4s, #5                     |     |
+   +0x584  ldr     q0, [sp, #624]                        |     |
+   +0x588  tbl     v16.16b, {v18.16b-v19.16b}, v26.16b   |     |
+   +0x58c  tbl     v2.16b, {v18.16b-v19.16b}, v25.16b    |     |
+   +0x590  rshrn2  v20.8h, v0.4s, #5                     |     |
+   +0x594  ldr     q0, [sp, #608]                        |     |
+   +0x598  tbl     v25.16b, {v18.16b-v19.16b}, v31.16b   |     |
+   +0x59c  tbl     v30.16b, {v18.16b-v19.16b}, v14.16b   |     |
+   +0x5a0  rshrn2  v21.8h, v0.4s, #5                     |     |
+   +0x5a4  ldr     q0, [sp, #576]                        |     |
+   +0x5a8  tbl     v26.16b, {v11.16b-v12.16b}, v28.16b   |     |
+   +0x5ac  tbl     v3.16b, {v11.16b-v12.16b}, v22.16b    |     |
+   +0x5b0  rshrn2  v23.8h, v0.4s, #5                     |     |
+   +0x5b4  ldr     q0, [sp, #688]                        |     |
+   +0x5b8  mov     v24.16b, v19.16b                      |     |
+   +0x5bc  tbl     v1.16b, {v11.16b-v12.16b}, v5.16b     |     |
+   +0x5c0  tbl     v18.16b, {v23.16b-v24.16b}, v0.16b    |     |
+   +0x5c4  ldr     q0, [sp, #672]                        |     |
+   +0x5c8  tbl     v11.16b, {v11.16b-v12.16b}, v4.16b    |     |
+   +0x5cc  mov     v25.h[7], v17.h[2]                    |     |
+   +0x5d0  tbl     v19.16b, {v23.16b-v24.16b}, v0.16b    |     |
+   +0x5d4  ldr     q0, [sp, #656]                        |     |
+   +0x5d8  mov     v30.h[7], v17.h[3]                    |     |
+   +0x5dc  mov     v16.h[7], v17.h[0]                    |     |
+   +0x5e0  tbl     v12.16b, {v23.16b-v24.16b}, v0.16b    |     |
+   +0x5e4  ldr     q0, [sp, #640]                        |     |
+   +0x5e8  mov     v2.h[7], v17.h[1]                     |     |
+   +0x5ec  tbl     v17.16b, {v20.16b-v21.16b}, v28.16b   |     |
+   +0x5f0  tbl     v23.16b, {v23.16b-v24.16b}, v0.16b    |     |
+   +0x5f4  tbl     v24.16b, {v20.16b-v21.16b}, v22.16b   |     |
+   +0x5f8  tbl     v0.16b, {v20.16b-v21.16b}, v5.16b     |     |
+   +0x5fc  tbl     v20.16b, {v20.16b-v21.16b}, v4.16b    |     |
+   +0x600  ldr     q21, [sp, #528]                       |     |
+   +0x604  mov     v11.d[1], v30.d[1]                    |     |
+   +0x608  mov     v1.d[1], v25.d[1]                     |     |
+   +0x60c  mov     v23.h[7], v21.h[3]                    |     |
+   +0x610  mov     v12.h[7], v21.h[2]                    |     |
+   +0x614  mov     v26.d[1], v16.d[1]                    |     |
+   +0x618  stp     q1, q11, [x0, #160]                   |     |
+   +0x61c  ldp     q1, q16, [sp, #416]                   |     |
+   +0x620  mov     v20.d[1], v23.d[1]                    |     |
+   +0x624  mov     v0.d[1], v12.d[1]                     |     |
+   +0x628  mov     v3.d[1], v2.d[1]                      |     |
+   +0x62c  tbl     v2.16b, {v6.16b-v7.16b}, v22.16b      |     |
+   +0x630  tbl     v4.16b, {v6.16b-v7.16b}, v4.16b       |     |
+   +0x634  stp     q0, q20, [x0, #224]                   |     |
+   +0x638  ldr     q0, [sp, #592]                        |     |
+   +0x63c  mov     v16.d[1], v1.d[1]                     |     |
+   +0x640  stp     q26, q3, [x0, #128]                   |     |
+   +0x644  tbl     v1.16b, {v6.16b-v7.16b}, v28.16b      |     |
+   +0x648  umull   v0.4s, v0.4h, v13.4h                  |     |
+   +0x64c  tbl     v3.16b, {v6.16b-v7.16b}, v5.16b       |     |
+   +0x650  stp     q16, q8, [x0, #64]                    |     |
+   +0x654  ldp     q16, q7, [sp, #448]                   |     |
+   +0x658  rshrn   v0.4h, v0.4s, #5                      |     |
+   +0x65c  mov     v19.h[7], v21.h[1]                    |     |
+   +0x660  mov     v18.h[7], v21.h[0]                    |     |
+   +0x664  mov     v16.h[7], v0.h[3]                     |     |
+   +0x668  mov     v27.d[1], v29.d[1]                    |     |
+   +0x66c  ldp     q6, q5, [sp, #480]                    |     |
+   +0x670  mov     v7.h[7], v0.h[2]                      |     |
+   +0x674  mov     v24.d[1], v19.d[1]                    |     |
+   +0x678  mov     v17.d[1], v18.d[1]                    |     |
+   +0x67c  stp     q9, q27, [x0, #96]                    |     |
+   +0x680  mov     v6.h[7], v0.h[1]                      |     |
+   +0x684  mov     v4.d[1], v16.d[1]                     |     |
+   +0x688  mov     v5.h[7], v0.h[0]                      |     |
+   +0x68c  mov     v3.d[1], v7.d[1]                      |     |
+   +0x690  stp     q17, q24, [x0, #192]                  |     |
+   +0x694  mov     v2.d[1], v6.d[1]                      |     |
+   +0x698  mov     v1.d[1], v5.d[1]                      |     |
+   +0x69c  stp     q3, q4, [x0, #32]                     |     |
+  loop2_test:                                            |     |
+   +0x6a0  stp     q1, q2, [x0], #256                    |     |
+  loop2_back:                                            |     |
+   +0x6a4  b.ne    loop2                                -+     |
+  join2: loop2_exit:                                           |
+   +0x6a8  add     sp, sp, #0x2c0                       <------+
+   +0x6ac  ldp     d9, d8, [sp, #48]
+   +0x6b0  ldp     d11, d10, [sp, #32]
+   +0x6b4  ldp     d13, d12, [sp, #16]
+   +0x6b8  ldr     x29, [sp, #64]
+   +0x6bc  ldp     d15, d14, [sp], #80
+  ret:
+   +0x6c0  ret
+ ***)
+
+(*** mlkem_poly_decompress_d11: 0x3ae0, 0x10c bytes
+
+     +0x0  mov     w9, #0xd01
+  adrp1:
+     +0x4  adrp    x11, <page>
+  adrp2:
+     +0x8  adrp    x12, <page>
+     +0xc  mov     x8, xzr
+    +0x10  add     x10, x1, #0x5
+    +0x14  dup     v1.4h, w9
+    +0x18  ldr     q0, [x11, #3856]
+                   // mlkem_poly_decompress_d11_const1
+    +0x1c  ldr     q2, [x12, #3872]
+                   // mlkem_poly_decompress_d11_const2
+    +0x20  mov     w11, #0x400
+  loop1:
+    +0x24  ldurb   w13, [x10, #-4]                      <+
+    +0x28  add     x2, x0, x8                            |
+    +0x2c  ldurb   w14, [x10, #-3]                       |
+    +0x30  add     x8, x8, #0x10                         |
+    +0x34  ldurb   w12, [x10, #-5]                       |
+    +0x38  cmp     x8, #0x200                            |
+    +0x3c  fmov    s3, w13                               |
+    +0x40  ldurb   w16, [x10, #-1]                       |
+    +0x44  lsr     w13, w13, #3                          |
+    +0x48  ldurb   w15, [x10, #-2]                       |
+    +0x4c  fmov    s4, w12                               |
+    +0x50  ldrb    w17, [x10]                            |
+    +0x54  mov     v3.h[1], w14                          |
+    +0x58  lsr     w14, w14, #6                          |
+    +0x5c  orr     w14, w14, w15, lsl #2                 |
+    +0x60  ldrb    w18, [x10, #1]                        |
+    +0x64  mov     v4.s[1], w13                          |
+    +0x68  lsr     w13, w16, #1                          |
+    +0x6c  ldrb    w1, [x10, #2]                         |
+    +0x70  lsr     w15, w17, #4                          |
+    +0x74  mov     v3.h[2], w16                          |
+    +0x78  ldrb    w3, [x10, #3]                         |
+    +0x7c  ldrb    w12, [x10, #4]                        |
+    +0x80  lsr     w16, w18, #7                          |
+    +0x84  mov     v4.s[2], w14                          |
+    +0x88  ldrb    w4, [x10, #5]                         |
+    +0x8c  lsr     w14, w3, #2                           |
+    +0x90  orr     w16, w16, w1, lsl #1                  |
+    +0x94  mov     v3.h[3], w17                          |
+    +0x98  lsr     w17, w12, #5                          |
+    +0x9c  bfi     w15, w18, #4, #7                      |
+    +0xa0  bfi     w14, w12, #6, #5                      |
+    +0xa4  mov     v4.s[3], w13                          |
+    +0xa8  orr     w12, w17, w4, lsl #3                  |
+    +0xac  bfi     w16, w3, #9, #2                       |
+    +0xb0  madd    w13, w15, w9, w11                     |
+    +0xb4  uxtl    v3.4s, v3.4h                          |
+    +0xb8  madd    w14, w14, w9, w11                     |
+    +0xbc  madd    w15, w16, w9, w11                     |
+    +0xc0  lsr     w13, w13, #11                         |
+    +0xc4  ushl    v3.4s, v3.4s, v0.4s                   |
+    +0xc8  madd    w12, w12, w9, w11                     |
+    +0xcc  lsr     w14, w14, #11                         |
+    +0xd0  lsr     w15, w15, #11                         |
+    +0xd4  and     v3.16b, v3.16b, v2.16b                |
+    +0xd8  lsr     w12, w12, #11                         |
+    +0xdc  orr     v3.16b, v3.16b, v4.16b                |
+    +0xe0  add     x10, x10, #0xb                        |
+    +0xe4  xtn     v3.4h, v3.4s                          |
+    +0xe8  strh    w13, [x2, #8]                         |
+    +0xec  strh    w14, [x2, #12]                        |
+    +0xf0  umull   v3.4s, v3.4h, v1.4h                   |
+    +0xf4  strh    w15, [x2, #10]                        |
+    +0xf8  strh    w12, [x2, #14]                        |
+    +0xfc  rshrn   v3.4h, v3.4s, #11                     |
+  loop1_test:                                            |
+   +0x100  str     d3, [x2]                              |
+  loop1_back:                                            |
+   +0x104  b.ne    loop1                                -+
+  loop1_exit: ret:
+   +0x108  ret
+ ***)
+
+(*** mlkem_poly_tobytes: 0x3bec, 0x250 bytes
+
+     +0x0  add     x8, x1, #0x200
+     +0x4  cmp     x8, x0
+     +0x8  b.ls    join1                         -----+
+     +0xc  add     x8, x0, #0x180                     |
+    +0x10  cmp     x8, x1                             |
+    +0x14  b.ls    join1                         ---+ |
+    +0x18  mov     x8, xzr                          | |
+    +0x1c  add     x9, x0, #0x2                     | |
+  loop1:                                            | |
+    +0x20  add     x10, x1, x8                   <+ | |
+    +0x24  add     x8, x8, #0x4                   | | |
+    +0x28  cmp     x8, #0x200                     | | |
+    +0x2c  ldrh    w11, [x10, #2]                 | | |
+    +0x30  ldrh    w10, [x10]                     | | |
+    +0x34  lsl     w12, w11, #4                   | | |
+    +0x38  lsr     w11, w11, #4                   | | |
+    +0x3c  orr     w12, w12, w10, lsr #8          | | |
+    +0x40  sturb   w10, [x9, #-2]                 | | |
+    +0x44  sturb   w12, [x9, #-1]                 | | |
+  loop1_test:                                     | | |
+    +0x48  strb    w11, [x9], #3                  | | |
+  loop1_back:                                     | | |
+    +0x4c  b.ne    loop1                         -+ | |
+  loop1_exit: ret1:                                 | |
+    +0x50  ret                                      | |
+  join1:                                            | |
+    +0x54  mov     x8, x1                        <--+-+
+    +0x58  add     x9, x1, #0x40
+    +0x5c  ld2     {v0.8h-v1.8h}, [x8], #32
+    +0x60  ushr    v4.8h, v0.8h, #8
+    +0x64  shl     v5.8h, v1.8h, #4
+    +0x68  orr     v4.16b, v5.16b, v4.16b
+    +0x6c  ld2     {v2.8h-v3.8h}, [x8]
+    +0x70  mov     x8, x0
+    +0x74  ushr    v5.8h, v2.8h, #8
+    +0x78  shl     v6.8h, v3.8h, #4
+    +0x7c  uzp1    v16.16b, v0.16b, v2.16b
+    +0x80  orr     v5.16b, v6.16b, v5.16b
+    +0x84  uzp1    v17.16b, v4.16b, v5.16b
+    +0x88  shrn    v18.8b, v1.8h, #4
+    +0x8c  shrn2   v18.16b, v3.8h, #4
+    +0x90  st3     {v16.16b-v18.16b}, [x8], #48
+    +0x94  ld2     {v0.8h-v1.8h}, [x9]
+    +0x98  add     x9, x1, #0x60
+    +0x9c  ld2     {v2.8h-v3.8h}, [x9]
+    +0xa0  add     x9, x1, #0x80
+    +0xa4  ushr    v17.8h, v0.8h, #8
+    +0xa8  shl     v18.8h, v1.8h, #4
+    +0xac  ushr    v7.8h, v2.8h, #8
+    +0xb0  shl     v16.8h, v3.8h, #4
+    +0xb4  uzp1    v4.16b, v0.16b, v2.16b
+    +0xb8  orr     v7.16b, v16.16b, v7.16b
+    +0xbc  orr     v16.16b, v18.16b, v17.16b
+    +0xc0  uzp1    v5.16b, v16.16b, v7.16b
+    +0xc4  shrn    v6.8b, v1.8h, #4
+    +0xc8  shrn2   v6.16b, v3.8h, #4
+    +0xcc  st3     {v4.16b-v6.16b}, [x8]
+    +0xd0  add     x8, x1, #0xa0
+    +0xd4  ld2     {v0.8h-v1.8h}, [x9]
+    +0xd8  add     x9, x1, #0xc0
+    +0xdc  ld2     {v2.8h-v3.8h}, [x8]
+    +0xe0  add     x8, x0, #0x60
+    +0xe4  ushr    v17.8h, v0.8h, #8
+    +0xe8  shl     v18.8h, v1.8h, #4
+    +0xec  ushr    v7.8h, v2.8h, #8
+    +0xf0  shl     v16.8h, v3.8h, #4
+    +0xf4  uzp1    v4.16b, v0.16b, v2.16b
+    +0xf8  orr     v7.16b, v16.16b, v7.16b
+    +0xfc  orr     v16.16b, v18.16b, v17.16b
+   +0x100  uzp1    v5.16b, v16.16b, v7.16b
+   +0x104  shrn    v6.8b, v1.8h, #4
+   +0x108  shrn2   v6.16b, v3.8h, #4
+   +0x10c  st3     {v4.16b-v6.16b}, [x8]
+   +0x110  add     x8, x1, #0xe0
+   +0x114  ld2     {v0.8h-v1.8h}, [x9]
+   +0x118  add     x9, x1, #0x100
+   +0x11c  ld2     {v2.8h-v3.8h}, [x8]
+   +0x120  add     x8, x0, #0x90
+   +0x124  ushr    v17.8h, v0.8h, #8
+   +0x128  shl     v18.8h, v1.8h, #4
+   +0x12c  ushr    v7.8h, v2.8h, #8
+   +0x130  shl     v16.8h, v3.8h, #4
+   +0x134  uzp1    v4.16b, v0.16b, v2.16b
+   +0x138  orr     v7.16b, v16.16b, v7.16b
+   +0x13c  orr     v16.16b, v18.16b, v17.16b
+   +0x140  uzp1    v5.16b, v16.16b, v7.16b
+   +0x144  shrn    v6.8b, v1.8h, #4
+   +0x148  shrn2   v6.16b, v3.8h, #4
+   +0x14c  st3     {v4.16b-v6.16b}, [x8]
+   +0x150  add     x8, x1, #0x120
+   +0x154  ld2     {v0.8h-v1.8h}, [x9]
+   +0x158  add     x9, x1, #0x140
+   +0x15c  ld2     {v2.8h-v3.8h}, [x8]
+   +0x160  add     x8, x0, #0xc0
+   +0x164  ushr    v17.8h, v0.8h, #8
+   +0x168  shl     v18.8h, v1.8h, #4
+   +0x16c  ushr    v7.8h, v2.8h, #8
+   +0x170  shl     v16.8h, v3.8h, #4
+   +0x174  uzp1    v4.16b, v0.16b, v2.16b
+   +0x178  orr     v7.16b, v16.16b, v7.16b
+   +0x17c  orr     v16.16b, v18.16b, v17.16b
+   +0x180  uzp1    v5.16b, v16.16b, v7.16b
+   +0x184  shrn    v6.8b, v1.8h, #4
+   +0x188  shrn2   v6.16b, v3.8h, #4
+   +0x18c  st3     {v4.16b-v6.16b}, [x8]
+   +0x190  add     x8, x1, #0x160
+   +0x194  ld2     {v0.8h-v1.8h}, [x9]
+   +0x198  add     x9, x1, #0x180
+   +0x19c  ld2     {v2.8h-v3.8h}, [x8]
+   +0x1a0  add     x8, x0, #0xf0
+   +0x1a4  ushr    v17.8h, v0.8h, #8
+   +0x1a8  shl     v18.8h, v1.8h, #4
+   +0x1ac  ushr    v7.8h, v2.8h, #8
+   +0x1b0  shl     v16.8h, v3.8h, #4
+   +0x1b4  uzp1    v4.16b, v0.16b, v2.16b
+   +0x1b8  orr     v7.16b, v16.16b, v7.16b
+   +0x1bc  orr     v16.16b, v18.16b, v17.16b
+   +0x1c0  uzp1    v5.16b, v16.16b, v7.16b
+   +0x1c4  shrn    v6.8b, v1.8h, #4
+   +0x1c8  shrn2   v6.16b, v3.8h, #4
+   +0x1cc  st3     {v4.16b-v6.16b}, [x8]
+   +0x1d0  add     x8, x1, #0x1a0
+   +0x1d4  ld2     {v0.8h-v1.8h}, [x9]
+   +0x1d8  add     x9, x1, #0x1c0
+   +0x1dc  ld2     {v2.8h-v3.8h}, [x8]
+   +0x1e0  add     x8, x0, #0x120
+   +0x1e4  ushr    v17.8h, v0.8h, #8
+   +0x1e8  shl     v18.8h, v1.8h, #4
+   +0x1ec  ushr    v7.8h, v2.8h, #8
+   +0x1f0  shl     v16.8h, v3.8h, #4
+   +0x1f4  uzp1    v4.16b, v0.16b, v2.16b
+   +0x1f8  orr     v7.16b, v16.16b, v7.16b
+   +0x1fc  orr     v16.16b, v18.16b, v17.16b
+   +0x200  uzp1    v5.16b, v16.16b, v7.16b
+   +0x204  shrn    v6.8b, v1.8h, #4
+   +0x208  shrn2   v6.16b, v3.8h, #4
+   +0x20c  st3     {v4.16b-v6.16b}, [x8]
+   +0x210  add     x8, x1, #0x1e0
+   +0x214  ld2     {v0.8h-v1.8h}, [x9]
+   +0x218  ld2     {v2.8h-v3.8h}, [x8]
+   +0x21c  add     x8, x0, #0x150
+   +0x220  ushr    v17.8h, v0.8h, #8
+   +0x224  shl     v18.8h, v1.8h, #4
+   +0x228  ushr    v7.8h, v2.8h, #8
+   +0x22c  shl     v16.8h, v3.8h, #4
+   +0x230  uzp1    v4.16b, v0.16b, v2.16b
+   +0x234  orr     v7.16b, v16.16b, v7.16b
+   +0x238  orr     v16.16b, v18.16b, v17.16b
+   +0x23c  uzp1    v5.16b, v16.16b, v7.16b
+   +0x240  shrn    v6.8b, v1.8h, #4
+   +0x244  shrn2   v6.16b, v3.8h, #4
+   +0x248  st3     {v4.16b-v6.16b}, [x8]
+  ret2:
+   +0x24c  ret
+ ***)
+
+(*** mlkem_poly_frombytes: 0x3e3c, 0x2f0 bytes
+
+     +0x0  add     x8, x1, #0x180
+     +0x4  cmp     x8, x0
+     +0x8  b.ls    join1                       -----+
+     +0xc  add     x8, x0, #0x200                   |
+    +0x10  cmp     x8, x1                           |
+    +0x14  b.ls    join1                       ---+ |
+    +0x18  mov     x8, xzr                        | |
+    +0x1c  add     x9, x1, #0x2                   | |
+  loop1:                                          | |
+    +0x20  ldurb   w10, [x9, #-2]              <+ | |
+    +0x24  add     x13, x0, x8                  | | |
+    +0x28  ldurb   w11, [x9, #-1]               | | |
+    +0x2c  add     x8, x8, #0x4                 | | |
+    +0x30  ldrb    w12, [x9], #3                | | |
+    +0x34  cmp     x8, #0x200                   | | |
+    +0x38  bfi     w10, w11, #8, #4             | | |
+    +0x3c  lsr     w11, w11, #4                 | | |
+    +0x40  orr     w11, w11, w12, lsl #4        | | |
+    +0x44  strh    w10, [x13]                   | | |
+  loop1_test:                                   | | |
+    +0x48  strh    w11, [x13, #2]               | | |
+  loop1_back:                                   | | |
+    +0x4c  b.ne    loop1                       -+ | |
+  loop1_exit: ret1:                               | |
+    +0x50  ret                                    | |
+  join1:                                          | |
+    +0x54  mov     x8, x1                      <--+-+
+    +0x58  mov     x9, x0
+    +0x5c  add     x10, x1, #0x150
+    +0x60  ld3     {v0.16b-v2.16b}, [x8], #48
+    +0x64  shll    v6.8h, v1.8b, #8
+    +0x68  ushr    v7.16b, v1.16b, #4
+    +0x6c  uxtl    v3.8h, v0.8b
+    +0x70  bic     v6.8h, #0xf0, lsl #8
+    +0x74  uxtl    v16.8h, v7.8b
+    +0x78  ushll   v17.8h, v2.8b, #4
+    +0x7c  orr     v18.16b, v6.16b, v3.16b
+    +0x80  orr     v19.16b, v17.16b, v16.16b
+    +0x84  shll2   v5.8h, v1.16b, #8
+    +0x88  st2     {v18.8h-v19.8h}, [x9], #32
+    +0x8c  uxtl2   v4.8h, v0.16b
+    +0x90  bic     v5.8h, #0xf0, lsl #8
+    +0x94  uxtl2   v3.8h, v7.16b
+    +0x98  ushll2  v0.8h, v2.16b, #4
+    +0x9c  orr     v1.16b, v5.16b, v4.16b
+    +0xa0  orr     v2.16b, v0.16b, v3.16b
+    +0xa4  st2     {v1.8h-v2.8h}, [x9]
+    +0xa8  add     x9, x0, #0x60
+    +0xac  ld3     {v0.16b-v2.16b}, [x8]
+    +0xb0  add     x8, x0, #0x40
+    +0xb4  shll    v4.8h, v1.8b, #8
+    +0xb8  ushr    v5.16b, v1.16b, #4
+    +0xbc  uxtl    v3.8h, v0.8b
+    +0xc0  ushll   v6.8h, v2.8b, #4
+    +0xc4  bic     v4.8h, #0xf0, lsl #8
+    +0xc8  uxtl    v7.8h, v5.8b
+    +0xcc  orr     v3.16b, v4.16b, v3.16b
+    +0xd0  orr     v4.16b, v6.16b, v7.16b
+    +0xd4  st2     {v3.8h-v4.8h}, [x8]
+    +0xd8  add     x8, x1, #0x60
+    +0xdc  shll2   v4.8h, v1.16b, #8
+    +0xe0  uxtl2   v3.8h, v0.16b
+    +0xe4  ushll2  v0.8h, v2.16b, #4
+    +0xe8  bic     v4.8h, #0xf0, lsl #8
+    +0xec  uxtl2   v1.8h, v5.16b
+    +0xf0  orr     v2.16b, v4.16b, v3.16b
+    +0xf4  orr     v3.16b, v0.16b, v1.16b
+    +0xf8  st2     {v2.8h-v3.8h}, [x9]
+    +0xfc  add     x9, x0, #0xa0
+   +0x100  ld3     {v0.16b-v2.16b}, [x8]
+   +0x104  add     x8, x0, #0x80
+   +0x108  shll    v4.8h, v1.8b, #8
+   +0x10c  ushr    v5.16b, v1.16b, #4
+   +0x110  uxtl    v3.8h, v0.8b
+   +0x114  ushll   v6.8h, v2.8b, #4
+   +0x118  bic     v4.8h, #0xf0, lsl #8
+   +0x11c  uxtl    v7.8h, v5.8b
+   +0x120  orr     v3.16b, v4.16b, v3.16b
+   +0x124  orr     v4.16b, v6.16b, v7.16b
+   +0x128  st2     {v3.8h-v4.8h}, [x8]
+   +0x12c  add     x8, x1, #0x90
+   +0x130  shll2   v4.8h, v1.16b, #8
+   +0x134  uxtl2   v3.8h, v0.16b
+   +0x138  ushll2  v0.8h, v2.16b, #4
+   +0x13c  bic     v4.8h, #0xf0, lsl #8
+   +0x140  uxtl2   v1.8h, v5.16b
+   +0x144  orr     v2.16b, v4.16b, v3.16b
+   +0x148  orr     v3.16b, v0.16b, v1.16b
+   +0x14c  st2     {v2.8h-v3.8h}, [x9]
+   +0x150  add     x9, x0, #0xe0
+   +0x154  ld3     {v0.16b-v2.16b}, [x8]
+   +0x158  add     x8, x0, #0xc0
+   +0x15c  shll    v4.8h, v1.8b, #8
+   +0x160  ushr    v5.16b, v1.16b, #4
+   +0x164  uxtl    v3.8h, v0.8b
+   +0x168  ushll   v6.8h, v2.8b, #4
+   +0x16c  bic     v4.8h, #0xf0, lsl #8
+   +0x170  uxtl    v7.8h, v5.8b
+   +0x174  orr     v3.16b, v4.16b, v3.16b
+   +0x178  orr     v4.16b, v6.16b, v7.16b
+   +0x17c  st2     {v3.8h-v4.8h}, [x8]
+   +0x180  add     x8, x1, #0xc0
+   +0x184  shll2   v4.8h, v1.16b, #8
+   +0x188  uxtl2   v3.8h, v0.16b
+   +0x18c  ushll2  v0.8h, v2.16b, #4
+   +0x190  bic     v4.8h, #0xf0, lsl #8
+   +0x194  uxtl2   v1.8h, v5.16b
+   +0x198  orr     v2.16b, v4.16b, v3.16b
+   +0x19c  orr     v3.16b, v0.16b, v1.16b
+   +0x1a0  st2     {v2.8h-v3.8h}, [x9]
+   +0x1a4  add     x9, x0, #0x120
+   +0x1a8  ld3     {v0.16b-v2.16b}, [x8]
+   +0x1ac  add     x8, x0, #0x100
+   +0x1b0  shll    v4.8h, v1.8b, #8
+   +0x1b4  ushr    v5.16b, v1.16b, #4
+   +0x1b8  uxtl    v3.8h, v0.8b
+   +0x1bc  ushll   v6.8h, v2.8b, #4
+   +0x1c0  bic     v4.8h, #0xf0, lsl #8
+   +0x1c4  uxtl    v7.8h, v5.8b
+   +0x1c8  orr     v3.16b, v4.16b, v3.16b
+   +0x1cc  orr     v4.16b, v6.16b, v7.16b
+   +0x1d0  st2     {v3.8h-v4.8h}, [x8]
+   +0x1d4  add     x8, x1, #0xf0
+   +0x1d8  shll2   v4.8h, v1.16b, #8
+   +0x1dc  uxtl2   v3.8h, v0.16b
+   +0x1e0  ushll2  v0.8h, v2.16b, #4
+   +0x1e4  bic     v4.8h, #0xf0, lsl #8
+   +0x1e8  uxtl2   v1.8h, v5.16b
+   +0x1ec  orr     v2.16b, v4.16b, v3.16b
+   +0x1f0  orr     v3.16b, v0.16b, v1.16b
+   +0x1f4  st2     {v2.8h-v3.8h}, [x9]
+   +0x1f8  add     x9, x0, #0x160
+   +0x1fc  ld3     {v0.16b-v2.16b}, [x8]
+   +0x200  add     x8, x0, #0x140
+   +0x204  shll    v4.8h, v1.8b, #8
+   +0x208  ushr    v5.16b, v1.16b, #4
+   +0x20c  uxtl    v3.8h, v0.8b
+   +0x210  ushll   v6.8h, v2.8b, #4
+   +0x214  bic     v4.8h, #0xf0, lsl #8
+   +0x218  uxtl    v7.8h, v5.8b
+   +0x21c  orr     v3.16b, v4.16b, v3.16b
+   +0x220  orr     v4.16b, v6.16b, v7.16b
+   +0x224  st2     {v3.8h-v4.8h}, [x8]
+   +0x228  add     x8, x1, #0x120
+   +0x22c  shll2   v4.8h, v1.16b, #8
+   +0x230  uxtl2   v3.8h, v0.16b
+   +0x234  ushll2  v0.8h, v2.16b, #4
+   +0x238  bic     v4.8h, #0xf0, lsl #8
+   +0x23c  uxtl2   v1.8h, v5.16b
+   +0x240  orr     v2.16b, v4.16b, v3.16b
+   +0x244  orr     v3.16b, v0.16b, v1.16b
+   +0x248  st2     {v2.8h-v3.8h}, [x9]
+   +0x24c  add     x9, x0, #0x1a0
+   +0x250  ld3     {v0.16b-v2.16b}, [x8]
+   +0x254  add     x8, x0, #0x180
+   +0x258  shll    v6.8h, v1.8b, #8
+   +0x25c  ushr    v7.16b, v1.16b, #4
+   +0x260  uxtl    v3.8h, v0.8b
+   +0x264  uxtl2   v4.8h, v0.16b
+   +0x268  shll2   v5.8h, v1.16b, #8
+   +0x26c  ushll   v0.8h, v2.8b, #4
+   +0x270  bic     v6.8h, #0xf0, lsl #8
+   +0x274  uxtl    v1.8h, v7.8b
+   +0x278  ushll2  v16.8h, v2.16b, #4
+   +0x27c  orr     v2.16b, v6.16b, v3.16b
+   +0x280  orr     v3.16b, v0.16b, v1.16b
+   +0x284  bic     v5.8h, #0xf0, lsl #8
+   +0x288  st2     {v2.8h-v3.8h}, [x8]
+   +0x28c  uxtl2   v0.8h, v7.16b
+   +0x290  add     x8, x0, #0x1c0
+   +0x294  orr     v1.16b, v5.16b, v4.16b
+   +0x298  orr     v2.16b, v16.16b, v0.16b
+   +0x29c  st2     {v1.8h-v2.8h}, [x9]
+   +0x2a0  add     x9, x0, #0x1e0
+   +0x2a4  ld3     {v0.16b-v2.16b}, [x10]
+   +0x2a8  shll    v6.8h, v1.8b, #8
+   +0x2ac  ushr    v7.16b, v1.16b, #4
+   +0x2b0  uxtl    v3.8h, v0.8b
+   +0x2b4  uxtl2   v4.8h, v0.16b
+   +0x2b8  shll2   v5.8h, v1.16b, #8
+   +0x2bc  ushll   v0.8h, v2.8b, #4
+   +0x2c0  bic     v6.8h, #0xf0, lsl #8
+   +0x2c4  uxtl    v1.8h, v7.8b
+   +0x2c8  ushll2  v16.8h, v2.16b, #4
+   +0x2cc  orr     v2.16b, v6.16b, v3.16b
+   +0x2d0  orr     v3.16b, v0.16b, v1.16b
+   +0x2d4  bic     v5.8h, #0xf0, lsl #8
+   +0x2d8  st2     {v2.8h-v3.8h}, [x8]
+   +0x2dc  uxtl2   v0.8h, v7.16b
+   +0x2e0  orr     v1.16b, v5.16b, v4.16b
+   +0x2e4  orr     v2.16b, v16.16b, v0.16b
+   +0x2e8  st2     {v1.8h-v2.8h}, [x9]
+  ret2:
+   +0x2ec  ret
+ ***)
+
+(*** mlkem_poly_frommsg: 0x412c, 0xe0 bytes
+
+     +0x0  mov     x8, xzr
+     +0x4  add     x9, x0, #0x8
+     +0x8  mov     w10, #0x681
+  loop1:
+     +0xc  mov     w11, #0x1               <+
+    +0x10  ldrb    w12, [x1, x8]            |
+    +0x14  and     w11, w11, w12            |
+    +0x18  mov     w12, #0x2                |
+    +0x1c  neg     w11, w11                 |
+    +0x20  and     w11, w10, w11, lsr #16   |
+    +0x24  sturh   w11, [x9, #-8]           |
+    +0x28  ldrb    w11, [x1, x8]            |
+    +0x2c  and     w11, w12, w11            |
+    +0x30  mov     w12, #0x4                |
+    +0x34  neg     w11, w11                 |
+    +0x38  and     w11, w10, w11, lsr #16   |
+    +0x3c  sturh   w11, [x9, #-6]           |
+    +0x40  ldrb    w11, [x1, x8]            |
+    +0x44  and     w11, w12, w11            |
+    +0x48  mov     w12, #0x8                |
+    +0x4c  neg     w11, w11                 |
+    +0x50  and     w11, w10, w11, lsr #16   |
+    +0x54  sturh   w11, [x9, #-4]           |
+    +0x58  ldrb    w11, [x1, x8]            |
+    +0x5c  and     w11, w12, w11            |
+    +0x60  mov     w12, #0x10               |
+    +0x64  neg     w11, w11                 |
+    +0x68  and     w11, w10, w11, lsr #16   |
+    +0x6c  sturh   w11, [x9, #-2]           |
+    +0x70  ldrb    w11, [x1, x8]            |
+    +0x74  and     w11, w12, w11            |
+    +0x78  mov     w12, #0x20               |
+    +0x7c  neg     w11, w11                 |
+    +0x80  and     w11, w10, w11, lsr #16   |
+    +0x84  strh    w11, [x9]                |
+    +0x88  ldrb    w11, [x1, x8]            |
+    +0x8c  and     w11, w12, w11            |
+    +0x90  mov     w12, #0x40               |
+    +0x94  neg     w11, w11                 |
+    +0x98  and     w11, w10, w11, lsr #16   |
+    +0x9c  strh    w11, [x9, #2]            |
+    +0xa0  ldrb    w11, [x1, x8]            |
+    +0xa4  and     w11, w12, w11            |
+    +0xa8  mov     w12, #0x80               |
+    +0xac  neg     w11, w11                 |
+    +0xb0  and     w11, w10, w11, lsr #16   |
+    +0xb4  strh    w11, [x9, #4]            |
+    +0xb8  ldrb    w11, [x1, x8]            |
+    +0xbc  add     x8, x8, #0x1             |
+    +0xc0  cmp     x8, #0x20                |
+    +0xc4  and     w11, w12, w11            |
+    +0xc8  neg     w11, w11                 |
+    +0xcc  and     w11, w10, w11, lsr #16   |
+    +0xd0  strh    w11, [x9, #6]            |
+  loop1_test:                               |
+    +0xd4  add     x9, x9, #0x10            |
+  loop1_back:                               |
+    +0xd8  b.ne    loop1                   -+
+  loop1_exit: ret:
+    +0xdc  ret
+ ***)
+
+(*** mlkem_poly_tomsg: 0x420c, 0x700 bytes
+
+     +0x0  sub     sp, sp, #0x1e0
+     +0x4  stp     d15, d14, [sp, #400]
+     +0x8  stp     d13, d12, [sp, #416]
+     +0xc  stp     d11, d10, [sp, #432]
+    +0x10  stp     d9, d8, [sp, #448]
+    +0x14  str     x29, [sp, #464]
+    +0x18  add     x8, x1, #0x200
+    +0x1c  cmp     x8, x0
+    +0x20  b.ls    join1                                -----+
+    +0x24  add     x8, x0, #0x20                             |
+    +0x28  cmp     x8, x1                                    |
+    +0x2c  b.ls    join1                                ---+ |
+    +0x30  mov     w9, #0xafb8                             | |
+    +0x34  mov     x8, xzr                                 | |
+    +0x38  movk    w9, #0x13, lsl #16                      | |
+    +0x3c  add     x10, x1, #0x8                           | |
+    +0x40  mov     w11, #0x40000000                        | |
+  loop1:                                                   | |
+    +0x44  strb    wzr, [x0, x8]                        <+ | |
+    +0x48  ldursh  w12, [x10, #-8]                       | | |
+    +0x4c  madd    w12, w12, w9, w11                     | | |
+    +0x50  lsr     w13, w12, #31                         | | |
+    +0x54  strb    w13, [x0, x8]                         | | |
+    +0x58  ldursh  w13, [x10, #-6]                       | | |
+    +0x5c  madd    w13, w13, w9, w11                     | | |
+    +0x60  lsr     w13, w13, #30                         | | |
+    +0x64  and     w13, w13, #0x2                        | | |
+    +0x68  bfxil   w13, w12, #31, #1                     | | |
+    +0x6c  strb    w13, [x0, x8]                         | | |
+    +0x70  ldursh  w12, [x10, #-4]                       | | |
+    +0x74  madd    w12, w12, w9, w11                     | | |
+    +0x78  lsr     w12, w12, #31                         | | |
+    +0x7c  orr     w12, w13, w12, lsl #2                 | | |
+    +0x80  strb    w12, [x0, x8]                         | | |
+    +0x84  ldursh  w13, [x10, #-2]                       | | |
+    +0x88  madd    w13, w13, w9, w11                     | | |
+    +0x8c  lsr     w13, w13, #31                         | | |
+    +0x90  orr     w12, w12, w13, lsl #3                 | | |
+    +0x94  strb    w12, [x0, x8]                         | | |
+    +0x98  ldrsh   w13, [x10]                            | | |
+    +0x9c  madd    w13, w13, w9, w11                     | | |
+    +0xa0  lsr     w13, w13, #31                         | | |
+    +0xa4  orr     w12, w12, w13, lsl #4                 | | |
+    +0xa8  strb    w12, [x0, x8]                         | | |
+    +0xac  ldrsh   w13, [x10, #2]                        | | |
+    +0xb0  madd    w13, w13, w9, w11                     | | |
+    +0xb4  lsr     w13, w13, #31                         | | |
+    +0xb8  orr     w12, w12, w13, lsl #5                 | | |
+    +0xbc  strb    w12, [x0, x8]                         | | |
+    +0xc0  ldrsh   w13, [x10, #4]                        | | |
+    +0xc4  madd    w13, w13, w9, w11                     | | |
+    +0xc8  lsr     w13, w13, #31                         | | |
+    +0xcc  orr     w12, w12, w13, lsl #6                 | | |
+    +0xd0  strb    w12, [x0, x8]                         | | |
+    +0xd4  ldrsh   w13, [x10, #6]                        | | |
+    +0xd8  add     x10, x10, #0x10                       | | |
+    +0xdc  madd    w13, w13, w9, w11                     | | |
+    +0xe0  lsr     w13, w13, #31                         | | |
+    +0xe4  orr     w12, w12, w13, lsl #7                 | | |
+    +0xe8  strb    w12, [x0, x8]                         | | |
+    +0xec  add     x8, x8, #0x1                          | | |
+  loop1_test:                                            | | |
+    +0xf0  cmp     x8, #0x20                             | | |
+  loop1_back:                                            | | |
+    +0xf4  b.ne    loop1                                -+ | |
+  loop1_exit:                                              | |
+    +0xf8  b       join2                                -------+
+  join1: adrp1:                                            | | |
+    +0xfc  adrp    x9, <page>                           <--+-+ |
+  adrp2:                                                       |
+   +0x100  adrp    x10, <page>                                 |
+   +0x104  mov     x8, xzr                                     |
+   +0x108  ldr     q0, [x9, #3168]                             |
+                   // mlkem_poly_compress_d4_const1            |
+  adrp3:                                                       |
+   +0x10c  adrp    x9, <page>                                  |
+   +0x110  str     q0, [sp, #256]                              |
+   +0x114  ldr     q0, [x10, #3184]                            |
+                   // mlkem_poly_compress_d4_const2            |
+  adrp4:                                                       |
+   +0x118  adrp    x10, <page>                                 |
+   +0x11c  str     q0, [sp, #80]                               |
+   +0x120  ldr     q0, [x9, #3200]                             |
+                   // mlkem_poly_compress_d4_const3            |
+   +0x124  mov     w9, #0xafb8                                 |
+   +0x128  movk    w9, #0x13, lsl #16                          |
+   +0x12c  str     q0, [sp, #64]                               |
+   +0x130  ldr     q0, [x10, #3216]                            |
+                   // mlkem_poly_compress_d4_const4            |
+  adrp5:                                                       |
+   +0x134  adrp    x10, <page>                                 |
+   +0x138  dup     v12.4s, w9                                  |
+   +0x13c  str     q0, [sp, #48]                               |
+   +0x140  ldr     q0, [x10, #3232]                            |
+                   // mlkem_poly_compress_d4_const5            |
+  adrp6:                                                       |
+   +0x144  adrp    x10, <page>                                 |
+   +0x148  str     q0, [sp, #32]                               |
+   +0x14c  ldr     q0, [x10, #3248]                            |
+                   // mlkem_poly_compress_d4_const6            |
+  adrp7:                                                       |
+   +0x150  adrp    x10, <page>                                 |
+   +0x154  str     q0, [sp, #16]                               |
+   +0x158  ldr     q0, [x10, #3264]                            |
+                   // mlkem_poly_compress_d4_const7            |
+   +0x15c  str     q0, [sp]                                    |
+  loop2:                                                       |
+   +0x160  movi    v0.2d, #0x0                          <+     |
+   +0x164  add     x9, sp, #0x130                        |     |
+   +0x168  str     q0, [x0, x8]                          |     |
+   +0x16c  ldp     q0, q1, [x1, #128]                    |     |
+   +0x170  mov     v5.16b, v0.16b                        |     |
+   +0x174  mov     v31.16b, v5.16b                       |     |
+   +0x178  ldp     q16, q17, [x1, #32]                   |     |
+   +0x17c  mov     v6.16b, v1.16b                        |     |
+   +0x180  zip1    v20.4h, v5.4h, v6.4h                  |     |
+   +0x184  mov     v27.16b, v16.16b                      |     |
+   +0x188  ldp     q25, q26, [x1]                        |     |
+   +0x18c  zip1    v4.4h, v16.4h, v17.4h                 |     |
+   +0x190  mov     v28.16b, v17.16b                      |     |
+   +0x194  ext     v2.8b, v16.8b, v4.8b, #4              |     |
+   +0x198  ldp     q23, q24, [x1, #224]                  |     |
+   +0x19c  st1     {v25.2d-v26.2d}, [x9]                 |     |
+   +0x1a0  add     x9, sp, #0xa0                         |     |
+   +0x1a4  zip1    v3.4h, v25.4h, v26.4h                 |     |
+   +0x1a8  movi    v16.4s, #0x40, lsl #24                |     |
+   +0x1ac  ldp     q8, q9, [x1, #96]                     |     |
+   +0x1b0  zip1    v17.4h, v23.4h, v24.4h                |     |
+   +0x1b4  mov     v3.s[1], v2.s[1]                      |     |
+   +0x1b8  ext     v21.8b, v23.8b, v17.8b, #4            |     |
+   +0x1bc  ldp     q29, q30, [x1, #160]                  |     |
+   +0x1c0  zip1    v15.4h, v8.4h, v9.4h                  |     |
+   +0x1c4  sxtl    v3.4s, v3.4h                          |     |
+   +0x1c8  mla     v16.4s, v3.4s, v12.4s                 |     |
+   +0x1cc  ext     v2.8b, v8.8b, v15.8b, #4              |     |
+   +0x1d0  ldp     q0, q1, [x1, #64]                     |     |
+   +0x1d4  zip1    v7.4h, v29.4h, v30.4h                 |     |
+   +0x1d8  mov     v13.16b, v0.16b                       |     |
+   +0x1dc  ext     v19.8b, v29.8b, v7.8b, #4             |     |
+   +0x1e0  ldp     q10, q11, [x1, #192]                  |     |
+   +0x1e4  st1     {v0.2d-v1.2d}, [x9]                   |     |
+   +0x1e8  add     x9, sp, #0x150                        |     |
+   +0x1ec  zip1    v18.4h, v0.4h, v1.4h                  |     |
+   +0x1f0  add     x1, x1, #0x100                        |     |
+   +0x1f4  mov     v20.s[1], v19.s[1]                    |     |
+   +0x1f8  st1     {v5.2d-v6.2d}, [x9]                   |     |
+   +0x1fc  add     x9, sp, #0x170                        |     |
+   +0x200  movi    v19.4s, #0x40, lsl #24                |     |
+   +0x204  zip1    v5.4h, v10.4h, v11.4h                 |     |
+   +0x208  mov     v18.s[1], v2.s[1]                     |     |
+   +0x20c  st1     {v29.2d-v30.2d}, [x9]                 |     |
+   +0x210  mov     v0.16b, v6.16b                        |     |
+   +0x214  add     x9, sp, #0x130                        |     |
+   +0x218  movi    v6.4s, #0x40, lsl #24                 |     |
+   +0x21c  mov     v5.s[1], v21.s[1]                     |     |
+   +0x220  movi    v21.4s, #0x40, lsl #24                |     |
+   +0x224  mov     v14.16b, v1.16b                       |     |
+   +0x228  sxtl    v1.4s, v18.4h                         |     |
+   +0x22c  sxtl    v5.4s, v5.4h                          |     |
+   +0x230  trn2    v18.4h, v25.4h, v26.4h                |     |
+   +0x234  ld1     {v25.2d-v26.2d}, [x9]                 |     |
+   +0x238  sxtl    v2.4s, v20.4h                         |     |
+   +0x23c  trn2    v20.4h, v31.4h, v0.4h                 |     |
+   +0x240  mla     v21.4s, v5.4s, v12.4s                 |     |
+   +0x244  add     x9, sp, #0xa0                         |     |
+   +0x248  mla     v19.4s, v2.4s, v12.4s                 |     |
+   +0x24c  mla     v6.4s, v1.4s, v12.4s                  |     |
+   +0x250  mov     v18.s[1], v4.s[1]                     |     |
+   +0x254  trn2    v4.4h, v10.4h, v11.4h                 |     |
+   +0x258  ushr    v3.4s, v21.4s, #31                    |     |
+   +0x25c  ldr     q21, [sp, #256]                       |     |
+   +0x260  ushr    v2.4s, v19.4s, #31                    |     |
+   +0x264  trn2    v22.4h, v13.4h, v14.4h                |     |
+   +0x268  ushr    v1.4s, v6.4s, #31                     |     |
+   +0x26c  mov     v4.s[1], v17.s[1]                     |     |
+   +0x270  ushr    v0.4s, v16.4s, #31                    |     |
+   +0x274  mov     v20.s[1], v7.s[1]                     |     |
+   +0x278  tbl     v0.16b, {v0.16b-v3.16b}, v21.16b      |     |
+   +0x27c  movi    v3.4s, #0x40, lsl #24                 |     |
+   +0x280  sxtl    v1.4s, v4.4h                          |     |
+   +0x284  mov     v22.s[1], v15.s[1]                    |     |
+   +0x288  mov     v13.16b, v27.16b                      |     |
+   +0x28c  str     q0, [sp, #240]                        |     |
+   +0x290  mla     v3.4s, v1.4s, v12.4s                  |     |
+   +0x294  mov     v14.16b, v28.16b                      |     |
+   +0x298  ld1     {v27.2d-v28.2d}, [x9]                 |     |
+   +0x29c  add     x9, sp, #0x150                        |     |
+   +0x2a0  movi    v7.4s, #0x40, lsl #24                 |     |
+   +0x2a4  sxtl    v5.4s, v18.4h                         |     |
+   +0x2a8  movi    v4.4s, #0x40, lsl #24                 |     |
+   +0x2ac  ushr    v19.4s, v3.4s, #30                    |     |
+   +0x2b0  mov     v3.16b, v29.16b                       |     |
+   +0x2b4  sxtl    v0.4s, v20.4h                         |     |
+   +0x2b8  mov     v3.h[3], v30.h[2]                     |     |
+   +0x2bc  ld1     {v29.2d-v30.2d}, [x9]                 |     |
+   +0x2c0  sxtl    v6.4s, v22.4h                         |     |
+   +0x2c4  add     x9, sp, #0x110                        |     |
+   +0x2c8  mla     v7.4s, v0.4s, v12.4s                  |     |
+   +0x2cc  mla     v4.4s, v6.4s, v12.4s                  |     |
+   +0x2d0  movi    v2.4s, #0x40, lsl #24                 |     |
+   +0x2d4  st1     {v8.2d-v9.2d}, [x9]                   |     |
+   +0x2d8  mov     v0.16b, v8.16b                        |     |
+   +0x2dc  add     x9, sp, #0x170                        |     |
+   +0x2e0  mov     v0.h[3], v9.h[2]                      |     |
+   +0x2e4  mov     v6.16b, v23.16b                       |     |
+   +0x2e8  ushr    v18.4s, v7.4s, #30                    |     |
+   +0x2ec  zip2    v7.4h, v27.4h, v28.4h                 |     |
+   +0x2f0  ushr    v17.4s, v4.4s, #30                    |     |
+   +0x2f4  mov     v1.16b, v13.16b                       |     |
+   +0x2f8  zip2    v4.4h, v29.4h, v30.4h                 |     |
+   +0x2fc  mov     v6.h[3], v24.h[2]                     |     |
+   +0x300  zip2    v20.4h, v10.4h, v11.4h                |     |
+   +0x304  mla     v2.4s, v5.4s, v12.4s                  |     |
+   +0x308  zip2    v5.4h, v25.4h, v26.4h                 |     |
+   +0x30c  mov     v1.h[3], v14.h[2]                     |     |
+   +0x310  mov     v7.s[1], v0.s[1]                      |     |
+   +0x314  mov     v4.s[1], v3.s[1]                      |     |
+   +0x318  mov     v20.s[1], v6.s[1]                     |     |
+   +0x31c  mov     v5.s[1], v1.s[1]                      |     |
+   +0x320  movi    v6.4s, #0x40, lsl #24                 |     |
+   +0x324  sxtl    v1.4s, v7.4h                          |     |
+   +0x328  movi    v7.4s, #0x40, lsl #24                 |     |
+   +0x32c  sxtl    v3.4s, v4.4h                          |     |
+   +0x330  sxtl    v4.4s, v20.4h                         |     |
+   +0x334  movi    v20.4s, #0x40, lsl #24                |     |
+   +0x338  sxtl    v0.4s, v5.4h                          |     |
+   +0x33c  movi    v5.4s, #0x40, lsl #24                 |     |
+   +0x340  mla     v6.4s, v4.4s, v12.4s                  |     |
+   +0x344  mla     v7.4s, v3.4s, v12.4s                  |     |
+   +0x348  mla     v20.4s, v1.4s, v12.4s                 |     |
+   +0x34c  mla     v5.4s, v0.4s, v12.4s                  |     |
+   +0x350  ushr    v16.4s, v2.4s, #30                    |     |
+   +0x354  ushr    v3.4s, v6.4s, #29                     |     |
+   +0x358  uzp2    v6.4h, v25.4h, v26.4h                 |     |
+   +0x35c  ushr    v2.4s, v7.4s, #29                     |     |
+   +0x360  ushr    v1.4s, v20.4s, #29                    |     |
+   +0x364  ushr    v0.4s, v5.4s, #29                     |     |
+   +0x368  zip2    v5.4h, v13.4h, v14.4h                 |     |
+   +0x36c  tbl     v4.16b, {v16.16b-v19.16b}, v21.16b    |     |
+   +0x370  uzp2    v7.4h, v6.4h, v25.4h                  |     |
+   +0x374  tbl     v0.16b, {v0.16b-v3.16b}, v21.16b      |     |
+   +0x378  mov     v18.16b, v27.16b                      |     |
+   +0x37c  mov     v19.16b, v28.16b                      |     |
+   +0x380  mov     v16.16b, v29.16b                      |     |
+   +0x384  stp     q0, q4, [sp, #208]                    |     |
+   +0x388  uzp2    v0.4h, v18.4h, v19.4h                 |     |
+   +0x38c  mov     v17.16b, v30.16b                      |     |
+   +0x390  ld1     {v29.2d-v30.2d}, [x9]                 |     |
+   +0x394  mov     v27.16b, v10.16b                      |     |
+   +0x398  add     x9, sp, #0x80                         |     |
+   +0x39c  mov     v28.16b, v11.16b                      |     |
+   +0x3a0  uzp2    v1.4h, v16.4h, v17.4h                 |     |
+   +0x3a4  uzp2    v2.4h, v27.4h, v28.4h                 |     |
+   +0x3a8  zip2    v3.4h, v8.4h, v9.4h                   |     |
+   +0x3ac  mov     v7.s[1], v5.s[1]                      |     |
+   +0x3b0  uzp2    v0.4h, v0.4h, v18.4h                  |     |
+   +0x3b4  movi    v4.4s, #0x40, lsl #24                 |     |
+   +0x3b8  st1     {v27.2d-v28.2d}, [x9]                 |     |
+   +0x3bc  uzp2    v1.4h, v1.4h, v16.4h                  |     |
+   +0x3c0  add     x9, sp, #0x150                        |     |
+   +0x3c4  zip2    v16.4h, v23.4h, v24.4h                |     |
+   +0x3c8  uzp2    v2.4h, v2.4h, v27.4h                  |     |
+   +0x3cc  mov     v0.s[1], v3.s[1]                      |     |
+   +0x3d0  zip2    v5.4h, v29.4h, v30.4h                 |     |
+   +0x3d4  sxtl    v3.4s, v7.4h                          |     |
+   +0x3d8  movi    v17.4s, #0x40, lsl #24                |     |
+   +0x3dc  mla     v4.4s, v3.4s, v12.4s                  |     |
+   +0x3e0  mov     v2.s[1], v16.s[1]                     |     |
+   +0x3e4  mov     v1.s[1], v5.s[1]                      |     |
+   +0x3e8  movi    v5.4s, #0x40, lsl #24                 |     |
+   +0x3ec  str     q4, [sp, #192]                        |     |
+   +0x3f0  ldr     q4, [sp, #80]                         |     |
+   +0x3f4  sxtl    v2.4s, v2.4h                          |     |
+   +0x3f8  movi    v3.4s, #0x40, lsl #24                 |     |
+   +0x3fc  sxtl    v0.4s, v0.4h                          |     |
+   +0x400  sxtl    v1.4s, v1.4h                          |     |
+   +0x404  mla     v5.4s, v2.4s, v12.4s                  |     |
+   +0x408  tbl     v2.16b, {v13.16b-v14.16b}, v4.16b     |     |
+   +0x40c  zip2    v16.8h, v25.8h, v26.8h                |     |
+   +0x410  mov     v10.16b, v18.16b                      |     |
+   +0x414  mov     v11.16b, v19.16b                      |     |
+   +0x418  mla     v17.4s, v0.4s, v12.4s                 |     |
+   +0x41c  mla     v3.4s, v1.4s, v12.4s                  |     |
+   +0x420  tbl     v0.16b, {v8.16b-v9.16b}, v4.16b       |     |
+   +0x424  zip2    v1.8h, v10.8h, v11.8h                 |     |
+   +0x428  mov     v16.s[1], v2.s[1]                     |     |
+   +0x42c  tbl     v2.16b, {v29.16b-v30.16b}, v4.16b     |     |
+   +0x430  ld1     {v29.2d-v30.2d}, [x9]                 |     |
+   +0x434  add     x9, sp, #0x60                         |     |
+   +0x438  ushr    v21.4s, v5.4s, #28                    |     |
+   +0x43c  mov     v1.s[1], v0.s[1]                      |     |
+   +0x440  ushr    v20.4s, v3.4s, #28                    |     |
+   +0x444  sxtl    v3.4s, v16.4h                         |     |
+   +0x448  tbl     v0.16b, {v23.16b-v24.16b}, v4.16b     |     |
+   +0x44c  st1     {v23.2d-v24.2d}, [x9]                 |     |
+   +0x450  zip2    v16.8h, v27.8h, v28.8h                |     |
+   +0x454  add     x9, sp, #0x110                        |     |
+   +0x458  movi    v27.4s, #0x40, lsl #24                |     |
+   +0x45c  sxtl    v1.4s, v1.4h                          |     |
+   +0x460  mov     v8.16b, v23.16b                       |     |
+   +0x464  mov     v16.s[1], v0.s[1]                     |     |
+   +0x468  mla     v27.4s, v1.4s, v12.4s                 |     |
+   +0x46c  ld1     {v0.2d-v1.2d}, [x9]                   |     |
+   +0x470  add     x9, sp, #0x170                        |     |
+   +0x474  ushr    v19.4s, v17.4s, #28                   |     |
+   +0x478  mov     v9.16b, v24.16b                       |     |
+   +0x47c  movi    v7.4s, #0x40, lsl #24                 |     |
+   +0x480  ld1     {v23.2d-v24.2d}, [x9]                 |     |
+   +0x484  add     x9, sp, #0x80                         |     |
+   +0x488  zip2    v5.8h, v29.8h, v30.8h                 |     |
+   +0x48c  movi    v22.4s, #0x40, lsl #24                |     |
+   +0x490  mla     v7.4s, v3.4s, v12.4s                  |     |
+   +0x494  ldr     q3, [sp, #64]                         |     |
+   +0x498  mov     v5.s[1], v2.s[1]                      |     |
+   +0x49c  sxtl    v16.4s, v16.4h                        |     |
+   +0x4a0  movi    v2.4s, #0x40, lsl #24                 |     |
+   +0x4a4  mla     v22.4s, v16.4s, v12.4s                |     |
+   +0x4a8  zip2    v16.8h, v0.8h, v1.8h                  |     |
+   +0x4ac  zip2    v1.8h, v23.8h, v24.8h                 |     |
+   +0x4b0  tbl     v23.16b, {v29.16b-v30.16b}, v3.16b    |     |
+   +0x4b4  ld1     {v30.2d-v31.2d}, [x9]                 |     |
+   +0x4b8  sxtl    v5.4s, v5.4h                          |     |
+   +0x4bc  add     x9, sp, #0x130                        |     |
+   +0x4c0  tbl     v0.16b, {v10.16b-v11.16b}, v3.16b     |     |
+   +0x4c4  mla     v2.4s, v5.4s, v12.4s                  |     |
+   +0x4c8  zip2    v6.8h, v13.8h, v14.8h                 |     |
+   +0x4cc  tbl     v5.16b, {v25.16b-v26.16b}, v3.16b     |     |
+   +0x4d0  ldr     q26, [sp, #256]                       |     |
+   +0x4d4  zip2    v25.8h, v8.8h, v9.8h                  |     |
+   +0x4d8  tbl     v24.16b, {v30.16b-v31.16b}, v3.16b    |     |
+   +0x4dc  mov     v0.s[1], v16.s[1]                     |     |
+   +0x4e0  mov     v5.s[1], v6.s[1]                      |     |
+   +0x4e4  movi    v6.4s, #0x40, lsl #24                 |     |
+   +0x4e8  movi    v4.4s, #0x40, lsl #24                 |     |
+   +0x4ec  mov     v24.s[1], v25.s[1]                    |     |
+   +0x4f0  sxtl    v0.4s, v0.4h                          |     |
+   +0x4f4  mov     v23.s[1], v1.s[1]                     |     |
+   +0x4f8  ldr     q1, [sp, #192]                        |     |
+   +0x4fc  sxtl    v5.4s, v5.4h                          |     |
+   +0x500  mla     v6.4s, v0.4s, v12.4s                  |     |
+   +0x504  movi    v0.4s, #0x40, lsl #24                 |     |
+   +0x508  mla     v4.4s, v5.4s, v12.4s                  |     |
+   +0x50c  movi    v5.4s, #0x40, lsl #24                 |     |
+   +0x510  sxtl    v16.4s, v24.4h                        |     |
+   +0x514  sxtl    v23.4s, v23.4h                        |     |
+   +0x518  mla     v0.4s, v16.4s, v12.4s                 |     |
+   +0x51c  mla     v5.4s, v23.4s, v12.4s                 |     |
+   +0x520  ushr    v18.4s, v1.4s, #28                    |     |
+   +0x524  ushr    v25.4s, v22.4s, #27                   |     |
+   +0x528  tbl     v9.16b, {v18.16b-v21.16b}, v26.16b    |     |
+   +0x52c  ld1     {v17.2d-v18.2d}, [x9]                 |     |
+   +0x530  add     x9, sp, #0x110                        |     |
+   +0x534  ushr    v24.4s, v2.4s, #27                    |     |
+   +0x538  ushr    v3.4s, v0.4s, #26                     |     |
+   +0x53c  ushr    v23.4s, v27.4s, #27                   |     |
+   +0x540  ushr    v2.4s, v5.4s, #26                     |     |
+   +0x544  ushr    v22.4s, v7.4s, #27                    |     |
+   +0x548  ushr    v1.4s, v6.4s, #26                     |     |
+   +0x54c  ld1     {v7.2d-v8.2d}, [x9]                   |     |
+   +0x550  add     x9, sp, #0x170                        |     |
+   +0x554  ushr    v0.4s, v4.4s, #26                     |     |
+   +0x558  tbl     v4.16b, {v22.16b-v25.16b}, v26.16b    |     |
+   +0x55c  tbl     v15.16b, {v0.16b-v3.16b}, v26.16b     |     |
+   +0x560  ldp     q16, q6, [sp, #32]                    |     |
+   +0x564  mov     v22.16b, v13.16b                      |     |
+   +0x568  mov     v23.16b, v14.16b                      |     |
+   +0x56c  str     q4, [sp, #192]                        |     |
+   +0x570  tbl     v1.16b, {v17.16b-v18.16b}, v16.16b    |     |
+   +0x574  tbl     v3.16b, {v10.16b-v11.16b}, v16.16b    |     |
+   +0x578  ld1     {v19.2d-v20.2d}, [x9]                 |     |
+   +0x57c  add     x9, sp, #0x150                        |     |
+   +0x580  tbl     v0.16b, {v13.16b-v14.16b}, v6.16b     |     |
+   +0x584  tbl     v2.16b, {v7.16b-v8.16b}, v6.16b       |     |
+   +0x588  ld1     {v13.2d-v14.2d}, [x9]                 |     |
+   +0x58c  add     x9, sp, #0x60                         |     |
+   +0x590  mov     v1.s[1], v0.s[1]                      |     |
+   +0x594  movi    v0.4s, #0x40, lsl #24                 |     |
+   +0x598  tbl     v4.16b, {v19.16b-v20.16b}, v6.16b     |     |
+   +0x59c  ld1     {v24.2d-v25.2d}, [x9]                 |     |
+   +0x5a0  mov     v3.s[1], v2.s[1]                      |     |
+   +0x5a4  sxtl    v1.4s, v1.4h                          |     |
+   +0x5a8  tbl     v5.16b, {v13.16b-v14.16b}, v16.16b    |     |
+   +0x5ac  tbl     v16.16b, {v30.16b-v31.16b}, v16.16b   |     |
+   +0x5b0  ldr     q21, [sp, #16]                        |     |
+   +0x5b4  movi    v2.4s, #0x40, lsl #24                 |     |
+   +0x5b8  mla     v0.4s, v1.4s, v12.4s                  |     |
+   +0x5bc  tbl     v6.16b, {v24.16b-v25.16b}, v6.16b     |     |
+   +0x5c0  mov     v5.s[1], v4.s[1]                      |     |
+   +0x5c4  movi    v1.4s, #0x40, lsl #24                 |     |
+   +0x5c8  sxtl    v3.4s, v3.4h                          |     |
+   +0x5cc  mov     v16.s[1], v6.s[1]                     |     |
+   +0x5d0  sxtl    v4.4s, v5.4h                          |     |
+   +0x5d4  mla     v2.4s, v3.4s, v12.4s                  |     |
+   +0x5d8  movi    v3.4s, #0x40, lsl #24                 |     |
+   +0x5dc  mla     v1.4s, v4.4s, v12.4s                  |     |
+   +0x5e0  tbl     v4.16b, {v22.16b-v23.16b}, v21.16b    |     |
+   +0x5e4  ldr     q22, [sp]                             |     |
+   +0x5e8  sxtl    v5.4s, v16.4h                         |     |
+   +0x5ec  tbl     v6.16b, {v7.16b-v8.16b}, v21.16b      |     |
+   +0x5f0  mla     v3.4s, v5.4s, v12.4s                  |     |
+   +0x5f4  tbl     v5.16b, {v17.16b-v18.16b}, v22.16b    |     |
+   +0x5f8  tbl     v16.16b, {v10.16b-v11.16b}, v22.16b   |     |
+   +0x5fc  tbl     v19.16b, {v19.16b-v20.16b}, v21.16b   |     |
+   +0x600  tbl     v20.16b, {v13.16b-v14.16b}, v22.16b   |     |
+   +0x604  tbl     v21.16b, {v24.16b-v25.16b}, v21.16b   |     |
+   +0x608  tbl     v22.16b, {v30.16b-v31.16b}, v22.16b   |     |
+   +0x60c  mov     v5.s[1], v4.s[1]                      |     |
+   +0x610  mov     v16.s[1], v6.s[1]                     |     |
+   +0x614  mov     v20.s[1], v19.s[1]                    |     |
+   +0x618  mov     v22.s[1], v21.s[1]                    |     |
+   +0x61c  sxtl    v4.4s, v5.4h                          |     |
+   +0x620  sxtl    v5.4s, v16.4h                         |     |
+   +0x624  movi    v19.4s, #0x40, lsl #24                |     |
+   +0x628  sxtl    v16.4s, v22.4h                        |     |
+   +0x62c  movi    v21.4s, #0x40, lsl #24                |     |
+   +0x630  movi    v22.4s, #0x40, lsl #24                |     |
+   +0x634  sxtl    v6.4s, v20.4h                         |     |
+   +0x638  mla     v19.4s, v4.4s, v12.4s                 |     |
+   +0x63c  mla     v21.4s, v6.4s, v12.4s                 |     |
+   +0x640  mla     v22.4s, v5.4s, v12.4s                 |     |
+   +0x644  ushr    v6.4s, v3.4s, #25                     |     |
+   +0x648  ushr    v5.4s, v1.4s, #25                     |     |
+   +0x64c  ushr    v4.4s, v2.4s, #25                     |     |
+   +0x650  ushr    v3.4s, v0.4s, #25                     |     |
+   +0x654  movi    v2.16b, #0x2                          |     |
+   +0x658  tbl     v0.16b, {v3.16b-v6.16b}, v26.16b      |     |
+   +0x65c  ldp     q4, q3, [sp, #208]                    |     |
+   +0x660  movi    v20.4s, #0x40, lsl #24                |     |
+   +0x664  mla     v20.4s, v16.4s, v12.4s                |     |
+   +0x668  and     v2.16b, v3.16b, v2.16b                |     |
+   +0x66c  movi    v3.16b, #0x4                          |     |
+   +0x670  ushr    v30.4s, v20.4s, #24                   |     |
+   +0x674  ushr    v29.4s, v21.4s, #24                   |     |
+   +0x678  and     v3.16b, v4.16b, v3.16b                |     |
+   +0x67c  ldr     q4, [sp, #192]                        |     |
+   +0x680  orr     v2.16b, v2.16b, v3.16b                |     |
+   +0x684  ldr     q3, [sp, #240]                        |     |
+   +0x688  ushr    v28.4s, v22.4s, #24                   |     |
+   +0x68c  ushr    v27.4s, v19.4s, #24                   |     |
+   +0x690  orr     v2.16b, v2.16b, v3.16b                |     |
+   +0x694  movi    v3.16b, #0x8                          |     |
+   +0x698  tbl     v1.16b, {v27.16b-v30.16b}, v26.16b    |     |
+   +0x69c  and     v3.16b, v9.16b, v3.16b                |     |
+   +0x6a0  orr     v2.16b, v2.16b, v3.16b                |     |
+   +0x6a4  movi    v3.16b, #0x10                         |     |
+   +0x6a8  and     v3.16b, v4.16b, v3.16b                |     |
+   +0x6ac  movi    v4.16b, #0x20                         |     |
+   +0x6b0  and     v4.16b, v15.16b, v4.16b               |     |
+   +0x6b4  orr     v3.16b, v3.16b, v4.16b                |     |
+   +0x6b8  movi    v4.16b, #0x40                         |     |
+   +0x6bc  and     v0.16b, v0.16b, v4.16b                |     |
+   +0x6c0  orr     v0.16b, v3.16b, v0.16b                |     |
+   +0x6c4  orr     v0.16b, v2.16b, v0.16b                |     |
+   +0x6c8  movi    v2.16b, #0x80                         |     |
+   +0x6cc  and     v1.16b, v1.16b, v2.16b                |     |
+   +0x6d0  orr     v0.16b, v0.16b, v1.16b                |     |
+   +0x6d4  str     q0, [x0, x8]                          |     |
+   +0x6d8  add     x8, x8, #0x10                         |     |
+  loop2_test:                                            |     |
+   +0x6dc  cmp     x8, #0x20                             |     |
+  loop2_back:                                            |     |
+   +0x6e0  b.ne    loop2                                -+     |
+  join2: loop2_exit:                                           |
+   +0x6e4  ldp     d9, d8, [sp, #448]                   <------+
+   +0x6e8  ldp     d11, d10, [sp, #432]
+   +0x6ec  ldp     d13, d12, [sp, #416]
+   +0x6f0  ldp     d15, d14, [sp, #400]
+   +0x6f4  ldr     x29, [sp, #464]
+   +0x6f8  add     sp, sp, #0x1e0
+  ret:
+   +0x6fc  ret
+ ***)
+
+(*** mlkem_shake128_absorb_once: 0x490c, 0x18 bytes
+
+     +0x0  mov     x8, x1
+     +0x4  mov     x3, x2
+     +0x8  mov     w1, #0xa8
+     +0xc  mov     x2, x8
+    +0x10  mov     w4, #0x1f
+    +0x14  b       mlk_keccak_absorb_once
+ ***)
+
+(*** mlk_keccak_absorb_once: 0x4924, 0x128 bytes
+
+     +0x0  sub     sp, sp, #0x50
+     +0x4  str     x30, [sp, #16]
+     +0x8  stp     x24, x23, [sp, #32]
+     +0xc  stp     x22, x21, [sp, #48]
+    +0x10  stp     x20, x19, [sp, #64]
+  adrp1:
+    +0x14  adrp    x8, <page>
+    +0x18  mov     w21, w4
+    +0x1c  movi    v0.2d, #0x0
+    +0x20  mov     x20, x3
+    +0x24  mov     x23, x2
+    +0x28  mov     w22, w1
+    +0x2c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x30  mov     x19, x0
+    +0x34  mov     w24, w1
+    +0x38  cmp     x24, x3
+    +0x3c  ldr     x8, [x8]
+    +0x40  str     x8, [sp, #8]
+    +0x44  strb    w4, [sp, #4]
+    +0x48  stp     q0, q0, [x0]
+    +0x4c  stp     q0, q0, [x0, #32]
+    +0x50  stp     q0, q0, [x0, #64]
+    +0x54  stp     q0, q0, [x0, #96]
+    +0x58  stp     q0, q0, [x0, #128]
+    +0x5c  stp     q0, q0, [x0, #160]
+    +0x60  str     xzr, [x0, #192]
+    +0x64  b.hi    join1                        ---+
+  loop1:                                           |
+    +0x68  mov     x0, x19                      <+ |
+    +0x6c  mov     x1, x23                       | |
+    +0x70  mov     w2, wzr                       | |
+    +0x74  mov     w3, w22                       | |
+    +0x78  bl      mlkem_keccakf1600_xor_bytes   | |
+  after_mlkem_keccakf1600_xor_bytes_1:           | |
+    +0x7c  mov     x0, x19                       | |
+    +0x80  bl      mlkem_keccakf1600_permute     | |
+  after_mlkem_keccakf1600_permute:               | |
+    +0x84  sub     x20, x20, x24                 | |
+    +0x88  add     x23, x23, x24                 | |
+  loop1_test:                                    | |
+    +0x8c  cmp     x20, x24                      | |
+  loop1_back:                                    | |
+    +0x90  b.cs    loop1                        -+ |
+  join1: loop1_exit:                               |
+    +0x94  cbz     x20, join2                   <+-+
+    +0x98  mov     x0, x19                       |
+    +0x9c  mov     x1, x23                       |
+    +0xa0  mov     w2, wzr                       |
+    +0xa4  mov     w3, w20                       |
+    +0xa8  bl      mlkem_keccakf1600_xor_bytes   |
+  join2: after_mlkem_keccakf1600_xor_bytes_2:    |
+    +0xac  sub     w22, w22, #0x1               <+
+    +0xb0  cmp     x20, x22
+    +0xb4  b.ne    +0xc0                        -+
+    +0xb8  orr     w8, w21, #0x80                |
+    +0xbc  b       join3                        ---+
+    +0xc0  add     x1, sp, #0x4                 <+ |
+    +0xc4  mov     x0, x19                         |
+    +0xc8  mov     w2, w20                         |
+    +0xcc  mov     w3, #0x1                        |
+    +0xd0  bl      mlkem_keccakf1600_xor_bytes     |
+  after_mlkem_keccakf1600_xor_bytes_3:             |
+    +0xd4  mov     w8, #0x80                       |
+    +0xd8  mov     w20, w22                        |
+  join3:                                           |
+    +0xdc  add     x1, sp, #0x4                 <--+
+    +0xe0  mov     x0, x19
+    +0xe4  mov     w2, w20
+    +0xe8  mov     w3, #0x1
+    +0xec  strb    w8, [sp, #4]
+    +0xf0  bl      mlkem_keccakf1600_xor_bytes
+  after_mlkem_keccakf1600_xor_bytes_4: adrp2:
+    +0xf4  adrp    x8, <page>
+    +0xf8  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0xfc  ldr     x9, [sp, #8]
+   +0x100  ldr     x8, [x8]
+   +0x104  cmp     x8, x9
+   +0x108  b.ne    +0x124                       -+
+   +0x10c  ldp     x20, x19, [sp, #64]           |
+   +0x110  ldp     x22, x21, [sp, #48]           |
+   +0x114  ldp     x24, x23, [sp, #32]           |
+   +0x118  ldr     x30, [sp, #16]                |
+   +0x11c  add     sp, sp, #0x50                 |
+  ret:                                           |
+   +0x120  ret                                   |
+   +0x124  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem_shake128_squeezeblocks: 0x4a4c, 0x4c bytes
+
+     +0x0  cbz     x1, join1                        ---+
+     +0x4  stp     x30, x21, [sp, #-32]!               |
+     +0x8  stp     x20, x19, [sp, #16]                 |
+     +0xc  mov     x19, x2                             |
+    +0x10  mov     x20, x1                             |
+    +0x14  mov     x21, x0                             |
+  loop1:                                               |
+    +0x18  mov     x0, x19                          <+ |
+    +0x1c  bl      mlkem_keccakf1600_permute         | |
+  after_mlkem_keccakf1600_permute:                   | |
+    +0x20  mov     x0, x19                           | |
+    +0x24  mov     x1, x21                           | |
+    +0x28  mov     w2, wzr                           | |
+    +0x2c  mov     w3, #0xa8                         | |
+    +0x30  bl      mlkem_keccakf1600_extract_bytes   | |
+  after_mlkem_keccakf1600_extract_bytes:             | |
+    +0x34  add     x21, x21, #0xa8                   | |
+  loop1_test:                                        | |
+    +0x38  subs    x20, x20, #0x1                    | |
+  loop1_back:                                        | |
+    +0x3c  b.ne    loop1                            -+ |
+  loop1_exit:                                          |
+    +0x40  ldp     x20, x19, [sp, #16]                 |
+    +0x44  ldp     x30, x21, [sp], #32                 |
+  join1: ret:                                          |
+    +0x48  ret                                      <--+
+ ***)
+
+(*** mlkem_shake128_init: 0x4a98, 0x4 bytes
+
+  ret:
+     +0x0  ret     
+ ***)
+
+(*** mlkem_shake128_release: 0x4a9c, 0x24 bytes
+
+     +0x0  movi    v0.2d, #0x0
+     +0x4  stp     q0, q0, [x0]
+     +0x8  stp     q0, q0, [x0, #32]
+     +0xc  stp     q0, q0, [x0, #64]
+    +0x10  stp     q0, q0, [x0, #96]
+    +0x14  stp     q0, q0, [x0, #128]
+    +0x18  stp     q0, q0, [x0, #160]
+    +0x1c  stp     q0, q0, [x0, #192]
+  ret:
+    +0x20  ret     
+ ***)
+
+(*** mlkem_shake256: 0x4ac0, 0xd4 bytes
+
+     +0x0  stp     x29, x30, [sp, #-64]!
+     +0x4  str     x28, [sp, #16]
+     +0x8  stp     x22, x21, [sp, #32]
+     +0xc  stp     x20, x19, [sp, #48]
+    +0x10  mov     x29, sp
+    +0x14  sub     x9, sp, #0x100
+    +0x18  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x1c  adrp    x8, <page>
+    +0x20  mov     x19, x1
+    +0x24  mov     x20, x0
+    +0x28  mov     x0, sp
+    +0x2c  mov     w1, #0x88
+    +0x30  mov     w4, #0x1f
+    +0x34  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x38  ldr     x8, [x8]
+    +0x3c  str     x8, [sp, #248]
+    +0x40  bl      mlk_keccak_absorb_once
+  after_mlk_keccak_absorb_once:
+    +0x44  cbz     x19, join1                       ---+
+    +0x48  mov     w22, #0x88                          |
+  loop1:                                               |
+    +0x4c  mov     x0, sp                           <+ |
+    +0x50  bl      mlkem_keccakf1600_permute         | |
+  after_mlkem_keccakf1600_permute:                   | |
+    +0x54  cmp     x19, #0x88                        | |
+    +0x58  mov     x0, sp                            | |
+    +0x5c  csel    x21, x19, x22, cc                 | |
+    +0x60  mov     x1, x20                           | |
+    +0x64  mov     w2, wzr                           | |
+    +0x68  mov     w3, w21                           | |
+    +0x6c  bl      mlkem_keccakf1600_extract_bytes   | |
+  after_mlkem_keccakf1600_extract_bytes:             | |
+    +0x70  add     x20, x20, x21                     | |
+  loop1_test:                                        | |
+    +0x74  subs    x19, x19, x21                     | |
+  loop1_back:                                        | |
+    +0x78  b.ne    loop1                            -+ |
+  join1: loop1_exit:                                   |
+    +0x7c  movi    v0.2d, #0x0                      <--+
+    +0x80  mov     x8, sp
+    +0x84  stp     q0, q0, [sp]
+    +0x88  stp     q0, q0, [sp, #32]
+    +0x8c  stp     q0, q0, [sp, #64]
+    +0x90  stp     q0, q0, [sp, #96]
+    +0x94  stp     q0, q0, [sp, #128]
+    +0x98  stp     q0, q0, [sp, #160]
+    +0x9c  stp     q0, q0, [sp, #192]
+  adrp2:
+    +0xa0  adrp    x8, <page>
+    +0xa4  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0xa8  ldr     x9, [sp, #248]
+    +0xac  ldr     x8, [x8]
+    +0xb0  cmp     x8, x9
+    +0xb4  b.ne    +0xd0                            -+
+    +0xb8  mov     sp, x29                           |
+    +0xbc  ldp     x20, x19, [sp, #48]               |
+    +0xc0  ldp     x22, x21, [sp, #32]               |
+    +0xc4  ldr     x28, [sp, #16]                    |
+    +0xc8  ldp     x29, x30, [sp], #64               |
+  ret:                                               |
+    +0xcc  ret                                       |
+    +0xd0  bl      stack_chk_fail                   <+
+ ***)
+
+(*** mlkem_sha3_256: 0x4b94, 0xa4 bytes
+
+     +0x0  sub     sp, sp, #0xf0
+     +0x4  str     x30, [sp, #208]
+     +0x8  stp     x20, x19, [sp, #224]
+  adrp1:
+     +0xc  adrp    x8, <page>
+    +0x10  mov     x3, x2
+    +0x14  mov     x2, x1
+    +0x18  mov     x19, x0
+    +0x1c  mov     x0, sp
+    +0x20  mov     w1, #0x88
+    +0x24  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x28  mov     w4, #0x6
+    +0x2c  mov     x20, sp
+    +0x30  ldr     x8, [x8]
+    +0x34  str     x8, [sp, #200]
+    +0x38  bl      mlk_keccak_absorb_once
+  after_mlk_keccak_absorb_once:
+    +0x3c  mov     x0, sp
+    +0x40  bl      mlkem_keccakf1600_permute
+  after_mlkem_keccakf1600_permute:
+    +0x44  mov     x0, sp
+    +0x48  mov     x1, x19
+    +0x4c  mov     w2, wzr
+    +0x50  mov     w3, #0x20
+    +0x54  bl      mlkem_keccakf1600_extract_bytes
+  after_mlkem_keccakf1600_extract_bytes:
+    +0x58  movi    v0.2d, #0x0
+  adrp2:
+    +0x5c  adrp    x8, <page>
+    +0x60  str     xzr, [sp, #192]
+    +0x64  stp     q0, q0, [sp]
+    +0x68  stp     q0, q0, [sp, #32]
+    +0x6c  stp     q0, q0, [sp, #64]
+    +0x70  stp     q0, q0, [sp, #96]
+    +0x74  stp     q0, q0, [sp, #128]
+    +0x78  stp     q0, q0, [sp, #160]
+    +0x7c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x80  ldr     x9, [sp, #200]
+    +0x84  ldr     x8, [x8]
+    +0x88  cmp     x8, x9
+    +0x8c  b.ne    +0xa0                            -+
+    +0x90  ldp     x20, x19, [sp, #224]              |
+    +0x94  ldr     x30, [sp, #208]                   |
+    +0x98  add     sp, sp, #0xf0                     |
+  ret:                                               |
+    +0x9c  ret                                       |
+    +0xa0  bl      stack_chk_fail                   <+
+ ***)
+
+(*** mlkem_sha3_512: 0x4c38, 0xa4 bytes
+
+     +0x0  sub     sp, sp, #0xf0
+     +0x4  str     x30, [sp, #208]
+     +0x8  stp     x20, x19, [sp, #224]
+  adrp1:
+     +0xc  adrp    x8, <page>
+    +0x10  mov     x3, x2
+    +0x14  mov     x2, x1
+    +0x18  mov     x19, x0
+    +0x1c  mov     x0, sp
+    +0x20  mov     w1, #0x48
+    +0x24  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x28  mov     w4, #0x6
+    +0x2c  mov     x20, sp
+    +0x30  ldr     x8, [x8]
+    +0x34  str     x8, [sp, #200]
+    +0x38  bl      mlk_keccak_absorb_once
+  after_mlk_keccak_absorb_once:
+    +0x3c  mov     x0, sp
+    +0x40  bl      mlkem_keccakf1600_permute
+  after_mlkem_keccakf1600_permute:
+    +0x44  mov     x0, sp
+    +0x48  mov     x1, x19
+    +0x4c  mov     w2, wzr
+    +0x50  mov     w3, #0x40
+    +0x54  bl      mlkem_keccakf1600_extract_bytes
+  after_mlkem_keccakf1600_extract_bytes:
+    +0x58  movi    v0.2d, #0x0
+  adrp2:
+    +0x5c  adrp    x8, <page>
+    +0x60  str     xzr, [sp, #192]
+    +0x64  stp     q0, q0, [sp]
+    +0x68  stp     q0, q0, [sp, #32]
+    +0x6c  stp     q0, q0, [sp, #64]
+    +0x70  stp     q0, q0, [sp, #96]
+    +0x74  stp     q0, q0, [sp, #128]
+    +0x78  stp     q0, q0, [sp, #160]
+    +0x7c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x80  ldr     x9, [sp, #200]
+    +0x84  ldr     x8, [x8]
+    +0x88  cmp     x8, x9
+    +0x8c  b.ne    +0xa0                            -+
+    +0x90  ldp     x20, x19, [sp, #224]              |
+    +0x94  ldr     x30, [sp, #208]                   |
+    +0x98  add     sp, sp, #0xf0                     |
+  ret:                                               |
+    +0x9c  ret                                       |
+    +0xa0  bl      stack_chk_fail                   <+
+ ***)
+
+(*** mlkem_shake128x4_absorb_once: 0x4cdc, 0x64 bytes
+
+     +0x0  str     x30, [sp, #-64]!
+     +0x4  stp     x24, x23, [sp, #16]
+     +0x8  stp     x22, x21, [sp, #32]
+     +0xc  stp     x20, x19, [sp, #48]
+    +0x10  mov     x22, x2
+    +0x14  mov     x23, x1
+    +0x18  mov     w1, wzr
+    +0x1c  mov     w2, #0x320
+    +0x20  mov     x19, x5
+    +0x24  mov     x20, x4
+    +0x28  mov     x21, x3
+    +0x2c  mov     x24, x0
+    +0x30  bl      memset
+  after_memset:
+    +0x34  mov     x0, x24
+    +0x38  mov     x2, x23
+    +0x3c  mov     x3, x22
+    +0x40  mov     x4, x21
+    +0x44  mov     x5, x20
+    +0x48  mov     x6, x19
+    +0x4c  ldp     x20, x19, [sp, #48]
+    +0x50  mov     w1, #0xa8
+    +0x54  ldp     x22, x21, [sp, #32]
+    +0x58  ldp     x24, x23, [sp, #16]
+    +0x5c  ldr     x30, [sp], #64
+    +0x60  b       mlk_keccak_absorb_once_x4
+ ***)
+
+(*** mlk_keccak_absorb_once_x4: 0x4d40, 0x160 bytes
+
+     +0x0  sub     sp, sp, #0x60
+     +0x4  stp     x30, x27, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x19, x6
+    +0x20  mov     x22, x5
+    +0x24  mov     x23, x4
+    +0x28  mov     w21, w1
+    +0x2c  mov     x24, x3
+    +0x30  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x34  mov     x25, x2
+    +0x38  mov     x20, x0
+    +0x3c  mov     w9, #0x1f
+    +0x40  mov     w27, w1
+    +0x44  ldr     x8, [x8]
+    +0x48  cmp     x27, x6
+    +0x4c  str     x8, [sp, #8]
+    +0x50  strb    w9, [sp, #4]
+    +0x54  b.hi    join1                          ---+
+    +0x58  mov     x26, xzr                          |
+  loop1:                                             |
+    +0x5c  add     x4, x22, x26                   <+ |
+    +0x60  add     x3, x23, x26                    | |
+    +0x64  add     x2, x24, x26                    | |
+    +0x68  add     x1, x25, x26                    | |
+    +0x6c  mov     x0, x20                         | |
+    +0x70  mov     w5, wzr                         | |
+    +0x74  mov     w6, w21                         | |
+    +0x78  bl      mlkem_keccakf1600x4_xor_bytes   | |
+  after_mlkem_keccakf1600x4_xor_bytes_1:           | |
+    +0x7c  mov     x0, x20                         | |
+    +0x80  bl      mlkem_keccakf1600x4_permute     | |
+  after_mlkem_keccakf1600x4_permute:               | |
+    +0x84  sub     x19, x19, x27                   | |
+    +0x88  add     x26, x26, x27                   | |
+  loop1_test:                                      | |
+    +0x8c  cmp     x19, x27                        | |
+  loop1_back:                                      | |
+    +0x90  b.cs    loop1                          -+ |
+  loop1_exit:                                        |
+    +0x94  add     x22, x22, x26                     |
+    +0x98  add     x23, x23, x26                     |
+    +0x9c  add     x24, x24, x26                     |
+    +0xa0  add     x25, x25, x26                     |
+  join1:                                             |
+    +0xa4  cbz     x19, join2                     <+-+
+    +0xa8  mov     x0, x20                         |
+    +0xac  mov     x1, x25                         |
+    +0xb0  mov     x2, x24                         |
+    +0xb4  mov     x3, x23                         |
+    +0xb8  mov     x4, x22                         |
+    +0xbc  mov     w5, wzr                         |
+    +0xc0  mov     w6, w19                         |
+    +0xc4  bl      mlkem_keccakf1600x4_xor_bytes   |
+  join2:                                           |
+  after_mlkem_keccakf1600x4_xor_bytes_2:           |
+    +0xc8  sub     w21, w21, #0x1                 <+
+    +0xcc  cmp     x19, x21
+    +0xd0  b.ne    +0xdc                          -+
+    +0xd4  mov     w8, #0x9f                       |
+    +0xd8  b       join3                          ---+
+    +0xdc  add     x1, sp, #0x4                   <+ |
+    +0xe0  add     x2, sp, #0x4                      |
+    +0xe4  add     x3, sp, #0x4                      |
+    +0xe8  add     x4, sp, #0x4                      |
+    +0xec  mov     x0, x20                           |
+    +0xf0  mov     w5, w19                           |
+    +0xf4  mov     w6, #0x1                          |
+    +0xf8  bl      mlkem_keccakf1600x4_xor_bytes     |
+  after_mlkem_keccakf1600x4_xor_bytes_3:             |
+    +0xfc  mov     w8, #0x80                         |
+   +0x100  mov     w19, w21                          |
+  join3:                                             |
+   +0x104  add     x1, sp, #0x4                   <--+
+   +0x108  add     x2, sp, #0x4
+   +0x10c  add     x3, sp, #0x4
+   +0x110  add     x4, sp, #0x4
+   +0x114  mov     x0, x20
+   +0x118  mov     w5, w19
+   +0x11c  mov     w6, #0x1
+   +0x120  strb    w8, [sp, #4]
+   +0x124  bl      mlkem_keccakf1600x4_xor_bytes
+  after_mlkem_keccakf1600x4_xor_bytes_4:
+  adrp2:
+   +0x128  adrp    x8, <page>
+   +0x12c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x130  ldr     x9, [sp, #8]
+   +0x134  ldr     x8, [x8]
+   +0x138  cmp     x8, x9
+   +0x13c  b.ne    +0x15c                         -+
+   +0x140  ldp     x20, x19, [sp, #80]             |
+   +0x144  ldp     x22, x21, [sp, #64]             |
+   +0x148  ldp     x24, x23, [sp, #48]             |
+   +0x14c  ldp     x26, x25, [sp, #32]             |
+   +0x150  ldp     x30, x27, [sp, #16]             |
+   +0x154  add     sp, sp, #0x60                   |
+  ret:                                             |
+   +0x158  ret                                     |
+   +0x15c  bl      stack_chk_fail                 <+
+ ***)
+
+(*** mlkem_shake128x4_squeezeblocks: 0x4ea0, 0x80 bytes
+
+     +0x0  cbz     x4, join1                          ---+
+     +0x4  str     x30, [sp, #-64]!                      |
+     +0x8  stp     x24, x23, [sp, #16]                   |
+     +0xc  stp     x22, x21, [sp, #32]                   |
+    +0x10  stp     x20, x19, [sp, #48]                   |
+    +0x14  mov     x19, x5                               |
+    +0x18  mov     x20, x4                               |
+    +0x1c  mov     x21, x3                               |
+    +0x20  mov     x22, x2                               |
+    +0x24  mov     x23, x1                               |
+    +0x28  mov     x24, x0                               |
+  loop1:                                                 |
+    +0x2c  mov     x0, x19                            <+ |
+    +0x30  bl      mlkem_keccakf1600x4_permute         | |
+  after_mlkem_keccakf1600x4_permute:                   | |
+    +0x34  mov     x0, x19                             | |
+    +0x38  mov     x1, x24                             | |
+    +0x3c  mov     x2, x23                             | |
+    +0x40  mov     x3, x22                             | |
+    +0x44  mov     x4, x21                             | |
+    +0x48  mov     w5, wzr                             | |
+    +0x4c  mov     w6, #0xa8                           | |
+    +0x50  bl      mlkem_keccakf1600x4_extract_bytes   | |
+  after_mlkem_keccakf1600x4_extract_bytes:             | |
+    +0x54  subs    x20, x20, #0x1                      | |
+    +0x58  add     x21, x21, #0xa8                     | |
+    +0x5c  add     x22, x22, #0xa8                     | |
+    +0x60  add     x23, x23, #0xa8                     | |
+  loop1_test:                                          | |
+    +0x64  add     x24, x24, #0xa8                     | |
+  loop1_back:                                          | |
+    +0x68  b.ne    loop1                              -+ |
+  loop1_exit:                                            |
+    +0x6c  ldp     x20, x19, [sp, #48]                   |
+    +0x70  ldp     x22, x21, [sp, #32]                   |
+    +0x74  ldp     x24, x23, [sp, #16]                   |
+    +0x78  ldr     x30, [sp], #64                        |
+  join1: ret:                                            |
+    +0x7c  ret                                        <--+
+ ***)
+
+(*** mlkem_shake128x4_init: 0x4f20, 0x4 bytes
+
+  ret:
+     +0x0  ret     
+ ***)
+
+(*** mlkem_shake128x4_release: 0x4f24, 0x1c bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     w1, wzr
+     +0x8  mov     w2, #0x320
+     +0xc  mov     x19, x0
+    +0x10  bl      memset
+  after_memset:
+    +0x14  ldp     x30, x19, [sp], #16
+  ret:
+    +0x18  ret     
+ ***)
+
+(*** mlkem_shake256x4: 0x4f40, 0x230 bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  stp     x28, x27, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0x5a0
+    +0x20  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x24  adrp    x9, <page>
+    +0x28  str     x2, [sp, #24]
+    +0x2c  mov     x8, #0xf0f0f0f0f0f0f0f0
+    +0x30  mov     x22, x1
+    +0x34  movk    x8, #0xf0f1
+    +0x38  mov     x20, x0
+    +0x3c  ldr     x9, [x9, #4088]
+                   // got_stack_chk_guard
+    +0x40  add     x0, sp, #0x260
+    +0x44  ldp     x27, x28, [x29, #96]
+    +0x48  mov     w1, wzr
+    +0x4c  mov     w2, #0x320
+    +0x50  ldr     x9, [x9]
+    +0x54  umulh   x8, x4, x8
+    +0x58  mov     x24, x7
+    +0x5c  mov     x25, x6
+    +0x60  mov     x23, x4
+    +0x64  mov     x26, x5
+    +0x68  mov     x21, x3
+    +0x6c  lsr     x19, x8, #7
+    +0x70  str     x9, [sp, #1432]
+    +0x74  bl      memset
+  after_memset_1:
+    +0x78  add     x0, sp, #0x260
+    +0x7c  mov     w1, #0x88
+    +0x80  mov     x2, x26
+    +0x84  mov     x3, x25
+    +0x88  mov     x4, x24
+    +0x8c  mov     x5, x27
+    +0x90  mov     x6, x28
+    +0x94  bl      mlk_keccak_absorb_once_x4
+  after_mlk_keccak_absorb_once_x4:
+    +0x98  cmp     x23, #0x88
+    +0x9c  b.cc    join1                              ---+
+    +0xa0  mov     x24, x20                              |
+    +0xa4  mov     x25, x22                              |
+    +0xa8  ldr     x26, [sp, #24]                        |
+    +0xac  mov     x27, x21                              |
+    +0xb0  mov     x28, x19                              |
+  loop1:                                                 |
+    +0xb4  add     x0, sp, #0x260                     <+ |
+    +0xb8  bl      mlkem_keccakf1600x4_permute         | |
+  after_mlkem_keccakf1600x4_permute_1:                 | |
+    +0xbc  add     x0, sp, #0x260                      | |
+    +0xc0  mov     x1, x24                             | |
+    +0xc4  mov     x2, x25                             | |
+    +0xc8  mov     x3, x26                             | |
+    +0xcc  mov     x4, x27                             | |
+    +0xd0  mov     w5, wzr                             | |
+    +0xd4  mov     w6, #0x88                           | |
+    +0xd8  bl      mlkem_keccakf1600x4_extract_bytes   | |
+  after_mlkem_keccakf1600x4_extract_bytes_1:           | |
+    +0xdc  subs    x28, x28, #0x1                      | |
+    +0xe0  add     x27, x27, #0x88                     | |
+    +0xe4  add     x26, x26, #0x88                     | |
+    +0xe8  add     x25, x25, #0x88                     | |
+  loop1_test:                                          | |
+    +0xec  add     x24, x24, #0x88                     | |
+  loop1_back:                                          | |
+    +0xf0  b.ne    loop1                              -+ |
+  join1: loop1_exit:                                     |
+    +0xf4  add     x8, x19, x19, lsl #4               <--+
+    +0xf8  lsl     x24, x8, #3
+    +0xfc  subs    x23, x23, x24
+   +0x100  b.eq    join2                              -+
+   +0x104  add     x0, sp, #0x260                      |
+   +0x108  add     x21, x21, x24                       |
+   +0x10c  add     x22, x22, x24                       |
+   +0x110  bl      mlkem_keccakf1600x4_permute         |
+  after_mlkem_keccakf1600x4_permute_2:                 |
+   +0x114  add     x0, sp, #0x260                      |
+   +0x118  add     x1, sp, #0x1d0                      |
+   +0x11c  add     x2, sp, #0x140                      |
+   +0x120  add     x3, sp, #0xb0                       |
+   +0x124  add     x4, sp, #0x20                       |
+   +0x128  mov     w5, wzr                             |
+   +0x12c  mov     w6, #0x88                           |
+   +0x130  bl      mlkem_keccakf1600x4_extract_bytes   |
+  after_mlkem_keccakf1600x4_extract_bytes_2:           |
+   +0x134  ldr     x8, [sp, #24]                       |
+   +0x138  add     x0, x20, x24                        |
+   +0x13c  add     x1, sp, #0x1d0                      |
+   +0x140  mov     x2, x23                             |
+   +0x144  add     x19, x8, x24                        |
+   +0x148  bl      memcpy                              |
+  after_memcpy_1:                                      |
+   +0x14c  add     x1, sp, #0x140                      |
+   +0x150  mov     x0, x22                             |
+   +0x154  mov     x2, x23                             |
+   +0x158  bl      memcpy                              |
+  after_memcpy_2:                                      |
+   +0x15c  add     x1, sp, #0xb0                       |
+   +0x160  mov     x0, x19                             |
+   +0x164  mov     x2, x23                             |
+   +0x168  bl      memcpy                              |
+  after_memcpy_3:                                      |
+   +0x16c  add     x1, sp, #0x20                       |
+   +0x170  mov     x0, x21                             |
+   +0x174  mov     x2, x23                             |
+   +0x178  bl      memcpy                              |
+  join2: after_memcpy_4:                               |
+   +0x17c  add     x0, sp, #0x260                     <+
+   +0x180  mov     w1, wzr
+   +0x184  mov     w2, #0x320
+   +0x188  add     x19, sp, #0x260
+   +0x18c  bl      memset
+  after_memset_2:
+   +0x190  movi    v0.2d, #0x0
+   +0x194  str     xzr, [sp, #592]
+   +0x198  add     x8, sp, #0x1d0
+   +0x19c  stp     q0, q0, [sp, #464]
+   +0x1a0  stp     q0, q0, [sp, #496]
+   +0x1a4  stp     q0, q0, [sp, #528]
+   +0x1a8  stp     q0, q0, [sp, #560]
+   +0x1ac  str     xzr, [sp, #448]
+   +0x1b0  stp     q0, q0, [sp, #352]
+   +0x1b4  add     x8, sp, #0x140
+   +0x1b8  stp     q0, q0, [sp, #320]
+   +0x1bc  stp     q0, q0, [sp, #384]
+   +0x1c0  stp     q0, q0, [sp, #416]
+   +0x1c4  str     xzr, [sp, #304]
+   +0x1c8  stp     q0, q0, [sp, #208]
+   +0x1cc  add     x8, sp, #0xb0
+   +0x1d0  stp     q0, q0, [sp, #176]
+   +0x1d4  stp     q0, q0, [sp, #240]
+   +0x1d8  stp     q0, q0, [sp, #272]
+   +0x1dc  str     xzr, [sp, #160]
+   +0x1e0  stp     q0, q0, [sp, #64]
+   +0x1e4  add     x8, sp, #0x20
+   +0x1e8  stp     q0, q0, [sp, #32]
+   +0x1ec  stp     q0, q0, [sp, #96]
+   +0x1f0  stp     q0, q0, [sp, #128]
+  adrp2:
+   +0x1f4  adrp    x8, <page>
+   +0x1f8  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x1fc  ldr     x9, [sp, #1432]
+   +0x200  ldr     x8, [x8]
+   +0x204  cmp     x8, x9
+   +0x208  b.ne    +0x22c                             -+
+   +0x20c  mov     sp, x29                             |
+   +0x210  ldp     x20, x19, [sp, #80]                 |
+   +0x214  ldp     x22, x21, [sp, #64]                 |
+   +0x218  ldp     x24, x23, [sp, #48]                 |
+   +0x21c  ldp     x26, x25, [sp, #32]                 |
+   +0x220  ldp     x28, x27, [sp, #16]                 |
+   +0x224  ldp     x29, x30, [sp], #96                 |
+  ret:                                                 |
+   +0x228  ret                                         |
+   +0x22c  bl      stack_chk_fail                     <+
+ ***)
+
+(*** mlkem_keccakf1600_extract_bytes: 0x5170, 0xcc bytes
+
+     +0x0  cbz     w3, join3             -------+
+     +0x4  mov     w9, w2                       |
+     +0x8  mov     w8, w3                       |
+     +0xc  cmp     w3, #0x8                     |
+    +0x10  b.cc    join1                 -+     |
+    +0x14  sub     x10, x1, x0            |     |
+    +0x18  sub     x10, x10, x9           |     |
+    +0x1c  cmp     x10, #0x20             |     |
+    +0x20  b.cs    +0x4c                 ---+   |
+  join1:                                  | |   |
+    +0x24  mov     x10, xzr              <+ |   |
+  join2:                                    |   |
+    +0x28  add     x11, x0, x10          <--------+---+
+    +0x2c  sub     x8, x8, x10              |   | |   |
+    +0x30  add     x9, x11, x9              |   | |   |
+    +0x34  add     x11, x1, x10             |   | |   |
+  loop1:                                    |   | |   |
+    +0x38  ldrb    w10, [x9], #1         <+ |   | |   |
+    +0x3c  subs    x8, x8, #0x1           | |   | |   |
+  loop1_test:                             | |   | |   |
+    +0x40  strb    w10, [x11], #1         | |   | |   |
+  loop1_back:                             | |   | |   |
+    +0x44  b.ne    loop1                 -+ |   | |   |
+  join3: loop1_exit: ret:                   |   | |   |
+    +0x48  ret                           <----+-+---+ |
+    +0x4c  cmp     w3, #0x20             <--+ |   | | |
+    +0x50  b.cs    +0x5c                 -+   |   | | |
+    +0x54  mov     x10, xzr               |   |   | | |
+    +0x58  b       join4                 ---+ |   | | |
+    +0x5c  and     x10, x8, #0xffffffe0  <+ | |   | | |
+    +0x60  add     x11, x9, x0              | |   | | |
+    +0x64  add     x11, x11, #0x10          | |   | | |
+    +0x68  add     x12, x1, #0x10           | |   | | |
+    +0x6c  mov     x13, x10                 | |   | | |
+  loop2:                                    | |   | | |
+    +0x70  ldp     q0, q1, [x11, #-16]   <+ | |   | | |
+    +0x74  add     x11, x11, #0x20        | | |   | | |
+    +0x78  subs    x13, x13, #0x20        | | |   | | |
+    +0x7c  stp     q0, q1, [x12, #-16]    | | |   | | |
+  loop2_test:                             | | |   | | |
+    +0x80  add     x12, x12, #0x20        | | |   | | |
+  loop2_back:                             | | |   | | |
+    +0x84  b.ne    loop2                 -+ | |   | | |
+  loop2_exit:                               | |   | | |
+    +0x88  cmp     x10, x8                  | |   | | |
+    +0x8c  b.eq    join3                 -----+   | | |
+    +0x90  tst     x8, #0x18                |     | | |
+    +0x94  b.eq    join2                 ---------+ | |
+  join4:                                    |       | |
+    +0x98  mov     x13, x10              <--+       | |
+    +0x9c  and     x10, x8, #0xfffffff8             | |
+    +0xa0  add     x11, x0, x13                     | |
+    +0xa4  add     x12, x1, x13                     | |
+    +0xa8  add     x11, x11, x9                     | |
+    +0xac  sub     x13, x13, x10                    | |
+  loop3:                                            | |
+    +0xb0  ldr     d0, [x11], #8         <+         | |
+    +0xb4  adds    x13, x13, #0x8         |         | |
+  loop3_test:                             |         | |
+    +0xb8  str     d0, [x12], #8          |         | |
+  loop3_back:                             |         | |
+    +0xbc  b.ne    loop3                 -+         | |
+  loop3_exit:                                       | |
+    +0xc0  cmp     x10, x8                          | |
+    +0xc4  b.eq    join3                 -----------+ |
+    +0xc8  b       join2                 -------------+
+ ***)
+
+(*** mlkem_keccakf1600_xor_bytes: 0x523c, 0xf8 bytes
+
+     +0x0  cbz     w3, join3               ---------+
+     +0x4  mov     w8, w2                           |
+     +0x8  mov     w9, w3                           |
+     +0xc  cmp     w3, #0x8                         |
+    +0x10  b.cc    join1                   -+       |
+    +0x14  add     x10, x0, x8              |       |
+    +0x18  add     x11, x1, x9              |       |
+    +0x1c  cmp     x10, x11                 |       |
+    +0x20  b.cs    join4                   -----+   |
+    +0x24  add     x10, x9, x8              |   |   |
+    +0x28  add     x10, x0, x10             |   |   |
+    +0x2c  cmp     x10, x1                  |   |   |
+    +0x30  b.ls    join4                   ---+ |   |
+  join1:                                    | | |   |
+    +0x34  mov     x10, xzr                <+ | |   |
+  join2:                                      | |   |
+    +0x38  add     x12, x0, x10            <----------+---+
+    +0x3c  add     x11, x1, x10               | |   | |   |
+    +0x40  add     x8, x12, x8                | |   | |   |
+    +0x44  sub     x9, x9, x10                | |   | |   |
+  loop1:                                      | |   | |   |
+    +0x48  ldrb    w10, [x11], #1          <+ | |   | |   |
+    +0x4c  ldrb    w12, [x8]                | | |   | |   |
+    +0x50  subs    x9, x9, #0x1             | | |   | |   |
+    +0x54  eor     w10, w12, w10            | | |   | |   |
+  loop1_test:                               | | |   | |   |
+    +0x58  strb    w10, [x8], #1            | | |   | |   |
+  loop1_back:                               | | |   | |   |
+    +0x5c  b.ne    loop1                   -+ | |   | |   |
+  join3: loop1_exit: ret:                     | |   | |   |
+    +0x60  ret                             <------+-+---+ |
+  join4:                                      | | |   | | |
+    +0x64  cmp     w3, #0x20               <--+-+ |   | | |
+    +0x68  b.cs    +0x74                   -+     |   | | |
+    +0x6c  mov     x10, xzr                 |     |   | | |
+    +0x70  b       join5                   ---+   |   | | |
+    +0x74  and     x10, x9, #0xffffffe0    <+ |   |   | | |
+    +0x78  add     x12, x8, x0                |   |   | | |
+    +0x7c  add     x11, x1, #0x10             |   |   | | |
+    +0x80  add     x12, x12, #0x10            |   |   | | |
+    +0x84  mov     x13, x10                   |   |   | | |
+  loop2:                                      |   |   | | |
+    +0x88  ldp     q0, q1, [x11, #-16]     <+ |   |   | | |
+    +0x8c  add     x11, x11, #0x20          | |   |   | | |
+    +0x90  subs    x13, x13, #0x20          | |   |   | | |
+    +0x94  ldp     q2, q3, [x12, #-16]      | |   |   | | |
+    +0x98  eor     v0.16b, v2.16b, v0.16b   | |   |   | | |
+    +0x9c  eor     v1.16b, v3.16b, v1.16b   | |   |   | | |
+    +0xa0  stp     q0, q1, [x12, #-16]      | |   |   | | |
+  loop2_test:                               | |   |   | | |
+    +0xa4  add     x12, x12, #0x20          | |   |   | | |
+  loop2_back:                               | |   |   | | |
+    +0xa8  b.ne    loop2                   -+ |   |   | | |
+  loop2_exit:                                 |   |   | | |
+    +0xac  cmp     x10, x9                    |   |   | | |
+    +0xb0  b.eq    join3                   -------+   | | |
+    +0xb4  tst     x9, #0x18                  |       | | |
+    +0xb8  b.eq    join2                   -----------+ | |
+  join5:                                      |         | |
+    +0xbc  mov     x13, x10                <--+         | |
+    +0xc0  and     x10, x9, #0xfffffff8                 | |
+    +0xc4  add     x12, x0, x13                         | |
+    +0xc8  add     x11, x1, x13                         | |
+    +0xcc  add     x12, x12, x8                         | |
+    +0xd0  sub     x13, x13, x10                        | |
+  loop3:                                                | |
+    +0xd4  ldr     d0, [x11], #8           <+           | |
+    +0xd8  ldr     d1, [x12]                |           | |
+    +0xdc  adds    x13, x13, #0x8           |           | |
+    +0xe0  eor     v0.8b, v1.8b, v0.8b      |           | |
+  loop3_test:                               |           | |
+    +0xe4  str     d0, [x12], #8            |           | |
+  loop3_back:                               |           | |
+    +0xe8  b.ne    loop3                   -+           | |
+  loop3_exit:                                           | |
+    +0xec  cmp     x10, x9                              | |
+    +0xf0  b.eq    join3                   -------------+ |
+    +0xf4  b       join2                   ---------------+
+ ***)
+
+(*** mlkem_keccakf1600x4_extract_bytes: 0x5334, 0x31c bytes
+
+     +0x0  cbz     w6, join12            -----------+
+     +0x4  mov     w8, w5                           |
+     +0x8  mov     w9, w6                           |
+     +0xc  cmp     w6, #0x8                         |
+    +0x10  b.cc    join1                 -+         |
+    +0x14  sub     x10, x1, x0            |         |
+    +0x18  sub     x10, x10, x8           |         |
+    +0x1c  cmp     x10, #0x20             |         |
+    +0x20  b.cs    +0x118                -----+     |
+  join1:                                  |   |     |
+    +0x24  mov     x10, xzr              <+   |     |
+  join2:                                      |     |
+    +0x28  add     x12, x0, x10          <----------------+
+    +0x2c  sub     x11, x9, x10               |     |     |
+    +0x30  add     x10, x1, x10               |     |     |
+    +0x34  add     x12, x12, x8               |     |     |
+  loop1:                                      |     |     |
+    +0x38  ldrb    w13, [x12], #1        <+   |     |     |
+    +0x3c  subs    x11, x11, #0x1         |   |     |     |
+  loop1_test:                             |   |     |     |
+    +0x40  strb    w13, [x10], #1         |   |     |     |
+  loop1_back:                             |   |     |     |
+    +0x44  b.ne    loop1                 -+   |     |     |
+  join3: loop1_exit:                          |     |     |
+    +0x48  cmp     w6, #0x8              <--------------+-----+
+    +0x4c  b.cc    join4                 -+   |     |   | |   |
+    +0x50  add     x10, x0, x8            |   |     |   | |   |
+    +0x54  sub     x10, x2, x10           |   |     |   | |   |
+    +0x58  sub     x10, x10, #0xc8        |   |     |   | |   |
+    +0x5c  cmp     x10, #0x20             |   |     |   | |   |
+    +0x60  b.cs    +0x128                -------+   |   | |   |
+  join4:                                  |   | |   |   | |   |
+    +0x64  mov     x10, xzr              <+   | |   |   | |   |
+  join5:                                      | |   |   | |   |
+    +0x68  add     x12, x10, x8          <----------------------+
+    +0x6c  sub     x11, x9, x10               | |   |   | |   | |
+    +0x70  add     x12, x12, x0               | |   |   | |   | |
+    +0x74  add     x10, x2, x10               | |   |   | |   | |
+    +0x78  add     x12, x12, #0xc8            | |   |   | |   | |
+  loop2:                                      | |   |   | |   | |
+    +0x7c  ldrb    w13, [x12], #1        <+   | |   |   | |   | |
+    +0x80  subs    x11, x11, #0x1         |   | |   |   | |   | |
+  loop2_test:                             |   | |   |   | |   | |
+    +0x84  strb    w13, [x10], #1         |   | |   |   | |   | |
+  loop2_back:                             |   | |   |   | |   | |
+    +0x88  b.ne    loop2                 -+   | |   |   | |   | |
+  join6: loop2_exit:                          | |   |   | |   | |
+    +0x8c  cmp     w6, #0x8              <------------------+ | |
+    +0x90  b.cc    join7                 -+   | |   |   | | | | |
+    +0x94  add     x10, x0, x8            |   | |   |   | | | | |
+    +0x98  sub     x10, x3, x10           |   | |   |   | | | | |
+    +0x9c  sub     x10, x10, #0x190       |   | |   |   | | | | |
+    +0xa0  cmp     x10, #0x20             |   | |   |   | | | | |
+    +0xa4  b.cs    +0x138                ---------+ |   | | | | |
+  join7:                                  |   | | | |   | | | | |
+    +0xa8  mov     x10, xzr              <+   | | | |   | | | | |
+  join8:                                      | | | |   | | | | |
+    +0xac  add     x12, x10, x8               | | | |   | | | | |
+    +0xb0  sub     x11, x9, x10               | | | |   | | | | |
+    +0xb4  add     x12, x12, x0               | | | |   | | | | |
+    +0xb8  add     x10, x3, x10               | | | |   | | | | |
+    +0xbc  add     x12, x12, #0x190           | | | |   | | | | |
+  loop3:                                      | | | |   | | | | |
+    +0xc0  ldrb    w13, [x12], #1        <+   | | | |   | | | | |
+    +0xc4  subs    x11, x11, #0x1         |   | | | |   | | | | |
+  loop3_test:                             |   | | | |   | | | | |
+    +0xc8  strb    w13, [x10], #1         |   | | | |   | | | | |
+  loop3_back:                             |   | | | |   | | | | |
+    +0xcc  b.ne    loop3                 -+   | | | |   | | | | |
+  join9: loop3_exit:                          | | | |   | | | | |
+    +0xd0  cmp     w6, #0x8                   | | | |   | | | | |
+    +0xd4  b.cc    join10                -+   | | | |   | | | | |
+    +0xd8  add     x11, x0, x8            |   | | | |   | | | | |
+    +0xdc  sub     x10, x4, x11           |   | | | |   | | | | |
+    +0xe0  sub     x10, x10, #0x258       |   | | | |   | | | | |
+    +0xe4  cmp     x10, #0x20             |   | | | |   | | | | |
+    +0xe8  b.cs    +0x148                ---+ | | | |   | | | | |
+  join10:                                 | | | | | |   | | | | |
+    +0xec  mov     x10, xzr              <+ | | | | |   | | | | |
+  join11:                                   | | | | |   | | | | |
+    +0xf0  add     x11, x10, x8             | | | | |   | | | | |
+    +0xf4  sub     x8, x9, x10              | | | | |   | | | | |
+    +0xf8  add     x11, x11, x0             | | | | |   | | | | |
+    +0xfc  add     x9, x4, x10              | | | | |   | | | | |
+   +0x100  add     x10, x11, #0x258         | | | | |   | | | | |
+  loop4:                                    | | | | |   | | | | |
+   +0x104  ldrb    w11, [x10], #1        <+ | | | | |   | | | | |
+   +0x108  subs    x8, x8, #0x1           | | | | | |   | | | | |
+  loop4_test:                             | | | | | |   | | | | |
+   +0x10c  strb    w11, [x9], #1          | | | | | |   | | | | |
+  loop4_back:                             | | | | | |   | | | | |
+   +0x110  b.ne    loop4                 -+ | | | | |   | | | | |
+  join12: loop4_exit: ret:                  | | | | |   | | | | |
+   +0x114  ret                           <----------+   | | | | |
+   +0x118  cmp     w6, #0x20             <----+ | |     | | | | |
+   +0x11c  b.cs    +0x158                -+ |   | |     | | | | |
+   +0x120  mov     x10, xzr               | |   | |     | | | | |
+   +0x124  b       join13                -----+ | |     | | | | |
+   +0x128  cmp     w6, #0x20             <------+ |     | | | | |
+   +0x12c  b.cs    +0x1c8                -------+ |     | | | | |
+   +0x130  mov     x10, xzr               | | | | |     | | | | |
+   +0x134  b       join14                -----------+   | | | | |
+   +0x138  cmp     w6, #0x20             <--------+ |   | | | | |
+   +0x13c  b.cs    +0x23c                ---------+ |   | | | | |
+   +0x140  mov     x10, xzr               | | | | | |   | | | | |
+   +0x144  b       join15                -------------+ | | | | |
+   +0x148  cmp     w6, #0x20             <--+ | | | | | | | | | |
+   +0x14c  b.cs    +0x2b0                ---+ | | | | | | | | | |
+   +0x150  mov     x10, xzr               | | | | | | | | | | | |
+   +0x154  b       join16                 | | | | | | | | | | | |
+   +0x158  and     x10, x9, #0xffffffe0  <+ | | | | | | | | | | |
+   +0x15c  add     x11, x8, x0              | | | | | | | | | | |
+   +0x160  add     x11, x11, #0x10          | | | | | | | | | | |
+   +0x164  add     x12, x1, #0x10           | | | | | | | | | | |
+   +0x168  mov     x13, x10                 | | | | | | | | | | |
+  loop5:                                    | | | | | | | | | | |
+   +0x16c  ldp     q0, q1, [x11, #-16]   <+ | | | | | | | | | | |
+   +0x170  add     x11, x11, #0x20        | | | | | | | | | | | |
+   +0x174  subs    x13, x13, #0x20        | | | | | | | | | | | |
+   +0x178  stp     q0, q1, [x12, #-16]    | | | | | | | | | | | |
+  loop5_test:                             | | | | | | | | | | | |
+   +0x17c  add     x12, x12, #0x20        | | | | | | | | | | | |
+  loop5_back:                             | | | | | | | | | | | |
+   +0x180  b.ne    loop5                 -+ | | | | | | | | | | |
+  loop5_exit:                               | | | | | | | | | | |
+   +0x184  cmp     x10, x9                  | | | | | | | | | | |
+   +0x188  b.eq    join3                 ---------------+ | | | |
+   +0x18c  tst     x9, #0x18                | | | | | |   | | | |
+   +0x190  b.eq    join2                 -----------------+ | | |
+  join13:                                   | | | | | |     | | |
+   +0x194  mov     x13, x10              <----+ | | | |     | | |
+   +0x198  and     x10, x9, #0xfffffff8     |   | | | |     | | |
+   +0x19c  add     x11, x0, x13             |   | | | |     | | |
+   +0x1a0  add     x12, x1, x13             |   | | | |     | | |
+   +0x1a4  add     x11, x11, x8             |   | | | |     | | |
+   +0x1a8  sub     x13, x13, x10            |   | | | |     | | |
+  loop6:                                    |   | | | |     | | |
+   +0x1ac  ldr     d0, [x11], #8         <+ |   | | | |     | | |
+   +0x1b0  adds    x13, x13, #0x8         | |   | | | |     | | |
+  loop6_test:                             | |   | | | |     | | |
+   +0x1b4  str     d0, [x12], #8          | |   | | | |     | | |
+  loop6_back:                             | |   | | | |     | | |
+   +0x1b8  b.ne    loop6                 -+ |   | | | |     | | |
+  loop6_exit:                               |   | | | |     | | |
+   +0x1bc  cmp     x10, x9                  |   | | | |     | | |
+   +0x1c0  b.eq    join3                 ---------------------+ |
+   +0x1c4  b       join2                    |   | | | |     |   |
+   +0x1c8  and     x10, x9, #0xffffffe0  <------+ | | |     |   |
+   +0x1cc  add     x11, x8, x0              |     | | |     |   |
+   +0x1d0  add     x11, x11, #0xd8          |     | | |     |   |
+   +0x1d4  add     x12, x2, #0x10           |     | | |     |   |
+   +0x1d8  mov     x13, x10                 |     | | |     |   |
+  loop7:                                    |     | | |     |   |
+   +0x1dc  ldp     q0, q1, [x11, #-16]   <+ |     | | |     |   |
+   +0x1e0  add     x11, x11, #0x20        | |     | | |     |   |
+   +0x1e4  subs    x13, x13, #0x20        | |     | | |     |   |
+   +0x1e8  stp     q0, q1, [x12, #-16]    | |     | | |     |   |
+  loop7_test:                             | |     | | |     |   |
+   +0x1ec  add     x12, x12, #0x20        | |     | | |     |   |
+  loop7_back:                             | |     | | |     |   |
+   +0x1f0  b.ne    loop7                 -+ |     | | |     |   |
+  loop7_exit:                               |     | | |     |   |
+   +0x1f4  cmp     x10, x9                  |     | | |     |   |
+   +0x1f8  b.eq    join6                 -------------------+   |
+   +0x1fc  tst     x9, #0x18                |     | | |         |
+   +0x200  b.eq    join5                 -----------------------+
+  join14:                                   |     | | |
+   +0x204  mov     x13, x10              <----------+ |
+   +0x208  and     x10, x9, #0xfffffff8     |     |   |
+   +0x20c  add     x11, x13, x8             |     |   |
+   +0x210  add     x12, x2, x13             |     |   |
+   +0x214  add     x11, x11, x0             |     |   |
+   +0x218  sub     x13, x13, x10            |     |   |
+   +0x21c  add     x11, x11, #0xc8          |     |   |
+  loop8:                                    |     |   |
+   +0x220  ldr     d0, [x11], #8         <+ |     |   |
+   +0x224  adds    x13, x13, #0x8         | |     |   |
+  loop8_test:                             | |     |   |
+   +0x228  str     d0, [x12], #8          | |     |   |
+  loop8_back:                             | |     |   |
+   +0x22c  b.ne    loop8                 -+ |     |   |
+  loop8_exit:                               |     |   |
+   +0x230  cmp     x10, x9                  |     |   |
+   +0x234  b.eq    join6                    |     |   |
+   +0x238  b       join5                    |     |   |
+   +0x23c  and     x10, x9, #0xffffffe0  <--------+   |
+   +0x240  add     x11, x8, x0              |         |
+   +0x244  add     x11, x11, #0x1a0         |         |
+   +0x248  add     x12, x3, #0x10           |         |
+   +0x24c  mov     x13, x10                 |         |
+  loop9:                                    |         |
+   +0x250  ldp     q0, q1, [x11, #-16]   <+ |         |
+   +0x254  add     x11, x11, #0x20        | |         |
+   +0x258  subs    x13, x13, #0x20        | |         |
+   +0x25c  stp     q0, q1, [x12, #-16]    | |         |
+  loop9_test:                             | |         |
+   +0x260  add     x12, x12, #0x20        | |         |
+  loop9_back:                             | |         |
+   +0x264  b.ne    loop9                 -+ |         |
+  loop9_exit:                               |         |
+   +0x268  cmp     x10, x9                  |         |
+   +0x26c  b.eq    join9                    |         |
+   +0x270  tst     x9, #0x18                |         |
+   +0x274  b.eq    join8                    |         |
+  join15:                                   |         |
+   +0x278  mov     x13, x10              <------------+
+   +0x27c  and     x10, x9, #0xfffffff8     |
+   +0x280  add     x11, x13, x8             |
+   +0x284  add     x12, x3, x13             |
+   +0x288  add     x11, x11, x0             |
+   +0x28c  sub     x13, x13, x10            |
+   +0x290  add     x11, x11, #0x190         |
+  loop10:                                   |
+   +0x294  ldr     d0, [x11], #8         <+ |
+   +0x298  adds    x13, x13, #0x8         | |
+  loop10_test:                            | |
+   +0x29c  str     d0, [x12], #8          | |
+  loop10_back:                            | |
+   +0x2a0  b.ne    loop10                -+ |
+  loop10_exit:                              |
+   +0x2a4  cmp     x10, x9                  |
+   +0x2a8  b.eq    join9                    |
+   +0x2ac  b       join8                    |
+   +0x2b0  and     x10, x9, #0xffffffe0  <--+
+   +0x2b4  add     x11, x11, #0x258
+   +0x2b8  add     x12, x4, #0x10
+   +0x2bc  mov     x13, x10
+  loop11:
+   +0x2c0  ldp     q0, q1, [x11], #32    <+
+   +0x2c4  subs    x13, x13, #0x20        |
+   +0x2c8  stp     q0, q1, [x12, #-16]    |
+  loop11_test:                            |
+   +0x2cc  add     x12, x12, #0x20        |
+  loop11_back:                            |
+   +0x2d0  b.ne    loop11                -+
+  loop11_exit:
+   +0x2d4  cmp     x10, x9
+   +0x2d8  b.eq    join12
+   +0x2dc  tst     x9, #0x18
+   +0x2e0  b.eq    join11
+  join16:
+   +0x2e4  mov     x13, x10
+   +0x2e8  and     x10, x9, #0xfffffff8
+   +0x2ec  add     x11, x13, x8
+   +0x2f0  add     x12, x4, x13
+   +0x2f4  add     x11, x11, x0
+   +0x2f8  sub     x13, x13, x10
+   +0x2fc  add     x11, x11, #0x258
+  loop12:
+   +0x300  ldr     d0, [x11], #8         <+
+   +0x304  adds    x13, x13, #0x8         |
+  loop12_test:                            |
+   +0x308  str     d0, [x12], #8          |
+  loop12_back:                            |
+   +0x30c  b.ne    loop12                -+
+  loop12_exit:
+   +0x310  cmp     x10, x9
+   +0x314  b.eq    join12
+   +0x318  b       join11
+ ***)
+
+(*** mlkem_keccakf1600x4_xor_bytes: 0x5650, 0x3d4 bytes
+
+     +0x0  cbz     w6, join12              -------------------+
+     +0x4  mov     w8, w5                                     |
+     +0x8  mov     w9, w6                                     |
+     +0xc  cmp     w6, #0x8                                   |
+    +0x10  b.cc    join1                   -+                 |
+    +0x14  add     x10, x0, x8              |                 |
+    +0x18  add     x11, x1, x9              |                 |
+    +0x1c  cmp     x10, x11                 |                 |
+    +0x20  b.cs    join13                  -----------------+ |
+    +0x24  add     x10, x9, x8              |               | |
+    +0x28  add     x10, x0, x10             |               | |
+    +0x2c  cmp     x10, x1                  |               | |
+    +0x30  b.ls    join13                  -----+           | |
+  join1:                                    |   |           | |
+    +0x34  mov     x10, xzr                <+   |           | |
+  join2:                                        |           | |
+    +0x38  add     x12, x0, x10                 |           | |
+    +0x3c  sub     x11, x9, x10                 |           | |
+    +0x40  add     x12, x12, x8                 |           | |
+    +0x44  add     x10, x1, x10                 |           | |
+  loop1:                                        |           | |
+    +0x48  ldrb    w13, [x10], #1          <+   |           | |
+    +0x4c  ldrb    w14, [x12]               |   |           | |
+    +0x50  subs    x11, x11, #0x1           |   |           | |
+    +0x54  eor     w13, w14, w13            |   |           | |
+  loop1_test:                               |   |           | |
+    +0x58  strb    w13, [x12], #1           |   |           | |
+  loop1_back:                               |   |           | |
+    +0x5c  b.ne    loop1                   -+   |           | |
+  join3: loop1_exit:                            |           | |
+    +0x60  cmp     w6, #0x8                <--------------------+
+    +0x64  b.cc    join4                   -+   |           | | |
+    +0x68  add     x10, x0, x8              |   |           | | |
+    +0x6c  add     x11, x2, x9              |   |           | | |
+    +0x70  add     x10, x10, #0xc8          |   |           | | |
+    +0x74  cmp     x10, x11                 |   |           | | |
+    +0x78  b.cs    join14                  ---------------+ | | |
+    +0x7c  add     x10, x9, x8              |   |         | | | |
+    +0x80  add     x10, x10, x0             |   |         | | | |
+    +0x84  add     x10, x10, #0xc8          |   |         | | | |
+    +0x88  cmp     x10, x2                  |   |         | | | |
+    +0x8c  b.ls    join14                  ---------+     | | | |
+  join4:                                    |   |   |     | | | |
+    +0x90  mov     x10, xzr                <+   |   |     | | | |
+  join5:                                        |   |     | | | |
+    +0x94  add     x12, x10, x8                 |   |     | | | |
+    +0x98  sub     x11, x9, x10                 |   |     | | | |
+    +0x9c  add     x12, x12, x0                 |   |     | | | |
+    +0xa0  add     x10, x2, x10                 |   |     | | | |
+    +0xa4  add     x12, x12, #0xc8              |   |     | | | |
+  loop2:                                        |   |     | | | |
+    +0xa8  ldrb    w13, [x10], #1          <+   |   |     | | | |
+    +0xac  ldrb    w14, [x12]               |   |   |     | | | |
+    +0xb0  subs    x11, x11, #0x1           |   |   |     | | | |
+    +0xb4  eor     w13, w14, w13            |   |   |     | | | |
+  loop2_test:                               |   |   |     | | | |
+    +0xb8  strb    w13, [x12], #1           |   |   |     | | | |
+  loop2_back:                               |   |   |     | | | |
+    +0xbc  b.ne    loop2                   -+   |   |     | | | |
+  join6: loop2_exit:                            |   |     | | | |
+    +0xc0  cmp     w6, #0x8                <----------------------+
+    +0xc4  b.cc    join7                   -+   |   |     | | | | |
+    +0xc8  add     x10, x0, x8              |   |   |     | | | | |
+    +0xcc  add     x11, x3, x9              |   |   |     | | | | |
+    +0xd0  add     x10, x10, #0x190         |   |   |     | | | | |
+    +0xd4  cmp     x10, x11                 |   |   |     | | | | |
+    +0xd8  b.cs    join15                  -------------+ | | | | |
+    +0xdc  add     x10, x9, x8              |   |   |   | | | | | |
+    +0xe0  add     x10, x10, x0             |   |   |   | | | | | |
+    +0xe4  add     x10, x10, #0x190         |   |   |   | | | | | |
+    +0xe8  cmp     x10, x3                  |   |   |   | | | | | |
+    +0xec  b.ls    join15                  -----------+ | | | | | |
+  join7:                                    |   |   | | | | | | | |
+    +0xf0  mov     x10, xzr                <+   |   | | | | | | | |
+  join8:                                        |   | | | | | | | |
+    +0xf4  add     x12, x10, x8                 |   | | | | | | | |
+    +0xf8  sub     x11, x9, x10                 |   | | | | | | | |
+    +0xfc  add     x12, x12, x0                 |   | | | | | | | |
+   +0x100  add     x10, x3, x10                 |   | | | | | | | |
+   +0x104  add     x12, x12, #0x190             |   | | | | | | | |
+  loop3:                                        |   | | | | | | | |
+   +0x108  ldrb    w13, [x10], #1          <+   |   | | | | | | | |
+   +0x10c  ldrb    w14, [x12]               |   |   | | | | | | | |
+   +0x110  subs    x11, x11, #0x1           |   |   | | | | | | | |
+   +0x114  eor     w13, w14, w13            |   |   | | | | | | | |
+  loop3_test:                               |   |   | | | | | | | |
+   +0x118  strb    w13, [x12], #1           |   |   | | | | | | | |
+  loop3_back:                               |   |   | | | | | | | |
+   +0x11c  b.ne    loop3                   -+   |   | | | | | | | |
+  join9: loop3_exit:                            |   | | | | | | | |
+   +0x120  cmp     w6, #0x8                     |   | | | | | | | |
+   +0x124  b.cc    join10                  -+   |   | | | | | | | |
+   +0x128  add     x10, x0, x8              |   |   | | | | | | | |
+   +0x12c  add     x11, x10, #0x258         |   |   | | | | | | | |
+   +0x130  add     x10, x4, x9              |   |   | | | | | | | |
+   +0x134  cmp     x11, x10                 |   |   | | | | | | | |
+   +0x138  b.cs    join16                  -------+ | | | | | | | |
+   +0x13c  add     x10, x9, x8              |   | | | | | | | | | |
+   +0x140  add     x10, x10, x0             |   | | | | | | | | | |
+   +0x144  add     x10, x10, #0x258         |   | | | | | | | | | |
+   +0x148  cmp     x10, x4                  |   | | | | | | | | | |
+   +0x14c  b.ls    join16                  ---+ | | | | | | | | | |
+  join10:                                   | | | | | | | | | | | |
+   +0x150  mov     x10, xzr                <+ | | | | | | | | | | |
+  join11:                                     | | | | | | | | | | |
+   +0x154  add     x11, x10, x8               | | | | | | | | | | |
+   +0x158  sub     x8, x9, x10                | | | | | | | | | | |
+   +0x15c  add     x9, x11, x0                | | | | | | | | | | |
+   +0x160  add     x10, x4, x10               | | | | | | | | | | |
+   +0x164  add     x9, x9, #0x258             | | | | | | | | | | |
+  loop4:                                      | | | | | | | | | | |
+   +0x168  ldrb    w11, [x10], #1          <+ | | | | | | | | | | |
+   +0x16c  ldrb    w12, [x9]                | | | | | | | | | | | |
+   +0x170  subs    x8, x8, #0x1             | | | | | | | | | | | |
+   +0x174  eor     w11, w12, w11            | | | | | | | | | | | |
+  loop4_test:                               | | | | | | | | | | | |
+   +0x178  strb    w11, [x9], #1            | | | | | | | | | | | |
+  loop4_back:                               | | | | | | | | | | | |
+   +0x17c  b.ne    loop4                   -+ | | | | | | | | | | |
+  join12: loop4_exit: ret:                    | | | | | | | | | | |
+   +0x180  ret                             <------------------+ | |
+  join13:                                     | | | | | | | |   | |
+   +0x184  cmp     w6, #0x20               <----+-----------+   | |
+   +0x188  b.cs    +0x1c4                  -+ |   | | | | |     | |
+   +0x18c  mov     x10, xzr                 | |   | | | | |     | |
+   +0x190  b       join17                  -----+ | | | | |     | |
+  join14:                                   | | | | | | | |     | |
+   +0x194  cmp     w6, #0x20               <--------+-----+     | |
+   +0x198  b.cs    +0x248                  ---------+ | |       | |
+   +0x19c  mov     x10, xzr                 | | | | | | |       | |
+   +0x1a0  b       join18                  ---------------+     | |
+  join15:                                   | | | | | | | |     | |
+   +0x1a4  cmp     w6, #0x20               <----------+-+ |     | |
+   +0x1a8  b.cs    +0x2d0                  -----------+   |     | |
+   +0x1ac  mov     x10, xzr                 | | | | | |   |     | |
+   +0x1b0  b       join19                  -------------+ |     | |
+  join16:                                   | | | | | | | |     | |
+   +0x1b4  cmp     w6, #0x20               <--+---+ | | | |     | |
+   +0x1b8  b.cs    +0x358                  ---+ |   | | | |     | |
+   +0x1bc  mov     x10, xzr                 | | |   | | | |     | |
+   +0x1c0  b       join20                  -------+ | | | |     | |
+   +0x1c4  and     x10, x9, #0xffffffe0    <+ | | | | | | |     | |
+   +0x1c8  add     x12, x8, x0                | | | | | | |     | |
+   +0x1cc  add     x11, x1, #0x10             | | | | | | |     | |
+   +0x1d0  add     x12, x12, #0x10            | | | | | | |     | |
+   +0x1d4  mov     x13, x10                   | | | | | | |     | |
+  loop5:                                      | | | | | | |     | |
+   +0x1d8  ldp     q0, q1, [x11, #-16]     <+ | | | | | | |     | |
+   +0x1dc  add     x11, x11, #0x20          | | | | | | | |     | |
+   +0x1e0  subs    x13, x13, #0x20          | | | | | | | |     | |
+   +0x1e4  ldp     q2, q3, [x12, #-16]      | | | | | | | |     | |
+   +0x1e8  eor     v0.16b, v2.16b, v0.16b   | | | | | | | |     | |
+   +0x1ec  eor     v1.16b, v3.16b, v1.16b   | | | | | | | |     | |
+   +0x1f0  stp     q0, q1, [x12, #-16]      | | | | | | | |     | |
+  loop5_test:                               | | | | | | | |     | |
+   +0x1f4  add     x12, x12, #0x20          | | | | | | | |     | |
+  loop5_back:                               | | | | | | | |     | |
+   +0x1f8  b.ne    loop5                   -+ | | | | | | |     | |
+  loop5_exit:                                 | | | | | | |     | |
+   +0x1fc  cmp     x10, x9                    | | | | | | |     | |
+   +0x200  b.eq    join3                   ---------------------+ |
+   +0x204  tst     x9, #0x18                  | | | | | | |       |
+   +0x208  b.eq    join2                      | | | | | | |       |
+  join17:                                     | | | | | | |       |
+   +0x20c  mov     x13, x10                <----+ | | | | |       |
+   +0x210  and     x10, x9, #0xfffffff8       |   | | | | |       |
+   +0x214  add     x12, x0, x13               |   | | | | |       |
+   +0x218  add     x11, x1, x13               |   | | | | |       |
+   +0x21c  add     x12, x12, x8               |   | | | | |       |
+   +0x220  sub     x13, x13, x10              |   | | | | |       |
+  loop6:                                      |   | | | | |       |
+   +0x224  ldr     d0, [x11], #8           <+ |   | | | | |       |
+   +0x228  ldr     d1, [x12]                | |   | | | | |       |
+   +0x22c  adds    x13, x13, #0x8           | |   | | | | |       |
+   +0x230  eor     v0.8b, v1.8b, v0.8b      | |   | | | | |       |
+  loop6_test:                               | |   | | | | |       |
+   +0x234  str     d0, [x12], #8            | |   | | | | |       |
+  loop6_back:                               | |   | | | | |       |
+   +0x238  b.ne    loop6                   -+ |   | | | | |       |
+  loop6_exit:                                 |   | | | | |       |
+   +0x23c  cmp     x10, x9                    |   | | | | |       |
+   +0x240  b.eq    join3                      |   | | | | |       |
+   +0x244  b       join2                      |   | | | | |       |
+   +0x248  and     x10, x9, #0xffffffe0    <--------+ | | |       |
+   +0x24c  add     x12, x8, x0                |   |   | | |       |
+   +0x250  add     x11, x2, #0x10             |   |   | | |       |
+   +0x254  add     x12, x12, #0xd8            |   |   | | |       |
+   +0x258  mov     x13, x10                   |   |   | | |       |
+  loop7:                                      |   |   | | |       |
+   +0x25c  ldp     q0, q1, [x11, #-16]     <+ |   |   | | |       |
+   +0x260  add     x11, x11, #0x20          | |   |   | | |       |
+   +0x264  subs    x13, x13, #0x20          | |   |   | | |       |
+   +0x268  ldp     q2, q3, [x12, #-16]      | |   |   | | |       |
+   +0x26c  eor     v0.16b, v2.16b, v0.16b   | |   |   | | |       |
+   +0x270  eor     v1.16b, v3.16b, v1.16b   | |   |   | | |       |
+   +0x274  stp     q0, q1, [x12, #-16]      | |   |   | | |       |
+  loop7_test:                               | |   |   | | |       |
+   +0x278  add     x12, x12, #0x20          | |   |   | | |       |
+  loop7_back:                               | |   |   | | |       |
+   +0x27c  b.ne    loop7                   -+ |   |   | | |       |
+  loop7_exit:                                 |   |   | | |       |
+   +0x280  cmp     x10, x9                    |   |   | | |       |
+   +0x284  b.eq    join6                   -----------------------+
+   +0x288  tst     x9, #0x18                  |   |   | | |
+   +0x28c  b.eq    join5                      |   |   | | |
+  join18:                                     |   |   | | |
+   +0x290  mov     x13, x10                <--------------+
+   +0x294  and     x10, x9, #0xfffffff8       |   |   | |
+   +0x298  add     x12, x13, x8               |   |   | |
+   +0x29c  add     x11, x2, x13               |   |   | |
+   +0x2a0  add     x12, x12, x0               |   |   | |
+   +0x2a4  sub     x13, x13, x10              |   |   | |
+   +0x2a8  add     x12, x12, #0xc8            |   |   | |
+  loop8:                                      |   |   | |
+   +0x2ac  ldr     d0, [x11], #8           <+ |   |   | |
+   +0x2b0  ldr     d1, [x12]                | |   |   | |
+   +0x2b4  adds    x13, x13, #0x8           | |   |   | |
+   +0x2b8  eor     v0.8b, v1.8b, v0.8b      | |   |   | |
+  loop8_test:                               | |   |   | |
+   +0x2bc  str     d0, [x12], #8            | |   |   | |
+  loop8_back:                               | |   |   | |
+   +0x2c0  b.ne    loop8                   -+ |   |   | |
+  loop8_exit:                                 |   |   | |
+   +0x2c4  cmp     x10, x9                    |   |   | |
+   +0x2c8  b.eq    join6                      |   |   | |
+   +0x2cc  b       join5                      |   |   | |
+   +0x2d0  and     x10, x9, #0xffffffe0    <----------+ |
+   +0x2d4  add     x12, x8, x0                |   |     |
+   +0x2d8  add     x11, x3, #0x10             |   |     |
+   +0x2dc  add     x12, x12, #0x1a0           |   |     |
+   +0x2e0  mov     x13, x10                   |   |     |
+  loop9:                                      |   |     |
+   +0x2e4  ldp     q0, q1, [x11, #-16]     <+ |   |     |
+   +0x2e8  add     x11, x11, #0x20          | |   |     |
+   +0x2ec  subs    x13, x13, #0x20          | |   |     |
+   +0x2f0  ldp     q2, q3, [x12, #-16]      | |   |     |
+   +0x2f4  eor     v0.16b, v2.16b, v0.16b   | |   |     |
+   +0x2f8  eor     v1.16b, v3.16b, v1.16b   | |   |     |
+   +0x2fc  stp     q0, q1, [x12, #-16]      | |   |     |
+  loop9_test:                               | |   |     |
+   +0x300  add     x12, x12, #0x20          | |   |     |
+  loop9_back:                               | |   |     |
+   +0x304  b.ne    loop9                   -+ |   |     |
+  loop9_exit:                                 |   |     |
+   +0x308  cmp     x10, x9                    |   |     |
+   +0x30c  b.eq    join9                      |   |     |
+   +0x310  tst     x9, #0x18                  |   |     |
+   +0x314  b.eq    join8                      |   |     |
+  join19:                                     |   |     |
+   +0x318  mov     x13, x10                <------------+
+   +0x31c  and     x10, x9, #0xfffffff8       |   |
+   +0x320  add     x12, x13, x8               |   |
+   +0x324  add     x11, x3, x13               |   |
+   +0x328  add     x12, x12, x0               |   |
+   +0x32c  sub     x13, x13, x10              |   |
+   +0x330  add     x12, x12, #0x190           |   |
+  loop10:                                     |   |
+   +0x334  ldr     d0, [x11], #8           <+ |   |
+   +0x338  ldr     d1, [x12]                | |   |
+   +0x33c  adds    x13, x13, #0x8           | |   |
+   +0x340  eor     v0.8b, v1.8b, v0.8b      | |   |
+  loop10_test:                              | |   |
+   +0x344  str     d0, [x12], #8            | |   |
+  loop10_back:                              | |   |
+   +0x348  b.ne    loop10                  -+ |   |
+  loop10_exit:                                |   |
+   +0x34c  cmp     x10, x9                    |   |
+   +0x350  b.eq    join9                      |   |
+   +0x354  b       join8                      |   |
+   +0x358  and     x10, x9, #0xffffffe0    <--+   |
+   +0x35c  add     x12, x4, #0x10                 |
+   +0x360  mov     x13, x10                       |
+  loop11:                                         |
+   +0x364  ldp     q0, q1, [x12, #-16]     <+     |
+   +0x368  add     x12, x12, #0x20          |     |
+   +0x36c  subs    x13, x13, #0x20          |     |
+   +0x370  ldp     q2, q3, [x11]            |     |
+   +0x374  eor     v0.16b, v2.16b, v0.16b   |     |
+   +0x378  eor     v1.16b, v3.16b, v1.16b   |     |
+  loop11_test:                              |     |
+   +0x37c  stp     q0, q1, [x11], #32       |     |
+  loop11_back:                              |     |
+   +0x380  b.ne    loop11                  -+     |
+  loop11_exit:                                    |
+   +0x384  cmp     x10, x9                        |
+   +0x388  b.eq    join12                         |
+   +0x38c  tst     x9, #0x18                      |
+   +0x390  b.eq    join11                         |
+  join20:                                         |
+   +0x394  mov     x13, x10                <------+
+   +0x398  and     x10, x9, #0xfffffff8
+   +0x39c  add     x12, x13, x8
+   +0x3a0  add     x11, x4, x13
+   +0x3a4  add     x12, x12, x0
+   +0x3a8  sub     x13, x13, x10
+   +0x3ac  add     x12, x12, #0x258
+  loop12:
+   +0x3b0  ldr     d0, [x11], #8           <+
+   +0x3b4  ldr     d1, [x12]                |
+   +0x3b8  adds    x13, x13, #0x8           |
+   +0x3bc  eor     v0.8b, v1.8b, v0.8b      |
+  loop12_test:                              |
+   +0x3c0  str     d0, [x12], #8            |
+  loop12_back:                              |
+   +0x3c4  b.ne    loop12                  -+
+  loop12_exit:
+   +0x3c8  cmp     x10, x9
+   +0x3cc  b.eq    join12
+   +0x3d0  b       join11
+ ***)
+
+(*** mlkem_keccakf1600x4_permute: 0x5a24, 0x28 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_keccakf1600_permute
+  after_mlkem_keccakf1600_permute_1:
+     +0xc  add     x0, x19, #0xc8
+    +0x10  bl      mlkem_keccakf1600_permute
+  after_mlkem_keccakf1600_permute_2:
+    +0x14  add     x0, x19, #0x190
+    +0x18  bl      mlkem_keccakf1600_permute
+  after_mlkem_keccakf1600_permute_3:
+    +0x1c  add     x0, x19, #0x258
+    +0x20  ldp     x30, x19, [sp], #16
+    +0x24  b       mlkem_keccakf1600_permute
+ ***)
+
+(*** mlkem_keccakf1600_permute: 0x5a4c, 0x534 bytes
+
+     +0x0  sub     sp, sp, #0xd0
+     +0x4  stp     x29, x30, [sp, #112]
+     +0x8  stp     x28, x27, [sp, #128]
+     +0xc  stp     x26, x25, [sp, #144]
+    +0x10  stp     x24, x23, [sp, #160]
+    +0x14  stp     x22, x21, [sp, #176]
+    +0x18  stp     x20, x19, [sp, #192]
+    +0x1c  ldp     x10, x27, [x0, #24]
+    +0x20  mov     x14, xzr
+    +0x24  str     x0, [sp, #8]
+    +0x28  ldr     x8, [x0, #56]
+    +0x2c  ldr     x9, [x0, #16]
+    +0x30  ldp     x23, x4, [x0]
+    +0x34  stp     x8, x10, [sp, #80]
+    +0x38  ldp     x8, x1, [x0, #64]
+    +0x3c  ldp     x22, x24, [x0, #40]
+    +0x40  ldp     x3, x26, [x0, #80]
+    +0x44  stp     x8, x9, [sp, #96]
+    +0x48  ldp     x29, x2, [x0, #96]
+    +0x4c  ldp     x28, x17, [x0, #112]
+    +0x50  ldp     x19, x5, [x0, #128]
+    +0x54  ldp     x30, x7, [x0, #144]
+    +0x58  ldp     x21, x6, [x0, #160]
+    +0x5c  ldp     x15, x20, [x0, #176]
+    +0x60  ldr     x9, [x0, #192]
+  loop1:
+    +0x64  stp     x28, x17, [sp, #56]                   <+
+    +0x68  mov     x18, x22                               |
+    +0x6c  eor     x10, x22, x23                          |
+    +0x70  eor     x11, x3, x17                           |
+    +0x74  ldp     x17, x22, [sp, #80]                    |
+    +0x78  eor     x10, x10, x11                          |
+    +0x7c  eor     x12, x24, x4                           |
+    +0x80  ldr     x8, [sp, #104]                         |
+    +0x84  eor     x0, x29, x5                            |
+    +0x88  eor     x25, x26, x19                          |
+    +0x8c  stp     x26, x27, [sp, #40]                    |
+    +0x90  eor     x12, x12, x25                          |
+    +0x94  eor     x25, x2, x30                           |
+    +0x98  eor     x11, x17, x8                           |
+    +0x9c  ldr     x8, [sp, #96]                          |
+    +0xa0  eor     x11, x11, x0                           |
+    +0xa4  eor     x26, x1, x27                           |
+    +0xa8  eor     x27, x28, x7                           |
+    +0xac  eor     x10, x10, x21                          |
+    +0xb0  eor     x0, x8, x22                            |
+    +0xb4  eor     x11, x11, x15                          |
+    +0xb8  eor     x0, x0, x25                            |
+    +0xbc  eor     x25, x26, x27                          |
+    +0xc0  eor     x0, x0, x20                            |
+    +0xc4  eor     x13, x25, x9                           |
+    +0xc8  eor     x12, x12, x6                           |
+  adrp1:                                                  |
+    +0xcc  adrp    x16, <page>                            |
+    +0xd0  add     x16, x16, #0x290                       |
+                   // rodata_mlk_KeccakF_RoundConstants   |
+    +0xd4  eor     x26, x12, x0, ror #63                  |
+    +0xd8  eor     x25, x10, x11, ror #63                 |
+    +0xdc  eor     x28, x11, x13, ror #63                 |
+    +0xe0  eor     x27, x0, x10, ror #63                  |
+    +0xe4  eor     x11, x26, x29                          |
+    +0xe8  add     x0, x16, x14, lsl #3                   |
+    +0xec  str     x14, [sp, #72]                         |
+    +0xf0  eor     x10, x25, x24                          |
+    +0xf4  eor     x30, x28, x30                          |
+    +0xf8  eor     x14, x27, x9                           |
+    +0xfc  eor     x24, x13, x12, ror #63                 |
+   +0x100  ror     x9, x11, #21                           |
+   +0x104  eor     x23, x24, x23                          |
+   +0x108  ldp     x11, x12, [x0]                         |
+   +0x10c  ror     x29, x10, #20                          |
+   +0x110  ror     x10, x30, #43                          |
+   +0x114  ror     x30, x14, #50                          |
+   +0x118  eor     x15, x26, x15                          |
+   +0x11c  eor     x7, x27, x7                            |
+   +0x120  eor     x2, x28, x2                            |
+   +0x124  eor     x11, x11, x23                          |
+   +0x128  bic     x13, x9, x29                           |
+   +0x12c  bic     x14, x30, x10                          |
+   +0x130  bic     x0, x23, x30                           |
+   +0x134  eor     x13, x11, x13                          |
+   +0x138  eor     x11, x14, x9                           |
+   +0x13c  bic     x9, x10, x9                            |
+   +0x140  eor     x14, x28, x22                          |
+   +0x144  eor     x22, x10, x0                           |
+   +0x148  eor     x10, x25, x19                          |
+   +0x14c  eor     x19, x9, x29                           |
+   +0x150  eor     x9, x24, x3                            |
+   +0x154  eor     x0, x27, x1                            |
+   +0x158  ror     x14, x14, #36                          |
+   +0x15c  ror     x15, x15, #3                           |
+   +0x160  ror     x1, x10, #19                           |
+   +0x164  bic     x10, x29, x23                          |
+   +0x168  ror     x3, x9, #61                            |
+   +0x16c  ror     x23, x0, #44                           |
+   +0x170  str     x12, [sp, #16]                         |
+   +0x174  bic     x9, x14, x15                           |
+   +0x178  bic     x0, x15, x1                            |
+   +0x17c  eor     x12, x10, x30                          |
+   +0x180  eor     x10, x9, x1                            |
+   +0x184  bic     x29, x1, x3                            |
+   +0x188  eor     x1, x0, x3                             |
+   +0x18c  eor     x30, x25, x4                           |
+   +0x190  bic     x0, x3, x23                            |
+   +0x194  eor     x3, x24, x21                           |
+   +0x198  eor     x16, x26, x17                          |
+   +0x19c  eor     x0, x0, x14                            |
+   +0x1a0  eor     x29, x29, x23                          |
+   +0x1a4  ror     x21, x30, #63                          |
+   +0x1a8  ror     x7, x7, #56                            |
+   +0x1ac  ror     x3, x3, #46                            |
+   +0x1b0  bic     x14, x23, x14                          |
+   +0x1b4  ror     x23, x2, #39                           |
+   +0x1b8  ror     x16, x16, #58                          |
+   +0x1bc  eor     x14, x14, x15                          |
+   +0x1c0  eor     x5, x26, x5                            |
+   +0x1c4  bic     x2, x21, x3                            |
+   +0x1c8  eor     x6, x25, x6                            |
+   +0x1cc  eor     x2, x2, x7                             |
+   +0x1d0  bic     x15, x7, x23                           |
+   +0x1d4  bic     x7, x3, x7                             |
+   +0x1d8  ror     x4, x5, #49                            |
+   +0x1dc  eor     x30, x7, x23                           |
+   +0x1e0  bic     x7, x23, x16                           |
+   +0x1e4  eor     x23, x24, x18                          |
+   +0x1e8  ror     x6, x6, #62                            |
+   +0x1ec  ldp     x9, x18, [sp, #40]                     |
+   +0x1f0  stp     x10, x11, [sp, #24]                    |
+   +0x1f4  ror     x23, x23, #28                          |
+   +0x1f8  eor     x17, x25, x9                           |
+   +0x1fc  eor     x9, x7, x21                            |
+   +0x200  eor     x7, x27, x18                           |
+   +0x204  eor     x18, x28, x20                          |
+   +0x208  eor     x20, x15, x16                          |
+   +0x20c  bic     x16, x16, x21                          |
+   +0x210  ror     x17, x17, #54                          |
+   +0x214  ror     x18, x18, #8                           |
+   +0x218  ror     x15, x7, #37                           |
+   +0x21c  eor     x7, x16, x3                            |
+   +0x220  eor     x16, x28, x8                           |
+   +0x224  ldr     x8, [sp, #56]                          |
+   +0x228  bic     x5, x17, x23                           |
+   +0x22c  bic     x3, x18, x4                            |
+   +0x230  eor     x5, x5, x15                            |
+   +0x234  eor     x21, x3, x17                           |
+   +0x238  ror     x16, x16, #9                           |
+   +0x23c  eor     x3, x27, x8                            |
+   +0x240  ldr     x8, [sp, #104]                         |
+   +0x244  bic     x27, x15, x18                          |
+   +0x248  bic     x15, x23, x15                          |
+   +0x24c  bic     x17, x4, x17                           |
+   +0x250  eor     x27, x27, x4                           |
+   +0x254  eor     x26, x26, x8                           |
+   +0x258  ldr     x8, [sp, #64]                          |
+   +0x25c  ror     x3, x3, #25                            |
+   +0x260  eor     x18, x15, x18                          |
+   +0x264  eor     x17, x17, x23                          |
+   +0x268  eor     x24, x24, x8                           |
+   +0x26c  ror     x25, x26, #2                           |
+   +0x270  bic     x4, x3, x16                            |
+   +0x274  eor     x8, x22, x10                           |
+   +0x278  mov     x10, x12                               |
+   +0x27c  ror     x24, x24, #23                          |
+   +0x280  eor     x26, x4, x25                           |
+   +0x284  bic     x15, x24, x3                           |
+   +0x288  bic     x23, x6, x24                           |
+   +0x28c  eor     x4, x15, x16                           |
+   +0x290  bic     x15, x25, x6                           |
+   +0x294  bic     x16, x16, x25                          |
+   +0x298  eor     x3, x23, x3                            |
+   +0x29c  eor     x28, x15, x24                          |
+   +0x2a0  eor     x15, x16, x6                           |
+   +0x2a4  eor     x16, x0, x5                            |
+   +0x2a8  eor     x6, x9, x26                            |
+   +0x2ac  eor     x23, x17, x29                          |
+   +0x2b0  eor     x24, x4, x19                           |
+   +0x2b4  eor     x16, x16, x6                           |
+   +0x2b8  eor     x6, x23, x24                           |
+   +0x2bc  eor     x23, x6, x20                           |
+   +0x2c0  eor     x6, x3, x1                             |
+   +0x2c4  eor     x24, x30, x21                          |
+   +0x2c8  eor     x25, x28, x2                           |
+   +0x2cc  eor     x6, x6, x24                            |
+   +0x2d0  eor     x8, x25, x8                            |
+   +0x2d4  eor     x24, x7, x12                           |
+   +0x2d8  eor     x25, x18, x15                          |
+   +0x2dc  eor     x16, x16, x13                          |
+   +0x2e0  eor     x6, x6, x11                            |
+   +0x2e4  eor     x24, x24, x25                          |
+   +0x2e8  eor     x8, x8, x27                            |
+   +0x2ec  eor     x24, x24, x14                          |
+   +0x2f0  eor     x25, x16, x6, ror #63                  |
+   +0x2f4  eor     x16, x8, x16, ror #63                  |
+   +0x2f8  eor     x8, x23, x8, ror #63                   |
+   +0x2fc  eor     x6, x6, x24, ror #63                   |
+   +0x300  eor     x29, x25, x29                          |
+   +0x304  eor     x30, x8, x30                           |
+   +0x308  eor     x27, x6, x27                           |
+   +0x30c  eor     x15, x16, x15                          |
+   +0x310  eor     x23, x24, x23, ror #63                 |
+   +0x314  ror     x24, x29, #20                          |
+   +0x318  ldr     x11, [sp, #16]                         |
+   +0x31c  ror     x29, x30, #21                          |
+   +0x320  ror     x27, x27, #43                          |
+   +0x324  ror     x30, x15, #50                          |
+   +0x328  eor     x13, x23, x13                          |
+   +0x32c  eor     x12, x11, x13                          |
+   +0x330  eor     x9, x23, x9                            |
+   +0x334  bic     x15, x29, x24                          |
+   +0x338  eor     x14, x16, x14                          |
+   +0x33c  eor     x11, x12, x15                          |
+   +0x340  bic     x12, x30, x27                          |
+   +0x344  eor     x12, x12, x29                          |
+   +0x348  ror     x9, x9, #61                            |
+   +0x34c  bic     x29, x27, x29                          |
+   +0x350  ror     x14, x14, #44                          |
+   +0x354  eor     x15, x29, x24                          |
+   +0x358  eor     x10, x16, x10                          |
+   +0x35c  str     x12, [sp, #104]                        |
+   +0x360  bic     x12, x13, x30                          |
+   +0x364  eor     x12, x12, x27                          |
+   +0x368  bic     x13, x24, x13                          |
+   +0x36c  eor     x27, x13, x30                          |
+   +0x370  ror     x10, x10, #37                          |
+   +0x374  str     x11, [sp, #64]                         |
+   +0x378  ldr     x11, [sp, #24]                         |
+   +0x37c  str     x12, [sp, #88]                         |
+   +0x380  eor     x12, x25, x17                          |
+   +0x384  eor     x17, x8, x3                            |
+   +0x388  eor     x3, x6, x22                            |
+   +0x38c  bic     x22, x9, x14                           |
+   +0x390  eor     x11, x6, x11                           |
+   +0x394  ror     x12, x12, #19                          |
+   +0x398  ror     x17, x17, #3                           |
+   +0x39c  ror     x3, x3, #36                            |
+   +0x3a0  ror     x11, x11, #9                           |
+   +0x3a4  bic     x13, x17, x12                          |
+   +0x3a8  eor     x22, x22, x3                           |
+   +0x3ac  eor     x13, x13, x9                           |
+   +0x3b0  bic     x9, x12, x9                            |
+   +0x3b4  eor     x24, x9, x14                           |
+   +0x3b8  eor     x9, x25, x19                           |
+   +0x3bc  bic     x14, x14, x3                           |
+   +0x3c0  str     x13, [sp, #80]                         |
+   +0x3c4  bic     x13, x3, x17                           |
+   +0x3c8  eor     x12, x13, x12                          |
+   +0x3cc  eor     x13, x23, x26                          |
+   +0x3d0  ror     x9, x9, #63                            |
+   +0x3d4  str     x12, [sp, #96]                         |
+   +0x3d8  eor     x12, x16, x18                          |
+   +0x3dc  eor     x18, x8, x1                            |
+   +0x3e0  eor     x1, x6, x2                             |
+   +0x3e4  ror     x13, x13, #46                          |
+   +0x3e8  eor     x16, x16, x7                           |
+   +0x3ec  ror     x12, x12, #56                          |
+   +0x3f0  ror     x18, x18, #58                          |
+   +0x3f4  ror     x2, x1, #39                            |
+   +0x3f8  eor     x1, x14, x17                           |
+   +0x3fc  bic     x14, x13, x12                          |
+   +0x400  bic     x17, x2, x18                           |
+   +0x404  eor     x29, x14, x2                           |
+   +0x408  bic     x14, x12, x2                           |
+   +0x40c  bic     x2, x9, x13                            |
+   +0x410  eor     x3, x17, x9                            |
+   +0x414  eor     x26, x14, x18                          |
+   +0x418  bic     x9, x18, x9                            |
+   +0x41c  eor     x14, x8, x21                           |
+   +0x420  eor     x18, x6, x28                           |
+   +0x424  eor     x2, x2, x12                            |
+   +0x428  eor     x12, x25, x20                          |
+   +0x42c  eor     x28, x9, x13                           |
+   +0x430  eor     x9, x23, x0                            |
+   +0x434  ror     x13, x14, #49                          |
+   +0x438  ror     x14, x18, #8                           |
+   +0x43c  eor     x0, x23, x5                            |
+   +0x440  ror     x12, x12, #54                          |
+   +0x444  ldr     x23, [sp, #64]                         |
+   +0x448  ror     x9, x9, #28                            |
+   +0x44c  bic     x5, x10, x14                           |
+   +0x450  bic     x18, x13, x12                          |
+   +0x454  eor     x30, x5, x13                           |
+   +0x458  bic     x13, x14, x13                          |
+   +0x45c  eor     x19, x18, x9                           |
+   +0x460  eor     x5, x13, x12                           |
+   +0x464  bic     x12, x12, x9                           |
+   +0x468  eor     x13, x25, x4                           |
+   +0x46c  eor     x17, x12, x10                          |
+   +0x470  ldr     x12, [sp, #32]                         |
+   +0x474  bic     x9, x9, x10                            |
+   +0x478  eor     x7, x9, x14                            |
+   +0x47c  mov     x4, x15                                |
+   +0x480  ror     x13, x13, #62                          |
+   +0x484  eor     x8, x8, x12                            |
+   +0x488  ror     x12, x16, #25                          |
+   +0x48c  ror     x16, x0, #23                           |
+   +0x490  ror     x8, x8, #2                             |
+   +0x494  bic     x9, x12, x11                           |
+   +0x498  bic     x14, x13, x16                          |
+   +0x49c  bic     x10, x16, x12                          |
+   +0x4a0  eor     x15, x14, x12                          |
+   +0x4a4  ldr     x14, [sp, #72]                         |
+   +0x4a8  bic     x12, x8, x13                           |
+   +0x4ac  eor     x21, x9, x8                            |
+   +0x4b0  bic     x8, x11, x8                            |
+   +0x4b4  eor     x20, x12, x16                          |
+   +0x4b8  cmp     x14, #0x16                             |
+   +0x4bc  add     x14, x14, #0x2                         |
+   +0x4c0  eor     x6, x10, x11                           |
+  loop1_test:                                             |
+   +0x4c4  eor     x9, x8, x13                            |
+  loop1_back:                                             |
+   +0x4c8  b.cc    loop1                                 -+
+  loop1_exit:
+   +0x4cc  ldr     x8, [sp, #8]
+   +0x4d0  ldr     x11, [sp, #104]
+   +0x4d4  ldr     x10, [sp, #88]
+   +0x4d8  stp     x23, x4, [x8]
+   +0x4dc  stp     x27, x22, [x8, #32]
+   +0x4e0  stp     x11, x10, [x8, #16]
+   +0x4e4  ldr     x10, [sp, #80]
+   +0x4e8  stp     x3, x26, [x8, #80]
+   +0x4ec  stp     x29, x2, [x8, #96]
+   +0x4f0  stp     x24, x10, [x8, #48]
+   +0x4f4  ldr     x10, [sp, #96]
+   +0x4f8  stp     x28, x17, [x8, #112]
+   +0x4fc  stp     x19, x5, [x8, #128]
+   +0x500  stp     x30, x7, [x8, #144]
+   +0x504  stp     x21, x6, [x8, #160]
+   +0x508  stp     x15, x20, [x8, #176]
+   +0x50c  ldp     x20, x19, [sp, #192]
+   +0x510  stp     x10, x1, [x8, #64]
+   +0x514  ldp     x22, x21, [sp, #176]
+   +0x518  str     x9, [x8, #192]
+   +0x51c  ldp     x24, x23, [sp, #160]
+   +0x520  ldp     x26, x25, [sp, #144]
+   +0x524  ldp     x28, x27, [sp, #128]
+   +0x528  ldp     x29, x30, [sp, #112]
+   +0x52c  add     sp, sp, #0xd0
+  ret:
+   +0x530  ret
+ ***)
+
+(*** mlkem512_gen_matrix: 0x5f80, 0xc8 bytes
+
+     +0x0  stp     x29, x30, [sp, #-32]!
+     +0x4  stp     x28, x19, [sp, #16]
+     +0x8  mov     x29, sp
+     +0xc  sub     x9, sp, #0x120
+    +0x10  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x14  adrp    x8, <page>
+    +0x18  cmp     w2, #0x0
+    +0x1c  cset    w9, eq
+    +0x20  mov     w10, #0x101
+    +0x24  add     x2, x0, #0x400
+    +0x28  add     x3, x0, #0x600
+    +0x2c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x30  mov     x4, sp
+    +0x34  mov     x19, sp
+    +0x38  ldr     x8, [x8]
+    +0x3c  str     x8, [sp, #280]
+    +0x40  cset    w8, ne
+    +0x44  ldp     q0, q1, [x1]
+    +0x48  add     x1, x0, #0x200
+    +0x4c  strb    w9, [sp, #96]
+    +0x50  strb    w8, [sp, #97]
+    +0x54  strb    w8, [sp, #160]
+    +0x58  strb    w9, [sp, #161]
+    +0x5c  strh    w10, [sp, #224]
+    +0x60  stp     q0, q1, [sp]
+    +0x64  stp     q0, q1, [sp, #64]
+    +0x68  stp     q0, q1, [sp, #128]
+    +0x6c  stp     q0, q1, [sp, #192]
+    +0x70  strh    wzr, [sp, #32]
+    +0x74  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4:
+    +0x78  movi    v0.2d, #0x0
+  adrp2:
+    +0x7c  adrp    x8, <page>
+    +0x80  stp     q0, q0, [sp]
+    +0x84  stp     q0, q0, [sp, #32]
+    +0x88  stp     q0, q0, [sp, #64]
+    +0x8c  stp     q0, q0, [sp, #96]
+    +0x90  stp     q0, q0, [sp, #128]
+    +0x94  stp     q0, q0, [sp, #160]
+    +0x98  stp     q0, q0, [sp, #192]
+    +0x9c  stp     q0, q0, [sp, #224]
+    +0xa0  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0xa4  ldr     x9, [sp, #280]
+    +0xa8  ldr     x8, [x8]
+    +0xac  cmp     x8, x9
+    +0xb0  b.ne    +0xc4                        -+
+    +0xb4  mov     sp, x29                       |
+    +0xb8  ldp     x28, x19, [sp, #16]           |
+    +0xbc  ldp     x29, x30, [sp], #32           |
+  ret:                                           |
+    +0xc0  ret                                   |
+    +0xc4  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem512_indcpa_keypair_derand: 0x6048, 0x2dc bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  stp     x28, x27, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0x1, lsl #12
+    +0x20  sub     x9, x9, #0x6c0
+    +0x24  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x28  adrp    x8, <page>
+    +0x2c  mov     x20, x1
+    +0x30  mov     x19, x0
+    +0x34  add     x24, sp, #0x1, lsl #12
+    +0x38  add     x0, sp, #0x1, lsl #12
+    +0x3c  add     x1, sp, #0x1, lsl #12
+    +0x40  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x44  add     x24, x24, #0x620
+    +0x48  add     x0, x0, #0x660
+    +0x4c  add     x1, x1, #0x620
+    +0x50  add     x23, sp, #0x1, lsl #12
+    +0x54  ldr     x8, [x8]
+    +0x58  add     x23, x23, #0x660
+    +0x5c  add     x22, x23, #0x20
+    +0x60  str     x8, [sp, #5816]
+    +0x64  mov     w8, #0x2
+    +0x68  ldp     q0, q1, [x2]
+    +0x6c  mov     w2, #0x21
+    +0x70  strb    w8, [x24, #32]
+    +0x74  str     q0, [sp, #5664]
+    +0x78  str     q1, [sp, #5680]
+    +0x7c  bl      mlkem_sha3_512
+  after_mlkem_sha3_512:
+    +0x80  add     x26, sp, #0xe20
+    +0x84  ldr     q0, [sp, #5728]
+    +0x88  add     x21, x26, #0x400
+    +0x8c  ldr     q1, [sp, #5744]
+    +0x90  mov     w8, #0x1
+    +0x94  mov     w9, #0x100
+    +0x98  mov     w10, #0x101
+    +0x9c  add     x1, x26, #0x200
+    +0xa0  add     x3, x26, #0x600
+    +0xa4  add     x0, sp, #0xe20
+    +0xa8  add     x4, sp, #0xa20
+    +0xac  mov     x2, x21
+    +0xb0  str     q0, [sp, #2592]
+    +0xb4  add     x27, sp, #0xa20
+    +0xb8  str     q1, [sp, #2608]
+    +0xbc  str     q0, [sp, #2656]
+    +0xc0  str     q1, [sp, #2672]
+    +0xc4  str     q0, [sp, #2720]
+    +0xc8  str     q1, [sp, #2736]
+    +0xcc  strh    w8, [sp, #2688]
+    +0xd0  strh    w9, [sp, #2752]
+    +0xd4  strh    w10, [sp, #2816]
+    +0xd8  str     q1, [sp, #2800]
+    +0xdc  str     q0, [sp, #2784]
+    +0xe0  strh    wzr, [sp, #2624]
+    +0xe4  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4:
+    +0xe8  movi    v0.2d, #0x0
+    +0xec  add     x28, sp, #0x220
+    +0xf0  add     x1, x28, #0x200
+    +0xf4  add     x3, x27, #0x200
+    +0xf8  mov     w8, #0x3
+    +0xfc  add     x0, sp, #0x220
+   +0x100  add     x2, sp, #0xa20
+   +0x104  mov     x4, x22
+   +0x108  str     q0, [sp, #2832]
+   +0x10c  mov     w5, wzr
+   +0x110  str     q0, [sp, #2816]
+   +0x114  mov     w6, #0x1
+   +0x118  str     q0, [sp, #2800]
+   +0x11c  mov     w7, #0x2
+   +0x120  str     q0, [sp, #2784]
+   +0x124  str     q0, [sp, #2768]
+   +0x128  str     q0, [sp, #2752]
+   +0x12c  str     q0, [sp, #2736]
+   +0x130  str     q0, [sp, #2720]
+   +0x134  str     q0, [sp, #2704]
+   +0x138  str     q0, [sp, #2688]
+   +0x13c  str     q0, [sp, #2672]
+   +0x140  str     q0, [sp, #2656]
+   +0x144  str     q0, [sp, #2640]
+   +0x148  str     q0, [sp, #2624]
+   +0x14c  str     q0, [sp, #2608]
+   +0x150  str     q0, [sp, #2592]
+   +0x154  strb    w8, [sp]
+   +0x158  bl      mlkem512_poly_getnoise_eta1_4x
+  after_mlkem512_poly_getnoise_eta1_4x:
+   +0x15c  add     x0, sp, #0x220
+   +0x160  bl      mlkem512_polyvec_ntt
+  after_mlkem512_polyvec_ntt_1:
+   +0x164  add     x0, sp, #0xa20
+   +0x168  bl      mlkem512_polyvec_ntt
+  after_mlkem512_polyvec_ntt_2:
+   +0x16c  add     x0, sp, #0x20
+   +0x170  add     x1, sp, #0x220
+   +0x174  add     x25, sp, #0x20
+   +0x178  bl      mlkem512_polyvec_mulcache_compute
+  after_mlkem512_polyvec_mulcache_compute:
+   +0x17c  add     x0, sp, #0x620
+   +0x180  add     x1, sp, #0xe20
+   +0x184  add     x2, sp, #0x220
+   +0x188  add     x3, sp, #0x20
+   +0x18c  add     x22, sp, #0x620
+   +0x190  bl      mlkem512_polyvec_basemul_acc_montgomery_cached
+  after_mlkem512_polyvec_basemul_acc_montgomery_cached_1:
+   +0x194  add     x0, x22, #0x200
+   +0x198  add     x2, sp, #0x220
+   +0x19c  add     x3, sp, #0x20
+   +0x1a0  mov     x1, x21
+   +0x1a4  bl      mlkem512_polyvec_basemul_acc_montgomery_cached
+  after_mlkem512_polyvec_basemul_acc_montgomery_cached_2:
+   +0x1a8  add     x0, sp, #0x620
+   +0x1ac  bl      mlkem512_polyvec_tomont
+  after_mlkem512_polyvec_tomont:
+   +0x1b0  add     x0, sp, #0x620
+   +0x1b4  add     x1, sp, #0xa20
+   +0x1b8  bl      mlkem512_polyvec_add
+  after_mlkem512_polyvec_add:
+   +0x1bc  add     x0, sp, #0x620
+   +0x1c0  bl      mlkem512_polyvec_reduce
+  after_mlkem512_polyvec_reduce_1:
+   +0x1c4  add     x0, sp, #0x220
+   +0x1c8  bl      mlkem512_polyvec_reduce
+  after_mlkem512_polyvec_reduce_2:
+   +0x1cc  add     x1, sp, #0x220
+   +0x1d0  mov     x0, x20
+   +0x1d4  bl      mlkem512_polyvec_tobytes
+  after_mlkem512_polyvec_tobytes_1:
+   +0x1d8  add     x1, sp, #0x620
+   +0x1dc  mov     x0, x19
+   +0x1e0  bl      mlkem512_polyvec_tobytes
+  after_mlkem512_polyvec_tobytes_2:
+   +0x1e4  movi    v2.2d, #0x0
+   +0x1e8  ldr     q0, [sp, #5728]
+   +0x1ec  ldr     q1, [sp, #5744]
+   +0x1f0  add     x0, sp, #0x220
+   +0x1f4  mov     w1, wzr
+   +0x1f8  mov     w2, #0x400
+   +0x1fc  stp     q2, q2, [sp, #32]
+   +0x200  stp     q0, q1, [x19, #768]
+   +0x204  stp     q2, q2, [sp, #64]
+   +0x208  stp     q2, q2, [sp, #96]
+   +0x20c  stp     q2, q2, [sp, #128]
+   +0x210  stp     q2, q2, [sp, #160]
+   +0x214  stp     q2, q2, [sp, #192]
+   +0x218  stp     q2, q2, [sp, #224]
+   +0x21c  stp     q2, q2, [sp, #256]
+   +0x220  stp     q2, q2, [sp, #288]
+   +0x224  stp     q2, q2, [sp, #320]
+   +0x228  stp     q2, q2, [sp, #352]
+   +0x22c  stp     q2, q2, [sp, #384]
+   +0x230  stp     q2, q2, [sp, #416]
+   +0x234  stp     q2, q2, [sp, #448]
+   +0x238  stp     q2, q2, [sp, #480]
+   +0x23c  stp     q2, q2, [sp, #512]
+   +0x240  bl      memset
+  after_memset_1:
+   +0x244  add     x0, sp, #0x620
+   +0x248  mov     w1, wzr
+   +0x24c  mov     w2, #0x400
+   +0x250  bl      memset
+  after_memset_2:
+   +0x254  add     x0, sp, #0xa20
+   +0x258  mov     w1, wzr
+   +0x25c  mov     w2, #0x400
+   +0x260  bl      memset
+  after_memset_3:
+   +0x264  add     x0, sp, #0xe20
+   +0x268  mov     w1, wzr
+   +0x26c  mov     w2, #0x800
+   +0x270  bl      memset
+  after_memset_4:
+   +0x274  movi    v0.2d, #0x0
+   +0x278  add     x8, sp, #0x1, lsl #12
+   +0x27c  strb    wzr, [x24, #32]
+   +0x280  add     x8, x8, #0x620
+   +0x284  str     q0, [sp, #5680]
+   +0x288  str     q0, [sp, #5664]
+  adrp2:
+   +0x28c  adrp    x8, <page>
+   +0x290  str     q0, [sp, #5776]
+   +0x294  str     q0, [sp, #5760]
+   +0x298  str     q0, [sp, #5744]
+   +0x29c  str     q0, [sp, #5728]
+   +0x2a0  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x2a4  ldr     x9, [sp, #5816]
+   +0x2a8  ldr     x8, [x8]
+   +0x2ac  cmp     x8, x9
+   +0x2b0  b.ne    +0x2d8                                          -+
+   +0x2b4  mov     w0, wzr                                          |
+   +0x2b8  mov     sp, x29                                          |
+   +0x2bc  ldp     x20, x19, [sp, #80]                              |
+   +0x2c0  ldp     x22, x21, [sp, #64]                              |
+   +0x2c4  ldp     x24, x23, [sp, #48]                              |
+   +0x2c8  ldp     x26, x25, [sp, #32]                              |
+   +0x2cc  ldp     x28, x27, [sp, #16]                              |
+   +0x2d0  ldp     x29, x30, [sp], #96                              |
+  ret:                                                              |
+   +0x2d4  ret                                                      |
+   +0x2d8  bl      stack_chk_fail                                  <+
+ ***)
+
+(*** mlkem512_indcpa_enc: 0x6324, 0x48c bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  stp     x28, x27, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0x2, lsl #12
+    +0x20  sub     x9, x9, #0x60
+    +0x24  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x28  adrp    x8, <page>
+    +0x2c  mov     x19, x0
+    +0x30  add     x0, sp, #0x1, lsl #12
+    +0x34  mov     x22, x1
+    +0x38  add     x0, x0, #0x20
+    +0x3c  mov     x1, x2
+    +0x40  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x44  add     x23, sp, #0x1, lsl #12
+    +0x48  mov     x20, x3
+    +0x4c  mov     x21, x2
+    +0x50  add     x23, x23, #0x20
+    +0x54  ldr     x8, [x8]
+    +0x58  str     x8, [sp, #8280]
+    +0x5c  bl      mlkem512_polyvec_frombytes
+  after_mlkem512_polyvec_frombytes:
+    +0x60  ldp     q0, q1, [x21, #768]
+    +0x64  add     x0, sp, #0x420
+    +0x68  mov     x1, x22
+    +0x6c  add     x25, sp, #0x420
+    +0x70  str     q0, [sp, #8224]
+    +0x74  str     q1, [sp, #8240]
+    +0x78  bl      mlkem_poly_frommsg
+  after_mlkem_poly_frommsg:
+    +0x7c  add     x22, sp, #0x1, lsl #12
+    +0x80  add     x0, sp, #0x1, lsl #12
+    +0x84  add     x22, x22, #0x820
+    +0x88  add     x4, sp, #0x1, lsl #12
+    +0x8c  add     x21, x22, #0x400
+    +0x90  ldr     q0, [sp, #8224]
+    +0x94  ldr     q1, [sp, #8240]
+    +0x98  mov     w8, #0x100
+    +0x9c  mov     w9, #0x1
+    +0xa0  mov     w10, #0x101
+    +0xa4  add     x1, x22, #0x200
+    +0xa8  add     x3, x22, #0x600
+    +0xac  add     x0, x0, #0x820
+    +0xb0  add     x4, x4, #0x420
+    +0xb4  mov     x2, x21
+    +0xb8  add     x24, sp, #0x1, lsl #12
+    +0xbc  str     q0, [sp, #5152]
+    +0xc0  add     x24, x24, #0x420
+    +0xc4  str     q1, [sp, #5168]
+    +0xc8  str     q0, [sp, #5216]
+    +0xcc  str     q1, [sp, #5232]
+    +0xd0  str     q0, [sp, #5280]
+    +0xd4  str     q1, [sp, #5296]
+    +0xd8  strh    w8, [sp, #5248]
+    +0xdc  strh    w9, [sp, #5312]
+    +0xe0  strh    w10, [sp, #5376]
+    +0xe4  str     q1, [sp, #5360]
+    +0xe8  str     q0, [sp, #5344]
+    +0xec  strh    wzr, [sp, #5184]
+    +0xf0  bl      mlkem_poly_rej_uniform_x4
+  after_mlkem_poly_rej_uniform_x4:
+    +0xf4  movi    v0.2d, #0x0
+    +0xf8  add     x26, sp, #0xc20
+    +0xfc  add     x0, sp, #0x1, lsl #12
+   +0x100  add     x1, x24, #0x200
+   +0x104  add     x3, x26, #0x200
+   +0x108  mov     w8, #0x3
+   +0x10c  add     x0, x0, #0x420
+   +0x110  add     x2, sp, #0xc20
+   +0x114  str     q0, [sp, #5392]
+   +0x118  mov     x4, x20
+   +0x11c  str     q0, [sp, #5376]
+   +0x120  mov     w5, wzr
+   +0x124  str     q0, [sp, #5360]
+   +0x128  mov     w6, #0x1
+   +0x12c  str     q0, [sp, #5344]
+   +0x130  mov     w7, #0x2
+   +0x134  str     q0, [sp, #5328]
+   +0x138  str     q0, [sp, #5312]
+   +0x13c  str     q0, [sp, #5296]
+   +0x140  str     q0, [sp, #5280]
+   +0x144  str     q0, [sp, #5264]
+   +0x148  str     q0, [sp, #5248]
+   +0x14c  str     q0, [sp, #5232]
+   +0x150  str     q0, [sp, #5216]
+   +0x154  str     q0, [sp, #5200]
+   +0x158  str     q0, [sp, #5184]
+   +0x15c  str     q0, [sp, #5168]
+   +0x160  str     q0, [sp, #5152]
+   +0x164  strb    w8, [sp]
+   +0x168  bl      mlkem512_poly_getnoise_eta1122_4x
+  after_mlkem512_poly_getnoise_eta1122_4x:
+   +0x16c  add     x0, sp, #0x220
+   +0x170  mov     x1, x20
+   +0x174  mov     w2, #0x4
+   +0x178  add     x27, sp, #0x220
+   +0x17c  bl      mlkem512_poly_getnoise_eta2
+  after_mlkem512_poly_getnoise_eta2:
+   +0x180  add     x0, sp, #0x1, lsl #12
+   +0x184  add     x0, x0, #0x420
+   +0x188  bl      mlkem512_polyvec_ntt
+  after_mlkem512_polyvec_ntt:
+   +0x18c  add     x1, sp, #0x1, lsl #12
+   +0x190  add     x0, sp, #0x20
+   +0x194  add     x1, x1, #0x420
+   +0x198  add     x28, sp, #0x20
+   +0x19c  bl      mlkem512_polyvec_mulcache_compute
+  after_mlkem512_polyvec_mulcache_compute:
+   +0x1a0  add     x1, sp, #0x1, lsl #12
+   +0x1a4  add     x2, sp, #0x1, lsl #12
+   +0x1a8  add     x0, sp, #0x820
+   +0x1ac  add     x1, x1, #0x820
+   +0x1b0  add     x2, x2, #0x420
+   +0x1b4  add     x3, sp, #0x20
+   +0x1b8  add     x20, sp, #0x820
+   +0x1bc  bl      mlkem512_polyvec_basemul_acc_montgomery_cached
+  after_mlkem512_polyvec_basemul_acc_montgomery_cached_1:
+   +0x1c0  add     x2, sp, #0x1, lsl #12
+   +0x1c4  add     x0, x20, #0x200
+   +0x1c8  add     x2, x2, #0x420
+   +0x1cc  add     x3, sp, #0x20
+   +0x1d0  mov     x1, x21
+   +0x1d4  bl      mlkem512_polyvec_basemul_acc_montgomery_cached
+  after_mlkem512_polyvec_basemul_acc_montgomery_cached_2:
+   +0x1d8  add     x1, sp, #0x1, lsl #12
+   +0x1dc  add     x2, sp, #0x1, lsl #12
+   +0x1e0  add     x0, sp, #0x620
+   +0x1e4  add     x1, x1, #0x20
+   +0x1e8  add     x2, x2, #0x420
+   +0x1ec  add     x3, sp, #0x20
+   +0x1f0  add     x21, sp, #0x620
+   +0x1f4  bl      mlkem512_polyvec_basemul_acc_montgomery_cached
+  after_mlkem512_polyvec_basemul_acc_montgomery_cached_3:
+   +0x1f8  add     x0, sp, #0x820
+   +0x1fc  bl      mlkem512_polyvec_invntt_tomont
+  after_mlkem512_polyvec_invntt_tomont:
+   +0x200  add     x0, sp, #0x620
+   +0x204  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont:
+   +0x208  add     x0, sp, #0x820
+   +0x20c  add     x1, sp, #0xc20
+   +0x210  bl      mlkem512_polyvec_add
+  after_mlkem512_polyvec_add:
+   +0x214  add     x0, sp, #0x620
+   +0x218  add     x1, sp, #0x220
+   +0x21c  bl      mlkem_poly_add
+  after_mlkem_poly_add_1:
+   +0x220  add     x0, sp, #0x620
+   +0x224  add     x1, sp, #0x420
+   +0x228  bl      mlkem_poly_add
+  after_mlkem_poly_add_2:
+   +0x22c  add     x0, sp, #0x820
+   +0x230  bl      mlkem512_polyvec_reduce
+  after_mlkem512_polyvec_reduce:
+   +0x234  add     x0, sp, #0x620
+   +0x238  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce:
+   +0x23c  add     x1, sp, #0x820
+   +0x240  mov     x0, x19
+   +0x244  bl      mlkem512_polyvec_compress_du
+  after_mlkem512_polyvec_compress_du:
+   +0x248  add     x0, x19, #0x280
+   +0x24c  add     x1, sp, #0x620
+   +0x250  bl      mlkem_poly_compress_d4
+  after_mlkem_poly_compress_d4:
+   +0x254  movi    v0.2d, #0x0
+   +0x258  add     x0, sp, #0x820
+   +0x25c  mov     w1, wzr
+   +0x260  mov     w2, #0x400
+   +0x264  stp     q0, q0, [sp, #32]
+   +0x268  stp     q0, q0, [sp, #64]
+   +0x26c  stp     q0, q0, [sp, #96]
+   +0x270  stp     q0, q0, [sp, #128]
+   +0x274  stp     q0, q0, [sp, #160]
+   +0x278  stp     q0, q0, [sp, #192]
+   +0x27c  stp     q0, q0, [sp, #224]
+   +0x280  stp     q0, q0, [sp, #256]
+   +0x284  stp     q0, q0, [sp, #288]
+   +0x288  stp     q0, q0, [sp, #320]
+   +0x28c  stp     q0, q0, [sp, #352]
+   +0x290  stp     q0, q0, [sp, #384]
+   +0x294  stp     q0, q0, [sp, #416]
+   +0x298  stp     q0, q0, [sp, #448]
+   +0x29c  stp     q0, q0, [sp, #480]
+   +0x2a0  stp     q0, q0, [sp, #512]
+   +0x2a4  str     q0, [sp, #1040]
+   +0x2a8  stp     q0, q0, [sp, #560]
+   +0x2ac  stp     q0, q0, [sp, #592]
+   +0x2b0  stp     q0, q0, [sp, #624]
+   +0x2b4  stp     q0, q0, [sp, #656]
+   +0x2b8  stp     q0, q0, [sp, #688]
+   +0x2bc  stp     q0, q0, [sp, #720]
+   +0x2c0  stp     q0, q0, [sp, #752]
+   +0x2c4  stp     q0, q0, [sp, #784]
+   +0x2c8  stp     q0, q0, [sp, #816]
+   +0x2cc  stp     q0, q0, [sp, #848]
+   +0x2d0  stp     q0, q0, [sp, #880]
+   +0x2d4  stp     q0, q0, [sp, #912]
+   +0x2d8  stp     q0, q0, [sp, #944]
+   +0x2dc  stp     q0, q0, [sp, #976]
+   +0x2e0  stp     q0, q0, [sp, #1008]
+   +0x2e4  str     q0, [sp, #544]
+   +0x2e8  str     q0, [sp, #1552]
+   +0x2ec  str     q0, [sp, #1536]
+   +0x2f0  str     q0, [sp, #1520]
+   +0x2f4  str     q0, [sp, #1504]
+   +0x2f8  str     q0, [sp, #1488]
+   +0x2fc  str     q0, [sp, #1472]
+   +0x300  str     q0, [sp, #1456]
+   +0x304  str     q0, [sp, #1440]
+   +0x308  str     q0, [sp, #1424]
+   +0x30c  str     q0, [sp, #1408]
+   +0x310  str     q0, [sp, #1392]
+   +0x314  str     q0, [sp, #1376]
+   +0x318  str     q0, [sp, #1360]
+   +0x31c  str     q0, [sp, #1344]
+   +0x320  str     q0, [sp, #1328]
+   +0x324  str     q0, [sp, #1312]
+   +0x328  str     q0, [sp, #1296]
+   +0x32c  str     q0, [sp, #1280]
+   +0x330  str     q0, [sp, #1264]
+   +0x334  str     q0, [sp, #1248]
+   +0x338  str     q0, [sp, #1232]
+   +0x33c  str     q0, [sp, #1216]
+   +0x340  str     q0, [sp, #1200]
+   +0x344  str     q0, [sp, #1184]
+   +0x348  str     q0, [sp, #1168]
+   +0x34c  str     q0, [sp, #1152]
+   +0x350  str     q0, [sp, #1136]
+   +0x354  str     q0, [sp, #1120]
+   +0x358  str     q0, [sp, #1104]
+   +0x35c  str     q0, [sp, #1088]
+   +0x360  str     q0, [sp, #1072]
+   +0x364  str     q0, [sp, #1056]
+   +0x368  str     q0, [sp, #2064]
+   +0x36c  str     q0, [sp, #2048]
+   +0x370  str     q0, [sp, #2032]
+   +0x374  str     q0, [sp, #2016]
+   +0x378  str     q0, [sp, #2000]
+   +0x37c  str     q0, [sp, #1984]
+   +0x380  str     q0, [sp, #1968]
+   +0x384  str     q0, [sp, #1952]
+   +0x388  str     q0, [sp, #1936]
+   +0x38c  str     q0, [sp, #1920]
+   +0x390  str     q0, [sp, #1904]
+   +0x394  str     q0, [sp, #1888]
+   +0x398  str     q0, [sp, #1872]
+   +0x39c  str     q0, [sp, #1856]
+   +0x3a0  str     q0, [sp, #1840]
+   +0x3a4  str     q0, [sp, #1824]
+   +0x3a8  str     q0, [sp, #1808]
+   +0x3ac  str     q0, [sp, #1792]
+   +0x3b0  str     q0, [sp, #1776]
+   +0x3b4  str     q0, [sp, #1760]
+   +0x3b8  str     q0, [sp, #1744]
+   +0x3bc  str     q0, [sp, #1728]
+   +0x3c0  str     q0, [sp, #1712]
+   +0x3c4  str     q0, [sp, #1696]
+   +0x3c8  str     q0, [sp, #1680]
+   +0x3cc  str     q0, [sp, #1664]
+   +0x3d0  str     q0, [sp, #1648]
+   +0x3d4  str     q0, [sp, #1632]
+   +0x3d8  str     q0, [sp, #1616]
+   +0x3dc  str     q0, [sp, #1600]
+   +0x3e0  str     q0, [sp, #1584]
+   +0x3e4  str     q0, [sp, #1568]
+   +0x3e8  bl      memset
+  after_memset_1:
+   +0x3ec  add     x0, sp, #0xc20
+   +0x3f0  mov     w1, wzr
+   +0x3f4  mov     w2, #0x400
+   +0x3f8  bl      memset
+  after_memset_2:
+   +0x3fc  add     x0, sp, #0x1, lsl #12
+   +0x400  add     x0, x0, #0x20
+   +0x404  mov     w1, wzr
+   +0x408  mov     w2, #0x400
+   +0x40c  bl      memset
+  after_memset_3:
+   +0x410  add     x0, sp, #0x1, lsl #12
+   +0x414  add     x0, x0, #0x420
+   +0x418  mov     w1, wzr
+   +0x41c  mov     w2, #0x400
+   +0x420  bl      memset
+  after_memset_4:
+   +0x424  add     x0, sp, #0x1, lsl #12
+   +0x428  add     x0, x0, #0x820
+   +0x42c  mov     w1, wzr
+   +0x430  mov     w2, #0x800
+   +0x434  bl      memset
+  after_memset_5:
+   +0x438  movi    v0.2d, #0x0
+   +0x43c  add     x8, sp, #0x2, lsl #12
+   +0x440  add     x8, x8, #0x20
+   +0x444  str     q0, [sp, #8240]
+   +0x448  str     q0, [sp, #8224]
+  adrp2:
+   +0x44c  adrp    x8, <page>
+   +0x450  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x454  ldr     x9, [sp, #8280]
+   +0x458  ldr     x8, [x8]
+   +0x45c  cmp     x8, x9
+   +0x460  b.ne    +0x488                                          -+
+   +0x464  mov     w0, wzr                                          |
+   +0x468  mov     sp, x29                                          |
+   +0x46c  ldp     x20, x19, [sp, #80]                              |
+   +0x470  ldp     x22, x21, [sp, #64]                              |
+   +0x474  ldp     x24, x23, [sp, #48]                              |
+   +0x478  ldp     x26, x25, [sp, #32]                              |
+   +0x47c  ldp     x28, x27, [sp, #16]                              |
+   +0x480  ldp     x29, x30, [sp], #96                              |
+  ret:                                                              |
+   +0x484  ret                                                      |
+   +0x488  bl      stack_chk_fail                                  <+
+ ***)
+
+(*** mlkem512_indcpa_dec: 0x67b0, 0x220 bytes
+
+     +0x0  stp     x29, x30, [sp, #-80]!
+     +0x4  str     x28, [sp, #16]
+     +0x8  stp     x24, x23, [sp, #32]
+     +0xc  stp     x22, x21, [sp, #48]
+    +0x10  stp     x20, x19, [sp, #64]
+    +0x14  mov     x29, sp
+    +0x18  sub     x9, sp, #0xe10
+    +0x1c  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x20  adrp    x8, <page>
+    +0x24  mov     x21, x0
+    +0x28  add     x0, sp, #0xa00
+    +0x2c  mov     x19, x2
+    +0x30  mov     x20, x1
+    +0x34  add     x22, sp, #0xa00
+    +0x38  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x3c  ldr     x8, [x8]
+    +0x40  str     x8, [sp, #3592]
+    +0x44  bl      mlkem512_polyvec_decompress_du
+  after_mlkem512_polyvec_decompress_du:
+    +0x48  add     x1, x20, #0x280
+    +0x4c  add     x0, sp, #0x400
+    +0x50  add     x20, sp, #0x400
+    +0x54  bl      mlkem_poly_decompress_d4
+  after_mlkem_poly_decompress_d4:
+    +0x58  add     x0, sp, #0x600
+    +0x5c  mov     x1, x19
+    +0x60  add     x19, sp, #0x600
+    +0x64  bl      mlkem512_polyvec_frombytes
+  after_mlkem512_polyvec_frombytes:
+    +0x68  add     x0, sp, #0xa00
+    +0x6c  bl      mlkem512_polyvec_ntt
+  after_mlkem512_polyvec_ntt:
+    +0x70  mov     x0, sp
+    +0x74  add     x1, sp, #0xa00
+    +0x78  mov     x24, sp
+    +0x7c  bl      mlkem512_polyvec_mulcache_compute
+  after_mlkem512_polyvec_mulcache_compute:
+    +0x80  add     x0, sp, #0x200
+    +0x84  add     x1, sp, #0x600
+    +0x88  add     x2, sp, #0xa00
+    +0x8c  mov     x3, sp
+    +0x90  add     x23, sp, #0x200
+    +0x94  bl      mlkem512_polyvec_basemul_acc_montgomery_cached
+  after_mlkem512_polyvec_basemul_acc_montgomery_cached:
+    +0x98  add     x0, sp, #0x200
+    +0x9c  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont:
+    +0xa0  add     x0, sp, #0x400
+    +0xa4  add     x1, sp, #0x200
+    +0xa8  bl      mlkem_poly_sub
+  after_mlkem_poly_sub:
+    +0xac  add     x0, sp, #0x400
+    +0xb0  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce:
+    +0xb4  add     x1, sp, #0x400
+    +0xb8  mov     x0, x21
+    +0xbc  bl      mlkem_poly_tomsg
+  after_mlkem_poly_tomsg:
+    +0xc0  movi    v0.2d, #0x0
+    +0xc4  add     x0, sp, #0x600
+    +0xc8  mov     w1, wzr
+    +0xcc  mov     w2, #0x400
+    +0xd0  stp     q0, q0, [sp]
+    +0xd4  stp     q0, q0, [sp, #32]
+    +0xd8  stp     q0, q0, [sp, #64]
+    +0xdc  stp     q0, q0, [sp, #96]
+    +0xe0  stp     q0, q0, [sp, #128]
+    +0xe4  stp     q0, q0, [sp, #160]
+    +0xe8  stp     q0, q0, [sp, #192]
+    +0xec  stp     q0, q0, [sp, #224]
+    +0xf0  stp     q0, q0, [sp, #256]
+    +0xf4  stp     q0, q0, [sp, #288]
+    +0xf8  stp     q0, q0, [sp, #320]
+    +0xfc  stp     q0, q0, [sp, #352]
+   +0x100  stp     q0, q0, [sp, #384]
+   +0x104  stp     q0, q0, [sp, #416]
+   +0x108  stp     q0, q0, [sp, #448]
+   +0x10c  stp     q0, q0, [sp, #480]
+   +0x110  stp     q0, q0, [sp, #512]
+   +0x114  stp     q0, q0, [sp, #544]
+   +0x118  stp     q0, q0, [sp, #576]
+   +0x11c  stp     q0, q0, [sp, #608]
+   +0x120  stp     q0, q0, [sp, #640]
+   +0x124  stp     q0, q0, [sp, #672]
+   +0x128  stp     q0, q0, [sp, #704]
+   +0x12c  stp     q0, q0, [sp, #736]
+   +0x130  stp     q0, q0, [sp, #768]
+   +0x134  stp     q0, q0, [sp, #800]
+   +0x138  stp     q0, q0, [sp, #832]
+   +0x13c  stp     q0, q0, [sp, #864]
+   +0x140  stp     q0, q0, [sp, #896]
+   +0x144  stp     q0, q0, [sp, #928]
+   +0x148  stp     q0, q0, [sp, #960]
+   +0x14c  stp     q0, q0, [sp, #992]
+   +0x150  str     q0, [sp, #1520]
+   +0x154  str     q0, [sp, #1504]
+   +0x158  str     q0, [sp, #1488]
+   +0x15c  str     q0, [sp, #1472]
+   +0x160  str     q0, [sp, #1456]
+   +0x164  str     q0, [sp, #1440]
+   +0x168  str     q0, [sp, #1424]
+   +0x16c  str     q0, [sp, #1408]
+   +0x170  str     q0, [sp, #1392]
+   +0x174  str     q0, [sp, #1376]
+   +0x178  str     q0, [sp, #1360]
+   +0x17c  str     q0, [sp, #1344]
+   +0x180  str     q0, [sp, #1328]
+   +0x184  str     q0, [sp, #1312]
+   +0x188  str     q0, [sp, #1296]
+   +0x18c  str     q0, [sp, #1280]
+   +0x190  str     q0, [sp, #1264]
+   +0x194  str     q0, [sp, #1248]
+   +0x198  str     q0, [sp, #1232]
+   +0x19c  str     q0, [sp, #1216]
+   +0x1a0  str     q0, [sp, #1200]
+   +0x1a4  str     q0, [sp, #1184]
+   +0x1a8  str     q0, [sp, #1168]
+   +0x1ac  str     q0, [sp, #1152]
+   +0x1b0  str     q0, [sp, #1136]
+   +0x1b4  str     q0, [sp, #1120]
+   +0x1b8  str     q0, [sp, #1104]
+   +0x1bc  str     q0, [sp, #1088]
+   +0x1c0  str     q0, [sp, #1072]
+   +0x1c4  str     q0, [sp, #1056]
+   +0x1c8  str     q0, [sp, #1040]
+   +0x1cc  str     q0, [sp, #1024]
+   +0x1d0  bl      memset
+  after_memset_1:
+   +0x1d4  add     x0, sp, #0xa00
+   +0x1d8  mov     w1, wzr
+   +0x1dc  mov     w2, #0x400
+   +0x1e0  bl      memset
+  after_memset_2: adrp2:
+   +0x1e4  adrp    x8, <page>
+   +0x1e8  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x1ec  ldr     x9, [sp, #3592]
+   +0x1f0  ldr     x8, [x8]
+   +0x1f4  cmp     x8, x9
+   +0x1f8  b.ne    +0x21c                                          -+
+   +0x1fc  mov     w0, wzr                                          |
+   +0x200  mov     sp, x29                                          |
+   +0x204  ldp     x20, x19, [sp, #64]                              |
+   +0x208  ldp     x22, x21, [sp, #48]                              |
+   +0x20c  ldp     x24, x23, [sp, #32]                              |
+   +0x210  ldr     x28, [sp, #16]                                   |
+   +0x214  ldp     x29, x30, [sp], #80                              |
+  ret:                                                              |
+   +0x218  ret                                                      |
+   +0x21c  bl      stack_chk_fail                                  <+
+ ***)
+
+(*** mlkem512_check_pk: 0x69d0, 0x150 bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  stp     x28, x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0x710
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x19, x0
+    +0x20  add     x0, sp, #0x300
+    +0x24  mov     x1, x19
+    +0x28  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x2c  ldr     x8, [x8]
+    +0x30  str     x8, [sp, #1800]
+    +0x34  bl      mlkem512_polyvec_frombytes
+  after_mlkem512_polyvec_frombytes:
+    +0x38  add     x0, sp, #0x300
+    +0x3c  bl      mlkem512_polyvec_reduce
+  after_mlkem512_polyvec_reduce:
+    +0x40  mov     x0, sp
+    +0x44  add     x1, sp, #0x300
+    +0x48  mov     x20, sp
+    +0x4c  bl      mlkem512_polyvec_tobytes
+  after_mlkem512_polyvec_tobytes:
+    +0x50  movi    v0.2d, #0x0
+    +0x54  mov     x8, xzr
+    +0x58  movi    v1.2d, #0x0
+    +0x5c  movi    v2.2d, #0x0
+    +0x60  movi    v3.2d, #0x0
+  loop1:
+    +0x64  add     x9, x19, x8                  <+
+    +0x68  add     x10, x20, x8                  |
+    +0x6c  add     x8, x8, #0x20                 |
+    +0x70  cmp     x8, #0x300                    |
+    +0x74  ldp     q4, q5, [x9]                  |
+    +0x78  ldp     q6, q7, [x10]                 |
+    +0x7c  eor     v4.16b, v6.16b, v4.16b        |
+    +0x80  orr     v2.16b, v4.16b, v2.16b        |
+    +0x84  eor     v5.16b, v7.16b, v5.16b        |
+    +0x88  orr     v3.16b, v5.16b, v3.16b        |
+    +0x8c  eor     v0.16b, v4.16b, v0.16b        |
+  loop1_test:                                    |
+    +0x90  eor     v1.16b, v5.16b, v1.16b        |
+  loop1_back:                                    |
+    +0x94  b.ne    loop1                        -+
+  loop1_exit:
+    +0x98  orr     v2.16b, v3.16b, v2.16b
+    +0x9c  mov     w20, wzr
+    +0xa0  ext     v3.16b, v2.16b, v2.16b, #8
+    +0xa4  mov     x0, sp
+    +0xa8  eor     v0.16b, v1.16b, v0.16b
+    +0xac  mov     w1, w20
+    +0xb0  mov     w2, #0x300
+    +0xb4  mov     w8, #0xfffffffc
+    +0xb8  mov     x21, sp
+    +0xbc  orr     v1.8b, v2.8b, v3.8b
+    +0xc0  ext     v2.16b, v0.16b, v0.16b, #8
+    +0xc4  fmov    x9, d1
+    +0xc8  orr     x9, x9, x9, lsr #32
+    +0xcc  lsr     x10, x9, #16
+    +0xd0  eor     v0.8b, v0.8b, v2.8b
+    +0xd4  orr     w9, w9, w10
+    +0xd8  fmov    x10, d0
+    +0xdc  orr     w9, w9, w9, lsr #8
+    +0xe0  eor     x10, x10, x10, lsr #32
+    +0xe4  sub     w9, w20, w9, uxtb
+    +0xe8  eor     x10, x10, x10, lsr #16
+    +0xec  lsr     x11, x10, #8
+    +0xf0  eor     w10, w10, w11
+    +0xf4  eor     w9, w10, w9, lsr #16
+    +0xf8  and     w9, w9, #0xff
+    +0xfc  cmp     w9, w10, uxtb
+   +0x100  csel    w19, w20, w8, eq
+   +0x104  bl      memset
+  after_memset_1:
+   +0x108  add     x0, sp, #0x300
+   +0x10c  mov     w1, w20
+   +0x110  mov     w2, #0x400
+   +0x114  add     x20, sp, #0x300
+   +0x118  bl      memset
+  after_memset_2: adrp2:
+   +0x11c  adrp    x8, <page>
+   +0x120  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x124  ldr     x9, [sp, #1800]
+   +0x128  ldr     x8, [x8]
+   +0x12c  cmp     x8, x9
+   +0x130  b.ne    +0x14c                       -+
+   +0x134  mov     w0, w19                       |
+   +0x138  mov     sp, x29                       |
+   +0x13c  ldp     x20, x19, [sp, #32]           |
+   +0x140  ldp     x28, x21, [sp, #16]           |
+   +0x144  ldp     x29, x30, [sp], #48           |
+  ret:                                           |
+   +0x148  ret                                   |
+   +0x14c  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem512_check_sk: 0x6b20, 0xe0 bytes
+
+     +0x0  stp     x29, x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x29, sp
+     +0xc  sub     x9, sp, #0x40
+    +0x10  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x14  adrp    x8, <page>
+    +0x18  mov     x19, x0
+    +0x1c  add     x1, x0, #0x300
+    +0x20  mov     x0, sp
+    +0x24  mov     w2, #0x320
+    +0x28  mov     x20, sp
+    +0x2c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x30  ldr     x8, [x8]
+    +0x34  str     x8, [sp, #56]
+    +0x38  bl      mlkem_sha3_256
+  after_mlkem_sha3_256:
+    +0x3c  ldp     q2, q3, [sp]
+    +0x40  mov     w8, wzr
+    +0x44  ldr     q0, [x19, #1568]
+    +0x48  ldr     q1, [x19, #1584]
+    +0x4c  eor     v0.16b, v2.16b, v0.16b
+    +0x50  eor     v1.16b, v3.16b, v1.16b
+    +0x54  orr     v2.16b, v1.16b, v0.16b
+    +0x58  ext     v3.16b, v2.16b, v2.16b, #8
+    +0x5c  eor     v0.16b, v1.16b, v0.16b
+    +0x60  orr     v1.8b, v2.8b, v3.8b
+    +0x64  ext     v2.16b, v0.16b, v0.16b, #8
+    +0x68  fmov    x9, d1
+    +0x6c  orr     x9, x9, x9, lsr #32
+    +0x70  eor     v0.8b, v0.8b, v2.8b
+    +0x74  lsr     x10, x9, #16
+    +0x78  fmov    x11, d0
+    +0x7c  orr     w9, w9, w10
+    +0x80  movi    v0.2d, #0x0
+    +0x84  orr     w9, w9, w9, lsr #8
+    +0x88  eor     x10, x11, x11, lsr #32
+    +0x8c  sub     w9, w8, w9, uxtb
+    +0x90  eor     x10, x10, x10, lsr #16
+    +0x94  lsr     x11, x10, #8
+    +0x98  eor     w10, w10, w11
+  adrp2:
+    +0x9c  adrp    x11, <page>
+    +0xa0  eor     w9, w10, w9, lsr #16
+    +0xa4  stp     q0, q0, [sp]
+    +0xa8  and     w9, w9, #0xff
+    +0xac  ldr     x11, [x11, #4088]
+                   // got_stack_chk_guard
+    +0xb0  cmp     w9, w10, uxtb
+    +0xb4  ldr     x12, [sp, #56]
+    +0xb8  mov     w9, #0xfffffffb
+    +0xbc  csel    w0, w8, w9, eq
+    +0xc0  ldr     x11, [x11]
+    +0xc4  cmp     x11, x12
+    +0xc8  b.ne    +0xdc                        -+
+    +0xcc  mov     sp, x29                       |
+    +0xd0  ldp     x20, x19, [sp, #16]           |
+    +0xd4  ldp     x29, x30, [sp], #32           |
+  ret:                                           |
+    +0xd8  ret                                   |
+    +0xdc  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem512_keypair_derand: 0x6c00, 0x88 bytes
+
+     +0x0  str     x30, [sp, #-48]!
+     +0x4  stp     x22, x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x22, x2
+    +0x10  mov     x19, x1
+    +0x14  mov     x21, x0
+    +0x18  bl      mlkem512_indcpa_keypair_derand
+  after_mlkem512_indcpa_keypair_derand:
+    +0x1c  mov     w20, w0
+    +0x20  cbz     w0, +0x48                       -+
+    +0x24  mov     x0, x21                          |
+    +0x28  mov     w1, wzr                          |
+    +0x2c  mov     w2, #0x320                       |
+    +0x30  bl      memset                           |
+  after_memset_1:                                   |
+    +0x34  mov     x0, x19                          |
+    +0x38  mov     w1, wzr                          |
+    +0x3c  mov     w2, #0x660                       |
+    +0x40  bl      memset                           |
+  after_memset_2:                                   |
+    +0x44  b       join1                           ---+
+    +0x48  add     x0, x19, #0x300                 <+ |
+    +0x4c  mov     x1, x21                            |
+    +0x50  mov     w2, #0x320                         |
+    +0x54  bl      memcpy                             |
+  after_memcpy:                                       |
+    +0x58  add     x0, x19, #0x620                    |
+    +0x5c  mov     x1, x21                            |
+    +0x60  mov     w2, #0x320                         |
+    +0x64  bl      mlkem_sha3_256                     |
+  after_mlkem_sha3_256:                               |
+    +0x68  ldp     q1, q0, [x22, #32]                 |
+    +0x6c  str     q1, [x19, #1600]                   |
+    +0x70  str     q0, [x19, #1616]                   |
+  join1:                                              |
+    +0x74  mov     w0, w20                         <--+
+    +0x78  ldp     x20, x19, [sp, #32]
+    +0x7c  ldp     x22, x21, [sp, #16]
+    +0x80  ldr     x30, [sp], #48
+  ret:
+    +0x84  ret
+ ***)
+
+(*** mlkem512_keypair: 0x6c88, 0xf4 bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  str     x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0x50
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x19, x1
+    +0x20  mov     x21, x0
+    +0x24  mov     x0, sp
+    +0x28  mov     w1, #0x40
+    +0x2c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x30  ldr     x8, [x8]
+    +0x34  str     x8, [sp, #72]
+    +0x38  bl      randombytes
+  after_randombytes:
+    +0x3c  cbz     w0, +0x48                       -+
+    +0x40  mov     w20, #0xfffffffd                 |
+    +0x44  b       join1                           -----+
+    +0x48  mov     x2, sp                          <+   |
+    +0x4c  mov     x0, x21                              |
+    +0x50  mov     x1, x19                              |
+    +0x54  bl      mlkem512_indcpa_keypair_derand       |
+  after_mlkem512_indcpa_keypair_derand:                 |
+    +0x58  mov     w20, w0                              |
+    +0x5c  cbz     w0, +0x84                       -+   |
+    +0x60  mov     x0, x21                          |   |
+    +0x64  mov     w1, wzr                          |   |
+    +0x68  mov     w2, #0x320                       |   |
+    +0x6c  bl      memset                           |   |
+  after_memset_1:                                   |   |
+    +0x70  mov     x0, x19                          |   |
+    +0x74  mov     w1, wzr                          |   |
+    +0x78  mov     w2, #0x660                       |   |
+    +0x7c  bl      memset                           |   |
+  after_memset_2:                                   |   |
+    +0x80  b       join1                           ---+ |
+    +0x84  add     x0, x19, #0x300                 <+ | |
+    +0x88  mov     x1, x21                            | |
+    +0x8c  mov     w2, #0x320                         | |
+    +0x90  bl      memcpy                             | |
+  after_memcpy:                                       | |
+    +0x94  add     x0, x19, #0x620                    | |
+    +0x98  mov     x1, x21                            | |
+    +0x9c  mov     w2, #0x320                         | |
+    +0xa0  bl      mlkem_sha3_256                     | |
+  after_mlkem_sha3_256:                               | |
+    +0xa4  ldp     q0, q1, [sp, #32]                  | |
+    +0xa8  str     q0, [x19, #1600]                   | |
+    +0xac  str     q1, [x19, #1616]                   | |
+  join1:                                              | |
+    +0xb0  movi    v0.2d, #0x0                     <--+-+
+    +0xb4  mov     x8, sp
+    +0xb8  stp     q0, q0, [sp]
+    +0xbc  stp     q0, q0, [sp, #32]
+  adrp2:
+    +0xc0  adrp    x8, <page>
+    +0xc4  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0xc8  ldr     x9, [sp, #72]
+    +0xcc  ldr     x8, [x8]
+    +0xd0  cmp     x8, x9
+    +0xd4  b.ne    +0xf0                           -+
+    +0xd8  mov     w0, w20                          |
+    +0xdc  mov     sp, x29                          |
+    +0xe0  ldp     x20, x19, [sp, #32]              |
+    +0xe4  ldr     x21, [sp, #16]                   |
+    +0xe8  ldp     x29, x30, [sp], #48              |
+  ret:                                              |
+    +0xec  ret                                      |
+    +0xf0  bl      stack_chk_fail                  <+
+ ***)
+
+(*** mlkem512_enc_derand: 0x6d7c, 0x1d8 bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  str     x28, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0x720
+    +0x20  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x24  adrp    x8, <page>
+    +0x28  mov     x19, x1
+    +0x2c  mov     x21, x0
+    +0x30  add     x0, sp, #0x300
+    +0x34  mov     x1, x2
+    +0x38  mov     x22, x3
+    +0x3c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x40  mov     x20, x2
+    +0x44  ldr     x8, [x8]
+    +0x48  str     x8, [sp, #1816]
+    +0x4c  bl      mlkem512_polyvec_frombytes
+  after_mlkem512_polyvec_frombytes:
+    +0x50  add     x0, sp, #0x300
+    +0x54  bl      mlkem512_polyvec_reduce
+  after_mlkem512_polyvec_reduce:
+    +0x58  mov     x0, sp
+    +0x5c  add     x1, sp, #0x300
+    +0x60  mov     x23, sp
+    +0x64  bl      mlkem512_polyvec_tobytes
+  after_mlkem512_polyvec_tobytes:
+    +0x68  movi    v0.2d, #0x0
+    +0x6c  mov     x8, xzr
+    +0x70  movi    v1.2d, #0x0
+    +0x74  movi    v2.2d, #0x0
+    +0x78  movi    v3.2d, #0x0
+  loop1:
+    +0x7c  add     x9, x20, x8                  <+
+    +0x80  add     x10, x23, x8                  |
+    +0x84  add     x8, x8, #0x20                 |
+    +0x88  cmp     x8, #0x300                    |
+    +0x8c  ldp     q4, q5, [x9]                  |
+    +0x90  ldp     q6, q7, [x10]                 |
+    +0x94  eor     v4.16b, v6.16b, v4.16b        |
+    +0x98  orr     v2.16b, v4.16b, v2.16b        |
+    +0x9c  eor     v5.16b, v7.16b, v5.16b        |
+    +0xa0  orr     v3.16b, v5.16b, v3.16b        |
+    +0xa4  eor     v0.16b, v4.16b, v0.16b        |
+  loop1_test:                                    |
+    +0xa8  eor     v1.16b, v5.16b, v1.16b        |
+  loop1_back:                                    |
+    +0xac  b.ne    loop1                        -+
+  loop1_exit:
+    +0xb0  orr     v2.16b, v3.16b, v2.16b
+    +0xb4  mov     w23, wzr
+    +0xb8  ext     v3.16b, v2.16b, v2.16b, #8
+    +0xbc  mov     x0, sp
+    +0xc0  eor     v0.16b, v1.16b, v0.16b
+    +0xc4  mov     w1, wzr
+    +0xc8  mov     w2, #0x300
+    +0xcc  mov     x24, sp
+    +0xd0  orr     v1.8b, v2.8b, v3.8b
+    +0xd4  ext     v2.16b, v0.16b, v0.16b, #8
+    +0xd8  fmov    x8, d1
+    +0xdc  orr     x8, x8, x8, lsr #32
+    +0xe0  lsr     x9, x8, #16
+    +0xe4  eor     v0.8b, v0.8b, v2.8b
+    +0xe8  orr     w8, w8, w9
+    +0xec  fmov    x9, d0
+    +0xf0  orr     w8, w8, w8, lsr #8
+    +0xf4  eor     x9, x9, x9, lsr #32
+    +0xf8  sub     w8, w23, w8, uxtb
+    +0xfc  eor     x9, x9, x9, lsr #16
+   +0x100  lsr     x10, x9, #8
+   +0x104  eor     w25, w9, w10
+   +0x108  eor     w8, w25, w8, lsr #16
+   +0x10c  and     w26, w8, #0xff
+   +0x110  bl      memset
+  after_memset_1:
+   +0x114  add     x0, sp, #0x300
+   +0x118  mov     w1, wzr
+   +0x11c  mov     w2, #0x400
+   +0x120  add     x23, sp, #0x300
+   +0x124  bl      memset
+  after_memset_2:
+   +0x128  cmp     w26, w25, uxtb
+   +0x12c  b.ne    +0x17c                       -----+
+   +0x130  ldp     q0, q1, [x22]                     |
+   +0x134  add     x0, x23, #0x20                    |
+   +0x138  mov     x1, x20                           |
+   +0x13c  mov     w2, #0x320                        |
+   +0x140  stp     q0, q1, [sp, #768]                |
+   +0x144  bl      mlkem_sha3_256                    |
+  after_mlkem_sha3_256:                              |
+   +0x148  mov     x0, sp                            |
+   +0x14c  add     x1, sp, #0x300                    |
+   +0x150  mov     w2, #0x40                         |
+   +0x154  bl      mlkem_sha3_512                    |
+  after_mlkem_sha3_512:                              |
+   +0x158  add     x3, x24, #0x20                    |
+   +0x15c  add     x1, sp, #0x300                    |
+   +0x160  mov     x0, x21                           |
+   +0x164  mov     x2, x20                           |
+   +0x168  bl      mlkem512_indcpa_enc               |
+  after_mlkem512_indcpa_enc:                         |
+   +0x16c  cbnz    w0, join1                    ---+ |
+   +0x170  ldp     q0, q1, [sp]                    | |
+   +0x174  stp     q0, q1, [x19]                   | |
+   +0x178  b       join1                        -+ | |
+   +0x17c  mov     w0, #0xfffffffc              <----+
+  join1:                                         | |
+   +0x180  movi    v0.2d, #0x0                  <+-+
+   +0x184  mov     x8, sp
+   +0x188  stp     q0, q0, [sp]
+   +0x18c  stp     q0, q0, [sp, #32]
+   +0x190  stp     q0, q0, [sp, #800]
+   +0x194  add     x8, sp, #0x300
+   +0x198  stp     q0, q0, [sp, #768]
+  adrp2:
+   +0x19c  adrp    x8, <page>
+   +0x1a0  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x1a4  ldr     x9, [sp, #1816]
+   +0x1a8  ldr     x8, [x8]
+   +0x1ac  cmp     x8, x9
+   +0x1b0  b.ne    +0x1d4                       -+
+   +0x1b4  mov     sp, x29                       |
+   +0x1b8  ldp     x20, x19, [sp, #80]           |
+   +0x1bc  ldp     x22, x21, [sp, #64]           |
+   +0x1c0  ldp     x24, x23, [sp, #48]           |
+   +0x1c4  ldp     x26, x25, [sp, #32]           |
+   +0x1c8  ldr     x28, [sp, #16]                |
+   +0x1cc  ldp     x29, x30, [sp], #96           |
+  ret:                                           |
+   +0x1d0  ret                                   |
+   +0x1d4  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem512_enc: 0x6f54, 0x9c bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  str     x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0x30
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x20, x1
+    +0x20  mov     x21, x0
+    +0x24  mov     x0, sp
+    +0x28  mov     w1, #0x20
+    +0x2c  mov     x19, x2
+    +0x30  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x34  ldr     x8, [x8]
+    +0x38  str     x8, [sp, #40]
+    +0x3c  bl      randombytes
+  after_randombytes:
+    +0x40  cbz     w0, +0x4c                    -+
+    +0x44  mov     w0, #0xfffffffd               |
+    +0x48  b       join1                        ---+
+    +0x4c  mov     x3, sp                       <+ |
+    +0x50  mov     x0, x21                         |
+    +0x54  mov     x1, x20                         |
+    +0x58  mov     x2, x19                         |
+    +0x5c  bl      mlkem512_enc_derand             |
+  join1: after_mlkem512_enc_derand:                |
+    +0x60  movi    v0.2d, #0x0                  <--+
+    +0x64  mov     x8, sp
+    +0x68  stp     q0, q0, [sp]
+  adrp2:
+    +0x6c  adrp    x8, <page>
+    +0x70  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x74  ldr     x9, [sp, #40]
+    +0x78  ldr     x8, [x8]
+    +0x7c  cmp     x8, x9
+    +0x80  b.ne    +0x98                        -+
+    +0x84  mov     sp, x29                       |
+    +0x88  ldp     x20, x19, [sp, #32]           |
+    +0x8c  ldr     x21, [sp, #16]                |
+    +0x90  ldp     x29, x30, [sp], #48           |
+  ret:                                           |
+    +0x94  ret                                   |
+    +0x98  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem512_dec: 0x6ff0, 0x294 bytes
+
+     +0x0  stp     x29, x30, [sp, #-64]!
+     +0x4  stp     x28, x23, [sp, #16]
+     +0x8  stp     x22, x21, [sp, #32]
+     +0xc  stp     x20, x19, [sp, #48]
+    +0x10  mov     x29, sp
+    +0x14  sub     x9, sp, #0x3c0
+    +0x18  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x1c  adrp    x8, <page>
+    +0x20  add     x22, x2, #0x300
+    +0x24  mov     x21, x2
+    +0x28  mov     x20, x1
+    +0x2c  mov     x19, x0
+    +0x30  mov     x0, sp
+    +0x34  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x38  mov     x1, x22
+    +0x3c  mov     w2, #0x320
+    +0x40  mov     x23, sp
+    +0x44  ldr     x8, [x8]
+    +0x48  str     x8, [sp, #952]
+    +0x4c  bl      mlkem_sha3_256
+  after_mlkem_sha3_256:
+    +0x50  ldp     q2, q3, [sp]
+    +0x54  mov     w8, wzr
+    +0x58  ldr     q0, [x21, #1568]
+    +0x5c  ldr     q1, [x21, #1584]
+    +0x60  eor     v0.16b, v2.16b, v0.16b
+    +0x64  eor     v1.16b, v3.16b, v1.16b
+    +0x68  orr     v2.16b, v1.16b, v0.16b
+    +0x6c  ext     v3.16b, v2.16b, v2.16b, #8
+    +0x70  eor     v0.16b, v1.16b, v0.16b
+    +0x74  orr     v1.8b, v2.8b, v3.8b
+    +0x78  ext     v2.16b, v0.16b, v0.16b, #8
+    +0x7c  fmov    x9, d1
+    +0x80  orr     x9, x9, x9, lsr #32
+    +0x84  eor     v0.8b, v0.8b, v2.8b
+    +0x88  lsr     x10, x9, #16
+    +0x8c  orr     w9, w9, w10
+    +0x90  fmov    x10, d0
+    +0x94  movi    v0.2d, #0x0
+    +0x98  orr     w9, w9, w9, lsr #8
+    +0x9c  eor     x10, x10, x10, lsr #32
+    +0xa0  sub     w8, w8, w9, uxtb
+    +0xa4  eor     x9, x10, x10, lsr #16
+    +0xa8  lsr     x10, x9, #8
+    +0xac  eor     w9, w9, w10
+    +0xb0  eor     w8, w9, w8, lsr #16
+    +0xb4  stp     q0, q0, [sp]
+    +0xb8  and     w8, w8, #0xff
+    +0xbc  cmp     w8, w9, uxtb
+    +0xc0  b.ne    +0x228                       -------+
+    +0xc4  add     x0, sp, #0x360                      |
+    +0xc8  mov     x1, x20                             |
+    +0xcc  mov     x2, x21                             |
+    +0xd0  bl      mlkem512_indcpa_dec                 |
+  after_mlkem512_indcpa_dec:                           |
+    +0xd4  mov     w23, w0                             |
+    +0xd8  cbnz    w0, join1                    -----+ |
+    +0xdc  add     x8, x21, #0x620                   | |
+    +0xe0  add     x0, sp, #0x320                    | |
+    +0xe4  add     x1, sp, #0x360                    | |
+    +0xe8  mov     w2, #0x40                         | |
+    +0xec  add     x23, sp, #0x320                   | |
+    +0xf0  ldp     q0, q1, [x8]                      | |
+    +0xf4  stp     q0, q1, [sp, #896]                | |
+    +0xf8  bl      mlkem_sha3_512                    | |
+  after_mlkem_sha3_512:                              | |
+    +0xfc  add     x3, x23, #0x20                    | |
+   +0x100  mov     x0, sp                            | |
+   +0x104  add     x1, sp, #0x360                    | |
+   +0x108  mov     x2, x22                           | |
+   +0x10c  mov     x22, sp                           | |
+   +0x110  bl      mlkem512_indcpa_enc               | |
+  after_mlkem512_indcpa_enc:                         | |
+   +0x114  mov     w23, w0                           | |
+   +0x118  cbnz    w0, join1                    ---+ | |
+   +0x11c  movi    v0.2d, #0x0                     | | |
+   +0x120  mov     x8, xzr                         | | |
+   +0x124  movi    v1.2d, #0x0                     | | |
+   +0x128  movi    v2.2d, #0x0                     | | |
+   +0x12c  movi    v3.2d, #0x0                     | | |
+  loop1:                                           | | |
+   +0x130  add     x9, x20, x8                  <+ | | |
+   +0x134  add     x10, x22, x8                  | | | |
+   +0x138  add     x8, x8, #0x20                 | | | |
+   +0x13c  cmp     x8, #0x300                    | | | |
+   +0x140  ldp     q4, q5, [x9]                  | | | |
+   +0x144  ldp     q6, q7, [x10]                 | | | |
+   +0x148  eor     v4.16b, v6.16b, v4.16b        | | | |
+   +0x14c  orr     v2.16b, v4.16b, v2.16b        | | | |
+   +0x150  eor     v5.16b, v7.16b, v5.16b        | | | |
+   +0x154  orr     v3.16b, v5.16b, v3.16b        | | | |
+   +0x158  eor     v0.16b, v4.16b, v0.16b        | | | |
+  loop1_test:                                    | | | |
+   +0x15c  eor     v1.16b, v5.16b, v1.16b        | | | |
+  loop1_back:                                    | | | |
+   +0x160  b.ne    loop1                        -+ | | |
+  loop1_exit:                                      | | |
+   +0x164  orr     v2.16b, v3.16b, v2.16b          | | |
+   +0x168  mov     w22, wzr                        | | |
+   +0x16c  ext     v3.16b, v2.16b, v2.16b, #8      | | |
+   +0x170  mov     x8, sp                          | | |
+   +0x174  eor     v0.16b, v1.16b, v0.16b          | | |
+   +0x178  add     x0, x8, #0x20                   | | |
+   +0x17c  ext     v1.16b, v0.16b, v0.16b, #8      | | |
+   +0x180  mov     x1, x20                         | | |
+   +0x184  mov     w2, #0x300                      | | |
+   +0x188  orr     v2.8b, v2.8b, v3.8b             | | |
+   +0x18c  fmov    x9, d2                          | | |
+   +0x190  eor     v0.8b, v0.8b, v1.8b             | | |
+   +0x194  fmov    x11, d0                         | | |
+   +0x198  orr     x9, x9, x9, lsr #32             | | |
+   +0x19c  lsr     x10, x9, #16                    | | |
+   +0x1a0  orr     w9, w9, w10                     | | |
+   +0x1a4  eor     x10, x11, x11, lsr #32          | | |
+   +0x1a8  orr     w9, w9, w9, lsr #8              | | |
+   +0x1ac  eor     x10, x10, x10, lsr #16          | | |
+   +0x1b0  sub     w9, w22, w9, uxtb               | | |
+   +0x1b4  lsr     x11, x10, #8                    | | |
+   +0x1b8  eor     w10, w10, w11                   | | |
+   +0x1bc  eor     w9, w10, w9, lsr #16            | | |
+   +0x1c0  ldr     q0, [x21, #1600]                | | |
+   +0x1c4  ldr     q1, [x21, #1616]                | | |
+   +0x1c8  eor     w21, w9, w10                    | | |
+   +0x1cc  stp     q0, q1, [sp]                    | | |
+   +0x1d0  bl      memcpy                          | | |
+  after_memcpy:                                    | | |
+   +0x1d4  mov     x2, sp                          | | |
+   +0x1d8  mov     x0, x19                         | | |
+   +0x1dc  mov     w1, #0x20                       | | |
+   +0x1e0  mov     w3, #0x320                      | | |
+   +0x1e4  bl      mlkem_shake256                  | | |
+  after_mlkem_shake256:                            | | |
+   +0x1e8  mov     x8, xzr                         | | |
+   +0x1ec  sub     w9, w22, w21, uxtb              | | |
+   +0x1f0  add     x10, sp, #0x320                 | | |
+  loop2:                                           | | |
+   +0x1f4  ldrb    w11, [x19, x8]               <+ | | |
+   +0x1f8  mov     w12, w9                       | | | |
+   +0x1fc  ldrb    w13, [x10, x8]                | | | |
+   +0x200  lsr     w12, w12, #16                 | | | |
+   +0x204  and     w11, w11, w12                 | | | |
+   +0x208  bic     w13, w13, w12                 | | | |
+   +0x20c  orr     w11, w11, w13                 | | | |
+   +0x210  strb    w11, [x19, x8]                | | | |
+   +0x214  add     x8, x8, #0x1                  | | | |
+  loop2_test:                                    | | | |
+   +0x218  cmp     x8, #0x20                     | | | |
+  loop2_back:                                    | | | |
+   +0x21c  b.ne    loop2                        -+ | | |
+  loop2_exit:                                      | | |
+   +0x220  mov     w23, wzr                        | | |
+   +0x224  b       join1                        -+ | | |
+   +0x228  mov     w23, #0xfffffffb             <------+
+  join1:                                         | | |
+   +0x22c  mov     x0, sp                       <+-+-+
+   +0x230  mov     w1, wzr
+   +0x234  mov     w2, #0x320
+   +0x238  mov     x19, sp
+   +0x23c  bl      memset
+  after_memset:
+   +0x240  movi    v0.2d, #0x0
+   +0x244  add     x8, sp, #0x320
+   +0x248  stp     q0, q0, [sp, #800]
+   +0x24c  stp     q0, q0, [sp, #832]
+   +0x250  stp     q0, q0, [sp, #896]
+   +0x254  add     x8, sp, #0x360
+   +0x258  stp     q0, q0, [sp, #864]
+  adrp2:
+   +0x25c  adrp    x8, <page>
+   +0x260  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x264  ldr     x9, [sp, #952]
+   +0x268  ldr     x8, [x8]
+   +0x26c  cmp     x8, x9
+   +0x270  b.ne    +0x290                       -+
+   +0x274  mov     w0, w23                       |
+   +0x278  mov     sp, x29                       |
+   +0x27c  ldp     x20, x19, [sp, #48]           |
+   +0x280  ldp     x22, x21, [sp, #32]           |
+   +0x284  ldp     x28, x23, [sp, #16]           |
+   +0x288  ldp     x29, x30, [sp], #64           |
+  ret:                                           |
+   +0x28c  ret                                   |
+   +0x290  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem_poly_tomont: 0x7284, 0x94 bytes
+
+     +0x0  mov     w9, #0x549
+     +0x4  mov     w10, #0x50490000
+     +0x8  mov     x8, xzr
+     +0xc  mvni    v2.4s, #0xd, lsl #8
+    +0x10  dup     v0.8h, w9
+    +0x14  dup     v1.4s, w10
+  loop1:
+    +0x18  add     x9, x0, x8             <+
+    +0x1c  add     x8, x8, #0x20           |
+    +0x20  cmp     x8, #0x200              |
+    +0x24  ldp     q3, q4, [x9]            |
+    +0x28  sxtl    v5.4s, v3.4h            |
+    +0x2c  sxtl2   v6.4s, v3.8h            |
+    +0x30  sxtl    v7.4s, v4.4h            |
+    +0x34  mul     v5.4s, v5.4s, v1.4s     |
+    +0x38  mul     v7.4s, v7.4s, v1.4s     |
+    +0x3c  sxtl2   v16.4s, v4.8h           |
+    +0x40  mul     v6.4s, v6.4s, v1.4s     |
+    +0x44  mul     v16.4s, v16.4s, v1.4s   |
+    +0x48  sshr    v5.4s, v5.4s, #16       |
+    +0x4c  sshr    v7.4s, v7.4s, #16       |
+    +0x50  smull2  v17.4s, v3.8h, v0.8h    |
+    +0x54  sshr    v6.4s, v6.4s, #16       |
+    +0x58  smull   v3.4s, v3.4h, v0.4h     |
+    +0x5c  smull2  v18.4s, v4.8h, v0.8h    |
+    +0x60  smull   v4.4s, v4.4h, v0.4h     |
+    +0x64  mul     v5.4s, v5.4s, v2.4s     |
+    +0x68  mul     v7.4s, v7.4s, v2.4s     |
+    +0x6c  sshr    v16.4s, v16.4s, #16     |
+    +0x70  mul     v6.4s, v6.4s, v2.4s     |
+    +0x74  mul     v16.4s, v16.4s, v2.4s   |
+    +0x78  addhn   v3.4h, v5.4s, v3.4s     |
+    +0x7c  addhn   v4.4h, v7.4s, v4.4s     |
+    +0x80  addhn2  v3.8h, v6.4s, v17.4s    |
+    +0x84  addhn2  v4.8h, v16.4s, v18.4s   |
+  loop1_test:                              |
+    +0x88  stp     q3, q4, [x9]            |
+  loop1_back:                              |
+    +0x8c  b.ne    loop1                  -+
+  loop1_exit: ret:
+    +0x90  ret
+ ***)
+
+(*** mlkem_poly_reduce: 0x7318, 0x50 bytes
+
+     +0x0  mov     x8, xzr
+     +0x4  mov     w9, #0x4ebf
+     +0x8  mov     w10, #0x2000000
+     +0xc  mov     w11, #0xfffff2ff
+  loop1:
+    +0x10  ldrsh   w12, [x0, x8]       <+
+    +0x14  madd    w13, w12, w9, w10    |
+    +0x18  asr     w13, w13, #26        |
+    +0x1c  madd    w12, w13, w11, w12   |
+    +0x20  sxth    w13, w12             |
+    +0x24  add     w14, w12, #0xd01     |
+    +0x28  neg     w13, w13, lsr #16    |
+    +0x2c  lsr     w13, w13, #16        |
+    +0x30  bic     w12, w12, w13        |
+    +0x34  and     w13, w14, w13        |
+    +0x38  orr     w12, w13, w12        |
+    +0x3c  strh    w12, [x0, x8]        |
+    +0x40  add     x8, x8, #0x2         |
+  loop1_test:                           |
+    +0x44  cmp     x8, #0x200           |
+  loop1_back:                           |
+    +0x48  b.ne    loop1               -+
+  loop1_exit: ret:
+    +0x4c  ret
+ ***)
+
+(*** mlkem_poly_add: 0x7368, 0x180 bytes
+
+     +0x0  add     x8, x1, #0x200
+     +0x4  cmp     x8, x0
+     +0x8  b.ls    join1                -----+
+     +0xc  add     x8, x0, #0x200            |
+    +0x10  cmp     x8, x1                    |
+    +0x14  b.ls    join1                ---+ |
+    +0x18  mov     x8, xzr                 | |
+  loop1:                                   | |
+    +0x1c  ldrh    w9, [x0, x8]         <+ | |
+    +0x20  ldrh    w10, [x1, x8]         | | |
+    +0x24  add     w9, w10, w9           | | |
+    +0x28  strh    w9, [x0, x8]          | | |
+    +0x2c  add     x8, x8, #0x2          | | |
+  loop1_test:                            | | |
+    +0x30  cmp     x8, #0x200            | | |
+  loop1_back:                            | | |
+    +0x34  b.ne    loop1                -+ | |
+  loop1_exit: ret1:                        | |
+    +0x38  ret                             | |
+  join1:                                   | |
+    +0x3c  ldp     q0, q1, [x0]         <--+-+
+    +0x40  ldp     q2, q3, [x1]
+    +0x44  add     v0.8h, v2.8h, v0.8h
+    +0x48  ldp     q4, q2, [x0, #32]
+    +0x4c  add     v1.8h, v3.8h, v1.8h
+    +0x50  stp     q0, q1, [x0]
+    +0x54  ldp     q3, q5, [x1, #32]
+    +0x58  add     v1.8h, v3.8h, v4.8h
+    +0x5c  ldp     q0, q3, [x0, #64]
+    +0x60  add     v2.8h, v5.8h, v2.8h
+    +0x64  stp     q1, q2, [x0, #32]
+    +0x68  ldp     q4, q5, [x1, #64]
+    +0x6c  add     v0.8h, v4.8h, v0.8h
+    +0x70  ldp     q1, q2, [x0, #96]
+    +0x74  add     v3.8h, v5.8h, v3.8h
+    +0x78  stp     q0, q3, [x0, #64]
+    +0x7c  ldp     q4, q5, [x1, #96]
+    +0x80  add     v1.8h, v4.8h, v1.8h
+    +0x84  ldp     q0, q3, [x0, #128]
+    +0x88  add     v2.8h, v5.8h, v2.8h
+    +0x8c  stp     q1, q2, [x0, #96]
+    +0x90  ldp     q4, q5, [x1, #128]
+    +0x94  add     v0.8h, v4.8h, v0.8h
+    +0x98  ldp     q1, q2, [x0, #160]
+    +0x9c  add     v3.8h, v5.8h, v3.8h
+    +0xa0  stp     q0, q3, [x0, #128]
+    +0xa4  ldp     q4, q5, [x1, #160]
+    +0xa8  add     v1.8h, v4.8h, v1.8h
+    +0xac  ldp     q0, q3, [x0, #192]
+    +0xb0  add     v2.8h, v5.8h, v2.8h
+    +0xb4  stp     q1, q2, [x0, #160]
+    +0xb8  ldp     q4, q5, [x1, #192]
+    +0xbc  add     v0.8h, v4.8h, v0.8h
+    +0xc0  ldp     q1, q2, [x0, #224]
+    +0xc4  add     v3.8h, v5.8h, v3.8h
+    +0xc8  stp     q0, q3, [x0, #192]
+    +0xcc  ldp     q4, q5, [x1, #224]
+    +0xd0  add     v1.8h, v4.8h, v1.8h
+    +0xd4  ldp     q0, q3, [x0, #256]
+    +0xd8  add     v2.8h, v5.8h, v2.8h
+    +0xdc  stp     q1, q2, [x0, #224]
+    +0xe0  ldp     q4, q5, [x1, #256]
+    +0xe4  add     v0.8h, v4.8h, v0.8h
+    +0xe8  ldp     q1, q2, [x0, #288]
+    +0xec  add     v3.8h, v5.8h, v3.8h
+    +0xf0  stp     q0, q3, [x0, #256]
+    +0xf4  ldp     q4, q5, [x1, #288]
+    +0xf8  add     v1.8h, v4.8h, v1.8h
+    +0xfc  ldp     q0, q3, [x0, #320]
+   +0x100  add     v2.8h, v5.8h, v2.8h
+   +0x104  stp     q1, q2, [x0, #288]
+   +0x108  ldp     q4, q5, [x1, #320]
+   +0x10c  add     v0.8h, v4.8h, v0.8h
+   +0x110  ldp     q1, q2, [x0, #352]
+   +0x114  add     v3.8h, v5.8h, v3.8h
+   +0x118  stp     q0, q3, [x0, #320]
+   +0x11c  ldp     q4, q5, [x1, #352]
+   +0x120  add     v1.8h, v4.8h, v1.8h
+   +0x124  ldp     q0, q3, [x0, #384]
+   +0x128  add     v2.8h, v5.8h, v2.8h
+   +0x12c  stp     q1, q2, [x0, #352]
+   +0x130  ldp     q4, q5, [x1, #384]
+   +0x134  add     v0.8h, v4.8h, v0.8h
+   +0x138  ldp     q1, q2, [x0, #416]
+   +0x13c  add     v3.8h, v5.8h, v3.8h
+   +0x140  stp     q0, q3, [x0, #384]
+   +0x144  ldp     q4, q5, [x1, #416]
+   +0x148  add     v1.8h, v4.8h, v1.8h
+   +0x14c  ldp     q0, q3, [x0, #448]
+   +0x150  add     v2.8h, v5.8h, v2.8h
+   +0x154  stp     q1, q2, [x0, #416]
+   +0x158  ldp     q4, q5, [x1, #448]
+   +0x15c  add     v0.8h, v4.8h, v0.8h
+   +0x160  ldp     q1, q2, [x0, #480]
+   +0x164  add     v3.8h, v5.8h, v3.8h
+   +0x168  stp     q0, q3, [x0, #448]
+   +0x16c  ldp     q4, q5, [x1, #480]
+   +0x170  add     v0.8h, v4.8h, v1.8h
+   +0x174  add     v1.8h, v5.8h, v2.8h
+   +0x178  stp     q0, q1, [x0, #480]
+  ret2:
+   +0x17c  ret
+ ***)
+
+(*** mlkem_poly_sub: 0x74e8, 0x180 bytes
+
+     +0x0  add     x8, x1, #0x200
+     +0x4  cmp     x8, x0
+     +0x8  b.ls    join1                -----+
+     +0xc  add     x8, x0, #0x200            |
+    +0x10  cmp     x8, x1                    |
+    +0x14  b.ls    join1                ---+ |
+    +0x18  mov     x8, xzr                 | |
+  loop1:                                   | |
+    +0x1c  ldrh    w9, [x0, x8]         <+ | |
+    +0x20  ldrh    w10, [x1, x8]         | | |
+    +0x24  sub     w9, w9, w10           | | |
+    +0x28  strh    w9, [x0, x8]          | | |
+    +0x2c  add     x8, x8, #0x2          | | |
+  loop1_test:                            | | |
+    +0x30  cmp     x8, #0x200            | | |
+  loop1_back:                            | | |
+    +0x34  b.ne    loop1                -+ | |
+  loop1_exit: ret1:                        | |
+    +0x38  ret                             | |
+  join1:                                   | |
+    +0x3c  ldp     q0, q1, [x0]         <--+-+
+    +0x40  ldp     q2, q3, [x1]
+    +0x44  sub     v0.8h, v0.8h, v2.8h
+    +0x48  ldp     q4, q2, [x0, #32]
+    +0x4c  sub     v1.8h, v1.8h, v3.8h
+    +0x50  stp     q0, q1, [x0]
+    +0x54  ldp     q3, q5, [x1, #32]
+    +0x58  sub     v1.8h, v4.8h, v3.8h
+    +0x5c  ldp     q0, q3, [x0, #64]
+    +0x60  sub     v2.8h, v2.8h, v5.8h
+    +0x64  stp     q1, q2, [x0, #32]
+    +0x68  ldp     q4, q5, [x1, #64]
+    +0x6c  sub     v0.8h, v0.8h, v4.8h
+    +0x70  ldp     q1, q2, [x0, #96]
+    +0x74  sub     v3.8h, v3.8h, v5.8h
+    +0x78  stp     q0, q3, [x0, #64]
+    +0x7c  ldp     q4, q5, [x1, #96]
+    +0x80  sub     v1.8h, v1.8h, v4.8h
+    +0x84  ldp     q0, q3, [x0, #128]
+    +0x88  sub     v2.8h, v2.8h, v5.8h
+    +0x8c  stp     q1, q2, [x0, #96]
+    +0x90  ldp     q4, q5, [x1, #128]
+    +0x94  sub     v0.8h, v0.8h, v4.8h
+    +0x98  ldp     q1, q2, [x0, #160]
+    +0x9c  sub     v3.8h, v3.8h, v5.8h
+    +0xa0  stp     q0, q3, [x0, #128]
+    +0xa4  ldp     q4, q5, [x1, #160]
+    +0xa8  sub     v1.8h, v1.8h, v4.8h
+    +0xac  ldp     q0, q3, [x0, #192]
+    +0xb0  sub     v2.8h, v2.8h, v5.8h
+    +0xb4  stp     q1, q2, [x0, #160]
+    +0xb8  ldp     q4, q5, [x1, #192]
+    +0xbc  sub     v0.8h, v0.8h, v4.8h
+    +0xc0  ldp     q1, q2, [x0, #224]
+    +0xc4  sub     v3.8h, v3.8h, v5.8h
+    +0xc8  stp     q0, q3, [x0, #192]
+    +0xcc  ldp     q4, q5, [x1, #224]
+    +0xd0  sub     v1.8h, v1.8h, v4.8h
+    +0xd4  ldp     q0, q3, [x0, #256]
+    +0xd8  sub     v2.8h, v2.8h, v5.8h
+    +0xdc  stp     q1, q2, [x0, #224]
+    +0xe0  ldp     q4, q5, [x1, #256]
+    +0xe4  sub     v0.8h, v0.8h, v4.8h
+    +0xe8  ldp     q1, q2, [x0, #288]
+    +0xec  sub     v3.8h, v3.8h, v5.8h
+    +0xf0  stp     q0, q3, [x0, #256]
+    +0xf4  ldp     q4, q5, [x1, #288]
+    +0xf8  sub     v1.8h, v1.8h, v4.8h
+    +0xfc  ldp     q0, q3, [x0, #320]
+   +0x100  sub     v2.8h, v2.8h, v5.8h
+   +0x104  stp     q1, q2, [x0, #288]
+   +0x108  ldp     q4, q5, [x1, #320]
+   +0x10c  sub     v0.8h, v0.8h, v4.8h
+   +0x110  ldp     q1, q2, [x0, #352]
+   +0x114  sub     v3.8h, v3.8h, v5.8h
+   +0x118  stp     q0, q3, [x0, #320]
+   +0x11c  ldp     q4, q5, [x1, #352]
+   +0x120  sub     v1.8h, v1.8h, v4.8h
+   +0x124  ldp     q0, q3, [x0, #384]
+   +0x128  sub     v2.8h, v2.8h, v5.8h
+   +0x12c  stp     q1, q2, [x0, #352]
+   +0x130  ldp     q4, q5, [x1, #384]
+   +0x134  sub     v0.8h, v0.8h, v4.8h
+   +0x138  ldp     q1, q2, [x0, #416]
+   +0x13c  sub     v3.8h, v3.8h, v5.8h
+   +0x140  stp     q0, q3, [x0, #384]
+   +0x144  ldp     q4, q5, [x1, #416]
+   +0x148  sub     v1.8h, v1.8h, v4.8h
+   +0x14c  ldp     q0, q3, [x0, #448]
+   +0x150  sub     v2.8h, v2.8h, v5.8h
+   +0x154  stp     q1, q2, [x0, #416]
+   +0x158  ldp     q4, q5, [x1, #448]
+   +0x15c  sub     v0.8h, v0.8h, v4.8h
+   +0x160  ldp     q1, q2, [x0, #480]
+   +0x164  sub     v3.8h, v3.8h, v5.8h
+   +0x168  stp     q0, q3, [x0, #448]
+   +0x16c  ldp     q4, q5, [x1, #480]
+   +0x170  sub     v0.8h, v1.8h, v4.8h
+   +0x174  sub     v1.8h, v2.8h, v5.8h
+   +0x178  stp     q0, q1, [x0, #480]
+  ret2:
+   +0x17c  ret
+ ***)
+
+(*** mlkem_poly_mulcache_compute: 0x7668, 0x5ac bytes
+
+     +0x0  add     x8, x1, #0x2
+     +0x4  add     x9, x1, #0x200
+     +0x8  cmp     x9, x0
+     +0xc  b.ls    join1                                   ---+
+    +0x10  add     x9, x0, #0x100                             |
+    +0x14  cmp     x8, x9                                     |
+    +0x18  b.cs    join1                                   -+ |
+    +0x1c  mov     x11, xzr                                 | |
+    +0x20  b       join2                                   -----+
+  join1:                                                    | | |
+    +0x24  ld4     {v1.8h-v4.8h}, [x8]                     <+-+ |
+  adrp1:                                                        |
+    +0x28  adrp    x8, <page>                                   |
+  adrp2:                                                        |
+    +0x2c  adrp    x9, <page>                                   |
+  adrp3:                                                        |
+    +0x30  adrp    x11, <page>                                  |
+  adrp4:                                                        |
+    +0x34  adrp    x10, <page>                                  |
+    +0x38  mvni    v0.4s, #0xd, lsl #8                          |
+    +0x3c  ldr     d5, [x8, #400]                               |
+                   // mlkem_poly_mulcache_compute_const28       |
+  adrp5:                                                        |
+    +0x40  adrp    x8, <page>                                   |
+    +0x44  ldr     d6, [x9, #408]                               |
+                   // mlkem_poly_mulcache_compute_const29       |
+  adrp6:                                                        |
+    +0x48  adrp    x9, <page>                                   |
+    +0x4c  ldr     q7, [x11, #3904]                             |
+                   // mlkem_poly_mulcache_compute_const2        |
+  adrp7:                                                        |
+    +0x50  adrp    x11, <page>                                  |
+    +0x54  ldr     d16, [x8, #424]                              |
+                   // mlkem_poly_mulcache_compute_const31       |
+  adrp8:                                                        |
+    +0x58  adrp    x8, <page>                                   |
+    +0x5c  sxtl    v17.4s, v1.4h                                |
+    +0x60  ldr     q23, [x10, #3888]                            |
+                   // mlkem_poly_mulcache_compute_const1        |
+    +0x64  sxtl2   v18.4s, v1.8h                                |
+  adrp9:                                                        |
+    +0x68  adrp    x10, <page>                                  |
+    +0x6c  ext     v19.16b, v1.16b, v1.16b, #8                  |
+    +0x70  smull   v6.4s, v1.4h, v6.4h                          |
+    +0x74  sxtl    v20.4s, v3.4h                                |
+    +0x78  sxtl2   v21.4s, v3.8h                                |
+    +0x7c  ext     v22.16b, v3.16b, v3.16b, #8                  |
+    +0x80  smull   v1.4s, v3.4h, v16.4h                         |
+    +0x84  ldr     q4, [x11, #3936]                             |
+                   // mlkem_poly_mulcache_compute_const4        |
+    +0x88  mul     v3.4s, v17.4s, v7.4s                         |
+    +0x8c  ldr     q2, [x9, #3920]                              |
+                   // mlkem_poly_mulcache_compute_const3        |
+    +0x90  mul     v7.4s, v18.4s, v23.4s                        |
+    +0x94  ldr     d16, [x8, #416]                              |
+                   // mlkem_poly_mulcache_compute_const30       |
+    +0x98  mul     v4.4s, v20.4s, v4.4s                         |
+    +0x9c  mov     x8, x0                                       |
+    +0xa0  mul     v2.4s, v21.4s, v2.4s                         |
+    +0xa4  add     x9, x1, #0x42                                |
+    +0xa8  sshr    v3.4s, v3.4s, #16                            |
+  adrp10:                                                       |
+    +0xac  adrp    x11, <page>                                  |
+    +0xb0  sshr    v7.4s, v7.4s, #16                            |
+    +0xb4  mul     v3.4s, v3.4s, v0.4s                          |
+    +0xb8  sshr    v4.4s, v4.4s, #16                            |
+    +0xbc  smull   v5.4s, v19.4h, v5.4h                         |
+    +0xc0  mul     v7.4s, v7.4s, v0.4s                          |
+    +0xc4  mul     v4.4s, v4.4s, v0.4s                          |
+    +0xc8  addhn   v17.4h, v3.4s, v6.4s                         |
+    +0xcc  ldr     d6, [x10, #440]                              |
+                   // mlkem_poly_mulcache_compute_const33       |
+    +0xd0  sshr    v2.4s, v2.4s, #16                            |
+  adrp11:                                                       |
+    +0xd4  adrp    x10, <page>                                  |
+    +0xd8  smull   v3.4s, v22.4h, v16.4h                        |
+    +0xdc  mul     v2.4s, v2.4s, v0.4s                          |
+    +0xe0  addhn2  v17.8h, v7.4s, v5.4s                         |
+    +0xe4  ldr     q7, [x11, #3952]                             |
+                   // mlkem_poly_mulcache_compute_const5        |
+    +0xe8  addhn   v18.4h, v4.4s, v1.4s                         |
+  adrp12:                                                       |
+    +0xec  adrp    x11, <page>                                  |
+    +0xf0  addhn2  v18.8h, v2.4s, v3.4s                         |
+    +0xf4  st2     {v17.8h-v18.8h}, [x8], #32                   |
+    +0xf8  ld4     {v1.8h-v4.8h}, [x9]                          |
+  adrp13:                                                       |
+    +0xfc  adrp    x9, <page>                                   |
+   +0x100  ldr     d5, [x9, #432]                               |
+                   // mlkem_poly_mulcache_compute_const32       |
+  adrp14:                                                       |
+   +0x104  adrp    x9, <page>                                   |
+   +0x108  ldr     d17, [x10, #456]                             |
+                   // mlkem_poly_mulcache_compute_const35       |
+  adrp15:                                                       |
+   +0x10c  adrp    x10, <page>                                  |
+   +0x110  ldr     q18, [x11, #3984]                            |
+                   // mlkem_poly_mulcache_compute_const7        |
+   +0x114  mov     w11, #0x38                                   |
+   +0x118  ldr     q16, [x9, #3968]                             |
+                   // mlkem_poly_mulcache_compute_const6        |
+  adrp16:                                                       |
+   +0x11c  adrp    x9, <page>                                   |
+   +0x120  sxtl    v19.4s, v1.4h                                |
+   +0x124  sxtl2   v20.4s, v1.8h                                |
+   +0x128  ext     v21.16b, v1.16b, v1.16b, #8                  |
+   +0x12c  smull   v6.4s, v1.4h, v6.4h                          |
+   +0x130  sxtl    v22.4s, v3.4h                                |
+   +0x134  sxtl2   v23.4s, v3.8h                                |
+   +0x138  smull   v17.4s, v3.4h, v17.4h                        |
+   +0x13c  ext     v1.16b, v3.16b, v3.16b, #8                   |
+   +0x140  ldr     q2, [x9, #4000]                              |
+                   // mlkem_poly_mulcache_compute_const8        |
+   +0x144  mul     v3.4s, v19.4s, v16.4s                        |
+  adrp17:                                                       |
+   +0x148  adrp    x9, <page>                                   |
+   +0x14c  mul     v4.4s, v20.4s, v7.4s                         |
+   +0x150  mul     v2.4s, v22.4s, v2.4s                         |
+   +0x154  mul     v7.4s, v23.4s, v18.4s                        |
+   +0x158  ldr     d16, [x9, #448]                              |
+                   // mlkem_poly_mulcache_compute_const34       |
+   +0x15c  sshr    v3.4s, v3.4s, #16                            |
+   +0x160  add     x9, x1, #0x82                                |
+   +0x164  sshr    v4.4s, v4.4s, #16                            |
+   +0x168  mul     v3.4s, v3.4s, v0.4s                          |
+   +0x16c  sshr    v2.4s, v2.4s, #16                            |
+   +0x170  smull   v5.4s, v21.4h, v5.4h                         |
+   +0x174  mul     v4.4s, v4.4s, v0.4s                          |
+   +0x178  mul     v2.4s, v2.4s, v0.4s                          |
+   +0x17c  addhn   v18.4h, v3.4s, v6.4s                         |
+   +0x180  sshr    v7.4s, v7.4s, #16                            |
+   +0x184  smull   v1.4s, v1.4h, v16.4h                         |
+   +0x188  mul     v3.4s, v7.4s, v0.4s                          |
+   +0x18c  ldr     q7, [x10, #4016]                             |
+                   // mlkem_poly_mulcache_compute_const9        |
+   +0x190  addhn2  v18.8h, v4.4s, v5.4s                         |
+  adrp18:                                                       |
+   +0x194  adrp    x10, <page>                                  |
+   +0x198  addhn   v19.4h, v2.4s, v17.4s                        |
+   +0x19c  addhn2  v19.8h, v3.4s, v1.4s                         |
+   +0x1a0  st2     {v18.8h-v19.8h}, [x8]                        |
+  adrp19:                                                       |
+   +0x1a4  adrp    x8, <page>                                   |
+   +0x1a8  ld4     {v1.8h-v4.8h}, [x9]                          |
+  adrp20:                                                       |
+   +0x1ac  adrp    x9, <page>                                   |
+   +0x1b0  ldr     d5, [x8, #464]                               |
+                   // mlkem_poly_mulcache_compute_const36       |
+  adrp21:                                                       |
+   +0x1b4  adrp    x8, <page>                                   |
+   +0x1b8  ldr     d6, [x9, #472]                               |
+                   // mlkem_poly_mulcache_compute_const37       |
+  adrp22:                                                       |
+   +0x1bc  adrp    x9, <page>                                   |
+   +0x1c0  ldr     q18, [x10, #4048]                            |
+                   // mlkem_poly_mulcache_compute_const11       |
+  adrp23:                                                       |
+   +0x1c4  adrp    x10, <page>                                  |
+   +0x1c8  ldr     q16, [x8, #4032]                             |
+                   // mlkem_poly_mulcache_compute_const10       |
+  adrp24:                                                       |
+   +0x1cc  adrp    x8, <page>                                   |
+   +0x1d0  ldr     d17, [x9, #488]                              |
+                   // mlkem_poly_mulcache_compute_const39       |
+   +0x1d4  add     x9, x1, #0xc2                                |
+   +0x1d8  sxtl    v19.4s, v1.4h                                |
+   +0x1dc  sxtl2   v20.4s, v1.8h                                |
+   +0x1e0  ext     v21.16b, v1.16b, v1.16b, #8                  |
+   +0x1e4  smull   v6.4s, v1.4h, v6.4h                          |
+   +0x1e8  sxtl    v22.4s, v3.4h                                |
+   +0x1ec  sxtl2   v23.4s, v3.8h                                |
+   +0x1f0  smull   v17.4s, v3.4h, v17.4h                        |
+   +0x1f4  ext     v1.16b, v3.16b, v3.16b, #8                   |
+   +0x1f8  ldr     q2, [x8, #4064]                              |
+                   // mlkem_poly_mulcache_compute_const12       |
+   +0x1fc  mul     v3.4s, v19.4s, v16.4s                        |
+  adrp25:                                                       |
+   +0x200  adrp    x8, <page>                                   |
+   +0x204  mul     v4.4s, v20.4s, v7.4s                         |
+   +0x208  mul     v2.4s, v22.4s, v2.4s                         |
+   +0x20c  mul     v7.4s, v23.4s, v18.4s                        |
+   +0x210  ldr     d16, [x8, #480]                              |
+                   // mlkem_poly_mulcache_compute_const38       |
+   +0x214  sshr    v3.4s, v3.4s, #16                            |
+   +0x218  add     x8, x0, #0x40                                |
+   +0x21c  sshr    v4.4s, v4.4s, #16                            |
+   +0x220  mul     v3.4s, v3.4s, v0.4s                          |
+   +0x224  sshr    v2.4s, v2.4s, #16                            |
+   +0x228  smull   v5.4s, v21.4h, v5.4h                         |
+   +0x22c  mul     v4.4s, v4.4s, v0.4s                          |
+   +0x230  mul     v2.4s, v2.4s, v0.4s                          |
+   +0x234  addhn   v18.4h, v3.4s, v6.4s                         |
+   +0x238  sshr    v7.4s, v7.4s, #16                            |
+   +0x23c  smull   v1.4s, v1.4h, v16.4h                         |
+   +0x240  mul     v3.4s, v7.4s, v0.4s                          |
+   +0x244  ldr     q7, [x10, #4080]                             |
+                   // mlkem_poly_mulcache_compute_const13       |
+   +0x248  addhn2  v18.8h, v4.4s, v5.4s                         |
+  adrp26:                                                       |
+   +0x24c  adrp    x10, <page>                                  |
+   +0x250  addhn   v19.4h, v2.4s, v17.4s                        |
+   +0x254  addhn2  v19.8h, v3.4s, v1.4s                         |
+   +0x258  st2     {v18.8h-v19.8h}, [x8]                        |
+  adrp27:                                                       |
+   +0x25c  adrp    x8, <page>                                   |
+   +0x260  ld4     {v1.8h-v4.8h}, [x9]                          |
+  adrp28:                                                       |
+   +0x264  adrp    x9, <page>                                   |
+   +0x268  ldr     d5, [x8, #496]                               |
+                   // mlkem_poly_mulcache_compute_const40       |
+  adrp29:                                                       |
+   +0x26c  adrp    x8, <page>                                   |
+   +0x270  ldr     d6, [x9, #504]                               |
+                   // mlkem_poly_mulcache_compute_const41       |
+  adrp30:                                                       |
+   +0x274  adrp    x9, <page>                                   |
+   +0x278  ldr     q18, [x10, #16]                              |
+                   // mlkem_poly_mulcache_compute_const14       |
+  adrp31:                                                       |
+   +0x27c  adrp    x10, <page>                                  |
+   +0x280  ldr     q16, [x8]                                    |
+  adrp32:                                                       |
+   +0x284  adrp    x8, <page>                                   |
+   +0x288  ldr     d17, [x9, #520]                              |
+                   // mlkem_poly_mulcache_compute_const43       |
+   +0x28c  add     x9, x1, #0x102                               |
+   +0x290  sxtl    v19.4s, v1.4h                                |
+   +0x294  sxtl2   v20.4s, v1.8h                                |
+   +0x298  ext     v21.16b, v1.16b, v1.16b, #8                  |
+   +0x29c  smull   v6.4s, v1.4h, v6.4h                          |
+   +0x2a0  sxtl    v22.4s, v3.4h                                |
+   +0x2a4  sxtl2   v23.4s, v3.8h                                |
+   +0x2a8  smull   v17.4s, v3.4h, v17.4h                        |
+   +0x2ac  ext     v1.16b, v3.16b, v3.16b, #8                   |
+   +0x2b0  ldr     q2, [x8, #32]                                |
+                   // mlkem_poly_mulcache_compute_const15       |
+   +0x2b4  mul     v3.4s, v19.4s, v16.4s                        |
+  adrp33:                                                       |
+   +0x2b8  adrp    x8, <page>                                   |
+   +0x2bc  mul     v4.4s, v20.4s, v7.4s                         |
+   +0x2c0  mul     v2.4s, v22.4s, v2.4s                         |
+   +0x2c4  mul     v7.4s, v23.4s, v18.4s                        |
+   +0x2c8  ldr     d16, [x8, #512]                              |
+                   // mlkem_poly_mulcache_compute_const42       |
+   +0x2cc  sshr    v3.4s, v3.4s, #16                            |
+   +0x2d0  add     x8, x0, #0x60                                |
+   +0x2d4  sshr    v4.4s, v4.4s, #16                            |
+   +0x2d8  mul     v3.4s, v3.4s, v0.4s                          |
+   +0x2dc  sshr    v2.4s, v2.4s, #16                            |
+   +0x2e0  smull   v5.4s, v21.4h, v5.4h                         |
+   +0x2e4  mul     v4.4s, v4.4s, v0.4s                          |
+   +0x2e8  mul     v2.4s, v2.4s, v0.4s                          |
+   +0x2ec  addhn   v18.4h, v3.4s, v6.4s                         |
+   +0x2f0  sshr    v7.4s, v7.4s, #16                            |
+   +0x2f4  smull   v1.4s, v1.4h, v16.4h                         |
+   +0x2f8  mul     v3.4s, v7.4s, v0.4s                          |
+   +0x2fc  ldr     q7, [x10, #48]                               |
+                   // mlkem_poly_mulcache_compute_const16       |
+   +0x300  addhn2  v18.8h, v4.4s, v5.4s                         |
+  adrp34:                                                       |
+   +0x304  adrp    x10, <page>                                  |
+   +0x308  addhn   v19.4h, v2.4s, v17.4s                        |
+   +0x30c  addhn2  v19.8h, v3.4s, v1.4s                         |
+   +0x310  st2     {v18.8h-v19.8h}, [x8]                        |
+  adrp35:                                                       |
+   +0x314  adrp    x8, <page>                                   |
+   +0x318  ld4     {v1.8h-v4.8h}, [x9]                          |
+  adrp36:                                                       |
+   +0x31c  adrp    x9, <page>                                   |
+   +0x320  ldr     d5, [x8, #528]                               |
+                   // mlkem_poly_mulcache_compute_const44       |
+  adrp37:                                                       |
+   +0x324  adrp    x8, <page>                                   |
+   +0x328  ldr     d6, [x9, #536]                               |
+                   // mlkem_poly_mulcache_compute_const45       |
+  adrp38:                                                       |
+   +0x32c  adrp    x9, <page>                                   |
+   +0x330  ldr     q18, [x10, #80]                              |
+                   // mlkem_poly_mulcache_compute_const18       |
+  adrp39:                                                       |
+   +0x334  adrp    x10, <page>                                  |
+   +0x338  ldr     q16, [x8, #64]                               |
+                   // mlkem_poly_mulcache_compute_const17       |
+  adrp40:                                                       |
+   +0x33c  adrp    x8, <page>                                   |
+   +0x340  ldr     d17, [x9, #552]                              |
+                   // mlkem_poly_mulcache_compute_const47       |
+   +0x344  add     x9, x1, #0x142                               |
+   +0x348  sxtl    v19.4s, v1.4h                                |
+   +0x34c  sxtl2   v20.4s, v1.8h                                |
+   +0x350  ext     v21.16b, v1.16b, v1.16b, #8                  |
+   +0x354  smull   v6.4s, v1.4h, v6.4h                          |
+   +0x358  sxtl    v22.4s, v3.4h                                |
+   +0x35c  sxtl2   v23.4s, v3.8h                                |
+   +0x360  smull   v17.4s, v3.4h, v17.4h                        |
+   +0x364  ext     v1.16b, v3.16b, v3.16b, #8                   |
+   +0x368  ldr     q2, [x8, #96]                                |
+                   // mlkem_poly_mulcache_compute_const19       |
+   +0x36c  mul     v3.4s, v19.4s, v16.4s                        |
+  adrp41:                                                       |
+   +0x370  adrp    x8, <page>                                   |
+   +0x374  mul     v4.4s, v20.4s, v7.4s                         |
+   +0x378  mul     v2.4s, v22.4s, v2.4s                         |
+   +0x37c  mul     v7.4s, v23.4s, v18.4s                        |
+   +0x380  ldr     d16, [x8, #544]                              |
+                   // mlkem_poly_mulcache_compute_const46       |
+   +0x384  sshr    v3.4s, v3.4s, #16                            |
+   +0x388  add     x8, x0, #0x80                                |
+   +0x38c  sshr    v4.4s, v4.4s, #16                            |
+   +0x390  mul     v3.4s, v3.4s, v0.4s                          |
+   +0x394  sshr    v2.4s, v2.4s, #16                            |
+   +0x398  smull   v5.4s, v21.4h, v5.4h                         |
+   +0x39c  mul     v4.4s, v4.4s, v0.4s                          |
+   +0x3a0  mul     v2.4s, v2.4s, v0.4s                          |
+   +0x3a4  addhn   v18.4h, v3.4s, v6.4s                         |
+   +0x3a8  sshr    v7.4s, v7.4s, #16                            |
+   +0x3ac  smull   v1.4s, v1.4h, v16.4h                         |
+   +0x3b0  mul     v3.4s, v7.4s, v0.4s                          |
+   +0x3b4  ldr     q7, [x10, #112]                              |
+                   // mlkem_poly_mulcache_compute_const20       |
+   +0x3b8  addhn2  v18.8h, v4.4s, v5.4s                         |
+  adrp42:                                                       |
+   +0x3bc  adrp    x10, <page>                                  |
+   +0x3c0  addhn   v19.4h, v2.4s, v17.4s                        |
+   +0x3c4  addhn2  v19.8h, v3.4s, v1.4s                         |
+   +0x3c8  st2     {v18.8h-v19.8h}, [x8]                        |
+  adrp43:                                                       |
+   +0x3cc  adrp    x8, <page>                                   |
+   +0x3d0  ld4     {v1.8h-v4.8h}, [x9]                          |
+  adrp44:                                                       |
+   +0x3d4  adrp    x9, <page>                                   |
+   +0x3d8  ldr     d5, [x8, #560]                               |
+                   // mlkem_poly_mulcache_compute_const48       |
+  adrp45:                                                       |
+   +0x3dc  adrp    x8, <page>                                   |
+   +0x3e0  ldr     d6, [x9, #568]                               |
+                   // mlkem_poly_mulcache_compute_const49       |
+  adrp46:                                                       |
+   +0x3e4  adrp    x9, <page>                                   |
+   +0x3e8  ldr     q16, [x8, #128]                              |
+                   // mlkem_poly_mulcache_compute_const21       |
+  adrp47:                                                       |
+   +0x3ec  adrp    x8, <page>                                   |
+   +0x3f0  ldr     d17, [x9, #584]                              |
+                   // mlkem_poly_mulcache_compute_const51       |
+   +0x3f4  add     x9, x1, #0x182                               |
+   +0x3f8  sxtl    v18.4s, v1.4h                                |
+   +0x3fc  sxtl2   v19.4s, v1.8h                                |
+   +0x400  ext     v20.16b, v1.16b, v1.16b, #8                  |
+   +0x404  smull   v6.4s, v1.4h, v6.4h                          |
+   +0x408  sxtl    v21.4s, v3.4h                                |
+   +0x40c  sxtl2   v22.4s, v3.8h                                |
+   +0x410  smull   v17.4s, v3.4h, v17.4h                        |
+   +0x414  ext     v1.16b, v3.16b, v3.16b, #8                   |
+   +0x418  ldr     q4, [x8, #160]                               |
+                   // mlkem_poly_mulcache_compute_const23       |
+   +0x41c  mul     v3.4s, v18.4s, v16.4s                        |
+   +0x420  ldr     q2, [x10, #144]                              |
+                   // mlkem_poly_mulcache_compute_const22       |
+   +0x424  mul     v7.4s, v19.4s, v7.4s                         |
+  adrp48:                                                       |
+   +0x428  adrp    x8, <page>                                   |
+   +0x42c  mul     v4.4s, v21.4s, v4.4s                         |
+  adrp49:                                                       |
+   +0x430  adrp    x10, <page>                                  |
+   +0x434  mul     v2.4s, v22.4s, v2.4s                         |
+   +0x438  sshr    v3.4s, v3.4s, #16                            |
+   +0x43c  ldr     d16, [x8, #576]                              |
+                   // mlkem_poly_mulcache_compute_const50       |
+   +0x440  sshr    v7.4s, v7.4s, #16                            |
+   +0x444  add     x8, x0, #0xa0                                |
+   +0x448  mul     v3.4s, v3.4s, v0.4s                          |
+   +0x44c  sshr    v4.4s, v4.4s, #16                            |
+   +0x450  smull   v5.4s, v20.4h, v5.4h                         |
+   +0x454  mul     v7.4s, v7.4s, v0.4s                          |
+   +0x458  mul     v4.4s, v4.4s, v0.4s                          |
+   +0x45c  addhn   v18.4h, v3.4s, v6.4s                         |
+   +0x460  sshr    v2.4s, v2.4s, #16                            |
+   +0x464  smull   v1.4s, v1.4h, v16.4h                         |
+   +0x468  mul     v2.4s, v2.4s, v0.4s                          |
+   +0x46c  addhn2  v18.8h, v7.4s, v5.4s                         |
+   +0x470  ldr     d7, [x10, #616]                              |
+                   // mlkem_poly_mulcache_compute_const55       |
+   +0x474  addhn   v19.4h, v4.4s, v17.4s                        |
+   +0x478  addhn2  v19.8h, v2.4s, v1.4s                         |
+   +0x47c  st2     {v18.8h-v19.8h}, [x8]                        |
+  adrp50:                                                       |
+   +0x480  adrp    x8, <page>                                   |
+   +0x484  ld4     {v1.8h-v4.8h}, [x9]                          |
+  adrp51:                                                       |
+   +0x488  adrp    x9, <page>                                   |
+   +0x48c  ldr     d5, [x8, #600]                               |
+                   // mlkem_poly_mulcache_compute_const53       |
+  adrp52:                                                       |
+   +0x490  adrp    x8, <page>                                   |
+   +0x494  ldr     q6, [x9, #192]                               |
+                   // mlkem_poly_mulcache_compute_const25       |
+  adrp53:                                                       |
+   +0x498  adrp    x9, <page>                                   |
+   +0x49c  sxtl    v16.4s, v1.4h                                |
+   +0x4a0  sxtl2   v17.4s, v1.8h                                |
+   +0x4a4  ext     v18.16b, v1.16b, v1.16b, #8                  |
+   +0x4a8  smull   v5.4s, v1.4h, v5.4h                          |
+   +0x4ac  sxtl    v19.4s, v3.4h                                |
+   +0x4b0  sxtl2   v20.4s, v3.8h                                |
+   +0x4b4  smull   v7.4s, v3.4h, v7.4h                          |
+   +0x4b8  ext     v1.16b, v3.16b, v3.16b, #8                   |
+   +0x4bc  ldr     q2, [x8, #176]                               |
+                   // mlkem_poly_mulcache_compute_const24       |
+   +0x4c0  mul     v3.4s, v16.4s, v6.4s                         |
+  adrp54:                                                       |
+   +0x4c4  adrp    x8, <page>                                   |
+   +0x4c8  ldr     q4, [x9, #224]                               |
+                   // mlkem_poly_mulcache_compute_const27       |
+  adrp55:                                                       |
+   +0x4cc  adrp    x9, <page>                                   |
+   +0x4d0  mul     v2.4s, v17.4s, v2.4s                         |
+   +0x4d4  ldr     q6, [x8, #208]                               |
+                   // mlkem_poly_mulcache_compute_const26       |
+  adrp56:                                                       |
+   +0x4d8  adrp    x8, <page>                                   |
+   +0x4dc  mul     v4.4s, v19.4s, v4.4s                         |
+   +0x4e0  sshr    v3.4s, v3.4s, #16                            |
+   +0x4e4  ldr     d16, [x9, #592]                              |
+                   // mlkem_poly_mulcache_compute_const52       |
+   +0x4e8  mul     v3.4s, v3.4s, v0.4s                          |
+   +0x4ec  sshr    v2.4s, v2.4s, #16                            |
+   +0x4f0  mul     v6.4s, v20.4s, v6.4s                         |
+   +0x4f4  ldr     d17, [x8, #608]                              |
+                   // mlkem_poly_mulcache_compute_const54       |
+   +0x4f8  sshr    v4.4s, v4.4s, #16                            |
+   +0x4fc  add     x8, x0, #0xc0                                |
+   +0x500  smull   v16.4s, v18.4h, v16.4h                       |
+   +0x504  mul     v2.4s, v2.4s, v0.4s                          |
+   +0x508  mul     v4.4s, v4.4s, v0.4s                          |
+   +0x50c  addhn   v18.4h, v3.4s, v5.4s                         |
+   +0x510  sshr    v3.4s, v6.4s, #16                            |
+   +0x514  smull   v1.4s, v1.4h, v17.4h                         |
+   +0x518  addhn2  v18.8h, v2.4s, v16.4s                        |
+   +0x51c  mul     v0.4s, v3.4s, v0.4s                          |
+   +0x520  addhn   v19.4h, v4.4s, v7.4s                         |
+   +0x524  addhn2  v19.8h, v0.4s, v1.4s                         |
+   +0x528  st2     {v18.8h-v19.8h}, [x8]                        |
+  join2:                                                        |
+   +0x52c  lsl     x9, x11, #1                             <----+
+   +0x530  add     x10, x1, x11, lsl #3
+   +0x534  add     x11, x0, x11, lsl #2
+   +0x538  mov     w8, #0xf3010000
+   +0x53c  add     x10, x10, #0x6
+   +0x540  add     x11, x11, #0x2
+   +0x544  mov     w12, #0xfffff2ff
+  adrp57:
+   +0x548  adrp    x13, <page>
+   +0x54c  add     x13, x13, #0x360
+                   // rodata_mlk_zetas
+  loop1:
+   +0x550  add     x14, x13, x9                            <+
+   +0x554  ldursh  w15, [x10, #-4]                          |
+   +0x558  add     x9, x9, #0x2                             |
+   +0x55c  cmp     x9, #0x80                                |
+   +0x560  ldrsh   w14, [x14, #128]                         |
+   +0x564  mul     w15, w14, w15                            |
+   +0x568  neg     w14, w14                                 |
+   +0x56c  sxth    w14, w14                                 |
+   +0x570  mul     w16, w15, w8                             |
+   +0x574  asr     w16, w16, #16                            |
+   +0x578  madd    w15, w16, w12, w15                       |
+   +0x57c  lsr     w15, w15, #16                            |
+   +0x580  sturh   w15, [x11, #-2]                          |
+   +0x584  ldrsh   w15, [x10]                               |
+   +0x588  add     x10, x10, #0x8                           |
+   +0x58c  mul     w14, w15, w14                            |
+   +0x590  mul     w15, w14, w8                             |
+   +0x594  asr     w15, w15, #16                            |
+   +0x598  madd    w14, w15, w12, w14                       |
+   +0x59c  lsr     w14, w14, #16                            |
+  loop1_test:                                               |
+   +0x5a0  strh    w14, [x11], #4                           |
+  loop1_back:                                               |
+   +0x5a4  b.ne    loop1                                   -+
+  loop1_exit: ret:
+   +0x5a8  ret
+ ***)
+
+(*** mlkem_poly_ntt: 0x7c14, 0x1ec bytes
+
+     +0x0  stp     x28, x27, [sp, #-80]!
+     +0x4  stp     x26, x25, [sp, #16]
+     +0x8  stp     x24, x23, [sp, #32]
+     +0xc  stp     x22, x21, [sp, #48]
+    +0x10  stp     x20, x19, [sp, #64]
+    +0x14  mov     w10, #0xf3010000
+    +0x18  mov     w8, #0x1
+    +0x1c  mov     w9, #0x100
+  adrp1:
+    +0x20  adrp    x11, <page>
+    +0x24  add     x11, x11, #0x360
+                   // rodata_mlk_zetas
+    +0x28  mov     w12, #0xfffff2ff
+    +0x2c  mov     w13, #0x1
+    +0x30  dup     v0.4s, w10
+    +0x34  mvni    v1.4s, #0xd, lsl #8
+    +0x38  b       loop1                          -+
+  loop2_exit:                                      |
+    +0x3c  add     w13, w13, #0x1                 <--+
+  loop1_test:                                      | |
+    +0x40  cmp     w13, #0x8                       | |
+  loop1_back:                                      | |
+    +0x44  b.eq    loop1_exit                     -----------+
+  loop1: loop1_next:                               | |       |
+    +0x48  sub     w2, w13, #0x1                  <+ |       |
+    +0x4c  lsr     w17, w9, w13                      |       |
+    +0x50  ubfiz   x18, x17, #1, #32                 |       |
+    +0x54  lsl     x4, x17, #63                      |       |
+    +0x58  mov     x14, xzr                          |       |
+    +0x5c  mov     x15, xzr                          |       |
+    +0x60  mov     x16, xzr                          |       |
+    +0x64  ubfiz   x1, x17, #2, #32                  |       |
+    +0x68  lsl     w2, w8, w2                        |       |
+    +0x6c  add     x3, x18, #0x2                     |       |
+    +0x70  sub     x4, x4, x18                       |       |
+    +0x74  neg     x5, x18                           |       |
+    +0x78  add     x6, x0, x18                       |       |
+    +0x7c  mov     x7, x0                            |       |
+    +0x80  mov     w19, #0x1                         |       |
+    +0x84  mov     x20, x17                          |       |
+    +0x88  b       loop2                          -+ |       |
+  join1:                                           | |       |
+    +0x8c  add     w2, w2, #0x1                   <------+-+ |
+    +0x90  add     x16, x16, x18                   | |   | | |
+    +0x94  add     x15, x15, #0x1                  | |   | | |
+    +0x98  add     x20, x20, x18                   | |   | | |
+    +0x9c  add     x19, x19, x18                   | |   | | |
+    +0xa0  sub     x14, x14, x18                   | |   | | |
+    +0xa4  add     x7, x7, x1                      | |   | | |
+  loop2_test:                                      | |   | | |
+    +0xa8  cmp     x16, #0x100                     | |   | | |
+  loop2_back:                                      | |   | | |
+    +0xac  b.cs    loop2_exit                     ---+   | | |
+  loop2: loop2_next:                               |     | | |
+    +0xb0  cmp     x20, x19                       <+     | | |
+    +0xb4  add     x21, x16, x17                         | | |
+    +0xb8  orr     x26, x16, #0x1                        | | |
+    +0xbc  csel    x25, x20, x19, hi                     | | |
+    +0xc0  cmp     x21, x26                              | | |
+    +0xc4  mov     x24, x16                              | | |
+    +0xc8  csel    x22, x21, x26, hi                     | | |
+    +0xcc  madd    x23, x5, x15, x22                     | | |
+    +0xd0  ldrsh   w22, [x11, w2, uxtw #1]               | | |
+    +0xd4  cmp     x23, #0x8                             | | |
+    +0xd8  b.cc    loop4                          -----+ | | |
+    +0xdc  cmp     x21, x26                            | | | |
+    +0xe0  mul     x24, x1, x15                        | | | |
+    +0xe4  csel    x26, x21, x26, hi                   | | | |
+    +0xe8  add     x28, x0, x18                        | | | |
+    +0xec  madd    x26, x4, x15, x26                   | | | |
+    +0xf0  orr     x27, x24, #0x2                      | | | |
+    +0xf4  add     x27, x0, x27                        | | | |
+    +0xf8  add     x28, x28, x24                       | | | |
+    +0xfc  lsl     x26, x26, #1                        | | | |
+   +0x100  sub     x26, x26, #0x2                      | | | |
+   +0x104  add     x27, x27, x26                       | | | |
+   +0x108  cmp     x28, x27                            | | | |
+   +0x10c  b.cs    join2                          -+   | | | |
+   +0x110  add     x27, x0, x3                     |   | | | |
+   +0x114  add     x28, x0, x24                    |   | | | |
+   +0x118  add     x24, x27, x24                   |   | | | |
+   +0x11c  add     x26, x24, x26                   |   | | | |
+   +0x120  mov     x24, x16                        |   | | | |
+   +0x124  cmp     x28, x26                        |   | | | |
+   +0x128  b.cc    loop4                          ---+ | | | |
+  join2:                                           | | | | | |
+   +0x12c  add     x24, x25, x14                  <+ | | | | |
+   +0x130  and     x25, x23, #0xfffffffffffffff8     | | | | |
+   +0x134  and     x26, x24, #0xfffffffffffffff8     | | | | |
+   +0x138  add     x24, x16, x25                     | | | | |
+   +0x13c  mov     x27, x7                           | | | | |
+  loop3:                                             | | | | |
+   +0x140  ldr     q2, [x27, x18]                 <+ | | | | |
+   +0x144  dup     v3.8h, w22                      | | | | | |
+   +0x148  subs    x26, x26, #0x8                  | | | | | |
+   +0x14c  smull   v4.4s, v3.4h, v2.4h             | | | | | |
+   +0x150  smull2  v2.4s, v3.8h, v2.8h             | | | | | |
+   +0x154  mul     v3.4s, v4.4s, v0.4s             | | | | | |
+   +0x158  mul     v5.4s, v2.4s, v0.4s             | | | | | |
+   +0x15c  sshr    v3.4s, v3.4s, #16               | | | | | |
+   +0x160  sshr    v5.4s, v5.4s, #16               | | | | | |
+   +0x164  mul     v3.4s, v3.4s, v1.4s             | | | | | |
+   +0x168  mul     v5.4s, v5.4s, v1.4s             | | | | | |
+   +0x16c  addhn   v3.4h, v3.4s, v4.4s             | | | | | |
+   +0x170  ldr     q4, [x27]                       | | | | | |
+   +0x174  addhn2  v3.8h, v5.4s, v2.4s             | | | | | |
+   +0x178  sub     v2.8h, v4.8h, v3.8h             | | | | | |
+   +0x17c  add     v3.8h, v4.8h, v3.8h             | | | | | |
+   +0x180  str     q2, [x27, x18]                  | | | | | |
+  loop3_test:                                      | | | | | |
+   +0x184  str     q3, [x27], #16                  | | | | | |
+  loop3_back:                                      | | | | | |
+   +0x188  b.ne    loop3                          -+ | | | | |
+  loop3_exit:                                        | | | | |
+   +0x18c  cmp     x23, x25                          | | | | |
+   +0x190  b.eq    join1                          -------+ | |
+  loop4:                                             | |   | |
+   +0x194  lsl     x23, x24, #1                   <+-+-+   | |
+   +0x198  add     x24, x24, #0x1                  |       | |
+   +0x19c  cmp     x24, x21                        |       | |
+   +0x1a0  ldrsh   w25, [x6, x23]                  |       | |
+   +0x1a4  ldrh    w27, [x0, x23]                  |       | |
+   +0x1a8  mul     w25, w25, w22                   |       | |
+   +0x1ac  mul     w26, w25, w10                   |       | |
+   +0x1b0  asr     w26, w26, #16                   |       | |
+   +0x1b4  madd    w25, w26, w12, w25              |       | |
+   +0x1b8  lsr     w25, w25, #16                   |       | |
+   +0x1bc  sub     w26, w27, w25                   |       | |
+   +0x1c0  add     w25, w27, w25                   |       | |
+   +0x1c4  strh    w26, [x6, x23]                  |       | |
+  loop4_test:                                      |       | |
+   +0x1c8  strh    w25, [x0, x23]                  |       | |
+  loop4_back:                                      |       | |
+   +0x1cc  b.cc    loop4                          -+       | |
+  loop4_exit:                                              | |
+   +0x1d0  b       join1                          ---------+ |
+  loop1_exit:                                                |
+   +0x1d4  ldp     x20, x19, [sp, #64]            <----------+
+   +0x1d8  ldp     x22, x21, [sp, #48]
+   +0x1dc  ldp     x24, x23, [sp, #32]
+   +0x1e0  ldp     x26, x25, [sp, #16]
+   +0x1e4  ldp     x28, x27, [sp], #80
+  ret:
+   +0x1e8  ret
+ ***)
+
+(*** mlkem_poly_invntt_tomont: 0x7e00, 0x2cc bytes
+
+     +0x0  mov     w9, #0x5a1
+     +0x4  mov     w10, #0xd8a10000
+     +0x8  mov     x8, xzr
+     +0xc  mvni    v2.4s, #0xd, lsl #8
+    +0x10  dup     v0.8h, w9
+    +0x14  dup     v1.4s, w10
+  loop1:
+    +0x18  add     x9, x0, x8                     <+
+    +0x1c  add     x8, x8, #0x20                   |
+    +0x20  cmp     x8, #0x200                      |
+    +0x24  ldp     q3, q4, [x9]                    |
+    +0x28  sxtl    v5.4s, v3.4h                    |
+    +0x2c  sxtl2   v6.4s, v3.8h                    |
+    +0x30  sxtl    v7.4s, v4.4h                    |
+    +0x34  mul     v5.4s, v5.4s, v1.4s             |
+    +0x38  mul     v7.4s, v7.4s, v1.4s             |
+    +0x3c  sxtl2   v16.4s, v4.8h                   |
+    +0x40  mul     v6.4s, v6.4s, v1.4s             |
+    +0x44  mul     v16.4s, v16.4s, v1.4s           |
+    +0x48  sshr    v5.4s, v5.4s, #16               |
+    +0x4c  sshr    v7.4s, v7.4s, #16               |
+    +0x50  smull2  v17.4s, v3.8h, v0.8h            |
+    +0x54  sshr    v6.4s, v6.4s, #16               |
+    +0x58  smull   v3.4s, v3.4h, v0.4h             |
+    +0x5c  smull2  v18.4s, v4.8h, v0.8h            |
+    +0x60  smull   v4.4s, v4.4h, v0.4h             |
+    +0x64  mul     v5.4s, v5.4s, v2.4s             |
+    +0x68  mul     v7.4s, v7.4s, v2.4s             |
+    +0x6c  sshr    v16.4s, v16.4s, #16             |
+    +0x70  mul     v6.4s, v6.4s, v2.4s             |
+    +0x74  mul     v16.4s, v16.4s, v2.4s           |
+    +0x78  addhn   v3.4h, v5.4s, v3.4s             |
+    +0x7c  addhn   v4.4h, v7.4s, v4.4s             |
+    +0x80  addhn2  v3.8h, v6.4s, v17.4s            |
+    +0x84  addhn2  v4.8h, v16.4s, v18.4s           |
+  loop1_test:                                      |
+    +0x88  stp     q3, q4, [x9]                    |
+  loop1_back:                                      |
+    +0x8c  b.ne    loop1                          -+
+  loop1_exit:
+    +0x90  stp     x29, x30, [sp, #-96]!
+    +0x94  stp     x28, x27, [sp, #16]
+    +0x98  stp     x26, x25, [sp, #32]
+    +0x9c  stp     x24, x23, [sp, #48]
+    +0xa0  stp     x22, x21, [sp, #64]
+    +0xa4  stp     x20, x19, [sp, #80]
+    +0xa8  mov     w10, #0x4ebf
+    +0xac  mov     w12, #0xf3010000
+  adrp1:
+    +0xb0  adrp    x8, <page>
+    +0xb4  add     x8, x8, #0x360
+                   // rodata_mlk_zetas
+    +0xb8  mov     w9, #0x7
+    +0xbc  mov     w11, #0x100
+    +0xc0  mov     w13, #0xffffffff
+    +0xc4  mov     w14, #0x2000000
+    +0xc8  mov     w15, #0xfffff2ff
+    +0xcc  dup     v0.8h, w10
+    +0xd0  dup     v2.4s, w12
+    +0xd4  mvni    v1.8h, #0xd, lsl #8
+    +0xd8  mvni    v3.4s, #0xd, lsl #8
+    +0xdc  b       loop2                          -+
+  loop3_exit: loop2_test:                          |
+    +0xe0  subs    w9, w9, #0x1                   <--+
+  loop2_back:                                      | |
+    +0xe4  b.eq    loop2_exit                     -----------+
+  loop2: loop2_next:                               | |       |
+    +0xe8  lsr     w1, w11, w9                    <+ |       |
+    +0xec  lsl     w2, w13, w9                       |       |
+    +0xf0  ubfiz   x3, x1, #1, #32                   |       |
+    +0xf4  lsl     x5, x1, #63                       |       |
+    +0xf8  mov     x16, xzr                          |       |
+    +0xfc  mov     x17, xzr                          |       |
+   +0x100  mov     x18, xzr                          |       |
+   +0x104  mvn     w2, w2                            |       |
+   +0x108  ubfiz   x4, x1, #2, #32                   |       |
+   +0x10c  sub     x5, x5, x3                        |       |
+   +0x110  add     x6, x3, #0x2                      |       |
+   +0x114  neg     x7, x3                            |       |
+   +0x118  add     x19, x0, x3                       |       |
+   +0x11c  mov     x20, x0                           |       |
+   +0x120  mov     w21, #0x1                         |       |
+   +0x124  mov     x22, x1                           |       |
+   +0x128  b       loop3                          -+ |       |
+  join1:                                           | |       |
+   +0x12c  sub     w2, w2, #0x1                   <------+-+ |
+   +0x130  add     x18, x18, x3                    | |   | | |
+   +0x134  add     x17, x17, #0x1                  | |   | | |
+   +0x138  add     x22, x22, x3                    | |   | | |
+   +0x13c  add     x21, x21, x3                    | |   | | |
+   +0x140  sub     x16, x16, x3                    | |   | | |
+   +0x144  add     x20, x20, x4                    | |   | | |
+  loop3_test:                                      | |   | | |
+   +0x148  cmp     x18, #0x100                     | |   | | |
+  loop3_back:                                      | |   | | |
+   +0x14c  b.cs    loop3_exit                     ---+   | | |
+  loop3: loop3_next:                               |     | | |
+   +0x150  cmp     x22, x21                       <+     | | |
+   +0x154  add     x23, x18, x1                          | | |
+   +0x158  orr     x28, x18, #0x1                        | | |
+   +0x15c  csel    x27, x22, x21, hi                     | | |
+   +0x160  cmp     x23, x28                              | | |
+   +0x164  mov     x25, x18                              | | |
+   +0x168  csel    x24, x23, x28, hi                     | | |
+   +0x16c  madd    x26, x7, x17, x24                     | | |
+   +0x170  ldrsh   w24, [x8, w2, uxtw #1]                | | |
+   +0x174  cmp     x26, #0x8                             | | |
+   +0x178  b.cc    loop5                          -----+ | | |
+   +0x17c  cmp     x23, x28                            | | | |
+   +0x180  add     x29, x0, x6                         | | | |
+   +0x184  csel    x25, x23, x28, hi                   | | | |
+   +0x188  madd    x28, x5, x17, x25                   | | | |
+   +0x18c  mul     x25, x4, x17                        | | | |
+   +0x190  lsl     x28, x28, #1                        | | | |
+   +0x194  add     x29, x29, x25                       | | | |
+   +0x198  sub     x28, x28, #0x2                      | | | |
+   +0x19c  add     x29, x29, x28                       | | | |
+   +0x1a0  add     x30, x0, x25                        | | | |
+   +0x1a4  cmp     x30, x29                            | | | |
+   +0x1a8  b.cs    join2                          -+   | | | |
+   +0x1ac  add     x29, x0, x3                     |   | | | |
+   +0x1b0  orr     x30, x25, #0x2                  |   | | | |
+   +0x1b4  add     x29, x29, x25                   |   | | | |
+   +0x1b8  add     x25, x0, x30                    |   | | | |
+   +0x1bc  add     x28, x25, x28                   |   | | | |
+   +0x1c0  mov     x25, x18                        |   | | | |
+   +0x1c4  cmp     x29, x28                        |   | | | |
+   +0x1c8  b.cc    loop5                          ---+ | | | |
+  join2:                                           | | | | | |
+   +0x1cc  add     x25, x27, x16                  <+ | | | | |
+   +0x1d0  and     x27, x26, #0xfffffffffffffff8     | | | | |
+   +0x1d4  and     x28, x25, #0xfffffffffffffff8     | | | | |
+   +0x1d8  add     x25, x18, x27                     | | | | |
+   +0x1dc  mov     x29, x20                          | | | | |
+  loop4:                                             | | | | |
+   +0x1e0  ldr     q5, [x29, x3]                  <+ | | | | |
+   +0x1e4  dup     v16.8h, w24                     | | | | | |
+   +0x1e8  ldr     q4, [x29]                       | | | | | |
+   +0x1ec  subs    x28, x28, #0x8                  | | | | | |
+   +0x1f0  movi    v6.4s, #0x2, lsl #24            | | | | | |
+   +0x1f4  movi    v7.4s, #0x2, lsl #24            | | | | | |
+   +0x1f8  sub     v17.8h, v5.8h, v4.8h            | | | | | |
+   +0x1fc  add     v4.8h, v5.8h, v4.8h             | | | | | |
+   +0x200  smull   v5.4s, v16.4h, v17.4h           | | | | | |
+   +0x204  smlal   v6.4s, v4.4h, v0.4h             | | | | | |
+   +0x208  smlal2  v7.4s, v4.8h, v0.8h             | | | | | |
+   +0x20c  smull2  v16.4s, v16.8h, v17.8h          | | | | | |
+   +0x210  mul     v17.4s, v5.4s, v2.4s            | | | | | |
+   +0x214  sshr    v6.4s, v6.4s, #26               | | | | | |
+   +0x218  sshr    v7.4s, v7.4s, #26               | | | | | |
+   +0x21c  mul     v18.4s, v16.4s, v2.4s           | | | | | |
+   +0x220  uzp1    v6.8h, v6.8h, v7.8h             | | | | | |
+   +0x224  sshr    v7.4s, v17.4s, #16              | | | | | |
+   +0x228  mul     v7.4s, v7.4s, v3.4s             | | | | | |
+   +0x22c  sshr    v17.4s, v18.4s, #16             | | | | | |
+   +0x230  mla     v4.8h, v6.8h, v1.8h             | | | | | |
+   +0x234  mul     v6.4s, v17.4s, v3.4s            | | | | | |
+   +0x238  addhn   v5.4h, v7.4s, v5.4s             | | | | | |
+   +0x23c  str     q4, [x29]                       | | | | | |
+   +0x240  addhn2  v5.8h, v6.4s, v16.4s            | | | | | |
+   +0x244  str     q5, [x29, x3]                   | | | | | |
+  loop4_test:                                      | | | | | |
+   +0x248  add     x29, x29, #0x10                 | | | | | |
+  loop4_back:                                      | | | | | |
+   +0x24c  b.ne    loop4                          -+ | | | | |
+  loop4_exit:                                        | | | | |
+   +0x250  cmp     x26, x27                          | | | | |
+   +0x254  b.eq    join1                          -------+ | |
+  loop5:                                             | |   | |
+   +0x258  lsl     x26, x25, #1                   <+-+-+   | |
+   +0x25c  add     x25, x25, #0x1                  |       | |
+   +0x260  cmp     x25, x23                        |       | |
+   +0x264  ldrh    w27, [x0, x26]                  |       | |
+   +0x268  ldrh    w28, [x19, x26]                 |       | |
+   +0x26c  add     w28, w28, w27                   |       | |
+   +0x270  sxth    w29, w28                        |       | |
+   +0x274  madd    w29, w29, w10, w14              |       | |
+   +0x278  asr     w29, w29, #26                   |       | |
+   +0x27c  madd    w28, w29, w15, w28              |       | |
+   +0x280  strh    w28, [x0, x26]                  |       | |
+   +0x284  ldrh    w28, [x19, x26]                 |       | |
+   +0x288  sub     w27, w28, w27                   |       | |
+   +0x28c  sxth    w27, w27                        |       | |
+   +0x290  mul     w27, w27, w24                   |       | |
+   +0x294  mul     w28, w27, w12                   |       | |
+   +0x298  asr     w28, w28, #16                   |       | |
+   +0x29c  madd    w27, w28, w15, w27              |       | |
+   +0x2a0  lsr     w27, w27, #16                   |       | |
+  loop5_test:                                      |       | |
+   +0x2a4  strh    w27, [x19, x26]                 |       | |
+  loop5_back:                                      |       | |
+   +0x2a8  b.cc    loop5                          -+       | |
+  loop5_exit:                                              | |
+   +0x2ac  b       join1                          ---------+ |
+  loop2_exit:                                                |
+   +0x2b0  ldp     x20, x19, [sp, #80]            <----------+
+   +0x2b4  ldp     x22, x21, [sp, #64]
+   +0x2b8  ldp     x24, x23, [sp, #48]
+   +0x2bc  ldp     x26, x25, [sp, #32]
+   +0x2c0  ldp     x28, x27, [sp, #16]
+   +0x2c4  ldp     x29, x30, [sp], #96
+  ret:
+   +0x2c8  ret
+ ***)
+
+(*** mlkem512_polyvec_compress_du: 0x80cc, 0x28 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_compress_d10
+  after_mlkem_poly_compress_d10:
+    +0x14  add     x0, x20, #0x140
+    +0x18  add     x1, x19, #0x200
+    +0x1c  ldp     x20, x19, [sp, #16]
+    +0x20  ldr     x30, [sp], #32
+    +0x24  b       mlkem_poly_compress_d10
+ ***)
+
+(*** mlkem512_polyvec_decompress_du: 0x80f4, 0x28 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_decompress_d10
+  after_mlkem_poly_decompress_d10:
+    +0x14  add     x0, x20, #0x200
+    +0x18  add     x1, x19, #0x140
+    +0x1c  ldp     x20, x19, [sp, #16]
+    +0x20  ldr     x30, [sp], #32
+    +0x24  b       mlkem_poly_decompress_d10
+ ***)
+
+(*** mlkem512_polyvec_tobytes: 0x811c, 0x28 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_tobytes
+  after_mlkem_poly_tobytes:
+    +0x14  add     x0, x20, #0x180
+    +0x18  add     x1, x19, #0x200
+    +0x1c  ldp     x20, x19, [sp, #16]
+    +0x20  ldr     x30, [sp], #32
+    +0x24  b       mlkem_poly_tobytes
+ ***)
+
+(*** mlkem512_polyvec_frombytes: 0x8144, 0x28 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_frombytes
+  after_mlkem_poly_frombytes:
+    +0x14  add     x0, x20, #0x200
+    +0x18  add     x1, x19, #0x180
+    +0x1c  ldp     x20, x19, [sp, #16]
+    +0x20  ldr     x30, [sp], #32
+    +0x24  b       mlkem_poly_frombytes
+ ***)
+
+(*** mlkem512_polyvec_ntt: 0x816c, 0x18 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_ntt
+  after_mlkem_poly_ntt:
+     +0xc  add     x0, x19, #0x200
+    +0x10  ldp     x30, x19, [sp], #16
+    +0x14  b       mlkem_poly_ntt
+ ***)
+
+(*** mlkem512_polyvec_invntt_tomont: 0x8184, 0x18 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont:
+     +0xc  add     x0, x19, #0x200
+    +0x10  ldp     x30, x19, [sp], #16
+    +0x14  b       mlkem_poly_invntt_tomont
+ ***)
+
+(*** mlkem512_polyvec_basemul_acc_montgomery_cached: 0x819c, 0x1b0 bytes
+
+     +0x0  add     x8, x3, #0x200
+     +0x4  add     x10, x0, #0x200
+     +0x8  cmp     x8, x0
+     +0xc  add     x9, x2, #0x400
+    +0x10  ccmp    x10, x3, #0x0, hi
+    +0x14  add     x11, x1, #0x400
+    +0x18  cset    w8, hi
+    +0x1c  cmp     x9, x0
+    +0x20  ccmp    x10, x2, #0x0, hi
+    +0x24  cset    w9, hi
+    +0x28  cmp     x10, x1
+    +0x2c  ccmp    x11, x0, #0x0, hi
+    +0x30  b.hi    join1                   ---------+
+    +0x34  tbnz    w8, #0, join1           -------+ |
+    +0x38  cbnz    w9, join1               -----+ | |
+    +0x3c  mov     w10, #0xf3010000             | | |
+    +0x40  mov     x8, xzr                      | | |
+    +0x44  add     x9, x3, #0x100               | | |
+    +0x48  mvni    v1.4s, #0xd, lsl #8          | | |
+    +0x4c  dup     v0.4s, w10                   | | |
+  loop1:                                        | | |
+    +0x50  add     x10, x1, x8             <+   | | |
+    +0x54  add     x11, x2, x8              |   | | |
+    +0x58  ldur    q17, [x9, #-256]         |   | | |
+    +0x5c  ldr     q18, [x9], #16           |   | | |
+    +0x60  ld2     {v2.8h-v3.8h}, [x10]     |   | | |
+    +0x64  add     x10, x10, #0x200         |   | | |
+    +0x68  ld2     {v4.8h-v5.8h}, [x11]     |   | | |
+    +0x6c  ld2     {v6.8h-v7.8h}, [x10]     |   | | |
+    +0x70  add     x10, x11, #0x200         |   | | |
+    +0x74  smull   v16.4s, v4.4h, v2.4h     |   | | |
+    +0x78  smull2  v19.4s, v4.8h, v2.8h     |   | | |
+    +0x7c  ld2     {v21.8h-v22.8h}, [x10]   |   | | |
+    +0x80  smull   v20.4s, v5.4h, v2.4h     |   | | |
+    +0x84  add     x10, x0, x8              |   | | |
+    +0x88  smull2  v23.4s, v5.8h, v2.8h     |   | | |
+    +0x8c  add     x8, x8, #0x20            |   | | |
+    +0x90  smlal   v16.4s, v17.4h, v3.4h    |   | | |
+    +0x94  cmp     x8, #0x200               |   | | |
+    +0x98  smlal2  v19.4s, v17.8h, v3.8h    |   | | |
+    +0x9c  smlal   v20.4s, v4.4h, v3.4h     |   | | |
+    +0xa0  smlal2  v23.4s, v4.8h, v3.8h     |   | | |
+    +0xa4  smlal   v16.4s, v18.4h, v7.4h    |   | | |
+    +0xa8  smlal2  v19.4s, v18.8h, v7.8h    |   | | |
+    +0xac  smlal   v20.4s, v21.4h, v7.4h    |   | | |
+    +0xb0  smlal2  v23.4s, v21.8h, v7.8h    |   | | |
+    +0xb4  smlal   v16.4s, v21.4h, v6.4h    |   | | |
+    +0xb8  smlal2  v19.4s, v21.8h, v6.8h    |   | | |
+    +0xbc  smlal   v20.4s, v22.4h, v6.4h    |   | | |
+    +0xc0  smlal2  v23.4s, v22.8h, v6.8h    |   | | |
+    +0xc4  mul     v2.4s, v16.4s, v0.4s     |   | | |
+    +0xc8  mul     v3.4s, v19.4s, v0.4s     |   | | |
+    +0xcc  mul     v4.4s, v20.4s, v0.4s     |   | | |
+    +0xd0  mul     v5.4s, v23.4s, v0.4s     |   | | |
+    +0xd4  sshr    v2.4s, v2.4s, #16        |   | | |
+    +0xd8  sshr    v3.4s, v3.4s, #16        |   | | |
+    +0xdc  mul     v2.4s, v2.4s, v1.4s      |   | | |
+    +0xe0  sshr    v4.4s, v4.4s, #16        |   | | |
+    +0xe4  mul     v3.4s, v3.4s, v1.4s      |   | | |
+    +0xe8  addhn   v6.4h, v2.4s, v16.4s     |   | | |
+    +0xec  mul     v2.4s, v4.4s, v1.4s      |   | | |
+    +0xf0  sshr    v4.4s, v5.4s, #16        |   | | |
+    +0xf4  addhn2  v6.8h, v3.4s, v19.4s     |   | | |
+    +0xf8  mul     v3.4s, v4.4s, v1.4s      |   | | |
+    +0xfc  addhn   v7.4h, v2.4s, v20.4s     |   | | |
+   +0x100  addhn2  v7.8h, v3.4s, v23.4s     |   | | |
+  loop1_test:                               |   | | |
+   +0x104  st2     {v6.8h-v7.8h}, [x10]     |   | | |
+  loop1_back:                               |   | | |
+   +0x108  b.ne    loop1                   -+   | | |
+  loop1_exit:                                   | | |
+   +0x10c  b       join2                   ---+ | | |
+  join1:                                      | | | |
+   +0x110  mov     x8, xzr                 <----+-+-+
+   +0x114  mov     w9, #0xf3010000            |
+   +0x118  add     x10, x3, #0x100            |
+   +0x11c  mov     w11, #0xfffff2ff           |
+  loop2:                                      |
+   +0x120  add     x12, x1, x8             <+ |
+   +0x124  add     x14, x2, x8              | |
+   +0x128  ldursh  w13, [x10, #-256]        | |
+   +0x12c  ldrsh   w15, [x10]               | |
+   +0x130  add     x10, x10, #0x2           | |
+   +0x134  ldrsh   w16, [x12, #2]           | |
+   +0x138  ldrsh   w17, [x14]               | |
+   +0x13c  ldrsh   w18, [x12]               | |
+   +0x140  ldrsh   w3, [x14, #2]            | |
+   +0x144  mul     w13, w13, w16            | |
+   +0x148  mul     w16, w17, w16            | |
+   +0x14c  ldrsh   w4, [x12, #514]          | |
+   +0x150  madd    w13, w17, w18, w13       | |
+   +0x154  ldrsh   w17, [x14, #512]         | |
+   +0x158  madd    w16, w3, w18, w16        | |
+   +0x15c  ldrsh   w12, [x12, #512]         | |
+   +0x160  ldrsh   w14, [x14, #514]         | |
+   +0x164  madd    w13, w15, w4, w13        | |
+   +0x168  madd    w15, w17, w4, w16        | |
+   +0x16c  madd    w13, w17, w12, w13       | |
+   +0x170  madd    w12, w14, w12, w15       | |
+   +0x174  mul     w14, w13, w9             | |
+   +0x178  mul     w15, w12, w9             | |
+   +0x17c  asr     w14, w14, #16            | |
+   +0x180  asr     w15, w15, #16            | |
+   +0x184  madd    w13, w14, w11, w13       | |
+   +0x188  add     x14, x0, x8              | |
+   +0x18c  madd    w12, w15, w11, w12       | |
+   +0x190  add     x8, x8, #0x4             | |
+   +0x194  lsr     w13, w13, #16            | |
+   +0x198  cmp     x8, #0x200               | |
+   +0x19c  lsr     w12, w12, #16            | |
+   +0x1a0  strh    w13, [x14]               | |
+  loop2_test:                               | |
+   +0x1a4  strh    w12, [x14, #2]           | |
+  loop2_back:                               | |
+   +0x1a8  b.ne    loop2                   -+ |
+  join2: loop2_exit: ret:                     |
+   +0x1ac  ret                             <--+
+ ***)
+
+(*** mlkem512_polyvec_mulcache_compute: 0x834c, 0x28 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_mulcache_compute
+  after_mlkem_poly_mulcache_compute:
+    +0x14  add     x0, x20, #0x100
+    +0x18  add     x1, x19, #0x200
+    +0x1c  ldp     x20, x19, [sp, #16]
+    +0x20  ldr     x30, [sp], #32
+    +0x24  b       mlkem_poly_mulcache_compute
+ ***)
+
+(*** mlkem512_polyvec_reduce: 0x8374, 0x18 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce:
+     +0xc  add     x0, x19, #0x200
+    +0x10  ldp     x30, x19, [sp], #16
+    +0x14  b       mlkem_poly_reduce
+ ***)
+
+(*** mlkem512_polyvec_add: 0x838c, 0x28 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_add
+  after_mlkem_poly_add:
+    +0x14  add     x0, x20, #0x200
+    +0x18  add     x1, x19, #0x200
+    +0x1c  ldp     x20, x19, [sp, #16]
+    +0x20  ldr     x30, [sp], #32
+    +0x24  b       mlkem_poly_add
+ ***)
+
+(*** mlkem512_polyvec_tomont: 0x83b4, 0x18 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_tomont
+  after_mlkem_poly_tomont:
+     +0xc  add     x0, x19, #0x200
+    +0x10  ldp     x30, x19, [sp], #16
+    +0x14  b       mlkem_poly_tomont
+ ***)
+
+(*** mlkem512_poly_getnoise_eta1_4x: 0x83cc, 0x160 bytes
+
+     +0x0  stp     x29, x30, [sp, #-80]!
+     +0x4  stp     x28, x25, [sp, #16]
+     +0x8  stp     x24, x23, [sp, #32]
+     +0xc  stp     x22, x21, [sp, #48]
+    +0x10  stp     x20, x19, [sp, #64]
+    +0x14  mov     x29, sp
+    +0x18  sub     x9, sp, #0x430
+    +0x1c  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x20  adrp    x8, <page>
+    +0x24  ldrb    w10, [x29, #80]
+    +0x28  add     x11, sp, #0x20
+    +0x2c  add     x12, sp, #0x120
+    +0x30  add     x9, x11, #0x80
+    +0x34  add     x24, x12, #0xc0
+    +0x38  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x3c  add     x25, x12, #0x180
+    +0x40  add     x20, x12, #0x240
+    +0x44  mov     x19, x3
+    +0x48  mov     x21, x2
+    +0x4c  mov     x22, x1
+    +0x50  ldr     x8, [x8]
+    +0x54  mov     x23, x0
+    +0x58  add     x0, sp, #0x120
+    +0x5c  mov     x1, x24
+    +0x60  mov     x2, x25
+    +0x64  mov     x3, x20
+    +0x68  str     x8, [sp, #1064]
+    +0x6c  add     x8, x11, #0x40
+    +0x70  ldp     q0, q1, [x4]
+    +0x74  strb    w5, [sp, #64]
+    +0x78  add     x11, x11, #0xc0
+    +0x7c  strb    w6, [sp, #128]
+    +0x80  add     x5, sp, #0x20
+    +0x84  strb    w7, [sp, #192]
+    +0x88  mov     w4, #0xc0
+    +0x8c  strb    w10, [sp, #256]
+    +0x90  mov     w10, #0x21
+    +0x94  mov     x6, x8
+    +0x98  mov     x7, x9
+    +0x9c  stp     q0, q1, [sp, #32]
+    +0xa0  str     q0, [sp, #96]
+    +0xa4  str     q1, [sp, #112]
+    +0xa8  stp     q0, q1, [sp, #160]
+    +0xac  stp     q0, q1, [sp, #224]
+    +0xb0  stp     x11, x10, [sp]
+    +0xb4  bl      mlkem_shake256x4
+  after_mlkem_shake256x4:
+    +0xb8  add     x1, sp, #0x120
+    +0xbc  mov     x0, x23
+    +0xc0  bl      mlkem_poly_cbd3
+  after_mlkem_poly_cbd3_1:
+    +0xc4  mov     x0, x22
+    +0xc8  mov     x1, x24
+    +0xcc  bl      mlkem_poly_cbd3
+  after_mlkem_poly_cbd3_2:
+    +0xd0  mov     x0, x21
+    +0xd4  mov     x1, x25
+    +0xd8  bl      mlkem_poly_cbd3
+  after_mlkem_poly_cbd3_3:
+    +0xdc  cbz     x19, join1                   -+
+    +0xe0  mov     x0, x19                       |
+    +0xe4  mov     x1, x20                       |
+    +0xe8  bl      mlkem_poly_cbd3               |
+  join1: after_mlkem_poly_cbd3_4:                |
+    +0xec  add     x0, sp, #0x120               <+
+    +0xf0  mov     w1, wzr
+    +0xf4  mov     w2, #0x300
+    +0xf8  add     x19, sp, #0x120
+    +0xfc  bl      memset
+  after_memset:
+   +0x100  movi    v0.2d, #0x0
+   +0x104  add     x8, sp, #0x20
+   +0x108  stp     q0, q0, [sp, #32]
+   +0x10c  stp     q0, q0, [sp, #64]
+   +0x110  stp     q0, q0, [sp, #96]
+   +0x114  stp     q0, q0, [sp, #128]
+   +0x118  stp     q0, q0, [sp, #160]
+   +0x11c  stp     q0, q0, [sp, #192]
+   +0x120  stp     q0, q0, [sp, #224]
+   +0x124  stp     q0, q0, [sp, #256]
+  adrp2:
+   +0x128  adrp    x8, <page>
+   +0x12c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x130  ldr     x9, [sp, #1064]
+   +0x134  ldr     x8, [x8]
+   +0x138  cmp     x8, x9
+   +0x13c  b.ne    +0x15c                       -+
+   +0x140  mov     sp, x29                       |
+   +0x144  ldp     x20, x19, [sp, #64]           |
+   +0x148  ldp     x22, x21, [sp, #48]           |
+   +0x14c  ldp     x24, x23, [sp, #32]           |
+   +0x150  ldp     x28, x25, [sp, #16]           |
+   +0x154  ldp     x29, x30, [sp], #80           |
+  ret:                                           |
+   +0x158  ret                                   |
+   +0x15c  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem512_poly_getnoise_eta2: 0x852c, 0xac bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  stp     x28, x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0xd0
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x19, x0
+    +0x20  add     x0, sp, #0x40
+    +0x24  mov     w3, #0x21
+    +0x28  add     x20, sp, #0x40
+    +0x2c  mov     x21, sp
+    +0x30  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x34  ldr     x8, [x8]
+    +0x38  str     x8, [sp, #200]
+    +0x3c  ldp     q0, q1, [x1]
+    +0x40  strb    w2, [sp, #32]
+    +0x44  mov     x2, sp
+    +0x48  mov     w1, #0x80
+    +0x4c  stp     q0, q1, [sp]
+    +0x50  bl      mlkem_shake256
+  after_mlkem_shake256:
+    +0x54  add     x1, sp, #0x40
+    +0x58  mov     x0, x19
+    +0x5c  bl      mlkem_poly_cbd2
+  after_mlkem_poly_cbd2:
+    +0x60  movi    v0.2d, #0x0
+  adrp2:
+    +0x64  adrp    x8, <page>
+    +0x68  stp     q0, q0, [sp, #64]
+    +0x6c  stp     q0, q0, [sp, #96]
+    +0x70  stp     q0, q0, [sp, #128]
+    +0x74  stp     q0, q0, [sp, #160]
+    +0x78  strb    wzr, [sp, #32]
+    +0x7c  stp     q0, q0, [sp]
+    +0x80  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x84  ldr     x9, [sp, #200]
+    +0x88  ldr     x8, [x8]
+    +0x8c  cmp     x8, x9
+    +0x90  b.ne    +0xa8                        -+
+    +0x94  mov     sp, x29                       |
+    +0x98  ldp     x20, x19, [sp, #32]           |
+    +0x9c  ldp     x28, x21, [sp, #16]           |
+    +0xa0  ldp     x29, x30, [sp], #48           |
+  ret:                                           |
+    +0xa4  ret                                   |
+    +0xa8  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem512_poly_getnoise_eta1122_4x: 0x85d8, 0x15c bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  stp     x28, x27, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0x440
+    +0x20  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x24  adrp    x8, <page>
+    +0x28  ldrb    w10, [x29, #96]
+    +0x2c  add     x26, sp, #0x20
+    +0x30  add     x27, sp, #0x120
+    +0x34  add     x9, x26, #0x80
+    +0x38  add     x23, x27, #0xc0
+    +0x3c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x40  add     x24, x27, #0x180
+    +0x44  add     x25, x27, #0x240
+    +0x48  mov     x19, x3
+    +0x4c  mov     x20, x2
+    +0x50  mov     x21, x1
+    +0x54  ldr     x8, [x8]
+    +0x58  mov     x22, x0
+    +0x5c  add     x11, x26, #0xc0
+    +0x60  add     x0, sp, #0x120
+    +0x64  mov     x1, x23
+    +0x68  mov     x2, x24
+    +0x6c  str     x8, [sp, #1080]
+    +0x70  add     x8, x26, #0x40
+    +0x74  ldp     q0, q1, [x4]
+    +0x78  strb    w5, [sp, #64]
+    +0x7c  add     x5, sp, #0x20
+    +0x80  strb    w6, [sp, #128]
+    +0x84  mov     x3, x25
+    +0x88  strb    w7, [sp, #192]
+    +0x8c  mov     w4, #0xc0
+    +0x90  strb    w10, [sp, #256]
+    +0x94  mov     w10, #0x21
+    +0x98  mov     x6, x8
+    +0x9c  mov     x7, x9
+    +0xa0  stp     q0, q1, [sp, #32]
+    +0xa4  str     q0, [sp, #96]
+    +0xa8  str     q1, [sp, #112]
+    +0xac  stp     q0, q1, [sp, #160]
+    +0xb0  stp     q0, q1, [sp, #224]
+    +0xb4  stp     x11, x10, [sp]
+    +0xb8  bl      mlkem_shake256x4
+  after_mlkem_shake256x4:
+    +0xbc  add     x1, sp, #0x120
+    +0xc0  mov     x0, x22
+    +0xc4  bl      mlkem_poly_cbd3
+  after_mlkem_poly_cbd3_1:
+    +0xc8  mov     x0, x21
+    +0xcc  mov     x1, x23
+    +0xd0  bl      mlkem_poly_cbd3
+  after_mlkem_poly_cbd3_2:
+    +0xd4  mov     x0, x20
+    +0xd8  mov     x1, x24
+    +0xdc  bl      mlkem_poly_cbd2
+  after_mlkem_poly_cbd2_1:
+    +0xe0  mov     x0, x19
+    +0xe4  mov     x1, x25
+    +0xe8  bl      mlkem_poly_cbd2
+  after_mlkem_poly_cbd2_2:
+    +0xec  add     x0, sp, #0x120
+    +0xf0  mov     w1, wzr
+    +0xf4  mov     w2, #0x300
+    +0xf8  bl      memset
+  after_memset:
+    +0xfc  movi    v0.2d, #0x0
+  adrp2:
+   +0x100  adrp    x8, <page>
+   +0x104  stp     q0, q0, [sp, #32]
+   +0x108  stp     q0, q0, [sp, #64]
+   +0x10c  stp     q0, q0, [sp, #96]
+   +0x110  stp     q0, q0, [sp, #128]
+   +0x114  stp     q0, q0, [sp, #160]
+   +0x118  stp     q0, q0, [sp, #192]
+   +0x11c  stp     q0, q0, [sp, #224]
+   +0x120  stp     q0, q0, [sp, #256]
+   +0x124  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x128  ldr     x9, [sp, #1080]
+   +0x12c  ldr     x8, [x8]
+   +0x130  cmp     x8, x9
+   +0x134  b.ne    +0x158                       -+
+   +0x138  mov     sp, x29                       |
+   +0x13c  ldp     x20, x19, [sp, #80]           |
+   +0x140  ldp     x22, x21, [sp, #64]           |
+   +0x144  ldp     x24, x23, [sp, #48]           |
+   +0x148  ldp     x26, x25, [sp, #32]           |
+   +0x14c  ldp     x28, x27, [sp, #16]           |
+   +0x150  ldp     x29, x30, [sp], #96           |
+  ret:                                           |
+   +0x154  ret                                   |
+   +0x158  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem_poly_rej_uniform_x4: 0x8734, 0x534 bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  stp     x28, x27, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0xb80
+    +0x20  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x24  adrp    x8, <page>
+    +0x28  mov     x22, x0
+    +0x2c  add     x0, sp, #0x40
+    +0x30  mov     x23, x4
+    +0x34  mov     x19, x3
+    +0x38  mov     x20, x2
+    +0x3c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x40  mov     x21, x1
+    +0x44  ldr     x8, [x8]
+    +0x48  str     x8, [sp, #2936]
+    +0x4c  bl      mlkem_shake128x4_init
+  after_mlkem_shake128x4_init:
+    +0x50  add     x2, x23, #0x40
+    +0x54  add     x3, x23, #0x80
+    +0x58  add     x4, x23, #0xc0
+    +0x5c  add     x0, sp, #0x40
+    +0x60  mov     x1, x23
+    +0x64  mov     w5, #0x22
+    +0x68  bl      mlkem_shake128x4_absorb_once
+  after_mlkem_shake128x4_absorb_once:
+    +0x6c  add     x23, sp, #0x360
+    +0x70  add     x0, sp, #0x360
+    +0x74  add     x1, x23, #0x200
+    +0x78  add     x2, x23, #0x400
+    +0x7c  add     x3, x23, #0x600
+    +0x80  add     x5, sp, #0x40
+    +0x84  mov     w4, #0x3
+    +0x88  stp     x2, x1, [sp, #40]
+    +0x8c  str     x3, [sp, #32]
+    +0x90  bl      mlkem_shake128x4_squeezeblocks
+  after_mlkem_shake128x4_squeezeblocks_1:
+    +0x94  mov     x8, xzr
+    +0x98  mov     x26, xzr
+  loop1:
+    +0x9c  add     x9, x23, x8                     <----+
+    +0xa0  ldrb    w11, [x9]                            |
+    +0xa4  ldrb    w10, [x9, #1]                        |
+    +0xa8  bfi     w11, w10, #8, #4                     |
+    +0xac  cmp     w11, #0xd00                          |
+    +0xb0  b.hi    join1                           -+   |
+    +0xb4  add     x12, x26, #0x1                   |   |
+    +0xb8  strh    w11, [x22, x26, lsl #1]          |   |
+    +0xbc  mov     x26, x12                         |   |
+  join1:                                            |   |
+    +0xc0  cmp     x26, #0xff                      <+   |
+    +0xc4  b.hi    join2                           ---+ |
+    +0xc8  ldrb    w9, [x9, #2]                       | |
+    +0xcc  lsr     w10, w10, #4                       | |
+    +0xd0  orr     w9, w10, w9, lsl #4                | |
+    +0xd4  cmp     w9, #0xd00                         | |
+    +0xd8  b.hi    join2                           -+ | |
+    +0xdc  add     x10, x26, #0x1                   | | |
+    +0xe0  strh    w9, [x22, x26, lsl #1]           | | |
+    +0xe4  mov     x26, x10                         | | |
+  join2:                                            | | |
+    +0xe8  cmp     x26, #0x100                     <+-+ |
+    +0xec  cset    w16, cc                              |
+  loop1_test1:                                          |
+    +0xf0  cmp     x26, #0xff                           |
+    +0xf4  b.hi    join3                           -+   |
+  loop1_next1:                                      |   |
+    +0xf8  add     x9, x8, #0x3                     |   |
+    +0xfc  add     x8, x8, #0x3                     |   |
+  loop1_test2:                                      |   |
+   +0x100  cmp     x9, #0x1f6                       |   |
+  loop1_back:                                       |   |
+   +0x104  b.cc    loop1                           -----+
+  join3: loop1_exit:                                |
+   +0x108  mov     x8, xzr                         <+
+   +0x10c  mov     x27, xzr
+   +0x110  add     x9, sp, #0x360
+  loop2:
+   +0x114  add     x10, x9, x8                     <----+
+   +0x118  ldrb    w12, [x10, #512]                     |
+   +0x11c  ldrb    w11, [x10, #513]                     |
+   +0x120  bfi     w12, w11, #8, #4                     |
+   +0x124  cmp     w12, #0xd00                          |
+   +0x128  b.hi    join4                           -+   |
+   +0x12c  add     x13, x27, #0x1                   |   |
+   +0x130  strh    w12, [x21, x27, lsl #1]          |   |
+   +0x134  mov     x27, x13                         |   |
+  join4:                                            |   |
+   +0x138  cmp     x27, #0xff                      <+   |
+   +0x13c  b.hi    join5                           ---+ |
+   +0x140  ldrb    w10, [x10, #514]                   | |
+   +0x144  lsr     w11, w11, #4                       | |
+   +0x148  orr     w10, w11, w10, lsl #4              | |
+   +0x14c  cmp     w10, #0xd00                        | |
+   +0x150  b.hi    join5                           -+ | |
+   +0x154  add     x11, x27, #0x1                   | | |
+   +0x158  strh    w10, [x21, x27, lsl #1]          | | |
+   +0x15c  mov     x27, x11                         | | |
+  join5:                                            | | |
+   +0x160  cmp     x27, #0x100                     <+-+ |
+   +0x164  cset    w15, cc                              |
+  loop2_test1:                                          |
+   +0x168  cmp     x27, #0xff                           |
+   +0x16c  b.hi    join6                           -+   |
+  loop2_next1:                                      |   |
+   +0x170  add     x10, x8, #0x3                    |   |
+   +0x174  add     x8, x8, #0x3                     |   |
+  loop2_test2:                                      |   |
+   +0x178  cmp     x10, #0x1f6                      |   |
+  loop2_back:                                       |   |
+   +0x17c  b.cc    loop2                           -----+
+  join6: loop2_exit:                                |
+   +0x180  mov     x8, xzr                         <+
+   +0x184  mov     x28, xzr
+   +0x188  add     x9, sp, #0x360
+  loop3:
+   +0x18c  add     x10, x9, x8                     <----+
+   +0x190  ldrb    w12, [x10, #1024]                    |
+   +0x194  ldrb    w11, [x10, #1025]                    |
+   +0x198  bfi     w12, w11, #8, #4                     |
+   +0x19c  cmp     w12, #0xd00                          |
+   +0x1a0  b.hi    join7                           -+   |
+   +0x1a4  add     x13, x28, #0x1                   |   |
+   +0x1a8  strh    w12, [x20, x28, lsl #1]          |   |
+   +0x1ac  mov     x28, x13                         |   |
+  join7:                                            |   |
+   +0x1b0  cmp     x28, #0xff                      <+   |
+   +0x1b4  b.hi    join8                           ---+ |
+   +0x1b8  ldrb    w10, [x10, #1026]                  | |
+   +0x1bc  lsr     w11, w11, #4                       | |
+   +0x1c0  orr     w10, w11, w10, lsl #4              | |
+   +0x1c4  cmp     w10, #0xd00                        | |
+   +0x1c8  b.hi    join8                           -+ | |
+   +0x1cc  add     x11, x28, #0x1                   | | |
+   +0x1d0  strh    w10, [x20, x28, lsl #1]          | | |
+   +0x1d4  mov     x28, x11                         | | |
+  join8:                                            | | |
+   +0x1d8  cmp     x28, #0x100                     <+-+ |
+   +0x1dc  cset    w14, cc                              |
+  loop3_test1:                                          |
+   +0x1e0  cmp     x28, #0xff                           |
+   +0x1e4  b.hi    join9                           -+   |
+  loop3_next1:                                      |   |
+   +0x1e8  add     x10, x8, #0x3                    |   |
+   +0x1ec  add     x8, x8, #0x3                     |   |
+  loop3_test2:                                      |   |
+   +0x1f0  cmp     x10, #0x1f6                      |   |
+  loop3_back:                                       |   |
+   +0x1f4  b.cc    loop3                           -----+
+  join9: loop3_exit:                                |
+   +0x1f8  mov     x8, xzr                         <+
+   +0x1fc  mov     x23, xzr
+   +0x200  add     x9, sp, #0x360
+  loop4:
+   +0x204  add     x10, x9, x8                     <----+
+   +0x208  ldrb    w12, [x10, #1536]                    |
+   +0x20c  ldrb    w11, [x10, #1537]                    |
+   +0x210  bfi     w12, w11, #8, #4                     |
+   +0x214  cmp     w12, #0xd00                          |
+   +0x218  b.hi    join10                          -+   |
+   +0x21c  add     x13, x23, #0x1                   |   |
+   +0x220  strh    w12, [x19, x23, lsl #1]          |   |
+   +0x224  mov     x23, x13                         |   |
+  join10:                                           |   |
+   +0x228  cmp     x23, #0xff                      <+   |
+   +0x22c  b.hi    join11                          ---+ |
+   +0x230  ldrb    w10, [x10, #1538]                  | |
+   +0x234  lsr     w11, w11, #4                       | |
+   +0x238  orr     w10, w11, w10, lsl #4              | |
+   +0x23c  cmp     w10, #0xd00                        | |
+   +0x240  b.hi    join11                          -+ | |
+   +0x244  add     x11, x23, #0x1                   | | |
+   +0x248  strh    w10, [x19, x23, lsl #1]          | | |
+   +0x24c  mov     x23, x11                         | | |
+  join11:                                           | | |
+   +0x250  cmp     x23, #0x100                     <+-+ |
+   +0x254  cset    w25, cc                              |
+  loop4_test1:                                          |
+   +0x258  cmp     x23, #0xff                           |
+   +0x25c  b.hi    join12                          -+   |
+  loop4_next1:                                      |   |
+   +0x260  add     x10, x8, #0x3                    |   |
+   +0x264  add     x8, x8, #0x3                     |   |
+  loop4_test2:                                      |   |
+   +0x268  cmp     x10, #0x1f6                      |   |
+  loop4_back:                                       |   |
+   +0x26c  b.cc    loop4                           -----+
+  join12: loop4_exit:                               |
+   +0x270  cmp     x26, #0x100                     <+
+   +0x274  str     x21, [sp, #24]
+   +0x278  b.cc    join13                          -----+
+   +0x27c  cmp     x27, #0x100                          |
+   +0x280  b.cc    join13                          ---+ |
+   +0x284  cmp     x28, #0x100                        | |
+   +0x288  b.cc    join13                          -+ | |
+   +0x28c  cmp     x23, #0xff                       | | |
+   +0x290  b.hi    join26                          -------------------+
+  join13:                                           | | |             |
+   +0x294  add     x24, sp, #0x360                 <+-+-+             |
+   +0x298  str     x22, [sp, #16]                                     |
+  loop5:                                                              |
+   +0x29c  ldp     x2, x1, [sp, #40]               <----------+-+-+-+ |
+   +0x2a0  add     x0, sp, #0x360                             | | | | |
+   +0x2a4  add     x5, sp, #0x40                              | | | | |
+   +0x2a8  ldr     x3, [sp, #32]                              | | | | |
+   +0x2ac  mov     w4, #0x1                                   | | | | |
+   +0x2b0  str     w15, [sp, #60]                             | | | | |
+   +0x2b4  mov     x21, x20                                   | | | | |
+   +0x2b8  mov     x20, x19                                   | | | | |
+   +0x2bc  mov     w19, w14                                   | | | | |
+   +0x2c0  mov     w22, w16                                   | | | | |
+   +0x2c4  bl      mlkem_shake128x4_squeezeblocks             | | | | |
+  after_mlkem_shake128x4_squeezeblocks_2:                     | | | | |
+   +0x2c8  tbz     w22, #0, +0x348                 -------+   | | | | |
+   +0x2cc  ldp     x22, x15, [sp, #16]                    |   | | | | |
+   +0x2d0  mov     x8, xzr                                |   | | | | |
+   +0x2d4  mov     w14, w19                               |   | | | | |
+   +0x2d8  mov     x19, x20                               |   | | | | |
+   +0x2dc  mov     x20, x21                               |   | | | | |
+  loop6:                                                  |   | | | | |
+   +0x2e0  add     x9, x24, x8                     <----+ |   | | | | |
+   +0x2e4  ldrb    w11, [x9]                            | |   | | | | |
+   +0x2e8  ldrb    w10, [x9, #1]                        | |   | | | | |
+   +0x2ec  bfi     w11, w10, #8, #4                     | |   | | | | |
+   +0x2f0  cmp     w11, #0xd00                          | |   | | | | |
+   +0x2f4  b.hi    join14                          -+   | |   | | | | |
+   +0x2f8  add     x12, x26, #0x1                   |   | |   | | | | |
+   +0x2fc  strh    w11, [x22, x26, lsl #1]          |   | |   | | | | |
+   +0x300  mov     x26, x12                         |   | |   | | | | |
+  join14:                                           |   | |   | | | | |
+   +0x304  cmp     x26, #0xff                      <+   | |   | | | | |
+   +0x308  b.hi    join15                          ---+ | |   | | | | |
+   +0x30c  ldrb    w9, [x9, #2]                       | | |   | | | | |
+   +0x310  lsr     w10, w10, #4                       | | |   | | | | |
+   +0x314  orr     w9, w10, w9, lsl #4                | | |   | | | | |
+   +0x318  cmp     w9, #0xd00                         | | |   | | | | |
+   +0x31c  b.hi    join15                          -+ | | |   | | | | |
+   +0x320  add     x10, x26, #0x1                   | | | |   | | | | |
+   +0x324  strh    w9, [x22, x26, lsl #1]           | | | |   | | | | |
+   +0x328  mov     x26, x10                         | | | |   | | | | |
+  join15: loop6_test1:                              | | | |   | | | | |
+   +0x32c  cmp     x26, #0xff                      <+-+ | |   | | | | |
+   +0x330  b.hi    join16                          ---+ | |   | | | | |
+  loop6_next1:                                        | | |   | | | | |
+   +0x334  add     x9, x8, #0x3                       | | |   | | | | |
+   +0x338  add     x8, x8, #0x3                       | | |   | | | | |
+  loop6_test2:                                        | | |   | | | | |
+   +0x33c  cmp     x9, #0xa6                          | | |   | | | | |
+  loop6_back:                                         | | |   | | | | |
+   +0x340  b.cc    loop6                           -----+ |   | | | | |
+  loop6_exit1:                                        |   |   | | | | |
+   +0x344  b       join16                          -+ |   |   | | | | |
+   +0x348  ldr     x15, [sp, #24]                  <------+   | | | | |
+   +0x34c  mov     w14, w19                         | |       | | | | |
+   +0x350  mov     x19, x20                         | |       | | | | |
+   +0x354  mov     x20, x21                         | |       | | | | |
+  join16: loop6_exit2:                              | |       | | | | |
+   +0x358  ldr     w8, [sp, #60]                   <+-+       | | | | |
+   +0x35c  tbz     w8, #0, join19                  -------+   | | | | |
+   +0x360  mov     x8, xzr                                |   | | | | |
+  loop7:                                                  |   | | | | |
+   +0x364  add     x9, x24, x8                     <----+ |   | | | | |
+   +0x368  ldrb    w11, [x9, #512]                      | |   | | | | |
+   +0x36c  ldrb    w10, [x9, #513]                      | |   | | | | |
+   +0x370  bfi     w11, w10, #8, #4                     | |   | | | | |
+   +0x374  cmp     w11, #0xd00                          | |   | | | | |
+   +0x378  b.hi    join17                          -+   | |   | | | | |
+   +0x37c  add     x12, x27, #0x1                   |   | |   | | | | |
+   +0x380  strh    w11, [x15, x27, lsl #1]          |   | |   | | | | |
+   +0x384  mov     x27, x12                         |   | |   | | | | |
+  join17:                                           |   | |   | | | | |
+   +0x388  cmp     x27, #0xff                      <+   | |   | | | | |
+   +0x38c  b.hi    join18                          ---+ | |   | | | | |
+   +0x390  ldrb    w9, [x9, #514]                     | | |   | | | | |
+   +0x394  lsr     w10, w10, #4                       | | |   | | | | |
+   +0x398  orr     w9, w10, w9, lsl #4                | | |   | | | | |
+   +0x39c  cmp     w9, #0xd00                         | | |   | | | | |
+   +0x3a0  b.hi    join18                          -+ | | |   | | | | |
+   +0x3a4  add     x10, x27, #0x1                   | | | |   | | | | |
+   +0x3a8  strh    w9, [x15, x27, lsl #1]           | | | |   | | | | |
+   +0x3ac  mov     x27, x10                         | | | |   | | | | |
+  join18: loop7_test1:                              | | | |   | | | | |
+   +0x3b0  cmp     x27, #0xff                      <+-+ | |   | | | | |
+   +0x3b4  b.hi    join19                          -+   | |   | | | | |
+  loop7_next1:                                      |   | |   | | | | |
+   +0x3b8  add     x9, x8, #0x3                     |   | |   | | | | |
+   +0x3bc  add     x8, x8, #0x3                     |   | |   | | | | |
+  loop7_test2:                                      |   | |   | | | | |
+   +0x3c0  cmp     x9, #0xa6                        |   | |   | | | | |
+  loop7_back:                                       |   | |   | | | | |
+   +0x3c4  b.cc    loop7                           -----+ |   | | | | |
+  join19: loop7_exit:                               |     |   | | | | |
+   +0x3c8  tbz     w14, #0, join22                 <+-----+-+ | | | | |
+   +0x3cc  mov     x8, xzr                                  | | | | | |
+  loop8:                                                    | | | | | |
+   +0x3d0  add     x9, x24, x8                     <----+   | | | | | |
+   +0x3d4  ldrb    w11, [x9, #1024]                     |   | | | | | |
+   +0x3d8  ldrb    w10, [x9, #1025]                     |   | | | | | |
+   +0x3dc  bfi     w11, w10, #8, #4                     |   | | | | | |
+   +0x3e0  cmp     w11, #0xd00                          |   | | | | | |
+   +0x3e4  b.hi    join20                          -+   |   | | | | | |
+   +0x3e8  add     x12, x28, #0x1                   |   |   | | | | | |
+   +0x3ec  strh    w11, [x20, x28, lsl #1]          |   |   | | | | | |
+   +0x3f0  mov     x28, x12                         |   |   | | | | | |
+  join20:                                           |   |   | | | | | |
+   +0x3f4  cmp     x28, #0xff                      <+   |   | | | | | |
+   +0x3f8  b.hi    join21                          ---+ |   | | | | | |
+   +0x3fc  ldrb    w9, [x9, #1026]                    | |   | | | | | |
+   +0x400  lsr     w10, w10, #4                       | |   | | | | | |
+   +0x404  orr     w9, w10, w9, lsl #4                | |   | | | | | |
+   +0x408  cmp     w9, #0xd00                         | |   | | | | | |
+   +0x40c  b.hi    join21                          -+ | |   | | | | | |
+   +0x410  add     x10, x28, #0x1                   | | |   | | | | | |
+   +0x414  strh    w9, [x20, x28, lsl #1]           | | |   | | | | | |
+   +0x418  mov     x28, x10                         | | |   | | | | | |
+  join21: loop8_test1:                              | | |   | | | | | |
+   +0x41c  cmp     x28, #0xff                      <+-+ |   | | | | | |
+   +0x420  b.hi    join22                          -+   |   | | | | | |
+  loop8_next1:                                      |   |   | | | | | |
+   +0x424  add     x9, x8, #0x3                     |   |   | | | | | |
+   +0x428  add     x8, x8, #0x3                     |   |   | | | | | |
+  loop8_test2:                                      |   |   | | | | | |
+   +0x42c  cmp     x9, #0xa6                        |   |   | | | | | |
+  loop8_back:                                       |   |   | | | | | |
+   +0x430  b.cc    loop8                           -----+   | | | | | |
+  join22: loop8_exit:                               |       | | | | | |
+   +0x434  tbz     w25, #0, join25                 <+-----+-+ | | | | |
+   +0x438  mov     x8, xzr                                |   | | | | |
+  loop9:                                                  |   | | | | |
+   +0x43c  add     x9, x24, x8                     <----+ |   | | | | |
+   +0x440  ldrb    w11, [x9, #1536]                     | |   | | | | |
+   +0x444  ldrb    w10, [x9, #1537]                     | |   | | | | |
+   +0x448  bfi     w11, w10, #8, #4                     | |   | | | | |
+   +0x44c  cmp     w11, #0xd00                          | |   | | | | |
+   +0x450  b.hi    join23                          -+   | |   | | | | |
+   +0x454  add     x12, x23, #0x1                   |   | |   | | | | |
+   +0x458  strh    w11, [x19, x23, lsl #1]          |   | |   | | | | |
+   +0x45c  mov     x23, x12                         |   | |   | | | | |
+  join23:                                           |   | |   | | | | |
+   +0x460  cmp     x23, #0xff                      <+   | |   | | | | |
+   +0x464  b.hi    join24                          ---+ | |   | | | | |
+   +0x468  ldrb    w9, [x9, #1538]                    | | |   | | | | |
+   +0x46c  lsr     w10, w10, #4                       | | |   | | | | |
+   +0x470  orr     w9, w10, w9, lsl #4                | | |   | | | | |
+   +0x474  cmp     w9, #0xd00                         | | |   | | | | |
+   +0x478  b.hi    join24                          -+ | | |   | | | | |
+   +0x47c  add     x10, x23, #0x1                   | | | |   | | | | |
+   +0x480  strh    w9, [x19, x23, lsl #1]           | | | |   | | | | |
+   +0x484  mov     x23, x10                         | | | |   | | | | |
+  join24: loop9_test1:                              | | | |   | | | | |
+   +0x488  cmp     x23, #0xff                      <+-+ | |   | | | | |
+   +0x48c  b.hi    join25                          -+   | |   | | | | |
+  loop9_next1:                                      |   | |   | | | | |
+   +0x490  add     x9, x8, #0x3                     |   | |   | | | | |
+   +0x494  add     x8, x8, #0x3                     |   | |   | | | | |
+  loop9_test2:                                      |   | |   | | | | |
+   +0x498  cmp     x9, #0xa6                        |   | |   | | | | |
+  loop9_back:                                       |   | |   | | | | |
+   +0x49c  b.cc    loop9                           -----+ |   | | | | |
+  join25: loop9_exit:                               |     |   | | | | |
+   +0x4a0  cmp     x27, #0x100                     <+-----+   | | | | |
+   +0x4a4  cset    w15, cc                                    | | | | |
+   +0x4a8  cmp     x28, #0x100                                | | | | |
+   +0x4ac  cset    w14, cc                                    | | | | |
+   +0x4b0  cmp     x23, #0x100                                | | | | |
+   +0x4b4  cset    w25, cc                                    | | | | |
+   +0x4b8  cmp     x26, #0x100                                | | | | |
+   +0x4bc  cset    w16, cc                                    | | | | |
+   +0x4c0  b.cc    loop5                           -----------+ | | | |
+   +0x4c4  cmp     x27, #0x100                                  | | | |
+   +0x4c8  b.cc    loop5                           -------------+ | | |
+   +0x4cc  cmp     x28, #0x100                                    | | |
+   +0x4d0  b.cc    loop5                           ---------------+ | |
+  loop5_test:                                                       | |
+   +0x4d4  cmp     x23, #0x100                                      | |
+   +0x4d8  b.cc    loop5                           -----------------+ |
+  join26: loop5_exit:                                                 |
+   +0x4dc  add     x0, sp, #0x40                   <------------------+
+   +0x4e0  bl      mlkem_shake128x4_release
+  after_mlkem_shake128x4_release:
+   +0x4e4  add     x0, sp, #0x360
+   +0x4e8  mov     w1, wzr
+   +0x4ec  mov     w2, #0x800
+   +0x4f0  add     x19, sp, #0x360
+   +0x4f4  bl      memset
+  after_memset: adrp2:
+   +0x4f8  adrp    x8, <page>
+   +0x4fc  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x500  ldr     x9, [sp, #2936]
+   +0x504  ldr     x8, [x8]
+   +0x508  cmp     x8, x9
+   +0x50c  b.ne    +0x530                          -+
+   +0x510  mov     sp, x29                          |
+   +0x514  ldp     x20, x19, [sp, #80]              |
+   +0x518  ldp     x22, x21, [sp, #64]              |
+   +0x51c  ldp     x24, x23, [sp, #48]              |
+   +0x520  ldp     x26, x25, [sp, #32]              |
+   +0x524  ldp     x28, x27, [sp, #16]              |
+   +0x528  ldp     x29, x30, [sp], #96              |
+  ret:                                              |
+   +0x52c  ret                                      |
+   +0x530  bl      stack_chk_fail                  <+
+ ***)
+
+(*** mlkem_poly_rej_uniform: 0x8c68, 0x1e0 bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  stp     x28, x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0x2f0
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x19, x0
+    +0x20  add     x0, sp, #0x200
+    +0x24  mov     x20, x1
+    +0x28  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x2c  ldr     x8, [x8]
+    +0x30  str     x8, [sp, #744]
+    +0x34  bl      mlkem_shake128_init
+  after_mlkem_shake128_init:
+    +0x38  add     x0, sp, #0x200
+    +0x3c  mov     x1, x20
+    +0x40  mov     w2, #0x22
+    +0x44  bl      mlkem_shake128_absorb_once
+  after_mlkem_shake128_absorb_once:
+    +0x48  mov     x0, sp
+    +0x4c  add     x2, sp, #0x200
+    +0x50  mov     w1, #0x3
+    +0x54  mov     x21, sp
+    +0x58  bl      mlkem_shake128_squeezeblocks
+  after_mlkem_shake128_squeezeblocks_1:
+    +0x5c  mov     x8, xzr
+    +0x60  mov     x20, xzr
+  loop1:
+    +0x64  add     x9, x21, x8                   <----+
+    +0x68  ldrb    w11, [x9]                          |
+    +0x6c  ldrb    w10, [x9, #1]                      |
+    +0x70  bfi     w11, w10, #8, #4                   |
+    +0x74  cmp     w11, #0xd00                        |
+    +0x78  b.hi    join1                         -+   |
+    +0x7c  add     x12, x20, #0x1                 |   |
+    +0x80  strh    w11, [x19, x20, lsl #1]        |   |
+    +0x84  mov     x20, x12                       |   |
+  join1:                                          |   |
+    +0x88  cmp     x20, #0xff                    <+   |
+    +0x8c  b.hi    join2                         ---+ |
+    +0x90  ldrb    w9, [x9, #2]                     | |
+    +0x94  lsr     w10, w10, #4                     | |
+    +0x98  orr     w9, w10, w9, lsl #4              | |
+    +0x9c  cmp     w9, #0xd00                       | |
+    +0xa0  b.hi    join2                         -+ | |
+    +0xa4  add     x10, x20, #0x1                 | | |
+    +0xa8  strh    w9, [x19, x20, lsl #1]         | | |
+    +0xac  mov     x20, x10                       | | |
+  join2: loop1_test1:                             | | |
+    +0xb0  cmp     x20, #0xff                    <+-+ |
+    +0xb4  b.hi    join3                         -+   |
+  loop1_next1:                                    |   |
+    +0xb8  add     x9, x8, #0x3                   |   |
+    +0xbc  add     x8, x8, #0x3                   |   |
+  loop1_test2:                                    |   |
+    +0xc0  cmp     x9, #0x1f6                     |   |
+  loop1_back:                                     |   |
+    +0xc4  b.cc    loop1                         -----+
+  join3: loop1_exit:                              |
+    +0xc8  cmp     x20, #0xff                    <+
+    +0xcc  b.hi    join7                         -------------+
+    +0xd0  mov     x21, sp                                    |
+    +0xd4  b       loop2                         -+           |
+  join4: loop3_exit1: loop2_test:                 |           |
+    +0xd8  cmp     x20, #0x100                   <------+---+ |
+  loop2_back:                                     |     |   | |
+    +0xdc  b.cs    join7                         ---------+ | |
+  loop2: loop2_next:                              |     | | | |
+    +0xe0  mov     x0, sp                        <+     | | | |
+    +0xe4  add     x2, sp, #0x200                       | | | |
+    +0xe8  mov     w1, #0x1                             | | | |
+    +0xec  bl      mlkem_shake128_squeezeblocks         | | | |
+  after_mlkem_shake128_squeezeblocks_2:                 | | | |
+    +0xf0  mov     x8, xzr                              | | | |
+  loop3:                                                | | | |
+    +0xf4  add     x10, x21, x8                  <----+ | | | |
+    +0xf8  ldrb    w11, [x10]                         | | | | |
+    +0xfc  ldrb    w9, [x10, #1]                      | | | | |
+   +0x100  ldrb    w10, [x10, #2]                     | | | | |
+   +0x104  bfi     w11, w9, #8, #4                    | | | | |
+   +0x108  cmp     w11, #0xd00                        | | | | |
+   +0x10c  b.hi    join5                         -+   | | | | |
+   +0x110  add     x12, x20, #0x1                 |   | | | | |
+   +0x114  strh    w11, [x19, x20, lsl #1]        |   | | | | |
+   +0x118  mov     x20, x12                       |   | | | | |
+  join5:                                          |   | | | | |
+   +0x11c  cmp     x20, #0xff                    <+   | | | | |
+   +0x120  b.hi    join6                         ---+ | | | | |
+   +0x124  lsr     w9, w9, #4                       | | | | | |
+   +0x128  orr     w9, w9, w10, lsl #4              | | | | | |
+   +0x12c  cmp     w9, #0xd00                       | | | | | |
+   +0x130  b.hi    join6                         -+ | | | | | |
+   +0x134  add     x10, x20, #0x1                 | | | | | | |
+   +0x138  strh    w9, [x19, x20, lsl #1]         | | | | | | |
+   +0x13c  mov     x20, x10                       | | | | | | |
+  join6: loop3_test1:                             | | | | | | |
+   +0x140  cmp     x20, #0xff                    <+-+ | | | | |
+   +0x144  b.hi    join4                         -------+ | | |
+  loop3_next1:                                        |   | | |
+   +0x148  add     x9, x8, #0x3                       |   | | |
+   +0x14c  add     x8, x8, #0x3                       |   | | |
+  loop3_test2:                                        |   | | |
+   +0x150  cmp     x9, #0xa6                          |   | | |
+  loop3_back:                                         |   | | |
+   +0x154  b.cc    loop3                         -----+   | | |
+  loop3_exit2:                                            | | |
+   +0x158  b       join4                         -----------+ |
+  join7: loop2_exit:                                      |   |
+   +0x15c  add     x0, sp, #0x200                <--------+---+
+   +0x160  bl      mlkem_shake128_release
+  after_mlkem_shake128_release:
+   +0x164  movi    v0.2d, #0x0
+   +0x168  str     xzr, [sp, #496]
+   +0x16c  mov     x8, sp
+   +0x170  stp     q0, q0, [sp, #16]
+   +0x174  stp     q0, q0, [sp, #48]
+   +0x178  stp     q0, q0, [sp, #80]
+   +0x17c  stp     q0, q0, [sp, #112]
+   +0x180  stp     q0, q0, [sp, #144]
+   +0x184  stp     q0, q0, [sp, #176]
+   +0x188  stp     q0, q0, [sp, #208]
+   +0x18c  stp     q0, q0, [sp, #240]
+   +0x190  stp     q0, q0, [sp, #272]
+   +0x194  stp     q0, q0, [sp, #304]
+   +0x198  stp     q0, q0, [sp, #336]
+   +0x19c  stp     q0, q0, [sp, #368]
+   +0x1a0  stp     q0, q0, [sp, #400]
+   +0x1a4  stp     q0, q0, [sp, #432]
+   +0x1a8  stp     q0, q0, [sp, #464]
+   +0x1ac  str     q0, [sp]
+  adrp2:
+   +0x1b0  adrp    x8, <page>
+   +0x1b4  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x1b8  ldr     x9, [sp, #744]
+   +0x1bc  ldr     x8, [x8]
+   +0x1c0  cmp     x8, x9
+   +0x1c4  b.ne    +0x1dc                        -+
+   +0x1c8  mov     sp, x29                        |
+   +0x1cc  ldp     x20, x19, [sp, #32]            |
+   +0x1d0  ldp     x28, x21, [sp, #16]            |
+   +0x1d4  ldp     x29, x30, [sp], #48            |
+  ret:                                            |
+   +0x1d8  ret                                    |
+   +0x1dc  bl      stack_chk_fail                <+
+ ***)
+
+(*** mlkem_poly_cbd2: 0x8e48, 0x218 bytes
+
+     +0x0  add     x8, x1, #0x80
+     +0x4  cmp     x8, x0
+     +0x8  b.ls    join1                                -----+
+     +0xc  add     x8, x0, #0x200                            |
+    +0x10  cmp     x8, x1                                    |
+    +0x14  b.ls    join1                                ---+ |
+  adrp1:                                                   | |
+    +0x18  adrp    x9, <page>                              | |
+  adrp2:                                                   | |
+    +0x1c  adrp    x10, <page>                             | |
+  adrp3:                                                   | |
+    +0x20  adrp    x11, <page>                             | |
+  adrp4:                                                   | |
+    +0x24  adrp    x12, <page>                             | |
+    +0x28  movi    v2.4s, #0x3                             | |
+    +0x2c  mov     x8, xzr                                 | |
+    +0x30  ldr     d0, [x9, #624]                          | |
+                   // mlkem_poly_cbd2_const11              | |
+    +0x34  mov     w9, #0x55555555                         | |
+    +0x38  ldr     q1, [x10, #304]                         | |
+                   // mlkem_poly_cbd2_const9               | |
+    +0x3c  add     x10, x0, #0x8                           | |
+    +0x40  ldr     d3, [x11, #632]                         | |
+                   // mlkem_poly_cbd2_const12              | |
+    +0x44  ldr     q4, [x12, #320]                         | |
+                   // mlkem_poly_cbd2_const10              | |
+  loop1:                                                   | |
+    +0x48  ldr     w11, [x1, x8]                        <+ | |
+    +0x4c  add     x8, x8, #0x4                          | | |
+    +0x50  cmp     x8, #0x80                             | | |
+    +0x54  and     w12, w11, w9                          | | |
+    +0x58  and     w11, w9, w11, lsr #1                  | | |
+    +0x5c  add     w11, w11, w12                         | | |
+    +0x60  lsr     w12, w11, #26                         | | |
+    +0x64  dup     v5.4s, w11                            | | |
+    +0x68  fmov    s16, w11                              | | |
+    +0x6c  ushl    v6.2s, v5.2s, v3.2s                   | | |
+    +0x70  ushl    v17.2s, v5.2s, v0.2s                  | | |
+    +0x74  mov     v6.s[2], w12                          | | |
+    +0x78  lsr     w12, w11, #4                          | | |
+    +0x7c  mov     v16.s[1], w12                         | | |
+    +0x80  and     v7.16b, v6.16b, v2.16b                | | |
+    +0x84  mov     v6.s[3], w11                          | | |
+    +0x88  mov     v16.d[1], v17.d[0]                    | | |
+    +0x8c  ushr    v6.4s, v6.4s, #30                     | | |
+    +0x90  mov     v7.s[3], v6.s[3]                      | | |
+    +0x94  ushl    v6.4s, v5.4s, v1.4s                   | | |
+    +0x98  ushl    v5.4s, v5.4s, v4.4s                   | | |
+    +0x9c  and     v6.16b, v6.16b, v2.16b                | | |
+    +0xa0  and     v16.16b, v16.16b, v2.16b              | | |
+    +0xa4  and     v5.16b, v5.16b, v2.16b                | | |
+    +0xa8  sub     v6.4s, v16.4s, v6.4s                  | | |
+    +0xac  sub     v5.4s, v5.4s, v7.4s                   | | |
+    +0xb0  xtn     v6.4h, v6.4s                          | | |
+    +0xb4  xtn     v5.4h, v5.4s                          | | |
+    +0xb8  stur    d6, [x10, #-8]                        | | |
+  loop1_test:                                            | | |
+    +0xbc  str     d5, [x10], #16                        | | |
+  loop1_back:                                            | | |
+    +0xc0  b.ne    loop1                                -+ | |
+  loop1_exit:                                              | |
+    +0xc4  b       join2                                -------+
+  join1: adrp5:                                            | | |
+    +0xc8  adrp    x9, <page>                           <--+-+ |
+  adrp6:                                                       |
+    +0xcc  adrp    x10, <page>                                 |
+  adrp7:                                                       |
+    +0xd0  adrp    x11, <page>                                 |
+    +0xd4  mov     x8, xzr                                     |
+    +0xd8  movi    v7.16b, #0x55                               |
+    +0xdc  ldr     q0, [x9, #240]                              |
+                   // mlkem_poly_cbd2_const5                   |
+  adrp8:                                                       |
+    +0xe0  adrp    x9, <page>                                  |
+    +0xe4  ldr     q1, [x10, #3664]                            |
+                   // mlkem_poly_decompress_d5_const19         |
+  adrp9:                                                       |
+    +0xe8  adrp    x10, <page>                                 |
+    +0xec  ldr     q2, [x11, #256]                             |
+                   // mlkem_poly_cbd2_const6                   |
+  adrp10:                                                      |
+    +0xf0  adrp    x11, <page>                                 |
+    +0xf4  ldr     q3, [x9, #3696]                             |
+                   // mlkem_poly_decompress_d5_const21         |
+  adrp11:                                                      |
+    +0xf8  adrp    x9, <page>                                  |
+    +0xfc  movi    v16.4s, #0x3                                |
+   +0x100  ldr     q4, [x10, #272]                             |
+                   // mlkem_poly_cbd2_const7                   |
+   +0x104  ldr     q5, [x11, #3728]                            |
+                   // mlkem_poly_decompress_d5_const23         |
+   +0x108  ldr     q6, [x9, #288]                              |
+                   // mlkem_poly_cbd2_const8                   |
+  adrp12:                                                      |
+   +0x10c  adrp    x9, <page>                                  |
+   +0x110  ldr     q17, [x9, #3760]                            |
+                   // mlkem_poly_decompress_d5_const25         |
+  loop2:                                                       |
+   +0x114  ldr     q18, [x1, x8]                        <+     |
+   +0x118  add     x8, x8, #0x10                         |     |
+   +0x11c  cmp     x8, #0x80                             |     |
+   +0x120  ushr    v19.4s, v18.4s, #1                    |     |
+   +0x124  and     v18.16b, v18.16b, v7.16b              |     |
+   +0x128  and     v19.16b, v19.16b, v7.16b              |     |
+   +0x12c  add     v18.4s, v19.4s, v18.4s                |     |
+   +0x130  ushr    v20.4s, v18.4s, #2                    |     |
+   +0x134  ushr    v21.4s, v18.4s, #4                    |     |
+   +0x138  ushr    v22.4s, v18.4s, #6                    |     |
+   +0x13c  ushr    v23.4s, v18.4s, #8                    |     |
+   +0x140  ushr    v24.4s, v18.4s, #10                   |     |
+   +0x144  ushr    v25.4s, v18.4s, #26                   |     |
+   +0x148  and     v19.16b, v18.16b, v16.16b             |     |
+   +0x14c  ushr    v26.4s, v18.4s, #30                   |     |
+   +0x150  and     v20.16b, v20.16b, v16.16b             |     |
+   +0x154  and     v21.16b, v21.16b, v16.16b             |     |
+   +0x158  and     v22.16b, v22.16b, v16.16b             |     |
+   +0x15c  and     v23.16b, v23.16b, v16.16b             |     |
+   +0x160  sub     v19.4s, v19.4s, v20.4s                |     |
+   +0x164  sub     v20.4s, v21.4s, v22.4s                |     |
+   +0x168  and     v21.16b, v24.16b, v16.16b             |     |
+   +0x16c  sub     v21.4s, v23.4s, v21.4s                |     |
+   +0x170  ushr    v22.4s, v18.4s, #16                   |     |
+   +0x174  ushr    v23.4s, v18.4s, #18                   |     |
+   +0x178  ushr    v24.4s, v18.4s, #22                   |     |
+   +0x17c  and     v22.16b, v22.16b, v16.16b             |     |
+   +0x180  ushr    v27.4s, v18.4s, #12                   |     |
+   +0x184  and     v23.16b, v23.16b, v16.16b             |     |
+   +0x188  sub     v22.4s, v22.4s, v23.4s                |     |
+   +0x18c  ushr    v23.4s, v18.4s, #20                   |     |
+   +0x190  and     v24.16b, v24.16b, v16.16b             |     |
+   +0x194  and     v23.16b, v23.16b, v16.16b             |     |
+   +0x198  sub     v23.4s, v23.4s, v24.4s                |     |
+   +0x19c  ushr    v24.4s, v18.4s, #24                   |     |
+   +0x1a0  bic     v25.4s, #0x3c                         |     |
+   +0x1a4  bic     v24.4s, #0xfc                         |     |
+   +0x1a8  sub     v24.4s, v24.4s, v25.4s                |     |
+   +0x1ac  ushr    v25.4s, v18.4s, #28                   |     |
+   +0x1b0  ushr    v18.4s, v18.4s, #14                   |     |
+   +0x1b4  bic     v25.4s, #0xc                          |     |
+   +0x1b8  sub     v25.4s, v25.4s, v26.4s                |     |
+   +0x1bc  and     v26.16b, v27.16b, v16.16b             |     |
+   +0x1c0  and     v18.16b, v18.16b, v16.16b             |     |
+   +0x1c4  sub     v18.4s, v26.4s, v18.4s                |     |
+   +0x1c8  uzp1    v22.8h, v22.8h, v23.8h                |     |
+   +0x1cc  uzp1    v19.8h, v19.8h, v20.8h                |     |
+   +0x1d0  uzp1    v23.8h, v24.8h, v25.8h                |     |
+   +0x1d4  uzp1    v20.8h, v21.8h, v18.8h                |     |
+   +0x1d8  tbl     v18.16b, {v22.16b-v23.16b}, v0.16b    |     |
+   +0x1dc  tbl     v21.16b, {v22.16b-v23.16b}, v2.16b    |     |
+   +0x1e0  tbl     v24.16b, {v22.16b-v23.16b}, v4.16b    |     |
+   +0x1e4  tbl     v22.16b, {v22.16b-v23.16b}, v6.16b    |     |
+   +0x1e8  tbl     v23.16b, {v19.16b-v20.16b}, v17.16b   |     |
+   +0x1ec  tbl     v25.16b, {v19.16b-v20.16b}, v5.16b    |     |
+   +0x1f0  tbl     v26.16b, {v19.16b-v20.16b}, v3.16b    |     |
+   +0x1f4  tbl     v19.16b, {v19.16b-v20.16b}, v1.16b    |     |
+   +0x1f8  mov     v23.d[1], v22.d[1]                    |     |
+   +0x1fc  mov     v25.d[1], v24.d[1]                    |     |
+   +0x200  mov     v26.d[1], v21.d[1]                    |     |
+   +0x204  mov     v19.d[1], v18.d[1]                    |     |
+   +0x208  stp     q25, q23, [x0, #32]                   |     |
+  loop2_test:                                            |     |
+   +0x20c  stp     q19, q26, [x0], #64                   |     |
+  loop2_back:                                            |     |
+   +0x210  b.ne    loop2                                -+     |
+  join2: loop2_exit: ret:                                      |
+   +0x214  ret                                          <------+
+ ***)
+
+(*** mlkem_poly_cbd3: 0x9060, 0x334 bytes
+
+     +0x0  add     x8, x1, #0xc0
+     +0x4  cmp     x8, x0
+     +0x8  b.ls    join1                                -----+
+     +0xc  add     x8, x0, #0x200                            |
+    +0x10  cmp     x8, x1                                    |
+    +0x14  b.ls    join1                                ---+ |
+  adrp1:                                                   | |
+    +0x18  adrp    x10, <page>                             | |
+  adrp2:                                                   | |
+    +0x1c  adrp    x11, <page>                             | |
+    +0x20  mov     w9, #0x9249                             | |
+    +0x24  movi    v0.2s, #0x7                             | |
+    +0x28  mov     x8, xzr                                 | |
+    +0x2c  movk    w9, #0x24, lsl #16                      | |
+    +0x30  ldr     d1, [x10, #640]                         | |
+                   // mlkem_poly_cbd3_const5               | |
+    +0x34  add     x10, x1, #0x1                           | |
+    +0x38  ldr     d2, [x11, #648]                         | |
+                   // mlkem_poly_cbd3_const6               | |
+  loop1:                                                   | |
+    +0x3c  ldurh   w11, [x10, #-1]                      <+ | |
+    +0x40  add     x14, x0, x8                           | | |
+    +0x44  ldrb    w12, [x10, #1]                        | | |
+    +0x48  add     x8, x8, #0x8                          | | |
+    +0x4c  add     x10, x10, #0x3                        | | |
+    +0x50  cmp     x8, #0x200                            | | |
+    +0x54  orr     w11, w11, w12, lsl #16                | | |
+    +0x58  and     w12, w11, w9                          | | |
+    +0x5c  and     w13, w9, w11, lsr #1                  | | |
+    +0x60  and     w11, w9, w11, lsr #2                  | | |
+    +0x64  add     w12, w13, w12                         | | |
+    +0x68  add     w11, w12, w11                         | | |
+    +0x6c  and     w12, w11, #0x7                        | | |
+    +0x70  ubfx    w13, w11, #3, #3                      | | |
+    +0x74  sub     w12, w12, w13                         | | |
+    +0x78  dup     v3.2s, w11                            | | |
+    +0x7c  strh    w12, [x14]                            | | |
+    +0x80  ubfx    w12, w11, #18, #3                     | | |
+    +0x84  sub     w11, w12, w11, lsr #21                | | |
+    +0x88  ushl    v4.2s, v3.2s, v1.2s                   | | |
+    +0x8c  ushl    v3.2s, v3.2s, v2.2s                   | | |
+    +0x90  and     v4.8b, v4.8b, v0.8b                   | | |
+    +0x94  and     v3.8b, v3.8b, v0.8b                   | | |
+    +0x98  sub     v3.2s, v4.2s, v3.2s                   | | |
+    +0x9c  strh    w11, [x14, #6]                        | | |
+    +0xa0  mov     w15, v3.s[1]                          | | |
+    +0xa4  fmov    w13, s3                               | | |
+    +0xa8  strh    w13, [x14, #2]                        | | |
+  loop1_test:                                            | | |
+    +0xac  strh    w15, [x14, #4]                        | | |
+  loop1_back:                                            | | |
+    +0xb0  b.ne    loop1                                -+ | |
+  loop1_exit:                                              | |
+    +0xb4  b       join2                                -------+
+  join1: adrp3:                                            | | |
+    +0xb8  adrp    x9, <page>                           <--+-+ |
+  adrp4:                                                       |
+    +0xbc  adrp    x10, <page>                                 |
+  adrp5:                                                       |
+    +0xc0  adrp    x11, <page>                                 |
+    +0xc4  mov     x8, xzr                                     |
+    +0xc8  movi    v3.4s, #0x7                                 |
+    +0xcc  ldr     q0, [x9, #336]                              |
+                   // mlkem_poly_cbd3_const2                   |
+  adrp6:                                                       |
+    +0xd0  adrp    x9, <page>                                  |
+    +0xd4  ldr     q1, [x10, #352]                             |
+                   // mlkem_poly_cbd3_const3                   |
+    +0xd8  mov     w10, #0x9249                                |
+    +0xdc  movk    w10, #0x24, lsl #16                         |
+    +0xe0  ldr     q2, [x11, #3312]                            |
+                   // mlkem_poly_decompress_d10_const3         |
+    +0xe4  ldr     q4, [x9, #368]                              |
+                   // mlkem_poly_cbd3_const4                   |
+    +0xe8  dup     v5.4s, w10                                  |
+  loop2:                                                       |
+    +0xec  add     x9, x1, x8                           <+     |
+    +0xf0  add     x8, x8, #0x30                         |     |
+    +0xf4  cmp     x8, #0xc0                             |     |
+    +0xf8  ld3     {v16.16b-v18.16b}, [x9]               |     |
+    +0xfc  add     x9, x0, #0x80                         |     |
+   +0x100  tbl     v21.16b, {v17.16b}, v4.16b            |     |
+   +0x104  tbl     v23.16b, {v17.16b}, v1.16b            |     |
+   +0x108  tbl     v24.16b, {v17.16b}, v0.16b            |     |
+   +0x10c  tbl     v22.16b, {v17.16b}, v2.16b            |     |
+   +0x110  tbl     v6.16b, {v16.16b}, v0.16b             |     |
+   +0x114  tbl     v7.16b, {v16.16b}, v1.16b             |     |
+   +0x118  tbl     v19.16b, {v16.16b}, v2.16b            |     |
+   +0x11c  tbl     v20.16b, {v16.16b}, v4.16b            |     |
+   +0x120  tbl     v25.16b, {v18.16b}, v0.16b            |     |
+   +0x124  tbl     v26.16b, {v18.16b}, v1.16b            |     |
+   +0x128  tbl     v27.16b, {v18.16b}, v2.16b            |     |
+   +0x12c  tbl     v16.16b, {v18.16b}, v4.16b            |     |
+   +0x130  shl     v17.4s, v24.4s, #8                    |     |
+   +0x134  shl     v18.4s, v21.4s, #8                    |     |
+   +0x138  shl     v21.4s, v23.4s, #8                    |     |
+   +0x13c  shl     v22.4s, v22.4s, #8                    |     |
+   +0x140  orr     v18.16b, v18.16b, v20.16b             |     |
+   +0x144  shl     v16.4s, v16.4s, #16                   |     |
+   +0x148  orr     v7.16b, v21.16b, v7.16b               |     |
+   +0x14c  orr     v6.16b, v17.16b, v6.16b               |     |
+   +0x150  shl     v17.4s, v25.4s, #16                   |     |
+   +0x154  shl     v20.4s, v27.4s, #16                   |     |
+   +0x158  shl     v21.4s, v26.4s, #16                   |     |
+   +0x15c  orr     v19.16b, v22.16b, v19.16b             |     |
+   +0x160  orr     v6.16b, v6.16b, v17.16b               |     |
+   +0x164  orr     v7.16b, v7.16b, v21.16b               |     |
+   +0x168  orr     v17.16b, v19.16b, v20.16b             |     |
+   +0x16c  orr     v16.16b, v18.16b, v16.16b             |     |
+   +0x170  ushr    v22.4s, v6.4s, #1                     |     |
+   +0x174  ushr    v23.4s, v16.4s, #1                    |     |
+   +0x178  ushr    v24.4s, v7.4s, #1                     |     |
+   +0x17c  ushr    v25.4s, v17.4s, #1                    |     |
+   +0x180  and     v18.16b, v16.16b, v5.16b              |     |
+   +0x184  ushr    v16.4s, v16.4s, #2                    |     |
+   +0x188  and     v19.16b, v17.16b, v5.16b              |     |
+   +0x18c  and     v20.16b, v7.16b, v5.16b               |     |
+   +0x190  and     v21.16b, v6.16b, v5.16b               |     |
+   +0x194  and     v23.16b, v23.16b, v5.16b              |     |
+   +0x198  and     v25.16b, v25.16b, v5.16b              |     |
+   +0x19c  and     v24.16b, v24.16b, v5.16b              |     |
+   +0x1a0  and     v22.16b, v22.16b, v5.16b              |     |
+   +0x1a4  ushr    v6.4s, v6.4s, #2                      |     |
+   +0x1a8  ushr    v17.4s, v17.4s, #2                    |     |
+   +0x1ac  ushr    v7.4s, v7.4s, #2                      |     |
+   +0x1b0  add     v21.4s, v22.4s, v21.4s                |     |
+   +0x1b4  add     v20.4s, v24.4s, v20.4s                |     |
+   +0x1b8  add     v19.4s, v25.4s, v19.4s                |     |
+   +0x1bc  add     v18.4s, v23.4s, v18.4s                |     |
+   +0x1c0  and     v6.16b, v6.16b, v5.16b                |     |
+   +0x1c4  and     v22.16b, v7.16b, v5.16b               |     |
+   +0x1c8  and     v7.16b, v17.16b, v5.16b               |     |
+   +0x1cc  and     v16.16b, v16.16b, v5.16b              |     |
+   +0x1d0  add     v17.4s, v18.4s, v16.4s                |     |
+   +0x1d4  add     v16.4s, v19.4s, v7.4s                 |     |
+   +0x1d8  add     v7.4s, v21.4s, v6.4s                  |     |
+   +0x1dc  add     v6.4s, v20.4s, v22.4s                 |     |
+   +0x1e0  ushr    v23.4s, v7.4s, #3                     |     |
+   +0x1e4  ushr    v25.4s, v6.4s, #3                     |     |
+   +0x1e8  ushr    v26.4s, v7.4s, #9                     |     |
+   +0x1ec  and     v18.16b, v7.16b, v3.16b               |     |
+   +0x1f0  ushr    v27.4s, v6.4s, #9                     |     |
+   +0x1f4  and     v19.16b, v6.16b, v3.16b               |     |
+   +0x1f8  and     v23.16b, v23.16b, v3.16b              |     |
+   +0x1fc  and     v25.16b, v25.16b, v3.16b              |     |
+   +0x200  sub     v19.4s, v19.4s, v25.4s                |     |
+   +0x204  sub     v18.4s, v18.4s, v23.4s                |     |
+   +0x208  ushr    v23.4s, v7.4s, #6                     |     |
+   +0x20c  ushr    v25.4s, v6.4s, #6                     |     |
+   +0x210  ushr    v22.4s, v17.4s, #3                    |     |
+   +0x214  ushr    v24.4s, v16.4s, #3                    |     |
+   +0x218  and     v23.16b, v23.16b, v3.16b              |     |
+   +0x21c  and     v25.16b, v25.16b, v3.16b              |     |
+   +0x220  and     v26.16b, v26.16b, v3.16b              |     |
+   +0x224  and     v27.16b, v27.16b, v3.16b              |     |
+   +0x228  and     v20.16b, v16.16b, v3.16b              |     |
+   +0x22c  and     v21.16b, v17.16b, v3.16b              |     |
+   +0x230  and     v24.16b, v24.16b, v3.16b              |     |
+   +0x234  and     v22.16b, v22.16b, v3.16b              |     |
+   +0x238  sub     v25.4s, v25.4s, v27.4s                |     |
+   +0x23c  sub     v23.4s, v23.4s, v26.4s                |     |
+   +0x240  sub     v22.4s, v21.4s, v22.4s                |     |
+   +0x244  sub     v24.4s, v20.4s, v24.4s                |     |
+   +0x248  uzp1    v18.8h, v18.8h, v19.8h                |     |
+   +0x24c  uzp1    v19.8h, v23.8h, v25.8h                |     |
+   +0x250  ushr    v23.4s, v16.4s, #6                    |     |
+   +0x254  ushr    v25.4s, v17.4s, #6                    |     |
+   +0x258  ushr    v26.4s, v16.4s, #9                    |     |
+   +0x25c  ushr    v27.4s, v17.4s, #9                    |     |
+   +0x260  and     v23.16b, v23.16b, v3.16b              |     |
+   +0x264  and     v25.16b, v25.16b, v3.16b              |     |
+   +0x268  and     v26.16b, v26.16b, v3.16b              |     |
+   +0x26c  and     v27.16b, v27.16b, v3.16b              |     |
+   +0x270  sub     v25.4s, v25.4s, v27.4s                |     |
+   +0x274  sub     v23.4s, v23.4s, v26.4s                |     |
+   +0x278  uzp1    v26.8h, v24.8h, v22.8h                |     |
+   +0x27c  ushr    v22.4s, v17.4s, #12                   |     |
+   +0x280  ushr    v24.4s, v17.4s, #15                   |     |
+   +0x284  and     v22.16b, v22.16b, v3.16b              |     |
+   +0x288  and     v24.16b, v24.16b, v3.16b              |     |
+   +0x28c  uzp1    v27.8h, v23.8h, v25.8h                |     |
+   +0x290  ushr    v23.4s, v16.4s, #12                   |     |
+   +0x294  sub     v22.4s, v22.4s, v24.4s                |     |
+   +0x298  ushr    v24.4s, v16.4s, #15                   |     |
+   +0x29c  and     v23.16b, v23.16b, v3.16b              |     |
+   +0x2a0  and     v24.16b, v24.16b, v3.16b              |     |
+   +0x2a4  sub     v23.4s, v23.4s, v24.4s                |     |
+   +0x2a8  ushr    v24.4s, v6.4s, #12                    |     |
+   +0x2ac  uzp1    v28.8h, v23.8h, v22.8h                |     |
+   +0x2b0  ushr    v22.4s, v6.4s, #15                    |     |
+   +0x2b4  and     v23.16b, v24.16b, v3.16b              |     |
+   +0x2b8  and     v22.16b, v22.16b, v3.16b              |     |
+   +0x2bc  ushr    v24.4s, v17.4s, #18                   |     |
+   +0x2c0  sub     v22.4s, v23.4s, v22.4s                |     |
+   +0x2c4  ushr    v23.4s, v16.4s, #18                   |     |
+   +0x2c8  ushr    v17.4s, v17.4s, #21                   |     |
+   +0x2cc  ushr    v16.4s, v16.4s, #21                   |     |
+   +0x2d0  bic     v24.4s, #0x38                         |     |
+   +0x2d4  bic     v23.4s, #0x38                         |     |
+   +0x2d8  sub     v17.4s, v24.4s, v17.4s                |     |
+   +0x2dc  sub     v16.4s, v23.4s, v16.4s                |     |
+   +0x2e0  ushr    v24.4s, v7.4s, #12                    |     |
+   +0x2e4  ushr    v23.4s, v7.4s, #15                    |     |
+   +0x2e8  uzp1    v29.8h, v16.8h, v17.8h                |     |
+   +0x2ec  ushr    v16.4s, v6.4s, #18                    |     |
+   +0x2f0  ushr    v17.4s, v7.4s, #18                    |     |
+   +0x2f4  and     v24.16b, v24.16b, v3.16b              |     |
+   +0x2f8  ushr    v7.4s, v7.4s, #21                     |     |
+   +0x2fc  and     v23.16b, v23.16b, v3.16b              |     |
+   +0x300  ushr    v6.4s, v6.4s, #21                     |     |
+   +0x304  sub     v23.4s, v24.4s, v23.4s                |     |
+   +0x308  bic     v17.4s, #0x38                         |     |
+   +0x30c  bic     v16.4s, #0x38                         |     |
+   +0x310  sub     v6.4s, v16.4s, v6.4s                  |     |
+   +0x314  sub     v7.4s, v17.4s, v7.4s                  |     |
+   +0x318  st4     {v26.8h-v29.8h}, [x0], #64            |     |
+   +0x31c  uzp1    v20.8h, v23.8h, v22.8h                |     |
+   +0x320  uzp1    v21.8h, v7.8h, v6.8h                  |     |
+   +0x324  st4     {v18.8h-v21.8h}, [x0]                 |     |
+  loop2_test:                                            |     |
+   +0x328  mov     x0, x9                                |     |
+  loop2_back:                                            |     |
+   +0x32c  b.ne    loop2                                -+     |
+  join2: loop2_exit: ret:                                      |
+   +0x330  ret                                          <------+
+ ***)
+
+(*** mlkem768_gen_matrix: 0x9394, 0x1fc bytes
+
+     +0x0  stp     x29, x30, [sp, #-64]!
+     +0x4  stp     x28, x23, [sp, #16]
+     +0x8  stp     x22, x21, [sp, #32]
+     +0xc  stp     x20, x19, [sp, #48]
+    +0x10  mov     x29, sp
+    +0x14  sub     x9, sp, #0x120
+    +0x18  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x1c  adrp    x9, <page>
+    +0x20  mov     w20, w2
+    +0x24  mov     x19, x0
+    +0x28  mov     w8, wzr
+    +0x2c  mov     w21, #0xab
+    +0x30  mov     w22, #0x600
+    +0x34  ldr     x9, [x9, #4088]
+                   // got_stack_chk_guard
+    +0x38  ldr     x9, [x9]
+    +0x3c  str     x9, [sp, #280]
+    +0x40  mov     w9, #0x1
+    +0x44  ldp     q0, q1, [x1]
+    +0x48  stp     q0, q1, [sp]
+    +0x4c  stp     q0, q1, [sp, #64]
+    +0x50  stp     q0, q1, [sp, #128]
+    +0x54  stp     q0, q1, [sp, #192]
+    +0x58  b       loop1                        ---+
+    +0x5c  strb    w12, [sp, #97]               <------+
+    +0x60  mov     w12, w10                        |   |
+    +0x64  mov     w10, w14                        |   |
+    +0x68  strb    w11, [sp, #32]                  |   |
+    +0x6c  strb    w9, [sp, #33]                   |   |
+    +0x70  strb    w16, [sp, #96]                  |   |
+    +0x74  strb    w15, [sp, #160]                 |   |
+    +0x78  strb    w13, [sp, #161]                 |   |
+  join1:                                           |   |
+    +0x7c  orr     w13, w8, #0x1                <----+ |
+    +0x80  orr     w14, w8, #0x2                   | | |
+    +0x84  and     w15, w13, #0xff                 | | |
+    +0x88  orr     w8, w8, #0x3                    | | |
+    +0x8c  and     w16, w14, #0xff                 | | |
+    +0x90  and     w17, w8, #0xff                  | | |
+    +0x94  mul     w15, w15, w21                   | | |
+    +0x98  mov     x4, sp                          | | |
+    +0x9c  mul     w16, w16, w21                   | | |
+    +0xa0  strb    w12, [sp, #224]                 | | |
+    +0xa4  mul     w17, w17, w21                   | | |
+    +0xa8  lsr     w15, w15, #9                    | | |
+    +0xac  lsr     w16, w16, #9                    | | |
+    +0xb0  umaddl  x9, w9, w22, x19                | | |
+    +0xb4  lsr     w17, w17, #9                    | | |
+    +0xb8  add     w18, w15, w15, lsl #1           | | |
+    +0xbc  sub     w13, w13, w18                   | | |
+    +0xc0  add     w18, w16, w16, lsl #1           | | |
+    +0xc4  sub     w14, w14, w18                   | | |
+    +0xc8  add     w18, w17, w17, lsl #1           | | |
+    +0xcc  sub     w8, w8, w18                     | | |
+    +0xd0  umaddl  x15, w15, w22, x19              | | |
+    +0xd4  and     x13, x13, #0xff                 | | |
+    +0xd8  umaddl  x16, w16, w22, x19              | | |
+    +0xdc  and     x14, x14, #0xff                 | | |
+    +0xe0  umaddl  x17, w17, w22, x19              | | |
+    +0xe4  and     x8, x8, #0xff                   | | |
+    +0xe8  add     x0, x9, x11, lsl #9             | | |
+    +0xec  add     x1, x15, x13, lsl #9            | | |
+    +0xf0  add     x2, x16, x14, lsl #9            | | |
+    +0xf4  add     x3, x17, x8, lsl #9             | | |
+    +0xf8  strb    w10, [sp, #225]                 | | |
+    +0xfc  bl      mlkem_poly_rej_uniform_x4       | | |
+  after_mlkem_poly_rej_uniform_x4:                 | | |
+   +0x100  mov     w9, wzr                         | | |
+  loop1_test:                                      | | |
+   +0x104  mov     w8, #0x4                        | | |
+  loop1_back:                                      | | |
+   +0x108  tbz     w23, #0, loop1_exit          -+ | | |
+  loop1: loop1_next:                             | | | |
+   +0x10c  orr     w10, w8, #0x1                <--+ | |
+   +0x110  orr     w15, w8, #0x2                 |   | |
+   +0x114  and     w11, w10, #0xff               |   | |
+   +0x118  and     w12, w15, #0xff               |   | |
+   +0x11c  orr     w17, w8, #0x3                 |   | |
+   +0x120  mov     w23, w9                       |   | |
+   +0x124  mul     w11, w11, w21                 |   | |
+   +0x128  and     w13, w17, #0xff               |   | |
+   +0x12c  mul     w14, w12, w21                 |   | |
+   +0x130  sub     w18, w8, #0x3                 |   | |
+   +0x134  lsr     w12, w11, #9                  |   | |
+   +0x138  mul     w11, w13, w21                 |   | |
+   +0x13c  lsr     w13, w14, #9                  |   | |
+   +0x140  tst     w23, #0x1                     |   | |
+   +0x144  add     w16, w12, w12, lsl #1         |   | |
+   +0x148  lsr     w14, w11, #9                  |   | |
+   +0x14c  sub     w16, w10, w16                 |   | |
+   +0x150  add     w10, w13, w13, lsl #1         |   | |
+   +0x154  sub     w15, w15, w10                 |   | |
+   +0x158  add     w10, w14, w14, lsl #1         |   | |
+   +0x15c  lsr     w9, w8, #2                    |   | |
+   +0x160  csel    w11, wzr, w18, ne             |   | |
+   +0x164  sub     w10, w17, w10                 |   | |
+   +0x168  cbz     w20, +0x5c                   -------+
+   +0x16c  strb    w9, [sp, #32]                 |   |
+   +0x170  strb    w11, [sp, #33]                |   |
+   +0x174  strb    w12, [sp, #96]                |   |
+   +0x178  mov     w12, w14                      |   |
+   +0x17c  strb    w16, [sp, #97]                |   |
+   +0x180  strb    w13, [sp, #160]               |   |
+   +0x184  strb    w15, [sp, #161]               |   |
+   +0x188  b       join1                        -----+
+  loop1_exit:                                    |
+   +0x18c  mov     w8, #0x202                   <+
+   +0x190  add     x0, x19, #0x1, lsl #12
+   +0x194  mov     x1, sp
+   +0x198  mov     x19, sp
+   +0x19c  strh    w8, [sp, #32]
+   +0x1a0  bl      mlkem_poly_rej_uniform
+  after_mlkem_poly_rej_uniform:
+   +0x1a4  movi    v0.2d, #0x0
+  adrp2:
+   +0x1a8  adrp    x8, <page>
+   +0x1ac  stp     q0, q0, [sp]
+   +0x1b0  stp     q0, q0, [sp, #32]
+   +0x1b4  stp     q0, q0, [sp, #64]
+   +0x1b8  stp     q0, q0, [sp, #96]
+   +0x1bc  stp     q0, q0, [sp, #128]
+   +0x1c0  stp     q0, q0, [sp, #160]
+   +0x1c4  stp     q0, q0, [sp, #192]
+   +0x1c8  stp     q0, q0, [sp, #224]
+   +0x1cc  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x1d0  ldr     x9, [sp, #280]
+   +0x1d4  ldr     x8, [x8]
+   +0x1d8  cmp     x8, x9
+   +0x1dc  b.ne    +0x1f8                       -+
+   +0x1e0  mov     sp, x29                       |
+   +0x1e4  ldp     x20, x19, [sp, #48]           |
+   +0x1e8  ldp     x22, x21, [sp, #32]           |
+   +0x1ec  ldp     x28, x23, [sp, #16]           |
+   +0x1f0  ldp     x29, x30, [sp], #64           |
+  ret:                                           |
+   +0x1f4  ret                                   |
+   +0x1f8  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem768_indcpa_keypair_derand: 0x9590, 0x268 bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  stp     x28, x27, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0x2, lsl #12
+    +0x20  sub     x9, x9, #0x7c0
+    +0x24  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x28  adrp    x8, <page>
+    +0x2c  mov     x20, x1
+    +0x30  mov     x19, x0
+    +0x34  add     x23, sp, #0x2, lsl #12
+    +0x38  add     x0, sp, #0x2, lsl #12
+    +0x3c  add     x1, sp, #0x2, lsl #12
+    +0x40  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x44  add     x23, x23, #0x720
+    +0x48  add     x0, x0, #0x760
+    +0x4c  add     x1, x1, #0x720
+    +0x50  add     x22, sp, #0x2, lsl #12
+    +0x54  add     x24, sp, #0x2, lsl #12
+    +0x58  ldr     x8, [x8]
+    +0x5c  add     x22, x22, #0x760
+    +0x60  add     x21, x22, #0x20
+    +0x64  add     x24, x24, #0x720
+    +0x68  str     x8, [sp, #10168]
+    +0x6c  mov     w8, #0x3
+    +0x70  ldp     q0, q1, [x2]
+    +0x74  mov     w2, #0x21
+    +0x78  strb    w8, [x23, #32]
+    +0x7c  str     q0, [sp, #10016]
+    +0x80  str     q1, [sp, #10032]
+    +0x84  bl      mlkem_sha3_512
+  after_mlkem_sha3_512:
+    +0x88  add     x0, sp, #0x1, lsl #12
+    +0x8c  add     x1, sp, #0x2, lsl #12
+    +0x90  add     x0, x0, #0x520
+    +0x94  add     x1, x1, #0x760
+    +0x98  mov     w2, wzr
+    +0x9c  add     x25, sp, #0x1, lsl #12
+    +0xa0  add     x25, x25, #0x520
+    +0xa4  bl      mlkem768_gen_matrix
+  after_mlkem768_gen_matrix:
+    +0xa8  add     x26, sp, #0x320
+    +0xac  mov     w28, #0xff
+    +0xb0  add     x1, x26, #0x200
+    +0xb4  add     x2, x26, #0x400
+    +0xb8  add     x0, sp, #0x320
+    +0xbc  mov     x3, xzr
+    +0xc0  mov     x4, x21
+    +0xc4  mov     w5, wzr
+    +0xc8  mov     w6, #0x1
+    +0xcc  mov     w7, #0x2
+    +0xd0  strb    w28, [sp]
+    +0xd4  bl      mlkem768_poly_getnoise_eta1_4x
+  after_mlkem768_poly_getnoise_eta1_4x_1:
+    +0xd8  add     x27, sp, #0xf20
+    +0xdc  add     x0, sp, #0xf20
+    +0xe0  add     x1, x27, #0x200
+    +0xe4  add     x2, x27, #0x400
+    +0xe8  mov     x3, xzr
+    +0xec  mov     x4, x21
+    +0xf0  mov     w5, #0x3
+    +0xf4  mov     w6, #0x4
+    +0xf8  mov     w7, #0x5
+    +0xfc  strb    w28, [sp]
+   +0x100  bl      mlkem768_poly_getnoise_eta1_4x
+  after_mlkem768_poly_getnoise_eta1_4x_2:
+   +0x104  add     x0, sp, #0x320
+   +0x108  bl      mlkem768_polyvec_ntt
+  after_mlkem768_polyvec_ntt_1:
+   +0x10c  add     x0, sp, #0xf20
+   +0x110  bl      mlkem768_polyvec_ntt
+  after_mlkem768_polyvec_ntt_2:
+   +0x114  add     x0, sp, #0x20
+   +0x118  add     x1, sp, #0x320
+   +0x11c  add     x28, sp, #0x20
+   +0x120  bl      mlkem768_polyvec_mulcache_compute
+  after_mlkem768_polyvec_mulcache_compute:
+   +0x124  add     x1, sp, #0x1, lsl #12
+   +0x128  add     x0, sp, #0x920
+   +0x12c  add     x1, x1, #0x520
+   +0x130  add     x2, sp, #0x320
+   +0x134  add     x3, sp, #0x20
+   +0x138  add     x21, sp, #0x920
+   +0x13c  bl      mlkem768_polyvec_basemul_acc_montgomery_cached
+  after_mlkem768_polyvec_basemul_acc_montgomery_cached_1:
+   +0x140  add     x0, x21, #0x200
+   +0x144  add     x1, x25, #0x600
+   +0x148  add     x2, sp, #0x320
+   +0x14c  add     x3, sp, #0x20
+   +0x150  bl      mlkem768_polyvec_basemul_acc_montgomery_cached
+  after_mlkem768_polyvec_basemul_acc_montgomery_cached_2:
+   +0x154  add     x0, x21, #0x400
+   +0x158  add     x1, x25, #0xc00
+   +0x15c  add     x2, sp, #0x320
+   +0x160  add     x3, sp, #0x20
+   +0x164  bl      mlkem768_polyvec_basemul_acc_montgomery_cached
+  after_mlkem768_polyvec_basemul_acc_montgomery_cached_3:
+   +0x168  add     x0, sp, #0x920
+   +0x16c  bl      mlkem768_polyvec_tomont
+  after_mlkem768_polyvec_tomont:
+   +0x170  add     x0, sp, #0x920
+   +0x174  add     x1, sp, #0xf20
+   +0x178  bl      mlkem768_polyvec_add
+  after_mlkem768_polyvec_add:
+   +0x17c  add     x0, sp, #0x920
+   +0x180  bl      mlkem768_polyvec_reduce
+  after_mlkem768_polyvec_reduce_1:
+   +0x184  add     x0, sp, #0x320
+   +0x188  bl      mlkem768_polyvec_reduce
+  after_mlkem768_polyvec_reduce_2:
+   +0x18c  add     x1, sp, #0x320
+   +0x190  mov     x0, x20
+   +0x194  bl      mlkem768_polyvec_tobytes
+  after_mlkem768_polyvec_tobytes_1:
+   +0x198  add     x1, sp, #0x920
+   +0x19c  mov     x0, x19
+   +0x1a0  bl      mlkem768_polyvec_tobytes
+  after_mlkem768_polyvec_tobytes_2:
+   +0x1a4  ldr     q0, [sp, #10080]
+   +0x1a8  add     x0, sp, #0x20
+   +0x1ac  ldr     q1, [sp, #10096]
+   +0x1b0  mov     w1, wzr
+   +0x1b4  mov     w2, #0x300
+   +0x1b8  str     q0, [x19, #1152]
+   +0x1bc  str     q1, [x19, #1168]
+   +0x1c0  bl      memset
+  after_memset_1:
+   +0x1c4  add     x0, sp, #0x320
+   +0x1c8  mov     w1, wzr
+   +0x1cc  mov     w2, #0x600
+   +0x1d0  bl      memset
+  after_memset_2:
+   +0x1d4  add     x0, sp, #0x920
+   +0x1d8  mov     w1, wzr
+   +0x1dc  mov     w2, #0x600
+   +0x1e0  bl      memset
+  after_memset_3:
+   +0x1e4  add     x0, sp, #0xf20
+   +0x1e8  mov     w1, wzr
+   +0x1ec  mov     w2, #0x600
+   +0x1f0  bl      memset
+  after_memset_4:
+   +0x1f4  add     x0, sp, #0x1, lsl #12
+   +0x1f8  add     x0, x0, #0x520
+   +0x1fc  mov     w1, wzr
+   +0x200  mov     w2, #0x1200
+   +0x204  bl      memset
+  after_memset_5:
+   +0x208  movi    v0.2d, #0x0
+   +0x20c  strb    wzr, [x23, #32]
+  adrp2:
+   +0x210  adrp    x8, <page>
+   +0x214  str     q0, [sp, #10032]
+   +0x218  str     q0, [sp, #10016]
+   +0x21c  str     q0, [sp, #10128]
+   +0x220  str     q0, [sp, #10112]
+   +0x224  str     q0, [sp, #10096]
+   +0x228  str     q0, [sp, #10080]
+   +0x22c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x230  ldr     x9, [sp, #10168]
+   +0x234  ldr     x8, [x8]
+   +0x238  cmp     x8, x9
+   +0x23c  b.ne    +0x264                                          -+
+   +0x240  mov     w0, wzr                                          |
+   +0x244  mov     sp, x29                                          |
+   +0x248  ldp     x20, x19, [sp, #80]                              |
+   +0x24c  ldp     x22, x21, [sp, #64]                              |
+   +0x250  ldp     x24, x23, [sp, #48]                              |
+   +0x254  ldp     x26, x25, [sp, #32]                              |
+   +0x258  ldp     x28, x27, [sp, #16]                              |
+   +0x25c  ldp     x29, x30, [sp], #96                              |
+  ret:                                                              |
+   +0x260  ret                                                      |
+   +0x264  bl      stack_chk_fail                                  <+
+ ***)
+
+(*** mlkem768_indcpa_enc: 0x97f8, 0x420 bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  stp     x28, x27, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0x3, lsl #12
+    +0x20  sub     x9, x9, #0x360
+    +0x24  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x28  adrp    x8, <page>
+    +0x2c  mov     x19, x0
+    +0x30  add     x0, sp, #0x1, lsl #12
+    +0x34  mov     x22, x1
+    +0x38  add     x0, x0, #0x520
+    +0x3c  mov     x1, x2
+    +0x40  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x44  add     x23, sp, #0x1, lsl #12
+    +0x48  mov     x20, x3
+    +0x4c  mov     x21, x2
+    +0x50  add     x23, x23, #0x520
+    +0x54  ldr     x8, [x8]
+    +0x58  str     x8, [sp, #13144]
+    +0x5c  bl      mlkem768_polyvec_frombytes
+  after_mlkem768_polyvec_frombytes:
+    +0x60  ldr     q0, [x21, #1152]
+    +0x64  add     x0, sp, #0x520
+    +0x68  ldr     q1, [x21, #1168]
+    +0x6c  mov     x1, x22
+    +0x70  add     x26, sp, #0x520
+    +0x74  str     q0, [sp, #13088]
+    +0x78  str     q1, [sp, #13104]
+    +0x7c  bl      mlkem_poly_frommsg
+  after_mlkem_poly_frommsg:
+    +0x80  add     x0, sp, #0x2, lsl #12
+    +0x84  add     x1, sp, #0x3, lsl #12
+    +0x88  add     x0, x0, #0x120
+    +0x8c  add     x1, x1, #0x320
+    +0x90  mov     w2, #0x1
+    +0x94  add     x22, sp, #0x2, lsl #12
+    +0x98  add     x22, x22, #0x120
+    +0x9c  bl      mlkem768_gen_matrix
+  after_mlkem768_gen_matrix:
+    +0xa0  add     x24, sp, #0x1, lsl #12
+    +0xa4  add     x0, sp, #0x1, lsl #12
+    +0xa8  add     x24, x24, #0xb20
+    +0xac  mov     w8, #0xff
+    +0xb0  add     x1, x24, #0x200
+    +0xb4  add     x2, x24, #0x400
+    +0xb8  add     x0, x0, #0xb20
+    +0xbc  mov     x3, xzr
+    +0xc0  mov     x4, x20
+    +0xc4  mov     w5, wzr
+    +0xc8  mov     w6, #0x1
+    +0xcc  mov     w7, #0x2
+    +0xd0  strb    w8, [sp]
+    +0xd4  bl      mlkem768_poly_getnoise_eta1_4x
+  after_mlkem768_poly_getnoise_eta1_4x_1:
+    +0xd8  add     x25, sp, #0xf20
+    +0xdc  mov     w8, #0x6
+    +0xe0  add     x1, x25, #0x200
+    +0xe4  add     x2, x25, #0x400
+    +0xe8  add     x0, sp, #0xf20
+    +0xec  add     x3, sp, #0x320
+    +0xf0  mov     x4, x20
+    +0xf4  mov     w5, #0x3
+    +0xf8  mov     w6, #0x4
+    +0xfc  mov     w7, #0x5
+   +0x100  add     x28, sp, #0x320
+   +0x104  strb    w8, [sp]
+   +0x108  bl      mlkem768_poly_getnoise_eta1_4x
+  after_mlkem768_poly_getnoise_eta1_4x_2:
+   +0x10c  add     x0, sp, #0x1, lsl #12
+   +0x110  add     x0, x0, #0xb20
+   +0x114  bl      mlkem768_polyvec_ntt
+  after_mlkem768_polyvec_ntt:
+   +0x118  add     x1, sp, #0x1, lsl #12
+   +0x11c  add     x0, sp, #0x20
+   +0x120  add     x1, x1, #0xb20
+   +0x124  add     x21, sp, #0x20
+   +0x128  bl      mlkem768_polyvec_mulcache_compute
+  after_mlkem768_polyvec_mulcache_compute:
+   +0x12c  add     x1, sp, #0x2, lsl #12
+   +0x130  add     x2, sp, #0x1, lsl #12
+   +0x134  add     x0, sp, #0x920
+   +0x138  add     x1, x1, #0x120
+   +0x13c  add     x2, x2, #0xb20
+   +0x140  add     x3, sp, #0x20
+   +0x144  add     x20, sp, #0x920
+   +0x148  bl      mlkem768_polyvec_basemul_acc_montgomery_cached
+  after_mlkem768_polyvec_basemul_acc_montgomery_cached_1:
+   +0x14c  add     x2, sp, #0x1, lsl #12
+   +0x150  add     x0, x20, #0x200
+   +0x154  add     x1, x22, #0x600
+   +0x158  add     x2, x2, #0xb20
+   +0x15c  add     x3, sp, #0x20
+   +0x160  bl      mlkem768_polyvec_basemul_acc_montgomery_cached
+  after_mlkem768_polyvec_basemul_acc_montgomery_cached_2:
+   +0x164  add     x2, sp, #0x1, lsl #12
+   +0x168  add     x0, x20, #0x400
+   +0x16c  add     x1, x22, #0xc00
+   +0x170  add     x2, x2, #0xb20
+   +0x174  add     x3, sp, #0x20
+   +0x178  bl      mlkem768_polyvec_basemul_acc_montgomery_cached
+  after_mlkem768_polyvec_basemul_acc_montgomery_cached_3:
+   +0x17c  add     x1, sp, #0x1, lsl #12
+   +0x180  add     x2, sp, #0x1, lsl #12
+   +0x184  add     x0, sp, #0x720
+   +0x188  add     x1, x1, #0x520
+   +0x18c  add     x2, x2, #0xb20
+   +0x190  add     x3, sp, #0x20
+   +0x194  add     x27, sp, #0x720
+   +0x198  bl      mlkem768_polyvec_basemul_acc_montgomery_cached
+  after_mlkem768_polyvec_basemul_acc_montgomery_cached_4:
+   +0x19c  add     x0, sp, #0x920
+   +0x1a0  bl      mlkem768_polyvec_invntt_tomont
+  after_mlkem768_polyvec_invntt_tomont:
+   +0x1a4  add     x0, sp, #0x720
+   +0x1a8  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont:
+   +0x1ac  add     x0, sp, #0x920
+   +0x1b0  add     x1, sp, #0xf20
+   +0x1b4  bl      mlkem768_polyvec_add
+  after_mlkem768_polyvec_add:
+   +0x1b8  add     x0, sp, #0x720
+   +0x1bc  add     x1, sp, #0x320
+   +0x1c0  bl      mlkem_poly_add
+  after_mlkem_poly_add_1:
+   +0x1c4  add     x0, sp, #0x720
+   +0x1c8  add     x1, sp, #0x520
+   +0x1cc  bl      mlkem_poly_add
+  after_mlkem_poly_add_2:
+   +0x1d0  add     x0, sp, #0x920
+   +0x1d4  bl      mlkem768_polyvec_reduce
+  after_mlkem768_polyvec_reduce:
+   +0x1d8  add     x0, sp, #0x720
+   +0x1dc  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce:
+   +0x1e0  add     x1, sp, #0x920
+   +0x1e4  mov     x0, x19
+   +0x1e8  bl      mlkem768_polyvec_compress_du
+  after_mlkem768_polyvec_compress_du:
+   +0x1ec  add     x0, x19, #0x3c0
+   +0x1f0  add     x1, sp, #0x720
+   +0x1f4  bl      mlkem_poly_compress_d4
+  after_mlkem_poly_compress_d4:
+   +0x1f8  add     x0, sp, #0x20
+   +0x1fc  mov     w1, wzr
+   +0x200  mov     w2, #0x300
+   +0x204  bl      memset
+  after_memset_1:
+   +0x208  movi    v0.2d, #0x0
+   +0x20c  add     x0, sp, #0x920
+   +0x210  mov     w1, wzr
+   +0x214  mov     w2, #0x600
+   +0x218  str     q0, [sp, #1296]
+   +0x21c  str     q0, [sp, #1280]
+   +0x220  str     q0, [sp, #1264]
+   +0x224  str     q0, [sp, #1248]
+   +0x228  str     q0, [sp, #1232]
+   +0x22c  str     q0, [sp, #1216]
+   +0x230  str     q0, [sp, #1200]
+   +0x234  str     q0, [sp, #1184]
+   +0x238  str     q0, [sp, #1168]
+   +0x23c  str     q0, [sp, #1152]
+   +0x240  str     q0, [sp, #1136]
+   +0x244  str     q0, [sp, #1120]
+   +0x248  str     q0, [sp, #1104]
+   +0x24c  str     q0, [sp, #1088]
+   +0x250  str     q0, [sp, #1072]
+   +0x254  str     q0, [sp, #1056]
+   +0x258  str     q0, [sp, #1040]
+   +0x25c  stp     q0, q0, [sp, #816]
+   +0x260  stp     q0, q0, [sp, #848]
+   +0x264  stp     q0, q0, [sp, #880]
+   +0x268  stp     q0, q0, [sp, #912]
+   +0x26c  stp     q0, q0, [sp, #944]
+   +0x270  stp     q0, q0, [sp, #976]
+   +0x274  stp     q0, q0, [sp, #1008]
+   +0x278  str     q0, [sp, #800]
+   +0x27c  str     q0, [sp, #1808]
+   +0x280  str     q0, [sp, #1792]
+   +0x284  str     q0, [sp, #1776]
+   +0x288  str     q0, [sp, #1760]
+   +0x28c  str     q0, [sp, #1744]
+   +0x290  str     q0, [sp, #1728]
+   +0x294  str     q0, [sp, #1712]
+   +0x298  str     q0, [sp, #1696]
+   +0x29c  str     q0, [sp, #1680]
+   +0x2a0  str     q0, [sp, #1664]
+   +0x2a4  str     q0, [sp, #1648]
+   +0x2a8  str     q0, [sp, #1632]
+   +0x2ac  str     q0, [sp, #1616]
+   +0x2b0  str     q0, [sp, #1600]
+   +0x2b4  str     q0, [sp, #1584]
+   +0x2b8  str     q0, [sp, #1568]
+   +0x2bc  str     q0, [sp, #1552]
+   +0x2c0  str     q0, [sp, #1536]
+   +0x2c4  str     q0, [sp, #1520]
+   +0x2c8  str     q0, [sp, #1504]
+   +0x2cc  str     q0, [sp, #1488]
+   +0x2d0  str     q0, [sp, #1472]
+   +0x2d4  str     q0, [sp, #1456]
+   +0x2d8  str     q0, [sp, #1440]
+   +0x2dc  str     q0, [sp, #1424]
+   +0x2e0  str     q0, [sp, #1408]
+   +0x2e4  str     q0, [sp, #1392]
+   +0x2e8  str     q0, [sp, #1376]
+   +0x2ec  str     q0, [sp, #1360]
+   +0x2f0  str     q0, [sp, #1344]
+   +0x2f4  str     q0, [sp, #1328]
+   +0x2f8  str     q0, [sp, #1312]
+   +0x2fc  str     q0, [sp, #2320]
+   +0x300  str     q0, [sp, #2304]
+   +0x304  str     q0, [sp, #2288]
+   +0x308  str     q0, [sp, #2272]
+   +0x30c  str     q0, [sp, #2256]
+   +0x310  str     q0, [sp, #2240]
+   +0x314  str     q0, [sp, #2224]
+   +0x318  str     q0, [sp, #2208]
+   +0x31c  str     q0, [sp, #2192]
+   +0x320  str     q0, [sp, #2176]
+   +0x324  str     q0, [sp, #2160]
+   +0x328  str     q0, [sp, #2144]
+   +0x32c  str     q0, [sp, #2128]
+   +0x330  str     q0, [sp, #2112]
+   +0x334  str     q0, [sp, #2096]
+   +0x338  str     q0, [sp, #2080]
+   +0x33c  str     q0, [sp, #2064]
+   +0x340  str     q0, [sp, #2048]
+   +0x344  str     q0, [sp, #2032]
+   +0x348  str     q0, [sp, #2016]
+   +0x34c  str     q0, [sp, #2000]
+   +0x350  str     q0, [sp, #1984]
+   +0x354  str     q0, [sp, #1968]
+   +0x358  str     q0, [sp, #1952]
+   +0x35c  str     q0, [sp, #1936]
+   +0x360  str     q0, [sp, #1920]
+   +0x364  str     q0, [sp, #1904]
+   +0x368  str     q0, [sp, #1888]
+   +0x36c  str     q0, [sp, #1872]
+   +0x370  str     q0, [sp, #1856]
+   +0x374  str     q0, [sp, #1840]
+   +0x378  str     q0, [sp, #1824]
+   +0x37c  bl      memset
+  after_memset_2:
+   +0x380  add     x0, sp, #0xf20
+   +0x384  mov     w1, wzr
+   +0x388  mov     w2, #0x600
+   +0x38c  bl      memset
+  after_memset_3:
+   +0x390  add     x0, sp, #0x1, lsl #12
+   +0x394  add     x0, x0, #0x520
+   +0x398  mov     w1, wzr
+   +0x39c  mov     w2, #0x600
+   +0x3a0  bl      memset
+  after_memset_4:
+   +0x3a4  add     x0, sp, #0x1, lsl #12
+   +0x3a8  add     x0, x0, #0xb20
+   +0x3ac  mov     w1, wzr
+   +0x3b0  mov     w2, #0x600
+   +0x3b4  bl      memset
+  after_memset_5:
+   +0x3b8  add     x0, sp, #0x2, lsl #12
+   +0x3bc  add     x0, x0, #0x120
+   +0x3c0  mov     w1, wzr
+   +0x3c4  mov     w2, #0x1200
+   +0x3c8  bl      memset
+  after_memset_6:
+   +0x3cc  movi    v0.2d, #0x0
+   +0x3d0  add     x8, sp, #0x3, lsl #12
+   +0x3d4  add     x8, x8, #0x320
+   +0x3d8  str     q0, [sp, #13104]
+   +0x3dc  str     q0, [sp, #13088]
+  adrp2:
+   +0x3e0  adrp    x8, <page>
+   +0x3e4  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x3e8  ldr     x9, [sp, #13144]
+   +0x3ec  ldr     x8, [x8]
+   +0x3f0  cmp     x8, x9
+   +0x3f4  b.ne    +0x41c                                          -+
+   +0x3f8  mov     w0, wzr                                          |
+   +0x3fc  mov     sp, x29                                          |
+   +0x400  ldp     x20, x19, [sp, #80]                              |
+   +0x404  ldp     x22, x21, [sp, #64]                              |
+   +0x408  ldp     x24, x23, [sp, #48]                              |
+   +0x40c  ldp     x26, x25, [sp, #32]                              |
+   +0x410  ldp     x28, x27, [sp, #16]                              |
+   +0x414  ldp     x29, x30, [sp], #96                              |
+  ret:                                                              |
+   +0x418  ret                                                      |
+   +0x41c  bl      stack_chk_fail                                  <+
+ ***)
+
+(*** mlkem768_indcpa_dec: 0x9c18, 0x214 bytes
+
+     +0x0  stp     x29, x30, [sp, #-80]!
+     +0x4  str     x28, [sp, #16]
+     +0x8  stp     x24, x23, [sp, #32]
+     +0xc  stp     x22, x21, [sp, #48]
+    +0x10  stp     x20, x19, [sp, #64]
+    +0x14  mov     x29, sp
+    +0x18  sub     x9, sp, #0x1, lsl #12
+    +0x1c  sub     x9, x9, #0x310
+    +0x20  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x24  adrp    x8, <page>
+    +0x28  mov     x21, x0
+    +0x2c  add     x0, sp, #0xd00
+    +0x30  mov     x19, x2
+    +0x34  mov     x20, x1
+    +0x38  add     x22, sp, #0xd00
+    +0x3c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x40  ldr     x8, [x8]
+    +0x44  str     x8, [sp, #4872]
+    +0x48  bl      mlkem768_polyvec_decompress_du
+  after_mlkem768_polyvec_decompress_du:
+    +0x4c  add     x1, x20, #0x3c0
+    +0x50  add     x0, sp, #0x500
+    +0x54  add     x20, sp, #0x500
+    +0x58  bl      mlkem_poly_decompress_d4
+  after_mlkem_poly_decompress_d4:
+    +0x5c  add     x0, sp, #0x700
+    +0x60  mov     x1, x19
+    +0x64  add     x19, sp, #0x700
+    +0x68  bl      mlkem768_polyvec_frombytes
+  after_mlkem768_polyvec_frombytes:
+    +0x6c  add     x0, sp, #0xd00
+    +0x70  bl      mlkem768_polyvec_ntt
+  after_mlkem768_polyvec_ntt:
+    +0x74  mov     x0, sp
+    +0x78  add     x1, sp, #0xd00
+    +0x7c  mov     x24, sp
+    +0x80  bl      mlkem768_polyvec_mulcache_compute
+  after_mlkem768_polyvec_mulcache_compute:
+    +0x84  add     x0, sp, #0x300
+    +0x88  add     x1, sp, #0x700
+    +0x8c  add     x2, sp, #0xd00
+    +0x90  mov     x3, sp
+    +0x94  add     x23, sp, #0x300
+    +0x98  bl      mlkem768_polyvec_basemul_acc_montgomery_cached
+  after_mlkem768_polyvec_basemul_acc_montgomery_cached:
+    +0x9c  add     x0, sp, #0x300
+    +0xa0  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont:
+    +0xa4  add     x0, sp, #0x500
+    +0xa8  add     x1, sp, #0x300
+    +0xac  bl      mlkem_poly_sub
+  after_mlkem_poly_sub:
+    +0xb0  add     x0, sp, #0x500
+    +0xb4  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce:
+    +0xb8  add     x1, sp, #0x500
+    +0xbc  mov     x0, x21
+    +0xc0  bl      mlkem_poly_tomsg
+  after_mlkem_poly_tomsg:
+    +0xc4  mov     x0, sp
+    +0xc8  mov     w1, wzr
+    +0xcc  mov     w2, #0x300
+    +0xd0  bl      memset
+  after_memset_1:
+    +0xd4  movi    v0.2d, #0x0
+    +0xd8  add     x0, sp, #0x700
+    +0xdc  mov     w1, wzr
+    +0xe0  mov     w2, #0x600
+    +0xe4  str     q0, [sp, #1264]
+    +0xe8  str     q0, [sp, #1248]
+    +0xec  str     q0, [sp, #1232]
+    +0xf0  str     q0, [sp, #1216]
+    +0xf4  str     q0, [sp, #1200]
+    +0xf8  str     q0, [sp, #1184]
+    +0xfc  str     q0, [sp, #1168]
+   +0x100  str     q0, [sp, #1152]
+   +0x104  str     q0, [sp, #1136]
+   +0x108  str     q0, [sp, #1120]
+   +0x10c  str     q0, [sp, #1104]
+   +0x110  str     q0, [sp, #1088]
+   +0x114  str     q0, [sp, #1072]
+   +0x118  str     q0, [sp, #1056]
+   +0x11c  str     q0, [sp, #1040]
+   +0x120  stp     q0, q0, [sp, #784]
+   +0x124  stp     q0, q0, [sp, #816]
+   +0x128  stp     q0, q0, [sp, #848]
+   +0x12c  stp     q0, q0, [sp, #880]
+   +0x130  stp     q0, q0, [sp, #912]
+   +0x134  stp     q0, q0, [sp, #944]
+   +0x138  stp     q0, q0, [sp, #976]
+   +0x13c  stp     q0, q0, [sp, #1008]
+   +0x140  str     q0, [sp, #768]
+   +0x144  str     q0, [sp, #1776]
+   +0x148  str     q0, [sp, #1760]
+   +0x14c  str     q0, [sp, #1744]
+   +0x150  str     q0, [sp, #1728]
+   +0x154  str     q0, [sp, #1712]
+   +0x158  str     q0, [sp, #1696]
+   +0x15c  str     q0, [sp, #1680]
+   +0x160  str     q0, [sp, #1664]
+   +0x164  str     q0, [sp, #1648]
+   +0x168  str     q0, [sp, #1632]
+   +0x16c  str     q0, [sp, #1616]
+   +0x170  str     q0, [sp, #1600]
+   +0x174  str     q0, [sp, #1584]
+   +0x178  str     q0, [sp, #1568]
+   +0x17c  str     q0, [sp, #1552]
+   +0x180  str     q0, [sp, #1536]
+   +0x184  str     q0, [sp, #1520]
+   +0x188  str     q0, [sp, #1504]
+   +0x18c  str     q0, [sp, #1488]
+   +0x190  str     q0, [sp, #1472]
+   +0x194  str     q0, [sp, #1456]
+   +0x198  str     q0, [sp, #1440]
+   +0x19c  str     q0, [sp, #1424]
+   +0x1a0  str     q0, [sp, #1408]
+   +0x1a4  str     q0, [sp, #1392]
+   +0x1a8  str     q0, [sp, #1376]
+   +0x1ac  str     q0, [sp, #1360]
+   +0x1b0  str     q0, [sp, #1344]
+   +0x1b4  str     q0, [sp, #1328]
+   +0x1b8  str     q0, [sp, #1312]
+   +0x1bc  str     q0, [sp, #1296]
+   +0x1c0  str     q0, [sp, #1280]
+   +0x1c4  bl      memset
+  after_memset_2:
+   +0x1c8  add     x0, sp, #0xd00
+   +0x1cc  mov     w1, wzr
+   +0x1d0  mov     w2, #0x600
+   +0x1d4  bl      memset
+  after_memset_3: adrp2:
+   +0x1d8  adrp    x8, <page>
+   +0x1dc  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x1e0  ldr     x9, [sp, #4872]
+   +0x1e4  ldr     x8, [x8]
+   +0x1e8  cmp     x8, x9
+   +0x1ec  b.ne    +0x210                                          -+
+   +0x1f0  mov     w0, wzr                                          |
+   +0x1f4  mov     sp, x29                                          |
+   +0x1f8  ldp     x20, x19, [sp, #64]                              |
+   +0x1fc  ldp     x22, x21, [sp, #48]                              |
+   +0x200  ldp     x24, x23, [sp, #32]                              |
+   +0x204  ldr     x28, [sp, #16]                                   |
+   +0x208  ldp     x29, x30, [sp], #80                              |
+  ret:                                                              |
+   +0x20c  ret                                                      |
+   +0x210  bl      stack_chk_fail                                  <+
+ ***)
+
+(*** mlkem768_check_pk: 0x9e2c, 0x150 bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  stp     x28, x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0xa90
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x19, x0
+    +0x20  add     x0, sp, #0x480
+    +0x24  mov     x1, x19
+    +0x28  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x2c  ldr     x8, [x8]
+    +0x30  str     x8, [sp, #2696]
+    +0x34  bl      mlkem768_polyvec_frombytes
+  after_mlkem768_polyvec_frombytes:
+    +0x38  add     x0, sp, #0x480
+    +0x3c  bl      mlkem768_polyvec_reduce
+  after_mlkem768_polyvec_reduce:
+    +0x40  mov     x0, sp
+    +0x44  add     x1, sp, #0x480
+    +0x48  mov     x20, sp
+    +0x4c  bl      mlkem768_polyvec_tobytes
+  after_mlkem768_polyvec_tobytes:
+    +0x50  movi    v0.2d, #0x0
+    +0x54  mov     x8, xzr
+    +0x58  movi    v1.2d, #0x0
+    +0x5c  movi    v2.2d, #0x0
+    +0x60  movi    v3.2d, #0x0
+  loop1:
+    +0x64  add     x9, x19, x8                  <+
+    +0x68  add     x10, x20, x8                  |
+    +0x6c  add     x8, x8, #0x20                 |
+    +0x70  cmp     x8, #0x480                    |
+    +0x74  ldp     q4, q5, [x9]                  |
+    +0x78  ldp     q6, q7, [x10]                 |
+    +0x7c  eor     v4.16b, v6.16b, v4.16b        |
+    +0x80  orr     v2.16b, v4.16b, v2.16b        |
+    +0x84  eor     v5.16b, v7.16b, v5.16b        |
+    +0x88  orr     v3.16b, v5.16b, v3.16b        |
+    +0x8c  eor     v0.16b, v4.16b, v0.16b        |
+  loop1_test:                                    |
+    +0x90  eor     v1.16b, v5.16b, v1.16b        |
+  loop1_back:                                    |
+    +0x94  b.ne    loop1                        -+
+  loop1_exit:
+    +0x98  orr     v2.16b, v3.16b, v2.16b
+    +0x9c  mov     w20, wzr
+    +0xa0  ext     v3.16b, v2.16b, v2.16b, #8
+    +0xa4  mov     x0, sp
+    +0xa8  eor     v0.16b, v1.16b, v0.16b
+    +0xac  mov     w1, w20
+    +0xb0  mov     w2, #0x480
+    +0xb4  mov     w8, #0xfffffffc
+    +0xb8  mov     x21, sp
+    +0xbc  orr     v1.8b, v2.8b, v3.8b
+    +0xc0  ext     v2.16b, v0.16b, v0.16b, #8
+    +0xc4  fmov    x9, d1
+    +0xc8  orr     x9, x9, x9, lsr #32
+    +0xcc  lsr     x10, x9, #16
+    +0xd0  eor     v0.8b, v0.8b, v2.8b
+    +0xd4  orr     w9, w9, w10
+    +0xd8  fmov    x10, d0
+    +0xdc  orr     w9, w9, w9, lsr #8
+    +0xe0  eor     x10, x10, x10, lsr #32
+    +0xe4  sub     w9, w20, w9, uxtb
+    +0xe8  eor     x10, x10, x10, lsr #16
+    +0xec  lsr     x11, x10, #8
+    +0xf0  eor     w10, w10, w11
+    +0xf4  eor     w9, w10, w9, lsr #16
+    +0xf8  and     w9, w9, #0xff
+    +0xfc  cmp     w9, w10, uxtb
+   +0x100  csel    w19, w20, w8, eq
+   +0x104  bl      memset
+  after_memset_1:
+   +0x108  add     x0, sp, #0x480
+   +0x10c  mov     w1, w20
+   +0x110  mov     w2, #0x600
+   +0x114  add     x20, sp, #0x480
+   +0x118  bl      memset
+  after_memset_2: adrp2:
+   +0x11c  adrp    x8, <page>
+   +0x120  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x124  ldr     x9, [sp, #2696]
+   +0x128  ldr     x8, [x8]
+   +0x12c  cmp     x8, x9
+   +0x130  b.ne    +0x14c                       -+
+   +0x134  mov     w0, w19                       |
+   +0x138  mov     sp, x29                       |
+   +0x13c  ldp     x20, x19, [sp, #32]           |
+   +0x140  ldp     x28, x21, [sp, #16]           |
+   +0x144  ldp     x29, x30, [sp], #48           |
+  ret:                                           |
+   +0x148  ret                                   |
+   +0x14c  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem768_check_sk: 0x9f7c, 0xe0 bytes
+
+     +0x0  stp     x29, x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x29, sp
+     +0xc  sub     x9, sp, #0x40
+    +0x10  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x14  adrp    x8, <page>
+    +0x18  mov     x19, x0
+    +0x1c  add     x1, x0, #0x480
+    +0x20  mov     x0, sp
+    +0x24  mov     w2, #0x4a0
+    +0x28  mov     x20, sp
+    +0x2c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x30  ldr     x8, [x8]
+    +0x34  str     x8, [sp, #56]
+    +0x38  bl      mlkem_sha3_256
+  after_mlkem_sha3_256:
+    +0x3c  ldp     q2, q3, [sp]
+    +0x40  mov     w8, wzr
+    +0x44  ldr     q0, [x19, #2336]
+    +0x48  ldr     q1, [x19, #2352]
+    +0x4c  eor     v0.16b, v2.16b, v0.16b
+    +0x50  eor     v1.16b, v3.16b, v1.16b
+    +0x54  orr     v2.16b, v1.16b, v0.16b
+    +0x58  ext     v3.16b, v2.16b, v2.16b, #8
+    +0x5c  eor     v0.16b, v1.16b, v0.16b
+    +0x60  orr     v1.8b, v2.8b, v3.8b
+    +0x64  ext     v2.16b, v0.16b, v0.16b, #8
+    +0x68  fmov    x9, d1
+    +0x6c  orr     x9, x9, x9, lsr #32
+    +0x70  eor     v0.8b, v0.8b, v2.8b
+    +0x74  lsr     x10, x9, #16
+    +0x78  fmov    x11, d0
+    +0x7c  orr     w9, w9, w10
+    +0x80  movi    v0.2d, #0x0
+    +0x84  orr     w9, w9, w9, lsr #8
+    +0x88  eor     x10, x11, x11, lsr #32
+    +0x8c  sub     w9, w8, w9, uxtb
+    +0x90  eor     x10, x10, x10, lsr #16
+    +0x94  lsr     x11, x10, #8
+    +0x98  eor     w10, w10, w11
+  adrp2:
+    +0x9c  adrp    x11, <page>
+    +0xa0  eor     w9, w10, w9, lsr #16
+    +0xa4  stp     q0, q0, [sp]
+    +0xa8  and     w9, w9, #0xff
+    +0xac  ldr     x11, [x11, #4088]
+                   // got_stack_chk_guard
+    +0xb0  cmp     w9, w10, uxtb
+    +0xb4  ldr     x12, [sp, #56]
+    +0xb8  mov     w9, #0xfffffffb
+    +0xbc  csel    w0, w8, w9, eq
+    +0xc0  ldr     x11, [x11]
+    +0xc4  cmp     x11, x12
+    +0xc8  b.ne    +0xdc                        -+
+    +0xcc  mov     sp, x29                       |
+    +0xd0  ldp     x20, x19, [sp, #16]           |
+    +0xd4  ldp     x29, x30, [sp], #32           |
+  ret:                                           |
+    +0xd8  ret                                   |
+    +0xdc  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem768_keypair_derand: 0xa05c, 0x88 bytes
+
+     +0x0  str     x30, [sp, #-48]!
+     +0x4  stp     x22, x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x22, x2
+    +0x10  mov     x19, x1
+    +0x14  mov     x21, x0
+    +0x18  bl      mlkem768_indcpa_keypair_derand
+  after_mlkem768_indcpa_keypair_derand:
+    +0x1c  mov     w20, w0
+    +0x20  cbz     w0, +0x48                       -+
+    +0x24  mov     x0, x21                          |
+    +0x28  mov     w1, wzr                          |
+    +0x2c  mov     w2, #0x4a0                       |
+    +0x30  bl      memset                           |
+  after_memset_1:                                   |
+    +0x34  mov     x0, x19                          |
+    +0x38  mov     w1, wzr                          |
+    +0x3c  mov     w2, #0x960                       |
+    +0x40  bl      memset                           |
+  after_memset_2:                                   |
+    +0x44  b       join1                           ---+
+    +0x48  add     x0, x19, #0x480                 <+ |
+    +0x4c  mov     x1, x21                            |
+    +0x50  mov     w2, #0x4a0                         |
+    +0x54  bl      memcpy                             |
+  after_memcpy:                                       |
+    +0x58  add     x0, x19, #0x920                    |
+    +0x5c  mov     x1, x21                            |
+    +0x60  mov     w2, #0x4a0                         |
+    +0x64  bl      mlkem_sha3_256                     |
+  after_mlkem_sha3_256:                               |
+    +0x68  ldp     q1, q0, [x22, #32]                 |
+    +0x6c  str     q1, [x19, #2368]                   |
+    +0x70  str     q0, [x19, #2384]                   |
+  join1:                                              |
+    +0x74  mov     w0, w20                         <--+
+    +0x78  ldp     x20, x19, [sp, #32]
+    +0x7c  ldp     x22, x21, [sp, #16]
+    +0x80  ldr     x30, [sp], #48
+  ret:
+    +0x84  ret
+ ***)
+
+(*** mlkem768_keypair: 0xa0e4, 0xf4 bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  str     x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0x50
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x19, x1
+    +0x20  mov     x21, x0
+    +0x24  mov     x0, sp
+    +0x28  mov     w1, #0x40
+    +0x2c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x30  ldr     x8, [x8]
+    +0x34  str     x8, [sp, #72]
+    +0x38  bl      randombytes
+  after_randombytes:
+    +0x3c  cbz     w0, +0x48                       -+
+    +0x40  mov     w20, #0xfffffffd                 |
+    +0x44  b       join1                           -----+
+    +0x48  mov     x2, sp                          <+   |
+    +0x4c  mov     x0, x21                              |
+    +0x50  mov     x1, x19                              |
+    +0x54  bl      mlkem768_indcpa_keypair_derand       |
+  after_mlkem768_indcpa_keypair_derand:                 |
+    +0x58  mov     w20, w0                              |
+    +0x5c  cbz     w0, +0x84                       -+   |
+    +0x60  mov     x0, x21                          |   |
+    +0x64  mov     w1, wzr                          |   |
+    +0x68  mov     w2, #0x4a0                       |   |
+    +0x6c  bl      memset                           |   |
+  after_memset_1:                                   |   |
+    +0x70  mov     x0, x19                          |   |
+    +0x74  mov     w1, wzr                          |   |
+    +0x78  mov     w2, #0x960                       |   |
+    +0x7c  bl      memset                           |   |
+  after_memset_2:                                   |   |
+    +0x80  b       join1                           ---+ |
+    +0x84  add     x0, x19, #0x480                 <+ | |
+    +0x88  mov     x1, x21                            | |
+    +0x8c  mov     w2, #0x4a0                         | |
+    +0x90  bl      memcpy                             | |
+  after_memcpy:                                       | |
+    +0x94  add     x0, x19, #0x920                    | |
+    +0x98  mov     x1, x21                            | |
+    +0x9c  mov     w2, #0x4a0                         | |
+    +0xa0  bl      mlkem_sha3_256                     | |
+  after_mlkem_sha3_256:                               | |
+    +0xa4  ldp     q0, q1, [sp, #32]                  | |
+    +0xa8  str     q0, [x19, #2368]                   | |
+    +0xac  str     q1, [x19, #2384]                   | |
+  join1:                                              | |
+    +0xb0  movi    v0.2d, #0x0                     <--+-+
+    +0xb4  mov     x8, sp
+    +0xb8  stp     q0, q0, [sp]
+    +0xbc  stp     q0, q0, [sp, #32]
+  adrp2:
+    +0xc0  adrp    x8, <page>
+    +0xc4  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0xc8  ldr     x9, [sp, #72]
+    +0xcc  ldr     x8, [x8]
+    +0xd0  cmp     x8, x9
+    +0xd4  b.ne    +0xf0                           -+
+    +0xd8  mov     w0, w20                          |
+    +0xdc  mov     sp, x29                          |
+    +0xe0  ldp     x20, x19, [sp, #32]              |
+    +0xe4  ldr     x21, [sp, #16]                   |
+    +0xe8  ldp     x29, x30, [sp], #48              |
+  ret:                                              |
+    +0xec  ret                                      |
+    +0xf0  bl      stack_chk_fail                  <+
+ ***)
+
+(*** mlkem768_enc_derand: 0xa1d8, 0x1e4 bytes
+
+     +0x0  stp     x29, x30, [sp, #-96]!
+     +0x4  str     x28, [sp, #16]
+     +0x8  stp     x26, x25, [sp, #32]
+     +0xc  stp     x24, x23, [sp, #48]
+    +0x10  stp     x22, x21, [sp, #64]
+    +0x14  stp     x20, x19, [sp, #80]
+    +0x18  mov     x29, sp
+    +0x1c  sub     x9, sp, #0xaa0
+    +0x20  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x24  adrp    x8, <page>
+    +0x28  mov     x19, x1
+    +0x2c  mov     x21, x0
+    +0x30  add     x0, sp, #0x480
+    +0x34  mov     x1, x2
+    +0x38  mov     x22, x3
+    +0x3c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x40  mov     x20, x2
+    +0x44  ldr     x8, [x8]
+    +0x48  str     x8, [sp, #2712]
+    +0x4c  bl      mlkem768_polyvec_frombytes
+  after_mlkem768_polyvec_frombytes:
+    +0x50  add     x0, sp, #0x480
+    +0x54  bl      mlkem768_polyvec_reduce
+  after_mlkem768_polyvec_reduce:
+    +0x58  mov     x0, sp
+    +0x5c  add     x1, sp, #0x480
+    +0x60  mov     x23, sp
+    +0x64  bl      mlkem768_polyvec_tobytes
+  after_mlkem768_polyvec_tobytes:
+    +0x68  movi    v0.2d, #0x0
+    +0x6c  mov     x8, xzr
+    +0x70  movi    v1.2d, #0x0
+    +0x74  movi    v2.2d, #0x0
+    +0x78  movi    v3.2d, #0x0
+  loop1:
+    +0x7c  add     x9, x20, x8                  <+
+    +0x80  add     x10, x23, x8                  |
+    +0x84  add     x8, x8, #0x20                 |
+    +0x88  cmp     x8, #0x480                    |
+    +0x8c  ldp     q4, q5, [x9]                  |
+    +0x90  ldp     q6, q7, [x10]                 |
+    +0x94  eor     v4.16b, v6.16b, v4.16b        |
+    +0x98  orr     v2.16b, v4.16b, v2.16b        |
+    +0x9c  eor     v5.16b, v7.16b, v5.16b        |
+    +0xa0  orr     v3.16b, v5.16b, v3.16b        |
+    +0xa4  eor     v0.16b, v4.16b, v0.16b        |
+  loop1_test:                                    |
+    +0xa8  eor     v1.16b, v5.16b, v1.16b        |
+  loop1_back:                                    |
+    +0xac  b.ne    loop1                        -+
+  loop1_exit:
+    +0xb0  orr     v2.16b, v3.16b, v2.16b
+    +0xb4  mov     w23, wzr
+    +0xb8  ext     v3.16b, v2.16b, v2.16b, #8
+    +0xbc  mov     x0, sp
+    +0xc0  eor     v0.16b, v1.16b, v0.16b
+    +0xc4  mov     w1, wzr
+    +0xc8  mov     w2, #0x480
+    +0xcc  mov     x24, sp
+    +0xd0  orr     v1.8b, v2.8b, v3.8b
+    +0xd4  ext     v2.16b, v0.16b, v0.16b, #8
+    +0xd8  fmov    x8, d1
+    +0xdc  orr     x8, x8, x8, lsr #32
+    +0xe0  lsr     x9, x8, #16
+    +0xe4  eor     v0.8b, v0.8b, v2.8b
+    +0xe8  orr     w8, w8, w9
+    +0xec  fmov    x9, d0
+    +0xf0  orr     w8, w8, w8, lsr #8
+    +0xf4  eor     x9, x9, x9, lsr #32
+    +0xf8  sub     w8, w23, w8, uxtb
+    +0xfc  eor     x9, x9, x9, lsr #16
+   +0x100  lsr     x10, x9, #8
+   +0x104  eor     w25, w9, w10
+   +0x108  eor     w8, w25, w8, lsr #16
+   +0x10c  and     w26, w8, #0xff
+   +0x110  bl      memset
+  after_memset_1:
+   +0x114  add     x0, sp, #0x480
+   +0x118  mov     w1, wzr
+   +0x11c  mov     w2, #0x600
+   +0x120  add     x23, sp, #0x480
+   +0x124  bl      memset
+  after_memset_2:
+   +0x128  cmp     w26, w25, uxtb
+   +0x12c  b.ne    +0x180                       -----+
+   +0x130  ldp     q0, q1, [x22]                     |
+   +0x134  add     x0, x23, #0x20                    |
+   +0x138  mov     x1, x20                           |
+   +0x13c  mov     w2, #0x4a0                        |
+   +0x140  str     q0, [sp, #1152]                   |
+   +0x144  str     q1, [sp, #1168]                   |
+   +0x148  bl      mlkem_sha3_256                    |
+  after_mlkem_sha3_256:                              |
+   +0x14c  mov     x0, sp                            |
+   +0x150  add     x1, sp, #0x480                    |
+   +0x154  mov     w2, #0x40                         |
+   +0x158  bl      mlkem_sha3_512                    |
+  after_mlkem_sha3_512:                              |
+   +0x15c  add     x3, x24, #0x20                    |
+   +0x160  add     x1, sp, #0x480                    |
+   +0x164  mov     x0, x21                           |
+   +0x168  mov     x2, x20                           |
+   +0x16c  bl      mlkem768_indcpa_enc               |
+  after_mlkem768_indcpa_enc:                         |
+   +0x170  cbnz    w0, join1                    ---+ |
+   +0x174  ldp     q0, q1, [sp]                    | |
+   +0x178  stp     q0, q1, [x19]                   | |
+   +0x17c  b       join1                        -+ | |
+   +0x180  mov     w0, #0xfffffffc              <----+
+  join1:                                         | |
+   +0x184  movi    v0.2d, #0x0                  <+-+
+   +0x188  mov     x8, sp
+   +0x18c  stp     q0, q0, [sp]
+   +0x190  stp     q0, q0, [sp, #32]
+   +0x194  str     q0, [sp, #1200]
+   +0x198  add     x8, sp, #0x480
+   +0x19c  str     q0, [sp, #1184]
+   +0x1a0  str     q0, [sp, #1168]
+   +0x1a4  str     q0, [sp, #1152]
+  adrp2:
+   +0x1a8  adrp    x8, <page>
+   +0x1ac  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x1b0  ldr     x9, [sp, #2712]
+   +0x1b4  ldr     x8, [x8]
+   +0x1b8  cmp     x8, x9
+   +0x1bc  b.ne    +0x1e0                       -+
+   +0x1c0  mov     sp, x29                       |
+   +0x1c4  ldp     x20, x19, [sp, #80]           |
+   +0x1c8  ldp     x22, x21, [sp, #64]           |
+   +0x1cc  ldp     x24, x23, [sp, #48]           |
+   +0x1d0  ldp     x26, x25, [sp, #32]           |
+   +0x1d4  ldr     x28, [sp, #16]                |
+   +0x1d8  ldp     x29, x30, [sp], #96           |
+  ret:                                           |
+   +0x1dc  ret                                   |
+   +0x1e0  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem768_enc: 0xa3bc, 0x9c bytes
+
+     +0x0  stp     x29, x30, [sp, #-48]!
+     +0x4  str     x21, [sp, #16]
+     +0x8  stp     x20, x19, [sp, #32]
+     +0xc  mov     x29, sp
+    +0x10  sub     x9, sp, #0x30
+    +0x14  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x18  adrp    x8, <page>
+    +0x1c  mov     x20, x1
+    +0x20  mov     x21, x0
+    +0x24  mov     x0, sp
+    +0x28  mov     w1, #0x20
+    +0x2c  mov     x19, x2
+    +0x30  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x34  ldr     x8, [x8]
+    +0x38  str     x8, [sp, #40]
+    +0x3c  bl      randombytes
+  after_randombytes:
+    +0x40  cbz     w0, +0x4c                    -+
+    +0x44  mov     w0, #0xfffffffd               |
+    +0x48  b       join1                        ---+
+    +0x4c  mov     x3, sp                       <+ |
+    +0x50  mov     x0, x21                         |
+    +0x54  mov     x1, x20                         |
+    +0x58  mov     x2, x19                         |
+    +0x5c  bl      mlkem768_enc_derand             |
+  join1: after_mlkem768_enc_derand:                |
+    +0x60  movi    v0.2d, #0x0                  <--+
+    +0x64  mov     x8, sp
+    +0x68  stp     q0, q0, [sp]
+  adrp2:
+    +0x6c  adrp    x8, <page>
+    +0x70  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x74  ldr     x9, [sp, #40]
+    +0x78  ldr     x8, [x8]
+    +0x7c  cmp     x8, x9
+    +0x80  b.ne    +0x98                        -+
+    +0x84  mov     sp, x29                       |
+    +0x88  ldp     x20, x19, [sp, #32]           |
+    +0x8c  ldr     x21, [sp, #16]                |
+    +0x90  ldp     x29, x30, [sp], #48           |
+  ret:                                           |
+    +0x94  ret                                   |
+    +0x98  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem768_dec: 0xa458, 0x2a8 bytes
+
+     +0x0  stp     x29, x30, [sp, #-64]!
+     +0x4  stp     x28, x23, [sp, #16]
+     +0x8  stp     x22, x21, [sp, #32]
+     +0xc  stp     x20, x19, [sp, #48]
+    +0x10  mov     x29, sp
+    +0x14  sub     x9, sp, #0x500
+    +0x18  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x1c  adrp    x8, <page>
+    +0x20  add     x22, x2, #0x480
+    +0x24  mov     x21, x2
+    +0x28  mov     x20, x1
+    +0x2c  mov     x19, x0
+    +0x30  mov     x0, sp
+    +0x34  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x38  mov     x1, x22
+    +0x3c  mov     w2, #0x4a0
+    +0x40  mov     x23, sp
+    +0x44  ldr     x8, [x8]
+    +0x48  str     x8, [sp, #1272]
+    +0x4c  bl      mlkem_sha3_256
+  after_mlkem_sha3_256:
+    +0x50  ldp     q2, q3, [sp]
+    +0x54  mov     w8, wzr
+    +0x58  ldr     q0, [x21, #2336]
+    +0x5c  ldr     q1, [x21, #2352]
+    +0x60  eor     v0.16b, v2.16b, v0.16b
+    +0x64  eor     v1.16b, v3.16b, v1.16b
+    +0x68  orr     v2.16b, v1.16b, v0.16b
+    +0x6c  ext     v3.16b, v2.16b, v2.16b, #8
+    +0x70  eor     v0.16b, v1.16b, v0.16b
+    +0x74  orr     v1.8b, v2.8b, v3.8b
+    +0x78  ext     v2.16b, v0.16b, v0.16b, #8
+    +0x7c  fmov    x9, d1
+    +0x80  orr     x9, x9, x9, lsr #32
+    +0x84  eor     v0.8b, v0.8b, v2.8b
+    +0x88  lsr     x10, x9, #16
+    +0x8c  orr     w9, w9, w10
+    +0x90  fmov    x10, d0
+    +0x94  movi    v0.2d, #0x0
+    +0x98  orr     w9, w9, w9, lsr #8
+    +0x9c  eor     x10, x10, x10, lsr #32
+    +0xa0  sub     w8, w8, w9, uxtb
+    +0xa4  eor     x9, x10, x10, lsr #16
+    +0xa8  lsr     x10, x9, #8
+    +0xac  eor     w9, w9, w10
+    +0xb0  eor     w8, w9, w8, lsr #16
+    +0xb4  stp     q0, q0, [sp]
+    +0xb8  and     w8, w8, #0xff
+    +0xbc  cmp     w8, w9, uxtb
+    +0xc0  b.ne    +0x22c                       -------+
+    +0xc4  add     x0, sp, #0x4a0                      |
+    +0xc8  mov     x1, x20                             |
+    +0xcc  mov     x2, x21                             |
+    +0xd0  bl      mlkem768_indcpa_dec                 |
+  after_mlkem768_indcpa_dec:                           |
+    +0xd4  mov     w23, w0                             |
+    +0xd8  cbnz    w0, join1                    -----+ |
+    +0xdc  add     x8, x21, #0x920                   | |
+    +0xe0  add     x0, sp, #0x460                    | |
+    +0xe4  add     x1, sp, #0x4a0                    | |
+    +0xe8  mov     w2, #0x40                         | |
+    +0xec  add     x23, sp, #0x460                   | |
+    +0xf0  ldp     q0, q1, [x8]                      | |
+    +0xf4  str     q0, [sp, #1216]                   | |
+    +0xf8  str     q1, [sp, #1232]                   | |
+    +0xfc  bl      mlkem_sha3_512                    | |
+  after_mlkem_sha3_512:                              | |
+   +0x100  add     x3, x23, #0x20                    | |
+   +0x104  mov     x0, sp                            | |
+   +0x108  add     x1, sp, #0x4a0                    | |
+   +0x10c  mov     x2, x22                           | |
+   +0x110  mov     x22, sp                           | |
+   +0x114  bl      mlkem768_indcpa_enc               | |
+  after_mlkem768_indcpa_enc:                         | |
+   +0x118  mov     w23, w0                           | |
+   +0x11c  cbnz    w0, join1                    ---+ | |
+   +0x120  movi    v0.2d, #0x0                     | | |
+   +0x124  mov     x8, xzr                         | | |
+   +0x128  movi    v1.2d, #0x0                     | | |
+   +0x12c  movi    v2.2d, #0x0                     | | |
+   +0x130  movi    v3.2d, #0x0                     | | |
+  loop1:                                           | | |
+   +0x134  add     x9, x20, x8                  <+ | | |
+   +0x138  add     x10, x22, x8                  | | | |
+   +0x13c  add     x8, x8, #0x20                 | | | |
+   +0x140  cmp     x8, #0x440                    | | | |
+   +0x144  ldp     q4, q5, [x9]                  | | | |
+   +0x148  ldp     q6, q7, [x10]                 | | | |
+   +0x14c  eor     v4.16b, v6.16b, v4.16b        | | | |
+   +0x150  orr     v2.16b, v4.16b, v2.16b        | | | |
+   +0x154  eor     v5.16b, v7.16b, v5.16b        | | | |
+   +0x158  orr     v3.16b, v5.16b, v3.16b        | | | |
+   +0x15c  eor     v0.16b, v4.16b, v0.16b        | | | |
+  loop1_test:                                    | | | |
+   +0x160  eor     v1.16b, v5.16b, v1.16b        | | | |
+  loop1_back:                                    | | | |
+   +0x164  b.ne    loop1                        -+ | | |
+  loop1_exit:                                      | | |
+   +0x168  orr     v2.16b, v3.16b, v2.16b          | | |
+   +0x16c  mov     w22, wzr                        | | |
+   +0x170  ext     v3.16b, v2.16b, v2.16b, #8      | | |
+   +0x174  mov     x8, sp                          | | |
+   +0x178  eor     v0.16b, v1.16b, v0.16b          | | |
+   +0x17c  add     x0, x8, #0x20                   | | |
+   +0x180  ext     v1.16b, v0.16b, v0.16b, #8      | | |
+   +0x184  mov     x1, x20                         | | |
+   +0x188  mov     w2, #0x440                      | | |
+   +0x18c  orr     v2.8b, v2.8b, v3.8b             | | |
+   +0x190  fmov    x9, d2                          | | |
+   +0x194  eor     v0.8b, v0.8b, v1.8b             | | |
+   +0x198  fmov    x11, d0                         | | |
+   +0x19c  orr     x9, x9, x9, lsr #32             | | |
+   +0x1a0  lsr     x10, x9, #16                    | | |
+   +0x1a4  orr     w9, w9, w10                     | | |
+   +0x1a8  eor     x10, x11, x11, lsr #32          | | |
+   +0x1ac  orr     w9, w9, w9, lsr #8              | | |
+   +0x1b0  eor     x10, x10, x10, lsr #16          | | |
+   +0x1b4  sub     w9, w22, w9, uxtb               | | |
+   +0x1b8  lsr     x11, x10, #8                    | | |
+   +0x1bc  eor     w10, w10, w11                   | | |
+   +0x1c0  eor     w9, w10, w9, lsr #16            | | |
+   +0x1c4  ldr     q0, [x21, #2368]                | | |
+   +0x1c8  ldr     q1, [x21, #2384]                | | |
+   +0x1cc  eor     w21, w9, w10                    | | |
+   +0x1d0  stp     q0, q1, [sp]                    | | |
+   +0x1d4  bl      memcpy                          | | |
+  after_memcpy:                                    | | |
+   +0x1d8  mov     x2, sp                          | | |
+   +0x1dc  mov     x0, x19                         | | |
+   +0x1e0  mov     w1, #0x20                       | | |
+   +0x1e4  mov     w3, #0x460                      | | |
+   +0x1e8  bl      mlkem_shake256                  | | |
+  after_mlkem_shake256:                            | | |
+   +0x1ec  mov     x8, xzr                         | | |
+   +0x1f0  sub     w9, w22, w21, uxtb              | | |
+   +0x1f4  add     x10, sp, #0x460                 | | |
+  loop2:                                           | | |
+   +0x1f8  ldrb    w11, [x19, x8]               <+ | | |
+   +0x1fc  mov     w12, w9                       | | | |
+   +0x200  ldrb    w13, [x10, x8]                | | | |
+   +0x204  lsr     w12, w12, #16                 | | | |
+   +0x208  and     w11, w11, w12                 | | | |
+   +0x20c  bic     w13, w13, w12                 | | | |
+   +0x210  orr     w11, w11, w13                 | | | |
+   +0x214  strb    w11, [x19, x8]                | | | |
+   +0x218  add     x8, x8, #0x1                  | | | |
+  loop2_test:                                    | | | |
+   +0x21c  cmp     x8, #0x20                     | | | |
+  loop2_back:                                    | | | |
+   +0x220  b.ne    loop2                        -+ | | |
+  loop2_exit:                                      | | |
+   +0x224  mov     w23, wzr                        | | |
+   +0x228  b       join1                        -+ | | |
+   +0x22c  mov     w23, #0xfffffffb             <------+
+  join1:                                         | | |
+   +0x230  mov     x0, sp                       <+-+-+
+   +0x234  mov     w1, wzr
+   +0x238  mov     w2, #0x460
+   +0x23c  mov     x19, sp
+   +0x240  bl      memset
+  after_memset:
+   +0x244  movi    v0.2d, #0x0
+   +0x248  add     x8, sp, #0x460
+   +0x24c  str     q0, [sp, #1168]
+   +0x250  str     q0, [sp, #1152]
+   +0x254  str     q0, [sp, #1136]
+   +0x258  str     q0, [sp, #1120]
+   +0x25c  str     q0, [sp, #1232]
+   +0x260  add     x8, sp, #0x4a0
+   +0x264  str     q0, [sp, #1216]
+   +0x268  str     q0, [sp, #1200]
+   +0x26c  str     q0, [sp, #1184]
+  adrp2:
+   +0x270  adrp    x8, <page>
+   +0x274  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x278  ldr     x9, [sp, #1272]
+   +0x27c  ldr     x8, [x8]
+   +0x280  cmp     x8, x9
+   +0x284  b.ne    +0x2a4                       -+
+   +0x288  mov     w0, w23                       |
+   +0x28c  mov     sp, x29                       |
+   +0x290  ldp     x20, x19, [sp, #48]           |
+   +0x294  ldp     x22, x21, [sp, #32]           |
+   +0x298  ldp     x28, x23, [sp, #16]           |
+   +0x29c  ldp     x29, x30, [sp], #64           |
+  ret:                                           |
+   +0x2a0  ret                                   |
+   +0x2a4  bl      stack_chk_fail               <+
+ ***)
+
+(*** mlkem768_polyvec_compress_du: 0xa700, 0x34 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_compress_d10
+  after_mlkem_poly_compress_d10_1:
+    +0x14  add     x0, x20, #0x140
+    +0x18  add     x1, x19, #0x200
+    +0x1c  bl      mlkem_poly_compress_d10
+  after_mlkem_poly_compress_d10_2:
+    +0x20  add     x0, x20, #0x280
+    +0x24  add     x1, x19, #0x400
+    +0x28  ldp     x20, x19, [sp, #16]
+    +0x2c  ldr     x30, [sp], #32
+    +0x30  b       mlkem_poly_compress_d10
+ ***)
+
+(*** mlkem768_polyvec_decompress_du: 0xa734, 0x34 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_decompress_d10
+  after_mlkem_poly_decompress_d10_1:
+    +0x14  add     x0, x20, #0x200
+    +0x18  add     x1, x19, #0x140
+    +0x1c  bl      mlkem_poly_decompress_d10
+  after_mlkem_poly_decompress_d10_2:
+    +0x20  add     x0, x20, #0x400
+    +0x24  add     x1, x19, #0x280
+    +0x28  ldp     x20, x19, [sp, #16]
+    +0x2c  ldr     x30, [sp], #32
+    +0x30  b       mlkem_poly_decompress_d10
+ ***)
+
+(*** mlkem768_polyvec_tobytes: 0xa768, 0x34 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_tobytes
+  after_mlkem_poly_tobytes_1:
+    +0x14  add     x0, x20, #0x180
+    +0x18  add     x1, x19, #0x200
+    +0x1c  bl      mlkem_poly_tobytes
+  after_mlkem_poly_tobytes_2:
+    +0x20  add     x0, x20, #0x300
+    +0x24  add     x1, x19, #0x400
+    +0x28  ldp     x20, x19, [sp, #16]
+    +0x2c  ldr     x30, [sp], #32
+    +0x30  b       mlkem_poly_tobytes
+ ***)
+
+(*** mlkem768_polyvec_frombytes: 0xa79c, 0x34 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_frombytes
+  after_mlkem_poly_frombytes_1:
+    +0x14  add     x0, x20, #0x200
+    +0x18  add     x1, x19, #0x180
+    +0x1c  bl      mlkem_poly_frombytes
+  after_mlkem_poly_frombytes_2:
+    +0x20  add     x0, x20, #0x400
+    +0x24  add     x1, x19, #0x300
+    +0x28  ldp     x20, x19, [sp, #16]
+    +0x2c  ldr     x30, [sp], #32
+    +0x30  b       mlkem_poly_frombytes
+ ***)
+
+(*** mlkem768_polyvec_ntt: 0xa7d0, 0x20 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_ntt
+  after_mlkem_poly_ntt_1:
+     +0xc  add     x0, x19, #0x200
+    +0x10  bl      mlkem_poly_ntt
+  after_mlkem_poly_ntt_2:
+    +0x14  add     x0, x19, #0x400
+    +0x18  ldp     x30, x19, [sp], #16
+    +0x1c  b       mlkem_poly_ntt
+ ***)
+
+(*** mlkem768_polyvec_invntt_tomont: 0xa7f0, 0x20 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont_1:
+     +0xc  add     x0, x19, #0x200
+    +0x10  bl      mlkem_poly_invntt_tomont
+  after_mlkem_poly_invntt_tomont_2:
+    +0x14  add     x0, x19, #0x400
+    +0x18  ldp     x30, x19, [sp], #16
+    +0x1c  b       mlkem_poly_invntt_tomont
+ ***)
+
+(*** mlkem768_polyvec_basemul_acc_montgomery_cached: 0xa810, 0x20c bytes
+
+     +0x0  add     x8, x3, #0x300
+     +0x4  add     x10, x0, #0x200
+     +0x8  cmp     x8, x0
+     +0xc  add     x9, x2, #0x600
+    +0x10  ccmp    x10, x3, #0x0, hi
+    +0x14  add     x11, x1, #0x600
+    +0x18  cset    w8, hi
+    +0x1c  cmp     x9, x0
+    +0x20  ccmp    x10, x2, #0x0, hi
+    +0x24  cset    w9, hi
+    +0x28  cmp     x10, x1
+    +0x2c  ccmp    x11, x0, #0x0, hi
+    +0x30  b.hi    join1                   ---------+
+    +0x34  tbnz    w8, #0, join1           -------+ |
+    +0x38  cbnz    w9, join1               -----+ | |
+    +0x3c  mov     w10, #0xf3010000             | | |
+    +0x40  mov     x8, xzr                      | | |
+    +0x44  add     x9, x3, #0x100               | | |
+    +0x48  mvni    v1.4s, #0xd, lsl #8          | | |
+    +0x4c  dup     v0.4s, w10                   | | |
+  loop1:                                        | | |
+    +0x50  add     x10, x1, x8             <+   | | |
+    +0x54  add     x11, x2, x8              |   | | |
+    +0x58  add     x12, x10, #0x200         |   | | |
+    +0x5c  ldur    q17, [x9, #-256]         |   | | |
+    +0x60  ldr     q22, [x9]                |   | | |
+    +0x64  ld2     {v2.8h-v3.8h}, [x10]     |   | | |
+    +0x68  add     x10, x10, #0x400         |   | | |
+    +0x6c  ld2     {v4.8h-v5.8h}, [x11]     |   | | |
+    +0x70  ld2     {v6.8h-v7.8h}, [x12]     |   | | |
+    +0x74  add     x12, x11, #0x200         |   | | |
+    +0x78  smull   v16.4s, v4.4h, v2.4h     |   | | |
+    +0x7c  smull2  v20.4s, v4.8h, v2.8h     |   | | |
+    +0x80  ld2     {v18.8h-v19.8h}, [x12]   |   | | |
+    +0x84  smull   v21.4s, v5.4h, v2.4h     |   | | |
+    +0x88  smull2  v23.4s, v5.8h, v2.8h     |   | | |
+    +0x8c  smlal   v16.4s, v17.4h, v3.4h    |   | | |
+    +0x90  smlal2  v20.4s, v17.8h, v3.8h    |   | | |
+    +0x94  ld2     {v24.8h-v25.8h}, [x10]   |   | | |
+    +0x98  smlal   v21.4s, v4.4h, v3.4h     |   | | |
+    +0x9c  add     x10, x11, #0x400         |   | | |
+    +0xa0  smlal2  v23.4s, v4.8h, v3.8h     |   | | |
+    +0xa4  smlal   v16.4s, v22.4h, v7.4h    |   | | |
+    +0xa8  smlal2  v20.4s, v22.8h, v7.8h    |   | | |
+    +0xac  ldr     q2, [x9, #256]           |   | | |
+    +0xb0  smlal   v21.4s, v18.4h, v7.4h    |   | | |
+    +0xb4  ld2     {v3.8h-v4.8h}, [x10]     |   | | |
+    +0xb8  smlal2  v23.4s, v18.8h, v7.8h    |   | | |
+    +0xbc  add     x10, x0, x8              |   | | |
+    +0xc0  smlal   v16.4s, v18.4h, v6.4h    |   | | |
+    +0xc4  add     x8, x8, #0x20            |   | | |
+    +0xc8  smlal2  v20.4s, v18.8h, v6.8h    |   | | |
+    +0xcc  add     x9, x9, #0x10            |   | | |
+    +0xd0  smlal   v21.4s, v19.4h, v6.4h    |   | | |
+    +0xd4  cmp     x8, #0x200               |   | | |
+    +0xd8  smlal2  v23.4s, v19.8h, v6.8h    |   | | |
+    +0xdc  smlal   v16.4s, v2.4h, v25.4h    |   | | |
+    +0xe0  smlal2  v20.4s, v2.8h, v25.8h    |   | | |
+    +0xe4  smlal   v21.4s, v3.4h, v25.4h    |   | | |
+    +0xe8  smlal2  v23.4s, v3.8h, v25.8h    |   | | |
+    +0xec  smlal   v16.4s, v3.4h, v24.4h    |   | | |
+    +0xf0  smlal2  v20.4s, v3.8h, v24.8h    |   | | |
+    +0xf4  smlal   v21.4s, v4.4h, v24.4h    |   | | |
+    +0xf8  smlal2  v23.4s, v4.8h, v24.8h    |   | | |
+    +0xfc  mul     v2.4s, v16.4s, v0.4s     |   | | |
+   +0x100  mul     v3.4s, v20.4s, v0.4s     |   | | |
+   +0x104  mul     v4.4s, v21.4s, v0.4s     |   | | |
+   +0x108  mul     v5.4s, v23.4s, v0.4s     |   | | |
+   +0x10c  sshr    v2.4s, v2.4s, #16        |   | | |
+   +0x110  sshr    v3.4s, v3.4s, #16        |   | | |
+   +0x114  mul     v2.4s, v2.4s, v1.4s      |   | | |
+   +0x118  sshr    v4.4s, v4.4s, #16        |   | | |
+   +0x11c  mul     v3.4s, v3.4s, v1.4s      |   | | |
+   +0x120  addhn   v6.4h, v2.4s, v16.4s     |   | | |
+   +0x124  mul     v2.4s, v4.4s, v1.4s      |   | | |
+   +0x128  sshr    v4.4s, v5.4s, #16        |   | | |
+   +0x12c  addhn2  v6.8h, v3.4s, v20.4s     |   | | |
+   +0x130  mul     v3.4s, v4.4s, v1.4s      |   | | |
+   +0x134  addhn   v7.4h, v2.4s, v21.4s     |   | | |
+   +0x138  addhn2  v7.8h, v3.4s, v23.4s     |   | | |
+  loop1_test:                               |   | | |
+   +0x13c  st2     {v6.8h-v7.8h}, [x10]     |   | | |
+  loop1_back:                               |   | | |
+   +0x140  b.ne    loop1                   -+   | | |
+  loop1_exit:                                   | | |
+   +0x144  b       join2                   ---+ | | |
+  join1:                                      | | | |
+   +0x148  mov     x8, xzr                 <----+-+-+
+   +0x14c  mov     w9, #0xf3010000            |
+   +0x150  add     x10, x3, #0x100            |
+   +0x154  mov     w11, #0xfffff2ff           |
+  loop2:                                      |
+   +0x158  add     x12, x1, x8             <+ |
+   +0x15c  add     x14, x2, x8              | |
+   +0x160  ldursh  w13, [x10, #-256]        | |
+   +0x164  ldrsh   w15, [x10]               | |
+   +0x168  ldrsh   w17, [x12, #2]           | |
+   +0x16c  ldrsh   w18, [x14]               | |
+   +0x170  ldrsh   w3, [x12]                | |
+   +0x174  ldrsh   w4, [x14, #2]            | |
+   +0x178  mul     w13, w13, w17            | |
+   +0x17c  ldrsh   w5, [x12, #514]          | |
+   +0x180  mul     w17, w18, w17            | |
+   +0x184  madd    w13, w18, w3, w13        | |
+   +0x188  ldrsh   w18, [x14, #512]         | |
+   +0x18c  madd    w17, w4, w3, w17         | |
+   +0x190  ldrsh   w3, [x12, #512]          | |
+   +0x194  madd    w13, w15, w5, w13        | |
+   +0x198  ldrsh   w15, [x14, #514]         | |
+   +0x19c  madd    w17, w18, w5, w17        | |
+   +0x1a0  ldrsh   w16, [x10, #256]         | |
+   +0x1a4  ldrsh   w4, [x12, #1026]         | |
+   +0x1a8  madd    w13, w18, w3, w13        | |
+   +0x1ac  ldrsh   w18, [x14, #1024]        | |
+   +0x1b0  madd    w15, w15, w3, w17        | |
+   +0x1b4  ldrsh   w12, [x12, #1024]        | |
+   +0x1b8  add     x10, x10, #0x2           | |
+   +0x1bc  ldrsh   w14, [x14, #1026]        | |
+   +0x1c0  madd    w13, w16, w4, w13        | |
+   +0x1c4  madd    w15, w18, w4, w15        | |
+   +0x1c8  madd    w13, w18, w12, w13       | |
+   +0x1cc  madd    w12, w14, w12, w15       | |
+   +0x1d0  mul     w14, w13, w9             | |
+   +0x1d4  mul     w15, w12, w9             | |
+   +0x1d8  asr     w14, w14, #16            | |
+   +0x1dc  asr     w15, w15, #16            | |
+   +0x1e0  madd    w13, w14, w11, w13       | |
+   +0x1e4  add     x14, x0, x8              | |
+   +0x1e8  madd    w12, w15, w11, w12       | |
+   +0x1ec  add     x8, x8, #0x4             | |
+   +0x1f0  lsr     w13, w13, #16            | |
+   +0x1f4  cmp     x8, #0x200               | |
+   +0x1f8  lsr     w12, w12, #16            | |
+   +0x1fc  strh    w13, [x14]               | |
+  loop2_test:                               | |
+   +0x200  strh    w12, [x14, #2]           | |
+  loop2_back:                               | |
+   +0x204  b.ne    loop2                   -+ |
+  join2: loop2_exit: ret:                     |
+   +0x208  ret                             <--+
+ ***)
+
+(*** mlkem768_polyvec_mulcache_compute: 0xaa1c, 0x34 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_mulcache_compute
+  after_mlkem_poly_mulcache_compute_1:
+    +0x14  add     x0, x20, #0x100
+    +0x18  add     x1, x19, #0x200
+    +0x1c  bl      mlkem_poly_mulcache_compute
+  after_mlkem_poly_mulcache_compute_2:
+    +0x20  add     x0, x20, #0x200
+    +0x24  add     x1, x19, #0x400
+    +0x28  ldp     x20, x19, [sp, #16]
+    +0x2c  ldr     x30, [sp], #32
+    +0x30  b       mlkem_poly_mulcache_compute
+ ***)
+
+(*** mlkem768_polyvec_reduce: 0xaa50, 0x20 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce_1:
+     +0xc  add     x0, x19, #0x200
+    +0x10  bl      mlkem_poly_reduce
+  after_mlkem_poly_reduce_2:
+    +0x14  add     x0, x19, #0x400
+    +0x18  ldp     x30, x19, [sp], #16
+    +0x1c  b       mlkem_poly_reduce
+ ***)
+
+(*** mlkem768_polyvec_add: 0xaa70, 0x34 bytes
+
+     +0x0  str     x30, [sp, #-32]!
+     +0x4  stp     x20, x19, [sp, #16]
+     +0x8  mov     x19, x1
+     +0xc  mov     x20, x0
+    +0x10  bl      mlkem_poly_add
+  after_mlkem_poly_add_1:
+    +0x14  add     x0, x20, #0x200
+    +0x18  add     x1, x19, #0x200
+    +0x1c  bl      mlkem_poly_add
+  after_mlkem_poly_add_2:
+    +0x20  add     x0, x20, #0x400
+    +0x24  add     x1, x19, #0x400
+    +0x28  ldp     x20, x19, [sp, #16]
+    +0x2c  ldr     x30, [sp], #32
+    +0x30  b       mlkem_poly_add
+ ***)
+
+(*** mlkem768_polyvec_tomont: 0xaaa4, 0x20 bytes
+
+     +0x0  stp     x30, x19, [sp, #-16]!
+     +0x4  mov     x19, x0
+     +0x8  bl      mlkem_poly_tomont
+  after_mlkem_poly_tomont_1:
+     +0xc  add     x0, x19, #0x200
+    +0x10  bl      mlkem_poly_tomont
+  after_mlkem_poly_tomont_2:
+    +0x14  add     x0, x19, #0x400
+    +0x18  ldp     x30, x19, [sp], #16
+    +0x1c  b       mlkem_poly_tomont
+ ***)
+
+(*** mlkem768_poly_getnoise_eta1_4x: 0xaac4, 0x190 bytes
+
+     +0x0  stp     x29, x30, [sp, #-80]!
+     +0x4  stp     x28, x25, [sp, #16]
+     +0x8  stp     x24, x23, [sp, #32]
+     +0xc  stp     x22, x21, [sp, #48]
+    +0x10  stp     x20, x19, [sp, #64]
+    +0x14  mov     x29, sp
+    +0x18  sub     x9, sp, #0x330
+    +0x1c  and     sp, x9, #0xffffffffffffffe0
+  adrp1:
+    +0x20  adrp    x8, <page>
+    +0x24  ldrb    w10, [x29, #80]
+    +0x28  add     x11, sp, #0x20
+    +0x2c  add     x12, sp, #0x120
+    +0x30  add     x9, x11, #0x80
+    +0x34  add     x24, x12, #0x80
+    +0x38  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+    +0x3c  add     x25, x12, #0x100
+    +0x40  add     x20, x12, #0x180
+    +0x44  mov     x19, x3
+    +0x48  mov     x21, x2
+    +0x4c  mov     x22, x1
+    +0x50  ldr     x8, [x8]
+    +0x54  mov     x23, x0
+    +0x58  add     x0, sp, #0x120
+    +0x5c  mov     x1, x24
+    +0x60  mov     x2, x25
+    +0x64  mov     x3, x20
+    +0x68  str     x8, [sp, #808]
+    +0x6c  add     x8, x11, #0x40
+    +0x70  ldp     q0, q1, [x4]
+    +0x74  strb    w5, [sp, #64]
+    +0x78  add     x11, x11, #0xc0
+    +0x7c  strb    w6, [sp, #128]
+    +0x80  add     x5, sp, #0x20
+    +0x84  strb    w7, [sp, #192]
+    +0x88  mov     w4, #0x80
+    +0x8c  strb    w10, [sp, #256]
+    +0x90  mov     w10, #0x21
+    +0x94  mov     x6, x8
+    +0x98  mov     x7, x9
+    +0x9c  stp     q0, q1, [sp, #32]
+    +0xa0  str     q0, [sp, #96]
+    +0xa4  str     q1, [sp, #112]
+    +0xa8  stp     q0, q1, [sp, #160]
+    +0xac  stp     q0, q1, [sp, #224]
+    +0xb0  stp     x11, x10, [sp]
+    +0xb4  bl      mlkem_shake256x4
+  after_mlkem_shake256x4:
+    +0xb8  add     x1, sp, #0x120
+    +0xbc  mov     x0, x23
+    +0xc0  bl      mlkem_poly_cbd2
+  after_mlkem_poly_cbd2_1:
+    +0xc4  mov     x0, x22
+    +0xc8  mov     x1, x24
+    +0xcc  bl      mlkem_poly_cbd2
+  after_mlkem_poly_cbd2_2:
+    +0xd0  mov     x0, x21
+    +0xd4  mov     x1, x25
+    +0xd8  bl      mlkem_poly_cbd2
+  after_mlkem_poly_cbd2_3:
+    +0xdc  cbz     x19, join1                   -+
+    +0xe0  mov     x0, x19                       |
+    +0xe4  mov     x1, x20                       |
+    +0xe8  bl      mlkem_poly_cbd2               |
+  join1: after_mlkem_poly_cbd2_4:                |
+    +0xec  movi    v0.2d, #0x0                  <+
+    +0xf0  add     x8, sp, #0x120
+    +0xf4  stp     q0, q0, [sp, #288]
+    +0xf8  stp     q0, q0, [sp, #320]
+    +0xfc  stp     q0, q0, [sp, #352]
+   +0x100  stp     q0, q0, [sp, #384]
+   +0x104  stp     q0, q0, [sp, #416]
+   +0x108  stp     q0, q0, [sp, #448]
+   +0x10c  stp     q0, q0, [sp, #480]
+   +0x110  stp     q0, q0, [sp, #512]
+   +0x114  stp     q0, q0, [sp, #544]
+   +0x118  stp     q0, q0, [sp, #576]
+   +0x11c  stp     q0, q0, [sp, #608]
+   +0x120  stp     q0, q0, [sp, #640]
+   +0x124  stp     q0, q0, [sp, #672]
+   +0x128  stp     q0, q0, [sp, #704]
+   +0x12c  stp     q0, q0, [sp, #736]
+   +0x130  stp     q0, q0, [sp, #768]
+   +0x134  stp     q0, q0, [sp, #64]
+   +0x138  stp     q0, q0, [sp, #96]
+   +0x13c  add     x8, sp, #0x20
+   +0x140  stp     q0, q0, [sp, #32]
+   +0x144  stp     q0, q0, [sp, #128]
+   +0x148  stp     q0, q0, [sp, #160]
+   +0x14c  stp     q0, q0, [sp, #192]
+   +0x150  stp     q0, q0, [sp, #224]
+   +0x154  stp     q0, q0, [sp, #256]
+  adrp2:
+   +0x158  adrp    x8, <page>
+   +0x15c  ldr     x8, [x8, #4088]
+                   // got_stack_chk_guard
+   +0x160  ldr     x9, [sp, #808]
+   +0x164  ldr     x8, [x8]
+   +0x168  cmp     x8, x9
+   +0x16c  b.ne    +0x18c                       -+
+   +0x170  mov     sp, x29                       |
+   +0x174  ldp     x20, x19, [sp, #64]           |
+   +0x178  ldp     x22, x21, [sp, #48]           |
+   +0x17c  ldp     x24, x23, [sp, #32]           |
+   +0x180  ldp     x28, x25, [sp, #16]           |
+   +0x184  ldp     x29, x30, [sp], #80           |
+  ret:                                           |
+   +0x188  ret                                   |
+   +0x18c  bl      stack_chk_fail               <+
+ ***)
