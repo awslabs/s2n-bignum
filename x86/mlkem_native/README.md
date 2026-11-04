@@ -406,3 +406,33 @@ theorem for `mlkem_sha3_512`. As for the encryption, the products of the
 rows of the matrix and the vector are computed in a loop for ML-KEM-768 and
 ML-KEM-1024, and the seed and rho are copied by legacy SSE moves, for which
 the proofs name the values of the YMM registers.
+
+`mlkem512_enc_derand`, `mlkem768_enc_derand` and `mlkem1024_enc_derand` are
+the encapsulation with the message as an argument, including the input
+check of FIPS 203: if the encapsulation key `ek` passes it
+(`mlkem_ek_check`), they return 0 and write the shared secret and the
+ciphertext of `mlkem_encaps_internal mlkem<n> ek m` for the message `m`,
+and otherwise they return -4. They are verified in the image with the same
+specifications as on AArch64 apart from the stack and DF, with the same
+hypotheses as the encryption, using the lemmas and tactics of
+`../proofs/utils/mlkem_native_kem.ml`, the x86 versions of those for
+AArch64. Their theorems of constant time and memory safety state that their
+events depend only on the addresses and on the encapsulation key, not on
+the message. Since the code branches on the result of the modulus check,
+this uses the combined theorems for `mlkem<n>_check_pk`, and the events are
+given by cases on `mlkem_ek_check`.
+
+`mlkem512_keypair_derand`, `mlkem768_keypair_derand` and
+`mlkem1024_keypair_derand` are the key generation with the seeds as
+arguments: the encapsulation key and the decapsulation key that they write
+are those of `mlkem_keygen mlkem<n> d z` for the seeds `d` and `z` of 32
+bytes each. They are verified in the image with the same specifications as
+on AArch64 apart from the stack and DF, with the same hypotheses as the key
+generation of K-PKE. The encapsulation key is copied into the decapsulation
+key by an inline `memcpy`, which copies its first and last 8 bytes directly
+and then all but 8 bytes by `rep movsq`, starting from the first multiple
+of 8 after the start of the destination; the tactics for it are in
+`../proofs/utils/mlkem_native_kem.ml`. Their theorems of constant time and
+memory safety state that their events depend only on the addresses and on
+rho, as for the key generation of K-PKE, and that rho is the end of the
+encapsulation key.
