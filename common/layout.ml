@@ -7,7 +7,7 @@
 (* Symbolic names for the addresses and sizes in a binary image.             *)
 (*                                                                           *)
 (* Proofs about the code of a whole binary (e.g. the mlkem-native image in   *)
-(* arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml) refer to many addresses:    *)
+(* arm/proofs/mlkem_native/gcc12_O2/libmlkem.ml) refer to many addresses:    *)
 (* the entry points of functions, points inside them where loops start or    *)
 (* end, entries of the global offset table, constant tables and the size of  *)
 (* the image. Rather than writing these as numerals in every proof, they     *)
