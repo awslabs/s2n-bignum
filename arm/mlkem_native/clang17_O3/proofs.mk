@@ -9,7 +9,11 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/poly_frommsg \
   mlkem_native/clang17_O3/poly_reduce \
   mlkem_native/clang17_O3/poly_sub \
-  mlkem_native/clang17_O3/poly_tomont
+  mlkem_native/clang17_O3/poly_tomont \
+  mlkem_native/clang17_O3/shake128_init \
+  mlkem_native/clang17_O3/shake128_release \
+  mlkem_native/clang17_O3/shake128x4_init \
+  mlkem_native/clang17_O3/shake128x4_release
 
 mlkem_native/clang17_O3/libmlkem.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
@@ -29,3 +33,13 @@ mlkem_native/clang17_O3/poly_sub.native: \
 mlkem_native/clang17_O3/poly_tomont.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/shake128_init.native: \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/shake128_release.native: \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/shake128x4_init.native: \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/shake128x4_release.native: \
+  proofs/utils/mlkem_native_libc.ml \
+  mlkem_native/clang17_O3/libmlkem.native \
+  proofs/utils/mlkem_native_image.ml
