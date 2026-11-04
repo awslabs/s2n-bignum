@@ -626,6 +626,13 @@ let decode = new_definition `!w:int32. decode w =
                            else Postreg_Offset (XREG' Rm))
            datasize esize)
 
+  // LD3/ST3 (multiple structures), 3 registers, no offset
+  | [0:1; q; 0b0011000:7; is_ld; 0b000000:6; 0b0100:4; size:2; Rn:5; Rt:5] ->
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_ldst3 is_ld Rt (XREG_SP Rn) No_Offset datasize esize)
+
   // SIMD operations
   | [0:1; q; u; 0b01110:5; size:2; 1:1; Rm:5; 0b100001:6; Rn:5; Rd:5] ->
     // ADD and SUB
