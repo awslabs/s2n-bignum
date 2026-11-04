@@ -707,8 +707,10 @@ let check_insns () =
     (*** ldr / str, shifted register, size 128 no extensions ***)
     "001111001x1xxxxx011x10xxxxxxxxxx";
 
-    (*** ldr / str, register (LSL, UXTW, SXTW, SXTX), size 64 (SIMD & FP) ***)
+    (*** ldr / str, register (LSL, UXTW, SXTW, SXTX), sizes 64 and 32 ***)
+    (*** (SIMD & FP)                                                   ***)
     "111111000x1xxxxxx1xx10xxxxxxxxxx";
+    "101111000x1xxxxxx1xx10xxxxxxxxxx";
 
     (*** ldrb (immediate ofs) ***)
     "00111000010xxxxxxxxx01xxxxxxxxxx";
