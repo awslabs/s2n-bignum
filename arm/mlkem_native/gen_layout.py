@@ -338,9 +338,11 @@ def box(text):
         if para.startswith(' - '):
             for it in para[3:].split('\n - '):
                 out += textwrap.wrap(' '.join(it.split()), 73,
+                                     break_on_hyphens=False,
                                      initial_indent=' - ', subsequent_indent='   ')
         else:
-            out += textwrap.wrap(' '.join(para.split()), 73)
+            out += textwrap.wrap(' '.join(para.split()), 73,
+                                 break_on_hyphens=False)
         out.append('')
     return '\n'.join(('(* %-73s *)' % l).rstrip() if not l else '(* %-73s *)' % l
                      for l in out[:-1])
