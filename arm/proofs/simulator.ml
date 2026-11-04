@@ -590,21 +590,26 @@ let cosimulate_ld1r() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LD3 and ST3 with the addressing modes no-offset,
+ *** post-immediate offset and post-register offset.
+ ***)
+
 let cosimulate_ldst3() =
   let datasize = Random.int 2
   and isld = Random.int 2
   and esize = Random.int 4
   and rn = Random.int 32
   and rt = Random.int 32 in
-  let someoffset = 1 in
+  let someoffset = Random.int 2 in
   let regoffr = Random.int 32 in
   let regoff =
-    if regoffr = rn || rn = 31 || Random.bool() then 31
+    if someoffset = 0 then 0
+    else if regoffr = rn || rn = 31 || Random.bool() then 31
     else regoffr in
   let stackoff =
     if rn = 31 then Random.int 13 * 16
     else Random.int 208 in
-  let postinc = 24 * (datasize + 1)  in
+  let postinc = someoffset * 24 * (datasize + 1)  in
   let code =
     pow2 30 */ num datasize +/
     pow2 24 */ num 0b001100 +/
