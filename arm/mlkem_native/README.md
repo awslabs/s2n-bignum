@@ -14,9 +14,11 @@ part of the library.
 
 The files for each build of the binary are in directories named after the
 compiler and the optimization level, `<build>` = `<compiler>_<level>`:
-`gcc12_O2` for the gcc 12 `-O2` binary, whose whole image is verified, and
+`gcc12_O2` for the gcc 12 `-O2` binary, whose whole image is verified,
 `clang17_O2` for the one function transcribed from the clang 17 `-O2`
-binary. For a build:
+binary, and `clang17_O3` for the clang 17 `-O3` binary, whose whole image
+is transcribed and some of whose functions are verified in it (see below).
+For a build:
 
  - `<build>/libmlkem.S` is the transcription of the whole image, if there
    is one, and `<build>/<function>.S` those of single functions;
@@ -75,6 +77,7 @@ function `mlkem_<function>` in the binary
 | gcc12_O2/poly_tomont.S           | gcc 12.3.0   |
 | gcc12_O2/rej_uniform.S           | gcc 12.3.0   |
 | clang17_O2/poly_reduce.S         | clang 17.0.6 |
+| clang17_O3/libmlkem.S            | clang 17.0.6 |
 
 The rejection sampling in mlkem-native is done by the static function
 `mlk_rej_uniform_c`, which has the target number of coefficients as an
@@ -102,6 +105,8 @@ The SHA-256 hashes of the binaries used, which match those recorded in
 ```
 binaries/multilevel/clang17/O2/libmlkem.so
   b7589e6e7ae228dd0dfa30424b0375e99a281979f70a5a40e6d163058fb50955
+binaries/multilevel/clang17/O3/libmlkem.so
+  c0b9cda5f78ff1baddc6f47c38aec02bb416c31fd559f390e845ee55f35375db
 binaries/multilevel/gcc12/O2/libmlkem.so
   ed9a4710c0ec93ef1eab794f3e854dfadf92b45e08c76101cffdf1a36b035692
 ```
@@ -586,3 +591,44 @@ The ML-KEM functions for ML-KEM-512 and ML-KEM-1024
 same specifications for `mlkem512` and `mlkem1024`, with the hypotheses of
 the K-PKE functions that they call, and the same theorems of constant time
 and memory safety.
+
+## The clang 17 -O3 image
+
+`clang17_O3/libmlkem.S` is the transcription of the image of the clang 17
+`-O3` binary, from address 0 up to the end of the read-only data at
+0xf940, in the same style as `gcc12_O2/libmlkem.S` but with a symbol
+`mlkem_native_libmlkem_clang17_O3` at its start. It is checked in the same
+way, with the address 0x0. Its layout is
+`../proofs/mlkem_native/clang17_O3/layout.ml`, and
+`../proofs/mlkem_native/clang17_O3/libmlkem.ml` defines the image.
+
+The functions verified in it so far, with the specifications of the gcc 12
+`-O2` theorems, are `mlkem_poly_reduce`, `mlkem_poly_tomont`,
+`mlkem_poly_frommsg`, `mlkem_poly_add` and `mlkem_poly_sub`, in the files
+`../proofs/mlkem_native/clang17_O3/<function>.ml` for
+`mlkem_<function>`. Each has `..._IMAGE_SUBROUTINE_CORRECT` and
+`..._IMAGE_SUBROUTINE_SAFE`, and `mlkem_poly_reduce` also
+`..._IMAGE_SUBROUTINE_FULL`. The code differs from that of gcc 12 as
+follows:
+
+ - `mlkem_poly_reduce` is the same 20 instructions as with `-O2`.
+ - `mlkem_poly_add` and `mlkem_poly_sub` first check whether the two
+   arrays overlap, and use a scalar loop if they do and otherwise straight
+   line code on 32 Q registers. Since the specifications assume that the
+   arrays do not overlap, only the vector code is reached, which the proofs
+   show for all addresses, including arrays that wrap around the end of the
+   address space.
+ - `mlkem_poly_tomont` makes its vectors of constants with immediate
+   operands rather than loading them from the read-only data, so the frame
+   of its safety theorem has no read-only object. It computes the
+   Montgomery reduction with ADDHN and ADDHN2.
+ - `mlkem_poly_frommsg` unrolls the loop over the bits of each byte, with
+   stores at negative offsets from a pointer into the output.
+
+The image has instructions that the model does not decode yet, e.g. LD1 of
+single lanes, LD2, ST2, LD3 and ST3 without an offset, SHLL, UZP2 of 64-bit
+vectors and BIC of a vector immediate, used in `mlkem_poly_tobytes`,
+`mlkem_poly_frombytes`, the NTTs and the compression functions. So the
+check that the instructions of all object files are covered by the
+classes for cosimulation, `check_insns` in
+`../proofs/simulator_iclasses.ml`, skips its object file.
