@@ -32,6 +32,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/poly_frombytes \
   mlkem_native/gcc12_O3/poly_frommsg \
   mlkem_native/gcc12_O3/poly_invntt_tomont \
+  mlkem_native/gcc12_O3/poly_mulcache_compute \
   mlkem_native/gcc12_O3/poly_ntt \
   mlkem_native/gcc12_O3/poly_reduce \
   mlkem_native/gcc12_O3/poly_rej_uniform \
@@ -55,6 +56,9 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/polyvec_invntt_tomont_k2 \
   mlkem_native/gcc12_O3/polyvec_invntt_tomont_k3 \
   mlkem_native/gcc12_O3/polyvec_invntt_tomont_k4 \
+  mlkem_native/gcc12_O3/polyvec_mulcache_compute_k2 \
+  mlkem_native/gcc12_O3/polyvec_mulcache_compute_k3 \
+  mlkem_native/gcc12_O3/polyvec_mulcache_compute_k4 \
   mlkem_native/gcc12_O3/polyvec_ntt_k2 \
   mlkem_native/gcc12_O3/polyvec_ntt_k3 \
   mlkem_native/gcc12_O3/polyvec_ntt_k4 \
@@ -180,6 +184,10 @@ mlkem_native/gcc12_O3/poly_frommsg.native: \
 mlkem_native/gcc12_O3/poly_invntt_tomont.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/poly_mulcache_compute.native: \
+  proofs/utils/mlkem_native.ml \
+  proofs/utils/mlkem_native_interleave.ml \
+  mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_ntt.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
@@ -249,6 +257,15 @@ mlkem_native/gcc12_O3/polyvec_invntt_tomont_k3.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/polyvec_invntt_tomont_k4.native: \
   mlkem_native/gcc12_O3/poly_invntt_tomont.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/polyvec_mulcache_compute_k2.native: \
+  mlkem_native/gcc12_O3/poly_mulcache_compute.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/polyvec_mulcache_compute_k3.native: \
+  mlkem_native/gcc12_O3/poly_mulcache_compute.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/polyvec_mulcache_compute_k4.native: \
+  mlkem_native/gcc12_O3/poly_mulcache_compute.native \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/polyvec_ntt_k2.native: \
   mlkem_native/gcc12_O3/poly_ntt.native \
