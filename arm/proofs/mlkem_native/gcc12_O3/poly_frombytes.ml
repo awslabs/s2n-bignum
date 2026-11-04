@@ -458,3 +458,69 @@ let MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O3_IMAGE_SUBROUTINE_SAFE = time prove
   ARM_STEPS_TAC MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O3_EXEC (6--182) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, as for       *)
+(* gcc12_O2, with the same simulation as for correctness.                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O3_IMAGE_SUBROUTINE_FULL = prove
+ (`exists f_events.
+       forall e r a n pc stackpointer returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (r,512)) [word pc,libmlkem_size; a,384] /\
+           ALL (nonoverlapping (word_sub stackpointer (word 32),32))
+               [word pc,libmlkem_size; a,384; r,512]
+           ==> ensures arm
+               (\s. aligned_bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O3_mc /\
+                    read PC s = word (pc + mlkem_poly_frombytes) /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [r; a] s /\
+                    read (memory :> bytes(a,384)) s = n /\
+                    read events s = e)
+               (\s. read PC s = returnaddress /\
+                    (!i. i < 256
+                         ==> read(memory :> bytes16
+                                   (word_add r (word(2 * i)))) s =
+                             word((n DIV 2 EXP (12 * i)) MOD 2 EXP 12)) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events a r pc (word_sub stackpointer (word 32))
+                                       returnaddress /\
+                         memaccess_inbounds e2
+                          [a,384; r,512; word_sub stackpointer (word 32),32]
+                          [r,512; word_sub stackpointer (word 32),32]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+                MAYCHANGE [memory :> bytes (r,512);
+                           memory :> bytes(word_sub stackpointer (word 32),32)])`,
+  CONCRETIZE_F_EVENTS_TAC
+    `\(a:int64) (r:int64) (pc:num) (stackpointer:int64) (returnaddress:int64).
+      f_ev a r pc stackpointer returnaddress:(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+              fst MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O3_EXEC] THEN
+  REPEAT STRIP_TAC THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  FB_INPUT_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O3_EXEC (1--5) THEN
+  ALIAS_BRANCH_TAC `r:int64` `512` `a:int64` `384` THEN
+  MAP_EVERY (fun k ->
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O3_EXEC [k] THEN
+    FB_SIMD_TAC) (6--182) THEN
+  FB_STORES_TAC THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN
+    REWRITE_TAC[WORD_ADD_0] THEN FB_FIELDS_TAC THEN ASM_REWRITE_TAC[] THEN
+    REPEAT CONJ_TAC THEN BITBLAST_TAC;
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
