@@ -6,6 +6,7 @@ MLKEM_NATIVE_OBJ += \
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/basemul_k2 \
+  mlkem_native/gcc12_O3/basemul_k3 \
   mlkem_native/gcc12_O3/keccakf1600_extract_bytes \
   mlkem_native/gcc12_O3/keccakf1600_permute \
   mlkem_native/gcc12_O3/keccakf1600x4_extract_bytes \
@@ -23,6 +24,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/poly_decompress_d5 \
   mlkem_native/gcc12_O3/poly_frombytes \
   mlkem_native/gcc12_O3/poly_frommsg \
+  mlkem_native/gcc12_O3/poly_invntt_tomont \
   mlkem_native/gcc12_O3/poly_ntt \
   mlkem_native/gcc12_O3/poly_reduce \
   mlkem_native/gcc12_O3/poly_rej_uniform \
@@ -64,6 +66,9 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/shake128x4_squeezeblocks
 
 mlkem_native/gcc12_O3/basemul_k2.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/basemul_k3.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/keccakf1600_extract_bytes.native: \
@@ -126,6 +131,9 @@ mlkem_native/gcc12_O3/poly_frombytes.native: \
   proofs/utils/mlkem_native_interleave.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_frommsg.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/poly_invntt_tomont.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_ntt.native: \
