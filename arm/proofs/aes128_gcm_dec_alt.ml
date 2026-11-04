@@ -33,9 +33,8 @@
 (* aes9, the eleven round keys and the AES-128 instruction schedule.  The    *)
 (* entry guard (0x0..0x8) returns 0 for an empty or invalid bit_len, and the *)
 (* prologue (0xc..0x18) saves d8-d15.  The core runs from pc + 0x1c to its   *)
-(* exit pc + 3708 (0xe7c, L128_dec_frame_restore); its theorem               *)
-(* AES128_GCM_DEC_ALT_CORRECT comes from the spine WBN_DEC_CORE_BYTELIST,    *)
-(* which splits on nblk:                                                     *)
+(* exit pc + 3708 (0xe7c, L128_dec_frame_restore); its theorem is the spine  *)
+(* WBN_DEC_CORE_BYTELIST, which splits on nblk:                              *)
 (* - nblk <= 8, the <=8-block chain (AES128_GCM_DEC_ALT_DISPATCH): for       *)
 (*   nblk <= 4 the b.le at 0x38 enters the small-input path L128_dec_small   *)
 (*   (WB_FUSED_1BLOCK .. WB_FUSED_4BLOCK); for 5..8 the shared front         *)
@@ -82,33 +81,6 @@ needs "arm/proofs/utils/aes_gcm_dec_alt_common.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 (* ========================================================================= *)
-(* Binary-independent proof machinery.                                       *)
-(*                                                                           *)
-(* Everything up to the AES-128 vocabulary below is independent of the       *)
-(* kernel:                                                                   *)
-(* - the N-block GHASH Karatsuba layer and the GMULTn builder;               *)
-(* - the counter core (gcm_ctr_inc, inc32, gcm_ctr_inc_iter) and the         *)
-(*   byte-list lemmas;                                                       *)
-(* - the generic GCM machinery: the GHASH/Karatsuba bridge lemmas, such as   *)
-(*   KARATSUBA_LIMBS_LET, GHASH_1BLOCK_CORRECT and GMULT_FULL_CORRECT_BA;    *)
-(* - the SIMD-fold stepping layer, such as GCM_SIMD_SIMPLIFY_TAC, the        *)
-(*   per-step-discard steppers and ARM_VSTEPS_FOLD_TAC;                      *)
-(* - the bridge-close helpers, such as PMUL_CONG_128,                        *)
-(*   ABBREV_INNER_PMULS_TAC, QQ0SPLIT and JOINMID;                           *)
-(* - the N-block bridge infrastructure (JOIN_EQ_SPLIT, the SUBW_* lane       *)
-(*   lemmas, MERGE_2BLK_TAC, GMULT2_FULL_CORRECT_BA);                        *)
-(* - the decrypt specification (gcm_dec_ghash_blocks, gcm_dec_final_xi).     *)
-(*                                                                           *)
-(* It is a copy of the corresponding layer of aes256_gcm_dec_alt.ml without  *)
-(* the AES-256 output specification and a few lemmas this proof does not     *)
-(* use; the shared definitions are identical, so the two proofs can be       *)
-(* loaded together.  No machine code is defined here.                        *)
-(* ========================================================================= *)
-
-(* The AES-XTS byte-list substrate: byte_list_at, bytes_to_int128,           *)
-(* int128_to_bytes and the shared readback machinery.                        *)
-
-(* ========================================================================= *)
 (* The AES-128 vocabulary.                                                   *)
 (*                                                                           *)
 (* aes256_gcm_dec_alt.ml states its keystream with the house aes256_encrypt  *)
@@ -124,7 +96,7 @@ needs "arm/proofs/subroutine_signatures.ml";;
 (* - the CTR and byte-list vocabulary aes128_ctr, aes128_ctr_bytes and       *)
 (*   gcm_dec128_pt_bytes, with their LENGTH/EL lemmas and the per-N unfolds; *)
 (*   the cipher-free gcm_dec_blocks_from, gcm_dec_ghash_blocks and           *)
-(*   gcm_dec_final_xi are those of the layer above;                          *)
+(*   gcm_dec_final_xi are those of aes_gcm_dec_alt_common.ml;                *)
 (* - the 11-slot key reads RK_ETA_11 and KEY_READS_FROM_WORDLIST.            *)
 (* ========================================================================= *)
 
@@ -154,13 +126,6 @@ let aes128_encrypt = new_definition
     word_reversefields 8
       (aes128_cipher (word_reversefields 8 block)
                      (MAP (word_reversefields 8) keys))`;;
-
-(* The whole tower with the last round key XORed in is AES-128.              *)
-let AES128_ENCRYPT_TOWER = prove
- (`!x k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10:int128.
-     aes128_encrypt x [k0;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10] =
-     word_xor (aes9 x k0 k1 k2 k3 k4 k5 k6 k7 k8 k9) k10`,
-  REWRITE_TAC[aes128_encrypt; aes9; AES128_CIPHER_RECONSTRUCT]);;
 
 (* The plaintext capture: tower XOR (k10 XOR ciphertext) is the ciphertext   *)
 (* XOR the keystream (XOR_AES128_CIPHER_RECONSTRUCT, aes_gcm_common.ml).     *)
@@ -2601,12 +2566,6 @@ let WB_TAIL_GEN2_8 = prove(wbn_tail_backleg_goal5_return 8,
     WB_IVEC_CLOSE8_TAC);;
 
 let AES128_GCM_DEC_ALT_BUF_8BLOCK = prove_band 8 WB_TAIL_GEN2_8;;
-
-(* The back-leg theorems WB_TAIL_GEN2_1..8 as a list: entry k - 1 is the
-   back-leg of a k-block tail. *)
-let wbn_backlegs =
-  [WB_TAIL_GEN2_1; WB_TAIL_GEN2_2; WB_TAIL_GEN2_3; WB_TAIL_GEN2_4;
-   WB_TAIL_GEN2_5; WB_TAIL_GEN2_6; WB_TAIL_GEN2_7; WB_TAIL_GEN2_8];;
 
 let GCM_SIMD_SIMPLIFY_CORE_QSCOPED_TAC =
   let is_qreg_read c = match c with
@@ -6270,58 +6229,6 @@ let WBN_DEC_SUBROUTINE_BYTELIST = prove
     ASM_SIMP_TAC[VAL_WORD_EQ; DIMINDEX_64; MULT_EQ_0; ARITH_EQ; MOD_MULT;
                  ARITH_RULE `2 EXP 7 = 128`;
                  ARITH_RULE `128 * n < 2 EXP 64 ==> 16 * n < 2 EXP 64`]]);;
-
-(* The exported core contract (after the prologue, bit_len = 128 * nblk). *)
-let AES128_GCM_DEC_ALT_CORRECT = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
-    tag0 nonce c.
-    1 <= nblk /\
-    128 * nblk < 2 EXP 64 /\
-    val in_p + 16 * nblk < 2 EXP 63 /\
-    aligned 16 stackpointer /\
-    ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
-    [word pc, LENGTH aes128_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,176; htbl_p,192; stackpointer,80] /\
-    PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
-    ALL (nonoverlapping (stackpointer,80))
-    [word pc, LENGTH aes128_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,176; htbl_p,192]
-    ==> ensures arm
-         (\s. aligned_bytes_loaded s (word pc) aes128_gcm_dec_alt_tmc /\
-              read PC s = word (pc + 28) /\
-              read SP s = stackpointer /\
-              C_ARGUMENTS
-              [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
-              s /\
-              (!j. j < nblk
-                   ==> read (memory :> bytes128
-                              (word_add in_p (word (16 * j)))) s = inblock j) /\
-              read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
-              read (memory :> bytes128 ivec_p) s =
-              word_reversefields 8 (ctr_block nonce c) /\
-              wordlist_from_memory (key_p,11) s =
-              MAP (word_reversefields 8) rk /\
-              htable_mem_8 (ghash_twist (aes128_cipher (word 0) rk)) htbl_p s)
-         (\s. read PC s = word (pc + 3708) /\
-              read X9 s = word (16 * nblk) /\
-              (!j. j < nblk
-                   ==> read (memory :> bytes128
-                              (word_add out_p (word (16 * j)))) s =
-                       word_xor (aes_ctr_block aes128_cipher c nonce rk j)
-                                (inblock j)) /\
-              read (memory :> bytes128 xi_p) s =
-              word_reversefields 8
-              (nist_ghash (aes128_cipher (word 0) rk) tag0
-              (list_of_seq (nist_input_block inblock) nblk)) /\
-              read (memory :> bytes128 ivec_p) s =
-              word_reversefields 8 (ctr_block nonce (nblk + c)))
-         (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-          MAYCHANGE
-          [memory :> bytes (out_p,16 * nblk);
-           memory :> bytes (xi_p,16);
-           memory :> bytes (ivec_p,16);
-           memory :> bytes (word_add stackpointer (word 64),16)] ,,
-          MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15])`,
-  PURE_REWRITE_TAC[GSYM WB_CORE_FRAME_EQ] THEN
-  WBN_EXPORT_FROM_SPINE_TAC WBN_DEC_CORE_BYTELIST);;
 
 (* The whole-block subroutine result for bit_len = 128 * nblk, any nblk      *)
 (* including 0: an internal helper for the public arbitrary-length theorem.  *)

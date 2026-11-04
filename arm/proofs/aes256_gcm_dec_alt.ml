@@ -30,8 +30,8 @@
 (* Proof structure.  The entry guard (0x0..0x8) returns 0 for an empty or    *)
 (* invalid bit_len, and the prologue (0xc..0x18) saves d8-d15.  The core     *)
 (* runs from pc + 0x1c to its exit pc + 4508 (0x119c,                        *)
-(* L256_dec_frame_restore); its theorem AES256_GCM_DEC_ALT_CORRECT comes     *)
-(* from the spine WBN_DEC_CORE_BYTELIST, which splits on nblk:               *)
+(* L256_dec_frame_restore); its theorem is the spine WBN_DEC_CORE_BYTELIST,  *)
+(* which splits on nblk:                                                     *)
 (* - nblk <= 8, the <=8-block chain (AES256_GCM_DEC_ALT_DISPATCH): for       *)
 (*   nblk <= 4 the b.le at 0x38 enters the small-input path L256_dec_small   *)
 (*   (WB_FUSED_1BLOCK .. WB_FUSED_4BLOCK); for 5..8 the shared front         *)
@@ -76,32 +76,6 @@
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/aes_gcm_dec_alt_common.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
-
-(* ========================================================================= *)
-(* Binary-independent proof machinery.                                       *)
-(*                                                                           *)
-(* Everything from here to the machine code is independent of the kernel:    *)
-(* - the N-block GHASH Karatsuba layer and the GMULTn builder;               *)
-(* - the counter core (gcm_ctr_inc, inc32, gcm_ctr_inc_iter);                *)
-(* - the AES-256 counter-mode output specification (aes_ctr) and the         *)
-(*   byte-list lemmas;                                                       *)
-(* - the generic GCM machinery: the GHASH/Karatsuba bridge lemmas, such as   *)
-(*   KARATSUBA_LIMBS_LET, GHASH_1BLOCK_CORRECT and GMULT_FULL_CORRECT_BA;    *)
-(* - the SIMD-fold stepping layer, such as GCM_SIMD_SIMPLIFY_TAC, the        *)
-(*   per-step-discard steppers and ARM_VSTEPS_FOLD_TAC;                      *)
-(* - the bridge-close helpers, such as PMUL_CONG_128,                        *)
-(*   ABBREV_INNER_PMULS_TAC, QQ0SPLIT and JOINMID;                           *)
-(* - the N-block bridge infrastructure (JOIN_EQ_SPLIT, the SUBW_* lane       *)
-(*   lemmas, MERGE_2BLK_TAC, GMULT2_FULL_CORRECT_BA, LANE_CLOSE_TAC);        *)
-(* - the decrypt specification (gcm_dec_ghash_blocks, gcm_dec_final_xi,      *)
-(*   gcm_dec_pt_bytes).                                                      *)
-(*                                                                           *)
-(* No machine code is defined here.                                          *)
-(* ========================================================================= *)
-
-let GCM_CTR_INC_ITER_ITER = prove
- (`!k x:128 word. gcm_ctr_inc_iter k x = ITER k gcm_ctr_inc x`,
-  INDUCT_TAC THEN ASM_REWRITE_TAC[gcm_ctr_inc_iter; ITER]);;
 
 (* ========================================================================= *)
 (* The AES-256 counter-mode (CTR) output over int128 block lists.            *)
@@ -7677,20 +7651,18 @@ let WBN_END_OUTPUT_BYTE_LIST = prove
 (* Roadmap of the theorems below.                                            *)
 (*                                                                           *)
 (* The exported theorems come at the end of the file, in the shared AES-GCM  *)
-(* vocabulary of aes_gcm_spec.ml: the correctness contracts                  *)
-(*   AES256_GCM_DEC_ALT_CORRECT                   the core, pc+28 to pc+4508 *)
-(*   AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT  the AAPCS64 wrapper        *)
-(* for the trimmed code (that of a -DNO_IBT build),                          *)
+(* vocabulary of aes_gcm_spec.ml: the correctness contract                   *)
+(* AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT (the AAPCS64 wrapper) for the *)
+(* trimmed code (that of a -DNO_IBT build),                                  *)
 (* AES256_GCM_DEC_ALT_SUBROUTINE_CORRECT for the full code (by               *)
 (* ARM_ADD_IBT_RULE) with its all-zero-key instance                          *)
 (* AES256_GCM_DEC_ALT_ZERO_KEY_CORRECT, and the matching safety theorems     *)
 (* AES256_GCM_DEC_ALT_SAFE, AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_SAFE and     *)
-(* AES256_GCM_DEC_ALT_SUBROUTINE_SAFE.  The correctness contracts are        *)
-(* derived, without re-running any simulation, from two internal spines with *)
-(* a free GHASH key H and byte-list input and output, by fixing the key      *)
-(* words, H and the counter block to the shared FIPS-197 / NIST convention   *)
-(* and restating the input and the output per block                          *)
-(* (WBN_EXPORT_FROM_SPINE_TAC):                                              *)
+(* AES256_GCM_DEC_ALT_SUBROUTINE_SAFE.  The correctness contract is derived, *)
+(* without re-running any simulation, from two internal spines with a free   *)
+(* GHASH key H and byte-list input and output, by fixing the key words, H    *)
+(* and the counter block to the shared FIPS-197 / NIST convention and        *)
+(* restating the input and the output per block (WBN_EXPORT_FROM_SPINE_TAC): *)
 (*   WBN_DEC_CORE_BYTELIST        the core, pc+0x1c to pc+4508               *)
 (*   WBN_DEC_SUBROUTINE_BYTELIST  the ABI wrapper: entry guard, d8-d15       *)
 (*                                spills, WBN_DEC_CORE_BYTELIST, restores    *)
@@ -7719,8 +7691,7 @@ let WBN_END_OUTPUT_BYTE_LIST = prove
 
 (* ------------------------------------------------------------------------- *)
 (* WBN_DEC_CORE_BYTELIST: the core spine, pc+0x1c to pc+4508, for every      *)
-(* nblk >= 1, with H free and the output as the whole-buffer byte list; the  *)
-(* exported AES256_GCM_DEC_ALT_CORRECT is derived from it.                   *)
+(* nblk >= 1, with H free and the output as the whole-buffer byte list.      *)
 (*                                                                           *)
 (* The statement is written out in full.  It is the DISPATCH statement with  *)
 (* nblk <= 8 replaced by 1 <= nblk and with the two size premises            *)
@@ -8268,58 +8239,6 @@ let WBN_EXPORT_FROM_SPINE_TAC spine =
   ASM_SIMP_TAC[GCM_DEC_BLOCKS_FROM_ASSEMBLED;
                AES256_ENCRYPT_CTR_AS_AES_CTR_BLOCK] THEN
   MATCH_ACCEPT_TAC WORD_XOR_SYM;;
-
-(* The exported core contract (after the prologue, bit_len = 128 * nblk). *)
-let AES256_GCM_DEC_ALT_CORRECT = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
-    tag0 nonce c.
-    1 <= nblk /\
-    128 * nblk < 2 EXP 64 /\
-    val in_p + 16 * nblk < 2 EXP 63 /\
-    aligned 16 stackpointer /\
-    ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
-    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
-    PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
-    ALL (nonoverlapping (stackpointer,80))
-    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htbl_p,192]
-    ==> ensures arm
-         (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
-              read PC s = word (pc + 28) /\
-              read SP s = stackpointer /\
-              C_ARGUMENTS
-              [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
-              s /\
-              (!j. j < nblk
-                   ==> read (memory :> bytes128
-                              (word_add in_p (word (16 * j)))) s = inblock j) /\
-              read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
-              read (memory :> bytes128 ivec_p) s =
-              word_reversefields 8 (ctr_block nonce c) /\
-              wordlist_from_memory (key_p,15) s =
-              MAP (word_reversefields 8) rk /\
-              htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htbl_p s)
-         (\s. read PC s = word (pc + 4508) /\
-              read X9 s = word (16 * nblk) /\
-              (!j. j < nblk
-                   ==> read (memory :> bytes128
-                              (word_add out_p (word (16 * j)))) s =
-                       word_xor (aes_ctr_block aes256_cipher c nonce rk j)
-                                (inblock j)) /\
-              read (memory :> bytes128 xi_p) s =
-              word_reversefields 8
-              (nist_ghash (aes256_cipher (word 0) rk) tag0
-              (list_of_seq (nist_input_block inblock) nblk)) /\
-              read (memory :> bytes128 ivec_p) s =
-              word_reversefields 8 (ctr_block nonce (nblk + c)))
-         (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-          MAYCHANGE
-          [memory :> bytes (out_p,16 * nblk);
-           memory :> bytes (xi_p,16);
-           memory :> bytes (ivec_p,16);
-           memory :> bytes (word_add stackpointer (word 64),16)] ,,
-          MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15])`,
-  PURE_REWRITE_TAC[GSYM WB_CORE_FRAME_EQ] THEN
-  WBN_EXPORT_FROM_SPINE_TAC WBN_DEC_CORE_BYTELIST);;
 
 (* The whole-block subroutine result for bit_len = 128 * nblk, any nblk      *)
 (* including 0: an internal helper for the public arbitrary-length theorem.  *)
