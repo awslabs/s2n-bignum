@@ -7,6 +7,7 @@ MLKEM_NATIVE_OBJ += \
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/basemul_k2 \
   mlkem_native/gcc12_O3/basemul_k3 \
+  mlkem_native/gcc12_O3/basemul_k4 \
   mlkem_native/gcc12_O3/check_pk_k2 \
   mlkem_native/gcc12_O3/keccak_absorb_once \
   mlkem_native/gcc12_O3/keccakf1600_extract_bytes \
@@ -49,6 +50,9 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/polyvec_frombytes_k2 \
   mlkem_native/gcc12_O3/polyvec_frombytes_k3 \
   mlkem_native/gcc12_O3/polyvec_frombytes_k4 \
+  mlkem_native/gcc12_O3/polyvec_invntt_tomont_k2 \
+  mlkem_native/gcc12_O3/polyvec_invntt_tomont_k3 \
+  mlkem_native/gcc12_O3/polyvec_invntt_tomont_k4 \
   mlkem_native/gcc12_O3/polyvec_ntt_k2 \
   mlkem_native/gcc12_O3/polyvec_ntt_k3 \
   mlkem_native/gcc12_O3/polyvec_ntt_k4 \
@@ -74,6 +78,9 @@ mlkem_native/gcc12_O3/basemul_k2.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/basemul_k3.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/basemul_k4.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/check_pk_k2.native: \
@@ -219,6 +226,15 @@ mlkem_native/gcc12_O3/polyvec_frombytes_k3.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/polyvec_frombytes_k4.native: \
   mlkem_native/gcc12_O3/poly_frombytes.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/polyvec_invntt_tomont_k2.native: \
+  mlkem_native/gcc12_O3/poly_invntt_tomont.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/polyvec_invntt_tomont_k3.native: \
+  mlkem_native/gcc12_O3/poly_invntt_tomont.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/polyvec_invntt_tomont_k4.native: \
+  mlkem_native/gcc12_O3/poly_invntt_tomont.native \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/polyvec_ntt_k2.native: \
   mlkem_native/gcc12_O3/poly_ntt.native \
