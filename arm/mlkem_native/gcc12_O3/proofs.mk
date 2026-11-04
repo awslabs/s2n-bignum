@@ -12,9 +12,6 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/poly_compress_d11 \
   mlkem_native/gcc12_O3/poly_compress_d5 \
   mlkem_native/gcc12_O3/poly_decompress_d10 \
-  mlkem_native/gcc12_O3/poly_decompress_d11 \
-  mlkem_native/gcc12_O3/poly_decompress_d4 \
-  mlkem_native/gcc12_O3/poly_decompress_d5 \
   mlkem_native/gcc12_O3/poly_frommsg \
   mlkem_native/gcc12_O3/poly_ntt \
   mlkem_native/gcc12_O3/poly_reduce \
@@ -26,9 +23,9 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/polyvec_compress_du_k2 \
   mlkem_native/gcc12_O3/polyvec_compress_du_k3 \
   mlkem_native/gcc12_O3/polyvec_compress_du_k4 \
-  mlkem_native/gcc12_O3/polyvec_decompress_du_k2 \
-  mlkem_native/gcc12_O3/polyvec_decompress_du_k3 \
-  mlkem_native/gcc12_O3/polyvec_decompress_du_k4 \
+  mlkem_native/gcc12_O3/polyvec_ntt_k2 \
+  mlkem_native/gcc12_O3/polyvec_ntt_k3 \
+  mlkem_native/gcc12_O3/polyvec_ntt_k4 \
   mlkem_native/gcc12_O3/polyvec_reduce_k2 \
   mlkem_native/gcc12_O3/polyvec_reduce_k3 \
   mlkem_native/gcc12_O3/polyvec_reduce_k4 \
@@ -65,16 +62,6 @@ mlkem_native/gcc12_O3/poly_compress_d5.native: \
 mlkem_native/gcc12_O3/poly_decompress_d10.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
-mlkem_native/gcc12_O3/poly_decompress_d11.native: \
-  proofs/utils/mlkem_native.ml \
-  mlkem_native/gcc12_O3/libmlkem.native
-mlkem_native/gcc12_O3/poly_decompress_d4.native: \
-  proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
-  mlkem_native/gcc12_O3/libmlkem.native
-mlkem_native/gcc12_O3/poly_decompress_d5.native: \
-  proofs/utils/mlkem_native.ml \
-  mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_frommsg.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
@@ -108,14 +95,14 @@ mlkem_native/gcc12_O3/polyvec_compress_du_k3.native: \
 mlkem_native/gcc12_O3/polyvec_compress_du_k4.native: \
   mlkem_native/gcc12_O3/poly_compress_d11.native \
   mlkem_native/gcc12_O3/libmlkem.native
-mlkem_native/gcc12_O3/polyvec_decompress_du_k2.native: \
-  mlkem_native/gcc12_O3/poly_decompress_d10.native \
+mlkem_native/gcc12_O3/polyvec_ntt_k2.native: \
+  mlkem_native/gcc12_O3/poly_ntt.native \
   mlkem_native/gcc12_O3/libmlkem.native
-mlkem_native/gcc12_O3/polyvec_decompress_du_k3.native: \
-  mlkem_native/gcc12_O3/poly_decompress_d10.native \
+mlkem_native/gcc12_O3/polyvec_ntt_k3.native: \
+  mlkem_native/gcc12_O3/poly_ntt.native \
   mlkem_native/gcc12_O3/libmlkem.native
-mlkem_native/gcc12_O3/polyvec_decompress_du_k4.native: \
-  mlkem_native/gcc12_O3/poly_decompress_d11.native \
+mlkem_native/gcc12_O3/polyvec_ntt_k4.native: \
+  mlkem_native/gcc12_O3/poly_ntt.native \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/polyvec_reduce_k2.native: \
   mlkem_native/gcc12_O3/poly_reduce.native \
