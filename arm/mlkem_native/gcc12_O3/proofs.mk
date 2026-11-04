@@ -20,6 +20,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/poly_frommsg \
   mlkem_native/gcc12_O3/poly_reduce \
   mlkem_native/gcc12_O3/poly_sub \
+  mlkem_native/gcc12_O3/poly_tobytes \
   mlkem_native/gcc12_O3/poly_tomont \
   mlkem_native/gcc12_O3/polyvec_add_k2 \
   mlkem_native/gcc12_O3/polyvec_add_k3 \
@@ -92,6 +93,11 @@ mlkem_native/gcc12_O3/poly_reduce.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_sub.native: \
   proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/poly_tobytes.native: \
+  proofs/utils/mlkem_native.ml \
+  proofs/utils/mlkem_native_overlap.ml \
+  proofs/utils/mlkem_native_interleave.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_tomont.native: \
   proofs/utils/mlkem_native.ml \
