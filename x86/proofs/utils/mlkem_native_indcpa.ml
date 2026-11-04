@@ -520,21 +520,24 @@ let INDCPA_UNBOT_TAC =
     then SUBST_ALL_TAC(SYM th) else NO_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* Some other forms in the simulation: the values of YMM1 and YMM2 after a   *)
-(* call are named by INDCPA_YMM_TAC, so that the legacy SSE moves through    *)
-(* XMM1 and XMM2, which keep their upper halves, have known results; a       *)
-(* buffer at bot + off is not null if the stack does not contain address 0   *)
+(* Some other forms in the simulation: the values of YMM registers in a      *)
+(* state, such as after a call, are named by INDCPA_YMMS_TAC (YMM1 and YMM2  *)
+(* by INDCPA_YMM_TAC), so that the legacy SSE moves through the XMM          *)
+(* registers, which keep their upper halves, have known results; a buffer at *)
+(* bot + off is not null if the stack does not contain address 0             *)
 (* (INDCPA_NONZERO_TAC, with n the size of the stack region in that          *)
 (* hypothesis); and INDCPA_PTR_TAC evaluates the comparisons of two          *)
 (* addresses in the frame, which decide the branches of the loops.           *)
 (* ------------------------------------------------------------------------- *)
 
-let INDCPA_YMM_TAC st =
-  MAP_EVERY (fun (v,r) ->
+let INDCPA_YMMS_TAC st ns =
+  MAP_EVERY (fun n ->
+    let v = "ymm"^string_of_int n and r = parse_term("YMM"^string_of_int n) in
     ABBREV_TAC(mk_eq(mk_var(v,`:int256`),
       list_mk_comb(`read:(x86state,int256)component->x86state->int256`,
-                   [r; mk_var(st,`:x86state`)]))))
-   [("ymm1",`YMM1`); ("ymm2",`YMM2`)];;
+                   [r; mk_var(st,`:x86state`)])))) ns;;
+
+let INDCPA_YMM_TAC st = INDCPA_YMMS_TAC st [1; 2];;
 
 let INDCPA_NONZERO_TAC n off =
   MP_TAC(SPECL [`stackpointer:int64`; mk_small_numeral n;

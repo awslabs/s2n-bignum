@@ -390,3 +390,19 @@ the matrix and the vector are computed in a loop, which the proofs unroll.
 In all three, the seed of the matrix is copied by legacy SSE moves, for
 which the proofs name the values of the YMM registers after the preceding
 call.
+
+`mlkem512_indcpa_keypair_derand`, `mlkem768_indcpa_keypair_derand` and
+`mlkem1024_indcpa_keypair_derand` are the key generation of K-PKE: the
+public key and the secret key that they write are those of
+`kpke_keygen mlkem<n> d` for the seed `d` of 32 bytes. They are verified in
+the image with the same specifications as on AArch64 apart from the stack
+and DF, including the hypothesis on SampleNTT for the matrix from rho, the
+first half of the result of SHA3-512, and, for ML-KEM-512 and ML-KEM-1024,
+the hypothesis that the stack does not contain address 0, as for the
+encryption. Their theorems of constant time and memory safety state that
+their events depend only on the addresses and on rho, through the samples
+of SampleNTT, and that rho is the end of the public key, using the combined
+theorem for `mlkem_sha3_512`. As for the encryption, the products of the
+rows of the matrix and the vector are computed in a loop for ML-KEM-768 and
+ML-KEM-1024, and the seed and rho are copied by legacy SSE moves, for which
+the proofs name the values of the YMM registers.
