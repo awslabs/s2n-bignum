@@ -1484,6 +1484,19 @@ let decode = new_definition `!w:int32. decode w =
       else
         SOME (arm_SSUBW (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
 
+  | [0:1; q; 0b001110:6; size:2; 0b1:1; Rm:5; 0b010000:6; Rn:5; Rd:5] ->
+    // ADDHN (vector, Q = 0). ADDHN2 (vector, Q = 1)
+    // Add narrowing high half: the 2*esize-bit lanes of Vn and Vm are
+    // added and the high esize bits of each sum are kept. esize is the
+    // destination (narrow) element size. size=11 is UNDEFINED.
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize: (64)word = word_shl (word 8: (64)word) (val size) in
+      if q then
+        SOME (arm_ADDHN2 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      else
+        SOME (arm_ADDHN (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+
   | [0:1; q; 0b001110:6; size:2; 0b1:1; Rm:5; 0b100000:6; Rn:5; Rd:5] ->
     // SMLAL (vector, Q = 0). SMLAL2 (vector, Q=1)
     if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
