@@ -50,6 +50,24 @@ let iclasses =
   "10010001000000001000001100110110"; (* unmatched case... *)
   "1001000100xxxxxxxxxxxx1110100010"; (* another: add x2, x29, #xxx *)
   "xx0100010xxxxxxxxxxxxxx0xxxxxx0x"; (* e.g. add x25, x22, #32 *)
+  (*** ADD, SUB immediate: the remaining pairs of registers, that is,
+   *** every pair of a bit position of Rn and one of Rd that are both
+   *** forced to 0, so that no register is SP. ***)
+  "xx0100010xxxxxxxxxxxxxxxxx0xxx0x";
+  "xx0100010xxxxxxxxxxxxxxxxx0xx0xx";
+  "xx0100010xxxxxxxxxxxxxxxxx0x0xxx";
+  "xx0100010xxxxxxxxxxxxxxxxx00xxxx";
+  "xx0100010xxxxxxxxxxxxxxxx0x0xxxx";
+  "xx0100010xxxxxxxxxxxxxxx0xxxxxx0";
+  "xx0100010xxxxxxxxxxxxxxx0xxxxx0x";
+  "xx0100010xxxxxxxxxxxxxxx0xxx0xxx";
+  "xx0100010xxxxxxxxxxxxxxx0xx0xxxx";
+  "xx0100010xxxxxxxxxxxxxx0xxxxxxx0";
+  "xx0100010xxxxxxxxxxxxxx0xxxxx0xx";
+  "xx0100010xxxxxxxxxxxxxx0xxx0xxxx";
+  "xx0100010xxxxxxxxxxxxx0xxxxxxx0x";
+  "xx0100010xxxxxxxxxxxxx0xxxxxx0xx";
+  "xx0100010xxxxxxxxxxxxx0xxxxx0xxx";
   (*** Rd of ADDS/SUBS cannot be SP *)
   "xx1100010xxxxxxxxxxxxxxxxx0xxxxx";
   "xx1100010xxxxxxxxxxxxxxxx0xxxxxx";
@@ -91,6 +109,48 @@ let iclasses =
   "xxx01011001xxxxxxxx100xx0xxxx0xx"; (* shift 4 *)
   "xxx01011001xxxxxxxx100x0xxxx0xxx"; (* shift 4 *)
   "xxx01011001xxxxxxxx1000xxxx0xxxx"; (* shift 4 *)
+  (*** ADD, SUB, extended registers: the remaining pairs of registers,
+   *** as for the immediate operand above. ***)
+  "xxx01011001xxxxxxxx0xxxxxx0xxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxxx0xx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxxx0x0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxxx00xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0x0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xx0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxx0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx100xxxx0xxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxxx0xx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxxx0x0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxxx00xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xx0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0x0xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxx0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xx0xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxx0xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxx0xxx"; (* shift 4 *)
   (*** CMP, CMN, extended registers: Rd is ZR, Rn is not SP ***)
   "xx101011001xxxxxxxx0xxxxxx011111"; (* shift 0-3 *)
   "xx101011001xxxxxxxx0xxxxx0x11111"; (* shift 0-3 *)
