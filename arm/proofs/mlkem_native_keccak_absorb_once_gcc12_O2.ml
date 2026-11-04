@@ -97,7 +97,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x23b0,0x24c8];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlk_keccak_absorb_once"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Lemmas about the arguments, the bytes of the message and the blocks.      *)
@@ -304,17 +305,17 @@ let ABSORB_CASE_FLAG_TAC tm =
 
 let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!st r m mlen p M pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         0 < r /\ r <= 200 /\ p < 128 /\
         PAIRWISE nonoverlapping
          [(st,200); (m,mlen); (word_sub stackpointer (word 256),256)] /\
-        ALL (nonoverlapping (word pc,0x6480))
+        ALL (nonoverlapping (word pc,libmlkem_size))
          [(st,200); (word_sub stackpointer (word 256),256)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x23b0) /\
+                  read PC s = word (pc + mlk_keccak_absorb_once) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [st; word r; m; word mlen; word p] s /\
@@ -360,7 +361,7 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
 
   (*** The state after the whole blocks, before the last block ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0x242c`
+  ENSURES_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_loop1_exit`
    `\s. read X19 s = st /\ read X20 s = word(mlen MOD r) /\
         read X21 s = word_add m (word(r * mlen DIV r)) /\
         read X23 s = word r /\
@@ -397,7 +398,8 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
 
     (*** Otherwise the loop over the whole blocks ***)
 
-    ENSURES_WHILE_UP_TAC `mlen DIV r` `pc + 0x2400` `pc + 0x2424`
+    ENSURES_WHILE_UP_TAC `mlen DIV r` `pc + mlk_keccak_absorb_once_loop1`
+     `pc + mlk_keccak_absorb_once_loop1_test`
      `\k s. read X19 s = st /\ read X20 s = word(mlen - r * k) /\
             read X21 s = word_add m (word(r * k)) /\
             read X22 s = word r /\ read X23 s = word r /\
@@ -791,17 +793,17 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
      forall e st r m mlen p pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\
        0 < r /\ r <= 200 /\
        PAIRWISE nonoverlapping
         [st,200; m,mlen; word_sub stackpointer (word 256),256] /\
-       ALL (nonoverlapping (word pc,0x6480))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [st,200; word_sub stackpointer (word 256),256]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x23b0) /\
+                 read PC s = word (pc + mlk_keccak_absorb_once) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [st; word r; m; word mlen; word p] s /\
@@ -813,7 +815,7 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                            (word_sub stackpointer (word 256)) returnaddress /\
                     memaccess_inbounds e2
                      [m,mlen; st,200; word_sub stackpointer (word 256),256;
-                      word(pc + 0x62b0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [st,200; word_sub stackpointer (word 256),256]))
             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
              MAYCHANGE
@@ -861,7 +863,7 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
   ENSURES_PRESERVED_TAC "x22_init" `X22` THEN
   ENSURES_PRESERVED_TAC "x23_init" `X23` THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x242c`
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_loop1_exit`
    `\s. read X19 s = st /\ read X20 s = word(mlen MOD r) /\
         read X21 s = word_add m (word(r * mlen DIV r)) /\
         read X23 s = word r /\
@@ -894,7 +896,9 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
 
     (*** Otherwise the loop over the whole blocks ***)
 
-    ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r` `pc + 0x2400` `pc + 0x242c`
+    ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r`
+     `pc + mlk_keccak_absorb_once_loop1`
+     `pc + mlk_keccak_absorb_once_loop1_exit`
      `\k s. read X19 s = st /\ read X20 s = word(mlen - r * k) /\
             read X21 s = word_add m (word(r * k)) /\
             read X22 s = word r /\ read X23 s = word r /\
@@ -1101,7 +1105,8 @@ let ABSORB_CS_CALL_TAC name ilist vars n =
      [ABSORB_EXISTS_E2_TAC (ref vars); LABEL_TAC name safety_th]);;
 
 let ABSORB_CS_LOOP_TAC =
-  ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r` `pc + 0x2400` `pc + 0x242c`
+  ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r` `pc + mlk_keccak_absorb_once_loop1`
+   `pc + mlk_keccak_absorb_once_loop1_exit`
     ABSORB_CS_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
@@ -1366,17 +1371,17 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
   prove
  (`exists f_events.
      forall e st r m mlen p M pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\
        0 < r /\ r <= 200 /\ p < 128 /\
        PAIRWISE nonoverlapping
         [st,200; m,mlen; word_sub stackpointer (word 256),256] /\
-       ALL (nonoverlapping (word pc,0x6480))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [st,200; word_sub stackpointer (word 256),256]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x23b0) /\
+                 read PC s = word (pc + mlk_keccak_absorb_once) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [st; word r; m; word mlen; word p] s /\
@@ -1398,14 +1403,15 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
                            (word_sub stackpointer (word 256)) returnaddress /\
                     memaccess_inbounds e2
                      [m,mlen; st,200; word_sub stackpointer (word 256),256;
-                      word(pc + 0x62b0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [st,200; word_sub stackpointer (word 256),256]))
             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
              MAYCHANGE
               [memory :> bytes(st,200);
                memory :> bytes(word_sub stackpointer (word 256),256)])`,
   ABSORB_CS_INTRO_TAC THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x242c` ABSORB_CS_MID THEN CONJ_TAC THENL
+  ENSURES_EVENTS_SEQUENCE_TAC
+   `pc + mlk_keccak_absorb_once_loop1_exit` ABSORB_CS_MID THEN CONJ_TAC THENL
    [ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THENL
      [ABSORB_CS_SHORT_TAC; ABSORB_CS_LOOP_TAC];
     ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THEN

@@ -79,7 +79,8 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
  ***)
 
 let MLKEM_NATIVE_SHAKE256_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x2570,0x2648];;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
+   [layout_range "mlkem_shake256"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The state is aligned to 32 bytes within the stack frame, so its address   *)
@@ -131,8 +132,9 @@ let SHAKE256_SETUP_TAC =
    `304 <= (if aligned 32 (stackpointer:int64) then 320 else 304) /\
     (if aligned 32 (stackpointer:int64) then 320 else 304) <= 320`
   STRIP_ASSUME_TAC THENL [COND_CASES_TAC THEN ARITH_TAC; ALL_TAC] THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD]) THEN
   GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
@@ -254,22 +256,24 @@ let SHAKE256_EXIT_TAC =
 
 let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!out outlen m (inp:byte list) guard pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         PAIRWISE nonoverlapping
          [(out,outlen); (m,LENGTH inp);
           (word_sub stackpointer (word 560),560)] /\
         ALLPAIRS nonoverlapping
          [(out,outlen); (word_sub stackpointer (word 560),560)]
-         [(word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8)]
+         [(word pc,libmlkem_size); (word(pc + got_stack_chk_guard),8);
+          (guard,8)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x2570) /\
+                  read PC s = word (pc + mlkem_shake256) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [out; word outlen; m; word(LENGTH inp)] s /\
-                  read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
                   read (memory :> bytes(m,LENGTH inp)) s =
                   num_of_bytelist inp)
              (\s. read PC s = returnaddress /\
@@ -291,7 +295,7 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
 
   (*** The absorption, up to the test of outlen ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0x25b0`
+  ENSURES_SEQUENCE_TAC `pc + mlkem_shake256_after_mlk_keccak_absorb_once`
    `\s. read X19 s = word outlen /\
         read X21 s =
         word_add stackpointer
@@ -359,7 +363,8 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
   (*** Otherwise the loop, with MIN outlen (136 * i) bytes done ***)
 
   SHAKE256_BOUND_TAC THEN
-  ENSURES_WHILE_UP2_TAC `(outlen + 135) DIV 136` `pc + 0x25c0` `pc + 0x25f0`
+  ENSURES_WHILE_UP2_TAC `(outlen + 135) DIV 136` `pc + mlkem_shake256_loop1`
+   `pc + mlkem_shake256_loop1_exit`
    `\i s. read X19 s = word(outlen - MIN outlen (136 * i)) /\
           read X21 s =
           word_add stackpointer
@@ -493,21 +498,22 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   time prove
  (`exists f_events.
      forall e out outlen m inlen guard pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
        aligned 16 stackpointer /\
        PAIRWISE nonoverlapping
         [out,outlen; m,inlen; word_sub stackpointer (word 560),560] /\
        ALLPAIRS nonoverlapping
         [out,outlen; word_sub stackpointer (word 560),560]
-        [word pc,0x6480; word(pc + 0x1fff8),8; guard,8]
+        [word pc,libmlkem_size; word(pc + got_stack_chk_guard),8; guard,8]
        ==> ensures arm
             (\s. aligned_bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + 0x2570) /\
+                 read PC s = word (pc + mlkem_shake256) /\
                  read SP s = stackpointer /\
                  read X30 s = returnaddress /\
                  C_ARGUMENTS [out; word outlen; m; word inlen] s /\
-                 read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
+                 read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                   guard /\
                  read events s = e)
             (\s. read PC s = returnaddress /\
                  (exists e2.
@@ -517,7 +523,8 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                     memaccess_inbounds e2
                      [m,inlen; out,outlen;
                       word_sub stackpointer (word 560),560;
-                      word(pc + 0x1fff8),8; guard,8; word(pc + 0x62b0),192]
+                      word(pc + got_stack_chk_guard),8; guard,8;
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [out,outlen; word_sub stackpointer (word 560),560]))
             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
              MAYCHANGE
@@ -556,7 +563,8 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
               fst MLKEM_NATIVE_SHAKE256_GCC12_O2_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   SHAKE256_SETUP_TAC THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x25b0`
+  ENSURES_EVENTS_SEQUENCE_TAC
+   `pc + mlkem_shake256_after_mlk_keccak_absorb_once`
    `\s. read X19 s = word outlen /\
         read X21 s =
         word_add stackpointer
@@ -604,7 +612,7 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
     ALL_TAC] THEN
   SHAKE256_BOUND_TAC THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `(outlen + 135) DIV 136`
-    `pc + 0x25c0` `pc + 0x25f0`
+   `pc + mlkem_shake256_loop1` `pc + mlkem_shake256_loop1_exit`
    `\i s. read X19 s = word(outlen - MIN outlen (136 * i)) /\
           read X21 s =
           word_add stackpointer

@@ -186,7 +186,7 @@ needs "arm/proofs/utils/mlkem_native_indcpa.ml";;
 
 let MLKEM_NATIVE_INDCPA_KEYPAIR_DERAND_K3_GCC12_O2_EXEC =
   ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x840,0x850; 0x50c0,0x5308];;
+   [layout_range "plt_memset"; layout_range "mlkem768_indcpa_keypair_derand"];;
 
 let KP3_EXEC = MLKEM_NATIVE_INDCPA_KEYPAIR_DERAND_K3_GCC12_O2_EXEC;;
 
@@ -719,10 +719,12 @@ let KP3_INTRO_TAC =
    [UNDISCH_TAC `aligned 16 (word_add stackpointer (word 13888):int64)` THEN
     CONV_TAC(LAND_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN REWRITE_TAC[];
     ALL_TAC] THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-                              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD;
+                              SPECL [`pc:num`;
+                                     `got_memset:num`] WORD_ADD]) THEN
   GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
@@ -876,7 +878,7 @@ let MLKEM_NATIVE_INDCPA_KEYPAIR_DERAND_K3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
  (`!pk sk coins (d:byte list) guard mf mc ea el ev pc stackpointer
     returnaddress.
         memset_contract mf ea el ev /\ memcpy_contract mc ea el ev /\
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\ LENGTH d = 32 /\
         (!i j. i < 3 /\ j < 3
                ==> mlkem_samplentt_terminates
@@ -886,18 +888,20 @@ let MLKEM_NATIVE_INDCPA_KEYPAIR_DERAND_K3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
          [(pk,1184); (sk,1152); (word_sub stackpointer (word 13888),13888)] /\
         ALLPAIRS nonoverlapping
          [(pk,1184); (sk,1152); (word_sub stackpointer (word 13888),13888)]
-         [(coins,32); (word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
-          (word(pc + 0x1ffe8),8); (word(pc + 0x1ffd0),8); (ea,el)]
+         [(coins,32); (word pc,libmlkem_size);
+          (word(pc + got_stack_chk_guard),8); (guard,8);
+          (word(pc + got_memset),8); (word(pc + got_memcpy),8); (ea,el)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x50c0) /\
+                  read PC s = word (pc + mlkem768_indcpa_keypair_derand) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [pk; sk; coins] s /\
-                  read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                  read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
-                  read (memory :> bytes64(word(pc + 0x1ffd0))) s = mc /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                  read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                  read (memory :> bytes64(word(pc + got_memcpy))) s = mc /\
                   read (memory :> bytes(ea,el)) s = ev /\
                   read (memory :> bytes(coins,32)) s = num_of_bytelist d)
              (\s. read PC s = returnaddress /\
@@ -995,10 +999,12 @@ let KP3_SAFE_INTRO_TAC =
    [UNDISCH_TAC `aligned 16 (word_add stackpointer (word 13888):int64)` THEN
     CONV_TAC(LAND_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN REWRITE_TAC[];
     ALL_TAC] THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-                              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD;
+                              SPECL [`pc:num`;
+                                     `got_memset:num`] WORD_ADD]) THEN
   GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
@@ -1099,7 +1105,7 @@ let MLKEM_NATIVE_INDCPA_KEYPAIR_DERAND_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
    memset_full_contract mf ea el ev /\ memcpy_safety_contract mc ea el ev
    ==> exists f_events.
         forall e pk sk coins (d:byte list) guard pc stackpointer returnaddress.
-          aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+          aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
           aligned 16 stackpointer /\ LENGTH d = 32 /\
           (!i j. i < 3 /\ j < 3
                  ==> mlkem_samplentt_terminates
@@ -1111,18 +1117,20 @@ let MLKEM_NATIVE_INDCPA_KEYPAIR_DERAND_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
           ALLPAIRS nonoverlapping
            [(pk,1184); (sk,1152);
             (word_sub stackpointer (word 13888),13888)]
-           [(coins,32); (word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
-            (word(pc + 0x1ffe8),8); (word(pc + 0x1ffd0),8); (ea,el)]
+           [(coins,32); (word pc,libmlkem_size);
+            (word(pc + got_stack_chk_guard),8); (guard,8);
+            (word(pc + got_memset),8); (word(pc + got_memcpy),8); (ea,el)]
           ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x50c0) /\
+                    read PC s = word (pc + mlkem768_indcpa_keypair_derand) /\
                     read SP s = stackpointer /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [pk; sk; coins] s /\
-                    read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                    read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
-                    read (memory :> bytes64(word(pc + 0x1ffd0))) s = mc /\
+                    read (memory :> bytes64(word(pc + got_stack_chk_guard))) s
+                     = guard /\
+                    read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                    read (memory :> bytes64(word(pc + got_memcpy))) s = mc /\
                     read (memory :> bytes(ea,el)) s = ev /\
                     read (memory :> bytes(coins,32)) s = num_of_bytelist d /\
                     read events s = e)
@@ -1139,10 +1147,13 @@ let MLKEM_NATIVE_INDCPA_KEYPAIR_DERAND_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                        memaccess_inbounds e2
                         [coins,32; pk,1184; sk,1152;
                          word_sub stackpointer (word 13888),13888;
-                         word(pc + 0x1fff8),8; guard,8; word(pc + 0x1ffe8),8;
-                         word(pc + 0x1ffd0),8; ea,el; word(pc + 0x62b0),192;
-                         word(pc + 0x6250),64; word(pc + 0x6380),256;
-                         word(pc + 0x6220),32]
+                         word(pc + got_stack_chk_guard),8; guard,8;
+                         word(pc + got_memset),8;
+                         word(pc + got_memcpy),8; ea,el;
+                         word(pc + rodata_mlk_KeccakF_RoundConstants),192;
+                         word(pc + mlkem_poly_cbd2_consts),64;
+                         word(pc + rodata_mlk_zetas),256;
+                         word(pc + mlkem_poly_tomont_consts),32]
                         [pk,1184; sk,1152;
                          word_sub stackpointer (word 13888),13888]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,

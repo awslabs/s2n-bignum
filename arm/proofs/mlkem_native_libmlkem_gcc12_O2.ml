@@ -10,11 +10,13 @@
 (* the image. All the theorems about the image assume that it is loaded at   *)
 (* an address pc that is a multiple of 4096, as the dynamic loader does, and *)
 (* that it does not wrap around the end of the address space, i.e.           *)
-(* pc + 0x6480 <= 2 EXP 64. The functions in it are then at pc + <address>,  *)
-(* where <address> is the address of the function in the binary.             *)
+(* pc + libmlkem_size <= 2 EXP 64. A function f in it is then at pc + f,     *)
+(* with the names for the addresses and sizes in the binary that are listed  *)
+(* in mlkem_native_libmlkem_gcc12_O2_layout.ml.                              *)
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
+needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml";;
 
 let mlkem_native_libmlkem_gcc12_O2_mc = define_from_elf
   "mlkem_native_libmlkem_gcc12_O2_mc"
@@ -23,6 +25,13 @@ let mlkem_native_libmlkem_gcc12_O2_mc = define_from_elf
 let LENGTH_MLKEM_NATIVE_LIBMLKEM_GCC12_O2_MC =
   CONV_RULE(RAND_CONV LENGTH_CONV)
    (AP_TERM `LENGTH:byte list->num` mlkem_native_libmlkem_gcc12_O2_mc);;
+
+(* The image has the size given in the layout file. *)
+
+let () =
+  if dest_small_numeral(rhs(concl LENGTH_MLKEM_NATIVE_LIBMLKEM_GCC12_O2_MC)) <>
+     layout "libmlkem_size"
+  then failwith "The size of the image is not libmlkem_size";;
 
 (* ------------------------------------------------------------------------- *)
 (* Decoding all the code in the image would take several minutes, and the    *)

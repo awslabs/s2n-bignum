@@ -159,13 +159,13 @@ let randombytes_safety_contract = new_definition
 (* have been normalized to word_add a (word(k + i)) by the simulation.       *)
 (* ------------------------------------------------------------------------- *)
 
-let mlkem_native_plt_memcpy = 0x810
-and mlkem_native_plt_randombytes = 0x820
-and mlkem_native_plt_memset = 0x840;;
+let mlkem_native_plt_memcpy = layout "plt_memcpy"
+and mlkem_native_plt_randombytes = layout "plt_randombytes"
+and mlkem_native_plt_memset = layout "plt_memset";;
 
-let mlkem_native_got_memcpy = 0x1ffd0
-and mlkem_native_got_randombytes = 0x1ffd8
-and mlkem_native_got_memset = 0x1ffe8;;
+let mlkem_native_got_memcpy = layout "got_memcpy"
+and mlkem_native_got_randombytes = layout "got_randombytes"
+and mlkem_native_got_memset = layout "got_memset";;
 
 let MEMSET_ZERO_BYTES = prove
  (`!a n s:armstate.

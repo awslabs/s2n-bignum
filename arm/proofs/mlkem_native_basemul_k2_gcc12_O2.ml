@@ -11,6 +11,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
+needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml";;
 needs "arm/proofs/utils/mlkem_native.ml";;
 
 (**** print_literal_from_elf
@@ -148,7 +149,7 @@ let MONTRED_SCALAR_CONG_TAC =
 let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_CORRECT = prove
  (`!srcA srcB srcBt dst x0 y0 y0t x1 y1 y1t pc.
      ALL (nonoverlapping (dst, 512))
-         [(word pc, 0xb4); (srcA, 1024); (srcB, 1024); (srcBt, 512)]
+         [(word pc, basemul_k2_size); (srcA, 1024); (srcB, 1024); (srcBt, 512)]
      ==>
      ensures arm
        (\s. aligned_bytes_loaded s (word pc)
@@ -173,7 +174,7 @@ let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_CORRECT = prove
             (!i. i < 128
                  ==> read(memory :> bytes16
                       (word_add srcBt (word (256 + 2 * i)))) s = y1t i))
-       (\s. read PC s = word (pc + 0xb0) /\
+       (\s. read PC s = word (pc + basemul_k2_ret) /\
             ((!i. i < 256
                   ==> abs(ival(x0 i)) <= &2 pow 12 /\
                       abs(ival(x1 i)) <= &2 pow 12)
@@ -199,7 +200,8 @@ let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_CORRECT = prove
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `128` `pc + 0x20` `pc + 0xa8`
+  ENSURES_WHILE_UP_TAC `128` `pc + basemul_k2_loop1`
+   `pc + basemul_k2_loop1_test`
    `\i s. read X4 s = word_add srcA (word(4 * i)) /\
           read X5 s = word_add srcB (word(4 * i)) /\
           read X6 s = word_add srcBt (word(2 * i)) /\
@@ -306,7 +308,7 @@ let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_CORRECT = prove
 let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_SUBROUTINE_CORRECT = prove
  (`!srcA srcB srcBt dst x0 y0 y0t x1 y1 y1t pc returnaddress.
      ALL (nonoverlapping (dst, 512))
-         [(word pc, 0xb4); (srcA, 1024); (srcB, 1024); (srcBt, 512)]
+         [(word pc, basemul_k2_size); (srcA, 1024); (srcB, 1024); (srcBt, 512)]
      ==>
      ensures arm
        (\s. aligned_bytes_loaded s (word pc)
@@ -407,7 +409,8 @@ let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_SUBROUTINE_SAFE = time prove
               fst MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `128` `pc + 0x20` `pc + 0xb0`
+  ENSURES_EVENTS_WHILE_UP2_TAC `128` `pc + basemul_k2_loop1`
+   `pc + basemul_k2_loop1_exit`
     `\i s. read X30 s = returnaddress /\
            read X4 s = word_add srcA (word(4 * i)) /\
            read X5 s = word_add srcB (word(4 * i)) /\
@@ -466,18 +469,19 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_IN_IMAGE =
   MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_basemul_k2_gcc12_O2_mc
-    0x45e0 [];;
+    (layout "mlkem512_polyvec_basemul_acc_montgomery_cached") [];;
 
 let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!srcA srcB srcBt dst x0 y0 y0t x1 y1 y1t pc returnaddress.
-     aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+     aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
      ALL (nonoverlapping (dst, 512))
-         [(word pc, 0x6480); (srcA, 1024); (srcB, 1024); (srcBt, 512)]
+         [(word pc, libmlkem_size); (srcA, 1024); (srcB, 1024); (srcBt, 512)]
      ==>
      ensures arm
        (\s. aligned_bytes_loaded s (word pc)
               mlkem_native_libmlkem_gcc12_O2_mc /\
-            read PC s = word (pc + 0x45e0) /\
+            read PC s =
+              word (pc + mlkem512_polyvec_basemul_acc_montgomery_cached) /\
             read X30 s = returnaddress /\
             C_ARGUMENTS [dst; srcA; srcB; srcBt] s  /\
             (!i. i < 256
@@ -515,21 +519,24 @@ let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
        (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
         MAYCHANGE [memory :> bytes(dst, 512)])`,
   MLKEM_NATIVE_IMAGE_TAC
-   (INST [`pc + 0x45e0`,`pc:num`]
+   (INST [`pc + mlkem512_polyvec_basemul_acc_montgomery_cached`,`pc:num`]
      (SPEC_ALL MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_SUBROUTINE_CORRECT))
    [MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_IN_IMAGE]);;
 
 let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
  (`exists f_events.
        forall e srcA srcB srcBt dst pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
            ALL (nonoverlapping (dst,512))
-           [word pc,0x6480; srcA,1024; srcB,1024; srcBt,512]
+           [word pc,libmlkem_size; srcA,1024; srcB,1024; srcBt,512]
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + 0x45e0) /\
+                    read PC s =
+                      word (pc
+                             + mlkem512_polyvec_basemul_acc_montgomery_cached)
+                              /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [dst; srcA; srcB; srcBt] s /\
                     read events s = e)
@@ -544,5 +551,5 @@ let MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
                 MAYCHANGE [memory :> bytes(dst, 512)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_SUBROUTINE_SAFE
-   [`pc + 0x45e0`,`pc:num`]
+   [`pc + mlkem512_polyvec_basemul_acc_montgomery_cached`,`pc:num`]
    [MLKEM_NATIVE_BASEMUL_K2_GCC12_O2_IN_IMAGE]);;

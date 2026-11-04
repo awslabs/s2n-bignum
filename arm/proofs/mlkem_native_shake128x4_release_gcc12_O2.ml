@@ -34,7 +34,7 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_EXEC =
   ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x2a04,0x2a20; 0x840,0x850];;
+   [layout_range "mlkem_shake128x4_release"; layout_range "plt_memset"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof, assuming the contract for memset at the address mf in  *)
@@ -46,20 +46,20 @@ let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   prove
  (`!st mf ea el ev pc stackpointer returnaddress.
         memset_contract mf ea el ev /\
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         nonoverlapping (st,800) (word_sub stackpointer (word 16),16) /\
         ALLPAIRS nonoverlapping
          [(st,800); (word_sub stackpointer (word 16),16)]
-         [(word pc,0x6480); (word(pc + 0x1ffe8),8); (ea,el)]
+         [(word pc,libmlkem_size); (word(pc + got_memset),8); (ea,el)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x2a04) /\
+                  read PC s = word (pc + mlkem_shake128x4_release) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [st] s /\
-                  read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                  read (memory :> bytes64(word(pc + got_memset))) s = mf /\
                   read (memory :> bytes(ea,el)) s = ev)
              (\s. read PC s = returnaddress /\
                   read (memory :> bytes(st,800)) s = 0)
@@ -76,8 +76,9 @@ let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   DISCH_THEN(CONJUNCTS_THEN2
    (LABEL_TAC "H_MEMSET" o REWRITE_RULE[memset_contract])
    (REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)) THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1ffe8`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1ffe8`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_memset:num`] WORD_ADD]) THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
   ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
@@ -106,20 +107,20 @@ let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
      memset_safety_contract mf ea el ev
      ==> exists f_events.
           forall e st pc stackpointer returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
            aligned 16 stackpointer /\
            nonoverlapping (st,800) (word_sub stackpointer (word 16),16) /\
            ALLPAIRS nonoverlapping
             [st,800; word_sub stackpointer (word 16),16]
-            [word pc,0x6480; word(pc + 0x1ffe8),8; ea,el]
+            [word pc,libmlkem_size; word(pc + got_memset),8; ea,el]
            ==> ensures arm
                 (\s. aligned_bytes_loaded s (word pc)
                        mlkem_native_libmlkem_gcc12_O2_mc /\
-                     read PC s = word (pc + 0x2a04) /\
+                     read PC s = word (pc + mlkem_shake128x4_release) /\
                      read SP s = stackpointer /\
                      read X30 s = returnaddress /\
                      C_ARGUMENTS [st] s /\
-                     read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                     read (memory :> bytes64(word(pc + got_memset))) s = mf /\
                      read (memory :> bytes(ea,el)) s = ev /\
                      read events s = e)
                 (\s. read PC s = returnaddress /\
@@ -130,7 +131,7 @@ let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                                returnaddress /\
                         memaccess_inbounds e2
                          [st,800; word_sub stackpointer (word 16),16;
-                          word(pc + 0x1ffe8),8; ea,el]
+                          word(pc + got_memset),8; ea,el]
                          [st,800; word_sub stackpointer (word 16),16]))
                 (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                  MAYCHANGE [X18] ,,
@@ -144,8 +145,9 @@ let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1ffe8`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1ffe8`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_memset:num`] WORD_ADD]) THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
   ENSURES_PRESERVED_TAC "x19_init" `X19` THEN

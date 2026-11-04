@@ -169,7 +169,7 @@ needs "arm/proofs/mlkem_native_shake128x4_release_gcc12_O2.ml";;
 
 let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_EXEC =
   ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x4b30,0x4d38; 0x840,0x850];;
+   [layout_range "mlkem_poly_rej_uniform_x4"; layout_range "plt_memset"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The samples from one more block, whatever the number of samples so far:   *)
@@ -389,10 +389,12 @@ let REJX4_SETUP_TAC =
    `432 <= (if aligned 32 (stackpointer:int64) then 448 else 432) /\
     (if aligned 32 (stackpointer:int64) then 448 else 432) <= 448`
   STRIP_ASSUME_TAC THENL [COND_CASES_TAC THEN ARITH_TAC; ALL_TAC] THEN
-  REWRITE_TAC[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `0x1fff8`] WORD_ADD;
-                              SPECL [`pc:num`; `0x1ffe8`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD;
+                              SPECL [`pc:num`;
+                                     `got_memset:num`] WORD_ADD]) THEN
   GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
   ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
   ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
@@ -849,7 +851,8 @@ let REJX4_EXIT_TAC =
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
 
 let REJX4_LOOP_TAC =
-  ENSURES_WHILE_UP2_TAC `k0:num` `pc + 0x4c50` `pc + 0x4ce0` REJX4_INV THEN
+  ENSURES_WHILE_UP2_TAC `k0:num` `pc + mlkem_poly_rej_uniform_x4_loop1`
+   `pc + mlkem_poly_rej_uniform_x4_loop1_exit` REJX4_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[]; REJX4_LOOP_INIT_TAC; REJX4_BODY_TAC; REJX4_EXIT_TAC];;
 
@@ -890,7 +893,7 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
    (inp2:byte list) (inp3:byte list) k guard mf ea el ev pc stackpointer
    returnaddress.
         memset_contract mf ea el ev /\
-        aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         aligned 16 stackpointer /\
         LENGTH inp0 = 34 /\ LENGTH inp1 = 34 /\
         LENGTH inp2 = 34 /\ LENGTH inp3 = 34 /\
@@ -909,17 +912,19 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
           (word_sub stackpointer (word 3312),3312)]
          [(seed,34); (word_add seed (word 64),34);
           (word_add seed (word 128),34); (word_add seed (word 192),34);
-          (word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
-          (word(pc + 0x1ffe8),8); (ea,el)]
+          (word pc,libmlkem_size); (word(pc + got_stack_chk_guard),8);
+          (guard,8);
+          (word(pc + got_memset),8); (ea,el)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + 0x4b30) /\
+                  read PC s = word (pc + mlkem_poly_rej_uniform_x4) /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [vec0; vec1; vec2; vec3; seed] s /\
-                  read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                  read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                  read (memory :> bytes64(word(pc + got_memset))) s = mf /\
                   read (memory :> bytes(ea,el)) s = ev /\
                   read (memory :> bytes(seed,34)) s = num_of_bytelist inp0 /\
                   read (memory :> bytes(word_add seed (word 64),34)) s =
@@ -967,8 +972,11 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
 
   (*** The first three blocks of each and the samples from them ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0x4ce0` REJX4_A2 THEN CONJ_TAC THENL
-   [ENSURES_SEQUENCE_TAC `pc + 0x4c24` REJX4_A1 THEN CONJ_TAC THENL
+  ENSURES_SEQUENCE_TAC
+   `pc + mlkem_poly_rej_uniform_x4_loop1_exit` REJX4_A2 THEN CONJ_TAC THENL
+   [ENSURES_SEQUENCE_TAC
+    `pc + mlkem_poly_rej_uniform_x4_after_mlk_rej_uniform_c_4` REJX4_A1 THEN
+     CONJ_TAC THENL
      [REJX4_PART1_TAC;
       ASM_CASES_TAC `k0 = 0` THENL [REJX4_NOLOOP_TAC; REJX4_LOOP_TAC]];
     REJX4_PART3_TAC]);;
@@ -1178,7 +1186,8 @@ let PREJ4_SAFE_BODY_TAC =
 
 let PREJ4_SAFE_LOOP_TAC =
   REWRITE_TAC[EQF_INTRO(ASSUME `~(k0 = 0)`)] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `k0:num` `pc + 0x4c50` `pc + 0x4ce0`
+  ENSURES_EVENTS_WHILE_UP2_TAC `k0:num` `pc + mlkem_poly_rej_uniform_x4_loop1`
+   `pc + mlkem_poly_rej_uniform_x4_loop1_exit`
     REJX4_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];
@@ -1248,7 +1257,7 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
         forall e vec0 vec1 vec2 vec3 seed (inp0:byte list) (inp1:byte list)
                (inp2:byte list) (inp3:byte list) k guard pc stackpointer
                returnaddress.
-         aligned 4096 (word pc:int64) /\ pc + 0x6480 <= 2 EXP 64 /\
+         aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
          aligned 16 stackpointer /\
          LENGTH inp0 = 34 /\ LENGTH inp1 = 34 /\
          LENGTH inp2 = 34 /\ LENGTH inp3 = 34 /\
@@ -1267,17 +1276,19 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
            (word_sub stackpointer (word 3312),3312)]
           [(seed,34); (word_add seed (word 64),34);
            (word_add seed (word 128),34); (word_add seed (word 192),34);
-           (word pc,0x6480); (word(pc + 0x1fff8),8); (guard,8);
-           (word(pc + 0x1ffe8),8); (ea,el)]
+           (word pc,libmlkem_size); (word(pc + got_stack_chk_guard),8);
+           (guard,8);
+           (word(pc + got_memset),8); (ea,el)]
          ==> ensures arm
               (\s. aligned_bytes_loaded s (word pc)
                      mlkem_native_libmlkem_gcc12_O2_mc /\
-                   read PC s = word (pc + 0x4b30) /\
+                   read PC s = word (pc + mlkem_poly_rej_uniform_x4) /\
                    read SP s = stackpointer /\
                    read X30 s = returnaddress /\
                    C_ARGUMENTS [vec0; vec1; vec2; vec3; seed] s /\
-                   read (memory :> bytes64(word(pc + 0x1fff8))) s = guard /\
-                   read (memory :> bytes64(word(pc + 0x1ffe8))) s = mf /\
+                   read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                     guard /\
+                   read (memory :> bytes64(word(pc + got_memset))) s = mf /\
                    read (memory :> bytes(ea,el)) s = ev /\
                    read (memory :> bytes(seed,34)) s = num_of_bytelist inp0 /\
                    read (memory :> bytes(word_add seed (word 64),34)) s =
@@ -1300,8 +1311,10 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                         word_add seed (word 192),34;
                         vec0,512; vec1,512; vec2,512; vec3,512;
                         word_sub stackpointer (word 3312),3312;
-                        word(pc + 0x1fff8),8; guard,8; word(pc + 0x1ffe8),8;
-                        ea,el; word(pc + 0x62b0),192]
+                        word(pc + got_stack_chk_guard),8; guard,8;
+                        word(pc + got_memset),8;
+                        ea,el;
+                        word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                        [vec0,512; vec1,512; vec2,512; vec3,512;
                         word_sub stackpointer (word 3312),3312]))
               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
@@ -1310,8 +1323,11 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                  memory :> bytes(vec2,512); memory :> bytes(vec3,512);
                  memory :> bytes(word_sub stackpointer (word 3312),3312)])`,
   PREJ4_SAFE_INTRO_TAC THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x4ce0` REJX4_A2 THEN CONJ_TAC THENL
-   [ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x4c24` REJX4_A1 THEN CONJ_TAC THENL
+  ENSURES_EVENTS_SEQUENCE_TAC
+   `pc + mlkem_poly_rej_uniform_x4_loop1_exit` REJX4_A2 THEN CONJ_TAC THENL
+   [ENSURES_EVENTS_SEQUENCE_TAC
+    `pc + mlkem_poly_rej_uniform_x4_after_mlk_rej_uniform_c_4` REJX4_A1 THEN
+     CONJ_TAC THENL
      [PREJ4_SAFE_PART1_TAC;
       ASM_CASES_TAC `k0 = 0` THENL
        [PREJ4_SAFE_NOLOOP_TAC; PREJ4_SAFE_LOOP_TAC]];
