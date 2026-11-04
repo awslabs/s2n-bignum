@@ -589,11 +589,11 @@ let iclasses =
   "001011110001xxxx000101xxxxxxxxxx"; (* q=0 *)
   "0010111100001xxx000101xxxxxxxxxx"; (* q=0 *)
 
-  (*** UZP1 ***)
-  "01001110xx0xxxxx000110xxxxxxxxxx";
+  (*** UZP1, 64-bit and 128-bit ***)
+  "0x001110xx0xxxxx000110xxxxxxxxxx";
 
-  (*** UZP2 ***)
-  "01001110xx0xxxxx010110xxxxxxxxxx";
+  (*** UZP2, 64-bit and 128-bit ***)
+  "0x001110xx0xxxxx010110xxxxxxxxxx";
 
   (*** XTN (q=0, low half) ***)
   "00001110xx100001001010xxxxxxxxxx";
