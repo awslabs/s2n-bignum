@@ -475,9 +475,10 @@ let INDCPA_NONOV_TAC size regions =
 
 let INDCPA_FRAME_TAC extra (n,p,d,f) =
   let mems = String.concat "; " (extra @
-    [Printf.sprintf "memory :> bytes(bot:int64,%d)" (d + f);
-     Printf.sprintf "memory :> bytes(word_add stackpointer (word %d),%d)"
-       (n - p) p]) in
+    [Printf.sprintf "memory :> bytes(bot:int64,%d)" (d + f)] @
+    (if p = 0 then [] else
+     [Printf.sprintf "memory :> bytes(word_add stackpointer (word %d),%d)"
+        (n - p) p])) in
   let tm = parse_term(Printf.sprintf
    "MAYCHANGE [RSP] ,,
     (MAYCHANGE [RIP] ,,
@@ -517,3 +518,149 @@ let INDCPA_UNBOT_TAC =
   FIRST_X_ASSUM(fun th ->
     if is_eq(concl th) && rhs(concl th) = `delta:num`
     then SUBST_ALL_TAC(SYM th) else NO_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Some other forms in the simulation: the values of YMM1 and YMM2 after a   *)
+(* call are named by INDCPA_YMM_TAC, so that the legacy SSE moves through    *)
+(* XMM1 and XMM2, which keep their upper halves, have known results; a       *)
+(* buffer at bot + off is not null if the stack does not contain address 0   *)
+(* (INDCPA_NONZERO_TAC, with n the size of the stack region in that          *)
+(* hypothesis); and INDCPA_PTR_TAC evaluates the comparisons of two          *)
+(* addresses in the frame, which decide the branches of the loops.           *)
+(* ------------------------------------------------------------------------- *)
+
+let INDCPA_YMM_TAC st =
+  MAP_EVERY (fun (v,r) ->
+    ABBREV_TAC(mk_eq(mk_var(v,`:int256`),
+      list_mk_comb(`read:(x86state,int256)component->x86state->int256`,
+                   [r; mk_var(st,`:x86state`)]))))
+   [("ymm1",`YMM1`); ("ymm2",`YMM2`)];;
+
+let INDCPA_NONZERO_TAC n off =
+  MP_TAC(SPECL [`stackpointer:int64`; mk_small_numeral n;
+                mk_binop `(+):num->num->num` `delta:num`
+                 (mk_small_numeral off)] NONOVERLAPPING_ZERO_NONZERO) THEN
+  ANTS_TAC THENL
+   [REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN ASM_REWRITE_TAC[] THEN
+    UNDISCH_TAC `delta <= 32` THEN ARITH_TAC;
+    DISCH_THEN(ASSUME_TAC o
+      REWRITE_RULE[ASSUME `word_add stackpointer (word delta):int64 = bot`] o
+      REWRITE_RULE[WORD_ADD; WORD_ADD_ASSOC])];;
+
+let INDCPA_PTR_SUB = prove
+ (`!x:int64 a b. word_sub (word_add x (word a)) (word_add x (word b)) =
+                 word_sub (word a) (word b)`,
+  CONV_TAC WORD_RULE);;
+
+let INDCPA_PTR_TAC =
+  RULE_ASSUM_TAC(fun th ->
+    if free_in `bot:int64` (concl th) &&
+       can (find_term (fun t -> is_const t && name_of t = "word_sub"))
+           (concl th)
+    then CONV_RULE(REWRITE_CONV[INDCPA_PTR_SUB] THENC
+                   DEPTH_CONV WORD_NUM_RED_CONV THENC NUM_REDUCE_CONV) th
+    else th);;
+
+(* ------------------------------------------------------------------------- *)
+(* Specializations of the theorems for the matrix generation (transposed or  *)
+(* not) and for getnoise_eta1_4x with a null fourth output.                  *)
+(* ------------------------------------------------------------------------- *)
+
+let INDCPA_GEN_MATRIX_SPEC th tr =
+  let th1 = INST [tr,`transposed:int64`] (SPEC_ALL th) in
+  let eq = mk_eq(mk_comb(`word_zx:int64->int32`,tr),`word 0:int32`) in
+  let th2 = REWRITE_RULE[WORD_REDUCE_CONV eq] th1 in
+  GENL [`a:int64`; `seed:int64`; `rho:byte list`; `k:num`; `pc:num`;
+        `stackpointer:int64`; `returnaddress:int64`] th2;;
+
+let MAYCHANGE_DROP_BYTES_0 = prove
+ (`!(c1:(x86state,num)component) c2 c3 c5 a:int64.
+        MAYCHANGE [c1; c2; c3; memory :> bytes(a,0); c5] =
+        MAYCHANGE [c1; c2; c3; c5]`,
+  REWRITE_TAC[MAYCHANGE; ASSIGNS_MEMORY_BYTES_0; SEQ_ID]);;
+
+let INDCPA_GETNOISE_NULL th =
+  let th1 = INST [`word 0:int64`,`r3:int64`] (SPEC_ALL th) in
+  let th2 = REWRITE_RULE[PAIRWISE; ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES;
+                         VAL_WORD_0; NONOVERLAPPING_MODULO_ZERO_LEN;
+                         MAYCHANGE_DROP_BYTES_0] th1 in
+  GENL [`r0:int64`; `r1:int64`; `r2:int64`; `seed:int64`; `sd:byte list`;
+        `nonce0:int64`; `nonce1:int64`; `nonce2:int64`; `nonce3:int64`;
+        `pc:num`; `stackpointer:int64`; `returnaddress:int64`] th2;;
+
+(* ------------------------------------------------------------------------- *)
+(* For the proofs of constant time and memory safety: the specializations of *)
+(* the theorems of constant time and memory safety for the matrix generation *)
+(* and for getnoise_eta1_4x with a null fourth output, as above, and the     *)
+(* removal of the empty regions that the latter then has from the lists of   *)
+(* the memory accesses of the calls.                                         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+
+let SAFE_EXISTS_RULE rule th =
+  let fe,body = dest_exists(concl th) in
+  let bth = rule (ASSUME body) in
+  CHOOSE (fe,th) (EXISTS (mk_exists(fe,concl bth),fe) bth);;
+
+let INDCPA_GEN_MATRIX_SAFE_SPEC th tr =
+  SAFE_EXISTS_RULE (fun bth ->
+    let th1 = INST [tr,`transposed:int64`] (SPEC_ALL bth) in
+    let eq = mk_eq(mk_comb(`word_zx:int64->int32`,tr),`word 0:int32`) in
+    let th2 = REWRITE_RULE[WORD_REDUCE_CONV eq] th1 in
+    GENL [`e:(uarch_event)list`; `a:int64`; `seed:int64`; `rho:byte list`;
+          `k:num`; `pc:num`; `stackpointer:int64`;
+          `returnaddress:int64`] th2) th;;
+
+let INDCPA_GETNOISE_NULL_SAFE th =
+  SAFE_EXISTS_RULE (fun bth ->
+    let th1 = INST [`word 0:int64`,`r3:int64`] (SPEC_ALL bth) in
+    let th2 = REWRITE_RULE[PAIRWISE; ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES;
+                           VAL_WORD_0; NONOVERLAPPING_MODULO_ZERO_LEN;
+                           MAYCHANGE_DROP_BYTES_0] th1 in
+    GENL [`e:(uarch_event)list`; `r0:int64`; `r1:int64`; `r2:int64`;
+          `seed:int64`; `pc:num`; `stackpointer:int64`;
+          `returnaddress:int64`] th2) th;;
+
+let CONTAINED_REFL_64 = prove
+ (`!(a:int64) n. contained (a,n) (a,n)`,
+  REWRITE_TAC[contained; CONTAINED_MODULO_REFL; LE_REFL]);;
+
+let CONTAINED_EMPTY_64 = prove
+ (`!(a:int64) b n. contained (a,0) (b,n)`,
+  REWRITE_TAC[contained; contained_modulo; LT]);;
+
+let MEMACCESS_DROP_ZERO_RULE th =
+  match strip_comb (concl th) with
+    Const("memaccess_inbounds",_),[e;rl;wl] ->
+      let keep l =
+        let ps = dest_list l in
+        mk_list(filter (fun p -> not (rand p = `0`)) ps,type_of(hd ps)) in
+      let rl' = keep rl and wl' = keep wl in
+      if rl' = rl && wl' = wl then th else
+      let lem = ISPECL [e; rl; rl'; wl; wl'] MEMACCESS_INBOUNDS_CONTAINED in
+      let side = prove(lhand(concl lem),
+        REWRITE_TAC[ALL; EX; CONTAINED_REFL_64; CONTAINED_EMPTY_64]) in
+      MP (MP lem side) th
+  | _ -> failwith "MEMACCESS_DROP_ZERO_RULE";;
+
+let MEMACCESS_DROP_ZERO_TAC =
+  RULE_ASSUM_TAC(fun th ->
+    try MEMACCESS_DROP_ZERO_RULE th with Failure _ -> th);;
+
+(* ------------------------------------------------------------------------- *)
+(* ASSUME_CALLEE_SAFETY_TAILED_TAC with the arguments of the theorem rotated *)
+(* by specialization rather than by MESON, which is too slow for the general *)
+(* theorems for getnoise.                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let ASSUME_CALLEE_SAFETY_TAILED_ALT_TAC =
+  let append_lemma = MESON[SAFETY_APPEND_EXISTS]
+    `(forall (e:((A)address_uarch_event)list). P e) <=>
+      (forall e_tail e. P (APPEND e_tail e))` in
+  fun (safety_th:thm) (name:string) ->
+    let safety_th' = ONCE_REWRITE_RULE[append_lemma] safety_th in
+    let safety_th'' = SAFE_EXISTS_RULE (fun bth ->
+      let args,_ = strip_forall(concl bth) in
+      GENL ((tl args) @ [hd args]) (SPECL args bth)) safety_th' in
+    ASSUME_CALLEE_SAFETY_TAC safety_th'' name;;

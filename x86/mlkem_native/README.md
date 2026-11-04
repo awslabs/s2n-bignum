@@ -372,3 +372,21 @@ stack and the image, not on the key or the ciphertext. As for the modulus
 check, their buffers are aligned to 32 bytes in the stack frame, and the
 proofs give their addresses as offsets from a variable for the bottom of
 the stacks of the callees.
+
+`mlkem512_indcpa_enc`, `mlkem768_indcpa_enc` and `mlkem1024_indcpa_enc` are
+the encryption of K-PKE: the ciphertext that they write is
+`kpke_encrypt mlkem<n> ek msg r` for the encryption key `ek`, the message
+`msg` and the randomness `r`, for any key. They are verified in the image
+with the same specifications as on AArch64 apart from the stack and DF,
+including the hypothesis on SampleNTT for the matrix from the last 32 bytes
+of `ek` and, for ML-KEM-768 and ML-KEM-1024, the hypothesis that the stack
+does not contain address 0, since they pass buffers in their stack frames
+as the fourth outputs of `poly_getnoise_eta1_4x`, which skips that output
+if the pointer is null. Their theorems of constant time and memory safety
+state that their events depend only on the addresses and on the last 32
+bytes of the key, through the samples of SampleNTT, not on the message or
+the randomness. For ML-KEM-768 and ML-KEM-1024 the products of the rows of
+the matrix and the vector are computed in a loop, which the proofs unroll.
+In all three, the seed of the matrix is copied by legacy SSE moves, for
+which the proofs name the values of the YMM registers after the preceding
+call.
