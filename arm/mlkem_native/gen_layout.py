@@ -236,6 +236,8 @@ class Layout:
         # same address (e.g. after GCC's identical code folding), so the
         # code of a function is found by its address
         self.labels = {self.names[a, n]: labels(code[a][1], fname) for a, sz, t, n in fsyms}
+        self.code = {self.names[a, n]: code[a][1] for a, sz, t, n in fsyms}
+        self.fname = fname
         self.data = collections.OrderedDict(
             ('rodata_' + n, (a, sz)) for a, sz, t, n in sorted(syms) if t in 'rR')
         self.plt = collections.OrderedDict(
@@ -391,6 +393,23 @@ headers, that has more than one predecessor. after_g is numbered if g is
 called several times, and ret if there are several returns. adrpK is the
 K-th ADRP instruction.
 
+The addresses of the ADRP instructions are needed because an ADRP
+computes the 4096-byte page of its target relative to its own page, and
+the LDR or ADD after it adds the offset of the target in that page:
+
+  adrpK:       adrp  x0, <page>        x0 = page(pc + adrpK) + 4096 * n
+               ldr   q0, [x0, #off]    q0 = the 16 bytes at x0 + off
+
+So what it computes depends on where the ADRP is. In the whole image the
+code and the data move together, and it is enough that the image is at a
+multiple of 4096 (ADRP_WITHIN_BOUNDS_ALIGNED in
+utils/mlkem_native_image.ml). But the proofs about a function that is also
+transcribed on its own, with the addresses of its tables as parameters,
+need adrpK: the hypothesis adrp_within_bounds (word zetas) (word(pc +
+poly_invntt_tomont_adrp3)) says that the table is within the range of
+the ADRP at that address, and the lemma ADRP_LDR_Q_FOLD, applied at that
+address, gives the address of the table from the page and the offset.
+
 The read-only data are the tables with symbols, named after the symbol
 with "rodata_" in front (e.g. rodata_mlk_zetas, since mlk_zetas is the
 HOL constant for its contents), and the vectors of constants without
@@ -404,7 +423,26 @@ dynamic relocations:
   plt_g:       adrp  x16, <page>        loads the address of g from
                ldr   x17, [x16, #off]   its slot got_g in the GOT and
                add   x16, x16, #off     jumps there
-               br    x17'''
+               br    x17
+
+At the end of this file, the code of each function is listed as objdump
+disassembles it, with each instruction at its offset from the start of
+the function, the labels at an instruction on the line before it, the
+name of the address that an ADRP with an LDR or ADD computes on the line
+after the LDR or ADD, and the branches inside the function as arrows on
+the right, from each branch to its target (marked with <). The operand of
+a branch is the first label at its target, or its offset. Where there
+are too many branches at once to draw them all, only the operand shows
+the target. For example:
+
+  loop2:
+    +0x20  lsl     w0, w8, w1            <+
+    +0x24  ldrb    w2, [x5, x3]           |
+           ...                            |
+  loop2_test:                             |
+    +0x44  cmp     w1, #0x8               |
+  loop2_back:                             |
+    +0x48  b.ne    loop2                 -+'''
 
 def box(text):
     # Paragraphs whose lines all start with two spaces are diagrams, kept
@@ -477,6 +515,122 @@ def write(lay, name, out):
                ';\n'.join('  "got_%s",0x%x' % (s, a) for s, a in lay.got.items())))
     out.write('%s\n\ninstall_layout (layout_labels [\n%s]);;\n' %
               (rule('The labels in the functions, as offsets from their start.'), label_table(lay)))
+    out.write('\n%s\n\n%s' %
+              (rule('The code of the functions, with the labels and the branches.'),
+               listings(lay)))
+
+# ---------------------------------------------------------------------------
+# Listings of the code, with the labels and arrows for the branches
+# ---------------------------------------------------------------------------
+
+LABEL_ORDER = ['loop', 'join', 'exit', 'test', 'next', 'back', 'after', 'adrp', 'ret']
+
+def label_key(l):
+    m = re.match(r'(loop\d+)(_([a-z]+))?', l)
+    kind = (m.group(3) or 'loop') if m else re.match(r'[a-z]+', l).group(0)
+    return (LABEL_ORDER.index(kind) if kind in LABEL_ORDER else 99, l)
+
+def listing(lay, f):
+    """The code of f as lines: a line "name:" for the labels at each
+    instruction, and each instruction at its offset from the start, with
+    the branches inside f drawn as arrows on the right."""
+    a0, size = lay.functions[f]
+    code = [c for c in lay.code[f] if c[0] < a0 + size]    # not the padding
+    at = collections.defaultdict(list)
+    for l, o in lay.labels[f].items():
+        at[o].append(l)
+    for o in at:
+        at[o].sort(key=label_key)
+    data = {}
+    for n, (a, sz) in lay.data.items():
+        data.setdefault(a, n)
+    for fn, vs in lay.consts.items():
+        for k, (v, w) in enumerate(vs, 1):
+            data.setdefault(v, fn + ('_consts' if len(vs) == 1 else '_const%d' % k))
+    for g, a in lay.got.items():
+        data.setdefault(a, 'got_' + g)
+    rows = []                   # (text, offset of the instruction or None)
+    page = {}
+    for x, o, args in code:
+        off = x - a0
+        if at[off]:
+            line = ''
+            for l in at[off]:
+                if line and len(line) + len(l) + 2 > 44:
+                    rows.append((line, None)); line = ''
+                line += (' ' if line else '') + l + ':'
+            rows.append((line, None))
+        t = target(args)
+        note = ''
+        if o == 'adrp':
+            m = re.match(r'(x\d+), ([0-9a-f]+) <', args)
+            if m:
+                page[m.group(1)] = int(m.group(2), 16)
+            args = re.sub(r'[0-9a-f]+ <[^>]*>', '<page>', args)
+        else:
+            m = re.match(r'(?:[xwqdsbh]\d+), \[(x\d+)(?:, #(\d+))?\]', args) if o.startswith('ld') or o.startswith('st') else \
+                re.match(r'(?:x\d+), (x\d+), #0x([0-9a-f]+)$', args) if o == 'add' else None
+            if m and m.group(1) in page:
+                v = page[m.group(1)] + (int(m.group(2), 16) if o == 'add' else int(m.group(2) or 0))
+                if v in data:
+                    note = '  // ' + data[v]
+            if t is not None:
+                if a0 <= t < a0 + 4 * len(code) and (BRANCH.match(o)):
+                    ls = at.get(t - a0)
+                    args = re.sub(r'[0-9a-f]+ <[^>]*>', ls[0] if ls else '+0x%x' % (t - a0), args)
+                else:
+                    m = re.search(r'<([^>+]+)(\+0x[0-9a-f]+)?>', args)
+                    callee = lay.fname(m.group(1), t) if m else '?'
+                    args = re.sub(r'[0-9a-f]+ <[^>]*>', callee + (m.group(2) or ''), args)
+            args = re.sub(r'\s*//.*$', '', args)
+            # drop objdump's own comments, e.g. the decimal value of an immediate
+        if o in ('b', 'bl') or BRANCH.match(o) or o == 'adrp':
+            args = re.sub(r'\s*//.*$', '', args)
+        rows.append(('%7s  %-7s %s' % ('+0x%x' % off, o, args), off))
+        if note:
+            rows.append((' ' * 17 + note.strip(), None))
+    # Arcs for the branches inside f, from the row of the branch to the row
+    # of its target, each in a column, the shortest ones nearest the code
+    row_of = {off: i for i, (_, off) in enumerate(rows) if off is not None}
+    arcs = []
+    for x, o, args in code:
+        t = target(args)
+        if BRANCH.match(o) and t is not None and a0 <= t < a0 + 4 * len(code) and t - a0 in row_of:
+            arcs.append((row_of[x - a0], row_of[t - a0]))
+    width = max(len(t) for t, _ in rows) + 2
+    ncols = max(0, min(12, (78 - width - 2) // 2))
+    cols = [[] for _ in range(ncols)]
+    placed = []
+    for src, dst in sorted(arcs, key=lambda a: (abs(a[0] - a[1]), a)):
+        lo, hi = min(src, dst), max(src, dst)
+        for c in range(ncols):
+            if all(hi < l or lo > h for l, h in cols[c]):
+                cols[c].append((lo, hi)); placed.append((src, dst, lo, hi, c)); break
+    grid = [[' '] * (2 * ncols + 2) for _ in rows]
+    for src, dst, lo, hi, c in placed:
+        for r in range(lo + 1, hi):
+            if grid[r][2 * c + 1] == ' ':
+                grid[r][2 * c + 1] = '|'
+    for src, dst, lo, hi, c in placed:
+        for r in (src, dst):
+            for k in range(2 * c + 1):
+                if grid[r][k] not in '+<':
+                    grid[r][k] = '-'
+            grid[r][2 * c + 1] = '+'
+        grid[dst][0] = '<'
+    out = []
+    for (t, _), g in zip(rows, grid):
+        line = ('  ' + t.ljust(width) + ''.join(g)).rstrip() if placed else '  ' + t
+        out.append(line)
+    return out
+
+def listings(lay):
+    out = []
+    for f, (a, sz) in sorted(lay.functions.items(), key=lambda x: x[1][0]):
+        out.append('(*** %s: 0x%x, 0x%x bytes\n' % (f, a, sz))
+        out += listing(lay, f)
+        out.append(' ***)\n')
+    return '\n'.join(out)
 
 def main():
     ap = argparse.ArgumentParser(description='Generate the layout file of a libmlkem.so')
