@@ -6,6 +6,7 @@ MLKEM_NATIVE_OBJ += \
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/poly_add \
+  mlkem_native/clang17_O3/poly_compress_d10 \
   mlkem_native/clang17_O3/poly_frommsg \
   mlkem_native/clang17_O3/poly_reduce \
   mlkem_native/clang17_O3/poly_sub \
@@ -19,6 +20,9 @@ mlkem_native/clang17_O3/libmlkem.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml
 mlkem_native/clang17_O3/poly_add.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/poly_compress_d10.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_frommsg.native: \
