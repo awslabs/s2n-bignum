@@ -6,7 +6,12 @@ MLKEM_NATIVE_OBJ += \
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/basemul_k2 \
+  mlkem_native/clang17_O3/keccakf1600_permute \
+  mlkem_native/clang17_O3/keccakf1600x4_permute \
   mlkem_native/clang17_O3/poly_add \
+  mlkem_native/clang17_O3/poly_compress_d10 \
+  mlkem_native/clang17_O3/poly_compress_d11 \
+  mlkem_native/clang17_O3/poly_compress_d5 \
   mlkem_native/clang17_O3/poly_frommsg \
   mlkem_native/clang17_O3/poly_mulcache_compute \
   mlkem_native/clang17_O3/poly_reduce \
@@ -30,10 +35,26 @@ mlkem_native/clang17_O3/basemul_k2.native: \
   proofs/utils/mlkem_native.ml \
   proofs/utils/mlkem_native_overlap.ml \
   mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/keccakf1600_permute.native: \
+  mlkem_native/clang17_O3/libmlkem.native \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_fips202.ml
+mlkem_native/clang17_O3/keccakf1600x4_permute.native: \
+  mlkem_native/clang17_O3/keccakf1600_permute.native \
+  mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/libmlkem.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml
 mlkem_native/clang17_O3/poly_add.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/poly_compress_d10.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/poly_compress_d11.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/poly_compress_d5.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_frommsg.native: \
