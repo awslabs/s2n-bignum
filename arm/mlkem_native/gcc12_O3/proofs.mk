@@ -47,7 +47,9 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/polyvec_reduce_k2 \
   mlkem_native/gcc12_O3/polyvec_reduce_k3 \
   mlkem_native/gcc12_O3/polyvec_reduce_k4 \
+  mlkem_native/gcc12_O3/polyvec_tobytes_k2 \
   mlkem_native/gcc12_O3/polyvec_tobytes_k3 \
+  mlkem_native/gcc12_O3/polyvec_tobytes_k4 \
   mlkem_native/gcc12_O3/polyvec_tomont_k2 \
   mlkem_native/gcc12_O3/polyvec_tomont_k3 \
   mlkem_native/gcc12_O3/polyvec_tomont_k4 \
@@ -195,7 +197,13 @@ mlkem_native/gcc12_O3/polyvec_reduce_k3.native: \
 mlkem_native/gcc12_O3/polyvec_reduce_k4.native: \
   mlkem_native/gcc12_O3/poly_reduce.native \
   mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/polyvec_tobytes_k2.native: \
+  mlkem_native/gcc12_O3/poly_tobytes.native \
+  mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/polyvec_tobytes_k3.native: \
+  mlkem_native/gcc12_O3/poly_tobytes.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/polyvec_tobytes_k4.native: \
   mlkem_native/gcc12_O3/poly_tobytes.native \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/polyvec_tomont_k2.native: \
