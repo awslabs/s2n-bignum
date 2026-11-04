@@ -1009,6 +1009,98 @@ let IVAL_WORD_SMALL = prove
                ARITH_RULE `n < 2 EXP 63 ==> n < 2 EXP (64 - 1)`]);;
 
 (* ------------------------------------------------------------------------- *)
+(* In-place operation.  The output buffer may be the input buffer, so the    *)
+(* proofs assume only in_p = out_p \/ nonoverlapping (in_p,16*n)             *)
+(* (out_p,16*n), from which NONOVERLAPPING_TAC separates input block j from  *)
+(* output block k for j <> k.  The input fact of a leg therefore covers only *)
+(* the blocks from some lo on, where no output block has been stored yet:    *)
+(*                                                                           *)
+(*   !j. lo <= j /\ j < n                                                    *)
+(*       ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =   *)
+(*           inblock j                                                       *)
+(* ------------------------------------------------------------------------- *)
+
+(* Introduce a conjunction of hypotheses, one assumption per conjunct.       *)
+(* Unlike STRIP_TAC this keeps the aliasing disjunction as one assumption    *)
+(* rather than splitting the goal on it.                                     *)
+let INTRO_HYPS_TAC = DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC);;
+
+(* Whether a term is an input fact as above (with any antecedent), and the   *)
+(* state it is about.                                                        *)
+let is_input_forall tm =
+  try let _,bod = strip_forall tm in
+      let c = rand bod in
+      is_imp bod && is_eq c &&
+      (match lhs c with
+         Comb(Comb(Const("read",_),comp),st) ->
+           is_var st && free_in `in_p:int64` comp
+       | _ -> false)
+  with Failure _ -> false;;
+
+let input_forall_state tm =
+  let _,bod = strip_forall tm in rand(lhs(rand bod));;
+
+(* ARITH_TAC from the arithmetic assumptions only (the relations between     *)
+(* numbers), much cheaper than ASM_ARITH_TAC once a leg has been entered.    *)
+let ARITH_HYPS_TAC : tactic = fun (asl,w) ->
+  let rel tm = exists (fun op -> is_binary op tm && type_of(lhand tm) = `:num`)
+                      ["="; "<"; "<="; ">"; ">="] in
+  let ok th = let c = concl th in rel c || (is_neg c && rel(rand c)) in
+  (MAP_EVERY (MP_TAC o snd) (filter (ok o snd) asl) THEN ARITH_TAC) (asl,w);;
+
+(* At the start of a leg, after ENSURES_INIT_TAC and after the blocks that   *)
+(* the leg loads have been split off its input fact: replace that fact by    *)
+(* the input fact of the postcondition, stated for the initial state, and    *)
+(* one-block input facts for the given blocks bs (the j with b <= j < b+1).  *)
+(* The former covers only blocks that the leg neither loads nor overwrites,  *)
+(* so the stepper carries it over the output stores of the leg also when     *)
+(* in_p = out_p, and it then gives the postcondition conjunct; if the        *)
+(* postcondition has no input fact there is none.  A one-block fact lasts    *)
+(* until its block is overwritten, which is after the block is loaded, so it *)
+(* holds at the state of the load; it is for the closers that fold the input *)
+(* reads of a leg through the input fact at the state of each read.          *)
+let INPUT_LEG_TAC (bs:term list) : tactic = fun (asl,w) ->
+  let ath = snd(find (fun (_,th) -> is_input_forall(concl th)) asl) in
+  let s0 = input_forall_state(concl ath) in
+  let j,bod = dest_forall(concl ath) in
+  let block b =
+    mk_forall(j, mk_imp(mk_conj(mk_binop `(<=):num->num->bool` b j,
+                                mk_binop `(<):num->num->bool` j
+                                  (mk_binop `(+):num->num->num` b `1`)),
+                        rand bod)) in
+  let post = try let t = find_term (fun t -> is_input_forall t &&
+                                             input_forall_state t <> s0) w in
+                 [vsubst [s0, input_forall_state t] t]
+             with Failure _ -> [] in
+  let derive t = SUBGOAL_THEN t ASSUME_TAC THENL
+    [GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC ath THEN ARITH_HYPS_TAC;
+     ALL_TAC] in
+  (MAP_EVERY derive (map block bs @ post) THEN
+   UNDISCH_THEN (concl ath) (K ALL_TAC)) (asl,w);;
+
+(* A goal that is an input fact, from an input fact about the same state     *)
+(* whose antecedent follows from the goal's.  This is for a postcondition    *)
+(* conjunct that the stepping has rewritten since INPUT_LEG_TAC stated it:   *)
+(* ARM_STEPS_TAC substitutes assumptions such as loop_count = m + 1 into the *)
+(* goal.                                                                     *)
+let INPUT_POST_TAC : tactic = fun (asl,w) ->
+  if not(is_input_forall w) then failwith "INPUT_POST_TAC" else
+  let st = input_forall_state w in
+  let ths = filter (fun th -> is_input_forall(concl th) &&
+                              input_forall_state(concl th) = st)
+                   (map snd asl) in
+  (GEN_TAC THEN STRIP_TAC THEN
+   FIRST(map (fun th -> MATCH_MP_TAC th THEN ARITH_HYPS_TAC) ths)) (asl,w);;
+
+(* After ENSURES_FINAL_STATE_TAC: remove from the goal the conjuncts that    *)
+(* are input facts, proving each by INPUT_POST_TAC where it can.             *)
+let INPUT_POSTS_TAC : tactic = fun (asl,w) ->
+  MAP_EVERY (fun t ->
+      TRY(SUBGOAL_THEN t (fun th -> PURE_REWRITE_TAC[EQT_INTRO th; AND_CLAUSES])
+          THENL [INPUT_POST_TAC; ALL_TAC]))
+    (filter is_input_forall (conjuncts w)) (asl,w);;
+
+(* ------------------------------------------------------------------------- *)
 (* Stepping the software-pipelined loop bodies.                              *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1424,7 +1516,7 @@ let OPEN_SWP_SAFE exec : tactic =
   ABBREV_TAC `nblocks     = len_bits DIV 128` THEN
   ABBREV_TAC `loop_count  = nblocks DIV 4` THEN
   ABBREV_TAC `loop_remain = nblocks MOD 4` THEN
-  STRIP_TAC THEN
+  INTRO_HYPS_TAC THEN
   SUBGOAL_THEN `loop_count < 2 EXP 64 /\ loop_remain < 2 EXP 64 /\ loop_remain < 4` STRIP_ASSUME_TAC THENL
    [REPEAT CONJ_TAC THENL
      [EXPAND_TAC "loop_count" THEN EXPAND_TAC "nblocks" THEN REWRITE_TAC[DIV_DIV] THEN
