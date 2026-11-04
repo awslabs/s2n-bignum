@@ -798,8 +798,10 @@ let decode = new_definition `!w:int32. decode w =
         | SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
                       else SOME (arm_MOVI (DREG' Rd) imm)
         | NONE -> NONE
-      // BIC (vector immediate), 16-bit size only
-      else if cmode = word 0b1001 \/ cmode = word 0b1011 then
+      // BIC (vector immediate), 32-bit (0xx1) and 16-bit (10x1) sizes
+      else if cmode = word 0b0001 \/ cmode = word 0b0011 \/
+              cmode = word 0b0101 \/ cmode = word 0b0111 \/
+              cmode = word 0b1001 \/ cmode = word 0b1011 then
         let abcdefgh:(8)word = word_join abc defgh in
         let datasize = if q then 128 else 64 in
         match arm_adv_simd_expand_imm abcdefgh (word 1:(1)word) cmode with
