@@ -6,6 +6,7 @@ MLKEM_NATIVE_OBJ += \
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/keccakf1600_permute \
+  mlkem_native/gcc12_O3/keccakf1600x4_permute \
   mlkem_native/gcc12_O3/shake128_init \
   mlkem_native/gcc12_O3/shake128_release \
   mlkem_native/gcc12_O3/shake128x4_init \
@@ -15,6 +16,9 @@ mlkem_native/gcc12_O3/keccakf1600_permute.native: \
   mlkem_native/gcc12_O3/libmlkem.native \
   proofs/utils/keccak_spec.ml \
   proofs/utils/keccak_fips202.ml
+mlkem_native/gcc12_O3/keccakf1600x4_permute.native: \
+  mlkem_native/gcc12_O3/keccakf1600_permute.native \
+  mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/libmlkem.native: \
   proofs/mlkem_native/gcc12_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml
