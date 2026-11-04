@@ -7,11 +7,13 @@ MLKEM_NATIVE_OBJ += \
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/basemul_k2 \
   mlkem_native/gcc12_O3/basemul_k3 \
+  mlkem_native/gcc12_O3/keccak_absorb_once \
   mlkem_native/gcc12_O3/keccakf1600_extract_bytes \
   mlkem_native/gcc12_O3/keccakf1600_permute \
   mlkem_native/gcc12_O3/keccakf1600_xor_bytes \
   mlkem_native/gcc12_O3/keccakf1600x4_extract_bytes \
   mlkem_native/gcc12_O3/keccakf1600x4_permute \
+  mlkem_native/gcc12_O3/keccakf1600x4_xor_bytes \
   mlkem_native/gcc12_O3/poly_add \
   mlkem_native/gcc12_O3/poly_cbd2 \
   mlkem_native/gcc12_O3/poly_cbd3 \
@@ -59,6 +61,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/polyvec_tomont_k3 \
   mlkem_native/gcc12_O3/polyvec_tomont_k4 \
   mlkem_native/gcc12_O3/rej_uniform \
+  mlkem_native/gcc12_O3/shake128_absorb_once \
   mlkem_native/gcc12_O3/shake128_init \
   mlkem_native/gcc12_O3/shake128_release \
   mlkem_native/gcc12_O3/shake128_squeezeblocks \
@@ -72,6 +75,12 @@ mlkem_native/gcc12_O3/basemul_k2.native: \
 mlkem_native/gcc12_O3/basemul_k3.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/keccak_absorb_once.native: \
+  mlkem_native/gcc12_O3/keccakf1600_permute.native \
+  mlkem_native/gcc12_O3/keccakf1600_xor_bytes.native \
+  proofs/utils/keccak_fips202.ml \
+  mlkem_native/gcc12_O3/libmlkem.native \
+  proofs/utils/keccak_spec.ml
 mlkem_native/gcc12_O3/keccakf1600_extract_bytes.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
@@ -87,6 +96,9 @@ mlkem_native/gcc12_O3/keccakf1600x4_extract_bytes.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/keccakf1600x4_permute.native: \
   mlkem_native/gcc12_O3/keccakf1600_permute.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/keccakf1600x4_xor_bytes.native: \
+  mlkem_native/gcc12_O3/keccakf1600_xor_bytes.native \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/libmlkem.native: \
   proofs/mlkem_native/gcc12_O3/layout.ml \
@@ -239,6 +251,9 @@ mlkem_native/gcc12_O3/polyvec_tomont_k4.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/rej_uniform.native: \
   proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/shake128_absorb_once.native: \
+  mlkem_native/gcc12_O3/keccak_absorb_once.native \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/shake128_init.native: \
   mlkem_native/gcc12_O3/libmlkem.native
