@@ -13,7 +13,7 @@
 (* forms of K-PKE in common/fips203_theory.ml.                               *)
 (* ========================================================================= *)
 
-needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+needs "arm/proofs/utils/mlkem_native_image.ml";;
 needs "common/mlkem_mldsa.ml";;
 needs "common/fips203_theory.ml";;
 

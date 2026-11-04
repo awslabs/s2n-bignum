@@ -11,7 +11,7 @@
 # object file:
 #
 #   python3 mlkem_native/check_transcription.py \
-#     mlkem_native/mlkem_native_poly_reduce_gcc12_O2.o \
+#     mlkem_native/gcc12_O2/poly_reduce.o \
 #     mlkem_native_poly_reduce_gcc12_O2 \
 #     <mlkem-native>/binaries/multilevel/gcc12/O2/libmlkem.so \
 #     mlkem_poly_reduce
@@ -28,7 +28,7 @@
 # hexadecimal, the whole .text section of FILE.o is checked to be identical,
 # without any relocations, to the contents of the loaded segment of BINARY
 # starting at that address. This is for the transcription of a whole image,
-# e.g. mlkem_native/mlkem_native_libmlkem_gcc12_O2.o with address 0x0.
+# e.g. mlkem_native/gcc12_O2/libmlkem.o with address 0x0.
 
 import struct
 import sys

@@ -11,7 +11,7 @@
 #
 #   python3 mlkem_native/gen_layout.py \
 #     <mlkem-native>/binaries/multilevel/gcc12/O2/libmlkem.so \
-#     > proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml
+#     > proofs/mlkem_native/gcc12_O2/layout.ml
 #
 # Everything comes from the ELF file: the symbol table, the section
 # headers, the dynamic relocations and the disassembly of the code (by
