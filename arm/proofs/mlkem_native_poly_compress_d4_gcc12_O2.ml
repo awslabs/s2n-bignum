@@ -4,13 +4,12 @@
  *)
 
 (* ========================================================================= *)
-(* Compression of a polynomial to 4 bits per coefficient.                    *)
-(* This is the code for mlkem_poly_compress_d4 from mlkem-native's portable  *)
-(* C implementation compiled by gcc 12 with -O2 (see                         *)
-(* mlkem_native/README.md), with a stack protector. It is verified in the    *)
-(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at       *)
-(* address 0x1bf0, with the address of the stack guard in the global offset  *)
-(* table at 0x1fff8.                                                         *)
+(* Compression of a polynomial to 4 bits per coefficient. This is the code   *)
+(* for mlkem_poly_compress_d4 from mlkem-native's portable C implementation  *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), with a stack    *)
+(* protector. It is verified in the whole image (see                         *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), with the address of the stack guard   *)
+(* in the global offset table.                                               *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -18,61 +17,62 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    1bf0: adrp    x2, 1f000 <mlk_zetas+0x18c80>
-    1bf4: ldr     x2, [x2, #4088]
-    1bf8: str     x30, [sp, #-32]!
-    1bfc: mov     x10, x1
-    1c00: mov     w12, #0xafb0
-    1c04: ldr     x1, [x2]
-    1c08: str     x1, [sp, #24]
-    1c0c: mov     x1, #0x0
-    1c10: add     x13, sp, #0x10
-    1c14: movk    w12, #0x13, lsl #16
-    1c18: mov     w11, #0x8000000
-    1c1c: nop
-    1c20: sub     w3, w1, #0x1
-    1c24: mov     x2, #0x1
-    1c28: str     xzr, [sp, #16]
-    1c2c: nop
-    1c30: add     w4, w3, w2
-    1c34: add     x5, x13, x2
-    1c38: add     x2, x2, #0x1
-    1c3c: ldrsh   w4, [x10, x4, lsl #1]
-    1c40: madd    w4, w4, w12, w11
-    1c44: lsr     w4, w4, #28
-    1c48: sturb   w4, [x5, #-1]
-    1c4c: cmp     x2, #0x9
-    1c50: b.ne    1c30 <mlkem_poly_compress_d4+0x40>
-    1c54: ldrb    w9, [sp, #16]
-    1c58: add     w1, w1, #0x8
-    1c5c: ldrb    w8, [sp, #18]
-    1c60: add     x0, x0, #0x4
-    1c64: ldrb    w7, [sp, #20]
-    1c68: ldrb    w6, [sp, #22]
-    1c6c: ldrb    w5, [sp, #17]
-    1c70: ldrb    w4, [sp, #19]
-    1c74: ldrb    w3, [sp, #21]
-    1c78: ldrb    w2, [sp, #23]
-    1c7c: orr     w5, w9, w5, lsl #4
-    1c80: orr     w4, w8, w4, lsl #4
-    1c84: sturb   w5, [x0, #-4]
-    1c88: orr     w3, w7, w3, lsl #4
-    1c8c: sturb   w4, [x0, #-3]
-    1c90: orr     w2, w6, w2, lsl #4
-    1c94: sturb   w3, [x0, #-2]
-    1c98: sturb   w2, [x0, #-1]
-    1c9c: cmp     w1, #0x100
-    1ca0: b.ne    1c20 <mlkem_poly_compress_d4+0x30>
-    1ca4: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    1ca8: ldr     x0, [x0, #4088]
-    1cac: ldr     x2, [sp, #24]
-    1cb0: ldr     x1, [x0]
-    1cb4: subs    x2, x2, x1
-    1cb8: mov     x1, #0x0
-    1cbc: b.ne    1cc8 <mlkem_poly_compress_d4+0xd8>
-    1cc0: ldr     x30, [sp], #32
-    1cc4: ret
-    1cc8: bl      830 <__stack_chk_fail@plt>
+    mlkem_poly_compress_d4:
+       +0x0: adrp    x2, <page>
+       +0x4: ldr     x2, [x2, #4088]  // got_stack_chk_guard
+       +0x8: str     x30, [sp, #-32]!
+       +0xc: mov     x10, x1
+      +0x10: mov     w12, #0xafb0
+      +0x14: ldr     x1, [x2]
+      +0x18: str     x1, [sp, #24]
+      +0x1c: mov     x1, #0x0
+      +0x20: add     x13, sp, #0x10
+      +0x24: movk    w12, #0x13, lsl #16
+      +0x28: mov     w11, #0x8000000
+      +0x2c: nop
+      +0x30: sub     w3, w1, #0x1
+      +0x34: mov     x2, #0x1
+      +0x38: str     xzr, [sp, #16]
+      +0x3c: nop
+      +0x40: add     w4, w3, w2
+      +0x44: add     x5, x13, x2
+      +0x48: add     x2, x2, #0x1
+      +0x4c: ldrsh   w4, [x10, x4, lsl #1]
+      +0x50: madd    w4, w4, w12, w11
+      +0x54: lsr     w4, w4, #28
+      +0x58: sturb   w4, [x5, #-1]
+      +0x5c: cmp     x2, #0x9
+      +0x60: b.ne    <mlkem_poly_compress_d4+0x40>
+      +0x64: ldrb    w9, [sp, #16]
+      +0x68: add     w1, w1, #0x8
+      +0x6c: ldrb    w8, [sp, #18]
+      +0x70: add     x0, x0, #0x4
+      +0x74: ldrb    w7, [sp, #20]
+      +0x78: ldrb    w6, [sp, #22]
+      +0x7c: ldrb    w5, [sp, #17]
+      +0x80: ldrb    w4, [sp, #19]
+      +0x84: ldrb    w3, [sp, #21]
+      +0x88: ldrb    w2, [sp, #23]
+      +0x8c: orr     w5, w9, w5, lsl #4
+      +0x90: orr     w4, w8, w4, lsl #4
+      +0x94: sturb   w5, [x0, #-4]
+      +0x98: orr     w3, w7, w3, lsl #4
+      +0x9c: sturb   w4, [x0, #-3]
+      +0xa0: orr     w2, w6, w2, lsl #4
+      +0xa4: sturb   w3, [x0, #-2]
+      +0xa8: sturb   w2, [x0, #-1]
+      +0xac: cmp     w1, #0x100
+      +0xb0: b.ne    <mlkem_poly_compress_d4+0x30>
+      +0xb4: adrp    x0, <page>
+      +0xb8: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0xbc: ldr     x2, [sp, #24]
+      +0xc0: ldr     x1, [x0]
+      +0xc4: subs    x2, x2, x1
+      +0xc8: mov     x1, #0x0
+      +0xcc: b.ne    <mlkem_poly_compress_d4+0xd8>
+      +0xd0: ldr     x30, [sp], #32
+      +0xd4: ret
+      +0xd8: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D4_GCC12_O2_EXEC =
@@ -191,11 +191,11 @@ let COMPRESS_D4_BODY_TAC =
 (* the coefficients being in [0,3329).                                       *)
 (*                                                                           *)
 (* The code reads the address of the stack guard from the global offset      *)
-(* table (GOT) at 0x1fff8 in the loaded image, which is outside the code and *)
-(* read-only data covered by the image and so is part of the precondition,   *)
-(* and checks before returning that the copy of the guard on the stack is    *)
-(* still the same, which it is since neither the guard nor the GOT entry is  *)
-(* written by the code.                                                      *)
+(* table (GOT) in the loaded image, which is outside the code and read-only  *)
+(* data covered by the image and so is part of the precondition, and checks  *)
+(* before returning that the copy of the guard on the stack is still the     *)
+(* same, which it is since neither the guard nor the GOT entry is written by *)
+(* the code.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove

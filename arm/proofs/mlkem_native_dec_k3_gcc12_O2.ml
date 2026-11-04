@@ -5,8 +5,8 @@
 
 (* ========================================================================= *)
 (* The decapsulation of ML-KEM-768 (FIPS 203 Algorithm 18, with the input    *)
-(* check of Algorithm 21). This is the code for mlkem768_dec from            *)
-(* mlkem-native's portable C implementation compiled by gcc 12 with -O2 (see *)
+(* check of Algorithm 21). This is the code for mlkem768_dec from mlkem-     *)
+(* native's portable C implementation compiled by gcc 12 with -O2 (see       *)
 (* mlkem_native/README.md). It checks the decapsulation key with             *)
 (* mlkem768_check_sk, and returns -5 if the check fails. Otherwise it        *)
 (* decrypts the ciphertext into m' with mlkem768_indcpa_dec, computes K' and *)
@@ -16,10 +16,10 @@
 (* followed by the ciphertext into the shared secret with mlkem_shake256,    *)
 (* and replaces it by K' if the ciphertexts are equal, again in constant     *)
 (* time. In both cases it zeroes its buffers. It is verified in the whole    *)
-(* image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address     *)
-(* 0x5c10, using the theorems for mlkem768_check_sk, mlkem768_indcpa_dec,    *)
-(* mlkem_sha3_512, mlkem768_indcpa_enc and mlkem_shake256 in the image and   *)
-(* the contracts for memset and memcpy.                                      *)
+(* image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for     *)
+(* mlkem768_check_sk, mlkem768_indcpa_dec, mlkem_sha3_512,                   *)
+(* mlkem768_indcpa_enc and mlkem_shake256 in the image and the contracts for *)
+(* memset and memcpy.                                                        *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_check_sk_k3_gcc12_O2.ml";;
@@ -31,137 +31,138 @@ needs "arm/proofs/utils/mlkem_native_kem.ml";;
 
 (*** The code in the image:
 
-    5c10: sub     sp, sp, #0x540
-    5c14: adrp    x3, 1f000 <mlk_zetas+0x18c80>
-    5c18: ldr     x3, [x3, #4088]
-    5c1c: stp     x19, x20, [sp]
-    5c20: add     x19, sp, #0x5f
-    5c24: and     x19, x19, #0xffffffffffffffe0
-    5c28: stp     x21, x22, [sp, #16]
-    5c2c: stp     x23, x24, [sp, #32]
-    5c30: mov     x24, x0
-    5c34: mov     x23, x2
-    5c38: stp     x25, x30, [sp, #48]
-    5c3c: mov     x25, x1
-    5c40: mov     x0, x2
-    5c44: ldr     x1, [x3]
-    5c48: str     x1, [sp, #1336]
-    5c4c: mov     x1, #0x0
-    5c50: bl      5880 <mlkem768_check_sk>
-    5c54: cbz     w0, 5cc0 <mlkem768_dec+0xb0>
-    5c58: mov     w20, w0
-    5c5c: add     x22, x19, #0x4a0
-    5c60: add     x21, x19, #0x460
-    5c64: mov     x0, x19
-    5c68: mov     x2, #0x460
-    5c6c: mov     w1, #0x0
-    5c70: bl      840 <memset@plt>
-    5c74: movi    v0.4s, #0x0
-    5c78: stp     q0, q0, [x21]
-    5c7c: stp     q0, q0, [x21, #32]
-    5c80: stp     q0, q0, [x22]
-    5c84: stp     q0, q0, [x22, #32]
-    5c88: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    5c8c: ldr     x0, [x0, #4088]
-    5c90: ldr     x2, [sp, #1336]
-    5c94: ldr     x1, [x0]
-    5c98: subs    x2, x2, x1
-    5c9c: mov     x1, #0x0
-    5ca0: b.ne    5e18 <mlkem768_dec+0x208>
-    5ca4: ldp     x21, x22, [sp, #16]
-    5ca8: mov     w0, w20
-    5cac: ldp     x19, x20, [sp]
-    5cb0: ldp     x23, x24, [sp, #32]
-    5cb4: ldp     x25, x30, [sp, #48]
-    5cb8: add     sp, sp, #0x540
-    5cbc: ret
-    5cc0: add     x22, x19, #0x4a0
-    5cc4: mov     x2, x23
-    5cc8: mov     x0, x22
-    5ccc: mov     x1, x25
-    5cd0: add     x21, x19, #0x460
-    5cd4: bl      55e0 <mlkem768_indcpa_dec>
-    5cd8: mov     w20, w0
-    5cdc: cbnz    w0, 5c64 <mlkem768_dec+0x54>
-    5ce0: ldr     q0, [x23, #2336]
-    5ce4: add     x3, x19, #0x4c0
-    5ce8: ldr     q1, [x23, #2352]
-    5cec: mov     x1, x22
-    5cf0: mov     x0, x21
-    5cf4: mov     x2, #0x40
-    5cf8: stp     q0, q1, [x3]
-    5cfc: bl      26f4 <mlkem_sha3_512>
-    5d00: add     x3, x19, #0x480
-    5d04: add     x2, x23, #0x480
-    5d08: mov     x1, x22
-    5d0c: mov     x0, x19
-    5d10: bl      5310 <mlkem768_indcpa_enc>
-    5d14: mov     w20, w0
-    5d18: cbnz    w0, 5c64 <mlkem768_dec+0x54>
-    5d1c: movi    v2.4s, #0x0
-    5d20: mov     x0, x19
-    5d24: mov     x1, x25
-    5d28: add     x2, x19, #0x440
-    5d2c: mov     v3.16b, v2.16b
-    5d30: ldr     q0, [x1], #16
-    5d34: ldr     q1, [x0], #16
-    5d38: eor     v0.16b, v0.16b, v1.16b
-    5d3c: orr     v3.16b, v3.16b, v0.16b
-    5d40: eor     v2.16b, v2.16b, v0.16b
-    5d44: cmp     x0, x2
-    5d48: b.ne    5d30 <mlkem768_dec+0x120>
-    5d4c: movi    v1.4s, #0x0
-    5d50: ext     v4.16b, v3.16b, v1.16b, #8
-    5d54: ext     v0.16b, v2.16b, v1.16b, #8
-    5d58: orr     v3.16b, v4.16b, v3.16b
-    5d5c: eor     v2.16b, v0.16b, v2.16b
-    5d60: ext     v4.16b, v3.16b, v1.16b, #4
-    5d64: ext     v0.16b, v2.16b, v1.16b, #4
-    5d68: orr     v4.16b, v4.16b, v3.16b
-    5d6c: eor     v0.16b, v0.16b, v2.16b
-    5d70: ext     v3.16b, v4.16b, v1.16b, #2
-    5d74: ext     v2.16b, v0.16b, v1.16b, #2
-    5d78: orr     v3.16b, v3.16b, v4.16b
-    5d7c: eor     v2.16b, v2.16b, v0.16b
-    5d80: ext     v0.16b, v3.16b, v1.16b, #1
-    5d84: ext     v1.16b, v2.16b, v1.16b, #1
-    5d88: orr     v0.16b, v0.16b, v3.16b
-    5d8c: eor     v1.16b, v1.16b, v2.16b
-    5d90: umov    w0, v0.b[0]
-    5d94: umov    w1, v1.b[0]
-    5d98: neg     w0, w0
-    5d9c: eor     w0, w1, w0, asr #16
-    5da0: ldr     q0, [x23, #2368]
-    5da4: and     w0, w0, #0xff
-    5da8: ldr     q1, [x23, #2384]
-    5dac: mov     x2, #0x440
-    5db0: eor     w23, w0, w1
-    5db4: mov     x1, x25
-    5db8: add     x0, x19, #0x20
-    5dbc: stp     q0, q1, [x19]
-    5dc0: bl      810 <memcpy@plt>
-    5dc4: mov     x0, x24
-    5dc8: mov     x2, x19
-    5dcc: mov     x3, #0x460
-    5dd0: mov     x1, #0x20
-    5dd4: bl      2570 <mlkem_shake256>
-    5dd8: neg     w4, w23
-    5ddc: sub     x24, x24, #0x1
-    5de0: mov     x0, #0x1
-    5de4: nop
-    5de8: add     x2, x21, x0
-    5dec: mov     w1, w4
-    5df0: ldurb   w2, [x2, #-1]
-    5df4: ldrb    w3, [x24, x0]
-    5df8: eor     w3, w2, w3
-    5dfc: and     w1, w3, w1, asr #16
-    5e00: eor     w2, w2, w1
-    5e04: strb    w2, [x24, x0]
-    5e08: add     x0, x0, #0x1
-    5e0c: cmp     x0, #0x21
-    5e10: b.ne    5de8 <mlkem768_dec+0x1d8>
-    5e14: b       5c64 <mlkem768_dec+0x54>
-    5e18: bl      830 <__stack_chk_fail@plt>
+    mlkem768_dec:
+        +0x0: sub     sp, sp, #0x540
+        +0x4: adrp    x3, <page>
+        +0x8: ldr     x3, [x3, #4088]  // got_stack_chk_guard
+        +0xc: stp     x19, x20, [sp]
+       +0x10: add     x19, sp, #0x5f
+       +0x14: and     x19, x19, #0xffffffffffffffe0
+       +0x18: stp     x21, x22, [sp, #16]
+       +0x1c: stp     x23, x24, [sp, #32]
+       +0x20: mov     x24, x0
+       +0x24: mov     x23, x2
+       +0x28: stp     x25, x30, [sp, #48]
+       +0x2c: mov     x25, x1
+       +0x30: mov     x0, x2
+       +0x34: ldr     x1, [x3]
+       +0x38: str     x1, [sp, #1336]
+       +0x3c: mov     x1, #0x0
+       +0x40: bl      <mlkem768_check_sk>
+       +0x44: cbz     w0, <mlkem768_dec+0xb0>
+       +0x48: mov     w20, w0
+       +0x4c: add     x22, x19, #0x4a0
+       +0x50: add     x21, x19, #0x460
+       +0x54: mov     x0, x19
+       +0x58: mov     x2, #0x460
+       +0x5c: mov     w1, #0x0
+       +0x60: bl      <memset@plt>
+       +0x64: movi    v0.4s, #0x0
+       +0x68: stp     q0, q0, [x21]
+       +0x6c: stp     q0, q0, [x21, #32]
+       +0x70: stp     q0, q0, [x22]
+       +0x74: stp     q0, q0, [x22, #32]
+       +0x78: adrp    x0, <page>
+       +0x7c: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+       +0x80: ldr     x2, [sp, #1336]
+       +0x84: ldr     x1, [x0]
+       +0x88: subs    x2, x2, x1
+       +0x8c: mov     x1, #0x0
+       +0x90: b.ne    <mlkem768_dec+0x208>
+       +0x94: ldp     x21, x22, [sp, #16]
+       +0x98: mov     w0, w20
+       +0x9c: ldp     x19, x20, [sp]
+       +0xa0: ldp     x23, x24, [sp, #32]
+       +0xa4: ldp     x25, x30, [sp, #48]
+       +0xa8: add     sp, sp, #0x540
+       +0xac: ret
+       +0xb0: add     x22, x19, #0x4a0
+       +0xb4: mov     x2, x23
+       +0xb8: mov     x0, x22
+       +0xbc: mov     x1, x25
+       +0xc0: add     x21, x19, #0x460
+       +0xc4: bl      <mlkem768_indcpa_dec>
+       +0xc8: mov     w20, w0
+       +0xcc: cbnz    w0, <mlkem768_dec+0x54>
+       +0xd0: ldr     q0, [x23, #2336]
+       +0xd4: add     x3, x19, #0x4c0
+       +0xd8: ldr     q1, [x23, #2352]
+       +0xdc: mov     x1, x22
+       +0xe0: mov     x0, x21
+       +0xe4: mov     x2, #0x40
+       +0xe8: stp     q0, q1, [x3]
+       +0xec: bl      <mlkem_sha3_512>
+       +0xf0: add     x3, x19, #0x480
+       +0xf4: add     x2, x23, #0x480
+       +0xf8: mov     x1, x22
+       +0xfc: mov     x0, x19
+      +0x100: bl      <mlkem768_indcpa_enc>
+      +0x104: mov     w20, w0
+      +0x108: cbnz    w0, <mlkem768_dec+0x54>
+      +0x10c: movi    v2.4s, #0x0
+      +0x110: mov     x0, x19
+      +0x114: mov     x1, x25
+      +0x118: add     x2, x19, #0x440
+      +0x11c: mov     v3.16b, v2.16b
+      +0x120: ldr     q0, [x1], #16
+      +0x124: ldr     q1, [x0], #16
+      +0x128: eor     v0.16b, v0.16b, v1.16b
+      +0x12c: orr     v3.16b, v3.16b, v0.16b
+      +0x130: eor     v2.16b, v2.16b, v0.16b
+      +0x134: cmp     x0, x2
+      +0x138: b.ne    <mlkem768_dec+0x120>
+      +0x13c: movi    v1.4s, #0x0
+      +0x140: ext     v4.16b, v3.16b, v1.16b, #8
+      +0x144: ext     v0.16b, v2.16b, v1.16b, #8
+      +0x148: orr     v3.16b, v4.16b, v3.16b
+      +0x14c: eor     v2.16b, v0.16b, v2.16b
+      +0x150: ext     v4.16b, v3.16b, v1.16b, #4
+      +0x154: ext     v0.16b, v2.16b, v1.16b, #4
+      +0x158: orr     v4.16b, v4.16b, v3.16b
+      +0x15c: eor     v0.16b, v0.16b, v2.16b
+      +0x160: ext     v3.16b, v4.16b, v1.16b, #2
+      +0x164: ext     v2.16b, v0.16b, v1.16b, #2
+      +0x168: orr     v3.16b, v3.16b, v4.16b
+      +0x16c: eor     v2.16b, v2.16b, v0.16b
+      +0x170: ext     v0.16b, v3.16b, v1.16b, #1
+      +0x174: ext     v1.16b, v2.16b, v1.16b, #1
+      +0x178: orr     v0.16b, v0.16b, v3.16b
+      +0x17c: eor     v1.16b, v1.16b, v2.16b
+      +0x180: umov    w0, v0.b[0]
+      +0x184: umov    w1, v1.b[0]
+      +0x188: neg     w0, w0
+      +0x18c: eor     w0, w1, w0, asr #16
+      +0x190: ldr     q0, [x23, #2368]
+      +0x194: and     w0, w0, #0xff
+      +0x198: ldr     q1, [x23, #2384]
+      +0x19c: mov     x2, #0x440
+      +0x1a0: eor     w23, w0, w1
+      +0x1a4: mov     x1, x25
+      +0x1a8: add     x0, x19, #0x20
+      +0x1ac: stp     q0, q1, [x19]
+      +0x1b0: bl      <memcpy@plt>
+      +0x1b4: mov     x0, x24
+      +0x1b8: mov     x2, x19
+      +0x1bc: mov     x3, #0x460
+      +0x1c0: mov     x1, #0x20
+      +0x1c4: bl      <mlkem_shake256>
+      +0x1c8: neg     w4, w23
+      +0x1cc: sub     x24, x24, #0x1
+      +0x1d0: mov     x0, #0x1
+      +0x1d4: nop
+      +0x1d8: add     x2, x21, x0
+      +0x1dc: mov     w1, w4
+      +0x1e0: ldurb   w2, [x2, #-1]
+      +0x1e4: ldrb    w3, [x24, x0]
+      +0x1e8: eor     w3, w2, w3
+      +0x1ec: and     w1, w3, w1, asr #16
+      +0x1f0: eor     w2, w2, w1
+      +0x1f4: strb    w2, [x24, x0]
+      +0x1f8: add     x0, x0, #0x1
+      +0x1fc: cmp     x0, #0x21
+      +0x200: b.ne    <mlkem768_dec+0x1d8>
+      +0x204: b       <mlkem768_dec+0x54>
+      +0x208: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_DEC_K3_GCC12_O2_EXEC =

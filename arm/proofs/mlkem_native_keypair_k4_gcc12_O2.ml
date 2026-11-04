@@ -11,49 +11,50 @@
 (* if that fails, and otherwise generates the keys from them with            *)
 (* mlkem1024_keypair_derand. In both cases it zeroes the buffer. It is       *)
 (* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),      *)
-(* where it is at address 0x12d4, using the theorem for                      *)
-(* mlkem1024_keypair_derand in the image and the contract for randombytes.   *)
+(* using the theorem for mlkem1024_keypair_derand in the image and the       *)
+(* contract for randombytes.                                                 *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keypair_derand_k4_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    12d4: stp     x19, x20, [sp, #-128]!
-    12d8: mov     x20, x0
-    12dc: adrp    x2, 1f000 <mlk_zetas+0x18c80>
-    12e0: ldr     x2, [x2, #4088]
-    12e4: stp     x21, x30, [sp, #16]
-    12e8: add     x19, sp, #0x3f
-    12ec: and     x19, x19, #0xffffffffffffffe0
-    12f0: mov     x21, x1
-    12f4: ldr     x1, [x2]
-    12f8: str     x1, [sp, #120]
-    12fc: mov     x1, #0x0
-    1300: mov     x0, x19
-    1304: mov     x1, #0x40
-    1308: bl      820 <randombytes@plt>
-    130c: cbnz    w0, 1354 <mlkem1024_keypair+0x80>
-    1310: mov     x1, x21
-    1314: mov     x0, x20
-    1318: mov     x2, x19
-    131c: bl      1240 <mlkem1024_keypair_derand>
-    1320: movi    v0.4s, #0x0
-    1324: stp     q0, q0, [x19]
-    1328: stp     q0, q0, [x19, #32]
-    132c: adrp    x1, 1f000 <mlk_zetas+0x18c80>
-    1330: ldr     x1, [x1, #4088]
-    1334: ldr     x3, [sp, #120]
-    1338: ldr     x2, [x1]
-    133c: subs    x3, x3, x2
-    1340: mov     x2, #0x0
-    1344: b.ne    135c <mlkem1024_keypair+0x88>
-    1348: ldp     x21, x30, [sp, #16]
-    134c: ldp     x19, x20, [sp], #128
-    1350: ret
-    1354: mov     w0, #0xfffffffd
-    1358: b       1320 <mlkem1024_keypair+0x4c>
-    135c: bl      830 <__stack_chk_fail@plt>
+    mlkem1024_keypair:
+       +0x0: stp     x19, x20, [sp, #-128]!
+       +0x4: mov     x20, x0
+       +0x8: adrp    x2, <page>
+       +0xc: ldr     x2, [x2, #4088]  // got_stack_chk_guard
+      +0x10: stp     x21, x30, [sp, #16]
+      +0x14: add     x19, sp, #0x3f
+      +0x18: and     x19, x19, #0xffffffffffffffe0
+      +0x1c: mov     x21, x1
+      +0x20: ldr     x1, [x2]
+      +0x24: str     x1, [sp, #120]
+      +0x28: mov     x1, #0x0
+      +0x2c: mov     x0, x19
+      +0x30: mov     x1, #0x40
+      +0x34: bl      <randombytes@plt>
+      +0x38: cbnz    w0, <mlkem1024_keypair+0x80>
+      +0x3c: mov     x1, x21
+      +0x40: mov     x0, x20
+      +0x44: mov     x2, x19
+      +0x48: bl      <mlkem1024_keypair_derand>
+      +0x4c: movi    v0.4s, #0x0
+      +0x50: stp     q0, q0, [x19]
+      +0x54: stp     q0, q0, [x19, #32]
+      +0x58: adrp    x1, <page>
+      +0x5c: ldr     x1, [x1, #4088]  // got_stack_chk_guard
+      +0x60: ldr     x3, [sp, #120]
+      +0x64: ldr     x2, [x1]
+      +0x68: subs    x3, x3, x2
+      +0x6c: mov     x2, #0x0
+      +0x70: b.ne    <mlkem1024_keypair+0x88>
+      +0x74: ldp     x21, x30, [sp, #16]
+      +0x78: ldp     x19, x20, [sp], #128
+      +0x7c: ret
+      +0x80: mov     w0, #0xfffffffd
+      +0x84: b       <mlkem1024_keypair+0x4c>
+      +0x88: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_KEYPAIR_K4_GCC12_O2_EXEC =

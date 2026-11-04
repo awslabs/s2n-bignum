@@ -12,11 +12,10 @@
 (* them with mlk_rej_uniform_c, and then squeezes one more block and samples *)
 (* from it until there are 256, before zeroing the state and the buffer. It  *)
 (* is verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),   *)
-(* where it is at address 0x4d40, using the theorems for mlkem_shake128_init *)
-(* at 0x2540, mlkem_shake128_absorb_once at 0x24d0,                          *)
-(* mlkem_shake128_squeezeblocks at 0x24e4, mlkem_shake128_release at 0x2544  *)
-(* and mlk_rej_uniform_c at 0x4a90 in the image and assuming the contracts   *)
-(* for memset in utils/mlkem_native_libc.ml.                                 *)
+(* using the theorems for mlkem_shake128_init, mlkem_shake128_absorb_once,   *)
+(* mlkem_shake128_squeezeblocks, mlkem_shake128_release and                  *)
+(* mlk_rej_uniform_c in the image and assuming the contracts for memset in   *)
+(* utils/mlkem_native_libc.ml.                                               *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native_libc.ml";;
@@ -29,74 +28,76 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image, and the PLT stub for memset:
 
-    4d40: sub     sp, sp, #0x330
-    4d44: adrp    x2, 1f000 <mlk_zetas+0x18c80>
-    4d48: ldr     x2, [x2, #4088]
-    4d4c: stp     x19, x20, [sp]
-    4d50: mov     x19, x1
-    4d54: add     x20, sp, #0x4f
-    4d58: stp     x21, x22, [sp, #16]
-    4d5c: and     x20, x20, #0xffffffffffffffe0
-    4d60: add     x22, x20, #0x200
-    4d64: str     x30, [sp, #32]
-    4d68: mov     x21, x0
-    4d6c: mov     x0, x22
-    4d70: ldr     x1, [x2]
-    4d74: str     x1, [sp, #808]
-    4d78: mov     x1, #0x0
-    4d7c: bl      2540 <mlkem_shake128_init>
-    4d80: mov     x1, x19
-    4d84: mov     x0, x22
-    4d88: mov     x2, #0x22
-    4d8c: bl      24d0 <mlkem_shake128_absorb_once>
-    4d90: mov     x2, x22
-    4d94: mov     x0, x20
-    4d98: mov     x1, #0x3
-    4d9c: bl      24e4 <mlkem_shake128_squeezeblocks>
-    4da0: mov     x2, x20
-    4da4: mov     x0, x21
-    4da8: mov     w3, #0x1f8
-    4dac: mov     w1, #0x0
-    4db0: bl      4a90 <mlk_rej_uniform_c.constprop.0>
-    4db4: cmp     w0, #0xff
-    4db8: b.hi    4df0 <mlkem_poly_rej_uniform+0xb0>
-    4dbc: mov     w19, w0
-    4dc0: mov     x2, x22
-    4dc4: mov     x0, x20
-    4dc8: mov     x1, #0x1
-    4dcc: bl      24e4 <mlkem_shake128_squeezeblocks>
-    4dd0: mov     w1, w19
-    4dd4: mov     x2, x20
-    4dd8: mov     x0, x21
-    4ddc: mov     w3, #0xa8
-    4de0: bl      4a90 <mlk_rej_uniform_c.constprop.0>
-    4de4: mov     w19, w0
-    4de8: cmp     w0, #0xff
-    4dec: b.ls    4dc0 <mlkem_poly_rej_uniform+0x80>
-    4df0: mov     x0, x22
-    4df4: bl      2544 <mlkem_shake128_release>
-    4df8: mov     x0, x20
-    4dfc: mov     x2, #0x1f8
-    4e00: mov     w1, #0x0
-    4e04: bl      840 <memset@plt>
-    4e08: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    4e0c: ldr     x0, [x0, #4088]
-    4e10: ldr     x2, [sp, #808]
-    4e14: ldr     x1, [x0]
-    4e18: subs    x2, x2, x1
-    4e1c: mov     x1, #0x0
-    4e20: b.ne    4e38 <mlkem_poly_rej_uniform+0xf8>
-    4e24: ldp     x19, x20, [sp]
-    4e28: ldp     x21, x22, [sp, #16]
-    4e2c: ldr     x30, [sp, #32]
-    4e30: add     sp, sp, #0x330
-    4e34: ret
-    4e38: bl      830 <__stack_chk_fail@plt>
+    mlkem_poly_rej_uniform:
+       +0x0: sub     sp, sp, #0x330
+       +0x4: adrp    x2, <page>
+       +0x8: ldr     x2, [x2, #4088]  // got_stack_chk_guard
+       +0xc: stp     x19, x20, [sp]
+      +0x10: mov     x19, x1
+      +0x14: add     x20, sp, #0x4f
+      +0x18: stp     x21, x22, [sp, #16]
+      +0x1c: and     x20, x20, #0xffffffffffffffe0
+      +0x20: add     x22, x20, #0x200
+      +0x24: str     x30, [sp, #32]
+      +0x28: mov     x21, x0
+      +0x2c: mov     x0, x22
+      +0x30: ldr     x1, [x2]
+      +0x34: str     x1, [sp, #808]
+      +0x38: mov     x1, #0x0
+      +0x3c: bl      <mlkem_shake128_init>
+      +0x40: mov     x1, x19
+      +0x44: mov     x0, x22
+      +0x48: mov     x2, #0x22
+      +0x4c: bl      <mlkem_shake128_absorb_once>
+      +0x50: mov     x2, x22
+      +0x54: mov     x0, x20
+      +0x58: mov     x1, #0x3
+      +0x5c: bl      <mlkem_shake128_squeezeblocks>
+      +0x60: mov     x2, x20
+      +0x64: mov     x0, x21
+      +0x68: mov     w3, #0x1f8
+      +0x6c: mov     w1, #0x0
+      +0x70: bl      <mlk_rej_uniform_c.constprop.0>
+      +0x74: cmp     w0, #0xff
+      +0x78: b.hi    <mlkem_poly_rej_uniform+0xb0>
+      +0x7c: mov     w19, w0
+      +0x80: mov     x2, x22
+      +0x84: mov     x0, x20
+      +0x88: mov     x1, #0x1
+      +0x8c: bl      <mlkem_shake128_squeezeblocks>
+      +0x90: mov     w1, w19
+      +0x94: mov     x2, x20
+      +0x98: mov     x0, x21
+      +0x9c: mov     w3, #0xa8
+      +0xa0: bl      <mlk_rej_uniform_c.constprop.0>
+      +0xa4: mov     w19, w0
+      +0xa8: cmp     w0, #0xff
+      +0xac: b.ls    <mlkem_poly_rej_uniform+0x80>
+      +0xb0: mov     x0, x22
+      +0xb4: bl      <mlkem_shake128_release>
+      +0xb8: mov     x0, x20
+      +0xbc: mov     x2, #0x1f8
+      +0xc0: mov     w1, #0x0
+      +0xc4: bl      <memset@plt>
+      +0xc8: adrp    x0, <page>
+      +0xcc: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0xd0: ldr     x2, [sp, #808]
+      +0xd4: ldr     x1, [x0]
+      +0xd8: subs    x2, x2, x1
+      +0xdc: mov     x1, #0x0
+      +0xe0: b.ne    <mlkem_poly_rej_uniform+0xf8>
+      +0xe4: ldp     x19, x20, [sp]
+      +0xe8: ldp     x21, x22, [sp, #16]
+      +0xec: ldr     x30, [sp, #32]
+      +0xf0: add     sp, sp, #0x330
+      +0xf4: ret
+      +0xf8: bl      <__stack_chk_fail@plt>
 
-    840: adrp    x16, 1f000 <mlk_zetas+0x18c80>
-    844: ldr     x17, [x16, #4072]
-    848: add     x16, x16, #0xfe8
-    84c: br      x17
+    memset@plt:
+      +0x0: adrp    x16, <page>
+      +0x4: ldr     x17, [x16, #4072]  // got_memset
+      +0x8: add     x16, x16, #0xfe8  // got_memset
+      +0xc: br      x17
  ***)
 
 let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_EXEC =

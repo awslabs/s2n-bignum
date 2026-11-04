@@ -4,15 +4,14 @@
  *)
 
 (* ========================================================================= *)
-(* Compression of a vector of 4 polynomials to 11 bits per coefficient.      *)
-(* This is the code for mlkem1024_polyvec_compress_du from mlkem-native's    *)
+(* Compression of a vector of 4 polynomials to 11 bits per coefficient. This *)
+(* is the code for mlkem1024_polyvec_compress_du from mlkem-native's         *)
 (* portable C implementation compiled by gcc 12 with -O2 (see                *)
 (* mlkem_native/README.md), which calls mlkem_poly_compress_d11 for each of  *)
 (* the polynomials, in a loop. It is verified in the whole image (see        *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x16f0, using  *)
-(* the theorems for mlkem_poly_compress_d11 at 0x1f74 in the image. Besides  *)
-(* its own 32 bytes, the stack below that is used by mlkem_poly_compress_d11 *)
-(* for all the calls.                                                        *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlkem_poly_compress_d11 in the image. Besides its own 32 bytes, the stack *)
+(* below that is used by mlkem_poly_compress_d11 for all the calls.          *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_compress_d11_gcc12_O2.ml";;
@@ -20,21 +19,22 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    16f0: stp     x19, x20, [sp, #-32]!
-    16f4: mov     x19, x0
-    16f8: mov     x20, x1
-    16fc: stp     x21, x30, [sp, #16]
-    1700: add     x21, x0, #0x580
-    1704: mov     x1, x20
-    1708: mov     x0, x19
-    170c: add     x19, x19, #0x160
-    1710: bl      1f74 <mlkem_poly_compress_d11>
-    1714: add     x20, x20, #0x200
-    1718: cmp     x19, x21
-    171c: b.ne    1704 <mlkem1024_polyvec_compress_du+0x14>
-    1720: ldp     x21, x30, [sp, #16]
-    1724: ldp     x19, x20, [sp], #32
-    1728: ret
+    mlkem1024_polyvec_compress_du:
+       +0x0: stp     x19, x20, [sp, #-32]!
+       +0x4: mov     x19, x0
+       +0x8: mov     x20, x1
+       +0xc: stp     x21, x30, [sp, #16]
+      +0x10: add     x21, x0, #0x580
+      +0x14: mov     x1, x20
+      +0x18: mov     x0, x19
+      +0x1c: add     x19, x19, #0x160
+      +0x20: bl      <mlkem_poly_compress_d11>
+      +0x24: add     x20, x20, #0x200
+      +0x28: cmp     x19, x21
+      +0x2c: b.ne    <mlkem1024_polyvec_compress_du+0x14>
+      +0x30: ldp     x21, x30, [sp, #16]
+      +0x34: ldp     x19, x20, [sp], #32
+      +0x38: ret
  ***)
 
 let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_GCC12_O2_EXEC =

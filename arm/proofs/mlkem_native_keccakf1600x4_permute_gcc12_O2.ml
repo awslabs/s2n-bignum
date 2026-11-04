@@ -4,16 +4,15 @@
  *)
 
 (* ========================================================================= *)
-(* Keccak-f1600 permutation of four consecutive states.                      *)
-(* This is the code for mlkem_keccakf1600x4_permute from mlkem-native's      *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md), which calls mlkem_keccakf1600_permute for each   *)
-(* of the four states, the last time as a tail call. It is verified in the   *)
-(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at       *)
-(* address 0x33a0, using the theorems for mlkem_keccakf1600_permute at       *)
-(* 0x2dd0 in the image. The specification is the same as for                 *)
-(* sha3_keccak4_f1600, except that the table of round constants is not an    *)
-(* argument, since it is part of the image.                                  *)
+(* Keccak-f1600 permutation of four consecutive states. This is the code for *)
+(* mlkem_keccakf1600x4_permute from mlkem-native's portable C implementation *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which calls     *)
+(* mlkem_keccakf1600_permute for each of the four states, the last time as a *)
+(* tail call. It is verified in the whole image (see                         *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlkem_keccakf1600_permute in the image. The specification is the same as  *)
+(* for sha3_keccak4_f1600, except that the table of round constants is not   *)
+(* an argument, since it is part of the image.                               *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keccakf1600_permute_gcc12_O2.ml";;
@@ -21,16 +20,17 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    33a0: stp     x19, x30, [sp, #-16]!
-    33a4: mov     x19, x0
-    33a8: bl      2dd0 <mlkem_keccakf1600_permute>
-    33ac: add     x0, x19, #0xc8
-    33b0: bl      2dd0 <mlkem_keccakf1600_permute>
-    33b4: add     x0, x19, #0x190
-    33b8: bl      2dd0 <mlkem_keccakf1600_permute>
-    33bc: add     x0, x19, #0x258
-    33c0: ldp     x19, x30, [sp], #16
-    33c4: b       2dd0 <mlkem_keccakf1600_permute>
+    mlkem_keccakf1600x4_permute:
+       +0x0: stp     x19, x30, [sp, #-16]!
+       +0x4: mov     x19, x0
+       +0x8: bl      <mlkem_keccakf1600_permute>
+       +0xc: add     x0, x19, #0xc8
+      +0x10: bl      <mlkem_keccakf1600_permute>
+      +0x14: add     x0, x19, #0x190
+      +0x18: bl      <mlkem_keccakf1600_permute>
+      +0x1c: add     x0, x19, #0x258
+      +0x20: ldp     x19, x30, [sp], #16
+      +0x24: b       <mlkem_keccakf1600_permute>
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_EXEC =

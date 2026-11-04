@@ -14,9 +14,9 @@
 (* memcpy, its hash H by mlkem_sha3_256 and the last 32 bytes z of coins. If *)
 (* mlkem1024_indcpa_keypair_derand returned an error, which it never does,   *)
 (* the function would zero the keys with memset. It is verified in the whole *)
-(* image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address     *)
-(* 0x1240, using the theorems for mlkem1024_indcpa_keypair_derand and        *)
-(* mlkem_sha3_256 in the image and the contract for memcpy.                  *)
+(* image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for     *)
+(* mlkem1024_indcpa_keypair_derand and mlkem_sha3_256 in the image and the   *)
+(* contract for memcpy.                                                      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_indcpa_keypair_derand_k4_gcc12_O2.ml";;
@@ -25,43 +25,46 @@ needs "arm/proofs/utils/mlkem_native_kem.ml";;
 
 (*** The code in the image:
 
-    1240: stp     x19, x20, [sp, #-48]!
-    1244: mov     x19, x1
-    1632: stp     x21, x22, [sp, #16]
-    124c: mov     x22, x2
-    1250: mov     x21, x0
-    1254: str     x30, [sp, #32]
-    1258: bl      9a0 <mlkem1024_indcpa_keypair_derand>
-    125c: mov     x2, #0x620
-    1260: mov     w20, w0
-    1264: cbnz    w0, 12a4 <mlkem1024_keypair_derand+0x64>
-    1268: mov     x1, x21
-    126c: add     x0, x19, #0x600
-    1270: bl      810 <memcpy@plt>
-    1274: mov     x1, x21
-    1278: add     x0, x19, #0xc20
-    127c: mov     x2, #0x620
-    1280: bl      2650 <mlkem_sha3_256>
-    1284: ldp     q0, q1, [x22, #32]
-    1288: add     x19, x19, #0xc40
-    128c: mov     w0, w20
-    1290: stp     q0, q1, [x19]
-    1294: ldp     x21, x22, [sp, #16]
-    1298: ldr     x30, [sp, #32]
-    129c: ldp     x19, x20, [sp], #48
-    12a0: ret
-    12a4: mov     x0, x21
-    12a8: mov     w1, #0x0
-    12ac: bl      840 <memset@plt>
-    12b0: mov     x2, #0xc60
-    12b4: mov     x0, x19
-    12b8: mov     w1, #0x0
-    12bc: bl      840 <memset@plt>
-    12c0: ldp     x21, x22, [sp, #16]
-    12c4: mov     w0, w20
-    12c8: ldr     x30, [sp, #32]
-    12cc: ldp     x19, x20, [sp], #48
-    12d0: ret
+    mlkem1024_keypair_derand:
+       +0x0: stp     x19, x20, [sp, #-48]!
+       +0x4: mov     x19, x1
+    mlkem1024_dec:
+      +0x152: stp     x21, x22, [sp, #16]
+    mlkem1024_keypair_derand:
+       +0xc: mov     x22, x2
+      +0x10: mov     x21, x0
+      +0x14: str     x30, [sp, #32]
+      +0x18: bl      <mlkem1024_indcpa_keypair_derand>
+      +0x1c: mov     x2, #0x620
+      +0x20: mov     w20, w0
+      +0x24: cbnz    w0, <mlkem1024_keypair_derand+0x64>
+      +0x28: mov     x1, x21
+      +0x2c: add     x0, x19, #0x600
+      +0x30: bl      <memcpy@plt>
+      +0x34: mov     x1, x21
+      +0x38: add     x0, x19, #0xc20
+      +0x3c: mov     x2, #0x620
+      +0x40: bl      <mlkem_sha3_256>
+      +0x44: ldp     q0, q1, [x22, #32]
+      +0x48: add     x19, x19, #0xc40
+      +0x4c: mov     w0, w20
+      +0x50: stp     q0, q1, [x19]
+      +0x54: ldp     x21, x22, [sp, #16]
+      +0x58: ldr     x30, [sp, #32]
+      +0x5c: ldp     x19, x20, [sp], #48
+      +0x60: ret
+      +0x64: mov     x0, x21
+      +0x68: mov     w1, #0x0
+      +0x6c: bl      <memset@plt>
+      +0x70: mov     x2, #0xc60
+      +0x74: mov     x0, x19
+      +0x78: mov     w1, #0x0
+      +0x7c: bl      <memset@plt>
+      +0x80: ldp     x21, x22, [sp, #16]
+      +0x84: mov     w0, w20
+      +0x88: ldr     x30, [sp, #32]
+      +0x8c: ldp     x19, x20, [sp], #48
+      +0x90: ret
  ***)
 
 let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_EXEC =

@@ -9,8 +9,8 @@
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which calls mlkem_keccakf1600_extract_bytes for each of the states, the   *)
 (* last time as a tail call. It is verified in the whole image (see          *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x2cd0, using  *)
-(* the theorems for mlkem_keccakf1600_extract_bytes at 0x2c60 in the image.  *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlkem_keccakf1600_extract_bytes in the image.                             *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keccakf1600_extract_bytes_gcc12_O2.ml";;
@@ -18,38 +18,39 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    2cd0: stp     x19, x20, [sp, #-64]!
-    2cd4: mov     w19, w5
-    2cd8: mov     w20, w6
-    2cdc: stp     x21, x22, [sp, #16]
-    2ce0: mov     x22, x4
-    2ce4: mov     x21, x0
-    2ce8: stp     x23, x24, [sp, #32]
-    2cec: mov     x24, x2
-    2cf0: mov     x23, x3
-    2cf4: mov     w2, w5
-    2cf8: mov     w3, w6
-    2cfc: str     x30, [sp, #48]
-    2d00: bl      2c60 <mlkem_keccakf1600_extract_bytes>
-    2d04: mov     w3, w20
-    2d08: mov     w2, w19
-    2d0c: mov     x1, x24
-    2d10: add     x0, x21, #0xc8
-    2d14: bl      2c60 <mlkem_keccakf1600_extract_bytes>
-    2d18: mov     w3, w20
-    2d1c: mov     w2, w19
-    2d20: mov     x1, x23
-    2d24: add     x0, x21, #0x190
-    2d28: bl      2c60 <mlkem_keccakf1600_extract_bytes>
-    2d2c: ldp     x23, x24, [sp, #32]
-    2d30: mov     w3, w20
-    2d34: ldr     x30, [sp, #48]
-    2d38: mov     w2, w19
-    2d3c: mov     x1, x22
-    2d40: add     x0, x21, #0x258
-    2d44: ldp     x21, x22, [sp, #16]
-    2d48: ldp     x19, x20, [sp], #64
-    2d4c: b       2c60 <mlkem_keccakf1600_extract_bytes>
+    mlkem_keccakf1600x4_extract_bytes:
+       +0x0: stp     x19, x20, [sp, #-64]!
+       +0x4: mov     w19, w5
+       +0x8: mov     w20, w6
+       +0xc: stp     x21, x22, [sp, #16]
+      +0x10: mov     x22, x4
+      +0x14: mov     x21, x0
+      +0x18: stp     x23, x24, [sp, #32]
+      +0x1c: mov     x24, x2
+      +0x20: mov     x23, x3
+      +0x24: mov     w2, w5
+      +0x28: mov     w3, w6
+      +0x2c: str     x30, [sp, #48]
+      +0x30: bl      <mlkem_keccakf1600_extract_bytes>
+      +0x34: mov     w3, w20
+      +0x38: mov     w2, w19
+      +0x3c: mov     x1, x24
+      +0x40: add     x0, x21, #0xc8
+      +0x44: bl      <mlkem_keccakf1600_extract_bytes>
+      +0x48: mov     w3, w20
+      +0x4c: mov     w2, w19
+      +0x50: mov     x1, x23
+      +0x54: add     x0, x21, #0x190
+      +0x58: bl      <mlkem_keccakf1600_extract_bytes>
+      +0x5c: ldp     x23, x24, [sp, #32]
+      +0x60: mov     w3, w20
+      +0x64: ldr     x30, [sp, #48]
+      +0x68: mov     w2, w19
+      +0x6c: mov     x1, x22
+      +0x70: add     x0, x21, #0x258
+      +0x74: ldp     x21, x22, [sp, #16]
+      +0x78: ldp     x19, x20, [sp], #64
+      +0x7c: b       <mlkem_keccakf1600_extract_bytes>
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_EXEC =

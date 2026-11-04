@@ -5,13 +5,12 @@
 
 (* ========================================================================= *)
 (* Computation of the multiplication cache for a vector of 3 polynomials.    *)
-(* This is the code for mlkem768_polyvec_mulcache_compute from               *)
-(* mlkem-native's portable C implementation compiled by gcc 12 with -O2      *)
-(* (see mlkem_native/README.md), which calls mlkem_poly_mulcache_compute     *)
-(* for each of the polynomials, the last time as a tail call. It is          *)
-(* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),      *)
-(* where it is at address 0x5ff0, using the theorems for                     *)
-(* mlkem_poly_mulcache_compute at 0x4240 in the image.                       *)
+(* This is the code for mlkem768_polyvec_mulcache_compute from mlkem-        *)
+(* native's portable C implementation compiled by gcc 12 with -O2 (see       *)
+(* mlkem_native/README.md), which calls mlkem_poly_mulcache_compute for each *)
+(* of the polynomials, the last time as a tail call. It is verified in the   *)
+(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems   *)
+(* for mlkem_poly_mulcache_compute in the image.                             *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_mulcache_compute_gcc12_O2.ml";;
@@ -19,19 +18,20 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    5ff0: stp     x19, x20, [sp, #-32]!
-    5ff4: mov     x19, x0
-    5ff8: mov     x20, x1
-    5ffc: str     x30, [sp, #16]
-    6000: bl      4240 <mlkem_poly_mulcache_compute>
-    6004: add     x1, x20, #0x200
-    6008: add     x0, x19, #0x100
-    600c: bl      4240 <mlkem_poly_mulcache_compute>
-    6010: ldr     x30, [sp, #16]
-    6014: add     x1, x20, #0x400
-    6018: add     x0, x19, #0x200
-    601c: ldp     x19, x20, [sp], #32
-    6020: b       4240 <mlkem_poly_mulcache_compute>
+    mlkem768_polyvec_mulcache_compute:
+       +0x0: stp     x19, x20, [sp, #-32]!
+       +0x4: mov     x19, x0
+       +0x8: mov     x20, x1
+       +0xc: str     x30, [sp, #16]
+      +0x10: bl      <mlkem_poly_mulcache_compute>
+      +0x14: add     x1, x20, #0x200
+      +0x18: add     x0, x19, #0x100
+      +0x1c: bl      <mlkem_poly_mulcache_compute>
+      +0x20: ldr     x30, [sp, #16]
+      +0x24: add     x1, x20, #0x400
+      +0x28: add     x0, x19, #0x200
+      +0x2c: ldp     x19, x20, [sp], #32
+      +0x30: b       <mlkem_poly_mulcache_compute>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K3_GCC12_O2_EXEC =

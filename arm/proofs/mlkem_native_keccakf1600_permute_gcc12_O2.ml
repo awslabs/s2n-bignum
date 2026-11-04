@@ -894,8 +894,8 @@ let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_SAFE = time prove
 extra_word_CONV := keccak_extra_word_CONV_backup;;
 
 (* ------------------------------------------------------------------------- *)
-(* The same code in the whole image, at address 0x2dd0 with the table of     *)
-(* round constants at 0x62b0 (see mlkem_native_libmlkem_gcc12_O2.ml).        *)
+(* The same code in the whole image with the table of round constants (see   *)
+(* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;

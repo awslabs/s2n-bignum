@@ -8,8 +8,7 @@
 (* mlkem_keccakf1600_extract_bytes from mlkem-native's portable C            *)
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which copies len bytes of the 200-byte state starting at byte off. It is  *)
-(* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),      *)
-(* where it is at address 0x2c60.                                            *)
+(* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml).      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -17,18 +16,19 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    2c60: mov     w2, w2
-    2c64: cbz     w3, 2c8c <mlkem_keccakf1600_extract_bytes+0x2c>
-    2c68: mov     w3, w3
-    2c6c: add     x4, x0, x2
-    2c70: mov     x0, #0x0
-    2c74: nop
-    2c78: ldrb    w2, [x4, x0]
-    2c7c: strb    w2, [x1, x0]
-    2c80: add     x0, x0, #0x1
-    2c84: cmp     x3, x0
-    2c88: b.ne    2c78 <mlkem_keccakf1600_extract_bytes+0x18>
-    2c8c: ret
+    mlkem_keccakf1600_extract_bytes:
+       +0x0: mov     w2, w2
+       +0x4: cbz     w3, <mlkem_keccakf1600_extract_bytes+0x2c>
+       +0x8: mov     w3, w3
+       +0xc: add     x4, x0, x2
+      +0x10: mov     x0, #0x0
+      +0x14: nop
+      +0x18: ldrb    w2, [x4, x0]
+      +0x1c: strb    w2, [x1, x0]
+      +0x20: add     x0, x0, #0x1
+      +0x24: cmp     x3, x0
+      +0x28: b.ne    <mlkem_keccakf1600_extract_bytes+0x18>
+      +0x2c: ret
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_O2_EXEC =

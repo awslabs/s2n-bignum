@@ -4,13 +4,12 @@
  *)
 
 (* ========================================================================= *)
-(* Compression of a polynomial to 5 bits per coefficient.                    *)
-(* This is the code for mlkem_poly_compress_d5 from mlkem-native's portable  *)
-(* C implementation compiled by gcc 12 with -O2 (see                         *)
-(* mlkem_native/README.md), with a stack protector. It is verified in the    *)
-(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at       *)
-(* address 0x1e74, with the address of the stack guard in the global offset  *)
-(* table at 0x1fff8.                                                         *)
+(* Compression of a polynomial to 5 bits per coefficient. This is the code   *)
+(* for mlkem_poly_compress_d5 from mlkem-native's portable C implementation  *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), with a stack    *)
+(* protector. It is verified in the whole image (see                         *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), with the address of the stack guard   *)
+(* in the global offset table.                                               *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -18,70 +17,71 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    1e74: adrp    x2, 1f000 <mlk_zetas+0x18c80>
-    1e78: ldr     x2, [x2, #4088]
-    1e7c: str     x30, [sp, #-32]!
-    1e80: mov     x12, x1
-    1e84: mov     w14, #0xafc0
-    1e88: ldr     x1, [x2]
-    1e8c: str     x1, [sp, #24]
-    1e90: mov     x1, #0x0
-    1e94: add     x15, sp, #0x10
-    1e98: mov     w6, #0x0
-    1e9c: movk    w14, #0x13, lsl #16
-    1ea0: mov     w13, #0x4000000
-    1ea4: nop
-    1ea8: sub     w2, w6, #0x1
-    1eac: mov     x1, #0x1
-    1eb0: str     xzr, [sp, #16]
-    1eb4: nop
-    1eb8: add     w3, w2, w1
-    1ebc: add     x4, x15, x1
-    1ec0: add     x1, x1, #0x1
-    1ec4: ldrsh   w3, [x12, x3, lsl #1]
-    1ec8: madd    w3, w3, w14, w13
-    1ecc: lsr     w3, w3, #27
-    1ed0: sturb   w3, [x4, #-1]
-    1ed4: cmp     x1, #0x9
-    1ed8: b.ne    1eb8 <mlkem_poly_compress_d5+0x44>
-    1edc: ldrb    w3, [sp, #19]
-    1ee0: add     w6, w6, #0x8
-    1ee4: ldrb    w1, [sp, #18]
-    1ee8: add     x0, x0, #0x5
-    1eec: ldrb    w5, [sp, #22]
-    1ef0: lsl     w4, w3, #7
-    1ef4: ldrb    w2, [sp, #20]
-    1ef8: ldrb    w8, [sp, #21]
-    1efc: orr     w1, w4, w1, lsl #2
-    1f00: ldrb    w9, [sp, #16]
-    1f04: lsl     w11, w5, #6
-    1f08: ldrb    w4, [sp, #17]
-    1f0c: lsl     w10, w2, #4
-    1f10: ldrb    w7, [sp, #23]
-    1f14: lsr     w5, w5, #2
-    1f18: orr     w8, w11, w8, lsl #1
-    1f1c: orr     w3, w10, w3, lsr #1
-    1f20: orr     w1, w1, w4, lsr #3
-    1f24: orr     w2, w8, w2, lsr #4
-    1f28: orr     w5, w5, w7, lsl #3
-    1f2c: orr     w4, w9, w4, lsl #5
-    1f30: sturb   w4, [x0, #-5]
-    1f34: sturb   w1, [x0, #-4]
-    1f38: sturb   w3, [x0, #-3]
-    1f3c: sturb   w2, [x0, #-2]
-    1f40: sturb   w5, [x0, #-1]
-    1f44: cmp     w6, #0x100
-    1f48: b.ne    1ea8 <mlkem_poly_compress_d5+0x34>
-    1f4c: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    1f50: ldr     x0, [x0, #4088]
-    1f54: ldr     x2, [sp, #24]
-    1f58: ldr     x1, [x0]
-    1f5c: subs    x2, x2, x1
-    1f60: mov     x1, #0x0
-    1f64: b.ne    1f70 <mlkem_poly_compress_d5+0xfc>
-    1f68: ldr     x30, [sp], #32
-    1f6c: ret
-    1f70: bl      830 <__stack_chk_fail@plt>
+    mlkem_poly_compress_d5:
+       +0x0: adrp    x2, <page>
+       +0x4: ldr     x2, [x2, #4088]  // got_stack_chk_guard
+       +0x8: str     x30, [sp, #-32]!
+       +0xc: mov     x12, x1
+      +0x10: mov     w14, #0xafc0
+      +0x14: ldr     x1, [x2]
+      +0x18: str     x1, [sp, #24]
+      +0x1c: mov     x1, #0x0
+      +0x20: add     x15, sp, #0x10
+      +0x24: mov     w6, #0x0
+      +0x28: movk    w14, #0x13, lsl #16
+      +0x2c: mov     w13, #0x4000000
+      +0x30: nop
+      +0x34: sub     w2, w6, #0x1
+      +0x38: mov     x1, #0x1
+      +0x3c: str     xzr, [sp, #16]
+      +0x40: nop
+      +0x44: add     w3, w2, w1
+      +0x48: add     x4, x15, x1
+      +0x4c: add     x1, x1, #0x1
+      +0x50: ldrsh   w3, [x12, x3, lsl #1]
+      +0x54: madd    w3, w3, w14, w13
+      +0x58: lsr     w3, w3, #27
+      +0x5c: sturb   w3, [x4, #-1]
+      +0x60: cmp     x1, #0x9
+      +0x64: b.ne    <mlkem_poly_compress_d5+0x44>
+      +0x68: ldrb    w3, [sp, #19]
+      +0x6c: add     w6, w6, #0x8
+      +0x70: ldrb    w1, [sp, #18]
+      +0x74: add     x0, x0, #0x5
+      +0x78: ldrb    w5, [sp, #22]
+      +0x7c: lsl     w4, w3, #7
+      +0x80: ldrb    w2, [sp, #20]
+      +0x84: ldrb    w8, [sp, #21]
+      +0x88: orr     w1, w4, w1, lsl #2
+      +0x8c: ldrb    w9, [sp, #16]
+      +0x90: lsl     w11, w5, #6
+      +0x94: ldrb    w4, [sp, #17]
+      +0x98: lsl     w10, w2, #4
+      +0x9c: ldrb    w7, [sp, #23]
+      +0xa0: lsr     w5, w5, #2
+      +0xa4: orr     w8, w11, w8, lsl #1
+      +0xa8: orr     w3, w10, w3, lsr #1
+      +0xac: orr     w1, w1, w4, lsr #3
+      +0xb0: orr     w2, w8, w2, lsr #4
+      +0xb4: orr     w5, w5, w7, lsl #3
+      +0xb8: orr     w4, w9, w4, lsl #5
+      +0xbc: sturb   w4, [x0, #-5]
+      +0xc0: sturb   w1, [x0, #-4]
+      +0xc4: sturb   w3, [x0, #-3]
+      +0xc8: sturb   w2, [x0, #-2]
+      +0xcc: sturb   w5, [x0, #-1]
+      +0xd0: cmp     w6, #0x100
+      +0xd4: b.ne    <mlkem_poly_compress_d5+0x34>
+      +0xd8: adrp    x0, <page>
+      +0xdc: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0xe0: ldr     x2, [sp, #24]
+      +0xe4: ldr     x1, [x0]
+      +0xe8: subs    x2, x2, x1
+      +0xec: mov     x1, #0x0
+      +0xf0: b.ne    <mlkem_poly_compress_d5+0xfc>
+      +0xf4: ldr     x30, [sp], #32
+      +0xf8: ret
+      +0xfc: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D5_GCC12_O2_EXEC =

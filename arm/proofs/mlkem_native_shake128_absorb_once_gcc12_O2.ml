@@ -9,8 +9,8 @@
 (* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which calls     *)
 (* mlk_keccak_absorb_once with the rate 168 of SHAKE128 and the first byte   *)
 (* 0x1F of its padding, as a tail call. It is verified in the whole image    *)
-(* (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x24d0,   *)
-(* using the theorems for mlk_keccak_absorb_once at 0x23b0 in the image.     *)
+(* (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for           *)
+(* mlk_keccak_absorb_once in the image.                                      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keccak_absorb_once_gcc12_O2.ml";;
@@ -18,11 +18,12 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    24d0: mov     x3, x2
-    24d4: mov     w4, #0x1f
-    24d8: mov     x2, x1
-    24dc: mov     w1, #0xa8
-    24e0: b       23b0 <mlk_keccak_absorb_once>
+    mlkem_shake128_absorb_once:
+       +0x0: mov     x3, x2
+       +0x4: mov     w4, #0x1f
+       +0x8: mov     x2, x1
+       +0xc: mov     w1, #0xa8
+      +0x10: b       <mlk_keccak_absorb_once>
  ***)
 
 let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_EXEC =

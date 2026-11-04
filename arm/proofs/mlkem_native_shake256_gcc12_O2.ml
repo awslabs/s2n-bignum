@@ -9,11 +9,11 @@
 (* gcc 12 with -O2 (see mlkem_native/README.md), which absorbs the input     *)
 (* into a state on the stack with mlk_keccak_absorb_once, and then for each  *)
 (* block of the output permutes the state and extracts up to 136 bytes of    *)
-(* it, the rate of SHAKE256, before zeroing the state. It is verified in     *)
-(* the whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at   *)
-(* address 0x2570, using the theorems for mlk_keccak_absorb_once at 0x23b0,  *)
-(* mlkem_keccakf1600_permute at 0x2dd0 and mlkem_keccakf1600_extract_bytes   *)
-(* at 0x2c60 in the image. The result is shake256 of common/fips202.ml.      *)
+(* it, the rate of SHAKE256, before zeroing the state. It is verified in the *)
+(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems   *)
+(* for mlk_keccak_absorb_once, mlkem_keccakf1600_permute and                 *)
+(* mlkem_keccakf1600_extract_bytes in the image. The result is shake256 of   *)
+(* common/fips202.ml.                                                        *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keccak_absorb_once_gcc12_O2.ml";;
@@ -22,60 +22,61 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    2570: stp     x19, x20, [sp, #-304]!
-    2574: mov     x19, x1
-    2578: adrp    x4, 1f000 <mlk_zetas+0x18c80>
-    257c: ldr     x4, [x4, #4088]
-    2580: stp     x21, x22, [sp, #16]
-    2584: add     x21, sp, #0x4f
-    2588: str     x30, [sp, #40]
-    258c: and     x21, x21, #0xffffffffffffffe0
-    2590: mov     x22, x0
-    2594: mov     x0, x21
-    2598: ldr     x1, [x4]
-    259c: str     x1, [sp, #296]
-    25a0: mov     x1, #0x0
-    25a4: mov     w4, #0x1f
-    25a8: mov     w1, #0x88
-    25ac: bl      23b0 <mlk_keccak_absorb_once>
-    25b0: cbz     x19, 25f4 <mlkem_shake256+0x84>
-    25b4: str     x23, [sp, #32]
-    25b8: mov     x23, #0x88
-    25bc: nop
-    25c0: mov     x0, x21
-    25c4: bl      2dd0 <mlkem_keccakf1600_permute>
-    25c8: cmp     x19, #0x88
-    25cc: mov     x1, x22
-    25d0: csel    x20, x19, x23, ls
-    25d4: mov     x0, x21
-    25d8: mov     w3, w20
-    25dc: mov     w2, #0x0
-    25e0: bl      2c60 <mlkem_keccakf1600_extract_bytes>
-    25e4: add     x22, x22, x20
-    25e8: subs    x19, x19, x20
-    25ec: b.ne    25c0 <mlkem_shake256+0x50>
-    25f0: ldr     x23, [sp, #32]
-    25f4: movi    v0.4s, #0x0
-    25f8: stp     q0, q0, [x21]
-    25fc: stp     q0, q0, [x21, #32]
-    2600: stp     q0, q0, [x21, #64]
-    2604: stp     q0, q0, [x21, #96]
-    2608: stp     q0, q0, [x21, #128]
-    260c: stp     q0, q0, [x21, #160]
-    2610: stp     q0, q0, [x21, #192]
-    2614: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    2618: ldr     x0, [x0, #4088]
-    261c: ldr     x2, [sp, #296]
-    2620: ldr     x1, [x0]
-    2624: subs    x2, x2, x1
-    2628: mov     x1, #0x0
-    262c: b.ne    2640 <mlkem_shake256+0xd0>
-    2630: ldp     x21, x22, [sp, #16]
-    2634: ldr     x30, [sp, #40]
-    2638: ldp     x19, x20, [sp], #304
-    263c: ret
-    2640: str     x23, [sp, #32]
-    2644: bl      830 <__stack_chk_fail@plt>
+    mlkem_shake256:
+       +0x0: stp     x19, x20, [sp, #-304]!
+       +0x4: mov     x19, x1
+       +0x8: adrp    x4, <page>
+       +0xc: ldr     x4, [x4, #4088]  // got_stack_chk_guard
+      +0x10: stp     x21, x22, [sp, #16]
+      +0x14: add     x21, sp, #0x4f
+      +0x18: str     x30, [sp, #40]
+      +0x1c: and     x21, x21, #0xffffffffffffffe0
+      +0x20: mov     x22, x0
+      +0x24: mov     x0, x21
+      +0x28: ldr     x1, [x4]
+      +0x2c: str     x1, [sp, #296]
+      +0x30: mov     x1, #0x0
+      +0x34: mov     w4, #0x1f
+      +0x38: mov     w1, #0x88
+      +0x3c: bl      <mlk_keccak_absorb_once>
+      +0x40: cbz     x19, <mlkem_shake256+0x84>
+      +0x44: str     x23, [sp, #32]
+      +0x48: mov     x23, #0x88
+      +0x4c: nop
+      +0x50: mov     x0, x21
+      +0x54: bl      <mlkem_keccakf1600_permute>
+      +0x58: cmp     x19, #0x88
+      +0x5c: mov     x1, x22
+      +0x60: csel    x20, x19, x23, ls
+      +0x64: mov     x0, x21
+      +0x68: mov     w3, w20
+      +0x6c: mov     w2, #0x0
+      +0x70: bl      <mlkem_keccakf1600_extract_bytes>
+      +0x74: add     x22, x22, x20
+      +0x78: subs    x19, x19, x20
+      +0x7c: b.ne    <mlkem_shake256+0x50>
+      +0x80: ldr     x23, [sp, #32]
+      +0x84: movi    v0.4s, #0x0
+      +0x88: stp     q0, q0, [x21]
+      +0x8c: stp     q0, q0, [x21, #32]
+      +0x90: stp     q0, q0, [x21, #64]
+      +0x94: stp     q0, q0, [x21, #96]
+      +0x98: stp     q0, q0, [x21, #128]
+      +0x9c: stp     q0, q0, [x21, #160]
+      +0xa0: stp     q0, q0, [x21, #192]
+      +0xa4: adrp    x0, <page>
+      +0xa8: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0xac: ldr     x2, [sp, #296]
+      +0xb0: ldr     x1, [x0]
+      +0xb4: subs    x2, x2, x1
+      +0xb8: mov     x1, #0x0
+      +0xbc: b.ne    <mlkem_shake256+0xd0>
+      +0xc0: ldp     x21, x22, [sp, #16]
+      +0xc4: ldr     x30, [sp, #40]
+      +0xc8: ldp     x19, x20, [sp], #304
+      +0xcc: ret
+      +0xd0: str     x23, [sp, #32]
+      +0xd4: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_SHAKE256_GCC12_O2_EXEC =

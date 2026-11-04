@@ -9,13 +9,12 @@
 (* mlk_keccak_absorb_once_x4 from mlkem-native's portable C implementation   *)
 (* compiled by gcc 12 with -O2 (see mlkem_native/README.md), specialized by  *)
 (* the compiler to the first byte 0x1F of the padding as                     *)
-(* mlk_keccak_absorb_once_x4.constprop.0. It works as                        *)
-(* mlk_keccak_absorb_once does on one state, using                           *)
-(* mlkem_keccakf1600x4_xor_bytes and mlkem_keccakf1600x4_permute, except     *)
-(* that the states are not zeroed first: that is done by its callers. It is  *)
-(* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),      *)
-(* where it is at address 0x27a0, using the theorems for those functions at  *)
-(* 0x2d50 and 0x33a0 in the image.                                           *)
+(* mlk_keccak_absorb_once_x4.constprop.0. It works as mlk_keccak_absorb_once *)
+(* does on one state, using mlkem_keccakf1600x4_xor_bytes and                *)
+(* mlkem_keccakf1600x4_permute, except that the states are not zeroed first: *)
+(* that is done by its callers. It is verified in the whole image (see       *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for those          *)
+(* functions in the image.                                                   *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keccak_absorb_once_gcc12_O2.ml";;
@@ -25,97 +24,98 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    27a0: stp     x19, x20, [sp, #-96]!
-    27a4: mov     w19, w1
-    27a8: mov     x20, x6
-    27ac: adrp    x7, 1f000 <mlk_zetas+0x18c80>
-    27b0: ldr     x7, [x7, #4088]
-    27b4: stp     x21, x22, [sp, #16]
-    27b8: mov     x21, x2
-    27bc: stp     x23, x24, [sp, #32]
-    27c0: mov     x22, x3
-    27c4: mov     x24, x0
-    27c8: stp     x25, x26, [sp, #48]
-    27cc: mov     x23, x4
-    27d0: mov     x25, x19
-    27d4: stp     x27, x30, [sp, #64]
-    27d8: mov     x26, x5
-    27dc: ldr     x1, [x7]
-    27e0: str     x1, [sp, #88]
-    27e4: mov     x1, #0x0
-    27e8: mov     w1, #0x1f
-    27ec: strb    w1, [sp, #87]
-    27f0: cmp     x19, x6
-    27f4: b.hi    283c <mlk_keccak_absorb_once_x4.constprop.0+0x9c>
-    27f8: mov     x4, x26
-    27fc: mov     x3, x23
-    2800: mov     x2, x22
-    2804: mov     x1, x21
-    2808: mov     w6, w25
-    280c: mov     w5, #0x0
-    2810: mov     x0, x24
-    2814: bl      2d50 <mlkem_keccakf1600x4_xor_bytes>
-    2818: mov     x0, x24
-    281c: sub     x20, x20, x19
-    2820: bl      33a0 <mlkem_keccakf1600x4_permute>
-    2824: add     x26, x26, x19
-    2828: add     x23, x23, x19
-    282c: add     x22, x22, x19
-    2830: add     x21, x21, x19
-    2834: cmp     x20, x19
-    2838: b.cs    27f8 <mlk_keccak_absorb_once_x4.constprop.0+0x58>
-    283c: sub     w25, w25, #0x1
-    2840: mov     w27, w20
-    2844: cbnz    x20, 28c8 <mlk_keccak_absorb_once_x4.constprop.0+0x128>
-    2848: add     x19, sp, #0x57
-    284c: mov     w5, w27
-    2850: mov     x4, x19
-    2854: mov     x0, x24
-    2858: mov     x3, x19
-    285c: mov     x2, x19
-    2860: mov     x1, x19
-    2864: mov     w6, #0x1
-    2868: bl      2d50 <mlkem_keccakf1600x4_xor_bytes>
-    286c: mov     w5, w25
-    2870: mov     x0, x24
-    2874: mov     x4, x19
-    2878: mov     w7, #0xffffff80
-    287c: mov     x2, x4
-    2880: mov     x1, x4
-    2884: mov     x3, x4
-    2888: mov     w6, #0x1
-    288c: strb    w7, [sp, #87]
-    2890: bl      2d50 <mlkem_keccakf1600x4_xor_bytes>
-    2894: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    2898: ldr     x0, [x0, #4088]
-    289c: ldr     x2, [sp, #88]
-    28a0: ldr     x1, [x0]
-    28a4: subs    x2, x2, x1
-    28a8: mov     x1, #0x0
-    28ac: b.ne    2908 <mlk_keccak_absorb_once_x4.constprop.0+0x168>
-    28b0: ldp     x21, x22, [sp, #16]
-    28b4: ldp     x23, x24, [sp, #32]
-    28b8: ldp     x25, x26, [sp, #48]
-    28bc: ldp     x27, x30, [sp, #64]
-    28c0: ldp     x19, x20, [sp], #96
-    28c4: ret
-    28c8: mov     x4, x26
-    28cc: mov     x3, x23
-    28d0: mov     x2, x22
-    28d4: mov     x1, x21
-    28d8: mov     w6, w20
-    28dc: mov     x0, x24
-    28e0: mov     w5, #0x0
-    28e4: bl      2d50 <mlkem_keccakf1600x4_xor_bytes>
-    28e8: cmp     x20, w25, uxtw
-    28ec: b.ne    2848 <mlk_keccak_absorb_once_x4.constprop.0+0xa8>
-    28f0: ldrb    w7, [sp, #87]
-    28f4: add     x4, sp, #0x57
-    28f8: mov     w5, w20
-    28fc: mov     x0, x24
-    2900: orr     w7, w7, #0xffffff80
-    2904: b       287c <mlk_keccak_absorb_once_x4.constprop.0+0xdc>
-    2908: bl      830 <__stack_chk_fail@plt>
+    mlk_keccak_absorb_once_x4.constprop.0:
+        +0x0: stp     x19, x20, [sp, #-96]!
+        +0x4: mov     w19, w1
+        +0x8: mov     x20, x6
+        +0xc: adrp    x7, <page>
+       +0x10: ldr     x7, [x7, #4088]  // got_stack_chk_guard
+       +0x14: stp     x21, x22, [sp, #16]
+       +0x18: mov     x21, x2
+       +0x1c: stp     x23, x24, [sp, #32]
+       +0x20: mov     x22, x3
+       +0x24: mov     x24, x0
+       +0x28: stp     x25, x26, [sp, #48]
+       +0x2c: mov     x23, x4
+       +0x30: mov     x25, x19
+       +0x34: stp     x27, x30, [sp, #64]
+       +0x38: mov     x26, x5
+       +0x3c: ldr     x1, [x7]
+       +0x40: str     x1, [sp, #88]
+       +0x44: mov     x1, #0x0
+       +0x48: mov     w1, #0x1f
+       +0x4c: strb    w1, [sp, #87]
+       +0x50: cmp     x19, x6
+       +0x54: b.hi    <mlk_keccak_absorb_once_x4.constprop.0+0x9c>
+       +0x58: mov     x4, x26
+       +0x5c: mov     x3, x23
+       +0x60: mov     x2, x22
+       +0x64: mov     x1, x21
+       +0x68: mov     w6, w25
+       +0x6c: mov     w5, #0x0
+       +0x70: mov     x0, x24
+       +0x74: bl      <mlkem_keccakf1600x4_xor_bytes>
+       +0x78: mov     x0, x24
+       +0x7c: sub     x20, x20, x19
+       +0x80: bl      <mlkem_keccakf1600x4_permute>
+       +0x84: add     x26, x26, x19
+       +0x88: add     x23, x23, x19
+       +0x8c: add     x22, x22, x19
+       +0x90: add     x21, x21, x19
+       +0x94: cmp     x20, x19
+       +0x98: b.cs    <mlk_keccak_absorb_once_x4.constprop.0+0x58>
+       +0x9c: sub     w25, w25, #0x1
+       +0xa0: mov     w27, w20
+       +0xa4: cbnz    x20, <mlk_keccak_absorb_once_x4.constprop.0+0x128>
+       +0xa8: add     x19, sp, #0x57
+       +0xac: mov     w5, w27
+       +0xb0: mov     x4, x19
+       +0xb4: mov     x0, x24
+       +0xb8: mov     x3, x19
+       +0xbc: mov     x2, x19
+       +0xc0: mov     x1, x19
+       +0xc4: mov     w6, #0x1
+       +0xc8: bl      <mlkem_keccakf1600x4_xor_bytes>
+       +0xcc: mov     w5, w25
+       +0xd0: mov     x0, x24
+       +0xd4: mov     x4, x19
+       +0xd8: mov     w7, #0xffffff80
+       +0xdc: mov     x2, x4
+       +0xe0: mov     x1, x4
+       +0xe4: mov     x3, x4
+       +0xe8: mov     w6, #0x1
+       +0xec: strb    w7, [sp, #87]
+       +0xf0: bl      <mlkem_keccakf1600x4_xor_bytes>
+       +0xf4: adrp    x0, <page>
+       +0xf8: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+       +0xfc: ldr     x2, [sp, #88]
+      +0x100: ldr     x1, [x0]
+      +0x104: subs    x2, x2, x1
+      +0x108: mov     x1, #0x0
+      +0x10c: b.ne    <mlk_keccak_absorb_once_x4.constprop.0+0x168>
+      +0x110: ldp     x21, x22, [sp, #16]
+      +0x114: ldp     x23, x24, [sp, #32]
+      +0x118: ldp     x25, x26, [sp, #48]
+      +0x11c: ldp     x27, x30, [sp, #64]
+      +0x120: ldp     x19, x20, [sp], #96
+      +0x124: ret
+      +0x128: mov     x4, x26
+      +0x12c: mov     x3, x23
+      +0x130: mov     x2, x22
+      +0x134: mov     x1, x21
+      +0x138: mov     w6, w20
+      +0x13c: mov     x0, x24
+      +0x140: mov     w5, #0x0
+      +0x144: bl      <mlkem_keccakf1600x4_xor_bytes>
+      +0x148: cmp     x20, w25, uxtw
+      +0x14c: b.ne    <mlk_keccak_absorb_once_x4.constprop.0+0xa8>
+      +0x150: ldrb    w7, [sp, #87]
+      +0x154: add     x4, sp, #0x57
+      +0x158: mov     w5, w20
+      +0x15c: mov     x0, x24
+      +0x160: orr     w7, w7, #0xffffff80
+      +0x164: b       <mlk_keccak_absorb_once_x4.constprop.0+0xdc>
+      +0x168: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_EXEC =

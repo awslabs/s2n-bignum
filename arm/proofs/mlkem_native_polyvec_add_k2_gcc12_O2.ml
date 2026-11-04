@@ -9,8 +9,8 @@
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which calls mlkem_poly_add for each of the polynomials, the last time as  *)
 (* a tail call. It is verified in the whole image (see                       *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x46e0, using  *)
-(* the theorems for mlkem_poly_add at 0x41e0 in the image.                   *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for mlkem_poly_add *)
+(* in the image.                                                             *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_add_gcc12_O2.ml";;
@@ -18,16 +18,17 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    46e0: stp     x19, x20, [sp, #-32]!
-    46e4: mov     x19, x0
-    46e8: mov     x20, x1
-    46ec: str     x30, [sp, #16]
-    46f0: bl      41e0 <mlkem_poly_add>
-    46f4: ldr     x30, [sp, #16]
-    46f8: add     x1, x20, #0x200
-    46fc: add     x0, x19, #0x200
-    4700: ldp     x19, x20, [sp], #32
-    4704: b       41e0 <mlkem_poly_add>
+    mlkem512_polyvec_add:
+       +0x0: stp     x19, x20, [sp, #-32]!
+       +0x4: mov     x19, x0
+       +0x8: mov     x20, x1
+       +0xc: str     x30, [sp, #16]
+      +0x10: bl      <mlkem_poly_add>
+      +0x14: ldr     x30, [sp, #16]
+      +0x18: add     x1, x20, #0x200
+      +0x1c: add     x0, x19, #0x200
+      +0x20: ldp     x19, x20, [sp], #32
+      +0x24: b       <mlkem_poly_add>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_ADD_K2_GCC12_O2_EXEC =

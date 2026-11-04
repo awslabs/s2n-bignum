@@ -1701,8 +1701,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_SAFE = time prove
   ASSERT_CONCL_TAC full_spec THEN INVNTT_SAFE_TOP_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* The same code in the whole image, at address 0x4394, with the constants   *)
-(* at 0x6230 and the zetas at 0x6380 (see                                    *)
+(* The same code in the whole image, with the constants and the zetas (see   *)
 (* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
 (* ------------------------------------------------------------------------- *)
 

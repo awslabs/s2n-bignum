@@ -4,13 +4,13 @@
  *)
 
 (* ========================================================================= *)
-(* Forward number-theoretic transform of a vector of 3 polynomials.          *)
-(* This is the code for mlkem768_polyvec_ntt from mlkem-native's portable C  *)
+(* Forward number-theoretic transform of a vector of 3 polynomials. This is  *)
+(* the code for mlkem768_polyvec_ntt from mlkem-native's portable C          *)
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which calls mlkem_poly_ntt for each of the polynomials, the last time as  *)
 (* a tail call. It is verified in the whole image (see                       *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x5f00, using  *)
-(* the theorems for mlkem_poly_ntt at 0x42b4 in the image.                   *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for mlkem_poly_ntt *)
+(* in the image.                                                             *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_ntt_gcc12_O2.ml";;
@@ -18,14 +18,15 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    5f00: stp     x19, x30, [sp, #-16]!
-    5f04: mov     x19, x0
-    5f08: bl      42b4 <mlkem_poly_ntt>
-    5f0c: add     x0, x19, #0x200
-    5f10: bl      42b4 <mlkem_poly_ntt>
-    5f14: add     x0, x19, #0x400
-    5f18: ldp     x19, x30, [sp], #16
-    5f1c: b       42b4 <mlkem_poly_ntt>
+    mlkem768_polyvec_ntt:
+       +0x0: stp     x19, x30, [sp, #-16]!
+       +0x4: mov     x19, x0
+       +0x8: bl      <mlkem_poly_ntt>
+       +0xc: add     x0, x19, #0x200
+      +0x10: bl      <mlkem_poly_ntt>
+      +0x14: add     x0, x19, #0x400
+      +0x18: ldp     x19, x30, [sp], #16
+      +0x1c: b       <mlkem_poly_ntt>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_NTT_K3_GCC12_O2_EXEC =

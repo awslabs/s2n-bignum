@@ -13,9 +13,9 @@
 (* 32 bytes at coins) followed by that hash with mlkem_sha3_512, encrypts m  *)
 (* with r by mlkem512_indcpa_enc into the ciphertext, and writes K as the    *)
 (* shared secret. In both cases it zeroes its buffers. It is verified in the *)
-(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at       *)
-(* address 0x3db0, using the theorems for mlkem512_check_pk, mlkem_sha3_256, *)
-(* mlkem_sha3_512 and mlkem512_indcpa_enc in the image.                      *)
+(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems   *)
+(* for mlkem512_check_pk, mlkem_sha3_256, mlkem_sha3_512 and                 *)
+(* mlkem512_indcpa_enc in the image.                                         *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_check_pk_k2_gcc12_O2.ml";;
@@ -26,62 +26,63 @@ needs "arm/proofs/utils/mlkem_native_kem.ml";;
 
 (*** The code in the image:
 
-    3db0: stp     x19, x20, [sp, #-224]!
-    3db4: adrp    x4, 1f000 <mlk_zetas+0x18c80>
-    3db8: ldr     x4, [x4, #4088]
-    3dbc: stp     x21, x22, [sp, #16]
-    3dc0: add     x19, sp, #0x5f
-    3dc4: stp     x23, x24, [sp, #32]
-    3dc8: mov     x23, x1
-    3dcc: and     x19, x19, #0xffffffffffffffe0
-    3dd0: str     x30, [sp, #48]
-    3dd4: mov     x24, x0
-    3dd8: mov     x21, x2
-    3ddc: mov     x22, x3
-    3de0: ldr     x1, [x4]
-    3de4: str     x1, [sp, #216]
-    3de8: mov     x1, #0x0
-    3dec: mov     x0, x2
-    3df0: add     x20, x19, #0x40
-    3df4: bl      3a60 <mlkem512_check_pk>
-    3df8: cbz     w0, 3e40 <mlkem512_enc_derand+0x90>
-    3dfc: movi    v0.4s, #0x0
-    3e00: stp     q0, q0, [x19]
-    3e04: stp     q0, q0, [x19, #32]
-    3e08: stp     q0, q0, [x20]
-    3e0c: stp     q0, q0, [x20, #32]
-    3e10: adrp    x1, 1f000 <mlk_zetas+0x18c80>
-    3e14: ldr     x1, [x1, #4088]
-    3e18: ldr     x3, [sp, #216]
-    3e1c: ldr     x2, [x1]
-    3e20: subs    x3, x3, x2
-    3e24: mov     x2, #0x0
-    3e28: b.ne    3e8c <mlkem512_enc_derand+0xdc>
-    3e2c: ldp     x21, x22, [sp, #16]
-    3e30: ldp     x23, x24, [sp, #32]
-    3e34: ldr     x30, [sp, #48]
-    3e38: ldp     x19, x20, [sp], #224
-    3e3c: ret
-    3e40: ldp     q0, q1, [x22]
-    3e44: mov     x1, x21
-    3e48: add     x0, x19, #0x60
-    3e4c: mov     x2, #0x320
-    3e50: stp     q0, q1, [x20]
-    3e54: bl      2650 <mlkem_sha3_256>
-    3e58: mov     x1, x20
-    3e5c: mov     x0, x19
-    3e60: mov     x2, #0x40
-    3e64: bl      26f4 <mlkem_sha3_512>
-    3e68: mov     x2, x21
-    3e6c: mov     x0, x24
-    3e70: add     x3, x19, #0x20
-    3e74: mov     x1, x20
-    3e78: bl      3690 <mlkem512_indcpa_enc>
-    3e7c: cbnz    w0, 3dfc <mlkem512_enc_derand+0x4c>
-    3e80: ldp     q0, q1, [x19]
-    3e84: stp     q0, q1, [x23]
-    3e88: b       3dfc <mlkem512_enc_derand+0x4c>
-    3e8c: bl      830 <__stack_chk_fail@plt>
+    mlkem512_enc_derand:
+       +0x0: stp     x19, x20, [sp, #-224]!
+       +0x4: adrp    x4, <page>
+       +0x8: ldr     x4, [x4, #4088]  // got_stack_chk_guard
+       +0xc: stp     x21, x22, [sp, #16]
+      +0x10: add     x19, sp, #0x5f
+      +0x14: stp     x23, x24, [sp, #32]
+      +0x18: mov     x23, x1
+      +0x1c: and     x19, x19, #0xffffffffffffffe0
+      +0x20: str     x30, [sp, #48]
+      +0x24: mov     x24, x0
+      +0x28: mov     x21, x2
+      +0x2c: mov     x22, x3
+      +0x30: ldr     x1, [x4]
+      +0x34: str     x1, [sp, #216]
+      +0x38: mov     x1, #0x0
+      +0x3c: mov     x0, x2
+      +0x40: add     x20, x19, #0x40
+      +0x44: bl      <mlkem512_check_pk>
+      +0x48: cbz     w0, <mlkem512_enc_derand+0x90>
+      +0x4c: movi    v0.4s, #0x0
+      +0x50: stp     q0, q0, [x19]
+      +0x54: stp     q0, q0, [x19, #32]
+      +0x58: stp     q0, q0, [x20]
+      +0x5c: stp     q0, q0, [x20, #32]
+      +0x60: adrp    x1, <page>
+      +0x64: ldr     x1, [x1, #4088]  // got_stack_chk_guard
+      +0x68: ldr     x3, [sp, #216]
+      +0x6c: ldr     x2, [x1]
+      +0x70: subs    x3, x3, x2
+      +0x74: mov     x2, #0x0
+      +0x78: b.ne    <mlkem512_enc_derand+0xdc>
+      +0x7c: ldp     x21, x22, [sp, #16]
+      +0x80: ldp     x23, x24, [sp, #32]
+      +0x84: ldr     x30, [sp, #48]
+      +0x88: ldp     x19, x20, [sp], #224
+      +0x8c: ret
+      +0x90: ldp     q0, q1, [x22]
+      +0x94: mov     x1, x21
+      +0x98: add     x0, x19, #0x60
+      +0x9c: mov     x2, #0x320
+      +0xa0: stp     q0, q1, [x20]
+      +0xa4: bl      <mlkem_sha3_256>
+      +0xa8: mov     x1, x20
+      +0xac: mov     x0, x19
+      +0xb0: mov     x2, #0x40
+      +0xb4: bl      <mlkem_sha3_512>
+      +0xb8: mov     x2, x21
+      +0xbc: mov     x0, x24
+      +0xc0: add     x3, x19, #0x20
+      +0xc4: mov     x1, x20
+      +0xc8: bl      <mlkem512_indcpa_enc>
+      +0xcc: cbnz    w0, <mlkem512_enc_derand+0x4c>
+      +0xd0: ldp     q0, q1, [x19]
+      +0xd4: stp     q0, q1, [x23]
+      +0xd8: b       <mlkem512_enc_derand+0x4c>
+      +0xdc: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_ENC_DERAND_K2_GCC12_O2_EXEC =

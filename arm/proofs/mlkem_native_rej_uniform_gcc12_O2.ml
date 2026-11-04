@@ -935,8 +935,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_SAFE = prove
   DISCHARGE_MEMSAFE_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* The same code in the whole image, at address 0x4a90 (see                  *)
-(* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
+(* The same code in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml). *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;

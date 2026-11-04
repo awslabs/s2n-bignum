@@ -5,14 +5,13 @@
 
 (* ========================================================================= *)
 (* Inverse number-theoretic transform of a vector of 3 polynomials, with     *)
-(* conversion to Montgomery form.                                            *)
-(* This is the code for mlkem768_polyvec_invntt_tomont from mlkem-native's   *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md), which calls mlkem_poly_invntt_tomont for each    *)
-(* of the polynomials, the last time as a tail call. It is verified in the   *)
-(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at       *)
-(* address 0x5f20, using the theorems for mlkem_poly_invntt_tomont at 0x4394 *)
-(* in the image.                                                             *)
+(* conversion to Montgomery form. This is the code for                       *)
+(* mlkem768_polyvec_invntt_tomont from mlkem-native's portable C             *)
+(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
+(* which calls mlkem_poly_invntt_tomont for each of the polynomials, the     *)
+(* last time as a tail call. It is verified in the whole image (see          *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlkem_poly_invntt_tomont in the image.                                    *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_invntt_tomont_gcc12_O2.ml";;
@@ -20,14 +19,15 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    5f20: stp     x19, x30, [sp, #-16]!
-    5f24: mov     x19, x0
-    5f28: bl      4394 <mlkem_poly_invntt_tomont>
-    5f2c: add     x0, x19, #0x200
-    5f30: bl      4394 <mlkem_poly_invntt_tomont>
-    5f34: add     x0, x19, #0x400
-    5f38: ldp     x19, x30, [sp], #16
-    5f3c: b       4394 <mlkem_poly_invntt_tomont>
+    mlkem768_polyvec_invntt_tomont:
+       +0x0: stp     x19, x30, [sp, #-16]!
+       +0x4: mov     x19, x0
+       +0x8: bl      <mlkem_poly_invntt_tomont>
+       +0xc: add     x0, x19, #0x200
+      +0x10: bl      <mlkem_poly_invntt_tomont>
+      +0x14: add     x0, x19, #0x400
+      +0x18: ldp     x19, x30, [sp], #16
+      +0x1c: b       <mlkem_poly_invntt_tomont>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K3_GCC12_O2_EXEC =

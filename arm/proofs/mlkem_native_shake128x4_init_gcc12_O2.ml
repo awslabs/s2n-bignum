@@ -8,15 +8,15 @@
 (* mlkem_shake128x4_init from mlkem-native's portable C implementation       *)
 (* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which does      *)
 (* nothing, since the states are set by mlkem_shake128x4_absorb_once. It is  *)
-(* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),      *)
-(* where it is at address 0x2a00.                                            *)
+(* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml).      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    2a00: ret
+    mlkem_shake128x4_init:
+      +0x0: ret
  ***)
 
 let MLKEM_NATIVE_SHAKE128X4_INIT_GCC12_O2_EXEC =
