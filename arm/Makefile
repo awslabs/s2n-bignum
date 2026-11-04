@@ -582,6 +582,13 @@ AES_GCM_DEC_ALT_UTILS = proofs/utils/aes_gcm_dec_alt_common.ml \
                         proofs/utils/aes_xts_encrypt_spec.ml proofs/utils/aes_xts_decrypt_spec.ml
 aes_gcm/aes128_gcm_dec_alt.native: $(AES_GCM_DEC_ALT_UTILS)
 aes_gcm/aes256_gcm_dec_alt.native: $(AES_GCM_DEC_ALT_UTILS)
+# The two 8-way encrypt proofs are one proof for both key sizes,
+# arm/proofs/utils/aes_gcm_enc_alt_proof.ml, on the layer in
+# arm/proofs/utils/aes_gcm_enc_alt_common.ml.
+AES_GCM_ENC_ALT_UTILS = proofs/utils/aes_gcm_enc_alt_common.ml \
+                        proofs/utils/aes_gcm_enc_alt_proof.ml
+aes_gcm/aes128_gcm_enc_alt.native: $(AES_GCM_ENC_ALT_UTILS)
+aes_gcm/aes256_gcm_enc_alt.native: $(AES_GCM_ENC_ALT_UTILS)
 
 # Checks of the AES-GCM specification files under common/ that no proof
 # depends on, run once here rather than at every load by the AES-GCM proofs.
