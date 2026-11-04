@@ -505,6 +505,9 @@ let iclasses =
   "0x1011110001xxxx101001xxxxxxxxxx";
   "0x10111100001xxx101001xxxxxxxxxx";
 
+  (*** SHLL / SHLL2, including the reserved size 11 ***)
+  "0x101110xx100001001110xxxxxxxxxx";
+
   (*** SSHLL (make sure immh is nonzero) ***)
   "0x001111001xxxxx101001xxxxxxxxxx";
   "0x0011110001xxxx101001xxxxxxxxxx";
@@ -525,11 +528,11 @@ let iclasses =
   "001011110001xxxx000101xxxxxxxxxx"; (* q=0 *)
   "0010111100001xxx000101xxxxxxxxxx"; (* q=0 *)
 
-  (*** UZP1 ***)
-  "01001110xx0xxxxx000110xxxxxxxxxx";
+  (*** UZP1, 64-bit and 128-bit ***)
+  "0x001110xx0xxxxx000110xxxxxxxxxx";
 
-  (*** UZP2 ***)
-  "01001110xx0xxxxx010110xxxxxxxxxx";
+  (*** UZP2, 64-bit and 128-bit ***)
+  "0x001110xx0xxxxx010110xxxxxxxxxx";
 
   (*** XTN (q=0, low half) ***)
   "00001110xx100001001010xxxxxxxxxx";
