@@ -14,6 +14,8 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/poly_decompress_d10 \
   mlkem_native/gcc12_O3/poly_frommsg \
   mlkem_native/gcc12_O3/poly_reduce \
+  mlkem_native/gcc12_O3/poly_rej_uniform \
+  mlkem_native/gcc12_O3/poly_rej_uniform_x4 \
   mlkem_native/gcc12_O3/poly_sub \
   mlkem_native/gcc12_O3/poly_tomont \
   mlkem_native/gcc12_O3/polyvec_add_k2 \
@@ -28,6 +30,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/polyvec_tomont_k2 \
   mlkem_native/gcc12_O3/polyvec_tomont_k3 \
   mlkem_native/gcc12_O3/polyvec_tomont_k4 \
+  mlkem_native/gcc12_O3/rej_uniform \
   mlkem_native/gcc12_O3/shake128_init \
   mlkem_native/gcc12_O3/shake128_release \
   mlkem_native/gcc12_O3/shake128x4_init \
@@ -64,6 +67,10 @@ mlkem_native/gcc12_O3/poly_frommsg.native: \
 mlkem_native/gcc12_O3/poly_reduce.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/poly_rej_uniform.native: \
+  mlkem_native/gcc12_O3/rej_uniform.native
+mlkem_native/gcc12_O3/poly_rej_uniform_x4.native: \
+  mlkem_native/gcc12_O3/rej_uniform.native
 mlkem_native/gcc12_O3/poly_sub.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
@@ -105,6 +112,9 @@ mlkem_native/gcc12_O3/polyvec_tomont_k3.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/polyvec_tomont_k4.native: \
   mlkem_native/gcc12_O3/poly_tomont.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/rej_uniform.native: \
+  proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/shake128_init.native: \
   mlkem_native/gcc12_O3/libmlkem.native
