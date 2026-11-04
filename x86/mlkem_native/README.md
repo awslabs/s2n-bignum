@@ -436,3 +436,19 @@ of 8 after the start of the destination; the tactics for it are in
 memory safety state that their events depend only on the addresses and on
 rho, as for the key generation of K-PKE, and that rho is the end of the
 encapsulation key.
+
+`mlkem512_dec`, `mlkem768_dec` and `mlkem1024_dec` are the decapsulation,
+including the input check of FIPS 203: if the decapsulation key `dk` and
+the ciphertext `c` pass it (`mlkem_decaps_check`), they return 0 and write
+the shared secret of `mlkem_decaps_internal mlkem<n> dk c`, and otherwise
+they return -5. They are verified in the image with the same specifications
+as on AArch64 apart from the stack and DF, with the same hypotheses as the
+encryption, for the reencryption, and without the contracts for `memset`
+and `memcpy` of AArch64, since gcc inlines them here as `rep stosq` and
+`rep movsq`. The comparison of the ciphertexts, 16 bytes at a time with an
+SSE accumulator, and the conditional move of the shared secret, one byte at
+a time, are loops, which the proofs handle with invariants, as on AArch64,
+using the lemmas and tactics of `../proofs/utils/mlkem_native_kem.ml`.
+Their theorems of constant time and memory safety state that their events
+depend only on the addresses and on the encapsulation key and its hash in
+the decapsulation key, not on the secret key, z or the ciphertext.

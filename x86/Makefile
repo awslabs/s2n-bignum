@@ -458,6 +458,9 @@ MLKEM_NATIVE_IMAGE_PROOFS = \
   mlkem_native/mlkem_native_check_sk_k2_gcc12_O2 \
   mlkem_native/mlkem_native_check_sk_k3_gcc12_O2 \
   mlkem_native/mlkem_native_check_sk_k4_gcc12_O2 \
+  mlkem_native/mlkem_native_dec_k2_gcc12_O2 \
+  mlkem_native/mlkem_native_dec_k3_gcc12_O2 \
+  mlkem_native/mlkem_native_dec_k4_gcc12_O2 \
   mlkem_native/mlkem_native_enc_derand_k2_gcc12_O2 \
   mlkem_native/mlkem_native_enc_derand_k3_gcc12_O2 \
   mlkem_native/mlkem_native_enc_derand_k4_gcc12_O2 \
@@ -673,6 +676,33 @@ mlkem_native/mlkem_native_check_sk_k3_gcc12_O2.native: \
   mlkem_native/mlkem_native_sha3_256_gcc12_O2.native
 mlkem_native/mlkem_native_check_sk_k4_gcc12_O2.native: \
   mlkem_native/mlkem_native_sha3_256_gcc12_O2.native
+mlkem_native/mlkem_native_dec_k2_gcc12_O2.native: \
+  mlkem_native/mlkem_native_check_sk_k2_gcc12_O2.native \
+  mlkem_native/mlkem_native_indcpa_dec_k2_gcc12_O2.native \
+  mlkem_native/mlkem_native_indcpa_enc_k2_gcc12_O2.native \
+  mlkem_native/mlkem_native_sha3_512_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake256_gcc12_O2.native \
+  proofs/utils/mlkem_native_fips203.ml \
+  proofs/utils/mlkem_native_indcpa.ml \
+  proofs/utils/mlkem_native_kem.ml
+mlkem_native/mlkem_native_dec_k3_gcc12_O2.native: \
+  mlkem_native/mlkem_native_check_sk_k3_gcc12_O2.native \
+  mlkem_native/mlkem_native_indcpa_dec_k3_gcc12_O2.native \
+  mlkem_native/mlkem_native_indcpa_enc_k3_gcc12_O2.native \
+  mlkem_native/mlkem_native_sha3_512_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake256_gcc12_O2.native \
+  proofs/utils/mlkem_native_fips203.ml \
+  proofs/utils/mlkem_native_indcpa.ml \
+  proofs/utils/mlkem_native_kem.ml
+mlkem_native/mlkem_native_dec_k4_gcc12_O2.native: \
+  mlkem_native/mlkem_native_check_sk_k4_gcc12_O2.native \
+  mlkem_native/mlkem_native_indcpa_dec_k4_gcc12_O2.native \
+  mlkem_native/mlkem_native_indcpa_enc_k4_gcc12_O2.native \
+  mlkem_native/mlkem_native_sha3_512_gcc12_O2.native \
+  mlkem_native/mlkem_native_shake256_gcc12_O2.native \
+  proofs/utils/mlkem_native_fips203.ml \
+  proofs/utils/mlkem_native_indcpa.ml \
+  proofs/utils/mlkem_native_kem.ml
 mlkem_native/mlkem_native_enc_derand_k2_gcc12_O2.native: \
   mlkem_native/mlkem_native_check_pk_k2_gcc12_O2.native \
   mlkem_native/mlkem_native_indcpa_enc_k2_gcc12_O2.native \

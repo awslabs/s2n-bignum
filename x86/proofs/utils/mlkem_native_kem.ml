@@ -521,3 +521,130 @@ let KEM_MEMCPY_DISCHARGE_TAC a =
   ABBREV_TAC(mk_eq(`md:num`,md)) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ASSUME(mk_eq(md,`md:num`))]) THEN
   DISCHARGE_MEMACCESS_INBOUNDS_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* The decapsulation: the comparison of the ciphertexts, 16 bytes at a time  *)
+(* with an OR accumulator, as for AArch64 (KEM_BYTES128, KEM_MOD_STEP and    *)
+(* KEM_OR_STEP, with the operands of the OR in the order of POR), and the    *)
+(* conditional move of 32 bytes, one byte at a time with a mask from the     *)
+(* comparison (KEM_SPLIT1, KEM_MOD_BYTE, KEM_DIV_BYTE and KEM_VAL_BYTE). For *)
+(* the legacy SSE moves, KEM_SUBWORD_JOIN_128 gives the XMM part of the      *)
+(* values of YMM registers, and KEM_MOD256 puts the zero extensions of bytes *)
+(* in a form for BITBLAST. For a memory operand at base + index, the address *)
+(* is computed as word_add a (word(1 * n)) when the index register is word   *)
+(* n, and KEM_INDEX_TAC and KEM_INDEX1_TAC restate the assumptions about the *)
+(* 128-bit words at offsets 16 * i and the bytes at offsets i in that form.  *)
+(* KEM_CMOV_TEST is the test of the loop of the conditional move.            *)
+(* ------------------------------------------------------------------------- *)
+
+let KEM_BYTES128 = prove
+ (`!a l k n s:x86state.
+        read (memory :> bytes(a,l)) s = n /\ 16 * k + 16 <= l
+        ==> read (memory :> bytes128(word_add a (word(16 * k)))) s =
+            word((n DIV 2 EXP (128 * k)) MOD 2 EXP 128)`,
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[BYTES128_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES;
+              VAL_WORD; DIMINDEX_128] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[ARITH_RULE `128 * k = 8 * 16 * k`; READ_BYTES_DIV] THEN
+  REWRITE_TAC[ARITH_RULE `340282366920938463463374607431768211456 =
+                          2 EXP (8 * 16)`; READ_BYTES_MOD; MOD_MOD_REFL] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  ASM_ARITH_TAC);;
+
+let KEM_MOD_STEP = prove
+ (`!n m k. n MOD 2 EXP (128 * (k + 1)) = m MOD 2 EXP (128 * (k + 1)) <=>
+           n MOD 2 EXP (128 * k) = m MOD 2 EXP (128 * k) /\
+           (n DIV 2 EXP (128 * k)) MOD 2 EXP 128 =
+           (m DIV 2 EXP (128 * k)) MOD 2 EXP 128`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[ARITH_RULE `128 * (k + 1) = 128 * k + 128`; EXP_ADD] THEN
+  REWRITE_TAC[MOD_MULT_MOD] THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) LEXICOGRAPHIC_EQ o lhand o snd) THEN
+  REWRITE_TAC[MOD_LT_EQ; EXP_EQ_0; ARITH_EQ] THEN
+  DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[CONJ_ACI]);;
+
+let KEM_OR_STEP = prove
+ (`!q:int128 a b.
+        word_or q
+         (word_xor (word(a MOD 340282366920938463463374607431768211456))
+                   (word(b MOD 340282366920938463463374607431768211456))) =
+        word 0 <=>
+        q = word 0 /\ b MOD 2 EXP 128 = a MOD 2 EXP 128`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[WORD_OR_EQ_0; WORD_XOR_EQ_0] THEN
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD; DIMINDEX_128] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL] THEN
+  REWRITE_TAC[VAL_EQ; CONJ_ACI; EQ_SYM_EQ]);;
+
+let KEM_SPLIT1 = prove
+ (`!a l x s:x86state.
+        read (memory :> bytes(a,l + 1)) s = x
+        ==> read (memory :> bytes8 a) s = word(x MOD 256) /\
+            read (memory :> bytes(word_add a (word 1),l)) s = x DIV 256`,
+  REPEAT GEN_TAC THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[ARITH_RULE `256 = 2 EXP (8 * 1)`] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_MOD; READ_BYTES_DIV] THEN
+  REWRITE_TAC[ARITH_RULE `MIN (l + 1) 1 = 1`;
+              ARITH_RULE `(l + 1) - 1 = l`] THEN
+  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE; READ_MEMORY_BYTES_1; WORD_VAL]);;
+
+let KEM_MOD_BYTE = prove
+ (`!x i. x MOD 2 EXP (8 * (i + 1)) =
+         x MOD 2 EXP (8 * i) +
+         2 EXP (8 * i) * ((x DIV 2 EXP (8 * i)) MOD 256)`,
+  REWRITE_TAC[ARITH_RULE `8 * (i + 1) = 8 * i + 8`; EXP_ADD; MOD_MULT_MOD] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC);;
+
+let KEM_DIV_BYTE = prove
+ (`!x i. x DIV 2 EXP (8 * (i + 1)) = (x DIV 2 EXP (8 * i)) DIV 256`,
+  REWRITE_TAC[ARITH_RULE `8 * (i + 1) = 8 * i + 8`; EXP_ADD; DIV_DIV] THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+let KEM_VAL_BYTE = prove
+ (`!n. n MOD 256 = val(word(n MOD 256):byte)`,
+  REWRITE_TAC[VAL_WORD; DIMINDEX_8] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[MOD_MOD_REFL]);;
+
+let KEM_SUBWORD_JOIN_128 = prove
+ (`!h:int128 l:int128.
+    word_subword (word_join h l:int256) (0,128):int128 = l`,
+  CONV_TAC WORD_BLAST);;
+
+let KEM_MOD256 = prove
+ (`!x:N word. word(val x MOD 256):M word = word_zx(word_zx x:byte)`,
+  REWRITE_TAC[word_zx; VAL_WORD; DIMINDEX_8] THEN CONV_TAC NUM_REDUCE_CONV);;
+
+let KEM_INDEX_TAC =
+  let pth = ARITH_RULE `16 * i = 1 * 16 * i` in
+  RULE_ASSUM_TAC(fun th ->
+    let c = concl th in
+    if can (term_match []
+          `read (memory :> bytes128 (word_add a (word n))) s = v`) c &&
+       free_in `i:num` (lhand c)
+    then GEN_REWRITE_RULE (LAND_CONV o ONCE_DEPTH_CONV) [pth] th else th);;
+
+let KEM_INDEX1_TAC =
+  let ith = ARITH_RULE `i = 1 * i` in
+  let conv t = if t = `i:num` then ith else failwith "KEM_INDEX1_TAC" in
+  RULE_ASSUM_TAC(fun th ->
+    let c = concl th in
+    if can (term_match []
+          `read (memory :> bytes8 (word_add a (word n))) s = v`) c &&
+       free_in `i:num` (lhand c)
+    then CONV_RULE (LAND_CONV(ONCE_DEPTH_CONV conv)) th else th);;
+
+let KEM_CMOV_TEST = prove
+ (`!i. i < 32
+       ==> (val(word_add (word i) (word 18446744073709551585):int64) = 0 <=>
+            ~(i + 1 < 32))`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE `i < 32 ==> i < 18446744073709551616`]
+  THEN ASM_CASES_TAC `i + 1 < 32` THEN ASM_REWRITE_TAC[] THENL
+   [ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+     `i + 1 < 32 ==> i + 18446744073709551585 < 18446744073709551616`]
+    THEN ARITH_TAC;
+    SUBGOAL_THEN `i = 31` SUBST1_TAC THENL
+     [ASM_ARITH_TAC; CONV_TAC NUM_REDUCE_CONV]]);;
