@@ -62,7 +62,7 @@ let MLKEM_NATIVE_POLY_SUB_CLANG17_O3_EXEC =
 (* The check for overlap. For arrays r and b of 512 bytes, the code takes    *)
 (* the vectorized path if b + 512 <= r or r + 512 <= b, computed modulo      *)
 (* 2^64. When the arrays do not overlap, one of these holds: if neither did, *)
-(* the start of one array would be within the other, also when an array     *)
+(* the start of one array would be within the other, also when an array      *)
 (* wraps around the end of the address space.                                *)
 (* ------------------------------------------------------------------------- *)
 
