@@ -970,12 +970,12 @@ let ALT_ZERO_KEY_RULE name cipher_def ks_def h0 th =
 (* ------------------------------------------------------------------------- *)
 
 let GCM_WB_BLOCKS_VALID = prove
- (`!bit_len:int64.
-      val bit_len MOD 128 = 0
-      ==> val bit_len = 128 * gcm_wb_blocks bit_len`,
+ (`!len_bits:int64.
+      val len_bits MOD 128 = 0
+      ==> val len_bits = 128 * gcm_wb_blocks len_bits`,
   REWRITE_TAC[gcm_wb_blocks] THEN REPEAT STRIP_TAC THEN
   ASM_REWRITE_TAC[] THEN
-  MP_TAC(SPECL [`val(bit_len:int64)`; `128`]
+  MP_TAC(SPECL [`val(len_bits:int64)`; `128`]
     (CONJUNCT2 DIVISION_SIMP)) THEN
   ASM_ARITH_TAC);;
 

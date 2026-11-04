@@ -883,7 +883,7 @@ let WORD_SUBWORD_SUBWORD = prove(
 (* ------------------------------------------------------------------------- *)
 (* GHASH bridge lemmas: helpers for showing that the Karatsuba + Prop3       *)
 (* reduction the assembly computes equals the spec-level polyval_dot /       *)
-(* ghash_polyval_acc, so that the symbolic Q19 result at the xi_p store can  *)
+(* ghash_polyval_acc, so that the symbolic Q19 result at the tag_p store can *)
 (* be bridged to the postcondition.                                          *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1110,7 +1110,7 @@ let DISCARD_COUNTER_ONLY_TAC =
 (* GHASH bridge close.  At the bridge state of a one-block tail the assembly *)
 (* holds in Q19 the Karatsuba+Prop3 GHASH of word_xor (brev xi) (brev ct)    *)
 (* with key byteswap128 h (the key table holds H twisted, and the GHASH key  *)
-(* is byteswap128 (read htbl_p)).  GMULT_FULL_CORRECT_BA, with               *)
+(* is byteswap128 (read htable_p)).  GMULT_FULL_CORRECT_BA, with             *)
 (*   b := byteswap128 h,                                                     *)
 (* makes the lane operands match; the helpers below abbreviate the Karatsuba *)
 (* pmul limbs to opaque atoms, merge atoms that are equal up to argument     *)
@@ -1422,9 +1422,9 @@ let gcm_dec_ghash_blocks = new_definition
  `gcm_dec_ghash_blocks (len:num) (x:byte list) : int128 list =
     gcm_dec_blocks_from 0 (len DIV 16) x`;;
 
-(* The final GHASH accumulator Xi written to xi_p: byte-reverse in, run
+(* The final GHASH accumulator Xi written to tag_p: byte-reverse in, run
    ghash_polyval_acc over the byte-reversed block list keyed by byteswap128 h,
-   byte-reverse out.  This is the xi_p postcondition of the band bodies. *)
+   byte-reverse out.  This is the tag_p postcondition of the band bodies. *)
 let gcm_dec_final_xi = new_definition
  `gcm_dec_final_xi (len:num) (x:byte list) (xi:int128) (h:int128) : int128 =
     word_bytereverse
@@ -1558,7 +1558,7 @@ let Q19_BREVXI = prove
   CONV_TAC WORD_BLAST);;
 
 (* ========================================================================= *)
-(* Band lemmas for the 3..8-block whole-blocks tails (bit_len = 128*N).      *)
+(* Band lemmas for the 3..8-block whole-blocks tails (len_bits = 128*N).     *)
 (* ========================================================================= *)
 
 (* ---- shared N>=3 band machinery ---- *)
@@ -2157,7 +2157,7 @@ let AND_MASK_16NBLK = prove
   CONV_TAC WORD_REDUCE_CONV);;
 
 let wb_front_frame_tm = `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-      MAYCHANGE [memory :> bytes(out_p:int64, 16 * nblk); memory :> bytes(xi_p:int64, 16);
+      MAYCHANGE [memory :> bytes(out_p:int64, 16 * nblk); memory :> bytes(tag_p:int64, 16);
                  memory :> bytes(ivec_p:int64, 16); memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
       MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                  Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31]`;;
@@ -2236,7 +2236,7 @@ let wbp_mem128 base i =
 
 let wbp_htable_reads =
   conjuncts(rhs(concl((REWRITE_CONV[htable_mem_dec] THENC TOP_DEPTH_CONV let_CONV)
-    `htable_mem_dec h htbl_p s`)));;
+    `htable_mem_dec h htable_p s`)));;
 
 (* NZCV after cmp a, #n and after cmp a, b *)
 let wbp_cmpi_flags a n = map (subst [a,`aaa:int64`; mk_small_numeral n,`nnn:num`])
@@ -2405,7 +2405,7 @@ let arith_128k k = ARITH_RULE(mk_eq(mk_binop `( * ):num->num->num` `128` (mk_sma
 let fdbl_at k =
   let fs = subst [mk_small_numeral(16*k),`sss:num`]
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-     MAYCHANGE [memory :> bytes(out_p:int64, sss); memory :> bytes(xi_p:int64, 16);
+     MAYCHANGE [memory :> bytes(out_p:int64, sss); memory :> bytes(tag_p:int64, 16);
                 memory :> bytes(ivec_p:int64, 16); memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
      MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                 Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31]` in
@@ -2419,12 +2419,12 @@ let mk_habbrev j =
 
 (* The 4 seam memory cells the weak precondition drops, which the tail never
    reads (proving the back-legs without them checks this): [sp+72] is the
-   zero the front stores next to the reduction constant at [sp+64]; xi_p and
+   zero the front stores next to the reduction constant at [sp+64]; tag_p and
    ivec_p are consumed only through Q19, Q16 (the tag) and Q0..Q7, Q30 (the
    counter); in_p block 0 arrives pre-loaded in Q9. *)
 let wbn_tail_drop_lhs = [
   `read (memory :> bytes64 (word_add stackpointer (word 72))) (s:armstate)`;
-  `read (memory :> bytes128 xi_p) (s:armstate)`;
+  `read (memory :> bytes128 tag_p) (s:armstate)`;
   `read (memory :> bytes128 ivec_p) (s:armstate)`;
   `read (memory :> bytes128 in_p) (s:armstate)`];;
 
@@ -2677,7 +2677,7 @@ let DISCARD_OLDSTATE_KEEPGHALL_TAC s =
     | Comb(a,b) -> union (unbound_statevars_of_read bound a) (unbound_statevars_of_read bound b)
     | Abs(vv,t) -> unbound_statevars_of_read (vv::bound) t | _ -> [] in
   let rec mentions_htbl t = match t with
-      Var("htbl_p",_) -> true
+      Var("htable_p",_) -> true
     | Comb(a,b) -> mentions_htbl a || mentions_htbl b | Abs(_,t2) -> mentions_htbl t2 | _ -> false in
   let rec mentions_ghreg t = match t with
       Comb(Comb(Const("read",_),cmp),_) ->
@@ -2893,8 +2893,8 @@ let s42_h3k_tm = s42_mk_join (s42_km (s42_hpow 4)) (s42_km (s42_hpow 3));;
 let s42_cph_tm i = subst [mk_small_numeral(16*i),`nnn:num`]
   `bytes_to_int128 (SUB_LIST (nnn,16) (ibytes:byte list))`;;
 
-let s42_ptr_args = [`pc:num`;`stackpointer:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
-                `in_p:int64`;`key_p:int64`;`htbl_p:int64`];;
+let s42_ptr_args = [`pc:num`;`stackpointer:int64`;`out_p:int64`;`tag_p:int64`;`ivec_p:int64`;
+                `in_p:int64`;`key_p:int64`;`htable_p:int64`];;
 
 (* ------------------------------------------------------------------------- *)
 (* The readable band theorems and the <=8-block dispatch theorem.            *)
@@ -2913,10 +2913,10 @@ let s42_ptr_args = [`pc:num`;`stackpointer:int64`;`out_p:int64`;`xi_p:int64`;`iv
 (*      SP 800-38D nist_ghash under the free NIST hash key H, with           *)
 (*      byteswap128 h = ghash_twist H.                                       *)
 (* The eight AESn_GCM_DEC_ALT_{1..8}BLOCK statements are written out         *)
-(* literally, as the specification.  DISPATCH covers bit_len = 128 * nblk    *)
+(* literally, as the specification.  DISPATCH covers len_bits = 128 * nblk   *)
 (* for 1 <= nblk <= 8; longer inputs are the nblk > 8 proof below, and       *)
-(* bit_len = 0 and the non-multiples of 128, which return 0 without touching *)
-(* memory, are handled in the subroutine theorems further below.             *)
+(* len_bits = 0 and the non-multiples of 128, which return 0 without         *)
+(* touching memory, are handled in the subroutine theorems further below.    *)
 (* ------------------------------------------------------------------------- *)
 
 (* ---- step 1: input bridge (byte_list_at -> the whole-buffer read) ---- *)
@@ -3856,9 +3856,9 @@ let NUM_OF_BYTELIST_EQ_WORDLIST = prove
 
 (* the three side conditions of the tail legs, at the whole-buffer length *)
 let wbn_prep_to_end_extra_clauses =
-  [`nonoverlapping (out_p:int64,16 * nblk) (xi_p:int64,16)`;
+  [`nonoverlapping (out_p:int64,16 * nblk) (tag_p:int64,16)`;
    `nonoverlapping (out_p:int64,16 * nblk) (ivec_p:int64,16)`;
-   `nonoverlapping (xi_p:int64,16) (ivec_p:int64,16)`];;
+   `nonoverlapping (tag_p:int64,16) (ivec_p:int64,16)`];;
 
 (* ------------------------------------------------------------------------- *)
 (* The tag fold and the output forall.                                       *)
@@ -3867,7 +3867,7 @@ let wbn_prep_to_end_extra_clauses =
 (* band's post:                                                              *)
 (*   - PC = pc+4508, the core exit;                                          *)
 (*   - the last r output stores, at out_p + 128*(k+1) + 16*i (i < r);        *)
-(*   - the tag at xi_p: the caught-up accumulator continued over the r new   *)
+(*   - the tag at tag_p: the caught-up accumulator continued over the r new  *)
 (*     blocks.                                                               *)
 (* It does not have the first 8*(k+1) output stores, which the seam post     *)
 (* carries as its output forall.  The full-nblk contract needs               *)
@@ -4086,11 +4086,11 @@ let GCM_CTR_INC_ITER_NIST_IVEC = prove
 (* The exported contracts, in the shared AES-GCM vocabulary.                 *)
 (*                                                                           *)
 (* In each kernel proof WBN_DEC_VALID_CALL_CORRECT (the AAPCS64 wrapper at   *)
-(* bit_len = 128 * nblk) is lifted from the spine                            *)
+(* len_bits = 128 * nblk) is lifted from the spine                           *)
 (* WBN_DEC_SUBROUTINE_BYTELIST by WBN_EXPORT_FROM_SPINE_TAC: the key words,  *)
 (* the GHASH key and the counter block are pinned to the FIPS-197 / NIST     *)
 (* convention and the input and output are restated per block.  The kernel's *)
-(* NOIBT_SUBROUTINE_CORRECT theorem (any bit_len) adds the reject path of    *)
+(* NOIBT_SUBROUTINE_CORRECT theorem (any len_bits) adds the reject path of   *)
 (* the entry guard to WBN_DEC_VALID_CALL_CORRECT.  These are about the       *)
 (* trimmed code; the SUBROUTINE_CORRECT theorem about the full code follows  *)
 (* from the NOIBT one by ARM_ADD_IBT_RULE.  c is the free counter of data    *)
@@ -4112,10 +4112,10 @@ let WB_SUBSUMED_ANTISYM = prove
   REWRITE_TAC[subsumed; FUN_EQ_THM] THEN MESON_TAC[]);;
 
 let WB_CORE_FRAME_EQ = prove
- (`!stackpointer out_p xi_p ivec_p nblk.
+ (`!stackpointer out_p tag_p ivec_p nblk.
      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
       MAYCHANGE
-      [memory :> bytes (out_p,16 * nblk); memory :> bytes (xi_p,16);
+      [memory :> bytes (out_p,16 * nblk); memory :> bytes (tag_p,16);
        memory :> bytes (ivec_p,16);
        memory :> bytes (word_add stackpointer (word 64),16)] ,,
       MAYCHANGE
@@ -4124,7 +4124,7 @@ let WB_CORE_FRAME_EQ = prove
        Q28; Q29; Q30; Q31]) =
      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
       MAYCHANGE
-      [memory :> bytes (out_p,16 * nblk); memory :> bytes (xi_p,16);
+      [memory :> bytes (out_p,16 * nblk); memory :> bytes (tag_p,16);
        memory :> bytes (ivec_p,16);
        memory :> bytes (word_add stackpointer (word 64),16)] ,,
       MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15])`,
@@ -4647,27 +4647,27 @@ let DISCHARGE_WB_COMPOSED_TAIL_TAC =
    be fixed by whichever residue closed first. ---- *)
 
 let core_scaffold =
- `\(in_p:int64) (key_p:int64) (htbl_p:int64) (out_p:int64) (xi_p:int64)
+ `\(in_p:int64) (key_p:int64) (htable_p:int64) (out_p:int64) (tag_p:int64)
    (ivec_p:int64) (nblk:num) (pc:num) (stackpointer:int64).
-     if nblk = 1 then f_ev_1 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
-     else if nblk = 2 then f_ev_2 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
-     else if nblk = 3 then f_ev_3 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
-     else if nblk = 4 then f_ev_4 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
+     if nblk = 1 then f_ev_1 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
+     else if nblk = 2 then f_ev_2 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
+     else if nblk = 3 then f_ev_3 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
+     else if nblk = 4 then f_ev_4 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
      else if nblk <= 8 then
        APPEND
          ((if nblk = 5 then f_ev_5
            else if nblk = 6 then f_ev_6
            else if nblk = 7 then f_ev_7
-           else f_ev_8) in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer)
-         (f_ev_58_front in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer)
-     else if nblk = 9 then f_ev_9 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
-     else if nblk = 10 then f_ev_10 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
-     else if nblk = 11 then f_ev_11 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
-     else if nblk = 12 then f_ev_12 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
-     else if nblk = 13 then f_ev_13 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
-     else if nblk = 14 then f_ev_14 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
-     else if nblk = 15 then f_ev_15 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
-     else if nblk = 16 then f_ev_16 in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer
+           else f_ev_8) in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer)
+         (f_ev_58_front in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer)
+     else if nblk = 9 then f_ev_9 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
+     else if nblk = 10 then f_ev_10 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
+     else if nblk = 11 then f_ev_11 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
+     else if nblk = 12 then f_ev_12 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
+     else if nblk = 13 then f_ev_13 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
+     else if nblk = 14 then f_ev_14 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
+     else if nblk = 15 then f_ev_15 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
+     else if nblk = 16 then f_ev_16 in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer
      else
        APPEND
          ((if (nblk - 9) MOD 8 = 0 then f_ev_t0
@@ -4677,11 +4677,11 @@ let core_scaffold =
            else if (nblk - 9) MOD 8 = 4 then f_ev_t4
            else if (nblk - 9) MOD 8 = 5 then f_ev_t5
            else if (nblk - 9) MOD 8 = 6 then f_ev_t6
-           else f_ev_t7) in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer)
+           else f_ev_t7) in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer)
          (APPEND
            (ENUMERATEL ((nblk - 9) DIV 8)
-             (\i. f_ev_loop in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer i))
-           (f_ev_front in_p key_p htbl_p out_p xi_p ivec_p nblk pc stackpointer))
+             (\i. f_ev_loop in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer i))
+           (f_ev_front in_p key_p htable_p out_p tag_p ivec_p nblk pc stackpointer))
      :(uarch_event)list`;;
 
 (* ---- >=17 entry prep: establish the bounds and collapse the 16-way ladder to
@@ -4786,7 +4786,7 @@ let CORE_SAFE_OPEN_TAC =
   VAL_INT64_TAC `16 * nblk` THEN VAL_INT64_TAC `128 * nblk`;;
 
 (* ---- the ABI wrapper.  The stock ARM_ADD_RETURN_STACK_TAC is not used: the
-   exported spec quantifies over the C argument bit_len, while the core below
+   exported spec quantifies over the C argument len_bits, while the core below
    takes word (128 * nblk) with 1 <= nblk, and the prologue contains the entry
    guard, whose zero and non-multiple-of-128 branches return before the core.
    So the crossing is hand-rolled (ARBITRARY_WRAPPER_SAFE_TAC below). ---- *)

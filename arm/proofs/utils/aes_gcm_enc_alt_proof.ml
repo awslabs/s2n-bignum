@@ -734,11 +734,11 @@ let SETUP_RECON_TAC_GEN : tactic =
 (* ========================================================================= *)
 
 let AES_GCM_ENC_ALT_SETUP_GEN = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
      tag0 nonce c rk inblock nb k pc.
     ~(k = 0) /\
     8 * (k + 1) <= nb /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     8 * (k + 1) < nb /\ nb <= 8 * (k + 2) /\
     end_p = word_add in_p (word (128 * (k + 1))) /\
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
@@ -753,13 +753,13 @@ let AES_GCM_ENC_ALT_SETUP_GEN = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -859,11 +859,11 @@ let AES_GCM_ENC_ALT_SETUP_GEN = prove
 (* without the flag conjunct.                                                *)
 (* ------------------------------------------------------------------------- *)
 let AES_GCM_ENC_ALT_SETUP_G1 = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
      tag0 nonce c rk inblock nb k pc.
     k = 0 /\
     8 * (k + 1) <= nb /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     8 * (k + 1) < nb /\ nb <= 8 * (k + 2) /\
     end_p = word_add in_p (word (128 * (k + 1))) /\
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
@@ -878,13 +878,13 @@ let AES_GCM_ENC_ALT_SETUP_G1 = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -3882,11 +3882,11 @@ let LENGTH_WB_MC =
   (REWRITE_CONV [fst AES_GCM_ENC_ALT_EXEC]) (kterm `LENGTH tmc`);;
 
 let AES_GCM_ENC_ALT_GEN_CORRECT = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
      tag0 nonce c rk inblock nb k pc.
     ~(k = 0) /\
     8 * (k + 1) <= nb /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     8 * (k + 1) < nb /\ nb <= 8 * (k + 2) /\
     val in_p + 16 * nb < 2 EXP 63 /\
     end_p = word_add in_p (word (128 * (k + 1))) /\
@@ -3905,13 +3905,13 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -4014,7 +4014,7 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
       ALL_TAC] THEN
     MP_TAC(ISPECL
      [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-      `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
+      `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
       `end_p:int64`; `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
       `inblock:num->int128`; `nb:num`; `k:num`; `pc:num`]
      AES_GCM_ENC_ALT_SETUP_GEN) THEN
@@ -4292,11 +4292,11 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
 (* buffer bound `val in_p + 16*nb < 2 EXP 63` is carried for TAIL_REM.       *)
 (* ========================================================================= *)
 let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
      tag0 nonce c rk inblock nb k pc.
     k = 0 /\
     8 * (0 + 1) <= nb /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     8 * (0 + 1) < nb /\ nb <= 8 * (0 + 2) /\
     val in_p + 16 * nb < 2 EXP 63 /\
     end_p = word_add in_p (word (128 * (0 + 1))) /\
@@ -4315,13 +4315,13 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -4411,7 +4411,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
       ALL_TAC] THEN
     MP_TAC(ISPECL
      [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-      `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
+      `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
       `end_p:int64`; `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
       `inblock:num->int128`; `nb:num`; `0`; `pc:num`]
      AES_GCM_ENC_ALT_SETUP_G1) THEN
@@ -4653,10 +4653,10 @@ let SETUP0_DISPATCH : tactic = fun (asl,w as gl) ->
   else ASM_REWRITE_TAC[] gl;;
 
 let AES_GCM_ENC_ALT_SETUP0 = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      tag0 nonce c rk inblock nb pc.
     1 <= nb /\ nb <= 8 /\ ~(nb = 2) /\ ~(nb = 4) /\ ~(nb = 1) /\ ~(nb = 3) /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -4669,13 +4669,13 @@ let AES_GCM_ENC_ALT_SETUP0 = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -4769,10 +4769,10 @@ let AES_GCM_ENC_ALT_SETUP0 = prove
 (* join of GEN_CORRECT.                                                      *)
 (* ========================================================================= *)
 let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      tag0 nonce c rk inblock nb pc.
     1 <= nb /\ nb <= 8 /\ ~(nb = 2) /\ ~(nb = 4) /\ ~(nb = 1) /\ ~(nb = 3) /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -4788,13 +4788,13 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -4944,7 +4944,7 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
       ASM_REWRITE_TAC[];
       MP_TAC(ISPECL
        [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-        `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
+        `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
         `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
         `inblock:num->int128`; `nb:num`; `pc:num`]
        AES_GCM_ENC_ALT_SETUP0) THEN
@@ -5010,10 +5010,10 @@ let FAST2_MID_D2 : tactic = fun (asl,w as gl) ->
          else (REFL_TAC ORELSE CONV_TAC WORD_BLAST)))) gl
   else (REWRITE_TAC[htable_mem_8; htable_mem_4] THEN ASM_REWRITE_TAC[]) gl;;
 let AES_GCM_ENC_ALT_FAST2 = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      tag0 nonce c rk inblock nb pc.
     nb = 2 /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -5029,13 +5029,13 @@ let AES_GCM_ENC_ALT_FAST2 = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -5149,10 +5149,10 @@ let AES_GCM_ENC_ALT_FAST2 = prove
 (* tail start, with the keystreams as preconditions) into FAST4_TAIL.        *)
 (* ========================================================================= *)
 let AES_GCM_ENC_ALT_FAST4 = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      tag0 nonce c rk inblock nb pc.
     nb = 4 /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -5168,13 +5168,13 @@ let AES_GCM_ENC_ALT_FAST4 = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -5299,10 +5299,10 @@ let AES_GCM_ENC_ALT_FAST4 = prove
 (* the keystream Q0 as precondition) into FAST1_TAIL.                        *)
 (* ========================================================================= *)
 let AES_GCM_ENC_ALT_FAST1 = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      tag0 nonce c rk inblock nb pc.
     nb = 1 /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -5318,13 +5318,13 @@ let AES_GCM_ENC_ALT_FAST1 = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -5428,10 +5428,10 @@ let AES_GCM_ENC_ALT_FAST1 = prove
 (* with the 3 keystreams as preconditions) into FAST3_TAIL.                  *)
 (* ========================================================================= *)
 let AES_GCM_ENC_ALT_FAST3 = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      tag0 nonce c rk inblock nb pc.
     nb = 3 /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -5447,13 +5447,13 @@ let AES_GCM_ENC_ALT_FAST3 = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -5571,10 +5571,10 @@ let AES_GCM_ENC_ALT_FAST3 = prove
      ASM_REWRITE_TAC[])]);;
 
 let AES_GCM_ENC_ALT_CORRECT = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+ (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      tag0 nonce c rk inblock nb pc.
     1 <= nb /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -5590,13 +5590,13 @@ let AES_GCM_ENC_ALT_CORRECT = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
              word 0xc200000000000000 /\
@@ -5634,7 +5634,7 @@ let AES_GCM_ENC_ALT_CORRECT = prove
      [(* nb = 1 (16B): the fast1 early-dispatch path *)
       MP_TAC(ISPECL
        [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-        `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
+        `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
         `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
         `inblock:num->int128`; `nb:num`; `pc:num`]
        AES_GCM_ENC_ALT_FAST1) THEN
@@ -5645,7 +5645,7 @@ let AES_GCM_ENC_ALT_CORRECT = prove
      [(* nb = 2 (32B): the fast2 early-dispatch path *)
       MP_TAC(ISPECL
        [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-        `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
+        `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
         `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
         `inblock:num->int128`; `nb:num`; `pc:num`]
        AES_GCM_ENC_ALT_FAST2) THEN
@@ -5656,7 +5656,7 @@ let AES_GCM_ENC_ALT_CORRECT = prove
        [(* nb = 3 (48B): the fast3 early-dispatch path *)
         MP_TAC(ISPECL
          [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-          `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
+          `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
           `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
           `inblock:num->int128`; `nb:num`; `pc:num`]
          AES_GCM_ENC_ALT_FAST3) THEN
@@ -5668,7 +5668,7 @@ let AES_GCM_ENC_ALT_CORRECT = prove
        [(* nb = 4 (64B): the fast4 early-dispatch path *)
         MP_TAC(ISPECL
          [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-          `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
+          `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
           `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
           `inblock:num->int128`; `nb:num`; `pc:num`]
          AES_GCM_ENC_ALT_FAST4) THEN
@@ -5678,7 +5678,7 @@ let AES_GCM_ENC_ALT_CORRECT = prove
         (* nb in {5,6,7,8}: the generic 8-block path via SETUP0_TAIL *)
         MP_TAC(ISPECL
          [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-          `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
+          `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
           `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
           `inblock:num->int128`; `nb:num`; `pc:num`]
          AES_GCM_ENC_ALT_SETUP0_TAIL) THEN
@@ -5688,7 +5688,7 @@ let AES_GCM_ENC_ALT_CORRECT = prove
     (* ===== g = 1  (nb 9..16): FIXED_CORRECT_G1 (k=0) ===== *)
     MP_TAC(ISPECL
      [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-      `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
+      `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
       `word_add in_p (word (128 * (0 + 1))):int64`;
       `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
       `inblock:num->int128`; `nb:num`; `0`; `pc:num`]
@@ -5699,7 +5699,7 @@ let AES_GCM_ENC_ALT_CORRECT = prove
     (* ===== g >= 2  (nb >= 17): GEN_CORRECT (k = groups-1) ===== *)
     MP_TAC(ISPECL
      [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
-      `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `bit_len:num`;
+      `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
       `word_add in_p (word (128 * (((nb - 1) DIV 8 - 1) + 1))):int64`;
       `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
       `inblock:num->int128`; `nb:num`; `(nb - 1) DIV 8 - 1`; `pc:num`]
@@ -5733,7 +5733,7 @@ let AES_GCM_ENC_ALT_CORRECT = prove
 (*     add x10,sp,#0x40 ; 0x38 = the core entry (CORRECT);                   *)
 (*   epilogue 0x1154 mov x0,x9 ; ldp d8..d15 ; add sp,sp,#0x50 ; 0x116c ret; *)
 (*   reject 0x1170 mov w0,#0 ; ret (L256_enc_ret).                           *)
-(* Entry C ABI: X0=in_p X1=bit_len X2=out_p X3=tag_p X4=ivec_p X5=key_p      *)
+(* Entry C ABI: X0=in_p X1=len_bits X2=out_p X3=tag_p X4=ivec_p X5=key_p     *)
 (* X6=htable_p; the prologue moves X4->X16 and X5->X11 and sets              *)
 (* x9 = X1 >> 3.                                                             *)
 (*                                                                           *)
@@ -5956,10 +5956,10 @@ let prove_fast_safe n =
   prove
    (kterm(vsubst [mk_small_numeral n,`n:num`]
      `exists f_events.
-   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      nb pc.
     nb = n /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -5975,13 +5975,13 @@ let prove_fast_safe n =
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read events s = e)
       (\s. read PC s = word (pc + pc_end) /\
@@ -6012,10 +6012,10 @@ let AES_GCM_ENC_ALT_FAST4_SAFE = prove_fast_safe 4;;
 (* nb in {5,6,7,8}.                                                          *)
 let AES_GCM_ENC_ALT_SETUP0_SAFE = prove
  (kterm `exists f_events.
-   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      nb pc.
     1 <= nb /\ nb <= 8 /\ ~(nb = 1) /\ ~(nb = 2) /\ ~(nb = 3) /\ ~(nb = 4) /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -6031,13 +6031,13 @@ let AES_GCM_ENC_ALT_SETUP0_SAFE = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read events s = e)
       (\s. read PC s = word (pc + pc_tail) /\
@@ -6321,10 +6321,10 @@ let AES_GCM_ENC_ALT_TAIL_REM_SAFE = prove
 (* depends on nb (= r).                                                      *)
 let AES_GCM_ENC_ALT_SETUP0_TAIL_SAFE = prove
  (kterm `exists f_events.
-   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      nb pc.
     1 <= nb /\ nb <= 8 /\ ~(nb = 1) /\ ~(nb = 2) /\ ~(nb = 3) /\ ~(nb = 4) /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -6340,13 +6340,13 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL_SAFE = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read events s = e)
       (\s. read PC s = word (pc + pc_end) /\
@@ -6385,7 +6385,7 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL_SAFE = prove
     MP_TAC (REWRITE_RULE[APPEND]
       (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
               `ivec_p:int64`; `key_p:int64`; `htable_p:int64`; `stackpointer:int64`;
-              `bit_len:num`; `nb:num`; `pc:num`; `[]:(uarch_event)list`] th))) THEN
+              `len_bits:num`; `nb:num`; `pc:num`; `[]:(uarch_event)list`] th))) THEN
   ANTS_TAC THENL
    [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
     ASM_REWRITE_TAC[];
@@ -6499,11 +6499,11 @@ let AES_GCM_ENC_ALT_PREPRETAIL_GEN_SAFE = prove
 (* via SETUP_RECON_TAC_GEN.                                                  *)
 let AES_GCM_ENC_ALT_SETUP_G1_SAFE = prove
  (kterm `exists f_events.
-   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
      nb k pc.
     k = 0 /\
     8 * (k + 1) <= nb /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     8 * (k + 1) < nb /\ nb <= 8 * (k + 2) /\
     end_p = word_add in_p (word (128 * (k + 1))) /\
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
@@ -6521,13 +6521,13 @@ let AES_GCM_ENC_ALT_SETUP_G1_SAFE = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read events s = e)
       (\s. read PC s = word (pc + pc_prepretail) /\
@@ -6705,11 +6705,11 @@ let AES_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE = prove
 (* bigstep).  f_events takes nb.                                             *)
 let AES_GCM_ENC_ALT_FIXED_CORRECT_G1_SAFE = prove
  (kterm `exists f_events.
-   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
      nb k pc.
     k = 0 /\
     8 * (k + 1) <= nb /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     8 * (k + 1) < nb /\ nb <= 8 * (k + 2) /\
     val in_p + 16 * nb < 2 EXP 63 /\
     end_p = word_add in_p (word (128 * (k + 1))) /\
@@ -6728,13 +6728,13 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1_SAFE = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read events s = e)
       (\s. read PC s = word (pc + pc_end) /\
@@ -6773,7 +6773,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1_SAFE = prove
     MP_TAC (REWRITE_RULE[APPEND]
       (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
               `ivec_p:int64`; `key_p:int64`; `htable_p:int64`; `stackpointer:int64`;
-              `bit_len:num`; `end_p:int64`; `nb:num`; `k:num`;
+              `len_bits:num`; `end_p:int64`; `nb:num`; `k:num`;
               `pc:num`; `[]:(uarch_event)list`] th))) THEN
   ANTS_TAC THENL
    [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
@@ -6816,11 +6816,11 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1_SAFE = prove
 (* the MAIN_LOOP entry registers.                                            *)
 let AES_GCM_ENC_ALT_SETUP_GEN_SAFE = prove
  (kterm `exists f_events.
-   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
      nb k pc.
     ~(k = 0) /\
     8 * (k + 1) <= nb /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     8 * (k + 1) < nb /\ nb <= 8 * (k + 2) /\
     end_p = word_add in_p (word (128 * (k + 1))) /\
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
@@ -6838,13 +6838,13 @@ let AES_GCM_ENC_ALT_SETUP_GEN_SAFE = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read events s = e)
       (\s. read PC s = word (pc + pc_loop) /\
@@ -7169,11 +7169,11 @@ let AES_GCM_ENC_ALT_LOOP_TAIL_SAFE = prove
 (* f_events takes nb and k.                                                  *)
 let AES_GCM_ENC_ALT_GEN_CORRECT_SAFE = prove
  (kterm `exists f_events.
-   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len end_p
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
      nb k pc.
     ~(k = 0) /\
     8 * (k + 1) <= nb /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     8 * (k + 1) < nb /\ nb <= 8 * (k + 2) /\
     end_p = word_add in_p (word (128 * (k + 1))) /\
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
@@ -7192,13 +7192,13 @@ let AES_GCM_ENC_ALT_GEN_CORRECT_SAFE = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read events s = e)
       (\s. read PC s = word (pc + pc_end) /\
@@ -7237,7 +7237,7 @@ let AES_GCM_ENC_ALT_GEN_CORRECT_SAFE = prove
     MP_TAC (REWRITE_RULE[APPEND]
       (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
               `ivec_p:int64`; `key_p:int64`; `htable_p:int64`; `stackpointer:int64`;
-              `bit_len:num`; `end_p:int64`; `nb:num`; `k:num`;
+              `len_bits:num`; `end_p:int64`; `nb:num`; `k:num`;
               `pc:num`; `[]:(uarch_event)list`] th))) THEN
   ANTS_TAC THENL
    [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
@@ -7278,10 +7278,10 @@ let AES_GCM_ENC_ALT_GEN_CORRECT_SAFE = prove
 (* Entry pc+0x38, exit pc+0x1154.                                            *)
 let AES_GCM_ENC_ALT_SAFE = prove
  (kterm `exists f_events.
-   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
      nb pc.
     1 <= nb /\
-    bit_len = 128 * nb /\
+    len_bits = 128 * nb /\
     val in_p + 16 * nb < 2 EXP 63 /\
     128 * nb < 2 EXP 64 /\
     nonoverlapping (out_p, 16 * nb)
@@ -7297,13 +7297,13 @@ let AES_GCM_ENC_ALT_SAFE = prove
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
            read X0 s = in_p /\
-           read X1 s = word bit_len /\
+           read X1 s = word len_bits /\
            read X2 s = out_p /\
            read X3 s = tag_p /\
            read X16 s = ivec_p /\
            read X6 s = htable_p /\
            read X11 s = key_p /\
-           read X9 s = word (bit_len DIV 8) /\
+           read X9 s = word (len_bits DIV 8) /\
            read X10 s = word_add stackpointer (word 0x40) /\
            read events s = e)
       (\s. read PC s = word (pc + pc_end) /\
@@ -7341,7 +7341,7 @@ let AES_GCM_ENC_ALT_SAFE = prove
   MAP_EVERY X_GEN_TAC
    [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
     `ivec_p:int64`; `key_p:int64`; `htable_p:int64`; `stackpointer:int64`;
-    `bit_len:num`; `nb:num`; `pc:num`] THEN
+    `len_bits:num`; `nb:num`; `pc:num`] THEN
   STRIP_TAC THEN BETA_TAC THEN
   SUBGOAL_THEN `nb <= 8 \/ (9 <= nb /\ nb <= 16) \/ 17 <= nb` MP_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN

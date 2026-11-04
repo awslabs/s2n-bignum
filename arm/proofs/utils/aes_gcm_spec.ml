@@ -109,14 +109,14 @@ let htable_mem_8 = new_definition
 
 (* ------------------------------------------------------------------------- *)
 (* The number of blocks a whole-blocks kernel processes for a bit length     *)
-(* bit_len (the C argument len_bits).  The 8-way unrolled kernels take whole *)
-(* blocks only: for any bit_len that is not a multiple of 128 they process   *)
-(* nothing and return 0, and a zero bit_len is zero blocks either way.       *)
+(* len_bits (the C argument).  The 8-way unrolled kernels take whole blocks  *)
+(* only: for any len_bits that is not a multiple of 128 they process nothing *)
+(* and return 0, and a zero len_bits is zero blocks either way.              *)
 (* ------------------------------------------------------------------------- *)
 
 let gcm_wb_blocks = new_definition
- `gcm_wb_blocks (bit_len:int64) =
-    if val bit_len MOD 128 = 0 then val bit_len DIV 128 else 0`;;
+ `gcm_wb_blocks (len_bits:int64) =
+    if val len_bits MOD 128 = 0 then val len_bits DIV 128 else 0`;;
 
 (* ------------------------------------------------------------------------- *)
 (* The counter blocks and the output blocks in terms of NIST SP 800-38D      *)

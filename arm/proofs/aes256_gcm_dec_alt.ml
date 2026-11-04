@@ -8,14 +8,14 @@
 (* kernel aes256_gcm_dec_alt.                                                *)
 (*                                                                           *)
 (* Contract (AES256_GCM_DEC_ALT_SUBROUTINE_CORRECT).  The kernel processes   *)
-(* nblk = gcm_wb_blocks bit_len whole 16-byte blocks (none when bit_len is   *)
+(* nblk = gcm_wb_blocks len_bits whole 16-byte blocks (none when len_bits is *)
 (* not a multiple of 128) and returns 16 * nblk.  Given the FIPS-197 key     *)
-(* schedule rk at key_p, the key table htable_mem_8 at htbl_p for the GHASH  *)
-(* key                                                                       *)
+(* schedule rk at key_p, the key table htable_mem_8 at htable_p for the      *)
+(* GHASH key                                                                 *)
 (*   H = aes256_cipher (word 0) rk                                           *)
 (* and the counter block ctr_block nonce c at ivec_p, output block j is      *)
 (* input block j XOR aes_ctr_block aes256_cipher c nonce rk j, the tag at    *)
-(* xi_p becomes nist_ghash H over the input (ciphertext) blocks, continued   *)
+(* tag_p becomes nist_ghash H over the input (ciphertext) blocks, continued  *)
 (* from the old tag, and ivec_p advances to ctr_block nonce (nblk + c); the  *)
 (* tag and the counter block are stored byte-reversed.  The buffers must be  *)
 (* disjoint, and val in_p + 16 * nblk < 2 EXP 63 since the kernel compares   *)
@@ -28,7 +28,7 @@
 (* code follow by ARM_ADD_IBT_RULE.                                          *)
 (*                                                                           *)
 (* Proof structure.  The entry guard (0x0..0x8) returns 0 for an empty or    *)
-(* invalid bit_len, and the prologue (0xc..0x18) saves d8-d15.  The core     *)
+(* invalid len_bits, and the prologue (0xc..0x18) saves d8-d15.  The core    *)
 (* runs from pc + 0x1c to its exit pc + 4508 (0x119c,                        *)
 (* L256_dec_frame_restore); its theorem is the spine WBN_DEC_CORE_BYTELIST,  *)
 (* which splits on nblk:                                                     *)
@@ -2613,9 +2613,9 @@ let INPUT_BYTES_TO_BYTE128_LANES = prove
 
 let wb_front_pre_tm = `\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
           read PC s = word (pc + 0x1c) /\ read SP s = stackpointer /\
-          C_ARGUMENTS [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+          C_ARGUMENTS [in_p; word (128 * nblk); out_p; tag_p; ivec_p; key_p; htable_p] s /\
           read (memory :> bytes (in_p, 16 * nblk)) s = num_of_bytelist ibytes /\
-          read (memory :> bytes128 xi_p) s = xi /\
+          read (memory :> bytes128 tag_p) s = xi /\
           read (memory :> bytes128 ivec_p) s = ctr0 /\
           read (memory :> bytes128 key_p) s = k0 /\
           read (memory :> bytes128 (word_add key_p (word 16))) s = k1 /\
@@ -2632,7 +2632,7 @@ let wb_front_pre_tm = `\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_t
           read (memory :> bytes128 (word_add key_p (word 192))) s = k12 /\
           read (memory :> bytes128 (word_add key_p (word 208))) s = k13 /\
           read (memory :> bytes128 (word_add key_p (word 224))) s = k14 /\
-          htable_mem_dec h htbl_p s`;;
+          htable_mem_dec h htable_p s`;;
 
 (* The band 5 <= nblk <= 8: WB_FRONT_BUF, stated with these hypotheses, is used
    only by prove_band for bands 5..8 (bands 1..4 take the b.le at step 8 to the
@@ -2643,22 +2643,22 @@ let wb_front_hyps_tm = `5 <= nblk /\ nblk <= 8 /\ LENGTH (ibytes:byte list) = 16
     aligned 16 stackpointer /\
     nonoverlapping (word pc, LENGTH aes256_gcm_dec_alt_tmc) (stackpointer:int64, 80) /\
     nonoverlapping (word pc, LENGTH aes256_gcm_dec_alt_tmc) (out_p:int64, 16 * nblk) /\
-    nonoverlapping (word pc, LENGTH aes256_gcm_dec_alt_tmc) (xi_p:int64, 16) /\
+    nonoverlapping (word pc, LENGTH aes256_gcm_dec_alt_tmc) (tag_p:int64, 16) /\
     nonoverlapping (word pc, LENGTH aes256_gcm_dec_alt_tmc) (ivec_p:int64, 16) /\
     nonoverlapping (ivec_p, 16) (in_p:int64, 16 * nblk) /\
     nonoverlapping (ivec_p, 16) (key_p:int64, 240) /\
-    nonoverlapping (ivec_p, 16) (htbl_p:int64, 192) /\
+    nonoverlapping (ivec_p, 16) (htable_p:int64, 192) /\
     nonoverlapping (in_p, 16 * nblk) (stackpointer, 80) /\
     nonoverlapping (key_p, 240) (stackpointer, 80) /\
-    nonoverlapping (htbl_p, 192) (stackpointer, 80) /\
+    nonoverlapping (htable_p, 192) (stackpointer, 80) /\
     nonoverlapping (ivec_p, 16) (stackpointer, 80) /\
-    nonoverlapping (xi_p, 16) (in_p, 16 * nblk) /\
-    nonoverlapping (xi_p, 16) (key_p, 240) /\
-    nonoverlapping (xi_p, 16) (htbl_p, 192) /\
-    nonoverlapping (xi_p, 16) (stackpointer, 80)`;;
+    nonoverlapping (tag_p, 16) (in_p, 16 * nblk) /\
+    nonoverlapping (tag_p, 16) (key_p, 240) /\
+    nonoverlapping (tag_p, 16) (htable_p, 192) /\
+    nonoverlapping (tag_p, 16) (stackpointer, 80)`;;
 
-let wb_front_vars = [`pc:num`;`stackpointer:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
-            `in_p:int64`;`key_p:int64`;`htbl_p:int64`;`nblk:num`;`ibytes:byte list`;
+let wb_front_vars = [`pc:num`;`stackpointer:int64`;`out_p:int64`;`tag_p:int64`;`ivec_p:int64`;
+            `in_p:int64`;`key_p:int64`;`htable_p:int64`;`nblk:num`;`ibytes:byte list`;
             `xi:int128`;`ctr0:int128`;`k0:int128`;`k1:int128`;`k2:int128`;`k3:int128`;
             `k4:int128`;`k5:int128`;`k6:int128`;`k7:int128`;`k8:int128`;`k9:int128`;
             `k10:int128`;`k11:int128`;`k12:int128`;`k13:int128`;`k14:int128`;`h:int128`];;
@@ -2720,10 +2720,10 @@ let wb_front_postcond = wbp_post
    `read SP s = stackpointer`;
    `read X1 s = word (128 * nblk)`;
    `read X2 s = out_p`;
-   `read X3 s = xi_p`;
-   `read X6 s = htbl_p`;
+   `read X3 s = tag_p`;
+   `read X6 s = htable_p`;
    `read (memory :> bytes (in_p,16 * nblk)) s = num_of_bytelist ibytes`;
-   `read (memory :> bytes128 xi_p) s = xi`;
+   `read (memory :> bytes128 tag_p) s = xi`;
    `read (memory :> bytes128 ivec_p) s = ctr0`] @
   wbp_key_reads @ wbp_htable_reads @
   [mk_eq(wbp_mem128 `in_p:int64` 0, mk_cph 0)] @ wbp_ctx `xi:int128` @
@@ -2870,10 +2870,10 @@ let wbn_front_prebranch_postcond = wbp_post
    `read X0 s = in_p`;
    `read X1 s = word (128 * nblk)`;
    `read X2 s = out_p`;
-   `read X3 s = xi_p`;
-   `read X6 s = htbl_p`;
+   `read X3 s = tag_p`;
+   `read X6 s = htable_p`;
    `read (memory :> bytes (in_p,16 * nblk)) s = num_of_bytelist ibytes`;
-   `read (memory :> bytes128 xi_p) s = xi`;
+   `read (memory :> bytes128 tag_p) s = xi`;
    `read (memory :> bytes128 ivec_p) s = ctr0`] @
   wbp_key_reads @ wbp_htable_reads @
   [mk_eq(wbp_mem128 `in_p:int64` 0, mk_cph 0)] @ wbp_ctx `xi:int128` @
@@ -2945,32 +2945,32 @@ let mk_band_goal k =
      aligned 16 stackpointer /\
      nonoverlapping (word pc, LENGTH aes256_gcm_dec_alt_tmc) (stackpointer:int64, 80) /\
      nonoverlapping (word pc, LENGTH aes256_gcm_dec_alt_tmc) (out_p:int64, sss) /\
-     nonoverlapping (word pc, LENGTH aes256_gcm_dec_alt_tmc) (xi_p:int64, 16) /\
+     nonoverlapping (word pc, LENGTH aes256_gcm_dec_alt_tmc) (tag_p:int64, 16) /\
      nonoverlapping (word pc, LENGTH aes256_gcm_dec_alt_tmc) (ivec_p:int64, 16) /\
-     nonoverlapping (out_p, sss) (xi_p, 16) /\
+     nonoverlapping (out_p, sss) (tag_p, 16) /\
      nonoverlapping (out_p, sss) (ivec_p, 16) /\
-     nonoverlapping (xi_p, 16) (ivec_p, 16) /\
+     nonoverlapping (tag_p, 16) (ivec_p, 16) /\
      nonoverlapping (ivec_p, 16) (in_p:int64, sss) /\
      nonoverlapping (ivec_p, 16) (key_p:int64, 240) /\
-     nonoverlapping (ivec_p, 16) (htbl_p:int64, 192) /\
+     nonoverlapping (ivec_p, 16) (htable_p:int64, 192) /\
      nonoverlapping (in_p, sss) (stackpointer, 80) /\
      nonoverlapping (key_p, 240) (stackpointer, 80) /\
-     nonoverlapping (htbl_p, 192) (stackpointer, 80) /\
+     nonoverlapping (htable_p, 192) (stackpointer, 80) /\
      nonoverlapping (ivec_p, 16) (stackpointer, 80) /\
-     nonoverlapping (xi_p, 16) (in_p, sss) /\
-     nonoverlapping (xi_p, 16) (key_p, 240) /\
-     nonoverlapping (xi_p, 16) (htbl_p, 192) /\
-     nonoverlapping (xi_p, 16) (stackpointer, 80) /\
+     nonoverlapping (tag_p, 16) (in_p, sss) /\
+     nonoverlapping (tag_p, 16) (key_p, 240) /\
+     nonoverlapping (tag_p, 16) (htable_p, 192) /\
+     nonoverlapping (tag_p, 16) (stackpointer, 80) /\
      nonoverlapping (out_p, sss) (in_p, sss) /\
      nonoverlapping (out_p, sss) (key_p, 240) /\
-     nonoverlapping (out_p, sss) (htbl_p, 192) /\
+     nonoverlapping (out_p, sss) (htable_p, 192) /\
      nonoverlapping (out_p, sss) (stackpointer, 80)` in
   let pre = subst [n16,`sss:num`; n128,`bbb:num`]
     `\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
         read PC s = word (pc + 0x1c) /\ read SP s = stackpointer /\
-        C_ARGUMENTS [in_p; word bbb; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+        C_ARGUMENTS [in_p; word bbb; out_p; tag_p; ivec_p; key_p; htable_p] s /\
         read (memory :> bytes (in_p, sss)) s = num_of_bytelist ibytes /\
-        read (memory :> bytes128 xi_p) s = xi /\
+        read (memory :> bytes128 tag_p) s = xi /\
         read (memory :> bytes128 ivec_p) s = ctr0 /\
         read (memory :> bytes128 key_p) s = k0 /\
         read (memory :> bytes128 (word_add key_p (word 16))) s = k1 /\
@@ -2987,12 +2987,12 @@ let mk_band_goal k =
         read (memory :> bytes128 (word_add key_p (word 192))) s = k12 /\
         read (memory :> bytes128 (word_add key_p (word 208))) s = k13 /\
         read (memory :> bytes128 (word_add key_p (word 224))) s = k14 /\
-        htable_mem_dec h htbl_p s` in
+        htable_mem_dec h htable_p s` in
   let pc_post = `read PC s = word (pc + 4508)` in
   let x9_post = subst [n16,`sss:num`] `read X9 s = word sss` in
   let outs = map mk_out_conj (0--(k-1)) in
   let xi_post = subst [mk_ghash_list k,`lll:int128 list`]
-    `read (memory :> bytes128 xi_p) s =
+    `read (memory :> bytes128 tag_p) s =
      word_bytereverse
        (ghash_polyval_acc (byteswap128 h) (word_bytereverse xi) (lll:int128 list))` in
   (* The counter write-back at band exit, in spine form
@@ -3003,7 +3003,7 @@ let mk_band_goal k =
     end_itlist (curry mk_conj) (pc_post :: x9_post :: outs @ [xi_post; ivec_post])) in
   let frame = subst [n16,`sss:num`]
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-     MAYCHANGE [memory :> bytes(out_p:int64, sss); memory :> bytes(xi_p:int64, 16);
+     MAYCHANGE [memory :> bytes(out_p:int64, sss); memory :> bytes(tag_p:int64, 16);
                 memory :> bytes(ivec_p:int64, 16);
                 memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
      MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -3015,8 +3015,8 @@ let mk_band_goal k =
 
 (* front lemma instantiated at nblk:=k, arithmetic normalized *)
 let wbf_at k = REWRITE_RULE[arith_16k k; arith_128k k]
-  (SPECL [`pc:num`;`stackpointer:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
-          `in_p:int64`;`key_p:int64`;`htbl_p:int64`; mk_small_numeral k;
+  (SPECL [`pc:num`;`stackpointer:int64`;`out_p:int64`;`tag_p:int64`;`ivec_p:int64`;
+          `in_p:int64`;`key_p:int64`;`htable_p:int64`; mk_small_numeral k;
           `ibytes:byte list`;`xi:int128`;`ctr0:int128`;`k0:int128`;`k1:int128`;
           `k2:int128`;`k3:int128`;`k4:int128`;`k5:int128`;`k6:int128`;`k7:int128`;
           `k8:int128`;`k9:int128`;`k10:int128`;`k11:int128`;`k12:int128`;
@@ -3073,7 +3073,7 @@ let WB_PREP_TAC k =
 (* both prove_band (below) and the nblk > 8 recomposition (WBN_PREP_TO_END,  *)
 (* further below).                                                           *)
 (*                                                                           *)
-(* The 5 dropped cells (sp+72, xi_p, ivec_p, in_p block 0, X1) are never     *)
+(* The 5 dropped cells (sp+72, tag_p, ivec_p, in_p block 0, X1) are never    *)
 (* read by the tail code, [0xef0,0x119c) and the exact-8 drain               *)
 (* [0x11b4,0x1334).  X9 is not read either, but it is kept generically as    *)
 (* return_value, so that the theorems record that the byte count reaches the *)
@@ -3308,39 +3308,39 @@ let BRIDGE_CLOSE_FULL_TAC =
    product (s34) to the reduce, where BRIDGE_CLOSE_FULL_TAC proves Q19 to be
    the one-block GHASH (gval). *)
 let WB_FUSED_1BLOCK = prove(
- `!pc stackpointer out_p xi_p ivec_p in_p key_p htbl_p
+ `!pc stackpointer out_p tag_p ivec_p in_p key_p htable_p
     cph xi ctr0 k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 h hk.
     aligned 16 stackpointer /\
     nonoverlapping (word pc, 5908) (stackpointer:int64, 80) /\
     nonoverlapping (word pc, 5908) (out_p:int64, 16) /\
-    nonoverlapping (word pc, 5908) (xi_p:int64, 16) /\
+    nonoverlapping (word pc, 5908) (tag_p:int64, 16) /\
     nonoverlapping (word pc, 5908) (ivec_p:int64, 16) /\
-    nonoverlapping (out_p, 16) (xi_p, 16) /\
+    nonoverlapping (out_p, 16) (tag_p, 16) /\
     nonoverlapping (out_p, 16) (ivec_p, 16) /\
-    nonoverlapping (xi_p, 16) (ivec_p, 16) /\
+    nonoverlapping (tag_p, 16) (ivec_p, 16) /\
     nonoverlapping (ivec_p, 16) (in_p:int64, 16) /\
     nonoverlapping (ivec_p, 16) (key_p:int64, 240) /\
-    nonoverlapping (ivec_p, 16) (htbl_p:int64, 192) /\
+    nonoverlapping (ivec_p, 16) (htable_p:int64, 192) /\
     nonoverlapping (in_p, 16) (stackpointer, 80) /\
     nonoverlapping (key_p, 240) (stackpointer, 80) /\
-    nonoverlapping (htbl_p, 192) (stackpointer, 80) /\
+    nonoverlapping (htable_p, 192) (stackpointer, 80) /\
     nonoverlapping (ivec_p, 16) (stackpointer, 80) /\
-    nonoverlapping (xi_p, 16) (in_p, 16) /\
-    nonoverlapping (xi_p, 16) (key_p, 240) /\
-    nonoverlapping (xi_p, 16) (htbl_p, 192) /\
-    nonoverlapping (xi_p, 16) (stackpointer, 80) /\
+    nonoverlapping (tag_p, 16) (in_p, 16) /\
+    nonoverlapping (tag_p, 16) (key_p, 240) /\
+    nonoverlapping (tag_p, 16) (htable_p, 192) /\
+    nonoverlapping (tag_p, 16) (stackpointer, 80) /\
     nonoverlapping (out_p, 16) (in_p, 16) /\
     nonoverlapping (out_p, 16) (key_p, 240) /\
-    nonoverlapping (out_p, 16) (htbl_p, 192) /\
+    nonoverlapping (out_p, 16) (htable_p, 192) /\
     nonoverlapping (out_p, 16) (stackpointer, 80) /\
     word_subword hk (0,64) :64 word =
       word_xor (word_subword h (0,64):64 word) (word_subword h (64,64):64 word)
     ==> ensures arm
      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
           read PC s = word (pc + 0x1c) /\ read SP s = stackpointer /\
-          C_ARGUMENTS [in_p; word 128; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+          C_ARGUMENTS [in_p; word 128; out_p; tag_p; ivec_p; key_p; htable_p] s /\
           read (memory :> bytes128 in_p) s = cph /\
-          read (memory :> bytes128 xi_p) s = xi /\
+          read (memory :> bytes128 tag_p) s = xi /\
           read (memory :> bytes128 ivec_p) s = ctr0 /\
           read (memory :> bytes128 key_p) s = k0 /\
           read (memory :> bytes128 (word_add key_p (word 16))) s = k1 /\
@@ -3357,20 +3357,20 @@ let WB_FUSED_1BLOCK = prove(
           read (memory :> bytes128 (word_add key_p (word 192))) s = k12 /\
           read (memory :> bytes128 (word_add key_p (word 208))) s = k13 /\
           read (memory :> bytes128 (word_add key_p (word 224))) s = k14 /\
-          read (memory :> bytes128 htbl_p) s = h /\
-          read (memory :> bytes128 (word_add htbl_p (word 16))) s = hk)
+          read (memory :> bytes128 htable_p) s = h /\
+          read (memory :> bytes128 (word_add htable_p (word 16))) s = hk)
      (\s. read PC s = word (pc + 0x119c) /\
           read X9 s = word 16 /\
           read (memory :> bytes128 out_p) s =
           word_xor cph (aes256_encrypt ctr0
             [(k0:int128);k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]) /\
-          read (memory :> bytes128 xi_p) s =
+          read (memory :> bytes128 tag_p) s =
           word_bytereverse
             (ghash_polyval_acc (byteswap128 h) (word_bytereverse xi)
               [word_bytereverse cph]) /\
           read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 1 ctr0)
      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-      MAYCHANGE [memory :> bytes(out_p, 16); memory :> bytes(xi_p, 16);
+      MAYCHANGE [memory :> bytes(out_p, 16); memory :> bytes(tag_p, 16);
                  memory :> bytes(ivec_p, 16);
                  memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
       MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -3379,7 +3379,7 @@ let WB_FUSED_1BLOCK = prove(
   ENSURES_INIT_TAC "s0" THEN
   CLEAR_KEEPGHALL_MEMO_TAC THEN  (* empty the normalizer fixpoint table *)
   FIRST_ASSUM(fun th ->
-    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htbl_p (word 16))) s0`
+    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htable_p (word 16))) s0`
         with _ -> false)
     then (MP_TAC th THEN PURE_ONCE_REWRITE_TAC[el 1 (CONJUNCTS READ_MEMORY_BYTESIZED_UNSPLIT)] THEN
           STRIP_TAC)
@@ -3476,8 +3476,8 @@ let BRIDGE_CLOSE_2_CPH1_TAC sN : tactic = fun (asl,w) ->
    small_blk_1 (block 1, the reduce at s128, ext and rev64 at s131 and s132,
    then the tag, counter and block-1 stores) and s141 the b at
    L256_dec_small_done.  Two details of the simulation:
-   (1) the hk read (htbl_p+16) is split into its 64-bit halves, and the
-       address of the high half, htbl_p+16+8, is normalized to htbl_p+24, the
+   (1) the hk read (htable_p+16) is split into its 64-bit halves, and the
+       address of the high half, htable_p+16+8, is normalized to htable_p+24, the
        address of the ldr d25,[x6,#24] that loads the Karatsuba mid of H^2;
        otherwise that load is not resolved and the discard drops the Q18
        accumulator that depends on it (nblk = 1 has no such load);
@@ -3486,30 +3486,30 @@ let BRIDGE_CLOSE_2_CPH1_TAC sN : tactic = fun (asl,w) ->
        chain of block 0 survives it.
    BRIDGE_CLOSE_2_CPH1_TAC closes Q19 at the reduce s128. *)
 let WB_FUSED_2BLOCK = prove(
- `!pc stackpointer out_p xi_p ivec_p in_p key_p htbl_p
+ `!pc stackpointer out_p tag_p ivec_p in_p key_p htable_p
     cph0 cph1 xi ctr0 k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 h hk h2.
     aligned 16 stackpointer /\
     nonoverlapping (word pc, 5908) (stackpointer:int64, 80) /\
     nonoverlapping (word pc, 5908) (out_p:int64, 32) /\
-    nonoverlapping (word pc, 5908) (xi_p:int64, 16) /\
+    nonoverlapping (word pc, 5908) (tag_p:int64, 16) /\
     nonoverlapping (word pc, 5908) (ivec_p:int64, 16) /\
-    nonoverlapping (out_p, 32) (xi_p, 16) /\
+    nonoverlapping (out_p, 32) (tag_p, 16) /\
     nonoverlapping (out_p, 32) (ivec_p, 16) /\
-    nonoverlapping (xi_p, 16) (ivec_p, 16) /\
+    nonoverlapping (tag_p, 16) (ivec_p, 16) /\
     nonoverlapping (ivec_p, 16) (in_p:int64, 32) /\
     nonoverlapping (ivec_p, 16) (key_p:int64, 240) /\
-    nonoverlapping (ivec_p, 16) (htbl_p:int64, 192) /\
+    nonoverlapping (ivec_p, 16) (htable_p:int64, 192) /\
     nonoverlapping (in_p, 32) (stackpointer, 80) /\
     nonoverlapping (key_p, 240) (stackpointer, 80) /\
-    nonoverlapping (htbl_p, 192) (stackpointer, 80) /\
+    nonoverlapping (htable_p, 192) (stackpointer, 80) /\
     nonoverlapping (ivec_p, 16) (stackpointer, 80) /\
-    nonoverlapping (xi_p, 16) (in_p, 32) /\
-    nonoverlapping (xi_p, 16) (key_p, 240) /\
-    nonoverlapping (xi_p, 16) (htbl_p, 192) /\
-    nonoverlapping (xi_p, 16) (stackpointer, 80) /\
+    nonoverlapping (tag_p, 16) (in_p, 32) /\
+    nonoverlapping (tag_p, 16) (key_p, 240) /\
+    nonoverlapping (tag_p, 16) (htable_p, 192) /\
+    nonoverlapping (tag_p, 16) (stackpointer, 80) /\
     nonoverlapping (out_p, 32) (in_p, 32) /\
     nonoverlapping (out_p, 32) (key_p, 240) /\
-    nonoverlapping (out_p, 32) (htbl_p, 192) /\
+    nonoverlapping (out_p, 32) (htable_p, 192) /\
     nonoverlapping (out_p, 32) (stackpointer, 80) /\
     word_subword hk (0,64) :64 word =
       word_xor (word_subword h (0,64):64 word) (word_subword h (64,64):64 word) /\
@@ -3519,10 +3519,10 @@ let WB_FUSED_2BLOCK = prove(
     ==> ensures arm
      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
           read PC s = word (pc + 0x1c) /\ read SP s = stackpointer /\
-          C_ARGUMENTS [in_p; word 256; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+          C_ARGUMENTS [in_p; word 256; out_p; tag_p; ivec_p; key_p; htable_p] s /\
           read (memory :> bytes128 in_p) s = cph0 /\
           read (memory :> bytes128 (word_add in_p (word 16))) s = cph1 /\
-          read (memory :> bytes128 xi_p) s = xi /\
+          read (memory :> bytes128 tag_p) s = xi /\
           read (memory :> bytes128 ivec_p) s = ctr0 /\
           read (memory :> bytes128 key_p) s = k0 /\
           read (memory :> bytes128 (word_add key_p (word 16))) s = k1 /\
@@ -3539,9 +3539,9 @@ let WB_FUSED_2BLOCK = prove(
           read (memory :> bytes128 (word_add key_p (word 192))) s = k12 /\
           read (memory :> bytes128 (word_add key_p (word 208))) s = k13 /\
           read (memory :> bytes128 (word_add key_p (word 224))) s = k14 /\
-          read (memory :> bytes128 htbl_p) s = h /\
-          read (memory :> bytes128 (word_add htbl_p (word 16))) s = hk /\
-          read (memory :> bytes128 (word_add htbl_p (word 32))) s = h2)
+          read (memory :> bytes128 htable_p) s = h /\
+          read (memory :> bytes128 (word_add htable_p (word 16))) s = hk /\
+          read (memory :> bytes128 (word_add htable_p (word 32))) s = h2)
      (\s. read PC s = word (pc + 0x119c) /\
           read X9 s = word 32 /\
           read (memory :> bytes128 out_p) s =
@@ -3550,13 +3550,13 @@ let WB_FUSED_2BLOCK = prove(
           read (memory :> bytes128 (word_add out_p (word 16))) s =
           word_xor cph1 (aes256_encrypt (gcm_ctr_inc ctr0)
             [(k0:int128);k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]) /\
-          read (memory :> bytes128 xi_p) s =
+          read (memory :> bytes128 tag_p) s =
           word_bytereverse
             (ghash_polyval_acc (byteswap128 h) (word_bytereverse xi)
               [word_bytereverse cph0; word_bytereverse cph1]) /\
           read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 2 ctr0)
      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-      MAYCHANGE [memory :> bytes(out_p, 32); memory :> bytes(xi_p, 16);
+      MAYCHANGE [memory :> bytes(out_p, 32); memory :> bytes(tag_p, 16);
                  memory :> bytes(ivec_p, 16);
                  memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
       MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -3565,14 +3565,14 @@ let WB_FUSED_2BLOCK = prove(
   ENSURES_INIT_TAC "s0" THEN
   CLEAR_KEEPGHALL_MEMO_TAC THEN  (* empty the normalizer fixpoint table *)
   FIRST_ASSUM(fun th ->
-    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htbl_p (word 16))) s0`
+    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htable_p (word 16))) s0`
         with _ -> false)
     then (MP_TAC th THEN PURE_ONCE_REWRITE_TAC[el 1 (CONJUNCTS READ_MEMORY_BYTESIZED_UNSPLIT)] THEN
           STRIP_TAC)
     else NO_TAC) THEN
-  (* detail (1): htbl_p+16+8 = htbl_p+24 *)
+  (* detail (1): htable_p+16+8 = htable_p+24 *)
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
-    `word_add (word_add (htbl_p:int64) (word 16)) (word 8) = word_add htbl_p (word 24)`]) THEN
+    `word_add (word_add (htable_p:int64) (word 16)) (word 8) = word_add htable_p (word 24)`]) THEN
   ARM_STEPS_TAC AES256_GCM_DEC_ALT_EXEC (1--30) THEN
   ARM_STEPS_FOLD_KEEPGHALL_TAC AES256_GCM_DEC_ALT_EXEC (31--81) THEN
   SUBGOAL_THEN
@@ -3686,12 +3686,12 @@ let WB3_FRAME_SUBSUMED = prove(
    MAYCHANGE [Q15] ,, MAYCHANGE [Q24] ,, MAYCHANGE [Q25] ,, MAYCHANGE [Q21] ,, MAYCHANGE [Q17] ,,
    MAYCHANGE [Q18] ,, MAYCHANGE [Q26] ,, MAYCHANGE [X0] ,, MAYCHANGE [Q0] ,, MAYCHANGE [Q20] ,,
    MAYCHANGE [Q22] ,, MAYCHANGE [Q23] ,, MAYCHANGE [memory :> bytes128 out_p] ,, MAYCHANGE [X2] ,,
-   MAYCHANGE [memory :> bytes128 (word_add out_p (word 16))] ,, MAYCHANGE [memory :> bytes128 xi_p] ,,
+   MAYCHANGE [memory :> bytes128 (word_add out_p (word 16))] ,, MAYCHANGE [memory :> bytes128 tag_p] ,,
    MAYCHANGE [memory :> bytes128 ivec_p] ,,
    MAYCHANGE [memory :> bytes128 (word_add out_p (word 32))]
    :armstate->armstate->bool) subsumed
   (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-   MAYCHANGE [memory :> bytes(out_p:int64, 48); memory :> bytes(xi_p:int64,16);
+   MAYCHANGE [memory :> bytes(out_p:int64, 48); memory :> bytes(tag_p:int64,16);
               memory :> bytes(ivec_p:int64,16);
               memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
    MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -3725,7 +3725,7 @@ let BRIDGE_CLOSE_3_CPH2_TAC sN : tactic = fun (asl,w) ->
    small_blk_1 (block 2, the reduce at s170, ext and rev64 at s173 and s174,
    the tag store at s177, the counter store at s180, the block-2 store at
    s182) and s183 the b at L256_dec_small_done.
-   The table reads hk (htbl_p+16) and h3k (htbl_p+64) are split into their
+   The table reads hk (htable_p+16) and h3k (htable_p+64) are split into their
    64-bit halves, which hold the Karatsuba mids the blocks load: of H at +16,
    of H^2 at +24, of H^3 at +64.  The simulation runs in windows that end at
    the block stores s80 and s123, where the block just stored is captured,
@@ -3734,30 +3734,30 @@ let BRIDGE_CLOSE_3_CPH2_TAC sN : tactic = fun (asl,w) ->
    BRIDGE_CLOSE_3_CPH2_TAC closes Q19 at s170, and the frame closes by
    WB3_FRAME_IMP. *)
 let WB_FUSED_3BLOCK = prove(
- `!pc stackpointer out_p xi_p ivec_p in_p key_p htbl_p
+ `!pc stackpointer out_p tag_p ivec_p in_p key_p htable_p
     cph0 cph1 cph2 xi ctr0 k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 h hk h2 h3 h3k.
     aligned 16 stackpointer /\
     nonoverlapping (word pc, 5908) (stackpointer:int64, 80) /\
     nonoverlapping (word pc, 5908) (out_p:int64, 48) /\
-    nonoverlapping (word pc, 5908) (xi_p:int64, 16) /\
+    nonoverlapping (word pc, 5908) (tag_p:int64, 16) /\
     nonoverlapping (word pc, 5908) (ivec_p:int64, 16) /\
-    nonoverlapping (out_p, 48) (xi_p, 16) /\
+    nonoverlapping (out_p, 48) (tag_p, 16) /\
     nonoverlapping (out_p, 48) (ivec_p, 16) /\
-    nonoverlapping (xi_p, 16) (ivec_p, 16) /\
+    nonoverlapping (tag_p, 16) (ivec_p, 16) /\
     nonoverlapping (ivec_p, 16) (in_p:int64, 48) /\
     nonoverlapping (ivec_p, 16) (key_p:int64, 240) /\
-    nonoverlapping (ivec_p, 16) (htbl_p:int64, 192) /\
+    nonoverlapping (ivec_p, 16) (htable_p:int64, 192) /\
     nonoverlapping (in_p, 48) (stackpointer, 80) /\
     nonoverlapping (key_p, 240) (stackpointer, 80) /\
-    nonoverlapping (htbl_p, 192) (stackpointer, 80) /\
+    nonoverlapping (htable_p, 192) (stackpointer, 80) /\
     nonoverlapping (ivec_p, 16) (stackpointer, 80) /\
-    nonoverlapping (xi_p, 16) (in_p, 48) /\
-    nonoverlapping (xi_p, 16) (key_p, 240) /\
-    nonoverlapping (xi_p, 16) (htbl_p, 192) /\
-    nonoverlapping (xi_p, 16) (stackpointer, 80) /\
+    nonoverlapping (tag_p, 16) (in_p, 48) /\
+    nonoverlapping (tag_p, 16) (key_p, 240) /\
+    nonoverlapping (tag_p, 16) (htable_p, 192) /\
+    nonoverlapping (tag_p, 16) (stackpointer, 80) /\
     nonoverlapping (out_p, 48) (in_p, 48) /\
     nonoverlapping (out_p, 48) (key_p, 240) /\
-    nonoverlapping (out_p, 48) (htbl_p, 192) /\
+    nonoverlapping (out_p, 48) (htable_p, 192) /\
     nonoverlapping (out_p, 48) (stackpointer, 80) /\
     word_subword hk (0,64) :64 word =
       word_xor (word_subword h (0,64):64 word) (word_subword h (64,64):64 word) /\
@@ -3770,11 +3770,11 @@ let WB_FUSED_3BLOCK = prove(
     ==> ensures arm
      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
           read PC s = word (pc + 0x1c) /\ read SP s = stackpointer /\
-          C_ARGUMENTS [in_p; word 384; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+          C_ARGUMENTS [in_p; word 384; out_p; tag_p; ivec_p; key_p; htable_p] s /\
           read (memory :> bytes128 in_p) s = cph0 /\
           read (memory :> bytes128 (word_add in_p (word 16))) s = cph1 /\
           read (memory :> bytes128 (word_add in_p (word 32))) s = cph2 /\
-          read (memory :> bytes128 xi_p) s = xi /\
+          read (memory :> bytes128 tag_p) s = xi /\
           read (memory :> bytes128 ivec_p) s = ctr0 /\
           read (memory :> bytes128 key_p) s = k0 /\
           read (memory :> bytes128 (word_add key_p (word 16))) s = k1 /\
@@ -3791,11 +3791,11 @@ let WB_FUSED_3BLOCK = prove(
           read (memory :> bytes128 (word_add key_p (word 192))) s = k12 /\
           read (memory :> bytes128 (word_add key_p (word 208))) s = k13 /\
           read (memory :> bytes128 (word_add key_p (word 224))) s = k14 /\
-          read (memory :> bytes128 htbl_p) s = h /\
-          read (memory :> bytes128 (word_add htbl_p (word 16))) s = hk /\
-          read (memory :> bytes128 (word_add htbl_p (word 32))) s = h2 /\
-          read (memory :> bytes128 (word_add htbl_p (word 48))) s = h3 /\
-          read (memory :> bytes128 (word_add htbl_p (word 64))) s = h3k)
+          read (memory :> bytes128 htable_p) s = h /\
+          read (memory :> bytes128 (word_add htable_p (word 16))) s = hk /\
+          read (memory :> bytes128 (word_add htable_p (word 32))) s = h2 /\
+          read (memory :> bytes128 (word_add htable_p (word 48))) s = h3 /\
+          read (memory :> bytes128 (word_add htable_p (word 64))) s = h3k)
      (\s. read PC s = word (pc + 0x119c) /\
           read X9 s = word 48 /\
           read (memory :> bytes128 out_p) s =
@@ -3807,13 +3807,13 @@ let WB_FUSED_3BLOCK = prove(
           read (memory :> bytes128 (word_add out_p (word 32))) s =
           word_xor cph2 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ctr0))
             [(k0:int128);k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]) /\
-          read (memory :> bytes128 xi_p) s =
+          read (memory :> bytes128 tag_p) s =
           word_bytereverse
             (ghash_polyval_acc (byteswap128 h) (word_bytereverse xi)
               [word_bytereverse cph0; word_bytereverse cph1; word_bytereverse cph2]) /\
           read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 3 ctr0)
      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-      MAYCHANGE [memory :> bytes(out_p, 48); memory :> bytes(xi_p, 16);
+      MAYCHANGE [memory :> bytes(out_p, 48); memory :> bytes(tag_p, 16);
                  memory :> bytes(ivec_p, 16);
                  memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
       MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -3821,23 +3821,23 @@ let WB_FUSED_3BLOCK = prove(
   REPEAT GEN_TAC THEN REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   CLEAR_KEEPGHALL_MEMO_TAC THEN  (* empty the normalizer fixpoint table *)
-  (* split hk at htbl_p+16: the Karatsuba mids of H (low) and H^2 (high) *)
+  (* split hk at htable_p+16: the Karatsuba mids of H (low) and H^2 (high) *)
   FIRST_ASSUM(fun th ->
-    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htbl_p (word 16))) s0`
+    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htable_p (word 16))) s0`
         with _ -> false)
     then (MP_TAC th THEN PURE_ONCE_REWRITE_TAC[el 1 (CONJUNCTS READ_MEMORY_BYTESIZED_UNSPLIT)] THEN
           STRIP_TAC)
     else NO_TAC) THEN
-  (* split h3k at htbl_p+64: the Karatsuba mid of H^3 (low) *)
+  (* split h3k at htable_p+64: the Karatsuba mid of H^3 (low) *)
   FIRST_ASSUM(fun th ->
-    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htbl_p (word 64))) s0`
+    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htable_p (word 64))) s0`
         with _ -> false)
     then (MP_TAC th THEN PURE_ONCE_REWRITE_TAC[el 1 (CONJUNCTS READ_MEMORY_BYTESIZED_UNSPLIT)] THEN
           STRIP_TAC)
     else NO_TAC) THEN
-  (* htbl_p+16+8 = htbl_p+24, the address of the ldr d25,[x6,#24] *)
+  (* htable_p+16+8 = htable_p+24, the address of the ldr d25,[x6,#24] *)
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
-    `word_add (word_add (htbl_p:int64) (word 16)) (word 8) = word_add htbl_p (word 24)`]) THEN
+    `word_add (word_add (htable_p:int64) (word 16)) (word 8) = word_add htable_p (word 24)`]) THEN
   ARM_STEPS_TAC AES256_GCM_DEC_ALT_EXEC (1--30) THEN
   (* the seed and block 0 (H^3), steps 31-80; block 0 is stored at s80 *)
   ARM_STEPS_FOLD_KEEPGHALL_TAC AES256_GCM_DEC_ALT_EXEC (31--80) THEN
@@ -4005,12 +4005,12 @@ let WB4_FRAME_SUBSUMED = prove(
    MAYCHANGE [Q22] ,, MAYCHANGE [Q23] ,, MAYCHANGE [memory :> bytes128 out_p] ,, MAYCHANGE [X2] ,,
    MAYCHANGE [memory :> bytes128 (word_add out_p (word 16))] ,,
    MAYCHANGE [memory :> bytes128 (word_add out_p (word 32))] ,,
-   MAYCHANGE [memory :> bytes128 xi_p] ,,
+   MAYCHANGE [memory :> bytes128 tag_p] ,,
    MAYCHANGE [memory :> bytes128 ivec_p] ,,
    MAYCHANGE [memory :> bytes128 (word_add out_p (word 48))]
    :armstate->armstate->bool) subsumed
   (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-   MAYCHANGE [memory :> bytes(out_p:int64, 64); memory :> bytes(xi_p:int64,16);
+   MAYCHANGE [memory :> bytes(out_p:int64, 64); memory :> bytes(tag_p:int64,16);
               memory :> bytes(ivec_p:int64,16);
               memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
    MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -4047,30 +4047,30 @@ let BRIDGE_CLOSE_4_CPH3_TAC sN : tactic = fun (asl,w) ->
    reduce s214, where BRIDGE_CLOSE_4_CPH3_TAC closes Q19, the closers below
    take the conjuncts by kind, and the frame closes by WB4_FRAME_IMP. *)
 let WB_FUSED_4BLOCK = prove(
- `!pc stackpointer out_p xi_p ivec_p in_p key_p htbl_p
+ `!pc stackpointer out_p tag_p ivec_p in_p key_p htable_p
     cph0 cph1 cph2 cph3 xi ctr0 k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 h hk h2 h3 h3k h4.
     aligned 16 stackpointer /\
     nonoverlapping (word pc, 5908) (stackpointer:int64, 80) /\
     nonoverlapping (word pc, 5908) (out_p:int64, 64) /\
-    nonoverlapping (word pc, 5908) (xi_p:int64, 16) /\
+    nonoverlapping (word pc, 5908) (tag_p:int64, 16) /\
     nonoverlapping (word pc, 5908) (ivec_p:int64, 16) /\
-    nonoverlapping (out_p, 64) (xi_p, 16) /\
+    nonoverlapping (out_p, 64) (tag_p, 16) /\
     nonoverlapping (out_p, 64) (ivec_p, 16) /\
-    nonoverlapping (xi_p, 16) (ivec_p, 16) /\
+    nonoverlapping (tag_p, 16) (ivec_p, 16) /\
     nonoverlapping (ivec_p, 16) (in_p:int64, 64) /\
     nonoverlapping (ivec_p, 16) (key_p:int64, 240) /\
-    nonoverlapping (ivec_p, 16) (htbl_p:int64, 192) /\
+    nonoverlapping (ivec_p, 16) (htable_p:int64, 192) /\
     nonoverlapping (in_p, 64) (stackpointer, 80) /\
     nonoverlapping (key_p, 240) (stackpointer, 80) /\
-    nonoverlapping (htbl_p, 192) (stackpointer, 80) /\
+    nonoverlapping (htable_p, 192) (stackpointer, 80) /\
     nonoverlapping (ivec_p, 16) (stackpointer, 80) /\
-    nonoverlapping (xi_p, 16) (in_p, 64) /\
-    nonoverlapping (xi_p, 16) (key_p, 240) /\
-    nonoverlapping (xi_p, 16) (htbl_p, 192) /\
-    nonoverlapping (xi_p, 16) (stackpointer, 80) /\
+    nonoverlapping (tag_p, 16) (in_p, 64) /\
+    nonoverlapping (tag_p, 16) (key_p, 240) /\
+    nonoverlapping (tag_p, 16) (htable_p, 192) /\
+    nonoverlapping (tag_p, 16) (stackpointer, 80) /\
     nonoverlapping (out_p, 64) (in_p, 64) /\
     nonoverlapping (out_p, 64) (key_p, 240) /\
-    nonoverlapping (out_p, 64) (htbl_p, 192) /\
+    nonoverlapping (out_p, 64) (htable_p, 192) /\
     nonoverlapping (out_p, 64) (stackpointer, 80) /\
     word_subword hk (0,64) :64 word =
       word_xor (word_subword h (0,64):64 word) (word_subword h (64,64):64 word) /\
@@ -4086,12 +4086,12 @@ let WB_FUSED_4BLOCK = prove(
     ==> ensures arm
      (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
           read PC s = word (pc + 0x1c) /\ read SP s = stackpointer /\
-          C_ARGUMENTS [in_p; word 512; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+          C_ARGUMENTS [in_p; word 512; out_p; tag_p; ivec_p; key_p; htable_p] s /\
           read (memory :> bytes128 in_p) s = cph0 /\
           read (memory :> bytes128 (word_add in_p (word 16))) s = cph1 /\
           read (memory :> bytes128 (word_add in_p (word 32))) s = cph2 /\
           read (memory :> bytes128 (word_add in_p (word 48))) s = cph3 /\
-          read (memory :> bytes128 xi_p) s = xi /\
+          read (memory :> bytes128 tag_p) s = xi /\
           read (memory :> bytes128 ivec_p) s = ctr0 /\
           read (memory :> bytes128 key_p) s = k0 /\
           read (memory :> bytes128 (word_add key_p (word 16))) s = k1 /\
@@ -4108,12 +4108,12 @@ let WB_FUSED_4BLOCK = prove(
           read (memory :> bytes128 (word_add key_p (word 192))) s = k12 /\
           read (memory :> bytes128 (word_add key_p (word 208))) s = k13 /\
           read (memory :> bytes128 (word_add key_p (word 224))) s = k14 /\
-          read (memory :> bytes128 htbl_p) s = h /\
-          read (memory :> bytes128 (word_add htbl_p (word 16))) s = hk /\
-          read (memory :> bytes128 (word_add htbl_p (word 32))) s = h2 /\
-          read (memory :> bytes128 (word_add htbl_p (word 48))) s = h3 /\
-          read (memory :> bytes128 (word_add htbl_p (word 64))) s = h3k /\
-          read (memory :> bytes128 (word_add htbl_p (word 80))) s = h4)
+          read (memory :> bytes128 htable_p) s = h /\
+          read (memory :> bytes128 (word_add htable_p (word 16))) s = hk /\
+          read (memory :> bytes128 (word_add htable_p (word 32))) s = h2 /\
+          read (memory :> bytes128 (word_add htable_p (word 48))) s = h3 /\
+          read (memory :> bytes128 (word_add htable_p (word 64))) s = h3k /\
+          read (memory :> bytes128 (word_add htable_p (word 80))) s = h4)
      (\s. read PC s = word (pc + 0x119c) /\
           read X9 s = word 64 /\
           read (memory :> bytes128 out_p) s =
@@ -4128,13 +4128,13 @@ let WB_FUSED_4BLOCK = prove(
           read (memory :> bytes128 (word_add out_p (word 48))) s =
           word_xor cph3 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ctr0)))
             [(k0:int128);k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]) /\
-          read (memory :> bytes128 xi_p) s =
+          read (memory :> bytes128 tag_p) s =
           word_bytereverse
             (ghash_polyval_acc (byteswap128 h) (word_bytereverse xi)
               [word_bytereverse cph0; word_bytereverse cph1; word_bytereverse cph2; word_bytereverse cph3]) /\
           read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 4 ctr0)
      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-      MAYCHANGE [memory :> bytes(out_p, 64); memory :> bytes(xi_p, 16);
+      MAYCHANGE [memory :> bytes(out_p, 64); memory :> bytes(tag_p, 16);
                  memory :> bytes(ivec_p, 16);
                  memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
       MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -4142,20 +4142,20 @@ let WB_FUSED_4BLOCK = prove(
   REPEAT GEN_TAC THEN REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   CLEAR_KEEPGHALL_MEMO_TAC THEN  (* empty the normalizer fixpoint table *)
-  (* split hk at htbl_p+16: the Karatsuba mids of H (low) and H^2 (high) *)
+  (* split hk at htable_p+16: the Karatsuba mids of H (low) and H^2 (high) *)
   FIRST_ASSUM(fun th ->
-    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htbl_p (word 16))) s0` with _ -> false)
+    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htable_p (word 16))) s0` with _ -> false)
     then (MP_TAC th THEN PURE_ONCE_REWRITE_TAC[el 1 (CONJUNCTS READ_MEMORY_BYTESIZED_UNSPLIT)] THEN STRIP_TAC)
     else NO_TAC) THEN
-  (* split h3k at htbl_p+64: the Karatsuba mids of H^3 (low) and H^4 (high) *)
+  (* split h3k at htable_p+64: Karatsuba mids of H^3 (low) and H^4 (high) *)
   FIRST_ASSUM(fun th ->
-    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htbl_p (word 64))) s0` with _ -> false)
+    if (try lhs(concl th) = `read (memory :> bytes128 (word_add htable_p (word 64))) s0` with _ -> false)
     then (MP_TAC th THEN PURE_ONCE_REWRITE_TAC[el 1 (CONJUNCTS READ_MEMORY_BYTESIZED_UNSPLIT)] THEN STRIP_TAC)
     else NO_TAC) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
-    `word_add (word_add (htbl_p:int64) (word 16)) (word 8) = word_add htbl_p (word 24)`;
+    `word_add (word_add (htable_p:int64) (word 16)) (word 8) = word_add htable_p (word 24)`;
     WORD_RULE
-    `word_add (word_add (htbl_p:int64) (word 64)) (word 8) = word_add htbl_p (word 72)`]) THEN
+    `word_add (word_add (htable_p:int64) (word 64)) (word 8) = word_add htable_p (word 72)`]) THEN
   ARM_STEPS_TAC AES256_GCM_DEC_ALT_EXEC (1--30) THEN
   (* the seed and block 0 (H^4), steps 31-81; block 0 is stored at s81 *)
   ARM_STEPS_FOLD_KEEPGHALL_TAC AES256_GCM_DEC_ALT_EXEC (31--81) THEN
@@ -4503,7 +4503,7 @@ let mk_wb_wrapper_goal k =
   let outpost = subst [n16,`nnn:num`; wb_keys_tm,`kl:int128 list`]
     `byte_list_at (gcm_dec_pt_bytes nnn ibytes ctr0 (kl:int128 list)) out_p (word nnn) s` in
   let xipost = subst [n16,`nnn:num`]
-    `read (memory :> bytes128 xi_p) s = gcm_dec_final_xi nnn ibytes xi h` in
+    `read (memory :> bytes128 tag_p) s = gcm_dec_final_xi nnn ibytes xi h` in
   (* the counter write-back conjunct of the band, unchanged *)
   let ivecpost = mk_ivec_conj k in
   let post' = mk_abs(sv, list_mk_conj [pcc; x9c; outpost; xipost; ivecpost]) in
@@ -4597,8 +4597,8 @@ let KEY_READS_FROM_WORDLIST = prove
    RK_ETA_15 folds the EL list back to rk, and ENSURES_PRECONDITION_THM with
    KEY_READS_FROM_WORDLIST bridges the key reads. *)
 let mk_wrapper_nist k wrapper_thm =
-  let winst = SPECL ([`pc:num`;`stackpointer:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
-                      `in_p:int64`;`key_p:int64`;`htbl_p:int64`;`ibytes:byte list`;
+  let winst = SPECL ([`pc:num`;`stackpointer:int64`;`out_p:int64`;`tag_p:int64`;`ivec_p:int64`;
+                      `in_p:int64`;`key_p:int64`;`htable_p:int64`;`ibytes:byte list`;
                       `word_reversefields 8 (tag0:int128)`;`ctr0:int128`] @
                      map (fun i -> list_mk_comb(`EL:num->(int128)list->int128`,
                             [mk_small_numeral i; `rk:int128 list`])) (0--14) @
@@ -4638,7 +4638,7 @@ let WB_READABLE_TAC k buf_thm =
 (* The eight readable band theorems (literal statements: the specification). *)
 (* Reading guide for N blocks: under the ABI and nonoverlapping side         *)
 (* conditions, decrypting N whole blocks writes to out_p the CTR keystream   *)
-(* XORed onto the input bytes (gcm_dec_pt_bytes), replaces the tag at xi_p   *)
+(* XORed onto the input bytes (gcm_dec_pt_bytes), replaces the tag at tag_p  *)
 (* with the SP 800-38D GHASH of the N raw ciphertext blocks folded onto tag0 *)
 (* under the NIST hash key H (both tag values byte-reversed, as the AWS-LC   *)
 (* caller keeps them), stores the counter block advanced by N at ivec_p      *)
@@ -4646,36 +4646,36 @@ let WB_READABLE_TAC k buf_thm =
 (* ------------------------------------------------------------------------- *)
 
 let AES256_GCM_DEC_ALT_1BLOCK = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p
     ibytes (rk:int128 list) (H:int128) tag0 ctr0.
      LENGTH ibytes = 16 /\ LENGTH rk = 15 /\
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
-       [out_p,16; xi_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16; key_p,240; htbl_p,192; stackpointer,80] /\
-     PAIRWISE nonoverlapping [out_p,16; xi_p,16; ivec_p,16] /\
+       [out_p,16; tag_p,16; ivec_p,16]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16; key_p,240; htable_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,16; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16; key_p,240; htbl_p,192]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16; key_p,240; htable_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                read PC s = word (pc + 0x1c) /\
                read SP s = stackpointer /\
-               C_ARGUMENTS [in_p; word 128; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               C_ARGUMENTS [in_p; word 128; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                byte_list_at ibytes in_p (word 16) s /\
-               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
                read (memory :> bytes128 ivec_p) s = ctr0 /\
                wordlist_from_memory (key_p,15) s = rk /\
-               htable_mem_8 (ghash_twist H) htbl_p s)
+               htable_mem_8 (ghash_twist H) htable_p s)
           (\s. read PC s = word (pc + 4508) /\
                read X9 s = word 16 /\
                byte_list_at (gcm_dec_pt_bytes 16 ibytes ctr0 rk) out_p (word 16) s /\
-               read (memory :> bytes128 xi_p) s =
+               read (memory :> bytes128 tag_p) s =
                word_reversefields 8
                  (nist_ghash H tag0 (list_of_seq (nist_input_block_bytes ibytes) 1))
                /\
                read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 1 ctr0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(out_p,16); memory :> bytes(xi_p,16);
+           MAYCHANGE [memory :> bytes(out_p,16); memory :> bytes(tag_p,16);
                       memory :> bytes(ivec_p,16);
                       memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -4683,36 +4683,36 @@ let AES256_GCM_DEC_ALT_1BLOCK = prove
   WB_READABLE_TAC 1 AES256_GCM_DEC_ALT_BUF_1BLOCK);;
 
 let AES256_GCM_DEC_ALT_2BLOCK = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p
     ibytes (rk:int128 list) (H:int128) tag0 ctr0.
      LENGTH ibytes = 32 /\ LENGTH rk = 15 /\
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
-       [out_p,32; xi_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,32; key_p,240; htbl_p,192; stackpointer,80] /\
-     PAIRWISE nonoverlapping [out_p,32; xi_p,16; ivec_p,16] /\
+       [out_p,32; tag_p,16; ivec_p,16]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,32; key_p,240; htable_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,32; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,32; key_p,240; htbl_p,192]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,32; key_p,240; htable_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                read PC s = word (pc + 0x1c) /\
                read SP s = stackpointer /\
-               C_ARGUMENTS [in_p; word 256; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               C_ARGUMENTS [in_p; word 256; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                byte_list_at ibytes in_p (word 32) s /\
-               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
                read (memory :> bytes128 ivec_p) s = ctr0 /\
                wordlist_from_memory (key_p,15) s = rk /\
-               htable_mem_8 (ghash_twist H) htbl_p s)
+               htable_mem_8 (ghash_twist H) htable_p s)
           (\s. read PC s = word (pc + 4508) /\
                read X9 s = word 32 /\
                byte_list_at (gcm_dec_pt_bytes 32 ibytes ctr0 rk) out_p (word 32) s /\
-               read (memory :> bytes128 xi_p) s =
+               read (memory :> bytes128 tag_p) s =
                word_reversefields 8
                  (nist_ghash H tag0 (list_of_seq (nist_input_block_bytes ibytes) 2))
                /\
                read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 2 ctr0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(out_p,32); memory :> bytes(xi_p,16);
+           MAYCHANGE [memory :> bytes(out_p,32); memory :> bytes(tag_p,16);
                       memory :> bytes(ivec_p,16);
                       memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -4720,36 +4720,36 @@ let AES256_GCM_DEC_ALT_2BLOCK = prove
   WB_READABLE_TAC 2 AES256_GCM_DEC_ALT_BUF_2BLOCK);;
 
 let AES256_GCM_DEC_ALT_3BLOCK = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p
     ibytes (rk:int128 list) (H:int128) tag0 ctr0.
      LENGTH ibytes = 48 /\ LENGTH rk = 15 /\
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
-       [out_p,48; xi_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,48; key_p,240; htbl_p,192; stackpointer,80] /\
-     PAIRWISE nonoverlapping [out_p,48; xi_p,16; ivec_p,16] /\
+       [out_p,48; tag_p,16; ivec_p,16]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,48; key_p,240; htable_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,48; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,48; key_p,240; htbl_p,192]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,48; key_p,240; htable_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                read PC s = word (pc + 0x1c) /\
                read SP s = stackpointer /\
-               C_ARGUMENTS [in_p; word 384; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               C_ARGUMENTS [in_p; word 384; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                byte_list_at ibytes in_p (word 48) s /\
-               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
                read (memory :> bytes128 ivec_p) s = ctr0 /\
                wordlist_from_memory (key_p,15) s = rk /\
-               htable_mem_8 (ghash_twist H) htbl_p s)
+               htable_mem_8 (ghash_twist H) htable_p s)
           (\s. read PC s = word (pc + 4508) /\
                read X9 s = word 48 /\
                byte_list_at (gcm_dec_pt_bytes 48 ibytes ctr0 rk) out_p (word 48) s /\
-               read (memory :> bytes128 xi_p) s =
+               read (memory :> bytes128 tag_p) s =
                word_reversefields 8
                  (nist_ghash H tag0 (list_of_seq (nist_input_block_bytes ibytes) 3))
                /\
                read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 3 ctr0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(out_p,48); memory :> bytes(xi_p,16);
+           MAYCHANGE [memory :> bytes(out_p,48); memory :> bytes(tag_p,16);
                       memory :> bytes(ivec_p,16);
                       memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -4757,36 +4757,36 @@ let AES256_GCM_DEC_ALT_3BLOCK = prove
   WB_READABLE_TAC 3 AES256_GCM_DEC_ALT_BUF_3BLOCK);;
 
 let AES256_GCM_DEC_ALT_4BLOCK = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p
     ibytes (rk:int128 list) (H:int128) tag0 ctr0.
      LENGTH ibytes = 64 /\ LENGTH rk = 15 /\
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
-       [out_p,64; xi_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,64; key_p,240; htbl_p,192; stackpointer,80] /\
-     PAIRWISE nonoverlapping [out_p,64; xi_p,16; ivec_p,16] /\
+       [out_p,64; tag_p,16; ivec_p,16]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,64; key_p,240; htable_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,64; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,64; key_p,240; htbl_p,192]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,64; key_p,240; htable_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                read PC s = word (pc + 0x1c) /\
                read SP s = stackpointer /\
-               C_ARGUMENTS [in_p; word 512; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               C_ARGUMENTS [in_p; word 512; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                byte_list_at ibytes in_p (word 64) s /\
-               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
                read (memory :> bytes128 ivec_p) s = ctr0 /\
                wordlist_from_memory (key_p,15) s = rk /\
-               htable_mem_8 (ghash_twist H) htbl_p s)
+               htable_mem_8 (ghash_twist H) htable_p s)
           (\s. read PC s = word (pc + 4508) /\
                read X9 s = word 64 /\
                byte_list_at (gcm_dec_pt_bytes 64 ibytes ctr0 rk) out_p (word 64) s /\
-               read (memory :> bytes128 xi_p) s =
+               read (memory :> bytes128 tag_p) s =
                word_reversefields 8
                  (nist_ghash H tag0 (list_of_seq (nist_input_block_bytes ibytes) 4))
                /\
                read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 4 ctr0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(out_p,64); memory :> bytes(xi_p,16);
+           MAYCHANGE [memory :> bytes(out_p,64); memory :> bytes(tag_p,16);
                       memory :> bytes(ivec_p,16);
                       memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -4794,36 +4794,36 @@ let AES256_GCM_DEC_ALT_4BLOCK = prove
   WB_READABLE_TAC 4 AES256_GCM_DEC_ALT_BUF_4BLOCK);;
 
 let AES256_GCM_DEC_ALT_5BLOCK = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p
     ibytes (rk:int128 list) (H:int128) tag0 ctr0.
      LENGTH ibytes = 80 /\ LENGTH rk = 15 /\
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
-       [out_p,80; xi_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,80; key_p,240; htbl_p,192; stackpointer,80] /\
-     PAIRWISE nonoverlapping [out_p,80; xi_p,16; ivec_p,16] /\
+       [out_p,80; tag_p,16; ivec_p,16]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,80; key_p,240; htable_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,80; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,80; key_p,240; htbl_p,192]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,80; key_p,240; htable_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                read PC s = word (pc + 0x1c) /\
                read SP s = stackpointer /\
-               C_ARGUMENTS [in_p; word 640; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               C_ARGUMENTS [in_p; word 640; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                byte_list_at ibytes in_p (word 80) s /\
-               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
                read (memory :> bytes128 ivec_p) s = ctr0 /\
                wordlist_from_memory (key_p,15) s = rk /\
-               htable_mem_8 (ghash_twist H) htbl_p s)
+               htable_mem_8 (ghash_twist H) htable_p s)
           (\s. read PC s = word (pc + 4508) /\
                read X9 s = word 80 /\
                byte_list_at (gcm_dec_pt_bytes 80 ibytes ctr0 rk) out_p (word 80) s /\
-               read (memory :> bytes128 xi_p) s =
+               read (memory :> bytes128 tag_p) s =
                word_reversefields 8
                  (nist_ghash H tag0 (list_of_seq (nist_input_block_bytes ibytes) 5))
                /\
                read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 5 ctr0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(out_p,80); memory :> bytes(xi_p,16);
+           MAYCHANGE [memory :> bytes(out_p,80); memory :> bytes(tag_p,16);
                       memory :> bytes(ivec_p,16);
                       memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -4831,36 +4831,36 @@ let AES256_GCM_DEC_ALT_5BLOCK = prove
   WB_READABLE_TAC 5 AES256_GCM_DEC_ALT_BUF_5BLOCK);;
 
 let AES256_GCM_DEC_ALT_6BLOCK = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p
     ibytes (rk:int128 list) (H:int128) tag0 ctr0.
      LENGTH ibytes = 96 /\ LENGTH rk = 15 /\
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
-       [out_p,96; xi_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,96; key_p,240; htbl_p,192; stackpointer,80] /\
-     PAIRWISE nonoverlapping [out_p,96; xi_p,16; ivec_p,16] /\
+       [out_p,96; tag_p,16; ivec_p,16]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,96; key_p,240; htable_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,96; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,96; key_p,240; htbl_p,192]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,96; key_p,240; htable_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                read PC s = word (pc + 0x1c) /\
                read SP s = stackpointer /\
-               C_ARGUMENTS [in_p; word 768; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               C_ARGUMENTS [in_p; word 768; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                byte_list_at ibytes in_p (word 96) s /\
-               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
                read (memory :> bytes128 ivec_p) s = ctr0 /\
                wordlist_from_memory (key_p,15) s = rk /\
-               htable_mem_8 (ghash_twist H) htbl_p s)
+               htable_mem_8 (ghash_twist H) htable_p s)
           (\s. read PC s = word (pc + 4508) /\
                read X9 s = word 96 /\
                byte_list_at (gcm_dec_pt_bytes 96 ibytes ctr0 rk) out_p (word 96) s /\
-               read (memory :> bytes128 xi_p) s =
+               read (memory :> bytes128 tag_p) s =
                word_reversefields 8
                  (nist_ghash H tag0 (list_of_seq (nist_input_block_bytes ibytes) 6))
                /\
                read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 6 ctr0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(out_p,96); memory :> bytes(xi_p,16);
+           MAYCHANGE [memory :> bytes(out_p,96); memory :> bytes(tag_p,16);
                       memory :> bytes(ivec_p,16);
                       memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -4868,36 +4868,36 @@ let AES256_GCM_DEC_ALT_6BLOCK = prove
   WB_READABLE_TAC 6 AES256_GCM_DEC_ALT_BUF_6BLOCK);;
 
 let AES256_GCM_DEC_ALT_7BLOCK = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p
     ibytes (rk:int128 list) (H:int128) tag0 ctr0.
      LENGTH ibytes = 112 /\ LENGTH rk = 15 /\
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
-       [out_p,112; xi_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,112; key_p,240; htbl_p,192; stackpointer,80] /\
-     PAIRWISE nonoverlapping [out_p,112; xi_p,16; ivec_p,16] /\
+       [out_p,112; tag_p,16; ivec_p,16]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,112; key_p,240; htable_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,112; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,112; key_p,240; htbl_p,192]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,112; key_p,240; htable_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                read PC s = word (pc + 0x1c) /\
                read SP s = stackpointer /\
-               C_ARGUMENTS [in_p; word 896; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               C_ARGUMENTS [in_p; word 896; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                byte_list_at ibytes in_p (word 112) s /\
-               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
                read (memory :> bytes128 ivec_p) s = ctr0 /\
                wordlist_from_memory (key_p,15) s = rk /\
-               htable_mem_8 (ghash_twist H) htbl_p s)
+               htable_mem_8 (ghash_twist H) htable_p s)
           (\s. read PC s = word (pc + 4508) /\
                read X9 s = word 112 /\
                byte_list_at (gcm_dec_pt_bytes 112 ibytes ctr0 rk) out_p (word 112) s /\
-               read (memory :> bytes128 xi_p) s =
+               read (memory :> bytes128 tag_p) s =
                word_reversefields 8
                  (nist_ghash H tag0 (list_of_seq (nist_input_block_bytes ibytes) 7))
                /\
                read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 7 ctr0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(out_p,112); memory :> bytes(xi_p,16);
+           MAYCHANGE [memory :> bytes(out_p,112); memory :> bytes(tag_p,16);
                       memory :> bytes(ivec_p,16);
                       memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -4905,36 +4905,36 @@ let AES256_GCM_DEC_ALT_7BLOCK = prove
   WB_READABLE_TAC 7 AES256_GCM_DEC_ALT_BUF_7BLOCK);;
 
 let AES256_GCM_DEC_ALT_8BLOCK = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p
     ibytes (rk:int128 list) (H:int128) tag0 ctr0.
      LENGTH ibytes = 128 /\ LENGTH rk = 15 /\
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
-       [out_p,128; xi_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,128; key_p,240; htbl_p,192; stackpointer,80] /\
-     PAIRWISE nonoverlapping [out_p,128; xi_p,16; ivec_p,16] /\
+       [out_p,128; tag_p,16; ivec_p,16]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,128; key_p,240; htable_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,128; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,128; key_p,240; htbl_p,192]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,128; key_p,240; htable_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                read PC s = word (pc + 0x1c) /\
                read SP s = stackpointer /\
-               C_ARGUMENTS [in_p; word 1024; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               C_ARGUMENTS [in_p; word 1024; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                byte_list_at ibytes in_p (word 128) s /\
-               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
                read (memory :> bytes128 ivec_p) s = ctr0 /\
                wordlist_from_memory (key_p,15) s = rk /\
-               htable_mem_8 (ghash_twist H) htbl_p s)
+               htable_mem_8 (ghash_twist H) htable_p s)
           (\s. read PC s = word (pc + 4508) /\
                read X9 s = word 128 /\
                byte_list_at (gcm_dec_pt_bytes 128 ibytes ctr0 rk) out_p (word 128) s /\
-               read (memory :> bytes128 xi_p) s =
+               read (memory :> bytes128 tag_p) s =
                word_reversefields 8
                  (nist_ghash H tag0 (list_of_seq (nist_input_block_bytes ibytes) 8))
                /\
                read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter 8 ctr0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(out_p,128); memory :> bytes(xi_p,16);
+           MAYCHANGE [memory :> bytes(out_p,128); memory :> bytes(tag_p,16);
                       memory :> bytes(ivec_p,16);
                       memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -4943,42 +4943,42 @@ let AES256_GCM_DEC_ALT_8BLOCK = prove
 
 (* ---- the <=8-block dispatch theorem ----
    One readable theorem for every whole-blocks call with 1 <= nblk <= 8:
-   symbolic nblk, the C argument bit_len = word (128 * nblk), byte_list_at
+   symbolic nblk, the C argument len_bits = word (128 * nblk), byte_list_at
    input and output over the whole 16 * nblk-byte buffer, and the NIST
    vocabulary of the bands.  Proof: a case split on nblk; each case reduces
    16 * k and 128 * k to numerals and applies the band theorem. *)
 let AES256_GCM_DEC_ALT_DISPATCH = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p
     nblk ibytes (rk:int128 list) (H:int128) tag0 ctr0.
      1 <= nblk /\ nblk <= 8 /\
      LENGTH ibytes = 16 * nblk /\ LENGTH rk = 15 /\
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
-       [out_p,16 * nblk; xi_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
-     PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
+       [out_p,16 * nblk; tag_p,16; ivec_p,16]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htbl_p,192]
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                read PC s = word (pc + 0x1c) /\
                read SP s = stackpointer /\
-               C_ARGUMENTS [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               C_ARGUMENTS [in_p; word (128 * nblk); out_p; tag_p; ivec_p; key_p; htable_p] s /\
                byte_list_at ibytes in_p (word (16 * nblk)) s /\
-               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
                read (memory :> bytes128 ivec_p) s = ctr0 /\
                wordlist_from_memory (key_p,15) s = rk /\
-               htable_mem_8 (ghash_twist H) htbl_p s)
+               htable_mem_8 (ghash_twist H) htable_p s)
           (\s. read PC s = word (pc + 4508) /\
                read X9 s = word (16 * nblk) /\
                byte_list_at (gcm_dec_pt_bytes (16 * nblk) ibytes ctr0 rk) out_p (word (16 * nblk)) s /\
-               read (memory :> bytes128 xi_p) s =
+               read (memory :> bytes128 tag_p) s =
                word_reversefields 8
                  (nist_ghash H tag0 (list_of_seq (nist_input_block_bytes ibytes) nblk))
                /\
                read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter nblk ctr0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(out_p,16 * nblk); memory :> bytes(xi_p,16);
+           MAYCHANGE [memory :> bytes(out_p,16 * nblk); memory :> bytes(tag_p,16);
                       memory :> bytes(ivec_p,16);
                       memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
@@ -5242,8 +5242,8 @@ let wbn_front_prefix_postcond = wbp_post
    `read X9 s = word (16 * nblk)`;
    `read SP s = stackpointer`;
    `read X1 s = word (128 * nblk)`;
-   `read X3 s = xi_p`;
-   `read X6 s = htbl_p`] @
+   `read X3 s = tag_p`;
+   `read X6 s = htable_p`] @
   wbp_ctx `xi:int128` @
   [wbp_rd `Q11` (mk_cph 3); wbp_rd `Q10` (mk_cph 2);
    `read X0 s = word_add in_p (word 128)`;
@@ -5372,7 +5372,7 @@ let WBN_FRONT_BUF = prove(mk_wbn_front_goal wbn_front_postcond_i0,
 
 let wbn_loop_invariant_raw = new_definition
  `wbn_loop_invariant_raw (pc:num) (ctr0:int128) (in_p:int64) (out_p:int64)
-    (xi_p:int64) (ivec_p:int64) (key_p:int64) (htbl_p:int64) (stackpointer:int64)
+    (tag_p:int64) (ivec_p:int64) (key_p:int64) (htable_p:int64) (stackpointer:int64)
     (nblk:num) (ibytes:byte list) (xi:int128) (h:int128)
     (k0:int128) k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 (k14:int128) =
   \(i:num) (s:armstate).
@@ -5421,8 +5421,8 @@ let wbn_loop_invariant_raw = new_definition
     read Q31 s = word 79228162514264337593543950336 /\
     read Q30 s = gcm_ctr_raw (word (8 * i + 13)) ctr0 /\
     read X16 s = ivec_p /\
-    read X6 s = htbl_p /\
-    read X3 s = xi_p /\
+    read X6 s = htable_p /\
+    read X3 s = tag_p /\
     read X11 s = key_p /\
     read SP s = stackpointer /\
     read (memory :> bytes64 (word_add stackpointer (word 64))) s =
@@ -5449,7 +5449,7 @@ let wbn_loop_invariant_raw = new_definition
     read (memory :> bytes128 (word_add key_p (word 192))) s = k12 /\
     read (memory :> bytes128 (word_add key_p (word 208))) s = k13 /\
     read (memory :> bytes128 (word_add key_p (word 224))) s = k14 /\
-    htable_mem_dec h htbl_p s`;;
+    htable_mem_dec h htable_p s`;;
 
 let WBN_MACHINE_REDUCE_IS_PROP3_PACK = prove
  (`!PL PH PM:int128.
@@ -5621,9 +5621,9 @@ let WBN_Q19_PREPRETAIL_CLOSE_TAC (idx:term) : tactic =
 (* WBN_FRONT_BUF_EXT and WBN_FRONT_PREFIX_EXT (Sec 7) use it to add the loop *)
 (* constants R (wbn_front_R_tm: the input buffer, the key schedule k0..k14   *)
 (* and htable_mem_dec) to the front postconditions: the front frame          *)
-(* wb_front_frame_tm writes only out_p, xi_p, ivec_p, the stack slot         *)
+(* wb_front_frame_tm writes only out_p, tag_p, ivec_p, the stack slot        *)
 (* [sp+64,sp+80) and registers, which the nonoverlapping hypotheses keep     *)
-(* apart from in_p, key_p and htbl_p.  The recomposition of Sec 12 uses it   *)
+(* apart from in_p, key_p and htable_p.  The recomposition of Sec 12 uses it *)
 (* to carry the stores of the first output blocks through the tail legs.     *)
 (* ------------------------------------------------------------------------- *)
 
@@ -5648,7 +5648,7 @@ let ENSURES_ADD_PRESERVED = prove
 (* input buffer, the 15 key reads k0..k14 and htable_mem_dec,                *)
 (* wbn_front_R_tm), which WBN_FRONT_BUF's simulated postcondition does not   *)
 (* restate.  The front frame preserves them provided out_p is disjoint from  *)
-(* in_p, key_p and htbl_p; wbn_front_hyps_tm does not have those three       *)
+(* in_p, key_p and htable_p; wbn_front_hyps_tm does not have those three     *)
 (* disjointness conjuncts, so wbn_front_hyps_wide_tm adds them.              *)
 (* WBN_FRONT_BUF_EXT is ENSURES_ADD_PRESERVED applied to WBN_FRONT_BUF       *)
 (* (whose hypotheses the wide ones imply) and to the preservation            *)
@@ -5657,12 +5657,12 @@ let ENSURES_ADD_PRESERVED = prove
 (* ------------------------------------------------------------------------- *)
 
 (* the wide >=17 hypotheses: wbn_front_hyps_tm plus the disjointness of out_p
-   from in_p, key_p and htbl_p *)
+   from in_p, key_p and htable_p *)
 let wbn_front_hyps_wide_tm =
   mk_conj(wbn_front_hyps_tm,
     `nonoverlapping (out_p:int64,16 * nblk) (in_p:int64,16 * nblk) /\
      nonoverlapping (out_p:int64,16 * nblk) (key_p:int64,240) /\
-     nonoverlapping (out_p:int64,16 * nblk) (htbl_p:int64,192)`);;
+     nonoverlapping (out_p:int64,16 * nblk) (htable_p:int64,192)`);;
 
 (* the WBN_FRONT_BUF pieces: P = precondition, Q0 = simulated postcondition,
    C = frame *)
@@ -5691,7 +5691,7 @@ let wbn_front_R_tm =
      `read (memory :> bytes128 (word_add key_p (word 192))) s = (k12:int128)`;
      `read (memory :> bytes128 (word_add key_p (word 208))) s = (k13:int128)`;
      `read (memory :> bytes128 (word_add key_p (word 224))) s = (k14:int128)`;
-     `htable_mem_dec h (htbl_p:int64) s`]);;
+     `htable_mem_dec h (htable_p:int64) s`]);;
 
 (* the EXT goal: wide hypotheses ==> ensures arm P (\s. Q0 s /\ R s) C *)
 let wbn_front_ext_goal =
@@ -5792,8 +5792,8 @@ let wbn_front_prefix_ext_post =
 (* the invariant applied to its 28 parameters, as a num->armstate->bool *)
 let wbn_inv_applied =
   list_mk_comb(`wbn_loop_invariant_raw`,
-    [`pc:num`;`ctr0:int128`;`in_p:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
-     `key_p:int64`;`htbl_p:int64`;`stackpointer:int64`;`nblk:num`;`ibytes:byte list`;
+    [`pc:num`;`ctr0:int128`;`in_p:int64`;`out_p:int64`;`tag_p:int64`;`ivec_p:int64`;
+     `key_p:int64`;`htable_p:int64`;`stackpointer:int64`;`nblk:num`;`ibytes:byte list`;
      `xi:int128`;`h:int128`;`k0:int128`;`k1:int128`;`k2:int128`;`k3:int128`;`k4:int128`;
      `k5:int128`;`k6:int128`;`k7:int128`;`k8:int128`;`k9:int128`;`k10:int128`;`k11:int128`;
      `k12:int128`;`k13:int128`;`k14:int128`]);;
@@ -5922,8 +5922,8 @@ let WBN_INV_RAW_SPLIT = prove
 (* the core applied to its parameters, as a num->armstate->bool and as \i s. *)
 let wbn_core_applied =
   list_mk_comb(`wbn_loop_inv_core_raw`,
-    [`pc:num`;`ctr0:int128`;`in_p:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
-     `key_p:int64`;`htbl_p:int64`;`stackpointer:int64`;`nblk:num`;`ibytes:byte list`;
+    [`pc:num`;`ctr0:int128`;`in_p:int64`;`out_p:int64`;`tag_p:int64`;`ivec_p:int64`;
+     `key_p:int64`;`htable_p:int64`;`stackpointer:int64`;`nblk:num`;`ibytes:byte list`;
      `xi:int128`;`h:int128`;`k0:int128`;`k1:int128`;`k2:int128`;`k3:int128`;`k4:int128`;
      `k5:int128`;`k6:int128`;`k7:int128`;`k8:int128`;`k9:int128`;`k10:int128`;`k11:int128`;
      `k12:int128`;`k13:int128`;`k14:int128`]);;
@@ -6184,7 +6184,7 @@ let WBN_MAIN_LOOP_raw = prove(wbn_main_loop_goal,
        in iteration i, with
          X0 = in_p+128(i+1), X2 = out_p+128(i+1), X4 = in_p+16nblk,
          X5 = 128*((nblk-1) DIV 8)+in_p, X1 = 128nblk, X9 = 16nblk,
-         X10 = sp+64, X11 = key_p, X3 = xi_p, X6 = htbl_p, X16 = ivec_p,
+         X10 = sp+64, X11 = key_p, X3 = tag_p, X6 = htable_p, X16 = ivec_p,
          X15 = word 2^32, SP = stackpointer,
          Q0..Q4 = gcm_ctr_add (8i+8 .. 8i+12) ctr0, the counters ahead,
          Q5..Q7 = the plaintexts of blocks 8i+5 .. 8i+7,
@@ -6384,7 +6384,7 @@ let WBN_MAIN_LOOP_raw = prove(wbn_main_loop_goal,
 (*   X5 = (in_p+16nblk) - (in_p+128(k+1)) = word (16*r), and the NZCV        *)
 (*   of cmp x5,#0x70 (112)                                                   *)
 (*   preserved: X1 = 128nblk, X9 = 16nblk, X10 = sp+64, X11 = key_p,         *)
-(*   X3 = xi_p, X6 = htbl_p, X16 = ivec_p, X15 = 2^32, Q31 = 2^96,           *)
+(*   X3 = tag_p, X6 = htable_p, X16 = ivec_p, X15 = 2^32, Q31 = 2^96,        *)
 (*   SP = stackpointer, [sp+64] = 0xC2..., the round keys k0..k14, the       *)
 (*   htable, the input buffer and the stores j < 8*(k+1)                     *)
 (* ========================================================================= *)
@@ -6395,10 +6395,10 @@ let WBN_MAIN_LOOP_raw = prove(wbn_main_loop_goal,
    this is not a true postcondition (word_bytereverse is a bijection and the
    model is deterministic).  The counter registers are
    Q0..Q7 = aes13 (gcm_ctr_add (word (8*k+8+i)) ctr0) k0..k13, i = 0..7.  It
-   leaves out the xi_p, ivec_p, [sp+72] and in_p block 0 cells, which the tail
+   leaves out the tag_p, ivec_p, [sp+72] and in_p block 0 cells, which the tail
    does not read: the tail (0xef0..0x1198, and the exact-8 drain
    0x11b4..0x1330) only stores ivec_p (str q30,[x16] at 0x1130, or 0x1300 in
-   the drain) and xi_p (st1 v19,[x3] at 0x1198), and its only stack load is the
+   the drain) and tag_p (st1 v19,[x3] at 0x1198), and its only stack load is the
    reduction constant at [sp+64].  It also leaves out Q9, which the tail does
    read and which the extended post below restates in spec form. *)
 let wbn_prepretail_post_raw =
@@ -6422,8 +6422,8 @@ let wbn_prepretail_post_raw =
     `read SP s = stackpointer`;
     `read X1 s = word (128 * nblk)`;
     `read X2 s = word_add out_p (word (128 * ((nblk - 9) DIV 8 + 1)))`;
-    `read X3 s = xi_p`;
-    `read X6 s = htbl_p`;
+    `read X3 s = tag_p`;
+    `read X6 s = htable_p`;
     `read (memory :> bytes (in_p,16 * nblk)) s = num_of_bytelist ibytes`] @
    wbp_key_reads @ wbp_htable_reads @ wbp_ctx `xi':int128` @
    [wbp_rd `Q5` (wbp_aes13 (ctr 13));
@@ -6734,12 +6734,12 @@ let WBN_INPUT_SLICE_GEN = prove
 (* below proves                                                              *)
 (*   ensures arm wbn_prepretail_post_ext2 (shifted band_post r) narrow_frame *)
 (* by weakening the precondition of WB_TAIL_GEN2_r at shift_vals r.  The     *)
-(* tail's own hypotheses (nonoverlapping over the shifted out_p, xi_p and    *)
+(* tail's own hypotheses (nonoverlapping over the shifted out_p, tag_p and   *)
 (* ivec_p regions) need three disjointness clauses the wide hypotheses do    *)
 (* not carry:                                                                *)
-(*   nonoverlapping (out_p,16*nblk) (xi_p,16)                                *)
+(*   nonoverlapping (out_p,16*nblk) (tag_p,16)                               *)
 (*   nonoverlapping (out_p,16*nblk) (ivec_p,16)                              *)
-(*   nonoverlapping (xi_p,16)       (ivec_p,16)                              *)
+(*   nonoverlapping (tag_p,16)       (ivec_p,16)                             *)
 (* They are genuine preconditions of the whole function: the output buffer   *)
 (* is disjoint from the tag and the counter block, and those two from each   *)
 (* other.  Rather than widen wbn_front_hyps_wide_tm, which would mean        *)
@@ -6760,9 +6760,9 @@ let shift_vals r =
   let xi_shifted = mk_comb(`word_bytereverse:int128->int128`, wbn_caught_up) in
   [ `pc:num`; `stackpointer:int64`;
     `word_add out_p (word (128 * ((nblk - 9) DIV 8 + 1))):int64`;
-    `xi_p:int64`; `ivec_p:int64`;
+    `tag_p:int64`; `ivec_p:int64`;
     `word_add in_p (word (128 * ((nblk - 9) DIV 8 + 1))):int64`;
-    `key_p:int64`; `htbl_p:int64`;
+    `key_p:int64`; `htable_p:int64`;
     slice; xi_shifted;
     `gcm_ctr_add (word (8 * ((nblk - 9) DIV 8 + 1))) ctr0:int128`;
     `k0:int128`;`k1:int128`;`k2:int128`;`k3:int128`;`k4:int128`;`k5:int128`;`k6:int128`;`k7:int128`;
@@ -6796,7 +6796,7 @@ let wbn_end_post =
     ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
         word_xor (word_xor (bytes_to_int128 (SUB_LIST (16 * j,16) ibytes))
         (aes13 (gcm_ctr_inc_iter j ctr0) k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13)) k14` in
-  let tag = `read (memory :> bytes128 xi_p) s =
+  let tag = `read (memory :> bytes128 tag_p) s =
     word_bytereverse (ghash_polyval_acc (byteswap128 h) (word_bytereverse xi)
       (MAP word_bytereverse
         (list_of_seq (\k. bytes_to_int128 (SUB_LIST (16 * k,16) ibytes)) nblk)))` in
@@ -7698,7 +7698,7 @@ let WBN_END_OUTPUT_BYTE_LIST = prove
 (* 128 * nblk < 2 EXP 64 and val in_p + 16 * nblk < 2 EXP 63 added: for      *)
 (* nblk <= 8 they follow from the small nblk, for a symbolic nblk they rule  *)
 (* out pointer and length overflow.  (The exported subroutine theorem gets   *)
-(* the first from the 64-bit bit_len and keeps the second as a               *)
+(* the first from the 64-bit len_bits and keeps the second as a              *)
 (* precondition.)                                                            *)
 (*                                                                           *)
 (* The proof splits on nblk: nblk <= 8 is DISPATCH, already in the NIST      *)
@@ -7719,7 +7719,7 @@ let WBN_END_OUTPUT_BYTE_LIST = prove
 (* ------------------------------------------------------------------------- *)
 
 let WBN_DEC_CORE_BYTELIST = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk ibytes rk H
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p nblk ibytes rk H
     tag0 ctr0.
     1 <= nblk /\
     128 * nblk < 2 EXP 64 /\
@@ -7727,35 +7727,35 @@ let WBN_DEC_CORE_BYTELIST = prove
     LENGTH ibytes = 16 * nblk /\
     LENGTH rk = 15 /\
     aligned 16 stackpointer /\
-    ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
-    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
-    PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
+    ALLPAIRS nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16]
+    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192; stackpointer,80] /\
+    PAIRWISE nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16] /\
     ALL (nonoverlapping (stackpointer,80))
-    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htbl_p,192]
+    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192]
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
               read PC s = word (pc + 28) /\
               read SP s = stackpointer /\
               C_ARGUMENTS
-                [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
+                [in_p; word (128 * nblk); out_p; tag_p; ivec_p; key_p; htable_p]
                 s /\
               byte_list_at ibytes in_p (word (16 * nblk)) s /\
-              read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+              read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
               read (memory :> bytes128 ivec_p) s = ctr0 /\
               wordlist_from_memory (key_p,15) s = rk /\
-              htable_mem_8 (ghash_twist H) htbl_p s)
+              htable_mem_8 (ghash_twist H) htable_p s)
          (\s. read PC s = word (pc + 4508) /\
               read X9 s = word (16 * nblk) /\
               byte_list_at (gcm_dec_pt_bytes (16 * nblk) ibytes ctr0 rk) out_p
               (word (16 * nblk)) s /\
-              read (memory :> bytes128 xi_p) s =
+              read (memory :> bytes128 tag_p) s =
               word_reversefields 8
               (nist_ghash H tag0
               (list_of_seq (nist_input_block_bytes ibytes) nblk)) /\
               read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter nblk ctr0)
          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE
-          [memory :> bytes (out_p,16 * nblk); memory :> bytes (xi_p,16);
+          [memory :> bytes (out_p,16 * nblk); memory :> bytes (tag_p,16);
            memory :> bytes (ivec_p,16);
            memory :> bytes (word_add stackpointer (word 64),16)] ,,
           MAYCHANGE
@@ -7823,8 +7823,8 @@ let WBN_DEC_CORE_BYTELIST = prove
 (* ------------------------------------------------------------------------- *)
 (* WBN_DEC_SUBROUTINE_BYTELIST: the ABI wrapper spine (H free, byte-list     *)
 (* output), from which the exported subroutine theorem is derived below      *)
-(* (through WBN_DEC_VALID_CALL_CORRECT).  It covers bit_len = 128 * nblk for *)
-(* any nblk, so it is the whole-blocks contract of the function: for         *)
+(* (through WBN_DEC_VALID_CALL_CORRECT).  It covers len_bits = 128 * nblk    *)
+(* for any nblk, so it is the whole-blocks contract of the function: for     *)
 (* nblk = 0 the entry cbz x1 is taken and the function returns 0, with the   *)
 (* output empty and the tag unchanged; for nblk >= 1 the entry guard falls   *)
 (* through and the prologue, the core and the epilogue run.                  *)
@@ -7859,43 +7859,43 @@ let WBN_DEC_CORE_BYTELIST = prove
 (* ------------------------------------------------------------------------- *)
 
 let WBN_DEC_SUBROUTINE_BYTELIST = prove
-   (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk ibytes rk H
+   (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p nblk ibytes rk H
       tag0 ctr0 returnaddress.
       128 * nblk < 2 EXP 64 /\
       val in_p + 16 * nblk < 2 EXP 63 /\
       LENGTH ibytes = 16 * nblk /\
       LENGTH rk = 15 /\
       aligned 16 stackpointer /\
-      ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
-      [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htbl_p,192;
+      ALLPAIRS nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16]
+      [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192;
        word_sub stackpointer (word 80),80] /\
-      PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
+      PAIRWISE nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16] /\
       ALL (nonoverlapping (word_sub stackpointer (word 80),80))
-      [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htbl_p,192]
+      [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192]
       ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                read PC s = word pc /\
                read SP s = stackpointer /\
                read X30 s = returnaddress /\
                C_ARGUMENTS
-               [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
+               [in_p; word (128 * nblk); out_p; tag_p; ivec_p; key_p; htable_p]
                s /\
                byte_list_at ibytes in_p (word (16 * nblk)) s /\
-               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
                read (memory :> bytes128 ivec_p) s = ctr0 /\
                wordlist_from_memory (key_p,15) s = rk /\
-               htable_mem_8 (ghash_twist H) htbl_p s)
+               htable_mem_8 (ghash_twist H) htable_p s)
           (\s. read PC s = returnaddress /\
                C_RETURN s = word (16 * nblk) /\
                byte_list_at (gcm_dec_pt_bytes (16 * nblk) ibytes ctr0 rk) out_p
                (word (16 * nblk)) s /\
-               read (memory :> bytes128 xi_p) s =
+               read (memory :> bytes128 tag_p) s =
                word_reversefields 8
                (nist_ghash H tag0 (list_of_seq (nist_input_block_bytes ibytes) nblk)) /\
                read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter nblk ctr0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE
-           [memory :> bytes (out_p,16 * nblk); memory :> bytes (xi_p,16);
+           [memory :> bytes (out_p,16 * nblk); memory :> bytes (tag_p,16);
             memory :> bytes (ivec_p,16);
             memory :> bytes (word_sub stackpointer (word 80),80)])`,
   (* The wrapper is written by hand (see above); these helpers are local to the
@@ -7904,8 +7904,8 @@ let WBN_DEC_SUBROUTINE_BYTELIST = prove
   (* the core, SP set to the post-prologue in-frame value *)
   let WB_CORE_INST =
     SPECL [`pc:num`; `word_sub stackpointer (word 80):int64`;
-           `in_p:int64`; `out_p:int64`; `xi_p:int64`; `ivec_p:int64`;
-           `key_p:int64`; `htbl_p:int64`; `nblk:num`; `ibytes:byte list`;
+           `in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
+           `key_p:int64`; `htable_p:int64`; `nblk:num`; `ibytes:byte list`;
            `rk:int128 list`; `H:int128`; `tag0:int128`; `ctr0:int128`]
           WBN_DEC_CORE_BYTELIST in
   (* val(word(16*nblk))=16*nblk from 128*nblk<2 EXP 64 (so 16*nblk<2 EXP 64) *)
@@ -7917,7 +7917,7 @@ let WBN_DEC_SUBROUTINE_BYTELIST = prove
   let WB_CORE_INST_UF2 =
     REWRITE_RULE[byte_list_at; wordlist_from_memory; HTABLE_MEM_8_FLAT; DIMINDEX_128;
                  fst EXEC; UNDISCH VAL16EQ] WB_CORE_INST in
-  (* guard fall-through: cbz/b.ne both fall through for bit_len = 128*nblk *)
+  (* guard fall-through: cbz/b.ne both fall through for len_bits = 128*nblk *)
   let WB_GUARD_FALLTHROUGH_TAC =
     SUBGOAL_THEN `val (word (128 * nblk):int64) = 128 * nblk` ASSUME_TAC THENL
      [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC;
@@ -8240,37 +8240,37 @@ let WBN_EXPORT_FROM_SPINE_TAC spine =
                AES256_ENCRYPT_CTR_AS_AES_CTR_BLOCK] THEN
   MATCH_ACCEPT_TAC WORD_XOR_SYM;;
 
-(* The whole-block subroutine result for bit_len = 128 * nblk, any nblk      *)
+(* The whole-block subroutine result for len_bits = 128 * nblk, any nblk     *)
 (* including 0: an internal helper for the public arbitrary-length theorem.  *)
 let WBN_DEC_VALID_CALL_CORRECT = prove
- (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
+ (`!pc stackpointer in_p out_p tag_p ivec_p key_p htable_p nblk inblock rk
     tag0 nonce c returnaddress.
     128 * nblk < 2 EXP 64 /\
     val in_p + 16 * nblk < 2 EXP 63 /\
     aligned 16 stackpointer /\
-    ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
-    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htbl_p,192;
+    ALLPAIRS nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16]
+    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192;
      word_sub stackpointer (word 80),80] /\
-    PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
+    PAIRWISE nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16] /\
     ALL (nonoverlapping (word_sub stackpointer (word 80),80))
-    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htbl_p,192]
+    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192]
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
               read PC s = word pc /\
               read SP s = stackpointer /\
               read X30 s = returnaddress /\
               C_ARGUMENTS
-              [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
+              [in_p; word (128 * nblk); out_p; tag_p; ivec_p; key_p; htable_p]
               s /\
               (!j. j < nblk
                    ==> read (memory :> bytes128
                               (word_add in_p (word (16 * j)))) s = inblock j) /\
-              read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+              read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
               read (memory :> bytes128 ivec_p) s =
               word_reversefields 8 (ctr_block nonce c) /\
               wordlist_from_memory (key_p,15) s =
               MAP (word_reversefields 8) rk /\
-              htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htbl_p s)
+              htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s)
          (\s. read PC s = returnaddress /\
               C_RETURN s = word (16 * nblk) /\
               (!j. j < nblk
@@ -8278,7 +8278,7 @@ let WBN_DEC_VALID_CALL_CORRECT = prove
                               (word_add out_p (word (16 * j)))) s =
                        word_xor (aes_ctr_block aes256_cipher c nonce rk j)
                                 (inblock j)) /\
-              read (memory :> bytes128 xi_p) s =
+              read (memory :> bytes128 tag_p) s =
               word_reversefields 8
               (nist_ghash (aes256_cipher (word 0) rk) tag0
               (list_of_seq (nist_input_block inblock) nblk)) /\
@@ -8286,20 +8286,20 @@ let WBN_DEC_VALID_CALL_CORRECT = prove
               word_reversefields 8 (ctr_block nonce (nblk + c)))
          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE
-          [memory :> bytes (out_p,16 * nblk); memory :> bytes (xi_p,16);
+          [memory :> bytes (out_p,16 * nblk); memory :> bytes (tag_p,16);
            memory :> bytes (ivec_p,16);
            memory :> bytes (word_sub stackpointer (word 80),80)])`,
   WBN_EXPORT_FROM_SPINE_TAC WBN_DEC_SUBROUTINE_BYTELIST);;
 
 (* The exported subroutine contract (the AAPCS64-callable result), for an
-   arbitrary bit_len, first for the trimmed code, the code of a -DNO_IBT
-   build.  gcm_wb_blocks bit_len is the number of blocks processed, and
+   arbitrary len_bits, first for the trimmed code, the code of a -DNO_IBT
+   build.  gcm_wb_blocks len_bits is the number of blocks processed, and
    every data-dependent clause is indexed by it, so one postcondition
    describes all three paths:
    - a non-multiple of 128 is rejected by the entry guard (cbz falls through,
      tst/b.ne branches to the return), which returns 0 and touches no memory;
    - zero and the nonzero multiples of 128 are WBN_DEC_VALID_CALL_CORRECT at
-     bit_len = word (128 * nblk), where 128 * nblk < 2 EXP 64 is just
+     len_bits = word (128 * nblk), where 128 * nblk < 2 EXP 64 is just
      VAL_BOUND_64.
    The pointer bound val in_p + 16 * nblk < 2 EXP 63 is genuine: the kernel
    compares pointers with signed conditions.
@@ -8307,71 +8307,71 @@ let WBN_DEC_VALID_CALL_CORRECT = prove
    ensure the cumulative message length does not exceed 2^36 - 32 bytes
    (2^39 - 256 bits). *)
 let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
- (`!pc stackpointer in_p bit_len out_p xi_p ivec_p key_p htbl_p inblock rk
+ (`!pc stackpointer in_p len_bits out_p tag_p ivec_p key_p htable_p inblock rk
     tag0 nonce c returnaddress.
-    val in_p + 16 * gcm_wb_blocks bit_len < 2 EXP 63 /\
+    val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
-    [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16]
+    [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16]
     [word pc, LENGTH aes256_gcm_dec_alt_tmc;
-     in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192;
+     in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192;
      word_sub stackpointer (word 80),80] /\
     PAIRWISE nonoverlapping
-    [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16] /\
+    [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16] /\
     ALL (nonoverlapping (word_sub stackpointer (word 80),80))
     [word pc, LENGTH aes256_gcm_dec_alt_tmc;
-     in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192]
+     in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192]
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
               read PC s = word pc /\
               read SP s = stackpointer /\
               read X30 s = returnaddress /\
               C_ARGUMENTS
-              [in_p; bit_len; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
-              (!j. j < gcm_wb_blocks bit_len
+              [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
+              (!j. j < gcm_wb_blocks len_bits
                    ==> read (memory :> bytes128
                               (word_add in_p (word (16 * j)))) s = inblock j) /\
-              read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+              read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
               read (memory :> bytes128 ivec_p) s =
               word_reversefields 8 (ctr_block nonce c) /\
               wordlist_from_memory (key_p,15) s =
               MAP (word_reversefields 8) rk /\
-              htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htbl_p s)
+              htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s)
          (\s. read PC s = returnaddress /\
-              C_RETURN s = word (16 * gcm_wb_blocks bit_len) /\
-              (!j. j < gcm_wb_blocks bit_len
+              C_RETURN s = word (16 * gcm_wb_blocks len_bits) /\
+              (!j. j < gcm_wb_blocks len_bits
                    ==> read (memory :> bytes128
                               (word_add out_p (word (16 * j)))) s =
                        word_xor (aes_ctr_block aes256_cipher c nonce rk j)
                                 (inblock j)) /\
-              read (memory :> bytes128 xi_p) s =
+              read (memory :> bytes128 tag_p) s =
               word_reversefields 8
               (nist_ghash (aes256_cipher (word 0) rk) tag0
               (list_of_seq (nist_input_block inblock)
-                           (gcm_wb_blocks bit_len))) /\
+                           (gcm_wb_blocks len_bits))) /\
               read (memory :> bytes128 ivec_p) s =
               word_reversefields 8
-                (ctr_block nonce (gcm_wb_blocks bit_len + c)))
+                (ctr_block nonce (gcm_wb_blocks len_bits + c)))
          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE
           [memory :> bytes
-             (out_p,16 * gcm_wb_blocks bit_len);
-           memory :> bytes (xi_p,16);
+             (out_p,16 * gcm_wb_blocks len_bits);
+           memory :> bytes (tag_p,16);
            memory :> bytes (ivec_p,16);
            memory :> bytes (word_sub stackpointer (word 80),80)])`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
-  ABBREV_TAC `nblk = gcm_wb_blocks bit_len` THEN
-  ASM_CASES_TAC `val(bit_len:int64) MOD 128 = 0` THENL
-   [(* Whole blocks, including zero: bit_len = word (128 * nblk). *)
-    SUBGOAL_THEN `val(bit_len:int64) = 128 * nblk` ASSUME_TAC THENL
+  ABBREV_TAC `nblk = gcm_wb_blocks len_bits` THEN
+  ASM_CASES_TAC `val(len_bits:int64) MOD 128 = 0` THENL
+   [(* Whole blocks, including zero: len_bits = word (128 * nblk). *)
+    SUBGOAL_THEN `val(len_bits:int64) = 128 * nblk` ASSUME_TAC THENL
      [EXPAND_TAC "nblk" THEN ASM_SIMP_TAC[GCM_WB_BLOCKS_VALID];
       ALL_TAC] THEN
     SUBGOAL_THEN `128 * nblk < 2 EXP 64` ASSUME_TAC THENL
-     [MP_TAC(ISPEC `bit_len:int64` VAL_BOUND_64) THEN ASM_REWRITE_TAC[];
+     [MP_TAC(ISPEC `len_bits:int64` VAL_BOUND_64) THEN ASM_REWRITE_TAC[];
       ALL_TAC] THEN
-    SUBGOAL_THEN `bit_len:int64 = word (128 * nblk)` SUBST_ALL_TAC THENL
+    SUBGOAL_THEN `len_bits:int64 = word (128 * nblk)` SUBST_ALL_TAC THENL
      [FIRST_X_ASSUM(fun th ->
-        if concl th = `val(bit_len:int64) = 128 * nblk`
+        if concl th = `val(len_bits:int64) = 128 * nblk`
         then SUBST1_TAC(SYM th) else NO_TAC) THEN
       REWRITE_TAC[WORD_VAL];
       ALL_TAC] THEN
@@ -8383,12 +8383,12 @@ let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
    [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_wb_blocks] THEN
     ASM_REWRITE_TAC[COND_CLAUSES];
     ALL_TAC] THEN
-  SUBGOAL_THEN `~(val(bit_len:int64) = 0)` ASSUME_TAC THENL
+  SUBGOAL_THEN `~(val(len_bits:int64) = 0)` ASSUME_TAC THENL
    [DISCH_TAC THEN
-    UNDISCH_TAC `~(val(bit_len:int64) MOD 128 = 0)` THEN
+    UNDISCH_TAC `~(val(len_bits:int64) MOD 128 = 0)` THEN
     ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
     ALL_TAC] THEN
-  SUBGOAL_THEN `~(val(word_and (bit_len:int64) (word 127)) = 0)`
+  SUBGOAL_THEN `~(val(word_and (len_bits:int64) (word 127)) = 0)`
   ASSUME_TAC THENL
    [SUBGOAL_THEN `127 = 2 EXP 7 - 1` SUBST1_TAC THENL
      [CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
@@ -8408,56 +8408,56 @@ let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
 (* The same for the full code, with its BTI landing pad. *)
 
 let AES256_GCM_DEC_ALT_SUBROUTINE_CORRECT = prove
- (`!pc stackpointer in_p bit_len out_p xi_p ivec_p key_p htbl_p inblock rk
+ (`!pc stackpointer in_p len_bits out_p tag_p ivec_p key_p htable_p inblock rk
     tag0 nonce c returnaddress.
-    val in_p + 16 * gcm_wb_blocks bit_len < 2 EXP 63 /\
+    val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
-    [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16]
+    [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16]
     [word pc, LENGTH aes256_gcm_dec_alt_mc;
-     in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192;
+     in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192;
      word_sub stackpointer (word 80),80] /\
     PAIRWISE nonoverlapping
-    [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16] /\
+    [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16] /\
     ALL (nonoverlapping (word_sub stackpointer (word 80),80))
     [word pc, LENGTH aes256_gcm_dec_alt_mc;
-     in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192]
+     in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192]
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_mc /\
               read PC s = word pc /\
               read SP s = stackpointer /\
               read X30 s = returnaddress /\
               C_ARGUMENTS
-              [in_p; bit_len; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
-              (!j. j < gcm_wb_blocks bit_len
+              [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
+              (!j. j < gcm_wb_blocks len_bits
                    ==> read (memory :> bytes128
                               (word_add in_p (word (16 * j)))) s = inblock j) /\
-              read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+              read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
               read (memory :> bytes128 ivec_p) s =
               word_reversefields 8 (ctr_block nonce c) /\
               wordlist_from_memory (key_p,15) s =
               MAP (word_reversefields 8) rk /\
-              htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htbl_p s)
+              htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s)
          (\s. read PC s = returnaddress /\
-              C_RETURN s = word (16 * gcm_wb_blocks bit_len) /\
-              (!j. j < gcm_wb_blocks bit_len
+              C_RETURN s = word (16 * gcm_wb_blocks len_bits) /\
+              (!j. j < gcm_wb_blocks len_bits
                    ==> read (memory :> bytes128
                               (word_add out_p (word (16 * j)))) s =
                        word_xor (aes_ctr_block aes256_cipher c nonce rk j)
                                 (inblock j)) /\
-              read (memory :> bytes128 xi_p) s =
+              read (memory :> bytes128 tag_p) s =
               word_reversefields 8
               (nist_ghash (aes256_cipher (word 0) rk) tag0
               (list_of_seq (nist_input_block inblock)
-                           (gcm_wb_blocks bit_len))) /\
+                           (gcm_wb_blocks len_bits))) /\
               read (memory :> bytes128 ivec_p) s =
               word_reversefields 8
-                (ctr_block nonce (gcm_wb_blocks bit_len + c)))
+                (ctr_block nonce (gcm_wb_blocks len_bits + c)))
          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE
           [memory :> bytes
-             (out_p,16 * gcm_wb_blocks bit_len);
-           memory :> bytes (xi_p,16);
+             (out_p,16 * gcm_wb_blocks len_bits);
+           memory :> bytes (tag_p,16);
            memory :> bytes (ivec_p,16);
            memory :> bytes (word_sub stackpointer (word 80),80)])`,
   MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE
@@ -8482,7 +8482,7 @@ let AES256_GCM_DEC_ALT_ZERO_KEY_CORRECT =
 (* Constant-time and memory safety proof.                                    *)
 (*                                                                           *)
 (* AES256_GCM_DEC_ALT_SAFE is the safety theorem of the core, from pc+0x1c   *)
-(* to the core exit pc+4508, for bit_len = 128 * nblk with 1 <= nblk.        *)
+(* to the core exit pc+4508, for len_bits = 128 * nblk with 1 <= nblk.       *)
 (* CORE_SAFE_TAC splits on nblk:                                             *)
 (* - bands 1..4: driven step by step from the core entry                     *)
 (*   (concrete_band_close_tac);                                              *)
@@ -8496,7 +8496,7 @@ let AES256_GCM_DEC_ALT_ZERO_KEY_CORRECT =
 (*   tail for the residue, (nblk - 9) MOD 8 + 1 blocks.                      *)
 (*                                                                           *)
 (* AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_SAFE adds the ABI wrapper, for any    *)
-(* bit_len (ARBITRARY_WRAPPER_SAFE_TAC), and                                 *)
+(* len_bits (ARBITRARY_WRAPPER_SAFE_TAC), and                                *)
 (* AES256_GCM_DEC_ALT_SUBROUTINE_SAFE is its IBT lift (ARM_ADD_IBT_RULE).    *)
 (* ------------------------------------------------------------------------- *)
 
@@ -8563,7 +8563,7 @@ let split_close_tac lo hi =
 let mk_tail_safe_goal r =
   subst [mk_small_numeral r,`rr:num`]
    `exists f_events.
-      forall e pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk
+      forall e pc stackpointer in_p out_p tag_p ivec_p key_p htable_p nblk
              tail_in tail_out.
         1 <= nblk /\
         128 * nblk < 2 EXP 64 /\
@@ -8572,16 +8572,16 @@ let mk_tail_safe_goal r =
         nonoverlapping
           (word pc,LENGTH aes256_gcm_dec_alt_tmc) (stackpointer,80) /\
         ALLPAIRS nonoverlapping
-          [out_p,16 * nblk; xi_p,16; ivec_p,16]
+          [out_p,16 * nblk; tag_p,16; ivec_p,16]
           [word pc,LENGTH aes256_gcm_dec_alt_tmc]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                   read PC s = word (pc + 0xee4) /\
                   read X0 s = tail_in /\
                   read X2 s = tail_out /\
-                  read X3 s = xi_p /\
+                  read X3 s = tag_p /\
                   read X5 s = word (16 * rr) /\
-                  read X6 s = htbl_p /\
+                  read X6 s = htable_p /\
                   read X10 s = word_add stackpointer (word 64) /\
                   read X16 s = ivec_p /\
                   read events s = e)
@@ -8589,17 +8589,17 @@ let mk_tail_safe_goal r =
                   (exists e2.
                        read events s = APPEND e2 e /\
                        e2 =
-                       f_events in_p key_p htbl_p out_p xi_p ivec_p nblk
+                       f_events in_p key_p htable_p out_p tag_p ivec_p nblk
                                 tail_in tail_out pc stackpointer /\
                        memaccess_inbounds e2
-                       [in_p,16 * nblk; xi_p,16; ivec_p,16;
-                        key_p,240; htbl_p,192; out_p,16 * nblk;
+                       [in_p,16 * nblk; tag_p,16; ivec_p,16;
+                        key_p,240; htable_p,192; out_p,16 * nblk;
                         stackpointer,80]
-                       [out_p,16 * nblk; xi_p,16; ivec_p,16;
+                       [out_p,16 * nblk; tag_p,16; ivec_p,16;
                         stackpointer,80]))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
-              [memory :> bytes (tail_out,16 * rr); memory :> bytes (xi_p,16);
+              [memory :> bytes (tail_out,16 * rr); memory :> bytes (tag_p,16);
                memory :> bytes (ivec_p,16);
                memory :> bytes (word_add stackpointer (word 64),16)] ,,
               MAYCHANGE
@@ -8614,11 +8614,11 @@ let prove_tail_safe r =
       `nonoverlapping (word pc,5908) (tail_out:int64,tail_len)` in
   let tail_reads =
     subst [tail_len,`tail_len:num`]
-      `[(tail_in:int64),tail_len; xi_p,16; ivec_p,16; key_p,240; htbl_p,192;
+      `[(tail_in:int64),tail_len; tag_p,16; ivec_p,16; key_p,240; htable_p,192;
         tail_out,tail_len; stackpointer,80]` in
   let tail_writes =
     subst [tail_len,`tail_len:num`]
-      `[(tail_out:int64),tail_len; xi_p,16; ivec_p,16; stackpointer,80]` in
+      `[(tail_out:int64),tail_len; tag_p,16; ivec_p,16; stackpointer,80]` in
   prove(mk_tail_safe_goal r,
     META_EXISTS_TAC THEN REPEAT GEN_TAC THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
@@ -8632,7 +8632,7 @@ let prove_tail_safe r =
          [ONCE_REWRITE_TAC[NONOVERLAPPING_SYM] THEN ASM_REWRITE_TAC[];
           ALL_TAC])
      [`nonoverlapping (word pc,5908) (out_p:int64,16 * nblk)`;
-      `nonoverlapping (word pc,5908) (xi_p:int64,16)`;
+      `nonoverlapping (word pc,5908) (tag_p:int64,16)`;
       `nonoverlapping (word pc,5908) (ivec_p:int64,16)`] THEN
     SUBGOAL_THEN tail_code_nonoverlap ASSUME_TAC THENL
      [MATCH_MP_TAC NONOVERLAPPING_SUBREGIONS THEN
@@ -8685,7 +8685,7 @@ let wbn_tail_safeties =
 let MP_WB_TAIL_SAFE_TAC r sname nblk tail_in tail_out : tactic =
   let args =
     [`pc:num`; `stackpointer:int64`; `in_p:int64`; `out_p:int64`;
-     `xi_p:int64`; `ivec_p:int64`; `key_p:int64`; `htbl_p:int64`;
+     `tag_p:int64`; `ivec_p:int64`; `key_p:int64`; `htable_p:int64`;
      nblk; tail_in; tail_out] in
   fun (asl,w) ->
     let ev = events_of_state asl (mk_var(sname,`:armstate`)) in
@@ -8740,8 +8740,8 @@ let front_inv = `\s:armstate.
      read X10 s = word_add stackpointer (word 64) /\
      read X1 s = word (128 * nblk) /\
      read X16 s = ivec_p /\
-     read X6 s = htbl_p /\
-     read X3 s = xi_p /\
+     read X6 s = htable_p /\
+     read X3 s = tag_p /\
      read X11 s = key_p`;;
 
 (* ---- nblk 5..8 shared front.  These four paths execute the same 270
@@ -8754,10 +8754,10 @@ let front_58_inv = `\s:armstate.
      read SP s = stackpointer /\
      read X0 s = in_p /\
      read X2 s = out_p /\
-     read X3 s = xi_p /\
+     read X3 s = tag_p /\
      read X4 s = word_add in_p (word (16 * nblk)) /\
      read X5 s = word (16 * nblk) /\
-     read X6 s = htbl_p /\
+     read X6 s = htable_p /\
      read X9 s = word (16 * nblk) /\
      read X10 s = word_add stackpointer (word 64) /\
      read X11 s = key_p /\
@@ -8847,8 +8847,8 @@ let loop_inv = `\(i:num) s:armstate.
      read X10 s = word_add stackpointer (word 64) /\
      read X1 s = word (128 * nblk) /\
      read X16 s = ivec_p /\
-     read X6 s = htbl_p /\
-     read X3 s = xi_p /\
+     read X6 s = htable_p /\
+     read X3 s = tag_p /\
      read X11 s = key_p`;;
 
 (* ---- the main loop, on the rest subgoal (pc+1212 to pc+4508) once the front
@@ -9037,45 +9037,45 @@ let CORE_SAFE_TAC =
    theorem below takes its bounds from the C signature through mk_safety_spec:
    the tag and ivec (16), key (240) and htable (192) bounds and the 80-byte
    frame equal this footprint, while the in/out bounds are the C length
-   len_bits/8 (val bit_len DIV 8 bytes), which contains the 16 * nblk footprint
-   and equals it when bit_len = word (128 * nblk). ---- *)
+   len_bits/8 (val len_bits DIV 8 bytes), which contains the 16 * nblk footprint
+   and equals it when len_bits = word (128 * nblk). ---- *)
 let AES256_GCM_DEC_ALT_SAFE = prove
  (`exists f_events.
-     forall e pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk.
+     forall e pc stackpointer in_p out_p tag_p ivec_p key_p htable_p nblk.
          1 <= nblk /\
          128 * nblk < 2 EXP 64 /\
          val in_p + 16 * nblk < 2 EXP 63 /\
          aligned 16 stackpointer /\
-         ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
+         ALLPAIRS nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16]
          [word pc,LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk;
-          key_p,240; htbl_p,192; stackpointer,80] /\
-         PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
+          key_p,240; htable_p,192; stackpointer,80] /\
+         PAIRWISE nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16] /\
          ALL (nonoverlapping (stackpointer,80))
          [word pc,LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk;
-          key_p,240; htbl_p,192]
+          key_p,240; htable_p,192]
          ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc /\
                   read PC s = word (pc + 28) /\
                   read SP s = stackpointer /\
                   C_ARGUMENTS
-                  [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
+                  [in_p; word (128 * nblk); out_p; tag_p; ivec_p; key_p; htable_p]
                   s /\
                   read events s = e)
              (\s. read PC s = word (pc + 4508) /\
                   (exists e2.
                        read events s = APPEND e2 e /\
                        e2 =
-                       f_events in_p key_p htbl_p out_p xi_p ivec_p nblk pc
+                       f_events in_p key_p htable_p out_p tag_p ivec_p nblk pc
                        stackpointer /\
                        memaccess_inbounds e2
-                       [in_p,16 * nblk; xi_p,16; ivec_p,16;
-                        key_p,240; htbl_p,192; out_p,16 * nblk;
+                       [in_p,16 * nblk; tag_p,16; ivec_p,16;
+                        key_p,240; htable_p,192; out_p,16 * nblk;
                         stackpointer,80]
-                       [out_p,16 * nblk; xi_p,16; ivec_p,16;
+                       [out_p,16 * nblk; tag_p,16; ivec_p,16;
                         stackpointer,80]))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
-              [memory :> bytes (out_p,16 * nblk); memory :> bytes (xi_p,16);
+              [memory :> bytes (out_p,16 * nblk); memory :> bytes (tag_p,16);
                memory :> bytes (ivec_p,16);
                memory :> bytes (word_add stackpointer (word 64),16)] ,,
               MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15])`,
@@ -9086,7 +9086,7 @@ let AES256_GCM_DEC_ALT_SAFE = prove
    X_CHOOSE'd f_events_callee variable in the witness, which then escapes its
    scope and makes the CHOOSE fail at extraction.
 
-   The public witness dispatches only on the public bit_len:
+   The public witness dispatches only on the public len_bits:
    - invalid non-multiple: the three reject-path jumps;
    - zero: the cbz/return jumps;
    - valid nonzero: prologue stores/jumps, the core trace, and epilogue
@@ -9096,10 +9096,10 @@ let AES256_GCM_DEC_ALT_SAFE = prove
    cannot be written down is which variable holds it, since
    ASSUME_CALLEE_SAFETY_TAILED_TAC chooses that variable itself. *)
 let wrapper_witness_template =
- `\(in_p:int64) (key_p:int64) (htbl_p:int64) (out_p:int64) (xi_p:int64)
-   (ivec_p:int64) (bit_len:int64) (pc:num) (sp:int64) (ra:int64).
-     if val bit_len MOD 128 = 0 then
-       if val bit_len = 0 then
+ `\(in_p:int64) (key_p:int64) (htable_p:int64) (out_p:int64) (tag_p:int64)
+   (ivec_p:int64) (len_bits:int64) (pc:num) (sp:int64) (ra:int64).
+     if val len_bits MOD 128 = 0 then
+       if val len_bits = 0 then
          [EventJump (word (pc + 5904),ra);
           EventJump (word pc,word (pc + 5900))]
        else
@@ -9109,8 +9109,8 @@ let wrapper_witness_template =
             EventLoad (word_add sp (word 32),16);
             EventLoad (word_add sp (word 16),16)]
            (APPEND
-             (f_events_core in_p key_p htbl_p out_p xi_p ivec_p
-               (gcm_wb_blocks bit_len) pc sp)
+             (f_events_core in_p key_p htable_p out_p tag_p ivec_p
+               (gcm_wb_blocks len_bits) pc sp)
              [EventStore (word_add sp (word 48),16);
               EventStore (word_add sp (word 32),16);
               EventStore (word_add sp (word 16),16); EventStore (sp,16);
@@ -9154,21 +9154,21 @@ let ARBITRARY_WRAPPER_SAFE_TAC coreth =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES;PAIRWISE;ALLPAIRS;ALL] THEN
   REWRITE_TAC[C_ARGUMENTS;C_RETURN;SOME_FLAGS] THEN REPEAT GEN_TAC THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN BETA_TAC THEN
-  ABBREV_TAC `nblk = gcm_wb_blocks bit_len` THEN
-  ASM_CASES_TAC `val(bit_len:int64) MOD 128 = 0` THENL
+  ABBREV_TAC `nblk = gcm_wb_blocks len_bits` THEN
+  ASM_CASES_TAC `val(len_bits:int64) MOD 128 = 0` THENL
    [ALL_TAC;
     (* Invalid non-multiple: reject before any memory access. *)
     SUBGOAL_THEN `nblk = 0` SUBST_ALL_TAC THENL
      [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_wb_blocks] THEN
       ASM_REWRITE_TAC[COND_CLAUSES];
       ALL_TAC] THEN
-    SUBGOAL_THEN `~(val(bit_len:int64) = 0)` ASSUME_TAC THENL
+    SUBGOAL_THEN `~(val(len_bits:int64) = 0)` ASSUME_TAC THENL
      [DISCH_TAC THEN
-      UNDISCH_TAC `~(val(bit_len:int64) MOD 128 = 0)` THEN
+      UNDISCH_TAC `~(val(len_bits:int64) MOD 128 = 0)` THEN
       ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
       ALL_TAC] THEN
     SUBGOAL_THEN
-     `~(val(word_and (bit_len:int64) (word 127)) = 0)`
+     `~(val(word_and (len_bits:int64) (word 127)) = 0)`
     ASSUME_TAC THENL
      [SUBGOAL_THEN `127 = 2 EXP 7 - 1` SUBST1_TAC THENL
        [CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
@@ -9177,13 +9177,13 @@ let ARBITRARY_WRAPPER_SAFE_TAC coreth =
       ALL_TAC] THEN
     WB_GUARD_RETURN_TAC 5
       (REWRITE_TAC[APPEND;memaccess_inbounds;ALL;EX;FST;SND])] THEN
-  ASM_CASES_TAC `val(bit_len:int64) = 0` THENL
+  ASM_CASES_TAC `val(len_bits:int64) = 0` THENL
    [(* Zero: cbz returns before the stack saves. *)
     SUBGOAL_THEN `nblk = 0` SUBST_ALL_TAC THENL
      [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_wb_blocks] THEN
       ASM_REWRITE_TAC[COND_CLAUSES] THEN CONV_TAC NUM_REDUCE_CONV;
       ALL_TAC] THEN
-    SUBGOAL_THEN `bit_len:int64 = word 0` SUBST_ALL_TAC THENL
+    SUBGOAL_THEN `len_bits:int64 = word 0` SUBST_ALL_TAC THENL
      [ASM_REWRITE_TAC[GSYM VAL_EQ_0];
       ALL_TAC] THEN
     WB_GUARD_RETURN_TAC 3
@@ -9195,19 +9195,19 @@ let ARBITRARY_WRAPPER_SAFE_TAC coreth =
   SUBGOAL_THEN `1 <= nblk` ASSUME_TAC THENL
    [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_wb_blocks] THEN
     ASM_REWRITE_TAC[] THEN
-    MP_TAC(SPECL [`val(bit_len:int64)`; `128`]
+    MP_TAC(SPECL [`val(len_bits:int64)`; `128`]
       (CONJUNCT2 DIVISION_SIMP)) THEN
     ASM_ARITH_TAC;
     ALL_TAC] THEN
-  SUBGOAL_THEN `val(bit_len:int64) = 128 * nblk` ASSUME_TAC THENL
+  SUBGOAL_THEN `val(len_bits:int64) = 128 * nblk` ASSUME_TAC THENL
    [EXPAND_TAC "nblk" THEN ASM_SIMP_TAC[GCM_WB_BLOCKS_VALID];
     ALL_TAC] THEN
   SUBGOAL_THEN `128 * nblk < 2 EXP 64` ASSUME_TAC THENL
-   [MP_TAC(ISPEC `bit_len:int64` VAL_BOUND_64) THEN ASM_REWRITE_TAC[];
+   [MP_TAC(ISPEC `len_bits:int64` VAL_BOUND_64) THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
-  SUBGOAL_THEN `bit_len:int64 = word (128 * nblk)` SUBST_ALL_TAC THENL
+  SUBGOAL_THEN `len_bits:int64 = word (128 * nblk)` SUBST_ALL_TAC THENL
    [FIRST_X_ASSUM(fun th ->
-      if concl th = `val(bit_len:int64) = 128 * nblk`
+      if concl th = `val(len_bits:int64) = 128 * nblk`
       then MP_TAC th else failwith "") THEN
     DISCH_THEN(SUBST1_TAC o SYM) THEN REWRITE_TAC[WORD_VAL];
     ALL_TAC] THEN
@@ -9227,8 +9227,8 @@ let ARBITRARY_WRAPPER_SAFE_TAC coreth =
      USE_THEN "CORE" (fun cth -> MP_TAC (SPECL
        [`e:(uarch_event)list`;`pc:num`;
         `word_sub stackpointer (word 80):int64`;
-        `in_p:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
-        `key_p:int64`;`htbl_p:int64`;`nblk:num`;pd] cth))) THEN
+        `in_p:int64`;`out_p:int64`;`tag_p:int64`;`ivec_p:int64`;
+        `key_p:int64`;`htable_p:int64`;`nblk:num`;pd] cth))) THEN
   ANTS_TAC THENL
    [ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES;PAIRWISE;ALLPAIRS;ALL] THEN
     REPEAT CONJ_TAC THEN TRY(FIRST_ASSUM ACCEPT_TAC) THEN
@@ -9257,7 +9257,7 @@ let noibt_full_spec,_ = mk_safety_spec
     AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT
     AES256_GCM_DEC_ALT_EXEC;;
 
-(* The statement of the exported safety theorem, for an arbitrary bit_len,
+(* The statement of the exported safety theorem, for an arbitrary len_bits,
    first for the trimmed code.  The theorem below is proved as the
    noibt_full_spec that mk_safety_spec generates above from
    AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT and the C signature, and the
@@ -9276,20 +9276,20 @@ let noibt_full_spec,_ = mk_safety_spec
    (2^39 - 256 bits). *)
 let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_SAFE = prove
  (`exists f_events.
-     forall e pc stackpointer in_p bit_len out_p xi_p ivec_p key_p htbl_p
+     forall e pc stackpointer in_p len_bits out_p tag_p ivec_p key_p htable_p
             returnaddress.
-         val in_p + 16 * gcm_wb_blocks bit_len < 2 EXP 63 /\
+         val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
          aligned 16 stackpointer /\
          ALLPAIRS nonoverlapping
-         [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16]
+         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16]
          [word pc,LENGTH aes256_gcm_dec_alt_tmc;
-          in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192;
+          in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192;
           word_sub stackpointer (word 80),80] /\
          PAIRWISE nonoverlapping
-         [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16] /\
+         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16] /\
          ALL (nonoverlapping (word_sub stackpointer (word 80),80))
          [word pc,LENGTH aes256_gcm_dec_alt_tmc;
-          in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192]
+          in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192]
          ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     aes256_gcm_dec_alt_tmc /\
@@ -9297,24 +9297,24 @@ let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_SAFE = prove
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS
-                  [in_p; bit_len; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+                  [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                   read events s = e)
              (\s. read PC s = returnaddress /\
                   (exists e2.
                        read events s = APPEND e2 e /\
                        e2 =
-                       f_events in_p key_p htbl_p out_p xi_p ivec_p bit_len pc
+                       f_events in_p key_p htable_p out_p tag_p ivec_p len_bits pc
                          (word_sub stackpointer (word 80)) returnaddress /\
                        memaccess_inbounds e2
-                       [in_p,val bit_len DIV 8 * 1; xi_p,16; ivec_p,16;
-                        key_p,240; htbl_p,192; out_p,val bit_len DIV 8 * 1;
+                       [in_p,val len_bits DIV 8 * 1; tag_p,16; ivec_p,16;
+                        key_p,240; htable_p,192; out_p,val len_bits DIV 8 * 1;
                         word_sub stackpointer (word 80),80]
-                       [out_p,val bit_len DIV 8 * 1; xi_p,16; ivec_p,16;
+                       [out_p,val len_bits DIV 8 * 1; tag_p,16; ivec_p,16;
                         word_sub stackpointer (word 80),80]))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
-              [memory :> bytes (out_p,16 * gcm_wb_blocks bit_len);
-               memory :> bytes (xi_p,16);
+              [memory :> bytes (out_p,16 * gcm_wb_blocks len_bits);
+               memory :> bytes (tag_p,16);
                memory :> bytes (ivec_p,16);
                memory :> bytes (word_sub stackpointer (word 80),80)])`,
   ASSERT_CONCL_TAC noibt_full_spec THEN
@@ -9332,20 +9332,20 @@ let full_spec,public_vars = mk_safety_spec
 
 let AES256_GCM_DEC_ALT_SUBROUTINE_SAFE = prove
  (`exists f_events.
-     forall e pc stackpointer in_p bit_len out_p xi_p ivec_p key_p htbl_p
+     forall e pc stackpointer in_p len_bits out_p tag_p ivec_p key_p htable_p
             returnaddress.
-         val in_p + 16 * gcm_wb_blocks bit_len < 2 EXP 63 /\
+         val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
          aligned 16 stackpointer /\
          ALLPAIRS nonoverlapping
-         [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16]
+         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16]
          [word pc,LENGTH aes256_gcm_dec_alt_mc;
-          in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192;
+          in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192;
           word_sub stackpointer (word 80),80] /\
          PAIRWISE nonoverlapping
-         [out_p,16 * gcm_wb_blocks bit_len; xi_p,16; ivec_p,16] /\
+         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16] /\
          ALL (nonoverlapping (word_sub stackpointer (word 80),80))
          [word pc,LENGTH aes256_gcm_dec_alt_mc;
-          in_p,16 * gcm_wb_blocks bit_len; key_p,240; htbl_p,192]
+          in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192]
          ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     aes256_gcm_dec_alt_mc /\
@@ -9353,24 +9353,24 @@ let AES256_GCM_DEC_ALT_SUBROUTINE_SAFE = prove
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS
-                  [in_p; bit_len; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+                  [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                   read events s = e)
              (\s. read PC s = returnaddress /\
                   (exists e2.
                        read events s = APPEND e2 e /\
                        e2 =
-                       f_events in_p key_p htbl_p out_p xi_p ivec_p bit_len pc
+                       f_events in_p key_p htable_p out_p tag_p ivec_p len_bits pc
                          (word_sub stackpointer (word 80)) returnaddress /\
                        memaccess_inbounds e2
-                       [in_p,val bit_len DIV 8 * 1; xi_p,16; ivec_p,16;
-                        key_p,240; htbl_p,192; out_p,val bit_len DIV 8 * 1;
+                       [in_p,val len_bits DIV 8 * 1; tag_p,16; ivec_p,16;
+                        key_p,240; htable_p,192; out_p,val len_bits DIV 8 * 1;
                         word_sub stackpointer (word 80),80]
-                       [out_p,val bit_len DIV 8 * 1; xi_p,16; ivec_p,16;
+                       [out_p,val len_bits DIV 8 * 1; tag_p,16; ivec_p,16;
                         word_sub stackpointer (word 80),80]))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
-              [memory :> bytes (out_p,16 * gcm_wb_blocks bit_len);
-               memory :> bytes (xi_p,16);
+              [memory :> bytes (out_p,16 * gcm_wb_blocks len_bits);
+               memory :> bytes (tag_p,16);
                memory :> bytes (ivec_p,16);
                memory :> bytes (word_sub stackpointer (word 80),80)])`,
   ASSERT_CONCL_TAC full_spec THEN
