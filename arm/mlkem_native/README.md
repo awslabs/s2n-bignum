@@ -604,8 +604,10 @@ way, with the address 0x0. Its layout is
 
 The functions verified in it so far, with the specifications of the gcc 12
 `-O2` theorems, are `mlkem_poly_reduce`, `mlkem_poly_tomont`,
-`mlkem_poly_frommsg`, `mlkem_poly_add` and `mlkem_poly_sub`, in the files
-`../proofs/mlkem_native/clang17_O3/<function>.ml` for
+`mlkem_poly_frommsg`, `mlkem_poly_add`, `mlkem_poly_sub`,
+`mlkem_shake128_init`, `mlkem_shake128x4_init`, `mlkem_shake128_release`
+and `mlkem_shake128x4_release` (assuming the contracts for memset), in the
+files `../proofs/mlkem_native/clang17_O3/<function>.ml` for
 `mlkem_<function>`. Each has `..._IMAGE_SUBROUTINE_CORRECT` and
 `..._IMAGE_SUBROUTINE_SAFE`, and `mlkem_poly_reduce` also
 `..._IMAGE_SUBROUTINE_FULL`. The code differs from that of gcc 12 as
