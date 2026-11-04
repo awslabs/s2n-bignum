@@ -566,6 +566,9 @@ let iclasses =
   "0x1011110001xxxx101001xxxxxxxxxx";
   "0x10111100001xxx101001xxxxxxxxxx";
 
+  (*** SHLL / SHLL2, including the reserved size 11 ***)
+  "0x101110xx100001001110xxxxxxxxxx";
+
   (*** SSHLL (make sure immh is nonzero) ***)
   "0x001111001xxxxx101001xxxxxxxxxx";
   "0x0011110001xxxx101001xxxxxxxxxx";
