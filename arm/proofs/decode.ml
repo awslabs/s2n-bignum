@@ -1039,11 +1039,11 @@ let decode = new_definition `!w:int32. decode w =
 
   | [0:1; q; 0b001110:6; size:2; 0b100000000010:12; Rn:5; Rd:5] ->
     // REV64
-    if ~q then NONE // datasize = 64 is unsupported yet
-    else if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
     else
       let esize:(64)word = word_shl (word 0b1000: (64)word) (val size) in
-      SOME (arm_REV64_VEC (QREG' Rd) (QREG' Rn) (val esize))
+      let datasize = if q then 128 else 64 in
+      SOME (arm_REV64_VEC (QREG' Rd) (QREG' Rn) (val esize) datasize)
 
   | [0:1; q; 0b101110:6; size:2; 0b100000000010:12; Rn:5; Rd:5] ->
     // REV32

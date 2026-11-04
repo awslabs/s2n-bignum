@@ -273,7 +273,7 @@ let iclasses =
   "1101101011000000000011xxxxxxxxxx";
 
   (*** REV64 ***)
-  "01001110xx100000000010xxxxxxxxxx";
+  "0x001110xx100000000010xxxxxxxxxx";
 
   (*** REV32 ***)
   "01101110xx100000000010xxxxxxxxxx";
