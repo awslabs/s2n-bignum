@@ -31,7 +31,7 @@
 (* reads its arguments and the region (ea,el) and only writes its outputs.   *)
 (* ========================================================================= *)
 
-needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+needs "arm/proofs/utils/mlkem_native_image.ml";;
 needs "arm/proofs/consttime.ml";;
 
 (* ------------------------------------------------------------------------- *)
@@ -152,20 +152,13 @@ let randombytes_safety_contract = new_definition
               MAYCHANGE [memory :> bytes(buf,val len)])`;;
 
 (* ------------------------------------------------------------------------- *)
-(* The PLT stubs and GOT entries in the image, and zeroing by memset. After  *)
-(* a call of memset with c = 0, MEMSET_ZERO_BYTES_TAC adds the fact that the *)
-(* region is zero, from the postcondition of the contract for each byte, in  *)
-(* which the address of byte i for a destination word_add a (word k) may     *)
-(* have been normalized to word_add a (word(k + i)) by the simulation.       *)
+(* Zeroing by memset. After a call of memset with c = 0,                     *)
+(* MEMSET_ZERO_BYTES_TAC adds the fact that the region is zero, from the     *)
+(* postcondition of the contract for each byte, in which the address of byte *)
+(* i for a destination word_add a (word k) may have been normalized to       *)
+(* word_add a (word(k + i)) by the simulation. The PLT stubs and GOT entries *)
+(* of the functions are named plt_f and got_f in the layout of each build.   *)
 (* ------------------------------------------------------------------------- *)
-
-let mlkem_native_plt_memcpy = layout "plt_memcpy"
-and mlkem_native_plt_randombytes = layout "plt_randombytes"
-and mlkem_native_plt_memset = layout "plt_memset";;
-
-let mlkem_native_got_memcpy = layout "got_memcpy"
-and mlkem_native_got_randombytes = layout "got_randombytes"
-and mlkem_native_got_memset = layout "got_memset";;
 
 let MEMSET_ZERO_BYTES = prove
  (`!a n s:armstate.

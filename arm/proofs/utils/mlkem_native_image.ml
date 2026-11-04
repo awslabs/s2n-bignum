@@ -1,0 +1,552 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+(* ========================================================================= *)
+(* Tools for the proofs about the whole image of a build of mlkem-native's   *)
+(* libmlkem.so (see mlkem_native/README.md), loaded at an address pc that is *)
+(* a multiple of 4096, as the dynamic loader does, and not wrapping around   *)
+(* the end of the address space. None of them depends on the build. The      *)
+(* rules whose names end in _FOR take the definition of the code of the      *)
+(* image, a byte list <image>, as their first argument, and the file for the *)
+(* image of each build, e.g. mlkem_native/gcc12_O2/libmlkem.ml, applies them *)
+(* to its image.                                                             *)
+(* ========================================================================= *)
+
+needs "arm/proofs/base.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* Decoding all the code in the image would take several minutes, and the    *)
+(* header and the data in it are not instructions, so the decoding theorems  *)
+(* for the simulation are only made for the given ranges of addresses        *)
+(* [lo,hi), which are those of the code being simulated. Otherwise this is   *)
+(* the same as ARM_MK_EXEC_RULE.                                             *)
+(* ------------------------------------------------------------------------- *)
+
+let ARM_MK_EXEC_RANGES_RULE =
+  let pth = (UNDISCH_ALL o prove)
+   (`i = i' ==> pc + 4 = pc' ==>
+     aligned_bytes_loaded s (word pc) l ==>
+     read_int32 l = SOME (a, l') ==> decode a = SOME i ==>
+     arm_decode s (word pc) i' /\
+     aligned_bytes_loaded s (word pc') l'`,
+    REPEAT (DISCH_THEN (SUBST1_TAC o SYM)) THEN
+    MATCH_ACCEPT_TAC ARM_DECODE_CONS)
+  and pth_pc = (UNDISCH o ARITH_RULE) `n + 4 = p ==> (pc + n) + 4 = pc + p`
+  and r32,dec,n4 = `read_int32`,`decode`,`4`
+  and ei,ei' = `i:armstate->armstate->bool`,`i':armstate->armstate->bool`
+  and pl,el,el' = `(+):num->num->num`,`l:byte list`,`l':byte list`
+  and ea,en,ep,epc,epc' = `a:int32`,`n:num`,`p:num`,`pc:num`,`pc':num`
+  and len_tm = `LENGTH:byte list->num` in
+  let rec go k th =
+    if k <= 0 then [] else
+    let pc,l = (rand o rand F_F I) (dest_comb (concl th)) in
+    let th1 = READ_WORD_CONV (mk_comb (r32, l)) in
+    let a,l' = dest_pair (rand (rhs (concl th1))) in
+    let th2 = DECODE_CONV (mk_comb (dec, a)) in
+    let i = rand (rhs (concl th2)) in
+    let th3 = REWRITE_CONV (invert_condition :: ARM_INSTRUCTION_ALIASES) i in
+    let i' = rhs (concl th3) in
+    let th4,pcofs = match pc with
+    | Comb(Comb(Const("+",_),pc),a) ->
+      let th = NUM_ADD_CONV (mk_comb (mk_comb (pl, a), n4)) in
+      PROVE_HYP th (INST [pc,epc; a,en; rhs (concl th),ep] pth_pc),a
+    | _ -> REFL (mk_comb (mk_comb (pl, pc), n4)),`0` in
+    let pc' = rhs (concl th4) in
+    let th' = itlist PROVE_HYP [th3; th4; th; th1; th2]
+      (INST [i,ei; i',ei'; pc,epc; pc',epc'; l,el; a,ea; l',el'] pth) in
+    match l' with
+    | Const("NIL",_) -> [CONJUNCT1 th',pcofs]
+    | _ -> let dth,bth = CONJ_PAIR th' in (dth,pcofs)::(go (k - 1) bth) in
+  fun mc_def ranges ->
+    let lenth = TRANS (AP_TERM len_tm mc_def)
+                      (LENGTH_CONV (mk_comb(len_tm,rhs(concl mc_def)))) in
+    let dth = AP_TERM `aligned_bytes_loaded s (word pc)` mc_def in
+    let th0 = EQ_MP dth (ASSUME (lhs (concl dth))) in
+    let decodes = itlist (fun (lo,hi) acc ->
+      go ((hi - lo) / 4) (ALIGNED_BYTES_LOADED_OFFSET_RULE lo th0) @ acc)
+      ranges [] in
+    let arr = Array.make (dest_small_numeral (rhs (concl lenth))) None in
+    List.iter (fun (th,pcofs) ->
+        arr.(dest_small_numeral pcofs) <-
+          Some ((GENL [`s:armstate`; `pc:num`] o DISCH_ALL) th))
+      decodes;
+    lenth,arr;;
+
+(* ------------------------------------------------------------------------- *)
+(* Addresses in the image when it is at a multiple of 4096.                  *)
+(* ------------------------------------------------------------------------- *)
+
+let ALIGNED_4096_WORD_AND = prove
+ (`!x:int64. aligned 4096 x <=> word_and x (word 4095) = word 0`,
+  GEN_TAC THEN REWRITE_TAC[aligned; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIVIDES_CONV) THEN REWRITE_TAC[] THEN
+  MP_TAC(ISPECL [`x:int64`; `12`] (CONJUNCT1 WORD_AND_MASK_WORD)) THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[DIVIDES_MOD; GSYM VAL_EQ_0; VAL_WORD; DIMINDEX_64] THEN
+  SIMP_TAC[MOD_LT; ARITH_RULE `x MOD 4096 < 4096`; ARITH_RULE
+    `x < 4096 ==> x < 2 EXP 64`]);;
+
+(*** The page and the offset within it computed by ADRP and ADD or LDR ***)
+
+let PAGE_ADD_ALIGNED = prove
+ (`!x y:int64.
+        word_and x (word 4095) = word 0
+        ==> word_and (word_add x y) (word 0xFFFFFFFFFFFFF000) =
+            word_add x (word_and y (word 0xFFFFFFFFFFFFF000)) /\
+            word_subword (word_add x y) (0,12):(12)word =
+            word_subword y (0,12) /\
+            word_subword (word_add x y) (4,8):(12)word =
+            word_subword y (4,8)`,
+  BITBLAST_TAC);;
+
+(*** The range check for ADRP holds within an image without wraparound ***)
+
+let ADRP_WITHIN_BOUNDS_ALIGNED = prove
+ (`!pc a b.
+        aligned 4096 (word pc:int64) /\
+        pc + a < 2 EXP 64 /\ pc + b < 2 EXP 64 /\
+        a < 2 EXP 32 /\ b < 2 EXP 32
+        ==> adrp_within_bounds (word (pc + b)) (word (pc + a))`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[aligned; VAL_WORD; DIMINDEX_64] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
+  STRIP_TAC THEN
+  SUBGOAL_THEN `pc MOD 18446744073709551616 = pc` SUBST_ALL_TAC THENL
+   [MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  FIRST_X_ASSUM(CHOOSE_THEN SUBST_ALL_TAC o REWRITE_RULE[divides]) THEN
+  REWRITE_TAC[adrp_within_bounds] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[word_uge; word_ult; word_ule; relational2; VAL_WORD_SUB_CASES;
+              VAL_WORD_SUBWORD; VAL_WORD; DIMINDEX_64] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT] THEN
+  REWRITE_TAC[ARITH_RULE `(4096 * x + b) DIV 4096 = x + b DIV 4096`] THEN
+  MP_TAC(SPECL [`4096`; `a:num`] DIV_MUL_LE) THEN
+  MP_TAC(SPECL [`4096`; `b:num`] DIV_MUL_LE) THEN REPEAT DISCH_TAC THEN
+  SUBGOAL_THEN `(x + a DIV 4096) MOD 18014398509481984 = x + a DIV 4096 /\
+                (x + b DIV 4096) MOD 18014398509481984 = x + b DIV 4096`
+   (CONJUNCTS_THEN SUBST1_TAC) THENL
+   [CONJ_TAC THEN MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  ASM_ARITH_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Given the definition of the code of a function, as it is in the image     *)
+(* at address v, and the addresses d1,...,dk in the image of the data that   *)
+(* the code refers to with relocations (if any), which are the extra         *)
+(* arguments of the definition, give                                         *)
+(*                                                                           *)
+(* |- !s pc. aligned_bytes_loaded s (word pc)                                *)
+(*             <image> /\                                                    *)
+(*           aligned 4096 (word pc)                                          *)
+(*           ==> aligned_bytes_loaded s (word(pc + v))                       *)
+(*                 (<mc> (pc + v) (pc + d1) ... (pc + dk))                   *)
+(*                                                                           *)
+(* (without the alignment if there are no relocations). With the image at a  *)
+(* multiple of 4096, the relocated instructions are the same as in the       *)
+(* image, wherever it is.                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_IMAGE_CODE_RULE_FOR image_mc =
+  let pc_tm = `pc:num` and al_tm = `aligned 4096 (word pc:int64)`
+  and plus_tm = `(+):num->num->num`
+  and abl_tm = mk_comb(`aligned_bytes_loaded s (word pc)`,
+                       lhs(concl image_mc)) in
+  let pths = MATCH_MP PAGE_ADD_ALIGNED
+   (UNDISCH(fst(EQ_IMP_RULE(SPEC `word pc:int64` ALIGNED_4096_WORD_AND))))
+  and wsub = WORD_RULE
+   `word_sub (word_add a x) (word_add a y):int64 = word_sub x y` in
+  let conv =
+    GEN_REWRITE_CONV ONCE_DEPTH_CONV [GSYM ADD_ASSOC] THENC
+    DEPTH_CONV NUM_ADD_CONV THENC
+    GEN_REWRITE_CONV ONCE_DEPTH_CONV [WORD_ADD] THENC
+    GEN_REWRITE_CONV TOP_DEPTH_CONV [pths; wsub] THENC
+    WORD_REDUCE_CONV THENC
+    REWRITE_CONV[encode_ADRP; encode_ADD_rri64; encode_LDR_Q_rri] THENC
+    WORD_REDUCE_CONV THENC NUM_REDUCE_CONV in
+  fun mc_def v ds ->
+    let inst =
+      if ds = [] then mc_def else
+      let offs = map (mk_binop plus_tm pc_tm o mk_small_numeral) (v::ds) in
+      CONV_RULE (RAND_CONV conv) (SPECL offs mc_def) in
+    let th = UNDISCH_ALL(SPEC_ALL(ALIGNED_BYTES_LOADED_SUBPROGRAM_RULE
+               image_mc inst v)) in
+    let th' = itlist DISCH (abl_tm::(if ds = [] then [] else [al_tm])) th in
+    if hyp th' <> [] then failwith "MLKEM_NATIVE_IMAGE_CODE_RULE" else
+    GENL [`s:armstate`; pc_tm] (REWRITE_RULE[IMP_IMP] th');;
+
+(* ------------------------------------------------------------------------- *)
+(* Likewise for a table of data that is at address d in the image, give      *)
+(*                                                                           *)
+(* |- !s pc. aligned_bytes_loaded s (word pc)                                *)
+(*             <image>                                                       *)
+(*           ==> bytes_loaded s (word(pc + d)) <data>                        *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_IMAGE_DATA_RULE_FOR image_mc data_def d =
+  let th = ALIGNED_BYTES_LOADED_SUBPROGRAM_RULE image_mc data_def d in
+  let th' = UNDISCH(SPEC_ALL th) in
+  GENL [`s:armstate`; `pc:num`]
+   (DISCH_ALL(CONJUNCT2(REWRITE_RULE[aligned_bytes_loaded] th')));;
+
+(* ------------------------------------------------------------------------- *)
+(* Prove the version of a theorem for a function in the image, given the     *)
+(* theorem for the function with the variables for the addresses of the      *)
+(* code and of the data instantiated to pc + v and pc + d1, ..., and its     *)
+(* other variables free with the same names as in the goal, and the          *)
+(* theorems from the two rules above for its code and data. The hypotheses   *)
+(* about the addresses of the code and data, such as the bounds for ADRP     *)
+(* and alignment for LDR of a Q register, follow from those for the image.   *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_IMAGE_TAC =
+  let pth = ONCE_REWRITE_RULE[IMP_CONJ_ALT] ENSURES_PRECONDITION_THM
+  and ath = REWRITE_RULE[IMP_IMP] (SPECL [`16`; `4096`] ALIGNED_WORD_WEAKEN) in
+  fun th loadths ->
+    REWRITE_TAC[ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
+    REPEAT STRIP_TAC THEN MP_TAC th THEN ANTS_TAC THENL
+     [REWRITE_TAC[GSYM ADD_ASSOC; ALL; ALLPAIRS] THEN
+      CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
+      ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN
+      FIRST
+       [MATCH_MP_TAC ADRP_WITHIN_BOUNDS_ALIGNED THEN ASM_REWRITE_TAC[] THEN
+        FIRST_X_ASSUM(MP_TAC o check
+         (can (term_match [] `pc + n <= 2 EXP 64`) o concl)) THEN
+        ARITH_TAC;
+        REWRITE_TAC[WORD_ADD] THEN
+        CONV_TAC NORMALIZE_ALIGNED_WORD_CONV THEN
+        MATCH_MP_TAC ath THEN ASM_REWRITE_TAC[] THEN CONV_TAC DIVIDES_CONV;
+        REWRITE_TAC[WORD_ADD] THEN NONOVERLAPPING_TAC];
+      DISCH_THEN(MATCH_MP_TAC o MATCH_MP pth) THEN
+      X_GEN_TAC `s:armstate` THEN REWRITE_TAC[] THEN STRIP_TAC THEN
+      ASM_SIMP_TAC loadths];;
+
+(* ------------------------------------------------------------------------- *)
+(* The same for a theorem of constant time and memory safety, of the form    *)
+(* |- ?f_events. !e ... . P ==> ensures arm (...) (... f_events ...) (...).  *)
+(* The function of the events in the image is that of the function with the  *)
+(* instantiations, as a function of the arguments of f_events in the goal.   *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_IMAGE_SAFE_TAC th inst loadths =
+  let f = fst(dest_exists(concl th)) in
+  let app v tm = find_term (fun t -> fst(strip_comb t) = v) tm in
+  X_CHOOSE_THEN f (fun fth ->
+    let fth' = INST inst (SPEC_ALL fth) in
+    W(fun (asl,w) ->
+      let f',wbod = dest_exists w in
+      let xs = snd(strip_comb(app f' wbod)) in
+      let zs = map (genvar o type_of) xs in
+      let wit = list_mk_abs(zs,subst (zip zs xs) (app f (concl fth'))) in
+      EXISTS_TAC wit THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+      MLKEM_NATIVE_IMAGE_TAC fth' loadths)) th;;
+
+(* ------------------------------------------------------------------------- *)
+(* Vectors of polynomials. As in common/fips203.ml, a vector of k            *)
+(* polynomials is given by its 256 * k coefficients, those of polynomial j   *)
+(* being \i. x(256 * j + i). POLYVEC_SPLIT_TAC k splits an assumption        *)
+(* !i. i < 256 * k ==> P i into one for each polynomial, POLYVEC_JOIN_TAC k  *)
+(* reduces such a goal to the cases for the polynomials, and                 *)
+(* POLYVEC_CASES_TAC reduces a goal !j. j < k ==> Q j to Q 0, ...,           *)
+(* Q (k - 1), with the indices and offsets evaluated in each case.           *)
+(* ------------------------------------------------------------------------- *)
+
+let POLYVEC_SPLIT = prove
+ (`!k j P. (!i. i < 256 * k ==> P i) /\ j < k
+           ==> !i. i < 256 ==> P(256 * j + i)`,
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+  TRANS_TAC LTE_TRANS `256 * (j + 1)` THEN
+  ASM_REWRITE_TAC[LE_MULT_LCANCEL] THEN ASM_ARITH_TAC);;
+
+let POLYVEC_JOIN = prove
+ (`!k P. (!j. j < k ==> !i. i < 256 ==> P(256 * j + i))
+         ==> !i. i < 256 * k ==> P i`,
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC `i DIV 256`) THEN
+  ASM_SIMP_TAC[RDIV_LT_EQ; ARITH_EQ] THEN
+  DISCH_THEN(MP_TAC o SPEC `i MOD 256`) THEN
+  REWRITE_TAC[MOD_LT_EQ; ARITH_EQ; DIVISION_SIMP]);;
+
+let POLYVEC_INDEX_CONV =
+  TOP_DEPTH_CONV BETA_CONV THENC
+  REWRITE_CONV[LEFT_ADD_DISTRIB; MULT_ASSOC] THENC NUM_REDUCE_CONV THENC
+  REWRITE_CONV[ADD_CLAUSES];;
+
+let POLYVEC_SPLIT_TAC k =
+  let kt = mk_small_numeral k in
+  let sth = CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV) (SPEC kt POLYVEC_SPLIT) in
+  let jths = map (fun j ->
+    let jt = mk_small_numeral j in
+    jt,EQT_ELIM(NUM_LT_CONV(mk_binop `(<):num->num->bool` jt kt)))
+    (0--(k-1)) in
+  let n = mk_small_numeral(256 * k) in
+  FIRST_X_ASSUM(fun th ->
+    let i,bod = dest_forall(concl th) in
+    if rand(lhand bod) <> n then failwith "POLYVEC_SPLIT_TAC" else
+    MAP_EVERY (fun (jt,jth) ->
+      ASSUME_TAC(CONV_RULE POLYVEC_INDEX_CONV
+        (MATCH_MP (SPEC jt sth) (CONJ th jth)))) jths);;
+
+let POLYVEC_CASES_TAC =
+  CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC POLYVEC_INDEX_CONV;;
+
+let POLYVEC_JOIN_TAC k =
+  let kt = mk_small_numeral k in
+  MATCH_MP_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+                (SPEC kt POLYVEC_JOIN)) THEN
+  POLYVEC_CASES_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* Byte arrays. As in mlkem_decode in common/fips203.ml, the contents of a   *)
+(* byte array are given as a number n, and READ_MEMORY_BYTES8_OF_NUM gives   *)
+(* its bytes. BYTES_BITBLAST_TAC proves a goal of bit operations on such     *)
+(* bytes word((n DIV 2 EXP k) MOD 256) by bit-blasting with them as atoms.   *)
+(* ------------------------------------------------------------------------- *)
+
+let READ_MEMORY_BYTES8_OF_NUM = prove
+ (`!a:int64 m n k s:armstate.
+        read (memory :> bytes(a,m)) s = n /\ k < m
+        ==> read (memory :> bytes8(word_add a (word k))) s =
+            word((n DIV 2 EXP (8 * k)) MOD 256)`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (SUBST1_TAC o SYM) ASSUME_TAC) THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[BYTES8_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES;
+              VAL_WORD; DIMINDEX_8] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL] THEN
+  REWRITE_TAC[ARITH_RULE `256 = 2 EXP (8 * 1)`; READ_BYTES_DIV;
+              READ_BYTES_MOD] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+let READ_MEMORY_BYTES16_OF_NUM = prove
+ (`!a:int64 m n k s:armstate.
+        read (memory :> bytes(a,m)) s = n /\ k + 2 <= m
+        ==> read (memory :> bytes16(word_add a (word k))) s =
+            word((n DIV 2 EXP (8 * k)) MOD 65536)`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (SUBST1_TAC o SYM) ASSUME_TAC) THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[BYTES16_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES;
+              VAL_WORD; DIMINDEX_16] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL] THEN
+  REWRITE_TAC[ARITH_RULE `65536 = 2 EXP (8 * 2)`; READ_BYTES_DIV;
+              READ_BYTES_MOD] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+let READ_MEMORY_BYTES32_OF_NUM = prove
+ (`!a:int64 m n k s:armstate.
+        read (memory :> bytes(a,m)) s = n /\ k + 4 <= m
+        ==> read (memory :> bytes32(word_add a (word k))) s =
+            word((n DIV 2 EXP (8 * k)) MOD 4294967296)`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (SUBST1_TAC o SYM) ASSUME_TAC) THEN
+  ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[BYTES32_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES;
+              VAL_WORD; DIMINDEX_32] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL] THEN
+  REWRITE_TAC[ARITH_RULE `4294967296 = 2 EXP (8 * 4)`; READ_BYTES_DIV;
+              READ_BYTES_MOD] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+(*** A byte array from its bytes, and a byte array as a single word ***)
+
+let READ_MEMORY_BYTES_OF_BYTES8 = prove
+ (`!a:int64 n x s:armstate.
+        (!j. j < n
+             ==> read (memory :> bytes8(word_add a (word j))) s =
+                 word((x DIV 2 EXP (8 * j)) MOD 256))
+        ==> read (memory :> bytes(a,n)) s = x MOD 2 EXP (8 * n)`,
+  GEN_TAC THEN INDUCT_TAC THENL
+   [REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_TRIVIAL] THEN
+    REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1];
+    REPEAT STRIP_TAC] THEN
+  REWRITE_TAC[ADD1; READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE;
+              READ_BYTES_BYTES8] THEN
+  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL [`x:num`; `s:armstate`]) THEN
+  ANTS_TAC THENL
+   [ASM_MESON_TAC[ARITH_RULE `j < n ==> j < SUC n`];
+    DISCH_THEN SUBST1_TAC] THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC `n:num`) THEN
+  REWRITE_TAC[LT] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_8] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[MOD_MOD_REFL; LEFT_ADD_DISTRIB; MULT_CLAUSES; EXP_ADD] THEN
+  REWRITE_TAC[ARITH_RULE `2 EXP 8 = 256`; MOD_MULT_MOD] THEN ARITH_TAC);;
+
+let READ_MEMORY_WBYTES_VAL = prove
+ (`!a:int64 (x:N word) s:armstate.
+        read (memory :> wbytes a) s = x <=>
+        read (memory :> bytes(a,dimindex(:N) DIV 8)) s = val x`,
+  REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [GSYM VAL_EQ] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; VAL_READ_WBYTES]);;
+
+(*** The case of a Keccak state, and its wbytes form from its bytes ***)
+
+let READ_MEMORY_WBYTES_1600 =
+  CONV_RULE(DEPTH_CONV DIMINDEX_CONV THENC ONCE_DEPTH_CONV NUM_DIV_CONV)
+   (INST_TYPE [`:1600`,`:N`] READ_MEMORY_WBYTES_VAL);;
+
+let KECCAK_STATE_WBYTES_TAC sv =
+  let pat = subst [sv,`S:1600 word`]
+   `read (memory :> bytes (a,200)) s = val(S:1600 word)` in
+  FIRST_ASSUM(fun th ->
+    if can (term_match [sv] pat) (concl th)
+    then ASSUME_TAC(REWRITE_RULE[GSYM READ_MEMORY_WBYTES_1600] th)
+    else NO_TAC);;
+
+(*** Bit fields of numbers and of words made from them ***)
+
+let DIV_MOD_EXP_LOW = prove
+ (`!x m k l. k + l <= m
+             ==> ((x MOD 2 EXP m) DIV 2 EXP k) MOD 2 EXP l =
+                 (x DIV 2 EXP k) MOD 2 EXP l`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[DIV_MOD; GSYM EXP_ADD; MOD_MOD_EXP_MIN] THEN
+  ASM_SIMP_TAC[ARITH_RULE `k + l <= m ==> MIN m (k + l) = k + l`]);;
+
+let WORD_SUBWORD_WORD = prove
+ (`!x k l. k + l <= dimindex(:N)
+           ==> word_subword (word x:N word) (k,l):M word =
+               word((x DIV 2 EXP k) MOD 2 EXP l)`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[word_subword; VAL_WORD] THEN
+  AP_TERM_TAC THEN ASM_SIMP_TAC[DIV_MOD_EXP_LOW]);;
+
+(*** Splitting off the first m values of a sum of n + m values ***)
+
+let NSUM_LT_ADD = prove
+ (`!f m n. nsum {i | i < m + n} f =
+           nsum {i | i < m} f + nsum {i | i < n} (\i. f(m + i))`,
+  GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THEN
+  ASM_REWRITE_TAC[ADD_CLAUSES; NSUM_CLAUSES_NUMSEG_LT; ADD_ASSOC]);;
+
+(*** Coefficients loaded with sign extension, when known to be small ***)
+
+let WORD_SX_SMALL = prove
+ (`!y:int16. val y < 32768 ==> (word_sx y:int32) = word_zx y`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_SX_ZX_GEN; DIMINDEX_16] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN `~bit 15 (y:int16)` (fun th -> REWRITE_TAC[th]) THENL
+   [REWRITE_TAC[BIT_VAL] THEN
+    ASM_SIMP_TAC[DIV_LT; ARITH_RULE `2 EXP 15 = 32768`] THEN
+    CONV_TAC NUM_REDUCE_CONV;
+    REWRITE_TAC[BITVAL_CLAUSES] THEN CONV_TAC WORD_REDUCE_CONV THEN
+    REWRITE_TAC[WORD_OR_0]]);;
+
+let MOD_32_64 = prove
+ (`!x. x MOD 4294967296 MOD 18446744073709551616 = x MOD 4294967296`,
+  GEN_TAC THEN MATCH_MP_TAC MOD_LT THEN
+  MP_TAC(SPECL [`x:num`; `4294967296`] MOD_LT_EQ) THEN ARITH_TAC);;
+
+(*** Unsigned 32-bit arguments word n, as the code zero-extends them ***)
+
+let WORD_ZX_32_SMALL = prove
+ (`!n. n < 2 EXP 32
+       ==> word_zx(word_zx(word n:int64):int32):int64 = word n /\
+           val(word_zx(word n:int64):int32) = n`,
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REPEAT STRIP_TAC THEN TRY(ONCE_REWRITE_TAC[GSYM VAL_EQ]) THEN
+  REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+   `n < 4294967296 ==> n < 18446744073709551616`]);;
+
+let ARGS_32_TAC ns =
+  MAP_EVERY (fun n ->
+    MP_TAC(SPEC n WORD_ZX_32_SMALL) THEN
+    ANTS_TAC THENL
+     [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))]) ns;;
+
+let BYTES_BITBLAST_TAC (asl,w) =
+  let bts = setify (find_terms (fun t ->
+     type_of t = `:byte` &&
+     can (term_match [] `word(x MOD 256):byte`) t) w) in
+  let vs = map (fun _ -> genvar `:byte`) bts in
+  let th = BITBLAST_RULE (subst (zip vs bts) w) in
+  ACCEPT_TAC (INST (zip bts vs) th) (asl,w);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constants in the image. MLKEM_NATIVE_IMAGE_CONST_RULE d k gives           *)
+(*                                                                           *)
+(* |- !s pc. aligned_bytes_loaded s (word pc)                                *)
+(*             <image>                                                       *)
+(*           ==> read (memory :> bytes<k> (word_add (word pc) (word d))) s = *)
+(*               word v                                                      *)
+(*                                                                           *)
+(* for the k-bit value v (k = 8, 16, 32, 64 or 128) at address d in the      *)
+(* image. The address is in the form that the simulation gives for an        *)
+(* address computed by ADRP and an offset after MLKEM_NATIVE_ADRP_TAC, which *)
+(* puts the page computed by ADRP in an image at a multiple of 4096 in the   *)
+(* form word_add (word pc) (word p).                                         *)
+(* ------------------------------------------------------------------------- *)
+
+let READ_MEMORY_WBYTES_LOADED = prove
+ (`!(a:int64) (l:byte list) s:armstate.
+        aligned_bytes_loaded s a l /\ LENGTH l = dimindex(:N) DIV 8
+        ==> read (memory :> wbytes a) s:N word = word(num_of_bytelist l)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[aligned_bytes_loaded; bytes_loaded] THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (MP_TAC o CONJUNCT2) ASSUME_TAC) THEN
+  REWRITE_TAC[READ_BYTELIST_EQ_BYTES] THEN STRIP_TAC THEN
+  GEN_REWRITE_TAC LAND_CONV [GSYM WORD_VAL] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; VAL_READ_WBYTES] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_COMPONENT_COMPOSE]) THEN
+  FIRST_X_ASSUM(fun th -> REWRITE_TAC[GSYM th]) THEN ASM_REWRITE_TAC[]);;
+
+let MLKEM_NATIVE_IMAGE_CONST_RULE_FOR image_mc =
+  let rec take n l =
+    if n = 0 then [] else
+    match l with h::t -> h::take (n - 1) t | [] -> failwith "take" in
+  let rec drop n l =
+    if n = 0 then l else
+    match l with _::t -> drop (n - 1) t | [] -> failwith "drop" in
+  let imagel = dest_list(rhs(concl image_mc)) in
+  let wbths = [8,BYTES8_WBYTES; 16,BYTES16_WBYTES; 32,BYTES32_WBYTES;
+               64,BYTES64_WBYTES; 128,BYTES128_WBYTES] in
+  let abl_tm = mk_comb(`aligned_bytes_loaded s (word pc)`,
+                       lhs(concl image_mc)) in
+  fun d k ->
+    let l = mk_list(take (k / 8) (drop d imagel),`:byte`) in
+    let th1 = UNDISCH(SPEC_ALL(ALIGNED_BYTES_LOADED_SUBPROGRAM_RULE
+                image_mc (REFL l) d)) in
+    let a = rand(rator(concl th1)) in
+    let lth = ISPECL [a; l; `s:armstate`]
+               (INST_TYPE [mk_finty(Num.num_of_int k),`:N`]
+                          READ_MEMORY_WBYTES_LOADED) in
+    let lenth = prove(rand(lhand(concl lth)),
+      REWRITE_TAC[LENGTH] THEN CONV_TAC(DEPTH_CONV DIMINDEX_CONV) THEN
+      CONV_TAC NUM_REDUCE_CONV) in
+    let th2 = MP lth (CONJ th1 lenth) in
+    let th3 = CONV_RULE(RAND_CONV(RAND_CONV
+      (REWRITE_CONV[num_of_bytelist] THENC DEPTH_CONV WORD_RED_CONV THENC
+       NUM_REDUCE_CONV))) th2 in
+    let th4 = REWRITE_RULE[GSYM(assoc k wbths); WORD_ADD] th3 in
+    GENL [`s:armstate`; `pc:num`] (DISCH abl_tm th4);;
+
+let MLKEM_NATIVE_ADRP_TAC =
+  let mask = `word 0xFFFFFFFFFFFFF000:int64` in
+  let is_page t =
+    match t with
+      Comb(Comb(Const("word_and",_),
+                Comb(Const("word",_),
+                     Comb(Comb(Const("+",_),Var("pc",_)),k))),m)
+        -> m = mask && is_numeral k
+    | _ -> false in
+  W(fun (asl,w) ->
+    let ath = snd(find (fun (_,th) ->
+                concl th = `aligned 4096 (word pc:int64)`) asl) in
+    let pth = GEN_ALL(CONJUNCT1(SPEC_ALL(MATCH_MP PAGE_ADD_ALIGNED
+                (REWRITE_RULE[ALIGNED_4096_WORD_AND] ath)))) in
+    let conv t =
+      if is_page t then
+        (LAND_CONV(REWR_CONV WORD_ADD) THENC REWR_CONV pth THENC
+         RAND_CONV WORD_REDUCE_CONV) t
+      else failwith "MLKEM_NATIVE_ADRP_TAC" in
+    let rule th =
+      if can (find_term is_page) (concl th) then
+        CONV_RULE(ONCE_DEPTH_CONV conv THENC
+                  ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) th
+      else th in
+    RULE_ASSUM_TAC rule);;
