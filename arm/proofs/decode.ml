@@ -1497,17 +1497,19 @@ let decode = new_definition `!w:int32. decode w =
 
   | [0:1; q; 0b001110:6; size:2; 0b0:1; Rm:5; 0b000110:6; Rn:5; Rd:5] ->
     // UZP1
-    if ~q then NONE // datasize = 64 is unsupported yet
+    if size = word 0b11 /\ ~q then NONE // "UNDEFINED"
     else
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
-      SOME (arm_UZP1 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      let datasize = if q then 128 else 64 in
+      SOME (arm_UZP1 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize) datasize)
 
   | [0:1; q; 0b001110:6; size:2; 0b0:1; Rm:5; 0b010110:6; Rn:5; Rd:5] ->
     // UZP2
-    if ~q then NONE // datasize = 64 is unsupported yet
+    if size = word 0b11 /\ ~q then NONE // "UNDEFINED"
     else
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
-      SOME (arm_UZP2 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      let datasize = if q then 128 else 64 in
+      SOME (arm_UZP2 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize) datasize)
 
   | [0:1; q; 0b001110:6; size:2; 0b100001001010:12; Rn:5; Rd:5] ->
     // XTN (q=0, low half) / XTN2 (q=1, high half)
