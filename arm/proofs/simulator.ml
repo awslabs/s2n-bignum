@@ -600,8 +600,8 @@ let cosimulate_ldstp_gpr() =
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
 
-(*** The post-register and no-offset modes are exercised only for LD1/ST1
- *** since they are not currently supported for LD2/ST2.
+(*** The post-register mode is exercised only for LD1/ST1 since it is
+ *** not currently supported for LD2/ST2.
  ***
  *** The register field is forced to 0 in the no-offset case to unify
  *** the encoding scheme, and is forced to 31 (i.e. post-immediate in
@@ -622,7 +622,7 @@ let cosimulate_ldst_12() =
   and rn = random_base_reg()
   and rt = Random.int 32 in
   let ldst2 = Random.int 2 in
-  let someoffset = if ldst2 = 1 then 1 else Random.int 2 in
+  let someoffset = Random.int 2 in
   let regoffr = Random.int 32 in
   let regoff =
     if someoffset = 0 then 0
