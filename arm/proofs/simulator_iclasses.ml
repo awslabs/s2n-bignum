@@ -749,6 +749,17 @@ let check_insns () =
     (*** ld2 / st2 (2 register, no offset) ***)
     "0x0011000x0000001000xxxxxxxxxxxx";
 
+    (*** ld1 (single structure) of one lane: no offset, post-immediate and ***)
+    (*** post-register ofs, for bytes, halfwords, words and doublewords   ***)
+    "0x00110101000000000xxxxxxxxxxxxx";
+    "0x001101110xxxxx000xxxxxxxxxxxxx";
+    "0x00110101000000010xx0xxxxxxxxxx";
+    "0x001101110xxxxx010xx0xxxxxxxxxx";
+    "0x00110101000000100x00xxxxxxxxxx";
+    "0x001101110xxxxx100x00xxxxxxxxxx";
+    "0x00110101000000100001xxxxxxxxxx";
+    "0x001101110xxxxx100001xxxxxxxxxx";
+
     (*** ld1r (no offset, post-immediate and post-register ofs) ***)
     "0x001101010000001100xxxxxxxxxxxx";
     "0x001101110xxxxx1100xxxxxxxxxxxx";
