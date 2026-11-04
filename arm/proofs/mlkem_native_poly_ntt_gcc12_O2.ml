@@ -16,6 +16,11 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml";;
 needs "arm/proofs/utils/mlkem_native.ml";;
 needs "common/int_linear.ml";;
 
+(* Names for the labels of this transcription, whose code is at pc. *)
+
+install_layout (layout_copies
+ ["poly_ntt","mlkem_poly_ntt"]);;
+
 (**** print_literal_relocs_from_elf
         "arm/mlkem_native/mlkem_native_poly_ntt_gcc12_O2.o";;
  ****)

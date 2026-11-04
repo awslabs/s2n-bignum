@@ -140,10 +140,35 @@ value as a numeral when the term is parsed, so that
 `read PC s = word(pc + mlkem768_dec)` is the same term as with the address
 of `mlkem768_dec` written out, and the theorems are unchanged; in OCaml it
 is `layout "mlkem768_dec"`. The header of the layout file explains how the
-labels are named. It is maintained by hand for now, with the values of the
-symbol table, the dynamic relocations and the disassembly of the binary.
-`../proofs/mlkem_native_libmlkem_clang17_O2_layout.ml` is the same for the
-function transcribed from the clang 17 binary.
+labels are named. It is generated from the binary by `gen_layout.py` (see
+below), as is `../proofs/mlkem_native_libmlkem_clang17_O2_layout.ml` for
+the clang 17 binary. For a function that is also transcribed on its own,
+with its code at its own `pc`, the proof of the transcription declares
+names for the offsets of the labels from the start of the function with
+`layout_copies`, e.g. `poly_ntt_loop1` for `mlkem_poly_ntt_loop1`.
+
+## Generating a layout
+
+`gen_layout.py` writes the layout file of a binary from the ELF file alone,
+with no debug information, using `objdump`, `nm` and `readelf` (or the
+tools given with `--objdump`, `--nm` and `--readelf`, e.g. those of a cross
+toolchain on a host that is not AArch64). For example, in the `arm`
+directory:
+
+```
+python3 mlkem_native/gen_layout.py --name multilevel/gcc12/O2/libmlkem.so \
+  <mlkem-native>/binaries/multilevel/gcc12/O2/libmlkem.so \
+  > proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml
+```
+
+The functions and data come from the symbol table, the size of the image
+from the section headers, the PLT entries and GOT slots from the
+disassembly and the dynamic relocations, the vectors of constants without
+symbols from the ADRP and LDR instructions that load them, and the labels
+in the functions from their control flow graphs. It works for all 48
+builds in the `binary` branch of mlkem-native. For a build other than
+gcc 12 `-O2` this gives the names that its proofs would use, but not the
+proofs themselves, since the code is different.
 
 The proof for each function ends with the versions of its theorems for the
 code in the image, `..._IMAGE_SUBROUTINE_CORRECT` and

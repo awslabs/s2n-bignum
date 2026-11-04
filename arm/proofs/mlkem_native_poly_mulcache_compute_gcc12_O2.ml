@@ -16,6 +16,11 @@ needs "arm/proofs/base.ml";;
 needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml";;
 needs "arm/proofs/utils/mlkem_native.ml";;
 
+(* Names for the labels of this transcription, whose code is at pc. *)
+
+install_layout (layout_copies
+ ["poly_mulcache_compute","mlkem_poly_mulcache_compute"]);;
+
 (**** print_literal_relocs_from_elf
         "arm/mlkem_native/mlkem_native_poly_mulcache_compute_gcc12_O2.o";;
  ****)

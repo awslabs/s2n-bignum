@@ -14,6 +14,11 @@ needs "arm/proofs/base.ml";;
 needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2_layout.ml";;
 needs "arm/proofs/utils/mlkem_native.ml";;
 
+(* Names for the labels of this transcription, whose code is at pc. *)
+
+install_layout (layout_copies
+ ["basemul_k2","mlkem512_polyvec_basemul_acc_montgomery_cached"]);;
+
 (**** print_literal_from_elf
         "arm/mlkem_native/mlkem_native_basemul_k2_gcc12_O2.o";;
  ****)
