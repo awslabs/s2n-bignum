@@ -357,3 +357,18 @@ that they call: `mlkem512_polyvec_frombytes`, `mlkem512_polyvec_reduce` and
 `mlkem_poly_frombytes`, `mlkem_poly_reduce` and `mlkem_poly_tobytes`. As
 for `mlkem512_check_sk`, the buffers are aligned to 32 bytes in the stack
 frame, and the comparison is done in the low halves of YMM registers.
+
+`mlkem512_indcpa_dec`, `mlkem768_indcpa_dec` and `mlkem1024_indcpa_dec` are
+the decryption of K-PKE: the message of 32 bytes that they write is
+`kpke_decrypt mlkem<n> dk ct` for the decryption key `dk` and the
+ciphertext `ct`, for any key, since FIPS 203 decodes its 12-bit fields
+modulo q. They are verified in the image with the same specifications as on
+AArch64 apart from the stack and DF, using the lemmas of
+`../proofs/utils/mlkem_native_fips203.ml` and the tactics of
+`../proofs/utils/mlkem_native_indcpa.ml`, which are x86 versions of those
+for AArch64, and their theorems of constant time and memory safety state
+that their events depend only on the addresses of their arguments, the
+stack and the image, not on the key or the ciphertext. As for the modulus
+check, their buffers are aligned to 32 bytes in the stack frame, and the
+proofs give their addresses as offsets from a variable for the bottom of
+the stacks of the callees.
