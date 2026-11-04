@@ -630,6 +630,41 @@ let decode = new_definition `!w:int32. decode w =
                 else Postreg_Offset (XREG' Rm) in
       SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) off esize datasize)
 
+  // LD1 (single structure) of one lane, no offset, post-immediate offset
+  // and post-register offset. The lane index is Q:S:size for bytes, Q:S:size<1>
+  // for halfwords (with size<0> = 0), Q:S for words (size = 00) and Q for
+  // doublewords (S = 0, size = 01). The other combinations are unallocated.
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b000:3; S:1; size:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 1)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1 (QREG' Rt) (XREG_SP Rn) off 8
+                    (8 * val Q + 4 * val S + val size))
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b010:3; S:1; h:1; 0:1; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 2)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1 (QREG' Rt) (XREG_SP Rn) off 16
+                    (4 * val Q + 2 * val S + val h))
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b100:3; S:1; 0b00:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 4)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1 (QREG' Rt) (XREG_SP Rn) off 32 (2 * val Q + val S))
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b100:3; 0:1; 0b01:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 8)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1 (QREG' Rt) (XREG_SP Rn) off 64 (val Q))
+
   // LD3/ST3 (multiple structures), 3 registers, Post-immediate and register offset
   | [0:1; q; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0100:4; size:2; Rn:5; Rt:5] ->
     if size = word 0b11 /\ ~q then NONE else
