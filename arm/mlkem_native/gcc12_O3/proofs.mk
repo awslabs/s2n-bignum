@@ -6,12 +6,15 @@ MLKEM_NATIVE_OBJ += \
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/poly_rej_uniform \
+  mlkem_native/gcc12_O3/poly_rej_uniform_x4 \
   mlkem_native/gcc12_O3/rej_uniform
 
 mlkem_native/gcc12_O3/libmlkem.native: \
   proofs/mlkem_native/gcc12_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml
 mlkem_native/gcc12_O3/poly_rej_uniform.native: \
+  mlkem_native/gcc12_O3/rej_uniform.native
+mlkem_native/gcc12_O3/poly_rej_uniform_x4.native: \
   mlkem_native/gcc12_O3/rej_uniform.native
 mlkem_native/gcc12_O3/rej_uniform.native: \
   proofs/utils/mlkem_native.ml \
