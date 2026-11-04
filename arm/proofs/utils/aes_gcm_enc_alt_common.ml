@@ -348,11 +348,17 @@ let INBLOCKS_TAC sname =
       128 * (i + 1) + 96 = 16 * (8 * (i + 1) + 6) /\
       128 * (i + 1) + 112 = 16 * (8 * (i + 1) + 7)`] THEN
     REWRITE_TAC[ARITH_RULE `128 * a = 16 * 8 * a`] THEN
-    REPEAT CONJ_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
-    (* Each obligation 8*(i+1)+b < nb follows from i < k and 8*(k+1) <= nb   *)
-    (* alone, so only those two hypotheses are undischarged before ARITH_TAC *)
-    (* (the same idiom as flag_arith in the main-loop body).                 *)
-    UNDISCH_TAC `8 * (k + 1) <= nb` THEN UNDISCH_TAC `(i:num) < k` THEN ARITH_TAC;
+    (* Each obligation is the antecedent of an input fact about the state    *)
+    (* (the input facts of the loop body, see INPUT_LEG_TAC, are one-block   *)
+    (* facts and the input fact of the rest), for the block 8*(i+1)+b; it    *)
+    (* follows from i < k and 8*(k+1) <= nb alone, so only those two         *)
+    (* hypotheses are undischarged before ARITH_TAC (the same idiom as       *)
+    (* flag_arith in the main-loop body).  An input fact that does not cover *)
+    (* the block fails the ARITH_TAC, and FIRST_ASSUM tries the next one.    *)
+    REPEAT CONJ_TAC THEN
+    FIRST_ASSUM(fun th -> MATCH_MP_TAC th THEN
+      UNDISCH_TAC `8 * (k + 1) <= nb` THEN UNDISCH_TAC `(i:num) < k` THEN
+      ARITH_TAC);
     ALL_TAC];;
 
 (* ------------------------------------------------------------------------- *)
@@ -740,13 +746,16 @@ let SETUP_INBLOCKS_TAC sname =
     read (memory :> bytes128 (word_add in_p (word (16 * 6)))) s = inblock 6 /\
     read (memory :> bytes128 (word_add in_p (word (16 * 7)))) s = inblock 7` in
   SUBGOAL_THEN concl_tm STRIP_ASSUME_TAC THENL
-   [(* Each obligation is b < nb for a literal b = 0..7, which follows from  *)
-    (* 8 * (k + 1) <= nb alone, so only that hypothesis is undischarged      *)
-    (* before ARITH_TAC (ASM_ARITH_TAC would consider every carried fact).   *)
-    (* All callers (SETUP_GEN, SETUP_G1 and their _SAFE versions) have       *)
-    (* that hypothesis.                                                      *)
-    REPEAT CONJ_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
-    UNDISCH_TAC `8 * (k + 1) <= nb` THEN ARITH_TAC;
+   [(* Each obligation is the antecedent of an input fact about the state,   *)
+    (* for a literal block b = 0..7; it follows from 8 * (k + 1) <= nb       *)
+    (* alone, so only that hypothesis is undischarged before ARITH_TAC       *)
+    (* (ASM_ARITH_TAC would consider every carried fact).  All callers       *)
+    (* (SETUP_GEN, SETUP_G1 and their _SAFE versions) have that hypothesis.  *)
+    (* An input fact that does not cover the block fails the ARITH_TAC, and  *)
+    (* FIRST_ASSUM tries the next one.                                       *)
+    REPEAT CONJ_TAC THEN
+    FIRST_ASSUM(fun th -> MATCH_MP_TAC th THEN
+      UNDISCH_TAC `8 * (k + 1) <= nb` THEN ARITH_TAC);
     ALL_TAC];;
 
 (* ------------------------------------------------------------------------- *)

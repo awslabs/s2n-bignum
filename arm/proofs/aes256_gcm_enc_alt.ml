@@ -14,7 +14,8 @@
 (* CTR mode (block j with the counter block ctr_block nonce (c+j), the ivec  *)
 (* holding ctr_block nonce c), updates the GHASH accumulator at tag_p over   *)
 (* the ciphertext, writes the next counter block back to the ivec and        *)
-(* returns 16*nb.  A zero length or one that is not a multiple of 128 gives  *)
+(* returns 16*nb; the output may be the input buffer itself (in-place        *)
+(* operation).  A zero length or one that is not a multiple of 128 gives     *)
 (* nb = 0: it returns 0 without memory access, so there is no                *)
 (* partial-final-block masking.                                              *)
 (*                                                                           *)
@@ -1708,8 +1709,13 @@ let AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
     ALLPAIRS nonoverlapping
       [(out_p, 16 * gcm_wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 80), 80)]
-      [(word pc, LENGTH aes256_gcm_enc_alt_tmc);
-       (in_p, 16 * gcm_wb_blocks len_bits); (key_p, 240); (htable_p, 192)] /\
+      [(word pc, LENGTH aes256_gcm_enc_alt_tmc); (key_p, 240);
+       (htable_p, 192)] /\
+    ALL (nonoverlapping (in_p, 16 * gcm_wb_blocks len_bits))
+      [(tag_p, 16); (ivec_p, 16); (word_sub stackpointer (word 80), 80)] /\
+    (in_p = out_p \/
+     nonoverlapping (in_p, 16 * gcm_wb_blocks len_bits)
+                    (out_p, 16 * gcm_wb_blocks len_bits)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * gcm_wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 80), 80)]
@@ -1766,8 +1772,13 @@ let AES256_GCM_ENC_ALT_SUBROUTINE_CORRECT = prove
     ALLPAIRS nonoverlapping
       [(out_p, 16 * gcm_wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 80), 80)]
-      [(word pc, LENGTH aes256_gcm_enc_alt_mc);
-       (in_p, 16 * gcm_wb_blocks len_bits); (key_p, 240); (htable_p, 192)] /\
+      [(word pc, LENGTH aes256_gcm_enc_alt_mc); (key_p, 240);
+       (htable_p, 192)] /\
+    ALL (nonoverlapping (in_p, 16 * gcm_wb_blocks len_bits))
+      [(tag_p, 16); (ivec_p, 16); (word_sub stackpointer (word 80), 80)] /\
+    (in_p = out_p \/
+     nonoverlapping (in_p, 16 * gcm_wb_blocks len_bits)
+                    (out_p, 16 * gcm_wb_blocks len_bits)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * gcm_wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 80), 80)]
@@ -1829,8 +1840,12 @@ let AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_SAFE = prove
         ALLPAIRS nonoverlapping
         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16;
          word_sub stackpointer (word 80),80]
-        [word pc,LENGTH aes256_gcm_enc_alt_tmc;
-         in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192] /\
+        [word pc,LENGTH aes256_gcm_enc_alt_tmc; key_p,240; htable_p,192] /\
+        ALL (nonoverlapping (in_p,16 * gcm_wb_blocks len_bits))
+        [tag_p,16; ivec_p,16; word_sub stackpointer (word 80),80] /\
+        (in_p = out_p \/
+         nonoverlapping (in_p,16 * gcm_wb_blocks len_bits)
+                        (out_p,16 * gcm_wb_blocks len_bits)) /\
         PAIRWISE nonoverlapping
         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16;
          word_sub stackpointer (word 80),80]
@@ -1886,8 +1901,12 @@ let AES256_GCM_ENC_ALT_SUBROUTINE_SAFE = prove
         ALLPAIRS nonoverlapping
         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16;
          word_sub stackpointer (word 80),80]
-        [word pc,LENGTH aes256_gcm_enc_alt_mc;
-         in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192] /\
+        [word pc,LENGTH aes256_gcm_enc_alt_mc; key_p,240; htable_p,192] /\
+        ALL (nonoverlapping (in_p,16 * gcm_wb_blocks len_bits))
+        [tag_p,16; ivec_p,16; word_sub stackpointer (word 80),80] /\
+        (in_p = out_p \/
+         nonoverlapping (in_p,16 * gcm_wb_blocks len_bits)
+                        (out_p,16 * gcm_wb_blocks len_bits)) /\
         PAIRWISE nonoverlapping
         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16;
          word_sub stackpointer (word 80),80]

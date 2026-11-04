@@ -259,7 +259,9 @@ let Q19_FOLD_TAC =
 (*                                                                           *)
 (* The antecedent 8 * (k + 1) <= nb keeps the four ciphertext stores (stp    *)
 (* q8..q15,[x2],#32 at 0x9e4..0xa04) inside out_p, which the stepper needs   *)
-(* in order to show that they do not modify the code.                        *)
+(* in order to show that they do not modify the code; with the bound         *)
+(* val in_p + 16 * nb < 2 EXP 63 it also shows that they miss the input      *)
+(* blocks still to be read when in_p = out_p.                                *)
 (* ========================================================================= *)
 
 let AES_GCM_ENC_ALT_MAIN_LOOP = prove
@@ -269,12 +271,14 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
     8 * (k + 1) <= nb /\
     end_p = word_add in_p (word (128 * (k + 1))) /\
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
+    val in_p + 16 * nb < 2 EXP 63 /\
     nonoverlapping (out_p, 16 * nb)
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb)]
-      [(in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
-       (tag_p, 16); (ivec_p, 16); (mod_p, 8)]
+      [(key_p, keybytes); (htable_p, 192); (tag_p, 16); (ivec_p, 16);
+       (mod_p, 8)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb))
     ==> ensures arm
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + pc_loop) /\
@@ -312,7 +316,7 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
            read Q3 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 11)) /\
            read Q4 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 12)) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * (0 + 1) <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * (0 + 1)
@@ -355,7 +359,7 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
            read Q3 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 11)) /\
            read Q4 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 12)) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * (k + 1) <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * (k + 1)
@@ -365,7 +369,7 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
        MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15] ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * nb)])`,
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALLPAIRS; ALL] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_WHILE_PUP_TAC `k:num`
     (kterm `pc + pc_loop`) (kterm `pc + pc_backedge`)
     (kterm `\i s. (read X0 s = word_add in_p (word (128 * (i + 1))) /\
@@ -403,7 +407,7 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
             read Q3 s = word_reversefields 8 (ctr_block nonce (8 * i + c + 11)) /\
             read Q4 s = word_reversefields 8 (ctr_block nonce (8 * i + c + 12)) /\
             htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-            (!j. j < nb
+            (!j. 8 * (i + 1) <= j /\ j < nb
                  ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                      inblock j) /\
             (!j. j < 8 * (i + 1)
@@ -418,7 +422,7 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
     (* Subgoal 2: init -- reflexive 0-step (precondition = p 0 at pc+0x4c0) *)
     ENSURES_INIT_TAC "s0" THEN
     RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_8; htable_mem_4]) THEN
-    ENSURES_FINAL_STATE_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
     ASM_REWRITE_TAC[];
 
     (* Subgoal 3: the body, a 339-instruction fused GHASH+AES pipeline.      *)
@@ -481,6 +485,9 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
       REPEAT CONJ_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
       ASM_ARITH_TAC;
       ALL_TAC] THEN
+    INPUT_LEG_TAC [`8 * (i + 1)`; `8 * (i + 1) + 1`; `8 * (i + 1) + 2`;
+                   `8 * (i + 1) + 3`; `8 * (i + 1) + 4`; `8 * (i + 1) + 5`;
+                   `8 * (i + 1) + 6`; `8 * (i + 1) + 7`] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
       (kterm `LENGTH tmc`)]) THEN
     MAP_EVERY NSTEP_G (1--(loop_ldp1-1)) THEN
@@ -489,7 +496,7 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
     LDP_STEP4_TAC loop_ldp2 THEN
     LDP_STEP4_TAC (loop_ldp2+1) THEN
     MAP_EVERY NSTEP_G ((loop_ldp2+2)--(loop_backedge-1)) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
     (* Cheap-conjunct close.  The case-split bound is 8*((i+1)+1) (the       *)
     (* invariant's out-forall at i is j < 8*(i+1), so at i+1 it is           *)
     (* j < 8*(i+2)); the eor3 3-way store XOR is AC-normalised to the        *)
@@ -747,8 +754,9 @@ let AES_GCM_ENC_ALT_SETUP_GEN = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb)]
-      [(in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
-       (tag_p, 16); (ivec_p, 16); (word_add stackpointer (word 0x40), 8)]
+      [(key_p, keybytes); (htable_p, 192); (tag_p, 16); (ivec_p, 16);
+       (word_add stackpointer (word 0x40), 8)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb))
     ==> ensures arm
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
@@ -808,7 +816,7 @@ let AES_GCM_ENC_ALT_SETUP_GEN = prove
            read Q3 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 11)) /\
            read Q4 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 12)) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * (0 + 1) <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * (0 + 1)
@@ -821,8 +829,9 @@ let AES_GCM_ENC_ALT_SETUP_GEN = prove
   REWRITE_TAC[KEY_SPLIT] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALLPAIRS; ALL;
               NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
+  INPUT_LEG_TAC [`0`; `1`; `2`; `3`; `4`; `5`; `6`; `7`] THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
       (kterm `LENGTH tmc`)]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_8; htable_mem_4]) THEN
@@ -844,7 +853,7 @@ let AES_GCM_ENC_ALT_SETUP_GEN = prove
       (CONJ (ASSUME `nb <= 8 * (k + 2)`)
           (ASSUME `val (in_p:int64) + 128 * (k + 1) < 2 EXP 63`))));
     COND_CLAUSES]) THEN
-  ENSURES_FINAL_STATE_TAC THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[htable_mem_8; htable_mem_4] THEN
   REPEAT CONJ_TAC THEN SETUP_RECON_TAC_GEN);;
@@ -872,8 +881,9 @@ let AES_GCM_ENC_ALT_SETUP_G1 = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb)]
-      [(in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
-       (tag_p, 16); (ivec_p, 16); (word_add stackpointer (word 0x40), 8)]
+      [(key_p, keybytes); (htable_p, 192); (tag_p, 16); (ivec_p, 16);
+       (word_add stackpointer (word 0x40), 8)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb))
     ==> ensures arm
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
@@ -933,7 +943,7 @@ let AES_GCM_ENC_ALT_SETUP_G1 = prove
            read Q3 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 11)) /\
            read Q4 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 12)) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * (0 + 1) <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * (0 + 1)
@@ -945,8 +955,9 @@ let AES_GCM_ENC_ALT_SETUP_G1 = prove
   REWRITE_TAC[KEY_SPLIT] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALLPAIRS; ALL;
               NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
+  INPUT_LEG_TAC [`0`; `1`; `2`; `3`; `4`; `5`; `6`; `7`] THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
       (kterm `LENGTH tmc`)]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_8; htable_mem_4]) THEN
@@ -968,7 +979,7 @@ let AES_GCM_ENC_ALT_SETUP_G1 = prove
       (CONJ (ASSUME `nb <= 8 * (k + 2)`)
           (ASSUME `val (in_p:int64) + 128 * (k + 1) < 2 EXP 63`))));
     COND_CLAUSES]) THEN
-  ENSURES_FINAL_STATE_TAC THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[htable_mem_8; htable_mem_4] THEN
   REPEAT CONJ_TAC THEN SETUP_RECON_TAC_GEN);;
@@ -1129,8 +1140,9 @@ let AES_GCM_ENC_ALT_PREPRETAIL_GEN = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb)]
-      [(in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
-       (tag_p, 16); (ivec_p, 16); (mod_p, 8)]
+      [(key_p, keybytes); (htable_p, 192); (tag_p, 16); (ivec_p, 16);
+       (mod_p, 8)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb))
     ==> ensures arm
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + pc_prepretail) /\
@@ -1168,7 +1180,7 @@ let AES_GCM_ENC_ALT_PREPRETAIL_GEN = prove
            read Q3 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 11)) /\
            read Q4 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 12)) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * (k + 1) <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * (k + 1)
@@ -1214,7 +1226,7 @@ let AES_GCM_ENC_ALT_PREPRETAIL_GEN = prove
            word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
              word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 15)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * (k + 1) <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * (k + 1)
@@ -1231,12 +1243,12 @@ let AES_GCM_ENC_ALT_PREPRETAIL_GEN = prove
   (* (Q19 fold / Q30 counter / v0..v7 AES / ASM_REWRITE).                    *)
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
   MAP_EVERY NSTEP_GP (1--prepretail_steps) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN PP_DISPATCH);;
 
 (* ========================================================================= *)
@@ -1328,8 +1340,11 @@ let AES_GCM_ENC_ALT_TAIL_REM1 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
+       (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -1358,7 +1373,7 @@ let AES_GCM_ENC_ALT_TAIL_REM1 = prove
              word_reversefields 8
                (cipher (ctr_block nonce (8 * g + c)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -1382,7 +1397,7 @@ let AES_GCM_ENC_ALT_TAIL_REM1 = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -1415,7 +1430,7 @@ let AES_GCM_ENC_ALT_TAIL_REM1 = prove
   (* Steps 83..85: ext, rev64 and st1 (tag) at 0x1148/0x114c/0x1150; the PC  *)
   (* is then pc+0x1154.                                                      *)
   MAP_EVERY NSTEP_GP (83--85) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   (* ivec store: 7 `sub v30` in the cascade take 8g+c+8 to 8g+c+1 = nb+c. *)
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
@@ -1529,8 +1544,11 @@ let AES_GCM_ENC_ALT_TAIL_REM2 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
+       (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -1581,7 +1599,7 @@ let AES_GCM_ENC_ALT_TAIL_REM2 = prove
              word_reversefields 8
                (cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -1605,7 +1623,7 @@ let AES_GCM_ENC_ALT_TAIL_REM2 = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -1638,7 +1656,7 @@ let AES_GCM_ENC_ALT_TAIL_REM2 = prove
   (* Steps 54..57: ext, rev64 and st1 (tag) at 0x14d4/0x14d8/0x14dc, then    *)
   (* the b at 0x14e0 to pc+0x1154.                                           *)
   MAP_EVERY NSTEP_GP (54--57) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   (* ivec store: 6 `sub v30` in the drain take 8g+c+8 to 8g+c+2 = nb+c. *)
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
@@ -1701,8 +1719,10 @@ let AES_GCM_ENC_ALT_FAST2_TAIL = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (htable_p, 192); (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -1728,7 +1748,7 @@ let AES_GCM_ENC_ALT_FAST2_TAIL = prove
            read Q30 s = word_reversefields 32 (ctr_block nonce (8 * g + c + 2)) /\
            read Q31 s = word 79228162514264337593543950336 /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -1752,7 +1772,7 @@ let AES_GCM_ENC_ALT_FAST2_TAIL = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -1773,7 +1793,7 @@ let AES_GCM_ENC_ALT_FAST2_TAIL = prove
   (* read Q12 reaches the tbl step.                                          *)
   DISCARD_REGS ["Q17";"Q18";"Q20";"Q21";"Q22";"Q23";"Q24";"Q25";"Q26";"Q29";"Q16";"Q8";"Q9";"Q10";"Q11";"Q13";"Q14";"Q15"] THEN
   MAP_EVERY NSTEP_GP (40--42) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
     REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
@@ -1831,8 +1851,10 @@ let AES_GCM_ENC_ALT_FAST1_TAIL = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (htable_p, 192); (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -1856,7 +1878,7 @@ let AES_GCM_ENC_ALT_FAST1_TAIL = prove
            read Q30 s = word_reversefields 32 (ctr_block nonce (8 * g + c + 1)) /\
            read Q31 s = word 79228162514264337593543950336 /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -1880,7 +1902,7 @@ let AES_GCM_ENC_ALT_FAST1_TAIL = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -1896,7 +1918,7 @@ let AES_GCM_ENC_ALT_FAST1_TAIL = prove
   fold_q19_at `read Q19 s24 : int128` `8 * g + 1` TAIL_Q19_FOLD_REM1 THEN
   DISCARD_REGS ["Q17";"Q18";"Q20";"Q21";"Q22";"Q23";"Q24";"Q25";"Q26";"Q29";"Q16";"Q8";"Q9";"Q10";"Q11";"Q13";"Q14";"Q15"] THEN
   MAP_EVERY NSTEP_GP (25--27) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
     REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
@@ -2006,8 +2028,11 @@ let AES_GCM_ENC_ALT_TAIL_REM3 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
+       (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -2058,7 +2083,7 @@ let AES_GCM_ENC_ALT_TAIL_REM3 = prove
              word_reversefields 8
                (cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -2082,7 +2107,7 @@ let AES_GCM_ENC_ALT_TAIL_REM3 = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -2106,7 +2131,7 @@ let AES_GCM_ENC_ALT_TAIL_REM3 = prove
   FOLD_Q19_REM3 THEN
   DISCARD_DEAD_REDUCE_SCRATCH THEN
   MAP_EVERY NSTEP_GP (108--110) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
     REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
@@ -2216,8 +2241,11 @@ let AES_GCM_ENC_ALT_TAIL_REM4 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
+       (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -2268,7 +2296,7 @@ let AES_GCM_ENC_ALT_TAIL_REM4 = prove
              word_reversefields 8
                (cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -2292,7 +2320,7 @@ let AES_GCM_ENC_ALT_TAIL_REM4 = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -2319,7 +2347,7 @@ let AES_GCM_ENC_ALT_TAIL_REM4 = prove
   FOLD_Q19_REM4 THEN
   DISCARD_DEAD_REDUCE_SCRATCH THEN
   MAP_EVERY NSTEP_GP (107--110) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
     REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
@@ -2379,8 +2407,10 @@ let AES_GCM_ENC_ALT_FAST4_TAIL = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (htable_p, 192); (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -2410,7 +2440,7 @@ let AES_GCM_ENC_ALT_FAST4_TAIL = prove
            read Q30 s = word_reversefields 32 (ctr_block nonce (8 * g + c + 4)) /\
            read Q31 s = word 79228162514264337593543950336 /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -2434,7 +2464,7 @@ let AES_GCM_ENC_ALT_FAST4_TAIL = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -2462,7 +2492,7 @@ let AES_GCM_ENC_ALT_FAST4_TAIL = prove
   DISCARD_REGS ["Q17"; "Q18"; "Q20"; "Q21"; "Q22"; "Q23"; "Q24"; "Q25"; "Q26";
      "Q29"; "Q16"; "Q8"; "Q9"; "Q10"; "Q11"; "Q13"; "Q14"; "Q15"] THEN
   MAP_EVERY NSTEP_GP (68--70) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
     REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
@@ -2516,8 +2546,10 @@ let AES_GCM_ENC_ALT_FAST3_TAIL = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (htable_p, 192); (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -2545,7 +2577,7 @@ let AES_GCM_ENC_ALT_FAST3_TAIL = prove
            read Q30 s = word_reversefields 32 (ctr_block nonce (8 * g + c + 3)) /\
            read Q31 s = word 79228162514264337593543950336 /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -2569,7 +2601,7 @@ let AES_GCM_ENC_ALT_FAST3_TAIL = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -2593,7 +2625,7 @@ let AES_GCM_ENC_ALT_FAST3_TAIL = prove
      "Q29"; "Q16"; "Q8"; "Q9"; "Q10"; "Q11"; "Q13"; "Q14"; "Q15";
      "Q3"; "Q4"; "Q5"] THEN
   MAP_EVERY NSTEP_GP (51--53) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
     REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
@@ -2710,8 +2742,11 @@ let AES_GCM_ENC_ALT_TAIL_REM5 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
+       (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -2762,7 +2797,7 @@ let AES_GCM_ENC_ALT_TAIL_REM5 = prove
              word_reversefields 8
                (cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -2786,7 +2821,7 @@ let AES_GCM_ENC_ALT_TAIL_REM5 = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -2816,7 +2851,7 @@ let AES_GCM_ENC_ALT_TAIL_REM5 = prove
   FOLD_Q19_REM5 THEN
   DISCARD_DEAD_REDUCE_SCRATCH THEN
   MAP_EVERY NSTEP_GP (116--119) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
     REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
@@ -2931,8 +2966,11 @@ let AES_GCM_ENC_ALT_TAIL_REM6 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
+       (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -2983,7 +3021,7 @@ let AES_GCM_ENC_ALT_TAIL_REM6 = prove
              word_reversefields 8
                (cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -3007,7 +3045,7 @@ let AES_GCM_ENC_ALT_TAIL_REM6 = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -3040,7 +3078,7 @@ let AES_GCM_ENC_ALT_TAIL_REM6 = prove
   FOLD_Q19_REM6 THEN
   DISCARD_DEAD_REDUCE_SCRATCH THEN
   MAP_EVERY NSTEP_GP (124--127) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
     REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
@@ -3157,8 +3195,11 @@ let AES_GCM_ENC_ALT_TAIL_REM7 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
+       (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -3209,7 +3250,7 @@ let AES_GCM_ENC_ALT_TAIL_REM7 = prove
              word_reversefields 8
                (cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -3233,7 +3274,7 @@ let AES_GCM_ENC_ALT_TAIL_REM7 = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -3269,7 +3310,7 @@ let AES_GCM_ENC_ALT_TAIL_REM7 = prove
   FOLD_Q19_REM7 THEN
   DISCARD_DEAD_REDUCE_SCRATCH THEN
   MAP_EVERY NSTEP_GP (130--133) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [REWRITE_TAC[IVEC_STORE_REV32] THEN
     REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
@@ -3419,8 +3460,11 @@ let AES_GCM_ENC_ALT_TAIL_REM8 = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
+       (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -3466,7 +3510,7 @@ let AES_GCM_ENC_ALT_TAIL_REM8 = prove
            word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
              word_reversefields 8 (cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -3491,7 +3535,7 @@ let AES_GCM_ENC_ALT_TAIL_REM8 = prove
   REWRITE_TAC[KEY_SPLIT] THEN
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
@@ -3547,7 +3591,7 @@ let AES_GCM_ENC_ALT_TAIL_REM8 = prove
   FOLD_Q19_S114_G THEN
   DISCARD_DEAD_REDUCE_SCRATCH THEN
   MAP_EVERY NSTEP_GP (116--119) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [
     REWRITE_TAC[IVEC_STORE_REV32] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
@@ -3655,7 +3699,7 @@ let TAIL_REM_ARM_TAC th =
           word_reversefields 8
             (cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
         htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. j < nb
+        (!j. 8 * g <= j /\ j < nb
              ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                  inblock j) /\
         (!j. j < 8 * g
@@ -3690,8 +3734,11 @@ let AES_GCM_ENC_ALT_TAIL_REM = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
+       (mod_p, 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -3737,7 +3784,7 @@ let AES_GCM_ENC_ALT_TAIL_REM = prove
            word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
              word_reversefields 8 (cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -3759,7 +3806,7 @@ let AES_GCM_ENC_ALT_TAIL_REM = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   SUBGOAL_THEN `r=1\/r=2\/r=3\/r=4\/r=5\/r=6\/r=7\/r=8` MP_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
   STRIP_TAC THENL
@@ -3788,7 +3835,7 @@ let AES_GCM_ENC_ALT_TAIL_REM = prove
              word_reversefields 8
                (cipher (ctr_block nonce (8 * g + c)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -3846,7 +3893,7 @@ let AES_GCM_ENC_ALT_TAIL_REM = prove
            word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
              word_reversefields 8 (cipher (ctr_block nonce (8 * g + c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * g <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * g
@@ -3896,9 +3943,11 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -3952,7 +4001,7 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
   (* PAIRWISE facts of CORRECT, not ALLPAIRS ones).                          *)
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
 
   (* ============ SEQUENCE 1: SETUP  pc+0x38 -> pc+0x4c0 ============        *)
   (* mid-state: no aligned_bytes_loaded or read PC (the tactic adds them).   *)
@@ -3992,7 +4041,7 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
         read Q3 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 11)) /\
         read Q4 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 12)) /\
         htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. j < nb
+        (!j. 8 * (0 + 1) <= j /\ j < nb
              ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                  inblock j) /\
         (!j. j < 8 * (0 + 1)
@@ -4061,7 +4110,7 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
         read Q3 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 11)) /\
         read Q4 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 12)) /\
         htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. j < nb
+        (!j. 8 * (k + 1) <= j /\ j < nb
              ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                  inblock j) /\
         (!j. j < 8 * (k + 1)
@@ -4140,7 +4189,7 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
         word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
           word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 15)) rk) /\
         htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. j < nb
+        (!j. 8 * (k + 1) <= j /\ j < nb
              ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                  inblock j) /\
         (!j. j < 8 * (k + 1)
@@ -4203,7 +4252,7 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
           word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
             word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 15)) rk) /\
           htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-          (!j. j < nb ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s = inblock j) /\
+          (!j. 8 * (k + 1) <= j /\ j < nb ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s = inblock j) /\
           (!j. j < 8 * (k + 1) ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
                  word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j))`) THEN
     CONJ_TAC THENL
@@ -4306,9 +4355,11 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -4351,7 +4402,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
 
   (* ===== SEQUENCE 1: SETUP_G1  pc+0x38 -> pc+0xa10 (skips main loop) ===== *)
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_prepretail`)
@@ -4390,7 +4441,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
         read Q3 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 11)) /\
         read Q4 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 12)) /\
         htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. j < nb
+        (!j. 8 * (0 + 1) <= j /\ j < nb
              ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                  inblock j) /\
         (!j. j < 8 * (0 + 1)
@@ -4462,7 +4513,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
         word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
           word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 15)) rk) /\
         htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. j < nb
+        (!j. 8 * (0 + 1) <= j /\ j < nb
              ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                  inblock j) /\
         (!j. j < 8 * (0 + 1)
@@ -4517,7 +4568,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
           word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
             word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 15)) rk) /\
           htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-          (!j. j < nb ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s = inblock j) /\
+          (!j. 8 * (0 + 1) <= j /\ j < nb ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s = inblock j) /\
           (!j. j < 8 * (0 + 1) ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
                  word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j))`) THEN
     CONJ_TAC THENL
@@ -4663,8 +4714,9 @@ let AES_GCM_ENC_ALT_SETUP0 = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb)]
-      [(in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
-       (tag_p, 16); (ivec_p, 16); (word_add stackpointer (word 0x40), 8)]
+      [(key_p, keybytes); (htable_p, 192); (tag_p, 16); (ivec_p, 16);
+       (word_add stackpointer (word 0x40), 8)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb))
     ==> ensures arm
       (\s. aligned_bytes_loaded s (word pc) tmc /\
            read PC s = word (pc + 0x38) /\
@@ -4728,7 +4780,7 @@ let AES_GCM_ENC_ALT_SETUP0 = prove
            word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
              word_reversefields 8 (cipher (ctr_block nonce (c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * 0 <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * 0
@@ -4740,7 +4792,7 @@ let AES_GCM_ENC_ALT_SETUP0 = prove
   REWRITE_TAC[KEY_SPLIT] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALLPAIRS; ALL;
               NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
       (kterm `LENGTH tmc`)]) THEN
@@ -4756,7 +4808,7 @@ let AES_GCM_ENC_ALT_SETUP0 = prove
   MAP_EVERY NSTEP (37--(setup_tail_branch-1)) THEN NSTEP setup_tail_branch THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_BRANCH_COND_TRUE
      (CONJ (ASSUME `1 <= nb`) (ASSUME `nb <= 8`)); COND_CLAUSES]) THEN
-  ENSURES_FINAL_STATE_TAC THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[htable_mem_8; htable_mem_4] THEN REPEAT CONJ_TAC THEN SETUP0_DISPATCH);;
 
@@ -4779,9 +4831,11 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -4824,7 +4878,7 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
 
   (* ===== SEQUENCE: SETUP0  pc+0x38 -> pc+0xee0 ===== *)
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_tail`)
@@ -4868,7 +4922,7 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
            word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
              word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * 0 <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * 0
@@ -4929,7 +4983,7 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
            word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
              word_reversefields 8 (cipher (ctr_block nonce (c + 7)) rk) /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * 0 <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * 0
@@ -5020,9 +5074,11 @@ let AES_GCM_ENC_ALT_FAST2 = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -5066,7 +5122,7 @@ let AES_GCM_ENC_ALT_FAST2 = prove
   REWRITE_TAC[KEY_SPLIT] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[LENGTH_WB_MC; htable_mem_8; htable_mem_4; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_fast2`)
    (kterm `\s. read X0 s = word_add in_p (word (128 * 0)) /\
            read X2 s = word_add out_p (word (128 * 0)) /\
@@ -5088,7 +5144,7 @@ let AES_GCM_ENC_ALT_FAST2 = prove
            read Q30 s = word_reversefields 32 (ctr_block nonce (8 * 0 + c + 2)) /\
            read Q31 s = word 79228162514264337593543950336 /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * 0 <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * 0
@@ -5125,7 +5181,7 @@ let AES_GCM_ENC_ALT_FAST2 = prove
      (kterm `word_xor (read Q1 sfast2) (word_reversefields 8 (EL nr rk)) =
       word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 1)) rk)`)
       ASSUME_TAC THENL [KSCLOSE; ALL_TAC] THEN
-    ENSURES_FINAL_STATE_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
     REPEAT CONJ_TAC THEN FAST2_MID_D2;
     (* Segment B: 0x17d4 -> 0x1154 = FAST2_TAIL *)
     MP_TAC(ISPECL
@@ -5159,9 +5215,11 @@ let AES_GCM_ENC_ALT_FAST4 = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -5205,7 +5263,7 @@ let AES_GCM_ENC_ALT_FAST4 = prove
   REWRITE_TAC[KEY_SPLIT] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[LENGTH_WB_MC; htable_mem_8; htable_mem_4; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_fast4`)
    (kterm `\s. read X0 s = word_add in_p (word (128 * 0)) /\
            read X2 s = word_add out_p (word (128 * 0)) /\
@@ -5231,7 +5289,7 @@ let AES_GCM_ENC_ALT_FAST4 = prove
            read Q30 s = word_reversefields 32 (ctr_block nonce (8 * 0 + c + 4)) /\
            read Q31 s = word 79228162514264337593543950336 /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * 0 <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * 0
@@ -5275,7 +5333,7 @@ let AES_GCM_ENC_ALT_FAST4 = prove
      (kterm `word_xor (read Q3 sfast4) (word_reversefields 8 (EL nr rk)) =
       word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 3)) rk)`)
       ASSUME_TAC THENL [KSCLOSE; ALL_TAC] THEN
-    ENSURES_FINAL_STATE_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
     REPEAT CONJ_TAC THEN FAST2_MID_D2;
     (* Segment B: 0x15ac -> 0x1154 = FAST4_TAIL *)
     MP_TAC(ISPECL
@@ -5309,9 +5367,11 @@ let AES_GCM_ENC_ALT_FAST1 = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -5355,7 +5415,7 @@ let AES_GCM_ENC_ALT_FAST1 = prove
   REWRITE_TAC[KEY_SPLIT] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[LENGTH_WB_MC; htable_mem_8; htable_mem_4; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_fast1`)
    (kterm `\s. read X0 s = word_add in_p (word (128 * 0)) /\
            read X2 s = word_add out_p (word (128 * 0)) /\
@@ -5375,7 +5435,7 @@ let AES_GCM_ENC_ALT_FAST1 = prove
            read Q30 s = word_reversefields 32 (ctr_block nonce (8 * 0 + c + 1)) /\
            read Q31 s = word 79228162514264337593543950336 /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * 0 <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * 0
@@ -5404,7 +5464,7 @@ let AES_GCM_ENC_ALT_FAST1 = prove
      (kterm `word_xor (read Q0 sfast1) (word_reversefields 8 (EL nr rk)) =
       word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c)) rk)`)
       ASSUME_TAC THENL [KSCLOSE; ALL_TAC] THEN
-    ENSURES_FINAL_STATE_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
     REPEAT CONJ_TAC THEN FAST2_MID_D2;
     (* Segment B: 0x187c -> FAST1_TAIL *)
     MP_TAC(ISPECL
@@ -5438,9 +5498,11 @@ let AES_GCM_ENC_ALT_FAST3 = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -5484,7 +5546,7 @@ let AES_GCM_ENC_ALT_FAST3 = prove
   REWRITE_TAC[KEY_SPLIT] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[LENGTH_WB_MC; htable_mem_8; htable_mem_4; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_fast3`)
    (kterm `\s. read X0 s = word_add in_p (word (128 * 0)) /\
            read X2 s = word_add out_p (word (128 * 0)) /\
@@ -5508,7 +5570,7 @@ let AES_GCM_ENC_ALT_FAST3 = prove
            read Q30 s = word_reversefields 32 (ctr_block nonce (8 * 0 + c + 3)) /\
            read Q31 s = word 79228162514264337593543950336 /\
            htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. j < nb
+           (!j. 8 * 0 <= j /\ j < nb
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
                     inblock j) /\
            (!j. j < 8 * 0
@@ -5554,7 +5616,7 @@ let AES_GCM_ENC_ALT_FAST3 = prove
      (kterm `word_xor (read Q2 sfast3) (word_reversefields 8 (EL nr rk)) =
       word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 2)) rk)`)
       ASSUME_TAC THENL [KSCLOSE; ALL_TAC] THEN
-    ENSURES_FINAL_STATE_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
     REPEAT CONJ_TAC THEN FAST2_MID_D2;
     (* Segment B: 0x16ec -> FAST3_TAIL *)
     MP_TAC(ISPECL
@@ -5581,9 +5643,11 @@ let AES_GCM_ENC_ALT_CORRECT = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
+    ALL (nonoverlapping (in_p, 16 * nb))
+      [(tag_p, 16); (ivec_p, 16)] /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16 * nb) (out_p, 16 * nb)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -5625,7 +5689,7 @@ let AES_GCM_ENC_ALT_CORRECT = prove
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
   REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   SUBGOAL_THEN `nb <= 8 \/ (9 <= nb /\ nb <= 16) \/ 17 <= nb` MP_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
   STRIP_TAC THENL
@@ -5754,9 +5818,12 @@ let AES_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
     ALLPAIRS nonoverlapping
       [(out_p, 16 * gcm_wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 80), 80)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * gcm_wb_blocks len_bits); (key_p, keybytes);
-       (htable_p, 192)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192)] /\
+    ALL (nonoverlapping (in_p, 16 * gcm_wb_blocks len_bits))
+      [(tag_p, 16); (ivec_p, 16); (word_sub stackpointer (word 80), 80)] /\
+    (in_p = out_p \/
+     nonoverlapping (in_p, 16 * gcm_wb_blocks len_bits)
+                    (out_p, 16 * gcm_wb_blocks len_bits)) /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * gcm_wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 80), 80)]
@@ -5799,7 +5866,7 @@ let AES_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
   (* Expand the compact round-key list, in place inside the precondition,    *)
   (* into the pointwise reads the interior legs consume.                     *)
   REWRITE_TAC[KEY_SPLIT] THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   (* Abbreviate the block count.  This is not cosmetic: keeping              *)
   (* `gcm_wb_blocks` folded stops `val len_bits = 128 * nb` from looping as  *)
   (* a rewrite, which it would if gcm_wb_blocks unfolded to `val len_bits    *)
@@ -5842,7 +5909,7 @@ let AES_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
       ASSUME `~(val(word_and (len_bits:int64) (word 0x7f)) = 0)`;
       COND_CLAUSES]) THEN
     ARM_STEPS_TAC AES_GCM_ENC_ALT_EXEC [4;5] THEN
-    ENSURES_FINAL_STATE_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
     ASM_REWRITE_TAC[list_of_seq; nist_ghash] THEN
     REWRITE_TAC[ARITH_RULE `j < 0 <=> F`]] THEN
   (* From here on the length is a whole number of blocks. *)
@@ -5859,7 +5926,7 @@ let AES_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
     REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN
     ENSURES_INIT_TAC "s0" THEN
     ARM_STEPS_TAC AES_GCM_ENC_ALT_EXEC [1;2;3] THEN
-    ENSURES_FINAL_STATE_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
     ASM_REWRITE_TAC[list_of_seq; nist_ghash] THEN
     REWRITE_TAC[ARITH_RULE `j < 0 <=> F`];
     ALL_TAC] THEN
@@ -5942,7 +6009,7 @@ let AES_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
               htable_mem_8; htable_mem_4] THEN
   ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s15" THEN
   ARM_STEPS_TAC AES_GCM_ENC_ALT_EXEC (16--22) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   SIMP_TAC[WORD_ZX_ZX; DIMINDEX_64; DIMINDEX_128; LE_REFL; ARITH] THEN
   CONV_TAC WORD_RULE);;
 
@@ -5966,8 +6033,7 @@ let prove_fast_safe n =
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
@@ -6022,8 +6088,7 @@ let AES_GCM_ENC_ALT_SETUP0_SAFE = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
@@ -6112,8 +6177,7 @@ let prove_tail_rem_safe r x5th steps =
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -6177,8 +6241,7 @@ let AES_GCM_ENC_ALT_TAIL_REM8_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -6240,8 +6303,7 @@ let AES_GCM_ENC_ALT_TAIL_REM_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -6331,8 +6393,7 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL_SAFE = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
@@ -6434,8 +6495,7 @@ let AES_GCM_ENC_ALT_PREPRETAIL_GEN_SAFE = prove
     val in_p + 128 * (k + 1) < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -6512,8 +6572,7 @@ let AES_GCM_ENC_ALT_SETUP_G1_SAFE = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
@@ -6611,8 +6670,7 @@ let AES_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -6719,8 +6777,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1_SAFE = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
@@ -6829,8 +6886,7 @@ let AES_GCM_ENC_ALT_SETUP_GEN_SAFE = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
@@ -6941,8 +6997,7 @@ let AES_GCM_ENC_ALT_MAIN_LOOP_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -7077,8 +7132,7 @@ let AES_GCM_ENC_ALT_LOOP_TAIL_SAFE = prove
     val in_p + 16 * nb < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192); (mod_p, 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
     ==> ensures arm
@@ -7183,8 +7237,7 @@ let AES_GCM_ENC_ALT_GEN_CORRECT_SAFE = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
@@ -7288,8 +7341,7 @@ let AES_GCM_ENC_ALT_SAFE = prove
                    (word pc, LENGTH tmc) /\
     ALLPAIRS nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
-      [(word pc, LENGTH tmc);
-       (in_p, 16 * nb); (key_p, keybytes); (htable_p, 192);
+      [(word pc, LENGTH tmc); (key_p, keybytes); (htable_p, 192);
        (word_add stackpointer (word 0x40), 8)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
@@ -7413,8 +7465,12 @@ let AES_GCM_ENC_ALT_NOIBT_SUBROUTINE_SAFE = prove
         ALLPAIRS nonoverlapping
         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16;
          word_sub stackpointer (word 80),80]
-        [word pc,LENGTH tmc;
-         in_p,16 * gcm_wb_blocks len_bits; key_p,keybytes; htable_p,192] /\
+        [word pc,LENGTH tmc; key_p,keybytes; htable_p,192] /\
+        ALL (nonoverlapping (in_p,16 * gcm_wb_blocks len_bits))
+        [tag_p,16; ivec_p,16; word_sub stackpointer (word 80),80] /\
+        (in_p = out_p \/
+         nonoverlapping (in_p,16 * gcm_wb_blocks len_bits)
+                        (out_p,16 * gcm_wb_blocks len_bits)) /\
         PAIRWISE nonoverlapping
         [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16;
          word_sub stackpointer (word 80),80]
@@ -7470,7 +7526,7 @@ let AES_GCM_ENC_ALT_NOIBT_SUBROUTINE_SAFE = prove
          f_ev_mis len_bits in_p out_p tag_p ivec_p key_p htable_p pc sp retaddr
       :(uarch_event)list` THEN
   REPEAT META_EXISTS_TAC THEN
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ABBREV_TAC `nb = gcm_wb_blocks len_bits` THEN
   ASM_CASES_TAC `val(len_bits:int64) MOD 128 = 0` THENL
    [ALL_TAC;
