@@ -2647,7 +2647,7 @@ let WB_IVEC_CLOSE_TAC r =
 
 (* ========================================================================= *)
 (* The small-message path, nblk <= 4.  The b.le at 0x38 (front step 8)       *)
-(* branches to L256_dec_small (0x1364), which loads the counter, the tag and *)
+(* branches to L256_dec_small (0x1334), which loads the counter, the tag and *)
 (* the 15 round keys and dispatches on x9 (through L256_dec_small_ge3 for    *)
 (* nblk >= 3) to L256_dec_small_seed_k.  small_seed_k seeds the GHASH        *)
 (* accumulator with Xi' * H^k and enters the chain small_blk_k, ..,          *)
@@ -2655,7 +2655,7 @@ let WB_IVEC_CLOSE_TAC r =
 (* ciphertext into the accumulator with the matching power of H;             *)
 (* small_blk_1 also reduces, stores the tag, the counter and the last        *)
 (* plaintext block, and L256_dec_small_done branches to                      *)
-(* L256_dec_frame_restore (0x11cc, pc+4556), the core exit.                  *)
+(* L256_dec_frame_restore (0x119c, pc+4508), the core exit.                  *)
 (*                                                                           *)
 (* WB_FUSED_kBLOCK (k = 1..4) proves each path from the core entry pc+0x1c,  *)
 (* and mk_band_from_fused restates it as the band goal mk_band_goal k by     *)
@@ -3829,7 +3829,7 @@ let WBN_Q9_INDEX_LT_9 = prove
 (* The tail leg: from the seam to the core exit (WBN_PREP_TO_END).           *)
 (*                                                                           *)
 (* The tail back-legs WB_TAIL_GEN2_1..8 of the <=8-block chain start at the  *)
-(* seam PC pc+3824 and run to the core exit pc+4556, closing the r-block     *)
+(* seam PC pc+3824 and run to the core exit pc+4508, closing the r-block     *)
 (* GHASH with GMULT_FULL_CORRECT_BA (r = 1) or GMULT2..8_FULL_CORRECT_BA.    *)
 (* They are proved once, before prove_band (which uses them too), where      *)
 (* their goal builders wbn_dissect_band, wbn_tail_drop_lhs5,                 *)
@@ -3840,8 +3840,8 @@ let WBN_Q9_INDEX_LT_9 = prove
 (* The back-legs keep X9 generic (return_value).  The seam has               *)
 (* X1 = word (128 * nblk) and X9 = word (16 * nblk), where a tail fixed to r *)
 (* blocks would have word (128 * r) and word (16 * r), which differ for      *)
-(* nblk >= 17.  The tail (0xef0..0x11c8, and the exact-8 drain               *)
-(* 0x11e4..0x1360) reads neither register, so the back-leg contract drops X1 *)
+(* nblk >= 17.  The tail (0xef0..0x1198, and the exact-8 drain               *)
+(* 0x11b4..0x1330) reads neither register, so the back-leg contract drops X1 *)
 (* and keeps X9 as return_value: the shifted tail instantiates it to         *)
 (* word (16 * nblk), a fixed band to word (16 * r).                          *)
 (* ------------------------------------------------------------------------- *)
@@ -3864,7 +3864,7 @@ let wbn_prep_to_end_extra_clauses =
 (*                                                                           *)
 (* The seam feed (INNER_TAIL_FEED_TAC with WB_TAIL_GEN2_r) gives the shifted *)
 (* band's post:                                                              *)
-(*   - PC = pc+4556, the core exit;                                          *)
+(*   - PC = pc+4508, the core exit;                                          *)
 (*   - the last r output stores, at out_p + 128*(k+1) + 16*i (i < r);        *)
 (*   - the tag at xi_p: the caught-up accumulator continued over the r new   *)
 (*     blocks.                                                               *)
@@ -4084,7 +4084,7 @@ let GCM_CTR_INC_ITER_NIST_IVEC = prove
 (* ------------------------------------------------------------------------- *)
 (* The exported contracts, in the shared AES-GCM vocabulary.                 *)
 (*                                                                           *)
-(* AES256_GCM_DEC_ALT_CORRECT (the core, pc+28 to pc+4556) and               *)
+(* AES256_GCM_DEC_ALT_CORRECT (the core, pc+28 to pc+4508) and               *)
 (* WBN_DEC_VALID_CALL_CORRECT (the AAPCS64 wrapper at bit_len = 128 * nblk)  *)
 (* are lifted from the two spines by WBN_EXPORT_FROM_SPINE_TAC: the key      *)
 (* words, the GHASH key and the counter block are pinned to the FIPS-197 /   *)
@@ -4753,7 +4753,7 @@ let x0norm_i = WORD_RULE
 
 let pcbridge_i = MP WBN_PC_BRIDGE (ASSUME `9 <= nblk`);;
 
-(* ---- G3, the exit and tail leg, pc+2572 to pc+4556: the straight-line
+(* ---- G3, the exit and tail leg, pc+2572 to pc+4508: the straight-line
    prepretail to pc+3812, then the 8-way dispatch on the leftover block count
    (nblk-9) MOD 8. ---- *)
 

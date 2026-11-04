@@ -82,7 +82,8 @@
 //    the output buffer is never read.
 //  - Inputs of 1 to 4 blocks take a separate path (L256_dec_small), and
 //    exactly 8 remaining blocks a dedicated GHASH drain
-//    (L256_dec_exact8_drain).
+//    (L256_dec_exact8_drain); the generator's L256_dec_blocks_more_than_7,
+//    which the drain replaces, is removed.
 //  - Rescheduling: a flatter counter setup, ext instead of ins for the
 //    Karatsuba middle terms in the GHASH tail, shorter odd-block middle-term
 //    chains in the tail, and a main loop at offset 0x4c0, which is 16-byte
@@ -1356,25 +1357,6 @@ L256_dec_tail:	//TAIL
 	sub	v30.4s, v30.4s, v31.4s
 	ldr	q21, [x6, #16]				//load h2k | h1k
 	b	L256_dec_blocks_less_than_1
-L256_dec_blocks_more_than_7:	//blocks	left >  7
-	rev64	v8.16b, v9.16b						//GHASH final-7 block
-	ldr	q9, [x0], #16				//AES final-6 block - load ciphertext
-	st1	{ v12.16b}, [x2], #16				//AES final-7 block  - store result
-
-	ext	v18.16b, v24.16b, v24.16b, #8			//GHASH final-7 block - mid
-
-	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
-
-	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-7 block - mid
-	eor3	v12.16b, v9.16b, v1.16b, v29.16b	//AES final-6 block - result
-
-	pmull2	v17.1q, v8.2d, v25.2d				//GHASH final-7 block - high
-
-	eor	v27.8b, v27.8b, v8.8b				//GHASH final-7 block - mid
-	movi	v16.8b, #0						//suppress further partial tag feed in
-
-	pmull	v19.1q, v8.1d, v25.1d				//GHASH final-7 block - low
-	pmull	v18.1q, v27.1d, v18.1d			 	//GHASH final-7 block - mid
 L256_dec_blocks_more_than_6:	//blocks	left >  6
 
 	rev64	v8.16b, v9.16b						//GHASH final-6 block

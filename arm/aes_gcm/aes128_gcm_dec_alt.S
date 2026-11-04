@@ -86,14 +86,14 @@
 //    plus the increments 1 to 7, each one add and one rev32 (the increments
 //    2 to 7 are built from the increment 1 first), instead of one serial
 //    add/rev32 chain through v30.
-//  - GHASH tail: the nine Karatsuba middle-term lane moves are
+//  - GHASH tail: the seven Karatsuba middle-term lane moves are
 //    ext vD.16b, vN.16b, vN.16b, #8 instead of ins vD.d[0], vN.d[1]. Only
 //    lane 0 of vD is consumed, and ext writes the whole register, so the
 //    moves no longer wait for the previous writer of vD.
 //  - Exactly 8 blocks left: the tail's first b.gt goes to the straight-line
 //    drain L128_dec_exact8_drain, placed after the return stub, instead of
-//    L128_dec_blocks_more_than_7, which is no longer reached but stays in
-//    place. The drain feeds the partial tag into its first block only,
+//    the generator's L128_dec_blocks_more_than_7, which is removed. The
+//    drain feeds the partial tag into its first block only,
 //    defers the products of three blocks to v13-v15 and folds each into the
 //    next block's accumulations with eor3, and rejoins the shared reduction
 //    at L128_dec_reduce.
@@ -1138,26 +1138,6 @@ L128_dec_tail:	//TAIL
 	sub	v30.4s, v30.4s, v31.4s
 	ldr	q21, [x6, #16]				//load h2k | h1k
 	b	L128_dec_blocks_less_than_1
-L128_dec_blocks_more_than_7:	//blocks	left >  7
-	rev64	v8.16b, v9.16b						//GHASH final-7 block
-
-	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
-
-	ext	v18.16b, v24.16b, v24.16b, #8			//GHASH final-7 block - mid
-
-	pmull	v19.1q, v8.1d, v25.1d				//GHASH final-7 block - low
-	ext	v27.16b, v8.16b, v8.16b, #8			//GHASH final-7 block - mid
-
-	movi	v16.8b, #0						//suppress further partial tag feed in
-	ldr	q9, [x0], #16				//AES final-6 block - load ciphertext
-
-	eor	v27.8b, v27.8b, v8.8b				//GHASH final-7 block - mid
-
-	pmull2	v17.1q, v8.2d, v25.2d				//GHASH final-7 block - high
-	st1	{ v12.16b}, [x2], #16			 	//AES final-7 block  - store result
-	eor3	v12.16b, v9.16b, v1.16b, v29.16b	//AES final-6 block - result
-
-	pmull	v18.1q, v27.1d, v18.1d			 	//GHASH final-7 block - mid
 L128_dec_blocks_more_than_6:	//blocks	left >  6
 
 	rev64	v8.16b, v9.16b						//GHASH final-6 block
