@@ -7,6 +7,7 @@ MLKEM_NATIVE_OBJ += \
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/basemul_k2 \
   mlkem_native/gcc12_O3/basemul_k3 \
+  mlkem_native/gcc12_O3/basemul_k4 \
   mlkem_native/gcc12_O3/keccakf1600_permute \
   mlkem_native/gcc12_O3/keccakf1600x4_permute \
   mlkem_native/gcc12_O3/poly_add \
@@ -47,6 +48,9 @@ mlkem_native/gcc12_O3/basemul_k2.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/basemul_k3.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/basemul_k4.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/keccakf1600_permute.native: \
