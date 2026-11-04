@@ -4,12 +4,11 @@
  *)
 
 (* ========================================================================= *)
-(* Decompression of a polynomial from 11 bits per coefficient.               *)
-(* This is the code for mlkem_poly_decompress_d11 from mlkem-native's        *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md). It is verified in the whole image (see           *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x2170, with a *)
-(* vector of constants at 0x6210.                                            *)
+(* Decompression of a polynomial from 11 bits per coefficient. This is the   *)
+(* code for mlkem_poly_decompress_d11 from mlkem-native's portable C         *)
+(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
+(* It is verified in the whole image (see                                    *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), with a vector of constants.           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -17,65 +16,66 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    2170: mov     x8, x0
-    2174: adrp    x0, 6000 <mlkem768_polyvec_mulcache_compute+0x10>
-    2178: movi    v2.4s, #0x4, lsl #8
-    217c: add     x9, x1, #0x160
-    2180: ldr     q3, [x0, #528]
-    2184: nop
-    2188: add     x1, x1, #0xb
-    218c: ldurb   w5, [x1, #-9]
-    2190: ldurb   w6, [x1, #-10]
-    2194: ldurb   w4, [x1, #-7]
-    2198: lsl     w2, w5, #5
-    219c: ldurh   w0, [x1, #-11]
-    21a0: orr     w6, w2, w6, lsr #3
-    21a4: ldurb   w2, [x1, #-8]
-    21a8: and     w6, w6, #0x7ff
-    21ac: and     w0, w0, #0x7ff
-    21b0: fmov    s0, w0
-    21b4: lsl     w0, w4, #10
-    21b8: orr     w0, w0, w2, lsl #2
-    21bc: ldurb   w3, [x1, #-6]
-    21c0: mov     v0.h[1], w6
-    21c4: orr     w5, w0, w5, lsr #6
-    21c8: and     w5, w5, #0x7ff
-    21cc: ldurb   w2, [x1, #-5]
-    21d0: lsl     w0, w3, #7
-    21d4: ldurb   w7, [x1, #-4]
-    21d8: mov     v1.16b, v2.16b
-    21dc: orr     w4, w0, w4, lsr #1
-    21e0: mov     v0.h[2], w5
-    21e4: and     w4, w4, #0x7ff
-    21e8: ldurb   w0, [x1, #-3]
-    21ec: lsl     w6, w2, #4
-    21f0: orr     w3, w6, w3, lsr #4
-    21f4: ldurb   w5, [x1, #-2]
-    21f8: and     w3, w3, #0x7ff
-    21fc: ldurb   w6, [x1, #-1]
-    2200: mov     v0.h[3], w4
-    2204: lsl     w10, w0, #9
-    2208: mov     v4.16b, v2.16b
-    220c: orr     w4, w10, w7, lsl #1
-    2210: orr     w2, w4, w2, lsr #7
-    2214: lsl     w4, w5, #6
-    2218: and     w2, w2, #0x7ff
-    221c: orr     w0, w4, w0, lsr #2
-    2220: mov     v0.h[4], w3
-    2224: and     w0, w0, #0x7ff
-    2228: ubfx    x5, x5, #5, #16
-    222c: orr     w3, w5, w6, lsl #3
-    2230: mov     v0.h[5], w2
-    2234: mov     v0.h[6], w0
-    2238: mov     v0.h[7], w3
-    223c: umlal   v1.4s, v0.4h, v3.4h
-    2240: umlal2  v4.4s, v0.8h, v3.8h
-    2244: shrn    v0.4h, v1.4s, #11
-    2248: shrn2   v0.8h, v4.4s, #11
-    224c: str     q0, [x8], #16
-    2250: cmp     x9, x1
-    2254: b.ne    2188 <mlkem_poly_decompress_d11+0x18>
-    2258: ret
+    mlkem_poly_decompress_d11:
+       +0x0: mov     x8, x0
+       +0x4: adrp    x0, <page>
+       +0x8: movi    v2.4s, #0x4, lsl #8
+       +0xc: add     x9, x1, #0x160
+      +0x10: ldr     q3, [x0, #528]
+      +0x14: nop
+      +0x18: add     x1, x1, #0xb
+      +0x1c: ldurb   w5, [x1, #-9]
+      +0x20: ldurb   w6, [x1, #-10]
+      +0x24: ldurb   w4, [x1, #-7]
+      +0x28: lsl     w2, w5, #5
+      +0x2c: ldurh   w0, [x1, #-11]
+      +0x30: orr     w6, w2, w6, lsr #3
+      +0x34: ldurb   w2, [x1, #-8]
+      +0x38: and     w6, w6, #0x7ff
+      +0x3c: and     w0, w0, #0x7ff
+      +0x40: fmov    s0, w0
+      +0x44: lsl     w0, w4, #10
+      +0x48: orr     w0, w0, w2, lsl #2
+      +0x4c: ldurb   w3, [x1, #-6]
+      +0x50: mov     v0.h[1], w6
+      +0x54: orr     w5, w0, w5, lsr #6
+      +0x58: and     w5, w5, #0x7ff
+      +0x5c: ldurb   w2, [x1, #-5]
+      +0x60: lsl     w0, w3, #7
+      +0x64: ldurb   w7, [x1, #-4]
+      +0x68: mov     v1.16b, v2.16b
+      +0x6c: orr     w4, w0, w4, lsr #1
+      +0x70: mov     v0.h[2], w5
+      +0x74: and     w4, w4, #0x7ff
+      +0x78: ldurb   w0, [x1, #-3]
+      +0x7c: lsl     w6, w2, #4
+      +0x80: orr     w3, w6, w3, lsr #4
+      +0x84: ldurb   w5, [x1, #-2]
+      +0x88: and     w3, w3, #0x7ff
+      +0x8c: ldurb   w6, [x1, #-1]
+      +0x90: mov     v0.h[3], w4
+      +0x94: lsl     w10, w0, #9
+      +0x98: mov     v4.16b, v2.16b
+      +0x9c: orr     w4, w10, w7, lsl #1
+      +0xa0: orr     w2, w4, w2, lsr #7
+      +0xa4: lsl     w4, w5, #6
+      +0xa8: and     w2, w2, #0x7ff
+      +0xac: orr     w0, w4, w0, lsr #2
+      +0xb0: mov     v0.h[4], w3
+      +0xb4: and     w0, w0, #0x7ff
+      +0xb8: ubfx    x5, x5, #5, #16
+      +0xbc: orr     w3, w5, w6, lsl #3
+      +0xc0: mov     v0.h[5], w2
+      +0xc4: mov     v0.h[6], w0
+      +0xc8: mov     v0.h[7], w3
+      +0xcc: umlal   v1.4s, v0.4h, v3.4h
+      +0xd0: umlal2  v4.4s, v0.8h, v3.8h
+      +0xd4: shrn    v0.4h, v1.4s, #11
+      +0xd8: shrn2   v0.8h, v4.4s, #11
+      +0xdc: str     q0, [x8], #16
+      +0xe0: cmp     x9, x1
+      +0xe4: b.ne    <mlkem_poly_decompress_d11+0x18>
+      +0xe8: ret
  ***)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_EXEC =

@@ -4,11 +4,11 @@
  *)
 
 (* ========================================================================= *)
-(* Unpacking of 12-bit coefficients from bytes, without reduction.           *)
-(* This is the code for mlkem_poly_frombytes from mlkem-native's portable C  *)
+(* Unpacking of 12-bit coefficients from bytes, without reduction. This is   *)
+(* the code for mlkem_poly_frombytes from mlkem-native's portable C          *)
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
 (* It is verified in the whole image (see                                    *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x22a0.        *)
+(* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -16,21 +16,22 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    22a0: add     x6, x1, #0x180
-    22a4: nop
-    22a8: ldrb    w2, [x1, #1]
-    22ac: add     x0, x0, #0x4
-    22b0: ldrb    w4, [x1, #2]
-    22b4: ldrb    w5, [x1], #3
-    22b8: ubfiz   w3, w2, #8, #4
-    22bc: lsl     w4, w4, #4
-    22c0: orr     w3, w3, w5
-    22c4: orr     w2, w4, w2, lsr #4
-    22c8: sturh   w3, [x0, #-4]
-    22cc: sturh   w2, [x0, #-2]
-    22d0: cmp     x6, x1
-    22d4: b.ne    22a8 <mlkem_poly_frombytes+0x8>
-    22d8: ret
+    mlkem_poly_frombytes:
+       +0x0: add     x6, x1, #0x180
+       +0x4: nop
+       +0x8: ldrb    w2, [x1, #1]
+       +0xc: add     x0, x0, #0x4
+      +0x10: ldrb    w4, [x1, #2]
+      +0x14: ldrb    w5, [x1], #3
+      +0x18: ubfiz   w3, w2, #8, #4
+      +0x1c: lsl     w4, w4, #4
+      +0x20: orr     w3, w3, w5
+      +0x24: orr     w2, w4, w2, lsr #4
+      +0x28: sturh   w3, [x0, #-4]
+      +0x2c: sturh   w2, [x0, #-2]
+      +0x30: cmp     x6, x1
+      +0x34: b.ne    <mlkem_poly_frombytes+0x8>
+      +0x38: ret
  ***)
 
 let MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_EXEC =

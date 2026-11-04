@@ -9,8 +9,8 @@
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which calls mlkem_keccakf1600_xor_bytes for each of the states, the last  *)
 (* time as a tail call. It is verified in the whole image (see               *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x2d50, using  *)
-(* the theorems for mlkem_keccakf1600_xor_bytes at 0x2c90 in the image.      *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlkem_keccakf1600_xor_bytes in the image.                                 *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keccakf1600_xor_bytes_gcc12_O2.ml";;
@@ -18,38 +18,39 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    2d50: stp     x19, x20, [sp, #-64]!
-    2d54: mov     w19, w5
-    2d58: mov     w20, w6
-    2d5c: stp     x21, x22, [sp, #16]
-    2d60: mov     x22, x4
-    2d64: mov     x21, x0
-    2d68: stp     x23, x24, [sp, #32]
-    2d6c: mov     x24, x2
-    2d70: mov     x23, x3
-    2d74: mov     w2, w5
-    2d78: mov     w3, w6
-    2d7c: str     x30, [sp, #48]
-    2d80: bl      2c90 <mlkem_keccakf1600_xor_bytes>
-    2d84: mov     w3, w20
-    2d88: mov     w2, w19
-    2d8c: mov     x1, x24
-    2d90: add     x0, x21, #0xc8
-    2d94: bl      2c90 <mlkem_keccakf1600_xor_bytes>
-    2d98: mov     w3, w20
-    2d9c: mov     w2, w19
-    2da0: mov     x1, x23
-    2da4: add     x0, x21, #0x190
-    2da8: bl      2c90 <mlkem_keccakf1600_xor_bytes>
-    2dac: ldp     x23, x24, [sp, #32]
-    2db0: mov     w3, w20
-    2db4: ldr     x30, [sp, #48]
-    2db8: mov     w2, w19
-    2dbc: mov     x1, x22
-    2dc0: add     x0, x21, #0x258
-    2dc4: ldp     x21, x22, [sp, #16]
-    2dc8: ldp     x19, x20, [sp], #64
-    2dcc: b       2c90 <mlkem_keccakf1600_xor_bytes>
+    mlkem_keccakf1600x4_xor_bytes:
+       +0x0: stp     x19, x20, [sp, #-64]!
+       +0x4: mov     w19, w5
+       +0x8: mov     w20, w6
+       +0xc: stp     x21, x22, [sp, #16]
+      +0x10: mov     x22, x4
+      +0x14: mov     x21, x0
+      +0x18: stp     x23, x24, [sp, #32]
+      +0x1c: mov     x24, x2
+      +0x20: mov     x23, x3
+      +0x24: mov     w2, w5
+      +0x28: mov     w3, w6
+      +0x2c: str     x30, [sp, #48]
+      +0x30: bl      <mlkem_keccakf1600_xor_bytes>
+      +0x34: mov     w3, w20
+      +0x38: mov     w2, w19
+      +0x3c: mov     x1, x24
+      +0x40: add     x0, x21, #0xc8
+      +0x44: bl      <mlkem_keccakf1600_xor_bytes>
+      +0x48: mov     w3, w20
+      +0x4c: mov     w2, w19
+      +0x50: mov     x1, x23
+      +0x54: add     x0, x21, #0x190
+      +0x58: bl      <mlkem_keccakf1600_xor_bytes>
+      +0x5c: ldp     x23, x24, [sp, #32]
+      +0x60: mov     w3, w20
+      +0x64: ldr     x30, [sp, #48]
+      +0x68: mov     w2, w19
+      +0x6c: mov     x1, x22
+      +0x70: add     x0, x21, #0x258
+      +0x74: ldp     x21, x22, [sp, #16]
+      +0x78: ldp     x19, x20, [sp], #64
+      +0x7c: b       <mlkem_keccakf1600_xor_bytes>
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600X4_XOR_BYTES_GCC12_O2_EXEC =

@@ -11,10 +11,10 @@
 (* in the NTT domain from the decryption key, and writes the compression     *)
 (* with d = 1 of w = v - NTT^-1(s^T NTT(u)) as the message, zeroing its      *)
 (* buffers. It is verified in the whole image (see                           *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x55e0, using  *)
-(* the theorems for mlkem768_polyvec_decompress_du,                          *)
-(* mlkem_poly_decompress_d4, mlkem768_polyvec_frombytes,                     *)
-(* mlkem768_polyvec_ntt, mlkem768_polyvec_mulcache_compute,                  *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlkem768_polyvec_decompress_du, mlkem_poly_decompress_d4,                 *)
+(* mlkem768_polyvec_frombytes, mlkem768_polyvec_ntt,                         *)
+(* mlkem768_polyvec_mulcache_compute,                                        *)
 (* mlkem768_polyvec_basemul_acc_montgomery_cached, mlkem_poly_invntt_tomont, *)
 (* mlkem_poly_sub, mlkem_poly_reduce and mlkem_poly_tomsg in the image, and  *)
 (* the contract for memset.                                                  *)
@@ -34,91 +34,92 @@ needs "arm/proofs/utils/mlkem_native_indcpa.ml";;
 
 (*** The code in the image:
 
-    55e0: mov     x12, #0x1360
-    55e4: sub     sp, sp, x12
-    55e8: adrp    x3, 1f000 <mlk_zetas+0x18c80>
-    55ec: ldr     x3, [x3, #4088]
-    55f0: stp     x19, x20, [sp]
-    55f4: add     x19, sp, #0x5f
-    55f8: and     x19, x19, #0xffffffffffffffe0
-    55fc: stp     x21, x22, [sp, #16]
-    5600: mov     x22, x2
-    5604: mov     x2, #0x1100
-    5608: stp     x23, x24, [sp, #32]
-    560c: add     x21, x19, x2
-    5610: add     x20, x19, #0x600
-    5614: str     x30, [sp, #48]
-    5618: mov     x24, x0
-    561c: mov     x23, x1
-    5620: mov     x0, x20
-    5624: ldr     x2, [x3]
-    5628: str     x2, [sp, #4952]
-    562c: mov     x2, #0x0
-    5630: bl      5e54 <mlkem768_polyvec_decompress_du>
-    5634: add     x1, x23, #0x3c0
-    5638: mov     x0, x21
-    563c: bl      1da4 <mlkem_poly_decompress_d4>
-    5640: add     x23, x19, #0xc00
-    5644: mov     x1, x22
-    5648: mov     x0, x19
-    564c: bl      5ec4 <mlkem768_polyvec_frombytes>
-    5650: add     x22, x19, #0xf00
-    5654: mov     x0, x20
-    5658: bl      5f00 <mlkem768_polyvec_ntt>
-    565c: mov     x1, x20
-    5660: mov     x0, x23
-    5664: bl      5ff0 <mlkem768_polyvec_mulcache_compute>
-    5668: mov     x3, x23
-    566c: mov     x2, x20
-    5670: mov     x1, x19
-    5674: mov     x0, x22
-    5678: bl      5f40 <mlkem768_polyvec_basemul_acc_montgomery_cached>
-    567c: mov     x0, x22
-    5680: bl      4394 <mlkem_poly_invntt_tomont>
-    5684: mov     x1, x22
-    5688: mov     x0, x21
-    568c: bl      4210 <mlkem_poly_sub>
-    5690: mov     x0, x21
-    5694: bl      4190 <mlkem_poly_reduce>
-    5698: mov     x1, x21
-    569c: mov     x0, x24
-    56a0: bl      2340 <mlkem_poly_tomsg>
-    56a4: mov     x0, x23
-    56a8: mov     x2, #0x300
-    56ac: mov     w1, #0x0
-    56b0: bl      840 <memset@plt>
-    56b4: mov     x2, #0x200
-    56b8: mov     x0, x22
-    56bc: mov     w1, #0x0
-    56c0: bl      840 <memset@plt>
-    56c4: mov     x2, #0x200
-    56c8: mov     x0, x21
-    56cc: mov     w1, #0x0
-    56d0: bl      840 <memset@plt>
-    56d4: mov     x2, #0x600
-    56d8: mov     x0, x19
-    56dc: mov     w1, #0x0
-    56e0: bl      840 <memset@plt>
-    56e4: mov     x2, #0x600
-    56e8: mov     x0, x20
-    56ec: mov     w1, #0x0
-    56f0: bl      840 <memset@plt>
-    56f4: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    56f8: ldr     x0, [x0, #4088]
-    56fc: ldr     x2, [sp, #4952]
-    5700: ldr     x1, [x0]
-    5704: subs    x2, x2, x1
-    5708: mov     x1, #0x0
-    570c: b.ne    5730 <mlkem768_indcpa_dec+0x150>
-    5710: ldp     x19, x20, [sp]
-    5714: mov     w0, #0x0
-    5718: ldp     x21, x22, [sp, #16]
-    571c: mov     x12, #0x1360
-    5720: ldp     x23, x24, [sp, #32]
-    5724: ldr     x30, [sp, #48]
-    5728: add     sp, sp, x12
-    572c: ret
-    5730: bl      830 <__stack_chk_fail@plt>
+    mlkem768_indcpa_dec:
+        +0x0: mov     x12, #0x1360
+        +0x4: sub     sp, sp, x12
+        +0x8: adrp    x3, <page>
+        +0xc: ldr     x3, [x3, #4088]  // got_stack_chk_guard
+       +0x10: stp     x19, x20, [sp]
+       +0x14: add     x19, sp, #0x5f
+       +0x18: and     x19, x19, #0xffffffffffffffe0
+       +0x1c: stp     x21, x22, [sp, #16]
+       +0x20: mov     x22, x2
+       +0x24: mov     x2, #0x1100
+       +0x28: stp     x23, x24, [sp, #32]
+       +0x2c: add     x21, x19, x2
+       +0x30: add     x20, x19, #0x600
+       +0x34: str     x30, [sp, #48]
+       +0x38: mov     x24, x0
+       +0x3c: mov     x23, x1
+       +0x40: mov     x0, x20
+       +0x44: ldr     x2, [x3]
+       +0x48: str     x2, [sp, #4952]
+       +0x4c: mov     x2, #0x0
+       +0x50: bl      <mlkem768_polyvec_decompress_du>
+       +0x54: add     x1, x23, #0x3c0
+       +0x58: mov     x0, x21
+       +0x5c: bl      <mlkem_poly_decompress_d4>
+       +0x60: add     x23, x19, #0xc00
+       +0x64: mov     x1, x22
+       +0x68: mov     x0, x19
+       +0x6c: bl      <mlkem768_polyvec_frombytes>
+       +0x70: add     x22, x19, #0xf00
+       +0x74: mov     x0, x20
+       +0x78: bl      <mlkem768_polyvec_ntt>
+       +0x7c: mov     x1, x20
+       +0x80: mov     x0, x23
+       +0x84: bl      <mlkem768_polyvec_mulcache_compute>
+       +0x88: mov     x3, x23
+       +0x8c: mov     x2, x20
+       +0x90: mov     x1, x19
+       +0x94: mov     x0, x22
+       +0x98: bl      <mlkem768_polyvec_basemul_acc_montgomery_cached>
+       +0x9c: mov     x0, x22
+       +0xa0: bl      <mlkem_poly_invntt_tomont>
+       +0xa4: mov     x1, x22
+       +0xa8: mov     x0, x21
+       +0xac: bl      <mlkem_poly_sub>
+       +0xb0: mov     x0, x21
+       +0xb4: bl      <mlkem_poly_reduce>
+       +0xb8: mov     x1, x21
+       +0xbc: mov     x0, x24
+       +0xc0: bl      <mlkem_poly_tomsg>
+       +0xc4: mov     x0, x23
+       +0xc8: mov     x2, #0x300
+       +0xcc: mov     w1, #0x0
+       +0xd0: bl      <memset@plt>
+       +0xd4: mov     x2, #0x200
+       +0xd8: mov     x0, x22
+       +0xdc: mov     w1, #0x0
+       +0xe0: bl      <memset@plt>
+       +0xe4: mov     x2, #0x200
+       +0xe8: mov     x0, x21
+       +0xec: mov     w1, #0x0
+       +0xf0: bl      <memset@plt>
+       +0xf4: mov     x2, #0x600
+       +0xf8: mov     x0, x19
+       +0xfc: mov     w1, #0x0
+      +0x100: bl      <memset@plt>
+      +0x104: mov     x2, #0x600
+      +0x108: mov     x0, x20
+      +0x10c: mov     w1, #0x0
+      +0x110: bl      <memset@plt>
+      +0x114: adrp    x0, <page>
+      +0x118: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0x11c: ldr     x2, [sp, #4952]
+      +0x120: ldr     x1, [x0]
+      +0x124: subs    x2, x2, x1
+      +0x128: mov     x1, #0x0
+      +0x12c: b.ne    <mlkem768_indcpa_dec+0x150>
+      +0x130: ldp     x19, x20, [sp]
+      +0x134: mov     w0, #0x0
+      +0x138: ldp     x21, x22, [sp, #16]
+      +0x13c: mov     x12, #0x1360
+      +0x140: ldp     x23, x24, [sp, #32]
+      +0x144: ldr     x30, [sp, #48]
+      +0x148: add     sp, sp, x12
+      +0x14c: ret
+      +0x150: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_INDCPA_DEC_K3_GCC12_O2_EXEC =

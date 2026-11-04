@@ -9,9 +9,8 @@
 (* portable C implementation compiled by gcc 12 with -O2 (see                *)
 (* mlkem_native/README.md), which calls mlkem_poly_decompress_d10 for each   *)
 (* of the polynomials, the last time as a tail call. It is verified in the   *)
-(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at       *)
-(* address 0x5e54, using the theorems for mlkem_poly_decompress_d10 at       *)
-(* 0x1df0 in the image.                                                      *)
+(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems   *)
+(* for mlkem_poly_decompress_d10 in the image.                               *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_decompress_d10_gcc12_O2.ml";;
@@ -19,19 +18,20 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    5e54: stp     x19, x20, [sp, #-32]!
-    5e58: mov     x19, x0
-    5e5c: mov     x20, x1
-    5e60: str     x30, [sp, #16]
-    5e64: bl      1df0 <mlkem_poly_decompress_d10>
-    5e68: add     x1, x20, #0x140
-    5e6c: add     x0, x19, #0x200
-    5e70: bl      1df0 <mlkem_poly_decompress_d10>
-    5e74: ldr     x30, [sp, #16]
-    5e78: add     x1, x20, #0x280
-    5e7c: add     x0, x19, #0x400
-    5e80: ldp     x19, x20, [sp], #32
-    5e84: b       1df0 <mlkem_poly_decompress_d10>
+    mlkem768_polyvec_decompress_du:
+       +0x0: stp     x19, x20, [sp, #-32]!
+       +0x4: mov     x19, x0
+       +0x8: mov     x20, x1
+       +0xc: str     x30, [sp, #16]
+      +0x10: bl      <mlkem_poly_decompress_d10>
+      +0x14: add     x1, x20, #0x140
+      +0x18: add     x0, x19, #0x200
+      +0x1c: bl      <mlkem_poly_decompress_d10>
+      +0x20: ldr     x30, [sp, #16]
+      +0x24: add     x1, x20, #0x280
+      +0x28: add     x0, x19, #0x400
+      +0x2c: ldp     x19, x20, [sp], #32
+      +0x30: b       <mlkem_poly_decompress_d10>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K3_GCC12_O2_EXEC =

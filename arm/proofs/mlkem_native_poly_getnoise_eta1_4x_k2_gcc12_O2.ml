@@ -12,10 +12,9 @@
 (* mlkem_shake256x4, applies mlkem_poly_cbd3 to them, skipping the fourth    *)
 (* polynomial if its pointer is null, and zeroes the buffers, the first ones *)
 (* with memset. It is verified in the whole image (see                       *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x4730, using  *)
-(* the theorems for mlkem_shake256x4 at 0x2a20 and mlkem_poly_cbd3 at 0x4ec4 *)
-(* in the image and assuming the contracts for memset and memcpy in          *)
-(* utils/mlkem_native_libc.ml.                                               *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlkem_shake256x4 and mlkem_poly_cbd3 in the image and assuming the        *)
+(* contracts for memset and memcpy in utils/mlkem_native_libc.ml.            *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native_libc.ml";;
@@ -25,97 +24,99 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image, and the PLT stub for memset:
 
-    4730: sub     sp, sp, #0x480
-    4734: stp     x19, x20, [sp, #16]
-    4738: add     x20, sp, #0x7f
-    473c: and     x20, x20, #0xffffffffffffffe0
-    4740: stp     x21, x22, [sp, #32]
-    4744: add     x10, x20, #0x340
-    4748: add     x9, x20, #0x380
-    474c: stp     x23, x24, [sp, #48]
-    4750: add     x19, x20, #0x300
-    4754: mov     x22, x2
-    4758: stp     x25, x26, [sp, #64]
-    475c: add     x8, x20, #0x3c0
-    4760: add     x25, x20, #0x180
-    4764: stp     x27, x30, [sp, #80]
-    4768: add     x27, x20, #0x240
-    476c: mov     x21, x3
-    4770: ldp     q0, q1, [x4]
-    4774: mov     x3, x27
-    4778: adrp    x4, 1f000 <mlk_zetas+0x18c80>
-    477c: ldr     x4, [x4, #4088]
-    4780: mov     x24, x0
-    4784: mov     x23, x1
-    4788: mov     x0, x20
-    478c: ldr     x2, [x4]
-    4790: str     x2, [sp, #1144]
-    4794: mov     x2, #0x0
-    4798: stp     q0, q1, [x9]
-    479c: mov     x2, x25
-    47a0: stp     q0, q1, [x10]
-    47a4: mov     x4, #0xc0
-    47a8: add     x26, x20, x4
-    47ac: strb    w5, [x19, #32]
-    47b0: mov     x5, x19
-    47b4: strb    w6, [x19, #96]
-    47b8: mov     x6, x10
-    47bc: strb    w7, [x19, #160]
-    47c0: mov     x7, x9
-    47c4: mov     x9, #0x21
-    47c8: stp     x8, x9, [sp]
-    47cc: ldrb    w9, [sp, #1152]
-    47d0: stp     q0, q1, [x8]
-    47d4: mov     x1, x26
-    47d8: strb    w9, [x19, #224]
-    47dc: stp     q0, q1, [x19]
-    47e0: bl      2a20 <mlkem_shake256x4>
-    47e4: mov     x1, x20
-    47e8: mov     x0, x24
-    47ec: bl      4ec4 <mlkem_poly_cbd3>
-    47f0: mov     x1, x26
-    47f4: mov     x0, x23
-    47f8: bl      4ec4 <mlkem_poly_cbd3>
-    47fc: mov     x1, x25
-    4800: mov     x0, x22
-    4804: bl      4ec4 <mlkem_poly_cbd3>
-    4808: cbz     x21, 4818 <mlkem512_poly_getnoise_eta1_4x+0xe8>
-    480c: mov     x1, x27
-    4810: mov     x0, x21
-    4814: bl      4ec4 <mlkem_poly_cbd3>
-    4818: mov     x0, x20
-    481c: mov     x2, #0x300
-    4820: mov     w1, #0x0
-    4824: bl      840 <memset@plt>
-    4828: movi    v0.4s, #0x0
-    482c: stp     q0, q0, [x19]
-    4830: stp     q0, q0, [x19, #32]
-    4834: stp     q0, q0, [x19, #64]
-    4838: stp     q0, q0, [x19, #96]
-    483c: stp     q0, q0, [x19, #128]
-    4840: stp     q0, q0, [x19, #160]
-    4844: stp     q0, q0, [x19, #192]
-    4848: stp     q0, q0, [x19, #224]
-    484c: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    4850: ldr     x0, [x0, #4088]
-    4854: ldr     x2, [sp, #1144]
-    4858: ldr     x1, [x0]
-    485c: subs    x2, x2, x1
-    4860: mov     x1, #0x0
-    4864: b.ne    4884 <mlkem512_poly_getnoise_eta1_4x+0x154>
-    4868: ldp     x19, x20, [sp, #16]
-    486c: ldp     x21, x22, [sp, #32]
-    4870: ldp     x23, x24, [sp, #48]
-    4874: ldp     x25, x26, [sp, #64]
-    4878: ldp     x27, x30, [sp, #80]
-    487c: add     sp, sp, #0x480
-    4880: ret
-    4884: bl      830 <__stack_chk_fail@plt>
+    mlkem512_poly_getnoise_eta1_4x:
+        +0x0: sub     sp, sp, #0x480
+        +0x4: stp     x19, x20, [sp, #16]
+        +0x8: add     x20, sp, #0x7f
+        +0xc: and     x20, x20, #0xffffffffffffffe0
+       +0x10: stp     x21, x22, [sp, #32]
+       +0x14: add     x10, x20, #0x340
+       +0x18: add     x9, x20, #0x380
+       +0x1c: stp     x23, x24, [sp, #48]
+       +0x20: add     x19, x20, #0x300
+       +0x24: mov     x22, x2
+       +0x28: stp     x25, x26, [sp, #64]
+       +0x2c: add     x8, x20, #0x3c0
+       +0x30: add     x25, x20, #0x180
+       +0x34: stp     x27, x30, [sp, #80]
+       +0x38: add     x27, x20, #0x240
+       +0x3c: mov     x21, x3
+       +0x40: ldp     q0, q1, [x4]
+       +0x44: mov     x3, x27
+       +0x48: adrp    x4, <page>
+       +0x4c: ldr     x4, [x4, #4088]  // got_stack_chk_guard
+       +0x50: mov     x24, x0
+       +0x54: mov     x23, x1
+       +0x58: mov     x0, x20
+       +0x5c: ldr     x2, [x4]
+       +0x60: str     x2, [sp, #1144]
+       +0x64: mov     x2, #0x0
+       +0x68: stp     q0, q1, [x9]
+       +0x6c: mov     x2, x25
+       +0x70: stp     q0, q1, [x10]
+       +0x74: mov     x4, #0xc0
+       +0x78: add     x26, x20, x4
+       +0x7c: strb    w5, [x19, #32]
+       +0x80: mov     x5, x19
+       +0x84: strb    w6, [x19, #96]
+       +0x88: mov     x6, x10
+       +0x8c: strb    w7, [x19, #160]
+       +0x90: mov     x7, x9
+       +0x94: mov     x9, #0x21
+       +0x98: stp     x8, x9, [sp]
+       +0x9c: ldrb    w9, [sp, #1152]
+       +0xa0: stp     q0, q1, [x8]
+       +0xa4: mov     x1, x26
+       +0xa8: strb    w9, [x19, #224]
+       +0xac: stp     q0, q1, [x19]
+       +0xb0: bl      <mlkem_shake256x4>
+       +0xb4: mov     x1, x20
+       +0xb8: mov     x0, x24
+       +0xbc: bl      <mlkem_poly_cbd3>
+       +0xc0: mov     x1, x26
+       +0xc4: mov     x0, x23
+       +0xc8: bl      <mlkem_poly_cbd3>
+       +0xcc: mov     x1, x25
+       +0xd0: mov     x0, x22
+       +0xd4: bl      <mlkem_poly_cbd3>
+       +0xd8: cbz     x21, <mlkem512_poly_getnoise_eta1_4x+0xe8>
+       +0xdc: mov     x1, x27
+       +0xe0: mov     x0, x21
+       +0xe4: bl      <mlkem_poly_cbd3>
+       +0xe8: mov     x0, x20
+       +0xec: mov     x2, #0x300
+       +0xf0: mov     w1, #0x0
+       +0xf4: bl      <memset@plt>
+       +0xf8: movi    v0.4s, #0x0
+       +0xfc: stp     q0, q0, [x19]
+      +0x100: stp     q0, q0, [x19, #32]
+      +0x104: stp     q0, q0, [x19, #64]
+      +0x108: stp     q0, q0, [x19, #96]
+      +0x10c: stp     q0, q0, [x19, #128]
+      +0x110: stp     q0, q0, [x19, #160]
+      +0x114: stp     q0, q0, [x19, #192]
+      +0x118: stp     q0, q0, [x19, #224]
+      +0x11c: adrp    x0, <page>
+      +0x120: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0x124: ldr     x2, [sp, #1144]
+      +0x128: ldr     x1, [x0]
+      +0x12c: subs    x2, x2, x1
+      +0x130: mov     x1, #0x0
+      +0x134: b.ne    <mlkem512_poly_getnoise_eta1_4x+0x154>
+      +0x138: ldp     x19, x20, [sp, #16]
+      +0x13c: ldp     x21, x22, [sp, #32]
+      +0x140: ldp     x23, x24, [sp, #48]
+      +0x144: ldp     x25, x26, [sp, #64]
+      +0x148: ldp     x27, x30, [sp, #80]
+      +0x14c: add     sp, sp, #0x480
+      +0x150: ret
+      +0x154: bl      <__stack_chk_fail@plt>
 
-    840: adrp    x16, 1f000 <mlk_zetas+0x18c80>
-    844: ldr     x17, [x16, #4072]
-    848: add     x16, x16, #0xfe8
-    84c: br      x17
+    memset@plt:
+      +0x0: adrp    x16, <page>
+      +0x4: ldr     x17, [x16, #4072]  // got_memset
+      +0x8: add     x16, x16, #0xfe8  // got_memset
+      +0xc: br      x17
  ***)
 
 let MLKEM_NATIVE_POLY_GETNOISE_ETA1_4X_K2_GCC12_O2_EXEC =

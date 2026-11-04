@@ -5,16 +5,15 @@
 
 (* ========================================================================= *)
 (* Absorbing a whole message into a Keccak state, with the padding. This is  *)
-(* the code for the static function mlk_keccak_absorb_once from              *)
-(* mlkem-native's portable C implementation compiled by gcc 12 with -O2      *)
-(* (see mlkem_native/README.md), which is used by its SHA-3 and SHAKE        *)
-(* functions. It zeroes the state, XORs in each whole block of r bytes of    *)
-(* the message and permutes the state, and then XORs in the rest of the      *)
-(* message and the padding, but does not permute the state again. It is      *)
-(* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),      *)
-(* where it is at address 0x23b0, using the theorems for                     *)
-(* mlkem_keccakf1600_xor_bytes at 0x2c90 and mlkem_keccakf1600_permute at    *)
-(* 0x2dd0 in the image.                                                      *)
+(* the code for the static function mlk_keccak_absorb_once from mlkem-       *)
+(* native's portable C implementation compiled by gcc 12 with -O2 (see       *)
+(* mlkem_native/README.md), which is used by its SHA-3 and SHAKE functions.  *)
+(* It zeroes the state, XORs in each whole block of r bytes of the message   *)
+(* and permutes the state, and then XORs in the rest of the message and the  *)
+(* padding, but does not permute the state again. It is verified in the      *)
+(* whole image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems   *)
+(* for mlkem_keccakf1600_xor_bytes and mlkem_keccakf1600_permute in the      *)
+(* image.                                                                    *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keccakf1600_permute_gcc12_O2.ml";;
@@ -24,76 +23,77 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    23b0: movi    v0.4s, #0x0
-    23b4: stp     x19, x20, [sp, #-64]!
-    23b8: mov     x19, x0
-    23bc: stp     x21, x22, [sp, #16]
-    23c0: mov     w22, w1
-    23c4: mov     x20, x3
-    23c8: stp     x23, x30, [sp, #32]
-    23cc: mov     x21, x2
-    23d0: mov     x23, x22
-    23d4: stp     q0, q0, [x0]
-    23d8: stp     q0, q0, [x0, #32]
-    23dc: strb    w4, [sp, #63]
-    23e0: stp     q0, q0, [x0, #64]
-    23e4: stp     q0, q0, [x0, #96]
-    23e8: stp     q0, q0, [x0, #128]
-    23ec: stp     q0, q0, [x0, #160]
-    23f0: str     xzr, [x0, #192]
-    23f4: cmp     x3, x22
-    23f8: b.cc    242c <mlk_keccak_absorb_once+0x7c>
-    23fc: nop
-    2400: mov     x1, x21
-    2404: mov     w3, w23
-    2408: mov     w2, #0x0
-    240c: mov     x0, x19
-    2410: bl      2c90 <mlkem_keccakf1600_xor_bytes>
-    2414: sub     x20, x20, x22
-    2418: mov     x0, x19
-    241c: bl      2dd0 <mlkem_keccakf1600_permute>
-    2420: add     x21, x21, x22
-    2424: cmp     x20, x22
-    2428: b.cs    2400 <mlk_keccak_absorb_once+0x50>
-    242c: sub     w23, w23, #0x1
-    2430: mov     w22, w20
-    2434: cbnz    x20, 247c <mlk_keccak_absorb_once+0xcc>
-    2438: add     x20, sp, #0x3f
-    243c: mov     w2, w22
-    2440: mov     x1, x20
-    2444: mov     x0, x19
-    2448: mov     w3, #0x1
-    244c: bl      2c90 <mlkem_keccakf1600_xor_bytes>
-    2450: mov     w4, #0xffffff80
-    2454: mov     x1, x20
-    2458: mov     w2, w23
-    245c: mov     x0, x19
-    2460: mov     w3, #0x1
-    2464: strb    w4, [sp, #63]
-    2468: bl      2c90 <mlkem_keccakf1600_xor_bytes>
-    246c: ldp     x21, x22, [sp, #16]
-    2470: ldp     x23, x30, [sp, #32]
-    2474: ldp     x19, x20, [sp], #64
-    2478: ret
-    247c: mov     x1, x21
-    2480: mov     w3, w20
-    2484: mov     x0, x19
-    2488: mov     w2, #0x0
-    248c: bl      2c90 <mlkem_keccakf1600_xor_bytes>
-    2490: cmp     x20, w23, uxtw
-    2494: b.ne    2438 <mlk_keccak_absorb_once+0x88>
-    2498: ldrb    w4, [sp, #63]
-    249c: mov     w2, w20
-    24a0: mov     x0, x19
-    24a4: add     x1, sp, #0x3f
-    24a8: orr     w4, w4, #0xffffff80
-    24ac: mov     w3, #0x1
-    24b0: strb    w4, [sp, #63]
-    24b4: bl      2c90 <mlkem_keccakf1600_xor_bytes>
-    24b8: ldp     x21, x22, [sp, #16]
-    24bc: ldp     x23, x30, [sp, #32]
-    24c0: ldp     x19, x20, [sp], #64
-    24c4: ret
+    mlk_keccak_absorb_once:
+        +0x0: movi    v0.4s, #0x0
+        +0x4: stp     x19, x20, [sp, #-64]!
+        +0x8: mov     x19, x0
+        +0xc: stp     x21, x22, [sp, #16]
+       +0x10: mov     w22, w1
+       +0x14: mov     x20, x3
+       +0x18: stp     x23, x30, [sp, #32]
+       +0x1c: mov     x21, x2
+       +0x20: mov     x23, x22
+       +0x24: stp     q0, q0, [x0]
+       +0x28: stp     q0, q0, [x0, #32]
+       +0x2c: strb    w4, [sp, #63]
+       +0x30: stp     q0, q0, [x0, #64]
+       +0x34: stp     q0, q0, [x0, #96]
+       +0x38: stp     q0, q0, [x0, #128]
+       +0x3c: stp     q0, q0, [x0, #160]
+       +0x40: str     xzr, [x0, #192]
+       +0x44: cmp     x3, x22
+       +0x48: b.cc    <mlk_keccak_absorb_once+0x7c>
+       +0x4c: nop
+       +0x50: mov     x1, x21
+       +0x54: mov     w3, w23
+       +0x58: mov     w2, #0x0
+       +0x5c: mov     x0, x19
+       +0x60: bl      <mlkem_keccakf1600_xor_bytes>
+       +0x64: sub     x20, x20, x22
+       +0x68: mov     x0, x19
+       +0x6c: bl      <mlkem_keccakf1600_permute>
+       +0x70: add     x21, x21, x22
+       +0x74: cmp     x20, x22
+       +0x78: b.cs    <mlk_keccak_absorb_once+0x50>
+       +0x7c: sub     w23, w23, #0x1
+       +0x80: mov     w22, w20
+       +0x84: cbnz    x20, <mlk_keccak_absorb_once+0xcc>
+       +0x88: add     x20, sp, #0x3f
+       +0x8c: mov     w2, w22
+       +0x90: mov     x1, x20
+       +0x94: mov     x0, x19
+       +0x98: mov     w3, #0x1
+       +0x9c: bl      <mlkem_keccakf1600_xor_bytes>
+       +0xa0: mov     w4, #0xffffff80
+       +0xa4: mov     x1, x20
+       +0xa8: mov     w2, w23
+       +0xac: mov     x0, x19
+       +0xb0: mov     w3, #0x1
+       +0xb4: strb    w4, [sp, #63]
+       +0xb8: bl      <mlkem_keccakf1600_xor_bytes>
+       +0xbc: ldp     x21, x22, [sp, #16]
+       +0xc0: ldp     x23, x30, [sp, #32]
+       +0xc4: ldp     x19, x20, [sp], #64
+       +0xc8: ret
+       +0xcc: mov     x1, x21
+       +0xd0: mov     w3, w20
+       +0xd4: mov     x0, x19
+       +0xd8: mov     w2, #0x0
+       +0xdc: bl      <mlkem_keccakf1600_xor_bytes>
+       +0xe0: cmp     x20, w23, uxtw
+       +0xe4: b.ne    <mlk_keccak_absorb_once+0x88>
+       +0xe8: ldrb    w4, [sp, #63]
+       +0xec: mov     w2, w20
+       +0xf0: mov     x0, x19
+       +0xf4: add     x1, sp, #0x3f
+       +0xf8: orr     w4, w4, #0xffffff80
+       +0xfc: mov     w3, #0x1
+      +0x100: strb    w4, [sp, #63]
+      +0x104: bl      <mlkem_keccakf1600_xor_bytes>
+      +0x108: ldp     x21, x22, [sp, #16]
+      +0x10c: ldp     x23, x30, [sp, #32]
+      +0x110: ldp     x19, x20, [sp], #64
+      +0x114: ret
  ***)
 
 let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC =

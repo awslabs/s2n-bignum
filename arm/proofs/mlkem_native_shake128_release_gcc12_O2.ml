@@ -9,22 +9,23 @@
 (* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which zeroes    *)
 (* the context of 224 bytes, the 200 bytes of the state padded to a multiple *)
 (* of 32. It is verified in the whole image (see                             *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x2544.        *)
+(* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    2544: movi    v0.4s, #0x0
-    2548: stp     q0, q0, [x0]
-    254c: stp     q0, q0, [x0, #32]
-    2550: stp     q0, q0, [x0, #64]
-    2554: stp     q0, q0, [x0, #96]
-    2558: stp     q0, q0, [x0, #128]
-    255c: stp     q0, q0, [x0, #160]
-    2560: stp     q0, q0, [x0, #192]
-    2564: ret
+    mlkem_shake128_release:
+       +0x0: movi    v0.4s, #0x0
+       +0x4: stp     q0, q0, [x0]
+       +0x8: stp     q0, q0, [x0, #32]
+       +0xc: stp     q0, q0, [x0, #64]
+      +0x10: stp     q0, q0, [x0, #96]
+      +0x14: stp     q0, q0, [x0, #128]
+      +0x18: stp     q0, q0, [x0, #160]
+      +0x1c: stp     q0, q0, [x0, #192]
+      +0x20: ret
  ***)
 
 let MLKEM_NATIVE_SHAKE128_RELEASE_GCC12_O2_EXEC =

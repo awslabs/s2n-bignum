@@ -13,12 +13,11 @@
 (* rate of SHAKE256, directly into the outputs, and the rest of the outputs  *)
 (* through four buffers on the stack with memcpy, before zeroing the context *)
 (* with memset and the buffers. It is verified in the whole image (see       *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x2a20, using  *)
-(* the theorems for mlk_keccak_absorb_once_x4 at 0x27a0,                     *)
-(* mlkem_keccakf1600x4_permute at 0x33a0 and                                 *)
-(* mlkem_keccakf1600x4_extract_bytes at 0x2cd0 in the image and assuming the *)
-(* contracts for memset and memcpy in utils/mlkem_native_libc.ml. The result *)
-(* is shake256 of common/fips202.ml for each input.                          *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlk_keccak_absorb_once_x4, mlkem_keccakf1600x4_permute and                *)
+(* mlkem_keccakf1600x4_extract_bytes in the image and assuming the contracts *)
+(* for memset and memcpy in utils/mlkem_native_libc.ml. The result is        *)
+(* shake256 of common/fips202.ml for each input.                             *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native_libc.ml";;
@@ -29,159 +28,162 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image, and the PLT stubs for memcpy and memset:
 
-    2a20: sub     sp, sp, #0x5d0
-    2a24: adrp    x8, 1f000 <mlk_zetas+0x18c80>
-    2a28: ldr     x8, [x8, #4088]
-    2a2c: stp     x25, x26, [sp, #48]
-    2a30: mov     x26, #0xf0f0f0f0f0f0f0f0
-    2a34: movk    x26, #0xf0f1
-    2a38: stp     x19, x20, [sp]
-    2a3c: add     x20, sp, #0x8f
-    2a40: and     x20, x20, #0xffffffffffffffe0
-    2a44: stp     x21, x22, [sp, #16]
-    2a48: umulh   x26, x4, x26
-    2a4c: mov     x19, x5
-    2a50: stp     x23, x24, [sp, #32]
-    2a54: mov     x21, x6
-    2a58: mov     x22, x3
-    2a5c: stp     x27, x28, [sp, #64]
-    2a60: mov     x25, x0
-    2a64: mov     x27, x4
-    2a68: str     x30, [sp, #80]
-    2a6c: mov     x24, x1
-    2a70: str     x7, [sp, #104]
-    2a74: mov     x23, x2
-    2a78: ldr     x28, [sp, #1488]
-    2a7c: ldr     x1, [x8]
-    2a80: str     x1, [sp, #1480]
-    2a84: mov     x1, #0x0
-    2a88: mov     x2, #0x320
-    2a8c: mov     x0, x20
-    2a90: bl      840 <memset@plt>
-    2a94: lsr     x26, x26, #7
-    2a98: ldr     x4, [sp, #104]
-    2a9c: mov     x5, x28
-    2aa0: ldr     x6, [sp, #1496]
-    2aa4: mov     x3, x21
-    2aa8: mov     x2, x19
-    2aac: mov     x0, x20
-    2ab0: mov     w1, #0x88
-    2ab4: bl      27a0 <mlk_keccak_absorb_once_x4.constprop.0>
-    2ab8: cmp     x27, #0x87
-    2abc: b.ls    2afc <mlkem_shake256x4+0xdc>
-    2ac0: mov     x21, x26
-    2ac4: mov     x19, #0x0
-    2ac8: mov     x0, x20
-    2acc: bl      33a0 <mlkem_keccakf1600x4_permute>
-    2ad0: add     x4, x22, x19
-    2ad4: add     x3, x23, x19
-    2ad8: add     x2, x24, x19
-    2adc: add     x1, x25, x19
-    2ae0: mov     x0, x20
-    2ae4: mov     w6, #0x88
-    2ae8: mov     w5, #0x0
-    2aec: bl      2cd0 <mlkem_keccakf1600x4_extract_bytes>
-    2af0: add     x19, x19, #0x88
-    2af4: subs    x21, x21, #0x1
-    2af8: b.ne    2ac8 <mlkem_shake256x4+0xa8>
-    2afc: mov     x19, #0xf0f0f0f0f0f0f0f0
-    2b00: movk    x19, #0xf0f1
-    2b04: umulh   x19, x27, x19
-    2b08: lsr     x19, x19, #7
-    2b0c: add     x19, x19, x19, lsl #4
-    2b10: subs    x19, x27, x19, lsl #3
-    2b14: b.ne    2bc8 <mlkem_shake256x4+0x1a8>
-    2b18: add     x21, sp, #0x540
-    2b1c: add     x27, sp, #0x4b8
-    2b20: add     x26, sp, #0x430
-    2b24: add     x28, sp, #0x3a8
-    2b28: mov     x0, x20
-    2b2c: mov     x2, #0x320
-    2b30: mov     w1, #0x0
-    2b34: bl      840 <memset@plt>
-    2b38: movi    v0.4s, #0x0
-    2b3c: str     xzr, [x28, #128]
-    2b40: stp     q0, q0, [x28]
-    2b44: stp     q0, q0, [x28, #32]
-    2b48: stp     q0, q0, [x28, #64]
-    2b4c: stp     q0, q0, [x28, #96]
-    2b50: stp     q0, q0, [x26]
-    2b54: stp     q0, q0, [x26, #32]
-    2b58: stp     q0, q0, [x26, #64]
-    2b5c: stp     q0, q0, [x26, #96]
-    2b60: str     xzr, [x26, #128]
-    2b64: stp     q0, q0, [x27]
-    2b68: stp     q0, q0, [x27, #32]
-    2b6c: stp     q0, q0, [x27, #64]
-    2b70: stp     q0, q0, [x27, #96]
-    2b74: str     xzr, [x27, #128]
-    2b78: stp     q0, q0, [x21]
-    2b7c: stp     q0, q0, [x21, #32]
-    2b80: stp     q0, q0, [x21, #64]
-    2b84: stp     q0, q0, [x21, #96]
-    2b88: str     xzr, [x21, #128]
-    2b8c: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    2b90: ldr     x0, [x0, #4088]
-    2b94: ldr     x2, [sp, #1480]
-    2b98: ldr     x1, [x0]
-    2b9c: subs    x2, x2, x1
-    2ba0: mov     x1, #0x0
-    2ba4: b.ne    2c58 <mlkem_shake256x4+0x238>
-    2ba8: ldp     x19, x20, [sp]
-    2bac: ldp     x21, x22, [sp, #16]
-    2bb0: ldp     x23, x24, [sp, #32]
-    2bb4: ldp     x25, x26, [sp, #48]
-    2bb8: ldp     x27, x28, [sp, #64]
-    2bbc: ldr     x30, [sp, #80]
-    2bc0: add     sp, sp, #0x5d0
-    2bc4: ret
-    2bc8: add     x26, x26, x26, lsl #4
-    2bcc: mov     x0, x20
-    2bd0: add     x21, sp, #0x540
-    2bd4: add     x27, sp, #0x4b8
-    2bd8: lsl     x1, x26, #3
-    2bdc: add     x28, sp, #0x3a8
-    2be0: add     x26, sp, #0x430
-    2be4: str     x1, [sp, #104]
-    2be8: bl      33a0 <mlkem_keccakf1600x4_permute>
-    2bec: mov     x4, x21
-    2bf0: mov     x3, x27
-    2bf4: mov     w6, #0x88
-    2bf8: mov     w5, #0x0
-    2bfc: mov     x2, x26
-    2c00: mov     x1, x28
-    2c04: mov     x0, x20
-    2c08: bl      2cd0 <mlkem_keccakf1600x4_extract_bytes>
-    2c0c: ldr     x0, [sp, #104]
-    2c10: mov     x2, x19
-    2c14: mov     x1, x28
-    2c18: add     x0, x25, x0
-    2c1c: bl      810 <memcpy@plt>
-    2c20: ldr     x25, [sp, #104]
-    2c24: mov     x2, x19
-    2c28: mov     x1, x26
-    2c2c: add     x0, x24, x25
-    2c30: bl      810 <memcpy@plt>
-    2c34: mov     x2, x19
-    2c38: mov     x1, x27
-    2c3c: add     x0, x23, x25
-    2c40: bl      810 <memcpy@plt>
-    2c44: mov     x2, x19
-    2c48: mov     x1, x21
-    2c4c: add     x0, x22, x25
-    2c50: bl      810 <memcpy@plt>
-    2c54: b       2b28 <mlkem_shake256x4+0x108>
-    2c58: bl      830 <__stack_chk_fail@plt>
+    mlkem_shake256x4:
+        +0x0: sub     sp, sp, #0x5d0
+        +0x4: adrp    x8, <page>
+        +0x8: ldr     x8, [x8, #4088]  // got_stack_chk_guard
+        +0xc: stp     x25, x26, [sp, #48]
+       +0x10: mov     x26, #0xf0f0f0f0f0f0f0f0
+       +0x14: movk    x26, #0xf0f1
+       +0x18: stp     x19, x20, [sp]
+       +0x1c: add     x20, sp, #0x8f
+       +0x20: and     x20, x20, #0xffffffffffffffe0
+       +0x24: stp     x21, x22, [sp, #16]
+       +0x28: umulh   x26, x4, x26
+       +0x2c: mov     x19, x5
+       +0x30: stp     x23, x24, [sp, #32]
+       +0x34: mov     x21, x6
+       +0x38: mov     x22, x3
+       +0x3c: stp     x27, x28, [sp, #64]
+       +0x40: mov     x25, x0
+       +0x44: mov     x27, x4
+       +0x48: str     x30, [sp, #80]
+       +0x4c: mov     x24, x1
+       +0x50: str     x7, [sp, #104]
+       +0x54: mov     x23, x2
+       +0x58: ldr     x28, [sp, #1488]
+       +0x5c: ldr     x1, [x8]
+       +0x60: str     x1, [sp, #1480]
+       +0x64: mov     x1, #0x0
+       +0x68: mov     x2, #0x320
+       +0x6c: mov     x0, x20
+       +0x70: bl      <memset@plt>
+       +0x74: lsr     x26, x26, #7
+       +0x78: ldr     x4, [sp, #104]
+       +0x7c: mov     x5, x28
+       +0x80: ldr     x6, [sp, #1496]
+       +0x84: mov     x3, x21
+       +0x88: mov     x2, x19
+       +0x8c: mov     x0, x20
+       +0x90: mov     w1, #0x88
+       +0x94: bl      <mlk_keccak_absorb_once_x4.constprop.0>
+       +0x98: cmp     x27, #0x87
+       +0x9c: b.ls    <mlkem_shake256x4+0xdc>
+       +0xa0: mov     x21, x26
+       +0xa4: mov     x19, #0x0
+       +0xa8: mov     x0, x20
+       +0xac: bl      <mlkem_keccakf1600x4_permute>
+       +0xb0: add     x4, x22, x19
+       +0xb4: add     x3, x23, x19
+       +0xb8: add     x2, x24, x19
+       +0xbc: add     x1, x25, x19
+       +0xc0: mov     x0, x20
+       +0xc4: mov     w6, #0x88
+       +0xc8: mov     w5, #0x0
+       +0xcc: bl      <mlkem_keccakf1600x4_extract_bytes>
+       +0xd0: add     x19, x19, #0x88
+       +0xd4: subs    x21, x21, #0x1
+       +0xd8: b.ne    <mlkem_shake256x4+0xa8>
+       +0xdc: mov     x19, #0xf0f0f0f0f0f0f0f0
+       +0xe0: movk    x19, #0xf0f1
+       +0xe4: umulh   x19, x27, x19
+       +0xe8: lsr     x19, x19, #7
+       +0xec: add     x19, x19, x19, lsl #4
+       +0xf0: subs    x19, x27, x19, lsl #3
+       +0xf4: b.ne    <mlkem_shake256x4+0x1a8>
+       +0xf8: add     x21, sp, #0x540
+       +0xfc: add     x27, sp, #0x4b8
+      +0x100: add     x26, sp, #0x430
+      +0x104: add     x28, sp, #0x3a8
+      +0x108: mov     x0, x20
+      +0x10c: mov     x2, #0x320
+      +0x110: mov     w1, #0x0
+      +0x114: bl      <memset@plt>
+      +0x118: movi    v0.4s, #0x0
+      +0x11c: str     xzr, [x28, #128]
+      +0x120: stp     q0, q0, [x28]
+      +0x124: stp     q0, q0, [x28, #32]
+      +0x128: stp     q0, q0, [x28, #64]
+      +0x12c: stp     q0, q0, [x28, #96]
+      +0x130: stp     q0, q0, [x26]
+      +0x134: stp     q0, q0, [x26, #32]
+      +0x138: stp     q0, q0, [x26, #64]
+      +0x13c: stp     q0, q0, [x26, #96]
+      +0x140: str     xzr, [x26, #128]
+      +0x144: stp     q0, q0, [x27]
+      +0x148: stp     q0, q0, [x27, #32]
+      +0x14c: stp     q0, q0, [x27, #64]
+      +0x150: stp     q0, q0, [x27, #96]
+      +0x154: str     xzr, [x27, #128]
+      +0x158: stp     q0, q0, [x21]
+      +0x15c: stp     q0, q0, [x21, #32]
+      +0x160: stp     q0, q0, [x21, #64]
+      +0x164: stp     q0, q0, [x21, #96]
+      +0x168: str     xzr, [x21, #128]
+      +0x16c: adrp    x0, <page>
+      +0x170: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0x174: ldr     x2, [sp, #1480]
+      +0x178: ldr     x1, [x0]
+      +0x17c: subs    x2, x2, x1
+      +0x180: mov     x1, #0x0
+      +0x184: b.ne    <mlkem_shake256x4+0x238>
+      +0x188: ldp     x19, x20, [sp]
+      +0x18c: ldp     x21, x22, [sp, #16]
+      +0x190: ldp     x23, x24, [sp, #32]
+      +0x194: ldp     x25, x26, [sp, #48]
+      +0x198: ldp     x27, x28, [sp, #64]
+      +0x19c: ldr     x30, [sp, #80]
+      +0x1a0: add     sp, sp, #0x5d0
+      +0x1a4: ret
+      +0x1a8: add     x26, x26, x26, lsl #4
+      +0x1ac: mov     x0, x20
+      +0x1b0: add     x21, sp, #0x540
+      +0x1b4: add     x27, sp, #0x4b8
+      +0x1b8: lsl     x1, x26, #3
+      +0x1bc: add     x28, sp, #0x3a8
+      +0x1c0: add     x26, sp, #0x430
+      +0x1c4: str     x1, [sp, #104]
+      +0x1c8: bl      <mlkem_keccakf1600x4_permute>
+      +0x1cc: mov     x4, x21
+      +0x1d0: mov     x3, x27
+      +0x1d4: mov     w6, #0x88
+      +0x1d8: mov     w5, #0x0
+      +0x1dc: mov     x2, x26
+      +0x1e0: mov     x1, x28
+      +0x1e4: mov     x0, x20
+      +0x1e8: bl      <mlkem_keccakf1600x4_extract_bytes>
+      +0x1ec: ldr     x0, [sp, #104]
+      +0x1f0: mov     x2, x19
+      +0x1f4: mov     x1, x28
+      +0x1f8: add     x0, x25, x0
+      +0x1fc: bl      <memcpy@plt>
+      +0x200: ldr     x25, [sp, #104]
+      +0x204: mov     x2, x19
+      +0x208: mov     x1, x26
+      +0x20c: add     x0, x24, x25
+      +0x210: bl      <memcpy@plt>
+      +0x214: mov     x2, x19
+      +0x218: mov     x1, x27
+      +0x21c: add     x0, x23, x25
+      +0x220: bl      <memcpy@plt>
+      +0x224: mov     x2, x19
+      +0x228: mov     x1, x21
+      +0x22c: add     x0, x22, x25
+      +0x230: bl      <memcpy@plt>
+      +0x234: b       <mlkem_shake256x4+0x108>
+      +0x238: bl      <__stack_chk_fail@plt>
 
-    810: adrp    x16, 1f000 <mlk_zetas+0x18c80>
-    814: ldr     x17, [x16, #4048]
-    818: add     x16, x16, #0xfd0
-    81c: br      x17
+    memcpy@plt:
+      +0x0: adrp    x16, <page>
+      +0x4: ldr     x17, [x16, #4048]  // got_memcpy
+      +0x8: add     x16, x16, #0xfd0  // got_memcpy
+      +0xc: br      x17
 
-    840: adrp    x16, 1f000 <mlk_zetas+0x18c80>
-    844: ldr     x17, [x16, #4072]
-    848: add     x16, x16, #0xfe8
-    84c: br      x17
+    memset@plt:
+      +0x0: adrp    x16, <page>
+      +0x4: ldr     x17, [x16, #4072]  // got_memset
+      +0x8: add     x16, x16, #0xfe8  // got_memset
+      +0xc: br      x17
  ***)
 
 let MLKEM_NATIVE_SHAKE256X4_GCC12_O2_EXEC =
@@ -641,14 +643,13 @@ let SHAKE256X4_A3 = SHAKE256X4_AT
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof, assuming the contracts for memset and memcpy at the    *)
-(* addresses mf and mc in the GOT entries at 0x1ffe8 and 0x1ffd0, with their *)
-(* code and data in the region (ea,el). The inputs are four lists of bytes   *)
-(* of the same length inlen, at in0, ..., in3, the last given on the stack   *)
-(* with inlen, and the outlen bytes of each output, as a number, are the     *)
-(* first outlen bytes of shake256 of the corresponding input. The stack is   *)
-(* the 1488 bytes of the function and the 304 used by                        *)
-(* mlk_keccak_absorb_once_x4 below them, and the two 8-byte stack arguments  *)
-(* are just above it.                                                        *)
+(* addresses mf and mc in the GOT entries, with their code and data in the   *)
+(* region (ea,el). The inputs are four lists of bytes of the same length     *)
+(* inlen, at in0, ..., in3, the last given on the stack with inlen, and the  *)
+(* outlen bytes of each output, as a number, are the first outlen bytes of   *)
+(* shake256 of the corresponding input. The stack is the 1488 bytes of the   *)
+(* function and the 304 used by mlk_keccak_absorb_once_x4 below them, and    *)
+(* the two 8-byte stack arguments are just above it.                         *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_SHAKE256X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove

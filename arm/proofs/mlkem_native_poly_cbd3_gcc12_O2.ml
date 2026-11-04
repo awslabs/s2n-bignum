@@ -7,8 +7,7 @@
 (* Centered binomial distribution with eta = 3. This is the code for         *)
 (* mlkem_poly_cbd3 from mlkem-native's portable C implementation compiled by *)
 (* gcc 12 with -O2 (see mlkem_native/README.md). It is verified in the whole *)
-(* image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address     *)
-(* 0x4ec4, with vectors of shifts at 0x6290.                                 *)
+(* image (see mlkem_native_libmlkem_gcc12_O2.ml), with vectors of shifts.    *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -16,41 +15,42 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    4ec4: mov     x2, x1
-    4ec8: mov     x4, x0
-    4ecc: adrp    x1, 6000 <mlkem768_polyvec_mulcache_compute+0x10>
-    4ed0: adrp    x0, 6000 <mlkem768_polyvec_mulcache_compute+0x10>
-    4ed4: movi    v2.4h, #0x7
-    4ed8: mov     w3, #0x9249
-    4edc: ldr     q4, [x1, #656]
-    4ee0: add     x6, x2, #0xc0
-    4ee4: ldr     q3, [x0, #672]
-    4ee8: movk    w3, #0x24, lsl #16
-    4eec: nop
-    4ef0: ldrb    w0, [x2, #2]
-    4ef4: add     x2, x2, #0x3
-    4ef8: ldurb   w1, [x2, #-2]
-    4efc: ldurb   w5, [x2, #-3]
-    4f00: lsl     w0, w0, #16
-    4f04: orr     w1, w0, w1, lsl #8
-    4f08: orr     w1, w1, w5
-    4f0c: and     w5, w1, w3
-    4f10: and     w0, w3, w1, lsr #1
-    4f14: and     w1, w3, w1, lsr #2
-    4f18: add     w0, w0, w1
-    4f1c: add     w0, w0, w5
-    4f20: dup     v0.4s, w0
-    4f24: ushl    v1.4s, v0.4s, v4.4s
-    4f28: ushl    v0.4s, v0.4s, v3.4s
-    4f2c: xtn     v1.4h, v1.4s
-    4f30: xtn     v0.4h, v0.4s
-    4f34: and     v1.8b, v1.8b, v2.8b
-    4f38: and     v0.8b, v0.8b, v2.8b
-    4f3c: sub     v0.4h, v1.4h, v0.4h
-    4f40: str     d0, [x4], #8
-    4f44: cmp     x6, x2
-    4f48: b.ne    4ef0 <mlkem_poly_cbd3+0x2c>
-    4f4c: ret
+    mlkem_poly_cbd3:
+       +0x0: mov     x2, x1
+       +0x4: mov     x4, x0
+       +0x8: adrp    x1, <page>
+       +0xc: adrp    x0, <page>
+      +0x10: movi    v2.4h, #0x7
+      +0x14: mov     w3, #0x9249
+      +0x18: ldr     q4, [x1, #656]
+      +0x1c: add     x6, x2, #0xc0
+      +0x20: ldr     q3, [x0, #672]
+      +0x24: movk    w3, #0x24, lsl #16
+      +0x28: nop
+      +0x2c: ldrb    w0, [x2, #2]
+      +0x30: add     x2, x2, #0x3
+      +0x34: ldurb   w1, [x2, #-2]
+      +0x38: ldurb   w5, [x2, #-3]
+      +0x3c: lsl     w0, w0, #16
+      +0x40: orr     w1, w0, w1, lsl #8
+      +0x44: orr     w1, w1, w5
+      +0x48: and     w5, w1, w3
+      +0x4c: and     w0, w3, w1, lsr #1
+      +0x50: and     w1, w3, w1, lsr #2
+      +0x54: add     w0, w0, w1
+      +0x58: add     w0, w0, w5
+      +0x5c: dup     v0.4s, w0
+      +0x60: ushl    v1.4s, v0.4s, v4.4s
+      +0x64: ushl    v0.4s, v0.4s, v3.4s
+      +0x68: xtn     v1.4h, v1.4s
+      +0x6c: xtn     v0.4h, v0.4s
+      +0x70: and     v1.8b, v1.8b, v2.8b
+      +0x74: and     v0.8b, v0.8b, v2.8b
+      +0x78: sub     v0.4h, v1.4h, v0.4h
+      +0x7c: str     d0, [x4], #8
+      +0x80: cmp     x6, x2
+      +0x84: b.ne    <mlkem_poly_cbd3+0x2c>
+      +0x88: ret
  ***)
 
 let MLKEM_NATIVE_POLY_CBD3_GCC12_O2_EXEC =

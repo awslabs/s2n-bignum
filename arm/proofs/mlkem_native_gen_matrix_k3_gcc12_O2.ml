@@ -12,106 +12,106 @@
 (* eight of the nine entries four at a time with mlkem_poly_rej_uniform_x4   *)
 (* and the last one with mlkem_poly_rej_uniform, and zeroes the buffers. It  *)
 (* is verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),   *)
-(* where it is at address 0x4f50, using the theorems for                     *)
-(* mlkem_poly_rej_uniform_x4 at 0x4b30 and mlkem_poly_rej_uniform at 0x4d40  *)
-(* in the image.                                                             *)
+(* using the theorems for mlkem_poly_rej_uniform_x4 and                      *)
+(* mlkem_poly_rej_uniform in the image.                                      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_rej_uniform_x4_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    4f50: stp     x19, x20, [sp, #-320]!
-    4f54: mov     x20, x0
-    4f58: adrp    x4, 1f000 <mlk_zetas+0x18c80>
-    4f5c: ldr     x4, [x4, #4088]
-    4f60: add     x19, sp, #0x3f
-    4f64: str     x30, [sp, #16]
-    4f68: and     x19, x19, #0xffffffffffffffe0
-    4f6c: mov     x3, x19
-    4f70: add     x0, x19, #0x100
-    4f74: ldr     x5, [x4]
-    4f78: str     x5, [sp, #312]
-    4f7c: mov     x5, #0x0
-    4f80: ldp     q0, q1, [x1]
-    4f84: stp     q0, q1, [x3]
-    4f88: add     x3, x3, #0x40
-    4f8c: cmp     x3, x0
-    4f90: b.ne    4f80 <mlkem768_gen_matrix+0x30>
-    4f94: strh    wzr, [x19, #32]
-    4f98: cbnz    w2, 5074 <mlkem768_gen_matrix+0x124>
-    4f9c: mov     w7, #0x1
-    4fa0: mov     w6, #0x2
-    4fa4: mov     w5, #0x100
-    4fa8: mov     x4, x19
-    4fac: add     x3, x20, #0x600
-    4fb0: add     x2, x20, #0x400
-    4fb4: add     x1, x20, #0x200
-    4fb8: mov     x0, x20
-    4fbc: strh    w7, [x19, #96]
-    4fc0: strh    w6, [x19, #160]
-    4fc4: strh    w5, [x19, #224]
-    4fc8: bl      4b30 <mlkem_poly_rej_uniform_x4>
-    4fcc: mov     w7, #0x2
-    4fd0: mov     w5, w7
-    4fd4: mov     w8, #0x0
-    4fd8: mov     w6, #0x1
-    4fdc: mov     w9, #0x101
-    4fe0: mov     x4, x19
-    4fe4: add     x3, x20, #0xe00
-    4fe8: add     x2, x20, #0xc00
-    4fec: add     x1, x20, #0xa00
-    4ff0: add     x0, x20, #0x800
-    4ff4: strh    w9, [x19, #32]
-    4ff8: strb    w5, [x19, #96]
-    4ffc: strb    w6, [x19, #97]
-    5000: strb    w8, [x19, #160]
-    5004: strb    w7, [x19, #161]
-    5008: strb    w6, [x19, #224]
-    500c: strb    w5, [x19, #225]
-    5010: bl      4b30 <mlkem_poly_rej_uniform_x4>
-    5014: mov     w2, #0x202
-    5018: add     x0, x20, #0x1, lsl #12
-    501c: mov     x1, x19
-    5020: strh    w2, [x19, #32]
-    5024: bl      4d40 <mlkem_poly_rej_uniform>
-    5028: movi    v0.4s, #0x0
-    502c: stp     q0, q0, [x19]
-    5030: stp     q0, q0, [x19, #32]
-    5034: stp     q0, q0, [x19, #64]
-    5038: stp     q0, q0, [x19, #96]
-    503c: stp     q0, q0, [x19, #128]
-    5040: stp     q0, q0, [x19, #160]
-    5044: stp     q0, q0, [x19, #192]
-    5048: stp     q0, q0, [x19, #224]
-    504c: adrp    x0, 1f000 <mlk_zetas+0x18c80>
-    5050: ldr     x0, [x0, #4088]
-    5054: ldr     x2, [sp, #312]
-    5058: ldr     x1, [x0]
-    505c: subs    x2, x2, x1
-    5060: mov     x1, #0x0
-    5064: b.ne    50b8 <mlkem768_gen_matrix+0x168>
-    5068: ldr     x30, [sp, #16]
-    506c: ldp     x19, x20, [sp], #320
-    5070: ret
-    5074: mov     w7, #0x100
-    5078: mov     w6, #0x200
-    507c: mov     w5, #0x1
-    5080: mov     x4, x19
-    5084: add     x3, x20, #0x600
-    5088: add     x2, x20, #0x400
-    508c: add     x1, x20, #0x200
-    5090: mov     x0, x20
-    5094: strh    w7, [x19, #96]
-    5098: strh    w6, [x19, #160]
-    509c: strh    w5, [x19, #224]
-    50a0: bl      4b30 <mlkem_poly_rej_uniform_x4>
-    50a4: mov     w8, #0x2
-    50a8: mov     w7, #0x0
-    50ac: mov     w6, w8
-    50b0: mov     w5, #0x1
-    50b4: b       4fdc <mlkem768_gen_matrix+0x8c>
-    50b8: bl      830 <__stack_chk_fail@plt>
+    mlkem768_gen_matrix:
+        +0x0: stp     x19, x20, [sp, #-320]!
+        +0x4: mov     x20, x0
+        +0x8: adrp    x4, <page>
+        +0xc: ldr     x4, [x4, #4088]  // got_stack_chk_guard
+       +0x10: add     x19, sp, #0x3f
+       +0x14: str     x30, [sp, #16]
+       +0x18: and     x19, x19, #0xffffffffffffffe0
+       +0x1c: mov     x3, x19
+       +0x20: add     x0, x19, #0x100
+       +0x24: ldr     x5, [x4]
+       +0x28: str     x5, [sp, #312]
+       +0x2c: mov     x5, #0x0
+       +0x30: ldp     q0, q1, [x1]
+       +0x34: stp     q0, q1, [x3]
+       +0x38: add     x3, x3, #0x40
+       +0x3c: cmp     x3, x0
+       +0x40: b.ne    <mlkem768_gen_matrix+0x30>
+       +0x44: strh    wzr, [x19, #32]
+       +0x48: cbnz    w2, <mlkem768_gen_matrix+0x124>
+       +0x4c: mov     w7, #0x1
+       +0x50: mov     w6, #0x2
+       +0x54: mov     w5, #0x100
+       +0x58: mov     x4, x19
+       +0x5c: add     x3, x20, #0x600
+       +0x60: add     x2, x20, #0x400
+       +0x64: add     x1, x20, #0x200
+       +0x68: mov     x0, x20
+       +0x6c: strh    w7, [x19, #96]
+       +0x70: strh    w6, [x19, #160]
+       +0x74: strh    w5, [x19, #224]
+       +0x78: bl      <mlkem_poly_rej_uniform_x4>
+       +0x7c: mov     w7, #0x2
+       +0x80: mov     w5, w7
+       +0x84: mov     w8, #0x0
+       +0x88: mov     w6, #0x1
+       +0x8c: mov     w9, #0x101
+       +0x90: mov     x4, x19
+       +0x94: add     x3, x20, #0xe00
+       +0x98: add     x2, x20, #0xc00
+       +0x9c: add     x1, x20, #0xa00
+       +0xa0: add     x0, x20, #0x800
+       +0xa4: strh    w9, [x19, #32]
+       +0xa8: strb    w5, [x19, #96]
+       +0xac: strb    w6, [x19, #97]
+       +0xb0: strb    w8, [x19, #160]
+       +0xb4: strb    w7, [x19, #161]
+       +0xb8: strb    w6, [x19, #224]
+       +0xbc: strb    w5, [x19, #225]
+       +0xc0: bl      <mlkem_poly_rej_uniform_x4>
+       +0xc4: mov     w2, #0x202
+       +0xc8: add     x0, x20, #0x1, lsl #12
+       +0xcc: mov     x1, x19
+       +0xd0: strh    w2, [x19, #32]
+       +0xd4: bl      <mlkem_poly_rej_uniform>
+       +0xd8: movi    v0.4s, #0x0
+       +0xdc: stp     q0, q0, [x19]
+       +0xe0: stp     q0, q0, [x19, #32]
+       +0xe4: stp     q0, q0, [x19, #64]
+       +0xe8: stp     q0, q0, [x19, #96]
+       +0xec: stp     q0, q0, [x19, #128]
+       +0xf0: stp     q0, q0, [x19, #160]
+       +0xf4: stp     q0, q0, [x19, #192]
+       +0xf8: stp     q0, q0, [x19, #224]
+       +0xfc: adrp    x0, <page>
+      +0x100: ldr     x0, [x0, #4088]  // got_stack_chk_guard
+      +0x104: ldr     x2, [sp, #312]
+      +0x108: ldr     x1, [x0]
+      +0x10c: subs    x2, x2, x1
+      +0x110: mov     x1, #0x0
+      +0x114: b.ne    <mlkem768_gen_matrix+0x168>
+      +0x118: ldr     x30, [sp, #16]
+      +0x11c: ldp     x19, x20, [sp], #320
+      +0x120: ret
+      +0x124: mov     w7, #0x100
+      +0x128: mov     w6, #0x200
+      +0x12c: mov     w5, #0x1
+      +0x130: mov     x4, x19
+      +0x134: add     x3, x20, #0x600
+      +0x138: add     x2, x20, #0x400
+      +0x13c: add     x1, x20, #0x200
+      +0x140: mov     x0, x20
+      +0x144: strh    w7, [x19, #96]
+      +0x148: strh    w6, [x19, #160]
+      +0x14c: strh    w5, [x19, #224]
+      +0x150: bl      <mlkem_poly_rej_uniform_x4>
+      +0x154: mov     w8, #0x2
+      +0x158: mov     w7, #0x0
+      +0x15c: mov     w6, w8
+      +0x160: mov     w5, #0x1
+      +0x164: b       <mlkem768_gen_matrix+0x8c>
+      +0x168: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_EXEC =

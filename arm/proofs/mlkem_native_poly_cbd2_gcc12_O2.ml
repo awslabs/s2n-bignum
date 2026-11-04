@@ -4,12 +4,12 @@
  *)
 
 (* ========================================================================= *)
-(* Sampling of a polynomial from the centered binomial distribution with     *)
-(* eta = 2. This is the code for mlkem_poly_cbd2 from mlkem-native's         *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md), which the compiler has partly vectorized. It is  *)
-(* verified in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml),      *)
-(* where it is at address 0x4e40, with vectors of shift amounts at 0x6250.   *)
+(* Sampling of a polynomial from the centered binomial distribution with eta *)
+(* = 2. This is the code for mlkem_poly_cbd2 from mlkem-native's portable C  *)
+(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
+(* which the compiler has partly vectorized. It is verified in the whole     *)
+(* image (see mlkem_native_libmlkem_gcc12_O2.ml), with vectors of shift      *)
+(* amounts.                                                                  *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -17,39 +17,40 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    4e40: mov     x5, x0
-    4e44: adrp    x0, 6000 <mlkem768_polyvec_mulcache_compute+0x10>
-    4e48: adrp    x2, 6000 <mlkem768_polyvec_mulcache_compute+0x10>
-    4e4c: mov     x4, x1
-    4e50: ldr     q7, [x0, #608]
-    4e54: adrp    x0, 6000 <mlkem768_polyvec_mulcache_compute+0x10>
-    4e58: ldr     q16, [x2, #592]
-    4e5c: mov     x1, #0x0
-    4e60: ldr     q6, [x0, #624]
-    4e64: adrp    x0, 6000 <mlkem768_polyvec_mulcache_compute+0x10>
-    4e68: movi    v3.8h, #0x3
-    4e6c: ldr     q5, [x0, #640]
-    4e70: lsl     x2, x1, #4
-    4e74: ldr     w0, [x4, x1, lsl #2]
-    4e78: add     x1, x1, #0x1
-    4e7c: and     w3, w0, #0x55555555
-    4e80: lsr     w0, w0, #1
-    4e84: and     w0, w0, #0x55555555
-    4e88: add     w0, w0, w3
-    4e8c: dup     v0.4s, w0
-    4e90: ushl    v1.4s, v0.4s, v16.4s
-    4e94: ushl    v4.4s, v0.4s, v7.4s
-    4e98: ushl    v2.4s, v0.4s, v6.4s
-    4e9c: ushl    v0.4s, v0.4s, v5.4s
-    4ea0: uzp1    v1.8h, v1.8h, v4.8h
-    4ea4: uzp1    v2.8h, v2.8h, v0.8h
-    4ea8: and     v0.16b, v1.16b, v3.16b
-    4eac: and     v1.16b, v2.16b, v3.16b
-    4eb0: sub     v0.8h, v0.8h, v1.8h
-    4eb4: str     q0, [x5, x2]
-    4eb8: cmp     x1, #0x20
-    4ebc: b.ne    4e70 <mlkem_poly_cbd2+0x30>
-    4ec0: ret
+    mlkem_poly_cbd2:
+       +0x0: mov     x5, x0
+       +0x4: adrp    x0, <page>
+       +0x8: adrp    x2, <page>
+       +0xc: mov     x4, x1
+      +0x10: ldr     q7, [x0, #608]
+      +0x14: adrp    x0, <page>
+      +0x18: ldr     q16, [x2, #592]
+      +0x1c: mov     x1, #0x0
+      +0x20: ldr     q6, [x0, #624]
+      +0x24: adrp    x0, <page>
+      +0x28: movi    v3.8h, #0x3
+      +0x2c: ldr     q5, [x0, #640]
+      +0x30: lsl     x2, x1, #4
+      +0x34: ldr     w0, [x4, x1, lsl #2]
+      +0x38: add     x1, x1, #0x1
+      +0x3c: and     w3, w0, #0x55555555
+      +0x40: lsr     w0, w0, #1
+      +0x44: and     w0, w0, #0x55555555
+      +0x48: add     w0, w0, w3
+      +0x4c: dup     v0.4s, w0
+      +0x50: ushl    v1.4s, v0.4s, v16.4s
+      +0x54: ushl    v4.4s, v0.4s, v7.4s
+      +0x58: ushl    v2.4s, v0.4s, v6.4s
+      +0x5c: ushl    v0.4s, v0.4s, v5.4s
+      +0x60: uzp1    v1.8h, v1.8h, v4.8h
+      +0x64: uzp1    v2.8h, v2.8h, v0.8h
+      +0x68: and     v0.16b, v1.16b, v3.16b
+      +0x6c: and     v1.16b, v2.16b, v3.16b
+      +0x70: sub     v0.8h, v0.8h, v1.8h
+      +0x74: str     q0, [x5, x2]
+      +0x78: cmp     x1, #0x20
+      +0x7c: b.ne    <mlkem_poly_cbd2+0x30>
+      +0x80: ret
  ***)
 
 let MLKEM_NATIVE_POLY_CBD2_GCC12_O2_EXEC =

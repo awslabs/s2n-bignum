@@ -9,9 +9,9 @@
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which for each of nblocks blocks permutes the state and then extracts the *)
 (* first 168 bytes of it, the rate of SHAKE128. It is verified in the whole  *)
-(* image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address     *)
-(* 0x24e4, using the theorems for mlkem_keccakf1600_permute at 0x2dd0 and    *)
-(* mlkem_keccakf1600_extract_bytes at 0x2c60 in the image.                   *)
+(* image (see mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for     *)
+(* mlkem_keccakf1600_permute and mlkem_keccakf1600_extract_bytes in the      *)
+(* image.                                                                    *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_keccakf1600_permute_gcc12_O2.ml";;
@@ -20,27 +20,28 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    24e4: cbz     x1, 2534 <mlkem_shake128_squeezeblocks+0x50>
-    24e8: stp     x19, x20, [sp, #-32]!
-    24ec: mov     x20, x0
-    24f0: mov     x19, x1
-    24f4: stp     x21, x30, [sp, #16]
-    24f8: mov     x21, x2
-    24fc: nop
-    2500: mov     x0, x21
-    2504: bl      2dd0 <mlkem_keccakf1600_permute>
-    2508: mov     x1, x20
-    250c: mov     x0, x21
-    2510: mov     w3, #0xa8
-    2514: mov     w2, #0x0
-    2518: bl      2c60 <mlkem_keccakf1600_extract_bytes>
-    251c: add     x20, x20, #0xa8
-    2520: subs    x19, x19, #0x1
-    2524: b.ne    2500 <mlkem_shake128_squeezeblocks+0x1c>
-    2528: ldp     x21, x30, [sp, #16]
-    252c: ldp     x19, x20, [sp], #32
-    2530: ret
-    2534: ret
+    mlkem_shake128_squeezeblocks:
+       +0x0: cbz     x1, <mlkem_shake128_squeezeblocks+0x50>
+       +0x4: stp     x19, x20, [sp, #-32]!
+       +0x8: mov     x20, x0
+       +0xc: mov     x19, x1
+      +0x10: stp     x21, x30, [sp, #16]
+      +0x14: mov     x21, x2
+      +0x18: nop
+      +0x1c: mov     x0, x21
+      +0x20: bl      <mlkem_keccakf1600_permute>
+      +0x24: mov     x1, x20
+      +0x28: mov     x0, x21
+      +0x2c: mov     w3, #0xa8
+      +0x30: mov     w2, #0x0
+      +0x34: bl      <mlkem_keccakf1600_extract_bytes>
+      +0x38: add     x20, x20, #0xa8
+      +0x3c: subs    x19, x19, #0x1
+      +0x40: b.ne    <mlkem_shake128_squeezeblocks+0x1c>
+      +0x44: ldp     x21, x30, [sp, #16]
+      +0x48: ldp     x19, x20, [sp], #32
+      +0x4c: ret
+      +0x50: ret
  ***)
 
 let MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_GCC12_O2_EXEC =

@@ -4,11 +4,11 @@
  *)
 
 (* ========================================================================= *)
-(* Addition of polynomials, coefficientwise with wraparound.                 *)
-(* This is the code for mlkem_poly_add from mlkem-native's portable C        *)
-(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
-(* which the compiler has vectorized. It is verified in the whole image (see *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x41e0.        *)
+(* Addition of polynomials, coefficientwise with wraparound. This is the     *)
+(* code for mlkem_poly_add from mlkem-native's portable C implementation     *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which the       *)
+(* compiler has vectorized. It is verified in the whole image (see           *)
+(* mlkem_native_libmlkem_gcc12_O2.ml).                                       *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -16,16 +16,17 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    41e0: mov     x2, #0x0
-    41e4: nop
-    41e8: ldr     q0, [x0, x2]
-    41ec: ldr     q1, [x1, x2]
-    41f0: add     v0.8h, v0.8h, v1.8h
-    41f4: str     q0, [x0, x2]
-    41f8: add     x2, x2, #0x10
-    41fc: cmp     x2, #0x200
-    4200: b.ne    41e8 <mlkem_poly_add+0x8>
-    4204: ret
+    mlkem_poly_add:
+       +0x0: mov     x2, #0x0
+       +0x4: nop
+       +0x8: ldr     q0, [x0, x2]
+       +0xc: ldr     q1, [x1, x2]
+      +0x10: add     v0.8h, v0.8h, v1.8h
+      +0x14: str     q0, [x0, x2]
+      +0x18: add     x2, x2, #0x10
+      +0x1c: cmp     x2, #0x200
+      +0x20: b.ne    <mlkem_poly_add+0x8>
+      +0x24: ret
  ***)
 
 let MLKEM_NATIVE_POLY_ADD_GCC12_O2_EXEC =

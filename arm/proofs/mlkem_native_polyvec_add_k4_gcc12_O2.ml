@@ -9,8 +9,8 @@
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which calls mlkem_poly_add for each of the polynomials, the last time as  *)
 (* a tail call. It is verified in the whole image (see                       *)
-(* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x1970, using  *)
-(* the theorems for mlkem_poly_add at 0x41e0 in the image.                   *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for mlkem_poly_add *)
+(* in the image.                                                             *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_add_gcc12_O2.ml";;
@@ -18,20 +18,21 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    1970: stp     x19, x20, [sp, #-32]!
-    1974: mov     x20, x1
-    1978: mov     x19, #0x0
-    197c: stp     x21, x30, [sp, #16]
-    1980: mov     x21, x0
-    1984: add     x1, x20, x19
-    1988: add     x0, x21, x19
-    198c: add     x19, x19, #0x200
-    1990: bl      41e0 <mlkem_poly_add>
-    1994: cmp     x19, #0x800
-    1998: b.ne    1984 <mlkem1024_polyvec_add+0x14>
-    199c: ldp     x21, x30, [sp, #16]
-    19a0: ldp     x19, x20, [sp], #32
-    19a4: ret
+    mlkem1024_polyvec_add:
+       +0x0: stp     x19, x20, [sp, #-32]!
+       +0x4: mov     x20, x1
+       +0x8: mov     x19, #0x0
+       +0xc: stp     x21, x30, [sp, #16]
+      +0x10: mov     x21, x0
+      +0x14: add     x1, x20, x19
+      +0x18: add     x0, x21, x19
+      +0x1c: add     x19, x19, #0x200
+      +0x20: bl      <mlkem_poly_add>
+      +0x24: cmp     x19, #0x800
+      +0x28: b.ne    <mlkem1024_polyvec_add+0x14>
+      +0x2c: ldp     x21, x30, [sp, #16]
+      +0x30: ldp     x19, x20, [sp], #32
+      +0x34: ret
  ***)
 
 let MLKEM_NATIVE_POLYVEC_ADD_K4_GCC12_O2_EXEC =

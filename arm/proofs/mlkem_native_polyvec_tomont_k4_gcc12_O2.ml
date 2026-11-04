@@ -4,13 +4,13 @@
  *)
 
 (* ========================================================================= *)
-(* Conversion of a vector of 4 polynomials to Montgomery form.               *)
-(* This is the code for mlkem1024_polyvec_tomont from mlkem-native's         *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md), which calls mlkem_poly_tomont for each of the    *)
-(* polynomials, the last time as a tail call. It is verified in the whole    *)
-(* image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at address     *)
-(* 0x19b0, using the theorems for mlkem_poly_tomont at 0x4140 in the image.  *)
+(* Conversion of a vector of 4 polynomials to Montgomery form. This is the   *)
+(* code for mlkem1024_polyvec_tomont from mlkem-native's portable C          *)
+(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
+(* which calls mlkem_poly_tomont for each of the polynomials, the last time  *)
+(* as a tail call. It is verified in the whole image (see                    *)
+(* mlkem_native_libmlkem_gcc12_O2.ml), using the theorems for                *)
+(* mlkem_poly_tomont in the image.                                           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_poly_tomont_gcc12_O2.ml";;
@@ -18,16 +18,17 @@ needs "arm/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    19b0: stp     x19, x30, [sp, #-16]!
-    19b4: mov     x19, x0
-    19b8: bl      4140 <mlkem_poly_tomont>
-    19bc: add     x0, x19, #0x200
-    19c0: bl      4140 <mlkem_poly_tomont>
-    19c4: add     x0, x19, #0x400
-    19c8: bl      4140 <mlkem_poly_tomont>
-    19cc: add     x0, x19, #0x600
-    19d0: ldp     x19, x30, [sp], #16
-    19d4: b       4140 <mlkem_poly_tomont>
+    mlkem1024_polyvec_tomont:
+       +0x0: stp     x19, x30, [sp, #-16]!
+       +0x4: mov     x19, x0
+       +0x8: bl      <mlkem_poly_tomont>
+       +0xc: add     x0, x19, #0x200
+      +0x10: bl      <mlkem_poly_tomont>
+      +0x14: add     x0, x19, #0x400
+      +0x18: bl      <mlkem_poly_tomont>
+      +0x1c: add     x0, x19, #0x600
+      +0x20: ldp     x19, x30, [sp], #16
+      +0x24: b       <mlkem_poly_tomont>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_TOMONT_K4_GCC12_O2_EXEC =

@@ -10,53 +10,54 @@
 (* with randombytes into a buffer on the stack, and returns -3 if that       *)
 (* fails, and otherwise encapsulates with them as the message with           *)
 (* mlkem768_enc_derand. In both cases it zeroes the buffer. It is verified   *)
-(* in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is   *)
-(* at address 0x5b70, using the theorem for mlkem768_enc_derand in the image *)
-(* and the contract for randombytes.                                         *)
+(* in the whole image (see mlkem_native_libmlkem_gcc12_O2.ml), using the     *)
+(* theorem for mlkem768_enc_derand in the image and the contract for         *)
+(* randombytes.                                                              *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native_enc_derand_k3_gcc12_O2.ml";;
 
 (*** The code in the image:
 
-    5b70: stp     x19, x20, [sp, #-112]!
-    5b74: mov     x20, x0
-    5b78: adrp    x3, 1f000 <mlk_zetas+0x18c80>
-    5b7c: ldr     x3, [x3, #4088]
-    5b80: stp     x21, x22, [sp, #16]
-    5b84: add     x19, sp, #0x4f
-    5b88: str     x30, [sp, #32]
-    5b8c: and     x19, x19, #0xffffffffffffffe0
-    5b90: mov     x21, x1
-    5b94: mov     x22, x2
-    5b98: ldr     x1, [x3]
-    5b9c: str     x1, [sp, #104]
-    5ba0: mov     x1, #0x0
-    5ba4: mov     x0, x19
-    5ba8: mov     x1, #0x20
-    5bac: bl      820 <randombytes@plt>
-    5bb0: cbnz    w0, 5bfc <mlkem768_enc+0x8c>
-    5bb4: mov     x2, x22
-    5bb8: mov     x1, x21
-    5bbc: mov     x0, x20
-    5bc0: mov     x3, x19
-    5bc4: bl      5a90 <mlkem768_enc_derand>
-    5bc8: stp     xzr, xzr, [x19]
-    5bcc: stp     xzr, xzr, [x19, #16]
-    5bd0: adrp    x1, 1f000 <mlk_zetas+0x18c80>
-    5bd4: ldr     x1, [x1, #4088]
-    5bd8: ldr     x3, [sp, #104]
-    5bdc: ldr     x2, [x1]
-    5be0: subs    x3, x3, x2
-    5be4: mov     x2, #0x0
-    5be8: b.ne    5c04 <mlkem768_enc+0x94>
-    5bec: ldp     x21, x22, [sp, #16]
-    5bf0: ldr     x30, [sp, #32]
-    5bf4: ldp     x19, x20, [sp], #112
-    5bf8: ret
-    5bfc: mov     w0, #0xfffffffd
-    5c00: b       5bc8 <mlkem768_enc+0x58>
-    5c04: bl      830 <__stack_chk_fail@plt>
+    mlkem768_enc:
+       +0x0: stp     x19, x20, [sp, #-112]!
+       +0x4: mov     x20, x0
+       +0x8: adrp    x3, <page>
+       +0xc: ldr     x3, [x3, #4088]  // got_stack_chk_guard
+      +0x10: stp     x21, x22, [sp, #16]
+      +0x14: add     x19, sp, #0x4f
+      +0x18: str     x30, [sp, #32]
+      +0x1c: and     x19, x19, #0xffffffffffffffe0
+      +0x20: mov     x21, x1
+      +0x24: mov     x22, x2
+      +0x28: ldr     x1, [x3]
+      +0x2c: str     x1, [sp, #104]
+      +0x30: mov     x1, #0x0
+      +0x34: mov     x0, x19
+      +0x38: mov     x1, #0x20
+      +0x3c: bl      <randombytes@plt>
+      +0x40: cbnz    w0, <mlkem768_enc+0x8c>
+      +0x44: mov     x2, x22
+      +0x48: mov     x1, x21
+      +0x4c: mov     x0, x20
+      +0x50: mov     x3, x19
+      +0x54: bl      <mlkem768_enc_derand>
+      +0x58: stp     xzr, xzr, [x19]
+      +0x5c: stp     xzr, xzr, [x19, #16]
+      +0x60: adrp    x1, <page>
+      +0x64: ldr     x1, [x1, #4088]  // got_stack_chk_guard
+      +0x68: ldr     x3, [sp, #104]
+      +0x6c: ldr     x2, [x1]
+      +0x70: subs    x3, x3, x2
+      +0x74: mov     x2, #0x0
+      +0x78: b.ne    <mlkem768_enc+0x94>
+      +0x7c: ldp     x21, x22, [sp, #16]
+      +0x80: ldr     x30, [sp, #32]
+      +0x84: ldp     x19, x20, [sp], #112
+      +0x88: ret
+      +0x8c: mov     w0, #0xfffffffd
+      +0x90: b       <mlkem768_enc+0x58>
+      +0x94: bl      <__stack_chk_fail@plt>
  ***)
 
 let MLKEM_NATIVE_ENC_K3_GCC12_O2_EXEC =
