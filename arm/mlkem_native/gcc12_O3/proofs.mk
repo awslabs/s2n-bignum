@@ -15,6 +15,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/check_sk_k3 \
   mlkem_native/gcc12_O3/check_sk_k4 \
   mlkem_native/gcc12_O3/gen_matrix_k2 \
+  mlkem_native/gcc12_O3/gen_matrix_k3 \
   mlkem_native/gcc12_O3/indcpa_dec_k2 \
   mlkem_native/gcc12_O3/indcpa_dec_k3 \
   mlkem_native/gcc12_O3/indcpa_dec_k4 \
@@ -129,6 +130,8 @@ mlkem_native/gcc12_O3/check_sk_k4.native: \
   mlkem_native/gcc12_O3/sha3_256.native \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/gen_matrix_k2.native: \
+  mlkem_native/gcc12_O3/poly_rej_uniform_x4.native
+mlkem_native/gcc12_O3/gen_matrix_k3.native: \
   mlkem_native/gcc12_O3/poly_rej_uniform_x4.native
 mlkem_native/gcc12_O3/indcpa_dec_k2.native: \
   mlkem_native/gcc12_O3/polyvec_decompress_du_k2.native \
