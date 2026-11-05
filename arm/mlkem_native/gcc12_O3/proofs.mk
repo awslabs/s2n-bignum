@@ -11,6 +11,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/check_pk_k2 \
   mlkem_native/gcc12_O3/check_pk_k3 \
   mlkem_native/gcc12_O3/check_pk_k4 \
+  mlkem_native/gcc12_O3/gen_matrix_k2 \
   mlkem_native/gcc12_O3/indcpa_dec_k2 \
   mlkem_native/gcc12_O3/keccak_absorb_once \
   mlkem_native/gcc12_O3/keccakf1600_extract_bytes \
@@ -112,6 +113,8 @@ mlkem_native/gcc12_O3/check_pk_k4.native: \
   mlkem_native/gcc12_O3/polyvec_reduce_k4.native \
   mlkem_native/gcc12_O3/polyvec_tobytes_k4.native \
   proofs/utils/mlkem_native_image.ml
+mlkem_native/gcc12_O3/gen_matrix_k2.native: \
+  mlkem_native/gcc12_O3/poly_rej_uniform_x4.native
 mlkem_native/gcc12_O3/indcpa_dec_k2.native: \
   mlkem_native/gcc12_O3/polyvec_decompress_du_k2.native \
   mlkem_native/gcc12_O3/poly_decompress_d4.native \
