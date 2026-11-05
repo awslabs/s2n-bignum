@@ -55,15 +55,15 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
 
 mlkem_native/clang17_O3/basemul_k2.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
+  proofs/mlkem_native/overlap.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/basemul_k3.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
+  proofs/mlkem_native/overlap.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/basemul_k4.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
+  proofs/mlkem_native/overlap.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/keccakf1600_permute.native: \
   mlkem_native/clang17_O3/libmlkem.native \
@@ -89,7 +89,7 @@ mlkem_native/clang17_O3/poly_compress_d5.native: \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_decompress_d4.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
+  proofs/mlkem_native/overlap.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_frombytes.native: \
   proofs/utils/mlkem_native.ml \
@@ -101,12 +101,12 @@ mlkem_native/clang17_O3/poly_frommsg.native: \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_mulcache_compute.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
-  proofs/utils/mlkem_native_interleave.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_ntt.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_interleave.ml \
+  proofs/mlkem_native/interleave.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_reduce.native: \
   proofs/utils/mlkem_native.ml \
@@ -120,8 +120,8 @@ mlkem_native/clang17_O3/poly_sub.native: \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_tobytes.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
-  proofs/utils/mlkem_native_interleave.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_tomont.native: \
   proofs/utils/mlkem_native.ml \
