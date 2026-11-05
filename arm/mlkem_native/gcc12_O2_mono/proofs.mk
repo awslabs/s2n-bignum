@@ -7,7 +7,8 @@ MLKEM_NATIVE_OBJ += \
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/poly_decompress_d4 \
   mlkem_native/gcc12_O2_mono/poly_frombytes \
-  mlkem_native/gcc12_O2_mono/poly_frommsg
+  mlkem_native/gcc12_O2_mono/poly_frommsg \
+  mlkem_native/gcc12_O2_mono/poly_tomsg
 
 mlkem_native/gcc12_O2_mono/libmlkem.native: \
   proofs/mlkem_native/gcc12_O2_mono/layout.ml \
@@ -19,5 +20,8 @@ mlkem_native/gcc12_O2_mono/poly_frombytes.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/poly_frommsg.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/poly_tomsg.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O2_mono/libmlkem.native
