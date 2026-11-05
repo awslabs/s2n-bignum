@@ -5,7 +5,7 @@
 # for common/layout.ml (see mlkem_native/README.md).
 #
 # Usage: gen_layout.py [--objdump OBJDUMP] [--nm NM] [--readelf READELF]
-#                      BINARY > LAYOUT.ml
+#                      [--dwarf [--dwp DWP]] BINARY > LAYOUT.ml
 #
 # For example, in s2n-bignum's arm directory:
 #
@@ -16,7 +16,11 @@
 # Everything comes from the ELF file: the symbol table, the section
 # headers, the dynamic relocations and the disassembly of the code (by
 # objdump), from which the labels inside the functions are found by an
-# analysis of the control flow. No debug information is needed. The tools
+# analysis of the control flow. No debug information is needed, except
+# with --dwarf, which adds labels for the calls that the compiler has
+# inlined, from the split debug information (--dwp, default BINARY.dwp)
+# read by dwarf_inline.py; this is useful for builds that inline much, such
+# as the monolithic ones, where most functions have no symbol. The tools
 # default to objdump, nm and readelf, or the environment variables
 # OBJDUMP, NM and READELF; on a host that is not AArch64 use those of a
 # cross toolchain, e.g. --objdump aarch64-linux-gnu-objdump.
@@ -294,6 +298,43 @@ class Layout:
             sys.exit('gen_layout.py: names defined twice: ' + ' '.join(sorted(dup)))
         return len(names)
 
+def short(callee):
+    """A callee without the namespace of mlkem-native, e.g. polyvec_ntt."""
+    return re.sub(r'^mlkem(512|768|1024)?_', '', callee)
+
+def add_inline(lay, binary, dwp):
+    """Labels in_<g>[_N] and in_<g>[_N]_end at the start and the end of the
+    code of each call of an mlkem-native function g inlined into a function
+    (from the first to after the last instruction of the call, which may
+    have code of other calls in between), and notes for the listings."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import dwarf_inline
+    by_addr = {a: f for f, (a, sz) in lay.functions.items()}
+    lay.inline_at = collections.defaultdict(dict)
+    for g, ext, calls in dwarf_inline.inline_tree(binary, dwp):
+        a0 = ext[0][0]
+        f = by_addr.get(a0)
+        if f is None or CLONE.sub('', f) != g and not f.startswith(g):
+            sys.exit('gen_layout.py: the debug information has %s at 0x%x, '
+                     'the symbol table %s' % (g, a0, f))
+        mine = [(c, rs) for c, rs in calls if c[-1].startswith('mlkem') and rs]
+        count = collections.Counter(c[-1] for c, _ in mine); seen = collections.Counter()
+        for c, rs in sorted(mine, key=lambda x: (min(x[1]), len(x[0]))):
+            seen[c[-1]] += 1
+            l = 'in_' + short(c[-1]) + ('' if count[c[-1]] == 1 else '_%d' % seen[c[-1]])
+            lay.labels[f][l] = min(lo for lo, hi in rs) - a0
+            lay.labels[f][l + '_end'] = max(hi for lo, hi in rs) - a0
+        prev = ()
+        for x, o, args in lay.code[f]:
+            if x >= a0 + lay.functions[f][1]:
+                break
+            inside = [c for c, rs in mine if any(lo <= x < hi for lo, hi in rs)]
+            ch = tuple(short(n) for n in max(inside, key=len) if n.startswith('mlkem')) if inside else ()
+            if ch != prev:
+                lay.inline_at[f][x - a0] = ' > '.join(ch) if ch else '(not inlined)'
+                prev = ch
+    lay.inline = True
+
 # ---------------------------------------------------------------------------
 # Writing the HOL Light file
 # ---------------------------------------------------------------------------
@@ -444,6 +485,25 @@ the target. For example:
   loop2_back:                             |
     +0x48  b.ne    loop2                 -+'''
 
+INLINE_LABELS = '''
+
+With --dwarf, the labels also mark the calls of mlkem-native functions that
+the compiler has inlined, which are not functions of their own in the
+binary (here most of the poly and polyvec functions and some others),
+found in the split debug information (see dwarf_inline.py):
+
+  in_g:        ...        the first instruction of an inlined call of g
+               ...
+  in_g_end:    ...        the instruction after its last one
+
+g is the name without the namespace (e.g. polyvec_ntt for
+mlkem512_polyvec_ntt), numbered as in_g_N if g is inlined several times
+into the same function, in the order of the addresses. The compiler may
+move instructions of a call next to those of others, so the instructions
+between in_g and in_g_end can include some of other calls. The listings
+note where the instructions of each inlined call start, with the chain of
+inlined calls they belong to, e.g. "inlined: polyvec_ntt > poly_ntt".'''
+
 def box(text):
     # Paragraphs whose lines all start with two spaces are diagrams, kept
     # as they are; lists start with " - "; the rest is filled.
@@ -496,7 +556,8 @@ def write(lay, name, out):
              'the sizes of its functions and data, for common/layout.ml. The proofs use '
              'these names, not the addresses themselves.\n\n'
              'This file is generated by mlkem_native/gen_layout.py from the binary with '
-             'SHA-256 %s. Do not edit it by hand.\n\n' % (name, digest)) + LABELS
+             'SHA-256 %s. Do not edit it by hand.\n\n' % (name, digest)) + LABELS + \
+            (INLINE_LABELS if getattr(lay, 'inline', False) else '')
     out.write('(*\n * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.\n'
               ' * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0\n *)\n\n')
     out.write('(* %s *)\n%s\n(* %s *)\n\n' % ('=' * 73, box(intro), '=' * 73))
@@ -523,7 +584,7 @@ def write(lay, name, out):
 # Listings of the code, with the labels and arrows for the branches
 # ---------------------------------------------------------------------------
 
-LABEL_ORDER = ['loop', 'join', 'exit', 'test', 'next', 'back', 'after', 'adrp', 'ret']
+LABEL_ORDER = ['loop', 'join', 'exit', 'test', 'next', 'back', 'after', 'adrp', 'ret', 'in']
 
 def label_key(l):
     m = re.match(r'(loop\d+)(_([a-z]+))?', l)
@@ -551,8 +612,11 @@ def listing(lay, f):
         data.setdefault(a, 'got_' + g)
     rows = []                   # (text, offset of the instruction or None)
     page = {}
+    notes = getattr(lay, 'inline_at', {}).get(f, {})
     for x, o, args in code:
         off = x - a0
+        if off in notes:
+            rows.append(('// inlined: ' + notes[off], None))
         if at[off]:
             line = ''
             for l in at[off]:
@@ -639,8 +703,13 @@ def main():
     ap.add_argument('--objdump', default=os.environ.get('OBJDUMP', 'objdump'))
     ap.add_argument('--nm', default=os.environ.get('NM', 'nm'))
     ap.add_argument('--readelf', default=os.environ.get('READELF', 'readelf'))
+    ap.add_argument('--dwarf', action='store_true',
+                    help='add labels for inlined calls from the split debug information')
+    ap.add_argument('--dwp', help='the split debug information (default BINARY.dwp)')
     args = ap.parse_args()
     lay = Layout(args.binary, args.objdump, args.nm, args.readelf)
+    if args.dwarf:
+        add_inline(lay, args.binary, args.dwp or args.binary + '.dwp')
     lay.check_names()
     write(lay, args.name or os.path.basename(args.binary), sys.stdout)
 
