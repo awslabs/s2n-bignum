@@ -41,8 +41,9 @@
 // of "htable" only these 96 bytes.
 //
 // The buffers written ("out", "tag" and "ivec") must not overlap each other,
-// "in", "key" or "htable"; in particular, in-place operation (out == in) is
-// not covered by the proof.
+// "key" or "htable", and "tag" and "ivec" must not overlap "in". The output
+// may be the input itself (in-place operation, out == in); otherwise "out"
+// must not overlap "in".
 //
 // This routine does not enforce the NIST GCM message limit. Callers must
 // ensure the cumulative message length does not exceed 2^36 - 32 bytes

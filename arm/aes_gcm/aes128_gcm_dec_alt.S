@@ -48,8 +48,9 @@
 // The input must satisfy in + len_bits/8 < 2^63, because the loop control
 // compares the input pointer with the main-loop end pointer as signed
 // integers (cmp x0, x5 followed by b.ge or b.lt). The buffers written ("out",
-// "tag" and "ivec") must not overlap each other, "in", "key" or "htable"; in
-// particular, in-place operation (out == in) is not covered by the proof.
+// "tag" and "ivec") must not overlap each other, "key" or "htable", and "tag"
+// and "ivec" must not overlap "in". The output may be the input itself
+// (in-place operation, out == in); otherwise "out" must not overlap "in".
 //
 // This is an alternative to aes128_gcm_dec with the same arguments, for
 // processors with FEAT_SHA3, whose eor3 it uses. Unlike aes128_gcm_dec it
