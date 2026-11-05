@@ -6,9 +6,9 @@
 (* ========================================================================= *)
 (* The proof of the 8-way AES-GCM encrypt kernels aes128_gcm_enc_alt and     *)
 (* aes256_gcm_enc_alt, written once for both key sizes.  The AES-128 kernel  *)
-(* is the AES-256 one with 10 rounds and 11 round keys instead of 14 and 15, *)
-(* so the two proofs differ only in the cipher, the code, the number of      *)
-(* rounds and some program counters and step counts.                         *)
+(* has 10 rounds and 11 round keys instead of 14 and 15, and its bulk loop  *)
+(* retains the native AES-128 schedule.  The per-kernel parameters select the *)
+(* cipher, code, round count, program counters, step counts and loop fold.   *)
 (*                                                                           *)
 (* This file is not loaded with needs.  Each kernel proof defines its        *)
 (* machine code, binds enc_alt_kernel (of type aes_gcm_enc_alt_kernel, in    *)
@@ -23,7 +23,7 @@
 (* keybytes (the size of the key schedule), the program counters pc_loop,    *)
 (* pc_backedge, pc_prepretail, pc_tail, pc_end and pc_fast1..pc_fast4, and   *)
 (* the states sfast1..sfast4 at the last four.  The step counts that differ  *)
-(* are OCaml integers (setup_tail_branch, loop_ldp1, loop_ldp2,              *)
+(* are OCaml integers (setup_tail_branch, loop_ldp1..loop_ldp3,              *)
 (* loop_backedge, prepretail_steps, fast1_steps..fast4_steps).  Addresses,   *)
 (* labels and step numbers in the comments are those of the AES-256 kernel.  *)
 (*                                                                           *)
@@ -58,7 +58,8 @@ let CIPHER_RECONSTRUCT = enc_alt_kernel.eak_cipher_reconstruct;;
 let XOR_CIPHER_RECONSTRUCT = enc_alt_kernel.eak_xor_cipher_reconstruct;;
 let aes_gcm_enc_alt_name = enc_alt_kernel.eak_name;;
 let setup_tail_branch = enc_alt_kernel.eak_setup_tail_branch;;
-let loop_ldp1,loop_ldp2 = enc_alt_kernel.eak_loop_ldp;;
+let loop_ldp1,loop_ldp2,loop_ldp3 = enc_alt_kernel.eak_loop_ldp;;
+let native_loop = enc_alt_kernel.eak_native_loop;;
 let loop_backedge = enc_alt_kernel.eak_loop_backedge;;
 let prepretail_steps = enc_alt_kernel.eak_prepretail_steps;;
 let fast1_steps,fast2_steps,fast3_steps,fast4_steps =
@@ -105,10 +106,22 @@ let NSTEP_TAC n =
   ARM_STEPS_TAC AES_GCM_ENC_ALT_EXEC [n] THEN
   RULE_ASSUM_TAC(fun th -> SUBWORD_NORM_RULE (NORMOFF_RULE (WB_WADD_RULE th)));;
 
+(* The native bulk loop also keeps the reduction's ext/LO structure in its  *)
+(* Q21/Q29 scratch values.  The AES-256 loop uses the original Q17..Q19     *)
+(* guard; the prepretail and tail steppers below are unchanged.              *)
+let is_loop_ghash_acc th =
+  is_ghash_acc th ||
+  (native_loop &&
+   can (find_term (fun t -> match t with
+        Comb(Const("read",_), r) ->
+          (match r with Const("Q21",_) | Const("Q29",_) -> true
+                      | _ -> false)
+      | _ -> false)) (concl th));;
+
 let NSTEP_G_TAC n =
   ARM_STEPS_TAC AES_GCM_ENC_ALT_EXEC [n] THEN
   RULE_ASSUM_TAC(fun th ->
-    if is_ghash_acc th then th
+    if is_loop_ghash_acc th then th
     else SUBWORD_NORM_RULE (NORMOFF_RULE (WB_WADD_RULE th)));;
 
 let LDP_STEP4_TAC n =
@@ -175,8 +188,20 @@ let SETUP_LOADS_TAC =
 (* store-order byteswap), so the fold uses GHASH_REDUCE_RAW_DIST8_PLAIN (all *)
 (* blocks clean).                                                            *)
 let Q19_FOLD_TAC =
-  ONCE_REWRITE_TAC[WORD_BITWISE_RULE
-    `word_xor (word_xor (x:int128) e) p = word_xor (word_xor x p) e`] THEN
+  (if native_loop then
+     (* The native outer EOR3 already has pmull before ext.  Its inner      *)
+     (* EOR3 has ext before pmull; normalize only that inner seam.          *)
+     REWRITE_TAC[WORD_BITWISE_RULE
+       `word_xor
+          (word_xor (x:int128)
+            (word_subword (word_join (p:int128) p :int256) (64,128)))
+          (word_pmul (word_subword p (0,64):int64) (w:int64):int128) =
+        word_xor
+          (word_xor x (word_pmul (word_subword p (0,64):int64) w:int128))
+          (word_subword (word_join p p :int256) (64,128))`]
+   else
+     ONCE_REWRITE_TAC[WORD_BITWISE_RULE
+       `word_xor (word_xor (x:int128) e) p = word_xor (word_xor x p) e`]) THEN
   REWRITE_TAC[RECON_GRR] THEN
   (* Reassemble the 8 cipherblocks (the plain invariant leaves no            *)
   (* store-order byteswap on the accumulator to cancel).                     *)
@@ -572,8 +597,9 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
     LDP_STEP4_TAC loop_ldp1 THEN
     MAP_EVERY NSTEP_G_TAC ((loop_ldp1+1)--(loop_ldp2-1)) THEN
     LDP_STEP4_TAC loop_ldp2 THEN
-    LDP_STEP4_TAC (loop_ldp2+1) THEN
-    MAP_EVERY NSTEP_G_TAC ((loop_ldp2+2)--(loop_backedge-1)) THEN
+    MAP_EVERY NSTEP_G_TAC ((loop_ldp2+1)--(loop_ldp3-1)) THEN
+    LDP_STEP4_TAC loop_ldp3 THEN
+    MAP_EVERY NSTEP_G_TAC ((loop_ldp3+1)--(loop_backedge-1)) THEN
     ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
     (* Cheap-conjunct close.  The case-split bound is 8*((i+1)+1) (the       *)
     (* invariant's out-forall at i is j < 8*(i+1), so at i+1 it is           *)
@@ -4591,8 +4617,9 @@ let AES_GCM_ENC_ALT_MAIN_LOOP_SAFE = prove
   LDP_STEP4_LEAN_TAC loop_ldp1 THEN
   MAP_EVERY NSTEP_G_TAC ((loop_ldp1+1)--(loop_ldp2-1)) THEN
   LDP_STEP4_LEAN_TAC loop_ldp2 THEN
-  LDP_STEP4_LEAN_TAC (loop_ldp2+1) THEN
-  MAP_EVERY NSTEP_G_TAC ((loop_ldp2+2)--loop_backedge) THEN
+  MAP_EVERY NSTEP_G_TAC ((loop_ldp2+1)--(loop_ldp3-1)) THEN
+  LDP_STEP4_LEAN_TAC loop_ldp3 THEN
+  MAP_EVERY NSTEP_G_TAC ((loop_ldp3+1)--loop_backedge) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   (* PC branch: <b.lt cond> <=> i+1<k, via BRIDGE_GE + IVAL_PTR_ADD *)
   CONJ_TAC THENL
