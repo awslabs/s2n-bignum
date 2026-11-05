@@ -26,7 +26,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
-needs "arm/proofs/utils/mlkem_native_overlap.ml";;
+needs "arm/proofs/mlkem_native/overlap.ml";;
 needs "arm/proofs/mlkem_native/clang17_O3/libmlkem.ml";;
 
 (*** The code in the image, the vector loop from +0x4c to +0x170 and the
