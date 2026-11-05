@@ -1,0 +1,100 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function __id|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|int('n)| => sail_hl_shared_arm_2dmove__5f_5fid_5f0
+shared-function Zeros|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|bitvector('n)| => sail_hl_shared_arm_2dmove_Zeros_5f1
+specialization-required execute_aarch64_instrs_integer_ins_ext_insert_movewide|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), bitvector(16), MoveWideOp, int('pos))|unit|datasize=32: HOL Light: unlowered instruction control
+specialization-required execute_aarch64_instrs_integer_ins_ext_insert_movewide|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), bitvector(16), MoveWideOp, int('pos))|unit|datasize=64: HOL Light: unlowered instruction control
+specialization-required execute_aarch64_instrs_integer_ins_ext_insert_movewide|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), bitvector(16), MoveWideOp, int('pos))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+root arm_MOVK32
+root arm_MOVK64
+root arm_MOVN32
+root arm_MOVN64
+root arm_MOVZ32
+root arm_MOVZ64
+inlined Zeros
+inlined __id
+inlined execute_aarch64_instrs_integer_ins_ext_insert_movewide
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract add_atom
+primitive-contract eq_any
+primitive-contract eq_bits
+primitive-contract lt_int
+primitive-contract not_vec
+primitive-contract sail_zeros
+primitive-contract unsigned
+statically-proved-assertion lt_int(add_atom(__id(pos), 15), __id(datasize)) at src/instrs64.sail:38730:23-38730:44
+proved-numeric-argument-fact Zeros 'n <= 127
+proved-numeric-argument-fact Zeros 'n <= 63
+proved-numeric-argument-fact Zeros (0 + 15) < 'n
+proved-numeric-argument-fact Zeros (16 + 15) < 'n
+proved-numeric-argument-fact Zeros (32 + 15) < 'n
+proved-numeric-argument-fact Zeros (48 + 15) < 'n
+proved-numeric-argument-fact Zeros 0 < 'n
+proved-numeric-argument-fact Zeros 0 < 16
+proved-numeric-argument-fact Zeros 0 < 32
+proved-numeric-argument-fact Zeros 0 < 48
+proved-numeric-argument-fact Zeros 0 <= 'n
+proved-numeric-argument-fact Zeros 0 <= 0
+proved-numeric-argument-fact Zeros 0 <= 16
+proved-numeric-argument-fact Zeros 0 <= 31
+proved-numeric-argument-fact Zeros 0 <= 32
+proved-numeric-argument-fact Zeros 0 <= 48
+proved-numeric-argument-fact Zeros 16 <= 31
+proved-numeric-argument-fact Zeros 32 <= 63
+proved-numeric-argument-fact Zeros 48 <= 63
+proved-numeric-argument-fact __id 'n <= 0
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 31
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id ('n + 15) < 32
+proved-numeric-argument-fact __id ('n + 15) < 64
+proved-numeric-argument-fact __id (0 + 15) < 'n
+proved-numeric-argument-fact __id (16 + 15) < 'n
+proved-numeric-argument-fact __id (32 + 15) < 'n
+proved-numeric-argument-fact __id (48 + 15) < 'n
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 < 16
+proved-numeric-argument-fact __id 0 < 32
+proved-numeric-argument-fact __id 0 < 48
+proved-numeric-argument-fact __id 0 < 64
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 0 <= 0
+proved-numeric-argument-fact __id 0 <= 16
+proved-numeric-argument-fact __id 0 <= 31
+proved-numeric-argument-fact __id 0 <= 32
+proved-numeric-argument-fact __id 0 <= 48
+proved-numeric-argument-fact __id 0 <= 64
+proved-numeric-argument-fact __id 16 <= 31
+proved-numeric-argument-fact __id 32 <= 63
+proved-numeric-argument-fact __id 48 <= 63
+proved-numeric-argument-fact __id 64 <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 'pos <= 0
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 'pos <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 'pos <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide ('pos + 15) < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 0 < 'pos
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_insert_movewide 0 <= 'pos
+statically-selected-branch src/instrs64.sail:38725:8-38725:30 else
+statically-selected-branch src/instrs64.sail:38725:8-38725:30 then
+statically-selected-branch src/instrs64.sail:38732:8-38732:30 else
+statically-selected-branch src/instrs64.sail:38732:8-38732:30 then
+unobserved-undefined-local result
+state-computation-root arm_MOVK32
+state-computation-root arm_MOVK64
+state-computation-root arm_MOVN32
+state-computation-root arm_MOVN64
+state-computation-root arm_MOVZ32
+state-computation-root arm_MOVZ64
+state-computation

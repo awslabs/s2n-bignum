@@ -1,0 +1,46 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function neq_bits|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('n), bitvector('n))|{('ex861974# : Bool), true. bool(not('ex861974#))}| => sail_hl_shared_arm_2dfp_2dselect_neq_5fbits_5f0
+shared-function ConditionHolds|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(4)|bool| => sail_hl_shared_arm_2dfp_2dselect_ConditionHolds_5f1
+shared-function execute_aarch64_instrs_float_move_fp_select|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('d), int('datasize), int('m), int('n))|unit|datasize=32 => sail_hl_shared_arm_2dfp_2dselect_execute_5faarch64_5finstrs_5ffloat_5fmove_5ffp_5fselect_5f2
+shared-function execute_aarch64_instrs_float_move_fp_select|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('d), int('datasize), int('m), int('n))|unit|datasize=64 => sail_hl_shared_arm_2dfp_2dselect_execute_5faarch64_5finstrs_5ffloat_5fmove_5ffp_5fselect_5f3
+specialization-required execute_aarch64_instrs_float_move_fp_select|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('d), int('datasize), int('m), int('n))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+root arm_FCSEL32
+root arm_FCSEL64
+inlined ConditionHolds
+inlined execute_aarch64_instrs_float_move_fp_select
+inlined neq_bits
+primitive-contract CheckFPEnabled64
+primitive-contract PSTATE-NZCV-projection
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract V_set-small-zero-top
+primitive-contract and_bool
+primitive-contract bitvector_access
+primitive-contract eq_bits
+primitive-contract not_bool
+primitive-contract subrange_bits
+primitive-contract unsigned
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_float_move_fp_select 0 <= 'n
+successful-check Arm-FP-enabled-access
+statically-selected-branch src/v8_base.sail:8982:8-8982:41 else
+unobserved-undefined-local result
+state-computation-root arm_FCSEL32
+state-computation-root arm_FCSEL64
+state-computation

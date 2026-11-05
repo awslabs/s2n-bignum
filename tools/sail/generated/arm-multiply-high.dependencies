@@ -1,0 +1,51 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function asl_Int|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), bool('is_unsigned))|int| => sail_hl_shared_arm_2dmultiply_2dhigh_asl_5fInt_5f0
+shared-function integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|lo=64 => sail_hl_shared_arm_2dmultiply_2dhigh_integer_5fsubrange_5f1
+shared-function execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), bool('is_unsigned))|unit|datasize=64 => sail_hl_shared_arm_2dmultiply_2dhigh_execute_5faarch64_5finstrs_5finteger_5farithmetic_5fmul_5fwidening_5f64_5f128hi_5f2
+specialization-required execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), bool('is_unsigned))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|: HOL Light: generic integer slice requires a nonnegative start
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|hi=127: HOL Light: generic integer slice requires a nonnegative start
+root arm_SMULH64
+root arm_UMULH64
+inlined asl_Int
+inlined execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi
+inlined integer_subrange
+primitive-contract SInt0
+primitive-contract UInt0
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract add_atom
+primitive-contract bitvector_length
+primitive-contract get_slice_int
+primitive-contract gt_int
+primitive-contract mult_atom
+primitive-contract sub_atom
+primitive-contract unsigned
+statically-proved-assertion gt_int(bitvector_length(x), 0) at src/builtins.sail:134:27-134:33
+proved-numeric-argument-fact asl_Int 'N > 0
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_mul_widening_64_128hi 0 <= 'n
+proved-numeric-argument-fact integer_subrange 'hi <= 127
+proved-numeric-argument-fact integer_subrange 'lo <= 127
+proved-numeric-argument-fact integer_subrange 0 < 'hi
+proved-numeric-argument-fact integer_subrange 0 < 'lo
+proved-numeric-argument-fact integer_subrange 0 <= 'hi
+proved-numeric-argument-fact integer_subrange 0 <= 'lo
+state-computation-root arm_SMULH64
+state-computation-root arm_UMULH64
+state-computation

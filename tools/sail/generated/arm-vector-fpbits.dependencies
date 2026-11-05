@@ -1,0 +1,582 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+used-assumption feature FEAT_AA64EL0=true
+used-assumption feature FEAT_AFP=true
+used-assumption feature FEAT_SME=true
+used-assumption initial-bit PSTATE.SM=0b0
+used-assumption initial-bit PSTATE.nRW=0b0
+shared-function Mk_FPCR_Type|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(64)|FPCR_Type| => sail_hl_shared_arm_2dvector_2dfpbits_Mk_5fFPCR_5fType_5f0
+shared-function __get_FPCR|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|FPCR_Type|FPCR_Type| => sail_hl_shared_arm_2dvector_2dfpbits__5f_5fget_5fFPCR_5f1
+shared-function Mk_FPCRType|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(64)|FPCRType| => sail_hl_shared_arm_2dvector_2dfpbits_Mk_5fFPCRType_5f2
+shared-function FPCR_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|FPCRType| => sail_hl_shared_arm_2dvector_2dfpbits_FPCR_5fread_5f3
+shared-function HaveSME|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool| => sail_hl_shared_arm_2dvector_2dfpbits_HaveSME_5f4
+shared-function _get_FPCRType_NEP|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|FPCRType|bitvector(((2 - 2) + 1))| => sail_hl_shared_arm_2dvector_2dfpbits__5fget_5fFPCRType_5fNEP_5f5
+shared-function HaveAltFP|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool| => sail_hl_shared_arm_2dvector_2dfpbits_HaveAltFP_5f6
+shared-function HaveAArch32|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool(true)| => sail_hl_shared_arm_2dvector_2dfpbits_HaveAArch32_5f7
+shared-function HaveAArch64|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool| => sail_hl_shared_arm_2dvector_2dfpbits_HaveAArch64_5f8
+shared-function UsingAArch32|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool| => sail_hl_shared_arm_2dvector_2dfpbits_UsingAArch32_5f9
+shared-function __id|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|int('n)| => sail_hl_shared_arm_2dvector_2dfpbits__5f_5fid_5f10
+specialization-required ImpDefBool|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|string|bool|: HOL Light: unsupported primitive append_str
+specialization-required Vpart_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('n), int('part), int('width))|bitvector('width)|width=32: HOL Light: unlowered instruction control
+specialization-required Vpart_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('n), int('part), int('width))|bitvector('width)|width=64: HOL Light: unlowered instruction control
+specialization-required Vpart_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('n), int('part), int('width))|bitvector('width)|: HOL Light: uninstantiated numeric type variable 'width
+specialization-required Vpart_set|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('n), int('part), int('width), bitvector('width))|unit|width=64: HOL Light: unlowered instruction control
+specialization-required Vpart_set|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('n), int('part), int('width), bitvector('width))|unit|: HOL Light: uninstantiated numeric type variable 'width
+specialization-required __IMPDEF_boolean|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|string|bool|: HOL Light: unsupported primitive append_str
+root arm_FMOV_FtoI32_LO
+root arm_FMOV_FtoI64_HI
+root arm_FMOV_FtoI64_LO
+root arm_FMOV_ItoF64_HI
+root arm_FMOV_ItoF64_LO
+inlined FPCR_read
+inlined HaveAArch32
+inlined HaveAArch64
+inlined HaveAltFP
+inlined HaveSME
+inlined ImpDefBool
+inlined IsMerging
+inlined Mk_FPCRType
+inlined Mk_FPCR_Type
+inlined UsingAArch32
+inlined Vpart_read
+inlined Vpart_set
+inlined __IMPDEF_boolean
+inlined __get_FPCR
+inlined __id
+inlined _get_FPCRType_NEP
+inlined execute_aarch64_instrs_float_convert_int
+primitive-contract CheckFPEnabled64
+primitive-contract IsFeatureImplemented
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract ZeroExtend0
+primitive-contract and_bool
+primitive-contract and_vec
+primitive-contract bitvector_concat
+primitive-contract eq_any
+primitive-contract eq_bits
+primitive-contract eq_int
+primitive-contract eq_string
+primitive-contract gteq_int
+primitive-contract lt_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract not_bool
+primitive-contract not_vec
+primitive-contract or_bool
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract unsigned
+statically-proved-assertion and_bool(gteq_int(__id(fsize), 0), gteq_int(__id(intsize), __id(fsize))) at src/instrs64.sail:14284:30-14284:62
+statically-proved-assertion and_bool(gteq_int(n, 0), lteq_int(n, 31)) at src/v8_base.sail:22343:12-22343:28
+statically-proved-assertion and_bool(gteq_int(n, 0), lteq_int(n, 31)) at src/v8_base.sail:22361:12-22361:28
+statically-proved-assertion and_bool(lteq_int(0, sub_atom(__id(fsize), 1)), lt_int(sub_atom(__id(fsize), 1), __id(intsize))) at src/instrs64.sail:14290:30-14290:69
+statically-proved-assertion eq_int(width, 64) at src/v8_base.sail:22368:16-22368:27
+statically-proved-assertion lt_int(width, 128) at src/v8_base.sail:22346:16-22346:27
+statically-proved-assertion lt_int(width, 128) at src/v8_base.sail:22364:16-22364:27
+statically-proved-assertion or_bool(eq_int(part, 0), eq_int(part, 1)) at src/v8_base.sail:22344:12-22344:33
+statically-proved-assertion or_bool(eq_int(part, 0), eq_int(part, 1)) at src/v8_base.sail:22362:12-22362:33
+statically-proved-assertion or_bool(eq_int(width, 32), eq_int(width, 64)) at src/v8_base.sail:22350:16-22350:41
+statically-proved-assertion or_bool(or_bool(or_bool(or_bool(eq_int(__id(width), 8), eq_int(__id(width), 16)), eq_int(__id(width), 32)), eq_int(__id(width), 64)), eq_int(__id(width), 128)) at src/v8_base.sail:22347:27-22347:57
+statically-proved-assertion or_bool(or_bool(or_bool(or_bool(eq_int(__id(width), 8), eq_int(__id(width), 16)), eq_int(__id(width), 32)), eq_int(__id(width), 64)), eq_int(__id(width), 128)) at src/v8_base.sail:22365:27-22365:57
+proved-numeric-argument-fact FPCR_read (((32 == 16 | 32 == 32) | 32 == 64) & ((32 == 16 | 32 == 32) | 32 == 64))
+proved-numeric-argument-fact FPCR_read (((64 == 16 | 64 == 32) | 64 == 64) & ((64 == 16 | 64 == 32) | 64 == 64))
+proved-numeric-argument-fact FPCR_read 0 < 1
+proved-numeric-argument-fact FPCR_read 0 < 32
+proved-numeric-argument-fact FPCR_read 0 < 64
+proved-numeric-argument-fact FPCR_read 0 <= 0
+proved-numeric-argument-fact FPCR_read 0 <= 1
+proved-numeric-argument-fact FPCR_read 0 <= 31
+proved-numeric-argument-fact FPCR_read 0 <= 32
+proved-numeric-argument-fact FPCR_read 0 <= 64
+proved-numeric-argument-fact FPCR_read 1 <= 1
+proved-numeric-argument-fact FPCR_read 1 <= 31
+proved-numeric-argument-fact FPCR_read 32 <= 63
+proved-numeric-argument-fact FPCR_read 32 == 32
+proved-numeric-argument-fact FPCR_read 64 <= 127
+proved-numeric-argument-fact IsMerging (((32 == 16 | 32 == 32) | 32 == 64) & ((32 == 16 | 32 == 32) | 32 == 64))
+proved-numeric-argument-fact IsMerging (((64 == 16 | 64 == 32) | 64 == 64) & ((64 == 16 | 64 == 32) | 64 == 64))
+proved-numeric-argument-fact IsMerging 0 < 1
+proved-numeric-argument-fact IsMerging 0 < 32
+proved-numeric-argument-fact IsMerging 0 < 64
+proved-numeric-argument-fact IsMerging 0 <= 0
+proved-numeric-argument-fact IsMerging 0 <= 1
+proved-numeric-argument-fact IsMerging 0 <= 31
+proved-numeric-argument-fact IsMerging 0 <= 32
+proved-numeric-argument-fact IsMerging 0 <= 64
+proved-numeric-argument-fact IsMerging 1 <= 1
+proved-numeric-argument-fact IsMerging 1 <= 31
+proved-numeric-argument-fact IsMerging 32 <= 63
+proved-numeric-argument-fact IsMerging 32 == 32
+proved-numeric-argument-fact IsMerging 64 <= 127
+proved-numeric-argument-fact Vpart_read 'n <= 31
+proved-numeric-argument-fact Vpart_read 'part <= 0
+proved-numeric-argument-fact Vpart_read 'part <= 1
+proved-numeric-argument-fact Vpart_read 'part <= 31
+proved-numeric-argument-fact Vpart_read 'width < 128
+proved-numeric-argument-fact Vpart_read 'width <= 127
+proved-numeric-argument-fact Vpart_read 'width <= 32
+proved-numeric-argument-fact Vpart_read 'width <= 63
+proved-numeric-argument-fact Vpart_read 'width <= 64
+proved-numeric-argument-fact Vpart_read ('n >= 0 & 'n <= 31)
+proved-numeric-argument-fact Vpart_read ('part == 0 | 'part == 1)
+proved-numeric-argument-fact Vpart_read ('width == 32 | 'width == 64)
+proved-numeric-argument-fact Vpart_read (((('width == 8 | 'width == 16) | 'width == 32) | 'width == 64) | 'width == 128)
+proved-numeric-argument-fact Vpart_read (((32 == 16 | 32 == 32) | 32 == 64) & ((32 == 16 | 32 == 32) | 32 == 64))
+proved-numeric-argument-fact Vpart_read (((64 == 16 | 64 == 32) | 64 == 64) & ((64 == 16 | 64 == 32) | 64 == 64))
+proved-numeric-argument-fact Vpart_read (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact Vpart_read 0 < 'part
+proved-numeric-argument-fact Vpart_read 0 < 'width
+proved-numeric-argument-fact Vpart_read 0 < 32
+proved-numeric-argument-fact Vpart_read 0 < 64
+proved-numeric-argument-fact Vpart_read 0 <= 'n
+proved-numeric-argument-fact Vpart_read 0 <= 'part
+proved-numeric-argument-fact Vpart_read 0 <= 'width
+proved-numeric-argument-fact Vpart_read 0 <= 32
+proved-numeric-argument-fact Vpart_read 0 <= 64
+proved-numeric-argument-fact Vpart_read 32 <= 'width
+proved-numeric-argument-fact Vpart_read 32 <= 63
+proved-numeric-argument-fact Vpart_read 32 == 32
+proved-numeric-argument-fact Vpart_read 64 <= 'width
+proved-numeric-argument-fact Vpart_read 64 <= 127
+proved-numeric-argument-fact Vpart_set 'n <= 31
+proved-numeric-argument-fact Vpart_set 'part <= 0
+proved-numeric-argument-fact Vpart_set 'part <= 1
+proved-numeric-argument-fact Vpart_set 'part <= 31
+proved-numeric-argument-fact Vpart_set 'width < 128
+proved-numeric-argument-fact Vpart_set 'width <= 127
+proved-numeric-argument-fact Vpart_set 'width <= 64
+proved-numeric-argument-fact Vpart_set 'width == 64
+proved-numeric-argument-fact Vpart_set ('n >= 0 & 'n <= 31)
+proved-numeric-argument-fact Vpart_set ('part == 0 | 'part == 1)
+proved-numeric-argument-fact Vpart_set (((('width == 8 | 'width == 16) | 'width == 32) | 'width == 64) | 'width == 128)
+proved-numeric-argument-fact Vpart_set (((64 == 16 | 64 == 32) | 64 == 64) & ((64 == 16 | 64 == 32) | 64 == 64))
+proved-numeric-argument-fact Vpart_set (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact Vpart_set (0 <= ('width - 1) & ('width - 1) < 64)
+proved-numeric-argument-fact Vpart_set 0 < 'part
+proved-numeric-argument-fact Vpart_set 0 < 'width
+proved-numeric-argument-fact Vpart_set 0 < 64
+proved-numeric-argument-fact Vpart_set 0 <= 'n
+proved-numeric-argument-fact Vpart_set 0 <= 'part
+proved-numeric-argument-fact Vpart_set 0 <= 'width
+proved-numeric-argument-fact Vpart_set 0 <= 64
+proved-numeric-argument-fact Vpart_set 64 <= 'width
+proved-numeric-argument-fact Vpart_set 64 <= 127
+proved-numeric-argument-fact __id 'n < 128
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 32
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id 'n <= 64
+proved-numeric-argument-fact __id 'n == 32
+proved-numeric-argument-fact __id 'n == 64
+proved-numeric-argument-fact __id 'n >= 0
+proved-numeric-argument-fact __id ('n == 32 | 'n == 64)
+proved-numeric-argument-fact __id (((('n == 8 | 'n == 16) | 'n == 32) | 'n == 64) | 'n == 128)
+proved-numeric-argument-fact __id (((32 == 16 | 32 == 32) | 32 == 64) & (('n == 16 | 'n == 32) | 'n == 64))
+proved-numeric-argument-fact __id (((32 == 16 | 32 == 32) | 32 == 64) & ((32 == 16 | 32 == 32) | 32 == 64))
+proved-numeric-argument-fact __id (((64 == 16 | 64 == 32) | 64 == 64) & (('n == 16 | 'n == 32) | 'n == 64))
+proved-numeric-argument-fact __id (((64 == 16 | 64 == 32) | 64 == 64) & ((64 == 16 | 64 == 32) | 64 == 64))
+proved-numeric-argument-fact __id (0 <= ('n - 1) & ('n - 1) < 64)
+proved-numeric-argument-fact __id (0 == 0 | 0 == 1)
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 < 1
+proved-numeric-argument-fact __id 0 < 32
+proved-numeric-argument-fact __id 0 < 64
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 0 <= 0
+proved-numeric-argument-fact __id 0 <= 1
+proved-numeric-argument-fact __id 0 <= 31
+proved-numeric-argument-fact __id 0 <= 32
+proved-numeric-argument-fact __id 0 <= 64
+proved-numeric-argument-fact __id 0 == 0
+proved-numeric-argument-fact __id 1 <= 1
+proved-numeric-argument-fact __id 1 <= 31
+proved-numeric-argument-fact __id 32 <= 'n
+proved-numeric-argument-fact __id 32 <= 32
+proved-numeric-argument-fact __id 32 <= 63
+proved-numeric-argument-fact __id 32 == 32
+proved-numeric-argument-fact __id 64 <= 'n
+proved-numeric-argument-fact __id 64 <= 127
+proved-numeric-argument-fact __id 64 <= 64
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 'fltsize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 'fltsize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 'intsize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 'intsize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 'intsize == 32
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 'part <= 0
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 'part <= 1
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 'part <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int ((('fltsize == 16 | 'fltsize == 32) | 'fltsize == 64) & (('intsize == 16 | 'intsize == 32) | 'intsize == 64))
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 0 < 'fltsize
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 0 < 'intsize
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 0 < 'part
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 0 <= 'fltsize
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 0 <= 'intsize
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_float_convert_int 0 <= 'part
+successful-check Arm-FP-enabled-access
+statically-selected-branch src/impdefs.sail:100:15-100:50 else
+statically-selected-branch src/impdefs.sail:102:15-102:47 else
+statically-selected-branch src/impdefs.sail:104:15-104:47 else
+statically-selected-branch src/impdefs.sail:106:15-106:43 else
+statically-selected-branch src/impdefs.sail:108:15-108:55 else
+statically-selected-branch src/impdefs.sail:110:15-110:71 else
+statically-selected-branch src/impdefs.sail:112:15-112:58 else
+statically-selected-branch src/impdefs.sail:114:15-114:50 else
+statically-selected-branch src/impdefs.sail:116:15-116:54 else
+statically-selected-branch src/impdefs.sail:118:15-118:58 else
+statically-selected-branch src/impdefs.sail:120:15-120:54 else
+statically-selected-branch src/impdefs.sail:122:15-122:60 else
+statically-selected-branch src/impdefs.sail:124:15-124:56 else
+statically-selected-branch src/impdefs.sail:126:15-126:66 else
+statically-selected-branch src/impdefs.sail:128:15-128:54 else
+statically-selected-branch src/impdefs.sail:130:15-130:53 else
+statically-selected-branch src/impdefs.sail:132:15-132:71 else
+statically-selected-branch src/impdefs.sail:134:15-134:51 else
+statically-selected-branch src/impdefs.sail:136:15-136:40 else
+statically-selected-branch src/impdefs.sail:138:15-138:62 else
+statically-selected-branch src/impdefs.sail:140:15-140:63 else
+statically-selected-branch src/impdefs.sail:142:15-142:58 else
+statically-selected-branch src/impdefs.sail:144:15-144:58 else
+statically-selected-branch src/impdefs.sail:146:15-146:62 else
+statically-selected-branch src/impdefs.sail:148:15-148:50 else
+statically-selected-branch src/impdefs.sail:150:15-150:52 else
+statically-selected-branch src/impdefs.sail:152:15-152:60 else
+statically-selected-branch src/impdefs.sail:154:15-154:54 else
+statically-selected-branch src/impdefs.sail:156:15-156:44 else
+statically-selected-branch src/impdefs.sail:158:15-158:43 else
+statically-selected-branch src/impdefs.sail:160:15-160:43 else
+statically-selected-branch src/impdefs.sail:162:15-162:69 else
+statically-selected-branch src/impdefs.sail:164:15-164:47 else
+statically-selected-branch src/impdefs.sail:166:15-166:52 else
+statically-selected-branch src/impdefs.sail:168:15-168:50 else
+statically-selected-branch src/impdefs.sail:170:15-170:49 else
+statically-selected-branch src/impdefs.sail:172:15-172:49 else
+statically-selected-branch src/impdefs.sail:174:15-174:52 else
+statically-selected-branch src/impdefs.sail:176:15-176:53 else
+statically-selected-branch src/impdefs.sail:178:15-178:52 else
+statically-selected-branch src/impdefs.sail:180:15-180:53 else
+statically-selected-branch src/impdefs.sail:182:15-182:51 else
+statically-selected-branch src/impdefs.sail:184:15-184:66 else
+statically-selected-branch src/impdefs.sail:186:15-186:51 else
+statically-selected-branch src/impdefs.sail:188:15-188:47 else
+statically-selected-branch src/impdefs.sail:190:15-190:68 else
+statically-selected-branch src/impdefs.sail:192:15-192:78 else
+statically-selected-branch src/impdefs.sail:194:15-194:61 else
+statically-selected-branch src/impdefs.sail:196:15-196:40 else
+statically-selected-branch src/impdefs.sail:198:15-198:53 else
+statically-selected-branch src/impdefs.sail:200:15-200:53 else
+statically-selected-branch src/impdefs.sail:202:15-202:38 else
+statically-selected-branch src/impdefs.sail:204:15-204:40 else
+statically-selected-branch src/impdefs.sail:206:15-206:43 else
+statically-selected-branch src/impdefs.sail:208:15-208:36 else
+statically-selected-branch src/impdefs.sail:210:15-210:66 else
+statically-selected-branch src/impdefs.sail:212:15-212:52 else
+statically-selected-branch src/impdefs.sail:214:15-214:54 else
+statically-selected-branch src/impdefs.sail:216:15-216:44 else
+statically-selected-branch src/impdefs.sail:218:15-218:53 else
+statically-selected-branch src/impdefs.sail:220:15-220:39 else
+statically-selected-branch src/impdefs.sail:222:15-222:40 else
+statically-selected-branch src/impdefs.sail:224:15-224:61 else
+statically-selected-branch src/impdefs.sail:226:15-226:57 else
+statically-selected-branch src/impdefs.sail:228:15-228:44 else
+statically-selected-branch src/impdefs.sail:230:15-230:59 else
+statically-selected-branch src/impdefs.sail:232:15-232:45 else
+statically-selected-branch src/impdefs.sail:234:15-234:47 else
+statically-selected-branch src/impdefs.sail:236:15-236:56 else
+statically-selected-branch src/impdefs.sail:238:15-238:39 else
+statically-selected-branch src/impdefs.sail:240:15-240:59 else
+statically-selected-branch src/impdefs.sail:242:15-242:48 else
+statically-selected-branch src/impdefs.sail:244:15-244:52 else
+statically-selected-branch src/impdefs.sail:246:15-246:51 else
+statically-selected-branch src/impdefs.sail:248:15-248:83 else
+statically-selected-branch src/impdefs.sail:250:15-250:34 else
+statically-selected-branch src/impdefs.sail:252:15-252:61 else
+statically-selected-branch src/impdefs.sail:254:15-254:61 else
+statically-selected-branch src/impdefs.sail:256:15-256:45 else
+statically-selected-branch src/impdefs.sail:258:15-258:55 else
+statically-selected-branch src/impdefs.sail:260:15-260:46 else
+statically-selected-branch src/impdefs.sail:262:15-262:48 else
+statically-selected-branch src/impdefs.sail:264:15-264:48 else
+statically-selected-branch src/impdefs.sail:266:15-266:45 else
+statically-selected-branch src/impdefs.sail:268:15-268:45 else
+statically-selected-branch src/impdefs.sail:270:15-270:44 else
+statically-selected-branch src/impdefs.sail:272:15-272:43 else
+statically-selected-branch src/impdefs.sail:274:15-274:40 else
+statically-selected-branch src/impdefs.sail:276:15-276:30 else
+statically-selected-branch src/impdefs.sail:278:15-278:46 else
+statically-selected-branch src/impdefs.sail:280:15-280:45 else
+statically-selected-branch src/impdefs.sail:282:15-282:67 else
+statically-selected-branch src/impdefs.sail:284:15-284:33 else
+statically-selected-branch src/impdefs.sail:286:15-286:49 else
+statically-selected-branch src/impdefs.sail:288:15-288:42 else
+statically-selected-branch src/impdefs.sail:290:15-290:41 else
+statically-selected-branch src/impdefs.sail:292:15-292:43 else
+statically-selected-branch src/impdefs.sail:294:15-294:76 else
+statically-selected-branch src/impdefs.sail:296:15-296:61 else
+statically-selected-branch src/impdefs.sail:298:15-298:56 else
+statically-selected-branch src/impdefs.sail:300:15-300:73 else
+statically-selected-branch src/impdefs.sail:302:15-302:52 else
+statically-selected-branch src/impdefs.sail:304:15-304:40 else
+statically-selected-branch src/impdefs.sail:306:15-306:52 else
+statically-selected-branch src/impdefs.sail:308:15-308:56 else
+statically-selected-branch src/impdefs.sail:310:15-310:56 else
+statically-selected-branch src/impdefs.sail:312:15-312:58 else
+statically-selected-branch src/impdefs.sail:314:15-314:58 else
+statically-selected-branch src/impdefs.sail:316:15-316:62 else
+statically-selected-branch src/impdefs.sail:318:15-318:62 else
+statically-selected-branch src/impdefs.sail:320:15-320:56 else
+statically-selected-branch src/impdefs.sail:322:15-322:50 else
+statically-selected-branch src/impdefs.sail:324:15-324:44 else
+statically-selected-branch src/impdefs.sail:326:15-326:61 else
+statically-selected-branch src/impdefs.sail:328:15-328:57 else
+statically-selected-branch src/impdefs.sail:330:15-330:49 else
+statically-selected-branch src/impdefs.sail:332:15-332:57 else
+statically-selected-branch src/impdefs.sail:334:15-334:67 else
+statically-selected-branch src/impdefs.sail:336:15-336:63 else
+statically-selected-branch src/impdefs.sail:338:15-338:55 else
+statically-selected-branch src/impdefs.sail:340:15-340:55 else
+statically-selected-branch src/impdefs.sail:342:15-342:51 else
+statically-selected-branch src/impdefs.sail:344:15-344:43 else
+statically-selected-branch src/impdefs.sail:346:15-346:43 else
+statically-selected-branch src/impdefs.sail:348:15-348:52 else
+statically-selected-branch src/impdefs.sail:350:15-350:59 else
+statically-selected-branch src/impdefs.sail:352:15-352:55 else
+statically-selected-branch src/impdefs.sail:354:15-354:59 else
+statically-selected-branch src/impdefs.sail:356:15-356:55 else
+statically-selected-branch src/impdefs.sail:358:15-358:57 else
+statically-selected-branch src/impdefs.sail:360:15-360:32 else
+statically-selected-branch src/impdefs.sail:362:15-362:35 else
+statically-selected-branch src/impdefs.sail:364:15-364:37 else
+statically-selected-branch src/impdefs.sail:366:15-366:35 else
+statically-selected-branch src/impdefs.sail:368:15-368:37 else
+statically-selected-branch src/impdefs.sail:370:15-370:48 else
+statically-selected-branch src/impdefs.sail:372:15-372:49 else
+statically-selected-branch src/impdefs.sail:374:15-374:49 else
+statically-selected-branch src/impdefs.sail:376:15-376:56 else
+statically-selected-branch src/impdefs.sail:378:15-378:57 else
+statically-selected-branch src/impdefs.sail:380:15-380:57 else
+statically-selected-branch src/impdefs.sail:382:15-382:40 else
+statically-selected-branch src/impdefs.sail:384:15-384:46 else
+statically-selected-branch src/impdefs.sail:386:15-386:40 else
+statically-selected-branch src/impdefs.sail:388:15-388:57 else
+statically-selected-branch src/impdefs.sail:390:15-390:61 else
+statically-selected-branch src/impdefs.sail:392:15-392:64 else
+statically-selected-branch src/impdefs.sail:394:15-394:62 else
+statically-selected-branch src/impdefs.sail:396:15-396:71 else
+statically-selected-branch src/impdefs.sail:398:15-398:75 else
+statically-selected-branch src/impdefs.sail:400:15-400:98 else
+statically-selected-branch src/impdefs.sail:402:15-402:43 else
+statically-selected-branch src/impdefs.sail:404:15-404:48 else
+statically-selected-branch src/impdefs.sail:406:15-406:46 else
+statically-selected-branch src/impdefs.sail:408:15-408:81 else
+statically-selected-branch src/impdefs.sail:410:15-410:50 else
+statically-selected-branch src/impdefs.sail:412:15-412:43 else
+statically-selected-branch src/impdefs.sail:414:15-414:94 else
+statically-selected-branch src/impdefs.sail:416:15-416:92 else
+statically-selected-branch src/impdefs.sail:418:15-418:92 else
+statically-selected-branch src/impdefs.sail:420:15-420:92 else
+statically-selected-branch src/impdefs.sail:422:15-422:92 else
+statically-selected-branch src/impdefs.sail:424:15-424:92 else
+statically-selected-branch src/impdefs.sail:426:15-426:92 else
+statically-selected-branch src/impdefs.sail:428:15-428:92 else
+statically-selected-branch src/impdefs.sail:430:15-430:92 else
+statically-selected-branch src/impdefs.sail:432:15-432:92 else
+statically-selected-branch src/impdefs.sail:434:15-434:92 else
+statically-selected-branch src/impdefs.sail:436:15-436:92 else
+statically-selected-branch src/impdefs.sail:438:15-438:92 else
+statically-selected-branch src/impdefs.sail:440:15-440:92 else
+statically-selected-branch src/impdefs.sail:442:15-442:92 else
+statically-selected-branch src/impdefs.sail:444:15-444:92 else
+statically-selected-branch src/impdefs.sail:446:15-446:92 else
+statically-selected-branch src/impdefs.sail:448:15-448:92 else
+statically-selected-branch src/impdefs.sail:44:8-44:44 else
+statically-selected-branch src/impdefs.sail:450:15-450:92 else
+statically-selected-branch src/impdefs.sail:452:15-452:92 else
+statically-selected-branch src/impdefs.sail:454:15-454:92 else
+statically-selected-branch src/impdefs.sail:456:15-456:92 else
+statically-selected-branch src/impdefs.sail:458:15-458:92 else
+statically-selected-branch src/impdefs.sail:460:15-460:92 else
+statically-selected-branch src/impdefs.sail:462:15-462:92 else
+statically-selected-branch src/impdefs.sail:464:15-464:92 else
+statically-selected-branch src/impdefs.sail:466:15-466:92 else
+statically-selected-branch src/impdefs.sail:468:15-468:92 else
+statically-selected-branch src/impdefs.sail:46:15-46:44 else
+statically-selected-branch src/impdefs.sail:470:15-470:92 else
+statically-selected-branch src/impdefs.sail:472:15-472:92 else
+statically-selected-branch src/impdefs.sail:474:15-474:92 else
+statically-selected-branch src/impdefs.sail:476:15-476:92 else
+statically-selected-branch src/impdefs.sail:478:15-478:92 else
+statically-selected-branch src/impdefs.sail:480:15-480:92 else
+statically-selected-branch src/impdefs.sail:482:15-482:92 else
+statically-selected-branch src/impdefs.sail:484:15-484:92 else
+statically-selected-branch src/impdefs.sail:486:15-486:92 else
+statically-selected-branch src/impdefs.sail:488:15-488:47 else
+statically-selected-branch src/impdefs.sail:48:15-48:44 else
+statically-selected-branch src/impdefs.sail:490:15-490:41 else
+statically-selected-branch src/impdefs.sail:492:15-492:40 else
+statically-selected-branch src/impdefs.sail:494:15-494:46 else
+statically-selected-branch src/impdefs.sail:496:15-496:40 else
+statically-selected-branch src/impdefs.sail:498:15-498:66 else
+statically-selected-branch src/impdefs.sail:500:15-500:66 else
+statically-selected-branch src/impdefs.sail:502:15-502:66 else
+statically-selected-branch src/impdefs.sail:504:15-504:66 else
+statically-selected-branch src/impdefs.sail:506:15-506:67 else
+statically-selected-branch src/impdefs.sail:508:15-508:44 else
+statically-selected-branch src/impdefs.sail:50:15-50:44 else
+statically-selected-branch src/impdefs.sail:510:15-510:44 else
+statically-selected-branch src/impdefs.sail:512:15-512:45 else
+statically-selected-branch src/impdefs.sail:514:15-514:45 else
+statically-selected-branch src/impdefs.sail:516:15-516:45 else
+statically-selected-branch src/impdefs.sail:518:15-518:45 else
+statically-selected-branch src/impdefs.sail:520:15-520:45 else
+statically-selected-branch src/impdefs.sail:522:15-522:45 else
+statically-selected-branch src/impdefs.sail:524:15-524:43 else
+statically-selected-branch src/impdefs.sail:526:15-526:43 else
+statically-selected-branch src/impdefs.sail:528:15-528:39 else
+statically-selected-branch src/impdefs.sail:52:15-52:37 else
+statically-selected-branch src/impdefs.sail:530:15-530:48 else
+statically-selected-branch src/impdefs.sail:532:15-532:53 else
+statically-selected-branch src/impdefs.sail:534:15-534:38 else
+statically-selected-branch src/impdefs.sail:536:15-536:53 else
+statically-selected-branch src/impdefs.sail:538:15-538:67 else
+statically-selected-branch src/impdefs.sail:540:15-540:49 else
+statically-selected-branch src/impdefs.sail:542:15-542:74 else
+statically-selected-branch src/impdefs.sail:544:15-544:45 else
+statically-selected-branch src/impdefs.sail:546:15-546:67 else
+statically-selected-branch src/impdefs.sail:548:15-548:43 else
+statically-selected-branch src/impdefs.sail:54:15-54:41 else
+statically-selected-branch src/impdefs.sail:550:15-550:43 else
+statically-selected-branch src/impdefs.sail:552:15-552:50 else
+statically-selected-branch src/impdefs.sail:554:15-554:50 else
+statically-selected-branch src/impdefs.sail:556:15-556:47 else
+statically-selected-branch src/impdefs.sail:558:15-558:55 else
+statically-selected-branch src/impdefs.sail:560:15-560:58 else
+statically-selected-branch src/impdefs.sail:562:15-562:55 else
+statically-selected-branch src/impdefs.sail:564:15-564:58 else
+statically-selected-branch src/impdefs.sail:566:15-566:55 else
+statically-selected-branch src/impdefs.sail:568:15-568:58 else
+statically-selected-branch src/impdefs.sail:56:15-56:76 else
+statically-selected-branch src/impdefs.sail:570:15-570:65 else
+statically-selected-branch src/impdefs.sail:572:15-572:49 else
+statically-selected-branch src/impdefs.sail:574:15-574:57 else
+statically-selected-branch src/impdefs.sail:576:15-576:87 else
+statically-selected-branch src/impdefs.sail:578:15-578:60 else
+statically-selected-branch src/impdefs.sail:580:15-580:40 else
+statically-selected-branch src/impdefs.sail:582:15-582:56 else
+statically-selected-branch src/impdefs.sail:584:15-584:70 else
+statically-selected-branch src/impdefs.sail:586:15-586:70 else
+statically-selected-branch src/impdefs.sail:588:15-588:70 else
+statically-selected-branch src/impdefs.sail:58:15-58:85 else
+statically-selected-branch src/impdefs.sail:590:15-590:70 else
+statically-selected-branch src/impdefs.sail:592:15-592:70 else
+statically-selected-branch src/impdefs.sail:594:15-594:70 else
+statically-selected-branch src/impdefs.sail:596:15-596:70 else
+statically-selected-branch src/impdefs.sail:598:15-598:70 else
+statically-selected-branch src/impdefs.sail:600:15-600:70 else
+statically-selected-branch src/impdefs.sail:602:15-602:70 else
+statically-selected-branch src/impdefs.sail:604:15-604:71 else
+statically-selected-branch src/impdefs.sail:606:15-606:71 else
+statically-selected-branch src/impdefs.sail:608:15-608:71 else
+statically-selected-branch src/impdefs.sail:60:15-60:52 else
+statically-selected-branch src/impdefs.sail:610:15-610:71 else
+statically-selected-branch src/impdefs.sail:612:15-612:71 else
+statically-selected-branch src/impdefs.sail:614:15-614:71 else
+statically-selected-branch src/impdefs.sail:616:15-616:77 else
+statically-selected-branch src/impdefs.sail:618:15-618:77 else
+statically-selected-branch src/impdefs.sail:620:15-620:77 else
+statically-selected-branch src/impdefs.sail:622:15-622:77 else
+statically-selected-branch src/impdefs.sail:624:15-624:77 else
+statically-selected-branch src/impdefs.sail:626:15-626:77 else
+statically-selected-branch src/impdefs.sail:628:15-628:77 else
+statically-selected-branch src/impdefs.sail:62:15-62:40 else
+statically-selected-branch src/impdefs.sail:630:15-630:77 else
+statically-selected-branch src/impdefs.sail:632:15-632:77 else
+statically-selected-branch src/impdefs.sail:634:15-634:77 else
+statically-selected-branch src/impdefs.sail:636:15-636:78 else
+statically-selected-branch src/impdefs.sail:638:15-638:78 else
+statically-selected-branch src/impdefs.sail:640:15-640:78 else
+statically-selected-branch src/impdefs.sail:642:15-642:78 else
+statically-selected-branch src/impdefs.sail:644:15-644:78 else
+statically-selected-branch src/impdefs.sail:646:15-646:78 else
+statically-selected-branch src/impdefs.sail:648:15-648:94 else
+statically-selected-branch src/impdefs.sail:64:15-64:43 else
+statically-selected-branch src/impdefs.sail:650:15-650:94 else
+statically-selected-branch src/impdefs.sail:652:15-652:68 else
+statically-selected-branch src/impdefs.sail:654:15-654:65 else
+statically-selected-branch src/impdefs.sail:656:15-656:65 else
+statically-selected-branch src/impdefs.sail:658:15-658:66 else
+statically-selected-branch src/impdefs.sail:660:15-660:87 else
+statically-selected-branch src/impdefs.sail:662:15-662:57 else
+statically-selected-branch src/impdefs.sail:664:15-664:40 else
+statically-selected-branch src/impdefs.sail:666:15-666:57 else
+statically-selected-branch src/impdefs.sail:668:15-668:58 else
+statically-selected-branch src/impdefs.sail:66:15-66:43 else
+statically-selected-branch src/impdefs.sail:670:15-670:34 else
+statically-selected-branch src/impdefs.sail:672:15-672:26 else
+statically-selected-branch src/impdefs.sail:674:15-674:29 else
+statically-selected-branch src/impdefs.sail:676:15-676:39 else
+statically-selected-branch src/impdefs.sail:678:15-678:65 else
+statically-selected-branch src/impdefs.sail:680:15-680:86 else
+statically-selected-branch src/impdefs.sail:680:15-680:86 then
+statically-selected-branch src/impdefs.sail:682:15-682:79 else
+statically-selected-branch src/impdefs.sail:682:15-682:79 then
+statically-selected-branch src/impdefs.sail:684:15-684:81 else
+statically-selected-branch src/impdefs.sail:684:15-684:81 then
+statically-selected-branch src/impdefs.sail:686:15-686:80 else
+statically-selected-branch src/impdefs.sail:686:15-686:80 then
+statically-selected-branch src/impdefs.sail:688:15-688:86 else
+statically-selected-branch src/impdefs.sail:688:15-688:86 then
+statically-selected-branch src/impdefs.sail:68:15-68:47 else
+statically-selected-branch src/impdefs.sail:690:15-690:89 then
+statically-selected-branch src/impdefs.sail:70:15-70:40 else
+statically-selected-branch src/impdefs.sail:72:15-72:39 else
+statically-selected-branch src/impdefs.sail:74:15-74:46 else
+statically-selected-branch src/impdefs.sail:76:15-76:53 else
+statically-selected-branch src/impdefs.sail:78:15-78:53 else
+statically-selected-branch src/impdefs.sail:80:15-80:57 else
+statically-selected-branch src/impdefs.sail:80:15-80:57 then
+statically-selected-branch src/impdefs.sail:82:15-82:90 else
+statically-selected-branch src/impdefs.sail:84:15-84:59 else
+statically-selected-branch src/impdefs.sail:86:15-86:72 else
+statically-selected-branch src/impdefs.sail:88:15-88:43 else
+statically-selected-branch src/impdefs.sail:90:15-90:67 else
+statically-selected-branch src/impdefs.sail:92:15-92:71 else
+statically-selected-branch src/impdefs.sail:94:15-94:37 else
+statically-selected-branch src/impdefs.sail:96:15-96:76 else
+statically-selected-branch src/impdefs.sail:98:15-98:102 else
+statically-selected-branch src/instrs64.sail:14257:8-14257:34 else
+statically-selected-branch src/instrs64.sail:14264:21-14264:52 else
+statically-selected-branch src/v8_base.sail:16709:28-16709:89 else
+statically-selected-branch src/v8_base.sail:22345:8-22345:17 else
+statically-selected-branch src/v8_base.sail:22345:8-22345:17 then
+statically-selected-branch src/v8_base.sail:22363:8-22363:17 else
+statically-selected-branch src/v8_base.sail:22363:8-22363:17 then
+statically-selected-branch src/v8_base.sail:3564:8-3564:105 else
+statically-selected-branch src/v8_base.sail:3567:8-3567:102 else
+statically-selected-branch src/v8_base.sail:3570:8-3570:96 else
+statically-selected-branch src/v8_base.sail:3573:8-3573:97 else
+statically-selected-branch src/v8_base.sail:3576:8-3576:95 else
+statically-selected-branch src/v8_base.sail:3579:8-3579:102 else
+statically-selected-branch src/v8_base.sail:3582:8-3582:63 else
+statically-selected-branch src/v8_base.sail:4028:8-4028:31 else
+statically-selected-branch src/v8_base.sail:4031:8-4031:31 else
+unobserved-undefined-local fltval
+unobserved-undefined-local intval
+state-computation-root arm_FMOV_FtoI32_LO
+state-computation-root arm_FMOV_FtoI64_HI
+state-computation-root arm_FMOV_FtoI64_LO
+state-computation-root arm_FMOV_ItoF64_HI
+state-computation-root arm_FMOV_ItoF64_LO
+state-computation

@@ -1,0 +1,110 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function execute_aarch64_instrs_vector_crypto_sha3_bcax|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('a), int('d), int('m), int('n))|unit| => sail_hl_shared_arm_2dcrypto_2dbitwise_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha3_5fbcax_5f0
+shared-function execute_aarch64_instrs_vector_crypto_sha3_eor3|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('a), int('d), int('m), int('n))|unit| => sail_hl_shared_arm_2dcrypto_2dbitwise_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha3_5feor3_5f1
+shared-function ROR|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|N=64 => sail_hl_shared_arm_2dcrypto_2dbitwise_ROR_5f2
+shared-function execute_aarch64_instrs_vector_crypto_sha3_rax1|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('m), int('n))|unit| => sail_hl_shared_arm_2dcrypto_2dbitwise_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha3_5frax1_5f3
+shared-function execute_aarch64_instrs_vector_crypto_sha3_xar|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), bitvector(6), int('m), int('n))|unit| => sail_hl_shared_arm_2dcrypto_2dbitwise_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha3_5fxar_5f4
+specialization-required ROL|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|N=64: HOL Light: unlowered instruction control
+specialization-required ROL|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|: HOL Light: operand-dependent width 'N
+specialization-required ROR|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|: HOL Light: integer shifts require a word, integer amount and matching word result
+root ARM_BCAX128
+root ARM_EOR3128
+root ARM_RAX1128
+root ARM_XAR128
+inlined ROL
+inlined ROR
+inlined execute_aarch64_instrs_vector_crypto_sha3_bcax
+inlined execute_aarch64_instrs_vector_crypto_sha3_eor3
+inlined execute_aarch64_instrs_vector_crypto_sha3_rax1
+inlined execute_aarch64_instrs_vector_crypto_sha3_xar
+primitive-contract AArch64_CheckFPAdvSIMDEnabled
+primitive-contract UInt0
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract and_bool
+primitive-contract and_vec
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract emod_nat
+primitive-contract eq_int
+primitive-contract gteq_int
+primitive-contract lteq_int
+primitive-contract not_vec
+primitive-contract or_vec
+primitive-contract sail_shiftleft
+primitive-contract sail_shiftright
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract unsigned
+primitive-contract xor_vec
+statically-proved-assertion and_bool(gteq_int(shift, 0), lteq_int(shift, bitvector_length(x))) at src/v8_base.sail:12606:12-12606:36
+proved-numeric-argument-fact ROL 'shift <= 1
+proved-numeric-argument-fact ROL 'shift <= 31
+proved-numeric-argument-fact ROL ('shift >= 0 & 'shift <= 'N)
+proved-numeric-argument-fact ROL 0 < 'shift
+proved-numeric-argument-fact ROL 0 <= 'shift
+proved-numeric-argument-fact ROR 'shift <= 63
+proved-numeric-argument-fact ROR (0 <= 'shift & 'shift < 64)
+proved-numeric-argument-fact ROR (1 >= 0 & 1 <= 64)
+proved-numeric-argument-fact ROR 0 < 'shift
+proved-numeric-argument-fact ROR 0 < 1
+proved-numeric-argument-fact ROR 0 <= 'shift
+proved-numeric-argument-fact ROR 0 <= 1
+proved-numeric-argument-fact ROR 1 <= 1
+proved-numeric-argument-fact ROR 1 <= 31
+proved-numeric-argument-fact ROR 64 >= 0
+proved-numeric-argument-fact ROR not(1 == 0)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax 'a <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax (0 <= 'a & 'a <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax 0 <= 'a
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_bcax 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 'a <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 (0 <= 'a & 'a <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 0 <= 'a
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_eor3 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_rax1 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_rax1 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_rax1 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_rax1 (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_rax1 (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_rax1 (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_rax1 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_rax1 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_rax1 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_xar 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_xar 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_xar 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_xar (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_xar (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_xar (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_xar 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_xar 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3_xar 0 <= 'n
+successful-check Arm-AdvSIMD-enabled-access
+statically-selected-branch src/v8_base.sail:12607:8-12607:18 else
+state-computation-root ARM_BCAX128
+state-computation-root ARM_EOR3128
+state-computation-root ARM_RAX1128
+state-computation-root ARM_XAR128
+state-computation

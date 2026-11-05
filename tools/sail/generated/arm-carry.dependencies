@@ -1,0 +1,78 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|lo=0 => sail_hl_shared_arm_2dcarry_integer_5fsubrange_5f0
+shared-function IsZero|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector('n)|bool| => sail_hl_shared_arm_2dcarry_IsZero_5f1
+shared-function AddWithCarry|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), bitvector('N), bitvector(1))|(bitvector('N), bitvector(4))| => sail_hl_shared_arm_2dcarry_AddWithCarry_5f2
+shared-function execute_aarch64_instrs_integer_arithmetic_add_sub_carry|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), bool('setflags), bool('sub_op))|unit|datasize=32 => sail_hl_shared_arm_2dcarry_execute_5faarch64_5finstrs_5finteger_5farithmetic_5fadd_5fsub_5fcarry_5f3
+shared-function execute_aarch64_instrs_integer_arithmetic_add_sub_carry|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), bool('setflags), bool('sub_op))|unit|datasize=64 => sail_hl_shared_arm_2dcarry_execute_5faarch64_5finstrs_5finteger_5farithmetic_5fadd_5fsub_5fcarry_5f4
+specialization-required execute_aarch64_instrs_integer_arithmetic_add_sub_carry|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), bool('setflags), bool('sub_op))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|: HOL Light: generic integer slice requires a nonnegative start
+root ARM_ADC32
+root ARM_ADC64
+root ARM_ADCS32
+root ARM_ADCS64
+root ARM_NGC32
+root ARM_NGC64
+root ARM_NGCS32
+root ARM_NGCS64
+root ARM_SBC32
+root ARM_SBC64
+root ARM_SBCS32
+root ARM_SBCS64
+inlined AddWithCarry
+inlined IsZero
+inlined execute_aarch64_instrs_integer_arithmetic_add_sub_carry
+inlined integer_subrange
+primitive-contract PSTATE-NZCV-projection
+primitive-contract SInt0
+primitive-contract UInt0
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract add_atom
+primitive-contract bitvector_access
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract eq_bits
+primitive-contract eq_int
+primitive-contract get_slice_int
+primitive-contract not_vec
+primitive-contract sail_zeros
+primitive-contract sub_atom
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry (0 <= 'd & 'd < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry (0 <= 'm & 'm < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry (0 <= 'n & 'n < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 0 < 'n
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_carry 0 <= 'n
+proved-numeric-argument-fact integer_subrange 'lo <= 0
+proved-numeric-argument-fact integer_subrange 'lo <= 31
+proved-numeric-argument-fact integer_subrange 0 <= 'ex860566#
+proved-numeric-argument-fact integer_subrange 0 <= 'hi
+proved-numeric-argument-fact integer_subrange 0 <= 'lo
+unobserved-undefined-local nzcv
+unobserved-undefined-local result
+state-computation-root ARM_ADC32
+state-computation-root ARM_ADC64
+state-computation-root ARM_ADCS32
+state-computation-root ARM_ADCS64
+state-computation-root ARM_NGC32
+state-computation-root ARM_NGC64
+state-computation-root ARM_NGCS32
+state-computation-root ARM_NGCS64
+state-computation-root ARM_SBC32
+state-computation-root ARM_SBC64
+state-computation-root ARM_SBCS32
+state-computation-root ARM_SBCS64
+state-computation

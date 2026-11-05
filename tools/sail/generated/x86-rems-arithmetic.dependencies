@@ -1,0 +1,2255 @@
+configured-assumption initial-bool log_register_writes=false
+used-assumption initial-bool log_register_writes=false
+shared-function Mk_prefixes|generic|x86state|true|initial-bool log_register_writes=false|bitvector(52)|prefixes| => sail_hl_shared_x86_2drems_2darithmetic_Mk_5fprefixes_5f0
+shared-function Mk_modr_m|generic|x86state|true|initial-bool log_register_writes=false|bitvector(8)|modr_m| => sail_hl_shared_x86_2drems_2darithmetic_Mk_5fmodr_5fm_5f1
+shared-function Mk_sib|generic|x86state|true|initial-bool log_register_writes=false|bitvector(8)|sib| => sail_hl_shared_x86_2drems_2darithmetic_Mk_5fsib_5f2
+shared-function _get_modr_m_r_m|generic|x86state|true|initial-bool log_register_writes=false|modr_m|bitvector(((2 - 0) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5fmodr_5fm_5fr_5fm_5f3
+shared-function _get_modr_m_mod|generic|x86state|true|initial-bool log_register_writes=false|modr_m|bitvector(((7 - 6) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5fmodr_5fm_5fmod_5f4
+shared-function _get_modr_m_reg|generic|x86state|true|initial-bool log_register_writes=false|modr_m|bitvector(((5 - 3) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5fmodr_5fm_5freg_5f5
+shared-function _get_prefixes_seg|generic|x86state|true|initial-bool log_register_writes=false|prefixes|bitvector(((27 - 20) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5fprefixes_5fseg_5f6
+shared-function _get_prefixes_adr|generic|x86state|true|initial-bool log_register_writes=false|prefixes|bitvector(((43 - 36) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5fprefixes_5fadr_5f7
+shared-function in_64bit_mode|generic|x86state|true|initial-bool log_register_writes=false|proc_mode|bool| => sail_hl_shared_x86_2drems_2darithmetic_in_5f64bit_5fmode_5f8
+shared-function logbitp_bits|generic|x86state|true|initial-bool log_register_writes=false|(int('pos), bitvector('n))|bool| => sail_hl_shared_x86_2drems_2darithmetic_logbitp_5fbits_5f9
+shared-function _get_prefixes_opr|generic|x86state|true|initial-bool log_register_writes=false|prefixes|bitvector(((35 - 28) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5fprefixes_5fopr_5f10
+shared-function bits_of_int|generic|x86state|true|initial-bool log_register_writes=false|(int('ex137771#), int('n))|bitvector('n)| => sail_hl_shared_x86_2drems_2darithmetic_bits_5fof_5fint_5f11
+shared-function reg_index|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(3), bitvector(8), bitvector(2))|bitvector(4)| => sail_hl_shared_x86_2drems_2darithmetic_reg_5findex_5f12
+shared-function eq_bits_nat|generic|x86state|true|initial-bool log_register_writes=false|(bitvector('n), int('ex137767#))|{('ex138118# : Int), (0 <= 'ex138118# & 'ex138118# <= (2 ^ 'n - 1)). bool('ex138118# == 'ex137767#)}| => sail_hl_shared_x86_2drems_2darithmetic_eq_5fbits_5fnat_5f13
+shared-function regval_from_reg|generic|x86state|true|initial-bool log_register_writes=false|bitvector(64)|bitvector(64)| => sail_hl_shared_x86_2drems_2darithmetic_regval_5ffrom_5freg_5f14
+shared-function rr64|generic|x86state|false|initial-bool log_register_writes=false|bitvector(4)|bitvector(64)| => sail_hl_shared_x86_2drems_2darithmetic_rr64_5f15
+shared-function rr32|generic|x86state|false|initial-bool log_register_writes=false|bitvector(4)|bitvector(32)| => sail_hl_shared_x86_2drems_2darithmetic_rr32_5f16
+shared-function rr16|generic|x86state|false|initial-bool log_register_writes=false|bitvector(4)|bitvector(16)| => sail_hl_shared_x86_2drems_2darithmetic_rr16_5f17
+shared-function rr08|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(4), bitvector(8))|bitvector(8)| => sail_hl_shared_x86_2drems_2darithmetic_rr08_5f18
+shared-function rgfi_size|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(4), bitvector(4), bitvector(8))|bitvector(64)| => sail_hl_shared_x86_2drems_2darithmetic_rgfi_5fsize_5f19
+shared-function canonical_address_p|generic|x86state|false|initial-bool log_register_writes=false|int('ex137828#)|bool| => sail_hl_shared_x86_2drems_2darithmetic_canonical_5faddress_5fp_5f20
+shared-function check_instruction_length|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(48), bitvector(48), bitvector(3))|option(int)| => sail_hl_shared_x86_2drems_2darithmetic_check_5finstruction_5flength_5f21
+shared-function is_some|generic|x86state|true|initial-bool log_register_writes=false|option(int)|bool| => sail_hl_shared_x86_2drems_2darithmetic_is_5fsome_5f22
+shared-function _get_rflagsbits_cf|generic|x86state|true|initial-bool log_register_writes=false|rflagsbits|bitvector(((0 - 0) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5frflagsbits_5fcf_5f23
+shared-function bool_to_bits|generic|x86state|true|initial-bool log_register_writes=false|bool('ex137768#)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_bool_5fto_5fbits_5f24
+shared-function cf_spec16|generic|x86state|false|initial-bool log_register_writes=false|bitvector(17)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_cf_5fspec16_5f25
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=8,v=16 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f26
+shared-function loghead_bits|fixed|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector('n)|m=16,n=8 => sail_hl_shared_x86_2drems_2darithmetic_loghead_5fbits_5f27
+shared-function isEven|generic|x86state|true|initial-bool log_register_writes=false|int('ex137776#)|bool| => sail_hl_shared_x86_2drems_2darithmetic_isEven_5f28
+shared-function bits_to_bool|generic|x86state|true|initial-bool log_register_writes=false|bitvector(1)|bool| => sail_hl_shared_x86_2drems_2darithmetic_bits_5fto_5fbool_5f29
+shared-function pf_spec16|generic|x86state|false|initial-bool log_register_writes=false|bitvector(16)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_pf_5fspec16_5f30
+shared-function adc_af_spec16|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(16), bitvector(16), bitvector(1))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_adc_5faf_5fspec16_5f31
+shared-function zf_spec|generic|x86state|true|initial-bool log_register_writes=false|int('ex137896#)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_zf_5fspec_5f32
+shared-function sf_spec16|generic|x86state|true|initial-bool log_register_writes=false|bitvector(16)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sf_5fspec16_5f33
+shared-function of_spec16|generic|x86state|false|initial-bool log_register_writes=false|bitvector(17)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_of_5fspec16_5f34
+shared-function _update_rflagsbits_cf|generic|x86state|true|initial-bool log_register_writes=false|(rflagsbits, bitvector(1))|rflagsbits| => sail_hl_shared_x86_2drems_2darithmetic__5fupdate_5frflagsbits_5fcf_5f35
+shared-function _update_rflagsbits_pf|generic|x86state|true|initial-bool log_register_writes=false|(rflagsbits, bitvector(1))|rflagsbits| => sail_hl_shared_x86_2drems_2darithmetic__5fupdate_5frflagsbits_5fpf_5f36
+shared-function _update_rflagsbits_af|generic|x86state|true|initial-bool log_register_writes=false|(rflagsbits, bitvector(1))|rflagsbits| => sail_hl_shared_x86_2drems_2darithmetic__5fupdate_5frflagsbits_5faf_5f37
+shared-function _update_rflagsbits_zf|generic|x86state|true|initial-bool log_register_writes=false|(rflagsbits, bitvector(1))|rflagsbits| => sail_hl_shared_x86_2drems_2darithmetic__5fupdate_5frflagsbits_5fzf_5f38
+shared-function _update_rflagsbits_sf|generic|x86state|true|initial-bool log_register_writes=false|(rflagsbits, bitvector(1))|rflagsbits| => sail_hl_shared_x86_2drems_2darithmetic__5fupdate_5frflagsbits_5fsf_5f39
+shared-function _update_rflagsbits_of|generic|x86state|true|initial-bool log_register_writes=false|(rflagsbits, bitvector(1))|rflagsbits| => sail_hl_shared_x86_2drems_2darithmetic__5fupdate_5frflagsbits_5fof_5f40
+shared-function Mk_rflagsbits|generic|x86state|true|initial-bool log_register_writes=false|bitvector(32)|rflagsbits| => sail_hl_shared_x86_2drems_2darithmetic_Mk_5frflagsbits_5f41
+shared-function gpr_adc_spec_2|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(16), bitvector(16), rflagsbits)|(bitvector(16), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fadc_5fspec_5f2_5f42
+shared-function regval_into_reg|generic|x86state|true|initial-bool log_register_writes=false|bitvector(64)|bitvector(64)| => sail_hl_shared_x86_2drems_2darithmetic_regval_5finto_5freg_5f43
+shared-function wr64|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(4), bitvector(64))|unit| => sail_hl_shared_x86_2drems_2darithmetic_wr64_5f44
+shared-function wr32|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(4), bitvector(32))|unit| => sail_hl_shared_x86_2drems_2darithmetic_wr32_5f45
+shared-function wr16|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(4), bitvector(16))|unit| => sail_hl_shared_x86_2drems_2darithmetic_wr16_5f46
+shared-function wr08|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(4), bitvector(8), bitvector(8))|unit| => sail_hl_shared_x86_2drems_2darithmetic_wr08_5f47
+shared-function write_rgfi_size|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(4), bitvector(4), bitvector(64), bitvector(8))|unit| => sail_hl_shared_x86_2drems_2darithmetic_write_5frgfi_5fsize_5f48
+shared-function _get_rflagsbits_pf|generic|x86state|true|initial-bool log_register_writes=false|rflagsbits|bitvector(((2 - 2) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5frflagsbits_5fpf_5f49
+shared-function _get_rflagsbits_af|generic|x86state|true|initial-bool log_register_writes=false|rflagsbits|bitvector(((4 - 4) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5frflagsbits_5faf_5f50
+shared-function _get_rflagsbits_zf|generic|x86state|true|initial-bool log_register_writes=false|rflagsbits|bitvector(((6 - 6) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5frflagsbits_5fzf_5f51
+shared-function _get_rflagsbits_sf|generic|x86state|true|initial-bool log_register_writes=false|rflagsbits|bitvector(((7 - 7) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5frflagsbits_5fsf_5f52
+shared-function _get_rflagsbits_of|generic|x86state|true|initial-bool log_register_writes=false|rflagsbits|bitvector(((11 - 11) + 1))| => sail_hl_shared_x86_2drems_2darithmetic__5fget_5frflagsbits_5fof_5f53
+shared-function write_rip|generic|x86state|false|initial-bool log_register_writes=false|bitvector(48)|unit| => sail_hl_shared_x86_2drems_2darithmetic_write_5frip_5f54
+shared-function cf_spec32|generic|x86state|false|initial-bool log_register_writes=false|bitvector(33)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_cf_5fspec32_5f55
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=8,v=32 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f56
+shared-function loghead_bits|fixed|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector('n)|m=32,n=8 => sail_hl_shared_x86_2drems_2darithmetic_loghead_5fbits_5f57
+shared-function pf_spec32|generic|x86state|false|initial-bool log_register_writes=false|bitvector(32)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_pf_5fspec32_5f58
+shared-function adc_af_spec32|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(32), bitvector(32), bitvector(1))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_adc_5faf_5fspec32_5f59
+shared-function sf_spec32|generic|x86state|true|initial-bool log_register_writes=false|bitvector(32)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sf_5fspec32_5f60
+shared-function of_spec32|generic|x86state|false|initial-bool log_register_writes=false|bitvector(33)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_of_5fspec32_5f61
+shared-function gpr_adc_spec_4|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(32), bitvector(32), rflagsbits)|(bitvector(32), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fadc_5fspec_5f4_5f62
+shared-function cf_spec64|generic|x86state|false|initial-bool log_register_writes=false|bitvector(65)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_cf_5fspec64_5f63
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=8,v=64 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f64
+shared-function loghead_bits|fixed|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector('n)|m=64,n=8 => sail_hl_shared_x86_2drems_2darithmetic_loghead_5fbits_5f65
+shared-function pf_spec64|generic|x86state|false|initial-bool log_register_writes=false|bitvector(64)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_pf_5fspec64_5f66
+shared-function adc_af_spec64|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(64), bitvector(64), bitvector(1))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_adc_5faf_5fspec64_5f67
+shared-function sf_spec64|generic|x86state|true|initial-bool log_register_writes=false|bitvector(64)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sf_5fspec64_5f68
+shared-function of_spec64|generic|x86state|false|initial-bool log_register_writes=false|bitvector(65)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_of_5fspec64_5f69
+shared-function gpr_adc_spec_8|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(64), bitvector(64), rflagsbits)|(bitvector(64), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fadc_5fspec_5f8_5f70
+shared-function cf_spec8|generic|x86state|false|initial-bool log_register_writes=false|bitvector(9)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_cf_5fspec8_5f71
+shared-function pf_spec8|generic|x86state|false|initial-bool log_register_writes=false|bitvector(8)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_pf_5fspec8_5f72
+shared-function adc_af_spec8|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(8), bitvector(8), bitvector(1))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_adc_5faf_5fspec8_5f73
+shared-function sf_spec8|generic|x86state|true|initial-bool log_register_writes=false|bitvector(8)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sf_5fspec8_5f74
+shared-function of_spec8|generic|x86state|false|initial-bool log_register_writes=false|bitvector(9)|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_of_5fspec8_5f75
+shared-function gpr_adc_spec_1|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(8), bitvector(8), rflagsbits)|(bitvector(8), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fadc_5fspec_5f1_5f76
+shared-function add_af_spec16|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(16), bitvector(16))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_add_5faf_5fspec16_5f77
+shared-function gpr_add_spec_2|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(16), bitvector(16), rflagsbits)|(bitvector(16), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fadd_5fspec_5f2_5f78
+shared-function add_af_spec32|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(32), bitvector(32))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_add_5faf_5fspec32_5f79
+shared-function gpr_add_spec_4|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(32), bitvector(32), rflagsbits)|(bitvector(32), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fadd_5fspec_5f4_5f80
+shared-function add_af_spec64|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(64), bitvector(64))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_add_5faf_5fspec64_5f81
+shared-function gpr_add_spec_8|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(64), bitvector(64), rflagsbits)|(bitvector(64), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fadd_5fspec_5f8_5f82
+shared-function add_af_spec8|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(8), bitvector(8))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_add_5faf_5fspec8_5f83
+shared-function gpr_add_spec_1|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(8), bitvector(8), rflagsbits)|(bitvector(8), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fadd_5fspec_5f1_5f84
+shared-function gpr_and_spec_2|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(16), bitvector(16), rflagsbits)|(bitvector(16), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fand_5fspec_5f2_5f85
+shared-function gpr_and_spec_4|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(32), bitvector(32), rflagsbits)|(bitvector(32), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fand_5fspec_5f4_5f86
+shared-function gpr_and_spec_8|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(64), bitvector(64), rflagsbits)|(bitvector(64), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fand_5fspec_5f8_5f87
+shared-function gpr_and_spec_1|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(8), bitvector(8), rflagsbits)|(bitvector(8), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fand_5fspec_5f1_5f88
+shared-function sub_af_spec16|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(16), bitvector(16))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sub_5faf_5fspec16_5f89
+shared-function gpr_sub_spec_2|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(16), bitvector(16), rflagsbits)|(bitvector(16), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fsub_5fspec_5f2_5f90
+shared-function sub_af_spec32|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(32), bitvector(32))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sub_5faf_5fspec32_5f91
+shared-function gpr_sub_spec_4|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(32), bitvector(32), rflagsbits)|(bitvector(32), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fsub_5fspec_5f4_5f92
+shared-function sub_af_spec64|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(64), bitvector(64))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sub_5faf_5fspec64_5f93
+shared-function gpr_sub_spec_8|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(64), bitvector(64), rflagsbits)|(bitvector(64), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fsub_5fspec_5f8_5f94
+shared-function sub_af_spec8|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(8), bitvector(8))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sub_5faf_5fspec8_5f95
+shared-function gpr_sub_spec_1|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(8), bitvector(8), rflagsbits)|(bitvector(8), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fsub_5fspec_5f1_5f96
+shared-function imul_spec_16|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(16), bitvector(16))|(bitvector(16), bitvector(16), bitvector(32), bitvector(1))| => sail_hl_shared_x86_2drems_2darithmetic_imul_5fspec_5f16_5f97
+shared-function imul_spec_32|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(32), bitvector(32))|(bitvector(32), bitvector(32), bitvector(64), bitvector(1))| => sail_hl_shared_x86_2drems_2darithmetic_imul_5fspec_5f32_5f98
+shared-function imul_spec_64|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(64), bitvector(64))|(bitvector(64), bitvector(64), bitvector(128), bitvector(1))| => sail_hl_shared_x86_2drems_2darithmetic_imul_5fspec_5f64_5f99
+shared-function imul_spec_8|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(8), bitvector(8))|(bitvector(8), bitvector(8), bitvector(16), bitvector(1))| => sail_hl_shared_x86_2drems_2darithmetic_imul_5fspec_5f8_5f100
+shared-function mul_spec_16|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(16), bitvector(16))|(bitvector(16), bitvector(16), bitvector(32))| => sail_hl_shared_x86_2drems_2darithmetic_mul_5fspec_5f16_5f101
+shared-function mul_spec_32|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(32), bitvector(32))|(bitvector(32), bitvector(32), bitvector(64))| => sail_hl_shared_x86_2drems_2darithmetic_mul_5fspec_5f32_5f102
+shared-function mul_spec_64|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(64), bitvector(64))|(bitvector(64), bitvector(64), bitvector(128))| => sail_hl_shared_x86_2drems_2darithmetic_mul_5fspec_5f64_5f103
+shared-function mul_spec_8|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(8), bitvector(8))|(bitvector(8), bitvector(8), bitvector(16))| => sail_hl_shared_x86_2drems_2darithmetic_mul_5fspec_5f8_5f104
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=16,v=128 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f105
+shared-function trunc|fixed|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector((8 * 'n))|m=128,n=2 => sail_hl_shared_x86_2drems_2darithmetic_trunc_5f106
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=64,v=16 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f107
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=32,v=128 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f108
+shared-function trunc|fixed|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector((8 * 'n))|m=128,n=4 => sail_hl_shared_x86_2drems_2darithmetic_trunc_5f109
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=64,v=32 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f110
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=64,v=128 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f111
+shared-function trunc|fixed|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector((8 * 'n))|m=128,n=8 => sail_hl_shared_x86_2drems_2darithmetic_trunc_5f112
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=64,v=64 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f113
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=8,v=128 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f114
+shared-function trunc|fixed|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector((8 * 'n))|m=128,n=1 => sail_hl_shared_x86_2drems_2darithmetic_trunc_5f115
+shared-function sail_mask|fixed|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=64,v=8 => sail_hl_shared_x86_2drems_2darithmetic_sail_5fmask_5f116
+shared-function gpr_or_spec_2|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(16), bitvector(16), rflagsbits)|(bitvector(16), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5for_5fspec_5f2_5f117
+shared-function gpr_or_spec_4|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(32), bitvector(32), rflagsbits)|(bitvector(32), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5for_5fspec_5f4_5f118
+shared-function gpr_or_spec_8|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(64), bitvector(64), rflagsbits)|(bitvector(64), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5for_5fspec_5f8_5f119
+shared-function gpr_or_spec_1|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(8), bitvector(8), rflagsbits)|(bitvector(8), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5for_5fspec_5f1_5f120
+shared-function sbb_af_spec16|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(16), bitvector(16), bitvector(1))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sbb_5faf_5fspec16_5f121
+shared-function gpr_sbb_spec_2|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(16), bitvector(16), rflagsbits)|(bitvector(16), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fsbb_5fspec_5f2_5f122
+shared-function sbb_af_spec32|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(32), bitvector(32), bitvector(1))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sbb_5faf_5fspec32_5f123
+shared-function gpr_sbb_spec_4|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(32), bitvector(32), rflagsbits)|(bitvector(32), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fsbb_5fspec_5f4_5f124
+shared-function sbb_af_spec64|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(64), bitvector(64), bitvector(1))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sbb_5faf_5fspec64_5f125
+shared-function gpr_sbb_spec_8|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(64), bitvector(64), rflagsbits)|(bitvector(64), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fsbb_5fspec_5f8_5f126
+shared-function sbb_af_spec8|generic|x86state|true|initial-bool log_register_writes=false|(bitvector(8), bitvector(8), bitvector(1))|bitvector(1)| => sail_hl_shared_x86_2drems_2darithmetic_sbb_5faf_5fspec8_5f127
+shared-function gpr_sbb_spec_1|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(8), bitvector(8), rflagsbits)|(bitvector(8), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fsbb_5fspec_5f1_5f128
+shared-function logxor|generic|x86state|true|initial-bool log_register_writes=false|(bitvector('n), bitvector('n))|bitvector('n)| => sail_hl_shared_x86_2drems_2darithmetic_logxor_5f129
+shared-function gpr_xor_spec_2|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(16), bitvector(16), rflagsbits)|(bitvector(16), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fxor_5fspec_5f2_5f130
+shared-function gpr_xor_spec_4|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(32), bitvector(32), rflagsbits)|(bitvector(32), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fxor_5fspec_5f4_5f131
+shared-function gpr_xor_spec_8|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(64), bitvector(64), rflagsbits)|(bitvector(64), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fxor_5fspec_5f8_5f132
+shared-function gpr_xor_spec_1|generic|x86state|false|initial-bool log_register_writes=false|(bitvector(8), bitvector(8), rflagsbits)|(bitvector(8), rflagsbits, rflagsbits)| => sail_hl_shared_x86_2drems_2darithmetic_gpr_5fxor_5fspec_5f1_5f133
+specialization-required changeSlice_bits|generic|x86state|true|initial-bool log_register_writes=false|(bitvector('n), int('low), int('width), bitvector('width))|bitvector('n)|: HOL Light: update_subrange_bits requires word base and inserted value
+specialization-required changeSlice_bits|generic|x86state|true|initial-bool log_register_writes=false|(bitvector('n), int('low), int('width), bitvector('width))|bitvector('n)|n=64: HOL Light: update_subrange_bits requires word base and inserted value
+specialization-required changeSlice_bits|generic|x86state|true|initial-bool log_register_writes=false|(bitvector('n), int('low), int('width), bitvector('width))|bitvector('n)|width=16: HOL Light: update_subrange_bits requires word base and inserted value
+specialization-required changeSlice_bits|generic|x86state|true|initial-bool log_register_writes=false|(bitvector('n), int('low), int('width), bitvector('width))|bitvector('n)|width=8: HOL Light: update_subrange_bits requires word base and inserted value
+specialization-required gpr_arith_logic_spec_1|generic|x86state|false|initial-bool log_register_writes=false|(int('ex137901#), bitvector(8), bitvector(8), rflagsbits)|(bitvector(8), rflagsbits, rflagsbits)|: HOL Light: integer matches require a statically known selector
+specialization-required gpr_arith_logic_spec_2|generic|x86state|false|initial-bool log_register_writes=false|(int('ex137902#), bitvector(16), bitvector(16), rflagsbits)|(bitvector(16), rflagsbits, rflagsbits)|: HOL Light: integer matches require a statically known selector
+specialization-required gpr_arith_logic_spec_4|generic|x86state|false|initial-bool log_register_writes=false|(int('ex137903#), bitvector(32), bitvector(32), rflagsbits)|(bitvector(32), rflagsbits, rflagsbits)|: HOL Light: integer matches require a statically known selector
+specialization-required gpr_arith_logic_spec_8|generic|x86state|false|initial-bool log_register_writes=false|(int('ex137904#), bitvector(64), bitvector(64), rflagsbits)|(bitvector(64), rflagsbits, rflagsbits)|: HOL Light: integer matches require a statically known selector
+specialization-required gpr_arith_logic_spec|generic|x86state|false|initial-bool log_register_writes=false|(int('ex137905#), int('ex137906#), bitvector(64), bitvector(64), rflagsbits)|(bitvector(64), rflagsbits, rflagsbits)|: HOL Light: integer matches require a statically known selector
+specialization-required imul_spec|generic|x86state|true|initial-bool log_register_writes=false|(int('ex137987#), bitvector(64), bitvector(64))|(bitvector(64), bitvector(64), bitvector(128), bitvector(1))|: HOL Light: integer matches require a statically known selector
+specialization-required logbitp_int|generic|x86state|false|initial-bool log_register_writes=false|(int('ex137789#), int('ex137790#))|bool|: HOL Light: uninstantiated numeric type variable 'ex137789#
+specialization-required loghead_bits|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector('n)|: HOL Light: polymorphic words require a proved positive source width
+specialization-required loghead_bits|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector('n)|m=16: HOL Light: operand-dependent width 'len
+specialization-required loghead_bits|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector('n)|m=32: HOL Light: operand-dependent width 'len
+specialization-required loghead_bits|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector('n)|m=64: HOL Light: operand-dependent width 'len
+specialization-required loghead_bits|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector('n)|n=8: HOL Light: polymorphic words require a proved positive source width
+specialization-required mul_spec|generic|x86state|true|initial-bool log_register_writes=false|(int('ex137986#), bitvector(64), bitvector(64))|(bitvector(64), bitvector(64), bitvector(128))|: HOL Light: integer matches require a statically known selector
+specialization-required rgfi|generic|x86state|false|initial-bool log_register_writes=false|int('ex137857#)|bitvector(64)|: HOL Light: unlowered instruction control
+specialization-required sail_mask|generic|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|: HOL Light: truncate requires a static result no wider than its input
+specialization-required sail_mask|generic|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=16: HOL Light: truncate requires a static result no wider than its input
+specialization-required sail_mask|generic|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=32: HOL Light: truncate requires a static result no wider than its input
+specialization-required sail_mask|generic|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=64: HOL Light: truncate requires a static result no wider than its input
+specialization-required sail_mask|generic|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|len=8: HOL Light: truncate requires a static result no wider than its input
+specialization-required sail_mask|generic|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|v=128: HOL Light: truncate requires a static result no wider than its input
+specialization-required sail_mask|generic|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|v=16: HOL Light: truncate requires a static result no wider than its input
+specialization-required sail_mask|generic|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|v=32: HOL Light: truncate requires a static result no wider than its input
+specialization-required sail_mask|generic|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|v=64: HOL Light: truncate requires a static result no wider than its input
+specialization-required sail_mask|generic|x86state|true|initial-bool log_register_writes=false|(int('len), bitvector('v))|bitvector('len)|v=8: HOL Light: truncate requires a static result no wider than its input
+specialization-required select_address_size|generic|x86state|false|initial-bool log_register_writes=false|(proc_mode, option(prefixes))|{('n : Int), 'n in {2, 4, 8}. int('n)}|: HOL Light: unsupported type vector(6, bitvector(16))
+specialization-required select_operand_size|generic|x86state|false|initial-bool log_register_writes=false|(proc_mode, bool('ex137975#), bitvector(8), bool('ex137976#), prefixes, bool('ex137977#), bool('ex137978#), bool('ex137979#))|{('n : Int), 'n in {1, 2, 4, 8}. int('n)}|: HOL Light: unsupported type vector(6, bitvector(16))
+specialization-required select_segment_register|generic|x86state|false|initial-bool log_register_writes=false|(proc_mode, prefixes, bitvector(2), bitvector(3), sib)|range(0, 5)|: HOL Light: unsupported type vector(6, bitvector(16))
+specialization-required signed_byte_p_int|generic|x86state|false|initial-bool log_register_writes=false|(int('ex137782#), int('ex137783#))|bool|: HOL Light: power of two requires a proved nonnegative exponent
+specialization-required trunc|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector((8 * 'n))|: HOL Light: polymorphic words require a proved positive source width
+specialization-required trunc|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector((8 * 'n))|m=128: HOL Light: operand-dependent width 'len
+specialization-required trunc|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector((8 * 'n))|n=1: HOL Light: polymorphic words require a proved positive source width
+specialization-required trunc|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector((8 * 'n))|n=2: HOL Light: polymorphic words require a proved positive source width
+specialization-required trunc|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector((8 * 'n))|n=4: HOL Light: polymorphic words require a proved positive source width
+specialization-required trunc|generic|x86state|true|initial-bool log_register_writes=false|(int('n), bitvector('m))|bitvector((8 * 'n))|n=8: HOL Light: polymorphic words require a proved positive source width
+specialization-required unsigned_byte_p_int|generic|x86state|false|initial-bool log_register_writes=false|(int('ex137779#), int('ex137780#))|bool|: HOL Light: unlowered instruction control
+specialization-required write_iptr|generic|x86state|false|initial-bool log_register_writes=false|(proc_mode, bitvector(48))|unit|: HOL Light: unsupported type vector(6, bitvector(16))
+specialization-required write_rgfi|generic|x86state|false|initial-bool log_register_writes=false|(int('ex137858#), bitvector(64))|unit|: HOL Light: unlowered instruction control
+root X86_REMS_ADC16_RR
+root X86_REMS_ADC32_RR
+root X86_REMS_ADC64_RR
+root X86_REMS_ADC8_LEGACY_RR
+root X86_REMS_ADC8_RR
+root X86_REMS_ADD16_RR
+root X86_REMS_ADD32_RR
+root X86_REMS_ADD64_RR
+root X86_REMS_ADD8_LEGACY_RR
+root X86_REMS_ADD8_RR
+root X86_REMS_AND16_RR
+root X86_REMS_AND32_RR
+root X86_REMS_AND64_RR
+root X86_REMS_AND8_LEGACY_RR
+root X86_REMS_AND8_RR
+root X86_REMS_CMP16_RR
+root X86_REMS_CMP32_RR
+root X86_REMS_CMP64_RR
+root X86_REMS_CMP8_LEGACY_RR
+root X86_REMS_CMP8_RR
+root X86_REMS_DEC16_R
+root X86_REMS_DEC32_R
+root X86_REMS_DEC64_R
+root X86_REMS_DEC8_LEGACY_R
+root X86_REMS_DEC8_R
+root X86_REMS_IMUL116_R
+root X86_REMS_IMUL132_R
+root X86_REMS_IMUL164_R
+root X86_REMS_IMUL16_RR
+root X86_REMS_IMUL18_LEGACY_R
+root X86_REMS_IMUL18_R
+root X86_REMS_IMUL32_RR
+root X86_REMS_IMUL64_RR
+root X86_REMS_INC16_R
+root X86_REMS_INC32_R
+root X86_REMS_INC64_R
+root X86_REMS_INC8_LEGACY_R
+root X86_REMS_INC8_R
+root X86_REMS_MUL16_R
+root X86_REMS_MUL32_R
+root X86_REMS_MUL64_R
+root X86_REMS_MUL8_LEGACY_R
+root X86_REMS_MUL8_R
+root X86_REMS_NEG16_R
+root X86_REMS_NEG32_R
+root X86_REMS_NEG64_R
+root X86_REMS_NEG8_LEGACY_R
+root X86_REMS_NEG8_R
+root X86_REMS_NOT16_R
+root X86_REMS_NOT32_R
+root X86_REMS_NOT64_R
+root X86_REMS_NOT8_LEGACY_R
+root X86_REMS_NOT8_R
+root X86_REMS_OR16_RR
+root X86_REMS_OR32_RR
+root X86_REMS_OR64_RR
+root X86_REMS_OR8_LEGACY_RR
+root X86_REMS_OR8_RR
+root X86_REMS_SBB16_RR
+root X86_REMS_SBB32_RR
+root X86_REMS_SBB64_RR
+root X86_REMS_SBB8_LEGACY_RR
+root X86_REMS_SBB8_RR
+root X86_REMS_SUB16_RR
+root X86_REMS_SUB32_RR
+root X86_REMS_SUB64_RR
+root X86_REMS_SUB8_LEGACY_RR
+root X86_REMS_SUB8_RR
+root X86_REMS_TEST16_RR
+root X86_REMS_TEST32_RR
+root X86_REMS_TEST64_RR
+root X86_REMS_TEST8_LEGACY_RR
+root X86_REMS_TEST8_RR
+root X86_REMS_XOR16_RR
+root X86_REMS_XOR32_RR
+root X86_REMS_XOR64_RR
+root X86_REMS_XOR8_LEGACY_RR
+root X86_REMS_XOR8_RR
+inlined Mk_modr_m
+inlined Mk_prefixes
+inlined Mk_rflagsbits
+inlined Mk_sib
+inlined _get_modr_m_mod
+inlined _get_modr_m_r_m
+inlined _get_modr_m_reg
+inlined _get_prefixes_adr
+inlined _get_prefixes_opr
+inlined _get_prefixes_seg
+inlined _get_rflagsbits_af
+inlined _get_rflagsbits_cf
+inlined _get_rflagsbits_of
+inlined _get_rflagsbits_pf
+inlined _get_rflagsbits_sf
+inlined _get_rflagsbits_zf
+inlined _update_rflagsbits_af
+inlined _update_rflagsbits_cf
+inlined _update_rflagsbits_of
+inlined _update_rflagsbits_pf
+inlined _update_rflagsbits_sf
+inlined _update_rflagsbits_zf
+inlined adc_af_spec16
+inlined adc_af_spec32
+inlined adc_af_spec64
+inlined adc_af_spec8
+inlined add_af_spec16
+inlined add_af_spec32
+inlined add_af_spec64
+inlined add_af_spec8
+inlined add_to_iptr
+inlined bits_of_int
+inlined bits_to_bool
+inlined bool_to_bits
+inlined canonical_address_p
+inlined cf_spec16
+inlined cf_spec32
+inlined cf_spec64
+inlined cf_spec8
+inlined changeSlice_bits
+inlined check_instruction_length
+inlined eq_bits_nat
+inlined gpr_adc_spec_1
+inlined gpr_adc_spec_2
+inlined gpr_adc_spec_4
+inlined gpr_adc_spec_8
+inlined gpr_add_spec_1
+inlined gpr_add_spec_2
+inlined gpr_add_spec_4
+inlined gpr_add_spec_8
+inlined gpr_and_spec_1
+inlined gpr_and_spec_2
+inlined gpr_and_spec_4
+inlined gpr_and_spec_8
+inlined gpr_arith_logic_spec
+inlined gpr_arith_logic_spec_1
+inlined gpr_arith_logic_spec_2
+inlined gpr_arith_logic_spec_4
+inlined gpr_arith_logic_spec_8
+inlined gpr_or_spec_1
+inlined gpr_or_spec_2
+inlined gpr_or_spec_4
+inlined gpr_or_spec_8
+inlined gpr_sbb_spec_1
+inlined gpr_sbb_spec_2
+inlined gpr_sbb_spec_4
+inlined gpr_sbb_spec_8
+inlined gpr_sub_spec_1
+inlined gpr_sub_spec_2
+inlined gpr_sub_spec_4
+inlined gpr_sub_spec_8
+inlined gpr_xor_spec_1
+inlined gpr_xor_spec_2
+inlined gpr_xor_spec_4
+inlined gpr_xor_spec_8
+inlined imul_spec
+inlined imul_spec_16
+inlined imul_spec_32
+inlined imul_spec_64
+inlined imul_spec_8
+inlined in_64bit_mode
+inlined isEven
+inlined is_some
+inlined logbitp_bits
+inlined logbitp_int
+inlined logcount_int
+inlined loghead_bits
+inlined logxor
+inlined mul_spec
+inlined mul_spec_16
+inlined mul_spec_32
+inlined mul_spec_64
+inlined mul_spec_8
+inlined of_spec16
+inlined of_spec32
+inlined of_spec64
+inlined of_spec8
+inlined pf_spec16
+inlined pf_spec32
+inlined pf_spec64
+inlined pf_spec8
+inlined reg_index
+inlined regval_from_reg
+inlined regval_into_reg
+inlined rgfi
+inlined rgfi_size
+inlined rr08
+inlined rr16
+inlined rr32
+inlined rr64
+inlined sail_mask
+inlined sbb_af_spec16
+inlined sbb_af_spec32
+inlined sbb_af_spec64
+inlined sbb_af_spec8
+inlined select_address_size
+inlined select_operand_size
+inlined select_segment_register
+inlined sf_spec16
+inlined sf_spec32
+inlined sf_spec64
+inlined sf_spec8
+inlined signed_byte_p_int
+inlined sub_af_spec16
+inlined sub_af_spec32
+inlined sub_af_spec64
+inlined sub_af_spec8
+inlined trunc
+inlined undef_flg
+inlined undef_flg_logic
+inlined undef_read
+inlined undef_read_logic
+inlined unsigned_byte_p_int
+inlined wr08
+inlined wr16
+inlined wr32
+inlined wr64
+inlined write_iptr
+inlined write_rgfi
+inlined write_rgfi_size
+inlined write_rip
+inlined write_user_rflags
+inlined x86_add_adc_sub_sbb_or_and_xor_cmp_g_e
+inlined x86_add_adc_sub_sbb_or_and_xor_cmp_test_e_g
+inlined x86_fault
+inlined x86_imul_op_en_m
+inlined x86_imul_op_en_rm
+inlined x86_inc_dec_fe_ff
+inlined x86_model_error
+inlined x86_mul
+inlined x86_not_neg_f6_f7
+inlined x86_operand_from_modr_m_and_sib_bytes
+inlined x86_operand_to_reg_mem
+inlined zf_spec
+primitive-contract None
+primitive-contract Sail-undefined-existential
+primitive-contract Sail-undefined-refined-integer
+primitive-contract Some
+primitive-contract _shr_int
+primitive-contract add_atom
+primitive-contract and_bool
+primitive-contract and_vec
+primitive-contract bitvector_access
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract eq_bits
+primitive-contract eq_int
+primitive-contract get_slice_int
+primitive-contract gteq_int
+primitive-contract lt_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract negate_atom
+primitive-contract not_bool
+primitive-contract not_vec
+primitive-contract or_bool
+primitive-contract or_vec
+primitive-contract pow2
+primitive-contract read_gpr
+primitive-contract sail_sign_extend
+primitive-contract sail_zero_extend
+primitive-contract signed
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract truncate
+primitive-contract typed-register-component-write
+primitive-contract unsigned
+primitive-contract update_subrange_bits
+primitive-contract write_gpr
+primitive-contract x86-REMS-GPR-access
+primitive-contract x86-uncaught-exception-no-normal-state
+primitive-contract xor_vec
+statically-proved-assertion and_bool(lteq_int(0, regNum), lt_int(regNum, 16)) at register_accessors.sail:12:12-12:37
+statically-proved-assertion and_bool(lteq_int(0, regNum), lt_int(regNum, 16)) at register_accessors.sail:6:12-6:37
+statically-proved-assertion gteq_int(bits, 0) at prelude.sail:212:9-212:18
+statically-proved-assertion gteq_int(bits, 0) at prelude.sail:226:9-226:18
+statically-proved-assertion gteq_int(i, 0) at prelude.sail:289:9-289:15
+proved-numeric-argument-fact Mk_rflagsbits (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact Mk_rflagsbits 0 <= 0
+proved-numeric-argument-fact Mk_rflagsbits 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact Mk_rflagsbits 0 in {0}
+proved-numeric-argument-fact Mk_rflagsbits 1 <= 1
+proved-numeric-argument-fact Mk_rflagsbits 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact Mk_rflagsbits 2 <= 2
+proved-numeric-argument-fact Mk_rflagsbits 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact Mk_rflagsbits 3 <= 3
+proved-numeric-argument-fact Mk_rflagsbits 4 <= 4
+proved-numeric-argument-fact Mk_rflagsbits 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact Mk_rflagsbits 8 <= 8
+proved-numeric-argument-fact Mk_rflagsbits 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact _get_modr_m_mod (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact _get_modr_m_mod (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact _get_modr_m_mod (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact _get_modr_m_mod (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact _get_modr_m_mod (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact _get_modr_m_mod (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact _get_modr_m_mod (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact _get_modr_m_mod (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact _get_modr_m_mod (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact _get_modr_m_mod 0 < 1
+proved-numeric-argument-fact _get_modr_m_mod 0 < 2
+proved-numeric-argument-fact _get_modr_m_mod 0 < 3
+proved-numeric-argument-fact _get_modr_m_mod 0 < 4
+proved-numeric-argument-fact _get_modr_m_mod 0 < 5
+proved-numeric-argument-fact _get_modr_m_mod 0 < 6
+proved-numeric-argument-fact _get_modr_m_mod 0 < 7
+proved-numeric-argument-fact _get_modr_m_mod 0 < 8
+proved-numeric-argument-fact _get_modr_m_mod 0 <= 0
+proved-numeric-argument-fact _get_modr_m_mod 0 <= 1
+proved-numeric-argument-fact _get_modr_m_mod 0 <= 2
+proved-numeric-argument-fact _get_modr_m_mod 0 <= 3
+proved-numeric-argument-fact _get_modr_m_mod 0 <= 31
+proved-numeric-argument-fact _get_modr_m_mod 0 <= 4
+proved-numeric-argument-fact _get_modr_m_mod 0 <= 5
+proved-numeric-argument-fact _get_modr_m_mod 0 <= 6
+proved-numeric-argument-fact _get_modr_m_mod 0 <= 7
+proved-numeric-argument-fact _get_modr_m_mod 0 <= 8
+proved-numeric-argument-fact _get_modr_m_mod 1 <= 1
+proved-numeric-argument-fact _get_modr_m_mod 1 <= 31
+proved-numeric-argument-fact _get_modr_m_mod 2 <= 3
+proved-numeric-argument-fact _get_modr_m_mod 2 <= 31
+proved-numeric-argument-fact _get_modr_m_mod 3 <= 3
+proved-numeric-argument-fact _get_modr_m_mod 3 <= 31
+proved-numeric-argument-fact _get_modr_m_mod 4 <= 31
+proved-numeric-argument-fact _get_modr_m_mod 4 <= 7
+proved-numeric-argument-fact _get_modr_m_mod 5 <= 31
+proved-numeric-argument-fact _get_modr_m_mod 5 <= 7
+proved-numeric-argument-fact _get_modr_m_mod 6 <= 31
+proved-numeric-argument-fact _get_modr_m_mod 6 <= 7
+proved-numeric-argument-fact _get_modr_m_mod 7 <= 31
+proved-numeric-argument-fact _get_modr_m_mod 7 <= 7
+proved-numeric-argument-fact _get_modr_m_mod 8 <= 15
+proved-numeric-argument-fact _get_modr_m_mod 8 <= 31
+proved-numeric-argument-fact _get_modr_m_r_m (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact _get_modr_m_r_m (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact _get_modr_m_r_m (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact _get_modr_m_r_m (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact _get_modr_m_r_m (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact _get_modr_m_r_m (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact _get_modr_m_r_m (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact _get_modr_m_r_m (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact _get_modr_m_r_m (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact _get_modr_m_r_m 0 < 1
+proved-numeric-argument-fact _get_modr_m_r_m 0 < 2
+proved-numeric-argument-fact _get_modr_m_r_m 0 < 3
+proved-numeric-argument-fact _get_modr_m_r_m 0 < 4
+proved-numeric-argument-fact _get_modr_m_r_m 0 < 5
+proved-numeric-argument-fact _get_modr_m_r_m 0 < 6
+proved-numeric-argument-fact _get_modr_m_r_m 0 < 7
+proved-numeric-argument-fact _get_modr_m_r_m 0 < 8
+proved-numeric-argument-fact _get_modr_m_r_m 0 <= 0
+proved-numeric-argument-fact _get_modr_m_r_m 0 <= 1
+proved-numeric-argument-fact _get_modr_m_r_m 0 <= 2
+proved-numeric-argument-fact _get_modr_m_r_m 0 <= 3
+proved-numeric-argument-fact _get_modr_m_r_m 0 <= 31
+proved-numeric-argument-fact _get_modr_m_r_m 0 <= 4
+proved-numeric-argument-fact _get_modr_m_r_m 0 <= 5
+proved-numeric-argument-fact _get_modr_m_r_m 0 <= 6
+proved-numeric-argument-fact _get_modr_m_r_m 0 <= 7
+proved-numeric-argument-fact _get_modr_m_r_m 0 <= 8
+proved-numeric-argument-fact _get_modr_m_r_m 1 <= 1
+proved-numeric-argument-fact _get_modr_m_r_m 1 <= 31
+proved-numeric-argument-fact _get_modr_m_r_m 2 <= 3
+proved-numeric-argument-fact _get_modr_m_r_m 2 <= 31
+proved-numeric-argument-fact _get_modr_m_r_m 3 <= 3
+proved-numeric-argument-fact _get_modr_m_r_m 3 <= 31
+proved-numeric-argument-fact _get_modr_m_r_m 4 <= 31
+proved-numeric-argument-fact _get_modr_m_r_m 4 <= 7
+proved-numeric-argument-fact _get_modr_m_r_m 5 <= 31
+proved-numeric-argument-fact _get_modr_m_r_m 5 <= 7
+proved-numeric-argument-fact _get_modr_m_r_m 6 <= 31
+proved-numeric-argument-fact _get_modr_m_r_m 6 <= 7
+proved-numeric-argument-fact _get_modr_m_r_m 7 <= 31
+proved-numeric-argument-fact _get_modr_m_r_m 7 <= 7
+proved-numeric-argument-fact _get_modr_m_r_m 8 <= 15
+proved-numeric-argument-fact _get_modr_m_r_m 8 <= 31
+proved-numeric-argument-fact _get_modr_m_reg (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact _get_modr_m_reg (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact _get_modr_m_reg (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact _get_modr_m_reg (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact _get_modr_m_reg (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact _get_modr_m_reg (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact _get_modr_m_reg (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact _get_modr_m_reg (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact _get_modr_m_reg (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact _get_modr_m_reg 0 < 1
+proved-numeric-argument-fact _get_modr_m_reg 0 < 2
+proved-numeric-argument-fact _get_modr_m_reg 0 < 3
+proved-numeric-argument-fact _get_modr_m_reg 0 < 4
+proved-numeric-argument-fact _get_modr_m_reg 0 < 5
+proved-numeric-argument-fact _get_modr_m_reg 0 < 6
+proved-numeric-argument-fact _get_modr_m_reg 0 < 7
+proved-numeric-argument-fact _get_modr_m_reg 0 < 8
+proved-numeric-argument-fact _get_modr_m_reg 0 <= 0
+proved-numeric-argument-fact _get_modr_m_reg 0 <= 1
+proved-numeric-argument-fact _get_modr_m_reg 0 <= 2
+proved-numeric-argument-fact _get_modr_m_reg 0 <= 3
+proved-numeric-argument-fact _get_modr_m_reg 0 <= 31
+proved-numeric-argument-fact _get_modr_m_reg 0 <= 4
+proved-numeric-argument-fact _get_modr_m_reg 0 <= 5
+proved-numeric-argument-fact _get_modr_m_reg 0 <= 6
+proved-numeric-argument-fact _get_modr_m_reg 0 <= 7
+proved-numeric-argument-fact _get_modr_m_reg 0 <= 8
+proved-numeric-argument-fact _get_modr_m_reg 1 <= 1
+proved-numeric-argument-fact _get_modr_m_reg 1 <= 31
+proved-numeric-argument-fact _get_modr_m_reg 2 <= 3
+proved-numeric-argument-fact _get_modr_m_reg 2 <= 31
+proved-numeric-argument-fact _get_modr_m_reg 3 <= 3
+proved-numeric-argument-fact _get_modr_m_reg 3 <= 31
+proved-numeric-argument-fact _get_modr_m_reg 4 <= 31
+proved-numeric-argument-fact _get_modr_m_reg 4 <= 7
+proved-numeric-argument-fact _get_modr_m_reg 5 <= 31
+proved-numeric-argument-fact _get_modr_m_reg 5 <= 7
+proved-numeric-argument-fact _get_modr_m_reg 6 <= 31
+proved-numeric-argument-fact _get_modr_m_reg 6 <= 7
+proved-numeric-argument-fact _get_modr_m_reg 7 <= 31
+proved-numeric-argument-fact _get_modr_m_reg 7 <= 7
+proved-numeric-argument-fact _get_modr_m_reg 8 <= 15
+proved-numeric-argument-fact _get_modr_m_reg 8 <= 31
+proved-numeric-argument-fact _get_prefixes_adr (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact _get_prefixes_adr (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact _get_prefixes_adr (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact _get_prefixes_adr (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact _get_prefixes_adr (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact _get_prefixes_adr (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact _get_prefixes_adr (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact _get_prefixes_adr (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact _get_prefixes_adr (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact _get_prefixes_adr 0 < 1
+proved-numeric-argument-fact _get_prefixes_adr 0 < 2
+proved-numeric-argument-fact _get_prefixes_adr 0 < 3
+proved-numeric-argument-fact _get_prefixes_adr 0 < 4
+proved-numeric-argument-fact _get_prefixes_adr 0 < 5
+proved-numeric-argument-fact _get_prefixes_adr 0 < 6
+proved-numeric-argument-fact _get_prefixes_adr 0 < 7
+proved-numeric-argument-fact _get_prefixes_adr 0 < 8
+proved-numeric-argument-fact _get_prefixes_adr 0 <= 0
+proved-numeric-argument-fact _get_prefixes_adr 0 <= 1
+proved-numeric-argument-fact _get_prefixes_adr 0 <= 2
+proved-numeric-argument-fact _get_prefixes_adr 0 <= 3
+proved-numeric-argument-fact _get_prefixes_adr 0 <= 31
+proved-numeric-argument-fact _get_prefixes_adr 0 <= 4
+proved-numeric-argument-fact _get_prefixes_adr 0 <= 5
+proved-numeric-argument-fact _get_prefixes_adr 0 <= 6
+proved-numeric-argument-fact _get_prefixes_adr 0 <= 7
+proved-numeric-argument-fact _get_prefixes_adr 0 <= 8
+proved-numeric-argument-fact _get_prefixes_adr 1 <= 1
+proved-numeric-argument-fact _get_prefixes_adr 1 <= 31
+proved-numeric-argument-fact _get_prefixes_adr 2 <= 3
+proved-numeric-argument-fact _get_prefixes_adr 2 <= 31
+proved-numeric-argument-fact _get_prefixes_adr 3 <= 3
+proved-numeric-argument-fact _get_prefixes_adr 3 <= 31
+proved-numeric-argument-fact _get_prefixes_adr 4 <= 31
+proved-numeric-argument-fact _get_prefixes_adr 4 <= 7
+proved-numeric-argument-fact _get_prefixes_adr 5 <= 31
+proved-numeric-argument-fact _get_prefixes_adr 5 <= 7
+proved-numeric-argument-fact _get_prefixes_adr 6 <= 31
+proved-numeric-argument-fact _get_prefixes_adr 6 <= 7
+proved-numeric-argument-fact _get_prefixes_adr 7 <= 31
+proved-numeric-argument-fact _get_prefixes_adr 7 <= 7
+proved-numeric-argument-fact _get_prefixes_adr 8 <= 15
+proved-numeric-argument-fact _get_prefixes_adr 8 <= 31
+proved-numeric-argument-fact _get_prefixes_seg (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact _get_prefixes_seg (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact _get_prefixes_seg (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact _get_prefixes_seg (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact _get_prefixes_seg (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact _get_prefixes_seg (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact _get_prefixes_seg (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact _get_prefixes_seg (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact _get_prefixes_seg (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact _get_prefixes_seg 0 < 1
+proved-numeric-argument-fact _get_prefixes_seg 0 < 2
+proved-numeric-argument-fact _get_prefixes_seg 0 < 3
+proved-numeric-argument-fact _get_prefixes_seg 0 < 4
+proved-numeric-argument-fact _get_prefixes_seg 0 < 5
+proved-numeric-argument-fact _get_prefixes_seg 0 < 6
+proved-numeric-argument-fact _get_prefixes_seg 0 < 7
+proved-numeric-argument-fact _get_prefixes_seg 0 < 8
+proved-numeric-argument-fact _get_prefixes_seg 0 <= 0
+proved-numeric-argument-fact _get_prefixes_seg 0 <= 1
+proved-numeric-argument-fact _get_prefixes_seg 0 <= 2
+proved-numeric-argument-fact _get_prefixes_seg 0 <= 3
+proved-numeric-argument-fact _get_prefixes_seg 0 <= 31
+proved-numeric-argument-fact _get_prefixes_seg 0 <= 4
+proved-numeric-argument-fact _get_prefixes_seg 0 <= 5
+proved-numeric-argument-fact _get_prefixes_seg 0 <= 6
+proved-numeric-argument-fact _get_prefixes_seg 0 <= 7
+proved-numeric-argument-fact _get_prefixes_seg 0 <= 8
+proved-numeric-argument-fact _get_prefixes_seg 1 <= 1
+proved-numeric-argument-fact _get_prefixes_seg 1 <= 31
+proved-numeric-argument-fact _get_prefixes_seg 2 <= 3
+proved-numeric-argument-fact _get_prefixes_seg 2 <= 31
+proved-numeric-argument-fact _get_prefixes_seg 3 <= 3
+proved-numeric-argument-fact _get_prefixes_seg 3 <= 31
+proved-numeric-argument-fact _get_prefixes_seg 4 <= 31
+proved-numeric-argument-fact _get_prefixes_seg 4 <= 7
+proved-numeric-argument-fact _get_prefixes_seg 5 <= 31
+proved-numeric-argument-fact _get_prefixes_seg 5 <= 7
+proved-numeric-argument-fact _get_prefixes_seg 6 <= 31
+proved-numeric-argument-fact _get_prefixes_seg 6 <= 7
+proved-numeric-argument-fact _get_prefixes_seg 7 <= 31
+proved-numeric-argument-fact _get_prefixes_seg 7 <= 7
+proved-numeric-argument-fact _get_prefixes_seg 8 <= 15
+proved-numeric-argument-fact _get_prefixes_seg 8 <= 31
+proved-numeric-argument-fact _get_rflagsbits_cf (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact _get_rflagsbits_cf 0 <= 0
+proved-numeric-argument-fact _get_rflagsbits_cf 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact _get_rflagsbits_cf 1 <= 1
+proved-numeric-argument-fact _get_rflagsbits_cf 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact _get_rflagsbits_cf 2 <= 2
+proved-numeric-argument-fact _get_rflagsbits_cf 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact _get_rflagsbits_cf 3 <= 3
+proved-numeric-argument-fact _get_rflagsbits_cf 4 <= 4
+proved-numeric-argument-fact _get_rflagsbits_cf 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact _get_rflagsbits_cf 8 <= 8
+proved-numeric-argument-fact _get_rflagsbits_cf 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_af (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact _update_rflagsbits_af 0 <= 0
+proved-numeric-argument-fact _update_rflagsbits_af 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact _update_rflagsbits_af 0 in {0}
+proved-numeric-argument-fact _update_rflagsbits_af 1 <= 1
+proved-numeric-argument-fact _update_rflagsbits_af 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_af 2 <= 2
+proved-numeric-argument-fact _update_rflagsbits_af 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_af 3 <= 3
+proved-numeric-argument-fact _update_rflagsbits_af 4 <= 4
+proved-numeric-argument-fact _update_rflagsbits_af 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_af 8 <= 8
+proved-numeric-argument-fact _update_rflagsbits_af 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_cf (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact _update_rflagsbits_cf 0 <= 0
+proved-numeric-argument-fact _update_rflagsbits_cf 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact _update_rflagsbits_cf 0 in {0}
+proved-numeric-argument-fact _update_rflagsbits_cf 1 <= 1
+proved-numeric-argument-fact _update_rflagsbits_cf 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_cf 2 <= 2
+proved-numeric-argument-fact _update_rflagsbits_cf 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_cf 3 <= 3
+proved-numeric-argument-fact _update_rflagsbits_cf 4 <= 4
+proved-numeric-argument-fact _update_rflagsbits_cf 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_cf 8 <= 8
+proved-numeric-argument-fact _update_rflagsbits_cf 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_of (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact _update_rflagsbits_of 0 <= 0
+proved-numeric-argument-fact _update_rflagsbits_of 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact _update_rflagsbits_of 0 in {0}
+proved-numeric-argument-fact _update_rflagsbits_of 1 <= 1
+proved-numeric-argument-fact _update_rflagsbits_of 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_of 2 <= 2
+proved-numeric-argument-fact _update_rflagsbits_of 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_of 3 <= 3
+proved-numeric-argument-fact _update_rflagsbits_of 4 <= 4
+proved-numeric-argument-fact _update_rflagsbits_of 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_of 8 <= 8
+proved-numeric-argument-fact _update_rflagsbits_of 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_pf (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact _update_rflagsbits_pf 0 <= 0
+proved-numeric-argument-fact _update_rflagsbits_pf 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact _update_rflagsbits_pf 0 in {0}
+proved-numeric-argument-fact _update_rflagsbits_pf 1 <= 1
+proved-numeric-argument-fact _update_rflagsbits_pf 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_pf 2 <= 2
+proved-numeric-argument-fact _update_rflagsbits_pf 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_pf 3 <= 3
+proved-numeric-argument-fact _update_rflagsbits_pf 4 <= 4
+proved-numeric-argument-fact _update_rflagsbits_pf 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_pf 8 <= 8
+proved-numeric-argument-fact _update_rflagsbits_pf 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_sf (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact _update_rflagsbits_sf 0 <= 0
+proved-numeric-argument-fact _update_rflagsbits_sf 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact _update_rflagsbits_sf 0 in {0}
+proved-numeric-argument-fact _update_rflagsbits_sf 1 <= 1
+proved-numeric-argument-fact _update_rflagsbits_sf 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_sf 2 <= 2
+proved-numeric-argument-fact _update_rflagsbits_sf 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_sf 3 <= 3
+proved-numeric-argument-fact _update_rflagsbits_sf 4 <= 4
+proved-numeric-argument-fact _update_rflagsbits_sf 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_sf 8 <= 8
+proved-numeric-argument-fact _update_rflagsbits_sf 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_zf (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact _update_rflagsbits_zf 0 <= 0
+proved-numeric-argument-fact _update_rflagsbits_zf 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact _update_rflagsbits_zf 0 in {0}
+proved-numeric-argument-fact _update_rflagsbits_zf 1 <= 1
+proved-numeric-argument-fact _update_rflagsbits_zf 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_zf 2 <= 2
+proved-numeric-argument-fact _update_rflagsbits_zf 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_zf 3 <= 3
+proved-numeric-argument-fact _update_rflagsbits_zf 4 <= 4
+proved-numeric-argument-fact _update_rflagsbits_zf 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact _update_rflagsbits_zf 8 <= 8
+proved-numeric-argument-fact _update_rflagsbits_zf 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact add_to_iptr (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact add_to_iptr (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact add_to_iptr (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact add_to_iptr (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact add_to_iptr (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact add_to_iptr (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact add_to_iptr (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact add_to_iptr (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact add_to_iptr (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact add_to_iptr (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact add_to_iptr 0 < 1
+proved-numeric-argument-fact add_to_iptr 0 < 2
+proved-numeric-argument-fact add_to_iptr 0 < 3
+proved-numeric-argument-fact add_to_iptr 0 < 4
+proved-numeric-argument-fact add_to_iptr 0 < 5
+proved-numeric-argument-fact add_to_iptr 0 < 6
+proved-numeric-argument-fact add_to_iptr 0 < 7
+proved-numeric-argument-fact add_to_iptr 0 < 8
+proved-numeric-argument-fact add_to_iptr 0 <= 0
+proved-numeric-argument-fact add_to_iptr 0 <= 1
+proved-numeric-argument-fact add_to_iptr 0 <= 2
+proved-numeric-argument-fact add_to_iptr 0 <= 3
+proved-numeric-argument-fact add_to_iptr 0 <= 31
+proved-numeric-argument-fact add_to_iptr 0 <= 4
+proved-numeric-argument-fact add_to_iptr 0 <= 5
+proved-numeric-argument-fact add_to_iptr 0 <= 6
+proved-numeric-argument-fact add_to_iptr 0 <= 7
+proved-numeric-argument-fact add_to_iptr 0 <= 8
+proved-numeric-argument-fact add_to_iptr 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact add_to_iptr 1 <= 1
+proved-numeric-argument-fact add_to_iptr 1 <= 31
+proved-numeric-argument-fact add_to_iptr 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact add_to_iptr 2 <= 2
+proved-numeric-argument-fact add_to_iptr 2 <= 3
+proved-numeric-argument-fact add_to_iptr 2 <= 31
+proved-numeric-argument-fact add_to_iptr 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact add_to_iptr 3 <= 3
+proved-numeric-argument-fact add_to_iptr 3 <= 31
+proved-numeric-argument-fact add_to_iptr 4 <= 31
+proved-numeric-argument-fact add_to_iptr 4 <= 4
+proved-numeric-argument-fact add_to_iptr 4 <= 7
+proved-numeric-argument-fact add_to_iptr 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact add_to_iptr 5 <= 31
+proved-numeric-argument-fact add_to_iptr 5 <= 7
+proved-numeric-argument-fact add_to_iptr 6 <= 31
+proved-numeric-argument-fact add_to_iptr 6 <= 7
+proved-numeric-argument-fact add_to_iptr 7 <= 31
+proved-numeric-argument-fact add_to_iptr 7 <= 7
+proved-numeric-argument-fact add_to_iptr 8 <= 15
+proved-numeric-argument-fact add_to_iptr 8 <= 31
+proved-numeric-argument-fact add_to_iptr 8 <= 8
+proved-numeric-argument-fact add_to_iptr 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 0
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 1
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 140737488355327
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 15
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 2
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 255
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 3
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 31
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 4
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 7
+proved-numeric-argument-fact bits_of_int 'ex137771# <= 8
+proved-numeric-argument-fact bits_of_int 'ex137771# in {0, 1, 2, 4}
+proved-numeric-argument-fact bits_of_int 'ex137771# in {0}
+proved-numeric-argument-fact bits_of_int 'ex137771# in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact bits_of_int 'ex137771# in {1, 2, 4, 8}
+proved-numeric-argument-fact bits_of_int 'n <= 1
+proved-numeric-argument-fact bits_of_int 'n <= 127
+proved-numeric-argument-fact bits_of_int 'n <= 15
+proved-numeric-argument-fact bits_of_int 'n <= 255
+proved-numeric-argument-fact bits_of_int 'n <= 3
+proved-numeric-argument-fact bits_of_int 'n <= 31
+proved-numeric-argument-fact bits_of_int 'n <= 63
+proved-numeric-argument-fact bits_of_int 'n <= 7
+proved-numeric-argument-fact bits_of_int (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact bits_of_int (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact bits_of_int (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact bits_of_int (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact bits_of_int (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact bits_of_int (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact bits_of_int (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact bits_of_int (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact bits_of_int (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact bits_of_int (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact bits_of_int -140737488355328 <= 'ex137771#
+proved-numeric-argument-fact bits_of_int 0 < 'ex137771#
+proved-numeric-argument-fact bits_of_int 0 < 'n
+proved-numeric-argument-fact bits_of_int 0 < 1
+proved-numeric-argument-fact bits_of_int 0 < 2
+proved-numeric-argument-fact bits_of_int 0 < 3
+proved-numeric-argument-fact bits_of_int 0 < 4
+proved-numeric-argument-fact bits_of_int 0 < 5
+proved-numeric-argument-fact bits_of_int 0 < 6
+proved-numeric-argument-fact bits_of_int 0 < 7
+proved-numeric-argument-fact bits_of_int 0 < 8
+proved-numeric-argument-fact bits_of_int 0 <= 'ex137771#
+proved-numeric-argument-fact bits_of_int 0 <= 'n
+proved-numeric-argument-fact bits_of_int 0 <= 0
+proved-numeric-argument-fact bits_of_int 0 <= 1
+proved-numeric-argument-fact bits_of_int 0 <= 2
+proved-numeric-argument-fact bits_of_int 0 <= 3
+proved-numeric-argument-fact bits_of_int 0 <= 31
+proved-numeric-argument-fact bits_of_int 0 <= 4
+proved-numeric-argument-fact bits_of_int 0 <= 5
+proved-numeric-argument-fact bits_of_int 0 <= 6
+proved-numeric-argument-fact bits_of_int 0 <= 7
+proved-numeric-argument-fact bits_of_int 0 <= 8
+proved-numeric-argument-fact bits_of_int 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact bits_of_int 0 in {0}
+proved-numeric-argument-fact bits_of_int 1 <= 'ex137771#
+proved-numeric-argument-fact bits_of_int 1 <= 1
+proved-numeric-argument-fact bits_of_int 1 <= 31
+proved-numeric-argument-fact bits_of_int 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact bits_of_int 2 <= 'ex137771#
+proved-numeric-argument-fact bits_of_int 2 <= 2
+proved-numeric-argument-fact bits_of_int 2 <= 3
+proved-numeric-argument-fact bits_of_int 2 <= 31
+proved-numeric-argument-fact bits_of_int 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact bits_of_int 3 <= 3
+proved-numeric-argument-fact bits_of_int 3 <= 31
+proved-numeric-argument-fact bits_of_int 4 <= 'ex137771#
+proved-numeric-argument-fact bits_of_int 4 <= 31
+proved-numeric-argument-fact bits_of_int 4 <= 4
+proved-numeric-argument-fact bits_of_int 4 <= 7
+proved-numeric-argument-fact bits_of_int 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact bits_of_int 5 <= 31
+proved-numeric-argument-fact bits_of_int 5 <= 7
+proved-numeric-argument-fact bits_of_int 6 <= 31
+proved-numeric-argument-fact bits_of_int 6 <= 7
+proved-numeric-argument-fact bits_of_int 7 <= 31
+proved-numeric-argument-fact bits_of_int 7 <= 7
+proved-numeric-argument-fact bits_of_int 8 <= 'ex137771#
+proved-numeric-argument-fact bits_of_int 8 <= 15
+proved-numeric-argument-fact bits_of_int 8 <= 31
+proved-numeric-argument-fact bits_of_int 8 <= 8
+proved-numeric-argument-fact bits_of_int 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact bits_of_int not(0 == 8)
+proved-numeric-argument-fact bits_of_int not(1 == 8)
+proved-numeric-argument-fact bits_of_int not(2 == 8)
+proved-numeric-argument-fact bits_of_int not(3 == 8)
+proved-numeric-argument-fact bits_of_int not(4 == 8)
+proved-numeric-argument-fact bits_of_int not(5 == 8)
+proved-numeric-argument-fact bits_of_int not(6 == 8)
+proved-numeric-argument-fact bits_to_bool 0 <= 0
+proved-numeric-argument-fact bits_to_bool 0 <= 31
+proved-numeric-argument-fact bits_to_bool 0 >= 0
+proved-numeric-argument-fact canonical_address_p (- 2 ^ 48 <= 'ex137828# & 'ex137828# <= (2 ^ 48 - 1))
+proved-numeric-argument-fact changeSlice_bits 'low <= 0
+proved-numeric-argument-fact changeSlice_bits 'low <= 15
+proved-numeric-argument-fact changeSlice_bits 'low <= 31
+proved-numeric-argument-fact changeSlice_bits 'width <= 15
+proved-numeric-argument-fact changeSlice_bits 'width <= 31
+proved-numeric-argument-fact changeSlice_bits 0 < 'low
+proved-numeric-argument-fact changeSlice_bits 0 < 'width
+proved-numeric-argument-fact changeSlice_bits 0 <= 'low
+proved-numeric-argument-fact changeSlice_bits 0 <= 'width
+proved-numeric-argument-fact check_instruction_length (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact check_instruction_length (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact check_instruction_length (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact check_instruction_length (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact check_instruction_length (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact check_instruction_length (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact check_instruction_length (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact check_instruction_length (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact check_instruction_length (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact check_instruction_length (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact check_instruction_length 0 < 1
+proved-numeric-argument-fact check_instruction_length 0 < 2
+proved-numeric-argument-fact check_instruction_length 0 < 3
+proved-numeric-argument-fact check_instruction_length 0 < 4
+proved-numeric-argument-fact check_instruction_length 0 < 5
+proved-numeric-argument-fact check_instruction_length 0 < 6
+proved-numeric-argument-fact check_instruction_length 0 < 7
+proved-numeric-argument-fact check_instruction_length 0 < 8
+proved-numeric-argument-fact check_instruction_length 0 <= 0
+proved-numeric-argument-fact check_instruction_length 0 <= 1
+proved-numeric-argument-fact check_instruction_length 0 <= 2
+proved-numeric-argument-fact check_instruction_length 0 <= 3
+proved-numeric-argument-fact check_instruction_length 0 <= 31
+proved-numeric-argument-fact check_instruction_length 0 <= 4
+proved-numeric-argument-fact check_instruction_length 0 <= 5
+proved-numeric-argument-fact check_instruction_length 0 <= 6
+proved-numeric-argument-fact check_instruction_length 0 <= 7
+proved-numeric-argument-fact check_instruction_length 0 <= 8
+proved-numeric-argument-fact check_instruction_length 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact check_instruction_length 1 <= 1
+proved-numeric-argument-fact check_instruction_length 1 <= 31
+proved-numeric-argument-fact check_instruction_length 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact check_instruction_length 2 <= 2
+proved-numeric-argument-fact check_instruction_length 2 <= 3
+proved-numeric-argument-fact check_instruction_length 2 <= 31
+proved-numeric-argument-fact check_instruction_length 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact check_instruction_length 3 <= 3
+proved-numeric-argument-fact check_instruction_length 3 <= 31
+proved-numeric-argument-fact check_instruction_length 4 <= 31
+proved-numeric-argument-fact check_instruction_length 4 <= 4
+proved-numeric-argument-fact check_instruction_length 4 <= 7
+proved-numeric-argument-fact check_instruction_length 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact check_instruction_length 5 <= 31
+proved-numeric-argument-fact check_instruction_length 5 <= 7
+proved-numeric-argument-fact check_instruction_length 6 <= 31
+proved-numeric-argument-fact check_instruction_length 6 <= 7
+proved-numeric-argument-fact check_instruction_length 7 <= 31
+proved-numeric-argument-fact check_instruction_length 7 <= 7
+proved-numeric-argument-fact check_instruction_length 8 <= 15
+proved-numeric-argument-fact check_instruction_length 8 <= 31
+proved-numeric-argument-fact check_instruction_length 8 <= 8
+proved-numeric-argument-fact check_instruction_length 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact eq_bits_nat 'ex137767# <= 1
+proved-numeric-argument-fact eq_bits_nat 'ex137767# <= 127
+proved-numeric-argument-fact eq_bits_nat 'ex137767# <= 15
+proved-numeric-argument-fact eq_bits_nat 'ex137767# <= 3
+proved-numeric-argument-fact eq_bits_nat 'ex137767# <= 31
+proved-numeric-argument-fact eq_bits_nat 'ex137767# <= 63
+proved-numeric-argument-fact eq_bits_nat 'ex137767# <= 7
+proved-numeric-argument-fact eq_bits_nat (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact eq_bits_nat 0 < 'ex137767#
+proved-numeric-argument-fact eq_bits_nat 0 <= 'ex137767#
+proved-numeric-argument-fact eq_bits_nat 0 <= 0
+proved-numeric-argument-fact eq_bits_nat 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact eq_bits_nat 1 <= 1
+proved-numeric-argument-fact eq_bits_nat 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact eq_bits_nat 2 <= 2
+proved-numeric-argument-fact eq_bits_nat 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact eq_bits_nat 3 <= 3
+proved-numeric-argument-fact eq_bits_nat 4 <= 4
+proved-numeric-argument-fact eq_bits_nat 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact eq_bits_nat 8 <= 8
+proved-numeric-argument-fact eq_bits_nat 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact gpr_adc_spec_1 (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact gpr_adc_spec_1 0 < 2
+proved-numeric-argument-fact gpr_adc_spec_1 0 <= 2
+proved-numeric-argument-fact gpr_adc_spec_1 2 <= 3
+proved-numeric-argument-fact gpr_adc_spec_1 2 <= 31
+proved-numeric-argument-fact gpr_adc_spec_1 2 == 2
+proved-numeric-argument-fact gpr_adc_spec_1 2 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_adc_spec_2 (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact gpr_adc_spec_2 0 < 2
+proved-numeric-argument-fact gpr_adc_spec_2 0 <= 2
+proved-numeric-argument-fact gpr_adc_spec_2 2 <= 3
+proved-numeric-argument-fact gpr_adc_spec_2 2 <= 31
+proved-numeric-argument-fact gpr_adc_spec_2 2 == 2
+proved-numeric-argument-fact gpr_adc_spec_2 2 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_adc_spec_4 (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact gpr_adc_spec_4 0 < 2
+proved-numeric-argument-fact gpr_adc_spec_4 0 <= 2
+proved-numeric-argument-fact gpr_adc_spec_4 2 <= 3
+proved-numeric-argument-fact gpr_adc_spec_4 2 <= 31
+proved-numeric-argument-fact gpr_adc_spec_4 2 == 2
+proved-numeric-argument-fact gpr_adc_spec_4 2 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_adc_spec_8 (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact gpr_adc_spec_8 0 < 2
+proved-numeric-argument-fact gpr_adc_spec_8 0 <= 2
+proved-numeric-argument-fact gpr_adc_spec_8 2 <= 3
+proved-numeric-argument-fact gpr_adc_spec_8 2 <= 31
+proved-numeric-argument-fact gpr_adc_spec_8 2 == 2
+proved-numeric-argument-fact gpr_adc_spec_8 2 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_add_spec_1 (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact gpr_add_spec_1 0 <= 0
+proved-numeric-argument-fact gpr_add_spec_1 0 <= 31
+proved-numeric-argument-fact gpr_add_spec_1 0 == 0
+proved-numeric-argument-fact gpr_add_spec_1 0 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_add_spec_2 (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact gpr_add_spec_2 0 <= 0
+proved-numeric-argument-fact gpr_add_spec_2 0 <= 31
+proved-numeric-argument-fact gpr_add_spec_2 0 == 0
+proved-numeric-argument-fact gpr_add_spec_2 0 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_add_spec_4 (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact gpr_add_spec_4 0 <= 0
+proved-numeric-argument-fact gpr_add_spec_4 0 <= 31
+proved-numeric-argument-fact gpr_add_spec_4 0 == 0
+proved-numeric-argument-fact gpr_add_spec_4 0 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_add_spec_8 (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact gpr_add_spec_8 0 <= 0
+proved-numeric-argument-fact gpr_add_spec_8 0 <= 31
+proved-numeric-argument-fact gpr_add_spec_8 0 == 0
+proved-numeric-argument-fact gpr_add_spec_8 0 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_and_spec_1 (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact gpr_and_spec_1 (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact gpr_and_spec_1 0 < 3
+proved-numeric-argument-fact gpr_and_spec_1 0 < 7
+proved-numeric-argument-fact gpr_and_spec_1 0 <= 3
+proved-numeric-argument-fact gpr_and_spec_1 0 <= 7
+proved-numeric-argument-fact gpr_and_spec_1 3 <= 3
+proved-numeric-argument-fact gpr_and_spec_1 3 <= 31
+proved-numeric-argument-fact gpr_and_spec_1 3 == 3
+proved-numeric-argument-fact gpr_and_spec_1 3 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_and_spec_1 7 <= 31
+proved-numeric-argument-fact gpr_and_spec_1 7 <= 7
+proved-numeric-argument-fact gpr_and_spec_1 7 == 7
+proved-numeric-argument-fact gpr_and_spec_1 7 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_and_spec_2 (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact gpr_and_spec_2 (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact gpr_and_spec_2 0 < 3
+proved-numeric-argument-fact gpr_and_spec_2 0 < 7
+proved-numeric-argument-fact gpr_and_spec_2 0 <= 3
+proved-numeric-argument-fact gpr_and_spec_2 0 <= 7
+proved-numeric-argument-fact gpr_and_spec_2 3 <= 3
+proved-numeric-argument-fact gpr_and_spec_2 3 <= 31
+proved-numeric-argument-fact gpr_and_spec_2 3 == 3
+proved-numeric-argument-fact gpr_and_spec_2 3 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_and_spec_2 7 <= 31
+proved-numeric-argument-fact gpr_and_spec_2 7 <= 7
+proved-numeric-argument-fact gpr_and_spec_2 7 == 7
+proved-numeric-argument-fact gpr_and_spec_2 7 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_and_spec_4 (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact gpr_and_spec_4 (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact gpr_and_spec_4 0 < 3
+proved-numeric-argument-fact gpr_and_spec_4 0 < 7
+proved-numeric-argument-fact gpr_and_spec_4 0 <= 3
+proved-numeric-argument-fact gpr_and_spec_4 0 <= 7
+proved-numeric-argument-fact gpr_and_spec_4 3 <= 3
+proved-numeric-argument-fact gpr_and_spec_4 3 <= 31
+proved-numeric-argument-fact gpr_and_spec_4 3 == 3
+proved-numeric-argument-fact gpr_and_spec_4 3 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_and_spec_4 7 <= 31
+proved-numeric-argument-fact gpr_and_spec_4 7 <= 7
+proved-numeric-argument-fact gpr_and_spec_4 7 == 7
+proved-numeric-argument-fact gpr_and_spec_4 7 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_and_spec_8 (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact gpr_and_spec_8 (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact gpr_and_spec_8 0 < 3
+proved-numeric-argument-fact gpr_and_spec_8 0 < 7
+proved-numeric-argument-fact gpr_and_spec_8 0 <= 3
+proved-numeric-argument-fact gpr_and_spec_8 0 <= 7
+proved-numeric-argument-fact gpr_and_spec_8 3 <= 3
+proved-numeric-argument-fact gpr_and_spec_8 3 <= 31
+proved-numeric-argument-fact gpr_and_spec_8 3 == 3
+proved-numeric-argument-fact gpr_and_spec_8 3 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_and_spec_8 7 <= 31
+proved-numeric-argument-fact gpr_and_spec_8 7 <= 7
+proved-numeric-argument-fact gpr_and_spec_8 7 == 7
+proved-numeric-argument-fact gpr_and_spec_8 7 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137905# <= 1
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137905# <= 15
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137905# <= 2
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137905# <= 3
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137905# <= 31
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137905# <= 4
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137905# <= 7
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137905# <= 8
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137905# in {1, 2, 4, 8}
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137906# <= 0
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137906# <= 1
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137906# <= 15
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137906# <= 3
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137906# <= 31
+proved-numeric-argument-fact gpr_arith_logic_spec 'ex137906# <= 7
+proved-numeric-argument-fact gpr_arith_logic_spec ('ex137906# == 0 | 'ex137906# == 4)
+proved-numeric-argument-fact gpr_arith_logic_spec (0 <= 'ex137906# & 'ex137906# <= 8)
+proved-numeric-argument-fact gpr_arith_logic_spec (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact gpr_arith_logic_spec 0 < 'ex137905#
+proved-numeric-argument-fact gpr_arith_logic_spec 0 < 'ex137906#
+proved-numeric-argument-fact gpr_arith_logic_spec 0 <= 'ex137905#
+proved-numeric-argument-fact gpr_arith_logic_spec 0 <= 'ex137906#
+proved-numeric-argument-fact gpr_arith_logic_spec 0 <= 0
+proved-numeric-argument-fact gpr_arith_logic_spec 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact gpr_arith_logic_spec 1 <= 'ex137905#
+proved-numeric-argument-fact gpr_arith_logic_spec 2 <= 'ex137905#
+proved-numeric-argument-fact gpr_arith_logic_spec 3 <= 3
+proved-numeric-argument-fact gpr_arith_logic_spec 4 <= 'ex137905#
+proved-numeric-argument-fact gpr_arith_logic_spec 8 <= 'ex137905#
+proved-numeric-argument-fact gpr_arith_logic_spec_1 'ex137901# <= 0
+proved-numeric-argument-fact gpr_arith_logic_spec_1 'ex137901# <= 1
+proved-numeric-argument-fact gpr_arith_logic_spec_1 'ex137901# <= 15
+proved-numeric-argument-fact gpr_arith_logic_spec_1 'ex137901# <= 3
+proved-numeric-argument-fact gpr_arith_logic_spec_1 'ex137901# <= 31
+proved-numeric-argument-fact gpr_arith_logic_spec_1 'ex137901# <= 7
+proved-numeric-argument-fact gpr_arith_logic_spec_1 'ex137901# in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_arith_logic_spec_1 ('ex137901# == 0 | 'ex137901# == 4)
+proved-numeric-argument-fact gpr_arith_logic_spec_1 (0 <= 'ex137901# & 'ex137901# <= 8)
+proved-numeric-argument-fact gpr_arith_logic_spec_1 0 < 'ex137901#
+proved-numeric-argument-fact gpr_arith_logic_spec_1 0 < 1
+proved-numeric-argument-fact gpr_arith_logic_spec_1 0 <= 'ex137901#
+proved-numeric-argument-fact gpr_arith_logic_spec_1 0 <= 1
+proved-numeric-argument-fact gpr_arith_logic_spec_1 1 <= 1
+proved-numeric-argument-fact gpr_arith_logic_spec_1 1 <= 31
+proved-numeric-argument-fact gpr_arith_logic_spec_1 1 == 1
+proved-numeric-argument-fact gpr_arith_logic_spec_1 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact gpr_arith_logic_spec_2 'ex137902# <= 0
+proved-numeric-argument-fact gpr_arith_logic_spec_2 'ex137902# <= 1
+proved-numeric-argument-fact gpr_arith_logic_spec_2 'ex137902# <= 15
+proved-numeric-argument-fact gpr_arith_logic_spec_2 'ex137902# <= 3
+proved-numeric-argument-fact gpr_arith_logic_spec_2 'ex137902# <= 31
+proved-numeric-argument-fact gpr_arith_logic_spec_2 'ex137902# <= 7
+proved-numeric-argument-fact gpr_arith_logic_spec_2 'ex137902# in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_arith_logic_spec_2 ('ex137902# == 0 | 'ex137902# == 4)
+proved-numeric-argument-fact gpr_arith_logic_spec_2 (0 <= 'ex137902# & 'ex137902# <= 8)
+proved-numeric-argument-fact gpr_arith_logic_spec_2 0 < 'ex137902#
+proved-numeric-argument-fact gpr_arith_logic_spec_2 0 < 2
+proved-numeric-argument-fact gpr_arith_logic_spec_2 0 <= 'ex137902#
+proved-numeric-argument-fact gpr_arith_logic_spec_2 0 <= 2
+proved-numeric-argument-fact gpr_arith_logic_spec_2 2 <= 2
+proved-numeric-argument-fact gpr_arith_logic_spec_2 2 <= 3
+proved-numeric-argument-fact gpr_arith_logic_spec_2 2 <= 31
+proved-numeric-argument-fact gpr_arith_logic_spec_2 2 == 2
+proved-numeric-argument-fact gpr_arith_logic_spec_2 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact gpr_arith_logic_spec_4 'ex137903# <= 0
+proved-numeric-argument-fact gpr_arith_logic_spec_4 'ex137903# <= 1
+proved-numeric-argument-fact gpr_arith_logic_spec_4 'ex137903# <= 15
+proved-numeric-argument-fact gpr_arith_logic_spec_4 'ex137903# <= 3
+proved-numeric-argument-fact gpr_arith_logic_spec_4 'ex137903# <= 31
+proved-numeric-argument-fact gpr_arith_logic_spec_4 'ex137903# <= 7
+proved-numeric-argument-fact gpr_arith_logic_spec_4 'ex137903# in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_arith_logic_spec_4 ('ex137903# == 0 | 'ex137903# == 4)
+proved-numeric-argument-fact gpr_arith_logic_spec_4 (0 <= 'ex137903# & 'ex137903# <= 8)
+proved-numeric-argument-fact gpr_arith_logic_spec_4 0 < 'ex137903#
+proved-numeric-argument-fact gpr_arith_logic_spec_4 0 < 4
+proved-numeric-argument-fact gpr_arith_logic_spec_4 0 <= 'ex137903#
+proved-numeric-argument-fact gpr_arith_logic_spec_4 0 <= 4
+proved-numeric-argument-fact gpr_arith_logic_spec_4 4 <= 31
+proved-numeric-argument-fact gpr_arith_logic_spec_4 4 <= 4
+proved-numeric-argument-fact gpr_arith_logic_spec_4 4 <= 7
+proved-numeric-argument-fact gpr_arith_logic_spec_4 4 == 4
+proved-numeric-argument-fact gpr_arith_logic_spec_4 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact gpr_arith_logic_spec_8 'ex137904# <= 0
+proved-numeric-argument-fact gpr_arith_logic_spec_8 'ex137904# <= 1
+proved-numeric-argument-fact gpr_arith_logic_spec_8 'ex137904# <= 15
+proved-numeric-argument-fact gpr_arith_logic_spec_8 'ex137904# <= 3
+proved-numeric-argument-fact gpr_arith_logic_spec_8 'ex137904# <= 31
+proved-numeric-argument-fact gpr_arith_logic_spec_8 'ex137904# <= 7
+proved-numeric-argument-fact gpr_arith_logic_spec_8 'ex137904# in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_arith_logic_spec_8 ('ex137904# == 0 | 'ex137904# == 4)
+proved-numeric-argument-fact gpr_arith_logic_spec_8 (0 <= 'ex137904# & 'ex137904# <= 8)
+proved-numeric-argument-fact gpr_arith_logic_spec_8 0 < 'ex137904#
+proved-numeric-argument-fact gpr_arith_logic_spec_8 0 < 8
+proved-numeric-argument-fact gpr_arith_logic_spec_8 0 <= 'ex137904#
+proved-numeric-argument-fact gpr_arith_logic_spec_8 0 <= 8
+proved-numeric-argument-fact gpr_arith_logic_spec_8 8 <= 15
+proved-numeric-argument-fact gpr_arith_logic_spec_8 8 <= 31
+proved-numeric-argument-fact gpr_arith_logic_spec_8 8 <= 8
+proved-numeric-argument-fact gpr_arith_logic_spec_8 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact gpr_or_spec_1 (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact gpr_or_spec_1 0 < 1
+proved-numeric-argument-fact gpr_or_spec_1 0 <= 1
+proved-numeric-argument-fact gpr_or_spec_1 1 <= 1
+proved-numeric-argument-fact gpr_or_spec_1 1 <= 31
+proved-numeric-argument-fact gpr_or_spec_1 1 == 1
+proved-numeric-argument-fact gpr_or_spec_1 1 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_or_spec_2 (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact gpr_or_spec_2 0 < 1
+proved-numeric-argument-fact gpr_or_spec_2 0 <= 1
+proved-numeric-argument-fact gpr_or_spec_2 1 <= 1
+proved-numeric-argument-fact gpr_or_spec_2 1 <= 31
+proved-numeric-argument-fact gpr_or_spec_2 1 == 1
+proved-numeric-argument-fact gpr_or_spec_2 1 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_or_spec_4 (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact gpr_or_spec_4 0 < 1
+proved-numeric-argument-fact gpr_or_spec_4 0 <= 1
+proved-numeric-argument-fact gpr_or_spec_4 1 <= 1
+proved-numeric-argument-fact gpr_or_spec_4 1 <= 31
+proved-numeric-argument-fact gpr_or_spec_4 1 == 1
+proved-numeric-argument-fact gpr_or_spec_4 1 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_or_spec_8 (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact gpr_or_spec_8 0 < 1
+proved-numeric-argument-fact gpr_or_spec_8 0 <= 1
+proved-numeric-argument-fact gpr_or_spec_8 1 <= 1
+proved-numeric-argument-fact gpr_or_spec_8 1 <= 31
+proved-numeric-argument-fact gpr_or_spec_8 1 == 1
+proved-numeric-argument-fact gpr_or_spec_8 1 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sbb_spec_1 (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact gpr_sbb_spec_1 0 < 6
+proved-numeric-argument-fact gpr_sbb_spec_1 0 <= 6
+proved-numeric-argument-fact gpr_sbb_spec_1 6 <= 31
+proved-numeric-argument-fact gpr_sbb_spec_1 6 <= 7
+proved-numeric-argument-fact gpr_sbb_spec_1 6 == 6
+proved-numeric-argument-fact gpr_sbb_spec_1 6 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sbb_spec_2 (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact gpr_sbb_spec_2 0 < 6
+proved-numeric-argument-fact gpr_sbb_spec_2 0 <= 6
+proved-numeric-argument-fact gpr_sbb_spec_2 6 <= 31
+proved-numeric-argument-fact gpr_sbb_spec_2 6 <= 7
+proved-numeric-argument-fact gpr_sbb_spec_2 6 == 6
+proved-numeric-argument-fact gpr_sbb_spec_2 6 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sbb_spec_4 (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact gpr_sbb_spec_4 0 < 6
+proved-numeric-argument-fact gpr_sbb_spec_4 0 <= 6
+proved-numeric-argument-fact gpr_sbb_spec_4 6 <= 31
+proved-numeric-argument-fact gpr_sbb_spec_4 6 <= 7
+proved-numeric-argument-fact gpr_sbb_spec_4 6 == 6
+proved-numeric-argument-fact gpr_sbb_spec_4 6 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sbb_spec_8 (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact gpr_sbb_spec_8 0 < 6
+proved-numeric-argument-fact gpr_sbb_spec_8 0 <= 6
+proved-numeric-argument-fact gpr_sbb_spec_8 6 <= 31
+proved-numeric-argument-fact gpr_sbb_spec_8 6 <= 7
+proved-numeric-argument-fact gpr_sbb_spec_8 6 == 6
+proved-numeric-argument-fact gpr_sbb_spec_8 6 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sub_spec_1 (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact gpr_sub_spec_1 (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact gpr_sub_spec_1 0 < 4
+proved-numeric-argument-fact gpr_sub_spec_1 0 < 8
+proved-numeric-argument-fact gpr_sub_spec_1 0 <= 4
+proved-numeric-argument-fact gpr_sub_spec_1 0 <= 8
+proved-numeric-argument-fact gpr_sub_spec_1 4 <= 31
+proved-numeric-argument-fact gpr_sub_spec_1 4 <= 7
+proved-numeric-argument-fact gpr_sub_spec_1 4 == 4
+proved-numeric-argument-fact gpr_sub_spec_1 4 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sub_spec_1 8 <= 15
+proved-numeric-argument-fact gpr_sub_spec_1 8 <= 31
+proved-numeric-argument-fact gpr_sub_spec_1 8 == 8
+proved-numeric-argument-fact gpr_sub_spec_1 8 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sub_spec_2 (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact gpr_sub_spec_2 (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact gpr_sub_spec_2 0 < 4
+proved-numeric-argument-fact gpr_sub_spec_2 0 < 8
+proved-numeric-argument-fact gpr_sub_spec_2 0 <= 4
+proved-numeric-argument-fact gpr_sub_spec_2 0 <= 8
+proved-numeric-argument-fact gpr_sub_spec_2 4 <= 31
+proved-numeric-argument-fact gpr_sub_spec_2 4 <= 7
+proved-numeric-argument-fact gpr_sub_spec_2 4 == 4
+proved-numeric-argument-fact gpr_sub_spec_2 4 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sub_spec_2 8 <= 15
+proved-numeric-argument-fact gpr_sub_spec_2 8 <= 31
+proved-numeric-argument-fact gpr_sub_spec_2 8 == 8
+proved-numeric-argument-fact gpr_sub_spec_2 8 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sub_spec_4 (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact gpr_sub_spec_4 (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact gpr_sub_spec_4 0 < 4
+proved-numeric-argument-fact gpr_sub_spec_4 0 < 8
+proved-numeric-argument-fact gpr_sub_spec_4 0 <= 4
+proved-numeric-argument-fact gpr_sub_spec_4 0 <= 8
+proved-numeric-argument-fact gpr_sub_spec_4 4 <= 31
+proved-numeric-argument-fact gpr_sub_spec_4 4 <= 7
+proved-numeric-argument-fact gpr_sub_spec_4 4 == 4
+proved-numeric-argument-fact gpr_sub_spec_4 4 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sub_spec_4 8 <= 15
+proved-numeric-argument-fact gpr_sub_spec_4 8 <= 31
+proved-numeric-argument-fact gpr_sub_spec_4 8 == 8
+proved-numeric-argument-fact gpr_sub_spec_4 8 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sub_spec_8 (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact gpr_sub_spec_8 (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact gpr_sub_spec_8 0 < 4
+proved-numeric-argument-fact gpr_sub_spec_8 0 < 8
+proved-numeric-argument-fact gpr_sub_spec_8 0 <= 4
+proved-numeric-argument-fact gpr_sub_spec_8 0 <= 8
+proved-numeric-argument-fact gpr_sub_spec_8 4 <= 31
+proved-numeric-argument-fact gpr_sub_spec_8 4 <= 7
+proved-numeric-argument-fact gpr_sub_spec_8 4 == 4
+proved-numeric-argument-fact gpr_sub_spec_8 4 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_sub_spec_8 8 <= 15
+proved-numeric-argument-fact gpr_sub_spec_8 8 <= 31
+proved-numeric-argument-fact gpr_sub_spec_8 8 == 8
+proved-numeric-argument-fact gpr_sub_spec_8 8 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_xor_spec_1 (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact gpr_xor_spec_1 0 < 5
+proved-numeric-argument-fact gpr_xor_spec_1 0 <= 5
+proved-numeric-argument-fact gpr_xor_spec_1 5 <= 31
+proved-numeric-argument-fact gpr_xor_spec_1 5 <= 7
+proved-numeric-argument-fact gpr_xor_spec_1 5 == 5
+proved-numeric-argument-fact gpr_xor_spec_1 5 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_xor_spec_2 (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact gpr_xor_spec_2 0 < 5
+proved-numeric-argument-fact gpr_xor_spec_2 0 <= 5
+proved-numeric-argument-fact gpr_xor_spec_2 5 <= 31
+proved-numeric-argument-fact gpr_xor_spec_2 5 <= 7
+proved-numeric-argument-fact gpr_xor_spec_2 5 == 5
+proved-numeric-argument-fact gpr_xor_spec_2 5 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_xor_spec_4 (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact gpr_xor_spec_4 0 < 5
+proved-numeric-argument-fact gpr_xor_spec_4 0 <= 5
+proved-numeric-argument-fact gpr_xor_spec_4 5 <= 31
+proved-numeric-argument-fact gpr_xor_spec_4 5 <= 7
+proved-numeric-argument-fact gpr_xor_spec_4 5 == 5
+proved-numeric-argument-fact gpr_xor_spec_4 5 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact gpr_xor_spec_8 (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact gpr_xor_spec_8 0 < 5
+proved-numeric-argument-fact gpr_xor_spec_8 0 <= 5
+proved-numeric-argument-fact gpr_xor_spec_8 5 <= 31
+proved-numeric-argument-fact gpr_xor_spec_8 5 <= 7
+proved-numeric-argument-fact gpr_xor_spec_8 5 == 5
+proved-numeric-argument-fact gpr_xor_spec_8 5 in {0, 1, 2, 3, 4, 5, 6, 7, 8}
+proved-numeric-argument-fact imul_spec 'ex137987# <= 1
+proved-numeric-argument-fact imul_spec 'ex137987# <= 15
+proved-numeric-argument-fact imul_spec 'ex137987# <= 2
+proved-numeric-argument-fact imul_spec 'ex137987# <= 3
+proved-numeric-argument-fact imul_spec 'ex137987# <= 31
+proved-numeric-argument-fact imul_spec 'ex137987# <= 4
+proved-numeric-argument-fact imul_spec 'ex137987# <= 7
+proved-numeric-argument-fact imul_spec 'ex137987# <= 8
+proved-numeric-argument-fact imul_spec 'ex137987# in {1, 2, 4, 8}
+proved-numeric-argument-fact imul_spec (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact imul_spec 0 < 'ex137987#
+proved-numeric-argument-fact imul_spec 0 <= 'ex137987#
+proved-numeric-argument-fact imul_spec 0 <= 0
+proved-numeric-argument-fact imul_spec 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact imul_spec 1 <= 'ex137987#
+proved-numeric-argument-fact imul_spec 2 <= 'ex137987#
+proved-numeric-argument-fact imul_spec 3 <= 3
+proved-numeric-argument-fact imul_spec 4 <= 'ex137987#
+proved-numeric-argument-fact imul_spec 8 <= 'ex137987#
+proved-numeric-argument-fact imul_spec_16 0 < 2
+proved-numeric-argument-fact imul_spec_16 0 <= 2
+proved-numeric-argument-fact imul_spec_16 2 <= 2
+proved-numeric-argument-fact imul_spec_16 2 <= 3
+proved-numeric-argument-fact imul_spec_16 2 <= 31
+proved-numeric-argument-fact imul_spec_16 2 == 2
+proved-numeric-argument-fact imul_spec_16 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact imul_spec_32 0 < 4
+proved-numeric-argument-fact imul_spec_32 0 <= 4
+proved-numeric-argument-fact imul_spec_32 4 <= 31
+proved-numeric-argument-fact imul_spec_32 4 <= 4
+proved-numeric-argument-fact imul_spec_32 4 <= 7
+proved-numeric-argument-fact imul_spec_32 4 == 4
+proved-numeric-argument-fact imul_spec_32 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact imul_spec_64 0 < 8
+proved-numeric-argument-fact imul_spec_64 0 <= 8
+proved-numeric-argument-fact imul_spec_64 8 <= 15
+proved-numeric-argument-fact imul_spec_64 8 <= 31
+proved-numeric-argument-fact imul_spec_64 8 <= 8
+proved-numeric-argument-fact imul_spec_64 8 == 8
+proved-numeric-argument-fact imul_spec_64 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact imul_spec_8 0 < 1
+proved-numeric-argument-fact imul_spec_8 0 <= 1
+proved-numeric-argument-fact imul_spec_8 1 <= 1
+proved-numeric-argument-fact imul_spec_8 1 <= 31
+proved-numeric-argument-fact imul_spec_8 1 == 1
+proved-numeric-argument-fact imul_spec_8 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact isEven 'ex137776# <= 255
+proved-numeric-argument-fact isEven (0 <= 'ex137776# & 'ex137776# <= (2 ^ 8 - 1))
+proved-numeric-argument-fact isEven 0 < 'ex137776#
+proved-numeric-argument-fact isEven 0 <= 'ex137776#
+proved-numeric-argument-fact isEven not('ex137776# < 0)
+proved-numeric-argument-fact isEven not('ex137776# == 0)
+proved-numeric-argument-fact is_some (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact is_some (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact is_some (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact is_some (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact is_some (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact is_some (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact is_some (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact is_some (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact is_some (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact is_some (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact is_some 0 < 1
+proved-numeric-argument-fact is_some 0 < 2
+proved-numeric-argument-fact is_some 0 < 3
+proved-numeric-argument-fact is_some 0 < 4
+proved-numeric-argument-fact is_some 0 < 5
+proved-numeric-argument-fact is_some 0 < 6
+proved-numeric-argument-fact is_some 0 < 7
+proved-numeric-argument-fact is_some 0 < 8
+proved-numeric-argument-fact is_some 0 <= 0
+proved-numeric-argument-fact is_some 0 <= 1
+proved-numeric-argument-fact is_some 0 <= 2
+proved-numeric-argument-fact is_some 0 <= 3
+proved-numeric-argument-fact is_some 0 <= 31
+proved-numeric-argument-fact is_some 0 <= 4
+proved-numeric-argument-fact is_some 0 <= 5
+proved-numeric-argument-fact is_some 0 <= 6
+proved-numeric-argument-fact is_some 0 <= 7
+proved-numeric-argument-fact is_some 0 <= 8
+proved-numeric-argument-fact is_some 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact is_some 1 <= 1
+proved-numeric-argument-fact is_some 1 <= 31
+proved-numeric-argument-fact is_some 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact is_some 2 <= 2
+proved-numeric-argument-fact is_some 2 <= 3
+proved-numeric-argument-fact is_some 2 <= 31
+proved-numeric-argument-fact is_some 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact is_some 3 <= 3
+proved-numeric-argument-fact is_some 3 <= 31
+proved-numeric-argument-fact is_some 4 <= 31
+proved-numeric-argument-fact is_some 4 <= 4
+proved-numeric-argument-fact is_some 4 <= 7
+proved-numeric-argument-fact is_some 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact is_some 5 <= 31
+proved-numeric-argument-fact is_some 5 <= 7
+proved-numeric-argument-fact is_some 6 <= 31
+proved-numeric-argument-fact is_some 6 <= 7
+proved-numeric-argument-fact is_some 7 <= 31
+proved-numeric-argument-fact is_some 7 <= 7
+proved-numeric-argument-fact is_some 8 <= 15
+proved-numeric-argument-fact is_some 8 <= 31
+proved-numeric-argument-fact is_some 8 <= 8
+proved-numeric-argument-fact is_some 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact logbitp_bits 'pos <= 3
+proved-numeric-argument-fact logbitp_bits 'pos <= 31
+proved-numeric-argument-fact logbitp_bits (0 <= 'pos & 'pos <= 3)
+proved-numeric-argument-fact logbitp_bits 0 < 'pos
+proved-numeric-argument-fact logbitp_bits 0 <= 'pos
+proved-numeric-argument-fact logbitp_int 'ex137789# <= 0
+proved-numeric-argument-fact logbitp_int 'ex137789# <= 31
+proved-numeric-argument-fact logbitp_int 'ex137789# >= 0
+proved-numeric-argument-fact logbitp_int 0 <= 'ex137789#
+proved-numeric-argument-fact logcount_int 'ex137794# <= 255
+proved-numeric-argument-fact logcount_int (0 <= 'ex137794# & 'ex137794# <= (2 ^ 8 - 1))
+proved-numeric-argument-fact logcount_int 0 <= 'ex137794#
+proved-numeric-argument-fact loghead_bits 'n <= 15
+proved-numeric-argument-fact loghead_bits 'n <= 31
+proved-numeric-argument-fact loghead_bits 0 < 'n
+proved-numeric-argument-fact loghead_bits 0 <= 'n
+proved-numeric-argument-fact mul_spec 'ex137986# <= 1
+proved-numeric-argument-fact mul_spec 'ex137986# <= 15
+proved-numeric-argument-fact mul_spec 'ex137986# <= 2
+proved-numeric-argument-fact mul_spec 'ex137986# <= 3
+proved-numeric-argument-fact mul_spec 'ex137986# <= 31
+proved-numeric-argument-fact mul_spec 'ex137986# <= 4
+proved-numeric-argument-fact mul_spec 'ex137986# <= 7
+proved-numeric-argument-fact mul_spec 'ex137986# <= 8
+proved-numeric-argument-fact mul_spec 'ex137986# in {1, 2, 4, 8}
+proved-numeric-argument-fact mul_spec (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact mul_spec 0 < 'ex137986#
+proved-numeric-argument-fact mul_spec 0 <= 'ex137986#
+proved-numeric-argument-fact mul_spec 0 <= 0
+proved-numeric-argument-fact mul_spec 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact mul_spec 1 <= 'ex137986#
+proved-numeric-argument-fact mul_spec 2 <= 'ex137986#
+proved-numeric-argument-fact mul_spec 3 <= 3
+proved-numeric-argument-fact mul_spec 4 <= 'ex137986#
+proved-numeric-argument-fact mul_spec 8 <= 'ex137986#
+proved-numeric-argument-fact mul_spec_16 0 < 2
+proved-numeric-argument-fact mul_spec_16 0 <= 2
+proved-numeric-argument-fact mul_spec_16 2 <= 2
+proved-numeric-argument-fact mul_spec_16 2 <= 3
+proved-numeric-argument-fact mul_spec_16 2 <= 31
+proved-numeric-argument-fact mul_spec_16 2 == 2
+proved-numeric-argument-fact mul_spec_16 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact mul_spec_32 0 < 4
+proved-numeric-argument-fact mul_spec_32 0 <= 4
+proved-numeric-argument-fact mul_spec_32 4 <= 31
+proved-numeric-argument-fact mul_spec_32 4 <= 4
+proved-numeric-argument-fact mul_spec_32 4 <= 7
+proved-numeric-argument-fact mul_spec_32 4 == 4
+proved-numeric-argument-fact mul_spec_32 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact mul_spec_64 0 < 8
+proved-numeric-argument-fact mul_spec_64 0 <= 8
+proved-numeric-argument-fact mul_spec_64 8 <= 15
+proved-numeric-argument-fact mul_spec_64 8 <= 31
+proved-numeric-argument-fact mul_spec_64 8 <= 8
+proved-numeric-argument-fact mul_spec_64 8 == 8
+proved-numeric-argument-fact mul_spec_64 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact mul_spec_8 0 < 1
+proved-numeric-argument-fact mul_spec_8 0 <= 1
+proved-numeric-argument-fact mul_spec_8 1 <= 1
+proved-numeric-argument-fact mul_spec_8 1 <= 31
+proved-numeric-argument-fact mul_spec_8 1 == 1
+proved-numeric-argument-fact mul_spec_8 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact pf_spec16 0 <= 0
+proved-numeric-argument-fact pf_spec16 0 in {0}
+proved-numeric-argument-fact pf_spec32 0 <= 0
+proved-numeric-argument-fact pf_spec32 0 in {0}
+proved-numeric-argument-fact pf_spec64 0 <= 0
+proved-numeric-argument-fact pf_spec64 0 in {0}
+proved-numeric-argument-fact pf_spec8 0 <= 0
+proved-numeric-argument-fact pf_spec8 0 in {0}
+proved-numeric-argument-fact reg_index (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact reg_index (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact reg_index (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact reg_index (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact reg_index (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact reg_index (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact reg_index (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact reg_index (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact reg_index (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact reg_index (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact reg_index 0 < 1
+proved-numeric-argument-fact reg_index 0 < 2
+proved-numeric-argument-fact reg_index 0 < 3
+proved-numeric-argument-fact reg_index 0 < 4
+proved-numeric-argument-fact reg_index 0 < 5
+proved-numeric-argument-fact reg_index 0 < 6
+proved-numeric-argument-fact reg_index 0 < 7
+proved-numeric-argument-fact reg_index 0 < 8
+proved-numeric-argument-fact reg_index 0 <= 0
+proved-numeric-argument-fact reg_index 0 <= 1
+proved-numeric-argument-fact reg_index 0 <= 2
+proved-numeric-argument-fact reg_index 0 <= 3
+proved-numeric-argument-fact reg_index 0 <= 31
+proved-numeric-argument-fact reg_index 0 <= 4
+proved-numeric-argument-fact reg_index 0 <= 5
+proved-numeric-argument-fact reg_index 0 <= 6
+proved-numeric-argument-fact reg_index 0 <= 7
+proved-numeric-argument-fact reg_index 0 <= 8
+proved-numeric-argument-fact reg_index 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact reg_index 1 <= 1
+proved-numeric-argument-fact reg_index 1 <= 31
+proved-numeric-argument-fact reg_index 1 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact reg_index 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact reg_index 2 <= 2
+proved-numeric-argument-fact reg_index 2 <= 3
+proved-numeric-argument-fact reg_index 2 <= 31
+proved-numeric-argument-fact reg_index 2 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact reg_index 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact reg_index 3 <= 3
+proved-numeric-argument-fact reg_index 3 <= 31
+proved-numeric-argument-fact reg_index 4 <= 31
+proved-numeric-argument-fact reg_index 4 <= 4
+proved-numeric-argument-fact reg_index 4 <= 7
+proved-numeric-argument-fact reg_index 4 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact reg_index 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact reg_index 5 <= 31
+proved-numeric-argument-fact reg_index 5 <= 7
+proved-numeric-argument-fact reg_index 6 <= 31
+proved-numeric-argument-fact reg_index 6 <= 7
+proved-numeric-argument-fact reg_index 7 <= 31
+proved-numeric-argument-fact reg_index 7 <= 7
+proved-numeric-argument-fact reg_index 8 <= 15
+proved-numeric-argument-fact reg_index 8 <= 31
+proved-numeric-argument-fact reg_index 8 <= 8
+proved-numeric-argument-fact reg_index 8 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact reg_index 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact reg_index not(0 == 8)
+proved-numeric-argument-fact reg_index not(1 == 8)
+proved-numeric-argument-fact reg_index not(2 == 8)
+proved-numeric-argument-fact reg_index not(3 == 8)
+proved-numeric-argument-fact reg_index not(4 == 8)
+proved-numeric-argument-fact reg_index not(5 == 8)
+proved-numeric-argument-fact reg_index not(6 == 8)
+proved-numeric-argument-fact rgfi 'ex137857# <= 15
+proved-numeric-argument-fact rgfi 'ex137857# <= 31
+proved-numeric-argument-fact rgfi (0 <= 'ex137857# & 'ex137857# < 16)
+proved-numeric-argument-fact rgfi (0 <= 'ex137857# & 'ex137857# <= 15)
+proved-numeric-argument-fact rgfi 0 <= 'ex137857#
+proved-numeric-argument-fact rgfi_size (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact rgfi_size (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact rgfi_size (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact rgfi_size (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact rgfi_size (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact rgfi_size (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact rgfi_size (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact rgfi_size (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact rgfi_size (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact rgfi_size (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact rgfi_size 0 < 1
+proved-numeric-argument-fact rgfi_size 0 < 2
+proved-numeric-argument-fact rgfi_size 0 < 3
+proved-numeric-argument-fact rgfi_size 0 < 4
+proved-numeric-argument-fact rgfi_size 0 < 5
+proved-numeric-argument-fact rgfi_size 0 < 6
+proved-numeric-argument-fact rgfi_size 0 < 7
+proved-numeric-argument-fact rgfi_size 0 < 8
+proved-numeric-argument-fact rgfi_size 0 <= 0
+proved-numeric-argument-fact rgfi_size 0 <= 1
+proved-numeric-argument-fact rgfi_size 0 <= 2
+proved-numeric-argument-fact rgfi_size 0 <= 3
+proved-numeric-argument-fact rgfi_size 0 <= 31
+proved-numeric-argument-fact rgfi_size 0 <= 4
+proved-numeric-argument-fact rgfi_size 0 <= 5
+proved-numeric-argument-fact rgfi_size 0 <= 6
+proved-numeric-argument-fact rgfi_size 0 <= 7
+proved-numeric-argument-fact rgfi_size 0 <= 8
+proved-numeric-argument-fact rgfi_size 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact rgfi_size 1 <= 1
+proved-numeric-argument-fact rgfi_size 1 <= 31
+proved-numeric-argument-fact rgfi_size 1 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact rgfi_size 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact rgfi_size 2 <= 2
+proved-numeric-argument-fact rgfi_size 2 <= 3
+proved-numeric-argument-fact rgfi_size 2 <= 31
+proved-numeric-argument-fact rgfi_size 2 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact rgfi_size 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact rgfi_size 3 <= 3
+proved-numeric-argument-fact rgfi_size 3 <= 31
+proved-numeric-argument-fact rgfi_size 4 <= 31
+proved-numeric-argument-fact rgfi_size 4 <= 4
+proved-numeric-argument-fact rgfi_size 4 <= 7
+proved-numeric-argument-fact rgfi_size 4 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact rgfi_size 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact rgfi_size 5 <= 31
+proved-numeric-argument-fact rgfi_size 5 <= 7
+proved-numeric-argument-fact rgfi_size 6 <= 31
+proved-numeric-argument-fact rgfi_size 6 <= 7
+proved-numeric-argument-fact rgfi_size 7 <= 31
+proved-numeric-argument-fact rgfi_size 7 <= 7
+proved-numeric-argument-fact rgfi_size 8 <= 15
+proved-numeric-argument-fact rgfi_size 8 <= 31
+proved-numeric-argument-fact rgfi_size 8 <= 8
+proved-numeric-argument-fact rgfi_size 8 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact rgfi_size 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact sail_mask 'len <= 127
+proved-numeric-argument-fact sail_mask 'len <= 15
+proved-numeric-argument-fact sail_mask 'len <= 31
+proved-numeric-argument-fact sail_mask 'len <= 63
+proved-numeric-argument-fact sail_mask ('len >= 0 & 16 >= 0)
+proved-numeric-argument-fact sail_mask ('len >= 0 & 32 >= 0)
+proved-numeric-argument-fact sail_mask ('len >= 0 & 64 >= 0)
+proved-numeric-argument-fact sail_mask (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact sail_mask (1 in {1, 2, 4, 8, 16} & 128 > 0)
+proved-numeric-argument-fact sail_mask (2 in {1, 2, 4, 8, 16} & 128 > 0)
+proved-numeric-argument-fact sail_mask (4 in {1, 2, 4, 8, 16} & 128 > 0)
+proved-numeric-argument-fact sail_mask (8 in {1, 2, 4, 8, 16} & 128 > 0)
+proved-numeric-argument-fact sail_mask 0 < 'len
+proved-numeric-argument-fact sail_mask 0 <= 'len
+proved-numeric-argument-fact sail_mask 0 <= 0
+proved-numeric-argument-fact sail_mask 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact sail_mask 1 <= 1
+proved-numeric-argument-fact sail_mask 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact sail_mask 2 <= 2
+proved-numeric-argument-fact sail_mask 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact sail_mask 3 <= 3
+proved-numeric-argument-fact sail_mask 4 <= 4
+proved-numeric-argument-fact sail_mask 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact sail_mask 8 <= 8
+proved-numeric-argument-fact sail_mask 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact select_operand_size (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact select_operand_size (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact select_operand_size (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact select_operand_size (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact select_operand_size (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact select_operand_size (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact select_operand_size (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact select_operand_size (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact select_operand_size (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact select_operand_size 0 < 1
+proved-numeric-argument-fact select_operand_size 0 < 2
+proved-numeric-argument-fact select_operand_size 0 < 3
+proved-numeric-argument-fact select_operand_size 0 < 4
+proved-numeric-argument-fact select_operand_size 0 < 5
+proved-numeric-argument-fact select_operand_size 0 < 6
+proved-numeric-argument-fact select_operand_size 0 < 7
+proved-numeric-argument-fact select_operand_size 0 < 8
+proved-numeric-argument-fact select_operand_size 0 <= 0
+proved-numeric-argument-fact select_operand_size 0 <= 1
+proved-numeric-argument-fact select_operand_size 0 <= 2
+proved-numeric-argument-fact select_operand_size 0 <= 3
+proved-numeric-argument-fact select_operand_size 0 <= 31
+proved-numeric-argument-fact select_operand_size 0 <= 4
+proved-numeric-argument-fact select_operand_size 0 <= 5
+proved-numeric-argument-fact select_operand_size 0 <= 6
+proved-numeric-argument-fact select_operand_size 0 <= 7
+proved-numeric-argument-fact select_operand_size 0 <= 8
+proved-numeric-argument-fact select_operand_size 1 <= 1
+proved-numeric-argument-fact select_operand_size 1 <= 31
+proved-numeric-argument-fact select_operand_size 2 <= 3
+proved-numeric-argument-fact select_operand_size 2 <= 31
+proved-numeric-argument-fact select_operand_size 3 <= 3
+proved-numeric-argument-fact select_operand_size 3 <= 31
+proved-numeric-argument-fact select_operand_size 4 <= 31
+proved-numeric-argument-fact select_operand_size 4 <= 7
+proved-numeric-argument-fact select_operand_size 5 <= 31
+proved-numeric-argument-fact select_operand_size 5 <= 7
+proved-numeric-argument-fact select_operand_size 6 <= 31
+proved-numeric-argument-fact select_operand_size 6 <= 7
+proved-numeric-argument-fact select_operand_size 7 <= 31
+proved-numeric-argument-fact select_operand_size 7 <= 7
+proved-numeric-argument-fact select_operand_size 8 <= 15
+proved-numeric-argument-fact select_operand_size 8 <= 31
+proved-numeric-argument-fact select_segment_register (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact select_segment_register (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact select_segment_register (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact select_segment_register (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact select_segment_register (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact select_segment_register (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact select_segment_register (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact select_segment_register (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact select_segment_register (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact select_segment_register 0 < 1
+proved-numeric-argument-fact select_segment_register 0 < 2
+proved-numeric-argument-fact select_segment_register 0 < 3
+proved-numeric-argument-fact select_segment_register 0 < 4
+proved-numeric-argument-fact select_segment_register 0 < 5
+proved-numeric-argument-fact select_segment_register 0 < 6
+proved-numeric-argument-fact select_segment_register 0 < 7
+proved-numeric-argument-fact select_segment_register 0 < 8
+proved-numeric-argument-fact select_segment_register 0 <= 0
+proved-numeric-argument-fact select_segment_register 0 <= 1
+proved-numeric-argument-fact select_segment_register 0 <= 2
+proved-numeric-argument-fact select_segment_register 0 <= 3
+proved-numeric-argument-fact select_segment_register 0 <= 31
+proved-numeric-argument-fact select_segment_register 0 <= 4
+proved-numeric-argument-fact select_segment_register 0 <= 5
+proved-numeric-argument-fact select_segment_register 0 <= 6
+proved-numeric-argument-fact select_segment_register 0 <= 7
+proved-numeric-argument-fact select_segment_register 0 <= 8
+proved-numeric-argument-fact select_segment_register 1 <= 1
+proved-numeric-argument-fact select_segment_register 1 <= 31
+proved-numeric-argument-fact select_segment_register 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact select_segment_register 2 <= 2
+proved-numeric-argument-fact select_segment_register 2 <= 3
+proved-numeric-argument-fact select_segment_register 2 <= 31
+proved-numeric-argument-fact select_segment_register 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact select_segment_register 3 <= 3
+proved-numeric-argument-fact select_segment_register 3 <= 31
+proved-numeric-argument-fact select_segment_register 4 <= 31
+proved-numeric-argument-fact select_segment_register 4 <= 4
+proved-numeric-argument-fact select_segment_register 4 <= 7
+proved-numeric-argument-fact select_segment_register 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact select_segment_register 5 <= 31
+proved-numeric-argument-fact select_segment_register 5 <= 7
+proved-numeric-argument-fact select_segment_register 6 <= 31
+proved-numeric-argument-fact select_segment_register 6 <= 7
+proved-numeric-argument-fact select_segment_register 7 <= 31
+proved-numeric-argument-fact select_segment_register 7 <= 7
+proved-numeric-argument-fact select_segment_register 8 <= 15
+proved-numeric-argument-fact select_segment_register 8 <= 31
+proved-numeric-argument-fact select_segment_register 8 <= 8
+proved-numeric-argument-fact select_segment_register 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact sf_spec16 0 <= 0
+proved-numeric-argument-fact sf_spec16 0 in {0}
+proved-numeric-argument-fact sf_spec32 0 <= 0
+proved-numeric-argument-fact sf_spec32 0 in {0}
+proved-numeric-argument-fact sf_spec64 0 <= 0
+proved-numeric-argument-fact sf_spec64 0 in {0}
+proved-numeric-argument-fact sf_spec8 0 <= 0
+proved-numeric-argument-fact sf_spec8 0 in {0}
+proved-numeric-argument-fact signed_byte_p_int 'ex137782# <= 127
+proved-numeric-argument-fact signed_byte_p_int 'ex137782# <= 15
+proved-numeric-argument-fact signed_byte_p_int 'ex137782# <= 31
+proved-numeric-argument-fact signed_byte_p_int 'ex137782# <= 63
+proved-numeric-argument-fact signed_byte_p_int 'ex137782# >= 0
+proved-numeric-argument-fact signed_byte_p_int 'ex137783# <= 255
+proved-numeric-argument-fact signed_byte_p_int (- 2 ^ 16 <= 'ex137783# & 'ex137783# <= (2 ^ 16 - 1))
+proved-numeric-argument-fact signed_byte_p_int (- 2 ^ 32 <= 'ex137783# & 'ex137783# <= (2 ^ 32 - 1))
+proved-numeric-argument-fact signed_byte_p_int (- 2 ^ 64 <= 'ex137783# & 'ex137783# <= (2 ^ 64 - 1))
+proved-numeric-argument-fact signed_byte_p_int (- 2 ^ 8 <= 'ex137783# & 'ex137783# <= (2 ^ 8 - 1))
+proved-numeric-argument-fact signed_byte_p_int 0 < 'ex137782#
+proved-numeric-argument-fact signed_byte_p_int 0 <= 'ex137782#
+proved-numeric-argument-fact trunc 'n <= 1
+proved-numeric-argument-fact trunc 'n <= 15
+proved-numeric-argument-fact trunc 'n <= 2
+proved-numeric-argument-fact trunc 'n <= 3
+proved-numeric-argument-fact trunc 'n <= 31
+proved-numeric-argument-fact trunc 'n <= 4
+proved-numeric-argument-fact trunc 'n <= 7
+proved-numeric-argument-fact trunc 'n <= 8
+proved-numeric-argument-fact trunc 'n in {1, 2, 4, 8}
+proved-numeric-argument-fact trunc (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact trunc 0 < 'n
+proved-numeric-argument-fact trunc 0 <= 'n
+proved-numeric-argument-fact trunc 0 <= 0
+proved-numeric-argument-fact trunc 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact trunc 1 <= 'n
+proved-numeric-argument-fact trunc 2 <= 'n
+proved-numeric-argument-fact trunc 3 <= 3
+proved-numeric-argument-fact trunc 4 <= 'n
+proved-numeric-argument-fact trunc 8 <= 'n
+proved-numeric-argument-fact undef_flg (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact undef_flg 0 <= 0
+proved-numeric-argument-fact undef_flg 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact undef_flg 1 <= 1
+proved-numeric-argument-fact undef_flg 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact undef_flg 2 <= 2
+proved-numeric-argument-fact undef_flg 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact undef_flg 3 <= 3
+proved-numeric-argument-fact undef_flg 4 <= 4
+proved-numeric-argument-fact undef_flg 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact undef_flg 8 <= 8
+proved-numeric-argument-fact undef_flg 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact unsigned_byte_p_int 'ex137779# <= 127
+proved-numeric-argument-fact unsigned_byte_p_int 'ex137779# <= 15
+proved-numeric-argument-fact unsigned_byte_p_int 'ex137779# <= 31
+proved-numeric-argument-fact unsigned_byte_p_int 'ex137779# <= 63
+proved-numeric-argument-fact unsigned_byte_p_int 'ex137779# >= 0
+proved-numeric-argument-fact unsigned_byte_p_int (0 <= 'ex137780# & 'ex137780# <= (2 ^ 17 - 1))
+proved-numeric-argument-fact unsigned_byte_p_int (0 <= 'ex137780# & 'ex137780# <= (2 ^ 33 - 1))
+proved-numeric-argument-fact unsigned_byte_p_int (0 <= 'ex137780# & 'ex137780# <= (2 ^ 65 - 1))
+proved-numeric-argument-fact unsigned_byte_p_int (0 <= 'ex137780# & 'ex137780# <= (2 ^ 9 - 1))
+proved-numeric-argument-fact unsigned_byte_p_int 0 < 'ex137779#
+proved-numeric-argument-fact unsigned_byte_p_int 0 <= 'ex137779#
+proved-numeric-argument-fact unsigned_byte_p_int 0 <= 'ex137780#
+proved-numeric-argument-fact write_iptr (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact write_iptr (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact write_iptr (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact write_iptr (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact write_iptr (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact write_iptr (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact write_iptr (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact write_iptr (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact write_iptr (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact write_iptr (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact write_iptr 0 < 1
+proved-numeric-argument-fact write_iptr 0 < 2
+proved-numeric-argument-fact write_iptr 0 < 3
+proved-numeric-argument-fact write_iptr 0 < 4
+proved-numeric-argument-fact write_iptr 0 < 5
+proved-numeric-argument-fact write_iptr 0 < 6
+proved-numeric-argument-fact write_iptr 0 < 7
+proved-numeric-argument-fact write_iptr 0 < 8
+proved-numeric-argument-fact write_iptr 0 <= 0
+proved-numeric-argument-fact write_iptr 0 <= 1
+proved-numeric-argument-fact write_iptr 0 <= 2
+proved-numeric-argument-fact write_iptr 0 <= 3
+proved-numeric-argument-fact write_iptr 0 <= 31
+proved-numeric-argument-fact write_iptr 0 <= 4
+proved-numeric-argument-fact write_iptr 0 <= 5
+proved-numeric-argument-fact write_iptr 0 <= 6
+proved-numeric-argument-fact write_iptr 0 <= 7
+proved-numeric-argument-fact write_iptr 0 <= 8
+proved-numeric-argument-fact write_iptr 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact write_iptr 1 <= 1
+proved-numeric-argument-fact write_iptr 1 <= 31
+proved-numeric-argument-fact write_iptr 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_iptr 2 <= 2
+proved-numeric-argument-fact write_iptr 2 <= 3
+proved-numeric-argument-fact write_iptr 2 <= 31
+proved-numeric-argument-fact write_iptr 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_iptr 3 <= 3
+proved-numeric-argument-fact write_iptr 3 <= 31
+proved-numeric-argument-fact write_iptr 4 <= 31
+proved-numeric-argument-fact write_iptr 4 <= 4
+proved-numeric-argument-fact write_iptr 4 <= 7
+proved-numeric-argument-fact write_iptr 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_iptr 5 <= 31
+proved-numeric-argument-fact write_iptr 5 <= 7
+proved-numeric-argument-fact write_iptr 6 <= 31
+proved-numeric-argument-fact write_iptr 6 <= 7
+proved-numeric-argument-fact write_iptr 7 <= 31
+proved-numeric-argument-fact write_iptr 7 <= 7
+proved-numeric-argument-fact write_iptr 8 <= 15
+proved-numeric-argument-fact write_iptr 8 <= 31
+proved-numeric-argument-fact write_iptr 8 <= 8
+proved-numeric-argument-fact write_iptr 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_rgfi 'ex137858# <= 15
+proved-numeric-argument-fact write_rgfi 'ex137858# <= 31
+proved-numeric-argument-fact write_rgfi (0 <= 'ex137858# & 'ex137858# < 16)
+proved-numeric-argument-fact write_rgfi (0 <= 'ex137858# & 'ex137858# <= 15)
+proved-numeric-argument-fact write_rgfi 0 <= 'ex137858#
+proved-numeric-argument-fact write_rgfi_size (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact write_rgfi_size (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact write_rgfi_size (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact write_rgfi_size (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact write_rgfi_size (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact write_rgfi_size (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact write_rgfi_size (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact write_rgfi_size (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact write_rgfi_size 0 < 1
+proved-numeric-argument-fact write_rgfi_size 0 < 2
+proved-numeric-argument-fact write_rgfi_size 0 < 3
+proved-numeric-argument-fact write_rgfi_size 0 < 4
+proved-numeric-argument-fact write_rgfi_size 0 < 5
+proved-numeric-argument-fact write_rgfi_size 0 < 6
+proved-numeric-argument-fact write_rgfi_size 0 < 8
+proved-numeric-argument-fact write_rgfi_size 0 <= 0
+proved-numeric-argument-fact write_rgfi_size 0 <= 1
+proved-numeric-argument-fact write_rgfi_size 0 <= 2
+proved-numeric-argument-fact write_rgfi_size 0 <= 3
+proved-numeric-argument-fact write_rgfi_size 0 <= 31
+proved-numeric-argument-fact write_rgfi_size 0 <= 4
+proved-numeric-argument-fact write_rgfi_size 0 <= 5
+proved-numeric-argument-fact write_rgfi_size 0 <= 6
+proved-numeric-argument-fact write_rgfi_size 0 <= 8
+proved-numeric-argument-fact write_rgfi_size 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact write_rgfi_size 1 <= 1
+proved-numeric-argument-fact write_rgfi_size 1 <= 31
+proved-numeric-argument-fact write_rgfi_size 1 == 1
+proved-numeric-argument-fact write_rgfi_size 1 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact write_rgfi_size 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_rgfi_size 2 <= 2
+proved-numeric-argument-fact write_rgfi_size 2 <= 3
+proved-numeric-argument-fact write_rgfi_size 2 <= 31
+proved-numeric-argument-fact write_rgfi_size 2 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact write_rgfi_size 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_rgfi_size 3 <= 3
+proved-numeric-argument-fact write_rgfi_size 3 <= 31
+proved-numeric-argument-fact write_rgfi_size 4 <= 31
+proved-numeric-argument-fact write_rgfi_size 4 <= 4
+proved-numeric-argument-fact write_rgfi_size 4 <= 7
+proved-numeric-argument-fact write_rgfi_size 4 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact write_rgfi_size 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_rgfi_size 5 <= 31
+proved-numeric-argument-fact write_rgfi_size 5 <= 7
+proved-numeric-argument-fact write_rgfi_size 6 <= 31
+proved-numeric-argument-fact write_rgfi_size 6 <= 7
+proved-numeric-argument-fact write_rgfi_size 8 <= 15
+proved-numeric-argument-fact write_rgfi_size 8 <= 31
+proved-numeric-argument-fact write_rgfi_size 8 <= 8
+proved-numeric-argument-fact write_rgfi_size 8 in {1, 2, 4, 6, 8, 10, 16}
+proved-numeric-argument-fact write_rgfi_size 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_rgfi_size not(0 == 8)
+proved-numeric-argument-fact write_rgfi_size not(1 == 8)
+proved-numeric-argument-fact write_rgfi_size not(2 == 8)
+proved-numeric-argument-fact write_rgfi_size not(3 == 8)
+proved-numeric-argument-fact write_rgfi_size not(4 == 8)
+proved-numeric-argument-fact write_rgfi_size not(5 == 8)
+proved-numeric-argument-fact write_rgfi_size not(6 == 8)
+proved-numeric-argument-fact write_user_rflags (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact write_user_rflags (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact write_user_rflags (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact write_user_rflags (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact write_user_rflags (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact write_user_rflags (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact write_user_rflags (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact write_user_rflags (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact write_user_rflags (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact write_user_rflags (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact write_user_rflags 0 < 1
+proved-numeric-argument-fact write_user_rflags 0 < 2
+proved-numeric-argument-fact write_user_rflags 0 < 3
+proved-numeric-argument-fact write_user_rflags 0 < 4
+proved-numeric-argument-fact write_user_rflags 0 < 5
+proved-numeric-argument-fact write_user_rflags 0 < 6
+proved-numeric-argument-fact write_user_rflags 0 < 7
+proved-numeric-argument-fact write_user_rflags 0 < 8
+proved-numeric-argument-fact write_user_rflags 0 <= 0
+proved-numeric-argument-fact write_user_rflags 0 <= 1
+proved-numeric-argument-fact write_user_rflags 0 <= 2
+proved-numeric-argument-fact write_user_rflags 0 <= 3
+proved-numeric-argument-fact write_user_rflags 0 <= 31
+proved-numeric-argument-fact write_user_rflags 0 <= 4
+proved-numeric-argument-fact write_user_rflags 0 <= 5
+proved-numeric-argument-fact write_user_rflags 0 <= 6
+proved-numeric-argument-fact write_user_rflags 0 <= 7
+proved-numeric-argument-fact write_user_rflags 0 <= 8
+proved-numeric-argument-fact write_user_rflags 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact write_user_rflags 1 <= 1
+proved-numeric-argument-fact write_user_rflags 1 <= 31
+proved-numeric-argument-fact write_user_rflags 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_user_rflags 2 <= 2
+proved-numeric-argument-fact write_user_rflags 2 <= 3
+proved-numeric-argument-fact write_user_rflags 2 <= 31
+proved-numeric-argument-fact write_user_rflags 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_user_rflags 3 <= 3
+proved-numeric-argument-fact write_user_rflags 3 <= 31
+proved-numeric-argument-fact write_user_rflags 4 <= 31
+proved-numeric-argument-fact write_user_rflags 4 <= 4
+proved-numeric-argument-fact write_user_rflags 4 <= 7
+proved-numeric-argument-fact write_user_rflags 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact write_user_rflags 5 <= 31
+proved-numeric-argument-fact write_user_rflags 5 <= 7
+proved-numeric-argument-fact write_user_rflags 6 <= 31
+proved-numeric-argument-fact write_user_rflags 6 <= 7
+proved-numeric-argument-fact write_user_rflags 7 <= 31
+proved-numeric-argument-fact write_user_rflags 7 <= 7
+proved-numeric-argument-fact write_user_rflags 8 <= 15
+proved-numeric-argument-fact write_user_rflags 8 <= 31
+proved-numeric-argument-fact write_user_rflags 8 <= 8
+proved-numeric-argument-fact write_user_rflags 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_g_e 'ex137981# <= 0
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_g_e 'ex137981# <= 1
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_g_e 'ex137981# <= 15
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_g_e 'ex137981# <= 3
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_g_e 'ex137981# <= 31
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_g_e 'ex137981# <= 7
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_g_e 0 < 'ex137981#
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_g_e 0 <= 'ex137981#
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_test_e_g 'ex137980# <= 31
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_test_e_g 'ex137980# <= 7
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_test_e_g 0 < 'ex137980#
+proved-numeric-argument-fact x86_add_adc_sub_sbb_or_and_xor_cmp_test_e_g 0 <= 'ex137980#
+proved-numeric-argument-fact x86_fault (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact x86_fault (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact x86_fault (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact x86_fault (0 <= 3 & 3 <= 5)
+proved-numeric-argument-fact x86_fault (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact x86_fault (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact x86_fault (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact x86_fault (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact x86_fault (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact x86_fault (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact x86_fault 0 < 1
+proved-numeric-argument-fact x86_fault 0 < 2
+proved-numeric-argument-fact x86_fault 0 < 3
+proved-numeric-argument-fact x86_fault 0 < 4
+proved-numeric-argument-fact x86_fault 0 < 5
+proved-numeric-argument-fact x86_fault 0 < 6
+proved-numeric-argument-fact x86_fault 0 < 7
+proved-numeric-argument-fact x86_fault 0 < 8
+proved-numeric-argument-fact x86_fault 0 <= 0
+proved-numeric-argument-fact x86_fault 0 <= 1
+proved-numeric-argument-fact x86_fault 0 <= 2
+proved-numeric-argument-fact x86_fault 0 <= 3
+proved-numeric-argument-fact x86_fault 0 <= 31
+proved-numeric-argument-fact x86_fault 0 <= 4
+proved-numeric-argument-fact x86_fault 0 <= 5
+proved-numeric-argument-fact x86_fault 0 <= 6
+proved-numeric-argument-fact x86_fault 0 <= 7
+proved-numeric-argument-fact x86_fault 0 <= 8
+proved-numeric-argument-fact x86_fault 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact x86_fault 1 <= 1
+proved-numeric-argument-fact x86_fault 1 <= 31
+proved-numeric-argument-fact x86_fault 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact x86_fault 2 <= 2
+proved-numeric-argument-fact x86_fault 2 <= 3
+proved-numeric-argument-fact x86_fault 2 <= 31
+proved-numeric-argument-fact x86_fault 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact x86_fault 3 <= 3
+proved-numeric-argument-fact x86_fault 3 <= 31
+proved-numeric-argument-fact x86_fault 4 <= 31
+proved-numeric-argument-fact x86_fault 4 <= 4
+proved-numeric-argument-fact x86_fault 4 <= 7
+proved-numeric-argument-fact x86_fault 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact x86_fault 5 <= 31
+proved-numeric-argument-fact x86_fault 5 <= 7
+proved-numeric-argument-fact x86_fault 6 <= 31
+proved-numeric-argument-fact x86_fault 6 <= 7
+proved-numeric-argument-fact x86_fault 7 <= 31
+proved-numeric-argument-fact x86_fault 7 <= 7
+proved-numeric-argument-fact x86_fault 8 <= 15
+proved-numeric-argument-fact x86_fault 8 <= 31
+proved-numeric-argument-fact x86_fault 8 <= 8
+proved-numeric-argument-fact x86_fault 8 in {1, 2, 4, 8}
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137964# <= 1
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137964# <= 15
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137964# <= 2
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137964# <= 3
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137964# <= 31
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137964# <= 4
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137964# <= 7
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137964# <= 8
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137964# in {1, 2, 4, 8}
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137967# <= 3
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 'ex137967# <= 31
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes (0 <= 'ex137967# & 'ex137967# <= 5)
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes (0 <= 0 & 0 <= 8)
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes (0 <= 1 & 1 <= 8)
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes (0 <= 2 & 2 <= 8)
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes (0 <= 3 & 3 <= 8)
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes (0 <= 4 & 4 <= 8)
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes (0 <= 5 & 5 <= 8)
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes (0 <= 6 & 6 <= 8)
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes (0 <= 7 & 7 <= 8)
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes (0 <= 8 & 8 <= 8)
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 < 'ex137964#
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 < 'ex137967#
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 < 1
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 < 2
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 < 3
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 < 4
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 < 5
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 < 6
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 < 7
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 < 8
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 'ex137964#
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 'ex137967#
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 0
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 1
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 2
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 3
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 31
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 4
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 5
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 6
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 7
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 0 <= 8
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 1 <= 'ex137964#
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 1 <= 1
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 1 <= 31
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 2 <= 'ex137964#
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 2 <= 3
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 2 <= 31
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 3 <= 'ex137967#
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 3 <= 3
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 3 <= 31
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 4 <= 'ex137964#
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 4 <= 31
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 4 <= 7
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 5 <= 31
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 5 <= 7
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 6 <= 31
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 6 <= 7
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 7 <= 31
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 7 <= 7
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 8 <= 'ex137964#
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 8 <= 15
+proved-numeric-argument-fact x86_operand_from_modr_m_and_sib_bytes 8 <= 31
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137968# <= 1
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137968# <= 15
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137968# <= 2
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137968# <= 3
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137968# <= 31
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137968# <= 4
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137968# <= 7
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137968# <= 8
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137968# in {1, 2, 4, 8}
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137971# <= 3
+proved-numeric-argument-fact x86_operand_to_reg_mem 'ex137971# <= 31
+proved-numeric-argument-fact x86_operand_to_reg_mem (0 <= 'ex137971# & 'ex137971# <= 5)
+proved-numeric-argument-fact x86_operand_to_reg_mem 0 < 'ex137968#
+proved-numeric-argument-fact x86_operand_to_reg_mem 0 < 'ex137971#
+proved-numeric-argument-fact x86_operand_to_reg_mem 0 <= 'ex137968#
+proved-numeric-argument-fact x86_operand_to_reg_mem 0 <= 'ex137971#
+proved-numeric-argument-fact x86_operand_to_reg_mem 0 <= 0
+proved-numeric-argument-fact x86_operand_to_reg_mem 0 in {0, 1, 2, 4}
+proved-numeric-argument-fact x86_operand_to_reg_mem 1 <= 'ex137968#
+proved-numeric-argument-fact x86_operand_to_reg_mem 2 <= 'ex137968#
+proved-numeric-argument-fact x86_operand_to_reg_mem 3 <= 'ex137971#
+proved-numeric-argument-fact x86_operand_to_reg_mem 4 <= 'ex137968#
+proved-numeric-argument-fact x86_operand_to_reg_mem 8 <= 'ex137968#
+proved-numeric-argument-fact zf_spec 'ex137896# <= 255
+proved-numeric-argument-fact zf_spec (0 <= 'ex137896# & 'ex137896# <= (2 ^ 16 - 1))
+proved-numeric-argument-fact zf_spec (0 <= 'ex137896# & 'ex137896# <= (2 ^ 32 - 1))
+proved-numeric-argument-fact zf_spec (0 <= 'ex137896# & 'ex137896# <= (2 ^ 64 - 1))
+proved-numeric-argument-fact zf_spec (0 <= 'ex137896# & 'ex137896# <= (2 ^ 8 - 1))
+proved-numeric-argument-fact zf_spec 0 <= 'ex137896#
+proved-numeric-argument-fact zf_spec 0 <= 0
+proved-numeric-argument-fact zf_spec 0 in {0}
+statically-selected-branch ./././././register_readers_and_writers.sail:612:8-612:27 else
+statically-selected-branch ././././decoding_and_spec_utils.sail:175:8-175:32 then
+statically-selected-branch ././././decoding_and_spec_utils.sail:783:12-783:27 then
+statically-selected-branch ././././decoding_and_spec_utils.sail:790:12-790:27 then
+statically-selected-branch ././././decoding_and_spec_utils.sail:791:16-791:31 then
+statically-selected-branch ././././decoding_and_spec_utils.sail:79:8-79:32 then
+statically-selected-branch ././././decoding_and_spec_utils.sail:817:8-817:23 then
+statically-selected-branch ././././decoding_and_spec_utils.sail:914:37-914:61 then
+statically-selected-branch ././././decoding_and_spec_utils.sail:914:8-914:21 else
+statically-selected-branch ././././decoding_and_spec_utils.sail:914:8-914:21 then
+statically-selected-branch ././././decoding_and_spec_utils.sail:915:12-915:56 else
+statically-selected-branch ././././decoding_and_spec_utils.sail:915:12-915:56 then
+statically-selected-branch ././././decoding_and_spec_utils.sail:916:16-916:20 else
+statically-selected-branch ././././decoding_and_spec_utils.sail:917:19-917:66 else
+statically-selected-branch ././././decoding_and_spec_utils.sail:917:19-917:66 then
+statically-selected-branch ././././decoding_and_spec_utils.sail:917:82-917:92 else
+statically-selected-branch ./././arith_and_logic.sail:223:125-223:137 else
+statically-selected-branch ./././arith_and_logic.sail:223:125-223:137 then
+statically-selected-branch ./././arith_and_logic.sail:273:8-273:20 else
+statically-selected-branch ./././arith_and_logic.sail:273:8-273:20 then
+statically-selected-branch ./././arith_and_logic.sail:45:8-45:39 then
+statically-selected-branch ./././arith_and_logic.sail:92:8-92:22 else
+statically-selected-branch ./././arith_and_logic.sail:92:8-92:22 then
+statically-selected-branch memory_accessors.sail:44:8-44:32 then
+statically-selected-branch memory_accessors.sail:45:12-45:15 else
+statically-selected-branch memory_accessors.sail:73:14-73:28 else
+statically-selected-branch memory_accessors.sail:75:21-75:135 else
+statically-selected-branch register_accessors.sail:22:8-22:27 else
+state-computation-root X86_REMS_ADC16_RR
+state-computation-root X86_REMS_ADC32_RR
+state-computation-root X86_REMS_ADC64_RR
+state-computation-root X86_REMS_ADC8_LEGACY_RR
+state-computation-root X86_REMS_ADC8_RR
+state-computation-root X86_REMS_ADD16_RR
+state-computation-root X86_REMS_ADD32_RR
+state-computation-root X86_REMS_ADD64_RR
+state-computation-root X86_REMS_ADD8_LEGACY_RR
+state-computation-root X86_REMS_ADD8_RR
+state-computation-root X86_REMS_AND16_RR
+state-computation-root X86_REMS_AND32_RR
+state-computation-root X86_REMS_AND64_RR
+state-computation-root X86_REMS_AND8_LEGACY_RR
+state-computation-root X86_REMS_AND8_RR
+state-computation-root X86_REMS_CMP16_RR
+state-computation-root X86_REMS_CMP32_RR
+state-computation-root X86_REMS_CMP64_RR
+state-computation-root X86_REMS_CMP8_LEGACY_RR
+state-computation-root X86_REMS_CMP8_RR
+state-computation-root X86_REMS_DEC16_R
+state-computation-root X86_REMS_DEC32_R
+state-computation-root X86_REMS_DEC64_R
+state-computation-root X86_REMS_DEC8_LEGACY_R
+state-computation-root X86_REMS_DEC8_R
+state-computation-root X86_REMS_IMUL116_R
+state-computation-root X86_REMS_IMUL132_R
+state-computation-root X86_REMS_IMUL164_R
+state-computation-root X86_REMS_IMUL16_RR
+state-computation-root X86_REMS_IMUL18_LEGACY_R
+state-computation-root X86_REMS_IMUL18_R
+state-computation-root X86_REMS_IMUL32_RR
+state-computation-root X86_REMS_IMUL64_RR
+state-computation-root X86_REMS_INC16_R
+state-computation-root X86_REMS_INC32_R
+state-computation-root X86_REMS_INC64_R
+state-computation-root X86_REMS_INC8_LEGACY_R
+state-computation-root X86_REMS_INC8_R
+state-computation-root X86_REMS_MUL16_R
+state-computation-root X86_REMS_MUL32_R
+state-computation-root X86_REMS_MUL64_R
+state-computation-root X86_REMS_MUL8_LEGACY_R
+state-computation-root X86_REMS_MUL8_R
+state-computation-root X86_REMS_NEG16_R
+state-computation-root X86_REMS_NEG32_R
+state-computation-root X86_REMS_NEG64_R
+state-computation-root X86_REMS_NEG8_LEGACY_R
+state-computation-root X86_REMS_NEG8_R
+state-computation-root X86_REMS_NOT16_R
+state-computation-root X86_REMS_NOT32_R
+state-computation-root X86_REMS_NOT64_R
+state-computation-root X86_REMS_NOT8_LEGACY_R
+state-computation-root X86_REMS_NOT8_R
+state-computation-root X86_REMS_OR16_RR
+state-computation-root X86_REMS_OR32_RR
+state-computation-root X86_REMS_OR64_RR
+state-computation-root X86_REMS_OR8_LEGACY_RR
+state-computation-root X86_REMS_OR8_RR
+state-computation-root X86_REMS_SBB16_RR
+state-computation-root X86_REMS_SBB32_RR
+state-computation-root X86_REMS_SBB64_RR
+state-computation-root X86_REMS_SBB8_LEGACY_RR
+state-computation-root X86_REMS_SBB8_RR
+state-computation-root X86_REMS_SUB16_RR
+state-computation-root X86_REMS_SUB32_RR
+state-computation-root X86_REMS_SUB64_RR
+state-computation-root X86_REMS_SUB8_LEGACY_RR
+state-computation-root X86_REMS_SUB8_RR
+state-computation-root X86_REMS_TEST16_RR
+state-computation-root X86_REMS_TEST32_RR
+state-computation-root X86_REMS_TEST64_RR
+state-computation-root X86_REMS_TEST8_LEGACY_RR
+state-computation-root X86_REMS_TEST8_RR
+state-computation-root X86_REMS_XOR16_RR
+state-computation-root X86_REMS_XOR32_RR
+state-computation-root X86_REMS_XOR64_RR
+state-computation-root X86_REMS_XOR8_LEGACY_RR
+state-computation-root X86_REMS_XOR8_RR
+state-computation

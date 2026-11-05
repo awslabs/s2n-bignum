@@ -1,0 +1,836 @@
+configured-assumption initial-enum cur_mode=LongMode
+configured-assumption initial-bool has_adx=true
+configured-assumption initial-bool has_bmi2=true
+used-assumption initial-enum cur_mode=LongMode
+used-assumption initial-bool has_adx=true
+used-assumption initial-bool has_bmi2=true
+source-input-boundary HOL_INPUT_decode_execute__fetch__through_fetch_modrm__acquired_scan_prefixes__opcode_132 [fix opcode (result.1) : bitvector(8) = 0b10000100; input 0, parameter __hol_input0 (result.0) : Prefixes] <- scan_prefixes() at insn_dispatch.sail:921:23-921:38 : (Prefixes, bitvector(8)) (replacement: (__hol_input0, 0b10000100))
+source-input-boundary HOL_INPUT_decode_execute__fetch__through_fetch_modrm__acquired_scan_prefixes__opcode_132 [input 1, parameter __hol_input1] <- fetch(1) at insn_modrm.sail:413:22-413:30 : bitvector((8 * 1)) (retained caller: fetch_modrm(pfx) at insn_dispatch.sail:1355:26-1355:42 -> HOL_INPUT_fetch_modrm__fetch, input 0)
+source-input-boundary HOL_INPUT_decode_execute__fetch__through_fetch_modrm__acquired_scan_prefixes__opcode_133 [fix opcode (result.1) : bitvector(8) = 0b10000101; input 0, parameter __hol_input0 (result.0) : Prefixes] <- scan_prefixes() at insn_dispatch.sail:921:23-921:38 : (Prefixes, bitvector(8)) (replacement: (__hol_input0, 0b10000101))
+source-input-boundary HOL_INPUT_decode_execute__fetch__through_fetch_modrm__acquired_scan_prefixes__opcode_133 [input 1, parameter __hol_input1] <- fetch(1) at insn_modrm.sail:413:22-413:30 : bitvector((8 * 1)) (retained caller: fetch_modrm(pfx) at insn_dispatch.sail:1362:26-1362:42 -> HOL_INPUT_fetch_modrm__fetch, input 0)
+source-input-boundary HOL_INPUT_dispatch_2byte_gpr__fetch__op_175__through_fetch_modrm (fix op=175 in dispatch_2byte_gpr) [input 0, parameter __hol_input0] <- fetch(1) at insn_modrm.sail:413:22-413:30 : bitvector((8 * 1)) (retained caller: fetch_modrm(pfx) at insn_baseline.sail:2018:24-2018:40 -> HOL_INPUT_fetch_modrm__fetch, input 0)
+source-input-boundary HOL_INPUT_dispatch_opcode_2byte__fetch__opcode_56__through_fetch_modrm__acquired_fetch__opcode3_246 (fix opcode=56 in dispatch_opcode_2byte) [fix opcode3 (result) : bitvector((8 * 1)) = 0b11110110] <- fetch(1) at insn_dispatch.sail:559:21-559:29 : bitvector((8 * 1)) (replacement: 0b11110110)
+source-input-boundary HOL_INPUT_dispatch_opcode_2byte__fetch__opcode_56__through_fetch_modrm__acquired_fetch__opcode3_246 (fix opcode=56 in dispatch_opcode_2byte) [input 0, parameter __hol_input0] <- fetch(1) at insn_modrm.sail:413:22-413:30 : bitvector((8 * 1)) (retained caller: fetch_modrm(pfx) at insn_dispatch.sail:568:26-568:42 -> HOL_INPUT_fetch_modrm__fetch, input 0)
+source-input-boundary HOL_INPUT_dispatch_vex_0f38_arith__fetch__op_246__through_fetch_modrm (fix op=246 in dispatch_vex_0f38_arith) [input 0, parameter __hol_input0] <- fetch(1) at insn_modrm.sail:413:22-413:30 : bitvector((8 * 1)) (retained caller: fetch_modrm(pfx) at insn_vex_arith.sail:337:25-337:41 -> HOL_INPUT_fetch_modrm__fetch, input 0)
+source-input-boundary HOL_INPUT_fetch_modrm__fetch [input 0, parameter __hol_input0] <- fetch(1) at insn_modrm.sail:413:22-413:30 : bitvector((8 * 1))
+shared-function __id|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|int('n)|int('n)| => sail_hl_shared_x86_2darithmetic__5f_5fid_5f0
+shared-function read_gpr|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('os), int('ex26490#))|bitvector('os)|os=16 => sail_hl_shared_x86_2darithmetic_read_5fgpr_5f1
+shared-function read_gpr_ref|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('os), GPRRef)|bitvector('os)|os=16 => sail_hl_shared_x86_2darithmetic_read_5fgpr_5fref_5f2
+shared-function zero_extend|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('m), bitvector('n))|bitvector('m)| => sail_hl_shared_x86_2darithmetic_zero_5fextend_5f3
+shared-function sign_extend|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('m), bitvector('n))|bitvector('m)| => sail_hl_shared_x86_2darithmetic_sign_5fextend_5f4
+shared-function compute_PF|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector(8)|bitvector(1)| => sail_hl_shared_x86_2darithmetic_compute_5fPF_5f5
+shared-function update_SF_ZF_PF|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|unit|n=16 => sail_hl_shared_x86_2darithmetic_update_5fSF_5fZF_5fPF_5f6
+shared-function update_flags_adc|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n), bitvector(1))|unit|n=16 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadc_5f7
+shared-function read_gpr|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('os), int('ex26490#))|bitvector('os)|os=32 => sail_hl_shared_x86_2darithmetic_read_5fgpr_5f8
+shared-function read_gpr_ref|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('os), GPRRef)|bitvector('os)|os=32 => sail_hl_shared_x86_2darithmetic_read_5fgpr_5fref_5f9
+shared-function update_SF_ZF_PF|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|unit|n=32 => sail_hl_shared_x86_2darithmetic_update_5fSF_5fZF_5fPF_5f10
+shared-function update_flags_adc|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n), bitvector(1))|unit|n=32 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadc_5f11
+shared-function read_gpr|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('os), int('ex26490#))|bitvector('os)|os=64 => sail_hl_shared_x86_2darithmetic_read_5fgpr_5f12
+shared-function read_gpr_ref|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('os), GPRRef)|bitvector('os)|os=64 => sail_hl_shared_x86_2darithmetic_read_5fgpr_5fref_5f13
+shared-function update_SF_ZF_PF|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|unit|n=64 => sail_hl_shared_x86_2darithmetic_update_5fSF_5fZF_5fPF_5f14
+shared-function update_flags_adc|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n), bitvector(1))|unit|n=64 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadc_5f15
+shared-function read_gpr_ref|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('os), GPRRef)|bitvector('os)|os=8 => sail_hl_shared_x86_2darithmetic_read_5fgpr_5fref_5f16
+shared-function update_SF_ZF_PF|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|unit|n=8 => sail_hl_shared_x86_2darithmetic_update_5fSF_5fZF_5fPF_5f17
+shared-function update_flags_adc|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n), bitvector(1))|unit|n=8 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadc_5f18
+shared-function default_prefixes|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|unit|Prefixes| => sail_hl_shared_x86_2darithmetic_default_5fprefixes_5f19
+shared-function get_mandatory_prefix|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|Prefixes|MandatoryPrefix| => sail_hl_shared_x86_2darithmetic_get_5fmandatory_5fprefix_5f20
+shared-function modrm_reg|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector(8), Prefixes)|GPRRef| => sail_hl_shared_x86_2darithmetic_modrm_5freg_5f21
+shared-function get_address_size|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|Prefixes|{('n : Int), 'n in {16, 32, 64}. int('n)}| => sail_hl_shared_x86_2darithmetic_get_5faddress_5fsize_5f22
+shared-function update_flags_add|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=16 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadd_5f23
+shared-function update_flags_add|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=32 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadd_5f24
+shared-function update_flags_add|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=64 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadd_5f25
+shared-function update_flags_add|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=8 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadd_5f26
+shared-function update_flags_sub|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=16 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsub_5f27
+shared-function update_flags_sub|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=32 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsub_5f28
+shared-function update_flags_sub|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=64 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsub_5f29
+shared-function update_flags_sub|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=8 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsub_5f30
+shared-function update_flags_sub_no_cf|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=16 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsub_5fno_5fcf_5f31
+shared-function exec_dec|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('os)|bitvector('os)|os=16 => sail_hl_shared_x86_2darithmetic_exec_5fdec_5f32
+shared-function update_flags_sub_no_cf|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=32 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsub_5fno_5fcf_5f33
+shared-function exec_dec|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('os)|bitvector('os)|os=32 => sail_hl_shared_x86_2darithmetic_exec_5fdec_5f34
+shared-function update_flags_sub_no_cf|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=64 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsub_5fno_5fcf_5f35
+shared-function exec_dec|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('os)|bitvector('os)|os=64 => sail_hl_shared_x86_2darithmetic_exec_5fdec_5f36
+shared-function update_flags_sub_no_cf|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=8 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsub_5fno_5fcf_5f37
+shared-function exec_dec|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('os)|bitvector('os)|os=8 => sail_hl_shared_x86_2darithmetic_exec_5fdec_5f38
+shared-function to_bits_truncate|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('l), int('ex26430#))|bitvector('l)| => sail_hl_shared_x86_2darithmetic_to_5fbits_5ftruncate_5f39
+shared-function or_reduce|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|bitvector(1)| => sail_hl_shared_x86_2darithmetic_or_5freduce_5f40
+shared-function is_nonzero|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|bitvector(1)| => sail_hl_shared_x86_2darithmetic_is_5fnonzero_5f41
+shared-function opsize|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|Prefixes|{('n : Int), 'n in {16, 32, 64}. int('n)}| => sail_hl_shared_x86_2darithmetic_opsize_5f42
+shared-function read_gpr|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('os), int('ex26490#))|bitvector('os)|os=8 => sail_hl_shared_x86_2darithmetic_read_5fgpr_5f43
+shared-function update_flags_add_no_cf|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=16 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadd_5fno_5fcf_5f44
+shared-function exec_inc|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('os)|bitvector('os)|os=16 => sail_hl_shared_x86_2darithmetic_exec_5finc_5f45
+shared-function update_flags_add_no_cf|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=32 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadd_5fno_5fcf_5f46
+shared-function exec_inc|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('os)|bitvector('os)|os=32 => sail_hl_shared_x86_2darithmetic_exec_5finc_5f47
+shared-function update_flags_add_no_cf|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=64 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadd_5fno_5fcf_5f48
+shared-function exec_inc|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('os)|bitvector('os)|os=64 => sail_hl_shared_x86_2darithmetic_exec_5finc_5f49
+shared-function update_flags_add_no_cf|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|n=8 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fadd_5fno_5fcf_5f50
+shared-function exec_inc|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('os)|bitvector('os)|os=8 => sail_hl_shared_x86_2darithmetic_exec_5finc_5f51
+shared-function neq_anything|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(MandatoryPrefix, MandatoryPrefix)|{('ex27099# : Bool), true. bool(not('ex27099#))}| => sail_hl_shared_x86_2darithmetic_neq_5fanything_5f52
+shared-function vex_gpr_size|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|Prefixes|{('n : Int), 'n in {32, 64}. int('n)}| => sail_hl_shared_x86_2darithmetic_vex_5fgpr_5fsize_5f53
+shared-function zeros|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|int('n)|bitvector('n)| => sail_hl_shared_x86_2darithmetic_zeros_5f54
+shared-function update_flags_sbb|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n), bitvector(1))|unit|n=16 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsbb_5f55
+shared-function update_flags_sbb|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n), bitvector(1))|unit|n=32 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsbb_5f56
+shared-function update_flags_sbb|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n), bitvector(1))|unit|n=64 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsbb_5f57
+shared-function update_flags_sbb|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n), bitvector(1))|unit|n=8 => sail_hl_shared_x86_2darithmetic_update_5fflags_5fsbb_5f58
+specialization-required exec_dec|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('os)|bitvector('os)|: HOL Light: mixed subtraction requires a word and integer of the declared result width
+specialization-required exec_inc|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('os)|bitvector('os)|: HOL Light: mixed addition requires a word and integer of the declared result width
+specialization-required read_gpr_ref|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('os), GPRRef)|bitvector('os)|: HOL Light: operand-dependent width 'os
+specialization-required read_gpr|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('os), int('ex26490#))|bitvector('os)|: HOL Light: integer matches require a statically known selector
+specialization-required update_SF_ZF_PF|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|unit|: HOL Light: unsupported polymorphic dimension (1 + 'n)
+specialization-required update_flags_adc|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n), bitvector(1))|unit|: HOL Light: unsupported polymorphic dimension (1 + 'n)
+specialization-required update_flags_add_no_cf|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|: HOL Light: operand-dependent width 'n
+specialization-required update_flags_add|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|: HOL Light: unsupported polymorphic dimension (1 + 'n)
+specialization-required update_flags_sbb|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n), bitvector(1))|unit|: HOL Light: unsupported polymorphic dimension (1 + 'n)
+specialization-required update_flags_sub_no_cf|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|: HOL Light: operand-dependent width 'n
+specialization-required update_flags_sub|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector('n))|unit|: HOL Light: unsupported polymorphic dimension (1 + 'n)
+root X86_ADC16_RR
+root X86_ADC32_RR
+root X86_ADC64_RR
+root X86_ADC8_LEGACY_RR
+root X86_ADC8_RR
+root X86_ADCX32_RR
+root X86_ADCX64_RR
+root X86_ADD16_RR
+root X86_ADD32_RR
+root X86_ADD64_RR
+root X86_ADD8_LEGACY_RR
+root X86_ADD8_RR
+root X86_ADOX32_RR
+root X86_ADOX64_RR
+root X86_AND16_RR
+root X86_AND32_RR
+root X86_AND64_RR
+root X86_AND8_LEGACY_RR
+root X86_AND8_RR
+root X86_CMP16_RR
+root X86_CMP32_RR
+root X86_CMP64_RR
+root X86_CMP8_LEGACY_RR
+root X86_CMP8_RR
+root X86_DEC16_R
+root X86_DEC32_R
+root X86_DEC64_R
+root X86_DEC8_LEGACY_R
+root X86_DEC8_R
+root X86_IMUL116_R
+root X86_IMUL132_R
+root X86_IMUL164_R
+root X86_IMUL16_RR
+root X86_IMUL18_LEGACY_R
+root X86_IMUL18_R
+root X86_IMUL32_RR
+root X86_IMUL64_RR
+root X86_INC16_R
+root X86_INC32_R
+root X86_INC64_R
+root X86_INC8_LEGACY_R
+root X86_INC8_R
+root X86_MUL16_R
+root X86_MUL32_R
+root X86_MUL64_R
+root X86_MUL8_LEGACY_R
+root X86_MUL8_R
+root X86_MULX32_RRR
+root X86_MULX64_RRR
+root X86_NEG16_R
+root X86_NEG32_R
+root X86_NEG64_R
+root X86_NEG8_LEGACY_R
+root X86_NEG8_R
+root X86_NOT16_R
+root X86_NOT32_R
+root X86_NOT64_R
+root X86_NOT8_LEGACY_R
+root X86_NOT8_R
+root X86_OR16_RR
+root X86_OR32_RR
+root X86_OR64_RR
+root X86_OR8_LEGACY_RR
+root X86_OR8_RR
+root X86_SBB16_RR
+root X86_SBB32_RR
+root X86_SBB64_RR
+root X86_SBB8_LEGACY_RR
+root X86_SBB8_RR
+root X86_SUB16_RR
+root X86_SUB32_RR
+root X86_SUB64_RR
+root X86_SUB8_LEGACY_RR
+root X86_SUB8_RR
+root X86_TEST16_RR
+root X86_TEST32_RR
+root X86_TEST64_RR
+root X86_TEST8_LEGACY_RR
+root X86_TEST8_RR
+root X86_XOR16_RR
+root X86_XOR32_RR
+root X86_XOR64_RR
+root X86_XOR8_LEGACY_RR
+root X86_XOR8_RR
+inlined HOL_INPUT_decode_execute__fetch__through_fetch_modrm__acquired_scan_prefixes__opcode_132
+inlined HOL_INPUT_decode_execute__fetch__through_fetch_modrm__acquired_scan_prefixes__opcode_133
+inlined HOL_INPUT_dispatch_2byte_gpr__fetch__op_175__through_fetch_modrm
+inlined HOL_INPUT_dispatch_opcode_2byte__fetch__opcode_56__through_fetch_modrm__acquired_fetch__opcode3_246
+inlined HOL_INPUT_dispatch_vex_0f38_arith__fetch__op_246__through_fetch_modrm
+inlined HOL_INPUT_fetch_modrm__fetch
+inlined __id
+inlined alu_compute
+inlined compute_PF
+inlined default_prefixes
+inlined dispatch_group3
+inlined dispatch_group3_byte
+inlined exec_alu_reg_rm
+inlined exec_dec
+inlined exec_imul_1
+inlined exec_inc
+inlined exec_mul
+inlined get_address_size
+inlined get_mandatory_prefix
+inlined is_nonzero
+inlined modrm_reg
+inlined modrm_rm
+inlined neq_anything
+inlined opsize
+inlined or_reduce
+inlined read_gpr
+inlined read_gpr_ref
+inlined read_rm_val
+inlined read_rmw
+inlined sign_extend
+inlined to_bits_truncate
+inlined update_SF_ZF_PF
+inlined update_flags_adc
+inlined update_flags_add
+inlined update_flags_add_no_cf
+inlined update_flags_logic
+inlined update_flags_sbb
+inlined update_flags_sub
+inlined update_flags_sub_no_cf
+inlined vex_gpr_size
+inlined write_gpr
+inlined write_gpr_ref
+inlined write_rm_val
+inlined zero_extend
+inlined zeros
+inlined-global RAX
+inlined-global RDX
+primitive-contract None
+primitive-contract RM_reg
+primitive-contract Sail-undefined-existential
+primitive-contract add_atom
+primitive-contract add_bits
+primitive-contract add_bits_int
+primitive-contract and_bool
+primitive-contract and_vec
+primitive-contract bitvector_access
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract eq_anything
+primitive-contract eq_bits
+primitive-contract eq_int
+primitive-contract get_slice_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract not_bool
+primitive-contract not_vec
+primitive-contract or_bool
+primitive-contract or_vec
+primitive-contract rem_positive_round_zero
+primitive-contract sail_sign_extend
+primitive-contract sail_zero_extend
+primitive-contract sail_zeros
+primitive-contract shiftr
+primitive-contract signed
+primitive-contract sub_atom
+primitive-contract sub_vec
+primitive-contract sub_vec_int
+primitive-contract subrange_bits
+primitive-contract unsigned
+primitive-contract x86-raw-GPR-bank
+primitive-contract x86-six-Boolean-flags
+primitive-contract xor_vec
+proved-numeric-argument-fact HOL_INPUT_fetch_modrm__fetch 16 <= 16
+proved-numeric-argument-fact HOL_INPUT_fetch_modrm__fetch 16 in {16, 32, 64}
+proved-numeric-argument-fact HOL_INPUT_fetch_modrm__fetch 32 <= 32
+proved-numeric-argument-fact HOL_INPUT_fetch_modrm__fetch 32 in {16, 32, 64}
+proved-numeric-argument-fact HOL_INPUT_fetch_modrm__fetch 32 in {32, 64}
+proved-numeric-argument-fact HOL_INPUT_fetch_modrm__fetch 64 <= 64
+proved-numeric-argument-fact HOL_INPUT_fetch_modrm__fetch 64 in {16, 32, 64}
+proved-numeric-argument-fact HOL_INPUT_fetch_modrm__fetch 64 in {32, 64}
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 15
+proved-numeric-argument-fact __id 'n <= 16
+proved-numeric-argument-fact __id 'n <= 31
+proved-numeric-argument-fact __id 'n <= 32
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id 'n <= 64
+proved-numeric-argument-fact __id 'n == 32
+proved-numeric-argument-fact __id 'n == 8
+proved-numeric-argument-fact __id 'n in {16, 32, 64}
+proved-numeric-argument-fact __id 'n in {32, 64}
+proved-numeric-argument-fact __id 'n in {8, 16, 32, 64}
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 16 <= 'n
+proved-numeric-argument-fact __id 32 <= 'n
+proved-numeric-argument-fact __id 64 <= 'n
+proved-numeric-argument-fact __id not('n == 8)
+proved-numeric-argument-fact alu_compute 'os <= 127
+proved-numeric-argument-fact alu_compute 'os <= 15
+proved-numeric-argument-fact alu_compute 'os <= 31
+proved-numeric-argument-fact alu_compute 'os <= 63
+proved-numeric-argument-fact alu_compute 'os in {8, 16, 32, 64}
+proved-numeric-argument-fact alu_compute 0 < 'os
+proved-numeric-argument-fact alu_compute 0 <= 'os
+proved-numeric-argument-fact compute_PF 16 >= 8
+proved-numeric-argument-fact compute_PF 32 >= 8
+proved-numeric-argument-fact compute_PF 64 >= 8
+proved-numeric-argument-fact compute_PF 8 >= 8
+proved-numeric-argument-fact dispatch_group3 'ex26789# <= 3
+proved-numeric-argument-fact dispatch_group3 'ex26789# <= 31
+proved-numeric-argument-fact dispatch_group3 'ex26790# <= 127
+proved-numeric-argument-fact dispatch_group3 'ex26790# <= 31
+proved-numeric-argument-fact dispatch_group3 'ex26790# <= 63
+proved-numeric-argument-fact dispatch_group3 0 < 'ex26789#
+proved-numeric-argument-fact dispatch_group3 0 < 'ex26790#
+proved-numeric-argument-fact dispatch_group3 0 <= 'ex26789#
+proved-numeric-argument-fact dispatch_group3 0 <= 'ex26790#
+proved-numeric-argument-fact dispatch_group3_byte 'ex26788# <= 3
+proved-numeric-argument-fact dispatch_group3_byte 'ex26788# <= 31
+proved-numeric-argument-fact dispatch_group3_byte 0 < 'ex26788#
+proved-numeric-argument-fact dispatch_group3_byte 0 <= 'ex26788#
+proved-numeric-argument-fact exec_alu_reg_rm 'ex26722# <= 127
+proved-numeric-argument-fact exec_alu_reg_rm 'ex26722# <= 15
+proved-numeric-argument-fact exec_alu_reg_rm 'ex26722# <= 31
+proved-numeric-argument-fact exec_alu_reg_rm 'ex26722# <= 63
+proved-numeric-argument-fact exec_alu_reg_rm 0 < 'ex26722#
+proved-numeric-argument-fact exec_alu_reg_rm 0 <= 'ex26722#
+proved-numeric-argument-fact exec_imul_1 'os <= 127
+proved-numeric-argument-fact exec_imul_1 'os <= 15
+proved-numeric-argument-fact exec_imul_1 'os <= 31
+proved-numeric-argument-fact exec_imul_1 'os <= 63
+proved-numeric-argument-fact exec_imul_1 0 < 'os
+proved-numeric-argument-fact exec_imul_1 0 <= 'os
+proved-numeric-argument-fact exec_mul 'os <= 127
+proved-numeric-argument-fact exec_mul 'os <= 15
+proved-numeric-argument-fact exec_mul 'os <= 31
+proved-numeric-argument-fact exec_mul 'os <= 63
+proved-numeric-argument-fact exec_mul 0 < 'os
+proved-numeric-argument-fact exec_mul 0 <= 'os
+proved-numeric-argument-fact is_nonzero 0 < 16
+proved-numeric-argument-fact is_nonzero 0 < 32
+proved-numeric-argument-fact is_nonzero 0 < 64
+proved-numeric-argument-fact is_nonzero 0 < 8
+proved-numeric-argument-fact is_nonzero 0 <= 16
+proved-numeric-argument-fact is_nonzero 0 <= 32
+proved-numeric-argument-fact is_nonzero 0 <= 64
+proved-numeric-argument-fact is_nonzero 0 <= 8
+proved-numeric-argument-fact is_nonzero 16 <= 16
+proved-numeric-argument-fact is_nonzero 16 <= 31
+proved-numeric-argument-fact is_nonzero 16 in {16, 32, 64}
+proved-numeric-argument-fact is_nonzero 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact is_nonzero 32 <= 32
+proved-numeric-argument-fact is_nonzero 32 <= 63
+proved-numeric-argument-fact is_nonzero 32 in {16, 32, 64}
+proved-numeric-argument-fact is_nonzero 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact is_nonzero 64 <= 127
+proved-numeric-argument-fact is_nonzero 64 <= 64
+proved-numeric-argument-fact is_nonzero 64 in {16, 32, 64}
+proved-numeric-argument-fact is_nonzero 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact is_nonzero 8 <= 15
+proved-numeric-argument-fact is_nonzero 8 <= 31
+proved-numeric-argument-fact is_nonzero 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact read_gpr 'ex26490# <= 15
+proved-numeric-argument-fact read_gpr 'ex26490# <= 31
+proved-numeric-argument-fact read_gpr 'os <= 127
+proved-numeric-argument-fact read_gpr 'os <= 15
+proved-numeric-argument-fact read_gpr 'os <= 31
+proved-numeric-argument-fact read_gpr 'os <= 32
+proved-numeric-argument-fact read_gpr 'os <= 63
+proved-numeric-argument-fact read_gpr 'os <= 64
+proved-numeric-argument-fact read_gpr 'os in {16, 32, 64}
+proved-numeric-argument-fact read_gpr 'os in {8, 16, 32, 64}
+proved-numeric-argument-fact read_gpr (0 <= 'ex26490# & 'ex26490# <= 15)
+proved-numeric-argument-fact read_gpr 0 < 'os
+proved-numeric-argument-fact read_gpr 0 <= 'ex26490#
+proved-numeric-argument-fact read_gpr 0 <= 'os
+proved-numeric-argument-fact read_gpr 32 <= 'os
+proved-numeric-argument-fact read_gpr 64 <= 'os
+proved-numeric-argument-fact read_gpr not('os == 8)
+proved-numeric-argument-fact read_gpr_ref 'os <= 127
+proved-numeric-argument-fact read_gpr_ref 'os <= 15
+proved-numeric-argument-fact read_gpr_ref 'os <= 16
+proved-numeric-argument-fact read_gpr_ref 'os <= 31
+proved-numeric-argument-fact read_gpr_ref 'os <= 32
+proved-numeric-argument-fact read_gpr_ref 'os <= 63
+proved-numeric-argument-fact read_gpr_ref 'os <= 64
+proved-numeric-argument-fact read_gpr_ref 'os in {16, 32, 64}
+proved-numeric-argument-fact read_gpr_ref 'os in {32, 64}
+proved-numeric-argument-fact read_gpr_ref 'os in {8, 16, 32, 64}
+proved-numeric-argument-fact read_gpr_ref 0 < 'os
+proved-numeric-argument-fact read_gpr_ref 0 <= 'os
+proved-numeric-argument-fact read_gpr_ref 16 <= 'os
+proved-numeric-argument-fact read_gpr_ref 32 <= 'os
+proved-numeric-argument-fact read_gpr_ref 64 <= 'os
+proved-numeric-argument-fact read_rm_val 'os <= 127
+proved-numeric-argument-fact read_rm_val 'os <= 15
+proved-numeric-argument-fact read_rm_val 'os <= 16
+proved-numeric-argument-fact read_rm_val 'os <= 31
+proved-numeric-argument-fact read_rm_val 'os <= 32
+proved-numeric-argument-fact read_rm_val 'os <= 63
+proved-numeric-argument-fact read_rm_val 'os <= 64
+proved-numeric-argument-fact read_rm_val 'os in {16, 32, 64}
+proved-numeric-argument-fact read_rm_val 'os in {32, 64}
+proved-numeric-argument-fact read_rm_val 'os in {8, 16, 32, 64}
+proved-numeric-argument-fact read_rm_val 0 < 'os
+proved-numeric-argument-fact read_rm_val 0 <= 'os
+proved-numeric-argument-fact read_rm_val 16 <= 'os
+proved-numeric-argument-fact read_rm_val 32 <= 'os
+proved-numeric-argument-fact read_rm_val 64 <= 'os
+proved-numeric-argument-fact read_rmw 'os <= 127
+proved-numeric-argument-fact read_rmw 'os <= 15
+proved-numeric-argument-fact read_rmw 'os <= 31
+proved-numeric-argument-fact read_rmw 'os <= 63
+proved-numeric-argument-fact read_rmw 'os in {16, 32, 64}
+proved-numeric-argument-fact read_rmw (0 <= 2 & 2 <= 7)
+proved-numeric-argument-fact read_rmw (0 <= 3 & 3 <= 7)
+proved-numeric-argument-fact read_rmw 0 < 'os
+proved-numeric-argument-fact read_rmw 0 < 2
+proved-numeric-argument-fact read_rmw 0 < 3
+proved-numeric-argument-fact read_rmw 0 <= 'os
+proved-numeric-argument-fact read_rmw 0 <= 2
+proved-numeric-argument-fact read_rmw 0 <= 3
+proved-numeric-argument-fact read_rmw 2 <= 3
+proved-numeric-argument-fact read_rmw 2 <= 31
+proved-numeric-argument-fact read_rmw 3 <= 3
+proved-numeric-argument-fact read_rmw 3 <= 31
+proved-numeric-argument-fact read_rmw not((2 == 0 | 2 == 1))
+proved-numeric-argument-fact read_rmw not((3 == 0 | 3 == 1))
+proved-numeric-argument-fact sign_extend 'm <= 127
+proved-numeric-argument-fact sign_extend 'm <= 15
+proved-numeric-argument-fact sign_extend 'm <= 31
+proved-numeric-argument-fact sign_extend 'm <= 63
+proved-numeric-argument-fact sign_extend 0 < 'm
+proved-numeric-argument-fact sign_extend 0 < 16
+proved-numeric-argument-fact sign_extend 0 < 32
+proved-numeric-argument-fact sign_extend 0 < 64
+proved-numeric-argument-fact sign_extend 0 < 8
+proved-numeric-argument-fact sign_extend 0 <= 'm
+proved-numeric-argument-fact sign_extend 0 <= 16
+proved-numeric-argument-fact sign_extend 0 <= 32
+proved-numeric-argument-fact sign_extend 0 <= 64
+proved-numeric-argument-fact sign_extend 0 <= 8
+proved-numeric-argument-fact sign_extend 16 <= 16
+proved-numeric-argument-fact sign_extend 16 <= 31
+proved-numeric-argument-fact sign_extend 16 >= 8
+proved-numeric-argument-fact sign_extend 16 in {16, 32, 64}
+proved-numeric-argument-fact sign_extend 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact sign_extend 32 <= 32
+proved-numeric-argument-fact sign_extend 32 <= 63
+proved-numeric-argument-fact sign_extend 32 >= 8
+proved-numeric-argument-fact sign_extend 32 in {16, 32, 64}
+proved-numeric-argument-fact sign_extend 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact sign_extend 64 <= 127
+proved-numeric-argument-fact sign_extend 64 <= 64
+proved-numeric-argument-fact sign_extend 64 >= 8
+proved-numeric-argument-fact sign_extend 64 in {16, 32, 64}
+proved-numeric-argument-fact sign_extend 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact sign_extend 8 <= 15
+proved-numeric-argument-fact sign_extend 8 <= 31
+proved-numeric-argument-fact sign_extend 8 >= 8
+proved-numeric-argument-fact sign_extend 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact to_bits_truncate 'l <= 127
+proved-numeric-argument-fact to_bits_truncate 'l <= 16
+proved-numeric-argument-fact to_bits_truncate 'l <= 255
+proved-numeric-argument-fact to_bits_truncate 'l <= 31
+proved-numeric-argument-fact to_bits_truncate 'l <= 32
+proved-numeric-argument-fact to_bits_truncate 'l <= 63
+proved-numeric-argument-fact to_bits_truncate 'l <= 64
+proved-numeric-argument-fact to_bits_truncate 'l in {16, 32, 64}
+proved-numeric-argument-fact to_bits_truncate 0 < 'l
+proved-numeric-argument-fact to_bits_truncate 0 < 16
+proved-numeric-argument-fact to_bits_truncate 0 < 32
+proved-numeric-argument-fact to_bits_truncate 0 < 64
+proved-numeric-argument-fact to_bits_truncate 0 < 8
+proved-numeric-argument-fact to_bits_truncate 0 <= 'ex26430#
+proved-numeric-argument-fact to_bits_truncate 0 <= 'l
+proved-numeric-argument-fact to_bits_truncate 0 <= 16
+proved-numeric-argument-fact to_bits_truncate 0 <= 32
+proved-numeric-argument-fact to_bits_truncate 0 <= 64
+proved-numeric-argument-fact to_bits_truncate 0 <= 8
+proved-numeric-argument-fact to_bits_truncate 16 <= 'l
+proved-numeric-argument-fact to_bits_truncate 16 <= 16
+proved-numeric-argument-fact to_bits_truncate 16 <= 31
+proved-numeric-argument-fact to_bits_truncate 16 in {16, 32, 64}
+proved-numeric-argument-fact to_bits_truncate 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact to_bits_truncate 32 <= 'l
+proved-numeric-argument-fact to_bits_truncate 32 <= 32
+proved-numeric-argument-fact to_bits_truncate 32 <= 63
+proved-numeric-argument-fact to_bits_truncate 32 in {16, 32, 64}
+proved-numeric-argument-fact to_bits_truncate 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact to_bits_truncate 64 <= 'l
+proved-numeric-argument-fact to_bits_truncate 64 <= 127
+proved-numeric-argument-fact to_bits_truncate 64 <= 64
+proved-numeric-argument-fact to_bits_truncate 64 in {16, 32, 64}
+proved-numeric-argument-fact to_bits_truncate 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact to_bits_truncate 8 <= 15
+proved-numeric-argument-fact to_bits_truncate 8 <= 31
+proved-numeric-argument-fact to_bits_truncate 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_SF_ZF_PF 16 >= 8
+proved-numeric-argument-fact update_SF_ZF_PF 32 >= 8
+proved-numeric-argument-fact update_SF_ZF_PF 64 >= 8
+proved-numeric-argument-fact update_SF_ZF_PF 8 >= 8
+proved-numeric-argument-fact update_flags_adc 0 < 16
+proved-numeric-argument-fact update_flags_adc 0 < 32
+proved-numeric-argument-fact update_flags_adc 0 < 64
+proved-numeric-argument-fact update_flags_adc 0 < 8
+proved-numeric-argument-fact update_flags_adc 0 <= 16
+proved-numeric-argument-fact update_flags_adc 0 <= 32
+proved-numeric-argument-fact update_flags_adc 0 <= 64
+proved-numeric-argument-fact update_flags_adc 0 <= 8
+proved-numeric-argument-fact update_flags_adc 16 <= 31
+proved-numeric-argument-fact update_flags_adc 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_adc 32 <= 63
+proved-numeric-argument-fact update_flags_adc 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_adc 64 <= 127
+proved-numeric-argument-fact update_flags_adc 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_adc 8 <= 15
+proved-numeric-argument-fact update_flags_adc 8 <= 31
+proved-numeric-argument-fact update_flags_adc 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_add 0 < 16
+proved-numeric-argument-fact update_flags_add 0 < 32
+proved-numeric-argument-fact update_flags_add 0 < 64
+proved-numeric-argument-fact update_flags_add 0 < 8
+proved-numeric-argument-fact update_flags_add 0 <= 16
+proved-numeric-argument-fact update_flags_add 0 <= 32
+proved-numeric-argument-fact update_flags_add 0 <= 64
+proved-numeric-argument-fact update_flags_add 0 <= 8
+proved-numeric-argument-fact update_flags_add 16 <= 31
+proved-numeric-argument-fact update_flags_add 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_add 32 <= 63
+proved-numeric-argument-fact update_flags_add 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_add 64 <= 127
+proved-numeric-argument-fact update_flags_add 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_add 8 <= 15
+proved-numeric-argument-fact update_flags_add 8 <= 31
+proved-numeric-argument-fact update_flags_add 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_add_no_cf 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_add_no_cf 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_add_no_cf 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_add_no_cf 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_logic 0 < 16
+proved-numeric-argument-fact update_flags_logic 0 < 32
+proved-numeric-argument-fact update_flags_logic 0 < 64
+proved-numeric-argument-fact update_flags_logic 0 < 8
+proved-numeric-argument-fact update_flags_logic 0 <= 16
+proved-numeric-argument-fact update_flags_logic 0 <= 32
+proved-numeric-argument-fact update_flags_logic 0 <= 64
+proved-numeric-argument-fact update_flags_logic 0 <= 8
+proved-numeric-argument-fact update_flags_logic 16 <= 16
+proved-numeric-argument-fact update_flags_logic 16 <= 31
+proved-numeric-argument-fact update_flags_logic 16 in {16, 32, 64}
+proved-numeric-argument-fact update_flags_logic 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_logic 32 <= 32
+proved-numeric-argument-fact update_flags_logic 32 <= 63
+proved-numeric-argument-fact update_flags_logic 32 in {16, 32, 64}
+proved-numeric-argument-fact update_flags_logic 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_logic 64 <= 127
+proved-numeric-argument-fact update_flags_logic 64 <= 64
+proved-numeric-argument-fact update_flags_logic 64 in {16, 32, 64}
+proved-numeric-argument-fact update_flags_logic 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_logic 8 <= 15
+proved-numeric-argument-fact update_flags_logic 8 <= 31
+proved-numeric-argument-fact update_flags_logic 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sbb 0 < 16
+proved-numeric-argument-fact update_flags_sbb 0 < 32
+proved-numeric-argument-fact update_flags_sbb 0 < 64
+proved-numeric-argument-fact update_flags_sbb 0 < 8
+proved-numeric-argument-fact update_flags_sbb 0 <= 16
+proved-numeric-argument-fact update_flags_sbb 0 <= 32
+proved-numeric-argument-fact update_flags_sbb 0 <= 64
+proved-numeric-argument-fact update_flags_sbb 0 <= 8
+proved-numeric-argument-fact update_flags_sbb 16 <= 31
+proved-numeric-argument-fact update_flags_sbb 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sbb 32 <= 63
+proved-numeric-argument-fact update_flags_sbb 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sbb 64 <= 127
+proved-numeric-argument-fact update_flags_sbb 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sbb 8 <= 15
+proved-numeric-argument-fact update_flags_sbb 8 <= 31
+proved-numeric-argument-fact update_flags_sbb 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sub (0 <= 3 & 3 <= 7)
+proved-numeric-argument-fact update_flags_sub 0 < 16
+proved-numeric-argument-fact update_flags_sub 0 < 3
+proved-numeric-argument-fact update_flags_sub 0 < 32
+proved-numeric-argument-fact update_flags_sub 0 < 64
+proved-numeric-argument-fact update_flags_sub 0 < 8
+proved-numeric-argument-fact update_flags_sub 0 <= 16
+proved-numeric-argument-fact update_flags_sub 0 <= 3
+proved-numeric-argument-fact update_flags_sub 0 <= 32
+proved-numeric-argument-fact update_flags_sub 0 <= 64
+proved-numeric-argument-fact update_flags_sub 0 <= 8
+proved-numeric-argument-fact update_flags_sub 16 <= 31
+proved-numeric-argument-fact update_flags_sub 16 in {16, 32, 64}
+proved-numeric-argument-fact update_flags_sub 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sub 3 <= 3
+proved-numeric-argument-fact update_flags_sub 3 <= 31
+proved-numeric-argument-fact update_flags_sub 3 == 3
+proved-numeric-argument-fact update_flags_sub 32 <= 63
+proved-numeric-argument-fact update_flags_sub 32 in {16, 32, 64}
+proved-numeric-argument-fact update_flags_sub 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sub 64 <= 127
+proved-numeric-argument-fact update_flags_sub 64 in {16, 32, 64}
+proved-numeric-argument-fact update_flags_sub 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sub 8 <= 15
+proved-numeric-argument-fact update_flags_sub 8 <= 31
+proved-numeric-argument-fact update_flags_sub 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sub not((3 == 0 | 3 == 1))
+proved-numeric-argument-fact update_flags_sub_no_cf 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sub_no_cf 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sub_no_cf 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact update_flags_sub_no_cf 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact write_gpr 'ex26491# <= 15
+proved-numeric-argument-fact write_gpr 'ex26491# <= 31
+proved-numeric-argument-fact write_gpr 'os <= 127
+proved-numeric-argument-fact write_gpr 'os <= 16
+proved-numeric-argument-fact write_gpr 'os <= 31
+proved-numeric-argument-fact write_gpr 'os <= 32
+proved-numeric-argument-fact write_gpr 'os <= 63
+proved-numeric-argument-fact write_gpr 'os <= 64
+proved-numeric-argument-fact write_gpr 'os in {16, 32, 64}
+proved-numeric-argument-fact write_gpr 'os in {32, 64}
+proved-numeric-argument-fact write_gpr 'os in {8, 16, 32, 64}
+proved-numeric-argument-fact write_gpr (0 <= 'ex26491# & 'ex26491# <= 15)
+proved-numeric-argument-fact write_gpr 0 < 'os
+proved-numeric-argument-fact write_gpr 0 < 16
+proved-numeric-argument-fact write_gpr 0 < 32
+proved-numeric-argument-fact write_gpr 0 < 64
+proved-numeric-argument-fact write_gpr 0 < 8
+proved-numeric-argument-fact write_gpr 0 <= 'ex26491#
+proved-numeric-argument-fact write_gpr 0 <= 'os
+proved-numeric-argument-fact write_gpr 0 <= 16
+proved-numeric-argument-fact write_gpr 0 <= 32
+proved-numeric-argument-fact write_gpr 0 <= 64
+proved-numeric-argument-fact write_gpr 0 <= 8
+proved-numeric-argument-fact write_gpr 16 <= 'os
+proved-numeric-argument-fact write_gpr 16 <= 31
+proved-numeric-argument-fact write_gpr 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact write_gpr 32 <= 'os
+proved-numeric-argument-fact write_gpr 32 <= 32
+proved-numeric-argument-fact write_gpr 32 <= 63
+proved-numeric-argument-fact write_gpr 32 in {16, 32, 64}
+proved-numeric-argument-fact write_gpr 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact write_gpr 64 <= 'os
+proved-numeric-argument-fact write_gpr 64 <= 127
+proved-numeric-argument-fact write_gpr 64 <= 64
+proved-numeric-argument-fact write_gpr 64 in {16, 32, 64}
+proved-numeric-argument-fact write_gpr 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact write_gpr 8 <= 15
+proved-numeric-argument-fact write_gpr 8 <= 31
+proved-numeric-argument-fact write_gpr 8 == 8
+proved-numeric-argument-fact write_gpr 8 in {8, 16, 32, 64}
+proved-numeric-argument-fact write_gpr not('os == 8)
+proved-numeric-argument-fact write_gpr not(16 == 8)
+proved-numeric-argument-fact write_gpr not(32 == 8)
+proved-numeric-argument-fact write_gpr not(64 == 8)
+proved-numeric-argument-fact write_gpr_ref 'os <= 127
+proved-numeric-argument-fact write_gpr_ref 'os <= 15
+proved-numeric-argument-fact write_gpr_ref 'os <= 16
+proved-numeric-argument-fact write_gpr_ref 'os <= 31
+proved-numeric-argument-fact write_gpr_ref 'os <= 32
+proved-numeric-argument-fact write_gpr_ref 'os <= 63
+proved-numeric-argument-fact write_gpr_ref 'os <= 64
+proved-numeric-argument-fact write_gpr_ref 'os in {16, 32, 64}
+proved-numeric-argument-fact write_gpr_ref 'os in {32, 64}
+proved-numeric-argument-fact write_gpr_ref 'os in {8, 16, 32, 64}
+proved-numeric-argument-fact write_gpr_ref 0 < 'os
+proved-numeric-argument-fact write_gpr_ref 0 <= 'os
+proved-numeric-argument-fact write_gpr_ref 16 <= 'os
+proved-numeric-argument-fact write_gpr_ref 32 <= 'os
+proved-numeric-argument-fact write_gpr_ref 32 <= 32
+proved-numeric-argument-fact write_gpr_ref 32 in {16, 32, 64}
+proved-numeric-argument-fact write_gpr_ref 64 <= 'os
+proved-numeric-argument-fact write_gpr_ref 64 <= 64
+proved-numeric-argument-fact write_gpr_ref 64 in {16, 32, 64}
+proved-numeric-argument-fact write_rm_val 'os <= 127
+proved-numeric-argument-fact write_rm_val 'os <= 15
+proved-numeric-argument-fact write_rm_val 'os <= 31
+proved-numeric-argument-fact write_rm_val 'os <= 63
+proved-numeric-argument-fact write_rm_val 'os in {16, 32, 64}
+proved-numeric-argument-fact write_rm_val (0 <= 2 & 2 <= 7)
+proved-numeric-argument-fact write_rm_val (0 <= 3 & 3 <= 7)
+proved-numeric-argument-fact write_rm_val 0 < 'os
+proved-numeric-argument-fact write_rm_val 0 < 2
+proved-numeric-argument-fact write_rm_val 0 < 3
+proved-numeric-argument-fact write_rm_val 0 <= 'os
+proved-numeric-argument-fact write_rm_val 0 <= 2
+proved-numeric-argument-fact write_rm_val 0 <= 3
+proved-numeric-argument-fact write_rm_val 2 <= 3
+proved-numeric-argument-fact write_rm_val 2 <= 31
+proved-numeric-argument-fact write_rm_val 2 == 2
+proved-numeric-argument-fact write_rm_val 3 <= 3
+proved-numeric-argument-fact write_rm_val 3 <= 31
+proved-numeric-argument-fact write_rm_val 3 == 3
+proved-numeric-argument-fact write_rm_val not((2 == 0 | 2 == 1))
+proved-numeric-argument-fact write_rm_val not((3 == 0 | 3 == 1))
+proved-numeric-argument-fact zero_extend 'm <= 127
+proved-numeric-argument-fact zero_extend 'm <= 15
+proved-numeric-argument-fact zero_extend 'm <= 31
+proved-numeric-argument-fact zero_extend 'm <= 32
+proved-numeric-argument-fact zero_extend 'm <= 63
+proved-numeric-argument-fact zero_extend 'm <= 64
+proved-numeric-argument-fact zero_extend 'm <= 7
+proved-numeric-argument-fact zero_extend 'm in {32, 64}
+proved-numeric-argument-fact zero_extend 'm in {8, 16, 32, 64}
+proved-numeric-argument-fact zero_extend 0 < 'm
+proved-numeric-argument-fact zero_extend 0 < 32
+proved-numeric-argument-fact zero_extend 0 <= 'm
+proved-numeric-argument-fact zero_extend 0 <= 32
+proved-numeric-argument-fact zero_extend 16 >= 8
+proved-numeric-argument-fact zero_extend 32 <= 'm
+proved-numeric-argument-fact zero_extend 32 <= 32
+proved-numeric-argument-fact zero_extend 32 <= 63
+proved-numeric-argument-fact zero_extend 32 == 32
+proved-numeric-argument-fact zero_extend 32 >= 8
+proved-numeric-argument-fact zero_extend 32 in {16, 32, 64}
+proved-numeric-argument-fact zero_extend 32 in {32, 64}
+proved-numeric-argument-fact zero_extend 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact zero_extend 64 <= 'm
+proved-numeric-argument-fact zero_extend 64 <= 64
+proved-numeric-argument-fact zero_extend 64 >= 8
+proved-numeric-argument-fact zero_extend 64 in {32, 64}
+proved-numeric-argument-fact zero_extend 8 >= 8
+proved-numeric-argument-fact zero_extend not(32 == 8)
+proved-numeric-argument-fact zeros 'n <= 127
+proved-numeric-argument-fact zeros 'n <= 15
+proved-numeric-argument-fact zeros 'n <= 31
+proved-numeric-argument-fact zeros 'n <= 63
+proved-numeric-argument-fact zeros 'n in {16, 32, 64}
+proved-numeric-argument-fact zeros (0 <= 3 & 3 <= 7)
+proved-numeric-argument-fact zeros 0 < 'n
+proved-numeric-argument-fact zeros 0 < 3
+proved-numeric-argument-fact zeros 0 <= 'n
+proved-numeric-argument-fact zeros 0 <= 3
+proved-numeric-argument-fact zeros 3 <= 3
+proved-numeric-argument-fact zeros 3 <= 31
+proved-numeric-argument-fact zeros 3 == 3
+proved-numeric-argument-fact zeros not((3 == 0 | 3 == 1))
+statically-selected-branch insn_alu.sail:70:6-70:8 else
+statically-selected-branch insn_alu.sail:70:6-70:8 then
+statically-selected-branch insn_baseline.sail:885:6-885:65 else
+statically-selected-branch insn_dispatch.sail:555:6-555:45 else
+statically-selected-branch insn_dispatch.sail:565:12-565:22 else
+statically-selected-branch insn_dispatch.sail:567:32-567:41 else
+statically-selected-branch insn_dispatch.sail:567:32-567:41 then
+statically-selected-branch insn_dispatch.sail:570:12-570:23 else
+statically-selected-branch insn_dispatch.sail:570:12-570:23 then
+statically-selected-branch insn_dispatch.sail:576:19-576:30 then
+statically-selected-branch insn_dispatch.sail:926:6-926:56 else
+statically-selected-branch insn_groups.sail:104:6-104:13 else
+statically-selected-branch insn_groups.sail:104:6-104:13 then
+statically-selected-branch insn_groups.sail:134:6-134:37 else
+statically-selected-branch insn_groups.sail:141:16-141:30 then
+statically-selected-branch insn_groups.sail:164:6-164:37 else
+statically-selected-branch insn_groups.sail:171:16-171:30 then
+statically-selected-branch insn_groups.sail:26:6-26:13 else
+statically-selected-branch insn_groups.sail:26:6-26:13 then
+statically-selected-branch insn_modrm.sail:342:6-342:33 else
+statically-selected-branch insn_modrm.sail:349:6-349:18 then
+statically-selected-branch insn_vex.sail:96:33-96:65 else
+statically-selected-branch insn_vex.sail:96:33-96:65 then
+statically-selected-branch insn_vex_arith.sail:335:8-335:31 else
+statically-selected-branch insn_vex_arith.sail:336:8-336:19 else
+statically-selected-branch operands.sail:194:13-194:33 then
+statically-selected-branch operands.sail:387:6-387:26 then
+statically-selected-branch regs.sail:48:23-48:43 then
+statically-selected-branch regs.sail:58:6-58:13 else
+statically-selected-branch regs.sail:58:6-58:13 then
+statically-selected-branch regs.sail:59:8-59:42 else
+statically-selected-branch regs.sail:72:6-72:13 else
+statically-selected-branch regs.sail:72:6-72:13 then
+statically-selected-branch regs.sail:73:8-73:42 else
+state-computation-root X86_ADC16_RR
+state-computation-root X86_ADC32_RR
+state-computation-root X86_ADC64_RR
+state-computation-root X86_ADC8_LEGACY_RR
+state-computation-root X86_ADC8_RR
+state-computation-root X86_ADCX32_RR
+state-computation-root X86_ADCX64_RR
+state-computation-root X86_ADD16_RR
+state-computation-root X86_ADD32_RR
+state-computation-root X86_ADD64_RR
+state-computation-root X86_ADD8_LEGACY_RR
+state-computation-root X86_ADD8_RR
+state-computation-root X86_ADOX32_RR
+state-computation-root X86_ADOX64_RR
+state-computation-root X86_AND16_RR
+state-computation-root X86_AND32_RR
+state-computation-root X86_AND64_RR
+state-computation-root X86_AND8_LEGACY_RR
+state-computation-root X86_AND8_RR
+state-computation-root X86_CMP16_RR
+state-computation-root X86_CMP32_RR
+state-computation-root X86_CMP64_RR
+state-computation-root X86_CMP8_LEGACY_RR
+state-computation-root X86_CMP8_RR
+state-computation-root X86_DEC16_R
+state-computation-root X86_DEC32_R
+state-computation-root X86_DEC64_R
+state-computation-root X86_DEC8_LEGACY_R
+state-computation-root X86_DEC8_R
+state-computation-root X86_IMUL116_R
+state-computation-root X86_IMUL132_R
+state-computation-root X86_IMUL164_R
+state-computation-root X86_IMUL16_RR
+state-computation-root X86_IMUL18_LEGACY_R
+state-computation-root X86_IMUL18_R
+state-computation-root X86_IMUL32_RR
+state-computation-root X86_IMUL64_RR
+state-computation-root X86_INC16_R
+state-computation-root X86_INC32_R
+state-computation-root X86_INC64_R
+state-computation-root X86_INC8_LEGACY_R
+state-computation-root X86_INC8_R
+state-computation-root X86_MUL16_R
+state-computation-root X86_MUL32_R
+state-computation-root X86_MUL64_R
+state-computation-root X86_MUL8_LEGACY_R
+state-computation-root X86_MUL8_R
+state-computation-root X86_MULX32_RRR
+state-computation-root X86_MULX64_RRR
+state-computation-root X86_NEG16_R
+state-computation-root X86_NEG32_R
+state-computation-root X86_NEG64_R
+state-computation-root X86_NEG8_LEGACY_R
+state-computation-root X86_NEG8_R
+state-computation-root X86_NOT16_R
+state-computation-root X86_NOT32_R
+state-computation-root X86_NOT64_R
+state-computation-root X86_NOT8_LEGACY_R
+state-computation-root X86_NOT8_R
+state-computation-root X86_OR16_RR
+state-computation-root X86_OR32_RR
+state-computation-root X86_OR64_RR
+state-computation-root X86_OR8_LEGACY_RR
+state-computation-root X86_OR8_RR
+state-computation-root X86_SBB16_RR
+state-computation-root X86_SBB32_RR
+state-computation-root X86_SBB64_RR
+state-computation-root X86_SBB8_LEGACY_RR
+state-computation-root X86_SBB8_RR
+state-computation-root X86_SUB16_RR
+state-computation-root X86_SUB32_RR
+state-computation-root X86_SUB64_RR
+state-computation-root X86_SUB8_LEGACY_RR
+state-computation-root X86_SUB8_RR
+state-computation-root X86_TEST16_RR
+state-computation-root X86_TEST32_RR
+state-computation-root X86_TEST64_RR
+state-computation-root X86_TEST8_LEGACY_RR
+state-computation-root X86_TEST8_RR
+state-computation-root X86_XOR16_RR
+state-computation-root X86_XOR32_RR
+state-computation-root X86_XOR64_RR
+state-computation-root X86_XOR8_LEGACY_RR
+state-computation-root X86_XOR8_RR
+state-computation

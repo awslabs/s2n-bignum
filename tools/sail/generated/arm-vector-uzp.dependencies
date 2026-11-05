@@ -1,0 +1,159 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function execute_aarch64_instrs_vector_transfer_vector_permute_unzip|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|datasize=128,elements=8,esize=16 => sail_hl_shared_arm_2dvector_2duzp_execute_5faarch64_5finstrs_5fvector_5ftransfer_5fvector_5fpermute_5funzip_5f0
+shared-function execute_aarch64_instrs_vector_transfer_vector_permute_unzip|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|datasize=128,elements=4,esize=32 => sail_hl_shared_arm_2dvector_2duzp_execute_5faarch64_5finstrs_5fvector_5ftransfer_5fvector_5fpermute_5funzip_5f1
+shared-function execute_aarch64_instrs_vector_transfer_vector_permute_unzip|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|datasize=128,elements=2,esize=64 => sail_hl_shared_arm_2dvector_2duzp_execute_5faarch64_5finstrs_5fvector_5ftransfer_5fvector_5fpermute_5funzip_5f2
+shared-function execute_aarch64_instrs_vector_transfer_vector_permute_unzip|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|datasize=128,elements=16,esize=8 => sail_hl_shared_arm_2dvector_2duzp_execute_5faarch64_5finstrs_5fvector_5ftransfer_5fvector_5fpermute_5funzip_5f3
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=256: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=16: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=32: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=64: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=8: HOL Light: unlowered instruction control
+specialization-required execute_aarch64_instrs_vector_transfer_vector_permute_unzip|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_permute_unzip|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|datasize=128: HOL Light: foreach bounds must be statically known integers
+specialization-required execute_aarch64_instrs_vector_transfer_vector_permute_unzip|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|elements=16: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_permute_unzip|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|elements=2: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_permute_unzip|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|elements=4: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_permute_unzip|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|elements=8: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_permute_unzip|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|esize=16: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_permute_unzip|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|esize=32: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_permute_unzip|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|esize=64: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_permute_unzip|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), int('part))|unit|esize=8: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+root arm_UZP1128E16
+root arm_UZP1128E32
+root arm_UZP1128E64
+root arm_UZP1128E8
+root arm_UZP2128E16
+root arm_UZP2128E32
+root arm_UZP2128E64
+root arm_UZP2128E8
+inlined Elem_read
+inlined Elem_set
+inlined execute_aarch64_instrs_vector_transfer_vector_permute_unzip
+primitive-contract CheckFPAdvSIMDEnabled64
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract add_atom
+primitive-contract and_bool
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract gteq_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract unsigned
+statically-proved-assertion and_bool(gteq_int(e, 0), lteq_int(mult_atom(add_atom(e, 1), size), bitvector_length(vector_name))) at src/builtins.sail:195:12-195:41
+statically-proved-assertion and_bool(gteq_int(e, 0), lteq_int(mult_atom(add_atom(e, 1), size), bitvector_length(vector_name__arg))) at src/builtins.sail:205:12-205:41
+proved-numeric-argument-fact Elem_read 'e <= 1
+proved-numeric-argument-fact Elem_read 'e <= 15
+proved-numeric-argument-fact Elem_read 'e <= 3
+proved-numeric-argument-fact Elem_read 'e <= 31
+proved-numeric-argument-fact Elem_read 'e <= 7
+proved-numeric-argument-fact Elem_read 'size <= 127
+proved-numeric-argument-fact Elem_read 'size <= 15
+proved-numeric-argument-fact Elem_read 'size <= 31
+proved-numeric-argument-fact Elem_read 'size <= 63
+proved-numeric-argument-fact Elem_read ('e >= 0 & (('e + 1) * 'size) <= 'N)
+proved-numeric-argument-fact Elem_read (0 <= 0 & 0 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 0 & 0 <= (2 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 0 & 0 <= (4 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 0 & 0 <= (8 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 1 & 1 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 1 & 1 <= (2 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 1 & 1 <= (4 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 1 & 1 <= (8 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 10 & 10 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 11 & 11 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 12 & 12 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 13 & 13 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 14 & 14 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 15 & 15 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 2 & 2 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 2 & 2 <= (4 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 2 & 2 <= (8 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 3 & 3 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 3 & 3 <= (4 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 3 & 3 <= (8 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 4 & 4 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 4 & 4 <= (8 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 5 & 5 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 5 & 5 <= (8 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 6 & 6 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 6 & 6 <= (8 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 7 & 7 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 7 & 7 <= (8 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 8 & 8 <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 9 & 9 <= (16 - 1))
+proved-numeric-argument-fact Elem_read 0 < 'e
+proved-numeric-argument-fact Elem_read 0 < 'size
+proved-numeric-argument-fact Elem_read 0 <= 'e
+proved-numeric-argument-fact Elem_read 0 <= 'size
+proved-numeric-argument-fact Elem_set 'e <= 0
+proved-numeric-argument-fact Elem_set 'e <= 1
+proved-numeric-argument-fact Elem_set 'e <= 15
+proved-numeric-argument-fact Elem_set 'e <= 3
+proved-numeric-argument-fact Elem_set 'e <= 31
+proved-numeric-argument-fact Elem_set 'e <= 7
+proved-numeric-argument-fact Elem_set 'size <= 127
+proved-numeric-argument-fact Elem_set 'size <= 15
+proved-numeric-argument-fact Elem_set 'size <= 31
+proved-numeric-argument-fact Elem_set 'size <= 63
+proved-numeric-argument-fact Elem_set ('e >= 0 & (('e + 1) * 'size) <= 'N)
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= (16 - 1))
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= (2 - 1))
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= (4 - 1))
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= (8 - 1))
+proved-numeric-argument-fact Elem_set 0 < 'e
+proved-numeric-argument-fact Elem_set 0 < 'size
+proved-numeric-argument-fact Elem_set 0 <= 'e
+proved-numeric-argument-fact Elem_set 0 <= 'size
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'elements <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'elements <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'elements <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'elements <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'esize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'esize <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'esize <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'esize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'part <= 0
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'part <= 1
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 'part <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 < 'elements
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 < 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 < 'part
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 <= 'elements
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 <= 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_permute_unzip 0 <= 'part
+successful-check Arm-AdvSIMD-enabled-access
+unrolled-static-loop e 0 1 1 inc
+unrolled-static-loop e 0 15 1 inc
+unrolled-static-loop e 0 3 1 inc
+unrolled-static-loop e 0 7 1 inc
+unobserved-undefined-local result
+state-computation-root arm_UZP1128E16
+state-computation-root arm_UZP1128E32
+state-computation-root arm_UZP1128E64
+state-computation-root arm_UZP1128E8
+state-computation-root arm_UZP2128E16
+state-computation-root arm_UZP2128E32
+state-computation-root arm_UZP2128E64
+state-computation-root arm_UZP2128E8
+state-computation

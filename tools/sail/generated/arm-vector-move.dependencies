@@ -1,0 +1,33 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function execute_aarch64_instrs_vector_logical|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('datasize), bitvector('datasize), ImmediateOp, int('rd))|unit|datasize=128 => sail_hl_shared_arm_2dvector_2dmove_execute_5faarch64_5finstrs_5fvector_5flogical_5f0
+shared-function execute_aarch64_instrs_vector_logical|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('datasize), bitvector('datasize), ImmediateOp, int('rd))|unit|datasize=64 => sail_hl_shared_arm_2dvector_2dmove_execute_5faarch64_5finstrs_5fvector_5flogical_5f1
+specialization-required execute_aarch64_instrs_vector_logical|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('datasize), bitvector('datasize), ImmediateOp, int('rd))|unit|: HOL Light: uninstantiated numeric type variable 'datasize
+root arm_MOVI128
+root arm_MOVI64
+inlined execute_aarch64_instrs_vector_logical
+primitive-contract CheckFPAdvSIMDEnabled64
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract and_vec
+primitive-contract not_vec
+primitive-contract or_vec
+primitive-contract replicate_bits
+primitive-contract unsigned
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 'rd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical (0 <= 'rd & 'rd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 0 <= 'rd
+successful-check Arm-AdvSIMD-enabled-access
+unobserved-undefined-local operand
+unobserved-undefined-local result
+state-computation-root arm_MOVI128
+state-computation-root arm_MOVI64
+state-computation

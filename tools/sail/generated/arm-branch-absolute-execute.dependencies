@@ -1,0 +1,26 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function HaveGCS|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool| => sail_hl_shared_arm_2dbranch_2dabsolute_2dexecute_HaveGCS_5f0
+shared-function PC_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bitvector(64)| => sail_hl_shared_arm_2dbranch_2dabsolute_2dexecute_PC_5fread_5f1
+root arm_BL_ABSOLUTE_EXECUTE
+inlined HaveGCS
+inlined PC_read
+inlined execute_aarch64_instrs_branch_unconditional_immediate
+primitive-contract Arm-frozen-instruction-PC64
+primitive-contract BranchTo
+primitive-contract IsFeatureImplemented
+primitive-contract X_set
+primitive-contract add_bits
+primitive-contract add_bits_int
+primitive-contract and_bool
+primitive-contract eq_any
+disabled-extension Arm-GCS
+successful-check Arm-flat-branch-PC-event
+statically-selected-branch src/instrs64.sail:2621:8-2621:41 then
+statically-selected-branch src/instrs64.sail:2622:12-2622:48 else
+state-computation-root arm_BL_ABSOLUTE_EXECUTE
+state-computation
