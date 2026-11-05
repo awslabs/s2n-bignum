@@ -5,6 +5,7 @@ MLKEM_NATIVE_OBJ += \
   mlkem_native/gcc12_O2_mono/libmlkem.o
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
+  mlkem_native/gcc12_O2_mono/basemul_k2 \
   mlkem_native/gcc12_O2_mono/poly_cbd2 \
   mlkem_native/gcc12_O2_mono/poly_cbd3 \
   mlkem_native/gcc12_O2_mono/poly_compress_d10 \
@@ -17,6 +18,9 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/poly_tobytes \
   mlkem_native/gcc12_O2_mono/poly_tomsg
 
+mlkem_native/gcc12_O2_mono/basemul_k2.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/libmlkem.native: \
   proofs/mlkem_native/gcc12_O2_mono/layout.ml \
   proofs/utils/mlkem_native_image.ml
