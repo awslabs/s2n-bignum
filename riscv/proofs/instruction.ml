@@ -20,8 +20,9 @@
 
    The state uses 32-bit PCs, registers, and memory addresses.
 
-   The model covers the instructions used by the mldsa-native RV32 backend. It
-   omits privileged state, exceptions, CSRs, and the compressed extension.
+   The model covers the RV32I integer computational instructions, the LW, SW,
+   BNE, and JALR instructions, and MUL and MULH from M. It omits privileged
+   state, exceptions, CSRs, and the compressed extension.
 
    MUL and MULH emit no operand-dependent event. Constant-time theorems using
    this model therefore require data-independent multiply latency on the
@@ -299,11 +300,117 @@ let riscv_SUB = define
         let d:int32 = word_sub m n in
         (rd := d) s`;;
 
+let riscv_SLL = define
+ `riscv_SLL rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n:int32 = read rs2 s in
+        let d:int32 = word_shl m (val n MOD 32) in
+        (rd := d) s`;;
+
+let riscv_SLT = define
+ `riscv_SLT rd rs1 rs2 =
+    \s:riscvstate.
+        let m:int32 = read rs1 s
+        and n:int32 = read rs2 s in
+        let d:int32 = if ival m < ival n then word 1 else word 0 in
+        (rd := d) s`;;
+
+let riscv_SLTU = define
+ `riscv_SLTU rd rs1 rs2 =
+    \s:riscvstate.
+        let m:int32 = read rs1 s
+        and n:int32 = read rs2 s in
+        let d:int32 = if val m < val n then word 1 else word 0 in
+        (rd := d) s`;;
+
+let riscv_XOR = define
+ `riscv_XOR rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = word_xor m n in
+        (rd := d) s`;;
+
+let riscv_SRL = define
+ `riscv_SRL rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n:int32 = read rs2 s in
+        let d:int32 = word_ushr m (val n MOD 32) in
+        (rd := d) s`;;
+
+let riscv_SRA = define
+ `riscv_SRA rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n:int32 = read rs2 s in
+        let d:int32 = word_ishr m (val n MOD 32) in
+        (rd := d) s`;;
+
+let riscv_OR = define
+ `riscv_OR rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = word_or m n in
+        (rd := d) s`;;
+
+let riscv_AND = define
+ `riscv_AND rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = word_and m n in
+        (rd := d) s`;;
+
+let riscv_SLTI = define
+ `riscv_SLTI rd rs1 (imm:int32) =
+    \s:riscvstate.
+        let m:int32 = read rs1 s in
+        let d:int32 = if ival m < ival imm then word 1 else word 0 in
+        (rd := d) s`;;
+
+let riscv_SLTIU = define
+ `riscv_SLTIU rd rs1 (imm:int32) =
+    \s:riscvstate.
+        let m:int32 = read rs1 s in
+        let d:int32 = if val m < val imm then word 1 else word 0 in
+        (rd := d) s`;;
+
+let riscv_XORI = define
+ `riscv_XORI rd rs1 (imm:int32) =
+    \s:riscvstate.
+        let m = read rs1 s in
+        let d:int32 = word_xor m imm in
+        (rd := d) s`;;
+
+let riscv_ORI = define
+ `riscv_ORI rd rs1 (imm:int32) =
+    \s:riscvstate.
+        let m = read rs1 s in
+        let d:int32 = word_or m imm in
+        (rd := d) s`;;
+
+let riscv_ANDI = define
+ `riscv_ANDI rd rs1 (imm:int32) =
+    \s:riscvstate.
+        let m = read rs1 s in
+        let d:int32 = word_and m imm in
+        (rd := d) s`;;
+
 let riscv_SLLI = define
  `riscv_SLLI rd rs1 shamt =
     \s:riscvstate.
         let m = read rs1 s in
         let d:int32 = word_shl m shamt in
+        (rd := d) s`;;
+
+let riscv_SRLI = define
+ `riscv_SRLI rd rs1 shamt =
+    \s:riscvstate.
+        let m = read rs1 s in
+        let d:int32 = word_ushr m shamt in
         (rd := d) s`;;
 
 let riscv_SRAI = define
@@ -317,6 +424,12 @@ let riscv_LUI = define
  `riscv_LUI rd (imm:int32) =
     \s:riscvstate.
         (rd := imm) s`;;
+
+let riscv_AUIPC = define
+ `riscv_AUIPC rd (imm:int32) =
+    \s:riscvstate.
+        let d:int32 = word_add (riscv_instruction_pc s) imm in
+        (rd := d) s`;;
 
 let riscv_MUL = define
  `riscv_MUL rd rs1 rs2 =
