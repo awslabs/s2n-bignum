@@ -219,7 +219,11 @@ let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
    REWRITE_CONV
     [riscv_execute; riscv_ADD; riscv_ADDI; riscv_SUB; riscv_SLLI;
      riscv_SRAI; riscv_LUI; riscv_MUL; riscv_MULH; riscv_LW; riscv_SW;
-     riscv_BNE; riscv_JALR; riscv_addr;
+     riscv_BNE; riscv_JALR;
+     riscv_SLL; riscv_SLT; riscv_SLTU; riscv_XOR; riscv_SRL; riscv_SRA;
+     riscv_OR; riscv_AND; riscv_SLTI; riscv_SLTIU; riscv_XORI; riscv_ORI;
+     riscv_ANDI; riscv_SRLI; riscv_AUIPC;
+     riscv_addr;
      riscv_instruction_pc; riscv_branch_target; riscv_mulh;
      riscv_event_load; riscv_event_store; riscv_event_jump; SEQ] THENC
    REWRITE_CONV[LET_DEF; LET_END_DEF] THENC
