@@ -47,6 +47,26 @@ class LayoutTests(unittest.TestCase):
         self.assertEqual(sorted(path.relative_to(coverage.REPO)
                                 for path in tools.rglob("*.sail")), [])
 
+    def test_documentation_links_and_anchors_exist(self):
+        documents = [ROOT / "README.md",
+                     ROOT / "CONTRIBUTING.md", ROOT / "scripts/README.md",
+                     ROOT / "backend/README.md",
+                     ROOT / "ci/README.md", ROOT / "generated/README.md",
+                     ROOT / "proofs/README.md", ROOT / "statements/README.md",
+                     *(ROOT / "docs").glob("*.md")]
+        for document in documents:
+            for target in re.findall(r"\]\(([^)\n]+)\)", document.read_text()):
+                if "://" in target:
+                    continue
+                name, _, anchor = target.partition("#")
+                path = (document.parent / name).resolve() if name else document
+                if coverage.BUILD in path.parents:
+                    continue
+                with self.subTest(document=document.name, target=target):
+                    self.assertTrue(path.exists(), str(path))
+                    if anchor and path.suffix == ".md":
+                        self.assertIn(anchor, heading_anchors(path))
+
 
 class AxiomTests(unittest.TestCase):
     """ci/check.py checks the proof sources before every proof run; these
@@ -98,6 +118,17 @@ class AxiomTests(unittest.TestCase):
                 self.mutated("arm-carry.ml", change)
         with self.assertRaises(ValueError):
             self.mutated("sub/unloaded.ml", lambda text: "let x = mk_thm([],`T`);;\n")
+
+
+def heading_anchors(path):
+    """GitHub's anchors for the Markdown headings in path."""
+    anchors = set()
+    for line in path.read_text().splitlines():
+        heading = re.match(r"#+ (.*)", line)
+        if heading:
+            text = re.sub(r"[^\w\- ]", "", heading.group(1).strip().lower())
+            anchors.add(text.replace(" ", "-"))
+    return anchors
 
 
 if __name__ == "__main__":

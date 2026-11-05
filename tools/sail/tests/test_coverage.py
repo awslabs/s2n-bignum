@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Check the AArch64 and RV32IM inventory and the proof-log audit."""
+import re
 import unittest
+from pathlib import Path
 
 import _project
 import coverage
@@ -104,6 +106,22 @@ class InventoryTests(unittest.TestCase):
         self.assertEqual(
             coverage.arm_instruction_forms("compare", "CCMP"),
             ("register", "immediate"))
+
+
+class CoverageMapTests(unittest.TestCase):
+    def test_suite_table_lists_each_familys_instructions(self):
+        """docs/ARM-COVERAGE-MAP.md's suite table is written by hand; it
+        must list the families of ARM_FAMILIES and their instructions."""
+        text = (Path(coverage.__file__).resolve().parent.parent /
+                "docs" / "ARM-COVERAGE-MAP.md").read_text()
+        rows = {}
+        for line in text.splitlines():
+            match = re.fullmatch(r"\| `arm-([a-z0-9-]+)` \| (.*) \|", line)
+            if match:
+                rows[match.group(1)] = re.findall(r"`([^`]+)`", match.group(2))
+        expected = {family: list(details["instructions"])
+                    for family, details in coverage.ARM_FAMILIES.items()}
+        self.assertEqual(rows, expected)
 
 
 class ProofOutputTests(unittest.TestCase):
