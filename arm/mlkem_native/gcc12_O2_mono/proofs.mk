@@ -180,7 +180,10 @@ mlkem_native/gcc12_O2_mono/poly_rej_uniform_x4.native: \
   mlkem_native/gcc12_O2_mono/poly_rej_uniform.native \
   mlkem_native/gcc12_O2_mono/keccakf1600_permute.native \
   mlkem_native/gcc12_O2_mono/keccak_absorb_once_x4.native \
-  mlkem_native/gcc12_O2_mono/keccak_squeezeblocks_x4.native
+  mlkem_native/gcc12_O2_mono/keccak_squeezeblocks_x4.native \
+  proofs/utils/mlkem_native_libc_full.ml \
+  proofs/utils/mlkem_native_libc.ml \
+  proofs/utils/mlkem_native_image.ml
 mlkem_native/gcc12_O2_mono/poly_tobytes.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O2_mono/libmlkem.native
