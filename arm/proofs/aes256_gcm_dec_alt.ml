@@ -18,9 +18,11 @@
 (* tag_p becomes nist_ghash H over the input (ciphertext) blocks, continued  *)
 (* from the old tag, and ivec_p advances to ctr_block nonce (nblk + c); the  *)
 (* tag and the counter block are stored byte-reversed.  The buffers must be  *)
-(* disjoint, and val in_p + 16 * nblk < 2 EXP 63 since the kernel compares   *)
-(* pointers with signed conditions.  AES256_GCM_DEC_ALT_SUBROUTINE_SAFE is   *)
-(* the matching constant-time and memory-safety theorem.                     *)
+(* disjoint, except that the output may be the input buffer itself (in-place *)
+(* decryption), and val in_p + 16 * nblk < 2 EXP 63 since the kernel         *)
+(* compares pointers with signed conditions.                                 *)
+(* AES256_GCM_DEC_ALT_SUBROUTINE_SAFE is the matching constant-time and      *)
+(* memory-safety theorem.                                                    *)
 (*                                                                           *)
 (* The code begins with a bti c landing pad.  The proofs are about the code  *)
 (* without it, the code of a -DNO_IBT build, so every offset in this file    *)
@@ -2940,7 +2942,7 @@ let mk_band_goal k =
      nonoverlapping (tag_p, 16) (key_p, 240) /\
      nonoverlapping (tag_p, 16) (htable_p, 192) /\
      nonoverlapping (tag_p, 16) (stackpointer, 80) /\
-     nonoverlapping (out_p, sss) (in_p, sss) /\
+     (in_p = out_p \/ nonoverlapping (in_p, sss) (out_p, sss)) /\
      nonoverlapping (out_p, sss) (key_p, 240) /\
      nonoverlapping (out_p, sss) (htable_p, 192) /\
      nonoverlapping (out_p, sss) (stackpointer, 80)` in
@@ -3087,21 +3089,21 @@ let wbn_tail_backleg_goal5_return r =
 (* The 8 shared back-legs.  Their proofs from the weakened precondition show *)
 (* that the tail does not read X1 and leaves X9 unchanged.                   *)
 let WB_TAIL_GEN2_1 = prove(wbn_tail_backleg_goal5_return 1,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 1 THEN WB_TAIL_1_TAC (WB_IVEC_CLOSE_TAC 1));;
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN WB_PREP_TAC 1 THEN WB_TAIL_1_TAC (WB_IVEC_CLOSE_TAC 1));;
 let WB_TAIL_GEN2_2 = prove(wbn_tail_backleg_goal5_return 2,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 2 THEN WB_TAIL_2_TAC (WB_IVEC_CLOSE_TAC 2));;
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN WB_PREP_TAC 2 THEN WB_TAIL_2_TAC (WB_IVEC_CLOSE_TAC 2));;
 let WB_TAIL_GEN2_3 = prove(wbn_tail_backleg_goal5_return 3,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 3 THEN WB_TAIL_3_TAC (WB_IVEC_CLOSE_TAC 3));;
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN WB_PREP_TAC 3 THEN WB_TAIL_3_TAC (WB_IVEC_CLOSE_TAC 3));;
 let WB_TAIL_GEN2_4 = prove(wbn_tail_backleg_goal5_return 4,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 4 THEN WB_TAIL_4_TAC (WB_IVEC_CLOSE_TAC 4));;
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN WB_PREP_TAC 4 THEN WB_TAIL_4_TAC (WB_IVEC_CLOSE_TAC 4));;
 let WB_TAIL_GEN2_5 = prove(wbn_tail_backleg_goal5_return 5,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 5 THEN WB_TAIL_5_TAC (WB_IVEC_CLOSE_TAC 5));;
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN WB_PREP_TAC 5 THEN WB_TAIL_5_TAC (WB_IVEC_CLOSE_TAC 5));;
 let WB_TAIL_GEN2_6 = prove(wbn_tail_backleg_goal5_return 6,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 6 THEN WB_TAIL_6_TAC (WB_IVEC_CLOSE_TAC 6));;
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN WB_PREP_TAC 6 THEN WB_TAIL_6_TAC (WB_IVEC_CLOSE_TAC 6));;
 let WB_TAIL_GEN2_7 = prove(wbn_tail_backleg_goal5_return 7,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 7 THEN WB_TAIL_7_TAC (WB_IVEC_CLOSE_TAC 7));;
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN WB_PREP_TAC 7 THEN WB_TAIL_7_TAC (WB_IVEC_CLOSE_TAC 7));;
 let WB_TAIL_GEN2_8 = prove(wbn_tail_backleg_goal5_return 8,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 8 THEN WB_TAIL_8_TAC (WB_IVEC_CLOSE_TAC 8));;
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN WB_PREP_TAC 8 THEN WB_TAIL_8_TAC (WB_IVEC_CLOSE_TAC 8));;
 
 let GCM_SIMD_SIMPLIFY_CORE_QSCOPED_TAC =
   GCM_SIMD_SIMPLIFY_MEMO_TAC gcm_simd_fixpt_tbl;;
@@ -3308,7 +3310,7 @@ let WB_FUSED_1BLOCK = prove(
     nonoverlapping (tag_p, 16) (key_p, 240) /\
     nonoverlapping (tag_p, 16) (htable_p, 192) /\
     nonoverlapping (tag_p, 16) (stackpointer, 80) /\
-    nonoverlapping (out_p, 16) (in_p, 16) /\
+    (in_p = out_p \/ nonoverlapping (in_p, 16) (out_p, 16)) /\
     nonoverlapping (out_p, 16) (key_p, 240) /\
     nonoverlapping (out_p, 16) (htable_p, 192) /\
     nonoverlapping (out_p, 16) (stackpointer, 80) /\
@@ -3354,7 +3356,7 @@ let WB_FUSED_1BLOCK = prove(
                  memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
       MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                  Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   CLEAR_KEEPGHALL_MEMO_TAC THEN  (* empty the normalizer fixpoint table *)
   FIRST_ASSUM(fun th ->
@@ -3486,7 +3488,7 @@ let WB_FUSED_2BLOCK = prove(
     nonoverlapping (tag_p, 16) (key_p, 240) /\
     nonoverlapping (tag_p, 16) (htable_p, 192) /\
     nonoverlapping (tag_p, 16) (stackpointer, 80) /\
-    nonoverlapping (out_p, 32) (in_p, 32) /\
+    (in_p = out_p \/ nonoverlapping (in_p, 32) (out_p, 32)) /\
     nonoverlapping (out_p, 32) (key_p, 240) /\
     nonoverlapping (out_p, 32) (htable_p, 192) /\
     nonoverlapping (out_p, 32) (stackpointer, 80) /\
@@ -3540,7 +3542,7 @@ let WB_FUSED_2BLOCK = prove(
                  memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
       MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                  Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   CLEAR_KEEPGHALL_MEMO_TAC THEN  (* empty the normalizer fixpoint table *)
   FIRST_ASSUM(fun th ->
@@ -3734,7 +3736,7 @@ let WB_FUSED_3BLOCK = prove(
     nonoverlapping (tag_p, 16) (key_p, 240) /\
     nonoverlapping (tag_p, 16) (htable_p, 192) /\
     nonoverlapping (tag_p, 16) (stackpointer, 80) /\
-    nonoverlapping (out_p, 48) (in_p, 48) /\
+    (in_p = out_p \/ nonoverlapping (in_p, 48) (out_p, 48)) /\
     nonoverlapping (out_p, 48) (key_p, 240) /\
     nonoverlapping (out_p, 48) (htable_p, 192) /\
     nonoverlapping (out_p, 48) (stackpointer, 80) /\
@@ -3797,7 +3799,7 @@ let WB_FUSED_3BLOCK = prove(
                  memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
       MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                  Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   CLEAR_KEEPGHALL_MEMO_TAC THEN  (* empty the normalizer fixpoint table *)
   (* split hk at htable_p+16: the Karatsuba mids of H (low) and H^2 (high) *)
@@ -4047,7 +4049,7 @@ let WB_FUSED_4BLOCK = prove(
     nonoverlapping (tag_p, 16) (key_p, 240) /\
     nonoverlapping (tag_p, 16) (htable_p, 192) /\
     nonoverlapping (tag_p, 16) (stackpointer, 80) /\
-    nonoverlapping (out_p, 64) (in_p, 64) /\
+    (in_p = out_p \/ nonoverlapping (in_p, 64) (out_p, 64)) /\
     nonoverlapping (out_p, 64) (key_p, 240) /\
     nonoverlapping (out_p, 64) (htable_p, 192) /\
     nonoverlapping (out_p, 64) (stackpointer, 80) /\
@@ -4118,7 +4120,7 @@ let WB_FUSED_4BLOCK = prove(
                  memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
       MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                  Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   CLEAR_KEEPGHALL_MEMO_TAC THEN  (* empty the normalizer fixpoint table *)
   (* split hk at htable_p+16: the Karatsuba mids of H (low) and H^2 (high) *)
@@ -4341,7 +4343,7 @@ let mk_band_from_fused k fused_thm =
   let fused_inst = SPECL (s42_fused_specl_args k) fused_thm in
   let fused_pre = el 1 (snd(strip_comb(snd(dest_imp(concl fused_inst))))) in
   prove(mk_band_goal k,
-    REPEAT GEN_TAC THEN STRIP_TAC THEN
+    REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
     MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC fused_pre THEN CONJ_TAC THENL
      [GEN_TAC THEN REWRITE_TAC[htable_mem_dec] THEN
       CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -4369,7 +4371,7 @@ let wbn_backlegs =
    does not read). *)
 let prove_band k =
   prove(mk_band_goal k,
-    REPEAT GEN_TAC THEN STRIP_TAC THEN
+    REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN EXISTS_TAC (fdbl_at k) THEN
     CONJ_TAC THENL
      [REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN SUBSUMED_MAYCHANGE_TAC;
@@ -4507,7 +4509,7 @@ let prove_wb_wrapper k buf_thm =
     (mk_eq(subst [mk_small_numeral k,`kkk:num`] `j < kkk:num`,
            list_mk_disj (map (fun i -> mk_eq(`j:num`, mk_small_numeral i)) (0--(k-1))))) in
   prove(mk_wb_wrapper_goal k,
-    REPEAT GEN_TAC THEN STRIP_TAC THEN
+    REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
     REWRITE_TAC[gcm_dec_final_xi; el (k-1) ghash_wholes; el (k-1) pt_wholes; MAP] THEN
     MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN
     EXISTS_TAC pre_buf THEN
@@ -4563,7 +4565,7 @@ let wb_rk15_tm = `[EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk
                    EL 13 rk; EL 14 rk]:int128 list`;;
 let WB_READABLE_TAC k buf_thm =
   let wn = mk_wrapper_nist k (prove_wb_wrapper k buf_thm) in
-  REPEAT GEN_TAC THEN REWRITE_TAC[ALLPAIRS;PAIRWISE;ALL] THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[ALLPAIRS;PAIRWISE;ALL] THEN INTRO_HYPS_TAC THEN
   MP_TAC wn THEN ANTS_TAC THENL
    [ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN
     ONCE_REWRITE_TAC[NONOVERLAPPING_SYM] THEN ASM_REWRITE_TAC[];
@@ -4600,7 +4602,9 @@ let AES256_GCM_DEC_ALT_1BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,16; tag_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16; key_p,240; htable_p,192; stackpointer,80] /\
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192; stackpointer,80] /\
+     ALL (nonoverlapping (in_p,16)) [tag_p,16; ivec_p,16] /\
+     (in_p = out_p \/ nonoverlapping (in_p,16) (out_p,16)) /\
      PAIRWISE nonoverlapping [out_p,16; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
        [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16; key_p,240; htable_p,192]
@@ -4637,7 +4641,9 @@ let AES256_GCM_DEC_ALT_2BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,32; tag_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,32; key_p,240; htable_p,192; stackpointer,80] /\
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192; stackpointer,80] /\
+     ALL (nonoverlapping (in_p,32)) [tag_p,16; ivec_p,16] /\
+     (in_p = out_p \/ nonoverlapping (in_p,32) (out_p,32)) /\
      PAIRWISE nonoverlapping [out_p,32; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
        [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,32; key_p,240; htable_p,192]
@@ -4674,7 +4680,9 @@ let AES256_GCM_DEC_ALT_3BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,48; tag_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,48; key_p,240; htable_p,192; stackpointer,80] /\
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192; stackpointer,80] /\
+     ALL (nonoverlapping (in_p,48)) [tag_p,16; ivec_p,16] /\
+     (in_p = out_p \/ nonoverlapping (in_p,48) (out_p,48)) /\
      PAIRWISE nonoverlapping [out_p,48; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
        [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,48; key_p,240; htable_p,192]
@@ -4711,7 +4719,9 @@ let AES256_GCM_DEC_ALT_4BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,64; tag_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,64; key_p,240; htable_p,192; stackpointer,80] /\
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192; stackpointer,80] /\
+     ALL (nonoverlapping (in_p,64)) [tag_p,16; ivec_p,16] /\
+     (in_p = out_p \/ nonoverlapping (in_p,64) (out_p,64)) /\
      PAIRWISE nonoverlapping [out_p,64; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
        [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,64; key_p,240; htable_p,192]
@@ -4748,7 +4758,9 @@ let AES256_GCM_DEC_ALT_5BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,80; tag_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,80; key_p,240; htable_p,192; stackpointer,80] /\
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192; stackpointer,80] /\
+     ALL (nonoverlapping (in_p,80)) [tag_p,16; ivec_p,16] /\
+     (in_p = out_p \/ nonoverlapping (in_p,80) (out_p,80)) /\
      PAIRWISE nonoverlapping [out_p,80; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
        [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,80; key_p,240; htable_p,192]
@@ -4785,7 +4797,9 @@ let AES256_GCM_DEC_ALT_6BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,96; tag_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,96; key_p,240; htable_p,192; stackpointer,80] /\
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192; stackpointer,80] /\
+     ALL (nonoverlapping (in_p,96)) [tag_p,16; ivec_p,16] /\
+     (in_p = out_p \/ nonoverlapping (in_p,96) (out_p,96)) /\
      PAIRWISE nonoverlapping [out_p,96; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
        [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,96; key_p,240; htable_p,192]
@@ -4822,7 +4836,9 @@ let AES256_GCM_DEC_ALT_7BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,112; tag_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,112; key_p,240; htable_p,192; stackpointer,80] /\
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192; stackpointer,80] /\
+     ALL (nonoverlapping (in_p,112)) [tag_p,16; ivec_p,16] /\
+     (in_p = out_p \/ nonoverlapping (in_p,112) (out_p,112)) /\
      PAIRWISE nonoverlapping [out_p,112; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
        [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,112; key_p,240; htable_p,192]
@@ -4859,7 +4875,9 @@ let AES256_GCM_DEC_ALT_8BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,128; tag_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,128; key_p,240; htable_p,192; stackpointer,80] /\
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192; stackpointer,80] /\
+     ALL (nonoverlapping (in_p,128)) [tag_p,16; ivec_p,16] /\
+     (in_p = out_p \/ nonoverlapping (in_p,128) (out_p,128)) /\
      PAIRWISE nonoverlapping [out_p,128; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
        [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,128; key_p,240; htable_p,192]
@@ -4903,7 +4921,9 @@ let AES256_GCM_DEC_ALT_DISPATCH = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,16 * nblk; tag_p,16; ivec_p,16]
-       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192; stackpointer,80] /\
+       [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192; stackpointer,80] /\
+     ALL (nonoverlapping (in_p,16 * nblk)) [tag_p,16; ivec_p,16] /\
+     (in_p = out_p \/ nonoverlapping (in_p,16 * nblk) (out_p,16 * nblk)) /\
      PAIRWISE nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
        [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192]
@@ -4935,7 +4955,7 @@ let AES256_GCM_DEC_ALT_DISPATCH = prove
                AES256_GCM_DEC_ALT_3BLOCK;AES256_GCM_DEC_ALT_4BLOCK;
                AES256_GCM_DEC_ALT_5BLOCK;AES256_GCM_DEC_ALT_6BLOCK;
                AES256_GCM_DEC_ALT_7BLOCK;AES256_GCM_DEC_ALT_8BLOCK] in
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   SUBGOAL_THEN `nblk = 1 \/ nblk = 2 \/ nblk = 3 \/ nblk = 4 \/ nblk = 5 \/ nblk = 6 \/ nblk = 7 \/ nblk = 8`
     MP_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   STRIP_TAC THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
@@ -5034,18 +5054,22 @@ let WB_PTRCMP_FLAGS = prove
 (* The >=17 front hypotheses: wb_front_hyps_tm with its 5 <= nblk /\ nblk <= 8
    prefix replaced by the >=17 band, keeping every other conjunct, plus
    nonoverlapping (out_p,16 * nblk) (stackpointer,80), which the <=8 hypotheses
-   do not need.  The front-N stores to out_p (the four stp q,q,[x2],#32 at
-   0x468..0x4ac) before the loop head; without out_p against the stack the
-   stepper cannot show that these stores miss [sp+64], and it drops the
-   reduction constant read (memory :> bytes64 (sp+64)) s =
+   do not need, and the in-place hypothesis: the output is the input buffer
+   or disjoint from it.  The front-N stores to out_p (the four
+   stp q,q,[x2],#32 at 0x468..0x4ac) before the loop head; without out_p
+   against the stack the stepper cannot show that these stores miss [sp+64],
+   and it drops the reduction constant read (memory :> bytes64 (sp+64)) s =
    word 0xc200000000000000, which the GHASH reduction of the loop body needs
-   (the [sp+64] conjunct of the invariant). *)
+   (the [sp+64] conjunct of the invariant).  Without the in-place hypothesis
+   it drops the input from block 8 on, which the invariant needs. *)
 let wbn_front_hyps_tm =
   let _,rest1 = dest_conj wb_front_hyps_tm in
   let _,rest = dest_conj rest1 in
   mk_conj(`17 <= nblk /\ 128 * nblk < 2 EXP 64 /\ val (in_p:int64) + 16 * nblk < 2 EXP 63`,
-          mk_conj(`nonoverlapping (out_p:int64,16 * nblk) (stackpointer:int64,80)`,
-                  rest));;
+   mk_conj(`nonoverlapping (out_p:int64,16 * nblk) (stackpointer:int64,80)`,
+    mk_conj(`in_p:int64 = out_p \/
+             nonoverlapping (in_p:int64,16 * nblk) (out_p:int64,16 * nblk)`,
+            rest)));;
 
 let mk_wbn_front_goal postcond =
   let ens = subst [wb_front_pre_tm,`PPP:armstate->bool`; postcond,`QQQ:armstate->bool`;
@@ -5135,10 +5159,12 @@ let mk_wbn_prefix_goal postcond =
    executes: input blocks 0..7 in Q8..Q15, plaintext blocks 0..7 stored and
    5..7 still in Q5..Q7, the counters 8..12 in Q0..Q4 and Q30 = the raw
    counter + 13, with the NZCV facts of the cmp x0,x5 at 0x45c, which each leg
-   resolves in its band at step 296.  It has no facts about the input buffer,
-   the key schedule or the htable; WBN_FRONT_BUF_EXT and WBN_FRONT_PREFIX_EXT
-   (Sec 7) add them back.  Built like wb_front_postcond, as the final state of
-   the prefix simulation. *)
+   resolves in its band at step 296, and the input from block 8 on, which the
+   stores of blocks 0..7 leave alone (the read of the whole buffer does not
+   survive them when in_p = out_p).  It has no facts about the key schedule
+   or the htable; WBN_FRONT_BUF_EXT and WBN_FRONT_PREFIX_EXT (Sec 7) add them
+   back.  Built like wb_front_postcond, as the final state of the prefix
+   simulation. *)
 let wbn_front_prefix_postcond = wbp_post
  ([`aligned_bytes_loaded s (word pc) aes256_gcm_dec_alt_tmc`;
    `read PC s = word (pc + 1208)`;
@@ -5161,7 +5187,9 @@ let wbn_front_prefix_postcond = wbp_post
    `read SP s = stackpointer`;
    `read X1 s = word (128 * nblk)`;
    `read X3 s = tag_p`;
-   `read X6 s = htable_p`] @
+   `read X6 s = htable_p`;
+   `read (memory :> bytes (word_add in_p (word 128),16 * nblk - 128)) s =
+    num_of_bytelist (SUB_LIST (128,16 * nblk - 128) ibytes)`] @
   wbp_ctx `xi:int128` @
   [wbp_rd `Q11` (mk_cph 3); wbp_rd `Q10` (mk_cph 2);
    `read X0 s = word_add in_p (word 128)`;
@@ -5200,7 +5228,7 @@ let WBN_LANES_PREBRANCH_GE9_TAC =
    falls through (step 268, WB_LOOPENTER_FLAGS_GE9) and the front-N runs steps
    269..295 to the 0x4b8 b.ge (pc+1208, state s295). *)
 let WBN_FRONT_PREFIX = prove(mk_wbn_prefix_goal wbn_front_prefix_postcond,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
   EXISTS_TAC wbn_front_prebranch_postcond THEN
   CONJ_TAC THENL
@@ -5209,7 +5237,8 @@ let WBN_FRONT_PREFIX = prove(mk_wbn_prefix_goal wbn_front_prefix_postcond,
   CONJ_TAC THENL
    [MATCH_MP_TAC WBN_FRONT_PREBRANCH THEN ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;
     ENSURES_INIT_TAC "s267" THEN RULE_ASSUM_TAC(REWRITE_RULE[WB_MC_LEN]) THEN
-    WBN_LANES_PREBRANCH_GE9_TAC THEN WBN_RESOLVE_42C_GE9_TAC THEN
+    WBN_LANES_PREBRANCH_GE9_TAC THEN WBN_SUFFIX8_TAC "s267" THEN
+    WBN_RESOLVE_42C_GE9_TAC THEN
     ARM_STEPS_TAC AES256_GCM_DEC_ALT_EXEC (268--268) THEN
     EVERY(map (fun i -> ARM_STEPS_TAC AES256_GCM_DEC_ALT_EXEC (i--i) THEN
                GCM_SIMD_SIMPLIFY_TAC THEN DISCARD_STALE_Q30_TAC) (269--295)) THEN
@@ -5237,7 +5266,7 @@ let wbn_front_postcond_i0 =
    accumulator over no blocks; the stores of blocks 0..7 done; the counters
    8..12 in Q0..Q4; X0 = in_p + 128 and X2 = out_p + 128. *)
 let WBN_FRONT_BUF = prove(mk_wbn_front_goal wbn_front_postcond_i0,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
   EXISTS_TAC wbn_front_prefix_postcond THEN
   CONJ_TAC THENL
@@ -5264,17 +5293,18 @@ let WBN_FRONT_BUF = prove(mk_wbn_front_goal wbn_front_postcond_i0,
 (* - the store/counter stream runs ahead at 8(i+1): X0 = in_p + 128(i+1),    *)
 (*   X2 = out_p + 128(i+1), Q0..Q4 = gcm_ctr_add (word (8i+8..8i+12)) ctr0   *)
 (*   (the counters of the next group), Q5..Q7 = the plaintext blocks         *)
-(*   8i+5..8i+7, the stores done for all j < 8(i+1), and                     *)
-(*   Q30 = gcm_ctr_raw (word (8i+13)) ctr0;                                  *)
+(*   8i+5..8i+7, the stores done for all j < 8(i+1),                         *)
+(*   Q30 = gcm_ctr_raw (word (8i+13)) ctr0, and the input from block 8(i+1)  *)
+(*   on (all that is left of it when in_p = out_p);                          *)
 (* - the GHASH stream lags at 8i: Q19 = ghash_polyval_acc (byteswap128 h)    *)
 (*   (word_bytereverse xi) over the byte-reversed raw ciphertext blocks      *)
 (*   0..8i-1, and Q8..Q15 = the raw ciphertext blocks 8i..8i+7, not yet      *)
 (*   folded in.                                                              *)
 (*                                                                           *)
-(* The last 17 conjuncts (the input buffer, the key schedule k0..k14 and     *)
-(* htable_mem_dec) are loop constants that the simulated front postcondition *)
-(* does not restate: WBN_FRONT_BUF_EXT (Sec 7) adds them, and                *)
-(* WBN_LOOP_INVARIANT_ENTRY_RAW (Sec 8) derives the i = 0 instance.          *)
+(* The last 16 conjuncts (the key schedule k0..k14 and htable_mem_dec) are   *)
+(* loop constants that the simulated front postcondition does not restate:   *)
+(* WBN_FRONT_BUF_EXT (Sec 7) adds them, and WBN_LOOP_INVARIANT_ENTRY_RAW     *)
+(* (Sec 8) derives the i = 0 instance.                                       *)
 (*                                                                           *)
 (* The loop control is the cmp x0,x5 at 0xa00 and the signed b.lt 0x4bc at   *)
 (* 0xa08 (resolved by WB_PTRCMP_FLAGS); the exit falls through to the        *)
@@ -5351,7 +5381,10 @@ let wbn_loop_invariant_raw = new_definition
              (word_xor (bytes_to_int128 (SUB_LIST (16 * j,16) ibytes))
              (aes13 (gcm_ctr_inc_iter j ctr0) k0 k1 k2 k3 k4 k5 k6 k7 k8 k9
               k10 k11 k12 k13)) k14) /\
-    read (memory :> bytes (in_p,16 * nblk)) s = num_of_bytelist ibytes /\
+    read (memory :> bytes (word_add in_p (word (128 * (i + 1))),
+                           16 * nblk - 128 * (i + 1))) s =
+    num_of_bytelist
+      (SUB_LIST (128 * (i + 1),16 * nblk - 128 * (i + 1)) ibytes) /\
     read (memory :> bytes128 key_p) s = k0 /\
     read (memory :> bytes128 (word_add key_p (word 16))) s = k1 /\
     read (memory :> bytes128 (word_add key_p (word 32))) s = k2 /\
@@ -5537,12 +5570,14 @@ let WBN_Q19_PREPRETAIL_CLOSE_TAC (idx:term) : tactic =
 (* From `ensures step P Q C` and `!s s'. P s /\ C s s' ==> R s'`,            *)
 (* ENSURES_ADD_PRESERVED gives `ensures step P (\s. Q s /\ R s) C`.          *)
 (* WBN_FRONT_BUF_EXT and WBN_FRONT_PREFIX_EXT (Sec 7) use it to add the loop *)
-(* constants R (wbn_front_R_tm: the input buffer, the key schedule k0..k14   *)
-(* and htable_mem_dec) to the front postconditions: the front frame          *)
-(* wb_front_frame_tm writes only out_p, tag_p, ivec_p, the stack slot        *)
-(* [sp+64,sp+80) and registers, which the nonoverlapping hypotheses keep     *)
-(* apart from in_p, key_p and htable_p.  The recomposition of Sec 12 uses it *)
-(* to carry the stores of the first output blocks through the tail legs.     *)
+(* constants R (wbn_front_R_tm: the key schedule k0..k14 and htable_mem_dec) *)
+(* to the front postconditions: the front frame wb_front_frame_tm writes     *)
+(* only out_p, tag_p, ivec_p, the stack slot [sp+64,sp+80) and registers,    *)
+(* which the nonoverlapping hypotheses keep apart from key_p and htable_p.   *)
+(* (The frame does not preserve the input when in_p = out_p; the input the   *)
+(* invariant needs is in the simulated postcondition.)  The recomposition of *)
+(* Sec 12 uses it to carry the stores of the first output blocks through the *)
+(* tail legs.                                                                *)
 (* ------------------------------------------------------------------------- *)
 
 let ENSURES_ADD_PRESERVED = prove
@@ -5562,12 +5597,12 @@ let ENSURES_ADD_PRESERVED = prove
 (* ------------------------------------------------------------------------- *)
 (* 7. WBN_FRONT_BUF_EXT: the front with the loop constants re-asserted.      *)
 (*                                                                           *)
-(* The i = 0 invariant needs the loop constants R at the loop head (the      *)
-(* input buffer, the 15 key reads k0..k14 and htable_mem_dec,                *)
-(* wbn_front_R_tm), which WBN_FRONT_BUF's simulated postcondition does not   *)
-(* restate.  The front frame preserves them provided out_p is disjoint from  *)
-(* in_p, key_p and htable_p; wbn_front_hyps_tm does not have those three     *)
-(* disjointness conjuncts, so wbn_front_hyps_wide_tm adds them.              *)
+(* The i = 0 invariant needs the loop constants R at the loop head (the 15   *)
+(* key reads k0..k14 and htable_mem_dec, wbn_front_R_tm), which              *)
+(* WBN_FRONT_BUF's simulated postcondition does not restate.  The front      *)
+(* frame preserves them provided out_p is disjoint from key_p and htable_p;  *)
+(* wbn_front_hyps_tm does not have those two disjointness conjuncts, so      *)
+(* wbn_front_hyps_wide_tm adds them.                                         *)
 (* WBN_FRONT_BUF_EXT is ENSURES_ADD_PRESERVED applied to WBN_FRONT_BUF       *)
 (* (whose hypotheses the wide ones imply) and to the preservation            *)
 (* obligation, which needs no simulation: the frame is unfolded and each     *)
@@ -5575,11 +5610,10 @@ let ENSURES_ADD_PRESERVED = prove
 (* ------------------------------------------------------------------------- *)
 
 (* the wide >=17 hypotheses: wbn_front_hyps_tm plus the disjointness of out_p
-   from in_p, key_p and htable_p *)
+   from key_p and htable_p *)
 let wbn_front_hyps_wide_tm =
   mk_conj(wbn_front_hyps_tm,
-    `nonoverlapping (out_p:int64,16 * nblk) (in_p:int64,16 * nblk) /\
-     nonoverlapping (out_p:int64,16 * nblk) (key_p:int64,240) /\
+    `nonoverlapping (out_p:int64,16 * nblk) (key_p:int64,240) /\
      nonoverlapping (out_p:int64,16 * nblk) (htable_p:int64,192)`);;
 
 (* the WBN_FRONT_BUF pieces: P = precondition, Q0 = simulated postcondition,
@@ -5588,13 +5622,12 @@ let wbn_front_P_tm, wbn_front_Q0_tm, wbn_front_C_tm =
   let ens = snd(dest_imp(snd(strip_forall(concl WBN_FRONT_BUF)))) in
   rand(rator(rator ens)), rand(rator ens), rand ens;;
 
-(* R = the loop constants (the input buffer, k0..k14, htable_mem_dec), spelled
-   as wbn_loop_invariant_raw states them *)
+(* R = the loop constants (k0..k14, htable_mem_dec), spelled as
+   wbn_loop_invariant_raw states them *)
 let wbn_front_R_tm =
   let sv = fst(dest_abs wbn_front_P_tm) in
   mk_abs(sv, list_mk_conj
-    [`read (memory :> bytes (in_p:int64,16 * nblk)) s = num_of_bytelist ibytes`;
-     `read (memory :> bytes128 (key_p:int64)) s = (k0:int128)`;
+    [`read (memory :> bytes128 (key_p:int64)) s = (k0:int128)`;
      `read (memory :> bytes128 (word_add key_p (word 16))) s = (k1:int128)`;
      `read (memory :> bytes128 (word_add key_p (word 32))) s = (k2:int128)`;
      `read (memory :> bytes128 (word_add key_p (word 48))) s = (k3:int128)`;
@@ -5620,7 +5653,7 @@ let wbn_front_ext_goal =
   list_mk_forall(wb_front_vars, mk_imp(wbn_front_hyps_wide_tm, ens));;
 
 let WBN_FRONT_BUF_EXT = prove(wbn_front_ext_goal,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MATCH_MP_TAC ENSURES_ADD_PRESERVED THEN CONJ_TAC THENL
    [MATCH_MP_TAC WBN_FRONT_BUF THEN ASM_REWRITE_TAC[];
     REWRITE_TAC[htable_mem_dec] THEN
@@ -5667,7 +5700,7 @@ let wbn_front_prefix_ext_goal =
   list_mk_forall(wb_front_vars, mk_imp(wbn_front_hyps_ge9_wide_tm, ens));;
 
 let WBN_FRONT_PREFIX_EXT = prove(wbn_front_prefix_ext_goal,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MATCH_MP_TAC ENSURES_ADD_PRESERVED THEN CONJ_TAC THENL
    [MATCH_MP_TAC WBN_FRONT_PREFIX THEN ASM_REWRITE_TAC[];
     REWRITE_TAC[htable_mem_dec] THEN
@@ -5735,7 +5768,7 @@ let wbn_extQ =
     rhs(concl(BETA_CONV(mk_comb(wbn_front_R_tm,sv)))))) ;;
 
 let WBN_LOOP_INVARIANT_ENTRY_RAW = prove(wbn_entry_goal,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MATCH_MP_TAC ENSURES_POSTCONDITION_THM THEN
   EXISTS_TAC wbn_extQ THEN CONJ_TAC THENL
    [(* (Q0 x /\ R x) ==> decodes /\ PC=pc+0x4bc /\ inv 0 x *)
@@ -5918,25 +5951,6 @@ let UP2_ABI_TAC k pc1 pc2 iv =
    [REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN MAYCHANGE_IDEMPOT_TAC;
     ALL_TAC];;
 
-let WBN_RAWCT_READ = prove
- (`i < (nblk - 9) DIV 8 /\ 9 <= nblk /\
-   LENGTH (ibytes:byte list) = 16 * nblk /\
-   read (memory :> bytes (in_p:int64, 16 * nblk)) s = num_of_bytelist ibytes
-   ==> !m. m < 8
-       ==> read (memory :> bytes128 (word_add in_p (word (16 * (8*(i+1)+m))))) s =
-           bytes_to_int128 (SUB_LIST (16 * (8*(i+1)+m), 16) ibytes)`,
-  STRIP_TAC THEN
-  MP_TAC(SPECL [`nblk:num`; `in_p:int64`; `ibytes:byte list`; `s:armstate`]
-    INPUT_PREFIX_TO_BYTE128_LANES) THEN
-  ANTS_TAC THENL
-   [ASM_REWRITE_TAC[LE_REFL] THEN
-    SUBGOAL_THEN `SUB_LIST (0, 16 * nblk) (ibytes:byte list) = ibytes` SUBST1_TAC THENL
-     [MATCH_MP_TAC SUB_LIST_LENGTH_IMPLIES THEN ASM_REWRITE_TAC[LE_REFL]; ALL_TAC] THEN
-    ASM_REWRITE_TAC[];
-    DISCH_TAC THEN X_GEN_TAC `m:num` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    MP_TAC(SPEC_ALL WBN_RAWCT_BOUND) THEN ASM_SIMP_TAC[]]);;
-
 (* 9 <= nblk from a nonzero loop count *)
 let WBN_NBLK_GE_9 = prove
  (`0 < (nblk - 9) DIV 8 ==> 9 <= nblk`,
@@ -6087,7 +6101,7 @@ let wbn_main_loop_goal =
   list_mk_forall(wb_front_vars, mk_imp(wbn_front_hyps_wide_tm, ens));;
 
 let WBN_MAIN_LOOP_raw = prove(wbn_main_loop_goal,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   UP2_ABI_TAC `(nblk - 9) DIV 8` `pc + 0x4bc` `pc + 0xa0c` wbn_core_iv THEN
   REPEAT CONJ_TAC THENL
    [ (* 1. the count is nonzero: (nblk - 9) DIV 8 >= 1 *)
@@ -6120,6 +6134,10 @@ let WBN_MAIN_LOOP_raw = prove(wbn_main_loop_goal,
     REPEAT STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core_raw] THEN
     CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ENSURES_INIT_TAC "s0" THEN
     CLEAR_KEEPDATA_MEMO_TAC THEN  (* empty the KEEPDATA memo table *)
+    (* the input from block 8 * (i + 2) on, for the invariant at i + 1; the
+       stores of this iteration, blocks 8 * (i + 1) .. 8 * (i + 1) + 7, leave
+       it alone *)
+    WBN_NEXT_SUFFIX_TAC "s0" THEN
     RULE_ASSUM_TAC(REWRITE_RULE[WB_MC_LEN]) THEN
     (* split htable_mem_dec at s0 into its 12 table reads *)
     RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_dec]) THEN
@@ -6304,7 +6322,7 @@ let WBN_MAIN_LOOP_raw = prove(wbn_main_loop_goal,
 (*   preserved: X1 = 128nblk, X9 = 16nblk, X10 = sp+64, X11 = key_p,         *)
 (*   X3 = tag_p, X6 = htable_p, X16 = ivec_p, X15 = 2^32, Q31 = 2^96,        *)
 (*   SP = stackpointer, [sp+64] = 0xC2..., the round keys k0..k14, the       *)
-(*   htable, the input buffer and the stores j < 8*(k+1)                     *)
+(*   htable, the input from block 8*(k+1) on and the stores j < 8*(k+1)      *)
 (* ========================================================================= *)
 
 (* The s313 seam state, built like wb_front_postcond from the final state of
@@ -6342,7 +6360,12 @@ let wbn_prepretail_post_raw =
     `read X2 s = word_add out_p (word (128 * ((nblk - 9) DIV 8 + 1)))`;
     `read X3 s = tag_p`;
     `read X6 s = htable_p`;
-    `read (memory :> bytes (in_p,16 * nblk)) s = num_of_bytelist ibytes`] @
+    `read (memory :> bytes
+            (word_add in_p (word (128 * ((nblk - 9) DIV 8 + 1))),
+             16 * nblk - 128 * ((nblk - 9) DIV 8 + 1))) s =
+     num_of_bytelist
+       (SUB_LIST (128 * ((nblk - 9) DIV 8 + 1),
+                  16 * nblk - 128 * ((nblk - 9) DIV 8 + 1)) ibytes)`] @
    wbp_key_reads @ wbp_htable_reads @ wbp_ctx `xi':int128` @
    [wbp_rd `Q5` (wbp_aes13 (ctr 13));
     wbp_rd `Q2` (wbp_aes13 (ctr 10));
@@ -6400,47 +6423,24 @@ let wbn_prepretail_post_ext =
             snd(dest_abs wbn_out_forall)));;
 
 (* ------------------------------------------------------------------------- *)
-(* WBN_Q9_SPEC: the first tail block in spec form.                           *)
+(* The first tail block in spec form.                                        *)
 (*                                                                           *)
 (* At the seam the simulation has executed the ldr q9,[x0],#16 at 0xee8      *)
 (* (step 312, with x0 = in_p + 128*(k+1)), so Q9 is a raw read of the input  *)
 (* memory in the state before it.  The tail reads that Q9                    *)
 (* (eor3 v12,v9,v0,v29 at 0xef8) before any reload of q9, so Q9 has to reach *)
-(* the seam in spec form.  This lemma gives the value of the read, the first *)
-(* tail block (global block 8*(k+1))                                         *)
+(* the seam in spec form.  WBN_Q9_SPEC (aes_gcm_dec_alt_common.ml) gives the *)
+(* value of the read, the first tail block (global block 8*(k+1))            *)
 (*   bytes_to_int128 (SUB_LIST (16*8*(k+1),16) ibytes),                      *)
-(* by INPUT_PREFIX_TO_BYTE128_LANES at lane 8*(k+1), from 8*(k+1) < nblk and *)
-(* the whole-buffer input fact.  WBN_PREPRETAIL_EXT2_TAC applies it at s311, *)
-(* the state before the ldr.                                                 *)
+(* from 8*(k+1) < nblk and the input from block 8*(k+1) on.                  *)
+(* WBN_PREPRETAIL_EXT2_TAC applies it at s311, the state before the ldr.     *)
 (* ------------------------------------------------------------------------- *)
-let WBN_Q9_SPEC = prove
- (`!(nblk:num) (in_p:int64) (ibytes:byte list) (k:num) (s:armstate).
-     LENGTH ibytes = 16 * nblk /\
-     8 * (k + 1) < nblk /\
-     read (memory :> bytes (in_p,16 * nblk)) s = num_of_bytelist ibytes
-     ==> read (memory :> bytes128 (word_add in_p (word (128 * (k + 1))))) s =
-         bytes_to_int128 (SUB_LIST (16 * (8 * (k + 1)),16) ibytes)`,
-  REPEAT STRIP_TAC THEN
-  MP_TAC(SPECL [`nblk:num`; `in_p:int64`; `ibytes:byte list`; `s:armstate`]
-    INPUT_PREFIX_TO_BYTE128_LANES) THEN
-  ANTS_TAC THENL
-   [CONJ_TAC THENL
-     [ASM_ARITH_TAC;
-      SUBGOAL_THEN `SUB_LIST (0, 16 * nblk) (ibytes:byte list) = ibytes` SUBST1_TAC THENL
-       [MATCH_MP_TAC SUB_LIST_LENGTH_IMPLIES THEN ASM_REWRITE_TAC[LE_REFL]; ALL_TAC] THEN
-      ASM_REWRITE_TAC[]];
-    DISCH_THEN(MP_TAC o SPEC `8 * (k + 1):num`) THEN
-    ANTS_TAC THENL
-     [ASM_ARITH_TAC;
-      REWRITE_TAC[ARITH_RULE `16 * (8 * (k + 1)) = 128 * (k + 1)`] THEN
-      DISCH_THEN(fun th -> REWRITE_TAC[th])]]);;
-
 (* The extended seam post: wbn_prepretail_post_ext (the stores of the first
    8 * (k + 1) blocks) and two more conjuncts.
    - Q9 = the first tail block, global block 8 * (k + 1), in spec form
      (WBN_Q9_SPEC at k := (nblk - 9) DIV 8): the tail reads the incoming
      Q9 before it reloads q9.  The simulation resolves the load in the state
-     before the ldr q9, where the whole-buffer input fact is live.
+     before the ldr q9, from the input suffix the prepretail carries.
    - Q30 = gcm_ctr_raw (word (8 * k + 16)) ctr0: the raw counter three adds
      past its loop-head value gcm_ctr_raw (word (8 * k + 13)) ctr0, for the
      ivec write-back.  INNER_TAIL_FEED_TAC discharges the shifted tail's Q30
@@ -6475,7 +6475,7 @@ let wbn_prepretail_ext2_goal =
    (step 312).  ENSURES_FINAL and ASM_REWRITE close the preserved and shifted
    conjuncts, WBN_Q19_PREPRETAIL_CLOSE_TAC the two GHASH conjuncts. *)
 let WBN_PREPRETAIL_EXT2_TAC idx_lt_thm =
-  REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core_raw] THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN REWRITE_TAC[wbn_loop_inv_core_raw] THEN
   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ENSURES_INIT_TAC "s0" THEN
   CLEAR_KEEPDATA_MEMO_TAC THEN  (* reset the KEEPDATA fixpoint cache *)
   RULE_ASSUM_TAC(REWRITE_RULE[WB_MC_LEN]) THEN
@@ -6558,7 +6558,7 @@ let WBN_PREPRETAIL_EXT2_UNIFIED =
    (no simulation). *)
 let WBN_PREPRETAIL_EXT2 =
   prove(wbn_prepretail_ext2_goal,
-    REPEAT GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC WBN_PREPRETAIL_EXT2_UNIFIED THEN
+    REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN MATCH_MP_TAC WBN_PREPRETAIL_EXT2_UNIFIED THEN
     ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC);;
 
 (* The loop and the prepretail, from the loop head pc+0x4bc to the seam
@@ -6613,37 +6613,6 @@ let WBN_FRONT_TO_PREP_EXT2 = prove(wbn_front_to_prep_ext2_goal,
       REWRITE_TAC[ARITH_RULE `pc + 0x4bc = pc + 1212`] THEN CONV_TAC TAUT;
       MP_TAC(SPECL wb_front_vars WBN_LOOP_PREP_EXT2) THEN
       ANTS_TAC THENL [FIRST_X_ASSUM ACCEPT_TAC; DISCH_THEN ACCEPT_TAC]]]);;
-
-(* Input-read restriction to a slice of length m (= 16*r) at 128*(k+1): the
-   r-block shifted tail reads 16*r input bytes there, m kept symbolic under
-   128*(k+1)+m <= 16*nblk.  The slice of the list is a DIV then a MOD of its
-   number (NUM_OF_WORDLIST_SUB_LIST), which READ_BYTES_DIV and READ_BYTES_MOD
-   turn back into reads. *)
-let WBN_INPUT_SLICE_GEN = prove
- (`!(nblk:num) (in_p:int64) (ibytes:byte list) (k:num) (m:num) (s:armstate).
-     LENGTH ibytes = 16 * nblk /\ 128 * (k + 1) + m <= 16 * nblk /\
-     read (memory :> bytes (in_p,16 * nblk)) s = num_of_bytelist ibytes
-     ==> read (memory :> bytes (word_add in_p (word (128 * (k + 1))),m)) s =
-         num_of_bytelist (SUB_LIST (128 * (k + 1),m) ibytes)`,
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`in_p:int64`; `16 * nblk`; `128 * (k+1)`; `read memory (s:armstate)`]
-    READ_BYTES_DIV) THEN
-  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN DISCH_TAC THEN
-  SUBGOAL_THEN `read (memory :> bytes (word_add in_p (word (128 * (k + 1))),m)) s =
-     (read (memory :> bytes (word_add in_p (word (128 * (k + 1))),
-                             16 * nblk - 128 * (k + 1))) s) MOD 2 EXP (8 * m)`
-   SUBST1_TAC THENL
-   [MP_TAC(ISPECL [`word_add in_p (word (128 * (k+1))):int64`;
-                   `16 * nblk - 128 * (k+1)`; `m:num`; `read memory (s:armstate)`]
-       READ_BYTES_MOD) THEN
-    REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN
-    SUBGOAL_THEN `MIN (16 * nblk - 128 * (k + 1)) m = m` SUBST1_TAC THENL
-     [ASM_ARITH_TAC; ALL_TAC] THEN
-    DISCH_THEN(SUBST1_TAC o SYM) THEN REFL_TAC; ALL_TAC] THEN
-  FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[NUM_OF_BYTELIST_EQ_WORDLIST] THEN
-  REWRITE_TAC[NUM_OF_WORDLIST_SUB_LIST; DIMINDEX_8] THEN
-  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* Feeding the shifted r-block tail.                                         *)
@@ -6753,7 +6722,9 @@ let wbn_narrow_frame r =
 (* INNER_TAIL_FEED_TAC r tail_r: the tail leg of WBN_PREP_TO_END_FULL_r (the
    first half of its ENSURES_ADD_PRESERVED step),
      ensures ext2post (shifted band_post r) narrow_frame,
-   by ENSURES_PRECONDITION_THM into tail_r = WB_TAIL_GEN2_r at shift_vals r. *)
+   by ENSURES_PRECONDITION_THM into tail_r = WB_TAIL_GEN2_r at shift_vals r.
+   The tail's in-place hypothesis, at the shifted in_p and out_p, follows
+   from that of the whole call by INPLACE_SHIFT. *)
 let INNER_TAIL_FEED_TAC r tail_r =
   let rt = mk_small_numeral r in
   let m16r = mk_binop `( * ):num->num->num` `16` rt in
@@ -6764,7 +6735,7 @@ let INNER_TAIL_FEED_TAC r tail_r =
   let tail_pre = el 1 targs in
   let slice_close =
     MP_TAC(SPECL [`nblk:num`;`in_p:int64`;`ibytes:byte list`;`q:num`;mnum;`x:armstate`]
-             WBN_INPUT_SLICE_GEN) THEN
+             WBN_INPUT_SUFFIX_GEN) THEN
     ANTS_TAC THENL
      [ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;
       REWRITE_TAC[ARITH_RULE(mk_eq(m16r,mnum))] THEN DISCH_THEN ACCEPT_TAC] in
@@ -6791,7 +6762,7 @@ let INNER_TAIL_FEED_TAC r tail_r =
       ALL_TAC] THEN
     REWRITE_TAC[GSYM GCM_CTR_ADD_1; GCM_CTR_ADD_COMPOSE] THEN
     MP_TAC(SPECL [`nblk:num`;`in_p:int64`;`ibytes:byte list`;`q:num`;m16r;`x:armstate`]
-      WBN_INPUT_SLICE_GEN) THEN
+      WBN_INPUT_SUFFIX_GEN) THEN
     ANTS_TAC THENL
      [ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;
       DISCH_THEN(fun th -> REWRITE_TAC[th])] THEN
@@ -6808,14 +6779,17 @@ let INNER_TAIL_FEED_TAC r tail_r =
      [CONJ_TAC THENL
         [REWRITE_TAC[LENGTH_SUB_LIST] THEN ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;
          ALL_TAC] THEN
-      REPEAT CONJ_TAC THEN (FIRST_ASSUM ACCEPT_TAC ORELSE NONOVERLAPPING_TAC);
+      REPEAT CONJ_TAC THEN
+      (FIRST_ASSUM ACCEPT_TAC ORELSE NONOVERLAPPING_TAC ORELSE
+       (MATCH_MP_TAC INPLACE_SHIFT THEN EXISTS_TAC `16 * nblk` THEN
+        CONJ_TAC THENL [FIRST_ASSUM ACCEPT_TAC; ASM_ARITH_TAC]));
       DISCH_THEN ACCEPT_TAC]];;
 
 (* The r = 1 full-post leg, by its own tactic.  The tactic does not depend on
    the band, so it also proves the 9..16 leg's r = 1 case
    (WBN_PREP_TO_END_FULL_916_1 below). *)
 let WBN_PREP_TO_END_FULL_1_HAND_TAC =
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
   EXISTS_TAC (wbn_narrow_frame 1) THEN
   CONJ_TAC THENL
@@ -6991,7 +6965,7 @@ let wbn_full_inter_post r =
    INNER_TAIL_FEED_TAC, with the forall carried through the narrow tail
    writes. *)
 let WBN_PREP_TO_END_FULL_r_TAC r =
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN EXISTS_TAC (wbn_narrow_frame r) THEN
   CONJ_TAC THENL
    [REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN SUBSUMED_MAYCHANGE_TAC;
@@ -7107,7 +7081,7 @@ let wbn_prep_to_end_goal_final =
   list_mk_forall(wb_front_vars, mk_imp(hyps, ens));;
 
 let WBN_PREP_TO_END = prove(wbn_prep_to_end_goal_final,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MP_TAC(SPEC `nblk - 9` (MATCH_MP DIVISION (ARITH_RULE `~(8 = 0)`))) THEN
   ABBREV_TAC `rr = (nblk - 9) MOD 8` THEN STRIP_TAC THEN
   FIRST_X_ASSUM(fun th -> if concl th = `rr < 8` then MP_TAC th else NO_TAC) THEN
@@ -7138,7 +7112,7 @@ let wbn_front_to_end_goal =
   list_mk_forall(wb_front_vars, mk_imp(hyps, ens));;
 
 let WBN_FRONT_TO_END = prove(wbn_front_to_end_goal,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
   EXISTS_TAC wbn_prepretail_post_ext2 THEN
   REPEAT CONJ_TAC THENL
@@ -7251,7 +7225,7 @@ let wbn_front_to_prep_916_goal =
    after the init, so that they propagate through step 296 (the stepper does
    not track the folded htable_mem_dec). *)
 let WBN_FRONT_TO_PREP_916 = prove(wbn_front_to_prep_916_goal,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
   EXISTS_TAC wbn_front_prefix_ext_post THEN
   CONJ_TAC THENL
@@ -7297,7 +7271,7 @@ let wbn_prepretail_ext2_916_goal =
 
 let WBN_PREPRETAIL_EXT2_916 =
   prove(wbn_prepretail_ext2_916_goal,
-    REPEAT GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC WBN_PREPRETAIL_EXT2_UNIFIED THEN
+    REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN MATCH_MP_TAC WBN_PREPRETAIL_EXT2_UNIFIED THEN
     ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC);;
 
 (* The 9..16 front and prepretail composed, from pc+0x1c to the seam post
@@ -7369,7 +7343,7 @@ let wbn_prep_to_end_916_goal =
   list_mk_forall(wb_front_vars, mk_imp(hyps, ens));;
 
 let WBN_PREP_TO_END_916 = prove(wbn_prep_to_end_916_goal,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MP_TAC(SPEC `nblk - 9` (MATCH_MP DIVISION (ARITH_RULE `~(8 = 0)`))) THEN
   ABBREV_TAC `rr = (nblk - 9) MOD 8` THEN STRIP_TAC THEN
   FIRST_X_ASSUM(fun th -> if concl th = `rr < 8` then MP_TAC th else NO_TAC) THEN
@@ -7393,7 +7367,7 @@ let wbn_front_to_end_916_goal =
   list_mk_forall(wb_front_vars, mk_imp(hyps, ens));;
 
 let WBN_FRONT_TO_END_916 = prove(wbn_front_to_end_916_goal,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
   EXISTS_TAC wbn_prepretail_post_ext2 THEN
   REPEAT CONJ_TAC THENL
@@ -7646,7 +7620,9 @@ let WBN_DEC_CORE_BYTELIST = prove
     LENGTH rk = 15 /\
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16]
-    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192; stackpointer,80] /\
+    [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192; stackpointer,80] /\
+    ALL (nonoverlapping (in_p,16 * nblk)) [tag_p,16; ivec_p,16] /\
+    (in_p = out_p \/ nonoverlapping (in_p,16 * nblk) (out_p,16 * nblk)) /\
     PAIRWISE nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16] /\
     ALL (nonoverlapping (stackpointer,80))
     [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192]
@@ -7731,7 +7707,7 @@ let WBN_DEC_CORE_BYTELIST = prove
         REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; MAP; NONOVERLAPPING_CLAUSES] THEN
         REPEAT CONJ_TAC THEN TRY(FIRST_ASSUM ACCEPT_TAC) THEN TRY(ASM_ARITH_TAC) THEN
         ASM_MESON_TAC[NONOVERLAPPING_MODULO_SYM; nonoverlapping]]] in
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ASM_CASES_TAC `nblk <= 8` THENL
    [ASM_MESON_TAC[AES256_GCM_DEC_ALT_DISPATCH]; ALL_TAC] THEN
   ASM_CASES_TAC `nblk <= 16` THENL
@@ -7785,8 +7761,10 @@ let WBN_DEC_SUBROUTINE_BYTELIST = prove
       LENGTH rk = 15 /\
       aligned 16 stackpointer /\
       ALLPAIRS nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16]
-      [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192;
+      [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192;
        word_sub stackpointer (word 80),80] /\
+      ALL (nonoverlapping (in_p,16 * nblk)) [tag_p,16; ivec_p,16] /\
+      (in_p = out_p \/ nonoverlapping (in_p,16 * nblk) (out_p,16 * nblk)) /\
       PAIRWISE nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16] /\
       ALL (nonoverlapping (word_sub stackpointer (word 80),80))
       [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192]
@@ -8107,7 +8085,7 @@ let AES256_ENCRYPT_CTR_AS_AES_CTR_BLOCK = prove
 (* ------------------------------------------------------------------------- *)
 
 let WBN_EXPORT_FROM_SPINE_TAC spine =
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ASM_CASES_TAC `LENGTH(rk:int128 list) = 15` THENL
    [ALL_TAC;
     ENSURES_PRECONDITION_TAC `\s:armstate. F` THEN CONJ_TAC THENL
@@ -8167,8 +8145,10 @@ let WBN_DEC_VALID_CALL_CORRECT = prove
     val in_p + 16 * nblk < 2 EXP 63 /\
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16]
-    [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192;
+    [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192;
      word_sub stackpointer (word 80),80] /\
+    ALL (nonoverlapping (in_p,16 * nblk)) [tag_p,16; ivec_p,16] /\
+    (in_p = out_p \/ nonoverlapping (in_p,16 * nblk) (out_p,16 * nblk)) /\
     PAIRWISE nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16] /\
     ALL (nonoverlapping (word_sub stackpointer (word 80),80))
     [word pc, LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk; key_p,240; htable_p,192]
@@ -8220,7 +8200,9 @@ let WBN_DEC_VALID_CALL_CORRECT = prove
      len_bits = word (128 * nblk), where 128 * nblk < 2 EXP 64 is just
      VAL_BOUND_64.
    The pointer bound val in_p + 16 * nblk < 2 EXP 63 is genuine: the kernel
-   compares pointers with signed conditions.
+   compares pointers with signed conditions.  The output may be the input
+   buffer itself (in_p = out_p, in-place decryption); otherwise the two must
+   be disjoint.
    This routine does not enforce the NIST GCM message limit. Callers must
    ensure the cumulative message length does not exceed 2^36 - 32 bytes
    (2^39 - 256 bits). *)
@@ -8231,9 +8213,13 @@ let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
     [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16]
-    [word pc, LENGTH aes256_gcm_dec_alt_tmc;
-     in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192;
+    [word pc, LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192;
      word_sub stackpointer (word 80),80] /\
+    ALL (nonoverlapping (in_p,16 * gcm_wb_blocks len_bits))
+    [tag_p,16; ivec_p,16] /\
+    (in_p = out_p \/
+     nonoverlapping (in_p,16 * gcm_wb_blocks len_bits)
+                    (out_p,16 * gcm_wb_blocks len_bits)) /\
     PAIRWISE nonoverlapping
     [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16] /\
     ALL (nonoverlapping (word_sub stackpointer (word 80),80))
@@ -8277,7 +8263,7 @@ let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
            memory :> bytes (tag_p,16);
            memory :> bytes (ivec_p,16);
            memory :> bytes (word_sub stackpointer (word 80),80)])`,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ABBREV_TAC `nblk = gcm_wb_blocks len_bits` THEN
   ASM_CASES_TAC `val(len_bits:int64) MOD 128 = 0` THENL
    [(* Whole blocks, including zero: len_bits = word (128 * nblk). *)
@@ -8332,9 +8318,13 @@ let AES256_GCM_DEC_ALT_SUBROUTINE_CORRECT = prove
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
     [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16]
-    [word pc, LENGTH aes256_gcm_dec_alt_mc;
-     in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192;
+    [word pc, LENGTH aes256_gcm_dec_alt_mc; key_p,240; htable_p,192;
      word_sub stackpointer (word 80),80] /\
+    ALL (nonoverlapping (in_p,16 * gcm_wb_blocks len_bits))
+    [tag_p,16; ivec_p,16] /\
+    (in_p = out_p \/
+     nonoverlapping (in_p,16 * gcm_wb_blocks len_bits)
+                    (out_p,16 * gcm_wb_blocks len_bits)) /\
     PAIRWISE nonoverlapping
     [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16] /\
     ALL (nonoverlapping (word_sub stackpointer (word 80),80))
@@ -8965,7 +8955,7 @@ let AES256_GCM_DEC_ALT_SAFE = prove
          val in_p + 16 * nblk < 2 EXP 63 /\
          aligned 16 stackpointer /\
          ALLPAIRS nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16]
-         [word pc,LENGTH aes256_gcm_dec_alt_tmc; in_p,16 * nblk;
+         [word pc,LENGTH aes256_gcm_dec_alt_tmc;
           key_p,240; htable_p,192; stackpointer,80] /\
          PAIRWISE nonoverlapping [out_p,16 * nblk; tag_p,16; ivec_p,16] /\
          ALL (nonoverlapping (stackpointer,80))
@@ -9181,7 +9171,7 @@ let noibt_full_spec,_ = mk_safety_spec
    AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT and the C signature, and the
    load fails unless that term is exactly the one written here:
    - the correctness theorem's hypotheses: the signed pointer bound, the stack
-     alignment and the nonoverlapping lists;
+     alignment, the nonoverlapping lists and the in-place disjunction;
    - access bounds sized by the C objects: in/out len_bits/8, tag 16, ivec 16,
      key 240, htable 24 * 8 = 192, and the 80-byte frame;
    - by keep_maychanges, the correctness theorem's MAYCHANGE frame, based on
@@ -9200,9 +9190,13 @@ let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_SAFE = prove
          aligned 16 stackpointer /\
          ALLPAIRS nonoverlapping
          [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16]
-         [word pc,LENGTH aes256_gcm_dec_alt_tmc;
-          in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192;
+         [word pc,LENGTH aes256_gcm_dec_alt_tmc; key_p,240; htable_p,192;
           word_sub stackpointer (word 80),80] /\
+         ALL (nonoverlapping (in_p,16 * gcm_wb_blocks len_bits))
+         [tag_p,16; ivec_p,16] /\
+         (in_p = out_p \/
+          nonoverlapping (in_p,16 * gcm_wb_blocks len_bits)
+                         (out_p,16 * gcm_wb_blocks len_bits)) /\
          PAIRWISE nonoverlapping
          [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16] /\
          ALL (nonoverlapping (word_sub stackpointer (word 80),80))
@@ -9256,9 +9250,13 @@ let AES256_GCM_DEC_ALT_SUBROUTINE_SAFE = prove
          aligned 16 stackpointer /\
          ALLPAIRS nonoverlapping
          [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16]
-         [word pc,LENGTH aes256_gcm_dec_alt_mc;
-          in_p,16 * gcm_wb_blocks len_bits; key_p,240; htable_p,192;
+         [word pc,LENGTH aes256_gcm_dec_alt_mc; key_p,240; htable_p,192;
           word_sub stackpointer (word 80),80] /\
+         ALL (nonoverlapping (in_p,16 * gcm_wb_blocks len_bits))
+         [tag_p,16; ivec_p,16] /\
+         (in_p = out_p \/
+          nonoverlapping (in_p,16 * gcm_wb_blocks len_bits)
+                         (out_p,16 * gcm_wb_blocks len_bits)) /\
          PAIRWISE nonoverlapping
          [out_p,16 * gcm_wb_blocks len_bits; tag_p,16; ivec_p,16] /\
          ALL (nonoverlapping (word_sub stackpointer (word 80),80))

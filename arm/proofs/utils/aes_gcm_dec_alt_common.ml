@@ -713,10 +713,6 @@ let LENGTH_INT128_LIST_TO_BYTES = prove
   ASM_REWRITE_TAC[int128_list_to_bytes; LENGTH; LENGTH_APPEND;
                   LENGTH_OF_INT128_TO_BYTES] THEN ARITH_TAC);;
 
-(* The input buffer read as whole blocks: for a 16 * n-byte prefix of x,     *)
-(* block k < n is the bytes128 read at in_p + 16 * k.  By induction on n:    *)
-(* the top block of a 16 * (n + 1)-byte read, and the 16 * n-byte prefix     *)
-(* read the induction hypothesis takes, are READ_BYTES_AND_BYTE128_MERGE.    *)
 (* The round-key list rk of nrk keys as the list of its elements
    (prove_rk_eta nrk), and the nrk bytes128 reads of the key schedule at
    key_p (prove_key_reads nrk): RK_ETA_11 or RK_ETA_15 and
@@ -747,6 +743,10 @@ let prove_key_reads nrk =
     REWRITE_TAC(map num_CONV (map mk_small_numeral (rev(1--(nrk-1))))) THEN
     REWRITE_TAC[EL; HD; TL]);;
 
+(* The input buffer read as whole blocks: for a 16 * n-byte prefix of x,     *)
+(* block k < n is the bytes128 read at in_p + 16 * k.  By induction on n:    *)
+(* the top block of a 16 * (n + 1)-byte read, and the 16 * n-byte prefix     *)
+(* read the induction hypothesis takes, are READ_BYTES_AND_BYTE128_MERGE.    *)
 let INPUT_PREFIX_TO_BYTE128_LANES = prove
  (`!n (in_p:int64) (x:byte list) s.
     16 * n <= LENGTH x /\
@@ -755,6 +755,93 @@ let INPUT_PREFIX_TO_BYTE128_LANES = prove
                       bytes_to_int128 (SUB_LIST (16 * k, 16) x)`,
   INDUCT_TAC THEN REWRITE_TAC[LT; ARITH_RULE `16 * SUC n = 16 * n + 16`] THEN
   ASM_MESON_TAC[READ_BYTES_AND_BYTE128_MERGE; ARITH_RULE `a + 16 <= l ==> a <= l`]);;
+
+(* ------------------------------------------------------------------------- *)
+(* In-place operation.  When in_p = out_p, the store of output block j       *)
+(* overwrites input block j, so no leg can carry the read of the whole input *)
+(* buffer past its first store.  The legs carry instead the read of the      *)
+(* suffix still to be read, the bytes from some offset a on                  *)
+(*   read (memory :> bytes (word_add in_p (word a),l)) s =                   *)
+(*   num_of_bytelist (SUB_LIST (a,l) x),                                     *)
+(* which the stores of the blocks below a leave alone (the nonoverlapping    *)
+(* automation proves that from in_p = out_p \/ nonoverlapping (in_p,n)       *)
+(* (out_p,n)).  INPUT_SUFFIX_LANE reads a block off such a suffix,           *)
+(* INPUT_SUFFIX_SLICE a shorter suffix, and READ_BYTES_SLICE the first       *)
+(* suffix off the whole buffer.  INPLACE_SHIFT moves the in-place hypothesis *)
+(* to buffers shifted by the same offset.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+(* num_of_bytelist = num_of_wordlist on byte lists *)
+let NUM_OF_BYTELIST_EQ_WORDLIST = prove
+ (`!l:byte list. num_of_bytelist l = num_of_wordlist l`,
+  LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC[num_of_bytelist; num_of_wordlist; DIMINDEX_8] THEN ARITH_TAC);;
+
+let READ_BYTES_SLICE = prove
+ (`!(base:int64) (y:byte list) l d m s.
+     d + m <= l /\
+     read (memory :> bytes (base,l)) s = num_of_bytelist y
+     ==> read (memory :> bytes (word_add base (word d),m)) s =
+         num_of_bytelist (SUB_LIST (d,m) y)`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[NUM_OF_BYTELIST_EQ_WORDLIST; NUM_OF_WORDLIST_SUB_LIST; DIMINDEX_8] THEN
+  STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
+  ASM_SIMP_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_DIV; READ_BYTES_MOD;
+               ARITH_RULE `d + m <= l ==> MIN (l - d) m = m`]);;
+
+let INPUT_SUFFIX_SLICE = prove
+ (`!(in_p:int64) (x:byte list) a l d m s.
+     d + m <= l /\
+     read (memory :> bytes (word_add in_p (word a),l)) s =
+     num_of_bytelist (SUB_LIST (a,l) x)
+     ==> read (memory :> bytes (word_add in_p (word (a + d)),m)) s =
+         num_of_bytelist (SUB_LIST (a + d,m) x)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`word_add in_p (word a):int64`; `SUB_LIST (a,l) (x:byte list)`;
+                 `l:num`; `d:num`; `m:num`; `s:armstate`] READ_BYTES_SLICE) THEN
+  ASM_REWRITE_TAC[SUB_LIST_MIN_GENERAL; WORD_RULE
+   `word_add (word_add p (word a)) (word d):int64 = word_add p (word (a + d))`] THEN
+  ASM_SIMP_TAC[ARITH_RULE `d + m <= l ==> MIN m (l - d) = m`]);;
+
+let INPUT_SUFFIX_LANE = prove
+ (`!(in_p:int64) (x:byte list) a l d s.
+     d + 16 <= l /\ a + l <= LENGTH x /\
+     read (memory :> bytes (word_add in_p (word a),l)) s =
+     num_of_bytelist (SUB_LIST (a,l) x)
+     ==> read (memory :> bytes128 (word_add in_p (word (a + d)))) s =
+         bytes_to_int128 (SUB_LIST (a + d,16) x)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`in_p:int64`; `x:byte list`; `a:num`; `l:num`; `d:num`; `16`;
+                 `s:armstate`] INPUT_SUFFIX_SLICE) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+  MP_TAC(ISPECL [`word_add in_p (word (a + d)):int64`; `0`;
+                 `SUB_LIST (a + d,16) (x:byte list)`; `s:armstate`]
+    READ_BYTES_AND_BYTE128_MERGE) THEN
+  REWRITE_TAC[ADD_CLAUSES; LENGTH_SUB_LIST; SUB_LIST_MIN_RIGHT;
+              ARITH_RULE `MIN 16 16 = 16`; WORD_ADD_0] THEN
+  ASM_REWRITE_TAC[] THEN ANTS_TAC THENL [ASM_ARITH_TAC; SIMP_TAC[]]);;
+
+let INPLACE_SHIFT = prove
+ (`!(in_p:int64) out_p n d m.
+     (in_p = out_p \/ nonoverlapping (in_p,n) (out_p,n)) /\ d + m <= n
+     ==> word_add in_p (word d) = word_add out_p (word d) \/
+         nonoverlapping (word_add in_p (word d),m) (word_add out_p (word d),m)`,
+  REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 DISJ_CASES_TAC ASSUME_TAC) THEN
+  ASM_REWRITE_TAC[] THEN DISJ2_TAC THEN NONOVERLAPPING_TAC);;
+
+(* WBN_SUFFIX8_TAC sname: the input from block 8 on at the state sname of a
+   front prefix (9 <= nblk), from the input-buffer fact there; the stores of
+   blocks 0..7 of the front-N leave it alone, so it reaches the prefix
+   postcondition. *)
+let WBN_SUFFIX8_TAC sname =
+  SUBGOAL_THEN
+   (vsubst [mk_var(sname,`:armstate`),`s:armstate`]
+     `read (memory :> bytes (word_add in_p (word 128),16 * nblk - 128)) s =
+      num_of_bytelist (SUB_LIST (128,16 * nblk - 128) (ibytes:byte list))`)
+   ASSUME_TAC THENL
+   [MATCH_MP_TAC READ_BYTES_SLICE THEN EXISTS_TAC `16 * nblk` THEN
+    ASM_REWRITE_TAC[] THEN UNDISCH_TAC `9 <= nblk` THEN ARITH_TAC;
+    ALL_TAC];;
 
 (* ========================================================================= *)
 (* Byte-extraction sublemmas for the whole-block byte_list_at bridges of the *)
@@ -3632,12 +3719,13 @@ let CTR_RAW_INCR_FOLD_TAC (qd:string) (sn:string) (wtm:term) : tactic =
 
 (* The next group's raw ciphertext blocks 8(i+1) .. 8(i+1)+7, which the
    body's ldp's load into Q8..Q15, are derived at each load from the
-   input-buffer loop constant
-     read (memory :> bytes (in_p,16 * nblk)) s = num_of_bytelist ibytes,
-   which the body preserves (in_p is only read, and out_p is disjoint from
-   it).  From the step-case bound i < (nblk-9) DIV 8, WBN_RAWCT_BOUND gives
+   invariant's input suffix, the bytes from block 8(i+1) on,
+     read (memory :> bytes (in_p + 128(i+1),16 * nblk - 128(i+1))) s =
+     num_of_bytelist (SUB_LIST (128(i+1),16 * nblk - 128(i+1)) ibytes),
+   which is intact there: all the loads of the body come before its first
+   store.  From the step-case bound i < (nblk-9) DIV 8, WBN_RAWCT_BOUND gives
      8(i+1)+m < nblk  for m < 8,
-   and WBN_RAWCT_READ, by INPUT_BYTES_TO_BYTE128_LANES, the block reads
+   and WBN_RAWCT_READ, by INPUT_SUFFIX_LANE, the block reads
      read (memory :> bytes128 (in_p + 16*(8(i+1)+m))) s =
      bytes_to_int128 (SUB_LIST (16*(8(i+1)+m),16) ibytes),
    the invariant's values of Q8..Q15 at i+1. *)
@@ -3645,6 +3733,53 @@ let WBN_RAWCT_BOUND = prove
  (`i < (nblk - 9) DIV 8 /\ 9 <= nblk ==> !m. m < 8 ==> 8 * (i+1) + m < nblk`,
   STRIP_TAC THEN X_GEN_TAC `m:num` THEN DISCH_TAC THEN
   MP_TAC(SPECL [`nblk - 9`; `8`] DIVISION) THEN ASM_ARITH_TAC);;
+
+let WBN_RAWCT_READ = prove
+ (`i < (nblk - 9) DIV 8 /\ 9 <= nblk /\
+   LENGTH (ibytes:byte list) = 16 * nblk /\
+   read (memory :> bytes (word_add (in_p:int64) (word (128 * (i + 1))),
+                          16 * nblk - 128 * (i + 1))) s =
+   num_of_bytelist (SUB_LIST (128 * (i + 1),16 * nblk - 128 * (i + 1)) ibytes)
+   ==> !m. m < 8
+       ==> read (memory :> bytes128 (word_add in_p (word (16 * (8*(i+1)+m))))) s =
+           bytes_to_int128 (SUB_LIST (16 * (8*(i+1)+m), 16) ibytes)`,
+  STRIP_TAC THEN X_GEN_TAC `m:num` THEN DISCH_TAC THEN
+  MP_TAC(SPECL [`in_p:int64`; `ibytes:byte list`; `128 * (i + 1)`;
+                `16 * nblk - 128 * (i + 1)`; `16 * m`; `s:armstate`]
+    INPUT_SUFFIX_LANE) THEN
+  REWRITE_TAC[ARITH_RULE `128 * (i + 1) + 16 * m = 16 * (8 * (i + 1) + m)`] THEN
+  DISCH_THEN MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
+  MP_TAC(SPEC_ALL WBN_RAWCT_BOUND) THEN ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MP_TAC o SPEC `m:num`) THEN ASM_REWRITE_TAC[] THEN ARITH_TAC);;
+
+(* WBN_NEXT_SUFFIX_TAC sname: at the state sname of the loop body's start,
+   the input from block 8 * (i + 2) on, for the invariant at i + 1, in the
+   form its unfolding takes (128 * ((i + 1) + 1)), from the invariant's input
+   suffix at i; and 8 * (i + 2) <= nblk, from the step-case bound
+   i < (nblk - 9) DIV 8, with which the nonoverlapping automation shows that
+   the stores of the iteration (blocks 8 * (i + 1) .. 8 * (i + 1) + 7) leave
+   it alone. *)
+let WBN_NEXT_SUFFIX_TAC sname =
+  SUBGOAL_THEN `8 * (i + 2) <= nblk` ASSUME_TAC THENL
+   [MP_TAC(SPECL [`nblk - 9`; `8`] DIVISION) THEN
+    UNDISCH_TAC `i < (nblk - 9) DIV 8` THEN ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   (vsubst [mk_var(sname,`:armstate`),`s:armstate`]
+     `read (memory :> bytes (word_add in_p (word (128 * ((i + 1) + 1))),
+                             16 * nblk - 128 * ((i + 1) + 1))) s =
+      num_of_bytelist
+        (SUB_LIST (128 * ((i + 1) + 1),16 * nblk - 128 * ((i + 1) + 1))
+                  (ibytes:byte list))`)
+   ASSUME_TAC THENL
+   [MP_TAC(SPECL [`in_p:int64`; `ibytes:byte list`; `128 * (i + 1)`;
+                  `16 * nblk - 128 * (i + 1)`; `128`;
+                  `16 * nblk - 128 * ((i + 1) + 1)`;
+                  mk_var(sname,`:armstate`)] INPUT_SUFFIX_SLICE) THEN
+    REWRITE_TAC[ARITH_RULE `128 * (i + 1) + 128 = 128 * ((i + 1) + 1)`] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
+    UNDISCH_TAC `8 * (i + 2) <= nblk` THEN ARITH_TAC;
+    ALL_TAC];;
 
 (* ------------------------------------------------------------------------- *)
 (* 10a. Loop-body simulation machinery.                                      *)
@@ -3859,6 +3994,27 @@ let WBN_Q9_INDEX_LT_9 = prove
   MP_TAC(SPECL[`nblk - 9`;`8`] DIVISION) THEN ANTS_TAC THENL [ARITH_TAC; ALL_TAC] THEN
   ABBREV_TAC `k = (nblk - 9) DIV 8` THEN ASM_ARITH_TAC);;
 
+(* The first tail block, global block 8 * (k + 1), in spec form, from the
+   input suffix the prepretail carries (the invariant's at i := k), by
+   INPUT_SUFFIX_LANE: the value of the ldr q9 of the tail entry, which
+   WBN_PREPRETAIL_EXT2_TAC resolves in the state before the ldr. *)
+let WBN_Q9_SPEC = prove
+ (`!(nblk:num) (in_p:int64) (ibytes:byte list) (k:num) (s:armstate).
+     LENGTH ibytes = 16 * nblk /\
+     8 * (k + 1) < nblk /\
+     read (memory :> bytes (word_add in_p (word (128 * (k + 1))),
+                            16 * nblk - 128 * (k + 1))) s =
+     num_of_bytelist (SUB_LIST (128 * (k + 1),16 * nblk - 128 * (k + 1)) ibytes)
+     ==> read (memory :> bytes128 (word_add in_p (word (128 * (k + 1))))) s =
+         bytes_to_int128 (SUB_LIST (16 * (8 * (k + 1)),16) ibytes)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`in_p:int64`; `ibytes:byte list`; `128 * (k + 1)`;
+                `16 * nblk - 128 * (k + 1)`; `0`; `s:armstate`]
+    INPUT_SUFFIX_LANE) THEN
+  REWRITE_TAC[ADD_CLAUSES; ARITH_RULE `16 * (8 * (k + 1)) = 128 * (k + 1)`] THEN
+  DISCH_THEN MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
+  UNDISCH_TAC `8 * (k + 1) < nblk` THEN ARITH_TAC);;
+
 (* ------------------------------------------------------------------------- *)
 (* The tail leg: from the seam to the core exit (WBN_PREP_TO_END).           *)
 (*                                                                           *)
@@ -3880,18 +4036,27 @@ let WBN_Q9_INDEX_LT_9 = prove
 (* word (16 * nblk), a fixed band to word (16 * r).                          *)
 (* ------------------------------------------------------------------------- *)
 
-(* num_of_bytelist = num_of_wordlist on byte lists (used by
-   WBN_INPUT_SLICE_GEN). *)
-let NUM_OF_BYTELIST_EQ_WORDLIST = prove
- (`!l:byte list. num_of_bytelist l = num_of_wordlist l`,
-  LIST_INDUCT_TAC THEN
-  ASM_REWRITE_TAC[num_of_bytelist; num_of_wordlist; DIMINDEX_8] THEN ARITH_TAC);;
-
 (* the three side conditions of the tail legs, at the whole-buffer length *)
 let wbn_prep_to_end_extra_clauses =
   [`nonoverlapping (out_p:int64,16 * nblk) (tag_p:int64,16)`;
    `nonoverlapping (out_p:int64,16 * nblk) (ivec_p:int64,16)`;
    `nonoverlapping (tag_p:int64,16) (ivec_p:int64,16)`];;
+
+(* The input of the r-block shifted tail, the m = 16*r bytes at 128*(k+1):
+   with 128*(k+1) + m = 16*nblk they are the whole input suffix of the seam
+   state, m kept symbolic. *)
+let WBN_INPUT_SUFFIX_GEN = prove
+ (`!(nblk:num) (in_p:int64) (ibytes:byte list) (k:num) (m:num) (s:armstate).
+     128 * (k + 1) + m = 16 * nblk /\
+     read (memory :> bytes (word_add in_p (word (128 * (k + 1))),
+                            16 * nblk - 128 * (k + 1))) s =
+     num_of_bytelist (SUB_LIST (128 * (k + 1),16 * nblk - 128 * (k + 1)) ibytes)
+     ==> read (memory :> bytes (word_add in_p (word (128 * (k + 1))),m)) s =
+         num_of_bytelist (SUB_LIST (128 * (k + 1),m) ibytes)`,
+  REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+  SUBGOAL_THEN `16 * nblk - 128 * (k + 1) = m` SUBST1_TAC THENL
+   [UNDISCH_TAC `128 * (k + 1) + m = 16 * nblk` THEN ARITH_TAC;
+    REWRITE_TAC[]]);;
 
 (* ------------------------------------------------------------------------- *)
 (* The tag fold and the output forall.                                       *)
@@ -4007,7 +4172,7 @@ let wbn_full_store_addr i =
    for the shared hypotheses, ASM_ARITH_TAC for the band.
    WBN_PREPRETAIL_EXT2_916 below is derived in the same way. *)
 let wbn_prep_to_end_full_derive_tac free_thm =
-  REPEAT GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC free_thm THEN
+  REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN MATCH_MP_TAC free_thm THEN
   ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;;
 
 (* ------------------------------------------------------------------------- *)
