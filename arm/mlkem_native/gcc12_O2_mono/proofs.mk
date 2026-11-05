@@ -7,6 +7,7 @@ MLKEM_NATIVE_OBJ += \
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/keccak_absorb_once \
   mlkem_native/gcc12_O2_mono/keccak_absorb_once_x4 \
+  mlkem_native/gcc12_O2_mono/keccak_squeezeblocks_x4 \
   mlkem_native/gcc12_O2_mono/keccakf1600_permute \
   mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes \
   mlkem_native/gcc12_O2_mono/keccakf1600x4_xor_bytes \
@@ -22,6 +23,11 @@ mlkem_native/gcc12_O2_mono/keccak_absorb_once.native: \
 mlkem_native/gcc12_O2_mono/keccak_absorb_once_x4.native: \
   mlkem_native/gcc12_O2_mono/keccak_absorb_once.native \
   mlkem_native/gcc12_O2_mono/keccakf1600x4_xor_bytes.native \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/keccak_squeezeblocks_x4.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/keccakf1600_permute.native \
+  mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes.native \
   mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/keccakf1600_permute.native: \
   mlkem_native/gcc12_O2_mono/libmlkem.native \
