@@ -1495,6 +1495,7 @@ let enc_alt_kernel =
     eak_pc_fast = (0x1564,0x14bc,0x13d4,0x1294);
     eak_setup_tail_branch = 196;
     eak_loop_ldp = (202,219,244); eak_loop_backedge = 274;
+    eak_native_loop = true;
     eak_prepretail_steps = 242;
     eak_fast_steps = (78,101,124,145) };;
 

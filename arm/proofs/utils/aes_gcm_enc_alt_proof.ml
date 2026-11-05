@@ -25,7 +25,9 @@
 (* pc_backedge, pc_prepretail, pc_tail, pc_end and pc_fast1..pc_fast4, and   *)
 (* the states sfast1..sfast4 at the last four.  The step counts that differ  *)
 (* are OCaml integers (setup_tail_branch, loop_ldp1..loop_ldp3,              *)
-(* loop_backedge, prepretail_steps, fast1_steps..fast4_steps).  Addresses,   *)
+(* loop_backedge, prepretail_steps, fast1_steps..fast4_steps), and the flag  *)
+(* native_loop says whether the main loop has the native instruction order   *)
+(* of AWS-LC's AES-128 kernel (true for aes128_gcm_enc_alt).  Addresses,     *)
 (* labels and step numbers in the comments are those of the AES-256 kernel.  *)
 (*                                                                           *)
 (* Proof structure (offsets of the -DNO_IBT code).  The core theorem         *)
@@ -60,6 +62,7 @@ let XOR_CIPHER_RECONSTRUCT = enc_alt_kernel.eak_xor_cipher_reconstruct;;
 let aes_gcm_enc_alt_name = enc_alt_kernel.eak_name;;
 let setup_tail_branch = enc_alt_kernel.eak_setup_tail_branch;;
 let loop_ldp1,loop_ldp2,loop_ldp3 = enc_alt_kernel.eak_loop_ldp;;
+let native_loop = enc_alt_kernel.eak_native_loop;;
 let loop_backedge = enc_alt_kernel.eak_loop_backedge;;
 let prepretail_steps = enc_alt_kernel.eak_prepretail_steps;;
 let fast1_steps,fast2_steps,fast3_steps,fast4_steps =
@@ -106,12 +109,13 @@ let NSTEP_TAC n =
   ARM_STEPS_TAC AES_GCM_ENC_ALT_EXEC [n] THEN
   RULE_ASSUM_TAC(fun th -> SUBWORD_NORM_RULE (NORMOFF_RULE (WB_WADD_RULE th)));;
 
-(* The AES-128 bulk loop also keeps the reduction's ext/LO structure in its  *)
-(* Q21/Q29 scratch values.  The AES-256 loop uses the original Q17..Q19      *)
-(* guard; the prepretail and tail steppers below are unchanged.              *)
+(* With the native AES-128 loop order (native_loop), the loop stepper also   *)
+(* keeps the ext/LO structure of the reduction in the Q21/Q29 scratch        *)
+(* values; the reduced AES-256 order needs only the Q17..Q19 guard of        *)
+(* is_ghash_acc.  The prepretail and tail steppers below are unchanged.      *)
 let is_loop_ghash_acc th =
   is_ghash_acc th ||
-  (enc_alt_kernel.eak_rounds = 10 &&
+  (native_loop &&
    can (find_term (fun t -> match t with
         Comb(Const("read",_), r) ->
           (match r with Const("Q21",_) | Const("Q29",_) -> true
@@ -188,7 +192,7 @@ let SETUP_LOADS_TAC =
 (* store-order byteswap), so the fold uses GHASH_REDUCE_RAW_DIST8_PLAIN (all *)
 (* blocks clean).                                                            *)
 let Q19_FOLD_TAC =
-  (if enc_alt_kernel.eak_rounds = 10 then
+  (if native_loop then
      (* The native outer EOR3 already has pmull before ext.  Its inner EOR3  *)
      (* has ext before pmull; normalize only that inner seam.                *)
      REWRITE_TAC[WORD_BITWISE_RULE
@@ -293,10 +297,10 @@ let Q19_FOLD_TAC =
 (* blocks still to be read when in_p = out_p.                                *)
 (*                                                                           *)
 (* The AES-128 loop body has the native instruction order of AWS-LC's        *)
-(* AES-128 kernel, not the reduced AES-256 one: its input loads are at other *)
-(* steps (loop_ldp1..loop_ldp3), its stepper also leaves the Q21/Q29 scratch *)
-(* values unnormalized (is_loop_ghash_acc), and its Q19 fold first           *)
-(* re-associates one EOR3 (Q19_FOLD_TAC).                                    *)
+(* AES-128 kernel (native_loop), not the reduced AES-256 one: its input      *)
+(* loads are at other steps (loop_ldp1..loop_ldp3), its stepper also leaves  *)
+(* the Q21/Q29 scratch values unnormalized (is_loop_ghash_acc), and its Q19  *)
+(* fold first re-associates one EOR3 (Q19_FOLD_TAC).                         *)
 (* ========================================================================= *)
 
 let AES_GCM_ENC_ALT_MAIN_LOOP = prove
