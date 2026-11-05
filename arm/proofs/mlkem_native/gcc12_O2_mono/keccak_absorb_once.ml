@@ -7,7 +7,7 @@
 (* Absorbing a whole message into a Keccak state, with the padding. This is  *)
 (* the code for the static function mlk_keccak_absorb_once from mlkem-       *)
 (* native's portable C implementation compiled by gcc 12 with -O2 as one    *)
-(* translation unit (see mlkem_native/README.md), with the specification     *)
+(* translation unit (see mlkem_native/README.md), with the specifications    *)
 (* that it has in the separately compiled gcc12_O2 build. It zeroes the     *)
 (* state, XORs in each whole block of r bytes of the message and permutes   *)
 (* the state, and then XORs in the rest of the message and the padding, but  *)
@@ -16,12 +16,18 @@
 (* as lemmas (one for the loop that XORs in a block, one for the loop that  *)
 (* XORs in the rest of the message, and one for each of the two bytes of     *)
 (* padding), and the permutation is the call of mlk_keccakf1600_permute_c.  *)
-(* There are two differences from the gcc12_O2 specification: the message    *)
-(* must be nonempty (mlen > 0), since a message shorter than a block goes    *)
-(* straight to the loop that XORs in the rest of the message, which does    *)
-(* not test for mlen = 0, and r is not zero; and the frame is that of the    *)
-(* ABI, which holds since no caller keeps a caller-saved register across    *)
-(* the call. It is verified in the whole image (see libmlkem.ml).            *)
+(* The lemmas and the function are proved with the events of the constant-   *)
+(* time and memory safety proofs together with the correctness statement     *)
+(* (the theorem ..._FULL), and the correctness theorem (..._CORRECT) and the *)
+(* safety theorem (..._SAFE) are derived from it. There are differences from *)
+(* the gcc12_O2 specifications: the message must be nonempty (mlen > 0),     *)
+(* since a message shorter than a block goes straight to the loop that XORs  *)
+(* in the rest of the message, which does not test for mlen = 0, and r is    *)
+(* not zero; the padding byte p is below 128 in all three, which the SAFE    *)
+(* theorem needs to be derived from FULL (the callers use 6 and 0x1f); and   *)
+(* the frame is that of the ABI, which holds since no caller keeps a         *)
+(* caller-saved register across the call. It is verified in the whole image  *)
+(* (see libmlkem.ml).                                                        *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
@@ -29,6 +35,8 @@ needs "arm/proofs/mlkem_native/gcc12_O2_mono/keccakf1600_permute.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes.ml";;
 needs "arm/proofs/utils/keccak_fips202.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O2_mono/libmlkem.ml";;
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
 
 (*** The code in the image:
 
@@ -138,149 +146,53 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_EXEC =
 
 let ABS_EXEC = MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_EXEC;;
 
+
 (* ------------------------------------------------------------------------- *)
 (* The loop that XORs in a block (mlk_keccak_absorb_once_loop2) and the loop *)
 (* that XORs in the rest of the message (from join2 to join1) are the same   *)
-(* as the loop of mlkem_keccakf1600_xor_bytes, with offset 0, with the       *)
-(* bound in a register (X22, or X3 set from X23) and the test of the loop   *)
-(* in different order. They are proved by one function, from the lemma       *)
-(* statement function of keccakf1600x4_xor_bytes.ml, here repeated.          *)
+(* as the loop of mlkem_keccakf1600_xor_bytes, with the bound in a register  *)
+(* (X22, or X3 set from X23) and the test of the loop in different order.    *)
+(* They are proved by the generator xorF_prove of keccakf1600_xor_bytes.ml   *)
+(* for any offset, and then specialized to the offset 0 that they have here. *)
 (* ------------------------------------------------------------------------- *)
-
-let xor_lemma_stmt from_lab to_lab st_addr pre post regs =
-  parse_term (Printf.sprintf
-   "!(a:int64) (d:int64) off len (S:1600 word) m pc.
-        aligned 4096 (word pc:int64) /\\ pc + libmlkem_size <= 2 EXP 64 /\\
-        off + len <= 200 /\\ ~(len = 0) /\\
-        ALL (nonoverlapping (%s,200)) [(word pc,libmlkem_size); (d,len)]
-        ==> ensures arm
-             (\\s. aligned_bytes_loaded s (word pc)
-                    mlkem_native_libmlkem_gcc12_O2_mono_mc /\\
-                  read PC s = word (pc + %s) /\\ %s /\\
-                  read (memory :> wbytes (%s)) s = S /\\
-                  read (memory :> bytes(d,len)) s = m)
-             (\\s. read PC s = word (pc + %s) /\\ %s /\\
-                  read (memory :> wbytes (%s)) s =
-                  word_xor S (word(2 EXP (8 * off) * m)))
-             (MAYCHANGE [PC; %s] ,, MAYCHANGE SOME_FLAGS ,,
-              MAYCHANGE [events] ,,
-              MAYCHANGE [memory :> bytes(%s,200)])"
-   st_addr from_lab pre st_addr to_lab post st_addr regs st_addr);;
-
-let xorC_prove exec stmt lab1 lab2 inv_regs init_n exit_n flip =
-  let sn = Printf.sprintf "s%d" exit_n in
-  let flagtm = if flip then
-   "~(val(word_sub (word_add (word i) (word 1)) (word len):int64) = 0) <=> i + 1 < len"
-   else "~(val(word_sub (word len) (word_add (word i) (word 1)):int64) = 0) <=> i + 1 < len" in
-  prove(stmt,
-  MAP_EVERY X_GEN_TAC [`a:int64`; `d:int64`; `off:num`; `len:num`;
-                       `S:1600 word`; `m:num`; `pc:num`] THEN
-  REWRITE_TAC[SOME_FLAGS; NONOVERLAPPING_CLAUSES; ALL;
-              READ_MEMORY_WBYTES_VAL; fst exec] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  CONV_TAC(ONCE_DEPTH_CONV NUM_DIV_CONV) THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ENSURES_WHILE_UP2_TAC `len:num` (parse_term ("pc + "^lab1))
-   (parse_term ("pc + "^lab2))
-   (parse_term (Printf.sprintf
-   "\\i s. %s /\\
-          read (memory :> bytes(d,len)) s = m /\\
-          !j. j < 200
-              ==> read (memory :> bytes8(word_add a (word j))) s =
-                  word_subword
-                   (word_xor (S:1600 word)
-                     (word(2 EXP (8 * off) * m MOD 2 EXP (8 * i))))
-                   (8 * j,8)" (inv_regs "i"))) THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-
-    (*** Entry: only the bytes of the state ***)
-
-    ENSURES_INIT_TAC "s0" THEN
-    (if init_n > 0 then
-       ARM_STEPS_TAC exec (1--init_n) THEN ARGS_32_TAC [`len:num`]
-     else ALL_TAC) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1; WORD_XOR_0; word_subword] THEN
-    REWRITE_TAC[ARITH_RULE `2 EXP 8 = 256`] THEN
-    REPEAT STRIP_TAC THEN MATCH_MP_TAC READ_MEMORY_BYTES8_OF_NUM THEN
-    EXISTS_TAC `200` THEN ASM_REWRITE_TAC[];
-
-    (*** The loop body, for byte off + i of the state, and the test ***)
-
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
-    SUBGOAL_THEN `off + i < 200` ASSUME_TAC THENL
-     [SIMPLE_ARITH_TAC; ALL_TAC] THEN
-    FIRST_X_ASSUM(fun th ->
-      if is_forall(concl th) && free_in `bytes8` (concl th) then
-        ASSUME_TAC(MP (SPEC `off + i` th) (ASSUME `off + i < 200`)) THEN
-        ASSUME_TAC(XOR_BYTES_RESTRICT_RULE `off + i` th)
-      else failwith "XOR_BYTES_RESTRICT_RULE") THEN
-    MP_TAC(SPECL [`d:int64`; `len:num`; `m:num`; `i:num`; `s0:armstate`]
-                 READ_MEMORY_BYTES8_OF_NUM) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-    ARM_STEPS_TAC exec (1--7) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    SUBGOAL_THEN (parse_term flagtm)
-    SUBST_ALL_TAC THENL
-     [REWRITE_TAC[GSYM WORD_ADD; VAL_WORD_SUB_EQ_0; VAL_WORD; DIMINDEX_64] THEN
-      SUBGOAL_THEN `len < 2 EXP 64 /\ i + 1 < 2 EXP 64` MP_TAC THENL
-       [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-      SIMP_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC;
-      ALL_TAC] THEN
-    REWRITE_TAC[ADD_SUB; GSYM WORD_ADD] THEN
-    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
-    X_GEN_TAC `j:num` THEN DISCH_TAC THEN
-    ASM_SIMP_TAC[XOR_BYTES_STEP] THEN
-    COND_CASES_TAC THENL [ALL_TAC; ASM_SIMP_TAC[]] THEN
-    FIRST_X_ASSUM SUBST1_TAC THEN ASM_REWRITE_TAC[] THEN
-    W(fun (_,w) -> SPEC_TAC(lhand(rand w),`b1:byte`) THEN
-                   SPEC_TAC(rand(rand w),`b2:byte`)) THEN
-    REPEAT GEN_TAC THEN W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w));
-
-    (*** The loop exit, with the whole state ***)
-
-    ENSURES_INIT_TAC "s0" THEN
-    (if exit_n > 0 then ARM_STEPS_TAC exec (1--exit_n) else ALL_TAC) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    TRY(CONJ_TAC THENL [ASM_MESON_TAC[]; ALL_TAC]) THEN
-    MP_TAC(ISPECL [`a:int64`; `S:1600 word`; `off:num`; `len:num`; `d:int64`;
-                   `m:num`; parse_term (sn^":armstate")] XOR_BYTES_FINAL) THEN
-    ASM_REWRITE_TAC[READ_MEMORY_WBYTES_1600]]);;
 
 (*** The loop that XORs in a block, from its head to its exit ***)
 
-let ABS_LA_STMT = xor_lemma_stmt
+let ABS_LA_STMT = xor_full_stmt
   "mlk_keccak_absorb_once_loop2" "mlk_keccak_absorb_once_loop2_exit" "a"
   "read X20 s = word_add a (word off) /\\ read X19 s = word 0 /\\
    read X21 s = d /\\ read X22 s = word len"
   "read X19 s = word len"
   "X0; X4; X19";;
 
-let ABS_LA = xorC_prove ABS_EXEC ABS_LA_STMT
+let ABS_LA = xorF_prove ABS_EXEC ABS_LA_STMT
   "mlk_keccak_absorb_once_loop2" "mlk_keccak_absorb_once_loop2_exit"
   (fun i -> "read X20 s = word_add a (word off) /\\ read X19 s = word "^i^" /\\
              read X21 s = d /\\ read X22 s = word len") 0 0 true;;
 
 (*** The loop that XORs in the rest of the message, from join2 to join1 ***)
 
-let ABS_LC_STMT = xor_lemma_stmt
+let ABS_LC_STMT = xor_full_stmt
   "mlk_keccak_absorb_once_join2" "mlk_keccak_absorb_once_join1" "a"
   "read X20 s = word_add a (word off) /\\ read X21 s = d /\\
    read X23 s = word len"
   "read X0 s = word len /\\ read X3 s = word len"
   "X0; X1; X2; X3";;
 
-let ABS_LC = xorC_prove ABS_EXEC ABS_LC_STMT
+let ABS_LC = xorF_prove ABS_EXEC ABS_LC_STMT
   "mlk_keccak_absorb_once_loop3" "mlk_keccak_absorb_once_loop3_exit"
   (fun i -> "read X20 s = word_add a (word off) /\\ read X0 s = word "^i^" /\\
              read X21 s = d /\\ read X3 s = word len") 2 1 false;;
+
+let ABS_LA0 = OFF0_PROVE ABS_LA;;
+let ABS_LC0 = OFF0_PROVE ABS_LC;;
 
 (* ------------------------------------------------------------------------- *)
 (* The padding: byte t of the state XORed with p, then byte r - 1 with 0x80. *)
 (* ------------------------------------------------------------------------- *)
 
-let ABS_T1_STMT = `!st t r p (A:1600 word) pc.
+let ABS_T1_STMT = `exists f_events.
+     forall e st t r p (A:1600 word) pc.
         aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         t < r /\ r <= 200 /\ p < 128 /\
         nonoverlapping (st,200) (word pc,libmlkem_size)
@@ -290,21 +202,29 @@ let ABS_T1_STMT = `!st t r p (A:1600 word) pc.
                   read PC s = word (pc + mlk_keccak_absorb_once_join1) /\
                   read X20 s = st /\ read X23 s = word t /\
                   read X24 s = word r /\ read X25 s = word p /\
-                  read (memory :> wbytes st) s = A)
+                  read (memory :> wbytes st) s = A /\
+                  read events s = e)
              (\s. read PC s =
                   word (pc + mlk_keccak_absorb_once_in_keccakf1600_xor_bytes_3) /\
                   read X24 s = word (r - 1) /\
                   read (memory :> wbytes st) s =
-                  word_xor A (word(2 EXP (8 * t) * p)))
+                  word_xor A (word(2 EXP (8 * t) * p)) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events st t pc /\
+                     memaccess_inbounds e2 [st,200] [st,200]))
              (MAYCHANGE [PC; X0; X24; X25] ,, MAYCHANGE SOME_FLAGS ,,
               MAYCHANGE [events] ,, MAYCHANGE [memory :> bytes(st,200)])`;;
 
 let ABS_T1 = prove(ABS_T1_STMT,
-  MAP_EVERY X_GEN_TAC [`st:int64`; `t:num`; `r:num`; `p:num`; `A:1600 word`;
+  META_EXISTS_TAC THEN
+  MAP_EVERY X_GEN_TAC [`e:(uarch_event)list`; `st:int64`; `t:num`; `r:num`; `p:num`; `A:1600 word`;
                        `pc:num`] THEN
   REWRITE_TAC[SOME_FLAGS; NONOVERLAPPING_CLAUSES; READ_MEMORY_WBYTES_1600;
               fst ABS_EXEC] THEN
-  STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+  STRIP_TAC THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN
   FIRST_ASSUM(ASSUME_TAC o MATCH_MP XOR_BYTES_OF_STATE) THEN
   SUBGOAL_THEN `t < 200` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   FIRST_X_ASSUM(fun th ->
@@ -317,7 +237,8 @@ let ABS_T1 = prove(ABS_T1_STMT,
   MP_TAC(SPEC `r:num` WORD_ZX_SUB1_SMALL) THEN
   ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC; ALL_TAC] THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
-  MP_TAC(ISPECL [`st:int64`; `A:1600 word`; `t:num`; `1`; `p:num`;
+  CONJ_TAC THENL
+   [MP_TAC(ISPECL [`st:int64`; `A:1600 word`; `t:num`; `1`; `p:num`;
                  `s4:armstate`] XOR_BYTES_FINAL2) THEN
   REWRITE_TAC[READ_MEMORY_WBYTES_1600] THEN
   ANTS_TAC THENL
@@ -344,9 +265,11 @@ let ABS_T1 = prove(ABS_T1_STMT,
   W(fun (_,w) -> SPEC_TAC(`word p:int64`,`u:int64`) THEN
                  SPEC_TAC(`word_subword (A:1600 word) (8 * t,8):byte`,
                           `x:byte`)) THEN
-  REPEAT GEN_TAC THEN W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w)));;
+  REPEAT GEN_TAC THEN W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w));
+  DISCHARGE_SAFETY_PROPERTY_TAC]);;
 
-let ABS_T2_STMT = `!st k (A:1600 word) pc.
+let ABS_T2_STMT = `exists f_events.
+     forall e st k (A:1600 word) pc.
         aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
         k < 200 /\
         nonoverlapping (st,200) (word pc,libmlkem_size)
@@ -356,19 +279,27 @@ let ABS_T2_STMT = `!st k (A:1600 word) pc.
                   read PC s =
                   word (pc + mlk_keccak_absorb_once_in_keccakf1600_xor_bytes_3) /\
                   read X20 s = st /\ read X24 s = word k /\
-                  read (memory :> wbytes st) s = A)
+                  read (memory :> wbytes st) s = A /\
+                  read events s = e)
              (\s. read PC s =
                   word (pc + mlk_keccak_absorb_once_in_keccakf1600_xor_bytes_3_end) /\
                   read (memory :> wbytes st) s =
-                  word_xor A (word(2 EXP (8 * k) * 128)))
+                  word_xor A (word(2 EXP (8 * k) * 128)) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events st k pc /\
+                     memaccess_inbounds e2 [st,200] [st,200]))
              (MAYCHANGE [PC; X0] ,, MAYCHANGE SOME_FLAGS ,,
               MAYCHANGE [events] ,, MAYCHANGE [memory :> bytes(st,200)])`;;
 
 let ABS_T2 = prove(ABS_T2_STMT,
-  MAP_EVERY X_GEN_TAC [`st:int64`; `k:num`; `A:1600 word`; `pc:num`] THEN
+  META_EXISTS_TAC THEN
+  MAP_EVERY X_GEN_TAC [`e:(uarch_event)list`; `st:int64`; `k:num`; `A:1600 word`; `pc:num`] THEN
   REWRITE_TAC[SOME_FLAGS; NONOVERLAPPING_CLAUSES; READ_MEMORY_WBYTES_1600;
               fst ABS_EXEC] THEN
-  STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+  STRIP_TAC THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN
   FIRST_ASSUM(ASSUME_TAC o MATCH_MP XOR_BYTES_OF_STATE) THEN
   FIRST_X_ASSUM(fun th ->
     if is_forall(concl th) && free_in `bytes8` (concl th) then
@@ -378,9 +309,10 @@ let ABS_T2 = prove(ABS_T2_STMT,
   MP_TAC(SPEC `k:num` VAL_ZX_UXTW) THEN
   ANTS_TAC THENL [SIMPLE_ARITH_TAC; STRIP_TAC] THEN
   ARM_STEPS_TAC ABS_EXEC (1--1) THEN ARGS_32_TAC [`k:num`] THEN
-  ARM_STEPS_TAC ABS_EXEC (2--3) THEN
+  ARM_STEPS_TAC ABS_EXEC (2--3) THEN ARGS_32_TAC [`k:num`] THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  MP_TAC(ISPECL [`st:int64`; `A:1600 word`; `k:num`; `1`; `128`;
+  CONJ_TAC THENL
+   [MP_TAC(ISPECL [`st:int64`; `A:1600 word`; `k:num`; `1`; `128`;
                  `s3:armstate`] XOR_BYTES_FINAL2) THEN
   REWRITE_TAC[READ_MEMORY_WBYTES_1600] THEN
   ANTS_TAC THENL
@@ -399,7 +331,8 @@ let ABS_T2 = prove(ABS_T2_STMT,
     DISCH_THEN ACCEPT_TAC] THEN
   W(fun (_,w) -> SPEC_TAC(`word_subword (A:1600 word) (8 * k,8):byte`,
                           `x:byte`)) THEN
-  GEN_TAC THEN W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w)));;
+  GEN_TAC THEN W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w));
+  DISCHARGE_SAFETY_PROPERTY_TAC]);;
 
 (* ------------------------------------------------------------------------- *)
 (* The state after the padding, as in the specification.                     *)
@@ -579,35 +512,16 @@ let NONOVERLAPPING_SUBRANGE = prove
     EXISTS_TAC `k + i` THEN CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
     REWRITE_TAC[WORD_ADD; WORD_ADD_ASSOC]]);;
 
-(* ------------------------------------------------------------------------- *)
-(* The two loops with the offset 0 of the XOR, which they have here.         *)
-(* ------------------------------------------------------------------------- *)
-
-let ABS_LA0 = GENL
- [`a:int64`; `d:int64`; `len:num`; `S:1600 word`; `m:num`; `pc:num`]
- (REWRITE_RULE[WORD_ADD_0; ADD_CLAUSES; EXP; MULT_CLAUSES]
-   (SPECL [`a:int64`; `d:int64`; `0`; `len:num`; `S:1600 word`; `m:num`;
-           `pc:num`] ABS_LA));;
-
-let ABS_LC0 = GENL
- [`a:int64`; `d:int64`; `len:num`; `S:1600 word`; `m:num`; `pc:num`]
- (REWRITE_RULE[WORD_ADD_0; ADD_CLAUSES; EXP; MULT_CLAUSES]
-   (SPECL [`a:int64`; `d:int64`; `0`; `len:num`; `S:1600 word`; `m:num`;
-           `pc:num`] ABS_LC));;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof, in parts. The statement is that of gcc12_O2 with       *)
-(* mlen > 0. The parts are the entry to the end of the XORs (the label       *)
-(* join1), and the padding to the return. The first part has the case of a   *)
-(* short message, which goes to join2 to XOR in the message (and then to     *)
-(* join1), and that of a message of at least a block, where the loop over    *)
-(* the blocks is followed by the XOR of the rest of the message, if any.     *)
+(* The proof of FULL, in parts. The parts are the entry to the end of the    *)
+(* XORs (the label join1), and the padding to the return. The first part has *)
+(* the case of a short message, which goes to join2 to XOR in the message    *)
+(* (and then to join1), and that of a message of at least a block, where the *)
+(* loop over the blocks is followed by the XOR of the rest of the message,   *)
+(* if any. The events are given by a template with the parts, as in the      *)
+(* gcc12_O2 proof, whose unknown parts are found by unification.             *)
 (* ------------------------------------------------------------------------- *)
-
-let ABS_SUB lemma n ilist =
-  ARM_SUBROUTINE_SIM_TAC
-   (mlkem_native_libmlkem_gcc12_O2_mono_mc,ABS_EXEC,0x0,
-    mlkem_native_libmlkem_gcc12_O2_mono_mc,lemma) ilist n;;
 
 let ABS_SETUP_TAC =
   MAP_EVERY X_GEN_TAC
@@ -674,11 +588,91 @@ let ABS_INV = parse_term ("\\k s. M < 2 EXP (8 * mlen) /\\
         ABS_COMMON ^ " /\\
         read (memory :> wbytes st) s = keccak_absorb r P k");;
 
+
+let ABS_TEMPLATE =
+ `\(m:int64) (st:int64) (r:num) (mlen:num) (pc:num) (stackpointer:int64)
+   (returnaddress:int64).
+   APPEND (f_ev_pad m st r mlen pc stackpointer returnaddress)
+    (if mlen < r
+     then APPEND (f_ev_l3s m st r mlen pc stackpointer returnaddress)
+                 (f_ev_short m st r mlen pc stackpointer returnaddress)
+     else APPEND
+           (APPEND
+             (if mlen MOD r = 0 then []
+              else f_ev_l3 m st r mlen pc stackpointer returnaddress)
+             (if mlen MOD r = 0
+              then f_ev_cb0 m st r mlen pc stackpointer returnaddress
+              else f_ev_cb1 m st r mlen pc stackpointer returnaddress))
+          (APPEND (f_ev_epil m st r mlen pc stackpointer returnaddress)
+            (APPEND
+              (ENUMERATEL (mlen DIV r)
+                (\i. f_ev_loop m st r mlen pc stackpointer returnaddress i))
+              (f_ev_prol m st r mlen pc stackpointer returnaddress))))
+   :(uarch_event)list`;;
+
+let ABS_INTRO_TAC =
+  ASSUME_CALLEE_SAFETY_TAILED_TAC ABS_LA0 "H_LA" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC ABS_LC0 "H_LC" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC ABS_T1 "H_T1" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC ABS_T2 "H_T2" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL_F1600
+    "H_PERMUTE" THEN
+  CONCRETIZE_F_EVENTS_TAC ABS_TEMPLATE THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  ABS_SETUP_TAC;;
+
+
+let has_wbytes th =
+  can (find_term (fun t -> is_const t && fst(dest_const t) = "wbytes"))
+      (concl th);;
+
+let ABS_VARS =
+  [`pc:num`; `m:int64`; `st:int64`; `r:num`; `mlen:num`;
+   `stackpointer:int64`; `returnaddress:int64`];;
+
+let ABS_EXISTS_E2_TAC allowed_vars_e =
+  let pfx = ref ["f_events_callee"; "f_ev_"] in
+  ((MATCH_MP_TAC NIL_IMPLIES_APPEND_EQ THEN CONJ_TAC THENL [
+    REFL_TAC;
+    SAFE_UNIFY_REFL_TAC allowed_vars_e pfx
+  ]) ORELSE
+  (CONV_TAC (TRY_CONV (LAND_CONV CONS_TO_APPEND_CONV)) THEN
+   TRY (GEN_REWRITE_TAC LAND_CONV [APPEND_ASSOC]) THEN
+   AP_THM_TAC THEN AP_TERM_TAC THEN
+   SAFE_UNIFY_REFL_TAC allowed_vars_e pfx) ORELSE
+  (CONV_TAC (TRY_CONV (LAND_CONV (ONCE_DEPTH_CONV CONS_TO_APPEND_CONV))) THEN
+   CONV_TAC (TRY_CONV (LAND_CONV (ONCE_DEPTH_CONV CONS_TO_APPEND_CONV))) THEN
+   GEN_REWRITE_TAC (LAND_CONV o DEPTH_CONV) [APPEND_ASSOC] THEN
+   AP_THM_TAC THEN AP_TERM_TAC THEN
+   SAFE_UNIFY_REFL_TAC allowed_vars_e pfx));;
+
+let ABS_DISCHARGE_TAC =
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [ABS_EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
+  W (fun (asl,w) ->
+    (if is_conj w then
+      (CONJ_TAC THENL
+        [FULL_UNIFY_F_EVENTS_TAC ORELSE
+         (REWRITE_TAC[APPEND; APPEND_NIL; GSYM APPEND_ASSOC] THEN NO_TAC);
+         ALL_TAC])
+     else ALL_TAC) THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
+
+let ABS_SUB name ilist vars n =
+  REMOVE_THEN name (fun th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mono_mc,ABS_EXEC,0x0,
+       mlkem_native_libmlkem_gcc12_O2_mono_mc,th)
+      ilist n THENL
+     [ABS_EXISTS_E2_TAC (ref vars); LABEL_TAC name th]);;
+
 (*** The entry of a message shorter than a block: the state is zeroed and the
      code jumps to join2 ***)
 
 let ABS_ENTRY_S_TAC =
-  ENSURES_INIT_TAC "s0" THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
   SUBGOAL_THEN `M < 2 EXP (8 * mlen)` ASSUME_TAC THENL
    [UNDISCH_TAC `read (memory :> bytes (m,mlen)) s0 = M` THEN
     DISCH_THEN(SUBST1_TAC o SYM) THEN
@@ -697,12 +691,14 @@ let ABS_ENTRY_S_TAC =
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   ASM_SIMP_TAC[DIV_LT; MOD_LT; MULT_CLAUSES; WORD_ADD_0] THEN
   REWRITE_TAC[keccak_absorb; READ_MEMORY_WBYTES_1600; VAL_WORD_0] THEN
-  CONJ_TAC THENL [ASM_ARITH_TAC; KECCAK_ZERO_STATE_TAC];;
+  CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  CONJ_TAC THENL [KECCAK_ZERO_STATE_TAC; ABS_DISCHARGE_TAC];;
 
 (*** From join2 to join1: the XOR of the rest of the message ***)
 
 let ABS_J2_TAC =
-  ENSURES_INIT_TAC "s0" THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
   SUBGOAL_THEN `mlen = r * (mlen DIV r) + mlen MOD r /\ mlen MOD r < r`
    STRIP_ASSUME_TAC THENL
    [MP_TAC(SPECL [`mlen:num`; `r:num`] DIVISION) THEN
@@ -727,11 +723,12 @@ let ABS_J2_TAC =
                 `mlen MOD r`; `s0:armstate`] READ_MEMORY_BYTES_SUB) THEN
   ANTS_TAC THENL [CONJ_TAC THENL [FIRST_ASSUM ACCEPT_TAC; ASM_ARITH_TAC];
                   DISCH_TAC] THEN
-  ABS_SUB ABS_LC0 1
-   [`st:int64`; `word_add (m:int64) (word (r * (mlen DIV r)))`; `mlen MOD r`;
+  ABS_SUB "H_LC"
+   [`e:(uarch_event)list`; `st:int64`;
+    `word_add (m:int64) (word (r * (mlen DIV r)))`; `mlen MOD r`;
     `keccak_absorb r P (mlen DIV r)`;
     `(M DIV 2 EXP (8 * r * mlen DIV r)) MOD 2 EXP (8 * mlen MOD r)`;
-    `pc:num`] THEN
+    `pc:num`] ABS_VARS 1 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   SUBGOAL_THEN
    `(M DIV 2 EXP (8 * r * mlen DIV r)) MOD 2 EXP (8 * mlen MOD r) =
@@ -743,12 +740,14 @@ let ABS_J2_TAC =
      (fun th -> ASM_REWRITE_TAC[th]) THEN
     ASM_ARITH_TAC;
     ALL_TAC] THEN
-  ASM_REWRITE_TAC[];;
+  ASM_REWRITE_TAC[] THEN
+  ABS_DISCHARGE_TAC;;
 
 (*** The loop over the whole blocks: the entry ***)
 
 let ABS_LINIT_TAC =
-  ENSURES_INIT_TAC "s0" THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
   SUBGOAL_THEN `M < 2 EXP (8 * mlen)` ASSUME_TAC THENL
    [UNDISCH_TAC `read (memory :> bytes (m,mlen)) s0 = M` THEN
     DISCH_THEN(SUBST1_TAC o SYM) THEN
@@ -767,12 +766,14 @@ let ABS_LINIT_TAC =
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[MULT_CLAUSES; SUB_0; WORD_ADD_0] THEN
   REWRITE_TAC[keccak_absorb; READ_MEMORY_WBYTES_1600; VAL_WORD_0] THEN
-  KECCAK_ZERO_STATE_TAC;;
+  CONJ_TAC THENL [KECCAK_ZERO_STATE_TAC; ABS_DISCHARGE_TAC];;
 
 (*** The body of the loop: XOR in a block, permute, and the test ***)
 
 let ABS_LBODY_TAC =
-  X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
   SUBGOAL_THEN `~(r = 0)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   MP_TAC(SPECL [`mlen:num`; `r:num`; `i:num`] ABSORB_BLOCK_BOUND) THEN
   ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
@@ -794,16 +795,18 @@ let ABS_LBODY_TAC =
   ANTS_TAC THENL [CONJ_TAC THENL [FIRST_ASSUM ACCEPT_TAC; ASM_ARITH_TAC];
                   DISCH_TAC] THEN
   ARM_STEPS_TAC ABS_EXEC (1--2) THEN
-  ABS_SUB ABS_LA0 3
-   [`st:int64`; `word_add (m:int64) (word (r * i))`; `r:num`;
-    `keccak_absorb r P i`; `(M DIV 2 EXP (8 * r * i)) MOD 2 EXP (8 * r)`;
-    `pc:num`] THEN
+  ABS_SUB "H_LA"
+   [`e:(uarch_event)list`; `st:int64`; `word_add (m:int64) (word (r * i))`;
+    `r:num`; `keccak_absorb r P i`;
+    `(M DIV 2 EXP (8 * r * i)) MOD 2 EXP (8 * r)`; `pc:num`]
+   (ABS_VARS @ [`i:num`]) 3 THEN
   ARM_STEPS_TAC ABS_EXEC (4--6) THEN
-  ABS_SUB MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT_F1600 7
-   [`read X0 s`;
+  ABS_SUB "H_PERMUTE"
+   [`e:(uarch_event)list`; `read X0 s`;
     `word_xor (keccak_absorb r P i)
               (word ((M DIV 2 EXP (8 * r * i)) MOD 2 EXP (8 * r))):1600 word`;
-    `pc:num`; `read SP s`; `read X30 s`] THEN
+    `pc:num`; `read SP s`; `read X30 s`]
+   (ABS_VARS @ [`i:num`]) 7 THEN
   ARM_STEPS_TAC ABS_EXEC (8--10) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   SUBGOAL_THEN
@@ -837,13 +840,28 @@ let ABS_LBODY_TAC =
       then SUBST1_TAC(SYM th) else failwith "") THEN
     CONV_TAC SYM_CONV THEN
     MATCH_MP_TAC KECCAK_BLOCK_FULL THEN
-    UNDISCH_TAC `r * i + r <= mlen` THEN ARITH_TAC];;
+    UNDISCH_TAC `r * i + r <= mlen` THEN ARITH_TAC;
+    ABS_DISCHARGE_TAC];;
+
+let ABS_LOOP_TAC =
+  ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r` `pc + mlk_keccak_absorb_once_loop1`
+    `pc + mlk_keccak_absorb_once_loop1_exit` ABS_INV THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
+    ABS_LINIT_TAC;
+    ABS_LBODY_TAC;
+    REWRITE_TAC[] THEN REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[ABSORB_MOD_EQ] THEN
+    ABS_DISCHARGE_TAC];;
 
 (*** After the loop: the rest of the message, if there is any ***)
 
 let ABS_LX_TAC =
+  CONV_TAC(DEPTH_CONV BETA_CONV) THEN
   ASM_CASES_TAC `mlen MOD r = 0` THENL
-   [ENSURES_INIT_TAC "s0" THEN
+   [FIRST_ASSUM(fun th -> REWRITE_TAC[th; APPEND_NIL; APPEND]) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC ABS_EXEC (1--1) THEN
     SUBGOAL_THEN `r * (mlen DIV r) = mlen` ASSUME_TAC THENL
      [MP_TAC(SPECL [`mlen:num`; `r:num`] DIVISION) THEN
@@ -854,11 +872,14 @@ let ABS_LX_TAC =
       ASM_REWRITE_TAC[];
       ALL_TAC] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[VAL_WORD_0; ASSUME `mlen MOD r = 0`]) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[WORD_XOR_0];
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[WORD_XOR_0] THEN
+    ABS_DISCHARGE_TAC;
     ALL_TAC] THEN
-  ENSURES_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_join2` ABS_MID_J2 THEN
+  FIRST_ASSUM(fun th -> REWRITE_TAC[th; APPEND_NIL; APPEND; GSYM APPEND_ASSOC]) THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_join2` ABS_MID_J2 THEN
   CONJ_TAC THENL
-   [ENSURES_INIT_TAC "s0" THEN
+   [REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC ABS_EXEC (1--1) THEN
     SUBGOAL_THEN `val(word (mlen MOD r):int64) = mlen MOD r`
      (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
@@ -867,41 +888,102 @@ let ABS_LX_TAC =
       MP_TAC(SPECL [`mlen:num`; `r:num`] MOD_LT_EQ) THEN
       ASM_SIMP_TAC[ARITH_RULE `0 < r ==> ~(r = 0)`] THEN ASM_ARITH_TAC;
       ALL_TAC] THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ABS_DISCHARGE_TAC;
     ABS_J2_TAC];;
 
 (*** The padding: byte t, then byte r - 1 ***)
 
-let has_wbytes th =
-  can (find_term (fun t -> is_const t && fst(dest_const t) = "wbytes"))
-      (concl th);;
-
 let ABS_PART2_TAC =
   SUBGOAL_THEN `mlen MOD r < r` ASSUME_TAC THENL
    [ASM_SIMP_TAC[MOD_LT_EQ; ARITH_RULE `0 < r ==> ~(r = 0)`]; ALL_TAC] THEN
-  ENSURES_INIT_TAC "s0" THEN
-  ABS_SUB ABS_T1 1
-   [`st:int64`; `mlen MOD r`; `r:num`; `p:num`;
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  ABS_SUB "H_T1"
+   [`e:(uarch_event)list`; `st:int64`; `mlen MOD r`; `r:num`; `p:num`;
     `word_xor (keccak_absorb r P (mlen DIV r))
               (word (M DIV 2 EXP (8 * r * mlen DIV r))):1600 word`;
-    `pc:num`] THEN
+    `pc:num`] ABS_VARS 1 THEN
   SUBGOAL_THEN `r - 1 < 200` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  ABS_SUB ABS_T2 2
-   [`st:int64`; `r - 1`;
+  ABS_SUB "H_T2"
+   [`e:(uarch_event)list`; `st:int64`; `r - 1`;
     `word_xor (word_xor (keccak_absorb r P (mlen DIV r))
                         (word (M DIV 2 EXP (8 * r * mlen DIV r))))
               (word (2 EXP (8 * mlen MOD r) * p)):1600 word`;
-    `pc:num`] THEN
+    `pc:num`] ABS_VARS 2 THEN
   ARM_STEPS_TAC ABS_EXEC (3--7) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  FIRST_ASSUM(fun th ->
-    if has_wbytes th then
-      ASSUME_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600] th)
-    else failwith "") THEN
-  MP_TAC(SPECL [`keccak_absorb r P (mlen DIV r)`; `M:num`; `mlen:num`;
-                `r:num`; `p:num`] FINAL_EQ) THEN
-  ANTS_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[th]);;
+  CONJ_TAC THENL
+   [FIRST_ASSUM(fun th ->
+      if has_wbytes th then
+        ASSUME_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600] th)
+      else failwith "") THEN
+    MP_TAC(SPECL [`keccak_absorb r P (mlen DIV r)`; `M:num`; `mlen:num`;
+                  `r:num`; `p:num`] FINAL_EQ) THEN
+    ANTS_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+    ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[th]);
+    ABS_DISCHARGE_TAC];;
+
+
+let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL =
+  prove
+ (`exists f_events.
+     forall e st r m mlen p M pc stackpointer returnaddress.
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+       aligned 16 stackpointer /\
+       0 < r /\ r <= 200 /\ p < 128 /\ 0 < mlen /\
+       PAIRWISE nonoverlapping
+        [(st,200); (m,mlen); (word_sub stackpointer (word 256),256)] /\
+       ALL (nonoverlapping (word pc,libmlkem_size))
+        [(st,200); (word_sub stackpointer (word 256),256)]
+       ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc)
+                   mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+                 read PC s = word (pc + mlk_keccak_absorb_once) /\
+                 read SP s = stackpointer /\
+                 read X30 s = returnaddress /\
+                 C_ARGUMENTS [st; word r; m; word mlen; word p] s /\
+                 read (memory :> bytes(m,mlen)) s = M /\
+                 read events s = e)
+            (\s. read PC s = returnaddress /\
+                 read (memory :> wbytes st) s =
+                 word_xor
+                  (keccak_absorb r
+                    (M + 2 EXP (8 * mlen) *
+                         num_of_bytelist(keccak_pad r p mlen))
+                    (mlen DIV r))
+                  (word((M + 2 EXP (8 * mlen) *
+                             num_of_bytelist(keccak_pad r p mlen)) DIV
+                        2 EXP (8 * r * mlen DIV r) MOD 2 EXP (8 * r))) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events m st r mlen pc
+                           (word_sub stackpointer (word 256)) returnaddress /\
+                    memaccess_inbounds e2
+                     [m,mlen; st,200; word_sub stackpointer (word 256),256;
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
+                     [st,200; word_sub stackpointer (word 256),256]))
+            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+             MAYCHANGE
+              [memory :> bytes(st,200);
+               memory :> bytes(word_sub stackpointer (word 256),256)])`,
+  ABS_INTRO_TAC THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_join1`
+   ABS_MID_J1 THEN
+  CONJ_TAC THENL
+   [ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THENL
+     [ENSURES_EVENTS_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_join2`
+        ABS_MID_J2 THEN
+      CONJ_TAC THENL [ABS_ENTRY_S_TAC; ABS_J2_TAC];
+      ENSURES_EVENTS_SEQUENCE_TAC
+       `pc + mlk_keccak_absorb_once_loop1_exit` ABS_MID_LX THEN
+      CONJ_TAC THENL [ABS_LOOP_TAC; ABS_LX_TAC]];
+    ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THEN ABS_PART2_TAC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The correctness theorem, as in gcc12_O2 but for a nonempty message, and   *)
+(* the safety theorem, both from FULL.                                       *)
+(* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT =
   prove
@@ -935,22 +1017,58 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT =
               MAYCHANGE
                [memory :> bytes(st,200);
                 memory :> bytes(word_sub stackpointer (word 256),256)])`,
-  ABS_SETUP_TAC THEN
-  ENSURES_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_join1` ABS_MID_J1 THEN
-  CONJ_TAC THENL
-   [ASM_CASES_TAC `mlen < r` THENL
-     [ENSURES_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_join2` ABS_MID_J2 THEN
-      CONJ_TAC THENL [ABS_ENTRY_S_TAC; ABS_J2_TAC];
-      ENSURES_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_loop1_exit`
-        ABS_MID_LX THEN
-      CONJ_TAC THENL
-       [ENSURES_WHILE_UP2_TAC `mlen DIV r` `pc + mlk_keccak_absorb_once_loop1`
-          `pc + mlk_keccak_absorb_once_loop1_exit` ABS_INV THEN
-        REPEAT CONJ_TAC THENL
-         [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
-          ABS_LINIT_TAC;
-          ABS_LBODY_TAC;
-          ENSURES_INIT_TAC "s0" THEN ENSURES_FINAL_STATE_TAC THEN
-          ASM_REWRITE_TAC[ABSORB_MOD_EQ]];
-        ABS_LX_TAC]];
-    ABS_PART2_TAC]);;
+  REPEAT STRIP_TAC THEN
+  X_CHOOSE_TAC `f:int64->int64->num->num->num->int64->int64->(uarch_event)list`
+   MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL THEN
+  GHOST_INTRO_TAC `e:(uarch_event)list` `read events` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `st:int64`; `r:num`; `m:int64`; `mlen:num`;
+    `p:num`; `M:num`; `pc:num`; `stackpointer:int64`;
+    `returnaddress:int64`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_PREPOST_WEAKEN) THEN
+  SIMP_TAC[]);;
+
+let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE =
+  prove
+ (`exists f_events.
+     forall e st r m mlen p pc stackpointer returnaddress.
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+       aligned 16 stackpointer /\
+       0 < r /\ r <= 200 /\ p < 128 /\ 0 < mlen /\
+       PAIRWISE nonoverlapping
+        [(st,200); (m,mlen); (word_sub stackpointer (word 256),256)] /\
+       ALL (nonoverlapping (word pc,libmlkem_size))
+        [(st,200); (word_sub stackpointer (word 256),256)]
+       ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc)
+                   mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+                 read PC s = word (pc + mlk_keccak_absorb_once) /\
+                 read SP s = stackpointer /\
+                 read X30 s = returnaddress /\
+                 C_ARGUMENTS [st; word r; m; word mlen; word p] s /\
+                 read events s = e)
+            (\s. read PC s = returnaddress /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events m st r mlen pc
+                           (word_sub stackpointer (word 256)) returnaddress /\
+                    memaccess_inbounds e2
+                     [m,mlen; st,200; word_sub stackpointer (word 256),256;
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
+                     [st,200; word_sub stackpointer (word 256),256]))
+            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+             MAYCHANGE
+              [memory :> bytes(st,200);
+               memory :> bytes(word_sub stackpointer (word 256),256)])`,
+  MP_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL THEN
+  MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC THEN DISCH_TAC THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  GHOST_INTRO_TAC `M:num` `read (memory :> bytes(m,mlen))` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `st:int64`; `r:num`; `m:int64`; `mlen:num`;
+    `p:num`; `M:num`; `pc:num`; `stackpointer:int64`;
+    `returnaddress:int64`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_PREPOST_WEAKEN) THEN
+  SIMP_TAC[]);;
