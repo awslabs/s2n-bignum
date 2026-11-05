@@ -4,7 +4,7 @@
  *)
 
 (* ========================================================================= *)
-(* Partial RV32IM instruction decoding.                                      *)
+(* RV32IM instruction decoding.                                              *)
 (* ========================================================================= *)
 
 (* Field and immediate layouts follow "Base Instruction Formats" in "RV32I
@@ -67,8 +67,12 @@ let riscv_xreg = new_definition
      BLTU  1100011 / 110             BGEU  1100011 / 111
      LUI   0110111                   AUIPC 0010111
      JAL   1101111                   JALR  1100111 / 000
+     FENCE 0001111 / 000             ECALL 0x00000073, EBREAK 0x00100073
 
-   Unsupported opcodes and unsupported variants fall through to `NONE`. *)
+   FENCE is accepted with any fm, pred, succ, rs1, and rd fields, as the
+   base ISA requires, so FENCE.TSO and PAUSE decode as FENCE. Unsupported
+   opcodes and variants, including FENCE.I, the CSR instructions, and the
+   other SYSTEM instructions, fall through to `NONE`. *)
 
 let decode = new_definition
  `decode (w:int32) =
@@ -195,6 +199,12 @@ let decode = new_definition
              (word_join imm10_1 (word 0:1 word):11 word):21 word)))
     | [imm:12; rs1:5; 0b000:3; rd:5; 0b1100111:7] ->
         SOME (riscv_JALR (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
+    | [fm:4; pred:4; succ:4; rs1:5; 0b000:3; rd:5; 0b0001111:7] ->
+        SOME riscv_FENCE
+    | [0b000000000000:12; 0b00000:5; 0b000:3; 0b00000:5; 0b1110011:7] ->
+        SOME riscv_ECALL
+    | [0b000000000001:12; 0b00000:5; 0b000:3; 0b00000:5; 0b1110011:7] ->
+        SOME riscv_EBREAK
     | _ -> NONE`;;
 
 open Compute;;
@@ -376,7 +386,19 @@ let RISCV_DECODE_TESTS =
     `decode (word 0xffdff06f)`,
       `SOME (riscv_JAL ZERO (word 0xfffffffc))`;
     `decode (word 0x00008067)`,
-      `SOME (riscv_JALR ZERO RA (word 0))`] in
+      `SOME (riscv_JALR ZERO RA (word 0))`;
+    `decode (word 0x0ff0000f)`,
+      `SOME riscv_FENCE`;
+    `decode (word 0x8330000f)`,
+      `SOME riscv_FENCE`;
+    `decode (word 0x0100000f)`,
+      `SOME riscv_FENCE`;
+    `decode (word 0xf335850f)`,
+      `SOME riscv_FENCE`;
+    `decode (word 0x00000073)`,
+      `SOME riscv_ECALL`;
+    `decode (word 0x00100073)`,
+      `SOME riscv_EBREAK`] in
   end_itlist CONJ
    (map
      (fun tm,expected ->

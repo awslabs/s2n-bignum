@@ -203,17 +203,23 @@ let rec random_register_except registers =
   then random_register_except registers
   else register;;
 
+(* A case either reaches the EBREAK that the executor appends after the
+   code, after executing the given number of instructions, or traps with
+   the given mcause before that. *)
+
+type rv32_outcome =
+  | Steps of int
+  | Trap of int;;
+
 (* `case_setup` and `case_cleanup` are the instructions placed before and
    after the instruction under test. Straight-line cases execute all of
-   them once, in order; control-flow cases jump over some of them.
-   `case_steps` is the number of instructions executed before the EBREAK
-   that the executor appends after the code. *)
+   them once, in order; control-flow cases jump over some of them. *)
 
 type rv32_test_case =
  { case_setup: int list;
    case_instruction: int;
    case_cleanup: int list;
-   case_steps: int;
+   case_outcome: rv32_outcome;
    case_memop_index: int option;
    case_input: num list };;
 
@@ -222,7 +228,7 @@ type rv32_case_builder = unit -> rv32_test_case;;
 let straight_case setup instruction cleanup memop input =
   { case_setup = setup; case_instruction = instruction;
     case_cleanup = cleanup;
-    case_steps = length setup + 1 + length cleanup;
+    case_outcome = Steps (length setup + 1 + length cleanup);
     case_memop_index = memop; case_input = input };;
 
 let make_input_state density =
@@ -291,6 +297,15 @@ let make_shift_case funct7 funct3 input =
   and shift = Random.int 32 in
   straight_case []
     (encode_i ((funct7 lsl 5) lor shift) rs1 funct3 rd 0x13) [] None input;;
+
+(* The base ISA executes every FENCE encoding as a FENCE, whatever its fm,
+   pred, succ, rs1, and rd fields, so choose all of them at random. *)
+
+let make_fence_case input =
+  let rd = random_register ()
+  and rs1 = random_register ()
+  and fields = Random.int 4096 in
+  straight_case [] (encode_i fields rs1 0 rd 0x0f) [] None input;;
 
 let make_lui_case input =
   let rd = random_register ()
@@ -380,13 +395,13 @@ let branch_case funct3 rs1 rs2 marker words input =
   if words = 1 then
     { case_setup = []; case_instruction = branch;
       case_cleanup = [encode_i 2 0 0 marker 0x13];
-      case_steps = 2; case_memop_index = None; case_input = input }
+      case_outcome = Steps 2; case_memop_index = None; case_input = input }
   else if words > 1 then
     { case_setup = []; case_instruction = branch;
       case_cleanup =
         [encode_j (4 * words) 0] @ filler marker (words - 2) @
         [encode_i 2 0 0 marker 0x13];
-      case_steps = 2; case_memop_index = None; case_input = input }
+      case_outcome = Steps 2; case_memop_index = None; case_input = input }
   else if words < 0 then
     let b = 1 - words in
     { case_setup =
@@ -394,7 +409,7 @@ let branch_case funct3 rs1 rs2 marker words input =
         filler marker (b - 2);
       case_instruction = branch;
       case_cleanup = [encode_i 1 0 0 marker 0x13];
-      case_steps = 3; case_memop_index = None; case_input = input }
+      case_outcome = Steps 3; case_memop_index = None; case_input = input }
   else failwith "branch_case: a taken branch to itself does not end";;
 
 (* Random operands are rarely equal, so make the second operand a copy of
@@ -432,7 +447,7 @@ let jal_case rd base marker words input =
     { case_setup = [encode_u 0 base 0x17];
       case_instruction = encode_j (4 * words) rd;
       case_cleanup = filler marker (words - 1) @ rebase [rd] base;
-      case_steps = 4; case_memop_index = None; case_input = input }
+      case_outcome = Steps 4; case_memop_index = None; case_input = input }
   else if words < 0 then
     let b = 2 - words in
     { case_setup =
@@ -440,7 +455,7 @@ let jal_case rd base marker words input =
          encode_j (4 * (b - 1)) 0] @ filler marker (b - 3);
       case_instruction = encode_j (4 * words) rd;
       case_cleanup = rebase [rd] base;
-      case_steps = 6; case_memop_index = None; case_input = input }
+      case_outcome = Steps 6; case_memop_index = None; case_input = input }
   else failwith "jal_case: a JAL to itself does not end";;
 
 let make_jal_case input =
@@ -475,7 +490,7 @@ let jalr_case rd rs1 base marker words immediate low input =
        encode_i lo rs1 0 rs1 0x13];
     case_instruction = encode_i immediate rs1 0 rd 0x67;
     case_cleanup = cleanup;
-    case_steps = 4 + length cleanup - (words - 1);
+    case_outcome = Steps (4 + length cleanup - (words - 1));
     case_memop_index = None;
     case_input = set_input_register marker num_0 input };;
 
@@ -486,6 +501,15 @@ let make_jalr_case input =
   let marker = random_register_except [rd; rs1; base] in
   jalr_case rd rs1 base marker (1 + Random.int (rv32_code_words - 6))
     (Random.int 4096 - 2048) (Random.int 2) input;;
+
+(* ECALL and EBREAK trap in both executors, with mcause 11 (environment
+   call from M-mode) and 3 (breakpoint). The model allows every successor
+   state for them, so the trap is all there is to compare. *)
+
+let make_trap_case instruction mcause input =
+  { case_setup = []; case_instruction = instruction; case_cleanup = [];
+    case_outcome = Trap mcause; case_memop_index = None;
+    case_input = input };;
 
 let regclasses : rv32_case_builder list =
   map (fun make -> fun () -> make (make_input_state (Random.int 65)))
@@ -516,7 +540,8 @@ let regclasses : rv32_case_builder list =
     make_r_case 1 4;               (* DIV    *)
     make_r_case 1 5;               (* DIVU   *)
     make_r_case 1 6;               (* REM    *)
-    make_r_case 1 7];;             (* REMU   *)
+    make_r_case 1 7;               (* REMU   *)
+    make_fence_case];;
 
 let memclasses : rv32_case_builder list =
   map (fun make -> fun () -> make (make_input_state (Random.int 65)))
@@ -539,7 +564,9 @@ let controlclasses : rv32_case_builder list =
     make_branch_case 6;            (* BLTU   *)
     make_branch_case 7;            (* BGEU   *)
     make_jal_case;
-    make_jalr_case];;
+    make_jalr_case;
+    make_trap_case 0x00000073 11;  (* ECALL  *)
+    make_trap_case 0x00100073 3];; (* EBREAK *)
 
 let caseclasses = regclasses @ memclasses @ controlclasses;;
 
@@ -554,6 +581,10 @@ let directed_r_case funct7 funct3 rd rs1 rs2 assignments =
 
 let directed_i_case funct3 rd rs1 immediate assignments =
   straight_case [] (encode_i immediate rs1 funct3 rd 0x13) [] None
+    (directed_input_state assignments);;
+
+let directed_fence_case fields rs1 rd assignments =
+  straight_case [] (encode_i fields rs1 0 rd 0x0f) [] None
     (directed_input_state assignments);;
 
 let directed_lui_case rd immediate =
@@ -804,6 +835,16 @@ let directed_cases =
      [1,num 0xfffffff9; 3,num 2];
    directed_r_case 1 7 4 1 3       (* remu x4, 0xfffffff9, 2          *)
      [1,num 0xfffffff9; 3,num 2];
+   (* FENCE, FENCE.TSO, PAUSE, and a FENCE with reserved fields set leave
+      rd and memory unchanged. *)
+   directed_fence_case 0x0ff 0 0   (* fence iorw,iorw                 *)
+     [];
+   directed_fence_case 0x833 0 0   (* fence.tso                       *)
+     [];
+   directed_fence_case 0x010 0 0   (* pause                           *)
+     [];
+   directed_fence_case 0xf33 1 4   (* fence, fm=0xf, rs1=x1, rd=x4    *)
+     [1,num 0x12345678; 4,num 0x87654321];
    (* AUIPC: zero, the sign bit, all upper bits, and an x0 destination. *)
    auipc_case 1 3 0x00000 (directed_input_state []);
    auipc_case 4 5 0x80000 (directed_input_state []);
@@ -857,7 +898,10 @@ let directed_cases =
    jalr_case 4 3 5 6 (rv32_code_words - 6) (-2048) 1
      (directed_input_state []);
    jalr_case 3 3 5 6 2 2047 0 (directed_input_state []);
-   jalr_case 0 3 5 6 3 (-1) 1 (directed_input_state [])];;
+   jalr_case 0 3 5 6 3 (-1) 1 (directed_input_state []);
+   (* ECALL and EBREAK. *)
+   make_trap_case 0x00000073 11 (directed_input_state []);
+   make_trap_case 0x00100073 3 (directed_input_state [])];;
 
 (*** The RV32 frontend constructs complete instructions directly from their
  *** encoding fields; it has no Arm-style bit templates or x86-style byte
@@ -869,10 +913,12 @@ let directed_cases =
  ***
  *** The campaign has register-only, memory, and control-flow classes,
  *** following the Arm/x86 frontend split between register coverage and
- *** dedicated harness families. The selected forms are the RV32I
- *** register-register and register-immediate ALU instructions, `LUI`, the
- *** M instructions, the loads and stores, `AUIPC`, the six branches,
- *** `JAL`, and `JALR`.
+ *** dedicated harness families. Together they select every RV32IM
+ *** instruction that the model defines: the RV32I register-register and
+ *** register-immediate ALU instructions, `LUI`, the M instructions, the
+ *** loads and stores, `FENCE` (with `FENCE.TSO` and `PAUSE` among the
+ *** directed cases), `AUIPC`, the six branches, `JAL`, `JALR`, `ECALL`,
+ *** and `EBREAK`.
  ***
  *** Some behavior is not compared because the model claims nothing there:
  *** a halfword or word access, taken branch, or jump whose address is not
@@ -1109,6 +1155,20 @@ and tac_after memop =
   TRY(MONOTONE_MAYCHANGE_TAC) THEN
   PRINT_GOAL_TAC THEN NO_TAC;;
 
+(* For a trapping instruction, the model must allow every successor of
+   the state that has the instruction at the PC. *)
+
+let trap_template =
+ `aligned_bytes_loaded s (word pc) ibytes
+  ==> read PC s = word pc
+  ==> riscv s s'`;;
+
+let RV32_TRAP_TAC execth =
+  DISCH_THEN(fun loaded_th -> DISCH_THEN(fun pc_th ->
+    GEN_REWRITE_TAC I [RISCV_THM (snd execth) loaded_th pc_th])) THEN
+  REWRITE_TAC[riscv_ECALL; riscv_EBREAK; SEQ; ASSIGNS_THM] THEN
+  EXISTS_TAC `s':riscvstate` THEN REWRITE_TAC[WRITE_ENTIRETY];;
+
 let cosimulate_case test_case =
   (*** The concrete and formal paths meet only after concrete execution:
    ***
@@ -1125,7 +1185,9 @@ let cosimulate_case test_case =
    *** the executor. `RISCV_MK_EXEC_RULE` derives symbolic execution rules
    *** for the same bytes; the executed instructions are stepped in HOL,
    *** and the resulting theorem is proved with the RV32 state and memory
-   *** model.
+   *** model. A trap case instead requires the executor to report the
+   *** expected trap and proves `trap_template` for the trapping
+   *** instruction.
    ***)
   let instructions =
     test_case.case_setup @ [test_case.case_instruction] @
@@ -1154,11 +1216,25 @@ let cosimulate_case test_case =
     cosim_execute (Lazy.force rv32_cosim_executor)
       (cosim_hex_of_bytes bytes)
       (map string_of_num test_case.case_input) in
-  match execution with
-  | Cosim_trap details ->
+  match test_case.case_outcome,execution with
+  | Trap mcause,Cosim_trap details ->
+      if mem ("mcause-" ^ string_of_int mcause) details then
+        decoded,
+        attempt (subst [ibyteterm,`ibytes:byte list`] trap_template)
+          (RV32_TRAP_TAC execth)
+      else begin
+        Printf.printf "Expected RV32 trap with mcause %d, got: %s\n"
+          mcause (String.concat " " details);
+        decoded,false
+      end
+  | Trap mcause,Cosim_ok _ ->
+      Printf.printf "Expected RV32 trap with mcause %d, but none occurred\n"
+        mcause;
+      decoded,false
+  | Steps _,Cosim_trap details ->
       Printf.printf "Unexpected RV32 trap: %s\n" (String.concat " " details);
       decoded,false
-  | Cosim_ok output_words ->
+  | Steps steps,Cosim_ok output_words ->
       let output_state = map num_of_string output_words in
       let goal = subst
         [ibyteterm,`ibytes:byte list`;
@@ -1169,7 +1245,7 @@ let cosimulate_case test_case =
       let proof_tactic =
         PURE_REWRITE_TAC [fst execth] THEN
         tac_before (test_case.case_memop_index <> None) THEN
-        tac_main test_case.case_memop_index execth (1--test_case.case_steps) THEN
+        tac_main test_case.case_memop_index execth (1--steps) THEN
         tac_after (test_case.case_memop_index <> None) in
       decoded,attempt goal proof_tactic;;
 
