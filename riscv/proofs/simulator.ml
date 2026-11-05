@@ -218,48 +218,34 @@ let rec memory_operands () =
   then memory_operands ()
   else address,setup,immediate;;
 
-let make_add_case input =
+(* Register-only builders choose the register fields at random. The R-type,
+   I-type, and shift-immediate ALU forms differ only in their function bits,
+   so one builder covers each format. *)
+
+let make_r_case funct7 funct3 input =
   let rd = random_register ()
   and rs1 = random_register ()
   and rs2 = random_register () in
   { case_setup = [];
-    case_instruction = encode_r 0 rs2 rs1 0 rd; case_cleanup = [];
+    case_instruction = encode_r funct7 rs2 rs1 funct3 rd; case_cleanup = [];
     case_memop_index = None;
     case_input = input };;
 
-let make_addi_case input =
+let make_i_case funct3 input =
   let rd = random_register ()
   and rs1 = random_register ()
   and immediate = Random.int 4096 - 2048 in
   { case_setup = [];
-    case_instruction = encode_i immediate rs1 0 rd 0x13;
+    case_instruction = encode_i immediate rs1 funct3 rd 0x13;
     case_cleanup = []; case_memop_index = None;
     case_input = input };;
 
-let make_sub_case input =
-  let rd = random_register ()
-  and rs1 = random_register ()
-  and rs2 = random_register () in
-  { case_setup = [];
-    case_instruction = encode_r 0x20 rs2 rs1 0 rd; case_cleanup = [];
-    case_memop_index = None;
-    case_input = input };;
-
-let make_slli_case input =
+let make_shift_case funct7 funct3 input =
   let rd = random_register ()
   and rs1 = random_register ()
   and shift = Random.int 32 in
   { case_setup = [];
-    case_instruction = encode_i shift rs1 1 rd 0x13; case_cleanup = [];
-    case_memop_index = None;
-    case_input = input };;
-
-let make_srai_case input =
-  let rd = random_register ()
-  and rs1 = random_register ()
-  and shift = Random.int 32 in
-  { case_setup = [];
-    case_instruction = encode_i (0x400 lor shift) rs1 5 rd 0x13;
+    case_instruction = encode_i ((funct7 lsl 5) lor shift) rs1 funct3 rd 0x13;
     case_cleanup = []; case_memop_index = None;
     case_input = input };;
 
@@ -269,24 +255,6 @@ let make_lui_case input =
   { case_setup = [];
     case_instruction = (immediate lsl 12) lor (rd lsl 7) lor 0x37;
     case_cleanup = []; case_memop_index = None;
-    case_input = input };;
-
-let make_mul_case input =
-  let rd = random_register ()
-  and rs1 = random_register ()
-  and rs2 = random_register () in
-  { case_setup = [];
-    case_instruction = encode_r 1 rs2 rs1 0 rd; case_cleanup = [];
-    case_memop_index = None;
-    case_input = input };;
-
-let make_mulh_case input =
-  let rd = random_register ()
-  and rs1 = random_register ()
-  and rs2 = random_register () in
-  { case_setup = [];
-    case_instruction = encode_r 1 rs2 rs1 1 rd; case_cleanup = [];
-    case_memop_index = None;
     case_input = input };;
 
 let make_lw_case input =
@@ -308,14 +276,29 @@ let make_sw_case input =
     case_input = input };;
 
 let regclasses : rv32_case_builder list =
-  [(fun () -> make_add_case (make_input_state (Random.int 65)));
-   (fun () -> make_addi_case (make_input_state (Random.int 65)));
-   (fun () -> make_sub_case (make_input_state (Random.int 65)));
-   (fun () -> make_slli_case (make_input_state (Random.int 65)));
-   (fun () -> make_srai_case (make_input_state (Random.int 65)));
-   (fun () -> make_lui_case (make_input_state (Random.int 65)));
-   (fun () -> make_mul_case (make_input_state (Random.int 65)));
-   (fun () -> make_mulh_case (make_input_state (Random.int 65)))];;
+  map (fun make -> fun () -> make (make_input_state (Random.int 65)))
+   [make_r_case 0 0;               (* ADD    *)
+    make_i_case 0;                 (* ADDI   *)
+    make_r_case 0x20 0;            (* SUB    *)
+    make_shift_case 0 1;           (* SLLI   *)
+    make_shift_case 0x20 5;        (* SRAI   *)
+    make_lui_case;
+    make_r_case 1 0;               (* MUL    *)
+    make_r_case 1 1;               (* MULH   *)
+    make_r_case 0 1;               (* SLL    *)
+    make_r_case 0 2;               (* SLT    *)
+    make_r_case 0 3;               (* SLTU   *)
+    make_r_case 0 4;               (* XOR    *)
+    make_r_case 0 5;               (* SRL    *)
+    make_r_case 0x20 5;            (* SRA    *)
+    make_r_case 0 6;               (* OR     *)
+    make_r_case 0 7;               (* AND    *)
+    make_i_case 2;                 (* SLTI   *)
+    make_i_case 3;                 (* SLTIU  *)
+    make_i_case 4;                 (* XORI   *)
+    make_i_case 6;                 (* ORI    *)
+    make_i_case 7;                 (* ANDI   *)
+    make_shift_case 0 5];;         (* SRLI   *)
 
 let memclasses : rv32_case_builder list =
   [(fun () -> make_lw_case (make_input_state (Random.int 65)));
@@ -435,7 +418,61 @@ let directed_cases =
    directed_r_case 1 1 4 1 3       (* mulh x4, 0x80000000, 0x80000000 *)
      [1,num 0x80000000; 3,num 0x80000000];
    directed_r_case 1 1 4 1 3       (* mulh x4, 0x7fffffff, 0x7fffffff *)
-     [1,num 0x7fffffff; 3,num 0x7fffffff]];;
+     [1,num 0x7fffffff; 3,num 0x7fffffff];
+   (* SLT and SLTU: the same operands compare differently signed and
+      unsigned; equal operands and x0 sources give zero. *)
+   directed_r_case 0 2 4 1 3       (* slt  x4, 0x80000000, 0x00000001 *)
+     [1,num 0x80000000; 3,num 1];
+   directed_r_case 0 3 4 1 3       (* sltu x4, 0x80000000, 0x00000001 *)
+     [1,num 0x80000000; 3,num 1];
+   directed_r_case 0 2 4 1 1       (* slt  x4, x1, x1                 *)
+     [1,num 0x7fffffff];
+   directed_r_case 0 3 4 0 1       (* sltu x4, x0, 0x00000001 (snez)  *)
+     [1,num 1];
+   (* SLTI and SLTIU sign-extend the immediate; SLTIU then compares
+      unsigned, so -1 is the largest value. *)
+   directed_i_case 2 4 1 (-1)      (* slti  x4, 0xfffffffe, -1        *)
+     [1,num 0xfffffffe];
+   directed_i_case 2 4 1 (-2048)   (* slti  x4, 0x7fffffff, -2048     *)
+     [1,num 0x7fffffff];
+   directed_i_case 3 4 1 (-1)      (* sltiu x4, 0x7fffffff, -1        *)
+     [1,num 0x7fffffff];
+   directed_i_case 3 4 1 1         (* sltiu x4, 0x00000000, 1 (seqz)  *)
+     [];
+   (* XORI, ORI, ANDI: sign-extended immediate extremes. *)
+   directed_i_case 4 4 1 (-1)      (* xori x4, 0x12345678, -1 (not)   *)
+     [1,num 0x12345678];
+   directed_i_case 6 4 1 (-2048)   (* ori  x4, 0x00000001, -2048      *)
+     [1,num 1];
+   directed_i_case 7 4 1 (-2048)   (* andi x4, 0xffffffff, -2048      *)
+     [1,num 0xffffffff];
+   directed_i_case 7 4 1 2047      (* andi x4, 0xffffffff, 2047       *)
+     [1,num 0xffffffff];
+   (* XOR, OR, AND: self-operation and complementary operands. *)
+   directed_r_case 0 4 4 1 1       (* xor  x4, x1, x1                 *)
+     [1,num 0xdeadbeef];
+   directed_r_case 0 6 4 1 3       (* or   x4, 0x0f0f0f0f, 0xf0f0f0f0 *)
+     [1,num 0x0f0f0f0f; 3,num 0xf0f0f0f0];
+   directed_r_case 0 7 4 1 3       (* and  x4, 0x0f0f0f0f, 0xf0f0f0f0 *)
+     [1,num 0x0f0f0f0f; 3,num 0xf0f0f0f0];
+   (* SRLI: zero fill from the sign bit and a zero shift. *)
+   directed_i_case 5 4 1 31        (* srli x4, 0x80000000, 31         *)
+     [1,num 0x80000000];
+   directed_i_case 5 4 1 0         (* srli x4, 0xffffffff, 0          *)
+     [1,num 0xffffffff];
+   (* SLL, SRL, SRA use only the low five bits of rs2. *)
+   directed_r_case 0 1 4 1 3       (* sll  x4, 0x00000001, 33         *)
+     [1,num 1; 3,num 33];
+   directed_r_case 0 1 4 1 3       (* sll  x4, 0x00000001, 0xffffffff *)
+     [1,num 1; 3,num 0xffffffff];
+   directed_r_case 0 5 4 1 3       (* srl  x4, 0x80000000, 31         *)
+     [1,num 0x80000000; 3,num 31];
+   directed_r_case 0 5 4 1 3       (* srl  x4, 0x80000000, 32         *)
+     [1,num 0x80000000; 3,num 32];
+   directed_r_case 0x20 5 4 1 3    (* sra  x4, 0x80000000, 31         *)
+     [1,num 0x80000000; 3,num 31];
+   directed_r_case 0x20 5 4 1 3    (* sra  x4, 0x80000000, 0xffffffe1 *)
+     [1,num 0x80000000; 3,num 0xffffffe1]];;
 
 (*** The RV32 frontend constructs complete instructions directly from their
  *** encoding fields; it has no Arm-style bit templates or x86-style byte
@@ -447,10 +484,11 @@ let directed_cases =
  ***
  *** The campaign separates register-only and memory classes, following the
  *** Arm/x86 frontend split between register coverage and dedicated memory
- *** harness families. The selected straight-line forms are `ADD`, `ADDI`,
- *** `SUB`, `SLLI`, `SRAI`, `LUI`, `MUL`, `MULH`, `LW`, and `SW`. `BNE` and
- *** `JALR` are modeled by RV32 but are not selected here because this
- *** campaign does not transport or check PC changes.
+ *** harness families. The selected straight-line forms are the RV32I
+ *** register-register and register-immediate ALU instructions, `LUI`, `MUL`,
+ *** `MULH`, `LW`, and `SW`. `AUIPC`, `BNE`, and `JALR` are modeled by RV32
+ *** but are not selected here because they read or change the PC, which this
+ *** campaign does not transport or check.
  ***
  *** Memory cases illustrate the difference from register-only cases. For
  *** one `LW` harness, `make_case` builds:

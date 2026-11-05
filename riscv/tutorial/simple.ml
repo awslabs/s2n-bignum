@@ -61,3 +61,32 @@ let SIMPLE_CORRECT = prove
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
   CONV_TAC WORD_RULE);;
+
+(* add a2,a0,a1; sltu a3,a2,a0. The sum wraps around exactly when it is
+   below an addend, so SLTU recovers the carry out of the addition. *)
+let carry_mc = define_word_list "carry_mc"
+ `[word 0x33; word 0x06; word 0xb5; word 0x00;
+   word 0xb3; word 0x36; word 0xa6; word 0x00]:byte list`;;
+
+let CARRY_EXEC = RISCV_MK_EXEC_RULE carry_mc;;
+
+let CARRY_CORRECT = prove
+ (`!pc (a:int32) (b:int32).
+    ensures riscv
+      (\s. aligned_bytes_loaded s (word pc) carry_mc /\
+           read PC s = word pc /\
+           read A0 s = a /\
+           read A1 s = b)
+      (\s. read PC s = word (pc + 8) /\
+           val(read A2 s) + 2 EXP 32 * val(read A3 s) = val a + val b)
+      (MAYCHANGE [PC] ,, MAYCHANGE [A2; A3])`,
+  REWRITE_TAC[fst CARRY_EXEC] THEN
+  REPEAT GEN_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  RISCV_STEPS_TAC CARRY_EXEC (1--2) THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  MAP_EVERY (MP_TAC o C ISPEC VAL_BOUND) [`a:int32`; `b:int32`] THEN
+  REWRITE_TAC[VAL_WORD_ADD_CASES; DIMINDEX_32] THEN
+  REPEAT COND_CASES_TAC THEN REWRITE_TAC[VAL_WORD_0; VAL_WORD_1] THEN
+  ASM_ARITH_TAC);;
