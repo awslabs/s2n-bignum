@@ -54,9 +54,13 @@ is in the split debug information (`libmlkem.so.dwp`), which
 `<f>_in_<g>` and `<f>_in_<g>_end` at the start of the code of each inlined
 call of a function `g` and after its end, numbered if `g` is inlined several
 times into `f`, and notes in the listings with the chain of inlined calls
-that each run of instructions belongs to. The layout has 476 such labels.
-gcc moves some instructions of an inlined call next to those of others, so
-the range of a call can include some instructions of others.
+that each run of instructions belongs to. gcc moves some instructions of
+an inlined call next to those of others: of the 238 inlined calls of
+mlkem-native functions, 135 are contiguous, and the code of the other 103
+is in 2 to 6 ranges, which make up between 15% and 99% of the span from
+in_g to in_g_end (72% for the median call). For those, labels
+`<f>_in_<g>_partJ` and `<f>_in_<g>_partJ_end` give each range. The layout
+has 1076 labels for inlined calls, 600 of them for ranges.
 
 `llvm-symbolizer --dwp` gives the right line numbers for this binary but
 attributes instructions to the wrong inlined calls: e.g. code of

@@ -228,8 +228,9 @@ different.
 
 With `--dwarf`, the layout also gets labels for the calls of mlkem-native
 functions that the compiler has inlined, `<f>_in_<g>` and
-`<f>_in_<g>_end`, and the listings note which inlined call each
-instruction belongs to. This needs the split debug information
+`<f>_in_<g>_end`, and, for calls whose code is not contiguous, also
+`<f>_in_<g>_partJ` and `<f>_in_<g>_partJ_end` for each range of it. The
+listings note which inlined call each instruction belongs to. This needs the split debug information
 `libmlkem.so.dwp` next to the binary (or `--dwp`) and `llvm-dwarfdump`,
 and is meant for builds that inline much, such as the monolithic ones,
 where most of the functions that the proofs of `-O2` are about have no
