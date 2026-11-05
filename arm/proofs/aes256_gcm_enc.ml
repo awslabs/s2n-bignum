@@ -1116,15 +1116,15 @@ let swp_inv = `\(i:num) s.
 (* ------------------------------------------------------------------------- *)
 
 (* The pruning policy of the steppers of this proof: the in_p reads and all
-   quantified facts are always kept, with the stale sweep (see SWP_STEP_TAC_P
+   quantified facts are always kept, with the stale sweep (see SWP_STEP_P_TAC
    in utils/aes_gcm_common.ml). *)
 let enc_prune =
   { anchors = []; slots = []; families = [];
     exempt = (fun c -> try free_in `in_p:int64` (lhs c) with _ -> false);
     all_foralls = true; stale_gc = true };;
-let gkeepN keeplist th sname = SWP_STEP_TAC_P enc_prune keeplist th sname;;
+let gkeepN keeplist th sname = SWP_STEP_P_TAC enc_prune keeplist th sname;;
 (* The (pointer, state index) of a fact read C sK = V whose component C
-   mentions tag_p or ivec_p: a family for SWP_STEP_TAC_P. *)
+   mentions tag_p or ivec_p: a family for SWP_STEP_P_TAC. *)
 let get_membyteread c =
   try let l = lhs c in
       let rd, st = dest_comb l in
@@ -1142,7 +1142,7 @@ let get_membyteread c =
    stack slots in fill_goal, ENSURES_FINAL_STATE_TAC carries the latest read
    across the stack stores to the final state s296. *)
 let gkeepF keeplist th sname =
-  SWP_STEP_TAC_P { enc_prune with families = [get_membyteread] } keeplist th sname;;
+  SWP_STEP_P_TAC { enc_prune with families = [get_membyteread] } keeplist th sname;;
 
 (* The registers whose latest values the steppers keep: the carried AES
    partials Q3, Q4, Q8 and Q31, the GHASH and key-power registers, the
@@ -1161,7 +1161,7 @@ let merges256 = [(27,208);(49,160);(92,192);(98,208);(109,176);(118,192);(171,16
 
 (* Split the 128-bit input reads of blocks 4i..4i+7 (group i and group i+1; the
    body loads the latter) into 64-bit halves (SPLIT_INPUT_CONV). *)
-let INPUT_SPLIT_TAC256_b bound =
+let INPUT_SPLIT256_BOUND_TAC bound =
   SUBGOAL_THEN
    `read (memory :> bytes128 (word_add in_p (word (16 * (4*i+0))))) s0 = inblock (4*i+0) /\
     read (memory :> bytes128 (word_add in_p (word (16 * (4*i+1))))) s0 = inblock (4*i+1) /\
@@ -1183,7 +1183,7 @@ let INPUT_SPLIT_TAC256_b bound =
   REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o CONV_RULE SPLIT_INPUT_CONV o
      check (fun th -> let c = concl th in is_eq c && free_in `in_p:int64` (lhs c) &&
        can (find_term (fun t -> is_const t && fst(dest_const t) = "bytes128")) (lhs c))));;
-let INPUT_SPLIT_TAC256 = INPUT_SPLIT_TAC256_b `i < loop_count - 1`;;
+let INPUT_SPLIT256_TAC = INPUT_SPLIT256_BOUND_TAC `i < loop_count - 1`;;
 
 (* Leg pre/postconditions over this kernel's code (see mk_leg_state). *)
 let leg_state = mk_leg_state `aes256_gcm_enc_tmc`;;
@@ -1244,7 +1244,7 @@ let setup_tac_s split =
     let toab = filter (fun t -> not(free_in jv t) && not(free_in `in_p:int64` t)
                               && string_of_term t <> "read PC s0") reads0 in
     (EVERY (List.mapi (fun k t -> ABBREV_TAC (mk_eq(mk_var(Printf.sprintf "init_%d" k, type_of t), t))) toab)) (asl,w));;
-let setup_tac = setup_tac_s INPUT_SPLIT_TAC256;;
+let setup_tac = setup_tac_s INPUT_SPLIT256_TAC;;
 
 (* The body stepper: steps 1..209 (pc + 0x560 .. pc + 0x8a0) with gkeepN over
    REDSETX256, the subword and address normalization after each step, and
@@ -1498,7 +1498,7 @@ let ACC_JOIN_BYTESWAP = prove
    h_power gt 0), (cbb2, h_power gt 1), (cbb1, h_power gt 2) and
    (word_xor A cbb0, h_power gt 3) is ghash_polyval_acc gt A
    [cbb0; cbb1; cbb2; cbb3].  The first step is the Karatsuba shuffle (with
-   ABBREV_PMULS), the second the batched accumulation
+   ABBREV_PMULS_TAC), the second the batched accumulation
    GHASH_POLYVAL_ACC_BATCHED.  close_goal7 matches it with A := sofar, the
    swpgrp accumulator. *)
 let CORE_REDUCE_GHASH = prove
@@ -1528,7 +1528,7 @@ let CORE_REDUCE_GHASH = prove
     CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN REWRITE_TAC[karatsuba_mid] THEN
     REWRITE_TAC[CMID_LOHI; CMID_HILO] THEN AP_TERM_TAC THEN
     REWRITE_TAC[JOIN_XOR_256; JOIN_XOR_128] THEN
-    ABBREV_PMULS THEN POP_ASSUM_LIST(K ALL_TAC) THEN CONV_TAC BITBLAST_RULE;
+    ABBREV_PMULS_TAC THEN POP_ASSUM_LIST(K ALL_TAC) THEN CONV_TAC BITBLAST_RULE;
     MP_TAC(ISPECL [`gt:int128`; `[cbb1;cbb2;cbb3]:(int128)list`; `A:int128`; `cbb0:int128`]
                   GHASH_POLYVAL_ACC_BATCHED) THEN
     REWRITE_TAC[LENGTH; ghash_wide] THEN CONV_TAC NUM_REDUCE_CONV THEN
@@ -2048,11 +2048,11 @@ let FILL_TO_CBZ = GEN_ALL(prove(fill_cbz_goal,
    invariant body for ENSURES_SEQUENCE_TAC and hop_init opens the state;
    after the step every conjunct is an unchanged read (ASM_REWRITE_TAC) or
    the branch PC, resolved from the val fact assumed before the step. *)
-let REFOLD_ABI = REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI];;
+let REFOLD_ABI_TAC = REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI];;
 let swp_inv_at idx = rhs(concl((BETA_CONV THENC REWRITE_CONV[ADD_CLAUSES]) (mk_comb(swp_inv,idx))));;
 let hop_init : tactic =
   ENSURES_INIT_TAC "s0" THEN RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_4]) THEN REWRITE_TAC[htable_mem_4];;
-let HOP_CLOSE : tactic =
+let HOP_CLOSE_TAC : tactic =
   REPEAT CONJ_TAC THEN
   (FIRST_ASSUM ACCEPT_TAC ORELSE (ASM_REWRITE_TAC[] THEN NO_TAC) ORELSE
    (ASM_REWRITE_TAC[COND_CLAUSES; VAL_WORD_0] THEN CONV_TAC WORD_RULE));;
@@ -2062,7 +2062,7 @@ let HOP_CLOSE : tactic =
 let FILLLEG = GEN_ALL(prove(fill_goal,
   INTRO_HYPS_TAC THEN REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   ENSURES_SEQUENCE_TAC `pc + 0x55c` (swp_inv_at `1`) THEN CONJ_TAC THENL
-   [REFOLD_ABI THEN MATCH_MP_TAC FILL_TO_CBZ THEN ASM_REWRITE_TAC[] THEN
+   [REFOLD_ABI_TAC THEN MATCH_MP_TAC FILL_TO_CBZ THEN ASM_REWRITE_TAC[] THEN
     TRY(UNDISCH_TAC `3 <= loop_count` THEN ARITH_TAC);
     hop_init THEN
     SUBGOAL_THEN `val (word (loop_count - 2):int64) = loop_count - 2` ASSUME_TAC THENL
@@ -2072,7 +2072,7 @@ let FILLLEG = GEN_ALL(prove(fill_goal,
       ALL_TAC] THEN
     SUBGOAL_THEN `~(val (word (loop_count - 2):int64) = 0)` ASSUME_TAC THENL
      [ASM_REWRITE_TAC[] THEN UNDISCH_TAC `3 <= loop_count` THEN ARITH_TAC; ALL_TAC] THEN
-    ARM_STEPS_TAC AES256_GCM_ENC_EXEC [1] THEN ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN HOP_CLOSE]));;
+    ARM_STEPS_TAC AES256_GCM_ENC_EXEC [1] THEN ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN HOP_CLOSE_TAC]));;
 
 (* LC2_PARTA: pc + 0xbc -> pc + 0x8a8 for loop_count = 2, FILL_TO_CBZ then
    the cbz at 0x55c taken (X1 = word 0).  The waypoint is swp_inv at the
@@ -2085,14 +2085,14 @@ let lc2a_goal = mk_imp(lc2a_precond, list_mk_icomb "ensures" [`arm`; fill_pre_st
 let LC2_PARTA = prove(lc2a_goal,
   INTRO_HYPS_TAC THEN REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   ENSURES_SEQUENCE_TAC `pc + 0x55c` (swp_inv_at `1`) THEN CONJ_TAC THENL
-   [REFOLD_ABI THEN MATCH_MP_TAC FILL_TO_CBZ THEN ASM_REWRITE_TAC[] THEN
+   [REFOLD_ABI_TAC THEN MATCH_MP_TAC FILL_TO_CBZ THEN ASM_REWRITE_TAC[] THEN
     TRY(UNDISCH_TAC `loop_count = 2` THEN ARITH_TAC);
     hop_init THEN
     SUBGOAL_THEN `val (word (loop_count - (1 + 1)):int64) = 0` ASSUME_TAC THENL
      [UNDISCH_TAC `loop_count = 2` THEN DISCH_THEN SUBST1_TAC THEN CONV_TAC NUM_REDUCE_CONV THEN
       REWRITE_TAC[VAL_WORD_0];
       ALL_TAC] THEN
-    ARM_STEPS_TAC AES256_GCM_ENC_EXEC [1] THEN ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN HOP_CLOSE]);;
+    ARM_STEPS_TAC AES256_GCM_ENC_EXEC [1] THEN ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN HOP_CLOSE_TAC]);;
 
 (* BODYLEG: swp_inv i at pc + 0x560 -> swp_inv (i+1) at pc + 0x8a4, one
    iteration of the loop body. *)
@@ -2374,8 +2374,8 @@ let DRAINLEG = GEN_ALL(prove(drain_goal,
     SUBGOAL_THEN `loop_count - ((loop_count - 1) + 1) = 0`
       (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THENL
      [UNDISCH_TAC `2 <= loop_count` THEN ARITH_TAC; ALL_TAC] THEN
-    ARM_STEPS_TAC AES256_GCM_ENC_EXEC [1] THEN ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN HOP_CLOSE;
-    REFOLD_ABI THEN MATCH_MP_TAC DRAINLEG_8A8 THEN ASM_REWRITE_TAC[]]));;
+    ARM_STEPS_TAC AES256_GCM_ENC_EXEC [1] THEN ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN HOP_CLOSE_TAC;
+    REFOLD_ABI_TAC THEN MATCH_MP_TAC DRAINLEG_8A8 THEN ASM_REWRITE_TAC[]]));;
 
 (* ------------------------------------------------------------------------- *)
 (* The tail: TAILLEG, drain_bridge at pc + 0xdd0 -> tail_post at pc + 0xee4  *)
@@ -2741,7 +2741,7 @@ let iter1_prime =
       SUBST1_TAC(WORD_RULE `word_add in_p (word 32):int64 = word_add in_p (word (16*2))`);
       SUBST1_TAC(WORD_RULE `word_add in_p (word 48):int64 = word_add in_p (word (16*3))`)] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC; ALL_TAC] THEN
-  (* Split each block read into its two 64-bit halves, as INPUT_SPLIT_TAC256
+  (* Split each block read into its two 64-bit halves, as INPUT_SPLIT256_TAC
      does, so that the scalar loads resolve to halves of inblock and the
      GHASH blocks fold to nist_cipher_block. *)
   REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o CONV_RULE SPLIT_INPUT_CONV o
@@ -2774,7 +2774,7 @@ let iter1_block_step lo hi =
    4*1+c -> c+4 (X13), and refolding htable_mem_4.  The two uses of 4*1 (the
    GHASH index and the bound of the output forall) need different forms and
    are handled by their closers. *)
-let ITER1_PRE_CLOSE : tactic =
+let ITER1_PRE_CLOSE_TAC : tactic =
   REWRITE_TAC[ARITH_RULE `64 * 1 = 64`; ARITH_RULE `4 * 1 + c = c + 4`] THEN
   REWRITE_TAC[GSYM htable_mem_4];;
 
@@ -2902,7 +2902,7 @@ let ITER1_LEG =
   prove(iter1_goal,
     iter1_head THEN iter1_block_step 1 211 THEN
     ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
-    ITER1_PRE_CLOSE THEN
+    ITER1_PRE_CLOSE_TAC THEN
     REPEAT CONJ_TAC THEN iter1_close_conj);;
 
 (* ------------------------------------------------------------------------- *)
@@ -3058,7 +3058,7 @@ let discharge_leg_hyps : tactic =
   TRY(FIRST_ASSUM ACCEPT_TAC) THEN TRY(ASM_REWRITE_TAC[] THEN NO_TAC) THEN
   TRY(ASM_ARITH_TAC) THEN TRY NONOVERLAPPING_TAC;;
 let apply_leg_core (legn:thm) : tactic =
-  REFOLD_ABI THEN
+  REFOLD_ABI_TAC THEN
   ((MATCH_MP_TAC legn THEN TRY(EXISTS_TAC `key_p:int64`) THEN discharge_leg_hyps)
    ORELSE
    (MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
@@ -3080,7 +3080,7 @@ let apply_leg_1 (legn:thm) : tactic =
                  FIRST[ACCEPT_TAC th; (STRIP_ASSUME_TAC th THEN ASM_REWRITE_TAC[])]);
               apply_leg_core legn]) (a2,w2))
         else failwith "apply_leg_1: not ensures")) (asl,w);;
-let APPLY_LEG (leg:thm) : tactic =
+let APPLY_LEG_TAC (leg:thm) : tactic =
   (apply_leg_1 (leg_htab leg))
   ORELSE
   (apply_leg_1 (REWRITE_RULE[GSYM CONJ_ASSOC] leg));;
@@ -3090,7 +3090,7 @@ let LC2_PARTA_W = WIDEN_LEG_FRAME_RULE broad_frame LC2_PARTA;;
    pc + 0xbc -> pc + 0x8a8) and DRAINLEG_8A8 (pc + 0x8a8 -> drain_bridge).
    For the drain, ENSURES_PRECONDITION_TAC takes the full leg_state
    predicate (with the aligned and PC conjuncts) and normalizes the literal
-   index 1 against loop_count - 1 under loop_count = 2.  REFOLD_ABI is
+   index 1 against loop_count - 1 under loop_count = 2.  REFOLD_ABI_TAC is
    needed before MATCH_MP_TAC DRAINLEG_8A8, whose frame has the ABI part
    folded while the goal's was expanded, and ARITH_TAC discharges its
    2 <= loop_count. *)
@@ -3111,7 +3111,7 @@ let LEG_LC2 = GEN_ALL(prove(mk_lcN_goal 2,
     ENSURES_SEQUENCE_TAC `pc + 0x8a8` (strip_aligned_pc lc2_waypoint) THEN CONJ_TAC THENL
      [(* LC2_PARTA (widened), then the leftover hypotheses of its
          precondition *)
-      APPLY_LEG LC2_PARTA_W THEN
+      APPLY_LEG_TAC LC2_PARTA_W THEN
       (ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN TRY(FIRST_ASSUM ACCEPT_TAC) THEN
        TRY(ASM_ARITH_TAC) THEN TRY NONOVERLAPPING_TAC);
       (* the drain, after normalizing the index under loop_count = 2 *)
@@ -3120,7 +3120,7 @@ let LEG_LC2 = GEN_ALL(prove(mk_lcN_goal 2,
        [GEN_TAC THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
         FIRST_ASSUM(fun th -> if lhs(concl th)=`loop_count:num` then REWRITE_TAC[th] else NO_TAC) THEN
         CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[];
-        REFOLD_ABI THEN MATCH_MP_TAC DRAINLEG_8A8 THEN ASM_REWRITE_TAC[] THEN ARITH_TAC]]]));;
+        REFOLD_ABI_TAC THEN MATCH_MP_TAC DRAINLEG_8A8 THEN ASM_REWRITE_TAC[] THEN ARITH_TAC]]]));;
 
 (* Widen the legs that end at drain_bridge to CORE_FROM88's frame. *)
 let LEG_LC0_W = widen_to_from88 LEG_LC0;;
@@ -3543,19 +3543,20 @@ let AES256_GCM_ENC_SUBROUTINE_CORRECT = prove
 (* is a function of the public arguments only, given by the scaffold         *)
 (* scaffold_enc (CONCRETIZE_F_EVENTS_TAC), and every memory access stays     *)
 (* within the declared buffers.  The proof walks the same regions with the   *)
-(* event-tracking simulator SAFE_SIM: the preamble, the cases loop_count =   *)
-(* 0, 1 and 2, and for loop_count >= 3 a loop of loop_count - 2 iterations   *)
+(* event-tracking simulator SAFE_SIM_TAC: the preamble, the cases loop_count *)
+(* = 0, 1 and 2, and for loop_count >= 3 a loop of loop_count - 2 iterations *)
 (* from pc + 0x560 to pc + 0x8a8 between the fill and the drain, then the    *)
 (* tail loop.  The leaf obligations are closed by the shared closers of      *)
-(* utils/aes_gcm_common.ml and the reconcilers FILL_X1 and DRAIN_ADDR_K.     *)
+(* utils/aes_gcm_common.ml and the reconcilers FILL_X1_TAC and               *)
+(* DRAIN_ADDR_K_TAC.                                                         *)
 (* ========================================================================= *)
 
-let SAFE_SIM = SAFE_SIM_TAC AES256_GCM_ENC_EXEC;;
+let SAFE_SIM_TAC = ARM_SAFE_SIM_TAC AES256_GCM_ENC_EXEC;;
 
 (* The fill's X1: word_sub (word C) (word 2) = word (C - 2 - 0), where
    C = len_bits DIV 512 = loop_count.  Guarded so that it only fires on a
    word_sub by 2. *)
-let FILL_X1 : tactic =
+let FILL_X1_TAC : tactic =
   W(fun (asl,w) ->
     if (try let l,_ = dest_eq w in
             name_of(fst(strip_comb l)) = "word_sub" && rand l = `word 2:int64`
@@ -3571,8 +3572,8 @@ let FILL_X1 : tactic =
     else NO_TAC);;
 
 (* The leaf closer: the shared chain plus the reconcilers for the fill's
-   counter (FILL_X1) and the drain pointers (DRAIN_ADDR_K). *)
-let CLOSE_ENC = CLOSE_R2_WITH [FILL_X1; DRAIN_ADDR_K `1`; DRAIN_ADDR_K `2`];;
+   counter (FILL_X1_TAC) and the drain pointers (DRAIN_ADDR_K_TAC). *)
+let CLOSE_ENC_TAC = CLOSE_R2_WITH [FILL_X1_TAC; DRAIN_ADDR_K_TAC `1`; DRAIN_ADDR_K_TAC `2`];;
 let scaffold_enc =
  `\(in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64) (key_p:int64) (htable_p:int64)
    (len_bits:int64) (pc:num) (stackpointer:int64).
@@ -3591,8 +3592,8 @@ let scaffold_enc =
        (f_ev_pro in_p out_p tag_p ivec_p key_p htable_p len_bits pc stackpointer))
    :(uarch_event) list`;;
 
-let OPEN_ENC : tactic =
-  OPEN_SWP_SAFE AES256_GCM_ENC_EXEC THEN
+let OPEN_ENC_TAC : tactic =
+  OPEN_SWP_SAFE_TAC AES256_GCM_ENC_EXEC THEN
   SUBGOAL_THEN `nblocks = 4 * loop_count + loop_remain` SUBST_ALL_TAC THENL
    [UNDISCH_TAC `nblocks DIV 4 = loop_count` THEN UNDISCH_TAC `nblocks MOD 4 = loop_remain` THEN ARITH_TAC; ALL_TAC];;
 
@@ -3635,7 +3636,7 @@ let AES256_GCM_ENC_SAFE = prove
                       memory :> bytes(tag_p, 16);
                       memory :> bytes(ivec_p, 16);
                       memory :> bytes(word_add stackpointer (word 160), 64)])`,
-  CONCRETIZE_F_EVENTS_TAC scaffold_enc THEN OPEN_ENC THEN
+  CONCRETIZE_F_EVENTS_TAC scaffold_enc THEN OPEN_ENC_TAC THEN
   (* the top split at 0xdd0, between the main region and the tail *)
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xdd0`
    `\s. read X0 s = word_add in_p (word (64 * loop_count)) /\
@@ -3648,18 +3649,18 @@ let AES256_GCM_ENC_SAFE = prove
      `\s. read X0 s = in_p /\ read X2 s = out_p /\ read X3 s = tag_p /\
           read X4 s = ivec_p /\ read X6 s = htable_p /\ read SP s = stackpointer /\
           read X1 s = word loop_count /\ read X16 s = word loop_remain` THEN
-    CONJ_TAC THENL [SAFE_SIM (1--33) THEN CLOSE_ENC; ALL_TAC] THEN
+    CONJ_TAC THENL [SAFE_SIM_TAC (1--33) THEN CLOSE_ENC_TAC; ALL_TAC] THEN
     ASM_CASES_TAC `loop_count = 0` THENL
-     [REDUCE_IF0 `loop_count:num` THEN SAFE_SIM (1--1) THEN CLOSE_ENC; ALL_TAC] THEN
-    REDUCE_IFN0 `loop_count:num` THEN
+     [REDUCE_IF0_TAC `loop_count:num` THEN SAFE_SIM_TAC (1--1) THEN CLOSE_ENC_TAC; ALL_TAC] THEN
+    REDUCE_IFN0_TAC `loop_count:num` THEN
     ASM_CASES_TAC `loop_count = 1` THENL
-     [REDUCE_IFEQ `loop_count:num` `1` THEN POP_ASSUM SUBST_ALL_TAC THEN
-      SAFE_SIM (1--211) THEN CLOSE_ENC; ALL_TAC] THEN
-    REDUCE_IFNE `loop_count:num` `1` THEN
+     [REDUCE_IFEQ_TAC `loop_count:num` `1` THEN POP_ASSUM SUBST_ALL_TAC THEN
+      SAFE_SIM_TAC (1--211) THEN CLOSE_ENC_TAC; ALL_TAC] THEN
+    REDUCE_IFNE_TAC `loop_count:num` `1` THEN
     ASM_CASES_TAC `loop_count = 2` THENL
-     [REDUCE_IFEQ `loop_count:num` `2` THEN POP_ASSUM SUBST_ALL_TAC THEN
-      SAFE_SIM (1--422) THEN CLOSE_ENC; ALL_TAC] THEN
-    REDUCE_IFNE `loop_count:num` `2` THEN
+     [REDUCE_IFEQ_TAC `loop_count:num` `2` THEN POP_ASSUM SUBST_ALL_TAC THEN
+      SAFE_SIM_TAC (1--422) THEN CLOSE_ENC_TAC; ALL_TAC] THEN
+    REDUCE_IFNE_TAC `loop_count:num` `2` THEN
     SUBGOAL_THEN `3 <= loop_count` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
     ENSURES_EVENTS_WHILE_UP2_TAC `loop_count - 2` `pc + 0x560` `pc + 0x8a8`
      `\i s. read X0 s = word_add in_p (word (64 * i + 128)) /\
@@ -3669,27 +3670,27 @@ let AES256_GCM_ENC_SAFE = prove
             read X1 s = word (loop_count - 2 - i)` THEN
     ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
      [ASM_ARITH_TAC;
-      BEQ_NZ `1` THEN BEQ_NZ `2` THEN SAFE_SIM (1--300) THEN CLOSE_ENC;
+      BEQ_NZ_TAC `1` THEN BEQ_NZ_TAC `2` THEN SAFE_SIM_TAC (1--300) THEN CLOSE_ENC_TAC;
       REWRITE_TAC[] THEN X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
       SUBGOAL_THEN `loop_count - 2 < 2 EXP 64` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-      SAFE_SIM (1--210) THEN CLOSE_ENC;
-      SAFE_SIM (1--122) THEN CLOSE_ENC];
+      SAFE_SIM_TAC (1--210) THEN CLOSE_ENC_TAC;
+      SAFE_SIM_TAC (1--122) THEN CLOSE_ENC_TAC];
     ALL_TAC] THEN
   (* the tail region, pc + 0xdd0 -> pc + 0xee4 *)
   ASM_CASES_TAC `loop_remain = 0` THENL
-   [REDUCE_IF0 `loop_remain:num` THEN SAFE_SIM (1--9) THEN CLOSE_ENC; ALL_TAC] THEN
-  REDUCE_IFN0 `loop_remain:num` THEN
+   [REDUCE_IF0_TAC `loop_remain:num` THEN SAFE_SIM_TAC (1--9) THEN CLOSE_ENC_TAC; ALL_TAC] THEN
+  REDUCE_IFN0_TAC `loop_remain:num` THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `loop_remain:num` `pc + 0xde0` `pc + 0xed0`
    `\i s. read X0 s = word_add in_p (word (64 * loop_count + 16 * i)) /\
           read X2 s = word_add out_p (word (64 * loop_count + 16 * i)) /\
           read X3 s = tag_p /\ read X4 s = ivec_p /\ read X6 s = htable_p /\
           read SP s = stackpointer /\ read X16 s = word (loop_remain - i)` THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [SAFE_SIM (1--4) THEN CLOSE_ENC;
+   [SAFE_SIM_TAC (1--4) THEN CLOSE_ENC_TAC;
     ALL_TAC;
-    REWRITE_TAC[] THEN SAFE_SIM (1--5) THEN CLOSE_ENC] THEN
+    REWRITE_TAC[] THEN SAFE_SIM_TAC (1--5) THEN CLOSE_ENC_TAC] THEN
   REWRITE_TAC[] THEN X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-  SAFE_SIM (1--60) THEN CLOSE_ENC);;
+  SAFE_SIM_TAC (1--60) THEN CLOSE_ENC_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* The whole-function version, obtained from the core theorem exactly as the *)

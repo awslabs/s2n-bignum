@@ -96,16 +96,16 @@ let kterm =
     s f1,`sfast1:armstate`; s f2,`sfast2:armstate`;
     s f3,`sfast3:armstate`; s f4,`sfast4:armstate`];;
 
-(* NSTEP steps one instruction and then applies the word_add flatten,        *)
+(* NSTEP_TAC steps one instruction and then applies the word_add flatten,    *)
 (* NORMOFF_RULE and SUBWORD_NORM_RULE to every assumption in a single        *)
 (* RULE_ASSUM_TAC pass.  It has no is_ghash_acc guard: it is used where no   *)
 (* large GHASH accumulator is live (the setup legs and the dispatch and AES  *)
 (* part of FAST1..FAST4).                                                    *)
-let NSTEP n =
+let NSTEP_TAC n =
   ARM_STEPS_TAC AES_GCM_ENC_ALT_EXEC [n] THEN
   RULE_ASSUM_TAC(fun th -> SUBWORD_NORM_RULE (NORMOFF_RULE (WB_WADD_RULE th)));;
 
-let NSTEP_G n =
+let NSTEP_G_TAC n =
   ARM_STEPS_TAC AES_GCM_ENC_ALT_EXEC [n] THEN
   RULE_ASSUM_TAC(fun th ->
     if is_ghash_acc th then th
@@ -156,10 +156,10 @@ let LDP_SETUP_TAC n =
 let SETUP_LOADS_TAC =
   let b = setup_tail_branch in
   LDP_SETUP_TAC (b + 1) THEN LDP_SETUP_TAC (b + 2) THEN
-  MAP_EVERY NSTEP ((b + 3)--(b + 9)) THEN
+  MAP_EVERY NSTEP_TAC ((b + 3)--(b + 9)) THEN
   LDP_SETUP_TAC (b + 10) THEN LDP_SETUP_TAC (b + 11) THEN
-  MAP_EVERY NSTEP ((b + 12)--(b + 27)) THEN
-  NSTEP (b + 28);;
+  MAP_EVERY NSTEP_TAC ((b + 12)--(b + 27)) THEN
+  NSTEP_TAC (b + 28);;
 
 (* The invariant states the Q19 accumulator plain, not wrapped in a          *)
 (* `byteswap128`: read Q19 s = nist_ghash..8i, rather than read Q19 s =      *)
@@ -492,12 +492,12 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
                    `8 * (i + 1) + 6`; `8 * (i + 1) + 7`] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
       (kterm `LENGTH tmc`)]) THEN
-    MAP_EVERY NSTEP_G (1--(loop_ldp1-1)) THEN
+    MAP_EVERY NSTEP_G_TAC (1--(loop_ldp1-1)) THEN
     LDP_STEP4_TAC loop_ldp1 THEN
-    MAP_EVERY NSTEP_G ((loop_ldp1+1)--(loop_ldp2-1)) THEN
+    MAP_EVERY NSTEP_G_TAC ((loop_ldp1+1)--(loop_ldp2-1)) THEN
     LDP_STEP4_TAC loop_ldp2 THEN
     LDP_STEP4_TAC (loop_ldp2+1) THEN
-    MAP_EVERY NSTEP_G ((loop_ldp2+2)--(loop_backedge-1)) THEN
+    MAP_EVERY NSTEP_G_TAC ((loop_ldp2+2)--(loop_backedge-1)) THEN
     ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
     (* Cheap-conjunct close.  The case-split bound is 8*((i+1)+1) (the       *)
     (* invariant's out-forall at i is j < 8*(i+1), so at i+1 it is           *)
@@ -625,14 +625,14 @@ let AES_GCM_ENC_ALT_MAIN_LOOP = prove
     ARM_SIM_TAC AES_GCM_ENC_ALT_EXEC [1] THEN
     ASM_REWRITE_TAC[]]);;
 
-(* CIPHER_CLOSE: the MAIN_LOOP body ciphertext chain (in                     *)
+(* CIPHER_CLOSE_TAC: the MAIN_LOOP body ciphertext chain (in                 *)
 (* AES_GCM_ENC_ALT_MAIN_LOOP) specialised to SETUP.  Reduces the raw         *)
 (* eor3/aese form                                                            *)
 (*      word_xor (word_xor (inblock j) (aese..aese..rk(nr-1))) rkn           *)
 (* to the cipher form.  For block 0 (counter ctr_block nonce c, no           *)
 (* rev32 rebuild) it closes outright; for the out-forall's j = 1..7 it       *)
 (* leaves the AES-input identity residual that CIPHER_ID_TAC then peels.     *)
-let CIPHER_CLOSE =
+let CIPHER_CLOSE_TAC =
   ONCE_REWRITE_TAC[WORD_BITWISE_RULE
     `word_xor (word_xor (inb:int128) ch) rkn =
      word_xor ch (word_xor rkn inb)`] THEN
@@ -658,17 +658,17 @@ let CIPHER_CLOSE =
   TRY(REFL_TAC) THEN
   TRY(REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN ARITH_TAC);;
 
-(* SETUP_RECON_TAC_GEN routes each SETUP residual by its shape: the negated  *)
-(* flag conjunct -> FLAG_CLOSE_GEN; the out-forall -> 8-way case split +     *)
-(* CIPHER_CLOSE / CIPHER_ID_TAC; a nist_ghash RHS (Q19 = tag0) ->            *)
+(* SETUP_RECON_GEN_TAC routes each SETUP residual by its shape: the negated  *)
+(* flag conjunct -> FLAG_CLOSE_GEN_TAC; the out-forall -> 8-way case split + *)
+(* CIPHER_CLOSE_TAC / CIPHER_ID_TAC; a nist_ghash RHS (Q19 = tag0) ->        *)
 (* NIST_GHASH_NIL; word_xor = word_xor (the ciphertext registers) ->         *)
-(* CIPHER_CLOSE; word_join = word_reversefields (the counters) -> CTR_CLOSE; *)
-(* word_add (the pointer registers) -> WORD_RULE, the X4 word_ushr bridge or *)
-(* SETUP_X5_END_GEN; any other read (the surviving read-only facts)          *)
-(* -> ASM_REWRITE.                                                           *)
-let SETUP_RECON_TAC_GEN : tactic =
+(* CIPHER_CLOSE_TAC; word_join = word_reversefields (the counters) ->        *)
+(* CTR_CLOSE_TAC; word_add (the pointer registers) -> WORD_RULE, the X4      *)
+(* word_ushr bridge or SETUP_X5_END_GEN; any other read (the surviving       *)
+(* read-only facts) -> ASM_REWRITE.                                          *)
+let SETUP_RECON_GEN_TAC : tactic =
   fun (asl,w as gl) ->
-    if is_neg w then FLAG_CLOSE_GEN gl
+    if is_neg w then FLAG_CLOSE_GEN_TAC gl
     else if is_forall w then
       (REWRITE_TAC[ARITH_RULE `j < 8 * (0 + 1) <=>
                      j = 0 \/ j = 1 \/ j = 2 \/ j = 3 \/
@@ -677,8 +677,8 @@ let SETUP_RECON_TAC_GEN : tactic =
        REWRITE_TAC[FORALL_AND_THM; FORALL_UNWIND_THM2] THEN
        CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN ASM_REWRITE_TAC[] THEN
        REWRITE_TAC[WORD_ADD_0] THEN
-       REPEAT CONJ_TAC THEN CIPHER_CLOSE THEN TRY CIPHER_ID_TAC THEN
-       TRY CIPHER_CLOSE) gl
+       REPEAT CONJ_TAC THEN CIPHER_CLOSE_TAC THEN TRY CIPHER_ID_TAC THEN
+       TRY CIPHER_CLOSE_TAC) gl
     else if is_eq w then
       let l,r = dest_eq w in
       let rhd = try fst(dest_const(fst(strip_comb r))) with _ -> "?" in
@@ -687,9 +687,9 @@ let SETUP_RECON_TAC_GEN : tactic =
         (CONV_TAC NUM_REDUCE_CONV THEN
          REWRITE_TAC[list_of_seq; NIST_GHASH_NIL] THEN CONV_TAC WORD_BLAST) gl
       else if lhd = "word_xor" && rhd = "word_xor" then
-        (CIPHER_CLOSE THEN TRY CIPHER_ID_TAC THEN TRY CIPHER_CLOSE) gl
+        (CIPHER_CLOSE_TAC THEN TRY CIPHER_ID_TAC THEN TRY CIPHER_CLOSE_TAC) gl
       else if lhd = "word_join" && rhd = "word_reversefields" then
-        CTR_CLOSE gl
+        CTR_CLOSE_TAC gl
       else if lhd = "word_add" then
         FIRST
           [CONV_TAC WORD_RULE;
@@ -731,15 +731,15 @@ let SETUP_RECON_TAC_GEN : tactic =
 (* The core is stated with mod_p = word_add stackpointer (word 0x40); the    *)
 (* subroutine wrapper ties stackpointer to the caller's SP - 0x50.           *)
 (*                                                                           *)
-(* The drive is 290 steps: NSTEP 1-7 (the b.le at step 7 resolved by         *)
-(* DISPATCH4_NOT_TAKEN and DISPATCH_SMALL_NOT_TAKEN), 8-261, NSTEP 262 = the *)
-(* b.ge at 0x44c (SETUP_BRANCH_COND_FALSE_GEN), LDP_SETUP_TAC at the four    *)
-(* ldps (steps 263/264/272/273; the stps are steps 278/279/286/288), and     *)
-(* NSTEP 290 = the b.ge at 0x4bc (SETUP_BRANCH_COND_FALSE_2_GEN).  The final *)
-(* state is then closed by SETUP_RECON_TAC_GEN, like the MAIN_LOOP body's    *)
-(* cheap close: XOR_CIPHER_RECONSTRUCT + aes_ctr_block/ADD_CLAUSES +         *)
-(* CIPHER_KEYLIST for Q8..Q15, CTR_BLOCK_RECONSTRUCT_* for Q0..Q4 and        *)
-(* Q30, and Q19 = nist_ghash..(8*0) = tag0.                                  *)
+(* The drive is 290 steps: NSTEP_TAC 1-7 (the b.le at step 7 resolved by     *)
+(* DISPATCH4_NOT_TAKEN and DISPATCH_SMALL_NOT_TAKEN), 8-261, NSTEP_TAC 262 = *)
+(* the b.ge at 0x44c (SETUP_BRANCH_COND_FALSE_GEN), LDP_SETUP_TAC at the     *)
+(* four ldps (steps 263/264/272/273; the stps are steps 278/279/286/288),    *)
+(* and NSTEP_TAC 290 = the b.ge at 0x4bc (SETUP_BRANCH_COND_FALSE_2_GEN).    *)
+(* The final state is then closed by SETUP_RECON_GEN_TAC, like the MAIN_LOOP *)
+(* body's cheap close: XOR_CIPHER_RECONSTRUCT + aes_ctr_block/ADD_CLAUSES +  *)
+(* CIPHER_KEYLIST for Q8..Q15, CTR_BLOCK_RECONSTRUCT_* for Q0..Q4 and Q30,   *)
+(* and Q19 = nist_ghash..(8*0) = tag0.                                       *)
 (* ========================================================================= *)
 
 let AES_GCM_ENC_ALT_SETUP_GEN = prove
@@ -839,13 +839,13 @@ let AES_GCM_ENC_ALT_SETUP_GEN = prove
   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_8; htable_mem_4]) THEN
   SUBGOAL_THEN `~(nb = 4)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `5 <= nb` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  MAP_EVERY NSTEP (1--5) THEN NSTEP 6 THEN NSTEP 7 THEN
+  MAP_EVERY NSTEP_TAC (1--5) THEN NSTEP_TAC 6 THEN NSTEP_TAC 7 THEN
   RULE_ASSUM_TAC(REWRITE_RULE[
     MATCH_MP DISPATCH4_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `~(nb = 4)`));
     MATCH_MP DISPATCH_SMALL_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `5 <= nb`));
     COND_CLAUSES]) THEN
-  MAP_EVERY NSTEP (8--36) THEN
-  MAP_EVERY NSTEP (37--(setup_tail_branch-1)) THEN NSTEP setup_tail_branch THEN
+  MAP_EVERY NSTEP_TAC (8--36) THEN
+  MAP_EVERY NSTEP_TAC (37--(setup_tail_branch-1)) THEN NSTEP_TAC setup_tail_branch THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP SETUP_BRANCH_COND_FALSE_GEN
     (CONJ (ASSUME `8 * (k + 1) < nb`) (CONJ (ASSUME `nb <= 8 * (k + 2)`)
           (ASSUME `val (in_p:int64) + 128 * (k + 1) < 2 EXP 63`))); COND_CLAUSES]) THEN
@@ -858,7 +858,7 @@ let AES_GCM_ENC_ALT_SETUP_GEN = prove
   ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[htable_mem_8; htable_mem_4] THEN
-  REPEAT CONJ_TAC THEN SETUP_RECON_TAC_GEN);;
+  REPEAT CONJ_TAC THEN SETUP_RECON_GEN_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* SETUP_G1: the g = 1 (k = 0) pipeline-fill setup leg, nblocks 9..16.  Its  *)
@@ -965,13 +965,13 @@ let AES_GCM_ENC_ALT_SETUP_G1 = prove
   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_8; htable_mem_4]) THEN
   SUBGOAL_THEN `~(nb = 4)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `5 <= nb` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  MAP_EVERY NSTEP (1--5) THEN NSTEP 6 THEN NSTEP 7 THEN
+  MAP_EVERY NSTEP_TAC (1--5) THEN NSTEP_TAC 6 THEN NSTEP_TAC 7 THEN
   RULE_ASSUM_TAC(REWRITE_RULE[
     MATCH_MP DISPATCH4_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `~(nb = 4)`));
     MATCH_MP DISPATCH_SMALL_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `5 <= nb`));
     COND_CLAUSES]) THEN
-  MAP_EVERY NSTEP (8--36) THEN
-  MAP_EVERY NSTEP (37--(setup_tail_branch-1)) THEN NSTEP setup_tail_branch THEN
+  MAP_EVERY NSTEP_TAC (8--36) THEN
+  MAP_EVERY NSTEP_TAC (37--(setup_tail_branch-1)) THEN NSTEP_TAC setup_tail_branch THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP SETUP_BRANCH_COND_FALSE_GEN
     (CONJ (ASSUME `8 * (k + 1) < nb`) (CONJ (ASSUME `nb <= 8 * (k + 2)`)
           (ASSUME `val (in_p:int64) + 128 * (k + 1) < 2 EXP 63`))); COND_CLAUSES]) THEN
@@ -984,7 +984,7 @@ let AES_GCM_ENC_ALT_SETUP_G1 = prove
   ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[htable_mem_8; htable_mem_4] THEN
-  REPEAT CONJ_TAC THEN SETUP_RECON_TAC_GEN);;
+  REPEAT CONJ_TAC THEN SETUP_RECON_GEN_TAC);;
 
 (* ========================================================================= *)
 (* PREPRETAIL (pipeline drain): pc+0xa10 -> pc+0xee0 (L256_enc_tail).        *)
@@ -1004,16 +1004,17 @@ let AES_GCM_ENC_ALT_SETUP_G1 = prove
 (* state at pc+0xa10), plus aligned_bytes_loaded; ENSURES_SEQUENCE_TAC joins *)
 (* them in the composition.  The Q19 drain fold has the same structure as    *)
 (* the MAIN_LOOP body's (a leading `ext v19`, at 0xa78 here, the same        *)
-(* pmull/pmull2/eor3 Karatsuba chain, the final reduce                       *)
-(* `eor3 v19,v19,v21,v17` at 0xec0, and no trailing `ext v19`), so it closes *)
-(* by Q19_FOLD_TAC_K, which is Q19_FOLD_TAC with i -> k.  The drain's reduce *)
+(* pmull/pmull2/eor3 Karatsuba chain, the final reduce `eor3                 *)
+(* v19,v19,v21,v17` at 0xec0, and no trailing `ext v19`), so it closes by    *)
+(* Q19_FOLD_K_TAC, which is Q19_FOLD_TAC with i -> k.  The drain's reduce    *)
 (* reads v18 through pmull (0xe64, into Q17) and through ext (0xe9c, into    *)
-(* Q21); NSTEP_GP (below) also protects Q20/Q21 from the per-step subword    *)
-(* normalisation, so both copies of v18 keep the same form and RECON_GRR can *)
-(* fold the reduce.  With NSTEP_GP the accumulators Q17/Q18/Q19 stay         *)
-(* concrete through the 308-step drive; after FINAL_STATE + REPEAT CONJ_TAC  *)
-(* ten residuals remain: the Q30 counter, the Q19 fold and the eight v0..v7  *)
-(* AES reconstructions (PP_DISPATCH; the rest close by ASM_REWRITE).         *)
+(* Q21); NSTEP_GP_TAC (below) also protects Q20/Q21 from the per-step        *)
+(* subword normalisation, so both copies of v18 keep the same form and       *)
+(* RECON_GRR can fold the reduce.  With NSTEP_GP_TAC the accumulators        *)
+(* Q17/Q18/Q19 stay concrete through the 308-step drive; after FINAL_STATE + *)
+(* REPEAT CONJ_TAC ten residuals remain: the Q30 counter, the Q19 fold and   *)
+(* the eight v0..v7 AES reconstructions (PP_DISPATCH_TAC; the rest close by  *)
+(* ASM_REWRITE).                                                             *)
 (*                                                                           *)
 (* Exit state (after the 308-step drive):                                    *)
 (* - PC = pc+0xee0; X0..X16 and Q31 preserved;                               *)
@@ -1032,14 +1033,14 @@ let AES_GCM_ENC_ALT_SETUP_G1 = prove
 (* tail's first `eor3 v9,v8,v0,v29` XORs v0 with v29, a copy of v28 = rkn).  *)
 (* ========================================================================= *)
 
-(* NSTEP_GP: the stepper for the prepretail, the tail arms and the small     *)
+(* NSTEP_GP_TAC: the stepper for the prepretail, the tail arms and the small *)
 (* path tails.  It skips all three per-step normalisations on assumptions    *)
 (* that mention the accumulators Q17..Q21 (is_ghash_acc_pp): the word_add    *)
 (* flatten and NORMOFF are the identity on them and the subword pass must    *)
 (* not touch them.  On the other facts the word_add flatten and NORMOFF run  *)
 (* only when has_wadd_nest / has_word_of_sum find their redex, since they    *)
 (* are no-ops otherwise.                                                     *)
-let NSTEP_GP n =
+let NSTEP_GP_TAC n =
   ARM_STEPS_TAC AES_GCM_ENC_ALT_EXEC [n] THEN
   RULE_ASSUM_TAC(fun th ->
     if is_ghash_acc_pp th then th
@@ -1052,7 +1053,7 @@ let NSTEP_GP n =
 (* drain folds the last in-flight 8-block group at loop bound k, advancing   *)
 (* Q19 from nist_ghash..(8*k) to nist_ghash..(8*(k+1))).  The fold has the   *)
 (* same structure as the main-loop body's; see Q19_FOLD_TAC for the route.   *)
-let Q19_FOLD_TAC_K =
+let Q19_FOLD_K_TAC =
   ONCE_REWRITE_TAC[WORD_BITWISE_RULE
     `word_xor (word_xor (x:int128) e) p = word_xor (word_xor x p) e`] THEN
   REWRITE_TAC[RECON_GRR] THEN
@@ -1100,7 +1101,7 @@ let Q19_FOLD_TAC_K =
 (* reconstruction (WORD_SUBWORD_*32 + CTR_BLOCK_RECONSTRUCT_REV8 +           *)
 (* WORD_REVERSEFIELDS_REVERSEFIELDS) folds; the TRY makes it a no-op for     *)
 (* v0..v4 (already closed).                                                  *)
-let PP_AES_CLOSE =
+let PP_AES_CLOSE_TAC =
   ASM_REWRITE_TAC[CIPHER_RECONSTRUCT; MAP;
                   WORD_REVERSEFIELDS_REVERSEFIELDS; CIPHER_KEYLIST] THEN
   TRY(REWRITE_TAC[GSYM WORD_ADD] THEN CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
@@ -1113,23 +1114,24 @@ let PP_AES_CLOSE =
 
 (* Shape-routed per-goal dispatcher over the 10 post-FINAL_STATE residuals:  *)
 (* nist_ghash-RHS -> Q19 fold; word_join=word_reversefields -> Q30 counter;  *)
-(* the 8 v-register AES eqs -> PP_AES_CLOSE; anything else -> ASM_REWRITE.   *)
-let PP_DISPATCH : tactic = fun (asl,w as gl) ->
+(* the 8 v-register AES eqs -> PP_AES_CLOSE_TAC; anything else ->            *)
+(* ASM_REWRITE.                                                              *)
+let PP_DISPATCH_TAC : tactic = fun (asl,w as gl) ->
   if is_eq w then
     let l,r = dest_eq w in
     let rhd = try fst(dest_const(fst(strip_comb r))) with _ -> "?" in
     let lhd = try fst(dest_const(fst(strip_comb l))) with _ -> "?" in
-    if rhd = "nist_ghash" then Q19_FOLD_TAC_K gl
-    else if lhd = "word_join" && rhd = "word_reversefields" then PP_CTR_CLOSE gl
-    else PP_AES_CLOSE gl
+    if rhd = "nist_ghash" then Q19_FOLD_K_TAC gl
+    else if lhd = "word_join" && rhd = "word_reversefields" then PP_CTR_CLOSE_TAC gl
+    else PP_AES_CLOSE_TAC gl
   else ASM_REWRITE_TAC[] gl;;
 
 (* ------------------------------------------------------------------------- *)
 (* PREPRETAIL_GEN: the pipeline-drain theorem, for every k including k = 0   *)
 (* (the g = 1 leg, nblocks 9..16, where the main loop runs zero times and    *)
 (* the prepretail and the tail do all the work).  The proof is a             *)
-(* straight-line drive, MAP_EVERY NSTEP_GP (1--prepretail_steps), then       *)
-(* FINAL_STATE and PP_DISPATCH; nothing in it depends on k beyond the        *)
+(* straight-line drive, MAP_EVERY NSTEP_GP_TAC (1--prepretail_steps), then   *)
+(* FINAL_STATE and PP_DISPATCH_TAC; nothing in it depends on k beyond the    *)
 (* symbolic 8*k.                                                             *)
 (* ------------------------------------------------------------------------- *)
 let AES_GCM_ENC_ALT_PREPRETAIL_GEN = prove
@@ -1239,19 +1241,19 @@ let AES_GCM_ENC_ALT_PREPRETAIL_GEN = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb)])`,
   REWRITE_TAC[KEY_SPLIT] THEN
   (* Drive the 308-instruction drain with the extended-guard stepper         *)
-  (* NSTEP_GP (it protects Q17..Q21, so the reduce's mid accumulator v18     *)
+  (* NSTEP_GP_TAC (it protects Q17..Q21, so the reduce's mid accumulator v18 *)
   (* stays unnormalised in both the pmull and the ext position), then        *)
-  (* FINAL_STATE + REPEAT CONJ_TAC + the shape-routed dispatcher PP_DISPATCH *)
-  (* (Q19 fold / Q30 counter / v0..v7 AES / ASM_REWRITE).                    *)
+  (* FINAL_STATE + REPEAT CONJ_TAC + the shape-routed dispatcher             *)
+  (* PP_DISPATCH_TAC (Q19 fold / Q30 counter / v0..v7 AES / ASM_REWRITE).    *)
   REWRITE_TAC[htable_mem_8; htable_mem_4; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
-  MAP_EVERY NSTEP_GP (1--prepretail_steps) THEN
+  MAP_EVERY NSTEP_GP_TAC (1--prepretail_steps) THEN
   ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THEN PP_DISPATCH);;
+  REPEAT CONJ_TAC THEN PP_DISPATCH_TAC);;
 
 (* ========================================================================= *)
 (* TAIL cascade: pc+0xee0 -> pc+0x1154.                                      *)
@@ -1279,7 +1281,7 @@ let AES_GCM_ENC_ALT_PREPRETAIL_GEN = prove
 (*                                                                           *)
 (* The Q19 fold is of the same kind as in PREPRETAIL and MAIN_LOOP           *)
 (* (pmull/pmull2/eor3 Karatsuba over the fresh cipherblocks, then the        *)
-(* reduce), so it reuses that machinery (NSTEP_GP, RECON_GRR, a              *)
+(* reduce), so it reuses that machinery (NSTEP_GP_TAC, RECON_GRR, a          *)
 (* Q19_FOLD_TAC-style fold).                                                 *)
 (*                                                                           *)
 (* The return value X0 = X9 = 16*nb (mov x0,x9 at 0x1154) is set by the      *)
@@ -1331,8 +1333,8 @@ let fold_q19_at lhstm cnt foldtac : tactic =
 
 (* Fold `read Q19 s82` (the raw single-block reduce) to the compact          *)
 (* nist_ghash..(8*g+1) in place, as TAIL_REM8's Q19 fold does.               *)
-let FOLD_Q19_REM1 : tactic =
-  fold_q19_at `read Q19 s82 : int128` `8 * g + 1` TAIL_Q19_FOLD_REM1;;
+let FOLD_Q19_REM1_TAC : tactic =
+  fold_q19_at `read Q19 s82 : int128` `8 * g + 1` TAIL_Q19_FOLD_REM1_TAC;;
 
 let AES_GCM_ENC_ALT_TAIL_REM1 = prove
  (kterm `!in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
@@ -1418,20 +1420,20 @@ let AES_GCM_ENC_ALT_TAIL_REM1 = prove
   (* Steps 1..9: the tail prefix (x5 = X4 - X0 at 0xee4); rewriting x5 to    *)
   (* word 16 lets the cascade resolve concretely to the rem = 1 arm          *)
   (* (L256_enc_blocks_less_than_1 at 0x10f0).                                *)
-  MAP_EVERY NSTEP_GP (1--9) THEN
+  MAP_EVERY NSTEP_GP_TAC (1--9) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[TAIL_X5_REM1]) THEN
   (* Steps 10..82: the cascade fall-through, the single-block fold and the   *)
   (* reduce, up to the final reduce eor3 at 0x1144 (s82: read Q19 = the raw  *)
   (* single-block reduce).                                                   *)
-  MAP_EVERY NSTEP_GP (10--82) THEN
+  MAP_EVERY NSTEP_GP_TAC (10--82) THEN
   (* Fold Q19 to the compact nist_ghash..(8*g+1) before ext/rev64/store      *)
   (* (otherwise the rev64 of the raw reduce grows very large), then drop the *)
   (* dead reduce scratch.                                                    *)
-  FOLD_Q19_REM1 THEN
-  DISCARD_DEAD_REDUCE_SCRATCH THEN
+  FOLD_Q19_REM1_TAC THEN
+  DISCARD_DEAD_REDUCE_SCRATCH_TAC THEN
   (* Steps 83..85: ext, rev64 and st1 (tag) at 0x1148/0x114c/0x1150; the PC  *)
   (* is then pc+0x1154.                                                      *)
-  MAP_EVERY NSTEP_GP (83--85) THEN
+  MAP_EVERY NSTEP_GP_TAC (83--85) THEN
   ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   (* ivec store: 7 `sub v30` in the cascade take 8g+c+8 to 8g+c+1 = nb+c. *)
   CONJ_TAC THENL
@@ -1481,8 +1483,8 @@ let AES_GCM_ENC_ALT_TAIL_REM1 = prove
 (* for r = 1, 0x17d4, 0x16ec, 0x15ac for r = 4), where Q30 already holds     *)
 (* ctr(c+nb), built by the small_r code.  It ends in L256_enc_small_reduce,  *)
 (* whose tag store is a tbl with the byte-reverse index in Q12, so Q12 stays *)
-(* live (DISCARD_DEAD_REDUCE_SCRATCH would drop it).  Each leg is entered    *)
-(* fresh, so that the tail's eor3 write of the block-0 ciphertext is         *)
+(* live (DISCARD_DEAD_REDUCE_SCRATCH_TAC would drop it).  Each leg is        *)
+(* entered fresh, so that the tail's eor3 write of the block-0 ciphertext is *)
 (* tracked.                                                                  *)
 (*                                                                           *)
 (* The per-leg parameters are the state at which Q19 is folded and the last  *)
@@ -1730,12 +1732,12 @@ let prove_tail_rem r x5th sfold send =
     (* the keystream facts inverted, so that the eor3 outputs are
        state-independent *)
     RULE_ASSUM_TAC(fun th -> try MATCH_MP KS_SOLVE th with Failure _ -> th) THEN
-    MAP_EVERY NSTEP_GP (1--9) THEN
+    MAP_EVERY NSTEP_GP_TAC (1--9) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[x5th]) THEN
-    MAP_EVERY NSTEP_GP (10--sfold) THEN
+    MAP_EVERY NSTEP_GP_TAC (10--sfold) THEN
     fold_q19_at (q19_at sfold) (gplus r) (tail_q19_fold r) THEN
-    DISCARD_DEAD_REDUCE_SCRATCH THEN
-    MAP_EVERY NSTEP_GP ((sfold+1)--send) THEN
+    DISCARD_DEAD_REDUCE_SCRATCH_TAC THEN
+    MAP_EVERY NSTEP_GP_TAC ((sfold+1)--send) THEN
     TAIL_POST_TAC r `8 * g + c + 8` (8 - r)
       (mk_binop `(+):num->num->num` `8 * g`
         (mk_binop `(+):num->num->num` `c:num` (mk_small_numeral r))));;
@@ -1829,13 +1831,13 @@ let prove_fast_tail r sfold extra =
       (kterm `LENGTH tmc`)]) THEN
     TAIL_IN_BLOCKS_TAC r THEN
     RULE_ASSUM_TAC(fun th -> try MATCH_MP KS_SOLVE th with Failure _ -> th) THEN
-    MAP_EVERY NSTEP_GP (1--sfold) THEN
+    MAP_EVERY NSTEP_GP_TAC (1--sfold) THEN
     fold_q19_at (q19_at sfold) (gplus r)
-      (if r = 1 then TAIL_Q19_FOLD_REM1 else tail_q19_fold r) THEN
-    DISCARD_REGS (["Q17"; "Q18"; "Q20"; "Q21"; "Q22"; "Q23"; "Q24"; "Q25";
+      (if r = 1 then TAIL_Q19_FOLD_REM1_TAC else tail_q19_fold r) THEN
+    DISCARD_REGS_TAC (["Q17"; "Q18"; "Q20"; "Q21"; "Q22"; "Q23"; "Q24"; "Q25";
                    "Q26"; "Q29"; "Q16"; "Q8"; "Q9"; "Q10"; "Q11"; "Q13";
                    "Q14"; "Q15"] @ extra) THEN
-    MAP_EVERY NSTEP_GP ((sfold+1)--(sfold+3)) THEN
+    MAP_EVERY NSTEP_GP_TAC ((sfold+1)--(sfold+3)) THEN
     TAIL_POST_TAC r `8 * g + 10` (8 - r) (gplus (r + 2)));;
 
 let AES_GCM_ENC_ALT_FAST1_TAIL = prove_fast_tail 1 24 [];;
@@ -1850,13 +1852,13 @@ let AES_GCM_ENC_ALT_FAST4_TAIL = prove_fast_tail 4 67 [];;
 (* TAIL_REM8 is stated for every group count g, including nblocks = 8 and    *)
 (* 16, which the (nblocks-1) DIV 8 decomposition also routes here; its drive *)
 (* does not depend on g (x5 = 128).  Its helpers are the x5 value            *)
-(* TAIL_X5_128_G and the Q19 fold TAIL_Q19_FOLD_G.                           *)
+(* TAIL_X5_128_G and the Q19 fold TAIL_Q19_FOLD_G_TAC.                       *)
 (* ========================================================================= *)
 
-(* TAIL_Q19_FOLD_G: the rem = 8 fold, advancing Q19 from nist_ghash..(8*g)   *)
-(* to nist_ghash..(8*g+8).  It is not Q19_FOLD_TAC_K, because the tail's     *)
-(* reduce differs from the prepretail's in two ways.                         *)
-(* (1) The operand order of the final reduce eor3.  The prepretail's         *)
+(* TAIL_Q19_FOLD_G_TAC: the rem = 8 fold, advancing Q19 from                 *)
+(* nist_ghash..(8*g) to nist_ghash..(8*g+8).  It is not Q19_FOLD_K_TAC,      *)
+(* because the tail's reduce differs from the prepretail's in two ways.  (1) *)
+(* The operand order of the final reduce eor3.  The prepretail's             *)
 (*     `eor3 v19,v19,v21,v17` (0xec0) is `word_xor (word_xor p3 ext) pmull`  *)
 (*     and needs a leading AC-swap to reach ghash_reduce_raw's `word_xor     *)
 (*     (word_xor p3 pmull) ext` shape; the tail's `eor3 v19,v19,v17,v21`     *)
@@ -1881,7 +1883,7 @@ let AES_GCM_ENC_ALT_FAST4_TAIL = prove_fast_tail 4 67 [];;
 (* DIST8_PLAIN (which assumes the body's [1;0;3;2..] cross order); the       *)
 (* batched fold then closes as in the main loop, with NCB_ETA for the        *)
 (* block-0 lambda.                                                           *)
-let TAIL_Q19_FOLD_G =
+let TAIL_Q19_FOLD_G_TAC =
   GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)
     [WORD_BITWISE_RULE
       `word_xor (word_xor (i:int128) (word_xor a r)) r = word_xor i a`] THEN
@@ -1943,8 +1945,8 @@ let TAIL_Q19_FOLD_G =
   REWRITE_TAC[ARITH_RULE `1 + 8 * g = 8 * g + 1`; ARITH_RULE `2 + 8 * g = 8 * g + 2`; ARITH_RULE `3 + 8 * g = 8 * g + 3`; ARITH_RULE `4 + 8 * g = 8 * g + 4`; ARITH_RULE `5 + 8 * g = 8 * g + 5`; ARITH_RULE `6 + 8 * g = 8 * g + 6`; ARITH_RULE `7 + 8 * g = 8 * g + 7`] THEN
   AP_TERM_TAC THEN CONV_TAC WORD_BITWISE_RULE;;
 
-let FOLD_Q19_S114_G : tactic =
-  fold_q19_at `read Q19 s115 : int128` `8 * g + 8` TAIL_Q19_FOLD_G;;
+let FOLD_Q19_S114_G_TAC : tactic =
+  fold_q19_at `read Q19 s115 : int128` `8 * g + 8` TAIL_Q19_FOLD_G_TAC;;
 
 let AES_GCM_ENC_ALT_TAIL_REM8 = prove
  (kterm `!q18_init q27_init in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
@@ -2064,27 +2066,27 @@ let AES_GCM_ENC_ALT_TAIL_REM8 = prove
     ASM_ARITH_TAC;
     ALL_TAC] THEN
   RULE_ASSUM_TAC(fun th -> try MATCH_MP KS_SOLVE th with Failure _ -> th) THEN
-  MAP_EVERY NSTEP_GP (1--9) THEN
+  MAP_EVERY NSTEP_GP_TAC (1--9) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP TAIL_X5_128_G (ASSUME `8 * g + 8 = nb`)]) THEN
-  DISCARD_DEAD_KEYMEM THEN
-  DISCARD_DEAD_HTABLE THEN
-  DISCARD_REGS ["Q31"; "Q28"] THEN
+  DISCARD_DEAD_KEYMEM_TAC THEN
+  DISCARD_DEAD_HTABLE_TAC THEN
+  DISCARD_REGS_TAC ["Q31"; "Q28"] THEN
   (* Q27 is last read at step 94 (eor3 v18,v18,v27,v15 at 0x12c0), so it is  *)
   (* dropped after s97; the final reduce eor3 at 0x1314 is step 115, where   *)
   (* Q19 is folded; the writebacks are the str q30 at step 98 and the st1 at *)
   (* step 118.                                                               *)
-  MAP_EVERY NSTEP_GP (10--97) THEN
-  DISCARD_REGS ["Q27"] THEN
-  MAP_EVERY NSTEP_GP (98--115) THEN
+  MAP_EVERY NSTEP_GP_TAC (10--97) THEN
+  DISCARD_REGS_TAC ["Q27"] THEN
+  MAP_EVERY NSTEP_GP_TAC (98--115) THEN
   (* Rewrite nb back to 8*g+8 in the Q19 fact only (the hypothesis           *)
   (* 8*g+8 = nb is still needed by the tag and out-block closers), so that   *)
   (* the fold sees all 8 block indices in the 8*g+j form.                    *)
   RULE_ASSUM_TAC(fun th ->
     if (try lhs(concl th) = `read Q19 s115:int128` with Failure _ -> false)
     then REWRITE_RULE[SYM(ASSUME `8 * g + 8 = nb`)] th else th) THEN
-  FOLD_Q19_S114_G THEN
-  DISCARD_DEAD_REDUCE_SCRATCH THEN
-  MAP_EVERY NSTEP_GP (116--119) THEN
+  FOLD_Q19_S114_G_TAC THEN
+  DISCARD_DEAD_REDUCE_SCRATCH_TAC THEN
+  MAP_EVERY NSTEP_GP_TAC (116--119) THEN
   ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [
@@ -2095,7 +2097,7 @@ let AES_GCM_ENC_ALT_TAIL_REM8 = prove
    [
     FIRST_X_ASSUM(fun th ->
       if concl th = `8 * g + 8 = nb` then SUBST_ALL_TAC(SYM th) else failwith "") THEN
-    REWRITE_TAC[TAG_STORE_REV64] THEN AP_TERM_TAC THEN TAIL_Q19_FOLD_G;
+    REWRITE_TAC[TAG_STORE_REV64] THEN AP_TERM_TAC THEN TAIL_Q19_FOLD_G_TAC;
     ALL_TAC] THEN
   FIRST_X_ASSUM(fun th ->
     if concl th = `8 * g + 8 = nb` then SUBST_ALL_TAC(SYM th) else failwith "") THEN
@@ -2748,16 +2750,16 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
 (* out-forall j < 0 vacuous), so TAIL_REM composes with it via               *)
 (* ENSURES_SEQUENCE_TAC.                                                     *)
 (*                                                                           *)
-(* The drive is SETUP_GEN's up to the branch: NSTEP 1-7 (the b.le at step 7  *)
-(* not taken), 8-261, then NSTEP 262 (the b.ge at 0x44c), which              *)
+(* The drive is SETUP_GEN's up to the branch: NSTEP_TAC 1-7 (the b.le at     *)
+(* step 7 not taken), 8-261, then NSTEP_TAC 262 (the b.ge at 0x44c), which   *)
 (* WB_BRANCH_COND_TRUE resolves to pc+0xee0.  Closers: the keystreams via    *)
-(* KSCLOSE (CIPHER_RECONSTRUCT + the counter-lane reconstruction);           *)
-(* Q30 via the lane lemma SETUP_Q30_LANES_10 + CTR_BLOCK_RECONSTRUCT_REV32;  *)
-(* Q19 via NIST_GHASH_NIL; X4 via the word_ushr/MOD_LT bridge; X5 via        *)
+(* KSCLOSE_TAC (CIPHER_RECONSTRUCT + the counter-lane reconstruction); Q30   *)
+(* via the lane lemma SETUP_Q30_LANES_10 + CTR_BLOCK_RECONSTRUCT_REV32; Q19  *)
+(* via NIST_GHASH_NIL; X4 via the word_ushr/MOD_LT bridge; X5 via            *)
 (* WB_X5_GROUPS0.                                                            *)
 (* ========================================================================= *)
 
-(* KSCLOSE: the keystream closer.  The pre-rkn aese chain in register Qj,
+(* KSCLOSE_TAC: the keystream closer.  The pre-rkn aese chain in register Qj,
    XORed with rkn, is rev8 (cipher (ctr_block nonce (c+j)) rk).  A
    direct `REWRITE_TAC[ctr_block] THEN CONV_TAC WORD_BLAST` would have to
    bit-blast the 128-bit counter term, so the closer follows CIPHER_CLOSE's
@@ -2768,7 +2770,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
    CTR_BLOCK_RECONSTRUCT_REV8/32, then cancel the double reverse), refold
    both sides to aes_ctr_block, and discharge the counter-index equality
    K = c+j by ARITH. *)
-let KSCLOSE =
+let KSCLOSE_TAC =
   ASM_REWRITE_TAC[CIPHER_RECONSTRUCT; MAP;
                   WORD_REVERSEFIELDS_REVERSEFIELDS; CIPHER_KEYLIST] THEN
   REWRITE_TAC[CTR_LANE_LOW; CTR_NONCE_LANES] THEN
@@ -2782,7 +2784,7 @@ let KSCLOSE =
   TRY(REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN ARITH_TAC);;
 
 (* Shape-routed dispatcher for the SETUP0 (groups = 0) postcondition. *)
-let SETUP0_DISPATCH : tactic = fun (asl,w as gl) ->
+let SETUP0_DISPATCH_TAC : tactic = fun (asl,w as gl) ->
   if is_forall w then
     (* the input-forall (j<nb) and the vacuous out-forall (j<0) *)
     (REWRITE_TAC[ARITH_RULE `j < 8 * 0 <=> F`] THEN ASM_REWRITE_TAC[]) gl
@@ -2790,9 +2792,9 @@ let SETUP0_DISPATCH : tactic = fun (asl,w as gl) ->
     let l,r = dest_eq w in
     let rhd = try fst(dest_const(fst(strip_comb r))) with _ -> "?" in
     let lhd = try fst(dest_const(fst(strip_comb l))) with _ -> "?" in
-    if rhd = "nist_ghash" then SETUP0_Q19_CLOSE gl
-    else if lhd = "word_join" && rhd = "word_reversefields" then SETUP0_CTR_CLOSE gl
-    else if lhd = "word_xor" then KSCLOSE gl
+    if rhd = "nist_ghash" then SETUP0_Q19_CLOSE_TAC gl
+    else if lhd = "word_join" && rhd = "word_reversefields" then SETUP0_CTR_CLOSE_TAC gl
+    else if lhd = "word_xor" then KSCLOSE_TAC gl
     else if lhd = "word_add" && rhd = "word_add" then
       (* X4: word_add in_p (word_ushr (word (128*nb)) 3) = in_p + 16*nb *)
       (AP_TERM_TAC THEN REWRITE_TAC[word_ushr; VAL_WORD; DIMINDEX_64] THEN
@@ -2900,18 +2902,18 @@ let AES_GCM_ENC_ALT_SETUP0 = prove
   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_8; htable_mem_4]) THEN
   SUBGOAL_THEN `~(nb = 4)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `5 <= nb` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  MAP_EVERY NSTEP (1--5) THEN NSTEP 6 THEN NSTEP 7 THEN
+  MAP_EVERY NSTEP_TAC (1--5) THEN NSTEP_TAC 6 THEN NSTEP_TAC 7 THEN
   RULE_ASSUM_TAC(REWRITE_RULE[
     MATCH_MP DISPATCH4_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `~(nb = 4)`));
     MATCH_MP DISPATCH_SMALL_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `5 <= nb`));
     COND_CLAUSES]) THEN
-  MAP_EVERY NSTEP (8--36) THEN
-  MAP_EVERY NSTEP (37--(setup_tail_branch-1)) THEN NSTEP setup_tail_branch THEN
+  MAP_EVERY NSTEP_TAC (8--36) THEN
+  MAP_EVERY NSTEP_TAC (37--(setup_tail_branch-1)) THEN NSTEP_TAC setup_tail_branch THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_BRANCH_COND_TRUE
      (CONJ (ASSUME `1 <= nb`) (ASSUME `nb <= 8`)); COND_CLAUSES]) THEN
   ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
   ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[htable_mem_8; htable_mem_4] THEN REPEAT CONJ_TAC THEN SETUP0_DISPATCH);;
+  REWRITE_TAC[htable_mem_8; htable_mem_4] THEN REPEAT CONJ_TAC THEN SETUP0_DISPATCH_TAC);;
 
 (* ========================================================================= *)
 (* SETUP0_TAIL: the leg for nb in {5,6,7,8}, SETUP0 (pc+0x38 -> pc+0xee0)    *)
@@ -3060,7 +3062,7 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
 (* the `b.eq` tests of L256_enc_small for nb = 1, 2 and 3 (steps 27, 29 and  *)
 (* 31) are each taken for that nb and fall through for the larger ones.      *)
 (* ========================================================================= *)
-let FAST2_MID_D2 : tactic = fun (asl,w as gl) ->
+let FAST2_MID_D2_TAC : tactic = fun (asl,w as gl) ->
   if is_forall w then
     ((GEN_TAC THEN DISCH_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
       ASM_ARITH_TAC) ORELSE
@@ -3069,12 +3071,12 @@ let FAST2_MID_D2 : tactic = fun (asl,w as gl) ->
     let l,r = dest_eq w in
     let rhd = try fst(dest_const(fst(strip_comb r))) with _ -> "?" in
     let lhd = try fst(dest_const(fst(strip_comb l))) with _ -> "?" in
-    if lhd = "word_xor" then (FIRST_ASSUM ACCEPT_TAC ORELSE KSCLOSE) gl
+    if lhd = "word_xor" then (FIRST_ASSUM ACCEPT_TAC ORELSE KSCLOSE_TAC) gl
     else
       (FIRST_ASSUM ACCEPT_TAC ORELSE
        (ASM_REWRITE_TAC[ARITH_RULE `(128 * nb) DIV 8 = 16 * nb`] THEN
-        (if rhd = "nist_ghash" then SETUP0_Q19_CLOSE
-         else if rhd = "word_reversefields" then SETUP0_CTR_CLOSE
+        (if rhd = "nist_ghash" then SETUP0_Q19_CLOSE_TAC
+         else if rhd = "word_reversefields" then SETUP0_CTR_CLOSE_TAC
          else if rhd = "word_add" then
             (REWRITE_TAC[ARITH_RULE `128 * 0 = 0`; WORD_ADD_0] THEN REFL_TAC)
          (* Q12 index closer *)
@@ -3156,21 +3158,21 @@ let FAST_DISPATCH_TAC r =
   and facts = el (r - 1) [[2; 4]; [4; 1]; [2; 4; 1]; [2; 1; 3]] in
   EVERY(map (fun k -> fact(nbne k)) facts) THEN
   (if r = 4 then ALL_TAC else fact `1 <= nb` THEN fact `nb <= 3`) THEN
-  MAP_EVERY NSTEP (1--7) THEN
+  MAP_EVERY NSTEP_TAC (1--7) THEN
   (if r = 4 then taken DISPATCH4_TAKEN 4
    else rw [MATCH_MP DISPATCH4_NOT_TAKEN
               (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME(nbne 4)));
             MATCH_MP DISPATCH_SMALL_TAKEN
               (CONJ (ASSUME `1 <= nb`) (ASSUME `nb <= 3`))]) THEN
-  MAP_EVERY NSTEP (8--27) THEN
+  MAP_EVERY NSTEP_TAC (8--27) THEN
   test 1 DISPATCH1_TAKEN DISPATCH1_NOT_TAKEN THEN
   (if r = 1 then ALL_TAC else
-   MAP_EVERY NSTEP (28--29) THEN
+   MAP_EVERY NSTEP_TAC (28--29) THEN
    test 2 DISPATCH_TAKEN DISPATCH_NOT_TAKEN) THEN
   (if r <= 2 then ALL_TAC else
-   MAP_EVERY NSTEP (30--31) THEN
+   MAP_EVERY NSTEP_TAC (30--31) THEN
    test 3 DISPATCH3_TAKEN DISPATCH3_NOT_TAKEN) THEN
-  MAP_EVERY NSTEP ((2 * min r 3 + 26)--steps);;
+  MAP_EVERY NSTEP_TAC ((2 * min r 3 + 26)--steps);;
 
 (* prove_fast r reads tail_th: FASTr from FASTr_TAIL (tail_th), with the     *)
 (* first reads input blocks loaded in segment A; the mid-state is            *)
@@ -3204,10 +3206,10 @@ let prove_fast r reads tail_th =
                 (0--(reads-1))) THEN
       FAST_DISPATCH_TAC r THEN
       EVERY(map (fun i -> SUBGOAL_THEN (ks i) ASSUME_TAC THENL
-                  [KSCLOSE; ALL_TAC])
+                  [KSCLOSE_TAC; ALL_TAC])
                 (0--(r-1))) THEN
       ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN
-      REPEAT CONJ_TAC THEN FAST2_MID_D2;
+      REPEAT CONJ_TAC THEN FAST2_MID_D2_TAC;
       MP_TAC(ISPECL
        [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
         `htable_p:int64`; `word_add stackpointer (word 0x40):int64`;
@@ -3666,7 +3668,7 @@ let AES_GCM_ENC_ALT_FAST3_SAFE = prove_fast_safe 3;;
 let AES_GCM_ENC_ALT_FAST4_SAFE = prove_fast_safe 4;;
 
 (* --- Setup segment safety: SETUP0_SAFE (nb in {5,6,7,8}, pc+0x38 ->        *)
-(* pc+0xee0).  It follows AES_GCM_ENC_ALT_SETUP0's stepping (NSTEP +         *)
+(* pc+0xee0).  It follows AES_GCM_ENC_ALT_SETUP0's stepping (NSTEP_TAC +     *)
 (* DISPATCH4_NOT_TAKEN / DISPATCH_SMALL_NOT_TAKEN + WB_BRANCH_COND_TRUE) but *)
 (* closes with the safety property.  The event trace is the same for every   *)
 (* nb in {5,6,7,8}.                                                          *)
@@ -3736,22 +3738,22 @@ let AES_GCM_ENC_ALT_SETUP0_SAFE = prove
   ENSURES_INIT_TAC "s0" THEN
   SUBGOAL_THEN `~(nb = 4)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `5 <= nb` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  MAP_EVERY NSTEP (1--5) THEN NSTEP 6 THEN NSTEP 7 THEN
+  MAP_EVERY NSTEP_TAC (1--5) THEN NSTEP_TAC 6 THEN NSTEP_TAC 7 THEN
   RULE_ASSUM_TAC(REWRITE_RULE[
     MATCH_MP DISPATCH4_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `~(nb = 4)`));
     MATCH_MP DISPATCH_SMALL_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `5 <= nb`));
     COND_CLAUSES]) THEN
-  MAP_EVERY NSTEP (8--36) THEN
-  MAP_EVERY NSTEP (37--(setup_tail_branch-1)) THEN NSTEP setup_tail_branch THEN
+  MAP_EVERY NSTEP_TAC (8--36) THEN
+  MAP_EVERY NSTEP_TAC (37--(setup_tail_branch-1)) THEN NSTEP_TAC setup_tail_branch THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_BRANCH_COND_TRUE
      (CONJ (ASSUME `1 <= nb`) (ASSUME `nb <= 8`)); COND_CLAUSES]) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THEN TRY SETUP0_DISPATCH THEN
+  REPEAT CONJ_TAC THEN TRY SETUP0_DISPATCH_TAC THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 (* --- Tail-cascade leg safety: TAIL_REM1..8_SAFE (entry pc+0xee0, exit      *)
-(* pc+0x1154).  They follow AES_GCM_ENC_ALT_TAIL_REM<r>'s NSTEP_GP drive     *)
+(* pc+0x1154).  They follow AES_GCM_ENC_ALT_TAIL_REM<r>'s NSTEP_GP_TAC drive *)
 (* and TAIL_X5 branch resolution, but without the functional Q19-fold and    *)
 (* data closers (safety needs only PC, events and inbounds), and close with  *)
 (* the safety property.  Lean precondition: the key/htable/ivec/counter/     *)
@@ -3812,9 +3814,9 @@ let prove_tail_rem_safe r x5th steps =
     REPEAT META_EXISTS_TAC THEN
     REPEAT STRIP_TAC THEN
     ENSURES_INIT_TAC "s0" THEN
-    MAP_EVERY NSTEP_GP (1--9) THEN
+    MAP_EVERY NSTEP_GP_TAC (1--9) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[x5th]) THEN
-    MAP_EVERY NSTEP_GP (10--steps) THEN
+    MAP_EVERY NSTEP_GP_TAC (10--steps) THEN
     ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC);;
@@ -3876,9 +3878,9 @@ let AES_GCM_ENC_ALT_TAIL_REM8_SAFE = prove
   REPEAT META_EXISTS_TAC THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  MAP_EVERY NSTEP_GP (1--9) THEN
+  MAP_EVERY NSTEP_GP_TAC (1--9) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP TAIL_X5_128_G (ASSUME `8 * g + 8 = nb`)]) THEN
-  MAP_EVERY NSTEP_GP (10--119) THEN
+  MAP_EVERY NSTEP_GP_TAC (10--119) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
@@ -4066,7 +4068,7 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL_SAFE = prove
   ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s2" THENL [
     BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
     ALL_TAC ] THEN
-  (* ===== CLOSE ===== *)
+  (* ===== CLOSE_TAC ===== *)
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
   CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
@@ -4079,7 +4081,7 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL_SAFE = prove
 (* segment (the reduction of the last full 8-block group) for nb >= 9.  Lean *)
 (* spec (pointer registers only; content facts do not matter for safety).    *)
 (* The pointer registers are unchanged from entry to exit; straight-line     *)
-(* NSTEP_GP (1--prepretail_steps) drive.  f_events takes k (the access       *)
+(* NSTEP_GP_TAC (1--prepretail_steps) drive.  f_events takes k (the access   *)
 (* addresses depend on the group index).                                     *)
 let AES_GCM_ENC_ALT_PREPRETAIL_GEN_SAFE = prove
  (kterm `exists f_events.
@@ -4140,17 +4142,17 @@ let AES_GCM_ENC_ALT_PREPRETAIL_GEN_SAFE = prove
   REPEAT META_EXISTS_TAC THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  MAP_EVERY NSTEP_GP (1--prepretail_steps) THEN
+  MAP_EVERY NSTEP_GP_TAC (1--prepretail_steps) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC)
 ;;
 
 (* --- SETUP_G1_SAFE (pc+0x38 -> pc+0xa10, k = 0, nb 9..16): the setup for   *)
-(* the single-full-group case.  It follows SETUP_G1's NSTEP/LDP_SETUP_TAC    *)
-(* drive and the SETUP_BRANCH_COND_FALSE_GEN / _TRUE_2 guard rewrites; the   *)
-(* post is strengthened with the PREPRETAIL_GEN entry registers and closed   *)
-(* via SETUP_RECON_TAC_GEN.                                                  *)
+(* the single-full-group case.  It follows SETUP_G1's                        *)
+(* NSTEP_TAC/LDP_SETUP_TAC drive and the SETUP_BRANCH_COND_FALSE_GEN /       *)
+(* _TRUE_2 guard rewrites; the post is strengthened with the PREPRETAIL_GEN  *)
+(* entry registers and closed via SETUP_RECON_GEN_TAC.                       *)
 let AES_GCM_ENC_ALT_SETUP_G1_SAFE = prove
  (kterm `exists f_events.
    !e in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
@@ -4228,13 +4230,13 @@ let AES_GCM_ENC_ALT_SETUP_G1_SAFE = prove
     REWRITE_TAC[]; ALL_TAC] THEN
   SUBGOAL_THEN `~(nb = 4)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `5 <= nb` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  MAP_EVERY NSTEP (1--5) THEN NSTEP 6 THEN NSTEP 7 THEN
+  MAP_EVERY NSTEP_TAC (1--5) THEN NSTEP_TAC 6 THEN NSTEP_TAC 7 THEN
   RULE_ASSUM_TAC(REWRITE_RULE[
     MATCH_MP DISPATCH4_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `~(nb = 4)`));
     MATCH_MP DISPATCH_SMALL_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `5 <= nb`));
     COND_CLAUSES]) THEN
-  MAP_EVERY NSTEP (8--36) THEN
-  MAP_EVERY NSTEP (37--(setup_tail_branch-1)) THEN NSTEP setup_tail_branch THEN
+  MAP_EVERY NSTEP_TAC (8--36) THEN
+  MAP_EVERY NSTEP_TAC (37--(setup_tail_branch-1)) THEN NSTEP_TAC setup_tail_branch THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP SETUP_BRANCH_COND_FALSE_GEN
     (CONJ (ASSUME `8 * (k + 1) < nb`) (CONJ (ASSUME `nb <= 8 * (k + 2)`)
           (ASSUME `val (in_p:int64) + 128 * (k + 1) < 2 EXP 63`))); COND_CLAUSES]) THEN
@@ -4246,7 +4248,7 @@ let AES_GCM_ENC_ALT_SETUP_G1_SAFE = prove
     COND_CLAUSES]) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THEN TRY SETUP_RECON_TAC_GEN THEN
+  REPEAT CONJ_TAC THEN TRY SETUP_RECON_GEN_TAC THEN
   DISCHARGE_SAFETY_PROPERTY_TAC)
 ;;
 
@@ -4343,7 +4345,7 @@ let AES_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE = prove
   ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s2" THENL [
     BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
     ALL_TAC ] THEN
-  (* ===== CLOSE ===== *)
+  (* ===== CLOSE_TAC ===== *)
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
   CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
@@ -4451,7 +4453,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1_SAFE = prove
   ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s2" THENL [
     BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
     ALL_TAC ] THEN
-  (* ===== CLOSE ===== *)
+  (* ===== CLOSE_TAC ===== *)
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
   CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
@@ -4542,13 +4544,13 @@ let AES_GCM_ENC_ALT_SETUP_GEN_SAFE = prove
     REWRITE_TAC[]; ALL_TAC] THEN
   SUBGOAL_THEN `~(nb = 4)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `5 <= nb` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  MAP_EVERY NSTEP (1--5) THEN NSTEP 6 THEN NSTEP 7 THEN
+  MAP_EVERY NSTEP_TAC (1--5) THEN NSTEP_TAC 6 THEN NSTEP_TAC 7 THEN
   RULE_ASSUM_TAC(REWRITE_RULE[
     MATCH_MP DISPATCH4_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `~(nb = 4)`));
     MATCH_MP DISPATCH_SMALL_NOT_TAKEN (CONJ (ASSUME `128 * nb < 2 EXP 64`) (ASSUME `5 <= nb`));
     COND_CLAUSES]) THEN
-  MAP_EVERY NSTEP (8--36) THEN
-  MAP_EVERY NSTEP (37--(setup_tail_branch-1)) THEN NSTEP setup_tail_branch THEN
+  MAP_EVERY NSTEP_TAC (8--36) THEN
+  MAP_EVERY NSTEP_TAC (37--(setup_tail_branch-1)) THEN NSTEP_TAC setup_tail_branch THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP SETUP_BRANCH_COND_FALSE_GEN
     (CONJ (ASSUME `8 * (k + 1) < nb`) (CONJ (ASSUME `nb <= 8 * (k + 2)`)
           (ASSUME `val (in_p:int64) + 128 * (k + 1) < 2 EXP 63`))); COND_CLAUSES]) THEN
@@ -4560,19 +4562,19 @@ let AES_GCM_ENC_ALT_SETUP_GEN_SAFE = prove
     COND_CLAUSES]) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THEN TRY SETUP_RECON_TAC_GEN THEN
+  REPEAT CONJ_TAC THEN TRY SETUP_RECON_GEN_TAC THEN
   DISCHARGE_SAFETY_PROPERTY_TAC)
 ;;
 
 (* --- MAIN_LOOP_SAFE (pc+0x4c0 -> pc+0xa10, k iterations, nb >= 17): the    *)
 (* 8-block main loop.  Lean invariant (pointer registers only);              *)
 (* ENSURES_EVENTS_WHILE_UP2_TAC with pc2 = the exit (pc+0xa10).  The body is *)
-(* the functional NSTEP_G drive, with the incremented ldps at steps          *)
-(* 295/303/304 handled by LDP_STEP4_LEAN (LDP_STEP4_TAC without the          *)
+(* the functional NSTEP_G_TAC drive, with the incremented ldps at steps      *)
+(* 295/303/304 handled by LDP_STEP4_LEAN_TAC (LDP_STEP4_TAC without the      *)
 (* INBLOCKS_TAC re-derivation, which safety does not need) and the b.lt at   *)
 (* step 340; the back-edge PC is closed via BRIDGE_GE + IVAL_PTR_ADD (in_p   *)
 (* cancels, leaving i+1 < k), the events via ENUMERATEL_ADD1.                *)
-let LDP_STEP4_LEAN n =
+let LDP_STEP4_LEAN_TAC n =
   let sn = "s"^string_of_int n in
   ARM_VERBOSE_STEP_TAC AES_GCM_ENC_ALT_EXEC sn THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
@@ -4673,12 +4675,12 @@ let AES_GCM_ENC_ALT_MAIN_LOOP_SAFE = prove
   ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REWRITE_CONV[fst AES_GCM_ENC_ALT_EXEC]
     (kterm `LENGTH tmc`)]) THEN
-  MAP_EVERY NSTEP_G (1--(loop_ldp1-1)) THEN
-  LDP_STEP4_LEAN loop_ldp1 THEN
-  MAP_EVERY NSTEP_G ((loop_ldp1+1)--(loop_ldp2-1)) THEN
-  LDP_STEP4_LEAN loop_ldp2 THEN
-  LDP_STEP4_LEAN (loop_ldp2+1) THEN
-  MAP_EVERY NSTEP_G ((loop_ldp2+2)--loop_backedge) THEN
+  MAP_EVERY NSTEP_G_TAC (1--(loop_ldp1-1)) THEN
+  LDP_STEP4_LEAN_TAC loop_ldp1 THEN
+  MAP_EVERY NSTEP_G_TAC ((loop_ldp1+1)--(loop_ldp2-1)) THEN
+  LDP_STEP4_LEAN_TAC loop_ldp2 THEN
+  LDP_STEP4_LEAN_TAC (loop_ldp2+1) THEN
+  MAP_EVERY NSTEP_G_TAC ((loop_ldp2+2)--loop_backedge) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   (* PC branch: <b.lt cond> <=> i+1<k, via BRIDGE_GE + IVAL_PTR_ADD *)
   CONJ_TAC THENL

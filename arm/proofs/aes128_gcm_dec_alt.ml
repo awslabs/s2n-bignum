@@ -2726,8 +2726,8 @@ let WB_FUSED_1BLOCK = prove(fused1_goal,
      block at s87. *)
   MAP_EVERY (fun (a,b) -> let st = "s" ^ string_of_int b in
       ARM_STEPS_FOLD_KEEPGHALL_TAC AES128_GCM_DEC_ALT_EXEC (a--b) THEN
-      INLINE_SELFCONTAINED "Q17" st 40 THEN INLINE_SELFCONTAINED "Q18" st 40 THEN
-      INLINE_SELFCONTAINED "Q19" st 40 THEN DISCARD_OLDSTATE_TAC st)
+      INLINE_SELFCONTAINED_TAC "Q17" st 40 THEN INLINE_SELFCONTAINED_TAC "Q18" st 40 THEN
+      INLINE_SELFCONTAINED_TAC "Q19" st 40 THEN DISCARD_OLDSTATE_TAC st)
     [1,35; 36,78] THEN
   SUBGOAL_THEN
     `read Q19 (s78:armstate) =
@@ -2848,8 +2848,8 @@ let WB_FUSED_2BLOCK = prove(fused2_goal,
      the close proves both blocks at s123. *)
   MAP_EVERY (fun (a,b) -> let st = "s" ^ string_of_int b in
       ARM_STEPS_FOLD_KEEPGHALL_TAC AES128_GCM_DEC_ALT_EXEC (a--b) THEN
-      INLINE_SELFCONTAINED "Q17" st 40 THEN INLINE_SELFCONTAINED "Q18" st 40 THEN
-      INLINE_SELFCONTAINED "Q19" st 40 THEN DISCARD_OLDSTATE_TAC st)
+      INLINE_SELFCONTAINED_TAC "Q17" st 40 THEN INLINE_SELFCONTAINED_TAC "Q18" st 40 THEN
+      INLINE_SELFCONTAINED_TAC "Q19" st 40 THEN DISCARD_OLDSTATE_TAC st)
     [1,36; 37,71; 72,114] THEN
   SUBGOAL_THEN
     `read Q19 (s114:armstate) =
@@ -2984,8 +2984,8 @@ let WB_FUSED_3BLOCK = prove(fused3_goal,
      proves all three blocks at s157. *)
   MAP_EVERY (fun (a,b) -> let st = "s" ^ string_of_int b in
       ARM_STEPS_FOLD_KEEPGHALL_TAC AES128_GCM_DEC_ALT_EXEC (a--b) THEN
-      INLINE_SELFCONTAINED "Q17" st 40 THEN INLINE_SELFCONTAINED "Q18" st 40 THEN
-      INLINE_SELFCONTAINED "Q19" st 40 THEN DISCARD_OLDSTATE_TAC st)
+      INLINE_SELFCONTAINED_TAC "Q17" st 40 THEN INLINE_SELFCONTAINED_TAC "Q18" st 40 THEN
+      INLINE_SELFCONTAINED_TAC "Q19" st 40 THEN DISCARD_OLDSTATE_TAC st)
     [1,35; 36,70; 71,105; 106,148] THEN
   SUBGOAL_THEN
     `read Q19 (s148:armstate) =
@@ -3131,8 +3131,8 @@ let WB_FUSED_4BLOCK = prove(fused4_goal,
      proves all four blocks at s193. *)
   MAP_EVERY (fun (a,b) -> let st = "s" ^ string_of_int b in
       ARM_STEPS_FOLD_KEEPGHALL_TAC AES128_GCM_DEC_ALT_EXEC (a--b) THEN
-      INLINE_SELFCONTAINED "Q17" st 40 THEN INLINE_SELFCONTAINED "Q18" st 40 THEN
-      INLINE_SELFCONTAINED "Q19" st 40 THEN DISCARD_OLDSTATE_TAC st)
+      INLINE_SELFCONTAINED_TAC "Q17" st 40 THEN INLINE_SELFCONTAINED_TAC "Q18" st 40 THEN
+      INLINE_SELFCONTAINED_TAC "Q19" st 40 THEN DISCARD_OLDSTATE_TAC st)
     [37,71; 72,106; 107,141; 142,184] THEN
   SUBGOAL_THEN
     `read Q19 (s184:armstate) =
@@ -5645,9 +5645,9 @@ let WBN_FRONT_TO_END_916 = prove(wbn_front_to_end_916_goal,
     MATCH_MP_TAC WBN_FRONT_TO_PREP_EXT2_916 THEN ASM_REWRITE_TAC[];
     MATCH_MP_TAC WBN_PREP_TO_END_916 THEN ASM_REWRITE_TAC[]]);;
 
-(* RAWCT_LEMMA_AT sprev: add the WBN_RAWCT_READ !m lemma at state sprev to the
+(* RAWCT_LEMMA_AT_TAC sprev: add the WBN_RAWCT_READ !m lemma at state sprev to the
    assumptions; its premises come from the assumptions. *)
-let RAWCT_LEMMA_AT sprev : tactic =
+let RAWCT_LEMMA_AT_TAC sprev : tactic =
   SUBGOAL_THEN
     (subst[mk_var(sprev,`:armstate`),`s:armstate`]
       `!m. m < 8 ==> read (memory :> bytes128 (word_add in_p (word (16 * (8*(i+1)+m))))) s =
@@ -5670,8 +5670,8 @@ let RESOLVE_LDP_TAC (sn:string) : tactic =
       [] -> ALL_TAC (asl,w)
     | (_,sl)::_ ->
        let qs = map fst raws in
-       (RAWCT_LEMMA_AT sl THEN
-        EVERY (map (fun q -> RESOLVE_QREG_C q sn
+       (RAWCT_LEMMA_AT_TAC sl THEN
+        EVERY (map (fun q -> RESOLVE_QREG_C_TAC q sn
                  (int_of_string(String.sub q 1 (String.length q - 1)) - 8)) qs) THEN
         DISCARD_ASSUMPTIONS_TAC(fun th -> match concl th with
            Comb(Comb(Const("=",_),Comb(Comb(Const("read",_),Const(n,_)),_)),

@@ -1555,7 +1555,7 @@ let REDUCELAST = GEN_ALL(prove(reducelast_goal,
 (* ------------------------------------------------------------------------- *)
 (* WORD_SIMPLE_SUBWORD_CONV on every assumption except the quantified
    memory facts. *)
-let SUBWORD_NONFORALL =
+let SUBWORD_NONFORALL_TAC =
   RULE_ASSUM_TAC(fun th ->
     if is_forall (concl th) then th
     else CONV_RULE(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) th);;
@@ -1679,11 +1679,11 @@ let swps_tail_tac =
      [MAP_EVERY (fun t -> UNDISCH_TAC t)
         [`i < loop_remain`; `nblocks MOD 4 = loop_remain`; `nblocks DIV 4 = loop_count`] THEN
       ARITH_TAC; ALL_TAC] THEN
-    MAP_EVERY(fun n -> ARM_STEPS_TAC AES128_GCM_ENC_EXEC [n] THEN SUBWORD_NONFORALL) (1--5) THEN
+    MAP_EVERY(fun n -> ARM_STEPS_TAC AES128_GCM_ENC_EXEC [n] THEN SUBWORD_NONFORALL_TAC) (1--5) THEN
     MERGE_CTR128_TAC 160 "s5" THEN
-    MAP_EVERY(fun n -> ARM_STEPS_TAC AES128_GCM_ENC_EXEC [n] THEN SUBWORD_NONFORALL) (6--28) THEN
+    MAP_EVERY(fun n -> ARM_STEPS_TAC AES128_GCM_ENC_EXEC [n] THEN SUBWORD_NONFORALL_TAC) (6--28) THEN
     MERGE_CTR128_TAC 160 "s28" THEN
-    MAP_EVERY(fun n -> ARM_STEPS_TAC AES128_GCM_ENC_EXEC [n] THEN SUBWORD_NONFORALL) (29--51) THEN
+    MAP_EVERY(fun n -> ARM_STEPS_TAC AES128_GCM_ENC_EXEC [n] THEN SUBWORD_NONFORALL_TAC) (29--51) THEN
     ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[ARITH_RULE `j < a + i + 1 <=> j < a + i \/ j = a + i`] THEN
@@ -2747,17 +2747,17 @@ let AES128_GCM_ENC_SUBROUTINE_CORRECT = prove
 
 let EXEC = AES128_GCM_ENC_EXEC;;
 
-let SAFE_SIM = SAFE_SIM_TAC EXEC;;
+let SAFE_SIM_TAC = ARM_SAFE_SIM_TAC EXEC;;
 
 (* Closers specific to the pipelined loop. *)
 
 (* The steady-state loop runs loop_count - 1 times, so at the drain the      *)
 (* pointers are base + 64*(loop_count-1), while the split point after it has *)
-(* base + 64*loop_count.  DRAIN_ADDR writes loop_count as                    *)
+(* base + 64*loop_count.  DRAIN_ADDR_TAC writes loop_count as                *)
 (* (loop_count - 1) + 1 so that WORD_RULE sees only linear combinations.     *)
-let DRAIN_ADDR = DRAIN_ADDR_K `1`;;
+let DRAIN_ADDR_TAC = DRAIN_ADDR_K_TAC `1`;;
 
-let OPEN_ENC = OPEN_SWP_SAFE EXEC;;
+let OPEN_ENC_TAC = OPEN_SWP_SAFE_TAC EXEC;;
 
 (* The event scaffold: e2 = APPEND (tail events) (APPEND (main events)       *)
 (* (prologue events)).  The main region has four paths: loop_count = 0       *)
@@ -2834,7 +2834,7 @@ let AES128_GCM_ENC_SAFE = prove
                       memory :> bytes(ivec_p, 16);
                       memory :> bytes(word_add stackpointer (word 160), 64)])`,
   CONCRETIZE_F_EVENTS_TAC scaffold_enc THEN
-  OPEN_ENC THEN
+  OPEN_ENC_TAC THEN
 
   (*** Split at 0x61c, the main region and the tail region. ***)
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x61c`
@@ -2848,23 +2848,23 @@ let AES128_GCM_ENC_SAFE = prove
      `\s. read X0 s = in_p /\ read X2 s = out_p /\ read X3 s = tag_p /\
           read X4 s = ivec_p /\ read X6 s = htable_p /\ read SP s = stackpointer /\
           read X1 s = word loop_count /\ read X16 s = word loop_remain` THEN
-    CONJ_TAC THENL [SAFE_SIM (1--23) THEN CLOSE; ALL_TAC] THEN
+    CONJ_TAC THENL [SAFE_SIM_TAC (1--23) THEN CLOSE_TAC; ALL_TAC] THEN
 
     (*** loop_count = 0: the cbz at 0x88 is taken to 0x61c. ***)
     ASM_CASES_TAC `loop_count = 0` THENL
-     [REDUCE_IF0 `loop_count:num` THEN SAFE_SIM (1--1) THEN CLOSE; ALL_TAC] THEN
-    REDUCE_IFN0 `loop_count:num` THEN
+     [REDUCE_IF0_TAC `loop_count:num` THEN SAFE_SIM_TAC (1--1) THEN CLOSE_TAC; ALL_TAC] THEN
+    REDUCE_IFN0_TAC `loop_count:num` THEN
 
     (*** loop_count = 1: the fill (the cbz at 0x1e8 taken), reduce_last. ***)
     ASM_CASES_TAC `loop_count = 1` THENL
-     [REDUCE_IFEQ `loop_count:num` `1` THEN SAFE_SIM (1--179) THEN CLOSE; ALL_TAC] THEN
-    REDUCE_IFNE `loop_count:num` `1` THEN
+     [REDUCE_IFEQ_TAC `loop_count:num` `1` THEN SAFE_SIM_TAC (1--179) THEN CLOSE_TAC; ALL_TAC] THEN
+    REDUCE_IFNE_TAC `loop_count:num` `1` THEN
 
     (*** loop_count = 2: the fill, one iteration (the cbnz at 0x4b0 falls ***)
     (*** through) and reduce_last.                                         ***)
     ASM_CASES_TAC `loop_count = 2` THENL
-     [REDUCE_IFEQ `loop_count:num` `2` THEN SAFE_SIM (1--357) THEN CLOSE; ALL_TAC] THEN
-    REDUCE_IFNE `loop_count:num` `2` THEN
+     [REDUCE_IFEQ_TAC `loop_count:num` `2` THEN SAFE_SIM_TAC (1--357) THEN CLOSE_TAC; ALL_TAC] THEN
+    REDUCE_IFNE_TAC `loop_count:num` `2` THEN
 
     (*** loop_count >= 3: the fill, loop_count - 1 iterations and          ***)
     (*** reduce_last.  The fill does not load block 0, so at iteration i   ***)
@@ -2879,45 +2879,45 @@ let AES128_GCM_ENC_SAFE = prove
     ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
      [(*** ~(loop_count - 1 = 0) ***)
       ASM_ARITH_TAC;
-      (*** The fill: 0x88 -> 0x1ec, the invariant at 0.  BEQ_NZ `1`      ***)
-      (*** gives the condition of the cbz at 0x1e8; the conjuncts left    ***)
-      (*** are X0, X2, X1 and the events.                                ***)
-      BEQ_NZ `1` THEN SAFE_SIM (1--89) THEN
-      BEQ_NZ `2` THEN
+      (*** The fill: 0x88 -> 0x1ec, the invariant at 0.  BEQ_NZ_TAC   ***)
+      (*** `1` gives the condition of the cbz at 0x1e8; the conjuncts ***)
+      (*** left are X0, X2, X1 and the events.                        ***)
+      BEQ_NZ_TAC `1` THEN SAFE_SIM_TAC (1--89) THEN
+      BEQ_NZ_TAC `2` THEN
       REPEAT CONJ_TAC THENL
-       [ADDR_RECON;
-        ADDR_RECON;
+       [ADDR_RECON_TAC;
+        ADDR_RECON_TAC;
         (* X1 = word(loop_count - 1 - 0) *)
         REWRITE_TAC[SUB_0] THEN GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN
         ASM_SIMP_TAC[ARITH_RULE `3 <= loop_count ==> 1 <= loop_count`];
-        DEABBR THEN DISCHARGE_SAFETY_PROPERTY_TAC];
+        DEABBR_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC];
       (*** The body: one iteration, from 0x1ec back to 0x1ec, or to 0x4b4 ***)
       (*** after the last one.                                             ***)
       REWRITE_TAC[] THEN X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
       SUBGOAL_THEN `loop_count - 1 < 2 EXP 64` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-      SAFE_SIM (1--178) THEN CLOSE_R2;
+      SAFE_SIM_TAC (1--178) THEN CLOSE_R2_TAC;
       (*** The exit: reduce_last, 0x4b4 -> 0x61c. ***)
-      SAFE_SIM (1--90) THEN REPEAT CONJ_TAC THENL
-       [DRAIN_ADDR; DRAIN_ADDR; DEABBR THEN DISCHARGE_SAFE_ROBUST]];
+      SAFE_SIM_TAC (1--90) THEN REPEAT CONJ_TAC THENL
+       [DRAIN_ADDR_TAC; DRAIN_ADDR_TAC; DEABBR_TAC THEN DISCHARGE_SAFE_ROBUST_TAC]];
 
     ALL_TAC] THEN
 
   (*** The tail region pc+0x61c -> pc+0x710: a loop over loop_remain     ***)
   (*** blocks, head 0x62c and exit 0x6fc, then the tag and counter stores. ***)
   ASM_CASES_TAC `loop_remain = 0` THENL
-   [REDUCE_IF0 `loop_remain:num` THEN SAFE_SIM (1--9) THEN CLOSE_R2; ALL_TAC] THEN
-  REDUCE_IFN0 `loop_remain:num` THEN
+   [REDUCE_IF0_TAC `loop_remain:num` THEN SAFE_SIM_TAC (1--9) THEN CLOSE_R2_TAC; ALL_TAC] THEN
+  REDUCE_IFN0_TAC `loop_remain:num` THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `loop_remain:num` `pc + 0x62c` `pc + 0x6fc`
    `\i s. read X0 s = word_add in_p (word (64 * loop_count + 16 * i)) /\
           read X2 s = word_add out_p (word (64 * loop_count + 16 * i)) /\
           read X3 s = tag_p /\ read X4 s = ivec_p /\ read X6 s = htable_p /\
           read SP s = stackpointer /\ read X16 s = word (loop_remain - i)` THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [SAFE_SIM (1--4) THEN CLOSE_R2;
+   [SAFE_SIM_TAC (1--4) THEN CLOSE_R2_TAC;
     ALL_TAC;
-    REWRITE_TAC[] THEN SAFE_SIM (1--5) THEN CLOSE_R2] THEN
+    REWRITE_TAC[] THEN SAFE_SIM_TAC (1--5) THEN CLOSE_R2_TAC] THEN
   REWRITE_TAC[] THEN X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-  SAFE_SIM (1--52) THEN CLOSE_R2);;
+  SAFE_SIM_TAC (1--52) THEN CLOSE_R2_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* The whole-function version, obtained from the core theorem exactly as the *)

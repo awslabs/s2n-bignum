@@ -210,8 +210,8 @@ let GHASH_REDUCE_RAW_KARATSUBA_IS_DOT = prove
 (* (NORMOFF_RULE), resolves the now-matching memory reads and then discards  *)
 (* the old state.  NORMOFF_RULE reduces `word (a + c1 + c2 + ...)` offsets;  *)
 (* is_inp_memfact selects the memory equations used to substitute the loads. *)
-(* NSTEP_G is the ordinary per-step chain (flatten + NORMOFF + subword) for  *)
-(* all other instructions.                                                   *)
+(* NSTEP_G_TAC is the ordinary per-step chain (flatten + NORMOFF + subword)  *)
+(* for all other instructions.                                               *)
 (* ------------------------------------------------------------------------- *)
 
 let NORMOFF_RULE =
@@ -249,7 +249,7 @@ let is_inp_memfact th =
 (* a short-circuiting find_term for exactly that shape: for every theorem th *)
 (* it returns what `CONV_RULE(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) th`   *)
 (* returns, without re-traversing the stable carried facts at every step.    *)
-(* Used by NSTEP, NSTEP_G and NSTEP_GP below.                                *)
+(* Used by NSTEP_TAC, NSTEP_G_TAC and NSTEP_GP_TAC below.                    *)
 (* ------------------------------------------------------------------------- *)
 let has_word_subword_numpair =
   can (find_term (fun t -> match t with
@@ -264,7 +264,7 @@ let SUBWORD_NORM_RULE th =
   else th;;
 
 (* has_wadd_nest: the same kind of guard for the word_add-nest flatten in    *)
-(* NSTEP_GP (NSTEP_GP_WADD_RULE).  That REWRITE_RULE rewrites `word_add      *)
+(* NSTEP_GP_TAC (NSTEP_GP_WADD_RULE).  That REWRITE_RULE rewrites `word_add  *)
 (* (word_add b (word m)) (word nn) -> word_add b (word(m+nn))`, which only   *)
 (* fires on a register-pointer fact with the doubly nested word_add shape    *)
 (* left by a post-increment ldr/str advancing X0/X2; on every other fact it  *)
@@ -277,19 +277,19 @@ let has_wadd_nest =
            Comb(Const("word",_),_)) -> true
     | _ -> false));;
 
-(* has_word_of_sum: the corresponding guard for NORMOFF_RULE in NSTEP_GP.    *)
-(* NORMOFF_RULE only rewrites a `word (t)` subterm whose argument t is a sum *)
-(* (`_ + _`), i.e. an offset not yet collapsed to a literal such as `word    *)
-(* (128 * (k+1) + 16 + 32)`; facts without such a subterm are                *)
-(* returned unchanged.                                                       *)
+(* has_word_of_sum: the corresponding guard for NORMOFF_RULE in              *)
+(* NSTEP_GP_TAC.  NORMOFF_RULE only rewrites a `word (t)` subterm whose      *)
+(* argument t is a sum (`_ + _`), i.e. an offset not yet collapsed to a      *)
+(* literal such as `word (128 * (k+1) + 16 + 32)`; facts without such a      *)
+(* subterm are returned unchanged.                                           *)
 let has_word_of_sum =
   can (find_term (fun t -> match t with
       Comb(Const("word",_), Comb(Comb(Const("+",_),_),_)) -> true
     | _ -> false));;
 
-(* WB_WADD_RULE: the word_add-nest flatten applied after each step by NSTEP  *)
-(* and NSTEP_G (NSTEP_GP applies the same rewrite as NSTEP_GP_WADD_RULE,     *)
-(* guarded by has_wadd_nest).                                                *)
+(* WB_WADD_RULE: the word_add-nest flatten applied after each step by        *)
+(* NSTEP_TAC and NSTEP_G_TAC (NSTEP_GP_TAC applies the same rewrite as       *)
+(* NSTEP_GP_WADD_RULE, guarded by has_wadd_nest).                            *)
 let WB_WADD_RULE = REWRITE_RULE[WORD_RULE
   `word_add (word_add b (word m)) (word nn):int64 = word_add b (word(m+nn))`];;
 
@@ -303,12 +303,13 @@ let WB_WADD_RULE = REWRITE_RULE[WORD_RULE
 (* definition, and the body-end Q19 residual could then not be folded back   *)
 (* to ghash_reduce_raw.                                                      *)
 (*                                                                           *)
-(* NSTEP_G is NSTEP with all three per-step normalisations skipped on any    *)
-(* assumption that mentions read Q17, Q18 or Q19 (is_ghash_acc).  The        *)
+(* NSTEP_G_TAC is NSTEP_TAC with all three per-step normalisations skipped   *)
+(* on any assumption that mentions read Q17, Q18 or Q19 (is_ghash_acc).  The *)
 (* word_add flatten and NORMOFF are the identity on those word_join /        *)
 (* word_subword terms anyway, and skipping the subword pass keeps their      *)
 (* ext/LO structure, so the final Q19 stays foldable.  The v0..v15 counter   *)
-(* and ciphertext facts (all other registers) are normalised as by NSTEP.    *)
+(* and ciphertext facts (all other registers) are normalised as by           *)
+(* NSTEP_TAC.                                                                *)
 (* ------------------------------------------------------------------------- *)
 let is_ghash_acc th =
   let c = concl th in
@@ -947,8 +948,8 @@ let GHASH_REDUCE_RAW_DIST8_PLAIN = prove
 (*       nist_ghash H tag0 (list_of_seq nist_cipher_block (8i+8))`           *)
 (* after splitting it off the raw post-FINAL_STATE conjunction but before    *)
 (* the cheap close, whose WORD_SIMPLE_SUBWORD_CONV would destroy the         *)
-(* foldable ext/LO structure.  The guarded stepper NSTEP_G is what keeps the *)
-(* accumulator foldable through the 339 body steps.                          *)
+(* foldable ext/LO structure.  The guarded stepper NSTEP_G_TAC is what keeps *)
+(* the accumulator foldable through the 339 body steps.                      *)
 (*                                                                           *)
 (* Chain:                                                                    *)
 (*   1. AC-swap the eor3 top XOR into ghash_reduce_raw's grouping;           *)
@@ -1011,11 +1012,11 @@ let SETUP_Q30_LANES = prove
 (*                                                                           *)
 (* After the SETUP drive reaches its exit, ENSURES_FINAL_STATE_TAC +         *)
 (* ASM_REWRITE + REWRITE_TAC[htable_mem_8; htable_mem_4] + REPEAT CONJ_TAC   *)
-(* split the postcondition, and SETUP_RECON_TAC_GEN (below) dispatches the   *)
+(* split the postcondition, and SETUP_RECON_GEN_TAC (below) dispatches the   *)
 (* residual goals by conclusion shape to the closers defined here.           *)
 (* ------------------------------------------------------------------------- *)
 
-(* Counter-lane reduction lemmas, shared by CIPHER_CLOSE and CTR_CLOSE.  The
+(* Counter-lane reduction lemmas, shared by CIPHER_CLOSE_TAC and CTR_CLOSE_TAC.  The
    counter field of the byte-reversed ctr_block double-reverses to the raw
    counter; the nonce lanes byte-reverse to the nonce sub-lanes.  Proved by
    abstracting `word c` to a fresh word (WORD_BLAST cannot blast `word c`
@@ -1050,14 +1051,14 @@ let CIPHER_ID_TAC =
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
   REWRITE_TAC[ctr_block] THEN CONV_TAC WORD_BLAST;;
 
-(* CTR_CLOSE: Q0..Q4 (rev8) + Q30 (rev32) fresh-counter reconstruction.
+(* CTR_CLOSE_TAC: Q0..Q4 (rev8) + Q30 (rev32) fresh-counter reconstruction.
    Reduce each lane to the CTR_BLOCK_RECONSTRUCT_REV8/REV32 pattern
    (SETUP_Q30_LANES for Q30; CTR_LANE_LOW + double-RF8 cancel +
    CTR_NONCE_LANES for Q0..Q4), combine the counter add (GSYM WORD_ADD),
    fold to ctr_block, then peel and close the counter-index equality by
    ARITH.  No whole-term WORD_BLAST: it would have to bit-blast the 128-bit
    counter term. *)
-let CTR_CLOSE =
+let CTR_CLOSE_TAC =
   CONV_TAC NUM_REDUCE_CONV THEN
   REWRITE_TAC[SETUP_Q30_LANES; CTR_LANE_LOW] THEN
   REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
@@ -1066,11 +1067,11 @@ let CTR_CLOSE =
   REWRITE_TAC[CTR_BLOCK_RECONSTRUCT_REV8; CTR_BLOCK_RECONSTRUCT_REV32] THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;;
 
-(* FLAG_CLOSE_GEN: the prepretail-check flag conjunct ((NF<=>VF)<=>(0=k)) at *)
-(* i = 0.  BRIDGE_GE turns it into a signed compare, SETUP_X5_END_GEN        *)
-(* rewrites the raw round-down X5 pointer to end_p, and SETUP_GE_FALSE_2     *)
-(* (k >= 1) discharges the compare.                                          *)
-let FLAG_CLOSE_GEN =
+(* FLAG_CLOSE_GEN_TAC: the prepretail-check flag conjunct                    *)
+(* ((NF<=>VF)<=>(0=k)) at i = 0.  BRIDGE_GE turns it into a signed compare,  *)
+(* SETUP_X5_END_GEN rewrites the raw round-down X5 pointer to end_p, and     *)
+(* SETUP_GE_FALSE_2 (k >= 1) discharges the compare.                         *)
+let FLAG_CLOSE_GEN_TAC =
   REWRITE_TAC[BRIDGE_GE] THEN
   SUBGOAL_THEN
     `word_add (word_and (word_sub (word ((128 * nb) DIV 8):int64) (word 1))
@@ -1083,8 +1084,8 @@ let FLAG_CLOSE_GEN =
       (CONJ (ASSUME `~(k = 0)`)
             (ASSUME `val(in_p:int64) + 128 * (k + 1) < 2 EXP 63`))]];;
 
-(* Extended-guard stepper for the drain.  NSTEP_G protects Q17/Q18/Q19 from  *)
-(* the per-step WORD_SIMPLE_SUBWORD_CONV; the drain also needs Q20/Q21       *)
+(* Extended-guard stepper for the drain.  NSTEP_G_TAC protects Q17/Q18/Q19   *)
+(* from the per-step WORD_SIMPLE_SUBWORD_CONV; the drain also needs Q20/Q21  *)
 (* protected, because its reduce takes ext(v18) -> Q21 and pmull(v18) -> Q17 *)
 (* at different steps (0xe9c and 0xe64): if Q21's subwords were collapsed,   *)
 (* the two copies of the mid-accumulator v18 would differ and RECON_GRR      *)
@@ -1099,13 +1100,14 @@ let is_ghash_acc_pp th =
          | _ -> false)
     | _ -> false)) c;;
 
-(* The word_add-nest flatten of NSTEP_GP (the same rewrite as WB_WADD_RULE). *)
+(* The word_add-nest flatten of NSTEP_GP_TAC (the same rewrite as            *)
+(* WB_WADD_RULE).                                                            *)
 let NSTEP_GP_WADD_RULE = REWRITE_RULE[WORD_RULE
   `word_add (word_add b (word m)) (word nn):int64 = word_add b (word(m+nn))`];;
 
 (* Q30 counter closer (the drain does three `add v30`, so the exit counter   *)
 (* is 8*k+c+16).                                                             *)
-let PP_CTR_CLOSE =
+let PP_CTR_CLOSE_TAC =
   REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
   REWRITE_TAC[GSYM WORD_ADD; WORD_ADD_0] THEN CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
   REWRITE_TAC[CTR_BLOCK_RECONSTRUCT_REV32] THEN
@@ -1163,7 +1165,7 @@ let KS_SOLVE = prove
   REPEAT STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
   CONV_TAC WORD_BITWISE_RULE);;
 
-let DISCARD_REGS deadl : tactic =
+let DISCARD_REGS_TAC deadl : tactic =
   let reg_of th =
     try let c = concl th in
         if not(is_eq c) then "" else
@@ -1175,31 +1177,31 @@ let DISCARD_REGS deadl : tactic =
   REPEAT(FIRST_X_ASSUM(fun th ->
     if List.mem (reg_of th) deadl then K ALL_TAC th else fail()));;
 
-(* DISCARD_DEAD_REDUCE_SCRATCH, used in each tail arm right after the Q19    *)
-(* fold, drops the Q-registers that are dead from there on: every register   *)
-(* except Q0..Q7 (the keystreams), Q19 (the folded tag) and Q30 (the ivec    *)
-(* counter) is neither read by the remaining ext/rev64/st1 steps nor         *)
-(* mentioned by the postcondition or the frame, so ARM_STEPS_TAC need not    *)
-(* re-stamp their large terms.  The list has 19 registers (Q8..Q18,          *)
+(* DISCARD_DEAD_REDUCE_SCRATCH_TAC, used in each tail arm right after the    *)
+(* Q19 fold, drops the Q-registers that are dead from there on: every        *)
+(* register except Q0..Q7 (the keystreams), Q19 (the folded tag) and Q30     *)
+(* (the ivec counter) is neither read by the remaining ext/rev64/st1 steps   *)
+(* nor mentioned by the postcondition or the frame, so ARM_STEPS_TAC need    *)
+(* not re-stamp their large terms.  The list has 19 registers (Q8..Q18,      *)
 (* Q20..Q26, Q29); Q27, Q28 and Q31 are not in it (TAIL_REM8 drops them      *)
 (* separately where they die).                                               *)
-let DISCARD_DEAD_REDUCE_SCRATCH : tactic =
-  DISCARD_REGS
+let DISCARD_DEAD_REDUCE_SCRATCH_TAC : tactic =
+  DISCARD_REGS_TAC
     ["Q17"; "Q18"; "Q20"; "Q21"; "Q22"; "Q23"; "Q24"; "Q25"; "Q26";
      "Q29"; "Q16"; "Q8"; "Q9"; "Q10"; "Q11"; "Q12";
      "Q13"; "Q14"; "Q15"];;
 
-(* DISCARD_DEAD_KEYMEM drops the round-key memory facts `read (memory :>     *)
+(* DISCARD_DEAD_KEYMEM_TAC drops the round-key memory facts `read (memory :> *)
 (* bytes128 (word_add key_p (word (16*i)))) s = word_reversefields 8 (EL i   *)
-(* rk)`, i = 0..nr, which DISCARD_REGS does not touch (its reg_of returns "" *)
-(* for a `memory :> ..` component).  The tail runs no AES rounds: the        *)
-(* keystreams Q0..Q7 are already computed at entry (the precondition's       *)
+(* rk)`, i = 0..nr, which DISCARD_REGS_TAC does not touch (its reg_of        *)
+(* returns "" for a `memory :> ..` component).  The tail runs no AES rounds: *)
+(* the keystreams Q0..Q7 are already computed at entry (the precondition's   *)
 (* `word_xor (read Qj) rkn = word_reversefields 8 (cipher ..)`), no          *)
 (* instruction in 0xee0..0x14e0 uses x11, and neither the postcondition nor  *)
 (* the frame mentions key_p memory.  TAIL_REM8 drops these facts right after *)
-(* the 9-step prefix, so that they are not carried through the rest of       *)
-(* the drive.                                                                *)
-let DISCARD_DEAD_KEYMEM : tactic =
+(* the 9-step prefix, so that they are not carried through the rest of the   *)
+(* drive.                                                                    *)
+let DISCARD_DEAD_KEYMEM_TAC : tactic =
   REPEAT(FIRST_X_ASSUM(fun th ->
     let c = concl th in
     if is_eq c &&
@@ -1208,17 +1210,17 @@ let DISCARD_DEAD_KEYMEM : tactic =
            (lhs c)
     then K ALL_TAC th else fail()));;
 
-(* DISCARD_DEAD_HTABLE drops the six htable facts at offsets 96..176         *)
+(* DISCARD_DEAD_HTABLE_TAC drops the six htable facts at offsets 96..176     *)
 (* (byteswap128 (h_power h 4..7) and the karatsuba_mid pairs for h_power     *)
 (* 4..7) of the 12 that htable_mem_8 contributes (offsets 0, 16, .., 176).   *)
 (* The 9-step tail prefix loads those offsets into q20..q25 (the ldps at     *)
 (* 0xee0/0xeec/0xef4); after it no instruction reads them (the drains reload *)
 (* only offsets 0..80) and the postcondition mentions no htable memory, so   *)
-(* TAIL_REM8 drops them right after the prefix.  DISCARD_DEAD_KEYMEM and     *)
-(* DISCARD_REGS miss them (one keys on key_p, the other on                   *)
+(* TAIL_REM8 drops them right after the prefix.  DISCARD_DEAD_KEYMEM_TAC and *)
+(* DISCARD_REGS_TAC miss them (one keys on key_p, the other on               *)
 (* register components).                                                     *)
 let dead_htable_offs = [96; 112; 128; 144; 160; 176];;
-let DISCARD_DEAD_HTABLE : tactic =
+let DISCARD_DEAD_HTABLE_TAC : tactic =
   REPEAT(FIRST_X_ASSUM(fun th ->
     let c = concl th in
     if is_eq c &&
@@ -1238,15 +1240,15 @@ let TAIL_X5_REM1 = prove
               (word_add in_p (word (128 * g))) = word 16:int64`,
   REPEAT STRIP_TAC THEN CONV_TAC WORD_RULE);;
 
-(* Single-block Q19 fold (the front end is shared with TAIL_Q19_FOLD_G, with *)
-(* a single-block APPEND instead of GHASH_POLYVAL_ACC_BATCHED).  Proves that *)
-(* the raw single-block ghash_reduce at s82 equals the compact               *)
+(* Single-block Q19 fold (the front end is shared with TAIL_Q19_FOLD_G_TAC,  *)
+(* with a single-block APPEND instead of GHASH_POLYVAL_ACC_BATCHED).  Proves *)
+(* that the raw single-block ghash_reduce at s82 equals the compact          *)
 (* nist_ghash..(8*g+1): RECON_GRR exposes ghash_reduce_raw, the block        *)
 (* normalises to nist_cipher_block(8*g), KARATSUBA_IS_DOT_HW collapses the   *)
 (* three Karatsuba pmulls to a single polyval_dot, and the one-element       *)
 (* list_of_seq(SUC)/NIST_GHASH_APPEND/CONS + NIST_DOT_IS_POLYVAL_DOT +       *)
 (* h_power 0 closes it.                                                      *)
-let TAIL_Q19_FOLD_REM1 =
+let TAIL_Q19_FOLD_REM1_TAC =
   GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)
     [WORD_BITWISE_RULE
       `word_xor (word_xor (i:int128) (word_xor a r)) r = word_xor i a`] THEN
@@ -1442,12 +1444,12 @@ let SETUP_Q30_LANES_10 = prove
     REWRITE_TAC[ctr_block] THEN
     SPEC_TAC(`word c:int32`,`wc:int32`) THEN GEN_TAC THEN CONV_TAC WORD_BLAST]);;
 
-(* Q30 counter closer (the next counter, index c+8): CTR_CLOSE with the lane
+(* Q30 counter closer (the next counter, index c+8): CTR_CLOSE_TAC with the lane
    lemma SETUP_Q30_LANES_10 in place of SETUP_Q30_LANES.  Reconstruct the
    counter lanes structurally, then peel and close the counter-index
    equality by ARITH; a whole-term WORD_BLAST would bit-blast the 128-bit
    counter term. *)
-let SETUP0_CTR_CLOSE =
+let SETUP0_CTR_CLOSE_TAC =
   CONV_TAC NUM_REDUCE_CONV THEN
   REWRITE_TAC[SETUP_Q30_LANES_10; CTR_LANE_LOW] THEN
   REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
@@ -1457,7 +1459,7 @@ let SETUP0_CTR_CLOSE =
   AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;;
 
 (* Q19 init closer: nist_ghash over the empty list = tag0.                   *)
-let SETUP0_Q19_CLOSE =
+let SETUP0_Q19_CLOSE_TAC =
   CONV_TAC NUM_REDUCE_CONV THEN
   REWRITE_TAC[list_of_seq; NIST_GHASH_NIL] THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC WORD_BLAST;;

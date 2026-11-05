@@ -60,7 +60,7 @@ let shl_zx_64_to_poly = prove(
     MATCH_MP_TAC(INST_TYPE [`:128`,`:N`] POLY_VAR_POW_OF_WORD) THEN
     REWRITE_TAC[DIMINDEX_128] THEN ARITH_TAC))] THEN
   MATCH_MP_TAC POLY_OF_WORD_PMUL_GEN THEN
-  PMUL_DEG_TAC_GEN DIMINDEX_128 DIMINDEX_64);;
+  PMUL_DEG_GEN_TAC DIMINDEX_128 DIMINDEX_64);;
 
 (* ------------------------------------------------------------------------- *)
 (* Schoolbook ring identity: (a+bx)(c+dx) = ac + (ad+bc)x + bdx^2.           *)

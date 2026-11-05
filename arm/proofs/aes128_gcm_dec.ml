@@ -995,8 +995,8 @@ let swp_inv : term =
 
 (* ------------------------------------------------------------------------- *)
 (* Closers for the body leg SWP_DEC_BODYLEG, dispatched per conjunct by      *)
-(* CLOSE_V8 below; the closers of the other legs reuse many of them.  First  *)
-(* some helper lemmas and the GHASH closers.                                 *)
+(* CLOSE_V8_TAC below; the closers of the other legs reuse many of them.     *)
+(* First some helper lemmas and the GHASH closers.                           *)
 (* ------------------------------------------------------------------------- *)
 
 let SWP_JOIN_IS_BSW = prove
@@ -1135,7 +1135,7 @@ let SP160_TAC : tactic =
   REWRITE_TAC[CTR_BLOCK_BUILD_INSERT] THEN
   REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
   TRY REFL_TAC THEN TRY(AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
-let SP_SLOT_TAC3 : tactic =
+let SP_SLOT3_TAC : tactic =
   REWRITE_TAC RHS_IDX_NORMS THEN REWRITE_TAC SLOT_LANE_FOLDS THEN
   REWRITE_TAC[CTR_BLOCK_BUILD_INSERT] THEN
   REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN TRY REFL_TAC;;
@@ -1185,12 +1185,12 @@ let OUT_ORTH_TAC : tactic =
        [REWRITE_TAC[ARITH_RULE `2 EXP 64 = 18446744073709551616`] THEN ASM_ARITH_TAC; ALL_TAC]) THEN
     REWRITE_TAC[VAL_WORD_SUB_CASES; VAL_WORD; DIMINDEX_64] THEN
     ASM_SIMP_TAC[MOD_LT] THEN ASM_ARITH_TAC];;
-let ORTH_STEP : tactic =
+let ORTH_STEP_TAC : tactic =
   FIRST [ OUT_ORTH_TAC; ORTHOGONAL_COMPONENTS_TAC;
           (MATCH_MP_TAC ORTHOGONAL_COMPONENTS_COMPOSE_RIGHT THEN CONJ_TAC THENL
             [CONV_TAC VALID_COMPONENT_CONV; ORTHOGONAL_COMPONENTS_TAC]) ];;
 let rec OUT_ROW_TAC g =
-  (REFL_TAC ORELSE (MATCH_MP_TAC orth_lemma THEN CONJ_TAC THENL [ORTH_STEP; OUT_ROW_TAC])) g;;
+  (REFL_TAC ORELSE (MATCH_MP_TAC orth_lemma THEN CONJ_TAC THENL [ORTH_STEP_TAC; OUT_ROW_TAC])) g;;
 (* OUT0_TAC: the conjunct !j. j < 4 * i ==> read (out_p + 16 * j) =
    word_xor (aes_ctr_block .. j) (inblock j), from the same fact about s0 and
    the orthogonality of the leg's stores (through its MAYCHANGE fact). *)
@@ -1236,18 +1236,18 @@ let REDSETX_DEC = ["Q0";"Q1";"Q2";"Q3";"Q4";"Q5";"Q6";"Q8";"Q9";"Q10";"Q11";"Q29
 let steady_merges = [(17,208);(46,176);(52,192);(112,160)];;
 let body_step_tac = SWP_STEPS_TAC dec_anchors ctr_slots REDSETX_DEC EXEC (K ALL_TAC) steady_merges (1--159);;
 
-(* More closers: the input reads (INFOLD3, IN_READ_CLOSE), the GHASH partial
+(* More closers: the input reads (INFOLD3_TAC, IN_READ_CLOSE_TAC), the GHASH partial
    products, the byteswap reassembly, the output stores (AES2C_OUT_TAC,
    OUTBLK_TAC) and the frame (close_goal10). *)
 let inp_addr_norms = List.map (fun (kk,m) ->
     WORD_RULE (subst [mk_small_numeral kk, `K:num`; mk_small_numeral m, `M:num`]
                  `word_add (in_p:int64) (word (64*i+K)):int64 = word_add in_p (word (16*(4*i+M)))`))
   [(0,0);(16,1);(32,2);(48,3);(64,4);(80,5);(96,6);(112,7)];;
-(* INFOLD3: fold the wrapped address offsets (dewrap80/96/112), normalize the
+(* INFOLD3_TAC: fold the wrapped address offsets (dewrap80/96/112), normalize the
    input addresses to in_p + word (16 * (4 * i + m)), then rewrite each input
    read with the input forall, which FIRST_ASSUM keeps so that several reads
    can use it. *)
-let INFOLD3 : tactic =
+let INFOLD3_TAC : tactic =
   REWRITE_TAC[dewrap80;dewrap96;dewrap112] THEN REWRITE_TAC inp_addr_norms THEN
   (fun (asl,w) ->
     let inreads = setify(find_terms (fun t -> match t with
@@ -1264,20 +1264,20 @@ let INFOLD3 : tactic =
         [FIRST_ASSUM(fun fa -> if (try is_forall(concl fa) && free_in `in_p:int64`(concl fa) && free_in st (concl fa) with _->false)
                                  then MATCH_MP_TAC fa THEN ARITH_HYPS_TAC else NO_TAC); ALL_TAC]))
       inreads)) (asl,w));;
-let GHASH_PARTIAL_CLOSE : tactic =
-  INFOLD3 THEN ASM_REWRITE_TAC[] THEN
+let GHASH_PARTIAL_CLOSE_TAC : tactic =
+  INFOLD3_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[INBLOCK_REASSEMBLE; GSYM nist_input_block] THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[nist_input_block] THEN ASM_REWRITE_TAC[] THEN TRY REFL_TAC;;
 (* A goal read (in_p + ADDR) sK = inblock m: the same address
    normalization, then the input forall. *)
-let IN_READ_CLOSE : tactic =
+let IN_READ_CLOSE_TAC : tactic =
   REWRITE_TAC[dewrap80;dewrap96;dewrap112] THEN REWRITE_TAC inp_addr_norms THEN
   (fun (asl,w) ->
      FIRST_ASSUM(fun fa -> if (try is_forall(concl fa) && free_in `in_p:int64`(concl fa)
                                   && free_in (rand(lhs w)) (concl fa) with _->false)
                           then MATCH_MP_TAC fa THEN ARITH_HYPS_TAC else NO_TAC) (asl,w));;
 let SWP_BYTESWAP_REASSEMBLE_TAC : tactic =
-  REWRITE_TAC[dewrap80;dewrap96;dewrap112] THEN INFOLD3 THEN
+  REWRITE_TAC[dewrap80;dewrap96;dewrap112] THEN INFOLD3_TAC THEN
   REWRITE_TAC[INBLOCK_REASSEMBLE] THEN REWRITE_TAC[GSYM nist_input_block] THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[nist_input_block] THEN ASM_REWRITE_TAC[] THEN TRY REFL_TAC;;
 (* The output store of a block whose AES tower starts from aes2c (block 4i)
@@ -1315,7 +1315,7 @@ let OUTBLK_TAC (addr_rule:thm) : tactic =
     if not (free_in (lhs(concl addr_rule)) w)
     then failwith "OUTBLK_TAC: offset absent" else
    (REWRITE_TAC[addr_rule] THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[dewrap80;dewrap96;dewrap112] THEN INFOLD3 THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[dewrap80;dewrap96;dewrap112] THEN INFOLD3_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[XOR_AES128_CIPHER_RECONSTRUCT_DEC] THEN
   REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[GSYM aes_ctr_block] THEN REWRITE_TAC[MAP] THEN
@@ -1344,9 +1344,9 @@ let SWP_Q6_FULL_TAC : tactic =
     AP_THM_TAC THEN AP_TERM_TAC THEN
     (SWP_GHASH_CORE_TAC ORELSE (BINOP_TAC THEN SWP_GHASH_CORE_TAC))];;
 
-(* CLOSE_V8: the per-conjunct dispatcher of the body leg, by the shape of
+(* CLOSE_V8_TAC: the per-conjunct dispatcher of the body leg, by the shape of
    the conjunct, most specific first. *)
-let CLOSE_V8 : tactic =
+let CLOSE_V8_TAC : tactic =
   fun (asl,w) ->
     let has_mc t = try can(find_term(fun x->match x with Const("MAYCHANGE",_)->true|_->false)) t with _->false in
     let hd t = try fst(dest_const(fst(strip_comb t))) with _->"" in
@@ -1354,9 +1354,9 @@ let CLOSE_V8 : tactic =
     if has_mc w then close_goal10 (asl,w)
     else if has "aligned_bytes_loaded" w then ASM_REWRITE_TAC[] (asl,w)
     else if is_eq w && rh "aes2c" then MUST_PROGRESS Q30_TAC (asl,w)
-    else if is_eq w && hd(lhs w)="read" && rh "inblock" && not(rh "word_xor") && not(rh "aes_ctr_block") then MUST_PROGRESS IN_READ_CLOSE (asl,w)
+    else if is_eq w && hd(lhs w)="read" && rh "inblock" && not(rh "word_xor") && not(rh "aes_ctr_block") then MUST_PROGRESS IN_READ_CLOSE_TAC (asl,w)
     else if is_eq w && hd(lhs w)="read" && rh "ctr_block" && rh "word_reversefields" then MUST_PROGRESS SP160_TAC (asl,w)
-    else if is_eq w && hd(lhs w)="word_join" && rh "ctr_block" && rh "word_reversefields" then MUST_PROGRESS SP_SLOT_TAC3 (asl,w)
+    else if is_eq w && hd(lhs w)="word_join" && rh "ctr_block" && rh "word_reversefields" then MUST_PROGRESS SP_SLOT3_TAC (asl,w)
     else if is_eq w && (hd(lhs w)="word_or" || (hd(lhs w)="word_zx" && String.length(string_of_term w)<200)) then MUST_PROGRESS CTRREG_TAC (asl,w)
     else if is_forall w then MUST_PROGRESS OUT0_TAC (asl,w)
     else if is_eq w && hd(lhs w)="read" && rh "aes_ctr_block" then MUST_PROGRESS (FIRST[close_outahead96; close_outahead112]) (asl,w)
@@ -1370,8 +1370,8 @@ let CLOSE_V8 : tactic =
        word_xor (aes_ctr_block ..) (inblock ..) *)
     else if is_eq w && rh "aes_ctr_block" && (has "aes2c" w || has "aese" (lhs w)) then MUST_PROGRESS AES2C_OUT_TAC (asl,w)
     (* byteswap reassembly, Karatsuba partials over reassembled input blocks *)
-    else if is_eq w && hd(lhs w)="word_join" then MUST_PROGRESS (FIRST[SWP_BYTESWAP_REASSEMBLE_TAC; GHASH_PARTIAL_CLOSE]) (asl,w)
-    else MUST_PROGRESS (FIRST[GHASH_PARTIAL_CLOSE; AES2C_OUT_TAC; SWP_GHASH_CORE_TAC; CTRREG_TAC; ASM_REWRITE_TAC[] THEN TRY REFL_TAC]) (asl,w)
+    else if is_eq w && hd(lhs w)="word_join" then MUST_PROGRESS (FIRST[SWP_BYTESWAP_REASSEMBLE_TAC; GHASH_PARTIAL_CLOSE_TAC]) (asl,w)
+    else MUST_PROGRESS (FIRST[GHASH_PARTIAL_CLOSE_TAC; AES2C_OUT_TAC; SWP_GHASH_CORE_TAC; CTRREG_TAC; ASM_REWRITE_TAC[] THEN TRY REFL_TAC]) (asl,w)
      ;;
 
 (* ------------------------------------------------------------------------- *)
@@ -1385,7 +1385,7 @@ let CLOSE_V8 : tactic =
    which is how ENSURES_SEQUENCE_TAC and ENSURES_WHILE_UP_TAC present the
    leaf goals of the main theorem; the entry (0xa0) and exit (0xaa0)
    mid-conditions are shared with the main theorem below.  A leg then
-   discharges its leaf goal by MATCH_MP_TAC (see APPLY_LEG). *)
+   discharges its leaf goal by MATCH_MP_TAC (see APPLY_LEG_TAC). *)
 let ap inv i s = rhs(concl(REDEPTH_CONV BETA_CONV (list_mk_comb(inv,[i;s]))));;
 let leg_state off body =
   mk_abs(`s:armstate`,
@@ -1587,7 +1587,7 @@ let SWP_DEC_BODYLEG = prove(bodyleg_goal,
   REWRITE_TAC[WORD_RULE `word_add (word (4 * i)) (word_add (word c) (word 4)):int32 = word (4 * i + c + 4)`;
               WORD_RULE `word_add (word (4 * i + c + 4)) (word 4):int32 = word(4 * i + c + 8)`] THEN
   ASM_SIMP_TAC[SWP_SUB_LEMMA] THEN
-  REPEAT CONJ_TAC THEN CLOSE_V8 THEN TRY CTR_CANON_TAC)
+  REPEAT CONJ_TAC THEN CLOSE_V8_TAC THEN TRY CTR_CANON_TAC)
   ;;
 
 (* ------------------------------------------------------------------------- *)
@@ -1622,53 +1622,53 @@ let KS9_CTRBASE_0 = mk_cbv `c + 1`;;
    c, ..., c + 4 to word_reversefields 8 (ctr_block nonce K) (mk_cbv). *)
 let CTRBASEN = end_itlist CONJ (map mk_cbv [`c:num`; `c + 1`; `c + 2`; `c + 3`; `c + 4`]);;
 
-(* CBLAST and CRULE: WORD_BLAST and WORD_RULE, guarded to goals free of the
+(* CBLAST_TAC and CRULE_TAC: WORD_BLAST and WORD_RULE, guarded to goals free of the
    symbolic counter c, on which they blow up (in the fill these are the
    GHASH conjuncts); the counter conjuncts are closed at the level of the
    numeral arithmetic instead. *)
-let CBLAST : tactic = fun (asl,w) ->
-  if free_in `c:num` w then failwith "CBLAST: symbolic c present (would explode)" else CONV_TAC WORD_BLAST (asl,w);;
-let CRULE : tactic = fun (asl,w) ->
-  if free_in `c:num` w then failwith "CRULE: symbolic c present" else CONV_TAC WORD_RULE (asl,w);;
+let CBLAST_TAC : tactic = fun (asl,w) ->
+  if free_in `c:num` w then failwith "CBLAST_TAC: symbolic c present (would explode)" else CONV_TAC WORD_BLAST (asl,w);;
+let CRULE_TAC : tactic = fun (asl,w) ->
+  if free_in `c:num` w then failwith "CRULE_TAC: symbolic c present" else CONV_TAC WORD_RULE (asl,w);;
 (* Close a counter goal with mismatched numeral indices (word_reversefields,
    ctr_block, aes2c or aes_ctr_block over expressions in c): canonicalize
    0 + c, then REFL_TAC, or peel the function layers down to the numeral
    argument and use ARITH_TAC.  It never blasts, so it is safe on the
    symbolic counter. *)
-let CTR_NUM_CLOSE : tactic =
+let CTR_NUM_CLOSE_TAC : tactic =
   REWRITE_TAC[ADD_CLAUSES] THEN
   (REFL_TAC ORELSE (REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN (REFL_TAC ORELSE ARITH_TAC)));;
-(* FILL_CLOSE: the per-conjunct closer of the fill, with one branch per shape
+(* FILL_CLOSE_TAC: the per-conjunct closer of the fill, with one branch per shape
    of conjunct, each closing its goal or failing.  In SWP_DEC_FILL290 it
    runs after the arithmetic normalization of fill290_close, so that the
-   conjuncts are in inblock k / literal-offset form, as CLOSE_V8 expects in
+   conjuncts are in inblock k / literal-offset form, as CLOSE_V8_TAC expects in
    the body; SWP_DEC_FILLLEG and SWP_DEC_LC2_PARTA use it again after their
    branch step.  The GHASH seed Q11 at i = 0 also needs
    nist_ghash .. 0 = tag0 (list_of_seq, nist_ghash). *)
-let FILL_CLOSE : tactic =
+let FILL_CLOSE_TAC : tactic =
   FIRST
    [ (* the counter registers at i = 0 (word_zx / word_or of word c): collapse
         the zx nest, fold word_add, canonicalize 0 + c and close on the
         numerals *)
      (REWRITE_TAC[ZX_COUNTER_UD; ZX_COUNTER_INC; CTR_ZX_NORM] THEN REWRITE_TAC[GSYM WORD_ADD] THEN
-      REWRITE_TAC[ADD_CLAUSES] THEN CTR_NUM_CLOSE THEN NO_TAC);
+      REWRITE_TAC[ADD_CLAUSES] THEN CTR_NUM_CLOSE_TAC THEN NO_TAC);
      (* GHASH (the seed Q11 and the partial products): reassembly, the empty
-        GHASH, byteswap and the rev64 bridge, then CBLAST (c is absent) *)
+        GHASH, byteswap and the rev64 bridge, then CBLAST_TAC (c is absent) *)
      (REWRITE_TAC[INBLOCK_REASSEMBLE; list_of_seq; nist_ghash] THEN ASM_REWRITE_TAC[] THEN
-      REWRITE_TAC[byteswap128] THEN CBLAST THEN NO_TAC);
+      REWRITE_TAC[byteswap128] THEN CBLAST_TAC THEN NO_TAC);
      (REWRITE_TAC[INBLOCK_REASSEMBLE; list_of_seq; nist_ghash] THEN ASM_REWRITE_TAC[] THEN
-      REWRITE_TAC[REV64_16B_IS_BSW_REVFIELDS; byteswap128] THEN CBLAST THEN NO_TAC);
+      REWRITE_TAC[REV64_16B_IS_BSW_REVFIELDS; byteswap128] THEN CBLAST_TAC THEN NO_TAC);
      (* the counter stack slots (word_join to ctr_block): zx normalization,
         the CTRBASEN folds, then close on the numerals (no blasting) *)
      (ASM_REWRITE_TAC[] THEN REWRITE_TAC[ZX_COUNTER_UD; ZX_COUNTER_INC; CTR_ZX_NORM] THEN
       REWRITE_TAC[GSYM WORD_ADD] THEN REWRITE_TAC[ADD_CLAUSES] THEN REWRITE_TAC[CTRBASEN; KS9_CTRBASE_0] THEN
-      REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN CTR_NUM_CLOSE THEN NO_TAC);
+      REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN CTR_NUM_CLOSE_TAC THEN NO_TAC);
      (* the Q30 and Q5 AES towers to aes2c: merge the reloaded slots, fold
         the counter, aes2c, close on the numerals (no blasting) *)
      ((MERGE_CTR128_TAC 160 "s77" ORELSE ALL_TAC) THEN (MERGE_CTR128_TAC 176 "s29" ORELSE ALL_TAC) THEN
       ASM_REWRITE_TAC[] THEN REWRITE_TAC[ZX_COUNTER_UD; ZX_COUNTER_INC; CTR_ZX_NORM] THEN
       REWRITE_TAC[GSYM WORD_ADD] THEN REWRITE_TAC[ADD_CLAUSES] THEN REWRITE_TAC[CTRBASEN; KS9_CTRBASE_0] THEN
-      REWRITE_TAC[aes2c] THEN CTR_NUM_CLOSE THEN NO_TAC);
+      REWRITE_TAC[aes2c] THEN CTR_NUM_CLOSE_TAC THEN NO_TAC);
      (* the output stores of blocks 2 and 3: merge the reloaded slots, fold
         the counter, reconstruct the AES tower, aes_ctr_block, close on the
         numerals (no blasting) *)
@@ -1676,7 +1676,7 @@ let FILL_CLOSE : tactic =
       ASM_REWRITE_TAC[] THEN REWRITE_TAC[ZX_COUNTER_UD; ZX_COUNTER_INC; CTR_ZX_NORM] THEN
       REWRITE_TAC[GSYM WORD_ADD] THEN REWRITE_TAC[ADD_CLAUSES] THEN REWRITE_TAC[CTRBASEN] THEN
       REWRITE_TAC[XOR_AES128_CIPHER_RECONSTRUCT_DEC] THEN REWRITE_TAC[MAP; WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
-      ASM_REWRITE_TAC[] THEN REWRITE_TAC[aes_ctr_block] THEN CTR_NUM_CLOSE THEN NO_TAC);
+      ASM_REWRITE_TAC[] THEN REWRITE_TAC[aes_ctr_block] THEN CTR_NUM_CLOSE_TAC THEN NO_TAC);
      (* the loop count (word_sub) *)
      (SUBGOAL_THEN `2 <= loop_count` ASSUME_TAC THENL [ASM_ARITH_TAC; ASM_SIMP_TAC[WORD_SUB]] THEN NO_TAC);
      (* the MAYCHANGE frame *)
@@ -1684,11 +1684,11 @@ let FILL_CLOSE : tactic =
      (* the other registers and the htable reads (htable_mem_4 unfolded),
         by ASM_REWRITE_TAC *)
      (ASM_REWRITE_TAC[] THEN TRY REFL_TAC THEN NO_TAC);
-     (ASM_REWRITE_TAC[] THEN CRULE THEN NO_TAC) ];;
+     (ASM_REWRITE_TAC[] THEN CRULE_TAC THEN NO_TAC) ];;
 
 (* The merge sites of the fill stepper, one per counter slot: the steps just
    before the fill's counter stores (stp at steps 11, 13, 16 and 22).
-   FILL_CLOSE merges the slots again at the states before their reloads
+   FILL_CLOSE_TAC merges the slots again at the states before their reloads
    (s18, s29, s32 and s77), and fill290_close at the final state s124. *)
 let fill_merges = [(10,160);(12,176);(15,208);(21,192)];;
 
@@ -1756,7 +1756,7 @@ let fill290_close =
   REWRITE_TAC[ARITH_RULE `j < 0 <=> F`] THEN
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[ADD_CLAUSES] THEN
-  REPEAT CONJ_TAC THEN FILL_CLOSE;;
+  REPEAT CONJ_TAC THEN FILL_CLOSE_TAC;;
 
 let SWP_DEC_FILL290 = prove(fill290_goal,
   fill290_prefix THEN fill290_step 124 THEN fill290_close);;
@@ -1800,7 +1800,7 @@ let SWP_DEC_FILLLEG = prove(fill_goal,
     RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `val(word(loop_count - 2 - 0):int64) = 0 <=> F`;
                                COND_CLAUSES]) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REPEAT CONJ_TAC THEN FILL_CLOSE]);;
+    REPEAT CONJ_TAC THEN FILL_CLOSE_TAC]);;
 
 (* SWP_DEC_LC2_PARTA (pc + 0xa0 -> pc + 0x514, loop_count = 2) is
    SWP_DEC_FILL290 followed by the cbz at pc + 0x290, taken into the drain
@@ -1826,7 +1826,7 @@ let SWP_DEC_LC2_PARTA = prove(fill_goal_lc2,
     RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `val(word(loop_count - 2 - 0):int64) = 0 <=> T`;
                                COND_CLAUSES]) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REPEAT CONJ_TAC THEN FILL_CLOSE]);;
+    REPEAT CONJ_TAC THEN FILL_CLOSE_TAC]);;
 
 (* ------------------------------------------------------------------------- *)
 (* The drain: pc + 0x510 -> pc + 0xaa0, from swp_inv (loop_count - 2) to the *)
@@ -1874,7 +1874,7 @@ let GHASH_SETTLE_TAC (ktm:term) (off:int) : tactic =
                  else mk_binop `(+):num->num->num` basetm (mk_small_numeral (off+j)) in
   DEC_GHASH_NORM_TAC THEN GHASH_SPLIT_TAC THEN
   GHASH_GROUP_TAC
-    (INFOLD3 THEN REWRITE_TAC[INBLOCK_REASSEMBLE] THEN REWRITE_TAC[GSYM nist_input_block] THEN ASM_REWRITE_TAC[])
+    (INFOLD3_TAC THEN REWRITE_TAC[INBLOCK_REASSEMBLE] THEN REWRITE_TAC[GSYM nist_input_block] THEN ASM_REWRITE_TAC[])
     (subst [ktm, `k:num`] `nist_ghash (aes128_cipher (word 0) rk) tag0 (list_of_seq (nist_input_block inblock) (4*k))`)
     (fun j -> mk_comb(`nist_input_block inblock`, blkidx j))
     ((if off = 0 then ALL_TAC else
@@ -1910,9 +1910,9 @@ let DRAIN_Q30_TAC : tactic =
    [UNDISCH_TAC `2 <= loop_count` THEN ARITH_TAC; ALL_TAC] THEN
   GHASH_SETTLE_TAC `loop_count - 1` 4;;
 
-(* DRAIN_CLOSE: the per-conjunct closer of the drain, by the shape of the
+(* DRAIN_CLOSE_TAC: the per-conjunct closer of the drain, by the shape of the
    conjunct. *)
-let DRAIN_CLOSE : tactic =
+let DRAIN_CLOSE_TAC : tactic =
   fun (asl,w) ->
     (if not(is_eq w) then
        (FIRST[close_goal10; MUST_PROGRESS OUT0_TAC; ASM_REWRITE_TAC[] THEN NO_TAC]) (asl,w)
@@ -1949,20 +1949,20 @@ let DRAIN_CLOSE : tactic =
                              ARITH_RULE `64*(loop_count-2)+112 = (64*(loop_count-2)+64)+48`] in
         FIRST[ (ASM_REWRITE_TAC[] THEN NO_TAC);
                (RECON THEN NO_TAC);
-               (RECON THEN CTR_NUM_CLOSE THEN NO_TAC);
-               (CLOSE_V8 THEN NO_TAC);
+               (RECON THEN CTR_NUM_CLOSE_TAC THEN NO_TAC);
+               (CLOSE_V8_TAC THEN NO_TAC);
                ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN RECON) THEN NO_TAC);
-               ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN RECON THEN CTR_NUM_CLOSE) THEN NO_TAC);
-               ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN CLOSE_V8) THEN NO_TAC);
+               ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN RECON THEN CTR_NUM_CLOSE_TAC) THEN NO_TAC);
+               ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN CLOSE_V8_TAC) THEN NO_TAC);
                ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN
                  REWRITE_TAC[dewrap80; dewrap96; dewrap112] THEN
                  REWRITE_TAC[ARITH_RULE `16 * (4 * a + b) = 64 * a + 16 * b`] THEN CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN
-                 ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[WORD_XOR_SYM] THEN RECON THEN TRY CTR_NUM_CLOSE) THEN NO_TAC);
-               ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN INFOLD3 THEN RECON) THEN NO_TAC);
+                 ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[WORD_XOR_SYM] THEN RECON THEN TRY CTR_NUM_CLOSE_TAC) THEN NO_TAC);
+               ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN INFOLD3_TAC THEN RECON) THEN NO_TAC);
                ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[WORD_XOR_SYM] THEN
-                 INFOLD3 THEN ASM_REWRITE_TAC[] THEN RECON THEN TRY CTR_NUM_CLOSE) THEN NO_TAC);
-               ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN INFOLD3 THEN ASM_REWRITE_TAC[] THEN
-                 ONCE_REWRITE_TAC[WORD_XOR_SYM] THEN RECON THEN TRY CTR_NUM_CLOSE) THEN NO_TAC);
+                 INFOLD3_TAC THEN ASM_REWRITE_TAC[] THEN RECON THEN TRY CTR_NUM_CLOSE_TAC) THEN NO_TAC);
+               ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN INFOLD3_TAC THEN ASM_REWRITE_TAC[] THEN
+                 ONCE_REWRITE_TAC[WORD_XOR_SYM] THEN RECON THEN TRY CTR_NUM_CLOSE_TAC) THEN NO_TAC);
                ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN AES2C_OUT_TAC) THEN NO_TAC);
                ((ADDRNORM THEN ASM_REWRITE_TAC[] THEN REWRITE_TAC[dewrap80; dewrap96; dewrap112] THEN
                  REWRITE_TAC[ARITH_RULE `16 * (4 * a + b) = 64 * a + 16 * b`] THEN CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN
@@ -1990,9 +1990,9 @@ let DRAIN_CLOSE : tactic =
      else
        (FIRST[ (ASM_REWRITE_TAC[] THEN TRY REFL_TAC THEN NO_TAC);
                (AP_TERM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC THEN NO_TAC);
-               (ASM_REWRITE_TAC[] THEN REWRITE_TAC[ctr_block] THEN CONV_TAC NUM_REDUCE_CONV THEN CBLAST THEN NO_TAC);
-               (CRULE THEN NO_TAC);
-               (CLOSE_V8 THEN NO_TAC) ]) (asl,w));;
+               (ASM_REWRITE_TAC[] THEN REWRITE_TAC[ctr_block] THEN CONV_TAC NUM_REDUCE_CONV THEN CBLAST_TAC THEN NO_TAC);
+               (CRULE_TAC THEN NO_TAC);
+               (CLOSE_V8_TAC THEN NO_TAC) ]) (asl,w));;
 
 let SWP_DEC_DRAIN514 = prove(drain514_goal,
   REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN ENSURES_INIT_TAC "s0" THEN
@@ -2041,7 +2041,7 @@ let SWP_DEC_DRAIN514 = prove(drain514_goal,
   REWRITE_TAC[FORALL_AND_THM; FORALL_UNWIND_THM2] THEN
   REWRITE_TAC[ARITH_RULE `16 * (4 * a + b) = 64 * a + 16 * b`; ARITH_RULE `16 * 4 * a = 64 * a`] THEN
   CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THEN DRAIN_CLOSE);;
+  REPEAT CONJ_TAC THEN DRAIN_CLOSE_TAC);;
 
 (* The cbnz at pc + 0x510 after the last iteration:
    X1 = word (loop_count - 2 - (loop_count - 2)) = word 0, so the branch is
@@ -2107,7 +2107,7 @@ let iter1_step_tac =
 let ITER1_Q30_TAC : tactic =
   DEC_GHASH_NORM_TAC THEN GHASH_SPLIT_TAC THEN
   GHASH_GROUP_TAC
-    (TRY INFOLD3 THEN REWRITE_TAC[INBLOCK_REASSEMBLE] THEN REWRITE_TAC[GSYM nist_input_block] THEN ASM_REWRITE_TAC[])
+    (TRY INFOLD3_TAC THEN REWRITE_TAC[INBLOCK_REASSEMBLE] THEN REWRITE_TAC[GSYM nist_input_block] THEN ASM_REWRITE_TAC[])
     `tag0:int128`
     (fun j -> mk_comb(`nist_input_block inblock`, mk_small_numeral j))
     (MP_TAC(REWRITE_RULE
@@ -2116,10 +2116,10 @@ let ITER1_Q30_TAC : tactic =
              (CONV_RULE NUM_REDUCE_CONV (ISPEC `0` SWP_GHASH_BRANCH2_SETTLED))) THEN
      DISCH_THEN(fun th -> REWRITE_TAC[th]));;
 
-(* ITER1_CLOSE: the per-conjunct closer of iter_1 (blocks 0..3; the counter
+(* ITER1_CLOSE_TAC: the per-conjunct closer of iter_1 (blocks 0..3; the counter
    base is X13 = word c, so the counters are c..c+3), with the shape
-   dispatch of DRAIN_CLOSE but literal block indices. *)
-let ITER1_CLOSE : tactic =
+   dispatch of DRAIN_CLOSE_TAC but literal block indices. *)
+let ITER1_CLOSE_TAC : tactic =
   fun (asl,w) ->
     (if not(is_eq w) then
        (FIRST[close_goal10; MUST_PROGRESS OUT0_TAC; ASM_REWRITE_TAC[] THEN NO_TAC]) (asl,w)
@@ -2159,15 +2159,15 @@ let ITER1_CLOSE : tactic =
            (A REPEAT would peel into the counter blocks themselves, and the
            blast that follows would blow up.)  The counter blocks then
            agree by REFL_TAC after WORD_REVERSEFIELDS_REVERSEFIELDS, by the
-           folds CTRBASEN and KS9_CTRBASE_0 and CTR_NUM_CLOSE, or, failing
-           those, by unfolding ctr_block and CBLAST. *)
+           folds CTRBASEN and KS9_CTRBASE_0 and CTR_NUM_CLOSE_TAC, or, failing
+           those, by unfolding ctr_block and CBLAST_TAC. *)
         let PEEL_CTR =
           AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
           REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
           (REFL_TAC ORELSE
            (REWRITE_TAC[CTRBASEN; KS9_CTRBASE_0] THEN REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
-            (REFL_TAC ORELSE CTR_NUM_CLOSE)) ORELSE
-           (REWRITE_TAC[ctr_block] THEN CONV_TAC NUM_REDUCE_CONV THEN CBLAST)) in
+            (REFL_TAC ORELSE CTR_NUM_CLOSE_TAC)) ORELSE
+           (REWRITE_TAC[ctr_block] THEN CONV_TAC NUM_REDUCE_CONV THEN CBLAST_TAC)) in
         FIRST[ (ADDRNORM THEN ASM_REWRITE_TAC[] THEN FOLD THEN PEEL_CTR THEN NO_TAC);
                (ASM_REWRITE_TAC[] THEN FOLD THEN PEEL_CTR THEN NO_TAC);
                (ADDRNORM THEN ASM_REWRITE_TAC[] THEN REWRITE_TAC[aes2c] THEN FOLD THEN PEEL_CTR THEN NO_TAC);
@@ -2197,28 +2197,28 @@ let ITER1_CLOSE : tactic =
      else if (try can (find_term (fun u -> try fst(dest_const(fst(strip_comb u)))="word_zx" with _->false)) w with _->false) then
        (* the X13 counter conjunct (word_zx (word (4 * 1 + c)) at
           loop_count = 1): normalize the zx nest and the numeral
-          arithmetic; CBLAST is the fallback for goals without c *)
+          arithmetic; CBLAST_TAC is the fallback for goals without c *)
        (FIRST[ (REWRITE_TAC[ZX_COUNTER_UD; ZX_COUNTER_INC; CTR_ZX_NORM] THEN
                 REWRITE_TAC[GSYM WORD_ADD] THEN TRY AP_TERM_TAC THEN TRY AP_TERM_TAC THEN
                 CONV_TAC NUM_REDUCE_CONV THEN (REFL_TAC ORELSE ARITH_TAC) THEN NO_TAC);
-               (CONV_TAC NUM_REDUCE_CONV THEN CBLAST THEN NO_TAC) ]) (asl,w)
+               (CONV_TAC NUM_REDUCE_CONV THEN CBLAST_TAC THEN NO_TAC) ]) (asl,w)
      else
        (* register conjuncts (mostly read Qn s = word_reversefields 8
           (EL k rk)): ASM_REWRITE_TAC and REFL_TAC from the s161 facts left
           by the pruning; the X0 and X2 pointer conjuncts need a WORD_RULE
-          step (CRULE) for 64 * 1 = 64 *)
+          step (CRULE_TAC) for 64 * 1 = 64 *)
        (FIRST[ (ASM_REWRITE_TAC[] THEN REFL_TAC THEN NO_TAC);
-               (ASM_REWRITE_TAC[] THEN REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN CRULE THEN NO_TAC) ]) (asl,w));;
+               (ASM_REWRITE_TAC[] THEN REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN CRULE_TAC THEN NO_TAC) ]) (asl,w));;
 
-let MAYCHANGE_ABI_CLOSE =
+let MAYCHANGE_ABI_CLOSE_TAC =
   FIRST_X_ASSUM(fun th -> if maychange_term(concl th) then
      MATCH_MP_TAC(MATCH_MP SUBSUMED_APPLY th) else NO_TAC) THEN
    REWRITE_TAC[ETA_AX] THEN REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN SUBSUMED_MAYCHANGE_TAC;;
 
-(* The per-conjunct closer of iter_1: the frame goals by MAYCHANGE_ABI_CLOSE,
-   everything else by ITER1_CLOSE. *)
-let ITER1_CLOSE_ALL : tactic =
-  fun (asl,w) -> (if maychange_term w then MAYCHANGE_ABI_CLOSE else ITER1_CLOSE) (asl,w);;
+(* The per-conjunct closer of iter_1: the frame goals by MAYCHANGE_ABI_CLOSE_TAC,
+   everything else by ITER1_CLOSE_TAC. *)
+let ITER1_CLOSE_ALL_TAC : tactic =
+  fun (asl,w) -> (if maychange_term w then MAYCHANGE_ABI_CLOSE_TAC else ITER1_CLOSE_TAC) (asl,w);;
 
 let SWP_DEC_ITER1 = prove(iter1_goal,
   REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
@@ -2276,7 +2276,7 @@ let SWP_DEC_ITER1 = prove(iter1_goal,
   REWRITE_TAC[TAUT `p \/ q ==> r <=> (p ==> r) /\ (q ==> r)`] THEN
   REWRITE_TAC[FORALL_AND_THM; FORALL_UNWIND_THM2] THEN
   CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THEN ITER1_CLOSE_ALL);;
+  REPEAT CONJ_TAC THEN ITER1_CLOSE_ALL_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* loop_count = 2: SWP_DEC_LC2 is SWP_DEC_LC2_PARTA                          *)
@@ -2303,8 +2303,8 @@ let SWP_DEC_LC2 = prove(lc2_goal,
 
 (* ------------------------------------------------------------------------- *)
 (* Leaf tactics for the seven leaf goals of the main theorem: the five leg   *)
-(* lemmas (applied by APPLY_LEG) and the inline cases loop_count = 0 and the *)
-(* back edge.                                                                *)
+(* lemmas (applied by APPLY_LEG_TAC) and the inline cases loop_count = 0 and *)
+(* the back edge.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
 (* loop_count = 0 (pc + 0xa0 -> pc + 0xaa0, the cbz at pc + 0xa0 taken),
@@ -2323,13 +2323,13 @@ let SWP_DEC_LC0_TAC : tactic =
   REWRITE_TAC[list_of_seq] THEN REWRITE_TAC[nist_ghash] THEN
   REWRITE_TAC[ARITH_RULE `j < 0 <=> F`] THEN
   (* Fold the ABI macro back in the frame goal (the main theorem expanded
-     it), so that the frame fact MAYCHANGE_ABI_CLOSE uses matches the goal
+     it), so that the frame fact MAYCHANGE_ABI_CLOSE_TAC uses matches the goal
      (ABI ,, ..) s0 s1. *)
   REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REPEAT CONJ_TAC THEN
   TRY(ASM_REWRITE_TAC[] THEN NO_TAC) THEN
   TRY(CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC WORD_BLAST THEN NO_TAC) THEN
-  MAYCHANGE_ABI_CLOSE;;
+  MAYCHANGE_ABI_CLOSE_TAC;;
 
 (* The main theorem presents its leaf goals with the ABI macro expanded,
    htable_mem_4 unfolded and the conjunctions right-associated (by
@@ -2347,7 +2347,7 @@ let LEG_HYPS_TAC : tactic =
   TRY(ASM_ARITH_TAC) THEN TRY NONOVERLAPPING_TAC;;
 
 (* Close a leaf goal with a leg lemma (key_p occurs only in its hypotheses). *)
-let APPLY_LEG (leg:thm) : tactic =
+let APPLY_LEG_TAC (leg:thm) : tactic =
   MATCH_MP_TAC (leaf_form leg) THEN EXISTS_TAC `key_p:int64` THEN LEG_HYPS_TAC;;
 
 (* The back edge (the cbnz at pc + 0x510 taken back to pc + 0x294 while
@@ -2369,7 +2369,7 @@ let SWP_DEC_BACKEDGE_LEAF_TAC : tactic =
     ALL_TAC] THEN
   ARM_STEPS_TAC AES128_GCM_DEC_EXEC [1] THEN
   ENSURES_FINAL_STATE_TAC THEN REWRITE_TAC[htable_mem_4] THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN MAYCHANGE_ABI_CLOSE;;
+  REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN MAYCHANGE_ABI_CLOSE_TAC;;
 
 (* ========================================================================= *)
 (* The core correctness theorem.                                             *)
@@ -2573,18 +2573,18 @@ let AES128_GCM_DEC_CORRECT = prove
      ***                   exit subgoals, and the body is SWP_DEC_BODYLEG.
      *** Each leaf goal is discharged by its leg lemma (SWP_DEC_ITER1,
      *** SWP_DEC_LC2, SWP_DEC_FILLLEG, SWP_DEC_BODYLEG, SWP_DEC_DRAINLEG) via
-     *** APPLY_LEG, or inline (loop_count = 0, the back edge). ***)
+     *** APPLY_LEG_TAC, or inline (loop_count = 0, the back edge). ***)
 
     ASM_CASES_TAC `loop_count = 0` THENL
      [POP_ASSUM SUBST_ALL_TAC THEN SWP_DEC_LC0_TAC;
       ALL_TAC] THEN
 
     ASM_CASES_TAC `loop_count = 1` THENL
-     [APPLY_LEG SWP_DEC_ITER1;
+     [APPLY_LEG_TAC SWP_DEC_ITER1;
       ALL_TAC] THEN
 
     ASM_CASES_TAC `loop_count = 2` THENL
-     [APPLY_LEG SWP_DEC_LC2;
+     [APPLY_LEG_TAC SWP_DEC_LC2;
       ALL_TAC] THEN
 
     SUBGOAL_THEN `3 <= loop_count` ASSUME_TAC THENL
@@ -2596,13 +2596,13 @@ let AES128_GCM_DEC_CORRECT = prove
      [(*** ~(loop_count - 2 = 0), from 3 <= loop_count. ***)
       ASM_ARITH_TAC;
       (*** FILL: 0xa0 -> 0x294, establish the inlined invariant at i = 0. ***)
-      APPLY_LEG SWP_DEC_FILLLEG;
+      APPLY_LEG_TAC SWP_DEC_FILLLEG;
       (*** The body (SWP_DEC_BODYLEG): 0x294 -> 0x510, inv i -> inv (i+1). ***)
-      X_GEN_TAC `i:num` THEN STRIP_TAC THEN APPLY_LEG SWP_DEC_BODYLEG;
+      X_GEN_TAC `i:num` THEN STRIP_TAC THEN APPLY_LEG_TAC SWP_DEC_BODYLEG;
       (*** The back edge: the cbnz x1 at 0x510 is taken back to 0x294. ***)
       SWP_DEC_BACKEDGE_LEAF_TAC;
       (*** The drain: 0x510 -> 0xaa0, inv (loop_count-2) -> exit state. ***)
-      APPLY_LEG SWP_DEC_DRAINLEG];
+      APPLY_LEG_TAC SWP_DEC_DRAINLEG];
     ALL_TAC] THEN
   (*** Trivial case of the tail loop ***)
 
@@ -2998,16 +2998,16 @@ let AES128_GCM_DEC_SUBROUTINE_CORRECT = prove
 (* (ARM_ADD_RETURN_STACK_TAC).                                               *)
 (* ========================================================================= *)
 
-let SAFE_SIM = SAFE_SIM_TAC EXEC;;
+let SAFE_SIM_TAC = ARM_SAFE_SIM_TAC EXEC;;
 
-(* The loop runs loop_count - 2 times (the exit test of the fill, the cbz    *)
-(* at 0x290, tests loop_count - 2), so the pointers at the drain are in      *)
-(* terms of loop_count - 2 and have to be reconciled with the                *)
-(* 64 * loop_count of the sequence post.  DRAIN_ADDR writes loop_count as    *)
-(* (loop_count - 2) + 2 so that WORD_RULE sees only linear combinations.     *)
-let DRAIN_ADDR = DRAIN_ADDR_K `2`;;
+(* The loop runs loop_count - 2 times (the exit test of the fill, the cbz at *)
+(* 0x290, tests loop_count - 2), so the pointers at the drain are in terms   *)
+(* of loop_count - 2 and have to be reconciled with the 64 * loop_count of   *)
+(* the sequence post.  DRAIN_ADDR_TAC writes loop_count as (loop_count - 2)  *)
+(* + 2 so that WORD_RULE sees only linear combinations.                      *)
+let DRAIN_ADDR_TAC = DRAIN_ADDR_K_TAC `2`;;
 
-let OPEN_DEC = OPEN_SWP_SAFE EXEC;;
+let OPEN_DEC_TAC = OPEN_SWP_SAFE_TAC EXEC;;
 
 let scaffold_dec =
  `\(in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64) (key_p:int64) (htable_p:int64)
@@ -3080,7 +3080,7 @@ let AES128_GCM_DEC_SAFE = prove
                       memory :> bytes(ivec_p, 16);
                       memory :> bytes(word_add stackpointer (word 160), 64)])`,
   CONCRETIZE_F_EVENTS_TAC scaffold_dec THEN
-  OPEN_DEC THEN
+  OPEN_DEC_TAC THEN
 
   (*** Top split at 0xaa0 (main region -> tail region). ***)
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xaa0`
@@ -3094,22 +3094,22 @@ let AES128_GCM_DEC_SAFE = prove
      `\s. read X0 s = in_p /\ read X2 s = out_p /\ read X3 s = tag_p /\
           read X4 s = ivec_p /\ read X6 s = htable_p /\ read SP s = stackpointer /\
           read X1 s = word loop_count /\ read X16 s = word loop_remain` THEN
-    CONJ_TAC THENL [SAFE_SIM (1--29) THEN CLOSE; ALL_TAC] THEN
+    CONJ_TAC THENL [SAFE_SIM_TAC (1--29) THEN CLOSE_TAC; ALL_TAC] THEN
 
     (*** loop_count = 0 : cbz @0xa0 taken -> 0xaa0. ***)
     ASM_CASES_TAC `loop_count = 0` THENL
-     [REDUCE_IF0 `loop_count:num` THEN SAFE_SIM (1--1) THEN CLOSE; ALL_TAC] THEN
-    REDUCE_IFN0 `loop_count:num` THEN
+     [REDUCE_IF0_TAC `loop_count:num` THEN SAFE_SIM_TAC (1--1) THEN CLOSE_TAC; ALL_TAC] THEN
+    REDUCE_IFN0_TAC `loop_count:num` THEN
 
     (*** loop_count = 1 : b.eq @0xa8 -> iter_1 path (3 + 158 steps). ***)
     ASM_CASES_TAC `loop_count = 1` THENL
-     [REDUCE_IFEQ `loop_count:num` `1` THEN SAFE_SIM (1--161) THEN CLOSE; ALL_TAC] THEN
-    REDUCE_IFNE `loop_count:num` `1` THEN
+     [REDUCE_IFEQ_TAC `loop_count:num` `1` THEN SAFE_SIM_TAC (1--161) THEN CLOSE_TAC; ALL_TAC] THEN
+    REDUCE_IFNE_TAC `loop_count:num` `1` THEN
 
     (*** loop_count = 2: fill (cbz @0x290 taken) + drain, 125 + 197 steps. ***)
     ASM_CASES_TAC `loop_count = 2` THENL
-     [REDUCE_IFEQ `loop_count:num` `2` THEN SAFE_SIM (1--322) THEN CLOSE; ALL_TAC] THEN
-    REDUCE_IFNE `loop_count:num` `2` THEN
+     [REDUCE_IFEQ_TAC `loop_count:num` `2` THEN SAFE_SIM_TAC (1--322) THEN CLOSE_TAC; ALL_TAC] THEN
+    REDUCE_IFNE_TAC `loop_count:num` `2` THEN
 
     (*** loop_count >= 3: fill, loop_count - 2 iterations, drain. ***)
     SUBGOAL_THEN `3 <= loop_count` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
@@ -3123,43 +3123,43 @@ let AES128_GCM_DEC_SAFE = prove
      [(*** ~(loop_count - 2 = 0) ***)
       ASM_ARITH_TAC;
       (*** FILL: 0xa0 -> 0x294, establish inv 0. ***)
-      BEQ_NZ `1` THEN SAFE_SIM (1--125) THEN
-      BEQ_NZ `2` THEN
+      BEQ_NZ_TAC `1` THEN SAFE_SIM_TAC (1--125) THEN
+      BEQ_NZ_TAC `2` THEN
       REPEAT CONJ_TAC THENL
        [(* cbz @0x290 branch not taken *)
         ASM_REWRITE_TAC[] THEN CONV_TAC WORD_RULE;
-        ADDR_RECON;
-        ADDR_RECON;
+        ADDR_RECON_TAC;
+        ADDR_RECON_TAC;
         (* X1 = word(loop_count - 2 - 0) *)
         REWRITE_TAC[SUB_0] THEN GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN
         ASM_SIMP_TAC[ARITH_RULE `3 <= loop_count ==> 2 <= loop_count`];
-        DEABBR THEN DISCHARGE_SAFETY_PROPERTY_TAC];
+        DEABBR_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC];
       (*** The body and back edge: 0x294 -> 0x514, inv i -> inv (i+1). ***)
       REWRITE_TAC[] THEN X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
       SUBGOAL_THEN `loop_count - 2 < 2 EXP 64` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-      SAFE_SIM (1--160) THEN CLOSE_R2;
+      SAFE_SIM_TAC (1--160) THEN CLOSE_R2_TAC;
       (*** The drain: 0x514 -> 0xaa0. ***)
-      SAFE_SIM (1--197) THEN REPEAT CONJ_TAC THENL
-       [DRAIN_ADDR; DRAIN_ADDR; DEABBR THEN DISCHARGE_SAFE_ROBUST]];
+      SAFE_SIM_TAC (1--197) THEN REPEAT CONJ_TAC THENL
+       [DRAIN_ADDR_TAC; DRAIN_ADDR_TAC; DEABBR_TAC THEN DISCHARGE_SAFE_ROBUST_TAC]];
 
     ALL_TAC] THEN
 
   (*** Tail region pc + 0xaa0 -> pc + 0xb7c: a plain WHILE on loop_remain ***)
   (*** from 0xaa4 to 0xb68, then the tag and counter stores.              ***)
   ASM_CASES_TAC `loop_remain = 0` THENL
-   [REDUCE_IF0 `loop_remain:num` THEN SAFE_SIM (1--6) THEN CLOSE_R2; ALL_TAC] THEN
-  REDUCE_IFN0 `loop_remain:num` THEN
+   [REDUCE_IF0_TAC `loop_remain:num` THEN SAFE_SIM_TAC (1--6) THEN CLOSE_R2_TAC; ALL_TAC] THEN
+  REDUCE_IFN0_TAC `loop_remain:num` THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `loop_remain:num` `pc + 0xaa4` `pc + 0xb68`
    `\i s. read X0 s = word_add in_p (word (64 * loop_count + 16 * i)) /\
           read X2 s = word_add out_p (word (64 * loop_count + 16 * i)) /\
           read X3 s = tag_p /\ read X4 s = ivec_p /\ read X6 s = htable_p /\
           read SP s = stackpointer /\ read X16 s = word (loop_remain - i)` THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [SAFE_SIM (1--1) THEN CLOSE_R2;
+   [SAFE_SIM_TAC (1--1) THEN CLOSE_R2_TAC;
     ALL_TAC;
-    REWRITE_TAC[] THEN SAFE_SIM (1--5) THEN CLOSE_R2] THEN
+    REWRITE_TAC[] THEN SAFE_SIM_TAC (1--5) THEN CLOSE_R2_TAC] THEN
   REWRITE_TAC[] THEN X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-  SAFE_SIM (1--49) THEN CLOSE_R2);;
+  SAFE_SIM_TAC (1--49) THEN CLOSE_R2_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* The whole-function version, obtained from the core theorem exactly as the *)

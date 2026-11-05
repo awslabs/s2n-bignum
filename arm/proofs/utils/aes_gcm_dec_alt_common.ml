@@ -2785,11 +2785,11 @@ let WB_IVEC_CLOSE_TAC r =
 (*                                                                           *)
 (* WB_FUSED_kBLOCK (k = 1..4) proves each path from the core entry pc+0x1c,  *)
 (* and mk_band_from_fused restates it as the band goal mk_band_goal k by     *)
-(* ENSURES_PRECONDITION_THM, without re-simulation (prove_band needs         *)
-(* 5 <= nblk).  The four proofs share the tactics that follow: the KEEPGHALL *)
+(* ENSURES_PRECONDITION_THM, without re-simulation (prove_band needs 5 <=    *)
+(* nblk).  The four proofs share the tactics that follow: the KEEPGHALL      *)
 (* discard and stepper, which keep the GHASH accumulators across a window,   *)
-(* JOIN_IS_CTR0, INLINE_SELFCONTAINED and DEC_BRIDGE_ROUTEB_TAC, the GHASH   *)
-(* bridge for k >= 2; the k = 1 bridge has its own lemmas and closer.        *)
+(* JOIN_IS_CTR0, INLINE_SELFCONTAINED_TAC and DEC_BRIDGE_ROUTEB_TAC, the     *)
+(* GHASH bridge for k >= 2; the k = 1 bridge has its own lemmas and closer.  *)
 (* ========================================================================= *)
 
 (* KEEPGHALL discard: drop every fact that mentions an older state, except
@@ -2853,10 +2853,10 @@ let JOIN_IS_CTR0 = prove(
   = ctr0`,
   CONV_TAC WORD_BLAST);;
 
-(* INLINE_SELFCONTAINED reg st npass: rewrite `read reg st = ...` with the
+(* INLINE_SELFCONTAINED_TAC reg st npass: rewrite `read reg st = ...` with the
    facts about the other states until its right side mentions no other state
    (at most npass rounds), so that the older states can be discarded. *)
-let INLINE_SELFCONTAINED reg st npass : tactic = fun (asl,w) ->
+let INLINE_SELFCONTAINED_TAC reg st npass : tactic = fun (asl,w) ->
   let lhs_t = parse_term (Printf.sprintf "read %s %s" reg st) in
   let rec nonSt tm = match tm with
       Comb(Comb(Const("read",_),_),stv) ->
@@ -3863,9 +3863,10 @@ let DISCARD_STALE_QREG_TAC qn : tactic = fun (asl,w) ->
 (* are resolved at load by RESOLVE_LDP2_TAC: an ldp leaves                   *)
 (*   read Qk sN = read (memory :> bytes128 ADDR) s(N-1),                     *)
 (* a memory read at the load-input state s(N-1), so the raw !m lemma has to  *)
-(* be matched at s(N-1), not at sN.  RESOLVE_QREG_C matches it at the state  *)
-(* of the register read's own memory read, and uses PURE_ONCE_REWRITE: plain *)
-(* REWRITE would reduce 8*(i+1)+0 to 8*(i+1) and break the m = 0 ACCEPT.     *)
+(* be matched at s(N-1), not at sN.  RESOLVE_QREG_C_TAC matches it at the    *)
+(* state of the register read's own memory read, and uses PURE_ONCE_REWRITE: *)
+(* plain REWRITE would reduce 8*(i+1)+0 to 8*(i+1) and break the m = 0       *)
+(* ACCEPT.                                                                   *)
 (* ------------------------------------------------------------------------- *)
 
 (* The KEEPDATA discard: keep every fact that reads one of Q0..Q19
@@ -3922,11 +3923,11 @@ let ARM_STEPS_FOLD_KEEPDATA_NOSIMP_TAC exec snums =
               DISCARD_STALE_DATA_TAC THEN DISCARD_OLDSTATE_KEEPDATA_TAC s THEN CLARIFY_TAC)
     (statenames "s" snums);;
 
-(* RESOLVE_QREG_C qreg scur m: resolve the raw read an ldp leaves,
+(* RESOLVE_QREG_C_TAC qreg scur m: resolve the raw read an ldp leaves,
      read qreg scur = read (memory :> bytes128 ADDR) sload,
    against the raw lemma at sload (the load-input state); PURE_ONCE_REWRITE
    keeps the m = 0 index 8*(i+1)+0 unreduced for the ACCEPT *)
-let RESOLVE_QREG_C (qreg:string) (scur:string) (m:int) : tactic =
+let RESOLVE_QREG_C_TAC (qreg:string) (scur:string) (m:int) : tactic =
   fun (asl,w) ->
     let mnum = mk_small_numeral m in
     let th,addr,sload = tryfind (fun (_,th) -> match concl th with
@@ -4479,7 +4480,7 @@ let WB_FIRST_NONOVERLAPPING_TAC : tactic = fun (asl,w) ->
      FIRST_ASSUM ACCEPT_TAC) (asl,w);;
 
 (* DISCHARGE_SAFETY_PROPERTY_TAC with its closing memaccess_inbounds tactic
-   replaced by meminb_tac: the shape of DISCHARGE_SAFE_ROBUST
+   replaced by meminb_tac: the shape of DISCHARGE_SAFE_ROBUST_TAC
    (aes_gcm_common.ml). *)
 let WB_SAFETY_PROPERTY_TAC (meminb_tac:tactic) : tactic =
   SAFE_META_EXISTS_TAC allowed_vars_e THEN

@@ -533,7 +533,7 @@ let zx_128_256 = prove
 (* input dimensions. Used to satisfy POLY_OF_WORD_PMUL_GEN's precondition.   *)
 (* ------------------------------------------------------------------------- *)
 
-let PMUL_DEG_TAC_GEN dim_out dim_in =
+let PMUL_DEG_GEN_TAC dim_out dim_in =
   REWRITE_TAC[bool_poly; POLY_RING; dim_out] THEN
   W(MP_TAC o PART_MATCH (lhand o rand) POLY_DEG_MUL_LE o lhand o snd) THEN
   REWRITE_TAC[RING_POLYNOMIAL_OF_WORD] THEN
@@ -545,7 +545,7 @@ let PMUL_DEG_TAC_GEN dim_out dim_in =
       CONJ_TAC THEN REWRITE_TAC[WORD_CLZ_LT_DIMINDEX; dim_in]) THEN
   ARITH_TAC;;
 
-let PMUL_DEG_TAC = PMUL_DEG_TAC_GEN DIMINDEX_256 DIMINDEX_128;;
+let PMUL_DEG_TAC = PMUL_DEG_GEN_TAC DIMINDEX_256 DIMINDEX_128;;
 
 (* ------------------------------------------------------------------------- *)
 (* 128 x 128 -> 256 pmul case of POLY_OF_WORD_PMUL_GEN.                      *)

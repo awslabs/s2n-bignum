@@ -3463,7 +3463,7 @@ let BRIDGE_CLOSE_2_CPH1_TAC sN : tactic = fun (asl,w) ->
        otherwise that load is not resolved and the discard drops the Q18
        accumulator that depends on it (nblk = 1 has no such load);
    (2) Q17-Q19 are made self-contained at the block-0 store s81
-       (INLINE_SELFCONTAINED) before the discard, so that the accumulator
+       (INLINE_SELFCONTAINED_TAC) before the discard, so that the accumulator
        chain of block 0 survives it.
    BRIDGE_CLOSE_2_CPH1_TAC closes Q19 at the reduce s128. *)
 let WB_FUSED_2BLOCK = prove(
@@ -3568,12 +3568,12 @@ let WB_FUSED_2BLOCK = prove(
    REWRITE_TAC[aese; aesmc] THEN CONV_TAC WORD_RULE;
    ALL_TAC] THEN
   (* detail (2): Q17-Q19 self-contained at s81 *)
-  INLINE_SELFCONTAINED "Q17" "s81" 24 THEN
-  INLINE_SELFCONTAINED "Q18" "s81" 24 THEN
-  INLINE_SELFCONTAINED "Q19" "s81" 24 THEN
+  INLINE_SELFCONTAINED_TAC "Q17" "s81" 24 THEN
+  INLINE_SELFCONTAINED_TAC "Q18" "s81" 24 THEN
+  INLINE_SELFCONTAINED_TAC "Q19" "s81" 24 THEN
   DISCARD_OLDSTATE_TAC "s81" THEN
   ARM_STEPS_FOLD_KEEPGHALL_TAC AES256_GCM_DEC_ALT_EXEC (82--128) THEN
-  INLINE_SELFCONTAINED "Q19" "s128" 8 THEN
+  INLINE_SELFCONTAINED_TAC "Q19" "s128" 8 THEN
   DISCARD_OLDSTATE_TAC "s128" THEN
   SUBGOAL_THEN
     `read Q19 (s128:armstate) =
@@ -3833,9 +3833,9 @@ let WB_FUSED_3BLOCK = prove(
    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
    REWRITE_TAC[aese; aesmc] THEN CONV_TAC WORD_RULE;
    ALL_TAC] THEN
-  INLINE_SELFCONTAINED "Q17" "s80" 30 THEN
-  INLINE_SELFCONTAINED "Q18" "s80" 30 THEN
-  INLINE_SELFCONTAINED "Q19" "s80" 30 THEN
+  INLINE_SELFCONTAINED_TAC "Q17" "s80" 30 THEN
+  INLINE_SELFCONTAINED_TAC "Q18" "s80" 30 THEN
+  INLINE_SELFCONTAINED_TAC "Q19" "s80" 30 THEN
   DISCARD_OLDSTATE_TAC "s80" THEN
   (* block 1 (H^2), steps 81-123, stored at s123; capture its plaintext
      (counter gcm_ctr_inc ctr0) before the discard *)
@@ -3852,13 +3852,13 @@ let WB_FUSED_3BLOCK = prove(
    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
    REWRITE_TAC[aese; aesmc] THEN (CONV_TAC WORD_RULE ORELSE CONV_TAC WORD_BLAST);
    ALL_TAC] THEN
-  INLINE_SELFCONTAINED "Q17" "s123" 40 THEN
-  INLINE_SELFCONTAINED "Q18" "s123" 40 THEN
-  INLINE_SELFCONTAINED "Q19" "s123" 40 THEN
+  INLINE_SELFCONTAINED_TAC "Q17" "s123" 40 THEN
+  INLINE_SELFCONTAINED_TAC "Q18" "s123" 40 THEN
+  INLINE_SELFCONTAINED_TAC "Q19" "s123" 40 THEN
   DISCARD_OLDSTATE_TAC "s123" THEN
   (* block 2 (H) and the reduce, steps 124-170; the bridge at s170 *)
   ARM_STEPS_FOLD_KEEPGHALL_TAC AES256_GCM_DEC_ALT_EXEC (124--170) THEN
-  INLINE_SELFCONTAINED "Q19" "s170" 12 THEN
+  INLINE_SELFCONTAINED_TAC "Q19" "s170" 12 THEN
   DISCARD_OLDSTATE_TAC "s170" THEN
   SUBGOAL_THEN
     `read Q19 (s170:armstate) =
@@ -4151,9 +4151,9 @@ let WB_FUSED_4BLOCK = prove(
    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
    REWRITE_TAC[aese; aesmc] THEN CONV_TAC WORD_RULE;
    ALL_TAC] THEN
-  INLINE_SELFCONTAINED "Q17" "s81" 30 THEN
-  INLINE_SELFCONTAINED "Q18" "s81" 30 THEN
-  INLINE_SELFCONTAINED "Q19" "s81" 30 THEN
+  INLINE_SELFCONTAINED_TAC "Q17" "s81" 30 THEN
+  INLINE_SELFCONTAINED_TAC "Q18" "s81" 30 THEN
+  INLINE_SELFCONTAINED_TAC "Q19" "s81" 30 THEN
   DISCARD_OLDSTATE_TAC "s81" THEN
   (* block 1 (H^3), steps 82-124, stored at s124 *)
   ARM_STEPS_FOLD_KEEPGHALL_TAC AES256_GCM_DEC_ALT_EXEC (82--124) THEN
@@ -4169,9 +4169,9 @@ let WB_FUSED_4BLOCK = prove(
    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
    REWRITE_TAC[aese; aesmc] THEN (CONV_TAC WORD_RULE ORELSE CONV_TAC WORD_BLAST);
    ALL_TAC] THEN
-  INLINE_SELFCONTAINED "Q17" "s124" 40 THEN
-  INLINE_SELFCONTAINED "Q18" "s124" 40 THEN
-  INLINE_SELFCONTAINED "Q19" "s124" 40 THEN
+  INLINE_SELFCONTAINED_TAC "Q17" "s124" 40 THEN
+  INLINE_SELFCONTAINED_TAC "Q18" "s124" 40 THEN
+  INLINE_SELFCONTAINED_TAC "Q19" "s124" 40 THEN
   DISCARD_OLDSTATE_TAC "s124" THEN
   (* block 2 (H^2), steps 125-167, stored at s167 *)
   ARM_STEPS_FOLD_KEEPGHALL_TAC AES256_GCM_DEC_ALT_EXEC (125--167) THEN
@@ -4187,13 +4187,13 @@ let WB_FUSED_4BLOCK = prove(
    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
    REWRITE_TAC[aese; aesmc] THEN (CONV_TAC WORD_RULE ORELSE CONV_TAC WORD_BLAST);
    ALL_TAC] THEN
-  INLINE_SELFCONTAINED "Q17" "s167" 40 THEN
-  INLINE_SELFCONTAINED "Q18" "s167" 40 THEN
-  INLINE_SELFCONTAINED "Q19" "s167" 40 THEN
+  INLINE_SELFCONTAINED_TAC "Q17" "s167" 40 THEN
+  INLINE_SELFCONTAINED_TAC "Q18" "s167" 40 THEN
+  INLINE_SELFCONTAINED_TAC "Q19" "s167" 40 THEN
   DISCARD_OLDSTATE_TAC "s167" THEN
   (* block 3 (H) and the reduce, steps 168-214; the bridge at s214 *)
   ARM_STEPS_FOLD_KEEPGHALL_TAC AES256_GCM_DEC_ALT_EXEC (168--214) THEN
-  INLINE_SELFCONTAINED "Q19" "s214" 12 THEN
+  INLINE_SELFCONTAINED_TAC "Q19" "s214" 12 THEN
   DISCARD_OLDSTATE_TAC "s214" THEN
   SUBGOAL_THEN
     `read Q19 (s214:armstate) =
@@ -5967,9 +5967,9 @@ let WBN_NBLK_GE_9 = prove
 (* stepper gives                                                             *)
 (*   read Qk sN = read (memory :> bytes128 ADDR) s(N-1),                     *)
 (* a read at the old state, which cannot be closed once s(N-1) is discarded. *)
-(* RAWCT_LEMMA_AT "s(N-1)" assumes the WBN_RAWCT_READ !m lemma at that       *)
-(* state, and RESOLVE_LDP2_TAC (with RESOLVE_QREG_C, Sec 10c) rewrites read  *)
-(* Qk sN to                                                                  *)
+(* RAWCT_LEMMA_AT_TAC "s(N-1)" assumes the WBN_RAWCT_READ !m lemma at that   *)
+(* state, and RESOLVE_LDP2_TAC (with RESOLVE_QREG_C_TAC, Sec 10c) rewrites   *)
+(* read Qk sN to                                                             *)
 (*   bytes_to_int128 (SUB_LIST (16*(8*(i+1)+m),16) ibytes)                   *)
 (* for m = 0..7 (Q8..Q15 in load order).  The stepper then carries this      *)
 (* state-free value forward, so it survives every later discard.             *)
@@ -5987,10 +5987,10 @@ let WBN_NBLK_GE_9 = prove
 (* ASM_REWRITE_TAC); the frame by MONOTONE_MAYCHANGE_TAC.                    *)
 (* ------------------------------------------------------------------------- *)
 
-(* RAWCT_LEMMA_AT sprev: add the WBN_RAWCT_READ !m lemma at state sprev to the
+(* RAWCT_LEMMA_AT_TAC sprev: add the WBN_RAWCT_READ !m lemma at state sprev to the
    assumptions; its premises come from the assumptions, with 9 <= nblk by
    WBN_NBLK_GE_9. *)
-let RAWCT_LEMMA_AT sprev : tactic =
+let RAWCT_LEMMA_AT_TAC sprev : tactic =
   SUBGOAL_THEN
     (subst[mk_var(sprev,`:armstate`),`s:armstate`]
       `!m. m < 8 ==> read (memory :> bytes128 (word_add in_p (word (16 * (8*(i+1)+m))))) s =
@@ -6015,15 +6015,15 @@ let DISCARD_QREGS_TAC qns : tactic =
 
 (* RESOLVE_LDP2_TAC exec qa qb ma mb sload scur: take the step scur of an ldp
    that loads the raw ciphertext blocks 8(i+1)+ma and 8(i+1)+mb into qa and qb.
-   Assume the raw lemma at the load-input state sload (RAWCT_LEMMA_AT), take
+   Assume the raw lemma at the load-input state sload (RAWCT_LEMMA_AT_TAC), take
    the step without discarding, so that the lemma survives, resolve qa and qb
-   (RESOLVE_QREG_C), then drop the raw memory-read forms and the old-state
+   (RESOLVE_QREG_C_TAC), then drop the raw memory-read forms and the old-state
    facts. *)
 let RESOLVE_LDP2_TAC exec qa qb ma mb sload scur : tactic =
-  RAWCT_LEMMA_AT sload THEN
+  RAWCT_LEMMA_AT_TAC sload THEN
   ARM_VERBOSE_STEP_TAC exec scur THEN
-  RESOLVE_QREG_C qa scur ma THEN
-  RESOLVE_QREG_C qb scur mb THEN
+  RESOLVE_QREG_C_TAC qa scur ma THEN
+  RESOLVE_QREG_C_TAC qb scur mb THEN
   DISCARD_ASSUMPTIONS_TAC(fun th -> match concl th with
      Comb(Comb(Const("=",_),Comb(Comb(Const("read",_),Const(n,_)),_)),
           Comb(Comb(Const("read",_),Comb(Comb(Const(":>",_),Const("memory",_)),_)),_))
@@ -7179,7 +7179,7 @@ let WBN_RESOLVE_49C_916_TAC : tactic = fun (asl,w) ->
 (* The close of the 9..16 front leg at s296, after the taken b.ge: the
    invariant core at i = 0, as in the first branch of
    WBN_LOOP_INVARIANT_ENTRY_RAW. *)
-let ENTRY_CLOSER_916 =
+let ENTRY_CLOSER_916_TAC =
   ENSURES_FINAL_STATE_TAC THEN
   REWRITE_TAC[wbn_loop_inv_core_raw] THEN
   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
@@ -7220,7 +7220,7 @@ let wbn_front_to_prep_916_goal =
 (* The 9..16 front leg: the shared prefix WBN_FRONT_PREFIX_EXT (pc+0x1c to the
    0x4b8 b.ge, with the loop constants R) via ENSURES_TRANS_SIMPLE, then step
    296: the b.ge is taken for 9..16 (WBN_RESOLVE_49C_916_TAC) and lands at the
-   prepretail entry 0xa0c with wbn_core_applied 0, closed by ENTRY_CLOSER_916
+   prepretail entry 0xa0c with wbn_core_applied 0, closed by ENTRY_CLOSER_916_TAC
    and WB_PTRCMP_FLAGS.  The htable predicate is unfolded into its reads right
    after the init, so that they propagate through step 296 (the stepper does
    not track the folded htable_mem_dec). *)
@@ -7240,7 +7240,7 @@ let WBN_FRONT_TO_PREP_916 = prove(wbn_front_to_prep_916_goal,
     WBN_RESOLVE_49C_916_TAC THEN
     ARM_STEPS_TAC AES256_GCM_DEC_ALT_EXEC (296--296) THEN
     wb_front_fold_tac THEN
-    ENTRY_CLOSER_916 THEN
+    ENTRY_CLOSER_916_TAC THEN
     MP_TAC(SPECL [`in_p:int64`; `128`; `128`] WB_PTRCMP_FLAGS) THEN
     ANTS_TAC THENL
      [CONJ_TAC THEN MP_TAC(ASSUME `val (in_p:int64) + 16 * nblk < 2 EXP 63`) THEN

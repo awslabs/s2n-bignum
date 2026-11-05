@@ -764,7 +764,7 @@ let KARATSUBA_JOIN_XOR4 = prove
    modelling the 64x64 carry-less multiplier.  Only two-argument
    applications are abstracted: abbreviating the bare word_pmul constant or
    a partial application would only rename the head. *)
-let ABBREV_PMULS : tactic =
+let ABBREV_PMULS_TAC : tactic =
   fun (asl,w) ->
     let is_full_pmul t = match strip_comb t with Const("word_pmul",_),[_;_] -> true | _ -> false in
     let pmuls = setify (find_terms is_full_pmul w) in
@@ -1228,7 +1228,7 @@ type swp_prune =
    all_foralls : bool;
    stale_gc : bool };;
 
-let SWP_STEP_TAC_P (p:swp_prune) keeplist exec sname : tactic =
+let SWP_STEP_P_TAC (p:swp_prune) keeplist exec sname : tactic =
   ARM_STEP_TAC exec [] sname None (K STRIP_TAC) THEN
   (fun (asl,w) ->
     let cs = map (fun (_,th) -> concl th) asl in
@@ -1279,7 +1279,7 @@ let swp_prune_plain anchors slots =
   { anchors = anchors; slots = slots; families = []; exempt = (fun _ -> false);
     all_foralls = false; stale_gc = true };;
 let SWP_STEP_TAC (anchors:term list) (slots:string list) keeplist exec sname : tactic =
-  SWP_STEP_TAC_P (swp_prune_plain anchors slots) keeplist exec sname;;
+  SWP_STEP_P_TAC (swp_prune_plain anchors slots) keeplist exec sname;;
 
 (* Steps k in ks of a leg: SWP_STEP_TAC, the address and subword normalization,
    a per-leg simplification of the fresh facts (extra k), and the counter-slot
@@ -1377,7 +1377,7 @@ let WSUB_BRANCH = prove
     REWRITE_TAC[VAL_WORD_1] THEN
     SIMP_TAC[DIMINDEX_64; ARITH_RULE `1 < 2 EXP 64`] THEN ASM_ARITH_TAC]);;
 
-let DEABBR : tactic =
+let DEABBR_TAC : tactic =
   W(fun (asl,w) ->
     let lcth = try [MATCH_MP lc_eq (CONJ (ASSUME `nblocks DIV 4 = loop_count`)
                                           (ASSUME `len_bits DIV 128 = nblocks`))] with _ -> [] in
@@ -1397,7 +1397,7 @@ let DEABBR : tactic =
        else REWRITE_RULE lclr th) THEN
     REWRITE_TAC (lclr @ vwth));;
 
-let CTR_RECON : tactic =
+let CTR_RECON_TAC : tactic =
   GEN_REWRITE_TAC I [GSYM VAL_EQ] THEN
   GEN_REWRITE_TAC (TRY_CONV o ONCE_DEPTH_CONV)
     [ARITH_RULE `word 3:int64 = word(2 EXP 2 - 1)`] THEN
@@ -1409,15 +1409,15 @@ let CTR_RECON : tactic =
               GSYM(ASSUME `nblocks MOD 4 = loop_remain`)] THEN
   REWRITE_TAC[DIV_DIV] THEN CONV_TAC NUM_REDUCE_CONV;;
 
-let ADDR_RECON : tactic =
+let ADDR_RECON_TAC : tactic =
   REWRITE_TAC[LEFT_ADD_DISTRIB; RIGHT_ADD_DISTRIB; MULT_CLAUSES; ADD_CLAUSES; SUB_0;
               WORD_ADD_0; ADD_ASSOC] THEN
   (CONV_TAC WORD_RULE ORELSE CONV_TAC WORD_ARITH);;
 
-let BRANCH_RECON : tactic =
+let BRANCH_RECON_TAC : tactic =
   GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_SIMP_TAC[WSUB_BRANCH];;
 
-let WSUB_ARITH : tactic =
+let WSUB_ARITH_TAC : tactic =
   W(fun (asl,w) ->
     let l,_ = dest_eq w in
     let cnt_minus_i = (match l with Comb(Comb(_,Comb(_,a)),_) -> a | _ -> failwith "wsub") in
@@ -1434,7 +1434,7 @@ let is_branch_goal w =
    let strip t = match t with Comb(c,a) when (try name_of c="word" with _->false) -> a | _ -> t in
    is_cond l || is_cond r || is_cond (strip l) || is_cond (strip r));;
 
-let MEMACC_VIA_ASM : tactic =
+let MEMACC_VIA_ASM_TAC : tactic =
   fun (asl,w) ->
     let defeqs = mapfilter (fun (_,th) -> let t = concl th in
         if is_eq t && is_var(lhs t) && type_of(lhs t) = `:(uarch_event)list`
@@ -1446,22 +1446,22 @@ let MEMACC_VIA_ASM : tactic =
              CONJ_TAC THENL [DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC; ALL_TAC]) THEN
      FIRST_ASSUM ACCEPT_TAC) (asl,w);;
 
-let DISCHARGE_SAFE_ROBUST : tactic =
+let DISCHARGE_SAFE_ROBUST_TAC : tactic =
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
   CONJ_TAC THENL [EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
   W(fun (asl,w) ->
     if is_conj w then CONJ_TAC THENL [FULL_UNIFY_F_EVENTS_TAC; ALL_TAC] else ALL_TAC) THEN
-  MEMACC_VIA_ASM;;
+  MEMACC_VIA_ASM_TAC;;
 
 (* Rewrite a conditional whose test is known (v = k or ~(v = k) is an
    assumption) by pure rewriting, without beta-reducing the f_ev_* event
    function applications. *)
-let REDUCE_IFEQ (v:term) (k:term) : tactic =
+let REDUCE_IFEQ_TAC (v:term) (k:term) : tactic =
   PURE_ONCE_REWRITE_TAC[EQT_INTRO(ASSUME(mk_eq(v,k)))] THEN PURE_REWRITE_TAC[COND_CLAUSES];;
-let REDUCE_IFNE (v:term) (k:term) : tactic =
+let REDUCE_IFNE_TAC (v:term) (k:term) : tactic =
   PURE_ONCE_REWRITE_TAC[EQF_INTRO(ASSUME(mk_neg(mk_eq(v,k))))] THEN PURE_REWRITE_TAC[COND_CLAUSES];;
-let REDUCE_IF0 (lv:term)  = REDUCE_IFEQ lv `0`;;
-let REDUCE_IFN0 (lv:term) = REDUCE_IFNE lv `0`;;
+let REDUCE_IF0_TAC (lv:term)  = REDUCE_IFEQ_TAC lv `0`;;
+let REDUCE_IFN0_TAC (lv:term) = REDUCE_IFNE_TAC lv `0`;;
 
 (* Leaf closers for the safety proofs.  Every alternative must close its     *)
 (* conjunct (THEN NO_TAC): a closer that merely rewrites can then never      *)
@@ -1471,29 +1471,29 @@ let LEAF_WITH (disch:tactic) (extra:tactic list) : tactic =
   W(fun (asl,w) ->
     if is_exists w then
       ((disch THEN NO_TAC) ORELSE
-       ((DEABBR THEN DISCHARGE_SAFE_ROBUST) THEN NO_TAC) ORELSE
-       ((DEABBR THEN DISCHARGE_SAFETY_PROPERTY_TAC) THEN NO_TAC))
-    else if is_branch_goal w then (BRANCH_RECON THEN NO_TAC)
+       ((DEABBR_TAC THEN DISCHARGE_SAFE_ROBUST_TAC) THEN NO_TAC) ORELSE
+       ((DEABBR_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC) THEN NO_TAC))
+    else if is_branch_goal w then (BRANCH_RECON_TAC THEN NO_TAC)
     else if can dest_eq w then
-      FIRST (map (fun t -> t THEN NO_TAC) ([WSUB_ARITH; ADDR_RECON; CTR_RECON] @ extra))
+      FIRST (map (fun t -> t THEN NO_TAC) ([WSUB_ARITH_TAC; ADDR_RECON_TAC; CTR_RECON_TAC] @ extra))
     else (disch THEN NO_TAC));;
-let CLOSE_WITH extra : tactic = REPEAT CONJ_TAC THEN LEAF_WITH (DEABBR THEN DISCHARGE_SAFETY_PROPERTY_TAC) extra;;
-let CLOSE_R2_WITH extra : tactic = REPEAT CONJ_TAC THEN LEAF_WITH (DEABBR THEN DISCHARGE_SAFE_ROBUST) extra;;
-let CLOSE : tactic = CLOSE_WITH [];;
-let CLOSE_R2 : tactic = CLOSE_R2_WITH [];;
+let CLOSE_WITH extra : tactic = REPEAT CONJ_TAC THEN LEAF_WITH (DEABBR_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC) extra;;
+let CLOSE_R2_WITH extra : tactic = REPEAT CONJ_TAC THEN LEAF_WITH (DEABBR_TAC THEN DISCHARGE_SAFE_ROBUST_TAC) extra;;
+let CLOSE_TAC : tactic = CLOSE_WITH [];;
+let CLOSE_R2_TAC : tactic = CLOSE_R2_WITH [];;
 (* Event-tracking simulator over a given EXEC rule. *)
-let SAFE_SIM_TAC exec =
+let ARM_SAFE_SIM_TAC exec =
   ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false exec;;
 
 (* Branch-nonzero fact for the loop counter cv (loop_count in the main       *)
 (* pipeline), proved without ASM_ rewriting over the post-simulation         *)
 (* context. Needs `val(word cv) = cv` and a `_ <= cv` bound among the        *)
 (* assumptions.                                                              *)
-let BEQ_NZ_V (cv:term) (k:term) : tactic =
+let BEQ_NZ_V_TAC (cv:term) (k:term) : tactic =
   fun (asl,w) ->
     let vfact = try snd(find (fun (_,th) ->
         concl th = mk_eq(mk_comb(`val:int64->num`,mk_comb(`word:num->int64`,cv)),cv)) asl)
-      with Failure _ -> failwith "BEQ_NZ_V: no `val(word cv) = cv` assumption" in
+      with Failure _ -> failwith "BEQ_NZ_V_TAC: no `val(word cv) = cv` assumption" in
     let bnd = mapfilter (fun (_,th) -> match concl th with
                   Comb(Comb(Const("<=",_),_),c) when c = cv -> th | _ -> fail()) asl in
     (SUBGOAL_THEN (mk_neg(mk_eq(mk_comb(`val:int64->num`,
@@ -1504,11 +1504,11 @@ let BEQ_NZ_V (cv:term) (k:term) : tactic =
       REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN CONV_TAC NUM_REDUCE_CONV THEN
       MAP_EVERY MP_TAC bnd THEN ARITH_TAC;
       ALL_TAC]) (asl,w);;
-let BEQ_NZ (k:term) : tactic = BEQ_NZ_V `loop_count:num` k;;
+let BEQ_NZ_TAC (k:term) : tactic = BEQ_NZ_V_TAC `loop_count:num` k;;
 
 (* Common opening of a 4-way safety goal: introduce the arguments,           *)
 (* abbreviate the block counts and establish their word bounds.              *)
-let OPEN_SWP_SAFE exec : tactic =
+let OPEN_SWP_SAFE_TAC exec : tactic =
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
   GEN_TAC THEN W64_GEN_TAC `len_bits:num` THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -1533,7 +1533,7 @@ let OPEN_SWP_SAFE exec : tactic =
 (* 64*(loop_count-k)+64*k while the sequence post states 64*loop_count.      *)
 (* Linearise loop_count = (loop_count-k)+k (valid given k <= loop_count      *)
 (* among the assumptions) so WORD_RULE sees only linear combinations.        *)
-let DRAIN_ADDR_K (k:term) : tactic =
+let DRAIN_ADDR_K_TAC (k:term) : tactic =
   SUBGOAL_THEN (mk_eq(`loop_count:num`, mk_binary "+" (mk_binary "-" (`loop_count:num`,k),k)))
     (fun th -> GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [th]) THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
