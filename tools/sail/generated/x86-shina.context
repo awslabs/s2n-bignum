@@ -1,0 +1,60 @@
+Context of the x86-shina run
+The configuration under which the translator ran, and every
+interpretation that a model of the run uses. The Interpretations
+section of backend/README.md explains each interpretation; a comment
+at the top of a model lists what is specific to it.
+
+Configuration
+  initial-enum cur_mode=LongMode
+  initial-bool has_adx=true
+  initial-bool has_bmi2=true
+
+Interpretations
+  Each Sail call or construct is replaced by the HOL term below it. a,
+  b, ... stand for its arguments, s for the state before it, s' for the
+  state after it and s0 for the state at the start of the instruction.
+
+  AF
+    ~> word (bitval (read AF s))
+  AF = a
+    ~> s' = write AF (bit 0 a) s
+  CF
+    ~> word (bitval (read CF s))
+  CF = a
+    ~> s' = write CF (bit 0 a) s
+  GPR[a]
+    ~> read (registers :> (element (iword a))) s
+  GPR[a] = b
+    ~> s' = write (registers :> (element (iword a))) b s
+  OF
+    ~> word (bitval (read OF s))
+  OF = a
+    ~> s' = write OF (bit 0 a) s
+  PF
+    ~> word (bitval (read PF s))
+  PF = a
+    ~> s' = write PF (bit 0 a) s
+  SF
+    ~> word (bitval (read SF s))
+  SF = a
+    ~> s' = write SF (bit 0 a) s
+  ZF
+    ~> word (bitval (read ZF s))
+  ZF = a
+    ~> s' = write ZF (bit 0 a) s
+  read_simd(128, a)
+    ~> read (SIMD128 (Simdreg (iword a) Lower_128)) s
+  read_simd(256, a)
+    ~> read (SIMD256 (Simdreg (iword a) Lower_256)) s
+  undefined : 1 word
+    ~> v, where the whole relation is ?v:1 word. ...
+  undefined : 16 word
+    ~> v, where the whole relation is ?v:16 word. ...
+  undefined : 32 word
+    ~> v, where the whole relation is ?v:32 word. ...
+  undefined : 64 word
+    ~> v, where the whole relation is ?v:64 word. ...
+  write_simd(128, a, b)
+    ~> s' = write (SIMD128 (Simdreg (iword a) Lower_128)) b s
+  write_simd(256, a, b)
+    ~> s' = write (SIMD256 (Simdreg (iword a) Lower_256)) b s

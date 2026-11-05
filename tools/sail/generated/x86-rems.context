@@ -1,0 +1,53 @@
+Context of the x86-rems run
+The configuration under which the translator ran, and every
+interpretation that a model of the run uses. The Interpretations
+section of backend/README.md explains each interpretation; a comment
+at the top of a model lists what is specific to it.
+
+Configuration
+  initial-bool log_register_writes=false
+
+Interpretations
+  Each Sail call or construct is replaced by the HOL term below it. a,
+  b, ... stand for its arguments, s for the state before it, s' for the
+  state after it and s0 for the state at the start of the instruction.
+
+  read_gpr(a)
+    ~> read (registers :> (element (iword a))) s
+  rflags
+    ~> read reg_rflags s
+  rflags = a
+    ~> s' = write reg_rflags a s
+  rip = a
+    ~> s' = write reg_rip a s
+  sail_shiftleft(a, b)
+    ~> if ((& 0) <= b) then (word_shl a (num_of_int b)) else v, where
+      the whole relation is ?v:16 word. ...
+  sail_shiftleft(a, b)
+    ~> if ((& 0) <= b) then (word_shl a (num_of_int b)) else v, where
+      the whole relation is ?v:17 word. ...
+  sail_shiftleft(a, b)
+    ~> if ((& 0) <= b) then (word_shl a (num_of_int b)) else v, where
+      the whole relation is ?v:8 word. ...
+  sail_shiftleft(a, b)
+    ~> if ((& 0) <= b) then (word_shl a (num_of_int b)) else v, where
+      the whole relation is ?v:9 word. ...
+  sail_shiftright(a, b)
+    ~> if ((& 0) <= b) then (word_ushr a (num_of_int b)) else v, where
+      the whole relation is ?v:16 word. ...
+  sail_shiftright(a, b)
+    ~> if ((& 0) <= b) then (word_ushr a (num_of_int b)) else v, where
+      the whole relation is ?v:17 word. ...
+  sail_shiftright(a, b)
+    ~> if ((& 0) <= b) then (word_ushr a (num_of_int b)) else v, where
+      the whole relation is ?v:8 word. ...
+  sail_shiftright(a, b)
+    ~> if ((& 0) <= b) then (word_ushr a (num_of_int b)) else v, where
+      the whole relation is ?v:9 word. ...
+  throw a
+    ~> no final state
+  undefined : int
+    ~> v, where the whole relation is ?v:int. if (& 0) <= v then ...
+      else no final state
+  write_gpr(a, b)
+    ~> s' = write (registers :> (element (iword a))) b s

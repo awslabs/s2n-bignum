@@ -1,0 +1,197 @@
+Context of the arm run
+The configuration under which the translator ran, and every
+interpretation that a model of the run uses. The Interpretations
+section of backend/README.md explains each interpretation; a comment
+at the top of a model lists what is specific to it.
+
+Configuration
+  feature FEAT_AA64EL0=true
+  feature FEAT_AFP=true
+  feature FEAT_PMULL=true
+  feature FEAT_SME=true
+  initial-bit PSTATE.SM=0b0
+  initial-bit PSTATE.nRW=0b0
+  extension Arm-GCS=off
+  extension Arm-SPE-sampling=off
+
+Interpretations
+  Each Sail call or construct is replaced by the HOL term below it. a,
+  b, ... stand for its arguments, s for the state before it, s' for the
+  state after it and s0 for the state at the start of the instruction.
+
+  AArch64_CheckFPAdvSIMDEnabled()
+    ~> s' = s
+  AArch64_SPAlignmentFault()
+    ~> every final state
+  BTypeCompatible = a
+    ~> s' = s
+  BTypeNext = a
+    ~> s' = s
+  BigEndian(a)
+    ~> F
+  BranchNotTaken(a, b)
+    ~> s' = write events
+      (CONS (EventJump ((read reg__5fPC s0),(read PC s)))
+      (read events s)) s
+  BranchTo(a, b, c)
+    ~> s' = write events
+      (CONS (EventJump ((read reg__5fPC s0),a))
+      (read events (write PC a s))) (write PC a s)
+  CheckFPAdvSIMDEnabled64()
+    ~> s' = s
+  CheckFPEnabled64()
+    ~> s' = s
+  CreateAccDescASIMD(MemOp_LOAD, false, a)
+    ~> read reg_FlatAccDescASIMD s
+  CreateAccDescASIMD(MemOp_LOAD, false, true)
+    ~> read reg_FlatAccDescASIMD s
+  CreateAccDescASIMD(MemOp_STORE, false, a)
+    ~> read reg_FlatAccDescASIMD s
+  CreateAccDescASIMD(MemOp_STORE, false, true)
+    ~> read reg_FlatAccDescASIMD s
+  CreateAccDescGPR(MemOp_LOAD, false, a, b)
+    ~> read reg_FlatAccDescGPR s
+  CreateAccDescGPR(MemOp_LOAD, false, a, true)
+    ~> read reg_FlatAccDescGPR s
+  CreateAccDescGPR(MemOp_STORE, false, a, b)
+    ~> read reg_FlatAccDescGPR s
+  CreateAccDescGPR(MemOp_STORE, false, a, true)
+    ~> read reg_FlatAccDescGPR s
+  EndOfInstruction()
+    ~> the instruction ends, with final state s
+  FPCR
+    ~> read reg_FPCR s
+  FPSR
+    ~> read reg_FPSR s
+  FPSR.bits = a
+    ~> s' = s
+  IsFeatureImplemented(FEAT_AA64EL0)
+    ~> T
+  IsFeatureImplemented(FEAT_AFP)
+    ~> T
+  IsFeatureImplemented(FEAT_GCS)
+    ~> F
+  IsFeatureImplemented(FEAT_LSE2)
+    ~> read reg_FlatHaveLSE2 s
+  IsFeatureImplemented(FEAT_PMULL)
+    ~> T
+  IsFeatureImplemented(FEAT_SME)
+    ~> T
+  Mem_read(a, 1, b)
+    ~> s' = write events (CONS (EventLoad (a,1)) (read events s)) s,
+      returning read (memory :> (bytes8 a)) s
+  Mem_read(a, 16, b)
+    ~> s' = write events (CONS (EventLoad (a,16)) (read events s)) s,
+      returning read (memory :> (bytes128 a)) s
+  Mem_read(a, 2, b)
+    ~> s' = write events (CONS (EventLoad (a,2)) (read events s)) s,
+      returning read (memory :> (bytes16 a)) s
+  Mem_read(a, 4, b)
+    ~> s' = write events (CONS (EventLoad (a,4)) (read events s)) s,
+      returning read (memory :> (bytes32 a)) s
+  Mem_read(a, 8, b)
+    ~> s' = write events (CONS (EventLoad (a,8)) (read events s)) s,
+      returning read (memory :> (bytes64 a)) s
+  Mem_read__1(a, 16, b, c)
+    ~> s' = write events (CONS (EventLoad (a,16)) (read events s)) s,
+      returning read (memory :> (bytes128 a)) s
+  Mem_read__1(a, 8, b, c)
+    ~> s' = write events (CONS (EventLoad (a,8)) (read events s)) s,
+      returning read (memory :> (bytes64 a)) s
+  Mem_set(a, 1, b, c)
+    ~> s' = write events (CONS (EventStore (a,1)) (read events s))
+      (write (memory :> (bytes8 a)) c s)
+  Mem_set(a, 16, b, c)
+    ~> s' = write events (CONS (EventStore (a,16)) (read events s))
+      (write (memory :> (bytes128 a)) c s)
+  Mem_set(a, 2, b, c)
+    ~> s' = write events (CONS (EventStore (a,2)) (read events s))
+      (write (memory :> (bytes16 a)) c s)
+  Mem_set(a, 4, b, c)
+    ~> s' = write events (CONS (EventStore (a,4)) (read events s))
+      (write (memory :> (bytes32 a)) c s)
+  Mem_set(a, 8, b, c)
+    ~> s' = write events (CONS (EventStore (a,8)) (read events s))
+      (write (memory :> (bytes64 a)) c s)
+  Mem_set__1(a, 16, b, c, d)
+    ~> s' = write events (CONS (EventStore (a,16)) (read events s))
+      (write (memory :> (bytes128 a)) d s)
+  Mem_set__1(a, 8, b, c, d)
+    ~> s' = write events (CONS (EventStore (a,8)) (read events s))
+      (write (memory :> (bytes64 a)) d s)
+  PSTATE.BTYPE
+    ~> FST (SND (SND (SND (SND (SND (read reg_PSTATE s))))))
+  PSTATE.C
+    ~> word (bitval (read CF s))
+  PSTATE.C = a
+    ~> s' = write CF (bit 0 a) s
+  PSTATE.EL
+    ~> FST (SND (SND (SND (SND (read reg_PSTATE s)))))
+  PSTATE.N
+    ~> word (bitval (read NF s))
+  PSTATE.N = a
+    ~> s' = write NF (bit 0 a) s
+  PSTATE.V
+    ~> word (bitval (read VF s))
+  PSTATE.V = a
+    ~> s' = write VF (bit 0 a) s
+  PSTATE.Z
+    ~> word (bitval (read ZF s))
+  PSTATE.Z = a
+    ~> s' = write ZF (bit 0 a) s
+  SCTLR_read__1()
+    ~> read reg_SCTLR_5fread_5f_5f1 s
+  SPESampleInFlight
+    ~> F
+  SP_read()
+    ~> read SP s
+  SP_set(a)
+    ~> s' = write SP a s
+  V_read(a, 128)
+    ~> read (QREG (num_of_int a)) s
+  V_read(a, 32)
+    ~> word_zx (read (DREG (num_of_int a)) s)
+  V_read(a, 64)
+    ~> read (DREG (num_of_int a)) s
+  V_set(a, 128, b)
+    ~> s' = write (QREG (num_of_int a)) b s
+  V_set(a, 16, b)
+    ~> s' = write (QREG (num_of_int a)) (word_zx b) s
+  V_set(a, 32, b)
+    ~> s' = write (QREG (num_of_int a)) (word_zx b) s
+  V_set(a, 64, b)
+    ~> s' = write (DREG (num_of_int a)) b s
+  V_set(a, 8, b)
+    ~> s' = write (QREG (num_of_int a)) (word_zx b) s
+  X_read(31, 32)
+    ~> read (WREG (num_of_int (& 31))) s
+  X_read(31, 64)
+    ~> read (XREG (num_of_int (& 31))) s
+  X_read(a, 16)
+    ~> word_zx (read (XREG (num_of_int a)) s)
+  X_read(a, 32)
+    ~> read (WREG (num_of_int a)) s
+  X_read(a, 64)
+    ~> read (XREG (num_of_int a)) s
+  X_read(a, 8)
+    ~> word_zx (read (XREG (num_of_int a)) s)
+  X_set(a, 32, b)
+    ~> s' = write (WREG (num_of_int a)) b s
+  X_set(a, 64, b)
+    ~> s' = write (XREG (num_of_int a)) b s
+  _PC
+    ~> read reg__5fPC s0
+  throw Error_Undefined()
+    ~> every final state
+  undefined : 128 word
+    ~> v, where the whole relation is ?v:128 word. ...
+  undefined : 32 word
+    ~> v, where the whole relation is ?v:32 word. ...
+  undefined : 64 word
+    ~> v, where the whole relation is ?v:64 word. ...
+  undefined : 8 word
+    ~> v, where the whole relation is ?v:8 word. ...
+  undefined : int
+    ~> v, where the whole relation is ?v:int. ...
+  undefined : sail_hl_type_Constraint
+    ~> v, where the whole relation is ?v:sail_hl_type_Constraint. ...
