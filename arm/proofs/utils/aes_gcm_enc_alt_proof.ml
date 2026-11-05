@@ -4292,6 +4292,67 @@ let prove_setup_safe g1 =
 
 let AES_GCM_ENC_ALT_SETUP_G1_SAFE = prove_setup_safe true;;
 
+(* SAFE_SEQ2_TAC leg1 specs1 leg2 specs2: the safety of a composition of two *)
+(* legs, leg1 from the entry and then leg2 to the exit, by double abstract   *)
+(* bigstep.  specs1 and specs2 instantiate the quantifiers of the legs after *)
+(* e (and the e_tail of leg1 is []).  The trace is that of leg2 after that   *)
+(* of leg1: the f_events witness is                                          *)
+(* \args. APPEND (f_ev_2 args) (f_ev_1 args), over the arguments of the      *)
+(* goal's f_events.                                                          *)
+let SAFE_SEQ2_TAC leg1 specs1 leg2 specs2 : tactic =
+  let e = `e:(uarch_event)list` and enil = `[]:(uarch_event)list` in
+  let ants_tac =
+    REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
+                LENGTH_WB_MC] THEN
+    REPEAT CONJ_TAC THEN
+    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
+     CONV_TAC WORD_RULE)
+  and witness_tac (asl,w as gl) =
+    let fev,bod = dest_exists w in
+    let args =
+      snd(strip_comb(find_term (fun t -> fst(strip_comb t) = fev) bod)) in
+    let ty = itlist (mk_fun_ty o type_of) args `:(uarch_event)list` in
+    let ap f = list_mk_comb(mk_var(f,ty),args) in
+    CONCRETIZE_F_EVENTS_TAC
+     (list_mk_abs(args,
+        mk_binop `APPEND:(uarch_event)list->(uarch_event)list->
+                         (uarch_event)list`
+          (ap "f_ev_2") (ap "f_ev_1"))) gl in
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
+              MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
+  REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
+              LENGTH_WB_MC] THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC leg2 "H_LEG2" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC leg1 "H_LEG1" THEN
+  witness_tac THEN
+  REPEAT META_EXISTS_TAC THEN
+  REPEAT STRIP_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+    MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS]) THEN
+  (* ===== BIGSTEP 1: leg1, e_tail = [] ===== *)
+  USE_THEN "H_LEG1" (fun th ->
+    MP_TAC (REWRITE_RULE[APPEND] (SPECL (e :: specs1 @ [enil]) th))) THEN
+  ANTS_TAC THENL [ants_tac; ALL_TAC] THEN
+  ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s1" THEN
+  (* ===== BIGSTEP 2: leg2 ===== *)
+  USE_THEN "H_LEG2" (fun th ->
+    MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
+      (SPECL (e :: specs2) th))) THEN
+  ANTS_TAC THENL [ants_tac; ALL_TAC] THEN
+  ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
+  META_EXISTS_TAC THEN
+  ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s2" THENL [
+    BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
+    ALL_TAC ] THEN
+  (* ===== the final state ===== *)
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+  CONJ_TAC THENL
+   [ BINOP_TAC THENL [ UNIFY_F_EVENTS_TAC; UNIFY_F_EVENTS_TAC ];
+     DISCHARGE_MEMACCESS_INBOUNDS_TAC ];;
+
 (* --- PREPRETAIL_TAIL_SAFE (pc+0xa10 -> pc+0x1154): the reusable last-group *)
 (* + tail composite (PREPRETAIL_GEN_SAFE o TAIL_REM_SAFE, g = k+1,           *)
 (* r = nb-8*(k+1)) for general k.  Double abstract bigstep; f_events takes   *)
@@ -4337,67 +4398,15 @@ let AES_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
-              MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
-  REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-              LENGTH_WB_MC] THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AES_GCM_ENC_ALT_TAIL_REM_SAFE "H_TAIL" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AES_GCM_ENC_ALT_PREPRETAIL_GEN_SAFE
-    "H_PP" THEN
-  CONCRETIZE_F_EVENTS_TAC
-    `\(in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
-      (key_p:int64) (htable_p:int64) (mod_p:int64) (nb:num) (k:num) (pc:num).
-       APPEND
-         (f_ev_tail in_p out_p tag_p ivec_p key_p htable_p mod_p nb k pc)
-         (f_ev_pp in_p out_p tag_p ivec_p key_p htable_p mod_p nb k pc)
-       :(uarch_event)list` THEN
-  REPEAT META_EXISTS_TAC THEN
-  REPEAT STRIP_TAC THEN
-  ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-    MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS]) THEN
-  (* ===== BIGSTEP 1: PREPRETAIL_GEN (pc+0xa10 -> pc+0xee0), e_tail = [] *)
-  USE_THEN "H_PP" (fun th ->
-    MP_TAC (REWRITE_RULE[APPEND]
-      (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
-              `ivec_p:int64`; `key_p:int64`; `htable_p:int64`; `mod_p:int64`;
-              `end_p:int64`; `nb:num`; `k:num`; `pc:num`;
-              `[]:(uarch_event)list`] th))) THEN
-  ANTS_TAC THENL
-   [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-                LENGTH_WB_MC] THEN
-    REPEAT CONJ_TAC THEN
-    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
-     CONV_TAC WORD_RULE);
-    ALL_TAC] THEN
-  ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s1" THEN
-  (* ===== BIGSTEP 2: TAIL_REM (pc+0xee0 -> pc+0x1154), g=k+1, r=nb-8*(k+1) *)
-  USE_THEN "H_TAIL" (fun th ->
-    MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
-      (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
-              `ivec_p:int64`; `key_p:int64`; `htable_p:int64`; `mod_p:int64`;
-              `end_p:int64`;
-              `nb:num`; `nb - 8 * (k + 1)`; `k + 1`; `pc:num`] th))) THEN
-  ANTS_TAC THENL
-   [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-                LENGTH_WB_MC] THEN
-    REPEAT CONJ_TAC THEN
-    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
-     CONV_TAC WORD_RULE);
-    ALL_TAC] THEN
-  ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
-  META_EXISTS_TAC THEN
-  ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s2" THENL [
-    BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
-    ALL_TAC ] THEN
-  (* ===== CLOSE_TAC ===== *)
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  CONJ_TAC THENL
-   [ BINOP_TAC THENL [ UNIFY_F_EVENTS_TAC; UNIFY_F_EVENTS_TAC ];
-     DISCHARGE_MEMACCESS_INBOUNDS_TAC ])
-;;
+  SAFE_SEQ2_TAC
+    AES_GCM_ENC_ALT_PREPRETAIL_GEN_SAFE
+     [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
+      `key_p:int64`; `htable_p:int64`; `mod_p:int64`; `end_p:int64`; `nb:num`;
+      `k:num`; `pc:num`]
+    AES_GCM_ENC_ALT_TAIL_REM_SAFE
+     [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
+      `key_p:int64`; `htable_p:int64`; `mod_p:int64`; `end_p:int64`; `nb:num`;
+      `nb - 8 * (k + 1)`; `k + 1`; `pc:num`]);;
 
 (* --- Whole-core safety for nb 9..16: FIXED_CORRECT_G1_SAFE (pc+0x38 ->     *)
 (* pc+0x1154, k = 0).  SETUP_G1_SAFE o PREPRETAIL_TAIL_SAFE (double          *)
@@ -4449,68 +4458,16 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1_SAFE = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
-              MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
-  REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-              LENGTH_WB_MC] THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AES_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE
-    "H_PT" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AES_GCM_ENC_ALT_SETUP_G1_SAFE "H_SETUP" THEN
-  CONCRETIZE_F_EVENTS_TAC
-    `\(nb:num) (in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
-      (key_p:int64) (htable_p:int64) (stackpointer:int64) (pc:num).
-       APPEND
-         (f_ev_pt nb in_p out_p tag_p ivec_p key_p htable_p stackpointer pc)
-         (f_ev_setup nb in_p out_p tag_p ivec_p key_p htable_p stackpointer pc)
-       :(uarch_event)list` THEN
-  REPEAT META_EXISTS_TAC THEN
-  REPEAT STRIP_TAC THEN
-  ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-    MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS]) THEN
-  (* ===== BIGSTEP 1: SETUP_G1 (pc+0x38 -> pc+0xa10), e_tail = [] ===== *)
-  USE_THEN "H_SETUP" (fun th ->
-    MP_TAC (REWRITE_RULE[APPEND]
-      (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
-              `ivec_p:int64`; `key_p:int64`; `htable_p:int64`;
-              `stackpointer:int64`;
-              `len_bits:num`; `end_p:int64`; `nb:num`; `k:num`;
-              `pc:num`; `[]:(uarch_event)list`] th))) THEN
-  ANTS_TAC THENL
-   [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-                LENGTH_WB_MC] THEN
-    REPEAT CONJ_TAC THEN
-    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
-     CONV_TAC WORD_RULE);
-    ALL_TAC] THEN
-  ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s1" THEN
-  (* ===== BIGSTEP 2: PREPRETAIL_TAIL (pc+0xa10 -> pc+0x1154), k=0 ===== *)
-  USE_THEN "H_PT" (fun th ->
-    MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
-      (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
-              `ivec_p:int64`; `key_p:int64`; `htable_p:int64`;
-              `word_add stackpointer (word 0x40):int64`; `end_p:int64`;
-              `nb:num`; `0`; `pc:num`] th))) THEN
-  ANTS_TAC THENL
-   [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-                LENGTH_WB_MC] THEN
-    REPEAT CONJ_TAC THEN
-    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
-     CONV_TAC WORD_RULE);
-    ALL_TAC] THEN
-  ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
-  META_EXISTS_TAC THEN
-  ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s2" THENL [
-    BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
-    ALL_TAC ] THEN
-  (* ===== CLOSE_TAC ===== *)
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  CONJ_TAC THENL
-   [ BINOP_TAC THENL [ UNIFY_F_EVENTS_TAC; UNIFY_F_EVENTS_TAC ];
-     DISCHARGE_MEMACCESS_INBOUNDS_TAC ])
-;;
+  SAFE_SEQ2_TAC
+    AES_GCM_ENC_ALT_SETUP_G1_SAFE
+     [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
+      `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
+      `end_p:int64`; `nb:num`; `k:num`; `pc:num`]
+    AES_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE
+     [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
+      `key_p:int64`; `htable_p:int64`;
+      `word_add stackpointer (word 0x40):int64`; `end_p:int64`; `nb:num`; `0`;
+      `pc:num`]);;
 
 (* --- SETUP_GEN_SAFE (pc+0x38 -> pc+0x4c0, k <> 0, nb >= 17): the setup for *)
 (* the general (main-loop) case (prove_setup_safe, above).                   *)
@@ -4717,65 +4674,15 @@ let AES_GCM_ENC_ALT_LOOP_TAIL_SAFE = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
-              MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
-  REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-              LENGTH_WB_MC] THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AES_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE
-    "H_PT" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AES_GCM_ENC_ALT_MAIN_LOOP_SAFE "H_ML" THEN
-  CONCRETIZE_F_EVENTS_TAC
-    `\(in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
-      (key_p:int64) (htable_p:int64) (mod_p:int64) (nb:num) (k:num) (pc:num).
-       APPEND
-         (f_ev_pt in_p out_p tag_p ivec_p key_p htable_p mod_p nb k pc)
-         (f_ev_ml in_p out_p tag_p ivec_p key_p htable_p mod_p nb k pc)
-       :(uarch_event)list` THEN
-  REPEAT META_EXISTS_TAC THEN
-  REPEAT STRIP_TAC THEN
-  ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-    MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS]) THEN
-  (* ===== BIGSTEP 1: MAIN_LOOP (pc+0x4c0 -> pc+0xa10), e_tail = [] ===== *)
-  USE_THEN "H_ML" (fun th ->
-    MP_TAC (REWRITE_RULE[APPEND]
-      (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
-              `ivec_p:int64`; `key_p:int64`; `htable_p:int64`; `mod_p:int64`;
-              `end_p:int64`; `nb:num`; `k:num`; `pc:num`;
-              `[]:(uarch_event)list`] th))) THEN
-  ANTS_TAC THENL
-   [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-                LENGTH_WB_MC] THEN
-    REPEAT CONJ_TAC THEN
-    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
-     CONV_TAC WORD_RULE);
-    ALL_TAC] THEN
-  ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s1" THEN
-  (* ===== BIGSTEP 2: PREPRETAIL_TAIL (pc+0xa10 -> pc+0x1154), param k ===== *)
-  USE_THEN "H_PT" (fun th ->
-    MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
-      (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
-              `ivec_p:int64`; `key_p:int64`; `htable_p:int64`; `mod_p:int64`;
-              `end_p:int64`; `nb:num`; `k:num`; `pc:num`] th))) THEN
-  ANTS_TAC THENL
-   [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-                LENGTH_WB_MC] THEN
-    REPEAT CONJ_TAC THEN
-    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
-     CONV_TAC WORD_RULE);
-    ALL_TAC] THEN
-  ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
-  META_EXISTS_TAC THEN
-  ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s2" THENL [
-    BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
-    ALL_TAC ] THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  CONJ_TAC THENL
-   [ BINOP_TAC THENL [ UNIFY_F_EVENTS_TAC; UNIFY_F_EVENTS_TAC ];
-     DISCHARGE_MEMACCESS_INBOUNDS_TAC ])
-;;
+  SAFE_SEQ2_TAC
+    AES_GCM_ENC_ALT_MAIN_LOOP_SAFE
+     [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
+      `key_p:int64`; `htable_p:int64`; `mod_p:int64`; `end_p:int64`; `nb:num`;
+      `k:num`; `pc:num`]
+    AES_GCM_ENC_ALT_PREPRETAIL_TAIL_SAFE
+     [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
+      `key_p:int64`; `htable_p:int64`; `mod_p:int64`; `end_p:int64`; `nb:num`;
+      `k:num`; `pc:num`]);;
 
 (* --- Whole-core safety for nb >= 17: GEN_CORRECT_SAFE (pc+0x38 ->          *)
 (* pc+0x1154, k >= 1).  SETUP_GEN_SAFE o LOOP_TAIL_SAFE (double bigstep).    *)
@@ -4827,66 +4734,16 @@ let AES_GCM_ENC_ALT_GEN_CORRECT_SAFE = prove
        MAYCHANGE [memory :> bytes(out_p, 16 * nb);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16)])`,
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; MODIFIABLE_SIMD_REGS;
-              MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] THEN
-  REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-              LENGTH_WB_MC] THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AES_GCM_ENC_ALT_LOOP_TAIL_SAFE "H_LT" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC AES_GCM_ENC_ALT_SETUP_GEN_SAFE "H_SG" THEN
-  CONCRETIZE_F_EVENTS_TAC
-    `\(nb:num) (k:num) (in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
-      (key_p:int64) (htable_p:int64) (stackpointer:int64) (pc:num).
-       APPEND
-         (f_ev_lt nb k in_p out_p tag_p ivec_p key_p htable_p stackpointer pc)
-         (f_ev_sg nb k in_p out_p tag_p ivec_p key_p htable_p stackpointer pc)
-       :(uarch_event)list` THEN
-  REPEAT META_EXISTS_TAC THEN
-  REPEAT STRIP_TAC THEN
-  ENSURES_INIT_TAC "s0" THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-    MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS]) THEN
-  (* ===== BIGSTEP 1: SETUP_GEN (pc+0x38 -> pc+0x4c0), e_tail = [] ===== *)
-  USE_THEN "H_SG" (fun th ->
-    MP_TAC (REWRITE_RULE[APPEND]
-      (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
-              `ivec_p:int64`; `key_p:int64`; `htable_p:int64`;
-              `stackpointer:int64`;
-              `len_bits:num`; `end_p:int64`; `nb:num`; `k:num`;
-              `pc:num`; `[]:(uarch_event)list`] th))) THEN
-  ANTS_TAC THENL
-   [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-                LENGTH_WB_MC] THEN
-    REPEAT CONJ_TAC THEN
-    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
-     CONV_TAC WORD_RULE);
-    ALL_TAC] THEN
-  ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s1" THEN
-  (* ===== BIGSTEP 2: LOOP_TAIL (pc+0x4c0 -> pc+0x1154), param k ===== *)
-  USE_THEN "H_LT" (fun th ->
-    MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
-      (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
-              `ivec_p:int64`; `key_p:int64`; `htable_p:int64`;
-              `word_add stackpointer (word 0x40):int64`; `end_p:int64`;
-              `nb:num`; `k:num`; `pc:num`] th))) THEN
-  ANTS_TAC THENL
-   [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES;
-                LENGTH_WB_MC] THEN
-    REPEAT CONJ_TAC THEN
-    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE ASM_REWRITE_TAC[] ORELSE
-     CONV_TAC WORD_RULE);
-    ALL_TAC] THEN
-  ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
-  META_EXISTS_TAC THEN
-  ARM_BIGSTEP_TAC AES_GCM_ENC_ALT_EXEC "s2" THENL [
-    BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN NO_TAC;
-    ALL_TAC ] THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  CONJ_TAC THENL
-   [ BINOP_TAC THENL [ UNIFY_F_EVENTS_TAC; UNIFY_F_EVENTS_TAC ];
-     DISCHARGE_MEMACCESS_INBOUNDS_TAC ])
-;;
+  SAFE_SEQ2_TAC
+    AES_GCM_ENC_ALT_SETUP_GEN_SAFE
+     [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
+      `key_p:int64`; `htable_p:int64`; `stackpointer:int64`; `len_bits:num`;
+      `end_p:int64`; `nb:num`; `k:num`; `pc:num`]
+    AES_GCM_ENC_ALT_LOOP_TAIL_SAFE
+     [`in_p:int64`; `out_p:int64`; `tag_p:int64`; `ivec_p:int64`;
+      `key_p:int64`; `htable_p:int64`;
+      `word_add stackpointer (word 0x40):int64`; `end_p:int64`; `nb:num`;
+      `k:num`; `pc:num`]);;
 
 (* --- Whole-core safety (all nb): a dispatch over the four nb ranges        *)
 (* (nb <= 4: FAST1..FAST4; 5..8: SETUP0_TAIL; 9..16: FIXED_CORRECT_G1;       *)
