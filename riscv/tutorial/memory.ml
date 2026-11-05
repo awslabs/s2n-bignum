@@ -4,7 +4,8 @@
  *)
 
 (******************************************************************************
-  Verify RV32I routines that swap two 32-bit memory words and copy a byte.
+  Verify RV32I routines that swap two 32-bit memory words and copy a byte,
+  and show that FENCE changes only the PC.
 ******************************************************************************)
 
 needs "riscv/proofs/base.ml";;
@@ -82,3 +83,23 @@ let BYTECOPY_CORRECT = prove
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
   CONV_TAC WORD_BLAST);;
+
+(* fence rw,rw *)
+let fence_mc = define_word_list "fence_mc"
+ `[word 0x0f; word 0x00; word 0x30; word 0x03]:byte list`;;
+
+let FENCE_EXEC = RISCV_MK_EXEC_RULE fence_mc;;
+
+let FENCE_CORRECT = prove
+ (`!pc.
+    ensures riscv
+      (\s. aligned_bytes_loaded s (word pc) fence_mc /\
+           read PC s = word pc)
+      (\s. read PC s = word (pc + 4))
+      (MAYCHANGE [PC])`,
+  REWRITE_TAC[fst FENCE_EXEC] THEN
+  GEN_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  RISCV_STEPS_TAC FENCE_EXEC [1] THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[]);;
