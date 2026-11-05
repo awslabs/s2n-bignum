@@ -14,6 +14,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/keccakf1600_xor_bytes \
   mlkem_native/clang17_O3/keccakf1600x4_extract_bytes \
   mlkem_native/clang17_O3/keccakf1600x4_permute \
+  mlkem_native/clang17_O3/keccakf1600x4_xor_bytes \
   mlkem_native/clang17_O3/poly_add \
   mlkem_native/clang17_O3/poly_cbd2 \
   mlkem_native/clang17_O3/poly_cbd3 \
@@ -112,6 +113,10 @@ mlkem_native/clang17_O3/keccakf1600x4_extract_bytes.native: \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/keccakf1600x4_permute.native: \
   mlkem_native/clang17_O3/keccakf1600_permute.native \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/keccakf1600x4_xor_bytes.native: \
+  mlkem_native/clang17_O3/keccakf1600_xor_bytes.native \
+  proofs/mlkem_native/copies.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/libmlkem.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
