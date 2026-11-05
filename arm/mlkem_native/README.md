@@ -15,10 +15,13 @@ part of the library.
 The files for each build of the binary are in directories named after the
 compiler and the optimization level, `<build>` = `<compiler>_<level>`:
 `gcc12_O2` for the gcc 12 `-O2` binary, whose whole image is verified,
-`clang17_O2` for the one function transcribed from the clang 17 `-O2`
-binary, and `clang17_O3` for the clang 17 `-O3` binary, whose whole image
-is transcribed and some of whose functions are verified in it (see below).
-For a build:
+`gcc12_O3` for the gcc 12 `-O3` binary, which is being verified in the same
+way (see `gcc12_O3/README.md`), `gcc12_O2_mono` for the gcc 12 `-O2`
+binary of the monolithic build, which compiles all of mlkem-native as one
+translation unit (see `gcc12_O2_mono/README.md`), `clang17_O2` for the
+one function transcribed from the clang 17 `-O2` binary, and `clang17_O3`
+for the clang 17 `-O3` binary, whose whole image is transcribed and some
+of whose functions are verified in it (see below). For a build:
 
  - `<build>/libmlkem.S` is the transcription of the whole image, if there
    is one, and `<build>/<function>.S` those of single functions;
@@ -80,6 +83,8 @@ function `mlkem_<function>` in the binary
 | gcc12_O2/poly_tobytes.S          | gcc 12.3.0   |
 | gcc12_O2/poly_tomont.S           | gcc 12.3.0   |
 | gcc12_O2/rej_uniform.S           | gcc 12.3.0   |
+| gcc12_O3/libmlkem.S              | gcc 12.3.0   |
+| gcc12_O2_mono/libmlkem.S         | gcc 12.3.0   |
 | clang17_O2/poly_reduce.S         | clang 17.0.6 |
 | clang17_O3/libmlkem.S            | clang 17.0.6 |
 
@@ -113,6 +118,10 @@ binaries/multilevel/clang17/O3/libmlkem.so
   c0b9cda5f78ff1baddc6f47c38aec02bb416c31fd559f390e845ee55f35375db
 binaries/multilevel/gcc12/O2/libmlkem.so
   ed9a4710c0ec93ef1eab794f3e854dfadf92b45e08c76101cffdf1a36b035692
+binaries/multilevel/gcc12/O3/libmlkem.so
+  5139544fd8a5aa5d0ac9d3895dadbe23d9168b2853dce9f5a9a758b0f0dfdd77
+binaries/multilevel-mono/gcc12/O2/libmlkem.so
+  218c21e6488dd7d9005ed0dd728d1511e6acce8be2ff981c4870c309b3c31e58
 ```
 
 ## Checking a transcription
@@ -209,10 +218,13 @@ The functions and data come from the symbol table, the size of the image
 from the section headers, the PLT entries and GOT slots from the
 disassembly and the dynamic relocations, the vectors of constants without
 symbols from the ADRP and LDR instructions that load them, and the labels
-in the functions from their control flow graphs. It works for all 48
-builds in the `binary` branch of mlkem-native. For a build other than
-gcc 12 `-O2` this gives the names that its proofs would use, but not the
-proofs themselves, since the code is different.
+in the functions from their control flow graphs, as the header of the file
+explains with diagrams. At the end, the file lists the code of each
+function with its labels, the names of the addresses of its constants, and
+arrows for its branches. It works for all 48 builds in the `binary` branch
+of mlkem-native. For a build other than gcc 12 `-O2` this gives the names
+that its proofs would use, but not the proofs themselves, since the code is
+different.
 
 With `--dwarf`, the layout also gets labels for the calls of mlkem-native
 functions that the compiler has inlined, `<f>_in_<g>` and
