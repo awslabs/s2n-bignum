@@ -214,6 +214,21 @@ builds in the `binary` branch of mlkem-native. For a build other than
 gcc 12 `-O2` this gives the names that its proofs would use, but not the
 proofs themselves, since the code is different.
 
+With `--dwarf`, the layout also gets labels for the calls of mlkem-native
+functions that the compiler has inlined, `<f>_in_<g>` and
+`<f>_in_<g>_end`, and the listings note which inlined call each
+instruction belongs to. This needs the split debug information
+`libmlkem.so.dwp` next to the binary (or `--dwp`) and `llvm-dwarfdump`,
+and is meant for builds that inline much, such as the monolithic ones,
+where most of the functions that the proofs of `-O2` are about have no
+symbol (see `gcc12_O2_mono/README.md`). The symbol table alone still gives
+all the functions with code. `dwarf_inline.py` reads the debug information:
+the tree of inlined calls from the `.dwp`, and the addresses and address
+ranges it refers to from the binary. It does not use `llvm-symbolizer`,
+which attributes instructions of these binaries to the wrong inlined calls,
+and it checks that the debug information and the symbol table agree on the
+start of every function.
+
 The proof for each function ends with the versions of its theorems for the
 code in the image, `..._IMAGE_SUBROUTINE_CORRECT` and
 `..._IMAGE_SUBROUTINE_SAFE`. For use in the proofs of callers, the
