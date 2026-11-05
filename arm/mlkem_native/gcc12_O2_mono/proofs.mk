@@ -8,6 +8,14 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/basemul_k2 \
   mlkem_native/gcc12_O2_mono/basemul_k3 \
   mlkem_native/gcc12_O2_mono/basemul_k4 \
+  mlkem_native/gcc12_O2_mono/check_pk_k2 \
+  mlkem_native/gcc12_O2_mono/check_pk_k3 \
+  mlkem_native/gcc12_O2_mono/keccak_absorb_once \
+  mlkem_native/gcc12_O2_mono/keccak_absorb_once_x4 \
+  mlkem_native/gcc12_O2_mono/keccak_squeezeblocks_x4 \
+  mlkem_native/gcc12_O2_mono/keccakf1600_permute \
+  mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes \
+  mlkem_native/gcc12_O2_mono/keccakf1600x4_xor_bytes \
   mlkem_native/gcc12_O2_mono/poly_cbd2 \
   mlkem_native/gcc12_O2_mono/poly_cbd3 \
   mlkem_native/gcc12_O2_mono/poly_compress_d10 \
@@ -21,7 +29,8 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/poly_ntt \
   mlkem_native/gcc12_O2_mono/poly_reduce \
   mlkem_native/gcc12_O2_mono/poly_tobytes \
-  mlkem_native/gcc12_O2_mono/poly_tomsg
+  mlkem_native/gcc12_O2_mono/poly_tomsg \
+  mlkem_native/gcc12_O2_mono/rej_uniform
 
 mlkem_native/gcc12_O2_mono/basemul_k2.native: \
   proofs/utils/mlkem_native.ml \
@@ -31,6 +40,45 @@ mlkem_native/gcc12_O2_mono/basemul_k3.native: \
   mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/basemul_k4.native: \
   proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/check_pk_k2.native: \
+  proofs/utils/mlkem_native_libc.ml \
+  proofs/mlkem_native/polyvec_inline.ml \
+  mlkem_native/gcc12_O2_mono/poly_frombytes.native \
+  mlkem_native/gcc12_O2_mono/poly_reduce.native \
+  mlkem_native/gcc12_O2_mono/poly_tobytes.native \
+  proofs/utils/mlkem_native_image.ml
+mlkem_native/gcc12_O2_mono/check_pk_k3.native: \
+  proofs/utils/mlkem_native_libc.ml \
+  proofs/mlkem_native/polyvec_inline.ml \
+  mlkem_native/gcc12_O2_mono/poly_frombytes.native \
+  mlkem_native/gcc12_O2_mono/poly_reduce.native \
+  mlkem_native/gcc12_O2_mono/poly_tobytes.native \
+  proofs/utils/mlkem_native_image.ml
+mlkem_native/gcc12_O2_mono/keccak_absorb_once.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/keccakf1600_permute.native \
+  mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes.native \
+  proofs/utils/keccak_fips202.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native \
+  proofs/utils/keccak_spec.ml
+mlkem_native/gcc12_O2_mono/keccak_absorb_once_x4.native: \
+  mlkem_native/gcc12_O2_mono/keccak_absorb_once.native \
+  mlkem_native/gcc12_O2_mono/keccakf1600x4_xor_bytes.native \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/keccak_squeezeblocks_x4.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/keccakf1600_permute.native \
+  mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes.native \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/keccakf1600_permute.native: \
+  mlkem_native/gcc12_O2_mono/libmlkem.native \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_fips202.ml
+mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes.native: \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/keccakf1600x4_xor_bytes.native: \
+  mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes.native \
   mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/libmlkem.native: \
   proofs/mlkem_native/gcc12_O2_mono/layout.ml \
@@ -75,5 +123,8 @@ mlkem_native/gcc12_O2_mono/poly_tobytes.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/poly_tomsg.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/rej_uniform.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O2_mono/libmlkem.native
