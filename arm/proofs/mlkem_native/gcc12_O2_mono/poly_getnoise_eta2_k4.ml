@@ -305,3 +305,99 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT =
   ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_MONO_EXEC (34--42) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[]);;
+
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof, stated directly as for             *)
+(* mlkem_poly_compress_d4. The events do not depend on the nonce.            *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let GETNOISE_SAFE_CALL_TAC name ilist n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mono_mc,
+       MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_MONO_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mono_mc,safety_th)
+      ilist n THENL
+     [EXISTS_E2_TAC (ref [`pc:num`; `r:int64`; `seed:int64`; `guard:int64`; `mc:int64`;
+                          `stackpointer:int64`; `returnaddress:int64`]);
+      LABEL_TAC name safety_th]);;
+
+let MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE =
+  time prove
+ (`!mc ea el ev.
+     memcpy_safety_contract mc ea el ev
+     ==> exists f_events.
+     forall e r seed nonce guard pc stackpointer returnaddress.
+       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+       aligned 16 stackpointer /\
+       PAIRWISE nonoverlapping
+        [r,512; seed,32; word_sub stackpointer (word 816),816] /\
+       ALLPAIRS nonoverlapping
+        [r,512; word_sub stackpointer (word 816),816]
+        [word pc,libmlkem_size; word(pc + got_stack_chk_guard),8; guard,8;
+         word(pc + got_memcpy),8; ea,el]
+       ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc)
+                   mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+                 read PC s = word (pc + mlkem1024_poly_getnoise_eta2) /\
+                 read SP s = stackpointer /\
+                 read X30 s = returnaddress /\
+                 C_ARGUMENTS [r; seed; nonce] s /\
+                 read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                   guard /\
+                 read (memory :> bytes64(word(pc + got_memcpy))) s = mc /\
+                 read (memory :> bytes(ea,el)) s = ev /\
+                 read events s = e)
+            (\s. read PC s = returnaddress /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events seed r guard mc pc
+                           (word_sub stackpointer (word 816)) returnaddress /\
+                    memaccess_inbounds e2
+                     [seed,32; r,512; word_sub stackpointer (word 816),816;
+                      word(pc + got_stack_chk_guard),8; guard,8;
+                      word(pc + got_memcpy),8; ea,el;
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192;
+                      word(pc + mlkem_poly_cbd2_consts),64]
+                     [r,512; word_sub stackpointer (word 816),816]))
+            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+             MAYCHANGE
+              [memory :> bytes(r,512);
+               memory :> bytes(word_sub stackpointer (word 816),816)])`,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  FIRST_ASSUM(fun th ->
+    ASSUME_CALLEE_SAFETY_TAILED_TAC
+     (MATCH_MP MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE th)
+     "H_SHAKE256") THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_POLY_CBD2_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE
+    "H_CBD2" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  GETNOISE_SETUP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_MONO_EXEC (1--5) THEN
+  GETNOISE_BUFFER_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_MONO_EXEC (6--6) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_MONO_EXEC (7--19) THEN
+  GETNOISE_GOT_TAC THEN GETNOISE_NORMALIZE_TAC THEN
+  GETNOISE_SAFE_CALL_TAC "H_SHAKE256"
+   [`e:(uarch_event)list`; `read X0 s`; `128`; `read X2 s`; `33`;
+    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 20 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_MONO_EXEC (21--23) THEN
+  GETNOISE_SAFE_CALL_TAC "H_CBD2"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `pc:num`;
+    `read X30 s`] 24 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_MONO_EXEC (25--33) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_MONO_EXEC (34--42) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
