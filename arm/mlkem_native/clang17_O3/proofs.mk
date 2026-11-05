@@ -15,6 +15,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/poly_compress_d11 \
   mlkem_native/clang17_O3/poly_compress_d5 \
   mlkem_native/clang17_O3/poly_decompress_d4 \
+  mlkem_native/clang17_O3/poly_frombytes \
   mlkem_native/clang17_O3/poly_frommsg \
   mlkem_native/clang17_O3/poly_invntt_tomont \
   mlkem_native/clang17_O3/poly_mulcache_compute \
@@ -31,6 +32,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/polyvec_compress_du_k2 \
   mlkem_native/clang17_O3/polyvec_compress_du_k3 \
   mlkem_native/clang17_O3/polyvec_compress_du_k4 \
+  mlkem_native/clang17_O3/polyvec_frombytes_k2 \
   mlkem_native/clang17_O3/polyvec_invntt_tomont_k2 \
   mlkem_native/clang17_O3/polyvec_invntt_tomont_k3 \
   mlkem_native/clang17_O3/polyvec_invntt_tomont_k4 \
@@ -93,6 +95,11 @@ mlkem_native/clang17_O3/poly_decompress_d4.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/poly_frombytes.native: \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
+  mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_frommsg.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/clang17_O3/libmlkem.native
@@ -144,6 +151,9 @@ mlkem_native/clang17_O3/polyvec_compress_du_k3.native: \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/polyvec_compress_du_k4.native: \
   mlkem_native/clang17_O3/poly_compress_d11.native \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/polyvec_frombytes_k2.native: \
+  mlkem_native/clang17_O3/poly_frombytes.native \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/polyvec_invntt_tomont_k2.native: \
   mlkem_native/clang17_O3/poly_invntt_tomont.native \
