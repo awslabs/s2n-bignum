@@ -6,12 +6,19 @@ MLKEM_NATIVE_OBJ += \
 
 MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/keccakf1600_permute \
+  mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes \
+  mlkem_native/gcc12_O2_mono/keccakf1600x4_xor_bytes \
   mlkem_native/gcc12_O2_mono/rej_uniform
 
 mlkem_native/gcc12_O2_mono/keccakf1600_permute.native: \
   mlkem_native/gcc12_O2_mono/libmlkem.native \
   proofs/utils/keccak_spec.ml \
   proofs/utils/keccak_fips202.ml
+mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes.native: \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/keccakf1600x4_xor_bytes.native: \
+  mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes.native \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/libmlkem.native: \
   proofs/mlkem_native/gcc12_O2_mono/layout.ml \
   proofs/utils/mlkem_native_image.ml
