@@ -206,7 +206,15 @@ mlkem_native/gcc12_O3/poly_rej_uniform.native: \
   mlkem_native/gcc12_O3/rej_uniform.native \
   proofs/utils/mlkem_native_image.ml
 mlkem_native/gcc12_O3/poly_rej_uniform_x4.native: \
-  mlkem_native/gcc12_O3/rej_uniform.native
+  proofs/utils/mlkem_native_libc.ml \
+  mlkem_native/gcc12_O3/poly_rej_uniform.native \
+  mlkem_native/gcc12_O3/shake128x4_init.native \
+  mlkem_native/gcc12_O3/shake128x4_absorb_once.native \
+  mlkem_native/gcc12_O3/shake128x4_squeezeblocks.native \
+  mlkem_native/gcc12_O3/shake128x4_release.native \
+  mlkem_native/gcc12_O3/rej_uniform.native \
+  proofs/utils/mlkem_native_libc_full.ml \
+  proofs/utils/mlkem_native_image.ml
 mlkem_native/gcc12_O3/poly_sub.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
