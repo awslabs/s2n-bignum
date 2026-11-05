@@ -19,7 +19,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
-needs "arm/proofs/utils/mlkem_native_overlap.ml";;
+needs "arm/proofs/mlkem_native/overlap.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/libmlkem.ml";;
 
 (*** The code in the image:
