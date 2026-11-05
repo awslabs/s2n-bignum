@@ -514,3 +514,206 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT = prove
     MLKEM_NATIVE_ADRP_TAC THEN
     ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (10--20) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The events depend on the address   *)
+(* of the stack guard, read from the GOT, and on the address mc of memcpy,   *)
+(* so the theorem is stated directly, with the safety contract for memcpy.   *)
+(* There is no theorem with the correctness statement together with the      *)
+(* events, as in gcc12_O2.                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let SHAKE256_SAFE_VARS =
+  [`pc:num`; `m:int64`; `out:int64`; `outlen:num`; `inlen:num`;
+   `guard:int64`; `mc:int64`; `ea:int64`; `el:num`; `stackpointer:int64`;
+   `returnaddress:int64`; `i:num`];;
+
+let SHAKE256_SAFE_CALL_TAC name ilist n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mono_mc,
+       MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mono_mc,safety_th)
+      ilist n THENL
+     [ABS_EXISTS_E2_TAC (ref SHAKE256_SAFE_VARS); LABEL_TAC name safety_th]);;
+
+let SHAKE256_LIBC_SAFE_CALL_TAC name n =
+  REMOVE_THEN name (fun th ->
+    LIBC_CONTRACT_SIM_TAC ~is_safety_thm:true
+      MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC th
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+       `read X30 s`] n THENL
+     [ABS_EXISTS_E2_TAC (ref SHAKE256_SAFE_VARS); LABEL_TAC name th]);;
+
+let SHAKE256_SAFE_MID = parse_term
+ ("\\s. read X20 s = word outlen /\\
+        read X21 s = " ^ SHAKE256_MONO_ST ^ " /\\
+        read X22 s = out /\\ read X23 s = word 1 /\\ read X24 s = word 136 /\\ " ^
+  SHAKE256_MONO_FRAME);;
+
+let SHAKE256_SAFE_INV = parse_term
+ ("\\i s. read X20 s = word(outlen - MIN outlen (136 * i)) /\\
+          read X21 s = " ^ SHAKE256_MONO_ST ^ " /\\
+          read X22 s = word_add out (word(MIN outlen (136 * i))) /\\
+          read X23 s = word 1 /\\ read X24 s = word 136 /\\ " ^
+  SHAKE256_MONO_FRAME);;
+
+let SHAKE256_SAFE_TEMPLATE =
+ `\(m:int64) (out:int64) (outlen:num) (inlen:num) (guard:int64) (mc:int64)
+   (pc:num) (stackpointer:int64) (returnaddress:int64).
+   APPEND
+    (APPEND
+      (f_ev_epil m out outlen inlen guard mc pc stackpointer returnaddress)
+      (APPEND
+        (ENUMERATEL ((outlen + 135) DIV 136)
+          (\i. f_ev_loop m out outlen inlen guard mc pc stackpointer
+                         returnaddress i))
+        (f_ev_prol m out outlen inlen guard mc pc stackpointer
+                   returnaddress)))
+    (f_ev_absorb m out outlen inlen guard mc pc stackpointer returnaddress)
+   :(uarch_event)list`;;
+
+let SHAKE256_SAFE_INTRO_TAC =
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[memcpy_safety_contract] THEN
+  DISCH_THEN(fun th -> ASSUME_CALLEE_SAFETY_TAILED_TAC th "H_MEMCPY") THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE
+    "H_ABSORB" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE
+    "H_PERMUTE" THEN
+  CONCRETIZE_F_EVENTS_TAC SHAKE256_SAFE_TEMPLATE THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES;
+              fst MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SHAKE256_MONO_SETUP_TAC;;
+
+let MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE =
+  time prove
+ (`!mc ea el ev.
+     memcpy_safety_contract mc ea el ev
+     ==> exists f_events.
+          forall e out outlen m inlen guard pc stackpointer returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           aligned 16 stackpointer /\ 0 < outlen /\ 0 < inlen /\
+           PAIRWISE nonoverlapping
+            [out,outlen; m,inlen; word_sub stackpointer (word 576),576] /\
+           ALLPAIRS nonoverlapping
+            [out,outlen; word_sub stackpointer (word 576),576]
+            [word pc,libmlkem_size; word(pc + got_stack_chk_guard),8; guard,8;
+             word(pc + got_memcpy),8; ea,el]
+           ==> ensures arm
+                (\s. aligned_bytes_loaded s (word pc)
+                       mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+                     read PC s = word (pc + mlkem_shake256) /\
+                     read SP s = stackpointer /\
+                     read X30 s = returnaddress /\
+                     C_ARGUMENTS [out; word outlen; m; word inlen] s /\
+                     read (memory :> bytes64(word(pc + got_stack_chk_guard)))
+                          s = guard /\
+                     read (memory :> bytes64(word(pc + got_memcpy))) s = mc /\
+                     read (memory :> bytes(ea,el)) s = ev /\
+                     read events s = e)
+                (\s. read PC s = returnaddress /\
+                     (exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 = f_events m out outlen inlen guard mc pc
+                               (word_sub stackpointer (word 576))
+                               returnaddress /\
+                        memaccess_inbounds e2
+                         [m,inlen; out,outlen;
+                          word_sub stackpointer (word 576),576;
+                          word(pc + got_stack_chk_guard),8; guard,8;
+                          word(pc + rodata_mlk_KeccakF_RoundConstants),192;
+                          word(pc + got_memcpy),8; ea,el]
+                         [out,outlen; word_sub stackpointer (word 576),576]))
+                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                 MAYCHANGE [X18] ,,
+                 MAYCHANGE
+                  [memory :> bytes(out,outlen);
+                   memory :> bytes(word_sub stackpointer (word 576),576)])`,
+  SHAKE256_SAFE_INTRO_TAC THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlkem_shake256_after_mlk_keccak_absorb_once`
+   SHAKE256_SAFE_MID THEN CONJ_TAC THENL
+   [(*** The absorption, up to the loop ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (1--3) THEN
+    MLKEM_NATIVE_ADRP_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (4--8) THEN
+    SHAKE256_STATE_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (9--19) THEN
+    SHAKE256_SAFE_CALL_TAC "H_ABSORB"
+     [`e:(uarch_event)list`; `read X0 s`; `136`; `read X2 s`; `inlen:num`;
+      `31`; `pc:num`; `read SP s`; `read X30 s`] 20 THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ABS_DISCHARGE_TAC;
+
+    (*** The loop, with MIN outlen (136 * i) bytes done ***)
+
+    SUBGOAL_THEN `~(outlen = 0)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    SHAKE256_BOUND_TAC THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `(outlen + 135) DIV 136`
+     `pc + mlkem_shake256_loop1` `pc + mlkem_shake256_loop1_exit`
+     SHAKE256_SAFE_INV THEN
+    REPEAT CONJ_TAC THENL
+     [REWRITE_TAC[DIV_EQ_0; ARITH_EQ] THEN ASM_ARITH_TAC;
+
+      (*** Initialization: the nop ***)
+
+      REWRITE_TAC(!simulation_precanon_thms) THEN
+      ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+      ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (1--1) THEN
+      ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+      REWRITE_TAC[MULT_CLAUSES; ARITH_RULE `MIN n 0 = 0`; SUB_0;
+                  WORD_ADD_0] THEN
+      ABS_DISCHARGE_TAC;
+
+      (*** The loop body: permute, then copy the next block with memcpy ***)
+
+SHAKE256_ITERATION_TAC (REWRITE_TAC[]) THEN
+        REWRITE_TAC(!simulation_precanon_thms) THEN
+        ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+        ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (1--2) THEN
+        SHAKE256_SAFE_CALL_TAC "H_PERMUTE"
+         [`e:(uarch_event)list`; `read X0 s`; `pc:num`; `read SP s`;
+          `read X30 s`] 3 THEN
+        ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (4--10) THEN
+        SHAKE256_LENGTH_TAC THEN
+        MP_TAC(SPEC `MIN (outlen - 136 * i) 136` SHAKE256_X2_LEMMA) THEN
+        ANTS_TAC THENL [ASM_REWRITE_TAC[];
+          DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+        SUBGOAL_THEN `val(word (MIN (outlen - 136 * i) 136):int64) =
+                      MIN (outlen - 136 * i) 136` ASSUME_TAC THENL
+         [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+          CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC; ALL_TAC] THEN
+        ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (11--11) THEN
+        LIBC_PLT_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC 11 THEN
+        SHAKE256_LIBC_SAFE_CALL_TAC "H_MEMCPY" 16 THEN
+        ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (17--18) THEN
+        SHAKE256_COUNTER_TAC THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+        CONJ_TAC THENL [AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
+        CONJ_TAC THENL
+         [REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD]; ALL_TAC] THEN
+        ABS_DISCHARGE_TAC;
+
+      (*** Zeroing the state, the check of the stack guard and the return ***)
+
+    SHAKE256_EXIT_TAC THEN
+        REWRITE_TAC[] THEN REWRITE_TAC(!simulation_precanon_thms) THEN
+        ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+        ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (1--9) THEN
+        MLKEM_NATIVE_ADRP_TAC THEN
+        ARM_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_MONO_EXEC (10--20) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        ABS_DISCHARGE_TAC]]);;
