@@ -6,9 +6,10 @@
 (* ========================================================================= *)
 (* The proof of the 8-way AES-GCM encrypt kernels aes128_gcm_enc_alt and     *)
 (* aes256_gcm_enc_alt, written once for both key sizes.  The AES-128 kernel  *)
-(* has 10 rounds and 11 round keys instead of 14 and 15, and its bulk loop  *)
-(* retains the native AES-128 schedule.  The per-kernel parameters select the *)
-(* cipher, code, round count, program counters, step counts and loop fold.   *)
+(* has 10 rounds and 11 round keys instead of 14 and 15, and its main loop   *)
+(* has the native instruction order of AWS-LC's AES-128 kernel, so the two   *)
+(* proofs differ only in the cipher, the code, the number of rounds, some    *)
+(* program counters and step counts, and two steps of the main-loop proof.   *)
 (*                                                                           *)
 (* This file is not loaded with needs.  Each kernel proof defines its        *)
 (* machine code, binds enc_alt_kernel (of type aes_gcm_enc_alt_kernel, in    *)
@@ -105,8 +106,8 @@ let NSTEP_TAC n =
   ARM_STEPS_TAC AES_GCM_ENC_ALT_EXEC [n] THEN
   RULE_ASSUM_TAC(fun th -> SUBWORD_NORM_RULE (NORMOFF_RULE (WB_WADD_RULE th)));;
 
-(* The AES-128 bulk loop also keeps the reduction's ext/LO structure in its *)
-(* Q21/Q29 scratch values.  The AES-256 loop uses the original Q17..Q19     *)
+(* The AES-128 bulk loop also keeps the reduction's ext/LO structure in its  *)
+(* Q21/Q29 scratch values.  The AES-256 loop uses the original Q17..Q19      *)
 (* guard; the prepretail and tail steppers below are unchanged.              *)
 let is_loop_ghash_acc th =
   is_ghash_acc th ||
@@ -188,8 +189,8 @@ let SETUP_LOADS_TAC =
 (* blocks clean).                                                            *)
 let Q19_FOLD_TAC =
   (if enc_alt_kernel.eak_rounds = 10 then
-     (* The native outer EOR3 already has pmull before ext.  Its inner      *)
-     (* EOR3 has ext before pmull; normalize only that inner seam.          *)
+     (* The native outer EOR3 already has pmull before ext.  Its inner EOR3  *)
+     (* has ext before pmull; normalize only that inner seam.                *)
      REWRITE_TAC[WORD_BITWISE_RULE
        `word_xor
           (word_xor (x:int128)
@@ -290,6 +291,12 @@ let Q19_FOLD_TAC =
 (* in order to show that they do not modify the code; with the bound         *)
 (* val in_p + 16 * nb < 2 EXP 63 it also shows that they miss the input      *)
 (* blocks still to be read when in_p = out_p.                                *)
+(*                                                                           *)
+(* The AES-128 loop body has the native instruction order of AWS-LC's        *)
+(* AES-128 kernel, not the reduced AES-256 one: its input loads are at other *)
+(* steps (loop_ldp1..loop_ldp3), its stepper also leaves the Q21/Q29 scratch *)
+(* values unnormalized (is_loop_ghash_acc), and its Q19 fold first           *)
+(* re-associates one EOR3 (Q19_FOLD_TAC).                                    *)
 (* ========================================================================= *)
 
 let AES_GCM_ENC_ALT_MAIN_LOOP = prove
@@ -1575,7 +1582,7 @@ let AES_GCM_ENC_ALT_TAIL_REM1 = prove
 (* counter from 8g+c+8 down to 8g+c+r = nb+c.  Its precondition is the tail  *)
 (* entry state with all eight keystreams and the entry value of Q27          *)
 (* (q27_init).  The arms enter the drains at 0x1434 (r = 2,                  *)
-(* L256_enc_rem2_drain, by the b.eq at 0x142c), 0x1070 (r = 3), 0x1328      *)
+(* L256_enc_rem2_drain, by the b.eq at 0x142c), 0x1070 (r = 3), 0x1328       *)
 (* (r = 4), 0x1034 (r = 5), 0xff8 (r = 6) and 0xfc0 (r = 7).                 *)
 (*                                                                           *)
 (* The small-path tail FASTr_TAIL (r = 1..4) is the same leg for the r       *)
