@@ -8,9 +8,11 @@
 (* in the gcc 12 -O2 image, such as mlkem768_enc_derand, as in               *)
 (* arm/proofs/utils/mlkem_native_kem.ml: the lengths of the results of the   *)
 (* algorithms of FIPS 203 and the forms of its internal ML-KEM algorithms    *)
-(* used in the proofs, copies of 32-byte values as two 128-bit words, and    *)
-(* the inline copies of byte arrays by REP MOVSQ. The frames are handled by  *)
-(* the tactics of mlkem_native_indcpa.ml.                                    *)
+(* used in the proofs, copies of 32-byte values as two 128-bit words, the    *)
+(* inline copies of byte arrays by REP MOVSQ, the comparison of the          *)
+(* ciphertexts and the conditional move of the shared secret in the          *)
+(* decapsulation, and the random bytes. The frames are handled by the        *)
+(* tactics of mlkem_native_indcpa.ml.                                        *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native_indcpa.ml";;
@@ -648,3 +650,42 @@ let KEM_CMOV_TEST = prove
     THEN ARITH_TAC;
     SUBGOAL_THEN `i = 31` SUBST1_TAC THENL
      [ASM_ARITH_TAC; CONV_TAC NUM_REDUCE_CONV]]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The random bytes written by randombytes, as the seeds d and z (64 bytes)  *)
+(* or as the message m (32 bytes) of the algorithms of FIPS 203, as for      *)
+(* AArch64, and the round trip of a list of 32 bytes through its number.     *)
+(* ------------------------------------------------------------------------- *)
+
+let KEM_RANDOM_SPLIT = prove
+ (`!a:int64 n s:x86state.
+        read (memory :> bytes(a,64)) s = n
+        ==> read (memory :> bytes(a,32)) s =
+            num_of_bytelist(bytelist_of_num 32 (n MOD 2 EXP 256)) /\
+            read (memory :> bytes(word_add a (word 32),32)) s =
+            num_of_bytelist(bytelist_of_num 32 (n DIV 2 EXP 256))`,
+  REPEAT GEN_TAC THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[NUM_OF_BYTELIST_OF_NUM] THEN
+  REWRITE_TAC[ARITH_RULE `256 EXP 32 = 2 EXP (8 * 32)`;
+              ARITH_RULE `2 EXP 256 = 2 EXP (8 * 32)`] THEN
+  REWRITE_TAC[MOD_MOD_REFL] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_MOD; READ_BYTES_DIV] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  CONV_TAC SYM_CONV THEN MATCH_MP_TAC MOD_LT THEN
+  MP_TAC(ISPECL [`word_add a (word 32):int64`; `32`; `read memory s`]
+                READ_BYTES_BOUND) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[]);;
+
+let KEM_RANDOM_32 = prove
+ (`!a:int64 n s:x86state.
+        read (memory :> bytes(a,32)) s = n
+        ==> num_of_bytelist(bytelist_of_num 32 n) = n`,
+  REPEAT GEN_TAC THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[NUM_OF_BYTELIST_OF_NUM] THEN MATCH_MP_TAC MOD_LT THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE] THEN
+  MP_TAC(ISPECL [`a:int64`; `32`; `read memory s`] READ_BYTES_BOUND) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[]);;
+
+let KEM_BYTELIST_32 = prove
+ (`!l:byte list. LENGTH l = 32 ==> bytelist_of_num 32 (num_of_bytelist l) = l`,
+  MESON_TAC[BYTELIST_OF_NUM_OF_BYTELIST]);;

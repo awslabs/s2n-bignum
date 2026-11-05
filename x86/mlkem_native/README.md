@@ -452,3 +452,32 @@ using the lemmas and tactics of `../proofs/utils/mlkem_native_kem.ml`.
 Their theorems of constant time and memory safety state that their events
 depend only on the addresses and on the encapsulation key and its hash in
 the decapsulation key, not on the secret key, z or the ciphertext.
+
+`mlkem512_keypair`, `mlkem768_keypair` and `mlkem1024_keypair`, and
+`mlkem512_enc`, `mlkem768_enc` and `mlkem1024_enc`, get their randomness
+with `randombytes`, which they call through the PLT and GOT of the binary:
+the stub `randombytes@plt` at 0x1010 in the image jumps to the address in
+the GOT entry at 0xaff8, in the read-write segment, which is not part of
+the image. (Simulating this absolute indirect jump needed an extension of
+the x86 model, which had no indirect branches.) As on AArch64, the
+behaviour of `randombytes` is assumed, as a notional high-level contract in
+`../proofs/utils/mlkem_native_libc.ml` that is a hypothesis of the theorems
+for its callers: `randombytes_contract f ea el ev` states that the function
+at the address f, which the stub reads from the GOT, in any state where the
+region (ea,el), containing its code and data, has the contents ev, which
+the callers must not overwrite, writes len bytes at buf, with no assumption
+about their values or about its result, and returns, changing only the
+registers that the ABI allows and no other memory; in particular it is
+assumed not to use the stack apart from reading its return address. (The
+x86-64 binary does not call memset and memcpy, which gcc inlines as `rep
+stosq` and `rep movsq`.) The specifications say that either `randombytes`
+fails and the functions return -3, or they behave as
+`mlkem<n>_keypair_derand` and `mlkem<n>_enc_derand` for some seeds or
+message of 32 bytes; for the key generation this needs the hypothesis that
+SampleNTT terminates for the matrix from any seed. Their theorems of
+constant time and memory safety also assume `randombytes_safety_contract`,
+and state that their events do not depend on the random bytes: those of the
+key generation depend only on the addresses, on whether `randombytes` fails
+and, if it does not, on rho, given as the last 32 bytes of the public key,
+and those of the encapsulation only on the addresses, on the encapsulation
+key and on whether `randombytes` fails.
