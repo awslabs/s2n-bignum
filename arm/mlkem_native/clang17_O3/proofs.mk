@@ -21,6 +21,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/poly_decompress_d10 \
   mlkem_native/clang17_O3/poly_decompress_d11 \
   mlkem_native/clang17_O3/poly_decompress_d4 \
+  mlkem_native/clang17_O3/poly_decompress_d5 \
   mlkem_native/clang17_O3/poly_frombytes \
   mlkem_native/clang17_O3/poly_frommsg \
   mlkem_native/clang17_O3/poly_invntt_tomont \
@@ -134,6 +135,12 @@ mlkem_native/clang17_O3/poly_decompress_d4.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/poly_decompress_d5.native: \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/bitnorm.ml \
+  mlkem_native/clang17_O3/libmlkem.native \
+  proofs/mlkem_native/interleave.ml
 mlkem_native/clang17_O3/poly_frombytes.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
