@@ -1,0 +1,3724 @@
+SAIL_HL_ARM_ADD32_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_arm_5fADD32_5fIMM d n imm s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_ADD32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_arm_5fADD32_5fSHIFT d n m amount kind s t <=>
+       arm_ADD (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTB_5f0 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTB_5f1 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTB_5f2 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTB_5f3 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTB_5f4 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTH_5f0 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTH_5f1 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTH_5f2 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTH_5f3 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTH_5f4 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTW_5f0 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTW_5f1 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTW_5f2 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTW_5f3 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTW_5f4 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTX_5f0 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTX_5f1 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTX_5f2 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTX_5f3 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_UXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fUXTX_5f4 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTB_5f0 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTB_5f1 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTB_5f2 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTB_5f3 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTB_5f4 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTH_5f0 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTH_5f1 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTH_5f2 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTH_5f3 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTH_5f4 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTW_5f0 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTW_5f1 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTW_5f2 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTW_5f3 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTW_5f4 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTX_5f0 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTX_5f1 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTX_5f2 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTX_5f3 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD32_EXT_SXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD32_5fEXT_5fSXTX_5f4 d n m s t <=>
+       arm_ADD (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_arm_5fADD64_5fIMM d n imm s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_ADD64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_arm_5fADD64_5fSHIFT d n m amount kind s t <=>
+       arm_ADD (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTB_5f0 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTB_5f1 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTB_5f2 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTB_5f3 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTB_5f4 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTH_5f0 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTH_5f1 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTH_5f2 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTH_5f3 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTH_5f4 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTW_5f0 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTW_5f1 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTW_5f2 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTW_5f3 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTW_5f4 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTX_5f0 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTX_5f1 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTX_5f2 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTX_5f3 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_UXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fUXTX_5f4 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTB_5f0 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTB_5f1 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTB_5f2 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTB_5f3 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTB_5f4 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTH_5f0 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTH_5f1 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTH_5f2 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTH_5f3 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTH_5f4 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTW_5f0 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTW_5f1 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTW_5f2 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTW_5f3 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTW_5f4 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTX_5f0 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTX_5f1 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTX_5f2 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTX_5f3 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADD64_EXT_SXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADD64_5fEXT_5fSXTX_5f4 d n m s t <=>
+       arm_ADD (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_arm_5fADDS32_5fIMM d n imm s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_ADDS32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_arm_5fADDS32_5fSHIFT d n m amount kind s t <=>
+       arm_ADDS (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTB_5f0 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTB_5f1 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTB_5f2 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTB_5f3 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTB_5f4 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTH_5f0 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTH_5f1 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTH_5f2 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTH_5f3 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTH_5f4 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTW_5f0 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTW_5f1 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTW_5f2 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTW_5f3 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTW_5f4 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTX_5f0 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTX_5f1 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTX_5f2 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTX_5f3 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_UXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fUXTX_5f4 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTB_5f0 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTB_5f1 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTB_5f2 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTB_5f3 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTB_5f4 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTH_5f0 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTH_5f1 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTH_5f2 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTH_5f3 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTH_5f4 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTW_5f0 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTW_5f1 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTW_5f2 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTW_5f3 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTW_5f4 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTX_5f0 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTX_5f1 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTX_5f2 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTX_5f3 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS32_EXT_SXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS32_5fEXT_5fSXTX_5f4 d n m s t <=>
+       arm_ADDS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_arm_5fADDS64_5fIMM d n imm s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_ADDS64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_arm_5fADDS64_5fSHIFT d n m amount kind s t <=>
+       arm_ADDS (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTB_5f0 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTB_5f1 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTB_5f2 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTB_5f3 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTB_5f4 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTH_5f0 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTH_5f1 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTH_5f2 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTH_5f3 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTH_5f4 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTW_5f0 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTW_5f1 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTW_5f2 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTW_5f3 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTW_5f4 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTX_5f0 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTX_5f1 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTX_5f2 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTX_5f3 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_UXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fUXTX_5f4 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTB_5f0 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTB_5f1 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTB_5f2 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTB_5f3 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTB_5f4 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTH_5f0 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTH_5f1 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTH_5f2 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTH_5f3 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTH_5f4 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTW_5f0 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTW_5f1 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTW_5f2 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTW_5f3 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTW_5f4 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTX_5f0 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTX_5f1 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTX_5f2 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTX_5f3 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_ADDS64_EXT_SXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fADDS64_5fEXT_5fSXTX_5f4 d n m s t <=>
+       arm_ADDS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_arm_5fSUB32_5fIMM d n imm s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_SUB32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_arm_5fSUB32_5fSHIFT d n m amount kind s t <=>
+       arm_SUB (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTB_5f0 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTB_5f1 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTB_5f2 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTB_5f3 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTB_5f4 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTH_5f0 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTH_5f1 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTH_5f2 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTH_5f3 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTH_5f4 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTW_5f0 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTW_5f1 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTW_5f2 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTW_5f3 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTW_5f4 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTX_5f0 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTX_5f1 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTX_5f2 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTX_5f3 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_UXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fUXTX_5f4 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTB_5f0 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTB_5f1 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTB_5f2 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTB_5f3 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTB_5f4 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTH_5f0 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTH_5f1 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTH_5f2 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTH_5f3 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTH_5f4 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTW_5f0 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTW_5f1 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTW_5f2 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTW_5f3 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTW_5f4 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTX_5f0 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTX_5f1 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTX_5f2 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTX_5f3 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB32_EXT_SXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB32_5fEXT_5fSXTX_5f4 d n m s t <=>
+       arm_SUB (WREG_SP d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_arm_5fSUB64_5fIMM d n imm s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_SUB64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_arm_5fSUB64_5fSHIFT d n m amount kind s t <=>
+       arm_SUB (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTB_5f0 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTB_5f1 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTB_5f2 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTB_5f3 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTB_5f4 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTH_5f0 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTH_5f1 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTH_5f2 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTH_5f3 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTH_5f4 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTW_5f0 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTW_5f1 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTW_5f2 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTW_5f3 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTW_5f4 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTX_5f0 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTX_5f1 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTX_5f2 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTX_5f3 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_UXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fUXTX_5f4 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTB_5f0 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTB_5f1 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTB_5f2 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTB_5f3 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTB_5f4 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTH_5f0 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTH_5f1 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTH_5f2 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTH_5f3 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTH_5f4 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTW_5f0 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTW_5f1 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTW_5f2 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTW_5f3 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTW_5f4 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTX_5f0 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTX_5f1 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTX_5f2 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTX_5f3 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUB64_EXT_SXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUB64_5fEXT_5fSXTX_5f4 d n m s t <=>
+       arm_SUB (XREG_SP d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_arm_5fSUBS32_5fIMM d n imm s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_SUBS32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_arm_5fSUBS32_5fSHIFT d n m amount kind s t <=>
+       arm_SUBS (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTB_5f0 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTB_5f1 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTB_5f2 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTB_5f3 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTB_5f4 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTH_5f0 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTH_5f1 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTH_5f2 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTH_5f3 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTH_5f4 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTW_5f0 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTW_5f1 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTW_5f2 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTW_5f3 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTW_5f4 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTX_5f0 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTX_5f1 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTX_5f2 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTX_5f3 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_UXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fUXTX_5f4 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTB_5f0 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTB_5f1 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTB_5f2 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTB_5f3 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTB_5f4 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTH_5f0 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTH_5f1 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTH_5f2 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTH_5f3 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTH_5f4 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTW_5f0 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTW_5f1 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTW_5f2 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTW_5f3 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTW_5f4 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTX_5f0 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTX_5f1 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTX_5f2 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTX_5f3 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS32_EXT_SXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS32_5fEXT_5fSXTX_5f4 d n m s t <=>
+       arm_SUBS (WREG' d) (WREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_arm_5fSUBS64_5fIMM d n imm s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_SUBS64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_arm_5fSUBS64_5fSHIFT d n m amount kind s t <=>
+       arm_SUBS (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTB_5f0 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTB_5f1 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTB_5f2 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTB_5f3 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTB_5f4 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTH_5f0 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTH_5f1 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTH_5f2 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTH_5f3 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTH_5f4 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTW_5f0 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTW_5f1 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTW_5f2 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTW_5f3 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTW_5f4 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTX_5f0 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTX_5f1 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTX_5f2 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTX_5f3 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_UXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fUXTX_5f4 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTB_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTB_5f0 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTB_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTB_5f1 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTB_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTB_5f2 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTB_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTB_5f3 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTB_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTB_5f4 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTH_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTH_5f0 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTH_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTH_5f1 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTH_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTH_5f2 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTH_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTH_5f3 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTH_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTH_5f4 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTW_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTW_5f0 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTW_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTW_5f1 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTW_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTW_5f2 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTW_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTW_5f3 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTW_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTW_5f4 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTX_0_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTX_5f0 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 0)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTX_1_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTX_5f1 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 1)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTX_2_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTX_5f2 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 2)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTX_3_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTX_5f3 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 3)
+       s
+       t
+
+SAIL_HL_ARM_SUBS64_EXT_SXTX_4_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSUBS64_5fEXT_5fSXTX_5f4 d n m s t <=>
+       arm_SUBS (XREG' d) (XREG_SP n)
+       (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 4)
+       s
+       t
+
+SAIL_HL_ARM_CMN32_IMM_EQ
+|- forall n imm s t.
+       sail_hl_arm_5fCMN32_5fIMM n imm s t <=>
+       arm_CMN (WREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_CMN32_SHIFT_EQ
+|- forall n m amount kind s t.
+       sail_hl_arm_5fCMN32_5fSHIFT n m amount kind s t <=>
+       arm_CMN (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTB_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTB_5f0 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTB_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTB_5f1 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTB_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTB_5f2 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTB_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTB_5f3 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTB_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTB_5f4 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTH_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTH_5f0 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTH_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTH_5f1 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTH_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTH_5f2 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTH_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTH_5f3 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTH_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTH_5f4 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTW_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTW_5f0 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTW_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTW_5f1 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTW_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTW_5f2 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTW_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTW_5f3 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTW_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTW_5f4 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTX_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTX_5f0 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTX_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTX_5f1 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTX_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTX_5f2 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTX_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTX_5f3 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_UXTX_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fUXTX_5f4 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTB_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTB_5f0 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTB_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTB_5f1 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTB_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTB_5f2 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTB_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTB_5f3 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTB_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTB_5f4 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTH_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTH_5f0 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTH_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTH_5f1 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTH_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTH_5f2 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTH_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTH_5f3 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTH_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTH_5f4 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTW_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTW_5f0 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTW_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTW_5f1 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTW_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTW_5f2 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTW_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTW_5f3 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTW_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTW_5f4 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTX_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTX_5f0 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTX_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTX_5f1 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTX_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTX_5f2 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTX_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTX_5f3 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN32_EXT_SXTX_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN32_5fEXT_5fSXTX_5f4 n m s t <=>
+       arm_CMN (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN64_IMM_EQ
+|- forall n imm s t.
+       sail_hl_arm_5fCMN64_5fIMM n imm s t <=>
+       arm_CMN (XREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_CMN64_SHIFT_EQ
+|- forall n m amount kind s t.
+       sail_hl_arm_5fCMN64_5fSHIFT n m amount kind s t <=>
+       arm_CMN (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTB_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTB_5f0 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTB_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTB_5f1 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTB_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTB_5f2 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTB_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTB_5f3 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTB_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTB_5f4 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTH_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTH_5f0 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTH_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTH_5f1 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTH_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTH_5f2 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTH_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTH_5f3 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTH_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTH_5f4 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTW_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTW_5f0 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTW_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTW_5f1 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTW_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTW_5f2 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTW_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTW_5f3 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTW_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTW_5f4 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTX_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTX_5f0 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTX_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTX_5f1 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTX_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTX_5f2 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTX_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTX_5f3 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_UXTX_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fUXTX_5f4 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTB_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTB_5f0 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTB_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTB_5f1 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTB_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTB_5f2 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTB_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTB_5f3 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTB_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTB_5f4 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTH_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTH_5f0 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTH_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTH_5f1 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTH_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTH_5f2 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTH_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTH_5f3 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTH_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTH_5f4 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTW_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTW_5f0 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTW_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTW_5f1 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTW_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTW_5f2 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTW_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTW_5f3 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTW_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTW_5f4 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTX_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTX_5f0 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTX_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTX_5f1 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTX_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTX_5f2 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTX_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTX_5f3 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMN64_EXT_SXTX_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMN64_5fEXT_5fSXTX_5f4 n m s t <=>
+       arm_CMN (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP32_IMM_EQ
+|- forall n imm s t.
+       sail_hl_arm_5fCMP32_5fIMM n imm s t <=>
+       arm_CMP (WREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_CMP32_SHIFT_EQ
+|- forall n m amount kind s t.
+       sail_hl_arm_5fCMP32_5fSHIFT n m amount kind s t <=>
+       arm_CMP (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTB_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTB_5f0 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTB_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTB_5f1 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTB_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTB_5f2 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTB_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTB_5f3 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTB_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTB_5f4 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTH_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTH_5f0 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTH_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTH_5f1 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTH_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTH_5f2 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTH_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTH_5f3 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTH_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTH_5f4 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTW_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTW_5f0 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTW_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTW_5f1 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTW_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTW_5f2 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTW_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTW_5f3 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTW_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTW_5f4 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTX_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTX_5f0 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTX_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTX_5f1 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTX_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTX_5f2 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTX_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTX_5f3 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_UXTX_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fUXTX_5f4 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTX) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTB_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTB_5f0 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTB_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTB_5f1 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTB_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTB_5f2 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTB_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTB_5f3 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTB_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTB_5f4 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTH_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTH_5f0 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTH_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTH_5f1 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTH_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTH_5f2 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTH_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTH_5f3 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTH_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTH_5f4 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTW_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTW_5f0 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTW_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTW_5f1 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTW_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTW_5f2 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTW_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTW_5f3 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTW_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTW_5f4 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTX_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTX_5f0 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTX_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTX_5f1 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTX_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTX_5f2 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTX_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTX_5f3 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP32_EXT_SXTX_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP32_5fEXT_5fSXTX_5f4 n m s t <=>
+       arm_CMP (WREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTX) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP64_IMM_EQ
+|- forall n imm s t.
+       sail_hl_arm_5fCMP64_5fIMM n imm s t <=>
+       arm_CMP (XREG_SP n) (rvalue imm) s t
+
+SAIL_HL_ARM_CMP64_SHIFT_EQ
+|- forall n m amount kind s t.
+       sail_hl_arm_5fCMP64_5fSHIFT n m amount kind s t <=>
+       arm_CMP (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTB_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTB_5f0 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTB_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTB_5f1 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTB_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTB_5f2 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTB_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTB_5f3 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTB_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTB_5f4 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTB) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTH_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTH_5f0 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTH_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTH_5f1 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTH_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTH_5f2 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTH_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTH_5f3 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTH_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTH_5f4 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTH) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTW_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTW_5f0 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTW_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTW_5f1 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTW_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTW_5f2 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTW_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTW_5f3 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTW_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTW_5f4 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) UXTW) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTX_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTX_5f0 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTX_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTX_5f1 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTX_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTX_5f2 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTX_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTX_5f3 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_UXTX_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fUXTX_5f4 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) UXTX) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTB_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTB_5f0 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTB_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTB_5f1 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTB_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTB_5f2 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTB_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTB_5f3 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTB_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTB_5f4 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTB) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTH_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTH_5f0 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTH_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTH_5f1 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTH_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTH_5f2 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTH_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTH_5f3 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTH_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTH_5f4 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTH) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTW_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTW_5f0 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTW_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTW_5f1 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTW_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTW_5f2 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTW_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTW_5f3 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTW_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTW_5f4 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (WREG' m) SXTW) LSL 4) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTX_0_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTX_5f0 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 0) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTX_1_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTX_5f1 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 1) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTX_2_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTX_5f2 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 2) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTX_3_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTX_5f3 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 3) s
+       t
+
+SAIL_HL_ARM_CMP64_EXT_SXTX_4_EQ
+|- forall n m s t.
+       sail_hl_arm_5fCMP64_5fEXT_5fSXTX_5f4 n m s t <=>
+       arm_CMP (XREG_SP n) (Shiftedreg (Extendedreg (XREG' m) SXTX) LSL 4) s
+       t
+
+SAIL_HL_ARM_NEG32_EQ
+|- forall d m s t.
+       sail_hl_arm_5fNEG32 d m s t <=> arm_NEG (WREG' d) (WREG' m) s t
+
+SAIL_HL_ARM_NEG32_SHIFT_EQ
+|- forall d m amount kind s t.
+       sail_hl_arm_5fNEG32_5fSHIFT d m amount kind s t <=>
+       arm_NEG (WREG' d)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_NEG64_EQ
+|- forall d m s t.
+       sail_hl_arm_5fNEG64 d m s t <=> arm_NEG (XREG' d) (XREG' m) s t
+
+SAIL_HL_ARM_NEG64_SHIFT_EQ
+|- forall d m amount kind s t.
+       sail_hl_arm_5fNEG64_5fSHIFT d m amount kind s t <=>
+       arm_NEG (XREG' d)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_NEGS32_EQ
+|- forall d m s t.
+       sail_hl_arm_5fNEGS32 d m s t <=> arm_NEGS (WREG' d) (WREG' m) s t
+
+SAIL_HL_ARM_NEGS32_SHIFT_EQ
+|- forall d m amount kind s t.
+       sail_hl_arm_5fNEGS32_5fSHIFT d m amount kind s t <=>
+       arm_NEGS (WREG' d)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_NEGS64_EQ
+|- forall d m s t.
+       sail_hl_arm_5fNEGS64 d m s t <=> arm_NEGS (XREG' d) (XREG' m) s t
+
+SAIL_HL_ARM_NEGS64_SHIFT_EQ
+|- forall d m amount kind s t.
+       sail_hl_arm_5fNEGS64_5fSHIFT d m amount kind s t <=>
+       arm_NEGS (XREG' d)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+

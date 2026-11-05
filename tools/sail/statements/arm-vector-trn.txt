@@ -1,0 +1,70 @@
+SAIL_HL_ARM_TRN164E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN164E8 d n m s t <=>
+       arm_TRN1 (QREG' d) (QREG' n) (QREG' m) 8 64 s t
+
+SAIL_HL_ARM_TRN164E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN164E16 d n m s t <=>
+       arm_TRN1 (QREG' d) (QREG' n) (QREG' m) 16 64 s t
+
+SAIL_HL_ARM_TRN164E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN164E32 d n m s t <=>
+       arm_TRN1 (QREG' d) (QREG' n) (QREG' m) 32 64 s t
+
+SAIL_HL_ARM_TRN1128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN1128E8 d n m s t <=>
+       arm_TRN1 (QREG' d) (QREG' n) (QREG' m) 8 128 s t
+
+SAIL_HL_ARM_TRN1128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN1128E16 d n m s t <=>
+       arm_TRN1 (QREG' d) (QREG' n) (QREG' m) 16 128 s t
+
+SAIL_HL_ARM_TRN1128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN1128E32 d n m s t <=>
+       arm_TRN1 (QREG' d) (QREG' n) (QREG' m) 32 128 s t
+
+SAIL_HL_ARM_TRN1128E64_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN1128E64 d n m s t <=>
+       arm_TRN1 (QREG' d) (QREG' n) (QREG' m) 64 128 s t
+
+SAIL_HL_ARM_TRN264E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN264E8 d n m s t <=>
+       arm_TRN2 (QREG' d) (QREG' n) (QREG' m) 8 64 s t
+
+SAIL_HL_ARM_TRN264E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN264E16 d n m s t <=>
+       arm_TRN2 (QREG' d) (QREG' n) (QREG' m) 16 64 s t
+
+SAIL_HL_ARM_TRN264E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN264E32 d n m s t <=>
+       arm_TRN2 (QREG' d) (QREG' n) (QREG' m) 32 64 s t
+
+SAIL_HL_ARM_TRN2128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN2128E8 d n m s t <=>
+       arm_TRN2 (QREG' d) (QREG' n) (QREG' m) 8 128 s t
+
+SAIL_HL_ARM_TRN2128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN2128E16 d n m s t <=>
+       arm_TRN2 (QREG' d) (QREG' n) (QREG' m) 16 128 s t
+
+SAIL_HL_ARM_TRN2128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN2128E32 d n m s t <=>
+       arm_TRN2 (QREG' d) (QREG' n) (QREG' m) 32 128 s t
+
+SAIL_HL_ARM_TRN2128E64_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fTRN2128E64 d n m s t <=>
+       arm_TRN2 (QREG' d) (QREG' n) (QREG' m) 64 128 s t
+

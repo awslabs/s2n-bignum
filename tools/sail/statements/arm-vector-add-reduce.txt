@@ -1,0 +1,25 @@
+SAIL_HL_ARM_ADDV64E8_EQ
+|- forall reg_FPCR d n s t.
+       sail_hl_arm_5fADDV64E8 reg_FPCR d n s t <=>
+       arm_ADDV (QREG' d) (QREG' n) 8 8 s t
+
+SAIL_HL_ARM_ADDV64E16_EQ
+|- forall reg_FPCR d n s t.
+       sail_hl_arm_5fADDV64E16 reg_FPCR d n s t <=>
+       arm_ADDV (QREG' d) (QREG' n) 4 16 s t
+
+SAIL_HL_ARM_ADDV128E8_EQ
+|- forall reg_FPCR d n s t.
+       sail_hl_arm_5fADDV128E8 reg_FPCR d n s t <=>
+       arm_ADDV (QREG' d) (QREG' n) 16 8 s t
+
+SAIL_HL_ARM_ADDV128E16_EQ
+|- forall reg_FPCR d n s t.
+       sail_hl_arm_5fADDV128E16 reg_FPCR d n s t <=>
+       arm_ADDV (QREG' d) (QREG' n) 8 16 s t
+
+SAIL_HL_ARM_ADDV128E32_EQ
+|- forall reg_FPCR d n s t.
+       sail_hl_arm_5fADDV128E32 reg_FPCR d n s t <=>
+       arm_ADDV (QREG' d) (QREG' n) 4 32 s t
+

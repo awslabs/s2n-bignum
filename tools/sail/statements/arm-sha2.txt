@@ -1,0 +1,40 @@
+SAIL_HL_ARM_SHA256H128_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fSHA256H128 d n m s t <=>
+       arm_SHA256H (QREG' d) (QREG' n) (QREG' m) s t
+
+SAIL_HL_ARM_SHA256H2128_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fSHA256H2128 d n m s t <=>
+       arm_SHA256H2 (QREG' d) (QREG' n) (QREG' m) s t
+
+SAIL_HL_ARM_SHA256SU0128_EQ
+|- forall d n s t.
+       sail_hl_ARM_5fSHA256SU0128 d n s t <=>
+       arm_SHA256SU0 (QREG' d) (QREG' n) s t
+
+SAIL_HL_ARM_SHA256SU1128_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fSHA256SU1128 d n m s t <=>
+       arm_SHA256SU1 (QREG' d) (QREG' n) (QREG' m) s t
+
+SAIL_HL_ARM_SHA512H128_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fSHA512H128 d n m s t <=>
+       arm_SHA512H (QREG' d) (QREG' n) (QREG' m) s t
+
+SAIL_HL_ARM_SHA512H2128_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fSHA512H2128 d n m s t <=>
+       arm_SHA512H2 (QREG' d) (QREG' n) (QREG' m) s t
+
+SAIL_HL_ARM_SHA512SU0128_EQ
+|- forall d n s t.
+       sail_hl_ARM_5fSHA512SU0128 d n s t <=>
+       arm_SHA512SU0 (QREG' d) (QREG' n) s t
+
+SAIL_HL_ARM_SHA512SU1128_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fSHA512SU1128 d n m s t <=>
+       arm_SHA512SU1 (QREG' d) (QREG' n) (QREG' m) s t
+

@@ -1,0 +1,72 @@
+SAIL_HL_ARM_INS128E8_LO_EQ
+|- forall d n dest idx s t.
+       sail_hl_arm_5fINS128E8_5fLO d n dest idx s t <=>
+       arm_INS (QREG' d) (QREG' n) (8 * val dest) (8 * (val idx + 0)) 8 64 s
+       t
+
+SAIL_HL_ARM_INS128E8_HI_EQ
+|- forall d n dest idx s t.
+       sail_hl_arm_5fINS128E8_5fHI d n dest idx s t <=>
+       arm_INS (QREG' d) (QREG' n) (8 * val dest) (8 * (val idx + 8)) 8 128 s
+       t
+
+SAIL_HL_ARM_INS128E16_LO_EQ
+|- forall d n dest idx s t.
+       sail_hl_arm_5fINS128E16_5fLO d n dest idx s t <=>
+       arm_INS (QREG' d) (QREG' n) (16 * val dest) (16 * (val idx + 0)) 16 64
+       s
+       t
+
+SAIL_HL_ARM_INS128E16_HI_EQ
+|- forall d n dest idx s t.
+       sail_hl_arm_5fINS128E16_5fHI d n dest idx s t <=>
+       arm_INS (QREG' d) (QREG' n) (16 * val dest) (16 * (val idx + 4)) 16
+       128
+       s
+       t
+
+SAIL_HL_ARM_INS128E32_LO_EQ
+|- forall d n dest idx s t.
+       sail_hl_arm_5fINS128E32_5fLO d n dest idx s t <=>
+       arm_INS (QREG' d) (QREG' n) (32 * val dest) (32 * (val idx + 0)) 32 64
+       s
+       t
+
+SAIL_HL_ARM_INS128E32_HI_EQ
+|- forall d n dest idx s t.
+       sail_hl_arm_5fINS128E32_5fHI d n dest idx s t <=>
+       arm_INS (QREG' d) (QREG' n) (32 * val dest) (32 * (val idx + 2)) 32
+       128
+       s
+       t
+
+SAIL_HL_ARM_INS128E64_LO_EQ
+|- forall d n dest s t.
+       sail_hl_arm_5fINS128E64_5fLO d n dest s t <=>
+       arm_INS (QREG' d) (QREG' n) (64 * val dest) (64 * 0) 64 64 s t
+
+SAIL_HL_ARM_INS128E64_HI_EQ
+|- forall d n dest s t.
+       sail_hl_arm_5fINS128E64_5fHI d n dest s t <=>
+       arm_INS (QREG' d) (QREG' n) (64 * val dest) (64 * 1) 64 128 s t
+
+SAIL_HL_ARM_INS_GEN128E8_EQ
+|- forall d n dest s t.
+       sail_hl_arm_5fINS_5fGEN128E8 d n dest s t <=>
+       arm_INS_GEN (QREG' d) (WREG' n) (8 * val dest) 8 s t
+
+SAIL_HL_ARM_INS_GEN128E16_EQ
+|- forall d n dest s t.
+       sail_hl_arm_5fINS_5fGEN128E16 d n dest s t <=>
+       arm_INS_GEN (QREG' d) (WREG' n) (16 * val dest) 16 s t
+
+SAIL_HL_ARM_INS_GEN128E32_EQ
+|- forall d n dest s t.
+       sail_hl_arm_5fINS_5fGEN128E32 d n dest s t <=>
+       arm_INS_GEN (QREG' d) (WREG' n) (32 * val dest) 32 s t
+
+SAIL_HL_ARM_INS_GEN128E64_EQ
+|- forall d n dest s t.
+       sail_hl_arm_5fINS_5fGEN128E64 d n dest s t <=>
+       arm_INS_GEN (QREG' d) (XREG' n) (64 * val dest) 64 s t
+

@@ -1,0 +1,90 @@
+SAIL_HL_ARM_AND_VEC64_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fAND_5fVEC64_5fREG d n m s t <=>
+       arm_AND_VEC (QREG' d) (QREG' n) (QREG' m) 64 s t
+
+SAIL_HL_ARM_AND_VEC128_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fAND_5fVEC128_5fREG d n m s t <=>
+       arm_AND_VEC (QREG' d) (QREG' n) (QREG' m) 128 s t
+
+SAIL_HL_ARM_BIC_VEC64_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fBIC_5fVEC64_5fREG d n m s t <=>
+       arm_BIC_VEC (QREG' d) (QREG' n) (QREG' m) 64 s t
+
+SAIL_HL_ARM_BIC_VEC64_IMM_EQ
+|- forall d imm s t.
+       sail_hl_arm_5fBIC_5fVEC64_5fIMM d imm s t <=>
+       arm_BIC_VEC (QREG' d) (QREG' d) (rvalue (word_zx imm)) 64 s t
+
+SAIL_HL_ARM_BIC_VEC128_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fBIC_5fVEC128_5fREG d n m s t <=>
+       arm_BIC_VEC (QREG' d) (QREG' n) (QREG' m) 128 s t
+
+SAIL_HL_ARM_BIC_VEC128_IMM_EQ
+|- forall d imm s t.
+       sail_hl_arm_5fBIC_5fVEC128_5fIMM d imm s t <=>
+       arm_BIC_VEC (QREG' d) (QREG' d) (rvalue (word_zx imm)) 128 s t
+
+SAIL_HL_ARM_ORR_VEC64_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fORR_5fVEC64_5fREG d n m s t <=>
+       arm_ORR_VEC (QREG' d) (QREG' n) (QREG' m) 64 s t
+
+SAIL_HL_ARM_ORR_VEC64_IMM_EQ
+|- forall d imm s t.
+       sail_hl_arm_5fORR_5fVEC64_5fIMM d imm s t <=>
+       arm_ORR_VEC (QREG' d) (QREG' d) (rvalue (word_zx imm)) 64 s t
+
+SAIL_HL_ARM_ORR_VEC128_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fORR_5fVEC128_5fREG d n m s t <=>
+       arm_ORR_VEC (QREG' d) (QREG' n) (QREG' m) 128 s t
+
+SAIL_HL_ARM_ORR_VEC128_IMM_EQ
+|- forall d imm s t.
+       sail_hl_arm_5fORR_5fVEC128_5fIMM d imm s t <=>
+       arm_ORR_VEC (QREG' d) (QREG' d) (rvalue (word_zx imm)) 128 s t
+
+SAIL_HL_ARM_EOR_VEC64_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fEOR_5fVEC64_5fREG d n m s t <=>
+       arm_EOR_VEC (QREG' d) (QREG' n) (QREG' m) 64 s t
+
+SAIL_HL_ARM_EOR_VEC128_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fEOR_5fVEC128_5fREG d n m s t <=>
+       arm_EOR_VEC (QREG' d) (QREG' n) (QREG' m) 128 s t
+
+SAIL_HL_ARM_BIT64_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fBIT64_5fREG d n m s t <=>
+       arm_BIT (QREG' d) (QREG' n) (QREG' m) 64 s t
+
+SAIL_HL_ARM_BIT128_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fBIT128_5fREG d n m s t <=>
+       arm_BIT (QREG' d) (QREG' n) (QREG' m) 128 s t
+
+SAIL_HL_ARM_BIF64_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fBIF64_5fREG d n m s t <=>
+       arm_BIF (QREG' d) (QREG' n) (QREG' m) 64 s t
+
+SAIL_HL_ARM_BIF128_REG_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fBIF128_5fREG d n m s t <=>
+       arm_BIF (QREG' d) (QREG' n) (QREG' m) 128 s t
+
+SAIL_HL_ARM_MOV_VEC64_REG_EQ
+|- forall d n s t.
+       sail_hl_arm_5fMOV_5fVEC64_5fREG d n s t <=>
+       arm_MOV_VEC (QREG' d) (QREG' n) 64 s t
+
+SAIL_HL_ARM_MOV_VEC128_REG_EQ
+|- forall d n s t.
+       sail_hl_arm_5fMOV_5fVEC128_5fREG d n s t <=>
+       arm_MOV_VEC (QREG' d) (QREG' n) 128 s t
+

@@ -1,0 +1,9 @@
+SAIL_HL_ARM_BL_ABSOLUTE_EXECUTE_EQ
+|- forall target s t.
+       sail_hl_arm_5fBL_5fABSOLUTE_5fEXECUTE
+       (PC :> evaluate (\pc. word_sub pc (word 4)))
+       (word_sub target (word_sub (read PC s) (word 4)))
+       s
+       t <=>
+       arm_BL_ABSOLUTE target s t
+

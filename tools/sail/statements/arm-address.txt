@@ -1,0 +1,15 @@
+SAIL_HL_ARM_ADR64_EQ
+|- forall d off s t.
+       sail_hl_arm_5fADR64 (PC :> evaluate (\pc. word_sub pc (word 4))) d off
+       s
+       t <=>
+       arm_ADR (XREG' d) off s t
+
+SAIL_HL_ARM_ADRP64_EQ
+|- forall d off s t.
+       sail_hl_arm_5fADRP64 (PC :> evaluate (\pc. word_sub pc (word 4))) d
+       off
+       s
+       t <=>
+       arm_ADRP (XREG' d) off s t
+

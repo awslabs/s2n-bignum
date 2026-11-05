@@ -1,0 +1,8 @@
+SAIL_HL_ARM_MOVI64_EQ
+|- forall d imm s t.
+       sail_hl_arm_5fMOVI64 d imm s t <=> arm_MOVI (DREG' d) imm s t
+
+SAIL_HL_ARM_MOVI128_EQ
+|- forall d imm s t.
+       sail_hl_arm_5fMOVI128 d imm s t <=> arm_MOVI (QREG' d) imm s t
+

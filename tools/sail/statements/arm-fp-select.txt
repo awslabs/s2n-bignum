@@ -1,0 +1,10 @@
+SAIL_HL_ARM_FCSEL32_EQ
+|- forall condition d n m s t.
+       sail_hl_arm_5fFCSEL32 condition d n m s t <=>
+       arm_FCSEL (QREG' d) (QREG' n) (QREG' m) (Condition condition) 32 s t
+
+SAIL_HL_ARM_FCSEL64_EQ
+|- forall condition d n m s t.
+       sail_hl_arm_5fFCSEL64 condition d n m s t <=>
+       arm_FCSEL (QREG' d) (QREG' n) (QREG' m) (Condition condition) 64 s t
+

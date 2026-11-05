@@ -1,0 +1,56 @@
+SAIL_HL_ARM_ADC32_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fADC32 d n m s t <=>
+       arm_ADC (WREG' d) (WREG' n) (WREG' m) s t
+
+SAIL_HL_ARM_ADC64_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fADC64 d n m s t <=>
+       arm_ADC (XREG' d) (XREG' n) (XREG' m) s t
+
+SAIL_HL_ARM_ADCS32_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fADCS32 d n m s t <=>
+       arm_ADCS (WREG' d) (WREG' n) (WREG' m) s t
+
+SAIL_HL_ARM_ADCS64_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fADCS64 d n m s t <=>
+       arm_ADCS (XREG' d) (XREG' n) (XREG' m) s t
+
+SAIL_HL_ARM_SBC32_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fSBC32 d n m s t <=>
+       arm_SBC (WREG' d) (WREG' n) (WREG' m) s t
+
+SAIL_HL_ARM_SBC64_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fSBC64 d n m s t <=>
+       arm_SBC (XREG' d) (XREG' n) (XREG' m) s t
+
+SAIL_HL_ARM_SBCS32_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fSBCS32 d n m s t <=>
+       arm_SBCS (WREG' d) (WREG' n) (WREG' m) s t
+
+SAIL_HL_ARM_SBCS64_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fSBCS64 d n m s t <=>
+       arm_SBCS (XREG' d) (XREG' n) (XREG' m) s t
+
+SAIL_HL_ARM_NGC32_EQ
+|- forall d m s t.
+       sail_hl_ARM_5fNGC32 d m s t <=> arm_NGC (WREG' d) (WREG' m) s t
+
+SAIL_HL_ARM_NGC64_EQ
+|- forall d m s t.
+       sail_hl_ARM_5fNGC64 d m s t <=> arm_NGC (XREG' d) (XREG' m) s t
+
+SAIL_HL_ARM_NGCS32_EQ
+|- forall d m s t.
+       sail_hl_ARM_5fNGCS32 d m s t <=> arm_NGCS (WREG' d) (WREG' m) s t
+
+SAIL_HL_ARM_NGCS64_EQ
+|- forall d m s t.
+       sail_hl_ARM_5fNGCS64 d m s t <=> arm_NGCS (XREG' d) (XREG' m) s t
+

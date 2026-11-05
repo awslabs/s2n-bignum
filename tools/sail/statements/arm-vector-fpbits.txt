@@ -1,0 +1,25 @@
+SAIL_HL_ARM_FMOV_FtoI32_LO_EQ
+|- forall reg_FPCR d n s t.
+       sail_hl_arm_5fFMOV_5fFtoI32_5fLO reg_FPCR d n s t <=>
+       arm_FMOV_FtoI (WREG' d) (QREG' n) 0 32 s t
+
+SAIL_HL_ARM_FMOV_FtoI64_LO_EQ
+|- forall reg_FPCR d n s t.
+       sail_hl_arm_5fFMOV_5fFtoI64_5fLO reg_FPCR d n s t <=>
+       arm_FMOV_FtoI (XREG' d) (QREG' n) 0 64 s t
+
+SAIL_HL_ARM_FMOV_FtoI64_HI_EQ
+|- forall reg_FPCR d n s t.
+       sail_hl_arm_5fFMOV_5fFtoI64_5fHI reg_FPCR d n s t <=>
+       arm_FMOV_FtoI (XREG' d) (QREG' n) 1 64 s t
+
+SAIL_HL_ARM_FMOV_ItoF64_LO_EQ
+|- forall reg_FPCR d n s t.
+       sail_hl_arm_5fFMOV_5fItoF64_5fLO reg_FPCR d n s t <=>
+       arm_FMOV_ItoF (QREG' d) (XREG' n) 0 s t
+
+SAIL_HL_ARM_FMOV_ItoF64_HI_EQ
+|- forall reg_FPCR d n s t.
+       sail_hl_arm_5fFMOV_5fItoF64_5fHI reg_FPCR d n s t <=>
+       arm_FMOV_ItoF (QREG' d) (XREG' n) 1 s t
+

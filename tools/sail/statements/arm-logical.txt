@@ -1,0 +1,236 @@
+SAIL_HL_ARM_AND32_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_ARM_5fAND32_5fIMM d n imm s t <=>
+       arm_AND (WREG_SP d) (WREG' n) (rvalue imm) s t
+
+SAIL_HL_ARM_AND32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fAND32_5fSHIFT d n m amount kind s t <=>
+       arm_AND (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_AND64_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_ARM_5fAND64_5fIMM d n imm s t <=>
+       arm_AND (XREG_SP d) (XREG' n) (rvalue imm) s t
+
+SAIL_HL_ARM_AND64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fAND64_5fSHIFT d n m amount kind s t <=>
+       arm_AND (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_ANDS32_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_ARM_5fANDS32_5fIMM d n imm s t <=>
+       arm_ANDS (WREG' d) (WREG' n) (rvalue imm) s t
+
+SAIL_HL_ARM_ANDS32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fANDS32_5fSHIFT d n m amount kind s t <=>
+       arm_ANDS (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_ANDS64_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_ARM_5fANDS64_5fIMM d n imm s t <=>
+       arm_ANDS (XREG' d) (XREG' n) (rvalue imm) s t
+
+SAIL_HL_ARM_ANDS64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fANDS64_5fSHIFT d n m amount kind s t <=>
+       arm_ANDS (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_BIC32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fBIC32_5fSHIFT d n m amount kind s t <=>
+       arm_BIC (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_BIC64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fBIC64_5fSHIFT d n m amount kind s t <=>
+       arm_BIC (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_BICS32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fBICS32_5fSHIFT d n m amount kind s t <=>
+       arm_BICS (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_BICS64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fBICS64_5fSHIFT d n m amount kind s t <=>
+       arm_BICS (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_ORR32_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_ARM_5fORR32_5fIMM d n imm s t <=>
+       arm_ORR (WREG_SP d) (WREG' n) (rvalue imm) s t
+
+SAIL_HL_ARM_ORR32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fORR32_5fSHIFT d n m amount kind s t <=>
+       arm_ORR (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_ORR64_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_ARM_5fORR64_5fIMM d n imm s t <=>
+       arm_ORR (XREG_SP d) (XREG' n) (rvalue imm) s t
+
+SAIL_HL_ARM_ORR64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fORR64_5fSHIFT d n m amount kind s t <=>
+       arm_ORR (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_ORN32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fORN32_5fSHIFT d n m amount kind s t <=>
+       arm_ORN (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_ORN64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fORN64_5fSHIFT d n m amount kind s t <=>
+       arm_ORN (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_EOR32_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_ARM_5fEOR32_5fIMM d n imm s t <=>
+       arm_EOR (WREG_SP d) (WREG' n) (rvalue imm) s t
+
+SAIL_HL_ARM_EOR32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fEOR32_5fSHIFT d n m amount kind s t <=>
+       arm_EOR (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_EOR64_IMM_EQ
+|- forall d n imm s t.
+       sail_hl_ARM_5fEOR64_5fIMM d n imm s t <=>
+       arm_EOR (XREG_SP d) (XREG' n) (rvalue imm) s t
+
+SAIL_HL_ARM_EOR64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fEOR64_5fSHIFT d n m amount kind s t <=>
+       arm_EOR (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_EON32_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fEON32_5fSHIFT d n m amount kind s t <=>
+       arm_EON (WREG' d) (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_EON64_SHIFT_EQ
+|- forall d n m amount kind s t.
+       sail_hl_ARM_5fEON64_5fSHIFT d n m amount kind s t <=>
+       arm_EON (XREG' d) (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_MOV32_IMM_EQ
+|- forall d imm s t.
+       sail_hl_ARM_5fMOV32_5fIMM d imm s t <=>
+       arm_MOV (WREG_SP d) (rvalue imm) s t
+
+SAIL_HL_ARM_MOV32_SHIFT_EQ
+|- forall d m amount kind s t.
+       sail_hl_ARM_5fMOV32_5fSHIFT d m amount kind s t <=>
+       arm_MOV (WREG' d)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_MOV64_IMM_EQ
+|- forall d imm s t.
+       sail_hl_ARM_5fMOV64_5fIMM d imm s t <=>
+       arm_MOV (XREG_SP d) (rvalue imm) s t
+
+SAIL_HL_ARM_MOV64_SHIFT_EQ
+|- forall d m amount kind s t.
+       sail_hl_ARM_5fMOV64_5fSHIFT d m amount kind s t <=>
+       arm_MOV (XREG' d)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_MVN32_SHIFT_EQ
+|- forall d m amount kind s t.
+       sail_hl_ARM_5fMVN32_5fSHIFT d m amount kind s t <=>
+       arm_MVN (WREG' d)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_MVN64_SHIFT_EQ
+|- forall d m amount kind s t.
+       sail_hl_ARM_5fMVN64_5fSHIFT d m amount kind s t <=>
+       arm_MVN (XREG' d)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_TST32_IMM_EQ
+|- forall n imm s t.
+       sail_hl_ARM_5fTST32_5fIMM n imm s t <=>
+       arm_TST (WREG' n) (rvalue imm) s t
+
+SAIL_HL_ARM_TST32_SHIFT_EQ
+|- forall n m amount kind s t.
+       sail_hl_ARM_5fTST32_5fSHIFT n m amount kind s t <=>
+       arm_TST (WREG' n)
+       (Shiftedreg (WREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+
+SAIL_HL_ARM_TST64_IMM_EQ
+|- forall n imm s t.
+       sail_hl_ARM_5fTST64_5fIMM n imm s t <=>
+       arm_TST (XREG' n) (rvalue imm) s t
+
+SAIL_HL_ARM_TST64_SHIFT_EQ
+|- forall n m amount kind s t.
+       sail_hl_ARM_5fTST64_5fSHIFT n m amount kind s t <=>
+       arm_TST (XREG' n)
+       (Shiftedreg (XREG' m) (sail_hl_arm_logical_kind kind) (val amount))
+       s
+       t
+

@@ -1,0 +1,150 @@
+SAIL_HL_ARM_SSUBL128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBL128E8 d n m s t <=>
+       arm_SSUBL (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_SSUBL128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBL128E16 d n m s t <=>
+       arm_SSUBL (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_SSUBL128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBL128E32 d n m s t <=>
+       arm_SSUBL (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_SSUBL2128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBL2128E8 d n m s t <=>
+       arm_SSUBL2 (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_SSUBL2128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBL2128E16 d n m s t <=>
+       arm_SSUBL2 (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_SSUBL2128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBL2128E32 d n m s t <=>
+       arm_SSUBL2 (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_USUBL128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBL128E8 d n m s t <=>
+       arm_USUBL (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_USUBL128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBL128E16 d n m s t <=>
+       arm_USUBL (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_USUBL128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBL128E32 d n m s t <=>
+       arm_USUBL (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_USUBL2128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBL2128E8 d n m s t <=>
+       arm_USUBL2 (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_USUBL2128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBL2128E16 d n m s t <=>
+       arm_USUBL2 (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_USUBL2128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBL2128E32 d n m s t <=>
+       arm_USUBL2 (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_SADDW128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSADDW128E8 d n m s t <=>
+       arm_SADDW (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_SADDW128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSADDW128E16 d n m s t <=>
+       arm_SADDW (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_SADDW128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSADDW128E32 d n m s t <=>
+       arm_SADDW (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_SADDW2128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSADDW2128E8 d n m s t <=>
+       arm_SADDW2 (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_SADDW2128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSADDW2128E16 d n m s t <=>
+       arm_SADDW2 (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_SADDW2128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSADDW2128E32 d n m s t <=>
+       arm_SADDW2 (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_SSUBW128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBW128E8 d n m s t <=>
+       arm_SSUBW (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_SSUBW128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBW128E16 d n m s t <=>
+       arm_SSUBW (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_SSUBW128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBW128E32 d n m s t <=>
+       arm_SSUBW (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_SSUBW2128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBW2128E8 d n m s t <=>
+       arm_SSUBW2 (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_SSUBW2128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBW2128E16 d n m s t <=>
+       arm_SSUBW2 (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_SSUBW2128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fSSUBW2128E32 d n m s t <=>
+       arm_SSUBW2 (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_USUBW128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBW128E8 d n m s t <=>
+       arm_USUBW (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_USUBW128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBW128E16 d n m s t <=>
+       arm_USUBW (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_USUBW128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBW128E32 d n m s t <=>
+       arm_USUBW (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_USUBW2128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBW2128E8 d n m s t <=>
+       arm_USUBW2 (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_USUBW2128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBW2128E16 d n m s t <=>
+       arm_USUBW2 (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_USUBW2128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUSUBW2128E32 d n m s t <=>
+       arm_USUBW2 (QREG' d) (QREG' n) (QREG' m) 32 s t
+

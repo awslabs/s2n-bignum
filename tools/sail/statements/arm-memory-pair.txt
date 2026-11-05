@@ -1,0 +1,1452 @@
+SAIL_HL_ARM_LDP32_GPR_POST_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(WREG' rt = WREG' rt2) /\
+        orthogonal_components (WREG' rt) (WREG' rt2) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(WREG' rt = WREG' rt2) /\
+        orthogonal_components (WREG' rt) (WREG' rt2) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP32_5fGPR_5fPOST reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (WREG' rt) (WREG' rt2) (XREG_SP n)
+             (Postimmediate_Offset (iword (ival imm * &4))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP32_GPR_PRE_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(WREG' rt = WREG' rt2) /\
+        orthogonal_components (WREG' rt) (WREG' rt2) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(WREG' rt = WREG' rt2) /\
+        orthogonal_components (WREG' rt) (WREG' rt2) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP32_5fGPR_5fPRE reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (WREG' rt) (WREG' rt2) (XREG_SP n)
+             (Preimmediate_Offset (iword (ival imm * &4))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP32_GPR_OFFSET_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(WREG' rt = WREG' rt2) /\
+        orthogonal_components (WREG' rt) (WREG' rt2) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(WREG' rt = WREG' rt2) /\
+        orthogonal_components (WREG' rt) (WREG' rt2) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP32_5fGPR_5fOFFSET reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (WREG' rt) (WREG' rt2) (XREG_SP n)
+             (Immediate_Offset (iword (ival imm * &4))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP64_GPR_POST_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(XREG' rt = XREG' rt2) /\
+        orthogonal_components (XREG' rt) (XREG' rt2) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(XREG' rt = XREG' rt2) /\
+        orthogonal_components (XREG' rt) (XREG' rt2) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP64_5fGPR_5fPOST reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (XREG' rt) (XREG' rt2) (XREG_SP n)
+             (Postimmediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP64_GPR_PRE_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(XREG' rt = XREG' rt2) /\
+        orthogonal_components (XREG' rt) (XREG' rt2) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(XREG' rt = XREG' rt2) /\
+        orthogonal_components (XREG' rt) (XREG' rt2) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP64_5fGPR_5fPRE reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (XREG' rt) (XREG' rt2) (XREG_SP n)
+             (Preimmediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP64_GPR_OFFSET_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(XREG' rt = XREG' rt2) /\
+        orthogonal_components (XREG' rt) (XREG' rt2) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(XREG' rt = XREG' rt2) /\
+        orthogonal_components (XREG' rt) (XREG' rt2) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP64_5fGPR_5fOFFSET reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (XREG' rt) (XREG' rt2) (XREG_SP n)
+             (Immediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP64_SIMD_POST_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(DREG' rt = DREG' rt2) /\
+        orthogonal_components (DREG' rt) (DREG' rt2) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(DREG' rt = DREG' rt2) /\
+        orthogonal_components (DREG' rt) (DREG' rt2) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP64_5fSIMD_5fPOST reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (DREG' rt) (DREG' rt2) (XREG_SP n)
+             (Postimmediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP64_SIMD_PRE_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(DREG' rt = DREG' rt2) /\
+        orthogonal_components (DREG' rt) (DREG' rt2) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(DREG' rt = DREG' rt2) /\
+        orthogonal_components (DREG' rt) (DREG' rt2) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP64_5fSIMD_5fPRE reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (DREG' rt) (DREG' rt2) (XREG_SP n)
+             (Preimmediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP64_SIMD_OFFSET_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(DREG' rt = DREG' rt2) /\
+        orthogonal_components (DREG' rt) (DREG' rt2) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(DREG' rt = DREG' rt2) /\
+        orthogonal_components (DREG' rt) (DREG' rt2) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP64_5fSIMD_5fOFFSET reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (DREG' rt) (DREG' rt2) (XREG_SP n)
+             (Immediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_POST_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' rt2) /\
+        orthogonal_components (QREG' rt) (QREG' rt2) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' rt2) /\
+        orthogonal_components (QREG' rt) (QREG' rt2) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fPOST reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' rt2) (XREG_SP n)
+             (Postimmediate_Offset (iword (ival imm * &16))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_PRE_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' rt2) /\
+        orthogonal_components (QREG' rt) (QREG' rt2) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' rt2) /\
+        orthogonal_components (QREG' rt) (QREG' rt2) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fPRE reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' rt2) (XREG_SP n)
+             (Preimmediate_Offset (iword (ival imm * &16))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_OFFSET_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' rt2) /\
+        orthogonal_components (QREG' rt) (QREG' rt2) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' rt2) /\
+        orthogonal_components (QREG' rt) (QREG' rt2) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fOFFSET reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' rt2) (XREG_SP n)
+             (Immediate_Offset (iword (ival imm * &16))))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E8_NO_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE8_5fNO
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             No_Offset)
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E8_POSTI_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE8_5fPOSTI
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (Postimmediate_Offset (word 32)))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E8_POSTR_SAFE_EQ
+|- (exists rt n m s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n m s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE8_5fPOSTR
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              n
+             m)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (if val m = 31
+              then Postimmediate_Offset (word 32)
+              else Postreg_Offset (XREG' m)))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E16_NO_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE16_5fNO
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             No_Offset)
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E16_POSTI_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE16_5fPOSTI
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (Postimmediate_Offset (word 32)))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E16_POSTR_SAFE_EQ
+|- (exists rt n m s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n m s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE16_5fPOSTR
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              n
+             m)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (if val m = 31
+              then Postimmediate_Offset (word 32)
+              else Postreg_Offset (XREG' m)))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E32_NO_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE32_5fNO
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             No_Offset)
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E32_POSTI_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE32_5fPOSTI
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (Postimmediate_Offset (word 32)))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E32_POSTR_SAFE_EQ
+|- (exists rt n m s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n m s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE32_5fPOSTR
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              n
+             m)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (if val m = 31
+              then Postimmediate_Offset (word 32)
+              else Postreg_Offset (XREG' m)))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E64_NO_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE64_5fNO
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             No_Offset)
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E64_POSTI_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE64_5fPOSTI
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (Postimmediate_Offset (word 32)))
+             s
+             t))
+
+SAIL_HL_ARM_LDP128_SIMD_LD1_E64_POSTR_SAFE_EQ
+|- (exists rt n m s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n m s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        ~(QREG' rt = QREG' (word_add rt (word 1))) /\
+        orthogonal_components (QREG' rt) (QREG' (word_add rt (word 1))) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fLDP128_5fSIMD_5fLD1_5fE64_5fPOSTR
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              n
+             m)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_LDP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (if val m = 31
+              then Postimmediate_Offset (word 32)
+              else Postreg_Offset (XREG' m)))
+             s
+             t))
+
+SAIL_HL_ARM_STP32_GPR_POST_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP32_5fGPR_5fPOST reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (WREG' rt) (WREG' rt2) (XREG_SP n)
+             (Postimmediate_Offset (iword (ival imm * &4))))
+             s
+             t))
+
+SAIL_HL_ARM_STP32_GPR_PRE_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP32_5fGPR_5fPRE reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (WREG' rt) (WREG' rt2) (XREG_SP n)
+             (Preimmediate_Offset (iword (ival imm * &4))))
+             s
+             t))
+
+SAIL_HL_ARM_STP32_GPR_OFFSET_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &4)))
+         ==> orthogonal_components (WREG' rt) (XREG_SP n) /\
+             orthogonal_components (WREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP32_5fGPR_5fOFFSET reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (WREG' rt) (WREG' rt2) (XREG_SP n)
+             (Immediate_Offset (iword (ival imm * &4))))
+             s
+             t))
+
+SAIL_HL_ARM_STP64_GPR_POST_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP64_5fGPR_5fPOST reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (XREG' rt) (XREG' rt2) (XREG_SP n)
+             (Postimmediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_STP64_GPR_PRE_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP64_5fGPR_5fPRE reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (XREG' rt) (XREG' rt2) (XREG_SP n)
+             (Preimmediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_STP64_GPR_OFFSET_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescGPR reg_FlatHaveLSE2 reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (XREG' rt) (XREG_SP n) /\
+             orthogonal_components (XREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP64_5fGPR_5fOFFSET reg_FlatAccDescGPR
+              reg_FlatHaveLSE2
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (XREG' rt) (XREG' rt2) (XREG_SP n)
+             (Immediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_STP64_SIMD_POST_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP64_5fSIMD_5fPOST reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (DREG' rt) (DREG' rt2) (XREG_SP n)
+             (Postimmediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_STP64_SIMD_PRE_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP64_5fSIMD_5fPRE reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (DREG' rt) (DREG' rt2) (XREG_SP n)
+             (Preimmediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_STP64_SIMD_OFFSET_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &8)))
+         ==> orthogonal_components (DREG' rt) (XREG_SP n) /\
+             orthogonal_components (DREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP64_5fSIMD_5fOFFSET reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (DREG' rt) (DREG' rt2) (XREG_SP n)
+             (Immediate_Offset (iword (ival imm * &8))))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_POST_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fPOST reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' rt2) (XREG_SP n)
+             (Postimmediate_Offset (iword (ival imm * &16))))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_PRE_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Preimmediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fPRE reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' rt2) (XREG_SP n)
+             (Preimmediate_Offset (iword (ival imm * &16))))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_OFFSET_SAFE_EQ
+|- (exists rt rt2 n imm s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt rt2 n imm s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Immediate_Offset (iword (ival imm * &16)))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' rt2) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fOFFSET reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              rt2
+              n
+             imm)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' rt2) (XREG_SP n)
+             (Immediate_Offset (iword (ival imm * &16))))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E8_NO_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE8_5fNO
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             No_Offset)
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E8_POSTI_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE8_5fPOSTI
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (Postimmediate_Offset (word 32)))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E8_POSTR_SAFE_EQ
+|- (exists rt n m s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n m s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE8_5fPOSTR
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              n
+             m)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (if val m = 31
+              then Postimmediate_Offset (word 32)
+              else Postreg_Offset (XREG' m)))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E16_NO_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE16_5fNO
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             No_Offset)
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E16_POSTI_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE16_5fPOSTI
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (Postimmediate_Offset (word 32)))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E16_POSTR_SAFE_EQ
+|- (exists rt n m s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n m s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE16_5fPOSTR
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              n
+             m)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (if val m = 31
+              then Postimmediate_Offset (word 32)
+              else Postreg_Offset (XREG' m)))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E32_NO_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE32_5fNO
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             No_Offset)
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E32_POSTI_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE32_5fPOSTI
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (Postimmediate_Offset (word 32)))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E32_POSTR_SAFE_EQ
+|- (exists rt n m s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n m s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE32_5fPOSTR
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              n
+             m)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (if val m = 31
+              then Postimmediate_Offset (word 32)
+              else Postreg_Offset (XREG' m)))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E64_NO_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback No_Offset
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE64_5fNO
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             No_Offset)
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E64_POSTI_SAFE_EQ
+|- (exists rt n s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback (Postimmediate_Offset (word 32))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE64_5fPOSTI
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+             n)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (Postimmediate_Offset (word 32)))
+             s
+             t))
+
+SAIL_HL_ARM_STP128_SIMD_LD1_E64_POSTR_SAFE_EQ
+|- (exists rt n m s.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))) /\
+   (forall reg_FlatAccDescASIMD reg_PSTATE reg_SCTLR_5fread_5f_5f1 rt n m s t.
+        (XREG_SP n = SP ==> aligned 16 (read (XREG_SP n) s)) /\
+        (offset_writesback
+         (if val m = 31
+          then Postimmediate_Offset (word 32)
+          else Postreg_Offset (XREG' m))
+         ==> orthogonal_components (QREG' rt) (XREG_SP n) /\
+             orthogonal_components (QREG' (word_add rt (word 1))) (XREG_SP n))
+        ==> (sail_hl_arm_memory_observed
+             (sail_hl_arm_5fSTP128_5fSIMD_5fLD1_5fE64_5fPOSTR
+              reg_FlatAccDescASIMD
+              reg_PSTATE
+              reg_SCTLR_5fread_5f_5f1
+              rt
+              n
+             m)
+             s
+             t <=>
+             sail_hl_arm_memory_observed
+             (arm_STP (QREG' rt) (QREG' (word_add rt (word 1))) (XREG_SP n)
+             (if val m = 31
+              then Postimmediate_Offset (word 32)
+              else Postreg_Offset (XREG' m)))
+             s
+             t))
+

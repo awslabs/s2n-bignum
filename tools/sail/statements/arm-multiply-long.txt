@@ -1,0 +1,20 @@
+SAIL_HL_ARM_UMADDL64_EQ
+|- forall d n m a s t.
+       sail_hl_arm_5fUMADDL64 d n m a s t <=>
+       arm_UMADDL (XREG' d) (WREG' n) (WREG' m) (XREG' a) s t
+
+SAIL_HL_ARM_UMSUBL64_EQ
+|- forall d n m a s t.
+       sail_hl_arm_5fUMSUBL64 d n m a s t <=>
+       arm_UMSUBL (XREG' d) (WREG' n) (WREG' m) (XREG' a) s t
+
+SAIL_HL_ARM_UMULL64_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUMULL64 d n m s t <=>
+       arm_UMULL (XREG' d) (WREG' n) (WREG' m) s t
+
+SAIL_HL_ARM_UMNEGL64_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUMNEGL64 d n m s t <=>
+       arm_UMNEGL (XREG' d) (WREG' n) (WREG' m) s t
+
