@@ -4,7 +4,7 @@
  *)
 
 (******************************************************************************
-  Prove simple properties of straight-line RV32I arithmetic.
+  Prove simple properties of straight-line RV32IM arithmetic.
 ******************************************************************************)
 
 needs "riscv/proofs/base.ml";;
@@ -90,3 +90,35 @@ let CARRY_CORRECT = prove
   REWRITE_TAC[VAL_WORD_ADD_CASES; DIMINDEX_32] THEN
   REPEAT COND_CASES_TAC THEN REWRITE_TAC[VAL_WORD_0; VAL_WORD_1] THEN
   ASM_ARITH_TAC);;
+
+(* divu a2,a0,a1; remu a3,a0,a1. The quotient and remainder recombine to the
+   dividend even for a zero divisor, where DIVU gives all ones and REMU gives
+   the dividend. Each division records its operands as a timing event. *)
+let divrem_mc = define_word_list "divrem_mc"
+ `[word 0x33; word 0x56; word 0xb5; word 0x02;
+   word 0xb3; word 0x76; word 0xb5; word 0x02]:byte list`;;
+
+let DIVREM_EXEC = RISCV_MK_EXEC_RULE divrem_mc;;
+
+let DIVREM_CORRECT = prove
+ (`!pc (a:int32) (b:int32) e.
+    ensures riscv
+      (\s. aligned_bytes_loaded s (word pc) divrem_mc /\
+           read PC s = word pc /\
+           read A0 s = a /\
+           read A1 s = b /\
+           read events s = e)
+      (\s. read PC s = word (pc + 8) /\
+           val(read A2 s) * val b + val(read A3 s) = val a /\
+           read events s =
+           CONS (EventRISCVDIV (a,b)) (CONS (EventRISCVDIV (a,b)) e))
+      (MAYCHANGE [PC] ,, MAYCHANGE [A2; A3] ,, MAYCHANGE [events])`,
+  REWRITE_TAC[fst DIVREM_EXEC] THEN
+  REPEAT GEN_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  RISCV_STEPS_TAC DIVREM_EXEC (1--2) THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  COND_CASES_TAC THEN
+  ASM_REWRITE_TAC[VAL_WORD_UDIV; VAL_WORD_UMOD; VAL_WORD_0; MULT_CLAUSES;
+                  ADD_CLAUSES; DIVISION_SIMP]);;
