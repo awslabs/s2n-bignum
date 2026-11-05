@@ -449,3 +449,112 @@ let MLKEM_NATIVE_POLY_TOBYTES_CLANG17_O3_IMAGE_SUBROUTINE_SAFE = time prove
      (1--127)) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, as for       *)
+(* gcc12_O2. Since the events must come from a single simulation (for each   *)
+(* of the two cases of the overlap check), the input is named as w j for any *)
+(* contents of memory, with w j = EL j l when l has 256 elements, which is   *)
+(* used only at the end.                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_POLY_TOBYTES_CLANG17_O3_IMAGE_SUBROUTINE_FULL = prove
+ (`exists f_events.
+       forall e r a (l:int16 list) pc returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           ALL (nonoverlapping (r,384)) [word pc,libmlkem_size; a,512]
+           ==> ensures arm
+               (\s. aligned_bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_clang17_O3_mc /\
+                    read PC s = word (pc + mlkem_poly_tobytes) /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [r; a] s /\
+                    read (memory :> bytes(a,512)) s = num_of_wordlist l /\
+                    read events s = e)
+               (\s. read PC s = returnaddress /\
+                    (LENGTH l = 256 /\ ALL (\x. val x < 4096) l
+                     ==> read(memory :> bytes(r,384)) s =
+                         num_of_wordlist (MAP word_zx l:(12 word)list)) /\
+                    (exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 = f_events a r pc returnaddress /\
+                        memaccess_inbounds e2 [a,512; r,384] [r,384]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(r,384)])`,
+  CONCRETIZE_F_EVENTS_TAC
+    `\(a:int64) (r:int64) (pc:num) (returnaddress:int64).
+      (if val(word_add a (word 512):int64) <= val r
+       then f_ev1 a r pc returnaddress
+       else f_ev2 a r pc returnaddress):(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+              fst MLKEM_NATIVE_POLY_TOBYTES_CLANG17_O3_EXEC] THEN
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+
+  (*** The input as w j, whatever l is ***)
+
+  SUBGOAL_THEN
+   `?w:num->int16.
+      !j. j < 256
+          ==> read (memory :> bytes16 (word_add a (word(2 * j)))) s0 = w j`
+   STRIP_ASSUME_TAC THENL
+   [EXISTS_TAC
+     `\j. read (memory :> bytes16 (word_add a (word(2 * j)))) s0` THEN
+    REWRITE_TAC[];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `LENGTH(l:int16 list) = 256 ==> !j. j < 256 ==> EL j l = (w:num->int16) j`
+   ASSUME_TAC THENL
+   [REPEAT STRIP_TAC THEN
+    TRANS_TAC EQ_TRANS
+     `read (memory :> bytes16 (word_add a (word(2 * j)))) s0` THEN
+    CONJ_TAC THENL
+     [MP_TAC(SPECL [`a:int64`; `l:int16 list`; `256`; `j:num`; `s0:armstate`]
+                   READ_MEMORY_BYTES16_NUM_OF_WORDLIST) THEN
+      ASM_REWRITE_TAC[ARITH_RULE `2 * 256 = 512`] THEN
+      DISCH_THEN(ACCEPT_TAC o SYM);
+      FIRST_X_ASSUM(MATCH_MP_TAC o check (fun th ->
+        is_forall(concl th) && free_in `w:num->int16` (concl th))) THEN
+      ASM_REWRITE_TAC[]];
+    ALL_TAC] THEN
+  FIRST_ASSUM(MP_TAC o check (fun th ->
+    is_forall(concl th) && free_in `w:num->int16` (concl th))) THEN
+  CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[WORD_ADD_0] THEN STRIP_TAC THEN
+  MAP_EVERY MP_TAC TOBYTES_MERGES THEN ASM_REWRITE_TAC[] THEN
+  REPEAT DISCH_TAC THEN
+  DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes16 a) s = x`] THEN
+
+  (*** The overlap check, and the vector code ***)
+
+  TOBYTES_CHECK_TAC (fun off ->
+    MAP_EVERY (fun k ->
+      ARM_STEPS_TAC MLKEM_NATIVE_POLY_TOBYTES_CLANG17_O3_EXEC [k + off] THEN
+      TOBYTES_SIMD_TAC) (1--127)) THEN
+  TOBYTES_STORES_TAC THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  (CONJ_TAC THENL [ALL_TAC; DISCHARGE_SAFETY_PROPERTY_TAC]) THEN
+
+  (*** Under the conditions on l, w j = EL j l, and the bytes as before ***)
+
+  DISCH_THEN(STRIP_ASSUME_TAC) THEN
+  FIRST_X_ASSUM(fun th ->
+    if is_imp(concl th) && free_in `EL:num->int16 list->int16` (concl th)
+    then ASSUME_TAC(MP th (ASSUME `LENGTH(l:int16 list) = 256`))
+    else NO_TAC) THEN
+  MATCH_MP_TAC TOBYTES_PACK THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC EXPAND_CASES_CONV THEN
+  CONV_TAC(DEPTH_CONV(NUM_MULT_CONV ORELSEC NUM_ADD_CONV)) THEN
+  FIRST_X_ASSUM(fun th ->
+    if is_forall(concl th) && free_in `EL:num->int16 list->int16` (concl th)
+    then REWRITE_TAC(map (fun j ->
+           MP (SPEC (mk_small_numeral j) th)
+              (EQT_ELIM(NUM_LT_CONV(mk_binop `(<):num->num->bool`
+                                    (mk_small_numeral j) `256`)))) (0--255))
+    else NO_TAC) THEN
+  REWRITE_TAC[WORD_ADD_0] THEN ASM_REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THEN BITBLAST_TAC);;
