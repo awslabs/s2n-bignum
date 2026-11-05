@@ -14,23 +14,35 @@ needs "common/overlap.ml";;
  *** a side-channel attacker can vary depending on the inputs of
  *** the instruction. For example, instructions taking a constant number of
  *** cycles like ADD do not raise an observable event, whereas cond branch does.
+ ***
  *** Its kinds (EventLoad/Store/...) describe the events distinguishable from
  *** each other by the attacker, and their parameters describe the values
  *** that are inputs and/or outputs of the instructions that will affect the
  *** observed cycles/etc.
+ ***
  *** An opcode of instruction is not a parameter of the event, even if the
  *** number of taken cycles may depend on opcode. This relies on an assumption
  *** that a program is public information.
+ ***
  *** One instruction can raise multiple events (e.g., one that reads PC from
  *** the memory and jumps to the address, even though this case will not exist
  *** in Arm).
+ ***
  *** The formal semantics of instruction must emit a fixed list of events.
  *** It is not allowed for an instruction to raise one event when its input
  *** data is X and and two events when its input data is Y.
+ ***
  *** Note: for x86, even if PUSH and POP instructions do memory access at RSP
  *** which is public information (stack address is public), these instructions
  *** must still explicitly raise EventLoad and EventStore because otherwise
  *** memory safety check will miss out-of-bounds stack access.
+ ***
+ *** Note: 32-bit RISC-V microcontrollers can have more timing variation than
+ *** the microarchitectural events defined here capture. This may include
+ *** multiplications, but also shift instructions, neither of which raises an
+ *** event. Users wishing to study the constant-time behavior of code on
+ *** specific low-end 32-bit RISC-V CPUs should consider extending the event
+ *** trace accordingly.
  ***)
 let address_uarch_event_INDUCT, address_uarch_event_RECURSION = define_type
   "address_uarch_event =
@@ -41,6 +53,12 @@ let address_uarch_event_INDUCT, address_uarch_event_RECURSION = define_type
     // (src pc, destination pc, branch taken). The condition is observable
     // even when the target is the next instruction. Unconditional jumps use T.
     | EventJump (A word#A word#bool)
+    // (dividend, divisor) of an integer division or remainder, whose
+    // latency may depend on its operands. Narrower operands are
+    // zero-extended to 64 bits. Currently raised only by RISC-V DIV, DIVU,
+    // REM and REMU, since the Arm and x86 models do not yet include
+    // division.
+    | EventDIV (int64#int64)
 
     // Instructions in X86 that are not in the DOIT list
     // (Data Operand Independent Timing Instructions)
@@ -87,6 +105,13 @@ overload_interface
  ("EventJump",`EventJump:A word#A word#bool->(A)address_uarch_event`);;
 overload_interface
  ("EventJump",`EventJump:int64#int64#bool->(64)address_uarch_event`);;
+
+make_overloadable "EventDIV"
+ `:int64#int64->(A)address_uarch_event`;;
+overload_interface
+ ("EventDIV",`EventDIV:int64#int64->(A)address_uarch_event`);;
+overload_interface
+ ("EventDIV",`EventDIV:int64#int64->(64)address_uarch_event`);;
 
 make_overloadable "EventX86PEXT"
  `:int64#int64#num->(A)address_uarch_event`;;
