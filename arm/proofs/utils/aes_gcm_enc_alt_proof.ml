@@ -2295,6 +2295,21 @@ let AES_GCM_ENC_ALT_TAIL_REM = prove
 let LENGTH_WB_MC =
   (REWRITE_CONV [fst AES_GCM_ENC_ALT_EXEC]) (kterm `LENGTH tmc`);;
 
+(* The mid-states of the compositions come from the leg theorems.            *)
+(* tail_join t is the mid-state at the tail entry pc+0xee0 for the state t   *)
+(* (a postcondition, or TAIL_REM's precondition): t as a mid-state, without  *)
+(* the tag memory (the tail only writes it), and with Q18 and Q27            *)
+(* existentially quantified, since TAIL_REM's precondition pins them but     *)
+(* SETUP0 and PREPRETAIL leave them unknown.                                 *)
+let tail_join t =
+  let s,b = dest_abs(mid_state t) in
+  let q18 = mk_comb(`read Q18`,s) and q27 = mk_comb(`read Q27`,s)
+  and tag = mk_comb(`read (memory :> bytes128 (tag_p:int64))`,s) in
+  let cs = filter (fun c -> not(is_eq c && mem (lhs c) [q18; q27; tag]))
+                  (conjuncts b) in
+  mk_abs(s,list_mk_exists([`v18:int128`; `v27:int128`],
+    list_mk_conj(mk_eq(q18,`v18:int128`) :: mk_eq(q27,`v27:int128`) :: cs)));;
+
 let AES_GCM_ENC_ALT_GEN_CORRECT = prove
  (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
      tag0 nonce c rk inblock nb k pc.
@@ -2371,50 +2386,9 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
   REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
 
   (* ============ SEQUENCE 1: SETUP  pc+0x38 -> pc+0x4c0 ============        *)
-  (* mid-state: no aligned_bytes_loaded or read PC (the tactic adds them).   *)
+  (* mid-state = the SETUP_GEN postcondition.                                *)
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_loop`)
-   (kterm `\s. read X0 s = word_add in_p (word (128 * (0 + 1))) /\
-        read X2 s = word_add out_p (word (128 * (0 + 1))) /\
-        read X3 s = tag_p /\
-        read X9 s = word (16 * nb) /\
-        read X4 s = word_add in_p (word (16 * nb)) /\
-        read X16 s = ivec_p /\
-        read X5 s = end_p /\
-        read X6 s = htable_p /\
-        read X10 s = word_add stackpointer (word 0x40) /\
-        read X11 s = key_p /\
-        read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
-          word 0xc200000000000000 /\
-        wordlist_from_memory(key_p,nrk) s = MAP (word_reversefields 8) rk /\
-        read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
-        read (memory :> bytes128 ivec_p) s =
-          word_reversefields 8 (ctr_block nonce c) /\
-        read Q30 s = word_reversefields 32 (ctr_block nonce (8 * 0 + c + 13)) /\
-        read Q31 s = word 79228162514264337593543950336 /\
-        read Q19 s =
-          nist_ghash (cipher (word 0) rk) tag0
-              (list_of_seq (nist_cipher_block cipher c nonce rk inblock) (8 * 0)) /\
-        read Q8 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 0))) (inblock (8 * 0 + 0)) /\
-        read Q9 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 1))) (inblock (8 * 0 + 1)) /\
-        read Q10 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 2))) (inblock (8 * 0 + 2)) /\
-        read Q11 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 3))) (inblock (8 * 0 + 3)) /\
-        read Q12 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 4))) (inblock (8 * 0 + 4)) /\
-        read Q13 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 5))) (inblock (8 * 0 + 5)) /\
-        read Q14 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 6))) (inblock (8 * 0 + 6)) /\
-        read Q15 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 7))) (inblock (8 * 0 + 7)) /\
-        read Q0 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 8)) /\
-        read Q1 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 9)) /\
-        read Q2 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 10)) /\
-        read Q3 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 11)) /\
-        read Q4 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 12)) /\
-        htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. 8 * (0 + 1) <= j /\ j < nb
-             ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
-                 inblock j) /\
-        (!j. j < 8 * (0 + 1)
-             ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                 word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j)) /\
-        ((read NF s <=> read VF s) <=> (0 = k))`) THEN
+   (mid_state(leg_post AES_GCM_ENC_ALT_SETUP_GEN)) THEN
   CONJ_TAC THENL
    [(* SETUP leg *)
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
@@ -2439,50 +2413,10 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
     ALL_TAC] THEN
 
   (* ============ SEQUENCE 2: MAIN_LOOP  pc+0x4c0 -> pc+0xa10 ============   *)
-  (* mid-state = the PREPRETAIL_GEN precondition (pc+0xa10) without aligned  *)
-  (* and PC, with mod_p := stackpointer+0x40, written out explicitly.        *)
+  (* mid-state = the PREPRETAIL_GEN precondition, with mod_p :=              *)
+  (* stackpointer+0x40.                                                      *)
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_prepretail`)
-   (kterm `\s. read X0 s = word_add in_p (word (128 * (k + 1))) /\
-        read X2 s = word_add out_p (word (128 * (k + 1))) /\
-        read X3 s = tag_p /\
-        read X9 s = word (16 * nb) /\
-        read X4 s = word_add in_p (word (16 * nb)) /\
-        read X16 s = ivec_p /\
-        read X5 s = end_p /\
-        read X6 s = htable_p /\
-        read X10 s = word_add stackpointer (word 0x40) /\
-        read X11 s = key_p /\
-        read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
-          word 0xc200000000000000 /\
-        wordlist_from_memory(key_p,nrk) s = MAP (word_reversefields 8) rk /\
-        read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
-        read (memory :> bytes128 ivec_p) s =
-          word_reversefields 8 (ctr_block nonce c) /\
-        read Q30 s = word_reversefields 32 (ctr_block nonce (8 * k + c + 13)) /\
-        read Q31 s = word 79228162514264337593543950336 /\
-        read Q19 s =
-          nist_ghash (cipher (word 0) rk) tag0
-              (list_of_seq (nist_cipher_block cipher c nonce rk inblock) (8 * k)) /\
-        read Q8 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * k + 0))) (inblock (8 * k + 0)) /\
-        read Q9 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * k + 1))) (inblock (8 * k + 1)) /\
-        read Q10 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * k + 2))) (inblock (8 * k + 2)) /\
-        read Q11 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * k + 3))) (inblock (8 * k + 3)) /\
-        read Q12 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * k + 4))) (inblock (8 * k + 4)) /\
-        read Q13 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * k + 5))) (inblock (8 * k + 5)) /\
-        read Q14 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * k + 6))) (inblock (8 * k + 6)) /\
-        read Q15 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * k + 7))) (inblock (8 * k + 7)) /\
-        read Q0 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 8)) /\
-        read Q1 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 9)) /\
-        read Q2 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 10)) /\
-        read Q3 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 11)) /\
-        read Q4 s = word_reversefields 8 (ctr_block nonce (8 * k + c + 12)) /\
-        htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. 8 * (k + 1) <= j /\ j < nb
-             ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
-                 inblock j) /\
-        (!j. j < 8 * (k + 1)
-             ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                 word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j))`) THEN
+   (stack_mod_p(mid_state(leg_pre AES_GCM_ENC_ALT_PREPRETAIL_GEN))) THEN
   CONJ_TAC THENL
    [(* MAIN_LOOP leg *)
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
@@ -2516,52 +2450,7 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
   (* RIGHT_EXISTS_AND_THM / LEFT_EXISTS_AND_THM before                       *)
   (* ENSURES_EXISTS2_PRECONDITION.                                           *)
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_tail`)
-   (kterm `\s. ?v18 v27.
-        read Q18 s = v18 /\ read Q27 s = v27 /\
-        read X0 s = word_add in_p (word (128 * (k + 1))) /\
-        read X2 s = word_add out_p (word (128 * (k + 1))) /\
-        read X3 s = tag_p /\
-        read X9 s = word (16 * nb) /\
-        read X4 s = word_add in_p (word (16 * nb)) /\
-        read X16 s = ivec_p /\
-        read X5 s = end_p /\
-        read X6 s = htable_p /\
-        read X10 s = word_add stackpointer (word 0x40) /\
-        read X11 s = key_p /\
-        read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
-          word 0xc200000000000000 /\
-        wordlist_from_memory(key_p,nrk) s = MAP (word_reversefields 8) rk /\
-        read (memory :> bytes128 ivec_p) s =
-          word_reversefields 8 (ctr_block nonce c) /\
-        read Q28 s = word_reversefields 8 (EL nr rk) /\
-        read Q30 s = word_reversefields 32 (ctr_block nonce (8 * k + c + 16)) /\
-        read Q31 s = word 79228162514264337593543950336 /\
-        read Q19 s =
-          nist_ghash (cipher (word 0) rk) tag0
-              (list_of_seq (nist_cipher_block cipher c nonce rk inblock) (8 * (k + 1))) /\
-        word_xor (read Q0 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 8)) rk) /\
-        word_xor (read Q1 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 9)) rk) /\
-        word_xor (read Q2 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 10)) rk) /\
-        word_xor (read Q3 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 11)) rk) /\
-        word_xor (read Q4 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 12)) rk) /\
-        word_xor (read Q5 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 13)) rk) /\
-        word_xor (read Q6 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 14)) rk) /\
-        word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 15)) rk) /\
-        htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. 8 * (k + 1) <= j /\ j < nb
-             ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
-                 inblock j) /\
-        (!j. j < 8 * (k + 1)
-             ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                 word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j))`) THEN
+   (tail_join(stack_mod_p(leg_post AES_GCM_ENC_ALT_PREPRETAIL_GEN))) THEN
   CONJ_TAC THENL
    [(* PREPRETAIL leg: apply PREPRETAIL_GEN, then weaken its post to the     *)
     (* existential mid-state (the witnesses are the actual Q18/Q27 reads).   *)
@@ -2585,43 +2474,7 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
     (* The post passed is PREPRETAIL_GEN's full postcondition, including     *)
     (* aligned_bytes_loaded and read PC.                                     *)
     ENSURES_POSTCONDITION_TAC
-     (kterm `\s. aligned_bytes_loaded s (word pc) tmc /\
-          read PC s = word (pc + pc_tail) /\
-          read X0 s = word_add in_p (word (128 * (k + 1))) /\
-          read X2 s = word_add out_p (word (128 * (k + 1))) /\
-          read X3 s = tag_p /\ read X9 s = word (16 * nb) /\ read X4 s = word_add in_p (word (16 * nb)) /\
-          read X16 s = ivec_p /\ read X5 s = end_p /\ read X6 s = htable_p /\
-          read X10 s = word_add stackpointer (word 0x40) /\ read X11 s = key_p /\
-          read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
-            word 0xc200000000000000 /\
-          wordlist_from_memory(key_p,nrk) s = MAP (word_reversefields 8) rk /\
-          read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
-          read (memory :> bytes128 ivec_p) s = word_reversefields 8 (ctr_block nonce c) /\
-          read Q28 s = word_reversefields 8 (EL nr rk) /\
-          read Q30 s = word_reversefields 32 (ctr_block nonce (8 * k + c + 16)) /\
-          read Q31 s = word 79228162514264337593543950336 /\
-          read Q19 s = nist_ghash (cipher (word 0) rk) tag0
-              (list_of_seq (nist_cipher_block cipher c nonce rk inblock) (8 * (k + 1))) /\
-          word_xor (read Q0 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 8)) rk) /\
-          word_xor (read Q1 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 9)) rk) /\
-          word_xor (read Q2 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 10)) rk) /\
-          word_xor (read Q3 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 11)) rk) /\
-          word_xor (read Q4 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 12)) rk) /\
-          word_xor (read Q5 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 13)) rk) /\
-          word_xor (read Q6 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 14)) rk) /\
-          word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * k + c + 15)) rk) /\
-          htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-          (!j. 8 * (k + 1) <= j /\ j < nb ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s = inblock j) /\
-          (!j. j < 8 * (k + 1) ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                 word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j))`) THEN
+     (stack_mod_p(leg_post AES_GCM_ENC_ALT_PREPRETAIL_GEN)) THEN
     CONJ_TAC THENL
      [(* (1) PP_post ==> Q_mid.  PREPRETAIL_GEN's post includes              *)
       (* aligned_bytes_loaded, so the antecedent lambda given to             *)
@@ -2703,9 +2556,10 @@ let AES_GCM_ENC_ALT_GEN_CORRECT = prove
 (* guard, b.ge at 0x4bc, is taken and SETUP_G1 lands directly at pc+0xa10 =  *)
 (* PREPRETAIL), so this is GEN_CORRECT's composition without the MAIN_LOOP   *)
 (* sequence: SETUP_G1 -> PREPRETAIL_GEN (k = 0) -> TAIL_REM (g = 0+1, r =    *)
-(* nb-8).  SETUP_G1's post at 0xa10 is GEN_CORRECT's second mid-state at     *)
-(* k := 0, so all mid-states and ISPECLs are written in literal-0 form.  The *)
-(* buffer bound `val in_p + 16*nb < 2 EXP 63` is carried for TAIL_REM.       *)
+(* nb-8).  The mid-states are SETUP_G1's postcondition and the tail join of *)
+(* PREPRETAIL_GEN's postcondition, at k = 0, and the ISPECLs are in          *)
+(* literal-0 form.  The buffer bound `val in_p + 16*nb < 2 EXP 63` is        *)
+(* carried for TAIL_REM.                                                     *)
 (* ========================================================================= *)
 let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
  (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits end_p
@@ -2773,47 +2627,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
 
   (* ===== SEQUENCE 1: SETUP_G1  pc+0x38 -> pc+0xa10 (skips main loop) ===== *)
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_prepretail`)
-   (kterm `\s. read X0 s = word_add in_p (word (128 * (0 + 1))) /\
-        read X2 s = word_add out_p (word (128 * (0 + 1))) /\
-        read X3 s = tag_p /\
-        read X9 s = word (16 * nb) /\
-        read X4 s = word_add in_p (word (16 * nb)) /\
-        read X16 s = ivec_p /\
-        read X5 s = end_p /\
-        read X6 s = htable_p /\
-        read X10 s = word_add stackpointer (word 0x40) /\
-        read X11 s = key_p /\
-        read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
-          word 0xc200000000000000 /\
-        wordlist_from_memory(key_p,nrk) s = MAP (word_reversefields 8) rk /\
-        read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
-        read (memory :> bytes128 ivec_p) s =
-          word_reversefields 8 (ctr_block nonce c) /\
-        read Q30 s = word_reversefields 32 (ctr_block nonce (8 * 0 + c + 13)) /\
-        read Q31 s = word 79228162514264337593543950336 /\
-        read Q19 s =
-          nist_ghash (cipher (word 0) rk) tag0
-              (list_of_seq (nist_cipher_block cipher c nonce rk inblock) (8 * 0)) /\
-        read Q8 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 0))) (inblock (8 * 0 + 0)) /\
-        read Q9 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 1))) (inblock (8 * 0 + 1)) /\
-        read Q10 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 2))) (inblock (8 * 0 + 2)) /\
-        read Q11 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 3))) (inblock (8 * 0 + 3)) /\
-        read Q12 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 4))) (inblock (8 * 0 + 4)) /\
-        read Q13 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 5))) (inblock (8 * 0 + 5)) /\
-        read Q14 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 6))) (inblock (8 * 0 + 6)) /\
-        read Q15 s = word_xor (aes_ctr_block cipher c nonce rk ((8 * 0 + 7))) (inblock (8 * 0 + 7)) /\
-        read Q0 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 8)) /\
-        read Q1 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 9)) /\
-        read Q2 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 10)) /\
-        read Q3 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 11)) /\
-        read Q4 s = word_reversefields 8 (ctr_block nonce (8 * 0 + c + 12)) /\
-        htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. 8 * (0 + 1) <= j /\ j < nb
-             ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
-                 inblock j) /\
-        (!j. j < 8 * (0 + 1)
-             ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                 word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j))`) THEN
+   (vsubst [`0`,`k:num`] (mid_state(leg_post AES_GCM_ENC_ALT_SETUP_G1))) THEN
   CONJ_TAC THENL
    [(* SETUP leg *)
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
@@ -2840,52 +2654,8 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
   (* ============ SEQUENCE 3: PREPRETAIL  pc+0xa10 -> pc+0xee0 ============  *)
   (* The same existential Q18/Q27 mid-state as in GEN_CORRECT.               *)
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_tail`)
-   (kterm `\s. ?v18 v27.
-        read Q18 s = v18 /\ read Q27 s = v27 /\
-        read X0 s = word_add in_p (word (128 * (0 + 1))) /\
-        read X2 s = word_add out_p (word (128 * (0 + 1))) /\
-        read X3 s = tag_p /\
-        read X9 s = word (16 * nb) /\
-        read X4 s = word_add in_p (word (16 * nb)) /\
-        read X16 s = ivec_p /\
-        read X5 s = end_p /\
-        read X6 s = htable_p /\
-        read X10 s = word_add stackpointer (word 0x40) /\
-        read X11 s = key_p /\
-        read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
-          word 0xc200000000000000 /\
-        wordlist_from_memory(key_p,nrk) s = MAP (word_reversefields 8) rk /\
-        read (memory :> bytes128 ivec_p) s =
-          word_reversefields 8 (ctr_block nonce c) /\
-        read Q28 s = word_reversefields 8 (EL nr rk) /\
-        read Q30 s = word_reversefields 32 (ctr_block nonce (8 * 0 + c + 16)) /\
-        read Q31 s = word 79228162514264337593543950336 /\
-        read Q19 s =
-          nist_ghash (cipher (word 0) rk) tag0
-              (list_of_seq (nist_cipher_block cipher c nonce rk inblock) (8 * (0 + 1))) /\
-        word_xor (read Q0 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 8)) rk) /\
-        word_xor (read Q1 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 9)) rk) /\
-        word_xor (read Q2 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 10)) rk) /\
-        word_xor (read Q3 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 11)) rk) /\
-        word_xor (read Q4 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 12)) rk) /\
-        word_xor (read Q5 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 13)) rk) /\
-        word_xor (read Q6 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 14)) rk) /\
-        word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
-          word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 15)) rk) /\
-        htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-        (!j. 8 * (0 + 1) <= j /\ j < nb
-             ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
-                 inblock j) /\
-        (!j. j < 8 * (0 + 1)
-             ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                 word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j))`) THEN
+   (tail_join(vsubst [`0`,`k:num`]
+                (stack_mod_p(leg_post AES_GCM_ENC_ALT_PREPRETAIL_GEN)))) THEN
   CONJ_TAC THENL
    [(* PREPRETAIL leg, as in GEN_CORRECT. *)
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
@@ -2901,43 +2671,7 @@ let AES_GCM_ENC_ALT_FIXED_CORRECT_G1 = prove
       ALL_TAC] THEN
     (* As in GEN_CORRECT: weaken the post to PREPRETAIL_GEN's full post. *)
     ENSURES_POSTCONDITION_TAC
-     (kterm `\s. aligned_bytes_loaded s (word pc) tmc /\
-          read PC s = word (pc + pc_tail) /\
-          read X0 s = word_add in_p (word (128 * (0 + 1))) /\
-          read X2 s = word_add out_p (word (128 * (0 + 1))) /\
-          read X3 s = tag_p /\ read X9 s = word (16 * nb) /\ read X4 s = word_add in_p (word (16 * nb)) /\
-          read X16 s = ivec_p /\ read X5 s = end_p /\ read X6 s = htable_p /\
-          read X10 s = word_add stackpointer (word 0x40) /\ read X11 s = key_p /\
-          read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
-            word 0xc200000000000000 /\
-          wordlist_from_memory(key_p,nrk) s = MAP (word_reversefields 8) rk /\
-          read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
-          read (memory :> bytes128 ivec_p) s = word_reversefields 8 (ctr_block nonce c) /\
-          read Q28 s = word_reversefields 8 (EL nr rk) /\
-          read Q30 s = word_reversefields 32 (ctr_block nonce (8 * 0 + c + 16)) /\
-          read Q31 s = word 79228162514264337593543950336 /\
-          read Q19 s = nist_ghash (cipher (word 0) rk) tag0
-              (list_of_seq (nist_cipher_block cipher c nonce rk inblock) (8 * (0 + 1))) /\
-          word_xor (read Q0 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 8)) rk) /\
-          word_xor (read Q1 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 9)) rk) /\
-          word_xor (read Q2 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 10)) rk) /\
-          word_xor (read Q3 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 11)) rk) /\
-          word_xor (read Q4 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 12)) rk) /\
-          word_xor (read Q5 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 13)) rk) /\
-          word_xor (read Q6 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 14)) rk) /\
-          word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
-            word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 15)) rk) /\
-          htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-          (!j. 8 * (0 + 1) <= j /\ j < nb ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s = inblock j) /\
-          (!j. j < 8 * (0 + 1) ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                 word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j))`) THEN
+     (vsubst [`0`,`k:num`] (stack_mod_p(leg_post AES_GCM_ENC_ALT_PREPRETAIL_GEN))) THEN
     CONJ_TAC THENL
      [(* (1) PP_post ==> Q_mid, as in GEN_CORRECT. *)
       X_GEN_TAC `s:armstate` THEN BETA_TAC THEN STRIP_TAC THEN
@@ -3184,8 +2918,8 @@ let AES_GCM_ENC_ALT_SETUP0 = prove
 (* composed with TAIL_REM (r = nb, g = 0; pc+0xee0 -> pc+0x1154) by          *)
 (* ENSURES_SEQUENCE_TAC at pc+0xee0: one tail group and no main loop (nb     *)
 (* 1..4 are FAST1..FAST4).  Q18/Q27 are unpinned at SETUP0's exit, so the    *)
-(* join uses the existential Q18/Q27 mid-state, as in the PREPRETAIL -> TAIL *)
-(* join of GEN_CORRECT.                                                      *)
+(* mid-state is the tail join of TAIL_REM's precondition at g = 0, with the  *)
+(* existential Q18/Q27 of the PREPRETAIL -> TAIL join of GEN_CORRECT.        *)
 (* ========================================================================= *)
 let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
  (kterm `!in_p out_p tag_p ivec_p key_p htable_p stackpointer len_bits
@@ -3249,52 +2983,9 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
 
   (* ===== SEQUENCE: SETUP0  pc+0x38 -> pc+0xee0 ===== *)
   ENSURES_SEQUENCE_TAC (kterm `pc + pc_tail`)
-   (kterm `\s. ?v18 v27.
-        read Q18 s = v18 /\ read Q27 s = v27 /\
-           read X0 s = word_add in_p (word (128 * 0)) /\
-           read X2 s = word_add out_p (word (128 * 0)) /\
-           read X3 s = tag_p /\
-           read X9 s = word (16 * nb) /\
-           read X4 s = word_add in_p (word (16 * nb)) /\
-           read X16 s = ivec_p /\
-           read X5 s = word_add in_p (word (128 * 0)) /\
-           read X6 s = htable_p /\
-           read X10 s = word_add stackpointer (word 0x40) /\
-           read X11 s = key_p /\
-           read (memory :> bytes64 (word_add stackpointer (word 0x40))) s = word 0xc200000000000000 /\
-           wordlist_from_memory(key_p,nrk) s = MAP (word_reversefields 8) rk /\
-           read (memory :> bytes128 ivec_p) s =
-             word_reversefields 8 (ctr_block nonce c) /\
-           read Q28 s = word_reversefields 8 (EL nr rk) /\
-           read Q30 s = word_reversefields 32 (ctr_block nonce (8 * 0 + c + 8)) /\
-           read Q31 s = word 79228162514264337593543950336 /\
-           read Q19 s =
-             nist_ghash (cipher (word 0) rk) tag0
-                 (list_of_seq (nist_cipher_block cipher c nonce rk inblock)
-                              (8 * 0)) /\
-           word_xor (read Q0 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c)) rk) /\
-           word_xor (read Q1 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 1)) rk) /\
-           word_xor (read Q2 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 2)) rk) /\
-           word_xor (read Q3 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 3)) rk) /\
-           word_xor (read Q4 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 4)) rk) /\
-           word_xor (read Q5 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 5)) rk) /\
-           word_xor (read Q6 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 6)) rk) /\
-           word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (8 * 0 + c + 7)) rk) /\
-           htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. 8 * 0 <= j /\ j < nb
-                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
-                    inblock j) /\
-           (!j. j < 8 * 0
-                ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                    word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j))`) THEN
+   (tail_join(stack_mod_p(vsubst
+     [`0`,`g:num`; `word_add (in_p:int64) (word (128 * 0))`,`end_p:int64`]
+     (leg_pre AES_GCM_ENC_ALT_TAIL_REM)))) THEN
   CONJ_TAC THENL
    [(* SETUP0 leg *)
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
@@ -3308,54 +2999,7 @@ let AES_GCM_ENC_ALT_SETUP0_TAIL = prove
               MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
       SUBSUMED_MAYCHANGE_TAC;
       ALL_TAC] THEN
-    ENSURES_POSTCONDITION_TAC
-     (kterm `      (\s. aligned_bytes_loaded s (word pc) tmc /\
-           read PC s = word (pc + pc_tail) /\
-           read X0 s = in_p /\
-           read X2 s = out_p /\
-           read X3 s = tag_p /\
-           read X9 s = word (16 * nb) /\
-           read X4 s = word_add in_p (word (16 * nb)) /\
-           read X16 s = ivec_p /\
-           read X5 s = in_p /\
-           read X6 s = htable_p /\
-           read X10 s = word_add stackpointer (word 0x40) /\
-           read X11 s = key_p /\
-           read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
-             word 0xc200000000000000 /\
-           wordlist_from_memory(key_p,nrk) s = MAP (word_reversefields 8) rk /\
-           read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
-           read (memory :> bytes128 ivec_p) s =
-             word_reversefields 8 (ctr_block nonce c) /\
-           read Q28 s = word_reversefields 8 (EL nr rk) /\
-           read Q30 s = word_reversefields 32 (ctr_block nonce (c + 8)) /\
-           read Q31 s = word 79228162514264337593543950336 /\
-           read Q19 s =
-             nist_ghash (cipher (word 0) rk) tag0
-                 (list_of_seq (nist_cipher_block cipher c nonce rk inblock) 0) /\
-           word_xor (read Q0 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce c) rk) /\
-           word_xor (read Q1 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (c + 1)) rk) /\
-           word_xor (read Q2 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (c + 2)) rk) /\
-           word_xor (read Q3 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (c + 3)) rk) /\
-           word_xor (read Q4 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (c + 4)) rk) /\
-           word_xor (read Q5 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (c + 5)) rk) /\
-           word_xor (read Q6 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (c + 6)) rk) /\
-           word_xor (read Q7 s) (word_reversefields 8 (EL nr rk)) =
-             word_reversefields 8 (cipher (ctr_block nonce (c + 7)) rk) /\
-           htable_mem_8 (ghash_twist (cipher (word 0) rk)) htable_p s /\
-           (!j. 8 * 0 <= j /\ j < nb
-                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
-                    inblock j) /\
-           (!j. j < 8 * 0
-                ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                    word_xor (aes_ctr_block cipher c nonce rk (j)) (inblock j)))`) THEN
+    ENSURES_POSTCONDITION_TAC (leg_post AES_GCM_ENC_ALT_SETUP0) THEN
     CONJ_TAC THENL
      [X_GEN_TAC `s:armstate` THEN BETA_TAC THEN STRIP_TAC THEN
       RULE_ASSUM_TAC(REWRITE_RULE[MULT_CLAUSES; ADD_CLAUSES; WORD_ADD_0]) THEN
