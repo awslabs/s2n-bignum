@@ -207,7 +207,17 @@ let BITS_NORM_CONV tm =
   let ith = BITBLAST_RULE(subst (zip gs ats) (mk_eq(tm,tm'))) in
   INST (zip ats gs) ith;;
 
-(*** Any fact read c s = t about a word is put in normal form ***)
+(*** Any fact read c s = t about a word is put in normal form. The facts
+ *** are carried from state to state with the same values, so the values
+ *** known to be in normal form (or to be left alone) are remembered ***)
+
+module Bits_termtbl = Hashtbl.Make(struct
+  type t = term
+  let equal = (=)
+  let hash = Hashtbl.hash_param 64 512
+end);;
+
+let bits_done : unit Bits_termtbl.t = Bits_termtbl.create 4096;;
 
 let BITS_NORM_RULE th =
   let c = concl th in
@@ -217,9 +227,13 @@ let BITS_NORM_RULE th =
           | _ -> false) &&
          can bits_wsize (type_of(rhs c)))
   then th else
-  try let eth = BITS_NORM_CONV(rhs c) in
-      if rand(concl eth) = lhand(concl eth) then th else TRANS th eth
-  with Failure _ -> th;;
+  let t = rhs c in
+  if Bits_termtbl.mem bits_done t then th else
+  try let eth = BITS_NORM_CONV t in
+      let t' = rand(concl eth) in
+      Bits_termtbl.replace bits_done t' ();
+      if t' = t then th else TRANS th eth
+  with Failure _ -> (Bits_termtbl.replace bits_done t (); th);;
 
 let BITS_NORM_TAC = RULE_ASSUM_TAC BITS_NORM_RULE;;
 
