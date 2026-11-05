@@ -30,7 +30,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
-needs "arm/proofs/utils/mlkem_native_interleave.ml";;
+needs "arm/proofs/mlkem_native/interleave.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/libmlkem.ml";;
 
 let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O3_EXEC =

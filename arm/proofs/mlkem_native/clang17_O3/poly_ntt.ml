@@ -30,7 +30,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native.ml";;
-needs "arm/proofs/utils/mlkem_native_interleave.ml";;
+needs "arm/proofs/mlkem_native/interleave.ml";;
 needs "arm/proofs/mlkem_native/clang17_O3/libmlkem.ml";;
 needs "common/int_linear.ml";;
 

@@ -41,7 +41,11 @@ What does not depend on the build is shared: the specifications in
 `../../common/layout.ml`, the tools and lemmas in
 `../proofs/utils/mlkem_native*.ml` and `../proofs/utils/keccak_*.ml`
 (including `mlkem_native_image.ml` for the proofs about a whole image and
-`mlkem_native_libc.ml` for the C library functions), and the scripts
+`mlkem_native_libc.ml` for the C library functions), the tactics for
+compiled code in `../proofs/mlkem_native/*.ml` (`overlap.ml` for the
+checks that arrays do not overlap, which vectorized loops start with, and
+`interleave.ml` for the loads and stores of LD2-LD4 and ST2-ST4), and
+the scripts
 `check_transcription.py`, `gen_layout.py` and `gen_proofs_mk.py` here.
 
 ## Source of the code
