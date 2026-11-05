@@ -16,6 +16,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/poly_compress_d5 \
   mlkem_native/clang17_O3/poly_frommsg \
   mlkem_native/clang17_O3/poly_mulcache_compute \
+  mlkem_native/clang17_O3/poly_ntt \
   mlkem_native/clang17_O3/poly_reduce \
   mlkem_native/clang17_O3/poly_rej_uniform \
   mlkem_native/clang17_O3/poly_rej_uniform_x4 \
@@ -83,6 +84,10 @@ mlkem_native/clang17_O3/poly_frommsg.native: \
 mlkem_native/clang17_O3/poly_mulcache_compute.native: \
   proofs/utils/mlkem_native.ml \
   proofs/utils/mlkem_native_overlap.ml \
+  proofs/utils/mlkem_native_interleave.ml \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/poly_ntt.native: \
+  proofs/utils/mlkem_native.ml \
   proofs/utils/mlkem_native_interleave.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_reduce.native: \
