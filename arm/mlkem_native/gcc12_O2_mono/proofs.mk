@@ -11,6 +11,9 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/check_pk_k2 \
   mlkem_native/gcc12_O2_mono/check_pk_k3 \
   mlkem_native/gcc12_O2_mono/check_pk_k4 \
+  mlkem_native/gcc12_O2_mono/check_sk_k2 \
+  mlkem_native/gcc12_O2_mono/check_sk_k3 \
+  mlkem_native/gcc12_O2_mono/check_sk_k4 \
   mlkem_native/gcc12_O2_mono/gen_matrix_k2 \
   mlkem_native/gcc12_O2_mono/gen_matrix_k4 \
   mlkem_native/gcc12_O2_mono/keccak_absorb_once \
@@ -70,6 +73,15 @@ mlkem_native/gcc12_O2_mono/check_pk_k4.native: \
   mlkem_native/gcc12_O2_mono/poly_reduce.native \
   mlkem_native/gcc12_O2_mono/poly_tobytes.native \
   proofs/utils/mlkem_native_image.ml
+mlkem_native/gcc12_O2_mono/check_sk_k2.native: \
+  mlkem_native/gcc12_O2_mono/sha3_256.native \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/check_sk_k3.native: \
+  mlkem_native/gcc12_O2_mono/sha3_256.native \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/check_sk_k4.native: \
+  mlkem_native/gcc12_O2_mono/sha3_256.native \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/gen_matrix_k2.native: \
   mlkem_native/gcc12_O2_mono/poly_rej_uniform_x4.native
 mlkem_native/gcc12_O2_mono/gen_matrix_k4.native: \
