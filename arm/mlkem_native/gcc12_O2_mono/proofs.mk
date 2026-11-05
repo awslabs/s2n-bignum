@@ -14,6 +14,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/check_sk_k2 \
   mlkem_native/gcc12_O2_mono/check_sk_k3 \
   mlkem_native/gcc12_O2_mono/check_sk_k4 \
+  mlkem_native/gcc12_O2_mono/dec_k2 \
   mlkem_native/gcc12_O2_mono/gen_matrix_k2 \
   mlkem_native/gcc12_O2_mono/gen_matrix_k4 \
   mlkem_native/gcc12_O2_mono/indcpa_enc_k2 \
@@ -91,6 +92,28 @@ mlkem_native/gcc12_O2_mono/check_sk_k3.native: \
 mlkem_native/gcc12_O2_mono/check_sk_k4.native: \
   mlkem_native/gcc12_O2_mono/sha3_256.native \
   mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/dec_k2.native: \
+  mlkem_native/gcc12_O2_mono/check_sk_k2.native \
+  mlkem_native/gcc12_O2_mono/sha3_512.native \
+  mlkem_native/gcc12_O2_mono/indcpa_enc_k2.native \
+  mlkem_native/gcc12_O2_mono/shake256.native \
+  mlkem_native/gcc12_O2_mono/poly_decompress_d10.native \
+  mlkem_native/gcc12_O2_mono/poly_decompress_d4.native \
+  mlkem_native/gcc12_O2_mono/poly_frombytes.native \
+  mlkem_native/gcc12_O2_mono/poly_ntt.native \
+  mlkem_native/gcc12_O2_mono/poly_mulcache_compute.native \
+  mlkem_native/gcc12_O2_mono/basemul_k2.native \
+  mlkem_native/gcc12_O2_mono/poly_invntt_tomont.native \
+  mlkem_native/gcc12_O2_mono/poly_reduce.native \
+  mlkem_native/gcc12_O2_mono/poly_tomsg.native \
+  proofs/mlkem_native/indcpa_inline.ml \
+  proofs/mlkem_native/inline_loops.ml \
+  proofs/utils/mlkem_native_kem.ml \
+  proofs/mlkem_native/polyvec_inline.ml \
+  proofs/utils/mlkem_native_indcpa.ml \
+  proofs/utils/mlkem_native_libc.ml \
+  proofs/utils/mlkem_native_fips203.ml \
+  proofs/utils/mlkem_native_image.ml
 mlkem_native/gcc12_O2_mono/gen_matrix_k2.native: \
   mlkem_native/gcc12_O2_mono/poly_rej_uniform_x4.native
 mlkem_native/gcc12_O2_mono/gen_matrix_k4.native: \
