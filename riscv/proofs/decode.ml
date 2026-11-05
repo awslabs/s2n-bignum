@@ -41,11 +41,19 @@ let riscv_xreg = new_definition
    Opcode / funct selectors (binary):
 
      ADD   0110011 / 000 / 0000000   SUB   0110011 / 000 / 0100000
+     SLL   0110011 / 001 / 0000000   SLT   0110011 / 010 / 0000000
+     SLTU  0110011 / 011 / 0000000   XOR   0110011 / 100 / 0000000
+     SRL   0110011 / 101 / 0000000   SRA   0110011 / 101 / 0100000
+     OR    0110011 / 110 / 0000000   AND   0110011 / 111 / 0000000
      MUL   0110011 / 000 / 0000001   MULH  0110011 / 001 / 0000001
-     ADDI  0010011 / 000             SLLI  0010011 / 001 / 0000000
+     ADDI  0010011 / 000             SLTI  0010011 / 010
+     SLTIU 0010011 / 011             XORI  0010011 / 100
+     ORI   0010011 / 110             ANDI  0010011 / 111
+     SLLI  0010011 / 001 / 0000000   SRLI  0010011 / 101 / 0000000
      SRAI  0010011 / 101 / 0100000   LW    0000011 / 010
      SW    0100011 / 010             BNE   1100011 / 001
-     LUI   0110111                   JALR  1100111 / 000
+     LUI   0110111                   AUIPC 0010111
+     JALR  1100111 / 000
 
    Unsupported opcodes and unsupported variants fall through to `NONE`. *)
 
@@ -56,14 +64,42 @@ let decode = new_definition
         SOME (riscv_ADD (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
     | [0b0100000:7; rs2:5; rs1:5; 0b000:3; rd:5; 0b0110011:7] ->
         SOME (riscv_SUB (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000000:7; rs2:5; rs1:5; 0b001:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_SLL (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000000:7; rs2:5; rs1:5; 0b010:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_SLT (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000000:7; rs2:5; rs1:5; 0b011:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_SLTU (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000000:7; rs2:5; rs1:5; 0b100:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_XOR (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000000:7; rs2:5; rs1:5; 0b101:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_SRL (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0100000:7; rs2:5; rs1:5; 0b101:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_SRA (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000000:7; rs2:5; rs1:5; 0b110:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_OR (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000000:7; rs2:5; rs1:5; 0b111:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_AND (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
     | [0b0000001:7; rs2:5; rs1:5; 0b000:3; rd:5; 0b0110011:7] ->
         SOME (riscv_MUL (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
     | [0b0000001:7; rs2:5; rs1:5; 0b001:3; rd:5; 0b0110011:7] ->
         SOME (riscv_MULH (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
     | [imm:12; rs1:5; 0b000:3; rd:5; 0b0010011:7] ->
         SOME (riscv_ADDI (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
+    | [imm:12; rs1:5; 0b010:3; rd:5; 0b0010011:7] ->
+        SOME (riscv_SLTI (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
+    | [imm:12; rs1:5; 0b011:3; rd:5; 0b0010011:7] ->
+        SOME (riscv_SLTIU (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
+    | [imm:12; rs1:5; 0b100:3; rd:5; 0b0010011:7] ->
+        SOME (riscv_XORI (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
+    | [imm:12; rs1:5; 0b110:3; rd:5; 0b0010011:7] ->
+        SOME (riscv_ORI (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
+    | [imm:12; rs1:5; 0b111:3; rd:5; 0b0010011:7] ->
+        SOME (riscv_ANDI (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
     | [0b0000000:7; shamt:5; rs1:5; 0b001:3; rd:5; 0b0010011:7] ->
         SOME (riscv_SLLI (riscv_xreg rd) (riscv_xreg rs1) (val shamt))
+    | [0b0000000:7; shamt:5; rs1:5; 0b101:3; rd:5; 0b0010011:7] ->
+        SOME (riscv_SRLI (riscv_xreg rd) (riscv_xreg rs1) (val shamt))
     | [0b0100000:7; shamt:5; rs1:5; 0b101:3; rd:5; 0b0010011:7] ->
         SOME (riscv_SRAI (riscv_xreg rd) (riscv_xreg rs1) (val shamt))
     | [imm:12; rs1:5; 0b010:3; rd:5; 0b0000011:7] ->
@@ -79,6 +115,9 @@ let decode = new_definition
              (word_join imm4_1 (word 0:1 word):5 word):13 word)))
     | [imm:20; rd:5; 0b0110111:7] ->
         SOME (riscv_LUI (riscv_xreg rd)
+          (word_join imm (word 0:12 word):int32))
+    | [imm:20; rd:5; 0b0010111:7] ->
+        SOME (riscv_AUIPC (riscv_xreg rd)
           (word_join imm (word 0:12 word):int32))
     | [imm:12; rs1:5; 0b000:3; rd:5; 0b1100111:7] ->
         SOME (riscv_JALR (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
@@ -136,6 +175,22 @@ let RISCV_DECODE_TESTS =
       `SOME (riscv_ADD A0 A0 A1)`;
     `decode (word 0x40b50533)`,
       `SOME (riscv_SUB A0 A0 A1)`;
+    `decode (word 0x00c59533)`,
+      `SOME (riscv_SLL A0 A1 A2)`;
+    `decode (word 0x00c5a533)`,
+      `SOME (riscv_SLT A0 A1 A2)`;
+    `decode (word 0x00c5b533)`,
+      `SOME (riscv_SLTU A0 A1 A2)`;
+    `decode (word 0x00c5c533)`,
+      `SOME (riscv_XOR A0 A1 A2)`;
+    `decode (word 0x00c5d533)`,
+      `SOME (riscv_SRL A0 A1 A2)`;
+    `decode (word 0x40c5d533)`,
+      `SOME (riscv_SRA A0 A1 A2)`;
+    `decode (word 0x00c5e533)`,
+      `SOME (riscv_OR A0 A1 A2)`;
+    `decode (word 0x00c5f533)`,
+      `SOME (riscv_AND A0 A1 A2)`;
     `decode (word 0x02b50533)`,
       `SOME (riscv_MUL A0 A0 A1)`;
     `decode (word 0x02b51533)`,
@@ -144,8 +199,30 @@ let RISCV_DECODE_TESTS =
       `SOME (riscv_ADDI A0 A0 (word 1))`;
     `decode (word 0xfff50513)`,
       `SOME (riscv_ADDI A0 A0 (word 0xffffffff))`;
+    `decode (word 0x0055a513)`,
+      `SOME (riscv_SLTI A0 A1 (word 5))`;
+    `decode (word 0xfff5a513)`,
+      `SOME (riscv_SLTI A0 A1 (word 0xffffffff))`;
+    `decode (word 0x0015b513)`,
+      `SOME (riscv_SLTIU A0 A1 (word 1))`;
+    `decode (word 0xfff5b513)`,
+      `SOME (riscv_SLTIU A0 A1 (word 0xffffffff))`;
+    `decode (word 0x7ff5c513)`,
+      `SOME (riscv_XORI A0 A1 (word 0x7ff))`;
+    `decode (word 0xfff5c513)`,
+      `SOME (riscv_XORI A0 A1 (word 0xffffffff))`;
+    `decode (word 0x1235e513)`,
+      `SOME (riscv_ORI A0 A1 (word 0x123))`;
+    `decode (word 0x8005e513)`,
+      `SOME (riscv_ORI A0 A1 (word 0xfffff800))`;
+    `decode (word 0x0ff5f513)`,
+      `SOME (riscv_ANDI A0 A1 (word 0xff))`;
+    `decode (word 0xff05f513)`,
+      `SOME (riscv_ANDI A0 A1 (word 0xfffffff0))`;
     `decode (word 0x00359513)`,
       `SOME (riscv_SLLI A0 A1 3)`;
+    `decode (word 0x0035d513)`,
+      `SOME (riscv_SRLI A0 A1 3)`;
     `decode (word 0x4035d513)`,
       `SOME (riscv_SRAI A0 A1 3)`;
     `decode (word 0x0045a503)`,
@@ -160,6 +237,10 @@ let RISCV_DECODE_TESTS =
       `SOME (riscv_BNE A0 A1 (word 0xfffffffc))`;
     `decode (word 0x12345537)`,
       `SOME (riscv_LUI A0 (word 0x12345000))`;
+    `decode (word 0x12345517)`,
+      `SOME (riscv_AUIPC A0 (word 0x12345000))`;
+    `decode (word 0xfffff517)`,
+      `SOME (riscv_AUIPC A0 (word 0xfffff000))`;
     `decode (word 0x00008067)`,
       `SOME (riscv_JALR ZERO RA (word 0))`] in
   end_itlist CONJ
