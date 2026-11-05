@@ -1,0 +1,70 @@
+SAIL_HL_ARM_ZIP164E8_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP164E8 d n m s t <=>
+     arm_ZIP1 (QREG' d) (QREG' n) (QREG' m) 8 64 s t
+
+SAIL_HL_ARM_ZIP164E16_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP164E16 d n m s t <=>
+     arm_ZIP1 (QREG' d) (QREG' n) (QREG' m) 16 64 s t
+
+SAIL_HL_ARM_ZIP164E32_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP164E32 d n m s t <=>
+     arm_ZIP1 (QREG' d) (QREG' n) (QREG' m) 32 64 s t
+
+SAIL_HL_ARM_ZIP1128E8_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP1128E8 d n m s t <=>
+     arm_ZIP1 (QREG' d) (QREG' n) (QREG' m) 8 128 s t
+
+SAIL_HL_ARM_ZIP1128E16_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP1128E16 d n m s t <=>
+     arm_ZIP1 (QREG' d) (QREG' n) (QREG' m) 16 128 s t
+
+SAIL_HL_ARM_ZIP1128E32_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP1128E32 d n m s t <=>
+     arm_ZIP1 (QREG' d) (QREG' n) (QREG' m) 32 128 s t
+
+SAIL_HL_ARM_ZIP1128E64_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP1128E64 d n m s t <=>
+     arm_ZIP1 (QREG' d) (QREG' n) (QREG' m) 64 128 s t
+
+SAIL_HL_ARM_ZIP264E8_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP264E8 d n m s t <=>
+     arm_ZIP2 (QREG' d) (QREG' n) (QREG' m) 8 64 s t
+
+SAIL_HL_ARM_ZIP264E16_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP264E16 d n m s t <=>
+     arm_ZIP2 (QREG' d) (QREG' n) (QREG' m) 16 64 s t
+
+SAIL_HL_ARM_ZIP264E32_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP264E32 d n m s t <=>
+     arm_ZIP2 (QREG' d) (QREG' n) (QREG' m) 32 64 s t
+
+SAIL_HL_ARM_ZIP2128E8_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP2128E8 d n m s t <=>
+     arm_ZIP2 (QREG' d) (QREG' n) (QREG' m) 8 128 s t
+
+SAIL_HL_ARM_ZIP2128E16_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP2128E16 d n m s t <=>
+     arm_ZIP2 (QREG' d) (QREG' n) (QREG' m) 16 128 s t
+
+SAIL_HL_ARM_ZIP2128E32_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP2128E32 d n m s t <=>
+     arm_ZIP2 (QREG' d) (QREG' n) (QREG' m) 32 128 s t
+
+SAIL_HL_ARM_ZIP2128E64_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fZIP2128E64 d n m s t <=>
+     arm_ZIP2 (QREG' d) (QREG' n) (QREG' m) 64 128 s t
+

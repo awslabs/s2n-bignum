@@ -1,0 +1,557 @@
+SAIL_HL_X86_REMS_SHL8_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHL8_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SHL (GPR8 (Gpr d Lower_8)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SHL8_LEGACY_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHL8_5fLEGACY_5fRI
+          (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SHL
+       (if 4 <= val d then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SHL16_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHL16_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SHL (GPR16 (Gpr d Lower_16)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SHL32_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHL32_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SHL (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SHL64_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHL64_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SHL (registers :> element d) (val count MOD 64) s t
+
+SAIL_HL_X86_REMS_SHR8_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHR8_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SHR (GPR8 (Gpr d Lower_8)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SHR8_LEGACY_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHR8_5fLEGACY_5fRI
+          (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SHR
+       (if 4 <= val d then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SHR16_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHR16_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SHR (GPR16 (Gpr d Lower_16)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SHR32_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHR32_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SHR (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SHR64_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHR64_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SHR (registers :> element d) (val count MOD 64) s t
+
+SAIL_HL_X86_REMS_SAR8_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSAR8_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 8))
+       (sail_hl_x86_rems_diff_initial (word 255) s)
+       (write
+          ZF false
+          (write
+             SF true
+             (write PF true (sail_hl_x86_rems_diff_initial (word 255) s)))) /\
+     ~x86_SAR
+        (GPR8 (Gpr (word 0) Lower_8)) 8
+        (sail_hl_x86_rems_diff_initial (word 255) s)
+        (write
+           ZF false
+           (write
+              SF true
+              (write PF true (sail_hl_x86_rems_diff_initial (word 255) s))))
+
+SAIL_HL_X86_REMS_SAR8_LEGACY_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSAR8_5fLEGACY_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 8))
+       (sail_hl_x86_rems_diff_initial (word 255) s)
+       (write
+          ZF false
+          (write
+             SF true
+             (write PF true (sail_hl_x86_rems_diff_initial (word 255) s)))) /\
+     ~x86_SAR
+        (if 4 <= val (word 0)
+         then GPR8 (Gpr (iword (&(val (word 0)) - &4)) Upper_8)
+         else GPR8 (Gpr (word_zx (word 0)) Lower_8))
+        8 (sail_hl_x86_rems_diff_initial (word 255) s)
+        (write
+           ZF false
+           (write
+              SF true
+              (write PF true (sail_hl_x86_rems_diff_initial (word 255) s))))
+
+SAIL_HL_X86_REMS_SAR16_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSAR16_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 16))
+       (sail_hl_x86_rems_diff_initial (word 65535) s)
+       (write
+          ZF false
+          (write
+             SF true
+             (write PF true (sail_hl_x86_rems_diff_initial (word 65535) s)))) /\
+     ~x86_SAR
+        (GPR16 (Gpr (word 0) Lower_16)) 16
+        (sail_hl_x86_rems_diff_initial (word 65535) s)
+        (write
+           ZF false
+           (write
+              SF true
+              (write PF true (sail_hl_x86_rems_diff_initial (word 65535) s))))
+
+SAIL_HL_X86_REMS_SAR32_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSAR32_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SAR (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SAR64_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSAR64_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_SAR (registers :> element d) (val count MOD 64) s t
+
+SAIL_HL_X86_REMS_SHLD16_RRI_EQ
+|- forall d m count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHLD16_5fRRI (rflags :> bottom_32) RIP d m count)
+       s t <=>
+     x86_SHLD
+       (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr m Lower_16)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SHLD32_RRI_EQ
+|- forall d m count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHLD32_5fRRI (rflags :> bottom_32) RIP d m count)
+       s t <=>
+     x86_SHLD
+       (GPR32_Z (Gpr d Lower_32)) (GPR32_Z (Gpr m Lower_32)) (val count MOD 32)
+       s t
+
+SAIL_HL_X86_REMS_SHLD64_RRI_EQ
+|- forall d m count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHLD64_5fRRI (rflags :> bottom_32) RIP d m count)
+       s t <=>
+     x86_SHLD
+       (registers :> element d) (registers :> element m) (val count MOD 64) s t
+
+SAIL_HL_X86_REMS_SHRD16_RRI_EQ
+|- forall d m count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHRD16_5fRRI (rflags :> bottom_32) RIP d m count)
+       s t <=>
+     x86_SHRD
+       (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr m Lower_16)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_SHRD32_RRI_EQ
+|- forall d m count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHRD32_5fRRI (rflags :> bottom_32) RIP d m count)
+       s t <=>
+     x86_SHRD
+       (GPR32_Z (Gpr d Lower_32)) (GPR32_Z (Gpr m Lower_32)) (val count MOD 32)
+       s t
+
+SAIL_HL_X86_REMS_SHRD64_RRI_EQ
+|- forall d m count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fSHRD64_5fRRI (rflags :> bottom_32) RIP d m count)
+       s t <=>
+     x86_SHRD
+       (registers :> element d) (registers :> element m) (val count MOD 64) s t
+
+SAIL_HL_X86_REMS_ROL8_RI_DIFF
+|- forall s.
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROL8_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 9))
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+        (write CF true (sail_hl_x86_rems_diff_initial (word 1) s)) /\
+      ~x86_ROL
+         (GPR8 (Gpr (word 0) Lower_8)) 9
+         (sail_hl_x86_rems_diff_initial (word 1) s)
+         (write CF true (sail_hl_x86_rems_diff_initial (word 1) s))) /\
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fROL8_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 0))
+       (sail_hl_x86_rems_diff_initial (word 0) s)
+       (write OF true (sail_hl_x86_rems_diff_initial (word 0) s)) /\
+     ~x86_ROL
+        (GPR8 (Gpr (word 0) Lower_8)) 0
+        (sail_hl_x86_rems_diff_initial (word 0) s)
+        (write OF true (sail_hl_x86_rems_diff_initial (word 0) s))
+
+SAIL_HL_X86_REMS_ROL8_LEGACY_RI_DIFF
+|- forall s.
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROL8_5fLEGACY_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 9))
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+        (write CF true (sail_hl_x86_rems_diff_initial (word 1) s)) /\
+      ~x86_ROL
+         (if 4 <= val (word 0)
+          then GPR8 (Gpr (iword (&(val (word 0)) - &4)) Upper_8)
+          else GPR8 (Gpr (word_zx (word 0)) Lower_8))
+         9 (sail_hl_x86_rems_diff_initial (word 1) s)
+         (write CF true (sail_hl_x86_rems_diff_initial (word 1) s))) /\
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fROL8_5fLEGACY_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 0))
+       (sail_hl_x86_rems_diff_initial (word 0) s)
+       (write OF true (sail_hl_x86_rems_diff_initial (word 0) s)) /\
+     ~x86_ROL
+        (if 4 <= val (word 0)
+         then GPR8 (Gpr (iword (&(val (word 0)) - &4)) Upper_8)
+         else GPR8 (Gpr (word_zx (word 0)) Lower_8))
+        0 (sail_hl_x86_rems_diff_initial (word 0) s)
+        (write OF true (sail_hl_x86_rems_diff_initial (word 0) s))
+
+SAIL_HL_X86_REMS_ROL16_RI_DIFF
+|- forall s.
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROL16_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 17))
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+        (write CF true (sail_hl_x86_rems_diff_initial (word 1) s)) /\
+      ~x86_ROL
+         (GPR16 (Gpr (word 0) Lower_16)) 17
+         (sail_hl_x86_rems_diff_initial (word 1) s)
+         (write CF true (sail_hl_x86_rems_diff_initial (word 1) s))) /\
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fROL16_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 0))
+       (sail_hl_x86_rems_diff_initial (word 0) s)
+       (write OF true (sail_hl_x86_rems_diff_initial (word 0) s)) /\
+     ~x86_ROL
+        (GPR16 (Gpr (word 0) Lower_16)) 0
+        (sail_hl_x86_rems_diff_initial (word 0) s)
+        (write OF true (sail_hl_x86_rems_diff_initial (word 0) s))
+
+SAIL_HL_X86_REMS_ROL32_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fROL32_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 0))
+       (sail_hl_x86_rems_diff_initial (word 0) s)
+       (write OF true (sail_hl_x86_rems_diff_initial (word 0) s)) /\
+     ~x86_ROL
+        (GPR32_Z (Gpr (word 0) Lower_32)) 0
+        (sail_hl_x86_rems_diff_initial (word 0) s)
+        (write OF true (sail_hl_x86_rems_diff_initial (word 0) s))
+
+SAIL_HL_X86_REMS_ROL64_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fROL64_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 0))
+       (sail_hl_x86_rems_diff_initial (word 0) s)
+       (write OF true (sail_hl_x86_rems_diff_initial (word 0) s)) /\
+     ~x86_ROL
+        (registers :> element (word 0)) 0
+        (sail_hl_x86_rems_diff_initial (word 0) s)
+        (write OF true (sail_hl_x86_rems_diff_initial (word 0) s))
+
+SAIL_HL_X86_REMS_ROR8_RI_DIFF
+|- forall s.
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR8_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 9))
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+        (write CF true (sail_hl_x86_rems_diff_initial (word 1) s)) /\
+      ~x86_ROR
+         (GPR8 (Gpr (word 0) Lower_8)) 9
+         (sail_hl_x86_rems_diff_initial (word 1) s)
+         (write CF true (sail_hl_x86_rems_diff_initial (word 1) s))) /\
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR8_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 0))
+        (sail_hl_x86_rems_diff_initial (word 0) s)
+        (write OF true (sail_hl_x86_rems_diff_initial (word 0) s)) /\
+      ~x86_ROR
+         (GPR8 (Gpr (word 0) Lower_8)) 0
+         (sail_hl_x86_rems_diff_initial (word 0) s)
+         (write OF true (sail_hl_x86_rems_diff_initial (word 0) s))) /\
+     x86_ROR
+       (GPR8 (Gpr (word 0) Lower_8)) 2
+       (sail_hl_x86_rems_diff_initial (word 4) s)
+       (write
+          (registers :> element (word 0)) (word 1)
+          (sail_hl_x86_rems_diff_initial (word 4) s)) /\
+     ~sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR8_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 2))
+        (sail_hl_x86_rems_diff_initial (word 4) s)
+        (write
+           (registers :> element (word 0)) (word 1)
+           (sail_hl_x86_rems_diff_initial (word 4) s))
+
+SAIL_HL_X86_REMS_ROR8_LEGACY_RI_DIFF
+|- forall s.
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR8_5fLEGACY_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 9))
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+        (write CF true (sail_hl_x86_rems_diff_initial (word 1) s)) /\
+      ~x86_ROR
+         (if 4 <= val (word 0)
+          then GPR8 (Gpr (iword (&(val (word 0)) - &4)) Upper_8)
+          else GPR8 (Gpr (word_zx (word 0)) Lower_8))
+         9 (sail_hl_x86_rems_diff_initial (word 1) s)
+         (write CF true (sail_hl_x86_rems_diff_initial (word 1) s))) /\
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR8_5fLEGACY_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 0))
+        (sail_hl_x86_rems_diff_initial (word 0) s)
+        (write OF true (sail_hl_x86_rems_diff_initial (word 0) s)) /\
+      ~x86_ROR
+         (if 4 <= val (word 0)
+          then GPR8 (Gpr (iword (&(val (word 0)) - &4)) Upper_8)
+          else GPR8 (Gpr (word_zx (word 0)) Lower_8))
+         0 (sail_hl_x86_rems_diff_initial (word 0) s)
+         (write OF true (sail_hl_x86_rems_diff_initial (word 0) s))) /\
+     x86_ROR
+       (if 4 <= val (word 0)
+        then GPR8 (Gpr (iword (&(val (word 0)) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx (word 0)) Lower_8))
+       2 (sail_hl_x86_rems_diff_initial (word 4) s)
+       (write
+          (registers :> element (word 0)) (word 1)
+          (sail_hl_x86_rems_diff_initial (word 4) s)) /\
+     ~sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR8_5fLEGACY_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 2))
+        (sail_hl_x86_rems_diff_initial (word 4) s)
+        (write
+           (registers :> element (word 0)) (word 1)
+           (sail_hl_x86_rems_diff_initial (word 4) s))
+
+SAIL_HL_X86_REMS_ROR16_RI_DIFF
+|- forall s.
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR16_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 17))
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+        (write CF true (sail_hl_x86_rems_diff_initial (word 1) s)) /\
+      ~x86_ROR
+         (GPR16 (Gpr (word 0) Lower_16)) 17
+         (sail_hl_x86_rems_diff_initial (word 1) s)
+         (write CF true (sail_hl_x86_rems_diff_initial (word 1) s))) /\
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR16_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 0))
+        (sail_hl_x86_rems_diff_initial (word 0) s)
+        (write OF true (sail_hl_x86_rems_diff_initial (word 0) s)) /\
+      ~x86_ROR
+         (GPR16 (Gpr (word 0) Lower_16)) 0
+         (sail_hl_x86_rems_diff_initial (word 0) s)
+         (write OF true (sail_hl_x86_rems_diff_initial (word 0) s))) /\
+     x86_ROR
+       (GPR16 (Gpr (word 0) Lower_16)) 2
+       (sail_hl_x86_rems_diff_initial (word 4) s)
+       (write
+          (registers :> element (word 0)) (word 1)
+          (sail_hl_x86_rems_diff_initial (word 4) s)) /\
+     ~sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR16_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 2))
+        (sail_hl_x86_rems_diff_initial (word 4) s)
+        (write
+           (registers :> element (word 0)) (word 1)
+           (sail_hl_x86_rems_diff_initial (word 4) s))
+
+SAIL_HL_X86_REMS_ROR32_RI_DIFF
+|- forall s.
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR32_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 0))
+        (sail_hl_x86_rems_diff_initial (word 0) s)
+        (write OF true (sail_hl_x86_rems_diff_initial (word 0) s)) /\
+      ~x86_ROR
+         (GPR32_Z (Gpr (word 0) Lower_32)) 0
+         (sail_hl_x86_rems_diff_initial (word 0) s)
+         (write OF true (sail_hl_x86_rems_diff_initial (word 0) s))) /\
+     x86_ROR
+       (GPR32_Z (Gpr (word 0) Lower_32)) 2
+       (sail_hl_x86_rems_diff_initial (word 4) s)
+       (write
+          (registers :> element (word 0)) (word 1)
+          (sail_hl_x86_rems_diff_initial (word 4) s)) /\
+     ~sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR32_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 2))
+        (sail_hl_x86_rems_diff_initial (word 4) s)
+        (write
+           (registers :> element (word 0)) (word 1)
+           (sail_hl_x86_rems_diff_initial (word 4) s))
+
+SAIL_HL_X86_REMS_ROR64_RI_DIFF
+|- forall s.
+     (sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR64_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 0))
+        (sail_hl_x86_rems_diff_initial (word 0) s)
+        (write OF true (sail_hl_x86_rems_diff_initial (word 0) s)) /\
+      ~x86_ROR
+         (registers :> element (word 0)) 0
+         (sail_hl_x86_rems_diff_initial (word 0) s)
+         (write OF true (sail_hl_x86_rems_diff_initial (word 0) s))) /\
+     x86_ROR
+       (registers :> element (word 0)) 2
+       (sail_hl_x86_rems_diff_initial (word 4) s)
+       (write
+          (registers :> element (word 0)) (word 1)
+          (sail_hl_x86_rems_diff_initial (word 4) s)) /\
+     ~sail_hl_x86_core
+        (sail_hl_X86_5fREMS_5fROR64_5fRI
+           (rflags :> bottom_32) RIP (word 0) (word 2))
+        (sail_hl_x86_rems_diff_initial (word 4) s)
+        (write
+           (registers :> element (word 0)) (word 1)
+           (sail_hl_x86_rems_diff_initial (word 4) s))
+
+SAIL_HL_X86_REMS_RCL8_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fRCL8_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 10))
+       (sail_hl_x86_rems_diff_initial (word 1) s)
+       (sail_hl_x86_rems_diff_initial (word 1) s) /\
+     ~x86_RCL
+        (GPR8 (Gpr (word 0) Lower_8)) 10
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+
+SAIL_HL_X86_REMS_RCL8_LEGACY_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fRCL8_5fLEGACY_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 10))
+       (sail_hl_x86_rems_diff_initial (word 1) s)
+       (sail_hl_x86_rems_diff_initial (word 1) s) /\
+     ~x86_RCL
+        (if 4 <= val (word 0)
+         then GPR8 (Gpr (iword (&(val (word 0)) - &4)) Upper_8)
+         else GPR8 (Gpr (word_zx (word 0)) Lower_8))
+        10 (sail_hl_x86_rems_diff_initial (word 1) s)
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+
+SAIL_HL_X86_REMS_RCL16_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fRCL16_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 18))
+       (sail_hl_x86_rems_diff_initial (word 1) s)
+       (sail_hl_x86_rems_diff_initial (word 1) s) /\
+     ~x86_RCL
+        (GPR16 (Gpr (word 0) Lower_16)) 18
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+
+SAIL_HL_X86_REMS_RCL32_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fRCL32_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_RCL (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_RCL64_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fRCL64_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_RCL (registers :> element d) (val count MOD 64) s t
+
+SAIL_HL_X86_REMS_RCR8_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fRCR8_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 10))
+       (sail_hl_x86_rems_diff_initial (word 1) s)
+       (sail_hl_x86_rems_diff_initial (word 1) s) /\
+     ~x86_RCR
+        (GPR8 (Gpr (word 0) Lower_8)) 10
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+
+SAIL_HL_X86_REMS_RCR8_LEGACY_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fRCR8_5fLEGACY_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 10))
+       (sail_hl_x86_rems_diff_initial (word 1) s)
+       (sail_hl_x86_rems_diff_initial (word 1) s) /\
+     ~x86_RCR
+        (if 4 <= val (word 0)
+         then GPR8 (Gpr (iword (&(val (word 0)) - &4)) Upper_8)
+         else GPR8 (Gpr (word_zx (word 0)) Lower_8))
+        10 (sail_hl_x86_rems_diff_initial (word 1) s)
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+
+SAIL_HL_X86_REMS_RCR16_RI_DIFF
+|- forall s.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fRCR16_5fRI
+          (rflags :> bottom_32) RIP (word 0) (word 18))
+       (sail_hl_x86_rems_diff_initial (word 1) s)
+       (sail_hl_x86_rems_diff_initial (word 1) s) /\
+     ~x86_RCR
+        (GPR16 (Gpr (word 0) Lower_16)) 18
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+        (sail_hl_x86_rems_diff_initial (word 1) s)
+
+SAIL_HL_X86_REMS_RCR32_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fRCR32_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_RCR (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_REMS_RCR64_RI_EQ
+|- forall d count s t.
+     sail_hl_x86_core
+       (sail_hl_X86_5fREMS_5fRCR64_5fRI (rflags :> bottom_32) RIP d count)
+       s t <=>
+     x86_RCR (registers :> element d) (val count MOD 64) s t
+

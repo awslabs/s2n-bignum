@@ -1,0 +1,390 @@
+SAIL_HL_RV32_LUI_EQ
+|- forall rd imm s t.
+     sail_hl_rv_5fUTYPE_5fLUI imm rd s t <=>
+     riscv_LUI (riscv_gpr rd) (word_join imm (word 0)) s t
+
+SAIL_HL_RV32_AUIPC_EQ
+|- forall rd imm s t.
+     sail_hl_rv_5fUTYPE_5fAUIPC imm rd s t <=>
+     riscv_AUIPC (riscv_gpr rd) (word_join imm (word 0)) s t
+
+SAIL_HL_RV32_ADDI_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fITYPE_5fADDI imm rs1 rd s t <=>
+     riscv_ADDI (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_SLTI_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fITYPE_5fSLTI imm rs1 rd s t <=>
+     riscv_SLTI (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_SLTIU_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fITYPE_5fSLTIU imm rs1 rd s t <=>
+     riscv_SLTIU (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_XORI_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fITYPE_5fXORI imm rs1 rd s t <=>
+     riscv_XORI (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_ORI_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fITYPE_5fORI imm rs1 rd s t <=>
+     riscv_ORI (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_ANDI_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fITYPE_5fANDI imm rs1 rd s t <=>
+     riscv_ANDI (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_SLLI_EQ
+|- forall rd rs1 shamt s t.
+     sail_hl_rv_5fSHIFTIOP_5fSLLI shamt rs1 rd s t <=>
+     riscv_SLLI
+       (riscv_gpr rd) (riscv_gpr rs1) (val (word_subword shamt (0,5))) s t
+
+SAIL_HL_RV32_SRLI_EQ
+|- forall rd rs1 shamt s t.
+     sail_hl_rv_5fSHIFTIOP_5fSRLI shamt rs1 rd s t <=>
+     riscv_SRLI
+       (riscv_gpr rd) (riscv_gpr rs1) (val (word_subword shamt (0,5))) s t
+
+SAIL_HL_RV32_SRAI_EQ
+|- forall rd rs1 shamt s t.
+     sail_hl_rv_5fSHIFTIOP_5fSRAI shamt rs1 rd s t <=>
+     riscv_SRAI
+       (riscv_gpr rd) (riscv_gpr rs1) (val (word_subword shamt (0,5))) s t
+
+SAIL_HL_RV32_ADD_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fRTYPE_5fADD rs2 rs1 rd s t <=>
+     riscv_ADD (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_SUB_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fRTYPE_5fSUB rs2 rs1 rd s t <=>
+     riscv_SUB (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_SLL_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fRTYPE_5fSLL rs2 rs1 rd s t <=>
+     riscv_SLL (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_SLT_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fRTYPE_5fSLT rs2 rs1 rd s t <=>
+     riscv_SLT (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_SLTU_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fRTYPE_5fSLTU rs2 rs1 rd s t <=>
+     riscv_SLTU (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_XOR_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fRTYPE_5fXOR rs2 rs1 rd s t <=>
+     riscv_XOR (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_SRL_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fRTYPE_5fSRL rs2 rs1 rd s t <=>
+     riscv_SRL (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_SRA_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fRTYPE_5fSRA rs2 rs1 rd s t <=>
+     riscv_SRA (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_OR_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fRTYPE_5fOR rs2 rs1 rd s t <=>
+     riscv_OR (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_AND_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fRTYPE_5fAND rs2 rs1 rd s t <=>
+     riscv_AND (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_MUL_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fMUL_5fMUL rs2 rs1 rd s t <=>
+     riscv_MUL (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_MULH_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fMUL_5fMULH rs2 rs1 rd s t <=>
+     riscv_MULH (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_MULHSU_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fMUL_5fMULHSU rs2 rs1 rd s t <=>
+     riscv_MULHSU (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_MULHU_EQ
+|- forall rd rs1 rs2 s t.
+     sail_hl_rv_5fMUL_5fMULHU rs2 rs1 rd s t <=>
+     riscv_MULHU (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_DIV_EQ
+|- forall rd rs1 rs2 s t.
+     (sail_hl_rv_5fDIV_5fDIV rs2 rs1 rd ,,
+      (\u. riscv_event_div (read (riscv_gpr rs1) s) (read (riscv_gpr rs2) s) u u))
+       s t <=>
+     riscv_DIV (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_DIVU_EQ
+|- forall rd rs1 rs2 s t.
+     (sail_hl_rv_5fDIV_5fDIVU rs2 rs1 rd ,,
+      (\u. riscv_event_div (read (riscv_gpr rs1) s) (read (riscv_gpr rs2) s) u u))
+       s t <=>
+     riscv_DIVU (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_REM_EQ
+|- forall rd rs1 rs2 s t.
+     (sail_hl_rv_5fREM_5fREM rs2 rs1 rd ,,
+      (\u. riscv_event_div (read (riscv_gpr rs1) s) (read (riscv_gpr rs2) s) u u))
+       s t <=>
+     riscv_REM (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_REMU_EQ
+|- forall rd rs1 rs2 s t.
+     (sail_hl_rv_5fREM_5fREMU rs2 rs1 rd ,,
+      (\u. riscv_event_div (read (riscv_gpr rs1) s) (read (riscv_gpr rs2) s) u u))
+       s t <=>
+     riscv_REMU (riscv_gpr rd) (riscv_gpr rs1) (riscv_gpr rs2) s t
+
+SAIL_HL_RV32_LB_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fLOAD_5fLB imm rs1 rd s t <=>
+     riscv_LB (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_LBU_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fLOAD_5fLBU imm rs1 rd s t <=>
+     riscv_LBU (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_LH_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fLOAD_5fLH imm rs1 rd s t <=>
+     riscv_LH (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_LHU_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fLOAD_5fLHU imm rs1 rd s t <=>
+     riscv_LHU (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_LW_EQ
+|- forall rd rs1 imm s t.
+     sail_hl_rv_5fLOAD_5fLW imm rs1 rd s t <=>
+     riscv_LW (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_SB_EQ
+|- forall rs2 rs1 imm s t.
+     sail_hl_rv_5fSTORE_5fSB imm rs2 rs1 s t <=>
+     riscv_SB (riscv_gpr rs2) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_SH_EQ
+|- forall rs2 rs1 imm s t.
+     sail_hl_rv_5fSTORE_5fSH imm rs2 rs1 s t <=>
+     riscv_SH (riscv_gpr rs2) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_SW_EQ
+|- forall rs2 rs1 imm s t.
+     sail_hl_rv_5fSTORE_5fSW imm rs2 rs1 s t <=>
+     riscv_SW (riscv_gpr rs2) (riscv_gpr rs1) (word_sx imm) s t
+
+SAIL_HL_RV32_FENCE_EQ
+|- forall reg_is_5ffiom_5factive fm pred succ rs rd s t.
+     sail_hl_rv_5fFENCE reg_is_5ffiom_5factive fm pred succ rs rd s t <=>
+     riscv_FENCE s t
+
+SAIL_HL_RV32_FENCE_TSO_EQ
+|- forall s t. sail_hl_rv_5fFENCE_5fTSO s t <=> riscv_FENCE s t
+
+SAIL_HL_RV32_PAUSE_EQ
+|- forall s t. sail_hl_rv_5fPAUSE s t <=> riscv_FENCE s t
+
+SAIL_HL_RV32_BEQ_SAFE_EQ
+|- (exists rs1 rs2 imm s.
+      aligned
+        4
+        (if read (riscv_gpr rs1) s = read (riscv_gpr rs2) s
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s)) /\
+   (forall rs1 rs2 imm s t.
+      aligned
+        4
+        (if read (riscv_gpr rs1) s = read (riscv_gpr rs2) s
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s) ==>
+      (sail_hl_rv_5fBTYPE_5fBEQ imm rs2 rs1 s t <=>
+       riscv_BEQ (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s t)) /\
+   forall rs1 rs2 imm s.
+     ~aligned
+        4
+        (if read (riscv_gpr rs1) s = read (riscv_gpr rs2) s
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s) ==>
+     riscv_BEQ (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s =
+     ASSIGNS entirety s
+
+SAIL_HL_RV32_BNE_SAFE_EQ
+|- (exists rs1 rs2 imm s.
+      aligned
+        4
+        (if read (riscv_gpr rs1) s = read (riscv_gpr rs2) s then read PC s
+         else word_add (riscv_instruction_pc s) (word_sx imm))) /\
+   (forall rs1 rs2 imm s t.
+      aligned
+        4
+        (if read (riscv_gpr rs1) s = read (riscv_gpr rs2) s then read PC s
+         else word_add (riscv_instruction_pc s) (word_sx imm)) ==>
+      (sail_hl_rv_5fBTYPE_5fBNE imm rs2 rs1 s t <=>
+       riscv_BNE (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s t)) /\
+   forall rs1 rs2 imm s.
+     ~aligned
+        4
+        (if read (riscv_gpr rs1) s = read (riscv_gpr rs2) s then read PC s
+         else word_add (riscv_instruction_pc s) (word_sx imm)) ==>
+     riscv_BNE (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s =
+     ASSIGNS entirety s
+
+SAIL_HL_RV32_BLT_SAFE_EQ
+|- (exists rs1 rs2 imm s.
+      aligned
+        4
+        (if ival (read (riscv_gpr rs1) s) < ival (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s)) /\
+   (forall rs1 rs2 imm s t.
+      aligned
+        4
+        (if ival (read (riscv_gpr rs1) s) < ival (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s) ==>
+      (sail_hl_rv_5fBTYPE_5fBLT imm rs2 rs1 s t <=>
+       riscv_BLT (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s t)) /\
+   forall rs1 rs2 imm s.
+     ~aligned
+        4
+        (if ival (read (riscv_gpr rs1) s) < ival (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s) ==>
+     riscv_BLT (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s =
+     ASSIGNS entirety s
+
+SAIL_HL_RV32_BGE_SAFE_EQ
+|- (exists rs1 rs2 imm s.
+      aligned
+        4
+        (if ival (read (riscv_gpr rs1) s) >= ival (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s)) /\
+   (forall rs1 rs2 imm s t.
+      aligned
+        4
+        (if ival (read (riscv_gpr rs1) s) >= ival (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s) ==>
+      (sail_hl_rv_5fBTYPE_5fBGE imm rs2 rs1 s t <=>
+       riscv_BGE (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s t)) /\
+   forall rs1 rs2 imm s.
+     ~aligned
+        4
+        (if ival (read (riscv_gpr rs1) s) >= ival (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s) ==>
+     riscv_BGE (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s =
+     ASSIGNS entirety s
+
+SAIL_HL_RV32_BLTU_SAFE_EQ
+|- (exists rs1 rs2 imm s.
+      aligned
+        4
+        (if val (read (riscv_gpr rs1) s) < val (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s)) /\
+   (forall rs1 rs2 imm s t.
+      aligned
+        4
+        (if val (read (riscv_gpr rs1) s) < val (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s) ==>
+      (sail_hl_rv_5fBTYPE_5fBLTU imm rs2 rs1 s t <=>
+       riscv_BLTU (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s t)) /\
+   forall rs1 rs2 imm s.
+     ~aligned
+        4
+        (if val (read (riscv_gpr rs1) s) < val (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s) ==>
+     riscv_BLTU (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s =
+     ASSIGNS entirety s
+
+SAIL_HL_RV32_BGEU_SAFE_EQ
+|- (exists rs1 rs2 imm s.
+      aligned
+        4
+        (if val (read (riscv_gpr rs1) s) >= val (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s)) /\
+   (forall rs1 rs2 imm s t.
+      aligned
+        4
+        (if val (read (riscv_gpr rs1) s) >= val (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s) ==>
+      (sail_hl_rv_5fBTYPE_5fBGEU imm rs2 rs1 s t <=>
+       riscv_BGEU (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s t)) /\
+   forall rs1 rs2 imm s.
+     ~aligned
+        4
+        (if val (read (riscv_gpr rs1) s) >= val (read (riscv_gpr rs2) s)
+         then word_add (riscv_instruction_pc s) (word_sx imm)
+         else read PC s) ==>
+     riscv_BGEU (riscv_gpr rs1) (riscv_gpr rs2) (word_sx imm) s =
+     ASSIGNS entirety s
+
+SAIL_HL_RV32_JAL_SAFE_EQ
+|- (exists imm s.
+      aligned 4 (word_add (riscv_instruction_pc s) (word_sx imm))) /\
+   (forall rd imm s t.
+      aligned 4 (word_add (riscv_instruction_pc s) (word_sx imm)) ==>
+      (sail_hl_rv_5fJAL imm rd s t <=>
+       riscv_JAL (riscv_gpr rd) (word_sx imm) s t)) /\
+   forall rd imm s.
+     ~aligned 4 (word_add (riscv_instruction_pc s) (word_sx imm)) ==>
+     riscv_JAL (riscv_gpr rd) (word_sx imm) s = ASSIGNS entirety s
+
+SAIL_HL_RV32_JALR_SAFE_EQ
+|- (exists rs1 imm s.
+      aligned
+        4
+        (word_and
+           (word_add (read (riscv_gpr rs1) s) (word_sx imm))
+           (word_not (word 1)))) /\
+   (forall rd rs1 imm s t.
+      aligned
+        4
+        (word_and
+           (word_add (read (riscv_gpr rs1) s) (word_sx imm))
+           (word_not (word 1))) ==>
+      (sail_hl_rv_5fJALR imm rs1 rd s t <=>
+       riscv_JALR (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s t)) /\
+   forall rd rs1 imm s.
+     ~aligned
+        4
+        (word_and
+           (word_add (read (riscv_gpr rs1) s) (word_sx imm))
+           (word_not (word 1))) ==>
+     riscv_JALR (riscv_gpr rd) (riscv_gpr rs1) (word_sx imm) s =
+     ASSIGNS entirety s
+
+SAIL_HL_RV32_ECALL_DIFF
+|- forall reg_cur_5fprivilege s t.
+     riscv_ECALL s t /\ ~sail_hl_rv_5fECALL reg_cur_5fprivilege s t
+
+SAIL_HL_RV32_EBREAK_DIFF
+|- forall s t. riscv_EBREAK s t /\ ~sail_hl_rv_5fEBREAK s t
+

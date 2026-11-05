@@ -1,0 +1,22 @@
+SAIL_HL_ARM_UMAXV64E8_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUMAXV64E8 d n s t <=> arm_UMAXV (QREG' d) (QREG' n) 8 8 s t
+
+SAIL_HL_ARM_UMAXV64E16_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUMAXV64E16 d n s t <=> arm_UMAXV (QREG' d) (QREG' n) 4 16 s t
+
+SAIL_HL_ARM_UMAXV128E8_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUMAXV128E8 d n s t <=> arm_UMAXV (QREG' d) (QREG' n) 16 8 s t
+
+SAIL_HL_ARM_UMAXV128E16_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUMAXV128E16 d n s t <=>
+     arm_UMAXV (QREG' d) (QREG' n) 8 16 s t
+
+SAIL_HL_ARM_UMAXV128E32_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUMAXV128E32 d n s t <=>
+     arm_UMAXV (QREG' d) (QREG' n) 4 32 s t
+

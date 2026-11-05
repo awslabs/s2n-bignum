@@ -1,0 +1,10 @@
+SAIL_HL_ARM_EXT64_EQ
+|- forall d n m position s t.
+     sail_hl_arm_5fEXT64 d n m position s t <=>
+     arm_EXT (DREG' d) (DREG' n) (DREG' m) (val position * 8) s t
+
+SAIL_HL_ARM_EXT128_EQ
+|- forall d n m position s t.
+     sail_hl_arm_5fEXT128 d n m position s t <=>
+     arm_EXT (QREG' d) (QREG' n) (QREG' m) (val position * 8) s t
+
