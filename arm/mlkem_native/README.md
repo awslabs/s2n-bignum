@@ -16,10 +16,12 @@ The files for each build of the binary are in directories named after the
 compiler and the optimization level, `<build>` = `<compiler>_<level>`:
 `gcc12_O2` for the gcc 12 `-O2` binary, whose whole image is verified,
 `gcc12_O3` for the gcc 12 `-O3` binary, which is being verified in the same
-way (see `gcc12_O3/README.md`), `clang17_O2` for the one function
-transcribed from the clang 17 `-O2` binary, and `clang17_O3` for the clang
-17 `-O3` binary, whose whole image is transcribed and some of whose
-functions are verified in it (see below). For a build:
+way (see `gcc12_O3/README.md`), `gcc12_O2_mono` for the gcc 12 `-O2`
+binary of the monolithic build, which compiles all of mlkem-native as one
+translation unit (see `gcc12_O2_mono/README.md`), `clang17_O2` for the
+one function transcribed from the clang 17 `-O2` binary, and `clang17_O3`
+for the clang 17 `-O3` binary, whose whole image is transcribed and some
+of whose functions are verified in it (see below). For a build:
 
  - `<build>/libmlkem.S` is the transcription of the whole image, if there
    is one, and `<build>/<function>.S` those of single functions;
@@ -82,6 +84,7 @@ function `mlkem_<function>` in the binary
 | gcc12_O2/poly_tomont.S           | gcc 12.3.0   |
 | gcc12_O2/rej_uniform.S           | gcc 12.3.0   |
 | gcc12_O3/libmlkem.S              | gcc 12.3.0   |
+| gcc12_O2_mono/libmlkem.S         | gcc 12.3.0   |
 | clang17_O2/poly_reduce.S         | clang 17.0.6 |
 | clang17_O3/libmlkem.S            | clang 17.0.6 |
 
@@ -117,6 +120,8 @@ binaries/multilevel/gcc12/O2/libmlkem.so
   ed9a4710c0ec93ef1eab794f3e854dfadf92b45e08c76101cffdf1a36b035692
 binaries/multilevel/gcc12/O3/libmlkem.so
   5139544fd8a5aa5d0ac9d3895dadbe23d9168b2853dce9f5a9a758b0f0dfdd77
+binaries/multilevel-mono/gcc12/O2/libmlkem.so
+  218c21e6488dd7d9005ed0dd728d1511e6acce8be2ff981c4870c309b3c31e58
 ```
 
 ## Checking a transcription
