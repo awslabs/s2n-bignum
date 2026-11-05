@@ -111,7 +111,8 @@ let MOD_POLYVAL_SYM = prove
 
 let MOD_POLYVAL_TRANS = prove
  (`!p q r.
-      (p == q) (mod_polyval) /\ (q == r) (mod_polyval) ==> (p == r) (mod_polyval)`,
+      (p == q) (mod_polyval) /\ (q == r) (mod_polyval)
+      ==> (p == r) (mod_polyval)`,
   REPEAT GEN_TAC THEN MAP_EVERY ASM_CASES_TAC
    [`p IN ring_carrier bool_poly`; `q IN ring_carrier bool_poly`;
     `r IN ring_carrier bool_poly`] THEN
@@ -332,7 +333,8 @@ let Q256_EXPAND = prove
 
 let PMUL_Q_256 = prove
  (`!(x:256 word).
-     (word_pmul x (word 0x1C2000000000000000000000000000001 : 256 word) : 256 word) =
+     (word_pmul x (word 0x1C2000000000000000000000000000001 : 256 word) : 256
+      word) =
      word_xor (word_xor (word_xor (word_xor (word_shl x 128) (word_shl x 127))
                                    (word_shl x 126))
                          (word_shl x 121))
@@ -344,7 +346,8 @@ let PMUL_Q_256 = prove
 
 let PMUL_Q_256_SYM = prove
  (`!(x:256 word).
-     (word_pmul (word 0x1C2000000000000000000000000000001 : 256 word) x : 256 word) =
+     (word_pmul (word 0x1C2000000000000000000000000000001 : 256 word) x : 256
+      word) =
      word_xor (word_xor (word_xor (word_xor (word_shl x 128) (word_shl x 127))
                                    (word_shl x 126))
                          (word_shl x 121))
@@ -510,7 +513,10 @@ let POLY_OF_WORD_PMUL_GEN = prove
     ==> poly_of_word(word_pmul x y : P word) =
         ring_mul bool_poly (poly_of_word x) (poly_of_word y)`,
   REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_PMUL_POLY] THEN
-  ABBREV_TAC `p = ring_mul bool_poly (poly_of_word (x:M word)) (poly_of_word (y:N word))` THEN
+  ABBREV_TAC
+    `p =
+     ring_mul bool_poly (poly_of_word (x:M word))
+       (poly_of_word (y:N word))` THEN
   SUBGOAL_THEN `p IN ring_carrier bool_poly` ASSUME_TAC THENL
   [EXPAND_TAC "p" THEN SIMP_TAC[RING_MUL; BOOL_POLY_OF_WORD]; ALL_TAC] THEN
   REWRITE_TAC[GSYM WORD_OF_POLY_OF_WORD_GEN] THEN
@@ -588,7 +594,8 @@ let BOOL_POLY_ZERO = prove
 
 let INTEGRAL_DOMAIN_BOOL_POLY = prove
  (`integral_domain bool_poly`,
-  REWRITE_TAC[bool_poly; INTEGRAL_DOMAIN_POLY_RING; INTEGRAL_DOMAIN_BOOL_RING]);;
+  REWRITE_TAC[bool_poly; INTEGRAL_DOMAIN_POLY_RING;
+              INTEGRAL_DOMAIN_BOOL_RING]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Q(x) is nonzero (degree 128 <> degree 0).                                 *)
@@ -620,7 +627,8 @@ let POLYVAL_DIVIDES_LOW_DEG = prove
    [DISCH_TAC THEN UNDISCH_TAC `~(p = ring_0 bool_poly)` THEN
     ASM_SIMP_TAC[RING_MUL_RZERO; POLYVAL_BOOL_POLY]; ALL_TAC] THEN
   FIRST_X_ASSUM(SUBST_ALL_TAC o check (is_eq o concl)) THEN
-  UNDISCH_TAC `poly_deg bool_ring (ring_mul bool_poly polyval_poly q) < 128` THEN
+  UNDISCH_TAC
+    `poly_deg bool_ring (ring_mul bool_poly polyval_poly q) < 128` THEN
   REWRITE_TAC[NOT_LT; BOOL_POLY_MUL] THEN
   SUBGOAL_THEN
     `poly_deg bool_ring (poly_mul bool_ring polyval_poly q) =
@@ -679,7 +687,8 @@ let POLYVAL_COPRIME_VAR = prove
   MP_TAC(INST_TYPE [`:129`,`:N`] POLYVAL_POLY_OF_WORD) THEN
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
   DISCH_THEN SUBST1_TAC THEN
-  SUBGOAL_THEN `poly_var bool_ring one = poly_of_word(word 2:129 word)` SUBST1_TAC THENL
+  SUBGOAL_THEN `poly_var bool_ring one = poly_of_word(word 2:129 word)`
+    SUBST1_TAC THENL
    [MP_TAC(ISPECL [`1`] (INST_TYPE [`:129`,`:N`] POLY_VAR_POW_OF_WORD)) THEN
     CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
     SIMP_TAC[RING_POW_1; POLY_VAR_BOOL_POLY];
@@ -688,7 +697,8 @@ let POLYVAL_COPRIME_VAR = prove
     REWRITE_TAC[POLY_OF_WORD_1]]);;
 
 let POLYVAL_COPRIME_VARPOW = prove
- (`!n. ring_coprime bool_poly (polyval_poly, ring_pow bool_poly (poly_var bool_ring one) n)`,
+ (`!n. ring_coprime bool_poly
+   (polyval_poly, ring_pow bool_poly (poly_var bool_ring one) n)`,
   INDUCT_TAC THENL
    [REWRITE_TAC[ring_pow; ring_coprime; POLYVAL_BOOL_POLY; RING_1] THEN
     MESON_TAC[RING_DIVIDES_ONE; RING_UNIT_1];
@@ -704,8 +714,10 @@ let POLYVAL_COPRIME_VARPOW = prove
 
 let MOD_POLYVAL_CANCEL_VARPOW = prove
  (`!n (x:int128) (y:int128).
-   (ring_mul bool_poly (poly_of_word x) (ring_pow bool_poly (poly_var bool_ring one) n) ==
-    ring_mul bool_poly (poly_of_word y) (ring_pow bool_poly (poly_var bool_ring one) n))
+   (ring_mul bool_poly (poly_of_word x)
+    (ring_pow bool_poly (poly_var bool_ring one) n) ==
+    ring_mul bool_poly (poly_of_word y)
+      (ring_pow bool_poly (poly_var bool_ring one) n))
    (mod_polyval)
    ==> x = y`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC MOD_POLYVAL_WORD_EQ THEN
@@ -722,8 +734,10 @@ let MOD_POLYVAL_CANCEL_VARPOW = prove
       (ring_add bool_poly (poly_of_word (x:int128)) (poly_of_word (y:int128)))
       (ring_pow bool_poly (poly_var bool_ring one) n) =
      ring_add bool_poly
-      (ring_mul bool_poly (poly_of_word x) (ring_pow bool_poly (poly_var bool_ring one) n))
-      (ring_mul bool_poly (poly_of_word y) (ring_pow bool_poly (poly_var bool_ring one) n))`
+      (ring_mul bool_poly (poly_of_word x)
+       (ring_pow bool_poly (poly_var bool_ring one) n))
+      (ring_mul bool_poly (poly_of_word y)
+       (ring_pow bool_poly (poly_var bool_ring one) n))`
     SUBST1_TAC THENL
    [MATCH_MP_TAC RING_ADD_RDISTRIB THEN
     REWRITE_TAC[BOOL_POLY_OF_WORD; POLY_VARPOW_BOOL_POLY];
@@ -737,8 +751,10 @@ let MOD_POLYVAL_CANCEL_VARPOW = prove
 let MOD_POLYVAL_CANCEL_VARPOW_GEN = prove
  (`!n p q. p IN ring_carrier bool_poly /\
            q IN ring_carrier bool_poly /\
-           (ring_mul bool_poly p (ring_pow bool_poly (poly_var bool_ring one) n) ==
-            ring_mul bool_poly q (ring_pow bool_poly (poly_var bool_ring one) n))
+           (ring_mul bool_poly p
+            (ring_pow bool_poly (poly_var bool_ring one) n) ==
+            ring_mul bool_poly q
+              (ring_pow bool_poly (poly_var bool_ring one) n))
            mod_polyval
            ==> (p == q) mod_polyval`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN

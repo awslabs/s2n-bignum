@@ -106,7 +106,8 @@ let CTR_BLOCK_RECONSTRUCT_REV32 = prove
 let ghash_reduce_raw = new_definition
  `ghash_reduce_raw p1 p2 p3 =
     let (LO:int128->int64) = \x. word_subword x (0,64) in
-    let (ext:int128->int128) = \x. word_subword (word_join x x : int256) (64,128) in
+    let (ext:int128->int128) =
+      \x. word_subword (word_join x x : int256) (64,128) in
     let w = word 13979173243358019584 : int64 in
     let q18 = word_xor (word_xor (word_xor (word_xor p2 p1) p3)
                                  (word_pmul (LO p1) w))
@@ -217,7 +218,8 @@ let GHASH_REDUCE_RAW_KARATSUBA_IS_DOT = prove
 let NORMOFF_RULE =
   CONV_RULE(ONCE_DEPTH_CONV(fun tm -> match tm with
       Comb(Const("word",_),_) ->
-        (RAND_CONV(REWRITE_CONV[GSYM ADD_ASSOC] THENC DEPTH_CONV NUM_ADD_CONV)) tm
+        (RAND_CONV(REWRITE_CONV[GSYM ADD_ASSOC] THENC DEPTH_CONV
+                   NUM_ADD_CONV)) tm
     | _ -> failwith "NORMOFF"));;
 
 (* Selects only the freshly re-derived input-block reads (`read (memory :>   *)
@@ -434,7 +436,8 @@ let X5_END_PTR_GEN = prove
     REWRITE_TAC[WORD_AND_NOT_MASK_WORD];
     ASM_REWRITE_TAC[] THEN AP_TERM_TAC THEN
     REWRITE_TAC[ARITH_RULE `2 EXP 7 = 128`] THEN
-    SUBGOAL_THEN `16 * nb - 1 = 128 * ((nb-1) DIV 8) + (16 * ((nb-1) MOD 8) + 15)`
+    SUBGOAL_THEN
+      `16 * nb - 1 = 128 * ((nb-1) DIV 8) + (16 * ((nb-1) MOD 8) + 15)`
       SUBST1_TAC THENL
      [MP_TAC(SPECL [`nb - 1`; `8`] DIVISION) THEN REWRITE_TAC[ARITH_EQ] THEN
       ASM_ARITH_TAC;
@@ -473,12 +476,14 @@ let DISPATCH_NOT_TAKEN = prove
  (`!nb:num. 128 * nb < 2 EXP 64 /\ ~(nb = 2)
     ==> (val (word_sub (word ((128 * nb) DIV 8):int64) (word 32)) = 0 <=> F)`,
   REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL
+  [ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `16 * nb < 2 EXP 64 /\ 32 < 2 EXP 64` STRIP_ASSUME_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
   REWRITE_TAC[VAL_EQ_0] THEN
   SUBGOAL_THEN
-    `(word_sub (word (16 * nb):int64) (word 32) = word 0) <=> (word (16*nb):int64 = word 32)`
+    `(word_sub (word (16 * nb):int64) (word 32) = word 0) <=>
+     (word (16*nb):int64 = word 32)`
    SUBST1_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
   ASM_SIMP_TAC[GSYM VAL_EQ; VAL_WORD; DIMINDEX_64; MOD_LT] THEN
   ASM_ARITH_TAC);;
@@ -504,12 +509,14 @@ let DISPATCH4_NOT_TAKEN = prove
  (`!nb:num. 128 * nb < 2 EXP 64 /\ ~(nb = 4)
     ==> (val (word_sub (word ((128 * nb) DIV 8):int64) (word 64)) = 0 <=> F)`,
   REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL
+  [ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `16 * nb < 2 EXP 64 /\ 64 < 2 EXP 64` STRIP_ASSUME_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
   REWRITE_TAC[VAL_EQ_0] THEN
   SUBGOAL_THEN
-    `(word_sub (word (16 * nb):int64) (word 64) = word 0) <=> (word (16*nb):int64 = word 64)`
+    `(word_sub (word (16 * nb):int64) (word 64) = word 0) <=>
+     (word (16*nb):int64 = word 64)`
    SUBST1_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
   ASM_SIMP_TAC[GSYM VAL_EQ; VAL_WORD; DIMINDEX_64; MOD_LT] THEN
   ASM_ARITH_TAC);;
@@ -532,12 +539,14 @@ let DISPATCH1_NOT_TAKEN = prove
  (`!nb:num. 128 * nb < 2 EXP 64 /\ ~(nb = 1)
     ==> (val (word_sub (word ((128 * nb) DIV 8):int64) (word 16)) = 0 <=> F)`,
   REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL
+  [ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `16 * nb < 2 EXP 64 /\ 16 < 2 EXP 64` STRIP_ASSUME_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
   REWRITE_TAC[VAL_EQ_0] THEN
   SUBGOAL_THEN
-    `(word_sub (word (16 * nb):int64) (word 16) = word 0) <=> (word (16*nb):int64 = word 16)`
+    `(word_sub (word (16 * nb):int64) (word 16) = word 0) <=>
+     (word (16*nb):int64 = word 16)`
    SUBST1_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
   ASM_SIMP_TAC[GSYM VAL_EQ; VAL_WORD; DIMINDEX_64; MOD_LT] THEN
   ASM_ARITH_TAC);;
@@ -556,12 +565,14 @@ let DISPATCH3_NOT_TAKEN = prove
  (`!nb:num. 128 * nb < 2 EXP 64 /\ ~(nb = 3)
     ==> (val (word_sub (word ((128 * nb) DIV 8):int64) (word 48)) = 0 <=> F)`,
   REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL
+  [ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `16 * nb < 2 EXP 64 /\ 48 < 2 EXP 64` STRIP_ASSUME_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
   REWRITE_TAC[VAL_EQ_0] THEN
   SUBGOAL_THEN
-    `(word_sub (word (16 * nb):int64) (word 48) = word 0) <=> (word (16*nb):int64 = word 48)`
+    `(word_sub (word (16 * nb):int64) (word 48) = word 0) <=>
+     (word (16*nb):int64 = word 48)`
    SUBST1_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
   ASM_SIMP_TAC[GSYM VAL_EQ; VAL_WORD; DIMINDEX_64; MOD_LT] THEN
   ASM_ARITH_TAC);;
@@ -582,16 +593,22 @@ let DISPATCH_SMALL_NOT_TAKEN = prove
  (`!nb:num. 128 * nb < 2 EXP 64 /\ 5 <= nb
     ==> (~(ival (word_sub (word ((128 * nb) DIV 8):int64) (word 64)) < &0 <=>
            ~(ival (word ((128 * nb) DIV 8):int64) - &64 =
-             ival (word_sub (word ((128 * nb) DIV 8):int64) (word 64)))) <=> F)`,
+             ival (word_sub (word ((128 * nb) DIV 8):int64) (word 64))))
+               <=> F)`,
   REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL
+  [ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `64 <= 16 * nb` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `16 * nb < 2 EXP 63` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `16 * nb - 64 < 2 EXP 63` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `word_sub (word (16 * nb):int64) (word 64) = word (16 * nb - 64)` SUBST1_TAC THENL
+  SUBGOAL_THEN `16 * nb < 2 EXP 63` ASSUME_TAC THENL
+  [ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `16 * nb - 64 < 2 EXP 63` ASSUME_TAC THENL
+  [ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `word_sub (word (16 * nb):int64) (word 64) = word (16 * nb - 64)`
+    SUBST1_TAC THENL
    [ASM_SIMP_TAC[WORD_SUB]; ALL_TAC] THEN
   ASM_SIMP_TAC[IVAL_WORD_SMALL; INT_OF_NUM_SUB] THEN
-  MP_TAC(ASSUME `64 <= 16 * nb`) THEN REWRITE_TAC[GSYM INT_OF_NUM_LE] THEN INT_ARITH_TAC);;
+  MP_TAC(ASSUME `64 <= 16 * nb`) THEN REWRITE_TAC[GSYM INT_OF_NUM_LE] THEN
+  INT_ARITH_TAC);;
 
 (* nb in {1,2,3} (x9 = 16*nb < 64): the signed less-than disjunct is T, so   *)
 (* the b.le is taken (DISPATCH4_NOT_TAKEN gives F for the ZF disjunct).      *)
@@ -600,13 +617,17 @@ let DISPATCH_SMALL_TAKEN = prove
  (`!nb:num. 1 <= nb /\ nb <= 3
     ==> (~(ival (word_sub (word ((128 * nb) DIV 8):int64) (word 64)) < &0 <=>
            ~(ival (word ((128 * nb) DIV 8):int64) - &64 =
-             ival (word_sub (word ((128 * nb) DIV 8):int64) (word 64)))) <=> T)`,
+             ival (word_sub (word ((128 * nb) DIV 8):int64) (word 64))))
+               <=> T)`,
   REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL [ARITH_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `16 * nb < 64 /\ 16 * nb < 2 EXP 63 /\ 64 < 2 EXP 63` STRIP_ASSUME_TAC THENL
+  SUBGOAL_THEN `(128 * nb) DIV 8 = 16 * nb` SUBST1_TAC THENL
+  [ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `16 * nb < 64 /\ 16 * nb < 2 EXP 63 /\ 64 < 2 EXP 63`
+    STRIP_ASSUME_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
   ASM_SIMP_TAC[IVAL_WORD_SMALL; IVAL_WORD_SUB_SMALL] THEN
-  MP_TAC(ASSUME `16 * nb < 64`) THEN REWRITE_TAC[GSYM INT_OF_NUM_LT] THEN INT_ARITH_TAC);;
+  MP_TAC(ASSUME `16 * nb < 64`) THEN REWRITE_TAC[GSYM INT_OF_NUM_LT] THEN
+  INT_ARITH_TAC);;
 
 let SETUP_GE_FALSE_2 = prove
  (`!(in_p:int64) k.
@@ -842,10 +863,13 @@ let GHASH_REDUCE_RAW_XOR = prove
 let KARATSUBA_IS_DOT_HW = prove
  (`!a b:int128.
     ghash_reduce_raw
-      (word_pmul (word_subword a (0,64):int64) (word_subword b (0,64):int64):int128)
-      (word_pmul (word_xor (word_subword a (64,64):int64) (word_subword a (0,64):int64))
+      (word_pmul (word_subword a (0,64):int64)
+       (word_subword b (0,64):int64):int128)
+      (word_pmul
+       (word_xor (word_subword a (64,64):int64) (word_subword a (0,64):int64))
                  (karatsuba_mid b):int128)
-      (word_pmul (word_subword a (64,64):int64) (word_subword b (64,64):int64):int128)
+      (word_pmul (word_subword a (64,64):int64)
+       (word_subword b (64,64):int64):int128)
     = polyval_dot a b`,
   REPEAT GEN_TAC THEN REWRITE_TAC[karatsuba_mid] THEN
   ONCE_REWRITE_TAC[WORD_BITWISE_RULE
@@ -876,19 +900,27 @@ let REORD_CROSS = prove
 let KDOT_B0 = prove
  (`!s c b:int128.
     ghash_reduce_raw
-      (word_pmul (word_xor (word_subword s (64,64):int64) (word_subword c (0,64):int64))
+      (word_pmul
+       (word_xor (word_subword s (64,64):int64) (word_subword c (0,64):int64))
                  (word_subword b (0,64):int64):int128)
-      (word_pmul (word_xor (word_xor (word_subword s (0,64):int64) (word_subword c (64,64):int64))
-                           (word_xor (word_subword s (64,64):int64) (word_subword c (0,64):int64)))
+      (word_pmul
+       (word_xor (word_xor (word_subword s (0,64):int64)
+                  (word_subword c (64,64):int64))
+                           (word_xor (word_subword s (64,64):int64)
+                            (word_subword c (0,64):int64)))
                  (karatsuba_mid b):int128)
-      (word_pmul (word_xor (word_subword s (0,64):int64) (word_subword c (64,64):int64))
+      (word_pmul
+       (word_xor (word_subword s (0,64):int64) (word_subword c (64,64):int64))
                  (word_subword b (64,64):int64):int128)
     = polyval_dot (word_xor (byteswap128 s) c) b`,
   REPEAT GEN_TAC THEN ABBREV_TAC `bs = byteswap128 (s:int128)` THEN
-  SUBGOAL_THEN `word_subword (s:int128) (64,64):int64 = word_subword (bs:int128) (0,64) /\
-                word_subword (s:int128) (0,64):int64 = word_subword (bs:int128) (64,64)`
+  SUBGOAL_THEN
+    `word_subword (s:int128) (64,64):int64 = word_subword (bs:int128) (0,64) /\
+                word_subword (s:int128) (0,64):int64 =
+                  word_subword (bs:int128) (64,64)`
     (fun th -> REWRITE_TAC[th]) THENL
-   [EXPAND_TAC "bs" THEN REWRITE_TAC[byteswap128] THEN CONJ_TAC THEN CONV_TAC WORD_BLAST;
+   [EXPAND_TAC "bs" THEN REWRITE_TAC[byteswap128] THEN CONJ_TAC THEN
+    CONV_TAC WORD_BLAST;
     ALL_TAC] THEN
   REWRITE_TAC[GSYM WORD_SUBWORD_XOR] THEN REWRITE_TAC[KARATSUBA_IS_DOT_HW]);;
 
@@ -904,32 +936,64 @@ let GHASH_REDUCE_RAW_DIST8_PLAIN = prove
  (`!a0 a1 a2 a3 a4 a5 a6 a7 b0 b1 b2 b3 b4 b5 b6 b7:int128.
     ghash_reduce_raw
       (word_xor (word_xor (word_xor (word_xor (word_xor (word_xor (word_xor
-        (word_pmul (word_subword a1 (0,64):int64) (word_subword b1 (0,64):int64):int128)
-        (word_pmul (word_subword a0 (0,64):int64) (word_subword b0 (0,64):int64):int128))
-        (word_pmul (word_subword a2 (0,64):int64) (word_subword b2 (0,64):int64):int128))
-        (word_pmul (word_subword a3 (0,64):int64) (word_subword b3 (0,64):int64):int128))
-        (word_pmul (word_subword a4 (0,64):int64) (word_subword b4 (0,64):int64):int128))
-        (word_pmul (word_subword a5 (0,64):int64) (word_subword b5 (0,64):int64):int128))
-        (word_pmul (word_subword a6 (0,64):int64) (word_subword b6 (0,64):int64):int128))
-        (word_pmul (word_subword a7 (0,64):int64) (word_subword b7 (0,64):int64):int128))
+        (word_pmul (word_subword a1 (0,64):int64)
+         (word_subword b1 (0,64):int64):int128)
+        (word_pmul (word_subword a0 (0,64):int64)
+         (word_subword b0 (0,64):int64):int128))
+        (word_pmul (word_subword a2 (0,64):int64)
+         (word_subword b2 (0,64):int64):int128))
+        (word_pmul (word_subword a3 (0,64):int64)
+         (word_subword b3 (0,64):int64):int128))
+        (word_pmul (word_subword a4 (0,64):int64)
+         (word_subword b4 (0,64):int64):int128))
+        (word_pmul (word_subword a5 (0,64):int64)
+         (word_subword b5 (0,64):int64):int128))
+        (word_pmul (word_subword a6 (0,64):int64)
+         (word_subword b6 (0,64):int64):int128))
+        (word_pmul (word_subword a7 (0,64):int64)
+         (word_subword b7 (0,64):int64):int128))
       (word_xor (word_xor (word_xor (word_xor (word_xor (word_xor (word_xor
-        (word_pmul (word_xor (word_subword a1 (64,64):int64) (word_subword a1 (0,64):int64)) (karatsuba_mid b1):int128)
-        (word_pmul (word_xor (word_subword a0 (64,64):int64) (word_subword a0 (0,64):int64)) (karatsuba_mid b0):int128))
-        (word_pmul (word_xor (word_subword a3 (64,64):int64) (word_subword a3 (0,64):int64)) (karatsuba_mid b3):int128))
-        (word_pmul (word_xor (word_subword a2 (64,64):int64) (word_subword a2 (0,64):int64)) (karatsuba_mid b2):int128))
-        (word_pmul (word_xor (word_subword a5 (64,64):int64) (word_subword a5 (0,64):int64)) (karatsuba_mid b5):int128))
-        (word_pmul (word_xor (word_subword a4 (64,64):int64) (word_subword a4 (0,64):int64)) (karatsuba_mid b4):int128))
-        (word_pmul (word_xor (word_subword a7 (64,64):int64) (word_subword a7 (0,64):int64)) (karatsuba_mid b7):int128))
-        (word_pmul (word_xor (word_subword a6 (64,64):int64) (word_subword a6 (0,64):int64)) (karatsuba_mid b6):int128))
+        (word_pmul
+         (word_xor (word_subword a1 (64,64):int64)
+          (word_subword a1 (0,64):int64)) (karatsuba_mid b1):int128)
+        (word_pmul
+         (word_xor (word_subword a0 (64,64):int64)
+          (word_subword a0 (0,64):int64)) (karatsuba_mid b0):int128))
+        (word_pmul
+         (word_xor (word_subword a3 (64,64):int64)
+          (word_subword a3 (0,64):int64)) (karatsuba_mid b3):int128))
+        (word_pmul
+         (word_xor (word_subword a2 (64,64):int64)
+          (word_subword a2 (0,64):int64)) (karatsuba_mid b2):int128))
+        (word_pmul
+         (word_xor (word_subword a5 (64,64):int64)
+          (word_subword a5 (0,64):int64)) (karatsuba_mid b5):int128))
+        (word_pmul
+         (word_xor (word_subword a4 (64,64):int64)
+          (word_subword a4 (0,64):int64)) (karatsuba_mid b4):int128))
+        (word_pmul
+         (word_xor (word_subword a7 (64,64):int64)
+          (word_subword a7 (0,64):int64)) (karatsuba_mid b7):int128))
+        (word_pmul
+         (word_xor (word_subword a6 (64,64):int64)
+          (word_subword a6 (0,64):int64)) (karatsuba_mid b6):int128))
       (word_xor (word_xor (word_xor (word_xor (word_xor (word_xor (word_xor
-        (word_pmul (word_subword a1 (64,64):int64) (word_subword b1 (64,64):int64):int128)
-        (word_pmul (word_subword a0 (64,64):int64) (word_subword b0 (64,64):int64):int128))
-        (word_pmul (word_subword a2 (64,64):int64) (word_subword b2 (64,64):int64):int128))
-        (word_pmul (word_subword a3 (64,64):int64) (word_subword b3 (64,64):int64):int128))
-        (word_pmul (word_subword a4 (64,64):int64) (word_subword b4 (64,64):int64):int128))
-        (word_pmul (word_subword a5 (64,64):int64) (word_subword b5 (64,64):int64):int128))
-        (word_pmul (word_subword a6 (64,64):int64) (word_subword b6 (64,64):int64):int128))
-        (word_pmul (word_subword a7 (64,64):int64) (word_subword b7 (64,64):int64):int128))
+        (word_pmul (word_subword a1 (64,64):int64)
+         (word_subword b1 (64,64):int64):int128)
+        (word_pmul (word_subword a0 (64,64):int64)
+         (word_subword b0 (64,64):int64):int128))
+        (word_pmul (word_subword a2 (64,64):int64)
+         (word_subword b2 (64,64):int64):int128))
+        (word_pmul (word_subword a3 (64,64):int64)
+         (word_subword b3 (64,64):int64):int128))
+        (word_pmul (word_subword a4 (64,64):int64)
+         (word_subword b4 (64,64):int64):int128))
+        (word_pmul (word_subword a5 (64,64):int64)
+         (word_subword b5 (64,64):int64):int128))
+        (word_pmul (word_subword a6 (64,64):int64)
+         (word_subword b6 (64,64):int64):int128))
+        (word_pmul (word_subword a7 (64,64):int64)
+         (word_subword b7 (64,64):int64):int128))
     = word_xor (word_xor (word_xor (word_xor (word_xor (word_xor (word_xor
         (polyval_dot a0 b0) (polyval_dot a1 b1)) (polyval_dot a2 b2))
         (polyval_dot a3 b3)) (polyval_dot a4 b4)) (polyval_dot a5 b5))
@@ -985,13 +1049,16 @@ let SETUP_Q30_LANES = prove
         (word_subword (word_reversefields 8 (ctr_block nonce c)) (96,32):int32))
       (word 12)) (word 1):int32 = word (c + 13)) /\
    (word_add (word_reversefields 8
-      (word_subword (word_reversefields 8 (ctr_block nonce c)) (64,32):int32)) (word 0):int32
+      (word_subword (word_reversefields 8 (ctr_block nonce c)) (64,32):int32))
+        (word 0):int32
     = word_subword nonce (0,32)) /\
    (word_add (word_reversefields 8
-      (word_subword (word_reversefields 8 (ctr_block nonce c)) (32,32):int32)) (word 0):int32
+      (word_subword (word_reversefields 8 (ctr_block nonce c)) (32,32):int32))
+        (word 0):int32
     = word_subword nonce (32,32)) /\
    (word_add (word_reversefields 8
-      (word_subword (word_reversefields 8 (ctr_block nonce c)) (0,32):int32)) (word 0):int32
+      (word_subword (word_reversefields 8 (ctr_block nonce c)) (0,32):int32))
+        (word 0):int32
     = word_subword nonce (64,32))`,
   SUBGOAL_THEN
     `word_reversefields 8
@@ -1005,7 +1072,8 @@ let SETUP_Q30_LANES = prove
   CONJ_TAC THENL
    [CONV_TAC WORD_RULE;
     REWRITE_TAC[ctr_block] THEN
-    SPEC_TAC(`word c:int32`,`wc:int32`) THEN GEN_TAC THEN CONV_TAC WORD_BLAST]);;
+    SPEC_TAC(`word c:int32`,`wc:int32`) THEN GEN_TAC THEN
+    CONV_TAC WORD_BLAST]);;
 
 (* ------------------------------------------------------------------------- *)
 (* SETUP final-state reconstruction.                                         *)
@@ -1016,8 +1084,8 @@ let SETUP_Q30_LANES = prove
 (* residual goals by conclusion shape to the closers defined here.           *)
 (* ------------------------------------------------------------------------- *)
 
-(* Counter-lane reduction lemmas, shared by CIPHER_CLOSE_TAC and CTR_CLOSE_TAC.  The
-   counter field of the byte-reversed ctr_block double-reverses to the raw
+(* Counter-lane reduction lemmas, shared by CIPHER_CLOSE_TAC and CTR_CLOSE_TAC.
+   The counter field of the byte-reversed ctr_block double-reverses to the raw
    counter; the nonce lanes byte-reverse to the nonce sub-lanes.  Proved by
    abstracting `word c` to a fresh word (WORD_BLAST cannot blast `word c`
    for a symbolic num c). *)
@@ -1048,7 +1116,8 @@ let CTR_NONCE_LANES = prove
    symbolic 96-bit nonce appears identically on both sides, so WORD_BLAST
    does not blast it. *)
 let CIPHER_ID_TAC =
-  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN
+  AP_TERM_TAC THEN
   REWRITE_TAC[ctr_block] THEN CONV_TAC WORD_BLAST;;
 
 (* CTR_CLOSE_TAC: Q0..Q4 (rev8) + Q30 (rev32) fresh-counter reconstruction.
@@ -1109,7 +1178,8 @@ let NSTEP_GP_WADD_RULE = REWRITE_RULE[WORD_RULE
 (* is 8*k+c+16).                                                             *)
 let PP_CTR_CLOSE_TAC =
   REWRITE_TAC[WORD_SUBWORD_REVERSEFIELDS_32; WORD_SUBWORD_CTR_BLOCK_32] THEN
-  REWRITE_TAC[GSYM WORD_ADD; WORD_ADD_0] THEN CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
+  REWRITE_TAC[GSYM WORD_ADD; WORD_ADD_0] THEN
+  CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
   REWRITE_TAC[CTR_BLOCK_RECONSTRUCT_REV32] THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;;
 
@@ -1123,17 +1193,24 @@ let TAG_STORE_REV64 = prove
      (word_join
       (word_join
        (word_join (word_subword x (0,8):byte) (word_subword x (8,8):byte):int16)
-       (word_join (word_subword x (16,8):byte) (word_subword x (24,8):byte):int16):int32)
+       (word_join (word_subword x (16,8):byte)
+        (word_subword x (24,8):byte):int16):int32)
       (word_join
-       (word_join (word_subword x (32,8):byte) (word_subword x (40,8):byte):int16)
-       (word_join (word_subword x (48,8):byte) (word_subword x (56,8):byte):int16):int32):int64)
+       (word_join (word_subword x (32,8):byte)
+        (word_subword x (40,8):byte):int16)
+       (word_join (word_subword x (48,8):byte)
+        (word_subword x (56,8):byte):int16):int32):int64)
      (word_join
       (word_join
-       (word_join (word_subword x (64,8):byte) (word_subword x (72,8):byte):int16)
-       (word_join (word_subword x (80,8):byte) (word_subword x (88,8):byte):int16):int32)
+       (word_join (word_subword x (64,8):byte)
+        (word_subword x (72,8):byte):int16)
+       (word_join (word_subword x (80,8):byte)
+        (word_subword x (88,8):byte):int16):int32)
       (word_join
-       (word_join (word_subword x (96,8):byte) (word_subword x (104,8):byte):int16)
-       (word_join (word_subword x (112,8):byte) (word_subword x (120,8):byte):int16):int32):int64):int128
+       (word_join (word_subword x (96,8):byte)
+        (word_subword x (104,8):byte):int16)
+       (word_join (word_subword x (112,8):byte)
+        (word_subword x (120,8):byte):int16):int32):int64):int128
     = word_reversefields 8 x`,
   CONV_TAC BITBLAST_RULE);;
 
@@ -1149,11 +1226,16 @@ let IVEC_STORE_REV32 = prove
  (`!y:int128.
     word_join
      (word_join
-      (word_reversefields 8 (word_subword (word_reversefields 32 y) (96,32):int32):int32)
-      (word_reversefields 8 (word_subword (word_reversefields 32 y) (64,32):int32):int32):int64)
+      (word_reversefields 8
+       (word_subword (word_reversefields 32 y) (96,32):int32):int32)
+      (word_reversefields 8
+       (word_subword (word_reversefields 32 y) (64,32):int32):int32):int64)
      (word_join
-      (word_reversefields 8 (word_subword (word_reversefields 32 y) (32,32):int32):int32)
-      (word_reversefields 8 (word_subword (word_reversefields 32 y) (0,32):int32):int32):int64):int128
+      (word_reversefields 8
+       (word_subword (word_reversefields 32 y) (32,32):int32):int32)
+      (word_reversefields 8
+       (word_subword (word_reversefields 32 y)
+        (0,32):int32):int32):int64):int128
     = word_reversefields 8 y`,
   CONV_TAC BITBLAST_RULE);;
 
@@ -1171,7 +1253,8 @@ let DISCARD_REGS_TAC deadl : tactic =
         if not(is_eq c) then "" else
         let f,args = strip_comb (lhs c) in
         if fst(dest_const f) = "read"
-        then (match args with c::_ -> (try fst(dest_const c) with Failure _ -> "") | _ -> "")
+        then (match args with c::_ ->
+              (try fst(dest_const c) with Failure _ -> "") | _ -> "")
         else ""
     with Failure _ -> "" in
   REPEAT(FIRST_X_ASSUM(fun th ->
@@ -1206,7 +1289,8 @@ let DISCARD_DEAD_KEYMEM_TAC : tactic =
     let c = concl th in
     if is_eq c &&
        can (find_term (fun t -> t = `key_p:int64`)) (lhs c) &&
-       can (find_term (fun t -> match t with Const("memory",_) -> true | _ -> false))
+       can (find_term
+            (fun t -> match t with Const("memory",_) -> true | _ -> false))
            (lhs c)
     then K ALL_TAC th else fail()));;
 
@@ -1225,7 +1309,8 @@ let DISCARD_DEAD_HTABLE_TAC : tactic =
     let c = concl th in
     if is_eq c &&
        can (find_term (fun t -> t = `htable_p:int64`)) (lhs c) &&
-       can (find_term (fun t -> match t with Const("memory",_) -> true | _ -> false))
+       can (find_term
+            (fun t -> match t with Const("memory",_) -> true | _ -> false))
            (lhs c) &&
        can (find_term (fun t -> match t with
               Comb(Const("word",_), n) ->
@@ -1323,7 +1408,8 @@ let TAIL_X5_128_G = prove
      8 * g + 8 = nb
      ==> word_sub (word_add in_p (word (16 * nb)))
                   (word_add in_p (word (128 * g))) = word 128:int64`,
-  REPEAT STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN CONV_TAC WORD_RULE);;
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
+  CONV_TAC WORD_RULE);;
 
 (* Helper for the TAIL leg's existential precondition: an ensures with an    *)
 (* existential precondition follows from the ensures for every witness (from *)
@@ -1422,13 +1508,16 @@ let SETUP_Q30_LANES_10 = prove
         (word_subword (word_reversefields 8 (ctr_block nonce c)) (96,32):int32))
       (word 7)) (word 1):int32 = word (c + 8)) /\
    (word_add (word_reversefields 8
-      (word_subword (word_reversefields 8 (ctr_block nonce c)) (64,32):int32)) (word 0):int32
+      (word_subword (word_reversefields 8 (ctr_block nonce c)) (64,32):int32))
+        (word 0):int32
     = word_subword nonce (0,32)) /\
    (word_add (word_reversefields 8
-      (word_subword (word_reversefields 8 (ctr_block nonce c)) (32,32):int32)) (word 0):int32
+      (word_subword (word_reversefields 8 (ctr_block nonce c)) (32,32):int32))
+        (word 0):int32
     = word_subword nonce (32,32)) /\
    (word_add (word_reversefields 8
-      (word_subword (word_reversefields 8 (ctr_block nonce c)) (0,32):int32)) (word 0):int32
+      (word_subword (word_reversefields 8 (ctr_block nonce c)) (0,32):int32))
+        (word 0):int32
     = word_subword nonce (64,32))`,
   SUBGOAL_THEN
     `word_reversefields 8
@@ -1442,7 +1531,8 @@ let SETUP_Q30_LANES_10 = prove
   CONJ_TAC THENL
    [CONV_TAC WORD_RULE;
     REWRITE_TAC[ctr_block] THEN
-    SPEC_TAC(`word c:int32`,`wc:int32`) THEN GEN_TAC THEN CONV_TAC WORD_BLAST]);;
+    SPEC_TAC(`word c:int32`,`wc:int32`) THEN GEN_TAC THEN
+    CONV_TAC WORD_BLAST]);;
 
 (* Q30 counter closer (the next counter, index c+8): CTR_CLOSE_TAC with the lane
    lemma SETUP_Q30_LANES_10 in place of SETUP_Q30_LANES.  Reconstruct the

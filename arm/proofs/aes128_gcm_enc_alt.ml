@@ -1540,20 +1540,25 @@ let AES128_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
              MAP (word_reversefields 8) rk /\
            htable_mem_8 (ghash_twist (aes128_cipher (word 0) rk)) htable_p s /\
            (!j. j < gcm_wb_blocks len_bits
-                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
+                ==> read (memory :> bytes128
+                          (word_add in_p (word (16 * j)))) s =
                     inblock j))
       (\s. read PC s = returnaddress /\
            C_RETURN s = word (16 * gcm_wb_blocks len_bits) /\
            read (memory :> bytes128 ivec_p) s =
-             word_reversefields 8 (ctr_block nonce (gcm_wb_blocks len_bits + c)) /\
+             word_reversefields 8
+               (ctr_block nonce (gcm_wb_blocks len_bits + c)) /\
            read (memory :> bytes128 tag_p) s =
              word_reversefields 8
                (nist_ghash (aes128_cipher (word 0) rk) tag0
-                  (list_of_seq (nist_cipher_block aes128_cipher c nonce rk inblock)
+                  (list_of_seq
+                   (nist_cipher_block aes128_cipher c nonce rk inblock)
                                (gcm_wb_blocks len_bits))) /\
            (!j. j < gcm_wb_blocks len_bits
-                ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                    word_xor (aes_ctr_block aes128_cipher c nonce rk (j)) (inblock j)))
+                ==> read (memory :> bytes128
+                          (word_add out_p (word (16 * j)))) s =
+                    word_xor (aes_ctr_block aes128_cipher c nonce rk (j))
+                      (inblock j)))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * gcm_wb_blocks len_bits);
                   memory :> bytes(tag_p, 16);
@@ -1603,26 +1608,32 @@ let AES128_GCM_ENC_ALT_SUBROUTINE_CORRECT = prove
              MAP (word_reversefields 8) rk /\
            htable_mem_8 (ghash_twist (aes128_cipher (word 0) rk)) htable_p s /\
            (!j. j < gcm_wb_blocks len_bits
-                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
+                ==> read (memory :> bytes128
+                          (word_add in_p (word (16 * j)))) s =
                     inblock j))
       (\s. read PC s = returnaddress /\
            C_RETURN s = word (16 * gcm_wb_blocks len_bits) /\
            read (memory :> bytes128 ivec_p) s =
-             word_reversefields 8 (ctr_block nonce (gcm_wb_blocks len_bits + c)) /\
+             word_reversefields 8
+               (ctr_block nonce (gcm_wb_blocks len_bits + c)) /\
            read (memory :> bytes128 tag_p) s =
              word_reversefields 8
                (nist_ghash (aes128_cipher (word 0) rk) tag0
-                  (list_of_seq (nist_cipher_block aes128_cipher c nonce rk inblock)
+                  (list_of_seq
+                   (nist_cipher_block aes128_cipher c nonce rk inblock)
                                (gcm_wb_blocks len_bits))) /\
            (!j. j < gcm_wb_blocks len_bits
-                ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
-                    word_xor (aes_ctr_block aes128_cipher c nonce rk (j)) (inblock j)))
+                ==> read (memory :> bytes128
+                          (word_add out_p (word (16 * j)))) s =
+                    word_xor (aes_ctr_block aes128_cipher c nonce rk (j))
+                      (inblock j)))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * gcm_wb_blocks len_bits);
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16);
                   memory :> bytes(word_sub stackpointer (word 80), 80)])`,
-  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE ~extra:[htable_mem_8; htable_mem_4; wordlist_from_memory]
+  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE
+                   ~extra:[htable_mem_8; htable_mem_4; wordlist_from_memory]
                      aes128_gcm_enc_alt_mc aes128_gcm_enc_alt_tmc
                      AES128_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT));;
 
@@ -1641,7 +1652,8 @@ let AES128_GCM_ENC_ALT_ZERO_KEY_CORRECT =
 
 let AES128_GCM_ENC_ALT_NOIBT_SUBROUTINE_SAFE = prove
  (`exists f_events.
-    forall e in_p len_bits out_p tag_p ivec_p key_p htable_p pc stackpointer returnaddress.
+    forall e in_p len_bits out_p tag_p ivec_p key_p htable_p pc stackpointer
+      returnaddress.
         aligned 16 stackpointer /\
         val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
         ALLPAIRS nonoverlapping
@@ -1702,7 +1714,8 @@ let enc_safety_full_spec,enc_safety_public_vars = mk_safety_spec
    ARM_ADD_IBT_RULE, as for AES128_GCM_ENC_ALT_SUBROUTINE_CORRECT. --- *)
 let AES128_GCM_ENC_ALT_SUBROUTINE_SAFE = prove
  (`exists f_events.
-    forall e in_p len_bits out_p tag_p ivec_p key_p htable_p pc stackpointer returnaddress.
+    forall e in_p len_bits out_p tag_p ivec_p key_p htable_p pc stackpointer
+      returnaddress.
         aligned 16 stackpointer /\
         val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
         ALLPAIRS nonoverlapping

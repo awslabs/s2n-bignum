@@ -26,11 +26,15 @@ let zx_64_128 = prove
 
 let pmul_shl_zx = prove(
   `(!w:128 word.
-     poly_of_word(word_pmul (word_zx w : 256 word) (word(2 EXP 64) : 256 word) : 256 word) =
-     ring_mul bool_poly (poly_of_word w) (poly_of_word(word(2 EXP 64) : 256 word))) /\
+     poly_of_word(word_pmul (word_zx w : 256 word) (word(2 EXP 64) : 256 word) :
+                  256 word) =
+     ring_mul bool_poly (poly_of_word w)
+       (poly_of_word(word(2 EXP 64) : 256 word))) /\
    (!w:128 word.
-     poly_of_word(word_pmul (word_zx w : 256 word) (word(2 EXP 128) : 256 word) : 256 word) =
-     ring_mul bool_poly (poly_of_word w) (poly_of_word(word(2 EXP 128) : 256 word)))`,
+     poly_of_word(word_pmul (word_zx w : 256 word) (word(2 EXP 128) : 256 word)
+                  : 256 word) =
+     ring_mul bool_poly (poly_of_word w)
+       (poly_of_word(word(2 EXP 128) : 256 word)))`,
   CONJ_TAC THEN GEN_TAC THEN
   GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [CONJUNCT1 WORD_PMUL_ZX] THEN
   MATCH_MP_TAC POLY_OF_WORD_PMUL_GEN THEN PMUL_DEG_TAC);;
@@ -86,8 +90,10 @@ let PMUL_SCHOOLBOOK = prove(
     let bh = word_subword b (64,64) : 64 word in
     (word_pmul a b : 256 word) =
     word_xor (word_xor (word_zx (word_pmul al bl : 128 word) : 256 word)
-                        (word_shl (word_zx (word_xor (word_pmul al bh : 128 word)
-                                                     (word_pmul ah bl)) : 256 word) 64))
+                        (word_shl (word_zx
+                                   (word_xor (word_pmul al bh : 128 word)
+                                                     (word_pmul ah bl)) : 256
+                                                       word) 64))
              (word_shl (word_zx (word_pmul ah bh : 128 word) : 256 word) 128)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
   MATCH_MP_TAC POLY_OF_WORD_INJ THEN
@@ -99,10 +105,14 @@ let PMUL_SCHOOLBOOK = prove(
   GEN_REWRITE_TAC (LAND_CONV o LAND_CONV o RAND_CONV) [WORD_DECOMPOSE_128] THEN
   GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o RAND_CONV) [WORD_DECOMPOSE_128] THEN
   REWRITE_TAC[POLY_OF_WORD_XOR; zx_64_128; shl_zx_64_to_poly] THEN
-  ABBREV_TAC `al = poly_of_word(word_subword (a:128 word) (0,64) : 64 word)` THEN
-  ABBREV_TAC `ah = poly_of_word(word_subword (a:128 word) (64,64) : 64 word)` THEN
-  ABBREV_TAC `bl = poly_of_word(word_subword (b:128 word) (0,64) : 64 word)` THEN
-  ABBREV_TAC `bh = poly_of_word(word_subword (b:128 word) (64,64) : 64 word)` THEN
+  ABBREV_TAC
+    `al = poly_of_word(word_subword (a:128 word) (0,64) : 64 word)` THEN
+  ABBREV_TAC
+    `ah = poly_of_word(word_subword (a:128 word) (64,64) : 64 word)` THEN
+  ABBREV_TAC
+    `bl = poly_of_word(word_subword (b:128 word) (0,64) : 64 word)` THEN
+  ABBREV_TAC
+    `bh = poly_of_word(word_subword (b:128 word) (64,64) : 64 word)` THEN
   ABBREV_TAC `x64 = ring_pow bool_poly (poly_var bool_ring one) 64` THEN
   SUBGOAL_THEN
     `al IN ring_carrier bool_poly /\ ah IN ring_carrier bool_poly /\
@@ -147,7 +157,8 @@ let PMUL_KARATSUBA = prove(
     let b_hi = word_subword b (64,64) : 64 word in
     let p_lo = word_pmul a_lo b_lo : 128 word in
     let p_hi = word_pmul a_hi b_hi : 128 word in
-    let p_mid = word_pmul (word_xor a_lo a_hi) (word_xor b_lo b_hi) : 128 word in
+    let p_mid =
+      word_pmul (word_xor a_lo a_hi) (word_xor b_lo b_hi) : 128 word in
     let mid = word_xor (word_xor p_mid p_lo) p_hi in
     (word_pmul a b : 256 word) =
     word_xor (word_xor (word_zx p_lo : 256 word)

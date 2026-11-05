@@ -84,7 +84,8 @@ let rec GCTR_FAST_CONV cipher_def ks_def tm =
   try
     let th = GCTR_STEP_FAST_CONV cipher_def ks_def tm in
     let rhs = rand (concl th) in
-    (try let th2 = RAND_CONV (GCTR_FAST_CONV cipher_def ks_def) rhs in TRANS th th2
+    (try let th2 = RAND_CONV (GCTR_FAST_CONV cipher_def ks_def) rhs in
+     TRANS th th2
      with _ -> th)
   with _ -> REWRITE_CONV [gctr] tm;;
 

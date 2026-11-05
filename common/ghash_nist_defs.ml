@@ -80,7 +80,8 @@ let BIT_TRIVIAL_128 = prove
 
 let nist_dot = new_definition
   `nist_dot (a:int128) (b:int128) : int128 =
-   bit_reflect128(ghash_reduce(word_pmul (bit_reflect128 a) (bit_reflect128 b)))`;;
+   bit_reflect128(ghash_reduce(word_pmul (bit_reflect128 a)
+                               (bit_reflect128 b)))`;;
 
 (* ========================================================================= *)
 (* nist_ghash: recursive GHASH per NIST SP 800-38D Algorithm 2.              *)

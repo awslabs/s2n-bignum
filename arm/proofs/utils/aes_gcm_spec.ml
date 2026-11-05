@@ -132,13 +132,16 @@ let INC32_CTR_BLOCK = prove
   REPEAT GEN_TAC THEN REWRITE_TAC[inc32; ctr_block] THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[WORD_BLAST
-    `word_subword (word_join (nonce:96 word) (wc:int32):int128) (0,32):32 word = wc`;
+    `word_subword (word_join (nonce:96 word) (wc:int32):int128) (0,32):32 word
+     = wc`;
               WORD_BLAST
-    `word_subword (word_join (nonce:96 word) (wc:int32):int128) (32,96):96 word = nonce`] THEN
+    `word_subword (word_join (nonce:96 word) (wc:int32):int128) (32,96):96 word
+     = nonce`] THEN
   REWRITE_TAC[WORD_ADD] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
 
 let ITER_INC32_CTR_BLOCK = prove
- (`!j (nonce:96 word) c. ITER j inc32 (ctr_block nonce c) = ctr_block nonce (c + j)`,
+ (`!j (nonce:96 word) c. ITER j inc32 (ctr_block nonce c) =
+   ctr_block nonce (c + j)`,
   INDUCT_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC[ITER; ADD_CLAUSES] THEN
   ASM_REWRITE_TAC[INC32_CTR_BLOCK] THEN REWRITE_TAC[INC32_CTR_BLOCK] THEN
   AP_TERM_TAC THEN ARITH_TAC);;
@@ -156,7 +159,8 @@ let GCTR_CTR_BLOCK = prove
 
 let GCTR_NIST_BLOCKS = prove
  (`!enc rk nonce c inblock n.
-     gctr enc rk (ctr_block nonce c) (list_of_seq (nist_input_block inblock) n) =
+     gctr enc rk (ctr_block nonce c)
+       (list_of_seq (nist_input_block inblock) n) =
      list_of_seq (nist_cipher_block enc c nonce rk inblock) n`,
   REWRITE_TAC[GCTR_CTR_BLOCK; LENGTH_LIST_OF_SEQ] THEN
   REWRITE_TAC[LIST_EQ; LENGTH_LIST_OF_SEQ] THEN SIMP_TAC[EL_LIST_OF_SEQ] THEN
