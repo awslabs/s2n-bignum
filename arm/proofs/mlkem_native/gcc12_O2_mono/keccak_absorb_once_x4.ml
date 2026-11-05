@@ -330,3 +330,257 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT =
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN AP_TERM_TAC THEN MATCH_MP_TAC ABSX4_LANE_EQ THEN
   ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, using that   *)
+(* of mlk_keccakf1600x4_xor_bytes_c. The events are those of the three       *)
+(* calls and of the instructions between them. The theorems of correctness   *)
+(* and of constant time and memory safety are derived from this one, or      *)
+(* proved separately (the correctness theorem above).                        *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let ABSX4_FULL_VARS =
+  [`pc:num`; `m0:int64`; `m1:int64`; `m2:int64`; `m3:int64`; `st:int64`;
+   `r:num`; `mlen:num`; `guard:int64`; `stackpointer:int64`;
+   `returnaddress:int64`];;
+
+let ABSX4_FULL_XOR_TAC off len ms n =
+  ABSX4_STATES_TAC THEN
+  ABSX4_STATES_THEN (fun v0 v1 v2 v3 ->
+    REMOVE_THEN "H_XOR" (fun safety_th ->
+      ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (mlkem_native_libmlkem_gcc12_O2_mono_mc,
+         MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC,
+         0x0,mlkem_native_libmlkem_gcc12_O2_mono_mc,safety_th)
+        ([`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+          `read X3 s`; `read X4 s`; off; len; v0; v1; v2; v3] @ ms @
+         [`pc:num`; `read X30 s`]) n THENL
+       [EXISTS_E2_TAC (ref ABSX4_FULL_VARS); LABEL_TAC "H_XOR" safety_th])) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]);;
+
+let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL =
+  prove
+ (`exists f_events.
+     forall e st r m0 m1 m2 m3 mlen M0 M1 M2 M3 guard pc stackpointer
+            returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        aligned 16 stackpointer /\ 0 < mlen /\ mlen < r /\ r <= 200 /\
+        nonoverlapping (st,800) (word_sub stackpointer (word 32),32) /\
+        ALLPAIRS nonoverlapping
+         [(st,800); (word_sub stackpointer (word 32),32)]
+         [(m0,mlen); (m1,mlen); (m2,mlen); (m3,mlen);
+          (word pc,libmlkem_size); (word(pc + got_stack_chk_guard),8);
+          (guard,8)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+                  read PC s = word (pc + mlk_keccak_absorb_once_x4) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [st; word r; m0; m1; m2; m3; word mlen] s /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                  read (memory :> bytes(st,800)) s = 0 /\
+                  read (memory :> bytes(m0,mlen)) s = M0 /\
+                  read (memory :> bytes(m1,mlen)) s = M1 /\
+                  read (memory :> bytes(m2,mlen)) s = M2 /\
+                  read (memory :> bytes(m3,mlen)) s = M3 /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  read (memory :> wbytes st) s =
+                  word_xor
+                   (keccak_absorb r
+                     (M0 + 2 EXP (8 * mlen) *
+                           num_of_bytelist(keccak_pad r 0x1F mlen))
+                     (mlen DIV r))
+                   (word((M0 + 2 EXP (8 * mlen) *
+                               num_of_bytelist(keccak_pad r 0x1F mlen)) DIV
+                         2 EXP (8 * r * mlen DIV r) MOD 2 EXP (8 * r))) /\
+                  read (memory :> wbytes (word_add st (word 200))) s =
+                  word_xor
+                   (keccak_absorb r
+                     (M1 + 2 EXP (8 * mlen) *
+                           num_of_bytelist(keccak_pad r 0x1F mlen))
+                     (mlen DIV r))
+                   (word((M1 + 2 EXP (8 * mlen) *
+                               num_of_bytelist(keccak_pad r 0x1F mlen)) DIV
+                         2 EXP (8 * r * mlen DIV r) MOD 2 EXP (8 * r))) /\
+                  read (memory :> wbytes (word_add st (word 400))) s =
+                  word_xor
+                   (keccak_absorb r
+                     (M2 + 2 EXP (8 * mlen) *
+                           num_of_bytelist(keccak_pad r 0x1F mlen))
+                     (mlen DIV r))
+                   (word((M2 + 2 EXP (8 * mlen) *
+                               num_of_bytelist(keccak_pad r 0x1F mlen)) DIV
+                         2 EXP (8 * r * mlen DIV r) MOD 2 EXP (8 * r))) /\
+                  read (memory :> wbytes (word_add st (word 600))) s =
+                  word_xor
+                   (keccak_absorb r
+                     (M3 + 2 EXP (8 * mlen) *
+                           num_of_bytelist(keccak_pad r 0x1F mlen))
+                     (mlen DIV r))
+                   (word((M3 + 2 EXP (8 * mlen) *
+                               num_of_bytelist(keccak_pad r 0x1F mlen)) DIV
+                         2 EXP (8 * r * mlen DIV r) MOD 2 EXP (8 * r))) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events m0 m1 m2 m3 st r mlen guard pc
+                            (word_sub stackpointer (word 32)) returnaddress /\
+                     memaccess_inbounds e2
+                      [m0,mlen; m1,mlen; m2,mlen; m3,mlen; st,800;
+                       word_sub stackpointer (word 32),32;
+                       word(pc + got_stack_chk_guard),8; guard,8]
+                      [st,800; word_sub stackpointer (word 32),32]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(st,800);
+                memory :> bytes(word_sub stackpointer (word 32),32)])`,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600X4_XOR_BYTES_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL
+    "H_XOR" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES;
+              READ_MEMORY_WBYTES_1600] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD]) THEN
+  GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_INIT_TAC "s0" THEN
+  FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP BYTES800_ZERO o check
+   (can (term_match [] `read (memory :> bytes(st,800)) s = 0`) o concl)) THEN
+  MAP_EVERY (fun mm ->
+    SUBGOAL_THEN (subst [mm,`M:num`] `M < 2 EXP (8 * mlen)`) ASSUME_TAC THENL
+     [FIRST_ASSUM(fun th ->
+        let c = concl th in
+        if is_eq c && rand c = mm &&
+           can (term_match [`mlen:num`]
+                 `read (memory :> bytes (m,mlen)) s = x`) c
+        then SUBST1_TAC(SYM th) else NO_TAC) THEN
+      REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_BOUND];
+      ALL_TAC])
+   [`M0:num`; `M1:num`; `M2:num`; `M3:num`] THEN
+  SUBGOAL_THEN
+   `0 + mlen <= 200 /\ ~(mlen = 0) /\ mlen + 1 <= 200 /\ r - 1 + 1 <= 200`
+  STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (1--1) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (2--17) THEN
+  ABSX4_FULL_XOR_TAC `0` `mlen:num` [`M0:num`; `M1:num`; `M2:num`; `M3:num`]
+    18 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (19--26) THEN
+  ARGS_32_TAC [`mlen:num`] THEN
+  ABSX4_BYTE_FACT_TAC "s26" `31` THEN
+  ABSX4_FULL_XOR_TAC `mlen:num` `1` [`31`; `31`; `31`; `31`] 27 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (28--36) THEN
+  ARGS_32_TAC [`r:num`] THEN
+  MP_TAC(SPEC `r:num` WORD_ZX_SUB1_SMALL) THEN
+  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+  ABSX4_BYTE_FACT_TAC "s36" `128` THEN
+  ABSX4_FULL_XOR_TAC `r - 1` `1` [`128`; `128`; `128`; `128`] 37 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (38--38) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (39--46) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THEN
+  FIRST
+   [AP_TERM_TAC THEN MATCH_MP_TAC ABSX4_LANE_EQ THEN
+    ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The theorem of constant time and memory safety, which does not need the   *)
+(* states to be zero, nor the contents of the messages.                      *)
+(* ------------------------------------------------------------------------- *)
+
+let ABSX4_SAFE_XOR_TAC off len n =
+  REMOVE_THEN "H_XOR" (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mono_mc,
+       MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mono_mc,safety_th)
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+       `read X3 s`; `read X4 s`; off; len; `pc:num`; `read X30 s`] n THENL
+     [EXISTS_E2_TAC (ref ABSX4_FULL_VARS); LABEL_TAC "H_XOR" safety_th]);;
+
+let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE =
+  prove
+ (`exists f_events.
+     forall e st r m0 m1 m2 m3 mlen guard pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        aligned 16 stackpointer /\ 0 < mlen /\ mlen < r /\ r <= 200 /\
+        nonoverlapping (st,800) (word_sub stackpointer (word 32),32) /\
+        ALLPAIRS nonoverlapping
+         [(st,800); (word_sub stackpointer (word 32),32)]
+         [(m0,mlen); (m1,mlen); (m2,mlen); (m3,mlen);
+          (word pc,libmlkem_size); (word(pc + got_stack_chk_guard),8);
+          (guard,8)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+                  read PC s = word (pc + mlk_keccak_absorb_once_x4) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [st; word r; m0; m1; m2; m3; word mlen] s /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events m0 m1 m2 m3 st r mlen guard pc
+                            (word_sub stackpointer (word 32)) returnaddress /\
+                     memaccess_inbounds e2
+                      [m0,mlen; m1,mlen; m2,mlen; m3,mlen; st,800;
+                       word_sub stackpointer (word 32),32;
+                       word(pc + got_stack_chk_guard),8; guard,8]
+                      [st,800; word_sub stackpointer (word 32),32]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(st,800);
+                memory :> bytes(word_sub stackpointer (word 32),32)])`,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600X4_XOR_BYTES_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE
+    "H_XOR" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD]) THEN
+  GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_INIT_TAC "s0" THEN
+  SUBGOAL_THEN
+   `0 + mlen <= 200 /\ ~(mlen = 0) /\ mlen + 1 <= 200 /\ r - 1 + 1 <= 200`
+  STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (1--1) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (2--17) THEN
+  ABSX4_SAFE_XOR_TAC `0` `mlen:num` 18 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (19--26) THEN
+  ARGS_32_TAC [`mlen:num`] THEN
+  ABSX4_SAFE_XOR_TAC `mlen:num` `1` 27 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (28--36) THEN
+  ARGS_32_TAC [`r:num`] THEN
+  MP_TAC(SPEC `r:num` WORD_ZX_SUB1_SMALL) THEN
+  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+  ABSX4_SAFE_XOR_TAC `r - 1` `1` 37 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (38--38) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_MONO_EXEC (39--46) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
