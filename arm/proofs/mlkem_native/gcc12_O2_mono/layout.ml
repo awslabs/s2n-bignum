@@ -173,9 +173,18 @@
 (* mlkem512_polyvec_ntt), numbered as in_g_N if g is inlined several times   *)
 (* into the same function, in the order of the addresses. The compiler may   *)
 (* move instructions of a call next to those of others, so the instructions  *)
-(* between in_g and in_g_end can include some of other calls. The listings   *)
-(* note where the instructions of each inlined call start, with the chain of *)
-(* inlined calls they belong to, e.g. "inlined: polyvec_ntt > poly_ntt".     *)
+(* between in_g and in_g_end can include some of other calls. If they do,    *)
+(* the code of the call itself is given by labels for each of its ranges of  *)
+(* consecutive instructions, in_g_partJ to in_g_partJ_end, from J = 1:       *)
+(*                                                                           *)
+(*   in_g:          in_g_part1:      first range of instructions of the call *)
+(*                  in_g_part1_end:  other code (the caller, other calls)    *)
+(*                  in_g_part2:      second range of the call                *)
+(*   in_g_end:      in_g_part2_end:                                          *)
+(*                                                                           *)
+(* The listings note where the instructions of each inlined call start, with *)
+(* the chain of inlined calls they belong to, e.g. "inlined: polyvec_ntt >   *)
+(* poly_ntt".                                                                *)
 (* ========================================================================= *)
 
 needs "common/layout.ml";;
@@ -382,12 +391,20 @@ install_layout (layout_labels [
   "mlk_keccak_absorb_once",
    ["loop1",0x50; "in_keccakf1600_xor_bytes_1",0x58; "loop2",0x58;
     "loop2_test",0x6c; "loop2_back",0x70; "in_keccakf1600_permute",0x74;
+    "in_keccakf1600_permute_part1",0x74;
     "in_keccakf1600_xor_bytes_1_end",0x74; "loop2_exit",0x74;
+    "in_keccakf1600_permute_part1_end",0x78;
+    "in_keccakf1600_permute_part2",0x7c;
     "after_mlk_keccakf1600_permute_c",0x80;
-    "in_keccakf1600_permute_end",0x80; "loop1_test",0x84;
+    "in_keccakf1600_permute_end",0x80;
+    "in_keccakf1600_permute_part2_end",0x80; "loop1_test",0x84;
     "loop1_back",0x88; "loop1_exit",0x8c;
-    "in_keccakf1600_xor_bytes_2",0x90; "join1",0x90;
+    "in_keccakf1600_xor_bytes_2",0x90;
+    "in_keccakf1600_xor_bytes_2_part1",0x90; "join1",0x90;
+    "in_keccakf1600_xor_bytes_2_part1_end",0x94;
+    "in_keccakf1600_xor_bytes_2_part2",0x98;
     "in_keccakf1600_xor_bytes_2_end",0xa0;
+    "in_keccakf1600_xor_bytes_2_part2_end",0xa0;
     "in_keccakf1600_xor_bytes_3",0xa0;
     "in_keccakf1600_xor_bytes_3_end",0xac; "ret",0xbc; "join2",0xc0;
     "in_keccakf1600_xor_bytes_4",0xc8; "loop3",0xc8; "loop3_test",0xdc;
@@ -407,8 +424,12 @@ install_layout (layout_labels [
     "after_mlk_keccakf1600_permute_c",0x48;
     "in_keccakf1600_permute_end",0x48;
     "in_keccakf1600_extract_bytes",0x4c;
-    "in_keccakf1600_extract_bytes_end",0x60; "adrp2",0x74; "ret",0x98;
-    "after_stack_chk_fail",0xa0];
+    "in_keccakf1600_extract_bytes_part1",0x4c;
+    "in_keccakf1600_extract_bytes_part1_end",0x54;
+    "in_keccakf1600_extract_bytes_part2",0x58;
+    "in_keccakf1600_extract_bytes_end",0x60;
+    "in_keccakf1600_extract_bytes_part2_end",0x60; "adrp2",0x74;
+    "ret",0x98; "after_stack_chk_fail",0xa0];
   "mlk_poly_ntt_c",
    ["adrp1",0x0; "loop1",0x28; "loop2",0x40; "loop3",0x70;
     "loop3_test",0xa0; "loop3_back",0xa4; "join1",0xa8;
@@ -417,14 +438,26 @@ install_layout (layout_labels [
     "loop1_next",0xc8; "loop1_back",0xd4; "loop1_exit",0xd8; "ret",0xd8];
   "mlk_keccak_absorb_once_x4",
    ["adrp1",0x0; "in_keccakf1600x4_xor_bytes_1",0x14;
+    "in_keccakf1600x4_xor_bytes_1_part1",0x14;
+    "in_keccakf1600x4_xor_bytes_1_part1_end",0x20;
     "in_keccakf1600x4_xor_bytes_2",0x30;
+    "in_keccakf1600x4_xor_bytes_2_part1",0x30;
+    "in_keccakf1600x4_xor_bytes_2_part1_end",0x34;
+    "in_keccakf1600x4_xor_bytes_1_part2",0x40;
     "after_mlk_keccakf1600x4_xor_bytes_c_1",0x44;
     "in_keccakf1600x4_xor_bytes_1_end",0x44;
+    "in_keccakf1600x4_xor_bytes_1_part2_end",0x44;
+    "in_keccakf1600x4_xor_bytes_2_part2",0x44;
     "after_mlk_keccakf1600x4_xor_bytes_c_2",0x64;
     "in_keccakf1600x4_xor_bytes_2_end",0x64;
-    "in_keccakf1600x4_xor_bytes_3",0x68; "adrp2",0x88;
+    "in_keccakf1600x4_xor_bytes_2_part2_end",0x64;
+    "in_keccakf1600x4_xor_bytes_3",0x68;
+    "in_keccakf1600x4_xor_bytes_3_part1",0x68;
+    "in_keccakf1600x4_xor_bytes_3_part1_end",0x80;
+    "in_keccakf1600x4_xor_bytes_3_part2",0x84; "adrp2",0x88;
     "after_mlk_keccakf1600x4_xor_bytes_c_3",0x88;
-    "in_keccakf1600x4_xor_bytes_3_end",0x88; "ret",0xa8;
+    "in_keccakf1600x4_xor_bytes_3_end",0x88;
+    "in_keccakf1600x4_xor_bytes_3_part2_end",0x88; "ret",0xa8;
     "after_stack_chk_fail",0xb0];
   "mlk_rej_uniform_c",
    ["join1",0x34; "loop1_test1",0x3c; "join2",0x44; "loop1_next1",0x44;
@@ -432,8 +465,16 @@ install_layout (layout_labels [
     "loop1_next2",0x54; "loop1_test3",0x90; "join3",0x98;
     "loop1_exit",0x98; "ret",0x98];
   "mlk_keccak_squeezeblocks_x4",
-   ["in_keccakf1600x4_permute",0x24; "in_keccakf1600_permute_1",0x48;
-    "loop1",0x48; "after_mlk_keccakf1600_permute_c_1",0x50;
+   ["in_keccakf1600x4_permute",0x24;
+    "in_keccakf1600x4_permute_part1",0x24;
+    "in_keccakf1600x4_permute_part1_end",0x28;
+    "in_keccakf1600x4_permute_part2",0x30;
+    "in_keccakf1600x4_permute_part2_end",0x34;
+    "in_keccakf1600x4_permute_part3",0x3c;
+    "in_keccakf1600x4_permute_part3_end",0x40;
+    "in_keccakf1600_permute_1",0x48;
+    "in_keccakf1600x4_permute_part4",0x48; "loop1",0x48;
+    "after_mlk_keccakf1600_permute_c_1",0x50;
     "in_keccakf1600_permute_1_end",0x50; "in_keccakf1600_permute_2",0x50;
     "after_mlk_keccakf1600_permute_c_2",0x58;
     "in_keccakf1600_permute_2_end",0x58; "in_keccakf1600_permute_3",0x58;
@@ -443,8 +484,9 @@ install_layout (layout_labels [
     "in_keccakf1600_extract_bytes_1",0x70;
     "in_keccakf1600_permute_4_end",0x70;
     "in_keccakf1600x4_extract_bytes",0x70;
-    "in_keccakf1600x4_permute_end",0x70; "loop2",0x70; "loop2_test",0x80;
-    "loop2_back",0x84; "loop2_exit",0x88;
+    "in_keccakf1600x4_permute_end",0x70;
+    "in_keccakf1600x4_permute_part4_end",0x70; "loop2",0x70;
+    "loop2_test",0x80; "loop2_back",0x84; "loop2_exit",0x88;
     "in_keccakf1600_extract_bytes_1_end",0x90;
     "in_keccakf1600_extract_bytes_2",0x90; "loop3",0x90;
     "loop3_test",0x9c; "loop3_back",0xa0; "loop3_exit",0xa4;
@@ -460,11 +502,27 @@ install_layout (layout_labels [
     "ret1",0x104; "ret2",0x108];
   "mlkem_poly_rej_uniform_x4",
    ["adrp1",0x4; "in_shake128x4_squeezeblocks_1",0x2c;
-    "in_shake128x4_absorb_once",0x34; "after_memset_1",0x70;
+    "in_shake128x4_squeezeblocks_1_part1",0x2c;
+    "in_shake128x4_squeezeblocks_1_part1_end",0x30;
+    "in_shake128x4_absorb_once",0x34;
+    "in_shake128x4_absorb_once_part1",0x34;
+    "in_shake128x4_absorb_once_part1_end",0x38;
+    "in_shake128x4_squeezeblocks_1_part2",0x38;
+    "in_shake128x4_squeezeblocks_1_part2_end",0x3c;
+    "in_shake128x4_squeezeblocks_1_part3",0x4c;
+    "in_shake128x4_squeezeblocks_1_part3_end",0x50;
+    "in_shake128x4_absorb_once_part2",0x54;
+    "in_shake128x4_absorb_once_part2_end",0x58;
+    "in_shake128x4_absorb_once_part3",0x5c;
+    "in_shake128x4_absorb_once_part3_end",0x60;
+    "in_shake128x4_absorb_once_part4",0x6c; "after_memset_1",0x70;
     "after_mlk_keccak_absorb_once_x4",0x90;
     "in_shake128x4_absorb_once_end",0x90;
+    "in_shake128x4_absorb_once_part4_end",0x90;
+    "in_shake128x4_squeezeblocks_1_part4",0x90;
     "after_mlk_keccak_squeezeblocks_x4_1",0xb0;
     "in_shake128x4_squeezeblocks_1_end",0xb0;
+    "in_shake128x4_squeezeblocks_1_part4_end",0xb0;
     "after_mlk_rej_uniform_c_1",0xc4; "after_mlk_rej_uniform_c_2",0xd8;
     "after_mlk_rej_uniform_c_3",0xec; "after_mlk_rej_uniform_c_4",0x100;
     "in_shake128x4_squeezeblocks_2",0x128; "loop1",0x128;
@@ -485,10 +543,16 @@ install_layout (layout_labels [
    ["adrp1",0x8; "loop1",0x40; "loop1_test",0x4c; "loop1_back",0x50;
     "loop1_exit",0x54; "after_mlkem_poly_rej_uniform_x4_1",0x8c;
     "join1",0x9c; "in_poly_rej_uniform",0xc0;
-    "in_shake128_absorb_once",0xc0;
+    "in_poly_rej_uniform_part1",0xc0; "in_shake128_absorb_once",0xc0;
+    "in_shake128_absorb_once_part1",0xc0;
+    "in_poly_rej_uniform_part1_end",0xc8;
+    "in_shake128_absorb_once_part1_end",0xc8;
     "after_mlkem_poly_rej_uniform_x4_2",0xdc;
+    "in_poly_rej_uniform_part2",0xe0;
+    "in_shake128_absorb_once_part2",0xe0;
     "after_mlk_keccak_absorb_once",0xfc; "in_keccakf1600_permute_1",0xfc;
     "in_shake128_absorb_once_end",0xfc;
+    "in_shake128_absorb_once_part2_end",0xfc;
     "in_shake128_squeezeblocks_1",0xfc; "loop2",0xfc;
     "after_mlk_keccakf1600_permute_c_1",0x104;
     "in_keccakf1600_extract_bytes_1",0x108;
@@ -498,17 +562,38 @@ install_layout (layout_labels [
     "loop2_test",0x120; "loop2_back",0x124;
     "in_shake128_squeezeblocks_1_end",0x128; "loop2_exit",0x128;
     "after_mlk_rej_uniform_c_1",0x140; "in_keccakf1600_permute_2",0x14c;
-    "in_shake128_squeezeblocks_2",0x14c; "loop4",0x14c;
+    "in_shake128_squeezeblocks_2",0x14c;
+    "in_shake128_squeezeblocks_2_part1",0x14c; "loop4",0x14c;
     "after_mlk_keccakf1600_permute_c_2",0x154;
     "in_keccakf1600_extract_bytes_2",0x154;
+    "in_keccakf1600_extract_bytes_2_part1",0x154;
     "in_keccakf1600_permute_2_end",0x154;
+    "in_keccakf1600_extract_bytes_2_part1_end",0x158;
+    "in_shake128_squeezeblocks_2_part1_end",0x158;
+    "in_keccakf1600_extract_bytes_2_part2",0x15c;
+    "in_shake128_squeezeblocks_2_part2",0x15c;
+    "in_keccakf1600_extract_bytes_2_part2_end",0x160;
+    "in_shake128_squeezeblocks_2_part2_end",0x160;
+    "in_keccakf1600_extract_bytes_2_part3",0x164;
+    "in_shake128_squeezeblocks_2_part3",0x164;
+    "in_keccakf1600_extract_bytes_2_part3_end",0x168;
+    "in_shake128_squeezeblocks_2_part3_end",0x168;
+    "in_keccakf1600_extract_bytes_2_part4",0x16c;
+    "in_shake128_squeezeblocks_2_part4",0x16c;
+    "in_keccakf1600_extract_bytes_2_part4_end",0x170;
+    "in_shake128_squeezeblocks_2_part4_end",0x170;
+    "in_keccakf1600_extract_bytes_2_part5",0x174;
+    "in_shake128_squeezeblocks_2_part5",0x174;
     "in_keccakf1600_extract_bytes_2_end",0x194;
+    "in_keccakf1600_extract_bytes_2_part5_end",0x194;
     "in_shake128_squeezeblocks_2_end",0x194;
+    "in_shake128_squeezeblocks_2_part5_end",0x194;
     "after_mlk_rej_uniform_c_2",0x198; "loop4_test",0x19c;
     "loop4_back",0x1a0; "in_shake128_release",0x1a4; "join2",0x1a4;
     "loop4_exit",0x1a4; "in_shake128_release_end",0x1c4;
-    "after_memset",0x1d4; "in_poly_rej_uniform_end",0x1d4; "adrp2",0x1f8;
-    "ret",0x228; "after_mlkem_poly_rej_uniform_x4_3",0x25c;
+    "after_memset",0x1d4; "in_poly_rej_uniform_end",0x1d4;
+    "in_poly_rej_uniform_part2_end",0x1d4; "adrp2",0x1f8; "ret",0x228;
+    "after_mlkem_poly_rej_uniform_x4_3",0x25c;
     "after_stack_chk_fail",0x274];
   "mlkem1024_gen_matrix",
    ["adrp1",0x4; "loop1",0x40; "loop1_test",0x4c; "loop1_back",0x50;
@@ -538,35 +623,52 @@ install_layout (layout_labels [
     "join1",0xe4; "after_memset",0xf4; "adrp2",0x118; "ret",0x14c;
     "after_stack_chk_fail",0x154];
   "mlkem1024_indcpa_keypair_derand",
-   ["adrp1",0x60; "in_poly_ntt_1",0x6c; "in_polyvec_ntt_1",0x6c;
+   ["adrp1",0x60; "in_poly_ntt_1",0x6c; "in_poly_ntt_1_part1",0x6c;
+    "in_polyvec_ntt_1",0x6c; "in_polyvec_ntt_1_part1",0x6c;
+    "in_poly_ntt_1_part1_end",0x70; "in_polyvec_ntt_1_part1_end",0x70;
     "after_mlkem_sha3_512",0x90; "after_mlkem1024_gen_matrix",0xa0;
     "after_mlkem1024_poly_getnoise_eta1_4x_1",0xe8;
     "after_mlkem1024_poly_getnoise_eta1_4x_2",0x120;
     "in_poly_ntt_2",0x120; "in_polyvec_ntt_2",0x120;
     "after_mlk_poly_ntt_c_1",0x128; "after_mlk_poly_ntt_c_2",0x13c;
     "after_mlk_poly_ntt_c_3",0x148; "after_mlk_poly_ntt_c_4",0x154;
-    "in_poly_ntt_2_end",0x154; "in_polyvec_ntt_2_end",0x154;
+    "in_poly_ntt_1_part2",0x154; "in_poly_ntt_2_end",0x154;
+    "in_polyvec_ntt_1_part2",0x154; "in_polyvec_ntt_2_end",0x154;
     "after_mlk_poly_ntt_c_5",0x15c; "after_mlk_poly_ntt_c_6",0x164;
     "after_mlk_poly_ntt_c_7",0x170; "after_mlk_poly_ntt_c_8",0x178;
-    "in_poly_mulcache_compute",0x178; "in_poly_ntt_1_end",0x178;
-    "in_polyvec_mulcache_compute",0x178; "in_polyvec_ntt_1_end",0x178;
-    "loop1",0x178; "after_mlk_poly_mulcache_compute_c",0x188;
-    "in_poly_mulcache_compute_end",0x188; "loop1_test",0x18c;
+    "in_poly_mulcache_compute",0x178;
+    "in_poly_mulcache_compute_part1",0x178; "in_poly_ntt_1_end",0x178;
+    "in_poly_ntt_1_part2_end",0x178; "in_polyvec_mulcache_compute",0x178;
+    "in_polyvec_ntt_1_end",0x178; "in_polyvec_ntt_1_part2_end",0x178;
+    "loop1",0x178; "in_poly_mulcache_compute_part1_end",0x180;
+    "in_poly_mulcache_compute_part2",0x184;
+    "after_mlk_poly_mulcache_compute_c",0x188;
+    "in_poly_mulcache_compute_end",0x188;
+    "in_poly_mulcache_compute_part2_end",0x188; "loop1_test",0x18c;
     "loop1_back",0x190; "loop1_exit",0x194;
     "in_polyvec_basemul_acc_montgomery_cached",0x1a8;
+    "in_polyvec_basemul_acc_montgomery_cached_part1",0x1a8;
     "in_polyvec_mulcache_compute_end",0x1a8; "loop2",0x1a8;
+    "in_polyvec_basemul_acc_montgomery_cached_part1_end",0x1b8;
+    "in_polyvec_basemul_acc_montgomery_cached_part2",0x1bc;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c1024",0x1c0;
     "in_polyvec_basemul_acc_montgomery_cached_end",0x1c0;
+    "in_polyvec_basemul_acc_montgomery_cached_part2_end",0x1c0;
     "loop2_test",0x1c4; "loop2_back",0x1c8; "adrp2",0x1cc;
     "loop2_exit",0x1cc; "in_poly_tomont",0x1d4;
-    "in_polyvec_tomont",0x1d4; "adrp3",0x1e0; "loop3",0x1ec;
-    "loop4",0x1f4; "loop4_test",0x218; "loop4_back",0x21c;
-    "in_poly_tomont_end",0x220; "loop4_exit",0x220; "loop3_test",0x224;
-    "loop3_back",0x228; "loop3_exit",0x22c;
-    "in_polyvec_tomont_end",0x234; "loop5",0x234; "in_poly_add",0x23c;
-    "in_polyvec_add",0x23c; "loop6",0x23c; "loop6_test",0x250;
-    "loop6_back",0x254; "in_poly_add_end",0x258; "loop6_exit",0x258;
-    "loop5_test",0x260; "loop5_back",0x264; "in_poly_reduce_1",0x268;
+    "in_poly_tomont_part1",0x1d4; "in_polyvec_tomont",0x1d4;
+    "in_polyvec_tomont_part1",0x1d4; "adrp3",0x1e0;
+    "in_poly_tomont_part1_end",0x1e4;
+    "in_polyvec_tomont_part1_end",0x1e4; "in_poly_tomont_part2",0x1e8;
+    "in_polyvec_tomont_part2",0x1e8; "loop3",0x1ec; "loop4",0x1f4;
+    "loop4_test",0x218; "loop4_back",0x21c; "in_poly_tomont_end",0x220;
+    "in_poly_tomont_part2_end",0x220; "loop4_exit",0x220;
+    "loop3_test",0x224; "loop3_back",0x228; "loop3_exit",0x22c;
+    "in_polyvec_tomont_end",0x234; "in_polyvec_tomont_part2_end",0x234;
+    "loop5",0x234; "in_poly_add",0x23c; "in_polyvec_add",0x23c;
+    "loop6",0x23c; "loop6_test",0x250; "loop6_back",0x254;
+    "in_poly_add_end",0x258; "loop6_exit",0x258; "loop5_test",0x260;
+    "loop5_back",0x264; "in_poly_reduce_1",0x268;
     "in_polyvec_add_end",0x268; "in_polyvec_reduce_1",0x268;
     "loop5_exit",0x268; "after_mlk_poly_reduce_c_1",0x270;
     "after_mlk_poly_reduce_c_2",0x278; "after_mlk_poly_reduce_c_3",0x284;
@@ -575,16 +677,23 @@ install_layout (layout_labels [
     "in_polyvec_reduce_2",0x28c; "after_mlk_poly_reduce_c_5",0x294;
     "after_mlk_poly_reduce_c_6",0x29c; "after_mlk_poly_reduce_c_7",0x2a4;
     "after_mlk_poly_reduce_c_8",0x2b0; "in_poly_reduce_2_end",0x2b0;
-    "in_poly_tobytes_1",0x2b0; "in_polyvec_reduce_2_end",0x2b0;
-    "in_polyvec_tobytes_1",0x2b0; "loop7",0x2b0;
-    "after_mlk_poly_tobytes_c_1",0x2c0; "in_poly_tobytes_1_end",0x2c0;
+    "in_poly_tobytes_1",0x2b0; "in_poly_tobytes_1_part1",0x2b0;
+    "in_polyvec_reduce_2_end",0x2b0; "in_polyvec_tobytes_1",0x2b0;
+    "loop7",0x2b0; "in_poly_tobytes_1_part1_end",0x2b8;
+    "in_poly_tobytes_1_part2",0x2bc; "after_mlk_poly_tobytes_c_1",0x2c0;
+    "in_poly_tobytes_1_end",0x2c0; "in_poly_tobytes_1_part2_end",0x2c0;
     "loop7_test",0x2c4; "loop7_back",0x2c8; "loop7_exit",0x2cc;
-    "in_poly_tobytes_2",0x2d0; "in_polyvec_tobytes_1_end",0x2d0;
-    "in_polyvec_tobytes_2",0x2d0; "after_mlk_poly_tobytes_c_2",0x2e4;
-    "loop8",0x2f0; "after_mlk_poly_tobytes_c_3",0x304;
-    "in_poly_tobytes_2_end",0x304; "loop8_test",0x308;
-    "loop8_back",0x30c; "in_polyvec_tobytes_2_end",0x310; "join1",0x310;
-    "loop8_exit",0x310; "after_memset_1",0x328; "after_memset_2",0x338;
+    "in_poly_tobytes_2",0x2d0; "in_poly_tobytes_2_part1",0x2d0;
+    "in_polyvec_tobytes_1_end",0x2d0; "in_polyvec_tobytes_2",0x2d0;
+    "in_poly_tobytes_2_part1_end",0x2d4; "in_poly_tobytes_2_part2",0x2d8;
+    "after_mlk_poly_tobytes_c_2",0x2e4;
+    "in_poly_tobytes_2_part2_end",0x2e4; "in_poly_tobytes_2_part3",0x2f0;
+    "loop8",0x2f0; "in_poly_tobytes_2_part3_end",0x2fc;
+    "in_poly_tobytes_2_part4",0x300; "after_mlk_poly_tobytes_c_3",0x304;
+    "in_poly_tobytes_2_end",0x304; "in_poly_tobytes_2_part4_end",0x304;
+    "loop8_test",0x308; "loop8_back",0x30c;
+    "in_polyvec_tobytes_2_end",0x310; "join1",0x310; "loop8_exit",0x310;
+    "after_memset_1",0x328; "after_memset_2",0x338;
     "after_memset_3",0x348; "after_memset_4",0x358;
     "after_memset_5",0x368; "adrp4",0x384; "ret",0x3c4;
     "after_stack_chk_fail",0x3cc];
@@ -592,84 +701,161 @@ install_layout (layout_labels [
    ["adrp1",0x68; "after_mlkem_sha3_512",0x90;
     "after_mlkem768_gen_matrix",0xa0;
     "after_mlkem1024_poly_getnoise_eta1_4x_1",0xd0;
-    "in_poly_mulcache_compute",0xe8; "in_polyvec_mulcache_compute",0xe8;
+    "in_poly_mulcache_compute",0xe8;
+    "in_poly_mulcache_compute_part1",0xe8;
+    "in_polyvec_mulcache_compute",0xe8;
+    "in_polyvec_mulcache_compute_part1",0xe8;
+    "in_poly_mulcache_compute_part1_end",0xec;
+    "in_polyvec_mulcache_compute_part1_end",0xec;
+    "in_poly_mulcache_compute_part2",0xfc;
+    "in_polyvec_mulcache_compute_part2",0xfc;
+    "in_poly_mulcache_compute_part2_end",0x100;
+    "in_polyvec_mulcache_compute_part2_end",0x100;
     "after_mlkem1024_poly_getnoise_eta1_4x_2",0x10c;
-    "in_poly_ntt_1",0x10c; "in_polyvec_ntt_1",0x10c;
+    "in_poly_ntt_1",0x10c; "in_poly_ntt_1_part1",0x10c;
+    "in_polyvec_ntt_1",0x10c; "in_polyvec_ntt_1_part1",0x10c;
     "after_mlk_poly_ntt_c_1",0x114; "after_mlk_poly_ntt_c_2",0x120;
-    "after_mlk_poly_ntt_c_3",0x134; "in_poly_ntt_1_end",0x134;
-    "in_poly_ntt_2",0x134; "in_polyvec_ntt_1_end",0x134;
-    "in_polyvec_ntt_2",0x134; "after_mlk_poly_ntt_c_4",0x13c;
-    "after_mlk_poly_ntt_c_5",0x144; "after_mlk_poly_ntt_c_6",0x158;
-    "in_poly_ntt_2_end",0x158; "in_polyvec_ntt_2_end",0x158;
+    "in_poly_ntt_1_part1_end",0x120; "in_polyvec_ntt_1_part1_end",0x120;
+    "in_poly_ntt_1_part2",0x124; "in_polyvec_ntt_1_part2",0x124;
+    "in_poly_mulcache_compute_part3",0x128;
+    "in_poly_ntt_1_part2_end",0x128;
+    "in_polyvec_mulcache_compute_part3",0x128;
+    "in_polyvec_ntt_1_part2_end",0x128;
+    "in_poly_mulcache_compute_part3_end",0x130;
+    "in_poly_ntt_1_part3",0x130;
+    "in_polyvec_mulcache_compute_part3_end",0x130;
+    "in_polyvec_ntt_1_part3",0x130; "after_mlk_poly_ntt_c_3",0x134;
+    "in_poly_ntt_1_end",0x134; "in_poly_ntt_1_part3_end",0x134;
+    "in_poly_ntt_2",0x134; "in_poly_ntt_2_part1",0x134;
+    "in_polyvec_ntt_1_end",0x134; "in_polyvec_ntt_1_part3_end",0x134;
+    "in_polyvec_ntt_2",0x134; "in_polyvec_ntt_2_part1",0x134;
+    "after_mlk_poly_ntt_c_4",0x13c; "after_mlk_poly_ntt_c_5",0x144;
+    "in_poly_mulcache_compute_part4",0x14c;
+    "in_poly_ntt_2_part1_end",0x14c;
+    "in_polyvec_mulcache_compute_part4",0x14c;
+    "in_polyvec_ntt_2_part1_end",0x14c;
+    "in_poly_mulcache_compute_part4_end",0x150;
+    "in_poly_ntt_2_part2",0x150;
+    "in_polyvec_mulcache_compute_part4_end",0x150;
+    "in_polyvec_ntt_2_part2",0x150; "after_mlk_poly_ntt_c_6",0x158;
+    "in_poly_mulcache_compute_part5",0x158; "in_poly_ntt_2_end",0x158;
+    "in_poly_ntt_2_part2_end",0x158;
+    "in_polyvec_mulcache_compute_part5",0x158;
+    "in_polyvec_ntt_2_end",0x158; "in_polyvec_ntt_2_part2_end",0x158;
     "after_mlk_poly_mulcache_compute_c_1",0x164;
     "after_mlk_poly_mulcache_compute_c_2",0x170;
     "after_mlk_poly_mulcache_compute_c_3",0x17c;
     "in_poly_mulcache_compute_end",0x17c;
+    "in_poly_mulcache_compute_part5_end",0x17c;
     "in_polyvec_basemul_acc_montgomery_cached",0x17c;
-    "in_polyvec_mulcache_compute_end",0x17c; "loop1",0x17c;
+    "in_polyvec_mulcache_compute_end",0x17c;
+    "in_polyvec_mulcache_compute_part5_end",0x17c; "loop1",0x17c;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c768",0x190;
     "in_polyvec_basemul_acc_montgomery_cached_end",0x190;
     "loop1_test",0x198; "loop1_back",0x19c; "adrp2",0x1a0;
     "loop1_exit",0x1a0; "in_poly_tomont",0x1a8;
-    "in_polyvec_tomont",0x1a8; "adrp3",0x1b4; "loop2",0x1c0;
-    "loop3",0x1c8; "loop3_test",0x1ec; "loop3_back",0x1f0;
-    "in_poly_tomont_end",0x1f4; "loop3_exit",0x1f4; "loop2_test",0x1f8;
-    "loop2_back",0x1fc; "loop2_exit",0x200;
-    "in_polyvec_tomont_end",0x204; "loop4",0x204; "in_poly_add",0x208;
-    "in_polyvec_add",0x208; "loop5",0x208; "loop5_test",0x21c;
-    "loop5_back",0x220; "in_poly_add_end",0x224; "loop5_exit",0x224;
-    "loop4_test",0x230; "loop4_next",0x238; "loop4_back",0x23c;
-    "in_poly_reduce_1",0x240; "in_polyvec_add_end",0x240;
-    "in_polyvec_reduce_1",0x240; "loop4_exit",0x240;
-    "after_mlk_poly_reduce_c_1",0x24c; "after_mlk_poly_reduce_c_2",0x258;
-    "after_mlk_poly_reduce_c_3",0x260; "in_poly_reduce_1_end",0x260;
-    "in_poly_reduce_2",0x260; "in_polyvec_reduce_1_end",0x260;
-    "in_polyvec_reduce_2",0x260; "after_mlk_poly_reduce_c_4",0x26c;
-    "after_mlk_poly_reduce_c_5",0x278; "after_mlk_poly_reduce_c_6",0x280;
-    "in_poly_reduce_2_end",0x280; "in_poly_tobytes_1",0x280;
-    "in_polyvec_reduce_2_end",0x280; "in_polyvec_tobytes_1",0x280;
-    "after_mlk_poly_tobytes_c_1",0x290;
+    "in_poly_tomont_part1",0x1a8; "in_polyvec_tomont",0x1a8;
+    "in_polyvec_tomont_part1",0x1a8; "adrp3",0x1b4;
+    "in_poly_tomont_part1_end",0x1b8;
+    "in_polyvec_tomont_part1_end",0x1b8; "in_poly_tomont_part2",0x1bc;
+    "in_polyvec_tomont_part2",0x1bc; "loop2",0x1c0; "loop3",0x1c8;
+    "loop3_test",0x1ec; "loop3_back",0x1f0; "in_poly_tomont_end",0x1f4;
+    "in_poly_tomont_part2_end",0x1f4; "loop3_exit",0x1f4;
+    "loop2_test",0x1f8; "loop2_back",0x1fc; "loop2_exit",0x200;
+    "in_polyvec_tomont_end",0x204; "in_polyvec_tomont_part2_end",0x204;
+    "loop4",0x204; "in_poly_add",0x208; "in_polyvec_add",0x208;
+    "loop5",0x208; "loop5_test",0x21c; "loop5_back",0x220;
+    "in_poly_add_end",0x224; "loop5_exit",0x224; "loop4_test",0x230;
+    "loop4_next",0x238; "loop4_back",0x23c; "in_poly_reduce_1",0x240;
+    "in_polyvec_add_end",0x240; "in_polyvec_reduce_1",0x240;
+    "loop4_exit",0x240; "after_mlk_poly_reduce_c_1",0x24c;
+    "after_mlk_poly_reduce_c_2",0x258; "after_mlk_poly_reduce_c_3",0x260;
+    "in_poly_reduce_1_end",0x260; "in_poly_reduce_2",0x260;
+    "in_polyvec_reduce_1_end",0x260; "in_polyvec_reduce_2",0x260;
+    "after_mlk_poly_reduce_c_4",0x26c; "after_mlk_poly_reduce_c_5",0x278;
+    "after_mlk_poly_reduce_c_6",0x280; "in_poly_reduce_2_end",0x280;
+    "in_poly_tobytes_1",0x280; "in_polyvec_reduce_2_end",0x280;
+    "in_polyvec_tobytes_1",0x280; "after_mlk_poly_tobytes_c_1",0x290;
     "after_mlk_poly_tobytes_c_2",0x29c;
     "after_mlk_poly_tobytes_c_3",0x2a8; "in_poly_tobytes_1_end",0x2a8;
-    "in_poly_tobytes_2",0x2a8; "in_polyvec_tobytes_1_end",0x2a8;
-    "in_polyvec_tobytes_2",0x2a8; "after_mlk_poly_tobytes_c_4",0x2b8;
+    "in_poly_tobytes_2",0x2a8; "in_poly_tobytes_2_part1",0x2a8;
+    "in_polyvec_tobytes_1_end",0x2a8; "in_polyvec_tobytes_2",0x2a8;
+    "in_polyvec_tobytes_2_part1",0x2a8;
+    "after_mlk_poly_tobytes_c_4",0x2b8;
     "after_mlk_poly_tobytes_c_5",0x2c4;
+    "in_poly_tobytes_2_part1_end",0x2c4;
+    "in_polyvec_tobytes_2_part1_end",0x2c4;
+    "in_poly_tobytes_2_part2",0x2c8; "in_polyvec_tobytes_2_part2",0x2c8;
     "after_mlk_poly_tobytes_c_6",0x2d4; "in_poly_tobytes_2_end",0x2d4;
-    "in_polyvec_tobytes_2_end",0x2d4; "after_memset_1",0x2ec;
+    "in_poly_tobytes_2_part2_end",0x2d4;
+    "in_polyvec_tobytes_2_end",0x2d4;
+    "in_polyvec_tobytes_2_part2_end",0x2d4; "after_memset_1",0x2ec;
     "after_memset_2",0x2fc; "after_memset_3",0x30c;
     "after_memset_4",0x320; "after_memset_5",0x330; "adrp4",0x348;
     "ret",0x388; "after_stack_chk_fail",0x390];
   "mlkem512_indcpa_keypair_derand",
-   ["in_poly_getnoise_eta1_4x",0x10; "adrp1",0x64;
+   ["in_poly_getnoise_eta1_4x",0x10;
+    "in_poly_getnoise_eta1_4x_part1",0x10;
+    "in_poly_getnoise_eta1_4x_part1_end",0x14;
+    "in_poly_getnoise_eta1_4x_part2",0x34;
+    "in_poly_getnoise_eta1_4x_part2_end",0x38;
+    "in_poly_getnoise_eta1_4x_part3",0x3c;
+    "in_poly_getnoise_eta1_4x_part3_end",0x44;
+    "in_poly_getnoise_eta1_4x_part4",0x54;
+    "in_poly_getnoise_eta1_4x_part4_end",0x58; "adrp1",0x64;
     "after_mlkem_sha3_512",0x8c; "after_mlkem512_gen_matrix",0x9c;
+    "in_poly_getnoise_eta1_4x_part5",0x9c;
     "after_mlkem_shake256x4",0x104; "after_mlkem_poly_cbd3_1",0x110;
     "after_mlkem_poly_cbd3_2",0x120; "after_mlkem_poly_cbd3_3",0x130;
     "after_mlkem_poly_cbd3_4",0x140; "after_memset_1",0x150;
-    "in_poly_getnoise_eta1_4x_end",0x174; "in_poly_tomont",0x174;
-    "in_polyvec_tomont",0x174; "in_poly_ntt_1",0x178;
-    "in_polyvec_ntt_1",0x178; "after_mlk_poly_ntt_c_1",0x180;
+    "in_poly_getnoise_eta1_4x_end",0x174;
+    "in_poly_getnoise_eta1_4x_part5_end",0x174; "in_poly_tomont",0x174;
+    "in_poly_tomont_part1",0x174; "in_polyvec_tomont",0x174;
+    "in_polyvec_tomont_part1",0x174; "in_poly_ntt_1",0x178;
+    "in_poly_tomont_part1_end",0x178; "in_polyvec_ntt_1",0x178;
+    "in_polyvec_tomont_part1_end",0x178; "after_mlk_poly_ntt_c_1",0x180;
     "after_mlk_poly_ntt_c_2",0x188; "in_poly_ntt_1_end",0x188;
     "in_poly_ntt_2",0x188; "in_polyvec_ntt_1_end",0x188;
     "in_polyvec_ntt_2",0x188; "after_mlk_poly_ntt_c_3",0x190;
     "after_mlk_poly_ntt_c_4",0x198; "in_poly_mulcache_compute",0x198;
-    "in_poly_ntt_2_end",0x198; "in_polyvec_mulcache_compute",0x198;
+    "in_poly_mulcache_compute_part1",0x198; "in_poly_ntt_2_end",0x198;
+    "in_polyvec_mulcache_compute",0x198;
+    "in_polyvec_mulcache_compute_part1",0x198;
     "in_polyvec_ntt_2_end",0x198;
     "after_mlk_poly_mulcache_compute_c_1",0x1a4;
+    "in_poly_mulcache_compute_part1_end",0x1a4;
     "in_polyvec_basemul_acc_montgomery_cached",0x1a4;
+    "in_polyvec_basemul_acc_montgomery_cached_part1",0x1a4;
+    "in_polyvec_mulcache_compute_part1_end",0x1a4;
+    "in_poly_mulcache_compute_part2",0x1a8;
+    "in_polyvec_basemul_acc_montgomery_cached_part1_end",0x1a8;
+    "in_polyvec_mulcache_compute_part2",0x1a8;
     "after_mlk_poly_mulcache_compute_c_2",0x1b4;
     "in_poly_mulcache_compute_end",0x1b4;
+    "in_poly_mulcache_compute_part2_end",0x1b4;
+    "in_polyvec_basemul_acc_montgomery_cached_part2",0x1b4;
     "in_polyvec_mulcache_compute_end",0x1b4;
+    "in_polyvec_mulcache_compute_part2_end",0x1b4;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c512_1",0x1c8;
     "adrp2",0x1dc;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c512_2",0x1dc;
-    "adrp3",0x1ec; "in_polyvec_basemul_acc_montgomery_cached_end",0x1ec;
-    "loop1",0x1f8; "loop1_test",0x21c; "loop1_back",0x220; "adrp4",0x224;
-    "loop1_exit",0x224; "adrp5",0x234; "loop2",0x240; "loop2_test",0x264;
-    "loop2_back",0x268; "loop2_exit",0x26c; "in_poly_add",0x270;
-    "in_poly_tomont_end",0x270; "in_polyvec_add",0x270;
-    "in_polyvec_tomont_end",0x270; "loop3",0x270; "loop3_test",0x280;
-    "loop3_back",0x284; "loop3_exit",0x288; "loop4",0x290;
-    "loop4_test",0x2ac; "loop4_back",0x2b0; "in_poly_add_end",0x2b4;
+    "in_poly_tomont_part2",0x1dc;
+    "in_polyvec_basemul_acc_montgomery_cached_part2_end",0x1dc;
+    "in_polyvec_tomont_part2",0x1dc; "in_poly_tomont_part2_end",0x1e4;
+    "in_polyvec_basemul_acc_montgomery_cached_part3",0x1e4;
+    "in_polyvec_tomont_part2_end",0x1e4; "adrp3",0x1ec;
+    "in_poly_tomont_part3",0x1ec;
+    "in_polyvec_basemul_acc_montgomery_cached_end",0x1ec;
+    "in_polyvec_basemul_acc_montgomery_cached_part3_end",0x1ec;
+    "in_polyvec_tomont_part3",0x1ec; "loop1",0x1f8; "loop1_test",0x21c;
+    "loop1_back",0x220; "adrp4",0x224; "loop1_exit",0x224; "adrp5",0x234;
+    "loop2",0x240; "loop2_test",0x264; "loop2_back",0x268;
+    "loop2_exit",0x26c; "in_poly_add",0x270; "in_poly_tomont_end",0x270;
+    "in_poly_tomont_part3_end",0x270; "in_polyvec_add",0x270;
+    "in_polyvec_tomont_end",0x270; "in_polyvec_tomont_part3_end",0x270;
+    "loop3",0x270; "loop3_test",0x280; "loop3_back",0x284;
+    "loop3_exit",0x288; "loop4",0x290; "loop4_test",0x2ac;
+    "loop4_back",0x2b0; "in_poly_add_end",0x2b4;
     "in_poly_reduce_1",0x2b4; "in_polyvec_add_end",0x2b4;
     "in_polyvec_reduce_1",0x2b4; "loop4_exit",0x2b4;
     "after_mlk_poly_reduce_c_1",0x2bc; "after_mlk_poly_reduce_c_2",0x2c4;
@@ -688,22 +874,55 @@ install_layout (layout_labels [
     "after_memset_5",0x350; "after_memset_6",0x360; "adrp6",0x378;
     "ret",0x3b8; "after_stack_chk_fail",0x3c0];
   "mlkem768_indcpa_enc",
-   ["adrp1",0x8; "in_poly_frombytes",0x24; "in_polyvec_frombytes",0x24;
-    "in_poly_mulcache_compute",0x80; "in_polyvec_mulcache_compute",0x80;
+   ["adrp1",0x8; "in_poly_frombytes",0x24;
+    "in_poly_frombytes_part1",0x24; "in_polyvec_frombytes",0x24;
+    "in_polyvec_frombytes_part1",0x24;
+    "in_poly_frombytes_part1_end",0x28;
+    "in_polyvec_frombytes_part1_end",0x28;
+    "in_poly_frombytes_part2",0x3c; "in_polyvec_frombytes_part2",0x3c;
+    "in_poly_frombytes_part2_end",0x40;
+    "in_polyvec_frombytes_part2_end",0x40;
+    "in_poly_frombytes_part3",0x60; "in_polyvec_frombytes_part3",0x60;
+    "in_poly_frombytes_part3_end",0x68;
+    "in_polyvec_frombytes_part3_end",0x68;
+    "in_poly_mulcache_compute",0x80;
+    "in_poly_mulcache_compute_part1",0x80;
+    "in_polyvec_mulcache_compute",0x80;
+    "in_polyvec_mulcache_compute_part1",0x80;
+    "in_poly_frombytes_part4",0x84;
+    "in_poly_mulcache_compute_part1_end",0x84;
+    "in_polyvec_frombytes_part4",0x84;
+    "in_polyvec_mulcache_compute_part1_end",0x84;
     "after_mlk_poly_frombytes_c_1",0x88;
     "after_mlk_poly_frombytes_c_2",0x94;
+    "in_poly_frombytes_part4_end",0x94;
+    "in_polyvec_frombytes_part4_end",0x94;
+    "in_poly_frombytes_part5",0x98; "in_polyvec_frombytes_part5",0x98;
     "after_mlk_poly_frombytes_c_3",0xa4; "in_poly_frombytes_end",0xa4;
-    "in_polyvec_frombytes_end",0xa4; "after_mlkem_poly_frommsg",0xc8;
-    "after_mlkem768_gen_matrix",0xd8;
+    "in_poly_frombytes_part5_end",0xa4; "in_polyvec_frombytes_end",0xa4;
+    "in_polyvec_frombytes_part5_end",0xa4;
+    "after_mlkem_poly_frommsg",0xc8; "after_mlkem768_gen_matrix",0xd8;
     "after_mlkem1024_poly_getnoise_eta1_4x_1",0x114;
+    "in_poly_mulcache_compute_part2",0x128;
+    "in_polyvec_mulcache_compute_part2",0x128;
+    "in_poly_mulcache_compute_part2_end",0x12c;
+    "in_polyvec_mulcache_compute_part2_end",0x12c;
+    "in_poly_mulcache_compute_part3",0x140;
+    "in_polyvec_mulcache_compute_part3",0x140;
+    "in_poly_mulcache_compute_part3_end",0x148;
+    "in_polyvec_mulcache_compute_part3_end",0x148;
     "after_mlkem1024_poly_getnoise_eta1_4x_2",0x150; "in_poly_ntt",0x150;
     "in_polyvec_ntt",0x150; "after_mlk_poly_ntt_c_1",0x15c;
     "after_mlk_poly_ntt_c_2",0x168; "after_mlk_poly_ntt_c_3",0x174;
-    "in_poly_ntt_end",0x174; "in_polyvec_ntt_end",0x174;
+    "in_poly_mulcache_compute_part4",0x174; "in_poly_ntt_end",0x174;
+    "in_polyvec_mulcache_compute_part4",0x174;
+    "in_polyvec_ntt_end",0x174;
     "after_mlk_poly_mulcache_compute_c_1",0x180;
     "after_mlk_poly_mulcache_compute_c_2",0x194;
     "after_mlk_poly_mulcache_compute_c_3",0x1a0;
-    "in_polyvec_basemul_acc_montgomery_cached_1",0x1a0; "loop1",0x1a0;
+    "in_poly_mulcache_compute_part4_end",0x1a0;
+    "in_polyvec_basemul_acc_montgomery_cached_1",0x1a0;
+    "in_polyvec_mulcache_compute_part4_end",0x1a0; "loop1",0x1a0;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c768_1",0x1b4;
     "in_polyvec_basemul_acc_montgomery_cached_1_end",0x1b4;
     "loop1_test",0x1bc; "loop1_back",0x1c0;
@@ -720,23 +939,29 @@ install_layout (layout_labels [
     "in_polyvec_invntt_tomont_end",0x1f8;
     "after_mlk_poly_invntt_tomont_c_4",0x200;
     "in_poly_invntt_tomont_2_end",0x200; "in_polyvec_add",0x200;
-    "loop2",0x204; "in_poly_add_1",0x208;
-    "in_poly_mulcache_compute_end",0x208;
-    "in_polyvec_mulcache_compute_end",0x208; "loop3",0x208;
+    "in_polyvec_add_part1",0x200; "in_poly_mulcache_compute_part5",0x204;
+    "in_polyvec_add_part1_end",0x204;
+    "in_polyvec_mulcache_compute_part5",0x204; "loop2",0x204;
+    "in_poly_add_1",0x208; "in_poly_mulcache_compute_end",0x208;
+    "in_poly_mulcache_compute_part5_end",0x208;
+    "in_polyvec_add_part2",0x208;
+    "in_polyvec_mulcache_compute_end",0x208;
+    "in_polyvec_mulcache_compute_part5_end",0x208; "loop3",0x208;
     "loop3_test",0x21c; "loop3_back",0x220; "in_poly_add_1_end",0x224;
     "loop3_exit",0x224; "loop2_test",0x230; "loop2_back",0x234;
     "loop2_exit",0x238; "in_poly_add_2",0x248;
-    "in_polyvec_add_end",0x248; "loop4",0x248; "loop4_test",0x258;
-    "loop4_back",0x25c; "loop4_exit",0x260; "in_poly_add_2_end",0x268;
-    "in_poly_add_3",0x268; "loop5",0x268; "loop5_test",0x278;
-    "loop5_back",0x27c; "in_poly_add_3_end",0x280;
-    "in_poly_reduce_1",0x280; "in_polyvec_reduce",0x280;
-    "loop5_exit",0x280; "after_mlk_poly_reduce_c_1",0x28c;
-    "after_mlk_poly_reduce_c_2",0x298; "after_mlk_poly_reduce_c_3",0x2a0;
-    "in_poly_reduce_1_end",0x2a0; "in_poly_reduce_2",0x2a0;
-    "in_polyvec_reduce_end",0x2a0; "after_mlk_poly_reduce_c_4",0x2a8;
-    "in_poly_compress_d10",0x2a8; "in_poly_compress_du",0x2a8;
-    "in_poly_reduce_2_end",0x2a8; "in_polyvec_compress_du",0x2a8;
+    "in_polyvec_add_end",0x248; "in_polyvec_add_part2_end",0x248;
+    "loop4",0x248; "loop4_test",0x258; "loop4_back",0x25c;
+    "loop4_exit",0x260; "in_poly_add_2_end",0x268; "in_poly_add_3",0x268;
+    "loop5",0x268; "loop5_test",0x278; "loop5_back",0x27c;
+    "in_poly_add_3_end",0x280; "in_poly_reduce_1",0x280;
+    "in_polyvec_reduce",0x280; "loop5_exit",0x280;
+    "after_mlk_poly_reduce_c_1",0x28c; "after_mlk_poly_reduce_c_2",0x298;
+    "after_mlk_poly_reduce_c_3",0x2a0; "in_poly_reduce_1_end",0x2a0;
+    "in_poly_reduce_2",0x2a0; "in_polyvec_reduce_end",0x2a0;
+    "after_mlk_poly_reduce_c_4",0x2a8; "in_poly_compress_d10",0x2a8;
+    "in_poly_compress_du",0x2a8; "in_poly_reduce_2_end",0x2a8;
+    "in_polyvec_compress_du",0x2a8;
     "after_mlk_poly_compress_d10_c_1",0x2b8;
     "after_mlk_poly_compress_d10_c_2",0x2c4;
     "after_mlk_poly_compress_d10_c_3",0x2d0;
@@ -753,10 +978,16 @@ install_layout (layout_labels [
     "after_stack_chk_fail",0x3c8];
   "mlkem_shake256",
    ["adrp1",0x8; "in_keccakf1600_extract_bytes",0x30;
+    "in_keccakf1600_extract_bytes_part1",0x30;
+    "in_keccakf1600_extract_bytes_part1_end",0x34;
     "after_mlk_keccak_absorb_once",0x4c; "in_keccakf1600_permute",0x50;
     "loop1",0x50; "after_mlk_keccakf1600_permute_c",0x58;
-    "in_keccakf1600_permute_end",0x58; "after_memcpy",0x78;
-    "in_keccakf1600_extract_bytes_end",0x78; "loop1_test",0x78;
+    "in_keccakf1600_permute_end",0x58;
+    "in_keccakf1600_extract_bytes_part2",0x5c;
+    "in_keccakf1600_extract_bytes_part2_end",0x6c;
+    "in_keccakf1600_extract_bytes_part3",0x70; "after_memcpy",0x78;
+    "in_keccakf1600_extract_bytes_end",0x78;
+    "in_keccakf1600_extract_bytes_part3_end",0x78; "loop1_test",0x78;
     "loop1_back",0x7c; "loop1_exit",0x80; "adrp2",0xa0; "ret",0xcc;
     "after_stack_chk_fail",0xd4];
   "mlkem1024_poly_getnoise_eta2",
@@ -768,9 +999,12 @@ install_layout (layout_labels [
     "after_mlkem_poly_cbd2",0x58; "adrp2",0x78; "ret",0x9c;
     "after_stack_chk_fail",0xa4];
   "mlkem1024_indcpa_enc",
-   ["adrp1",0x10; "in_poly_frombytes",0x58; "in_polyvec_frombytes",0x58;
-    "loop1",0x58; "after_mlk_poly_frombytes_c",0x68;
-    "in_poly_frombytes_end",0x68; "loop1_test",0x6c; "loop1_back",0x70;
+   ["adrp1",0x10; "in_poly_frombytes",0x58;
+    "in_poly_frombytes_part1",0x58; "in_polyvec_frombytes",0x58;
+    "loop1",0x58; "in_poly_frombytes_part1_end",0x60;
+    "in_poly_frombytes_part2",0x64; "after_mlk_poly_frombytes_c",0x68;
+    "in_poly_frombytes_end",0x68; "in_poly_frombytes_part2_end",0x68;
+    "loop1_test",0x6c; "loop1_back",0x70;
     "in_polyvec_frombytes_end",0x74; "loop1_exit",0x74;
     "after_mlkem_poly_frommsg",0xac; "after_mlkem1024_gen_matrix",0xc0;
     "after_mlkem1024_poly_getnoise_eta1_4x_1",0xf8;
@@ -779,14 +1013,24 @@ install_layout (layout_labels [
     "in_polyvec_ntt",0x140; "after_mlk_poly_ntt_c_1",0x148;
     "after_mlk_poly_ntt_c_2",0x150; "after_mlk_poly_ntt_c_3",0x158;
     "after_mlk_poly_ntt_c_4",0x170; "in_poly_mulcache_compute",0x170;
-    "in_poly_ntt_end",0x170; "in_polyvec_mulcache_compute",0x170;
+    "in_poly_mulcache_compute_part1",0x170; "in_poly_ntt_end",0x170;
+    "in_polyvec_mulcache_compute",0x170;
+    "in_polyvec_mulcache_compute_part1",0x170;
     "in_polyvec_ntt_end",0x170; "loop2",0x170;
+    "in_poly_mulcache_compute_part1_end",0x178;
+    "in_poly_mulcache_compute_part2",0x17c;
     "after_mlk_poly_mulcache_compute_c",0x180;
-    "in_poly_mulcache_compute_end",0x180; "loop2_test",0x184;
+    "in_poly_mulcache_compute_end",0x180;
+    "in_poly_mulcache_compute_part2_end",0x180; "loop2_test",0x184;
     "loop2_back",0x188; "loop2_exit",0x18c;
-    "in_polyvec_basemul_acc_montgomery_cached_1",0x1a0; "loop3",0x1a0;
+    "in_polyvec_basemul_acc_montgomery_cached_1",0x1a0;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part1",0x1a0;
+    "in_polyvec_mulcache_compute_part1_end",0x1a0; "loop3",0x1a0;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part1_end",0x1b0;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part2",0x1b4;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c1024_1",0x1b8;
     "in_polyvec_basemul_acc_montgomery_cached_1_end",0x1b8;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part2_end",0x1b8;
     "loop3_test",0x1bc; "loop3_back",0x1c0;
     "in_polyvec_basemul_acc_montgomery_cached_2",0x1c4;
     "loop3_exit",0x1c4;
@@ -802,33 +1046,69 @@ install_layout (layout_labels [
     "in_polyvec_invntt_tomont_end",0x200;
     "after_mlk_poly_invntt_tomont_c_5",0x208;
     "in_poly_invntt_tomont_2_end",0x208; "in_polyvec_add",0x208;
-    "loop4",0x20c; "in_poly_add_1",0x210;
-    "in_polyvec_mulcache_compute_end",0x210; "loop5",0x210;
+    "in_polyvec_add_part1",0x208; "in_polyvec_add_part1_end",0x20c;
+    "in_polyvec_mulcache_compute_part2",0x20c; "loop4",0x20c;
+    "in_poly_add_1",0x210; "in_polyvec_add_part2",0x210;
+    "in_polyvec_mulcache_compute_end",0x210;
+    "in_polyvec_mulcache_compute_part2_end",0x210; "loop5",0x210;
     "loop5_test",0x224; "loop5_back",0x228; "in_poly_add_1_end",0x22c;
     "loop5_exit",0x22c; "loop4_test",0x234; "loop4_back",0x238;
     "loop4_exit",0x23c; "in_poly_add_2",0x250;
-    "in_polyvec_add_end",0x250; "loop6",0x250; "loop6_test",0x260;
-    "loop6_back",0x264; "loop6_exit",0x268; "in_poly_add_2_end",0x270;
-    "in_poly_add_3",0x270; "loop7",0x270; "loop7_test",0x280;
-    "loop7_back",0x284; "in_poly_add_3_end",0x288;
-    "in_poly_reduce_1",0x288; "in_polyvec_reduce",0x288;
-    "loop7_exit",0x288; "after_mlk_poly_reduce_c_1",0x290;
-    "after_mlk_poly_reduce_c_2",0x298; "after_mlk_poly_reduce_c_3",0x2a0;
-    "after_mlk_poly_reduce_c_4",0x2a8; "in_poly_reduce_1_end",0x2a8;
-    "in_poly_reduce_2",0x2a8; "in_polyvec_reduce_end",0x2a8;
-    "in_poly_compress_d11",0x2ac; "in_poly_compress_du",0x2ac;
-    "in_polyvec_compress_du",0x2ac; "after_mlk_poly_reduce_c_5",0x2b4;
-    "in_poly_reduce_2_end",0x2b4; "loop8",0x2d0; "loop9",0x2e0;
-    "loop10",0x2e8; "loop10_test",0x300; "loop10_back",0x304;
-    "loop10_exit",0x308; "loop9_test",0x3cc; "loop9_back",0x3d0;
-    "in_poly_compress_d11_end",0x3d4; "in_poly_compress_du_end",0x3d4;
-    "loop9_exit",0x3d4; "loop8_test",0x3dc; "loop8_back",0x3e0;
-    "in_polyvec_compress_du_end",0x3e4; "loop8_exit",0x3e4;
-    "in_poly_compress_d5",0x3ec; "in_poly_compress_dv",0x3ec;
+    "in_polyvec_add_end",0x250; "in_polyvec_add_part2_end",0x250;
+    "loop6",0x250; "loop6_test",0x260; "loop6_back",0x264;
+    "loop6_exit",0x268; "in_poly_add_2_end",0x270; "in_poly_add_3",0x270;
+    "loop7",0x270; "loop7_test",0x280; "loop7_back",0x284;
+    "in_poly_add_3_end",0x288; "in_poly_reduce_1",0x288;
+    "in_polyvec_reduce",0x288; "loop7_exit",0x288;
+    "after_mlk_poly_reduce_c_1",0x290; "after_mlk_poly_reduce_c_2",0x298;
+    "after_mlk_poly_reduce_c_3",0x2a0; "after_mlk_poly_reduce_c_4",0x2a8;
+    "in_poly_reduce_1_end",0x2a8; "in_poly_reduce_2",0x2a8;
+    "in_poly_reduce_2_part1",0x2a8; "in_polyvec_reduce_end",0x2a8;
+    "in_poly_compress_d11",0x2ac; "in_poly_compress_d11_part1",0x2ac;
+    "in_poly_compress_du",0x2ac; "in_poly_compress_du_part1",0x2ac;
+    "in_poly_reduce_2_part1_end",0x2ac; "in_polyvec_compress_du",0x2ac;
+    "in_polyvec_compress_du_part1",0x2ac;
+    "in_poly_compress_d11_part1_end",0x2b0;
+    "in_poly_compress_du_part1_end",0x2b0;
+    "in_poly_reduce_2_part2",0x2b0;
+    "in_polyvec_compress_du_part1_end",0x2b0;
+    "after_mlk_poly_reduce_c_5",0x2b4; "in_poly_reduce_2_end",0x2b4;
+    "in_poly_reduce_2_part2_end",0x2b4;
+    "in_polyvec_compress_du_part2",0x2b4;
+    "in_poly_compress_d11_part2",0x2bc;
+    "in_poly_compress_du_part2",0x2bc;
+    "in_poly_compress_d11_part2_end",0x2c4;
+    "in_poly_compress_du_part2_end",0x2c4;
+    "in_poly_compress_d11_part3",0x2c8;
+    "in_poly_compress_du_part3",0x2c8;
+    "in_poly_compress_d11_part3_end",0x2d0;
+    "in_poly_compress_du_part3_end",0x2d0; "loop8",0x2d0;
+    "in_poly_compress_d11_part4",0x2d4;
+    "in_poly_compress_du_part4",0x2d4;
+    "in_poly_compress_d11_part4_end",0x2d8;
+    "in_poly_compress_du_part4_end",0x2d8;
+    "in_poly_compress_d11_part5",0x2e0;
+    "in_poly_compress_du_part5",0x2e0; "loop9",0x2e0; "loop10",0x2e8;
+    "loop10_test",0x300; "loop10_back",0x304; "loop10_exit",0x308;
+    "loop9_test",0x3cc; "loop9_back",0x3d0;
+    "in_poly_compress_d11_end",0x3d4;
+    "in_poly_compress_d11_part5_end",0x3d4;
+    "in_poly_compress_du_end",0x3d4;
+    "in_poly_compress_du_part5_end",0x3d4; "loop9_exit",0x3d4;
+    "loop8_test",0x3dc; "loop8_back",0x3e0;
+    "in_polyvec_compress_du_end",0x3e4;
+    "in_polyvec_compress_du_part2_end",0x3e4; "loop8_exit",0x3e4;
+    "in_poly_compress_d5",0x3ec; "in_poly_compress_d5_part1",0x3ec;
+    "in_poly_compress_dv",0x3ec; "in_poly_compress_dv_part1",0x3ec;
+    "in_poly_compress_d5_part1_end",0x3f4;
+    "in_poly_compress_dv_part1_end",0x3f4;
+    "in_poly_compress_d5_part2",0x3fc; "in_poly_compress_dv_part2",0x3fc;
     "loop11",0x408; "loop12",0x418; "loop12_test",0x434;
     "loop12_back",0x438; "loop12_exit",0x43c; "loop11_test",0x4bc;
     "loop11_back",0x4c0; "in_poly_compress_d5_end",0x4c4;
-    "in_poly_compress_dv_end",0x4c4; "loop11_exit",0x4c4;
+    "in_poly_compress_d5_part2_end",0x4c4;
+    "in_poly_compress_dv_end",0x4c4;
+    "in_poly_compress_dv_part2_end",0x4c4; "loop11_exit",0x4c4;
     "after_memset_1",0x4d4; "after_memset_2",0x4e8;
     "after_memset_3",0x4fc; "after_memset_4",0x50c;
     "after_memset_5",0x51c; "after_memset_6",0x52c;
@@ -836,32 +1116,81 @@ install_layout (layout_labels [
     "after_memset_9",0x560; "adrp2",0x568; "ret",0x5a8;
     "after_stack_chk_fail",0x5b0];
   "mlkem512_indcpa_enc",
-   ["adrp1",0x8; "in_poly_frombytes",0x28; "in_polyvec_frombytes",0x28;
+   ["adrp1",0x8; "in_poly_frombytes",0x28;
+    "in_poly_frombytes_part1",0x28; "in_polyvec_frombytes",0x28;
+    "in_polyvec_frombytes_part1",0x28;
+    "in_poly_frombytes_part1_end",0x2c;
+    "in_polyvec_frombytes_part1_end",0x2c;
     "in_poly_getnoise_eta1122_4x",0x30;
+    "in_poly_getnoise_eta1122_4x_part1",0x30;
+    "in_poly_getnoise_eta1122_4x_part1_end",0x34;
+    "in_poly_getnoise_eta1122_4x_part2",0x3c;
+    "in_poly_frombytes_part2",0x40;
+    "in_poly_getnoise_eta1122_4x_part2_end",0x40;
+    "in_polyvec_frombytes_part2",0x40;
+    "in_poly_frombytes_part2_end",0x44;
+    "in_polyvec_frombytes_part2_end",0x44;
+    "in_poly_getnoise_eta1122_4x_part3",0x48;
+    "in_poly_getnoise_eta1122_4x_part3_end",0x50;
+    "in_poly_frombytes_part3",0x5c; "in_polyvec_frombytes_part3",0x5c;
+    "in_poly_frombytes_part3_end",0x60;
+    "in_poly_getnoise_eta1122_4x_part4",0x60;
+    "in_polyvec_frombytes_part3_end",0x60;
+    "in_poly_getnoise_eta1122_4x_part4_end",0x68;
+    "in_poly_getnoise_eta1122_4x_part5",0x74;
+    "in_poly_frombytes_part4",0x7c;
+    "in_poly_getnoise_eta1122_4x_part5_end",0x7c;
+    "in_polyvec_frombytes_part4",0x7c;
     "after_mlk_poly_frombytes_c_1",0x80;
     "after_mlk_poly_frombytes_c_2",0x8c; "in_poly_frombytes_end",0x8c;
-    "in_polyvec_frombytes_end",0x8c; "after_mlkem_poly_frommsg",0xa8;
-    "after_mlkem512_gen_matrix",0xb8; "after_mlkem_shake256x4",0x118;
-    "after_mlkem_poly_cbd3_1",0x124; "after_mlkem_poly_cbd3_2",0x130;
-    "after_mlkem_poly_cbd2_1",0x144; "after_mlkem_poly_cbd2_2",0x150;
-    "after_memset_1",0x160; "in_poly_getnoise_eta1122_4x_end",0x184;
+    "in_poly_frombytes_part4_end",0x8c; "in_polyvec_frombytes_end",0x8c;
+    "in_polyvec_frombytes_part4_end",0x8c;
+    "after_mlkem_poly_frommsg",0xa8; "after_mlkem512_gen_matrix",0xb8;
+    "in_poly_getnoise_eta1122_4x_part6",0xb8;
+    "after_mlkem_shake256x4",0x118; "after_mlkem_poly_cbd3_1",0x124;
+    "after_mlkem_poly_cbd3_2",0x130; "after_mlkem_poly_cbd2_1",0x144;
+    "after_mlkem_poly_cbd2_2",0x150; "after_memset_1",0x160;
+    "in_poly_getnoise_eta1122_4x_end",0x184;
+    "in_poly_getnoise_eta1122_4x_part6_end",0x184;
     "after_mlkem1024_poly_getnoise_eta2",0x19c; "in_poly_ntt",0x19c;
     "in_polyvec_ntt",0x19c; "after_mlk_poly_ntt_c_1",0x1a4;
     "after_mlk_poly_ntt_c_2",0x1ac; "in_poly_mulcache_compute",0x1ac;
-    "in_poly_ntt_end",0x1ac; "in_polyvec_mulcache_compute",0x1ac;
+    "in_poly_mulcache_compute_part1",0x1ac; "in_poly_ntt_end",0x1ac;
+    "in_polyvec_mulcache_compute",0x1ac;
+    "in_polyvec_mulcache_compute_part1",0x1ac;
     "in_polyvec_ntt_end",0x1ac;
     "after_mlk_poly_mulcache_compute_c_1",0x1b8;
+    "in_poly_mulcache_compute_part1_end",0x1b8;
     "in_polyvec_basemul_acc_montgomery_cached_1",0x1b8;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part1",0x1b8;
+    "in_polyvec_mulcache_compute_part1_end",0x1b8;
+    "in_poly_mulcache_compute_part2",0x1bc;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part1_end",0x1bc;
+    "in_polyvec_mulcache_compute_part2",0x1bc;
     "after_mlk_poly_mulcache_compute_c_2",0x1c8;
     "in_poly_mulcache_compute_end",0x1c8;
+    "in_poly_mulcache_compute_part2_end",0x1c8;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part2",0x1c8;
     "in_polyvec_mulcache_compute_end",0x1c8;
+    "in_polyvec_mulcache_compute_part2_end",0x1c8;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c512_1",0x1dc;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part2_end",0x1dc;
     "in_polyvec_basemul_acc_montgomery_cached_2",0x1dc;
+    "in_polyvec_basemul_acc_montgomery_cached_2_part1",0x1dc;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part3",0x1e0;
+    "in_polyvec_basemul_acc_montgomery_cached_2_part1_end",0x1e0;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part3_end",0x1e4;
+    "in_polyvec_basemul_acc_montgomery_cached_2_part2",0x1e4;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part4",0x1e8;
+    "in_polyvec_basemul_acc_montgomery_cached_2_part2_end",0x1e8;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c512_2",0x1f8;
     "in_polyvec_basemul_acc_montgomery_cached_1_end",0x1f8;
+    "in_polyvec_basemul_acc_montgomery_cached_1_part4_end",0x1f8;
+    "in_polyvec_basemul_acc_montgomery_cached_2_part3",0x1f8;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c512_3",0x20c;
     "in_poly_invntt_tomont_1",0x20c;
     "in_polyvec_basemul_acc_montgomery_cached_2_end",0x20c;
+    "in_polyvec_basemul_acc_montgomery_cached_2_part3_end",0x20c;
     "in_polyvec_invntt_tomont",0x20c;
     "after_mlk_poly_invntt_tomont_c_1",0x214;
     "after_mlk_poly_invntt_tomont_c_2",0x21c;
@@ -902,29 +1231,53 @@ install_layout (layout_labels [
     "after_mlk_keccakf1600_permute_c",0x48;
     "in_keccakf1600_permute_end",0x48;
     "in_keccakf1600_extract_bytes",0x4c;
-    "in_keccakf1600_extract_bytes_end",0x58; "adrp2",0x6c; "ret",0x90;
-    "after_stack_chk_fail",0x98];
+    "in_keccakf1600_extract_bytes_part1",0x4c;
+    "in_keccakf1600_extract_bytes_part1_end",0x50;
+    "in_keccakf1600_extract_bytes_part2",0x54;
+    "in_keccakf1600_extract_bytes_end",0x58;
+    "in_keccakf1600_extract_bytes_part2_end",0x58; "adrp2",0x6c;
+    "ret",0x90; "after_stack_chk_fail",0x98];
   "mlkem512_check_pk",
-   ["adrp1",0x8; "in_poly_frombytes",0x10; "in_polyvec_frombytes",0x10;
-    "in_poly_tobytes",0x38; "in_polyvec_tobytes",0x38;
+   ["adrp1",0x8; "in_poly_frombytes",0x10;
+    "in_poly_frombytes_part1",0x10; "in_polyvec_frombytes",0x10;
+    "in_polyvec_frombytes_part1",0x10;
+    "in_poly_frombytes_part1_end",0x14;
+    "in_polyvec_frombytes_part1_end",0x14;
+    "in_poly_frombytes_part2",0x24; "in_polyvec_frombytes_part2",0x24;
+    "in_poly_frombytes_part2_end",0x2c;
+    "in_polyvec_frombytes_part2_end",0x2c; "in_poly_tobytes",0x38;
+    "in_poly_tobytes_part1",0x38; "in_polyvec_tobytes",0x38;
+    "in_polyvec_tobytes_part1",0x38; "in_poly_frombytes_part3",0x40;
+    "in_poly_tobytes_part1_end",0x40; "in_polyvec_frombytes_part3",0x40;
+    "in_polyvec_tobytes_part1_end",0x40;
     "after_mlk_poly_frombytes_c_1",0x44;
+    "in_poly_frombytes_part3_end",0x4c; "in_poly_tobytes_part2",0x4c;
+    "in_polyvec_frombytes_part3_end",0x4c;
+    "in_polyvec_tobytes_part2",0x4c; "in_poly_frombytes_part4",0x50;
+    "in_poly_tobytes_part2_end",0x50; "in_polyvec_frombytes_part4",0x50;
+    "in_polyvec_tobytes_part2_end",0x50;
     "after_mlk_poly_frombytes_c_2",0x54; "in_poly_frombytes_end",0x54;
-    "in_poly_reduce",0x54; "in_polyvec_frombytes_end",0x54;
-    "in_polyvec_reduce",0x54; "after_mlk_poly_reduce_c_1",0x5c;
-    "after_mlk_poly_reduce_c_2",0x64; "in_poly_reduce_end",0x64;
-    "in_polyvec_reduce_end",0x64; "after_mlk_poly_tobytes_c_1",0x70;
-    "after_mlk_poly_tobytes_c_2",0x7c; "in_poly_tobytes_end",0x7c;
-    "in_polyvec_tobytes_end",0x7c; "loop1",0x88; "loop1_test",0x9c;
-    "loop1_back",0xa0; "loop1_exit",0xa4; "after_memset_1",0x114;
-    "adrp2",0x124; "after_memset_2",0x124; "ret",0x150;
-    "after_stack_chk_fail",0x158];
+    "in_poly_frombytes_part4_end",0x54; "in_poly_reduce",0x54;
+    "in_polyvec_frombytes_end",0x54;
+    "in_polyvec_frombytes_part4_end",0x54; "in_polyvec_reduce",0x54;
+    "after_mlk_poly_reduce_c_1",0x5c; "after_mlk_poly_reduce_c_2",0x64;
+    "in_poly_reduce_end",0x64; "in_poly_tobytes_part3",0x64;
+    "in_polyvec_reduce_end",0x64; "in_polyvec_tobytes_part3",0x64;
+    "after_mlk_poly_tobytes_c_1",0x70; "after_mlk_poly_tobytes_c_2",0x7c;
+    "in_poly_tobytes_end",0x7c; "in_poly_tobytes_part3_end",0x7c;
+    "in_polyvec_tobytes_end",0x7c; "in_polyvec_tobytes_part3_end",0x7c;
+    "loop1",0x88; "loop1_test",0x9c; "loop1_back",0xa0;
+    "loop1_exit",0xa4; "after_memset_1",0x114; "adrp2",0x124;
+    "after_memset_2",0x124; "ret",0x150; "after_stack_chk_fail",0x158];
   "mlkem512_check_sk",
    ["adrp1",0xc; "after_mlkem_sha3_256",0x38; "adrp2",0xbc; "ret",0xe0;
     "after_stack_chk_fail",0xe8];
   "mlkem512_keypair_derand",
    ["after_mlkem512_indcpa_keypair_derand",0x1c;
-    "in_keypair_derand",0x28; "after_memcpy",0x34;
-    "after_mlkem_sha3_256",0x44; "in_keypair_derand_end",0x54;
+    "in_keypair_derand",0x28; "in_keypair_derand_part1",0x28;
+    "after_memcpy",0x34; "after_mlkem_sha3_256",0x44;
+    "in_keypair_derand_part1_end",0x4c; "in_keypair_derand_part2",0x50;
+    "in_keypair_derand_end",0x54; "in_keypair_derand_part2_end",0x54;
     "ret1",0x60; "after_memset_1",0x70; "after_memset_2",0x80;
     "ret2",0x90];
   "mlkem512_keypair",
@@ -944,35 +1297,70 @@ install_layout (layout_labels [
    ["adrp1",0x8; "after_mlkem512_check_sk",0x4c; "join1",0x68;
     "after_memset_1",0x78; "adrp2",0x8c; "ret",0xc8;
     "in_indcpa_dec",0xcc; "in_poly_decompress_d10",0xcc;
-    "in_poly_decompress_du",0xcc; "in_polyvec_decompress_du",0xcc;
+    "in_poly_decompress_d10_part1",0xcc; "in_poly_decompress_du",0xcc;
+    "in_poly_decompress_du_part1",0xcc; "in_polyvec_decompress_du",0xcc;
+    "in_polyvec_decompress_du_part1",0xcc;
     "after_mlk_poly_decompress_d10_c_1",0xe0;
-    "in_poly_decompress_d4",0xe0; "in_poly_decompress_dv",0xe0;
+    "in_poly_decompress_d10_part1_end",0xe0;
+    "in_poly_decompress_d4",0xe0; "in_poly_decompress_d4_part1",0xe0;
+    "in_poly_decompress_du_part1_end",0xe0; "in_poly_decompress_dv",0xe0;
+    "in_poly_decompress_dv_part1",0xe0;
+    "in_polyvec_decompress_du_part1_end",0xe0;
+    "in_poly_decompress_d10_part2",0xe4;
+    "in_poly_decompress_d4_part1_end",0xe4;
+    "in_poly_decompress_du_part2",0xe4;
+    "in_poly_decompress_dv_part1_end",0xe4;
+    "in_polyvec_decompress_du_part2",0xe4;
     "after_mlk_poly_decompress_d10_c_2",0xf0;
-    "in_poly_decompress_d10_end",0xf0; "in_poly_decompress_du_end",0xf0;
-    "in_poly_mulcache_compute",0xf0; "in_polyvec_decompress_du_end",0xf0;
+    "in_poly_decompress_d10_end",0xf0;
+    "in_poly_decompress_d10_part2_end",0xf0;
+    "in_poly_decompress_du_end",0xf0;
+    "in_poly_decompress_du_part2_end",0xf0;
+    "in_poly_mulcache_compute",0xf0;
+    "in_poly_mulcache_compute_part1",0xf0;
+    "in_polyvec_decompress_du_end",0xf0;
+    "in_polyvec_decompress_du_part2_end",0xf0;
     "in_polyvec_mulcache_compute",0xf0;
+    "in_polyvec_mulcache_compute_part1",0xf0;
+    "in_poly_decompress_d4_part2",0xf4;
+    "in_poly_decompress_dv_part2",0xf4;
+    "in_poly_mulcache_compute_part1_end",0xf4;
+    "in_polyvec_mulcache_compute_part1_end",0xf4;
     "after_mlk_poly_decompress_d4_c",0x100;
-    "in_poly_decompress_d4_end",0x100; "in_poly_decompress_dv_end",0x100;
+    "in_poly_decompress_d4_end",0x100;
+    "in_poly_decompress_d4_part2_end",0x100;
+    "in_poly_decompress_dv_end",0x100;
+    "in_poly_decompress_dv_part2_end",0x100;
     "in_polyvec_basemul_acc_montgomery_cached",0x100;
-    "in_poly_frombytes",0x104; "in_polyvec_frombytes",0x104;
-    "after_mlk_poly_frombytes_c_1",0x110;
+    "in_polyvec_basemul_acc_montgomery_cached_part1",0x100;
+    "in_poly_frombytes",0x104;
+    "in_polyvec_basemul_acc_montgomery_cached_part1_end",0x104;
+    "in_polyvec_frombytes",0x104; "after_mlk_poly_frombytes_c_1",0x110;
     "after_mlk_poly_frombytes_c_2",0x11c; "in_poly_frombytes_end",0x11c;
     "in_poly_ntt",0x11c; "in_polyvec_frombytes_end",0x11c;
     "in_polyvec_ntt",0x11c; "after_mlk_poly_ntt_c_1",0x124;
-    "after_mlk_poly_ntt_c_2",0x12c; "in_poly_ntt_end",0x12c;
+    "after_mlk_poly_ntt_c_2",0x12c;
+    "in_poly_mulcache_compute_part2",0x12c; "in_poly_ntt_end",0x12c;
+    "in_polyvec_mulcache_compute_part2",0x12c;
     "in_polyvec_ntt_end",0x12c;
     "after_mlk_poly_mulcache_compute_c_1",0x138;
     "after_mlk_poly_mulcache_compute_c_2",0x144;
     "in_poly_mulcache_compute_end",0x144;
+    "in_poly_mulcache_compute_part2_end",0x144;
+    "in_polyvec_basemul_acc_montgomery_cached_part2",0x144;
     "in_polyvec_mulcache_compute_end",0x144;
+    "in_polyvec_mulcache_compute_part2_end",0x144;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c512",0x158;
     "in_poly_invntt_tomont",0x158;
     "in_polyvec_basemul_acc_montgomery_cached_end",0x158;
+    "in_polyvec_basemul_acc_montgomery_cached_part2_end",0x158;
     "after_mlk_poly_invntt_tomont_c",0x160;
     "in_poly_invntt_tomont_end",0x160; "in_poly_sub",0x160;
     "loop1",0x170; "loop1_test",0x180; "loop1_back",0x184;
     "in_poly_sub_end",0x188; "loop1_exit",0x188; "in_poly_reduce",0x18c;
-    "after_mlk_poly_reduce_c",0x198; "in_poly_reduce_end",0x198;
+    "in_poly_reduce_part1",0x18c; "in_poly_reduce_part1_end",0x190;
+    "in_poly_reduce_part2",0x194; "after_mlk_poly_reduce_c",0x198;
+    "in_poly_reduce_end",0x198; "in_poly_reduce_part2_end",0x198;
     "after_mlkem_poly_tomsg",0x1a4; "after_memset_2",0x1b4;
     "after_memset_3",0x1c4; "after_memset_4",0x1d4;
     "after_memset_5",0x1e4; "after_memset_6",0x1f4;
@@ -982,28 +1370,51 @@ install_layout (layout_labels [
     "after_mlkem_shake256",0x2f4; "loop3",0x300; "loop3_test",0x324;
     "loop3_back",0x328; "loop3_exit",0x32c; "after_stack_chk_fail",0x334];
   "mlkem768_check_pk",
-   ["adrp1",0x8; "in_poly_frombytes",0x10; "in_polyvec_frombytes",0x10;
-    "in_poly_tobytes",0x3c; "in_polyvec_tobytes",0x3c;
+   ["adrp1",0x8; "in_poly_frombytes",0x10;
+    "in_poly_frombytes_part1",0x10; "in_polyvec_frombytes",0x10;
+    "in_polyvec_frombytes_part1",0x10;
+    "in_poly_frombytes_part1_end",0x14;
+    "in_polyvec_frombytes_part1_end",0x14;
+    "in_poly_frombytes_part2",0x24; "in_polyvec_frombytes_part2",0x24;
+    "in_poly_frombytes_part2_end",0x2c;
+    "in_polyvec_frombytes_part2_end",0x2c;
+    "in_poly_frombytes_part3",0x38; "in_polyvec_frombytes_part3",0x38;
+    "in_poly_frombytes_part3_end",0x3c; "in_poly_tobytes",0x3c;
+    "in_poly_tobytes_part1",0x3c; "in_polyvec_frombytes_part3_end",0x3c;
+    "in_polyvec_tobytes",0x3c; "in_polyvec_tobytes_part1",0x3c;
+    "in_poly_frombytes_part4",0x44; "in_poly_tobytes_part1_end",0x44;
+    "in_polyvec_frombytes_part4",0x44;
+    "in_polyvec_tobytes_part1_end",0x44;
     "after_mlk_poly_frombytes_c_1",0x48;
+    "in_poly_frombytes_part4_end",0x50; "in_poly_tobytes_part2",0x50;
+    "in_polyvec_frombytes_part4_end",0x50;
+    "in_polyvec_tobytes_part2",0x50; "in_poly_frombytes_part5",0x54;
+    "in_poly_tobytes_part2_end",0x54; "in_polyvec_frombytes_part5",0x54;
+    "in_polyvec_tobytes_part2_end",0x54;
     "after_mlk_poly_frombytes_c_2",0x58;
     "after_mlk_poly_frombytes_c_3",0x64; "in_poly_frombytes_end",0x64;
-    "in_poly_reduce",0x64; "in_polyvec_frombytes_end",0x64;
-    "in_polyvec_reduce",0x64; "after_mlk_poly_reduce_c_1",0x6c;
-    "after_mlk_poly_reduce_c_2",0x74; "after_mlk_poly_reduce_c_3",0x7c;
-    "in_poly_reduce_end",0x7c; "in_polyvec_reduce_end",0x7c;
-    "after_mlk_poly_tobytes_c_1",0x88; "after_mlk_poly_tobytes_c_2",0x94;
-    "after_mlk_poly_tobytes_c_3",0xa0; "in_poly_tobytes_end",0xa0;
-    "in_polyvec_tobytes_end",0xa0; "loop1",0xac; "loop1_test",0xc0;
-    "loop1_back",0xc4; "loop1_exit",0xc8; "after_memset_1",0x138;
-    "adrp2",0x148; "after_memset_2",0x148; "ret",0x174;
-    "after_stack_chk_fail",0x17c];
+    "in_poly_frombytes_part5_end",0x64; "in_poly_reduce",0x64;
+    "in_polyvec_frombytes_end",0x64;
+    "in_polyvec_frombytes_part5_end",0x64; "in_polyvec_reduce",0x64;
+    "after_mlk_poly_reduce_c_1",0x6c; "after_mlk_poly_reduce_c_2",0x74;
+    "after_mlk_poly_reduce_c_3",0x7c; "in_poly_reduce_end",0x7c;
+    "in_poly_tobytes_part3",0x7c; "in_polyvec_reduce_end",0x7c;
+    "in_polyvec_tobytes_part3",0x7c; "after_mlk_poly_tobytes_c_1",0x88;
+    "after_mlk_poly_tobytes_c_2",0x94; "after_mlk_poly_tobytes_c_3",0xa0;
+    "in_poly_tobytes_end",0xa0; "in_poly_tobytes_part3_end",0xa0;
+    "in_polyvec_tobytes_end",0xa0; "in_polyvec_tobytes_part3_end",0xa0;
+    "loop1",0xac; "loop1_test",0xc0; "loop1_back",0xc4;
+    "loop1_exit",0xc8; "after_memset_1",0x138; "adrp2",0x148;
+    "after_memset_2",0x148; "ret",0x174; "after_stack_chk_fail",0x17c];
   "mlkem768_check_sk",
    ["adrp1",0xc; "after_mlkem_sha3_256",0x38; "adrp2",0xbc; "ret",0xe0;
     "after_stack_chk_fail",0xe8];
   "mlkem768_keypair_derand",
    ["after_mlkem768_indcpa_keypair_derand",0x1c;
-    "in_keypair_derand",0x28; "after_memcpy",0x34;
-    "after_mlkem_sha3_256",0x44; "in_keypair_derand_end",0x54;
+    "in_keypair_derand",0x28; "in_keypair_derand_part1",0x28;
+    "after_memcpy",0x34; "after_mlkem_sha3_256",0x44;
+    "in_keypair_derand_part1_end",0x4c; "in_keypair_derand_part2",0x50;
+    "in_keypair_derand_end",0x54; "in_keypair_derand_part2_end",0x54;
     "ret1",0x60; "after_memset_1",0x70; "after_memset_2",0x80;
     "ret2",0x90];
   "mlkem768_keypair",
@@ -1023,39 +1434,104 @@ install_layout (layout_labels [
    ["adrp1",0x8; "after_mlkem768_check_sk",0x50; "join1",0x6c;
     "after_memset_1",0x7c; "adrp2",0x90; "ret",0xd0;
     "in_indcpa_dec",0xd4; "in_poly_decompress_d10",0xd4;
-    "in_poly_decompress_du",0xd4; "in_polyvec_decompress_du",0xd4;
+    "in_poly_decompress_d10_part1",0xd4; "in_poly_decompress_du",0xd4;
+    "in_poly_decompress_du_part1",0xd4; "in_polyvec_decompress_du",0xd4;
+    "in_polyvec_decompress_du_part1",0xd4;
     "after_mlk_poly_decompress_d10_c_1",0xe8;
     "after_mlk_poly_decompress_d10_c_2",0xf8;
-    "in_poly_decompress_d4",0xf8; "in_poly_decompress_dv",0xf8;
+    "in_poly_decompress_d10_part1_end",0xf8;
+    "in_poly_decompress_d4",0xf8; "in_poly_decompress_d4_part1",0xf8;
+    "in_poly_decompress_du_part1_end",0xf8; "in_poly_decompress_dv",0xf8;
+    "in_poly_decompress_dv_part1",0xf8;
+    "in_polyvec_decompress_du_part1_end",0xf8;
+    "in_poly_decompress_d10_part2",0xfc;
+    "in_poly_decompress_d4_part1_end",0xfc;
+    "in_poly_decompress_du_part2",0xfc;
+    "in_poly_decompress_dv_part1_end",0xfc;
+    "in_polyvec_decompress_du_part2",0xfc;
+    "in_poly_decompress_d10_part2_end",0x100;
+    "in_poly_decompress_d4_part2",0x100;
+    "in_poly_decompress_du_part2_end",0x100;
+    "in_poly_decompress_dv_part2",0x100;
+    "in_polyvec_decompress_du_part2_end",0x100;
+    "in_poly_decompress_d10_part3",0x104;
+    "in_poly_decompress_d4_part2_end",0x104;
+    "in_poly_decompress_du_part3",0x104;
+    "in_poly_decompress_dv_part2_end",0x104;
+    "in_polyvec_decompress_du_part3",0x104;
     "after_mlk_poly_decompress_d10_c_3",0x10c;
     "in_poly_decompress_d10_end",0x10c;
-    "in_poly_decompress_du_end",0x10c; "in_poly_mulcache_compute",0x10c;
+    "in_poly_decompress_d10_part3_end",0x10c;
+    "in_poly_decompress_du_end",0x10c;
+    "in_poly_decompress_du_part3_end",0x10c;
+    "in_poly_mulcache_compute",0x10c;
+    "in_poly_mulcache_compute_part1",0x10c;
     "in_polyvec_decompress_du_end",0x10c;
+    "in_polyvec_decompress_du_part3_end",0x10c;
     "in_polyvec_mulcache_compute",0x10c;
+    "in_polyvec_mulcache_compute_part1",0x10c;
+    "in_poly_decompress_d4_part3",0x110;
+    "in_poly_decompress_dv_part3",0x110;
+    "in_poly_mulcache_compute_part1_end",0x110;
+    "in_polyvec_mulcache_compute_part1_end",0x110;
+    "in_poly_decompress_d4_part3_end",0x114;
+    "in_poly_decompress_dv_part3_end",0x114;
+    "in_poly_mulcache_compute_part2",0x114;
+    "in_polyvec_mulcache_compute_part2",0x114;
+    "in_poly_decompress_d4_part4",0x118;
+    "in_poly_decompress_dv_part4",0x118;
+    "in_poly_mulcache_compute_part2_end",0x118;
+    "in_polyvec_mulcache_compute_part2_end",0x118;
     "after_mlk_poly_decompress_d4_c",0x120;
-    "in_poly_decompress_d4_end",0x120; "in_poly_decompress_dv_end",0x120;
-    "in_poly_frombytes",0x120; "in_polyvec_frombytes",0x120;
+    "in_poly_decompress_d4_end",0x120;
+    "in_poly_decompress_d4_part4_end",0x120;
+    "in_poly_decompress_dv_end",0x120;
+    "in_poly_decompress_dv_part4_end",0x120; "in_poly_frombytes",0x120;
+    "in_poly_frombytes_part1",0x120; "in_polyvec_frombytes",0x120;
+    "in_polyvec_frombytes_part1",0x120;
     "after_mlk_poly_frombytes_c_1",0x12c;
     "after_mlk_poly_frombytes_c_2",0x138;
+    "in_poly_frombytes_part1_end",0x138;
     "in_polyvec_basemul_acc_montgomery_cached",0x138;
+    "in_polyvec_basemul_acc_montgomery_cached_part1",0x138;
+    "in_polyvec_frombytes_part1_end",0x138;
+    "in_poly_frombytes_part2",0x13c;
+    "in_polyvec_basemul_acc_montgomery_cached_part1_end",0x13c;
+    "in_polyvec_frombytes_part2",0x13c;
+    "in_poly_frombytes_part2_end",0x140;
+    "in_polyvec_basemul_acc_montgomery_cached_part2",0x140;
+    "in_polyvec_frombytes_part2_end",0x140;
+    "in_poly_frombytes_part3",0x144;
+    "in_polyvec_basemul_acc_montgomery_cached_part2_end",0x144;
+    "in_polyvec_frombytes_part3",0x144;
     "after_mlk_poly_frombytes_c_3",0x14c; "in_poly_frombytes_end",0x14c;
-    "in_poly_ntt",0x14c; "in_polyvec_frombytes_end",0x14c;
-    "in_polyvec_ntt",0x14c; "after_mlk_poly_ntt_c_1",0x154;
-    "after_mlk_poly_ntt_c_2",0x15c; "after_mlk_poly_ntt_c_3",0x164;
-    "in_poly_ntt_end",0x164; "in_polyvec_ntt_end",0x164;
+    "in_poly_frombytes_part3_end",0x14c; "in_poly_ntt",0x14c;
+    "in_polyvec_frombytes_end",0x14c;
+    "in_polyvec_frombytes_part3_end",0x14c; "in_polyvec_ntt",0x14c;
+    "after_mlk_poly_ntt_c_1",0x154; "after_mlk_poly_ntt_c_2",0x15c;
+    "after_mlk_poly_ntt_c_3",0x164;
+    "in_poly_mulcache_compute_part3",0x164; "in_poly_ntt_end",0x164;
+    "in_polyvec_mulcache_compute_part3",0x164;
+    "in_polyvec_ntt_end",0x164;
     "after_mlk_poly_mulcache_compute_c_1",0x170;
     "after_mlk_poly_mulcache_compute_c_2",0x17c;
     "after_mlk_poly_mulcache_compute_c_3",0x188;
     "in_poly_mulcache_compute_end",0x188;
+    "in_poly_mulcache_compute_part3_end",0x188;
+    "in_polyvec_basemul_acc_montgomery_cached_part3",0x188;
     "in_polyvec_mulcache_compute_end",0x188;
+    "in_polyvec_mulcache_compute_part3_end",0x188;
     "after_mlk_polyvec_basemul_acc_montgomery_cached_c768",0x19c;
     "in_poly_invntt_tomont",0x19c;
     "in_polyvec_basemul_acc_montgomery_cached_end",0x19c;
+    "in_polyvec_basemul_acc_montgomery_cached_part3_end",0x19c;
     "after_mlk_poly_invntt_tomont_c",0x1a4;
     "in_poly_invntt_tomont_end",0x1a4; "in_poly_sub",0x1a4;
     "loop1",0x1b0; "loop1_test",0x1c0; "loop1_back",0x1c4;
     "in_poly_sub_end",0x1c8; "loop1_exit",0x1c8; "in_poly_reduce",0x1cc;
-    "after_mlk_poly_reduce_c",0x1d8; "in_poly_reduce_end",0x1d8;
+    "in_poly_reduce_part1",0x1cc; "in_poly_reduce_part1_end",0x1d0;
+    "in_poly_reduce_part2",0x1d4; "after_mlk_poly_reduce_c",0x1d8;
+    "in_poly_reduce_end",0x1d8; "in_poly_reduce_part2_end",0x1d8;
     "after_mlkem_poly_tomsg",0x1e4; "after_memset_2",0x1f4;
     "after_memset_3",0x204; "after_memset_4",0x214;
     "after_memset_5",0x224; "after_memset_6",0x234;
@@ -1065,28 +1541,35 @@ install_layout (layout_labels [
     "after_mlkem_shake256",0x334; "loop3",0x340; "loop3_test",0x364;
     "loop3_back",0x368; "loop3_exit",0x36c; "after_stack_chk_fail",0x374];
   "mlkem1024_check_pk",
-   ["adrp1",0x8; "in_poly_frombytes",0x3c; "in_polyvec_frombytes",0x3c;
-    "loop1",0x3c; "after_mlk_poly_frombytes_c",0x4c;
-    "in_poly_frombytes_end",0x4c; "loop1_test",0x50; "loop1_back",0x54;
-    "in_poly_reduce",0x58; "in_polyvec_frombytes_end",0x58;
-    "in_polyvec_reduce",0x58; "loop1_exit",0x58;
-    "after_mlk_poly_reduce_c_1",0x60; "after_mlk_poly_reduce_c_2",0x68;
-    "after_mlk_poly_reduce_c_3",0x74; "after_mlk_poly_reduce_c_4",0x88;
-    "in_poly_reduce_end",0x88; "in_poly_tobytes",0x88;
+   ["adrp1",0x8; "in_poly_frombytes",0x3c;
+    "in_poly_frombytes_part1",0x3c; "in_polyvec_frombytes",0x3c;
+    "loop1",0x3c; "in_poly_frombytes_part1_end",0x44;
+    "in_poly_frombytes_part2",0x48; "after_mlk_poly_frombytes_c",0x4c;
+    "in_poly_frombytes_end",0x4c; "in_poly_frombytes_part2_end",0x4c;
+    "loop1_test",0x50; "loop1_back",0x54; "in_poly_reduce",0x58;
+    "in_polyvec_frombytes_end",0x58; "in_polyvec_reduce",0x58;
+    "loop1_exit",0x58; "after_mlk_poly_reduce_c_1",0x60;
+    "after_mlk_poly_reduce_c_2",0x68; "after_mlk_poly_reduce_c_3",0x74;
+    "after_mlk_poly_reduce_c_4",0x88; "in_poly_reduce_end",0x88;
+    "in_poly_tobytes",0x88; "in_poly_tobytes_part1",0x88;
     "in_polyvec_reduce_end",0x88; "in_polyvec_tobytes",0x88;
-    "loop2",0x88; "after_mlk_poly_tobytes_c",0x98;
-    "in_poly_tobytes_end",0x98; "loop2_test",0x9c; "loop2_back",0xa0;
-    "loop2_exit",0xa4; "in_polyvec_tobytes_end",0xac; "loop3",0xac;
-    "loop3_test",0xc0; "loop3_back",0xc4; "loop3_exit",0xc8;
-    "after_memset_1",0x138; "adrp2",0x148; "after_memset_2",0x148;
-    "ret",0x174; "after_stack_chk_fail",0x17c];
+    "loop2",0x88; "in_poly_tobytes_part1_end",0x90;
+    "in_poly_tobytes_part2",0x94; "after_mlk_poly_tobytes_c",0x98;
+    "in_poly_tobytes_end",0x98; "in_poly_tobytes_part2_end",0x98;
+    "loop2_test",0x9c; "loop2_back",0xa0; "loop2_exit",0xa4;
+    "in_polyvec_tobytes_end",0xac; "loop3",0xac; "loop3_test",0xc0;
+    "loop3_back",0xc4; "loop3_exit",0xc8; "after_memset_1",0x138;
+    "adrp2",0x148; "after_memset_2",0x148; "ret",0x174;
+    "after_stack_chk_fail",0x17c];
   "mlkem1024_check_sk",
    ["adrp1",0xc; "after_mlkem_sha3_256",0x38; "adrp2",0xbc; "ret",0xe0;
     "after_stack_chk_fail",0xe8];
   "mlkem1024_keypair_derand",
    ["after_mlkem1024_indcpa_keypair_derand",0x1c;
-    "in_keypair_derand",0x28; "after_memcpy",0x34;
-    "after_mlkem_sha3_256",0x44; "in_keypair_derand_end",0x54;
+    "in_keypair_derand",0x28; "in_keypair_derand_part1",0x28;
+    "after_memcpy",0x34; "after_mlkem_sha3_256",0x44;
+    "in_keypair_derand_part1_end",0x4c; "in_keypair_derand_part2",0x50;
+    "in_keypair_derand_end",0x54; "in_keypair_derand_part2_end",0x54;
     "ret1",0x60; "after_memset_1",0x70; "after_memset_2",0x80;
     "ret2",0x90];
   "mlkem1024_keypair",
@@ -1105,19 +1588,59 @@ install_layout (layout_labels [
   "mlkem1024_dec",
    ["adrp1",0x8; "after_mlkem1024_check_sk",0x48; "join1",0x64;
     "after_memset_1",0x74; "adrp2",0x88; "ret",0xc0; "adrp3",0xc8;
-    "in_indcpa_dec",0xc8; "in_poly_decompress_d11",0xc8;
-    "in_poly_decompress_du",0xc8; "in_polyvec_decompress_du",0xc8;
-    "loop1",0xf4; "loop2",0x100; "loop2_test",0x1c8; "loop2_back",0x1cc;
+    "in_indcpa_dec",0xc8; "in_indcpa_dec_part1",0xc8;
+    "in_poly_decompress_d11",0xc8; "in_poly_decompress_d11_part1",0xc8;
+    "in_poly_decompress_du",0xc8; "in_poly_decompress_du_part1",0xc8;
+    "in_polyvec_decompress_du",0xc8;
+    "in_polyvec_decompress_du_part1",0xc8;
+    "in_indcpa_dec_part1_end",0xd0;
+    "in_poly_decompress_d11_part1_end",0xd0;
+    "in_poly_decompress_du_part1_end",0xd0;
+    "in_polyvec_decompress_du_part1_end",0xd0;
+    "in_indcpa_dec_part2",0xd4; "in_poly_decompress_d11_part2",0xd4;
+    "in_poly_decompress_du_part2",0xd4;
+    "in_polyvec_decompress_du_part2",0xd4;
+    "in_indcpa_dec_part2_end",0xe0;
+    "in_poly_decompress_d11_part2_end",0xe0;
+    "in_poly_decompress_du_part2_end",0xe0;
+    "in_polyvec_decompress_du_part2_end",0xe0;
+    "in_indcpa_dec_part3",0xf4; "in_poly_decompress_d11_part3",0xf4;
+    "in_poly_decompress_du_part3",0xf4;
+    "in_polyvec_decompress_du_part3",0xf4; "loop1",0xf4;
+    "in_indcpa_dec_part3_end",0xf8;
+    "in_poly_decompress_d11_part3_end",0xf8;
+    "in_poly_decompress_du_part3_end",0xf8;
+    "in_polyvec_decompress_du_part3_end",0xf8;
+    "in_indcpa_dec_part4",0x100; "in_poly_decompress_d11_part4",0x100;
+    "in_poly_decompress_du_part4",0x100;
+    "in_polyvec_decompress_du_part4",0x100; "loop2",0x100;
+    "loop2_test",0x1c8; "loop2_back",0x1cc;
     "in_poly_decompress_d11_end",0x1d0;
-    "in_poly_decompress_du_end",0x1d0; "loop2_exit",0x1d0;
+    "in_poly_decompress_d11_part4_end",0x1d0;
+    "in_poly_decompress_du_end",0x1d0;
+    "in_poly_decompress_du_part4_end",0x1d0; "loop2_exit",0x1d0;
     "loop1_test",0x1dc; "loop1_back",0x1e0;
-    "in_polyvec_decompress_du_end",0x1e4; "loop1_exit",0x1e4;
-    "in_poly_decompress_d5",0x1ec; "in_poly_decompress_dv",0x1ec;
-    "adrp4",0x1f8; "loop3",0x210; "loop3_test",0x2ac; "loop3_back",0x2b0;
-    "loop3_exit",0x2b4; "in_poly_decompress_d5_end",0x2c0;
-    "in_poly_decompress_dv_end",0x2c0; "in_poly_frombytes",0x2c0;
-    "in_polyvec_frombytes",0x2c0; "loop4",0x2c0;
-    "after_mlk_poly_frombytes_c",0x2d0; "in_poly_frombytes_end",0x2d0;
+    "in_polyvec_decompress_du_end",0x1e4;
+    "in_polyvec_decompress_du_part4_end",0x1e4; "loop1_exit",0x1e4;
+    "in_poly_decompress_d5",0x1ec; "in_poly_decompress_d5_part1",0x1ec;
+    "in_poly_decompress_dv",0x1ec; "in_poly_decompress_dv_part1",0x1ec;
+    "in_poly_decompress_d5_part1_end",0x1f4;
+    "in_poly_decompress_dv_part1_end",0x1f4; "adrp4",0x1f8;
+    "in_poly_decompress_d5_part2",0x1f8;
+    "in_poly_decompress_dv_part2",0x1f8;
+    "in_poly_decompress_d5_part2_end",0x208;
+    "in_poly_decompress_dv_part2_end",0x208;
+    "in_poly_decompress_d5_part3",0x210;
+    "in_poly_decompress_dv_part3",0x210; "loop3",0x210;
+    "loop3_test",0x2ac; "loop3_back",0x2b0; "loop3_exit",0x2b4;
+    "in_poly_decompress_d5_end",0x2c0;
+    "in_poly_decompress_d5_part3_end",0x2c0;
+    "in_poly_decompress_dv_end",0x2c0;
+    "in_poly_decompress_dv_part3_end",0x2c0; "in_poly_frombytes",0x2c0;
+    "in_poly_frombytes_part1",0x2c0; "in_polyvec_frombytes",0x2c0;
+    "loop4",0x2c0; "in_poly_frombytes_part1_end",0x2c8;
+    "in_poly_frombytes_part2",0x2cc; "after_mlk_poly_frombytes_c",0x2d0;
+    "in_poly_frombytes_end",0x2d0; "in_poly_frombytes_part2_end",0x2d0;
     "loop4_test",0x2d4; "loop4_back",0x2d8; "in_poly_ntt",0x2dc;
     "in_polyvec_frombytes_end",0x2dc; "in_polyvec_ntt",0x2dc;
     "loop4_exit",0x2dc; "after_mlk_poly_ntt_c_1",0x2ec;
@@ -1136,16 +1659,19 @@ install_layout (layout_labels [
     "in_poly_invntt_tomont_end",0x354; "in_poly_sub",0x354;
     "loop6",0x358; "loop6_test",0x368; "loop6_back",0x36c;
     "in_poly_sub_end",0x370; "loop6_exit",0x370; "in_poly_reduce",0x374;
-    "after_mlk_poly_reduce_c",0x380; "in_poly_reduce_end",0x380;
+    "in_poly_reduce_part1",0x374; "in_poly_reduce_part1_end",0x378;
+    "in_poly_reduce_part2",0x37c; "after_mlk_poly_reduce_c",0x380;
+    "in_poly_reduce_end",0x380; "in_poly_reduce_part2_end",0x380;
     "after_mlkem_poly_tomsg",0x38c; "after_memset_2",0x39c;
     "after_memset_3",0x3ac; "after_memset_4",0x3bc;
     "after_memset_5",0x3cc; "after_memset_6",0x3dc;
-    "in_indcpa_dec_end",0x3dc; "after_mlkem_sha3_512",0x404;
-    "after_mlkem1024_indcpa_enc",0x418; "loop7",0x430;
-    "loop7_test",0x44c; "loop7_back",0x450; "loop7_exit",0x454;
-    "after_memcpy",0x4d0; "after_mlkem_shake256",0x4e8; "loop8",0x4f0;
-    "loop8_test",0x514; "loop8_back",0x518; "join2",0x51c;
-    "loop8_exit",0x51c; "after_stack_chk_fail",0x534]]);;
+    "in_indcpa_dec_end",0x3dc; "in_indcpa_dec_part4_end",0x3dc;
+    "after_mlkem_sha3_512",0x404; "after_mlkem1024_indcpa_enc",0x418;
+    "loop7",0x430; "loop7_test",0x44c; "loop7_back",0x450;
+    "loop7_exit",0x454; "after_memcpy",0x4d0;
+    "after_mlkem_shake256",0x4e8; "loop8",0x4f0; "loop8_test",0x514;
+    "loop8_back",0x518; "join2",0x51c; "loop8_exit",0x51c;
+    "after_stack_chk_fail",0x534]]);;
 
 (* ------------------------------------------------------------------------- *)
 (* The code of the functions, with the labels and the branches.              *)
@@ -2296,15 +2822,19 @@ install_layout (layout_labels [
     +0x70  b.ne    loop2                      -+ | |
   // inlined: keccakf1600_permute                | |
   loop2_exit: in_keccakf1600_permute:            | |
+  in_keccakf1600_permute_part1:                  | |
   in_keccakf1600_xor_bytes_1_end:                | |
     +0x74  mov     x0, x20                       | |
   // inlined: (not inlined)                      | |
+  in_keccakf1600_permute_part1_end:              | |
     +0x78  sub     x23, x23, x19                 | |
   // inlined: keccakf1600_permute                | |
+  in_keccakf1600_permute_part2:                  | |
     +0x7c  bl      mlk_keccakf1600_permute_c     | |
   // inlined: (not inlined)                      | |
   after_mlk_keccakf1600_permute_c:               | |
   in_keccakf1600_permute_end:                    | |
+  in_keccakf1600_permute_part2_end:              | |
     +0x80  add     x21, x21, x19                 | |
   loop1_test:                                    | |
     +0x84  cmp     x23, x19                      | |
@@ -2314,13 +2844,17 @@ install_layout (layout_labels [
     +0x8c  cbnz    x23, join2                 -+   |
   // inlined: keccakf1600_xor_bytes            |   |
   join1: in_keccakf1600_xor_bytes_2:           |   |
+  in_keccakf1600_xor_bytes_2_part1:            |   |
     +0x90  ldrb    w0, [x20, x23]             <--+ |
   // inlined: (not inlined)                    | | |
+  in_keccakf1600_xor_bytes_2_part1_end:        | | |
     +0x94  sub     w24, w24, #0x1              | | |
   // inlined: keccakf1600_xor_bytes            | | |
+  in_keccakf1600_xor_bytes_2_part2:            | | |
     +0x98  eor     w25, w25, w0                | | |
     +0x9c  strb    w25, [x20, x23]             | | |
   in_keccakf1600_xor_bytes_2_end:              | | |
+  in_keccakf1600_xor_bytes_2_part2_end:        | | |
   in_keccakf1600_xor_bytes_3:                  | | |
     +0xa0  ldrb    w0, [x20, w24, uxtw]        | | |
     +0xa4  eor     w0, w0, #0xffffff80         | | |
@@ -2502,15 +3036,19 @@ install_layout (layout_labels [
     +0x48  str     xzr, [x19, #192]
   // inlined: keccakf1600_extract_bytes
   in_keccakf1600_extract_bytes:
+  in_keccakf1600_extract_bytes_part1:
     +0x4c  ldp     q3, q4, [x19]
     +0x50  ldp     q1, q2, [x19, #32]
   // inlined: (not inlined)
+  in_keccakf1600_extract_bytes_part1_end:
     +0x54  stp     q0, q0, [x19]
   // inlined: keccakf1600_extract_bytes
+  in_keccakf1600_extract_bytes_part2:
     +0x58  stp     q3, q4, [x20]
     +0x5c  stp     q1, q2, [x20, #32]
   // inlined: (not inlined)
   in_keccakf1600_extract_bytes_end:
+  in_keccakf1600_extract_bytes_part2_end:
     +0x60  stp     q0, q0, [x19, #32]
     +0x64  stp     q0, q0, [x19, #64]
     +0x68  stp     q0, q0, [x19, #96]
@@ -2617,25 +3155,32 @@ install_layout (layout_labels [
     +0x10  mov     x1, x2
   // inlined: keccakf1600x4_xor_bytes
   in_keccakf1600x4_xor_bytes_1:
+  in_keccakf1600x4_xor_bytes_1_part1:
     +0x14  mov     x2, x3
     +0x18  mov     x3, x4
     +0x1c  mov     x4, x5
   // inlined: (not inlined)
+  in_keccakf1600x4_xor_bytes_1_part1_end:
     +0x20  ldr     x5, [x7]
     +0x24  str     x5, [sp, #24]
     +0x28  mov     x5, #0x0
     +0x2c  mov     w7, #0x1f
   // inlined: keccakf1600x4_xor_bytes
   in_keccakf1600x4_xor_bytes_2:
+  in_keccakf1600x4_xor_bytes_2_part1:
     +0x30  add     x13, sp, #0x17
   // inlined: (not inlined)
+  in_keccakf1600x4_xor_bytes_2_part1_end:
     +0x34  mov     x11, x6
     +0x38  mov     x10, x0
     +0x3c  strb    w7, [sp, #23]
   // inlined: keccakf1600x4_xor_bytes
+  in_keccakf1600x4_xor_bytes_1_part2:
     +0x40  bl      mlk_keccakf1600x4_xor_bytes_c
   after_mlk_keccakf1600x4_xor_bytes_c_1:
   in_keccakf1600x4_xor_bytes_1_end:
+  in_keccakf1600x4_xor_bytes_1_part2_end:
+  in_keccakf1600x4_xor_bytes_2_part2:
     +0x44  mov     w5, w11
     +0x48  mov     x0, x10
     +0x4c  mov     x4, x13
@@ -2647,9 +3192,11 @@ install_layout (layout_labels [
   // inlined: (not inlined)
   after_mlk_keccakf1600x4_xor_bytes_c_2:
   in_keccakf1600x4_xor_bytes_2_end:
+  in_keccakf1600x4_xor_bytes_2_part2_end:
     +0x64  mov     w7, #0xffffff80
   // inlined: keccakf1600x4_xor_bytes
   in_keccakf1600x4_xor_bytes_3:
+  in_keccakf1600x4_xor_bytes_3_part1:
     +0x68  mov     x0, x10
     +0x6c  mov     x2, x13
     +0x70  mov     x1, x13
@@ -2657,12 +3204,15 @@ install_layout (layout_labels [
     +0x78  mov     x3, x13
     +0x7c  mov     w6, #0x1
   // inlined: (not inlined)
+  in_keccakf1600x4_xor_bytes_3_part1_end:
     +0x80  strb    w7, [sp, #23]
   // inlined: keccakf1600x4_xor_bytes
+  in_keccakf1600x4_xor_bytes_3_part2:
     +0x84  bl      mlk_keccakf1600x4_xor_bytes_c
   // inlined: (not inlined)
   after_mlk_keccakf1600x4_xor_bytes_c_3:
   adrp2: in_keccakf1600x4_xor_bytes_3_end:
+  in_keccakf1600x4_xor_bytes_3_part2_end:
     +0x88  adrp    x0, <page>
     +0x8c  ldr     x0, [x0, #4088]
                    // got_stack_chk_guard
@@ -2741,22 +3291,29 @@ install_layout (layout_labels [
     +0x20  mov     x23, x5                                                  |
   // inlined: keccakf1600x4_permute                                         |
   in_keccakf1600x4_permute:                                                 |
+  in_keccakf1600x4_permute_part1:                                           |
     +0x24  add     x24, x5, #0x258                                          |
   // inlined: (not inlined)                                                 |
+  in_keccakf1600x4_permute_part1_end:                                       |
     +0x28  stp     x25, x26, [sp, #48]                                      |
     +0x2c  mov     w26, w6                                                  |
   // inlined: keccakf1600x4_permute                                         |
+  in_keccakf1600x4_permute_part2:                                           |
     +0x30  add     x25, x5, #0x190                                          |
   // inlined: (not inlined)                                                 |
+  in_keccakf1600x4_permute_part2_end:                                       |
     +0x34  stp     x27, x28, [sp, #64]                                      |
     +0x38  mov     x27, x4                                                  |
   // inlined: keccakf1600x4_permute                                         |
+  in_keccakf1600x4_permute_part3:                                           |
     +0x3c  add     x28, x5, #0xc8                                           |
   // inlined: (not inlined)                                                 |
+  in_keccakf1600x4_permute_part3_end:                                       |
     +0x40  str     x30, [sp, #80]                                           |
     +0x44  nop                                                              |
   // inlined: keccakf1600x4_permute > keccakf1600_permute                   |
   loop1: in_keccakf1600_permute_1:                                          |
+  in_keccakf1600x4_permute_part4:                                           |
     +0x48  mov     x0, x23                                             <--+ |
     +0x4c  bl      mlk_keccakf1600_permute_c                              | |
   after_mlk_keccakf1600_permute_c_1:                                      | |
@@ -2782,6 +3339,7 @@ install_layout (layout_labels [
   in_keccakf1600_permute_4_end:                                           | |
   in_keccakf1600x4_extract_bytes:                                         | |
   in_keccakf1600x4_permute_end:                                           | |
+  in_keccakf1600x4_permute_part4_end:                                     | |
     +0x70  ldrb    w1, [x23, x0]                                       <+ | |
     +0x74  mov     x2, x0                                               | | |
     +0x78  strb    w1, [x19, x0]                                        | | |
@@ -2866,34 +3424,47 @@ install_layout (layout_labels [
     +0x28  mov     x20, x0
   // inlined: shake128x4_squeezeblocks
   in_shake128x4_squeezeblocks_1:
+  in_shake128x4_squeezeblocks_1_part1:
     +0x2c  add     x23, x22, #0x600
   // inlined: (not inlined)
+  in_shake128x4_squeezeblocks_1_part1_end:
     +0x30  stp     x25, x26, [sp, #48]
   // inlined: shake128x4_absorb_once
   in_shake128x4_absorb_once:
+  in_shake128x4_absorb_once_part1:
     +0x34  add     x26, x22, #0x800
   // inlined: shake128x4_squeezeblocks
+  in_shake128x4_absorb_once_part1_end:
+  in_shake128x4_squeezeblocks_1_part2:
     +0x38  add     x24, x22, #0x400
   // inlined: (not inlined)
+  in_shake128x4_squeezeblocks_1_part2_end:
     +0x3c  stp     x27, x28, [sp, #64]
     +0x40  mov     x27, x3
     +0x44  mov     x28, x2
     +0x48  str     x30, [sp, #80]
   // inlined: shake128x4_squeezeblocks
+  in_shake128x4_squeezeblocks_1_part3:
     +0x4c  add     x25, x22, #0x200
   // inlined: (not inlined)
+  in_shake128x4_squeezeblocks_1_part3_end:
     +0x50  stp     x0, x1, [sp, #96]
   // inlined: shake128x4_absorb_once
+  in_shake128x4_absorb_once_part2:
     +0x54  mov     x0, x26
   // inlined: (not inlined)
+  in_shake128x4_absorb_once_part2_end:
     +0x58  stp     x2, x3, [sp, #112]
   // inlined: shake128x4_absorb_once
+  in_shake128x4_absorb_once_part3:
     +0x5c  mov     x2, #0x320
   // inlined: (not inlined)
+  in_shake128x4_absorb_once_part3_end:
     +0x60  ldr     x1, [x5]
     +0x64  str     x1, [sp, #3000]
     +0x68  mov     x1, #0x0
   // inlined: shake128x4_absorb_once
+  in_shake128x4_absorb_once_part4:
     +0x6c  bl      memset
   after_memset_1:
     +0x70  add     x5, x19, #0xc0
@@ -2907,6 +3478,8 @@ install_layout (layout_labels [
   // inlined: shake128x4_squeezeblocks
   after_mlk_keccak_absorb_once_x4:
   in_shake128x4_absorb_once_end:
+  in_shake128x4_absorb_once_part4_end:
+  in_shake128x4_squeezeblocks_1_part4:
     +0x90  mov     x5, x26
     +0x94  mov     w6, #0xa8
     +0x98  mov     x4, #0x3
@@ -2918,6 +3491,7 @@ install_layout (layout_labels [
   // inlined: (not inlined)
   after_mlk_keccak_squeezeblocks_x4_1:
   in_shake128x4_squeezeblocks_1_end:
+  in_shake128x4_squeezeblocks_1_part4_end:
     +0xb0  mov     w3, #0x1f8
     +0xb4  mov     x2, x22
     +0xb8  mov     x0, x20
@@ -3156,10 +3730,14 @@ install_layout (layout_labels [
     +0xbc  strb    w6, [x24, #97]
   // inlined: poly_rej_uniform > shake128_absorb_once
   in_poly_rej_uniform:
+  in_poly_rej_uniform_part1:
   in_shake128_absorb_once:
+  in_shake128_absorb_once_part1:
     +0xc0  mov     x23, #0x3
     +0xc4  strb    w8, [x24, #160]
   // inlined: (not inlined)
+  in_poly_rej_uniform_part1_end:
+  in_shake128_absorb_once_part1_end:
     +0xc8  strb    w7, [x24, #161]
     +0xcc  strb    w6, [x24, #224]
     +0xd0  strb    w5, [x24, #225]
@@ -3168,6 +3746,8 @@ install_layout (layout_labels [
   after_mlkem_poly_rej_uniform_x4_2:
     +0xdc  mov     w5, #0x202
   // inlined: poly_rej_uniform > shake128_absorb_once
+  in_poly_rej_uniform_part2:
+  in_shake128_absorb_once_part2:
     +0xe0  mov     x2, x24
     +0xe4  mov     x0, x20
     +0xe8  mov     w4, #0x1f
@@ -3179,6 +3759,7 @@ install_layout (layout_labels [
   loop2: after_mlk_keccak_absorb_once:
   in_keccakf1600_permute_1:
   in_shake128_absorb_once_end:
+  in_shake128_absorb_once_part2_end:
   in_shake128_squeezeblocks_1:
     +0xfc  mov     x0, x20
    +0x100  bl      mlk_keccakf1600_permute_c
@@ -3218,28 +3799,46 @@ install_layout (layout_labels [
   // inlined: poly_rej_uniform > shake128_squeezeblocks > keccakf1600_permute
   loop4: in_keccakf1600_permute_2:
   in_shake128_squeezeblocks_2:
+  in_shake128_squeezeblocks_2_part1:
    +0x14c  mov     x0, x20
    +0x150  bl      mlk_keccakf1600_permute_c
   // inlined: poly_rej_uniform > shake128_squeezeblocks > keccakf1600_extract_bytes
   after_mlk_keccakf1600_permute_c_2:
   in_keccakf1600_extract_bytes_2:
+  in_keccakf1600_extract_bytes_2_part1:
   in_keccakf1600_permute_2_end:
    +0x154  ldp     q16, q17, [x20]
   // inlined: poly_rej_uniform
+  in_keccakf1600_extract_bytes_2_part1_end:
+  in_shake128_squeezeblocks_2_part1_end:
    +0x158  mov     w1, w19
   // inlined: poly_rej_uniform > shake128_squeezeblocks > keccakf1600_extract_bytes
+  in_keccakf1600_extract_bytes_2_part2:
+  in_shake128_squeezeblocks_2_part2:
    +0x15c  ldp     q6, q7, [x20, #32]
   // inlined: poly_rej_uniform
+  in_keccakf1600_extract_bytes_2_part2_end:
+  in_shake128_squeezeblocks_2_part2_end:
    +0x160  mov     x2, x21
   // inlined: poly_rej_uniform > shake128_squeezeblocks > keccakf1600_extract_bytes
+  in_keccakf1600_extract_bytes_2_part3:
+  in_shake128_squeezeblocks_2_part3:
    +0x164  ldp     q4, q5, [x20, #64]
   // inlined: poly_rej_uniform
+  in_keccakf1600_extract_bytes_2_part3_end:
+  in_shake128_squeezeblocks_2_part3_end:
    +0x168  mov     x0, x25
   // inlined: poly_rej_uniform > shake128_squeezeblocks > keccakf1600_extract_bytes
+  in_keccakf1600_extract_bytes_2_part4:
+  in_shake128_squeezeblocks_2_part4:
    +0x16c  ldp     q2, q3, [x20, #96]
   // inlined: poly_rej_uniform
+  in_keccakf1600_extract_bytes_2_part4_end:
+  in_shake128_squeezeblocks_2_part4_end:
    +0x170  mov     w3, #0xa8
   // inlined: poly_rej_uniform > shake128_squeezeblocks > keccakf1600_extract_bytes
+  in_keccakf1600_extract_bytes_2_part5:
+  in_shake128_squeezeblocks_2_part5:
    +0x174  ldp     q0, q1, [x20, #128]
    +0x178  stp     q16, q17, [x21]
    +0x17c  ldr     x4, [x20, #160]
@@ -3250,7 +3849,9 @@ install_layout (layout_labels [
    +0x190  str     x4, [x21, #160]
   // inlined: poly_rej_uniform
   in_keccakf1600_extract_bytes_2_end:
+  in_keccakf1600_extract_bytes_2_part5_end:
   in_shake128_squeezeblocks_2_end:
+  in_shake128_squeezeblocks_2_part5_end:
    +0x194  bl      mlk_rej_uniform_c
   after_mlk_rej_uniform_c_2:
    +0x198  mov     w19, w0
@@ -3276,6 +3877,7 @@ install_layout (layout_labels [
    +0x1d0  bl      memset
   // inlined: (not inlined)
   after_memset: in_poly_rej_uniform_end:
+  in_poly_rej_uniform_part2_end:
    +0x1d4  movi    v0.4s, #0x0
    +0x1d8  stp     q0, q0, [x24]
    +0x1dc  stp     q0, q0, [x24, #32]
@@ -3801,9 +4403,12 @@ install_layout (layout_labels [
                    // got_stack_chk_guard
     +0x68  add     x28, x20, #0x200
   // inlined: polyvec_ntt > poly_ntt
-  in_poly_ntt_1: in_polyvec_ntt_1:
+  in_poly_ntt_1: in_poly_ntt_1_part1:
+  in_polyvec_ntt_1: in_polyvec_ntt_1_part1:
     +0x6c  mov     x26, x21
   // inlined: (not inlined)
+  in_poly_ntt_1_part1_end:
+  in_polyvec_ntt_1_part1_end:
     +0x70  ldr     x0, [x2]
     +0x74  str     x0, [sp, #15672]
     +0x78  mov     x0, #0x0
@@ -3870,7 +4475,8 @@ install_layout (layout_labels [
    +0x148  ldr     x9, [sp, #168]
    +0x14c  mov     x0, x9
    +0x150  bl      mlk_poly_ntt_c
-  after_mlk_poly_ntt_c_4: in_poly_ntt_2_end:
+  after_mlk_poly_ntt_c_4: in_poly_ntt_1_part2:
+  in_poly_ntt_2_end: in_polyvec_ntt_1_part2:
   in_polyvec_ntt_2_end:
    +0x154  mov     x0, x20
    +0x158  bl      mlk_poly_ntt_c
@@ -3886,18 +4492,24 @@ install_layout (layout_labels [
    +0x174  bl      mlk_poly_ntt_c
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
   loop1: after_mlk_poly_ntt_c_8:
-  in_poly_mulcache_compute: in_poly_ntt_1_end:
+  in_poly_mulcache_compute:
+  in_poly_mulcache_compute_part1:
+  in_poly_ntt_1_end: in_poly_ntt_1_part2_end:
   in_polyvec_mulcache_compute:
   in_polyvec_ntt_1_end:
+  in_polyvec_ntt_1_part2_end:
    +0x178  mov     x1, x26                                          <+
    +0x17c  mov     x0, x19                                           |
   // inlined: polyvec_mulcache_compute                               |
+  in_poly_mulcache_compute_part1_end:                                |
    +0x180  add     x19, x19, #0x100                                  |
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute       |
+  in_poly_mulcache_compute_part2:                                    |
    +0x184  bl      mlk_poly_mulcache_compute_c                       |
   // inlined: polyvec_mulcache_compute                               |
   after_mlk_poly_mulcache_compute_c:                                 |
   in_poly_mulcache_compute_end:                                      |
+  in_poly_mulcache_compute_part2_end:                                |
    +0x188  add     x26, x26, #0x200                                  |
   loop1_test:                                                        |
    +0x18c  cmp     x19, x25                                          |
@@ -3912,18 +4524,22 @@ install_layout (layout_labels [
   // inlined: polyvec_basemul_acc_montgomery_cached
   loop2:
   in_polyvec_basemul_acc_montgomery_cached:
+  in_polyvec_basemul_acc_montgomery_cached_part1:
   in_polyvec_mulcache_compute_end:
    +0x1a8  mov     x1, x28                                          <+
    +0x1ac  mov     x0, x19                                           |
    +0x1b0  mov     x3, x27                                           |
    +0x1b4  mov     x2, x21                                           |
   // inlined: (not inlined)                                          |
+  in_polyvec_basemul_acc_montgomery_cached_part1_end:                |
    +0x1b8  add     x19, x19, #0x200                                  |
   // inlined: polyvec_basemul_acc_montgomery_cached                  |
+  in_polyvec_basemul_acc_montgomery_cached_part2:                    |
    +0x1bc  bl      mlk_polyvec_basemul_acc_montgomery_cached_c1024   |
   // inlined: (not inlined)                                          |
   after_mlk_polyvec_basemul_acc_montgomery_cached_c1024:             |
   in_polyvec_basemul_acc_montgomery_cached_end:                      |
+  in_polyvec_basemul_acc_montgomery_cached_part2_end:                |
    +0x1c0  add     x28, x28, #0x800                                  |
   loop2_test:                                                        |
    +0x1c4  cmp     x19, x20                                          |
@@ -3933,7 +4549,8 @@ install_layout (layout_labels [
    +0x1cc  adrp    x0, <page>
    +0x1d0  add     x8, x25, #0x200
   // inlined: polyvec_tomont > poly_tomont
-  in_poly_tomont: in_polyvec_tomont:
+  in_poly_tomont: in_poly_tomont_part1:
+  in_polyvec_tomont: in_polyvec_tomont_part1:
    +0x1d4  mvni    v3.8h, #0xd, lsl #8
    +0x1d8  mov     x1, x8
    +0x1dc  ldr     q4, [x0, #3312]
@@ -3941,8 +4558,12 @@ install_layout (layout_labels [
   adrp3:
    +0x1e0  adrp    x0, <page>
   // inlined: (not inlined)
+  in_poly_tomont_part1_end:
+  in_polyvec_tomont_part1_end:
    +0x1e4  mov     w2, #0x4
   // inlined: polyvec_tomont > poly_tomont
+  in_poly_tomont_part2:
+  in_polyvec_tomont_part2:
    +0x1e8  ldr     q5, [x0, #3200]
                    // mlk_poly_invntt_tomont_c_const2
   loop3:
@@ -3964,6 +4585,7 @@ install_layout (layout_labels [
    +0x21c  b.ne    loop4                                            -+ |
   // inlined: polyvec_tomont                                           |
   loop4_exit: in_poly_tomont_end:                                      |
+  in_poly_tomont_part2_end:                                            |
    +0x220  add     x1, x0, #0x200                                      |
   loop3_test:                                                          |
    +0x224  subs    w2, w2, #0x1                                        |
@@ -3974,6 +4596,7 @@ install_layout (layout_labels [
    +0x230  mov     x1, x25
   // inlined: (not inlined)
   loop5: in_polyvec_tomont_end:
+  in_polyvec_tomont_part2_end:
    +0x234  mov     x0, #0x0                                         <--+
    +0x238  nop                                                         |
   // inlined: polyvec_add > poly_add                                   |
@@ -4029,17 +4652,21 @@ install_layout (layout_labels [
   // inlined: polyvec_tobytes > poly_tobytes
   loop7: after_mlk_poly_reduce_c_8:
   in_poly_reduce_2_end: in_poly_tobytes_1:
+  in_poly_tobytes_1_part1:
   in_polyvec_reduce_2_end:
   in_polyvec_tobytes_1:
    +0x2b0  mov     x1, x22                                          <+
    +0x2b4  mov     x0, x19                                           |
   // inlined: polyvec_tobytes                                        |
+  in_poly_tobytes_1_part1_end:                                       |
    +0x2b8  add     x19, x19, #0x180                                  |
   // inlined: polyvec_tobytes > poly_tobytes                         |
+  in_poly_tobytes_1_part2:                                           |
    +0x2bc  bl      mlk_poly_tobytes_c                                |
   // inlined: polyvec_tobytes                                        |
   after_mlk_poly_tobytes_c_1:                                        |
   in_poly_tobytes_1_end:                                             |
+  in_poly_tobytes_1_part2_end:                                       |
    +0x2c0  add     x22, x22, #0x200                                  |
   loop7_test:                                                        |
    +0x2c4  cmp     x19, x9                                           |
@@ -4048,32 +4675,39 @@ install_layout (layout_labels [
   loop7_exit:
    +0x2cc  ldr     x5, [sp, #112]
   // inlined: polyvec_tobytes > poly_tobytes
-  in_poly_tobytes_2: in_polyvec_tobytes_1_end:
+  in_poly_tobytes_2: in_poly_tobytes_2_part1:
+  in_polyvec_tobytes_1_end:
   in_polyvec_tobytes_2:
    +0x2d0  mov     x1, x26
   // inlined: polyvec_tobytes
+  in_poly_tobytes_2_part1_end:
    +0x2d4  mov     x26, x8
   // inlined: polyvec_tobytes > poly_tobytes
+  in_poly_tobytes_2_part2:
    +0x2d8  mov     x0, x5
    +0x2dc  add     x6, x5, #0x600
    +0x2e0  bl      mlk_poly_tobytes_c
   // inlined: polyvec_tobytes
   after_mlk_poly_tobytes_c_2:
+  in_poly_tobytes_2_part2_end:
    +0x2e4  add     x5, x5, #0x180
    +0x2e8  cmp     x6, x5
    +0x2ec  b.eq    join1                                            ---+
   // inlined: polyvec_tobytes > poly_tobytes                           |
-  loop8:                                                               |
+  loop8: in_poly_tobytes_2_part3:                                      |
    +0x2f0  mov     x1, x26                                          <+ |
    +0x2f4  mov     x0, x5                                            | |
    +0x2f8  add     x8, x8, #0x200                                    | |
   // inlined: polyvec_tobytes                                        | |
+  in_poly_tobytes_2_part3_end:                                       | |
    +0x2fc  add     x5, x5, #0x180                                    | |
   // inlined: polyvec_tobytes > poly_tobytes                         | |
+  in_poly_tobytes_2_part4:                                           | |
    +0x300  bl      mlk_poly_tobytes_c                                | |
   // inlined: polyvec_tobytes                                        | |
   after_mlk_poly_tobytes_c_3:                                        | |
   in_poly_tobytes_2_end:                                             | |
+  in_poly_tobytes_2_part4_end:                                       | |
    +0x304  mov     x26, x8                                           | |
   loop8_test:                                                        | |
    +0x308  cmp     x6, x5                                            | |
@@ -4205,22 +4839,31 @@ install_layout (layout_labels [
     +0xe4  mov     x1, x22
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
   in_poly_mulcache_compute:
+  in_poly_mulcache_compute_part1:
   in_polyvec_mulcache_compute:
+  in_polyvec_mulcache_compute_part1:
     +0xe8  mov     x9, #0x2400
   // inlined: (not inlined)
+  in_poly_mulcache_compute_part1_end:
+  in_polyvec_mulcache_compute_part1_end:
     +0xec  mov     w7, #0x5
     +0xf0  mov     w6, #0x4
     +0xf4  mov     x3, #0x0
     +0xf8  add     x24, x20, x8
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
+  in_poly_mulcache_compute_part2:
+  in_polyvec_mulcache_compute_part2:
     +0xfc  add     x25, x20, x9
   // inlined: (not inlined)
+  in_poly_mulcache_compute_part2_end:
+  in_polyvec_mulcache_compute_part2_end:
    +0x100  mov     x0, x27
    +0x104  str     x2, [sp, #152]
    +0x108  bl      mlkem1024_poly_getnoise_eta1_4x
   // inlined: polyvec_ntt > poly_ntt
   after_mlkem1024_poly_getnoise_eta1_4x_2:
-  in_poly_ntt_1: in_polyvec_ntt_1:
+  in_poly_ntt_1: in_poly_ntt_1_part1:
+  in_polyvec_ntt_1: in_polyvec_ntt_1_part1:
    +0x10c  mov     x0, x19
    +0x110  bl      mlk_poly_ntt_c
   after_mlk_poly_ntt_c_1:
@@ -4229,17 +4872,30 @@ install_layout (layout_labels [
    +0x11c  bl      mlk_poly_ntt_c
   // inlined: (not inlined)
   after_mlk_poly_ntt_c_2:
+  in_poly_ntt_1_part1_end:
+  in_polyvec_ntt_1_part1_end:
    +0x120  mov     x23, x27
   // inlined: polyvec_ntt > poly_ntt
+  in_poly_ntt_1_part2: in_polyvec_ntt_1_part2:
    +0x124  ldr     x0, [sp, #112]
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
+  in_poly_mulcache_compute_part3:
+  in_poly_ntt_1_part2_end:
+  in_polyvec_mulcache_compute_part3:
+  in_polyvec_ntt_1_part2_end:
    +0x128  mov     x27, x24
    +0x12c  mov     x28, x24
   // inlined: polyvec_ntt > poly_ntt
+  in_poly_mulcache_compute_part3_end:
+  in_poly_ntt_1_part3:
+  in_polyvec_mulcache_compute_part3_end:
+  in_polyvec_ntt_1_part3:
    +0x130  bl      mlk_poly_ntt_c
   after_mlk_poly_ntt_c_3: in_poly_ntt_1_end:
-  in_poly_ntt_2: in_polyvec_ntt_1_end:
-  in_polyvec_ntt_2:
+  in_poly_ntt_1_part3_end: in_poly_ntt_2:
+  in_poly_ntt_2_part1: in_polyvec_ntt_1_end:
+  in_polyvec_ntt_1_part3_end:
+  in_polyvec_ntt_2: in_polyvec_ntt_2_part1:
    +0x134  mov     x0, x23
    +0x138  bl      mlk_poly_ntt_c
   after_mlk_poly_ntt_c_4:
@@ -4249,13 +4905,25 @@ install_layout (layout_labels [
    +0x144  ldr     x2, [sp, #152]
    +0x148  mov     x23, x20
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
+  in_poly_mulcache_compute_part4:
+  in_poly_ntt_2_part1_end:
+  in_polyvec_mulcache_compute_part4:
+  in_polyvec_ntt_2_part1_end:
    +0x14c  mov     w22, #0x3
   // inlined: polyvec_ntt > poly_ntt
+  in_poly_mulcache_compute_part4_end:
+  in_poly_ntt_2_part2:
+  in_polyvec_mulcache_compute_part4_end:
+  in_polyvec_ntt_2_part2:
    +0x150  mov     x0, x2
    +0x154  bl      mlk_poly_ntt_c
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
-  after_mlk_poly_ntt_c_6: in_poly_ntt_2_end:
+  after_mlk_poly_ntt_c_6:
+  in_poly_mulcache_compute_part5:
+  in_poly_ntt_2_end: in_poly_ntt_2_part2_end:
+  in_polyvec_mulcache_compute_part5:
   in_polyvec_ntt_2_end:
+  in_polyvec_ntt_2_part2_end:
    +0x158  mov     x1, x19
    +0x15c  mov     x0, x25
    +0x160  bl      mlk_poly_mulcache_compute_c
@@ -4270,8 +4938,10 @@ install_layout (layout_labels [
   // inlined: polyvec_basemul_acc_montgomery_cached
   loop1: after_mlk_poly_mulcache_compute_c_3:
   in_poly_mulcache_compute_end:
+  in_poly_mulcache_compute_part5_end:
   in_polyvec_basemul_acc_montgomery_cached:
   in_polyvec_mulcache_compute_end:
+  in_polyvec_mulcache_compute_part5_end:
    +0x17c  mov     x1, x23                                         <+
    +0x180  mov     x0, x27                                          |
    +0x184  mov     x3, x25                                          |
@@ -4290,7 +4960,8 @@ install_layout (layout_labels [
    +0x1a0  adrp    x0, <page>
    +0x1a4  add     x3, x24, #0x200
   // inlined: polyvec_tomont > poly_tomont
-  in_poly_tomont: in_polyvec_tomont:
+  in_poly_tomont: in_poly_tomont_part1:
+  in_polyvec_tomont: in_polyvec_tomont_part1:
    +0x1a8  mvni    v3.8h, #0xd, lsl #8
    +0x1ac  mov     x1, x3
    +0x1b0  ldr     q4, [x0, #3312]
@@ -4298,8 +4969,12 @@ install_layout (layout_labels [
   adrp3:
    +0x1b4  adrp    x0, <page>
   // inlined: (not inlined)
+  in_poly_tomont_part1_end:
+  in_polyvec_tomont_part1_end:
    +0x1b8  mov     w2, #0x3
   // inlined: polyvec_tomont > poly_tomont
+  in_poly_tomont_part2:
+  in_polyvec_tomont_part2:
    +0x1bc  ldr     q5, [x0, #3200]
                    // mlk_poly_invntt_tomont_c_const2
   loop2:
@@ -4321,6 +4996,7 @@ install_layout (layout_labels [
    +0x1f0  b.ne    loop3                                           -+ |
   // inlined: polyvec_tomont                                          |
   loop3_exit: in_poly_tomont_end:                                     |
+  in_poly_tomont_part2_end:                                           |
    +0x1f4  add     x1, x0, #0x200                                     |
   loop2_test:                                                         |
    +0x1f8  subs    w2, w2, #0x1                                       |
@@ -4330,6 +5006,7 @@ install_layout (layout_labels [
    +0x200  ldr     x1, [sp, #120]
   // inlined: (not inlined)
   loop4: in_polyvec_tomont_end:
+  in_polyvec_tomont_part2_end:
    +0x204  mov     x0, #0x0                                        <--+
   // inlined: polyvec_add > poly_add                                  |
   loop5: in_poly_add: in_polyvec_add:                                 |
@@ -4400,8 +5077,10 @@ install_layout (layout_labels [
    +0x2a4  bl      mlk_poly_tobytes_c
   after_mlk_poly_tobytes_c_3:
   in_poly_tobytes_1_end: in_poly_tobytes_2:
+  in_poly_tobytes_2_part1:
   in_polyvec_tobytes_1_end:
   in_polyvec_tobytes_2:
+  in_polyvec_tobytes_2_part1:
    +0x2a8  ldr     x5, [sp, #128]
    +0x2ac  mov     x1, x24
    +0x2b0  mov     x0, x5
@@ -4412,15 +5091,21 @@ install_layout (layout_labels [
    +0x2c0  bl      mlk_poly_tobytes_c
   // inlined: (not inlined)
   after_mlk_poly_tobytes_c_5:
+  in_poly_tobytes_2_part1_end:
+  in_polyvec_tobytes_2_part1_end:
    +0x2c4  add     x23, x5, #0x480
   // inlined: polyvec_tobytes > poly_tobytes
+  in_poly_tobytes_2_part2:
+  in_polyvec_tobytes_2_part2:
    +0x2c8  mov     x1, x8
    +0x2cc  add     x0, x5, #0x300
    +0x2d0  bl      mlk_poly_tobytes_c
   // inlined: (not inlined)
   after_mlk_poly_tobytes_c_6:
   in_poly_tobytes_2_end:
+  in_poly_tobytes_2_part2_end:
   in_polyvec_tobytes_2_end:
+  in_polyvec_tobytes_2_part2_end:
    +0x2d4  ldp     q0, q1, [x21]
    +0x2d8  mov     x0, x25
    +0x2dc  mov     x2, #0x300
@@ -4486,8 +5171,10 @@ install_layout (layout_labels [
      +0xc  mov     x4, #0x1600
   // inlined: poly_getnoise_eta1_4x
   in_poly_getnoise_eta1_4x:
+  in_poly_getnoise_eta1_4x_part1:
     +0x10  mov     x5, #0x1400
   // inlined: (not inlined)
+  in_poly_getnoise_eta1_4x_part1_end:
     +0x14  stp     x19, x20, [sp, #16]
     +0x18  add     x19, sp, #0xaf
     +0x1c  and     x19, x19, #0xffffffffffffffe0
@@ -4497,20 +5184,26 @@ install_layout (layout_labels [
     +0x2c  stp     x23, x24, [sp, #48]
     +0x30  add     x23, x19, x3
   // inlined: poly_getnoise_eta1_4x
+  in_poly_getnoise_eta1_4x_part2:
     +0x34  add     x24, x19, x5
   // inlined: (not inlined)
+  in_poly_getnoise_eta1_4x_part2_end:
     +0x38  stp     x25, x26, [sp, #64]
   // inlined: poly_getnoise_eta1_4x
+  in_poly_getnoise_eta1_4x_part3:
     +0x3c  add     x26, x19, #0xc00
     +0x40  add     x22, x19, #0xa00
   // inlined: (not inlined)
+  in_poly_getnoise_eta1_4x_part3_end:
     +0x44  stp     x27, x28, [sp, #80]
     +0x48  add     x27, x19, #0x1, lsl #12
     +0x4c  add     x28, x19, x4
     +0x50  str     x30, [sp, #96]
   // inlined: poly_getnoise_eta1_4x
+  in_poly_getnoise_eta1_4x_part4:
     +0x54  add     x25, x27, #0x200
   // inlined: (not inlined)
+  in_poly_getnoise_eta1_4x_part4_end:
     +0x58  str     x1, [sp, #112]
     +0x5c  mov     x1, x23
     +0x60  ldp     q0, q1, [x2]
@@ -4533,6 +5226,7 @@ install_layout (layout_labels [
     +0x98  bl      mlkem512_gen_matrix
   // inlined: poly_getnoise_eta1_4x
   after_mlkem512_gen_matrix:
+  in_poly_getnoise_eta1_4x_part5:
     +0x9c  ldp     q0, q1, [x28, #32]
     +0xa0  add     x6, x24, #0x40
     +0xa4  add     x7, x24, #0x80
@@ -4595,10 +5289,14 @@ install_layout (layout_labels [
    +0x170  stp     q0, q0, [x24, #224]
   // inlined: polyvec_tomont > poly_tomont
   in_poly_getnoise_eta1_4x_end:
-  in_poly_tomont: in_polyvec_tomont:
+  in_poly_getnoise_eta1_4x_part5_end:
+  in_poly_tomont: in_poly_tomont_part1:
+  in_polyvec_tomont: in_polyvec_tomont_part1:
    +0x174  mvni    v3.8h, #0xd, lsl #8
   // inlined: polyvec_ntt > poly_ntt
-  in_poly_ntt_1: in_polyvec_ntt_1:
+  in_poly_ntt_1: in_poly_tomont_part1_end:
+  in_polyvec_ntt_1:
+  in_polyvec_tomont_part1_end:
    +0x178  mov     x0, x20
    +0x17c  bl      mlk_poly_ntt_c
   after_mlk_poly_ntt_c_1:
@@ -4614,24 +5312,36 @@ install_layout (layout_labels [
    +0x194  bl      mlk_poly_ntt_c
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
   after_mlk_poly_ntt_c_4:
-  in_poly_mulcache_compute: in_poly_ntt_2_end:
+  in_poly_mulcache_compute:
+  in_poly_mulcache_compute_part1:
+  in_poly_ntt_2_end:
   in_polyvec_mulcache_compute:
+  in_polyvec_mulcache_compute_part1:
   in_polyvec_ntt_2_end:
    +0x198  mov     x1, x20
    +0x19c  mov     x0, x24
    +0x1a0  bl      mlk_poly_mulcache_compute_c
   // inlined: polyvec_basemul_acc_montgomery_cached
   after_mlk_poly_mulcache_compute_c_1:
+  in_poly_mulcache_compute_part1_end:
   in_polyvec_basemul_acc_montgomery_cached:
+  in_polyvec_basemul_acc_montgomery_cached_part1:
+  in_polyvec_mulcache_compute_part1_end:
    +0x1a4  add     x25, x19, #0xe00
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
+  in_poly_mulcache_compute_part2:
+  in_polyvec_basemul_acc_montgomery_cached_part1_end:
+  in_polyvec_mulcache_compute_part2:
    +0x1a8  mov     x1, x22
    +0x1ac  add     x0, x24, #0x100
    +0x1b0  bl      mlk_poly_mulcache_compute_c
   // inlined: polyvec_basemul_acc_montgomery_cached
   after_mlk_poly_mulcache_compute_c_2:
   in_poly_mulcache_compute_end:
+  in_poly_mulcache_compute_part2_end:
+  in_polyvec_basemul_acc_montgomery_cached_part2:
   in_polyvec_mulcache_compute_end:
+  in_polyvec_mulcache_compute_part2_end:
    +0x1b4  mov     x3, x24
    +0x1b8  mov     x2, x20
    +0x1bc  mov     x1, x19
@@ -4645,16 +5355,23 @@ install_layout (layout_labels [
    +0x1d8  bl      mlk_polyvec_basemul_acc_montgomery_cached_c512
   // inlined: polyvec_tomont > poly_tomont
   after_mlk_polyvec_basemul_acc_montgomery_cached_c512_2:
-  adrp2:
+  adrp2: in_poly_tomont_part2:
+  in_polyvec_basemul_acc_montgomery_cached_part2_end:
+  in_polyvec_tomont_part2:
    +0x1dc  adrp    x0, <page>
    +0x1e0  mov     x3, x26
   // inlined: polyvec_basemul_acc_montgomery_cached
+  in_poly_tomont_part2_end:
+  in_polyvec_basemul_acc_montgomery_cached_part3:
+  in_polyvec_tomont_part2_end:
    +0x1e4  mov     x2, x26
    +0x1e8  ldr     q4, [x0, #3312]
                    // mlkem1024_indcpa_keypair_derand_const2
   // inlined: polyvec_tomont > poly_tomont
-  adrp3:
+  adrp3: in_poly_tomont_part3:
   in_polyvec_basemul_acc_montgomery_cached_end:
+  in_polyvec_basemul_acc_montgomery_cached_part3_end:
+  in_polyvec_tomont_part3:
    +0x1ec  adrp    x0, <page>
    +0x1f0  ldr     q5, [x0, #3200]
                    // mlk_poly_invntt_tomont_c_const2
@@ -4702,7 +5419,9 @@ install_layout (layout_labels [
    +0x26c  mov     x0, x27
   // inlined: polyvec_add > poly_add
   loop3: in_poly_add: in_poly_tomont_end:
-  in_polyvec_add: in_polyvec_tomont_end:
+  in_poly_tomont_part3_end: in_polyvec_add:
+  in_polyvec_tomont_end:
+  in_polyvec_tomont_part3_end:
    +0x270  ldr     q1, [x0], #16                                   <+
    +0x274  ldr     q0, [x3]                                         |
    +0x278  add     v0.8h, v0.8h, v1.8h                              |
@@ -4842,17 +5561,25 @@ install_layout (layout_labels [
     +0x1c  and     x19, x5, #0xffffffffffffffe0
     +0x20  stp     x21, x22, [sp, #32]
   // inlined: polyvec_frombytes > poly_frombytes
-  in_poly_frombytes: in_polyvec_frombytes:
+  in_poly_frombytes: in_poly_frombytes_part1:
+  in_polyvec_frombytes:
+  in_polyvec_frombytes_part1:
     +0x24  mov     x2, #0x1e00
   // inlined: (not inlined)
+  in_poly_frombytes_part1_end:
+  in_polyvec_frombytes_part1_end:
     +0x28  mov     x5, #0x2400
     +0x2c  stp     x23, x24, [sp, #48]
     +0x30  mov     x6, #0x1800
     +0x34  mov     x21, x3
     +0x38  stp     x25, x26, [sp, #64]
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part2:
+  in_polyvec_frombytes_part2:
     +0x3c  add     x26, x19, x2
   // inlined: (not inlined)
+  in_poly_frombytes_part2_end:
+  in_polyvec_frombytes_part2_end:
     +0x40  mov     x3, #0x2f00
     +0x44  stp     x27, x28, [sp, #80]
     +0x48  add     x20, x19, x5
@@ -4862,9 +5589,13 @@ install_layout (layout_labels [
     +0x58  str     x0, [sp, #128]
     +0x5c  mov     x8, x1
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part3:
+  in_polyvec_frombytes_part3:
     +0x60  mov     x0, x26
     +0x64  mov     x1, x7
   // inlined: (not inlined)
+  in_poly_frombytes_part3_end:
+  in_polyvec_frombytes_part3_end:
     +0x68  ldr     x2, [x4]
     +0x6c  str     x2, [sp, #13272]
     +0x70  mov     x2, #0x0
@@ -4873,9 +5604,15 @@ install_layout (layout_labels [
     +0x7c  add     x25, x20, #0x200
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
   in_poly_mulcache_compute:
+  in_poly_mulcache_compute_part1:
   in_polyvec_mulcache_compute:
+  in_polyvec_mulcache_compute_part1:
     +0x80  mov     w27, #0x3
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part4:
+  in_poly_mulcache_compute_part1_end:
+  in_polyvec_frombytes_part4:
+  in_polyvec_mulcache_compute_part1_end:
     +0x84  bl      mlk_poly_frombytes_c
   after_mlk_poly_frombytes_c_1:
     +0x88  add     x1, x7, #0x180
@@ -4883,15 +5620,21 @@ install_layout (layout_labels [
     +0x90  bl      mlk_poly_frombytes_c
   // inlined: (not inlined)
   after_mlk_poly_frombytes_c_2:
+  in_poly_frombytes_part4_end:
+  in_polyvec_frombytes_part4_end:
     +0x94  str     x9, [sp, #112]
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part5:
+  in_polyvec_frombytes_part5:
     +0x98  add     x1, x7, #0x300
     +0x9c  add     x0, x26, #0x400
     +0xa0  bl      mlk_poly_frombytes_c
   // inlined: (not inlined)
   after_mlk_poly_frombytes_c_3:
   in_poly_frombytes_end:
+  in_poly_frombytes_part5_end:
   in_polyvec_frombytes_end:
+  in_polyvec_frombytes_part5_end:
     +0xa4  ldr     q0, [x7, #1152]
     +0xa8  add     x2, x19, x10
     +0xac  ldr     q1, [x7, #1168]
@@ -4929,17 +5672,25 @@ install_layout (layout_labels [
    +0x120  add     x1, x24, #0x200
    +0x124  mov     x12, #0x1200
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
+  in_poly_mulcache_compute_part2:
+  in_polyvec_mulcache_compute_part2:
    +0x128  mov     x13, #0x2a00
   // inlined: (not inlined)
+  in_poly_mulcache_compute_part2_end:
+  in_polyvec_mulcache_compute_part2_end:
    +0x12c  mov     w0, #0x6
    +0x130  strb    w0, [sp]
    +0x134  mov     w7, #0x5
    +0x138  mov     w6, #0x4
    +0x13c  mov     w5, #0x3
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
+  in_poly_mulcache_compute_part3:
+  in_polyvec_mulcache_compute_part3:
    +0x140  add     x22, x19, x13
    +0x144  add     x21, x19, x12
   // inlined: (not inlined)
+  in_poly_mulcache_compute_part3_end:
+  in_polyvec_mulcache_compute_part3_end:
    +0x148  mov     x0, x24
    +0x14c  bl      mlkem1024_poly_getnoise_eta1_4x
   // inlined: polyvec_ntt > poly_ntt
@@ -4957,7 +5708,10 @@ install_layout (layout_labels [
    +0x16c  mov     x0, x23
    +0x170  bl      mlk_poly_ntt_c
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
-  after_mlk_poly_ntt_c_3: in_poly_ntt_end:
+  after_mlk_poly_ntt_c_3:
+  in_poly_mulcache_compute_part4:
+  in_poly_ntt_end:
+  in_polyvec_mulcache_compute_part4:
   in_polyvec_ntt_end:
    +0x174  mov     x1, x20
    +0x178  mov     x0, x22
@@ -4974,7 +5728,9 @@ install_layout (layout_labels [
    +0x19c  bl      mlk_poly_mulcache_compute_c
   // inlined: polyvec_basemul_acc_montgomery_cached
   loop1: after_mlk_poly_mulcache_compute_c_3:
+  in_poly_mulcache_compute_part4_end:
   in_polyvec_basemul_acc_montgomery_cached_1:
+  in_polyvec_mulcache_compute_part4_end:
    +0x1a0  mov     x1, x23                                                <+
    +0x1a4  mov     x0, x25                                                 |
    +0x1a8  mov     x3, x22                                                 |
@@ -5022,14 +5778,20 @@ install_layout (layout_labels [
   // inlined: polyvec_add
   after_mlk_poly_invntt_tomont_c_4:
   in_poly_invntt_tomont_2_end: in_polyvec_add:
+  in_polyvec_add_part1:
    +0x200  mov     x1, x24
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
-  loop2:
+  loop2: in_poly_mulcache_compute_part5:
+  in_polyvec_add_part1_end:
+  in_polyvec_mulcache_compute_part5:
    +0x204  mov     x0, #0x0                                               <--+
   // inlined: polyvec_add > poly_add                                         |
   loop3: in_poly_add_1:                                                      |
   in_poly_mulcache_compute_end:                                              |
+  in_poly_mulcache_compute_part5_end:                                        |
+  in_polyvec_add_part2:                                                      |
   in_polyvec_mulcache_compute_end:                                           |
+  in_polyvec_mulcache_compute_part5_end:                                     |
    +0x208  ldr     q0, [x28, x0]                                          <+ |
    +0x20c  ldr     q1, [x1, x0]                                            | |
    +0x210  add     v0.8h, v0.8h, v1.8h                                     | |
@@ -5055,6 +5817,7 @@ install_layout (layout_labels [
    +0x244  mov     x1, x23
   // inlined: poly_add
   loop4: in_poly_add_2: in_polyvec_add_end:
+  in_polyvec_add_part2_end:
    +0x248  ldr     q1, [x3], #16                                          <+
    +0x24c  ldr     q0, [x1]                                                |
    +0x250  add     v0.8h, v0.8h, v1.8h                                     |
@@ -5216,8 +5979,10 @@ install_layout (layout_labels [
     +0x2c  mov     x24, #0x88
   // inlined: keccakf1600_extract_bytes
   in_keccakf1600_extract_bytes:
+  in_keccakf1600_extract_bytes_part1:
     +0x30  mov     x23, #0x1
   // inlined: (not inlined)
+  in_keccakf1600_extract_bytes_part1_end:
     +0x34  ldr     x1, [x4]
     +0x38  str     x1, [sp, #312]
     +0x3c  mov     x1, #0x0
@@ -5235,18 +6000,22 @@ install_layout (layout_labels [
   in_keccakf1600_permute_end:                      |
     +0x58  cmp     x20, #0x88                      |
   // inlined: keccakf1600_extract_bytes            |
+  in_keccakf1600_extract_bytes_part2:              |
     +0x5c  mov     x0, x22                         |
     +0x60  csel    x19, x20, x24, ls               |
     +0x64  mov     x1, x21                         |
     +0x68  cmp     w19, #0x0                       |
   // inlined: (not inlined)                        |
+  in_keccakf1600_extract_bytes_part2_end:          |
     +0x6c  add     x22, x22, x19                   |
   // inlined: keccakf1600_extract_bytes            |
+  in_keccakf1600_extract_bytes_part3:              |
     +0x70  csel    x2, x19, x23, ne                |
     +0x74  bl      memcpy                          |
   // inlined: (not inlined)                        |
   loop1_test: after_memcpy:                        |
   in_keccakf1600_extract_bytes_end:                |
+  in_keccakf1600_extract_bytes_part3_end:          |
     +0x78  subs    x20, x20, x19                   |
   loop1_back:                                      |
     +0x7c  b.ne    loop1                          -+
@@ -5409,16 +6178,20 @@ install_layout (layout_labels [
     +0x54  mov     x0, #0x0
   // inlined: polyvec_frombytes > poly_frombytes
   loop1: in_poly_frombytes:
+  in_poly_frombytes_part1:
   in_polyvec_frombytes:
     +0x58  mov     x1, x7                                                 <+
     +0x5c  mov     x0, x8                                                  |
   // inlined: polyvec_frombytes                                            |
+  in_poly_frombytes_part1_end:                                             |
     +0x60  add     x7, x7, #0x180                                          |
   // inlined: polyvec_frombytes > poly_frombytes                           |
+  in_poly_frombytes_part2:                                                 |
     +0x64  bl      mlk_poly_frombytes_c                                    |
   // inlined: polyvec_frombytes                                            |
   after_mlk_poly_frombytes_c:                                              |
   in_poly_frombytes_end:                                                   |
+  in_poly_frombytes_part2_end:                                             |
     +0x68  add     x8, x8, #0x200                                          |
   loop1_test:                                                              |
     +0x6c  cmp     x7, x10                                                 |
@@ -5501,18 +6274,24 @@ install_layout (layout_labels [
    +0x16c  bl      mlk_poly_ntt_c
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
   loop2: after_mlk_poly_ntt_c_4:
-  in_poly_mulcache_compute: in_poly_ntt_end:
+  in_poly_mulcache_compute:
+  in_poly_mulcache_compute_part1:
+  in_poly_ntt_end:
   in_polyvec_mulcache_compute:
+  in_polyvec_mulcache_compute_part1:
   in_polyvec_ntt_end:
    +0x170  mov     x1, x19                                                <+
    +0x174  mov     x0, x27                                                 |
   // inlined: polyvec_mulcache_compute                                     |
+  in_poly_mulcache_compute_part1_end:                                      |
    +0x178  add     x27, x27, #0x100                                        |
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute             |
+  in_poly_mulcache_compute_part2:                                          |
    +0x17c  bl      mlk_poly_mulcache_compute_c                             |
   // inlined: polyvec_mulcache_compute                                     |
   after_mlk_poly_mulcache_compute_c:                                       |
   in_poly_mulcache_compute_end:                                            |
+  in_poly_mulcache_compute_part2_end:                                      |
    +0x180  add     x19, x19, #0x200                                        |
   loop2_test:                                                              |
    +0x184  cmp     x27, x28                                                |
@@ -5527,17 +6306,22 @@ install_layout (layout_labels [
   // inlined: polyvec_basemul_acc_montgomery_cached
   loop3:
   in_polyvec_basemul_acc_montgomery_cached_1:
+  in_polyvec_basemul_acc_montgomery_cached_1_part1:
+  in_polyvec_mulcache_compute_part1_end:
    +0x1a0  mov     x1, x27                                                <+
    +0x1a4  mov     x0, x26                                                 |
    +0x1a8  mov     x3, x22                                                 |
    +0x1ac  mov     x2, x21                                                 |
   // inlined: (not inlined)                                                |
+  in_polyvec_basemul_acc_montgomery_cached_1_part1_end:                    |
    +0x1b0  add     x26, x26, #0x200                                        |
   // inlined: polyvec_basemul_acc_montgomery_cached                        |
+  in_polyvec_basemul_acc_montgomery_cached_1_part2:                        |
    +0x1b4  bl      mlk_polyvec_basemul_acc_montgomery_cached_c1024         |
   // inlined: (not inlined)                                                |
   after_mlk_polyvec_basemul_acc_montgomery_cached_c1024_1:                 |
   in_polyvec_basemul_acc_montgomery_cached_1_end:                          |
+  in_polyvec_basemul_acc_montgomery_cached_1_part2_end:                    |
    +0x1b8  add     x27, x27, #0x800                                        |
   loop3_test:                                                              |
    +0x1bc  cmp     x26, x28                                                |
@@ -5579,13 +6363,16 @@ install_layout (layout_labels [
   // inlined: polyvec_add
   after_mlk_poly_invntt_tomont_c_5:
   in_poly_invntt_tomont_2_end: in_polyvec_add:
+  in_polyvec_add_part1:
    +0x208  mov     x1, x23
   // inlined: polyvec_mulcache_compute
-  loop4:
+  loop4: in_polyvec_add_part1_end:
+  in_polyvec_mulcache_compute_part2:
    +0x20c  mov     x0, #0x0                                               <--+
   // inlined: polyvec_add > poly_add                                         |
-  loop5: in_poly_add_1:                                                      |
+  loop5: in_poly_add_1: in_polyvec_add_part2:                                |
   in_polyvec_mulcache_compute_end:                                           |
+  in_polyvec_mulcache_compute_part2_end:                                     |
    +0x210  ldr     q0, [x19, x0]                                          <+ |
    +0x214  ldr     q1, [x1, x0]                                            | |
    +0x218  add     v0.8h, v0.8h, v1.8h                                     | |
@@ -5611,6 +6398,7 @@ install_layout (layout_labels [
    +0x24c  nop
   // inlined: poly_add
   loop6: in_poly_add_2: in_polyvec_add_end:
+  in_polyvec_add_part2_end:
    +0x250  ldr     q1, [x3], #16                                          <+
    +0x254  ldr     q0, [x1]                                                |
    +0x258  add     v0.8h, v0.8h, v1.8h                                     |
@@ -5648,37 +6436,61 @@ install_layout (layout_labels [
   // inlined: poly_reduce
   after_mlk_poly_reduce_c_4:
   in_poly_reduce_1_end: in_poly_reduce_2:
+  in_poly_reduce_2_part1:
   in_polyvec_reduce_end:
    +0x2a8  mov     x0, x26
   // inlined: polyvec_compress_du > poly_compress_du > poly_compress_d11
-  in_poly_compress_d11: in_poly_compress_du:
+  in_poly_compress_d11:
+  in_poly_compress_d11_part1:
+  in_poly_compress_du:
+  in_poly_compress_du_part1:
+  in_poly_reduce_2_part1_end:
   in_polyvec_compress_du:
+  in_polyvec_compress_du_part1:
    +0x2ac  mov     x8, #0x7800
   // inlined: poly_reduce
+  in_poly_compress_d11_part1_end:
+  in_poly_compress_du_part1_end:
+  in_poly_reduce_2_part2:
+  in_polyvec_compress_du_part1_end:
    +0x2b0  bl      mlk_poly_reduce_c
   // inlined: polyvec_compress_du
   after_mlk_poly_reduce_c_5:
   in_poly_reduce_2_end:
+  in_poly_reduce_2_part2_end:
+  in_polyvec_compress_du_part2:
    +0x2b4  mov     x19, #0x4ad0
    +0x2b8  ldr     x12, [sp, #120]
   // inlined: polyvec_compress_du > poly_compress_du > poly_compress_d11
+  in_poly_compress_d11_part2:
+  in_poly_compress_du_part2:
    +0x2bc  movk    x8, #0x3afb, lsl #16
    +0x2c0  add     x10, sp, x19
   // inlined: polyvec_compress_du
+  in_poly_compress_d11_part2_end:
+  in_poly_compress_du_part2_end:
    +0x2c4  mov     w11, #0x0
   // inlined: polyvec_compress_du > poly_compress_du > poly_compress_d11
+  in_poly_compress_d11_part3:
+  in_poly_compress_du_part3:
    +0x2c8  movk    x8, #0x1, lsl #32
    +0x2cc  mov     x7, #0x100000000
   // inlined: polyvec_compress_du
-  loop8:
+  loop8: in_poly_compress_d11_part3_end:
+  in_poly_compress_du_part3_end:
    +0x2d0  mov     x9, x12
   // inlined: polyvec_compress_du > poly_compress_du > poly_compress_d11
+  in_poly_compress_d11_part4:
+  in_poly_compress_du_part4:
    +0x2d4  ubfiz   x6, x11, #8, #32
   // inlined: polyvec_compress_du
+  in_poly_compress_d11_part4_end:
+  in_poly_compress_du_part4_end:
    +0x2d8  mov     w3, #0x8
    +0x2dc  nop
   // inlined: polyvec_compress_du > poly_compress_du > poly_compress_d11
-  loop9:
+  loop9: in_poly_compress_d11_part5:
+  in_poly_compress_du_part5:
    +0x2e0  sub     w1, w3, #0x8                                           <--+
    +0x2e4  mov     x2, x10                                                   |
   loop10:                                                                    |
@@ -5748,7 +6560,9 @@ install_layout (layout_labels [
    +0x3d0  b.ne    loop9                                                  ---+
   // inlined: polyvec_compress_du
   loop9_exit: in_poly_compress_d11_end:
+  in_poly_compress_d11_part5_end:
   in_poly_compress_du_end:
+  in_poly_compress_du_part5_end:
    +0x3d4  add     w11, w11, #0x1
    +0x3d8  add     x12, x12, #0x160
   loop8_test:
@@ -5757,16 +6571,24 @@ install_layout (layout_labels [
    +0x3e0  b.ne    loop8
   // inlined: (not inlined)
   loop8_exit: in_polyvec_compress_du_end:
+  in_polyvec_compress_du_part2_end:
    +0x3e4  ldr     x0, [sp, #120]
    +0x3e8  mov     x5, #0x4ae0
   // inlined: poly_compress_dv > poly_compress_d5
-  in_poly_compress_d5: in_poly_compress_dv:
+  in_poly_compress_d5:
+  in_poly_compress_d5_part1:
+  in_poly_compress_dv:
+  in_poly_compress_dv_part1:
    +0x3ec  mov     w7, #0xafc0
    +0x3f0  add     x8, sp, x5
   // inlined: (not inlined)
+  in_poly_compress_d5_part1_end:
+  in_poly_compress_dv_part1_end:
    +0x3f4  add     x19, x0, #0x580
    +0x3f8  mov     w9, #0x0
   // inlined: poly_compress_dv > poly_compress_d5
+  in_poly_compress_d5_part2:
+  in_poly_compress_dv_part2:
    +0x3fc  movk    w7, #0x13, lsl #16
    +0x400  mov     w6, #0x4000000
    +0x404  nop
@@ -5826,7 +6648,9 @@ install_layout (layout_labels [
    +0x4c0  b.ne    loop11                                                 ---+
   // inlined: (not inlined)
   loop11_exit: in_poly_compress_d5_end:
+  in_poly_compress_d5_part2_end:
   in_poly_compress_dv_end:
+  in_poly_compress_dv_part2_end:
    +0x4c4  mov     x0, x22
    +0x4c8  mov     x2, #0x400
    +0x4cc  mov     w1, #0x0
@@ -5915,42 +6739,66 @@ install_layout (layout_labels [
     +0x20  stp     x21, x22, [sp, #32]
     +0x24  mov     x7, x2
   // inlined: polyvec_frombytes > poly_frombytes
-  in_poly_frombytes: in_polyvec_frombytes:
+  in_poly_frombytes: in_poly_frombytes_part1:
+  in_polyvec_frombytes:
+  in_polyvec_frombytes_part1:
     +0x28  mov     x1, x2
   // inlined: (not inlined)
+  in_poly_frombytes_part1_end:
+  in_polyvec_frombytes_part1_end:
     +0x2c  stp     x23, x24, [sp, #48]
   // inlined: poly_getnoise_eta1122_4x
   in_poly_getnoise_eta1122_4x:
+  in_poly_getnoise_eta1122_4x_part1:
     +0x30  mov     x2, #0x1800
   // inlined: (not inlined)
+  in_poly_getnoise_eta1122_4x_part1_end:
     +0x34  mov     x19, x3
     +0x38  stp     x25, x26, [sp, #64]
   // inlined: poly_getnoise_eta1122_4x
+  in_poly_getnoise_eta1122_4x_part2:
     +0x3c  mov     x3, #0x1400
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part2:
+  in_poly_getnoise_eta1122_4x_part2_end:
+  in_polyvec_frombytes_part2:
     +0x40  add     x23, x20, #0x1, lsl #12
   // inlined: (not inlined)
+  in_poly_frombytes_part2_end:
+  in_polyvec_frombytes_part2_end:
     +0x44  stp     x27, x28, [sp, #80]
   // inlined: poly_getnoise_eta1122_4x
+  in_poly_getnoise_eta1122_4x_part3:
     +0x48  add     x27, x20, x2
     +0x4c  add     x21, x20, x3
   // inlined: (not inlined)
+  in_poly_getnoise_eta1122_4x_part3_end:
     +0x50  str     x30, [sp, #96]
     +0x54  add     x28, x20, #0x2, lsl #12
     +0x58  str     x0, [sp, #136]
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part3:
+  in_polyvec_frombytes_part3:
     +0x5c  mov     x0, x23
   // inlined: poly_getnoise_eta1122_4x
+  in_poly_frombytes_part3_end:
+  in_poly_getnoise_eta1122_4x_part4:
+  in_polyvec_frombytes_part3_end:
     +0x60  add     x26, x20, #0xa40
     +0x64  add     x25, x20, #0x800
   // inlined: (not inlined)
+  in_poly_getnoise_eta1122_4x_part4_end:
     +0x68  ldr     x2, [x4]
     +0x6c  str     x2, [sp, #8392]
     +0x70  mov     x2, #0x0
   // inlined: poly_getnoise_eta1122_4x
+  in_poly_getnoise_eta1122_4x_part5:
     +0x74  add     x24, x20, #0x8c0
     +0x78  add     x22, x21, #0x200
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part4:
+  in_poly_getnoise_eta1122_4x_part5_end:
+  in_polyvec_frombytes_part4:
     +0x7c  bl      mlk_poly_frombytes_c
   after_mlk_poly_frombytes_c_1:
     +0x80  add     x1, x7, #0x180
@@ -5959,7 +6807,9 @@ install_layout (layout_labels [
   // inlined: (not inlined)
   after_mlk_poly_frombytes_c_2:
   in_poly_frombytes_end:
+  in_poly_frombytes_part4_end:
   in_polyvec_frombytes_end:
+  in_polyvec_frombytes_part4_end:
     +0x8c  ldp     q0, q1, [x7, #768]
     +0x90  mov     x4, #0x1c00
     +0x94  mov     x1, x8
@@ -5974,6 +6824,7 @@ install_layout (layout_labels [
     +0xb4  bl      mlkem512_gen_matrix
   // inlined: poly_getnoise_eta1122_4x
   after_mlkem512_gen_matrix:
+  in_poly_getnoise_eta1122_4x_part6:
     +0xb8  ldp     q0, q1, [x19]
     +0xbc  add     x6, x27, #0x40
     +0xc0  add     x7, x27, #0x80
@@ -6033,6 +6884,7 @@ install_layout (layout_labels [
    +0x180  stp     q0, q0, [x27, #224]
   // inlined: (not inlined)
   in_poly_getnoise_eta1122_4x_end:
+  in_poly_getnoise_eta1122_4x_part6_end:
    +0x184  mov     x5, #0x1a00
    +0x188  mov     x1, x19
    +0x18c  mov     w2, #0x4
@@ -6049,40 +6901,62 @@ install_layout (layout_labels [
    +0x1a8  bl      mlk_poly_ntt_c
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
   after_mlk_poly_ntt_c_2:
-  in_poly_mulcache_compute: in_poly_ntt_end:
+  in_poly_mulcache_compute:
+  in_poly_mulcache_compute_part1:
+  in_poly_ntt_end:
   in_polyvec_mulcache_compute:
+  in_polyvec_mulcache_compute_part1:
   in_polyvec_ntt_end:
    +0x1ac  mov     x1, x21
    +0x1b0  mov     x0, x27
    +0x1b4  bl      mlk_poly_mulcache_compute_c
   // inlined: polyvec_basemul_acc_montgomery_cached
   after_mlk_poly_mulcache_compute_c_1:
+  in_poly_mulcache_compute_part1_end:
   in_polyvec_basemul_acc_montgomery_cached_1:
+  in_polyvec_basemul_acc_montgomery_cached_1_part1:
+  in_polyvec_mulcache_compute_part1_end:
    +0x1b8  add     x26, x20, #0xa00
   // inlined: polyvec_mulcache_compute > poly_mulcache_compute
+  in_poly_mulcache_compute_part2:
+  in_polyvec_basemul_acc_montgomery_cached_1_part1_end:
+  in_polyvec_mulcache_compute_part2:
    +0x1bc  mov     x1, x22
    +0x1c0  add     x0, x27, #0x100
    +0x1c4  bl      mlk_poly_mulcache_compute_c
   // inlined: polyvec_basemul_acc_montgomery_cached
   after_mlk_poly_mulcache_compute_c_2:
   in_poly_mulcache_compute_end:
+  in_poly_mulcache_compute_part2_end:
+  in_polyvec_basemul_acc_montgomery_cached_1_part2:
   in_polyvec_mulcache_compute_end:
+  in_polyvec_mulcache_compute_part2_end:
    +0x1c8  mov     x3, x27
    +0x1cc  mov     x2, x21
    +0x1d0  mov     x1, x20
    +0x1d4  mov     x0, x25
    +0x1d8  bl      mlk_polyvec_basemul_acc_montgomery_cached_c512
   after_mlk_polyvec_basemul_acc_montgomery_cached_c512_1:
+  in_polyvec_basemul_acc_montgomery_cached_1_part2_end:
   in_polyvec_basemul_acc_montgomery_cached_2:
+  in_polyvec_basemul_acc_montgomery_cached_2_part1:
    +0x1dc  mov     x6, #0x1e00
+  in_polyvec_basemul_acc_montgomery_cached_1_part3:
+  in_polyvec_basemul_acc_montgomery_cached_2_part1_end:
    +0x1e0  mov     x0, x26
+  in_polyvec_basemul_acc_montgomery_cached_1_part3_end:
+  in_polyvec_basemul_acc_montgomery_cached_2_part2:
    +0x1e4  add     x22, x20, x6
+  in_polyvec_basemul_acc_montgomery_cached_1_part4:
+  in_polyvec_basemul_acc_montgomery_cached_2_part2_end:
    +0x1e8  mov     x3, x27
    +0x1ec  mov     x2, x21
    +0x1f0  add     x1, x20, #0x400
    +0x1f4  bl      mlk_polyvec_basemul_acc_montgomery_cached_c512
   after_mlk_polyvec_basemul_acc_montgomery_cached_c512_2:
   in_polyvec_basemul_acc_montgomery_cached_1_end:
+  in_polyvec_basemul_acc_montgomery_cached_1_part4_end:
+  in_polyvec_basemul_acc_montgomery_cached_2_part3:
    +0x1f8  mov     x1, x23
    +0x1fc  mov     x3, x27
    +0x200  mov     x2, x21
@@ -6092,6 +6966,7 @@ install_layout (layout_labels [
   after_mlk_polyvec_basemul_acc_montgomery_cached_c512_3:
   in_poly_invntt_tomont_1:
   in_polyvec_basemul_acc_montgomery_cached_2_end:
+  in_polyvec_basemul_acc_montgomery_cached_2_part3_end:
   in_polyvec_invntt_tomont:
    +0x20c  mov     x0, x25
    +0x210  bl      mlk_poly_invntt_tomont_c
@@ -6307,13 +7182,17 @@ install_layout (layout_labels [
     +0x48  str     xzr, [x19, #192]
   // inlined: keccakf1600_extract_bytes
   in_keccakf1600_extract_bytes:
+  in_keccakf1600_extract_bytes_part1:
     +0x4c  ldp     q1, q2, [x19]
   // inlined: (not inlined)
+  in_keccakf1600_extract_bytes_part1_end:
     +0x50  stp     q0, q0, [x19]
   // inlined: keccakf1600_extract_bytes
+  in_keccakf1600_extract_bytes_part2:
     +0x54  stp     q1, q2, [x20]
   // inlined: (not inlined)
   in_keccakf1600_extract_bytes_end:
+  in_keccakf1600_extract_bytes_part2_end:
     +0x58  stp     q0, q0, [x19, #32]
     +0x5c  stp     q0, q0, [x19, #64]
     +0x60  stp     q0, q0, [x19, #96]
@@ -6344,37 +7223,62 @@ install_layout (layout_labels [
      +0xc  ldr     x2, [x2, #4088]
                    // got_stack_chk_guard
   // inlined: polyvec_frombytes > poly_frombytes
-  in_poly_frombytes: in_polyvec_frombytes:
+  in_poly_frombytes: in_poly_frombytes_part1:
+  in_polyvec_frombytes:
+  in_polyvec_frombytes_part1:
     +0x10  mov     x1, x0
   // inlined: (not inlined)
+  in_poly_frombytes_part1_end:
+  in_polyvec_frombytes_part1_end:
     +0x14  stp     x19, x20, [sp]
     +0x18  add     x19, sp, #0x3f
     +0x1c  and     x19, x19, #0xffffffffffffffe0
     +0x20  stp     x21, x30, [sp, #16]
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part2:
+  in_polyvec_frombytes_part2:
     +0x24  mov     x0, x19
     +0x28  add     x9, x19, #0x200
   // inlined: (not inlined)
+  in_poly_frombytes_part2_end:
+  in_polyvec_frombytes_part2_end:
     +0x2c  ldr     x3, [x2]
     +0x30  str     x3, [sp, #1848]
     +0x34  mov     x3, #0x0
   // inlined: polyvec_tobytes > poly_tobytes
-  in_poly_tobytes: in_polyvec_tobytes:
+  in_poly_tobytes: in_poly_tobytes_part1:
+  in_polyvec_tobytes:
+  in_polyvec_tobytes_part1:
     +0x38  add     x20, x19, #0x400
     +0x3c  movi    v2.4s, #0x0
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part3:
+  in_poly_tobytes_part1_end:
+  in_polyvec_frombytes_part3:
+  in_polyvec_tobytes_part1_end:
     +0x40  bl      mlk_poly_frombytes_c
   after_mlk_poly_frombytes_c_1:
     +0x44  add     x1, x8, #0x180
     +0x48  mov     x0, x9
   // inlined: polyvec_tobytes > poly_tobytes
+  in_poly_frombytes_part3_end:
+  in_poly_tobytes_part2:
+  in_polyvec_frombytes_part3_end:
+  in_polyvec_tobytes_part2:
     +0x4c  mov     v3.16b, v2.16b
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part4:
+  in_poly_tobytes_part2_end:
+  in_polyvec_frombytes_part4:
+  in_polyvec_tobytes_part2_end:
     +0x50  bl      mlk_poly_frombytes_c
   // inlined: polyvec_reduce > poly_reduce
   after_mlk_poly_frombytes_c_2:
-  in_poly_frombytes_end: in_poly_reduce:
-  in_polyvec_frombytes_end: in_polyvec_reduce:
+  in_poly_frombytes_end:
+  in_poly_frombytes_part4_end: in_poly_reduce:
+  in_polyvec_frombytes_end:
+  in_polyvec_frombytes_part4_end:
+  in_polyvec_reduce:
     +0x54  mov     x0, x19
     +0x58  bl      mlk_poly_reduce_c
   after_mlk_poly_reduce_c_1:
@@ -6382,7 +7286,9 @@ install_layout (layout_labels [
     +0x60  bl      mlk_poly_reduce_c
   // inlined: polyvec_tobytes > poly_tobytes
   after_mlk_poly_reduce_c_2:
-  in_poly_reduce_end: in_polyvec_reduce_end:
+  in_poly_reduce_end: in_poly_tobytes_part3:
+  in_polyvec_reduce_end:
+  in_polyvec_tobytes_part3:
     +0x64  mov     x0, x20
     +0x68  mov     x1, x19
     +0x6c  bl      mlk_poly_tobytes_c
@@ -6392,7 +7298,10 @@ install_layout (layout_labels [
     +0x78  bl      mlk_poly_tobytes_c
   // inlined: (not inlined)
   after_mlk_poly_tobytes_c_2:
-  in_poly_tobytes_end: in_polyvec_tobytes_end:
+  in_poly_tobytes_end:
+  in_poly_tobytes_part3_end:
+  in_polyvec_tobytes_end:
+  in_polyvec_tobytes_part3_end:
     +0x7c  mov     x0, x8
     +0x80  mov     x2, x20
     +0x84  add     x1, x19, #0x700
@@ -6540,7 +7449,7 @@ install_layout (layout_labels [
     +0x20  mov     w20, w0
     +0x24  cbnz    w0, +0x64                       -+
   // inlined: keypair_derand                        |
-  in_keypair_derand:                                |
+  in_keypair_derand: in_keypair_derand_part1:       |
     +0x28  mov     x1, x21                          |
     +0x2c  add     x0, x19, #0x300                  |
     +0x30  bl      memcpy                           |
@@ -6553,11 +7462,14 @@ install_layout (layout_labels [
     +0x44  ldp     q0, q1, [x22, #32]               |
     +0x48  add     x19, x19, #0x640                 |
   // inlined: (not inlined)                         |
+  in_keypair_derand_part1_end:                      |
     +0x4c  mov     w0, w20                          |
   // inlined: keypair_derand                        |
+  in_keypair_derand_part2:                          |
     +0x50  stp     q0, q1, [x19]                    |
   // inlined: (not inlined)                         |
   in_keypair_derand_end:                            |
+  in_keypair_derand_part2_end:                      |
     +0x54  ldp     x21, x22, [sp, #16]              |
     +0x58  ldr     x30, [sp, #32]                   |
     +0x5c  ldp     x19, x20, [sp], #48              |
@@ -6808,8 +7720,11 @@ install_layout (layout_labels [
     +0xc8  ret     
   // inlined: indcpa_dec > polyvec_decompress_du > poly_decompress_du > poly_decompress_d10
   in_indcpa_dec: in_poly_decompress_d10:
+  in_poly_decompress_d10_part1:
   in_poly_decompress_du:
+  in_poly_decompress_du_part1:
   in_polyvec_decompress_du:
+  in_polyvec_decompress_du_part1:
     +0xcc  add     x24, x19, #0x400
     +0xd0  add     x27, x19, #0x600
     +0xd4  mov     x1, x22
@@ -6817,33 +7732,57 @@ install_layout (layout_labels [
     +0xdc  bl      mlk_poly_decompress_d10_c
   // inlined: indcpa_dec > poly_decompress_dv > poly_decompress_d4
   after_mlk_poly_decompress_d10_c_1:
+  in_poly_decompress_d10_part1_end:
   in_poly_decompress_d4:
+  in_poly_decompress_d4_part1:
+  in_poly_decompress_du_part1_end:
   in_poly_decompress_dv:
+  in_poly_decompress_dv_part1:
+  in_polyvec_decompress_du_part1_end:
     +0xe0  add     x23, x19, #0xf20
   // inlined: indcpa_dec > polyvec_decompress_du > poly_decompress_du > poly_decompress_d10
+  in_poly_decompress_d10_part2:
+  in_poly_decompress_d4_part1_end:
+  in_poly_decompress_du_part2:
+  in_poly_decompress_dv_part1_end:
+  in_polyvec_decompress_du_part2:
     +0xe4  mov     x0, x27
     +0xe8  add     x1, x22, #0x140
     +0xec  bl      mlk_poly_decompress_d10_c
   // inlined: indcpa_dec > polyvec_mulcache_compute > poly_mulcache_compute
   after_mlk_poly_decompress_d10_c_2:
   in_poly_decompress_d10_end:
+  in_poly_decompress_d10_part2_end:
   in_poly_decompress_du_end:
+  in_poly_decompress_du_part2_end:
   in_poly_mulcache_compute:
+  in_poly_mulcache_compute_part1:
   in_polyvec_decompress_du_end:
+  in_polyvec_decompress_du_part2_end:
   in_polyvec_mulcache_compute:
+  in_polyvec_mulcache_compute_part1:
     +0xf0  add     x26, x19, #0xb20
   // inlined: indcpa_dec > poly_decompress_dv > poly_decompress_d4
+  in_poly_decompress_d4_part2:
+  in_poly_decompress_dv_part2:
+  in_poly_mulcache_compute_part1_end:
+  in_polyvec_mulcache_compute_part1_end:
     +0xf4  mov     x0, x23
     +0xf8  add     x1, x22, #0x280
     +0xfc  bl      mlk_poly_decompress_d4_c
   // inlined: indcpa_dec > polyvec_basemul_acc_montgomery_cached
   after_mlk_poly_decompress_d4_c:
   in_poly_decompress_d4_end:
+  in_poly_decompress_d4_part2_end:
   in_poly_decompress_dv_end:
+  in_poly_decompress_dv_part2_end:
   in_polyvec_basemul_acc_montgomery_cached:
+  in_polyvec_basemul_acc_montgomery_cached_part1:
    +0x100  add     x25, x19, #0xd20
   // inlined: indcpa_dec > polyvec_frombytes > poly_frombytes
-  in_poly_frombytes: in_polyvec_frombytes:
+  in_poly_frombytes:
+  in_polyvec_basemul_acc_montgomery_cached_part1_end:
+  in_polyvec_frombytes:
    +0x104  mov     x1, x20
    +0x108  mov     x0, x19
    +0x10c  bl      mlk_poly_frombytes_c
@@ -6861,7 +7800,10 @@ install_layout (layout_labels [
    +0x124  mov     x0, x27
    +0x128  bl      mlk_poly_ntt_c
   // inlined: indcpa_dec > polyvec_mulcache_compute > poly_mulcache_compute
-  after_mlk_poly_ntt_c_2: in_poly_ntt_end:
+  after_mlk_poly_ntt_c_2:
+  in_poly_mulcache_compute_part2:
+  in_poly_ntt_end:
+  in_polyvec_mulcache_compute_part2:
   in_polyvec_ntt_end:
    +0x12c  mov     x1, x24
    +0x130  mov     x0, x26
@@ -6873,7 +7815,10 @@ install_layout (layout_labels [
   // inlined: indcpa_dec > polyvec_basemul_acc_montgomery_cached
   after_mlk_poly_mulcache_compute_c_2:
   in_poly_mulcache_compute_end:
+  in_poly_mulcache_compute_part2_end:
+  in_polyvec_basemul_acc_montgomery_cached_part2:
   in_polyvec_mulcache_compute_end:
+  in_polyvec_mulcache_compute_part2_end:
    +0x144  mov     x3, x26
    +0x148  mov     x2, x24
    +0x14c  mov     x1, x19
@@ -6883,6 +7828,7 @@ install_layout (layout_labels [
   after_mlk_polyvec_basemul_acc_montgomery_cached_c512:
   in_poly_invntt_tomont:
   in_polyvec_basemul_acc_montgomery_cached_end:
+  in_polyvec_basemul_acc_montgomery_cached_part2_end:
    +0x158  mov     x0, x25
    +0x15c  bl      mlk_poly_invntt_tomont_c
   // inlined: indcpa_dec > poly_sub
@@ -6905,14 +7851,17 @@ install_layout (layout_labels [
   loop1_exit: in_poly_sub_end:
    +0x188  mov     x1, #0x1160
   // inlined: indcpa_dec > poly_reduce
-  in_poly_reduce:
+  in_poly_reduce: in_poly_reduce_part1:
    +0x18c  mov     x0, x23
   // inlined: indcpa_dec
+  in_poly_reduce_part1_end:
    +0x190  add     x27, x19, x1
   // inlined: indcpa_dec > poly_reduce
+  in_poly_reduce_part2:
    +0x194  bl      mlk_poly_reduce_c
   // inlined: indcpa_dec
   after_mlk_poly_reduce_c: in_poly_reduce_end:
+  in_poly_reduce_part2_end:
    +0x198  mov     x0, x27
    +0x19c  mov     x1, x23
    +0x1a0  bl      mlkem_poly_tomsg
@@ -7046,34 +7995,60 @@ install_layout (layout_labels [
      +0xc  ldr     x2, [x2, #4088]
                    // got_stack_chk_guard
   // inlined: polyvec_frombytes > poly_frombytes
-  in_poly_frombytes: in_polyvec_frombytes:
+  in_poly_frombytes: in_poly_frombytes_part1:
+  in_polyvec_frombytes:
+  in_polyvec_frombytes_part1:
     +0x10  mov     x1, x0
   // inlined: (not inlined)
+  in_poly_frombytes_part1_end:
+  in_polyvec_frombytes_part1_end:
     +0x14  stp     x19, x20, [sp]
     +0x18  add     x19, sp, #0x3f
     +0x1c  and     x19, x19, #0xffffffffffffffe0
     +0x20  stp     x21, x30, [sp, #16]
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part2:
+  in_polyvec_frombytes_part2:
     +0x24  add     x10, x19, #0x200
     +0x28  mov     x0, x19
   // inlined: (not inlined)
+  in_poly_frombytes_part2_end:
+  in_polyvec_frombytes_part2_end:
     +0x2c  ldr     x3, [x2]
     +0x30  str     x3, [sp, #2744]
     +0x34  mov     x3, #0x0
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part3:
+  in_polyvec_frombytes_part3:
     +0x38  add     x9, x19, #0x400
   // inlined: polyvec_tobytes > poly_tobytes
-  in_poly_tobytes: in_polyvec_tobytes:
+  in_poly_frombytes_part3_end:
+  in_poly_tobytes: in_poly_tobytes_part1:
+  in_polyvec_frombytes_part3_end:
+  in_polyvec_tobytes:
+  in_polyvec_tobytes_part1:
     +0x3c  movi    v2.4s, #0x0
     +0x40  add     x20, x19, #0x600
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part4:
+  in_poly_tobytes_part1_end:
+  in_polyvec_frombytes_part4:
+  in_polyvec_tobytes_part1_end:
     +0x44  bl      mlk_poly_frombytes_c
   after_mlk_poly_frombytes_c_1:
     +0x48  mov     x0, x10
     +0x4c  add     x1, x8, #0x180
   // inlined: polyvec_tobytes > poly_tobytes
+  in_poly_frombytes_part4_end:
+  in_poly_tobytes_part2:
+  in_polyvec_frombytes_part4_end:
+  in_polyvec_tobytes_part2:
     +0x50  mov     v3.16b, v2.16b
   // inlined: polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part5:
+  in_poly_tobytes_part2_end:
+  in_polyvec_frombytes_part5:
+  in_polyvec_tobytes_part2_end:
     +0x54  bl      mlk_poly_frombytes_c
   after_mlk_poly_frombytes_c_2:
     +0x58  add     x1, x8, #0x300
@@ -7081,8 +8056,11 @@ install_layout (layout_labels [
     +0x60  bl      mlk_poly_frombytes_c
   // inlined: polyvec_reduce > poly_reduce
   after_mlk_poly_frombytes_c_3:
-  in_poly_frombytes_end: in_poly_reduce:
-  in_polyvec_frombytes_end: in_polyvec_reduce:
+  in_poly_frombytes_end:
+  in_poly_frombytes_part5_end: in_poly_reduce:
+  in_polyvec_frombytes_end:
+  in_polyvec_frombytes_part5_end:
+  in_polyvec_reduce:
     +0x64  mov     x0, x19
     +0x68  bl      mlk_poly_reduce_c
   after_mlk_poly_reduce_c_1:
@@ -7093,7 +8071,9 @@ install_layout (layout_labels [
     +0x78  bl      mlk_poly_reduce_c
   // inlined: polyvec_tobytes > poly_tobytes
   after_mlk_poly_reduce_c_3:
-  in_poly_reduce_end: in_polyvec_reduce_end:
+  in_poly_reduce_end: in_poly_tobytes_part3:
+  in_polyvec_reduce_end:
+  in_polyvec_tobytes_part3:
     +0x7c  mov     x0, x20
     +0x80  mov     x1, x19
     +0x84  bl      mlk_poly_tobytes_c
@@ -7107,7 +8087,10 @@ install_layout (layout_labels [
     +0x9c  bl      mlk_poly_tobytes_c
   // inlined: (not inlined)
   after_mlk_poly_tobytes_c_3:
-  in_poly_tobytes_end: in_polyvec_tobytes_end:
+  in_poly_tobytes_end:
+  in_poly_tobytes_part3_end:
+  in_polyvec_tobytes_end:
+  in_polyvec_tobytes_part3_end:
     +0xa0  mov     x0, x8
     +0xa4  mov     x1, x20
     +0xa8  add     x2, x19, #0xa80
@@ -7255,7 +8238,7 @@ install_layout (layout_labels [
     +0x20  mov     w20, w0
     +0x24  cbnz    w0, +0x64                       -+
   // inlined: keypair_derand                        |
-  in_keypair_derand:                                |
+  in_keypair_derand: in_keypair_derand_part1:       |
     +0x28  mov     x1, x21                          |
     +0x2c  add     x0, x19, #0x480                  |
     +0x30  bl      memcpy                           |
@@ -7268,11 +8251,14 @@ install_layout (layout_labels [
     +0x44  ldp     q0, q1, [x22, #32]               |
     +0x48  add     x19, x19, #0x940                 |
   // inlined: (not inlined)                         |
+  in_keypair_derand_part1_end:                      |
     +0x4c  mov     w0, w20                          |
   // inlined: keypair_derand                        |
+  in_keypair_derand_part2:                          |
     +0x50  stp     q0, q1, [x19]                    |
   // inlined: (not inlined)                         |
   in_keypair_derand_end:                            |
+  in_keypair_derand_part2_end:                      |
     +0x54  ldp     x21, x22, [sp, #16]              |
     +0x58  ldr     x30, [sp, #32]                   |
     +0x5c  ldp     x19, x20, [sp], #48              |
@@ -7525,8 +8511,11 @@ install_layout (layout_labels [
     +0xd0  ret     
   // inlined: indcpa_dec > polyvec_decompress_du > poly_decompress_du > poly_decompress_d10
   in_indcpa_dec: in_poly_decompress_d10:
+  in_poly_decompress_d10_part1:
   in_poly_decompress_du:
+  in_poly_decompress_du_part1:
   in_polyvec_decompress_du:
+  in_polyvec_decompress_du_part1:
     +0xd4  add     x24, x19, #0x600
     +0xd8  add     x28, x19, #0x800
     +0xdc  mov     x1, x21
@@ -7539,36 +8528,77 @@ install_layout (layout_labels [
     +0xf4  bl      mlk_poly_decompress_d10_c
   // inlined: indcpa_dec > poly_decompress_dv > poly_decompress_d4
   after_mlk_poly_decompress_d10_c_2:
+  in_poly_decompress_d10_part1_end:
   in_poly_decompress_d4:
+  in_poly_decompress_d4_part1:
+  in_poly_decompress_du_part1_end:
   in_poly_decompress_dv:
+  in_poly_decompress_dv_part1:
+  in_polyvec_decompress_du_part1_end:
     +0xf8  mov     x3, #0x1560
   // inlined: indcpa_dec > polyvec_decompress_du > poly_decompress_du > poly_decompress_d10
+  in_poly_decompress_d10_part2:
+  in_poly_decompress_d4_part1_end:
+  in_poly_decompress_du_part2:
+  in_poly_decompress_dv_part1_end:
+  in_polyvec_decompress_du_part2:
     +0xfc  mov     x0, x27
   // inlined: indcpa_dec > poly_decompress_dv > poly_decompress_d4
+  in_poly_decompress_d10_part2_end:
+  in_poly_decompress_d4_part2:
+  in_poly_decompress_du_part2_end:
+  in_poly_decompress_dv_part2:
+  in_polyvec_decompress_du_part2_end:
    +0x100  add     x23, x19, x3
   // inlined: indcpa_dec > polyvec_decompress_du > poly_decompress_du > poly_decompress_d10
+  in_poly_decompress_d10_part3:
+  in_poly_decompress_d4_part2_end:
+  in_poly_decompress_du_part3:
+  in_poly_decompress_dv_part2_end:
+  in_polyvec_decompress_du_part3:
    +0x104  add     x1, x21, #0x280
    +0x108  bl      mlk_poly_decompress_d10_c
   // inlined: indcpa_dec > polyvec_mulcache_compute > poly_mulcache_compute
   after_mlk_poly_decompress_d10_c_3:
   in_poly_decompress_d10_end:
+  in_poly_decompress_d10_part3_end:
   in_poly_decompress_du_end:
+  in_poly_decompress_du_part3_end:
   in_poly_mulcache_compute:
+  in_poly_mulcache_compute_part1:
   in_polyvec_decompress_du_end:
+  in_polyvec_decompress_du_part3_end:
   in_polyvec_mulcache_compute:
+  in_polyvec_mulcache_compute_part1:
    +0x10c  mov     x4, #0x1060
   // inlined: indcpa_dec > poly_decompress_dv > poly_decompress_d4
+  in_poly_decompress_d4_part3:
+  in_poly_decompress_dv_part3:
+  in_poly_mulcache_compute_part1_end:
+  in_polyvec_mulcache_compute_part1_end:
    +0x110  mov     x0, x23
   // inlined: indcpa_dec > polyvec_mulcache_compute > poly_mulcache_compute
+  in_poly_decompress_d4_part3_end:
+  in_poly_decompress_dv_part3_end:
+  in_poly_mulcache_compute_part2:
+  in_polyvec_mulcache_compute_part2:
    +0x114  add     x25, x19, x4
   // inlined: indcpa_dec > poly_decompress_dv > poly_decompress_d4
+  in_poly_decompress_d4_part4:
+  in_poly_decompress_dv_part4:
+  in_poly_mulcache_compute_part2_end:
+  in_polyvec_mulcache_compute_part2_end:
    +0x118  add     x1, x21, #0x3c0
    +0x11c  bl      mlk_poly_decompress_d4_c
   // inlined: indcpa_dec > polyvec_frombytes > poly_frombytes
   after_mlk_poly_decompress_d4_c:
   in_poly_decompress_d4_end:
+  in_poly_decompress_d4_part4_end:
   in_poly_decompress_dv_end:
-  in_poly_frombytes: in_polyvec_frombytes:
+  in_poly_decompress_dv_part4_end:
+  in_poly_frombytes: in_poly_frombytes_part1:
+  in_polyvec_frombytes:
+  in_polyvec_frombytes_part1:
    +0x120  mov     x1, x20
    +0x124  mov     x0, x19
    +0x128  bl      mlk_poly_frombytes_c
@@ -7578,19 +8608,34 @@ install_layout (layout_labels [
    +0x134  bl      mlk_poly_frombytes_c
   // inlined: indcpa_dec > polyvec_basemul_acc_montgomery_cached
   after_mlk_poly_frombytes_c_2:
+  in_poly_frombytes_part1_end:
   in_polyvec_basemul_acc_montgomery_cached:
+  in_polyvec_basemul_acc_montgomery_cached_part1:
+  in_polyvec_frombytes_part1_end:
    +0x138  mov     x5, #0x1360
   // inlined: indcpa_dec > polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part2:
+  in_polyvec_basemul_acc_montgomery_cached_part1_end:
+  in_polyvec_frombytes_part2:
    +0x13c  add     x1, x20, #0x300
   // inlined: indcpa_dec > polyvec_basemul_acc_montgomery_cached
+  in_poly_frombytes_part2_end:
+  in_polyvec_basemul_acc_montgomery_cached_part2:
+  in_polyvec_frombytes_part2_end:
    +0x140  add     x26, x19, x5
   // inlined: indcpa_dec > polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part3:
+  in_polyvec_basemul_acc_montgomery_cached_part2_end:
+  in_polyvec_frombytes_part3:
    +0x144  add     x0, x19, #0x400
    +0x148  bl      mlk_poly_frombytes_c
   // inlined: indcpa_dec > polyvec_ntt > poly_ntt
   after_mlk_poly_frombytes_c_3:
-  in_poly_frombytes_end: in_poly_ntt:
-  in_polyvec_frombytes_end: in_polyvec_ntt:
+  in_poly_frombytes_end:
+  in_poly_frombytes_part3_end: in_poly_ntt:
+  in_polyvec_frombytes_end:
+  in_polyvec_frombytes_part3_end:
+  in_polyvec_ntt:
    +0x14c  mov     x0, x24
    +0x150  bl      mlk_poly_ntt_c
   after_mlk_poly_ntt_c_1:
@@ -7600,7 +8645,10 @@ install_layout (layout_labels [
    +0x15c  mov     x0, x27
    +0x160  bl      mlk_poly_ntt_c
   // inlined: indcpa_dec > polyvec_mulcache_compute > poly_mulcache_compute
-  after_mlk_poly_ntt_c_3: in_poly_ntt_end:
+  after_mlk_poly_ntt_c_3:
+  in_poly_mulcache_compute_part3:
+  in_poly_ntt_end:
+  in_polyvec_mulcache_compute_part3:
   in_polyvec_ntt_end:
    +0x164  mov     x1, x24
    +0x168  mov     x0, x25
@@ -7616,7 +8664,10 @@ install_layout (layout_labels [
   // inlined: indcpa_dec > polyvec_basemul_acc_montgomery_cached
   after_mlk_poly_mulcache_compute_c_3:
   in_poly_mulcache_compute_end:
+  in_poly_mulcache_compute_part3_end:
+  in_polyvec_basemul_acc_montgomery_cached_part3:
   in_polyvec_mulcache_compute_end:
+  in_polyvec_mulcache_compute_part3_end:
    +0x188  mov     x3, x25
    +0x18c  mov     x2, x24
    +0x190  mov     x1, x19
@@ -7626,6 +8677,7 @@ install_layout (layout_labels [
   after_mlk_polyvec_basemul_acc_montgomery_cached_c768:
   in_poly_invntt_tomont:
   in_polyvec_basemul_acc_montgomery_cached_end:
+  in_polyvec_basemul_acc_montgomery_cached_part3_end:
    +0x19c  mov     x0, x26
    +0x1a0  bl      mlk_poly_invntt_tomont_c
   // inlined: indcpa_dec > poly_sub
@@ -7647,14 +8699,17 @@ install_layout (layout_labels [
   loop1_exit: in_poly_sub_end:
    +0x1c8  mov     x1, #0x17a0
   // inlined: indcpa_dec > poly_reduce
-  in_poly_reduce:
+  in_poly_reduce: in_poly_reduce_part1:
    +0x1cc  mov     x0, x23
   // inlined: indcpa_dec
+  in_poly_reduce_part1_end:
    +0x1d0  add     x27, x19, x1
   // inlined: indcpa_dec > poly_reduce
+  in_poly_reduce_part2:
    +0x1d4  bl      mlk_poly_reduce_c
   // inlined: indcpa_dec
   after_mlk_poly_reduce_c: in_poly_reduce_end:
+  in_poly_reduce_part2_end:
    +0x1d8  mov     x0, x27
    +0x1dc  mov     x1, x23
    +0x1e0  bl      mlkem_poly_tomsg
@@ -7800,16 +8855,20 @@ install_layout (layout_labels [
     +0x38  mov     x0, #0x0
   // inlined: polyvec_frombytes > poly_frombytes
   loop1: in_poly_frombytes:
+  in_poly_frombytes_part1:
   in_polyvec_frombytes:
     +0x3c  mov     x1, x7                         <+
     +0x40  mov     x0, x8                          |
   // inlined: polyvec_frombytes                    |
+  in_poly_frombytes_part1_end:                     |
     +0x44  add     x7, x7, #0x180                  |
   // inlined: polyvec_frombytes > poly_frombytes   |
+  in_poly_frombytes_part2:                         |
     +0x48  bl      mlk_poly_frombytes_c            |
   // inlined: polyvec_frombytes                    |
   after_mlk_poly_frombytes_c:                      |
   in_poly_frombytes_end:                           |
+  in_poly_frombytes_part2_end:                     |
     +0x4c  add     x8, x8, #0x200                  |
   loop1_test:                                      |
     +0x50  cmp     x9, x7                          |
@@ -7836,16 +8895,20 @@ install_layout (layout_labels [
   // inlined: polyvec_tobytes > poly_tobytes
   loop2: after_mlk_poly_reduce_c_4:
   in_poly_reduce_end: in_poly_tobytes:
+  in_poly_tobytes_part1:
   in_polyvec_reduce_end: in_polyvec_tobytes:
     +0x88  mov     x1, x11                        <+
     +0x8c  mov     x0, x8                          |
   // inlined: polyvec_tobytes                      |
+  in_poly_tobytes_part1_end:                       |
     +0x90  add     x8, x8, #0x180                  |
   // inlined: polyvec_tobytes > poly_tobytes       |
+  in_poly_tobytes_part2:                           |
     +0x94  bl      mlk_poly_tobytes_c              |
   // inlined: polyvec_tobytes                      |
   after_mlk_poly_tobytes_c:                        |
   in_poly_tobytes_end:                             |
+  in_poly_tobytes_part2_end:                       |
     +0x98  add     x11, x11, #0x200                |
   loop2_test:                                      |
     +0x9c  cmp     x12, x8                         |
@@ -7999,7 +9062,7 @@ install_layout (layout_labels [
     +0x20  mov     w20, w0
     +0x24  cbnz    w0, +0x64                        -+
   // inlined: keypair_derand                         |
-  in_keypair_derand:                                 |
+  in_keypair_derand: in_keypair_derand_part1:        |
     +0x28  mov     x1, x21                           |
     +0x2c  add     x0, x19, #0x600                   |
     +0x30  bl      memcpy                            |
@@ -8012,11 +9075,14 @@ install_layout (layout_labels [
     +0x44  ldp     q0, q1, [x22, #32]                |
     +0x48  add     x19, x19, #0xc40                  |
   // inlined: (not inlined)                          |
+  in_keypair_derand_part1_end:                       |
     +0x4c  mov     w0, w20                           |
   // inlined: keypair_derand                         |
+  in_keypair_derand_part2:                           |
     +0x50  stp     q0, q1, [x19]                     |
   // inlined: (not inlined)                          |
   in_keypair_derand_end:                             |
+  in_keypair_derand_part2_end:                       |
     +0x54  ldp     x21, x22, [sp, #16]               |
     +0x58  ldr     x30, [sp, #32]                    |
     +0x5c  ldp     x19, x20, [sp], #48               |
@@ -8265,33 +9331,58 @@ install_layout (layout_labels [
     +0xc0  ret     
     +0xc4  ldr     x0, [sp, #104]
   // inlined: indcpa_dec > polyvec_decompress_du > poly_decompress_du > poly_decompress_d11
-  adrp3: in_indcpa_dec:
+  adrp3: in_indcpa_dec: in_indcpa_dec_part1:
   in_poly_decompress_d11:
+  in_poly_decompress_d11_part1:
   in_poly_decompress_du:
+  in_poly_decompress_du_part1:
   in_polyvec_decompress_du:
+  in_polyvec_decompress_du_part1:
     +0xc8  adrp    x1, <page>
     +0xcc  add     x24, x19, #0x800
   // inlined: (not inlined)
+  in_indcpa_dec_part1_end:
+  in_poly_decompress_d11_part1_end:
+  in_poly_decompress_du_part1_end:
+  in_polyvec_decompress_du_part1_end:
     +0xd0  mov     x9, #0x0
   // inlined: indcpa_dec > polyvec_decompress_du > poly_decompress_du > poly_decompress_d11
+  in_indcpa_dec_part2:
+  in_poly_decompress_d11_part2:
+  in_poly_decompress_du_part2:
+  in_polyvec_decompress_du_part2:
     +0xd4  ldr     q3, [x1, #3328]
                    // mlkem1024_dec_consts
     +0xd8  mov     x20, x24
     +0xdc  movi    v2.4s, #0x4, lsl #8
   // inlined: (not inlined)
+  in_indcpa_dec_part2_end:
+  in_poly_decompress_d11_part2_end:
+  in_poly_decompress_du_part2_end:
+  in_polyvec_decompress_du_part2_end:
     +0xe0  mov     x10, x24
     +0xe4  add     x8, x0, #0x160
     +0xe8  stp     x25, x26, [sp, #48]
     +0xec  stp     x27, x28, [sp, #64]
     +0xf0  str     x0, [sp, #112]
   // inlined: indcpa_dec > polyvec_decompress_du > poly_decompress_du > poly_decompress_d11
-  loop1:
+  loop1: in_indcpa_dec_part3:
+  in_poly_decompress_d11_part3:
+  in_poly_decompress_du_part3:
+  in_polyvec_decompress_du_part3:
     +0xf4  sub     x1, x8, #0x160
   // inlined: (not inlined)
+  in_indcpa_dec_part3_end:
+  in_poly_decompress_d11_part3_end:
+  in_poly_decompress_du_part3_end:
+  in_polyvec_decompress_du_part3_end:
     +0xf8  mov     x7, x10
     +0xfc  nop     
   // inlined: indcpa_dec > polyvec_decompress_du > poly_decompress_du > poly_decompress_d11
-  loop2:
+  loop2: in_indcpa_dec_part4:
+  in_poly_decompress_d11_part4:
+  in_poly_decompress_du_part4:
+  in_polyvec_decompress_du_part4:
    +0x100  ldrb    w5, [x1, #2]
    +0x104  add     x1, x1, #0xb
    +0x108  ldurb   w6, [x1, #-10]
@@ -8348,7 +9439,9 @@ install_layout (layout_labels [
    +0x1cc  b.ne    loop2
   // inlined: indcpa_dec > polyvec_decompress_du
   loop2_exit: in_poly_decompress_d11_end:
+  in_poly_decompress_d11_part4_end:
   in_poly_decompress_du_end:
+  in_poly_decompress_du_part4_end:
    +0x1d0  add     x9, x9, #0x20
    +0x1d4  add     x10, x10, #0x200
    +0x1d8  add     x8, x1, #0x160
@@ -8358,27 +9451,36 @@ install_layout (layout_labels [
    +0x1e0  b.ne    loop1
   // inlined: indcpa_dec
   loop1_exit: in_polyvec_decompress_du_end:
+  in_polyvec_decompress_du_part4_end:
    +0x1e4  ldr     x0, [sp, #104]
    +0x1e8  mov     x6, #0x1c40
   // inlined: indcpa_dec > poly_decompress_dv > poly_decompress_d5
   in_poly_decompress_d5:
+  in_poly_decompress_d5_part1:
   in_poly_decompress_dv:
+  in_poly_decompress_dv_part1:
    +0x1ec  movi    v2.4s, #0x10
    +0x1f0  add     x22, x19, x6
   // inlined: indcpa_dec
+  in_poly_decompress_d5_part1_end:
+  in_poly_decompress_dv_part1_end:
    +0x1f4  add     x2, x0, #0x580
   // inlined: indcpa_dec > poly_decompress_dv > poly_decompress_d5
-  adrp4:
+  adrp4: in_poly_decompress_d5_part2:
+  in_poly_decompress_dv_part2:
    +0x1f8  adrp    x0, <page>
    +0x1fc  mov     x23, x22
    +0x200  add     x27, x22, #0x200
    +0x204  ldr     q3, [x0, #3328]
                    // mlkem1024_dec_consts
   // inlined: indcpa_dec
+  in_poly_decompress_d5_part2_end:
+  in_poly_decompress_dv_part2_end:
    +0x208  mov     x8, x22
    +0x20c  nop     
   // inlined: indcpa_dec > poly_decompress_dv > poly_decompress_d5
-  loop3:
+  loop3: in_poly_decompress_d5_part3:
+  in_poly_decompress_dv_part3:
    +0x210  ldrb    w0, [x2, #1]
    +0x214  add     x2, x2, #0x5
    +0x218  ldurb   w1, [x2, #-5]
@@ -8428,17 +9530,23 @@ install_layout (layout_labels [
    +0x2bc  add     x26, x21, #0x600
   // inlined: indcpa_dec > polyvec_frombytes > poly_frombytes
   loop4: in_poly_decompress_d5_end:
+  in_poly_decompress_d5_part3_end:
   in_poly_decompress_dv_end:
-  in_poly_frombytes: in_polyvec_frombytes:
+  in_poly_decompress_dv_part3_end:
+  in_poly_frombytes: in_poly_frombytes_part1:
+  in_polyvec_frombytes:
    +0x2c0  mov     x1, x7
    +0x2c4  mov     x0, x8
   // inlined: indcpa_dec > polyvec_frombytes
+  in_poly_frombytes_part1_end:
    +0x2c8  add     x7, x7, #0x180
   // inlined: indcpa_dec > polyvec_frombytes > poly_frombytes
+  in_poly_frombytes_part2:
    +0x2cc  bl      mlk_poly_frombytes_c
   // inlined: indcpa_dec > polyvec_frombytes
   after_mlk_poly_frombytes_c:
   in_poly_frombytes_end:
+  in_poly_frombytes_part2_end:
    +0x2d0  add     x8, x8, #0x200
   loop4_test:
    +0x2d4  cmp     x26, x7
@@ -8515,14 +9623,17 @@ install_layout (layout_labels [
   loop6_exit: in_poly_sub_end:
    +0x370  mov     x1, #0x1e80
   // inlined: indcpa_dec > poly_reduce
-  in_poly_reduce:
+  in_poly_reduce: in_poly_reduce_part1:
    +0x374  mov     x0, x22
   // inlined: indcpa_dec
+  in_poly_reduce_part1_end:
    +0x378  add     x20, x19, x1
   // inlined: indcpa_dec > poly_reduce
+  in_poly_reduce_part2:
    +0x37c  bl      mlk_poly_reduce_c
   // inlined: indcpa_dec
   after_mlk_poly_reduce_c: in_poly_reduce_end:
+  in_poly_reduce_part2_end:
    +0x380  mov     x0, x20
    +0x384  mov     x1, x22
    +0x388  bl      mlkem_poly_tomsg
@@ -8553,6 +9664,7 @@ install_layout (layout_labels [
    +0x3d8  bl      memset
   // inlined: (not inlined)
   after_memset_6: in_indcpa_dec_end:
+  in_indcpa_dec_part4_end:
    +0x3dc  ldr     q0, [x21, #3104]
    +0x3e0  mov     x2, #0x1e40
    +0x3e4  ldr     q1, [x21, #3120]

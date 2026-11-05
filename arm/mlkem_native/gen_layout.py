@@ -324,6 +324,18 @@ def add_inline(lay, binary, dwp):
             l = 'in_' + short(c[-1]) + ('' if count[c[-1]] == 1 else '_%d' % seen[c[-1]])
             lay.labels[f][l] = min(lo for lo, hi in rs) - a0
             lay.labels[f][l + '_end'] = max(hi for lo, hi in rs) - a0
+            # The ranges themselves, with adjacent ones joined, if the code
+            # of the call is not contiguous
+            parts = []
+            for lo, hi in sorted(rs):
+                if parts and lo <= parts[-1][1]:
+                    parts[-1] = (parts[-1][0], max(hi, parts[-1][1]))
+                else:
+                    parts.append((lo, hi))
+            if len(parts) > 1:
+                for j, (lo, hi) in enumerate(parts, 1):
+                    lay.labels[f]['%s_part%d' % (l, j)] = lo - a0
+                    lay.labels[f]['%s_part%d_end' % (l, j)] = hi - a0
         prev = ()
         for x, o, args in lay.code[f]:
             if x >= a0 + lay.functions[f][1]:
@@ -500,7 +512,16 @@ g is the name without the namespace (e.g. polyvec_ntt for
 mlkem512_polyvec_ntt), numbered as in_g_N if g is inlined several times
 into the same function, in the order of the addresses. The compiler may
 move instructions of a call next to those of others, so the instructions
-between in_g and in_g_end can include some of other calls. The listings
+between in_g and in_g_end can include some of other calls. If they do,
+the code of the call itself is given by labels for each of its ranges of
+consecutive instructions, in_g_partJ to in_g_partJ_end, from J = 1:
+
+  in_g:          in_g_part1:      first range of instructions of the call
+                 in_g_part1_end:  other code (the caller, other calls)
+                 in_g_part2:      second range of the call
+  in_g_end:      in_g_part2_end:
+
+The listings
 note where the instructions of each inlined call start, with the chain of
 inlined calls they belong to, e.g. "inlined: polyvec_ntt > poly_ntt".'''
 
