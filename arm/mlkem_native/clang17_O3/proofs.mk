@@ -37,6 +37,8 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/polyvec_compress_du_k4 \
   mlkem_native/clang17_O3/polyvec_decompress_du_k4 \
   mlkem_native/clang17_O3/polyvec_frombytes_k2 \
+  mlkem_native/clang17_O3/polyvec_frombytes_k3 \
+  mlkem_native/clang17_O3/polyvec_frombytes_k4 \
   mlkem_native/clang17_O3/polyvec_invntt_tomont_k2 \
   mlkem_native/clang17_O3/polyvec_invntt_tomont_k3 \
   mlkem_native/clang17_O3/polyvec_invntt_tomont_k4 \
@@ -172,6 +174,12 @@ mlkem_native/clang17_O3/polyvec_decompress_du_k4.native: \
   mlkem_native/clang17_O3/poly_decompress_d11.native \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/polyvec_frombytes_k2.native: \
+  mlkem_native/clang17_O3/poly_frombytes.native \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/polyvec_frombytes_k3.native: \
+  mlkem_native/clang17_O3/poly_frombytes.native \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/polyvec_frombytes_k4.native: \
   mlkem_native/clang17_O3/poly_frombytes.native \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/polyvec_invntt_tomont_k2.native: \
