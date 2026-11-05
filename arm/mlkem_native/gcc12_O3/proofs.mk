@@ -11,6 +11,9 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/check_pk_k2 \
   mlkem_native/gcc12_O3/check_pk_k3 \
   mlkem_native/gcc12_O3/check_pk_k4 \
+  mlkem_native/gcc12_O3/check_sk_k2 \
+  mlkem_native/gcc12_O3/check_sk_k3 \
+  mlkem_native/gcc12_O3/check_sk_k4 \
   mlkem_native/gcc12_O3/keccak_absorb_once \
   mlkem_native/gcc12_O3/keccakf1600_extract_bytes \
   mlkem_native/gcc12_O3/keccakf1600_permute \
@@ -109,6 +112,15 @@ mlkem_native/gcc12_O3/check_pk_k4.native: \
   mlkem_native/gcc12_O3/polyvec_reduce_k4.native \
   mlkem_native/gcc12_O3/polyvec_tobytes_k4.native \
   proofs/utils/mlkem_native_image.ml
+mlkem_native/gcc12_O3/check_sk_k2.native: \
+  mlkem_native/gcc12_O3/sha3_256.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/check_sk_k3.native: \
+  mlkem_native/gcc12_O3/sha3_256.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/check_sk_k4.native: \
+  mlkem_native/gcc12_O3/sha3_256.native \
+  mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/keccak_absorb_once.native: \
   mlkem_native/gcc12_O3/keccakf1600_permute.native \
   mlkem_native/gcc12_O3/keccakf1600_xor_bytes.native \
