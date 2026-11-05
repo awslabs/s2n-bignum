@@ -33,6 +33,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/polyvec_tomont_k3 \
   mlkem_native/gcc12_O3/polyvec_tomont_k4 \
   mlkem_native/gcc12_O3/sha3_256 \
+  mlkem_native/gcc12_O3/sha3_512 \
   mlkem_native/gcc12_O3/shake128_absorb_once \
   mlkem_native/gcc12_O3/shake128_init \
   mlkem_native/gcc12_O3/shake128_release \
@@ -131,6 +132,10 @@ mlkem_native/gcc12_O3/polyvec_tomont_k4.native: \
   mlkem_native/gcc12_O3/poly_tomont.native \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/sha3_256.native: \
+  mlkem_native/gcc12_O3/keccak_absorb_once.native \
+  mlkem_native/gcc12_O3/keccakf1600_extract_bytes.native \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/sha3_512.native: \
   mlkem_native/gcc12_O3/keccak_absorb_once.native \
   mlkem_native/gcc12_O3/keccakf1600_extract_bytes.native \
   mlkem_native/gcc12_O3/libmlkem.native
