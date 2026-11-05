@@ -3405,8 +3405,8 @@ let AES_GCM_ENC_ALT_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let AES_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
- (kterm `!in_p out_p tag_p ivec_p key_p htable_p
-     tag0 nonce c rk inblock len_bits pc stackpointer returnaddress.
+ (kterm `!in_p len_bits out_p tag_p ivec_p key_p htable_p
+     inblock tag0 nonce c rk pc stackpointer returnaddress.
     aligned 16 stackpointer /\
     val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
@@ -5053,7 +5053,7 @@ let enc_safety_full_spec_tmc,enc_safety_public_vars_tmc = mk_safety_spec
 (* is the mk_safety_spec-generated enc_safety_full_spec_tmc.                 *)
 let AES_GCM_ENC_ALT_NOIBT_SUBROUTINE_SAFE = prove
  (kterm `exists f_events.
-    forall e in_p out_p tag_p ivec_p key_p htable_p len_bits pc stackpointer returnaddress.
+    forall e in_p len_bits out_p tag_p ivec_p key_p htable_p pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
         ALLPAIRS nonoverlapping

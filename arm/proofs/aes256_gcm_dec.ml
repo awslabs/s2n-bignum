@@ -3195,7 +3195,7 @@ let CORE_FROM88 = prove(core_from88_goal, core_from88_tac);;
 let core_from88_post =
   el 2 (snd(strip_comb(snd(dest_imp(snd(strip_forall(concl CORE_FROM88)))))));;
 let AES256_GCM_DEC_CORRECT = prove
- (`!in_p out_p len_bits tag_p ivec_p key_p htable_p tag0 nonce c rk inblock pc
+ (`!in_p len_bits out_p tag_p ivec_p key_p htable_p inblock tag0 nonce c rk pc
      stackpointer.
        aligned 16 stackpointer /\
        ALLPAIRS nonoverlapping
@@ -3249,7 +3249,7 @@ let AES256_GCM_DEC_CORRECT = prove
        MAYCHANGE [memory :> bytes(ivec_p, 16)] ,,
        MAYCHANGE [memory :> bytes(word_add stackpointer (word 160), 64)] ,,
        MAYCHANGE [events])`,
-  GEN_TAC THEN GEN_TAC THEN W64_GEN_TAC `len_bits:num` THEN REPEAT GEN_TAC THEN
+  GEN_TAC THEN W64_GEN_TAC `len_bits:num` THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; fst AES256_GCM_DEC_EXEC] THEN
   ABBREV_TAC `nblocks     = len_bits DIV 128` THEN
@@ -3302,7 +3302,7 @@ let AES256_GCM_DEC_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let AES256_GCM_DEC_NOIBT_SUBROUTINE_CORRECT = prove
- (`!in_p out_p len_bits tag_p ivec_p key_p htable_p tag0 nonce c rk inblock
+ (`!in_p len_bits out_p tag_p ivec_p key_p htable_p inblock tag0 nonce c rk
     pc stackpointer returnaddress.
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
@@ -3366,7 +3366,7 @@ let AES256_GCM_DEC_NOIBT_SUBROUTINE_CORRECT = prove
 (* The same for the full code, with its BTI landing pad. *)
 
 let AES256_GCM_DEC_SUBROUTINE_CORRECT = prove
- (`!in_p out_p len_bits tag_p ivec_p key_p htable_p tag0 nonce c rk inblock
+ (`!in_p len_bits out_p tag_p ivec_p key_p htable_p inblock tag0 nonce c rk
     pc stackpointer returnaddress.
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping

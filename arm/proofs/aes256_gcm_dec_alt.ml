@@ -8207,8 +8207,8 @@ let WBN_DEC_VALID_CALL_CORRECT = prove
    ensure the cumulative message length does not exceed 2^36 - 32 bytes
    (2^39 - 256 bits). *)
 let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
- (`!pc stackpointer in_p len_bits out_p tag_p ivec_p key_p htable_p inblock rk
-    tag0 nonce c returnaddress.
+ (`!in_p len_bits out_p tag_p ivec_p key_p htable_p inblock tag0 nonce c rk
+    pc stackpointer returnaddress.
     val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
@@ -8312,8 +8312,8 @@ let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
 (* The same for the full code, with its BTI landing pad. *)
 
 let AES256_GCM_DEC_ALT_SUBROUTINE_CORRECT = prove
- (`!pc stackpointer in_p len_bits out_p tag_p ivec_p key_p htable_p inblock rk
-    tag0 nonce c returnaddress.
+ (`!in_p len_bits out_p tag_p ivec_p key_p htable_p inblock tag0 nonce c rk
+    pc stackpointer returnaddress.
     val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
@@ -9184,8 +9184,8 @@ let noibt_full_spec,_ = mk_safety_spec
    (2^39 - 256 bits). *)
 let AES256_GCM_DEC_ALT_NOIBT_SUBROUTINE_SAFE = prove
  (`exists f_events.
-     forall e pc stackpointer in_p len_bits out_p tag_p ivec_p key_p htable_p
-            returnaddress.
+     forall e in_p len_bits out_p tag_p ivec_p key_p htable_p
+            pc stackpointer returnaddress.
          val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
          aligned 16 stackpointer /\
          ALLPAIRS nonoverlapping
@@ -9244,8 +9244,8 @@ let full_spec,public_vars = mk_safety_spec
 
 let AES256_GCM_DEC_ALT_SUBROUTINE_SAFE = prove
  (`exists f_events.
-     forall e pc stackpointer in_p len_bits out_p tag_p ivec_p key_p htable_p
-            returnaddress.
+     forall e in_p len_bits out_p tag_p ivec_p key_p htable_p
+            pc stackpointer returnaddress.
          val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
          aligned 16 stackpointer /\
          ALLPAIRS nonoverlapping

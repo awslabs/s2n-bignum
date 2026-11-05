@@ -2450,7 +2450,7 @@ let CORE_FROM88 = prove(core_from88_stmt, core_from88_tac);;
  *** loads themselves.
  ***)
 let AES128_GCM_ENC_CORRECT = prove
- (`!in_p out_p len_bits tag_p ivec_p key_p htable_p tag0 nonce c rk inblock pc
+ (`!in_p len_bits out_p tag_p ivec_p key_p htable_p inblock tag0 nonce c rk pc
      stackpointer.
        aligned 16 stackpointer /\
        ALLPAIRS nonoverlapping
@@ -2505,7 +2505,7 @@ let AES128_GCM_ENC_CORRECT = prove
                   memory :> bytes(ivec_p, 16);
                   memory :> bytes(word_add stackpointer (word 160), 64)])`,
   (*** setup boilerplate ***)
-  GEN_TAC THEN GEN_TAC THEN W64_GEN_TAC `len_bits:num` THEN REPEAT GEN_TAC THEN
+  GEN_TAC THEN W64_GEN_TAC `len_bits:num` THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; fst AES128_GCM_ENC_EXEC] THEN
   ABBREV_TAC `nblocks = len_bits DIV 128` THEN
@@ -2605,7 +2605,7 @@ let AES128_GCM_ENC_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let AES128_GCM_ENC_NOIBT_SUBROUTINE_CORRECT = prove
- (`!in_p out_p len_bits tag_p ivec_p key_p htable_p tag0 nonce c rk inblock
+ (`!in_p len_bits out_p tag_p ivec_p key_p htable_p inblock tag0 nonce c rk
     pc stackpointer returnaddress.
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
@@ -2671,7 +2671,7 @@ let AES128_GCM_ENC_NOIBT_SUBROUTINE_CORRECT = prove
 (* The same for the full code, with its BTI landing pad. *)
 
 let AES128_GCM_ENC_SUBROUTINE_CORRECT = prove
- (`!in_p out_p len_bits tag_p ivec_p key_p htable_p tag0 nonce c rk inblock
+ (`!in_p len_bits out_p tag_p ivec_p key_p htable_p inblock tag0 nonce c rk
     pc stackpointer returnaddress.
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping

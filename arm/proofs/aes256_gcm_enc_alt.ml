@@ -1702,8 +1702,8 @@ loadt "arm/proofs/utils/aes_gcm_enc_alt_proof.ml";;
 (* ------------------------------------------------------------------------- *)
 
 let AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
- (`!in_p out_p tag_p ivec_p key_p htable_p
-     tag0 nonce c rk inblock len_bits pc stackpointer returnaddress.
+ (`!in_p len_bits out_p tag_p ivec_p key_p htable_p
+     inblock tag0 nonce c rk pc stackpointer returnaddress.
     aligned 16 stackpointer /\
     val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
@@ -1765,8 +1765,8 @@ let AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let AES256_GCM_ENC_ALT_SUBROUTINE_CORRECT = prove
- (`!in_p out_p tag_p ivec_p key_p htable_p
-     tag0 nonce c rk inblock len_bits pc stackpointer returnaddress.
+ (`!in_p len_bits out_p tag_p ivec_p key_p htable_p
+     inblock tag0 nonce c rk pc stackpointer returnaddress.
     aligned 16 stackpointer /\
     val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
     ALLPAIRS nonoverlapping
@@ -1834,7 +1834,7 @@ let AES256_GCM_ENC_ALT_ZERO_KEY_CORRECT =
 
 let AES256_GCM_ENC_ALT_NOIBT_SUBROUTINE_SAFE = prove
  (`exists f_events.
-    forall e in_p out_p tag_p ivec_p key_p htable_p len_bits pc stackpointer returnaddress.
+    forall e in_p len_bits out_p tag_p ivec_p key_p htable_p pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
         ALLPAIRS nonoverlapping
@@ -1895,7 +1895,7 @@ let enc_safety_full_spec,enc_safety_public_vars = mk_safety_spec
    ARM_ADD_IBT_RULE, as for AES256_GCM_ENC_ALT_SUBROUTINE_CORRECT. --- *)
 let AES256_GCM_ENC_ALT_SUBROUTINE_SAFE = prove
  (`exists f_events.
-    forall e in_p out_p tag_p ivec_p key_p htable_p len_bits pc stackpointer returnaddress.
+    forall e in_p len_bits out_p tag_p ivec_p key_p htable_p pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         val in_p + 16 * gcm_wb_blocks len_bits < 2 EXP 63 /\
         ALLPAIRS nonoverlapping
