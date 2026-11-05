@@ -38,6 +38,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/poly_decompress_d5 \
   mlkem_native/gcc12_O3/poly_frombytes \
   mlkem_native/gcc12_O3/poly_frommsg \
+  mlkem_native/gcc12_O3/poly_getnoise_eta2_k2 \
   mlkem_native/gcc12_O3/poly_invntt_tomont \
   mlkem_native/gcc12_O3/poly_mulcache_compute \
   mlkem_native/gcc12_O3/poly_ntt \
@@ -222,6 +223,10 @@ mlkem_native/gcc12_O3/poly_frombytes.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_frommsg.native: \
   proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/poly_getnoise_eta2_k2.native: \
+  mlkem_native/gcc12_O3/shake256.native \
+  mlkem_native/gcc12_O3/poly_cbd2.native \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_invntt_tomont.native: \
   proofs/utils/mlkem_native.ml \
