@@ -32,6 +32,9 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/polyvec_mulcache_compute_k2 \
   mlkem_native/clang17_O3/polyvec_mulcache_compute_k3 \
   mlkem_native/clang17_O3/polyvec_mulcache_compute_k4 \
+  mlkem_native/clang17_O3/polyvec_ntt_k2 \
+  mlkem_native/clang17_O3/polyvec_ntt_k3 \
+  mlkem_native/clang17_O3/polyvec_ntt_k4 \
   mlkem_native/clang17_O3/polyvec_reduce_k2 \
   mlkem_native/clang17_O3/polyvec_reduce_k3 \
   mlkem_native/clang17_O3/polyvec_reduce_k4 \
@@ -134,6 +137,15 @@ mlkem_native/clang17_O3/polyvec_mulcache_compute_k3.native: \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/polyvec_mulcache_compute_k4.native: \
   mlkem_native/clang17_O3/poly_mulcache_compute.native \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/polyvec_ntt_k2.native: \
+  mlkem_native/clang17_O3/poly_ntt.native \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/polyvec_ntt_k3.native: \
+  mlkem_native/clang17_O3/poly_ntt.native \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/polyvec_ntt_k4.native: \
+  mlkem_native/clang17_O3/poly_ntt.native \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/polyvec_reduce_k2.native: \
   mlkem_native/clang17_O3/poly_reduce.native \
