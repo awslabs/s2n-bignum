@@ -43,7 +43,8 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/rej_uniform \
   mlkem_native/gcc12_O2_mono/sha3_256 \
   mlkem_native/gcc12_O2_mono/sha3_512 \
-  mlkem_native/gcc12_O2_mono/shake256
+  mlkem_native/gcc12_O2_mono/shake256 \
+  mlkem_native/gcc12_O2_mono/shake256x4
 
 mlkem_native/gcc12_O2_mono/basemul_k2.native: \
   proofs/utils/mlkem_native.ml \
@@ -193,5 +194,11 @@ mlkem_native/gcc12_O2_mono/shake256.native: \
   proofs/utils/mlkem_native_libc.ml \
   mlkem_native/gcc12_O2_mono/keccak_absorb_once.native \
   mlkem_native/gcc12_O2_mono/keccakf1600_permute.native \
+  mlkem_native/gcc12_O2_mono/libmlkem.native \
+  proofs/utils/mlkem_native_image.ml
+mlkem_native/gcc12_O2_mono/shake256x4.native: \
+  proofs/utils/mlkem_native_libc.ml \
+  mlkem_native/gcc12_O2_mono/keccak_absorb_once_x4.native \
+  mlkem_native/gcc12_O2_mono/keccak_squeezeblocks_x4.native \
   mlkem_native/gcc12_O2_mono/libmlkem.native \
   proofs/utils/mlkem_native_image.ml
