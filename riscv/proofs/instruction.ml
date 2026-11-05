@@ -4,7 +4,7 @@
  *)
 
 (* ========================================================================= *)
-(* Partial RV32IM state and instruction semantics.                           *)
+(* RV32IM state and instruction semantics.                                   *)
 (* ========================================================================= *)
 
 (* Instruction behavior follows The RISC-V Instruction Set Manual, Volume I:
@@ -20,8 +20,8 @@
 
    The state uses 32-bit PCs, registers, and memory addresses.
 
-   The model covers RV32I except FENCE, ECALL, and EBREAK, and all of M. It
-   omits privileged state, exceptions, CSRs, and the compressed extension.
+   The model covers all of RV32I and M. It omits privileged state,
+   exceptions, CSRs, and the compressed extension.
 
    MUL, MULH, MULHSU and MULHU emit no operand-dependent event.
    Constant-time theorems using this model therefore require
@@ -35,7 +35,8 @@
    abstracts omitted exception and trap handling; it does not claim that the
    architecture defines such cases as undefined behavior. Normal execution
    proofs establish two- or four-byte alignment and do not use this case. Byte
-   accesses cannot be misaligned. *)
+   accesses cannot be misaligned. ECALL and EBREAK always trap, so they use
+   `ASSIGNS entirety` unconditionally. *)
 
 (* TODO: This is complete only for the unprivileged RV32IM register state:
    x0--x31 and pc. The M extension adds no architectural registers. A faithful
@@ -693,3 +694,15 @@ let riscv_JALR = define
            PC := dst ,,
            riscv_event_jump src dst s
          else ASSIGNS entirety) s`;;
+
+(* FENCE orders memory accesses between harts and devices. The model has one
+   hart and flat memory, so FENCE, FENCE.TSO, and PAUSE change no state. *)
+
+let riscv_FENCE = new_definition
+ `riscv_FENCE = \s s':riscvstate. s = s'`;;
+
+let riscv_ECALL = new_definition
+ `riscv_ECALL:riscvstate->riscvstate->bool = ASSIGNS entirety`;;
+
+let riscv_EBREAK = new_definition
+ `riscv_EBREAK:riscvstate->riscvstate->bool = ASSIGNS entirety`;;

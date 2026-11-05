@@ -226,6 +226,7 @@ let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
      riscv_LB; riscv_LH; riscv_LBU; riscv_LHU; riscv_SB; riscv_SH;
      riscv_BEQ; riscv_BLT; riscv_BGE; riscv_BLTU; riscv_BGEU; riscv_JAL;
      riscv_MULHSU; riscv_MULHU; riscv_DIV; riscv_DIVU; riscv_REM; riscv_REMU;
+     riscv_FENCE; riscv_ECALL; riscv_EBREAK;
      riscv_addr;
      riscv_instruction_pc; riscv_branch_target; riscv_mulh; riscv_mulhsu;
      riscv_mulhu;
