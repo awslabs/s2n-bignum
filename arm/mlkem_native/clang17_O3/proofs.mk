@@ -8,6 +8,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/basemul_k2 \
   mlkem_native/clang17_O3/basemul_k3 \
   mlkem_native/clang17_O3/basemul_k4 \
+  mlkem_native/clang17_O3/keccak_absorb_once \
   mlkem_native/clang17_O3/keccakf1600_extract_bytes \
   mlkem_native/clang17_O3/keccakf1600_permute \
   mlkem_native/clang17_O3/keccakf1600x4_extract_bytes \
@@ -84,6 +85,12 @@ mlkem_native/clang17_O3/basemul_k4.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/keccak_absorb_once.native: \
+  mlkem_native/clang17_O3/keccakf1600_permute.native \
+  mlkem_native/clang17_O3/keccakf1600_xor_bytes.native \
+  proofs/utils/keccak_fips202.ml \
+  mlkem_native/clang17_O3/libmlkem.native \
+  proofs/utils/keccak_spec.ml
 mlkem_native/clang17_O3/keccakf1600_extract_bytes.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/clang17_O3/libmlkem.native
