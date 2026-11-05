@@ -29,6 +29,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/poly_sub \
   mlkem_native/clang17_O3/poly_tobytes \
   mlkem_native/clang17_O3/poly_tomont \
+  mlkem_native/clang17_O3/poly_tomsg \
   mlkem_native/clang17_O3/polyvec_add_k2 \
   mlkem_native/clang17_O3/polyvec_add_k3 \
   mlkem_native/clang17_O3/polyvec_add_k4 \
@@ -150,6 +151,11 @@ mlkem_native/clang17_O3/poly_tobytes.native: \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/poly_tomont.native: \
   proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/poly_tomsg.native: \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/polyvec_add_k2.native: \
   mlkem_native/clang17_O3/poly_add.native \
