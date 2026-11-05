@@ -585,3 +585,524 @@ let MLKEM_NATIVE_KECCAK_SQUEEZEBLOCKS_X4_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT 
     ENSURES_INIT_TAC "s0" THEN
     ARM_STEPS_TAC SQ_EXEC (1--7) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The lemmas for the extraction loops with the events (constant time and    *)
+(* memory safety), combined with the correctness, as for the XOR loops.      *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let sq_full_stmt from_lab to_lab pre post regs =
+  parse_term (Printf.sprintf
+   "exists f_events.
+      forall e (a:int64) (d:int64) len (S:1600 word) pc.
+        aligned 4096 (word pc:int64) /\\ pc + libmlkem_size <= 2 EXP 64 /\\
+        len <= 200 /\\ ~(len = 0) /\\
+        ALL (nonoverlapping (d,len)) [(word pc,libmlkem_size); (a,200)]
+        ==> ensures arm
+             (\\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mono_mc /\\
+                  read PC s = word (pc + %s) /\\ %s /\\
+                  read (memory :> wbytes a) s = S /\\
+                  read events s = e)
+             (\\s. read PC s = word (pc + %s) /\\ %s /\\
+                  read (memory :> bytes(d,len)) s = val S MOD 2 EXP (8 * len) /\\
+                  (exists e2.
+                     read events s = APPEND e2 e /\\
+                     e2 = f_events a d len pc /\\
+                     memaccess_inbounds e2 [a,200; d,len] [d,len]))
+             (MAYCHANGE [PC; %s] ,, MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE [events] ,, MAYCHANGE [memory :> bytes(d,len)])"
+   from_lab pre to_lab post regs);;
+
+let sqF_prove stmt lab1 lab2 inv_regs nbody first nexit =
+  let flagtm = if first then
+   "~(val(word_sub (word len) (word_add (word i) (word 1)):int64) = 0) <=> i + 1 < len"
+   else "~(val(word_sub (word (len - 1)) (word i):int64) = 0) <=> i + 1 < len" in
+  prove(stmt,
+  CONCRETIZE_F_EVENTS_TAC
+   `\(a:int64) (d:int64) (len:num) (pc:num).
+      APPEND (f_ev_epil a d len pc)
+        (APPEND (ENUMERATEL len (\i. f_ev_loop a d len pc i))
+                (f_ev_prol a d len pc)):(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC [`a:int64`; `d:int64`; `len:num`; `S:1600 word`;
+                       `pc:num`] THEN
+  REWRITE_TAC[SOME_FLAGS; NONOVERLAPPING_CLAUSES; ALL;
+              READ_MEMORY_WBYTES_VAL; fst SQ_EXEC] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_DIV_CONV) THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` (parse_term ("pc + "^lab1))
+   (parse_term ("pc + "^lab2))
+   (parse_term (Printf.sprintf
+   "\\i s. %s /\\
+          read (memory :> bytes(a,200)) s = val (S:1600 word) /\\
+          read (memory :> bytes(d,i)) s = val S MOD 2 EXP (8 * i)"
+   (inv_regs "i"))) THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+
+    (*** Entry: nothing has been written ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_TRIVIAL] THEN
+      REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1];
+      DISCHARGE_SAFETY_PROPERTY_TAC];
+
+    (*** The loop body, copying byte i of the state, and the test ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    MP_TAC(SPECL [`a:int64`; `200`; `val(S:1600 word)`; `i:num`;
+                  `s0:armstate`] READ_MEMORY_BYTES8_OF_NUM) THEN
+    ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC; DISCH_TAC] THEN
+    ARM_STEPS_TAC SQ_EXEC (1--nbody) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN (parse_term flagtm) SUBST_ALL_TAC THENL
+     [(if first then
+        REWRITE_TAC[GSYM WORD_ADD; VAL_WORD_SUB_EQ_0; VAL_WORD;
+                    DIMINDEX_64] THEN
+        SUBGOAL_THEN `len < 2 EXP 64 /\ i + 1 < 2 EXP 64` MP_TAC THENL
+         [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+        SIMP_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC
+      else
+        MATCH_MP_TAC XOR_LAST_FLAG THEN ASM_REWRITE_TAC[] THEN
+        SIMPLE_ARITH_TAC);
+      ALL_TAC] THEN
+    REWRITE_TAC[ADD_SUB; GSYM WORD_ADD] THEN
+    REPEAT CONJ_TAC THEN
+    FIRST
+     [COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC;
+      ASM_REWRITE_TAC[ARITH_RULE `~(i + 1 = 0)`] THEN NO_TAC;
+      REWRITE_TAC[WORD_ADD; READ_MEMORY_BYTES_SNOC] THEN
+      ASM_REWRITE_TAC[] THEN
+      REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_8; DIMINDEX_16;
+                  DIMINDEX_32; DIMINDEX_64] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      REWRITE_TAC[ARITH_RULE `256 = 2 EXP 8 /\ 4294967296 = 2 EXP 32 /\
+                              18446744073709551616 = 2 EXP 64`;
+                  MOD_MOD_EXP_MIN] THEN
+      CONV_TAC(DEPTH_CONV NUM_MIN_CONV) THEN
+      REWRITE_TAC[LEFT_ADD_DISTRIB; EXP_ADD; GSYM DIV_DIV] THEN
+      REWRITE_TAC[MULT_CLAUSES; MOD_MULT_MOD; ADD_SYM] THEN NO_TAC;
+      DISCHARGE_SAFETY_PROPERTY_TAC];
+
+    (*** The loop exit ***)
+
+    REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    (if nexit > 0 then ARM_STEPS_TAC SQ_EXEC (1--nexit) else ALL_TAC) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ((CONJ_TAC THENL [ASM_MESON_TAC[]; DISCHARGE_SAFETY_PROPERTY_TAC]) ORELSE
+     DISCHARGE_SAFETY_PROPERTY_TAC)]);;
+
+let SQ_F2_STMT = sq_full_stmt
+  "mlk_keccak_squeezeblocks_x4_loop2" "mlk_keccak_squeezeblocks_x4_loop3"
+  "read X0 s = word 0 /\\ read X19 s = d /\\ read X23 s = a /\\
+   read X26 s = word len"
+  "read X0 s = word len /\\ read X1 s = word 0 /\\ read X2 s = word (len - 1)"
+  "X0; X1; X2";;
+
+let SQ_F2 = sqF_prove SQ_F2_STMT
+  "mlk_keccak_squeezeblocks_x4_loop2" "mlk_keccak_squeezeblocks_x4_loop2_exit"
+  (fun i -> "read X0 s = word "^i^" /\\
+             (~("^i^" = 0) ==> read X2 s = word ("^i^" - 1)) /\\
+             read X19 s = d /\\ read X23 s = a /\\ read X26 s = word len")
+  6 true 2;;
+
+let SQ_F3_STMT = sq_full_stmt
+  "mlk_keccak_squeezeblocks_x4_loop3" "mlk_keccak_squeezeblocks_x4_loop4"
+  "read X1 s = word 0 /\\ read X2 s = word (len - 1) /\\ read X20 s = d /\\
+   read X28 s = a"
+  "read X1 s = word 0"
+  "X1; X6";;
+
+let SQ_F3 = sqF_prove SQ_F3_STMT
+  "mlk_keccak_squeezeblocks_x4_loop3" "mlk_keccak_squeezeblocks_x4_loop3_exit"
+  (fun i -> "read X1 s = word "^i^" /\\ read X2 s = word (len - 1) /\\
+             read X20 s = d /\\ read X28 s = a")
+  5 false 1;;
+
+let SQ_F4_STMT = sq_full_stmt
+  "mlk_keccak_squeezeblocks_x4_loop4" "mlk_keccak_squeezeblocks_x4_loop5"
+  "read X1 s = word 0 /\\ read X2 s = word (len - 1) /\\ read X21 s = d /\\
+   read X25 s = a"
+  "read X1 s = word 0"
+  "X1; X6";;
+
+let SQ_F4 = sqF_prove SQ_F4_STMT
+  "mlk_keccak_squeezeblocks_x4_loop4" "mlk_keccak_squeezeblocks_x4_loop4_exit"
+  (fun i -> "read X1 s = word "^i^" /\\ read X2 s = word (len - 1) /\\
+             read X21 s = d /\\ read X25 s = a")
+  5 false 1;;
+
+let SQ_F5_STMT = sq_full_stmt
+  "mlk_keccak_squeezeblocks_x4_loop5" "mlk_keccak_squeezeblocks_x4_loop5_exit"
+  "read X1 s = word 0 /\\ read X2 s = word (len - 1) /\\ read X22 s = d /\\
+   read X24 s = a"
+  "read X1 s = word len"
+  "X1; X6";;
+
+let SQ_F5 = sqF_prove SQ_F5_STMT
+  "mlk_keccak_squeezeblocks_x4_loop5" "mlk_keccak_squeezeblocks_x4_loop5_exit"
+  (fun i -> "read X1 s = word "^i^" /\\ read X2 s = word (len - 1) /\\
+             read X22 s = d /\\ read X24 s = a")
+  5 false 0;;
+
+let SQ_PERMUTE_FULL =
+  MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL_F1600;;
+
+let SQ_FULL_CALL_TAC name ilist n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mono_mc,SQ_EXEC,0x0,
+       mlkem_native_libmlkem_gcc12_O2_mono_mc,safety_th)
+      ilist n THENL
+     [EXISTS_E2_TAC (ref
+       [`out0:int64`; `out1:int64`; `out2:int64`; `out3:int64`;
+        `nblocks:num`; `st:int64`; `r:num`; `pc:num`; `stackpointer:int64`;
+        `returnaddress:int64`; `i:num`;
+        `f_ev_loop:int64->int64->int64->int64->num->int64->num->num->int64->
+                   int64->num->(uarch_event)list`]);
+      LABEL_TAC name safety_th]);;
+
+let MLKEM_NATIVE_KECCAK_SQUEEZEBLOCKS_X4_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL =
+  prove
+ (`exists f_events.
+  forall e out0 out1 out2 out3 nblocks st r
+    (S0:1600 word) (S1:1600 word) (S2:1600 word) (S3:1600 word)
+    pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        aligned 16 stackpointer /\ 0 < r /\ r <= 200 /\
+        PAIRWISE nonoverlapping
+         [(out0,r * nblocks); (out1,r * nblocks); (out2,r * nblocks);
+          (out3,r * nblocks); (st,800);
+          (word_sub stackpointer (word 288),288)] /\
+        ALL (nonoverlapping (word pc,libmlkem_size))
+         [(out0,r * nblocks); (out1,r * nblocks); (out2,r * nblocks);
+          (out3,r * nblocks); (st,800);
+          (word_sub stackpointer (word 288),288)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+                  read PC s = word (pc + mlk_keccak_squeezeblocks_x4) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [out0; out1; out2; out3; word nblocks; st;
+                               word r] s /\
+                  read (memory :> wbytes st) s = S0 /\
+                  read (memory :> wbytes (word_add st (word 200))) s = S1 /\
+                  read (memory :> wbytes (word_add st (word 400))) s = S2 /\
+                  read (memory :> wbytes (word_add st (word 600))) s = S3 /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  read (memory :> bytes(out0,r * nblocks)) s =
+                  nsum {i | i < nblocks}
+                   (\i. 2 EXP (8 * r * i) *
+                        val(keccak_squeeze (i + 1) S0) MOD 2 EXP (8 * r)) /\
+                  read (memory :> bytes(out1,r * nblocks)) s =
+                  nsum {i | i < nblocks}
+                   (\i. 2 EXP (8 * r * i) *
+                        val(keccak_squeeze (i + 1) S1) MOD 2 EXP (8 * r)) /\
+                  read (memory :> bytes(out2,r * nblocks)) s =
+                  nsum {i | i < nblocks}
+                   (\i. 2 EXP (8 * r * i) *
+                        val(keccak_squeeze (i + 1) S2) MOD 2 EXP (8 * r)) /\
+                  read (memory :> bytes(out3,r * nblocks)) s =
+                  nsum {i | i < nblocks}
+                   (\i. 2 EXP (8 * r * i) *
+                        val(keccak_squeeze (i + 1) S3) MOD 2 EXP (8 * r)) /\
+                  read (memory :> wbytes st) s = keccak_squeeze nblocks S0 /\
+                  read (memory :> wbytes (word_add st (word 200))) s =
+                  keccak_squeeze nblocks S1 /\
+                  read (memory :> wbytes (word_add st (word 400))) s =
+                  keccak_squeeze nblocks S2 /\
+                  read (memory :> wbytes (word_add st (word 600))) s =
+                  keccak_squeeze nblocks S3 /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events out0 out1 out2 out3 nblocks st r pc
+                            (word_sub stackpointer (word 288)) returnaddress /\
+                     memaccess_inbounds e2
+                      [out0,r * nblocks; out1,r * nblocks; out2,r * nblocks;
+                       out3,r * nblocks; st,800;
+                       word_sub stackpointer (word 288),288;
+                       word(pc + rodata_mlk_KeccakF_RoundConstants),192]
+                      [out0,r * nblocks; out1,r * nblocks; out2,r * nblocks;
+                       out3,r * nblocks; st,800;
+                       word_sub stackpointer (word 288),288]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(out0,r * nblocks);
+                memory :> bytes(out1,r * nblocks);
+                memory :> bytes(out2,r * nblocks);
+                memory :> bytes(out3,r * nblocks);
+                memory :> bytes(st,800);
+                memory :> bytes(word_sub stackpointer (word 288),288)])`,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC SQ_PERMUTE_FULL "H_PERMUTE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC SQ_F2 "H_L2" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC SQ_F3 "H_L3" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC SQ_F4 "H_L4" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC SQ_F5 "H_L5" THEN
+  CONCRETIZE_F_EVENTS_TAC
+    `\(out0:int64) (out1:int64) (out2:int64) (out3:int64) (nblocks:num)
+      (st:int64) (r:num) (pc:num) (stackpointer:int64)
+      (returnaddress:int64).
+      if nblocks = 0
+      then f_ev_zero out0 out1 out2 out3 nblocks st r pc stackpointer
+                     returnaddress
+      else APPEND (f_ev_epil out0 out1 out2 out3 nblocks st r pc stackpointer
+                             returnaddress)
+            (APPEND
+              (ENUMERATEL nblocks
+                (\i. f_ev_loop out0 out1 out2 out3 nblocks st r pc
+                               stackpointer returnaddress i))
+              (f_ev_prol out0 out1 out2 out3 nblocks st r pc stackpointer
+                         returnaddress))
+     :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; PAIRWISE; NONOVERLAPPING_CLAUSES;
+              READ_MEMORY_WBYTES_1600; fst SQ_EXEC] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `~(r = 0)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  ASM_CASES_TAC `nblocks = 0` THEN ASM_REWRITE_TAC[] THENL
+   [REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC SQ_EXEC (1--2) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MULT_CLAUSES; READ_MEMORY_BYTES_TRIVIAL;
+                NSUM_CLAUSES_NUMSEG_LT; keccak_squeeze] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  SQ_BOUND_TAC THEN SQ_PRESERVED_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num`
+   `pc + mlk_keccak_squeezeblocks_x4_loop1`
+   `pc + mlk_keccak_squeezeblocks_x4_loop1_exit`
+   `\i s. read X19 s = word_add out0 (word(r * i)) /\
+          read X20 s = word_add out1 (word(r * i)) /\
+          read X21 s = word_add out2 (word(r * i)) /\
+          read X22 s = word_add out3 (word(r * i)) /\
+          read X23 s = st /\
+          read X24 s = word_add st (word 600) /\
+          read X25 s = word_add st (word 400) /\
+          read X26 s = word r /\
+          read X27 s = word(nblocks - i) /\
+          read X28 s = word_add st (word 200) /\
+          read SP s = word_add stackpointer (word 192) /\
+          read (memory :> bytes64 (word_add stackpointer (word 192))) s =
+          x19_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 200))) s =
+          x20_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 208))) s =
+          x21_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 216))) s =
+          x22_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 224))) s =
+          x23_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 232))) s =
+          x24_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 240))) s =
+          x25_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 248))) s =
+          x26_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 256))) s =
+          x27_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 264))) s =
+          x28_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 272))) s =
+          returnaddress /\
+          read (memory :> bytes(out0,r * i)) s =
+          nsum {j | j < i}
+           (\j. 2 EXP (8 * r * j) *
+                val(keccak_squeeze (j + 1) S0) MOD 2 EXP (8 * r)) /\
+          read (memory :> bytes(out1,r * i)) s =
+          nsum {j | j < i}
+           (\j. 2 EXP (8 * r * j) *
+                val(keccak_squeeze (j + 1) S1) MOD 2 EXP (8 * r)) /\
+          read (memory :> bytes(out2,r * i)) s =
+          nsum {j | j < i}
+           (\j. 2 EXP (8 * r * j) *
+                val(keccak_squeeze (j + 1) S2) MOD 2 EXP (8 * r)) /\
+          read (memory :> bytes(out3,r * i)) s =
+          nsum {j | j < i}
+           (\j. 2 EXP (8 * r * j) *
+                val(keccak_squeeze (j + 1) S3) MOD 2 EXP (8 * r)) /\
+          read (memory :> bytes(st,200)) s =
+          val(keccak_squeeze i (S0:1600 word)) /\
+          read (memory :> bytes(word_add st (word 200),200)) s =
+          val(keccak_squeeze i (S1:1600 word)) /\
+          read (memory :> bytes(word_add st (word 400),200)) s =
+          val(keccak_squeeze i (S2:1600 word)) /\
+          read (memory :> bytes(word_add st (word 600),200)) s =
+          val(keccak_squeeze i (S3:1600 word))` THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC SQ_EXEC (1--1) THEN
+    SQ_NONZERO_TAC THEN
+    ARM_STEPS_TAC SQ_EXEC (2--18) THEN ARGS_32_TAC [`r:num`] THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MULT_CLAUSES; SUB_0; WORD_ADD_0; READ_MEMORY_BYTES_TRIVIAL;
+                NSUM_CLAUSES_NUMSEG_LT; keccak_squeeze] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    SUBGOAL_THEN `r * i + r <= r * nblocks` ASSUME_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `r * i + r = r * (i + 1)`; LE_MULT_LCANCEL] THEN
+      DISJ2_TAC THEN ASM_ARITH_TAC; ALL_TAC] THEN
+    SQ_STATES_TAC THEN
+    ARM_STEPS_TAC SQ_EXEC (1--2) THEN
+    KECCAK_STATE_THEN `st:int64` (fun v ->
+      SQ_FULL_CALL_TAC "H_PERMUTE"
+        [`e:(uarch_event)list`; `read X0 s`; v; `pc:num`; `read SP s`;
+         `read X30 s`] 3) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN SQ_STATES_TAC THEN
+    ARM_STEPS_TAC SQ_EXEC (4--5) THEN
+    KECCAK_STATE_THEN `word_add (st:int64) (word 200)` (fun v ->
+      SQ_FULL_CALL_TAC "H_PERMUTE"
+        [`e:(uarch_event)list`; `read X0 s`; v; `pc:num`; `read SP s`;
+         `read X30 s`] 6) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN SQ_STATES_TAC THEN
+    ARM_STEPS_TAC SQ_EXEC (7--8) THEN
+    KECCAK_STATE_THEN `word_add (st:int64) (word 400)` (fun v ->
+      SQ_FULL_CALL_TAC "H_PERMUTE"
+        [`e:(uarch_event)list`; `read X0 s`; v; `pc:num`; `read SP s`;
+         `read X30 s`] 9) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN SQ_STATES_TAC THEN
+    ARM_STEPS_TAC SQ_EXEC (10--11) THEN
+    KECCAK_STATE_THEN `word_add (st:int64) (word 600)` (fun v ->
+      SQ_FULL_CALL_TAC "H_PERMUTE"
+        [`e:(uarch_event)list`; `read X0 s`; v; `pc:num`; `read SP s`;
+         `read X30 s`] 12) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
+    ARM_STEPS_TAC SQ_EXEC (13--14) THEN
+    SQ_STATES_TAC THEN
+    SQ_FULL_CALL_TAC "H_L2"
+      [`e:(uarch_event)list`; `read X23 s`; `read X19 s`; `r:num`;
+       `keccak_f1600 (keccak_squeeze i (S0:1600 word))`; `pc:num`] 15 THEN
+    SQ_STATES_TAC THEN
+    SQ_FULL_CALL_TAC "H_L3"
+      [`e:(uarch_event)list`; `word_add (st:int64) (word 200)`;
+       `word_add (out1:int64) (word (r * i))`; `r:num`;
+       `keccak_f1600 (keccak_squeeze i (S1:1600 word))`; `pc:num`] 16 THEN
+    SQ_STATES_TAC THEN
+    SQ_FULL_CALL_TAC "H_L4"
+      [`e:(uarch_event)list`; `word_add (st:int64) (word 400)`;
+       `word_add (out2:int64) (word (r * i))`; `r:num`;
+       `keccak_f1600 (keccak_squeeze i (S2:1600 word))`; `pc:num`] 17 THEN
+    SQ_STATES_TAC THEN
+    SQ_FULL_CALL_TAC "H_L5"
+      [`e:(uarch_event)list`; `word_add (st:int64) (word 600)`;
+       `word_add (out3:int64) (word (r * i))`; `r:num`;
+       `keccak_f1600 (keccak_squeeze i (S3:1600 word))`; `pc:num`] 18 THEN
+    ARM_STEPS_TAC SQ_EXEC (19--24) THEN
+    SQ_COUNTER_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REPEAT CONJ_TAC THEN
+    FIRST
+     [COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC;
+      REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+        REWRITE_TAC[ARITH_RULE `r * (i + 1) = r * i + r`] THEN NO_TAC;
+      REWRITE_TAC[GSYM ADD1; keccak_squeeze] THEN NO_TAC;
+      REWRITE_TAC[ARITH_RULE `r * (i + 1) = r * i + r`] THEN
+        REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
+        REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN ASM_REWRITE_TAC[] THEN
+        REWRITE_TAC[GSYM ADD1; NSUM_CLAUSES_NUMSEG_LT; keccak_squeeze] THEN
+        NO_TAC;
+      DISCHARGE_SAFETY_PROPERTY_TAC];
+
+    REWRITE_TAC[] THEN REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC SQ_EXEC (1--7) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The theorem of constant time and memory safety, from the combined one.    *)
+(* ------------------------------------------------------------------------- *)
+
+(*** Weakening the pre- and postconditions of an ensures ***)
+
+let ENSURES_PREPOST_WEAKEN = MESON[ENSURES_PREPOSTCONDITION_THM]
+ `ensures step P Q C
+  ==> (!x. P' x ==> P x) /\ (!x. Q x ==> Q' x)
+      ==> ensures step P' Q' C`;;
+
+let MLKEM_NATIVE_KECCAK_SQUEEZEBLOCKS_X4_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE =
+  prove
+ (`exists f_events.
+     forall e out0 out1 out2 out3 nblocks st r pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        aligned 16 stackpointer /\ 0 < r /\ r <= 200 /\
+        PAIRWISE nonoverlapping
+         [(out0,r * nblocks); (out1,r * nblocks); (out2,r * nblocks);
+          (out3,r * nblocks); (st,800);
+          (word_sub stackpointer (word 288),288)] /\
+        ALL (nonoverlapping (word pc,libmlkem_size))
+         [(out0,r * nblocks); (out1,r * nblocks); (out2,r * nblocks);
+          (out3,r * nblocks); (st,800);
+          (word_sub stackpointer (word 288),288)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+                  read PC s = word (pc + mlk_keccak_squeezeblocks_x4) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [out0; out1; out2; out3; word nblocks; st;
+                               word r] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events out0 out1 out2 out3 nblocks st r pc
+                            (word_sub stackpointer (word 288)) returnaddress /\
+                     memaccess_inbounds e2
+                      [out0,r * nblocks; out1,r * nblocks; out2,r * nblocks;
+                       out3,r * nblocks; st,800;
+                       word_sub stackpointer (word 288),288;
+                       word(pc + rodata_mlk_KeccakF_RoundConstants),192]
+                      [out0,r * nblocks; out1,r * nblocks; out2,r * nblocks;
+                       out3,r * nblocks; st,800;
+                       word_sub stackpointer (word 288),288]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(out0,r * nblocks);
+                memory :> bytes(out1,r * nblocks);
+                memory :> bytes(out2,r * nblocks);
+                memory :> bytes(out3,r * nblocks);
+                memory :> bytes(st,800);
+                memory :> bytes(word_sub stackpointer (word 288),288)])`,
+  MP_TAC MLKEM_NATIVE_KECCAK_SQUEEZEBLOCKS_X4_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL THEN
+  MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC THEN DISCH_TAC THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  GHOST_INTRO_TAC `S0:1600 word`
+   `read (memory :> wbytes st):armstate->1600 word` THEN
+  GHOST_INTRO_TAC `S1:1600 word`
+   `read (memory :> wbytes (word_add st (word 200))):armstate->1600 word` THEN
+  GHOST_INTRO_TAC `S2:1600 word`
+   `read (memory :> wbytes (word_add st (word 400))):armstate->1600 word` THEN
+  GHOST_INTRO_TAC `S3:1600 word`
+   `read (memory :> wbytes (word_add st (word 600))):armstate->1600 word` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `out0:int64`; `out1:int64`; `out2:int64`;
+    `out3:int64`; `nblocks:num`; `st:int64`; `r:num`; `S0:1600 word`;
+    `S1:1600 word`; `S2:1600 word`; `S3:1600 word`; `pc:num`;
+    `stackpointer:int64`; `returnaddress:int64`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_PREPOST_WEAKEN) THEN
+  SIMP_TAC[]);;
