@@ -50,7 +50,11 @@ let riscv_xreg = new_definition
      SLTIU 0010011 / 011             XORI  0010011 / 100
      ORI   0010011 / 110             ANDI  0010011 / 111
      SLLI  0010011 / 001 / 0000000   SRLI  0010011 / 101 / 0000000
-     SRAI  0010011 / 101 / 0100000   LW    0000011 / 010
+     SRAI  0010011 / 101 / 0100000
+     LB    0000011 / 000             LH    0000011 / 001
+     LW    0000011 / 010             LBU   0000011 / 100
+     LHU   0000011 / 101
+     SB    0100011 / 000             SH    0100011 / 001
      SW    0100011 / 010             BNE   1100011 / 001
      LUI   0110111                   AUIPC 0010111
      JALR  1100111 / 000
@@ -102,8 +106,22 @@ let decode = new_definition
         SOME (riscv_SRLI (riscv_xreg rd) (riscv_xreg rs1) (val shamt))
     | [0b0100000:7; shamt:5; rs1:5; 0b101:3; rd:5; 0b0010011:7] ->
         SOME (riscv_SRAI (riscv_xreg rd) (riscv_xreg rs1) (val shamt))
+    | [imm:12; rs1:5; 0b000:3; rd:5; 0b0000011:7] ->
+        SOME (riscv_LB (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
+    | [imm:12; rs1:5; 0b001:3; rd:5; 0b0000011:7] ->
+        SOME (riscv_LH (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
     | [imm:12; rs1:5; 0b010:3; rd:5; 0b0000011:7] ->
         SOME (riscv_LW (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
+    | [imm:12; rs1:5; 0b100:3; rd:5; 0b0000011:7] ->
+        SOME (riscv_LBU (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
+    | [imm:12; rs1:5; 0b101:3; rd:5; 0b0000011:7] ->
+        SOME (riscv_LHU (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
+    | [immhi:7; rs2:5; rs1:5; 0b000:3; immlo:5; 0b0100011:7] ->
+        SOME (riscv_SB (riscv_xreg rs2) (riscv_xreg rs1)
+          (word_sx (word_join immhi immlo:12 word)))
+    | [immhi:7; rs2:5; rs1:5; 0b001:3; immlo:5; 0b0100011:7] ->
+        SOME (riscv_SH (riscv_xreg rs2) (riscv_xreg rs1)
+          (word_sx (word_join immhi immlo:12 word)))
     | [immhi:7; rs2:5; rs1:5; 0b010:3; immlo:5; 0b0100011:7] ->
         SOME (riscv_SW (riscv_xreg rs2) (riscv_xreg rs1)
           (word_sx (word_join immhi immlo:12 word)))
@@ -225,8 +243,32 @@ let RISCV_DECODE_TESTS =
       `SOME (riscv_SRLI A0 A1 3)`;
     `decode (word 0x4035d513)`,
       `SOME (riscv_SRAI A0 A1 3)`;
+    `decode (word 0x00458503)`,
+      `SOME (riscv_LB A0 A1 (word 4))`;
+    `decode (word 0xffc58503)`,
+      `SOME (riscv_LB A0 A1 (word 0xfffffffc))`;
+    `decode (word 0x00659503)`,
+      `SOME (riscv_LH A0 A1 (word 6))`;
+    `decode (word 0xffe59503)`,
+      `SOME (riscv_LH A0 A1 (word 0xfffffffe))`;
     `decode (word 0x0045a503)`,
       `SOME (riscv_LW A0 A1 (word 4))`;
+    `decode (word 0x7ff5c503)`,
+      `SOME (riscv_LBU A0 A1 (word 0x7ff))`;
+    `decode (word 0x8005c503)`,
+      `SOME (riscv_LBU A0 A1 (word 0xfffff800))`;
+    `decode (word 0x00a5d503)`,
+      `SOME (riscv_LHU A0 A1 (word 10))`;
+    `decode (word 0xffa5d503)`,
+      `SOME (riscv_LHU A0 A1 (word 0xfffffffa))`;
+    `decode (word 0x00a580a3)`,
+      `SOME (riscv_SB A0 A1 (word 1))`;
+    `decode (word 0xfea58fa3)`,
+      `SOME (riscv_SB A0 A1 (word 0xffffffff))`;
+    `decode (word 0x00a59123)`,
+      `SOME (riscv_SH A0 A1 (word 2))`;
+    `decode (word 0x80a59023)`,
+      `SOME (riscv_SH A0 A1 (word 0xfffff800))`;
     `decode (word 0x00a5a223)`,
       `SOME (riscv_SW A0 A1 (word 4))`;
     `decode (word 0xfea5ae23)`,
