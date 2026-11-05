@@ -145,12 +145,12 @@ mlkem_native/gcc12_O3/poly_add.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_cbd2.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
+  proofs/mlkem_native/overlap.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_cbd3.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
-  proofs/utils/mlkem_native_interleave.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_compress_d10.native: \
   proofs/utils/mlkem_native.ml \
@@ -160,7 +160,7 @@ mlkem_native/gcc12_O3/poly_compress_d11.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_compress_d4.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
+  proofs/mlkem_native/overlap.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_compress_d5.native: \
   proofs/utils/mlkem_native.ml \
@@ -173,15 +173,15 @@ mlkem_native/gcc12_O3/poly_decompress_d11.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_decompress_d4.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
+  proofs/mlkem_native/overlap.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_decompress_d5.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_frombytes.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
-  proofs/utils/mlkem_native_interleave.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_frommsg.native: \
   proofs/utils/mlkem_native.ml \
@@ -191,7 +191,7 @@ mlkem_native/gcc12_O3/poly_invntt_tomont.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_mulcache_compute.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_interleave.ml \
+  proofs/mlkem_native/interleave.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_ntt.native: \
   proofs/utils/mlkem_native.ml \
@@ -222,15 +222,15 @@ mlkem_native/gcc12_O3/poly_sub.native: \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_tobytes.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
-  proofs/utils/mlkem_native_interleave.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_tomont.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/poly_tomsg.native: \
   proofs/utils/mlkem_native.ml \
-  proofs/utils/mlkem_native_overlap.ml \
+  proofs/mlkem_native/overlap.ml \
   mlkem_native/gcc12_O3/libmlkem.native
 mlkem_native/gcc12_O3/polyvec_add_k2.native: \
   mlkem_native/gcc12_O3/poly_add.native \
