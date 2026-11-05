@@ -20,13 +20,15 @@
 
    The state uses 32-bit PCs, registers, and memory addresses.
 
-   The model covers RV32I except FENCE, ECALL, and EBREAK, and MUL and MULH
-   from M. It omits privileged state, exceptions, CSRs, and the compressed
-   extension.
+   The model covers RV32I except FENCE, ECALL, and EBREAK, and all of M. It
+   omits privileged state, exceptions, CSRs, and the compressed extension.
 
-   MUL and MULH emit no operand-dependent event. Constant-time theorems using
-   this model therefore require data-independent multiply latency on the
-   target implementation.
+   MUL, MULH, MULHSU and MULHU emit no operand-dependent event.
+   Constant-time theorems using this model therefore require
+   data-independent multiply latency on the target implementation, which
+   the Zkt extension promises. Division latency commonly depends on the
+   operands, and Zkt does not cover it, so DIV, DIVU, REM and REMU record
+   their operands in an `EventRISCVDIV` event.
 
    Misaligned halfword and word accesses and instruction targets use
    `ASSIGNS entirety`, which permits any successor state. This conservatively
@@ -257,10 +259,26 @@ let riscv_mulh = new_definition
       (word_mul (word_sx x:int64) (word_sx y:int64))
       (32,32):int32`;;
 
+(* The same for the signed-by-unsigned product of MULHSU and the unsigned
+   product of MULHU. *)
+
+let riscv_mulhsu = new_definition
+ `riscv_mulhsu (x:int32) (y:int32) =
+    word_subword
+      (word_mul (word_sx x:int64) (word_zx y:int64))
+      (32,32):int32`;;
+
+let riscv_mulhu = new_definition
+ `riscv_mulhu (x:int32) (y:int32) =
+    word_subword
+      (word_mul (word_zx x:int64) (word_zx y:int64))
+      (32,32):int32`;;
+
 (* Record the architectural address or target observed by constant-time
-   proofs. Each is a state relation (an `events := ...` update) so it composes
-   with `,,` alongside the register/PC/memory update, as in the ARM and x86
-   models. Arithmetic instructions do not add an event. *)
+   proofs, and the operands of a division, whose latency may depend on them.
+   Each is a state relation (an `events := ...` update) so it composes with
+   `,,` alongside the register/PC/memory update, as in the ARM and x86
+   models. Other arithmetic instructions do not add an event. *)
 
 let riscv_event_load = new_definition
  `riscv_event_load (addr:int32) sz s =
@@ -273,6 +291,10 @@ let riscv_event_store = new_definition
 let riscv_event_jump = new_definition
  `riscv_event_jump (src:int32) (dst:int32) s =
     events := CONS (EventJump (src,dst)) (read events s)`;;
+
+let riscv_event_div = new_definition
+ `riscv_event_div (x:int32) (y:int32) s =
+    events := CONS (EventRISCVDIV (x,y)) (read events s)`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Instruction semantics.                                                    *)
@@ -447,6 +469,68 @@ let riscv_MULH = define
         and n = read rs2 s in
         let d:int32 = riscv_mulh m n in
         (rd := d) s`;;
+
+let riscv_MULHSU = define
+ `riscv_MULHSU rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = riscv_mulhsu m n in
+        (rd := d) s`;;
+
+let riscv_MULHU = define
+ `riscv_MULHU rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = riscv_mulhu m n in
+        (rd := d) s`;;
+
+(* Division rounds toward zero, as `word_jdiv` and `word_jrem` do. A zero
+   divisor gives all ones for DIV and DIVU and the dividend for REM and REMU;
+   each instruction tests for it explicitly, as the manual's table does.
+   Signed overflow needs no test: `word_jdiv` wraps -2^31 / -1 to -2^31, and
+   `word_jrem` gives 0. The test also keeps automation away from HOL Light's
+   `WORD_JDIV_CONV`, which raises `Division_by_zero` for a zero divisor:
+   rewriting resolves the test before words are evaluated. The bottom-up
+   `WORD_REDUCE_CONV` still raises it if applied before the test is
+   resolved. *)
+
+let riscv_DIV = define
+ `riscv_DIV rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = if n = word 0 then word_not (word 0)
+                      else word_jdiv m n in
+        (rd := d ,, riscv_event_div m n s) s`;;
+
+let riscv_DIVU = define
+ `riscv_DIVU rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = if n = word 0 then word_not (word 0)
+                      else word_udiv m n in
+        (rd := d ,, riscv_event_div m n s) s`;;
+
+let riscv_REM = define
+ `riscv_REM rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = if n = word 0 then m
+                      else word_jrem m n in
+        (rd := d ,, riscv_event_div m n s) s`;;
+
+let riscv_REMU = define
+ `riscv_REMU rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = if n = word 0 then m
+                      else word_umod m n in
+        (rd := d ,, riscv_event_div m n s) s`;;
 
 let riscv_LW = define
  `riscv_LW rd rs1 imm =

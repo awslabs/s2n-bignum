@@ -510,7 +510,13 @@ let regclasses : rv32_case_builder list =
     make_i_case 4;                 (* XORI   *)
     make_i_case 6;                 (* ORI    *)
     make_i_case 7;                 (* ANDI   *)
-    make_shift_case 0 5];;         (* SRLI   *)
+    make_shift_case 0 5;           (* SRLI   *)
+    make_r_case 1 2;               (* MULHSU *)
+    make_r_case 1 3;               (* MULHU  *)
+    make_r_case 1 4;               (* DIV    *)
+    make_r_case 1 5;               (* DIVU   *)
+    make_r_case 1 6;               (* REM    *)
+    make_r_case 1 7];;             (* REMU   *)
 
 let memclasses : rv32_case_builder list =
   map (fun make -> fun () -> make (make_input_state (Random.int 65)))
@@ -756,6 +762,48 @@ let directed_cases =
      (num 0x12348765) [0,num 0xaaaaaaaa];
    directed_store_case 1 256 (-256) (* sh x4, -256(sp+256)            *)
      (num 0xffff8000) [0,num 0x55555555];
+   (* MULHSU: rs1 signed, rs2 unsigned, so 0xffffffff is -1 only as rs1. *)
+   directed_r_case 1 2 4 1 3       (* mulhsu x4, 0xffffffff, 0xffffffff *)
+     [1,num 0xffffffff; 3,num 0xffffffff];
+   directed_r_case 1 2 4 1 3       (* mulhsu x4, 0x80000000, 0xffffffff *)
+     [1,num 0x80000000; 3,num 0xffffffff];
+   directed_r_case 1 2 4 1 3       (* mulhsu x4, 0x7fffffff, 0x80000000 *)
+     [1,num 0x7fffffff; 3,num 0x80000000];
+   (* MULHU: unsigned extremes. *)
+   directed_r_case 1 3 4 1 3       (* mulhu  x4, 0xffffffff, 0xffffffff *)
+     [1,num 0xffffffff; 3,num 0xffffffff];
+   directed_r_case 1 3 4 1 3       (* mulhu  x4, 0x80000000, 0x00000002 *)
+     [1,num 0x80000000; 3,num 2];
+   (* DIV, DIVU, REM, REMU: zero divisor, signed overflow, and rounding
+      toward zero with each sign. *)
+   directed_r_case 1 4 4 1 0       (* div  x4, 0x12345678, x0         *)
+     [1,num 0x12345678];
+   directed_r_case 1 5 4 1 0       (* divu x4, 0x12345678, x0         *)
+     [1,num 0x12345678];
+   directed_r_case 1 6 4 1 0       (* rem  x4, 0x12345678, x0         *)
+     [1,num 0x12345678];
+   directed_r_case 1 7 4 1 0       (* remu x4, 0x87654321, x0         *)
+     [1,num 0x87654321];
+   directed_r_case 1 4 4 1 3       (* div  x4, 0x87654321, 0          *)
+     [1,num 0x87654321];
+   directed_r_case 1 6 4 1 3       (* rem  x4, 0x87654321, 0          *)
+     [1,num 0x87654321];
+   directed_r_case 1 4 4 1 3       (* div  x4, 0x80000000, 0xffffffff *)
+     [1,num 0x80000000; 3,num 0xffffffff];
+   directed_r_case 1 6 4 1 3       (* rem  x4, 0x80000000, 0xffffffff *)
+     [1,num 0x80000000; 3,num 0xffffffff];
+   directed_r_case 1 4 4 1 3       (* div  x4, -7, 2                  *)
+     [1,num 0xfffffff9; 3,num 2];
+   directed_r_case 1 6 4 1 3       (* rem  x4, -7, 2                  *)
+     [1,num 0xfffffff9; 3,num 2];
+   directed_r_case 1 4 4 1 3       (* div  x4, 7, -2                  *)
+     [1,num 7; 3,num 0xfffffffe];
+   directed_r_case 1 6 4 1 3       (* rem  x4, 7, -2                  *)
+     [1,num 7; 3,num 0xfffffffe];
+   directed_r_case 1 5 4 1 3       (* divu x4, 0xfffffff9, 2          *)
+     [1,num 0xfffffff9; 3,num 2];
+   directed_r_case 1 7 4 1 3       (* remu x4, 0xfffffff9, 2          *)
+     [1,num 0xfffffff9; 3,num 2];
    (* AUIPC: zero, the sign bit, all upper bits, and an x0 destination. *)
    auipc_case 1 3 0x00000 (directed_input_state []);
    auipc_case 4 5 0x80000 (directed_input_state []);
@@ -822,9 +870,9 @@ let directed_cases =
  *** The campaign has register-only, memory, and control-flow classes,
  *** following the Arm/x86 frontend split between register coverage and
  *** dedicated harness families. The selected forms are the RV32I
- *** register-register and register-immediate ALU instructions, `LUI`,
- *** `MUL`, `MULH`, the loads and stores, `AUIPC`, the six branches, `JAL`,
- *** and `JALR`.
+ *** register-register and register-immediate ALU instructions, `LUI`, the
+ *** M instructions, the loads and stores, `AUIPC`, the six branches,
+ *** `JAL`, and `JALR`.
  ***
  *** Some behavior is not compared because the model claims nothing there:
  *** a halfword or word access, taken branch, or jump whose address is not
