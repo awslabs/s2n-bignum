@@ -10,6 +10,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/basemul_k4 \
   mlkem_native/gcc12_O2_mono/check_pk_k2 \
   mlkem_native/gcc12_O2_mono/check_pk_k3 \
+  mlkem_native/gcc12_O2_mono/check_pk_k4 \
   mlkem_native/gcc12_O2_mono/keccak_absorb_once \
   mlkem_native/gcc12_O2_mono/keccak_absorb_once_x4 \
   mlkem_native/gcc12_O2_mono/keccak_squeezeblocks_x4 \
@@ -50,6 +51,13 @@ mlkem_native/gcc12_O2_mono/check_pk_k2.native: \
   mlkem_native/gcc12_O2_mono/poly_tobytes.native \
   proofs/utils/mlkem_native_image.ml
 mlkem_native/gcc12_O2_mono/check_pk_k3.native: \
+  proofs/utils/mlkem_native_libc.ml \
+  proofs/mlkem_native/polyvec_inline.ml \
+  mlkem_native/gcc12_O2_mono/poly_frombytes.native \
+  mlkem_native/gcc12_O2_mono/poly_reduce.native \
+  mlkem_native/gcc12_O2_mono/poly_tobytes.native \
+  proofs/utils/mlkem_native_image.ml
+mlkem_native/gcc12_O2_mono/check_pk_k4.native: \
   proofs/utils/mlkem_native_libc.ml \
   proofs/mlkem_native/polyvec_inline.ml \
   mlkem_native/gcc12_O2_mono/poly_frombytes.native \
