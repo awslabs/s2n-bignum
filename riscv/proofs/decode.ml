@@ -10,9 +10,10 @@
 (* Field and immediate layouts follow "Base Instruction Formats" in "RV32I
    Base Integer Instruction Set, Version 2.1" of The RISC-V Instruction Set
    Manual, Volume I: Unprivileged Architecture. Exact opcode, funct3, and
-   funct7 values follow the manual's "RV32/64G Instruction Set Listings". MUL
-   and MULH follow "Multiplication Operations" in "M Extension for Integer
-   Multiplication and Division, Version 2.0".
+   funct7 values follow the manual's "RV32/64G Instruction Set Listings". The
+   M instructions follow "Multiplication Operations" and "Division
+   Operations" in "M Extension for Integer Multiplication and Division,
+   Version 2.0".
 
    https://docs.riscv.org/reference/isa/unpriv/rv32.html
    https://docs.riscv.org/reference/isa/unpriv/m-st-ext.html *)
@@ -48,6 +49,9 @@ let riscv_xreg = new_definition
      SRL   0110011 / 101 / 0000000   SRA   0110011 / 101 / 0100000
      OR    0110011 / 110 / 0000000   AND   0110011 / 111 / 0000000
      MUL   0110011 / 000 / 0000001   MULH  0110011 / 001 / 0000001
+     MULHSU 0110011 / 010 / 0000001  MULHU 0110011 / 011 / 0000001
+     DIV   0110011 / 100 / 0000001   DIVU  0110011 / 101 / 0000001
+     REM   0110011 / 110 / 0000001   REMU  0110011 / 111 / 0000001
      ADDI  0010011 / 000             SLTI  0010011 / 010
      SLTIU 0010011 / 011             XORI  0010011 / 100
      ORI   0010011 / 110             ANDI  0010011 / 111
@@ -93,6 +97,18 @@ let decode = new_definition
         SOME (riscv_MUL (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
     | [0b0000001:7; rs2:5; rs1:5; 0b001:3; rd:5; 0b0110011:7] ->
         SOME (riscv_MULH (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000001:7; rs2:5; rs1:5; 0b010:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_MULHSU (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000001:7; rs2:5; rs1:5; 0b011:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_MULHU (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000001:7; rs2:5; rs1:5; 0b100:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_DIV (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000001:7; rs2:5; rs1:5; 0b101:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_DIVU (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000001:7; rs2:5; rs1:5; 0b110:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_REM (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
+    | [0b0000001:7; rs2:5; rs1:5; 0b111:3; rd:5; 0b0110011:7] ->
+        SOME (riscv_REMU (riscv_xreg rd) (riscv_xreg rs1) (riscv_xreg rs2))
     | [imm:12; rs1:5; 0b000:3; rd:5; 0b0010011:7] ->
         SOME (riscv_ADDI (riscv_xreg rd) (riscv_xreg rs1) (word_sx imm))
     | [imm:12; rs1:5; 0b010:3; rd:5; 0b0010011:7] ->
@@ -253,6 +269,18 @@ let RISCV_DECODE_TESTS =
       `SOME (riscv_MUL A0 A0 A1)`;
     `decode (word 0x02b51533)`,
       `SOME (riscv_MULH A0 A0 A1)`;
+    `decode (word 0x02c5a533)`,
+      `SOME (riscv_MULHSU A0 A1 A2)`;
+    `decode (word 0x02c5b533)`,
+      `SOME (riscv_MULHU A0 A1 A2)`;
+    `decode (word 0x02c5c533)`,
+      `SOME (riscv_DIV A0 A1 A2)`;
+    `decode (word 0x02c5d533)`,
+      `SOME (riscv_DIVU A0 A1 A2)`;
+    `decode (word 0x02c5e533)`,
+      `SOME (riscv_REM A0 A1 A2)`;
+    `decode (word 0x02c5f533)`,
+      `SOME (riscv_REMU A0 A1 A2)`;
     `decode (word 0x00150513)`,
       `SOME (riscv_ADDI A0 A0 (word 1))`;
     `decode (word 0xfff50513)`,
