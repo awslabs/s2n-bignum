@@ -23,6 +23,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/poly_frombytes \
   mlkem_native/gcc12_O2_mono/poly_frommsg \
   mlkem_native/gcc12_O2_mono/poly_invntt_tomont \
+  mlkem_native/gcc12_O2_mono/poly_mulcache_compute \
   mlkem_native/gcc12_O2_mono/poly_ntt \
   mlkem_native/gcc12_O2_mono/poly_reduce \
   mlkem_native/gcc12_O2_mono/poly_tobytes \
@@ -91,6 +92,9 @@ mlkem_native/gcc12_O2_mono/poly_frommsg.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/poly_invntt_tomont.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/poly_mulcache_compute.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/poly_ntt.native: \
