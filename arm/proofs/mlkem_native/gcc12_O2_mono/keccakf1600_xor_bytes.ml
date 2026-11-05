@@ -158,3 +158,95 @@ let XOR_LAST_FLAG = prove
    [CONJ_TAC THEN MATCH_MP_TAC MOD_LT THEN
     CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC; ALL_TAC] THEN
   ASM_ARITH_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The same as XOR_BYTES_FINAL, with a bound on the data m instead of its    *)
+(* bytes in memory. It gives the state after a single byte (len = 1) has     *)
+(* been XORed in, e.g. by the code that adds the padding.                    *)
+(* ------------------------------------------------------------------------- *)
+
+let XOR_BYTES_FINAL2 = prove
+ (`!(a:int64) (S:1600 word) off len m s:armstate.
+        off + len <= 200 /\ m < 2 EXP (8 * len) /\
+        (!j. j < 200
+             ==> read (memory :> bytes8(word_add a (word j))) s =
+                 word_subword
+                  (word_xor S (word(2 EXP (8 * off) * m MOD 2 EXP (8 * len))))
+                  (8 * j,8))
+        ==> read (memory :> wbytes a) s = word_xor S (word(2 EXP (8 * off) * m))`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `m MOD 2 EXP (8 * len) = m`
+   (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+   [MATCH_MP_TAC MOD_LT THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  REWRITE_TAC[READ_MEMORY_WBYTES_VAL] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_DIV_CONV) THEN
+  W(fun (_,w) -> MP_TAC(ISPEC (rand(rand w)) VAL_BOUND)) THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  DISCH_THEN(fun th -> SUBST1_TAC(SYM(MATCH_MP MOD_LT th))) THEN
+  REWRITE_TAC[ARITH_RULE `1600 = 8 * 200`] THEN
+  MATCH_MP_TAC READ_MEMORY_BYTES_OF_BYTES8 THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[word_subword; ARITH_RULE `2 EXP 8 = 256`]) THEN
+  ASM_REWRITE_TAC[]);;
+
+(*** The index of a load or store with a UXTW register offset ***)
+
+let VAL_ZX_UXTW = prove
+ (`!n. n < 4294967296
+       ==> val(word_zx(word_zx(word_zx(word n:int64):int32):int32):int64) =
+           n /\
+           val(word_zx(word_zx(word n:int64):int32):int64) = n`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE `n < 4294967296 ==> n < 18446744073709551616`]);;
+
+(*** The state as bytes, from its 1600-bit word ***)
+
+let XOR_BYTES_OF_STATE = prove
+ (`!(a:int64) (S:1600 word) s:armstate.
+        read (memory :> bytes(a,200)) s = val S
+        ==> !j. j < 200
+                ==> read (memory :> bytes8(word_add a (word j))) s =
+                    word_subword S (8 * j,8)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`a:int64`; `200`; `val(S:1600 word)`; `j:num`; `s:armstate`]
+    READ_MEMORY_BYTES8_OF_NUM) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[word_subword; ARITH_RULE `2 EXP 8 = 256`] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN REWRITE_TAC[]);;
+
+(*** Reading a part of a number in memory, and the bytes of a 32-bit value ***)
+
+let READ_MEMORY_BYTES_SUB = prove
+ (`!a:int64 n x k l s:armstate.
+        read (memory :> bytes(a,n)) s = x /\ k + l <= n
+        ==> read (memory :> bytes(word_add a (word k),l)) s =
+            (x DIV 2 EXP (8 * k)) MOD 2 EXP (8 * l)`,
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_DIV; READ_BYTES_MOD] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+let WORD_ZX_BYTE_SMALL = prove
+ (`!p. p < 256 ==> word_zx(word_zx(word p:int64):int32):byte = word p`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_8; DIMINDEX_32;
+              DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+   `p < 256 ==> p < 4294967296 /\ p < 18446744073709551616`]);;
+
+let WORD_ZX_SUB1_SMALL = prove
+ (`!r. 0 < r /\ r < 2 EXP 32
+       ==> word_zx (word_sub (word_zx (word r:int64):int32) (word 1)):int64 =
+           word(r - 1)`,
+  CONV_TAC NUM_REDUCE_CONV THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ZX_GEN; VAL_WORD; VAL_WORD_SUB_CASES;
+              DIMINDEX_32; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+   `r < 4294967296 ==> r < 18446744073709551616`;
+   ARITH_RULE `0 < r ==> 1 <= r`;
+   ARITH_RULE `r < 4294967296 ==> r - 1 < 4294967296`;
+   ARITH_RULE `r < 4294967296 ==> r - 1 < 18446744073709551616`]);;
