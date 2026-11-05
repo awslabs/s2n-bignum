@@ -562,7 +562,8 @@ general patterns for s2n-bignum:
    the counter block and the GHASH accumulator, and leave the additional
    data, a partial final block, the length block and the final tag to the
    caller. The round keys and the table of powers of the hash key are in the
-   layouts of AWS-LC's AES_KEY and gcm_init_v8.
+   layouts of AWS-LC's AES_KEY and gcm_init_v8. They may be called in place,
+   with the output buffer the same as the input buffer.
 
  * The four "_alt" AES-GCM kernels derive from OpenSSL code, so their
    licensing is Apache-2.0, with the OpenSSL copyright notice, rather than
