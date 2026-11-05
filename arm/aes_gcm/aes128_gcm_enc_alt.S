@@ -463,7 +463,7 @@ L128_enc_main_loop:	//main	loop start
 	aese	v0.16b, v27.16b
 	aesmc	v0.16b, v0.16b			//AES block 8k+8 - round 1
 
-.inst	0xce1d2631	//eor3 v17.16b, v17.16b, v29.16b,v9.16b			//GHASH block 8k+2, 8k+3 - high
+	eor3	v17.16b, v17.16b, v29.16b, v9.16b			//GHASH block 8k+2, 8k+3 - high
 	trn1	v29.2d, v11.2d, v10.2d				//GHASH block 8k+2, 8k+3 - mid
 	trn2	v10.2d, v11.2d, v10.2d				//GHASH block 8k+2, 8k+3 - mid
 
@@ -484,7 +484,7 @@ L128_enc_main_loop:	//main	loop start
 	pmull	v24.1q, v8.1d, v24.1d				//GHASH block 8k+1 - mid
 
 	rev64	v14.16b, v14.16b						//GHASH block 8k+6 (t0, t1, and t2 free)
-.inst	0xce165273	//eor3 v19.16b, v19.16b, v22.16b, v20.16b			//GHASH block 8k+2, 8k+3 - low
+	eor3	v19.16b, v19.16b, v22.16b, v20.16b			//GHASH block 8k+2, 8k+3 - low
 
 	pmull2	v29.1q, v10.2d, v21.2d				//GHASH block 8k+2 - mid
 	eor	v18.16b, v18.16b, v24.16b				//GHASH block 8k+1 - mid
@@ -499,7 +499,7 @@ L128_enc_main_loop:	//main	loop start
 
 	aese	v1.16b, v28.16b
 	aesmc	v1.16b, v1.16b			//AES block 8k+9 - round 2
-.inst	0xce157652	//eor3 v18.16b, v18.16b, v21.16b, v29.16b			//GHASH block 8k+2, 8k+3 - mid
+	eor3	v18.16b, v18.16b, v21.16b, v29.16b			//GHASH block 8k+2, 8k+3 - mid
 	aese	v6.16b, v28.16b
 	aesmc	v6.16b, v6.16b			//AES block 8k+14 - round 2
 
@@ -579,10 +579,10 @@ L128_enc_main_loop:	//main	loop start
 	aesmc	v5.16b, v5.16b			//AES block 8k+13 - round 5
 
 	pmull	v22.1q, v14.1d, v22.1d				//GHASH block 8k+6 - low
-.inst	0xce082a31	//eor3 v17.16b, v17.16b, v8.16b, v10.16b			//GHASH block 8k+4, 8k+5 - high
+	eor3	v17.16b, v17.16b, v8.16b, v10.16b			//GHASH block 8k+4, 8k+5 - high
 	trn2	v14.2d, v15.2d, v14.2d				//GHASH block 8k+6, 8k+7 - mid
 
-.inst	0xce195e73	//eor3 v19.16b, v19.16b, v25.16b, v23.16b			//GHASH block 8k+4, 8k+5 - low
+	eor3	v19.16b, v19.16b, v25.16b, v23.16b			//GHASH block 8k+4, 8k+5 - low
 	aese	v6.16b, v28.16b
 	aesmc	v6.16b, v6.16b			//AES block 8k+14 - round 5
 
@@ -599,7 +599,7 @@ L128_enc_main_loop:	//main	loop start
 	aese	v0.16b, v28.16b
 	aesmc	v0.16b, v0.16b			//AES block 8k+8 - round 5
 
-.inst	0xce184252	//eor3 v18.16b, v18.16b, v24.16b, v16.16b			//GHASH block 8k+4, 8k+5 - mid
+	eor3	v18.16b, v18.16b, v24.16b, v16.16b			//GHASH block 8k+4, 8k+5 - mid
 	ldr	d16, [x10]			//MODULO - load modulo constant
 	pmull	v20.1q, v15.1d, v20.1d				//GHASH block 8k+7 - low
 
@@ -615,7 +615,7 @@ L128_enc_main_loop:	//main	loop start
 	aesmc	v2.16b, v2.16b			//AES block 8k+10 - round 6
 
 	pmull	v21.1q, v14.1d, v21.1d				//GHASH block 8k+7 - mid
-.inst	0xce165273	//eor3 v19.16b, v19.16b, v22.16b, v20.16b			//GHASH block 8k+6, 8k+7 - low
+	eor3	v19.16b, v19.16b, v22.16b, v20.16b			//GHASH block 8k+6, 8k+7 - low
 	ldp	q8, q9, [x0], #32			//AES block 8k+8, 8k+9 - load plaintext
 
 	aese	v3.16b, v26.16b
@@ -630,9 +630,9 @@ L128_enc_main_loop:	//main	loop start
 	aese	v6.16b, v26.16b
 	aesmc	v6.16b, v6.16b			//AES block 8k+14 - round 6
 
-.inst	0xce153652	//eor3 v18.16b, v18.16b, v21.16b, v13.16b			//GHASH block 8k+6, 8k+7 - mid
+	eor3	v18.16b, v18.16b, v21.16b, v13.16b			//GHASH block 8k+6, 8k+7 - mid
 	ldp	q28, q26, [x11, #128]				//load rk8, rk9
-.inst	0xce0b3231	//eor3 v17.16b, v17.16b, v11.16b, v12.16b			//GHASH block 8k+6, 8k+7 - high
+	eor3	v17.16b, v17.16b, v11.16b, v12.16b			//GHASH block 8k+6, 8k+7 - high
 
 	aese	v2.16b, v27.16b
 	aesmc	v2.16b, v2.16b			//AES block 8k+10 - round 7
@@ -671,7 +671,7 @@ L128_enc_main_loop:	//main	loop start
 
 	aese	v4.16b, v28.16b
 	aesmc	v4.16b, v4.16b			//AES block 8k+12 - round 8
-.inst	0xce114e52	//eor3 v18.16b, v18.16b, v17.16b, v19.16b		 	//MODULO - karatsuba tidy up
+	eor3	v18.16b, v18.16b, v17.16b, v19.16b		 	//MODULO - karatsuba tidy up
 	ldr	q27, [x11, #160]					//load rk10
 
 	ext	v29.16b, v17.16b, v17.16b, #8				//MODULO - other top alignment
@@ -682,7 +682,7 @@ L128_enc_main_loop:	//main	loop start
 
 	aese	v0.16b, v28.16b
 	aesmc	v0.16b, v0.16b			//AES block 8k+8 - round 8
-.inst	0xce1d5652	//eor3 v18.16b, v18.16b, v29.16b, v21.16b			//MODULO - fold into mid
+	eor3	v18.16b, v18.16b, v29.16b, v21.16b			//MODULO - fold into mid
 	aese	v6.16b, v28.16b
 	aesmc	v6.16b, v6.16b			//AES block 8k+14 - round 8
 
@@ -695,13 +695,13 @@ L128_enc_main_loop:	//main	loop start
 	add	v30.4s, v30.4s, v31.4s		//CTR block 8k+19
 
 	cmp	x0, x5				//.LOOP CONTROL
-.inst	0xce046d8c	//eor3 v12.16b, v12.16b, v4.16b, v27.16b				//AES block 4 - result
+	eor3	v12.16b, v12.16b, v4.16b, v27.16b				//AES block 4 - result
 	aese	v7.16b, v26.16b						//AES block 8k+15 - round 9
 
 	aese	v6.16b, v26.16b						//AES block 8k+14 - round 9
 	aese	v3.16b, v26.16b						//AES block 8k+11 - round 9
 
-.inst	0xce026d4a	//eor3 v10.16b, v10.16b, v2.16b, v27.16b				//AES block 8k+10 - result
+	eor3	v10.16b, v10.16b, v2.16b, v27.16b				//AES block 8k+10 - result
 
 	mov	v2.16b, v23.16b					//CTR block 8k+18
 	aese	v0.16b, v26.16b						//AES block 8k+8 - round 9
@@ -709,27 +709,27 @@ L128_enc_main_loop:	//main	loop start
 	rev32	v4.16b, v30.16b				//CTR block 8k+20
 	add	v30.4s, v30.4s, v31.4s		//CTR block 8k+20
 
-.inst	0xce076def	//eor3 v15.16b, v15.16b, v7.16b, v27.16b				//AES block 7 - result
+	eor3	v15.16b, v15.16b, v7.16b, v27.16b				//AES block 7 - result
 	aese	v5.16b, v26.16b						//AES block 8k+13 - round 9
 	pmull	v17.1q, v18.1d, v16.1d			//MODULO - mid 64b align with low
 
-.inst	0xce016d29	//eor3 v9.16b, v9.16b, v1.16b, v27.16b				//AES block 8k+9 - result
-.inst	0xce036d6b	//eor3 v11.16b, v11.16b, v3.16b, v27.16b				//AES block 8k+11 - result
+	eor3	v9.16b, v9.16b, v1.16b, v27.16b				//AES block 8k+9 - result
+	eor3	v11.16b, v11.16b, v3.16b, v27.16b				//AES block 8k+11 - result
 	mov	v3.16b, v25.16b					//CTR block 8k+19
 
 	ext	v21.16b, v18.16b, v18.16b, #8				//MODULO - other mid alignment
-.inst	0xce056dad	//eor3 v13.16b, v13.16b, v5.16b, v27.16b				//AES block 5 - result
+	eor3	v13.16b, v13.16b, v5.16b, v27.16b				//AES block 5 - result
 	mov	v1.16b, v22.16b					//CTR block 8k+17
 
-.inst	0xce006d08	//eor3 v8.16b, v8.16b, v0.16b, v27.16b				//AES block 8k+8 - result
+	eor3	v8.16b, v8.16b, v0.16b, v27.16b				//AES block 8k+8 - result
 	mov	v0.16b, v20.16b					//CTR block 8k+16
 	stp	q8, q9, [x2], #32			//AES block 8k+8, 8k+9 - store result
 
 	stp	q10, q11, [x2], #32			//AES block 8k+10, 8k+11 - store result
-.inst	0xce066dce	//eor3 v14.16b, v14.16b, v6.16b, v27.16b				//AES block 6 - result
+	eor3	v14.16b, v14.16b, v6.16b, v27.16b				//AES block 6 - result
 
 	stp	q12, q13, [x2], #32			//AES block 8k+12, 8k+13 - store result
-.inst	0xce115673	//eor3 v19.16b, v19.16b, v17.16b, v21.16b		 	//MODULO - fold into low
+	eor3	v19.16b, v19.16b, v17.16b, v21.16b		 	//MODULO - fold into low
 
 	stp	q14, q15, [x2], #32			//AES block 8k+14, 8k+15 - store result
 	b.lt	L128_enc_main_loop
