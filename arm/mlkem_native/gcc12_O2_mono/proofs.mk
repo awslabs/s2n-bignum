@@ -16,6 +16,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/check_sk_k4 \
   mlkem_native/gcc12_O2_mono/dec_k2 \
   mlkem_native/gcc12_O2_mono/gen_matrix_k2 \
+  mlkem_native/gcc12_O2_mono/gen_matrix_k3 \
   mlkem_native/gcc12_O2_mono/gen_matrix_k4 \
   mlkem_native/gcc12_O2_mono/indcpa_enc_k2 \
   mlkem_native/gcc12_O2_mono/indcpa_enc_k4 \
@@ -116,6 +117,9 @@ mlkem_native/gcc12_O2_mono/dec_k2.native: \
   proofs/utils/mlkem_native_image.ml
 mlkem_native/gcc12_O2_mono/gen_matrix_k2.native: \
   mlkem_native/gcc12_O2_mono/poly_rej_uniform_x4.native
+mlkem_native/gcc12_O2_mono/gen_matrix_k3.native: \
+  mlkem_native/gcc12_O2_mono/poly_rej_uniform_x4.native \
+  mlkem_native/gcc12_O2_mono/poly_rej_uniform.native
 mlkem_native/gcc12_O2_mono/gen_matrix_k4.native: \
   mlkem_native/gcc12_O2_mono/poly_rej_uniform_x4.native
 mlkem_native/gcc12_O2_mono/indcpa_enc_k2.native: \
@@ -272,6 +276,8 @@ mlkem_native/gcc12_O2_mono/poly_reduce.native: \
 mlkem_native/gcc12_O2_mono/poly_rej_uniform.native: \
   proofs/utils/mlkem_native_libc.ml \
   mlkem_native/gcc12_O2_mono/rej_uniform.native \
+  mlkem_native/gcc12_O2_mono/keccak_absorb_once.native \
+  mlkem_native/gcc12_O2_mono/keccakf1600_permute.native \
   proofs/utils/keccak_fips202.ml \
   mlkem_native/gcc12_O2_mono/libmlkem.native \
   proofs/utils/mlkem_native_image.ml \
