@@ -43,7 +43,6 @@ type aes_gcm_enc_alt_kernel =
    eak_pc_fast : int * int * int * int; (* small paths: tail entries *)
    eak_setup_tail_branch : int;         (* setup: step of b.ge tail *)
    eak_loop_ldp : int * int * int;      (* loop body: incremented ldp steps *)
-   eak_native_loop : bool;             (* native AES-128 bulk schedule *)
    eak_loop_backedge : int;             (* loop body: step of the b.lt *)
    eak_prepretail_steps : int;          (* prepretail: steps to the tail *)
    eak_fast_steps : int * int * int * int }   (* small paths: AES steps *)
