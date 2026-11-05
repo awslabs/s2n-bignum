@@ -210,12 +210,16 @@ let directed_input_state assignments =
     assignments
     (map (fun _ -> num_0) (1--95));;
 
-let rec memory_operands () =
-  let address = 4 * Random.int 64
+(* Choose an address aligned to the access size in the scratch buffer, a
+   four-byte SP adjustment, and the 12-bit immediate that reaches the address
+   from the adjusted SP. *)
+
+let rec memory_operands size =
+  let address = size * Random.int (256 / size)
   and setup = 4 * (Random.int 1024 - 512) in
   let immediate = address - setup in
   if immediate < -2048 || immediate > 2047
-  then memory_operands ()
+  then memory_operands size
   else address,setup,immediate;;
 
 (* Register-only builders choose the register fields at random. The R-type,
@@ -257,20 +261,20 @@ let make_lui_case input =
     case_cleanup = []; case_memop_index = None;
     case_input = input };;
 
-let make_lw_case input =
+let make_load_case funct3 size input =
   let rd = random_register () in
-  let _,setup,immediate = memory_operands () in
+  let _,setup,immediate = memory_operands size in
   { case_setup = [encode_i setup 2 0 2 0x13];
-    case_instruction = encode_i immediate 2 2 rd 0x03;
+    case_instruction = encode_i immediate 2 funct3 rd 0x03;
     case_cleanup = [encode_i (-setup) 2 0 2 0x13];
     case_memop_index = Some 1;
     case_input = input };;
 
-let make_sw_case input =
+let make_store_case funct3 size input =
   let rs2 = random_register () in
-  let _,setup,immediate = memory_operands () in
+  let _,setup,immediate = memory_operands size in
   { case_setup = [encode_i setup 2 0 2 0x13];
-    case_instruction = encode_s immediate rs2 2 2;
+    case_instruction = encode_s immediate rs2 2 funct3;
     case_cleanup = [encode_i (-setup) 2 0 2 0x13];
     case_memop_index = Some 1;
     case_input = input };;
@@ -301,8 +305,15 @@ let regclasses : rv32_case_builder list =
     make_shift_case 0 5];;         (* SRLI   *)
 
 let memclasses : rv32_case_builder list =
-  [(fun () -> make_lw_case (make_input_state (Random.int 65)));
-   (fun () -> make_sw_case (make_input_state (Random.int 65)))];;
+  map (fun make -> fun () -> make (make_input_state (Random.int 65)))
+   [make_load_case 0 1;            (* LB     *)
+    make_load_case 1 2;            (* LH     *)
+    make_load_case 2 4;            (* LW     *)
+    make_load_case 4 1;            (* LBU    *)
+    make_load_case 5 2;            (* LHU    *)
+    make_store_case 0 1;           (* SB     *)
+    make_store_case 1 2;           (* SH     *)
+    make_store_case 2 4];;         (* SW     *)
 
 let caseclasses = regclasses @ memclasses;;
 
@@ -329,10 +340,30 @@ let directed_lui_case rd immediate =
     case_cleanup = []; case_memop_index = None;
     case_input = directed_input_state [] };;
 
-(*** Run a fixed arithmetic prelude before random sampling so x0 behavior,
- *** operand aliasing, immediate extremes, and signed wraparound do not rely
- *** on chance. The subsequent random campaign keeps probing the wider state
- *** space and memory harnesses.
+(* Run one load or store with SP adjusted by `setup` around it, as the random
+   memory cases do, after setting the listed registers and scratch words.
+   The directed loads write x4, and the directed stores store x4. *)
+
+let directed_memory_case setup instruction assignments words =
+  { case_setup = [encode_i setup 2 0 2 0x13];
+    case_instruction = instruction;
+    case_cleanup = [encode_i (-setup) 2 0 2 0x13];
+    case_memop_index = Some 1;
+    case_input =
+      itlist (fun (index,value) -> list_update (31 + index) value)
+        words (directed_input_state assignments) };;
+
+let directed_load_case funct3 setup immediate words =
+  directed_memory_case setup (encode_i immediate 2 funct3 4 0x03) [] words;;
+
+let directed_store_case funct3 setup immediate value words =
+  directed_memory_case setup (encode_s immediate 4 2 funct3) [4,value] words;;
+
+(*** Run a fixed prelude before random sampling so x0 behavior, operand
+ *** aliasing, immediate extremes, signed wraparound, and the extension and
+ *** placement of byte and halfword accesses do not rely on chance. The
+ *** subsequent random campaign keeps probing the wider state space and
+ *** memory harnesses.
  ***)
 
 let directed_cases =
@@ -472,7 +503,35 @@ let directed_cases =
    directed_r_case 0x20 5 4 1 3    (* sra  x4, 0x80000000, 31         *)
      [1,num 0x80000000; 3,num 31];
    directed_r_case 0x20 5 4 1 3    (* sra  x4, 0x80000000, 0xffffffe1 *)
-     [1,num 0x80000000; 3,num 0xffffffe1]];;
+     [1,num 0x80000000; 3,num 0xffffffe1];
+   (* LB, LBU, LH, LHU: sign and zero extension at the top bit, the first
+      and last scratch bytes, and negative offsets. *)
+   directed_load_case 0 0 1        (* lb  x4, 1(sp)                   *)
+     [0,num 0x00008000];
+   directed_load_case 4 0 1        (* lbu x4, 1(sp)                   *)
+     [0,num 0x00008000];
+   directed_load_case 0 0 255      (* lb  x4, 255(sp)                 *)
+     [63,num 0x7f000000];
+   directed_load_case 4 256 (-256) (* lbu x4, -256(sp+256)            *)
+     [0,num 0x000000ff];
+   directed_load_case 1 0 2        (* lh  x4, 2(sp)                   *)
+     [0,num 0x80000000];
+   directed_load_case 5 0 2        (* lhu x4, 2(sp)                   *)
+     [0,num 0x80000000];
+   directed_load_case 1 256 (-2)   (* lh  x4, -2(sp+256)              *)
+     [63,num 0x7fff0000];
+   directed_load_case 5 256 (-2)   (* lhu x4, -2(sp+256)              *)
+     [63,num 0xffff0000];
+   (* SB, SH: only the low bits of x4 reach memory, and the other bytes of
+      the surrounding word keep their values. *)
+   directed_store_case 0 0 3       (* sb  x4, 3(sp)                   *)
+     (num 0x12345678) [0,num 0xaaaaaaaa];
+   directed_store_case 0 256 (-1)  (* sb  x4, -1(sp+256)              *)
+     (num 0x123456ff) [63,num 0x55555555];
+   directed_store_case 1 0 2       (* sh  x4, 2(sp)                   *)
+     (num 0x12348765) [0,num 0xaaaaaaaa];
+   directed_store_case 1 256 (-256) (* sh x4, -256(sp+256)            *)
+     (num 0xffff8000) [0,num 0x55555555]];;
 
 (*** The RV32 frontend constructs complete instructions directly from their
  *** encoding fields; it has no Arm-style bit templates or x86-style byte
@@ -486,18 +545,19 @@ let directed_cases =
  *** Arm/x86 frontend split between register coverage and dedicated memory
  *** harness families. The selected straight-line forms are the RV32I
  *** register-register and register-immediate ALU instructions, `LUI`, `MUL`,
- *** `MULH`, `LW`, and `SW`. `AUIPC`, `BNE`, and `JALR` are modeled by RV32
- *** but are not selected here because they read or change the PC, which this
- *** campaign does not transport or check.
+ *** `MULH`, and the loads and stores. `AUIPC`, `BNE`, and `JALR` are modeled
+ *** by RV32 but are not selected here because they read or change the PC,
+ *** which this campaign does not transport or check.
  ***
  *** Memory cases illustrate the difference from register-only cases. For
  *** one `LW` harness, `make_case` builds:
  ***
  ***   ADDI SP,SP,setup; LW rd,offset(SP); ADDI SP,SP,-setup
  ***
- *** `SW` uses the same setup and cleanup around a store. The chosen offset
- *** identifies one word in the private 256-byte scratch buffer, and
- *** `case_memop_index` tells the evaluator which instruction is the target.
+ *** The other loads and the stores use the same setup and cleanup. The chosen
+ *** offset identifies one byte, halfword, or word, aligned to its size, in
+ *** the private 256-byte scratch buffer, and `case_memop_index` tells the
+ *** evaluator which instruction is the target.
  *** Thus setup and cleanup establish and restore the address while the target
  *** instruction is the operation whose memory behavior is checked.
  ***)
@@ -547,6 +607,9 @@ and tac_after memop =
    else ALL_TAC) THEN
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
   ASM_REWRITE_TAC[] THEN
+  (* After a byte or halfword store, the merged scratch word is a
+     `word_join` of the byte values just substituted; evaluate it. *)
+  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
   REWRITE_TAC[] THEN
   TRY(MONOTONE_MAYCHANGE_TAC) THEN
   PRINT_GOAL_TAC THEN NO_TAC;;

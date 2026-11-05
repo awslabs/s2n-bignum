@@ -20,19 +20,20 @@
 
    The state uses 32-bit PCs, registers, and memory addresses.
 
-   The model covers the RV32I integer computational instructions, the LW, SW,
-   BNE, and JALR instructions, and MUL and MULH from M. It omits privileged
-   state, exceptions, CSRs, and the compressed extension.
+   The model covers the RV32I integer computational, load, and store
+   instructions, the BNE and JALR instructions, and MUL and MULH from M. It
+   omits privileged state, exceptions, CSRs, and the compressed extension.
 
    MUL and MULH emit no operand-dependent event. Constant-time theorems using
    this model therefore require data-independent multiply latency on the
    target implementation.
 
-   Misaligned word accesses and instruction targets use `ASSIGNS entirety`,
-   which permits any successor state. This conservatively abstracts omitted
-   exception and trap handling; it does not claim that the architecture
-   defines such cases as undefined behavior. Normal execution proofs establish
-   four-byte alignment and do not use this case. *)
+   Misaligned halfword and word accesses and instruction targets use
+   `ASSIGNS entirety`, which permits any successor state. This conservatively
+   abstracts omitted exception and trap handling; it does not claim that the
+   architecture defines such cases as undefined behavior. Normal execution
+   proofs establish two- or four-byte alignment and do not use this case. Byte
+   accesses cannot be misaligned. *)
 
 (* TODO: This is complete only for the unprivileged RV32IM register state:
    x0--x31 and pc. The M extension adds no architectural registers. A faithful
@@ -227,8 +228,8 @@ let riscv_gpr = define
    directly, as in the ARM and x86 models. The selected component may be
    `ZERO`, whose write is ignored (it is `rvalue (word 0)`). *)
 
-(* Form the base-plus-immediate value used by LW, SW, and JALR. The decoder
-   supplies a sign-extended int32 immediate, and word_add gives RV32
+(* Form the base-plus-immediate value used by loads, stores, and JALR. The
+   decoder supplies a sign-extended int32 immediate, and word_add gives RV32
    wraparound arithmetic. *)
 
 let riscv_addr = new_definition
@@ -456,6 +457,38 @@ let riscv_LW = define
            riscv_event_load addr 4 s
          else ASSIGNS entirety) s`;;
 
+let riscv_LB = define
+ `riscv_LB (rd:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (rd := word_sx (read (memory :> bytes8 addr) s) ,,
+         riscv_event_load addr 1 s) s`;;
+
+let riscv_LH = define
+ `riscv_LH (rd:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (if aligned 2 addr then
+           rd := word_sx (read (memory :> bytes16 addr) s) ,,
+           riscv_event_load addr 2 s
+         else ASSIGNS entirety) s`;;
+
+let riscv_LBU = define
+ `riscv_LBU (rd:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (rd := word_zx (read (memory :> bytes8 addr) s) ,,
+         riscv_event_load addr 1 s) s`;;
+
+let riscv_LHU = define
+ `riscv_LHU (rd:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (if aligned 2 addr then
+           rd := word_zx (read (memory :> bytes16 addr) s) ,,
+           riscv_event_load addr 2 s
+         else ASSIGNS entirety) s`;;
+
 let riscv_SW = define
  `riscv_SW rs2 rs1 imm =
     \s:riscvstate.
@@ -463,6 +496,22 @@ let riscv_SW = define
         (if aligned 4 addr then
            memory :> bytes32 addr := read rs2 s ,,
            riscv_event_store addr 4 s
+         else ASSIGNS entirety) s`;;
+
+let riscv_SB = define
+ `riscv_SB (rs2:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (memory :> bytes8 addr := word_zx (read rs2 s) ,,
+         riscv_event_store addr 1 s) s`;;
+
+let riscv_SH = define
+ `riscv_SH (rs2:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (if aligned 2 addr then
+           memory :> bytes16 addr := word_zx (read rs2 s) ,,
+           riscv_event_store addr 2 s
          else ASSIGNS entirety) s`;;
 
 let riscv_BNE = define
