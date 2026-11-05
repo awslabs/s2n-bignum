@@ -9,6 +9,10 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/keccakf1600_permute \
   mlkem_native/gcc12_O2_mono/keccakf1600_xor_bytes \
   mlkem_native/gcc12_O2_mono/keccakf1600x4_xor_bytes \
+  mlkem_native/gcc12_O2_mono/poly_decompress_d4 \
+  mlkem_native/gcc12_O2_mono/poly_frombytes \
+  mlkem_native/gcc12_O2_mono/poly_frommsg \
+  mlkem_native/gcc12_O2_mono/poly_tomsg \
   mlkem_native/gcc12_O2_mono/rej_uniform
 
 mlkem_native/gcc12_O2_mono/keccak_absorb_once.native: \
@@ -30,6 +34,18 @@ mlkem_native/gcc12_O2_mono/keccakf1600x4_xor_bytes.native: \
 mlkem_native/gcc12_O2_mono/libmlkem.native: \
   proofs/mlkem_native/gcc12_O2_mono/layout.ml \
   proofs/utils/mlkem_native_image.ml
+mlkem_native/gcc12_O2_mono/poly_decompress_d4.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/poly_frombytes.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/poly_frommsg.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/poly_tomsg.native: \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/rej_uniform.native: \
   proofs/utils/mlkem_native.ml \
   mlkem_native/gcc12_O2_mono/libmlkem.native
