@@ -20,9 +20,9 @@
 
    The state uses 32-bit PCs, registers, and memory addresses.
 
-   The model covers the RV32I integer computational, load, and store
-   instructions, the BNE and JALR instructions, and MUL and MULH from M. It
-   omits privileged state, exceptions, CSRs, and the compressed extension.
+   The model covers RV32I except FENCE, ECALL, and EBREAK, and MUL and MULH
+   from M. It omits privileged state, exceptions, CSRs, and the compressed
+   extension.
 
    MUL and MULH emit no operand-dependent event. Constant-time theorems using
    this model therefore require data-independent multiply latency on the
@@ -242,7 +242,7 @@ let riscv_instruction_pc = new_definition
  `riscv_instruction_pc s =
     word_sub (read PC s) (word 4)`;;
 
-(* Form a branch target relative to the address of the branch instruction,
+(* Form a branch or JAL target relative to the address of the instruction,
    rather than the already advanced PC. *)
 
 let riscv_branch_target = new_definition
@@ -523,6 +523,73 @@ let riscv_BNE = define
         (if aligned 4 dst then
            PC := dst ,,
            riscv_event_jump src dst taken s
+         else ASSIGNS entirety) s`;;
+
+let riscv_BEQ = define
+ `riscv_BEQ rs1 rs2 imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s
+        and taken = read rs1 s = read rs2 s in
+        let dst = if taken then riscv_branch_target imm s else read PC s in
+        (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst taken s
+         else ASSIGNS entirety) s`;;
+
+let riscv_BLT = define
+ `riscv_BLT rs1 rs2 imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s
+        and taken = ival(read rs1 s:int32) < ival(read rs2 s:int32) in
+        let dst = if taken then riscv_branch_target imm s else read PC s in
+        (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst taken s
+         else ASSIGNS entirety) s`;;
+
+let riscv_BGE = define
+ `riscv_BGE rs1 rs2 imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s
+        and taken = ival(read rs1 s:int32) >= ival(read rs2 s:int32) in
+        let dst = if taken then riscv_branch_target imm s else read PC s in
+        (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst taken s
+         else ASSIGNS entirety) s`;;
+
+let riscv_BLTU = define
+ `riscv_BLTU rs1 rs2 imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s
+        and taken = val(read rs1 s:int32) < val(read rs2 s:int32) in
+        let dst = if taken then riscv_branch_target imm s else read PC s in
+        (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst taken s
+         else ASSIGNS entirety) s`;;
+
+let riscv_BGEU = define
+ `riscv_BGEU rs1 rs2 imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s
+        and taken = val(read rs1 s:int32) >= val(read rs2 s:int32) in
+        let dst = if taken then riscv_branch_target imm s else read PC s in
+        (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst taken s
+         else ASSIGNS entirety) s`;;
+
+let riscv_JAL = define
+ `riscv_JAL rd imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s in
+        let link = read PC s in
+        let dst = riscv_branch_target imm s in
+        (if aligned 4 dst then
+           rd := link ,,
+           PC := dst ,,
+           riscv_event_jump src dst T s
          else ASSIGNS entirety) s`;;
 
 let riscv_JALR = define
