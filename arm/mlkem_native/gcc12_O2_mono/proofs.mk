@@ -30,6 +30,8 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/poly_decompress_d4 \
   mlkem_native/gcc12_O2_mono/poly_frombytes \
   mlkem_native/gcc12_O2_mono/poly_frommsg \
+  mlkem_native/gcc12_O2_mono/poly_getnoise_eta2_k2 \
+  mlkem_native/gcc12_O2_mono/poly_getnoise_eta2_k4 \
   mlkem_native/gcc12_O2_mono/poly_invntt_tomont \
   mlkem_native/gcc12_O2_mono/poly_mulcache_compute \
   mlkem_native/gcc12_O2_mono/poly_ntt \
@@ -137,6 +139,12 @@ mlkem_native/gcc12_O2_mono/poly_frombytes.native: \
   mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/poly_frommsg.native: \
   proofs/utils/mlkem_native.ml \
+  mlkem_native/gcc12_O2_mono/libmlkem.native
+mlkem_native/gcc12_O2_mono/poly_getnoise_eta2_k2.native: \
+  mlkem_native/gcc12_O2_mono/poly_getnoise_eta2_k4.native
+mlkem_native/gcc12_O2_mono/poly_getnoise_eta2_k4.native: \
+  mlkem_native/gcc12_O2_mono/shake256.native \
+  mlkem_native/gcc12_O2_mono/poly_cbd2.native \
   mlkem_native/gcc12_O2_mono/libmlkem.native
 mlkem_native/gcc12_O2_mono/poly_invntt_tomont.native: \
   proofs/utils/mlkem_native.ml \
