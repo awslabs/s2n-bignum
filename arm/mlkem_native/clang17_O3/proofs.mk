@@ -15,6 +15,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/poly_tomont \
   mlkem_native/clang17_O3/shake128_init \
   mlkem_native/clang17_O3/shake128_release \
+  mlkem_native/clang17_O3/shake128_squeezeblocks \
   mlkem_native/clang17_O3/shake128x4_init \
   mlkem_native/clang17_O3/shake128x4_release
 
@@ -49,6 +50,10 @@ mlkem_native/clang17_O3/poly_tomont.native: \
 mlkem_native/clang17_O3/shake128_init.native: \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/shake128_release.native: \
+  mlkem_native/clang17_O3/libmlkem.native
+mlkem_native/clang17_O3/shake128_squeezeblocks.native: \
+  mlkem_native/clang17_O3/keccakf1600_permute.native \
+  mlkem_native/clang17_O3/keccakf1600_extract_bytes.native \
   mlkem_native/clang17_O3/libmlkem.native
 mlkem_native/clang17_O3/shake128x4_init.native: \
   mlkem_native/clang17_O3/libmlkem.native
