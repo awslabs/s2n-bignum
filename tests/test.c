@@ -17527,9 +17527,10 @@ int test_aes_xts_roundtrip(void)
 // against the reference ref_aes_gcm_kernel of tests/ref_aes_gcm.c (after a
 // zero-length call and every block count from 1 to 32, which cover the
 // small-message paths, all tail residues and the first main-loop
-// transitions), the length contract, wraparound of the 32-bit block counter,
-// and the AWS-LC and Wycheproof known-answer vectors.  Every call also checks
-// that nothing is written past the output and that the return value is right.
+// transitions), the same in place (out == in), the length contract,
+// wraparound of the 32-bit block counter, and the AWS-LC and Wycheproof
+// known-answer vectors.  Every call also checks that nothing is written past
+// the output and that the return value is right.
 
 typedef uint64_t (*aes_gcm_fn)(const uint8_t *in, uint64_t len_bits,
                                uint8_t *out, uint64_t *tag, uint8_t *ivec,
@@ -17576,10 +17577,11 @@ static uint64_t aes_gcm_expected_return(const aes_gcm_kernel *k,
 // len_bits as given; compare the output, the updated tag and counter block,
 // and the return value with the reference, and check that nothing is
 // written past the processed blocks.  The low 32 bits of the counter block
-// are set to ctr32 unless it is negative.
+// are set to ctr32 unless it is negative.  If inplace is nonzero the kernel
+// gets a copy of the input in its output buffer and works in place there.
 
-static int test_aes_gcm_case(const aes_gcm_kernel *k, uint64_t len_bits,
-                             int64_t ctr32)
+static int test_aes_gcm_case_mode(const aes_gcm_kernel *k, uint64_t len_bits,
+                                  int64_t ctr32, int inplace)
 { uint8_t key[32], h[16];
   uint8_t iv_asm[16], iv_ref[16];
   uint64_t tag_asm[2], tag_ref[2], htable[24], r;
@@ -17602,26 +17604,29 @@ static int test_aes_gcm_case(const aes_gcm_kernel *k, uint64_t len_bits,
   random_bytes_density(bb1, len + AES_GCM_GUARD);
   memset(bb2, AES_GCM_FILL, len + AES_GCM_GUARD);
   memset(bb3, 0, len);
+  if (inplace) memcpy(bb2, bb1, len);
 
-  r = k->fn(bb1, len_bits, bb2, tag_asm, iv_asm, &ek, htable);
+  r = k->fn(inplace ? bb2 : bb1, len_bits, bb2, tag_asm, iv_asm, &ek, htable);
   ref_aes_gcm_kernel(k->keybytes, k->encrypt, bb1, 128 * (uint64_t)(len / 16),
                      bb3, (uint8_t *)tag_ref, iv_ref, &ek);
 
   if (r != expect)
-   { printf("### Disparity: %s len_bits=%"PRIu64" returned %"PRIu64
-            ", expected %"PRIu64"\n", k->name, len_bits, r, expect);
+   { printf("### Disparity: %s%s len_bits=%"PRIu64" returned %"PRIu64
+            ", expected %"PRIu64"\n", k->name, inplace ? " in place" : "",
+            len_bits, r, expect);
      return 1;
    }
   for (j = len; j < len + AES_GCM_GUARD; ++j)
     if (bb2[j] != AES_GCM_FILL)
-     { printf("### Disparity: %s len_bits=%"PRIu64" wrote past the output\n",
-              k->name, len_bits);
+     { printf("### Disparity: %s%s len_bits=%"PRIu64" wrote past the output\n",
+              k->name, inplace ? " in place" : "", len_bits);
        return 1;
      }
   if (memcmp(bb2, bb3, len) != 0 ||
       memcmp(tag_asm, tag_ref, 16) != 0 ||
       memcmp(iv_asm, iv_ref, 16) != 0)
-   { printf("### Disparity: %s len_bits=%"PRIu64"\n", k->name, len_bits);
+   { printf("### Disparity: %s%s len_bits=%"PRIu64"\n", k->name,
+            inplace ? " in place" : "", len_bits);
      printf("    key=");
      for (j = 0; j < (size_t)k->keybytes; ++j) printf("%02x", key[j]);
      printf("\n    data %s, tag %s, ctr %s\n",
@@ -17630,8 +17635,15 @@ static int test_aes_gcm_case(const aes_gcm_kernel *k, uint64_t len_bits,
             memcmp(iv_asm, iv_ref, 16) ? "DIFF" : "ok");
      return 1;
    }
-  if (VERBOSE) printf("OK: %s len_bits=%"PRIu64"\n", k->name, len_bits);
+  if (VERBOSE)
+    printf("OK: %s%s len_bits=%"PRIu64"\n", k->name,
+           inplace ? " in place" : "", len_bits);
   return 0;
+}
+
+static int test_aes_gcm_case(const aes_gcm_kernel *k, uint64_t len_bits,
+                             int64_t ctr32)
+{ return test_aes_gcm_case_mode(k, len_bits, ctr32, 0);
 }
 
 // Random inputs against the reference: the zero length, every whole-block
@@ -17652,6 +17664,27 @@ static int test_aes_gcm_random(const aes_gcm_kernel *k)
    { nblocks = 1 + (rand() % 256);
      if ((rand() & 3) == 0) nblocks = 1 + (rand() % 8);
      if (test_aes_gcm_case(k, 128 * (uint64_t)nblocks, -1)) return 1;
+   }
+  return 0;
+}
+
+// The same in place, with the output buffer the input buffer
+
+static int test_aes_gcm_inplace(const aes_gcm_kernel *k)
+{ uint64_t t;
+  size_t nblocks;
+
+  printf("Testing %s in place against reference with %d cases\n",
+         k->name, tests);
+
+  if (test_aes_gcm_case_mode(k, 0, -1, 1)) return 1;
+  for (nblocks = 1; nblocks <= 32; ++nblocks)
+    if (test_aes_gcm_case_mode(k, 128 * (uint64_t)nblocks, -1, 1)) return 1;
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { nblocks = 1 + (rand() % 256);
+     if ((rand() & 3) == 0) nblocks = 1 + (rand() % 8);
+     if (test_aes_gcm_case_mode(k, 128 * (uint64_t)nblocks, -1, 1)) return 1;
    }
   return 0;
 }
@@ -17921,8 +17954,8 @@ static int test_aes_gcm_vectors(const aes_gcm_kernel *k, int wycheproof)
 // The whole battery for one kernel
 
 static int test_aes_gcm_kernel(const aes_gcm_kernel *k)
-{ if (test_aes_gcm_random(k) || test_aes_gcm_lengths(k) ||
-      test_aes_gcm_counter_wrap(k) ||
+{ if (test_aes_gcm_random(k) || test_aes_gcm_inplace(k) ||
+      test_aes_gcm_lengths(k) || test_aes_gcm_counter_wrap(k) ||
       test_aes_gcm_vectors(k, 0) || test_aes_gcm_vectors(k, 1)) return 1;
   printf("All OK\n");
   return 0;
