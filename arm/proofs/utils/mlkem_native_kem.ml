@@ -12,6 +12,7 @@
 (* and the conditional move of 32 bytes one byte at a time.                  *)
 (* ========================================================================= *)
 
+needs "common/layout.ml";;
 needs "arm/proofs/utils/mlkem_native_libc.ml";;
 needs "arm/proofs/utils/mlkem_native_fips203.ml";;
 
@@ -133,7 +134,7 @@ let KEM_LABELS_TAC =
     then LABEL_TAC "H_MEMCPY" (REWRITE_RULE[memcpy_contract] th)
     else NO_TAC);;
 
-let KEM_GOT_TAC =
+let KEM_GOT_TAC gl =
   let pat n = subst [mk_small_numeral n,`n:num`]
    `read (memory :> bytes64 (word_add (word pc) (word n):int64)) s =
     (g:int64)` in
@@ -141,7 +142,8 @@ let KEM_GOT_TAC =
     TRY(FIRST_ASSUM(fun th ->
       if can (term_match [] (pat n)) (concl th)
       then ASSUME_TAC(REWRITE_RULE[GSYM WORD_ADD] th) else NO_TAC)))
-   [131064; 131048; 131024];;
+   (map layout
+      ["got_stack_chk_guard"; "got_memset"; "got_memcpy"]) gl;;
 
 let KEM_BYTES128_HALVES = prove
  (`!a:int64 n s:armstate.

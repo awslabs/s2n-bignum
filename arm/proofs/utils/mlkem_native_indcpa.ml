@@ -15,6 +15,7 @@
 (* terms of FIPS 203 (see mlkem_native_fips203.ml).                          *)
 (* ========================================================================= *)
 
+needs "common/layout.ml";;
 needs "arm/proofs/utils/mlkem_native_libc.ml";;
 needs "arm/proofs/utils/mlkem_native_fips203.ml";;
 
@@ -367,7 +368,7 @@ let INDCPA_GETNOISE_NULL th =
 
 (*** The GOT entries for the guard and memset, in the form used by callees ***)
 
-let INDCPA_GOT_TAC =
+let INDCPA_GOT_TAC gl =
   let pat n = subst [mk_small_numeral n,`n:num`]
    `read (memory :> bytes64 (word_add (word pc) (word n):int64)) s =
     (g:int64)` in
@@ -375,7 +376,7 @@ let INDCPA_GOT_TAC =
     FIRST_ASSUM(fun th ->
       if can (term_match [] (pat n)) (concl th)
       then ASSUME_TAC(REWRITE_RULE[GSYM WORD_ADD] th) else NO_TAC))
-   [131064; 131048];;
+   (map layout ["got_stack_chk_guard"; "got_memset"]) gl;;
 
 (*** A buffer in a stack frame not containing address 0 is not null ***)
 
