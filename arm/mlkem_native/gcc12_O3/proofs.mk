@@ -35,6 +35,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/keccakf1600x4_extract_bytes \
   mlkem_native/gcc12_O3/keccakf1600x4_permute \
   mlkem_native/gcc12_O3/keccakf1600x4_xor_bytes \
+  mlkem_native/gcc12_O3/keypair_derand_k2 \
   mlkem_native/gcc12_O3/poly_add \
   mlkem_native/gcc12_O3/poly_cbd2 \
   mlkem_native/gcc12_O3/poly_cbd3 \
@@ -338,6 +339,13 @@ mlkem_native/gcc12_O3/keccakf1600x4_permute.native: \
 mlkem_native/gcc12_O3/keccakf1600x4_xor_bytes.native: \
   mlkem_native/gcc12_O3/keccakf1600_xor_bytes.native \
   mlkem_native/gcc12_O3/libmlkem.native
+mlkem_native/gcc12_O3/keypair_derand_k2.native: \
+  mlkem_native/gcc12_O3/indcpa_keypair_derand_k2.native \
+  mlkem_native/gcc12_O3/sha3_256.native \
+  proofs/utils/mlkem_native_kem.ml \
+  proofs/utils/mlkem_native_libc.ml \
+  proofs/utils/mlkem_native_fips203.ml \
+  proofs/utils/mlkem_native_image.ml
 mlkem_native/gcc12_O3/libmlkem.native: \
   proofs/mlkem_native/gcc12_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml
