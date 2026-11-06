@@ -1748,6 +1748,22 @@ let arm_RSHRN2 = define
             usimd8 (\(x:(16)word). word_rshrn x amnt:(8)word) n in
         (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
 
+let arm_SMADDL = define
+ `arm_SMADDL Rd Rn Rm Ra =
+    \s. let n:int32 = read Rn (s:armstate)
+        and m:int32 = read Rm s
+        and a:int64 = read Ra s in
+        let d:int64 = iword(ival a + ival n * ival m) in
+        (Rd := d) s`;;
+
+let arm_SMSUBL = define
+ `arm_SMSUBL Rd Rn Rm Ra =
+    \s. let n:int32 = read Rn (s:armstate)
+        and m:int32 = read Rm s
+        and a:int64 = read Ra s in
+        let d:int64 = iword(ival a - ival n * ival m) in
+        (Rd := d) s`;;
+
 let arm_SMULH = define
  `arm_SMULH Rd Rn Rm =
     \s. let n:N word = read Rn (s:armstate)
@@ -3795,6 +3811,9 @@ let arm_ROR = define `arm_ROR Rd Rs lsb = arm_EXTR Rd Rs Rs lsb`;;
 
 let arm_TST = define `arm_TST Rm Rn = arm_ANDS ZR Rm Rn`;;
 
+let arm_SMNEGL = define `arm_SMNEGL Rd Rn Rm = arm_SMSUBL Rd Rn Rm XZR`;;
+let arm_SMULL = define `arm_SMULL Rd Rn Rm = arm_SMADDL Rd Rn Rm XZR`;;
+
 let arm_UMNEGL = define `arm_UMNEGL Rd Rn Rm = arm_UMSUBL Rd Rn Rm XZR`;;
 let arm_UMULL = define `arm_UMULL Rd Rn Rm = arm_UMADDL Rd Rn Rm XZR`;;
 
@@ -3807,7 +3826,7 @@ let ARM_INSTRUCTION_ALIASES =
   arm_MOV; arm_MOV_VEC;
   arm_MNEG; arm_MUL; arm_MVN; arm_NEG;
   arm_NEGS; arm_NGC; arm_NGCS; arm_ROR; arm_TST;
-  arm_UMNEGL; arm_UMULL];;
+  arm_SMNEGL; arm_SMULL; arm_UMNEGL; arm_UMULL];;
 
 (* ------------------------------------------------------------------------- *)
 (* These three are treated by ARM as aliases, but since they are such        *)
@@ -4472,7 +4491,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SMLSL_VEC_ALT; arm_SMLSL2_VEC_ALT;
        arm_SMULL_VEC_ALT; arm_SMULL2_VEC_ALT;
        arm_SSHLL_VEC_ALT; arm_SSHLL2_VEC_ALT;
-       arm_SMULH;
+       arm_SMADDL; arm_SMSUBL; arm_SMULH;
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
        arm_SQRSHRUN_ALT; arm_SQRSHRUN2_ALT;

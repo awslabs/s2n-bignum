@@ -331,6 +331,9 @@ let decode = new_definition `!w:int32. decode w =
   | [0b10011011101:11; Rm:5; o0; Ra:5; Rn:5; Rd:5] ->
     SOME ((if o0 then arm_UMSUBL else arm_UMADDL)
           (XREG' Rd) (WREG' Rn) (WREG' Rm) (XREG' Ra))
+  | [0b10011011001:11; Rm:5; o0; Ra:5; Rn:5; Rd:5] ->
+    SOME ((if o0 then arm_SMSUBL else arm_SMADDL)
+          (XREG' Rd) (WREG' Rn) (WREG' Rm) (XREG' Ra))
   | [0:1; immlo:2; 0b10000:5; immhi:19; Rd:5] ->
     SOME (arm_ADR (XREG' Rd) (word_join immhi immlo))
   | [1:1; immlo:2; 0b10000:5; immhi:19; Rd:5] ->

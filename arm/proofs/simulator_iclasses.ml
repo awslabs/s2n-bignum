@@ -187,6 +187,9 @@ let iclasses =
   (*** UMADDL, UMSUBL ***)
   "10011011101xxxxxxxxxxxxxxxxxxxxx";
 
+  (*** SMADDL, SMSUBL ***)
+  "10011011001xxxxxxxxxxxxxxxxxxxxx";
+
   (****** NEON INSTRUCTIONS *****)
   (*** ADD ***)
   "0x001110xx1xxxxx100001xxxxxxxxxx";
