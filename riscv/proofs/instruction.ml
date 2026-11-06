@@ -4,7 +4,7 @@
  *)
 
 (* ========================================================================= *)
-(* Partial RV32IM state and instruction semantics.                           *)
+(* RV32IM state and instruction semantics.                                   *)
 (* ========================================================================= *)
 
 (* Instruction behavior follows The RISC-V Instruction Set Manual, Volume I:
@@ -20,18 +20,23 @@
 
    The state uses 32-bit PCs, registers, and memory addresses.
 
-   The model covers the instructions used by the mldsa-native RV32 backend. It
-   omits privileged state, exceptions, CSRs, and the compressed extension.
+   The model covers all of RV32I and M. It omits privileged state,
+   exceptions, CSRs, and the compressed extension.
 
-   MUL and MULH emit no operand-dependent event. Constant-time theorems using
-   this model therefore require data-independent multiply latency on the
-   target implementation.
+   MUL, MULH, MULHSU and MULHU emit no operand-dependent event.
+   Constant-time theorems using this model therefore require
+   data-independent multiply latency on the target implementation, which
+   the Zkt extension promises. Division latency commonly depends on the
+   operands, and Zkt does not cover it, so DIV, DIVU, REM and REMU record
+   their operands in an `EventRISCVDIV` event.
 
-   Misaligned word accesses and instruction targets use `ASSIGNS entirety`,
-   which permits any successor state. This conservatively abstracts omitted
-   exception and trap handling; it does not claim that the architecture
-   defines such cases as undefined behavior. Normal execution proofs establish
-   four-byte alignment and do not use this case. *)
+   Misaligned halfword and word accesses and instruction targets use
+   `ASSIGNS entirety`, which permits any successor state. This conservatively
+   abstracts omitted exception and trap handling; it does not claim that the
+   architecture defines such cases as undefined behavior. Normal execution
+   proofs establish two- or four-byte alignment and do not use this case. Byte
+   accesses cannot be misaligned. ECALL and EBREAK always trap, so they use
+   `ASSIGNS entirety` unconditionally. *)
 
 (* TODO: This is complete only for the unprivileged RV32IM register state:
    x0--x31 and pc. The M extension adds no architectural registers. A faithful
@@ -226,8 +231,8 @@ let riscv_gpr = define
    directly, as in the ARM and x86 models. The selected component may be
    `ZERO`, whose write is ignored (it is `rvalue (word 0)`). *)
 
-(* Form the base-plus-immediate value used by LW, SW, and JALR. The decoder
-   supplies a sign-extended int32 immediate, and word_add gives RV32
+(* Form the base-plus-immediate value used by loads, stores, and JALR. The
+   decoder supplies a sign-extended int32 immediate, and word_add gives RV32
    wraparound arithmetic. *)
 
 let riscv_addr = new_definition
@@ -240,7 +245,7 @@ let riscv_instruction_pc = new_definition
  `riscv_instruction_pc s =
     word_sub (read PC s) (word 4)`;;
 
-(* Form a branch target relative to the address of the branch instruction,
+(* Form a branch or JAL target relative to the address of the instruction,
    rather than the already advanced PC. *)
 
 let riscv_branch_target = new_definition
@@ -255,10 +260,26 @@ let riscv_mulh = new_definition
       (word_mul (word_sx x:int64) (word_sx y:int64))
       (32,32):int32`;;
 
+(* The same for the signed-by-unsigned product of MULHSU and the unsigned
+   product of MULHU. *)
+
+let riscv_mulhsu = new_definition
+ `riscv_mulhsu (x:int32) (y:int32) =
+    word_subword
+      (word_mul (word_sx x:int64) (word_zx y:int64))
+      (32,32):int32`;;
+
+let riscv_mulhu = new_definition
+ `riscv_mulhu (x:int32) (y:int32) =
+    word_subword
+      (word_mul (word_zx x:int64) (word_zx y:int64))
+      (32,32):int32`;;
+
 (* Record the architectural address or target observed by constant-time
-   proofs. Each is a state relation (an `events := ...` update) so it composes
-   with `,,` alongside the register/PC/memory update, as in the ARM and x86
-   models. Arithmetic instructions do not add an event. *)
+   proofs, and the operands of a division, whose latency may depend on them.
+   Each is a state relation (an `events := ...` update) so it composes with
+   `,,` alongside the register/PC/memory update, as in the ARM and x86
+   models. Other arithmetic instructions do not add an event. *)
 
 let riscv_event_load = new_definition
  `riscv_event_load (addr:int32) sz s =
@@ -271,6 +292,10 @@ let riscv_event_store = new_definition
 let riscv_event_jump = new_definition
  `riscv_event_jump (src:int32) (dst:int32) s =
     events := CONS (EventJump (src,dst)) (read events s)`;;
+
+let riscv_event_div = new_definition
+ `riscv_event_div (x:int32) (y:int32) s =
+    events := CONS (EventRISCVDIV (x,y)) (read events s)`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Instruction semantics.                                                    *)
@@ -299,11 +324,117 @@ let riscv_SUB = define
         let d:int32 = word_sub m n in
         (rd := d) s`;;
 
+let riscv_SLL = define
+ `riscv_SLL rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n:int32 = read rs2 s in
+        let d:int32 = word_shl m (val n MOD 32) in
+        (rd := d) s`;;
+
+let riscv_SLT = define
+ `riscv_SLT rd rs1 rs2 =
+    \s:riscvstate.
+        let m:int32 = read rs1 s
+        and n:int32 = read rs2 s in
+        let d:int32 = if ival m < ival n then word 1 else word 0 in
+        (rd := d) s`;;
+
+let riscv_SLTU = define
+ `riscv_SLTU rd rs1 rs2 =
+    \s:riscvstate.
+        let m:int32 = read rs1 s
+        and n:int32 = read rs2 s in
+        let d:int32 = if val m < val n then word 1 else word 0 in
+        (rd := d) s`;;
+
+let riscv_XOR = define
+ `riscv_XOR rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = word_xor m n in
+        (rd := d) s`;;
+
+let riscv_SRL = define
+ `riscv_SRL rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n:int32 = read rs2 s in
+        let d:int32 = word_ushr m (val n MOD 32) in
+        (rd := d) s`;;
+
+let riscv_SRA = define
+ `riscv_SRA rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n:int32 = read rs2 s in
+        let d:int32 = word_ishr m (val n MOD 32) in
+        (rd := d) s`;;
+
+let riscv_OR = define
+ `riscv_OR rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = word_or m n in
+        (rd := d) s`;;
+
+let riscv_AND = define
+ `riscv_AND rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = word_and m n in
+        (rd := d) s`;;
+
+let riscv_SLTI = define
+ `riscv_SLTI rd rs1 (imm:int32) =
+    \s:riscvstate.
+        let m:int32 = read rs1 s in
+        let d:int32 = if ival m < ival imm then word 1 else word 0 in
+        (rd := d) s`;;
+
+let riscv_SLTIU = define
+ `riscv_SLTIU rd rs1 (imm:int32) =
+    \s:riscvstate.
+        let m:int32 = read rs1 s in
+        let d:int32 = if val m < val imm then word 1 else word 0 in
+        (rd := d) s`;;
+
+let riscv_XORI = define
+ `riscv_XORI rd rs1 (imm:int32) =
+    \s:riscvstate.
+        let m = read rs1 s in
+        let d:int32 = word_xor m imm in
+        (rd := d) s`;;
+
+let riscv_ORI = define
+ `riscv_ORI rd rs1 (imm:int32) =
+    \s:riscvstate.
+        let m = read rs1 s in
+        let d:int32 = word_or m imm in
+        (rd := d) s`;;
+
+let riscv_ANDI = define
+ `riscv_ANDI rd rs1 (imm:int32) =
+    \s:riscvstate.
+        let m = read rs1 s in
+        let d:int32 = word_and m imm in
+        (rd := d) s`;;
+
 let riscv_SLLI = define
  `riscv_SLLI rd rs1 shamt =
     \s:riscvstate.
         let m = read rs1 s in
         let d:int32 = word_shl m shamt in
+        (rd := d) s`;;
+
+let riscv_SRLI = define
+ `riscv_SRLI rd rs1 shamt =
+    \s:riscvstate.
+        let m = read rs1 s in
+        let d:int32 = word_ushr m shamt in
         (rd := d) s`;;
 
 let riscv_SRAI = define
@@ -317,6 +448,12 @@ let riscv_LUI = define
  `riscv_LUI rd (imm:int32) =
     \s:riscvstate.
         (rd := imm) s`;;
+
+let riscv_AUIPC = define
+ `riscv_AUIPC rd (imm:int32) =
+    \s:riscvstate.
+        let d:int32 = word_add (riscv_instruction_pc s) imm in
+        (rd := d) s`;;
 
 let riscv_MUL = define
  `riscv_MUL rd rs1 rs2 =
@@ -334,6 +471,68 @@ let riscv_MULH = define
         let d:int32 = riscv_mulh m n in
         (rd := d) s`;;
 
+let riscv_MULHSU = define
+ `riscv_MULHSU rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = riscv_mulhsu m n in
+        (rd := d) s`;;
+
+let riscv_MULHU = define
+ `riscv_MULHU rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = riscv_mulhu m n in
+        (rd := d) s`;;
+
+(* Division rounds toward zero, as `word_jdiv` and `word_jrem` do. A zero
+   divisor gives all ones for DIV and DIVU and the dividend for REM and REMU;
+   each instruction tests for it explicitly, as the manual's table does.
+   Signed overflow needs no test: `word_jdiv` wraps -2^31 / -1 to -2^31, and
+   `word_jrem` gives 0. The test also keeps automation away from HOL Light's
+   `WORD_JDIV_CONV`, which raises `Division_by_zero` for a zero divisor:
+   rewriting resolves the test before words are evaluated. The bottom-up
+   `WORD_REDUCE_CONV` still raises it if applied before the test is
+   resolved. *)
+
+let riscv_DIV = define
+ `riscv_DIV rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = if n = word 0 then word_not (word 0)
+                      else word_jdiv m n in
+        (rd := d ,, riscv_event_div m n s) s`;;
+
+let riscv_DIVU = define
+ `riscv_DIVU rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = if n = word 0 then word_not (word 0)
+                      else word_udiv m n in
+        (rd := d ,, riscv_event_div m n s) s`;;
+
+let riscv_REM = define
+ `riscv_REM rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = if n = word 0 then m
+                      else word_jrem m n in
+        (rd := d ,, riscv_event_div m n s) s`;;
+
+let riscv_REMU = define
+ `riscv_REMU rd rs1 rs2 =
+    \s:riscvstate.
+        let m = read rs1 s
+        and n = read rs2 s in
+        let d:int32 = if n = word 0 then m
+                      else word_umod m n in
+        (rd := d ,, riscv_event_div m n s) s`;;
+
 let riscv_LW = define
  `riscv_LW rd rs1 imm =
     \s:riscvstate.
@@ -341,6 +540,38 @@ let riscv_LW = define
         (if aligned 4 addr then
            rd := read (memory :> bytes32 addr) s ,,
            riscv_event_load addr 4 s
+         else ASSIGNS entirety) s`;;
+
+let riscv_LB = define
+ `riscv_LB (rd:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (rd := word_sx (read (memory :> bytes8 addr) s) ,,
+         riscv_event_load addr 1 s) s`;;
+
+let riscv_LH = define
+ `riscv_LH (rd:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (if aligned 2 addr then
+           rd := word_sx (read (memory :> bytes16 addr) s) ,,
+           riscv_event_load addr 2 s
+         else ASSIGNS entirety) s`;;
+
+let riscv_LBU = define
+ `riscv_LBU (rd:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (rd := word_zx (read (memory :> bytes8 addr) s) ,,
+         riscv_event_load addr 1 s) s`;;
+
+let riscv_LHU = define
+ `riscv_LHU (rd:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (if aligned 2 addr then
+           rd := word_zx (read (memory :> bytes16 addr) s) ,,
+           riscv_event_load addr 2 s
          else ASSIGNS entirety) s`;;
 
 let riscv_SW = define
@@ -352,6 +583,22 @@ let riscv_SW = define
            riscv_event_store addr 4 s
          else ASSIGNS entirety) s`;;
 
+let riscv_SB = define
+ `riscv_SB (rs2:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (memory :> bytes8 addr := word_zx (read rs2 s) ,,
+         riscv_event_store addr 1 s) s`;;
+
+let riscv_SH = define
+ `riscv_SH (rs2:(riscvstate,int32)component) rs1 imm =
+    \s:riscvstate.
+        let addr = riscv_addr rs1 imm s in
+        (if aligned 2 addr then
+           memory :> bytes16 addr := word_zx (read rs2 s) ,,
+           riscv_event_store addr 2 s
+         else ASSIGNS entirety) s`;;
+
 let riscv_BNE = define
  `riscv_BNE rs1 rs2 imm =
     \s:riscvstate.
@@ -360,6 +607,78 @@ let riscv_BNE = define
                   then read PC s
                   else riscv_branch_target imm s in
         (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst s
+         else ASSIGNS entirety) s`;;
+
+let riscv_BEQ = define
+ `riscv_BEQ rs1 rs2 imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s in
+        let dst = if read rs1 s = read rs2 s
+                  then riscv_branch_target imm s
+                  else read PC s in
+        (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst s
+         else ASSIGNS entirety) s`;;
+
+let riscv_BLT = define
+ `riscv_BLT rs1 rs2 imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s in
+        let dst = if ival(read rs1 s:int32) < ival(read rs2 s:int32)
+                  then riscv_branch_target imm s
+                  else read PC s in
+        (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst s
+         else ASSIGNS entirety) s`;;
+
+let riscv_BGE = define
+ `riscv_BGE rs1 rs2 imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s in
+        let dst = if ival(read rs1 s:int32) >= ival(read rs2 s:int32)
+                  then riscv_branch_target imm s
+                  else read PC s in
+        (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst s
+         else ASSIGNS entirety) s`;;
+
+let riscv_BLTU = define
+ `riscv_BLTU rs1 rs2 imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s in
+        let dst = if val(read rs1 s:int32) < val(read rs2 s:int32)
+                  then riscv_branch_target imm s
+                  else read PC s in
+        (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst s
+         else ASSIGNS entirety) s`;;
+
+let riscv_BGEU = define
+ `riscv_BGEU rs1 rs2 imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s in
+        let dst = if val(read rs1 s:int32) >= val(read rs2 s:int32)
+                  then riscv_branch_target imm s
+                  else read PC s in
+        (if aligned 4 dst then
+           PC := dst ,,
+           riscv_event_jump src dst s
+         else ASSIGNS entirety) s`;;
+
+let riscv_JAL = define
+ `riscv_JAL rd imm =
+    \s:riscvstate.
+        let src = riscv_instruction_pc s in
+        let link = read PC s in
+        let dst = riscv_branch_target imm s in
+        (if aligned 4 dst then
+           rd := link ,,
            PC := dst ,,
            riscv_event_jump src dst s
          else ASSIGNS entirety) s`;;
@@ -375,3 +694,15 @@ let riscv_JALR = define
            PC := dst ,,
            riscv_event_jump src dst s
          else ASSIGNS entirety) s`;;
+
+(* FENCE orders memory accesses between harts and devices. The model has one
+   hart and flat memory, so FENCE, FENCE.TSO, and PAUSE change no state. *)
+
+let riscv_FENCE = new_definition
+ `riscv_FENCE = \s s':riscvstate. s = s'`;;
+
+let riscv_ECALL = new_definition
+ `riscv_ECALL:riscvstate->riscvstate->bool = ASSIGNS entirety`;;
+
+let riscv_EBREAK = new_definition
+ `riscv_EBREAK:riscvstate->riscvstate->bool = ASSIGNS entirety`;;

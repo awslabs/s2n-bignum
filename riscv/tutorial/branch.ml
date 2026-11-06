@@ -4,7 +4,7 @@
  *)
 
 (******************************************************************************
-  Verify conditional and indirect RV32I control flow.
+  Verify conditional, direct, and indirect RV32I control flow.
 ******************************************************************************)
 
 needs "riscv/proofs/base.ml";;
@@ -67,3 +67,30 @@ let JALR_EVENT_CORRECT = prove
   RISCV_STEPS_TAC JALR_EXEC [1] THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_SIMP_TAC[RISCV_JALR_ALIGNED_MASK_WORD]);;
+
+(* jal ra,+8; addi a0,zero,1; addi a1,zero,2. The JAL skips the first ADDI
+   and links RA to it. *)
+let jal_mc = define_word_list "jal_mc"
+ `[word 0xef; word 0x00; word 0x80; word 0x00;
+   word 0x13; word 0x05; word 0x10; word 0x00;
+   word 0x93; word 0x05; word 0x20; word 0x00]:byte list`;;
+
+let JAL_EXEC = RISCV_MK_EXEC_RULE jal_mc;;
+
+let JAL_CORRECT = prove
+ (`!pc e.
+    ensures riscv
+      (\s. aligned_bytes_loaded s (word pc) jal_mc /\
+           read PC s = word pc /\
+           read events s = e)
+      (\s. read PC s = word (pc + 12) /\
+           read RA s = word (pc + 4) /\
+           read A1 s = word 2 /\
+           read events s = CONS (EventJump (word pc,word (pc + 8))) e)
+      (MAYCHANGE [PC] ,, MAYCHANGE [RA; A1] ,, MAYCHANGE [events])`,
+  REWRITE_TAC[fst JAL_EXEC] THEN
+  REPEAT GEN_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  RISCV_STEPS_TAC JAL_EXEC (1--2) THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[]);;
