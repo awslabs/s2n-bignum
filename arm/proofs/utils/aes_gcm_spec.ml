@@ -19,6 +19,7 @@
 needs "arm/proofs/base.ml";;
 needs "common/fips197.ml";;
 needs "common/polyval_ghash.ml";;
+needs "common/gcm.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Counter blocks and the keystream.  The block cipher enc is a parameter,   *)
@@ -45,7 +46,7 @@ let cipher_block = new_definition
     word_xor (aes_ctr_block enc c nonce rk i) (inblock i)`;;
 
 (* The output and input blocks in NIST byte order, as hashed by GHASH: the   *)
-(* encryption kernels hash their output and the decryption kernels their    *)
+(* encryption kernels hash their output and the decryption kernels their     *)
 (* input, i.e. both hash the ciphertext.                                     *)
 
 let nist_cipher_block = new_definition
@@ -60,10 +61,10 @@ let nist_input_block = new_definition
 (* The GHASH key table, restricted to the entries the 4-way kernels read.    *)
 (* The 4-way unrolled loop uses H^1..H^4 and their Karatsuba middle terms,   *)
 (* i.e. the first 6 entries (offsets 0..80) of the table gcm_init_v8         *)
-(* produces.  Each middle-term entry holds the lower power's term in its low *)
-(* 64-bit lane, the opposite order from htable_mem in common/polyval_ghash.  *)
-(* The single-block tail loop only uses H^1 and H^2, but the precondition is *)
-(* shared, so all four powers are asserted.                                  *)
+(* produces.  Each middle-term entry holds the lower power's Karatsuba term  *)
+(* in its low 64-bit lane.  The single-block tail loop multiplies only by    *)
+(* H^1 and its middle term, but one precondition covers every input length,  *)
+(* so all six entries are asserted.                                          *)
 (* ------------------------------------------------------------------------- *)
 
 let htable_mem_4 = new_definition
@@ -107,12 +108,62 @@ let htable_mem_8 = new_definition
     byteswap128(h_power h 7)`;;
 
 (* ------------------------------------------------------------------------- *)
-(* The number of blocks a whole-blocks kernel processes for the C argument   *)
-(* len_bits.  The 8-way unrolled kernels take whole blocks only: for any     *)
-(* len_bits that is not a multiple of 128 they process nothing and return    *)
-(* 0, and a zero len_bits is zero blocks either way.                         *)
+(* The number of blocks a whole-blocks kernel processes for a bit length     *)
+(* len_bits (the C argument).  The 8-way unrolled kernels take whole blocks  *)
+(* only: for any len_bits that is not a multiple of 128 they process nothing *)
+(* and return 0, and a zero len_bits is zero blocks either way.              *)
 (* ------------------------------------------------------------------------- *)
 
 let gcm_wb_blocks = new_definition
- `gcm_wb_blocks (bit_len:int64) =
-    if val bit_len MOD 128 = 0 then val bit_len DIV 128 else 0`;;
+ `gcm_wb_blocks (len_bits:int64) =
+    if val len_bits MOD 128 = 0 then val len_bits DIV 128 else 0`;;
+
+(* ------------------------------------------------------------------------- *)
+(* The counter blocks and the output blocks in terms of NIST SP 800-38D      *)
+(* (common/gcm.ml): inc32 advances ctr_block by one, and the output blocks   *)
+(* in NIST byte order are GCTR, from the initial counter block               *)
+(* ctr_block nonce c, of the input blocks in NIST byte order.  So with       *)
+(* c = 2 and the nonce IV the kernels compute GCTR from inc32(J0), where     *)
+(* J0 = IV || 1, as GCM-AE and GCM-AD do.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let INC32_CTR_BLOCK = prove
+ (`!(nonce:96 word) c. inc32 (ctr_block nonce c) = ctr_block nonce (c + 1)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[inc32; ctr_block] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[WORD_BLAST
+    `word_subword (word_join (nonce:96 word) (wc:int32):int128) (0,32):32 word
+     = wc`;
+              WORD_BLAST
+    `word_subword (word_join (nonce:96 word) (wc:int32):int128) (32,96):96 word
+     = nonce`] THEN
+  REWRITE_TAC[WORD_ADD] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
+
+let ITER_INC32_CTR_BLOCK = prove
+ (`!j (nonce:96 word) c. ITER j inc32 (ctr_block nonce c) =
+   ctr_block nonce (c + j)`,
+  INDUCT_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC[ITER; ADD_CLAUSES] THEN
+  ASM_REWRITE_TAC[INC32_CTR_BLOCK] THEN REWRITE_TAC[INC32_CTR_BLOCK] THEN
+  AP_TERM_TAC THEN ARITH_TAC);;
+
+let GCTR_CTR_BLOCK = prove
+ (`!enc (ks:int128 list) nonce l c.
+     gctr enc ks (ctr_block nonce c) l =
+     list_of_seq (\i. word_xor (EL i l) (enc (ctr_block nonce (i + c)) ks))
+                 (LENGTH l)`,
+  GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC[gctr; LENGTH; LIST_OF_SEQ; INC32_CTR_BLOCK] THEN
+  REWRITE_TAC[CONS_11; EL; HD; TL; ADD_CLAUSES; o_DEF] THEN
+  GEN_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN ABS_TAC THEN
+  REWRITE_TAC[ARITH_RULE `i + c + 1 = SUC(i + c)`]);;
+
+let GCTR_NIST_BLOCKS = prove
+ (`!enc rk nonce c inblock n.
+     gctr enc rk (ctr_block nonce c)
+       (list_of_seq (nist_input_block inblock) n) =
+     list_of_seq (nist_cipher_block enc c nonce rk inblock) n`,
+  REWRITE_TAC[GCTR_CTR_BLOCK; LENGTH_LIST_OF_SEQ] THEN
+  REWRITE_TAC[LIST_EQ; LENGTH_LIST_OF_SEQ] THEN SIMP_TAC[EL_LIST_OF_SEQ] THEN
+  REWRITE_TAC[nist_input_block; nist_cipher_block; cipher_block;
+              aes_ctr_block] THEN
+  REPEAT STRIP_TAC THEN BITBLAST_TAC);;
