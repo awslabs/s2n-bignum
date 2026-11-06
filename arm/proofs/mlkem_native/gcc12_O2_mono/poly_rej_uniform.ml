@@ -1277,8 +1277,10 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_MONO_IN_MLKEM768_GEN_MATRIX = prove(
 
   ENSURES_INIT_TAC "s0" THEN
   FIRST_ASSUM(fun th ->
-    if can (term_match [] `read (memory :> bytes64 (word (pc + 131048))) s =
-                           (g:int64)`) (concl th)
+    if can (term_match []
+             (vsubst [mk_small_numeral(layout "got_memset"),`n:num`]
+                `read (memory :> bytes64 (word (pc + n))) s = (g:int64)`))
+           (concl th)
     then ASSUME_TAC(REWRITE_RULE[WORD_ADD] th) else NO_TAC) THEN
   ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--12) THEN
   LIBC_PLT_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC 12 THEN
