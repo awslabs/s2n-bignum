@@ -43,16 +43,15 @@ estimated 2550 s.
 
 | build | full runs, summed | each file once, one process | longest run |
 |---|---|---|---|
-| gcc12_O2 (116 files) | 49.9 h | 5.0 h | 1.98 h |
-| gcc12_O2_mono (64) | 27.0 h | 5.7 h | 1.57 h |
+| gcc12_O2 (117 files) | 51.3 h | 5.5 h | 2.17 h |
+| gcc12_O2_mono (65) | 29.6 h | 4.7 h | 1.63 h |
 | gcc12_O3 (98) | 84.3 h | 8.2 h | 4.72 h |
 | clang17_O3 (77) | 25.8 h | 7.0 h | 2.73 h |
-| total | 187 h | 26 h | |
+| total | 191 h | 25 h | |
 
-All columns come from logged wall times (±30% with load; pinned
-timings: [benchmarks.md](benchmarks.md)); the middle one is an
-estimate. Measured once: the 10 proof files under mono
-`gen_matrix_k2.ml` take 1131 s in one process, 4063 s as 10 runs.
+The gcc12_O2 and gcc12_O2_mono rows are measured: pinned runs of every
+proof, one per CPU ([benchmarks.md](benchmarks.md)). The gcc12_O3 and
+clang17_O3 rows are estimates from logged wall times under load (±30%).
 
 Symbolic stepping takes only 1-30% of a run (seven logs), e.g. 40 s of
 5036 s for gcc12_O3 `keccakf1600_xor_bytes`. Every process first spends
@@ -111,6 +110,19 @@ cost the same on both, and Sonnet needed more calls (163 per file
 against Opus's 44 on fips202).
 
 ## 2. What to change, in order
+
+**In progress: statements and proofs in separate files.** Each proof file
+`X.ml` becomes `X_spec.ml` (statements, definitions, tactics) and
+`X_proof.ml` (proofs). A caller loads only its callees' spec files and
+proves its theorems with the callees' statements as hypotheses
+(`assume_spec`; a variant of `prove` accepts only hypotheses that are
+stated contracts). One generated link file per build loads every proof
+file once, discharges the hypotheses with `PROVE_HYP` and requires the
+top-level API theorems to have none left, followed by `check_axioms ()`.
+This replaces #3, #4 and #12 below. Pilot on gcc12_O3: `keypair_derand_k2`
+checks in 594 s instead of 16,175 s, `indcpa_keypair_derand_k2` in
+1,187 s instead of 15,598 s; loading the callees' spec files is now 89%
+of such a run. Work on branch `mlkem-arm-spec-split`.
 
 | # | change | expected saving (evidence) | effort | risk |
 |---|---|---|---|---|
