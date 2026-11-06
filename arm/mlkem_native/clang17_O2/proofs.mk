@@ -5,9 +5,19 @@ MLKEM_NATIVE_OBJ += \
   mlkem_native/clang17_O2/poly_reduce.o
 
 MLKEM_NATIVE_PROOFS += \
+  mlkem_native/clang17_O2/link \
   mlkem_native/clang17_O2/poly_reduce_proof
 
+mlkem_native/clang17_O2/link.native: \
+  proofs/mlkem_native/relative.ml \
+  proofs/mlkem_native/clang17_O2/poly_reduce_proof.ml \
+  proofs/mlkem_native/clang17_O2/poly_reduce_spec.ml \
+  proofs/mlkem_native/clang17_O2/layout.ml \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O2/poly_reduce.o
 mlkem_native/clang17_O2/poly_reduce_proof.native: \
+  proofs/mlkem_native/clang17_O2/poly_reduce_spec.ml \
+  proofs/mlkem_native/relative.ml \
   proofs/mlkem_native/clang17_O2/layout.ml \
   proofs/utils/mlkem_native.ml \
   mlkem_native/clang17_O2/poly_reduce.o
