@@ -792,11 +792,9 @@ let GCM_CTR_INC_LANES = prove(
 
 (* inc32 per NIST SP 800-38D Section 6.2.  Self-contained (word primitives
    only, zero dependencies).  It is the same definition as common/gcm.ml's
-   inc32, so loading both files is a benign redefinition.  It is repeated here
-   because common/gcm.ml also defines the rest of the SP 800-38D spec and
-   runs its KATs at load time, which this proof does not need.
-   TODO: drop this definition and `needs "common/gcm.ml"` instead, once the
-   KATs are split out of that file. *)
+   inc32, so loading both files is a benign redefinition.  It is kept local
+   because common/gcm.ml also loads the rest of the SP 800-38D specification
+   and its KATs, which this proof does not require. *)
 let inc32 = new_definition
  `inc32 (cb:128 word) : 128 word =
     let top96:96 word = word_subword cb (32,96) in
