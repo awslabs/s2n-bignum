@@ -20,6 +20,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O3/indcpa_dec_k2 \
   mlkem_native/gcc12_O3/indcpa_dec_k3 \
   mlkem_native/gcc12_O3/indcpa_dec_k4 \
+  mlkem_native/gcc12_O3/indcpa_keypair_derand_k2 \
   mlkem_native/gcc12_O3/keccak_absorb_once \
   mlkem_native/gcc12_O3/keccakf1600_extract_bytes \
   mlkem_native/gcc12_O3/keccakf1600_permute \
@@ -183,6 +184,21 @@ mlkem_native/gcc12_O3/indcpa_dec_k4.native: \
   mlkem_native/gcc12_O3/poly_sub.native \
   mlkem_native/gcc12_O3/poly_reduce.native \
   mlkem_native/gcc12_O3/poly_tomsg.native \
+  proofs/utils/mlkem_native_indcpa.ml \
+  proofs/utils/mlkem_native_libc.ml \
+  proofs/utils/mlkem_native_fips203.ml \
+  proofs/utils/mlkem_native_image.ml
+mlkem_native/gcc12_O3/indcpa_keypair_derand_k2.native: \
+  mlkem_native/gcc12_O3/sha3_512.native \
+  mlkem_native/gcc12_O3/gen_matrix_k2.native \
+  mlkem_native/gcc12_O3/poly_getnoise_eta1_4x_k2.native \
+  mlkem_native/gcc12_O3/polyvec_ntt_k2.native \
+  mlkem_native/gcc12_O3/polyvec_mulcache_compute_k2.native \
+  mlkem_native/gcc12_O3/basemul_k2.native \
+  mlkem_native/gcc12_O3/polyvec_tomont_k2.native \
+  mlkem_native/gcc12_O3/polyvec_add_k2.native \
+  mlkem_native/gcc12_O3/polyvec_reduce_k2.native \
+  mlkem_native/gcc12_O3/polyvec_tobytes_k2.native \
   proofs/utils/mlkem_native_indcpa.ml \
   proofs/utils/mlkem_native_libc.ml \
   proofs/utils/mlkem_native_fips203.ml \
