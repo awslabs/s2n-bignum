@@ -346,6 +346,7 @@ mlkem_native/gcc12_O2_mono/poly_rej_uniform.native: \
   mlkem_native/gcc12_O2_mono/keccakf1600_permute.native \
   proofs/utils/keccak_fips202.ml \
   mlkem_native/gcc12_O2_mono/libmlkem.native \
+  proofs/utils/mlkem_native_libc_full.ml \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml
 mlkem_native/gcc12_O2_mono/poly_rej_uniform_x4.native: \
