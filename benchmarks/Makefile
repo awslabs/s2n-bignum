@@ -28,7 +28,7 @@ endif
 
 # Benchmarking progfram
 
-benchmark: benchmark.c ../include/s2n-bignum.h ../$(ARCH)/libs2nbignum.a; $(CC) -O3 -o benchmark benchmark.c -L../$(ARCH) -ls2nbignum -lm
+benchmark: benchmark.c ../tests/arch.h ../include/s2n-bignum.h ../$(ARCH)/libs2nbignum.a; $(CC) -O3 -o benchmark benchmark.c -L../$(ARCH) -ls2nbignum -lm
 
 go: benchmark ; ./benchmark
 
