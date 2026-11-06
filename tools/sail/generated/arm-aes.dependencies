@@ -1,0 +1,99 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function AESShiftRows|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(128)|bitvector(128)| => sail_hl_shared_arm_2daes_AESShiftRows_5f0
+shared-function AESSubBytes|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(128)|bitvector(128)| => sail_hl_shared_arm_2daes_AESSubBytes_5f1
+shared-function AESInvShiftRows|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(128)|bitvector(128)| => sail_hl_shared_arm_2daes_AESInvShiftRows_5f2
+shared-function AESInvSubBytes|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(128)|bitvector(128)| => sail_hl_shared_arm_2daes_AESInvSubBytes_5f3
+shared-function execute_aarch64_instrs_vector_crypto_aes_round|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), bool('decrypt), int('n))|unit| => sail_hl_shared_arm_2daes_execute_5faarch64_5finstrs_5fvector_5fcrypto_5faes_5fround_5f4
+shared-function FFmul02|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(8)|bitvector(8)| => sail_hl_shared_arm_2daes_FFmul02_5f5
+shared-function FFmul03|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(8)|bitvector(8)| => sail_hl_shared_arm_2daes_FFmul03_5f6
+shared-function AESMixColumns|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(128)|bitvector(128)| => sail_hl_shared_arm_2daes_AESMixColumns_5f7
+shared-function FFmul0E|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(8)|bitvector(8)| => sail_hl_shared_arm_2daes_FFmul0E_5f8
+shared-function FFmul0B|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(8)|bitvector(8)| => sail_hl_shared_arm_2daes_FFmul0B_5f9
+shared-function FFmul0D|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(8)|bitvector(8)| => sail_hl_shared_arm_2daes_FFmul0D_5f10
+shared-function FFmul09|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(8)|bitvector(8)| => sail_hl_shared_arm_2daes_FFmul09_5f11
+shared-function AESInvMixColumns|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(128)|bitvector(128)| => sail_hl_shared_arm_2daes_AESInvMixColumns_5f12
+shared-function execute_aarch64_instrs_vector_crypto_aes_mix|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), bool('decrypt), int('n))|unit| => sail_hl_shared_arm_2daes_execute_5faarch64_5finstrs_5fvector_5fcrypto_5faes_5fmix_5f13
+root ARM_AESD128
+root ARM_AESE128
+root ARM_AESIMC128
+root ARM_AESMC128
+inlined AESInvMixColumns
+inlined AESInvShiftRows
+inlined AESInvSubBytes
+inlined AESMixColumns
+inlined AESShiftRows
+inlined AESSubBytes
+inlined FFmul02
+inlined FFmul03
+inlined FFmul09
+inlined FFmul0B
+inlined FFmul0D
+inlined FFmul0E
+inlined execute_aarch64_instrs_vector_crypto_aes_mix
+inlined execute_aarch64_instrs_vector_crypto_aes_round
+primitive-contract AArch64_CheckFPAdvSIMDEnabled
+primitive-contract UInt0
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract bitvector_concat
+primitive-contract mult_atom
+primitive-contract set_slice_bits
+primitive-contract slice
+primitive-contract subrange_bits
+primitive-contract unsigned
+primitive-contract xor_vec
+proved-numeric-argument-fact FFmul02 (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact FFmul02 (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact FFmul02 (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact FFmul02 (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact FFmul03 (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact FFmul03 (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact FFmul03 (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact FFmul03 (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact FFmul09 (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact FFmul09 (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact FFmul09 (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact FFmul09 (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact FFmul0B (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact FFmul0B (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact FFmul0B (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact FFmul0B (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact FFmul0D (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact FFmul0D (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact FFmul0D (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact FFmul0D (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact FFmul0E (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact FFmul0E (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact FFmul0E (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact FFmul0E (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_mix 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_mix 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_mix (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_mix (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_mix 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_mix 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_round 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_round 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_round (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_round (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_round 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_aes_round 0 <= 'n
+successful-check Arm-AdvSIMD-enabled-access
+unrolled-static-loop c 0 3 1 inc
+unrolled-static-loop i 0 15 1 inc
+unobserved-undefined-local out
+unobserved-undefined-local out0
+unobserved-undefined-local out1
+unobserved-undefined-local out2
+unobserved-undefined-local out3
+unobserved-undefined-local result
+state-computation-root ARM_AESD128
+state-computation-root ARM_AESE128
+state-computation-root ARM_AESIMC128
+state-computation-root ARM_AESMC128
+state-computation

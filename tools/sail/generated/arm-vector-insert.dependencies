@@ -1,0 +1,213 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=1,size=64 => sail_hl_shared_arm_2dvector_2dinsert_Elem_5fread_5f0
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=0,size=64 => sail_hl_shared_arm_2dvector_2dinsert_Elem_5fread_5f1
+shared-function __id|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|int('n)| => sail_hl_shared_arm_2dvector_2dinsert__5f_5fid_5f2
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=0: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=1: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=16: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=32: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=64: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=8: HOL Light: unlowered instruction control
+specialization-required Elem_set|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size), bitvector('size))|bitvector('N)|: HOL Light: a range write requires a bitvector local
+specialization-required Elem_set|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size), bitvector('size))|bitvector('N)|N=128: HOL Light: a range write requires a static word length
+specialization-required Elem_set|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size), bitvector('size))|bitvector('N)|size=16: HOL Light: a range write requires a bitvector local
+specialization-required Elem_set|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size), bitvector('size))|bitvector('N)|size=32: HOL Light: a range write requires a bitvector local
+specialization-required Elem_set|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size), bitvector('size))|bitvector('N)|size=64: HOL Light: a range write requires a bitvector local
+specialization-required Elem_set|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size), bitvector('size))|bitvector('N)|size=8: HOL Light: a range write requires a bitvector local
+specialization-required execute_aarch64_instrs_vector_transfer_integer_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('esize), int('index), int('n))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+specialization-required execute_aarch64_instrs_vector_transfer_integer_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('esize), int('index), int('n))|unit|datasize=128: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+specialization-required execute_aarch64_instrs_vector_transfer_integer_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('esize), int('index), int('n))|unit|esize=16: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_integer_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('esize), int('index), int('n))|unit|esize=32: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_integer_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('esize), int('index), int('n))|unit|esize=64: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_integer_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('esize), int('index), int('n))|unit|esize=8: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('dst_index), int('esize), int('idxdsize), int('n), int('src_index))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('dst_index), int('esize), int('idxdsize), int('n), int('src_index))|unit|esize=16: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('dst_index), int('esize), int('idxdsize), int('n), int('src_index))|unit|esize=32: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('dst_index), int('esize), int('idxdsize), int('n), int('src_index))|unit|esize=64: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('dst_index), int('esize), int('idxdsize), int('n), int('src_index))|unit|esize=8: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('dst_index), int('esize), int('idxdsize), int('n), int('src_index))|unit|idxdsize=128: HOL Light: unsupported primitive on internal dynamic bitvectors: subrange_bits
+specialization-required execute_aarch64_instrs_vector_transfer_vector_insert|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('dst_index), int('esize), int('idxdsize), int('n), int('src_index))|unit|idxdsize=64: HOL Light: unsupported primitive on internal dynamic bitvectors: subrange_bits
+root arm_INS128E16_HI
+root arm_INS128E16_LO
+root arm_INS128E32_HI
+root arm_INS128E32_LO
+root arm_INS128E64_HI
+root arm_INS128E64_LO
+root arm_INS128E8_HI
+root arm_INS128E8_LO
+root arm_INS_GEN128E16
+root arm_INS_GEN128E32
+root arm_INS_GEN128E64
+root arm_INS_GEN128E8
+inlined Elem_read
+inlined Elem_set
+inlined __id
+inlined execute_aarch64_instrs_vector_transfer_integer_insert
+inlined execute_aarch64_instrs_vector_transfer_vector_insert
+primitive-contract CheckFPAdvSIMDEnabled64
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract X_read
+primitive-contract add_atom
+primitive-contract and_bool
+primitive-contract bitvector_length
+primitive-contract eq_int
+primitive-contract gteq_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract or_bool
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract unsigned
+statically-proved-assertion and_bool(gteq_int(e, 0), lteq_int(mult_atom(add_atom(e, 1), size), bitvector_length(vector_name))) at src/builtins.sail:195:12-195:41
+statically-proved-assertion and_bool(gteq_int(e, 0), lteq_int(mult_atom(add_atom(e, 1), size), bitvector_length(vector_name__arg))) at src/builtins.sail:205:12-205:41
+statically-proved-assertion or_bool(or_bool(or_bool(eq_int(__id(esize), 8), eq_int(__id(esize), 16)), eq_int(__id(esize), 32)), eq_int(__id(esize), 64)) at src/instrs64.sail:22661:23-22661:48
+proved-numeric-argument-fact Elem_read 'e <= 0
+proved-numeric-argument-fact Elem_read 'e <= 1
+proved-numeric-argument-fact Elem_read 'e <= 15
+proved-numeric-argument-fact Elem_read 'e <= 3
+proved-numeric-argument-fact Elem_read 'e <= 31
+proved-numeric-argument-fact Elem_read 'e <= 7
+proved-numeric-argument-fact Elem_read 'size <= 127
+proved-numeric-argument-fact Elem_read 'size <= 15
+proved-numeric-argument-fact Elem_read 'size <= 31
+proved-numeric-argument-fact Elem_read 'size <= 63
+proved-numeric-argument-fact Elem_read ('e >= 0 & (('e + 1) * 'size) <= 'N)
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= 1)
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= 3)
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= 7)
+proved-numeric-argument-fact Elem_read 0 < 'e
+proved-numeric-argument-fact Elem_read 0 < 'size
+proved-numeric-argument-fact Elem_read 0 < 128
+proved-numeric-argument-fact Elem_read 0 < 64
+proved-numeric-argument-fact Elem_read 0 <= 'e
+proved-numeric-argument-fact Elem_read 0 <= 'size
+proved-numeric-argument-fact Elem_read 0 <= 128
+proved-numeric-argument-fact Elem_read 0 <= 64
+proved-numeric-argument-fact Elem_read 128 <= 255
+proved-numeric-argument-fact Elem_read 64 <= 127
+proved-numeric-argument-fact Elem_set 'e <= 1
+proved-numeric-argument-fact Elem_set 'e <= 15
+proved-numeric-argument-fact Elem_set 'e <= 3
+proved-numeric-argument-fact Elem_set 'e <= 31
+proved-numeric-argument-fact Elem_set 'e <= 7
+proved-numeric-argument-fact Elem_set 'size <= 127
+proved-numeric-argument-fact Elem_set 'size <= 15
+proved-numeric-argument-fact Elem_set 'size <= 31
+proved-numeric-argument-fact Elem_set 'size <= 63
+proved-numeric-argument-fact Elem_set ('e >= 0 & (('e + 1) * 'size) <= 'N)
+proved-numeric-argument-fact Elem_set ((('size == 8 | 'size == 16) | 'size == 32) | 'size == 64)
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= 1)
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= 15)
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= 3)
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= 7)
+proved-numeric-argument-fact Elem_set 0 < 'size
+proved-numeric-argument-fact Elem_set 0 < 1
+proved-numeric-argument-fact Elem_set 0 < 128
+proved-numeric-argument-fact Elem_set 0 < 64
+proved-numeric-argument-fact Elem_set 0 <= 'e
+proved-numeric-argument-fact Elem_set 0 <= 'size
+proved-numeric-argument-fact Elem_set 0 <= 0
+proved-numeric-argument-fact Elem_set 0 <= 1
+proved-numeric-argument-fact Elem_set 0 <= 128
+proved-numeric-argument-fact Elem_set 0 <= 31
+proved-numeric-argument-fact Elem_set 0 <= 64
+proved-numeric-argument-fact Elem_set 1 <= 1
+proved-numeric-argument-fact Elem_set 1 <= 31
+proved-numeric-argument-fact Elem_set 128 <= 255
+proved-numeric-argument-fact Elem_set 64 <= 127
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 15
+proved-numeric-argument-fact __id 'n <= 31
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id ((('n == 8 | 'n == 16) | 'n == 32) | 'n == 64)
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 < 128
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 0 <= 128
+proved-numeric-argument-fact __id 128 <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'esize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'esize <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'esize <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'esize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'index <= 1
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'index <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'index <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'index <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'index <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert ((('esize == 8 | 'esize == 16) | 'esize == 32) | 'esize == 64)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert (0 <= 'index & 'index <= 1)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert (0 <= 'index & 'index <= 15)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert (0 <= 'index & 'index <= 3)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert (0 <= 'index & 'index <= 7)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 0 < 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 0 <= 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 0 <= 'index
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_integer_insert 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'dst_index <= 1
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'dst_index <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'dst_index <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'dst_index <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'dst_index <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'esize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'esize <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'esize <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'esize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'idxdsize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'idxdsize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'src_index <= 0
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'src_index <= 1
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'src_index <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'src_index <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'src_index <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 'src_index <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert (0 <= 'dst_index & 'dst_index <= 1)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert (0 <= 'dst_index & 'dst_index <= 15)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert (0 <= 'dst_index & 'dst_index <= 3)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert (0 <= 'dst_index & 'dst_index <= 7)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert (0 <= 'src_index & 'src_index <= 1)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert (0 <= 'src_index & 'src_index <= 3)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert (0 <= 'src_index & 'src_index <= 7)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 0 < 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 0 < 'idxdsize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 0 < 'src_index
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 0 <= 'dst_index
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 0 <= 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 0 <= 'idxdsize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_insert 0 <= 'src_index
+successful-check Arm-AdvSIMD-enabled-access
+state-computation-root arm_INS128E16_HI
+state-computation-root arm_INS128E16_LO
+state-computation-root arm_INS128E32_HI
+state-computation-root arm_INS128E32_LO
+state-computation-root arm_INS128E64_HI
+state-computation-root arm_INS128E64_LO
+state-computation-root arm_INS128E8_HI
+state-computation-root arm_INS128E8_LO
+state-computation-root arm_INS_GEN128E16
+state-computation-root arm_INS_GEN128E32
+state-computation-root arm_INS_GEN128E64
+state-computation-root arm_INS_GEN128E8
+state-computation

@@ -1,0 +1,80 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function neq_bits|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('n), bitvector('n))|{('ex861974# : Bool), true. bool(not('ex861974#))}| => sail_hl_shared_arm_2dcompare_neq_5fbits_5f0
+shared-function ConditionHolds|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(4)|bool| => sail_hl_shared_arm_2dcompare_ConditionHolds_5f1
+shared-function integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|lo=0 => sail_hl_shared_arm_2dcompare_integer_5fsubrange_5f2
+shared-function IsZero|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector('n)|bool| => sail_hl_shared_arm_2dcompare_IsZero_5f3
+shared-function AddWithCarry|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), bitvector('N), bitvector(1))|(bitvector('N), bitvector(4))| => sail_hl_shared_arm_2dcompare_AddWithCarry_5f4
+shared-function execute_aarch64_instrs_integer_conditional_compare_register|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('datasize), bitvector(4), int('m), int('n), bool('sub_op))|unit|datasize=32 => sail_hl_shared_arm_2dcompare_execute_5faarch64_5finstrs_5finteger_5fconditional_5fcompare_5fregister_5f5
+shared-function execute_aarch64_instrs_integer_conditional_compare_immediate|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('datasize), bitvector(4), bitvector('datasize), int('n), bool('sub_op))|unit|datasize=32 => sail_hl_shared_arm_2dcompare_execute_5faarch64_5finstrs_5finteger_5fconditional_5fcompare_5fimmediate_5f6
+shared-function execute_aarch64_instrs_integer_conditional_compare_register|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('datasize), bitvector(4), int('m), int('n), bool('sub_op))|unit|datasize=64 => sail_hl_shared_arm_2dcompare_execute_5faarch64_5finstrs_5finteger_5fconditional_5fcompare_5fregister_5f7
+shared-function execute_aarch64_instrs_integer_conditional_compare_immediate|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('datasize), bitvector(4), bitvector('datasize), int('n), bool('sub_op))|unit|datasize=64 => sail_hl_shared_arm_2dcompare_execute_5faarch64_5finstrs_5finteger_5fconditional_5fcompare_5fimmediate_5f8
+specialization-required execute_aarch64_instrs_integer_conditional_compare_immediate|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('datasize), bitvector(4), bitvector('datasize), int('n), bool('sub_op))|unit|: HOL Light: uninstantiated numeric type variable 'datasize
+specialization-required execute_aarch64_instrs_integer_conditional_compare_register|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('datasize), bitvector(4), int('m), int('n), bool('sub_op))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|: HOL Light: generic integer slice requires a nonnegative start
+root arm_CCMN32
+root arm_CCMN64
+root arm_CCMP32
+root arm_CCMP64
+inlined AddWithCarry
+inlined ConditionHolds
+inlined IsZero
+inlined execute_aarch64_instrs_integer_conditional_compare_immediate
+inlined execute_aarch64_instrs_integer_conditional_compare_register
+inlined integer_subrange
+inlined neq_bits
+primitive-contract PSTATE-NZCV-projection
+primitive-contract SInt0
+primitive-contract UInt0
+primitive-contract X_read
+primitive-contract add_atom
+primitive-contract and_bool
+primitive-contract bitvector_access
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract eq_bits
+primitive-contract eq_int
+primitive-contract get_slice_int
+primitive-contract not_bool
+primitive-contract not_vec
+primitive-contract sail_zero_extend
+primitive-contract sail_zeros
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract unsigned
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_immediate 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_immediate 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_immediate 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_immediate (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_immediate 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_immediate 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_immediate 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_register 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_register 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_register 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_register 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_register (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_register (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_register 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_register 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_register 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_compare_register 0 <= 'n
+proved-numeric-argument-fact integer_subrange 'lo <= 0
+proved-numeric-argument-fact integer_subrange 'lo <= 31
+proved-numeric-argument-fact integer_subrange 0 <= 'ex860566#
+proved-numeric-argument-fact integer_subrange 0 <= 'hi
+proved-numeric-argument-fact integer_subrange 0 <= 'lo
+disabled-extension Arm-SPE-sampling
+statically-selected-branch src/instrs64.sail:6647:8-6647:25 else
+statically-selected-branch src/instrs64.sail:6723:8-6723:25 else
+statically-selected-branch src/v8_base.sail:8982:8-8982:41 else
+unobserved-undefined-local result
+state-computation-root arm_CCMN32
+state-computation-root arm_CCMN64
+state-computation-root arm_CCMP32
+state-computation-root arm_CCMP64
+state-computation

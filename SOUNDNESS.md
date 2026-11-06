@@ -224,6 +224,18 @@ instruction cases and memory states are generated:
 - [Arm instruction modeling](arm/INSTRUCTION.md)
 - [x86-64 instruction modeling](x86/INSTRUCTION.md)
 
+**Mitigation: formal comparison with Sail models.**
+[tools/sail](tools/sail/README.md) uses HOL Light to compare s2n-bignum's
+instruction relations with relations exported from independent Sail
+specifications, for all operands and states, under explicit state and
+platform interpretations. It covers all 221 public AArch64 definitions
+and all 48 RV32IM definitions, but for x86 only the register forms of 68
+of the 156 `x86_*` instruction definitions; MOV, LEA, CMOV, BT, PUSH,
+POP and all memory operands are not covered. Forms that differ have
+counterexamples instead. This complements co-simulation but does not
+cover decoding, and the export from Sail is trusted; see its
+[README](tools/sail/README.md).
+
 ### B2. ELF object-code loader
 
 An OCaml ELF loader extracts the `.text` section (and, where applicable, the

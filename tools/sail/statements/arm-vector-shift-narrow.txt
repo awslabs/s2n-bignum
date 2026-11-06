@@ -1,0 +1,60 @@
+SAIL_HL_ARM_SHRN64E8_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fSHRN64E8 amount d n s t <=>
+       arm_SHRN (QREG' d) (QREG' n) (val amount + 1) 8 s t
+
+SAIL_HL_ARM_SHRN64E16_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fSHRN64E16 amount d n s t <=>
+       arm_SHRN (QREG' d) (QREG' n) (val amount + 1) 16 s t
+
+SAIL_HL_ARM_SHRN64E32_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fSHRN64E32 amount d n s t <=>
+       arm_SHRN (QREG' d) (QREG' n) (val amount + 1) 32 s t
+
+SAIL_HL_ARM_SHRN264E8_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fSHRN264E8 amount d n s t <=>
+       arm_SHRN2 (QREG' d) (QREG' n) (val amount + 1) 8 s t
+
+SAIL_HL_ARM_SHRN264E16_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fSHRN264E16 amount d n s t <=>
+       arm_SHRN2 (QREG' d) (QREG' n) (val amount + 1) 16 s t
+
+SAIL_HL_ARM_SHRN264E32_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fSHRN264E32 amount d n s t <=>
+       arm_SHRN2 (QREG' d) (QREG' n) (val amount + 1) 32 s t
+
+SAIL_HL_ARM_RSHRN64E8_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fRSHRN64E8 amount d n s t <=>
+       arm_RSHRN (QREG' d) (QREG' n) (val amount + 1) 8 s t
+
+SAIL_HL_ARM_RSHRN64E16_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fRSHRN64E16 amount d n s t <=>
+       arm_RSHRN (QREG' d) (QREG' n) (val amount + 1) 16 s t
+
+SAIL_HL_ARM_RSHRN64E32_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fRSHRN64E32 amount d n s t <=>
+       arm_RSHRN (QREG' d) (QREG' n) (val amount + 1) 32 s t
+
+SAIL_HL_ARM_RSHRN264E8_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fRSHRN264E8 amount d n s t <=>
+       arm_RSHRN2 (QREG' d) (QREG' n) (val amount + 1) 8 s t
+
+SAIL_HL_ARM_RSHRN264E16_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fRSHRN264E16 amount d n s t <=>
+       arm_RSHRN2 (QREG' d) (QREG' n) (val amount + 1) 16 s t
+
+SAIL_HL_ARM_RSHRN264E32_EQ
+|- forall amount d n s t.
+       sail_hl_arm_5fRSHRN264E32 amount d n s t <=>
+       arm_RSHRN2 (QREG' d) (QREG' n) (val amount + 1) 32 s t
+

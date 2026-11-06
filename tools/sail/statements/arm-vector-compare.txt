@@ -1,0 +1,140 @@
+SAIL_HL_ARM_CMGT_VEC64E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGT_5fVEC64E8 d n m s t <=>
+       arm_CMGT_VEC (QREG' d) (QREG' n) (QREG' m) 8 64 s t
+
+SAIL_HL_ARM_CMGT_VEC64E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGT_5fVEC64E16 d n m s t <=>
+       arm_CMGT_VEC (QREG' d) (QREG' n) (QREG' m) 16 64 s t
+
+SAIL_HL_ARM_CMGT_VEC64E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGT_5fVEC64E32 d n m s t <=>
+       arm_CMGT_VEC (QREG' d) (QREG' n) (QREG' m) 32 64 s t
+
+SAIL_HL_ARM_CMGT_VEC128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGT_5fVEC128E8 d n m s t <=>
+       arm_CMGT_VEC (QREG' d) (QREG' n) (QREG' m) 8 128 s t
+
+SAIL_HL_ARM_CMGT_VEC128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGT_5fVEC128E16 d n m s t <=>
+       arm_CMGT_VEC (QREG' d) (QREG' n) (QREG' m) 16 128 s t
+
+SAIL_HL_ARM_CMGT_VEC128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGT_5fVEC128E32 d n m s t <=>
+       arm_CMGT_VEC (QREG' d) (QREG' n) (QREG' m) 32 128 s t
+
+SAIL_HL_ARM_CMGT_VEC128E64_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGT_5fVEC128E64 d n m s t <=>
+       arm_CMGT_VEC (QREG' d) (QREG' n) (QREG' m) 64 128 s t
+
+SAIL_HL_ARM_CMHI_VEC64E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMHI_5fVEC64E8 d n m s t <=>
+       arm_CMHI_VEC (QREG' d) (QREG' n) (QREG' m) 8 64 s t
+
+SAIL_HL_ARM_CMHI_VEC64E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMHI_5fVEC64E16 d n m s t <=>
+       arm_CMHI_VEC (QREG' d) (QREG' n) (QREG' m) 16 64 s t
+
+SAIL_HL_ARM_CMHI_VEC64E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMHI_5fVEC64E32 d n m s t <=>
+       arm_CMHI_VEC (QREG' d) (QREG' n) (QREG' m) 32 64 s t
+
+SAIL_HL_ARM_CMHI_VEC128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMHI_5fVEC128E8 d n m s t <=>
+       arm_CMHI_VEC (QREG' d) (QREG' n) (QREG' m) 8 128 s t
+
+SAIL_HL_ARM_CMHI_VEC128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMHI_5fVEC128E16 d n m s t <=>
+       arm_CMHI_VEC (QREG' d) (QREG' n) (QREG' m) 16 128 s t
+
+SAIL_HL_ARM_CMHI_VEC128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMHI_5fVEC128E32 d n m s t <=>
+       arm_CMHI_VEC (QREG' d) (QREG' n) (QREG' m) 32 128 s t
+
+SAIL_HL_ARM_CMHI_VEC128E64_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMHI_5fVEC128E64 d n m s t <=>
+       arm_CMHI_VEC (QREG' d) (QREG' n) (QREG' m) 64 128 s t
+
+SAIL_HL_ARM_CMGE_VEC64E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGE_5fVEC64E8 d n m s t <=>
+       arm_CMGE_VEC (QREG' d) (QREG' n) (QREG' m) 8 64 s t
+
+SAIL_HL_ARM_CMGE_VEC64E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGE_5fVEC64E16 d n m s t <=>
+       arm_CMGE_VEC (QREG' d) (QREG' n) (QREG' m) 16 64 s t
+
+SAIL_HL_ARM_CMGE_VEC64E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGE_5fVEC64E32 d n m s t <=>
+       arm_CMGE_VEC (QREG' d) (QREG' n) (QREG' m) 32 64 s t
+
+SAIL_HL_ARM_CMGE_VEC128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGE_5fVEC128E8 d n m s t <=>
+       arm_CMGE_VEC (QREG' d) (QREG' n) (QREG' m) 8 128 s t
+
+SAIL_HL_ARM_CMGE_VEC128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGE_5fVEC128E16 d n m s t <=>
+       arm_CMGE_VEC (QREG' d) (QREG' n) (QREG' m) 16 128 s t
+
+SAIL_HL_ARM_CMGE_VEC128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGE_5fVEC128E32 d n m s t <=>
+       arm_CMGE_VEC (QREG' d) (QREG' n) (QREG' m) 32 128 s t
+
+SAIL_HL_ARM_CMGE_VEC128E64_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fCMGE_5fVEC128E64 d n m s t <=>
+       arm_CMGE_VEC (QREG' d) (QREG' n) (QREG' m) 64 128 s t
+
+SAIL_HL_ARM_CMLE_VEC_ZERO64E8_EQ
+|- forall d n s t.
+       sail_hl_arm_5fCMLE_5fVEC_5fZERO64E8 d n s t <=>
+       arm_CMLE_VEC_ZERO (QREG' d) (QREG' n) 8 64 s t
+
+SAIL_HL_ARM_CMLE_VEC_ZERO64E16_EQ
+|- forall d n s t.
+       sail_hl_arm_5fCMLE_5fVEC_5fZERO64E16 d n s t <=>
+       arm_CMLE_VEC_ZERO (QREG' d) (QREG' n) 16 64 s t
+
+SAIL_HL_ARM_CMLE_VEC_ZERO64E32_EQ
+|- forall d n s t.
+       sail_hl_arm_5fCMLE_5fVEC_5fZERO64E32 d n s t <=>
+       arm_CMLE_VEC_ZERO (QREG' d) (QREG' n) 32 64 s t
+
+SAIL_HL_ARM_CMLE_VEC_ZERO128E8_EQ
+|- forall d n s t.
+       sail_hl_arm_5fCMLE_5fVEC_5fZERO128E8 d n s t <=>
+       arm_CMLE_VEC_ZERO (QREG' d) (QREG' n) 8 128 s t
+
+SAIL_HL_ARM_CMLE_VEC_ZERO128E16_EQ
+|- forall d n s t.
+       sail_hl_arm_5fCMLE_5fVEC_5fZERO128E16 d n s t <=>
+       arm_CMLE_VEC_ZERO (QREG' d) (QREG' n) 16 128 s t
+
+SAIL_HL_ARM_CMLE_VEC_ZERO128E32_EQ
+|- forall d n s t.
+       sail_hl_arm_5fCMLE_5fVEC_5fZERO128E32 d n s t <=>
+       arm_CMLE_VEC_ZERO (QREG' d) (QREG' n) 32 128 s t
+
+SAIL_HL_ARM_CMLE_VEC_ZERO128E64_EQ
+|- forall d n s t.
+       sail_hl_arm_5fCMLE_5fVEC_5fZERO128E64 d n s t <=>
+       arm_CMLE_VEC_ZERO (QREG' d) (QREG' n) 64 128 s t
+

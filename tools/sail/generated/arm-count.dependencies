@@ -1,0 +1,71 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function HighestSetBit|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector('N)|int|N=32 => sail_hl_shared_arm_2dcount_HighestSetBit_5f0
+shared-function CountLeadingZeroBits|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector('N)|int|N=32 => sail_hl_shared_arm_2dcount_CountLeadingZeroBits_5f1
+shared-function integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|lo=0 => sail_hl_shared_arm_2dcount_integer_5fsubrange_5f2
+shared-function HighestSetBit|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector('N)|int|N=64 => sail_hl_shared_arm_2dcount_HighestSetBit_5f3
+shared-function CountLeadingZeroBits|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector('N)|int|N=64 => sail_hl_shared_arm_2dcount_CountLeadingZeroBits_5f4
+specialization-required CountLeadingZeroBits|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector('N)|int|: HOL Light: polymorphic words require a proved positive source width
+specialization-required HighestSetBit|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector('N)|int|: HOL Light: foreach bounds must be statically known integers
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|: HOL Light: generic integer slice requires a nonnegative start
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|hi=31: HOL Light: generic integer slice requires a nonnegative start
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|hi=63: HOL Light: generic integer slice requires a nonnegative start
+root arm_CLZ32
+root arm_CLZ64
+inlined CountLeadingZeroBits
+inlined HighestSetBit
+inlined execute_aarch64_instrs_integer_arithmetic_cnt
+inlined integer_subrange
+primitive-contract Sail-undefined-existential
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract add_atom
+primitive-contract bitvector_access
+primitive-contract bitvector_length
+primitive-contract eq_any
+primitive-contract eq_bits
+primitive-contract get_slice_int
+primitive-contract negate_atom
+primitive-contract sub_atom
+primitive-contract unsigned
+proved-numeric-argument-fact CountLeadingZeroBits 0 < 32
+proved-numeric-argument-fact CountLeadingZeroBits 0 < 64
+proved-numeric-argument-fact CountLeadingZeroBits 0 <= 32
+proved-numeric-argument-fact CountLeadingZeroBits 0 <= 64
+proved-numeric-argument-fact CountLeadingZeroBits 32 <= 63
+proved-numeric-argument-fact CountLeadingZeroBits 64 <= 127
+proved-numeric-argument-fact HighestSetBit 32 >= 0
+proved-numeric-argument-fact HighestSetBit 64 >= 0
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_cnt 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_cnt 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_cnt 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_cnt 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_cnt (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_cnt (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_cnt 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_cnt 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_cnt 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_cnt 0 <= 'n
+proved-numeric-argument-fact integer_subrange 'hi <= 31
+proved-numeric-argument-fact integer_subrange 'hi <= 63
+proved-numeric-argument-fact integer_subrange 'lo <= 0
+proved-numeric-argument-fact integer_subrange 'lo <= 31
+proved-numeric-argument-fact integer_subrange 0 < 'hi
+proved-numeric-argument-fact integer_subrange 0 < 32
+proved-numeric-argument-fact integer_subrange 0 < 64
+proved-numeric-argument-fact integer_subrange 0 <= 'hi
+proved-numeric-argument-fact integer_subrange 0 <= 'lo
+proved-numeric-argument-fact integer_subrange 0 <= 32
+proved-numeric-argument-fact integer_subrange 0 <= 64
+proved-numeric-argument-fact integer_subrange 32 <= 63
+proved-numeric-argument-fact integer_subrange 64 <= 127
+unrolled-static-loop i 31 0 1 dec
+unrolled-static-loop i 63 0 1 dec
+statically-selected-branch src/instrs64.sail:6896:8-6896:29 then
+state-computation-root arm_CLZ32
+state-computation-root arm_CLZ64
+state-computation

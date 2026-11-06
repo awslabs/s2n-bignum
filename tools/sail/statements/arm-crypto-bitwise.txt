@@ -1,0 +1,20 @@
+SAIL_HL_ARM_EOR3128_EQ
+|- forall d n m a s t.
+       sail_hl_ARM_5fEOR3128 d n m a s t <=>
+       arm_EOR3 (QREG' d) (QREG' n) (QREG' m) (QREG' a) s t
+
+SAIL_HL_ARM_BCAX128_EQ
+|- forall d n m a s t.
+       sail_hl_ARM_5fBCAX128 d n m a s t <=>
+       arm_BCAX (QREG' d) (QREG' n) (QREG' m) (QREG' a) s t
+
+SAIL_HL_ARM_RAX1128_EQ
+|- forall d n m s t.
+       sail_hl_ARM_5fRAX1128 d n m s t <=>
+       arm_RAX1 (QREG' d) (QREG' n) (QREG' m) s t
+
+SAIL_HL_ARM_XAR128_EQ
+|- forall d n m amount s t.
+       sail_hl_ARM_5fXAR128 d n m amount s t <=>
+       arm_XAR (QREG' d) (QREG' n) (QREG' m) amount s t
+

@@ -1,0 +1,40 @@
+SAIL_HL_ARM_UZP1128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUZP1128E8 d n m s t <=>
+       arm_UZP1 (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_UZP1128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUZP1128E16 d n m s t <=>
+       arm_UZP1 (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_UZP1128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUZP1128E32 d n m s t <=>
+       arm_UZP1 (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_UZP1128E64_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUZP1128E64 d n m s t <=>
+       arm_UZP1 (QREG' d) (QREG' n) (QREG' m) 64 s t
+
+SAIL_HL_ARM_UZP2128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUZP2128E8 d n m s t <=>
+       arm_UZP2 (QREG' d) (QREG' n) (QREG' m) 8 s t
+
+SAIL_HL_ARM_UZP2128E16_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUZP2128E16 d n m s t <=>
+       arm_UZP2 (QREG' d) (QREG' n) (QREG' m) 16 s t
+
+SAIL_HL_ARM_UZP2128E32_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUZP2128E32 d n m s t <=>
+       arm_UZP2 (QREG' d) (QREG' n) (QREG' m) 32 s t
+
+SAIL_HL_ARM_UZP2128E64_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fUZP2128E64 d n m s t <=>
+       arm_UZP2 (QREG' d) (QREG' n) (QREG' m) 64 s t
+

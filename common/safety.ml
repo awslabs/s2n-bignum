@@ -48,6 +48,11 @@ let address_uarch_event_INDUCT, address_uarch_event_RECURSION = define_type
     | EventX86PEXT (int64#int64#num)
     // POPCNT (src, bitwidth)
     | EventX86POPCNT (int64#num)
+
+    // RISC-V instructions whose latency may depend on their operands
+
+    // DIV, DIVU, REM and REMU (dividend, divisor)
+    | EventRISCVDIV (int32#int32)
   ";;
 
 (* Before this type was parameterized, every event constructor produced a

@@ -1,0 +1,1158 @@
+configured-assumption initial-enum cur_mode=LongMode
+configured-assumption initial-bool has_adx=true
+configured-assumption initial-bool has_bmi2=true
+used-assumption initial-enum cur_mode=LongMode
+source-input-boundary HOL_INPUT_dispatch_vex_0f38_arith__fetch__op_23 (fix op=23 in dispatch_vex_0f38_arith) [input 0, parameter __hol_input0] <- fetch(1) at insn_vex_arith.sail:637:17-637:25 : bitvector((8 * 1))
+source-input-boundary HOL_INPUT_dispatch_vex_0f_int__fetch__op_113__inputs_2 (fix op=113 in dispatch_vex_0f_int) [input 0, parameter __hol_input0] <- fetch(1) at insn_vex_int.sail:154:17-154:25 : bitvector((8 * 1))
+source-input-boundary HOL_INPUT_dispatch_vex_0f_int__fetch__op_113__inputs_2 (fix op=113 in dispatch_vex_0f_int) [input 1, parameter __hol_input1] <- fetch(1) at insn_vex_int.sail:158:38-158:46 : bitvector((8 * 1))
+source-input-boundary HOL_INPUT_dispatch_vex_0f_int__fetch__op_114__inputs_2 (fix op=114 in dispatch_vex_0f_int) [input 0, parameter __hol_input0] <- fetch(1) at insn_vex_int.sail:154:17-154:25 : bitvector((8 * 1))
+source-input-boundary HOL_INPUT_dispatch_vex_0f_int__fetch__op_114__inputs_2 (fix op=114 in dispatch_vex_0f_int) [input 1, parameter __hol_input1] <- fetch(1) at insn_vex_int.sail:158:38-158:46 : bitvector((8 * 1))
+source-input-boundary HOL_INPUT_dispatch_vex_0f_int__fetch__op_115__inputs_2 (fix op=115 in dispatch_vex_0f_int) [input 0, parameter __hol_input0] <- fetch(1) at insn_vex_int.sail:154:17-154:25 : bitvector((8 * 1))
+source-input-boundary HOL_INPUT_dispatch_vex_0f_int__fetch__op_115__inputs_2 (fix op=115 in dispatch_vex_0f_int) [input 1, parameter __hol_input1] <- fetch(1) at insn_vex_int.sail:158:38-158:46 : bitvector((8 * 1))
+source-input-boundary HOL_INPUT_vex_exec_binop__fetch [input 0, parameter __hol_input0] <- fetch(1) at insn_vex.sail:144:15-144:23 : bitvector((8 * 1))
+source-input-boundary HOL_INPUT_vex_exec_pack__fetch [input 0, parameter __hol_input0] <- fetch(1) at insn_vex.sail:123:15-123:23 : bitvector((8 * 1))
+source-input-boundary HOL_INPUT_vex_exec_unop__fetch [input 0, parameter __hol_input0] <- fetch(1) at insn_vex_arith.sail:62:15-62:23 : bitvector((8 * 1))
+source-input-boundary HOL_INPUT_vex_exec_widen__fetch [input 0, parameter __hol_input0] <- fetch(1) at insn_vex_arith.sail:37:15-37:23 : bitvector((8 * 1))
+shared-function default_prefixes|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|unit|Prefixes| => sail_hl_shared_x86_2dvector_default_5fprefixes_5f0
+shared-function neq_int|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('n), int('m))|bool(not('n == 'm))| => sail_hl_shared_x86_2dvector_neq_5fint_5f1
+shared-function modrm_xreg|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector(8), Prefixes)|range(0, (2 ^ (1 + ((5 - 3) + 1)) - 1))| => sail_hl_shared_x86_2dvector_modrm_5fxreg_5f2
+shared-function get_address_size|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|Prefixes|{('n : Int), 'n in {16, 32, 64}. int('n)}| => sail_hl_shared_x86_2dvector_get_5faddress_5fsize_5f3
+shared-function vex_vl|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|Prefixes|{('n : Int), 'n in {128, 256}. int('n)}| => sail_hl_shared_x86_2dvector_vex_5fvl_5f4
+shared-function __id|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|int('n)|int('n)| => sail_hl_shared_x86_2dvector__5f_5fid_5f5
+shared-function zeros|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|int('n)|bitvector('n)| => sail_hl_shared_x86_2dvector_zeros_5f6
+shared-function velem_nat|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('eb), bitvector('vl), int('ex26695#))|bitvector(((('eb - 1) - 0) + 1))|vl=128 => sail_hl_shared_x86_2dvector_velem_5fnat_5f7
+shared-function sign_extend|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('m), bitvector('n))|bitvector('m)| => sail_hl_shared_x86_2dvector_sign_5fextend_5f8
+shared-function abs|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|bitvector('n)| => sail_hl_shared_x86_2dvector_abs_5f9
+shared-function velem_nat|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('eb), bitvector('vl), int('ex26695#))|bitvector(((('eb - 1) - 0) + 1))|vl=256 => sail_hl_shared_x86_2dvector_velem_5fnat_5f10
+shared-function zero_extend|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('m), bitvector('n))|bitvector('m)| => sail_hl_shared_x86_2dvector_zero_5fextend_5f11
+shared-function sail_ones|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|int('n)|bitvector('n)| => sail_hl_shared_x86_2dvector_sail_5fones_5f12
+shared-function ones|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|int('n)|bitvector('n)| => sail_hl_shared_x86_2dvector_ones_5f13
+shared-function blend|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n), bitvector(1))|bitvector('n)| => sail_hl_shared_x86_2dvector_blend_5f14
+shared-function is_gt|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector(1)|n=16 => sail_hl_shared_x86_2dvector_is_5fgt_5f15
+shared-function min_s|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector('n)|n=16 => sail_hl_shared_x86_2dvector_min_5fs_5f16
+shared-function max_s|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector('n)|n=16 => sail_hl_shared_x86_2dvector_max_5fs_5f17
+shared-function sat_su|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('dst), bitvector('n))|bitvector('dst)|n=16 => sail_hl_shared_x86_2dvector_sat_5fsu_5f18
+shared-function is_gt|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector(1)|n=32 => sail_hl_shared_x86_2dvector_is_5fgt_5f19
+shared-function cmp_gt|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector('n)|n=32 => sail_hl_shared_x86_2dvector_cmp_5fgt_5f20
+shared-function cmp_gt|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector('n)|n=16 => sail_hl_shared_x86_2dvector_cmp_5fgt_5f21
+shared-function pmaddubsw_pair|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector(8), bitvector(8), bitvector(8), bitvector(8))|bitvector(16)| => sail_hl_shared_x86_2dvector_pmaddubsw_5fpair_5f22
+shared-function to_bits_truncate|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('l), int('ex26430#))|bitvector('l)| => sail_hl_shared_x86_2dvector_to_5fbits_5ftruncate_5f23
+shared-function pmaddwd_pair|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector(16), bitvector(16), bitvector(16), bitvector(16))|bitvector(32)| => sail_hl_shared_x86_2dvector_pmaddwd_5fpair_5f24
+shared-function packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|dst=32,src=8,vl=128 => sail_hl_shared_x86_2dvector_packed_5fwiden_5funop_5f25
+shared-function packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|dst=32,src=8,vl=256 => sail_hl_shared_x86_2dvector_packed_5fwiden_5funop_5f26
+shared-function packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|dst=16,src=8,vl=128 => sail_hl_shared_x86_2dvector_packed_5fwiden_5funop_5f27
+shared-function packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|dst=16,src=8,vl=256 => sail_hl_shared_x86_2dvector_packed_5fwiden_5funop_5f28
+shared-function (operator >>>)|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), int('m))|bitvector('n)|n=32 => sail_hl_shared_x86_2dvector__28operator_20_3e_3e_3e_29_5f29
+shared-function mulhrs|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector('n)|n=16 => sail_hl_shared_x86_2dvector_mulhrs_5f30
+shared-function get_mandatory_prefix|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|Prefixes|MandatoryPrefix| => sail_hl_shared_x86_2dvector_get_5fmandatory_5fprefix_5f31
+shared-function neq_anything|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(MandatoryPrefix, MandatoryPrefix)|{('ex27099# : Bool), true. bool(not('ex27099#))}| => sail_hl_shared_x86_2dvector_neq_5fanything_5f32
+shared-function packed_uniform_shift|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=32,vl=128 => sail_hl_shared_x86_2dvector_packed_5funiform_5fshift_5f33
+shared-function packed_uniform_shift|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=32,vl=256 => sail_hl_shared_x86_2dvector_packed_5funiform_5fshift_5f34
+shared-function (operator >>>)|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), int('m))|bitvector('n)|n=64 => sail_hl_shared_x86_2dvector__28operator_20_3e_3e_3e_29_5f35
+shared-function packed_uniform_shift|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=64,vl=128 => sail_hl_shared_x86_2dvector_packed_5funiform_5fshift_5f36
+shared-function packed_uniform_shift|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=64,vl=256 => sail_hl_shared_x86_2dvector_packed_5funiform_5fshift_5f37
+shared-function (operator >>>)|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), int('m))|bitvector('n)|n=16 => sail_hl_shared_x86_2dvector__28operator_20_3e_3e_3e_29_5f38
+shared-function packed_uniform_shift|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=16,vl=128 => sail_hl_shared_x86_2dvector_packed_5funiform_5fshift_5f39
+shared-function packed_uniform_shift|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=16,vl=256 => sail_hl_shared_x86_2dvector_packed_5funiform_5fshift_5f40
+shared-function (operator >>>)|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), int('m))|bitvector('n)|n=128 => sail_hl_shared_x86_2dvector__28operator_20_3e_3e_3e_29_5f41
+shared-function packed_uniform_shift|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=128,vl=128 => sail_hl_shared_x86_2dvector_packed_5funiform_5fshift_5f42
+shared-function packed_uniform_shift|fixed|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=128,vl=256 => sail_hl_shared_x86_2dvector_packed_5funiform_5fshift_5f43
+shared-function or_reduce|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|bitvector(1)| => sail_hl_shared_x86_2dvector_or_5freduce_5f44
+shared-function is_nonzero|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|bitvector(1)| => sail_hl_shared_x86_2dvector_is_5fnonzero_5f45
+shared-function is_zero|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|bitvector('n)|bitvector(1)| => sail_hl_shared_x86_2dvector_is_5fzero_5f46
+specialization-required (operator >>>)|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), int('m))|bitvector('n)|: HOL Light: unsupported polymorphic dimension ('n + 64)
+specialization-required cmp_gt|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector('n)|: HOL Light: operand-dependent width 'n
+specialization-required is_gt|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector(1)|: HOL Light: unsupported polymorphic dimension ('n + 1)
+specialization-required max_s|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector('n)|: HOL Light: operand-dependent width 'n
+specialization-required min_s|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector('n)|: HOL Light: operand-dependent width 'n
+specialization-required mulhrs|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(bitvector('n), bitvector('n))|bitvector('n)|: HOL Light: operand-dependent width 'n
+specialization-required packed_binop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, int('eb), bitvector('vl), bitvector('vl))|bitvector('vl)|: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_binop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, int('eb), bitvector('vl), bitvector('vl))|bitvector('vl)|eb=16: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_binop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, int('eb), bitvector('vl), bitvector('vl))|bitvector('vl)|eb=32: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_binop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, int('eb), bitvector('vl), bitvector('vl))|bitvector('vl)|eb=64: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_binop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, int('eb), bitvector('vl), bitvector('vl))|bitvector('vl)|eb=8: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_binop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, int('eb), bitvector('vl), bitvector('vl))|bitvector('vl)|vl=128: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_binop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, int('eb), bitvector('vl), bitvector('vl))|bitvector('vl)|vl=256: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_elem_op|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, bitvector('eb), bitvector('eb))|bitvector('eb)|eb=16: HOL Light: bitvector slices require matching in-bounds positions
+specialization-required packed_elem_op|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, bitvector('eb), bitvector('eb))|bitvector('eb)|eb=32: HOL Light: bitvector slices require matching in-bounds positions
+specialization-required packed_elem_op|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, bitvector('eb), bitvector('eb))|bitvector('eb)|eb=64: HOL Light: bitvector slices require matching in-bounds positions
+specialization-required packed_elem_op|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, bitvector('eb), bitvector('eb))|bitvector('eb)|eb=8: HOL Light: bitvector slices require matching in-bounds positions
+specialization-required packed_elem_op|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedBinOp, bitvector('eb), bitvector('eb))|bitvector('eb)|: HOL Light: unsupported primitive __f64_add
+specialization-required packed_narrow_elem|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedNarrowOp, int('dst), bitvector('src))|bitvector('dst)|: HOL Light: operand-dependent width 'n
+specialization-required packed_narrow_elem|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedNarrowOp, int('dst), bitvector('src))|bitvector('dst)|dst=8: HOL Light: operand-dependent width 'n
+specialization-required packed_narrow_elem|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedNarrowOp, int('dst), bitvector('src))|bitvector('dst)|src=16: HOL Light: polymorphic words require a proved positive source width
+specialization-required packed_pack|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedNarrowOp, int('src), int('dst), bitvector('vl), bitvector('vl))|bitvector('vl)|: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_pack|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedNarrowOp, int('src), int('dst), bitvector('vl), bitvector('vl))|bitvector('vl)|dst=8: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_pack|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedNarrowOp, int('src), int('dst), bitvector('vl), bitvector('vl))|bitvector('vl)|src=16: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_pack|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedNarrowOp, int('src), int('dst), bitvector('vl), bitvector('vl))|bitvector('vl)|vl=128: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_pack|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedNarrowOp, int('src), int('dst), bitvector('vl), bitvector('vl))|bitvector('vl)|vl=256: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_unary_elem|fixed|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedUnaryOp, bitvector('eb))|bitvector('eb)|eb=32: HOL Light: unsupported primitive __f32_exp2
+specialization-required packed_unary_elem|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedUnaryOp, bitvector('eb))|bitvector('eb)|: HOL Light: operand-dependent width 'n
+specialization-required packed_uniform_shift|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_uniform_shift|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=128: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_uniform_shift|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=16: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_uniform_shift|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=32: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_uniform_shift|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|eb=64: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_uniform_shift|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|vl=128: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_uniform_shift|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedShiftOp, int('eb), bitvector('vl), int('ex26696#))|bitvector('vl)|vl=256: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_unop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedUnaryOp, int('eb), bitvector('vl))|bitvector('vl)|: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_unop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedUnaryOp, int('eb), bitvector('vl))|bitvector('vl)|eb=32: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_unop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedUnaryOp, int('eb), bitvector('vl))|bitvector('vl)|vl=128: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_unop|generic|x86state|false|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(PackedUnaryOp, int('eb), bitvector('vl))|bitvector('vl)|vl=256: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|dst=16: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|dst=32: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|n=128: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|n=32: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|n=64: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|src=8: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|vl=128: HOL Light: foreach bounds must be statically known integers
+specialization-required packed_widen_unop|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('vl), PackedWidenOp, int('src), int('dst), bitvector('n))|bitvector('vl)|vl=256: HOL Light: foreach bounds must be statically known integers
+specialization-required sat_su|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('dst), bitvector('n))|bitvector('dst)|: HOL Light: operand-dependent width 'n
+specialization-required sat_su|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('dst), bitvector('n))|bitvector('dst)|dst=8: HOL Light: operand-dependent width 'n
+specialization-required velem_nat|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('eb), bitvector('vl), int('ex26695#))|bitvector(((('eb - 1) - 0) + 1))|: HOL Light: integer shifts require a word, integer amount and matching word result
+specialization-required velem_nat|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('eb), bitvector('vl), int('ex26695#))|bitvector(((('eb - 1) - 0) + 1))|eb=128: HOL Light: integer shifts require a word, integer amount and matching word result
+specialization-required velem_nat|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('eb), bitvector('vl), int('ex26695#))|bitvector(((('eb - 1) - 0) + 1))|eb=16: HOL Light: integer shifts require a word, integer amount and matching word result
+specialization-required velem_nat|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('eb), bitvector('vl), int('ex26695#))|bitvector(((('eb - 1) - 0) + 1))|eb=32: HOL Light: integer shifts require a word, integer amount and matching word result
+specialization-required velem_nat|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('eb), bitvector('vl), int('ex26695#))|bitvector(((('eb - 1) - 0) + 1))|eb=64: HOL Light: integer shifts require a word, integer amount and matching word result
+specialization-required velem_nat|generic|x86state|true|initial-enum cur_mode=LongMode;initial-bool has_adx=true;initial-bool has_bmi2=true|(int('eb), bitvector('vl), int('ex26695#))|bitvector(((('eb - 1) - 0) + 1))|eb=8: HOL Light: integer shifts require a word, integer amount and matching word result
+root X86_VPABSD128_RR
+root X86_VPABSD256_RR
+root X86_VPACKUSWB128_RRR
+root X86_VPACKUSWB256_RRR
+root X86_VPADDB128_RRR
+root X86_VPADDB256_RRR
+root X86_VPADDD128_RRR
+root X86_VPADDD256_RRR
+root X86_VPADDQ128_RRR
+root X86_VPADDQ256_RRR
+root X86_VPADDW128_RRR
+root X86_VPADDW256_RRR
+root X86_VPAND128_RRR
+root X86_VPAND256_RRR
+root X86_VPANDN128_RRR
+root X86_VPANDN256_RRR
+root X86_VPCMPGTD128_RRR
+root X86_VPCMPGTD256_RRR
+root X86_VPCMPGTW128_RRR
+root X86_VPCMPGTW256_RRR
+root X86_VPMADDUBSW128_RRR
+root X86_VPMADDUBSW256_RRR
+root X86_VPMADDWD128_RRR
+root X86_VPMADDWD256_RRR
+root X86_VPMOVSXBD128_RR
+root X86_VPMOVSXBD256_RR
+root X86_VPMOVZXBD128_RR
+root X86_VPMOVZXBD256_RR
+root X86_VPMOVZXBW128_RR
+root X86_VPMOVZXBW256_RR
+root X86_VPMULDQ128_RRR
+root X86_VPMULDQ256_RRR
+root X86_VPMULHRSW128_RRR
+root X86_VPMULHRSW256_RRR
+root X86_VPMULHUW128_RRR
+root X86_VPMULHUW256_RRR
+root X86_VPMULHW128_RRR
+root X86_VPMULHW256_RRR
+root X86_VPMULLD128_RRR
+root X86_VPMULLD256_RRR
+root X86_VPMULLW128_RRR
+root X86_VPMULLW256_RRR
+root X86_VPOR128_RRR
+root X86_VPOR256_RRR
+root X86_VPSLLD128_RRI
+root X86_VPSLLD256_RRI
+root X86_VPSLLQ128_RRI
+root X86_VPSLLQ256_RRI
+root X86_VPSLLVD128_RRR
+root X86_VPSLLVD256_RRR
+root X86_VPSLLW128_RRI
+root X86_VPSLLW256_RRI
+root X86_VPSRAD128_RRI
+root X86_VPSRAD256_RRI
+root X86_VPSRAW128_RRI
+root X86_VPSRAW256_RRI
+root X86_VPSRLD128_RRI
+root X86_VPSRLD256_RRI
+root X86_VPSRLDQ128_RRI
+root X86_VPSRLDQ256_RRI
+root X86_VPSRLQ128_RRI
+root X86_VPSRLQ256_RRI
+root X86_VPSRLVD128_RRR
+root X86_VPSRLVD256_RRR
+root X86_VPSRLVQ128_RRR
+root X86_VPSRLVQ256_RRR
+root X86_VPSRLW128_RRI
+root X86_VPSRLW256_RRI
+root X86_VPSUBB128_RRR
+root X86_VPSUBB256_RRR
+root X86_VPSUBD128_RRR
+root X86_VPSUBD256_RRR
+root X86_VPSUBQ128_RRR
+root X86_VPSUBQ256_RRR
+root X86_VPSUBW128_RRR
+root X86_VPSUBW256_RRR
+root X86_VPTEST128_RR
+root X86_VPTEST256_RR
+root X86_VPXOR128_RRR
+root X86_VPXOR256_RRR
+inlined (operator >>>)
+inlined HOL_INPUT_dispatch_vex_0f38_arith__fetch__op_23
+inlined HOL_INPUT_dispatch_vex_0f_int__fetch__op_113__inputs_2
+inlined HOL_INPUT_dispatch_vex_0f_int__fetch__op_114__inputs_2
+inlined HOL_INPUT_dispatch_vex_0f_int__fetch__op_115__inputs_2
+inlined HOL_INPUT_vex_exec_binop__fetch
+inlined HOL_INPUT_vex_exec_pack__fetch
+inlined HOL_INPUT_vex_exec_unop__fetch
+inlined HOL_INPUT_vex_exec_widen__fetch
+inlined __id
+inlined abs
+inlined blend
+inlined cmp_gt
+inlined decode_vex_src
+inlined default_prefixes
+inlined get_address_size
+inlined get_mandatory_prefix
+inlined is_gt
+inlined is_nonzero
+inlined is_zero
+inlined max_s
+inlined min_s
+inlined modrm_rm
+inlined modrm_xreg
+inlined modrm_xrm
+inlined mulhrs
+inlined neq_anything
+inlined neq_int
+inlined ones
+inlined or_reduce
+inlined packed_binop
+inlined packed_elem_op
+inlined packed_narrow_elem
+inlined packed_pack
+inlined packed_unary_elem
+inlined packed_uniform_shift
+inlined packed_unop
+inlined packed_widen_unop
+inlined pmaddubsw_pair
+inlined pmaddwd_pair
+inlined sail_ones
+inlined sat_su
+inlined sign_extend
+inlined to_bits_truncate
+inlined velem_nat
+inlined vex_read_narrow_src
+inlined vex_vl
+inlined xrm_reg
+inlined zero_extend
+inlined zeros
+primitive-contract None
+primitive-contract RM_reg
+primitive-contract XRM_reg
+primitive-contract add_atom
+primitive-contract add_bits
+primitive-contract and_bool
+primitive-contract and_vec
+primitive-contract bitvector_access
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract eq_anything
+primitive-contract eq_bits
+primitive-contract eq_int
+primitive-contract get_slice_int
+primitive-contract gt_int
+primitive-contract gteq_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract not_bool
+primitive-contract not_vec
+primitive-contract or_bool
+primitive-contract or_vec
+primitive-contract quot_positive_round_zero
+primitive-contract read_simd
+primitive-contract sail_sign_extend
+primitive-contract sail_zero_extend
+primitive-contract sail_zeros
+primitive-contract shiftl
+primitive-contract shiftr
+primitive-contract signed
+primitive-contract sub_atom
+primitive-contract sub_vec
+primitive-contract subrange_bits
+primitive-contract unsigned
+primitive-contract write_simd
+primitive-contract x86-six-Boolean-flags
+primitive-contract xor_vec
+statically-proved-assertion eq_int(bitvector_length(b), 16) at insn_simd.sail:161:31-161:40
+statically-proved-assertion eq_int(bitvector_length(b), 32) at insn_simd.sail:162:31-162:40
+statically-proved-assertion eq_int(bitvector_length(b), 64) at insn_simd.sail:164:31-164:40
+statically-proved-assertion lteq_int(bitvector_length(b), 64) at insn_simd.sail:142:27-142:36
+statically-proved-assertion lteq_int(bitvector_length(b), 64) at insn_simd.sail:146:27-146:36
+proved-numeric-argument-fact (operator >>>) 'm <= 1
+proved-numeric-argument-fact (operator >>>) 'm <= 127
+proved-numeric-argument-fact (operator >>>) 'm <= 128
+proved-numeric-argument-fact (operator >>>) 'm <= 15
+proved-numeric-argument-fact (operator >>>) 'm <= 16
+proved-numeric-argument-fact (operator >>>) 'm <= 255
+proved-numeric-argument-fact (operator >>>) 'm <= 31
+proved-numeric-argument-fact (operator >>>) 'm <= 32
+proved-numeric-argument-fact (operator >>>) 'm <= 63
+proved-numeric-argument-fact (operator >>>) 'm <= 64
+proved-numeric-argument-fact (operator >>>) (0 <= 0 & 0 <= (div(128, 128) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 0 & 0 <= (div(128, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 0 & 0 <= (div(128, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 0 & 0 <= (div(128, 64) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 0 & 0 <= (div(256, 128) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 0 & 0 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 0 & 0 <= (div(256, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 0 & 0 <= (div(256, 64) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 1 & 1 <= (div(128, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 1 & 1 <= (div(128, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 1 & 1 <= (div(128, 64) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 1 & 1 <= (div(256, 128) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 1 & 1 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 1 & 1 <= (div(256, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 1 & 1 <= (div(256, 64) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 10 & 10 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 11 & 11 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 12 & 12 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 13 & 13 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 14 & 14 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 15 & 15 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 2 & 2 <= (div(128, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 2 & 2 <= (div(128, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 2 & 2 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 2 & 2 <= (div(256, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 2 & 2 <= (div(256, 64) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 3 & 3 <= (div(128, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 3 & 3 <= (div(128, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 3 & 3 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 3 & 3 <= (div(256, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 3 & 3 <= (div(256, 64) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 4 & 4 <= (div(128, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 4 & 4 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 4 & 4 <= (div(256, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 5 & 5 <= (div(128, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 5 & 5 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 5 & 5 <= (div(256, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 6 & 6 <= (div(128, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 6 & 6 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 6 & 6 <= (div(256, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 7 & 7 <= (div(128, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 7 & 7 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 7 & 7 <= (div(256, 32) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 8 & 8 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (0 <= 9 & 9 <= (div(256, 16) - 1))
+proved-numeric-argument-fact (operator >>>) (128 in {64, 128, 256, 512} & 128 in {16, 32, 64, 128})
+proved-numeric-argument-fact (operator >>>) (128 in {64, 128, 256, 512} & 16 in {16, 32, 64, 128})
+proved-numeric-argument-fact (operator >>>) (128 in {64, 128, 256, 512} & 32 in {16, 32, 64, 128})
+proved-numeric-argument-fact (operator >>>) (128 in {64, 128, 256, 512} & 64 in {16, 32, 64, 128})
+proved-numeric-argument-fact (operator >>>) (256 in {64, 128, 256, 512} & 128 in {16, 32, 64, 128})
+proved-numeric-argument-fact (operator >>>) (256 in {64, 128, 256, 512} & 16 in {16, 32, 64, 128})
+proved-numeric-argument-fact (operator >>>) (256 in {64, 128, 256, 512} & 32 in {16, 32, 64, 128})
+proved-numeric-argument-fact (operator >>>) (256 in {64, 128, 256, 512} & 64 in {16, 32, 64, 128})
+proved-numeric-argument-fact (operator >>>) 0 < 'm
+proved-numeric-argument-fact (operator >>>) 0 <= 'm
+proved-numeric-argument-fact (operator >>>) 128 <= 'm
+proved-numeric-argument-fact (operator >>>) 16 <= 'm
+proved-numeric-argument-fact (operator >>>) 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact (operator >>>) 32 <= 'm
+proved-numeric-argument-fact (operator >>>) 64 <= 'm
+proved-numeric-argument-fact HOL_INPUT_vex_exec_binop__fetch 'ex26801# <= 127
+proved-numeric-argument-fact HOL_INPUT_vex_exec_binop__fetch 'ex26801# <= 15
+proved-numeric-argument-fact HOL_INPUT_vex_exec_binop__fetch 'ex26801# <= 31
+proved-numeric-argument-fact HOL_INPUT_vex_exec_binop__fetch 'ex26801# <= 63
+proved-numeric-argument-fact HOL_INPUT_vex_exec_binop__fetch 0 < 'ex26801#
+proved-numeric-argument-fact HOL_INPUT_vex_exec_binop__fetch 0 <= 'ex26801#
+proved-numeric-argument-fact HOL_INPUT_vex_exec_pack__fetch 'dst <= 15
+proved-numeric-argument-fact HOL_INPUT_vex_exec_pack__fetch 'dst <= 31
+proved-numeric-argument-fact HOL_INPUT_vex_exec_pack__fetch 'src <= 31
+proved-numeric-argument-fact HOL_INPUT_vex_exec_pack__fetch 0 < 'dst
+proved-numeric-argument-fact HOL_INPUT_vex_exec_pack__fetch 0 < 'src
+proved-numeric-argument-fact HOL_INPUT_vex_exec_pack__fetch 0 <= 'dst
+proved-numeric-argument-fact HOL_INPUT_vex_exec_pack__fetch 0 <= 'src
+proved-numeric-argument-fact HOL_INPUT_vex_exec_unop__fetch 'ex26809# <= 63
+proved-numeric-argument-fact HOL_INPUT_vex_exec_unop__fetch 0 < 'ex26809#
+proved-numeric-argument-fact HOL_INPUT_vex_exec_unop__fetch 0 <= 'ex26809#
+proved-numeric-argument-fact HOL_INPUT_vex_exec_widen__fetch 'dst <= 31
+proved-numeric-argument-fact HOL_INPUT_vex_exec_widen__fetch 'dst <= 63
+proved-numeric-argument-fact HOL_INPUT_vex_exec_widen__fetch 'src <= 15
+proved-numeric-argument-fact HOL_INPUT_vex_exec_widen__fetch 'src <= 31
+proved-numeric-argument-fact HOL_INPUT_vex_exec_widen__fetch 0 < 'dst
+proved-numeric-argument-fact HOL_INPUT_vex_exec_widen__fetch 0 < 'src
+proved-numeric-argument-fact HOL_INPUT_vex_exec_widen__fetch 0 <= 'dst
+proved-numeric-argument-fact HOL_INPUT_vex_exec_widen__fetch 0 <= 'src
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 128
+proved-numeric-argument-fact __id 'n <= 15
+proved-numeric-argument-fact __id 'n <= 255
+proved-numeric-argument-fact __id 'n <= 256
+proved-numeric-argument-fact __id 'n <= 31
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id 'n in {128, 256}
+proved-numeric-argument-fact __id 'n in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact __id 'n in {8, 16, 32, 64}
+proved-numeric-argument-fact __id (0 < 'n & 'n <= 128)
+proved-numeric-argument-fact __id (0 < 'n & ('n < 16 & 16 <= 64))
+proved-numeric-argument-fact __id (0 <= 0 & 0 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 0 & 0 <= (div(128, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 0 & 0 <= (div(128, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 0 & 0 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 0 & 0 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 0 & 0 <= (div(256, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 1 & 1 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 1 & 1 <= (div(128, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 1 & 1 <= (div(128, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 1 & 1 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 1 & 1 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 1 & 1 <= (div(256, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 10 & 10 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 10 & 10 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 10 & 10 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 11 & 11 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 11 & 11 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 11 & 11 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 12 & 12 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 12 & 12 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 12 & 12 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 13 & 13 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 13 & 13 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 13 & 13 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 14 & 14 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 14 & 14 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 14 & 14 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 15 & 15 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 15 & 15 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 15 & 15 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 16 & 16 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 17 & 17 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 18 & 18 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 19 & 19 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 2 & 2 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 2 & 2 <= (div(128, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 2 & 2 <= (div(128, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 2 & 2 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 2 & 2 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 2 & 2 <= (div(256, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 20 & 20 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 21 & 21 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 22 & 22 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 23 & 23 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 24 & 24 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 25 & 25 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 26 & 26 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 27 & 27 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 28 & 28 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 29 & 29 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 3 & 3 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 3 & 3 <= (div(128, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 3 & 3 <= (div(128, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 3 & 3 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 3 & 3 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 3 & 3 <= (div(256, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 30 & 30 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 31 & 31 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 4 & 4 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 4 & 4 <= (div(128, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 4 & 4 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 4 & 4 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 4 & 4 <= (div(256, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 5 & 5 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 5 & 5 <= (div(128, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 5 & 5 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 5 & 5 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 5 & 5 <= (div(256, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 6 & 6 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 6 & 6 <= (div(128, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 6 & 6 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 6 & 6 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 6 & 6 <= (div(256, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 7 & 7 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 7 & 7 <= (div(128, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 7 & 7 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 7 & 7 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 7 & 7 <= (div(256, 32) - 1))
+proved-numeric-argument-fact __id (0 <= 8 & 8 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 8 & 8 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 8 & 8 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (0 <= 9 & 9 <= (div(128, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 9 & 9 <= (div(256, 'n) - 1))
+proved-numeric-argument-fact __id (0 <= 9 & 9 <= (div(256, 16) - 1))
+proved-numeric-argument-fact __id (128 > 0 & ('n > 0 & 128 >= 'n))
+proved-numeric-argument-fact __id (128 in {128, 256, 512} & (16 in {16, 32} & ('n in {8, 16} & 16 == ('n * 2))))
+proved-numeric-argument-fact __id (128 in {64, 128, 256, 512} & 'n in {16, 32, 64, 128})
+proved-numeric-argument-fact __id (128 in {64, 128, 256, 512} & 'n in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact __id (128 in {64, 128, 256, 512} & 'n in {8, 16, 32, 64})
+proved-numeric-argument-fact __id (16 in {16, 32, 64} & ('n in {8, 16, 32} & 16 > 'n))
+proved-numeric-argument-fact __id (16 in {16, 32} & ('n in {8, 16} & 16 == ('n * 2)))
+proved-numeric-argument-fact __id (16 in {16, 32} & (8 in {8, 16} & 16 == (8 * 2)))
+proved-numeric-argument-fact __id (256 > 0 & ('n > 0 & 256 >= 'n))
+proved-numeric-argument-fact __id (256 in {128, 256, 512} & (16 in {16, 32} & ('n in {8, 16} & 16 == ('n * 2))))
+proved-numeric-argument-fact __id (256 in {64, 128, 256, 512} & 'n in {16, 32, 64, 128})
+proved-numeric-argument-fact __id (256 in {64, 128, 256, 512} & 'n in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact __id (256 in {64, 128, 256, 512} & 'n in {8, 16, 32, 64})
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 < 16
+proved-numeric-argument-fact __id 0 < 32
+proved-numeric-argument-fact __id 0 < 64
+proved-numeric-argument-fact __id 0 < 8
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 0 <= 128
+proved-numeric-argument-fact __id 0 <= 16
+proved-numeric-argument-fact __id 0 <= 32
+proved-numeric-argument-fact __id 0 <= 64
+proved-numeric-argument-fact __id 0 <= 8
+proved-numeric-argument-fact __id 128 <= 'n
+proved-numeric-argument-fact __id 128 <= 128
+proved-numeric-argument-fact __id 16 <= 16
+proved-numeric-argument-fact __id 16 <= 31
+proved-numeric-argument-fact __id 16 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact __id 256 <= 'n
+proved-numeric-argument-fact __id 32 <= 32
+proved-numeric-argument-fact __id 32 <= 63
+proved-numeric-argument-fact __id 32 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact __id 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact __id 64 <= 127
+proved-numeric-argument-fact __id 64 <= 64
+proved-numeric-argument-fact __id 64 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact __id 8 <= 15
+proved-numeric-argument-fact __id 8 <= 31
+proved-numeric-argument-fact __id 8 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact abs 32 == 32
+proved-numeric-argument-fact abs 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact blend (0 < 16 & 16 <= 64)
+proved-numeric-argument-fact cmp_gt 16 <= 64
+proved-numeric-argument-fact cmp_gt 16 == 16
+proved-numeric-argument-fact cmp_gt 16 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact cmp_gt 32 <= 64
+proved-numeric-argument-fact cmp_gt 32 == 32
+proved-numeric-argument-fact cmp_gt 32 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact decode_vex_src 'vl <= 128
+proved-numeric-argument-fact decode_vex_src 'vl <= 255
+proved-numeric-argument-fact decode_vex_src 'vl <= 256
+proved-numeric-argument-fact decode_vex_src 'vl in {128, 256}
+proved-numeric-argument-fact decode_vex_src (16 in {16, 32} & (8 in {8, 16} & 16 == (8 * 2)))
+proved-numeric-argument-fact decode_vex_src 0 < 'vl
+proved-numeric-argument-fact decode_vex_src 0 < 16
+proved-numeric-argument-fact decode_vex_src 0 < 32
+proved-numeric-argument-fact decode_vex_src 0 < 64
+proved-numeric-argument-fact decode_vex_src 0 < 8
+proved-numeric-argument-fact decode_vex_src 0 <= 'vl
+proved-numeric-argument-fact decode_vex_src 0 <= 16
+proved-numeric-argument-fact decode_vex_src 0 <= 32
+proved-numeric-argument-fact decode_vex_src 0 <= 64
+proved-numeric-argument-fact decode_vex_src 0 <= 8
+proved-numeric-argument-fact decode_vex_src 128 <= 'vl
+proved-numeric-argument-fact decode_vex_src 16 <= 31
+proved-numeric-argument-fact decode_vex_src 16 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact decode_vex_src 256 <= 'vl
+proved-numeric-argument-fact decode_vex_src 32 <= 63
+proved-numeric-argument-fact decode_vex_src 32 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact decode_vex_src 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact decode_vex_src 64 <= 127
+proved-numeric-argument-fact decode_vex_src 64 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact decode_vex_src 8 <= 15
+proved-numeric-argument-fact decode_vex_src 8 <= 31
+proved-numeric-argument-fact decode_vex_src 8 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact is_gt (0 < 16 & 16 <= 64)
+proved-numeric-argument-fact is_gt (0 < 32 & 32 <= 64)
+proved-numeric-argument-fact is_zero 128 <= 128
+proved-numeric-argument-fact is_zero 128 in {128, 256}
+proved-numeric-argument-fact is_zero 256 <= 256
+proved-numeric-argument-fact is_zero 256 in {128, 256}
+proved-numeric-argument-fact modrm_xreg (16 in {16, 32} & (8 in {8, 16} & 16 == (8 * 2)))
+proved-numeric-argument-fact modrm_xreg (8 in {8, 16, 32} & (16 in {16, 32, 64} & 16 > 8))
+proved-numeric-argument-fact modrm_xreg (8 in {8, 16, 32} & (32 in {16, 32, 64} & 32 > 8))
+proved-numeric-argument-fact modrm_xreg 0 < 16
+proved-numeric-argument-fact modrm_xreg 0 < 32
+proved-numeric-argument-fact modrm_xreg 0 < 64
+proved-numeric-argument-fact modrm_xreg 0 < 8
+proved-numeric-argument-fact modrm_xreg 0 <= 16
+proved-numeric-argument-fact modrm_xreg 0 <= 32
+proved-numeric-argument-fact modrm_xreg 0 <= 64
+proved-numeric-argument-fact modrm_xreg 0 <= 8
+proved-numeric-argument-fact modrm_xreg 16 <= 31
+proved-numeric-argument-fact modrm_xreg 16 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact modrm_xreg 32 <= 63
+proved-numeric-argument-fact modrm_xreg 32 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact modrm_xreg 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact modrm_xreg 64 <= 127
+proved-numeric-argument-fact modrm_xreg 64 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact modrm_xreg 8 <= 15
+proved-numeric-argument-fact modrm_xreg 8 <= 31
+proved-numeric-argument-fact modrm_xreg 8 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact modrm_xrm (16 in {16, 32} & (8 in {8, 16} & 16 == (8 * 2)))
+proved-numeric-argument-fact modrm_xrm (8 in {8, 16, 32} & (16 in {16, 32, 64} & 16 > 8))
+proved-numeric-argument-fact modrm_xrm (8 in {8, 16, 32} & (32 in {16, 32, 64} & 32 > 8))
+proved-numeric-argument-fact modrm_xrm 0 < 16
+proved-numeric-argument-fact modrm_xrm 0 < 32
+proved-numeric-argument-fact modrm_xrm 0 < 64
+proved-numeric-argument-fact modrm_xrm 0 < 8
+proved-numeric-argument-fact modrm_xrm 0 <= 16
+proved-numeric-argument-fact modrm_xrm 0 <= 32
+proved-numeric-argument-fact modrm_xrm 0 <= 64
+proved-numeric-argument-fact modrm_xrm 0 <= 8
+proved-numeric-argument-fact modrm_xrm 16 <= 31
+proved-numeric-argument-fact modrm_xrm 16 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact modrm_xrm 32 <= 63
+proved-numeric-argument-fact modrm_xrm 32 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact modrm_xrm 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact modrm_xrm 64 <= 127
+proved-numeric-argument-fact modrm_xrm 64 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact modrm_xrm 8 <= 15
+proved-numeric-argument-fact modrm_xrm 8 <= 31
+proved-numeric-argument-fact modrm_xrm 8 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact mulhrs 16 <= 64
+proved-numeric-argument-fact mulhrs 16 == 16
+proved-numeric-argument-fact mulhrs 16 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact neq_int 'm <= 0
+proved-numeric-argument-fact neq_int 'm <= 31
+proved-numeric-argument-fact neq_int 'n <= 31
+proved-numeric-argument-fact neq_int (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact neq_int (8 in {8, 16, 32} & (16 in {16, 32, 64} & 16 > 8))
+proved-numeric-argument-fact neq_int (8 in {8, 16, 32} & (32 in {16, 32, 64} & 32 > 8))
+proved-numeric-argument-fact neq_int 0 < 16
+proved-numeric-argument-fact neq_int 0 < 32
+proved-numeric-argument-fact neq_int 0 < 8
+proved-numeric-argument-fact neq_int 0 <= 'm
+proved-numeric-argument-fact neq_int 0 <= 'n
+proved-numeric-argument-fact neq_int 0 <= 16
+proved-numeric-argument-fact neq_int 0 <= 32
+proved-numeric-argument-fact neq_int 0 <= 8
+proved-numeric-argument-fact neq_int 16 <= 31
+proved-numeric-argument-fact neq_int 32 <= 63
+proved-numeric-argument-fact neq_int 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact neq_int 8 <= 15
+proved-numeric-argument-fact neq_int 8 <= 31
+proved-numeric-argument-fact ones 'n <= 15
+proved-numeric-argument-fact ones 'n <= 31
+proved-numeric-argument-fact ones (0 < 'n & ('n < 16 & 16 <= 64))
+proved-numeric-argument-fact ones 0 < 'n
+proved-numeric-argument-fact ones 0 <= 'n
+proved-numeric-argument-fact packed_binop 'eb <= 127
+proved-numeric-argument-fact packed_binop 'eb <= 15
+proved-numeric-argument-fact packed_binop 'eb <= 31
+proved-numeric-argument-fact packed_binop 'eb <= 63
+proved-numeric-argument-fact packed_binop 'eb in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact packed_binop 0 < 'eb
+proved-numeric-argument-fact packed_binop 0 <= 'eb
+proved-numeric-argument-fact packed_binop 128 <= 128
+proved-numeric-argument-fact packed_binop 128 in {128, 256}
+proved-numeric-argument-fact packed_binop 256 <= 256
+proved-numeric-argument-fact packed_binop 256 in {128, 256}
+proved-numeric-argument-fact packed_elem_op 'eb <= 64
+proved-numeric-argument-fact packed_elem_op 'eb == 16
+proved-numeric-argument-fact packed_elem_op 'eb == 32
+proved-numeric-argument-fact packed_elem_op 'eb == 64
+proved-numeric-argument-fact packed_elem_op (0 <= 0 & 0 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 0 & 0 <= (div(128, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 0 & 0 <= (div(128, 64) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 0 & 0 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 0 & 0 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 0 & 0 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 0 & 0 <= (div(256, 64) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 0 & 0 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 1 & 1 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 1 & 1 <= (div(128, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 1 & 1 <= (div(128, 64) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 1 & 1 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 1 & 1 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 1 & 1 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 1 & 1 <= (div(256, 64) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 1 & 1 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 10 & 10 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 10 & 10 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 10 & 10 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 11 & 11 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 11 & 11 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 11 & 11 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 12 & 12 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 12 & 12 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 12 & 12 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 13 & 13 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 13 & 13 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 13 & 13 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 14 & 14 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 14 & 14 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 14 & 14 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 15 & 15 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 15 & 15 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 15 & 15 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 16 & 16 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 17 & 17 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 18 & 18 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 19 & 19 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 2 & 2 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 2 & 2 <= (div(128, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 2 & 2 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 2 & 2 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 2 & 2 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 2 & 2 <= (div(256, 64) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 2 & 2 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 20 & 20 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 21 & 21 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 22 & 22 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 23 & 23 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 24 & 24 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 25 & 25 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 26 & 26 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 27 & 27 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 28 & 28 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 29 & 29 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 3 & 3 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 3 & 3 <= (div(128, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 3 & 3 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 3 & 3 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 3 & 3 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 3 & 3 <= (div(256, 64) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 3 & 3 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 30 & 30 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 31 & 31 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 4 & 4 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 4 & 4 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 4 & 4 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 4 & 4 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 4 & 4 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 5 & 5 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 5 & 5 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 5 & 5 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 5 & 5 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 5 & 5 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 6 & 6 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 6 & 6 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 6 & 6 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 6 & 6 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 6 & 6 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 7 & 7 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 7 & 7 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 7 & 7 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 7 & 7 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 7 & 7 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 8 & 8 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 8 & 8 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 8 & 8 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 9 & 9 <= (div(128, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 9 & 9 <= (div(256, 16) - 1))
+proved-numeric-argument-fact packed_elem_op (0 <= 9 & 9 <= (div(256, 8) - 1))
+proved-numeric-argument-fact packed_elem_op (128 in {64, 128, 256, 512} & 16 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact packed_elem_op (128 in {64, 128, 256, 512} & 32 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact packed_elem_op (128 in {64, 128, 256, 512} & 64 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact packed_elem_op (128 in {64, 128, 256, 512} & 8 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact packed_elem_op (256 in {64, 128, 256, 512} & 16 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact packed_elem_op (256 in {64, 128, 256, 512} & 32 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact packed_elem_op (256 in {64, 128, 256, 512} & 64 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact packed_elem_op (256 in {64, 128, 256, 512} & 8 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact packed_elem_op 0 < 16
+proved-numeric-argument-fact packed_elem_op 0 < 32
+proved-numeric-argument-fact packed_elem_op 0 < 64
+proved-numeric-argument-fact packed_elem_op 0 < 8
+proved-numeric-argument-fact packed_elem_op 0 <= 16
+proved-numeric-argument-fact packed_elem_op 0 <= 32
+proved-numeric-argument-fact packed_elem_op 0 <= 64
+proved-numeric-argument-fact packed_elem_op 0 <= 8
+proved-numeric-argument-fact packed_elem_op 16 <= 31
+proved-numeric-argument-fact packed_elem_op 16 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact packed_elem_op 32 <= 63
+proved-numeric-argument-fact packed_elem_op 32 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact packed_elem_op 64 <= 127
+proved-numeric-argument-fact packed_elem_op 64 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact packed_elem_op 8 <= 15
+proved-numeric-argument-fact packed_elem_op 8 <= 31
+proved-numeric-argument-fact packed_elem_op 8 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact packed_narrow_elem 'dst <= 15
+proved-numeric-argument-fact packed_narrow_elem 'dst <= 31
+proved-numeric-argument-fact packed_narrow_elem (0 <= 0 & 0 <= (div(128, 128) - 1))
+proved-numeric-argument-fact packed_narrow_elem (0 <= 0 & 0 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_narrow_elem (0 <= 0 & 0 <= (div(256, 128) - 1))
+proved-numeric-argument-fact packed_narrow_elem (0 <= 1 & 1 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_narrow_elem (0 <= 1 & 1 <= (div(256, 128) - 1))
+proved-numeric-argument-fact packed_narrow_elem (0 <= 2 & 2 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_narrow_elem (0 <= 3 & 3 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_narrow_elem (0 <= 4 & 4 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_narrow_elem (0 <= 5 & 5 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_narrow_elem (0 <= 6 & 6 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_narrow_elem (0 <= 7 & 7 <= (div(128, 16) - 1))
+proved-numeric-argument-fact packed_narrow_elem (128 in {128, 256, 512} & (16 in {16, 32} & ('dst in {8, 16} & 16 == ('dst * 2))))
+proved-numeric-argument-fact packed_narrow_elem (16 in {16, 32} & ('dst in {8, 16} & 16 == ('dst * 2)))
+proved-numeric-argument-fact packed_narrow_elem (256 in {128, 256, 512} & (16 in {16, 32} & ('dst in {8, 16} & 16 == ('dst * 2))))
+proved-numeric-argument-fact packed_narrow_elem 0 < 'dst
+proved-numeric-argument-fact packed_narrow_elem 0 < 16
+proved-numeric-argument-fact packed_narrow_elem 0 <= 'dst
+proved-numeric-argument-fact packed_narrow_elem 0 <= 16
+proved-numeric-argument-fact packed_narrow_elem 16 <= 31
+proved-numeric-argument-fact packed_pack 'dst <= 15
+proved-numeric-argument-fact packed_pack 'dst <= 31
+proved-numeric-argument-fact packed_pack 'src <= 31
+proved-numeric-argument-fact packed_pack ('src in {16, 32} & ('dst in {8, 16} & 'src == ('dst * 2)))
+proved-numeric-argument-fact packed_pack 0 < 'dst
+proved-numeric-argument-fact packed_pack 0 < 'src
+proved-numeric-argument-fact packed_pack 0 <= 'dst
+proved-numeric-argument-fact packed_pack 0 <= 'src
+proved-numeric-argument-fact packed_pack 128 <= 128
+proved-numeric-argument-fact packed_pack 128 in {128, 256}
+proved-numeric-argument-fact packed_pack 256 <= 256
+proved-numeric-argument-fact packed_pack 256 in {128, 256}
+proved-numeric-argument-fact packed_unary_elem 'eb == 32
+proved-numeric-argument-fact packed_unary_elem (0 <= 0 & 0 <= (div(128, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 0 & 0 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 1 & 1 <= (div(128, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 1 & 1 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 2 & 2 <= (div(128, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 2 & 2 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 3 & 3 <= (div(128, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 3 & 3 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 4 & 4 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 5 & 5 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 6 & 6 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (0 <= 7 & 7 <= (div(256, 32) - 1))
+proved-numeric-argument-fact packed_unary_elem (128 in {64, 128, 256, 512} & 32 in {8, 16, 32, 64})
+proved-numeric-argument-fact packed_unary_elem (256 in {64, 128, 256, 512} & 32 in {8, 16, 32, 64})
+proved-numeric-argument-fact packed_unary_elem 0 < 32
+proved-numeric-argument-fact packed_unary_elem 0 <= 32
+proved-numeric-argument-fact packed_unary_elem 32 <= 63
+proved-numeric-argument-fact packed_unary_elem 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact packed_uniform_shift 'eb <= 127
+proved-numeric-argument-fact packed_uniform_shift 'eb <= 255
+proved-numeric-argument-fact packed_uniform_shift 'eb <= 31
+proved-numeric-argument-fact packed_uniform_shift 'eb <= 63
+proved-numeric-argument-fact packed_uniform_shift 'ex26696# <= 255
+proved-numeric-argument-fact packed_uniform_shift (0 <= 'ex26696# & 'ex26696# <= 255)
+proved-numeric-argument-fact packed_uniform_shift 0 < 'eb
+proved-numeric-argument-fact packed_uniform_shift 0 <= 'eb
+proved-numeric-argument-fact packed_uniform_shift 0 <= 'ex26696#
+proved-numeric-argument-fact packed_uniform_shift 128 <= 128
+proved-numeric-argument-fact packed_uniform_shift 128 in {128, 256}
+proved-numeric-argument-fact packed_uniform_shift 256 <= 256
+proved-numeric-argument-fact packed_uniform_shift 256 in {128, 256}
+proved-numeric-argument-fact packed_unop 'eb <= 63
+proved-numeric-argument-fact packed_unop 'eb in {8, 16, 32, 64}
+proved-numeric-argument-fact packed_unop 0 < 'eb
+proved-numeric-argument-fact packed_unop 0 <= 'eb
+proved-numeric-argument-fact packed_unop 128 <= 128
+proved-numeric-argument-fact packed_unop 128 in {128, 256}
+proved-numeric-argument-fact packed_unop 256 <= 256
+proved-numeric-argument-fact packed_unop 256 in {128, 256}
+proved-numeric-argument-fact packed_widen_unop 'dst <= 31
+proved-numeric-argument-fact packed_widen_unop 'dst <= 63
+proved-numeric-argument-fact packed_widen_unop 'src <= 15
+proved-numeric-argument-fact packed_widen_unop 'src <= 31
+proved-numeric-argument-fact packed_widen_unop 'vl <= 128
+proved-numeric-argument-fact packed_widen_unop 'vl <= 255
+proved-numeric-argument-fact packed_widen_unop 'vl <= 256
+proved-numeric-argument-fact packed_widen_unop ('src in {8, 16, 32} & ('dst in {16, 32, 64} & 'dst > 'src))
+proved-numeric-argument-fact packed_widen_unop ('vl == 256 | 'vl == 128)
+proved-numeric-argument-fact packed_widen_unop 0 < 'dst
+proved-numeric-argument-fact packed_widen_unop 0 < 'src
+proved-numeric-argument-fact packed_widen_unop 0 < 'vl
+proved-numeric-argument-fact packed_widen_unop 0 <= 'dst
+proved-numeric-argument-fact packed_widen_unop 0 <= 'src
+proved-numeric-argument-fact packed_widen_unop 0 <= 'vl
+proved-numeric-argument-fact packed_widen_unop 128 <= 'vl
+proved-numeric-argument-fact packed_widen_unop 256 <= 'vl
+proved-numeric-argument-fact pmaddubsw_pair 16 <= 64
+proved-numeric-argument-fact pmaddubsw_pair 16 == 16
+proved-numeric-argument-fact pmaddubsw_pair 16 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact pmaddwd_pair 32 <= 64
+proved-numeric-argument-fact pmaddwd_pair 32 == 32
+proved-numeric-argument-fact pmaddwd_pair 32 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact sail_ones 'n >= 0
+proved-numeric-argument-fact sail_ones 0 < 'n
+proved-numeric-argument-fact sail_ones 0 <= 'n
+proved-numeric-argument-fact sat_su 'dst <= 15
+proved-numeric-argument-fact sat_su 'dst <= 31
+proved-numeric-argument-fact sat_su (128 in {128, 256, 512} & (16 in {16, 32} & ('dst in {8, 16} & 16 == ('dst * 2))))
+proved-numeric-argument-fact sat_su (16 in {16, 32, 64} & ('dst in {8, 16, 32} & 16 > 'dst))
+proved-numeric-argument-fact sat_su (16 in {16, 32} & ('dst in {8, 16} & 16 == ('dst * 2)))
+proved-numeric-argument-fact sat_su (256 in {128, 256, 512} & (16 in {16, 32} & ('dst in {8, 16} & 16 == ('dst * 2))))
+proved-numeric-argument-fact sat_su 0 < 'dst
+proved-numeric-argument-fact sat_su 0 <= 'dst
+proved-numeric-argument-fact sign_extend 'm <= 127
+proved-numeric-argument-fact sign_extend 'm <= 255
+proved-numeric-argument-fact sign_extend 'm <= 31
+proved-numeric-argument-fact sign_extend 'm <= 63
+proved-numeric-argument-fact sign_extend 'm > 0
+proved-numeric-argument-fact sign_extend (0 < 'm & 'm <= 64)
+proved-numeric-argument-fact sign_extend (0 < 16 & 16 <= 64)
+proved-numeric-argument-fact sign_extend (0 < 32 & 32 <= 64)
+proved-numeric-argument-fact sign_extend (0 <= 0 & 0 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 0 & 0 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 1 & 1 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 1 & 1 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 10 & 10 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 11 & 11 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 12 & 12 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 13 & 13 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 14 & 14 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 15 & 15 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 2 & 2 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 2 & 2 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 3 & 3 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 3 & 3 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 4 & 4 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 4 & 4 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 5 & 5 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 5 & 5 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 6 & 6 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 6 & 6 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 7 & 7 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 7 & 7 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 8 & 8 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend (0 <= 9 & 9 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact sign_extend 0 < 'm
+proved-numeric-argument-fact sign_extend 0 <= 'm
+proved-numeric-argument-fact to_bits_truncate 'l <= 127
+proved-numeric-argument-fact to_bits_truncate 'l <= 31
+proved-numeric-argument-fact to_bits_truncate 'l <= 63
+proved-numeric-argument-fact to_bits_truncate 'l <= 64
+proved-numeric-argument-fact to_bits_truncate 'l == 16
+proved-numeric-argument-fact to_bits_truncate 'l == 32
+proved-numeric-argument-fact to_bits_truncate 'l == 64
+proved-numeric-argument-fact to_bits_truncate 'l in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact to_bits_truncate 0 < 'l
+proved-numeric-argument-fact to_bits_truncate 0 <= 'l
+proved-numeric-argument-fact to_bits_truncate 16 in {8, 16, 32, 64}
+proved-numeric-argument-fact velem_nat 'eb <= 127
+proved-numeric-argument-fact velem_nat 'eb <= 15
+proved-numeric-argument-fact velem_nat 'eb <= 255
+proved-numeric-argument-fact velem_nat 'eb <= 31
+proved-numeric-argument-fact velem_nat 'eb <= 63
+proved-numeric-argument-fact velem_nat 'eb in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact velem_nat 'eb in {8, 16, 32, 64}
+proved-numeric-argument-fact velem_nat 'ex26695# <= 0
+proved-numeric-argument-fact velem_nat 'ex26695# <= 1
+proved-numeric-argument-fact velem_nat 'ex26695# <= 15
+proved-numeric-argument-fact velem_nat 'ex26695# <= 3
+proved-numeric-argument-fact velem_nat 'ex26695# <= 31
+proved-numeric-argument-fact velem_nat 'ex26695# <= 7
+proved-numeric-argument-fact velem_nat (0 <= 'ex26695# & 'ex26695# <= (div(128, 'eb) - 1))
+proved-numeric-argument-fact velem_nat (0 <= 'ex26695# & 'ex26695# <= (div(256, 'eb) - 1))
+proved-numeric-argument-fact velem_nat (128 in {64, 128, 256, 512} & 'eb in {16, 32, 64, 128})
+proved-numeric-argument-fact velem_nat (128 in {64, 128, 256, 512} & 'eb in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact velem_nat (128 in {64, 128, 256, 512} & 'eb in {8, 16, 32, 64})
+proved-numeric-argument-fact velem_nat (256 in {64, 128, 256, 512} & 'eb in {16, 32, 64, 128})
+proved-numeric-argument-fact velem_nat (256 in {64, 128, 256, 512} & 'eb in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact velem_nat (256 in {64, 128, 256, 512} & 'eb in {8, 16, 32, 64})
+proved-numeric-argument-fact velem_nat 0 < 'eb
+proved-numeric-argument-fact velem_nat 0 < 'ex26695#
+proved-numeric-argument-fact velem_nat 0 <= 'eb
+proved-numeric-argument-fact velem_nat 0 <= 'ex26695#
+proved-numeric-argument-fact velem_nat 0 <= 128
+proved-numeric-argument-fact velem_nat 0 <= 16
+proved-numeric-argument-fact velem_nat 0 <= 32
+proved-numeric-argument-fact velem_nat 0 <= 64
+proved-numeric-argument-fact velem_nat 128 <= 128
+proved-numeric-argument-fact velem_nat 16 <= 16
+proved-numeric-argument-fact velem_nat 32 <= 32
+proved-numeric-argument-fact velem_nat 64 <= 64
+proved-numeric-argument-fact vex_read_narrow_src 'n <= 127
+proved-numeric-argument-fact vex_read_narrow_src 'n <= 255
+proved-numeric-argument-fact vex_read_narrow_src 'n <= 63
+proved-numeric-argument-fact vex_read_narrow_src (128 == 256 | 128 == 128)
+proved-numeric-argument-fact vex_read_narrow_src (256 == 256 | 256 == 128)
+proved-numeric-argument-fact vex_read_narrow_src (8 in {8, 16, 32} & (16 in {16, 32, 64} & 16 > 8))
+proved-numeric-argument-fact vex_read_narrow_src (8 in {8, 16, 32} & (32 in {16, 32, 64} & 32 > 8))
+proved-numeric-argument-fact vex_read_narrow_src 0 < 'n
+proved-numeric-argument-fact vex_read_narrow_src 0 < 16
+proved-numeric-argument-fact vex_read_narrow_src 0 < 32
+proved-numeric-argument-fact vex_read_narrow_src 0 < 8
+proved-numeric-argument-fact vex_read_narrow_src 0 <= 'n
+proved-numeric-argument-fact vex_read_narrow_src 0 <= 16
+proved-numeric-argument-fact vex_read_narrow_src 0 <= 32
+proved-numeric-argument-fact vex_read_narrow_src 0 <= 8
+proved-numeric-argument-fact vex_read_narrow_src 128 <= 128
+proved-numeric-argument-fact vex_read_narrow_src 16 <= 31
+proved-numeric-argument-fact vex_read_narrow_src 256 <= 256
+proved-numeric-argument-fact vex_read_narrow_src 32 <= 63
+proved-numeric-argument-fact vex_read_narrow_src 8 <= 15
+proved-numeric-argument-fact vex_read_narrow_src 8 <= 31
+proved-numeric-argument-fact vex_vl (16 in {16, 32} & (8 in {8, 16} & 16 == (8 * 2)))
+proved-numeric-argument-fact vex_vl 0 < 16
+proved-numeric-argument-fact vex_vl 0 < 32
+proved-numeric-argument-fact vex_vl 0 < 64
+proved-numeric-argument-fact vex_vl 0 < 8
+proved-numeric-argument-fact vex_vl 0 <= 16
+proved-numeric-argument-fact vex_vl 0 <= 32
+proved-numeric-argument-fact vex_vl 0 <= 64
+proved-numeric-argument-fact vex_vl 0 <= 8
+proved-numeric-argument-fact vex_vl 16 <= 31
+proved-numeric-argument-fact vex_vl 16 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact vex_vl 32 <= 63
+proved-numeric-argument-fact vex_vl 32 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact vex_vl 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact vex_vl 64 <= 127
+proved-numeric-argument-fact vex_vl 64 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact vex_vl 8 <= 15
+proved-numeric-argument-fact vex_vl 8 <= 31
+proved-numeric-argument-fact vex_vl 8 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact zero_extend 'm <= 127
+proved-numeric-argument-fact zero_extend 'm <= 255
+proved-numeric-argument-fact zero_extend 'm <= 31
+proved-numeric-argument-fact zero_extend 'm <= 63
+proved-numeric-argument-fact zero_extend (0 <= 0 & 0 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 0 & 0 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 1 & 1 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 1 & 1 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 10 & 10 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 11 & 11 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 12 & 12 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 13 & 13 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 14 & 14 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 15 & 15 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 2 & 2 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 2 & 2 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 3 & 3 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 3 & 3 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 4 & 4 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 4 & 4 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 5 & 5 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 5 & 5 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 6 & 6 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 6 & 6 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 7 & 7 <= (div(128, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 7 & 7 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 8 & 8 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend (0 <= 9 & 9 <= (div(256, 'm) - 1))
+proved-numeric-argument-fact zero_extend 0 < 'm
+proved-numeric-argument-fact zero_extend 0 <= 'm
+proved-numeric-argument-fact zeros 'n <= 127
+proved-numeric-argument-fact zeros 'n <= 255
+proved-numeric-argument-fact zeros 'n <= 31
+proved-numeric-argument-fact zeros 'n <= 63
+proved-numeric-argument-fact zeros 'n <= 64
+proved-numeric-argument-fact zeros 'n == 32
+proved-numeric-argument-fact zeros 'n == 64
+proved-numeric-argument-fact zeros 'n in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact zeros ('n in {128, 256, 512} & (16 in {16, 32} & (8 in {8, 16} & 16 == (8 * 2))))
+proved-numeric-argument-fact zeros ('n in {64, 128, 256, 512} & 128 in {16, 32, 64, 128})
+proved-numeric-argument-fact zeros ('n in {64, 128, 256, 512} & 16 in {16, 32, 64, 128})
+proved-numeric-argument-fact zeros ('n in {64, 128, 256, 512} & 16 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact zeros ('n in {64, 128, 256, 512} & 32 in {16, 32, 64, 128})
+proved-numeric-argument-fact zeros ('n in {64, 128, 256, 512} & 32 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact zeros ('n in {64, 128, 256, 512} & 32 in {8, 16, 32, 64})
+proved-numeric-argument-fact zeros ('n in {64, 128, 256, 512} & 64 in {16, 32, 64, 128})
+proved-numeric-argument-fact zeros ('n in {64, 128, 256, 512} & 64 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact zeros ('n in {64, 128, 256, 512} & 8 in {8, 16, 32, 64, 128})
+proved-numeric-argument-fact zeros (16 in {16, 32} & (8 in {8, 16} & 16 == (8 * 2)))
+proved-numeric-argument-fact zeros 0 < 'n
+proved-numeric-argument-fact zeros 0 < 16
+proved-numeric-argument-fact zeros 0 < 32
+proved-numeric-argument-fact zeros 0 < 64
+proved-numeric-argument-fact zeros 0 < 8
+proved-numeric-argument-fact zeros 0 <= 'n
+proved-numeric-argument-fact zeros 0 <= 128
+proved-numeric-argument-fact zeros 0 <= 16
+proved-numeric-argument-fact zeros 0 <= 32
+proved-numeric-argument-fact zeros 0 <= 64
+proved-numeric-argument-fact zeros 0 <= 8
+proved-numeric-argument-fact zeros 128 <= 128
+proved-numeric-argument-fact zeros 16 <= 16
+proved-numeric-argument-fact zeros 16 <= 31
+proved-numeric-argument-fact zeros 16 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact zeros 32 <= 32
+proved-numeric-argument-fact zeros 32 <= 63
+proved-numeric-argument-fact zeros 32 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact zeros 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact zeros 64 <= 127
+proved-numeric-argument-fact zeros 64 <= 64
+proved-numeric-argument-fact zeros 64 in {8, 16, 32, 64, 128}
+proved-numeric-argument-fact zeros 8 <= 15
+proved-numeric-argument-fact zeros 8 <= 31
+proved-numeric-argument-fact zeros 8 in {8, 16, 32, 64, 128}
+unrolled-static-loop i 0 0 1 inc
+unrolled-static-loop i 0 1 1 inc
+unrolled-static-loop i 0 15 1 inc
+unrolled-static-loop i 0 3 1 inc
+unrolled-static-loop i 0 31 1 inc
+unrolled-static-loop i 0 7 1 inc
+unrolled-static-loop j 0 0 1 inc
+unrolled-static-loop j 0 1 1 inc
+statically-selected-branch insn_modrm.sail:342:6-342:33 else
+statically-selected-branch insn_modrm.sail:349:6-349:18 then
+statically-selected-branch insn_vex_arith.sail:36:6-36:23 else
+statically-selected-branch insn_vex_arith.sail:40:15-40:24 else
+statically-selected-branch insn_vex_arith.sail:40:15-40:24 then
+statically-selected-branch insn_vex_arith.sail:61:6-61:23 else
+statically-selected-branch insn_vex_arith.sail:636:8-636:39 else
+statically-selected-branch insn_vex_int.sail:153:8-153:19 else
+statically-selected-branch operands.sail:387:6-387:26 then
+state-computation-root X86_VPABSD128_RR
+state-computation-root X86_VPABSD256_RR
+state-computation-root X86_VPACKUSWB128_RRR
+state-computation-root X86_VPACKUSWB256_RRR
+state-computation-root X86_VPADDB128_RRR
+state-computation-root X86_VPADDB256_RRR
+state-computation-root X86_VPADDD128_RRR
+state-computation-root X86_VPADDD256_RRR
+state-computation-root X86_VPADDQ128_RRR
+state-computation-root X86_VPADDQ256_RRR
+state-computation-root X86_VPADDW128_RRR
+state-computation-root X86_VPADDW256_RRR
+state-computation-root X86_VPAND128_RRR
+state-computation-root X86_VPAND256_RRR
+state-computation-root X86_VPANDN128_RRR
+state-computation-root X86_VPANDN256_RRR
+state-computation-root X86_VPCMPGTD128_RRR
+state-computation-root X86_VPCMPGTD256_RRR
+state-computation-root X86_VPCMPGTW128_RRR
+state-computation-root X86_VPCMPGTW256_RRR
+state-computation-root X86_VPMADDUBSW128_RRR
+state-computation-root X86_VPMADDUBSW256_RRR
+state-computation-root X86_VPMADDWD128_RRR
+state-computation-root X86_VPMADDWD256_RRR
+state-computation-root X86_VPMOVSXBD128_RR
+state-computation-root X86_VPMOVSXBD256_RR
+state-computation-root X86_VPMOVZXBD128_RR
+state-computation-root X86_VPMOVZXBD256_RR
+state-computation-root X86_VPMOVZXBW128_RR
+state-computation-root X86_VPMOVZXBW256_RR
+state-computation-root X86_VPMULDQ128_RRR
+state-computation-root X86_VPMULDQ256_RRR
+state-computation-root X86_VPMULHRSW128_RRR
+state-computation-root X86_VPMULHRSW256_RRR
+state-computation-root X86_VPMULHUW128_RRR
+state-computation-root X86_VPMULHUW256_RRR
+state-computation-root X86_VPMULHW128_RRR
+state-computation-root X86_VPMULHW256_RRR
+state-computation-root X86_VPMULLD128_RRR
+state-computation-root X86_VPMULLD256_RRR
+state-computation-root X86_VPMULLW128_RRR
+state-computation-root X86_VPMULLW256_RRR
+state-computation-root X86_VPOR128_RRR
+state-computation-root X86_VPOR256_RRR
+state-computation-root X86_VPSLLD128_RRI
+state-computation-root X86_VPSLLD256_RRI
+state-computation-root X86_VPSLLQ128_RRI
+state-computation-root X86_VPSLLQ256_RRI
+state-computation-root X86_VPSLLVD128_RRR
+state-computation-root X86_VPSLLVD256_RRR
+state-computation-root X86_VPSLLW128_RRI
+state-computation-root X86_VPSLLW256_RRI
+state-computation-root X86_VPSRAD128_RRI
+state-computation-root X86_VPSRAD256_RRI
+state-computation-root X86_VPSRAW128_RRI
+state-computation-root X86_VPSRAW256_RRI
+state-computation-root X86_VPSRLD128_RRI
+state-computation-root X86_VPSRLD256_RRI
+state-computation-root X86_VPSRLDQ128_RRI
+state-computation-root X86_VPSRLDQ256_RRI
+state-computation-root X86_VPSRLQ128_RRI
+state-computation-root X86_VPSRLQ256_RRI
+state-computation-root X86_VPSRLVD128_RRR
+state-computation-root X86_VPSRLVD256_RRR
+state-computation-root X86_VPSRLVQ128_RRR
+state-computation-root X86_VPSRLVQ256_RRR
+state-computation-root X86_VPSRLW128_RRI
+state-computation-root X86_VPSRLW256_RRI
+state-computation-root X86_VPSUBB128_RRR
+state-computation-root X86_VPSUBB256_RRR
+state-computation-root X86_VPSUBD128_RRR
+state-computation-root X86_VPSUBD256_RRR
+state-computation-root X86_VPSUBQ128_RRR
+state-computation-root X86_VPSUBQ256_RRR
+state-computation-root X86_VPSUBW128_RRR
+state-computation-root X86_VPSUBW256_RRR
+state-computation-root X86_VPTEST128_RR
+state-computation-root X86_VPTEST256_RR
+state-computation-root X86_VPXOR128_RRR
+state-computation-root X86_VPXOR256_RRR
+state-computation

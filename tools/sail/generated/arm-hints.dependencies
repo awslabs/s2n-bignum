@@ -1,0 +1,28 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function neq_bits|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('n), bitvector('n))|{('ex861974# : Bool), true. bool(not('ex861974#))}| => sail_hl_shared_arm_2dhints_neq_5fbits_5f0
+shared-function SetBTypeCompatible|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bool('x)|unit| => sail_hl_shared_arm_2dhints_SetBTypeCompatible_5f1
+shared-function SetBTypeNext|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(2)|unit| => sail_hl_shared_arm_2dhints_SetBTypeNext_5f2
+root arm_BTI_C
+root arm_NOP
+inlined BTypeCompatible_BTI
+inlined SetBTypeCompatible
+inlined SetBTypeNext
+inlined decode_bti_aarch64_instrs_system_hints
+inlined decode_nop_aarch64_instrs_system_hints
+inlined execute_aarch64_instrs_system_hints
+inlined neq_bits
+primitive-contract Arm-BType-write-exclusion
+primitive-contract Arm-explicit-PSTATE-config-projection
+primitive-contract bitvector_concat
+primitive-contract eq_bits
+primitive-contract not_bool
+primitive-contract subrange_bits
+unobserved-undefined-local op
+state-computation-root arm_BTI_C
+state-computation-root arm_NOP
+state-computation

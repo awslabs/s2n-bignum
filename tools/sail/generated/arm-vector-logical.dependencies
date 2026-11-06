@@ -1,0 +1,126 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function execute_aarch64_instrs_vector_logical|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('datasize), bitvector('datasize), ImmediateOp, int('rd))|unit|datasize=128 => sail_hl_shared_arm_2dvector_2dlogical_execute_5faarch64_5finstrs_5fvector_5flogical_5f0
+shared-function execute_aarch64_instrs_vector_logical|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('datasize), bitvector('datasize), ImmediateOp, int('rd))|unit|datasize=64 => sail_hl_shared_arm_2dvector_2dlogical_execute_5faarch64_5finstrs_5fvector_5flogical_5f1
+shared-function Zeros|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|bitvector('n)| => sail_hl_shared_arm_2dvector_2dlogical_Zeros_5f2
+shared-function sail_ones|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|bitvector('n)| => sail_hl_shared_arm_2dvector_2dlogical_sail_5fones_5f3
+shared-function Ones|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|bitvector('n)| => sail_hl_shared_arm_2dvector_2dlogical_Ones_5f4
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), VBitOp)|unit|datasize=128 => sail_hl_shared_arm_2dvector_2dlogical_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5flogical_5fbsl_5feor_5f5
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), VBitOp)|unit|datasize=64 => sail_hl_shared_arm_2dvector_2dlogical_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5flogical_5fbsl_5feor_5f6
+shared-function arm_ORR_VEC128_REG|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(5), bitvector(5), bitvector(5))|unit| => sail_hl_shared_arm_2dvector_2dlogical_arm_5fORR_5fVEC128_5fREG_5f7
+shared-function arm_ORR_VEC64_REG|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(5), bitvector(5), bitvector(5))|unit| => sail_hl_shared_arm_2dvector_2dlogical_arm_5fORR_5fVEC64_5fREG_5f8
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), bool('invert), int('m), int('n), LogicalOp)|unit|datasize=128: HOL Light: read of an undefined local before assignment: result
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), bool('invert), int('m), int('n), LogicalOp)|unit|datasize=64: HOL Light: read of an undefined local before assignment: result
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), bool('invert), int('m), int('n), LogicalOp)|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), VBitOp)|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_logical|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('datasize), bitvector('datasize), ImmediateOp, int('rd))|unit|: HOL Light: uninstantiated numeric type variable 'datasize
+root arm_AND_VEC128_REG
+root arm_AND_VEC64_REG
+root arm_BIC_VEC128_IMM
+root arm_BIC_VEC128_REG
+root arm_BIC_VEC64_IMM
+root arm_BIC_VEC64_REG
+root arm_BIF128_REG
+root arm_BIF64_REG
+root arm_BIT128_REG
+root arm_BIT64_REG
+root arm_EOR_VEC128_REG
+root arm_EOR_VEC64_REG
+root arm_MOV_VEC128_REG
+root arm_MOV_VEC64_REG
+root arm_ORR_VEC128_IMM
+root arm_ORR_VEC128_REG
+root arm_ORR_VEC64_IMM
+root arm_ORR_VEC64_REG
+inlined Ones
+inlined Zeros
+inlined arm_ORR_VEC128_REG
+inlined arm_ORR_VEC64_REG
+inlined execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr
+inlined execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor
+inlined execute_aarch64_instrs_vector_logical
+inlined sail_ones
+primitive-contract CheckFPAdvSIMDEnabled64
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract and_vec
+primitive-contract not_vec
+primitive-contract or_vec
+primitive-contract sail_zeros
+primitive-contract unsigned
+primitive-contract xor_vec
+proved-numeric-argument-fact Ones 'n <= 127
+proved-numeric-argument-fact Ones 'n <= 255
+proved-numeric-argument-fact Ones 0 < 'n
+proved-numeric-argument-fact Ones 0 <= 'n
+proved-numeric-argument-fact Zeros 'n <= 127
+proved-numeric-argument-fact Zeros 'n <= 255
+proved-numeric-argument-fact Zeros 0 < 'n
+proved-numeric-argument-fact Zeros 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_and_orr 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_logical_bsl_eor 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 'rd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical (0 <= 'rd & 'rd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_logical 0 <= 'rd
+proved-numeric-argument-fact sail_ones 'n >= 0
+proved-numeric-argument-fact sail_ones 0 < 'n
+proved-numeric-argument-fact sail_ones 0 <= 'n
+successful-check Arm-AdvSIMD-enabled-access
+statically-selected-branch src/instrs64.sail:1638:8-1638:14 else
+statically-selected-branch src/instrs64.sail:1638:8-1638:14 then
+unobserved-undefined-local operand
+unobserved-undefined-local operand1
+unobserved-undefined-local operand2
+unobserved-undefined-local operand3
+unobserved-undefined-local result
+state-computation-root arm_AND_VEC128_REG
+state-computation-root arm_AND_VEC64_REG
+state-computation-root arm_BIC_VEC128_IMM
+state-computation-root arm_BIC_VEC128_REG
+state-computation-root arm_BIC_VEC64_IMM
+state-computation-root arm_BIC_VEC64_REG
+state-computation-root arm_BIF128_REG
+state-computation-root arm_BIF64_REG
+state-computation-root arm_BIT128_REG
+state-computation-root arm_BIT64_REG
+state-computation-root arm_EOR_VEC128_REG
+state-computation-root arm_EOR_VEC64_REG
+state-computation-root arm_MOV_VEC128_REG
+state-computation-root arm_MOV_VEC64_REG
+state-computation-root arm_ORR_VEC128_IMM
+state-computation-root arm_ORR_VEC128_REG
+state-computation-root arm_ORR_VEC64_IMM
+state-computation-root arm_ORR_VEC64_REG
+state-computation

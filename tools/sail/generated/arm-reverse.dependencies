@@ -1,0 +1,122 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function __id|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|int('n)| => sail_hl_shared_arm_2dreverse__5f_5fid_5f0
+root arm_REV32
+root arm_REV64
+inlined __id
+inlined execute_aarch64_instrs_integer_arithmetic_rev
+primitive-contract Sail-undefined-existential
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract add_atom
+primitive-contract and_bool
+primitive-contract ediv_nat
+primitive-contract lt_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract unsigned
+statically-proved-assertion and_bool(lteq_int(0, __id(index)), lt_int(add_atom(__id(index), 7), __id(datasize))) at src/instrs64.sail:41066:38-41066:74
+statically-proved-assertion and_bool(lteq_int(0, __id(rev_index)), lt_int(add_atom(__id(rev_index), 7), __id(datasize))) at src/instrs64.sail:41065:38-41065:82
+proved-numeric-argument-fact __id 'n <= 0
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 15
+proved-numeric-argument-fact __id 'n <= 16
+proved-numeric-argument-fact __id 'n <= 24
+proved-numeric-argument-fact __id 'n <= 31
+proved-numeric-argument-fact __id 'n <= 32
+proved-numeric-argument-fact __id 'n <= 40
+proved-numeric-argument-fact __id 'n <= 48
+proved-numeric-argument-fact __id 'n <= 56
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id 'n <= 8
+proved-numeric-argument-fact __id (0 <= 0 & (0 + 7) < 'n)
+proved-numeric-argument-fact __id (0 <= 0 & (0 + 7) < 32)
+proved-numeric-argument-fact __id (0 <= 0 & (0 + 7) < 64)
+proved-numeric-argument-fact __id (0 <= 0 & 0 <= (1 - 1))
+proved-numeric-argument-fact __id (0 <= 0 & 0 <= (4 - 1))
+proved-numeric-argument-fact __id (0 <= 0 & 0 <= (8 - 1))
+proved-numeric-argument-fact __id (0 <= 1 & 1 <= (4 - 1))
+proved-numeric-argument-fact __id (0 <= 1 & 1 <= (8 - 1))
+proved-numeric-argument-fact __id (0 <= 16 & (16 + 7) < 'n)
+proved-numeric-argument-fact __id (0 <= 16 & (16 + 7) < 32)
+proved-numeric-argument-fact __id (0 <= 16 & (16 + 7) < 64)
+proved-numeric-argument-fact __id (0 <= 2 & 2 <= (4 - 1))
+proved-numeric-argument-fact __id (0 <= 2 & 2 <= (8 - 1))
+proved-numeric-argument-fact __id (0 <= 24 & (24 + 7) < 'n)
+proved-numeric-argument-fact __id (0 <= 24 & (24 + 7) < 32)
+proved-numeric-argument-fact __id (0 <= 24 & (24 + 7) < 64)
+proved-numeric-argument-fact __id (0 <= 3 & 3 <= (4 - 1))
+proved-numeric-argument-fact __id (0 <= 3 & 3 <= (8 - 1))
+proved-numeric-argument-fact __id (0 <= 32 & (32 + 7) < 'n)
+proved-numeric-argument-fact __id (0 <= 32 & (32 + 7) < 64)
+proved-numeric-argument-fact __id (0 <= 4 & 4 <= (8 - 1))
+proved-numeric-argument-fact __id (0 <= 40 & (40 + 7) < 'n)
+proved-numeric-argument-fact __id (0 <= 40 & (40 + 7) < 64)
+proved-numeric-argument-fact __id (0 <= 48 & (48 + 7) < 'n)
+proved-numeric-argument-fact __id (0 <= 48 & (48 + 7) < 64)
+proved-numeric-argument-fact __id (0 <= 5 & 5 <= (8 - 1))
+proved-numeric-argument-fact __id (0 <= 56 & (56 + 7) < 'n)
+proved-numeric-argument-fact __id (0 <= 56 & (56 + 7) < 64)
+proved-numeric-argument-fact __id (0 <= 6 & 6 <= (8 - 1))
+proved-numeric-argument-fact __id (0 <= 7 & 7 <= (8 - 1))
+proved-numeric-argument-fact __id (0 <= 8 & (8 + 7) < 'n)
+proved-numeric-argument-fact __id (0 <= 8 & (8 + 7) < 32)
+proved-numeric-argument-fact __id (0 <= 8 & (8 + 7) < 64)
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 < 32
+proved-numeric-argument-fact __id 0 < 64
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 0 <= 0
+proved-numeric-argument-fact __id 0 <= 32
+proved-numeric-argument-fact __id 0 <= 64
+proved-numeric-argument-fact __id 1 <= 1
+proved-numeric-argument-fact __id 1 == div('n, 32)
+proved-numeric-argument-fact __id 1 == div('n, 64)
+proved-numeric-argument-fact __id 1 == div(32, 32)
+proved-numeric-argument-fact __id 1 == div(64, 64)
+proved-numeric-argument-fact __id 16 <= 'n
+proved-numeric-argument-fact __id 16 <= 16
+proved-numeric-argument-fact __id 24 <= 'n
+proved-numeric-argument-fact __id 24 <= 24
+proved-numeric-argument-fact __id 32 <= 'n
+proved-numeric-argument-fact __id 32 <= 32
+proved-numeric-argument-fact __id 32 <= 63
+proved-numeric-argument-fact __id 4 <= 4
+proved-numeric-argument-fact __id 4 == div(32, 8)
+proved-numeric-argument-fact __id 40 <= 'n
+proved-numeric-argument-fact __id 40 <= 40
+proved-numeric-argument-fact __id 48 <= 'n
+proved-numeric-argument-fact __id 48 <= 48
+proved-numeric-argument-fact __id 56 <= 'n
+proved-numeric-argument-fact __id 56 <= 56
+proved-numeric-argument-fact __id 64 <= 127
+proved-numeric-argument-fact __id 8 <= 'n
+proved-numeric-argument-fact __id 8 <= 8
+proved-numeric-argument-fact __id 8 == div(64, 8)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 'container_size <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 'container_size <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 0 < 'container_size
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 0 <= 'container_size
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_rev 0 <= 'n
+unrolled-static-loop c 0 0 1 inc
+unrolled-static-loop e 0 3 1 inc
+unrolled-static-loop e 0 7 1 inc
+unobserved-undefined-local result
+state-computation-root arm_REV32
+state-computation-root arm_REV64
+state-computation

@@ -1,0 +1,327 @@
+SAIL_HL_X86_SHL8_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSHL8_5fRI d count s t <=>
+       x86_SHL (GPR8 (Gpr d Lower_8)) (val count MOD 32) s t
+
+SAIL_HL_X86_SHL8_LEGACY_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSHL8_5fLEGACY_5fRI d count s t <=>
+       x86_SHL
+       (if 4 <= val d
+        then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       (val count MOD 32)
+       s
+       t
+
+SAIL_HL_X86_SHL16_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSHL16_5fRI d count s t <=>
+       x86_SHL (GPR16 (Gpr d Lower_16)) (val count MOD 32) s t
+
+SAIL_HL_X86_SHL32_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSHL32_5fRI d count s t <=>
+       x86_SHL (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_SHL64_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSHL64_5fRI d count s t <=>
+       x86_SHL (registers :> element d) (val count MOD 64) s t
+
+SAIL_HL_X86_SHR8_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSHR8_5fRI d count s t <=>
+       x86_SHR (GPR8 (Gpr d Lower_8)) (val count MOD 32) s t
+
+SAIL_HL_X86_SHR8_LEGACY_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSHR8_5fLEGACY_5fRI d count s t <=>
+       x86_SHR
+       (if 4 <= val d
+        then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       (val count MOD 32)
+       s
+       t
+
+SAIL_HL_X86_SHR16_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSHR16_5fRI d count s t <=>
+       x86_SHR (GPR16 (Gpr d Lower_16)) (val count MOD 32) s t
+
+SAIL_HL_X86_SHR32_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSHR32_5fRI d count s t <=>
+       x86_SHR (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_SHR64_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSHR64_5fRI d count s t <=>
+       x86_SHR (registers :> element d) (val count MOD 64) s t
+
+SAIL_HL_X86_SAR8_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSAR8_5fRI d count s t <=>
+       x86_SAR (GPR8 (Gpr d Lower_8)) (val count MOD 32) s t
+
+SAIL_HL_X86_SAR8_LEGACY_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSAR8_5fLEGACY_5fRI d count s t <=>
+       x86_SAR
+       (if 4 <= val d
+        then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       (val count MOD 32)
+       s
+       t
+
+SAIL_HL_X86_SAR16_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSAR16_5fRI d count s t <=>
+       x86_SAR (GPR16 (Gpr d Lower_16)) (val count MOD 32) s t
+
+SAIL_HL_X86_SAR32_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSAR32_5fRI d count s t <=>
+       x86_SAR (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_SAR64_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fSAR64_5fRI d count s t <=>
+       x86_SAR (registers :> element d) (val count MOD 64) s t
+
+SAIL_HL_X86_SHLD16_RRI_EQ
+|- forall d m count s t.
+       sail_hl_X86_5fSHLD16_5fRRI d m count s t <=>
+       x86_SHLD (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr m Lower_16))
+       (val count MOD 32)
+       s
+       t
+
+SAIL_HL_X86_SHLD32_RRI_EQ
+|- forall d m count s t.
+       sail_hl_X86_5fSHLD32_5fRRI d m count s t <=>
+       x86_SHLD (GPR32_Z (Gpr d Lower_32)) (GPR32_Z (Gpr m Lower_32))
+       (val count MOD 32)
+       s
+       t
+
+SAIL_HL_X86_SHLD64_RRI_EQ
+|- forall d m count s t.
+       sail_hl_X86_5fSHLD64_5fRRI d m count s t <=>
+       x86_SHLD (registers :> element d) (registers :> element m)
+       (val count MOD 64)
+       s
+       t
+
+SAIL_HL_X86_SHRD16_RRI_EQ
+|- forall d m count s t.
+       sail_hl_X86_5fSHRD16_5fRRI d m count s t <=>
+       x86_SHRD (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr m Lower_16))
+       (val count MOD 32)
+       s
+       t
+
+SAIL_HL_X86_SHRD32_RRI_EQ
+|- forall d m count s t.
+       sail_hl_X86_5fSHRD32_5fRRI d m count s t <=>
+       x86_SHRD (GPR32_Z (Gpr d Lower_32)) (GPR32_Z (Gpr m Lower_32))
+       (val count MOD 32)
+       s
+       t
+
+SAIL_HL_X86_SHRD64_RRI_EQ
+|- forall d m count s t.
+       sail_hl_X86_5fSHRD64_5fRRI d m count s t <=>
+       x86_SHRD (registers :> element d) (registers :> element m)
+       (val count MOD 64)
+       s
+       t
+
+SAIL_HL_X86_ROL8_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fROL8_5fRI d count s t <=>
+       x86_ROL (GPR8 (Gpr d Lower_8)) (val count MOD 32) s t
+
+SAIL_HL_X86_ROL8_LEGACY_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fROL8_5fLEGACY_5fRI d count s t <=>
+       x86_ROL
+       (if 4 <= val d
+        then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       (val count MOD 32)
+       s
+       t
+
+SAIL_HL_X86_ROL16_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fROL16_5fRI d count s t <=>
+       x86_ROL (GPR16 (Gpr d Lower_16)) (val count MOD 32) s t
+
+SAIL_HL_X86_ROL32_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fROL32_5fRI d count s t <=>
+       x86_ROL (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_ROL64_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fROL64_5fRI d count s t <=>
+       x86_ROL (registers :> element d) (val count MOD 64) s t
+
+SAIL_HL_X86_ROR8_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fROR8_5fRI d count s t <=>
+       x86_ROR (GPR8 (Gpr d Lower_8)) (val count MOD 32) s t
+
+SAIL_HL_X86_ROR8_LEGACY_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fROR8_5fLEGACY_5fRI d count s t <=>
+       x86_ROR
+       (if 4 <= val d
+        then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       (val count MOD 32)
+       s
+       t
+
+SAIL_HL_X86_ROR16_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fROR16_5fRI d count s t <=>
+       x86_ROR (GPR16 (Gpr d Lower_16)) (val count MOD 32) s t
+
+SAIL_HL_X86_ROR32_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fROR32_5fRI d count s t <=>
+       x86_ROR (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_ROR64_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fROR64_5fRI d count s t <=>
+       x86_ROR (registers :> element d) (val count MOD 64) s t
+
+SAIL_HL_X86_RCL8_RI_DIFF
+|- forall d s.
+       x86_RCL (GPR8 (Gpr d Lower_8)) 9 s (write OF (~read OF s) s) /\
+       ~sail_hl_X86_5fRCL8_5fRI d (word 9) s (write OF (~read OF s) s)
+
+SAIL_HL_X86_RCL8_RI_EXACT
+|- forall d count s t.
+       sail_hl_X86_5fRCL8_5fRI d count s t <=>
+       x86_RCL (GPR8 (Gpr d Lower_8)) (val count MOD 32) s t /\
+       (val count MOD 32 = 9 \/
+        val count MOD 32 = 18 \/
+        val count MOD 32 = 27
+        ==> (read OF t <=> read OF s))
+
+SAIL_HL_X86_RCL8_LEGACY_RI_DIFF
+|- forall d s.
+       x86_RCL
+       (if 4 <= val d
+        then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       9
+       s
+       (write OF (~read OF s) s) /\
+       ~sail_hl_X86_5fRCL8_5fLEGACY_5fRI d (word 9) s
+        (write OF (~read OF s) s)
+
+SAIL_HL_X86_RCL8_LEGACY_RI_EXACT
+|- forall d count s t.
+       sail_hl_X86_5fRCL8_5fLEGACY_5fRI d count s t <=>
+       x86_RCL
+       (if 4 <= val d
+        then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       (val count MOD 32)
+       s
+       t /\
+       (val count MOD 32 = 9 \/
+        val count MOD 32 = 18 \/
+        val count MOD 32 = 27
+        ==> (read OF t <=> read OF s))
+
+SAIL_HL_X86_RCL16_RI_DIFF
+|- forall d s.
+       x86_RCL (GPR16 (Gpr d Lower_16)) 17 s (write OF (~read OF s) s) /\
+       ~sail_hl_X86_5fRCL16_5fRI d (word 17) s (write OF (~read OF s) s)
+
+SAIL_HL_X86_RCL16_RI_EXACT
+|- forall d count s t.
+       sail_hl_X86_5fRCL16_5fRI d count s t <=>
+       x86_RCL (GPR16 (Gpr d Lower_16)) (val count MOD 32) s t /\
+       (val count MOD 32 = 17 ==> (read OF t <=> read OF s))
+
+SAIL_HL_X86_RCL32_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fRCL32_5fRI d count s t <=>
+       x86_RCL (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_RCL64_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fRCL64_5fRI d count s t <=>
+       x86_RCL (registers :> element d) (val count MOD 64) s t
+
+SAIL_HL_X86_RCR8_RI_DIFF
+|- forall d s.
+       x86_RCR (GPR8 (Gpr d Lower_8)) 9 s (write OF (~read OF s) s) /\
+       ~sail_hl_X86_5fRCR8_5fRI d (word 9) s (write OF (~read OF s) s)
+
+SAIL_HL_X86_RCR8_RI_EXACT
+|- forall d count s t.
+       sail_hl_X86_5fRCR8_5fRI d count s t <=>
+       x86_RCR (GPR8 (Gpr d Lower_8)) (val count MOD 32) s t /\
+       (val count MOD 32 = 9 \/
+        val count MOD 32 = 18 \/
+        val count MOD 32 = 27
+        ==> (read OF t <=> read OF s))
+
+SAIL_HL_X86_RCR8_LEGACY_RI_DIFF
+|- forall d s.
+       x86_RCR
+       (if 4 <= val d
+        then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       9
+       s
+       (write OF (~read OF s) s) /\
+       ~sail_hl_X86_5fRCR8_5fLEGACY_5fRI d (word 9) s
+        (write OF (~read OF s) s)
+
+SAIL_HL_X86_RCR8_LEGACY_RI_EXACT
+|- forall d count s t.
+       sail_hl_X86_5fRCR8_5fLEGACY_5fRI d count s t <=>
+       x86_RCR
+       (if 4 <= val d
+        then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       (val count MOD 32)
+       s
+       t /\
+       (val count MOD 32 = 9 \/
+        val count MOD 32 = 18 \/
+        val count MOD 32 = 27
+        ==> (read OF t <=> read OF s))
+
+SAIL_HL_X86_RCR16_RI_DIFF
+|- forall d s.
+       x86_RCR (GPR16 (Gpr d Lower_16)) 17 s (write OF (~read OF s) s) /\
+       ~sail_hl_X86_5fRCR16_5fRI d (word 17) s (write OF (~read OF s) s)
+
+SAIL_HL_X86_RCR16_RI_EXACT
+|- forall d count s t.
+       sail_hl_X86_5fRCR16_5fRI d count s t <=>
+       x86_RCR (GPR16 (Gpr d Lower_16)) (val count MOD 32) s t /\
+       (val count MOD 32 = 17 ==> (read OF t <=> read OF s))
+
+SAIL_HL_X86_RCR32_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fRCR32_5fRI d count s t <=>
+       x86_RCR (GPR32_Z (Gpr d Lower_32)) (val count MOD 32) s t
+
+SAIL_HL_X86_RCR64_RI_EQ
+|- forall d count s t.
+       sail_hl_X86_5fRCR64_5fRI d count s t <=>
+       x86_RCR (registers :> element d) (val count MOD 64) s t
+

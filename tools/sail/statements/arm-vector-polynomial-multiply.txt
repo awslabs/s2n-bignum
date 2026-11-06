@@ -1,0 +1,10 @@
+SAIL_HL_ARM_PMUL_VEC64E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fPMUL_5fVEC64E8 d n m s t <=>
+       arm_PMUL_VEC (QREG' d) (QREG' n) (QREG' m) 64 s t
+
+SAIL_HL_ARM_PMUL_VEC128E8_EQ
+|- forall d n m s t.
+       sail_hl_arm_5fPMUL_5fVEC128E8 d n m s t <=>
+       arm_PMUL_VEC (QREG' d) (QREG' n) (QREG' m) 128 s t
+

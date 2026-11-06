@@ -1,0 +1,225 @@
+shared-function not|generic|riscvstate|true||bool('p)|bool(not('p))| => sail_hl_shared_rv32_not_5f0
+shared-function to_bits_truncate|generic|riscvstate|true||(int('l), int('ex280559#))|bitvector('l)| => sail_hl_shared_rv32_to_5fbits_5ftruncate_5f1
+shared-function execute_DIV|generic|riscvstate|false||(regidx, regidx, regidx, bool('ex282156#))|ExecutionResult| => sail_hl_shared_rv32_execute_5fDIV_5f2
+shared-function effective_fence_set|generic|riscvstate|true||(bitvector(4), bool('ex281937#))|bitvector(4)| => sail_hl_shared_rv32_effective_5ffence_5fset_5f3
+shared-function execute_FENCE|generic|riscvstate|false||(bitvector(4), bitvector(4), bitvector(4), regidx, regidx)|ExecutionResult| => sail_hl_shared_rv32_execute_5fFENCE_5f4
+shared-function execute_FENCE_TSO|generic|riscvstate|false||unit|ExecutionResult| => sail_hl_shared_rv32_execute_5fFENCE_5fTSO_5f5
+shared-function sign_extend|generic|riscvstate|true||(int('m), bitvector('n))|bitvector('m)| => sail_hl_shared_rv32_sign_5fextend_5f6
+shared-function (operator <_u)|generic|riscvstate|true||(bitvector('n), bitvector('n))|{('ex282679# : Int) ('ex282680# : Int), ((0 <= 'ex282680# & 'ex282680# <= (2 ^ 'n - 1)) & (0 <= 'ex282679# & 'ex282679# <= (2 ^ 'n - 1))). bool('ex282679# < 'ex282680#)}| => sail_hl_shared_rv32__28operator_20_3c_5fu_29_5f7
+shared-function bool_to_bit|generic|riscvstate|false||bool|bitvector(1)| => sail_hl_shared_rv32_bool_5fto_5fbit_5f8
+shared-function zero_extend|generic|riscvstate|true||(int('m), bitvector('n))|bitvector('m)| => sail_hl_shared_rv32_zero_5fextend_5f9
+shared-function (operator <_s)|generic|riscvstate|true||(bitvector('n), bitvector('n))|{('ex282651# : Int) ('ex282652# : Int), ((- 2 ^ ('n - 1) <= 'ex282652# & 'ex282652# <= (2 ^ ('n - 1) - 1)) & (- 2 ^ ('n - 1) <= 'ex282651# & 'ex282651# <= (2 ^ ('n - 1) - 1))). bool('ex282651# < 'ex282652#)}| => sail_hl_shared_rv32__28operator_20_3c_5fs_29_5f10
+shared-function execute_ITYPE|generic|riscvstate|false||(bitvector(12), regidx, regidx, iop)|ExecutionResult| => sail_hl_shared_rv32_execute_5fITYPE_5f11
+shared-function extend_value|generic|riscvstate|true||(bool('ex281930#), bitvector('n))|bitvector(32)| => sail_hl_shared_rv32_extend_5fvalue_5f12
+shared-function execute_LOAD|fixed|riscvstate|false||(bitvector(12), regidx, regidx, bool('ex282147#), int('ex282148#))|ExecutionResult|ex282148#=1 => sail_hl_shared_rv32_execute_5fLOAD_5f13
+shared-function execute_LOAD|fixed|riscvstate|false||(bitvector(12), regidx, regidx, bool('ex282147#), int('ex282148#))|ExecutionResult|ex282148#=2 => sail_hl_shared_rv32_execute_5fLOAD_5f14
+shared-function execute_LOAD|fixed|riscvstate|false||(bitvector(12), regidx, regidx, bool('ex282147#), int('ex282148#))|ExecutionResult|ex282148#=4 => sail_hl_shared_rv32_execute_5fLOAD_5f15
+shared-function mult_to_bits_half|generic|riscvstate|true||(int('l), Signedness, Signedness, bitvector('l), bitvector('l), VectorHalf)|bitvector('l)| => sail_hl_shared_rv32_mult_5fto_5fbits_5fhalf_5f16
+shared-function execute_MUL|generic|riscvstate|false||(regidx, regidx, regidx, mul_op)|ExecutionResult| => sail_hl_shared_rv32_execute_5fMUL_5f17
+shared-function execute_PAUSE|generic|riscvstate|true||unit|ExecutionResult| => sail_hl_shared_rv32_execute_5fPAUSE_5f18
+shared-function execute_REM|generic|riscvstate|false||(regidx, regidx, regidx, bool('ex282145#))|ExecutionResult| => sail_hl_shared_rv32_execute_5fREM_5f19
+shared-function shift_bits_right_arith|generic|riscvstate|true||(bitvector('n), bitvector('m))|bitvector('n)|n=32 => sail_hl_shared_rv32_shift_5fbits_5fright_5farith_5f20
+shared-function execute_RTYPE|generic|riscvstate|false||(regidx, regidx, regidx, rop)|ExecutionResult| => sail_hl_shared_rv32_execute_5fRTYPE_5f21
+shared-function execute_SHIFTIOP|generic|riscvstate|false||(bitvector(6), regidx, regidx, sop)|ExecutionResult| => sail_hl_shared_rv32_execute_5fSHIFTIOP_5f22
+shared-function execute_STORE|fixed|riscvstate|false||(bitvector(12), regidx, regidx, int('ex282141#))|ExecutionResult|ex282141#=1 => sail_hl_shared_rv32_execute_5fSTORE_5f23
+shared-function execute_STORE|fixed|riscvstate|false||(bitvector(12), regidx, regidx, int('ex282141#))|ExecutionResult|ex282141#=2 => sail_hl_shared_rv32_execute_5fSTORE_5f24
+shared-function execute_STORE|fixed|riscvstate|false||(bitvector(12), regidx, regidx, int('ex282141#))|ExecutionResult|ex282141#=4 => sail_hl_shared_rv32_execute_5fSTORE_5f25
+shared-function execute_UTYPE|generic|riscvstate|false||(bitvector(20), regidx, uop)|ExecutionResult| => sail_hl_shared_rv32_execute_5fUTYPE_5f26
+specialization-required execute_LOAD|generic|riscvstate|false||(bitvector(12), regidx, regidx, bool('ex282147#), int('ex282148#))|ExecutionResult|: HOL Light: uninstantiated numeric type variable 'ex282148#
+specialization-required execute_STORE|generic|riscvstate|false||(bitvector(12), regidx, regidx, int('ex282141#))|ExecutionResult|: HOL Light: unsupported primitive on internal dynamic bitvectors: subrange_bits
+specialization-required shift_bits_right_arith|generic|riscvstate|true||(bitvector('n), bitvector('m))|bitvector('n)|: HOL Light: integer shifts require a word, integer amount and matching word result
+specialization-required shift_bits_right_arith|generic|riscvstate|true||(bitvector('n), bitvector('m))|bitvector('n)|m=5: HOL Light: integer shifts require a word, integer amount and matching word result
+root rv_DIV_DIV
+root rv_DIV_DIVU
+root rv_FENCE
+root rv_FENCE_TSO
+root rv_ITYPE_ADDI
+root rv_ITYPE_ANDI
+root rv_ITYPE_ORI
+root rv_ITYPE_SLTI
+root rv_ITYPE_SLTIU
+root rv_ITYPE_XORI
+root rv_LOAD_LB
+root rv_LOAD_LBU
+root rv_LOAD_LH
+root rv_LOAD_LHU
+root rv_LOAD_LW
+root rv_MUL_MUL
+root rv_MUL_MULH
+root rv_MUL_MULHSU
+root rv_MUL_MULHU
+root rv_PAUSE
+root rv_REM_REM
+root rv_REM_REMU
+root rv_RTYPE_ADD
+root rv_RTYPE_AND
+root rv_RTYPE_OR
+root rv_RTYPE_SLL
+root rv_RTYPE_SLT
+root rv_RTYPE_SLTU
+root rv_RTYPE_SRA
+root rv_RTYPE_SRL
+root rv_RTYPE_SUB
+root rv_RTYPE_XOR
+root rv_SHIFTIOP_SLLI
+root rv_SHIFTIOP_SRAI
+root rv_SHIFTIOP_SRLI
+root rv_STORE_SB
+root rv_STORE_SH
+root rv_STORE_SW
+root rv_UTYPE_AUIPC
+root rv_UTYPE_LUI
+inlined (operator <_s)
+inlined (operator <_u)
+inlined bool_to_bit
+inlined effective_fence_set
+inlined execute_DIV
+inlined execute_FENCE
+inlined execute_FENCE_TSO
+inlined execute_ITYPE
+inlined execute_LOAD
+inlined execute_MUL
+inlined execute_PAUSE
+inlined execute_REM
+inlined execute_RTYPE
+inlined execute_SHIFTIOP
+inlined execute_STORE
+inlined execute_UTYPE
+inlined extend_value
+inlined mult_to_bits_half
+inlined not
+inlined shift_bits_right_arith
+inlined sign_extend
+inlined to_bits_truncate
+inlined zero_extend
+inlined-global RETIRE_SUCCESS
+inlined-global log2_xlen
+inlined-global xlen
+inlined-global xlen_bytes
+inlined-mapping bool_bit forwards
+primitive-contract Regidx
+primitive-contract Retire_Success
+primitive-contract add_bits
+primitive-contract and_bool
+primitive-contract and_vec
+primitive-contract bitvector_concat
+primitive-contract eq_int
+primitive-contract generate_event
+primitive-contract get_arch_pc
+primitive-contract get_slice_int
+primitive-contract gteq_int
+primitive-contract is_fiom_active
+primitive-contract lt_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract negate_atom
+primitive-contract not_bool
+primitive-contract or_vec
+primitive-contract pow2
+primitive-contract quot_round_zero
+primitive-contract rX_bits
+primitive-contract rem_round_zero
+primitive-contract sail_arith_shiftright
+primitive-contract sail_barrier
+primitive-contract sail_sign_extend
+primitive-contract sail_zero_extend
+primitive-contract shift_bits_left
+primitive-contract shift_bits_right
+primitive-contract signed
+primitive-contract sub_atom
+primitive-contract sub_vec
+primitive-contract subrange_bits
+primitive-contract unsigned
+primitive-contract vmem_read
+primitive-contract vmem_write
+primitive-contract wX_bits
+primitive-contract xor_vec
+statically-proved-assertion lteq_int(width, xlen_bytes) at extensions/I/base_insts.sail:289:10-289:29
+statically-proved-assertion lteq_int(width, xlen_bytes) at extensions/I/base_insts.sail:320:10-320:29
+proved-numeric-argument-fact execute_LOAD 'ex282148# <= 1
+proved-numeric-argument-fact execute_LOAD 'ex282148# <= 3
+proved-numeric-argument-fact execute_LOAD 'ex282148# <= 31
+proved-numeric-argument-fact execute_LOAD 'ex282148# <= 4
+proved-numeric-argument-fact execute_LOAD 'ex282148# <= 7
+proved-numeric-argument-fact execute_LOAD 0 < 'ex282148#
+proved-numeric-argument-fact execute_LOAD 0 <= 'ex282148#
+proved-numeric-argument-fact execute_STORE 'ex282141# <= 1
+proved-numeric-argument-fact execute_STORE 'ex282141# <= 3
+proved-numeric-argument-fact execute_STORE 'ex282141# <= 31
+proved-numeric-argument-fact execute_STORE 'ex282141# <= 4
+proved-numeric-argument-fact execute_STORE 'ex282141# <= 7
+proved-numeric-argument-fact execute_STORE 0 < 'ex282141#
+proved-numeric-argument-fact execute_STORE 0 <= 'ex282141#
+proved-numeric-argument-fact extend_value 1 <= 4
+proved-numeric-argument-fact extend_value 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact extend_value 2 <= 4
+proved-numeric-argument-fact extend_value 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact extend_value 4 <= 4
+proved-numeric-argument-fact extend_value 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact mult_to_bits_half 'l <= 63
+proved-numeric-argument-fact mult_to_bits_half 0 < 'l
+proved-numeric-argument-fact mult_to_bits_half 0 <= 'l
+proved-numeric-argument-fact not -1 <= -1
+proved-numeric-argument-fact sign_extend 'm <= 63
+proved-numeric-argument-fact sign_extend 0 < 'm
+proved-numeric-argument-fact sign_extend 0 <= 'm
+proved-numeric-argument-fact sign_extend 1 in {1, 2, 4, 8}
+proved-numeric-argument-fact sign_extend 2 in {1, 2, 4, 8}
+proved-numeric-argument-fact sign_extend 4 in {1, 2, 4, 8}
+proved-numeric-argument-fact to_bits_truncate 'ex280559# <= 0
+proved-numeric-argument-fact to_bits_truncate 'ex280559# <= 2147483647
+proved-numeric-argument-fact to_bits_truncate 'ex280559# <= 31
+proved-numeric-argument-fact to_bits_truncate 'ex280559# <= 4294967295
+proved-numeric-argument-fact to_bits_truncate 'l <= 63
+proved-numeric-argument-fact to_bits_truncate -1 <= -1
+proved-numeric-argument-fact to_bits_truncate -2147483648 <= 'ex280559#
+proved-numeric-argument-fact to_bits_truncate 0 < 'l
+proved-numeric-argument-fact to_bits_truncate 0 <= 'ex280559#
+proved-numeric-argument-fact to_bits_truncate 0 <= 'l
+proved-numeric-argument-fact zero_extend 'm <= 63
+proved-numeric-argument-fact zero_extend 0 < 'm
+proved-numeric-argument-fact zero_extend 0 <= 'm
+statically-selected-branch core/xlen.sail:16:28-16:38 then
+statically-selected-branch core/xlen.sail:17:28-17:38 then
+statically-selected-branch extensions/M/mext_insts.sail:61:21-61:66 else
+state-computation-root rv_DIV_DIV
+state-computation-root rv_DIV_DIVU
+state-computation-root rv_FENCE
+state-computation-root rv_FENCE_TSO
+state-computation-root rv_ITYPE_ADDI
+state-computation-root rv_ITYPE_ANDI
+state-computation-root rv_ITYPE_ORI
+state-computation-root rv_ITYPE_SLTI
+state-computation-root rv_ITYPE_SLTIU
+state-computation-root rv_ITYPE_XORI
+state-computation-root rv_LOAD_LB
+state-computation-root rv_LOAD_LBU
+state-computation-root rv_LOAD_LH
+state-computation-root rv_LOAD_LHU
+state-computation-root rv_LOAD_LW
+state-computation-root rv_MUL_MUL
+state-computation-root rv_MUL_MULH
+state-computation-root rv_MUL_MULHSU
+state-computation-root rv_MUL_MULHU
+state-computation-root rv_PAUSE
+state-computation-root rv_REM_REM
+state-computation-root rv_REM_REMU
+state-computation-root rv_RTYPE_ADD
+state-computation-root rv_RTYPE_AND
+state-computation-root rv_RTYPE_OR
+state-computation-root rv_RTYPE_SLL
+state-computation-root rv_RTYPE_SLT
+state-computation-root rv_RTYPE_SLTU
+state-computation-root rv_RTYPE_SRA
+state-computation-root rv_RTYPE_SRL
+state-computation-root rv_RTYPE_SUB
+state-computation-root rv_RTYPE_XOR
+state-computation-root rv_SHIFTIOP_SLLI
+state-computation-root rv_SHIFTIOP_SRAI
+state-computation-root rv_SHIFTIOP_SRLI
+state-computation-root rv_STORE_SB
+state-computation-root rv_STORE_SH
+state-computation-root rv_STORE_SW
+state-computation-root rv_UTYPE_AUIPC
+state-computation-root rv_UTYPE_LUI
+state-computation

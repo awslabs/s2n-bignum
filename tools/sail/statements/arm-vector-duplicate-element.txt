@@ -1,0 +1,70 @@
+SAIL_HL_ARM_DUP_ELEM64E8_LO_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM64E8_5fLO d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 0) 8 64 s t
+
+SAIL_HL_ARM_DUP_ELEM64E8_HI_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM64E8_5fHI d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 8) 8 64 s t
+
+SAIL_HL_ARM_DUP_ELEM64E16_LO_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM64E16_5fLO d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 0) 16 64 s t
+
+SAIL_HL_ARM_DUP_ELEM64E16_HI_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM64E16_5fHI d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 4) 16 64 s t
+
+SAIL_HL_ARM_DUP_ELEM64E32_LO_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM64E32_5fLO d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 0) 32 64 s t
+
+SAIL_HL_ARM_DUP_ELEM64E32_HI_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM64E32_5fHI d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 2) 32 64 s t
+
+SAIL_HL_ARM_DUP_ELEM128E8_LO_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM128E8_5fLO d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 0) 8 128 s t
+
+SAIL_HL_ARM_DUP_ELEM128E8_HI_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM128E8_5fHI d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 8) 8 128 s t
+
+SAIL_HL_ARM_DUP_ELEM128E16_LO_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM128E16_5fLO d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 0) 16 128 s t
+
+SAIL_HL_ARM_DUP_ELEM128E16_HI_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM128E16_5fHI d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 4) 16 128 s t
+
+SAIL_HL_ARM_DUP_ELEM128E32_LO_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM128E32_5fLO d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 0) 32 128 s t
+
+SAIL_HL_ARM_DUP_ELEM128E32_HI_EQ
+|- forall d n idx s t.
+       sail_hl_arm_5fDUP_5fELEM128E32_5fHI d n idx s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) (val idx + 2) 32 128 s t
+
+SAIL_HL_ARM_DUP_ELEM128E64_LO_EQ
+|- forall d n s t.
+       sail_hl_arm_5fDUP_5fELEM128E64_5fLO d n s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) 0 64 128 s t
+
+SAIL_HL_ARM_DUP_ELEM128E64_HI_EQ
+|- forall d n s t.
+       sail_hl_arm_5fDUP_5fELEM128E64_5fHI d n s t <=>
+       arm_DUP_ELEM (QREG' d) (QREG' n) 1 64 128 s t
+

@@ -1,0 +1,15 @@
+SAIL_HL_ARM_UADDLP128E8_EQ
+|- forall d n s t.
+       sail_hl_arm_5fUADDLP128E8 d n s t <=>
+       arm_UADDLP (QREG' d) (QREG' n) 8 s t
+
+SAIL_HL_ARM_UADDLP128E16_EQ
+|- forall d n s t.
+       sail_hl_arm_5fUADDLP128E16 d n s t <=>
+       arm_UADDLP (QREG' d) (QREG' n) 16 s t
+
+SAIL_HL_ARM_UADDLP128E32_EQ
+|- forall d n s t.
+       sail_hl_arm_5fUADDLP128E32 d n s t <=>
+       arm_UADDLP (QREG' d) (QREG' n) 32 s t
+

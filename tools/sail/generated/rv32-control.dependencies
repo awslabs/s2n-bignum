@@ -1,0 +1,84 @@
+root rv_BTYPE_BEQ
+root rv_BTYPE_BGE
+root rv_BTYPE_BGEU
+root rv_BTYPE_BLT
+root rv_BTYPE_BLTU
+root rv_BTYPE_BNE
+root rv_EBREAK
+root rv_ECALL
+root rv_JAL
+root rv_JALR
+inlined (operator <_s)
+inlined (operator <_u)
+inlined (operator >=_s)
+inlined (operator >=_u)
+inlined bit_to_bool
+inlined execute_BTYPE
+inlined execute_EBREAK
+inlined execute_ECALL
+inlined execute_JAL
+inlined execute_JALR
+inlined ext_control_check_pc
+inlined jump_to
+inlined neq_bits
+inlined not
+inlined sign_extend
+inlined update_elp_state
+inlined zeros
+inlined-global RETIRE_SUCCESS
+inlined-mapping bool_bit backwards
+primitive-contract E_Breakpoint
+primitive-contract E_Fetch_Addr_Align
+primitive-contract E_M_EnvCall
+primitive-contract E_S_EnvCall
+primitive-contract E_U_EnvCall
+primitive-contract E_VS_EnvCall
+primitive-contract Ext_ControlAddr_Check_Failure
+primitive-contract None
+primitive-contract Regidx
+primitive-contract Retire_Success
+primitive-contract add_bits
+primitive-contract and_bool
+primitive-contract bitvector_access
+primitive-contract bitvector_update
+primitive-contract currentlyEnabled
+primitive-contract eq_bits
+primitive-contract exception_context
+primitive-contract get_next_pc
+primitive-contract gteq_int
+primitive-contract lt_int
+primitive-contract not_bool
+primitive-contract rX_bits
+primitive-contract sail_sign_extend
+primitive-contract sail_zeros
+primitive-contract set_next_pc
+primitive-contract signed
+primitive-contract trap
+primitive-contract unsigned
+primitive-contract wX_bits
+guarded-assertion eq_bits(bitvector_access(target, 0), 0b0) at extensions/I/base_insts.sail:59:10-59:26
+proved-numeric-argument-fact sign_extend 'm <= 63
+proved-numeric-argument-fact sign_extend 0 < 'm
+proved-numeric-argument-fact sign_extend 0 <= 'm
+proved-numeric-argument-fact zeros 'n <= 31
+proved-numeric-argument-fact zeros 'n <= 63
+proved-numeric-argument-fact zeros 'n <= 7
+proved-numeric-argument-fact zeros 0 < 'n
+proved-numeric-argument-fact zeros 0 <= 'n
+disabled-extension Ext_Zca
+disabled-extension Ext_Zicfilp
+statically-selected-branch extensions/I/base_insts.sail:62:6-62:61 else
+statically-selected-branch extensions/I/base_insts.sail:62:6-62:61 then
+statically-selected-branch extensions/cfi/zicfilp_regs.sail:53:6-53:35 else
+normal-retirement-root rv_BTYPE_BEQ
+normal-retirement-root rv_BTYPE_BGE
+normal-retirement-root rv_BTYPE_BGEU
+normal-retirement-root rv_BTYPE_BLT
+normal-retirement-root rv_BTYPE_BLTU
+normal-retirement-root rv_BTYPE_BNE
+normal-retirement-root rv_EBREAK
+normal-retirement-root rv_ECALL
+normal-retirement-root rv_JAL
+normal-retirement-root rv_JALR
+normal-retirement-only
+primitive-contract successful-root-jump-event

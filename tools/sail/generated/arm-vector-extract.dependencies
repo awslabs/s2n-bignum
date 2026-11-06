@@ -1,0 +1,61 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function __id|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|int('n)| => sail_hl_shared_arm_2dvector_2dextract__5f_5fid_5f0
+specialization-required execute_aarch64_instrs_vector_transfer_vector_extract|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), int('position))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_transfer_vector_extract|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), int('position))|unit|datasize=128: HOL Light: unlowered instruction control
+specialization-required execute_aarch64_instrs_vector_transfer_vector_extract|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), int('position))|unit|datasize=64: HOL Light: unlowered instruction control
+root arm_EXT128
+root arm_EXT64
+inlined __id
+inlined execute_aarch64_instrs_vector_transfer_vector_extract
+primitive-contract CheckFPAdvSIMDEnabled64
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract add_atom
+primitive-contract and_bool
+primitive-contract bitvector_concat
+primitive-contract lt_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract unsigned
+statically-proved-assertion and_bool(lteq_int(0, __id(position)), lt_int(sub_atom(add_atom(__id(position), __id(datasize)), 1), mult_atom(__id(datasize), 2))) at src/instrs64.sail:10696:24-10696:82
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 255
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id (0 <= 'n & (('n + 128) - 1) < (128 * 2))
+proved-numeric-argument-fact __id (0 <= 'n & (('n + 64) - 1) < (64 * 2))
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 < 128
+proved-numeric-argument-fact __id 0 < 64
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 0 <= 128
+proved-numeric-argument-fact __id 0 <= 64
+proved-numeric-argument-fact __id 128 <= 255
+proved-numeric-argument-fact __id 64 <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 'position <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 'position <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract (0 <= 'position & (('position + 'datasize) - 1) < ('datasize * 2))
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_transfer_vector_extract 0 <= 'position
+successful-check Arm-AdvSIMD-enabled-access
+state-computation-root arm_EXT128
+state-computation-root arm_EXT64
+state-computation

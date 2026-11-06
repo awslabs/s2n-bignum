@@ -1,0 +1,7 @@
+SAIL_HL_ARM_NOP_EQ
+|- forall s t. sail_hl_arm_5fNOP s t <=> arm_NOP s t
+
+SAIL_HL_ARM_BTI_C_EQ
+|- forall reg_PSTATE s t.
+       sail_hl_arm_5fBTI_5fC reg_PSTATE s t <=> arm_BTI s t
+

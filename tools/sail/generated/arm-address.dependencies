@@ -1,0 +1,37 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function Zeros|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|bitvector('n)| => sail_hl_shared_arm_2daddress_Zeros_5f0
+shared-function PC_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bitvector(64)| => sail_hl_shared_arm_2daddress_PC_5fread_5f1
+shared-function execute_aarch64_instrs_integer_arithmetic_address_pc_rel|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), bitvector(64), bool('page))|unit| => sail_hl_shared_arm_2daddress_execute_5faarch64_5finstrs_5finteger_5farithmetic_5faddress_5fpc_5frel_5f2
+shared-function decode_adr_aarch64_instrs_integer_arithmetic_address_pc_rel|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(5), bitvector(19), bitvector(2), bitvector(1))|unit| => sail_hl_shared_arm_2daddress_decode_5fadr_5faarch64_5finstrs_5finteger_5farithmetic_5faddress_5fpc_5frel_5f3
+shared-function decode_adrp_aarch64_instrs_integer_arithmetic_address_pc_rel|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(5), bitvector(19), bitvector(2), bitvector(1))|unit| => sail_hl_shared_arm_2daddress_decode_5fadrp_5faarch64_5finstrs_5finteger_5farithmetic_5faddress_5fpc_5frel_5f4
+root arm_ADR64
+root arm_ADRP64
+inlined PC_read
+inlined Zeros
+inlined decode_adr_aarch64_instrs_integer_arithmetic_address_pc_rel
+inlined decode_adrp_aarch64_instrs_integer_arithmetic_address_pc_rel
+inlined execute_aarch64_instrs_integer_arithmetic_address_pc_rel
+primitive-contract Arm-frozen-instruction-PC64
+primitive-contract SignExtend0
+primitive-contract UInt0
+primitive-contract X_set
+primitive-contract add_bits
+primitive-contract bitvector_concat
+primitive-contract eq_bits
+primitive-contract sail_zeros
+primitive-contract subrange_bits
+proved-numeric-argument-fact Zeros 'n <= 15
+proved-numeric-argument-fact Zeros 'n <= 31
+proved-numeric-argument-fact Zeros 0 < 'n
+proved-numeric-argument-fact Zeros 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_address_pc_rel 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_address_pc_rel 0 <= 'd
+unobserved-undefined-local imm
+state-computation-root arm_ADR64
+state-computation-root arm_ADRP64
+state-computation

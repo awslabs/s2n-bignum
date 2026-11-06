@@ -1,0 +1,25 @@
+SAIL_HL_ARM_REV32_VEC128E8_EQ
+|- forall d n s t.
+       sail_hl_arm_5fREV32_5fVEC128E8 d n s t <=>
+       arm_REV32_VEC (QREG' d) (QREG' n) 8 s t
+
+SAIL_HL_ARM_REV32_VEC128E16_EQ
+|- forall d n s t.
+       sail_hl_arm_5fREV32_5fVEC128E16 d n s t <=>
+       arm_REV32_VEC (QREG' d) (QREG' n) 16 s t
+
+SAIL_HL_ARM_REV64_VEC128E8_EQ
+|- forall d n s t.
+       sail_hl_arm_5fREV64_5fVEC128E8 d n s t <=>
+       arm_REV64_VEC (QREG' d) (QREG' n) 8 s t
+
+SAIL_HL_ARM_REV64_VEC128E16_EQ
+|- forall d n s t.
+       sail_hl_arm_5fREV64_5fVEC128E16 d n s t <=>
+       arm_REV64_VEC (QREG' d) (QREG' n) 16 s t
+
+SAIL_HL_ARM_REV64_VEC128E32_EQ
+|- forall d n s t.
+       sail_hl_arm_5fREV64_5fVEC128E32 d n s t <=>
+       arm_REV64_VEC (QREG' d) (QREG' n) 32 s t
+

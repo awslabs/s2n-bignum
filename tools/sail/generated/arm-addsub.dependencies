@@ -1,0 +1,1478 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function __id|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|int('n)| => sail_hl_shared_arm_2daddsub__5f_5fid_5f0
+shared-function Zeros|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|bitvector('n)|n=0 => sail_hl_shared_arm_2daddsub_Zeros_5f1
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=8,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f2
+shared-function integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|lo=0 => sail_hl_shared_arm_2daddsub_integer_5fsubrange_5f3
+shared-function IsZero|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector('n)|bool| => sail_hl_shared_arm_2daddsub_IsZero_5f4
+shared-function AddWithCarry|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), bitvector('N), bitvector(1))|(bitvector('N), bitvector(4))| => sail_hl_shared_arm_2daddsub_AddWithCarry_5f5
+shared-function Zeros|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|bitvector('n)| => sail_hl_shared_arm_2daddsub_Zeros_5f6
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=9,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f7
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=10,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f8
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=11,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f9
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=12,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f10
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=16,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f11
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=17,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f12
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=18,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f13
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=19,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f14
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=20,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f15
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=32,N=32 => sail_hl_shared_arm_2daddsub_Extend_5f16
+shared-function execute_aarch64_instrs_integer_arithmetic_add_sub_immediate|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), bitvector('datasize), int('n), bool('setflags), bool('sub_op))|unit|datasize=32 => sail_hl_shared_arm_2daddsub_execute_5faarch64_5finstrs_5finteger_5farithmetic_5fadd_5fsub_5fimmediate_5f17
+shared-function ROR|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|N=32 => sail_hl_shared_arm_2daddsub_ROR_5f18
+shared-function execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), bool('setflags), int('shift_amount), ShiftType, bool('sub_op))|unit|datasize=32 => sail_hl_shared_arm_2daddsub_execute_5faarch64_5finstrs_5finteger_5farithmetic_5fadd_5fsub_5fshiftedreg_5f19
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=8,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f20
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=9,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f21
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=10,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f22
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=11,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f23
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=12,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f24
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=16,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f25
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=17,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f26
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=18,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f27
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=19,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f28
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=20,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f29
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=32,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f30
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=33,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f31
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=34,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f32
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=35,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f33
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=36,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f34
+shared-function Extend|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=64,N=64 => sail_hl_shared_arm_2daddsub_Extend_5f35
+shared-function execute_aarch64_instrs_integer_arithmetic_add_sub_immediate|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), bitvector('datasize), int('n), bool('setflags), bool('sub_op))|unit|datasize=64 => sail_hl_shared_arm_2daddsub_execute_5faarch64_5finstrs_5finteger_5farithmetic_5fadd_5fsub_5fimmediate_5f36
+shared-function ROR|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|N=64 => sail_hl_shared_arm_2daddsub_ROR_5f37
+shared-function execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), bool('setflags), int('shift_amount), ShiftType, bool('sub_op))|unit|datasize=64 => sail_hl_shared_arm_2daddsub_execute_5faarch64_5finstrs_5finteger_5farithmetic_5fadd_5fsub_5fshiftedreg_5f38
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=10: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=11: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=12: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=16: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=17: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=18: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=19: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=20: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=32: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=33: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=34: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=35: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=36: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=64: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=8: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|M=9: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|N=32: HOL Light: unlowered instruction control
+specialization-required Extend|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), int('N), bool('is_unsigned))|bitvector('N)|N=64: HOL Light: unlowered instruction control
+specialization-required ROR|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|: HOL Light: integer shifts require a word, integer amount and matching word result
+specialization-required ShiftReg|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('reg), ShiftType, int('amount), int('N))|bitvector('N)|N=32: HOL Light: X_read index is not proved in 0..31
+specialization-required ShiftReg|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('reg), ShiftType, int('amount), int('N))|bitvector('N)|N=64: HOL Light: X_read index is not proved in 0..31
+specialization-required ShiftReg|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('reg), ShiftType, int('amount), int('N))|bitvector('N)|: HOL Light: uninstantiated numeric type variable 'N
+specialization-required execute_aarch64_instrs_integer_arithmetic_add_sub_immediate|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), bitvector('datasize), int('n), bool('setflags), bool('sub_op))|unit|: HOL Light: uninstantiated numeric type variable 'datasize
+specialization-required execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('m), int('n), bool('setflags), int('shift_amount), ShiftType, bool('sub_op))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|: HOL Light: generic integer slice requires a nonnegative start
+root arm_ADD32_EXT_SXTB_0
+root arm_ADD32_EXT_SXTB_1
+root arm_ADD32_EXT_SXTB_2
+root arm_ADD32_EXT_SXTB_3
+root arm_ADD32_EXT_SXTB_4
+root arm_ADD32_EXT_SXTH_0
+root arm_ADD32_EXT_SXTH_1
+root arm_ADD32_EXT_SXTH_2
+root arm_ADD32_EXT_SXTH_3
+root arm_ADD32_EXT_SXTH_4
+root arm_ADD32_EXT_SXTW_0
+root arm_ADD32_EXT_SXTW_1
+root arm_ADD32_EXT_SXTW_2
+root arm_ADD32_EXT_SXTW_3
+root arm_ADD32_EXT_SXTW_4
+root arm_ADD32_EXT_SXTX_0
+root arm_ADD32_EXT_SXTX_1
+root arm_ADD32_EXT_SXTX_2
+root arm_ADD32_EXT_SXTX_3
+root arm_ADD32_EXT_SXTX_4
+root arm_ADD32_EXT_UXTB_0
+root arm_ADD32_EXT_UXTB_1
+root arm_ADD32_EXT_UXTB_2
+root arm_ADD32_EXT_UXTB_3
+root arm_ADD32_EXT_UXTB_4
+root arm_ADD32_EXT_UXTH_0
+root arm_ADD32_EXT_UXTH_1
+root arm_ADD32_EXT_UXTH_2
+root arm_ADD32_EXT_UXTH_3
+root arm_ADD32_EXT_UXTH_4
+root arm_ADD32_EXT_UXTW_0
+root arm_ADD32_EXT_UXTW_1
+root arm_ADD32_EXT_UXTW_2
+root arm_ADD32_EXT_UXTW_3
+root arm_ADD32_EXT_UXTW_4
+root arm_ADD32_EXT_UXTX_0
+root arm_ADD32_EXT_UXTX_1
+root arm_ADD32_EXT_UXTX_2
+root arm_ADD32_EXT_UXTX_3
+root arm_ADD32_EXT_UXTX_4
+root arm_ADD32_IMM
+root arm_ADD32_SHIFT
+root arm_ADD64_EXT_SXTB_0
+root arm_ADD64_EXT_SXTB_1
+root arm_ADD64_EXT_SXTB_2
+root arm_ADD64_EXT_SXTB_3
+root arm_ADD64_EXT_SXTB_4
+root arm_ADD64_EXT_SXTH_0
+root arm_ADD64_EXT_SXTH_1
+root arm_ADD64_EXT_SXTH_2
+root arm_ADD64_EXT_SXTH_3
+root arm_ADD64_EXT_SXTH_4
+root arm_ADD64_EXT_SXTW_0
+root arm_ADD64_EXT_SXTW_1
+root arm_ADD64_EXT_SXTW_2
+root arm_ADD64_EXT_SXTW_3
+root arm_ADD64_EXT_SXTW_4
+root arm_ADD64_EXT_SXTX_0
+root arm_ADD64_EXT_SXTX_1
+root arm_ADD64_EXT_SXTX_2
+root arm_ADD64_EXT_SXTX_3
+root arm_ADD64_EXT_SXTX_4
+root arm_ADD64_EXT_UXTB_0
+root arm_ADD64_EXT_UXTB_1
+root arm_ADD64_EXT_UXTB_2
+root arm_ADD64_EXT_UXTB_3
+root arm_ADD64_EXT_UXTB_4
+root arm_ADD64_EXT_UXTH_0
+root arm_ADD64_EXT_UXTH_1
+root arm_ADD64_EXT_UXTH_2
+root arm_ADD64_EXT_UXTH_3
+root arm_ADD64_EXT_UXTH_4
+root arm_ADD64_EXT_UXTW_0
+root arm_ADD64_EXT_UXTW_1
+root arm_ADD64_EXT_UXTW_2
+root arm_ADD64_EXT_UXTW_3
+root arm_ADD64_EXT_UXTW_4
+root arm_ADD64_EXT_UXTX_0
+root arm_ADD64_EXT_UXTX_1
+root arm_ADD64_EXT_UXTX_2
+root arm_ADD64_EXT_UXTX_3
+root arm_ADD64_EXT_UXTX_4
+root arm_ADD64_IMM
+root arm_ADD64_SHIFT
+root arm_ADDS32_EXT_SXTB_0
+root arm_ADDS32_EXT_SXTB_1
+root arm_ADDS32_EXT_SXTB_2
+root arm_ADDS32_EXT_SXTB_3
+root arm_ADDS32_EXT_SXTB_4
+root arm_ADDS32_EXT_SXTH_0
+root arm_ADDS32_EXT_SXTH_1
+root arm_ADDS32_EXT_SXTH_2
+root arm_ADDS32_EXT_SXTH_3
+root arm_ADDS32_EXT_SXTH_4
+root arm_ADDS32_EXT_SXTW_0
+root arm_ADDS32_EXT_SXTW_1
+root arm_ADDS32_EXT_SXTW_2
+root arm_ADDS32_EXT_SXTW_3
+root arm_ADDS32_EXT_SXTW_4
+root arm_ADDS32_EXT_SXTX_0
+root arm_ADDS32_EXT_SXTX_1
+root arm_ADDS32_EXT_SXTX_2
+root arm_ADDS32_EXT_SXTX_3
+root arm_ADDS32_EXT_SXTX_4
+root arm_ADDS32_EXT_UXTB_0
+root arm_ADDS32_EXT_UXTB_1
+root arm_ADDS32_EXT_UXTB_2
+root arm_ADDS32_EXT_UXTB_3
+root arm_ADDS32_EXT_UXTB_4
+root arm_ADDS32_EXT_UXTH_0
+root arm_ADDS32_EXT_UXTH_1
+root arm_ADDS32_EXT_UXTH_2
+root arm_ADDS32_EXT_UXTH_3
+root arm_ADDS32_EXT_UXTH_4
+root arm_ADDS32_EXT_UXTW_0
+root arm_ADDS32_EXT_UXTW_1
+root arm_ADDS32_EXT_UXTW_2
+root arm_ADDS32_EXT_UXTW_3
+root arm_ADDS32_EXT_UXTW_4
+root arm_ADDS32_EXT_UXTX_0
+root arm_ADDS32_EXT_UXTX_1
+root arm_ADDS32_EXT_UXTX_2
+root arm_ADDS32_EXT_UXTX_3
+root arm_ADDS32_EXT_UXTX_4
+root arm_ADDS32_IMM
+root arm_ADDS32_SHIFT
+root arm_ADDS64_EXT_SXTB_0
+root arm_ADDS64_EXT_SXTB_1
+root arm_ADDS64_EXT_SXTB_2
+root arm_ADDS64_EXT_SXTB_3
+root arm_ADDS64_EXT_SXTB_4
+root arm_ADDS64_EXT_SXTH_0
+root arm_ADDS64_EXT_SXTH_1
+root arm_ADDS64_EXT_SXTH_2
+root arm_ADDS64_EXT_SXTH_3
+root arm_ADDS64_EXT_SXTH_4
+root arm_ADDS64_EXT_SXTW_0
+root arm_ADDS64_EXT_SXTW_1
+root arm_ADDS64_EXT_SXTW_2
+root arm_ADDS64_EXT_SXTW_3
+root arm_ADDS64_EXT_SXTW_4
+root arm_ADDS64_EXT_SXTX_0
+root arm_ADDS64_EXT_SXTX_1
+root arm_ADDS64_EXT_SXTX_2
+root arm_ADDS64_EXT_SXTX_3
+root arm_ADDS64_EXT_SXTX_4
+root arm_ADDS64_EXT_UXTB_0
+root arm_ADDS64_EXT_UXTB_1
+root arm_ADDS64_EXT_UXTB_2
+root arm_ADDS64_EXT_UXTB_3
+root arm_ADDS64_EXT_UXTB_4
+root arm_ADDS64_EXT_UXTH_0
+root arm_ADDS64_EXT_UXTH_1
+root arm_ADDS64_EXT_UXTH_2
+root arm_ADDS64_EXT_UXTH_3
+root arm_ADDS64_EXT_UXTH_4
+root arm_ADDS64_EXT_UXTW_0
+root arm_ADDS64_EXT_UXTW_1
+root arm_ADDS64_EXT_UXTW_2
+root arm_ADDS64_EXT_UXTW_3
+root arm_ADDS64_EXT_UXTW_4
+root arm_ADDS64_EXT_UXTX_0
+root arm_ADDS64_EXT_UXTX_1
+root arm_ADDS64_EXT_UXTX_2
+root arm_ADDS64_EXT_UXTX_3
+root arm_ADDS64_EXT_UXTX_4
+root arm_ADDS64_IMM
+root arm_ADDS64_SHIFT
+root arm_CMN32_EXT_SXTB_0
+root arm_CMN32_EXT_SXTB_1
+root arm_CMN32_EXT_SXTB_2
+root arm_CMN32_EXT_SXTB_3
+root arm_CMN32_EXT_SXTB_4
+root arm_CMN32_EXT_SXTH_0
+root arm_CMN32_EXT_SXTH_1
+root arm_CMN32_EXT_SXTH_2
+root arm_CMN32_EXT_SXTH_3
+root arm_CMN32_EXT_SXTH_4
+root arm_CMN32_EXT_SXTW_0
+root arm_CMN32_EXT_SXTW_1
+root arm_CMN32_EXT_SXTW_2
+root arm_CMN32_EXT_SXTW_3
+root arm_CMN32_EXT_SXTW_4
+root arm_CMN32_EXT_SXTX_0
+root arm_CMN32_EXT_SXTX_1
+root arm_CMN32_EXT_SXTX_2
+root arm_CMN32_EXT_SXTX_3
+root arm_CMN32_EXT_SXTX_4
+root arm_CMN32_EXT_UXTB_0
+root arm_CMN32_EXT_UXTB_1
+root arm_CMN32_EXT_UXTB_2
+root arm_CMN32_EXT_UXTB_3
+root arm_CMN32_EXT_UXTB_4
+root arm_CMN32_EXT_UXTH_0
+root arm_CMN32_EXT_UXTH_1
+root arm_CMN32_EXT_UXTH_2
+root arm_CMN32_EXT_UXTH_3
+root arm_CMN32_EXT_UXTH_4
+root arm_CMN32_EXT_UXTW_0
+root arm_CMN32_EXT_UXTW_1
+root arm_CMN32_EXT_UXTW_2
+root arm_CMN32_EXT_UXTW_3
+root arm_CMN32_EXT_UXTW_4
+root arm_CMN32_EXT_UXTX_0
+root arm_CMN32_EXT_UXTX_1
+root arm_CMN32_EXT_UXTX_2
+root arm_CMN32_EXT_UXTX_3
+root arm_CMN32_EXT_UXTX_4
+root arm_CMN32_IMM
+root arm_CMN32_SHIFT
+root arm_CMN64_EXT_SXTB_0
+root arm_CMN64_EXT_SXTB_1
+root arm_CMN64_EXT_SXTB_2
+root arm_CMN64_EXT_SXTB_3
+root arm_CMN64_EXT_SXTB_4
+root arm_CMN64_EXT_SXTH_0
+root arm_CMN64_EXT_SXTH_1
+root arm_CMN64_EXT_SXTH_2
+root arm_CMN64_EXT_SXTH_3
+root arm_CMN64_EXT_SXTH_4
+root arm_CMN64_EXT_SXTW_0
+root arm_CMN64_EXT_SXTW_1
+root arm_CMN64_EXT_SXTW_2
+root arm_CMN64_EXT_SXTW_3
+root arm_CMN64_EXT_SXTW_4
+root arm_CMN64_EXT_SXTX_0
+root arm_CMN64_EXT_SXTX_1
+root arm_CMN64_EXT_SXTX_2
+root arm_CMN64_EXT_SXTX_3
+root arm_CMN64_EXT_SXTX_4
+root arm_CMN64_EXT_UXTB_0
+root arm_CMN64_EXT_UXTB_1
+root arm_CMN64_EXT_UXTB_2
+root arm_CMN64_EXT_UXTB_3
+root arm_CMN64_EXT_UXTB_4
+root arm_CMN64_EXT_UXTH_0
+root arm_CMN64_EXT_UXTH_1
+root arm_CMN64_EXT_UXTH_2
+root arm_CMN64_EXT_UXTH_3
+root arm_CMN64_EXT_UXTH_4
+root arm_CMN64_EXT_UXTW_0
+root arm_CMN64_EXT_UXTW_1
+root arm_CMN64_EXT_UXTW_2
+root arm_CMN64_EXT_UXTW_3
+root arm_CMN64_EXT_UXTW_4
+root arm_CMN64_EXT_UXTX_0
+root arm_CMN64_EXT_UXTX_1
+root arm_CMN64_EXT_UXTX_2
+root arm_CMN64_EXT_UXTX_3
+root arm_CMN64_EXT_UXTX_4
+root arm_CMN64_IMM
+root arm_CMN64_SHIFT
+root arm_CMP32_EXT_SXTB_0
+root arm_CMP32_EXT_SXTB_1
+root arm_CMP32_EXT_SXTB_2
+root arm_CMP32_EXT_SXTB_3
+root arm_CMP32_EXT_SXTB_4
+root arm_CMP32_EXT_SXTH_0
+root arm_CMP32_EXT_SXTH_1
+root arm_CMP32_EXT_SXTH_2
+root arm_CMP32_EXT_SXTH_3
+root arm_CMP32_EXT_SXTH_4
+root arm_CMP32_EXT_SXTW_0
+root arm_CMP32_EXT_SXTW_1
+root arm_CMP32_EXT_SXTW_2
+root arm_CMP32_EXT_SXTW_3
+root arm_CMP32_EXT_SXTW_4
+root arm_CMP32_EXT_SXTX_0
+root arm_CMP32_EXT_SXTX_1
+root arm_CMP32_EXT_SXTX_2
+root arm_CMP32_EXT_SXTX_3
+root arm_CMP32_EXT_SXTX_4
+root arm_CMP32_EXT_UXTB_0
+root arm_CMP32_EXT_UXTB_1
+root arm_CMP32_EXT_UXTB_2
+root arm_CMP32_EXT_UXTB_3
+root arm_CMP32_EXT_UXTB_4
+root arm_CMP32_EXT_UXTH_0
+root arm_CMP32_EXT_UXTH_1
+root arm_CMP32_EXT_UXTH_2
+root arm_CMP32_EXT_UXTH_3
+root arm_CMP32_EXT_UXTH_4
+root arm_CMP32_EXT_UXTW_0
+root arm_CMP32_EXT_UXTW_1
+root arm_CMP32_EXT_UXTW_2
+root arm_CMP32_EXT_UXTW_3
+root arm_CMP32_EXT_UXTW_4
+root arm_CMP32_EXT_UXTX_0
+root arm_CMP32_EXT_UXTX_1
+root arm_CMP32_EXT_UXTX_2
+root arm_CMP32_EXT_UXTX_3
+root arm_CMP32_EXT_UXTX_4
+root arm_CMP32_IMM
+root arm_CMP32_SHIFT
+root arm_CMP64_EXT_SXTB_0
+root arm_CMP64_EXT_SXTB_1
+root arm_CMP64_EXT_SXTB_2
+root arm_CMP64_EXT_SXTB_3
+root arm_CMP64_EXT_SXTB_4
+root arm_CMP64_EXT_SXTH_0
+root arm_CMP64_EXT_SXTH_1
+root arm_CMP64_EXT_SXTH_2
+root arm_CMP64_EXT_SXTH_3
+root arm_CMP64_EXT_SXTH_4
+root arm_CMP64_EXT_SXTW_0
+root arm_CMP64_EXT_SXTW_1
+root arm_CMP64_EXT_SXTW_2
+root arm_CMP64_EXT_SXTW_3
+root arm_CMP64_EXT_SXTW_4
+root arm_CMP64_EXT_SXTX_0
+root arm_CMP64_EXT_SXTX_1
+root arm_CMP64_EXT_SXTX_2
+root arm_CMP64_EXT_SXTX_3
+root arm_CMP64_EXT_SXTX_4
+root arm_CMP64_EXT_UXTB_0
+root arm_CMP64_EXT_UXTB_1
+root arm_CMP64_EXT_UXTB_2
+root arm_CMP64_EXT_UXTB_3
+root arm_CMP64_EXT_UXTB_4
+root arm_CMP64_EXT_UXTH_0
+root arm_CMP64_EXT_UXTH_1
+root arm_CMP64_EXT_UXTH_2
+root arm_CMP64_EXT_UXTH_3
+root arm_CMP64_EXT_UXTH_4
+root arm_CMP64_EXT_UXTW_0
+root arm_CMP64_EXT_UXTW_1
+root arm_CMP64_EXT_UXTW_2
+root arm_CMP64_EXT_UXTW_3
+root arm_CMP64_EXT_UXTW_4
+root arm_CMP64_EXT_UXTX_0
+root arm_CMP64_EXT_UXTX_1
+root arm_CMP64_EXT_UXTX_2
+root arm_CMP64_EXT_UXTX_3
+root arm_CMP64_EXT_UXTX_4
+root arm_CMP64_IMM
+root arm_CMP64_SHIFT
+root arm_NEG32
+root arm_NEG32_SHIFT
+root arm_NEG64
+root arm_NEG64_SHIFT
+root arm_NEGS32
+root arm_NEGS32_SHIFT
+root arm_NEGS64
+root arm_NEGS64_SHIFT
+root arm_SUB32_EXT_SXTB_0
+root arm_SUB32_EXT_SXTB_1
+root arm_SUB32_EXT_SXTB_2
+root arm_SUB32_EXT_SXTB_3
+root arm_SUB32_EXT_SXTB_4
+root arm_SUB32_EXT_SXTH_0
+root arm_SUB32_EXT_SXTH_1
+root arm_SUB32_EXT_SXTH_2
+root arm_SUB32_EXT_SXTH_3
+root arm_SUB32_EXT_SXTH_4
+root arm_SUB32_EXT_SXTW_0
+root arm_SUB32_EXT_SXTW_1
+root arm_SUB32_EXT_SXTW_2
+root arm_SUB32_EXT_SXTW_3
+root arm_SUB32_EXT_SXTW_4
+root arm_SUB32_EXT_SXTX_0
+root arm_SUB32_EXT_SXTX_1
+root arm_SUB32_EXT_SXTX_2
+root arm_SUB32_EXT_SXTX_3
+root arm_SUB32_EXT_SXTX_4
+root arm_SUB32_EXT_UXTB_0
+root arm_SUB32_EXT_UXTB_1
+root arm_SUB32_EXT_UXTB_2
+root arm_SUB32_EXT_UXTB_3
+root arm_SUB32_EXT_UXTB_4
+root arm_SUB32_EXT_UXTH_0
+root arm_SUB32_EXT_UXTH_1
+root arm_SUB32_EXT_UXTH_2
+root arm_SUB32_EXT_UXTH_3
+root arm_SUB32_EXT_UXTH_4
+root arm_SUB32_EXT_UXTW_0
+root arm_SUB32_EXT_UXTW_1
+root arm_SUB32_EXT_UXTW_2
+root arm_SUB32_EXT_UXTW_3
+root arm_SUB32_EXT_UXTW_4
+root arm_SUB32_EXT_UXTX_0
+root arm_SUB32_EXT_UXTX_1
+root arm_SUB32_EXT_UXTX_2
+root arm_SUB32_EXT_UXTX_3
+root arm_SUB32_EXT_UXTX_4
+root arm_SUB32_IMM
+root arm_SUB32_SHIFT
+root arm_SUB64_EXT_SXTB_0
+root arm_SUB64_EXT_SXTB_1
+root arm_SUB64_EXT_SXTB_2
+root arm_SUB64_EXT_SXTB_3
+root arm_SUB64_EXT_SXTB_4
+root arm_SUB64_EXT_SXTH_0
+root arm_SUB64_EXT_SXTH_1
+root arm_SUB64_EXT_SXTH_2
+root arm_SUB64_EXT_SXTH_3
+root arm_SUB64_EXT_SXTH_4
+root arm_SUB64_EXT_SXTW_0
+root arm_SUB64_EXT_SXTW_1
+root arm_SUB64_EXT_SXTW_2
+root arm_SUB64_EXT_SXTW_3
+root arm_SUB64_EXT_SXTW_4
+root arm_SUB64_EXT_SXTX_0
+root arm_SUB64_EXT_SXTX_1
+root arm_SUB64_EXT_SXTX_2
+root arm_SUB64_EXT_SXTX_3
+root arm_SUB64_EXT_SXTX_4
+root arm_SUB64_EXT_UXTB_0
+root arm_SUB64_EXT_UXTB_1
+root arm_SUB64_EXT_UXTB_2
+root arm_SUB64_EXT_UXTB_3
+root arm_SUB64_EXT_UXTB_4
+root arm_SUB64_EXT_UXTH_0
+root arm_SUB64_EXT_UXTH_1
+root arm_SUB64_EXT_UXTH_2
+root arm_SUB64_EXT_UXTH_3
+root arm_SUB64_EXT_UXTH_4
+root arm_SUB64_EXT_UXTW_0
+root arm_SUB64_EXT_UXTW_1
+root arm_SUB64_EXT_UXTW_2
+root arm_SUB64_EXT_UXTW_3
+root arm_SUB64_EXT_UXTW_4
+root arm_SUB64_EXT_UXTX_0
+root arm_SUB64_EXT_UXTX_1
+root arm_SUB64_EXT_UXTX_2
+root arm_SUB64_EXT_UXTX_3
+root arm_SUB64_EXT_UXTX_4
+root arm_SUB64_IMM
+root arm_SUB64_SHIFT
+root arm_SUBS32_EXT_SXTB_0
+root arm_SUBS32_EXT_SXTB_1
+root arm_SUBS32_EXT_SXTB_2
+root arm_SUBS32_EXT_SXTB_3
+root arm_SUBS32_EXT_SXTB_4
+root arm_SUBS32_EXT_SXTH_0
+root arm_SUBS32_EXT_SXTH_1
+root arm_SUBS32_EXT_SXTH_2
+root arm_SUBS32_EXT_SXTH_3
+root arm_SUBS32_EXT_SXTH_4
+root arm_SUBS32_EXT_SXTW_0
+root arm_SUBS32_EXT_SXTW_1
+root arm_SUBS32_EXT_SXTW_2
+root arm_SUBS32_EXT_SXTW_3
+root arm_SUBS32_EXT_SXTW_4
+root arm_SUBS32_EXT_SXTX_0
+root arm_SUBS32_EXT_SXTX_1
+root arm_SUBS32_EXT_SXTX_2
+root arm_SUBS32_EXT_SXTX_3
+root arm_SUBS32_EXT_SXTX_4
+root arm_SUBS32_EXT_UXTB_0
+root arm_SUBS32_EXT_UXTB_1
+root arm_SUBS32_EXT_UXTB_2
+root arm_SUBS32_EXT_UXTB_3
+root arm_SUBS32_EXT_UXTB_4
+root arm_SUBS32_EXT_UXTH_0
+root arm_SUBS32_EXT_UXTH_1
+root arm_SUBS32_EXT_UXTH_2
+root arm_SUBS32_EXT_UXTH_3
+root arm_SUBS32_EXT_UXTH_4
+root arm_SUBS32_EXT_UXTW_0
+root arm_SUBS32_EXT_UXTW_1
+root arm_SUBS32_EXT_UXTW_2
+root arm_SUBS32_EXT_UXTW_3
+root arm_SUBS32_EXT_UXTW_4
+root arm_SUBS32_EXT_UXTX_0
+root arm_SUBS32_EXT_UXTX_1
+root arm_SUBS32_EXT_UXTX_2
+root arm_SUBS32_EXT_UXTX_3
+root arm_SUBS32_EXT_UXTX_4
+root arm_SUBS32_IMM
+root arm_SUBS32_SHIFT
+root arm_SUBS64_EXT_SXTB_0
+root arm_SUBS64_EXT_SXTB_1
+root arm_SUBS64_EXT_SXTB_2
+root arm_SUBS64_EXT_SXTB_3
+root arm_SUBS64_EXT_SXTB_4
+root arm_SUBS64_EXT_SXTH_0
+root arm_SUBS64_EXT_SXTH_1
+root arm_SUBS64_EXT_SXTH_2
+root arm_SUBS64_EXT_SXTH_3
+root arm_SUBS64_EXT_SXTH_4
+root arm_SUBS64_EXT_SXTW_0
+root arm_SUBS64_EXT_SXTW_1
+root arm_SUBS64_EXT_SXTW_2
+root arm_SUBS64_EXT_SXTW_3
+root arm_SUBS64_EXT_SXTW_4
+root arm_SUBS64_EXT_SXTX_0
+root arm_SUBS64_EXT_SXTX_1
+root arm_SUBS64_EXT_SXTX_2
+root arm_SUBS64_EXT_SXTX_3
+root arm_SUBS64_EXT_SXTX_4
+root arm_SUBS64_EXT_UXTB_0
+root arm_SUBS64_EXT_UXTB_1
+root arm_SUBS64_EXT_UXTB_2
+root arm_SUBS64_EXT_UXTB_3
+root arm_SUBS64_EXT_UXTB_4
+root arm_SUBS64_EXT_UXTH_0
+root arm_SUBS64_EXT_UXTH_1
+root arm_SUBS64_EXT_UXTH_2
+root arm_SUBS64_EXT_UXTH_3
+root arm_SUBS64_EXT_UXTH_4
+root arm_SUBS64_EXT_UXTW_0
+root arm_SUBS64_EXT_UXTW_1
+root arm_SUBS64_EXT_UXTW_2
+root arm_SUBS64_EXT_UXTW_3
+root arm_SUBS64_EXT_UXTW_4
+root arm_SUBS64_EXT_UXTX_0
+root arm_SUBS64_EXT_UXTX_1
+root arm_SUBS64_EXT_UXTX_2
+root arm_SUBS64_EXT_UXTX_3
+root arm_SUBS64_EXT_UXTX_4
+root arm_SUBS64_IMM
+root arm_SUBS64_SHIFT
+inlined AddWithCarry
+inlined Extend
+inlined ExtendReg
+inlined IsZero
+inlined ROR
+inlined ShiftReg
+inlined Zeros
+inlined __id
+inlined execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg
+inlined execute_aarch64_instrs_integer_arithmetic_add_sub_immediate
+inlined execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg
+inlined integer_subrange
+primitive-contract PSTATE-NZCV-projection
+primitive-contract SInt0
+primitive-contract SP_read
+primitive-contract SP_set
+primitive-contract Sail-undefined-existential
+primitive-contract SignExtend0
+primitive-contract UInt0
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract ZeroExtend0
+primitive-contract add_atom
+primitive-contract and_bool
+primitive-contract bitvector_access
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract emod_nat
+primitive-contract eq_bits
+primitive-contract eq_int
+primitive-contract get_slice_int
+primitive-contract gt_int
+primitive-contract gteq_int
+primitive-contract lteq_int
+primitive-contract min_int
+primitive-contract not_bool
+primitive-contract not_vec
+primitive-contract or_bool
+primitive-contract or_vec
+primitive-contract sail_arith_shiftright
+primitive-contract sail_shiftleft
+primitive-contract sail_shiftright
+primitive-contract sail_zeros
+primitive-contract sub_atom
+primitive-contract subrange_bits
+statically-proved-assertion and_bool(gt_int(__id(N), 0), gteq_int(__id(amount), 0)) at src/v8_base.sail:35864:30-35864:51
+statically-proved-assertion and_bool(gt_int(bitvector_length(x), 0), gteq_int(__id(N), bitvector_length(x))) at src/builtins.sail:124:28-124:45
+statically-proved-assertion and_bool(gteq_int(bitvector_length(x), 0), gteq_int(__id(N), bitvector_length(x))) at src/builtins.sail:121:28-121:46
+statically-proved-assertion and_bool(gteq_int(shift, 0), lteq_int(shift, 4)) at src/v8_base.sail:35781:12-35781:35
+statically-proved-assertion or_bool(lteq_int(0, sub_atom(__id(len), 1)), not_bool(and_bool(gteq_int(__id(shift), 0), lteq_int(__id(shift), 4)))) at src/v8_base.sail:35821:24-35821:72
+proved-numeric-argument-fact AddWithCarry 0 < 1
+proved-numeric-argument-fact AddWithCarry 0 < 2
+proved-numeric-argument-fact AddWithCarry 0 < 3
+proved-numeric-argument-fact AddWithCarry 0 < 31
+proved-numeric-argument-fact AddWithCarry 0 < 32
+proved-numeric-argument-fact AddWithCarry 0 < 4
+proved-numeric-argument-fact AddWithCarry 0 < 64
+proved-numeric-argument-fact AddWithCarry 0 <= 0
+proved-numeric-argument-fact AddWithCarry 0 <= 1
+proved-numeric-argument-fact AddWithCarry 0 <= 2
+proved-numeric-argument-fact AddWithCarry 0 <= 3
+proved-numeric-argument-fact AddWithCarry 0 <= 31
+proved-numeric-argument-fact AddWithCarry 0 <= 32
+proved-numeric-argument-fact AddWithCarry 0 <= 4
+proved-numeric-argument-fact AddWithCarry 0 <= 64
+proved-numeric-argument-fact AddWithCarry 1 <= 1
+proved-numeric-argument-fact AddWithCarry 1 <= 31
+proved-numeric-argument-fact AddWithCarry 2 <= 3
+proved-numeric-argument-fact AddWithCarry 2 <= 31
+proved-numeric-argument-fact AddWithCarry 3 <= 3
+proved-numeric-argument-fact AddWithCarry 3 <= 31
+proved-numeric-argument-fact AddWithCarry 31 <= 31
+proved-numeric-argument-fact AddWithCarry 32 <= 63
+proved-numeric-argument-fact AddWithCarry 4 <= 31
+proved-numeric-argument-fact AddWithCarry 4 <= 7
+proved-numeric-argument-fact AddWithCarry 64 <= 127
+proved-numeric-argument-fact Extend 'N <= 127
+proved-numeric-argument-fact Extend 'N <= 63
+proved-numeric-argument-fact Extend ('M > 0 & 'N >= 'M)
+proved-numeric-argument-fact Extend ('M >= 0 & 'N >= 'M)
+proved-numeric-argument-fact Extend ('N >= 0 & ('N == 8 | ('N == 16 | ('N == 32 | ('N == 64 | not((0 >= 0 & 0 <= 4)))))))
+proved-numeric-argument-fact Extend ('N >= 0 & ('N == 8 | ('N == 16 | ('N == 32 | ('N == 64 | not((1 >= 0 & 1 <= 4)))))))
+proved-numeric-argument-fact Extend ('N >= 0 & ('N == 8 | ('N == 16 | ('N == 32 | ('N == 64 | not((2 >= 0 & 2 <= 4)))))))
+proved-numeric-argument-fact Extend ('N >= 0 & ('N == 8 | ('N == 16 | ('N == 32 | ('N == 64 | not((3 >= 0 & 3 <= 4)))))))
+proved-numeric-argument-fact Extend ('N >= 0 & ('N == 8 | ('N == 16 | ('N == 32 | ('N == 64 | not((4 >= 0 & 4 <= 4)))))))
+proved-numeric-argument-fact Extend (0 <= (16 - 1) | not((0 >= 0 & 0 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (16 - 1) | not((1 >= 0 & 1 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (16 - 1) | not((2 >= 0 & 2 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (16 - 1) | not((3 >= 0 & 3 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (16 - 1) | not((4 >= 0 & 4 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (28 - 1) | not((4 >= 0 & 4 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (29 - 1) | not((3 >= 0 & 3 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (30 - 1) | not((2 >= 0 & 2 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (31 - 1) | not((1 >= 0 & 1 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (32 - 1) | not((0 >= 0 & 0 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (32 - 1) | not((1 >= 0 & 1 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (32 - 1) | not((2 >= 0 & 2 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (32 - 1) | not((3 >= 0 & 3 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (32 - 1) | not((4 >= 0 & 4 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (60 - 1) | not((4 >= 0 & 4 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (61 - 1) | not((3 >= 0 & 3 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (62 - 1) | not((2 >= 0 & 2 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (63 - 1) | not((1 >= 0 & 1 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (64 - 1) | not((0 >= 0 & 0 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (8 - 1) | not((0 >= 0 & 0 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (8 - 1) | not((1 >= 0 & 1 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (8 - 1) | not((2 >= 0 & 2 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (8 - 1) | not((3 >= 0 & 3 <= 4)))
+proved-numeric-argument-fact Extend (0 <= (8 - 1) | not((4 >= 0 & 4 <= 4)))
+proved-numeric-argument-fact Extend (0 >= 0 & 0 <= 4)
+proved-numeric-argument-fact Extend (1 >= 0 & 1 <= 4)
+proved-numeric-argument-fact Extend (2 >= 0 & 2 <= 4)
+proved-numeric-argument-fact Extend (3 >= 0 & 3 <= 4)
+proved-numeric-argument-fact Extend (4 >= 0 & 4 <= 4)
+proved-numeric-argument-fact Extend 0 < 'N
+proved-numeric-argument-fact Extend 0 < 1
+proved-numeric-argument-fact Extend 0 < 2
+proved-numeric-argument-fact Extend 0 < 3
+proved-numeric-argument-fact Extend 0 < 4
+proved-numeric-argument-fact Extend 0 <= 'N
+proved-numeric-argument-fact Extend 0 <= 0
+proved-numeric-argument-fact Extend 0 <= 1
+proved-numeric-argument-fact Extend 0 <= 2
+proved-numeric-argument-fact Extend 0 <= 3
+proved-numeric-argument-fact Extend 0 <= 31
+proved-numeric-argument-fact Extend 0 <= 4
+proved-numeric-argument-fact Extend 1 <= 1
+proved-numeric-argument-fact Extend 1 <= 31
+proved-numeric-argument-fact Extend 16 <= 16
+proved-numeric-argument-fact Extend 2 <= 3
+proved-numeric-argument-fact Extend 2 <= 31
+proved-numeric-argument-fact Extend 28 <= 28
+proved-numeric-argument-fact Extend 29 <= 29
+proved-numeric-argument-fact Extend 3 <= 3
+proved-numeric-argument-fact Extend 3 <= 31
+proved-numeric-argument-fact Extend 30 <= 30
+proved-numeric-argument-fact Extend 31 <= 31
+proved-numeric-argument-fact Extend 32 <= 32
+proved-numeric-argument-fact Extend 4 <= 31
+proved-numeric-argument-fact Extend 4 <= 7
+proved-numeric-argument-fact Extend 60 <= 60
+proved-numeric-argument-fact Extend 61 <= 61
+proved-numeric-argument-fact Extend 62 <= 62
+proved-numeric-argument-fact Extend 63 <= 63
+proved-numeric-argument-fact Extend 64 <= 64
+proved-numeric-argument-fact Extend 8 <= 8
+proved-numeric-argument-fact ExtendReg 'N <= 127
+proved-numeric-argument-fact ExtendReg 'N <= 63
+proved-numeric-argument-fact ExtendReg 'reg <= 31
+proved-numeric-argument-fact ExtendReg 'shift <= 0
+proved-numeric-argument-fact ExtendReg 'shift <= 1
+proved-numeric-argument-fact ExtendReg 'shift <= 3
+proved-numeric-argument-fact ExtendReg 'shift <= 31
+proved-numeric-argument-fact ExtendReg 'shift <= 7
+proved-numeric-argument-fact ExtendReg ('shift >= 0 & 'shift <= 4)
+proved-numeric-argument-fact ExtendReg (0 <= 'reg & 'reg < 32)
+proved-numeric-argument-fact ExtendReg 0 < 'N
+proved-numeric-argument-fact ExtendReg 0 < 'shift
+proved-numeric-argument-fact ExtendReg 0 < 31
+proved-numeric-argument-fact ExtendReg 0 <= 'N
+proved-numeric-argument-fact ExtendReg 0 <= 'reg
+proved-numeric-argument-fact ExtendReg 0 <= 'shift
+proved-numeric-argument-fact ExtendReg 0 <= 31
+proved-numeric-argument-fact ExtendReg 31 <= 31
+proved-numeric-argument-fact ROR 'shift <= 63
+proved-numeric-argument-fact ROR (32 > 0 & 'shift >= 0)
+proved-numeric-argument-fact ROR (64 > 0 & 'shift >= 0)
+proved-numeric-argument-fact ROR 0 < 32
+proved-numeric-argument-fact ROR 0 < 64
+proved-numeric-argument-fact ROR 0 <= 'shift
+proved-numeric-argument-fact ROR 0 <= 32
+proved-numeric-argument-fact ROR 0 <= 64
+proved-numeric-argument-fact ROR 32 <= 63
+proved-numeric-argument-fact ROR 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact ROR 64 <= 127
+proved-numeric-argument-fact ROR 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact ShiftReg 'N <= 127
+proved-numeric-argument-fact ShiftReg 'N <= 63
+proved-numeric-argument-fact ShiftReg 'amount <= 63
+proved-numeric-argument-fact ShiftReg 'reg <= 31
+proved-numeric-argument-fact ShiftReg ('N > 0 & 'amount >= 0)
+proved-numeric-argument-fact ShiftReg 0 < 'N
+proved-numeric-argument-fact ShiftReg 0 <= 'N
+proved-numeric-argument-fact ShiftReg 0 <= 'amount
+proved-numeric-argument-fact ShiftReg 0 <= 'reg
+proved-numeric-argument-fact Zeros 'n <= 0
+proved-numeric-argument-fact Zeros 'n <= 1
+proved-numeric-argument-fact Zeros 'n <= 3
+proved-numeric-argument-fact Zeros 'n <= 31
+proved-numeric-argument-fact Zeros 'n <= 7
+proved-numeric-argument-fact Zeros ('n >= 0 & 'n <= 4)
+proved-numeric-argument-fact Zeros (0 <= (16 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (28 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (29 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (30 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (31 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (32 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (60 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (61 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (62 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (63 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (64 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (0 <= (8 - 1) | not(('n >= 0 & 'n <= 4)))
+proved-numeric-argument-fact Zeros (32 >= 0 & (32 == 8 | (32 == 16 | (32 == 32 | (32 == 64 | not(('n >= 0 & 'n <= 4)))))))
+proved-numeric-argument-fact Zeros (64 >= 0 & (64 == 8 | (64 == 16 | (64 == 32 | (64 == 64 | not(('n >= 0 & 'n <= 4)))))))
+proved-numeric-argument-fact Zeros 0 < 'n
+proved-numeric-argument-fact Zeros 0 < 32
+proved-numeric-argument-fact Zeros 0 < 64
+proved-numeric-argument-fact Zeros 0 <= 'n
+proved-numeric-argument-fact Zeros 0 <= 32
+proved-numeric-argument-fact Zeros 0 <= 64
+proved-numeric-argument-fact Zeros 16 <= 16
+proved-numeric-argument-fact Zeros 28 <= 28
+proved-numeric-argument-fact Zeros 29 <= 29
+proved-numeric-argument-fact Zeros 30 <= 30
+proved-numeric-argument-fact Zeros 31 <= 31
+proved-numeric-argument-fact Zeros 32 <= 32
+proved-numeric-argument-fact Zeros 32 <= 63
+proved-numeric-argument-fact Zeros 60 <= 60
+proved-numeric-argument-fact Zeros 61 <= 61
+proved-numeric-argument-fact Zeros 62 <= 62
+proved-numeric-argument-fact Zeros 63 <= 63
+proved-numeric-argument-fact Zeros 64 <= 127
+proved-numeric-argument-fact Zeros 64 <= 64
+proved-numeric-argument-fact Zeros 8 <= 8
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 15
+proved-numeric-argument-fact __id 'n <= 16
+proved-numeric-argument-fact __id 'n <= 28
+proved-numeric-argument-fact __id 'n <= 29
+proved-numeric-argument-fact __id 'n <= 30
+proved-numeric-argument-fact __id 'n <= 31
+proved-numeric-argument-fact __id 'n <= 32
+proved-numeric-argument-fact __id 'n <= 60
+proved-numeric-argument-fact __id 'n <= 61
+proved-numeric-argument-fact __id 'n <= 62
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id 'n <= 64
+proved-numeric-argument-fact __id 'n <= 8
+proved-numeric-argument-fact __id 'n in {8, 16, 32, 64}
+proved-numeric-argument-fact __id (0 >= 0 & 0 <= 4)
+proved-numeric-argument-fact __id (1 >= 0 & 1 <= 4)
+proved-numeric-argument-fact __id (10 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (11 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (12 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (16 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (17 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (18 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (19 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (2 >= 0 & 2 <= 4)
+proved-numeric-argument-fact __id (20 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (3 >= 0 & 3 <= 4)
+proved-numeric-argument-fact __id (32 > 0 & 'n >= 0)
+proved-numeric-argument-fact __id (32 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (32 >= 0 & (32 == 8 | (32 == 16 | (32 == 32 | (32 == 64 | not((0 >= 0 & 0 <= 4)))))))
+proved-numeric-argument-fact __id (32 >= 0 & (32 == 8 | (32 == 16 | (32 == 32 | (32 == 64 | not((1 >= 0 & 1 <= 4)))))))
+proved-numeric-argument-fact __id (32 >= 0 & (32 == 8 | (32 == 16 | (32 == 32 | (32 == 64 | not((2 >= 0 & 2 <= 4)))))))
+proved-numeric-argument-fact __id (32 >= 0 & (32 == 8 | (32 == 16 | (32 == 32 | (32 == 64 | not((3 >= 0 & 3 <= 4)))))))
+proved-numeric-argument-fact __id (32 >= 0 & (32 == 8 | (32 == 16 | (32 == 32 | (32 == 64 | not((4 >= 0 & 4 <= 4)))))))
+proved-numeric-argument-fact __id (33 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (34 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (35 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (36 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (4 >= 0 & 4 <= 4)
+proved-numeric-argument-fact __id (64 > 0 & 'n >= 0)
+proved-numeric-argument-fact __id (64 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (64 >= 0 & (64 == 8 | (64 == 16 | (64 == 32 | (64 == 64 | not((0 >= 0 & 0 <= 4)))))))
+proved-numeric-argument-fact __id (64 >= 0 & (64 == 8 | (64 == 16 | (64 == 32 | (64 == 64 | not((1 >= 0 & 1 <= 4)))))))
+proved-numeric-argument-fact __id (64 >= 0 & (64 == 8 | (64 == 16 | (64 == 32 | (64 == 64 | not((2 >= 0 & 2 <= 4)))))))
+proved-numeric-argument-fact __id (64 >= 0 & (64 == 8 | (64 == 16 | (64 == 32 | (64 == 64 | not((3 >= 0 & 3 <= 4)))))))
+proved-numeric-argument-fact __id (64 >= 0 & (64 == 8 | (64 == 16 | (64 == 32 | (64 == 64 | not((4 >= 0 & 4 <= 4)))))))
+proved-numeric-argument-fact __id (8 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id (9 >= 0 & 'n >= 0)
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 < 1
+proved-numeric-argument-fact __id 0 < 2
+proved-numeric-argument-fact __id 0 < 3
+proved-numeric-argument-fact __id 0 < 32
+proved-numeric-argument-fact __id 0 < 4
+proved-numeric-argument-fact __id 0 < 64
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 0 <= 0
+proved-numeric-argument-fact __id 0 <= 1
+proved-numeric-argument-fact __id 0 <= 2
+proved-numeric-argument-fact __id 0 <= 3
+proved-numeric-argument-fact __id 0 <= 31
+proved-numeric-argument-fact __id 0 <= 32
+proved-numeric-argument-fact __id 0 <= 4
+proved-numeric-argument-fact __id 0 <= 64
+proved-numeric-argument-fact __id 1 <= 1
+proved-numeric-argument-fact __id 1 <= 31
+proved-numeric-argument-fact __id 16 <= 'n
+proved-numeric-argument-fact __id 2 <= 3
+proved-numeric-argument-fact __id 2 <= 31
+proved-numeric-argument-fact __id 28 <= 'n
+proved-numeric-argument-fact __id 29 <= 'n
+proved-numeric-argument-fact __id 3 <= 3
+proved-numeric-argument-fact __id 3 <= 31
+proved-numeric-argument-fact __id 30 <= 'n
+proved-numeric-argument-fact __id 31 <= 'n
+proved-numeric-argument-fact __id 32 <= 'n
+proved-numeric-argument-fact __id 32 <= 63
+proved-numeric-argument-fact __id 32 in {8, 16, 32, 64}
+proved-numeric-argument-fact __id 4 <= 31
+proved-numeric-argument-fact __id 4 <= 7
+proved-numeric-argument-fact __id 60 <= 'n
+proved-numeric-argument-fact __id 61 <= 'n
+proved-numeric-argument-fact __id 62 <= 'n
+proved-numeric-argument-fact __id 63 <= 'n
+proved-numeric-argument-fact __id 64 <= 'n
+proved-numeric-argument-fact __id 64 <= 127
+proved-numeric-argument-fact __id 64 in {8, 16, 32, 64}
+proved-numeric-argument-fact __id 8 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 'shift <= 0
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 'shift <= 1
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 'shift <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 'shift <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 'shift <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg (0 <= 'd & 'd < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg (0 <= 'm & 'm < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg (0 <= 'n & 'n < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 0 < 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 0 < 'shift
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_extendedreg 0 <= 'shift
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate (0 <= 'd & 'd < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate (0 <= 'n & 'n < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate 0 < 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_immediate 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 'shift_amount <= 0
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 'shift_amount <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 'shift_amount <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg (0 <= 'd & 'd < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg (0 <= 'm & 'm < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg (0 <= 'n & 'n < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg (0 <= 'shift_amount & 'shift_amount < 32)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg (0 <= 'shift_amount & 'shift_amount < 64)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 0 < 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 0 < 'n
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 0 <= 'shift_amount
+proved-numeric-argument-fact integer_subrange 'lo <= 0
+proved-numeric-argument-fact integer_subrange 'lo <= 31
+proved-numeric-argument-fact integer_subrange 0 <= 'ex860566#
+proved-numeric-argument-fact integer_subrange 0 <= 'hi
+proved-numeric-argument-fact integer_subrange 0 <= 'lo
+statically-selected-branch src/instrs64.sail:608:8-608:36 else
+statically-selected-branch src/instrs64.sail:760:8-760:14 else
+statically-selected-branch src/instrs64.sail:760:8-760:14 then
+statically-selected-branch src/instrs64.sail:767:8-767:16 else
+statically-selected-branch src/instrs64.sail:767:8-767:16 then
+statically-selected-branch src/instrs64.sail:770:8-770:36 else
+statically-selected-branch src/instrs64.sail:770:8-770:36 then
+unobserved-undefined-local carry_in
+unobserved-undefined-local is_unsigned
+unobserved-undefined-local nzcv
+unobserved-undefined-local result
+state-computation-root arm_ADD32_EXT_SXTB_0
+state-computation-root arm_ADD32_EXT_SXTB_1
+state-computation-root arm_ADD32_EXT_SXTB_2
+state-computation-root arm_ADD32_EXT_SXTB_3
+state-computation-root arm_ADD32_EXT_SXTB_4
+state-computation-root arm_ADD32_EXT_SXTH_0
+state-computation-root arm_ADD32_EXT_SXTH_1
+state-computation-root arm_ADD32_EXT_SXTH_2
+state-computation-root arm_ADD32_EXT_SXTH_3
+state-computation-root arm_ADD32_EXT_SXTH_4
+state-computation-root arm_ADD32_EXT_SXTW_0
+state-computation-root arm_ADD32_EXT_SXTW_1
+state-computation-root arm_ADD32_EXT_SXTW_2
+state-computation-root arm_ADD32_EXT_SXTW_3
+state-computation-root arm_ADD32_EXT_SXTW_4
+state-computation-root arm_ADD32_EXT_SXTX_0
+state-computation-root arm_ADD32_EXT_SXTX_1
+state-computation-root arm_ADD32_EXT_SXTX_2
+state-computation-root arm_ADD32_EXT_SXTX_3
+state-computation-root arm_ADD32_EXT_SXTX_4
+state-computation-root arm_ADD32_EXT_UXTB_0
+state-computation-root arm_ADD32_EXT_UXTB_1
+state-computation-root arm_ADD32_EXT_UXTB_2
+state-computation-root arm_ADD32_EXT_UXTB_3
+state-computation-root arm_ADD32_EXT_UXTB_4
+state-computation-root arm_ADD32_EXT_UXTH_0
+state-computation-root arm_ADD32_EXT_UXTH_1
+state-computation-root arm_ADD32_EXT_UXTH_2
+state-computation-root arm_ADD32_EXT_UXTH_3
+state-computation-root arm_ADD32_EXT_UXTH_4
+state-computation-root arm_ADD32_EXT_UXTW_0
+state-computation-root arm_ADD32_EXT_UXTW_1
+state-computation-root arm_ADD32_EXT_UXTW_2
+state-computation-root arm_ADD32_EXT_UXTW_3
+state-computation-root arm_ADD32_EXT_UXTW_4
+state-computation-root arm_ADD32_EXT_UXTX_0
+state-computation-root arm_ADD32_EXT_UXTX_1
+state-computation-root arm_ADD32_EXT_UXTX_2
+state-computation-root arm_ADD32_EXT_UXTX_3
+state-computation-root arm_ADD32_EXT_UXTX_4
+state-computation-root arm_ADD32_IMM
+state-computation-root arm_ADD32_SHIFT
+state-computation-root arm_ADD64_EXT_SXTB_0
+state-computation-root arm_ADD64_EXT_SXTB_1
+state-computation-root arm_ADD64_EXT_SXTB_2
+state-computation-root arm_ADD64_EXT_SXTB_3
+state-computation-root arm_ADD64_EXT_SXTB_4
+state-computation-root arm_ADD64_EXT_SXTH_0
+state-computation-root arm_ADD64_EXT_SXTH_1
+state-computation-root arm_ADD64_EXT_SXTH_2
+state-computation-root arm_ADD64_EXT_SXTH_3
+state-computation-root arm_ADD64_EXT_SXTH_4
+state-computation-root arm_ADD64_EXT_SXTW_0
+state-computation-root arm_ADD64_EXT_SXTW_1
+state-computation-root arm_ADD64_EXT_SXTW_2
+state-computation-root arm_ADD64_EXT_SXTW_3
+state-computation-root arm_ADD64_EXT_SXTW_4
+state-computation-root arm_ADD64_EXT_SXTX_0
+state-computation-root arm_ADD64_EXT_SXTX_1
+state-computation-root arm_ADD64_EXT_SXTX_2
+state-computation-root arm_ADD64_EXT_SXTX_3
+state-computation-root arm_ADD64_EXT_SXTX_4
+state-computation-root arm_ADD64_EXT_UXTB_0
+state-computation-root arm_ADD64_EXT_UXTB_1
+state-computation-root arm_ADD64_EXT_UXTB_2
+state-computation-root arm_ADD64_EXT_UXTB_3
+state-computation-root arm_ADD64_EXT_UXTB_4
+state-computation-root arm_ADD64_EXT_UXTH_0
+state-computation-root arm_ADD64_EXT_UXTH_1
+state-computation-root arm_ADD64_EXT_UXTH_2
+state-computation-root arm_ADD64_EXT_UXTH_3
+state-computation-root arm_ADD64_EXT_UXTH_4
+state-computation-root arm_ADD64_EXT_UXTW_0
+state-computation-root arm_ADD64_EXT_UXTW_1
+state-computation-root arm_ADD64_EXT_UXTW_2
+state-computation-root arm_ADD64_EXT_UXTW_3
+state-computation-root arm_ADD64_EXT_UXTW_4
+state-computation-root arm_ADD64_EXT_UXTX_0
+state-computation-root arm_ADD64_EXT_UXTX_1
+state-computation-root arm_ADD64_EXT_UXTX_2
+state-computation-root arm_ADD64_EXT_UXTX_3
+state-computation-root arm_ADD64_EXT_UXTX_4
+state-computation-root arm_ADD64_IMM
+state-computation-root arm_ADD64_SHIFT
+state-computation-root arm_ADDS32_EXT_SXTB_0
+state-computation-root arm_ADDS32_EXT_SXTB_1
+state-computation-root arm_ADDS32_EXT_SXTB_2
+state-computation-root arm_ADDS32_EXT_SXTB_3
+state-computation-root arm_ADDS32_EXT_SXTB_4
+state-computation-root arm_ADDS32_EXT_SXTH_0
+state-computation-root arm_ADDS32_EXT_SXTH_1
+state-computation-root arm_ADDS32_EXT_SXTH_2
+state-computation-root arm_ADDS32_EXT_SXTH_3
+state-computation-root arm_ADDS32_EXT_SXTH_4
+state-computation-root arm_ADDS32_EXT_SXTW_0
+state-computation-root arm_ADDS32_EXT_SXTW_1
+state-computation-root arm_ADDS32_EXT_SXTW_2
+state-computation-root arm_ADDS32_EXT_SXTW_3
+state-computation-root arm_ADDS32_EXT_SXTW_4
+state-computation-root arm_ADDS32_EXT_SXTX_0
+state-computation-root arm_ADDS32_EXT_SXTX_1
+state-computation-root arm_ADDS32_EXT_SXTX_2
+state-computation-root arm_ADDS32_EXT_SXTX_3
+state-computation-root arm_ADDS32_EXT_SXTX_4
+state-computation-root arm_ADDS32_EXT_UXTB_0
+state-computation-root arm_ADDS32_EXT_UXTB_1
+state-computation-root arm_ADDS32_EXT_UXTB_2
+state-computation-root arm_ADDS32_EXT_UXTB_3
+state-computation-root arm_ADDS32_EXT_UXTB_4
+state-computation-root arm_ADDS32_EXT_UXTH_0
+state-computation-root arm_ADDS32_EXT_UXTH_1
+state-computation-root arm_ADDS32_EXT_UXTH_2
+state-computation-root arm_ADDS32_EXT_UXTH_3
+state-computation-root arm_ADDS32_EXT_UXTH_4
+state-computation-root arm_ADDS32_EXT_UXTW_0
+state-computation-root arm_ADDS32_EXT_UXTW_1
+state-computation-root arm_ADDS32_EXT_UXTW_2
+state-computation-root arm_ADDS32_EXT_UXTW_3
+state-computation-root arm_ADDS32_EXT_UXTW_4
+state-computation-root arm_ADDS32_EXT_UXTX_0
+state-computation-root arm_ADDS32_EXT_UXTX_1
+state-computation-root arm_ADDS32_EXT_UXTX_2
+state-computation-root arm_ADDS32_EXT_UXTX_3
+state-computation-root arm_ADDS32_EXT_UXTX_4
+state-computation-root arm_ADDS32_IMM
+state-computation-root arm_ADDS32_SHIFT
+state-computation-root arm_ADDS64_EXT_SXTB_0
+state-computation-root arm_ADDS64_EXT_SXTB_1
+state-computation-root arm_ADDS64_EXT_SXTB_2
+state-computation-root arm_ADDS64_EXT_SXTB_3
+state-computation-root arm_ADDS64_EXT_SXTB_4
+state-computation-root arm_ADDS64_EXT_SXTH_0
+state-computation-root arm_ADDS64_EXT_SXTH_1
+state-computation-root arm_ADDS64_EXT_SXTH_2
+state-computation-root arm_ADDS64_EXT_SXTH_3
+state-computation-root arm_ADDS64_EXT_SXTH_4
+state-computation-root arm_ADDS64_EXT_SXTW_0
+state-computation-root arm_ADDS64_EXT_SXTW_1
+state-computation-root arm_ADDS64_EXT_SXTW_2
+state-computation-root arm_ADDS64_EXT_SXTW_3
+state-computation-root arm_ADDS64_EXT_SXTW_4
+state-computation-root arm_ADDS64_EXT_SXTX_0
+state-computation-root arm_ADDS64_EXT_SXTX_1
+state-computation-root arm_ADDS64_EXT_SXTX_2
+state-computation-root arm_ADDS64_EXT_SXTX_3
+state-computation-root arm_ADDS64_EXT_SXTX_4
+state-computation-root arm_ADDS64_EXT_UXTB_0
+state-computation-root arm_ADDS64_EXT_UXTB_1
+state-computation-root arm_ADDS64_EXT_UXTB_2
+state-computation-root arm_ADDS64_EXT_UXTB_3
+state-computation-root arm_ADDS64_EXT_UXTB_4
+state-computation-root arm_ADDS64_EXT_UXTH_0
+state-computation-root arm_ADDS64_EXT_UXTH_1
+state-computation-root arm_ADDS64_EXT_UXTH_2
+state-computation-root arm_ADDS64_EXT_UXTH_3
+state-computation-root arm_ADDS64_EXT_UXTH_4
+state-computation-root arm_ADDS64_EXT_UXTW_0
+state-computation-root arm_ADDS64_EXT_UXTW_1
+state-computation-root arm_ADDS64_EXT_UXTW_2
+state-computation-root arm_ADDS64_EXT_UXTW_3
+state-computation-root arm_ADDS64_EXT_UXTW_4
+state-computation-root arm_ADDS64_EXT_UXTX_0
+state-computation-root arm_ADDS64_EXT_UXTX_1
+state-computation-root arm_ADDS64_EXT_UXTX_2
+state-computation-root arm_ADDS64_EXT_UXTX_3
+state-computation-root arm_ADDS64_EXT_UXTX_4
+state-computation-root arm_ADDS64_IMM
+state-computation-root arm_ADDS64_SHIFT
+state-computation-root arm_CMN32_EXT_SXTB_0
+state-computation-root arm_CMN32_EXT_SXTB_1
+state-computation-root arm_CMN32_EXT_SXTB_2
+state-computation-root arm_CMN32_EXT_SXTB_3
+state-computation-root arm_CMN32_EXT_SXTB_4
+state-computation-root arm_CMN32_EXT_SXTH_0
+state-computation-root arm_CMN32_EXT_SXTH_1
+state-computation-root arm_CMN32_EXT_SXTH_2
+state-computation-root arm_CMN32_EXT_SXTH_3
+state-computation-root arm_CMN32_EXT_SXTH_4
+state-computation-root arm_CMN32_EXT_SXTW_0
+state-computation-root arm_CMN32_EXT_SXTW_1
+state-computation-root arm_CMN32_EXT_SXTW_2
+state-computation-root arm_CMN32_EXT_SXTW_3
+state-computation-root arm_CMN32_EXT_SXTW_4
+state-computation-root arm_CMN32_EXT_SXTX_0
+state-computation-root arm_CMN32_EXT_SXTX_1
+state-computation-root arm_CMN32_EXT_SXTX_2
+state-computation-root arm_CMN32_EXT_SXTX_3
+state-computation-root arm_CMN32_EXT_SXTX_4
+state-computation-root arm_CMN32_EXT_UXTB_0
+state-computation-root arm_CMN32_EXT_UXTB_1
+state-computation-root arm_CMN32_EXT_UXTB_2
+state-computation-root arm_CMN32_EXT_UXTB_3
+state-computation-root arm_CMN32_EXT_UXTB_4
+state-computation-root arm_CMN32_EXT_UXTH_0
+state-computation-root arm_CMN32_EXT_UXTH_1
+state-computation-root arm_CMN32_EXT_UXTH_2
+state-computation-root arm_CMN32_EXT_UXTH_3
+state-computation-root arm_CMN32_EXT_UXTH_4
+state-computation-root arm_CMN32_EXT_UXTW_0
+state-computation-root arm_CMN32_EXT_UXTW_1
+state-computation-root arm_CMN32_EXT_UXTW_2
+state-computation-root arm_CMN32_EXT_UXTW_3
+state-computation-root arm_CMN32_EXT_UXTW_4
+state-computation-root arm_CMN32_EXT_UXTX_0
+state-computation-root arm_CMN32_EXT_UXTX_1
+state-computation-root arm_CMN32_EXT_UXTX_2
+state-computation-root arm_CMN32_EXT_UXTX_3
+state-computation-root arm_CMN32_EXT_UXTX_4
+state-computation-root arm_CMN32_IMM
+state-computation-root arm_CMN32_SHIFT
+state-computation-root arm_CMN64_EXT_SXTB_0
+state-computation-root arm_CMN64_EXT_SXTB_1
+state-computation-root arm_CMN64_EXT_SXTB_2
+state-computation-root arm_CMN64_EXT_SXTB_3
+state-computation-root arm_CMN64_EXT_SXTB_4
+state-computation-root arm_CMN64_EXT_SXTH_0
+state-computation-root arm_CMN64_EXT_SXTH_1
+state-computation-root arm_CMN64_EXT_SXTH_2
+state-computation-root arm_CMN64_EXT_SXTH_3
+state-computation-root arm_CMN64_EXT_SXTH_4
+state-computation-root arm_CMN64_EXT_SXTW_0
+state-computation-root arm_CMN64_EXT_SXTW_1
+state-computation-root arm_CMN64_EXT_SXTW_2
+state-computation-root arm_CMN64_EXT_SXTW_3
+state-computation-root arm_CMN64_EXT_SXTW_4
+state-computation-root arm_CMN64_EXT_SXTX_0
+state-computation-root arm_CMN64_EXT_SXTX_1
+state-computation-root arm_CMN64_EXT_SXTX_2
+state-computation-root arm_CMN64_EXT_SXTX_3
+state-computation-root arm_CMN64_EXT_SXTX_4
+state-computation-root arm_CMN64_EXT_UXTB_0
+state-computation-root arm_CMN64_EXT_UXTB_1
+state-computation-root arm_CMN64_EXT_UXTB_2
+state-computation-root arm_CMN64_EXT_UXTB_3
+state-computation-root arm_CMN64_EXT_UXTB_4
+state-computation-root arm_CMN64_EXT_UXTH_0
+state-computation-root arm_CMN64_EXT_UXTH_1
+state-computation-root arm_CMN64_EXT_UXTH_2
+state-computation-root arm_CMN64_EXT_UXTH_3
+state-computation-root arm_CMN64_EXT_UXTH_4
+state-computation-root arm_CMN64_EXT_UXTW_0
+state-computation-root arm_CMN64_EXT_UXTW_1
+state-computation-root arm_CMN64_EXT_UXTW_2
+state-computation-root arm_CMN64_EXT_UXTW_3
+state-computation-root arm_CMN64_EXT_UXTW_4
+state-computation-root arm_CMN64_EXT_UXTX_0
+state-computation-root arm_CMN64_EXT_UXTX_1
+state-computation-root arm_CMN64_EXT_UXTX_2
+state-computation-root arm_CMN64_EXT_UXTX_3
+state-computation-root arm_CMN64_EXT_UXTX_4
+state-computation-root arm_CMN64_IMM
+state-computation-root arm_CMN64_SHIFT
+state-computation-root arm_CMP32_EXT_SXTB_0
+state-computation-root arm_CMP32_EXT_SXTB_1
+state-computation-root arm_CMP32_EXT_SXTB_2
+state-computation-root arm_CMP32_EXT_SXTB_3
+state-computation-root arm_CMP32_EXT_SXTB_4
+state-computation-root arm_CMP32_EXT_SXTH_0
+state-computation-root arm_CMP32_EXT_SXTH_1
+state-computation-root arm_CMP32_EXT_SXTH_2
+state-computation-root arm_CMP32_EXT_SXTH_3
+state-computation-root arm_CMP32_EXT_SXTH_4
+state-computation-root arm_CMP32_EXT_SXTW_0
+state-computation-root arm_CMP32_EXT_SXTW_1
+state-computation-root arm_CMP32_EXT_SXTW_2
+state-computation-root arm_CMP32_EXT_SXTW_3
+state-computation-root arm_CMP32_EXT_SXTW_4
+state-computation-root arm_CMP32_EXT_SXTX_0
+state-computation-root arm_CMP32_EXT_SXTX_1
+state-computation-root arm_CMP32_EXT_SXTX_2
+state-computation-root arm_CMP32_EXT_SXTX_3
+state-computation-root arm_CMP32_EXT_SXTX_4
+state-computation-root arm_CMP32_EXT_UXTB_0
+state-computation-root arm_CMP32_EXT_UXTB_1
+state-computation-root arm_CMP32_EXT_UXTB_2
+state-computation-root arm_CMP32_EXT_UXTB_3
+state-computation-root arm_CMP32_EXT_UXTB_4
+state-computation-root arm_CMP32_EXT_UXTH_0
+state-computation-root arm_CMP32_EXT_UXTH_1
+state-computation-root arm_CMP32_EXT_UXTH_2
+state-computation-root arm_CMP32_EXT_UXTH_3
+state-computation-root arm_CMP32_EXT_UXTH_4
+state-computation-root arm_CMP32_EXT_UXTW_0
+state-computation-root arm_CMP32_EXT_UXTW_1
+state-computation-root arm_CMP32_EXT_UXTW_2
+state-computation-root arm_CMP32_EXT_UXTW_3
+state-computation-root arm_CMP32_EXT_UXTW_4
+state-computation-root arm_CMP32_EXT_UXTX_0
+state-computation-root arm_CMP32_EXT_UXTX_1
+state-computation-root arm_CMP32_EXT_UXTX_2
+state-computation-root arm_CMP32_EXT_UXTX_3
+state-computation-root arm_CMP32_EXT_UXTX_4
+state-computation-root arm_CMP32_IMM
+state-computation-root arm_CMP32_SHIFT
+state-computation-root arm_CMP64_EXT_SXTB_0
+state-computation-root arm_CMP64_EXT_SXTB_1
+state-computation-root arm_CMP64_EXT_SXTB_2
+state-computation-root arm_CMP64_EXT_SXTB_3
+state-computation-root arm_CMP64_EXT_SXTB_4
+state-computation-root arm_CMP64_EXT_SXTH_0
+state-computation-root arm_CMP64_EXT_SXTH_1
+state-computation-root arm_CMP64_EXT_SXTH_2
+state-computation-root arm_CMP64_EXT_SXTH_3
+state-computation-root arm_CMP64_EXT_SXTH_4
+state-computation-root arm_CMP64_EXT_SXTW_0
+state-computation-root arm_CMP64_EXT_SXTW_1
+state-computation-root arm_CMP64_EXT_SXTW_2
+state-computation-root arm_CMP64_EXT_SXTW_3
+state-computation-root arm_CMP64_EXT_SXTW_4
+state-computation-root arm_CMP64_EXT_SXTX_0
+state-computation-root arm_CMP64_EXT_SXTX_1
+state-computation-root arm_CMP64_EXT_SXTX_2
+state-computation-root arm_CMP64_EXT_SXTX_3
+state-computation-root arm_CMP64_EXT_SXTX_4
+state-computation-root arm_CMP64_EXT_UXTB_0
+state-computation-root arm_CMP64_EXT_UXTB_1
+state-computation-root arm_CMP64_EXT_UXTB_2
+state-computation-root arm_CMP64_EXT_UXTB_3
+state-computation-root arm_CMP64_EXT_UXTB_4
+state-computation-root arm_CMP64_EXT_UXTH_0
+state-computation-root arm_CMP64_EXT_UXTH_1
+state-computation-root arm_CMP64_EXT_UXTH_2
+state-computation-root arm_CMP64_EXT_UXTH_3
+state-computation-root arm_CMP64_EXT_UXTH_4
+state-computation-root arm_CMP64_EXT_UXTW_0
+state-computation-root arm_CMP64_EXT_UXTW_1
+state-computation-root arm_CMP64_EXT_UXTW_2
+state-computation-root arm_CMP64_EXT_UXTW_3
+state-computation-root arm_CMP64_EXT_UXTW_4
+state-computation-root arm_CMP64_EXT_UXTX_0
+state-computation-root arm_CMP64_EXT_UXTX_1
+state-computation-root arm_CMP64_EXT_UXTX_2
+state-computation-root arm_CMP64_EXT_UXTX_3
+state-computation-root arm_CMP64_EXT_UXTX_4
+state-computation-root arm_CMP64_IMM
+state-computation-root arm_CMP64_SHIFT
+state-computation-root arm_NEG32
+state-computation-root arm_NEG32_SHIFT
+state-computation-root arm_NEG64
+state-computation-root arm_NEG64_SHIFT
+state-computation-root arm_NEGS32
+state-computation-root arm_NEGS32_SHIFT
+state-computation-root arm_NEGS64
+state-computation-root arm_NEGS64_SHIFT
+state-computation-root arm_SUB32_EXT_SXTB_0
+state-computation-root arm_SUB32_EXT_SXTB_1
+state-computation-root arm_SUB32_EXT_SXTB_2
+state-computation-root arm_SUB32_EXT_SXTB_3
+state-computation-root arm_SUB32_EXT_SXTB_4
+state-computation-root arm_SUB32_EXT_SXTH_0
+state-computation-root arm_SUB32_EXT_SXTH_1
+state-computation-root arm_SUB32_EXT_SXTH_2
+state-computation-root arm_SUB32_EXT_SXTH_3
+state-computation-root arm_SUB32_EXT_SXTH_4
+state-computation-root arm_SUB32_EXT_SXTW_0
+state-computation-root arm_SUB32_EXT_SXTW_1
+state-computation-root arm_SUB32_EXT_SXTW_2
+state-computation-root arm_SUB32_EXT_SXTW_3
+state-computation-root arm_SUB32_EXT_SXTW_4
+state-computation-root arm_SUB32_EXT_SXTX_0
+state-computation-root arm_SUB32_EXT_SXTX_1
+state-computation-root arm_SUB32_EXT_SXTX_2
+state-computation-root arm_SUB32_EXT_SXTX_3
+state-computation-root arm_SUB32_EXT_SXTX_4
+state-computation-root arm_SUB32_EXT_UXTB_0
+state-computation-root arm_SUB32_EXT_UXTB_1
+state-computation-root arm_SUB32_EXT_UXTB_2
+state-computation-root arm_SUB32_EXT_UXTB_3
+state-computation-root arm_SUB32_EXT_UXTB_4
+state-computation-root arm_SUB32_EXT_UXTH_0
+state-computation-root arm_SUB32_EXT_UXTH_1
+state-computation-root arm_SUB32_EXT_UXTH_2
+state-computation-root arm_SUB32_EXT_UXTH_3
+state-computation-root arm_SUB32_EXT_UXTH_4
+state-computation-root arm_SUB32_EXT_UXTW_0
+state-computation-root arm_SUB32_EXT_UXTW_1
+state-computation-root arm_SUB32_EXT_UXTW_2
+state-computation-root arm_SUB32_EXT_UXTW_3
+state-computation-root arm_SUB32_EXT_UXTW_4
+state-computation-root arm_SUB32_EXT_UXTX_0
+state-computation-root arm_SUB32_EXT_UXTX_1
+state-computation-root arm_SUB32_EXT_UXTX_2
+state-computation-root arm_SUB32_EXT_UXTX_3
+state-computation-root arm_SUB32_EXT_UXTX_4
+state-computation-root arm_SUB32_IMM
+state-computation-root arm_SUB32_SHIFT
+state-computation-root arm_SUB64_EXT_SXTB_0
+state-computation-root arm_SUB64_EXT_SXTB_1
+state-computation-root arm_SUB64_EXT_SXTB_2
+state-computation-root arm_SUB64_EXT_SXTB_3
+state-computation-root arm_SUB64_EXT_SXTB_4
+state-computation-root arm_SUB64_EXT_SXTH_0
+state-computation-root arm_SUB64_EXT_SXTH_1
+state-computation-root arm_SUB64_EXT_SXTH_2
+state-computation-root arm_SUB64_EXT_SXTH_3
+state-computation-root arm_SUB64_EXT_SXTH_4
+state-computation-root arm_SUB64_EXT_SXTW_0
+state-computation-root arm_SUB64_EXT_SXTW_1
+state-computation-root arm_SUB64_EXT_SXTW_2
+state-computation-root arm_SUB64_EXT_SXTW_3
+state-computation-root arm_SUB64_EXT_SXTW_4
+state-computation-root arm_SUB64_EXT_SXTX_0
+state-computation-root arm_SUB64_EXT_SXTX_1
+state-computation-root arm_SUB64_EXT_SXTX_2
+state-computation-root arm_SUB64_EXT_SXTX_3
+state-computation-root arm_SUB64_EXT_SXTX_4
+state-computation-root arm_SUB64_EXT_UXTB_0
+state-computation-root arm_SUB64_EXT_UXTB_1
+state-computation-root arm_SUB64_EXT_UXTB_2
+state-computation-root arm_SUB64_EXT_UXTB_3
+state-computation-root arm_SUB64_EXT_UXTB_4
+state-computation-root arm_SUB64_EXT_UXTH_0
+state-computation-root arm_SUB64_EXT_UXTH_1
+state-computation-root arm_SUB64_EXT_UXTH_2
+state-computation-root arm_SUB64_EXT_UXTH_3
+state-computation-root arm_SUB64_EXT_UXTH_4
+state-computation-root arm_SUB64_EXT_UXTW_0
+state-computation-root arm_SUB64_EXT_UXTW_1
+state-computation-root arm_SUB64_EXT_UXTW_2
+state-computation-root arm_SUB64_EXT_UXTW_3
+state-computation-root arm_SUB64_EXT_UXTW_4
+state-computation-root arm_SUB64_EXT_UXTX_0
+state-computation-root arm_SUB64_EXT_UXTX_1
+state-computation-root arm_SUB64_EXT_UXTX_2
+state-computation-root arm_SUB64_EXT_UXTX_3
+state-computation-root arm_SUB64_EXT_UXTX_4
+state-computation-root arm_SUB64_IMM
+state-computation-root arm_SUB64_SHIFT
+state-computation-root arm_SUBS32_EXT_SXTB_0
+state-computation-root arm_SUBS32_EXT_SXTB_1
+state-computation-root arm_SUBS32_EXT_SXTB_2
+state-computation-root arm_SUBS32_EXT_SXTB_3
+state-computation-root arm_SUBS32_EXT_SXTB_4
+state-computation-root arm_SUBS32_EXT_SXTH_0
+state-computation-root arm_SUBS32_EXT_SXTH_1
+state-computation-root arm_SUBS32_EXT_SXTH_2
+state-computation-root arm_SUBS32_EXT_SXTH_3
+state-computation-root arm_SUBS32_EXT_SXTH_4
+state-computation-root arm_SUBS32_EXT_SXTW_0
+state-computation-root arm_SUBS32_EXT_SXTW_1
+state-computation-root arm_SUBS32_EXT_SXTW_2
+state-computation-root arm_SUBS32_EXT_SXTW_3
+state-computation-root arm_SUBS32_EXT_SXTW_4
+state-computation-root arm_SUBS32_EXT_SXTX_0
+state-computation-root arm_SUBS32_EXT_SXTX_1
+state-computation-root arm_SUBS32_EXT_SXTX_2
+state-computation-root arm_SUBS32_EXT_SXTX_3
+state-computation-root arm_SUBS32_EXT_SXTX_4
+state-computation-root arm_SUBS32_EXT_UXTB_0
+state-computation-root arm_SUBS32_EXT_UXTB_1
+state-computation-root arm_SUBS32_EXT_UXTB_2
+state-computation-root arm_SUBS32_EXT_UXTB_3
+state-computation-root arm_SUBS32_EXT_UXTB_4
+state-computation-root arm_SUBS32_EXT_UXTH_0
+state-computation-root arm_SUBS32_EXT_UXTH_1
+state-computation-root arm_SUBS32_EXT_UXTH_2
+state-computation-root arm_SUBS32_EXT_UXTH_3
+state-computation-root arm_SUBS32_EXT_UXTH_4
+state-computation-root arm_SUBS32_EXT_UXTW_0
+state-computation-root arm_SUBS32_EXT_UXTW_1
+state-computation-root arm_SUBS32_EXT_UXTW_2
+state-computation-root arm_SUBS32_EXT_UXTW_3
+state-computation-root arm_SUBS32_EXT_UXTW_4
+state-computation-root arm_SUBS32_EXT_UXTX_0
+state-computation-root arm_SUBS32_EXT_UXTX_1
+state-computation-root arm_SUBS32_EXT_UXTX_2
+state-computation-root arm_SUBS32_EXT_UXTX_3
+state-computation-root arm_SUBS32_EXT_UXTX_4
+state-computation-root arm_SUBS32_IMM
+state-computation-root arm_SUBS32_SHIFT
+state-computation-root arm_SUBS64_EXT_SXTB_0
+state-computation-root arm_SUBS64_EXT_SXTB_1
+state-computation-root arm_SUBS64_EXT_SXTB_2
+state-computation-root arm_SUBS64_EXT_SXTB_3
+state-computation-root arm_SUBS64_EXT_SXTB_4
+state-computation-root arm_SUBS64_EXT_SXTH_0
+state-computation-root arm_SUBS64_EXT_SXTH_1
+state-computation-root arm_SUBS64_EXT_SXTH_2
+state-computation-root arm_SUBS64_EXT_SXTH_3
+state-computation-root arm_SUBS64_EXT_SXTH_4
+state-computation-root arm_SUBS64_EXT_SXTW_0
+state-computation-root arm_SUBS64_EXT_SXTW_1
+state-computation-root arm_SUBS64_EXT_SXTW_2
+state-computation-root arm_SUBS64_EXT_SXTW_3
+state-computation-root arm_SUBS64_EXT_SXTW_4
+state-computation-root arm_SUBS64_EXT_SXTX_0
+state-computation-root arm_SUBS64_EXT_SXTX_1
+state-computation-root arm_SUBS64_EXT_SXTX_2
+state-computation-root arm_SUBS64_EXT_SXTX_3
+state-computation-root arm_SUBS64_EXT_SXTX_4
+state-computation-root arm_SUBS64_EXT_UXTB_0
+state-computation-root arm_SUBS64_EXT_UXTB_1
+state-computation-root arm_SUBS64_EXT_UXTB_2
+state-computation-root arm_SUBS64_EXT_UXTB_3
+state-computation-root arm_SUBS64_EXT_UXTB_4
+state-computation-root arm_SUBS64_EXT_UXTH_0
+state-computation-root arm_SUBS64_EXT_UXTH_1
+state-computation-root arm_SUBS64_EXT_UXTH_2
+state-computation-root arm_SUBS64_EXT_UXTH_3
+state-computation-root arm_SUBS64_EXT_UXTH_4
+state-computation-root arm_SUBS64_EXT_UXTW_0
+state-computation-root arm_SUBS64_EXT_UXTW_1
+state-computation-root arm_SUBS64_EXT_UXTW_2
+state-computation-root arm_SUBS64_EXT_UXTW_3
+state-computation-root arm_SUBS64_EXT_UXTW_4
+state-computation-root arm_SUBS64_EXT_UXTX_0
+state-computation-root arm_SUBS64_EXT_UXTX_1
+state-computation-root arm_SUBS64_EXT_UXTX_2
+state-computation-root arm_SUBS64_EXT_UXTX_3
+state-computation-root arm_SUBS64_EXT_UXTX_4
+state-computation-root arm_SUBS64_IMM
+state-computation-root arm_SUBS64_SHIFT
+state-computation

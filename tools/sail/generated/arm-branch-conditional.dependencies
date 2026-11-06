@@ -1,0 +1,159 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function neq_bits|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('n), bitvector('n))|{('ex861974# : Bool), true. bool(not('ex861974#))}| => sail_hl_shared_arm_2dbranch_2dconditional_neq_5fbits_5f0
+shared-function ConditionHolds|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(4)|bool| => sail_hl_shared_arm_2dbranch_2dconditional_ConditionHolds_5f1
+shared-function PC_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bitvector(64)| => sail_hl_shared_arm_2dbranch_2dconditional_PC_5fread_5f2
+shared-function execute_aarch64_instrs_branch_conditional_cond|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), bitvector(64))|unit| => sail_hl_shared_arm_2dbranch_2dconditional_execute_5faarch64_5finstrs_5fbranch_5fconditional_5fcond_5f3
+shared-function decode_b_cond_aarch64_instrs_branch_conditional_cond|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), bitvector(19))|unit| => sail_hl_shared_arm_2dbranch_2dconditional_decode_5fb_5fcond_5faarch64_5finstrs_5fbranch_5fconditional_5fcond_5f4
+shared-function IsZero|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector('n)|bool| => sail_hl_shared_arm_2dbranch_2dconditional_IsZero_5f5
+shared-function execute_aarch64_instrs_branch_conditional_compare|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('datasize), bool('iszero), bitvector(64), int('t))|unit|datasize=32 => sail_hl_shared_arm_2dbranch_2dconditional_execute_5faarch64_5finstrs_5fbranch_5fconditional_5fcompare_5f6
+shared-function execute_aarch64_instrs_branch_conditional_compare|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('datasize), bool('iszero), bitvector(64), int('t))|unit|datasize=64 => sail_hl_shared_arm_2dbranch_2dconditional_execute_5faarch64_5finstrs_5fbranch_5fconditional_5fcompare_5f7
+shared-function decode_cbnz_aarch64_instrs_branch_conditional_compare|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(5), bitvector(19), bitvector(1), bitvector(1))|unit| => sail_hl_shared_arm_2dbranch_2dconditional_decode_5fcbnz_5faarch64_5finstrs_5fbranch_5fconditional_5fcompare_5f8
+shared-function decode_cbz_aarch64_instrs_branch_conditional_compare|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(5), bitvector(19), bitvector(1), bitvector(1))|unit| => sail_hl_shared_arm_2dbranch_2dconditional_decode_5fcbz_5faarch64_5finstrs_5fbranch_5fconditional_5fcompare_5f9
+shared-function __id|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|int('n)| => sail_hl_shared_arm_2dbranch_2dconditional__5f_5fid_5f10
+shared-function execute_aarch64_instrs_branch_conditional_test|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('bit_pos), bitvector(1), int('datasize), bitvector(64), int('t))|unit|datasize=64 => sail_hl_shared_arm_2dbranch_2dconditional_execute_5faarch64_5finstrs_5fbranch_5fconditional_5ftest_5f11
+specialization-required decode_tbnz_aarch64_instrs_branch_conditional_test|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(5), bitvector(14), bitvector(5), bitvector(1), bitvector(1))|unit|: HOL Light: unlowered instruction control
+specialization-required decode_tbz_aarch64_instrs_branch_conditional_test|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(5), bitvector(14), bitvector(5), bitvector(1), bitvector(1))|unit|: HOL Light: unlowered instruction control
+specialization-required execute_aarch64_instrs_branch_conditional_compare|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('datasize), bool('iszero), bitvector(64), int('t))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+specialization-required execute_aarch64_instrs_branch_conditional_test|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('bit_pos), bitvector(1), int('datasize), bitvector(64), int('t))|unit|datasize=32: HOL Light: unlowered instruction control
+specialization-required execute_aarch64_instrs_branch_conditional_test|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('bit_pos), bitvector(1), int('datasize), bitvector(64), int('t))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+root arm_BAL
+root arm_BCC
+root arm_BCOND
+root arm_BCS
+root arm_BEQ
+root arm_BGE
+root arm_BGT
+root arm_BHI
+root arm_BHS
+root arm_BLE
+root arm_BLO
+root arm_BLS
+root arm_BLT
+root arm_BMI
+root arm_BNE
+root arm_BNV
+root arm_BPL
+root arm_BVC
+root arm_BVS
+root arm_CBNZ32
+root arm_CBNZ64
+root arm_CBZ32
+root arm_CBZ64
+root arm_TBNZ32
+root arm_TBNZ64_HI
+root arm_TBZ32
+root arm_TBZ64_HI
+inlined ConditionHolds
+inlined IsZero
+inlined PC_read
+inlined __id
+inlined decode_b_cond_aarch64_instrs_branch_conditional_cond
+inlined decode_cbnz_aarch64_instrs_branch_conditional_compare
+inlined decode_cbz_aarch64_instrs_branch_conditional_compare
+inlined decode_tbnz_aarch64_instrs_branch_conditional_test
+inlined decode_tbz_aarch64_instrs_branch_conditional_test
+inlined execute_aarch64_instrs_branch_conditional_compare
+inlined execute_aarch64_instrs_branch_conditional_cond
+inlined execute_aarch64_instrs_branch_conditional_test
+inlined neq_bits
+primitive-contract Arm-frozen-instruction-PC64
+primitive-contract BranchNotTaken
+primitive-contract BranchTo
+primitive-contract PSTATE-NZCV-projection
+primitive-contract SignExtend0
+primitive-contract UInt0
+primitive-contract X_read
+primitive-contract add_bits
+primitive-contract and_bool
+primitive-contract bitvector_access
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract eq_bits
+primitive-contract eq_bool
+primitive-contract lt_int
+primitive-contract not_bool
+primitive-contract sail_zeros
+primitive-contract subrange_bits
+statically-proved-assertion lt_int(__id(bit_pos), __id(datasize)) at src/instrs64.sail:52130:23-52130:43
+proved-numeric-argument-fact PC_read 0 < 32
+proved-numeric-argument-fact PC_read 0 <= 32
+proved-numeric-argument-fact PC_read 32 <= 32
+proved-numeric-argument-fact PC_read 32 <= 63
+proved-numeric-argument-fact __id 'n < 32
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 31
+proved-numeric-argument-fact __id 'n <= 32
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 < 32
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 0 <= 32
+proved-numeric-argument-fact __id 32 <= 'n
+proved-numeric-argument-fact __id 32 <= 32
+proved-numeric-argument-fact __id 32 <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_compare 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_compare 'datasize <= 32
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_compare 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_compare 'datasize <= 64
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_compare 't <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_compare 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_compare 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_compare 0 <= 't
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_compare 32 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_compare 64 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 'bit_pos < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 'bit_pos <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 'bit_pos <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 'datasize <= 32
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 'datasize <= 64
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 't <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 0 < 'bit_pos
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 0 <= 'bit_pos
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 0 <= 't
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 32 <= 'bit_pos
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 32 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_branch_conditional_test 64 <= 'datasize
+successful-check Arm-flat-branch-PC-event
+statically-selected-branch src/instrs64.sail:52142:24-52142:33 else
+statically-selected-branch src/instrs64.sail:52142:24-52142:33 then
+statically-selected-branch src/instrs64.sail:52163:24-52163:33 else
+statically-selected-branch src/instrs64.sail:52163:24-52163:33 then
+statically-selected-branch src/v8_base.sail:8982:8-8982:41 else
+unobserved-undefined-local result
+state-computation-root arm_BAL
+state-computation-root arm_BCC
+state-computation-root arm_BCOND
+state-computation-root arm_BCS
+state-computation-root arm_BEQ
+state-computation-root arm_BGE
+state-computation-root arm_BGT
+state-computation-root arm_BHI
+state-computation-root arm_BHS
+state-computation-root arm_BLE
+state-computation-root arm_BLO
+state-computation-root arm_BLS
+state-computation-root arm_BLT
+state-computation-root arm_BMI
+state-computation-root arm_BNE
+state-computation-root arm_BNV
+state-computation-root arm_BPL
+state-computation-root arm_BVC
+state-computation-root arm_BVS
+state-computation-root arm_CBNZ32
+state-computation-root arm_CBNZ64
+state-computation-root arm_CBZ32
+state-computation-root arm_CBZ64
+state-computation-root arm_TBNZ32
+state-computation-root arm_TBNZ64_HI
+state-computation-root arm_TBZ32
+state-computation-root arm_TBZ64_HI
+state-computation

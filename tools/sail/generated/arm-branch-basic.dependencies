@@ -1,0 +1,66 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function PC_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bitvector(64)| => sail_hl_shared_arm_2dbranch_2dbasic_PC_5fread_5f0
+shared-function HaveGCS|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool| => sail_hl_shared_arm_2dbranch_2dbasic_HaveGCS_5f1
+shared-function neq_int|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('n), int('m))|bool(not('n == 'm))| => sail_hl_shared_arm_2dbranch_2dbasic_neq_5fint_5f2
+root arm_B
+root arm_BL
+root arm_RET
+inlined HaveGCS
+inlined PC_read
+inlined decode_b_uncond_aarch64_instrs_branch_unconditional_immediate
+inlined decode_bl_aarch64_instrs_branch_unconditional_immediate
+inlined decode_ret_aarch64_instrs_branch_unconditional_register
+inlined execute_aarch64_instrs_branch_unconditional_immediate
+inlined execute_aarch64_instrs_branch_unconditional_register
+inlined neq_int
+primitive-contract Arm-BType-write-exclusion
+primitive-contract Arm-frozen-instruction-PC64
+primitive-contract BranchTo
+primitive-contract IsFeatureImplemented
+primitive-contract SignExtend0
+primitive-contract UInt0
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract add_bits
+primitive-contract add_bits_int
+primitive-contract and_bool
+primitive-contract bitvector_concat
+primitive-contract eq_any
+primitive-contract eq_bits
+primitive-contract eq_int
+primitive-contract not_bool
+proved-numeric-argument-fact execute_aarch64_instrs_branch_unconditional_register 'm <= 0
+proved-numeric-argument-fact execute_aarch64_instrs_branch_unconditional_register 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_branch_unconditional_register 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_branch_unconditional_register 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_branch_unconditional_register 0 <= 'n
+proved-numeric-argument-fact neq_int 'm <= 0
+proved-numeric-argument-fact neq_int 'm <= 31
+proved-numeric-argument-fact neq_int 'n <= 0
+proved-numeric-argument-fact neq_int 'n <= 31
+proved-numeric-argument-fact neq_int 0 <= 'm
+proved-numeric-argument-fact neq_int 0 <= 'n
+disabled-extension Arm-GCS
+successful-check Arm-flat-branch-PC-event
+statically-selected-branch src/instrs64.sail:2621:8-2621:41 else
+statically-selected-branch src/instrs64.sail:2621:8-2621:41 then
+statically-selected-branch src/instrs64.sail:2622:12-2622:48 else
+statically-selected-branch src/instrs64.sail:2634:39-2634:48 else
+statically-selected-branch src/instrs64.sail:2650:39-2650:48 then
+statically-selected-branch src/instrs64.sail:3725:8-3725:11 else
+statically-selected-branch src/instrs64.sail:3734:8-3734:78 else
+statically-selected-branch src/instrs64.sail:3747:8-3747:41 else
+statically-selected-branch src/instrs64.sail:4014:8-4014:30 else
+statically-selected-branch src/instrs64.sail:4016:15-4016:43 else
+statically-selected-branch src/instrs64.sail:4034:8-4034:11 else
+unobserved-undefined-local branch_type
+unobserved-undefined-local inst_type
+state-computation-root arm_B
+state-computation-root arm_BL
+state-computation-root arm_RET
+state-computation

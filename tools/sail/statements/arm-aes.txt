@@ -1,0 +1,16 @@
+SAIL_HL_ARM_AESE128_EQ
+|- forall d n s t.
+       sail_hl_ARM_5fAESE128 d n s t <=> arm_AESE (QREG' d) (QREG' n) s t
+
+SAIL_HL_ARM_AESD128_EQ
+|- forall d n s t.
+       sail_hl_ARM_5fAESD128 d n s t <=> arm_AESD (QREG' d) (QREG' n) s t
+
+SAIL_HL_ARM_AESMC128_EQ
+|- forall d n s t.
+       sail_hl_ARM_5fAESMC128 d n s t <=> arm_AESMC (QREG' d) (QREG' n) s t
+
+SAIL_HL_ARM_AESIMC128_EQ
+|- forall d n s t.
+       sail_hl_ARM_5fAESIMC128 d n s t <=> arm_AESIMC (QREG' d) (QREG' n) s t
+

@@ -1,0 +1,90 @@
+SAIL_HL_ARM_CSEL32_EQ
+|- forall condition d n m s t.
+       sail_hl_arm_5fCSEL32 condition d n m s t <=>
+       arm_CSEL (WREG' d) (WREG' n) (WREG' m) (Condition condition) s t
+
+SAIL_HL_ARM_CSEL64_EQ
+|- forall condition d n m s t.
+       sail_hl_arm_5fCSEL64 condition d n m s t <=>
+       arm_CSEL (XREG' d) (XREG' n) (XREG' m) (Condition condition) s t
+
+SAIL_HL_ARM_CSINC32_EQ
+|- forall condition d n m s t.
+       sail_hl_arm_5fCSINC32 condition d n m s t <=>
+       arm_CSINC (WREG' d) (WREG' n) (WREG' m) (Condition condition) s t
+
+SAIL_HL_ARM_CSINC64_EQ
+|- forall condition d n m s t.
+       sail_hl_arm_5fCSINC64 condition d n m s t <=>
+       arm_CSINC (XREG' d) (XREG' n) (XREG' m) (Condition condition) s t
+
+SAIL_HL_ARM_CSINV32_EQ
+|- forall condition d n m s t.
+       sail_hl_arm_5fCSINV32 condition d n m s t <=>
+       arm_CSINV (WREG' d) (WREG' n) (WREG' m) (Condition condition) s t
+
+SAIL_HL_ARM_CSINV64_EQ
+|- forall condition d n m s t.
+       sail_hl_arm_5fCSINV64 condition d n m s t <=>
+       arm_CSINV (XREG' d) (XREG' n) (XREG' m) (Condition condition) s t
+
+SAIL_HL_ARM_CSNEG32_EQ
+|- forall condition d n m s t.
+       sail_hl_arm_5fCSNEG32 condition d n m s t <=>
+       arm_CSNEG (WREG' d) (WREG' n) (WREG' m) (Condition condition) s t
+
+SAIL_HL_ARM_CSNEG64_EQ
+|- forall condition d n m s t.
+       sail_hl_arm_5fCSNEG64 condition d n m s t <=>
+       arm_CSNEG (XREG' d) (XREG' n) (XREG' m) (Condition condition) s t
+
+SAIL_HL_ARM_CINC32_EQ
+|- forall condition d n s t.
+       sail_hl_arm_5fCINC32 condition d n s t <=>
+       arm_CINC (WREG' d) (WREG' n) (Condition condition) s t
+
+SAIL_HL_ARM_CINC64_EQ
+|- forall condition d n s t.
+       sail_hl_arm_5fCINC64 condition d n s t <=>
+       arm_CINC (XREG' d) (XREG' n) (Condition condition) s t
+
+SAIL_HL_ARM_CINV32_EQ
+|- forall condition d n s t.
+       sail_hl_arm_5fCINV32 condition d n s t <=>
+       arm_CINV (WREG' d) (WREG' n) (Condition condition) s t
+
+SAIL_HL_ARM_CINV64_EQ
+|- forall condition d n s t.
+       sail_hl_arm_5fCINV64 condition d n s t <=>
+       arm_CINV (XREG' d) (XREG' n) (Condition condition) s t
+
+SAIL_HL_ARM_CNEG32_EQ
+|- forall condition d n s t.
+       sail_hl_arm_5fCNEG32 condition d n s t <=>
+       arm_CNEG (WREG' d) (WREG' n) (Condition condition) s t
+
+SAIL_HL_ARM_CNEG64_EQ
+|- forall condition d n s t.
+       sail_hl_arm_5fCNEG64 condition d n s t <=>
+       arm_CNEG (XREG' d) (XREG' n) (Condition condition) s t
+
+SAIL_HL_ARM_CSET32_EQ
+|- forall condition d s t.
+       sail_hl_arm_5fCSET32 condition d s t <=>
+       arm_CSET (WREG' d) (Condition condition) s t
+
+SAIL_HL_ARM_CSET64_EQ
+|- forall condition d s t.
+       sail_hl_arm_5fCSET64 condition d s t <=>
+       arm_CSET (XREG' d) (Condition condition) s t
+
+SAIL_HL_ARM_CSETM32_EQ
+|- forall condition d s t.
+       sail_hl_arm_5fCSETM32 condition d s t <=>
+       arm_CSETM (WREG' d) (Condition condition) s t
+
+SAIL_HL_ARM_CSETM64_EQ
+|- forall condition d s t.
+       sail_hl_arm_5fCSETM64 condition d s t <=>
+       arm_CSETM (XREG' d) (Condition condition) s t
+

@@ -1,0 +1,8 @@
+SAIL_HL_ARM_CLZ32_EQ
+|- forall d n s t.
+       sail_hl_arm_5fCLZ32 d n s t <=> arm_CLZ (WREG' d) (WREG' n) s t
+
+SAIL_HL_ARM_CLZ64_EQ
+|- forall d n s t.
+       sail_hl_arm_5fCLZ64 d n s t <=> arm_CLZ (XREG' d) (XREG' n) s t
+

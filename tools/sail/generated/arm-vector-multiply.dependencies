@@ -1,0 +1,548 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=0,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f0
+shared-function integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|lo=0 => sail_hl_shared_arm_2dvector_2dmultiply_integer_5fsubrange_5f1
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=1,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f2
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=2,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f3
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=3,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f4
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=4,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f5
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=5,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f6
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=6,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f7
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=7,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f8
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|datasize=128,elements=8,esize=16 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5faccum_5f9
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=0,size=32 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f10
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=1,size=32 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f11
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=2,size=32 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f12
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=3,size=32 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f13
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|datasize=128,elements=4,esize=32 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5faccum_5f14
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=0,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f15
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=1,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f16
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=2,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f17
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=3,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f18
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=4,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f19
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=5,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f20
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=6,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f21
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=7,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f22
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=8,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f23
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=9,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f24
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=10,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f25
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=11,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f26
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=12,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f27
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=13,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f28
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=14,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f29
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=15,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f30
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|datasize=128,elements=16,esize=8 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5faccum_5f31
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=0,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f32
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=1,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f33
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=2,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f34
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=3,size=16 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f35
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|datasize=64,elements=4,esize=16 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5faccum_5f36
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=0,size=32 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f37
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=1,size=32 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f38
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|datasize=64,elements=2,esize=32 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5faccum_5f39
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=0,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f40
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=1,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f41
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=2,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f42
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=3,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f43
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=4,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f44
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=5,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f45
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=6,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f46
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=7,size=8 => sail_hl_shared_arm_2dvector_2dmultiply_Elem_5fread_5f47
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|datasize=64,elements=8,esize=8 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5faccum_5f48
+shared-function Zeros|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|bitvector('n)| => sail_hl_shared_arm_2dvector_2dmultiply_Zeros_5f49
+shared-function PolynomialMult|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), bitvector('N))|bitvector(('M + 'N))|M=16,N=16 => sail_hl_shared_arm_2dvector_2dmultiply_PolynomialMult_5f50
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|datasize=128,elements=8,esize=16 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5fproduct_5f51
+shared-function PolynomialMult|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), bitvector('N))|bitvector(('M + 'N))|M=32,N=32 => sail_hl_shared_arm_2dvector_2dmultiply_PolynomialMult_5f52
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|datasize=128,elements=4,esize=32 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5fproduct_5f53
+shared-function PolynomialMult|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), bitvector('N))|bitvector(('M + 'N))|M=8,N=8 => sail_hl_shared_arm_2dvector_2dmultiply_PolynomialMult_5f54
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|datasize=128,elements=16,esize=8 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5fproduct_5f55
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|datasize=64,elements=4,esize=16 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5fproduct_5f56
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|datasize=64,elements=2,esize=32 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5fproduct_5f57
+shared-function execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|datasize=64,elements=8,esize=8 => sail_hl_shared_arm_2dvector_2dmultiply_execute_5faarch64_5finstrs_5fvector_5farithmetic_5fbinary_5funiform_5fmul_5fint_5fproduct_5f58
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=0: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=1: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=10: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=11: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=12: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=13: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=14: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=15: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=2: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=3: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=4: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=5: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=6: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=7: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=8: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=9: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=16: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=32: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=8: HOL Light: unlowered instruction control
+specialization-required PolynomialMult|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), bitvector('N))|bitvector(('M + 'N))|: HOL Light: unsupported polymorphic dimension ('M + 'N)
+specialization-required PolynomialMult|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), bitvector('N))|bitvector(('M + 'N))|M=16: HOL Light: unsupported polymorphic dimension ('M + 'N)
+specialization-required PolynomialMult|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), bitvector('N))|bitvector(('M + 'N))|M=32: HOL Light: unsupported polymorphic dimension ('M + 'N)
+specialization-required PolynomialMult|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), bitvector('N))|bitvector(('M + 'N))|M=8: HOL Light: unsupported polymorphic dimension ('M + 'N)
+specialization-required PolynomialMult|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), bitvector('N))|bitvector(('M + 'N))|N=16: HOL Light: unsupported polymorphic dimension ('M + 'N)
+specialization-required PolynomialMult|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), bitvector('N))|bitvector(('M + 'N))|N=32: HOL Light: unsupported polymorphic dimension ('M + 'N)
+specialization-required PolynomialMult|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('M), bitvector('N))|bitvector(('M + 'N))|N=8: HOL Light: unsupported polymorphic dimension ('M + 'N)
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|datasize=128: HOL Light: foreach bounds must be statically known integers
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|datasize=64: HOL Light: foreach bounds must be statically known integers
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|elements=16: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|elements=2: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|elements=4: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|elements=8: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|esize=16: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|esize=32: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('sub_op))|unit|esize=8: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|datasize=128: HOL Light: foreach bounds must be statically known integers
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|datasize=64: HOL Light: foreach bounds must be statically known integers
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|elements=16: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|elements=2: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|elements=4: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|elements=8: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|esize=16: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|esize=32: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('elements), int('esize), int('m), int('n), bool('poly))|unit|esize=8: HOL Light: unsupported primitive on internal dynamic bitvectors: V_read
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|: HOL Light: generic integer slice requires a nonnegative start
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|hi=15: HOL Light: generic integer slice requires a nonnegative start
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|hi=31: HOL Light: generic integer slice requires a nonnegative start
+specialization-required integer_subrange|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('ex860566#), int('hi), int('lo))|bitvector((('hi - 'lo) + 1))|hi=7: HOL Light: generic integer slice requires a nonnegative start
+root arm_MLA_VEC128E16
+root arm_MLA_VEC128E16_HI
+root arm_MLA_VEC128E16_LO
+root arm_MLA_VEC128E32
+root arm_MLA_VEC128E32_HI
+root arm_MLA_VEC128E32_LO
+root arm_MLA_VEC128E8
+root arm_MLA_VEC64E16
+root arm_MLA_VEC64E16_HI
+root arm_MLA_VEC64E16_LO
+root arm_MLA_VEC64E32
+root arm_MLA_VEC64E32_HI
+root arm_MLA_VEC64E32_LO
+root arm_MLA_VEC64E8
+root arm_MLS_VEC128E16
+root arm_MLS_VEC128E16_HI
+root arm_MLS_VEC128E16_LO
+root arm_MLS_VEC128E32
+root arm_MLS_VEC128E32_HI
+root arm_MLS_VEC128E32_LO
+root arm_MLS_VEC128E8
+root arm_MLS_VEC64E16
+root arm_MLS_VEC64E16_HI
+root arm_MLS_VEC64E16_LO
+root arm_MLS_VEC64E32
+root arm_MLS_VEC64E32_HI
+root arm_MLS_VEC64E32_LO
+root arm_MLS_VEC64E8
+root arm_MUL_VEC128E16
+root arm_MUL_VEC128E16_HI
+root arm_MUL_VEC128E16_LO
+root arm_MUL_VEC128E32
+root arm_MUL_VEC128E32_HI
+root arm_MUL_VEC128E32_LO
+root arm_MUL_VEC128E8
+root arm_MUL_VEC64E16
+root arm_MUL_VEC64E16_HI
+root arm_MUL_VEC64E16_LO
+root arm_MUL_VEC64E32
+root arm_MUL_VEC64E32_HI
+root arm_MUL_VEC64E32_LO
+root arm_MUL_VEC64E8
+inlined Elem_read
+inlined Elem_set
+inlined PolynomialMult
+inlined Zeros
+inlined execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int
+inlined execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int
+inlined execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum
+inlined execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product
+inlined integer_subrange
+primitive-contract CheckFPAdvSIMDEnabled64
+primitive-contract Sail-undefined-existential
+primitive-contract UInt0
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract ZeroExtend0
+primitive-contract add_atom
+primitive-contract add_bits
+primitive-contract and_bool
+primitive-contract bitvector_access
+primitive-contract bitvector_length
+primitive-contract eq_bits
+primitive-contract get_slice_int
+primitive-contract gteq_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract sail_shiftleft
+primitive-contract sail_zeros
+primitive-contract sub_atom
+primitive-contract sub_bits
+primitive-contract subrange_bits
+primitive-contract unsigned
+primitive-contract xor_vec
+statically-proved-assertion and_bool(gteq_int(e, 0), lteq_int(mult_atom(add_atom(e, 1), size), bitvector_length(vector_name))) at src/builtins.sail:195:12-195:41
+statically-proved-assertion and_bool(gteq_int(e, 0), lteq_int(mult_atom(add_atom(e, 1), size), bitvector_length(vector_name__arg))) at src/builtins.sail:205:12-205:41
+proved-numeric-argument-fact Elem_read 'e <= 0
+proved-numeric-argument-fact Elem_read 'e <= 1
+proved-numeric-argument-fact Elem_read 'e <= 15
+proved-numeric-argument-fact Elem_read 'e <= 3
+proved-numeric-argument-fact Elem_read 'e <= 31
+proved-numeric-argument-fact Elem_read 'e <= 7
+proved-numeric-argument-fact Elem_read 'size <= 15
+proved-numeric-argument-fact Elem_read 'size <= 31
+proved-numeric-argument-fact Elem_read 'size <= 63
+proved-numeric-argument-fact Elem_read ('e >= 0 & (('e + 1) * 'size) <= 'N)
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= (16 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= (2 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= (4 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= (8 - 1))
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= 1)
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= 3)
+proved-numeric-argument-fact Elem_read 0 < 'e
+proved-numeric-argument-fact Elem_read 0 < 'size
+proved-numeric-argument-fact Elem_read 0 < 128
+proved-numeric-argument-fact Elem_read 0 < 2
+proved-numeric-argument-fact Elem_read 0 < 4
+proved-numeric-argument-fact Elem_read 0 < 64
+proved-numeric-argument-fact Elem_read 0 < 8
+proved-numeric-argument-fact Elem_read 0 <= 'e
+proved-numeric-argument-fact Elem_read 0 <= 'size
+proved-numeric-argument-fact Elem_read 0 <= 128
+proved-numeric-argument-fact Elem_read 0 <= 2
+proved-numeric-argument-fact Elem_read 0 <= 4
+proved-numeric-argument-fact Elem_read 0 <= 64
+proved-numeric-argument-fact Elem_read 0 <= 8
+proved-numeric-argument-fact Elem_read 128 <= 255
+proved-numeric-argument-fact Elem_read 2 <= 3
+proved-numeric-argument-fact Elem_read 2 <= 31
+proved-numeric-argument-fact Elem_read 4 <= 31
+proved-numeric-argument-fact Elem_read 4 <= 7
+proved-numeric-argument-fact Elem_read 64 <= 127
+proved-numeric-argument-fact Elem_read 8 <= 15
+proved-numeric-argument-fact Elem_read 8 <= 31
+proved-numeric-argument-fact Elem_set 'e <= 0
+proved-numeric-argument-fact Elem_set 'e <= 1
+proved-numeric-argument-fact Elem_set 'e <= 15
+proved-numeric-argument-fact Elem_set 'e <= 3
+proved-numeric-argument-fact Elem_set 'e <= 31
+proved-numeric-argument-fact Elem_set 'e <= 7
+proved-numeric-argument-fact Elem_set 'size <= 15
+proved-numeric-argument-fact Elem_set 'size <= 31
+proved-numeric-argument-fact Elem_set 'size <= 63
+proved-numeric-argument-fact Elem_set ('e >= 0 & (('e + 1) * 'size) <= 'N)
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= (16 - 1))
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= (2 - 1))
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= (4 - 1))
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= (8 - 1))
+proved-numeric-argument-fact Elem_set 0 < 'e
+proved-numeric-argument-fact Elem_set 0 < 'size
+proved-numeric-argument-fact Elem_set 0 < 128
+proved-numeric-argument-fact Elem_set 0 < 2
+proved-numeric-argument-fact Elem_set 0 < 4
+proved-numeric-argument-fact Elem_set 0 < 64
+proved-numeric-argument-fact Elem_set 0 < 8
+proved-numeric-argument-fact Elem_set 0 <= 'e
+proved-numeric-argument-fact Elem_set 0 <= 'size
+proved-numeric-argument-fact Elem_set 0 <= 128
+proved-numeric-argument-fact Elem_set 0 <= 2
+proved-numeric-argument-fact Elem_set 0 <= 4
+proved-numeric-argument-fact Elem_set 0 <= 64
+proved-numeric-argument-fact Elem_set 0 <= 8
+proved-numeric-argument-fact Elem_set 128 <= 255
+proved-numeric-argument-fact Elem_set 2 <= 3
+proved-numeric-argument-fact Elem_set 2 <= 31
+proved-numeric-argument-fact Elem_set 4 <= 31
+proved-numeric-argument-fact Elem_set 4 <= 7
+proved-numeric-argument-fact Elem_set 64 <= 127
+proved-numeric-argument-fact Elem_set 8 <= 15
+proved-numeric-argument-fact Elem_set 8 <= 31
+proved-numeric-argument-fact PolynomialMult (0 <= 0 & 0 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 0 & 0 <= (2 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 0 & 0 <= (4 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 0 & 0 <= (8 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 1 & 1 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 1 & 1 <= (2 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 1 & 1 <= (4 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 1 & 1 <= (8 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 10 & 10 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 11 & 11 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 12 & 12 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 13 & 13 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 14 & 14 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 15 & 15 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 2 & 2 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 2 & 2 <= (4 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 2 & 2 <= (8 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 3 & 3 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 3 & 3 <= (4 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 3 & 3 <= (8 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 4 & 4 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 4 & 4 <= (8 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 5 & 5 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 5 & 5 <= (8 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 6 & 6 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 6 & 6 <= (8 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 7 & 7 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 7 & 7 <= (8 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 8 & 8 <= (16 - 1))
+proved-numeric-argument-fact PolynomialMult (0 <= 9 & 9 <= (16 - 1))
+proved-numeric-argument-fact Zeros 'n <= 127
+proved-numeric-argument-fact Zeros 'n <= 31
+proved-numeric-argument-fact Zeros 'n <= 63
+proved-numeric-argument-fact Zeros (16 >= 0 & 16 >= 0)
+proved-numeric-argument-fact Zeros (32 >= 0 & 32 >= 0)
+proved-numeric-argument-fact Zeros (8 >= 0 & 8 >= 0)
+proved-numeric-argument-fact Zeros 0 < 'n
+proved-numeric-argument-fact Zeros 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'elements <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'elements <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'elements <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'elements <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'esize <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'esize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'idxdsize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'idxdsize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'index <= 1
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'index <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'index <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'index <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'm <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int (0 <= 'index & 'index <= 1)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int (0 <= 'index & 'index <= 3)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int (0 <= 'm & 'm <= 15)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 < 'elements
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 < 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 < 'idxdsize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 < 'index
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 <= 'elements
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 <= 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 <= 'idxdsize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 <= 'index
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_acc_int 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'elements <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'elements <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'elements <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'elements <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'esize <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'esize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'idxdsize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'idxdsize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'index <= 1
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'index <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'index <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'index <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'm <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int (0 <= 'index & 'index <= 1)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int (0 <= 'index & 'index <= 3)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int (0 <= 'm & 'm <= 15)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 < 'elements
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 < 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 < 'idxdsize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 < 'index
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 <= 'elements
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 <= 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 <= 'idxdsize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 <= 'index
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_element_mul_int 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'elements <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'elements <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'elements <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'elements <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'esize <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'esize <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'esize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 0 < 'elements
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 0 < 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 0 <= 'elements
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 0 <= 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_accum 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'elements <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'elements <= 3
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'elements <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'elements <= 7
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'esize <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'esize <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'esize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 0 < 'elements
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 0 < 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 0 <= 'elements
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 0 <= 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_arithmetic_binary_uniform_mul_int_product 0 <= 'n
+proved-numeric-argument-fact integer_subrange 'hi <= 15
+proved-numeric-argument-fact integer_subrange 'hi <= 31
+proved-numeric-argument-fact integer_subrange 'hi <= 7
+proved-numeric-argument-fact integer_subrange 'lo <= 0
+proved-numeric-argument-fact integer_subrange 'lo <= 31
+proved-numeric-argument-fact integer_subrange (0 <= 0 & 0 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 0 & 0 <= (2 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 0 & 0 <= (4 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 0 & 0 <= (8 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 1 & 1 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 1 & 1 <= (2 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 1 & 1 <= (4 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 1 & 1 <= (8 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 10 & 10 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 11 & 11 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 12 & 12 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 13 & 13 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 14 & 14 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 15 & 15 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 2 & 2 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 2 & 2 <= (4 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 2 & 2 <= (8 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 3 & 3 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 3 & 3 <= (4 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 3 & 3 <= (8 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 4 & 4 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 4 & 4 <= (8 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 5 & 5 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 5 & 5 <= (8 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 6 & 6 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 6 & 6 <= (8 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 7 & 7 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 7 & 7 <= (8 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 8 & 8 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange (0 <= 9 & 9 <= (16 - 1))
+proved-numeric-argument-fact integer_subrange 0 < 'hi
+proved-numeric-argument-fact integer_subrange 0 < 128
+proved-numeric-argument-fact integer_subrange 0 < 16
+proved-numeric-argument-fact integer_subrange 0 < 2
+proved-numeric-argument-fact integer_subrange 0 < 32
+proved-numeric-argument-fact integer_subrange 0 < 4
+proved-numeric-argument-fact integer_subrange 0 < 64
+proved-numeric-argument-fact integer_subrange 0 < 8
+proved-numeric-argument-fact integer_subrange 0 <= 'ex860566#
+proved-numeric-argument-fact integer_subrange 0 <= 'hi
+proved-numeric-argument-fact integer_subrange 0 <= 'lo
+proved-numeric-argument-fact integer_subrange 0 <= 128
+proved-numeric-argument-fact integer_subrange 0 <= 16
+proved-numeric-argument-fact integer_subrange 0 <= 2
+proved-numeric-argument-fact integer_subrange 0 <= 32
+proved-numeric-argument-fact integer_subrange 0 <= 4
+proved-numeric-argument-fact integer_subrange 0 <= 64
+proved-numeric-argument-fact integer_subrange 0 <= 8
+proved-numeric-argument-fact integer_subrange 128 <= 255
+proved-numeric-argument-fact integer_subrange 16 <= 31
+proved-numeric-argument-fact integer_subrange 2 <= 3
+proved-numeric-argument-fact integer_subrange 2 <= 31
+proved-numeric-argument-fact integer_subrange 32 <= 63
+proved-numeric-argument-fact integer_subrange 4 <= 31
+proved-numeric-argument-fact integer_subrange 4 <= 7
+proved-numeric-argument-fact integer_subrange 64 <= 127
+proved-numeric-argument-fact integer_subrange 8 <= 15
+proved-numeric-argument-fact integer_subrange 8 <= 31
+successful-check Arm-AdvSIMD-enabled-access
+unrolled-static-loop e 0 1 1 inc
+unrolled-static-loop e 0 15 1 inc
+unrolled-static-loop e 0 3 1 inc
+unrolled-static-loop e 0 7 1 inc
+unrolled-static-loop i 0 15 1 inc
+unrolled-static-loop i 0 31 1 inc
+unrolled-static-loop i 0 7 1 inc
+statically-selected-branch src/instrs64.sail:38620:12-38620:18 else
+statically-selected-branch src/instrs64.sail:38620:12-38620:18 then
+unobserved-undefined-local element1
+unobserved-undefined-local element2
+unobserved-undefined-local product
+unobserved-undefined-local result
+state-computation-root arm_MLA_VEC128E16
+state-computation-root arm_MLA_VEC128E16_HI
+state-computation-root arm_MLA_VEC128E16_LO
+state-computation-root arm_MLA_VEC128E32
+state-computation-root arm_MLA_VEC128E32_HI
+state-computation-root arm_MLA_VEC128E32_LO
+state-computation-root arm_MLA_VEC128E8
+state-computation-root arm_MLA_VEC64E16
+state-computation-root arm_MLA_VEC64E16_HI
+state-computation-root arm_MLA_VEC64E16_LO
+state-computation-root arm_MLA_VEC64E32
+state-computation-root arm_MLA_VEC64E32_HI
+state-computation-root arm_MLA_VEC64E32_LO
+state-computation-root arm_MLA_VEC64E8
+state-computation-root arm_MLS_VEC128E16
+state-computation-root arm_MLS_VEC128E16_HI
+state-computation-root arm_MLS_VEC128E16_LO
+state-computation-root arm_MLS_VEC128E32
+state-computation-root arm_MLS_VEC128E32_HI
+state-computation-root arm_MLS_VEC128E32_LO
+state-computation-root arm_MLS_VEC128E8
+state-computation-root arm_MLS_VEC64E16
+state-computation-root arm_MLS_VEC64E16_HI
+state-computation-root arm_MLS_VEC64E16_LO
+state-computation-root arm_MLS_VEC64E32
+state-computation-root arm_MLS_VEC64E32_HI
+state-computation-root arm_MLS_VEC64E32_LO
+state-computation-root arm_MLS_VEC64E8
+state-computation-root arm_MUL_VEC128E16
+state-computation-root arm_MUL_VEC128E16_HI
+state-computation-root arm_MUL_VEC128E16_LO
+state-computation-root arm_MUL_VEC128E32
+state-computation-root arm_MUL_VEC128E32_HI
+state-computation-root arm_MUL_VEC128E32_LO
+state-computation-root arm_MUL_VEC128E8
+state-computation-root arm_MUL_VEC64E16
+state-computation-root arm_MUL_VEC64E16_HI
+state-computation-root arm_MUL_VEC64E16_LO
+state-computation-root arm_MUL_VEC64E32
+state-computation-root arm_MUL_VEC64E32_HI
+state-computation-root arm_MUL_VEC64E32_LO
+state-computation-root arm_MUL_VEC64E8
+state-computation

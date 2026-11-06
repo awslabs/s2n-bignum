@@ -1,0 +1,239 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function SHAchoose|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(32), bitvector(32), bitvector(32))|bitvector(32)| => sail_hl_shared_arm_2dsha2_SHAchoose_5f0
+shared-function SHAmajority|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(32), bitvector(32), bitvector(32))|bitvector(32)| => sail_hl_shared_arm_2dsha2_SHAmajority_5f1
+shared-function ROR|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|N=32 => sail_hl_shared_arm_2dsha2_ROR_5f2
+shared-function SHAhashSIGMA1|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(32)|bitvector(32)| => sail_hl_shared_arm_2dsha2_SHAhashSIGMA1_5f3
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=0,size=32 => sail_hl_shared_arm_2dsha2_Elem_5fread_5f4
+shared-function SHAhashSIGMA0|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(32)|bitvector(32)| => sail_hl_shared_arm_2dsha2_SHAhashSIGMA0_5f5
+shared-function ROR|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|N=256 => sail_hl_shared_arm_2dsha2_ROR_5f6
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=1,size=32 => sail_hl_shared_arm_2dsha2_Elem_5fread_5f7
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=2,size=32 => sail_hl_shared_arm_2dsha2_Elem_5fread_5f8
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128,e=3,size=32 => sail_hl_shared_arm_2dsha2_Elem_5fread_5f9
+shared-function SHA256hash|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(128), bitvector(128), bitvector(128), bool('part1))|bitvector(128)| => sail_hl_shared_arm_2dsha2_SHA256hash_5f10
+shared-function execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('m), int('n), bool('part1))|unit| => sail_hl_shared_arm_2dsha2_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha3op_5fsha256_5fhash_5f11
+shared-function execute_aarch64_instrs_vector_crypto_sha2op_sha256_sched0|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('n))|unit| => sail_hl_shared_arm_2dsha2_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha2op_5fsha256_5fsched0_5f12
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=0,size=32 => sail_hl_shared_arm_2dsha2_Elem_5fread_5f13
+shared-function Elem_read|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64,e=1,size=32 => sail_hl_shared_arm_2dsha2_Elem_5fread_5f14
+shared-function execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('m), int('n))|unit| => sail_hl_shared_arm_2dsha2_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha3op_5fsha256_5fsched1_5f15
+shared-function ROR|fixed|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|N=64 => sail_hl_shared_arm_2dsha2_ROR_5f16
+shared-function execute_aarch64_instrs_vector_crypto_sha512_sha512h|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('m), int('n))|unit| => sail_hl_shared_arm_2dsha2_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha512_5fsha512h_5f17
+shared-function execute_aarch64_instrs_vector_crypto_sha512_sha512h2|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('m), int('n))|unit| => sail_hl_shared_arm_2dsha2_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha512_5fsha512h2_5f18
+shared-function execute_aarch64_instrs_vector_crypto_sha512_sha512su0|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('n))|unit| => sail_hl_shared_arm_2dsha2_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha512_5fsha512su0_5f19
+shared-function execute_aarch64_instrs_vector_crypto_sha512_sha512su1|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('m), int('n))|unit| => sail_hl_shared_arm_2dsha2_execute_5faarch64_5finstrs_5fvector_5fcrypto_5fsha512_5fsha512su1_5f20
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=128: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|N=64: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=0: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=1: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=2: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|e=3: HOL Light: unlowered instruction control
+specialization-required Elem_read|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('e), int('size))|bitvector('size)|size=32: HOL Light: unlowered instruction control
+specialization-required ROL|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|N=256: HOL Light: unlowered instruction control
+specialization-required ROL|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|: HOL Light: operand-dependent width 'N
+specialization-required ROR|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('N), int('shift))|bitvector('N)|: HOL Light: integer shifts require a word, integer amount and matching word result
+root ARM_SHA256H128
+root ARM_SHA256H2128
+root ARM_SHA256SU0128
+root ARM_SHA256SU1128
+root ARM_SHA512H128
+root ARM_SHA512H2128
+root ARM_SHA512SU0128
+root ARM_SHA512SU1128
+inlined Elem_read
+inlined Elem_set
+inlined ROL
+inlined ROR
+inlined SHA256hash
+inlined SHAchoose
+inlined SHAhashSIGMA0
+inlined SHAhashSIGMA1
+inlined SHAmajority
+inlined execute_aarch64_instrs_vector_crypto_sha2op_sha256_sched0
+inlined execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash
+inlined execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1
+inlined execute_aarch64_instrs_vector_crypto_sha512_sha512h
+inlined execute_aarch64_instrs_vector_crypto_sha512_sha512h2
+inlined execute_aarch64_instrs_vector_crypto_sha512_sha512su0
+inlined execute_aarch64_instrs_vector_crypto_sha512_sha512su1
+primitive-contract AArch64_CheckFPAdvSIMDEnabled
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract add_atom
+primitive-contract add_bits
+primitive-contract and_bool
+primitive-contract and_vec
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract emod_nat
+primitive-contract eq_int
+primitive-contract gteq_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract not_vec
+primitive-contract or_vec
+primitive-contract sail_shiftleft
+primitive-contract sail_shiftright
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract unsigned
+primitive-contract xor_vec
+statically-proved-assertion and_bool(gteq_int(e, 0), lteq_int(mult_atom(add_atom(e, 1), size), bitvector_length(vector_name))) at src/builtins.sail:195:12-195:41
+statically-proved-assertion and_bool(gteq_int(e, 0), lteq_int(mult_atom(add_atom(e, 1), size), bitvector_length(vector_name__arg))) at src/builtins.sail:205:12-205:41
+statically-proved-assertion and_bool(gteq_int(shift, 0), lteq_int(shift, bitvector_length(x))) at src/v8_base.sail:12606:12-12606:36
+proved-numeric-argument-fact Elem_read 'e <= 0
+proved-numeric-argument-fact Elem_read 'e <= 1
+proved-numeric-argument-fact Elem_read 'e <= 3
+proved-numeric-argument-fact Elem_read 'e <= 31
+proved-numeric-argument-fact Elem_read 'size <= 63
+proved-numeric-argument-fact Elem_read ('e >= 0 & (('e + 1) * 'size) <= 'N)
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= 1)
+proved-numeric-argument-fact Elem_read (0 <= 'e & 'e <= 3)
+proved-numeric-argument-fact Elem_read (2 <= 'e & 'e <= 3)
+proved-numeric-argument-fact Elem_read (2 <= 2 & 2 <= 3)
+proved-numeric-argument-fact Elem_read (2 <= 3 & 3 <= 3)
+proved-numeric-argument-fact Elem_read 0 < 'e
+proved-numeric-argument-fact Elem_read 0 < 'size
+proved-numeric-argument-fact Elem_read 0 <= 'e
+proved-numeric-argument-fact Elem_read 0 <= 'size
+proved-numeric-argument-fact Elem_set 'e <= 0
+proved-numeric-argument-fact Elem_set 'e <= 1
+proved-numeric-argument-fact Elem_set 'e <= 3
+proved-numeric-argument-fact Elem_set 'e <= 31
+proved-numeric-argument-fact Elem_set 'size <= 63
+proved-numeric-argument-fact Elem_set ('e >= 0 & (('e + 1) * 'size) <= 'N)
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= 1)
+proved-numeric-argument-fact Elem_set (0 <= 'e & 'e <= 3)
+proved-numeric-argument-fact Elem_set (2 <= 'e & 'e <= 3)
+proved-numeric-argument-fact Elem_set 0 < 'e
+proved-numeric-argument-fact Elem_set 0 < 'size
+proved-numeric-argument-fact Elem_set 0 <= 'e
+proved-numeric-argument-fact Elem_set 0 <= 'size
+proved-numeric-argument-fact ROL 'shift <= 63
+proved-numeric-argument-fact ROL ('shift >= 0 & 'shift <= 'N)
+proved-numeric-argument-fact ROL (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact ROL (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact ROL (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact ROL (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact ROL 0 < 'shift
+proved-numeric-argument-fact ROL 0 <= 'shift
+proved-numeric-argument-fact ROR 'shift <= 1
+proved-numeric-argument-fact ROR 'shift <= 15
+proved-numeric-argument-fact ROR 'shift <= 255
+proved-numeric-argument-fact ROR 'shift <= 3
+proved-numeric-argument-fact ROR 'shift <= 31
+proved-numeric-argument-fact ROR 'shift <= 63
+proved-numeric-argument-fact ROR 'shift <= 7
+proved-numeric-argument-fact ROR (0 <= 0 & 0 <= 1)
+proved-numeric-argument-fact ROR (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact ROR (0 <= 1 & 1 <= 1)
+proved-numeric-argument-fact ROR (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact ROR (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact ROR (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact ROR (2 <= 2 & 2 <= 3)
+proved-numeric-argument-fact ROR (2 <= 3 & 3 <= 3)
+proved-numeric-argument-fact ROR (32 >= 0 & 32 <= 256)
+proved-numeric-argument-fact ROR 0 < 'shift
+proved-numeric-argument-fact ROR 0 < 32
+proved-numeric-argument-fact ROR 0 <= 'shift
+proved-numeric-argument-fact ROR 0 <= 32
+proved-numeric-argument-fact ROR 256 >= 0
+proved-numeric-argument-fact ROR 32 <= 63
+proved-numeric-argument-fact ROR not(32 == 0)
+proved-numeric-argument-fact SHAchoose (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact SHAchoose (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact SHAchoose (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact SHAchoose (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact SHAhashSIGMA0 (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact SHAhashSIGMA0 (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact SHAhashSIGMA0 (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact SHAhashSIGMA0 (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact SHAhashSIGMA1 (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact SHAhashSIGMA1 (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact SHAhashSIGMA1 (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact SHAhashSIGMA1 (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact SHAmajority (0 <= 0 & 0 <= 3)
+proved-numeric-argument-fact SHAmajority (0 <= 1 & 1 <= 3)
+proved-numeric-argument-fact SHAmajority (0 <= 2 & 2 <= 3)
+proved-numeric-argument-fact SHAmajority (0 <= 3 & 3 <= 3)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha2op_sha256_sched0 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha2op_sha256_sched0 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha2op_sha256_sched0 (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha2op_sha256_sched0 (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha2op_sha256_sched0 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha2op_sha256_sched0 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_hash 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1 (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1 (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1 (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha3op_sha256_sched1 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h2 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h2 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h2 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h2 (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h2 (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h2 (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h2 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h2 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512h2 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su0 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su0 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su0 (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su0 (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su0 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su0 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su1 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su1 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su1 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su1 (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su1 (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su1 (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su1 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su1 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_vector_crypto_sha512_sha512su1 0 <= 'n
+successful-check Arm-AdvSIMD-enabled-access
+unrolled-static-loop e 0 1 1 inc
+unrolled-static-loop e 0 3 1 inc
+unrolled-static-loop e 2 3 1 inc
+statically-selected-branch src/v8_base.sail:12607:8-12607:18 else
+unobserved-undefined-local Vtmp
+unobserved-undefined-local chs
+unobserved-undefined-local elt
+unobserved-undefined-local maj
+unobserved-undefined-local result
+unobserved-undefined-local t
+state-computation-root ARM_SHA256H128
+state-computation-root ARM_SHA256H2128
+state-computation-root ARM_SHA256SU0128
+state-computation-root ARM_SHA256SU1128
+state-computation-root ARM_SHA512H128
+state-computation-root ARM_SHA512H2128
+state-computation-root ARM_SHA512SU0128
+state-computation-root ARM_SHA512SU1128
+state-computation

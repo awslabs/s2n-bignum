@@ -1,0 +1,60 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function __id|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|int('n)|int('n)| => sail_hl_shared_arm_2dextract__5f_5fid_5f0
+shared-function execute_aarch64_instrs_integer_ins_ext_extract_immediate|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('lsb), int('m), int('n))|unit|datasize=64 => sail_hl_shared_arm_2dextract_execute_5faarch64_5finstrs_5finteger_5fins_5fext_5fextract_5fimmediate_5f1
+specialization-required execute_aarch64_instrs_integer_ins_ext_extract_immediate|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('lsb), int('m), int('n))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+specialization-required execute_aarch64_instrs_integer_ins_ext_extract_immediate|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(int('d), int('datasize), int('lsb), int('m), int('n))|unit|datasize=32: HOL Light: unlowered instruction control
+root arm_EXTR32
+root arm_EXTR64
+root arm_ROR32
+root arm_ROR64
+inlined __id
+inlined execute_aarch64_instrs_integer_ins_ext_extract_immediate
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract add_atom
+primitive-contract bitvector_concat
+primitive-contract lt_int
+primitive-contract mult_atom
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract unsigned
+statically-proved-assertion lt_int(sub_atom(add_atom(__id(lsb), __id(datasize)), 1), mult_atom(2, __id(datasize))) at src/instrs64.sail:10732:23-10732:59
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 31
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id (('n + 32) - 1) < (2 * 32)
+proved-numeric-argument-fact __id (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 < 32
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 0 <= 32
+proved-numeric-argument-fact __id 32 <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 'lsb <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 'lsb <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate (('lsb + 'datasize) - 1) < (2 * 'datasize)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate (0 <= 'lsb & 'lsb <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate (0 <= 'lsb & 'lsb <= 63)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 0 <= 'lsb
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_integer_ins_ext_extract_immediate 0 <= 'n
+state-computation-root arm_EXTR32
+state-computation-root arm_EXTR64
+state-computation-root arm_ROR32
+state-computation-root arm_ROR64
+state-computation

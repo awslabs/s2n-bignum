@@ -1,0 +1,92 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function neq_bits|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector('n), bitvector('n))|{('ex861974# : Bool), true. bool(not('ex861974#))}| => sail_hl_shared_arm_2dselect_neq_5fbits_5f0
+shared-function ConditionHolds|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|bitvector(4)|bool| => sail_hl_shared_arm_2dselect_ConditionHolds_5f1
+shared-function execute_aarch64_instrs_integer_conditional_select|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('d), int('datasize), bool('else_inc), bool('else_inv), int('m), int('n))|unit|datasize=32 => sail_hl_shared_arm_2dselect_execute_5faarch64_5finstrs_5finteger_5fconditional_5fselect_5f2
+shared-function arm_CSINC32|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), bitvector(5), bitvector(5), bitvector(5))|unit| => sail_hl_shared_arm_2dselect_arm_5fCSINC32_5f3
+shared-function execute_aarch64_instrs_integer_conditional_select|fixed|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('d), int('datasize), bool('else_inc), bool('else_inv), int('m), int('n))|unit|datasize=64 => sail_hl_shared_arm_2dselect_execute_5faarch64_5finstrs_5finteger_5fconditional_5fselect_5f4
+shared-function arm_CSINC64|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), bitvector(5), bitvector(5), bitvector(5))|unit| => sail_hl_shared_arm_2dselect_arm_5fCSINC64_5f5
+shared-function arm_CSINV32|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), bitvector(5), bitvector(5), bitvector(5))|unit| => sail_hl_shared_arm_2dselect_arm_5fCSINV32_5f6
+shared-function arm_CSINV64|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), bitvector(5), bitvector(5), bitvector(5))|unit| => sail_hl_shared_arm_2dselect_arm_5fCSINV64_5f7
+shared-function arm_CSNEG32|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), bitvector(5), bitvector(5), bitvector(5))|unit| => sail_hl_shared_arm_2dselect_arm_5fCSNEG32_5f8
+shared-function arm_CSNEG64|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), bitvector(5), bitvector(5), bitvector(5))|unit| => sail_hl_shared_arm_2dselect_arm_5fCSNEG64_5f9
+specialization-required execute_aarch64_instrs_integer_conditional_select|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|(bitvector(4), int('d), int('datasize), bool('else_inc), bool('else_inv), int('m), int('n))|unit|: HOL Light: unsupported primitive on internal dynamic bitvectors: X_read
+root arm_CINC32
+root arm_CINC64
+root arm_CINV32
+root arm_CINV64
+root arm_CNEG32
+root arm_CNEG64
+root arm_CSEL32
+root arm_CSEL64
+root arm_CSET32
+root arm_CSET64
+root arm_CSETM32
+root arm_CSETM64
+root arm_CSINC32
+root arm_CSINC64
+root arm_CSINV32
+root arm_CSINV64
+root arm_CSNEG32
+root arm_CSNEG64
+inlined ConditionHolds
+inlined arm_CSINC32
+inlined arm_CSINC64
+inlined arm_CSINV32
+inlined arm_CSINV64
+inlined arm_CSNEG32
+inlined arm_CSNEG64
+inlined execute_aarch64_instrs_integer_conditional_select
+inlined neq_bits
+primitive-contract PSTATE-NZCV-projection
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract add_bits_int
+primitive-contract and_bool
+primitive-contract bitvector_access
+primitive-contract eq_bits
+primitive-contract not_bool
+primitive-contract not_vec
+primitive-contract subrange_bits
+primitive-contract unsigned
+primitive-contract xor_vec
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select 'm <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select (0 <= 'm & 'm <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select 0 <= 'm
+proved-numeric-argument-fact execute_aarch64_instrs_integer_conditional_select 0 <= 'n
+disabled-extension Arm-SPE-sampling
+statically-selected-branch src/instrs64.sail:10068:8-10068:25 else
+statically-selected-branch src/v8_base.sail:8982:8-8982:41 else
+unobserved-undefined-local result
+state-computation-root arm_CINC32
+state-computation-root arm_CINC64
+state-computation-root arm_CINV32
+state-computation-root arm_CINV64
+state-computation-root arm_CNEG32
+state-computation-root arm_CNEG64
+state-computation-root arm_CSEL32
+state-computation-root arm_CSEL64
+state-computation-root arm_CSET32
+state-computation-root arm_CSET64
+state-computation-root arm_CSETM32
+state-computation-root arm_CSETM64
+state-computation-root arm_CSINC32
+state-computation-root arm_CSINC64
+state-computation-root arm_CSINV32
+state-computation-root arm_CSINV64
+state-computation-root arm_CSNEG32
+state-computation-root arm_CSNEG64
+state-computation

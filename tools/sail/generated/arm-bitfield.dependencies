@@ -1,0 +1,296 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+shared-function root arm_ASR32 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_ASR64 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_BFM32 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_BFM64 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_LSL32 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_LSL64 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_LSR32 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_LSR64 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_SBFM32 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_SBFM64 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_UBFM32 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+shared-function root arm_UBFM64 => checked inline: HOL Light: unsupported primitive on internal dynamic bitvectors: UInt0
+root arm_ASR32
+root arm_ASR64
+root arm_BFM32
+root arm_BFM64
+root arm_LSL32
+root arm_LSL64
+root arm_LSR32
+root arm_LSR64
+root arm_SBFM32
+root arm_SBFM64
+root arm_UBFM32
+root arm_UBFM64
+inlined DecodeBitMasks
+inlined HighestSetBit
+inlined Ones
+inlined ROR
+inlined Zeros
+inlined __id
+inlined decode_bfm_aarch64_instrs_integer_bitfield
+inlined decode_sbfm_aarch64_instrs_integer_bitfield
+inlined decode_ubfm_aarch64_instrs_integer_bitfield
+inlined execute_aarch64_instrs_integer_bitfield
+inlined integer_subrange
+inlined neq_bits
+inlined sail_ones
+primitive-contract UInt0
+primitive-contract X_read
+primitive-contract X_set
+primitive-contract ZeroExtend0
+primitive-contract _shl_int
+primitive-contract add_atom
+primitive-contract and_bool
+primitive-contract and_vec
+primitive-contract bitvector_access
+primitive-contract bitvector_concat
+primitive-contract bitvector_length
+primitive-contract checked-dynamic-bit-complement
+primitive-contract checked-dynamic-bit-zeros
+primitive-contract checked-dynamic-zero-extension
+primitive-contract ediv_int
+primitive-contract ediv_nat
+primitive-contract emod_nat
+primitive-contract eq_bits
+primitive-contract eq_int
+primitive-contract get_slice_int
+primitive-contract gteq_int
+primitive-contract lt_int
+primitive-contract lteq_int
+primitive-contract mult_atom
+primitive-contract not_bool
+primitive-contract not_vec
+primitive-contract or_bool
+primitive-contract or_vec
+primitive-contract replicate_bits
+primitive-contract sail_shiftleft
+primitive-contract sail_shiftright
+primitive-contract sail_zeros
+primitive-contract sub_atom
+primitive-contract sub_bits
+statically-proved-assertion and_bool(lteq_int(0, __id(s)), lt_int(__id(s), __id(datasize))) at src/instrs64.sail:2923:28-2923:52
+statically-proved-assertion eq_int(mult_atom(__id(esize), ediv_int(__id(M), __id(esize))), __id(M)) at src/v8_base.sail:30915:23-30915:53
+statically-proved-assertion gteq_int(6, __id(len)) at src/v8_base.sail:30901:23-30901:32
+statically-proved-assertion gteq_int(M, _shl_int(1, len)) at src/v8_base.sail:30900:12-30900:27
+statically-proved-assertion gteq_int(__id(esize), add_atom(__id(d), 1)) at src/v8_base.sail:30913:23-30913:39
+statically-proved-assertion gteq_int(__id(esize), add_atom(__id(s), 1)) at src/v8_base.sail:30911:23-30911:39
+proved-numeric-argument-fact DecodeBitMasks 'M <= 127
+proved-numeric-argument-fact DecodeBitMasks 'M <= 32
+proved-numeric-argument-fact DecodeBitMasks 'M <= 63
+proved-numeric-argument-fact DecodeBitMasks 'M <= 64
+proved-numeric-argument-fact DecodeBitMasks 0 < 'M
+proved-numeric-argument-fact DecodeBitMasks 0 <= 'M
+proved-numeric-argument-fact DecodeBitMasks 32 <= 'M
+proved-numeric-argument-fact DecodeBitMasks 64 <= 'M
+proved-numeric-argument-fact HighestSetBit 0 < 32
+proved-numeric-argument-fact HighestSetBit 0 < 64
+proved-numeric-argument-fact HighestSetBit 0 <= 32
+proved-numeric-argument-fact HighestSetBit 0 <= 64
+proved-numeric-argument-fact HighestSetBit 32 <= 32
+proved-numeric-argument-fact HighestSetBit 32 <= 63
+proved-numeric-argument-fact HighestSetBit 32 >= 0
+proved-numeric-argument-fact HighestSetBit 64 <= 127
+proved-numeric-argument-fact HighestSetBit 64 <= 64
+proved-numeric-argument-fact HighestSetBit 64 >= 0
+proved-numeric-argument-fact Ones 'n <= 127
+proved-numeric-argument-fact Ones 'n <= 31
+proved-numeric-argument-fact Ones 'n <= 5
+proved-numeric-argument-fact Ones 'n <= 6
+proved-numeric-argument-fact Ones 'n <= 63
+proved-numeric-argument-fact Ones 'n <= 7
+proved-numeric-argument-fact Ones 0 < 'n
+proved-numeric-argument-fact Ones 0 < 32
+proved-numeric-argument-fact Ones 0 < 64
+proved-numeric-argument-fact Ones 0 <= 'n
+proved-numeric-argument-fact Ones 0 <= 32
+proved-numeric-argument-fact Ones 0 <= 64
+proved-numeric-argument-fact Ones 32 <= 32
+proved-numeric-argument-fact Ones 32 <= 63
+proved-numeric-argument-fact Ones 32 >= 0
+proved-numeric-argument-fact Ones 5 <= 'n
+proved-numeric-argument-fact Ones 5 <= 5
+proved-numeric-argument-fact Ones 6 <= 'n
+proved-numeric-argument-fact Ones 6 <= 6
+proved-numeric-argument-fact Ones 6 >= 'n
+proved-numeric-argument-fact Ones 6 >= 5
+proved-numeric-argument-fact Ones 6 >= 6
+proved-numeric-argument-fact Ones 64 <= 127
+proved-numeric-argument-fact Ones 64 <= 64
+proved-numeric-argument-fact Ones 64 >= 0
+proved-numeric-argument-fact Ones not('n < 1)
+proved-numeric-argument-fact Ones not(5 < 1)
+proved-numeric-argument-fact Ones not(6 < 1)
+proved-numeric-argument-fact ROR 'shift <= 31
+proved-numeric-argument-fact ROR 'shift <= 63
+proved-numeric-argument-fact ROR (32 * div(32, 32)) == 32
+proved-numeric-argument-fact ROR (64 * div(64, 64)) == 64
+proved-numeric-argument-fact ROR 0 < 32
+proved-numeric-argument-fact ROR 0 < 64
+proved-numeric-argument-fact ROR 0 <= 'shift
+proved-numeric-argument-fact ROR 0 <= 32
+proved-numeric-argument-fact ROR 0 <= 64
+proved-numeric-argument-fact ROR 32 <= 32
+proved-numeric-argument-fact ROR 32 <= 63
+proved-numeric-argument-fact ROR 32 >= 0
+proved-numeric-argument-fact ROR 5 <= 5
+proved-numeric-argument-fact ROR 6 <= 6
+proved-numeric-argument-fact ROR 6 >= 5
+proved-numeric-argument-fact ROR 6 >= 6
+proved-numeric-argument-fact ROR 64 <= 127
+proved-numeric-argument-fact ROR 64 <= 64
+proved-numeric-argument-fact ROR 64 >= 0
+proved-numeric-argument-fact ROR not(5 < 1)
+proved-numeric-argument-fact ROR not(6 < 1)
+proved-numeric-argument-fact Zeros 'n <= 127
+proved-numeric-argument-fact Zeros 'n <= 32
+proved-numeric-argument-fact Zeros 'n <= 63
+proved-numeric-argument-fact Zeros 'n <= 64
+proved-numeric-argument-fact Zeros 0 < 'n
+proved-numeric-argument-fact Zeros 0 <= 'n
+proved-numeric-argument-fact Zeros 32 <= 'n
+proved-numeric-argument-fact Zeros 64 <= 'n
+proved-numeric-argument-fact __id 'n <= 127
+proved-numeric-argument-fact __id 'n <= 31
+proved-numeric-argument-fact __id 'n <= 32
+proved-numeric-argument-fact __id 'n <= 5
+proved-numeric-argument-fact __id 'n <= 6
+proved-numeric-argument-fact __id 'n <= 63
+proved-numeric-argument-fact __id 'n <= 64
+proved-numeric-argument-fact __id 'n <= 7
+proved-numeric-argument-fact __id 'n >= 0
+proved-numeric-argument-fact __id (0 <= 'n & 'n < 32)
+proved-numeric-argument-fact __id (0 <= 'n & 'n < 64)
+proved-numeric-argument-fact __id 0 < 'n
+proved-numeric-argument-fact __id 0 < 32
+proved-numeric-argument-fact __id 0 < 64
+proved-numeric-argument-fact __id 0 <= 'n
+proved-numeric-argument-fact __id 0 <= 32
+proved-numeric-argument-fact __id 0 <= 64
+proved-numeric-argument-fact __id 31 <= 'n
+proved-numeric-argument-fact __id 32 <= 'n
+proved-numeric-argument-fact __id 32 <= 32
+proved-numeric-argument-fact __id 32 <= 63
+proved-numeric-argument-fact __id 32 >= 0
+proved-numeric-argument-fact __id 5 <= 'n
+proved-numeric-argument-fact __id 5 <= 5
+proved-numeric-argument-fact __id 6 <= 'n
+proved-numeric-argument-fact __id 6 <= 6
+proved-numeric-argument-fact __id 6 >= 5
+proved-numeric-argument-fact __id 6 >= 6
+proved-numeric-argument-fact __id 63 <= 'n
+proved-numeric-argument-fact __id 64 <= 'n
+proved-numeric-argument-fact __id 64 <= 127
+proved-numeric-argument-fact __id 64 <= 64
+proved-numeric-argument-fact __id 64 >= 0
+proved-numeric-argument-fact __id not('n < 1)
+proved-numeric-argument-fact __id not(5 < 1)
+proved-numeric-argument-fact __id not(6 < 1)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 'datasize <= 32
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 'datasize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 'datasize <= 64
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 'r <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 'r <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 's <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 's <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield (0 <= 's & 's < 'datasize)
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 0 < 's
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 0 <= 'n
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 0 <= 'r
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 0 <= 's
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 31 <= 's
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 32 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 63 <= 's
+proved-numeric-argument-fact execute_aarch64_instrs_integer_bitfield 64 <= 'datasize
+proved-numeric-argument-fact integer_subrange 'ex860566# <= 31
+proved-numeric-argument-fact integer_subrange 'ex860566# <= 63
+proved-numeric-argument-fact integer_subrange 'hi <= 31
+proved-numeric-argument-fact integer_subrange 'hi <= 7
+proved-numeric-argument-fact integer_subrange 'lo <= 0
+proved-numeric-argument-fact integer_subrange 'lo <= 31
+proved-numeric-argument-fact integer_subrange -31 <= 'ex860566#
+proved-numeric-argument-fact integer_subrange -63 <= 'ex860566#
+proved-numeric-argument-fact integer_subrange 0 < 'hi
+proved-numeric-argument-fact integer_subrange 0 < 32
+proved-numeric-argument-fact integer_subrange 0 < 64
+proved-numeric-argument-fact integer_subrange 0 <= 'hi
+proved-numeric-argument-fact integer_subrange 0 <= 'lo
+proved-numeric-argument-fact integer_subrange 0 <= 32
+proved-numeric-argument-fact integer_subrange 0 <= 64
+proved-numeric-argument-fact integer_subrange 32 <= 32
+proved-numeric-argument-fact integer_subrange 32 <= 63
+proved-numeric-argument-fact integer_subrange 32 >= 0
+proved-numeric-argument-fact integer_subrange 5 <= 5
+proved-numeric-argument-fact integer_subrange 6 <= 6
+proved-numeric-argument-fact integer_subrange 6 >= 5
+proved-numeric-argument-fact integer_subrange 6 >= 6
+proved-numeric-argument-fact integer_subrange 64 <= 127
+proved-numeric-argument-fact integer_subrange 64 <= 64
+proved-numeric-argument-fact integer_subrange 64 >= 0
+proved-numeric-argument-fact integer_subrange not(5 < 1)
+proved-numeric-argument-fact integer_subrange not(6 < 1)
+proved-numeric-argument-fact neq_bits 32 <= 32
+proved-numeric-argument-fact neq_bits 64 <= 64
+proved-numeric-argument-fact sail_ones 'n <= 127
+proved-numeric-argument-fact sail_ones 'n <= 31
+proved-numeric-argument-fact sail_ones 'n <= 5
+proved-numeric-argument-fact sail_ones 'n <= 6
+proved-numeric-argument-fact sail_ones 'n <= 63
+proved-numeric-argument-fact sail_ones 'n <= 7
+proved-numeric-argument-fact sail_ones 'n >= 0
+proved-numeric-argument-fact sail_ones 0 < 'n
+proved-numeric-argument-fact sail_ones 0 <= 'n
+proved-numeric-argument-fact sail_ones 5 <= 'n
+proved-numeric-argument-fact sail_ones 6 <= 'n
+proved-numeric-argument-fact sail_ones 6 >= 'n
+proved-numeric-argument-fact sail_ones not('n < 1)
+unrolled-static-loop i 6 0 1 dec
+statically-selected-branch src/builtins.sail:156:12-156:25 else
+statically-selected-branch src/builtins.sail:156:12-156:25 then
+statically-selected-branch src/instrs64.sail:2918:36-2918:42 else
+statically-selected-branch src/instrs64.sail:2918:36-2918:42 then
+statically-selected-branch src/instrs64.sail:2922:36-2922:42 else
+statically-selected-branch src/instrs64.sail:2922:36-2922:42 then
+statically-selected-branch src/instrs64.sail:2934:24-2934:33 else
+statically-selected-branch src/instrs64.sail:2934:24-2934:33 then
+statically-selected-branch src/instrs64.sail:2958:8-2958:28 else
+statically-selected-branch src/instrs64.sail:2961:8-2961:70 else
+statically-selected-branch src/instrs64.sail:2987:24-2987:33 else
+statically-selected-branch src/instrs64.sail:2987:24-2987:33 then
+statically-selected-branch src/instrs64.sail:3011:8-3011:28 else
+statically-selected-branch src/instrs64.sail:3014:8-3014:70 else
+statically-selected-branch src/instrs64.sail:3040:24-3040:33 else
+statically-selected-branch src/instrs64.sail:3040:24-3040:33 then
+statically-selected-branch src/instrs64.sail:3064:8-3064:28 else
+statically-selected-branch src/instrs64.sail:3067:8-3067:70 else
+statically-selected-branch src/v8_base.sail:30897:8-30897:15 else
+statically-selected-branch src/v8_base.sail:30903:8-30903:45 else
+unobserved-undefined-local extend
+unobserved-undefined-local inzero
+unobserved-undefined-local tmask
+unobserved-undefined-local wmask
+state-computation-root arm_ASR32
+state-computation-root arm_ASR64
+state-computation-root arm_BFM32
+state-computation-root arm_BFM64
+state-computation-root arm_LSL32
+state-computation-root arm_LSL64
+state-computation-root arm_LSR32
+state-computation-root arm_LSR64
+state-computation-root arm_SBFM32
+state-computation-root arm_SBFM64
+state-computation-root arm_UBFM32
+state-computation-root arm_UBFM64
+state-computation

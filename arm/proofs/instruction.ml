@@ -3002,12 +3002,17 @@ let arm_STRB = define
 (*** the actually encodable offsets are a bit more limited for LDP ***)
 (*** But this is all ignored at the present level and left to decoder ***)
 
+(* Equal load destinations are constrained unpredictable, including two
+   zero-register destinations. Orthogonality alone does not detect that
+   case: a read-only component is orthogonal to itself. Use the existing
+   unrestricted-state policy for this invalid destination pair as well. *)
 let arm_LDP = define
  `arm_LDP (Rt1:(armstate,N word)component)
           (Rt2:(armstate,N word)component) Rn off =
     \s. let base = read Rn s in
         let addr = word_add base (offset_address off s) in
         (if (Rn = SP ==> aligned 16 base) /\
+            ~(Rt1 = Rt2) /\
             orthogonal_components Rt1 Rt2 /\
             (offset_writesback off
              ==> orthogonal_components Rt1 Rn /\ orthogonal_components Rt2 Rn)

@@ -260,6 +260,34 @@ let READ_LANE_CLAUSES = prove
   REWRITE_TAC[READ_COMPONENT_COMPOSE; LANE_B; LANE_H; LANE_S; LANE_D;
               through; read]);;
 
+(* Orthogonality does not imply distinct components: two read-only zero
+   registers are orthogonal. A writable word component does distinguish
+   two orthogonal destinations, because it can read back both zero and one.
+   Discharge the LDP destination-inequality guard from these existing facts
+   on demand, rather than precomputing every register pair. *)
+let ARM_DISTINCT_WORD_COMPONENTS = prove
+ (`!c d:(S,N word)component.
+     orthogonal_components c d /\
+     (valid_component c \/ valid_component d)
+     ==> ~(c = d)`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[orthogonal_components; valid_component] THEN
+  STRIP_TAC THEN DISCH_THEN SUBST_ALL_TAC THEN
+  ASM_MESON_TAC[WORD_NE_10]);;
+
+let ARM_DISTINCT_WORD_COMPONENTS_CONV tm =
+  let c,d = dest_eq(dest_neg tm) in
+  let orthogonal = ORTHOGONAL_COMPONENTS_CONV
+    (list_mk_icomb "orthogonal_components" [c;d]) in
+  let validity =
+    try DISJ1 (VALID_COMPONENT_RULE c)
+          (mk_icomb(`valid_component`,d))
+    with Failure _ ->
+      DISJ2 (mk_icomb(`valid_component`,c))
+        (VALID_COMPONENT_RULE d) in
+  EQT_INTRO(MP (PART_MATCH rand ARM_DISTINCT_WORD_COMPONENTS tm)
+    (CONJ orthogonal validity));;
+
 let ARM_EXEC_CONV =
   let qth = prove(`bytes64 (word_add a (word 0)) = bytes64 a /\
                    bytes128 (word_add b (word 0)) = bytes128 b`,
@@ -270,6 +298,7 @@ let ARM_EXEC_CONV =
   ((GEN_REWRITE_CONV I ARM_LOAD_STORE_CLAUSES THENC
     REWRITE_CONV [offset_writesback; offset_writeback;
                   no_offset; OFFSET_ADDRESS_CLAUSES] THENC
+    ONCE_DEPTH_CONV ARM_DISTINCT_WORD_COMPONENTS_CONV THENC
     ONCE_DEPTH_CONV(EQT_INTRO o ORTHOGONAL_COMPONENTS_CONV) THENC
     REWRITE_CONV[] THENC
     ONCE_DEPTH_CONV(LAND_CONV DIMINDEX_CONV THENC NUM_DIV_CONV) THENC

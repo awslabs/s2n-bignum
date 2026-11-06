@@ -1,0 +1,150 @@
+configured-assumption feature FEAT_AA64EL0=true
+configured-assumption feature FEAT_AFP=true
+configured-assumption feature FEAT_PMULL=true
+configured-assumption feature FEAT_SME=true
+configured-assumption initial-bit PSTATE.SM=0b0
+configured-assumption initial-bit PSTATE.nRW=0b0
+used-assumption feature FEAT_AA64EL0=true
+used-assumption feature FEAT_AFP=true
+used-assumption initial-bit PSTATE.nRW=0b0
+shared-function HaveAltFP|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool| => sail_hl_shared_arm_2dvector_2dadd_2dreduce_HaveAltFP_5f0
+shared-function HaveAArch32|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool(true)| => sail_hl_shared_arm_2dvector_2dadd_2dreduce_HaveAArch32_5f1
+shared-function HaveAArch64|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool| => sail_hl_shared_arm_2dvector_2dadd_2dreduce_HaveAArch64_5f2
+shared-function UsingAArch32|generic|armstate|false|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|unit|bool| => sail_hl_shared_arm_2dvector_2dadd_2dreduce_UsingAArch32_5f3
+shared-function _get_FPCR_Type_AH|generic|armstate|true|feature FEAT_AA64EL0=true;feature FEAT_AFP=true;feature FEAT_PMULL=true;feature FEAT_SME=true;initial-bit PSTATE.SM=0b0;initial-bit PSTATE.nRW=0b0|FPCR_Type|bitvector(((1 - 1) + 1))| => sail_hl_shared_arm_2dvector_2dadd_2dreduce__5fget_5fFPCR_5fType_5fAH_5f4
+root arm_ADDV128E16
+root arm_ADDV128E32
+root arm_ADDV128E8
+root arm_ADDV64E16
+root arm_ADDV64E8
+inlined HaveAArch32
+inlined HaveAArch64
+inlined HaveAltFP
+inlined Reduce
+inlined Reduce__1
+inlined UsingAArch32
+inlined _get_FPCR_Type_AH
+inlined execute_aarch64_instrs_vector_reduce_add_simd
+primitive-contract CheckFPAdvSIMDEnabled64
+primitive-contract IsFeatureImplemented
+primitive-contract V_read
+primitive-contract V_set
+primitive-contract V_set-small-zero-top
+primitive-contract add_bits
+primitive-contract and_bool
+primitive-contract bitvector_length
+primitive-contract ediv_nat
+primitive-contract eq_bits
+primitive-contract eq_int
+primitive-contract not_bool
+primitive-contract or_bool
+primitive-contract sub_atom
+primitive-contract subrange_bits
+primitive-contract unsigned
+statically-proved-assertion or_bool(eq_int(esize, 8), or_bool(eq_int(esize, 16), or_bool(eq_int(esize, 32), eq_int(esize, 64)))) at src/v8_base.sail:30829:12-30829:64
+proved-numeric-argument-fact HaveAltFP (128 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (16 in {8, 16, 32, 64} & 128 >= 16))
+proved-numeric-argument-fact HaveAltFP (128 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (32 in {8, 16, 32, 64} & 128 >= 32))
+proved-numeric-argument-fact HaveAltFP (128 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (8 in {8, 16, 32, 64} & 128 >= 8))
+proved-numeric-argument-fact HaveAltFP (64 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (16 in {8, 16, 32, 64} & 64 >= 16))
+proved-numeric-argument-fact HaveAltFP (64 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (8 in {8, 16, 32, 64} & 64 >= 8))
+proved-numeric-argument-fact HaveAltFP 0 < 16
+proved-numeric-argument-fact HaveAltFP 0 < 32
+proved-numeric-argument-fact HaveAltFP 0 < 8
+proved-numeric-argument-fact HaveAltFP 0 <= 16
+proved-numeric-argument-fact HaveAltFP 0 <= 32
+proved-numeric-argument-fact HaveAltFP 0 <= 8
+proved-numeric-argument-fact HaveAltFP 16 <= 31
+proved-numeric-argument-fact HaveAltFP 32 <= 63
+proved-numeric-argument-fact HaveAltFP 8 <= 15
+proved-numeric-argument-fact HaveAltFP 8 <= 31
+proved-numeric-argument-fact Reduce 'esize <= 15
+proved-numeric-argument-fact Reduce 'esize <= 31
+proved-numeric-argument-fact Reduce 'esize <= 63
+proved-numeric-argument-fact Reduce 0 < 'esize
+proved-numeric-argument-fact Reduce 0 < 128
+proved-numeric-argument-fact Reduce 0 < 64
+proved-numeric-argument-fact Reduce 0 <= 'esize
+proved-numeric-argument-fact Reduce 0 <= 128
+proved-numeric-argument-fact Reduce 0 <= 64
+proved-numeric-argument-fact Reduce 128 <= 255
+proved-numeric-argument-fact Reduce 64 <= 127
+proved-numeric-argument-fact Reduce__1 'esize <= 15
+proved-numeric-argument-fact Reduce__1 'esize <= 31
+proved-numeric-argument-fact Reduce__1 'esize <= 63
+proved-numeric-argument-fact Reduce__1 ('esize == 8 | ('esize == 16 | ('esize == 32 | 'esize == 64)))
+proved-numeric-argument-fact Reduce__1 (('esize == 16 | 'esize == 32) | 'esize == 64)
+proved-numeric-argument-fact Reduce__1 (128 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & ('esize in {8, 16, 32, 64} & 128 >= 'esize))
+proved-numeric-argument-fact Reduce__1 (16 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & ('esize in {8, 16, 32, 64} & 16 >= 'esize))
+proved-numeric-argument-fact Reduce__1 (32 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & ('esize in {8, 16, 32, 64} & 32 >= 'esize))
+proved-numeric-argument-fact Reduce__1 (64 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & ('esize in {8, 16, 32, 64} & 64 >= 'esize))
+proved-numeric-argument-fact Reduce__1 0 < 'esize
+proved-numeric-argument-fact Reduce__1 0 <= 'esize
+proved-numeric-argument-fact Reduce__1 16 <= 16
+proved-numeric-argument-fact Reduce__1 16 == div(32, 2)
+proved-numeric-argument-fact Reduce__1 32 <= 32
+proved-numeric-argument-fact Reduce__1 32 == div(64, 2)
+proved-numeric-argument-fact Reduce__1 64 <= 64
+proved-numeric-argument-fact Reduce__1 64 == div(128, 2)
+proved-numeric-argument-fact Reduce__1 8 <= 8
+proved-numeric-argument-fact Reduce__1 8 == div(16, 2)
+proved-numeric-argument-fact Reduce__1 not(128 == 'esize)
+proved-numeric-argument-fact Reduce__1 not(16 == 'esize)
+proved-numeric-argument-fact Reduce__1 not(32 == 'esize)
+proved-numeric-argument-fact Reduce__1 not(64 == 'esize)
+proved-numeric-argument-fact UsingAArch32 (128 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (16 in {8, 16, 32, 64} & 128 >= 16))
+proved-numeric-argument-fact UsingAArch32 (128 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (32 in {8, 16, 32, 64} & 128 >= 32))
+proved-numeric-argument-fact UsingAArch32 (128 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (8 in {8, 16, 32, 64} & 128 >= 8))
+proved-numeric-argument-fact UsingAArch32 (64 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (16 in {8, 16, 32, 64} & 64 >= 16))
+proved-numeric-argument-fact UsingAArch32 (64 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (8 in {8, 16, 32, 64} & 64 >= 8))
+proved-numeric-argument-fact UsingAArch32 0 < 16
+proved-numeric-argument-fact UsingAArch32 0 < 32
+proved-numeric-argument-fact UsingAArch32 0 < 8
+proved-numeric-argument-fact UsingAArch32 0 <= 16
+proved-numeric-argument-fact UsingAArch32 0 <= 32
+proved-numeric-argument-fact UsingAArch32 0 <= 8
+proved-numeric-argument-fact UsingAArch32 16 <= 31
+proved-numeric-argument-fact UsingAArch32 32 <= 63
+proved-numeric-argument-fact UsingAArch32 8 <= 15
+proved-numeric-argument-fact UsingAArch32 8 <= 31
+proved-numeric-argument-fact _get_FPCR_Type_AH (128 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (16 in {8, 16, 32, 64} & 128 >= 16))
+proved-numeric-argument-fact _get_FPCR_Type_AH (128 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (32 in {8, 16, 32, 64} & 128 >= 32))
+proved-numeric-argument-fact _get_FPCR_Type_AH (128 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (8 in {8, 16, 32, 64} & 128 >= 8))
+proved-numeric-argument-fact _get_FPCR_Type_AH (64 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (16 in {8, 16, 32, 64} & 64 >= 16))
+proved-numeric-argument-fact _get_FPCR_Type_AH (64 in {8, 16, 32, 64, 128, 256, 512, 1024, 2048} & (8 in {8, 16, 32, 64} & 64 >= 8))
+proved-numeric-argument-fact _get_FPCR_Type_AH 0 < 16
+proved-numeric-argument-fact _get_FPCR_Type_AH 0 < 32
+proved-numeric-argument-fact _get_FPCR_Type_AH 0 < 8
+proved-numeric-argument-fact _get_FPCR_Type_AH 0 <= 16
+proved-numeric-argument-fact _get_FPCR_Type_AH 0 <= 32
+proved-numeric-argument-fact _get_FPCR_Type_AH 0 <= 8
+proved-numeric-argument-fact _get_FPCR_Type_AH 16 <= 31
+proved-numeric-argument-fact _get_FPCR_Type_AH 32 <= 63
+proved-numeric-argument-fact _get_FPCR_Type_AH 8 <= 15
+proved-numeric-argument-fact _get_FPCR_Type_AH 8 <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 'd <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 'datasize <= 127
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 'datasize <= 255
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 'esize <= 15
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 'esize <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 'esize <= 63
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 'n <= 31
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd (0 <= 'd & 'd <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd (0 <= 'n & 'n <= 31)
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 0 < 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 0 < 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 0 <= 'd
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 0 <= 'datasize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 0 <= 'esize
+proved-numeric-argument-fact execute_aarch64_instrs_vector_reduce_add_simd 0 <= 'n
+successful-check Arm-AdvSIMD-enabled-access
+statically-selected-branch src/v8_base.sail:30831:8-30831:19 else
+statically-selected-branch src/v8_base.sail:30831:8-30831:19 then
+statically-selected-branch src/v8_base.sail:4028:8-4028:31 else
+statically-selected-branch src/v8_base.sail:4031:8-4031:31 else
+unobserved-undefined-local result
+state-computation-root arm_ADDV128E16
+state-computation-root arm_ADDV128E32
+state-computation-root arm_ADDV128E8
+state-computation-root arm_ADDV64E16
+state-computation-root arm_ADDV64E8
+state-computation

@@ -1,0 +1,60 @@
+SAIL_HL_ARM_SQSHRUN64E8_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQSHRUN64E8 reg_FPSR amount d n s t <=>
+       arm_SQSHRUN (QREG' d) (QREG' n) (val amount + 1) 8 s t
+
+SAIL_HL_ARM_SQSHRUN64E16_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQSHRUN64E16 reg_FPSR amount d n s t <=>
+       arm_SQSHRUN (QREG' d) (QREG' n) (val amount + 1) 16 s t
+
+SAIL_HL_ARM_SQSHRUN64E32_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQSHRUN64E32 reg_FPSR amount d n s t <=>
+       arm_SQSHRUN (QREG' d) (QREG' n) (val amount + 1) 32 s t
+
+SAIL_HL_ARM_SQSHRUN264E8_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQSHRUN264E8 reg_FPSR amount d n s t <=>
+       arm_SQSHRUN2 (QREG' d) (QREG' n) (val amount + 1) 8 s t
+
+SAIL_HL_ARM_SQSHRUN264E16_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQSHRUN264E16 reg_FPSR amount d n s t <=>
+       arm_SQSHRUN2 (QREG' d) (QREG' n) (val amount + 1) 16 s t
+
+SAIL_HL_ARM_SQSHRUN264E32_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQSHRUN264E32 reg_FPSR amount d n s t <=>
+       arm_SQSHRUN2 (QREG' d) (QREG' n) (val amount + 1) 32 s t
+
+SAIL_HL_ARM_SQRSHRUN64E8_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQRSHRUN64E8 reg_FPSR amount d n s t <=>
+       arm_SQRSHRUN (QREG' d) (QREG' n) (val amount + 1) 8 s t
+
+SAIL_HL_ARM_SQRSHRUN64E16_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQRSHRUN64E16 reg_FPSR amount d n s t <=>
+       arm_SQRSHRUN (QREG' d) (QREG' n) (val amount + 1) 16 s t
+
+SAIL_HL_ARM_SQRSHRUN64E32_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQRSHRUN64E32 reg_FPSR amount d n s t <=>
+       arm_SQRSHRUN (QREG' d) (QREG' n) (val amount + 1) 32 s t
+
+SAIL_HL_ARM_SQRSHRUN264E8_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQRSHRUN264E8 reg_FPSR amount d n s t <=>
+       arm_SQRSHRUN2 (QREG' d) (QREG' n) (val amount + 1) 8 s t
+
+SAIL_HL_ARM_SQRSHRUN264E16_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQRSHRUN264E16 reg_FPSR amount d n s t <=>
+       arm_SQRSHRUN2 (QREG' d) (QREG' n) (val amount + 1) 16 s t
+
+SAIL_HL_ARM_SQRSHRUN264E32_EQ
+|- forall reg_FPSR amount d n s t.
+       sail_hl_arm_5fSQRSHRUN264E32 reg_FPSR amount d n s t <=>
+       arm_SQRSHRUN2 (QREG' d) (QREG' n) (val amount + 1) 32 s t
+
