@@ -336,6 +336,16 @@ let WORD_ZX_ZX_32_64_32 = prove
  (`!x:int32. word_zx(word_zx x:int64):int32 = x`,
   CONV_TAC WORD_BLAST);;
 
+let WORD_ZX_ZX_SMALL = prove
+ (`!n. n < 2 EXP 32 ==> word_zx(word_zx(word n:int64):int32):int64 = word n`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32;
+              DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN `n MOD 18446744073709551616 = n /\ n MOD 4294967296 = n`
+   (fun th -> REWRITE_TAC[th]) THEN
+  CONJ_TAC THEN MATCH_MP_TAC MOD_LT THEN POP_ASSUM MP_TAC THEN ARITH_TAC);;
+
 let SIGN_MASK_32_CONV =
   let pat = `word_zx (word_ishr (word_sxfrom 31
                (word_subword (word_zx (z:int32)) (0,32))) 31):int32`
