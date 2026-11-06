@@ -17,6 +17,7 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/gcc12_O2_mono/dec_k2 \
   mlkem_native/gcc12_O2_mono/enc_derand_k2 \
   mlkem_native/gcc12_O2_mono/enc_derand_k4 \
+  mlkem_native/gcc12_O2_mono/enc_k2 \
   mlkem_native/gcc12_O2_mono/gen_matrix_k2 \
   mlkem_native/gcc12_O2_mono/gen_matrix_k4 \
   mlkem_native/gcc12_O2_mono/indcpa_enc_k2 \
@@ -138,6 +139,8 @@ mlkem_native/gcc12_O2_mono/enc_derand_k4.native: \
   proofs/utils/mlkem_native_libc.ml \
   proofs/utils/mlkem_native_fips203.ml \
   proofs/utils/mlkem_native_image.ml
+mlkem_native/gcc12_O2_mono/enc_k2.native: \
+  mlkem_native/gcc12_O2_mono/enc_derand_k2.native
 mlkem_native/gcc12_O2_mono/gen_matrix_k2.native: \
   mlkem_native/gcc12_O2_mono/poly_rej_uniform_x4.native
 mlkem_native/gcc12_O2_mono/gen_matrix_k4.native: \
