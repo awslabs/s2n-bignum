@@ -449,6 +449,13 @@ MLKEM_NATIVE_OBJ =
 MLKEM_NATIVE_PROOFS =
 include $(wildcard mlkem_native/*/proofs.mk)
 
+# The same for mldsa-native's portable C implementation (see
+# mldsa_native/README.md), with mldsa_native/gen_proofs_mk.py.
+
+MLDSA_NATIVE_OBJ =
+MLDSA_NATIVE_PROOFS =
+include $(wildcard mldsa_native/*/proofs.mk)
+
 # Tutorial assembly files
 
 TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
@@ -468,11 +475,14 @@ TUTORIAL_OBJ = $(filter-out tutorial/aes_encrypt_decrypt.o tutorial/safety.o, $(
 	$(OBJDUMP) $@ | ( ( ! grep --ignore-case -E 'w18|[^0]x18' ) || ( rm $@ ; exit 1 ) )
 	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
 
-# The compiled code from mlkem-native is for Linux, where x18 is just a
+# The compiled code from mlkem-native and mldsa-native is for Linux, where x18 is just a
 # temporary register (and the compilers do use it), so the check that x18
 # is not used is not applied to it.
 
 mlkem_native/%.o : mlkem_native/%.S
+	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
+
+mldsa_native/%.o : mldsa_native/%.S
 	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
 
 libs2nbignum.a: $(OBJ) ; ar -rc libs2nbignum.a $(OBJ)
@@ -501,8 +511,10 @@ BASE_ML=proofs/arm.ml \
 HOLDIR?=$(HOME)/hol-light
 HOLLIGHT:=$(HOLDIR)/hol.sh
 
-PROOF_BINS = $(OBJ:.o=.native) $(MLKEM_NATIVE_PROOFS:=.native)
-PROOF_LOGS = $(OBJ:.o=.correct) $(MLKEM_NATIVE_PROOFS:=.correct)
+PROOF_BINS = $(OBJ:.o=.native) $(MLKEM_NATIVE_PROOFS:=.native) \
+  $(MLDSA_NATIVE_PROOFS:=.native)
+PROOF_LOGS = $(OBJ:.o=.correct) $(MLKEM_NATIVE_PROOFS:=.correct) \
+  $(MLDSA_NATIVE_PROOFS:=.correct)
 TUTORIAL_PROOF_BINS = $(TUTORIAL_PROOFS:.ml=.native)
 TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 
@@ -594,6 +606,12 @@ $(MLKEM_NATIVE_PROOFS:=.native): mlkem_native/%.native: \
   proofs/mlkem_native/%.ml $(BASE_ML) proofs/utils/mlkem_native.ml ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
+# The proofs of mldsa-native's compiled code, in proofs/mldsa_native/<build>
+# for the code in mldsa_native/<build>.
+$(MLDSA_NATIVE_PROOFS:=.native): mldsa_native/%.native: \
+  proofs/mldsa_native/%.ml $(BASE_ML) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \
                                      tutorial/aes_encrypt.o tutorial/aes_decrypt.o ; \
@@ -629,5 +647,5 @@ FORCE: ;
 # A portable way of getting the number of max. cores:
 # https://stackoverflow.com/a/23569003/1488216
 NUM_CORES_FOR_SEMATEST = $(shell getconf _NPROCESSORS_ONLN)
-sematest: FORCE $(OBJ) $(MLKEM_NATIVE_OBJ) proofs/simulator_iclasses.ml proofs/simulator.native
+sematest: FORCE $(OBJ) $(MLKEM_NATIVE_OBJ) $(MLDSA_NATIVE_OBJ) proofs/simulator_iclasses.ml proofs/simulator.native
 	../tools/run-sematest.sh arm $(NUM_CORES_FOR_SEMATEST)
