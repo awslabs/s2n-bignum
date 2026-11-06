@@ -39,8 +39,10 @@ the state at 19f9abc7.
    waits; 440 of the 864 rewrites came when the Bash tool's 10-minute
    timeout woke a waiting agent.
 4. Every official run re-proves all its callees: one full run of every
-   file in the four builds adds up to about 187 CPU-hours, against an
-   estimated 26 if each file were proved once.
+   file adds up to 51.3 CPU-hours for gcc12_O2 and 29.6 for mono
+   (measured), against 5.5 and 4.7 if each file were proved once; about
+   191 against 25 for all four builds. Splitting statements from proofs
+   (in progress) brought one gcc12_O3 wrapper from 16,175 s to 594 s.
 5. Cheap mechanical edits caused the most expensive failures: a missing
    `read SP s` in one callee call cost a failed 4.5-hour make, and a
    merged GOT numeral led to a 5.8-hour stall of the coordinator.
