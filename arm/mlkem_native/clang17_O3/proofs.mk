@@ -4,7 +4,7 @@
 MLKEM_NATIVE_OBJ += \
   mlkem_native/clang17_O3/libmlkem.o
 
-MLKEM_NATIVE_IMAGE_PROOFS += \
+MLKEM_NATIVE_PROOFS += \
   mlkem_native/clang17_O3/basemul_k2 \
   mlkem_native/clang17_O3/basemul_k3 \
   mlkem_native/clang17_O3/basemul_k4 \
@@ -12,9 +12,11 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
   mlkem_native/clang17_O3/keccak_absorb_once_x4 \
   mlkem_native/clang17_O3/keccakf1600_extract_bytes \
   mlkem_native/clang17_O3/keccakf1600_permute \
+  mlkem_native/clang17_O3/keccakf1600_xor_bytes \
   mlkem_native/clang17_O3/keccakf1600x4_extract_bytes \
   mlkem_native/clang17_O3/keccakf1600x4_permute \
   mlkem_native/clang17_O3/keccakf1600x4_xor_bytes \
+  mlkem_native/clang17_O3/libmlkem \
   mlkem_native/clang17_O3/poly_add \
   mlkem_native/clang17_O3/poly_cbd2 \
   mlkem_native/clang17_O3/poly_cbd3 \
@@ -85,271 +87,624 @@ MLKEM_NATIVE_IMAGE_PROOFS += \
 mlkem_native/clang17_O3/basemul_k2.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/basemul_k3.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/basemul_k4.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/keccak_absorb_once.native: \
-  mlkem_native/clang17_O3/keccakf1600_permute.native \
-  mlkem_native/clang17_O3/keccakf1600_xor_bytes.native \
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_xor_bytes.ml \
   proofs/utils/keccak_fips202.ml \
-  mlkem_native/clang17_O3/libmlkem.native \
-  proofs/utils/keccak_spec.ml
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/keccak_absorb_once_x4.native: \
-  mlkem_native/clang17_O3/keccak_absorb_once.native \
-  mlkem_native/clang17_O3/keccakf1600x4_permute.native \
-  mlkem_native/clang17_O3/keccakf1600x4_xor_bytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/keccak_absorb_once.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600x4_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600x4_xor_bytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_xor_bytes.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/mlkem_native/copies.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/keccakf1600_extract_bytes.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/keccakf1600_permute.native: \
-  mlkem_native/clang17_O3/libmlkem.native \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
   proofs/utils/keccak_spec.ml \
-  proofs/utils/keccak_fips202.ml
+  proofs/utils/keccak_fips202.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
+mlkem_native/clang17_O3/keccakf1600_xor_bytes.native: \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/keccakf1600x4_extract_bytes.native: \
-  mlkem_native/clang17_O3/keccakf1600_extract_bytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/keccakf1600x4_permute.native: \
-  mlkem_native/clang17_O3/keccakf1600_permute.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/keccakf1600x4_xor_bytes.native: \
-  mlkem_native/clang17_O3/keccakf1600_xor_bytes.native \
+  proofs/mlkem_native/clang17_O3/keccakf1600_xor_bytes.ml \
   proofs/mlkem_native/copies.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/libmlkem.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
-  proofs/utils/mlkem_native_image.ml
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_add.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_cbd2.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_cbd3.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   proofs/mlkem_native/interleave.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_compress_d10.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_compress_d11.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_compress_d4.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   proofs/mlkem_native/interleave.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_compress_d5.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_decompress_d10.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   proofs/mlkem_native/bitnorm.ml \
-  mlkem_native/clang17_O3/libmlkem.native \
-  proofs/mlkem_native/interleave.ml
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_decompress_d11.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_decompress_d4.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_decompress_d5.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   proofs/mlkem_native/bitnorm.ml \
-  mlkem_native/clang17_O3/libmlkem.native \
-  proofs/mlkem_native/interleave.ml
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_frombytes.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   proofs/mlkem_native/interleave.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_frommsg.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_invntt_tomont.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/interleave.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_mulcache_compute.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   proofs/mlkem_native/interleave.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_ntt.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/interleave.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_reduce.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_rej_uniform.native: \
-  mlkem_native/clang17_O3/rej_uniform.native
+  proofs/mlkem_native/clang17_O3/rej_uniform.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_rej_uniform_x4.native: \
-  mlkem_native/clang17_O3/rej_uniform.native
+  proofs/mlkem_native/clang17_O3/rej_uniform.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_sub.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_tobytes.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   proofs/mlkem_native/interleave.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_tomont.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_tomsg.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/overlap.ml \
   proofs/mlkem_native/interleave.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_add_k2.native: \
-  mlkem_native/clang17_O3/poly_add.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_add.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_add_k3.native: \
-  mlkem_native/clang17_O3/poly_add.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_add.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_add_k4.native: \
-  mlkem_native/clang17_O3/poly_add.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_add.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_compress_du_k2.native: \
-  mlkem_native/clang17_O3/poly_compress_d10.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_compress_d10.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_compress_du_k3.native: \
-  mlkem_native/clang17_O3/poly_compress_d10.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_compress_d10.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_compress_du_k4.native: \
-  mlkem_native/clang17_O3/poly_compress_d11.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_compress_d11.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_decompress_du_k2.native: \
-  mlkem_native/clang17_O3/poly_decompress_d10.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_decompress_d10.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/bitnorm.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/mlkem_native/interleave.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_decompress_du_k3.native: \
-  mlkem_native/clang17_O3/poly_decompress_d10.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_decompress_d10.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/bitnorm.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/mlkem_native/interleave.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_decompress_du_k4.native: \
-  mlkem_native/clang17_O3/poly_decompress_d11.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_decompress_d11.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_frombytes_k2.native: \
-  mlkem_native/clang17_O3/poly_frombytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_frombytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_frombytes_k3.native: \
-  mlkem_native/clang17_O3/poly_frombytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_frombytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_frombytes_k4.native: \
-  mlkem_native/clang17_O3/poly_frombytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_frombytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_invntt_tomont_k2.native: \
-  mlkem_native/clang17_O3/poly_invntt_tomont.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_invntt_tomont.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_invntt_tomont_k3.native: \
-  mlkem_native/clang17_O3/poly_invntt_tomont.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_invntt_tomont.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_invntt_tomont_k4.native: \
-  mlkem_native/clang17_O3/poly_invntt_tomont.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_invntt_tomont.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_mulcache_compute_k2.native: \
-  mlkem_native/clang17_O3/poly_mulcache_compute.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_mulcache_compute.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_mulcache_compute_k3.native: \
-  mlkem_native/clang17_O3/poly_mulcache_compute.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_mulcache_compute.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_mulcache_compute_k4.native: \
-  mlkem_native/clang17_O3/poly_mulcache_compute.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_mulcache_compute.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_ntt_k2.native: \
-  mlkem_native/clang17_O3/poly_ntt.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_ntt.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_ntt_k3.native: \
-  mlkem_native/clang17_O3/poly_ntt.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_ntt.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_ntt_k4.native: \
-  mlkem_native/clang17_O3/poly_ntt.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_ntt.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_reduce_k2.native: \
-  mlkem_native/clang17_O3/poly_reduce.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_reduce.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_reduce_k3.native: \
-  mlkem_native/clang17_O3/poly_reduce.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_reduce.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_reduce_k4.native: \
-  mlkem_native/clang17_O3/poly_reduce.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_reduce.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_tobytes_k2.native: \
-  mlkem_native/clang17_O3/poly_tobytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_tobytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_tobytes_k3.native: \
-  mlkem_native/clang17_O3/poly_tobytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_tobytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_tobytes_k4.native: \
-  mlkem_native/clang17_O3/poly_tobytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_tobytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/overlap.ml \
+  proofs/mlkem_native/interleave.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_tomont_k2.native: \
-  mlkem_native/clang17_O3/poly_tomont.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_tomont.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_tomont_k3.native: \
-  mlkem_native/clang17_O3/poly_tomont.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_tomont.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/polyvec_tomont_k4.native: \
-  mlkem_native/clang17_O3/poly_tomont.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/poly_tomont.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/rej_uniform.native: \
   proofs/utils/mlkem_native.ml \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/sha3_256.native: \
-  mlkem_native/clang17_O3/keccak_absorb_once.native \
-  mlkem_native/clang17_O3/keccakf1600_extract_bytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/keccak_absorb_once.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_xor_bytes.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_spec.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/sha3_512.native: \
-  mlkem_native/clang17_O3/keccak_absorb_once.native \
-  mlkem_native/clang17_O3/keccakf1600_extract_bytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/keccak_absorb_once.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_xor_bytes.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_spec.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128_absorb_once.native: \
-  mlkem_native/clang17_O3/keccak_absorb_once.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/keccak_absorb_once.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_xor_bytes.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128_init.native: \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128_release.native: \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128_squeezeblocks.native: \
-  mlkem_native/clang17_O3/keccakf1600_permute.native \
-  mlkem_native/clang17_O3/keccakf1600_extract_bytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128x4_absorb_once.native: \
   proofs/utils/mlkem_native_libc.ml \
-  mlkem_native/clang17_O3/keccak_absorb_once_x4.native \
-  mlkem_native/clang17_O3/libmlkem.native \
+  proofs/mlkem_native/clang17_O3/keccak_absorb_once_x4.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
   proofs/utils/mlkem_native_libc_full.ml \
-  proofs/utils/mlkem_native_image.ml
+  proofs/utils/mlkem_native_image.ml \
+  proofs/mlkem_native/clang17_O3/keccak_absorb_once.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600x4_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600x4_xor_bytes.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_xor_bytes.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/mlkem_native/copies.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128x4_init.native: \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128x4_release.native: \
   proofs/utils/mlkem_native_libc.ml \
-  mlkem_native/clang17_O3/libmlkem.native \
-  proofs/utils/mlkem_native_image.ml
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128x4_squeezeblocks.native: \
-  mlkem_native/clang17_O3/keccakf1600x4_permute.native \
-  mlkem_native/clang17_O3/keccakf1600x4_extract_bytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/keccakf1600x4_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600x4_extract_bytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake256.native: \
-  mlkem_native/clang17_O3/keccak_absorb_once.native \
-  mlkem_native/clang17_O3/keccakf1600_extract_bytes.native \
-  mlkem_native/clang17_O3/libmlkem.native
+  proofs/mlkem_native/clang17_O3/keccak_absorb_once.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_xor_bytes.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mlkem_native.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_spec.ml \
+  mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake256x4.native: \
   proofs/utils/mlkem_native_libc.ml \
-  mlkem_native/clang17_O3/keccak_absorb_once_x4.native \
-  mlkem_native/clang17_O3/keccakf1600x4_permute.native \
-  mlkem_native/clang17_O3/keccakf1600x4_extract_bytes.native \
-  mlkem_native/clang17_O3/libmlkem.native \
-  proofs/utils/mlkem_native_image.ml
+  proofs/mlkem_native/clang17_O3/keccak_absorb_once_x4.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600x4_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600x4_extract_bytes.ml \
+  proofs/mlkem_native/clang17_O3/libmlkem.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/mlkem_native/clang17_O3/keccak_absorb_once.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600x4_xor_bytes.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_permute.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes.ml \
+  proofs/mlkem_native/clang17_O3/layout.ml \
+  proofs/mlkem_native/clang17_O3/keccakf1600_xor_bytes.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/mlkem_native/copies.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/mlkem_native.ml \
+  mlkem_native/clang17_O3/libmlkem.o
