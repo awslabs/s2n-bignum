@@ -52,11 +52,28 @@ let relative_find_contract tm =
                 (!relative_contracts))
   with Failure _ -> None;;
 
+(* ------------------------------------------------------------------------- *)
+(* A statement with free variables, e.g. `x + 0 = x`, is recorded as the     *)
+(* contract with them quantified, `!x. x + 0 = x`, and assume_spec gives     *)
+(* the theorem !x. x + 0 = x |- x + 0 = x. The free variables of the         *)
+(* conclusion are then not free in the assumption, so rules such as          *)
+(* MATCH_MP and REWRITE_CONV can instantiate them, as they can in the        *)
+(* proved theorem |- x + 0 = x. They would treat them as constants           *)
+(* otherwise.                                                                *)
+(* ------------------------------------------------------------------------- *)
+
+let relative_contract_of tm = list_mk_forall(frees tm,tm);;
+
 let assume_spec tm =
   if type_of tm <> bool_ty then failwith "assume_spec: not a proposition" else
-  (if not (exists (fun (s,_,_) -> aconv s tm) (!relative_contracts)) then
-     relative_contracts := (tm,ref None,ref None)::(!relative_contracts));
-  ASSUME tm;;
+  let vs = frees tm in
+  let ctm = list_mk_forall(vs,tm) in
+  (if type_vars_in_term tm <> [] then
+    (Format.print_string "relative: warning: contract with type variables: ";
+     print_qterm tm; Format.print_newline()));
+  (if not (exists (fun (s,_,_) -> aconv s ctm) (!relative_contracts)) then
+     relative_contracts := (ctm,ref None,ref None)::(!relative_contracts));
+  SPECL vs (ASSUME ctm);;
 
 (* ------------------------------------------------------------------------- *)
 (* assuming_proofs f evaluates f () with every prove(t,tac) replaced by      *)
@@ -94,8 +111,9 @@ let prove(t,tac) =
            try EQ_MP (ALPHA t' t) th
            with Failure _ ->
              failwith "prove: justification generated wrong theorem" in
-  (match relative_find_contract t with
-     Some(s,p,_) when aconv s t && !p = None -> p := Some th
+  let ct = relative_contract_of t in
+  (match relative_find_contract ct with
+     Some(s,p,_) when aconv s ct && !p = None -> p := Some(GENL (frees t) th)
    | _ -> ());
   th;;
 
