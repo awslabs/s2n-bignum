@@ -3,57 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-(* ========================================================================= *)
-(* Unpacking of 12-bit coefficients from bytes, without reduction. This is   *)
-(* the code for mlkem_poly_frombytes from mlkem-native's portable C          *)
-(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
-(* It is verified in the whole image (see                                    *)
-(* libmlkem.ml).                                                             *)
-(* ========================================================================= *)
+needs "arm/proofs/mlkem_native/gcc12_O2/poly_frombytes_spec.ml";;
 
-needs "arm/proofs/utils/mlkem_native.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
-
-(*** The code in the image:
-
-    mlkem_poly_frombytes:
-       +0x0: add     x6, x1, #0x180
-       +0x4: nop
-       +0x8: ldrb    w2, [x1, #1]
-       +0xc: add     x0, x0, #0x4
-      +0x10: ldrb    w4, [x1, #2]
-      +0x14: ldrb    w5, [x1], #3
-      +0x18: ubfiz   w3, w2, #8, #4
-      +0x1c: lsl     w4, w4, #4
-      +0x20: orr     w3, w3, w5
-      +0x24: orr     w2, w4, w2, lsr #4
-      +0x28: sturh   w3, [x0, #-4]
-      +0x2c: sturh   w2, [x0, #-2]
-      +0x30: cmp     x6, x1
-      +0x34: b.ne    <mlkem_poly_frombytes+0x8>
-      +0x38: ret
- ***)
-
-let MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [layout_range "mlkem_poly_frombytes"];;
-
-(* ------------------------------------------------------------------------- *)
-(* The two coefficients from three bytes.                                    *)
-(* ------------------------------------------------------------------------- *)
 
 let FROMBYTES_LANES = prove
- (`!n i.
-     word_zx(word_join
-              (word_subword (word((n DIV 2 EXP (24 * i + 8)) MOD 256):byte)
-                            (0,4):4 word)
-              (word((n DIV 2 EXP (24 * i)) MOD 256):byte):12 word):int16 =
-     word((n DIV 2 EXP (24 * i)) MOD 4096) /\
-     word_zx(word_join
-              (word((n DIV 2 EXP (24 * i + 16)) MOD 256):byte)
-              (word_subword (word((n DIV 2 EXP (24 * i + 8)) MOD 256):byte)
-                            (4,4):4 word):12 word):int16 =
-     word((n DIV 2 EXP (24 * i + 12)) MOD 4096)`,
+ (FROMBYTES_LANES_STMT,
   let rule = GEN_ALL o CONV_RULE NUM_REDUCE_CONV o SPEC_ALL in
   let l1 = rule(SPECL [`m:num`; `16`; `16`] MOD_MOD)
   and l2 = rule(GSYM(SPECL [`m:num`; `16`; `16`] DIV_MOD))
@@ -70,27 +24,8 @@ let FROMBYTES_LANES = prove
   REWRITE_TAC[MOD_MOD_REFL; DIV_1; l1; l2; l3] THEN
   REWRITE_TAC[l4] THEN REWRITE_TAC[l5; l6; MOD_MOD_REFL]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Correctness proof.                                                        *)
-(* ------------------------------------------------------------------------- *)
-
 let MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
- (`!r a n pc returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-        ALL (nonoverlapping (r,512)) [(word pc,libmlkem_size); (a,384)]
-        ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc)
-                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + mlkem_poly_frombytes) /\
-                  read X30 s = returnaddress /\
-                  C_ARGUMENTS [r; a] s /\
-                  read (memory :> bytes(a,384)) s = n)
-             (\s. read PC s = returnaddress /\
-                  !i. i < 256
-                      ==> read(memory :> bytes16(word_add r (word(2 * i)))) s =
-                          word((n DIV 2 EXP (12 * i)) MOD 2 EXP 12))
-             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(r,512)])`,
+ (MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
   MAP_EVERY X_GEN_TAC
    [`r:int64`; `a:int64`; `n:num`; `pc:num`; `returnaddress:int64`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
@@ -168,48 +103,8 @@ let MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
       check (fun th -> is_forall(concl th) &&
                        free_in `bytes16` (concl th)))]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof.                                    *)
-(* ------------------------------------------------------------------------- *)
-
-needs "arm/proofs/consttime.ml";;
-needs "arm/proofs/subroutine_signatures.ml";;
-
-let mlkem_native_poly_frombytes_signature =
-  ([("r", "int16_t[static 256]", "false");
-    ("a", "uint8_t[static 384]", "true")],
-   "void",
-   [("a", "384", 1)],
-   [("r", "256", 2)],
-   []);;
-
-let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:true
-    mlkem_native_poly_frombytes_signature
-    MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
-    MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_EXEC;;
-
 let MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
- (`exists f_events.
-       forall e r a pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-           ALL (nonoverlapping (r,512)) [word pc,libmlkem_size; a,384]
-           ==> ensures arm
-               (\s.
-                    aligned_bytes_loaded s (word pc)
-                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + mlkem_poly_frombytes) /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [r; a] s /\
-                    read events s = e)
-               (\s.
-                    read PC s = returnaddress /\
-                    (exists e2.
-                         read events s = APPEND e2 e /\
-                         e2 = f_events a r pc returnaddress /\
-                         memaccess_inbounds e2 [a,384; r,512] [r,512]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [memory :> bytes (r,512)])`,
+ (MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(a:int64) (r:int64) (pc:num) (returnaddress:int64).
@@ -276,35 +171,8 @@ let MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
     ALL_TAC]) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-(* ------------------------------------------------------------------------- *)
-(* Combined correctness, constant-time and memory safety proof, as for       *)
-(* mlkem_poly_reduce.                                                        *)
-(* ------------------------------------------------------------------------- *)
-
 let MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
- (`exists f_events.
-       forall e r a n pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-           ALL (nonoverlapping (r,512)) [word pc,libmlkem_size; a,384]
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc)
-                      mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + mlkem_poly_frombytes) /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [r; a] s /\
-                    read (memory :> bytes(a,384)) s = n /\
-                    read events s = e)
-               (\s. read PC s = returnaddress /\
-                    (!i. i < 256
-                         ==> read(memory :> bytes16
-                                   (word_add r (word(2 * i)))) s =
-                             word((n DIV 2 EXP (12 * i)) MOD 2 EXP 12)) /\
-                    (exists e2.
-                         read events s = APPEND e2 e /\
-                         e2 = f_events a r pc returnaddress /\
-                         memaccess_inbounds e2 [a,384; r,512] [r,512]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [memory :> bytes (r,512)])`,
+ (MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT,
   CONCRETIZE_F_EVENTS_TAC
     `\(a:int64) (r:int64) (pc:num) (returnaddress:int64).
       APPEND

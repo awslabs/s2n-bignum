@@ -3,112 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-(* ========================================================================= *)
-(* Compression of a polynomial to 11 bits per coefficient. This is the code  *)
-(* for mlkem_poly_compress_d11 from mlkem-native's portable C implementation *)
-(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), with a stack    *)
-(* protector. It is verified in the whole image (see                         *)
-(* libmlkem.ml), with the address of the stack guard                         *)
-(* in the global offset table.                                               *)
-(* ========================================================================= *)
+needs "arm/proofs/mlkem_native/gcc12_O2/poly_compress_d11_spec.ml";;
 
-needs "arm/proofs/utils/mlkem_native.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
-
-(*** The code in the image:
-
-    mlkem_poly_compress_d11:
-        +0x0: adrp    x3, <page>
-        +0x4: ldr     x3, [x3, #4088]  // got_stack_chk_guard
-        +0x8: str     x30, [sp, #-48]!
-        +0xc: mov     x13, #0x7800
-       +0x10: mov     x2, x0
-       +0x14: movk    x13, #0x3afb, lsl #16
-       +0x18: mov     x11, x1
-       +0x1c: ldr     x0, [x3]
-       +0x20: str     x0, [sp, #40]
-       +0x24: mov     x0, #0x0
-       +0x28: add     x10, sp, #0x18
-       +0x2c: mov     w8, #0x8
-       +0x30: movk    x13, #0x1, lsl #32
-       +0x34: mov     x12, #0x100000000
-       +0x38: nop
-       +0x3c: sub     w0, w8, #0x8
-       +0x40: mov     x1, x10
-       +0x44: ldrsh   x3, [x11, w0, uxtw #1]
-       +0x48: add     w0, w0, #0x1
-       +0x4c: madd    x3, x3, x13, x12
-       +0x50: ubfx    x3, x3, #33, #11
-       +0x54: strh    w3, [x1], #2
-       +0x58: cmp     w8, w0
-       +0x5c: b.ne    <mlkem_poly_compress_d11+0x44>
-       +0x60: ldrh    w5, [sp, #26]
-       +0x64: add     w8, w8, #0x8
-       +0x68: ldrh    w6, [sp, #24]
-       +0x6c: add     x2, x2, #0xb
-       +0x70: ldrh    w1, [sp, #28]
-       +0x74: fmov    s0, w1
-       +0x78: lsl     w0, w5, #3
-       +0x7c: orr     w0, w0, w6, lsr #8
-       +0x80: ldrh    w4, [sp, #30]
-       +0x84: ushr    v2.2s, v0.2s, #2
-       +0x88: fmov    d0, x6
-       +0x8c: lsl     w7, w1, #6
-       +0x90: ldrh    w3, [sp, #32]
-       +0x94: mov     v0.b[1], w0
-       +0x98: orr     w7, w7, w5, lsr #5
-       +0x9c: lsl     w5, w4, #1
-       +0xa0: ldrh    w0, [sp, #34]
-       +0xa4: orr     w1, w5, w1, lsr #10
-       +0xa8: lsl     w5, w3, #4
-       +0xac: orr     w4, w5, w4, lsr #7
-       +0xb0: fmov    s1, w0
-       +0xb4: mov     v0.b[2], w7
-       +0xb8: lsl     w7, w0, #7
-       +0xbc: orr     w3, w7, w3, lsr #4
-       +0xc0: ushr    v1.2s, v1.2s, #1
-       +0xc4: ldrh    w6, [sp, #36]
-       +0xc8: ldrh    w5, [sp, #38]
-       +0xcc: mov     v0.b[3], v2.b[0]
-       +0xd0: lsl     w9, w6, #2
-       +0xd4: lsl     w7, w5, #5
-       +0xd8: orr     w0, w9, w0, lsr #9
-       +0xdc: orr     w6, w7, w6, lsr #6
-       +0xe0: lsr     w5, w5, #3
-       +0xe4: mov     v0.b[4], w1
-       +0xe8: sturb   w0, [x2, #-3]
-       +0xec: sturb   w6, [x2, #-2]
-       +0xf0: sturb   w5, [x2, #-1]
-       +0xf4: mov     v0.b[5], w4
-       +0xf8: mov     v0.b[6], w3
-       +0xfc: mov     v0.b[7], v1.b[0]
-      +0x100: stur    d0, [x2, #-11]
-      +0x104: cmp     w8, #0x108
-      +0x108: b.ne    <mlkem_poly_compress_d11+0x3c>
-      +0x10c: adrp    x0, <page>
-      +0x110: ldr     x0, [x0, #4088]  // got_stack_chk_guard
-      +0x114: ldr     x2, [sp, #40]
-      +0x118: ldr     x1, [x0]
-      +0x11c: subs    x2, x2, x1
-      +0x120: mov     x1, #0x0
-      +0x124: b.ne    <mlkem_poly_compress_d11+0x130>
-      +0x128: ldr     x30, [sp], #48
-      +0x12c: ret
-      +0x130: bl      <__stack_chk_fail@plt>
- ***)
-
-let MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [layout_range "mlkem_poly_compress_d11"];;
-
-(* ------------------------------------------------------------------------- *)
-(* The compression of a coefficient to 11 bits, as computed.                 *)
-(* ------------------------------------------------------------------------- *)
 
 let COMPRESS_D11_ARITH = prove
- (`!v. v < 3329
-       ==> (4294967296 + v * 5284526080) DIV 8589934592 =
-           (4096 * v + 3329) DIV 6658`,
+ (COMPRESS_D11_ARITH_STMT,
   REPEAT STRIP_TAC THEN
   MP_TAC(SPECL [`4096 * v + 3329`; `6658`] DIVISION) THEN
   REWRITE_TAC[ARITH_EQ] THEN
@@ -119,7 +18,7 @@ let COMPRESS_D11_ARITH = prove
   ASM_ARITH_TAC);;
 
 let WORD_SX_SMALL_64 = prove
- (`!y:int16. val y < 32768 ==> (word_sx y:int64) = word_zx y`,
+ (WORD_SX_SMALL_64_STMT,
   REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_SX_ZX_GEN; DIMINDEX_16] THEN
   CONV_TAC NUM_REDUCE_CONV THEN
   SUBGOAL_THEN `~bit 15 (y:int16)` (fun th -> REWRITE_TAC[th]) THENL
@@ -130,13 +29,7 @@ let WORD_SX_SMALL_64 = prove
     REWRITE_TAC[WORD_OR_0]]);;
 
 let COMPRESS_D11_FIELD = prove
- (`!y:int16.
-        val y < 3329
-        ==> val(word_subword
-                 (word (4294967296 + val (word_sx y:int64) * 5284526080):
-                  int64)
-                 (33,11):11 word) =
-            ((4096 * val y + 3329) DIV 6658) MOD 2048`,
+ (COMPRESS_D11_FIELD_STMT,
   REPEAT STRIP_TAC THEN
   ASM_SIMP_TAC[WORD_SX_SMALL_64; ARITH_RULE `y < 3329 ==> y < 32768`] THEN
   REWRITE_TAC[VAL_WORD_SUBWORD; VAL_WORD_ZX_GEN; VAL_WORD;
@@ -147,19 +40,8 @@ let COMPRESS_D11_FIELD = prove
                 ==> 4294967296 + y * 5284526080 < 18446744073709551616`] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN ASM_SIMP_TAC[COMPRESS_D11_ARITH]);;
 
-(* ------------------------------------------------------------------------- *)
-(* The packing of eight 11-bit values into eleven bytes.                     *)
-(* ------------------------------------------------------------------------- *)
-
 let VAL_JOIN_11X8 = prove
- (`!(u0:11 word) (u1:11 word) (u2:11 word) (u3:11 word)
-    (u4:11 word) (u5:11 word) (u6:11 word) (u7:11 word).
-     val(word_join u7 (word_join u6 (word_join u5 (word_join u4
-          (word_join u3 (word_join u2 (word_join u1 u0:22 word):33 word):
-           44 word):55 word):66 word):77 word):88 word) =
-     val u0 + 2048 * val u1 + 4194304 * val u2 + 8589934592 * val u3 +
-     17592186044416 * val u4 + 36028797018963968 * val u5 +
-     73786976294838206464 * val u6 + 151115727451828646838272 * val u7`,
+ (VAL_JOIN_11X8_STMT,
   REPEAT GEN_TAC THEN
   MAP_EVERY (fun t -> MP_TAC(ISPEC t VAL_BOUND))
    [`u0:11 word`; `u1:11 word`; `u2:11 word`; `u3:11 word`;
@@ -172,158 +54,8 @@ let VAL_JOIN_11X8 = prove
              mk_var("n"^string_of_int k,`:num`))) (0--7) THEN
   REPEAT STRIP_TAC THEN REPEAT MOD_LT_ASM_TAC THEN ARITH_TAC);;
 
-let WORD_SUBWORD_BYTE = prove
- (`!(w:N word) p.
-        word_subword w (p,8):byte = word((val w DIV 2 EXP p) MOD 256)`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_SUBWORD] THEN
-  REWRITE_TAC[VAL_WORD; DIMINDEX_8] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL]);;
-
-(*** The stored bytes as parts of the 88-bit join of the eight fields ***)
-
-let compress_d11_indices = map (fun k ->
-  if k = 0 then `8 * i` else
-  mk_binop `(+):num->num->num` `8 * i` (mk_small_numeral k)) (0--8);;
-
-let d11_xatoms = map (fun j ->
-  vsubst [j,`j:num`]
-   `word (4294967296 + val (word_sx ((x:num->int16) j):int64) * 5284526080):
-    int64`) (butlast compress_d11_indices);;
-
-let d11_join =
-  vsubst (zip d11_xatoms
-              (map (fun k -> mk_var("w"^string_of_int k,`:int64`)) (0--7)))
-  `word_join (word_subword (w7:int64) (33,11):11 word)
-    (word_join (word_subword (w6:int64) (33,11):11 word)
-     (word_join (word_subword (w5:int64) (33,11):11 word)
-      (word_join (word_subword (w4:int64) (33,11):11 word)
-       (word_join (word_subword (w3:int64) (33,11):11 word)
-        (word_join (word_subword (w2:int64) (33,11):11 word)
-         (word_join (word_subword (w1:int64) (33,11):11 word)
-                    (word_subword (w0:int64) (33,11):11 word):22 word):
-         33 word):44 word):55 word):66 word):77 word):88 word`;;
-
-let D11_PACK_TAC m =
-  let addr =
-    if m = 0 then `word_add r (word (11 * i)):int64` else
-    mk_comb(mk_comb(`word_add:int64->int64->int64`,`r:int64`),
-            mk_comb(`word:num->int64`,
-                    mk_binop `(+):num->num->num` `11 * i`
-                             (mk_small_numeral m))) in
-  let pat = vsubst [addr,`addr:int64`]
-              `read (memory :> bytes8 addr) s = x` in
-  let rule th =
-    let v = rand(concl th) in
-    let target = mk_comb(mk_comb(`word_subword:88 word->num#num->byte`,
-                                 d11_join),
-                         mk_pair(mk_small_numeral(8 * m),`8`)) in
-    let gvs = map (fun _ -> genvar `:int64`) d11_xatoms in
-    let eq = subst (zip gvs d11_xatoms) (mk_eq(v,target)) in
-    TRANS th (INST (zip d11_xatoms gvs) (BITBLAST_RULE eq)) in
-  FIRST_X_ASSUM(fun th ->
-    if can (term_match [] pat) (concl th)
-    then ASSUME_TAC(rule th) else failwith "D11_PACK_TAC");;
-
-(*** The 64-bit store of the first eight bytes, as bytes ***)
-
-let D11_SPLIT_TAC =
-  FIRST_X_ASSUM(MP_TAC o CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
-    check (can (term_match []
-      `read (memory :> bytes64 (word_add r (word(11 * i)))) s = x`) o
-           concl)) THEN
-  DISCH_THEN(fun th -> MAP_EVERY (ASSUME_TAC o
-     CONV_RULE(LAND_CONV(REWRITE_CONV[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD])))
-     (CONJUNCTS th));;
-
-(* ------------------------------------------------------------------------- *)
-(* The loops. The inner one, unrolled in the simulation, computes eight      *)
-(* 11-bit values into a temporary array on the stack; X0 is the index of     *)
-(* the coefficient, which is tidied up before it is used as a register       *)
-(* offset, as for mlkem_poly_compress_d10.                                   *)
-(* ------------------------------------------------------------------------- *)
-
-let COMPRESS_D11_INDEX_TAC k =
-  let jt = el k compress_d11_indices in
-  let wt = mk_comb(`word:num->int64`,jt) in
-  FIRST_X_ASSUM(fun th ->
-    let c = concl th in
-    if can (term_match [] `read X0 s = x`) c then
-      MP_TAC th THEN SUBGOAL_THEN (mk_eq(rand c,wt)) SUBST1_TAC THENL
-       [WORD_SMALL_TAC; DISCH_TAC]
-    else failwith "COMPRESS_D11_INDEX_TAC");;
-
-let COMPRESS_D11_UXTW_TAC k =
-  let jt = el k compress_d11_indices in
-  let zt = mk_comb(`word_zx:int32->int64`,
-                   mk_comb(`word_zx:int64->int32`,
-                           mk_comb(`word:num->int64`,jt))) in
-  SUBGOAL_THEN (mk_eq(mk_comb(`val:int64->num`,zt),jt)) ASSUME_TAC THENL
-   [REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32; DIMINDEX_64] THEN
-    CONV_TAC NUM_REDUCE_CONV THEN REPEAT MOD_LT_ASM_TAC THEN REWRITE_TAC[];
-    ALL_TAC];;
-
-let COMPRESS_D11_BODY_TAC =
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_EXEC (1--1) THEN
-  COMPRESS_D11_INDEX_TAC 0 THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_EXEC (2--2) THEN
-  MAP_EVERY (fun k ->
-    COMPRESS_D11_UXTW_TAC k THEN
-    ARM_STEPS_TAC MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_EXEC
-     ((3 + 7 * k)--(4 + 7 * k)) THEN
-    COMPRESS_D11_INDEX_TAC (k + 1) THEN
-    ARM_STEPS_TAC MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_EXEC
-     ((5 + 7 * k)--(8 + 7 * k)) THEN
-    W32_DECIDE_FLAGS_TAC THEN
-    ARM_STEPS_TAC MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_EXEC
-     ((9 + 7 * k)--(9 + 7 * k))) (0--7) THEN
-  MAP_EVERY (fun k ->
-    ARM_STEPS_TAC MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_EXEC [k] THEN
-    SIMD_SIMPLIFY_TAC[]) (59--99);;
-
-(* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_compress 11 in common/fips203.ml, the     *)
-(* result for a coefficient x in [0,3329) is the integer closest to          *)
-(* 2048 * x / 3329, rounding up on ties, modulo 2048, i.e.                   *)
-(* ((4096 * x + 3329) DIV 6658) MOD 2048, and as for mlkem_encode 11 the     *)
-(* 11-bit values are put together little-endian. Like the C code, this       *)
-(* relies on the coefficients being in [0,3329). The stack guard is handled  *)
-(* as for mlkem_poly_compress_d4.                                            *)
-(* ------------------------------------------------------------------------- *)
-
-let MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
-  prove
- (`!r a x guard pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-        aligned 16 stackpointer /\
-        PAIRWISE nonoverlapping
-         [(r,352); (a,512); (word_sub stackpointer (word 48),48)] /\
-        ALLPAIRS nonoverlapping
-         [(r,352); (word_sub stackpointer (word 48),48)]
-         [(word pc,libmlkem_size); (word(pc + got_stack_chk_guard),8);
-          (guard,8)]
-        ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc)
-                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + mlkem_poly_compress_d11) /\
-                  read SP s = stackpointer /\
-                  read X30 s = returnaddress /\
-                  C_ARGUMENTS [r; a] s /\
-                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
-                    guard /\
-                  (!i. i < 256
-                       ==> read(memory :> bytes16
-                                     (word_add a (word(2 * i)))) s =
-                           x i))
-             (\s. read PC s = returnaddress /\
-                  ((!i. i < 256 ==> val(x i) < 3329)
-                   ==> read(memory :> bytes(r,352)) s =
-                       nsum {i | i < 256}
-                            (\i. ((4096 * val(x i) + 3329) DIV 6658) MOD
-                                 2048 * 2 EXP (11 * i))))
-             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(r,352);
-                         memory :> bytes(word_sub stackpointer
-                                                  (word 48),48)])`,
+let MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
   MAP_EVERY X_GEN_TAC
    [`r:int64`; `a:int64`; `x:num->int16`; `guard:int64`; `pc:num`] THEN
   WORD_FORALL_OFFSET_TAC 48 THEN
@@ -459,47 +191,8 @@ let MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
       CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV) o
       check (is_imp o concl))]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof, stated directly as for             *)
-(* mlkem_poly_compress_d4.                                                   *)
-(* ------------------------------------------------------------------------- *)
-
-needs "arm/proofs/consttime.ml";;
-needs "arm/proofs/subroutine_signatures.ml";;
-
-let MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
-  time prove
- (`exists f_events.
-     forall e r a guard pc stackpointer returnaddress.
-       aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-       aligned 16 stackpointer /\
-       PAIRWISE nonoverlapping
-        [r,352; a,512; word_sub stackpointer (word 48),48] /\
-       ALLPAIRS nonoverlapping
-        [r,352; word_sub stackpointer (word 48),48]
-        [word pc,libmlkem_size; word(pc + got_stack_chk_guard),8; guard,8]
-       ==> ensures arm
-            (\s. aligned_bytes_loaded s (word pc)
-                   mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read PC s = word (pc + mlkem_poly_compress_d11) /\
-                 read SP s = stackpointer /\
-                 read X30 s = returnaddress /\
-                 C_ARGUMENTS [r; a] s /\
-                 read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
-                   guard /\
-                 read events s = e)
-            (\s. read PC s = returnaddress /\
-                 (exists e2.
-                    read events s = APPEND e2 e /\
-                    e2 = f_events a r guard pc
-                           (word_sub stackpointer (word 48)) returnaddress /\
-                    memaccess_inbounds e2
-                     [a,512; r,352; word_sub stackpointer (word 48),48;
-                      word(pc + got_stack_chk_guard),8; guard,8]
-                     [r,352; word_sub stackpointer (word 48),48]))
-            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-             MAYCHANGE [memory :> bytes(r,352);
-                        memory :> bytes(word_sub stackpointer (word 48),48)])`,
+let MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
+ (MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
   CONCRETIZE_F_EVENTS_TAC
     `\(a:int64) (r:int64) (guard:int64) (pc:num) (stackpointer:int64)
       (returnaddress:int64).

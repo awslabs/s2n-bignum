@@ -3,53 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-(* ========================================================================= *)
-(* Packing of a vector of 2 polynomials into bytes, 12 bits per coefficient. *)
-(* This is the code for mlkem512_polyvec_tobytes from mlkem-native's         *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md), which calls mlkem_poly_tobytes for each of the   *)
-(* polynomials, the last time as a tail call. It is verified in the whole    *)
-(* image (see libmlkem.ml), using the theorems for                           *)
-(* mlkem_poly_tobytes in the image.                                          *)
-(* ========================================================================= *)
+needs "arm/proofs/mlkem_native/gcc12_O2/polyvec_tobytes_k2_spec.ml";;
 
-needs "arm/proofs/mlkem_native/gcc12_O2/poly_tobytes_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
-
-(*** The code in the image:
-
-    mlkem512_polyvec_tobytes:
-       +0x0: stp     x19, x20, [sp, #-32]!
-       +0x4: mov     x19, x0
-       +0x8: mov     x20, x1
-       +0xc: str     x30, [sp, #16]
-      +0x10: bl      <mlkem_poly_tobytes>
-      +0x14: ldr     x30, [sp, #16]
-      +0x18: add     x1, x20, #0x200
-      +0x1c: add     x0, x19, #0x180
-      +0x20: ldp     x19, x20, [sp], #32
-      +0x24: b       <mlkem_poly_tobytes>
- ***)
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [layout_range "mlkem512_polyvec_tobytes"];;
-
-(* ------------------------------------------------------------------------- *)
-(* The input and output for the polynomials, as parts of those for the       *)
-(* vector.                                                                   *)
-(* ------------------------------------------------------------------------- *)
-
-let ALL_SUB_LIST = prove
- (`!P (l:A list) m n. ALL P l ==> ALL P (SUB_LIST(m,n) l)`,
-  GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SUB_LIST_CLAUSES; ALL] THEN
-  INDUCT_TAC THEN INDUCT_TAC THEN ASM_SIMP_TAC[SUB_LIST_CLAUSES; ALL]);;
 
 let POLYVEC_TOBYTES_SPLIT = prove
- (`!a (l:int16 list) s j.
-        read (memory :> bytes(a,1024)) s = num_of_wordlist l /\ j < 2
-        ==> read (memory :> bytes(word_add a (word(512 * j)),512)) s =
-            num_of_wordlist (SUB_LIST(256 * j,256) l)`,
+ (POLYVEC_TOBYTES_SPLIT_STMT,
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[NUM_OF_WORDLIST_SUB_LIST; DIMINDEX_16] THEN
   FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
@@ -61,14 +19,7 @@ let POLYVEC_TOBYTES_SPLIT = prove
   REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
 
 let POLYVEC_TOBYTES_JOIN = prove
- (`!r (l:int16 list) s.
-        LENGTH l = 512 /\
-        (!j. j < 2
-             ==> read (memory :> bytes(word_add r (word(384 * j)),384)) s =
-                 num_of_wordlist
-                  (MAP word_zx (SUB_LIST(256 * j,256) l):(12 word)list))
-        ==> read (memory :> bytes(r,768)) s =
-            num_of_wordlist (MAP word_zx l:(12 word)list)`,
+ (POLYVEC_TOBYTES_JOIN_STMT,
   REPEAT GEN_TAC THEN
   CONV_TAC(LAND_CONV(RAND_CONV EXPAND_CASES_CONV)) THEN
   CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[WORD_ADD_0] THEN STRIP_TAC THEN
@@ -89,42 +40,8 @@ let POLYVEC_TOBYTES_JOIN = prove
   REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
   CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Correctness proof.                                                        *)
-(* ------------------------------------------------------------------------- *)
-
-let LOCAL_TOBYTES_TAC =
-  ARM_SUBROUTINE_SIM_TAC
-   (mlkem_native_libmlkem_gcc12_O2_mc,
-    MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_EXEC,
-    0x0,mlkem_native_libmlkem_gcc12_O2_mc,
-    MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT);;
-
 let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
- (`!r a (l:int16 list) pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-        aligned 16 stackpointer /\
-        PAIRWISE nonoverlapping
-          [(r,768); (a,1024); (word_sub stackpointer (word 32),32)] /\
-        ALLPAIRS nonoverlapping
-          [(r,768); (a,1024); (word_sub stackpointer (word 32),32)]
-          [(word pc,libmlkem_size)]
-        ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc)
-                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + mlkem512_polyvec_tobytes) /\
-                  read SP s = stackpointer /\
-                  read X30 s = returnaddress /\
-                  C_ARGUMENTS [r; a] s /\
-                  read (memory :> bytes(a,1024)) s = num_of_wordlist l)
-             (\s. read PC s = returnaddress /\
-                  (LENGTH l = 512 /\ ALL (\x. val x < 4096) l
-                   ==> read(memory :> bytes(r,768)) s =
-                       num_of_wordlist (MAP word_zx l:(12 word)list)))
-             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE
-               [memory :> bytes(r,768);
-                memory :> bytes(word_sub stackpointer (word 32),32)])`,
+ (MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
   MAP_EVERY X_GEN_TAC
    [`r:int64`; `a:int64`; `l:int16 list`; `pc:num`] THEN
   WORD_FORALL_OFFSET_TAC 32 THEN
@@ -159,73 +76,8 @@ let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
   REWRITE_TAC[WORD_ADD_0] THEN
   ASM_SIMP_TAC[LENGTH_SUB_LIST; ALL_SUB_LIST; MIN; ARITH]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof.                                    *)
-(* ------------------------------------------------------------------------- *)
-
-needs "arm/proofs/consttime.ml";;
-needs "arm/proofs/subroutine_signatures.ml";;
-
-let mlkem_native_polyvec_tobytes_k2_signature =
-  ([("r", "uint8_t[static 768]", "false");
-    ("a", "int16_t[static 512]", "true")],
-   "void",
-   [("a", "512", 2)],
-   [("r", "768", 1)],
-   []);;
-
-let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:true
-    mlkem_native_polyvec_tobytes_k2_signature
-    MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
-    MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_EXEC;;
-
-let LOCAL_TOBYTES_SAFETY_TAC (assump_name:string) (n:int) =
-  REMOVE_THEN assump_name (fun safety_th ->
-    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-      (mlkem_native_libmlkem_gcc12_O2_mc,
-       MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_EXEC,
-       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
-      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `pc:num`;
-       `read X30 s`] n THENL
-     [EXISTS_E2_TAC (ref [`pc:num`; `r:int64`; `a:int64`;
-                          `stackpointer:int64`; `returnaddress:int64`]);
-      LABEL_TAC assump_name safety_th]);;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
-  time prove
- (`exists f_events.
-       forall e r a pc stackpointer returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-           aligned 16 stackpointer /\
-           PAIRWISE nonoverlapping
-           [r,768; a,1024; word_sub stackpointer (word 32),32] /\
-           ALLPAIRS nonoverlapping
-           [r,768; a,1024; word_sub stackpointer (word 32),32]
-           [word pc,libmlkem_size]
-           ==> ensures arm
-               (\s.
-                    aligned_bytes_loaded s (word pc)
-                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read PC s = word (pc + mlkem512_polyvec_tobytes) /\
-                    read SP s = stackpointer /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [r; a] s /\
-                    read events s = e)
-               (\s.
-                    read PC s = returnaddress /\
-                    (exists e2.
-                         read events s = APPEND e2 e /\
-                         e2 =
-                         f_events a r pc (word_sub stackpointer (word 32))
-                         returnaddress /\
-                         memaccess_inbounds e2
-                         [a,1024; r,768; word_sub stackpointer (word 32),32]
-                         [r,768; word_sub stackpointer (word 32),32]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE
-                [memory :> bytes (r,768);
-                 memory :> bytes (word_sub stackpointer (word 32),32)])`,
+let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
+ (MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
   ASSERT_CONCL_TAC full_spec THEN
   ASSUME_CALLEE_SAFETY_TAILED_TAC
     MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE "H_TOBYTES" THEN
@@ -246,59 +98,8 @@ let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-(* ------------------------------------------------------------------------- *)
-(* Combined correctness, constant-time and memory safety proof, using that   *)
-(* of mlkem_poly_tobytes, for mlkem512_check_pk, whose result the            *)
-(* encapsulation branches on.                                                *)
-(* ------------------------------------------------------------------------- *)
-
-let LOCAL_FULL_TAC ilist n =
-  REMOVE_THEN "H_POLY" (fun safety_th ->
-    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-      (mlkem_native_libmlkem_gcc12_O2_mc,
-       MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_EXEC,
-       0x0,mlkem_native_libmlkem_gcc12_O2_mc,safety_th)
-      (`e:(uarch_event)list`::ilist) n THENL
-     [EXISTS_E2_TAC (ref [`pc:num`; `r:int64`; `a:int64`;
-                          `stackpointer:int64`; `returnaddress:int64`]);
-      LABEL_TAC "H_POLY" safety_th]);;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_FULL =
-  prove
- (`exists f_events.
-     forall e r a (l:int16 list) pc stackpointer returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-        aligned 16 stackpointer /\
-        PAIRWISE nonoverlapping
-          [(r,768); (a,1024); (word_sub stackpointer (word 32),32)] /\
-        ALLPAIRS nonoverlapping
-          [(r,768); (a,1024); (word_sub stackpointer (word 32),32)]
-          [(word pc,libmlkem_size)]
-        ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc)
-                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read PC s = word (pc + mlkem512_polyvec_tobytes) /\
-                  read SP s = stackpointer /\
-                  read X30 s = returnaddress /\
-                  C_ARGUMENTS [r; a] s /\
-                  read (memory :> bytes(a,1024)) s = num_of_wordlist l /\
-                  read events s = e)
-             (\s. read PC s = returnaddress /\
-                  (LENGTH l = 512 /\ ALL (\x. val x < 4096) l
-                   ==> read(memory :> bytes(r,768)) s =
-                       num_of_wordlist (MAP word_zx l:(12 word)list)) /\
-                  (exists e2.
-                     read events s = APPEND e2 e /\
-                     e2 =
-                     f_events a r pc (word_sub stackpointer (word 32))
-                     returnaddress /\
-                     memaccess_inbounds e2
-                     [a,1024; r,768; word_sub stackpointer (word 32),32]
-                     [r,768; word_sub stackpointer (word 32),32]))
-             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE
-               [memory :> bytes(r,768);
-                memory :> bytes(word_sub stackpointer (word 32),32)])`,
+let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (MLKEM_NATIVE_POLYVEC_TOBYTES_K2_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT,
   ASSUME_CALLEE_SAFETY_TAILED_TAC
     MLKEM_NATIVE_POLY_TOBYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL
     "H_POLY" THEN
