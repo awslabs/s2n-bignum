@@ -1301,3 +1301,753 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_MONO_IN_MLKEM768_GEN_MATRIX = prove(
     else NO_TAC) THEN
   MATCH_MP_TAC REJ_WORDLIST_OF_BYTES16 THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN ASM_REWRITE_TAC[]);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* The same with the events, for the proof of constant time and memory safety. *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/mlkem_native_libc_full.ml";;
+
+let GM3SQ_ALLOWED =
+  [`pc:num`; `st:int64`; `buf:int64`; `bp:int64`; `t:num`;
+   `f_ev_loop:int64->int64->int64->num->num->(uarch_event)list`];;
+
+let GM3SQ_SAFE_CALL_TAC name ilist n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mono_mc,
+       MLKEM_NATIVE_GENMAT3_REJ_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mono_mc,safety_th)
+      ilist n THENL
+     [EXISTS_E2_TAC (ref GM3SQ_ALLOWED); LABEL_TAC name safety_th]);;
+
+let GM3SQ_SAFE_CALL_SIDE_TAC name ilist n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mono_mc,
+       MLKEM_NATIVE_GENMAT3_REJ_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mono_mc,safety_th)
+      ilist n THENL
+     [CONJ_TAC THENL [CONV_TAC WORD_RULE; EXISTS_E2_TAC (ref GM3SQ_ALLOWED)];
+      LABEL_TAC name safety_th]);;
+
+(*** Discharge the events of a loop body with callees, when the events of the
+     iteration are a left-nested APPEND in front of ENUMERATEL ***)
+
+let GM3_LOOP_DISCHARGE_TAC =
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
+  W(fun (asl,w) ->
+    (if is_conj w then
+      (CONJ_TAC THENL
+        [REWRITE_TAC[ENUMERATEL_ADD1; APPEND_NIL; CONJUNCT1 APPEND] THEN
+         REWRITE_TAC[APPEND_ASSOC] THEN
+         CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+         REPEAT(AP_THM_TAC THEN AP_TERM_TAC) THEN
+         CONV_TAC(REPEATC (RAND_CONV BETA_CONV)) THEN UNIFY_F_EVENTS_TAC;
+         ALL_TAC])
+     else ALL_TAC) THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
+
+let genmat3_copy_full_goal =
+ `exists f_events.
+   forall e st q (V:1600 word) pc.
+    aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+    nonoverlapping (q,168) (st,200) /\
+    nonoverlapping (st,200) (word pc,libmlkem_size) /\
+    nonoverlapping (q,168) (word pc,libmlkem_size)
+    ==> ensures arm
+         (\s. aligned_bytes_loaded s (word pc)
+                mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+              read PC s =
+              word(pc + mlkem768_gen_matrix_after_mlk_keccakf1600_permute_c_1) /\
+              read X20 s = st /\
+              read X22 s = word_add q (word 168) /\
+              read (memory :> wbytes st) s = V /\
+              read events s = e)
+         (\s. read PC s = word(pc + mlkem768_gen_matrix_loop2_test) /\
+              read X20 s = st /\
+              read X19 s = word_add q (word 168) /\
+              read X22 s = word_add q (word 336) /\
+              read (memory :> wbytes st) s = V /\
+              read (memory :> bytes(q,168)) s = val V MOD 2 EXP (8 * 168) /\
+              (exists e2. read events s = APPEND e2 e /\
+                          e2 = f_events st q pc /\
+                          memaccess_inbounds e2 [st,200; q,168] [q,168]))
+         (MAYCHANGE [PC; X0; X19; X22] ,, MAYCHANGE [Q0] ,,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+          MAYCHANGE [memory :> bytes(q,168)])`;;
+
+let GENMAT3_COPY168_FULL = prove(genmat3_copy_full_goal,
+  CONCRETIZE_F_EVENTS_TAC
+    `\(st:int64) (q:int64) (pc:num).
+      APPEND
+        (f_ev_epil st q pc)
+        (APPEND
+          (ENUMERATEL 21 (\i. f_ev_loop st q pc i))
+          (f_ev_prol st q pc))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC [`st:int64`; `q:int64`; `V:1600 word`; `pc:num`] THEN
+  REWRITE_TAC[SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `21` `pc + mlkem768_gen_matrix_loop3`
+   `pc + mlkem768_gen_matrix_loop3_exit`
+   `\j s. read X0 s = word_add st (word(8 * j)) /\
+          read X19 s = word_add q (word(8 * j)) /\
+          read X20 s = st /\ read X22 s = word_add q (word 168) /\
+          read (memory :> wbytes st) s = (V:1600 word) /\
+          read (memory :> bytes(q,8 * j)) s =
+          val (V:1600 word) MOD 2 EXP (8 * (8 * j))` THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** Initialization ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--2) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0; READ_COMPONENT_COMPOSE;
+                READ_BYTES_TRIVIAL; EXP; MOD_1] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The body: one 8-byte word and the test ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    FIRST_ASSUM(fun th ->
+      if can (term_match [] `read (memory :> wbytes st) s0 = (V:1600 word)`)
+             (concl th)
+      then ASSUME_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600] th)
+      else NO_TAC) THEN
+    MP_TAC(SPECL [`st:int64`; `200`; `val(V:1600 word)`; `8 * i`;
+                  `s0:armstate`] READ_MEMORY_BYTES64_OF_NUM) THEN
+    ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC; DISCH_TAC] THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--4) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN
+     `~(val(word_sub (word_add (word_add q (word (8 * i))) (word 8))
+                     (word_add q (word 168)):int64) = 0) <=> i + 1 < 21`
+    SUBST_ALL_TAC THENL
+     [REWRITE_TAC[WORD_RULE
+       `word_sub (word_add (word_add a x) y) (word_add a z):int64 =
+        word_sub (word_add x y) z`] THEN
+      REWRITE_TAC[VAL_WORD_SUB_EQ_0; GSYM WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+       `i < 21 ==> 8 * i + 8 < 18446744073709551616`] THEN
+      SIMPLE_ARITH_TAC;
+      ALL_TAC] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    REPEAT(CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `8 * (i + 1) = 8 * i + 8`] THEN
+      CONV_TAC WORD_RULE; ALL_TAC]) THEN
+    CONJ_TAC THENL
+     [ASM_REWRITE_TAC[READ_MEMORY_WBYTES_1600]; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [MP_TAC(SPECL [`q:int64`; `8 * i`; `8`; `val(V:1600 word)`;
+                    `s4:armstate`] READ_MEMORY_BYTES_EXTEND) THEN
+      REWRITE_TAC[ARITH_RULE `8 * (i + 1) = 8 * i + 8`;
+                  ARITH_RULE `8 * (8 * i + 8) = 8 * (8 * i) + 64`] THEN
+      DISCH_THEN MATCH_MP_TAC THEN
+      CONJ_TAC THENL
+       [ASM_REWRITE_TAC[ARITH_RULE `8 * 8 * i = 8 * (8 * i)`];
+        FIRST_ASSUM(fun th ->
+          if can (term_match [] `read (memory :> bytes64 (word_add q (word (8 * i)))) s4 = x`) (concl th)
+          then MP_TAC(MATCH_MP READ_MEMORY_BYTES_OF_BYTES64
+                       (REWRITE_RULE[ZX_ZX_64_128] th))
+          else NO_TAC) THEN
+        CONV_TAC NUM_REDUCE_CONV THEN
+        REWRITE_TAC[MOD_MOD_REFL; ARITH_RULE `8 * 8 * i = 8 * (8 * i)`]];
+      ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The exit and the update of X22 ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--1) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN
+    CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let genmat3_copyu_full_goal =
+ `exists f_events.
+   forall e st buf (V:1600 word) c19 y pc.
+    aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+    nonoverlapping (buf,168) (st,200) /\
+    nonoverlapping (st,200) (word pc,libmlkem_size) /\
+    nonoverlapping (buf,168) (word pc,libmlkem_size)
+    ==> ensures arm
+         (\s. aligned_bytes_loaded s (word pc)
+                mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+              read PC s =
+              word(pc + mlkem768_gen_matrix_after_mlk_keccakf1600_permute_c_2) /\
+              read X19 s = c19 /\ read X20 s = st /\ read X21 s = buf /\
+              read X25 s = y /\
+              read (memory :> wbytes st) s = V /\
+              read events s = e)
+         (\s. read PC s =
+              word(pc + mlkem768_gen_matrix_in_shake128_squeezeblocks_2_end) /\
+              read X19 s = c19 /\ read X20 s = st /\ read X21 s = buf /\
+              read X25 s = y /\
+              read X0 s = y /\ read X2 s = buf /\ read X3 s = word 168 /\
+              read X1 s = word_zx(word_zx c19:int32) /\
+              read (memory :> wbytes st) s = V /\
+              read (memory :> bytes(buf,168)) s = val V MOD 2 EXP (8 * 168) /\
+              (exists e2. read events s = APPEND e2 e /\
+                          e2 = f_events st buf pc /\
+                          memaccess_inbounds e2 [st,200; buf,168] [buf,168]))
+         (MAYCHANGE [PC; X0; X1; X2; X3; X4] ,,
+          MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17] ,,
+          MAYCHANGE [events] ,,
+          MAYCHANGE [memory :> bytes(buf,168)])`;;
+
+let GENMAT3_COPY168U_FULL = prove(genmat3_copyu_full_goal,
+  CONCRETIZE_F_EVENTS_TAC
+    `\(st:int64) (buf:int64) (pc:num). f_ev_all st buf pc :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC [`st:int64`; `buf:int64`; `V:1600 word`; `c19:int64`;
+                       `y:int64`; `pc:num`] THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN
+  FIRST_ASSUM(fun th ->
+    if can (term_match [] `read (memory :> wbytes st) s0 = (V:1600 word)`)
+           (concl th)
+    then ASSUME_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600] th)
+    else NO_TAC) THEN
+  MAP_EVERY (fun k ->
+    MP_TAC(SPECL [`st:int64`; `200`; `val(V:1600 word)`;
+                  mk_small_numeral(16 * k); `s0:armstate`]
+                 READ_MEMORY_BYTES128_OF_NUM) THEN
+    ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+    DISCH_THEN(ASSUME_TAC o REWRITE_RULE[WORD_ADD_0])) (0--9) THEN
+  MP_TAC(SPECL [`st:int64`; `200`; `val(V:1600 word)`; `160`; `s0:armstate`]
+               READ_MEMORY_BYTES64_OF_NUM) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+  DISCH_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--16) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [ASM_REWRITE_TAC[READ_MEMORY_WBYTES_1600]; ALL_TAC] THEN
+  CONJ_TAC THENL
+   [MP_TAC(SPECL [`10`; `buf:int64`; `val(V:1600 word)`; `s16:armstate`]
+                 READ_BYTES_FROM_CHUNKS128) THEN
+    ANTS_TAC THENL
+     [CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
+      REWRITE_TAC[WORD_ADD_0] THEN ASM_REWRITE_TAC[];
+      DISCH_TAC] THEN
+    MP_TAC(SPECL [`buf:int64`; `160`; `8`; `val(V:1600 word)`; `s16:armstate`]
+                 READ_MEMORY_BYTES_EXTEND) THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    DISCH_THEN MATCH_MP_TAC THEN CONJ_TAC THENL
+     [RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN ASM_REWRITE_TAC[];
+      FIRST_ASSUM(fun th ->
+        if can (term_match [] `read (memory :> bytes64 (word_add buf (word 160))) s16 = x`) (concl th)
+        then MP_TAC(MATCH_MP READ_MEMORY_BYTES_OF_BYTES64 th) else NO_TAC) THEN
+      CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MOD_MOD_REFL]];
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let genmat3_sq3_full_goal =
+ `exists f_events.
+   forall e st buf (S:1600 word) bp pc.
+    aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+    aligned 16 bp /\
+    PAIRWISE nonoverlapping
+     [(buf,504); (st,200); (word_add bp (word 64),192)] /\
+    ALL (nonoverlapping (word pc,libmlkem_size))
+     [(buf,504); (st,200); (word_add bp (word 64),192)]
+    ==> ensures arm
+         (\s. aligned_bytes_loaded s (word pc)
+                mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+              read PC s = word(pc + mlkem768_gen_matrix_loop2) /\
+              read SP s = word_add bp (word 256) /\
+              read X20 s = st /\ read X21 s = buf /\
+              read X22 s = word_add buf (word 168) /\ read X23 s = word 3 /\
+              read (memory :> wbytes st) s = S /\
+              read events s = e)
+         (\s. read PC s = word(pc + mlkem768_gen_matrix_loop2_exit) /\
+              read SP s = word_add bp (word 256) /\
+              read X20 s = st /\ read X21 s = buf /\ read X23 s = word 0 /\
+              read (memory :> wbytes st) s = keccak_squeeze 3 S /\
+              read (memory :> bytes(buf,504)) s =
+              nsum {i | i < 3}
+               (\i. 2 EXP (8 * 168 * i) *
+                    val(keccak_squeeze (i + 1) S) MOD 2 EXP (8 * 168)) /\
+              (exists e2. read events s = APPEND e2 e /\
+                          e2 = f_events st buf bp pc /\
+                          memaccess_inbounds e2
+                           [st,200; buf,504; word_add bp (word 64),192;
+                            word(pc + rodata_mlk_KeccakF_RoundConstants),192]
+                           [buf,504; st,200; word_add bp (word 64),192]))
+         (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11;
+                     X12; X13; X14; X15; X16; X17; X18; X19; X22; X23;
+                     X30] ,,
+          MAYCHANGE [Q0] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+          MAYCHANGE [memory :> bytes(buf,504); memory :> bytes(st,200);
+                     memory :> bytes(word_add bp (word 64),192)])`;;
+
+let GENMAT3_SQ3_FULL = prove(genmat3_sq3_full_goal,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL_F1600
+    "H_PERM" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC GENMAT3_COPY168_FULL "H_COPY" THEN
+  CONCRETIZE_F_EVENTS_TAC
+    `\(st:int64) (buf:int64) (bp:int64) (pc:num).
+      APPEND
+        (f_ev_epil st buf bp pc)
+        (APPEND
+          (ENUMERATEL 3 (\t. f_ev_loop st buf bp pc t))
+          (f_ev_prol st buf bp pc))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC [`st:int64`; `buf:int64`; `S:1600 word`; `bp:int64`;
+                       `pc:num`] THEN
+  REWRITE_TAC[SOME_FLAGS; ALL; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `3` `pc + mlkem768_gen_matrix_loop2`
+   `pc + mlkem768_gen_matrix_loop2_exit`
+   `\t s. read SP s = word_add bp (word 256) /\ read X20 s = st /\ read X21 s = buf /\
+          read X22 s = word_add buf (word(168 * (t + 1))) /\
+          read X23 s = word(3 - t) /\
+          read (memory :> wbytes st) s = keccak_squeeze t (S:1600 word) /\
+          read (memory :> bytes(buf,168 * t)) s =
+          nsum {i | i < t}
+           (\i. 2 EXP (8 * 168 * i) *
+                val(keccak_squeeze (i + 1) (S:1600 word)) MOD 2 EXP (8 * 168))` THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** Initialization ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[ADD_CLAUSES; MULT_CLAUSES; SUB_0; WORD_ADD_0; keccak_squeeze;
+                READ_COMPONENT_COMPOSE; READ_BYTES_TRIVIAL;
+                CONJUNCT1 NSUM_CLAUSES_NUMSEG_LT] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The body ***)
+
+    X_GEN_TAC `t:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--2) THEN
+    GM3SQ_SAFE_CALL_TAC "H_PERM"
+     [`e:(uarch_event)list`; `read X0 s`; `keccak_squeeze t (S:1600 word)`;
+      `pc:num`; `read SP s`; `read X30 s`] 3 THEN
+    SUBGOAL_THEN
+     `word_add buf (word (168 * (t + 1))):int64 =
+      word_add (word_add buf (word (168 * t))) (word 168)`
+     (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+     [REWRITE_TAC[ARITH_RULE `168 * (t + 1) = 168 * t + 168`] THEN
+      CONV_TAC WORD_RULE;
+      ALL_TAC] THEN
+    GM3SQ_SAFE_CALL_SIDE_TAC "H_COPY"
+     [`e:(uarch_event)list`; `st:int64`; `word_add buf (word(168 * t)):int64`;
+      `keccak_f1600 (keccak_squeeze t (S:1600 word))`; `pc:num`] 4 THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (5--6) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REPEAT CONJ_TAC THENL
+     [UNDISCH_TAC `t < 3` THEN SPEC_TAC(`t:num`,`t:num`) THEN
+      CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
+      CONV_TAC WORD_REDUCE_CONV THEN REWRITE_TAC[ARITH_EQ];
+      REWRITE_TAC[ARITH_RULE `168 * t + 336 = 168 * ((t + 1) + 1)`];
+      UNDISCH_TAC `t < 3` THEN SPEC_TAC(`t:num`,`t:num`) THEN
+      CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
+      CONV_TAC WORD_REDUCE_CONV THEN REWRITE_TAC[ARITH_EQ];
+      REWRITE_TAC[KSQ_SUC];
+      REWRITE_TAC[NSUM_LT_STEP; ARITH_RULE `168 * (t + 1) = 168 * t + 168`;
+                  READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
+      RULE_ASSUM_TAC(REWRITE_RULE[READ_COMPONENT_COMPOSE]) THEN
+      ASM_REWRITE_TAC[] THEN REWRITE_TAC[KSQ_SUC];
+      GM3_LOOP_DISCHARGE_TAC];
+
+    (*** The exit ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[] THEN RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN
+    CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+(*** The events of the inlined code: the template and the helper tactics ***)
+
+let GM3F_ARGS =
+  [`entry:int64`; `buf:int64`; `inp:byte list`; `mf:int64`; `pc:num`;
+   `bp:int64`];;
+
+let GM3F_K0 =
+  mk_comb(`(minimal):(num->bool)->num`,
+          mk_abs(`n:num`,
+           mk_comb(mk_comb(`(<=):num->num->bool`,`256`),
+            mk_comb(`LENGTH:(16 word)list->num`,
+             mk_comb(`REJ_SAMPLE`,rej_fields `n:num`)))));;
+
+let GM3F_TEMPLATE =
+  let args = GM3F_ARGS in
+  let fty = itlist (fun a t -> mk_fun_ty (type_of a) t) args
+                   `:(uarch_event)list` in
+  let fv n = mk_var(n,fty) in
+  let app n = list_mk_comb(fv n,args) in
+  let k0 = GM3F_K0 in
+  let fl = list_mk_comb(mk_var("f_ev_loop",
+             itlist (fun a t -> mk_fun_ty (type_of a) t) args
+                    (mk_fun_ty `:num` `:(uarch_event)list`)),args) in
+  let loop = mk_abs(`i:num`,mk_comb(fl,`i:num`)) in
+  let ap = `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list` in
+  let enum = list_mk_comb(`ENUMERATEL:num->(num->(uarch_event)list)->
+                                     (uarch_event)list`,[k0;loop]) in
+  let mid = mk_cond(mk_eq(k0,`0`),app "f_ev_skip",
+              list_mk_comb(ap,[app "f_ev_exit";
+                list_mk_comb(ap,[enum; app "f_ev_enter"])])) in
+  let body = list_mk_comb(ap,[app "f_ev_rel";
+               list_mk_comb(ap,[mid;
+                list_mk_comb(ap,[app "f_ev_a1";
+                 list_mk_comb(ap,[app "f_ev_sq3"; app "f_ev_m1"])])])]) in
+  list_mk_abs(args,body);;
+
+let GM3F_ALLOWED =
+  [`entry:int64`; `buf:int64`; `inp:byte list`; `rho:byte list`;
+   `mf:int64`; `pc:num`; `bp:int64`; `i:num`; `ci:num`; `k0:num`;
+   `f_ev_loop:int64->int64->byte list->int64->num->int64->num->
+              (uarch_event)list`];;
+
+let GM3F_CALL_TAC name side ilist n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mono_mc,
+       MLKEM_NATIVE_GENMAT3_REJ_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mono_mc,safety_th)
+      ilist n THENL
+     [(match side with
+         None -> EXISTS_E2_TAC (ref GM3F_ALLOWED)
+       | Some tac -> CONJ_TAC THENL [tac; EXISTS_E2_TAC (ref GM3F_ALLOWED)]);
+      LABEL_TAC name safety_th]);;
+
+let genmat3_rej_full_goal =
+ `!mf ea el ev.
+   memset_full_contract mf ea el ev
+   ==> exists f_events.
+    forall e entry buf (rho:byte list) (inp:byte list) k pc bp.
+    aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+    aligned 16 bp /\ aligned 32 buf /\
+    LENGTH rho = 32 /\ APPEND rho [word 2; word 2] = inp /\
+    256 <= LENGTH(FILTER (\x. val x < 3329)
+                   (MAP (word_zx:12 word->16 word)
+                     (wordlist_of_num (336 + 112 * k)
+                       (num_of_bytelist
+                         (list_of_seq (shake128 inp) (504 + 168 * k)))))) /\
+    PAIRWISE nonoverlapping
+     [(entry,512); (buf,504); (word_add buf (word 512),256);
+      (word_add buf (word 768),224); (bp,256)] /\
+    ALLPAIRS nonoverlapping
+     [(entry,512); (buf,504); (word_add buf (word 512),256);
+      (word_add buf (word 768),224); (bp,256)]
+     [(word pc,libmlkem_size); (word(pc + got_memset),8); (ea,el)]
+    ==> ensures arm
+         (\s. aligned_bytes_loaded s (word pc)
+                mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+              read PC s =
+              word(pc + mlkem768_gen_matrix_after_mlkem_poly_rej_uniform_x4_2) /\
+              read SP s = word_add bp (word 256) /\
+              read X20 s = word_add buf (word 768) /\
+              read X21 s = buf /\
+              read X22 s = word_add buf (word 168) /\
+              read X23 s = word 3 /\
+              read X24 s = word_add buf (word 512) /\
+              read X25 s = word_sub entry (word 4096) /\
+              read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+              read (memory :> bytes(ea,el)) s = ev /\
+              read (memory :> bytes(word_add buf (word 512),32)) s =
+              num_of_bytelist rho /\
+              read events s = e)
+         (\s. read PC s =
+              word(pc + mlkem768_gen_matrix_in_poly_rej_uniform_end) /\
+              wordlist_from_memory(entry,256) s =
+              SUB_LIST(0,256)
+               (FILTER (\x. val x < 3329)
+                 (MAP (word_zx:12 word->16 word)
+                   (wordlist_of_num (336 + 112 * k)
+                     (num_of_bytelist
+                       (list_of_seq (shake128 inp) (504 + 168 * k)))))) /\
+              (exists e2. read events s = APPEND e2 e /\
+                          e2 = f_events entry buf inp mf pc bp /\
+                          memaccess_inbounds e2
+                           [entry,512; buf,504; word_add buf (word 512),256;
+                            word_add buf (word 768),224; bp,256;
+                            word(pc + rodata_mlk_KeccakF_RoundConstants),192;
+                            word(pc + got_memset),8; ea,el]
+                           [entry,512; buf,504; word_add buf (word 512),256;
+                            word_add buf (word 768),224; bp,256]))
+         (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [X18; X19; X22; X23; X25; X30] ,,
+          MAYCHANGE
+           [memory :> bytes(entry,512);
+            memory :> bytes(buf,504);
+            memory :> bytes(word_add buf (word 512),256);
+            memory :> bytes(word_add buf (word 768),224);
+            memory :> bytes(bp,256)])`;;
+
+let GM3F_INTRO_TAC =
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  FIRST_ASSUM(fun th ->
+    ASSUME_CALLEE_SAFETY_TAILED_TAC
+     (REWRITE_RULE[memset_full_contract] th) "H_MEMSET") THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL
+    "H_ABSORB" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC GENMAT3_SQ3_FULL "H_SQ3" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL "H_REJ" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL_F1600
+    "H_PERM" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC GENMAT3_COPY168U_FULL "H_COPYU" THEN
+  CONCRETIZE_F_EVENTS_TAC GM3F_TEMPLATE THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC
+   [`entry:int64`; `buf:int64`; `rho:byte list`; `inp:byte list`; `k:num`;
+    `pc:num`; `bp:int64`] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALL; ALLPAIRS;
+              PAIRWISE; NONOVERLAPPING_CLAUSES; GSYM REJ_SAMPLE] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `LENGTH(inp:byte list) = 34` ASSUME_TAC THENL
+   [FIRST_ASSUM(SUBST1_TAC o SYM o check (fun th ->
+      concl th = `APPEND rho [word 2:byte; word 2] = inp`)) THEN
+    ASM_REWRITE_TAC[LENGTH_APPEND; LENGTH] THEN ARITH_TAC; ALL_TAC] THEN
+  REJ_ABSORBED_TAC THEN REJ_MINIMAL_TAC;;
+
+let GM3F_INIT_TAC =
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC;;
+
+(*** Absorbing the seed ***)
+
+let GM3F_PART_M1_TAC =
+  GM3F_INIT_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--8) THEN
+  GM3F_CALL_TAC "H_ABSORB"
+   (Some (MP_TAC(SPECL [`word_add buf (word 512):int64`; `rho:byte list`;
+                        `s8:armstate`] GM3_INPUT) THEN
+          ANTS_TAC THENL
+           [ASM_REWRITE_TAC[] THEN
+            CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+            ASM_REWRITE_TAC[];
+            STRIP_TAC THEN ASM_REWRITE_TAC[]]))
+   [`e:(uarch_event)list`; `read X0 s`; `168`; `read X2 s`; `34`; `31`;
+    `num_of_bytelist(inp:byte list)`; `pc:num`; `read SP s`;
+    `read X30 s`] 9 THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(*** The first three blocks ***)
+
+let GM3F_PART_M2_TAC =
+  GM3F_INIT_TAC THEN
+  GM3F_CALL_TAC "H_SQ3" None
+   [`e:(uarch_event)list`; `word_add buf (word 768):int64`; `buf:int64`;
+    `S0:1600 word`; `bp:int64`; `pc:num`] 1 THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(*** The first sampling ***)
+
+let GM3F_PART_A1_TAC =
+  GM3F_INIT_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--6) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
+   `word_add (word_sub x (word 4096)) (word 4096):int64 = x`]) THEN
+  REJ_INPUT0_TAC `s6:armstate` THEN
+  GM3F_CALL_TAC "H_REJ" None
+   [`e:(uarch_event)list`; `read X0 s`; `0`; `read X2 s`; `504`;
+    `wordlist_of_num 336
+      (num_of_bytelist(list_of_seq (shake128 inp) 504)):(12 word)list`;
+    `pc:num`; `read X30 s`] 7 THEN
+  REJ_POST_TAC THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES; MULT_CLAUSES; SUB_0; WORD_ADD_0;
+                              LENGTH_SUB_LIST]) THEN
+  FIRST_X_ASSUM(ASSUME_TAC o MATCH_MP REJ_BYTES16_OF_WORDLIST o check
+   (can (term_match [] `wordlist_from_memory(a,n) s = l:int16 list`) o
+    concl)) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(*** No more block needed ***)
+
+let GM3F_PART_NOLOOP_TAC =
+  FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k0 = 0`)) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[MULT_CLAUSES; ADD_CLAUSES]) THEN
+  SUBGOAL_THEN (mk_eq(mk_comb(`MIN 256`,REJ_C0),`256`))
+   (fun th -> REWRITE_TAC[th] THEN RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+   [REWRITE_TAC[ARITH_RULE `MIN a b = a <=> a <= b`] THEN
+    ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  GM3F_INIT_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--3) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  MP_TAC(ISPECL [`shake128 inp`; `0`; `k:num`] REJ_SAMPLE_FINAL) THEN
+  REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; LE_0] THEN ANTS_TAC THENL
+   [ASM_REWRITE_TAC[]; DISCH_THEN SUBST1_TAC] THEN
+  RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(*** The loop of further blocks ***)
+
+let GM3F_LOOP_INIT_TAC =
+  GM3F_INIT_TAC THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--3) THEN
+  REJ_ARGS_32_TAC REJ_C0 THEN REJ_HI_TAC REJ_C0 THEN
+  SUBGOAL_THEN (mk_neg(mk_binop `(<):num->num->bool` `255` REJ_C0))
+   (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+   [FIRST_ASSUM(fun th ->
+      if is_binary "<" (concl th) && lhand(concl th) = REJ_C0
+      then MP_TAC th THEN ARITH_TAC else NO_TAC);
+    ALL_TAC] THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN ASM_REWRITE_TAC[] THEN
+  REJ_MIN_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let GM3F_LOOP_BODY_TAC =
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+  SUBGOAL_THEN (mk_binop `(<):num->num->bool` (rej_count `i:num`) `256`)
+  ASSUME_TAC THENL
+   [FIRST_X_ASSUM(MP_TAC o SPEC `i:num` o check (is_forall o concl)) THEN
+    ASM_REWRITE_TAC[NOT_LE];
+    ALL_TAC] THEN
+  REJ_MIN_TAC THEN GM3F_INIT_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--2) THEN
+  KECCAK_STATE_AT_TAC `word_add buf (word 768):int64` THEN
+  GM3F_CALL_TAC "H_PERM" None
+   [`e:(uarch_event)list`; `read X0 s`;
+    `keccak_squeeze (3 + i) (S0:1600 word)`; `pc:num`;
+    `read SP s`; `read X30 s`] 3 THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[GSYM(SPECL [`3 + i`; `S0:1600 word`]
+                                    KSQ_SUC)]) THEN
+  ABBREV_TAC (mk_eq(`ci:num`,rej_count `i:num`)) THEN
+  SUBGOAL_THEN `ci <= 256` ASSUME_TAC THENL
+   [UNDISCH_TAC `ci < 256` THEN ARITH_TAC; ALL_TAC] THEN
+  GM3F_CALL_TAC "H_COPYU" (Some (REWRITE_TAC[ADD_ASSOC]))
+   [`e:(uarch_event)list`; `word_add buf (word 768):int64`; `buf:int64`;
+    `keccak_squeeze (3 + i + 1) (S0:1600 word)`; `read X19 s`;
+    `read X25 s`; `pc:num`] 4 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (5--5) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600;
+                              ARITH_RULE `(3 + i) + 1 = 3 + (i + 1)`]) THEN
+  REJ_ARGS_32_TAC `ci:num` THEN REJ_BLOCK_TAC `s5:armstate` THEN
+  GM3F_CALL_TAC "H_REJ" None
+   [`e:(uarch_event)list`; `read X0 s`; `ci:num`; `read X2 s`; `168`;
+    rej_block `i:num`; `pc:num`; `read X30 s`] 6 THEN
+  REJ_COMBINE_TAC "s6" THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (7--9) THEN
+  REJ_ARGS_32_TAC REJ_CN THEN REJ_HI_TAC REJ_CN THEN REJ_LS_TAC THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600;
+                              ARITH_RULE `(3 + i) + 1 = 3 + (i + 1)`]) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+  FIRST_X_ASSUM(fun th ->
+    if is_eq(concl th) && rand(concl th) = `ci:num`
+    then SUBST_ALL_TAC(SYM th) else NO_TAC) THEN
+  GM3_LOOP_DISCHARGE_TAC;;
+
+let GM3F_LOOP_EXIT_TAC =
+  GM3F_INIT_TAC THEN
+  SUBGOAL_THEN (mk_eq(mk_comb(`MIN 256`,rej_count `k0:num`),`256`))
+   (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+   [REWRITE_TAC[ARITH_RULE `MIN 256 x = 256 <=> 256 <= x`] THEN
+    ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
+  MP_TAC(ISPECL [`shake128 inp`; `k0:num`; `k:num`] REJ_SAMPLE_FINAL) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_THEN SUBST1_TAC] THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let GM3F_PART_LOOP_TAC =
+  SUBGOAL_THEN (mk_binop `(<):num->num->bool` REJ_C0 `256`) ASSUME_TAC THENL
+   [FIRST_X_ASSUM(MP_TAC o SPEC `0` o check (is_forall o concl)) THEN
+    REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; NOT_LE] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN (mk_eq(mk_comb(`MIN 256`,REJ_C0),REJ_C0))
+   (fun th -> REWRITE_TAC[th] THEN RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+   [REWRITE_TAC[ARITH_RULE `MIN a b = b <=> b <= a`] THEN
+    ASM_SIMP_TAC[LT_IMP_LE];
+    ALL_TAC] THEN
+  REWRITE_TAC[EQF_INTRO(ASSUME `~(k0 = 0)`)] THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `k0:num` `pc + mlkem768_gen_matrix_loop4`
+   `pc + mlkem768_gen_matrix_loop4_exit` GM3_INV THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    GM3F_LOOP_INIT_TAC;
+    GM3F_LOOP_BODY_TAC;
+    GM3F_LOOP_EXIT_TAC];;
+
+(*** Releasing the state, zeroing the buffer ***)
+
+let GM3F_PART_REL_TAC =
+  GM3F_INIT_TAC THEN
+  FIRST_ASSUM(fun th ->
+    if can (term_match []
+             (vsubst [mk_small_numeral(layout "got_memset"),`n:num`]
+                `read (memory :> bytes64 (word (pc + n))) s = (g:int64)`))
+           (concl th)
+    then ASSUME_TAC(REWRITE_RULE[WORD_ADD] th) else NO_TAC) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC (1--12) THEN
+  LIBC_PLT_TAC MLKEM_NATIVE_GENMAT3_REJ_EXEC 12 THEN
+  LIBC_SAFE_CALL_TAC "H_MEMSET" MLKEM_NATIVE_GENMAT3_REJ_EXEC
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+    `read X30 s`] (ref GM3F_ALLOWED) 17 THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN
+   (mk_eq(mk_comb(`LENGTH:(16 word)list->num`,rej_l1 `k:num`),`256`))
+  ASSUME_TAC THENL
+   [REWRITE_TAC[LENGTH_SUB_LIST; SUB_0;
+                ARITH_RULE `MIN 256 x = 256 <=> 256 <= x`] THEN
+    ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  CONJ_TAC THENL
+   [FIRST_ASSUM(fun th ->
+      if concl th = mk_eq(mk_comb(`LENGTH:(16 word)list->num`,rej_l1 `k:num`),
+                          `256`)
+      then GEN_REWRITE_TAC (LAND_CONV o LAND_CONV o RAND_CONV) [SYM th]
+      else NO_TAC) THEN
+    MATCH_MP_TAC REJ_WORDLIST_OF_BYTES16 THEN ASM_REWRITE_TAC[] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN ASM_REWRITE_TAC[];
+    DISCHARGE_SAFETY_PROPERTY_TAC];;
+
+let GM3F_MAIN_TAC =
+  GM3F_INTRO_TAC THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlkem768_gen_matrix_loop4_exit` GM3_A2 THEN
+  CONJ_TAC THENL
+   [ENSURES_EVENTS_SEQUENCE_TAC
+      `pc + mlkem768_gen_matrix_after_mlk_rej_uniform_c_1` GM3_A1 THEN
+    CONJ_TAC THENL
+     [ENSURES_EVENTS_SEQUENCE_TAC
+        `pc + mlkem768_gen_matrix_loop2_exit` GM3_M2 THEN
+      CONJ_TAC THENL
+       [ENSURES_EVENTS_SEQUENCE_TAC
+          `pc + mlkem768_gen_matrix_loop2` GM3_M1 THEN
+        CONJ_TAC THENL [GM3F_PART_M1_TAC; GM3F_PART_M2_TAC];
+        GM3F_PART_A1_TAC];
+      ASM_CASES_TAC `k0 = 0` THENL
+       [GM3F_PART_NOLOOP_TAC; GM3F_PART_LOOP_TAC]];
+    GM3F_PART_REL_TAC];;
+
+let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_MONO_IN_MLKEM768_GEN_MATRIX_FULL =
+  prove(genmat3_rej_full_goal, GM3F_MAIN_TAC);;

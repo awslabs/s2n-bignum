@@ -447,3 +447,204 @@ let MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT = prove
   ASM_CASES_TAC `word_zx(transposed:int64):int32 = word 0` THENL
    [GENMAT3_CASE_TAC 3392 false; GENMAT3_CASE_TAC 3392 true;
     GENMAT3_CASE_TAC 3376 false; GENMAT3_CASE_TAC 3376 true]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof, assuming the combined contract for *)
+(* memset as for mlkem_poly_rej_uniform_x4. The events depend only on the    *)
+(* addresses, rho and the flag, through the samples of each entry, which are *)
+(* public. They are given by cases on whether the stack pointer is a         *)
+(* multiple of 32, which gives the address of the buffers, and on the flag,  *)
+(* which gives the order of the indices and a branch.                        *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let GENMAT_SAFE_TEMPLATE =
+ `\(a:int64) (seed:int64) (rho:byte list) (transposed:int64) (guard:int64)
+   (mf:int64) (pc:num) (stackpointer:int64) (returnaddress:int64).
+   if aligned 32 stackpointer
+   then (if word_zx transposed = (word 0:int32)
+         then f_ev_an a seed rho transposed guard mf pc stackpointer
+                      returnaddress
+         else f_ev_at a seed rho transposed guard mf pc stackpointer
+                      returnaddress)
+   else (if word_zx transposed = (word 0:int32)
+         then f_ev_un a seed rho transposed guard mf pc stackpointer
+                      returnaddress
+         else f_ev_ut a seed rho transposed guard mf pc stackpointer
+                      returnaddress)
+   :(uarch_event)list`;;
+
+let GENMAT_SAFE_ALLOWED =
+  [`pc:num`; `a:int64`; `seed:int64`; `rho:byte list`; `transposed:int64`;
+   `guard:int64`; `mf:int64`; `stackpointer:int64`; `returnaddress:int64`];;
+
+let GENMAT3_SAFE_INTRO_TAC =
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  FIRST_ASSUM(fun th ->
+    ASSUME_CALLEE_SAFETY_TAILED_TAC
+     (MATCH_MP
+       MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_MONO_IN_MLKEM768_GEN_MATRIX_FULL
+       th) "H_X1") THEN
+  FIRST_X_ASSUM(fun th ->
+    ASSUME_CALLEE_SAFETY_TAILED_TAC
+     (REWRITE_RULE[ALL] (MATCH_MP
+       MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE th))
+     "H_X4") THEN
+  CONCRETIZE_F_EVENTS_TAC GENMAT_SAFE_TEMPLATE THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `aligned 16 (stackpointer:int64)` ASSUME_TAC THENL
+   [UNDISCH_TAC `aligned 16 (word_add stackpointer (word 4400):int64)` THEN
+    CONV_TAC(LAND_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN REWRITE_TAC[];
+    ALL_TAC] THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD]) THEN
+  GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
+  ENSURES_PRESERVED_TAC "x22_init" `X22` THEN
+  ENSURES_PRESERVED_TAC "x23_init" `X23` THEN
+  ENSURES_PRESERVED_TAC "x24_init" `X24` THEN
+  ENSURES_PRESERVED_TAC "x25_init" `X25`;;
+
+let GENMAT3_SAFE_CALL_TAC name ilist n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mlkem_native_libmlkem_gcc12_O2_mono_mc,
+       MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_EXEC,
+       0x0,mlkem_native_libmlkem_gcc12_O2_mono_mc,safety_th)
+      ilist n THENL
+     [EXISTS_E2_TAC (ref GENMAT_SAFE_ALLOWED); LABEL_TAC name safety_th]);;
+
+let GENMAT3_SAFE_CASE_TAC b tr =
+  let d = if tr then 1 else 0 in
+  let st n = mk_var("s"^string_of_int n,`:armstate`) in
+  let xy e = let i = e / 3 and j = e mod 3 in if tr then (i,j) else (j,i) in
+  let seed e = let x,y = xy e in GENMAT_SEED x y in
+  let inputs g s =
+    MAP_EVERY (fun m -> let x,y = xy (4 * g + m) in
+                        GENMAT_INPUT_TAC (b + 512 + 64 * m) x y s) (0--3) in
+  let rest = [`k:num`; `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] in
+  let args5 = [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+               `read X3 s`; `read X4 s`] in
+  let BUF = GENMAT_SP b in
+  (if tr then
+     SUBGOAL_THEN `~(val(word_zx(transposed:int64):int32) = 0)` ASSUME_TAC
+     THENL [ASM_REWRITE_TAC[VAL_EQ_0]; ALL_TAC]
+   else ALL_TAC) THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN
+  FIRST_ASSUM(MP_TAC o MATCH_MP GENMAT_BYTES128_HALVES o check
+   (can (term_match [] `read (memory :> bytes(seed,32)) s = n`) o concl)) THEN
+  STRIP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_EXEC (1--3) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_EXEC (4--7) THEN
+  GENMAT3_BUFFER_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_EXEC (8--16) THEN
+  MAP_EVERY (fun m ->
+    ARM_STEPS_TAC MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_EXEC
+     ((17 + 5 * m)--(20 + 5 * m)) THEN
+    PTR_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_EXEC [21 + 5 * m])
+   (0--3) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_EXEC (37--50) THEN
+  inputs 0 (st 50) THEN
+  MAP_EVERY (fun e -> GENMAT_HYP_TAC (e / 3) (e mod 3)) (0--8) THEN
+  GENMAT_GOT_TAC THEN
+  GENMAT3_SAFE_CALL_TAC "H_X4" (args5 @ map seed (0--3) @ rest) 51 THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_EXEC (52--(71 + d)) THEN
+  inputs 1 (st(71 + d)) THEN
+  GENMAT3_SAFE_CALL_TAC "H_X4" (args5 @ map seed (4--7) @ rest) (72 + d) THEN
+  SUBGOAL_THEN
+   (vsubst [mk_small_numeral b,`n:num`]
+     `aligned 32 (word_add (stackpointer:int64) (word n))`) ASSUME_TAC THENL
+   [MP_TAC(SPEC `stackpointer:int64` GENMAT3_BUF_ALIGNED) THEN
+    ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  GENMAT_SEED32_TAC (b + 512) (st (72 + d)) THEN
+  GENMAT3_SAFE_CALL_TAC "H_X1"
+   [`e:(uarch_event)list`; `word_add a (word 4096):int64`; BUF;
+    `rho:byte list`; `APPEND (rho:byte list) [word 2:byte; word 2]`;
+    `k:num`; `pc:num`; `word_add (stackpointer:int64) (word 3056)`]
+   (73 + d) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_EXEC
+   ((74 + d)--(83 + d)) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_EXEC
+   ((84 + d)--(95 + d)) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE = prove
+ (`!mf ea el ev.
+   memset_full_contract mf ea el ev
+   ==> exists f_events.
+        forall e a seed (rho:byte list) transposed k guard pc stackpointer
+               returnaddress.
+          aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+          aligned 16 stackpointer /\ LENGTH rho = 32 /\
+          (!i j. i < 3 /\ j < 3
+                 ==> 256 <= LENGTH(FILTER (\x. val x < 3329)
+                             (MAP (word_zx:12 word->16 word)
+                               (wordlist_of_num (336 + 112 * k)
+                                 (num_of_bytelist
+                                   (list_of_seq
+                                     (shake128
+                                       (APPEND rho
+                                         (if word_zx transposed =
+                                             (word 0:int32)
+                                          then [word j; word i]
+                                          else [word i; word j])))
+                                     (504 + 168 * k))))))) /\
+          nonoverlapping (a,4608) (word_sub stackpointer (word 4400),4400) /\
+          ALLPAIRS nonoverlapping
+           [(a,4608); (word_sub stackpointer (word 4400),4400)]
+           [(seed,32); (word pc,libmlkem_size);
+            (word(pc + got_stack_chk_guard),8); (guard,8);
+            (word(pc + got_memset),8); (ea,el)]
+          ==> ensures arm
+               (\s. aligned_bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_gcc12_O2_mono_mc /\
+                    read PC s = word (pc + mlkem768_gen_matrix) /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [a; seed; transposed] s /\
+                    read (memory :> bytes64(word(pc + got_stack_chk_guard))) s
+                     = guard /\
+                    read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                    read (memory :> bytes(ea,el)) s = ev /\
+                    read (memory :> bytes(seed,32)) s = num_of_bytelist rho /\
+                    read events s = e)
+               (\s. read PC s = returnaddress /\
+                    (exists e2.
+                       read events s = APPEND e2 e /\
+                       e2 = f_events a seed rho transposed guard mf pc
+                              (word_sub stackpointer (word 4400))
+                              returnaddress /\
+                       memaccess_inbounds e2
+                        [seed,32; a,4608;
+                         word_sub stackpointer (word 4400),4400;
+                         word(pc + got_stack_chk_guard),8; guard,8;
+                         word(pc + got_memset),8;
+                         ea,el;
+                         word(pc + rodata_mlk_KeccakF_RoundConstants),192]
+                        [a,4608; word_sub stackpointer (word 4400),4400]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+                MAYCHANGE
+                 [memory :> bytes(a,4608);
+                  memory :> bytes(word_sub stackpointer (word 4400),4400)])`,
+  GENMAT3_SAFE_INTRO_TAC THEN
+  ASM_CASES_TAC `aligned 32 (stackpointer:int64)` THEN
+  ASM_CASES_TAC `word_zx(transposed:int64):int32 = word 0` THENL
+   [GENMAT3_SAFE_CASE_TAC 3392 false; GENMAT3_SAFE_CASE_TAC 3392 true;
+    GENMAT3_SAFE_CASE_TAC 3376 false; GENMAT3_SAFE_CASE_TAC 3376 true]);;
