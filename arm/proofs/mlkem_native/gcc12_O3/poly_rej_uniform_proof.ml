@@ -3,189 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-(* ========================================================================= *)
-(* Uniform sampling of a polynomial from a seed by rejection. This is the    *)
-(* code for mlkem_poly_rej_uniform from mlkem-native's portable C            *)
-(* implementation compiled by gcc 12 with -O3 (see mlkem_native/README.md),  *)
-(* which absorbs the 34 bytes of the seed into a SHAKE128 state, squeezes    *)
-(* three blocks of 168 bytes and samples the coefficients below 3329 from    *)
-(* them, and then squeezes one more block and samples from it until there    *)
-(* are 256, before zeroing the state and the buffer. Unlike at -O2, the      *)
-(* sampling of mlk_rej_uniform_c is inlined, as two copies of its loop, one  *)
-(* for the first three blocks (loop1) and one for each further block (loop3, *)
-(* inside the loop loop2 that squeezes the blocks). It is verified in the    *)
-(* whole image (see libmlkem.ml), using the theorems for                     *)
-(* mlkem_shake128_init, mlkem_shake128_absorb_once,                          *)
-(* mlkem_shake128_squeezeblocks and mlkem_shake128_release in the image, the *)
-(* theorems for the two copies of the loop proved here with the tool in      *)
-(* rej_uniform.ml, and assuming the contracts for memset in                  *)
-(* utils/mlkem_native_libc.ml. The theorems have the statements of the -O2   *)
-(* ones, except that the stack used is 1088 bytes rather than 1072, as the   *)
-(* frame of the function is 832 bytes rather than 816.                       *)
-(* ========================================================================= *)
+needs "arm/proofs/mlkem_native/gcc12_O3/poly_rej_uniform_spec.ml";;
 
-needs "arm/proofs/utils/mlkem_native_libc.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/shake128_init_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/shake128_absorb_once_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/shake128_squeezeblocks_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/shake128_release_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/rej_uniform_proof.ml";;
-
-
-(*** The code in the image:
-
-    mlkem_poly_rej_uniform:
-       +0x0: sub     sp, sp, #0x340
-       +0x4: adrp    x2, <page>
-       +0x8: ldr     x2, [x2, #4088]  // got_stack_chk_guard
-       +0xc: stp     x19, x20, [sp]
-      +0x10: add     x20, sp, #0x5f
-      +0x14: and     x20, x20, #0xffffffffffffffe0
-      +0x18: stp     x21, x22, [sp, #16]
-      +0x1c: add     x21, x20, #0x200
-      +0x20: mov     x22, x0
-      +0x24: stp     x23, x24, [sp, #32]
-      +0x28: mov     x23, x1
-      +0x2c: mov     x0, x21
-      +0x30: str     x30, [sp, #48]
-      +0x34: mov     w19, #0x0
-      +0x38: ldr     x1, [x2]
-      +0x3c: str     x1, [sp, #824]
-      +0x40: mov     x1, #0x0
-      +0x44: bl      mlkem_shake128_init
-      +0x48: mov     x1, x23
-      +0x4c: mov     x0, x21
-      +0x50: mov     x2, #0x22
-      +0x54: bl      mlkem_shake128_absorb_once
-      +0x58: mov     x1, #0x3
-      +0x5c: mov     x2, x21
-      +0x60: mov     x0, x20
-      +0x64: bl      mlkem_shake128_squeezeblocks
-      +0x68: add     x5, x20, #0x1f8
-      +0x6c: mov     x1, x20
-      +0x70: mov     w7, #0xd00
-      +0x74: mov     w6, #0xff
-      +0x78: b       loop1
-      +0x7c: cmp     w2, #0xd00
-      +0x80: ccmp    w19, w6, #0x2, le
-      +0x84: b.hi    join2
-      +0x88: mov     w3, w19
-      +0x8c: add     w19, w3, #0x1
-      +0x90: strh    w2, [x22, w3, uxtw #1]
-      +0x94: cmp     w19, #0x100
-      +0x98: b.eq    join3
-      +0x9c: add     x1, x1, #0x3
-      +0xa0: cmp     x1, x5
-      +0xa4: b.eq    loop1_exit3
-      +0xa8: ldrb    w0, [x1, #1]
-      +0xac: ldrb    w4, [x1]
-      +0xb0: ldrb    w2, [x1, #2]
-      +0xb4: lsr     w3, w0, #4
-      +0xb8: orr     w0, w4, w0, lsl #8
-      +0xbc: and     w0, w0, #0xfff
-      +0xc0: orr     w2, w3, w2, lsl #4
-      +0xc4: cmp     w0, #0xd00
-      +0xc8: b.gt    +0x7c
-      +0xcc: add     w3, w19, #0x1
-      +0xd0: strh    w0, [x22, w19, uxtw #1]
-      +0xd4: cmp     w3, #0xff
-      +0xd8: mov     w19, w3
-      +0xdc: ccmp    w2, w7, #0x0, ls
-      +0xe0: b.le    join1
-      +0xe4: cmp     w19, #0x100
-      +0xe8: b.ne    join2
-      +0xec: nop
-      +0xf0: mov     x0, x21
-      +0xf4: bl      mlkem_shake128_release
-      +0xf8: mov     x0, x20
-      +0xfc: mov     x2, #0x1f8
-     +0x100: mov     w1, #0x0
-     +0x104: bl      memset
-     +0x108: adrp    x0, <page>
-     +0x10c: ldr     x0, [x0, #4088]  // got_stack_chk_guard
-     +0x110: ldr     x2, [sp, #824]
-     +0x114: ldr     x1, [x0]
-     +0x118: subs    x2, x2, x1
-     +0x11c: mov     x1, #0x0
-     +0x120: b.ne    +0x1cc
-     +0x124: ldp     x19, x20, [sp]
-     +0x128: ldp     x21, x22, [sp, #16]
-     +0x12c: ldp     x23, x24, [sp, #32]
-     +0x130: ldr     x30, [sp, #48]
-     +0x134: add     sp, sp, #0x340
-     +0x138: ret
-     +0x13c: add     x24, x20, #0xa8
-     +0x140: mov     w23, #0xd00
-     +0x144: nop
-     +0x148: mov     x2, x21
-     +0x14c: mov     x0, x20
-     +0x150: mov     x1, #0x1
-     +0x154: bl      mlkem_shake128_squeezeblocks
-     +0x158: mov     x2, x20
-     +0x15c: b       loop3
-     +0x160: cmp     w19, #0xff
-     +0x164: ccmp    w3, w23, #0x0, ls
-     +0x168: b.gt    join6
-     +0x16c: mov     w4, w19
-     +0x170: add     w19, w4, #0x1
-     +0x174: strh    w3, [x22, w4, uxtw #1]
-     +0x178: cmp     w19, #0x100
-     +0x17c: b.eq    join3
-     +0x180: add     x2, x2, #0x3
-     +0x184: cmp     x2, x24
-     +0x188: b.eq    loop2
-     +0x18c: ldrb    w1, [x2, #1]
-     +0x190: ldrb    w5, [x2]
-     +0x194: ldrb    w3, [x2, #2]
-     +0x198: lsr     w4, w1, #4
-     +0x19c: orr     w1, w5, w1, lsl #8
-     +0x1a0: and     w1, w1, #0xfff
-     +0x1a4: orr     w3, w4, w3, lsl #4
-     +0x1a8: cmp     w1, #0xd00
-     +0x1ac: b.gt    +0x160
-     +0x1b0: add     w4, w19, #0x1
-     +0x1b4: strh    w1, [x22, w19, uxtw #1]
-     +0x1b8: cmp     w4, #0xff
-     +0x1bc: mov     w19, w4
-     +0x1c0: ccmp    w3, w23, #0x0, ls
-     +0x1c4: b.gt    join5
-     +0x1c8: b       join4
-     +0x1cc: bl      stack_chk_fail
- ***)
-
-let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O3_mc
-   [layout_range "mlkem_poly_rej_uniform"; layout_range "plt_memset"];;
-
-(* ------------------------------------------------------------------------- *)
-(* The two copies of the sampling loop. The first samples from the three     *)
-(* blocks in the buffer at X20, from offset 0, with X1 the pointer, X5 its   *)
-(* end and X19 the counter, and exits to loop1_exit2 when there are 256      *)
-(* coefficients and to loop1_exit3 at the end of the buffer. The second      *)
-(* samples from one block at X20 with X2 the pointer and X24 its end, and    *)
-(* exits to the same point loop3_exit1 when there are 256 coefficients and   *)
-(* to loop2, to squeeze another block, at the end of the buffer.             *)
-(* ------------------------------------------------------------------------- *)
-
-let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP1 =
-  { rej_exec = MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC;
-    rej_header = "mlkem_poly_rej_uniform_loop1";
-    rej_full = "mlkem_poly_rej_uniform_loop1_exit2";
-    rej_end = "mlkem_poly_rej_uniform_loop1_exit3";
-    rej_ptr = "X1"; rej_endreg = "X5"; rej_ctr = "X19"; rej_out = "X22";
-    rej_consts = ["X6",255; "X7",3328];
-    rej_fields = "X0","X2";
-    rej_regs = ["X0"; "X1"; "X2"; "X3"; "X4"; "X19"] };;
-
-let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP3 =
-  { rej_exec = MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC;
-    rej_header = "mlkem_poly_rej_uniform_loop3";
-    rej_full = "mlkem_poly_rej_uniform_loop3_exit1";
-    rej_end = "mlkem_poly_rej_uniform_loop3_exit2";
-    rej_ptr = "X2"; rej_endreg = "X24"; rej_ctr = "X19"; rej_out = "X22";
-    rej_consts = ["X23",3328];
-    rej_fields = "X1","X3";
-    rej_regs = ["X1"; "X2"; "X3"; "X4"; "X5"; "X19"] };;
 
 let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP1_FULL =
   REJ_LOOP_FULL MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP1;;
@@ -201,37 +20,14 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP3_CORRECT =
   REJ_LOOP_CORRECT MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP3
    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP3_FULL;;
 
-(* ------------------------------------------------------------------------- *)
-(* The bytes of SHAKE128 in blocks of 168, the rate, in terms of the         *)
-(* absorbed state, as for mlkem_shake256 and mlkem_shake256x4.               *)
-(* ------------------------------------------------------------------------- *)
-
 let REJ_SPONGE = prove
- (`!(m:byte list) k n.
-        n <= 168
-        ==> num_of_bytelist(list_of_seq (\j. shake128 m (168 * k + j)) n) =
-            val(keccak_squeeze (k + 1)
-                 (word_xor
-                   (keccak_absorb 168
-                     (num_of_bytelist m +
-                      2 EXP (8 * LENGTH m) *
-                      num_of_bytelist(keccak_pad 168 0x1F (LENGTH m)))
-                     (LENGTH m DIV 168))
-                   (word((num_of_bytelist m +
-                          2 EXP (8 * LENGTH m) *
-                          num_of_bytelist(keccak_pad 168 0x1F (LENGTH m))) DIV
-                         2 EXP (8 * 168 * LENGTH m DIV 168) MOD
-                         2 EXP (8 * 168))))) MOD 2 EXP (8 * n)`,
+ (REJ_SPONGE_STMT,
   REPEAT STRIP_TAC THEN REWRITE_TAC[shake128] THEN
   MATCH_MP_TAC KECCAK_SPONGE_BLOCK THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 let REJ_XOF_BLOCKS = prove
- (`!(f:num->byte) n.
-        num_of_bytelist(list_of_seq f (168 * n)) =
-        nsum {i | i < n}
-         (\i. 2 EXP (8 * 168 * i) *
-              num_of_bytelist(list_of_seq (\j. f(168 * i + j)) 168))`,
+ (REJ_XOF_BLOCKS_STMT,
   GEN_TAC THEN INDUCT_TAC THENL
    [REWRITE_TAC[MULT_CLAUSES; list_of_seq; num_of_bytelist;
                 NSUM_CLAUSES_NUMSEG_LT];
@@ -240,60 +36,22 @@ let REJ_XOF_BLOCKS = prove
                     NSUM_CLAUSES_NUMSEG_LT]]);;
 
 let REJ_SHAKE128_BLOCKS = prove
- (`!(m:byte list) b.
-        num_of_bytelist(list_of_seq (shake128 m) (168 * b)) =
-        nsum {i | i < b}
-         (\i. 2 EXP (8 * 168 * i) *
-              val(keccak_squeeze (i + 1)
-                   (word_xor
-                     (keccak_absorb 168
-                       (num_of_bytelist m +
-                        2 EXP (8 * LENGTH m) *
-                        num_of_bytelist(keccak_pad 168 0x1F (LENGTH m)))
-                       (LENGTH m DIV 168))
-                     (word((num_of_bytelist m +
-                            2 EXP (8 * LENGTH m) *
-                            num_of_bytelist(keccak_pad 168 0x1F (LENGTH m)))
-                           DIV 2 EXP (8 * 168 * LENGTH m DIV 168) MOD
-                           2 EXP (8 * 168))))) MOD 2 EXP (8 * 168))`,
+ (REJ_SHAKE128_BLOCKS_STMT,
   REPEAT GEN_TAC THEN REWRITE_TAC[REJ_XOF_BLOCKS] THEN
   MATCH_MP_TAC NSUM_EQ THEN X_GEN_TAC `i:num` THEN DISCH_TAC THEN
   REWRITE_TAC[] THEN AP_TERM_TAC THEN MATCH_MP_TAC REJ_SPONGE THEN
   REWRITE_TAC[LE_REFL]);;
 
 let KECCAK_SQUEEZE_ADD = prove
- (`!m n (S:1600 word).
-        keccak_squeeze m (keccak_squeeze n S) = keccak_squeeze (m + n) S`,
+ (KECCAK_SQUEEZE_ADD_STMT,
   INDUCT_TAC THEN ASM_REWRITE_TAC[keccak_squeeze; ADD_CLAUSES]);;
 
 let REJ_NSUM_1 = prove
- (`!f. nsum {j | j < 1} f = f 0`,
+ (REJ_NSUM_1_STMT,
   REWRITE_TAC[num_CONV `1`; NSUM_CLAUSES_NUMSEG_LT; ADD_CLAUSES]);;
 
-(* ------------------------------------------------------------------------- *)
-(* The 12-bit fields of the first 504 + 168 * j bytes, those of three blocks *)
-(* and j more, and the samples from them, with REJ_SAMPLE as in              *)
-(* rej_uniform.ml.                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-let REJ_WORDLIST_OF_NUM_ADD = prove
- (`!m n x. wordlist_of_num (m + n) x:(N word)list =
-           APPEND (wordlist_of_num m x)
-                  (wordlist_of_num n (x DIV 2 EXP (dimindex(:N) * m)))`,
-  INDUCT_TAC THEN
-  REWRITE_TAC[ADD_CLAUSES; wordlist_of_num; APPEND; MULT_CLAUSES; EXP;
-              DIV_1] THEN
-  ASM_REWRITE_TAC[CONS_11; DIV_DIV; GSYM EXP_ADD] THEN
-  REWRITE_TAC[ARITH_RULE `d + d * m = d * SUC m`]);;
-
 let REJ_WORDLIST_APPEND = prove
- (`!(f:num->byte) m n.
-        8 * m = 12 * n
-        ==> wordlist_of_num (n + 112)
-             (num_of_bytelist(list_of_seq f (m + 168))):(12 word)list =
-            APPEND (wordlist_of_num n (num_of_bytelist(list_of_seq f m)))
-                   (wordlist_of_num 112
-                     (num_of_bytelist(list_of_seq (\i. f(m + i)) 168)))`,
+ (REJ_WORDLIST_APPEND_STMT,
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[NUM_OF_BYTELIST_LIST_OF_SEQ_ADD; REJ_WORDLIST_OF_NUM_ADD] THEN
   REWRITE_TAC[DIMINDEX_12] THEN FIRST_ASSUM(SUBST1_TAC o SYM) THEN
@@ -315,27 +73,14 @@ let REJ_WORDLIST_APPEND = prove
     ASM_SIMP_TAC[DIV_LT; ADD_CLAUSES]]);;
 
 let REJ_FIELDS_SUC = prove
- (`!(f:num->byte) j.
-        wordlist_of_num (336 + 112 * (j + 1))
-         (num_of_bytelist(list_of_seq f (504 + 168 * (j + 1)))):(12 word)list =
-        APPEND
-         (wordlist_of_num (336 + 112 * j)
-           (num_of_bytelist(list_of_seq f (504 + 168 * j))))
-         (wordlist_of_num 112
-           (num_of_bytelist(list_of_seq (\i. f((504 + 168 * j) + i)) 168)))`,
+ (REJ_FIELDS_SUC_STMT,
   REPEAT GEN_TAC THEN
   REWRITE_TAC[ARITH_RULE `504 + 168 * (j + 1) = (504 + 168 * j) + 168`;
               ARITH_RULE `336 + 112 * (j + 1) = (336 + 112 * j) + 112`] THEN
   MATCH_MP_TAC REJ_WORDLIST_APPEND THEN ARITH_TAC);;
 
 let REJ_FIELDS_PREFIX = prove
- (`!(f:num->byte) j k.
-        j <= k
-        ==> ?t. wordlist_of_num (336 + 112 * k)
-                 (num_of_bytelist(list_of_seq f (504 + 168 * k))):
-                (12 word)list =
-                APPEND (wordlist_of_num (336 + 112 * j)
-                         (num_of_bytelist(list_of_seq f (504 + 168 * j)))) t`,
+ (REJ_FIELDS_PREFIX_STMT,
   GEN_TAC THEN GEN_TAC THEN MATCH_MP_TAC num_INDUCTION THEN CONJ_TAC THENL
    [REWRITE_TAC[LE] THEN DISCH_THEN SUBST1_TAC THEN
     EXISTS_TAC `[]:(12 word)list` THEN REWRITE_TAC[APPEND_NIL];
@@ -350,28 +95,14 @@ let REJ_FIELDS_PREFIX = prove
       ASM_REWRITE_TAC[GSYM APPEND_ASSOC] THEN MESON_TAC[]]]);;
 
 let REJ_COUNT_MONO = prove
- (`!(f:num->byte) j k.
-        j <= k
-        ==> LENGTH(REJ_SAMPLE(wordlist_of_num (336 + 112 * j)
-                     (num_of_bytelist(list_of_seq f (504 + 168 * j))))) <=
-            LENGTH(REJ_SAMPLE(wordlist_of_num (336 + 112 * k)
-                     (num_of_bytelist(list_of_seq f (504 + 168 * k)))))`,
+ (REJ_COUNT_MONO_STMT,
   REPEAT GEN_TAC THEN
   DISCH_THEN(X_CHOOSE_THEN `t:(12 word)list` SUBST1_TAC o
              MATCH_MP(SPEC `f:num->byte` REJ_FIELDS_PREFIX)) THEN
   REWRITE_TAC[REJ_SAMPLE_APPEND; LENGTH_APPEND; LE_ADD]);;
 
 let REJ_SAMPLE_FINAL = prove
- (`!(f:num->byte) j k.
-        j <= k /\
-        256 <= LENGTH(REJ_SAMPLE(wordlist_of_num (336 + 112 * j)
-                       (num_of_bytelist(list_of_seq f (504 + 168 * j)))))
-        ==> SUB_LIST(0,256)
-             (REJ_SAMPLE(wordlist_of_num (336 + 112 * k)
-                (num_of_bytelist(list_of_seq f (504 + 168 * k))))) =
-            SUB_LIST(0,256)
-             (REJ_SAMPLE(wordlist_of_num (336 + 112 * j)
-                (num_of_bytelist(list_of_seq f (504 + 168 * j)))))`,
+ (REJ_SAMPLE_FINAL_STMT,
   REPEAT GEN_TAC THEN
   DISCH_THEN(CONJUNCTS_THEN2
    (X_CHOOSE_THEN `t:(12 word)list` SUBST1_TAC o
@@ -381,42 +112,19 @@ let REJ_SAMPLE_FINAL = prove
   MATCH_MP_TAC SUB_LIST_APPEND_LEFT THEN ASM_REWRITE_TAC[]);;
 
 let REJ_SAMPLE_SUC = prove
- (`!(f:num->byte) j.
-        LENGTH(REJ_SAMPLE(wordlist_of_num (336 + 112 * j)
-                 (num_of_bytelist(list_of_seq f (504 + 168 * j))))) <= 256
-        ==> SUB_LIST(0,256)
-             (REJ_SAMPLE(wordlist_of_num (336 + 112 * (j + 1))
-                (num_of_bytelist(list_of_seq f (504 + 168 * (j + 1)))))) =
-            APPEND
-             (SUB_LIST(0,256)
-               (REJ_SAMPLE(wordlist_of_num (336 + 112 * j)
-                  (num_of_bytelist(list_of_seq f (504 + 168 * j))))))
-             (SUB_LIST(0,256 -
-                       LENGTH(REJ_SAMPLE(wordlist_of_num (336 + 112 * j)
-                         (num_of_bytelist(list_of_seq f (504 + 168 * j))))))
-               (REJ_SAMPLE(wordlist_of_num 112
-                  (num_of_bytelist
-                    (list_of_seq (\i. f((504 + 168 * j) + i)) 168)))))`,
+ (REJ_SAMPLE_SUC_STMT,
   REPEAT STRIP_TAC THEN REWRITE_TAC[REJ_FIELDS_SUC; REJ_SAMPLE_APPEND] THEN
   ASM_SIMP_TAC[SUB_LIST_APPEND_RIGHT; SUB_LIST_REFL]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Lists of 12-bit fields and of 16-bit samples in memory.                   *)
-(* ------------------------------------------------------------------------- *)
-
 let REJ_WORDLIST_FROM_BYTES = prove
- (`!a m n x s:armstate.
-        12 * n = 8 * m /\ read (memory :> bytes(a,m)) s = x
-        ==> wordlist_from_memory(a,n) s = (wordlist_of_num n x:(12 word)list)`,
+ (REJ_WORDLIST_FROM_BYTES_STMT,
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[wordlist_from_memory; DIMINDEX_12] THEN
   SUBGOAL_THEN `(12 * n + 7) DIV 8 = m` (fun th -> ASM_REWRITE_TAC[th]) THEN
   MATCH_MP_TAC DIV_UNIQ THEN EXISTS_TAC `7` THEN ASM_ARITH_TAC);;
 
 let REJ_BYTES16_OF_WORDLIST = prove
- (`!a n (l:int16 list) s:armstate.
-        wordlist_from_memory(a,n) s = l
-        ==> read (memory :> bytes(a,2 * n)) s = num_of_wordlist l`,
+ (REJ_BYTES16_OF_WORDLIST_STMT,
   REPEAT GEN_TAC THEN
   MP_TAC(ISPECL [`a:int64`; `n:num`; `2 * n`; `l:int16 list`; `s:armstate`]
          WORDLIST_FROM_MEMORY_EQ_ALT) THEN
@@ -424,9 +132,7 @@ let REJ_BYTES16_OF_WORDLIST = prove
   DISCH_THEN SUBST1_TAC THEN SIMP_TAC[]);;
 
 let REJ_WORDLIST_OF_BYTES16 = prove
- (`!a (l:int16 list) s:armstate.
-        read (memory :> bytes(a,2 * LENGTH l)) s = num_of_wordlist l
-        ==> wordlist_from_memory(a,LENGTH l) s = l`,
+ (REJ_WORDLIST_OF_BYTES16_STMT,
   REPEAT GEN_TAC THEN
   MP_TAC(ISPECL [`a:int64`; `LENGTH(l:int16 list)`; `2 * LENGTH(l:int16 list)`;
                  `l:int16 list`; `s:armstate`]
@@ -435,31 +141,15 @@ let REJ_WORDLIST_OF_BYTES16 = prove
   DISCH_THEN SUBST1_TAC THEN SIMP_TAC[]);;
 
 let REJ_BYTES16_APPEND_N = prove
- (`!a n (l1:int16 list) (l2:int16 list) s:armstate.
-        LENGTH l1 = n /\
-        read (memory :> bytes(a,2 * n)) s = num_of_wordlist l1 /\
-        read (memory :> bytes(word_add a (word(2 * n)),2 * LENGTH l2)) s =
-        num_of_wordlist l2
-        ==> read (memory :> bytes(a,2 * (n + LENGTH l2))) s =
-            num_of_wordlist(APPEND l1 l2)`,
+ (REJ_BYTES16_APPEND_N_STMT,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o check
    (fun th -> concl th = `LENGTH(l1:int16 list) = n`)) THEN
   REWRITE_TAC[GSYM LENGTH_APPEND] THEN
   MATCH_MP_TAC READ_BYTES16_APPEND THEN ASM_REWRITE_TAC[]);;
 
-(* ------------------------------------------------------------------------- *)
-(* The buffer for three blocks, followed by the state, is aligned to 32      *)
-(* bytes within the stack frame, so its address depends on whether the stack *)
-(* pointer is a multiple of 32 or just of 16. The frame is 832 bytes, 16     *)
-(* more than at -O2, and the buffer is 95 bytes up from the stack pointer    *)
-(* rounded down, so it is 320 or 336 bytes above the bottom of the stack     *)
-(* used, rather than 320 or 304.                                             *)
-(* ------------------------------------------------------------------------- *)
-
 let REJ_ALIGNED_16_32 = prove
- (`(!x:int64. aligned 16 x <=> word_and x (word 15) = word 0) /\
-   (!x:int64. aligned 32 x <=> word_and x (word 31) = word 0)`,
+ (REJ_ALIGNED_16_32_STMT,
   CONJ_TAC THEN GEN_TAC THEN REWRITE_TAC[aligned; DIMINDEX_64] THEN
   CONV_TAC NUM_REDUCE_CONV THEN
   CONV_TAC(ONCE_DEPTH_CONV DIVIDES_CONV) THEN REWRITE_TAC[] THENL
@@ -472,591 +162,13 @@ let REJ_ALIGNED_16_32 = prove
            ARITH_RULE `x < 32 ==> x < 2 EXP 64`]);;
 
 let REJ_BUFFER_ADDRESS = prove
- (`!sp:int64.
-        aligned 16 sp
-        ==> word_and (word_add sp (word 351)) (word 18446744073709551584) =
-            word_add sp (word(if aligned 32 sp then 320 else 336))`,
+ (REJ_BUFFER_ADDRESS_STMT,
   REWRITE_TAC[REJ_ALIGNED_16_32] THEN GEN_TAC THEN
   COND_CASES_TAC THEN POP_ASSUM MP_TAC THEN
   W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w)));;
 
-let REJ_BUFFER_TAC =
-  SUBGOAL_THEN
-   `word_and (word_add stackpointer (word 351))
-             (word 18446744073709551584):int64 =
-    word_add stackpointer (word(if aligned 32 stackpointer then 320 else 336))`
-  SUBST_ALL_TAC THENL
-   [MATCH_MP_TAC REJ_BUFFER_ADDRESS THEN ASM_REWRITE_TAC[]; ALL_TAC];;
-
-let REJ_BUF = `word_add (stackpointer:int64)
-                (word(if aligned 32 stackpointer then 320 else 336))`;;
-
-let REJ_CTX = `word_add (stackpointer:int64)
-                (word((if aligned 32 stackpointer then 320 else 336) + 512))`;;
-
-let REJ_ADDRESS_CONV =
-  REWRITE_CONV[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD; GSYM ADD_ASSOC] THENC
-  DEPTH_CONV NUM_ADD_CONV;;
-
-let REJ_NORMALIZE_TAC =
-  RULE_ASSUM_TAC(fun th ->
-    if free_in `stackpointer:int64` (concl th)
-    then CONV_RULE REJ_ADDRESS_CONV th else th);;
-
-let REJ_SETUP_TAC =
-  SUBGOAL_THEN `aligned 16 (stackpointer:int64)` ASSUME_TAC THENL
-   [UNDISCH_TAC `aligned 16 (word_add stackpointer (word 1088):int64)` THEN
-    CONV_TAC(LAND_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN REWRITE_TAC[];
-    ALL_TAC] THEN
-  SUBGOAL_THEN
-   `320 <= (if aligned 32 (stackpointer:int64) then 320 else 336) /\
-    (if aligned 32 (stackpointer:int64) then 320 else 336) <= 336`
-  STRIP_ASSUME_TAC THENL [COND_CASES_TAC THEN ARITH_TAC; ALL_TAC] THEN
-  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD;
-              SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
-                                     `got_stack_chk_guard:num`] WORD_ADD;
-                              SPECL [`pc:num`;
-                                     `got_memset:num`] WORD_ADD]) THEN
-  GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
-  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
-  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
-  MAP_EVERY (fun n ->
-    let r = "X"^string_of_int n in
-    ENSURES_PRESERVED_TAC ("x"^string_of_int n^"_init")
-     (mk_const(r,[]))) (19--24);;
-
-(*** The address of the stack guard in the form of the precondition of ***)
-(*** mlkem_shake128_absorb_once, which has the stack protector inlined ***)
-
-let REJ_GOT_TAC =
-  FIRST_ASSUM(fun th ->
-    if can (term_match []
-             (vsubst [mk_small_numeral(layout "got_stack_chk_guard"),`n:num`]
-               `read (memory :> bytes64
-                       (word_add (word (pc:num)) (word n):int64)) s =
-                (g:int64)`)) (concl th)
-    then ASSUME_TAC(REWRITE_RULE[GSYM WORD_ADD] th) else NO_TAC);;
-
-(* ------------------------------------------------------------------------- *)
-(* Correctness proof, assuming the contract for memset as for                *)
-(* mlkem_shake128x4_release. The seed is 34 bytes at seed, given as a list   *)
-(* of bytes inp. The loop sampling from one more block at a time stops when  *)
-(* there are 256 samples, so the theorem has the hypothesis that there are   *)
-(* at least 256 samples, values below 3329, among the 12-bit fields of the   *)
-(* first 504 + 168 * k bytes of shake128 of the seed for some k, and the     *)
-(* result is the first 256 of those samples. The proof uses the minimal such *)
-(* k, k0, as the number of iterations of loop2. The stack is the 832 bytes   *)
-(* of the function and the 256 used by mlkem_shake128_absorb_once below      *)
-(* them, 1088 bytes in all (1072 at -O2).                                    *)
-(* ------------------------------------------------------------------------- *)
-
-let LOCAL_INIT_TAC =
-  ARM_SUBROUTINE_SIM_TAC
-   (mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC,
-    0x0,mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_SHAKE128_INIT_GCC12_O3_IMAGE_SUBROUTINE_CORRECT);;
-
-let LOCAL_ABSORB_TAC =
-  ARM_SUBROUTINE_SIM_TAC
-   (mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC,
-    0x0,mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O3_IMAGE_SUBROUTINE_CORRECT);;
-
-let LOCAL_SQUEEZE_TAC =
-  ARM_SUBROUTINE_SIM_TAC
-   (mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC,
-    0x0,mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_GCC12_O3_IMAGE_SUBROUTINE_CORRECT);;
-
-let LOCAL_LOOP1_TAC =
-  ARM_SUBROUTINE_SIM_TAC
-   (mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC,
-    0x0,mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP1_CORRECT);;
-
-let LOCAL_LOOP3_TAC =
-  ARM_SUBROUTINE_SIM_TAC
-   (mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC,
-    0x0,mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP3_CORRECT);;
-
-let LOCAL_RELEASE_TAC =
-  ARM_SUBROUTINE_SIM_TAC
-   (mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC,
-    0x0,mlkem_native_libmlkem_gcc12_O3_mc,
-    MLKEM_NATIVE_SHAKE128_RELEASE_GCC12_O3_IMAGE_SUBROUTINE_CORRECT);;
-
-(*** The fields and samples, and the blocks and samples from them ***)
-
-let rej_fields j =
-  vsubst [j,`j:num`]
-   `wordlist_of_num (336 + 112 * j)
-     (num_of_bytelist(list_of_seq (shake128 inp) (504 + 168 * j))):
-    (12 word)list`;;
-
-let rej_count j = mk_comb(`LENGTH:(16 word)list->num`,
-                          mk_comb(`REJ_SAMPLE`,rej_fields j));;
-
-let rej_block i =
-  vsubst [i,`i:num`]
-   `wordlist_of_num 112
-     (num_of_bytelist
-       (list_of_seq (\j. shake128 inp ((504 + 168 * i) + j)) 168)):
-    (12 word)list`;;
-
-let rej_l1 i =
-  mk_comb(`SUB_LIST(0,256):(16 word)list->(16 word)list`,
-          mk_comb(`REJ_SAMPLE`,rej_fields i));;
-
-let rej_l2 i =
-  mk_comb(`SUB_LIST(0,256 - ci):(16 word)list->(16 word)list`,
-          mk_comb(`REJ_SAMPLE`,rej_block i));;
-
-(*** The facts at the intermediate points, with the saved registers ***)
-
-let REJ_FRAME =
- `read SP s = word_add stackpointer (word 256) /\
-  read (memory :> bytes64 (word_add stackpointer (word 256))) s = x19_init /\
-  read (memory :> bytes64 (word_add stackpointer (word 264))) s = x20_init /\
-  read (memory :> bytes64 (word_add stackpointer (word 272))) s = x21_init /\
-  read (memory :> bytes64 (word_add stackpointer (word 280))) s = x22_init /\
-  read (memory :> bytes64 (word_add stackpointer (word 288))) s = x23_init /\
-  read (memory :> bytes64 (word_add stackpointer (word 296))) s = x24_init /\
-  read (memory :> bytes64 (word_add stackpointer (word 304))) s =
-  returnaddress /\
-  read (memory :> bytes64 (word_add stackpointer (word 1080))) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
-  guard /\
-  read (memory :> bytes64 guard) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
-  read (memory :> bytes(ea,el)) s = ev /\
-  read X20 s =
-  word_add stackpointer (word(if aligned 32 stackpointer then 320 else 336)) /\
-  read X21 s =
-  word_add stackpointer
-   (word((if aligned 32 stackpointer then 320 else 336) + 512)) /\
-  read X22 s = entry`;;
-
-let REJ_AT t =
-  let vs,bod = strip_abs t in list_mk_abs(vs,mk_conj(bod,REJ_FRAME));;
-
-(*** At the header of loop1, with the fields of the first three blocks ***)
-
-let REJ_A0 = REJ_AT
- `\s. read X19 s = word 0 /\
-      read X1 s =
-      word_add stackpointer
-       (word(if aligned 32 stackpointer then 320 else 336)) /\
-      read X5 s =
-      word_add stackpointer
-       (word((if aligned 32 stackpointer then 320 else 336) + 504)) /\
-      read X6 s = word 255 /\ read X7 s = word 3328 /\
-      wordlist_from_memory
-       (word_add stackpointer
-         (word(if aligned 32 stackpointer then 320 else 336)),336) s =
-      (wordlist_of_num 336
-        (num_of_bytelist(list_of_seq (shake128 inp) 504)):(12 word)list) /\
-      read (memory :> bytes(word_add stackpointer
-              (word((if aligned 32 stackpointer then 320 else 336) + 512)),
-              200)) s =
-      val(keccak_squeeze 3 (S0:1600 word))`;;
-
-(*** At the header of loop2, after 3 + i blocks ***)
-
-let REJ_INV = REJ_AT
- `\i s. read X19 s =
-        word(MIN 256 (LENGTH(REJ_SAMPLE(wordlist_of_num (336 + 112 * i)
-          (num_of_bytelist(list_of_seq (shake128 inp) (504 + 168 * i))))))) /\
-        read (memory :> bytes(entry,2 * MIN 256 (LENGTH(REJ_SAMPLE
-          (wordlist_of_num (336 + 112 * i)
-            (num_of_bytelist(list_of_seq (shake128 inp)
-                               (504 + 168 * i)))))))) s =
-        num_of_wordlist(SUB_LIST(0,256) (REJ_SAMPLE(wordlist_of_num
-          (336 + 112 * i)
-          (num_of_bytelist(list_of_seq (shake128 inp) (504 + 168 * i)))))) /\
-        read (memory :> bytes(word_add stackpointer
-                (word((if aligned 32 stackpointer then 320 else 336) + 512)),
-                200)) s =
-        val(keccak_squeeze (3 + i) (S0:1600 word)) /\
-        read X23 s = word 3328 /\
-        read X24 s =
-        word_add stackpointer
-         (word((if aligned 32 stackpointer then 320 else 336) + 168))`;;
-
-(*** At loop1_exit2 = loop3_exit1, with the 256 coefficients ***)
-
-let REJ_A2 = REJ_AT
- `\s. read (memory :> bytes(entry,512)) s =
-      num_of_wordlist(SUB_LIST(0,256) (REJ_SAMPLE(wordlist_of_num
-        (336 + 112 * k)
-        (num_of_bytelist(list_of_seq (shake128 inp) (504 + 168 * k))))))`;;
-
-(*** The absorbed state as S0, and the minimal number k0 of blocks ***)
-
-let REJ_ABSORBED =
- `word_xor
-   (keccak_absorb 168
-     (num_of_bytelist inp +
-      2 EXP (8 * 34) * num_of_bytelist(keccak_pad 168 0x1F 34))
-     (34 DIV 168))
-   (word((num_of_bytelist inp +
-          2 EXP (8 * 34) * num_of_bytelist(keccak_pad 168 0x1F 34)) DIV
-         2 EXP (8 * 168 * 34 DIV 168) MOD 2 EXP (8 * 168))):1600 word`;;
-
-let REJ_ABSORBED_TAC =
-  let len = ASSUME `LENGTH(inp:byte list) = 34` in
-  ABBREV_TAC(mk_eq(`S0:1600 word`,REJ_ABSORBED)) THEN
-  ASSUME_TAC(REWRITE_RULE[len; ASSUME(mk_eq(REJ_ABSORBED,`S0:1600 word`))]
-              (SPEC `inp:byte list` REJ_SPONGE)) THEN
-  ASSUME_TAC(REWRITE_RULE[len; ASSUME(mk_eq(REJ_ABSORBED,`S0:1600 word`))]
-              (SPEC `inp:byte list` REJ_SHAKE128_BLOCKS));;
-
-let REJ_MINIMAL_TAC =
-  let p = mk_abs(`n:num`,
-           mk_comb(mk_comb(`(<=):num->num->bool`,`256`),
-             mk_comb(`LENGTH:(16 word)list->num`,
-               mk_comb(`REJ_SAMPLE`,rej_fields `n:num`)))) in
-  MP_TAC(BETA_RULE(fst(EQ_IMP_RULE(ISPEC p MINIMAL)))) THEN
-  ANTS_TAC THENL [EXISTS_TAC `k:num` THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  ABBREV_TAC(mk_eq(`k0:num`,mk_comb(`(minimal):(num->bool)->num`,p))) THEN
-  STRIP_TAC THEN
-  SUBGOAL_THEN `k0 <= k` ASSUME_TAC THENL
-   [REWRITE_TAC[GSYM NOT_LT] THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o SPEC `k:num`) THEN ASM_REWRITE_TAC[];
-    ALL_TAC];;
-
-(*** The samples from the first three blocks and from one more block ***)
-
-let REJ_INPUT0_TAC s =
-  SUBGOAL_THEN
-   (subst [REJ_BUF,`buf:int64`; s,`s:armstate`]
-     `wordlist_from_memory(buf,336) s =
-      (wordlist_of_num 336
-        (num_of_bytelist(list_of_seq (shake128 inp) 504)):(12 word)list)`)
-  ASSUME_TAC THENL
-   [MATCH_MP_TAC REJ_WORDLIST_FROM_BYTES THEN EXISTS_TAC `504` THEN
-    CONV_TAC(LAND_CONV NUM_REDUCE_CONV) THEN REWRITE_TAC[] THEN
-    REWRITE_TAC[ARITH_RULE `504 = 168 * 3`] THEN ASM_REWRITE_TAC[];
-    ALL_TAC];;
-
-let REJ_BLOCK_TAC s =
-  SUBGOAL_THEN
-   (mk_eq(list_mk_comb(`wordlist_from_memory:int64#num->armstate->
-                         (12 word)list`,
-                       [mk_pair(REJ_BUF,`112`); s]),
-          rej_block `i:num`))
-  ASSUME_TAC THENL
-   [MATCH_MP_TAC REJ_WORDLIST_FROM_BYTES THEN EXISTS_TAC `168` THEN
-    CONV_TAC(LAND_CONV NUM_REDUCE_CONV) THEN REWRITE_TAC[] THEN
-    FIRST_X_ASSUM(fun th ->
-      if can (term_match [] `!k n. n <= 168 ==> a = b`) (concl th) then
-        MP_TAC(SPECL [`3 + i`; `168`] th) else NO_TAC) THEN
-    REWRITE_TAC[LE_REFL; ARITH_RULE `168 * (3 + i) = 504 + 168 * i`;
-                ARITH_RULE `(3 + i) + 1 = 3 + i + 1`] THEN
-    DISCH_THEN SUBST1_TAC THEN ASM_REWRITE_TAC[];
-    ALL_TAC];;
-
-let REJ_POST_TAC =
-  FIRST_X_ASSUM(fun th ->
-    if is_let(concl th) then
-      STRIP_ASSUME_TAC(REWRITE_RULE[GSYM REJ_SAMPLE]
-        (CONV_RULE(TOP_DEPTH_CONV let_CONV) th))
-    else NO_TAC);;
-
-let REJ_COMBINE_TAC s =
-  REJ_POST_TAC THEN
-  FIRST_X_ASSUM(ASSUME_TAC o MATCH_MP REJ_BYTES16_OF_WORDLIST o check
-   (can (term_match [] `wordlist_from_memory(a,n) s = l:int16 list`) o
-    concl)) THEN
-  SUBGOAL_THEN
-   (mk_eq(mk_comb(`LENGTH:(16 word)list->num`,rej_l1 `i:num`),`ci:num`))
-  ASSUME_TAC THENL
-   [REWRITE_TAC[LENGTH_SUB_LIST; SUB_0] THEN ASM_REWRITE_TAC[] THEN
-    ASM_ARITH_TAC;
-    ALL_TAC] THEN
-  MP_TAC(ISPECL [`entry:int64`; `ci:num`; rej_l1 `i:num`; rej_l2 `i:num`;
-                 s] REJ_BYTES16_APPEND_N) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-  (let th = MP (REWRITE_RULE[ASSUME(mk_eq(rej_count `i:num`,`ci:num`))]
-                (ISPECL [`shake128 inp`; `i:num`] REJ_SAMPLE_SUC))
-               (ASSUME `ci <= 256`) in
-   RULE_ASSUM_TAC(REWRITE_RULE[GSYM th]) THEN
-   MP_TAC(AP_TERM `LENGTH:(16 word)list->num` th)) THEN
-  REWRITE_TAC[LENGTH_APPEND;
-    ASSUME(mk_eq(mk_comb(`LENGTH:(16 word)list->num`,rej_l1 `i:num`),
-                 `ci:num`))] THEN
-  GEN_REWRITE_TAC (LAND_CONV o LAND_CONV) [LENGTH_SUB_LIST] THEN
-  REWRITE_TAC[SUB_0] THEN
-  DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[SYM th]));;
-
-(*** The exit of a loop, decided by whether there are 256 samples ***)
-
-let REJ_C0 =
-  `LENGTH(REJ_SAMPLE(wordlist_of_num 336
-     (num_of_bytelist(list_of_seq (shake128 inp) 504)):(12 word)list))`
-and REJ_CN = mk_comb(`MIN 256`,rej_count `i + 1`);;
-
-let REJ_EXIT_COND_TAC c d =
-  SUBGOAL_THEN (mk_eq(mk_eq(mk_comb(`MIN 256`,c),`256`),d))
-   (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
-   [REWRITE_TAC[ARITH_RULE `MIN 256 x = 256 <=> 256 <= x`] THEN
-    (ASM_REWRITE_TAC[] THEN NO_TAC ORELSE
-     FIRST_ASSUM(fun th ->
-       if is_binary "<" (concl th) && lhand(concl th) = c
-       then MP_TAC th THEN ARITH_TAC else NO_TAC));
-    ALL_TAC];;
-
-let REJ_MIN_TAC =
-  FIRST_ASSUM(fun th ->
-    if is_binary "<" (concl th) && rand(concl th) = `256` &&
-       can (find_term (fun t -> try fst(dest_const t) = "REJ_SAMPLE"
-                               with _ -> false)) (lhand(concl th))
-    then REWRITE_TAC[MATCH_MP (ARITH_RULE `x < 256 ==> MIN 256 x = x`) th]
-    else NO_TAC);;
-
-let REJ_LS_TAC =
-  SUBGOAL_THEN (mk_eq(mk_eq(REJ_CN,`256`),`~(i + 1 < k0)`))
-   (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
-   [REWRITE_TAC[ARITH_RULE `MIN 256 x = 256 <=> 256 <= x`] THEN EQ_TAC THENL
-     [DISCH_TAC THEN DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC o SPEC `i + 1` o check (is_forall o concl)) THEN
-      ASM_REWRITE_TAC[];
-      DISCH_TAC THEN SUBGOAL_THEN `i + 1 = k0` SUBST1_TAC THENL
-       [MAP_EVERY UNDISCH_TAC [`i < k0`; `~(i + 1 < k0)`] THEN ARITH_TAC;
-        ASM_REWRITE_TAC[]]];
-    ALL_TAC];;
-
-(*** The parts of the proof ***)
-
-let REJ_INTRO_TAC =
-  MAP_EVERY X_GEN_TAC
-   [`entry:int64`; `seed:int64`; `inp:byte list`; `k:num`; `guard:int64`;
-    `mf:int64`; `ea:int64`; `el:num`; `ev:num`; `pc:num`] THEN
-  WORD_FORALL_OFFSET_TAC 1088 THEN
-  MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
-              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES;
-              GSYM REJ_SAMPLE] THEN
-  DISCH_THEN(CONJUNCTS_THEN2
-   (LABEL_TAC "H_MEMSET" o REWRITE_RULE[memset_contract])
-   (REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC));;
-
-let REJ_PART1_TAC =
-  ENSURES_INIT_TAC "s0" THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (1--2) THEN
-  MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (3--6) THEN
-  REJ_BUFFER_TAC THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (7--18) THEN
-  REJ_NORMALIZE_TAC THEN
-  LOCAL_INIT_TAC [`read X0 s`; `pc:num`; `read X30 s`] 19 THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (20--23) THEN
-  REJ_GOT_TAC THEN
-  LOCAL_ABSORB_TAC [`read X0 s`; `read X1 s`; `34`;
-                    `num_of_bytelist(inp:byte list)`; `guard:int64`;
-                    `pc:num`; `read SP s`; `read X30 s`] 24 THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (25--28) THEN
-  LOCAL_SQUEEZE_TAC [`read X0 s`; `3`; `read X2 s`; `S0:1600 word`;
-                     `pc:num`; `read SP s`; `read X30 s`] 29 THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (30--34) THEN
-  REJ_NORMALIZE_TAC THEN REJ_INPUT0_TAC `s34:armstate` THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
-
-(*** loop1, giving the samples from the first three blocks ***)
-
-let REJ_LOOP1_TAC =
-  ASSUME_TAC(INST_TYPE [`:12`,`:N`] (ISPECL
-   [`336`; `num_of_bytelist(list_of_seq (shake128 inp) 504)`]
-   LENGTH_WORDLIST_OF_NUM)) THEN
-  LOCAL_LOOP1_TAC [`read X22 s`; `0`; `read X1 s`; `504`;
-     `wordlist_of_num 336 (num_of_bytelist(list_of_seq (shake128 inp) 504)):
-      (12 word)list`; `pc:num`] 1 THEN
-  REJ_POST_TAC THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES; MULT_CLAUSES; SUB_0; WORD_ADD_0;
-                              LENGTH_SUB_LIST]) THEN
-  FIRST_X_ASSUM(ASSUME_TAC o MATCH_MP REJ_BYTES16_OF_WORDLIST o check
-   (can (term_match [] `wordlist_from_memory(entry,n) s = l:int16 list`) o
-    concl));;
-
-let REJ_NOLOOP_TAC =
-  FIRST_X_ASSUM SUBST_ALL_TAC THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MULT_CLAUSES; ADD_CLAUSES]) THEN
-  ENSURES_INIT_TAC "s0" THEN REJ_LOOP1_TAC THEN
-  REJ_EXIT_COND_TAC REJ_C0 `T` THEN
-  SUBGOAL_THEN (mk_eq(mk_comb(`MIN 256`,REJ_C0),`256`))
-   (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
-   [REWRITE_TAC[ARITH_RULE `MIN a b = a <=> a <= b`] THEN ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  MP_TAC(ISPECL [`shake128 inp`; `0`; `k:num`] REJ_SAMPLE_FINAL) THEN
-  REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; LE_0] THEN ANTS_TAC THENL
-   [ASM_REWRITE_TAC[]; DISCH_THEN SUBST1_TAC] THEN
-  RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
-  ASM_REWRITE_TAC[];;
-
-let REJ_EXIT_TAC =
-  ENSURES_INIT_TAC "s0" THEN
-  SUBGOAL_THEN (mk_eq(mk_comb(`MIN 256`,rej_count `k0:num`),`256`))
-   (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
-   [REWRITE_TAC[ARITH_RULE `MIN 256 x = 256 <=> 256 <= x`] THEN
-    ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
-  RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
-  MP_TAC(ISPECL [`shake128 inp`; `k0:num`; `k:num`] REJ_SAMPLE_FINAL) THEN
-  ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_THEN SUBST1_TAC] THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
-
-let REJ_FINAL_TAC =
-  SUBGOAL_THEN
-   (mk_eq(mk_comb(`LENGTH:(16 word)list->num`,rej_l1 `k:num`),`256`))
-  ASSUME_TAC THENL
-   [REWRITE_TAC[LENGTH_SUB_LIST; SUB_0;
-                ARITH_RULE `MIN 256 x = 256 <=> 256 <= x`] THEN
-    ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
-  FIRST_ASSUM(fun th ->
-    if concl th = mk_eq(mk_comb(`LENGTH:(16 word)list->num`,rej_l1 `k:num`),
-                        `256`)
-    then GEN_REWRITE_TAC (LAND_CONV o LAND_CONV o RAND_CONV) [SYM th]
-    else NO_TAC) THEN
-  MATCH_MP_TAC REJ_WORDLIST_OF_BYTES16 THEN ASM_REWRITE_TAC[] THEN
-  CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN ASM_REWRITE_TAC[];;
-
-(*** From the header of loop1 to that of loop2, if one more block is ***)
-(*** needed: the samples from the first three blocks are fewer than 256 ***)
-
-let REJ_ENTER_TAC =
-  ENSURES_INIT_TAC "s0" THEN REJ_LOOP1_TAC THEN
-  REJ_EXIT_COND_TAC REJ_C0 `F` THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (2--4) THEN
-  REJ_NORMALIZE_TAC THEN
-  ENSURES_FINAL_STATE_TAC THEN
-  REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN ASM_REWRITE_TAC[] THEN
-  REJ_MIN_TAC THEN ASM_REWRITE_TAC[];;
-
-(*** The body of loop2, from 3 + i blocks to 3 + i + 1 ***)
-
-let REJ_BODY_TAC =
-  X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-  SUBGOAL_THEN (mk_binop `(<):num->num->bool` (rej_count `i:num`) `256`)
-  ASSUME_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC o SPEC `i:num` o check (is_forall o concl)) THEN
-    ASM_REWRITE_TAC[NOT_LE];
-    ALL_TAC] THEN
-  REJ_MIN_TAC THEN ENSURES_INIT_TAC "s0" THEN
-
-  (*** Squeezing one more block from the state ***)
-
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (1--4) THEN
-  KECCAK_STATE_AT_TAC REJ_CTX THEN
-  LOCAL_SQUEEZE_TAC [`read X0 s`; `1`; `read X2 s`;
-                     `keccak_squeeze (3 + i) (S0:1600 word)`;
-                     `pc:num`; `read SP s`; `read X30 s`] 5 THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600; MULT_CLAUSES;
-                              REJ_NSUM_1; EXP; ADD_CLAUSES;
-                              KECCAK_SQUEEZE_ADD;
-                              ARITH_RULE `1 + 3 + i = 3 + i + 1`]) THEN
-
-  (*** Sampling from it in loop3 after the ci samples so far ***)
-
-  ABBREV_TAC (mk_eq(`ci:num`,rej_count `i:num`)) THEN
-  SUBGOAL_THEN `ci <= 256` ASSUME_TAC THENL
-   [UNDISCH_TAC `ci < 256` THEN ARITH_TAC; ALL_TAC] THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (6--7) THEN
-  REJ_BLOCK_TAC `s7:armstate` THEN
-  ASSUME_TAC(INST_TYPE [`:12`,`:N`]
-   (ISPECL [`112`; rand(rej_block `i:num`)] LENGTH_WORDLIST_OF_NUM)) THEN
-  LOCAL_LOOP3_TAC [`read X22 s`; `ci:num`; `read X2 s`; `168`;
-                   rej_block `i:num`; `pc:num`] 8 THEN
-  REJ_COMBINE_TAC `s8:armstate` THEN
-
-  (*** The exit of loop3, decided by whether there are 256 samples now ***)
-
-  REJ_LS_TAC THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  COND_CASES_TAC THEN ASM_REWRITE_TAC[];;
-
-(*** loop2, if one more block is needed ***)
-
-let REJ_LOOP_TAC =
-  SUBGOAL_THEN (mk_binop `(<):num->num->bool` REJ_C0 `256`) ASSUME_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC o SPEC `0` o check (is_forall o concl)) THEN
-    REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; NOT_LE] THEN
-    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC;
-    ALL_TAC] THEN
-  ENSURES_WHILE_UP2_TAC `k0:num` `pc + mlkem_poly_rej_uniform_loop2`
-   `pc + mlkem_poly_rej_uniform_loop1_exit2` REJ_INV THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REJ_ENTER_TAC;
-    REJ_BODY_TAC;
-    REJ_EXIT_TAC];;
-
-(*** Releasing the state, zeroing the buffer, the stack guard, return ***)
-
-let REJ_PART3_TAC =
-  ENSURES_INIT_TAC "s0" THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (1--2) THEN
-  LOCAL_RELEASE_TAC [`read X0 s`; `pc:num`; `read X30 s`] 3 THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (4--7) THEN
-  LIBC_PLT_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC 7 THEN
-  LIBC_CALL_TAC "H_MEMSET" MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC
-   [`read X0 s`; `read X1 s`; `read X2 s`; `read X30 s`] 12 THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (13--13) THEN
-  MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (14--25) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN REJ_FINAL_TAC;;
-
 let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_IMAGE_SUBROUTINE_CORRECT = prove
- (`!entry seed (inp:byte list) k guard mf ea el ev pc stackpointer
-   returnaddress.
-        memset_contract mf ea el ev /\
-        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-        aligned 16 stackpointer /\ LENGTH inp = 34 /\
-        256 <= LENGTH(FILTER (\x. val x < 3329)
-                       (MAP (word_zx:12 word->16 word)
-                         (wordlist_of_num (336 + 112 * k)
-                           (num_of_bytelist
-                             (list_of_seq (shake128 inp)
-                                          (504 + 168 * k)))))) /\
-        nonoverlapping (entry,512) (word_sub stackpointer (word 1088),1088) /\
-        ALLPAIRS nonoverlapping
-         [(entry,512); (word_sub stackpointer (word 1088),1088)]
-         [(seed,34); (word pc,libmlkem_size);
-          (word(pc + got_stack_chk_guard),8); (guard,8);
-          (word(pc + got_memset),8); (ea,el)]
-        ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc)
-                    mlkem_native_libmlkem_gcc12_O3_mc /\
-                  read PC s = word (pc + mlkem_poly_rej_uniform) /\
-                  read SP s = stackpointer /\
-                  read X30 s = returnaddress /\
-                  C_ARGUMENTS [entry; seed] s /\
-                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
-                    guard /\
-                  read (memory :> bytes64(word(pc + got_memset))) s = mf /\
-                  read (memory :> bytes(ea,el)) s = ev /\
-                  read (memory :> bytes(seed,34)) s = num_of_bytelist inp)
-             (\s. read PC s = returnaddress /\
-                  wordlist_from_memory(entry,256) s =
-                  SUB_LIST(0,256)
-                   (FILTER (\x. val x < 3329)
-                     (MAP (word_zx:12 word->16 word)
-                       (wordlist_of_num (336 + 112 * k)
-                         (num_of_bytelist
-                           (list_of_seq (shake128 inp) (504 + 168 * k)))))))
-             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
-              MAYCHANGE
-               [memory :> bytes(entry,512);
-                memory :> bytes(word_sub stackpointer (word 1088),1088)])`,
+ (MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_IMAGE_SUBROUTINE_CORRECT_STMT,
   REJ_INTRO_TAC THEN REJ_SETUP_TAC THEN REJ_ABSORBED_TAC THEN
   REJ_MINIMAL_TAC THEN
 
@@ -1070,298 +182,8 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_IMAGE_SUBROUTINE_CORRECT = prove
       ASM_CASES_TAC `k0 = 0` THENL [REJ_NOLOOP_TAC; REJ_LOOP_TAC]];
     REJ_PART3_TAC]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof, assuming the corresponding         *)
-(* contract for memset. The events depend only on the addresses and on the   *)
-(* seed, which is public, through the samples and the number of iterations   *)
-(* of loop2, the least k for which there are 256 samples, and the            *)
-(* hypothesis about the samples is still needed for the loop to terminate.   *)
-(* The events are given by a template with the parts before loop1, in loop1  *)
-(* if no more block is needed, in loop1 and from it to loop2 otherwise, in   *)
-(* loop2 and after it, and the proof uses the combined theorems for the hash *)
-(* functions and for loop1 and loop3, with the facts of the correctness      *)
-(* proof.                                                                    *)
-(* ------------------------------------------------------------------------- *)
-
-needs "arm/proofs/subroutine_signatures.ml";;
-
-let PREJ_SAFE_TEMPLATE =
- `\(entry:int64) (seed:int64) (inp:byte list) (guard:int64) (mf:int64)
-   (pc:num) (stackpointer:int64) (returnaddress:int64).
-   APPEND (f_ev_p3 entry seed inp guard mf pc stackpointer returnaddress)
-    (APPEND
-      (if (minimal n.
-             256 <= LENGTH(REJ_SAMPLE(wordlist_of_num (336 + 112 * n)
-                     (num_of_bytelist
-                       (list_of_seq (shake128 inp) (504 + 168 * n)))))) = 0
-       then f_ev_skip entry seed inp guard mf pc stackpointer returnaddress
-       else
-        APPEND
-         (f_ev_exit entry seed inp guard mf pc stackpointer returnaddress)
-         (APPEND
-           (ENUMERATEL
-             (minimal n.
-                256 <= LENGTH(REJ_SAMPLE(wordlist_of_num (336 + 112 * n)
-                        (num_of_bytelist
-                          (list_of_seq (shake128 inp) (504 + 168 * n))))))
-             (\i. f_ev_loop entry seed inp guard mf pc stackpointer
-                    returnaddress i))
-           (f_ev_enter entry seed inp guard mf pc stackpointer returnaddress)))
-      (f_ev_p1 entry seed inp guard mf pc stackpointer returnaddress))
-   :(uarch_event)list`;;
-
-let PREJ_SAFE_INTRO_TAC =
-  REPEAT GEN_TAC THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(fun th ->
-    ASSUME_CALLEE_SAFETY_TAILED_TAC
-     (REWRITE_RULE[memset_safety_contract] th) "H_MEMSET") THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC
-    MLKEM_NATIVE_SHAKE128_INIT_GCC12_O3_IMAGE_SUBROUTINE_SAFE "H_INIT" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC
-    MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O3_IMAGE_SUBROUTINE_FULL
-    "H_ABSORB" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC
-    MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_GCC12_O3_IMAGE_SUBROUTINE_FULL
-    "H_SQUEEZE" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC
-    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP1_FULL "H_LOOP1" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC
-    MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_LOOP3_FULL "H_LOOP3" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC
-    MLKEM_NATIVE_SHAKE128_RELEASE_GCC12_O3_IMAGE_SUBROUTINE_SAFE
-    "H_RELEASE" THEN
-  CONCRETIZE_F_EVENTS_TAC PREJ_SAFE_TEMPLATE THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
-              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES;
-              GSYM REJ_SAMPLE] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  REJ_SETUP_TAC THEN REJ_ABSORBED_TAC THEN REJ_MINIMAL_TAC;;
-
-let PREJ_ALLOWED =
-  [`pc:num`; `entry:int64`; `seed:int64`; `inp:byte list`; `guard:int64`;
-   `mf:int64`; `stackpointer:int64`; `returnaddress:int64`; `i:num`;
-   `f_ev_loop:int64->int64->byte list->int64->int64->num->int64->int64->
-              num->(uarch_event)list`];;
-
-let PREJ_SAFE_CALL_TAC name ilist n =
-  REMOVE_THEN name (fun safety_th ->
-    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-      (mlkem_native_libmlkem_gcc12_O3_mc,
-       MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC,
-       0x0,mlkem_native_libmlkem_gcc12_O3_mc,safety_th)
-      ilist n THENL
-     [EXISTS_E2_TAC (ref PREJ_ALLOWED); LABEL_TAC name safety_th]);;
-
-let PREJ_SAFE_PART1_TAC =
-  REWRITE_TAC(!simulation_precanon_thms) THEN
-  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (1--2) THEN
-  MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (3--6) THEN
-  REJ_BUFFER_TAC THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (7--18) THEN
-  REJ_NORMALIZE_TAC THEN
-  PREJ_SAFE_CALL_TAC "H_INIT"
-   [`e:(uarch_event)list`; `read X0 s`; `pc:num`; `read X30 s`] 19 THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (20--23) THEN
-  REJ_GOT_TAC THEN
-  PREJ_SAFE_CALL_TAC "H_ABSORB"
-   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `34`;
-    `num_of_bytelist(inp:byte list)`; `guard:int64`; `pc:num`; `read SP s`;
-    `read X30 s`] 24 THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (25--28) THEN
-  PREJ_SAFE_CALL_TAC "H_SQUEEZE"
-   [`e:(uarch_event)list`; `read X0 s`; `3`; `read X2 s`; `S0:1600 word`;
-    `pc:num`; `read SP s`; `read X30 s`] 29 THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (30--34) THEN
-  REJ_NORMALIZE_TAC THEN REJ_INPUT0_TAC `s34:armstate` THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-let PREJ_SAFE_LOOP1_TAC =
-  ASSUME_TAC(INST_TYPE [`:12`,`:N`] (ISPECL
-   [`336`; `num_of_bytelist(list_of_seq (shake128 inp) 504)`]
-   LENGTH_WORDLIST_OF_NUM)) THEN
-  PREJ_SAFE_CALL_TAC "H_LOOP1"
-   [`e:(uarch_event)list`; `read X22 s`; `0`; `read X1 s`; `504`;
-    `wordlist_of_num 336 (num_of_bytelist(list_of_seq (shake128 inp) 504)):
-     (12 word)list`; `pc:num`] 1 THEN
-  REJ_POST_TAC THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES; MULT_CLAUSES; SUB_0; WORD_ADD_0;
-                              LENGTH_SUB_LIST]) THEN
-  FIRST_X_ASSUM(ASSUME_TAC o MATCH_MP REJ_BYTES16_OF_WORDLIST o check
-   (can (term_match [] `wordlist_from_memory(entry,n) s = l:int16 list`) o
-    concl));;
-
-let PREJ_SAFE_NOLOOP_TAC =
-  FIRST_X_ASSUM SUBST_ALL_TAC THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MULT_CLAUSES; ADD_CLAUSES]) THEN
-  REWRITE_TAC[] THEN
-  REWRITE_TAC(!simulation_precanon_thms) THEN
-  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-  PREJ_SAFE_LOOP1_TAC THEN
-  REJ_EXIT_COND_TAC REJ_C0 `T` THEN
-  SUBGOAL_THEN (mk_eq(mk_comb(`MIN 256`,REJ_C0),`256`))
-   (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
-   [REWRITE_TAC[ARITH_RULE `MIN a b = a <=> a <= b`] THEN ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  MP_TAC(ISPECL [`shake128 inp`; `0`; `k:num`] REJ_SAMPLE_FINAL) THEN
-  REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; LE_0] THEN ANTS_TAC THENL
-   [ASM_REWRITE_TAC[]; DISCH_THEN SUBST1_TAC] THEN
-  RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
-  ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-let PREJ_SAFE_ENTER_TAC =
-  REWRITE_TAC(!simulation_precanon_thms) THEN
-  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-  PREJ_SAFE_LOOP1_TAC THEN
-  REJ_EXIT_COND_TAC REJ_C0 `F` THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (2--4) THEN
-  REJ_NORMALIZE_TAC THEN
-  ENSURES_FINAL_STATE_TAC THEN
-  REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN ASM_REWRITE_TAC[] THEN
-  REJ_MIN_TAC THEN ASM_REWRITE_TAC[] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-let PREJ_SAFE_BODY_TAC =
-  X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
-  SUBGOAL_THEN (mk_binop `(<):num->num->bool` (rej_count `i:num`) `256`)
-  ASSUME_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC o SPEC `i:num` o check (is_forall o concl)) THEN
-    ASM_REWRITE_TAC[NOT_LE];
-    ALL_TAC] THEN
-  REJ_MIN_TAC THEN
-  REWRITE_TAC(!simulation_precanon_thms) THEN
-  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (1--4) THEN
-  KECCAK_STATE_AT_TAC REJ_CTX THEN
-  PREJ_SAFE_CALL_TAC "H_SQUEEZE"
-   [`e:(uarch_event)list`; `read X0 s`; `1`; `read X2 s`;
-    `keccak_squeeze (3 + i) (S0:1600 word)`;
-    `pc:num`; `read SP s`; `read X30 s`] 5 THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600; MULT_CLAUSES;
-                              REJ_NSUM_1; EXP; ADD_CLAUSES;
-                              KECCAK_SQUEEZE_ADD;
-                              ARITH_RULE `1 + 3 + i = 3 + i + 1`]) THEN
-  ABBREV_TAC (mk_eq(`ci:num`,rej_count `i:num`)) THEN
-  SUBGOAL_THEN `ci <= 256` ASSUME_TAC THENL
-   [UNDISCH_TAC `ci < 256` THEN ARITH_TAC; ALL_TAC] THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (6--7) THEN
-  REJ_BLOCK_TAC `s7:armstate` THEN
-  ASSUME_TAC(INST_TYPE [`:12`,`:N`]
-   (ISPECL [`112`; rand(rej_block `i:num`)] LENGTH_WORDLIST_OF_NUM)) THEN
-  PREJ_SAFE_CALL_TAC "H_LOOP3"
-   [`e:(uarch_event)list`; `read X22 s`; `ci:num`; `read X2 s`; `168`;
-    rej_block `i:num`; `pc:num`] 8 THEN
-  REJ_COMBINE_TAC `s8:armstate` THEN
-  REJ_LS_TAC THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL [COND_CASES_TAC THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  TRY(FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o check (fun th ->
-        is_eq(concl th) && rhs(concl th) = `ci:num`))) THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-let PREJ_SAFE_LOOP_TAC =
-  REWRITE_TAC[EQF_INTRO(ASSUME `~(k0 = 0)`)] THEN
-  SUBGOAL_THEN (mk_binop `(<):num->num->bool` REJ_C0 `256`) ASSUME_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC o SPEC `0` o check (is_forall o concl)) THEN
-    REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; NOT_LE] THEN
-    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC;
-    ALL_TAC] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `k0:num` `pc + mlkem_poly_rej_uniform_loop2`
-   `pc + mlkem_poly_rej_uniform_loop1_exit2` REJ_INV THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    PREJ_SAFE_ENTER_TAC;
-    PREJ_SAFE_BODY_TAC;
-    REWRITE_TAC[] THEN
-    REWRITE_TAC(!simulation_precanon_thms) THEN
-    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-    SUBGOAL_THEN (mk_eq(mk_comb(`MIN 256`,rej_count `k0:num`),`256`))
-     (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
-     [REWRITE_TAC[ARITH_RULE `MIN 256 x = 256 <=> 256 <= x`] THEN
-      ASM_REWRITE_TAC[];
-      ALL_TAC] THEN
-    RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
-    MP_TAC(ISPECL [`shake128 inp`; `k0:num`; `k:num`] REJ_SAMPLE_FINAL) THEN
-    ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_THEN SUBST1_TAC] THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC];;
-
-let PREJ_SAFE_PART3_TAC =
-  FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o check (fun th ->
-    is_eq(concl th) && rhs(concl th) = `k0:num`)) THEN
-  REWRITE_TAC(!simulation_precanon_thms) THEN
-  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (1--2) THEN
-  PREJ_SAFE_CALL_TAC "H_RELEASE"
-   [`e:(uarch_event)list`; `read X0 s`; `pc:num`; `read X30 s`] 3 THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (4--7) THEN
-  LIBC_PLT_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC 7 THEN
-  LIBC_SAFE_CALL_TAC "H_MEMSET" MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC
-   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
-    `read X30 s`] (ref PREJ_ALLOWED) 12 THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (13--13) THEN
-  MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_EXEC (14--25) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC;;
-
 let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_IMAGE_SUBROUTINE_SAFE = prove
- (`!mf ea el ev.
-   memset_safety_contract mf ea el ev
-   ==> exists f_events.
-        forall e entry seed (inp:byte list) k guard pc stackpointer
-               returnaddress.
-         aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-         aligned 16 stackpointer /\ LENGTH inp = 34 /\
-         256 <= LENGTH(FILTER (\x. val x < 3329)
-                        (MAP (word_zx:12 word->16 word)
-                          (wordlist_of_num (336 + 112 * k)
-                            (num_of_bytelist
-                              (list_of_seq (shake128 inp)
-                                           (504 + 168 * k)))))) /\
-         nonoverlapping (entry,512) (word_sub stackpointer (word 1088),1088) /\
-         ALLPAIRS nonoverlapping
-          [(entry,512); (word_sub stackpointer (word 1088),1088)]
-          [(seed,34); (word pc,libmlkem_size);
-           (word(pc + got_stack_chk_guard),8); (guard,8);
-           (word(pc + got_memset),8); (ea,el)]
-         ==> ensures arm
-              (\s. aligned_bytes_loaded s (word pc)
-                     mlkem_native_libmlkem_gcc12_O3_mc /\
-                   read PC s = word (pc + mlkem_poly_rej_uniform) /\
-                   read SP s = stackpointer /\
-                   read X30 s = returnaddress /\
-                   C_ARGUMENTS [entry; seed] s /\
-                   read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
-                     guard /\
-                   read (memory :> bytes64(word(pc + got_memset))) s = mf /\
-                   read (memory :> bytes(ea,el)) s = ev /\
-                   read (memory :> bytes(seed,34)) s = num_of_bytelist inp /\
-                   read events s = e)
-              (\s. read PC s = returnaddress /\
-                   (exists e2.
-                      read events s = APPEND e2 e /\
-                      e2 = f_events entry seed inp guard mf pc
-                             (word_sub stackpointer (word 1088))
-                             returnaddress /\
-                      memaccess_inbounds e2
-                       [seed,34; entry,512;
-                        word_sub stackpointer (word 1088),1088;
-                        word(pc + got_stack_chk_guard),8; guard,8;
-                        word(pc + got_memset),8;
-                        ea,el;
-                        word(pc + rodata_mlk_KeccakF_RoundConstants),192]
-                       [entry,512; word_sub stackpointer (word 1088),1088]))
-              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
-               MAYCHANGE
-                [memory :> bytes(entry,512);
-                 memory :> bytes(word_sub stackpointer (word 1088),1088)])`,
+ (MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O3_IMAGE_SUBROUTINE_SAFE_STMT,
   PREJ_SAFE_INTRO_TAC THEN
   ENSURES_EVENTS_SEQUENCE_TAC
    `pc + mlkem_poly_rej_uniform_loop1_exit2` REJ_A2 THEN CONJ_TAC THENL
