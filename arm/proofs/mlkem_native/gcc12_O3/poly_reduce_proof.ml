@@ -3,114 +3,20 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-(* ========================================================================= *)
-(* Reduction of polynomial coefficients producing nonnegative remainders.    *)
-(* This is the code for mlkem_poly_reduce from mlkem-native's portable C     *)
-(* implementation compiled by gcc 12 with -O3 (see mlkem_native/README.md),  *)
-(* which is the same as with -O2. It is verified in the whole image (see     *)
-(* libmlkem.ml), with the same loop invariants as the proofs of the separate *)
-(* transcription of the -O2 code.                                            *)
-(* ========================================================================= *)
+needs "arm/proofs/mlkem_native/gcc12_O3/poly_reduce_spec.ml";;
 
-needs "arm/proofs/utils/mlkem_native.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/libmlkem.ml";;
-
-(*** The code in the image:
-
-    mlkem_poly_reduce:
-       +0x0: add     x5, x0, #0x200
-       +0x4: mov     w7, #0x4ebf
-       +0x8: mov     w6, #0x2000000
-       +0xc: mov     w4, #0xfffff2ff
-      +0x10: ldrsh   w2, [x0]
-      +0x14: madd    w1, w2, w7, w6
-      +0x18: asr     w1, w1, #26
-      +0x1c: madd    w1, w1, w4, w2
-      +0x20: sxth    w1, w1
-      +0x24: mov     w2, w1
-      +0x28: neg     w2, w2, lsr #16
-      +0x2c: add     w3, w1, #0xd01
-      +0x30: eor     w3, w1, w3
-      +0x34: and     w2, w3, w2, asr #16
-      +0x38: eor     w1, w1, w2
-      +0x3c: strh    w1, [x0], #2
-      +0x40: cmp     x5, x0
-      +0x44: b.ne    <mlkem_poly_reduce+0x10>
-      +0x48: ret
- ***)
-
-let MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_EXEC =
-  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O3_mc
-   [layout_range "mlkem_poly_reduce"];;
-
-(* ------------------------------------------------------------------------- *)
-(* The value computed for each coefficient.                                  *)
-(* ------------------------------------------------------------------------- *)
-
-(*** The conditional addition of 3329, mlk_scalar_signed_to_unsigned_q,
- *** as compiled, applied to the 32-bit result w of the Barrett reduction
- ***)
 
 let CONDADD_GCC12_O3 = prove
- (`!w:int32.
-     word_zx
-      (word_xor (word_sxfrom 15 (word_subword w (0,16):int32))
-       (word_and
-         (word_xor (word_sxfrom 15 (word_subword w (0,16):int32))
-                   (word_add (word_sxfrom 15 (word_subword w (0,16):int32))
-                             (word 3329)))
-         (word_ishr (word_sub (word 0)
-                       (word_ushr (word_sxfrom 15
-                                    (word_subword w (0,16):int32)) 16))
-                    16))):int16 =
-     word_add (word_zx w) (word_and (word_ishr (word_zx w) 15) (word 3329))`,
+ (CONDADD_GCC12_O3_STMT,
   BITBLAST_TAC);;
 
 let REDUCE_ELEMENT = prove
- (`!x:int16.
-     let w:int32 =
-       word_add (word_sx x)
-        (word_mul (word_ishr (word_add (word 33554432)
-                               (word_mul (word_sx x) (word 20159))) 26)
-                  (word 4294963967)) in
-     ival(word_zx
-      (word_xor (word_sxfrom 15 (word_subword w (0,16):int32))
-       (word_and
-         (word_xor (word_sxfrom 15 (word_subword w (0,16):int32))
-                   (word_add (word_sxfrom 15 (word_subword w (0,16):int32))
-                             (word 3329)))
-         (word_ishr (word_sub (word 0)
-                       (word_ushr (word_sxfrom 15
-                                    (word_subword w (0,16):int32)) 16))
-                    16))):int16) =
-     ival x rem &3329`,
+ (REDUCE_ELEMENT_STMT,
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[CONDADD_GCC12_O3; BARRED_SCALAR; BARRED_CONDADD_REM]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Correctness proof.                                                        *)
-(* ------------------------------------------------------------------------- *)
-
 let MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_IMAGE_SUBROUTINE_CORRECT = prove
- (`!a x pc returnaddress.
-        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-        nonoverlapping (word pc,libmlkem_size) (a,512)
-        ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc)
-                    mlkem_native_libmlkem_gcc12_O3_mc /\
-                  read PC s = word (pc + mlkem_poly_reduce) /\
-                  read X30 s = returnaddress /\
-                  C_ARGUMENTS [a] s /\
-                  !i. i < 256
-                      ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
-                          x i)
-             (\s. read PC s = returnaddress /\
-                  !i. i < 256
-                      ==> ival(read(memory :> bytes16
-                                 (word_add a (word(2 * i)))) s) =
-                          ival(x i) rem &3329)
-             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(a,512)])`,
+ (MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_IMAGE_SUBROUTINE_CORRECT_STMT,
   MAP_EVERY X_GEN_TAC
    [`a:int64`; `x:num->int16`; `pc:num`; `returnaddress:int64`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
@@ -187,42 +93,8 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_IMAGE_SUBROUTINE_CORRECT = prove
     ARM_STEPS_TAC MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_EXEC (1--3) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]]);;
 
-(* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof.                                    *)
-(* ------------------------------------------------------------------------- *)
-
-needs "arm/proofs/consttime.ml";;
-needs "arm/proofs/subroutine_signatures.ml";;
-
-(*** The C signature is the same as that of mlkem_reduce ***)
-
-let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:true
-    (assoc "mlkem_reduce" subroutine_signatures)
-    MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_IMAGE_SUBROUTINE_CORRECT
-    MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_EXEC;;
-
 let MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_IMAGE_SUBROUTINE_SAFE = time prove
- (`exists f_events.
-       forall e a pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-           nonoverlapping (word pc,libmlkem_size) (a,512)
-           ==> ensures arm
-               (\s.
-                    aligned_bytes_loaded s (word pc)
-                      mlkem_native_libmlkem_gcc12_O3_mc /\
-                    read PC s = word (pc + mlkem_poly_reduce) /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [a] s /\
-                    read events s = e)
-               (\s.
-                    read PC s = returnaddress /\
-                    exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 = f_events a pc returnaddress /\
-                        memaccess_inbounds e2 [a,512] [a,512])
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [memory :> bytes(a,512)])`,
+ (MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_IMAGE_SUBROUTINE_SAFE_STMT,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(a:int64) (pc:num) (returnaddress:int64).
@@ -286,39 +158,8 @@ let MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_IMAGE_SUBROUTINE_SAFE = time prove
     ALL_TAC] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-(* ------------------------------------------------------------------------- *)
-(* Combined correctness, constant-time and memory safety proof, for the      *)
-(* modulus check of the encapsulation key, whose result the encapsulation    *)
-(* branches on. The loop is that of the correctness proof, but with the loop *)
-(* test at the end of the body, as ENSURES_EVENTS_WHILE_UP2_TAC requires.    *)
-(* ------------------------------------------------------------------------- *)
-
 let MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_IMAGE_SUBROUTINE_FULL = prove
- (`exists f_events.
-       forall e a x pc returnaddress.
-           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
-           nonoverlapping (word pc,libmlkem_size) (a,512)
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc)
-                      mlkem_native_libmlkem_gcc12_O3_mc /\
-                    read PC s = word (pc + mlkem_poly_reduce) /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [a] s /\
-                    (!i. i < 256
-                         ==> read(memory :> bytes16
-                                   (word_add a (word(2 * i)))) s = x i) /\
-                    read events s = e)
-               (\s. read PC s = returnaddress /\
-                    (!i. i < 256
-                         ==> ival(read(memory :> bytes16
-                                    (word_add a (word(2 * i)))) s) =
-                             ival(x i) rem &3329) /\
-                    (exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 = f_events a pc returnaddress /\
-                        memaccess_inbounds e2 [a,512] [a,512]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [memory :> bytes(a,512)])`,
+ (MLKEM_NATIVE_POLY_REDUCE_GCC12_O3_IMAGE_SUBROUTINE_FULL_STMT,
   CONCRETIZE_F_EVENTS_TAC
     `\(a:int64) (pc:num) (returnaddress:int64).
       APPEND
