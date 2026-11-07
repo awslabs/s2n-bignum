@@ -31,3 +31,47 @@ LDR and STR of a D register with a register offset.
 
 Where a proof is the same as for `-O2` up to the names of the build, this
 is noted below, as a candidate for sharing the proof between the builds.
+
+## The proofs compared with gcc 12 -O2
+
+Measured at 43f55641 on each function's spec and proof files together, with
+comments stripped and the build name renamed: the share of the code lines
+that also occur, in order, in the gcc12_O2 proof of the same function.
+There are 115 functions (`mlk_keccak_absorb_once_x4` has no code of its
+own here). Of the 55,151 code lines, 76% are shared.
+
+ - 41 functions share at least 99%: their proofs are the same as for
+   `-O2` up to the build name, and are candidates for sharing once the
+   build name is a parameter. They are the KEM and K-PKE top layer
+   (`check_sk`, `enc_derand`, `enc_k4`, `indcpa_enc`,
+   `indcpa_keypair_derand_k2/k4`, `keypair`, `gen_matrix_k2`), the
+   polyvec wrappers (`add`, `compress_du`, `decompress_du`, `reduce`),
+   `poly_add`, `poly_sub`, `poly_getnoise_eta2`, the x4 Keccak
+   functions, and the SHAKE128 init, release and squeeze functions.
+ - 38 share 90-98%: the same proof with other frames, registers, step
+   numbers or read-only regions.
+ - 19 share 50-89%.
+ - 17 share less than 50%: the kernels whose code is vectorized (basemul,
+   NTT and inverse NTT, mulcache, frombytes and tobytes, compress and
+   decompress d4, cbd3, tomsg, keccakf1600 xor and extract bytes) and
+   the SHA3 and SHAKE functions into which gcc inlined the absorb
+   (`sha3_512` 9%, `shake128_absorb_once` 12%). Their proofs use the
+   build-independent tactics in `../../proofs/mlkem_native/`
+   (`overlap.ml`, `interleave.ml`).
+
+The theorem statements, compared the same way:
+
+| | pairs | identical | differ only in numbers | differ otherwise |
+|---|---|---|---|---|
+| CORRECT | 111 | 74 | 23 | 14 |
+| SAFE | 114 | 38 | 7 | 69 |
+| FULL | 30 | 16 | 4 | 10 |
+
+The numbers are frame sizes and buffer offsets. The other CORRECT
+differences are mostly arguments the vectorized code needs, e.g. the
+stack pointer of the vectorized basemul. Most SAFE differences are the
+read-only regions: the vectorized kernels read their own constant tables
+(NTT, mulcache, basemul and compress constants), and cbd2 reads none.
+`../../proofs/mlkem_native/doc/` has the general comparison
+(`comparison.md`, for the monolithic build) and the cost of the proofs.
+
