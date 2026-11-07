@@ -1,0 +1,332 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/mlkem_native/gcc12_O2_mono/dec_k2_spec.ml";;
+
+
+let KPKE_DECRYPT_K2_RESULT = prove
+ (KPKE_DECRYPT_K2_RESULT_STMT,
+  let parity_tac =
+    X_GEN_TAC `n':num` THEN DISCH_TAC THEN
+    MP_TAC(SPECL [`2`; `128`; `n':num`] EXISTS_DIV_MOD_LT) THEN
+    ASM_REWRITE_TAC[ARITH_RULE `2 * 128 = 256`; LEFT_IMP_EXISTS_THM] THEN
+    MAP_EVERY X_GEN_TAC [`p:num`; `b:num`] THEN
+    DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+    FIRST_X_ASSUM SUBST_ALL_TAC THEN
+    FIRST_X_ASSUM(DISJ_CASES_THEN SUBST_ALL_TAC o
+      MATCH_MP(ARITH_RULE `b < 2 ==> b = 0 \/ b = 1`)) THEN
+    REWRITE_TAC[ADD_CLAUSES] THEN
+    (SUBGOAL_THEN `2 * p < 256 /\ 2 * p + 1 < 256` STRIP_ASSUME_TAC THENL
+      [UNDISCH_TAC `p < 128` THEN ARITH_TAC; ALL_TAC])
+and row_tac =
+    CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+    CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[ADD_CLAUSES; INT_CONG_REFL] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[] in
+  REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[mlkem512] THEN
+  REWRITE_TAC[KPKE_DECRYPT_FIPS] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  W(fun (_,w) ->
+    let enc = find_term (fun t -> match strip_comb t with
+       (Const("mlkem_encode",_),[_;_;_]) -> true | _ -> false) w in
+    MP_TAC(PART_MATCH (lhand o rand) NUM_OF_BYTELIST_MLKEM_ENCODE
+            (mk_comb(`num_of_bytelist`,enc)))) THEN
+  ANTS_TAC THENL
+   [CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV THENC DIVIDES_CONV);
+    DISCH_THEN SUBST1_TAC] THEN
+  MATCH_MP_TAC NSUM_EQ THEN REWRITE_TAC[IN_ELIM_THM] THEN
+  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  CONV_TAC(DEPTH_CONV BETA_CONV) THEN REWRITE_TAC[MULT_CLAUSES] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN
+  W(fun (_,w) ->
+    let pinv = find_term (fun t -> match t with
+      Comb(Const("mlkem_ntt_inv",_),_) -> true | _ -> false) w in
+    SUBGOAL_THEN
+     (mk_comb(mk_comb(`(IN):((1->num)->int)->(((1->num)->int)->bool)->bool`,
+                      pinv),`ring_carrier mlkem_rq`)) ASSUME_TAC THENL
+     [MATCH_MP_TAC MLKEM_NTT_INV_IN_RQ THEN
+      REWRITE_TAC[GSYM IN_MLKEM_ZQ; RING_SUM];
+      ALL_TAC]) THEN
+  W(fun (_,w) ->
+    let wt = find_term (fun t -> match t with
+      Comb(Comb(Comb(Const("ring_sub",_),_),_),_) -> true | _ -> false) w in
+    SUBGOAL_THEN
+     (mk_comb(mk_comb(`(IN):((1->num)->int)->(((1->num)->int)->bool)->bool`,
+                      wt),`ring_carrier mlkem_rq`)) ASSUME_TAC THENL
+     [MATCH_MP_TAC RING_SUB THEN ASM_REWRITE_TAC[MLKEM_POLY_IN_RQ];
+      ALL_TAC]) THEN
+  W(fun (_,w) ->
+    let t = find_term (fun t -> match t with
+      Comb(Const("num_of_int",_),
+           Comb(Comb(Const("rem",_),
+                Comb(Comb(Const("mlkem_compress",_),_),_)),_)) -> true
+      | _ -> false) w in
+    MP_TAC(PART_MATCH (lhand o rand) MLKEM_COMPRESS_DIGIT t)) THEN
+  ANTS_TAC THENL
+   [MATCH_MP_TAC MLKEM_COEFF_POS THEN ASM_REWRITE_TAC[];
+    DISCH_THEN SUBST1_TAC] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  MATCH_MP_TAC VAL_EQ_NUM_OF_INT_IVAL THEN CONJ_TAC THENL
+   [MATCH_MP_TAC MLKEM_COEFF_POS THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  ASM_SIMP_TAC[MLKEM_RQ_COEFF_SUB; MLKEM_POLY_IN_RQ] THEN
+  REWRITE_TAC[MLKEM_ZQ; INT_REM_EQ] THEN
+  ABBREV_TAC `fv = (num_of_bytelist (mlkem_slice 640 128 ct) DIV
+                    2 EXP (4 * i)) MOD 2 EXP 4` THEN
+  SUBGOAL_THEN `(3329 * fv + 8) DIV 16 < 3329` ASSUME_TAC THENL
+   [SUBGOAL_THEN `fv < 16` MP_TAC THENL
+     [EXPAND_TAC "fv" THEN
+      REWRITE_TAC[ARITH_RULE `16 = 2 EXP 4`; MOD_LT_EQ] THEN
+      CONV_TAC NUM_REDUCE_CONV;
+      ARITH_TAC];
+    ALL_TAC] THEN
+  SUBGOAL_THEN `ival(word((3329 * fv + 8) DIV 16):int16) =
+                &((3329 * fv + 8) DIV 16)` ASSUME_TAC THENL
+   [MATCH_MP_TAC IVAL_WORD_SMALL THEN
+    UNDISCH_TAC `(3329 * fv + 8) DIV 16 < 3329` THEN ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN `abs(ival((WI:num->int16) i)) <= &26624` ASSUME_TAC THENL
+   [ASM_SIMP_TAC[]; ALL_TAC] THEN
+  W(fun (_,w) ->
+    let t = find_term (fun t -> match t with
+      Comb(Const("ival",_),Comb(Comb(Const("word_sub",_),_),_)) -> true
+      | _ -> false) w in
+    MP_TAC(PART_MATCH (lhand o rand) IVAL_WORD_SUB_BOUNDED t)) THEN
+  ANTS_TAC THENL
+   [ASM_REWRITE_TAC[] THEN
+    UNDISCH_TAC `(3329 * fv + 8) DIV 16 < 3329` THEN
+    REWRITE_TAC[GSYM INT_OF_NUM_LT] THEN
+    UNDISCH_TAC `abs(ival((WI:num->int16) i)) <= &26624` THEN INT_ARITH_TAC;
+    DISCH_THEN SUBST1_TAC] THEN
+  ASM_REWRITE_TAC[COEFF_MLKEM_POLY] THEN
+  SIMP_TAC[MLKEM_DECODE_SMALL; ARITH_RULE `4 < 12`] THEN
+  ASM_SIMP_TAC[MLKEM_DECOMPRESS_NUM; ARITH_EQ] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN
+   `&((3329 * fv + 8) DIV 16) rem &3329 = &((3329 * fv + 8) DIV 16)`
+  SUBST1_TAC THENL
+   [MATCH_MP_TAC INT_REM_LT THEN REWRITE_TAC[INT_POS; INT_OF_NUM_LT] THEN
+    ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  MATCH_MP_TAC(INTEGER_RULE
+   `(b:int == d) (mod q) ==> (a - b == a - d) (mod q)`) THEN
+  SUBGOAL_THEN
+   `!j' n. j' < 2 /\ n < 256
+           ==> (ival((UH:num->int16)(256 * j' + n)) ==
+                mlkem_ntt (mlkem_poly
+                  (\j''. mlkem_decompress 10
+                          (mlkem_decode 10 ct (256 * j' + j'')))) n)
+               (mod &3329)`
+  ASSUME_TAC THENL
+   [REPEAT STRIP_TAC THEN MATCH_MP_TAC MLKEM_NATIVE_NTT_CONG THEN
+    EXISTS_TAC `\n. (UD:num->int16)(256 * j' + n)` THEN
+    REWRITE_TAC[MLKEM_POLY_IN_RQ] THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+    ASM_SIMP_TAC[] THEN
+    X_GEN_TAC `n':num` THEN DISCH_TAC THEN
+    SUBGOAL_THEN `256 * j' + n' < 512` ASSUME_TAC THENL
+     [UNDISCH_TAC `j' < 2` THEN UNDISCH_TAC `n' < 256` THEN ARITH_TAC;
+      ALL_TAC] THEN
+    ASM_SIMP_TAC[COEFF_MLKEM_POLY; MLKEM_DECODE_SMALL; ARITH_RULE `10 < 12`;
+                 MLKEM_DECOMPRESS_NUM; ARITH_EQ] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
+    REWRITE_TAC[INT_CONG_RREM] THEN
+    ABBREV_TAC `fu = (num_of_bytelist ct DIV 2 EXP (10 * (256 * j' + n'))) MOD
+                     1024` THEN
+    SUBGOAL_THEN `fu < 1024` MP_TAC THENL
+     [EXPAND_TAC "fu" THEN REWRITE_TAC[MOD_LT_EQ] THEN
+      CONV_TAC NUM_REDUCE_CONV;
+      DISCH_TAC] THEN
+    SUBGOAL_THEN `ival(word((3329 * fu + 512) DIV 1024):int16) =
+                  &((3329 * fu + 512) DIV 1024)` SUBST1_TAC THENL
+     [MATCH_MP_TAC IVAL_WORD_SMALL THEN UNDISCH_TAC `fu < 1024` THEN ARITH_TAC;
+      REWRITE_TAC[INT_CONG_REFL]];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `!n'. n' < 256
+         ==> (ival((WP:num->int16) n') ==
+              &169 * ring_sum mlkem_zq {j' | j' < 2}
+                      (\j'. fips203_multiply_ntts
+                             (\n. mlkem_decode 12 dk (256 * j' + n))
+                             (mlkem_ntt (mlkem_poly
+                               (\j''. mlkem_decompress 10
+                                       (mlkem_decode 10 ct (256 * j' + j'')))))
+                             n')) (mod &3329)`
+  ASSUME_TAC THENL
+   [parity_tac THEN
+    (SUBGOAL_THEN
+      `!j' x. j' < 2 /\ x < 256
+              ==> (ival((SS:num->int16)(256 * j' + x)) ==
+                   mlkem_decode 12 dk (256 * j' + x)) (mod &3329)`
+     ASSUME_TAC THENL
+      [REPEAT STRIP_TAC THEN MATCH_MP_TAC TT_DECODE_CONG THEN
+       FIRST_X_ASSUM MATCH_MP_TAC THEN
+       UNDISCH_TAC `j' < 2` THEN UNDISCH_TAC `x < 256` THEN ARITH_TAC;
+       ALL_TAC])
+    THENL
+     [MP_TAC(SPECL
+       [`\j' n. mlkem_decode 12 dk (256 * j' + n)`;
+        `\j' n. ival((SS:num->int16)(256 * j' + n))`;
+        `\j' n. ival((UH:num->int16)(256 * j' + n))`;
+        `\j'. ival((MC:num->int16)(128 * j' + p))`;
+        `\j'. mlkem_ntt (mlkem_poly
+                (\j''. mlkem_decompress 10
+                        (mlkem_decode 10 ct (256 * j' + j''))))`;
+        `ival((WP:num->int16)(2 * p))`; `p:num`] BASEMUL2_ROW_EVEN);
+      MP_TAC(SPECL
+       [`\j' n. mlkem_decode 12 dk (256 * j' + n)`;
+        `\j' n. ival((SS:num->int16)(256 * j' + n))`;
+        `\j' n. ival((UH:num->int16)(256 * j' + n))`;
+        `\j'. mlkem_ntt (mlkem_poly
+                (\j''. mlkem_decompress 10
+                        (mlkem_decode 10 ct (256 * j' + j''))))`;
+        `ival((WP:num->int16)(2 * p + 1))`; `p:num`] BASEMUL2_ROW_ODD)] THEN
+    row_tac;
+    ALL_TAC] THEN
+  W(fun (_,w) ->
+    let pinv = find_term (fun t -> match t with
+      Comb(Const("mlkem_ntt_inv",_),_) -> true | _ -> false) w in
+    MP_TAC(ISPECL [rand pinv; `\n. ival((WP:num->int16) n)`; `&169:int`;
+                   `i:num`] MLKEM_NTT_INV_CONG_MUL)) THEN
+  ANTS_TAC THENL
+   [CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+    ASM_SIMP_TAC[GSYM IN_MLKEM_ZQ; RING_SUM];
+    DISCH_TAC] THEN
+  MATCH_MP_TAC INT_CONG_MONT_CANCEL THEN
+  EXISTS_TAC `inverse_ntt (\n. ival((WP:num->int16) n)) i` THEN
+  ASM_SIMP_TAC[]);;
+
+let KD2_DU_SPLIT = prove
+ (KD2_DU_SPLIT_STMT,
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE;
+              ARITH_RULE `2560 * j = 8 * 320 * j`;
+              ARITH_RULE `2560 = 8 * 320`;
+              READ_BYTES_DIV; READ_BYTES_MOD] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[PAIR_EQ] THEN ASM_ARITH_TAC);;
+
+let KD2_DU_FIELD = prove
+ (KD2_DU_FIELD_STMT,
+  REPEAT STRIP_TAC THEN
+  GEN_REWRITE_TAC LAND_CONV [DIV_MOD] THEN
+  REWRITE_TAC[GSYM EXP_ADD; MOD_MOD_EXP_MIN] THEN
+  ASM_SIMP_TAC[ARITH_RULE
+   `i < 256 ==> MIN 2560 (10 * i + 10) = 10 * i + 10`] THEN
+  REWRITE_TAC[EXP_ADD; GSYM DIV_MOD; DIV_DIV]);;
+
+let KD2_DEC_A = KD2_DEC_LEMMA 12096;;
+
+let KD2_DEC_U = KD2_DEC_LEMMA 12112;;
+
+let KPKE_ENCRYPT_LENGTH_512 = prove
+ (KPKE_ENCRYPT_LENGTH_512_STMT,
+  REWRITE_TAC[mlkem512; KPKE_ENCRYPT_LENGTH] THEN CONV_TAC NUM_REDUCE_CONV);;
+
+let KPKE_DECRYPT_LENGTH_512 = prove
+ (KPKE_DECRYPT_LENGTH_512_STMT,
+  REWRITE_TAC[mlkem512; KPKE_DECRYPT_LENGTH]);;
+
+let KD2_CHECK = prove
+ (KD2_CHECK_STMT,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[mlkem512; mlkem_decaps_check] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[mlkem_h] THEN
+  CONV_TAC(LAND_CONV SYM_CONV) THEN CONV_TAC SYM_CONV THEN
+  MATCH_MP_TAC NUM_OF_BYTELIST_INJ THEN
+  REWRITE_TAC[mlkem_slice; LENGTH_LIST_OF_SEQ; LENGTH_SHA3_256]);;
+
+let KD2_ALIGNED_16_32 = prove
+ (KD2_ALIGNED_16_32_STMT,
+  CONJ_TAC THEN GEN_TAC THEN REWRITE_TAC[aligned; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIVIDES_CONV) THEN REWRITE_TAC[] THENL
+   [MP_TAC(ISPECL [`x:int64`; `4`] (CONJUNCT1 WORD_AND_MASK_WORD));
+    MP_TAC(ISPECL [`x:int64`; `5`] (CONJUNCT1 WORD_AND_MASK_WORD))] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[DIVIDES_MOD; GSYM VAL_EQ_0; VAL_WORD; DIMINDEX_64] THEN
+  SIMP_TAC[MOD_LT; ARITH_RULE `x MOD 16 < 16`; ARITH_RULE `x MOD 32 < 32`;
+           ARITH_RULE `x < 16 ==> x < 2 EXP 64`;
+           ARITH_RULE `x < 32 ==> x < 2 EXP 64`]);;
+
+let KD2_BUFFER_ADDRESS = prove
+ (KD2_BUFFER_ADDRESS_STMT,
+  REWRITE_TAC[KD2_ALIGNED_16_32] THEN GEN_TAC THEN
+  COND_CASES_TAC THEN POP_ASSUM MP_TAC THEN
+  W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w)));;
+
+let KD2_TEST = prove
+ (KD2_TEST_STMT,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD;
+              WORD_RULE `word_sub (word_add a x) (word_add a y):int64 =
+                         word_sub x y`] THEN
+  REWRITE_TAC[VAL_EQ_0; WORD_SUB_EQ_0; GSYM VAL_EQ; VAL_WORD; DIMINDEX_64] THEN
+  SUBGOAL_THEN `b + 2816 < 2 EXP 64 /\ ((b + 2048) + 16 * i) + 16 < 2 EXP 64`
+   (fun th -> SIMP_TAC[th; MOD_LT]) THENL
+   [CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC; ASM_ARITH_TAC]);;
+
+let KD2_KP_ADDR2 = prove
+ (KD2_KP_ADDR2_STMT,
+  REPEAT GEN_TAC THEN REWRITE_TAC[WORD_ADD] THEN CONV_TAC WORD_RULE);;
+
+let MLKEM_NATIVE_DEC_K2_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLKEM_NATIVE_DEC_K2_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT_STMT,
+  KD2_INTRO_TAC THEN ASM_CASES_TAC `aligned 32 (stackpointer:int64)` THENL
+   [KD2_CASE_TAC 12096; KD2_CASE_TAC 12112]);;
+
+let KD2_DEC_SAFE_A = prove
+ (KD2_DEC_SAFE_A_STMT, KD2_DEC_SAFE_TAC);;
+
+let KD2_DEC_SAFE_U = prove
+ (KD2_DEC_SAFE_U_STMT, KD2_DEC_SAFE_TAC);;
+
+let KD2_DEC_SAFE = prove
+ (KD2_DEC_SAFE_STMT,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  MP_TAC(UNDISCH(SPEC_ALL KD2_DEC_SAFE_A)) THEN
+  DISCH_THEN(X_CHOOSE_TAC
+   `fa:int64->int64->int64->num->int64->(uarch_event)list`) THEN
+  MP_TAC(UNDISCH(SPEC_ALL KD2_DEC_SAFE_U)) THEN
+  DISCH_THEN(X_CHOOSE_TAC
+   `fu:int64->int64->int64->num->int64->(uarch_event)list`) THEN
+  EXISTS_TAC
+   `\(sk:int64) (c:int64) (mf:int64) (pc:num) (stackpointer:int64)
+      (b:num).
+       if b = 12096 then fa sk c mf pc stackpointer
+       else fu sk c mf pc stackpointer:(uarch_event)list` THEN
+  REWRITE_TAC[] THEN REPEAT GEN_TAC THEN
+  DISCH_THEN(fun th ->
+    DISJ_CASES_THEN (fun eq -> SUBST1_TAC eq THEN
+                               MP_TAC(REWRITE_RULE[eq] (CONJUNCT2 th)))
+     (CONJUNCT1 th)) THEN
+  REWRITE_TAC[ARITH_EQ] THEN FIRST_ASSUM MATCH_ACCEPT_TAC);;
+
+let KD2_KBAR_ADDR = prove
+ (KD2_KBAR_ADDR_STMT,
+  REPEAT GEN_TAC THEN REWRITE_TAC[KD2_KP_ADDR2] THEN AP_TERM_TAC THEN
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD; DIMINDEX_64] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
+  REWRITE_TAC[ARITH_RULE
+   `(a + b) + (i + 1) + 18446744073709551615 =
+    1 * 18446744073709551616 + (a + b + i)`; MOD_MULT_ADD]);;
+
+let MLKEM_NATIVE_DEC_K2_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE = prove
+ (MLKEM_NATIVE_DEC_K2_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE_STMT,
+  KD2_SAFE_INTRO_TAC THEN
+  ASM_CASES_TAC
+   `num_of_bytelist(hh:byte list) = num_of_bytelist(sha3_256 ekk)` THEN
+  ASM_REWRITE_TAC[] THENL
+   [ENSURES_EVENTS_WHILE_UP2_TAC `48` `pc + mlkem512_dec_loop2`
+    `pc + mlkem512_dec_loop2_exit`
+     KD2_SAFE_INV THEN
+    REPEAT CONJ_TAC THENL
+     [ARITH_TAC; KD2_SAFE_PART1_TAC; KD2_SAFE_BODY_TAC;
+      ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + mlkem512_dec_loop3`
+       `pc + mlkem512_dec_loop3_exit`
+       KD2_SAFE_CMOV_INV THEN
+      REPEAT CONJ_TAC THENL
+       [ARITH_TAC; KD2_SAFE_EXIT_A_TAC; KD2_SAFE_CMOV_BODY_TAC;
+        KD2_SAFE_EXIT_B_TAC]];
+    KD2_SAFE_BAD_TAC]);;

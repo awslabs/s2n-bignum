@@ -1,0 +1,14 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_rej_uniform_x4_spec.ml";;
+
+
+let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_LOOPS_FULL =
+  map REJ_LOOP_FULL MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_LOOPS;;
+
+let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_LOOPS_CORRECT =
+  map2 REJ_LOOP_CORRECT MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_LOOPS
+   MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_LOOPS_FULL;;
