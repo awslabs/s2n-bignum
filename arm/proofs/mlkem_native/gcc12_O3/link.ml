@@ -94,27 +94,28 @@ needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_add_k3_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_compress_du_k3_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/indcpa_enc_k3_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/dec_k3_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/enc_derand_k2_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/enc_derand_k3_proof.ml";;
+needs "arm/proofs/mlkem_native/gcc12_O3/poly_decompress_d11_proof.ml";;
+needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_decompress_du_k4_proof.ml";;
+needs "arm/proofs/mlkem_native/gcc12_O3/poly_decompress_d5_proof.ml";;
+needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_ntt_k4_proof.ml";;
+needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_mulcache_compute_k4_proof.ml";;
+needs "arm/proofs/mlkem_native/gcc12_O3/indcpa_dec_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/gen_matrix_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/poly_getnoise_eta1_4x_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/poly_getnoise_eta2_k4_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_ntt_k4_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_mulcache_compute_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_invntt_tomont_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_add_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/poly_compress_d11_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_compress_du_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/poly_compress_d5_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/indcpa_enc_k4_proof.ml";;
+needs "arm/proofs/mlkem_native/gcc12_O3/dec_k4_proof.ml";;
+needs "arm/proofs/mlkem_native/gcc12_O3/enc_derand_k2_proof.ml";;
+needs "arm/proofs/mlkem_native/gcc12_O3/enc_derand_k3_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/enc_derand_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/enc_k2_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/enc_k3_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/enc_k4_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/poly_decompress_d11_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_decompress_du_k4_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/poly_decompress_d5_proof.ml";;
-needs "arm/proofs/mlkem_native/gcc12_O3/indcpa_dec_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/poly_getnoise_eta1_4x_k2_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/poly_tomont_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_tomont_k2_proof.ml";;
@@ -199,6 +200,12 @@ let MLKEM_NATIVE_DEC_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT =
 
 let MLKEM_NATIVE_DEC_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE =
   relative_close MLKEM_NATIVE_DEC_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_DEC_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close MLKEM_NATIVE_DEC_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_DEC_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close MLKEM_NATIVE_DEC_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE;;
 
 let MLKEM_NATIVE_ENC_DERAND_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT =
   relative_close MLKEM_NATIVE_ENC_DERAND_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;;
