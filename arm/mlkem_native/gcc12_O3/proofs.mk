@@ -1812,27 +1812,28 @@ mlkem_native/gcc12_O3/link.native: \
   proofs/mlkem_native/gcc12_O3/polyvec_compress_du_k3_proof.ml \
   proofs/mlkem_native/gcc12_O3/indcpa_enc_k3_proof.ml \
   proofs/mlkem_native/gcc12_O3/dec_k3_proof.ml \
-  proofs/mlkem_native/gcc12_O3/enc_derand_k2_proof.ml \
-  proofs/mlkem_native/gcc12_O3/enc_derand_k3_proof.ml \
+  proofs/mlkem_native/gcc12_O3/poly_decompress_d11_proof.ml \
+  proofs/mlkem_native/gcc12_O3/polyvec_decompress_du_k4_proof.ml \
+  proofs/mlkem_native/gcc12_O3/poly_decompress_d5_proof.ml \
+  proofs/mlkem_native/gcc12_O3/polyvec_ntt_k4_proof.ml \
+  proofs/mlkem_native/gcc12_O3/polyvec_mulcache_compute_k4_proof.ml \
+  proofs/mlkem_native/gcc12_O3/indcpa_dec_k4_proof.ml \
   proofs/mlkem_native/gcc12_O3/gen_matrix_k4_proof.ml \
   proofs/mlkem_native/gcc12_O3/poly_getnoise_eta1_4x_k4_proof.ml \
   proofs/mlkem_native/gcc12_O3/poly_getnoise_eta2_k4_proof.ml \
-  proofs/mlkem_native/gcc12_O3/polyvec_ntt_k4_proof.ml \
-  proofs/mlkem_native/gcc12_O3/polyvec_mulcache_compute_k4_proof.ml \
   proofs/mlkem_native/gcc12_O3/polyvec_invntt_tomont_k4_proof.ml \
   proofs/mlkem_native/gcc12_O3/polyvec_add_k4_proof.ml \
   proofs/mlkem_native/gcc12_O3/poly_compress_d11_proof.ml \
   proofs/mlkem_native/gcc12_O3/polyvec_compress_du_k4_proof.ml \
   proofs/mlkem_native/gcc12_O3/poly_compress_d5_proof.ml \
   proofs/mlkem_native/gcc12_O3/indcpa_enc_k4_proof.ml \
+  proofs/mlkem_native/gcc12_O3/dec_k4_proof.ml \
+  proofs/mlkem_native/gcc12_O3/enc_derand_k2_proof.ml \
+  proofs/mlkem_native/gcc12_O3/enc_derand_k3_proof.ml \
   proofs/mlkem_native/gcc12_O3/enc_derand_k4_proof.ml \
   proofs/mlkem_native/gcc12_O3/enc_k2_proof.ml \
   proofs/mlkem_native/gcc12_O3/enc_k3_proof.ml \
   proofs/mlkem_native/gcc12_O3/enc_k4_proof.ml \
-  proofs/mlkem_native/gcc12_O3/poly_decompress_d11_proof.ml \
-  proofs/mlkem_native/gcc12_O3/polyvec_decompress_du_k4_proof.ml \
-  proofs/mlkem_native/gcc12_O3/poly_decompress_d5_proof.ml \
-  proofs/mlkem_native/gcc12_O3/indcpa_dec_k4_proof.ml \
   proofs/mlkem_native/gcc12_O3/poly_getnoise_eta1_4x_k2_proof.ml \
   proofs/mlkem_native/gcc12_O3/poly_tomont_proof.ml \
   proofs/mlkem_native/gcc12_O3/polyvec_tomont_k2_proof.ml \
@@ -1926,27 +1927,28 @@ mlkem_native/gcc12_O3/link.native: \
   proofs/mlkem_native/gcc12_O3/polyvec_compress_du_k3_spec.ml \
   proofs/mlkem_native/gcc12_O3/indcpa_enc_k3_spec.ml \
   proofs/mlkem_native/gcc12_O3/dec_k3_spec.ml \
-  proofs/mlkem_native/gcc12_O3/enc_derand_k2_spec.ml \
-  proofs/mlkem_native/gcc12_O3/enc_derand_k3_spec.ml \
+  proofs/mlkem_native/gcc12_O3/poly_decompress_d11_spec.ml \
+  proofs/mlkem_native/gcc12_O3/polyvec_decompress_du_k4_spec.ml \
+  proofs/mlkem_native/gcc12_O3/poly_decompress_d5_spec.ml \
+  proofs/mlkem_native/gcc12_O3/polyvec_ntt_k4_spec.ml \
+  proofs/mlkem_native/gcc12_O3/polyvec_mulcache_compute_k4_spec.ml \
+  proofs/mlkem_native/gcc12_O3/indcpa_dec_k4_spec.ml \
   proofs/mlkem_native/gcc12_O3/gen_matrix_k4_spec.ml \
   proofs/mlkem_native/gcc12_O3/poly_getnoise_eta1_4x_k4_spec.ml \
   proofs/mlkem_native/gcc12_O3/poly_getnoise_eta2_k4_spec.ml \
-  proofs/mlkem_native/gcc12_O3/polyvec_ntt_k4_spec.ml \
-  proofs/mlkem_native/gcc12_O3/polyvec_mulcache_compute_k4_spec.ml \
   proofs/mlkem_native/gcc12_O3/polyvec_invntt_tomont_k4_spec.ml \
   proofs/mlkem_native/gcc12_O3/polyvec_add_k4_spec.ml \
   proofs/mlkem_native/gcc12_O3/poly_compress_d11_spec.ml \
   proofs/mlkem_native/gcc12_O3/polyvec_compress_du_k4_spec.ml \
   proofs/mlkem_native/gcc12_O3/poly_compress_d5_spec.ml \
   proofs/mlkem_native/gcc12_O3/indcpa_enc_k4_spec.ml \
+  proofs/mlkem_native/gcc12_O3/dec_k4_spec.ml \
+  proofs/mlkem_native/gcc12_O3/enc_derand_k2_spec.ml \
+  proofs/mlkem_native/gcc12_O3/enc_derand_k3_spec.ml \
   proofs/mlkem_native/gcc12_O3/enc_derand_k4_spec.ml \
   proofs/mlkem_native/gcc12_O3/enc_k2_spec.ml \
   proofs/mlkem_native/gcc12_O3/enc_k3_spec.ml \
   proofs/mlkem_native/gcc12_O3/enc_k4_spec.ml \
-  proofs/mlkem_native/gcc12_O3/poly_decompress_d11_spec.ml \
-  proofs/mlkem_native/gcc12_O3/polyvec_decompress_du_k4_spec.ml \
-  proofs/mlkem_native/gcc12_O3/poly_decompress_d5_spec.ml \
-  proofs/mlkem_native/gcc12_O3/indcpa_dec_k4_spec.ml \
   proofs/mlkem_native/gcc12_O3/poly_getnoise_eta1_4x_k2_spec.ml \
   proofs/mlkem_native/gcc12_O3/poly_tomont_spec.ml \
   proofs/mlkem_native/gcc12_O3/polyvec_tomont_k2_spec.ml \
