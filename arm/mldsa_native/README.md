@@ -63,9 +63,29 @@ parameter sets is compiled once, with the namespace `mldsa_`, and the
 rest once per parameter set, with the namespaces `mldsa44_`, `mldsa65_`
 and `mldsa87_`.
 
-| File                | Compiler   | Binary                                   |
-|---------------------|------------|------------------------------------------|
-| gcc12_O2/libmldsa.S | gcc 12.3.0 | binaries/multilevel/gcc12/O2/libmldsa.so |
+| File                           | Compiler   | Binary                                   |
+|--------------------------------|------------|------------------------------------------|
+| gcc12_O2/libmldsa.S            | gcc 12.3.0 | binaries/multilevel/gcc12/O2/libmldsa.so |
+| gcc12_O2/keccakf1600_permute.S | gcc 12.3.0 | binaries/multilevel/gcc12/O2/libmldsa.so |
+
+`gcc12_O2/keccakf1600_permute.S` is the code of `mldsa_keccakf1600_permute`
+alone, with its table of round constants as a separate symbol: the code
+is byte-for-byte that of `mlkem_keccakf1600_permute` in the gcc 12 -O2
+build of mlkem-native, and so its proof is that of
+`../proofs/mlkem_native/gcc12_O2/keccakf1600_permute.ml`, on the separate
+object, transferred to the image. The other Keccak functions are proved
+in the image directly, also with the proofs of the same code in
+mlkem-native. `../mlkem_native/check_transcription.py` checks the
+separate object against the binary:
+
+```
+python3 mlkem_native/check_transcription.py \
+  mldsa_native/gcc12_O2/keccakf1600_permute.o \
+  mldsa_native_keccakf1600_permute_gcc12_O2 \
+  <mldsa-native>/binaries/multilevel/gcc12/O2/libmldsa.so \
+  mldsa_keccakf1600_permute \
+  mldsa_native_keccakf1600_permute_gcc12_O2_rc mld_KeccakF_RoundConstants
+```
 
 The SHA-256 hash of the binary used, which matches that recorded in
 `binaries/SHA256SUMS` of mldsa-native, is:

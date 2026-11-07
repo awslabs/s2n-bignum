@@ -2,9 +2,16 @@
 # proofs in proofs/mldsa_native/gcc12_O2. Do not edit.
 
 MLDSA_NATIVE_OBJ += \
+  mldsa_native/gcc12_O2/keccakf1600_permute.o \
   mldsa_native/gcc12_O2/libmldsa.o
 
 MLDSA_NATIVE_PROOFS += \
+  mldsa_native/gcc12_O2/keccakf1600_extract_bytes_proof \
+  mldsa_native/gcc12_O2/keccakf1600_permute_proof \
+  mldsa_native/gcc12_O2/keccakf1600_xor_bytes_proof \
+  mldsa_native/gcc12_O2/keccakf1600x4_extract_bytes_proof \
+  mldsa_native/gcc12_O2/keccakf1600x4_permute_proof \
+  mldsa_native/gcc12_O2/keccakf1600x4_xor_bytes_proof \
   mldsa_native/gcc12_O2/libmldsa \
   mldsa_native/gcc12_O2/poly_add_proof \
   mldsa_native/gcc12_O2/poly_caddq_proof \
@@ -17,6 +24,68 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2/poly_shiftl_proof \
   mldsa_native/gcc12_O2/poly_sub_proof
 
+mldsa_native/gcc12_O2/keccakf1600_extract_bytes_proof.native: \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
+  proofs/mlkem_native/relative.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/keccakf1600_permute_proof.native: \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mlkem_native/relative.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mldsa_native/gcc12_O2/keccakf1600_permute.o \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/keccakf1600_xor_bytes_proof.native: \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mlkem_native/relative.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/keccakf1600x4_extract_bytes_proof.native: \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
+  proofs/mlkem_native/relative.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/keccakf1600x4_permute_proof.native: \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
+  proofs/mlkem_native/relative.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/keccakf1600x4_xor_bytes_proof.native: \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_xor_bytes_spec.ml \
+  proofs/mlkem_native/relative.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/libmldsa.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \

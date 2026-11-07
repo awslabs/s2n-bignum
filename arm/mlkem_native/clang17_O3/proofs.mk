@@ -121,6 +121,7 @@ mlkem_native/clang17_O3/keccak_absorb_once_proof.native: \
   proofs/mlkem_native/clang17_O3/libmlkem.ml \
   proofs/utils/keccak_spec.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml \
   mlkem_native/clang17_O3/libmlkem.o
@@ -139,6 +140,7 @@ mlkem_native/clang17_O3/keccak_absorb_once_x4_proof.native: \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/keccakf1600_extract_bytes_proof.native: \
   proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes_spec.ml \
@@ -156,6 +158,7 @@ mlkem_native/clang17_O3/keccakf1600_permute_proof.native: \
   proofs/utils/keccak_fips202.ml \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/keccakf1600_xor_bytes_proof.native: \
   proofs/mlkem_native/clang17_O3/keccakf1600_xor_bytes_spec.ml \
@@ -183,6 +186,7 @@ mlkem_native/clang17_O3/keccakf1600x4_permute_proof.native: \
   proofs/utils/keccak_fips202.ml \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/keccakf1600x4_xor_bytes_proof.native: \
   proofs/mlkem_native/clang17_O3/keccakf1600x4_xor_bytes_spec.ml \
@@ -366,6 +370,7 @@ mlkem_native/clang17_O3/link.native: \
   proofs/utils/mlkem_native_libc_full.ml \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/poly_add_proof.native: \
   proofs/mlkem_native/clang17_O3/poly_add_spec.ml \
@@ -896,6 +901,7 @@ mlkem_native/clang17_O3/sha3_256_proof.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/sha3_512_proof.native: \
   proofs/mlkem_native/clang17_O3/sha3_512_spec.ml \
@@ -910,6 +916,7 @@ mlkem_native/clang17_O3/sha3_512_proof.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128_absorb_once_proof.native: \
   proofs/mlkem_native/clang17_O3/shake128_absorb_once_spec.ml \
@@ -923,6 +930,7 @@ mlkem_native/clang17_O3/shake128_absorb_once_proof.native: \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128_init_proof.native: \
   proofs/mlkem_native/clang17_O3/shake128_init_spec.ml \
@@ -949,6 +957,7 @@ mlkem_native/clang17_O3/shake128_squeezeblocks_proof.native: \
   proofs/utils/mlkem_native.ml \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128x4_absorb_once_proof.native: \
   proofs/mlkem_native/clang17_O3/shake128x4_absorb_once_spec.ml \
@@ -968,6 +977,7 @@ mlkem_native/clang17_O3/shake128x4_absorb_once_proof.native: \
   proofs/mlkem_native/copies.ml \
   proofs/utils/keccak_spec.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake128x4_init_proof.native: \
   proofs/mlkem_native/clang17_O3/shake128x4_init_spec.ml \
@@ -997,6 +1007,7 @@ mlkem_native/clang17_O3/shake128x4_squeezeblocks_proof.native: \
   proofs/utils/keccak_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake256_proof.native: \
   proofs/mlkem_native/clang17_O3/shake256_spec.ml \
@@ -1011,6 +1022,7 @@ mlkem_native/clang17_O3/shake256_proof.native: \
   proofs/mlkem_native/clang17_O3/layout.ml \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
 mlkem_native/clang17_O3/shake256x4_proof.native: \
   proofs/mlkem_native/clang17_O3/shake256x4_spec.ml \
@@ -1031,4 +1043,5 @@ mlkem_native/clang17_O3/shake256x4_proof.native: \
   proofs/mlkem_native/copies.ml \
   proofs/utils/keccak_spec.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/clang17_O3/libmlkem.o
