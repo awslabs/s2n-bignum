@@ -160,6 +160,12 @@ let extra_simp_tac =
               WORD_RULE `word_sub y (word_add x y):N word = word_neg x`;
               WORD_RULE `word_sub (word_add x y) x:N word = y`;
               WORD_RULE `word_sub (word_add x y) y:N word = x`;
+              (* SP minus an immediate cancels, as in cosimulate_sp_arith *)
+              WORD_RULE `word_add (word_sub x y) y:N word = x`;
+              WORD_RULE `word_sub x (word_sub x y):N word = y`;
+              (* Code addresses cancel, as in the call sequences *)
+              WORD_RULE `word_sub (word(x + a)) (word(x + b)):N word =
+                         word_sub (word a) (word b)`;
               WORD_ADD_0; WORD_SUB_0] THEN
   CONV_TAC(DEPTH_CONV
    (WORD_NUM_RED_CONV ORELSEC apply_extra_word_convs)) THEN REWRITE_TAC[];;
@@ -212,7 +218,32 @@ let arm_cosim_executor = lazy
   (start_cosim_executor "S2N_BIGNUM_AARCH64_EXECUTOR"
     "tools/simulate-persistent arm" "aarch64" 128);;
 
-let cosimulate_instructions (memopidx: int option) icodes =
+(*** The CPU features beyond the baseline that an instruction needs, so that
+ *** a case can be skipped on a host that lacks them or whose features are
+ *** unknown (see common/cosim.ml). ***)
+
+let arm_host_features = lazy (cosim_host_features "Features");;
+
+let arm_required_features instr =
+  let name = try fst(dest_const(fst(strip_comb instr))) with Failure _ -> "" in
+  match name with
+    "arm_AESE" | "arm_AESD" | "arm_AESMC" | "arm_AESIMC" -> ["aes"]
+  | "arm_PMULL_VEC" | "arm_PMULL2_VEC" ->
+      if (try dest_small_numeral (rand instr) = 64 with Failure _ -> false)
+      then ["pmull"] else []
+  | "arm_SHA256H" | "arm_SHA256H2" | "arm_SHA256SU0" | "arm_SHA256SU1" ->
+      ["sha2"]
+  | "arm_SHA512H" | "arm_SHA512H2" | "arm_SHA512SU0" | "arm_SHA512SU1" ->
+      ["sha512"]
+  | "arm_EOR3" | "arm_BCAX" | "arm_RAX1" | "arm_XAR" -> ["sha3"]
+  | _ -> [];;
+
+(*** The instructions are normally simulated one step each. With a branch
+ *** they need not all run, so nsteps can give the number of steps instead.
+ ***)
+
+let cosimulate_instructions_steps (nsteps: int option)
+      (memopidx: int option) icodes =
   let icodestring =
     end_itlist (fun s t -> s^","^t) (map string_of_num_hex icodes) in
   let _ =
@@ -278,18 +309,103 @@ let cosimulate_instructions (memopidx: int option) icodes =
      (goal,
       PURE_REWRITE_TAC [fst execth] THEN
       (tac_before (memopidx <> None) THEN
-       tac_main memopidx execth (1--length icodes) THEN
+       tac_main memopidx execth
+         (1--(match nsteps with Some n -> n | None -> length icodes)) THEN
        tac_after (memopidx <> None))) in
     (decoded,result)
-  | Cosim_trap _ ->
+  | Cosim_trap details ->
     let decoded = mk_flist(map mk_numeral icodes) in
-    decoded,not(can ARM_MK_EXEC_RULE(REFL ibyteterm));;
+    (match (try Some(ARM_MK_EXEC_RULE(REFL ibyteterm)) with Failure _ -> None)
+     with
+       None -> decoded,true
+     | Some execth ->
+         let instrs = map (rand o rand o snd o strip_forall o concl o
+                           option_get)
+                        (filter option_is_some (Array.to_list (snd execth))) in
+         let missing =
+           cosim_missing_features (Lazy.force arm_host_features) details
+             (setify (itlist ((@) o arm_required_features) instrs [])) in
+         if missing = [] then decoded,false
+         else (cosim_skipped_features := missing; mk_flist instrs,true));;
+
+let cosimulate_instructions = cosimulate_instructions_steps None;;
 
 (*** Pick random instances from register-to-register iclasses and run ***)
 
 let run_random_regsimulation () =
   let icode:num = random_instruction iclasses in
   cosimulate_instructions None [icode];;
+
+(* ------------------------------------------------------------------------- *)
+(* Branches. In each sequence both outcomes of a conditional branch run the  *)
+(* same number of instructions, returned with the sequence, so that it can   *)
+(* be simulated a fixed number of steps; W0 tells which way the branch went. *)
+(* The flags and the tested registers come from the random input state.     *)
+(* ------------------------------------------------------------------------- *)
+
+let cosimulate_branch() =
+  let movz_w0 n = num(0x52800000 + 32 * n)
+  and b_rel d = num(0x14000000 + (d + 0x4000000) mod 0x4000000)
+  and nop = num 0xd503201f in
+  (* A random conditional branch of d instructions (d may be negative):
+     B.cond, CBZ/CBNZ or TBZ/TBNZ, testing a random register 1-31.
+     A random register is seldom zero, so CBZ/CBNZ is usually preceded
+     by ubfx Xt,Xt,#b,#1 (giving 0 or 1) or lsl Xt,Xt,#32 (zero low half).
+     The result is the list of those instructions and the branch. *)
+  let cond_rel d =
+    let rt = 1 + Random.int 31 and op = Random.int 2 in
+    match Random.int 3 with
+      0 -> [],num(0x54000000 + 32 * ((d + 0x80000) mod 0x80000) + Random.int 16)
+    | 1 -> let sf = Random.int 2 and b = Random.int 64 in
+           (match Random.int 4 with
+              0 | 1 -> [num(0xd3400000 + 0x10400 * b + 33 * rt)]
+            | 2 -> [num(0xd3607c00 + 33 * rt)]
+            | _ -> []),
+           num(0x80000000 * sf + 0x34000000 + 0x1000000 * op +
+               32 * ((d + 0x80000) mod 0x80000) + rt)
+    | _ -> let b = Random.int 64 in
+           [],num(0x80000000 * (b / 32) + 0x36000000 + 0x1000000 * op +
+                  0x80000 * (b mod 32) + 32 * ((d + 0x4000) mod 0x4000) + rt) in
+  match Random.int 4 with
+    0 -> (* Forward: br L; movz w0,#1; b E; L: movz w0,#2; nop; E: *)
+         let pre,br = cond_rel 3 in
+         pre @ [br; movz_w0 1; b_rel 3; movz_w0 2; nop],length pre + 3
+  | 1 -> (* Backward: b A; B: movz w0,#2; b E; A: br B; movz w0,#1; b E; E: *)
+         let pre,br = cond_rel (-2) in
+         pre @ [b_rel 3; movz_w0 2; b_rel 4; br; movz_w0 1; b_rel 1],
+         length pre + 4
+  | 2 -> (* Forward B: b L; movz w0,#1; L: movz w0,#2 *)
+         [b_rel 2; movz_w0 1; movz_w0 2],2
+  | _ -> (* Backward B: b A; B: b E; A: b B; E: *)
+         [b_rel 2; b_rel 2; b_rel (-1)],3;;
+
+(* ------------------------------------------------------------------------- *)
+(* Calls. The return address that BL leaves in X30 and the result of ADR     *)
+(* both depend on the code address, so the sequence keeps only their        *)
+(* difference, in Xt for a random t in 0-29, and then clears X30.           *)
+(* ------------------------------------------------------------------------- *)
+
+let cosimulate_call() =
+  let t = Random.int 30 and imm = Random.int 0x200000 in
+  let adr = num(0x10000000 + 0x20000000 * (imm mod 4) + 32 * (imm / 4) + t)
+  and sub = num(0xcb1e0000 + 33 * t)
+  and movz_x30 = num 0xd280001e
+  and bl_rel d = num(0x94000000 + (d + 0x4000000) mod 0x4000000)
+  and b_rel d = num(0x14000000 + (d + 0x4000000) mod 0x4000000)
+  and bti_c = num 0xd503245f and ret = num 0xd65f03c0 in
+  if Random.bool() then
+    (* Forward: bl F; adr xt,#imm; sub xt,xt,x30; movz x30,#0; b E;
+                F: bti c; ret; E: *)
+    [bl_rel 5; adr; sub; movz_x30; b_rel 3; bti_c; ret],7
+  else
+    (* Backward: b S; F: ret; S: bl F; adr xt,#imm; sub xt,xt,x30;
+                 movz x30,#0; E: *)
+    [b_rel 2; ret; bl_rel (-1); adr; sub; movz_x30],6;;
+
+let run_random_branchsimulation () =
+  let icodes,nsteps =
+    if Random.int 4 = 0 then cosimulate_call() else cosimulate_branch() in
+  cosimulate_instructions_steps (Some nsteps) None icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Setting up safe self-contained tests for load-store instructions.         *)
@@ -314,6 +430,19 @@ let sub_Xn_SP_Xn rn =
   pow2 5 */ num 0b11111 +/
   num rn;;
 
+(*** Base registers for some of the load-store generators below. SP (31)
+ *** is drawn more often than 1 in 32, since stack frames use it a lot. ***)
+
+let random_base_reg() = if Random.int 4 = 0 then 31 else Random.int 32;;
+
+(*** An offset or data register for such a base: never the base itself,
+ *** except that with an SP base 31 is the zero register, which is then
+ *** allowed and drawn 1 in 8 times. ***)
+
+let other_reg rn =
+  if rn = 31 then (if Random.int 8 = 0 then 31 else Random.int 31)
+  else (rn + 1 + Random.int 31) mod 32;;
+
 let movz_Xn_imm rd imm =
   pow2 21 */ num_of_string "0b11010010100" +/
   pow2 5 */ num(imm mod 65536) +/
@@ -326,13 +455,11 @@ let movz_Xn_imm rd imm =
 
 let cosimulate_ldstr() =
   let simd = Random.int 2
-  and rn = Random.int 32
+  and rn = random_base_reg()
   and isld = Random.int 2 in
   let full = if simd = 1 then 1 else Random.int 2 in
-  let rm = (rn + 1 + Random.int 31) mod 32
-  and rt =
-    if simd = 1 then Random.int 32
-    else (rn + 1 + Random.int 31) mod 32 in
+  let rm = other_reg rn
+  and rt = if simd = 1 then Random.int 32 else other_reg rn in
   let headroom =
     if simd = 1 then 16
     else if full = 1 then 8 else 4 in
@@ -378,7 +505,7 @@ let cosimulate_ldstp() =
   let isld = Random.int 2 in
   let rt2 = Random.int 32 in
   let rt = (rt2 + 1 + Random.int 31) mod 32 in
-  let rn = Random.int 32 in
+  let rn = random_base_reg() in
   let headroom = if size_rd = 0 then 8*2 else 16*2 in
   let rawstackoff = Random.int (256 - headroom) in
   let stackoff =
@@ -407,6 +534,57 @@ let cosimulate_ldstp() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers general-register (32-bit or 64-bit) LDP and STP with
+ *** post-index, pre-index and signed offset. Register 31 is the zero
+ *** register for Rt and Rt2. The registers avoid the CONSTRAINED
+ *** UNPREDICTABLE cases (LDP with Rt = Rt2, writeback with Rt or Rt2 =
+ *** Rn) and, because the base address is only known relative to SP, any
+ *** use of Rn as Rt or Rt2.
+ ***)
+
+let cosimulate_ldstp_gpr() =
+  let x = Random.int 2 in
+  let scale = 2 + x in
+  let index_rd = Random.int 3 in
+  let index_mode =
+    if index_rd = 0 then 0b001 else if index_rd = 1 then 0b011 else 0b010 in
+  let isld = Random.int 2 in
+  let rn = random_base_reg() in
+  (* XZR (31) is drawn more often than 1 in 32, as the library uses it *)
+  let rec pick avoid =
+    let r = if Random.int 8 = 0 then 31 else Random.int 32 in
+    if List.mem r avoid then pick avoid else r in
+  let rt2 = pick (if rn = 31 then [] else [rn]) in
+  let rt =
+    pick ((if rn = 31 then [] else [rn]) @ (if isld = 1 then [rt2] else [])) in
+  let headroom = if x = 0 then 4*2 else 8*2 in
+  let rawstackoff = Random.int (256 - headroom) in
+  let stackoff =
+    if rn = 31 then 16 * (rawstackoff / 16)
+    else rawstackoff in
+  (* immediate could be negative or positive *)
+  let extraoff_neg = if stackoff = 0 then 0 else - (Random.int stackoff) in
+  let extraoff_pos = Random.int (256-headroom-stackoff) in
+  let extraoff_rd = Random.int 2 in
+  let extraoff = if extraoff_rd = 0 then extraoff_neg else extraoff_pos in
+  let regoff = extraoff / Num.int_of_num (pow2 scale) in
+  let unsigned_regoff = if regoff < 0 then 128 + regoff else regoff in
+  (* signed offset doesn't write back *)
+  let postinc = if index_rd = 2 then 0 else regoff lsl scale in
+  let code =
+    pow2 31 */ num x +/
+    pow2 26 */ num 0b1010 +/
+    pow2 23 */ num index_mode +/
+    pow2 22 */ num isld +/
+    pow2 15 */ num unsigned_regoff +/
+    pow2 10 */ num rt2 +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 
 (*** The post-register and no-offset modes are exercised only for LD1/ST1
  *** since they are not currently supported for LD2/ST2.
@@ -417,27 +595,33 @@ let cosimulate_ldstp() =
  ***
  ***  - it is LD2/ST2 (since post-register is not supported there)
  ***  - the offset register is the same as the base (confuses test harness)
- ***  - the base register is SP (alters final stack pointer in test harness)
  ***  - or just on a 50-50 probability, to avoid biasing to register case
+ ***
+ *** With an SP base, the post-register increment is set by a MOVZ and
+ *** taken back off SP at the end, as in cosimulate_ldst_1_2reg.
  ***)
 
 let cosimulate_ldst_12() =
   let datasize = Random.int 2
   and isld = Random.int 2
   and esize = Random.int 4
-  and rn = Random.int 32
+  and rn = random_base_reg()
   and rt = Random.int 32 in
   let ldst2 = Random.int 2 in
   let someoffset = if ldst2 = 1 then 1 else Random.int 2 in
   let regoffr = Random.int 32 in
   let regoff =
     if someoffset = 0 then 0
-    else if ldst2 = 1 || regoffr = rn || rn = 31 || Random.bool() then 31
+    else if ldst2 = 1 || regoffr = rn || Random.bool() then 31
     else regoffr in
   let stackoff =
     if rn = 31 then Random.int 14 * 16
     else Random.int 224 in
-  let postinc = someoffset * 8 * (datasize + 1) * (ldst2 + 1) in
+  let postreg = someoffset = 1 && regoff <> 31 in
+  let regpostinc = 1 + Random.int 64 in
+  let postinc =
+    if postreg then regpostinc
+    else someoffset * 8 * (datasize + 1) * (ldst2 + 1) in
   let code =
     pow2 30 */ num datasize +/
     pow2 24 */ num 0b001100 +/
@@ -449,7 +633,9 @@ let cosimulate_ldst_12() =
     pow2 5 */ num rn +/
     num rt in
   if rn = 31 then
-    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+    [add_Xn_SP_imm 31 stackoff] @
+    (if postreg then [movz_Xn_imm regoff regpostinc] else []) @
+    [code; sub_Xn_SP_imm 31 (stackoff + postinc)]
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
@@ -498,10 +684,10 @@ let cosimulate_ldst_1_2reg() =
  ***)
 
 let cosimulate_ldstrb() =
-  let rn = Random.int 32
+  let rn = random_base_reg()
   and isld = Random.int 2 in
-  let rm = (rn + 1 + Random.int 31) mod 32
-  and rt = (rn + 1 + Random.int 31) mod 32 in
+  let rm = other_reg rn
+  and rt = other_reg rn in
   let stackoff =
     if rn = 31 then Random.int 15 * 16
     else Random.int 256 in
@@ -524,8 +710,8 @@ let cosimulate_ldstu() =
   let is_not_b = Random.int 2 in
   let x = if is_not_b = 1 then Random.int 2 else 0 in
   let isld = Random.int 2
-  and rn = Random.int 32 in
-  let rt = (rn + 1 + Random.int 31) mod 32 in
+  and rn = random_base_reg() in
+  let rt = other_reg rn in
   let stackoff =
     if rn = 31 then Random.int 15 * 16
     else Random.int 249 in
@@ -570,17 +756,19 @@ let cosimulate_ldst3() =
   let datasize = Random.int 2
   and isld = Random.int 2
   and esize = Random.int 4
-  and rn = Random.int 32
+  and rn = random_base_reg()
   and rt = Random.int 32 in
   let someoffset = 1 in
   let regoffr = Random.int 32 in
   let regoff =
-    if regoffr = rn || rn = 31 || Random.bool() then 31
+    if regoffr = rn || Random.bool() then 31
     else regoffr in
   let stackoff =
     if rn = 31 then Random.int 13 * 16
     else Random.int 208 in
-  let postinc = 24 * (datasize + 1)  in
+  let postreg = regoff <> 31 in
+  let regpostinc = 1 + Random.int 64 in
+  let postinc = if postreg then regpostinc else 24 * (datasize + 1) in
   let code =
     pow2 30 */ num datasize +/
     pow2 24 */ num 0b001100 +/
@@ -592,7 +780,9 @@ let cosimulate_ldst3() =
     pow2 5 */ num rn +/
     num rt in
   if rn = 31 then
-    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+    [add_Xn_SP_imm 31 stackoff] @
+    (if postreg then [movz_Xn_imm regoff regpostinc] else []) @
+    [code; sub_Xn_SP_imm 31 (stackoff + postinc)]
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
@@ -606,24 +796,28 @@ let cosimulate_ldst1_4reg() =
   let datasize = Random.int 2
   and isld = Random.int 2
   and esize = Random.int 4
-  and rn = Random.int 32
+  and rn = random_base_reg()
   and rt = Random.int 32 in
   let someoffset = Random.int 2 in
   let regoffr = Random.int 32 in
   (* No-offset form has Rm = 0 and bit23 = 0; the post forms set bit23 = 1,
      with Rm = 31 selecting post-immediate and Rm = Xm post-register. As in
-     cosimulate_ldst3, avoid a base of SP or Rm aliasing the base for the
-     post-register form. *)
+     cosimulate_ldst3, avoid Rm aliasing the base for the post-register
+     form; with an SP base, a MOVZ sets the increment. *)
   let regoff =
     if someoffset = 0 then 0
-    else if regoffr = rn || rn = 31 || Random.bool() then 31
+    else if regoffr = rn || Random.bool() then 31
     else regoffr in
   let stackoff =
     if rn = 31 then Random.int 12 * 16
     else Random.int 192 in
   (* Four 8- or 16-byte registers span 32 or 64 bytes. The post-immediate
      form (Rm = 31) writes the base back by that span. *)
-  let postinc = if someoffset = 1 && regoff = 31 then 32 * (datasize + 1) else 0 in
+  let postreg = someoffset = 1 && regoff <> 31 in
+  let regpostinc = 1 + Random.int 64 in
+  let postinc =
+    if postreg then regpostinc
+    else if someoffset = 1 then 32 * (datasize + 1) else 0 in
   let code =
     pow2 30 */ num datasize +/
     pow2 24 */ num 0b001100 +/
@@ -635,14 +829,149 @@ let cosimulate_ldst1_4reg() =
     pow2 5 */ num rn +/
     num rt in
   if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff] @
+    (if postreg then [movz_Xn_imm regoff regpostinc] else []) @
+    [code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LDR/STR (immediate) of 64-bit, 32-bit and byte general
+ *** registers and of 128-bit and 64-bit SIMD&FP registers, with an
+ *** unsigned (scaled) offset, pre-index or post-index, and LDUR/STUR of
+ *** 128-bit registers. Register 31 is the zero register for a general
+ *** register Rt. Rt is never the same register as Rn: with writeback
+ *** that is CONSTRAINED UNPREDICTABLE, and in any case the harness only
+ *** knows the base address relative to SP.
+ ***)
+
+let cosimulate_ldst_imm() =
+  (* kind: 0 = X, 1 = W, 2 = byte, 3 = Q, 4 = D *)
+  let kind = Random.int 5 and isld = Random.int 2 and rn = random_base_reg() in
+  (* mode: 0 = unsigned offset, 1 = pre-index, 2 = post-index,
+           3 = unscaled offset (LDUR/STUR, Q only) *)
+  let mode = Random.int (if kind = 3 then 4 else 3) in
+  let bytes = el kind [8; 4; 1; 16; 8] in
+  let rt =
+    if kind >= 3 || rn = 31 then Random.int 32
+    else (rn + 1 + Random.int 31) mod 32 in
+  let stackoff =
+    if rn = 31 then 16 * Random.int ((256 - bytes) / 16 + 1)
+    else Random.int (256 - bytes + 1) in
+  (* imm12 for the unsigned offset, imm9 for the others. The access stays
+     inside [SP,SP+256) and a writeback never moves the base below SP. *)
+  let imm12 = Random.int ((256 - bytes - stackoff) / bytes + 1) in
+  let imm9 =
+    if mode = 2 then Random.int (256 + stackoff) - stackoff
+    else
+      let lo = - stackoff and hi = min 255 (256 - bytes - stackoff) in
+      lo + Random.int (hi - lo + 1) in
+  let postinc = if mode = 1 || mode = 2 then imm9 else 0 in
+  let idx = num((imm9 + 512) mod 512) in
+  let idxmode = num(el mode [0; 3; 1; 0]) in
+  let code =
+    (if mode = 0 then
+       (match kind with
+          0 | 1 -> pow2 31 */ num 1 +/ pow2 30 */ num (1 - kind) +/
+                   pow2 23 */ num 0b1110010
+        | 2 -> pow2 23 */ num 0b001110010
+        | 3 -> pow2 24 */ num 0b111101 +/ pow2 23
+        | _ -> pow2 30 */ num 0b11 +/ pow2 24 */ num 0b111101) +/
+       pow2 10 */ num imm12
+     else
+       (match kind with
+          0 | 1 -> pow2 31 */ num 1 +/ pow2 30 */ num (1 - kind) +/
+                   pow2 23 */ num 0b1110000
+        | 2 -> pow2 23 */ num 0b001110000
+        | 3 -> pow2 23 */ num 0b1111001
+        | _ -> pow2 30 */ num 0b11 +/ pow2 23 */ num 0b1111000) +/
+       pow2 12 */ idx +/ pow2 10 */ idxmode) +/
+    pow2 22 */ num isld +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
     [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** ADD and SUB (immediate) with SP, which the generators above use only
+ *** with small unshifted immediates. The stack address cancels as there:
+ ***   add/sub xd, sp, #imm{, lsl #12}; sub xd, sp, xd
+ ***   add/sub sp, sp, #imm{, lsl #12}; sub/add sp, sp, #imm{, lsl #12}
+ ***   mov x29, sp; sub sp, sp, #imm{, lsl #12}; mov sp, x29; sub x29, sp, x29
+ ***)
+
+let cosimulate_sp_arith() =
+  let addsub op d n imm sh =
+    num(0x91000000 + 0x40000000 * op + 0x400000 * sh + 0x400 * imm +
+        32 * n + d) in
+  let imm = Random.int 4096 and sh = Random.int 2 and op = Random.int 2 in
+  match Random.int 3 with
+    0 -> let rd = Random.int 31 in
+         [addsub op rd 31 imm sh; sub_Xn_SP_Xn rd]
+  | 1 -> [addsub op 31 31 imm sh; addsub (1 - op) 31 31 imm sh]
+  | _ -> [addsub 0 29 31 0 0; addsub 1 31 31 imm sh; addsub 0 31 29 0 0;
+          sub_Xn_SP_Xn 29];;
+
+(*** Instructions that use SP as an ordinary register, run with SP set to a
+ *** random register's value so that all their results can be compared,
+ *** flags and 32-bit WSP values included:
+ ***   mov x29, sp; mov sp, xs; <instruction>; mov x28, sp; mov sp, x29;
+ ***   sub x29, sp, x29
+ *** The instruction is ADD, ADDS, SUB or SUBS (extended register or
+ *** immediate) with SP as Rn, Rd or both, where with S set Rd = 31 is the
+ *** zero register (CMN, CMP), or AND, ORR or EOR (immediate) with a valid
+ *** bit mask and SP as Rd. Its other registers are never x29, which holds
+ *** the real SP, and it does not write x28.
+ ***)
+
+let cosimulate_sp_subst() =
+  let addsub op d n imm sh =
+    num(0x91000000 + 0x40000000 * op + 0x400000 * sh + 0x400 * imm +
+        32 * n + d) in
+  let src() = let r = Random.int 30 in if r = 29 then 30 else r in
+  let dst() = let r = Random.int 29 in if r = 28 then 30 else r in
+  let sf = Random.int 2 in
+  let code =
+    match Random.int 3 with
+      2 -> let opc = Random.int 3 in
+           let rn = if Random.int 4 = 0 then 31 else src() in
+           let len = 1 + Random.int (5 + sf) in
+           let esize = 1 lsl len in
+           let ones = Random.int (esize - 1) in
+           let rot = Random.int esize in
+           let imms = ((0b111111 lsl (len + 1)) land 0b111111) lor ones in
+           num(0x12000000 + 0x80000000 * sf + 0x20000000 * opc +
+               0x400000 * (if len = 6 then 1 else 0) + 0x10000 * rot +
+               0x400 * imms + 32 * rn + 31)
+    | k -> let op = Random.int 2 in
+           let s = Random.int 2 in
+           let rn,rd,s =
+             match Random.int 3 with
+               0 -> 31,dst(),s
+             | 1 -> 31,31,s
+             | _ -> src(),31,0 in
+           if k = 0 then
+             let rm = if Random.int 4 = 0 then 31 else src() in
+             let option = Random.int 8 in
+             let imm3 = Random.int 5 in
+             num(0x0b200000 + 0x80000000 * sf + 0x40000000 * op +
+                 0x20000000 * s + 0x10000 * rm + 0x2000 * option +
+                 0x400 * imm3 + 32 * rn + rd)
+           else
+             let sh = Random.int 2 in
+             let imm = Random.int 4096 in
+             num(0x11000000 + 0x80000000 * sf + 0x40000000 * op +
+                 0x20000000 * s + 0x400000 * sh + 0x400 * imm +
+                 32 * rn + rd) in
+  let xs = src() in
+  [addsub 0 29 31 0 0; addsub 0 31 xs 0 0; code;
+   addsub 0 28 31 0 0; addsub 0 31 29 0 0; sub_Xn_SP_Xn 29];;
+
 let memclasses =
-   [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
+   [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldstp_gpr; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
-    cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg
+    cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg;
+    cosimulate_ldst_imm; cosimulate_sp_arith; cosimulate_sp_subst
     ];;
 
 let run_random_memopsimulation() =
@@ -656,32 +985,50 @@ let run_random_memopsimulation() =
 (* ------------------------------------------------------------------------- *)
 
 let run_random_simulation() =
-  if Random.int 100 < 90 then
+  let rn = Random.int 100 in
+  if rn < 85 then
     let decoded, result = run_random_regsimulation() in
-    decoded,result,true
+    decoded,result,0
+  else if rn < 90 then
+    let decoded, result = run_random_branchsimulation() in
+    decoded,result,2
   else
     let decoded, result = run_random_memopsimulation() in
-    decoded,result,false;;
+    decoded,result,1;;
 
 let time_limit_sec = sematest_seconds 2400.0;;
 let case_limit = sematest_case_limit ();;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
+let tested_br_instances = ref 0;;
+let skipped_instances = ref 0;;
 
 let rec run_random_simulations start_t =
-  let decoded,result,isreg = run_random_simulation() in
+  let decoded,result,simty = run_random_simulation() in
+  let missing = !cosim_skipped_features in
+  cosim_skipped_features := [];
   if result then begin
-    tested_reg_instances := !tested_reg_instances + (if isreg then 1 else 0);
-    tested_mem_instances := !tested_mem_instances + (if isreg then 0 else 1);
-    let fey = if is_numeral (lhand decoded)
-              then " (fails correctly) instruction codes " else " " in
-    let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
-            Format.print_newline() in
-    let total = !tested_reg_instances + !tested_mem_instances in
+    if missing <> [] then begin
+      skipped_instances := !skipped_instances + 1;
+      let reason = cosim_skip_reason (Lazy.force arm_host_features) missing in
+      Format.print_string("SKIPPED (" ^ reason ^ "): " ^
+                          string_of_term decoded);
+      Format.print_newline()
+    end else begin
+      tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
+      tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
+      tested_br_instances := !tested_br_instances + (if simty = 2 then 1 else 0);
+      let fey = if is_numeral (lhand decoded)
+                then " (fails correctly) instruction codes " else " " in
+      Format.print_string("OK:" ^ fey ^ string_of_term decoded);
+      Format.print_newline()
+    end;
+    let total = !tested_reg_instances + !tested_mem_instances +
+                !tested_br_instances in
     if sematest_finished time_limit_sec case_limit start_t total then
-      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, total: %d)\n"
+      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, tested branch instances: %d, total: %d, skipped instances: %d)\n"
           time_limit_sec !tested_reg_instances !tested_mem_instances
-          (!tested_reg_instances + !tested_mem_instances) in
+          !tested_br_instances total !skipped_instances in
       None
     else run_random_simulations start_t
   end
