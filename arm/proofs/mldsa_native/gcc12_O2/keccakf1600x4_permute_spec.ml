@@ -77,3 +77,46 @@ let MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 
 let MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* The same for the states as 1600-bit words, read by wbytes, with the       *)
+(* permutation keccak_f1600 of common/fips202.ml (see                        *)
+(* utils/keccak_f1600.ml).                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600_STMT =
+ `!a (S0:1600 word) (S1:1600 word) (S2:1600 word) (S3:1600 word)
+    pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 stackpointer /\
+        nonoverlapping (a,800) (word_sub stackpointer (word 208),208) /\
+        ALLPAIRS nonoverlapping
+          [(a,800); (word_sub stackpointer (word 208),208)]
+          [(word pc,libmldsa_size)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_keccakf1600x4_permute) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a] s /\
+                  read (memory :> wbytes a) s = S0 /\
+                  read (memory :> wbytes (word_add a (word 200))) s = S1 /\
+                  read (memory :> wbytes (word_add a (word 400))) s = S2 /\
+                  read (memory :> wbytes (word_add a (word 600))) s = S3)
+             (\s. read PC s = returnaddress /\
+                  read (memory :> wbytes a) s = keccak_f1600 S0 /\
+                  read (memory :> wbytes (word_add a (word 200))) s =
+                  keccak_f1600 S1 /\
+                  read (memory :> wbytes (word_add a (word 400))) s =
+                  keccak_f1600 S2 /\
+                  read (memory :> wbytes (word_add a (word 600))) s =
+                  keccak_f1600 S3)
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(a,800);
+                memory :> bytes(word_sub stackpointer (word 208),208)])`;;
+
+let MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600 =
+  assume_spec
+   MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600_STMT;;

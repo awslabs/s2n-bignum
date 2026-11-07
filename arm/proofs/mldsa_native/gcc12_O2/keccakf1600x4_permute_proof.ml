@@ -67,3 +67,27 @@ let MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
   ARM_STEPS_TAC MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_EXEC (11--13) THEN
   LOCAL_KECCAK_TAC `A4:int64 list` 14 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The theorem for the states as 1600-bit words, from the one above.         *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600 =
+  prove
+ (MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600_STMT,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL
+   [`a:int64`; `wordlist_of_num 25 (val(S0:1600 word)):int64 list`;
+    `wordlist_of_num 25 (val(S1:1600 word)):int64 list`;
+    `wordlist_of_num 25 (val(S2:1600 word)):int64 list`;
+    `wordlist_of_num 25 (val(S3:1600 word)):int64 list`;
+    `pc:num`; `stackpointer:int64`; `returnaddress:int64`]
+    MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP (MESON[ENSURES_PREPOSTCONDITION_THM]
+   `ensures step P Q C
+    ==> (!x. P' x ==> P x) /\ (!x. Q x ==> Q' x)
+        ==> ensures step P' Q' C`)) THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[READ_MEMORY_WBYTES_KECCAK] THEN SIMP_TAC[];
+    MESON_TAC[KECCAK_F1600_MEMORY]]);;
