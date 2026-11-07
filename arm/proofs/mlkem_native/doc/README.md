@@ -12,7 +12,7 @@ the state at 19f9abc7.
 |---|---|---|
 | `gcc12_O2` | the precedent; one translation unit per source file | 116 / 116 |
 | `gcc12_O2_mono` | whole library as one translation unit: 72 functions inlined, registers allocated across calls | 62 / 62 with code of their own |
-| `gcc12_O3` | gcc 12 `-O3`: vectorised and unrolled | 98 / 115 |
+| `gcc12_O3` | gcc 12 `-O3`: vectorised and unrolled | 115 / 115 |
 | `clang17_O3` | clang 17 `-O3`: vectorised, other scheduling; paused | 77 / 116 |
 
 ## Files
