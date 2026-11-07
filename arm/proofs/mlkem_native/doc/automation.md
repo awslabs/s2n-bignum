@@ -111,18 +111,29 @@ against Opus's 44 on fips202).
 
 ## 2. What to change, in order
 
-**In progress: statements and proofs in separate files.** Each proof file
-`X.ml` becomes `X_spec.ml` (statements, definitions, tactics) and
-`X_proof.ml` (proofs). A caller loads only its callees' spec files and
-proves its theorems with the callees' statements as hypotheses
+**Done: statements and proofs in separate files** (cd9b9076). Each
+proof file `X.ml` is now `X_spec.ml` (statements, definitions, tactics)
+and `X_proof.ml` (proofs). A caller loads only its callees' spec files
+and proves its theorems with the callees' statements as hypotheses
 (`assume_spec`; a variant of `prove` accepts only hypotheses that are
-stated contracts). One generated link file per build loads every proof
-file once, discharges the hypotheses with `PROVE_HYP` and requires the
-top-level API theorems to have none left, followed by the usual check
-that no axioms were added. This replaces #3, #4 and #12 below. Pilot on gcc12_O3: `keypair_derand_k2`
-checks in 594 s instead of 16,175 s, `indcpa_keypair_derand_k2` in
-1,187 s instead of 15,598 s; loading the callees' spec files is now 89%
-of such a run. Work on branch `mlkem-arm-spec-split`.
+stated contracts, `arm/proofs/mlkem_native/relative.ml`). One generated
+`link.ml` per build proves every file once, discharges the hypotheses
+with `PROVE_HYP` and requires the top-level theorems to have none left,
+followed by the usual check that no axioms were added. This replaces #3,
+#4 and #12 below. Measured (runs 4 to 24 at a time on a loaded machine):
+
+| build | files | sum of `_proof` runs | before | longest `_proof` | link run |
+|---|---|---|---|---|---|
+| gcc12_O2 | 116 | 12.3 h | 51.3 h | 29 min | 4.8 h |
+| gcc12_O2_mono | 64 | 9.2 h | 29.6 h | 41 min | 4.5 h |
+| gcc12_O3 | 108 | 16.6 h | about 84 h | 84 min | 9.2 h |
+| clang17_O3 | 77 | 11.3 h | about 26 h | 82 min | 7.5 h |
+
+A changed proof file now costs its own run: gcc12_O3 `keypair_derand_k2`
+takes 594 s instead of 16,175 s. Loading the callees' spec files is now
+most of such a run (499 of 540 s there: shared files 283 s, tactics that
+compute when defined 116 s, decoding 92 s), so that is the next target.
+Statements were checked to be unchanged by a script over all 366 files.
 
 | # | change | expected saving (evidence) | effort | risk |
 |---|---|---|---|---|
