@@ -12,6 +12,7 @@
 
 needs "arm/proofs/utils/mldsa_native_keccak.ml";;
 needs "arm/proofs/utils/keccak_fips202.ml";;
+needs "arm/proofs/utils/mlkem_native_image.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Lemmas about the arguments, the bytes of the message and the blocks.      *)
@@ -162,3 +163,45 @@ let ABSORB_CASE_FLAG_TAC tm =
         then REWRITE_RULE[cth] th else th)
     else NO_TAC);;
 
+
+(*** A 32-bit argument n < 2^32 read as a 64-bit register, word_zx(word n) ***)
+
+let WORD_ZX_32_64_SMALL = prove
+ (`!n. n < 2 EXP 32 ==> word_zx(word n:int32):int64 = word n`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ZX_GEN; VAL_WORD;
+    DIMINDEX_32; DIMINDEX_64] THEN
+  RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT;
+    ARITH_RULE `n < 4294967296 ==> n < 18446744073709551616`]);;
+
+let ARGS_64_TAC ns =
+  MAP_EVERY (fun n ->
+    MP_TAC(SPEC n WORD_ZX_32_64_SMALL) THEN
+    ANTS_TAC THENL
+     [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))]) ns;;
+
+(*** The state at a as a 1600-bit word, from it as 200 bytes, and a tactic ***)
+(*** applied to that word (as in keccakf1600_permute_spec.ml)              ***)
+
+let KECCAK_STATE_AT_TAC a =
+  FIRST_ASSUM(fun th ->
+    match concl th with
+      Comb(Comb(Const("=",_),
+                Comb(Comb(Const("read",_),
+                          Comb(Comb(Const(":>",_),Const("memory",_)),
+                               Comb(Const("bytes",_),aa))),_)),
+           Comb(Const("val",_),_))
+        when aa = mk_pair(a,`200`) ->
+          ASSUME_TAC(REWRITE_RULE[GSYM READ_MEMORY_WBYTES_1600] th)
+    | _ -> NO_TAC);;
+
+let KECCAK_STATE_THEN a (ttac:term->tactic) =
+  FIRST_ASSUM(fun th ->
+    match concl th with
+      Comb(Comb(Const("=",_),
+                Comb(Comb(Const("read",_),
+                          Comb(Comb(Const(":>",_),Const("memory",_)),
+                               Comb(Const("wbytes",_),aa))),_)),v)
+        when aa = a -> ttac v
+    | _ -> NO_TAC);;
