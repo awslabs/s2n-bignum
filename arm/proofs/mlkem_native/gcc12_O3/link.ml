@@ -123,6 +123,7 @@ needs "arm/proofs/mlkem_native/gcc12_O3/polyvec_tomont_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/indcpa_keypair_derand_k4_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/keypair_derand_k2_proof.ml";;
 needs "arm/proofs/mlkem_native/gcc12_O3/keypair_derand_k3_proof.ml";;
+needs "arm/proofs/mlkem_native/gcc12_O3/keypair_derand_k4_proof.ml";;
 
 (* The contracts stated and proved, and those not proved, if any *)
 
@@ -229,6 +230,12 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT =
 
 let MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE =
   relative_close MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE;;
 
 (* The theorems that the build prints for CORRECT and SAFE only *)
 
