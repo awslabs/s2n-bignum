@@ -1,0 +1,84 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+(* ========================================================================= *)
+(* Unpacking of a polynomial with 10 bits per coefficient: the statement.    *)
+(* This is the code for mldsa_polyt1_unpack (mld_polyt1_unpack in poly.c)    *)
+(* from mldsa-native's portable C implementation compiled by gcc 12 with -O2 *)
+(* (see mldsa_native/README.md), which reads 5 bytes for each 4              *)
+(* coefficients. It is verified in the whole image (see libmldsa.ml) against *)
+(* mld_polyt1_unpack of common/mldsa_native_packing.ml.                      *)
+(* ========================================================================= *)
+
+needs "arm/proofs/mlkem_native/relative.ml";;
+needs "arm/proofs/utils/mldsa_native_pack.ml";;
+needs "common/mldsa_native_packing.ml";;
+needs "arm/proofs/mldsa_native/gcc12_O2/libmldsa.ml";;
+
+(*** The code in the image:
+
+    mldsa_polyt1_unpack:
+       +0x0: add     x4, x1, #0x140
+       +0x4: nop
+       +0x8: ldrb    w3, [x1]
+       +0xc: add     x1, x1, #0x5
+      +0x10: ldurb   w2, [x1, #-4]
+      +0x14: add     x0, x0, #0x10
+      +0x18: orr     w2, w3, w2, lsl #8
+      +0x1c: and     w2, w2, #0x3ff
+      +0x20: stur    w2, [x0, #-16]
+      +0x24: ldurb   w3, [x1, #-3]
+      +0x28: ldurb   w2, [x1, #-4]
+      +0x2c: lsl     w3, w3, #6
+      +0x30: orr     w2, w3, w2, lsr #2
+      +0x34: and     w2, w2, #0x3ff
+      +0x38: stur    w2, [x0, #-12]
+      +0x3c: ldurb   w3, [x1, #-2]
+      +0x40: ldurb   w2, [x1, #-3]
+      +0x44: lsl     w3, w3, #4
+      +0x48: orr     w2, w3, w2, lsr #4
+      +0x4c: and     w2, w2, #0x3ff
+      +0x50: stur    w2, [x0, #-8]
+      +0x54: ldurb   w3, [x1, #-1]
+      +0x58: ldurb   w2, [x1, #-2]
+      +0x5c: lsl     w3, w3, #2
+      +0x60: orr     w2, w3, w2, lsr #6
+      +0x64: stur    w2, [x0, #-4]
+      +0x68: cmp     x4, x1
+      +0x6c: b.ne    <mldsa_polyt1_unpack+0x8>
+      +0x70: ret
+ ***)
+
+let MLDSA_NATIVE_POLYT1_UNPACK_GCC12_O2_EXEC =
+  ARM_MK_EXEC_RANGES_RULE mldsa_native_libmldsa_gcc12_O2_mc
+   [layout_range "mldsa_polyt1_unpack"];;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness.                                                              *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLYT1_UNPACK_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
+ `!r a b pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        ALL (nonoverlapping (r,1024)) [(word pc,libmldsa_size); (a,320)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_polyt1_unpack) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [r; a] s /\
+                  (!j. j < 320
+                       ==> read(memory :> bytes8(word_add a (word j))) s =
+                           b j))
+             (\s. read PC s = returnaddress /\
+                  !i. i < 256
+                      ==> read(memory :> bytes32(word_add r (word(4 * i))))
+                            s = mld_polyt1_unpack b i)
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(r,1024)])`;;
+
+let MLDSA_NATIVE_POLYT1_UNPACK_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
+  assume_spec
+   MLDSA_NATIVE_POLYT1_UNPACK_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;

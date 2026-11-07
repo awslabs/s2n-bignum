@@ -22,7 +22,11 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2/poly_power2round_proof \
   mldsa_native/gcc12_O2/poly_reduce_proof \
   mldsa_native/gcc12_O2/poly_shiftl_proof \
-  mldsa_native/gcc12_O2/poly_sub_proof
+  mldsa_native/gcc12_O2/poly_sub_proof \
+  mldsa_native/gcc12_O2/polyt0_pack_proof \
+  mldsa_native/gcc12_O2/polyt0_unpack_proof \
+  mldsa_native/gcc12_O2/polyt1_pack_proof \
+  mldsa_native/gcc12_O2/polyt1_unpack_proof
 
 mldsa_native/gcc12_O2/keccakf1600_extract_bytes_proof.native: \
   proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
@@ -179,6 +183,50 @@ mldsa_native/gcc12_O2/poly_sub_proof.native: \
   proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/polyt0_pack_proof.native: \
+  proofs/mldsa_native/gcc12_O2/polyt0_pack_spec.ml \
+  proofs/mlkem_native/relative.ml \
+  proofs/utils/mldsa_native_pack.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/polyt0_unpack_proof.native: \
+  proofs/mldsa_native/gcc12_O2/polyt0_unpack_spec.ml \
+  proofs/mlkem_native/relative.ml \
+  proofs/utils/mldsa_native_pack.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/polyt1_pack_proof.native: \
+  proofs/mldsa_native/gcc12_O2/polyt1_pack_spec.ml \
+  proofs/mlkem_native/relative.ml \
+  proofs/utils/mldsa_native_pack.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/polyt1_unpack_proof.native: \
+  proofs/mldsa_native/gcc12_O2/polyt1_unpack_spec.ml \
+  proofs/mlkem_native/relative.ml \
+  proofs/utils/mldsa_native_pack.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
   mldsa_native/gcc12_O2/libmldsa.o
