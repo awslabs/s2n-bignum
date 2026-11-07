@@ -260,6 +260,42 @@ let READ_LANE_CLAUSES = prove
   REWRITE_TAC[READ_COMPONENT_COMPOSE; LANE_B; LANE_H; LANE_S; LANE_D;
               through; read]);;
 
+(* ------------------------------------------------------------------------- *)
+(* Evaluate ~(c = d) for two register components c and d, as in the guard of *)
+(* arm_LDP. Distinct registers are orthogonal, and at least one of them is a *)
+(* valid component (the other may be a zero register, a constant).           *)
+(* ------------------------------------------------------------------------- *)
+
+let DISTINCT_REGISTERS_CONV =
+  let pth = prove
+   (`!(c:(S,A)component) d (y:A) z.
+        orthogonal_components c d /\ valid_component c /\ ~(y = z)
+        ==> ~(c = d)`,
+    REWRITE_TAC[orthogonal_components] THEN
+    MESON_TAC[READ_WRITE_VALID_COMPONENT]) in
+  let qth = prove
+   (`!(c:(S,A)component) d (y:A) z.
+        orthogonal_components c d /\ valid_component d /\ ~(y = z)
+        ==> ~(c = d)`,
+    MESON_TAC[pth; ORTHOGONAL_COMPONENTS_SYM]) in
+  let cache = ref [] in
+  fun tm ->
+    match tm with
+      Comb(Const("~",_),Comb(Comb(Const("=",_),c),d))
+        when is_const c && is_const d ->
+        if c = d then REWRITE_CONV[] tm else
+        (try assoc (c,d) !cache with Failure _ ->
+          let oth = ORTHOGONAL_COMPONENTS_RULE2 c d in
+          let nty = hd(snd(dest_type(el 1 (snd(dest_type(type_of c)))))) in
+          let neth = INST_TYPE [nty,`:N`] WORD_NE_10 in
+          let th =
+            try MATCH_MP pth (CONJ oth (CONJ (VALID_COMPONENT_RULE c) neth))
+            with Failure _ ->
+              MATCH_MP qth (CONJ oth (CONJ (VALID_COMPONENT_RULE d) neth)) in
+          let eth = EQT_INTRO th in
+          cache := ((c,d),eth) :: !cache; eth)
+    | _ -> failwith "DISTINCT_REGISTERS_CONV";;
+
 let ARM_EXEC_CONV =
   let qth = prove(`bytes64 (word_add a (word 0)) = bytes64 a /\
                    bytes128 (word_add b (word 0)) = bytes128 b`,
@@ -271,6 +307,7 @@ let ARM_EXEC_CONV =
     REWRITE_CONV [offset_writesback; offset_writeback;
                   no_offset; OFFSET_ADDRESS_CLAUSES] THENC
     ONCE_DEPTH_CONV(EQT_INTRO o ORTHOGONAL_COMPONENTS_CONV) THENC
+    ONCE_DEPTH_CONV DISTINCT_REGISTERS_CONV THENC
     REWRITE_CONV[] THENC
     ONCE_DEPTH_CONV(LAND_CONV DIMINDEX_CONV THENC NUM_DIV_CONV) THENC
     GEN_REWRITE_CONV ONCE_DEPTH_CONV
