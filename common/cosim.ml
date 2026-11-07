@@ -298,7 +298,9 @@ let cosim_execute executor code state =
  * and the case is skipped if its instructions need any such feature at
  * all, since an emulated CPU may lack it: qemu-x86_64 8.2 with -cpu max has
  * no VPCLMULQDQ, for example. A SIGILL from instructions that need no such
- * feature is always a failure.
+ * feature is always a failure. Where the host's features are known, the
+ * x86 simulator also skips such a case before running it, since TZCNT and
+ * LZCNT do not trap on a host without them but run as BSF and BSR.
  *)
 
 let cosim_host_features label =

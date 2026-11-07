@@ -1602,6 +1602,28 @@ let cosimulate_instructions_steps (nsteps: int option)
 
   let input_state = random_regstate() in
 
+  (*** If the host's features are known, a case that needs one it lacks is
+   *** skipped without being run. Most such instructions would trap, as
+   *** handled below, but TZCNT and LZCNT do not: without BMI1 and LZCNT
+   *** they execute as BSF and BSR, which give different results.
+   ***)
+
+  let execth_opt =
+    try Some(X86_MK_EXEC_RULE(REFL ibyteterm)) with Failure _ -> None in
+  let instrs_of execth =
+    map (snd o dest_pair o rand o rand o snd o
+         strip_forall o concl o option_get)
+        (filter option_is_some (Array.to_list (snd execth))) in
+  let known_missing =
+    match Lazy.force x86_host_features, execth_opt with
+      Some flags, Some execth ->
+        filter (fun f -> not (mem f flags))
+          (setify (itlist ((@) o x86_required_features) (instrs_of execth) []))
+    | _ -> [] in
+  if known_missing <> [] then
+    (cosim_skipped_features := known_missing;
+     mk_flist (instrs_of (option_get execth_opt)),true) else
+
   let execution =
     cosim_execute (Lazy.force x86_cosim_executor)
       (cosim_hex_of_bytes ibytes) (map string_of_num input_state) in
@@ -1629,7 +1651,10 @@ let cosimulate_instructions_steps (nsteps: int option)
        add_assum_subst]
       template in
 
-    let execth = X86_MK_EXEC_RULE(REFL ibyteterm) in
+    let execth =
+      match execth_opt with
+        Some th -> th
+      | None -> X86_MK_EXEC_RULE(REFL ibyteterm) in
 
     let inst_th = option_get (snd execth).(0) in
     let decoded = mk_flist
@@ -1659,13 +1684,10 @@ let cosimulate_instructions_steps (nsteps: int option)
     (decoded,result)
   | Cosim_trap details ->
     let decoded = mk_flist(map mk_numeral icodes) in
-    (match (try Some(X86_MK_EXEC_RULE(REFL ibyteterm)) with Failure _ -> None)
-     with
+    (match execth_opt with
        None -> decoded,true
      | Some execth ->
-         let instrs = map (snd o dest_pair o rand o rand o snd o
-                           strip_forall o concl o option_get)
-                        (filter option_is_some (Array.to_list (snd execth))) in
+         let instrs = instrs_of execth in
          let missing =
            cosim_missing_features (Lazy.force x86_host_features) details
              (setify (itlist ((@) o x86_required_features) instrs [])) in
