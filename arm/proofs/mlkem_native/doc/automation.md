@@ -118,8 +118,8 @@ proves its theorems with the callees' statements as hypotheses
 (`assume_spec`; a variant of `prove` accepts only hypotheses that are
 stated contracts). One generated link file per build loads every proof
 file once, discharges the hypotheses with `PROVE_HYP` and requires the
-top-level API theorems to have none left, followed by `check_axioms ()`.
-This replaces #3, #4 and #12 below. Pilot on gcc12_O3: `keypair_derand_k2`
+top-level API theorems to have none left, followed by the usual check
+that no axioms were added. This replaces #3, #4 and #12 below. Pilot on gcc12_O3: `keypair_derand_k2`
 checks in 594 s instead of 16,175 s, `indcpa_keypair_derand_k2` in
 1,187 s instead of 15,598 s; loading the callees' spec files is now 89%
 of such a run. Work on branch `mlkem-arm-spec-split`.
@@ -165,8 +165,8 @@ frame and 4 precondition mismatches in the mono stubs). A cache file can
 be edited, so official logs must come from full runs (#4).
 
 **#4, one process.** A generated driver `needs` all proof files of a
-build in order, prints each file's specs, ends with `check_axioms ()`,
-and its log is split into per-file `.correct` files.
+build in order, prints each file's specs, ends with the usual check
+that no axioms were added, and its log is split into per-file `.correct` files.
 Estimate with one process each for the `_k2`, `_k3`, `_k4` files and
 the rest: gcc12_O2 7.9 CPU-hours and 2.5 h wall, gcc12_O3 22.0 and
 6.1 h. Risk: 174 OCaml names are bound in more than one gcc12_O2 file,
