@@ -227,6 +227,7 @@ mlkem_native/gcc12_O2/check_sk_k2_proof.native: \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mlkem_native.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/check_sk_k3_proof.native: \
@@ -243,6 +244,7 @@ mlkem_native/gcc12_O2/check_sk_k3_proof.native: \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mlkem_native.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/check_sk_k4_proof.native: \
@@ -259,6 +261,7 @@ mlkem_native/gcc12_O2/check_sk_k4_proof.native: \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mlkem_native.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/dec_k2_proof.native: \
@@ -313,6 +316,7 @@ mlkem_native/gcc12_O2/dec_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/poly_cbd3_spec.ml \
   proofs/mlkem_native/gcc12_O2/poly_compress_d10_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/poly_rej_uniform_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
@@ -386,6 +390,7 @@ mlkem_native/gcc12_O2/dec_k3_proof.native: \
   proofs/mlkem_native/gcc12_O2/poly_cbd2_spec.ml \
   proofs/mlkem_native/gcc12_O2/poly_compress_d10_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/poly_rej_uniform_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
@@ -460,6 +465,7 @@ mlkem_native/gcc12_O2/dec_k4_proof.native: \
   proofs/mlkem_native/gcc12_O2/poly_cbd2_spec.ml \
   proofs/mlkem_native/gcc12_O2/poly_compress_d11_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/poly_rej_uniform_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
@@ -531,6 +537,7 @@ mlkem_native/gcc12_O2/enc_derand_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/poly_mulcache_compute_spec.ml \
   proofs/mlkem_native/gcc12_O2/poly_compress_d10_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/poly_rej_uniform_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
@@ -600,6 +607,7 @@ mlkem_native/gcc12_O2/enc_derand_k3_proof.native: \
   proofs/mlkem_native/gcc12_O2/poly_mulcache_compute_spec.ml \
   proofs/mlkem_native/gcc12_O2/poly_compress_d10_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/poly_rej_uniform_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
@@ -671,6 +679,7 @@ mlkem_native/gcc12_O2/enc_derand_k4_proof.native: \
   proofs/mlkem_native/gcc12_O2/poly_mulcache_compute_spec.ml \
   proofs/mlkem_native/gcc12_O2/poly_compress_d11_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/poly_rej_uniform_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
@@ -744,6 +753,7 @@ mlkem_native/gcc12_O2/enc_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/poly_mulcache_compute_spec.ml \
   proofs/mlkem_native/gcc12_O2/poly_compress_d10_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/poly_rej_uniform_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
@@ -814,6 +824,7 @@ mlkem_native/gcc12_O2/enc_k3_proof.native: \
   proofs/mlkem_native/gcc12_O2/poly_mulcache_compute_spec.ml \
   proofs/mlkem_native/gcc12_O2/poly_compress_d10_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/poly_rej_uniform_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
@@ -886,6 +897,7 @@ mlkem_native/gcc12_O2/enc_k4_proof.native: \
   proofs/mlkem_native/gcc12_O2/poly_mulcache_compute_spec.ml \
   proofs/mlkem_native/gcc12_O2/poly_compress_d11_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/poly_rej_uniform_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
@@ -940,6 +952,7 @@ mlkem_native/gcc12_O2/gen_matrix_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o \
   mlkem_native/gcc12_O2/rej_uniform.o
@@ -973,6 +986,7 @@ mlkem_native/gcc12_O2/gen_matrix_k3_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o \
   mlkem_native/gcc12_O2/rej_uniform.o
@@ -1006,6 +1020,7 @@ mlkem_native/gcc12_O2/gen_matrix_k4_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o \
   mlkem_native/gcc12_O2/rej_uniform.o
@@ -1155,6 +1170,7 @@ mlkem_native/gcc12_O2/indcpa_enc_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/basemul_k2.o \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o \
@@ -1216,6 +1232,7 @@ mlkem_native/gcc12_O2/indcpa_enc_k3_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/basemul_k3.o \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o \
@@ -1279,6 +1296,7 @@ mlkem_native/gcc12_O2/indcpa_enc_k4_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/basemul_k4.o \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o \
@@ -1331,6 +1349,7 @@ mlkem_native/gcc12_O2/indcpa_keypair_derand_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/shake128_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_absorb_once_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_squeezeblocks_spec.ml \
@@ -1390,6 +1409,7 @@ mlkem_native/gcc12_O2/indcpa_keypair_derand_k3_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/shake128_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_absorb_once_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_squeezeblocks_spec.ml \
@@ -1449,6 +1469,7 @@ mlkem_native/gcc12_O2/indcpa_keypair_derand_k4_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/shake128_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_absorb_once_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_squeezeblocks_spec.ml \
@@ -1474,6 +1495,7 @@ mlkem_native/gcc12_O2/keccak_absorb_once_proof.native: \
   proofs/mlkem_native/gcc12_O2/layout.ml \
   proofs/utils/keccak_spec.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/utils/mlkem_native_image.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
@@ -1491,6 +1513,7 @@ mlkem_native/gcc12_O2/keccak_absorb_once_x4_proof.native: \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/keccakf1600_extract_bytes_proof.native: \
@@ -1509,6 +1532,7 @@ mlkem_native/gcc12_O2/keccakf1600_permute_proof.native: \
   proofs/mlkem_native/gcc12_O2/libmlkem.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/keccakf1600_xor_bytes_proof.native: \
@@ -1537,6 +1561,7 @@ mlkem_native/gcc12_O2/keccakf1600x4_permute_proof.native: \
   proofs/utils/keccak_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/keccakf1600x4_xor_bytes_proof.native: \
@@ -1595,6 +1620,7 @@ mlkem_native/gcc12_O2/keypair_derand_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/shake128_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_absorb_once_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_squeezeblocks_spec.ml \
@@ -1657,6 +1683,7 @@ mlkem_native/gcc12_O2/keypair_derand_k3_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/shake128_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_absorb_once_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_squeezeblocks_spec.ml \
@@ -1719,6 +1746,7 @@ mlkem_native/gcc12_O2/keypair_derand_k4_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/shake128_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_absorb_once_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_squeezeblocks_spec.ml \
@@ -1782,6 +1810,7 @@ mlkem_native/gcc12_O2/keypair_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/shake128_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_absorb_once_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_squeezeblocks_spec.ml \
@@ -1845,6 +1874,7 @@ mlkem_native/gcc12_O2/keypair_k3_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/shake128_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_absorb_once_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_squeezeblocks_spec.ml \
@@ -1908,6 +1938,7 @@ mlkem_native/gcc12_O2/keypair_k4_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
   proofs/mlkem_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/mlkem_native/gcc12_O2/shake128_init_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_absorb_once_spec.ml \
   proofs/mlkem_native/gcc12_O2/shake128_squeezeblocks_spec.ml \
@@ -2171,6 +2202,7 @@ mlkem_native/gcc12_O2/link.native: \
   proofs/utils/mlkem_native_libc_full.ml \
   proofs/utils/mlkem_native_kem.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_f1600.ml \
   proofs/utils/mlkem_native_fips203.ml \
   mlkem_native/gcc12_O2/basemul_k2.o \
   mlkem_native/gcc12_O2/basemul_k3.o \
@@ -2309,6 +2341,7 @@ mlkem_native/gcc12_O2/poly_getnoise_eta1122_4x_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/poly_getnoise_eta1_4x_k2_proof.native: \
@@ -2331,6 +2364,7 @@ mlkem_native/gcc12_O2/poly_getnoise_eta1_4x_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/poly_getnoise_eta1_4x_k3_proof.native: \
@@ -2353,6 +2387,7 @@ mlkem_native/gcc12_O2/poly_getnoise_eta1_4x_k3_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/poly_getnoise_eta1_4x_k4_proof.native: \
@@ -2375,6 +2410,7 @@ mlkem_native/gcc12_O2/poly_getnoise_eta1_4x_k4_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/poly_getnoise_eta2_k2_proof.native: \
@@ -2392,6 +2428,7 @@ mlkem_native/gcc12_O2/poly_getnoise_eta2_k2_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/poly_getnoise_eta2_k4_proof.native: \
@@ -2409,6 +2446,7 @@ mlkem_native/gcc12_O2/poly_getnoise_eta2_k4_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/poly_invntt_tomont_proof.native: \
@@ -2466,6 +2504,7 @@ mlkem_native/gcc12_O2/poly_rej_uniform_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o \
   mlkem_native/gcc12_O2/rej_uniform.o
@@ -2498,6 +2537,7 @@ mlkem_native/gcc12_O2/poly_rej_uniform_x4_proof.native: \
   proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o \
   mlkem_native/gcc12_O2/rej_uniform.o
@@ -2845,6 +2885,7 @@ mlkem_native/gcc12_O2/sha3_256_proof.native: \
   proofs/mlkem_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/sha3_512_proof.native: \
@@ -2860,6 +2901,7 @@ mlkem_native/gcc12_O2/sha3_512_proof.native: \
   proofs/mlkem_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/shake128_absorb_once_proof.native: \
@@ -2874,6 +2916,7 @@ mlkem_native/gcc12_O2/shake128_absorb_once_proof.native: \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/shake128_init_proof.native: \
@@ -2901,6 +2944,7 @@ mlkem_native/gcc12_O2/shake128_squeezeblocks_proof.native: \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mlkem_native.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/shake128x4_absorb_once_proof.native: \
@@ -2920,6 +2964,7 @@ mlkem_native/gcc12_O2/shake128x4_absorb_once_proof.native: \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/shake128x4_init_proof.native: \
@@ -2950,6 +2995,7 @@ mlkem_native/gcc12_O2/shake128x4_squeezeblocks_proof.native: \
   proofs/utils/keccak_spec.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/shake256_proof.native: \
@@ -2965,6 +3011,7 @@ mlkem_native/gcc12_O2/shake256_proof.native: \
   proofs/mlkem_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
   proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
 mlkem_native/gcc12_O2/shake256x4_proof.native: \
@@ -2985,5 +3032,6 @@ mlkem_native/gcc12_O2/shake256x4_proof.native: \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/keccak_spec.ml \
   proofs/utils/mlkem_native.ml \
+  proofs/utils/keccak_f1600.ml \
   mlkem_native/gcc12_O2/keccakf1600_permute.o \
   mlkem_native/gcc12_O2/libmlkem.o
