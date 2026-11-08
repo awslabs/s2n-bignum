@@ -9,6 +9,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/mldsa_native/gcc12_O2/poly_caddq_spec.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The value stored for coefficient a is a ^ ((a ^ (a + q)) & m), where the  *)
@@ -32,21 +33,32 @@ let CADDQ_LANE_TAC =
     else NO_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. The loop handles one coefficient per iteration.        *)
+(* Correctness, constant time and memory safety. The loop handles one        *)
+(* coefficient per iteration; the loop test is the end of the body, as       *)
+(* ENSURES_EVENTS_WHILE_UP2_TAC requires, and the events of an iteration     *)
+(* depend on its index only.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-let MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
- (MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+let MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT,
+  CONCRETIZE_F_EVENTS_TAC
+    `\(a:int64) (pc:num) (returnaddress:int64).
+      APPEND
+        (f_ev_epil a pc returnaddress)
+        (APPEND
+          (ENUMERATEL 256 (\i. f_ev_loop a pc returnaddress i))
+          (f_ev_prol a pc returnaddress))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN
   MAP_EVERY X_GEN_TAC
-   [`a:int64`; `x:num->int32`; `pc:num`; `returnaddress:int64`] THEN
+   [`e:(uarch_event)list`; `a:int64`; `x:num->int32`; `pc:num`;
+    `returnaddress:int64`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
-              NONOVERLAPPING_CLAUSES; ALL; mld_poly_caddq] THEN
+              NONOVERLAPPING_CLAUSES; ALL; mld_poly_caddq;
+              fst MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** The loop invariant, with the loop test as a separate step ***)
-
-  ENSURES_WHILE_UP_TAC `256` `pc + mldsa_poly_caddq_loop1`
-   `pc + mldsa_poly_caddq_loop1_test`
+  ENSURES_EVENTS_WHILE_UP2_TAC `256` `pc + mldsa_poly_caddq_loop1`
+   `pc + mldsa_poly_caddq_loop1_exit`
    `\i s. read X0 s = word_add a (word(4 * i)) /\
           read X4 s = word_add a (word 1024) /\
           read X30 s = returnaddress /\
@@ -62,15 +74,18 @@ let MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
 
     (*** Initialization ***)
 
-    ENSURES_INIT_TAC "s0" THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_EXEC (1--4) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0; WORD_ADD_0] THEN
-    ASM_REWRITE_TAC[];
+    ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC;
 
-    (*** The loop body ***)
+    (*** The loop body, with the loop test ***)
 
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
     FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I [ONE_INPUT_SPLIT] o
       check (fun th -> is_forall(concl th) &&
         free_in `x:num->int32` (concl th) &&
@@ -78,24 +93,28 @@ let MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
     ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
     ARM_STEPS_TAC MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_EXEC (1--8) THEN
     CADDQ_LANE_TAC THEN
+    ARM_STEPS_TAC MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_EXEC (9--10) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[ONE_OUTPUT_SPLIT] THEN
-    CONV_TAC WORD_RULE;
+    PTR_LOOP_TEST_TAC THEN LOOP_COND_TAC THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    CONJ_TAC THENL [CONV_TAC WORD_RULE; DISCHARGE_SAFETY_PROPERTY_TAC];
 
-    (*** The loop-back branch ***)
+    (*** The return ***)
 
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    REWRITE_TAC[] THEN REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_EXEC (1--1) THEN
-    PTR_DECIDE_FLAGS_TAC THEN
-    ARM_STEPS_TAC MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_EXEC (2--2) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];
-
-    (*** The loop exit and the return ***)
-
-    ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_EXEC (1--1) THEN
-    PTR_DECIDE_FLAGS_TAC THEN
-    ARM_STEPS_TAC MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_EXEC (2--3) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    FIRST_X_ASSUM(MATCH_ACCEPT_TAC o
-      check (fun th -> is_forall(concl th) &&
-                       free_in `mld_caddq` (concl th)))]);;
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, and constant time and memory safety alone.                   *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+  CORRECT_OF_FULL_TAC MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_FULL);;
+
+let MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  SAFE_OF_FULL_TAC MLDSA_NATIVE_POLY_CADDQ_GCC12_O2_IMAGE_SUBROUTINE_FULL);;

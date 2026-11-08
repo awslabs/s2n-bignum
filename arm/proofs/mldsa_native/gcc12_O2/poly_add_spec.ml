@@ -9,7 +9,8 @@
 (* mldsa-native's portable C implementation compiled by gcc 12 with -O2      *)
 (* (see mldsa_native/README.md), which the compiler has vectorized. It is    *)
 (* verified in the whole image (see libmldsa.ml) against mld_poly_add of     *)
-(* common/mldsa_native_poly.ml.                                              *)
+(* common/mldsa_native_poly.ml, and shown to be constant time and memory     *)
+(* safe.                                                                     *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -66,3 +67,68 @@ let MLDSA_NATIVE_POLY_ADD_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 
 let MLDSA_NATIVE_POLY_ADD_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec MLDSA_NATIVE_POLY_ADD_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together: the same, and the  *)
+(* events are a function of the addresses only, with all accesses within the *)
+(* two polynomials and the writes within r.                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLY_ADD_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
+ `exists f_events.
+     forall e r b x y pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        ALL (nonoverlapping (r,1024)) [(word pc,libmldsa_size); (b,1024)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_poly_add) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [r; b] s /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add r (word(4 * i))))
+                             s = x i) /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add b (word(4 * i))))
+                             s = y i) /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add r (word(4 * i))))
+                             s = mld_poly_add x y i) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events r b pc returnaddress /\
+                     memaccess_inbounds e2 [r,1024; b,1024] [r,1024]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(r,1024)])`;;
+
+let MLDSA_NATIVE_POLY_ADD_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLDSA_NATIVE_POLY_ADD_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant time and memory safety alone.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLY_ADD_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
+ `exists f_events.
+     forall e r b pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        ALL (nonoverlapping (r,1024)) [(word pc,libmldsa_size); (b,1024)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_poly_add) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [r; b] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events r b pc returnaddress /\
+                     memaccess_inbounds e2 [r,1024; b,1024] [r,1024]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(r,1024)])`;;
+
+let MLDSA_NATIVE_POLY_ADD_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLDSA_NATIVE_POLY_ADD_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;

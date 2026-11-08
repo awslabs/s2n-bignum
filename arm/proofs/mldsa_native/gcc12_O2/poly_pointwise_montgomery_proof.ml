@@ -9,6 +9,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/mldsa_native/gcc12_O2/poly_pointwise_montgomery_spec.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 
 (*** The vectors of -q = 0xff801fff and q^-1 mod 2^32 = 0x3802001 ***)
 
@@ -44,25 +45,36 @@ let MONTRED_LANE = prove
   CONV_TAC(DEPTH_CONV WORD_RED_CONV) THEN REWRITE_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. Each of the 64 iterations of the loop multiplies 4     *)
-(* coefficients, loaded and stored as one 128-bit word.                      *)
+(* Correctness, constant time and memory safety. Each of the 64 iterations   *)
+(* of the loop multiplies 4 coefficients, loaded and stored as one 128-bit   *)
+(* word; the loop test is the end of the body, as                            *)
+(* ENSURES_EVENTS_WHILE_UP2_TAC requires, and the events of an iteration     *)
+(* depend on its index only.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-let MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
+let MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_FULL =
   prove
- (MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+ (MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT,
   let EXEC = MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_EXEC in
+  CONCRETIZE_F_EVENTS_TAC
+    `\(r:int64) (b:int64) (pc:num) (returnaddress:int64).
+      APPEND
+        (f_ev_epil r b pc returnaddress)
+        (APPEND
+          (ENUMERATEL 64 (\i. f_ev_loop r b pc returnaddress i))
+          (f_ev_prol r b pc returnaddress))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN
   MAP_EVERY X_GEN_TAC
-   [`r:int64`; `b:int64`; `x:num->int32`; `y:num->int32`; `pc:num`;
-    `returnaddress:int64`] THEN
+   [`e:(uarch_event)list`; `r:int64`; `b:int64`; `x:num->int32`;
+    `y:num->int32`; `pc:num`; `returnaddress:int64`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
-              NONOVERLAPPING_CLAUSES; ALL; mld_poly_pointwise_montgomery] THEN
+              NONOVERLAPPING_CLAUSES; ALL; mld_poly_pointwise_montgomery;
+              fst EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** The loop invariant, with the loop test as a separate step ***)
-
-  ENSURES_WHILE_UP_TAC `64` `pc + mldsa_poly_pointwise_montgomery_loop1`
-   `pc + mldsa_poly_pointwise_montgomery_loop1_test`
+  ENSURES_EVENTS_WHILE_UP2_TAC `64`
+   `pc + mldsa_poly_pointwise_montgomery_loop1`
+   `pc + mldsa_poly_pointwise_montgomery_loop1_exit`
    `\i s. read X0 s = r /\ read X1 s = b /\ read X2 s = word(16 * i) /\
           read X30 s = returnaddress /\
           read Q3 s = word 0xff801fffff801fffff801fffff801fff /\
@@ -82,7 +94,7 @@ let MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
 
     (*** Initialization, with the vectors of constants from the image ***)
 
-    ENSURES_INIT_TAC "s0" THEN
+    FULL_INIT_TAC THEN
     MAP_EVERY (fun th -> FIRST_ASSUM(ASSUME_TAC o MATCH_MP th))
       MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_CONSTANTS THEN
     ARM_STEPS_TAC EXEC (1--1) THEN MLKEM_NATIVE_ADRP_TAC THEN
@@ -90,15 +102,32 @@ let MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
     ARM_STEPS_TAC EXEC (4--6) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0; WORD_ADD_0] THEN
-    ASM_REWRITE_TAC[] THEN CONV_TAC WORD_REDUCE_CONV;
+    ASM_REWRITE_TAC[] THEN CONV_TAC WORD_REDUCE_CONV THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
 
-    (*** The loop body; the code multiplies y j by x j ***)
+    (*** The loop body, with the loop test; the code multiplies y j by x j ***)
 
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
-    VEC4_LOOP_BODY_TAC EXEC 11 THEN
-    VEC4_LOOP_FINAL_TAC [MONTRED_LANE] THEN REWRITE_TAC[WORD_MUL_SYM];
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+    FULL_INIT_TAC THEN
+    VEC4_LOOP_BODY_TAC EXEC 11 THEN ARM_STEPS_TAC EXEC (12--13) THEN
+    VEC4_FULL_FINAL_TAC [MONTRED_LANE] (REWRITE_TAC[WORD_MUL_SYM]);
 
-    (*** The loop-back branch and the exit ***)
+    (*** The return ***)
 
-    LOOP_BACK_TAC EXEC;
-    LOOP_EXIT_TAC EXEC 3]);;
+    FULL_EXIT_TAC EXEC 1]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, and constant time and memory safety alone.                   *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
+  prove
+ (MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+  CORRECT_OF_FULL_TAC
+    MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_FULL);;
+
+let MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  prove
+ (MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  SAFE_OF_FULL_TAC
+    MLDSA_NATIVE_POLY_POINTWISE_MONTGOMERY_GCC12_O2_IMAGE_SUBROUTINE_FULL);;

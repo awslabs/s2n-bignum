@@ -155,30 +155,39 @@ mldsa_native/gcc12_O2/libmldsa.native: \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_add_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_add_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/mlkem_native_libc.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_caddq_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_caddq_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/mlkem_native_libc.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_chknorm_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_chknorm_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/mlkem_native_libc.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_decompose_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_decompose_44_spec.ml \
@@ -238,48 +247,63 @@ mldsa_native/gcc12_O2/poly_ntt_proof.native: \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_pointwise_montgomery_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_pointwise_montgomery_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/mlkem_native_libc.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_power2round_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_power2round_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/mlkem_native_libc.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_reduce_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_reduce_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/mlkem_native_libc.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_shiftl_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_shiftl_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/mlkem_native_libc.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_sub_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_sub_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mlkem_native_image.ml \
+  proofs/utils/mlkem_native_libc.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_use_hint_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_use_hint_44_spec.ml \

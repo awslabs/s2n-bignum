@@ -10,7 +10,8 @@
 (* compiled by gcc 12 with -O2 (see mldsa_native/README.md). It is verified  *)
 (* in the whole image (see libmldsa.ml) against mld_poly_chknorm of          *)
 (* common/mldsa_native_poly.ml: the result is all ones if some coefficient a *)
-(* has B - 1 - |a| < 0, and zero otherwise.                                  *)
+(* has B - 1 - |a| < 0, and zero otherwise. It is also shown to be constant  *)
+(* time and memory safe.                                                     *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -68,3 +69,59 @@ let MLDSA_NATIVE_POLY_CHKNORM_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 
 let MLDSA_NATIVE_POLY_CHKNORM_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec MLDSA_NATIVE_POLY_CHKNORM_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together: the same, and the  *)
+(* events are a function of the addresses only, with all accesses within the *)
+(* inputs and outputs and the writes within the outputs.                     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLY_CHKNORM_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
+ `exists f_events.
+     forall e a x bnd pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_poly_chknorm) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a; bnd] s /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add a (word(4 * i))))
+                             s = x i) /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  C_RETURN s = word_zx(mld_poly_chknorm x (word_zx bnd)) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a bnd pc returnaddress /\
+                     memaccess_inbounds e2 [a,1024] []))
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`;;
+
+let MLDSA_NATIVE_POLY_CHKNORM_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLDSA_NATIVE_POLY_CHKNORM_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant time and memory safety alone.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLY_CHKNORM_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
+ `exists f_events.
+     forall e a bnd pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_poly_chknorm) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a; bnd] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a bnd pc returnaddress /\
+                     memaccess_inbounds e2 [a,1024] []))
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`;;
+
+let MLDSA_NATIVE_POLY_CHKNORM_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLDSA_NATIVE_POLY_CHKNORM_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;
