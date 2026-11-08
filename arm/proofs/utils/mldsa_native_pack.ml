@@ -10,6 +10,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mldsa_native.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 
 (*** Splitting off the B outputs of an iteration (with j < i for B = 1), and
      the indices of an iteration ***)
@@ -154,3 +155,27 @@ let CHUNK_FINAL_TAC fdef (x:term) =
   REWRITE_TAC[ADD_CLAUSES; WORD_ADD_0] THEN
   CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN APP_BLAST_TAC x;;
+
+(*** The same in a FULL proof, where the loop test is the end of the body ***)
+(*** (see utils/mldsa_native_full.ml): also the PC after the branch and   ***)
+(*** the events of the iteration                                          ***)
+
+let CHUNK_FULL_FINAL_TAC fdef (x:term) =
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  LOOP_TEST_TAC THEN PTR_LOOP_TEST_TAC THEN LOOP_COND_TAC THEN
+  REPEAT CONJ_TAC THEN
+  TRY(COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC) THEN
+  TRY(CONV_TAC WORD_RULE THEN NO_TAC) THEN
+  TRY(REWRITE_TAC[CHUNK_OUTPUT_SPLIT; CHUNK_OUTPUT_SPLIT_1] THEN
+      ASM_REWRITE_TAC[] THEN
+      CONV_TAC EXPAND_CASES_CONV THEN
+      REWRITE_TAC[fdef] THEN
+      SIMP_TAC[DIVMOD_CHUNK; ARITH] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      REWRITE_TAC[ADD_CLAUSES; LEFT_ADD_DISTRIB; MULT_ASSOC] THEN
+      CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
+      REWRITE_TAC[ADD_CLAUSES; WORD_ADD_0] THEN
+      CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+      ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN APP_BLAST_TAC x THEN
+      NO_TAC) THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;

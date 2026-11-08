@@ -10,7 +10,8 @@
 (* C implementation compiled by gcc 12 with -O2 (see                         *)
 (* mldsa_native/README.md), which writes 3 bytes for each 8 coefficients. It *)
 (* is verified in the whole image (see libmldsa.ml) against                  *)
-(* mld_polyeta_pack_2 of common/mldsa_native_packing.ml, byte by byte.       *)
+(* mld_polyeta_pack_2 of common/mldsa_native_packing.ml, byte by byte. It is *)
+(* also shown to be constant time and memory safe.                           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -92,3 +93,65 @@ let MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 let MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec
    MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together: the same, and the  *)
+(* events are a function of the addresses only, with all accesses within the *)
+(* inputs and outputs and the writes within the outputs.                     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
+ `exists f_events.
+     forall e r a x pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        ALL (nonoverlapping (r,96)) [(word pc,libmldsa_size); (a,1024)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa87_polyeta_pack) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [r; a] s /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add a (word(4 * i))))
+                             s = x i) /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (!j. j < 96
+                       ==> read(memory :> bytes8(word_add r (word j))) s =
+                           mld_polyeta_pack_2 x j) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events r a pc returnaddress /\
+                     memaccess_inbounds e2 [a,1024; r,96] [r,96]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(r,96)])`;;
+
+let MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant time and memory safety alone.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
+ `exists f_events.
+     forall e r a pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        ALL (nonoverlapping (r,96)) [(word pc,libmldsa_size); (a,1024)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa87_polyeta_pack) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [r; a] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events r a pc returnaddress /\
+                     memaccess_inbounds e2 [a,1024; r,96] [r,96]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(r,96)])`;;
+
+let MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;

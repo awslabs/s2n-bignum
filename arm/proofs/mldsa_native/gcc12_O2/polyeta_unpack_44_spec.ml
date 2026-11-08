@@ -12,7 +12,8 @@
 (* stores the masked fields and then 2 - a over them, four coefficients at a *)
 (* time from a vector register. It is verified in the whole image (see       *)
 (* libmldsa.ml) against mld_polyeta_unpack_2 of                              *)
-(* common/mldsa_native_packing.ml.                                           *)
+(* common/mldsa_native_packing.ml. It is also shown to be constant time and  *)
+(* memory safe.                                                              *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -105,3 +106,65 @@ let MLDSA_NATIVE_POLYETA_UNPACK_44_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 let MLDSA_NATIVE_POLYETA_UNPACK_44_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec
    MLDSA_NATIVE_POLYETA_UNPACK_44_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together: the same, and the  *)
+(* events are a function of the addresses only, with all accesses within the *)
+(* inputs and outputs and the writes within the outputs.                     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLYETA_UNPACK_44_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
+ `exists f_events.
+     forall e r a b pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        ALL (nonoverlapping (r,1024)) [(word pc,libmldsa_size); (a,96)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa44_polyeta_unpack) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [r; a] s /\
+                  (!j. j < 96
+                       ==> read(memory :> bytes8(word_add a (word j))) s =
+                           b j) /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add r (word(4 * i))))
+                             s = mld_polyeta_unpack_2 b i) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events r a pc returnaddress /\
+                     memaccess_inbounds e2 [a,96; r,1024] [r,1024]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(r,1024)])`;;
+
+let MLDSA_NATIVE_POLYETA_UNPACK_44_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLDSA_NATIVE_POLYETA_UNPACK_44_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant time and memory safety alone.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLYETA_UNPACK_44_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
+ `exists f_events.
+     forall e r a pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        ALL (nonoverlapping (r,1024)) [(word pc,libmldsa_size); (a,96)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa44_polyeta_unpack) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [r; a] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events r a pc returnaddress /\
+                     memaccess_inbounds e2 [a,96; r,1024] [r,1024]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(r,1024)])`;;
+
+let MLDSA_NATIVE_POLYETA_UNPACK_44_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLDSA_NATIVE_POLYETA_UNPACK_44_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;
