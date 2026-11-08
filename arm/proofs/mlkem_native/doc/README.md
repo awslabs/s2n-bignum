@@ -25,6 +25,9 @@ the state at 19f9abc7.
   and organising the next port.
 - [benchmarks.md](benchmarks.md): pinned timings of every gcc12_O2 and
   gcc12_O2_mono proof.
+- [performance.md](performance.md): where the CPU time of a proof
+  check goes, what each prototype speed-up measured, and what a 5-10x
+  gain still needs.
 
 ## Main findings
 
