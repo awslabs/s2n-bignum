@@ -277,15 +277,13 @@ let cosimulate_instructions_steps (nsteps: int option)
   let instrs_of execth =
     map (rand o rand o snd o strip_forall o concl o option_get)
         (filter option_is_some (Array.to_list (snd execth))) in
-  let lacking =
+  let skip =
     match execth_opt with
       Some execth ->
-        cosim_lacking_features (Lazy.force arm_executor_features)
-          (setify (itlist ((@) o arm_required_features) (instrs_of execth) []))
-    | None -> [] in
-  if lacking <> [] then
-    (cosim_skipped_features := lacking;
-     mk_flist (instrs_of (option_get execth_opt)),true) else
+        cosim_skip_lacking (Lazy.force arm_executor_features)
+          (itlist ((@) o arm_required_features) (instrs_of execth) [])
+    | None -> false in
+  if skip then mk_flist (instrs_of (option_get execth_opt)),true else
 
   let command_arg =
     (* Split q registers that are 128 bits to 64 + 64 bits *)
@@ -1021,14 +1019,11 @@ let skipped_instances = ref 0;;
 
 let rec run_random_simulations start_t =
   let decoded,result,simty = run_random_simulation() in
-  let missing = !cosim_skipped_features in
-  cosim_skipped_features := [];
+  let missing = cosim_take_skipped () in
   if result then begin
     if missing <> [] then begin
       skipped_instances := !skipped_instances + 1;
-      Format.print_string("SKIPPED (" ^ cosim_skip_reason missing ^ "): " ^
-                          string_of_term decoded);
-      Format.print_newline()
+      cosim_report_skipped missing decoded
     end else begin
       tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
       tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
@@ -1044,6 +1039,7 @@ let rec run_random_simulations start_t =
       let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, tested branch instances: %d, total: %d, skipped instances: %d)\n"
           time_limit_sec !tested_reg_instances !tested_mem_instances
           !tested_br_instances total !skipped_instances in
+      cosim_warn_skipped !skipped_instances total;
       None
     else run_random_simulations start_t
   end

@@ -343,7 +343,41 @@ let cosim_lacking_features features required =
 let cosim_skip_reason missing =
   "executor lacks " ^ String.concat ", " missing;;
 
-(* Set by a simulator when it skips a case, to the features that the
-   executor lacks *)
+(* The features that the executor lacks for the last case skipped, if any.
+   It is set by cosim_skip_lacking and read and reset by cosim_take_skipped,
+   so that a simulator need not thread the reason for a skip through the
+   functions that generate its cases. *)
 
 let cosim_skipped_features = ref ([]:string list);;
+
+(* Whether to skip a case whose instructions need the required features (in
+   any order, possibly repeated): true if the executor reports its features
+   and lacks some of them, which are recorded for cosim_take_skipped *)
+
+let cosim_skip_lacking features required =
+  match cosim_lacking_features features (setify required) with
+  | [] -> false
+  | missing -> cosim_skipped_features := missing; true;;
+
+(* The features recorded for the case just run, nonempty if it was
+   skipped, resetting the record for the next case *)
+
+let cosim_take_skipped () =
+  let missing = !cosim_skipped_features in
+  cosim_skipped_features := [];
+  missing;;
+
+(* Report a skipped case, and at the end of a run, warn if at least as many
+   cases were skipped as tested, since the run then checks much less than
+   it seems to: the executor probably lacks features that most cases need *)
+
+let cosim_report_skipped missing decoded =
+  Format.print_string("SKIPPED (" ^ cosim_skip_reason missing ^ "): " ^
+                      string_of_term decoded);
+  Format.print_newline();;
+
+let cosim_warn_skipped skipped tested =
+  if skipped > 0 && skipped >= tested then
+    Printf.printf
+      "Warning: %d cases were skipped for lack of CPU features, but only %d \
+       were tested\n%!" skipped tested;;
