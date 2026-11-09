@@ -417,3 +417,96 @@ let find_substring str sub =
       f_search (pos + 1)
   in
   f_search 0;;
+
+(* ------------------------------------------------------------------------- *)
+(* Memoized variant of TOP_DEPTH_CONV.                                       *)
+(* ------------------------------------------------------------------------- *)
+
+(* Bounded memoization for TOP_DEPTH_CONV. MEMOIZED_TOP_DEPTH_CONV step
+   behaves like TOP_DEPTH_CONV step, and on a cache miss it rewrites and
+   traverses in the same order. In addition, it records the result of
+   converting each subterm t, either the theorem Gamma |- t = u (including
+   any hypotheses Gamma that step introduced) or the fact that no rewrite
+   applied anywhere in t, and reuses it when t occurs again.
+
+   This pays off on terms with many repeated subterms. TOP_DEPTH_CONV
+   converts every occurrence separately, even when the occurrences are
+   physically shared, so its work grows with the unshared size of the term.
+   For example, bit-blasting a word equation produces one equivalence per
+   bit, and these share the same word subterms; see MEMOIZED_BITBLAST_THEN
+   in common/words2.ml. On small terms or terms without repetition the
+   caching overhead makes this slower than TOP_DEPTH_CONV, so use it only
+   where profiling shows a benefit.
+
+   Each application MEMOIZED_TOP_DEPTH_CONV step creates a new cache, which
+   is shared by all later calls of the resulting conversion, including on
+   different terms and goals. Keys use structural term equality via OCaml's
+   compare (which returns at once on physically equal subterms), including
+   types and variable names, not matching or alpha-equivalence.
+
+   The cache key does not include step or anything step depends on. The
+   caller must make sure that step gives the same result on the same term
+   for the lifetime of the conversion; there is no automatic invalidation.
+   For instance, if step rewrites with the assumptions of a goal, build it
+   from the assumption theorems themselves (map snd asl) so that cached
+   results carry the right hypotheses, and construct a new memoizer when
+   the assumptions change. A cache hit returns the stored theorem unchanged,
+   including its hypotheses.
+
+   At most max_entries results (successes and failures) are kept, default
+   16384; the table is cleared before inserting when full. This bounds the
+   number of entries, not memory in bytes. Zero selects ordinary
+   TOP_DEPTH_CONV; negative limits fail. Caching failures matters because
+   most subterms are usually left unchanged: without it, every occurrence of
+   a shared subterm that has no rewrite would be traversed again. As with
+   TOP_DEPTH_CONV, the result is REFL when no rewrite succeeds. *)
+
+let MEMOIZED_TOP_DEPTH_CONV ?(max_entries=16384) step =
+  if max_entries < 0 then
+    failwith "MEMOIZED_TOP_DEPTH_CONV: negative cache limit"
+  else if max_entries = 0 then TOP_DEPTH_CONV step else
+  let thenqc first second tm =
+    try let th = first tm in
+        try TRANS th (second(rhs(concl th)))
+        with Failure _ -> th
+    with Failure _ -> second tm
+  and thencqc first second tm =
+    let th = first tm in
+    try TRANS th (second(rhs(concl th)))
+    with Failure _ -> th in
+  let combq conv tm =
+    match tm with
+    | Comb(l,r) ->
+        (try let th = conv l in
+             try MK_COMB(th,conv r)
+             with Failure _ -> AP_THM th r
+         with Failure _ -> AP_TERM l (conv r))
+    | _ -> failwith "MEMOIZED_TOP_DEPTH_CONV: not a combination" in
+  let subq conv tm =
+    match tm with
+    | Abs(_,_) -> ABS_CONV conv tm
+    | _ -> combq conv tm in
+  let module Results = Hashtbl.Make(struct
+    type t = term
+    let equal t1 t2 = t1 == t2 || compare t1 t2 = 0
+    (* Look past shared heads and type constructors to symbolic arguments.
+       Equality still compares the whole term, not its hash. *)
+    let hash = Hashtbl.hash_param 128 512
+  end) in
+  let cache = Results.create 1021 in
+  let rec repeatq tm = thencqc step repeatq tm
+  and visit tm =
+    match (try Some(Results.find cache tm) with Not_found -> None) with
+    | Some(Some th) -> th
+    | Some None -> failwith "MEMOIZED_TOP_DEPTH_CONV"
+    | None ->
+        let res =
+          try Some(thenqc repeatq
+                     (thencqc (subq visit) (thencqc step visit)) tm)
+          with Failure _ -> None in
+        if Results.length cache >= max_entries then Results.clear cache;
+        Results.add cache tm res;
+        match res with
+        | Some th -> th
+        | None -> failwith "MEMOIZED_TOP_DEPTH_CONV" in
+  TRY_CONV visit;;
