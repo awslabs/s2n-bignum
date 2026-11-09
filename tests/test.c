@@ -19334,7 +19334,7 @@ int main(int argc, char *argv[])
   functionaltest(avx2,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
   functionaltest(avx2,"mlkem_ntt",test_mlkem_ntt);
   functionaltest(avx2,"mlkem_reduce",test_mlkem_reduce);
-  functionaltest(avx2,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
+  functionaltest(bmi,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
   functionaltest(avx2,"mlkem_tobytes",test_mlkem_tobytes);
   functionaltest(avx2,"mlkem_tomont",test_mlkem_tomont);
   functionaltest(avx2,"mlkem_unpack",test_mlkem_unpack);

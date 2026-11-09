@@ -29,8 +29,9 @@ int cpuid_basicfeatures(void)
 
 // AVX2 needs the processor feature (CPUID.(EAX=7,ECX=0):EBX[5]) and the
 // operating system to save the YMM state (CPUID.1:ECX.OSXSAVE[27] and
-// XCR0 bits 1 and 2). The ML-KEM rejection sampler also uses PEXT and
-// POPCNT, which every processor with AVX2 has.
+// XCR0 bits 1 and 2). The ML-KEM rejection sampler does not use AVX2 but
+// BMI2 (PEXT), with POPCNT and SSE4.1, which every processor with BMI2
+// has, so it is gated on supports_bmi2_and_adx instead.
 
 int supports_avx2(void)
 { int c = cpuid_basicfeatures();

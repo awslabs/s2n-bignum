@@ -2073,7 +2073,7 @@ int main(int argc, char *argv[])
   timingtest(avx2,"mlkem_mulcache_compute",call_mlkem_mulcache_compute);
   timingtest(avx2,"mlkem_ntt",call_mlkem_ntt);
   timingtest(avx2,"mlkem_reduce",call_mlkem_reduce);
-  timingtest(avx2,"mlkem_rej_uniform_VARIABLE_TIME (1200 bytes)",call_mlkem_rej_uniform);
+  timingtest(bmi,"mlkem_rej_uniform_VARIABLE_TIME (1200 bytes)",call_mlkem_rej_uniform);
   timingtest(avx2,"mlkem_tobytes",call_mlkem_tobytes);
   timingtest(avx2,"mlkem_tomont",call_mlkem_tomont);
   timingtest(!arm && avx2,"mlkem_unpack",call_mlkem_unpack);
