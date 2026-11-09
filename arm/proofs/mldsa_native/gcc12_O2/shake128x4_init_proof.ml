@@ -10,16 +10,34 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/mldsa_native/gcc12_O2/shake128x4_init_spec.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 
 
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof.                                                        *)
+(* Correctness, constant time and memory safety: the code is a return.       *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT,
+  META_EXISTS_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+              fst MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_EXEC] THEN
+  REPEAT STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_EXEC (1--1) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, and constant time and memory safety alone.                   *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
-  REWRITE_TAC[C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  REPEAT STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
-  ARM_STEPS_TAC MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_EXEC (1--1) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+  CORRECT_OF_FULL_TAC
+    MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_IMAGE_SUBROUTINE_FULL);;
+
+let MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  SAFE_OF_FULL_TAC
+    MLDSA_NATIVE_SHAKE128X4_INIT_GCC12_O2_IMAGE_SUBROUTINE_FULL);;

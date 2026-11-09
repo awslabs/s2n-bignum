@@ -11,6 +11,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/mldsa_native/gcc12_O2/shake128x4_absorb_once_spec.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 
 
 
@@ -30,7 +31,8 @@ let LOCAL_ABSORB_X4_TAC =
     0x0,mldsa_native_libmldsa_gcc12_O2_mc,
     MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT);;
 
-let MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+let MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
+  prove
  (MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
   MAP_EVERY X_GEN_TAC
    [`st:int64`; `m0:int64`; `m1:int64`; `m2:int64`; `m3:int64`;
@@ -73,3 +75,73 @@ let MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prov
     `mlen:num`; `M0:num`; `M1:num`; `M2:num`; `M3:num`; `guard:int64`;
     `pc:num`; `read SP s`; `read X30 s`] 31 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together.                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT,
+  REPEAT GEN_TAC THEN REWRITE_TAC[memset_full_contract] THEN
+  DISCH_THEN(fun th -> ASSUME_CALLEE_SAFETY_TAILED_TAC th "H_MEMSET") THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_FULL
+    "H_ABSORB" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_memset:num`] WORD_ADD]) THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  MAP_EVERY (fun n ->
+    let r = "X"^string_of_int n in
+    ENSURES_PRESERVED_TAC ("x"^string_of_int n^"_init")
+     (mk_const(r,[]))) (19--24) THEN
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_EXEC (1--13) THEN
+  LIBC_PLT_TAC MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_EXEC 13 THEN
+  LIBC_SAFE_CALL_TAC "H_MEMSET"
+   MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_EXEC
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+    `read X30 s`]
+   (ref [`pc:num`; `st:int64`; `m0:int64`; `m1:int64`; `m2:int64`;
+         `m3:int64`; `mlen:num`; `guard:int64`; `mf:int64`;
+         `stackpointer:int64`; `returnaddress:int64`])
+   18 THEN
+  FIRST_ASSUM(ASSUME_TAC o MATCH_MP MEMSET_ZERO_BYTES o
+    check (fun th -> is_forall(concl th) && free_in `st:int64` (concl th) &&
+                     free_in `bytes8:int64->(int64->byte,byte)component`
+                             (concl th))) THEN
+  ARM_STEPS_TAC MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_EXEC (19--30) THEN
+  REMOVE_THEN "H_ABSORB" (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mldsa_native_libmldsa_gcc12_O2_mc,
+       MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_EXEC,
+       0x0,mldsa_native_libmldsa_gcc12_O2_mc,safety_th)
+      [`e:(uarch_event)list`; `read X0 s`; `168`; `read X2 s`; `read X3 s`;
+       `read X4 s`; `read X5 s`; `mlen:num`; `M0:num`; `M1:num`;
+       `M2:num`; `M3:num`; `guard:int64`; `pc:num`;
+       `read SP s`; `read X30 s`] 31 THENL
+     [EXISTS_E2_TAC
+       (ref [`pc:num`; `st:int64`; `m0:int64`; `m1:int64`; `m2:int64`;
+             `m3:int64`; `mlen:num`; `guard:int64`; `mf:int64`;
+             `stackpointer:int64`; `returnaddress:int64`]);
+      LABEL_TAC "H_ABSORB" safety_th]) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant time and memory safety alone.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(fun th -> SAFE_OF_FULL_TAC
+    (MP (SPEC_ALL
+          MLDSA_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL)
+        th)));;

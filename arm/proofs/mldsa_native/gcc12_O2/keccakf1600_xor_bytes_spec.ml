@@ -8,7 +8,8 @@
 (* mldsa_keccakf1600_xor_bytes from mldsa-native's portable C implementation *)
 (* compiled by gcc 12 with -O2 (see mldsa_native/README.md), which XORs len  *)
 (* bytes of data into the 200-byte state starting at byte off. It is         *)
-(* verified in the whole image (see libmldsa.ml).                            *)
+(* verified in the whole image (see libmldsa.ml). It is also shown to be     *)
+(* constant time and memory safe.                                            *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -63,3 +64,65 @@ let MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 
 let MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together: the same, and the  *)
+(* events are a function of the addresses only, with all accesses within the *)
+(* inputs and outputs and the writes within the outputs.                     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
+ `exists f_events.
+     forall e a d off len (S:1600 word) m pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        off + len <= 200 /\
+        ALL (nonoverlapping (a,200)) [(word pc,libmldsa_size); (d,len)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_keccakf1600_xor_bytes) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a; d; word off; word len] s /\
+                  read (memory :> wbytes a) s = S /\
+                  read (memory :> bytes(d,len)) s = m /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  read (memory :> wbytes a) s =
+                  word_xor S (word(2 EXP (8 * off) * m)) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a d off len pc returnaddress /\
+                     memaccess_inbounds e2 [a,200; d,len] [a,200]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(a,200)])`;;
+
+let MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant time and memory safety alone.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
+ `exists f_events.
+     forall e a d off len pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        off + len <= 200 /\
+        ALL (nonoverlapping (a,200)) [(word pc,libmldsa_size); (d,len)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_keccakf1600_xor_bytes) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a; d; word off; word len] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a d off len pc returnaddress /\
+                     memaccess_inbounds e2 [a,200; d,len] [a,200]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(a,200)])`;;
+
+let MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;

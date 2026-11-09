@@ -12,6 +12,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/mldsa_native/gcc12_O2/shake256x4_squeezeblocks_spec.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 
 
 
@@ -76,34 +77,78 @@ let SQX4_COUNTER_TAC =
 (* keccak_squeeze nblocks S.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-let MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
- (MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
-  MAP_EVERY X_GEN_TAC
-   [`out0:int64`; `out1:int64`; `out2:int64`; `out3:int64`; `nblocks:num`;
-    `st:int64`; `S0:1600 word`; `S1:1600 word`; `S2:1600 word`;
-    `S3:1600 word`; `pc:num`] THEN
-  WORD_FORALL_OFFSET_TAC 272 THEN
-  MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together.                    *)
+(* ------------------------------------------------------------------------- *)
+
+let SQX4_CS_CALL_TAC name ilist n =
+  REMOVE_THEN name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (mldsa_native_libmldsa_gcc12_O2_mc,
+       MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_EXEC,
+       0x0,mldsa_native_libmldsa_gcc12_O2_mc,safety_th)
+      ilist n THENL
+     [EXISTS_E2_TAC (ref
+       [`out0:int64`; `out1:int64`; `out2:int64`; `out3:int64`;
+        `nblocks:num`; `st:int64`; `pc:num`; `stackpointer:int64`;
+        `returnaddress:int64`; `i:num`;
+        `f_ev_loop:int64->int64->int64->int64->num->int64->num->int64->
+                   int64->num->(uarch_event)list`]);
+      LABEL_TAC name safety_th]);;
+
+let SQX4_BYTES_STEP_TAC =
+  REWRITE_TAC[ARITH_RULE `136 * (i + 1) = 136 * i + 136`] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
+  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[GSYM ADD1; NSUM_CLAUSES_NUMSEG_LT; keccak_squeeze] THEN
+  REWRITE_TAC[MULT_CLAUSES; EXP; DIV_1];;
+
+let SQX4_PTR_STEP_TAC =
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  REWRITE_TAC[ARITH_RULE `136 * (i + 1) = 136 * i + 136`];;
+
+let MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL_F1600
+    "H_PERMUTE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLDSA_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL
+    "H_EXTRACT" THEN
+  CONCRETIZE_F_EVENTS_TAC
+    `\(out0:int64) (out1:int64) (out2:int64) (out3:int64) (nblocks:num)
+      (st:int64) (pc:num) (stackpointer:int64) (returnaddress:int64).
+      if nblocks = 0
+      then f_ev_zero out0 out1 out2 out3 nblocks st pc stackpointer
+                     returnaddress
+      else APPEND (f_ev_epil out0 out1 out2 out3 nblocks st pc stackpointer
+                             returnaddress)
+            (APPEND
+              (ENUMERATEL nblocks
+                (\i. f_ev_loop out0 out1 out2 out3 nblocks st pc stackpointer
+                               returnaddress i))
+              (f_ev_prol out0 out1 out2 out3 nblocks st pc stackpointer
+                         returnaddress))
+     :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               ALL; PAIRWISE; NONOVERLAPPING_CLAUSES;
-              READ_MEMORY_WBYTES_1600] THEN
+              READ_MEMORY_WBYTES_1600;
+              fst MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** The case nblocks = 0, where nothing is done ***)
-
-  ASM_CASES_TAC `nblocks = 0` THENL
-   [ASM_REWRITE_TAC[] THEN ENSURES_INIT_TAC "s0" THEN
+  ASM_CASES_TAC `nblocks = 0` THEN ASM_REWRITE_TAC[] THENL
+   [REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_EXEC
      (1--2) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[MULT_CLAUSES; READ_MEMORY_BYTES_TRIVIAL;
-                NSUM_CLAUSES_NUMSEG_LT; keccak_squeeze];
+                NSUM_CLAUSES_NUMSEG_LT; keccak_squeeze] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
   SQX4_BOUND_TAC THEN SQX4_PRESERVED_TAC THEN
-
-  (*** The loop, with i blocks done ***)
-
-  ENSURES_WHILE_UP2_TAC `nblocks:num`
+  ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num`
    `pc + mldsa_shake256x4_squeezeblocks_loop1`
    `pc + mldsa_shake256x4_squeezeblocks_loop1_exit`
    `\i s. read X19 s = word_add out3 (word(136 * i)) /\
@@ -154,9 +199,8 @@ let MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = pr
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];
 
-    (*** Initialization ***)
-
-    ENSURES_INIT_TAC "s0" THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_EXEC
      (1--1) THEN
     SQX4_NONZERO_TAC THEN
@@ -164,22 +208,19 @@ let MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = pr
      (2--11) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[MULT_CLAUSES; SUB_0; WORD_ADD_0; READ_MEMORY_BYTES_TRIVIAL;
-                NSUM_CLAUSES_NUMSEG_LT; keccak_squeeze];
+                NSUM_CLAUSES_NUMSEG_LT; keccak_squeeze] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
 
-    (*** The loop body: permute, extract a block of each, the loop test ***)
-
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
     SUBGOAL_THEN `136 * i + 136 <= 136 * nblocks` ASSUME_TAC THENL
      [UNDISCH_TAC `i < nblocks` THEN ARITH_TAC; ALL_TAC] THEN
     ARM_STEPS_TAC MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_EXEC
      (1--2) THEN
     SQX4_STATES_TAC THEN
-    ARM_SUBROUTINE_SIM_TAC
-     (mldsa_native_libmldsa_gcc12_O2_mc,
-      MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_EXEC,
-      0x0,mldsa_native_libmldsa_gcc12_O2_mc,
-    MLDSA_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600)
-     [`read X0 s`; `keccak_squeeze i (S0:1600 word)`;
+    SQX4_CS_CALL_TAC "H_PERMUTE"
+     [`e:(uarch_event)list`; `read X0 s`; `keccak_squeeze i (S0:1600 word)`;
       `keccak_squeeze i (S1:1600 word)`; `keccak_squeeze i (S2:1600 word)`;
       `keccak_squeeze i (S3:1600 word)`; `pc:num`; `read SP s`;
       `read X30 s`] 3 THEN
@@ -187,13 +228,10 @@ let MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = pr
     ARM_STEPS_TAC MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_EXEC
      (4--11) THEN
     SQX4_STATES_TAC THEN
-    ARM_SUBROUTINE_SIM_TAC
-     (mldsa_native_libmldsa_gcc12_O2_mc,
-      MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_EXEC,
-      0x0,mldsa_native_libmldsa_gcc12_O2_mc,
-    MLDSA_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT)
-     [`read X0 s`; `read X1 s`; `read X2 s`; `read X3 s`; `read X4 s`; `0`;
-      `136`; `keccak_f1600(keccak_squeeze i (S0:1600 word))`;
+    SQX4_CS_CALL_TAC "H_EXTRACT"
+     [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+      `read X3 s`; `read X4 s`; `0`; `136`;
+      `keccak_f1600(keccak_squeeze i (S0:1600 word))`;
       `keccak_f1600(keccak_squeeze i (S1:1600 word))`;
       `keccak_f1600(keccak_squeeze i (S2:1600 word))`;
       `keccak_f1600(keccak_squeeze i (S3:1600 word))`; `pc:num`;
@@ -202,21 +240,33 @@ let MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = pr
      (13--18) THEN
     SQX4_COUNTER_TAC THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REPEAT CONJ_TAC THEN
-    TRY(COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC) THEN
-    TRY(REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
-        REWRITE_TAC[ARITH_RULE `136 * (i + 1) = 136 * i + 136`] THEN
-        NO_TAC) THEN
-    TRY(REWRITE_TAC[GSYM ADD1; keccak_squeeze] THEN NO_TAC) THEN
-    REWRITE_TAC[ARITH_RULE `136 * (i + 1) = 136 * i + 136`] THEN
-    REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
-    REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[GSYM ADD1; NSUM_CLAUSES_NUMSEG_LT; keccak_squeeze] THEN
-    REWRITE_TAC[MULT_CLAUSES; EXP; DIV_1];
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    MAP_EVERY (fun _ -> CONJ_TAC THENL [SQX4_PTR_STEP_TAC; ALL_TAC])
+     (1--4) THEN
+    MAP_EVERY (fun _ -> CONJ_TAC THENL [SQX4_BYTES_STEP_TAC; ALL_TAC])
+     (1--4) THEN
+    MAP_EVERY (fun _ -> CONJ_TAC THENL
+      [REWRITE_TAC[GSYM ADD1; keccak_squeeze]; ALL_TAC]) (1--4) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
 
-    (*** The return ***)
-
-    ENSURES_INIT_TAC "s0" THEN
+    REWRITE_TAC[] THEN REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_EXEC
      (1--5) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]]);;
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, and constant time and memory safety alone.                   *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
+  prove
+ (MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+  CORRECT_OF_FULL_TAC
+    MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_FULL);;
+
+let MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  SAFE_OF_FULL_TAC
+    MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_FULL);;

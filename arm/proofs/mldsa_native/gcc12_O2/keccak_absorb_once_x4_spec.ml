@@ -16,7 +16,8 @@
 (* mlkem-native, apart from the addresses, so the statement and proof are    *)
 (* those of mlkem_native/gcc12_O2/keccak_absorb_once_x4.ml. It is verified   *)
 (* in the whole image (see libmldsa.ml), using the theorems for those        *)
-(* functions in the image.                                                   *)
+(* functions in the image. It is also shown to be constant time and memory   *)
+(* safe.                                                                     *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -199,3 +200,129 @@ let MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 
 let MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together, and constant time  *)
+(* and memory safety alone. The events depend on the length of the messages  *)
+(* and the rate only.                                                        *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
+  `exists f_events.
+     forall e st r m0 m1 m2 m3 mlen M0 M1 M2 M3 guard pc stackpointer
+            returnaddress.
+       aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+       aligned 16 stackpointer /\ 0 < r /\ r <= 200 /\
+       nonoverlapping (st,800) (word_sub stackpointer (word 304),304) /\
+       ALLPAIRS nonoverlapping
+        [st,800; word_sub stackpointer (word 304),304]
+        [m0,mlen; m1,mlen; m2,mlen; m3,mlen;
+         word pc,libmldsa_size; word(pc + got_stack_chk_guard),8; guard,8]
+       ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc)
+                   mldsa_native_libmldsa_gcc12_O2_mc /\
+                 read PC s = word (pc + mld_keccak_absorb_once_x4) /\
+                 read SP s = stackpointer /\
+                 read X30 s = returnaddress /\
+                 C_ARGUMENTS [st; word r; m0; m1; m2; m3; word mlen] s /\
+                 read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                   guard /\
+                 read (memory :> bytes(st,800)) s = 0 /\
+                 read (memory :> bytes(m0,mlen)) s = M0 /\
+                 read (memory :> bytes(m1,mlen)) s = M1 /\
+                 read (memory :> bytes(m2,mlen)) s = M2 /\
+                 read (memory :> bytes(m3,mlen)) s = M3 /\
+                 read events s = e)
+            (\s. read PC s = returnaddress /\
+                 read (memory :> wbytes st) s =
+                 word_xor
+                  (keccak_absorb r
+                    (M0 + 2 EXP (8 * mlen) *
+                          num_of_bytelist(keccak_pad r 0x1F mlen))
+                    (mlen DIV r))
+                  (word((M0 + 2 EXP (8 * mlen) *
+                              num_of_bytelist(keccak_pad r 0x1F mlen)) DIV
+                        2 EXP (8 * r * mlen DIV r) MOD 2 EXP (8 * r))) /\
+                 read (memory :> wbytes (word_add st (word 200))) s =
+                 word_xor
+                  (keccak_absorb r
+                    (M1 + 2 EXP (8 * mlen) *
+                          num_of_bytelist(keccak_pad r 0x1F mlen))
+                    (mlen DIV r))
+                  (word((M1 + 2 EXP (8 * mlen) *
+                              num_of_bytelist(keccak_pad r 0x1F mlen)) DIV
+                        2 EXP (8 * r * mlen DIV r) MOD 2 EXP (8 * r))) /\
+                 read (memory :> wbytes (word_add st (word 400))) s =
+                 word_xor
+                  (keccak_absorb r
+                    (M2 + 2 EXP (8 * mlen) *
+                          num_of_bytelist(keccak_pad r 0x1F mlen))
+                    (mlen DIV r))
+                  (word((M2 + 2 EXP (8 * mlen) *
+                              num_of_bytelist(keccak_pad r 0x1F mlen)) DIV
+                        2 EXP (8 * r * mlen DIV r) MOD 2 EXP (8 * r))) /\
+                 read (memory :> wbytes (word_add st (word 600))) s =
+                 word_xor
+                  (keccak_absorb r
+                    (M3 + 2 EXP (8 * mlen) *
+                          num_of_bytelist(keccak_pad r 0x1F mlen))
+                    (mlen DIV r))
+                  (word((M3 + 2 EXP (8 * mlen) *
+                              num_of_bytelist(keccak_pad r 0x1F mlen)) DIV
+                        2 EXP (8 * r * mlen DIV r) MOD 2 EXP (8 * r))) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events m0 m1 m2 m3 st r mlen guard pc
+                           (word_sub stackpointer (word 304)) returnaddress /\
+                    memaccess_inbounds e2
+                     [m0,mlen; m1,mlen; m2,mlen; m3,mlen; st,800;
+                      word_sub stackpointer (word 304),304;
+                      word(pc + got_stack_chk_guard),8; guard,8;
+                      word(pc + rodata_mld_KeccakF_RoundConstants),192]
+                     [st,800; word_sub stackpointer (word 304),304]))
+            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+             MAYCHANGE
+              [memory :> bytes(st,800);
+               memory :> bytes(word_sub stackpointer (word 304),304)])`;;
+
+let MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
+
+let MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
+  `exists f_events.
+     forall e st r m0 m1 m2 m3 mlen guard pc stackpointer returnaddress.
+       aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+       aligned 16 stackpointer /\ 0 < r /\ r <= 200 /\
+       nonoverlapping (st,800) (word_sub stackpointer (word 304),304) /\
+       ALLPAIRS nonoverlapping
+        [st,800; word_sub stackpointer (word 304),304]
+        [m0,mlen; m1,mlen; m2,mlen; m3,mlen;
+         word pc,libmldsa_size; word(pc + got_stack_chk_guard),8; guard,8]
+       ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc)
+                   mldsa_native_libmldsa_gcc12_O2_mc /\
+                 read PC s = word (pc + mld_keccak_absorb_once_x4) /\
+                 read SP s = stackpointer /\
+                 read X30 s = returnaddress /\
+                 C_ARGUMENTS [st; word r; m0; m1; m2; m3; word mlen] s /\
+                 read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                   guard /\
+                 read events s = e)
+            (\s. read PC s = returnaddress /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events m0 m1 m2 m3 st r mlen guard pc
+                           (word_sub stackpointer (word 304)) returnaddress /\
+                    memaccess_inbounds e2
+                     [m0,mlen; m1,mlen; m2,mlen; m3,mlen; st,800;
+                      word_sub stackpointer (word 304),304;
+                      word(pc + got_stack_chk_guard),8; guard,8;
+                      word(pc + rodata_mld_KeccakF_RoundConstants),192]
+                     [st,800; word_sub stackpointer (word 304),304]))
+            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+             MAYCHANGE
+              [memory :> bytes(st,800);
+               memory :> bytes(word_sub stackpointer (word 304),304)])`;;
+
+let MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;

@@ -10,6 +10,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/mldsa_native/gcc12_O2/shake128x4_release_spec.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 
 
 
@@ -44,3 +45,46 @@ let MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
   ARM_STEPS_TAC MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_EXEC (11--12) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC MEMSET_ZERO_BYTES THEN ASM_REWRITE_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together, and constant time  *)
+(* and memory safety alone.                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT,
+  REPEAT GEN_TAC THEN REWRITE_TAC[memset_full_contract] THEN
+  DISCH_THEN(fun th -> ASSUME_CALLEE_SAFETY_TAILED_TAC th "H_MEMSET") THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_memset:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_memset:num`] WORD_ADD]) THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_EXEC (1--5) THEN
+  LIBC_PLT_TAC MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_EXEC 5 THEN
+  LIBC_SAFE_CALL_TAC "H_MEMSET" MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_EXEC
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+    `read X30 s`]
+   (ref [`pc:num`; `st:int64`; `stackpointer:int64`; `returnaddress:int64`;
+         `mf:int64`])
+   10 THEN
+  ARM_STEPS_TAC MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_EXEC (11--12) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [MATCH_MP_TAC MEMSET_ZERO_BYTES THEN ASM_REWRITE_TAC[];
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(fun th -> SAFE_OF_FULL_TAC
+    (MP (SPEC_ALL
+          MLDSA_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_FULL)
+        th)));;

@@ -13,7 +13,8 @@
 (* call. It is verified in the whole image (see                              *)
 (* libmldsa.ml), using the theorems for                                      *)
 (* mld_keccak_absorb_once_x4 in the image and assuming the contracts for     *)
-(* memset in utils/mlkem_native_libc.ml.                                     *)
+(* memset in utils/mlkem_native_libc.ml. It is also shown to be constant     *)
+(* time and memory safe.                                                     *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -141,3 +142,154 @@ let MLDSA_NATIVE_SHAKE256X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 
 let MLDSA_NATIVE_SHAKE256X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec MLDSA_NATIVE_SHAKE256X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together, with the combined  *)
+(* contract of memset of utils/mlkem_native_libc_full.ml, and constant time  *)
+(* and memory safety alone. The correctness theorem above keeps the weaker   *)
+(* contract memset_contract and has its own proof.                           *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/utils/mlkem_native_libc_full.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
+
+let MLDSA_NATIVE_SHAKE256X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
+  `!mf ea el ev.
+     memset_full_contract mf ea el ev
+     ==> exists f_events.
+          forall e st m0 m1 m2 m3 mlen M0 M1 M2 M3 guard pc stackpointer
+                 returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+           aligned 16 stackpointer /\
+           nonoverlapping (st,800) (word_sub stackpointer (word 304),304) /\
+           ALLPAIRS nonoverlapping
+            [st,800; word_sub stackpointer (word 304),304]
+            [m0,mlen; m1,mlen; m2,mlen; m3,mlen;
+             word pc,libmldsa_size; word(pc + got_stack_chk_guard),8; guard,8;
+             word(pc + got_memset),8; ea,el]
+           ==> ensures arm
+                (\s. aligned_bytes_loaded s (word pc)
+                       mldsa_native_libmldsa_gcc12_O2_mc /\
+                     read PC s = word (pc + mldsa_shake256x4_absorb_once) /\
+                     read SP s = stackpointer /\
+                     read X30 s = returnaddress /\
+                     C_ARGUMENTS [st; m0; m1; m2; m3; word mlen] s /\
+                     read (memory :> bytes64(word(pc + got_stack_chk_guard))) s
+                      = guard /\
+                     read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                     read (memory :> bytes(ea,el)) s = ev /\
+                     read (memory :> bytes(m0,mlen)) s = M0 /\
+                     read (memory :> bytes(m1,mlen)) s = M1 /\
+                     read (memory :> bytes(m2,mlen)) s = M2 /\
+                     read (memory :> bytes(m3,mlen)) s = M3 /\
+                     read events s = e)
+                (\s. read PC s = returnaddress /\
+                     read (memory :> wbytes st) s =
+                     word_xor
+                      (keccak_absorb 136
+                        (M0 + 2 EXP (8 * mlen) *
+                              num_of_bytelist(keccak_pad 136 0x1F mlen))
+                        (mlen DIV 136))
+                      (word((M0 + 2 EXP (8 * mlen) *
+                             num_of_bytelist(keccak_pad 136 0x1F mlen)) DIV
+                            2 EXP (8 * 136 * mlen DIV 136) MOD
+                            2 EXP (8 * 136))) /\
+                     read (memory :> wbytes (word_add st (word 200))) s =
+                     word_xor
+                      (keccak_absorb 136
+                        (M1 + 2 EXP (8 * mlen) *
+                              num_of_bytelist(keccak_pad 136 0x1F mlen))
+                        (mlen DIV 136))
+                      (word((M1 + 2 EXP (8 * mlen) *
+                             num_of_bytelist(keccak_pad 136 0x1F mlen)) DIV
+                            2 EXP (8 * 136 * mlen DIV 136) MOD
+                            2 EXP (8 * 136))) /\
+                     read (memory :> wbytes (word_add st (word 400))) s =
+                     word_xor
+                      (keccak_absorb 136
+                        (M2 + 2 EXP (8 * mlen) *
+                              num_of_bytelist(keccak_pad 136 0x1F mlen))
+                        (mlen DIV 136))
+                      (word((M2 + 2 EXP (8 * mlen) *
+                             num_of_bytelist(keccak_pad 136 0x1F mlen)) DIV
+                            2 EXP (8 * 136 * mlen DIV 136) MOD
+                            2 EXP (8 * 136))) /\
+                     read (memory :> wbytes (word_add st (word 600))) s =
+                     word_xor
+                      (keccak_absorb 136
+                        (M3 + 2 EXP (8 * mlen) *
+                              num_of_bytelist(keccak_pad 136 0x1F mlen))
+                        (mlen DIV 136))
+                      (word((M3 + 2 EXP (8 * mlen) *
+                             num_of_bytelist(keccak_pad 136 0x1F mlen)) DIV
+                            2 EXP (8 * 136 * mlen DIV 136) MOD
+                            2 EXP (8 * 136))) /\
+                     (exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 = f_events m0 m1 m2 m3 st mlen guard mf pc
+                               (word_sub stackpointer (word 304))
+                               returnaddress /\
+                        memaccess_inbounds e2
+                         [m0,mlen; m1,mlen; m2,mlen; m3,mlen; st,800;
+                          word_sub stackpointer (word 304),304;
+                          word(pc + got_stack_chk_guard),8; guard,8;
+                          word(pc + rodata_mld_KeccakF_RoundConstants),192;
+                          word(pc + got_memset),8;
+                          ea,el]
+                         [st,800; word_sub stackpointer (word 304),304]))
+                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                 MAYCHANGE [X18] ,,
+                 MAYCHANGE
+                  [memory :> bytes(st,800);
+                   memory :> bytes(word_sub stackpointer (word 304),304)])`;;
+
+let MLDSA_NATIVE_SHAKE256X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLDSA_NATIVE_SHAKE256X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
+
+let MLDSA_NATIVE_SHAKE256X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
+  `!mf ea el ev.
+     memset_full_contract mf ea el ev
+     ==> exists f_events.
+          forall e st m0 m1 m2 m3 mlen guard pc stackpointer returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+           aligned 16 stackpointer /\
+           nonoverlapping (st,800) (word_sub stackpointer (word 304),304) /\
+           ALLPAIRS nonoverlapping
+            [st,800; word_sub stackpointer (word 304),304]
+            [m0,mlen; m1,mlen; m2,mlen; m3,mlen;
+             word pc,libmldsa_size; word(pc + got_stack_chk_guard),8; guard,8;
+             word(pc + got_memset),8; ea,el]
+           ==> ensures arm
+                (\s. aligned_bytes_loaded s (word pc)
+                       mldsa_native_libmldsa_gcc12_O2_mc /\
+                     read PC s = word (pc + mldsa_shake256x4_absorb_once) /\
+                     read SP s = stackpointer /\
+                     read X30 s = returnaddress /\
+                     C_ARGUMENTS [st; m0; m1; m2; m3; word mlen] s /\
+                     read (memory :> bytes64(word(pc + got_stack_chk_guard))) s
+                      = guard /\
+                     read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                     read (memory :> bytes(ea,el)) s = ev /\
+                     read events s = e)
+                (\s. read PC s = returnaddress /\
+                     (exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 = f_events m0 m1 m2 m3 st mlen guard mf pc
+                               (word_sub stackpointer (word 304))
+                               returnaddress /\
+                        memaccess_inbounds e2
+                         [m0,mlen; m1,mlen; m2,mlen; m3,mlen; st,800;
+                          word_sub stackpointer (word 304),304;
+                          word(pc + got_stack_chk_guard),8; guard,8;
+                          word(pc + rodata_mld_KeccakF_RoundConstants),192;
+                          word(pc + got_memset),8;
+                          ea,el]
+                         [st,800; word_sub stackpointer (word 304),304]))
+                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                 MAYCHANGE [X18] ,,
+                 MAYCHANGE
+                  [memory :> bytes(st,800);
+                   memory :> bytes(word_sub stackpointer (word 304),304)])`;;
+
+let MLDSA_NATIVE_SHAKE256X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLDSA_NATIVE_SHAKE256X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;
