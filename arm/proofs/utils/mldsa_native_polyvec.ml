@@ -115,6 +115,68 @@ let VEC_UNROLL_JOIN_TAC n k ths =
   REPEAT CONJ_TAC THEN ASM_SIMP_TAC[ETA_AX];;
 
 (* ------------------------------------------------------------------------- *)
+(* Loops counting polynomials in a 32-bit register. WORD_ZX_ADD_SMALL gives  *)
+(* the counter after the increment, and W32_LOOP_TEST_TAC turns the flags of *)
+(* the compare of the counter with a numeral, as the simulation gives them,  *)
+(* val(word_sub (word_zx(word m)) (word n)) = 0, into m = n.                 *)
+(* ------------------------------------------------------------------------- *)
+
+let WORD_ZX_ADD_SMALL = prove
+ (`!i k. i + k < 2 EXP 32
+         ==> word_zx(word_add (word_zx(word i:int64):int32) (word k)):int64 =
+             word(i + k)`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ZX_GEN; VAL_WORD_ADD; VAL_WORD;
+              DIMINDEX_32; DIMINDEX_64] THEN
+  RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN `i < 4294967296 /\ k < 4294967296 /\ i < 18446744073709551616 /\
+                i + k < 18446744073709551616` STRIP_ASSUME_TAC THENL
+   [ASM_ARITH_TAC; ASM_SIMP_TAC[MOD_LT]]);;
+
+let VAL_WORD_SUB_ZX_EQ_0 = prove
+ (`!m n. m < 2 EXP 32 /\ n < 2 EXP 32
+         ==> (val(word_sub (word_zx(word m:int64):int32) (word n)) = 0 <=>
+              m = n)`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[VAL_EQ_0; WORD_SUB_EQ_0; GSYM VAL_EQ; VAL_WORD_ZX_GEN; VAL_WORD;
+              DIMINDEX_32; DIMINDEX_64] THEN
+  RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN `m < 18446744073709551616` ASSUME_TAC THENL
+   [ASM_ARITH_TAC; ASM_SIMP_TAC[MOD_LT]]);;
+
+let W32_LOOP_TEST_TAC =
+  let pat = `val(word_sub (word_zx(word m:int64):int32) (word n)) = 0`
+  and lth = SPECL [`m:num`; `n:num`] VAL_WORD_SUB_ZX_EQ_0 in
+  W(fun (asl,w) ->
+    let tms = setify(find_terms (can (term_match [] pat)) w) in
+    MAP_EVERY (fun t ->
+      let th = INSTANTIATE (term_match [] pat t) lth in
+      MP_TAC th THEN ANTS_TAC THENL
+       [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+        DISCH_THEN SUBST1_TAC]) tms);;
+
+(* ------------------------------------------------------------------------- *)
+(* A vector copied with memcpy: VEC_BYTES_EQ_BYTES32 gives the coefficients  *)
+(* of the copy from the equality of the bytes of the two vectors that the    *)
+(* contract of memcpy gives.                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+let VEC_BYTES_EQ_BYTES32 = prove
+ (`!a b n (s:armstate) (s1:armstate).
+        read (memory :> bytes(a,4 * n)) s = read (memory :> bytes(b,4 * n)) s1
+        ==> !j. j < n
+                ==> read (memory :> bytes32(word_add a (word(4 * j)))) s =
+                    read (memory :> bytes32(word_add b (word(4 * j)))) s1`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[bytes32; READ_COMPONENT_COMPOSE; asword; through; read] THEN
+  AP_TERM_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o AP_TERM
+   `\x. (x DIV 2 EXP (8 * (4 * j))) MOD 2 EXP (8 * 4)`) THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_DIV; READ_BYTES_MOD] THEN
+  SUBGOAL_THEN `MIN (4 * n - 4 * j) 4 = 4` SUBST1_TAC THENL
+   [UNDISCH_TAC `j < n` THEN ARITH_TAC; REWRITE_TAC[]]);;
+
+(* ------------------------------------------------------------------------- *)
 (* The end of the body of a loop over the polynomials, after the loop test:  *)
 (* as FULL_FINAL_TAC ths, also proving the facts for the polynomials done    *)
 (* with VEC_JOIN_TAC ths. VEC_FULL_EXIT_TAC execth n ths is FULL_EXIT_TAC    *)
@@ -124,7 +186,8 @@ let VEC_UNROLL_JOIN_TAC n k ths =
 
 let VEC_FULL_FINAL_TAC ths =
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC ths THEN
-  LOOP_TEST_TAC THEN PTR_LOOP_TEST_TAC THEN LOOP_COND_TAC THEN
+  LOOP_TEST_TAC THEN PTR_LOOP_TEST_TAC THEN W32_LOOP_TEST_TAC THEN
+  LOOP_COND_TAC THEN
   REPEAT CONJ_TAC THEN
   TRY(COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC) THEN
   TRY(CONV_TAC WORD_RULE THEN NO_TAC) THEN
@@ -149,3 +212,29 @@ let VEC_FULL_INIT_TAC execth n ths =
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC ths THEN
   REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0; WORD_ADD_0] THEN
   ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* The address of row i of a matrix, which the code computes from the 32-bit *)
+(* index i with a multiplication (UMADDL) or a shift (UBFIZ): for tm of the  *)
+(* form read X s = word_add a (word(n * i)), with an assumption i < k for a  *)
+(* numeral k, VEC_ROW_ADDR_TAC tm replaces the assumption read X s = t by    *)
+(* tm, checking that t and the right side of tm are equal for each i < k.    *)
+(* ------------------------------------------------------------------------- *)
+
+let VEC_ROW_ADDR_TAC tm =
+  let l = lhs tm and r = rhs tm in
+  let iv = rand(rand(rand r)) in
+  FIRST_X_ASSUM(fun th ->
+    if lhs(concl th) <> l then failwith "VEC_ROW_ADDR_TAC" else
+    SUBGOAL_THEN (mk_eq(rhs(concl th),r))
+      (fun eq -> ASSUME_TAC(TRANS th eq)) THENL
+     [FIRST_ASSUM(fun bth ->
+        let c = concl bth in
+        if is_binary "<" c && lhand c = iv && is_numeral(rand c) then
+          MP_TAC bth THEN SPEC_TAC(iv,iv) THEN
+          CONV_TAC EXPAND_CASES_CONV THEN
+          CONV_TAC(NUM_REDUCE_CONV THENC WORD_REDUCE_CONV THENC
+                   NUM_REDUCE_CONV) THEN
+          REWRITE_TAC[WORD_ADD; WORD_VAL; WORD_ADD_0] THEN NO_TAC
+        else failwith "VEC_ROW_ADDR_TAC");
+      ALL_TAC]);;

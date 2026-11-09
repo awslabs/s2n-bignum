@@ -75,6 +75,21 @@ let mld_polyvec_pointwise_acc_montgomery = new_definition
     \i. mld_montgomery_reduce (mld_polyvec_dot n u v i)`;;
 
 (* ------------------------------------------------------------------------- *)
+(* The product of a matrix of polynomials with a vector, in the NTT domain   *)
+(* (mld_polyvec_matrix_pointwise_montgomery): a matrix of k rows of L        *)
+(* polynomials is one function A:num->int32 for its 256 * L * k              *)
+(* coefficients, row i being the vector \j. A((256 * L) * i + j), and        *)
+(* polynomial i of the product is the pointwise product of row i with the    *)
+(* vector.                                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+let mld_polyvec_matrix_pointwise_montgomery = new_definition
+ `mld_polyvec_matrix_pointwise_montgomery L (A:num->int32) (v:num->int32) =
+    mld_polyvec
+     (\i. mld_polyvec_pointwise_acc_montgomery L
+            (\j. A((256 * L) * i + j)) v)`;;
+
+(* ------------------------------------------------------------------------- *)
 (* The polynomials and coefficients of the lifted functions.                 *)
 (* ------------------------------------------------------------------------- *)
 
@@ -133,3 +148,11 @@ let MLD_POLY_CHKNORM_POLYVEC_UNPACK = prove
    `(!k. P k ==> (Q k <=> R k))
     ==> ((?k. P k /\ Q k) <=> (?k. P k /\ R k))`) THEN
   SIMP_TAC[MLD_POLYVEC_UNPACK_COEFF]);;
+
+let MLD_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_COEFF = prove
+ (`!L (A:num->int32) v i k.
+        k < 256
+        ==> mld_polyvec_matrix_pointwise_montgomery L A v (256 * i + k) =
+            mld_polyvec_pointwise_acc_montgomery L
+             (\j. A((256 * L) * i + j)) v k`,
+  SIMP_TAC[mld_polyvec_matrix_pointwise_montgomery; MLD_POLYVEC_COEFF]);;
