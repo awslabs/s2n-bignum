@@ -114,14 +114,48 @@ let LOOP_COND_TAC =
     | _ -> ALL_TAC);;
 
 (* ------------------------------------------------------------------------- *)
+(* A call in a FULL proof. FULL_CALL_TAC mc execth name ilist vars n         *)
+(* simulates the call at step n, after the BL, in the image mc, with the     *)
+(* FULL theorem of the callee in assumption name, as given by                *)
+(* ASSUME_CALLEE_SAFETY_TAILED_TAC, instantiated with the events and ilist.  *)
+(* The events before the call must be a function of the variables vars, the  *)
+(* events of callees and the functions of the events template of the caller  *)
+(* (f_ev_...), which FULL_EXISTS_E2_TAC checks as it proves the precondition *)
+(* of the callee on the events, as EXISTS_E2_TAC does without the template.  *)
+(* ------------------------------------------------------------------------- *)
+
+let FULL_EXISTS_E2_TAC allowed_vars_e =
+  let pfx = ref ["f_events_callee"; "f_ev_"] in
+  (MATCH_MP_TAC NIL_IMPLIES_APPEND_EQ THEN CONJ_TAC THENL
+    [REFL_TAC; SAFE_UNIFY_REFL_TAC allowed_vars_e pfx]) ORELSE
+  (CONV_TAC (TRY_CONV (LAND_CONV CONS_TO_APPEND_CONV)) THEN
+   TRY (GEN_REWRITE_TAC LAND_CONV [APPEND_ASSOC]) THEN
+   AP_THM_TAC THEN AP_TERM_TAC THEN
+   SAFE_UNIFY_REFL_TAC allowed_vars_e pfx) ORELSE
+  (CONV_TAC (TRY_CONV (LAND_CONV (ONCE_DEPTH_CONV CONS_TO_APPEND_CONV))) THEN
+   CONV_TAC (TRY_CONV (LAND_CONV (ONCE_DEPTH_CONV CONS_TO_APPEND_CONV))) THEN
+   GEN_REWRITE_TAC (LAND_CONV o DEPTH_CONV) [APPEND_ASSOC] THEN
+   AP_THM_TAC THEN AP_TERM_TAC THEN
+   SAFE_UNIFY_REFL_TAC allowed_vars_e pfx);;
+
+let FULL_CALL_TAC mc execth name ilist vars n =
+  REMOVE_THEN name (fun th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true (mc,execth,0x0,mc,th)
+      (`e:(uarch_event)list`::ilist) n THENL
+     [FULL_EXISTS_E2_TAC (ref vars); LABEL_TAC name th]);;
+
+(* ------------------------------------------------------------------------- *)
 (* The parts of a FULL loop proof with ENSURES_EVENTS_WHILE_UP2_TAC, for the *)
 (* loops of utils/mldsa_native.ml. FULL_INIT_TAC starts the simulation of a  *)
 (* subgoal. VEC4_FULL_FINAL_TAC lanes tac ends a vectorized loop body, after *)
 (* VEC4_LOOP_BODY_TAC and the steps of the loop test, as VEC4_LOOP_FINAL_TAC *)
 (* does, with tac after the rewriting with the lane lemmas, and also proves  *)
-(* the PC after the branch and the events of the iteration. FULL_EXIT_TAC    *)
-(* execth n simulates the n instructions from the exit of a loop to the      *)
-(* return, where the invariant gives the postcondition.                      *)
+(* the PC after the branch and the events of the iteration. FULL_FINAL_TAC   *)
+(* ths does the same for a loop body whose outputs follow from the           *)
+(* assumptions by rewriting with ths and WORD_RULE, as at the end of the     *)
+(* scalar loops of the correctness proofs. FULL_EXIT_TAC execth n simulates  *)
+(* the n instructions from the exit of a loop to the return, where the       *)
+(* invariant gives the postcondition.                                        *)
 (* ------------------------------------------------------------------------- *)
 
 let FULL_INIT_TAC =
@@ -143,6 +177,14 @@ let VEC4_FULL_FINAL_TAC lanes tac =
       NO_TAC) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC;;
 
+let FULL_FINAL_TAC ths =
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC ths THEN
+  LOOP_TEST_TAC THEN PTR_LOOP_TEST_TAC THEN LOOP_COND_TAC THEN
+  REPEAT CONJ_TAC THEN
+  TRY(COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC) THEN
+  TRY(CONV_TAC WORD_RULE THEN NO_TAC) THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
 let FULL_EXIT_TAC execth n =
   REWRITE_TAC[] THEN FULL_INIT_TAC THEN
   ARM_STEPS_TAC execth (1--n) THEN
@@ -151,6 +193,52 @@ let FULL_EXIT_TAC execth n =
   TRY(FIRST_ASSUM(MATCH_ACCEPT_TAC o
         CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN NO_TAC) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* The events of a loop whose iterations take one of several paths: the      *)
+(* template is ENUMERATEL n (\i. if c i then f_ev_a .. i else f_ev_b .. i),  *)
+(* with a meta-variable for each path, and each path of the proof of the     *)
+(* body, with the case assumption c i or ~c i, picks its own (rewriting with *)
+(* the case assumptions only), before discharging the safety property; the   *)
+(* instantiated meta-variables are beta-reduced in the goal and in the       *)
+(* assumptions, and negated comparisons put in one form, so that the events  *)
+(* so far match the invariant syntactically.                                 *)
+(* ------------------------------------------------------------------------- *)
+
+let PATH_DISCHARGE_TAC =
+  let beta_all =
+    CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV)) in
+  let select_tac =
+    W(fun (asl,w) ->
+      let conds = map (fun t -> rand(rator(rator t)))
+                      (find_terms is_cond w) in
+      let ths = mapfilter (fun (_,th) ->
+        let c = concl th in
+        if mem c conds then EQT_INTRO th
+        else if is_neg c && mem (rand c) conds then EQF_INTRO th
+        else failwith "") asl in
+      REWRITE_TAC ths) in
+  REWRITE_TAC[ENUMERATEL_ADD1] THEN beta_all THEN select_tac THEN
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
+  W(fun (asl,w) ->
+    if is_conj w then CONJ_TAC THENL [FULL_UNIFY_F_EVENTS_TAC; ALL_TAC]
+    else ALL_TAC) THEN
+  beta_all THEN
+  REWRITE_TAC[NOT_LT] THEN RULE_ASSUM_TAC(REWRITE_RULE[NOT_LT]) THEN
+  DISCHARGE_MEMACCESS_INBOUNDS_TAC;;
+
+(*** The return after such a loop, as FULL_EXIT_TAC ***)
+
+let FULL_PATHS_EXIT_TAC execth n =
+  REWRITE_TAC[] THEN FULL_INIT_TAC THEN
+  ARM_STEPS_TAC execth (1--n) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THEN
+  TRY(FIRST_ASSUM(MATCH_ACCEPT_TAC o
+        CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN NO_TAC) THEN
+  PATH_DISCHARGE_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* The correctness and safety theorems from a FULL theorem. The goal of      *)

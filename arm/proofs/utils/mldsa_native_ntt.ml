@@ -6,8 +6,9 @@
 (* ========================================================================= *)
 (* Tools for the proofs of the NTT and inverse NTT of mldsa-native that do   *)
 (* not depend on the build: the table of zetas as the bytes of the           *)
-(* read-only data, and the Montgomery multiplication as the compiled code    *)
-(* does it with scalar registers.                                            *)
+(* read-only data, the Montgomery multiplication as the compiled code does   *)
+(* it with scalar registers, and tactics for the lemmas of their FULL        *)
+(* proofs.                                                                   *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mldsa_native.ml";;
@@ -86,7 +87,7 @@ let MLD_ZETAS_LOADED = prove
 (* ------------------------------------------------------------------------- *)
 (* The Montgomery multiplication as the compiled code does it: with          *)
 (* p = SMULL a b, t = MUL (low 32 bits of p) QINV and r = SMADDL t (-q) p,   *)
-(* the result is the high 32 bits of r, i.e. word_zx(word_ishr r 32).       *)
+(* the result is the high 32 bits of r, i.e. word_zx(word_ishr r 32).        *)
 (* ------------------------------------------------------------------------- *)
 
 let WORD_MUL_SX_IWORD = prove
@@ -218,3 +219,83 @@ let WORD_ZX_SUB_1_SMALL = prove
               DIMINDEX_32; DIMINDEX_64] THEN
   CONV_TAC NUM_REDUCE_CONV THEN ASM_SIMP_TAC[MOD_LT] THEN
   MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The FULL proofs of the two transforms state the values and the events     *)
+(* together, in a lemma for one block and a lemma for each layer, whose      *)
+(* events are named by new_specification. NTT_EVENTS_LEMMA_TAC ths mk is     *)
+(* EVENTS_LEMMA_TAC mk (utils/mldsa_native.ml) for such a lemma: it also     *)
+(* rewrites with ths when it shows the postcondition of the goal from that   *)
+(* of the lemma, e.g. with the step of the recursion that defines the        *)
+(* coefficients after one more block or layer, and the regions of the lemma  *)
+(* may be some of those of the goal.                                         *)
+(* ------------------------------------------------------------------------- *)
+
+let NTT_EVENTS_LEMMA_TAC =
+  let mth = ONCE_REWRITE_RULE[TAUT `(p ==> q ==> r) <=> (q ==> p ==> r)`]
+             MEMACCESS_INBOUNDS_MEM in
+  fun (ths:thm list) (mk:term->thm) ->
+  CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+  W(fun (asl,w) ->
+    let pre = rand(rator(rator w)) in
+    let ex = find_term (fun t -> is_exists t &&
+                          name_of(fst(dest_exists t)) = "e2") pre in
+    let c1,c2,c3 = match conjuncts(snd(dest_exists ex)) with
+                     [c1;c2;c3] -> c1,c2,c3
+                   | _ -> failwith "NTT_EVENTS_LEMMA_TAC" in
+    let x = rand c2 and e0 = rand(rand c1) in
+    let ib = subst [x,fst(dest_exists ex)] c3 in
+    let th = CONV_RULE NUM_REDUCE_CONV (mk (list_mk_icomb "APPEND" [x;e0])) in
+    ASM_CASES_TAC ib THENL
+     [MP_TAC th THEN ANTS_TAC THENL
+       [ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN
+        CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+        DISCH_THEN ENSURES_WEAKEN_TAC] THEN
+      REPEAT CONJ_TAC THENL
+       [GEN_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN
+        FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC[];
+        GEN_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN
+        FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC ths THEN
+        REPEAT CONJ_TAC THEN TRY(AP_TERM_TAC THEN ARITH_TAC) THEN
+        W(fun (asl,w) ->
+          EXISTS_TAC(rand(hd(tl(conjuncts(snd(dest_exists w))))))) THEN
+        REWRITE_TAC[] THEN CONJ_TAC THENL
+         [ASM_REWRITE_TAC[GSYM APPEND_ASSOC];
+          ONCE_REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND] THEN
+          ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP mth) THEN
+          REWRITE_TAC[ALL; MEM]];
+        (REWRITE_TAC[subsumed] THEN NO_TAC) ORELSE
+        (REWRITE_TAC[SOME_FLAGS;
+                     MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+         SUBSUMED_MAYCHANGE_TAC)];
+      REWRITE_TAC[ensures] THEN GEN_TAC THEN REWRITE_TAC[] THEN
+      STRIP_TAC THEN ASM_MESON_TAC[]]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The test of a loop counter i at the end of a loop body with n iterations, *)
+(* in a FULL proof, where the PC after the branch is to be shown equal to    *)
+(* word (if i + 1 < n then pc1 else pc2). NTT_LOOP_COND_TAC i n rewrites     *)
+(* i + 1 < n with its value where the assumptions decide it, and otherwise   *)
+(* replaces each condition c on i in the goal and the assumptions (that of   *)
+(* the branch, as the flags give it) by i + 1 < n or ~(i + 1 < n) where c is *)
+(* equivalent to it.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+let NTT_LOOP_COND_TAC (i:term) (n:term) =
+  let l = mk_binary "<" (mk_binary "+" (i,`1`),n) in
+  (SUBGOAL_THEN l (fun th -> REWRITE_TAC[th]) THENL
+    [SIMPLE_ARITH_TAC; ALL_TAC]) ORELSE
+  (SUBGOAL_THEN (mk_neg l) (fun th -> REWRITE_TAC[th]) THENL
+    [SIMPLE_ARITH_TAC; ALL_TAC]) ORELSE
+  W(fun (asl,w) ->
+    let fvs = frees w in
+    let cs = setify(mapfilter (fun t ->
+      let c = lhand(rator t) in
+      if c <> l && free_in i c && subset (frees c) fvs then c
+      else failwith "") (find_terms is_cond w)) in
+    MAP_EVERY (fun c ->
+      FIRST [SUBGOAL_THEN (mk_iff(c,l)) SUBST_ALL_TAC THENL
+              [SIMPLE_ARITH_TAC; ALL_TAC];
+             SUBGOAL_THEN (mk_iff(c,mk_neg l)) SUBST_ALL_TAC THENL
+              [SIMPLE_ARITH_TAC; ALL_TAC];
+             ALL_TAC]) cs);;

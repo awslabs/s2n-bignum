@@ -12,7 +12,9 @@
 (* which replaces each coefficient of a by its corrected high part,          *)
 (* branching on each hint. It is verified in the whole image (see            *)
 (* libmldsa.ml) against mld_poly_use_hint_88 of                              *)
-(* common/mldsa_native_rounding.ml.                                          *)
+(* common/mldsa_native_rounding.ml. It is also shown to be memory safe and   *)
+(* constant time apart from the branches on the hint and the low part, which *)
+(* the C code also has.                                                      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -103,3 +105,78 @@ let MLDSA_NATIVE_POLY_USE_HINT_44_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 let MLDSA_NATIVE_POLY_USE_HINT_44_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec
    MLDSA_NATIVE_POLY_USE_HINT_44_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together: the same, and the  *)
+(* events are a function of the addresses, of the hints y and of the         *)
+(* polynomial x, on whose low parts the code also branches (as the C code    *)
+(* does; both are public where mld_poly_use_hint is called, in the           *)
+(* verification), with all accesses within the inputs and outputs and the    *)
+(* writes within the outputs.                                                *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLY_USE_HINT_44_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
+ `exists f_events.
+     forall e a h x y pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        PAIRWISE nonoverlapping [(a,1024); (h,1024); (word pc,libmldsa_size)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa44_poly_use_hint) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a; h] s /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add a (word(4 * i))))
+                             s = x i) /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add h (word(4 * i))))
+                             s = y i) /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add a (word(4 * i))))
+                             s = mld_poly_use_hint_88 x y i) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a h x y pc returnaddress /\
+                     memaccess_inbounds e2 [a,1024; h,1024] [a,1024]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(a,1024)])`;;
+
+let MLDSA_NATIVE_POLY_USE_HINT_44_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLDSA_NATIVE_POLY_USE_HINT_44_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant time and memory safety alone, with the polynomial and the hints  *)
+(* as data that the events may depend on.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLY_USE_HINT_44_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
+ `exists f_events.
+     forall e a h x y pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        PAIRWISE nonoverlapping [(a,1024); (h,1024); (word pc,libmldsa_size)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa44_poly_use_hint) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a; h] s /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add a (word(4 * i))))
+                             s = x i) /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add h (word(4 * i))))
+                             s = y i) /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a h x y pc returnaddress /\
+                     memaccess_inbounds e2 [a,1024; h,1024] [a,1024]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(a,1024)])`;;
+
+let MLDSA_NATIVE_POLY_USE_HINT_44_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLDSA_NATIVE_POLY_USE_HINT_44_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;
