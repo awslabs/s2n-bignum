@@ -299,7 +299,7 @@ let decode_binop = new_definition
 let decode_BT = new_definition `decode_BT (n:2 word) =
   match val n with 0 -> BT | 1 -> BTS | 2 -> BTR | 3 -> BTC`;;
 
-let decode_hi = new_definition `decode_hi x v sz (opc:3 word) rm l =
+let decode_hi = new_definition `decode_hi x (v:bool) sz (opc:3 word) rm l =
   match x,v,val opc with
   | F,_,0 -> read_imm sz l >>= \(imm,l). SOME (TEST rm imm,l)
   | F,_,2 -> SOME (NOT rm,l)
@@ -310,11 +310,9 @@ let decode_hi = new_definition `decode_hi x v sz (opc:3 word) rm l =
   // | F,_,7 -> SOME (IDIV rm,l)
   | T,_,0 -> SOME (INC rm,l)
   | T,_,1 -> SOME (DEC rm,l)
-  // Indirect CALL/JMP (T,T,2 and T,T,4) and PUSH r/m (T,T,6) are not
-  // supported; the cases are kept, as NONE, for the decoding tables.
-  | T,T,2 -> NONE
-  | T,T,4 -> NONE
-  | T,T,6 -> NONE
+  // Indirect CALL/JMP (T,T,2 and T,T,4) and PUSH r/m (T,T,6) are
+  // deliberately not supported, and so are decoded as NONE below. No case
+  // uses v, so its type is given explicitly above.
   | _ -> NONE`;;
 
 let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
