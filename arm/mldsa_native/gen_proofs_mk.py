@@ -21,7 +21,7 @@ import os, re, sys
 def needs(path):
     """The files that path loads with needs, as paths relative to the arm
     directory: the proofs and tools under arm/proofs, and the
-    specifications common/mldsa_native*.ml."""
+    specifications common/mldsa_native*.ml and common/fips204*.ml."""
     if not os.path.exists(path):
         return []
     out = []
@@ -29,7 +29,7 @@ def needs(path):
         m = re.match(r'\s*needs\s+"arm/(proofs/[^"]+)"', l)
         if m:
             out.append(m.group(1))
-        m = re.match(r'\s*needs\s+"(common/mldsa_native[^"]*)"', l)
+        m = re.match(r'\s*needs\s+"(common/(mldsa_native|fips204)[^"]*)"', l)
         if m:
             out.append('../' + m.group(1))
     return out
@@ -52,7 +52,8 @@ def closure(prf, src, path):
         if d.startswith(prf + '/') or d.startswith('proofs/utils/') or \
            (d.startswith('proofs/mldsa_native/') and d.count('/') == 2) or \
            (d.startswith('proofs/mlkem_native/') and d.count('/') == 2) or \
-           d.startswith('../common/mldsa_native'):
+           d.startswith('../common/mldsa_native') or \
+           d.startswith('../common/fips204'):
             deps.append(d); todo += needs(d)
             objs += [o for o in objects_read(d, src) if o not in objs]
     return deps, sorted(set(objs))

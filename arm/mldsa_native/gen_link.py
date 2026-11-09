@@ -9,8 +9,11 @@
 # files that its spec file loads, in the order of the needs. The top-level
 # functions are the API functions (keypair, signature, verify and their
 # variants, for each parameter set) that the build has proofs for; if it
-# has none,
-# the functions whose files no other file loads.
+# has none, the functions whose files no other file loads. The files
+# fips204.ml and fips204_*.ml of the build, if any, with the theorems for
+# the API functions stated with the FIPS 204 specification common/fips204.ml
+# (derived from their CORRECT theorems), are loaded last, fips204.ml first,
+# and their theorems are closed too.
 #
 # Usage, in s2n-bignum's arm directory:
 #
@@ -20,6 +23,7 @@ import os, re, sys
 
 API = re.compile(r'(keypair_internal|keypair|signature_internal|signature|signature_extmu|signature_pre_hash_internal|signature_pre_hash_shake256|verify_internal|verify|verify_extmu|verify_pre_hash_internal|verify_pre_hash_shake256|prepare_domain_separation_prefix|pk_from_sk)_(44|65|87)$')
 THM = re.compile(r'^let ([A-Z0-9_]+_SUBROUTINE_(CORRECT|SAFE|FULL)) =', re.M)
+FIPS = re.compile(r'^let ([A-Z0-9_]+_SUBROUTINE_FIPS204) =', re.M)
 
 def spec_needs(prf, x):
     """The spec files of the build that X_spec.ml loads, in order."""
@@ -48,6 +52,13 @@ def main():
     thms = []
     for x in top:
         thms += [m.group(1) for m in THM.finditer(open('%s/%s_proof.ml' % (prf, x)).read())]
+    ffiles = sorted(f for f in os.listdir(prf)
+                    if re.match(r'fips204(_[a-z0-9]+)?\.ml$', f))
+    ffiles.sort(key=lambda f: f != 'fips204.ml')
+    fthms = []
+    for f in ffiles:
+        fthms += FIPS.findall(open('%s/%s' % (prf, f)).read())
+    thms += fthms
     if len(set(thms)) != len(thms):
         sys.exit('gen_link.py: a theorem name is in two files')
     out = ['(*',
@@ -64,13 +75,14 @@ def main():
            '(* ========================================================================= *)',
            '', 'needs "arm/proofs/mlkem_native/relative.ml";;', '']
     out += ['needs "arm/%s/%s_proof.ml";;' % (prf, x) for x in order]
+    out += ['needs "arm/%s/%s";;' % (prf, f) for f in ffiles]
     out += ['', '(* The contracts stated and proved, and those not proved, if any *)', '',
             'relative_report ();;', '']
     for t in thms:
         out += ['let %s =' % t, '  relative_close %s;;' % t, '']
-    full = [t for t in thms if t.endswith('_FULL')]
+    full = [t for t in thms if t.endswith('_FULL') or t.endswith('_FIPS204')]
     if full:
-        out += ['(* The theorems that the build prints for CORRECT and SAFE only *)', '']
+        out += ['(* The FULL and FIPS204 theorems, which the build does not print itself *)', '']
         for t in full:
             out += ['Printf.printf "val %s : thm = %%s\\n" (string_of_thm %s);;' % (t, t)]
         out.append('')
