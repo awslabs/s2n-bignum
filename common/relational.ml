@@ -901,12 +901,20 @@ ASSIGNS_MOVE_BACK_CONV ASSIGNS_IDEMPOT_CONV
  ***)
 
 (* ------------------------------------------------------------------------- *)
-(* Now implement idempotence for a whole chain of ASSIGNS clauses.           *)
-(* ASSIGNS_SEQ_ABSORB_CONV takes a term of the form                         *)
-(* (ASSIGNS a1 ,, ... ,, ASSIGNS an) ,, (ASSIGNS b1 ,, ... ASSIGNS bm)       *)
-(* where each bi occurs somewhere in the a list that it can be commuted      *)
-(* back to and absorbed by in sequence. In the common case the a and b lists *)
-(* are identical. Returns equality with just the a's list.                   *)
+(* ASSIGNS_SEQ_ABSORB_CONV applies to A ,, B. Both A and B must be           *)
+(* nonempty sequences of ASSIGNS clauses. Every clause in B must match a     *)
+(* clause in A and commute with the clauses between it and that match. The   *)
+(* conversion returns |- A ,, B = A.                                         *)
+(*                                                                           *)
+(* For example, it proves                                                    *)
+(*                                                                           *)
+(*   (ASSIGNS X1 ,, ASSIGNS X2) ,, ASSIGNS X1 =                              *)
+(*   ASSIGNS X1 ,, ASSIGNS X2                                                *)
+(*                                                                           *)
+(* R ,, R is the common input, but B need not be identical to A.             *)
+(*                                                                           *)
+(* The implementation takes the first clause from B, moves it left to its    *)
+(* match in A, absorbs it, and repeats for the rest of B.                    *)
 (* ------------------------------------------------------------------------- *)
 
 let rec ASSIGNS_SEQ_ABSORB_CONV tm =
@@ -923,15 +931,93 @@ let rec ASSIGNS_SEQ_ABSORB_CONV tm =
       let n,th = ASSIGNS_MOVE_BACK_CONV ASSIGNS_IDEMPOT_CONV tm in
       if n <> 1 then failwith "ASSIGNS_SEQ_ABSORB_CONV" else th;;
 
-let ASSIGNS_SEQ_IDEMPOT_CONV tm =
-  match tm with
-    Comb(Comb(Const(",,",_),ltm),rtm) when ltm = rtm ->
-        ASSIGNS_SEQ_ABSORB_CONV tm
-  | _ -> failwith "ASSIGNS_SEQ_IDEMPOT_CONV: Non-identical sequences";;
+(* ASSIGNS_SEQ_IDEMPOT_CONV applies only to R ,, R, where R is a             *)
+(* nonempty sequence of ASSIGNS clauses. The two copies of R must be         *)
+(* syntactically identical. It returns |- R ,, R = R.                        *)
+(*                                                                           *)
+(* For example, R may be                                                     *)
+(*                                                                           *)
+(*   R = ASSIGNS X1 ,, ASSIGNS X2                                            *)
+(*                                                                           *)
+(* The implementation scans from left to right. It moves the second X1       *)
+(* directly to the first X1 and absorbs it, then does the same for X2.       *)
+(* Direct swap and absorption rules avoid reassociating the whole chain      *)
+(* for every move.                                                           *)
+(*                                                                           *)
+(* If a direct swap cannot be justified, the conversion falls back to        *)
+(* ASSIGNS_SEQ_ABSORB_CONV. That conversion has extra commutation rules      *)
+(* for symbolic elements and byte ranges.                                    *)
+(*                                                                           *)
+(* MAYCHANGE_IDEMPOT_TAC calls this conversion after expanding MAYCHANGE     *)
+(* into ASSIGNS clauses.                                                     *)
+
+let ASSIGNS_SEQ_IDEMPOT_CONV =
+  let pth_rid = REWR_CONV (SPEC_ALL (CONJUNCT2 SEQ_ID))
+  and pth_assoc = REWR_CONV (SPEC_ALL SEQ_ASSOC)
+  and pth_absorb = IMP_REWR_CONV (prove
+   (`weakly_valid_component c ==>
+     (R ,, ASSIGNS c) ,, ASSIGNS c = R ,, ASSIGNS c`,
+    IMP_REWRITE_TAC [GSYM SEQ_ASSOC; ASSIGNS_ABSORB_SAME_COMPONENTS]))
+  and pth_swap = IMP_REWR_CONV (prove
+   (`orthogonal_components c d ==>
+     (R ,, ASSIGNS c) ,, ASSIGNS d = (R ,, ASSIGNS d) ,, ASSIGNS c`,
+    IMP_REWRITE_TAC [GSYM SEQ_ASSOC;
+                     ASSIGNS_SWAP_ORTHOGONAL_COMPONENTS])) in
+  let assigns_component = function
+    Comb(Const("ASSIGNS",_),c) -> c
+  | _ -> failwith "ASSIGNS_SEQ_IDEMPOT_CONV: Expected ASSIGNS" in
+  let rec contains c = function
+    Comb(Comb(Const(",,",_),fs),f) ->
+      c = assigns_component f || contains c fs
+  | _ -> false in
+  let rhs_conv_rule conv th =
+    TRANS th (conv (rand(concl th))) in
+  let rec normalize tm =
+    match rand tm with
+      Const("=",_) -> pth_rid tm
+    | Comb(Comb(Const(",,",_),_),_) ->
+        (pth_assoc THENC LAND_CONV normalize THENC normalize) tm
+    | Comb(Const("ASSIGNS",_),c) ->
+        if contains c (lhand tm) then move_back c tm else REFL tm
+    | _ -> failwith "ASSIGNS_SEQ_IDEMPOT_CONV: Invalid sequence"
+  and move_back c tm =
+    match lhand tm with
+      Comb(Comb(Const(",,",_),_),Comb(Const("ASSIGNS",_),d)) ->
+        if c = d then
+          MP (pth_absorb tm) (WEAKLY_VALID_COMPONENT_RULE c)
+        else
+          let th = MP (pth_swap tm) (ORTHOGONAL_COMPONENTS_RULE2 d c) in
+          rhs_conv_rule (LAND_CONV (move_back c)) th
+    | _ -> failwith "ASSIGNS_SEQ_IDEMPOT_CONV: Missing assignment" in
+  let normalize_relation tm =
+    let th = SYM (ISPEC tm (CONJUNCT1 SEQ_ID)) in
+    TRANS th (normalize (rand(concl th))) in
+  fun tm ->
+    match tm with
+      Comb(Comb(Const(",,",_),ltm),rtm) when ltm = rtm ->
+        (try
+           let th1 = normalize_relation tm
+           and th2 = normalize_relation rtm in
+           TRANS th1 (SYM th2)
+         with Failure _ -> ASSIGNS_SEQ_ABSORB_CONV tm)
+    | _ -> failwith "ASSIGNS_SEQ_IDEMPOT_CONV: Non-identical sequences";;
 
 (* ------------------------------------------------------------------------- *)
-(* Tactic to prove FRAMES ,, FRAMES = FRAMES where FRAMES is a ,,-sequence   *)
-(* of ASSIGNS and CHANGES statements.                                        *)
+(* MAYCHANGE_IDEMPOT_TAC proves goals F ,, F = F. The three occurrences      *)
+(* of F must be syntactically identical. F may be a frame built from         *)
+(* ASSIGNS and MAYCHANGE, the identity relation (=), or (\s s'. true).       *)
+(*                                                                           *)
+(* For example, it proves                                                    *)
+(*                                                                           *)
+(*   MAYCHANGE [X1; X2] ,, MAYCHANGE [X1; X2] =                              *)
+(*   MAYCHANGE [X1; X2]                                                      *)
+(*                                                                           *)
+(* Sequence, loop and case proof rules create this goal when they combine    *)
+(* proofs that use the same frame.                                           *)
+(*                                                                           *)
+(* The implementation handles (=) and (\s s'. true) directly. Otherwise it   *)
+(* expands MAYCHANGE into ASSIGNS clauses and calls                          *)
+(* ASSIGNS_SEQ_IDEMPOT_CONV.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 let MAYCHANGE_IDEMPOT_TAC =
@@ -2259,35 +2345,212 @@ let SUBSUMED_ASSIGNS_TAC =
   MATCH_MP_TAC SUBSUMED_ASSIGNS_BYTES THEN CONTAINED_TAC;;
 
 (* ------------------------------------------------------------------------- *)
-(* Tactic to show one MAYCHANGE list is subsumed by another.                 *)
+(* ORDERED_SUBSUMED_ASSIGNS_TAC proves goals S subsumed D. S and D must be   *)
+(* right-associated sequences of ASSIGNS clauses and opaque relations. The   *)
+(* identity relation (=) represents an empty sequence. Opaque clauses can    *)
+(* only match distinct, syntactically identical clauses in the other frame;  *)
+(* they are neither reordered nor combined. ASSIGNS clauses may also match  *)
+(* subsuming components. Thus every change allowed by S must also be allowed *)
+(* by D.                                                                     *)
+(*                                                                           *)
+(* For example:                                                              *)
+(*                                                                           *)
+(*   S = ASSIGNS X0 ,, ASSIGNS PC                                            *)
+(*   D = ASSIGNS PC ,, ASSIGNS SP ,,                                         *)
+(*       ASSIGNS X0 ,, ASSIGNS X1                                            *)
+(*                                                                           *)
+(* The implementation matches PC to the first position in D and X0 to        *)
+(* the third. It reorders S to that target order. The unused SP and X1       *)
+(* positions are filled with (=), which leaves the state unchanged. This     *)
+(* builds D once instead of making one copy for each clause in S.            *)
+(*                                                                           *)
+(* An opaque relation can anchor an otherwise ordered match:                 *)
+(*                                                                           *)
+(*   S = ASSIGNS X0 ,, R                                                     *)
+(*   D = ASSIGNS X0 ,, ASSIGNS X1 ,, R                                      *)
+(*                                                                           *)
+(* R is discharged by reflexivity, while the unused X1 position is filled    *)
+(* with (=). No property of R other than syntactic identity is assumed.      *)
+(*                                                                           *)
+(* Exact assignment matches are tried first. Otherwise                       *)
+(* SUBSUMED_ASSIGNS_TAC tries to prove that the source component is          *)
+(* contained in the target. For example,                                     *)
+(*                                                                           *)
+(*   ASSIGNS (memory :> bytes(a,2))                                          *)
+(*                                                                           *)
+(* can match                                                                 *)
+(*                                                                           *)
+(*   ASSIGNS (memory :> bytes64 a)                                           *)
+(*                                                                           *)
+(* Containment between symbolic ranges may use assumptions from the goal.    *)
+(*                                                                           *)
+(* Several source clauses may match the same target clause. For example,     *)
+(* several small writes may all lie in one target byte range. The tactic     *)
+(* combines only that group, using ASSIGNS c ,, ASSIGNS c = ASSIGNS c        *)
+(* for the target component c.                                               *)
+(*                                                                           *)
+(* In cosimulation, S is the MAYCHANGE assumption accumulated while          *)
+(* symbolic execution steps the tested instruction sequence. It lists the    *)
+(* components that the instruction semantics actually writes, such as PC     *)
+(* and a destination register, or the exact bytes written by a store. D      *)
+(* is the MAYCHANGE frame in the simulator theorem. It allows the harness    *)
+(* registers, vector registers, flags, events and 256-byte stack region.     *)
+(* ------------------------------------------------------------------------- *)
+
+let ORDERED_SUBSUMED_ASSIGNS_TAC =
+  let pth_assoc = REWR_CONV (SPEC_ALL SEQ_ASSOC)
+  and pth_unassoc = REWR_CONV (SYM (SPEC_ALL SEQ_ASSOC))
+  and pth_transport = prove
+   (`C = C' ==> C' subsumed D ==> C subsumed D`,
+    REWRITE_TAC[subsumed] THEN MESON_TAC[]) in
+  let assignment = function
+    | Comb(Const("ASSIGNS",_),c) -> Some c
+    | _ -> None in
+  let rec clauses = function
+    | Comb(Comb(Const(",,",_),r),rs) ->
+        (r,assignment r)::clauses rs
+    | Const("=",_) -> []
+    | r -> [(r,assignment r)] in
+  let subsumed_rule asl (stm,sc) (ttm,tc) =
+    if stm = ttm then ISPEC stm SUBSUMED_REFL
+    else match sc,tc with
+      Some _,Some _ ->
+        TAC_PROOF
+          ((asl,list_mk_icomb "subsumed" [stm;ttm]),SUBSUMED_ASSIGNS_TAC)
+    | _ -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Opaque mismatch" in
+  let id_clause_rule = function
+    | _,Some c ->
+        MP (ISPEC c SUBSUMED_ID_EXTENSIONALLY_VALID_COMPONENT)
+           (EXTENSIONALLY_VALID_COMPONENT_RULE c)
+    | _ -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Unmatched opaque target" in
+  let rec id_rule etm = function
+    | [] -> ISPEC etm SUBSUMED_REFL
+    | [rc] -> id_clause_rule rc
+    | rc::rest ->
+        MATCH_MP SUBSUMED_ID_SEQ
+          (CONJ (id_clause_rule rc) (id_rule etm rest)) in
+  let find_match asl used_opaque src targets =
+    let rec exact i = function
+      | [] -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: No exact target"
+      | ((ttm,tc) as target)::_ when
+          fst src = ttm && not (tc = None && mem i used_opaque) ->
+          i,subsumed_rule asl src target
+      | _::rest -> exact (i + 1) rest in
+    let rec general i = function
+      | [] -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: No target"
+      | target::rest ->
+          try i,subsumed_rule asl src target
+          with Failure _ -> general (i + 1) rest in
+    try exact 0 targets with Failure _ -> general 0 targets in
+  let rec match_sources asl targets used_opaque = function
+    | [] -> []
+    | src::rest ->
+        let i,th = find_match asl used_opaque src targets in
+        let used_opaque' =
+          if snd src = None then i::used_opaque else used_opaque in
+        (i,src,th)::match_sources asl targets used_opaque' rest in
+  let rec adjacent_inversion i = function
+    | (j,_,_)::((k,_,_)::_ as rest) ->
+        if j > k then Some i else adjacent_inversion (i + 1) rest
+    | _ -> None in
+  let rec swap_items i = function
+    | a::b::rest when i = 0 -> b::a::rest
+    | a::rest -> a::swap_items (i - 1) rest
+    | _ -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Bad permutation" in
+  let rec swap_conv i tm =
+    if i = 0 then
+      match tm with
+        Comb(Comb(Const(",,",_),_),
+             Comb(Comb(Const(",,",_),_),_)) ->
+          (pth_assoc THENC LAND_CONV ASSIGNS_SWAP_CONV THENC pth_unassoc) tm
+      | Comb(Comb(Const(",,",_),_),_) -> ASSIGNS_SWAP_CONV tm
+      | _ -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Bad sequence"
+    else RAND_CONV (swap_conv (i - 1)) tm in
+  let rec sort_rule items tm =
+    match adjacent_inversion 0 items with
+    | Some i ->
+      let th1 = swap_conv i tm in
+      let th2,items' =
+        sort_rule (swap_items i items) (rand(concl th1)) in
+      TRANS th1 th2,items'
+    | None -> REFL tm,items in
+  let rec same_target j = function
+    | ((k,_,_) as item)::rest when j = k ->
+        let same,other = same_target j rest in
+        item::same,other
+    | rest -> [],rest in
+  let group_rule target group =
+    match target with
+      _,None ->
+        (match group with
+          [_,_,sth] -> sth
+        | _ ->
+            failwith
+              "ORDERED_SUBSUMED_ASSIGNS_TAC: Repeated opaque source")
+    | _,Some c ->
+        let ith = MP (ISPEC c ASSIGNS_ABSORB_SAME_COMPONENTS)
+                     (WEAKLY_VALID_COMPONENT_RULE c) in
+        let rec combine = function
+          | [] -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Empty group"
+          | [_,_,sth] -> sth
+          | (_,_,sth)::rest ->
+              MATCH_MP SUBSUMED_FOR_SEQ
+                (CONJ ith (CONJ sth (combine rest))) in
+        combine group in
+  let rec build_rule etm i sources targets =
+    match sources,targets with
+      [],_ -> id_rule etm targets
+    | _,[] -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Missing target"
+    | ((j,_,_)::_ as sources),trc::trest ->
+        if i < j then
+          MATCH_MP SUBSUMED_SEQ_RIGHT
+            (CONJ (id_clause_rule trc)
+                  (build_rule etm (i + 1) sources trest))
+        else if i = j then
+          let group,srest = same_target j sources in
+          let sth = group_rule trc group in
+          if srest = [] then
+            if trest = [] then sth
+            else MATCH_MP SUBSUMED_SEQ_LEFT
+                   (CONJ sth (id_rule etm trest))
+          else MATCH_MP SUBSUMED_SEQ
+                 (CONJ sth (build_rule etm (i + 1) srest trest))
+        else failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Bad target order" in
+  fun (asl,w as gl) ->
+    match w with
+      Comb(Comb(Const("subsumed",_),stm),ttm) ->
+        if stm = ttm then ACCEPT_TAC (ISPEC stm SUBSUMED_REFL) gl else
+        let sources = clauses stm
+        and targets = clauses ttm in
+        let matches = match_sources asl targets [] sources in
+        let pth,matches' = sort_rule matches stm in
+        let sty,_ = dest_fun_ty(type_of ttm) in
+        let etm = inst [sty,`:S`] `(=):S->S->bool` in
+        let th = CONV_RULE
+          (LAND_CONV
+            (GEN_REWRITE_CONV TOP_DEPTH_CONV [GSYM SEQ_ASSOC]))
+          (build_rule etm 0 matches' targets) in
+        let th' = MATCH_MP (MATCH_MP pth_transport pth) th in
+        ACCEPT_TAC th' gl
+    | _ -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC";;
+
+(* ------------------------------------------------------------------------- *)
+(* SUBSUMED_MAYCHANGE_TAC proves goals S subsumed D where S and D are        *)
+(* frames built by sequencing ASSIGNS and MAYCHANGE clauses. The identity    *)
+(* relation (=) represents an empty frame. The tactic also accepts           *)
+(* (\s s'. true) as D.                                                       *)
+(*                                                                           *)
+(* For a nontrivial D, the implementation expands both frames with           *)
+(* MAYCHANGE_CANON_CONV and calls ORDERED_SUBSUMED_ASSIGNS_TAC.              *)
+(*                                                                           *)
+(* The example below includes both register and byte-range clauses.          *)
 (* ------------------------------------------------------------------------- *)
 
 let SUBSUMED_MAYCHANGE_TAC =
-  let lemma_step = prove
-   (`(D ,, D = D ==> C1 subsumed D) /\
-     (D ,, D = D ==> C2 subsumed D)
-     ==> (D ,, D = D ==> (C1 ,, C2) subsumed D)`,
-    MESON_TAC[SUBSUMED_FOR_SEQ])
-  and lemma_start = prove
-   (`D ,, D = D /\
-     (D ,, D = D ==> C1 subsumed D) /\
-     (D ,, D = D ==> C2 subsumed D)
-    ==> (C1 ,, C2) subsumed D`,
-    MESON_TAC[SUBSUMED_FOR_SEQ]) in
-  let rec tac gl =
-   ((MATCH_MP_TAC SUBSUMED_SEQ_LEFT THEN CONJ_TAC THENL
-      [tac; SUBSUMED_ID_MAYCHANGE_TAC]) ORELSE
-    (MATCH_MP_TAC SUBSUMED_SEQ_RIGHT THEN CONJ_TAC THENL
-      [SUBSUMED_ID_MAYCHANGE_TAC; tac]) ORELSE
-    SUBSUMED_ASSIGNS_TAC) gl in
   (* Anything is subsumed by (\s s'. true) *)
   MATCH_ACCEPT_TAC SUBSUMED_TRIVIAL ORELSE (
   CONV_TAC(BINOP_CONV MAYCHANGE_CANON_CONV) THEN
-  TRY(MATCH_MP_TAC lemma_start THEN CONJ_TAC THENL
-       [MAYCHANGE_IDEMPOT_TAC THEN NO_TAC; CONJ_TAC] THEN
-      REPEAT(MATCH_MP_TAC lemma_step THEN CONJ_TAC) THEN
-      DISCH_THEN(K ALL_TAC)) THEN
-  ((POP_ASSUM_LIST(K ALL_TAC) THEN tac) ORELSE tac));;
+  ORDERED_SUBSUMED_ASSIGNS_TAC);;
 
 
 (*** Example
