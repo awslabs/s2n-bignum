@@ -422,64 +422,44 @@ let find_substring str sub =
 (* Memoized variant of TOP_DEPTH_CONV.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-(* Bounded memoization for TOP_DEPTH_CONV. A conversion has type
-   conv = term -> thm and proves an equality for its input. For fixed step,
-   cache recursive results t -> (Gamma |- t = u), and also record the
-   terms on which the recursive conversion failed. Each application
-   MEMOIZED_TOP_DEPTH_CONV step creates a new cache, which is shared by all
-   later calls of the resulting conversion. Keys use structural term
-   equality via OCaml's compare (which returns at once on physically equal
-   subterms), including types and variable names, not matching or
-   alpha-equivalence. Values are complete theorems, including hypotheses.
-   Cache misses follow TOP_DEPTH_CONV's rewrite/traversal order.
+(* Bounded memoization for TOP_DEPTH_CONV. MEMOIZED_TOP_DEPTH_CONV step
+   behaves like TOP_DEPTH_CONV step, and on a cache miss it rewrites and
+   traverses in the same order. In addition, it records the result of
+   converting each subterm t, either the theorem Gamma |- t = u (including
+   any hypotheses Gamma that step introduced) or the fact that no rewrite
+   applied anywhere in t, and reuses it when t occurs again.
 
-   Example (MEMOIZED_BITBLAST_THEN in common/words2.ml is a simpler user):
-   the RV32 inverse-NTT proof in mldsa-native folds its output by
-   interleaving phase unfolding with rewriting by execution abbreviations.
-   Schematically:
+   This pays off on terms with many repeated subterms. TOP_DEPTH_CONV
+   converts every occurrence separately, even when the occurrences are
+   physically shared, so its work grows with the unshared size of the term.
+   For example, bit-blasting a word equation produces one equivalence per
+   bit, and these share the same word subterms; see MEMOIZED_BITBLAST_THEN
+   in common/words2.ml. On small terms or terms without repetition the
+   caching overhead makes this slower than TOP_DEPTH_CONV, so use it only
+   where profiling shows a benefit.
 
-   Delta |- P x i = E     unfold/reduce; fold earlier abbreviations
-   Gamma |- E = v         execution abbreviation
-   -------------------------------------------------------------
-   Delta, Gamma |- P x i = v
+   Each application MEMOIZED_TOP_DEPTH_CONV step creates a new cache, which
+   is shared by all later calls of the resulting conversion, including on
+   different terms and goals. Keys use structural term equality via OCaml's
+   compare (which returns at once on physically equal subterms), including
+   types and variable names, not matching or alpha-equivalence.
 
-   P x i denotes a phase coefficient, E its word expression and v an
-   abbreviation variable. Delta is empty for purely definitional reduction;
-   otherwise it contains hypotheses used by earlier abbreviation rewrites.
-   The composed theorem has the union of Delta and Gamma as hypotheses.
-   A Gentleman-Sande butterfly has outputs a+b and w(a-b), represented by
-   word operations and Barrett multiplication.
-   Both outputs contain earlier-layer phase expressions for a and b.
-   TOP_DEPTH_CONV reconstructs their conversion theorems at each occurrence,
-   even if term nodes are physically shared. Retaining the composed result
-   avoids repeated unfolding, reduction and equality proof construction.
-   Building the conversion once outside the per-goal loop only saves setup
-   work; it does not avoid these repeated term conversions.
+   The cache key does not include step or anything step depends on. The
+   caller must make sure that step gives the same result on the same term
+   for the lifetime of the conversion; there is no automatic invalidation.
+   For instance, if step rewrites with the assumptions of a goal, build it
+   from the assumption theorems themselves (map snd asl) so that cached
+   results carry the right hypotheses, and construct a new memoizer when
+   the assumptions change. A cache hit returns the stored theorem unchanged,
+   including its hypotheses.
 
-   The cache key does not include rewrite rules or their hypotheses.
-   The caller must keep step's rewrites and theorem dependencies fixed.
-   For contextual rewriting, capture the actual assumption theorems, not
-   just their conclusions. In mldsa-native's RV32 caller, ths = map snd asl
-   after execution, and context_step is prepared as
-     GENERAL_REWRITE_CONV true I (basic_net()) ths.
-   One memoizer for context_step ORELSEC layout_step is retained across
-   all 256 coefficient goals. It does not span changing instruction
-   contexts. If the rules, their hypotheses or another input to step change,
-   construct a new memoizer. There is no automatic invalidation.
-   A hit returns Gamma |- t = u unchanged, not an unconditional equality.
-
-   Keep at most max_entries results (successes and failures), default
-   16384; clear the table before inserting when full. This bounds entries,
-   not memory bytes. Zero selects ordinary TOP_DEPTH_CONV; negative limits
-   fail. Caching failures matters because most subterms are left unchanged:
-   without it, every occurrence of a shared subterm that has no rewrite is
-   traversed again. The outer TRY_CONV supplies REFL when no rewrite
-   succeeds.
-
-   Alternatively, a caller can prove and retain phase-coefficient equations
-   P x i = v layer by layer and rewrite subsequent layers with them.
-   That changes proof decomposition; this helper memoizes the existing
-   conversion without requiring it. *)
+   At most max_entries results (successes and failures) are kept, default
+   16384; the table is cleared before inserting when full. This bounds the
+   number of entries, not memory in bytes. Zero selects ordinary
+   TOP_DEPTH_CONV; negative limits fail. Caching failures matters because
+   most subterms are usually left unchanged: without it, every occurrence of
+   a shared subterm that has no rewrite would be traversed again. As with
+   TOP_DEPTH_CONV, the result is REFL when no rewrite succeeds. *)
 
 let MEMOIZED_TOP_DEPTH_CONV ?(max_entries=16384) step =
   if max_entries < 0 then
