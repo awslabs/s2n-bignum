@@ -144,3 +144,43 @@ let MLDSA_NATIVE_POLY_POWER2ROUND_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
 
 let MLDSA_NATIVE_POLY_POWER2ROUND_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   assume_spec MLDSA_NATIVE_POLY_POWER2ROUND_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* The same in place, with the low part written over the input (a0 = a), as  *)
+(* mld_compute_pack_t0_t1 calls it: each iteration loads its four input      *)
+(* coefficients before it stores the results.                                *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLY_POWER2ROUND_GCC12_O2_IMAGE_SUBROUTINE_FULL_INPLACE_STMT =
+ `exists f_events.
+     forall e a1 a0 x pc returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        PAIRWISE nonoverlapping
+         [(a1,1024); (a0,1024); (word pc,libmldsa_size)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_poly_power2round) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [a1; a0; a0] s /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add a0 (word(4 * i))))
+                             s = x i) /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add a1 (word(4 * i))))
+                             s = mld_poly_power2round_hi x i) /\
+                  (!i. i < 256
+                       ==> read(memory :> bytes32(word_add a0 (word(4 * i))))
+                             s = mld_poly_power2round_lo x i) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a1 a0 pc returnaddress /\
+                     memaccess_inbounds e2 [a0,1024] [a1,1024; a0,1024]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(a1,1024); memory :> bytes(a0,1024)])`;;
+
+let MLDSA_NATIVE_POLY_POWER2ROUND_GCC12_O2_IMAGE_SUBROUTINE_FULL_INPLACE =
+  assume_spec
+   MLDSA_NATIVE_POLY_POWER2ROUND_GCC12_O2_IMAGE_SUBROUTINE_FULL_INPLACE_STMT;;
