@@ -94,3 +94,47 @@ let RANDOMBYTES_SAFETY_CONTRACT = prove
   ASM_REWRITE_TAC[] THEN
   DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_WEAKEN_PREPOST) THEN
   SIMP_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
+(* memset with its return value. After the call of memset in                 *)
+(* mld_sig_unpack_hints, gcc 12 uses the destination that memset returns,    *)
+(* as the C standard says it does, which the contracts of                    *)
+(* utils/mlkem_native_libc.ml and utils/mlkem_native_libc_full.ml do not     *)
+(* give. memset_ret_full_contract is memset_full_contract with it, and       *)
+(* implies memset_full_contract.                                             *)
+(* ------------------------------------------------------------------------- *)
+
+let memset_ret_full_contract = new_definition
+ `memset_ret_full_contract (f:int64) (ea:int64) (el:num) (ev:num) <=>
+    ?f_events.
+      !e dst c len returnaddress.
+        nonoverlapping (dst,val len) (ea,el)
+        ==> ensures arm
+             (\s. read PC s = f /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [dst; c; len] s /\
+                  read (memory :> bytes(ea,el)) s = ev /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  C_RETURN s = dst /\
+                  (!i. i < val len
+                       ==> read (memory :> bytes8(word_add dst (word i))) s =
+                           word_zx c) /\
+                  (?e2. read events s = APPEND e2 e /\
+                        e2 = f_events dst c len returnaddress /\
+                        memaccess_inbounds e2 [dst,val len; ea,el]
+                                              [dst,val len]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [X18; X30] ,,
+              MAYCHANGE [memory :> bytes(dst,val len)])`;;
+
+let MEMSET_RET_FULL_CONTRACT = prove
+ (`!f ea el ev. memset_ret_full_contract f ea el ev
+                ==> memset_full_contract f ea el ev`,
+  REWRITE_TAC[memset_ret_full_contract; memset_full_contract] THEN
+  REPEAT GEN_TAC THEN MATCH_MP_TAC MONO_EXISTS THEN
+  X_GEN_TAC `f_events:int64->int64->int64->int64->(uarch_event)list` THEN
+  REPEAT(MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
+  MATCH_MP_TAC MONO_IMP THEN REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_WEAKEN_PREPOST) THEN
+  SIMP_TAC[]);;
