@@ -9,6 +9,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/mldsa_native/gcc12_O2/shake256_absorb_spec.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The blocks of the stream X = 2^(8 * pos) * M. Iteration k of the loop     *)
@@ -136,23 +137,35 @@ let SHAKE_VAL_WORD_RATE_1 = prove
  (`val(word 135:int64) = 135`,
   CONV_TAC WORD_REDUCE_CONV);;
 
+(*** The test at the end of iteration i: more than r - 1 bytes are left ***)
+
+let SHAKE_ABSORB_LOOP_TEST = prove
+ (`!pos inlen i.
+        pos <= 136 /\ 136 * (i + 1) <= pos + inlen
+        ==> (135 <= inlen - (136 * (i + 1) - pos) /\
+             ~(inlen - (136 * (i + 1) - pos) = 135) <=>
+             i + 1 < (pos + inlen) DIV 136)`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[ARITH_RULE `i + 1 < q <=> i + 2 <= q`] THEN
+  SIMP_TAC[LE_RDIV_EQ; ARITH_EQ] THEN ASM_ARITH_TAC);;
+
 (* ------------------------------------------------------------------------- *)
-(* Tactics for the calls, and for the comparisons with the rate.             *)
+(* Tactics for the calls, with the FULL theorems of the callees assumed as   *)
+(* "H_XOR" and "H_PERMUTE", and for the comparisons with the rate.           *)
 (* ------------------------------------------------------------------------- *)
 
-let LOCAL_XOR_TAC =
-  ARM_SUBROUTINE_SIM_TAC
-   (mldsa_native_libmldsa_gcc12_O2_mc,
-    MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_EXEC,
-    0x0,mldsa_native_libmldsa_gcc12_O2_mc,
-    MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT);;
-
-let LOCAL_PERMUTE_TAC =
-  ARM_SUBROUTINE_SIM_TAC
-   (mldsa_native_libmldsa_gcc12_O2_mc,
-    MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_EXEC,
-    0x0,mldsa_native_libmldsa_gcc12_O2_mc,
-    MLDSA_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600);;
+let SHAKE256_ABSORB_CALL_TAC name ilist n =
+  REMOVE_THEN name (fun th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+     (mldsa_native_libmldsa_gcc12_O2_mc,
+      MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_EXEC,
+      0x0,mldsa_native_libmldsa_gcc12_O2_mc,th)
+     ilist n THENL
+     [EXISTS_E2_FEV_TAC
+       [`ctx:int64`; `src:int64`; `inlen:num`; `pos:num`; `pc:num`;
+        `stackpointer:int64`; `returnaddress:int64`; `i:num`; `n:num`;
+        `p:num`; `c:num`];
+      LABEL_TAC name th]);;
 
 (*** The flags of the comparison of r - pos with inlen, as arithmetic ***)
 
@@ -177,23 +190,51 @@ let ABSORB_LOOP_FLAGS_TAC x =
     [VAL_WORD_SUB_EQ_0; SHAKE_VAL_WORD_RATE_1; th]));;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. The loop over the n = (pos + inlen) DIV 136 full       *)
-(* blocks, if any, ends at join1 with the state after them; then the last    *)
-(* call XORs the rest of the message. The frame is the 64 bytes at           *)
-(* stackpointer + 192, with the 192 bytes of the permutation below them.     *)
+(* Correctness, constant time and memory safety. The loop over the           *)
+(* n = (pos + inlen) DIV 136 full blocks, if any, ends at join1 with the     *)
+(* state after them; then the last call XORs the rest of the message. The    *)
+(* frame is the 64 bytes at stackpointer + 192, with the 192 bytes of the    *)
+(* permutation below them. The events are those of the branch over the loop  *)
+(* if n = 0, and otherwise of the start of the loop and of its n iterations, *)
+(* each of which calls mldsa_keccakf1600_xor_bytes with arguments that       *)
+(* depend on the iteration and on pos, and then mldsa_keccakf1600_permute;   *)
+(* the loop test is the end of the body, as ENSURES_EVENTS_WHILE_UP2_TAC     *)
+(* requires. The abbreviations n, p and c are expanded before the events are *)
+(* unified with the template.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
- (MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
+ (MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT,
   let EXEC = MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_EXEC in
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLDSA_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL
+    "H_XOR" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLDSA_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL_F1600
+    "H_PERMUTE" THEN
+  CONCRETIZE_F_EVENTS_TAC
+   `\(ctx:int64) (src:int64) (inlen:num) (pos:num) (pc:num)
+     (stackpointer:int64) (returnaddress:int64).
+      APPEND (f_ev_tail ctx src inlen pos pc stackpointer returnaddress)
+       (if (pos + inlen) DIV 136 = 0
+        then f_ev_short ctx src inlen pos pc stackpointer returnaddress
+        else
+         APPEND (f_ev_epil ctx src inlen pos pc stackpointer returnaddress)
+          (APPEND
+            (ENUMERATEL ((pos + inlen) DIV 136)
+              (\i. f_ev_loop ctx src inlen pos pc stackpointer
+                             returnaddress i))
+            (f_ev_prol ctx src inlen pos pc stackpointer returnaddress)))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN
   MAP_EVERY X_GEN_TAC
-   [`ctx:int64`; `src:int64`; `inlen:num`; `S:1600 word`; `pos:num`;
-    `M:num`; `pc:num`] THEN
+   [`e:(uarch_event)list`; `ctx:int64`; `src:int64`; `inlen:num`;
+    `S:1600 word`; `pos:num`; `M:num`; `pc:num`] THEN
   WORD_FORALL_OFFSET_TAC 256 THEN
   MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               ALL; PAIRWISE; NONOVERLAPPING_CLAUSES;
-              READ_MEMORY_WBYTES_1600] THEN
+              READ_MEMORY_WBYTES_1600; fst EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   SUBGOAL_THEN `204 + inlen <= 18446744073709551616` ASSUME_TAC THENL
    [MATCH_MP_TAC NONOVERLAPPING_IMP_SMALL_RIGHT_ALT THEN
@@ -211,7 +252,7 @@ let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
 
   (*** The state after the full blocks, at join1 ***)
 
-  ENSURES_SEQUENCE_TAC `pc + mldsa_shake256_absorb_join1`
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mldsa_shake256_absorb_join1`
    `\s. read X22 s = ctx /\
         read X19 s = word(inlen - (if n = 0 then 0 else 136 * n - pos)) /\
         read X20 s =
@@ -233,10 +274,10 @@ let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
         read (memory :> bytes(ctx,200)) s =
         val(mld_keccak_absorb_blocks 136 S (2 EXP (8 * pos) * M) n)` THEN
   CONJ_TAC THENL
-   [ASM_CASES_TAC `n = 0` THENL
+   [ASM_CASES_TAC `n = 0` THEN ASM_REWRITE_TAC[] THENL
      [(*** No full block: the branch over the loop ***)
 
-      ENSURES_INIT_TAC "s0" THEN ARM_STEPS_TAC EXEC (1--11) THEN
+      FULL_INIT_TAC THEN ARM_STEPS_TAC EXEC (1--11) THEN
       ABSORB_FIRST_FLAGS_TAC THEN
       SUBGOAL_THEN `pos + inlen < 136` ASSUME_TAC THENL
        [UNDISCH_TAC `(pos + inlen) DIV 136 = n` THEN ASM_REWRITE_TAC[] THEN
@@ -246,13 +287,14 @@ let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
        [UNDISCH_TAC `pos + inlen < 136` THEN ARITH_TAC; ALL_TAC] THEN
       ARM_STEPS_TAC EXEC (12--12) THEN
       ENSURES_FINAL_STATE_TAC THEN
-      ASM_REWRITE_TAC[mld_keccak_absorb_blocks; WORD_ADD_0; SUB_0];
+      ASM_REWRITE_TAC[mld_keccak_absorb_blocks; WORD_ADD_0; SUB_0] THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
       ALL_TAC] THEN
 
     (*** The loop over the n full blocks ***)
 
-    ENSURES_WHILE_UP_TAC `n:num` `pc + mldsa_shake256_absorb_loop1`
-     `pc + mldsa_shake256_absorb_loop1_test`
+    ENSURES_EVENTS_WHILE_UP2_TAC `n:num` `pc + mldsa_shake256_absorb_loop1`
+     `pc + mldsa_shake256_absorb_loop1_exit`
      `\k s. read X22 s = ctx /\
             read X19 s =
             word(inlen - (if k = 0 then 0 else 136 * k - pos)) /\
@@ -280,31 +322,28 @@ let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
     REPEAT CONJ_TAC THENL
      [ASM_REWRITE_TAC[];
 
-      (*** Initialization: the branch into the loop ***)
+      (*** Initialization: the branch into the loop, not taken when the ***)
+      (*** rest of the block is the whole message (the flags are then  ***)
+      (*** C and Z), nor when the message is longer (neither)          ***)
 
-      ENSURES_INIT_TAC "s0" THEN ARM_STEPS_TAC EXEC (1--11) THEN
+      FULL_INIT_TAC THEN ARM_STEPS_TAC EXEC (1--11) THEN
       ABSORB_FIRST_FLAGS_TAC THEN
       SUBGOAL_THEN `136 <= pos + inlen` ASSUME_TAC THENL
        [UNDISCH_TAC `(pos + inlen) DIV 136 = n` THEN
         UNDISCH_TAC `~(n = 0)` THEN
         SIMP_TAC[GSYM DIV_EQ_0; ARITH_EQ] THEN ARITH_TAC; ALL_TAC] THEN
-      ASM_CASES_TAC `136 - pos = inlen` THEN
-      FIRST_X_ASSUM(fun th ->
-        if concl th = `136 - pos = inlen` ||
-           concl th = `~(136 - pos = inlen)`
-        then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN ASSUME_TAC th
-        else NO_TAC) THEN
-      TRY(SUBGOAL_THEN `(inlen <= 136 - pos <=> F)`
-           (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
-          [UNDISCH_TAC `136 <= pos + inlen` THEN
-           UNDISCH_TAC `~(136 - pos = inlen)` THEN ARITH_TAC; ALL_TAC]) THEN
+      SUBGOAL_THEN `(inlen <= 136 - pos <=> 136 - pos = inlen)`
+       (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+       [UNDISCH_TAC `136 <= pos + inlen` THEN ARITH_TAC; ALL_TAC] THEN
       ARM_STEPS_TAC EXEC (12--12) THEN
+      RULE_ASSUM_TAC(REWRITE_RULE[TAUT `(p /\ ~p) <=> F`]) THEN
       ENSURES_FINAL_STATE_TAC THEN
-      ASM_REWRITE_TAC[mld_keccak_absorb_blocks; WORD_ADD_0; SUB_0];
+      ASM_REWRITE_TAC[mld_keccak_absorb_blocks; WORD_ADD_0; SUB_0] THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
 
-      (*** The body: XOR block i and permute ***)
+      (*** The body: XOR block i, permute, and the loop test ***)
 
-      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+      X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
       SUBGOAL_THEN `136 * (i + 1) <= pos + inlen` ASSUME_TAC THENL
        [TRANS_TAC LE_TRANS `136 * n` THEN CONJ_TAC THENL
          [REWRITE_TAC[LE_MULT_LCANCEL] THEN UNDISCH_TAC `i < n` THEN
@@ -331,7 +370,7 @@ let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
             ARITH_TAC;
             ARITH_TAC]];
         ALL_TAC] THEN
-      ENSURES_INIT_TAC "s0" THEN
+      FULL_INIT_TAC THEN
       ARM_STEPS_TAC EXEC (1--3) THEN
       SUBGOAL_THEN
        `read (memory :> bytes(word_add src (word c),136 - p)) s3 =
@@ -342,7 +381,8 @@ let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
       SUBGOAL_THEN `p + (136 - p) <= 200` ASSUME_TAC THENL
        [UNDISCH_TAC `p <= 136` THEN ARITH_TAC; ALL_TAC] THEN
       KECCAK_STATE_AT_TAC `ctx:int64` THEN
-      LOCAL_XOR_TAC [`read X0 s`; `read X1 s`; `p:num`; `136 - p`;
+      SHAKE256_ABSORB_CALL_TAC "H_XOR"
+       [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `p:num`; `136 - p`;
         `mld_keccak_absorb_blocks 136 S (2 EXP (8 * pos) * M) i`;
         `(M DIV 2 EXP (8 * c)) MOD 2 EXP (8 * (136 - p))`; `pc:num`;
         `read X30 s`] 4 THEN
@@ -354,84 +394,50 @@ let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
         MATCH_MP_TAC SHAKE_ABSORB_CHUNK THEN ASM_REWRITE_TAC[];
         ALL_TAC] THEN
       ARM_STEPS_TAC EXEC (5--8) THEN
-      LOCAL_PERMUTE_TAC [`read X0 s`;
+      SHAKE256_ABSORB_CALL_TAC "H_PERMUTE"
+       [`e:(uarch_event)list`; `read X0 s`;
         `mld_keccak_absorb_blocks 136 S (2 EXP (8 * pos) * M) i ^^
          word ((2 EXP (8 * pos) * M) DIV 2 EXP (8 * 136 * i) MOD
                2 EXP (8 * 136))`;
         `pc:num`; `read SP s`; `read X30 s`] 9 THEN
       RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
-      ARM_STEPS_TAC EXEC (10--12) THEN ENSURES_FINAL_STATE_TAC THEN
-      ASM_REWRITE_TAC[GSYM ADD1; mld_keccak_absorb_blocks; SUB_0] THEN
-      REWRITE_TAC[ADD1] THEN ASM_REWRITE_TAC[] THEN
-      REWRITE_TAC[GSYM(ASSUME `c + (136 - p) = 136 * (i + 1) - pos`)] THEN
-      REPEAT CONJ_TAC THENL
-       [REWRITE_TAC[ARITH_RULE `inlen - (c + d) = inlen - c - d`] THEN
+      ARM_STEPS_TAC EXEC (10--12) THEN
+      SUBGOAL_THEN
+       `word_sub (word (inlen - c)) (word (136 - p)):int64 =
+        word(inlen - (136 * (i + 1) - pos))`
+       (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+       [REWRITE_TAC[GSYM(ASSUME `c + (136 - p) = 136 * (i + 1) - pos`)] THEN
+        REWRITE_TAC[ARITH_RULE `inlen - (c + d) = inlen - c - d`] THEN
         REWRITE_TAC[WORD_SUB] THEN
         SUBGOAL_THEN `136 - p <= inlen - c` (fun th -> REWRITE_TAC[th]) THEN
         UNDISCH_TAC `c + (136 - p) <= inlen` THEN ARITH_TAC;
-        REWRITE_TAC[WORD_ADD; GSYM WORD_ADD_ASSOC]];
-
-      (*** The branch back to the loop ***)
-
-      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      REWRITE_TAC[ADD_EQ_0; ARITH_EQ] THEN
-      ENSURES_INIT_TAC "s0" THEN ARM_STEPS_TAC EXEC (1--1) THEN
-      SUBGOAL_THEN `~(i = 0) /\ 136 * (i + 1) <= pos + inlen`
-      STRIP_ASSUME_TAC THENL
-       [CONJ_TAC THENL [UNDISCH_TAC `0 < i` THEN ARITH_TAC; ALL_TAC] THEN
-        TRANS_TAC LE_TRANS `136 * n` THEN CONJ_TAC THENL
-         [REWRITE_TAC[LE_MULT_LCANCEL] THEN UNDISCH_TAC `i < n` THEN
-          ARITH_TAC;
-          EXPAND_TAC "n" THEN REWRITE_TAC[DIV_MUL_LE]];
         ALL_TAC] THEN
-      SUBGOAL_THEN `pos <= 136 * i` ASSUME_TAC THENL
-       [TRANS_TAC LE_TRANS `136 * 1` THEN CONJ_TAC THENL
-         [UNDISCH_TAC `pos <= 136` THEN ARITH_TAC; ALL_TAC] THEN
-        REWRITE_TAC[LE_MULT_LCANCEL] THEN UNDISCH_TAC `~(i = 0)` THEN
-        ARITH_TAC; ALL_TAC] THEN
-      ABSORB_LOOP_FLAGS_TAC `inlen - (136 * i - pos)` THEN
-      SUBGOAL_THEN
-       `(135 <= inlen - (136 * i - pos) <=> T) /\
-        (inlen - (136 * i - pos) = 135 <=> F)`
-       (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
-       [UNDISCH_TAC `136 * (i + 1) <= pos + inlen` THEN
-        UNDISCH_TAC `pos <= 136 * i` THEN ARITH_TAC; ALL_TAC] THEN
-      ARM_STEPS_TAC EXEC (2--2) THEN ENSURES_FINAL_STATE_TAC THEN
-      ASM_REWRITE_TAC[];
-
-      (*** The exit of the loop ***)
-
-      REWRITE_TAC[] THEN ENSURES_INIT_TAC "s0" THEN
-      ARM_STEPS_TAC EXEC (1--1) THEN
-      SUBGOAL_THEN
-       `pos <= 136 * n /\ inlen - (136 * n - pos) < 136 /\
-        136 * n - pos <= inlen`
-      STRIP_ASSUME_TAC THENL
-       [MP_TAC(SPECL [`pos + inlen`; `136`] DIVISION) THEN
-        REWRITE_TAC[ARITH_EQ] THEN ASM_REWRITE_TAC[] THEN
-        UNDISCH_TAC `~(n = 0)` THEN UNDISCH_TAC `pos <= 136` THEN
-        SPEC_TAC(`(pos + inlen) MOD 136`,`t:num`) THEN GEN_TAC THEN
-        DISCH_TAC THEN DISCH_TAC THEN
-        SUBGOAL_THEN `136 <= 136 * n` MP_TAC THENL
-         [GEN_REWRITE_TAC LAND_CONV [ARITH_RULE `136 = 136 * 1`] THEN
-          REWRITE_TAC[LE_MULT_LCANCEL] THEN UNDISCH_TAC `~(n = 0)` THEN
-          ARITH_TAC;
-          UNDISCH_TAC `pos <= 136` THEN ONCE_REWRITE_TAC[MULT_SYM] THEN
-          ARITH_TAC];
+      ARM_STEPS_TAC EXEC (13--13) THEN
+      ABSORB_LOOP_FLAGS_TAC `inlen - (136 * (i + 1) - pos)` THEN
+      ARM_STEPS_TAC EXEC (14--14) THEN
+      MP_TAC(SPECL [`pos:num`; `inlen:num`; `i:num`]
+                   SHAKE_ABSORB_LOOP_TEST) THEN
+      ASM_REWRITE_TAC[] THEN
+      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+      ENSURES_FINAL_STATE_TAC THEN
+      ASM_REWRITE_TAC[GSYM ADD1; mld_keccak_absorb_blocks; SUB_0] THEN
+      REWRITE_TAC[ADD1] THEN ASM_REWRITE_TAC[] THEN
+      CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+      CONJ_TAC THENL
+       [REWRITE_TAC[GSYM(ASSUME `c + (136 - p) = 136 * (i + 1) - pos`)] THEN
+        REWRITE_TAC[WORD_ADD; GSYM WORD_ADD_ASSOC];
         ALL_TAC] THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `~(n = 0)`]) THEN
-      ABSORB_LOOP_FLAGS_TAC `inlen - (136 * n - pos)` THEN
-      SUBGOAL_THEN
-       `(135 <= inlen - (136 * n - pos) <=> inlen - (136 * n - pos) = 135)`
-       (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
-       [UNDISCH_TAC `inlen - (136 * n - pos) < 136` THEN ARITH_TAC;
-        ALL_TAC] THEN
-      ARM_STEPS_TAC EXEC (2--2) THEN ENSURES_FINAL_STATE_TAC THEN
-      ASM_REWRITE_TAC[TAUT `(p /\ ~p) <=> F`]];
+      UNABBREV_VARS_TAC [`p:num`; `c:num`; `n:num`] THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+
+      (*** The exit of the loop, at join1 ***)
+
+      REWRITE_TAC[] THEN FULL_INIT_TAC THEN ENSURES_FINAL_STATE_TAC THEN
+      ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC];
 
     (*** The rest of the message, and the new position ***)
 
-    ENSURES_INIT_TAC "s0" THEN
+    FULL_INIT_TAC THEN
     MP_TAC(ISPECL [`src:int64`; `inlen:num`; `read memory s0`]
                   READ_BYTES_BOUND) THEN
     REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN ASM_REWRITE_TAC[] THEN
@@ -458,22 +464,40 @@ let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
     SUBGOAL_THEN `p + (inlen - c) <= 200` ASSUME_TAC THENL
      [UNDISCH_TAC `p + (inlen - c) < 136` THEN ARITH_TAC; ALL_TAC] THEN
     KECCAK_STATE_AT_TAC `ctx:int64` THEN
-    LOCAL_XOR_TAC [`read X0 s`; `read X1 s`; `p:num`; `inlen - c`;
+    SHAKE256_ABSORB_CALL_TAC "H_XOR"
+     [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `p:num`; `inlen - c`;
       `mld_keccak_absorb_blocks 136 S (2 EXP (8 * pos) * M) n`;
       `(M DIV 2 EXP (8 * c)) MOD 2 EXP (8 * (inlen - c))`; `pc:num`;
       `read X30 s`] 6 THEN
     RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
     ARM_STEPS_TAC EXEC (7--13) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[mld_keccak_absorb] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-    ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ZX_GEN; VAL_WORD_ADD; VAL_WORD;
-                DIMINDEX_32; DIMINDEX_64] THEN
-    SUBGOAL_THEN `p < 136 /\ inlen - c < 136` STRIP_ASSUME_TAC THENL
-     [UNDISCH_TAC `p + (inlen - c) < 136` THEN ARITH_TAC; ALL_TAC] THEN
-    CONV_TAC NUM_REDUCE_CONV THEN
-    ASM_SIMP_TAC[MOD_LT;
-      ARITH_RULE `p < 136 ==> p < 4294967296 /\ p < 18446744073709551616`;
-      ARITH_RULE `x < 136 ==> x < 4294967296 /\ x < 18446744073709551616`;
-      ARITH_RULE `p < 136 /\ x < 136 ==> p + x < 4294967296`] THEN
-    ASM_SIMP_TAC[MOD_LT; SHAKE_MOD_RATE_SMALL]]);;
+    GEN_REWRITE_TAC I [CONJ_ASSOC] THEN CONJ_TAC THENL
+     [REWRITE_TAC[mld_keccak_absorb] THEN
+      CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[] THEN
+      REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ZX_GEN; VAL_WORD_ADD; VAL_WORD;
+                  DIMINDEX_32; DIMINDEX_64] THEN
+      SUBGOAL_THEN `p < 136 /\ inlen - c < 136` STRIP_ASSUME_TAC THENL
+       [UNDISCH_TAC `p + (inlen - c) < 136` THEN ARITH_TAC; ALL_TAC] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      ASM_SIMP_TAC[MOD_LT;
+        ARITH_RULE `p < 136 ==> p < 4294967296 /\ p < 18446744073709551616`;
+        ARITH_RULE `x < 136 ==> x < 4294967296 /\ x < 18446744073709551616`;
+        ARITH_RULE `p < 136 /\ x < 136 ==> p + x < 4294967296`] THEN
+      ASM_SIMP_TAC[MOD_LT; SHAKE_MOD_RATE_SMALL];
+      UNABBREV_VARS_TAC [`p:num`; `c:num`; `n:num`] THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC]]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, and constant time and memory safety alone.                   *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+  CORRECT_OF_FULL_TAC
+    MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_FULL);;
+
+let MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  SAFE_OF_FULL_TAC
+    MLDSA_NATIVE_SHAKE256_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_FULL);;

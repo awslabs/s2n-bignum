@@ -14,7 +14,8 @@
 (* verified in the whole image (see libmldsa.ml) against mld_keccak_absorb   *)
 (* of common/mldsa_native_fips202.ml, for a position up to the rate, as the  *)
 (* C code requires. The stack is the 64 bytes of the function and the 192    *)
-(* used by the permutation below them.                                       *)
+(* used by the permutation below them. It is also shown to be constant time  *)
+(* and memory safe.                                                          *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -104,3 +105,97 @@ let MLDSA_NATIVE_SHAKE128_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 let MLDSA_NATIVE_SHAKE128_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec
    MLDSA_NATIVE_SHAKE128_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together: the same, and the  *)
+(* events are a function of the addresses, the length and the position only  *)
+(* (which give the number of blocks), with all accesses within the context,  *)
+(* the message, the stack and the round constants of the permutation, and    *)
+(* the writes within the context and the stack.                              *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_SHAKE128_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
+ `exists f_events.
+     forall e ctx src inlen (S:1600 word) pos M pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 stackpointer /\ pos <= 168 /\
+        PAIRWISE nonoverlapping
+         [(ctx,204); (src,inlen); (word_sub stackpointer (word 256),256)] /\
+        ALL (nonoverlapping (word pc,libmldsa_size))
+         [(ctx,204); (word_sub stackpointer (word 256),256)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_shake128_absorb) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [ctx; src; word inlen] s /\
+                  read (memory :> wbytes ctx) s = S /\
+                  read (memory :> bytes32(word_add ctx (word 200))) s =
+                  word pos /\
+                  read (memory :> bytes(src,inlen)) s = M /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  read (memory :> wbytes ctx) s =
+                  FST(mld_keccak_absorb 168 S pos inlen M) /\
+                  read (memory :> bytes32(word_add ctx (word 200))) s =
+                  word(SND(mld_keccak_absorb 168 S pos inlen M)) /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events ctx src inlen pos pc
+                                 (word_sub stackpointer (word 256))
+                                 returnaddress /\
+                     memaccess_inbounds e2
+                      [ctx,204; src,inlen;
+                       word_sub stackpointer (word 256),256;
+                       word(pc + rodata_mld_KeccakF_RoundConstants),192]
+                      [ctx,204; word_sub stackpointer (word 256),256]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(ctx,204);
+                memory :> bytes(word_sub stackpointer (word 256),256)])`;;
+
+let MLDSA_NATIVE_SHAKE128_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLDSA_NATIVE_SHAKE128_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant time and memory safety alone.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_SHAKE128_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
+ `exists f_events.
+     forall e ctx src inlen pos pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 stackpointer /\ pos <= 168 /\
+        PAIRWISE nonoverlapping
+         [(ctx,204); (src,inlen); (word_sub stackpointer (word 256),256)] /\
+        ALL (nonoverlapping (word pc,libmldsa_size))
+         [(ctx,204); (word_sub stackpointer (word 256),256)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_shake128_absorb) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [ctx; src; word inlen] s /\
+                  read (memory :> bytes32(word_add ctx (word 200))) s =
+                  word pos /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events ctx src inlen pos pc
+                                 (word_sub stackpointer (word 256))
+                                 returnaddress /\
+                     memaccess_inbounds e2
+                      [ctx,204; src,inlen;
+                       word_sub stackpointer (word 256),256;
+                       word(pc + rodata_mld_KeccakF_RoundConstants),192]
+                      [ctx,204; word_sub stackpointer (word 256),256]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(ctx,204);
+                memory :> bytes(word_sub stackpointer (word 256),256)])`;;
+
+let MLDSA_NATIVE_SHAKE128_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLDSA_NATIVE_SHAKE128_ABSORB_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;

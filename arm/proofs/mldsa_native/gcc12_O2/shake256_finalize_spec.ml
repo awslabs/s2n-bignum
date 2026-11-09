@@ -14,7 +14,8 @@
 (* position to the rate 136. It is verified in the whole image (see          *)
 (* libmldsa.ml) against mld_keccak_finalize of                               *)
 (* common/mldsa_native_fips202.ml, for a position up to the rate, as the C   *)
-(* code requires; the address of the stack guard is read from the GOT.       *)
+(* code requires; the address of the stack guard is read from the GOT. It is *)
+(* also shown to be constant time and memory safe.                           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -101,3 +102,99 @@ let MLDSA_NATIVE_SHAKE256_FINALIZE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
 let MLDSA_NATIVE_SHAKE256_FINALIZE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec
    MLDSA_NATIVE_SHAKE256_FINALIZE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together: the same, and the  *)
+(* events are a function of the addresses and the position only, with all    *)
+(* accesses within the context, the stack frame, the GOT entry of the stack  *)
+(* guard and the guard, and the writes within the context and the frame.     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_SHAKE256_FINALIZE_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
+ `exists f_events.
+     forall e ctx (S:1600 word) pos guard pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 stackpointer /\ pos <= 136 /\
+        nonoverlapping (ctx,204) (word_sub stackpointer (word 32),32) /\
+        ALLPAIRS nonoverlapping
+         [(ctx,204); (word_sub stackpointer (word 32),32)]
+         [(word pc,libmldsa_size); (word(pc + got_stack_chk_guard),8);
+          (guard,8)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_shake256_finalize) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [ctx] s /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                  read (memory :> wbytes ctx) s = S /\
+                  read (memory :> bytes32(word_add ctx (word 200))) s =
+                  word pos /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  read (memory :> wbytes ctx) s =
+                  mld_keccak_finalize 136 0x1F S pos /\
+                  read (memory :> bytes32(word_add ctx (word 200))) s =
+                  word 136 /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events ctx pos guard pc
+                                 (word_sub stackpointer (word 32))
+                                 returnaddress /\
+                     memaccess_inbounds e2
+                      [ctx,204; word_sub stackpointer (word 32),32;
+                       word(pc + got_stack_chk_guard),8; guard,8]
+                      [ctx,204; word_sub stackpointer (word 32),32]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE
+               [memory :> bytes(ctx,204);
+                memory :> bytes(word_sub stackpointer (word 32),32)])`;;
+
+let MLDSA_NATIVE_SHAKE256_FINALIZE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLDSA_NATIVE_SHAKE256_FINALIZE_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant time and memory safety alone.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_SHAKE256_FINALIZE_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
+ `exists f_events.
+     forall e ctx pos guard pc stackpointer returnaddress.
+        aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 stackpointer /\ pos <= 136 /\
+        nonoverlapping (ctx,204) (word_sub stackpointer (word 32),32) /\
+        ALLPAIRS nonoverlapping
+         [(ctx,204); (word_sub stackpointer (word 32),32)]
+         [(word pc,libmldsa_size); (word(pc + got_stack_chk_guard),8);
+          (guard,8)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mldsa_native_libmldsa_gcc12_O2_mc /\
+                  read PC s = word (pc + mldsa_shake256_finalize) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [ctx] s /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                  read (memory :> bytes32(word_add ctx (word 200))) s =
+                  word pos /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events ctx pos guard pc
+                                 (word_sub stackpointer (word 32))
+                                 returnaddress /\
+                     memaccess_inbounds e2
+                      [ctx,204; word_sub stackpointer (word 32),32;
+                       word(pc + got_stack_chk_guard),8; guard,8]
+                      [ctx,204; word_sub stackpointer (word 32),32]))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE
+               [memory :> bytes(ctx,204);
+                memory :> bytes(word_sub stackpointer (word 32),32)])`;;
+
+let MLDSA_NATIVE_SHAKE256_FINALIZE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLDSA_NATIVE_SHAKE256_FINALIZE_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;

@@ -6,13 +6,16 @@
 (* ========================================================================= *)
 (* Lemmas and tactics for the proofs of mldsa-native's absorbing of messages *)
 (* into Keccak states, copied from the proof of mlk_keccak_absorb_once in    *)
-(* mlkem_native/gcc12_O2/keccak_absorb_once.ml (whose code mldsa-native     *)
-(* does not have), without the parts that refer to that function.           *)
+(* mlkem_native/gcc12_O2/keccak_absorb_once.ml (whose code mldsa-native      *)
+(* does not have), without the parts that refer to that function. The        *)
+(* tactics at the end are for the FULL proofs of the SHAKE functions, which  *)
+(* absorb and squeeze.                                                       *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mldsa_native_keccak.ml";;
 needs "arm/proofs/utils/keccak_fips202.ml";;
 needs "arm/proofs/utils/mlkem_native_image.ml";;
+needs "arm/proofs/consttime.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Lemmas about the arguments, the bytes of the message and the blocks.      *)
@@ -205,3 +208,65 @@ let KECCAK_STATE_THEN a (ttac:term->tactic) =
                                Comb(Const("wbytes",_),aa))),_)),v)
         when aa = a -> ttac v
     | _ -> NO_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Two tactics for the FULL proofs of the SHAKE functions, whose events are  *)
+(* given by a template of event functions f_ev_... (CONCRETIZE_F_EVENTS_TAC) *)
+(* to be unified with the events of the code. EXISTS_E2_FEV_TAC vars is      *)
+(* EXISTS_E2_TAC vars for the subgoal on the events before a call, also      *)
+(* allowing the f_ev_... of the template, which these events contain in a    *)
+(* loop. UNABBREV_VARS_TAC vs replaces each variable v of vs, introduced by  *)
+(* ABBREV_TAC with an assumption t = v, by t everywhere: the events must be  *)
+(* functions of the public arguments of the template only when they are      *)
+(* unified with it.                                                          *)
+(* ------------------------------------------------------------------------- *)
+
+let EXISTS_E2_FEV_TAC vars =
+  W(fun (asl,w) ->
+    let fevs = filter (fun v -> starts_with "f_ev_" (name_of v)) (frees w) in
+    EXISTS_E2_TAC (ref (vars @ fevs)));;
+
+let UNABBREV_VARS_TAC vs =
+  MAP_EVERY (fun v ->
+    FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o check (fun th ->
+      is_eq(concl th) && rhs(concl th) = v && not(is_var(lhs(concl th))))))
+   vs;;
+
+(* ------------------------------------------------------------------------- *)
+(* DISCHARGE_SAFETY_PROPERTY_SPINE_TAC is DISCHARGE_SAFETY_PROPERTY_TAC for  *)
+(* a segment whose precondition gives the memory safety of the events since  *)
+(* the start as a whole, e.g. of a loop so far and of a part before it with  *)
+(* a conditional. EXISTS_E2_TAC left-associates the APPENDs of the events,   *)
+(* so that this whole is no longer a subterm and the tactic for              *)
+(* memaccess_inbounds cannot use the fact; APPEND_SPINE_CONV                 *)
+(* right-associates the APPENDs along the spine of the list, and removes     *)
+(* APPEND [], without changing the parts. The tactic does the same to unify  *)
+(* the events with the template when FULL_UNIFY_F_EVENTS_TAC fails on the    *)
+(* left-associated form, e.g. for an empty segment at the end of a loop      *)
+(* inside such a whole.                                                      *)
+(* ------------------------------------------------------------------------- *)
+
+let rec APPEND_SPINE_CONV tm =
+  match tm with
+    Comb(Comb(Const("APPEND",_),l),r) ->
+      (match l with
+         Comb(Comb(Const("APPEND",_),_),_) ->
+           (GEN_REWRITE_CONV I [GSYM APPEND_ASSOC] THENC APPEND_SPINE_CONV) tm
+       | Const("NIL",_) ->
+           (GEN_REWRITE_CONV I [CONJUNCT1 APPEND] THENC APPEND_SPINE_CONV) tm
+       | _ -> RAND_CONV APPEND_SPINE_CONV tm)
+  | Comb(Comb(Const("CONS",_),_),_) -> RAND_CONV APPEND_SPINE_CONV tm
+  | _ -> REFL tm;;
+
+let DISCHARGE_SAFETY_PROPERTY_SPINE_TAC =
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
+  W(fun (asl,w) ->
+    (if is_conj w then
+       CONJ_TAC THENL
+        [FULL_UNIFY_F_EVENTS_TAC ORELSE
+         (REWRITE_TAC[GSYM APPEND_ASSOC] THEN FULL_UNIFY_F_EVENTS_TAC);
+         ALL_TAC]
+     else ALL_TAC) THEN
+    CONV_TAC(RATOR_CONV(RATOR_CONV(RAND_CONV APPEND_SPINE_CONV))) THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
