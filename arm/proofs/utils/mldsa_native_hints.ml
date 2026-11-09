@@ -7,9 +7,10 @@
 (* Tools for the FULL proofs of the packing glue of signatures and keys of   *)
 (* mldsa-native (packing.c): the copies of byte strings that the compiler    *)
 (* has inlined as 128-bit loads and stores (mld_pack_sig_c,                  *)
-(* mld_pack_sk_rho_key_tr), the tail calls at offsets computed from an index *)
-(* (mld_pack_sig_z, mld_unpack_pk_t1), and the packing and unpacking of the  *)
-(* hints (mld_pack_sig_h, mld_sig_unpack_hints).                             *)
+(* mld_pack_sk_rho_key_tr, mld_unpack_sk), the tail calls at offsets         *)
+(* computed from an index (mld_pack_sig_z, mld_unpack_pk_t1), and the        *)
+(* packing and unpacking of the hints (mld_pack_sig_h,                       *)
+(* mld_sig_unpack_hints).                                                    *)
 (* ========================================================================= *)
 
 needs "common/layout.ml";;
@@ -72,6 +73,20 @@ let GLUE_BYTES_FINAL_TAC =
   CONV_TAC(EXPAND_CASES_CONV THENC NUM_REDUCE_CONV THENC
            REWRITE_CONV[WORD_ADD_0]) THEN
   ASM_REWRITE_TAC[];;
+
+(* ------------------------------------------------------------------------- *)
+(* Part of a byte string given by a fact !j. j < m ==> read (bytes8          *)
+(* (word_add a (word j))) s = b j, e.g. for the precondition of a callee:    *)
+(* GLUE_SLICE_TAC tm proves and assumes tm, of the form !j. j < n ==> read   *)
+(* (bytes8 (word_add a (word(e + j)))) s = b(e' + j) with e + j and e' + j   *)
+(* equal up to the association of the additions.                             *)
+(* ------------------------------------------------------------------------- *)
+
+let GLUE_SLICE_TAC tm =
+  SUBGOAL_THEN tm ASSUME_TAC THENL
+   [X_GEN_TAC `j:num` THEN DISCH_TAC THEN REWRITE_TAC[GSYM ADD_ASSOC] THEN
+    FIRST_ASSUM(fun th -> MATCH_MP_TAC th THEN SIMPLE_ARITH_TAC);
+    ALL_TAC];;
 
 (* ------------------------------------------------------------------------- *)
 (* The address of a tail call, computed from an index with 32-bit            *)
