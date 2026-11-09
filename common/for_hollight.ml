@@ -428,12 +428,10 @@ let find_substring str sub =
    terms on which the recursive conversion failed. Each application
    MEMOIZED_TOP_DEPTH_CONV step creates a new cache, which is shared by all
    later calls of the resulting conversion. Keys use structural term
-   equality via OCaml's compare, including types and variable names, not
-   matching or alpha-equivalence. Unlike polymorphic (=), compare returns
-   at once on physically equal subterms. These are common in the shared
-   terms this is used on, where (=) can traverse the whole unshared tree.
-   Values are complete theorems, including hypotheses. Cache misses follow
-   TOP_DEPTH_CONV's rewrite/traversal order.
+   equality via OCaml's compare (which returns at once on physically equal
+   subterms), including types and variable names, not matching or
+   alpha-equivalence. Values are complete theorems, including hypotheses.
+   Cache misses follow TOP_DEPTH_CONV's rewrite/traversal order.
 
    Example (MEMOIZED_BITBLAST_THEN in common/words2.ml is a simpler user):
    the RV32 inverse-NTT proof in mldsa-native folds its output by
