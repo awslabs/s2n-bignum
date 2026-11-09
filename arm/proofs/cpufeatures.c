@@ -14,8 +14,9 @@
 //
 // Names are omitted if the feature is absent. The features come from
 // AT_HWCAP on Linux and from the hw.optional sysctls on macOS. On other
-// systems the program prints nothing and fails, so that the features are
-// reported as unknown rather than absent.
+// systems, or on a macOS without one of the sysctls, the program prints
+// nothing and fails, so that the features are reported as unknown rather
+// than absent.
 // -------------------------------------------------------------------------
 
 #include <stdio.h>
@@ -56,7 +57,9 @@ int main(void)
 #include <stddef.h>
 #include <sys/sysctl.h>
 
-// Read a sysctl flag, trying the older name if the first does not exist
+// Read a sysctl flag, trying the older name if the first does not exist.
+// Return -1 if neither exists (as for the FEAT_ names before macOS 12),
+// since the feature is then unknown rather than absent.
 static int sysctl_flag(const char *name, const char *older)
 {
   int value = 0;
@@ -65,20 +68,28 @@ static int sysctl_flag(const char *name, const char *older)
   size = sizeof(value);
   if (older != NULL && sysctlbyname(older, &value, &size, NULL, 0) == 0)
     return value != 0;
-  return 0;
+  return -1;
 }
 
 int main(void)
 {
-  int first = 1;
-  feature(sysctl_flag("hw.optional.arm.FEAT_AES", NULL), "aes", &first);
-  feature(sysctl_flag("hw.optional.arm.FEAT_PMULL", NULL), "pmull", &first);
-  feature(sysctl_flag("hw.optional.arm.FEAT_SHA256", NULL), "sha2", &first);
-  feature(sysctl_flag("hw.optional.arm.FEAT_SHA3", "hw.optional.armv8_2_sha3"),
-          "sha3", &first);
-  feature(sysctl_flag("hw.optional.arm.FEAT_SHA512",
-                      "hw.optional.armv8_2_sha512"),
-          "sha512", &first);
+  static const char *const names[] =
+    {"aes", "pmull", "sha2", "sha3", "sha512"};
+  int present[5];
+  int first = 1, i;
+  present[0] = sysctl_flag("hw.optional.arm.FEAT_AES", NULL);
+  present[1] = sysctl_flag("hw.optional.arm.FEAT_PMULL", NULL);
+  present[2] = sysctl_flag("hw.optional.arm.FEAT_SHA256", NULL);
+  present[3] = sysctl_flag("hw.optional.arm.FEAT_SHA3",
+                           "hw.optional.armv8_2_sha3");
+  present[4] = sysctl_flag("hw.optional.arm.FEAT_SHA512",
+                           "hw.optional.armv8_2_sha512");
+  for (i = 0; i < 5; i++)
+    if (present[i] < 0)
+     { fprintf(stderr, "cpufeatures: cannot determine %s\n", names[i]);
+       return 1;
+     }
+  for (i = 0; i < 5; i++) feature(present[i], names[i], &first);
   printf("\n");
   return 0;
 }
