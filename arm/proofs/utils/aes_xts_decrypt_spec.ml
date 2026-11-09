@@ -187,34 +187,34 @@ in: 3231302f2e2d2c2b2a292827262524232221201f1e1d1c1b1a191817161514131211100f0e0d
 
 *)
 
-let c0 = new_definition
-  `c0 = [word 0xc3; word 0x0c; word 0xa8; word 0xf2
+let xts_tv_c0 = new_definition
+  `xts_tv_c0 = [word 0xc3; word 0x0c; word 0xa8; word 0xf2
   ; word 0xed; word 0x57; word 0x30; word 0x7e
   ; word 0xdc; word 0x87; word 0xe5; word 0x44
   ; word 0x86; word 0x7a; word 0xc8; word 0x88] : byte list`;;
-let p0 = new_definition
-  `p0 = [word 0x00; word 0x01; word 0x02; word 0x03
+let xts_tv_p0 = new_definition
+  `xts_tv_p0 = [word 0x00; word 0x01; word 0x02; word 0x03
   ; word 0x04; word 0x05; word 0x06; word 0x07
   ; word 0x08; word 0x09; word 0x0a; word 0x0b
   ; word 0x0c; word 0x0d; word 0x0e; word 0x0f] : byte list`;;
 
-let c1 = new_definition
-  `c1 = [ word 0x75; word 0xe8; word 0x18; word 0x8b;
+let xts_tv_c1 = new_definition
+  `xts_tv_c1 = [ word 0x75; word 0xe8; word 0x18; word 0x8b;
       word 0xcc; word 0xe5; word 0x9a; word 0xda;
       word 0x93; word 0x9f; word 0x57; word 0xde;
       word 0x2c; word 0xb9; word 0xa4; word 0x89;
       word 0xc3; word 0x0c; word 0xa8; word 0xf2;
       word 0xed; word 0x57 ] : byte list`;;
-let p1 = new_definition
-  `p1 = [word 0x0; word 0x1; word 0x2; word 0x3;
+let xts_tv_p1 = new_definition
+  `xts_tv_p1 = [word 0x0; word 0x1; word 0x2; word 0x3;
       word 0x4; word 0x5; word 0x6; word 0x7;
       word 0x8; word 0x9; word 0xa; word 0xb;
       word 0xc; word 0xd; word 0xe; word 0xf;
       word 0x10; word 0x11; word 0x12; word 0x13;
       word 0x14; word 0x15] : byte list`;;
 
-let c2 = new_definition
-  `c2 = [ word 0xc3; word 0x0c; word 0xa8; word 0xf2;
+let xts_tv_c2 = new_definition
+  `xts_tv_c2 = [ word 0xc3; word 0x0c; word 0xa8; word 0xf2;
       word 0xed; word 0x57; word 0x30; word 0x7e;
       word 0xdc; word 0x87; word 0xe5; word 0x44;
       word 0x86; word 0x7a; word 0xc8; word 0x88;
@@ -227,8 +227,8 @@ let c2 = new_definition
       word 0x92; word 0x4c; word 0xce; word 0x6a;
       word 0x10; word 0x2c; word 0xa2; word 0xe4;
       word 0xe1; word 0xc2; word 0x41 ] : byte list`;;
-let p2 = new_definition
-  `p2 = [word 0x0; word 0x1; word 0x2; word 0x3;
+let xts_tv_p2 = new_definition
+  `xts_tv_p2 = [word 0x0; word 0x1; word 0x2; word 0x3;
       word 0x4; word 0x5; word 0x6; word 0x7;
       word 0x8; word 0x9; word 0xa; word 0xb;
       word 0xc; word 0xd; word 0xe; word 0xf;
@@ -242,8 +242,8 @@ let p2 = new_definition
       word 0x2c; word 0x2d; word 0x2e; word 0x2f;
       word 0x30; word 0x31; word 0x32] : byte list`;;
 
-let iv_tweak = new_definition
-  `iv_tweak = (word 0x0000000000000000000000123456789a) : int128`;;
+let xts_tv_iv_tweak = new_definition
+  `xts_tv_iv_tweak = (word 0x0000000000000000000000123456789a) : int128`;;
 
 let KEY1 = new_definition `KEY1:int128 list =
   [ word 0xc70a951e84370d1836bdd387607e94e5
@@ -287,8 +287,8 @@ let XTS_INIT_TWEAK_CONV =
   REWR_CONV xts_init_tweak THENC AESENC_HELPER_CONV;;
 
 (*
-(REWRITE_CONV [iv_tweak;KEY2] THENC XTS_INIT_TWEAK_CONV)
-  `xts_init_tweak iv_tweak KEY2`;;
+(REWRITE_CONV [xts_tv_iv_tweak;KEY2] THENC XTS_INIT_TWEAK_CONV)
+  `xts_init_tweak xts_tv_iv_tweak KEY2`;;
   *)
 
 let AES256_XTS_DECRYPT_ROUND_CONV =
@@ -298,8 +298,8 @@ let AES256_XTS_DECRYPT_ROUND_CONV =
   SUBLET_CONV AESDEC_HELPER_CONV THENC
   let_CONV THENC WORD_RED_CONV;;
 
-(* (REWRITE_CONV [iv_tweak; KEY2] THENC AES256_XTS_DECRYPT_ROUND_CONV)
-  `aes256_xts_decrypt_round iv_tweak iv_tweak KEY2`;; *)
+(* (REWRITE_CONV [xts_tv_iv_tweak; KEY2] THENC AES256_XTS_DECRYPT_ROUND_CONV)
+  `aes256_xts_decrypt_round xts_tv_iv_tweak xts_tv_iv_tweak KEY2`;; *)
 
 let XTSDEC_1BLOCK_HELPER_CONV =
   REWR_CONV aes256_xts_decrypt_1block THENC
@@ -325,7 +325,7 @@ let BYTES_TO_INT128_CONV =
   REWRITE_CONV EL_16_8_CLAUSES THENC
   DEPTH_CONV WORD_RED_CONV;;
 
-(* (REWRITE_CONV [c0] THENC BYTES_TO_INT128_CONV) `bytes_to_int128 c0`;; *)
+(* (REWRITE_CONV [xts_tv_c0] THENC BYTES_TO_INT128_CONV) `bytes_to_int128 xts_tv_c0`;; *)
 
 let INT128_TO_BYTES_CONV =
   REWRITE_CONV [int128_to_bytes] THENC
@@ -363,9 +363,9 @@ let rec CALCULATE_TWEAK_CONV tm =
   | _ -> failwith "CALCULATE_TWEAK_CONV: inapplicable";;
 
 (*
-(REWRITE_CONV [iv_tweak;KEY2] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 0 iv_tweak KEY2`;;
+(REWRITE_CONV [xts_tv_iv_tweak;KEY2] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 0 xts_tv_iv_tweak KEY2`;;
 
-(REWRITE_CONV [iv_tweak;KEY2] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 1 iv_tweak KEY2`;;
+(REWRITE_CONV [xts_tv_iv_tweak;KEY2] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 1 xts_tv_iv_tweak KEY2`;;
 *)
 
 let rec AES256_XTS_DECRYPT_REC_CONV tm =
@@ -399,8 +399,8 @@ let rec AES256_XTS_DECRYPT_REC_CONV tm =
   | _ -> failwith "AES256_XTS_DECRYPT_REC_CONV: inapplicable";;
 
 (*
-(REWRITE_CONV [iv_tweak;KEY1;KEY2;c0] THENC AES256_XTS_DECRYPT_REC_CONV)
-  `aes256_xts_decrypt_rec 0 0 c0 iv_tweak KEY1 KEY2`;;
+(REWRITE_CONV [xts_tv_iv_tweak;KEY1;KEY2;xts_tv_c0] THENC AES256_XTS_DECRYPT_REC_CONV)
+  `aes256_xts_decrypt_rec 0 0 xts_tv_c0 xts_tv_iv_tweak KEY1 KEY2`;;
 *)
 
 let CIPHER_STEALING_CONV =
@@ -419,8 +419,8 @@ let CIPHER_STEALING_CONV =
   SUBLET_CONV INT128_TO_BYTES_CONV THENC let_CONV;;
 
 (*
-(REWRITE_CONV [c0;iv_tweak;KEY1;KEY2] THENC CIPHER_STEALING_CONV)
-  `cipher_stealing c0 [(word 0x0)] 1 iv_tweak 0 KEY1 KEY2`;;
+(REWRITE_CONV [xts_tv_c0;xts_tv_iv_tweak;KEY1;KEY2] THENC CIPHER_STEALING_CONV)
+  `cipher_stealing xts_tv_c0 [(word 0x0)] 1 xts_tv_iv_tweak 0 KEY1 KEY2`;;
 *)
 
 let AES256_XTS_DECRYPT_TAIL_CONV tm =
@@ -457,11 +457,11 @@ let AES256_XTS_DECRYPT_TAIL_CONV tm =
   | _ -> failwith "AES256_XTS_DECRYPT_TAIL_CONV: inapplicable";;
 
 (*
-(REWRITE_CONV [c0;iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_TAIL_CONV)
-  `aes256_xts_decrypt_tail 0 0 c0 iv_tweak KEY1 KEY2`;;
+(REWRITE_CONV [xts_tv_c0;xts_tv_iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_TAIL_CONV)
+  `aes256_xts_decrypt_tail 0 0 xts_tv_c0 xts_tv_iv_tweak KEY1 KEY2`;;
 
-(REWRITE_CONV [c1;iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_TAIL_CONV)
-  `aes256_xts_decrypt_tail 0 6 c1 iv_tweak KEY1 KEY2`;;
+(REWRITE_CONV [xts_tv_c1;xts_tv_iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_TAIL_CONV)
+  `aes256_xts_decrypt_tail 0 6 xts_tv_c1 xts_tv_iv_tweak KEY1 KEY2`;;
 *)
 
 let AES256_XTS_DECRYPT_CONV tm =
@@ -495,12 +495,12 @@ let AES256_XTS_DECRYPT_CONV tm =
 
 (*
 AES256_XTS_DECRYPT_CONV
-  `aes256_xts_decrypt c0 5 iv_tweak KEY1 KEY2`;;
+  `aes256_xts_decrypt xts_tv_c0 5 xts_tv_iv_tweak KEY1 KEY2`;;
 
-(REWRITE_CONV [c0;iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)
-  `aes256_xts_decrypt c0 16 iv_tweak KEY1 KEY2`;;
+(REWRITE_CONV [xts_tv_c0;xts_tv_iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)
+  `aes256_xts_decrypt xts_tv_c0 16 xts_tv_iv_tweak KEY1 KEY2`;;
 
-time (REWRITE_CONV [iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)
+time (REWRITE_CONV [xts_tv_iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)
   `aes256_xts_decrypt [word 0xc3; word 0x0c; word 0xa8; word 0xf2
   ; word 0xed; word 0x57; word 0x30; word 0x7e
   ; word 0xdc; word 0x87; word 0xe5; word 0x44
@@ -510,7 +510,7 @@ time (REWRITE_CONV [iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)
   ; word 0xdc; word 0x87; word 0xe5; word 0x44
   ; word 0x86; word 0x7a; word 0xc8; word 0x88
   ; word 0x00]
-  33 iv_tweak KEY1 KEY2`;;
+  33 xts_tv_iv_tweak KEY1 KEY2`;;
 *)
 
 (*******************************************)
@@ -518,17 +518,17 @@ time (REWRITE_CONV [iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)
 
 (*
 (* 1 block : 81 second *)
-time prove (`aes256_xts_decrypt c0 16 iv_tweak KEY1 KEY2 = p0`,
-  CONV_TAC(LAND_CONV (REWRITE_CONV [c0;iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)) THEN
-  REWRITE_TAC [p0] THEN REFL_TAC);;
+time prove (`aes256_xts_decrypt xts_tv_c0 16 xts_tv_iv_tweak KEY1 KEY2 = xts_tv_p0`,
+  CONV_TAC(LAND_CONV (REWRITE_CONV [xts_tv_c0;xts_tv_iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)) THEN
+  REWRITE_TAC [xts_tv_p0] THEN REFL_TAC);;
 
 (* 1 block + 6 bytes : 121 seconds *)
-time prove(`aes256_xts_decrypt c1 22 iv_tweak KEY1 KEY2 = p1`,
-  CONV_TAC(LAND_CONV (REWRITE_CONV [c1;iv_tweak;KEY1;KEY2;p1] THENC AES256_XTS_DECRYPT_CONV)) THEN
-  REWRITE_TAC [p1] THEN REFL_TAC);;
+time prove(`aes256_xts_decrypt xts_tv_c1 22 xts_tv_iv_tweak KEY1 KEY2 = xts_tv_p1`,
+  CONV_TAC(LAND_CONV (REWRITE_CONV [xts_tv_c1;xts_tv_iv_tweak;KEY1;KEY2;xts_tv_p1] THENC AES256_XTS_DECRYPT_CONV)) THEN
+  REWRITE_TAC [xts_tv_p1] THEN REFL_TAC);;
 
 (* 3 blocks + 3 bytes : 273 seconds *)
-time prove(`aes256_xts_decrypt c2 51 iv_tweak KEY1 KEY2 = p2`,
-  CONV_TAC(LAND_CONV (REWRITE_CONV [c2;iv_tweak;KEY1;KEY2;p2] THENC AES256_XTS_DECRYPT_CONV)) THEN
-  REWRITE_TAC [p2] THEN REFL_TAC);;
+time prove(`aes256_xts_decrypt xts_tv_c2 51 xts_tv_iv_tweak KEY1 KEY2 = xts_tv_p2`,
+  CONV_TAC(LAND_CONV (REWRITE_CONV [xts_tv_c2;xts_tv_iv_tweak;KEY1;KEY2;xts_tv_p2] THENC AES256_XTS_DECRYPT_CONV)) THEN
+  REWRITE_TAC [xts_tv_p2] THEN REFL_TAC);;
 *)
