@@ -8,7 +8,10 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2/libmldsa \
   mldsa_native/gcc12_O2/poly_add_proof \
   mldsa_native/gcc12_O2/poly_caddq_proof \
-  mldsa_native/gcc12_O2/polyveck_caddq_44_proof
+  mldsa_native/gcc12_O2/polyveck_caddq_44_proof \
+  mldsa_native/gcc12_O2/prepare_domain_separation_prefix_44_proof \
+  mldsa_native/gcc12_O2/prepare_domain_separation_prefix_65_proof \
+  mldsa_native/gcc12_O2/prepare_domain_separation_prefix_87_proof
 
 mldsa_native/gcc12_O2/libmldsa.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
@@ -44,6 +47,42 @@ mldsa_native/gcc12_O2/polyveck_caddq_44_proof.native: \
   proofs/utils/mldsa_native_full.ml \
   ../common/mldsa_native_packing.ml \
   ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/prepare_domain_separation_prefix_44_proof.native: \
+  proofs/mldsa_native/gcc12_O2/prepare_domain_separation_prefix_44_spec.ml \
+  proofs/utils/mldsa_native_prefix.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_libc.ml \
+  ../common/mldsa_native_prefix.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/prepare_domain_separation_prefix_65_proof.native: \
+  proofs/mldsa_native/gcc12_O2/prepare_domain_separation_prefix_65_spec.ml \
+  proofs/utils/mldsa_native_prefix.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_libc.ml \
+  ../common/mldsa_native_prefix.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/prepare_domain_separation_prefix_87_proof.native: \
+  proofs/mldsa_native/gcc12_O2/prepare_domain_separation_prefix_87_spec.ml \
+  proofs/utils/mldsa_native_prefix.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_libc.ml \
+  ../common/mldsa_native_prefix.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native.ml \
   mldsa_native/gcc12_O2/libmldsa.o
