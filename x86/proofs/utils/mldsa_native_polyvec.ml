@@ -37,7 +37,10 @@ needs "common/mldsa_native_polyvec.ml";;
 (* assumption !j. P j ==> read (c (a' j)) s = x j, with the address of       *)
 (* element n * i + j normalized as in the simulation, and VEC_REST_TAC tm    *)
 (* proves tm, of the form !j. Q j ==> R j, from an assumption                *)
-(* !j. P j ==> R j where Q implies P.                                        *)
+(* !j. P j ==> R j where Q implies P. The bounds on the indices are proved   *)
+(* with SIMPLE_ARITH_TAC, which in the body of a loop over the polynomials   *)
+(* takes a fraction of a second where ASM_ARITH_TAC, which the AArch64       *)
+(* tactics use, takes minutes among the assumptions of the simulation.       *)
 (* ------------------------------------------------------------------------- *)
 
 let VEC_SLICE_TAC tm =
@@ -49,13 +52,13 @@ let VEC_SLICE_TAC tm =
         MP_TAC(SPEC idx th) THEN
         REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC] THEN
         CONV_TAC NUM_REDUCE_CONV THEN
-        DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC));
+        DISCH_THEN MATCH_MP_TAC THEN SIMPLE_ARITH_TAC));
     ALL_TAC];;
 
 let VEC_REST_TAC tm =
   SUBGOAL_THEN tm ASSUME_TAC THENL
    [X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-    FIRST_ASSUM(fun th -> MATCH_MP_TAC th THEN ASM_ARITH_TAC);
+    FIRST_ASSUM(fun th -> MATCH_MP_TAC th THEN SIMPLE_ARITH_TAC);
     ALL_TAC];;
 
 (* ------------------------------------------------------------------------- *)
