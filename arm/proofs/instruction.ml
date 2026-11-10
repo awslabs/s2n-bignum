@@ -3002,13 +3002,20 @@ let arm_STRB = define
 (*** the actually encodable offsets are a bit more limited for LDP ***)
 (*** But this is all ignored at the present level and left to decoder ***)
 
+(*** LDP with Rt1 = Rt2 is CONSTRAINED UNPREDICTABLE (the result may be ***)
+(*** UNKNOWN, or the instruction a NOP or UNDEFINED), so like the other ***)
+(*** unpredictable cases it has arbitrary semantics, ASSIGNS entirety.  ***)
+(*** The orthogonality condition already excludes Rt1 = Rt2 except for  ***)
+(*** the zero registers XZR and WZR, which as constants are orthogonal  ***)
+(*** to themselves; hence the explicit ~(Rt1 = Rt2).                    ***)
+
 let arm_LDP = define
  `arm_LDP (Rt1:(armstate,N word)component)
           (Rt2:(armstate,N word)component) Rn off =
     \s. let base = read Rn s in
         let addr = word_add base (offset_address off s) in
         (if (Rn = SP ==> aligned 16 base) /\
-            orthogonal_components Rt1 Rt2 /\
+            ~(Rt1 = Rt2) /\ orthogonal_components Rt1 Rt2 /\
             (offset_writesback off
              ==> orthogonal_components Rt1 Rn /\ orthogonal_components Rt2 Rn)
          then

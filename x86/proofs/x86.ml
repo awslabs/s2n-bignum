@@ -845,19 +845,24 @@ let x86_AND = new_definition
  *** moderately recent extensions.
  ***)
 
+(*** On a zero input the destination is undefined. The "destx" argument
+ *** is the whole 64-bit register even for 32-bit operands, since some
+ *** implementations leave the top half alone and others may clear it.
+ ***)
+
 let x86_BSF = new_definition
- `x86_BSF dest src s =
+ `x86_BSF dest destx src s =
         let x:N word = read src s in
         let z:N word = word(word_ctz x) in
-        ((if x = word 0 then UNDEFINED_VALUES[dest] else dest := (z:N word)) ,,
+        ((if x = word 0 then UNDEFINED_VALUES[destx] else dest := (z:N word)) ,,
          ZF := (val x = 0) ,,
          UNDEFINED_VALUES[CF;OF;SF;PF;AF]) s`;;
 
 let x86_BSR = new_definition
- `x86_BSR dest src s =
+ `x86_BSR dest destx src s =
         let x:N word = read src s in
         let z:N word = word(dimindex(:N) - 1 - word_clz x) in
-        ((if x = word 0 then UNDEFINED_VALUES[dest] else dest := (z:N word)) ,,
+        ((if x = word 0 then UNDEFINED_VALUES[destx] else dest := (z:N word)) ,,
          ZF := (val x = 0) ,,
          UNDEFINED_VALUES[CF;OF;SF;PF;AF]) s`;;
 
@@ -874,6 +879,10 @@ let x86_BSWAP = new_definition
  *** assemblers even support that kind of thing for immediates. So the
  *** dispatch needs to treat different operands differently, unless we
  *** choose to define some more generic "bit" of a state components.
+ *** For now the decoder only accepts a memory operand with an imm8
+ *** bit offset, for which the offset is masked as for a register.
+ *** ZF is unaffected according to Intel but undefined according to
+ *** AMD, so it is undefined here.
  ***)
 
 let x86_BT = new_definition
@@ -882,7 +891,7 @@ let x86_BT = new_definition
         let c = val y MOD dimindex(:N) in
         let b = bit c x in
         (CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`;;
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`;;
 
 let x86_BTC = new_definition
  `x86_BTC dest src s =
@@ -891,7 +900,7 @@ let x86_BTC = new_definition
         let b = bit c x in
         (dest :> bitelement c := ~b ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`;;
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`;;
 
 let x86_BTR = new_definition
  `x86_BTR dest src s =
@@ -900,7 +909,7 @@ let x86_BTR = new_definition
         let b = bit c x in
         (dest :> bitelement c := F ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`;;
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`;;
 
 let x86_BTS = new_definition
  `x86_BTS dest src s =
@@ -909,7 +918,7 @@ let x86_BTS = new_definition
         let b = bit c x in
         (dest :> bitelement c := T ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`;;
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`;;
 
 let x86_CLC = new_definition
  `x86_CLC s =
@@ -1571,6 +1580,11 @@ let x86_SET = new_definition
           (dest := (if condition_semantics cc s then
                     word 1:byte else word 0)) s`;;
 
+(*** CF is undefined for SHL and SHR if the masked count is at least the
+ *** operand size, which is only possible for 8-bit and 16-bit operands.
+ *** The ALT forms below drop the test in the 32-bit and 64-bit cases.
+ ***)
+
 let x86_SHL = new_definition
  `x86_SHL dest c s =
       let x = read dest s in
@@ -1579,8 +1593,9 @@ let x86_SHL = new_definition
        ZF := (if c = 0 then read ZF s else val z = 0) ,,
        SF := (if c = 0 then read SF s else ival z < &0) ,,
        PF := (if c = 0 then read PF s else word_evenparity(word_zx z:byte)) ,,
-       CF := (if c = 0 then read CF s
-              else bit (dimindex(:N)-1) (word_shl x (c - 1))) ,,
+       (if dimindex(:N) <= c then UNDEFINED_VALUES[CF]
+        else CF := (if c = 0 then read CF s
+                    else bit (dimindex(:N)-1) (word_shl x (c - 1)))) ,,
        (if c = 0 then
           OF := read OF s
         else if c = 1 then
@@ -1590,8 +1605,18 @@ let x86_SHL = new_definition
           AF := read AF s
         else UNDEFINED_VALUES[AF])) s`;;
 
+(*** With masked counts > dimindex(:N) (only possible for 16-bit operands
+ *** since the count is masked to 5 bits) the result and all flags are
+ *** undefined, and implementations really do differ. The ALT forms below
+ *** drop the test in the 32-bit and 64-bit cases, where the count is
+ *** always "n MOD 32" or "n MOD 64", so symbolic simulation is unchanged.
+ ***)
+
 let x86_SHLD = new_definition
  `x86_SHLD dest src c s =
+    if dimindex(:N) < c then
+      (UNDEFINED_VALUES[dest] ,, UNDEFINED_VALUES[CF;OF;SF;ZF;PF;AF]) s
+    else
       let h:N word = read dest s
       and l:N word = read src s in
       let concat:(N tybit0)word = word_join h l in
@@ -1618,7 +1643,9 @@ let x86_SHR = new_definition
        ZF := (if c = 0 then read ZF s else val z = 0) ,,
        SF := (if c = 0 then read SF s else ival z < &0) ,,
        PF := (if c = 0 then read PF s else word_evenparity(word_zx z:byte)) ,,
-       CF := (if c = 0 then read CF s else bit 0 (word_ushr x (c - 1))) ,,
+       (if dimindex(:N) <= c then UNDEFINED_VALUES[CF]
+        else CF := (if c = 0 then read CF s
+                    else bit 0 (word_ushr x (c - 1)))) ,,
        (if c = 0 then
           OF := read OF s
         else if c = 1 then
@@ -1630,6 +1657,9 @@ let x86_SHR = new_definition
 
 let x86_SHRD = new_definition
  `x86_SHRD dest src c s =
+    if dimindex(:N) < c then
+      (UNDEFINED_VALUES[dest] ,, UNDEFINED_VALUES[CF;OF;SF;ZF;PF;AF]) s
+    else
       let h:N word = read src s
       and l:N word = read dest s in
       let concat:(N tybit0)word = word_join h l in
@@ -2497,6 +2527,11 @@ let GPR32 = define
 let GPR32_Z = define
  `GPR32_Z (Gpr reg Lower_32) = registers :> element reg :> zerotop_32`;;
 
+(*** The whole 64-bit register containing a 32-bit one ***)
+
+let GPR32_FULL = define
+ `GPR32_FULL (Gpr reg Lower_32) = registers :> element reg`;;
+
 let GPR64 = define
  `GPR64 (Gpr reg Full_64) = registers :> element reg`;;
 
@@ -2588,6 +2623,10 @@ let OPERAND32 = define
   OPERAND32 (Memop w ea) s =
        (if w = Doubleword then memory :> bytes32 (bsid_semantics ea s)
         else ARB)`;;
+
+let OPERAND32_FULL = define
+ `OPERAND32_FULL (Register r) (s:x86state) =
+        (if register_size r = 32 then GPR32_FULL r else ARB)`;;
 
 let OPERAND16 = define
  `OPERAND16 (Register r) s =
@@ -2792,28 +2831,38 @@ let x86_execute = define
            64 -> x86_ADOX (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_ADOX (OPERAND32 dest s) (OPERAND32 src s)) s)) s
     | AESDEC dest src ->
+        if aligned_OPERAND128 src s then
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
         (\s. (x86_AESDEC (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s)) s
+        else (\s'. F)
     | AESDECLAST dest src ->
+        if aligned_OPERAND128 src s then
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
         (\s. (x86_AESDECLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s))
         s
+        else (\s'. F)
     | AESENC dest src ->
+        if aligned_OPERAND128 src s then
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
         (\s. (x86_AESENC (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s)) s
+        else (\s'. F)
     | AESENCLAST dest src ->
+        if aligned_OPERAND128 src s then
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
         (\s. (x86_AESENCLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s))
         s
+        else (\s'. F)
     | AESKEYGENASSIST dest src imm8 ->
+        if aligned_OPERAND128 src s then
         (add_load_event src s ,,
          add_store_event dest s ,,
         (\s. (x86_AESKEYGENASSIST (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
                                   (OPERAND8 imm8 s)) s)) s
+        else (\s'. F)
     | AND dest src ->
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,,
@@ -2826,16 +2875,22 @@ let x86_execute = define
         (add_load_event src s ,,
          add_store_event dest s ,,
         (\s. (match operand_size dest with
-           64 -> x86_BSF (OPERAND64 dest s) (OPERAND64 src s)
-         | 32 -> x86_BSF (OPERAND32 dest s) (OPERAND32 src s)
-         | 16 -> x86_BSF (OPERAND16 dest s) (OPERAND16 src s)) s)) s
+           64 -> x86_BSF (OPERAND64 dest s) (OPERAND64 dest s)
+                        (OPERAND64 src s)
+         | 32 -> x86_BSF (OPERAND32 dest s) (OPERAND32_FULL dest s)
+                        (OPERAND32 src s)
+         | 16 -> x86_BSF (OPERAND16 dest s) (OPERAND16 dest s)
+                        (OPERAND16 src s)) s)) s
     | BSR dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
         (\s. (match operand_size dest with
-           64 -> x86_BSR (OPERAND64 dest s) (OPERAND64 src s)
-         | 32 -> x86_BSR (OPERAND32 dest s) (OPERAND32 src s)
-         | 16 -> x86_BSR (OPERAND16 dest s) (OPERAND16 src s)) s)) s
+           64 -> x86_BSR (OPERAND64 dest s) (OPERAND64 dest s)
+                        (OPERAND64 src s)
+         | 32 -> x86_BSR (OPERAND32 dest s) (OPERAND32_FULL dest s)
+                        (OPERAND32 src s)
+         | 16 -> x86_BSR (OPERAND16 dest s) (OPERAND16 dest s)
+                        (OPERAND16 src s)) s)) s
     | BSWAP dest ->
         (add_load_event dest s ,,
          add_store_event dest s ,,
@@ -3087,7 +3142,8 @@ let x86_execute = define
         x86_NOP s
     | NOP_N dest ->
         (match operand_size dest with
-           32 -> x86_NOP_N (OPERAND32 dest s)
+           64 -> x86_NOP_N (OPERAND64 dest s)
+         | 32 -> x86_NOP_N (OPERAND32 dest s)
          | 16 -> x86_NOP_N (OPERAND16 dest s)) s
     | NOT dest ->
         (add_load_event dest s ,,
@@ -3106,30 +3162,42 @@ let x86_execute = define
          | 16 -> x86_OR (OPERAND16 dest s) (OPERAND16 src s)
          | 8 -> x86_OR (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | PADDD dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PADDD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PADDQ dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PADDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PAND dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PAND (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PBLENDW dest src imm8 ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PBLENDW (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
                         (OPERAND8 imm8 s) s)) s
+       else (\s'. F)
     | PCMPGTD dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PCMPGTD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PCMPGTW dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PCMPGTW (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PEXT dest src1 src2 ->
        (add_load_event src1 s ,, add_load_event src2 s ,,
         add_store_event dest s ,,
@@ -3164,14 +3232,18 @@ let x86_execute = define
          | 32 -> x86_POPCNT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_POPCNT (OPERAND16 dest s) (OPERAND16 src s)) s)) s
     | PSHUFB dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event src s ,, add_load_event dest s ,,
         add_store_event dest s ,,
        (\s. x86_PSHUFB (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | PSHUFD dest src imm8 ->
+       if aligned_OPERAND128 src s then
        (add_load_event src s ,, add_load_event dest s ,,
         add_store_event dest s ,,
        (\s. x86_PSHUFD (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
                        (OPERAND8 imm8 s) s)) s
+       else (\s'. F)
     | PSRAD dest imm8 ->
        (add_load_event dest s ,, add_store_event dest s ,,
        (\s. x86_PSRAD (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
@@ -3182,11 +3254,15 @@ let x86_execute = define
        (add_load_event src s ,,
        (\s. (match operand_size src with
            64 -> x86_PUSH (OPERAND64 src s)
-         | 16 -> x86_PUSH (OPERAND16 src s)) s)) s
+         | 32 -> x86_PUSH (OPERAND64 src s)
+         | 16 -> x86_PUSH (OPERAND16 src s)
+         | 8 -> x86_PUSH (OPERAND64 src s)) s)) s
     | PXOR dest src ->
+       if aligned_OPERAND128 src s then
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
        (\s. x86_PXOR (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
     | RCL dest src ->
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
@@ -3981,6 +4057,8 @@ let OPERAND_SIZE_CASES = prove
    (match 64 with 128 -> a | 64 -> b) = b /\
    (match 128 with 128 -> a | 32 -> b) = a /\
    (match 32 with 128 -> a | 32 -> b) = b /\
+   (match 128 with 128 -> a | 16 -> b) = a /\
+   (match 16 with 128 -> a | 16 -> b) = b /\
    (match 64 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = a /\
    (match 32 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = b /\
    (match 16 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = c /\
@@ -4293,6 +4371,22 @@ let OPERAND_CLAUSES = prove
    OPERAND32 (%r13d) s = R13 :> zerotop_32 /\
    OPERAND32 (%r14d) s = R14 :> zerotop_32 /\
    OPERAND32 (%r15d) s = R15 :> zerotop_32 /\
+   OPERAND32_FULL (%eax) s = RAX /\
+   OPERAND32_FULL (%ecx) s = RCX /\
+   OPERAND32_FULL (%edx) s = RDX /\
+   OPERAND32_FULL (%ebx) s = RBX /\
+   OPERAND32_FULL (%esp) s = RSP /\
+   OPERAND32_FULL (%ebp) s = RBP /\
+   OPERAND32_FULL (%esi) s = RSI /\
+   OPERAND32_FULL (%edi) s = RDI /\
+   OPERAND32_FULL (%r8d) s = R8 /\
+   OPERAND32_FULL (%r9d) s = R9 /\
+   OPERAND32_FULL (%r10d) s = R10 /\
+   OPERAND32_FULL (%r11d) s = R11 /\
+   OPERAND32_FULL (%r12d) s = R12 /\
+   OPERAND32_FULL (%r13d) s = R13 /\
+   OPERAND32_FULL (%r14d) s = R14 /\
+   OPERAND32_FULL (%r15d) s = R15 /\
    OPERAND32 (## n) s = rvalue(word n:32 word) /\
    OPERAND32 (Imm32 w32) s = rvalue w32 /\
    OPERAND32 (Imm16 w16) s = rvalue(word_sx w16) /\
@@ -4307,6 +4401,14 @@ let OPERAND_CLAUSES = prove
    OPERAND16 (%bp) s = RBP :> bottom_32 :> bottom_16 /\
    OPERAND16 (%si) s = RSI :> bottom_32 :> bottom_16 /\
    OPERAND16 (%di) s = RDI :> bottom_32 :> bottom_16 /\
+   OPERAND16 (% r8w) s =  R8 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (% r9w) s =  R9 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r10w) s = R10 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r11w) s = R11 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r12w) s = R12 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r13w) s = R13 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r14w) s = R14 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r15w) s = R15 :> bottom_32 :> bottom_16 /\
    OPERAND16 (Imm16 w16) s = rvalue w16 /\
    OPERAND16 (Imm8 w8) s = rvalue(word_sx w8) /\
    OPERAND16 (Memop Word bsid) s =
@@ -4342,6 +4444,7 @@ let OPERAND_CLAUSES = prove
               r8d; r9d; r10d; r11d; r12d; r13d; r14d; r15d;
               ax; cx; dx; bx; sp; bp; si; di; ah;
               al; ch; cl; dh; dl; bh; bl; spl; bpl; sil; dil;
+              r8w; r9w; r10w; r11w; r12w; r13w; r14w; r15w;
               r8b; r9b; r10b; r11b; r12b; r13b; r14b; r15b;
               EAX; ECX; EDX; EBX; ESP; EBP; ESI; EDI;
               R8D; R9D; R10D; R11D; R12D; R13D; R14D; R15D;
@@ -4369,7 +4472,8 @@ let OPERAND_CLAUSES = prove
   REWRITE_TAC[simple_immediate; base_displacement; QWORD] THEN
   REWRITE_TAC[OPERAND256; OPERAND128; OPERAND128_SSE; OPERAND64; OPERAND32; OPERAND16; OPERAND8;
               register_size; regsize; simdregister_size; simdregsize;
-              SIMD256; SIMD128; SIMD128_SSE; GPR64; GPR32_Z; GPR32; GPR16; GPR8] THEN
+              SIMD256; SIMD128; SIMD128_SSE; GPR64; GPR32_Z; GPR32; GPR16; GPR8;
+              OPERAND32_FULL; GPR32_FULL] THEN
   REWRITE_TAC[COMPONENT_COMPOSE_ASSOC]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -4527,7 +4631,7 @@ let x86_BTC_ALT = prove
         let b = bit c x in
         (dest := word_xor x (word_shl (word 1) c) ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`,
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`,
   REWRITE_TAC[x86_BTC] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[FUN_EQ_THM; seq; assign; UNWIND_THM1] THEN
   X_GEN_TAC `s':x86state` THEN
@@ -4547,7 +4651,7 @@ let x86_BTR_ALT = prove
         let b = bit c x in
         (dest := word_and x (word_not(word_shl (word 1) c)) ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`,
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`,
   REWRITE_TAC[x86_BTR] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[FUN_EQ_THM; seq; assign; UNWIND_THM1] THEN
   X_GEN_TAC `s':x86state` THEN
@@ -4568,7 +4672,7 @@ let x86_BTS_ALT = prove
         let b = bit c x in
         (dest := word_or x (word_shl (word 1) c) ,,
          CF := b ,,
-         UNDEFINED_VALUES[SF;PF;OF;AF]) s`,
+         UNDEFINED_VALUES[ZF;SF;PF;OF;AF]) s`,
   REWRITE_TAC[x86_BTS] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[FUN_EQ_THM; seq; assign; UNWIND_THM1] THEN
   X_GEN_TAC `s':x86state` THEN
@@ -4699,6 +4803,40 @@ let x86_VPSRLW_ALT = EXPAND_SIMD_RULE x86_VPSRLW;;
 let x86_VPUNPCKHQDQ_ALT = EXPAND_SIMD_RULE x86_VPUNPCKHQDQ;;
 let x86_VPUNPCKLQDQ_ALT = EXPAND_SIMD_RULE x86_VPUNPCKLQDQ;;
 
+(*** For 32-bit and 64-bit operands the count is "n MOD 32" or "n MOD 64",
+ *** so the test for a count larger than the operand size is always false.
+ ***)
+
+let x86_SHLD_ALT,x86_SHRD_ALT =
+  let lemma = prove
+   (`(!n. dimindex(:64) < n MOD 64 <=> F) /\
+     (!n. dimindex(:32) < n MOD 32 <=> F)`,
+    REWRITE_TAC[DIMINDEX_64; DIMINDEX_32; NOT_LT] THEN
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC LT_IMP_LE THEN
+    REWRITE_TAC[MOD_LT_EQ] THEN CONV_TAC NUM_REDUCE_CONV) in
+  let mk def =
+    let inst ty m =
+      let th = SPEC_ALL (INST_TYPE [ty,`:N`] def) in
+      let c' = mk_comb(mk_comb(`(MOD)`,`n:num`),m) in
+      GEN_ALL(PURE_REWRITE_RULE[lemma; COND_CLAUSES] (INST [c',`c:num`] th)) in
+    CONJ (inst `:64` `64`) (inst `:32` `32`) in
+  mk x86_SHLD,mk x86_SHRD;;
+
+let x86_SHL_ALT,x86_SHR_ALT =
+  let lemma = prove
+   (`(!n. dimindex(:64) <= n MOD 64 <=> F) /\
+     (!n. dimindex(:32) <= n MOD 32 <=> F)`,
+    REWRITE_TAC[DIMINDEX_64; DIMINDEX_32; NOT_LE; MOD_LT_EQ] THEN
+    CONV_TAC NUM_REDUCE_CONV) in
+  let mk def =
+    let inst ty m =
+      let th = SPEC_ALL (INST_TYPE [ty,`:N`] def) in
+      let c' = mk_comb(mk_comb(`(MOD)`,`n:num`),m) in
+      GEN_ALL(PURE_REWRITE_RULE[lemma; COND_CLAUSES] (INST [c',`c:num`] th)) in
+    end_itlist CONJ [inst `:64` `64`; inst `:32` `32`;
+                     INST_TYPE [`:16`,`:N`] def; INST_TYPE [`:8`,`:N`] def] in
+  mk x86_SHL,mk x86_SHR;;
+
 let X86_OPERATION_CLAUSES =
   map (CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
        REWRITE_RULE[WORD_ZX_TRIVIAL] o
@@ -4716,7 +4854,7 @@ let X86_OPERATION_CLAUSES =
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
     x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
-    x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
+    x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL_ALT; x86_SHLD_ALT; x86_SHR_ALT; x86_SHRD_ALT;
     x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDB_ALT; x86_VPADDD_ALT; x86_VPADDQ_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHUW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPINSRW; x86_VINSERTI128; x86_VEXTRACTI128;
@@ -4730,15 +4868,27 @@ let X86_OPERATION_CLAUSES =
     x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT; x86_VPBROADCASTQ_ALT; x86_VPERM2I128_ALT;
     x86_VMOVMSKPS_ALT; x86_VPABSD_ALT; x86_VPMOVMSKB_ALT; x86_VPMOVSXBD_ALT;
     x86_VPMOVZXBD_ALT; x86_VPMOVZXBW_ALT; x86_VPSUBB_ALT; x86_VPTEST_ALT; x86_VZEROUPPER_ALT;
-    (*** 32/8-bit backups since the ALT forms are 64-bit only ***)
+    (*** 32/16/8-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
+    INST_TYPE[`:16`,`:N`] x86_ADC;
+    INST_TYPE[`:8`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
     INST_TYPE[`:32`,`:N`] x86_ADOX;
     INST_TYPE[`:32`,`:N`] x86_ADD;
+    INST_TYPE[`:16`,`:N`] x86_ADD;
+    INST_TYPE[`:8`,`:N`] x86_ADD;
     INST_TYPE[`:32`,`:N`] x86_CMP;
+    INST_TYPE[`:16`,`:N`] x86_CMP;
     INST_TYPE[`:8`,`:N`] x86_CMP;
     INST_TYPE[`:32`,`:N`] x86_SBB;
-    INST_TYPE[`:32`,`:N`] x86_SUB];;
+    INST_TYPE[`:16`,`:N`] x86_SBB;
+    INST_TYPE[`:8`,`:N`] x86_SBB;
+    INST_TYPE[`:32`,`:N`] x86_SUB;
+    INST_TYPE[`:16`,`:N`] x86_SUB;
+    INST_TYPE[`:8`,`:N`] x86_SUB;
+    (*** 16-bit SHLD/SHRD, where the count can exceed the size ***)
+    INST_TYPE[`:16`,`:N`] x86_SHLD;
+    INST_TYPE[`:16`,`:N`] x86_SHRD];;
 
 (* ------------------------------------------------------------------------- *)
 (* Trivial reassociation and reduction of "word((pc + m) + n)"               *)
