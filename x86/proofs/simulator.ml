@@ -388,7 +388,15 @@ let iclasses = iclasses_regreg @
 
 (*** The elements here were added manually for additional checks. ***)
 
-[[0x48; 0x0f; 0xb7; 0xc2];  (* MOVZX (% rax) (% dx) *)
+[[0x66; 0x01; 0xc8];        (* ADD (% ax) (% cx) *)
+ [0x66; 0x41; 0x29; 0xd1];  (* SUB (% r9w) (% dx) *)
+ [0x66; 0x39; 0xd1];        (* CMP (% cx) (% dx) *)
+ [0x66; 0x3d; 0x01; 0x0d];  (* CMP (% ax) (Imm16 (word 3329)) *)
+ [0x66; 0x81; 0xf9; 0x01; 0x0d]; (* CMP (% cx) (Imm16 (word 3329)) *)
+ [0x66; 0x83; 0xfe; 0x80];  (* CMP (% si) (Imm8 (word 128)) *)
+ [0x00; 0xd1];              (* ADD (% cl) (% dl) *)
+ [0x28; 0xd1];              (* SUB (% cl) (% dl) *)
+ [0x48; 0x0f; 0xb7; 0xc2];  (* MOVZX (% rax) (% dx) *)
  [0x0f; 0xb7; 0xc2];        (* MOVZX (% eax) (% dx) *)
  [0x48; 0x0f; 0xb6; 0xc2];  (* MOVZX (% rax) (% dl) *)
  [0x0f; 0xb6; 0xc2];        (* MOVZX (% eax) (% dl) *)
@@ -1443,6 +1451,21 @@ let cosimulate_mem_base_disp_harness(opcode) = fun () ->
    [0x48; 0x89; 0xd3]; (* MOV rbx, rdx *)
   ];;
 
+(* Mode: base + displacement
+   Fixed: use of registers, operand size = 16, displacement size = 8
+   Randomized: addressing mode parameters
+   *)
+let cosimulate_mem16_base_disp_harness(opcode) = fun () ->
+  (* disp8 is sign-extended *)
+  let stack_start = Random.int 128 in
+  let rest = 248 - stack_start in
+  let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
+  [[0x48; 0x89; 0xda]; (* MOV rdx, rbx *)
+   [0x48; 0x8d; 0x5c; 0x24; stack_start]; (* LEA rbx, [rsp+stack_start] *)
+   [0x66] @ opcode @ [0x43; disp];  (* INST [rbx + displacement], ax *)
+   [0x48; 0x89; 0xd3]; (* MOV rbx, rdx *)
+  ];;
+
 (* Mode: base (rsp) + scale*index + displacement
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters *)
@@ -1702,6 +1725,10 @@ let cosimulate_leave_harness() = fun () ->
   the evaluation of harnesses are deferred until an instruction is
   chosen from mem_iclasses *)
 let mem_iclasses = [
+  (* ADD r/m16, r16, SUB r/m16, r16 and CMP r/m16, r16 *)
+  (cosimulate_mem16_base_disp_harness([0x01]), false);
+  (cosimulate_mem16_base_disp_harness([0x29]), false);
+  (cosimulate_mem16_base_disp_harness([0x39]), false);
   (* ADC r/m64, r64 *)
   (cosimulate_mem_full_harness([0x11]), false);
   (cosimulate_mem_base_disp_harness([0x11]), false);
