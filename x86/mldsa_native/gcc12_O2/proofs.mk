@@ -34,6 +34,10 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2/prepare_domain_separation_prefix_44_proof \
   mldsa_native/gcc12_O2/prepare_domain_separation_prefix_65_proof \
   mldsa_native/gcc12_O2/prepare_domain_separation_prefix_87_proof \
+  mldsa_native/gcc12_O2/rej_eta_44_proof \
+  mldsa_native/gcc12_O2/rej_eta_65_proof \
+  mldsa_native/gcc12_O2/rej_eta_87_proof \
+  mldsa_native/gcc12_O2/rej_uniform_proof \
   mldsa_native/gcc12_O2/shake128_init_proof \
   mldsa_native/gcc12_O2/shake128_release_proof \
   mldsa_native/gcc12_O2/shake128x4_init_proof \
@@ -363,6 +367,62 @@ mldsa_native/gcc12_O2/prepare_domain_separation_prefix_87_proof.native: \
   proofs/utils/mldsa_native_full.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/rej_eta_44_proof.native: \
+  proofs/mldsa_native/gcc12_O2/rej_eta_44_spec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_poly.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/rej_eta_65_proof.native: \
+  proofs/mldsa_native/gcc12_O2/rej_eta_65_spec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_poly.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/rej_eta_87_proof.native: \
+  proofs/mldsa_native/gcc12_O2/rej_eta_87_spec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_poly.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/rej_uniform_proof.native: \
+  proofs/mldsa_native/gcc12_O2/rej_uniform_spec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_poly.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/shake128_init_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake128_init_spec.ml \
