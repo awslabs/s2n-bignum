@@ -6,6 +6,7 @@ MLDSA_NATIVE_OBJ += \
   mldsa_native/gcc12_O2/libmldsa.o
 
 MLDSA_NATIVE_PROOFS += \
+  mldsa_native/gcc12_O2/keccak_absorb_once_x4_proof \
   mldsa_native/gcc12_O2/keccakf1600_extract_bytes_proof \
   mldsa_native/gcc12_O2/keccakf1600_permute_proof \
   mldsa_native/gcc12_O2/keccakf1600_xor_bytes_proof \
@@ -107,14 +108,25 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2/rej_eta_65_proof \
   mldsa_native/gcc12_O2/rej_eta_87_proof \
   mldsa_native/gcc12_O2/rej_uniform_proof \
+  mldsa_native/gcc12_O2/shake128_absorb_proof \
+  mldsa_native/gcc12_O2/shake128_finalize_proof \
   mldsa_native/gcc12_O2/shake128_init_proof \
   mldsa_native/gcc12_O2/shake128_release_proof \
+  mldsa_native/gcc12_O2/shake128_squeeze_proof \
+  mldsa_native/gcc12_O2/shake128x4_absorb_once_proof \
   mldsa_native/gcc12_O2/shake128x4_init_proof \
   mldsa_native/gcc12_O2/shake128x4_release_proof \
+  mldsa_native/gcc12_O2/shake128x4_squeezeblocks_proof \
+  mldsa_native/gcc12_O2/shake256_absorb_proof \
+  mldsa_native/gcc12_O2/shake256_finalize_proof \
   mldsa_native/gcc12_O2/shake256_init_proof \
+  mldsa_native/gcc12_O2/shake256_proof \
   mldsa_native/gcc12_O2/shake256_release_proof \
+  mldsa_native/gcc12_O2/shake256_squeeze_proof \
+  mldsa_native/gcc12_O2/shake256x4_absorb_once_proof \
   mldsa_native/gcc12_O2/shake256x4_init_proof \
   mldsa_native/gcc12_O2/shake256x4_release_proof \
+  mldsa_native/gcc12_O2/shake256x4_squeezeblocks_proof \
   mldsa_native/gcc12_O2/sig_unpack_hints_44_proof \
   mldsa_native/gcc12_O2/sig_unpack_hints_65_proof \
   mldsa_native/gcc12_O2/sig_unpack_hints_87_proof \
@@ -125,6 +137,23 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2/unpack_sk_65_proof \
   mldsa_native/gcc12_O2/unpack_sk_87_proof
 
+mldsa_native/gcc12_O2/keccak_absorb_once_x4_proof.native: \
+  proofs/mldsa_native/gcc12_O2/keccak_absorb_once_x4_spec.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/keccakf1600_extract_bytes_proof.native: \
   proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
   proofs/utils/mldsa_native_full.ml \
@@ -1487,6 +1516,34 @@ mldsa_native/gcc12_O2/rej_uniform_proof.native: \
   proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_poly.ml \
   mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake128_absorb_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake128_absorb_spec.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake128_finalize_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake128_finalize_spec.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/shake128_init_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake128_init_spec.ml \
   proofs/utils/mldsa_native_full.ml \
@@ -1509,6 +1566,39 @@ mldsa_native/gcc12_O2/shake128_release_proof.native: \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake128_squeeze_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake128_squeeze_spec.ml \
+  proofs/utils/mldsa_native_squeeze.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake128x4_absorb_once_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccak_absorb_once_x4_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/utils/keccak_spec.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/shake128x4_init_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake128x4_init_spec.ml \
   proofs/utils/mldsa_native_full.ml \
@@ -1528,6 +1618,49 @@ mldsa_native/gcc12_O2/shake128x4_release_proof.native: \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake128x4_squeezeblocks_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake128x4_squeezeblocks_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/keccak_spec.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake256_absorb_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake256_absorb_spec.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake256_finalize_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake256_finalize_spec.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/shake256_init_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake256_init_spec.ml \
   proofs/utils/mldsa_native_full.ml \
@@ -1539,6 +1672,27 @@ mldsa_native/gcc12_O2/shake256_init_proof.native: \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake256_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake256_spec.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/keccak_spec.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/shake256_release_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake256_release_spec.ml \
   proofs/utils/mldsa_native_full.ml \
@@ -1549,6 +1703,39 @@ mldsa_native/gcc12_O2/shake256_release_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake256_squeeze_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake256_squeeze_spec.ml \
+  proofs/utils/mldsa_native_squeeze.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake256x4_absorb_once_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake256x4_absorb_once_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccak_absorb_once_x4_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/utils/keccak_spec.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/shake256x4_init_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake256x4_init_spec.ml \
@@ -1568,6 +1755,21 @@ mldsa_native/gcc12_O2/shake256x4_release_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/shake256x4_squeezeblocks_proof.native: \
+  proofs/mldsa_native/gcc12_O2/shake256x4_squeezeblocks_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600x4_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/keccak_spec.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/sig_unpack_hints_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/sig_unpack_hints_44_spec.ml \
