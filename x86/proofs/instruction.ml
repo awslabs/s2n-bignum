@@ -279,6 +279,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | IMUL2 (operand#operand) operand
    | INC operand
    | JUMP condition operand
+   | JUMP_INDIRECT operand
    | LEA operand bsid
    | LEAVE
    | LZCNT operand operand

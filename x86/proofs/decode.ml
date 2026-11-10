@@ -310,8 +310,11 @@ let decode_hi = new_definition `decode_hi x v sz (opc:3 word) rm l =
   // | F,_,7 -> SOME (IDIV rm,l)
   | T,_,0 -> SOME (INC rm,l)
   | T,_,1 -> SOME (DEC rm,l)
-  | T,T,2 -> SOME (CALL rm,l)
-  | T,T,4 -> SOME (JMP rm,l)
+  // FF /4 (JMP r/m) and FF /6 (PUSH r/m) have 64-bit operands, and are
+  // decoded in decode_aux; FF /2 (CALL r/m), an absolute indirect call,
+  // is not supported. The cases are kept, as NONE, for the decoding tables.
+  | T,T,2 -> NONE
+  | T,T,4 -> NONE
   | _ -> NONE`;;
 
 let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
@@ -1436,6 +1439,8 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     let sz = op_size_W rex v pfxs in
     read_opcode_ModRM rex l >>= \((opc,rm),l).
     if x /\ v /\ opc = word 6 then SOME (PUSH (operand_of_RM Full_64 rm),l)
+    else if x /\ v /\ opc = word 4
+    then SOME (JUMP_INDIRECT (operand_of_RM Full_64 rm),l)
     else let rm = operand_of_RM sz rm in
          decode_hi x v (to_wordsize sz) opc rm l
   | _ -> NONE`;;

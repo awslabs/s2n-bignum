@@ -3359,6 +3359,11 @@ let x86_execute = define
            then word_add (read RIP s)
                          (read (OPERAND64 off s) s)
            else read RIP s) s
+    | JUMP_INDIRECT src ->
+        (add_load_event src s ,,
+         (\s. let ip' = read (OPERAND64 src s) s in
+              (events := CONS (EventJump (read RIP s,ip')) (read events s) ,,
+               RIP := ip') s)) s
     | LEAVE ->
         x86_LEAVE s
     | LEA dest bsid ->
