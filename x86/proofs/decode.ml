@@ -794,10 +794,22 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
      | (F, RepZ, SG0) -> SOME (MOVSB T (%rdi) (%rsi) (%rcx),l)
      | (F, RepNZ, SG0) -> SOME (MOVSB T (%rdi) (%rsi) (%rcx),l)
      | _ -> NONE)
+  | [0xa5:8] -> if rex_W rex then
+    (match pfxs with
+     | (F, Rep0, SG0) -> SOME (MOVSQ F (%rdi) (%rsi) (Imm8(word 1)),l)
+     | (F, RepZ, SG0) -> SOME (MOVSQ T (%rdi) (%rsi) (%rcx),l)
+     | _ -> NONE)
+    else NONE
   | [0b1010100:7; v] -> if has_pfxs pfxs then NONE else
     let sz = op_size T (rex_W rex) v pfxs in
     read_imm (to_wordsize sz) l >>= \(imm,l).
     SOME (TEST (%(gpr_adjust (word 0) sz)) imm,l)
+  | [0xab:8] -> if rex_W rex then
+    (match pfxs with
+     | (F, Rep0, SG0) -> SOME (STOSQ F (%rdi) (%rax) (Imm8(word 1)),l)
+     | (F, RepZ, SG0) -> SOME (STOSQ T (%rdi) (%rax) (%rcx),l)
+     | _ -> NONE)
+    else NONE
   | [0xb:4; v; r:3] -> if has_unhandled_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
     read_full_imm (to_wordsize sz) l >>= \(imm,l).
@@ -1392,6 +1404,8 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            | _ -> NONE)
         | _ -> NONE)
     | _ -> NONE)
+  | [0xc9:8] -> if has_pfxs pfxs then NONE else
+    SOME (LEAVE,l)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
     read_opcode_ModRM_operand rex sz l >>= \((opc,rm),l).

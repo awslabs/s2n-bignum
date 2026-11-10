@@ -228,6 +228,120 @@ let X86_MOVSB_CONV =
     | _ -> failwith "X86_MOVSB_CONV");;
 
 (* ------------------------------------------------------------------------- *)
+(* Explicit execution for x86_movsq, with each quadword move as byte moves   *)
+(* reading the state before it, and the values written by STOSQ as bytes.   *)
+(* ------------------------------------------------------------------------- *)
+
+let X86_REVERT_QSTRINGCOPY = prove
+ (`read (memory :> bytes (b,k)) s' =
+   read (memory :> bytes (b,k))
+   (write (memory :> bytes (b,k))
+          (x86_qstringcopy df a b n
+            (read (memory :> bytes (a,k)) s)
+            (read (memory :> bytes (b,k)) s))
+          t)
+   ==> k = 8 * n /\ k <= 2 EXP 64
+       ==> read (memory :> bytes (b,k)) s' =
+           read (memory :> bytes (b,k)) (x86_movsq df a b n s)`,
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
+  ASM_MESON_TAC[x86_qstringcopy; READ_WRITE_X86_QSTRINGCOPY]);;
+
+let X86_MOVSQ_CLAUSES = prove
+ (`x86_movsq d a b 0 s = s /\
+   x86_movsq false a b (SUC n) s =
+   x86_movsq1 a b n (x86_movsq false a b n s) /\
+   x86_movsq true a b (SUC n) s =
+   x86_movsq true a b n (x86_movsq1 a b n s)`,
+  REWRITE_TAC[x86_movsq; I_THM; o_THM]);;
+
+let X86_MOVSQ1_CONV =
+  let pth0 = prove
+   (`write (memory :> bytes(b,0)) y t = t`,
+    REWRITE_TAC[WRITE_COMPONENT_COMPOSE; WRITE_BYTES; LT; ETA_AX] THEN
+    REWRITE_TAC[REWRITE_RULE[strongly_valid_component; valid_component]
+      (STRONGLY_VALID_COMPONENT_CONV `strongly_valid_component memory`)])
+  and pth1 = prove
+   (`!a b k s t.
+       write (memory :> bytes(b,SUC k)) (read (memory :> bytes(a,SUC k)) s) t =
+       write (memory :> bytes8 b) (read (memory :> bytes8 a) s)
+         (write (memory :> bytes(word_add b (word 1),k))
+                (read (memory :> bytes(word_add a (word 1),k)) s) t)`,
+    REPEAT GEN_TAC THEN REWRITE_TAC[ARITH_RULE `SUC k = 1 + k`] THEN
+    REWRITE_TAC[READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+    REWRITE_TAC[REWRITE_RULE[valid_component]
+      (VALID_COMPONENT_CONV `valid_component memory`)] THEN
+    AP_THM_TAC THEN AP_TERM_TAC THEN
+    MP_TAC(ISPECL
+     [`b:int64`; `1`; `k:num`; `read (bytes(a:int64,1)) (read memory s)`;
+      `read (bytes(word_add a (word 1):int64,k)) (read memory s)`;
+      `read memory (t:x86state)`] WRITE_BYTES_COMBINE) THEN
+    REWRITE_TAC[READ_BYTES_MOD_LEN; GSYM READ_BYTES_COMBINE] THEN
+    DISCH_THEN SUBST1_TAC THEN
+    REWRITE_TAC[WRITE_BYTES_1; READ_BYTES_1; WORD_VAL; BYTES8_ELEMENT;
+                READ_ELEMENT]) in
+  let sizeconv = RAND_CONV(RAND_CONV(RAND_CONV num_CONV)) in
+  let rec conv tm =
+    let k = dest_small_numeral(rand(rand(rand(lhand(rator tm))))) in
+    if k = 0 then GEN_REWRITE_CONV I [pth0] tm else
+    (RATOR_CONV(RATOR_CONV(RAND_CONV sizeconv)) THENC
+     RATOR_CONV(RAND_CONV(RATOR_CONV(RAND_CONV sizeconv))) THENC
+     GEN_REWRITE_CONV I [pth1] THENC RAND_CONV conv) tm in
+  GEN_REWRITE_CONV I [x86_movsq1] THENC NUM_REDUCE_CONV THENC conv THENC
+  DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV;;
+
+let X86_MOVSQ_CONV =
+  let true_tm = `T` and false_tm = `F` and zero_tm = `0`
+  and [conv0;conv1;conv2] =
+    map (fun th -> GEN_REWRITE_CONV I [th]) (CONJUNCTS X86_MOVSQ_CLAUSES)
+  and simprule =
+    CONV_RULE(RAND_CONV(DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV)) in
+  let rec conv tm =
+    if lhand tm = zero_tm then conv0 tm
+    else if lhand(funpow 3 rator tm) = false_tm then
+      let th0 = (LAND_CONV num_CONV THENC conv1) tm in
+      let th1 = conv (rand(rand(concl th0))) in
+      let th2 = CONV_RULE (RAND_CONV(RAND_CONV(K th1))) th0 in
+      simprule (CONV_RULE (RAND_CONV X86_MOVSQ1_CONV) th2)
+    else
+      let th0 = (LAND_CONV num_CONV THENC conv2 THENC
+                 RAND_CONV X86_MOVSQ1_CONV) tm in
+      simprule (CONV_RULE (RAND_CONV conv) (simprule th0)) in
+  fun tm ->
+    (match tm with
+      Comb(Comb(Comb(Comb(Comb(Const("x86_movsq",_),df),a),b),n),s)
+      when (df = false_tm || df = true_tm) && is_numeral n -> conv tm
+    | _ -> failwith "X86_MOVSQ_CONV");;
+
+let READ_WRITE_MEMORY_BYTES = prove
+ (`!a k y t.
+        k <= 2 EXP 64
+        ==> read (memory :> bytes(a:int64,k))
+                 (write (memory :> bytes(a,k)) y (t:x86state)) =
+            y MOD 2 EXP (8 * k)`,
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+  REWRITE_TAC[REWRITE_RULE[valid_component]
+    (VALID_COMPONENT_CONV `valid_component memory`)] THEN
+  SIMP_TAC[READ_WRITE_BYTES; DIMINDEX_64]);;
+
+let X86_STOSQ_BYTES = prove
+ (`!a k s n.
+        read (memory :> bytes(a,k)) s = n
+        ==> !i. i < k
+                ==> read (memory :> bytes8 (word_add a (word i))) s =
+                    word((n DIV 2 EXP (8 * i)) MOD 2 EXP 8)`,
+  REPEAT GEN_TAC THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_DIV] THEN
+  REWRITE_TAC[ARITH_RULE `2 EXP 8 = 2 EXP (8 * 1)`; READ_BYTES_MOD] THEN
+  ASM_SIMP_TAC[ARITH_RULE `i < k ==> MIN (k - i) 1 = 1`] THEN
+  REWRITE_TAC[READ_BYTES_1; BYTES8_ELEMENT; READ_ELEMENT; WORD_VAL]);;
+
+let X86_NSUM_LT_CONV =
+  REWRITE_CONV[NUMSEG_LT] THENC NUM_REDUCE_CONV THENC
+  REWRITE_CONV[NSUM_CLAUSES] THENC TRY_CONV EXPAND_NSUM_CONV THENC
+  WORD_REDUCE_CONV THENC NUM_REDUCE_CONV;;
+
+(* ------------------------------------------------------------------------- *)
 (* Random numbers with random bit density, random state for simulating.      *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1092,6 +1206,39 @@ let extra_movsb_tac =
      TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV)) THEN
   ASM_REWRITE_TAC[] THEN STRIP_TAC;;
 
+let extra_movsq_tac =
+  FIRST_X_ASSUM(MP_TAC o MATCH_MP X86_REVERT_QSTRINGCOPY) THEN
+  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN NO_TAC; ALL_TAC] THEN
+  CONV_TAC(LAND_CONV
+    (RAND_CONV(RAND_CONV X86_MOVSQ_CONV) THENC
+     BINOP_CONV
+      (GEN_REWRITE_CONV I [GSYM NUM_OF_WORDLIST_FROM_MEMORY_BYTE] THENC
+       RAND_CONV WORDLIST_FROM_MEMORY_CONV) THENC
+     GEN_REWRITE_CONV TOP_DEPTH_CONV [NUM_OF_WORDLIST_EQ] THENC
+     TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV)) THEN
+  ASM_REWRITE_TAC[] THEN STRIP_TAC;;
+
+let extra_stosq_tac =
+  let rwconv tm =
+    let th = PART_MATCH (lhand o rand) READ_WRITE_MEMORY_BYTES tm in
+    MP th (EQT_ELIM(NUM_REDUCE_CONV(lhand(concl th)))) in
+  FIRST_X_ASSUM(MP_TAC o check
+   (can (term_match []
+     `read (memory :> bytes(a,k)) s =
+      read (memory :> bytes(a,k))
+       (write (memory :> bytes(a,k)) (nsum {i | i < n} f) t)`) o concl)) THEN
+  CONV_TAC(LAND_CONV(RAND_CONV
+   (rwconv THENC LAND_CONV X86_NSUM_LT_CONV THENC NUM_REDUCE_CONV))) THEN
+  DISCH_THEN(fun th ->
+    let k = dest_small_numeral(rand(rand(rand(lhand(lhand(concl th)))))) in
+    let bth = MATCH_MP X86_STOSQ_BYTES th in
+    MAP_EVERY (fun i ->
+      let ith = SPEC (mk_small_numeral i) bth in
+      let ith' = MP ith (EQT_ELIM(NUM_REDUCE_CONV(lhand(concl ith)))) in
+      ASSUME_TAC(CONV_RULE(NUM_REDUCE_CONV THENC
+        ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) ith'))
+     (if k = 0 then [] else 0--(k-1)));;
+
 let tac_before memop =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
   REWRITE_TAC[regfile; CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
@@ -1109,7 +1256,8 @@ and tac_main (memopidx: int option) mc states =
     (if states1 <> [] then X86_STEPS_TAC mc states1 else ALL_TAC) THEN
     (if states2 <> [] then
        X86_VSTEPS_TAC mc [hd states2] THEN
-       TRY extra_movsb_tac THEN
+       TRY(extra_movsb_tac ORELSE extra_movsq_tac ORELSE
+           extra_stosq_tac) THEN
        X86_VSTEPS_TAC mc (tl states2)
      else ALL_TAC)
   | None -> X86_STEPS_TAC mc states
@@ -1506,6 +1654,47 @@ let cosimulate_movsb_full_harness() = fun () ->
    [0x48; 0x8d; 0x34; 0x34]; (* LEA rsi, [rsp + rsi] *)
   ];;
 
+let cosimulate_movsq_full_harness() = fun () ->
+  let src = 64 + Random.int 32
+  and dest = 64 + Random.int 32
+  and count = Random.int 8
+  and rep = Random.int 2 in
+  [[0x48; 0x8d; 0x7c; 0x24; dest]; (* LEA rdi, [rsp+dest] *)
+   [0x48; 0x8d; 0x74; 0x24; src]; (* LEA rsi, [rsp+src] *)
+   [0xb9; count; 0x00; 0x00; 0x00]; (* MOV ecx, count *)
+   (if rep = 0 then [0x48; 0xa5] (* MOVSQ *)
+    else [0xf3; 0x48; 0xa5] (* REP MOVSQ *)
+   );
+   [0x48; 0xf7; 0xd7;]; (* NOT rdi *)
+   [0x48; 0xf7; 0xd6;]; (* NOT rsi *)
+   [0x48; 0x8d; 0x3c; 0x3c]; (* LEA rdi, [rsp + rdi] *)
+   [0x48; 0x8d; 0x34; 0x34]; (* LEA rsi, [rsp + rsi] *)
+  ];;
+
+let cosimulate_stosq_full_harness() = fun () ->
+  let src = 64 + Random.int 32
+  and dest = 64 + Random.int 32
+  and count = Random.int 8
+  and rep = Random.int 2 in
+  [[0x48; 0x8d; 0x7c; 0x24; dest]; (* LEA rdi, [rsp+dest] *)
+   [0x48; 0x8d; 0x74; 0x24; src]; (* LEA rsi, [rsp+src] *)
+   [0xb9; count; 0x00; 0x00; 0x00]; (* MOV ecx, count *)
+   (if rep = 0 then [0x48; 0xab] (* STOSQ *)
+    else [0xf3; 0x48; 0xab] (* REP STOSQ *)
+   );
+   [0x48; 0xf7; 0xd7;]; (* NOT rdi *)
+   [0x48; 0xf7; 0xd6;]; (* NOT rsi *)
+   [0x48; 0x8d; 0x3c; 0x3c]; (* LEA rdi, [rsp + rdi] *)
+   [0x48; 0x8d; 0x34; 0x34]; (* LEA rsi, [rsp + rsi] *)
+  ];;
+
+let cosimulate_leave_harness() = fun () ->
+  let off = Random.int 120 in
+  [[0x48; 0x8d; 0x6c; 0x24; off]; (* LEA rbp, [rsp+off] *)
+   [0xc9]; (* LEAVE *)
+   [0x48; 0x8d; 0x64; 0x24; 248 - off] (* LEA rsp, [rsp-(off+8)] *)
+  ];;
+
 (* Each mem simulation is a pair consists of a list of instructions
   to execute and a bool representing whether additional assumptions
   are needed. Currently the additional assumption is for stack
@@ -1571,6 +1760,12 @@ let mem_iclasses = [
   (cosimulate_sse_mov_unaligned_rsp_harness([0xf3], [0x0f; 0x7f]), false);
   (* MOVSB and REP MOVSB *)
   (cosimulate_movsb_full_harness(),false);
+  (* MOVSQ and REP MOVSQ *)
+  (cosimulate_movsq_full_harness(),false);
+  (* STOSQ and REP STOSQ *)
+  (cosimulate_stosq_full_harness(),false);
+  (* LEAVE *)
+  (cosimulate_leave_harness(),false);
   (* MOVUPS xmm1, xmm2/m128 *)
   (cosimulate_sse_mov_unaligned_full_harness([], [0x0f; 0x10]), false);
   (cosimulate_sse_mov_unaligned_base_disp_harness([], [0x0f; 0x10]), false);

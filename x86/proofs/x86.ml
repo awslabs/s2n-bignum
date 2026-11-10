@@ -745,6 +745,262 @@ let READ_WRITE_X86_STRINGCOPY = prove
   REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_BOUND]);;
 
 (* ------------------------------------------------------------------------- *)
+(* Likewise for MOVSQ, whose iteration moves quadwords rather than bytes and *)
+(* so differs from that of MOVSB when the regions overlap. The function      *)
+(* "x86_qstringcopy" plays the same role, but in this case the theorems do   *)
+(* not need any bound on the number of quadwords.                            *)
+(* ------------------------------------------------------------------------- *)
+
+let x86_movsq1 = define
+ `x86_movsq1 a b n s =
+        write (memory :> bytes(word_add b (word(8 * n)),8))
+              (read (memory :> bytes(word_add a (word(8 * n)),8)) s) s`;;
+
+let x86_movsq = define
+ `x86_movsq df a b 0 = I /\
+  x86_movsq df a b (SUC n) =
+        if df then x86_movsq df a b n o x86_movsq1 a b n
+        else x86_movsq1 a b n o x86_movsq df a b n`;;
+
+let READ_NONMEMORY_MOVSQ = prove
+ (`!df a b n s.
+        read RIP (x86_movsq df a b n s) = read RIP s /\
+        read registers (x86_movsq df a b n s) = read registers s /\
+        read simdregisters (x86_movsq df a b n s) = read simdregisters s /\
+        read maskregisters (x86_movsq df a b n s) = read maskregisters s /\
+        read rflags (x86_movsq df a b n s) = read rflags s /\
+        read events (x86_movsq df a b n s) = read events s`,
+  GEN_REWRITE_TAC I [FORALL_BOOL_THM] THEN CONJ_TAC THEN
+  REPLICATE_TAC 2 GEN_TAC THEN INDUCT_TAC THEN
+  ASM_REWRITE_TAC[x86_movsq; I_THM; o_THM; x86_movsq1] THEN
+  CONV_TAC(ONCE_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
+  ASM_REWRITE_TAC[]);;
+
+let READ_ELEMENT_MOVSQ = prove
+ (`!df a b n s e.
+        ~(val(word_sub e b) < 8 * n)
+        ==> read (memory :> element e) (x86_movsq df a b n s) =
+            read (memory :> element e) s`,
+  GEN_REWRITE_TAC I [FORALL_BOOL_THM] THEN CONJ_TAC THEN
+  REPLICATE_TAC 2 GEN_TAC THEN INDUCT_TAC THEN
+  REWRITE_TAC[x86_movsq; I_THM] THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
+  (SUBGOAL_THEN
+    `~(val(word_sub e (word_add b (word(8 * n)):int64)) < 8) /\
+     ~(val(word_sub e b) < 8 * n)`
+   STRIP_ASSUME_TAC THENL
+    [REWRITE_TAC[WORD_RULE
+      `word_sub e (word_add b c):int64 = word_sub (word_sub e b) c`] THEN
+     POP_ASSUM MP_TAC THEN SPEC_TAC(`word_sub e b:int64`,`d:int64`) THEN
+     GEN_TAC THEN MP_TAC(ISPEC `d:int64` VAL_BOUND_64) THEN
+     REWRITE_TAC[VAL_WORD_SUB_CASES; VAL_WORD; DIMINDEX_64] THEN
+     REPEAT DISCH_TAC THEN
+     SUBGOAL_THEN `(8 * n) MOD 2 EXP 64 = 8 * n` SUBST1_TAC THENL
+      [MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC; ALL_TAC] THEN
+     COND_CASES_TAC THEN ASM_ARITH_TAC;
+     ASM_SIMP_TAC[o_THM; x86_movsq1] THEN
+     REWRITE_TAC[READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+     REWRITE_TAC[REWRITE_RULE[valid_component]
+       (VALID_COMPONENT_CONV `valid_component memory`)] THEN
+     ASM_REWRITE_TAC[READ_ELEMENT_WRITE_BYTES] THEN
+     REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN ASM_SIMP_TAC[]]));;
+
+let READ_MEMORY_BYTES_MOVSQ = prove
+ (`!df a b n s c k.
+        nonoverlapping (c,k) (b,8 * n)
+        ==> read (memory :> bytes(c,k)) (x86_movsq df a b n s) =
+            read (memory :> bytes(c,k)) s`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[NONOVERLAPPING] THEN DISCH_TAC THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE] THEN
+  REWRITE_TAC[GEN_REWRITE_RULE
+      (RAND_CONV o BINDER_CONV o RAND_CONV o BINOP_CONV)
+      [GSYM READ_ELEMENT] (SPEC_ALL READ_BYTES_EQ)] THEN
+  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN
+  MATCH_MP_TAC READ_ELEMENT_MOVSQ THEN DISCH_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o check (is_neg o concl)) THEN
+  REWRITE_TAC[] THEN MAP_EVERY EXISTS_TAC
+   [`i:num`; `val(word_sub (word_add c (word i)) b:int64)`] THEN
+  ASM_REWRITE_TAC[] THEN CONV_TAC WORD_RULE);;
+
+let X86_QSTRINGCOPY_BOUND,READ_X86_MOVSQ =
+  let lemma1 = prove
+   (`!a b n m s s'.
+          m < n /\
+          read (memory :> bytes (a,8 * n)) s =
+          read (memory :> bytes (a,8 * n)) s' /\
+          read (memory :> bytes (b,8 * n)) s =
+          read (memory :> bytes (b,8 * n)) s'
+          ==> read (memory :> bytes (a,8 * n)) (x86_movsq1 a b m s) =
+              read (memory :> bytes (a,8 * n)) (x86_movsq1 a b m s') /\
+              read (memory :> bytes (b,8 * n)) (x86_movsq1 a b m s) =
+              read (memory :> bytes (b,8 * n)) (x86_movsq1 a b m s')`,
+    REPEAT GEN_TAC THEN REWRITE_TAC[x86_movsq1] THEN
+    REWRITE_TAC[READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+    REWRITE_TAC[REWRITE_RULE[valid_component]
+      (VALID_COMPONENT_CONV `valid_component memory`)] THEN
+    STRIP_TAC THEN
+    SUBGOAL_THEN
+     `read (bytes(word_add a (word(8 * m)),8)) (read memory s) =
+      read (bytes(word_add a (word(8 * m)),8)) (read memory s')`
+    SUBST1_TAC THENL
+     [FIRST_X_ASSUM(MP_TAC o check (free_in `a:int64` o concl)) THEN
+      REWRITE_TAC[READ_BYTES_EQ; GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+      DISCH_TAC THEN X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+      FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+      REPEAT(POP_ASSUM MP_TAC)] THEN
+    REWRITE_TAC[GEN_REWRITE_RULE
+        (RAND_CONV o BINDER_CONV o RAND_CONV o BINOP_CONV)
+        [GSYM READ_ELEMENT] (SPEC_ALL READ_BYTES_EQ)] THEN
+    REWRITE_TAC[READ_ELEMENT_WRITE_BYTES] THEN
+    REPEAT STRIP_TAC THEN COND_CASES_TAC THEN ASM_SIMP_TAC[]) in
+  let lemma2 = prove
+   (`!df a b n m s s'.
+          m <= n /\
+          read (memory :> bytes (a,8 * n)) s =
+          read (memory :> bytes (a,8 * n)) s' /\
+          read (memory :> bytes (b,8 * n)) s =
+          read (memory :> bytes (b,8 * n)) s'
+          ==> read (memory :> bytes (a,8 * n)) (x86_movsq df a b m s) =
+              read (memory :> bytes (a,8 * n)) (x86_movsq df a b m s') /\
+              read (memory :> bytes (b,8 * n)) (x86_movsq df a b m s) =
+              read (memory :> bytes (b,8 * n)) (x86_movsq df a b m s')`,
+    GEN_REWRITE_TAC I [FORALL_BOOL_THM] THEN CONJ_TAC THEN
+    REPLICATE_TAC 3 GEN_TAC THEN INDUCT_TAC THEN
+    ASM_SIMP_TAC[x86_movsq; I_THM; o_THM] THEN
+    REWRITE_TAC[LE_SUC_LT] THEN ASM_MESON_TAC[lemma1; LT_IMP_LE]) in
+  let lemma3 = prove
+   (`?f. !df a b n s.
+          read (memory :> bytes(b,8 * n)) (x86_movsq df a b n s) =
+          f df a b n
+            (read (memory :> bytes(a,8 * n)) s)
+            (read (memory :> bytes(b,8 * n)) s)`,
+    REWRITE_TAC[GSYM SKOLEM_THM] THEN REPEAT GEN_TAC THEN
+    REWRITE_TAC[EXISTS_UNCURRY] THEN
+    ONCE_REWRITE_TAC[GSYM FUN_EQ_THM] THEN
+    GEN_REWRITE_TAC (BINDER_CONV o BINOP_CONV) [GSYM o_DEF] THEN
+    REWRITE_TAC[GSYM FUNCTION_FACTORS_LEFT] THEN
+    REWRITE_TAC[o_DEF; PAIR_EQ] THEN ASM_MESON_TAC[lemma2; LE_REFL]) in
+  let th = prove
+   (`?f. (!df a b n abuf bbuf. f df a b n abuf bbuf < 2 EXP (8 * 8 * n)) /\
+         (!df a b n s.
+            read (memory :> bytes(b,8 * n)) (x86_movsq df a b n s) =
+            f df a b n
+              (read (memory :> bytes(a,8 * n)) s)
+              (read (memory :> bytes(b,8 * n)) s))`,
+    X_CHOOSE_TAC `f:bool->int64->int64->num->num->num->num`
+     (GSYM lemma3) THEN
+    EXISTS_TAC
+      `\(df:bool) (a:int64) (b:int64) n (abuf:num) (bbuf:num).
+        (f df a b n abuf bbuf) MOD 2 EXP (8 * 8 * n)` THEN
+    SIMP_TAC[MOD_LT_EQ; EXP_EQ_0; ARITH_EQ] THEN
+    ASM_SIMP_TAC[] THEN
+    REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_MOD_LEN]) in
+  CONJ_PAIR(new_specification ["x86_qstringcopy"] th);;
+
+let x86_qstringcopy = prove
+ (`!df a b n s.
+        x86_movsq df a b n s =
+        write (memory :> bytes (b,8 * n))
+              (x86_qstringcopy df a b n
+                  (read (memory :> bytes (a,8 * n)) s)
+                  (read (memory :> bytes (b,8 * n)) s))
+              s`,
+  MP_TAC READ_X86_MOVSQ THEN
+  REPEAT(MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
+  DISCH_TAC THEN REWRITE_TAC[X86STATE_EQ] THEN
+  CONV_TAC(ONCE_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
+  REWRITE_TAC[READ_NONMEMORY_MOVSQ] THEN
+  GEN_REWRITE_TAC I [FUN_EQ_THM] THEN X_GEN_TAC `c:int64` THEN
+  GEN_REWRITE_TAC BINOP_CONV [GSYM READ_ELEMENT] THEN
+  REWRITE_TAC[WRITE_COMPONENT_COMPOSE] THEN
+  REWRITE_TAC[REWRITE_RULE[valid_component]
+    (VALID_COMPONENT_CONV `valid_component memory`)] THEN
+  REWRITE_TAC[READ_ELEMENT_WRITE_BYTES] THEN COND_CASES_TAC THENL
+   [FIRST_ASSUM(SUBST1_TAC o SYM) THEN
+    REWRITE_TAC[limb; READ_COMPONENT_COMPOSE] THEN
+    REWRITE_TAC[READ_BYTES_DIV] THEN
+    REWRITE_TAC[ARITH_RULE `2 EXP 8 = 2 EXP (8 * 1)`; READ_BYTES_MOD] THEN
+    REWRITE_TAC[WORD_RULE `word_add b (word(val(word_sub c b))) = c`] THEN
+    ASM_SIMP_TAC[ARITH_RULE `a < b ==> MIN (b - a) 1 = 1`] THEN
+    REWRITE_TAC[READ_BYTES_1; WORD_VAL; READ_ELEMENT];
+    REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN
+    ASM_SIMP_TAC[READ_ELEMENT_MOVSQ]]);;
+
+let READ_X86_MOVSQ_NONOVERLAPPING = prove
+ (`!df a b n s.
+        nonoverlapping (a,8 * n) (b,8 * n)
+        ==> read (memory :> bytes(b,8 * n)) (x86_movsq df a b n s) =
+            read (memory :> bytes(a,8 * n)) s`,
+  let lemma = prove
+   (`!x y s s'.
+        read (memory :> bytes(x,8))
+             (write (memory :> bytes(x,8))
+                    (read (memory :> bytes(y,8)) s') s) =
+        read (memory :> bytes(y,8)) s'`,
+    REWRITE_TAC[READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+    REWRITE_TAC[REWRITE_RULE[valid_component]
+      (VALID_COMPONENT_CONV `valid_component memory`)] THEN
+    SIMP_TAC[READ_WRITE_BYTES; DIMINDEX_64; ARITH_RULE `8 <= 2 EXP 64`] THEN
+    REWRITE_TAC[READ_BYTES_MOD_LEN]) in
+  GEN_REWRITE_TAC I [FORALL_BOOL_THM] THEN CONJ_TAC THEN
+  REPLICATE_TAC 2 GEN_TAC THEN INDUCT_TAC THEN
+  REWRITE_TAC[x86_movsq; I_THM; ARITH_RULE `8 * 0 = 0`;
+              ARITH_RULE `8 * SUC n = 8 * n + 8`;
+              READ_MEMORY_BYTES_TRIVIAL] THEN
+  X_GEN_TAC `s:x86state` THEN DISCH_TAC THEN
+  FIRST_ASSUM(MP_TAC o MATCH_MP (REWRITE_RULE[IMP_CONJ]
+    NONOVERLAPPING_IMP_SMALL_1) o
+    REWRITE_RULE[nonoverlapping; DIMINDEX_64]) THEN
+  (ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV; DISCH_TAC]) THEN
+  (SUBGOAL_THEN `nonoverlapping(a:int64,8 * n) (b,8 * n)` ASSUME_TAC THENL
+   [NONOVERLAPPING_TAC; ALL_TAC]) THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
+  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN
+  (BINOP_TAC THENL [ALL_TAC; AP_TERM_TAC]) THEN REWRITE_TAC[o_THM] THENL
+   [ASM_SIMP_TAC[] THEN REWRITE_TAC[x86_movsq1] THEN
+    READ_OVER_WRITE_ORTHOGONAL_TAC;
+    W(MP_TAC o PART_MATCH (lhand o rand) READ_MEMORY_BYTES_MOVSQ o
+      lhand o snd) THEN
+    ANTS_TAC THENL [NONOVERLAPPING_TAC; DISCH_THEN SUBST1_TAC] THEN
+    REWRITE_TAC[x86_movsq1; lemma];
+    REWRITE_TAC[x86_movsq1] THEN
+    MATCH_MP_TAC(MESON[]
+     `read c (write d y s) = read c s /\ read c s = z
+      ==> read c (write d y s) = z`) THEN
+    CONJ_TAC THENL [READ_OVER_WRITE_ORTHOGONAL_TAC; ASM_SIMP_TAC[]];
+    REWRITE_TAC[x86_movsq1; lemma] THEN
+    MATCH_MP_TAC READ_MEMORY_BYTES_MOVSQ THEN NONOVERLAPPING_TAC]);;
+
+let X86_QSTRINGCOPY_NONOVERLAPPING = prove
+ (`!df a b n s.
+        nonoverlapping (a,8 * n) (b,8 * n)
+        ==> x86_qstringcopy df a b n
+             (read (memory :> bytes (a,8 * n)) s)
+             (read (memory :> bytes (b,8 * n)) s) =
+            read (memory :> bytes (a,8 * n)) s`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM READ_X86_MOVSQ] THEN
+  ASM_SIMP_TAC[READ_X86_MOVSQ_NONOVERLAPPING]);;
+
+let READ_WRITE_X86_QSTRINGCOPY = prove
+ (`!df a b n s s'.
+        8 * n <= 2 EXP 64
+        ==> read (memory :> bytes(b,8 * n))
+                 (write (memory :> bytes(b,8 * n))
+                        (x86_qstringcopy df a b n
+                          (read (memory :> bytes (a,8 * n)) s)
+                          (read (memory :> bytes (b,8 * n)) s))
+                        s') =
+            x86_qstringcopy df a b n
+             (read (memory :> bytes (a,8 * n)) s)
+             (read (memory :> bytes (b,8 * n)) s)`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+  REWRITE_TAC[REWRITE_RULE[valid_component]
+    (VALID_COMPONENT_CONV `valid_component memory`)] THEN
+  ASM_SIMP_TAC[READ_WRITE_BYTES; DIMINDEX_64] THEN
+  MATCH_MP_TAC MOD_LT THEN REWRITE_TAC[X86_QSTRINGCOPY_BOUND]);;
+
+(* ------------------------------------------------------------------------- *)
 (* The core operations with generic sizes, to be instantiated to any of      *)
 (* 8, 16, 32 or 64. In effect this is a kind of shallow embedding of x86.    *)
 (* ------------------------------------------------------------------------- *)
@@ -1053,6 +1309,16 @@ let x86_LEA = new_definition
  `x86_LEA dest ea s =
         (dest := ea) s`;;
 
+(*** In 64-bit mode LEAVE is MOV RSP,RBP followed by POP RBP ***)
+
+let x86_LEAVE = new_definition
+ `x86_LEAVE s =
+        let p = read RBP s in
+        let p' = word_add p (word 8)
+        and x = read (memory :> bytes64 p) s in
+        (events := CONS (EventLoad (p,8)) (read events s) ,,
+         RSP := p' ,, RBP := x) s`;;
+
 let x86_LZCNT = new_definition
  `x86_LZCNT dest src s =
         let x:N word = read src s in
@@ -1137,6 +1403,26 @@ let x86_MOVSB = new_definition
          (\s s'. x86_movsb df sbuf dbuf (val n) s = s') ,,
          src := (if df then word_sub sptr n else word_add sptr n) ,,
          dest := (if df then word_sub dptr n else word_add dptr n) ,,
+         (if rept then size := word 0 else (=))) s`;;
+
+(*** The analog of MOVSB moving quadwords, with the number of quadwords
+ *** as "size" and the iterated moves via the auxiliary x86_movsq.
+ ***)
+
+let x86_MOVSQ = new_definition
+ `x86_MOVSQ rept dest src size s =
+        let sptr = read src s
+        and dptr = read dest s
+        and n:int64 = read size s
+        and df = read DF s in
+        let m = word_mul (word 8) n in
+        let sbuf = if df then word_sub sptr (word_sub m (word 8)) else sptr
+        and dbuf = if df then word_sub dptr (word_sub m (word 8)) else dptr in
+        (events := CONS (EventStore(dbuf,8 * val n))
+                        (CONS (EventLoad(sbuf,8 * val n)) (read events s)) ,,
+         (\s s'. x86_movsq df sbuf dbuf (val n) s = s') ,,
+         src := (if df then word_sub sptr m else word_add sptr m) ,,
+         dest := (if df then word_sub dptr m else word_add dptr m) ,,
          (if rept then size := word 0 else (=))) s`;;
 
 (*** These are rare cases with distinct source and destination
@@ -1754,6 +2040,22 @@ let x86_STC = new_definition
 let x86_STD = new_definition
  `x86_STD s =
         (DF := T) s`;;
+
+(*** Repeated or single storing of a quadword "src" at "dest" ***)
+
+let x86_STOSQ = new_definition
+ `x86_STOSQ rept dest src size s =
+        let dptr = read dest s
+        and x:int64 = read src s
+        and n:int64 = read size s
+        and df = read DF s in
+        let m = word_mul (word 8) n in
+        let dbuf = if df then word_sub dptr (word_sub m (word 8)) else dptr in
+        (events := CONS (EventStore(dbuf,8 * val n)) (read events s) ,,
+         memory :> bytes(dbuf,8 * val n) :=
+           nsum {i | i < val n} (\i. 2 EXP (64 * i) * val x) ,,
+         dest := (if df then word_sub dptr m else word_add dptr m) ,,
+         (if rept then size := word 0 else (=))) s`;;
 
 let x86_SUB = new_definition
  `x86_SUB dest src s =
@@ -3057,6 +3359,8 @@ let x86_execute = define
            then word_add (read RIP s)
                          (read (OPERAND64 off s) s)
            else read RIP s) s
+    | LEAVE ->
+        x86_LEAVE s
     | LEA dest bsid ->
         (add_store_event dest s ,,
         (\s. (match operand_size dest with
@@ -3130,6 +3434,9 @@ let x86_execute = define
           (64,128) -> x86_VMOVHPD (OPERAND64 dest s) (OPERAND128 src s)) s)) s
     | MOVSB rept dest src size ->
         (\s. x86_MOVSB rept (OPERAND64 dest s) (OPERAND64 src s) (OPERAND64 size s) s) s
+    | MOVSQ rept dest src size ->
+        (\s. x86_MOVSQ rept (OPERAND64 dest s) (OPERAND64 src s)
+                       (OPERAND64 size s) s) s
     | MOVSX dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
@@ -3525,6 +3832,9 @@ let x86_execute = define
         x86_STC s
     | STD ->
         x86_STD s
+    | STOSQ rept dest src size ->
+        (\s. x86_STOSQ rept (OPERAND64 dest s) (OPERAND64 src s)
+                       (OPERAND64 size s) s) s
     | SUB dest src ->
         (add_load_event dest s ,, add_load_event src s ,,
          add_store_event dest s ,,
@@ -4821,6 +5131,27 @@ let x86_MOVSB_ALT = prove
   ASM_SIMP_TAC[x86_MOVSB; x86_stringcopy; VAL_BOUND_64] THEN
   REWRITE_TAC[LET_DEF; LET_END_DEF; assign; seq]);;
 
+let x86_MOVSQ_ALT = prove
+ (`x86_MOVSQ rept dest src size s =
+        let sptr = read src s
+        and dptr = read dest s
+        and n:int64 = read size s
+        and df = read DF s in
+        let m = word_mul (word 8) n in
+        let sbuf = if df then word_sub sptr (word_sub m (word 8)) else sptr
+        and dbuf = if df then word_sub dptr (word_sub m (word 8)) else dptr in
+        (events := CONS (EventStore (dbuf,8 * val n))
+                        (CONS (EventLoad (sbuf,8 * val n)) (read events s)) ,,
+         (\s. (memory :> bytes (dbuf,8 * val n) :=
+                 x86_qstringcopy df sbuf dbuf (val n)
+                   (read (memory :> bytes (sbuf,8 * val n)) s)
+                   (read (memory :> bytes (dbuf,8 * val n)) s)) s) ,,
+         src := (if df then word_sub sptr m else word_add sptr m) ,,
+         dest := (if df then word_sub dptr m else word_add dptr m) ,,
+         (if rept then size := word 0 else (=))) s`,
+  REWRITE_TAC[x86_MOVSQ; x86_qstringcopy] THEN
+  REWRITE_TAC[LET_DEF; LET_END_DEF; assign; seq]);;
+
 (*** Simplify word operations in SIMD instructions ***)
 
 let all_simd_rules =
@@ -4928,9 +5259,10 @@ let X86_OPERATION_CLAUSES =
     x86_AESKEYGENASSIST; x86_AND;
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CLD; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
-    x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
+    x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LEAVE;
+    x86_LZCNT;
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ;
-    x86_VMOVHPD; x86_MOVSX; x86_MOVUPS; x86_MOVSB_ALT;
+    x86_VMOVHPD; x86_MOVSX; x86_MOVUPS; x86_MOVSB_ALT; x86_MOVSQ_ALT;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
@@ -4939,7 +5271,8 @@ let X86_OPERATION_CLAUSES =
     x86_SHUFPS;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
-    x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
+    x86_STC; x86_STD; x86_STOSQ;
+    x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDB_ALT; x86_VPADDD_ALT; x86_VPADDQ_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHUW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPINSRW; x86_VINSERTI128; x86_VEXTRACTI128;
     x86_VPCMPGTD_ALT; x86_VPCMPGTW_ALT;
