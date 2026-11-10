@@ -8,6 +8,7 @@
 (* ========================================================================= *)
 
 needs "common/fips203.ml";;
+needs "Library/isum.ml";;
 
 type_invention_error := true;;
 
