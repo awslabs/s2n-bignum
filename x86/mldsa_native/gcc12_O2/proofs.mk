@@ -31,6 +31,9 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2/pack_sk_rho_key_tr_87_proof \
   mldsa_native/gcc12_O2/poly_add_proof \
   mldsa_native/gcc12_O2/poly_caddq_proof \
+  mldsa_native/gcc12_O2/poly_challenge_44_proof \
+  mldsa_native/gcc12_O2/poly_challenge_65_proof \
+  mldsa_native/gcc12_O2/poly_challenge_87_proof \
   mldsa_native/gcc12_O2/poly_chknorm_proof \
   mldsa_native/gcc12_O2/poly_decompose_44_proof \
   mldsa_native/gcc12_O2/poly_decompose_65_proof \
@@ -501,6 +504,93 @@ mldsa_native/gcc12_O2/poly_caddq_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/poly_challenge_44_proof.native: \
+  proofs/mldsa_native/gcc12_O2/poly_challenge_44_spec.ml \
+  proofs/utils/mldsa_native_challenge.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_challenge.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_hash.ml \
+  proofs/utils/mldsa_native_prefix.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mldsa_native_libc.ml \
+  ../common/mldsa_native_prefix.ml \
+  proofs/utils/keccak_spec.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/poly_challenge_65_proof.native: \
+  proofs/mldsa_native/gcc12_O2/poly_challenge_65_spec.ml \
+  proofs/utils/mldsa_native_challenge.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_challenge.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_hash.ml \
+  proofs/utils/mldsa_native_prefix.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mldsa_native_libc.ml \
+  ../common/mldsa_native_prefix.ml \
+  proofs/utils/keccak_spec.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/poly_challenge_87_proof.native: \
+  proofs/mldsa_native/gcc12_O2/poly_challenge_87_spec.ml \
+  proofs/utils/mldsa_native_challenge.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_challenge.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2/shake256_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_hash.ml \
+  proofs/utils/mldsa_native_prefix.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mldsa_native_libc.ml \
+  ../common/mldsa_native_prefix.ml \
+  proofs/utils/keccak_spec.ml \
   mldsa_native/gcc12_O2/libmldsa.o
 mldsa_native/gcc12_O2/poly_chknorm_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_chknorm_spec.ml \
