@@ -298,22 +298,44 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | NOP_N operand
    | NOT operand
    | OR operand operand
+   | PACKUSWB operand operand
    | PADDD operand operand
    | PADDQ operand operand
+   | PADDW operand operand
    | PAND operand operand
    | PBLENDW operand operand operand
    | PCMPGTD operand operand
    | PCMPGTW operand operand
    | PEXT operand operand operand
+   | PEXTRW operand operand operand
    | PINSRD operand operand operand
    | PINSRQ operand operand operand
+   | PINSRW operand operand operand
    | PMOVMSKB operand operand
+   | PMULHUW operand operand
+   | PMULHW operand operand
+   | PMULLW operand operand
    | POP operand
    | POPCNT operand operand
+   | POR operand operand
    | PSHUFB operand operand
    | PSHUFD operand operand operand
+   | PSLLD operand operand
+   | PSLLQ operand operand
    | PSRAD operand operand
+   | PSRLD operand operand
+   | PSRLDQ operand operand
+   | PSRLQ operand operand
    | PSRLW operand operand
+   | PSUBD operand operand
+   | PSUBQ operand operand
+   | PSUBW operand operand
+   | PUNPCKHDQ operand operand
+   | PUNPCKHWD operand operand
+   | PUNPCKLBW operand operand
+   | PUNPCKLDQ operand operand
+   | PUNPCKLQDQ operand operand
+   | PUNPCKLWD operand operand
    | PUSH operand
    | PXOR operand operand
    | RCL operand operand
@@ -328,6 +350,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | SHR operand operand
    | SHLD operand operand operand
    | SHRD operand operand operand
+   | SHUFPS operand operand operand
    | STCF
    | STD
    | SUB operand operand

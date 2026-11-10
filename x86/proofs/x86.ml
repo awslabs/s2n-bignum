@@ -1422,6 +1422,105 @@ let x86_PSRLW = new_definition
     let res:(128)word = usimd8 (\x. word_ushr x count) d in
     (dest := res) s`;;
 
+(*** Interleaving and shuffles of legacy SSE registers ***)
+
+let x86_PUNPCKLBW = new_definition
+ `x86_PUNPCKLBW dest src s =
+    let x:int128 = read dest s and y:int128 = read src s in
+    let res:int128 =
+      (word_join
+       (word_join
+        (word_join
+         (word_join (word_subword y (56,8):byte)
+                    (word_subword x (56,8):byte):int16)
+         (word_join (word_subword y (48,8):byte)
+                    (word_subword x (48,8):byte):int16):int32)
+        (word_join
+         (word_join (word_subword y (40,8):byte)
+                    (word_subword x (40,8):byte):int16)
+         (word_join (word_subword y (32,8):byte)
+                    (word_subword x (32,8):byte):int16):int32):int64)
+       (word_join
+        (word_join
+         (word_join (word_subword y (24,8):byte)
+                    (word_subword x (24,8):byte):int16)
+         (word_join (word_subword y (16,8):byte)
+                    (word_subword x (16,8):byte):int16):int32)
+        (word_join
+         (word_join (word_subword y (8,8):byte)
+                    (word_subword x (8,8):byte):int16)
+         (word_join (word_subword y (0,8):byte)
+                    (word_subword x (0,8):byte):int16):int32):int64):int128) in
+    (dest := res) s`;;
+
+let x86_PUNPCKLWD = new_definition
+ `x86_PUNPCKLWD dest src s =
+    let x:int128 = read dest s and y:int128 = read src s in
+    let res:int128 =
+      (word_join
+       (word_join
+        (word_join (word_subword y (48,16):int16)
+                   (word_subword x (48,16):int16):int32)
+        (word_join (word_subword y (32,16):int16)
+                   (word_subword x (32,16):int16):int32):int64)
+       (word_join
+        (word_join (word_subword y (16,16):int16)
+                   (word_subword x (16,16):int16):int32)
+        (word_join (word_subword y (0,16):int16)
+                   (word_subword x (0,16):int16):int32):int64):int128) in
+    (dest := res) s`;;
+
+let x86_PUNPCKHWD = new_definition
+ `x86_PUNPCKHWD dest src s =
+    let x:int128 = read dest s and y:int128 = read src s in
+    let res:int128 =
+      (word_join
+       (word_join
+        (word_join (word_subword y (112,16):int16)
+                   (word_subword x (112,16):int16):int32)
+        (word_join (word_subword y (96,16):int16)
+                   (word_subword x (96,16):int16):int32):int64)
+       (word_join
+        (word_join (word_subword y (80,16):int16)
+                   (word_subword x (80,16):int16):int32)
+        (word_join (word_subword y (64,16):int16)
+                   (word_subword x (64,16):int16):int32):int64):int128) in
+    (dest := res) s`;;
+
+let x86_PUNPCKLDQ = new_definition
+ `x86_PUNPCKLDQ dest src s =
+    let x:int128 = read dest s and y:int128 = read src s in
+    let res:int128 =
+      (word_join
+       (word_join (word_subword y (32,32):int32)
+                  (word_subword x (32,32):int32):int64)
+       (word_join (word_subword y (0,32):int32)
+                  (word_subword x (0,32):int32):int64):int128) in
+    (dest := res) s`;;
+
+let x86_PUNPCKHDQ = new_definition
+ `x86_PUNPCKHDQ dest src s =
+    let x:int128 = read dest s and y:int128 = read src s in
+    let res:int128 =
+      (word_join
+       (word_join (word_subword y (96,32):int32)
+                  (word_subword x (96,32):int32):int64)
+       (word_join (word_subword y (64,32):int32)
+                  (word_subword x (64,32):int32):int64):int128) in
+    (dest := res) s`;;
+
+let x86_SHUFPS = new_definition
+ `x86_SHUFPS dest src imm8 s =
+    let x:int128 = read dest s and y:int128 = read src s
+    and k = val(read imm8 s:byte) in
+    let res:int128 =
+      word_join
+       (word_join (word_subword y (32 * ((k DIV 64) MOD 4),32):int32)
+                  (word_subword y (32 * ((k DIV 16) MOD 4),32):int32):int64)
+       (word_join (word_subword x (32 * ((k DIV 4) MOD 4),32):int32)
+                  (word_subword x (32 * (k MOD 4),32):int32):int64) in
+    (dest := res) s`;;
+
 let x86_PXOR = new_definition
   `x86_PXOR dest src s =
     let x = read dest s in
@@ -3178,6 +3277,118 @@ let x86_execute = define
     | PSRLW dest imm8 ->
        (add_load_event dest s ,, add_store_event dest s ,,
        (\s. x86_PSRLW (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
+    | PACKUSWB dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPACKUSWB (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+    | PADDW dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPADDW (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+    | PEXTRW dest src imm8 ->
+       (add_load_event src s ,, add_store_event dest s ,,
+       (\s. (match operand_size dest with
+               64 -> x86_VPEXTRW (OPERAND64 dest s) (OPERAND128_SSE src s)
+                                 (OPERAND8 imm8 s)
+             | 32 -> x86_VPEXTRW (OPERAND32 dest s) (OPERAND128_SSE src s)
+                                 (OPERAND8 imm8 s)) s)) s
+    | PINSRW dest src imm8 ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. (match operand_size src with
+               32 -> x86_VPINSRW (OPERAND128_SSE dest s)
+                       (OPERAND128_SSE dest s) (OPERAND32 src s)
+                       (OPERAND8 imm8 s)
+             | 16 -> x86_VPINSRW (OPERAND128_SSE dest s)
+                       (OPERAND128_SSE dest s) (OPERAND16 src s)
+                       (OPERAND8 imm8 s)) s)) s
+    | PMULHUW dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPMULHUW (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+    | PMULHW dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPMULHW (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+    | PMULLW dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPMULLW (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+    | POR dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPOR (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+    | PSLLD dest imm8 ->
+       (add_load_event dest s ,, add_store_event dest s ,,
+       (\s. x86_VPSLLD (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND8 imm8 s) s)) s
+    | PSLLQ dest imm8 ->
+       (add_load_event dest s ,, add_store_event dest s ,,
+       (\s. x86_VPSLLQ (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND8 imm8 s) s)) s
+    | PSRLD dest imm8 ->
+       (add_load_event dest s ,, add_store_event dest s ,,
+       (\s. x86_VPSRLD (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND8 imm8 s) s)) s
+    | PSRLDQ dest imm8 ->
+       (add_load_event dest s ,, add_store_event dest s ,,
+       (\s. x86_VPSRLDQ (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND8 imm8 s) s)) s
+    | PSRLQ dest imm8 ->
+       (add_load_event dest s ,, add_store_event dest s ,,
+       (\s. x86_VPSRLQ (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND8 imm8 s) s)) s
+    | PSUBD dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPSUBD (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+    | PSUBQ dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPSUBQ (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+    | PSUBW dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPSUBW (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+    | PUNPCKHDQ dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PUNPCKHDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+    | PUNPCKHWD dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PUNPCKHWD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+    | PUNPCKLBW dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PUNPCKLBW (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+    | PUNPCKLDQ dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PUNPCKLDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+    | PUNPCKLQDQ dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPUNPCKLQDQ (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+    | PUNPCKLWD dest src ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PUNPCKLWD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+    | SHUFPS dest src imm8 ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_SHUFPS (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
+                       (OPERAND8 imm8 s) s)) s
     | PUSH src ->
        (add_load_event src s ,,
        (\s. (match operand_size src with
@@ -4307,6 +4518,14 @@ let OPERAND_CLAUSES = prove
    OPERAND16 (%bp) s = RBP :> bottom_32 :> bottom_16 /\
    OPERAND16 (%si) s = RSI :> bottom_32 :> bottom_16 /\
    OPERAND16 (%di) s = RDI :> bottom_32 :> bottom_16 /\
+   OPERAND16 (% r8w) s =  R8 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (% r9w) s =  R9 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r10w) s = R10 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r11w) s = R11 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r12w) s = R12 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r13w) s = R13 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r14w) s = R14 :> bottom_32 :> bottom_16 /\
+   OPERAND16 (%r15w) s = R15 :> bottom_32 :> bottom_16 /\
    OPERAND16 (Imm16 w16) s = rvalue w16 /\
    OPERAND16 (Imm8 w8) s = rvalue(word_sx w8) /\
    OPERAND16 (Memop Word bsid) s =
@@ -4342,6 +4561,7 @@ let OPERAND_CLAUSES = prove
               r8d; r9d; r10d; r11d; r12d; r13d; r14d; r15d;
               ax; cx; dx; bx; sp; bp; si; di; ah;
               al; ch; cl; dh; dl; bh; bl; spl; bpl; sil; dil;
+              r8w; r9w; r10w; r11w; r12w; r13w; r14w; r15w;
               r8b; r9b; r10b; r11b; r12b; r13b; r14b; r15b;
               EAX; ECX; EDX; EBX; ESP; EBP; ESI; EDI;
               R8D; R9D; R10D; R11D; R12D; R13D; R14D; R15D;
@@ -4715,6 +4935,8 @@ let X86_OPERATION_CLAUSES =
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
     x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
+    x86_PUNPCKHDQ; x86_PUNPCKHWD; x86_PUNPCKLBW; x86_PUNPCKLDQ; x86_PUNPCKLWD;
+    x86_SHUFPS;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
