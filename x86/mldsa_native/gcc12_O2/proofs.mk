@@ -5,8 +5,45 @@ MLDSA_NATIVE_OBJ += \
   mldsa_native/gcc12_O2/libmldsa.o
 
 MLDSA_NATIVE_PROOFS += \
-  mldsa_native/gcc12_O2/libmldsa
+  mldsa_native/gcc12_O2/libmldsa \
+  mldsa_native/gcc12_O2/poly_add_proof \
+  mldsa_native/gcc12_O2/poly_caddq_proof \
+  mldsa_native/gcc12_O2/polyveck_caddq_44_proof
 
 mldsa_native/gcc12_O2/libmldsa.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/poly_add_proof.native: \
+  proofs/mldsa_native/gcc12_O2/poly_add_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/poly_caddq_proof.native: \
+  proofs/mldsa_native/gcc12_O2/poly_caddq_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  mldsa_native/gcc12_O2/libmldsa.o
+mldsa_native/gcc12_O2/polyveck_caddq_44_proof.native: \
+  proofs/mldsa_native/gcc12_O2/polyveck_caddq_44_spec.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_polyvec.ml \
+  proofs/mldsa_native/gcc12_O2/poly_caddq_spec.ml \
+  proofs/mldsa_native/gcc12_O2/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2/layout.ml \
+  proofs/utils/mldsa_native.ml \
   mldsa_native/gcc12_O2/libmldsa.o
