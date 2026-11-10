@@ -140,3 +140,81 @@ let POLYVEC_JOIN_TAC k =
   MATCH_MP_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
                 (SPEC kt POLYVEC_JOIN)) THEN
   POLYVEC_CASES_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* Given the theorem image_mc defining the bytes of an image, and the        *)
+(* definition of the code of a function, as it is in the image at address    *)
+(* v, and the addresses d1,...,dk in the image of the data that the code     *)
+(* refers to with relocations (if any), which are the extra arguments of the *)
+(* definition, IMAGE_CODE_RULE_FOR image_mc mc_def v [d1;...;dk] gives       *)
+(*                                                                           *)
+(* |- !s pc. bytes_loaded s (word pc) <image>                                *)
+(*           ==> bytes_loaded s (word(pc + v))                               *)
+(*                 (<mc> (pc + v) (pc + d1) ... (pc + dk))                   *)
+(*                                                                           *)
+(* The relocated displacements are then constants, the same as in the image, *)
+(* wherever it is. IMAGE_DATA_RULE_FOR image_mc data_def d does the same for *)
+(* a table of data at address d in the image.                                *)
+(* ------------------------------------------------------------------------- *)
+
+let IMAGE_CODE_RULE_FOR image_mc =
+  let pc_tm = `pc:num` and plus_tm = `(+):num->num->num` in
+  let conv =
+    GEN_REWRITE_CONV TOP_DEPTH_CONV [IMAGE_INT_SUB_LEMMA] THENC
+    NUM_REDUCE_CONV THENC INT_REDUCE_CONV THENC
+    GEN_REWRITE_CONV TOP_DEPTH_CONV [NUM_OF_INT_OF_NUM] THENC
+    NUM_REDUCE_CONV in
+  fun mc_def v ds ->
+    let inst =
+      if ds = [] then mc_def else
+      let offs = map (mk_binop plus_tm pc_tm o mk_small_numeral) (v::ds) in
+      CONV_RULE (RAND_CONV conv) (SPECL offs mc_def) in
+    BYTES_LOADED_SUBPROGRAM_RULE image_mc inst v;;
+
+let IMAGE_DATA_RULE_FOR image_mc data_def d =
+  BYTES_LOADED_SUBPROGRAM_RULE image_mc data_def d;;
+
+(* ------------------------------------------------------------------------- *)
+(* Prove the version of a theorem for a function in the image, given the     *)
+(* theorem for the function with the variables for the addresses of the      *)
+(* code and of the data instantiated to pc + v and pc + d1, ..., and its     *)
+(* other variables free with the same names as in the goal, and the          *)
+(* theorems from the two rules above for its code and data. The hypotheses   *)
+(* about the addresses of the code and data, such as the bounds for the      *)
+(* RIP-relative displacements and the alignment of vectors of constants,     *)
+(* follow from those for the image. IMAGE_SAFE_TAC does the same for a       *)
+(* theorem of the form |- ?f_events. !e ... . P ==> ensures x86 ... : the    *)
+(* function of the events in the image is that of the function with the      *)
+(* instantiations, as a function of the arguments of f_events in the goal.   *)
+(* ------------------------------------------------------------------------- *)
+
+let IMAGE_TAC =
+  let pth = ONCE_REWRITE_RULE[IMP_CONJ_ALT] ENSURES_PRECONDITION_THM in
+  fun th loadths ->
+    REWRITE_TAC[ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
+    REPEAT STRIP_TAC THEN MP_TAC th THEN ANTS_TAC THENL
+     [REWRITE_TAC[GSYM ADD_ASSOC; ALL; ALLPAIRS] THEN
+      CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
+      ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN
+      FIRST
+       [MATCH_MP_TAC RIPREL32_WITHIN_BOUNDS_IN_IMAGE THEN
+        CONV_TAC NUM_REDUCE_CONV;
+        REWRITE_TAC[WORD_ADD] THEN
+        CONV_TAC NORMALIZE_ALIGNED_WORD_CONV THEN FIRST_ASSUM ACCEPT_TAC;
+        REWRITE_TAC[WORD_ADD] THEN NONOVERLAPPING_TAC];
+      DISCH_THEN(MATCH_MP_TAC o MATCH_MP pth) THEN
+      X_GEN_TAC `s:x86state` THEN REWRITE_TAC[] THEN STRIP_TAC THEN
+      ASM_SIMP_TAC loadths];;
+
+let IMAGE_SAFE_TAC th inst loadths =
+  let f = fst(dest_exists(concl th)) in
+  let app v tm = find_term (fun t -> fst(strip_comb t) = v) tm in
+  X_CHOOSE_THEN f (fun fth ->
+    let fth' = INST inst (SPEC_ALL fth) in
+    W(fun (asl,w) ->
+      let f',wbod = dest_exists w in
+      let xs = snd(strip_comb(app f' wbod)) in
+      let zs = map (genvar o type_of) xs in
+      let wit = list_mk_abs(zs,subst (zip zs xs) (app f (concl fth'))) in
+      EXISTS_TAC wit THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+      IMAGE_TAC fth' loadths)) th;;

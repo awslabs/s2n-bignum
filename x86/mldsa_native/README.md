@@ -60,9 +60,28 @@ and the rest once per parameter set, with the namespaces `mldsa44_`,
 `mldsa65_` and `mldsa87_`. The binary has the same 192 functions, with the
 same names, as the AArch64 binary of the same build.
 
-| File                | Compiler   | Binary                          |
-|---------------------|------------|---------------------------------|
-| gcc12_O2/libmldsa.S | gcc 12.3.0 | multilevel/gcc12/O2/libmldsa.so |
+| File (gcc 12.3.0)              | Binary                          |
+|--------------------------------|---------------------------------|
+| gcc12_O2/libmldsa.S            | multilevel/gcc12/O2/libmldsa.so |
+| gcc12_O2/keccakf1600_permute.S | multilevel/gcc12/O2/libmldsa.so |
+
+`gcc12_O2/keccakf1600_permute.S` is the code of `mldsa_keccakf1600_permute`
+alone, with its table of round constants as a separate symbol. Its code is
+that of `mlkem_keccakf1600_permute` in the x86-64 gcc 12 -O2 build of
+mlkem-native, apart from the displacements of the table, and so its proof
+is that of the x86-64 mlkem-native proofs, on the separate object,
+transferred to the image (as for AArch64). `check_transcription.py`, also
+from the x86-64 mlkem-native proofs, checks the separate object against
+the binary:
+
+```
+python3 mldsa_native/check_transcription.py \
+  mldsa_native/gcc12_O2/keccakf1600_permute.o \
+  mldsa_native_keccakf1600_permute_gcc12_O2 \
+  <build>/multilevel/gcc12/O2/libmldsa.so \
+  mldsa_keccakf1600_permute \
+  mld_KeccakF_RoundConstants mld_KeccakF_RoundConstants
+```
 
 The SHA-256 hash of the binary used is:
 
