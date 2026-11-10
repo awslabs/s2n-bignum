@@ -312,7 +312,6 @@ let decode_hi = new_definition `decode_hi x v sz (opc:3 word) rm l =
   | T,_,1 -> SOME (DEC rm,l)
   | T,T,2 -> SOME (CALL rm,l)
   | T,T,4 -> SOME (JMP rm,l)
-  | T,T,6 -> SOME (PUSH rm,l)
   | _ -> NONE`;;
 
 let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
@@ -1435,8 +1434,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     SOME (STD,l)
   | [0xf:4; x; 0b11:2; v] -> if has_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
-    read_opcode_ModRM_operand rex sz l >>= \((opc,rm),l).
-    decode_hi x v (to_wordsize sz) opc rm l
+    read_opcode_ModRM rex l >>= \((opc,rm),l).
+    if x /\ v /\ opc = word 6 then SOME (PUSH (operand_of_RM Full_64 rm),l)
+    else let rm = operand_of_RM sz rm in
+         decode_hi x v (to_wordsize sz) opc rm l
   | _ -> NONE`;;
 
 let decode = new_definition `decode l =
