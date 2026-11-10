@@ -79,7 +79,7 @@ let WORD_RECIP_CORRECT = prove
   X_GEN_TAC `a:int64` THEN X_GEN_TAC `pc:num` THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
 
-  (*** Globablize the top-bit-set assumption ***)
+  (*** Globalize the top-bit-set assumption ***)
 
   ASM_CASES_TAC `bit 63 (a:int64)` THENL
    [ASM_REWRITE_TAC[] THEN ENSURES_INIT_TAC "s0";

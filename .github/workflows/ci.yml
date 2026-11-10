@@ -27,7 +27,7 @@ jobs:
       run: |
         cd ${{ matrix.arch }}
         make
-        ${{ matrix.arch == 'x86' && 'cd ../x86_att && make clobber && make && git diff --exit-code .' || true}}
+        ${{ matrix.arch == 'x86' && '(cd ../x86_att && make clobber && make && git diff --exit-code .)' || true}}
         echo "Make test"
         cd ../tests
         CC=gcc make complete
