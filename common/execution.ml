@@ -160,9 +160,52 @@ useful information\n"
          true)
       else true);;
 
+(* REPEAT GEN_TAC, giving the same subgoal with the same variable names, but
+   with a cheaper justification. GEN_TAC introduces a primed name x' for a
+   bound variable x whose name is already free in the goal or assumptions,
+   and its justification renames x' back to x by alpha-converting the whole
+   conclusion, once per variable. A big step strips one variable per state
+   component that the callee may change (56 on AArch64 for the frame
+   MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI alone), and their names repeat
+   across types (y, y', ... for each of int64 and int128), so most of them
+   are renamed. This justification generalizes
+   all variables at once and gets back to the bound names with one ALPHA,
+   falling back to the variable-by-variable steps if that fails. *)
+let REPEAT_GEN_ALPHA_TAC:tactic =
+  fun (asl,w) ->
+    let afvs = itlist (union o thm_frees o snd) asl [] in
+    let rec strip w ps =
+      if not (is_forall w) then w,ps else
+      let x,bod = dest_forall w in
+      let x' = mk_primed_var (union afvs (frees w)) x in
+      strip (vsubst[x',x] bod) ((x,x')::ps) in
+    let w',ps = strip w [] in
+    if ps = [] then ALL_TAC (asl,w) else
+    let xs' = rev_itlist (fun (_,x') l -> x'::l) ps [] in
+    null_meta,[asl,w'],
+    fun i [th] ->
+      let gth = GENL xs' th in
+      try EQ_MP (ALPHA (concl gth) (instantiate i w)) gth
+      with Failure _ ->
+        rev_itlist (fun (x,x') th -> CONV_RULE (GEN_ALPHA_CONV x) (GEN x' th))
+                   ps th;;
+
 (* Simulate through a core ensures theorem while preserving the surrounding
    eventual-execution goal. Backends supply their code-loading update theorem
-   and old-state cleanup tactic. *)
+   and old-state cleanup tactic.
+
+   After the callee's frame is expanded, the antecedent of the goal is a
+   nest of beta-redexes, one level per state component that the callee may
+   change, e.g.
+
+     (\s s'. ?y. (\s s'. ?y. ... ) (write X1 y s) s') s29 s30
+
+   It is beta-reduced with TOP_DEPTH_CONV BETA_CONV before the existentials
+   are moved out with REWRITE_TAC[LEFT_IMP_EXISTS_THM]: that gives the same
+   goal, but REWRITE_TAC with its basic rewrites spends about 10 times as
+   long on the unreduced nest (2.7 s instead of 0.27 s for a callee whose
+   frame has 58 components: the 56 of MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI
+   on AArch64 and two more). *)
 let GEN_BIGSTEP_TAC backend_name loaded_update discard_oldstate_tac =
   let lemma = prove
    (`P s /\ (!s':S. Q s' /\ C s s' ==> eventually step R s')
@@ -197,7 +240,8 @@ but got `%s`.\n"
        GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [GSYM SEQ_ASSOC] THEN
        GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [ASSIGNS_SEQ] THEN
        GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [ASSIGNS_THM] THEN
-       REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT GEN_TAC THEN
+       CONV_TAC(LAND_CONV(TOP_DEPTH_CONV BETA_CONV)) THEN
+       REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT_GEN_ALPHA_TAC THEN
        NONSELFMODIFYING_STATE_UPDATE_TAC
         (MATCH_MP loaded_update execth1) THEN
        ASSUMPTION_STATE_UPDATE_TAC THEN
