@@ -9,11 +9,14 @@
 (* arm/proofs/utils/mldsa_native_wrap.ml for AArch64: the random bytes that  *)
 (* randombytes writes, the distinct results of the functions, the CORRECT    *)
 (* and SAFE theorems from FULL theorems whose postconditions have an         *)
-(* existential (the random bytes), and the constants of the image that the   *)
-(* code reads RIP-relative without an alignment check.                       *)
+(* existential (the random bytes), the constants of the image that the code  *)
+(* reads RIP-relative without an alignment check, the callees of the signing *)
+(* functions as assumptions, the case facts of their branches, the length of *)
+(* the domain separation prefix and when signing succeeds.                   *)
 (* ========================================================================= *)
 
 needs "common/mldsa_native_sign.ml";;
+needs "common/mldsa_native_prefix.ml";;
 needs "x86/proofs/utils/mldsa_native_libc.ml";;
 needs "x86/proofs/utils/mldsa_native_top.ml";;
 needs "x86/proofs/utils/mldsa_native_scalar.ml";;
@@ -187,3 +190,254 @@ let API_SIGN_SAFE_TAC fullth =
   REPEAT GEN_TAC THEN
   DISCH_THEN(fun th -> SAFE_OF_FULL_TAC (MP (SPEC_ALL fullth) th)) THEN
   MESON_TAC[API_SIGN_DISTINCT];;
+
+(* ------------------------------------------------------------------------- *)
+(* Case facts, as in arm/proofs/utils/mldsa_native_wrap.ml. API_CASE_THMS cs *)
+(* gives, for each term c of cs that is an assumption, or whose negation is, *)
+(* c = T or c = F. API_LET_TAC cs ths simplifies the postcondition of the    *)
+(* prefix (a let term) with those and ths (API_PREFIX_THMS for a pure        *)
+(* ML-DSA prefix, with hashalg 0 and no pre-hash), without rewriting the     *)
+(* case facts themselves; API_USE_CASE_TAC c ths rewrites the assumptions in *)
+(* which c occurs with the case fact for c and ths; API_MP_TAC c uses the    *)
+(* assumption c on an assumption c ==> p.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let API_CASE_THMS cs (asl,w) =
+  mapfilter (fun c ->
+    try EQT_INTRO(snd(find (fun (_,a) -> concl a = c) asl))
+    with Failure _ ->
+      EQF_INTRO(snd(find (fun (_,a) -> concl a = mk_neg c) asl))) cs;;
+
+let API_LET_TAC cs ths =
+  FIRST_X_ASSUM(fun th ->
+    if is_let(concl th) then
+      W(fun g ->
+        STRIP_ASSUME_TAC
+         (REWRITE_RULE(API_CASE_THMS cs g @ ths)
+           (CONV_RULE(TOP_DEPTH_CONV let_CONV) th)))
+    else NO_TAC);;
+
+let API_PREFIX_THMS =
+  [VAL_WORD_ZX_GEN; VAL_WORD_0; MOD_0; mld_domain_separation_prefix_length;
+   ADD_EQ_0; ARITH_EQ; CONJUNCT1 bytelist_of_num];;
+
+let API_USE_CASE_TAC c ths =
+  W(fun (asl,w) ->
+    let cths = API_CASE_THMS [c] (asl,w) in
+    RULE_ASSUM_TAC(fun th ->
+      let t = concl th in
+      if t = c || t = mk_neg c || not(free_in c t) then th
+      else REWRITE_RULE(cths @ ths) th));;
+
+let API_MP_TAC c =
+  FIRST_X_ASSUM(fun th ->
+    if is_imp(concl th) && lhand(concl th) = c
+    then W(fun (asl,w) ->
+      STRIP_ASSUME_TAC(MP th (snd(find (fun (_,a) -> concl a = c) asl))))
+    else NO_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The prefix in the buffer has length at most 332 (API_PREFIX_LENGTH_LE),   *)
+(* and ctxlen + 77 for the 64-byte SHAKE256 pre-hash                         *)
+(* (API_PREFIX_LENGTH_SHAKE256), of which API_SHAKE256_TERMINATES_TAC gives  *)
+(* the termination hypothesis of the pre-hash function from that on ctxlen   *)
+(* <= 255, and API_SHAKE256_RESULT_TAC proves the result and the signature   *)
+(* given in those terms. The bounds on the regions of a length that is not a *)
+(* numeral are not seen by NONOVERLAPPING_TAC: API_DRIVER_TAC tm bth proves  *)
+(* the nonoverlapping fact tm about a region whose length has the bound bth, *)
+(* for the hypotheses of a callee, and API_WIDEN_TAC cths replaces each      *)
+(* readable region r of the memaccess_inbounds assumptions by r' for each    *)
+(* theorem contained r r' of cths.                                           *)
+(* ------------------------------------------------------------------------- *)
+
+let API_PREFIX_LENGTH_LE = prove
+ (`!h ctxlen phlen. mld_domain_separation_prefix_length h ctxlen phlen <= 332`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[mld_domain_separation_prefix_length; mld_prehash_valid;
+              mld_prehash_length] THEN
+  REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN SIMPLE_ARITH_TAC);;
+
+let API_PREFIX_LENGTH_SHAKE256 = prove
+ (`!ctxlen. mld_domain_separation_prefix_length 12 ctxlen 64 =
+            if 255 < ctxlen then 0 else ctxlen + 77`,
+  GEN_TAC THEN
+  REWRITE_TAC[mld_domain_separation_prefix_length; mld_prehash_valid;
+              mld_prehash_length] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN COND_CASES_TAC THEN ARITH_TAC);;
+
+let API_SHAKE256_TERMINATES_TAC =
+  FIRST_ASSUM(fun th ->
+    let c = concl th in
+    if is_imp c && lhand c = `ctxlen <= 255` then
+      SUBGOAL_THEN
+       (mk_imp(`~(12 = 0) /\
+                ~(mld_domain_separation_prefix_length 12 ctxlen 64 = 0)`,
+               rand c)) ASSUME_TAC THENL
+       [REWRITE_TAC[API_PREFIX_LENGTH_SHAKE256] THEN COND_CASES_TAC THEN
+        REWRITE_TAC[ADD_EQ_0; ARITH_EQ] THEN MATCH_MP_TAC th THEN
+        SIMPLE_ARITH_TAC;
+        ALL_TAC]
+    else NO_TAC);;
+
+let API_SHAKE256_RESULT_TAC =
+  REWRITE_TAC[API_PREFIX_LENGTH_SHAKE256] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[API_PREFIX_LENGTH_SHAKE256]) THEN
+  ASM_CASES_TAC `255 < ctxlen` THEN
+  API_USE_CASE_TAC `255 < ctxlen` [ADD_EQ_0; ARITH_EQ] THEN
+  ASM_REWRITE_TAC[ADD_EQ_0; ARITH_EQ];;
+
+let API_CONTAINED_REFL = prove
+ (`!(a:int64) n. contained (a,n) (a,n)`,
+  REWRITE_TAC[contained; CONTAINED_MODULO_REFL; LE_REFL]);;
+
+let API_DRIVER_TAC tm bth =
+  let len = lhand(concl bth) in
+  SUBGOAL_THEN tm ASSUME_TAC THENL
+   [MP_TAC bth THEN SPEC_TAC(len,`l:num`) THEN GEN_TAC THEN DISCH_TAC THEN
+    NONOVERLAPPING_TAC;
+    ALL_TAC];;
+
+let API_WIDEN_TAC cths =
+  RULE_ASSUM_TAC(fun th ->
+    try let c,args = strip_comb(concl th) in
+        if not(is_const c && name_of c = "memaccess_inbounds") then th else
+        let e,rr,wr = match args with [e;rr;wr] -> e,rr,wr | _ -> fail() in
+        let els = dest_list rr in
+        let sub r =
+          try rand(concl(find (fun t -> lhand(concl t) = r) cths))
+          with Failure _ -> r in
+        let els' = map sub els in
+        if els' = els then th else
+        let rr' = mk_list(els',type_of(hd els)) in
+        let lth = ISPECL [e; rr; rr'; wr; wr] MEMACCESS_INBOUNDS_CONTAINED in
+        let sth = prove(lhand(concl lth),
+          REWRITE_TAC[ALL; EX] THEN
+          REWRITE_TAC(API_CONTAINED_REFL :: map EQT_INTRO cths)) in
+        MP (MP lth sth) th
+    with Failure _ -> th);;
+
+(* ------------------------------------------------------------------------- *)
+(* Signing succeeds (mld_sign_ok) if and only if one of the attempts that it *)
+(* declassifies (mld_sign_declass, zero beyond the last) passes all its      *)
+(* checks, as in arm/proofs/utils/mldsa_native_wrap.ml: the events of the    *)
+(* callers that zero the signature on failure are functions of the           *)
+(* declassified values. The signature of a failed signing is zero            *)
+(* (API_SIGN_SIG_FAIL).                                                      *)
+(* ------------------------------------------------------------------------- *)
+
+let API_SIGN_OK_DECLASS = prove
+ (`!k l unpack p ctlen tau g1 bndz bndw bndh w1enc w1p dlo mkhint omega
+    maxatt sk mu rnd.
+     mld_sign_ok k l unpack p ctlen tau g1 bndz bndw bndh w1enc w1p dlo
+      mkhint omega maxatt sk mu rnd <=>
+     ?n. FST(SND(mld_sign_declass k l unpack p ctlen tau g1 bndz bndw bndh
+                  w1enc w1p dlo mkhint omega maxatt sk mu rnd n)) =
+         l + 2 * k + 1`,
+  REPEAT GEN_TAC THEN
+  SUBGOAL_THEN
+   `!kappa. FST(SND(mld_sign_attempt_declass k l ctlen tau g1 bndz bndw bndh
+                     w1enc w1p dlo mkhint omega
+                     (mld_polyvec_matrix_expand l (mld_sk_rho sk))
+                     (mld_polyvec_map mld_poly_ntt (mld_sk_s1 unpack p sk))
+                     (mld_polyvec_map mld_poly_ntt (mld_sk_s2 l unpack p sk))
+                     (mld_polyvec_map mld_poly_ntt (mld_sk_t0 k l p sk))
+                     mu (mld_sign_rhoprime (\j. sk(32 + j)) rnd mu) kappa)) =
+            mld_sign_attempt_rej k l ctlen tau g1 bndz bndw bndh
+                     w1enc w1p dlo mkhint omega
+                     (mld_polyvec_matrix_expand l (mld_sk_rho sk))
+                     (mld_polyvec_map mld_poly_ntt (mld_sk_s1 unpack p sk))
+                     (mld_polyvec_map mld_poly_ntt (mld_sk_s2 l unpack p sk))
+                     (mld_polyvec_map mld_poly_ntt (mld_sk_t0 k l p sk))
+                     mu (mld_sign_rhoprime (\j. sk(32 + j)) rnd mu) kappa`
+  ASSUME_TAC THENL
+   [GEN_TAC THEN
+    REWRITE_TAC[mld_sign_attempt_declass; mld_sign_attempt_rej] THEN
+    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN REWRITE_TAC[];
+    ALL_TAC] THEN
+  REWRITE_TAC[mld_sign_declass; mld_sign_nattempts] THEN
+  COND_CASES_TAC THEN ASM_REWRITE_TAC[] THENL
+   [UNDISCH_TAC
+     `mld_sign_ok k l unpack p ctlen tau g1 bndz bndw bndh w1enc w1p dlo
+       mkhint omega maxatt sk mu rnd` THEN
+    REWRITE_TAC[mld_sign_ok] THEN
+    DISCH_THEN(STRIP_ASSUME_TAC o ONCE_REWRITE_RULE[MINIMAL]) THEN
+    EXISTS_TAC
+     `minimal n. n < maxatt /\
+                 mld_sign_rejn k l unpack p ctlen tau g1 bndz bndw bndh w1enc
+                  w1p dlo mkhint omega sk mu rnd n = l + 2 * k + 1` THEN
+    ASM_REWRITE_TAC[ARITH_RULE `n < n + 1`] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[mld_sign_rejn]) THEN
+    REWRITE_TAC[mld_sign_rejn] THEN ASM_REWRITE_TAC[];
+    REWRITE_TAC[NOT_EXISTS_THM] THEN X_GEN_TAC `n:num` THEN
+    COND_CASES_TAC THEN ASM_REWRITE_TAC[] THENL
+     [UNDISCH_TAC
+       `~mld_sign_ok k l unpack p ctlen tau g1 bndz bndw bndh w1enc w1p dlo
+         mkhint omega maxatt sk mu rnd` THEN
+      REWRITE_TAC[mld_sign_ok; NOT_EXISTS_THM] THEN
+      DISCH_THEN(MP_TAC o SPEC `n:num`) THEN ASM_REWRITE_TAC[mld_sign_rejn];
+      ARITH_TAC]]);;
+
+let API_SIGN_SIG_FAIL = prove
+ (`(!sk mu rnd t. ~mld_sign_ok_44 sk mu rnd
+                  ==> mld_sign_sig_44 sk mu rnd t = word 0) /\
+   (!sk mu rnd t. ~mld_sign_ok_65 sk mu rnd
+                  ==> mld_sign_sig_65 sk mu rnd t = word 0) /\
+   (!sk mu rnd t. ~mld_sign_ok_87 sk mu rnd
+                  ==> mld_sign_sig_87 sk mu rnd t = word 0)`,
+  REWRITE_TAC[mld_sign_sig_44; mld_sign_ok_44; mld_sign_sig_65;
+              mld_sign_ok_65; mld_sign_sig_87; mld_sign_ok_87;
+              mld_sign_sig] THEN
+  SIMP_TAC[]);;
+
+let API_SIGN_OK_DECLASS_44 = prove
+ (`!sk mu rnd.
+        mld_sign_ok_44 sk mu rnd <=>
+        ?n. FST(SND(mld_sign_declass_44 sk mu rnd n)) = 13`,
+  REWRITE_TAC[mld_sign_ok_44; mld_sign_declass_44; API_SIGN_OK_DECLASS] THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+let API_SIGN_OK_DECLASS_65 = prove
+ (`!sk mu rnd.
+        mld_sign_ok_65 sk mu rnd <=>
+        ?n. FST(SND(mld_sign_declass_65 sk mu rnd n)) = 18`,
+  REWRITE_TAC[mld_sign_ok_65; mld_sign_declass_65; API_SIGN_OK_DECLASS] THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+let API_SIGN_OK_DECLASS_87 = prove
+ (`!sk mu rnd.
+        mld_sign_ok_87 sk mu rnd <=>
+        ?n. FST(SND(mld_sign_declass_87 sk mu rnd n)) = 24`,
+  REWRITE_TAC[mld_sign_ok_87; mld_sign_declass_87; API_SIGN_OK_DECLASS] THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+(* ------------------------------------------------------------------------- *)
+(* The branches on the result of a test of a 32-bit value x (e.g. hashalg)   *)
+(* against 0, whose RIP the simulation leaves as a conditional: API_PC_TAC   *)
+(* cs rewrites it with the case facts for the terms of cs (word_zx x = word  *)
+(* 0, or its negation, as assumptions). API_TERMINATES_TAC proves the        *)
+(* condition of the termination hypothesis from the case facts and adds its  *)
+(* conclusions, and API_RET_TAC proves a result given by a conditional.      *)
+(* ------------------------------------------------------------------------- *)
+
+let API_PC_TAC cs =
+  W(fun (asl,w) ->
+    let ths = mapfilter (fun (_,th) ->
+      let c = concl th in
+      if mem c cs || (is_neg c && mem (rand c) cs) then th else fail()) asl in
+    RULE_ASSUM_TAC(fun th ->
+      if can (term_match [] `read RIP s = (if b then x else y):int64`)
+             (concl th)
+      then REWRITE_RULE(WORD_ZX_ZX_32_64_32::VAL_EQ_0::ths) th else th));;
+
+let API_TERMINATES_TAC =
+  FIRST_X_ASSUM(fun th ->
+    let c = concl th in
+    if is_imp c && can (find_term (fun t ->
+         is_const t && name_of t = "mld_matrix_terminates")) (rand c)
+    then SUBGOAL_THEN (lhand c) (STRIP_ASSUME_TAC o MP th) THENL
+          [ASM_REWRITE_TAC[] THEN NO_TAC; ALL_TAC]
+    else NO_TAC);;
+
+let API_RET_TAC =
+  TRY(COND_CASES_TAC THEN ASM_REWRITE_TAC[ADD_EQ_0; ARITH_EQ]) THEN
+  CONV_TAC WORD_REDUCE_CONV;;
