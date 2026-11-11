@@ -53,6 +53,12 @@
  *     |                                          |
  *
  * READY identifies the protocol version, architecture, and state-word count.
+ * Further words on the READY line are metadata. A word features=f1,f2,...
+ * lists the optional CPU features with which the executor runs instructions
+ * (possibly none, as in "features="), using the names of Linux's
+ * /proc/cpuinfo: "flags" on x86 (such as avx2, bmi2, adx, abm, vpclmulqdq)
+ * and "Features" on AArch64 (such as aes, pmull, sha2, sha3, sha512). An
+ * executor that omits the word leaves its features unknown.
  * RUN carries hexadecimal instruction bytes followed by unsigned decimal
  * state words. OK returns the resulting state. TRAP reports an execution
  * trap, while ERROR reports a malformed request or executor failure.
@@ -70,6 +76,7 @@ type cosim_executor =
    cosim_arch: string;
    cosim_state_words: int;
    cosim_metadata: string list;
+   cosim_features: string list option;
    cosim_pid: int;
    cosim_from_child: in_channel;
    cosim_to_child: out_channel;
@@ -216,6 +223,19 @@ let cosim_spawn command =
       pid,Unix.in_channel_of_descr parent_from_child,
           Unix.out_channel_of_descr parent_to_child;;
 
+(* The value of a features=... metadata word, and its list of names *)
+
+let cosim_features_metadata metadata =
+  let prefix = "features=" in
+  let n = String.length prefix in
+  List.map (fun w -> String.sub w n (String.length w - n))
+    (List.filter (fun w -> String.length w >= n && String.sub w 0 n = prefix)
+       metadata);;
+
+let cosim_feature_list s =
+  List.filter (fun f -> f <> "")
+    (List.map String.trim (String.split_on_char ',' s));;
+
 let start_cosim_executor env_name default_command expected_arch expected_words =
   let command =
     match cosim_getenv env_name with
@@ -228,6 +248,7 @@ let start_cosim_executor env_name default_command expected_arch expected_words =
      cosim_arch = expected_arch;
      cosim_state_words = expected_words;
      cosim_metadata = [];
+     cosim_features = None;
      cosim_pid = pid;
      cosim_from_child = from_child;
      cosim_to_child = to_child;
@@ -253,7 +274,19 @@ let start_cosim_executor env_name default_command expected_arch expected_words =
     fail ("instruction-executor state-word count " ^
           string_of_int state_words ^
           " does not match " ^ string_of_int expected_words);
-  let executor = { partial with cosim_metadata = metadata } in
+  let features =
+    match cosim_features_metadata metadata with
+    | [] -> None
+    | [s] -> Some (cosim_feature_list s)
+    | _ -> fail ("instruction executor reports its features twice: " ^
+                 command) in
+  Printf.printf "Instruction executor %s features: %s\n%!" arch
+    (match features with
+     | Some [] -> "none"
+     | Some names -> String.concat ", " names
+     | None -> "unknown");
+  let executor =
+    { partial with cosim_metadata = metadata; cosim_features = features } in
   at_exit (fun () -> close_cosim_executor executor);
   executor;;
 
@@ -286,3 +319,65 @@ let cosim_execute executor code state =
   | "ERROR"::details ->
       failwith ("instruction executor error: " ^ String.concat " " details)
   | _ -> failwith "malformed instruction-executor response";;
+
+(*
+ * An instruction that needs a CPU feature the executor lacks would trap
+ * with SIGILL, or, for TZCNT and LZCNT on x86 without BMI1 and LZCNT, run
+ * as BSF and BSR and give different results. Where the simulator knows
+ * which features the decoded instructions need, and the executor reports
+ * its features (see READY above), a case that needs one the executor lacks
+ * is therefore skipped and reported without being run. A trap from a case
+ * that is run, including a SIGILL, is a failure if the model accepts the
+ * instructions.
+ *)
+
+let cosim_executor_features executor = executor.cosim_features;;
+
+(* The required features missing from those reported, if any are reported *)
+
+let cosim_lacking_features features required =
+  match features with
+  | Some names -> List.filter (fun f -> not (List.mem f names)) required
+  | None -> [];;
+
+let cosim_skip_reason missing =
+  "executor lacks " ^ String.concat ", " missing;;
+
+(* The features that the executor lacks for the last case skipped, if any.
+   It is set by cosim_skip_lacking and read and reset by cosim_take_skipped,
+   so that a simulator need not thread the reason for a skip through the
+   functions that generate its cases. *)
+
+let cosim_skipped_features = ref ([]:string list);;
+
+(* Whether to skip a case whose instructions need the required features (in
+   any order, possibly repeated): true if the executor reports its features
+   and lacks some of them, which are recorded for cosim_take_skipped *)
+
+let cosim_skip_lacking features required =
+  match cosim_lacking_features features (setify required) with
+  | [] -> false
+  | missing -> cosim_skipped_features := missing; true;;
+
+(* The features recorded for the case just run, nonempty if it was
+   skipped, resetting the record for the next case *)
+
+let cosim_take_skipped () =
+  let missing = !cosim_skipped_features in
+  cosim_skipped_features := [];
+  missing;;
+
+(* Report a skipped case, and at the end of a run, warn if at least as many
+   cases were skipped as tested, since the run then checks much less than
+   it seems to: the executor probably lacks features that most cases need *)
+
+let cosim_report_skipped missing decoded =
+  Format.print_string("SKIPPED (" ^ cosim_skip_reason missing ^ "): " ^
+                      string_of_term decoded);
+  Format.print_newline();;
+
+let cosim_warn_skipped skipped tested =
+  if skipped > 0 && skipped >= tested then
+    Printf.printf
+      "Warning: %d cases were skipped for lack of CPU features, but only %d \
+       were tested\n%!" skipped tested;;

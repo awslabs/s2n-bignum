@@ -2833,6 +2833,43 @@ let ORTHOGONAL_COMPONENTS_RULE2 tm1 tm2 =
   ORTHOGONAL_COMPONENTS_CONV(list_mk_icomb "orthogonal_components" [tm1;tm2]);;
 
 (* ------------------------------------------------------------------------- *)
+(* Evaluate ~(c = d) for two constant word components c and d such as        *)
+(* registers, e.g. in the guard of arm_LDP. Distinct components must be      *)
+(* orthogonal, and at least one of them a valid component (the other may be  *)
+(* a constant component such as a zero register).                            *)
+(* ------------------------------------------------------------------------- *)
+
+let DISTINCT_REGISTERS_CONV =
+  let pth = prove
+   (`!(c:(S,A)component) d (y:A) z.
+        orthogonal_components c d /\ valid_component c /\ ~(y = z)
+        ==> ~(c = d)`,
+    REWRITE_TAC[orthogonal_components] THEN
+    MESON_TAC[READ_WRITE_VALID_COMPONENT]) in
+  let qth = prove
+   (`!(c:(S,A)component) d (y:A) z.
+        orthogonal_components c d /\ valid_component d /\ ~(y = z)
+        ==> ~(c = d)`,
+    MESON_TAC[pth; ORTHOGONAL_COMPONENTS_SYM]) in
+  let cache = ref [] in
+  fun tm ->
+    match tm with
+      Comb(Const("~",_),Comb(Comb(Const("=",_),c),d))
+        when is_const c && is_const d ->
+        if c = d then REWRITE_CONV[] tm else
+        (try assoc (c,d) !cache with Failure _ ->
+          let oth = ORTHOGONAL_COMPONENTS_RULE2 c d in
+          let nty = hd(snd(dest_type(el 1 (snd(dest_type(type_of c)))))) in
+          let neth = INST_TYPE [nty,`:N`] WORD_NE_10 in
+          let th =
+            try MATCH_MP pth (CONJ oth (CONJ (VALID_COMPONENT_RULE c) neth))
+            with Failure _ ->
+              MATCH_MP qth (CONJ oth (CONJ (VALID_COMPONENT_RULE d) neth)) in
+          let eth = EQT_INTRO th in
+          cache := ((c,d),eth) :: !cache; eth)
+    | _ -> failwith "DISTINCT_REGISTERS_CONV";;
+
+(* ------------------------------------------------------------------------- *)
 (* Slightly ad hoc tactic to do "simple" linear arithmetic: pick out         *)
 (* "environmental" assumptions with relevance to natural number arithmetic.  *)
 (* ------------------------------------------------------------------------- *)

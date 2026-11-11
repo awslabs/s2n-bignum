@@ -4,6 +4,7 @@
 # instruction sequence against a serialized machine state.
 #
 # Usage: armsimulate instruction-words [state-word ...]
+#        armsimulate --features
 #
 # The instruction words are passed to the assembler's .inst directive.
 # The state words initialize the registers, flags, vectors, and stack
@@ -11,6 +12,11 @@
 #
 # Internally, the script preprocesses template.S with -DICODE, assembles
 # it, links it with simulator.c, and runs the resulting temporary binary.
+#
+# With --features instead, the script builds cpufeatures.c and runs it in
+# the same way, printing the optional CPU features with which the cases
+# run (see cpufeatures.c). This takes the run settings into account, so an
+# emulator reports the features of its emulated CPU rather than the host's.
 #
 # The build and execution commands can be changed with:
 #
@@ -38,6 +44,25 @@ COSIM_RUN_ARGS="${COSIM_RUN_ARGS:-}"
 read -r -a link_flags <<< "$COSIM_LDFLAGS"
 read -r -a run_args <<< "$COSIM_RUN_ARGS"
 
+# Run a built binary with the remaining arguments, directly or through
+# the configured runner, and return its exit status.
+run_binary() {
+  if [[ -n "$COSIM_RUN" ]]; then
+    "$COSIM_RUN" "${run_args[@]}" "$@"
+  else
+    "$@"
+  fi
+}
+
+if [[ "${1:-}" == "--features" ]]; then
+  temp="$( mktemp )"
+  "$COSIM_CC" "${link_flags[@]}" -o $temp cpufeatures.c &&
+    run_binary "$temp"
+  status=$?
+  rm -f $temp
+  exit $status
+fi
+
 # Use one temporary basename for the executable, preprocessed assembly,
 # and object file produced for this case.
 temp="$( mktemp )"
@@ -53,11 +78,10 @@ temp_o="${temp}.o"
 
 # Drop the instruction argument before forwarding the state words.
 shift 1
-if [[ -n "$COSIM_RUN" ]]; then
-  "$COSIM_RUN" "${run_args[@]}" "$temp" "$@"
-else
-  "$temp" "$@"
-fi
+run_binary "$temp" "$@"
+status=$?
 
-# Remove all per-case build products.
+# Remove all per-case build products, keeping the exit status: after a
+# trap it is 128 plus the signal number, which the executor reports.
 rm -f $temp $temp_s $temp_o
+exit $status

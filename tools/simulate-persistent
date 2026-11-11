@@ -82,11 +82,41 @@ hex_to_code_argument() {
   CODE_ARGUMENT="${units[*]}"
 }
 
+# Ask the legacy command which optional CPU features the cases run with,
+# and set FEATURES_METADATA to the corresponding READY metadata word, such
+# as " features=aes,sha3". The legacy command builds and runs a probe as
+# it would a case, so an emulator reports its emulated CPU. If the probe
+# fails or prints something unexpected, leave the word out, so that the
+# client treats the features as unknown rather than absent.
+FEATURES_METADATA=""
+
+probe_features() {
+  local output
+
+  if ! output="$("$LEGACY" --features </dev/null)"; then
+    printf 'simulate-persistent: cannot determine %s CPU features\n' \
+      "$ARCH" >&2
+    return
+  fi
+  if [[ ! "$output" =~ ^[a-z0-9_\ ]*$ ]]; then
+    printf 'simulate-persistent: malformed %s CPU features: %s\n' \
+      "$ARCH" "$output" >&2
+    return
+  fi
+  # Join the names with commas. This uses the positional parameters rather
+  # than an array, since bash before 4.4 rejects an empty array under set -u
+  # and the probe may report no features.
+  set -- $output
+  local IFS=,
+  FEATURES_METADATA=" features=$*"
+}
+
 run_persistent() {
   local line code child_status
   local -a request output_words
 
-  printf 'READY 1 %s %d\n' "$ARCH" "$STATE_WORDS"
+  probe_features
+  printf 'READY 1 %s %d%s\n' "$ARCH" "$STATE_WORDS" "$FEATURES_METADATA"
   while IFS= read -r line; do
     read -r -a request <<< "$line"
     case "${request[0]:-}" in
