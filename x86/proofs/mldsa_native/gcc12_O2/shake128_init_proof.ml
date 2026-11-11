@@ -10,6 +10,7 @@
 
 needs "x86/proofs/mldsa_native/gcc12_O2/shake128_init_spec.ml";;
 needs "x86/proofs/utils/mldsa_native_full.ml";;
+needs "x86/proofs/utils/mldsa_native_memset.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness, constant time and memory safety. The state is zeroed by the  *)

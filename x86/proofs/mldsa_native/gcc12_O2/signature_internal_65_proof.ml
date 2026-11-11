@@ -2033,7 +2033,7 @@ let SIGN65_START_TAC =
     `word(pc + got_memset):int64,8`; `ea:int64,el:num`;
     `word_add stackpointer (word 73061):int64,8`;
     `word_add stackpointer (word 73069):int64,16`] THEN
-  SIGN_ALIGNED_BOT_TAC [5318; 7430; 18694; 36102; 73014] THEN
+  REALIGN_ALIGNED_TAC [5318; 7430; 18694; 36102; 73014] THEN
   MAP_EVERY (fun (n,r) -> ENSURES_PRESERVED_TAC n r)
    [("rbx_init",`RBX`); ("rbp_init",`RBP`); ("r12_init",`R12`);
     ("r13_init",`R13`); ("r14_init",`R14`); ("r15_init",`R15`)] THEN

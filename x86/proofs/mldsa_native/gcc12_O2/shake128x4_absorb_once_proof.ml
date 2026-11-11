@@ -10,6 +10,7 @@
 
 needs "x86/proofs/mldsa_native/gcc12_O2/shake128x4_absorb_once_spec.ml";;
 needs "x86/proofs/utils/mldsa_native_full.ml";;
+needs "x86/proofs/utils/mldsa_native_memset.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness, constant time and memory safety. The memset of the 800 bytes *)

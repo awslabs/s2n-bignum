@@ -27,9 +27,12 @@
 (* states the frame of the goal with these two regions in place of the N     *)
 (* bytes, and REALIGN_NONOV_TAC l rs gives the region (bot,l) apart from     *)
 (* each region of rs. After the AND, REALIGN_RSP_TAC puts its value in RSP.  *)
-(* The events must not depend on bot and delta, which are not arguments of   *)
-(* the events function, so REALIGN_UNBOT_TAC expands them before the events  *)
-(* are matched at the end of each part of a proof.                           *)
+(* REALIGN_ALIGNED_TAC offs gives aligned 16 (word_add bot (word off)) for   *)
+(* each off in offs (with k - 31 - off a multiple of 16), for the aligned    *)
+(* SSE loads and stores in the frame. The events must not depend on bot and  *)
+(* delta, which are not arguments of the events function, so                 *)
+(* REALIGN_UNBOT_TAC expands them before the events are matched at the end   *)
+(* of each part of a proof.                                                  *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mldsa_native_full.ml";;
@@ -145,6 +148,39 @@ let REALIGN_RSP_TAC =
     then RULE_ASSUM_TAC(fun th' ->
            if free_in `RSP` (concl th') then REWRITE_RULE[th] th' else th')
     else NO_TAC);;
+
+(*** The alignment of word_add bot (word off), from that of the AND ***)
+
+let REALIGN_ALIGNED_AND = prove
+ (`!x:int64. aligned 32 (word_and x (word 18446744073709551584))`,
+  GEN_TAC THEN REWRITE_TAC[aligned; DIMINDEX_64] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIVIDES_CONV) THEN REWRITE_TAC[DIVIDES_MOD] THEN
+  REWRITE_TAC[ARITH_RULE `32 = 2 EXP 5`] THEN
+  REWRITE_TAC[GSYM VAL_WORD_AND_MASK_WORD] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[VAL_EQ_0] THEN CONV_TAC WORD_BLAST);;
+
+let REALIGN_ALIGNED_TAC offs =
+  let pat = `word_and (word_add stackpointer (word k))
+                      (word 18446744073709551584):int64 = x` in
+  FIRST_ASSUM(fun th ->
+    if not (can (term_match [] pat) (concl th)) then NO_TAC else
+    let ba = rhs(concl th) in
+    let a = dest_small_numeral(rand(rand ba)) in
+    let th32 = REWRITE_RULE[th]
+                (SPEC (lhand(lhs(concl th))) REALIGN_ALIGNED_AND) in
+    let th16 = MP (MP (ISPECL [`16`; `32`; ba] ALIGNED_WORD_WEAKEN)
+                      (EQT_ELIM(DIVIDES_CONV `16 divides 32`))) th32 in
+    MAP_EVERY (fun off ->
+      let d = mk_small_numeral(a - off) in
+      let bo = subst [mk_small_numeral off,`n:num`]
+                 `word_add bot (word n):int64` in
+      let sub = mk_comb(mk_comb(`word_sub:int64->int64->int64`,ba),
+                        mk_comb(`word:num->int64`,d)) in
+      let eq = WORD_RULE(mk_eq(bo,sub)) in
+      let c = NORMALIZE_ALIGNED_WORD_CONV
+               (mk_comb(`aligned 16:int64->bool`,sub)) in
+      ASSUME_TAC(REWRITE_RULE[SYM eq] (EQ_MP (SYM c) th16))) offs);;
 
 (*** Expanding bot and delta, for matching the events ***)
 

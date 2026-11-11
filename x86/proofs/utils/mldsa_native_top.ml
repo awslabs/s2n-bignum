@@ -9,10 +9,8 @@
 (* memory as lists of bytes and as 128-bit chunks, and the folds of the      *)
 (* constant-time comparison mld_ct_memcmp (ct.h), which the code vectorizes  *)
 (* 16 bytes at a time, accumulating the OR and the XOR of the differences;   *)
-(* the alignment of the buffers in a stack frame aligned with AND RSP,-32    *)
-(* (see utils/mldsa_native_realign.ml), for the aligned SSE loads and stores *)
-(* of the code and its callees; and the proof of the FULL theorems for       *)
-(* mld_sign_pk_from_sk (PFS_FULL_TAC).                                       *)
+(* and the proof of the FULL theorems for mld_sign_pk_from_sk                *)
+(* (PFS_FULL_TAC).                                                           *)
 (* ========================================================================= *)
 
 needs "common/mldsa_native_sign.ml";;
@@ -20,46 +18,9 @@ needs "x86/proofs/utils/mldsa_native_full.ml";;
 needs "x86/proofs/utils/mldsa_native_realign.ml";;
 needs "x86/proofs/utils/mldsa_native_scalar.ml";;
 needs "x86/proofs/utils/mldsa_native_hints.ml";;
+needs "x86/proofs/utils/mldsa_native_memset.ml";;
 needs "x86/proofs/utils/mldsa_native_wrap.ml";;
 needs "x86/proofs/utils/keccak_fips202.ml";;
-
-(* ------------------------------------------------------------------------- *)
-(* The value of the AND is a multiple of 32, and after REALIGN_TAC it is     *)
-(* word_add bot (word a); REALIGN_ALIGNED_TAC offs proves                    *)
-(* aligned 16 (word_add bot (word off)) for each off in offs, for which      *)
-(* a - off must be a multiple of 16.                                         *)
-(* ------------------------------------------------------------------------- *)
-
-let REALIGN_ALIGNED_AND = prove
- (`!x:int64. aligned 32 (word_and x (word 18446744073709551584))`,
-  GEN_TAC THEN REWRITE_TAC[aligned; DIMINDEX_64] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIVIDES_CONV) THEN REWRITE_TAC[DIVIDES_MOD] THEN
-  REWRITE_TAC[ARITH_RULE `32 = 2 EXP 5`] THEN
-  REWRITE_TAC[GSYM VAL_WORD_AND_MASK_WORD] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[VAL_EQ_0] THEN CONV_TAC WORD_BLAST);;
-
-let REALIGN_ALIGNED_TAC offs =
-  let pat = `word_and (word_add stackpointer (word k))
-                      (word 18446744073709551584):int64 = x` in
-  FIRST_ASSUM(fun th ->
-    if not (can (term_match [] pat) (concl th)) then NO_TAC else
-    let ba = rhs(concl th) in
-    let a = dest_small_numeral(rand(rand ba)) in
-    let th32 = REWRITE_RULE[th]
-                (SPEC (lhand(lhs(concl th))) REALIGN_ALIGNED_AND) in
-    let th16 = MP (MP (ISPECL [`16`; `32`; ba] ALIGNED_WORD_WEAKEN)
-                      (EQT_ELIM(DIVIDES_CONV `16 divides 32`))) th32 in
-    MAP_EVERY (fun off ->
-      let d = mk_small_numeral(a - off) in
-      let bo = subst [mk_small_numeral off,`n:num`]
-                 `word_add bot (word n):int64` in
-      let sub = mk_comb(mk_comb(`word_sub:int64->int64->int64`,ba),
-                        mk_comb(`word:num->int64`,d)) in
-      let eq = WORD_RULE(mk_eq(bo,sub)) in
-      let c = NORMALIZE_ALIGNED_WORD_CONV
-               (mk_comb(`aligned 16:int64->bool`,sub)) in
-      ASSUME_TAC(REWRITE_RULE[SYM eq] (EQ_MP (SYM c) th16))) offs);;
 
 (* ------------------------------------------------------------------------- *)
 (* Bytes of memory as lists of bytes and as 128-bit chunks, and the folds of *)
@@ -917,8 +878,8 @@ let PFS_EXIT_TAC prm =
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN
     REALIGN_UNBOT_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;
     SIMD_STEPS_TAC exec (115--125) THEN
-    GLUE_MEMSET_PREP_TAC THEN GLUE_MEMSET_STEP_TAC exec 126 THEN
-    GLUE_MEMSET_DONE_TAC `pk:int64` prm.pfs_pk "s126" THEN
+    MEMSET_PREP_TAC THEN MEMSET_STEP_TAC exec 126 THEN
+    MEMSET_DONE_TAC `pk:int64` prm.pfs_pk "s126" THEN
     SIMD_STEPS_TAC exec (127--159) THEN
     FIRST_ASSUM(fun th ->
       if can (term_match [] (subst [pkl,`n:num`]

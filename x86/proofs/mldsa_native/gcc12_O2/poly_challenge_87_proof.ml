@@ -12,6 +12,7 @@
 
 needs "x86/proofs/mldsa_native/gcc12_O2/poly_challenge_87_spec.ml";;
 needs "x86/proofs/utils/mldsa_native_challenge.ml";;
+needs "x86/proofs/utils/mldsa_native_memset.ml";;
 
 let POLY_CHALLENGE_87_EXEC = MLDSA_NATIVE_POLY_CHALLENGE_87_GCC12_O2_EXEC;;
 

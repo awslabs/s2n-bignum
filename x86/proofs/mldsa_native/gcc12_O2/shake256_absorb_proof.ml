@@ -11,6 +11,7 @@
 needs "x86/proofs/mldsa_native/gcc12_O2/shake256_absorb_spec.ml";;
 needs "x86/proofs/utils/mldsa_native_absorb.ml";;
 needs "x86/proofs/utils/mldsa_native_full.ml";;
+needs "x86/proofs/utils/mldsa_native_memset.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The blocks of the stream X = 2^(8 * pos) * M. Iteration k of the loop     *)

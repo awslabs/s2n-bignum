@@ -90,20 +90,6 @@ let MLD_SEED_INPUT = prove
   REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
-let MLD_ALIGNED_16_32 = prove
- (`(!x:int64. aligned 16 x <=> word_and x (word 15) = word 0) /\
-   (!x:int64. aligned 32 x <=> word_and x (word 31) = word 0)`,
-  CONJ_TAC THEN GEN_TAC THEN REWRITE_TAC[aligned; DIMINDEX_64] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIVIDES_CONV) THEN REWRITE_TAC[] THENL
-   [MP_TAC(ISPECL [`x:int64`; `4`] (CONJUNCT1 WORD_AND_MASK_WORD));
-    MP_TAC(ISPECL [`x:int64`; `5`] (CONJUNCT1 WORD_AND_MASK_WORD))] THEN
-  CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN DISCH_THEN SUBST1_TAC THEN
-  REWRITE_TAC[DIVIDES_MOD; GSYM VAL_EQ_0; VAL_WORD; DIMINDEX_64] THEN
-  SIMP_TAC[MOD_LT; ARITH_RULE `x MOD 16 < 16`; ARITH_RULE `x MOD 32 < 32`;
-           ARITH_RULE `x < 16 ==> x < 2 EXP 64`;
-           ARITH_RULE `x < 32 ==> x < 2 EXP 64`]);;
-
 (* ------------------------------------------------------------------------- *)
 (* The tactics for the x86 code of mld_polyvec_matrix_expand_eager, which    *)
 (* aligns its frame to 32 bytes (see utils/mldsa_native_realign.ml), so that *)

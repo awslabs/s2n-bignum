@@ -14,6 +14,7 @@ needs "x86/proofs/mldsa_native/gcc12_O2/keccak_absorb_once_x4_spec.ml";;
 needs "x86/proofs/utils/keccak_fips202.ml";;
 needs "x86/proofs/utils/mldsa_native_absorb.ml";;
 needs "x86/proofs/utils/mldsa_native_full.ml";;
+needs "x86/proofs/utils/mldsa_native_memset.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The four states zero at the start, as 200 bytes each.                     *)

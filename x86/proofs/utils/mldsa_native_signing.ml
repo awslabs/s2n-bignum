@@ -22,6 +22,7 @@ needs "x86/proofs/utils/mldsa_native_full.ml";;
 needs "x86/proofs/utils/mldsa_native_polyvec.ml";;
 needs "x86/proofs/utils/mldsa_native_libc.ml";;
 needs "x86/proofs/utils/mldsa_native_keccak.ml";;
+needs "x86/proofs/utils/mldsa_native_memset.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The number of attempts made, from what is declassified: one more than the *)
@@ -477,13 +478,10 @@ let SIGN_Y_KAPPA = prove
 
 (* ------------------------------------------------------------------------- *)
 (* The alignment of the buffers in the frame, which the code aligns to 32    *)
-(* bytes with AND RSP,-32 (see utils/mldsa_native_realign.ml), for the       *)
-(* aligned SSE stores of the code and the callees that need it: an address   *)
-(* aligned to 16 bytes stays so when a multiple of 16 is added, and after    *)
-(* REALIGN_TAC, which gives the value word_add bot (word a) of the AND, a    *)
-(* multiple of 32, SIGN_ALIGNED_BOT_TAC offs proves aligned 16 (word_add bot *)
-(* (word off)) for each off in offs, for which a - off must be a multiple of *)
-(* 16, as REALIGN_ALIGNED_TAC of utils/mldsa_native_top.ml does.             *)
+(* bytes with AND RSP,-32 (see REALIGN_ALIGNED_TAC of                        *)
+(* utils/mldsa_native_realign.ml), for the aligned SSE stores of the code    *)
+(* and the callees that need it: an address aligned to 16 bytes stays so     *)
+(* when a multiple of 16 is added.                                           *)
 (* ------------------------------------------------------------------------- *)
 
 let SIGN_ALIGNED_ADD = prove
@@ -500,37 +498,6 @@ let SIGN_ALIGNED_OFF = prove
         ==> aligned 16 (word_add b (word(off + 1024 * k)))`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SIGN_ALIGNED_ADD THEN
   ASM_REWRITE_TAC[] THEN CONV_TAC NUMBER_RULE);;
-
-let SIGN_ALIGNED_AND = prove
- (`!x:int64. aligned 32 (word_and x (word 18446744073709551584))`,
-  GEN_TAC THEN REWRITE_TAC[aligned; DIMINDEX_64] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIVIDES_CONV) THEN REWRITE_TAC[DIVIDES_MOD] THEN
-  REWRITE_TAC[ARITH_RULE `32 = 2 EXP 5`] THEN
-  REWRITE_TAC[GSYM VAL_WORD_AND_MASK_WORD] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[VAL_EQ_0] THEN CONV_TAC WORD_BLAST);;
-
-let SIGN_ALIGNED_BOT_TAC offs =
-  let pat = `word_and (word_add stackpointer (word k))
-                      (word 18446744073709551584):int64 = x` in
-  FIRST_ASSUM(fun th ->
-    if not (can (term_match [] pat) (concl th)) then NO_TAC else
-    let ba = rhs(concl th) in
-    let a = dest_small_numeral(rand(rand ba)) in
-    let th32 = REWRITE_RULE[th]
-                (SPEC (lhand(lhs(concl th))) SIGN_ALIGNED_AND) in
-    let th16 = MP (MP (ISPECL [`16`; `32`; ba] ALIGNED_WORD_WEAKEN)
-                      (EQT_ELIM(DIVIDES_CONV `16 divides 32`))) th32 in
-    MAP_EVERY (fun off ->
-      let d = mk_small_numeral(a - off) in
-      let bo = subst [mk_small_numeral off,`n:num`]
-                 `word_add bot (word n):int64` in
-      let sub = mk_comb(mk_comb(`word_sub:int64->int64->int64`,ba),
-                        mk_comb(`word:num->int64`,d)) in
-      let eq = WORD_RULE(mk_eq(bo,sub)) in
-      let c = NORMALIZE_ALIGNED_WORD_CONV
-               (mk_comb(`aligned 16:int64->bool`,sub)) in
-      ASSUME_TAC(REWRITE_RULE[SYM eq] (EQ_MP (SYM c) th16))) offs);;
 
 (*** The values of the registers rs in state s, e.g. the YMM registers   ***)
 (*** whose low 128 bits the code loads (keeping the high bits), as       ***)

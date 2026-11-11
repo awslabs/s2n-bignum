@@ -540,6 +540,7 @@ let SAMPLING_EL_LIST_CONV =
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/utils/mldsa_native_keccak.ml";;
+needs "x86/proofs/utils/mldsa_native_memset.ml";;
 
 let SAMPLING_NUM_OF_BYTELIST_APPEND = prove
  (`!l1 l2. num_of_bytelist (APPEND l1 l2) =
@@ -1136,70 +1137,11 @@ let SAMPLING_SUBWORD_JOIN_128 = prove
   REPEAT GEN_TAC THEN BITBLAST_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* The alignment of the frames that the code aligns to 32 bytes with AND     *)
-(* RSP,-32 (see utils/mldsa_native_realign.ml), for the SSE stores that need *)
-(* it (MOVAPS): SAMPLING_ALIGNED_BOT_TAC k off w, after REALIGN_TAC k,       *)
-(* proves aligned w (word_add bot (word off)), for w = 16 or 32 and off with *)
-(* k - 31 - off a multiple of 32, e.g. for the value of RSP after the frame  *)
-(* is reserved, from which the simulation decides the alignment of the       *)
-(* addresses that are multiples of 16 above it. SAMPLING_GHOST_REGS_TAC rs s *)
-(* names the values of the registers rs in state s, e.g. the YMM registers   *)
-(* whose low 128 bits the code loads, so that the facts about their new      *)
-(* values, which keep the high bits, are not discarded as facts about an old *)
-(* state.                                                                    *)
+(* SAMPLING_GHOST_REGS_TAC rs s names the values of the registers rs in      *)
+(* state s, e.g. the YMM registers whose low 128 bits the code loads, so     *)
+(* that the facts about their new values, which keep the high bits, are not  *)
+(* discarded as facts about an old state.                                    *)
 (* ------------------------------------------------------------------------- *)
-
-let SAMPLING_ALIGNED_16_32 = prove
- (`(!x:int64. aligned 16 x <=> word_and x (word 15) = word 0) /\
-   (!x:int64. aligned 32 x <=> word_and x (word 31) = word 0)`,
-  CONJ_TAC THEN GEN_TAC THEN REWRITE_TAC[aligned; DIMINDEX_64] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIVIDES_CONV) THEN REWRITE_TAC[] THENL
-   [MP_TAC(ISPECL [`x:int64`; `4`] (CONJUNCT1 WORD_AND_MASK_WORD));
-    MP_TAC(ISPECL [`x:int64`; `5`] (CONJUNCT1 WORD_AND_MASK_WORD))] THEN
-  CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN DISCH_THEN SUBST1_TAC THEN
-  REWRITE_TAC[DIVIDES_MOD; GSYM VAL_EQ_0; VAL_WORD; DIMINDEX_64] THEN
-  SIMP_TAC[MOD_LT; ARITH_RULE `x MOD 16 < 16`; ARITH_RULE `x MOD 32 < 32`;
-           ARITH_RULE `x < 16 ==> x < 2 EXP 64`;
-           ARITH_RULE `x < 32 ==> x < 2 EXP 64`] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  SIMP_TAC[MOD_LT; MOD_LT_EQ; ARITH_EQ;
-           ARITH_RULE `x MOD 16 < 18446744073709551616`;
-           ARITH_RULE `x MOD 32 < 18446744073709551616`]);;
-
-let SAMPLING_ALIGNED_AND = prove
- (`!x:int64. aligned 32 (word_and x (word 18446744073709551584))`,
-  REWRITE_TAC[SAMPLING_ALIGNED_16_32] THEN BITBLAST_TAC);;
-
-let SAMPLING_ALIGNED_BOT_TAC k off w =
-  let a = k - 31 in
-  let tm n = mk_comb(mk_comb(`word_add:int64->int64->int64`,`bot:int64`),
-                     mk_comb(`word:num->int64`,mk_small_numeral n)) in
-  let goal = mk_comb(mk_comb(`aligned:num->int64->bool`,mk_small_numeral w),
-                     tm off) in
-  let split = mk_eq(tm a,
-    mk_comb(mk_comb(`word_add:int64->int64->int64`,tm off),
-            mk_comb(`word:num->int64`,mk_small_numeral(a - off)))) in
-  let kt = mk_comb(mk_comb(`word_add:int64->int64->int64`,
-                           `stackpointer:int64`),
-                   mk_comb(`word:num->int64`,mk_small_numeral k)) in
-  SUBGOAL_THEN goal ASSUME_TAC THENL
-   [MP_TAC(SPEC kt SAMPLING_ALIGNED_AND) THEN
-    FIRST_ASSUM(fun th ->
-      if can (term_match [] `word_and (word_add stackpointer (word k))
-                              (word 18446744073709551584):int64 = x`)
-             (concl th)
-      then REWRITE_TAC[th] else NO_TAC) THEN
-    SUBGOAL_THEN split SUBST1_TAC THENL
-     [REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
-      CONV_TAC NUM_REDUCE_CONV;
-      ALL_TAC] THEN
-    CONV_TAC(LAND_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN
-    (if w = 32 then REWRITE_TAC[] else
-     MATCH_ACCEPT_TAC(MATCH_MP (SPECL [mk_small_numeral w; `32`]
-       ALIGNED_WORD_WEAKEN) (EQT_ELIM(DIVIDES_CONV
-         (mk_binary "num_divides" (mk_small_numeral w,`32`))))));
-    ALL_TAC];;
 
 let SAMPLING_GHOST_REGS_TAC rs s =
   let sv = mk_var(s,`:x86state`) in
@@ -1251,9 +1193,9 @@ let SAMPLING_NONCE16_TAC kappa =
 (* SAMPLING_ALIGNED_FROM_TAC base off0 w offs adds aligned w (word_add base  *)
 (* (word off)) to the assumptions for each off in offs, given aligned w      *)
 (* (word_add base (word off0)) there and w dividing off - off0, e.g. for the *)
-(* addresses of the SSE stores in a frame aligned with                       *)
-(* SAMPLING_ALIGNED_BOT_TAC, in the form in which the simulation decides     *)
-(* their alignment.                                                          *)
+(* addresses of the SSE stores in a frame aligned to 32 bytes, from the      *)
+(* alignment that REALIGN_ALIGNED_TAC (utils/mldsa_native_realign.ml) gives, *)
+(* in the form in which the simulation decides their alignment.              *)
 (* ------------------------------------------------------------------------- *)
 
 let SAMPLING_ALIGNED_FROM_TAC base off0 w offs =

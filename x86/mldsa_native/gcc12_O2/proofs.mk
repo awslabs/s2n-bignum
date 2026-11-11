@@ -297,6 +297,7 @@ mldsa_native/gcc12_O2/compute_pack_t0_t1_44_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   ../common/mldsa_native_sampling.ml \
@@ -350,6 +351,7 @@ mldsa_native/gcc12_O2/compute_pack_t0_t1_65_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/keccak_fips202.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_hints.ml \
@@ -407,6 +409,7 @@ mldsa_native/gcc12_O2/compute_pack_t0_t1_87_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   ../common/mldsa_native_sampling.ml \
@@ -454,6 +457,7 @@ mldsa_native/gcc12_O2/fips204.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_image.ml \
@@ -645,6 +649,7 @@ mldsa_native/gcc12_O2/fips204_sign.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/mldsa_native/gcc12_O2/poly_uniform_eta_4x_44_spec.ml \
@@ -849,6 +854,7 @@ mldsa_native/gcc12_O2/fips204_verify.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/mldsa_native/gcc12_O2/poly_uniform_eta_4x_44_spec.ml \
@@ -931,6 +937,7 @@ mldsa_native/gcc12_O2/keccak_absorb_once_x4_proof.native: \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -1036,6 +1043,7 @@ mldsa_native/gcc12_O2/keypair_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native.ml \
@@ -1108,6 +1116,7 @@ mldsa_native/gcc12_O2/keypair_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native.ml \
@@ -1186,6 +1195,7 @@ mldsa_native/gcc12_O2/keypair_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native.ml \
@@ -1254,6 +1264,7 @@ mldsa_native/gcc12_O2/keypair_internal_44_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_polyvec.ml \
@@ -1326,6 +1337,7 @@ mldsa_native/gcc12_O2/keypair_internal_65_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   ../common/mldsa_native_prefix.ml \
   ../common/mldsa_native_sampling.ml \
@@ -1405,6 +1417,7 @@ mldsa_native/gcc12_O2/keypair_internal_87_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   ../common/mldsa_native_prefix.ml \
   ../common/mldsa_native_sampling.ml \
@@ -1657,6 +1670,7 @@ mldsa_native/gcc12_O2/link.native: \
   proofs/mldsa_native/gcc12_O2/fips204_verify.ml \
   proofs/mldsa_native/gcc12_O2/shake256_init_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
   proofs/utils/keccak_fips202.ml \
@@ -1907,6 +1921,7 @@ mldsa_native/gcc12_O2/pack_sig_c_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   ../common/mldsa_native_rounding.ml \
@@ -1922,6 +1937,7 @@ mldsa_native/gcc12_O2/pack_sig_c_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   ../common/mldsa_native_rounding.ml \
@@ -1937,6 +1953,7 @@ mldsa_native/gcc12_O2/pack_sig_c_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   ../common/mldsa_native_rounding.ml \
@@ -1954,6 +1971,7 @@ mldsa_native/gcc12_O2/pack_sig_h_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_packing.ml \
@@ -1970,6 +1988,7 @@ mldsa_native/gcc12_O2/pack_sig_h_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_packing.ml \
@@ -1986,6 +2005,7 @@ mldsa_native/gcc12_O2/pack_sig_h_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_packing.ml \
@@ -2001,6 +2021,7 @@ mldsa_native/gcc12_O2/pack_sig_z_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
@@ -2017,6 +2038,7 @@ mldsa_native/gcc12_O2/pack_sig_z_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
@@ -2033,6 +2055,7 @@ mldsa_native/gcc12_O2/pack_sig_z_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
@@ -2048,6 +2071,7 @@ mldsa_native/gcc12_O2/pack_sk_rho_key_tr_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   ../common/mldsa_native_rounding.ml \
@@ -2063,6 +2087,7 @@ mldsa_native/gcc12_O2/pack_sk_rho_key_tr_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   ../common/mldsa_native_rounding.ml \
@@ -2078,6 +2103,7 @@ mldsa_native/gcc12_O2/pack_sk_rho_key_tr_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   ../common/mldsa_native_rounding.ml \
@@ -2103,6 +2129,7 @@ mldsa_native/gcc12_O2/pk_from_sk_44_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   ../common/mldsa_native_sampling.ml \
@@ -2168,6 +2195,7 @@ mldsa_native/gcc12_O2/pk_from_sk_65_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   ../common/mldsa_native_sampling.ml \
@@ -2239,6 +2267,7 @@ mldsa_native/gcc12_O2/pk_from_sk_87_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   ../common/mldsa_native_sampling.ml \
@@ -2309,6 +2338,7 @@ mldsa_native/gcc12_O2/poly_caddq_proof.native: \
 mldsa_native/gcc12_O2/poly_challenge_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_challenge_44_spec.ml \
   proofs/utils/mldsa_native_challenge.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   ../common/mldsa_native_challenge.ml \
@@ -2322,13 +2352,13 @@ mldsa_native/gcc12_O2/poly_challenge_44_proof.native: \
   proofs/utils/mldsa_native_hash.ml \
   proofs/utils/mldsa_native_prefix.ml \
   proofs/utils/mldsa_native_realign.ml \
+  proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_fips202.ml \
   proofs/utils/mldsa_native_keccak.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
-  proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_absorb.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_libc.ml \
@@ -2338,6 +2368,7 @@ mldsa_native/gcc12_O2/poly_challenge_44_proof.native: \
 mldsa_native/gcc12_O2/poly_challenge_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_challenge_65_spec.ml \
   proofs/utils/mldsa_native_challenge.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   ../common/mldsa_native_challenge.ml \
@@ -2351,13 +2382,13 @@ mldsa_native/gcc12_O2/poly_challenge_65_proof.native: \
   proofs/utils/mldsa_native_hash.ml \
   proofs/utils/mldsa_native_prefix.ml \
   proofs/utils/mldsa_native_realign.ml \
+  proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_fips202.ml \
   proofs/utils/mldsa_native_keccak.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
-  proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_absorb.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_libc.ml \
@@ -2367,6 +2398,7 @@ mldsa_native/gcc12_O2/poly_challenge_65_proof.native: \
 mldsa_native/gcc12_O2/poly_challenge_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/poly_challenge_87_spec.ml \
   proofs/utils/mldsa_native_challenge.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   ../common/mldsa_native_challenge.ml \
@@ -2380,13 +2412,13 @@ mldsa_native/gcc12_O2/poly_challenge_87_proof.native: \
   proofs/utils/mldsa_native_hash.ml \
   proofs/utils/mldsa_native_prefix.ml \
   proofs/utils/mldsa_native_realign.ml \
+  proofs/utils/mldsa_native.ml \
   ../common/mldsa_native_fips202.ml \
   proofs/utils/mldsa_native_keccak.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_xor_bytes_spec.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_permute_spec.ml \
   proofs/mldsa_native/gcc12_O2/keccakf1600_extract_bytes_spec.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
-  proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_absorb.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_libc.ml \
@@ -2538,6 +2570,7 @@ mldsa_native/gcc12_O2/poly_uniform_4x_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -2568,6 +2601,7 @@ mldsa_native/gcc12_O2/poly_uniform_eta_4x_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -2598,6 +2632,7 @@ mldsa_native/gcc12_O2/poly_uniform_eta_4x_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -2628,6 +2663,7 @@ mldsa_native/gcc12_O2/poly_uniform_eta_4x_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -2658,6 +2694,7 @@ mldsa_native/gcc12_O2/poly_uniform_gamma1_4x_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -2688,6 +2725,7 @@ mldsa_native/gcc12_O2/poly_uniform_gamma1_4x_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -2718,6 +2756,7 @@ mldsa_native/gcc12_O2/poly_uniform_gamma1_4x_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -2749,6 +2788,7 @@ mldsa_native/gcc12_O2/poly_uniform_gamma1_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -2776,6 +2816,7 @@ mldsa_native/gcc12_O2/poly_uniform_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -2958,6 +2999,7 @@ mldsa_native/gcc12_O2/polyvec_matrix_expand_eager_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   ../common/mldsa_native_fips202.ml \
@@ -2994,6 +3036,7 @@ mldsa_native/gcc12_O2/polyvec_matrix_expand_eager_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native.ml \
@@ -3033,6 +3076,7 @@ mldsa_native/gcc12_O2/polyvec_matrix_expand_eager_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   ../common/mldsa_native_fips202.ml \
@@ -3559,6 +3603,7 @@ mldsa_native/gcc12_O2/polyvecl_uniform_gamma1_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -3592,6 +3637,7 @@ mldsa_native/gcc12_O2/polyvecl_uniform_gamma1_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -3629,6 +3675,7 @@ mldsa_native/gcc12_O2/polyvecl_uniform_gamma1_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -3899,6 +3946,7 @@ mldsa_native/gcc12_O2/rej_eta_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -3915,6 +3963,7 @@ mldsa_native/gcc12_O2/rej_eta_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -3931,6 +3980,7 @@ mldsa_native/gcc12_O2/rej_eta_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -3947,6 +3997,7 @@ mldsa_native/gcc12_O2/rej_uniform_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_absorb.ml \
   ../common/mldsa_native_fips202.ml \
   ../common/mldsa_native_packing.ml \
@@ -3958,6 +4009,7 @@ mldsa_native/gcc12_O2/shake128_absorb_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake128_absorb_spec.ml \
   proofs/utils/mldsa_native_absorb.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -3985,6 +4037,7 @@ mldsa_native/gcc12_O2/shake128_finalize_proof.native: \
 mldsa_native/gcc12_O2/shake128_init_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake128_init_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -3996,6 +4049,7 @@ mldsa_native/gcc12_O2/shake128_init_proof.native: \
 mldsa_native/gcc12_O2/shake128_release_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake128_release_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -4024,6 +4078,7 @@ mldsa_native/gcc12_O2/shake128_squeeze_proof.native: \
 mldsa_native/gcc12_O2/shake128x4_absorb_once_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake128x4_absorb_once_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -4049,6 +4104,7 @@ mldsa_native/gcc12_O2/shake128x4_init_proof.native: \
 mldsa_native/gcc12_O2/shake128x4_release_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake128x4_release_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -4075,6 +4131,7 @@ mldsa_native/gcc12_O2/shake256_absorb_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake256_absorb_spec.ml \
   proofs/utils/mldsa_native_absorb.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -4102,6 +4159,7 @@ mldsa_native/gcc12_O2/shake256_finalize_proof.native: \
 mldsa_native/gcc12_O2/shake256_init_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake256_init_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -4134,6 +4192,7 @@ mldsa_native/gcc12_O2/shake256_proof.native: \
 mldsa_native/gcc12_O2/shake256_release_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake256_release_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -4162,6 +4221,7 @@ mldsa_native/gcc12_O2/shake256_squeeze_proof.native: \
 mldsa_native/gcc12_O2/shake256x4_absorb_once_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake256x4_absorb_once_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -4187,6 +4247,7 @@ mldsa_native/gcc12_O2/shake256x4_init_proof.native: \
 mldsa_native/gcc12_O2/shake256x4_release_proof.native: \
   proofs/mldsa_native/gcc12_O2/shake256x4_release_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/mldsa_native/relative.ml \
   proofs/utils/mldsa_native_image.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -4218,6 +4279,7 @@ mldsa_native/gcc12_O2/sig_unpack_hints_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/mldsa_native_polyvec.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
@@ -4233,6 +4295,7 @@ mldsa_native/gcc12_O2/sig_unpack_hints_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/mldsa_native_polyvec.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
@@ -4248,6 +4311,7 @@ mldsa_native/gcc12_O2/sig_unpack_hints_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/mldsa_native_polyvec.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
@@ -4271,6 +4335,7 @@ mldsa_native/gcc12_O2/signature_44_proof.native: \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
@@ -4360,6 +4425,7 @@ mldsa_native/gcc12_O2/signature_65_proof.native: \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
@@ -4456,6 +4522,7 @@ mldsa_native/gcc12_O2/signature_87_proof.native: \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
@@ -4571,6 +4638,7 @@ mldsa_native/gcc12_O2/signature_extmu_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native.ml \
@@ -4658,6 +4726,7 @@ mldsa_native/gcc12_O2/signature_extmu_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native.ml \
@@ -4752,6 +4821,7 @@ mldsa_native/gcc12_O2/signature_extmu_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native.ml \
@@ -4836,6 +4906,7 @@ mldsa_native/gcc12_O2/signature_internal_44_proof.native: \
   proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
@@ -4920,6 +4991,7 @@ mldsa_native/gcc12_O2/signature_internal_65_proof.native: \
   proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
@@ -5011,6 +5083,7 @@ mldsa_native/gcc12_O2/signature_internal_87_proof.native: \
   proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
@@ -5072,6 +5145,7 @@ mldsa_native/gcc12_O2/signature_pre_hash_internal_44_proof.native: \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
@@ -5161,6 +5235,7 @@ mldsa_native/gcc12_O2/signature_pre_hash_internal_65_proof.native: \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
@@ -5257,6 +5332,7 @@ mldsa_native/gcc12_O2/signature_pre_hash_internal_87_proof.native: \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_sampling.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
@@ -5359,6 +5435,7 @@ mldsa_native/gcc12_O2/signature_pre_hash_shake256_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native.ml \
@@ -5449,6 +5526,7 @@ mldsa_native/gcc12_O2/signature_pre_hash_shake256_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native.ml \
@@ -5546,6 +5624,7 @@ mldsa_native/gcc12_O2/signature_pre_hash_shake256_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/layout.ml \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native.ml \
@@ -5615,6 +5694,7 @@ mldsa_native/gcc12_O2/unpack_pk_t1_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
@@ -5631,6 +5711,7 @@ mldsa_native/gcc12_O2/unpack_pk_t1_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
@@ -5647,6 +5728,7 @@ mldsa_native/gcc12_O2/unpack_pk_t1_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2/layout.ml \
@@ -5669,6 +5751,7 @@ mldsa_native/gcc12_O2/unpack_sk_44_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2/polyeta_unpack_44_spec.ml \
@@ -5692,6 +5775,7 @@ mldsa_native/gcc12_O2/unpack_sk_65_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2/polyeta_unpack_65_spec.ml \
@@ -5715,6 +5799,7 @@ mldsa_native/gcc12_O2/unpack_sk_87_proof.native: \
   proofs/mldsa_native/gcc12_O2/libmldsa.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_memset.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2/polyeta_unpack_87_spec.ml \
@@ -5769,6 +5854,7 @@ mldsa_native/gcc12_O2/verify_44_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -5843,6 +5929,7 @@ mldsa_native/gcc12_O2/verify_65_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -5923,6 +6010,7 @@ mldsa_native/gcc12_O2/verify_87_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -5996,6 +6084,7 @@ mldsa_native/gcc12_O2/verify_extmu_44_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6069,6 +6158,7 @@ mldsa_native/gcc12_O2/verify_extmu_65_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6148,6 +6238,7 @@ mldsa_native/gcc12_O2/verify_extmu_87_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6233,6 +6324,7 @@ mldsa_native/gcc12_O2/verify_internal_44_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6306,6 +6398,7 @@ mldsa_native/gcc12_O2/verify_internal_65_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6383,6 +6476,7 @@ mldsa_native/gcc12_O2/verify_internal_87_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6444,6 +6538,7 @@ mldsa_native/gcc12_O2/verify_pre_hash_internal_44_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6518,6 +6613,7 @@ mldsa_native/gcc12_O2/verify_pre_hash_internal_65_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6598,6 +6694,7 @@ mldsa_native/gcc12_O2/verify_pre_hash_internal_87_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6658,6 +6755,7 @@ mldsa_native/gcc12_O2/verify_pre_hash_shake256_44_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6734,6 +6832,7 @@ mldsa_native/gcc12_O2/verify_pre_hash_shake256_65_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -6816,6 +6915,7 @@ mldsa_native/gcc12_O2/verify_pre_hash_shake256_87_proof.native: \
   proofs/utils/mldsa_native_realign.ml \
   proofs/utils/mldsa_native_scalar.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_memset.ml \
   proofs/utils/mldsa_native_wrap.ml \
   proofs/utils/keccak_fips202.ml \
   proofs/utils/mldsa_native_absorb.ml \
