@@ -4,7 +4,8 @@
  *)
 
 (******************************************************************************
-  Verify an RV32I routine that swaps two 32-bit memory words.
+  Verify RV32I routines that swap two 32-bit memory words and copy a byte,
+  and show that FENCE changes only the PC.
 ******************************************************************************)
 
 needs "riscv/proofs/base.ml";;
@@ -48,5 +49,57 @@ let MEMORY_CORRECT = prove
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
   RISCV_STEPS_TAC MEMORY_EXEC (1--4) THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[]);;
+
+(* lbu t0,0(a0); sb t0,0(a1). Byte accesses have no alignment condition. *)
+let bytecopy_mc = define_word_list "bytecopy_mc"
+ `[word 0x83; word 0x42; word 0x05; word 0x00;
+   word 0x23; word 0x80; word 0x55; word 0x00]:byte list`;;
+
+let BYTECOPY_EXEC = RISCV_MK_EXEC_RULE bytecopy_mc;;
+
+let BYTECOPY_CORRECT = prove
+ (`!pc (p0:int32) p1 x e.
+    nonoverlapping ((word pc):int32,LENGTH bytecopy_mc) (p1,1)
+    ==> ensures riscv
+      (\s. aligned_bytes_loaded s (word pc) bytecopy_mc /\
+           read PC s = word pc /\
+           read A0 s = p0 /\
+           read A1 s = p1 /\
+           read (memory :> bytes8 p0) s = x /\
+           read events s = e)
+      (\s. read PC s = word (pc + 8) /\
+           read T0 s = word_zx x /\
+           read (memory :> bytes8 p1) s = x /\
+           read events s =
+           CONS (EventStore (p1,1)) (CONS (EventLoad (p0,1)) e))
+      (MAYCHANGE [PC] ,, MAYCHANGE [T0] ,,
+       MAYCHANGE [memory :> bytes8 p1] ,, MAYCHANGE [events])`,
+  REWRITE_TAC[fst BYTECOPY_EXEC] THEN
+  REPEAT STRIP_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  RISCV_STEPS_TAC BYTECOPY_EXEC (1--2) THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  CONV_TAC WORD_BLAST);;
+
+(* fence rw,rw *)
+let fence_mc = define_word_list "fence_mc"
+ `[word 0x0f; word 0x00; word 0x30; word 0x03]:byte list`;;
+
+let FENCE_EXEC = RISCV_MK_EXEC_RULE fence_mc;;
+
+let FENCE_CORRECT = prove
+ (`!pc.
+    ensures riscv
+      (\s. aligned_bytes_loaded s (word pc) fence_mc /\
+           read PC s = word pc)
+      (\s. read PC s = word (pc + 4))
+      (MAYCHANGE [PC])`,
+  REWRITE_TAC[fst FENCE_EXEC] THEN
+  GEN_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  RISCV_STEPS_TAC FENCE_EXEC [1] THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[]);;
