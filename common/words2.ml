@@ -458,3 +458,88 @@ let msimd16 = new_definition
 
 let simd32 = new_definition
  `simd32 (f: N word -> N word -> N word) = simd2 (simd16 f)`;;
+
+(* ------------------------------------------------------------------------- *)
+(* Variant of BITBLAST_THEN (Library/words.ml) whose BIT_WORD_CONV           *)
+(* traversals use MEMOIZED_TOP_DEPTH_CONV. Bit-blasting expands each word    *)
+(* equation into one equivalence per bit, and these share the same word      *)
+(* subterms. BIT_WORD_CONV does not depend on the context, so one memoizer   *)
+(* can serve all bits: the two memoizers of the main traversal are created   *)
+(* afresh for each goal, and the one in BITBLAST_EQUATION for each equation. *)
+(* Otherwise this is a copy of BITBLAST_THEN as of HOL Light commit 6090208, *)
+(* except for dest_finty(dest_word_ty ty) below, because Library/bitmatch.ml *)
+(* redefines dest_word_ty to return the word size as a type.                 *)
+(* ------------------------------------------------------------------------- *)
+
+let MEMOIZED_BITBLAST_THEN =
+  let carrying tm =
+    match tm with
+      Comb(Comb(Const("word_add",_),_),_) -> true
+    | Comb(Comb(Const("word_sub",_),_),_) -> true
+    | Comb(Const("word_neg",_),
+           Comb(Const("word",_),
+                Comb(Const("bitval",_),_))) -> false
+    | Comb(Const("word_neg",_),_) -> true
+    | _ -> false
+  and BITWISE_EXPAND_CONV =
+    GEN_REWRITE_CONV I [WORD_EQ_BITS_ALT] THENC
+    BINDER_CONV(LAND_CONV(RAND_CONV(!word_SIZE_CONV))) THENC
+    EXPAND_CASES_CONV in
+  let BITBLAST_EQUATION th =
+    let ths = CONJUNCTS(CONV_RULE BITWISE_EXPAND_CONV th) in
+    end_itlist CONJ (map (CONV_RULE
+     (LAND_CONV
+       (BIT_WORD_CONV THENC SUBS_CONV[th] THENC
+        MEMOIZED_TOP_DEPTH_CONV
+          (BIT_WORD_CONV o check (not o carrying o rand))) THENC
+      SYM_CONV THENC
+      RAND_CONV(REWRITE_CONV[]))) ths) in
+  let wordbits =
+    let bit_tm = `bit:num->(N)word->bool` and n_ty = `:N` in
+    let wordbits_var tm =
+      try let ty = type_of tm in
+          let n = dest_finty(dest_word_ty ty) in
+          let btm = inst[mk_finty n,n_ty] bit_tm in
+          map (fun i -> mk_comb(mk_comb(btm,mk_small_numeral i),tm))
+              (0--(Num.int_of_num n-1))
+      with Failure _ -> [] in
+    let rec interleave lis =
+      match lis with
+        [] -> []
+      | []::rst -> interleave rst
+      | (h::t)::rst -> h::(interleave(rst @ [t])) in
+    fun tm -> interleave (map wordbits_var (frees tm)) in
+  fun tac ->
+    REPEAT(GEN_TAC ORELSE CONJ_TAC) THEN
+    REPEAT((COND_CASES_TAC THEN POP_ASSUM MP_TAC) ORELSE
+           (CHANGED_TAC(CONV_TAC(ONCE_DEPTH_CONV let_CONV)))) THEN
+    W(fun (_,w) -> let vars = wordbits w in
+      let bit_conv = MEMOIZED_TOP_DEPTH_CONV BIT_WORD_CONV
+      and bit_noncarry_conv =
+        MEMOIZED_TOP_DEPTH_CONV
+          (BIT_WORD_CONV o check (not o carrying o rand)) in
+      CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+      REWRITE_TAC[word_UINT_MAX; WORD_INT_MIN; WORD_INT_MAX] THEN
+      CONV_TAC(DEPTH_CONV
+       (WORD_RED_CONV ORELSEC NUM_RED_CONV ORELSEC DIMINDEX_CONV)) THEN
+      CONV_TAC(ONCE_DEPTH_CONV WORD_INEQ_RELATION_EXPAND_CONV) THEN
+      GEN_REWRITE_TAC TOP_DEPTH_CONV
+       [WORD_ODDPARITY_POPCOUNT; WORD_EVENPARITY_POPCOUNT;
+        WORD_CTZ_EMULATION_POPCOUNT; GSYM WORD_CTZ_REVERSEFIELDS] THEN
+      CONV_TAC(ONCE_DEPTH_CONV WORD_POPCOUNT_EXPAND_CONV) THEN
+      CONV_TAC(ONCE_DEPTH_CONV WORDIFY_WORD_CONV) THEN
+      CONV_TAC(DEPTH_CONV(WORD_RED_CONV ORELSEC NUM_RED_CONV)) THEN
+      CONV_TAC(ONCE_DEPTH_CONV VAL_MOD_OR_DIV_CONV) THEN
+      CONV_TAC(DEPTH_CONV
+       (WORDIFY_ATOM_CONV ORELSEC IWORDIFY_ATOM_CONV)) THEN
+      CONV_TAC(DEPTH_CONV WORD_MUL_EXPAND_CONV) THEN
+      REPEAT(W(fun (_,w) ->
+        let t = hd(sort free_in (find_terms carrying w)) in
+        let v = genvar(type_of t) in
+         ABBREV_TAC(mk_eq(v,t)))) THEN
+      CONV_TAC(ONCE_DEPTH_CONV
+       (BITWISE_EXPAND_CONV THENC bit_conv)) THEN
+      CONV_TAC bit_noncarry_conv THEN
+      TRY(POP_ASSUM_LIST
+       (MP_TAC o end_itlist CONJ o map BITBLAST_EQUATION o rev)) THEN
+      REWRITE_TAC[] THEN tac vars);;

@@ -14,7 +14,7 @@
 (* and not at every load of the GHASH and POLYVAL theories.                  *)
 (* ========================================================================= *)
 
-needs "Library/rabin_test.ml";;
+needs "Library/finite_fields.ml";;
 needs "common/polyval.ml";;
 
 (* ------------------------------------------------------------------------- *)
