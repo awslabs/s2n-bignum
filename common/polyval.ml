@@ -441,7 +441,7 @@ let LHS_POLY_LEMMA = prove
   SUBGOAL_THEN `poly_deg bool_ring
     (ring_pow bool_poly (poly_var bool_ring one) 128) = 128`
     (fun th -> REWRITE_TAC[th]) THENL
-  [REWRITE_TAC[bool_poly; POLY_DEG_VAR_POW; BOOL_RING] THEN
+  [REWRITE_TAC[bool_poly; GSYM POLY_CLAUSES; POLY_DEG_VAR_POW; BOOL_RING] THEN
    CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
   SUBGOAL_THEN `poly_of_word(word_zx (r:128 word) : 256 word) = poly_of_word r`
     SUBST1_TAC THENL
