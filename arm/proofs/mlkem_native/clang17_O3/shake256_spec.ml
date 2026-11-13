@@ -13,7 +13,7 @@
 (* whole image (see libmlkem.ml), using the theorems for                     *)
 (* mlk_keccak_absorb_once, mlkem_keccakf1600_permute and                     *)
 (* mlkem_keccakf1600_extract_bytes in the image. The result is shake256 of   *)
-(* common/fips202.ml.                                                        *)
+(* common/fips202/fips202.ml.                                                *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -278,7 +278,7 @@ let SHAKE256_EXIT_TAC =
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The input is a list of bytes, and the outlen bytes of  *)
 (* the output, as a number, are the first outlen bytes of shake256 in        *)
-(* common/fips202.ml. Each iteration of the loop extracts                    *)
+(* common/fips202/fips202.ml. Each iteration of the loop extracts            *)
 (* MIN (outlen - 136 * i) 136 bytes. As for mlkem_poly_compress_d4, the      *)
 (* address of the stack guard is read from the GOT, and the stack is the 304 *)
 (* bytes of the function and the 256 used by mlk_keccak_absorb_once below    *)
@@ -288,7 +288,7 @@ let SHAKE256_EXIT_TAC =
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The input is a list of bytes, and the outlen bytes of  *)
 (* the output, as a number, are the first outlen bytes of shake256 in        *)
-(* common/fips202.ml. Each iteration of the loop extracts                    *)
+(* common/fips202/fips202.ml. Each iteration of the loop extracts            *)
 (* MIN (outlen - 136 * i) 136 bytes. As for mlkem_poly_compress_d4, the      *)
 (* address of the stack guard is read from the GOT. The stack is the 64      *)
 (* bytes of the saved registers, 256 bytes aligned to 32 bytes for the state *)

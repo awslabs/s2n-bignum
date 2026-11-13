@@ -148,10 +148,10 @@ let GETNOISE_INPUT = assume_spec GETNOISE_INPUT_STMT;;
 (* sd, and the nonce is the low byte of the third argument. As for PRF and   *)
 (* SamplePolyCBD with eta = 2 in FIPS 203, the result is the centered        *)
 (* binomial distribution of mlkem_poly_cbd2 applied to the first 128 bytes   *)
-(* of shake256 of the seed followed by the nonce, as in common/fips202.ml.   *)
-(* The stack guard is handled as for mlkem_poly_compress_d4, and the stack   *)
-(* is the 240 bytes of the function and the 560 used by mlkem_shake256 below *)
-(* them.                                                                     *)
+(* of shake256 of the seed followed by the nonce, as in                      *)
+(* common/fips202/fips202.ml. The stack guard is handled as for              *)
+(* mlkem_poly_compress_d4, and the stack is the 240 bytes of the function    *)
+(* and the 560 used by mlkem_shake256 below them.                            *)
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SHAKE256_TAC =

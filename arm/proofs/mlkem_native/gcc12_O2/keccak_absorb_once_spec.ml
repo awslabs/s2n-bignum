@@ -269,8 +269,8 @@ let ABSORB_CASE_FLAG_TAC tm =
     else NO_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As in keccak_sponge in common/fips202.ml, the message  *)
-(* of mlen bytes is a number M, and the padded message is the number         *)
+(* Correctness proof. As in keccak_sponge in common/fips202/fips202.ml, the  *)
+(* message of mlen bytes is a number M, and the padded message is the number *)
 (* P = M + 2 EXP (8 * mlen) * num_of_bytelist(keccak_pad r p mlen), with     *)
 (* mlen DIV r + 1 blocks of r bytes, where p < 128 is the first byte of the  *)
 (* padding (0x1F for SHAKE and 0x06 for SHA-3). The result is the state      *)
@@ -278,8 +278,8 @@ let ABSORB_CASE_FLAG_TAC tm =
 (* message, XORed with the last block of P, so that keccak_f1600 of it is    *)
 (* keccak_absorb r P (mlen DIV r + 1), the state in keccak_sponge. In        *)
 (* mlkem-native, that last permutation is the first step of squeezing. The   *)
-(* stack is the 64 bytes of the function and the 192 used by the             *)
-(* permutation below them.                                                   *)
+(* stack is the 64 bytes of the function and the 192 used by the permutation *)
+(* below them.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =

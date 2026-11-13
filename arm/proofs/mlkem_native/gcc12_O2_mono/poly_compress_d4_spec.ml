@@ -164,12 +164,12 @@ let COMPRESS_D4_BODY_TAC =
   ARM_STEPS_TAC MLKEM_NATIVE_POLY_COMPRESS_D4_GCC12_O2_MONO_EXEC (77--94);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_compress 4 in common/fips203.ml, the      *)
-(* result for a coefficient x in [0,3329) is the integer closest to          *)
-(* 16 * x / 3329, rounding up on ties, modulo 16, i.e.                       *)
-(* ((32 * x + 3329) DIV 6658) MOD 16, and as for mlkem_encode 4 the 4-bit    *)
-(* values are put together little-endian. Like the C code, this relies on    *)
-(* the coefficients being in [0,3329).                                       *)
+(* Correctness proof. As for mlkem_compress 4 in common/fips203/fips203.ml,  *)
+(* the result for a coefficient x in [0,3329) is the integer closest to 16 * *)
+(* x / 3329, rounding up on ties, modulo 16, i.e. ((32 * x + 3329) DIV 6658) *)
+(* MOD 16, and as for mlkem_encode 4 the 4-bit values are put together       *)
+(* little-endian. Like the C code, this relies on the coefficients being in  *)
+(* [0,3329).                                                                 *)
 (*                                                                           *)
 (* The code reads the address of the stack guard from the global offset      *)
 (* table (GOT) in the loaded image, which is outside the code and read-only  *)

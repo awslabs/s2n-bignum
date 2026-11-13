@@ -13,7 +13,7 @@
 (* keeps the round counter 2 * i in a register, and spills several lanes to  *)
 (* the stack. It is verified in the whole image (see libmlkem.ml), with the  *)
 (* same theorems as for gcc, including those for the state as a 1600-bit     *)
-(* word, with keccak_f1600 of common/fips202.ml.                             *)
+(* word, with keccak_f1600 of common/fips202/fips202.ml.                     *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -841,7 +841,7 @@ let MLKEM_NATIVE_KECCAKF1600_PERMUTE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
 
 (* ------------------------------------------------------------------------- *)
 (* The same for the state as a 1600-bit word, read by wbytes, with the       *)
-(* permutation keccak_f1600 of common/fips202.ml (see                        *)
+(* permutation keccak_f1600 of common/fips202/fips202.ml (see                *)
 (* utils/keccak_fips202.ml), and tactics for callers, which carry the state  *)
 (* between calls as 200 bytes.                                               *)
 (* ------------------------------------------------------------------------- *)

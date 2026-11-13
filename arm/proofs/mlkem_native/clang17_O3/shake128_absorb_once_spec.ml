@@ -9,13 +9,13 @@
 (* compiled by clang 17 with -O3 (see mlkem_native/README.md), which calls   *)
 (* mlk_keccak_absorb_once with the rate 168 of SHAKE128 and the first byte   *)
 (* 0x1F of its padding, as a tail call. As mlk_keccak_absorb_once has a      *)
-(* stack guard, whose address it reads from the GOT, the specifications      *)
-(* have the GOT entry as a precondition and require that neither it nor the  *)
-(* guard overlaps the state or the stack, as for the corresponding           *)
-(* functions of gcc12_O3. The stack is the 80 bytes of mlk_keccak_absorb_once *)
-(* and the 208 used by mlkem_keccakf1600_permute below them. It is verified  *)
-(* in the whole image (see libmlkem.ml), using the theorems for              *)
-(* mlk_keccak_absorb_once in the image.                                      *)
+(* stack guard, whose address it reads from the GOT, the specifications have *)
+(* the GOT entry as a precondition and require that neither it nor the guard *)
+(* overlaps the state or the stack, as for the corresponding functions of    *)
+(* gcc12_O3. The stack is the 80 bytes of mlk_keccak_absorb_once and the 208 *)
+(* used by mlkem_keccakf1600_permute below them. It is verified in the whole *)
+(* image (see libmlkem.ml), using the theorems for mlk_keccak_absorb_once in *)
+(* the image.                                                                *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -40,9 +40,9 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_EXEC =
 (* ------------------------------------------------------------------------- *)
 (* Combined correctness, constant-time and memory safety proof, using that   *)
 (* of mlk_keccak_absorb_once, with r = 168 and p = 0x1F as in shake128 in    *)
-(* common/fips202.ml. The state is the first 200 bytes of the context. The   *)
-(* theorems of correctness and of constant time and memory safety are        *)
-(* derived from this one.                                                    *)
+(* common/fips202/fips202.ml. The state is the first 200 bytes of the        *)
+(* context. The theorems of correctness and of constant time and memory      *)
+(* safety are derived from this one.                                         *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;

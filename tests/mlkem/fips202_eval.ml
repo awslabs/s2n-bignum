@@ -8,7 +8,7 @@
 (* to check the definitions against standard test vectors.                   *)
 (* ========================================================================= *)
 
-needs "common/fips202.ml";;
+needs "common/fips202/properties/fips202_properties.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Round constants as explicit words.                                        *)

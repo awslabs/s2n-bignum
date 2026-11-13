@@ -117,11 +117,11 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O3_EXEC =
 (* ------------------------------------------------------------------------- *)
 (* Combined correctness, constant-time and memory safety proof, as for       *)
 (* mlk_keccak_absorb_once with r = 168 and p = 0x1F as in shake128 in        *)
-(* common/fips202.ml, and the copy of the stack guard, which is checked at   *)
-(* the end. The state is the first 200 bytes of the context. The stack is    *)
-(* the 64 bytes of the function and the 192 used by the permutation below    *)
-(* them. The theorems of correctness and of constant time and memory safety  *)
-(* are derived from this one.                                                *)
+(* common/fips202/fips202.ml, and the copy of the stack guard, which is      *)
+(* checked at the end. The state is the first 200 bytes of the context. The  *)
+(* stack is the 64 bytes of the function and the 192 used by the permutation *)
+(* below them. The theorems of correctness and of constant time and memory   *)
+(* safety are derived from this one.                                         *)
 (* ------------------------------------------------------------------------- *)
 
 let S128_ABSORB_UNABBREV_TAC =

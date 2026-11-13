@@ -184,9 +184,10 @@ let CHECK_SK_COMPARE_TAC =
 (* Correctness proof. The decapsulation key of 1632 bytes at sk contains the *)
 (* encapsulation key of 800 bytes at offset 768, given as a list of bytes    *)
 (* ek, and its hash h at offset 1568, as a number. The result is 0 if h is   *)
-(* the SHA3-256 hash of ek, as in common/fips202.ml, and -5 otherwise. The   *)
-(* stack guard is handled as for mlkem_sha3_256, and the stack is the 96     *)
-(* bytes of the function and the 496 used by mlkem_sha3_256 below them.      *)
+(* the SHA3-256 hash of ek, as in common/fips202/fips202.ml, and -5          *)
+(* otherwise. The stack guard is handled as for mlkem_sha3_256, and the      *)
+(* stack is the 96 bytes of the function and the 496 used by mlkem_sha3_256  *)
+(* below them.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SHA3_256_TAC =

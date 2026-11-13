@@ -32,9 +32,9 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_EXEC =
    [layout_range "mlkem_shake128_absorb_once"];;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. The result is as for mlk_keccak_absorb_once, with      *)
-(* r = 168 and p = 0x1F as in shake128 in common/fips202.ml. The state is    *)
-(* the first 200 bytes of the context.                                       *)
+(* Correctness proof. The result is as for mlk_keccak_absorb_once, with r =  *)
+(* 168 and p = 0x1F as in shake128 in common/fips202/fips202.ml. The state   *)
+(* is the first 200 bytes of the context.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =

@@ -139,9 +139,10 @@ let D10_FIELD_TAC k =
      REWRITE_TAC[ADD_CLAUSES] THEN CONV_TAC NUM_REDUCE_CONV);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_decompress 10 in common/fips203.ml, the   *)
-(* result for a 10-bit field y is the integer closest to 3329 * y / 1024,    *)
-(* rounding up on ties, i.e. (3329 * y + 512) DIV 1024.                      *)
+(* Correctness proof. As for mlkem_decompress 10 in                          *)
+(* common/fips203/fips203.ml, the result for a 10-bit field y is the integer *)
+(* closest to 3329 * y / 1024, rounding up on ties, i.e. (3329 * y + 512)    *)
+(* DIV 1024.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT_STMT =

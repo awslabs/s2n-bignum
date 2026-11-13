@@ -500,11 +500,11 @@ let LOCAL_POLY_TOMSG_TAC =
 (* Correctness proof, assuming the contract for memset. The ciphertext ct of *)
 (* 1568 bytes is at c and the decryption key dk of 1536 bytes at sk, and the *)
 (* message of 32 bytes written at m is kpke_decrypt mlkem1024 dk ct in       *)
-(* common/fips203.ml, for any dk (FIPS 203 decodes s modulo q, while the     *)
-(* code multiplies by the 12-bit fields, which are congruent). The stack is  *)
-(* the 6240 bytes of the function and the 128 used by its callees below them. *)
-(* The proof is by cases on whether the stack pointer is a multiple of 32,   *)
-(* which gives the address b of the buffers, at offsets 0 (s), 2048 (u),     *)
+(* common/fips203/fips203.ml, for any dk (FIPS 203 decodes s modulo q, while *)
+(* the code multiplies by the 12-bit fields, which are congruent). The stack *)
+(* is the 6240 bytes of the function and the 128 used by its callees below   *)
+(* them. The proof is by cases on whether the stack pointer is a multiple of *)
+(* 32, which gives the address b of the buffers, at offsets 0 (s), 2048 (u), *)
 (* 4096 (the multiplication cache), 5120 (the product) and 5632 (v).         *)
 (* ------------------------------------------------------------------------- *)
 
@@ -659,8 +659,8 @@ let MLKEM_NATIVE_INDCPA_DEC_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT =
 (* Constant-time and memory safety proof, assuming the corresponding         *)
 (* contract for memset. The events depend only on the addresses of the       *)
 (* arguments, the stack and the image, not on the ciphertext or the key. The *)
-(* buffers are kept at stackpointer + b with b the conditional offset (192 or *)
-(* 208), so the two cases need not be separated.                             *)
+(* buffers are kept at stackpointer + b with b the conditional offset (192   *)
+(* or 208), so the two cases need not be separated.                          *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;

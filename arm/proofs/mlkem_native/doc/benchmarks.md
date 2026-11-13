@@ -79,7 +79,7 @@ Files that proofs load but that are not proofs of functions, timed alone
 | `Library/pocklington.ml` | 4 s | 4 s |
 | `arm/proofs/mlkem_native/polyvec_inline.ml` | 3 s | 72 s |
 | `arm/proofs/utils/mlkem_native_image.ml` | 3 s | 72 s |
-| `common/fips203.ml` | 3 s | 78 s |
+| `common/fips203/fips203.ml` | 3 s | 78 s |
 
 ## All gcc12_O2 proofs
 

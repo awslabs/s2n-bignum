@@ -210,9 +210,10 @@ let d11_lanepats =
   `word_subword (x:int32) (11,16):int16`];;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_decompress 11 in common/fips203.ml, the   *)
-(* result for an 11-bit field y is the integer closest to 3329 * y / 2048,   *)
-(* rounding up on ties, i.e. (3329 * y + 1024) DIV 2048.                     *)
+(* Correctness proof. As for mlkem_decompress 11 in                          *)
+(* common/fips203/fips203.ml, the result for an 11-bit field y is the        *)
+(* integer closest to 3329 * y / 2048, rounding up on ties, i.e. (3329 * y + *)
+(* 1024) DIV 2048.                                                           *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O3_IMAGE_SUBROUTINE_CORRECT_STMT =

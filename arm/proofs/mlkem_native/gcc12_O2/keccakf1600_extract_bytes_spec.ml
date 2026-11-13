@@ -46,9 +46,10 @@ let EXTRACT_BYTES_ARGS_TAC =
       if concl th' = concl th then th' else REWRITE_RULE[th] th'));;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As in common/fips202.ml, the state is a 1600-bit word  *)
-(* S, and the bytes extracted are bytes off to off + len - 1 of it, which    *)
-(* as a number are (val S DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len).          *)
+(* Correctness proof. As in common/fips202/fips202.ml, the state is a        *)
+(* 1600-bit word S, and the bytes extracted are bytes off to off + len - 1   *)
+(* of it, which as a number are (val S DIV 2 EXP (8 * off)) MOD 2 EXP (8 *   *)
+(* len).                                                                     *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =

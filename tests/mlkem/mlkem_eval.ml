@@ -4,13 +4,13 @@
  *)
 
 (* ========================================================================= *)
-(* Evaluation of the ML-KEM functions of common/fips203.ml on concrete       *)
-(* inputs by proof, used to check the specification against NIST test        *)
-(* vectors. The K-PKE functions are evaluated via their NTT-domain forms     *)
-(* KPKE_*_FIPS of common/fips203_theory.ml.                                  *)
+(* Evaluation of the ML-KEM functions of common/fips203/fips203.ml on        *)
+(* concrete inputs by proof, used to check the specification against NIST    *)
+(* test vectors. The K-PKE functions are evaluated via their NTT-domain      *)
+(* forms KPKE_*_FIPS of common/fips203/properties/kpke_ntt_domain.ml.        *)
 (* ========================================================================= *)
 
-needs "common/fips203_theory.ml";;
+needs "common/fips203/properties/fips203_properties.ml";;
 needs "tests/mlkem/keccak_bridge.ml";;
 
 (* ------------------------------------------------------------------------- *)
@@ -535,7 +535,7 @@ add_mlkem_handler "ring_sum"
 
 let BITREVERSE7_CONV =
   let tab = Array.init 128 (fun i ->
-    (REWR_CONV bitreverse7 THENC WORD_REDUCE_CONV)
+    (RATOR_CONV(REWR_CONV bitreverse7) THENC BITMAP_CONV)
     (mk_comb(`bitreverse7`,mk_small_numeral i))) in
   fun tm ->
     match tm with

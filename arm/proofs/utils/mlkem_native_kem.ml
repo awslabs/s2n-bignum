@@ -73,12 +73,12 @@ let NUM_OF_BYTELIST_INJ = prove
 
 let MLKEM_KEYGEN_PAIR = prove
  (`!k eta1 eta2 du dv d z.
-        mlkem_keygen (k,eta1,eta2,du,dv) d z =
+        mlkem_keygen_internal (k,eta1,eta2,du,dv) d z =
         FST(kpke_keygen (k,eta1,eta2,du,dv) d),
         APPEND (SND(kpke_keygen (k,eta1,eta2,du,dv) d))
          (APPEND (FST(kpke_keygen (k,eta1,eta2,du,dv) d))
            (APPEND (mlkem_h(FST(kpke_keygen (k,eta1,eta2,du,dv) d))) z))`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[mlkem_keygen; mlkem_keygen_internal] THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[mlkem_keygen_internal] THEN
   SPEC_TAC(`kpke_keygen (k,eta1,eta2,du,dv) d`,`kk:byte list#byte list`) THEN
   REWRITE_TAC[FORALL_PAIR_THM] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[]);;

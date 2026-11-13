@@ -156,12 +156,12 @@ let KK4_FINAL_TAC =
 (* Correctness proof, assuming the contracts for memset and memcpy (the      *)
 (* former for the callees). The seed is d followed by z, 32 bytes each, at   *)
 (* coins, and the encapsulation key of 1568 bytes at pk and the              *)
-(* decapsulation key of 3168 bytes at sk are those of mlkem_keygen mlkem1024 *)
-(* d z in common/fips203.ml. The theorem assumes that SampleNTT terminates   *)
-(* for each entry of the matrix and that the stack does not contain address  *)
-(* 0, as for mlkem1024_indcpa_keypair_derand. The stack is the 48 bytes of   *)
-(* the function and the 19360 used by mlkem1024_indcpa_keypair_derand below  *)
-(* them.                                                                     *)
+(* decapsulation key of 3168 bytes at sk are those of mlkem_keygen_internal  *)
+(* mlkem1024 d z in common/fips203/fips203.ml. The theorem assumes that      *)
+(* SampleNTT terminates for each entry of the matrix and that the stack does *)
+(* not contain address 0, as for mlkem1024_indcpa_keypair_derand. The stack  *)
+(* is the 48 bytes of the function and the 19360 used by                     *)
+(* mlkem1024_indcpa_keypair_derand below them.                               *)
 (* ------------------------------------------------------------------------- *)
 
 let KK4_INTRO_TAC =
@@ -239,9 +239,9 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT_STMT =
                   num_of_bytelist z)
              (\s. read PC s = returnaddress /\
                   read (memory :> bytes(pk,1568)) s =
-                  num_of_bytelist(FST(mlkem_keygen mlkem1024 d z)) /\
+                  num_of_bytelist(FST(mlkem_keygen_internal mlkem1024 d z)) /\
                   read (memory :> bytes(sk,3168)) s =
-                  num_of_bytelist(SND(mlkem_keygen mlkem1024 d z)) /\
+                  num_of_bytelist(SND(mlkem_keygen_internal mlkem1024 d z)) /\
                   C_RETURN s = word 0)
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
               MAYCHANGE

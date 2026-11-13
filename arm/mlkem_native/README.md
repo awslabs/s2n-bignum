@@ -41,15 +41,14 @@ theorems in the proofs, still contain the build, e.g.
 `MLKEM_NATIVE_POLY_NTT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT`.
 
 What does not depend on the build is shared: the specifications in
-`../../common/fips202.ml` and `../../common/fips203.ml`, the names of
-`../../common/layout.ml`, the tools and lemmas in
+`../../common/fips202/fips202.ml` and `../../common/fips203/fips203.ml`, the
+names of `../../common/layout.ml`, the tools and lemmas in
 `../proofs/utils/mlkem_native*.ml` and `../proofs/utils/keccak_*.ml`
 (including `mlkem_native_image.ml` for the proofs about a whole image and
-`mlkem_native_libc.ml` for the C library functions), the tactics for
-compiled code in `../proofs/mlkem_native/*.ml` (`overlap.ml` for the
-checks that arrays do not overlap, which vectorized loops start with, and
-`interleave.ml` for the loads and stores of LD2-LD4 and ST2-ST4), and
-the scripts
+`mlkem_native_libc.ml` for the C library functions), the tactics for compiled
+code in `../proofs/mlkem_native/*.ml` (`overlap.ml` for the checks that
+arrays do not overlap, which vectorized loops start with, and `interleave.ml`
+for the loads and stores of LD2-LD4 and ST2-ST4), and the scripts
 `check_transcription.py`, `gen_layout.py`, `gen_proofs_mk.py` and
 `gen_link.py` here.
 
@@ -315,16 +314,15 @@ each polynomial of a vector, for `<op>` one of `add`, `frombytes`,
 `mlkem512_polyvec_<op>` and `mlkem1024_polyvec_<op>` (in the files
 `..._k2.ml` and `..._k4.ml`), some of which are
 compiled as loops over the polynomials, unrolled in the proofs. As in
-`common/fips203.ml`, a vector of k polynomials is given by its 256 * k
-coefficients, of which those of polynomial j are `\i. x(256 * j + i)`.
-Likewise `mlkem768_polyvec_compress_du` and
-`mlkem768_polyvec_decompress_du` apply `mlkem_poly_compress_d10` and
-`mlkem_poly_decompress_d10` to each polynomial, as do the ML-KEM-512
-versions, while the ML-KEM-1024 ones use `mlkem_poly_compress_d11` and
-`mlkem_poly_decompress_d11`. Similarly
-`mlkem_keccakf1600x4_extract_bytes` and `mlkem_keccakf1600x4_xor_bytes`
-apply `mlkem_keccakf1600_extract_bytes` and `mlkem_keccakf1600_xor_bytes`
-(see below) to each of four consecutive Keccak states.
+`common/fips203/fips203.ml`, a vector of k polynomials is given by its 256 *
+k coefficients, of which those of polynomial j are `\i. x(256 * j + i)`.
+Likewise `mlkem768_polyvec_compress_du` and `mlkem768_polyvec_decompress_du`
+apply `mlkem_poly_compress_d10` and `mlkem_poly_decompress_d10` to each
+polynomial, as do the ML-KEM-512 versions, while the ML-KEM-1024 ones use
+`mlkem_poly_compress_d11` and `mlkem_poly_decompress_d11`. Similarly
+`mlkem_keccakf1600x4_extract_bytes` and `mlkem_keccakf1600x4_xor_bytes` apply
+`mlkem_keccakf1600_extract_bytes` and `mlkem_keccakf1600_xor_bytes` (see
+below) to each of four consecutive Keccak states.
 
 The functions without transcriptions of their own are also verified
 directly in the image, in the files
@@ -337,42 +335,41 @@ far these are `mlkem_poly_add`, `mlkem_poly_sub`, `mlkem_poly_frombytes`,
 for ML-KEM-512 and ML-KEM-1024 also `mlkem_poly_compress_d5`,
 `mlkem_poly_compress_d11`, `mlkem_poly_decompress_d5`,
 `mlkem_poly_decompress_d11` and `mlkem_poly_cbd3`. As in
-`mlkem_decode` in `common/fips203.ml`, the contents of a byte array are
-given as a number, so that coefficient i of the result of
+`mlkem_decode` in `common/fips203/fips203.ml`, the contents of a byte array
+are given as a number, so that coefficient i of the result of
 `mlkem_poly_frombytes` is bits 12 * i to 12 * i + 11 of the number given by
-the 384 bytes. The compression and decompression of coefficients are given
-by the same arithmetic as `mlkem_compress` and `mlkem_decompress` there,
-e.g. (3329 * y + 8) DIV 16 for decompression from 4 bits, but without using
-`common/fips203.ml`, which takes several minutes to load. Likewise, as for
-`mlkem_cbd 2`, coefficient i of the result of `mlkem_poly_cbd2` is the
+the 384 bytes. The compression and decompression of coefficients are given by
+the same arithmetic as `mlkem_compress` and `mlkem_decompress` there, e.g.
+(3329 * y + 8) DIV 16 for decompression from 4 bits, but without using
+`common/fips203/fips203.ml`, which takes several minutes to load. Likewise,
+as for `mlkem_cbd 2`, coefficient i of the result of `mlkem_poly_cbd2` is the
 number of 1 bits among bits 4 * i and 4 * i + 1 of the number given by the
 128 bytes, minus the number among bits 4 * i + 2 and 4 * i + 3, but as a
-16-bit integer rather than modulo 3329, and similarly for
-`mlkem_poly_cbd3` with three bits each from 192 bytes.
+16-bit integer rather than modulo 3329, and similarly for `mlkem_poly_cbd3`
+with three bits each from 192 bytes.
 
 For the Keccak functions, the state is a 1600-bit word S, as in
-`common/fips202.ml`, which is `read (memory :> wbytes a) s` for the 200
-bytes at its address a. Then `mlkem_keccakf1600_extract_bytes` gives bytes
-off to off + len - 1 of the state, which as a number are
-(val S DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len), and
-`mlkem_keccakf1600_xor_bytes` XORs len bytes of data, as a number m, into
-the state from byte off, giving word_xor S (word(2 EXP (8 * off) * m)). For
-off = 0 and len the rate, this is the XOR of a block into the state in
-`keccak_absorb` there.
+`common/fips202/fips202.ml`, which is `read (memory :> wbytes a) s` for the
+200 bytes at its address a. Then `mlkem_keccakf1600_extract_bytes` gives
+bytes off to off + len - 1 of the state, which as a number are (val S DIV 2
+EXP (8 * off)) MOD 2 EXP (8 * len), and `mlkem_keccakf1600_xor_bytes` XORs
+len bytes of data, as a number m, into the state from byte off, giving
+word_xor S (word(2 EXP (8 * off) * m)). For off = 0 and len the rate, this is
+the XOR of a block into the state in `keccak_absorb` there.
 
 The permutation `keccak 24` of `../proofs/utils/keccak_spec.ml`, the
 specification of the Keccak code in s2n-bignum, is shown to be
-`keccak_f1600` of `common/fips202.ml` on the state as a 1600-bit word in
-`../proofs/utils/keccak_fips202.ml`, and the theorem for
-`mlkem_keccakf1600_permute` is restated in that form at the end of its
-proof, as
+`keccak_f1600` of `common/fips202/fips202.ml` on the state as a 1600-bit word
+in `../proofs/utils/keccak_fips202.ml`, and the theorem for
+`mlkem_keccakf1600_permute` is restated in that form at the end of its proof,
+as
 `MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600`.
 
 These are used by the static function `mlk_keccak_absorb_once`, at 0x23b0
 in the image, which absorbs a whole message into a state for the SHA-3 and
 SHAKE functions, and is verified in
 `../proofs/mlkem_native/gcc12_O2/keccak_absorb_once.ml`. As in
-`keccak_sponge` in `common/fips202.ml`, a message of mlen bytes, as a
+`keccak_sponge` in `common/fips202/fips202.ml`, a message of mlen bytes, as a
 number M, is padded to the number
 P = M + 2 EXP (8 * mlen) * num_of_bytelist(keccak_pad r p mlen), which is
 mlen DIV r + 1 blocks of r bytes, for the rate r and the first byte p of
@@ -408,13 +405,13 @@ for one, and `mlkem_shake128x4_init` does nothing.
 
 For `mlkem_sha3_256` and `mlkem_sha3_512`, the input is given as a list of
 bytes, and the result, as a number, is that of `sha3_256` or `sha3_512` in
-`common/fips202.ml`, using the lemmas about `keccak_sponge` at the end of
-`../proofs/utils/keccak_fips202.ml`. They keep the state on the stack.
+`common/fips202/fips202.ml`, using the lemmas about `keccak_sponge` at the
+end of `../proofs/utils/keccak_fips202.ml`. They keep the state on the stack.
 Likewise, for `mlkem_shake256` with an output of outlen bytes, the result is
-that of `list_of_seq (shake256 inp) outlen`. It extracts
-MIN (outlen - 136 * i) 136 bytes of the state in iteration i of its loop,
-and it aligns the state on the stack to 32 bytes, so its address depends on
-whether the stack pointer is a multiple of 32.
+that of `list_of_seq (shake256 inp) outlen`. It extracts MIN (outlen - 136 *
+i) 136 bytes of the state in iteration i of its loop, and it aligns the state
+on the stack to 32 bytes, so its address depends on whether the stack pointer
+is a multiple of 32.
 
 Using these, `mlkem768_check_sk`, and likewise `mlkem512_check_sk` and
 `mlkem1024_check_sk`, is the hash check of the decapsulation key in
@@ -562,23 +559,23 @@ for `mlkem_sha3_256`.
 `mlkem768_indcpa_keypair_derand` is the key generation of K-PKE for
 ML-KEM-768, and its specification is in terms of FIPS 203 itself: the
 public key and the secret key that it writes are those of `kpke_keygen
-mlkem768 d` in `common/fips203.ml`, for the seed `d` of 32 bytes. It has
-the hypothesis that SampleNTT terminates for each entry of the matrix
+mlkem768 d` in `common/fips203/fips203.ml`, for the seed `d` of 32 bytes. It
+has the hypothesis that SampleNTT terminates for each entry of the matrix
 (`mlkem_samplentt_terminates`), that is, that the output of SHAKE128 for it
-eventually has 256 fields below q, which gives a k as in the specification
-of `mlkem768_gen_matrix`. The lemmas relating the specifications of the
-functions it calls (congruences modulo q and bounds on coefficients,
-numbers for byte arrays and lists of words) to the definitions of FIPS 203
-and to the forms of K-PKE in the NTT domain in `common/fips203_theory.ml`
-are in `arm/proofs/utils/mlkem_native_fips203.ml`. Its theorem of constant
-time and memory safety, which assumes `memset_full_contract` (for the
-matrix generation) and `memcpy_safety_contract`, states that its events
-depend only on the addresses and on rho, the seed of the matrix, which is
-part of the public key: they are given as a function of
-`FST(mlkem_g(APPEND d [word 3]))`, and the theorem also states that the
-public key ends with it. Since rho is computed by SHA3-512, this uses a
-theorem for `mlkem_sha3_512` that combines its correctness and its events
-(`..._IMAGE_SUBROUTINE_FULL`).
+eventually has 256 fields below q, which gives a k as in the specification of
+`mlkem768_gen_matrix`. The lemmas relating the specifications of the
+functions it calls (congruences modulo q and bounds on coefficients, numbers
+for byte arrays and lists of words) to the definitions of FIPS 203 and to the
+forms of K-PKE in the NTT domain in
+`common/fips203/properties/kpke_ntt_domain.ml` are in
+`arm/proofs/utils/mlkem_native_fips203.ml`. Its theorem of constant time and
+memory safety, which assumes `memset_full_contract` (for the matrix
+generation) and `memcpy_safety_contract`, states that its events depend only
+on the addresses and on rho, the seed of the matrix, which is part of the
+public key: they are given as a function of `FST(mlkem_g(APPEND d [word
+3]))`, and the theorem also states that the public key ends with it. Since
+rho is computed by SHA3-512, this uses a theorem for `mlkem_sha3_512` that
+combines its correctness and its events (`..._IMAGE_SUBROUTINE_FULL`).
 
 `mlkem768_indcpa_enc` is the encryption of K-PKE for ML-KEM-768, and its
 specification is in terms of FIPS 203 too: the ciphertext of 1088 bytes
@@ -621,13 +618,13 @@ matrix and the vector are computed in a loop, which the proofs unroll.
 `mlkem768_keypair_derand` is the key generation of ML-KEM-768 with the
 randomness as an argument, and its specification is in terms of the
 internal ML-KEM algorithms of FIPS 203: the keys that it writes are those
-of `mlkem_keygen mlkem768 d z` for its 64 bytes of coins `d` and `z`. It
-has the same hypothesis as `mlkem768_indcpa_keypair_derand`. Its theorem of
-constant time and memory safety, which assumes `memset_full_contract` and
-`memcpy_safety_contract`, states as for `mlkem768_indcpa_keypair_derand`
-that its events depend only on the addresses and on rho, and that the
-public key ends with rho. The lemmas and tactics for the ML-KEM functions
-are in `arm/proofs/utils/mlkem_native_kem.ml`.
+of `mlkem_keygen_internal mlkem768 d z` for its 64 bytes of coins `d` and
+`z`. It has the same hypothesis as `mlkem768_indcpa_keypair_derand`. Its
+theorem of constant time and memory safety, which assumes
+`memset_full_contract` and `memcpy_safety_contract`, states as for
+`mlkem768_indcpa_keypair_derand` that its events depend only on the addresses
+and on rho, and that the public key ends with rho. The lemmas and tactics for
+the ML-KEM functions are in `arm/proofs/utils/mlkem_native_kem.ml`.
 
 `mlkem768_enc_derand` is the encapsulation with the message as an argument,
 including the input check of FIPS 203: if the encapsulation key `ek` passes

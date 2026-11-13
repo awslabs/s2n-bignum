@@ -56,7 +56,7 @@ clang17_O3 rows are estimates from logged wall times under load (±30%).
 Symbolic stepping takes only 1-30% of a run (seven logs), e.g. 40 s of
 5036 s for gcc12_O3 `keccakf1600_xor_bytes`. Every process first spends
 200-280 s loading `arm/proofs/base.ml` (66 s), `common/mlkem_mldsa.ml`
-(104-107 s) and, for indcpa/KEM files, `common/fips203.ml` (79 s);
+(104-107 s) and, for indcpa/KEM files, `common/fips203/fips203.ml` (79 s);
 compiling adds 79-228 s. Much of the rest is per-step rewriting of
 assumptions, and simulating the code three times (CORRECT, SAFE, FULL)
 in 67 files.

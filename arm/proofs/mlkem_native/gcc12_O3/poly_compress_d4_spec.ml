@@ -271,12 +271,12 @@ let COMPRESS_D4_NIBBLES_TAC =
     RULE_ASSUM_TAC(REWRITE_RULE lths));;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_compress 4 in common/fips203.ml, the      *)
-(* result for a coefficient x in [0,3329) is the integer closest to          *)
-(* 16 * x / 3329, rounding up on ties, modulo 16, i.e.                       *)
-(* ((32 * x + 3329) DIV 6658) MOD 16, and as for mlkem_encode 4 the 4-bit    *)
-(* values are put together little-endian. Like the C code, this relies on    *)
-(* the coefficients being in [0,3329).                                       *)
+(* Correctness proof. As for mlkem_compress 4 in common/fips203/fips203.ml,  *)
+(* the result for a coefficient x in [0,3329) is the integer closest to 16 * *)
+(* x / 3329, rounding up on ties, modulo 16, i.e. ((32 * x + 3329) DIV 6658) *)
+(* MOD 16, and as for mlkem_encode 4 the 4-bit values are put together       *)
+(* little-endian. Like the C code, this relies on the coefficients being in  *)
+(* [0,3329).                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT_STMT =

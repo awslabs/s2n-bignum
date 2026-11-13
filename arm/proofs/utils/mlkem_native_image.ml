@@ -242,7 +242,7 @@ let MLKEM_NATIVE_IMAGE_SAFE_TAC th inst loadths =
       MLKEM_NATIVE_IMAGE_TAC fth' loadths)) th;;
 
 (* ------------------------------------------------------------------------- *)
-(* Vectors of polynomials. As in common/fips203.ml, a vector of k            *)
+(* Vectors of polynomials. As in common/fips203/fips203.ml, a vector of k    *)
 (* polynomials is given by its 256 * k coefficients, those of polynomial j   *)
 (* being \i. x(256 * j + i). POLYVEC_SPLIT_TAC k splits an assumption        *)
 (* !i. i < 256 * k ==> P i into one for each polynomial, POLYVEC_JOIN_TAC k  *)
@@ -297,10 +297,11 @@ let POLYVEC_JOIN_TAC k =
   POLYVEC_CASES_TAC;;
 
 (* ------------------------------------------------------------------------- *)
-(* Byte arrays. As in mlkem_decode in common/fips203.ml, the contents of a   *)
-(* byte array are given as a number n, and READ_MEMORY_BYTES8_OF_NUM gives   *)
-(* its bytes. BYTES_BITBLAST_TAC proves a goal of bit operations on such     *)
-(* bytes word((n DIV 2 EXP k) MOD 256) by bit-blasting with them as atoms.   *)
+(* Byte arrays. As in mlkem_decode in common/fips203/fips203.ml, the         *)
+(* contents of a byte array are given as a number n, and                     *)
+(* READ_MEMORY_BYTES8_OF_NUM gives its bytes. BYTES_BITBLAST_TAC proves a    *)
+(* goal of bit operations on such bytes word((n DIV 2 EXP k) MOD 256) by     *)
+(* bit-blasting with them as atoms.                                          *)
 (* ------------------------------------------------------------------------- *)
 
 let READ_MEMORY_BYTES8_OF_NUM = prove

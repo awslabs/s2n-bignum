@@ -22,7 +22,7 @@
 (* and the 288 used by mlk_keccak_squeezeblocks_x4 below them. It is         *)
 (* verified in the whole image (see libmlkem.ml), assuming the contracts for *)
 (* memset and memcpy in utils/mlkem_native_libc.ml. The result is shake256   *)
-(* of common/fips202.ml for each input.                                      *)
+(* of common/fips202/fips202.ml for each input.                              *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;

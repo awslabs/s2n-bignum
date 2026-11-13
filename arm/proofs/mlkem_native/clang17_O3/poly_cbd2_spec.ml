@@ -373,10 +373,10 @@ let CBD2_BODY_TAC (simp:tactic) off =
     simp) (1--532);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_cbd 2 in common/fips203.ml, coefficient i *)
-(* of the result is the number of 1 bits among bits 4 * i and 4 * i + 1 of   *)
-(* the 128 bytes as a number n, minus the number among bits 4 * i + 2 and    *)
-(* 4 * i + 3, here as a 16-bit integer rather than modulo 3329.              *)
+(* Correctness proof. As for mlkem_cbd 2 in common/fips203/fips203.ml,       *)
+(* coefficient i of the result is the number of 1 bits among bits 4 * i and  *)
+(* 4 * i + 1 of the 128 bytes as a number n, minus the number among bits 4 * *)
+(* i + 2 and 4 * i + 3, here as a 16-bit integer rather than modulo 3329.    *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_CBD2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT_STMT =

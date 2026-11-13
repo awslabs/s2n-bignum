@@ -354,7 +354,7 @@ let FB_CHECK_TAC (body:int->tactic) =
     FB_RESOLVE_TAC THEN body 6];;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_decode 12 in common/fips203.ml,           *)
+(* Correctness proof. As for mlkem_decode 12 in common/fips203/fips203.ml,   *)
 (* coefficient i of the result is bits 12 * i to 12 * i + 11 of the number   *)
 (* given by the 384 bytes.                                                   *)
 (* ------------------------------------------------------------------------- *)

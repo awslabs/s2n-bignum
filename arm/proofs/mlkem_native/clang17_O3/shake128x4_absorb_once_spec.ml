@@ -65,9 +65,9 @@ let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_EXEC =
 (* Correctness proof, assuming the contract for memset at the address mf in  *)
 (* the GOT entry, with its code and data in the region (ea,el). The result   *)
 (* is as for mlk_keccak_absorb_once on each message, with r = 168 and p =    *)
-(* 0x1F as in shake128 in common/fips202.ml. The stack is the 320 bytes used *)
-(* by mlk_keccak_absorb_once_x4, which include the 64 of the function before *)
-(* the tail call.                                                            *)
+(* 0x1F as in shake128 in common/fips202/fips202.ml. The stack is the 320    *)
+(* bytes used by mlk_keccak_absorb_once_x4, which include the 64 of the      *)
+(* function before the tail call.                                            *)
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ABSORB_X4_TAC =

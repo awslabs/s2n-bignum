@@ -70,9 +70,9 @@ let BYTE_BIT_STMT =
 let BYTE_BIT = assume_spec BYTE_BIT_STMT;;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_decompress 1 in common/fips203.ml, the    *)
-(* result for a bit y is the integer closest to 3329 * y / 2, rounding up on *)
-(* ties, i.e. (3329 * y + 1) DIV 2.                                          *)
+(* Correctness proof. As for mlkem_decompress 1 in                           *)
+(* common/fips203/fips203.ml, the result for a bit y is the integer closest  *)
+(* to 3329 * y / 2, rounding up on ties, i.e. (3329 * y + 1) DIV 2.          *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_FROMMSG_GCC12_O3_IMAGE_SUBROUTINE_CORRECT_STMT =

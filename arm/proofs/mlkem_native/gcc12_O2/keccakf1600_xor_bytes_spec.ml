@@ -88,9 +88,10 @@ let XOR_BYTES_RESTRICT_RULE t th =
   GEN j (DISCH p' (MP (SPEC j th) (CONJUNCT1(ASSUME p'))));;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As in keccak_absorb in common/fips202.ml, the state is *)
-(* a 1600-bit word S. The len bytes of data, as a number m, are XORed into   *)
-(* it starting at byte off, giving word_xor S (word(2 EXP (8 * off) * m)).   *)
+(* Correctness proof. As in keccak_absorb in common/fips202/fips202.ml, the  *)
+(* state is a 1600-bit word S. The len bytes of data, as a number m, are     *)
+(* XORed into it starting at byte off, giving word_xor S (word(2 EXP (8 *    *)
+(* off) * m)).                                                               *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =

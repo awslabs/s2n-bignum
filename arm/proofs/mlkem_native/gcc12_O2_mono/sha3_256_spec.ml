@@ -15,7 +15,7 @@
 (* gcc has inlined as two 16-byte loads and stores, and then zeroes the      *)
 (* state. It is verified in the whole image (see libmlkem.ml), using the     *)
 (* theorems for mlk_keccak_absorb_once and mlk_keccakf1600_permute_c in the  *)
-(* image. The result is sha3_256 of common/fips202.ml.                       *)
+(* image. The result is sha3_256 of common/fips202/fips202.ml.               *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -109,10 +109,10 @@ let SHA3_HALVES_TAC =
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The input is a list of bytes, and the 32 bytes of the  *)
-(* output, as a number, are those of sha3_256 in common/fips202.ml. The      *)
-(* address of the stack guard is read from the GOT, and the stack is the 240 *)
-(* bytes of the function and the 256 used by mlk_keccak_absorb_once below    *)
-(* them.                                                                     *)
+(* output, as a number, are those of sha3_256 in common/fips202/fips202.ml.  *)
+(* The address of the stack guard is read from the GOT, and the stack is the *)
+(* 240 bytes of the function and the 256 used by mlk_keccak_absorb_once      *)
+(* below them.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_SHA3_256_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT_STMT =

@@ -254,13 +254,13 @@ let COMPRESS_D11_BODY_TAC =
     SIMD_SIMPLIFY_TAC[]) (59--99);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_compress 11 in common/fips203.ml, the     *)
-(* result for a coefficient x in [0,3329) is the integer closest to          *)
-(* 2048 * x / 3329, rounding up on ties, modulo 2048, i.e.                   *)
-(* ((4096 * x + 3329) DIV 6658) MOD 2048, and as for mlkem_encode 11 the     *)
-(* 11-bit values are put together little-endian. Like the C code, this       *)
-(* relies on the coefficients being in [0,3329). The stack guard is handled  *)
-(* as for mlkem_poly_compress_d4.                                            *)
+(* Correctness proof. As for mlkem_compress 11 in common/fips203/fips203.ml, *)
+(* the result for a coefficient x in [0,3329) is the integer closest to 2048 *)
+(* * x / 3329, rounding up on ties, modulo 2048, i.e. ((4096 * x + 3329) DIV *)
+(* 6658) MOD 2048, and as for mlkem_encode 11 the 11-bit values are put      *)
+(* together little-endian. Like the C code, this relies on the coefficients  *)
+(* being in [0,3329). The stack guard is handled as for                      *)
+(* mlkem_poly_compress_d4.                                                   *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =

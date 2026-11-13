@@ -229,13 +229,12 @@ let COMPRESS_D5_BODY_TAC =
   ARM_STEPS_TAC MLKEM_NATIVE_POLY_COMPRESS_D5_GCC12_O2_EXEC (77--102);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_compress 5 in common/fips203.ml, the      *)
-(* result for a coefficient x in [0,3329) is the integer closest to          *)
-(* 32 * x / 3329, rounding up on ties, modulo 32, i.e.                       *)
-(* ((64 * x + 3329) DIV 6658) MOD 32, and as for mlkem_encode 5 the 5-bit    *)
-(* values are put together little-endian. Like the C code, this relies on    *)
-(* the coefficients being in [0,3329). The stack guard is handled as for     *)
-(* mlkem_poly_compress_d4.                                                   *)
+(* Correctness proof. As for mlkem_compress 5 in common/fips203/fips203.ml,  *)
+(* the result for a coefficient x in [0,3329) is the integer closest to 32 * *)
+(* x / 3329, rounding up on ties, modulo 32, i.e. ((64 * x + 3329) DIV 6658) *)
+(* MOD 32, and as for mlkem_encode 5 the 5-bit values are put together       *)
+(* little-endian. Like the C code, this relies on the coefficients being in  *)
+(* [0,3329). The stack guard is handled as for mlkem_poly_compress_d4.       *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D5_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =

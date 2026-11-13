@@ -12,7 +12,7 @@
 (* (see libmlkem.ml), using the theorems for                                 *)
 (* mlk_keccak_absorb_once, mlkem_keccakf1600_permute and                     *)
 (* mlkem_keccakf1600_extract_bytes in the image. The result is sha3_256 of   *)
-(* common/fips202.ml.                                                        *)
+(* common/fips202/fips202.ml.                                                *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -72,10 +72,10 @@ let MLKEM_NATIVE_SHA3_256_GCC12_O2_EXEC =
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The input is a list of bytes, and the 32 bytes of the  *)
-(* output, as a number, are those of sha3_256 in common/fips202.ml. As for   *)
-(* mlkem_poly_compress_d4, the address of the stack guard is read from the   *)
-(* GOT, and the stack is the 240 bytes of the function and the 256 used by   *)
-(* mlk_keccak_absorb_once below them.                                        *)
+(* output, as a number, are those of sha3_256 in common/fips202/fips202.ml.  *)
+(* As for mlkem_poly_compress_d4, the address of the stack guard is read     *)
+(* from the GOT, and the stack is the 240 bytes of the function and the 256  *)
+(* used by mlk_keccak_absorb_once below them.                                *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_SHA3_256_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =

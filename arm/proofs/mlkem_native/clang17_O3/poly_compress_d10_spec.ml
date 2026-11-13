@@ -212,12 +212,12 @@ let COMPRESS_D10_BODY_TAC =
   ARM_STEPS_TAC MLKEM_NATIVE_POLY_COMPRESS_D10_CLANG17_O3_EXEC (1--32);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_compress 10 in common/fips203.ml, the     *)
-(* result for a coefficient x in [0,3329) is the integer closest to          *)
-(* 1024 * x / 3329, rounding up on ties, modulo 1024, i.e.                   *)
-(* ((2048 * x + 3329) DIV 6658) MOD 1024, and as for mlkem_encode 10 the     *)
-(* 10-bit values are put together little-endian. Like the C code, this       *)
-(* relies on the coefficients being in [0,3329).                             *)
+(* Correctness proof. As for mlkem_compress 10 in common/fips203/fips203.ml, *)
+(* the result for a coefficient x in [0,3329) is the integer closest to 1024 *)
+(* * x / 3329, rounding up on ties, modulo 1024, i.e. ((2048 * x + 3329) DIV *)
+(* 6658) MOD 1024, and as for mlkem_encode 10 the 10-bit values are put      *)
+(* together little-endian. Like the C code, this relies on the coefficients  *)
+(* being in [0,3329).                                                        *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D10_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT_STMT =

@@ -177,7 +177,7 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
 
 (* ------------------------------------------------------------------------- *)
 (* The same for the four states as 1600-bit words, read by wbytes, with the  *)
-(* permutation keccak_f1600 of common/fips202.ml, as for                     *)
+(* permutation keccak_f1600 of common/fips202/fips202.ml, as for             *)
 (* mlkem_keccakf1600_permute.                                                *)
 (* ------------------------------------------------------------------------- *)
 

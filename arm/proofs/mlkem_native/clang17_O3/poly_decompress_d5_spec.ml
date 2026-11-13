@@ -917,9 +917,10 @@ let DECOMPRESS_D5_STORES_TAC =
                CONV_RULE(RAND_CONV BITS_NORM_CONV)) (CONJUNCTS th)));;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_decompress 5 in common/fips203.ml, the    *)
-(* result for a 5-bit field y is the integer closest to 3329 * y / 32,       *)
-(* rounding up on ties, i.e. (3329 * y + 16) DIV 32.                         *)
+(* Correctness proof. As for mlkem_decompress 5 in                           *)
+(* common/fips203/fips203.ml, the result for a 5-bit field y is the integer  *)
+(* closest to 3329 * y / 32, rounding up on ties, i.e. (3329 * y + 16) DIV   *)
+(* 32.                                                                       *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT_STMT =

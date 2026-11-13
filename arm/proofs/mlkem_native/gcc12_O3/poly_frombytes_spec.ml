@@ -330,7 +330,7 @@ let FB_FIELDS_TAC =
     else NO_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_decode 12 in common/fips203.ml,           *)
+(* Correctness proof. As for mlkem_decode 12 in common/fips203/fips203.ml,   *)
 (* coefficient i of the result is bits 12 * i to 12 * i + 11 of the number   *)
 (* given by the 384 bytes. The frame for X19, X20 and X30 is below the       *)
 (* stack pointer at entry.                                                   *)

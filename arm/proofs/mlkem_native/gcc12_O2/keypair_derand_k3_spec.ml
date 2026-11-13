@@ -139,11 +139,11 @@ let KK3_FINAL_TAC =
 (* Correctness proof, assuming the contracts for memset and memcpy (the      *)
 (* former for the callees). The seed is d followed by z, 32 bytes each, at   *)
 (* coins, and the encapsulation key of 1184 bytes at pk and the              *)
-(* decapsulation key of 2400 bytes at sk are those of mlkem_keygen mlkem768  *)
-(* d z in common/fips203.ml. The theorem assumes that SampleNTT terminates   *)
-(* for each entry of the matrix, as for mlkem768_indcpa_keypair_derand. The  *)
-(* stack is the 48 bytes of the function and the 13888 used by               *)
-(* mlkem768_indcpa_keypair_derand below them.                                *)
+(* decapsulation key of 2400 bytes at sk are those of mlkem_keygen_internal  *)
+(* mlkem768 d z in common/fips203/fips203.ml. The theorem assumes that       *)
+(* SampleNTT terminates for each entry of the matrix, as for                 *)
+(* mlkem768_indcpa_keypair_derand. The stack is the 48 bytes of the function *)
+(* and the 13888 used by mlkem768_indcpa_keypair_derand below them.          *)
 (* ------------------------------------------------------------------------- *)
 
 let KK3_INTRO_TAC =
@@ -220,9 +220,9 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
                   num_of_bytelist z)
              (\s. read PC s = returnaddress /\
                   read (memory :> bytes(pk,1184)) s =
-                  num_of_bytelist(FST(mlkem_keygen mlkem768 d z)) /\
+                  num_of_bytelist(FST(mlkem_keygen_internal mlkem768 d z)) /\
                   read (memory :> bytes(sk,2400)) s =
-                  num_of_bytelist(SND(mlkem_keygen mlkem768 d z)) /\
+                  num_of_bytelist(SND(mlkem_keygen_internal mlkem768 d z)) /\
                   C_RETURN s = word 0)
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
               MAYCHANGE

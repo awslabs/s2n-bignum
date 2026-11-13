@@ -19,7 +19,7 @@
 (* output must be nonzero (0 < LENGTH inp since mlk_keccak_absorb_once       *)
 (* requires it; 0 < outlen since the loop is a do-while, which would copy a  *)
 (* byte for outlen = 0). It is verified in the whole image (see              *)
-(* libmlkem.ml). The result is shake256 of common/fips202.ml.                *)
+(* libmlkem.ml). The result is shake256 of common/fips202/fips202.ml.        *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -345,7 +345,7 @@ let SHAKE256_MEMCPY_TAC n =
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The input is a list of bytes, and the outlen bytes of  *)
 (* the output, as a number, are the first outlen bytes of shake256 in        *)
-(* common/fips202.ml. Each iteration of the loop extracts                    *)
+(* common/fips202/fips202.ml. Each iteration of the loop extracts            *)
 (* MIN (outlen - 136 * i) 136 bytes. The address of the stack guard is read  *)
 (* from the GOT, and the stack is the 320 bytes of the function and the 256  *)
 (* used by mlk_keccak_absorb_once below them.                                *)

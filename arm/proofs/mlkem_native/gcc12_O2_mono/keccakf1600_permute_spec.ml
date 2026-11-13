@@ -17,7 +17,7 @@
 (* rather than taking them as an argument, and it does two rounds in each    *)
 (* iteration of its loop. It is verified in the whole image (see             *)
 (* libmlkem.ml), including the theorems for the state as a 1600-bit word,    *)
-(* with keccak_f1600 of common/fips202.ml.                                   *)
+(* with keccak_f1600 of common/fips202/fips202.ml.                           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -899,7 +899,7 @@ let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE =
 
 (* ------------------------------------------------------------------------- *)
 (* The same for the state as a 1600-bit word, read by wbytes, with the       *)
-(* permutation keccak_f1600 of common/fips202.ml (see                        *)
+(* permutation keccak_f1600 of common/fips202/fips202.ml (see                *)
 (* utils/keccak_fips202.ml), and tactics for callers, which carry the state  *)
 (* between calls as 200 bytes.                                               *)
 (* ------------------------------------------------------------------------- *)

@@ -107,14 +107,14 @@ let KR3_Z = `bytelist_of_num 32 (rnd DIV 2 EXP 256)`;;
 (* Correctness proof, assuming the contracts for memset, memcpy and          *)
 (* randombytes. Either randombytes succeeds and the function returns 0, and  *)
 (* then the encapsulation key of 1184 bytes at pk and the decapsulation key  *)
-(* of 2400 bytes at sk are those of mlkem_keygen mlkem768 d z in             *)
-(* common/fips203.ml for some d and z of 32 bytes (the random bytes), or it  *)
-(* fails and the function returns -3. The theorem assumes that SampleNTT     *)
-(* terminates for each entry of the matrix for any seed d. The stack is the  *)
-(* 128 bytes of the function and the 14736 used by mlkem768_keypair_derand   *)
-(* below them. The proof is by cases on whether the stack pointer is a       *)
-(* multiple of 32, which gives the address b of the buffer, and on whether   *)
-(* randombytes succeeds.                                                     *)
+(* of 2400 bytes at sk are those of mlkem_keygen_internal mlkem768 d z in    *)
+(* common/fips203/fips203.ml for some d and z of 32 bytes (the random        *)
+(* bytes), or it fails and the function returns -3. The theorem assumes that *)
+(* SampleNTT terminates for each entry of the matrix for any seed d. The     *)
+(* stack is the 128 bytes of the function and the 14736 used by              *)
+(* mlkem768_keypair_derand below them. The proof is by cases on whether the  *)
+(* stack pointer is a multiple of 32, which gives the address b of the       *)
+(* buffer, and on whether randombytes succeeds.                              *)
 (* ------------------------------------------------------------------------- *)
 
 let KR3_INTRO_TAC =
@@ -221,9 +221,9 @@ let MLKEM_NATIVE_KEYPAIR_K3_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT_STMT =
                   (C_RETURN s = word 0 /\
                    (?d z. LENGTH d = 32 /\ LENGTH z = 32 /\
                           read (memory :> bytes(pk,1184)) s =
-                          num_of_bytelist(FST(mlkem_keygen mlkem768 d z)) /\
+                          num_of_bytelist(FST(mlkem_keygen_internal mlkem768 d z)) /\
                           read (memory :> bytes(sk,2400)) s =
-                          num_of_bytelist(SND(mlkem_keygen mlkem768 d z))) \/
+                          num_of_bytelist(SND(mlkem_keygen_internal mlkem768 d z))) \/
                    C_RETURN s = word 0xfffffffd))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
               MAYCHANGE

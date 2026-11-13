@@ -145,8 +145,8 @@ let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O3_EXEC =
 
 (* ------------------------------------------------------------------------- *)
 (* Absorbing from a given state rather than from zero, as keccak_absorb in   *)
-(* common/fips202.ml does. The code after memset is verified for any initial *)
-(* states, so that the same proof serves the theorems for the three          *)
+(* common/fips202/fips202.ml does. The code after memset is verified for any *)
+(* initial states, so that the same proof serves the theorems for the three  *)
 (* contracts of memset: only with the combined and the correctness ones are  *)
 (* the states known to be zero after it.                                     *)
 (* ------------------------------------------------------------------------- *)

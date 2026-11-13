@@ -17,7 +17,7 @@
 (* mlk_keccak_absorb_once_x4, mlkem_keccakf1600x4_permute and                *)
 (* mlkem_keccakf1600x4_extract_bytes in the image and assuming the contracts *)
 (* for memset and memcpy in utils/mlkem_native_libc.ml. The result is        *)
-(* shake256 of common/fips202.ml for each input.                             *)
+(* shake256 of common/fips202/fips202.ml for each input.                     *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;

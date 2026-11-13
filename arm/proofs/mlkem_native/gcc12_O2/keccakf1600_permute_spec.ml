@@ -4,14 +4,14 @@
  *)
 
 (* ========================================================================= *)
-(* Keccak-f1600 permutation.                                                 *)
-(* This is the code for mlkem_keccakf1600_permute from mlkem-native's        *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md). Unlike the hand-written kernels, it reads its    *)
-(* own table of round constants from the read-only data rather than taking   *)
-(* it as an argument, and it does two rounds in each iteration of its loop.  *)
-(* At the end, the theorem for the code in the whole image is also stated    *)
-(* for the state as a 1600-bit word, with keccak_f1600 of common/fips202.ml. *)
+(* Keccak-f1600 permutation. This is the code for mlkem_keccakf1600_permute  *)
+(* from mlkem-native's portable C implementation compiled by gcc 12 with -O2 *)
+(* (see mlkem_native/README.md). Unlike the hand-written kernels, it reads   *)
+(* its own table of round constants from the read-only data rather than      *)
+(* taking it as an argument, and it does two rounds in each iteration of its *)
+(* loop. At the end, the theorem for the code in the whole image is also     *)
+(* stated for the state as a 1600-bit word, with keccak_f1600 of             *)
+(* common/fips202/fips202.ml.                                                *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -872,7 +872,7 @@ let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
 
 (* ------------------------------------------------------------------------- *)
 (* The same for the state as a 1600-bit word, read by wbytes, with the       *)
-(* permutation keccak_f1600 of common/fips202.ml (see                        *)
+(* permutation keccak_f1600 of common/fips202/fips202.ml (see                *)
 (* utils/keccak_fips202.ml), and tactics for callers, which carry the state  *)
 (* between calls as 200 bytes.                                               *)
 (* ------------------------------------------------------------------------- *)

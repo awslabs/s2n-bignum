@@ -413,9 +413,10 @@ let D4_CHECK_TAC (body:int->tactic) =
     D4_RESOLVE_TAC THEN body 6];;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_decompress 4 in common/fips203.ml, the    *)
-(* result for a 4-bit field y is the integer closest to 3329 * y / 16,       *)
-(* rounding up on ties, i.e. (3329 * y + 8) DIV 16.                          *)
+(* Correctness proof. As for mlkem_decompress 4 in                           *)
+(* common/fips203/fips203.ml, the result for a 4-bit field y is the integer  *)
+(* closest to 3329 * y / 16, rounding up on ties, i.e. (3329 * y + 8) DIV    *)
+(* 16.                                                                       *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT_STMT =

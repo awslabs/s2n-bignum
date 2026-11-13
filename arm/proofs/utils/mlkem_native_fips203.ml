@@ -5,17 +5,17 @@
 
 (* ========================================================================= *)
 (* Lemmas connecting the specifications of the mlkem-native functions to the *)
-(* FIPS 203 specification in common/fips203.ml, for the proofs of the K-PKE  *)
-(* and ML-KEM functions. The specifications of the leaf functions use plain  *)
-(* arithmetic (congruences mod q = 3329 and bounds on the 16-bit             *)
+(* FIPS 203 specification in common/fips203/fips203.ml, for the proofs of    *)
+(* the K-PKE and ML-KEM functions. The specifications of the leaf functions  *)
+(* use plain arithmetic (congruences mod q = 3329 and bounds on the 16-bit   *)
 (* coefficients, numbers for byte arrays, and lists of words), and these     *)
 (* lemmas relate them to the definitions of FIPS 203 and to its NTT-domain   *)
-(* forms of K-PKE in common/fips203_theory.ml.                               *)
+(* forms of K-PKE in common/fips203/properties/kpke_ntt_domain.ml.           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native_image.ml";;
 needs "common/mlkem_mldsa.ml";;
-needs "common/fips203_theory.ml";;
+needs "common/fips203/properties/fips203_properties.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Byte strings, bit fields and lists of words.                              *)
@@ -776,7 +776,7 @@ let MLKEM_NTT_INV_CONG = prove
      `(x:int == y) (mod n) ==> (x * z == y * z) (mod n)`) THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN
-    MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ARITH_TAC;
+    MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ASM_ARITH_TAC;
     ALL_TAC] THEN
   MP_TAC(SPECL [`&3303 * I2:int`; `&3329:int`] INT_REM_MOD_SELF) THEN
   SPEC_TAC(`(&3303 * I2:int) rem &3329`,`z:int`) THEN GEN_TAC THEN
@@ -809,7 +809,7 @@ let INVERSE_NTT_CONG_MUL = prove
    `(x:int == y) (mod n) ==> (x * z == y * z) (mod n)`) THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN
-  MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ARITH_TAC);;
+  MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ASM_ARITH_TAC);;
 
 let MLKEM_NTT_INV_CONG_MUL = prove
  (`!(a:num->int) (b:num->int) c k.
