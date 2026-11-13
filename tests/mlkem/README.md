@@ -3,19 +3,19 @@
 This directory contains validation and testing material for the formal
 specifications in `common/`:
 
- - `common/fips202.ml`: SHA-3 (FIPS 202)
- - `common/fips203.ml`: ML-KEM (FIPS 203)
- - `common/fips203_theory.ml`: properties of the ML-KEM specification,
+ - `common/fips202/fips202.ml`: SHA-3 (FIPS 202)
+ - `common/fips203/fips203.ml`: ML-KEM (FIPS 203)
+ - `common/fips203/properties/`: properties of the ML-KEM specification,
    including the NTT-domain forms `KPKE_*_FIPS` of FIPS 203 Algorithms 13-15
 
 ## Files
 
  - `fips202_eval.ml`: conversions evaluating the FIPS 202 functions by proof.
  - `keccak_bridge.ml`: the theorem `KECCAK_F1600_BRIDGE` identifying
-   `keccak_f1600` of `common/fips202.ml` with the lane-list `keccak 24` of
-   `{arm,x86}/proofs/utils/keccak_spec.ml` (whose definitions are reproduced
-   verbatim, so the files can be loaded together), and a faster evaluator of
-   `keccak_f1600` based on it.
+   `keccak_f1600` of `common/fips202/fips202.ml` with the lane-list
+   `keccak 24` of `{arm,x86}/proofs/utils/keccak_spec.ml` (whose
+   definitions are reproduced verbatim, so the files can be loaded
+   together), and a faster evaluator of `keccak_f1600` based on it.
  - `fips202_test.ml`: standard SHA-3 test vectors as theorems.
  - `mlkem_eval.ml`: evaluation of the ML-KEM functions by proof
    (`MLKEM_EVAL_CONV`, `MLKEM_TOP_EVAL_CONV`), via the `KPKE_*_FIPS` theorems.
@@ -23,7 +23,7 @@ specifications in `common/`:
  - `vectors/*.ml`: the ACVP vectors used, as HOL terms.
  - `make_vectors.py`: generates `vectors/` from the ACVP JSON files.
  - `ref_mlkem.py`: a direct Python transcription of the HOL definitions in
-   `common/fips203.ml`, used for fast (non-formal) cross-checking.
+   `common/fips203/fips203.ml`, used for fast (non-formal) cross-checking.
  - `check_acvp.py`, `check_keychecks.py`: run `ref_mlkem.py` on all the ACVP
    keyGen, encapsulation, decapsulation and key-check vectors.
 
@@ -32,7 +32,7 @@ specifications in `common/`:
 From the root of the repository:
 
 ```
-needs "common/fips203_theory.ml";;      (* spec and theory, about 10 seconds *)
+needs "common/fips203/properties/fips203_properties.ml";;  (* about 10 seconds *)
 needs "tests/mlkem/fips202_test.ml";;   (* SHA-3 test vectors, a few minutes *)
 needs "tests/mlkem/mlkem_kat.ml";;
 mlkem_kat "keygen512";;

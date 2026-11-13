@@ -5,17 +5,17 @@
 
 (* ========================================================================= *)
 (* Lemmas connecting the specifications of the mlkem-native functions to the *)
-(* FIPS 203 specification in common/fips203.ml, for the proofs of the K-PKE  *)
-(* and ML-KEM functions. The specifications of the leaf functions use plain  *)
-(* arithmetic (congruences mod q = 3329 and bounds on the 16-bit             *)
+(* FIPS 203 specification in common/fips203/fips203.ml, for the proofs of    *)
+(* the K-PKE and ML-KEM functions. The specifications of the leaf functions  *)
+(* use plain arithmetic (congruences mod q = 3329 and bounds on the 16-bit   *)
 (* coefficients, numbers for byte arrays, and lists of words), and these     *)
 (* lemmas relate them to the definitions of FIPS 203 and to its NTT-domain   *)
-(* forms of K-PKE in common/fips203_theory.ml.                               *)
+(* forms of K-PKE in common/fips203/properties/kpke_ntt_domain.ml.           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/mlkem_native_image.ml";;
 needs "common/mlkem_mldsa.ml";;
-needs "common/fips203_theory.ml";;
+needs "common/fips203/properties/fips203_properties.ml";;
 needs "common/fips203_terminates.ml";;
 
 (* ------------------------------------------------------------------------- *)

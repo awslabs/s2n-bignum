@@ -1,9 +1,10 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 
-# A direct Python transcription of the HOL definitions in common/fips203.ml,
-# used only to cross-check the specification against NIST ACVP vectors and
-# to produce intermediate values for evaluation in HOL. Not optimized.
+# A direct Python transcription of the HOL definitions in
+# common/fips203/fips203.ml, used only to cross-check the specification
+# against NIST ACVP vectors and to produce intermediate values for
+# evaluation in HOL. Not optimized.
 import hashlib
 
 Q = 3329

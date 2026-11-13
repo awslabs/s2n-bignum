@@ -5,9 +5,10 @@
 
 (* ========================================================================= *)
 (* Standard test vectors for the FIPS 202 definitions, proved by evaluation. *)
-(* KECCAK_F1600_ZERO evaluates the step mappings of common/fips202.ml        *)
-(* directly; the others go through the faster lane-list evaluation of        *)
-(* keccak_bridge.ml, which is also what the ML-KEM tests use.                *)
+(* KECCAK_F1600_ZERO evaluates the step mappings of                          *)
+(* common/fips202/fips202.ml directly; the others go through the faster      *)
+(* lane-list evaluation of keccak_bridge.ml, which is also what the ML-KEM   *)
+(* tests use.                                                                *)
 (* ========================================================================= *)
 
 needs "tests/mlkem/keccak_bridge.ml";;

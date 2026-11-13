@@ -4,10 +4,11 @@
  *)
 
 (* ========================================================================= *)
-(* Bridge between the Keccak-f[1600] of common/fips202.ml and the lane-list  *)
-(* formulation used by the Keccak assembly proofs in {arm,x86}/proofs (from  *)
-(* {arm,x86}/proofs/utils/keccak_spec.ml, whose definitions are reproduced   *)
-(* verbatim below, so that loading both gives benign redefinitions).         *)
+(* Bridge between the Keccak-f[1600] of common/fips202/fips202.ml and the    *)
+(* lane-list formulation used by the Keccak assembly proofs in               *)
+(* {arm,x86}/proofs (from {arm,x86}/proofs/utils/keccak_spec.ml, whose       *)
+(* definitions are reproduced verbatim below, so that loading both gives     *)
+(* benign redefinitions).                                                    *)
 (* ========================================================================= *)
 
 needs "tests/mlkem/fips202_eval.ml";;
