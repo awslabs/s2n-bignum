@@ -45,7 +45,12 @@ let pure_inverse_ntt_mldsa = define
 (* i_j of n, i.e. a pure "gather these source bits, in this order". Note the *)
 (* little-endian ordering: bitmap[1;0] swaps bits 0 and 1 for example.       *)
 (* Bits of the argument above the list length are retained as-is, which      *)
-(* makes some theorems more regular for all inputs.                          *)
+(* makes some theorems (e.g. the involution properties) hold for all inputs. *)
+(* The orders below are only meaningful, and only used in the specs, on the  *)
+(* range [0,2^k) where k is the list length. Earlier versions of the specs   *)
+(* defined them differently (e.g. bitreverse7 via word_reversefields, which  *)
+(* truncates to 7 bits), and the definitions only agree on that range; see   *)
+(* the "_ALT" theorems below for the explicit correspondences.               *)
 (* ------------------------------------------------------------------------- *)
 
 let bitmap = define
@@ -110,8 +115,8 @@ let reorder = define
   `reorder p (a:num->int) = \i. a(p i)`;;
 
 (* ------------------------------------------------------------------------- *)
-(* AVX2-optimized orderings for ML-KEM and ML-DSA NTT (bit-field permutes).   *)
-(* avx2_ntt_order'/avx2_reorder'/mldsa_avx2_ntt_order' are the inverses.      *)
+(* AVX2-optimized orderings for ML-KEM and ML-DSA NTT (bit-field permutes).  *)
+(* avx2_ntt_order'/avx2_reorder'/mldsa_avx2_ntt_order' are the inverses.     *)
 (* ------------------------------------------------------------------------- *)
 
 let avx2_ntt_order = define
@@ -167,6 +172,45 @@ let MLDSA_AVX2_NTT_ORDER_INVOLUTION = prove
  (`!n. mldsa_avx2_ntt_order'(mldsa_avx2_ntt_order n) = n /\
        mldsa_avx2_ntt_order(mldsa_avx2_ntt_order' n) = n`,
   BITMAP_EQ_TAC[mldsa_avx2_ntt_order; mldsa_avx2_ntt_order']);;
+
+(* ------------------------------------------------------------------------- *)
+(* Correspondences with the earlier (word-based or DIV/MOD-based) forms of   *)
+(* the orders, on the meaningful input ranges. These are not used in proofs  *)
+(* but allow the bit lists above to be checked against the documented forms. *)
+(* See also BITREVERSE_PAIRS_ALT, AVX2_REORDER_ALT and AVX2_REORDER'_SPLIT.  *)
+(* ------------------------------------------------------------------------- *)
+
+let BITMAP_ALT_TAC thl =
+  CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC thl THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  CONV_TAC(DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC BITMAP_CONV));;
+
+let BITREVERSE7_ALT = prove
+ (`!n. n < 128 ==> bitreverse7 n = val(word_reversefields 1 (word n:7 word))`,
+  BITMAP_ALT_TAC[bitreverse7]);;
+
+let BITREVERSE8_ALT = prove
+ (`!n. n < 256 ==> bitreverse8 n = val(word_reversefields 1 (word n:8 word))`,
+  BITMAP_ALT_TAC[bitreverse8]);;
+
+let AVX2_NTT_ORDER_ALT = prove
+ (`!i. i < 128
+       ==> avx2_ntt_order i =
+           bitreverse7(64 * (i DIV 64) + (i MOD 64) DIV 16 + 4 * (i MOD 16))`,
+  BITMAP_ALT_TAC[avx2_ntt_order; bitreverse7]);;
+
+let AVX2_NTT_ORDER'_ALT = prove
+ (`!i. i < 128
+       ==> avx2_ntt_order' i =
+           let j = bitreverse7 i in
+           64 * (j DIV 64) + 16 * (j MOD 4) + (j MOD 64) DIV 4`,
+  BITMAP_ALT_TAC[avx2_ntt_order'; bitreverse7]);;
+
+let MLDSA_AVX2_NTT_ORDER_ALT = prove
+ (`!i. i < 256
+       ==> mldsa_avx2_ntt_order i =
+           bitreverse8(64 * (i DIV 64) + (i MOD 64) DIV 8 + 8 * (i MOD 8))`,
+  BITMAP_ALT_TAC[mldsa_avx2_ntt_order; bitreverse8]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Characterizations relating each order to the index arithmetic below.      *)
@@ -365,9 +409,11 @@ let AVX2_INVERSE_NTT = prove
   CONV_TAC(ONCE_DEPTH_CONV let_CONV) THEN
   SUBGOAL_THEN
    `isum(0..127)
-      (\j. x(avx2_reorder'(2 * j + k MOD 2)) * &1175 pow ((2 * j + 1) * k DIV 2)) =
+      (\j. x(avx2_reorder'(2 * j + k MOD 2)) *
+           &1175 pow ((2 * j + 1) * k DIV 2)) =
     isum(0..127)
-      (\j. x(avx2_ntt_order' j DIV 16 * 32 + k MOD 2 * 16 + avx2_ntt_order' j MOD 16) *
+      (\j. x(avx2_ntt_order' j DIV 16 * 32 + k MOD 2 * 16 +
+             avx2_ntt_order' j MOD 16) *
            &1175 pow ((2 * j + 1) * k DIV 2))`
    (fun th -> REWRITE_TAC[th]) THENL
    [MATCH_MP_TAC ISUM_EQ_NUMSEG THEN GEN_TAC THEN STRIP_TAC THEN BETA_TAC THEN
@@ -383,8 +429,8 @@ let MLDSA_FORWARD_NTT = prove
 
 (* ------------------------------------------------------------------------- *)
 (* Explicit computation rules to evaluate mod-3329 powers/sums less naively. *)
-(* Every order is a bitmap, so its explicit table over 0..bound is built the  *)
-(* same way: unfold the order to its bitmap, then apply the single BITMAP_CONV.*)
+(* Every order is a bitmap, so its explicit table over 0..bound is built     *)
+(* the same way: unfold the order to its bitmap, then apply BITMAP_CONV.     *)
 (* ------------------------------------------------------------------------- *)
 
 let BITMAP_CLAUSES perm bound =
@@ -2096,15 +2142,13 @@ let is_local_definition unfold_defs =
   fun tm -> is_eq tm && is_var(rand tm) && pam(lhand tm);;
 
 (* ------------------------------------------------------------------------- *)
-(* Caller-side drivers that discharge a "congruence-and-bounds" goal using    *)
-(* the machinery above.  These factor out the boilerplate that was previously *)
-(* copied, with minor variations, into every NTT/iNTT and pointwise/basemul   *)
-(* correctness proof.                                                         *)
-(*                                                                            *)
-(* The two universal building blocks:                                         *)
-(*   CONGBOUND_BOUNDS_TAC:      weaken a computed [l,u] bound to the goal's    *)
-(*                              [l',u'] (the second MONO_AND branch).          *)
-(*   CONGBOUND_ABS_BOUNDS_TAC:  same, after turning abs(x)<=b into -b<=x<=b.   *)
+(* Caller-side drivers that discharge a "congruence-and-bounds" goal using   *)
+(* the machinery above. These factor out the boilerplate that was previously *)
+(* copied, with minor variations, into every NTT/iNTT and pointwise/basemul  *)
+(* correctness proof.                                                        *)
+(*                                                                           *)
+(* The universal building block CONGBOUND_BOUNDS_TAC weakens a computed      *)
+(* [l,u] bound to the goal's [l',u'] (the second MONO_AND branch).           *)
 (* ------------------------------------------------------------------------- *)
 
 let CONGBOUND_BOUNDS_TAC =
@@ -2113,12 +2157,9 @@ let CONGBOUND_BOUNDS_TAC =
     ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
   CONV_TAC INT_REDUCE_CONV;;
 
-let CONGBOUND_ABS_BOUNDS_TAC =
-  REWRITE_TAC[INT_ABS_BOUNDS] THEN CONGBOUND_BOUNDS_TAC;;
-
-(* The two local-function seeds used to prime ASM_CONGBOUND_RULE: either the   *)
-(* processed bound assumptions (the usual case) or the empty map (the mlkem    *)
-(* intt proofs, which rely purely on the local barred/barmul definitions).    *)
+(* The two local-function seeds used to prime ASM_CONGBOUND_RULE: either the *)
+(* processed bound assumptions (the usual case) or the empty map (the mlkem  *)
+(* intt proofs, which rely purely on the local barred/barmul definitions).   *)
 
 let CONGBOUND_LFN_BOUNDED asl =
   PROCESS_BOUND_ASSUMPTIONS
@@ -2126,10 +2167,10 @@ let CONGBOUND_LFN_BOUNDED asl =
 
 let CONGBOUND_LFN_EMPTY (asl:(string * thm) list) = undefined;;
 
-(* The two per-architecture strategies for splitting the top-level goal        *)
-(* conjunction into individual coefficient goals before propagation.  ARM      *)
-(* proofs peel conjuncts while more than three remain; x86 proofs re-associate *)
-(* a 4-way conjunction and split off the last conjunct.                        *)
+(* The two per-architecture strategies for splitting the top-level goal      *)
+(* conjunction into individual coefficient goals before propagation. ARM     *)
+(* proofs peel conjuncts while more than three remain; x86 proofs            *)
+(* re-associate a 4-way conjunction and split off the last conjunct.         *)
 
 let CONGBOUND_SPLIT_ARM =
   REPEAT(W(fun (asl,w) ->
@@ -2139,13 +2180,13 @@ let CONGBOUND_SPLIT_X86 =
   REPEAT(GEN_REWRITE_TAC I
    [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC);;
 
-(* The full NTT/iNTT driver.  Positional arguments:                            *)
-(*   lfn_seed    : CONGBOUND_LFN_BOUNDED or CONGBOUND_LFN_EMPTY                 *)
-(*   markers     : local-definition markers, e.g. [barmul] / [mldsa_montmul]   *)
-(*   split_tac   : CONGBOUND_SPLIT_ARM or CONGBOUND_SPLIT_X86                   *)
-(*   cong_prelude: extra tactic before the congruence chain (ALL_TAC on ARM;   *)
-(*                 REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod q R`] on x86)      *)
-(*   ntt_conv    : the forward/inverse NTT evaluation conversion.              *)
+(* The full NTT/iNTT driver. Positional arguments:                           *)
+(*   lfn_seed    : CONGBOUND_LFN_BOUNDED or CONGBOUND_LFN_EMPTY              *)
+(*   markers     : local-definition markers, e.g. [barmul] / [mldsa_montmul] *)
+(*   split_tac   : CONGBOUND_SPLIT_ARM or CONGBOUND_SPLIT_X86                *)
+(*   cong_prelude: extra tactic before the congruence chain (ALL_TAC on ARM; *)
+(*                 REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod q R`] on x86)   *)
+(*   ntt_conv    : the forward/inverse NTT evaluation conversion.            *)
 
 let CONGBOUND_NTT_TAC lfn_seed markers split_tac cong_prelude ntt_conv =
   W(fun (asl,w) ->
@@ -2164,11 +2205,11 @@ let CONGBOUND_NTT_TAC lfn_seed markers split_tac cong_prelude ntt_conv =
        REWRITE_TAC[INT_REM_EQ] THEN INT_LINEAR_CONG_TAC;
        CONGBOUND_BOUNDS_TAC]));;
 
-(* The basemul driver: congruence only (GEN_CONGBOUND_RULE over the whole      *)
-(* assumption list, keep CONJUNCT1), discharged by INT_RING after reducing     *)
-(* the modular arithmetic.  Takes no arguments - all six basemul proofs share  *)
-(* this verbatim (the per-arch/per-k variation is entirely in the def-unfold   *)
-(* rewrites the caller applies BEFORE this tactic).                           *)
+(* The basemul driver: congruence only (GEN_CONGBOUND_RULE over the whole    *)
+(* assumption list, keep CONJUNCT1), discharged by INT_RING after reducing   *)
+(* the modular arithmetic. Takes no arguments - all six basemul proofs share *)
+(* this verbatim (the per-arch/per-k variation is entirely in the def-unfold *)
+(* rewrites the caller applies BEFORE this tactic).                          *)
 
 let CONGBOUND_INT_RING_TAC =
   ASSUM_LIST((fun ths -> W(MP_TAC o CONJUNCT1 o GEN_CONGBOUND_RULE ths o

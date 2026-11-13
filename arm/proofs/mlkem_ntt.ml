@@ -506,7 +506,8 @@ let MLKEM_NTT_CORRECT = prove
   (*** Perform congruence and bound propagation and finish ***)
 
   CONGBOUND_NTT_TAC
-    CONGBOUND_LFN_BOUNDED [barmul] CONGBOUND_SPLIT_ARM ALL_TAC FORWARD_NTT_CONV);;
+    CONGBOUND_LFN_BOUNDED [barmul] CONGBOUND_SPLIT_ARM ALL_TAC
+    FORWARD_NTT_CONV);;
 
 (*** Subroutine form, somewhat messy elaboration of the usual wrapper ***)
 
