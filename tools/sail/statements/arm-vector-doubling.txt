@@ -1,0 +1,128 @@
+SAIL_HL_ARM_SQDMULH_VEC64E16_EQ
+|- forall reg_FPSR d n m s t.
+     sail_hl_arm_5fSQDMULH_5fVEC64E16 reg_FPSR d n m s t <=>
+     arm_SQDMULH_VEC (QREG' d) (QREG' n) (QREG' m) 16 64 s t
+
+SAIL_HL_ARM_SQDMULH_VEC64E32_EQ
+|- forall reg_FPSR d n m s t.
+     sail_hl_arm_5fSQDMULH_5fVEC64E32 reg_FPSR d n m s t <=>
+     arm_SQDMULH_VEC (QREG' d) (QREG' n) (QREG' m) 32 64 s t
+
+SAIL_HL_ARM_SQDMULH_VEC64E16_LO_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQDMULH_5fVEC64E16_5fLO reg_FPSR d n m idx s t <=>
+     arm_SQDMULH_VEC
+       (QREG' d) (QREG' n) (QLANE (word_zx m) 16 (val idx + 0)) 16 64 s t
+
+SAIL_HL_ARM_SQDMULH_VEC64E16_HI_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQDMULH_5fVEC64E16_5fHI reg_FPSR d n m idx s t <=>
+     arm_SQDMULH_VEC
+       (QREG' d) (QREG' n) (QLANE (word_zx m) 16 (val idx + 4)) 16 64 s t
+
+SAIL_HL_ARM_SQDMULH_VEC64E32_LO_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQDMULH_5fVEC64E32_5fLO reg_FPSR d n m idx s t <=>
+     arm_SQDMULH_VEC (QREG' d) (QREG' n) (QLANE m 32 (val idx + 0)) 32 64 s t
+
+SAIL_HL_ARM_SQDMULH_VEC64E32_HI_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQDMULH_5fVEC64E32_5fHI reg_FPSR d n m idx s t <=>
+     arm_SQDMULH_VEC (QREG' d) (QREG' n) (QLANE m 32 (val idx + 2)) 32 64 s t
+
+SAIL_HL_ARM_SQDMULH_VEC128E16_EQ
+|- forall reg_FPSR d n m s t.
+     sail_hl_arm_5fSQDMULH_5fVEC128E16 reg_FPSR d n m s t <=>
+     arm_SQDMULH_VEC (QREG' d) (QREG' n) (QREG' m) 16 128 s t
+
+SAIL_HL_ARM_SQDMULH_VEC128E32_EQ
+|- forall reg_FPSR d n m s t.
+     sail_hl_arm_5fSQDMULH_5fVEC128E32 reg_FPSR d n m s t <=>
+     arm_SQDMULH_VEC (QREG' d) (QREG' n) (QREG' m) 32 128 s t
+
+SAIL_HL_ARM_SQDMULH_VEC128E16_LO_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQDMULH_5fVEC128E16_5fLO reg_FPSR d n m idx s t <=>
+     arm_SQDMULH_VEC
+       (QREG' d) (QREG' n) (QLANE (word_zx m) 16 (val idx + 0)) 16 128 s t
+
+SAIL_HL_ARM_SQDMULH_VEC128E16_HI_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQDMULH_5fVEC128E16_5fHI reg_FPSR d n m idx s t <=>
+     arm_SQDMULH_VEC
+       (QREG' d) (QREG' n) (QLANE (word_zx m) 16 (val idx + 4)) 16 128 s t
+
+SAIL_HL_ARM_SQDMULH_VEC128E32_LO_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQDMULH_5fVEC128E32_5fLO reg_FPSR d n m idx s t <=>
+     arm_SQDMULH_VEC (QREG' d) (QREG' n) (QLANE m 32 (val idx + 0)) 32 128 s t
+
+SAIL_HL_ARM_SQDMULH_VEC128E32_HI_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQDMULH_5fVEC128E32_5fHI reg_FPSR d n m idx s t <=>
+     arm_SQDMULH_VEC (QREG' d) (QREG' n) (QLANE m 32 (val idx + 2)) 32 128 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC64E16_EQ
+|- forall reg_FPSR d n m s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC64E16 reg_FPSR d n m s t <=>
+     arm_SQRDMULH_VEC (QREG' d) (QREG' n) (QREG' m) 16 64 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC64E32_EQ
+|- forall reg_FPSR d n m s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC64E32 reg_FPSR d n m s t <=>
+     arm_SQRDMULH_VEC (QREG' d) (QREG' n) (QREG' m) 32 64 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC64E16_LO_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC64E16_5fLO reg_FPSR d n m idx s t <=>
+     arm_SQRDMULH_VEC
+       (QREG' d) (QREG' n) (QLANE (word_zx m) 16 (val idx + 0)) 16 64 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC64E16_HI_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC64E16_5fHI reg_FPSR d n m idx s t <=>
+     arm_SQRDMULH_VEC
+       (QREG' d) (QREG' n) (QLANE (word_zx m) 16 (val idx + 4)) 16 64 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC64E32_LO_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC64E32_5fLO reg_FPSR d n m idx s t <=>
+     arm_SQRDMULH_VEC (QREG' d) (QREG' n) (QLANE m 32 (val idx + 0)) 32 64 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC64E32_HI_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC64E32_5fHI reg_FPSR d n m idx s t <=>
+     arm_SQRDMULH_VEC (QREG' d) (QREG' n) (QLANE m 32 (val idx + 2)) 32 64 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC128E16_EQ
+|- forall reg_FPSR d n m s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC128E16 reg_FPSR d n m s t <=>
+     arm_SQRDMULH_VEC (QREG' d) (QREG' n) (QREG' m) 16 128 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC128E32_EQ
+|- forall reg_FPSR d n m s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC128E32 reg_FPSR d n m s t <=>
+     arm_SQRDMULH_VEC (QREG' d) (QREG' n) (QREG' m) 32 128 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC128E16_LO_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC128E16_5fLO reg_FPSR d n m idx s t <=>
+     arm_SQRDMULH_VEC
+       (QREG' d) (QREG' n) (QLANE (word_zx m) 16 (val idx + 0)) 16 128 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC128E16_HI_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC128E16_5fHI reg_FPSR d n m idx s t <=>
+     arm_SQRDMULH_VEC
+       (QREG' d) (QREG' n) (QLANE (word_zx m) 16 (val idx + 4)) 16 128 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC128E32_LO_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC128E32_5fLO reg_FPSR d n m idx s t <=>
+     arm_SQRDMULH_VEC (QREG' d) (QREG' n) (QLANE m 32 (val idx + 0)) 32 128 s t
+
+SAIL_HL_ARM_SQRDMULH_VEC128E32_HI_EQ
+|- forall reg_FPSR d n m idx s t.
+     sail_hl_arm_5fSQRDMULH_5fVEC128E32_5fHI reg_FPSR d n m idx s t <=>
+     arm_SQRDMULH_VEC (QREG' d) (QREG' n) (QLANE m 32 (val idx + 2)) 32 128 s t
+

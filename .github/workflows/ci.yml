@@ -4,9 +4,115 @@ on:
   pull_request:
 
 env:
+  # The Sail proof job builds its own HOL Light, pinned in
+  # tools/sail/ci/versions.env.
   HOLLIGHT_COMMIT: "e5236a5839b4d08dc2536b325cea0af855e6c379"
 
 jobs:
+  # Compare freshly generated definitions with the checked-in models.
+  # The separate proof job below does not consume outputs from this job.
+  # Generation needs about 33 GiB with its four compiler processes and
+  # test shards running together; the 16 GB hosted runner shuts down.
+  sail-hol-generation:
+    runs-on:
+      - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      SAIL_HOL_CI_BUILD_JOBS: "2"
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Install Sail build prerequisites
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential git opam m4 pkg-config libgmp-dev z3
+
+    - name: Build pinned Sail toolchain and fetch architecture models
+      run: |
+        set -o pipefail
+        mkdir -p tools/sail/_build/ci
+        bash tools/sail/ci/setup.sh generation 2>&1 | \
+          tee tools/sail/_build/ci/setup-generation.log
+
+    - name: Check backend tests and exact generated models
+      run: python3 tools/sail/ci/check.py generate
+
+    - name: Preserve generation failure logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sail-hol-generation-logs-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          tools/sail/_build/ci/**/*.log
+          tools/sail/_build/ci/generation-*/models/*
+          tools/sail/_build/plugin-build.log
+          tools/sail/_build/tests/**/*.log
+        if-no-files-found: warn
+        retention-days: 7
+
+  # Check agreement and explicit counterexamples using checked-in models.
+  # Each worker starts a new kernel; no theorem heap or result is restored.
+  sail-hol-proofs:
+    runs-on:
+      - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    env:
+      SAIL_HOL_CI_BUILD_JOBS: "2"
+      SAIL_HOL_PROOF_JOBS: "16"
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+
+    - name: Install HOL Light build prerequisites
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential git opam m4 pkg-config \
+          libgmp-dev libpcre2-dev xdot
+
+    - name: Build pinned native HOL Light
+      run: |
+        set -o pipefail
+        mkdir -p tools/sail/_build/ci
+        bash tools/sail/ci/setup.sh proofs 2>&1 | \
+          tee tools/sail/_build/ci/setup-proofs.log
+
+    - name: Check instruction claims on checked-in models
+      run: python3 tools/sail/ci/check.py proofs
+
+    # The audited logs are the evidence of a passing run as well.
+    - name: Preserve proof logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sail-hol-proofs-logs-${{ github.run_id }}-${{ github.run_attempt }}
+        path: tools/sail/_build/ci/**/*.log
+        if-no-files-found: warn
+        retention-days: 7
+
+  # The one check to require for the Sail work. GitHub counts a skipped
+  # job as passed, so run even after a failure and test both results.
+  sail-hol:
+    needs: [sail-hol-generation, sail-hol-proofs]
+    if: always()
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+    - name: Require Sail generation and proofs to pass
+      run: |
+        test "${{ needs.sail-hol-generation.result }}" = success
+        test "${{ needs.sail-hol-proofs.result }}" = success
+
   s2n-bignum-tests:
     strategy:
       matrix:

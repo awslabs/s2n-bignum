@@ -1,0 +1,10 @@
+SAIL_HL_ARM_SMULH64_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fSMULH64 d n m s t <=>
+     arm_SMULH (XREG' d) (XREG' n) (XREG' m) s t
+
+SAIL_HL_ARM_UMULH64_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fUMULH64 d n m s t <=>
+     arm_UMULH (XREG' d) (XREG' n) (XREG' m) s t
+

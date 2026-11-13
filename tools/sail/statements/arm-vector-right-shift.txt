@@ -1,0 +1,140 @@
+SAIL_HL_ARM_USHR_VEC64E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHR_5fVEC64E8 amount d n s t <=>
+     arm_USHR_VEC (QREG' d) (QREG' n) (val amount + 1) 8 64 s t
+
+SAIL_HL_ARM_USHR_VEC64E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHR_5fVEC64E16 amount d n s t <=>
+     arm_USHR_VEC (QREG' d) (QREG' n) (val amount + 1) 16 64 s t
+
+SAIL_HL_ARM_USHR_VEC64E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHR_5fVEC64E32 amount d n s t <=>
+     arm_USHR_VEC (QREG' d) (QREG' n) (val amount + 1) 32 64 s t
+
+SAIL_HL_ARM_USHR_VEC128E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHR_5fVEC128E8 amount d n s t <=>
+     arm_USHR_VEC (QREG' d) (QREG' n) (val amount + 1) 8 128 s t
+
+SAIL_HL_ARM_USHR_VEC128E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHR_5fVEC128E16 amount d n s t <=>
+     arm_USHR_VEC (QREG' d) (QREG' n) (val amount + 1) 16 128 s t
+
+SAIL_HL_ARM_USHR_VEC128E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHR_5fVEC128E32 amount d n s t <=>
+     arm_USHR_VEC (QREG' d) (QREG' n) (val amount + 1) 32 128 s t
+
+SAIL_HL_ARM_USHR_VEC128E64_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHR_5fVEC128E64 amount d n s t <=>
+     arm_USHR_VEC (QREG' d) (QREG' n) (val amount + 1) 64 128 s t
+
+SAIL_HL_ARM_SSHR_VEC64E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHR_5fVEC64E8 amount d n s t <=>
+     arm_SSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 8 64 s t
+
+SAIL_HL_ARM_SSHR_VEC64E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHR_5fVEC64E16 amount d n s t <=>
+     arm_SSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 16 64 s t
+
+SAIL_HL_ARM_SSHR_VEC64E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHR_5fVEC64E32 amount d n s t <=>
+     arm_SSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 32 64 s t
+
+SAIL_HL_ARM_SSHR_VEC128E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHR_5fVEC128E8 amount d n s t <=>
+     arm_SSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 8 128 s t
+
+SAIL_HL_ARM_SSHR_VEC128E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHR_5fVEC128E16 amount d n s t <=>
+     arm_SSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 16 128 s t
+
+SAIL_HL_ARM_SSHR_VEC128E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHR_5fVEC128E32 amount d n s t <=>
+     arm_SSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 32 128 s t
+
+SAIL_HL_ARM_SSHR_VEC128E64_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHR_5fVEC128E64 amount d n s t <=>
+     arm_SSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 64 128 s t
+
+SAIL_HL_ARM_SRSHR_VEC64E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSRSHR_5fVEC64E8 amount d n s t <=>
+     arm_SRSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 8 64 s t
+
+SAIL_HL_ARM_SRSHR_VEC64E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSRSHR_5fVEC64E16 amount d n s t <=>
+     arm_SRSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 16 64 s t
+
+SAIL_HL_ARM_SRSHR_VEC64E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSRSHR_5fVEC64E32 amount d n s t <=>
+     arm_SRSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 32 64 s t
+
+SAIL_HL_ARM_SRSHR_VEC128E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSRSHR_5fVEC128E8 amount d n s t <=>
+     arm_SRSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 8 128 s t
+
+SAIL_HL_ARM_SRSHR_VEC128E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSRSHR_5fVEC128E16 amount d n s t <=>
+     arm_SRSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 16 128 s t
+
+SAIL_HL_ARM_SRSHR_VEC128E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSRSHR_5fVEC128E32 amount d n s t <=>
+     arm_SRSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 32 128 s t
+
+SAIL_HL_ARM_SRSHR_VEC128E64_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSRSHR_5fVEC128E64 amount d n s t <=>
+     arm_SRSHR_VEC (QREG' d) (QREG' n) (val amount + 1) 64 128 s t
+
+SAIL_HL_ARM_USRA_VEC64E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSRA_5fVEC64E8 amount d n s t <=>
+     arm_USRA_VEC (QREG' d) (QREG' n) (val amount + 1) 8 64 s t
+
+SAIL_HL_ARM_USRA_VEC64E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSRA_5fVEC64E16 amount d n s t <=>
+     arm_USRA_VEC (QREG' d) (QREG' n) (val amount + 1) 16 64 s t
+
+SAIL_HL_ARM_USRA_VEC64E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSRA_5fVEC64E32 amount d n s t <=>
+     arm_USRA_VEC (QREG' d) (QREG' n) (val amount + 1) 32 64 s t
+
+SAIL_HL_ARM_USRA_VEC128E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSRA_5fVEC128E8 amount d n s t <=>
+     arm_USRA_VEC (QREG' d) (QREG' n) (val amount + 1) 8 128 s t
+
+SAIL_HL_ARM_USRA_VEC128E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSRA_5fVEC128E16 amount d n s t <=>
+     arm_USRA_VEC (QREG' d) (QREG' n) (val amount + 1) 16 128 s t
+
+SAIL_HL_ARM_USRA_VEC128E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSRA_5fVEC128E32 amount d n s t <=>
+     arm_USRA_VEC (QREG' d) (QREG' n) (val amount + 1) 32 128 s t
+
+SAIL_HL_ARM_USRA_VEC128E64_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSRA_5fVEC128E64 amount d n s t <=>
+     arm_USRA_VEC (QREG' d) (QREG' n) (val amount + 1) 64 128 s t
+

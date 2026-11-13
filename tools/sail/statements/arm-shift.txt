@@ -1,0 +1,40 @@
+SAIL_HL_ARM_LSLV32_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fLSLV32 d n m s t <=>
+     arm_LSLV (WREG' d) (WREG' n) (WREG' m) s t
+
+SAIL_HL_ARM_LSLV64_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fLSLV64 d n m s t <=>
+     arm_LSLV (XREG' d) (XREG' n) (XREG' m) s t
+
+SAIL_HL_ARM_LSRV32_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fLSRV32 d n m s t <=>
+     arm_LSRV (WREG' d) (WREG' n) (WREG' m) s t
+
+SAIL_HL_ARM_LSRV64_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fLSRV64 d n m s t <=>
+     arm_LSRV (XREG' d) (XREG' n) (XREG' m) s t
+
+SAIL_HL_ARM_ASRV32_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fASRV32 d n m s t <=>
+     arm_ASRV (WREG' d) (WREG' n) (WREG' m) s t
+
+SAIL_HL_ARM_ASRV64_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fASRV64 d n m s t <=>
+     arm_ASRV (XREG' d) (XREG' n) (XREG' m) s t
+
+SAIL_HL_ARM_RORV32_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fRORV32 d n m s t <=>
+     arm_RORV (WREG' d) (WREG' n) (WREG' m) s t
+
+SAIL_HL_ARM_RORV64_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fRORV64 d n m s t <=>
+     arm_RORV (XREG' d) (XREG' n) (XREG' m) s t
+

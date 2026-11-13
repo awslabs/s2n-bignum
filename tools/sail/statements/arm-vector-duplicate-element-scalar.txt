@@ -1,0 +1,40 @@
+SAIL_HL_ARM_DUP_ELEM_SCALAR_E8_LO_EQ
+|- forall d n idx s t.
+     sail_hl_arm_5fDUP_5fELEM_5fSCALAR_5fE8_5fLO d n idx s t <=>
+     arm_DUP_ELEM_SCALAR (QREG' d) (QREG' n) (val idx + 0) 8 s t
+
+SAIL_HL_ARM_DUP_ELEM_SCALAR_E8_HI_EQ
+|- forall d n idx s t.
+     sail_hl_arm_5fDUP_5fELEM_5fSCALAR_5fE8_5fHI d n idx s t <=>
+     arm_DUP_ELEM_SCALAR (QREG' d) (QREG' n) (val idx + 8) 8 s t
+
+SAIL_HL_ARM_DUP_ELEM_SCALAR_E16_LO_EQ
+|- forall d n idx s t.
+     sail_hl_arm_5fDUP_5fELEM_5fSCALAR_5fE16_5fLO d n idx s t <=>
+     arm_DUP_ELEM_SCALAR (QREG' d) (QREG' n) (val idx + 0) 16 s t
+
+SAIL_HL_ARM_DUP_ELEM_SCALAR_E16_HI_EQ
+|- forall d n idx s t.
+     sail_hl_arm_5fDUP_5fELEM_5fSCALAR_5fE16_5fHI d n idx s t <=>
+     arm_DUP_ELEM_SCALAR (QREG' d) (QREG' n) (val idx + 4) 16 s t
+
+SAIL_HL_ARM_DUP_ELEM_SCALAR_E32_LO_EQ
+|- forall d n idx s t.
+     sail_hl_arm_5fDUP_5fELEM_5fSCALAR_5fE32_5fLO d n idx s t <=>
+     arm_DUP_ELEM_SCALAR (QREG' d) (QREG' n) (val idx + 0) 32 s t
+
+SAIL_HL_ARM_DUP_ELEM_SCALAR_E32_HI_EQ
+|- forall d n idx s t.
+     sail_hl_arm_5fDUP_5fELEM_5fSCALAR_5fE32_5fHI d n idx s t <=>
+     arm_DUP_ELEM_SCALAR (QREG' d) (QREG' n) (val idx + 2) 32 s t
+
+SAIL_HL_ARM_DUP_ELEM_SCALAR_E64_LO_EQ
+|- forall d n s t.
+     sail_hl_arm_5fDUP_5fELEM_5fSCALAR_5fE64_5fLO d n s t <=>
+     arm_DUP_ELEM_SCALAR (QREG' d) (QREG' n) 0 64 s t
+
+SAIL_HL_ARM_DUP_ELEM_SCALAR_E64_HI_EQ
+|- forall d n s t.
+     sail_hl_arm_5fDUP_5fELEM_5fSCALAR_5fE64_5fHI d n s t <=>
+     arm_DUP_ELEM_SCALAR (QREG' d) (QREG' n) 1 64 s t
+

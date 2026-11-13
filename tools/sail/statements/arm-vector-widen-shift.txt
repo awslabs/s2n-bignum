@@ -1,0 +1,60 @@
+SAIL_HL_ARM_USHLL_VEC128E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHLL_5fVEC128E8 amount d n s t <=>
+     arm_USHLL_VEC (QREG' d) (QREG' n) (val amount) 8 s t
+
+SAIL_HL_ARM_USHLL_VEC128E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHLL_5fVEC128E16 amount d n s t <=>
+     arm_USHLL_VEC (QREG' d) (QREG' n) (val amount) 16 s t
+
+SAIL_HL_ARM_USHLL_VEC128E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHLL_5fVEC128E32 amount d n s t <=>
+     arm_USHLL_VEC (QREG' d) (QREG' n) (val amount) 32 s t
+
+SAIL_HL_ARM_USHLL2_VEC128E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHLL2_5fVEC128E8 amount d n s t <=>
+     arm_USHLL2_VEC (QREG' d) (QREG' n) (val amount) 8 s t
+
+SAIL_HL_ARM_USHLL2_VEC128E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHLL2_5fVEC128E16 amount d n s t <=>
+     arm_USHLL2_VEC (QREG' d) (QREG' n) (val amount) 16 s t
+
+SAIL_HL_ARM_USHLL2_VEC128E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fUSHLL2_5fVEC128E32 amount d n s t <=>
+     arm_USHLL2_VEC (QREG' d) (QREG' n) (val amount) 32 s t
+
+SAIL_HL_ARM_SSHLL_VEC128E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHLL_5fVEC128E8 amount d n s t <=>
+     arm_SSHLL_VEC (QREG' d) (QREG' n) (val amount) 8 s t
+
+SAIL_HL_ARM_SSHLL_VEC128E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHLL_5fVEC128E16 amount d n s t <=>
+     arm_SSHLL_VEC (QREG' d) (QREG' n) (val amount) 16 s t
+
+SAIL_HL_ARM_SSHLL_VEC128E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHLL_5fVEC128E32 amount d n s t <=>
+     arm_SSHLL_VEC (QREG' d) (QREG' n) (val amount) 32 s t
+
+SAIL_HL_ARM_SSHLL2_VEC128E8_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHLL2_5fVEC128E8 amount d n s t <=>
+     arm_SSHLL2_VEC (QREG' d) (QREG' n) (val amount) 8 s t
+
+SAIL_HL_ARM_SSHLL2_VEC128E16_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHLL2_5fVEC128E16 amount d n s t <=>
+     arm_SSHLL2_VEC (QREG' d) (QREG' n) (val amount) 16 s t
+
+SAIL_HL_ARM_SSHLL2_VEC128E32_EQ
+|- forall amount d n s t.
+     sail_hl_arm_5fSSHLL2_5fVEC128E32 amount d n s t <=>
+     arm_SSHLL2_VEC (QREG' d) (QREG' n) (val amount) 32 s t
+

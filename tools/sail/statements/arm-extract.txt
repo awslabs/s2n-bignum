@@ -1,0 +1,20 @@
+SAIL_HL_ARM_EXTR32_EQ
+|- forall d n m lsb s t.
+     sail_hl_arm_5fEXTR32 d n m lsb s t <=>
+     arm_EXTR (WREG' d) (WREG' n) (WREG' m) (val lsb) s t
+
+SAIL_HL_ARM_EXTR64_EQ
+|- forall d n m lsb s t.
+     sail_hl_arm_5fEXTR64 d n m lsb s t <=>
+     arm_EXTR (XREG' d) (XREG' n) (XREG' m) (val lsb) s t
+
+SAIL_HL_ARM_ROR32_EQ
+|- forall d n lsb s t.
+     sail_hl_arm_5fROR32 d n lsb s t <=>
+     arm_ROR (WREG' d) (WREG' n) (val lsb) s t
+
+SAIL_HL_ARM_ROR64_EQ
+|- forall d n lsb s t.
+     sail_hl_arm_5fROR64 d n lsb s t <=>
+     arm_ROR (XREG' d) (XREG' n) (val lsb) s t
+

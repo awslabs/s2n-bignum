@@ -1,0 +1,30 @@
+SAIL_HL_ARM_UADALP64E8_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUADALP64E8 d n s t <=>
+     arm_UADALP (QREG' d) (QREG' n) 8 64 s t
+
+SAIL_HL_ARM_UADALP64E16_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUADALP64E16 d n s t <=>
+     arm_UADALP (QREG' d) (QREG' n) 16 64 s t
+
+SAIL_HL_ARM_UADALP64E32_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUADALP64E32 d n s t <=>
+     arm_UADALP (QREG' d) (QREG' n) 32 64 s t
+
+SAIL_HL_ARM_UADALP128E8_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUADALP128E8 d n s t <=>
+     arm_UADALP (QREG' d) (QREG' n) 8 128 s t
+
+SAIL_HL_ARM_UADALP128E16_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUADALP128E16 d n s t <=>
+     arm_UADALP (QREG' d) (QREG' n) 16 128 s t
+
+SAIL_HL_ARM_UADALP128E32_EQ
+|- forall d n s t.
+     sail_hl_arm_5fUADALP128E32 d n s t <=>
+     arm_UADALP (QREG' d) (QREG' n) 32 128 s t
+
