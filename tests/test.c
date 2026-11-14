@@ -21,6 +21,16 @@
   #include <alloca.h>
 #endif
 
+// POSIX memory-protection support, used by the _alt whole-blocks guard tests
+// to pass a PROT_NONE page as every data pointer on rejected lengths.
+#if defined(__unix__) || defined(__APPLE__)
+  #include <sys/mman.h>
+  #include <unistd.h>
+  #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+    #define MAP_ANONYMOUS MAP_ANON
+  #endif
+#endif
+
 // Prototypes for the assembler implementations
 
 #include "../include/s2n-bignum.h"
@@ -14465,8 +14475,8 @@ int test_mldsa_intt(void)
 // It converts from AVX2 lane-interleaved layout to sequential layout.
 //
 // Mathematical specification:
-//   For each block b ∈ {0, 1, 2, 3}:
-//     For each position i ∈ {0, ..., 63}:
+//   For each block b in {0, 1, 2, 3}:
+//     For each position i in {0, ..., 63}:
 //       output[64*b + i] = input[64*b + (i mod 8) * 8 + (i div 8)]
 //
 // This transposes the organization from:
@@ -15222,8 +15232,8 @@ int test_p256_montjscalarmul_alt(void)
      reference_scalarmul(k,b2,b0,gen_p256,p_256,n_256,a_256);
 
      // Map (x,y) into Montgomery form (x',y')
-     bignum_tomont_p256(b2,b2);
-     bignum_tomont_p256(b2+k,b2+k);
+     bignum_tomont_p256_alt(b2,b2);
+     bignum_tomont_p256_alt(b2+k,b2+k);
 
      // Pick a nonzero z coordinate and scale things, except if
      // z = 0, in which case randomize x and y as well. This is
@@ -15752,8 +15762,8 @@ int test_p384_montjscalarmul_alt(void)
      reference_scalarmul(k,b2,b0,gen_p384,p_384,n_384,a_384);
 
      // Map (x,y) into Montgomery form (x',y')
-     bignum_tomont_p384(b2,b2);
-     bignum_tomont_p384(b2+k,b2+k);
+     bignum_tomont_p384_alt(b2,b2);
+     bignum_tomont_p384_alt(b2+k,b2+k);
 
      // Pick a nonzero z coordinate and scale things, except if
      // z = 0, in which case randomize x and y as well. This is
@@ -17230,6 +17240,7 @@ int test_known_values_p384(void)
 // Reference implementation of AES-256-XTS for comparison testing
 
 #include "ref_aes_xts.c"
+#include "ref_aes_gcm.c"
 
 // Helpers for writing XTS tests
 void assign_bytearray_from_hexstring(uint8_t *bytearr, const char *hexstr, int len)
@@ -17329,6 +17340,14 @@ int test_known_values_xts_decrypt(void)
 static void random_bytes(uint8_t *buf, size_t n)
 { size_t i;
   for (i = 0; i < n; ++i) buf[i] = (uint8_t)(rand() & 0xFF);
+}
+
+// Random bytes with a random bit density, so the AES-GCM tests exercise the
+// full spectrum from sparse to dense inputs.
+static void random_bytes_density(uint8_t *buf, size_t n)
+{ int d = ((unsigned) rand() & 0xFFFF) % 65;
+  size_t i;
+  for (i = 0; i < n; ++i) buf[i] = (uint8_t)(random64d(d) & 0xFF);
 }
 
 int test_aes_xts_encrypt(void)
@@ -17443,6 +17462,370 @@ int test_aes_xts_decrypt(void)
 #endif
 }
 
+// ****************************************************************************
+// Random-input testing of the AES-GCM bulk encryption/decryption kernels
+// ****************************************************************************
+//
+// The AES-GCM kernels share one ABI: the 4-way aes128_gcm_enc,
+// aes128_gcm_dec, aes256_gcm_enc and aes256_gcm_dec, and the 8-way _alt
+// kernels such as aes256_gcm_dec_alt, all process a whole number of 16-byte
+// blocks, encrypting or decrypting in counter mode from the supplied counter
+// block, folding the ciphertext into the GHASH accumulator "tag" and
+// incrementing the counter per block.  The GHASH subkey H = AES_K(0^128) is
+// supplied indirectly via the precomputed table of its powers.  Each kernel is
+// compared against the clean reference in tests/ref_aes_gcm.c over the
+// output, the updated tag and the updated counter block, for random keys,
+// counters, starting tags and message lengths, using the bit-density
+// generator, after one explicit zero-length call.
+
+typedef uint64_t (*aes_gcm_fn)(const uint8_t *in, uint64_t len_bits,
+                               uint8_t *out, uint64_t *tag, uint8_t *ivec,
+                               const s2n_bignum_AES_KEY *key,
+                               const uint64_t *htable);
+typedef void (*ref_aes_gcm_fn)(const uint8_t *in, uint64_t len_bits,
+                               uint8_t *out, uint8_t *tag, uint8_t *ivec,
+                               const s2n_bignum_AES_KEY *key);
+
+#ifndef __x86_64__
+// The zero-length call: len_bits = 0 must return 0 and leave the output, the
+// tag and the counter block as they were.
+static int test_aes_gcm_zero_length(const char *name, int keybytes,
+                                    aes_gcm_fn fn)
+{
+  uint8_t key[32], h[16], zero[16], htable[192];
+  uint8_t ivec[16], ivec0[16], tag[16], tag0[16];
+  s2n_bignum_AES_KEY ek;
+  uint64_t r;
+  size_t j;
+
+  random_bytes_density(key, keybytes);
+  memset(zero, 0, 16);
+  if (keybytes == 16)
+   { ref_aes128_expand_key(key, &ek);
+     ref_aes128_encrypt_block(zero, h, &ek); }
+  else
+   { ref_aes256_expand_key(key, &ek);
+     ref_aes256_encrypt_block(zero, h, &ek); }
+  ref_gcm_init_htable(htable, h);
+  random_bytes_density(ivec, 16);
+  memcpy(ivec0, ivec, 16);
+  random_bytes_density(tag, 16);
+  memcpy(tag0, tag, 16);
+  random_bytes_density(bb1, 64);
+  memset(bb2, 0xa5, 64);
+
+  r = fn(bb1, 0, bb2, (uint64_t *)tag, ivec, &ek, (uint64_t *)htable);
+
+  if (r != 0)
+   { printf("### Disparity: %s len=0 returned %"PRIu64"\n", name, r);
+     return 1; }
+  if (memcmp(tag, tag0, 16) != 0 || memcmp(ivec, ivec0, 16) != 0)
+   { printf("### Disparity: %s len=0 modified tag/ivec\n", name);
+     return 1; }
+  for (j = 0; j < 64; ++j)
+    if (bb2[j] != 0xa5)
+     { printf("### Disparity: %s len=0 wrote to out\n", name);
+       return 1; }
+  if (VERBOSE) printf("OK: %s len=0\n", name);
+  return 0;
+}
+
+// One differential case of test_aes_gcm at a given whole-block count: fresh
+// random key/counter/tag/input, run the kernel and the reference, and compare
+// the output, the updated tag, the updated counter, and the returned byte
+// count.  Every driven kernel documents "returns bytes processed", which for a
+// whole-block input is the full 16*nblocks bytes.
+static int test_aes_gcm_one(const char *name, int keybytes,
+                            aes_gcm_fn fn, ref_aes_gcm_fn ref, size_t nblocks)
+{
+  uint8_t key[32], h[16], zero[16], htable[192];
+  uint8_t iv_asm[16], iv_ref[16], tag_asm[16], tag_ref[16];
+  s2n_bignum_AES_KEY ek;
+  uint64_t r;
+  size_t len = 16 * nblocks;
+
+  // Random key, and derive H and the table of its powers
+  random_bytes_density(key, keybytes);
+  memset(zero, 0, 16);
+  if (keybytes == 16)
+   { ref_aes128_expand_key(key, &ek);
+     ref_aes128_encrypt_block(zero, h, &ek); }
+  else
+   { ref_aes256_expand_key(key, &ek);
+     ref_aes256_encrypt_block(zero, h, &ek); }
+  ref_gcm_init_htable(htable, h);
+
+  // Random counter block, starting tag and input
+  random_bytes_density(iv_asm, 16);
+  memcpy(iv_ref, iv_asm, 16);
+  random_bytes_density(tag_asm, 16);
+  memcpy(tag_ref, tag_asm, 16);
+  random_bytes_density(bb1, len);
+  memset(bb2, 0, len);
+  memset(bb3, 0, len);
+
+  r = fn(bb1, (uint64_t)len * 8, bb2, (uint64_t *)tag_asm, iv_asm, &ek,
+         (uint64_t *)htable);
+  ref(bb1, (uint64_t)len * 8, bb3, tag_ref, iv_ref, &ek);
+
+  if (r != (uint64_t)len)
+   { printf("### Disparity: %s len=%zu returned %"PRIu64", expected %zu\n",
+            name, len, r, len);
+     return 1;
+   }
+  if (memcmp(bb2, bb3, len) != 0 ||
+      memcmp(tag_asm, tag_ref, 16) != 0 ||
+      memcmp(iv_asm, iv_ref, 16) != 0)
+   { printf("### Disparity: %s len=%zu\n", name, len);
+     printf("    key=");
+     for (int i = 0; i < keybytes; ++i) printf("%02x", key[i]);
+     printf("\n    data %s, tag %s, ctr %s\n",
+            memcmp(bb2, bb3, len) ? "DIFF" : "ok",
+            memcmp(tag_asm, tag_ref, 16) ? "DIFF" : "ok",
+            memcmp(iv_asm, iv_ref, 16) ? "DIFF" : "ok");
+     return 1;
+   }
+  else if (VERBOSE)
+   { printf("OK: %s len=%zu\n", name, len);
+   }
+  return 0;
+}
+
+static int test_aes_gcm(const char *name, int keybytes,
+                        aes_gcm_fn fn, ref_aes_gcm_fn ref)
+{
+  uint64_t t;
+  size_t nblocks;
+
+  printf("Testing %s against reference with %d cases\n", name, tests);
+
+  if (test_aes_gcm_zero_length(name, keybytes, fn)) return 1;
+
+  // Deterministic whole-block counts 1..32, run on every call before the
+  // random cases: these cover the four small-message paths, all tail residues,
+  // and the first main-loop transitions, which the random distribution below
+  // does not guarantee to exercise on any given run.
+  for (nblocks = 1; nblocks <= 32; ++nblocks)
+    if (test_aes_gcm_one(name, keybytes, fn, ref, nblocks)) return 1;
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { // Random number of whole blocks from 1 to 256, biased toward small
+     // counts to exercise the four-block boundaries
+     nblocks = 1 + (rand() % 256);
+     if ((rand() & 3) == 0) nblocks = 1 + (rand() % 8);
+     if (test_aes_gcm_one(name, keybytes, fn, ref, nblocks)) return 1;
+   }
+  printf("All OK\n");
+  return 0;
+}
+#endif
+
+int test_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_enc", 16, aes128_gcm_enc, ref_aes128_gcm_enc);
+#endif
+}
+
+int test_aes128_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_dec", 16, aes128_gcm_dec, ref_aes128_gcm_dec);
+#endif
+}
+
+int test_aes256_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes256_gcm_enc", 32, aes256_gcm_enc, ref_aes256_gcm_enc);
+#endif
+}
+
+int test_aes256_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes256_gcm_dec", 32, aes256_gcm_dec, ref_aes256_gcm_dec);
+#endif
+}
+
+// ****************************************************************************
+// Known-answer test of the GHASH key table built for the AES-GCM kernels
+// ****************************************************************************
+//
+// ref_gcm_init_htable builds the 192-byte table of powers of H = AES_K(0^128)
+// that the AES-GCM kernel tests feed to the kernels.  It is checked here,
+// together with H, for two AES-256 keys, the all-zero key and the McGrew-Viega
+// GCM test case 15 key (the AES-128 test key feffe9928665731c6d6a8f9467308308
+// repeated), and for two AES-128 keys, the all-zero key and the FIPS-197
+// Appendix B key 2b7e151628aed2a6abf7158809cf4f3c.  The expected tables are
+// the ones AWS-LC's gcm_init_v8 (crypto/fipsmodule/modes/asm/ghashv8-armx.pl)
+// writes for these H.  Read little-endian, their 16-byte entries are the 12
+// literals proved for the precondition
+// htable_mem_8 (ghash_twist (aesNNN_cipher (word 0) rk)) at these keys in
+// arm/proofs/aes256_gcm_dec_alt.ml (HTABLE_MEM_8_AESAVS_ZERO_KEY_256,
+// HTABLE_MEM_8_NIST_TC15_KEY) and arm/proofs/aes128_gcm_dec_alt.ml
+// (HTABLE_MEM_8_AESAVS_ZERO_KEY_128, HTABLE_MEM_8_AES128_APPENDIX_B_KEY).
+
+int test_aes_gcm_htable(void)
+{ static const uint8_t key[4][32] =
+   { { 0 },
+     { 0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+       0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08,
+       0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+       0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08 },
+     { 0 },
+     { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+       0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c } };
+  static const uint8_t h_expected[4][16] =
+   { { 0xdc, 0x95, 0xc0, 0x78, 0xa2, 0x40, 0x89, 0x89,
+       0xad, 0x48, 0xa2, 0x14, 0x92, 0x84, 0x20, 0x87 },
+     { 0xac, 0xbe, 0xf2, 0x05, 0x79, 0xb4, 0xb8, 0xeb,
+       0xce, 0x88, 0x9b, 0xac, 0x87, 0x32, 0xda, 0xd7 },
+     { 0x66, 0xe9, 0x4b, 0xd4, 0xef, 0x8a, 0x2c, 0x3b,
+       0x88, 0x4c, 0xfa, 0x59, 0xca, 0x34, 0x2b, 0x2e },
+     { 0x7d, 0xf7, 0x6b, 0x0c, 0x1a, 0xb8, 0x99, 0xb3,
+       0x3e, 0x42, 0xf0, 0x47, 0xb9, 0x1b, 0x54, 0x6f } };
+  static const uint8_t htable_expected[4][192] =
+   { { 0x13, 0x13, 0x81, 0x44, 0xf1, 0x80, 0x2b, 0x7b,
+       0x0f, 0x41, 0x08, 0x25, 0x29, 0x44, 0x91, 0x5a,
+       0x1c, 0x52, 0x89, 0x61, 0xd8, 0xc4, 0xba, 0x21,
+       0x17, 0xb1, 0x18, 0x03, 0x77, 0x5f, 0x81, 0x18,
+       0x78, 0x72, 0x3c, 0x9e, 0x06, 0xfd, 0x84, 0x4d,
+       0x6f, 0xc3, 0x24, 0x9d, 0x71, 0xa2, 0x05, 0x55,
+       0xe0, 0x8e, 0x41, 0xe8, 0x36, 0x73, 0x5e, 0x17,
+       0x1f, 0x61, 0xc5, 0xb3, 0x92, 0xbf, 0xc3, 0x8c,
+       0xff, 0xef, 0x84, 0x5b, 0xa4, 0xcc, 0x9d, 0x9b,
+       0xfd, 0xd6, 0x7c, 0x99, 0x49, 0xc2, 0x81, 0xba,
+       0xff, 0x12, 0xde, 0xc0, 0x0d, 0xa2, 0xfa, 0x48,
+       0x02, 0xc4, 0xa2, 0x59, 0x44, 0x60, 0x7b, 0xf2,
+       0x19, 0x45, 0x5c, 0xb0, 0xeb, 0xc1, 0xb1, 0x9e,
+       0xab, 0x04, 0x8c, 0xa5, 0x03, 0x92, 0x9c, 0xf3,
+       0xb2, 0x41, 0xd0, 0x15, 0xe8, 0x53, 0x2d, 0x6d,
+       0xf9, 0x89, 0x58, 0x10, 0x4e, 0x6b, 0xa1, 0x1e,
+       0x51, 0x1e, 0x25, 0xa9, 0xf2, 0xdd, 0xad, 0x34,
+       0xa8, 0x97, 0x7d, 0xb9, 0xbc, 0xb6, 0x0c, 0x2a,
+       0xc2, 0x57, 0x73, 0xbc, 0x2f, 0xa4, 0x87, 0x32,
+       0xc2, 0xf4, 0x3a, 0x3e, 0xbf, 0x10, 0x46, 0xa1,
+       0x00, 0xa3, 0x49, 0x82, 0x90, 0xb4, 0xc1, 0x93,
+       0x3f, 0x69, 0x94, 0x70, 0x03, 0x23, 0xae, 0x19,
+       0x6d, 0x1c, 0x2c, 0x15, 0xd8, 0x47, 0x3d, 0x74,
+       0x52, 0x75, 0xb8, 0x65, 0xdb, 0x64, 0x93, 0x6d },
+     { 0xd7, 0x71, 0x69, 0xf3, 0x0a, 0xe4, 0x7d, 0x9b,
+       0xaf, 0xb5, 0x65, 0x0e, 0x59, 0x37, 0x11, 0x9d,
+       0x78, 0xc4, 0x0c, 0xfd, 0x53, 0xd3, 0x6c, 0x06,
+       0x20, 0x33, 0x96, 0x11, 0xe6, 0xd1, 0x50, 0x62,
+       0xd7, 0xf7, 0xc0, 0x90, 0x92, 0x76, 0x3e, 0x75,
+       0xf7, 0xc4, 0x56, 0x81, 0x74, 0xa7, 0x6e, 0x17,
+       0x56, 0xae, 0xc7, 0xb8, 0x46, 0x68, 0x10, 0x8f,
+       0x13, 0x78, 0xe3, 0x5b, 0x71, 0xf0, 0xac, 0x4d,
+       0x45, 0xd6, 0x24, 0xe3, 0x37, 0x98, 0xbc, 0xc2,
+       0x97, 0xaa, 0x2f, 0xdb, 0xee, 0x7b, 0x1c, 0xa1,
+       0xf2, 0xb1, 0x86, 0xca, 0x17, 0xf4, 0x9d, 0xb0,
+       0x65, 0x1b, 0xa9, 0x11, 0xf9, 0x8f, 0x81, 0x11,
+       0xf3, 0x23, 0xd3, 0x30, 0x7d, 0x26, 0x97, 0xe9,
+       0xfa, 0xd0, 0x29, 0x52, 0xfc, 0xac, 0xb5, 0x90,
+       0x09, 0xf3, 0xfa, 0x62, 0x81, 0x8a, 0x22, 0x79,
+       0x2f, 0x9a, 0xe4, 0x4a, 0x5f, 0x65, 0xd8, 0x5a,
+       0xff, 0x0a, 0x2a, 0xde, 0xe4, 0x14, 0x0c, 0xc0,
+       0xd0, 0x90, 0xce, 0x94, 0xbb, 0x71, 0xd4, 0x9a,
+       0xbe, 0xa3, 0xd4, 0x09, 0xdd, 0xf4, 0x5f, 0xc7,
+       0x79, 0x73, 0xdc, 0x22, 0xe9, 0xa7, 0x30, 0xd2,
+       0xc7, 0xd0, 0x08, 0x2b, 0x34, 0x53, 0x6f, 0x15,
+       0x3f, 0x05, 0x4f, 0xe1, 0x3d, 0x06, 0x00, 0xfd,
+       0x0e, 0x01, 0xfa, 0xe7, 0xd0, 0xf3, 0x87, 0xee,
+       0x31, 0x04, 0xb5, 0x06, 0xed, 0xf5, 0x87, 0x13 },
+     { 0x77, 0x58, 0x14, 0xdf, 0xa9, 0x97, 0xd2, 0xcd,
+       0x5c, 0x56, 0x68, 0x94, 0xb3, 0xf4, 0x99, 0x10,
+       0x2b, 0x0e, 0x7c, 0x4b, 0x1a, 0x63, 0x4b, 0xdd,
+       0x96, 0x32, 0xda, 0xe5, 0x7f, 0x1a, 0xd8, 0x62,
+       0x0d, 0x12, 0x63, 0x69, 0x37, 0x20, 0xd3, 0x88,
+       0x9b, 0x20, 0xb9, 0x8c, 0x48, 0x3a, 0x0b, 0xea,
+       0xf9, 0xfa, 0x22, 0xc3, 0x02, 0xe7, 0x95, 0x86,
+       0x95, 0x23, 0xfb, 0x8b, 0x4f, 0xa0, 0xc1, 0x35,
+       0x6c, 0xd9, 0xd9, 0x48, 0x4d, 0x47, 0x54, 0xb3,
+       0x20, 0xe0, 0xb1, 0x0c, 0x4d, 0x1b, 0x26, 0xb2,
+       0x45, 0x91, 0xbd, 0x48, 0x73, 0xd9, 0x8b, 0x56,
+       0x65, 0x71, 0x0c, 0x44, 0x3e, 0xc2, 0xad, 0xe4,
+       0xb4, 0x10, 0x2d, 0x63, 0x1f, 0x1b, 0x15, 0xf9,
+       0x5d, 0xa5, 0xb0, 0x0b, 0x63, 0x5b, 0x84, 0x7d,
+       0xe9, 0xb5, 0x9d, 0x68, 0x7c, 0x40, 0x91, 0x84,
+       0x50, 0xf2, 0xd7, 0xf9, 0xa8, 0xeb, 0x74, 0xa6,
+       0x4e, 0x1c, 0x9d, 0xe1, 0xb0, 0xcf, 0x87, 0xec,
+       0x1e, 0xee, 0x4a, 0x18, 0x18, 0x24, 0xf3, 0x4a,
+       0x74, 0x54, 0x54, 0xfc, 0xbc, 0x98, 0x19, 0x7d,
+       0xee, 0x1e, 0x1d, 0xb3, 0xe0, 0xe6, 0x09, 0xf1,
+       0x9a, 0x4a, 0x49, 0x4f, 0x5c, 0x7e, 0x10, 0x8c,
+       0x80, 0xd2, 0x0c, 0xa4, 0x9d, 0x72, 0x98, 0x74,
+       0xa4, 0x1b, 0xe6, 0x5f, 0xa0, 0x17, 0xe4, 0xd0,
+       0x24, 0xc9, 0xea, 0xfb, 0x3d, 0x65, 0x7c, 0xa4 },
+     { 0x66, 0x33, 0x71, 0x35, 0x18, 0xd6, 0xee, 0xfb,
+       0xde, 0xa8, 0x36, 0x72, 0x8f, 0xe0, 0x85, 0x7c,
+       0xb8, 0x9b, 0x47, 0x47, 0x97, 0x36, 0x6b, 0x87,
+       0xb7, 0x88, 0x41, 0x82, 0x19, 0x9f, 0x6f, 0xed,
+       0xaa, 0x71, 0xbc, 0xd8, 0xc9, 0x84, 0x93, 0x98,
+       0x1d, 0xf9, 0xfd, 0x5a, 0xd0, 0x1b, 0xfc, 0x75,
+       0xa5, 0x1a, 0x90, 0xb5, 0xf6, 0xf2, 0x93, 0x93,
+       0x21, 0x5a, 0xf7, 0x37, 0xa0, 0xad, 0x9d, 0x07,
+       0x84, 0x40, 0x67, 0x82, 0x56, 0x5f, 0x0e, 0x94,
+       0xc8, 0x70, 0xbe, 0xfc, 0x54, 0x6e, 0x26, 0x5c,
+       0x23, 0x77, 0xa4, 0xe1, 0x03, 0xc9, 0xf3, 0x10,
+       0xeb, 0x07, 0x1a, 0x1d, 0x57, 0xa7, 0xd5, 0x4c,
+       0x0d, 0x07, 0x05, 0xfd, 0x43, 0x55, 0xb6, 0x77,
+       0x12, 0x01, 0x54, 0xe3, 0x87, 0xd6, 0x68, 0x18,
+       0x1f, 0x06, 0x51, 0x1e, 0xc4, 0x83, 0xde, 0x6f,
+       0x84, 0x8b, 0x30, 0xb6, 0x5a, 0x1b, 0xda, 0x90,
+       0x9c, 0x40, 0xe1, 0x40, 0x2a, 0xda, 0x1b, 0xd3,
+       0x18, 0xcb, 0xd1, 0xf6, 0x70, 0xc1, 0xc1, 0x43,
+       0x5b, 0xaf, 0x97, 0x84, 0x5d, 0xb7, 0x42, 0x99,
+       0x6a, 0xdb, 0xa2, 0xc9, 0x7e, 0xfa, 0xa7, 0x71,
+       0x31, 0x74, 0x35, 0x4d, 0x23, 0x4d, 0xe5, 0xe8,
+       0x26, 0x72, 0xdc, 0x58, 0xdf, 0xbf, 0xf6, 0xdf,
+       0xfd, 0xf7, 0xd3, 0xc5, 0x7a, 0x98, 0x58, 0x60,
+       0xdb, 0x85, 0x0f, 0x9d, 0xa5, 0x27, 0xae, 0xbf } };
+  static const int keybytes[4] = {32, 32, 16, 16};
+  static const char *name[4] = {"AES-256 all-zero key", "GCM test case 15 key",
+                                "AES-128 all-zero key", "FIPS-197 Appendix B key"};
+  uint8_t zero[16], h[16], htable[192];
+  s2n_bignum_AES_KEY ek;
+  int k, failures = 0;
+
+  printf("Testing the AES-GCM key table builder with 4 known keys\n");
+
+  for (k = 0; k < 4; ++k)
+   { memset(zero, 0, 16);
+     if (keybytes[k] == 16)
+      { ref_aes128_expand_key(key[k], &ek);
+        ref_aes128_encrypt_block(zero, h, &ek); }
+     else
+      { ref_aes256_expand_key(key[k], &ek);
+        ref_aes256_encrypt_block(zero, h, &ek); }
+     ref_gcm_init_htable(htable, h);
+     if (memcmp(h, h_expected[k], 16) != 0)
+      { printf("### Disparity: H for the %s\n", name[k]);
+        ++failures;
+      }
+     else if (memcmp(htable, htable_expected[k], 192) != 0)
+      { printf("### Disparity: key table for the %s\n", name[k]);
+        ++failures;
+      }
+     else if (VERBOSE)
+      { printf("OK: key table for the %s\n", name[k]);
+      }
+   }
+
+  if (failures != 0) return failures;
+  printf("All OK\n");
+  return 0;
+}
+
 int test_aes_xts_roundtrip(void)
 {
 #ifdef __x86_64__
@@ -17486,6 +17869,601 @@ int test_aes_xts_roundtrip(void)
    }
   printf("All OK\n");
   return 0;
+#endif
+}
+
+// ****************************************************************************
+// The 8-way _alt AES-GCM kernels, and known-answer tests of all the AES-GCM
+// kernels
+// ****************************************************************************
+
+// Random-input tests of aes128_gcm_dec_alt and aes256_gcm_dec_alt against
+// ref_aes128_gcm_dec and ref_aes256_gcm_dec.  They have the ABI of the 4-way
+// kernels above, so test_aes_gcm drives them as it does those: random keys,
+// counter blocks, starting tags and inputs of 1 to 256 whole blocks, with
+// the key table from ref_gcm_init_htable, comparing the output, the updated
+// tag and the updated counter block.
+int test_aes128_gcm_dec_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_dec_alt", 16, aes128_gcm_dec_alt,
+                      ref_aes128_gcm_dec);
+#endif
+}
+
+int test_aes256_gcm_dec_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes256_gcm_dec_alt", 32, aes256_gcm_dec_alt,
+                      ref_aes256_gcm_dec);
+#endif
+}
+
+#ifndef __x86_64__
+
+// The whole-blocks contract of the _alt kernels: a len_bits value that is
+// not a multiple of 128, or is zero, must return 0 and leave out / tag /
+// ivec untouched.  keybytes is 16 or 32, as for test_aes_gcm.
+static int test_aes_gcm_alt_guard(const char *name, int keybytes,
+                                  aes_gcm_fn fn)
+{
+  uint8_t key[32], ivec[16], ivec0[16], zero[16], h[16];
+  uint64_t xi[2], xi0[2], htable[24];
+  s2n_bignum_AES_KEY ek;
+  // Invalid lengths span values that would reach both the small-message and
+  // 8x paths if the guard regressed. Kept <= 32895 so that processing
+  // floor(len_bits/128) blocks would still land inside the first 4096 bytes
+  // of bb1/bb2 and be reported rather than overrunning.
+  static const uint64_t badbits[] = { 0, 1, 8, 127, 129, 255, 1023,
+                                      2049, 4095, 8191, 32769 };
+  size_t i;
+
+  printf("Testing the %s whole-blocks guard\n", name);
+
+  random_bytes(key, keybytes); random_bytes(ivec, 16);
+  random_bytes((uint8_t *)xi, 16);
+  memcpy(ivec0, ivec, 16); memcpy(xi0, xi, 16);
+  memset(zero, 0, 16);
+  if (keybytes == 16)
+   { ref_aes128_expand_key(key, &ek);
+     ref_aes128_encrypt_block(zero, h, &ek); }
+  else
+   { ref_aes256_expand_key(key, &ek);
+     ref_aes256_encrypt_block(zero, h, &ek); }
+  ref_gcm_init_htable((uint8_t *)htable, h);
+
+  random_bytes(bb1, 4096);
+  memset(bb2, 0xa5, 4096);
+
+  for (i = 0; i < sizeof(badbits)/sizeof(badbits[0]); ++i)
+   { uint64_t r = fn(bb1, badbits[i], bb2, xi, ivec, &ek, htable);
+     if (r != 0)
+      { printf("### Disparity: %s guard len_bits=%"PRIu64
+               " returned %"PRIu64", expected 0\n",
+               name, badbits[i], r);
+        return 1; }
+     if (memcmp(xi, xi0, 16) != 0 || memcmp(ivec, ivec0, 16) != 0)
+      { printf("### Disparity: %s guard len_bits=%"PRIu64
+               " modified tag/ivec\n",
+               name, badbits[i]);
+        return 1; }
+     { size_t j; for (j = 0; j < 4096; ++j) if (bb2[j] != 0xa5)
+        { printf("### Disparity: %s guard len_bits=%"PRIu64
+                 " wrote to out\n",
+                 name, badbits[i]);
+          return 1; } }
+   }
+
+#if (defined(__unix__) || defined(__APPLE__)) && defined(MAP_ANONYMOUS)
+  // Inaccessible-pointer cases, where POSIX memory protection is available:
+  // the whole-blocks guard decides to reject (len_bits zero, or not a multiple
+  // of 128) from len_bits alone, before any load or store, so a PROT_NONE page
+  // passed as every data pointer must not fault and must still return 0.
+  // Rejected lengths near 2^64 are included; no value here is a nonzero
+  // multiple of 128, so the kernel never reaches the bulk path.
+  { long pgsz = sysconf(_SC_PAGESIZE);
+    size_t maplen = (size_t)(pgsz > 0 ? pgsz : 4096);
+    void *na = mmap(NULL, maplen, PROT_NONE,
+                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    static const uint64_t badbits_na[] =
+      { 0, 1, 127, 129, 255,
+        0xffffffffffffff81ULL, 0xfffffffffffffffeULL, 0xffffffffffffffffULL };
+    if (na == MAP_FAILED)
+     { printf("### %s guard: mmap PROT_NONE failed\n", name); return 1; }
+    for (i = 0; i < sizeof(badbits_na)/sizeof(badbits_na[0]); ++i)
+     { uint64_t r = fn((const uint8_t *)na, badbits_na[i], (uint8_t *)na,
+                       (uint64_t *)na, (uint8_t *)na,
+                       (const s2n_bignum_AES_KEY *)na, (const uint64_t *)na);
+       if (r != 0)
+        { printf("### Disparity: %s guard(no-access) len_bits=%"PRIu64
+                 " returned %"PRIu64", expected 0\n",
+                 name, badbits_na[i], r);
+          munmap(na, maplen); return 1; } }
+    munmap(na, maplen);
+    if (VERBOSE) printf("OK: %s guard no-access pages\n", name);
+  }
+#endif
+
+  printf("All OK\n");
+  return 0;
+}
+
+#endif
+
+int test_aes128_gcm_dec_alt_guard(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm_alt_guard("aes128_gcm_dec_alt", 16, aes128_gcm_dec_alt);
+#endif
+}
+
+int test_aes256_gcm_dec_alt_guard(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm_alt_guard("aes256_gcm_dec_alt", 32, aes256_gcm_dec_alt);
+#endif
+}
+
+#ifndef __x86_64__
+
+// Known-answer driver for one GCM_KAT(key, nonce, aad, plaintext, ciphertext,
+// tag) record of known_value_tests_gcm_128.h, wycheproof_tests_gcm_128.h,
+// known_value_tests_gcm_256.h or wycheproof_tests_gcm_256.h, run through an
+// AES-GCM kernel fn for keybytes-byte keys (16 or 32) that encrypts if
+// encrypt is nonzero and decrypts otherwise.  The kernel does only the
+// whole-block part of GCM (NIST SP 800-38D, Sections 7.1 and 7.2):
+// counter-mode encryption or decryption from the counter block ivec, and the
+// GHASH update of tag with each ciphertext block.  The rest is done here with
+// tests/ref_aes_gcm.c: the key table for H = AES_K(0^128), the pre-counter
+// block J0, the GHASH of the AAD that starts the tag, and after the kernel
+// the GHASH of the length block [len(A)]_64 || [len(C)]_64 and the tag
+// T = AES_K(J0) XOR S.  Every record goes straight to the kernel, whatever
+// its length, and the output, the tag, the updated counter block and the
+// return value are all checked.
+static int run_gcm_kat(const char *name, aes_gcm_fn fn, int encrypt,
+                       int keybytes, const char *keyhex,
+                       const char *noncehex, const char *aadhex,
+                       const char *pthex, const char *cthex,
+                       const char *taghex)
+{ static uint8_t pt[BUFFERSIZE], ct[BUFFERSIZE], out[BUFFERSIZE];
+  uint8_t key[32], nonce[64], aad[240], tag_expect[16], tag_out[16];
+  uint8_t zero[16], h[16], j0[16], ek_j0[16], ivec[16], ivec_expect[16];
+  uint8_t block[16];
+  uint64_t htable[24], xi[2], ret;
+  s2n_bignum_AES_KEY ek;
+  size_t nonce_len = strlen(noncehex) / 2, aad_len = strlen(aadhex) / 2;
+  size_t len = strlen(pthex) / 2, i;
+  int bad = 0;
+
+  if (strlen(keyhex) != 2 * (size_t)keybytes ||
+      nonce_len == 0 || nonce_len > sizeof(nonce) ||
+      aad_len > sizeof(aad) || len == 0 || len % 16 != 0 ||
+      len > BUFFERSIZE || strlen(cthex) != 2 * len || strlen(taghex) != 32)
+   { printf("### Malformed GCM_KAT record (nonce %zu, aad %zu, text %zu bytes)\n",
+            nonce_len, aad_len, len);
+     return 1;
+   }
+  assign_bytearray_from_hexstring(key, keyhex, keybytes);
+  assign_bytearray_from_hexstring(nonce, noncehex, (int)nonce_len);
+  assign_bytearray_from_hexstring(aad, aadhex, (int)aad_len);
+  assign_bytearray_from_hexstring(pt, pthex, (int)len);
+  assign_bytearray_from_hexstring(ct, cthex, (int)len);
+  assign_bytearray_from_hexstring(tag_expect, taghex, 16);
+
+  // H = AES_K(0^128) and the table of its powers
+  memset(zero, 0, 16);
+  if (keybytes == 16)
+   { ref_aes128_expand_key(key, &ek);
+     ref_aes128_encrypt_block(zero, h, &ek); }
+  else
+   { ref_aes256_expand_key(key, &ek);
+     ref_aes256_encrypt_block(zero, h, &ek); }
+  ref_gcm_init_htable((uint8_t *)htable, h);
+
+  // J0 = IV || 0^31 || 1 for a 96-bit IV, else
+  // J0 = GHASH_H(IV || 0^(s+64) || [len(IV)]_64) (Section 7.1, step 2)
+  if (nonce_len == 12)
+   { memcpy(j0, nonce, 12);
+     j0[12] = 0; j0[13] = 0; j0[14] = 0; j0[15] = 1;
+   }
+  else ref_ghash_full(h, NULL, 0, nonce, nonce_len, j0);
+
+  // The tag starts as the GHASH of the AAD, its last block zero-padded
+  memset(xi, 0, 16);
+  ref_ghash_blocks((uint8_t *)xi, aad, aad_len / 16, h);
+  if (aad_len % 16 != 0)
+   { memset(block, 0, 16);
+     memcpy(block, aad + 16 * (aad_len / 16), aad_len % 16);
+     ref_ghash_blocks((uint8_t *)xi, block, 1, h);
+   }
+
+  // The kernel encrypts or decrypts from the counter block inc32(J0) and
+  // folds the ciphertext into the tag
+  memcpy(ivec, j0, 16);
+  ref_gcm_inc32(ivec);
+  memset(out, 0, len);
+  ret = fn(encrypt ? pt : ct, (uint64_t)len * 8, out, xi, ivec, &ek, htable);
+
+  // S = the tag after the length block; T = AES_K(J0) XOR S
+  ref_put_be64(block, (uint64_t)aad_len * 8);
+  ref_put_be64(block + 8, (uint64_t)len * 8);
+  ref_ghash_blocks((uint8_t *)xi, block, 1, h);
+  if (keybytes == 16) ref_aes128_encrypt_block(j0, ek_j0, &ek);
+  else ref_aes256_encrypt_block(j0, ek_j0, &ek);
+  for (i = 0; i < 16; ++i) tag_out[i] = ek_j0[i] ^ ((uint8_t *)xi)[i];
+
+  // The counter block comes back advanced once per block
+  memcpy(ivec_expect, j0, 16);
+  for (i = 0; i <= len / 16; ++i) ref_gcm_inc32(ivec_expect);
+
+  if (ret != len)
+   { printf("### Disparity: %s returned %"PRIu64" for len=%zu\n",
+            name, ret, len);
+     bad = 1; }
+  if (memcmp(out, encrypt ? ct : pt, len) != 0)
+   { printf("### Disparity: %s %s len=%zu\n",
+            name, encrypt ? "ciphertext" : "plaintext", len);
+     bad = 1; }
+  if (memcmp(tag_out, tag_expect, 16) != 0)
+   { printf("### Disparity: %s tag len=%zu\n", name, len);
+     bad = 1; }
+  if (memcmp(ivec, ivec_expect, 16) != 0)
+   { printf("### Disparity: %s counter len=%zu\n", name, len);
+     bad = 1; }
+  if (!bad && VERBOSE)
+   { printf("OK: %s len=%zu\n", name, len);
+   }
+  return bad;
+}
+
+#define GCM_KAT(KEYHEX, NONCEHEX, ADHEX, INHEX, CTHEX, TAGHEX)                \
+  do { if (run_gcm_kat(name, fn, encrypt, keybytes, KEYHEX, NONCEHEX,       \
+                       ADHEX, INHEX, CTHEX, TAGHEX)) ++failures;            \
+       else ++successes;                                                     \
+     } while (0)
+
+// Known-answer tests: the AWS-LC records of known_value_tests_gcm_128.h.
+static int test_known_values_gcm_128(const char *name, aes_gcm_fn fn,
+                                     int encrypt)
+{
+  const int keybytes = 16;
+  int failures = 0, successes = 0;
+  printf("Testing known value cases for %s\n", name);
+
+#include "known_value_tests_gcm_128.h"
+
+  if (failures != 0)
+   { printf("Failed %d known value tests, passed %d\n", failures, successes);
+     return failures;
+   }
+  else
+   { printf("Successfully passed %d known value tests\n", successes);
+     return 0;
+   }
+}
+
+// Known-answer tests: the AWS-LC records of known_value_tests_gcm_256.h.
+static int test_known_values_gcm_256(const char *name, aes_gcm_fn fn,
+                                     int encrypt)
+{
+  const int keybytes = 32;
+  int failures = 0, successes = 0;
+  printf("Testing known value cases for %s\n", name);
+
+#include "known_value_tests_gcm_256.h"
+
+  if (failures != 0)
+   { printf("Failed %d known value tests, passed %d\n", failures, successes);
+     return failures;
+   }
+  else
+   { printf("Successfully passed %d known value tests\n", successes);
+     return 0;
+   }
+}
+
+// Wycheproof known-answer vectors, through the same driver.
+//
+// Wycheproof's AES-GCM corpus is mostly not usable here: these kernels take
+// only whole 16-byte blocks, so the many partial-length records are out of
+// contract, and the negative records (result = invalid) are
+// authentication-failure cases this harness does not assert. What is left --
+// tagSize 128, result = valid, plaintext a nonzero multiple of 16 -- is 21
+// vectors with keySize 128 and 17 with keySize 256, and they complement the
+// AWS-LC sets above: their IVs have eight lengths from 1 to 16 bytes,
+// including IVs shorter than 12 bytes, which the AWS-LC sets lack. The
+// keySize 128 vectors carry 0 to 16 bytes of AAD, the keySize 256 ones none.
+static int test_wycheproof_gcm_128(const char *name, aes_gcm_fn fn,
+                                   int encrypt)
+{
+  const int keybytes = 16;
+  int failures = 0, successes = 0;
+  printf("Testing Wycheproof vectors for %s\n", name);
+
+#include "wycheproof_tests_gcm_128.h"
+
+  if (failures != 0)
+   { printf("Failed %d Wycheproof tests, passed %d\n", failures, successes);
+     return failures;
+   }
+  else
+   { printf("Successfully passed %d Wycheproof tests\n", successes);
+     return 0;
+   }
+}
+
+static int test_wycheproof_gcm_256(const char *name, aes_gcm_fn fn,
+                                   int encrypt)
+{
+  const int keybytes = 32;
+  int failures = 0, successes = 0;
+  printf("Testing Wycheproof vectors for %s\n", name);
+
+#include "wycheproof_tests_gcm_256.h"
+
+  if (failures != 0)
+   { printf("Failed %d Wycheproof tests, passed %d\n", failures, successes);
+     return failures;
+   }
+  else
+   { printf("Successfully passed %d Wycheproof tests\n", successes);
+     return 0;
+   }
+}
+
+#endif
+
+int test_known_values_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_128("aes128_gcm_enc", aes128_gcm_enc, 1);
+#endif
+}
+
+int test_known_values_aes128_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_128("aes128_gcm_dec", aes128_gcm_dec, 0);
+#endif
+}
+
+int test_known_values_aes128_gcm_dec_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_128("aes128_gcm_dec_alt", aes128_gcm_dec_alt, 0);
+#endif
+}
+
+int test_known_values_aes256_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_256("aes256_gcm_enc", aes256_gcm_enc, 1);
+#endif
+}
+
+int test_known_values_aes256_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_256("aes256_gcm_dec", aes256_gcm_dec, 0);
+#endif
+}
+
+int test_known_values_aes256_gcm_dec_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_256("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 0);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_128("aes128_gcm_enc", aes128_gcm_enc, 1);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_128("aes128_gcm_dec", aes128_gcm_dec, 0);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_dec_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_128("aes128_gcm_dec_alt", aes128_gcm_dec_alt, 0);
+#endif
+}
+
+int test_wycheproof_aes256_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_256("aes256_gcm_enc", aes256_gcm_enc, 1);
+#endif
+}
+
+int test_wycheproof_aes256_gcm_dec(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_256("aes256_gcm_dec", aes256_gcm_dec, 0);
+#endif
+}
+
+int test_wycheproof_aes256_gcm_dec_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_256("aes256_gcm_dec_alt", aes256_gcm_dec_alt, 0);
+#endif
+}
+
+// ****************************************************************************
+// Testing of the AES-128-GCM 8x whole-blocks encryption kernel
+// aes128_gcm_enc_alt, on the drivers shared with the other AES-GCM kernels
+// ****************************************************************************
+
+int test_aes128_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_enc_alt", 16, aes128_gcm_enc_alt,
+                      ref_aes128_gcm_enc);
+#endif
+}
+
+int test_aes128_gcm_enc_alt_guard(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm_alt_guard("aes128_gcm_enc_alt", 16, aes128_gcm_enc_alt);
+#endif
+}
+
+// Explicit inc32 rollover cases complement the arbitrary counters and tags
+// in test_aes_gcm: exercise every 8-block tail residue on either side of the
+// first main-loop boundaries, with wrap during the first, fourth or eighth
+// block, and exactly on the final block.
+int test_aes128_gcm_enc_alt_rollover(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint8_t key[16], zero[16] = {0}, h[16], iv[16], iv_ref[16];
+  uint8_t tag[16], tag_ref[16];
+  uint64_t htable[24];
+  s2n_bignum_AES_KEY ek;
+  size_t nblocks, i, len;
+
+  printf("Testing aes128_gcm_enc_alt counter rollover\n");
+  for (nblocks = 1; nblocks <= 32; ++nblocks)
+   { const uint32_t counters[] =
+       { UINT32_MAX, UINT32_MAX - 3, UINT32_MAX - 7,
+         (uint32_t)(0U - (uint32_t)nblocks) };
+     for (i = 0; i < sizeof(counters) / sizeof(counters[0]); ++i)
+      { uint32_t counter = counters[i];
+        uint64_t ret;
+        len = 16 * nblocks;
+        random_bytes_density(key, sizeof(key));
+        ref_aes128_expand_key(key, &ek);
+        ref_aes128_encrypt_block(zero, h, &ek);
+        ref_gcm_init_htable((uint8_t *)htable, h);
+        random_bytes_density(iv, sizeof(iv));
+        iv[12] = (uint8_t)(counter >> 24);
+        iv[13] = (uint8_t)(counter >> 16);
+        iv[14] = (uint8_t)(counter >> 8);
+        iv[15] = (uint8_t)counter;
+        memcpy(iv_ref, iv, sizeof(iv));
+        random_bytes_density(tag, sizeof(tag));
+        memcpy(tag_ref, tag, sizeof(tag));
+        random_bytes_density(bb1, len);
+        ret = aes128_gcm_enc_alt(bb1, 8 * len, bb2, (uint64_t *)tag,
+                                 iv, &ek, htable);
+        ref_aes128_gcm_enc(bb1, 8 * len, bb3, tag_ref, iv_ref, &ek);
+        if (ret != len || memcmp(bb2, bb3, len) ||
+            memcmp(tag, tag_ref, sizeof(tag)) ||
+            memcmp(iv, iv_ref, sizeof(iv)))
+         { printf("### Disparity: aes128_gcm_enc_alt rollover "
+                  "blocks=%zu counter=%08"PRIx32"\n", nblocks, counter);
+           return 1; }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_known_values_aes128_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_128("aes128_gcm_enc_alt", aes128_gcm_enc_alt, 1);
+#endif
+}
+
+int test_wycheproof_aes128_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_128("aes128_gcm_enc_alt", aes128_gcm_enc_alt, 1);
+#endif
+}
+
+// ****************************************************************************
+// Testing of the AES-256-GCM 8x whole-blocks encryption kernel
+// aes256_gcm_enc_alt, on the drivers shared with the other AES-GCM kernels
+// ****************************************************************************
+
+int test_aes256_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes256_gcm_enc_alt", 32, aes256_gcm_enc_alt,
+                      ref_aes256_gcm_enc);
+#endif
+}
+
+int test_aes256_gcm_enc_alt_guard(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm_alt_guard("aes256_gcm_enc_alt", 32,
+                                aes256_gcm_enc_alt);
+#endif
+}
+
+int test_known_values_aes256_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_known_values_gcm_256("aes256_gcm_enc_alt", aes256_gcm_enc_alt, 1);
+#endif
+}
+
+int test_wycheproof_aes256_gcm_enc_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_wycheproof_gcm_256("aes256_gcm_enc_alt", aes256_gcm_enc_alt, 1);
 #endif
 }
 
@@ -18018,6 +18996,7 @@ void functionaltest(int enabled,char *name,int (*f)(void))
 
 int main(int argc, char *argv[])
 { int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
+  int avx2 = get_arch_name() == ARCH_AARCH64 || supports_avx2();
   int sha3 = get_arch_name() == ARCH_AARCH64 && supports_arm_sha3();
   int aes = get_arch_name() == ARCH_AARCH64 && supports_arm_aes();
   int arm = get_arch_name() == ARCH_AARCH64;
@@ -18328,37 +19307,37 @@ int main(int argc, char *argv[])
   functionaltest(all,"edwards25519_scalarmulbase_alt",test_edwards25519_scalarmulbase_alt);
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
-  functionaltest(all,"mldsa_caddq",test_mldsa_caddq);
-  functionaltest(all,"mldsa_chknorm",test_mldsa_chknorm);
-  functionaltest(all,"mldsa_decompose_32",test_mldsa_decompose_32);
-  functionaltest(all,"mldsa_decompose_88",test_mldsa_decompose_88);
-  functionaltest(all,"mldsa_polyz_unpack_17",test_mldsa_polyz_unpack_17);
-  functionaltest(all,"mldsa_polyz_unpack_19",test_mldsa_polyz_unpack_19);
-  functionaltest(all,"mldsa_intt",test_mldsa_intt);
-  functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
-  functionaltest(all,"mldsa_nttunpack",test_mldsa_nttunpack);
-  functionaltest(all,"mldsa_pointwise",test_mldsa_pointwise);
-  functionaltest(all,"mldsa_pointwise_acc_l4",test_mldsa_pointwise_acc_l4);
-  functionaltest(all,"mldsa_pointwise_acc_l5",test_mldsa_pointwise_acc_l5);
-  functionaltest(all,"mldsa_pointwise_acc_l7",test_mldsa_pointwise_acc_l7);
-  functionaltest(all,"mldsa_poly_use_hint_32",test_mldsa_poly_use_hint_32);
-  functionaltest(all,"mldsa_poly_use_hint_88",test_mldsa_poly_use_hint_88);
-  functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
-  functionaltest(all,"mldsa_rej_uniform",test_mldsa_rej_uniform);
-  functionaltest(all,"mldsa_rej_uniform_eta2_VARIABLE_TIME",test_mldsa_rej_uniform_eta2);
-  functionaltest(all,"mldsa_rej_uniform_eta4_VARIABLE_TIME",test_mldsa_rej_uniform_eta4);
-  functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
-  functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
-  functionaltest(all,"mlkem_basemul_k4",test_mlkem_basemul_k4);
-  functionaltest(all,"mlkem_frombytes",test_mlkem_frombytes);
-  functionaltest(all,"mlkem_intt",test_mlkem_intt);
-  functionaltest(all,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
-  functionaltest(all,"mlkem_ntt",test_mlkem_ntt);
-  functionaltest(all,"mlkem_reduce",test_mlkem_reduce);
-  functionaltest(all,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
-  functionaltest(all,"mlkem_tobytes",test_mlkem_tobytes);
-  functionaltest(all,"mlkem_tomont",test_mlkem_tomont);
-  functionaltest(all,"mlkem_unpack",test_mlkem_unpack);
+  functionaltest(avx2,"mldsa_caddq",test_mldsa_caddq);
+  functionaltest(avx2,"mldsa_chknorm",test_mldsa_chknorm);
+  functionaltest(avx2,"mldsa_decompose_32",test_mldsa_decompose_32);
+  functionaltest(avx2,"mldsa_decompose_88",test_mldsa_decompose_88);
+  functionaltest(avx2,"mldsa_polyz_unpack_17",test_mldsa_polyz_unpack_17);
+  functionaltest(avx2,"mldsa_polyz_unpack_19",test_mldsa_polyz_unpack_19);
+  functionaltest(avx2,"mldsa_intt",test_mldsa_intt);
+  functionaltest(avx2,"mldsa_ntt",test_mldsa_ntt);
+  functionaltest(avx2,"mldsa_nttunpack",test_mldsa_nttunpack);
+  functionaltest(avx2,"mldsa_pointwise",test_mldsa_pointwise);
+  functionaltest(avx2,"mldsa_pointwise_acc_l4",test_mldsa_pointwise_acc_l4);
+  functionaltest(avx2,"mldsa_pointwise_acc_l5",test_mldsa_pointwise_acc_l5);
+  functionaltest(avx2,"mldsa_pointwise_acc_l7",test_mldsa_pointwise_acc_l7);
+  functionaltest(avx2,"mldsa_poly_use_hint_32",test_mldsa_poly_use_hint_32);
+  functionaltest(avx2,"mldsa_poly_use_hint_88",test_mldsa_poly_use_hint_88);
+  functionaltest(avx2,"mldsa_reduce",test_mldsa_reduce);
+  functionaltest(avx2,"mldsa_rej_uniform",test_mldsa_rej_uniform);
+  functionaltest(avx2,"mldsa_rej_uniform_eta2_VARIABLE_TIME",test_mldsa_rej_uniform_eta2);
+  functionaltest(avx2,"mldsa_rej_uniform_eta4_VARIABLE_TIME",test_mldsa_rej_uniform_eta4);
+  functionaltest(avx2,"mlkem_basemul_k2",test_mlkem_basemul_k2);
+  functionaltest(avx2,"mlkem_basemul_k3",test_mlkem_basemul_k3);
+  functionaltest(avx2,"mlkem_basemul_k4",test_mlkem_basemul_k4);
+  functionaltest(avx2,"mlkem_frombytes",test_mlkem_frombytes);
+  functionaltest(avx2,"mlkem_intt",test_mlkem_intt);
+  functionaltest(avx2,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
+  functionaltest(avx2,"mlkem_ntt",test_mlkem_ntt);
+  functionaltest(avx2,"mlkem_reduce",test_mlkem_reduce);
+  functionaltest(bmi,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
+  functionaltest(avx2,"mlkem_tobytes",test_mlkem_tobytes);
+  functionaltest(avx2,"mlkem_tomont",test_mlkem_tomont);
+  functionaltest(avx2,"mlkem_unpack",test_mlkem_unpack);
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
   functionaltest(bmi,"p256_montjdouble",test_p256_montjdouble);
@@ -18394,8 +19373,8 @@ int main(int argc, char *argv[])
   functionaltest(bmi,"secp256k1_jmixadd",test_secp256k1_jmixadd);
   functionaltest(all,"secp256k1_jmixadd_alt",test_secp256k1_jmixadd_alt);
   functionaltest(all,"sha3_keccak_f1600",test_sha3_keccak_f1600);
-  functionaltest(all,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
-  functionaltest(all,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
+  functionaltest(arm ? sha3 : avx2,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
+  functionaltest(avx2,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
   functionaltest(bmi,"sm2_montjadd",test_sm2_montjadd);
   functionaltest(all,"sm2_montjadd_alt",test_sm2_montjadd_alt);
   functionaltest(bmi,"sm2_montjdouble",test_sm2_montjdouble);
@@ -18426,9 +19405,39 @@ int main(int argc, char *argv[])
     functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
     functionaltest(aes,"aes_xts_encrypt",test_aes_xts_encrypt);
     functionaltest(aes,"aes_xts_decrypt",test_aes_xts_decrypt);
+    functionaltest(aes,"aes128_gcm_enc",test_aes128_gcm_enc);
+    functionaltest(aes,"aes128_gcm_dec",test_aes128_gcm_dec);
+    functionaltest(aes,"aes256_gcm_enc",test_aes256_gcm_enc);
+    functionaltest(aes,"aes256_gcm_dec",test_aes256_gcm_dec);
+    functionaltest(aes&&sha3,"aes128_gcm_dec_alt",test_aes128_gcm_dec_alt);
+    functionaltest(aes&&sha3,"aes128_gcm_dec_alt whole-blocks guard",test_aes128_gcm_dec_alt_guard);
+    functionaltest(aes&&sha3,"aes256_gcm_dec_alt",test_aes256_gcm_dec_alt);
+    functionaltest(aes&&sha3,"aes256_gcm_dec_alt whole-blocks guard",test_aes256_gcm_dec_alt_guard);
+    functionaltest(all,"aes_gcm_htable",test_aes_gcm_htable);
+    functionaltest(aes,"known value tests for aes128_gcm_enc",test_known_values_aes128_gcm_enc);
+    functionaltest(aes,"known value tests for aes128_gcm_dec",test_known_values_aes128_gcm_dec);
+    functionaltest(aes&&sha3,"known value tests for aes128_gcm_dec_alt",test_known_values_aes128_gcm_dec_alt);
+    functionaltest(aes,"known value tests for aes256_gcm_enc",test_known_values_aes256_gcm_enc);
+    functionaltest(aes,"known value tests for aes256_gcm_dec",test_known_values_aes256_gcm_dec);
+    functionaltest(aes&&sha3,"known value tests for aes256_gcm_dec_alt",test_known_values_aes256_gcm_dec_alt);
+    functionaltest(aes,"Wycheproof vectors for aes128_gcm_enc",test_wycheproof_aes128_gcm_enc);
+    functionaltest(aes,"Wycheproof vectors for aes128_gcm_dec",test_wycheproof_aes128_gcm_dec);
+    functionaltest(aes&&sha3,"Wycheproof vectors for aes128_gcm_dec_alt",test_wycheproof_aes128_gcm_dec_alt);
+    functionaltest(aes,"Wycheproof vectors for aes256_gcm_enc",test_wycheproof_aes256_gcm_enc);
+    functionaltest(aes,"Wycheproof vectors for aes256_gcm_dec",test_wycheproof_aes256_gcm_dec);
+    functionaltest(aes&&sha3,"Wycheproof vectors for aes256_gcm_dec_alt",test_wycheproof_aes256_gcm_dec_alt);
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
+    functionaltest(aes&&sha3,"aes128_gcm_enc_alt",test_aes128_gcm_enc_alt);
+    functionaltest(aes&&sha3,"aes128_gcm_enc_alt whole-blocks guard",test_aes128_gcm_enc_alt_guard);
+    functionaltest(aes&&sha3,"aes128_gcm_enc_alt counter rollover",test_aes128_gcm_enc_alt_rollover);
+    functionaltest(aes&&sha3,"known value tests for aes128_gcm_enc_alt",test_known_values_aes128_gcm_enc_alt);
+    functionaltest(aes&&sha3,"Wycheproof vectors for aes128_gcm_enc_alt",test_wycheproof_aes128_gcm_enc_alt);
+    functionaltest(aes&&sha3,"aes256_gcm_enc_alt",test_aes256_gcm_enc_alt);
+    functionaltest(aes&&sha3,"aes256_gcm_enc_alt whole-blocks guard",test_aes256_gcm_enc_alt_guard);
+    functionaltest(aes&&sha3,"known value tests for aes256_gcm_enc_alt",test_known_values_aes256_gcm_enc_alt);
+    functionaltest(aes&&sha3,"Wycheproof vectors for aes256_gcm_enc_alt",test_wycheproof_aes256_gcm_enc_alt);
   }
 
   if (extrastrigger) function_to_test = "_";
@@ -18463,6 +19472,6 @@ int main(int argc, char *argv[])
   printf("                                      Failed  = %3d\n",failures);
   printf("         Skipped because not selected by user = %3d\n",skipped);
   printf("Skipped because inapplicable (no %s) = %3d\n",
-         ((get_arch_name() == ARCH_AARCH64) ? "ARM sha3" : "x86 BMI/ADX"),inapplicable);
+         ((get_arch_name() == ARCH_AARCH64) ? "ARM sha3" : "x86 BMI/ADX/AVX2"),inapplicable);
   return 1;
 }

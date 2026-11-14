@@ -1368,20 +1368,37 @@ let DEABBREV_TAC tm =
     REPEAT(FIRST_X_ASSUM(SUBST_ALL_TAC o check (sfn o concl)));;
 
 (* ------------------------------------------------------------------------- *)
-(* A slight help for efficiency of justification in some cases.              *)
+(* Normalize context facts and retain their original proofs for restoration. *)
 (* ------------------------------------------------------------------------- *)
 
+(* CLARIFY_TAC replaces each assumption Gamma |- H by H |- H, keeping the    *)
+(* labels, their order and the target. For example, the assumption           *)
+(*                                                                           *)
+(*   (x = 3 /\ y = 5) |- x = 3                                               *)
+(*                                                                           *)
+(* becomes x = 3 |- x = 3, so later tactics no longer see y = 5. This is     *)
+(* sound because the justification restores each Gamma: it instantiates      *)
+(* each original theorem Gamma |- H and uses PROVE_HYP to replace the        *)
+(* hypothesis H of the proved theorem by Gamma. Unused assumptions add no    *)
+(* hypotheses to the result.                                                 *)
+
 let (CLARIFY_TAC:tactic) =
-  let rec REASSUME oldasms th =
-    match oldasms with
-     [(l,oth)] -> LABEL_TAC l th
-    | (l,oth)::oasms ->
-        CONJUNCTS_THEN2 (LABEL_TAC l) (REASSUME oasms) th
-    | [] -> failwith "CLARIFY_TAC: sanity check" in
   fun ((asl,w) as gl) ->
     if asl = [] then ALL_TAC gl else
-    (POP_ASSUM_LIST(MP_TAC o end_itlist CONJ o rev) THEN
-     DISCH_THEN(REASSUME (rev asl))) gl;;
+    (* Skip theorems that are already H |- H, since PROVE_HYP would only
+       replace H by H. The test uses pointer equality (==). A theorem
+       whose hypothesis equals its conclusion but is a different term
+       object is kept; that only misses an optimization and does not
+       affect correctness, so there is no need to use aconv here. *)
+    let proofs = filter
+      (fun th -> match hyp th with
+         | [h] when h == concl th -> false
+         | _ -> true) (map snd asl) in
+    null_meta,
+    [map (fun (label,th) -> label,ASSUME(concl th)) asl,w],
+    (fun inst [th] ->
+      itlist (fun ath -> PROVE_HYP (INSTANTIATE_ALL inst ath))
+        proofs th);;
 
 (* ------------------------------------------------------------------------- *)
 (* Apply cacheing (memoization) to arbitrary function with naive assoc list. *)

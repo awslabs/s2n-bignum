@@ -441,7 +441,7 @@ let LHS_POLY_LEMMA = prove
   SUBGOAL_THEN `poly_deg bool_ring
     (ring_pow bool_poly (poly_var bool_ring one) 128) = 128`
     (fun th -> REWRITE_TAC[th]) THENL
-  [REWRITE_TAC[bool_poly; POLY_DEG_VAR_POW; BOOL_RING] THEN
+  [REWRITE_TAC[bool_poly; GSYM POLY_CLAUSES; POLY_DEG_VAR_POW; BOOL_RING] THEN
    CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
   SUBGOAL_THEN `poly_of_word(word_zx (r:128 word) : 256 word) = poly_of_word r`
     SUBST1_TAC THENL
@@ -907,7 +907,9 @@ let polyval_chain =
       let w_num = dest_numeral(rand w_tm) in
       let sq_th = MATCH_MP POLYVAL_SQUARE_STEP prev_th in
       let sq_th' = CONV_RULE(rhs_conv(REWR_CONV(SPEC w_tm PMUL_128_256_BRIDGE))) sq_th in
-      let sq_th'' = CONV_RULE(rhs_conv(RAND_CONV WORD_PMUL_CONV)) sq_th' in
+      (* WORD_PMUL_NUM_CONV stops when the 128-bit first operand becomes zero,
+         instead of continuing until the widened second operand shifts out. *)
+      let sq_th'' = CONV_RULE(rhs_conv(RAND_CONV WORD_PMUL_NUM_CONV)) sq_th' in
       let y_num = poly_mul_gf2 w_num w_num in
       let z_num = x_powpow.(k) in
       let q_num = quotients.(k-1) in
