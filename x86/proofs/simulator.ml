@@ -15,14 +15,124 @@ needs "common/cosim.ml";;
 needs "common/sematest.ml";;
 needs "x86/proofs/base.ml";;
 
-(*** The register file is read at the full width of the ZMM registers, so
- *** the instructions are stepped in the ZMM view (see OPERAND_CLAUSES_ZMM)
+(*** Two layouts of the register file, chosen by the executor (see below):
+ *** with AVX-512 it passes the whole ZMM registers and the opmask registers
+ *** (regfile_zmm, 312 words, simulated in the ZMM view, OPERAND_CLAUSES_ZMM)
+ *** and otherwise just the YMM registers (regfile, 112 words, in the
+ *** default YMM view).
  ***)
 
-x86_zmm_view := true;;
+let x86_cosim_zmm = ref false;;
 
 let regfile = new_definition
  `regfile s =
+   [val(read RAX s); val(read RCX s); val(read RDX s); val(read RBX s);
+    bitval(read CF s) +  4 * bitval(read PF s) + 16 * bitval(read AF s) +
+    64 * bitval(read ZF s) + 128 * bitval(read SF s) +
+    1024 * bitval(read DF s) + 2048 * bitval(read OF s);
+    val(read RBP s); val(read RSI s); val(read RDI s); val(read R8 s);
+    val(read R9 s); val(read R10 s); val(read R11 s); val(read R12 s);
+    val(read R13 s); val(read R14 s); val(read R15 s);
+    val(word_subword (read YMM0 s) (0,64):int64);
+    val(word_subword (read YMM0 s) (64,64):int64);
+    val(word_subword (read YMM0 s) (128,64):int64);
+    val(word_subword (read YMM0 s) (192,64):int64);
+    val(word_subword (read YMM1 s) (0,64):int64);
+    val(word_subword (read YMM1 s) (64,64):int64);
+    val(word_subword (read YMM1 s) (128,64):int64);
+    val(word_subword (read YMM1 s) (192,64):int64);
+    val(word_subword (read YMM2 s) (0,64):int64);
+    val(word_subword (read YMM2 s) (64,64):int64);
+    val(word_subword (read YMM2 s) (128,64):int64);
+    val(word_subword (read YMM2 s) (192,64):int64);
+    val(word_subword (read YMM3 s) (0,64):int64);
+    val(word_subword (read YMM3 s) (64,64):int64);
+    val(word_subword (read YMM3 s) (128,64):int64);
+    val(word_subword (read YMM3 s) (192,64):int64);
+    val(word_subword (read YMM4 s) (0,64):int64);
+    val(word_subword (read YMM4 s) (64,64):int64);
+    val(word_subword (read YMM4 s) (128,64):int64);
+    val(word_subword (read YMM4 s) (192,64):int64);
+    val(word_subword (read YMM5 s) (0,64):int64);
+    val(word_subword (read YMM5 s) (64,64):int64);
+    val(word_subword (read YMM5 s) (128,64):int64);
+    val(word_subword (read YMM5 s) (192,64):int64);
+    val(word_subword (read YMM6 s) (0,64):int64);
+    val(word_subword (read YMM6 s) (64,64):int64);
+    val(word_subword (read YMM6 s) (128,64):int64);
+    val(word_subword (read YMM6 s) (192,64):int64);
+    val(word_subword (read YMM7 s) (0,64):int64);
+    val(word_subword (read YMM7 s) (64,64):int64);
+    val(word_subword (read YMM7 s) (128,64):int64);
+    val(word_subword (read YMM7 s) (192,64):int64);
+    val(word_subword (read YMM8 s) (0,64):int64);
+    val(word_subword (read YMM8 s) (64,64):int64);
+    val(word_subword (read YMM8 s) (128,64):int64);
+    val(word_subword (read YMM8 s) (192,64):int64);
+    val(word_subword (read YMM9 s) (0,64):int64);
+    val(word_subword (read YMM9 s) (64,64):int64);
+    val(word_subword (read YMM9 s) (128,64):int64);
+    val(word_subword (read YMM9 s) (192,64):int64);
+    val(word_subword (read YMM10 s) (0,64):int64);
+    val(word_subword (read YMM10 s) (64,64):int64);
+    val(word_subword (read YMM10 s) (128,64):int64);
+    val(word_subword (read YMM10 s) (192,64):int64);
+    val(word_subword (read YMM11 s) (0,64):int64);
+    val(word_subword (read YMM11 s) (64,64):int64);
+    val(word_subword (read YMM11 s) (128,64):int64);
+    val(word_subword (read YMM11 s) (192,64):int64);
+    val(word_subword (read YMM12 s) (0,64):int64);
+    val(word_subword (read YMM12 s) (64,64):int64);
+    val(word_subword (read YMM12 s) (128,64):int64);
+    val(word_subword (read YMM12 s) (192,64):int64);
+    val(word_subword (read YMM13 s) (0,64):int64);
+    val(word_subword (read YMM13 s) (64,64):int64);
+    val(word_subword (read YMM13 s) (128,64):int64);
+    val(word_subword (read YMM13 s) (192,64):int64);
+    val(word_subword (read YMM14 s) (0,64):int64);
+    val(word_subword (read YMM14 s) (64,64):int64);
+    val(word_subword (read YMM14 s) (128,64):int64);
+    val(word_subword (read YMM14 s) (192,64):int64);
+    val(word_subword (read YMM15 s) (0,64):int64);
+    val(word_subword (read YMM15 s) (64,64):int64);
+    val(word_subword (read YMM15 s) (128,64):int64);
+    val(word_subword (read YMM15 s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(read RSP s)) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(read RSP s)) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(read RSP s)) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(read RSP s)) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 32))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 32))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 32))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 32))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 64))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 64))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 64))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 64))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 96))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 96))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 96))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 96))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 128))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 128))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 128))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 128))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 160))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 160))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 160))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 160))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 192))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 192))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 192))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 192))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 224))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 224))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 224))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 224))) s) (192,64):int64)
+    ]`;;
+
+let regfile_zmm = new_definition
+ `regfile_zmm s =
    [val(read RAX s); val(read RCX s); val(read RDX s); val(read RBX s);
     bitval(read CF s) +  4 * bitval(read PF s) + 16 * bitval(read AF s) +
     64 * bitval(read ZF s) + 128 * bitval(read SF s) +
@@ -480,7 +590,14 @@ let randomnd n density =
 
 let random64() = randomnd 64 (Random.int 65);;
 
-let random_regstate () =
+let random_regstate_ymm () =
+  let d = Random.int 65 in
+  map (fun _ -> randomnd 64 d) (0--3) @
+  [num(Random.int 4096 land 0b110011010101)] @
+  map (fun _ -> randomnd 64 d) (5--79) @
+  map (fun _ -> randomnd 64 d) (80--111);;
+
+let random_regstate_zmm () =
   let d = Random.int 65 in
   let dk = Random.int 65 in
   map (fun _ -> randomnd 64 d) (0--3) @          (* RAX..RBX          words 0-3     *)
@@ -496,6 +613,9 @@ let random_regstate () =
 
 let random_instruction iclasses =
   el (Random.int (length iclasses)) iclasses;;
+
+let random_regstate () =
+  if !x86_cosim_zmm then random_regstate_zmm() else random_regstate_ymm();;
 
 (* ------------------------------------------------------------------------- *)
 (* The iclasses to simulate.                                                 *)
@@ -1657,7 +1777,32 @@ let iclasses = iclasses_regreg @ iclasses_forms_reg @ iclasses_encodings_reg @
  [0x62; 0x83; 0x7d; 0x48; 0x39; 0xe1; 0x02];       (* vextracti32x4 $2,zmm20,xmm25 *)
  [0x62; 0x91; 0x95; 0x20; 0x6d; 0xf9];             (* vpunpckhqdq ymm25,ymm29,ymm7 (EVEX) *)
  [0x62; 0xf1; 0xe5; 0x48; 0x6c; 0xe2];             (* vpunpcklqdq zmm2,zmm3,zmm4 (EVEX) *)
- [0x62; 0x92; 0xfd; 0x48; 0x59; 0xf9]              (* vpbroadcastq xmm25,zmm7 (EVEX) *)
+ [0x62; 0x92; 0xfd; 0x48; 0x59; 0xf9]              (* vpbroadcastq zmm7,xmm25 (EVEX) *)
+] @
+(*** General registers in rm (EVEX.X ignored) and k0 for the mask
+ *** instructions ***)
+[[0x62; 0xe1; 0xfd; 0x08; 0x6e; 0xc0]; (* vmovq xmm16,rax (EVEX) *)
+ [0x62; 0xe1; 0xfd; 0x08; 0x7e; 0xc0]; (* vmovq rax,xmm16 (EVEX) *)
+ [0x62; 0x41; 0xfd; 0x08; 0x6e; 0xf1]; (* vmovq xmm30,r9 (EVEX) *)
+ [0x62; 0x41; 0xfd; 0x08; 0x7e; 0xea]; (* vmovq r10,xmm29 (EVEX) *)
+ [0x62; 0xe3; 0xed; 0x00; 0x22; 0xca; 0x01]; (* vpinsrq xmm17,xmm18,rdx,0x1 (EVEX) *)
+ [0x62; 0xd3; 0xdd; 0x00; 0x22; 0xdb; 0x00]; (* vpinsrq xmm3,xmm20,r11,0x0 (EVEX) *)
+ [0x62; 0xe3; 0xfd; 0x08; 0x16; 0xd9; 0x01]; (* vpextrq rcx,xmm19,0x1 (EVEX) *)
+ [0x62; 0xc3; 0xfd; 0x08; 0x16; 0xec; 0x00]; (* vpextrq r12,xmm21,0x0 (EVEX) *)
+ [0xc5; 0xf4; 0x46; 0xc2]; (* kxnorw k0,k1,k2 *)
+ [0xc5; 0xfc; 0x46; 0xd8]; (* kxnorw k3,k0,k0 *)
+ [0xc4; 0xe3; 0xf9; 0x30; 0xc0; 0x03]; (* kshiftrw k0,k0,0x3 *)
+ [0xc4; 0xe3; 0xf9; 0x32; 0xc8; 0x05]  (* kshiftlw k1,k0,0x5 *)
+] @
+(*** Encodings that the hardware and the decoder reject ***)
+[[0x62; 0xf3; 0xe5; 0x08; 0x43; 0xe2; 0x01]; (* vshufi64x2 with EVEX.L'L = 00 (#UD) *)
+ [0x62; 0xf3; 0x7d; 0x08; 0x39; 0xdc; 0x01]; (* vextracti32x4 with EVEX.L'L = 00 (#UD) *)
+ [0x62; 0xf2; 0x95; 0x08; 0x36; 0xd0]; (* vpermq (vector) with EVEX.L'L = 00 (#UD) *)
+ [0x62; 0xe1; 0xfd; 0x28; 0x6e; 0xc0]; (* vmovq xmm16,rax with EVEX.L'L = 01 (#UD) *)
+ [0x62; 0xe3; 0xed; 0x20; 0x22; 0xca; 0x01]; (* vpinsrq with EVEX.L'L = 01 (#UD) *)
+ [0x62; 0xf1; 0xf5; 0x28; 0x6f; 0xca]; (* vmovdqa64 with EVEX.vvvv not 1111 (#UD) *)
+ [0x62; 0xe2; 0xf5; 0x28; 0x59; 0xc2]; (* vpbroadcastq with EVEX.vvvv not 1111 (#UD) *)
+ [0xc4; 0xe3; 0xf1; 0x30; 0xc0; 0x03]  (* kshiftrw with VEX.vvvv not 1111 (#UD) *)
 ]
 ;;
 
@@ -1676,6 +1821,24 @@ let template =
      (\s. read RIP s = word(pc + ibytes_length) /\
           read RSP s = stackpointer /\
           regfile s = output_state)
+     (MAYCHANGE [RIP; RSP; RAX; RCX; RDX; RBX; RBP; RSI; RDI;
+                 R8; R9; R10; R11; R12; R13; R14; R15] ,,
+      MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
+                 ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+      MAYCHANGE [memory :> bytes(stackpointer,256)] ,,
+      MAYCHANGE [CF; PF; AF; ZF; SF; OF; DF] ,, MAYCHANGE [events])`;;
+
+let template_zmm =
+ `nonoverlapping (word pc,LENGTH ibytes) (stackpointer,256)
+  ==> ensures x86
+     (\s. bytes_loaded s (word pc) ibytes /\
+          additional_assumptions /\
+          read RIP s = word pc /\
+          read RSP s = stackpointer /\
+          regfile_zmm s = input_state)
+     (\s. read RIP s = word(pc + ibytes_length) /\
+          read RSP s = stackpointer /\
+          regfile_zmm s = output_state)
      (MAYCHANGE [RIP; RSP; RAX; RCX; RDX; RBX; RBP; RSI; RDI;
                  R8; R9; R10; R11; R12; R13; R14; R15] ,,
       MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
@@ -1803,18 +1966,29 @@ let extra_movsb_tac =
      TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV)) THEN
   ASM_REWRITE_TAC[] THEN STRIP_TAC;;
 
+(*** The stack buffer is split down to bytes from 512-bit or 256-bit chunks
+ *** (0 = bytes8 up to 5 = bytes512), depending on the layout
+ ***)
+
+let memory_split_sizes () =
+  if !x86_cosim_zmm then [5;0;1;2;3;4] else 0--4;;
+
 let tac_before memop =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
-  REWRITE_TAC[regfile; CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
+  REWRITE_TAC[if !x86_cosim_zmm then regfile_zmm else regfile;
+              CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
   REWRITE_TAC[DIMINDEX_64; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512] THEN
   CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[ZMMENCODING_REGROUP; YMMENCODING_REGROUP] THEN
+  REWRITE_TAC(if !x86_cosim_zmm
+              then [ZMMENCODING_REGROUP; YMMENCODING_REGROUP]
+              else [YMMENCODING_REGROUP]) THEN
   CONV_TAC(DEPTH_CONV WORD_JOIN_CONV) THEN
   REWRITE_TAC[SOME_FLAGS] THEN ONCE_REWRITE_TAC[MESON[]
    `read RSP s = stackpointer /\ P (read RSP s) s <=>
     read RSP s = stackpointer /\ P stackpointer s`] THEN
   ENSURES_INIT_TAC "s0" THEN
-  (if memop then MAP_EVERY MEMORY_SPLIT_TAC [5;0;1;2;3;4] else ALL_TAC)
+  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (memory_split_sizes())
+   else ALL_TAC)
 and tac_main (memopidx: int option) mc states =
   begin match memopidx with
   | Some idx ->
@@ -1841,7 +2015,8 @@ and tac_after memop =
    example). To further assist, we will perform the READ_MEMORY_FULLMERGE_CONV
    and rewrite/simplification again for spliting out the memory read and
    simplify the goal. *)
-  (if memop then MAP_EVERY MEMORY_SPLIT_TAC [5;0;1;2;3;4] else ALL_TAC) THEN
+  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (memory_split_sizes())
+   else ALL_TAC) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_FULLMERGE_CONV)
    else ALL_TAC) THEN
@@ -1878,16 +2053,21 @@ let decode_inst ibytes =
 (*** The HOL-side executor client is shared in common/cosim.ml. This file
  *** selects the x86-64 executor and supplies the state-vector shape.
  ***
- *** A session starts with READY 1 x86_64 312. The client sends
+ *** A session starts with READY 1 x86_64 312 on an executor with the
+ *** AVX-512 state and READY 1 x86_64 112 otherwise. The client sends
  *** RUN <hex-instruction-bytes> <decimal-state-word> ... and receives
- *** OK with the resulting 312 words, or TRAP/ERROR.
+ *** OK with the resulting words, or TRAP/ERROR.
  ***
  *** The x86-64 executor and state-vector shape are selected below.
  ***)
 
 let x86_cosim_executor = lazy
-  (start_cosim_executor "S2N_BIGNUM_X86_64_EXECUTOR"
-    "tools/simulate-persistent x86" "x86_64" 312);;
+  (let executor =
+     start_cosim_executor_of_sizes "S2N_BIGNUM_X86_64_EXECUTOR"
+       "tools/simulate-persistent x86" "x86_64" [112; 312] in
+   x86_cosim_zmm := (executor.cosim_state_words = 312);
+   x86_zmm_view := !x86_cosim_zmm;
+   executor);;
 
 (*** The CPU features beyond baseline x86-64 that an instruction needs, so
  *** that a case can be skipped if the executor reports that it lacks them
@@ -1927,8 +2107,20 @@ let x86_required_features instr =
   | "VPBROADCASTW" | "VPBROADCASTD" | "VPBROADCASTQ" | "VPBLENDD"
   | "VPSLLVD" | "VPSRLVD" | "VPSRLVQ" | "VPERMD" | "VPERMQ"
   | "VPERM2I128" | "VINSERTI128" | "VEXTRACTI128" -> ["avx2"]
+  | "VPTERNLOGD" | "VPTERNLOGQ" | "VPXORQ" | "VPROLQ" | "VPROLVQ"
+  | "VPERMQV" | "VPBLENDMQ" | "VMOVDQA64" | "VMOVDQU64" | "VSHUFI64X2"
+  | "VINSERTI32X4" | "VEXTRACTI32X4" -> ["avx512f"; "avx512vl"]
+  | "KXNORW" | "KSHIFTRW" | "KSHIFTLW" -> ["avx512f"]
   | _ -> if String.length name > 1 && String.get name 0 = 'V'
          then [if ymm then "avx2" else "avx"] else [];;
+
+(*** An EVEX-encoded instruction needs AVX-512 whatever it decodes to, and
+ *** the EVEX forms of vpinsrq and vpextrq need AVX-512DQ
+ ***)
+
+let x86_evex_features ibytes_list =
+  if exists (fun bs -> bs <> [] && hd bs = 0x62) ibytes_list
+  then ["avx512f"; "avx512vl"; "avx512dq"] else [];;
 
 (*** The instructions are normally simulated one step each. With a branch
  *** they need not all run, so nsteps can give the number of steps instead.
@@ -1950,6 +2142,7 @@ let cosimulate_instructions_steps (nsteps: int option)
   let ibyteterm =
     mk_flist(map (curry mk_comb `word:num->byte` o mk_small_numeral) ibytes) in
 
+  let _ = Lazy.force x86_cosim_executor in
   let input_state = random_regstate() in
 
   (*** Decode first, so that a case that needs a CPU feature the executor
@@ -1966,7 +2159,8 @@ let cosimulate_instructions_steps (nsteps: int option)
     match execth_opt with
       Some execth ->
         cosim_skip_lacking (Lazy.force x86_executor_features)
-          (itlist ((@) o x86_required_features) (instrs_of execth) [])
+          (itlist ((@) o x86_required_features) (instrs_of execth)
+             (x86_evex_features ibytes_list))
     | None -> false in
   if skip then mk_flist (instrs_of (option_get execth_opt)),true else
 
@@ -1996,7 +2190,7 @@ let cosimulate_instructions_steps (nsteps: int option)
        mk_flist(map mk_numeral input_state),`input_state:num list`;
        mk_flist(map mk_numeral output_state),`output_state:num list`;
        add_assum_subst]
-      template in
+      (if !x86_cosim_zmm then template_zmm else template) in
 
     let execth =
       match execth_opt with
@@ -2023,7 +2217,8 @@ let cosimulate_instructions_steps (nsteps: int option)
             (Format.print_string "Modulo undefinedness "; true)
           else
             let _,[_,gsd],_ =
-             (REWRITE_TAC[regfile; CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
+             (REWRITE_TAC[if !x86_cosim_zmm then regfile_zmm else regfile;
+                          CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
               REWRITE_TAC[DIMINDEX_64; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512] THEN
               CONV_TAC NUM_REDUCE_CONV THEN
               REWRITE_TAC[SOME_FLAGS]) ([], goal) in
@@ -2683,8 +2878,8 @@ let simple_memory_iclasses =
   [0xc4; 0xe1; 0xf9; 0x6e; 0x6c; 0x24; 0x20];      (* vmovq xmm5,qword ptr [rsp+0x20] *)
   [0xc4; 0xe1; 0xf9; 0x7e; 0x74; 0x24; 0x20];      (* vmovq qword ptr [rsp+0x20],xmm6 *)
 ] @
-[[0x62; 0xF3; 0x75; 0x5C; 0x25; 0x44; 0x24; 0x20; 0x96]; (* VPTERNLOGD zmm0{k4}, zmm1, DWORD BCST [rsp+0x20], 0x96 *)
- [0x62; 0xF3; 0x5D; 0xDD; 0x25; 0x5C; 0x24; 0x20; 0x80]  (* VPTERNLOGD zmm3{k5}{z}, zmm4, DWORD BCST [rsp+0x20], 0x80 *)
+[[0x62; 0xF3; 0x75; 0x5C; 0x25; 0x44; 0x24; 0x20; 0x96]; (* VPTERNLOGD zmm0{k4}, zmm1, DWORD BCST [rsp+0x80], 0x96 *)
+ [0x62; 0xF3; 0x5D; 0xDD; 0x25; 0x5C; 0x24; 0x20; 0x80]  (* VPTERNLOGD zmm3{k5}{z}, zmm4, DWORD BCST [rsp+0x80], 0x80 *)
 ] @
 [[0x62; 0xf1; 0xf5; 0x48; 0xef; 0x04; 0x24];       (* vpxorq (rsp),zmm1,zmm0 *)
  [0x62; 0xf1; 0xed; 0x49; 0xef; 0x5c; 0x24; 0x01]; (* vpxorq 0x40(rsp),zmm2,zmm3{k1} *)
@@ -2698,6 +2893,15 @@ let simple_memory_iclasses =
  [0x62; 0x63; 0xbd; 0x00; 0x22; 0x44; 0x24; 0x08; 0x01]; (* vpinsrq $1,0x40(rsp),xmm24,xmm24 (EVEX) *)
  [0xc4; 0xe3; 0xf9; 0x16; 0x54; 0x24; 0x48; 0x01]; (* vpextrq $1,xmm2,0x48(rsp) (VEX) *)
  [0x62; 0x63; 0xfd; 0x08; 0x16; 0x44; 0x24; 0x09; 0x01]  (* vpextrq $1,xmm24,0x48(rsp) (EVEX) *)
+] @
+(*** 64-bit embedded broadcast, and zero-masking of a store (#UD) ***)
+[[0x62; 0xf1; 0xed; 0x38; 0xef; 0x4c; 0x24; 0x04]; (* vpxorq ymm1,ymm2,QWORD BCST [rsp+0x20] *)
+ [0x62; 0xf1; 0xdd; 0x58; 0xef; 0x5c; 0x24; 0x05]; (* vpxorq zmm3,zmm4,QWORD BCST [rsp+0x28] *)
+ [0x62; 0xe1; 0xed; 0x10; 0xef; 0x4c; 0x24; 0x06]; (* vpxorq xmm17,xmm18,QWORD BCST [rsp+0x30] *)
+ [0x62; 0xe1; 0xdd; 0x31; 0xef; 0x5c; 0x24; 0x07]; (* vpxorq ymm19{k1},ymm20,QWORD BCST [rsp+0x38] *)
+ [0x62; 0xf3; 0xcd; 0x38; 0x25; 0x6c; 0x24; 0x04; 0x96]; (* vpternlogq ymm5,ymm6,QWORD BCST [rsp+0x20],0x96 *)
+ [0x62; 0xe3; 0xc5; 0xd2; 0x25; 0x74; 0x24; 0x08; 0xe8]; (* vpternlogq zmm22{k2}{z},zmm23,QWORD BCST [rsp+0x40],0xe8 *)
+ [0x62; 0xf1; 0xfe; 0xa9; 0x7f; 0x4c; 0x24; 0x01]  (* vmovdqu64 [rsp+0x20]{k1}{z},ymm1 (#UD) *)
 ]
 ;;
 

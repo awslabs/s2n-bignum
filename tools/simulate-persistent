@@ -34,7 +34,7 @@ case $1 in
   x86)
     LEGACY="$ROOT/x86/proofs/x86simulate"
     ARCH=x86_64
-    STATE_WORDS=312
+    STATE_WORDS=112
     CODE_UNIT_BYTES=1
     ;;
   *)
@@ -111,11 +111,25 @@ probe_features() {
   FEATURES_METADATA=" features=$*"
 }
 
+# On x86, an executor with AVX-512 (and the AVX-512BW moves of the opmask
+# registers) passes the whole ZMM registers and the opmask registers, in
+# 312 state words instead of 112 (see x86/proofs/x86simulate).
+
+select_state_layout() {
+  local features=",${FEATURES_METADATA# features=},"
+  if [[ "$ARCH" == x86_64 && "$features" == *,avx512f,* &&
+        "$features" == *,avx512bw,* ]]; then
+    STATE_WORDS=312
+    export COSIM_X86_STATE=zmm
+  fi
+}
+
 run_persistent() {
   local line code child_status
   local -a request output_words
 
   probe_features
+  select_state_layout
   printf 'READY 1 %s %d%s\n' "$ARCH" "$STATE_WORDS" "$FEATURES_METADATA"
   while IFS= read -r line; do
     read -r -a request <<< "$line"

@@ -6,7 +6,11 @@
 
 #define DEBUG 0
 
-// regs[0..311]:  integer registers, ZMMs, opmasks, flags and small buffer in stack
+// regs[0..STATESIZE-1]: integer registers, flags, vector registers, opmask
+// registers and a small buffer in the stack. Built with ZMM_STATE (for an
+// executor with AVX-512, by template_zmm.S), the vector registers are
+// ZMM0-31 and the opmasks K0-7 follow; otherwise they are YMM0-15, by
+// template.S, and there are no opmasks:
 //
 //      RAX = regfile[0]
 //      RCX = regfile[1]
@@ -24,20 +28,31 @@
 //      R13 = regfile[13]
 //      R14 = regfile[14]
 //      R15 = regfile[15]
-//      ZMM0.d[0] = regfile[16]
-//      ZMM0.d[1] = regfile[17]
+//      VEC0.d[0] = regfile[16]
 //      ...
-//      ZMM0.d[7] = regfile[23]
-//      ZMM1.d[0] = regfile[24]
+//      VEC0.d[VECWORDS-1] = regfile[16+VECWORDS-1]
+//      VEC1.d[0] = regfile[16+VECWORDS]
 //      ...
-//      ZMM31.d[6] = regfile[270]
-//      ZMM31.d[7] = regfile[271]
-//      K0 = regfile[272]
-//      ...
-//      K7 = regfile[279]
-//      [SP,...,SP+255] = regfile[280...311]
+//      K0 ... K7 = regfile[MASKBASE ... MASKBASE+7] (ZMM_STATE only)
+//      [SP,...,SP+255] = regfile[STACKBASE ... STACKBASE+31]
+//
+// so STATESIZE is 312 with ZMM_STATE (ZMM0 at 16..23, K0 at 272, the stack
+// buffer at 280..311) and 112 without (YMM0 at 16..19, the stack buffer at
+// 80..111).
 
-#define STATESIZE 312
+#ifdef ZMM_STATE
+#define VECREGS 32
+#define VECWORDS 8
+#define MASKREGS 8
+#else
+#define VECREGS 16
+#define VECWORDS 4
+#define MASKREGS 0
+#endif
+
+#define MASKBASE (16 + VECREGS * VECWORDS)
+#define STACKBASE (MASKBASE + MASKREGS)
+#define STATESIZE (STACKBASE + 32)
 static uint64_t regs[STATESIZE];
 
 extern uint64_t harness(uint64_t *regfile);
@@ -65,21 +80,18 @@ void print_regs()
   printf("    AF = %d\n",(regs[4] & (1<<4)) != 0);
   printf("    PF = %d\n",(regs[4] & (1<<2)) != 0);
   printf("    CF = %d\n",(regs[4] & (1<<0)) != 0);
-  { uint64_t r;
-    for (r = 0; r < 32; ++r)
-     { uint64_t b = 16 + r * 8;
-       printf(" ZMM%-2"PRIu64" = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64
-              ":%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",
-              r,regs[b+7],regs[b+6],regs[b+5],regs[b+4],
-                regs[b+3],regs[b+2],regs[b+1],regs[b+0]);
+  { int r, w;
+    for (r = 0; r < VECREGS; ++r)
+     { printf(" %cMM%-2d = 0x", VECWORDS == 8 ? 'Z' : 'Y', r);
+       for (w = VECWORDS - 1; w >= 0; --w)
+         printf("%016"PRIx64"%s", regs[16 + r * VECWORDS + w], w ? ":" : "\n");
      }
+    for (r = 0; r < MASKREGS; ++r)
+      printf("    K%d = 0x%016"PRIx64"\n", r, regs[MASKBASE + r]);
     for (r = 0; r < 8; ++r)
-      printf("    K%"PRIu64" = 0x%016"PRIx64"\n",r,regs[272+r]);
-    for (r = 0; r < 8; ++r)
-     { uint64_t b = 280 + r * 4;
-       printf("   SP%"PRIu64" = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",
-              r,regs[b+0],regs[b+1],regs[b+2],regs[b+3]);
-     }
+      printf("   SP%d = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",
+             r, regs[STACKBASE + 4 * r], regs[STACKBASE + 4 * r + 1],
+             regs[STACKBASE + 4 * r + 2], regs[STACKBASE + 4 * r + 3]);
   }
 }
 
