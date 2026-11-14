@@ -524,7 +524,7 @@ let WORDLIST_FROM_MEMORY_CONV =
   and prule =
        (PURE_REWRITE_RULE o map GSYM)
        [BYTES8_WBYTES; BYTES16_WBYTES; BYTES32_WBYTES; BYTES64_WBYTES;
-        BYTES128_WBYTES; BYTES256_WBYTES] in
+        BYTES128_WBYTES; BYTES256_WBYTES; BYTES512_WBYTES] in
   fun tm ->
     match tm with
       Comb(Comb(Const("wordlist_from_memory",_),

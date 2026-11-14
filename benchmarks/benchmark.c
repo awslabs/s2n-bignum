@@ -1430,6 +1430,8 @@ void call_sha3_keccak_f1600_alt2(void) {}
 void call_sha3_keccak2_f1600(void) {}
 void call_sha3_keccak2_f1600_alt(void) {}
 void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1,b2,b3))
+void call_sha3_keccak4_f1600_avx512vl(void) repeat(sha3_keccak4_f1600_avx512vl(b0,b1))
+void call_sha3_keccak8_f1600_avx512(void) repeat(sha3_keccak8_f1600_avx512(b0,b1))
 void call_sha3_keccak4_f1600_alt2(void) {}
 
 void call_aes_xts_encrypt_16(void) {}
@@ -1528,6 +1530,8 @@ void call_sha3_keccak_f1600_alt2(void) repeat(sha3_keccak_f1600_alt2(b0,b1))
 void call_sha3_keccak2_f1600(void) repeat(sha3_keccak2_f1600(b0,b1))
 void call_sha3_keccak2_f1600_alt(void) repeat(sha3_keccak2_f1600_alt(b0,b1))
 void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1))
+void call_sha3_keccak4_f1600_avx512vl(void) {}
+void call_sha3_keccak8_f1600_avx512(void) {}
 void call_sha3_keccak4_f1600_alt2(void) repeat(sha3_keccak4_f1600_alt2(b0,b1))
 
 void call_mlkem_frombytes(void) {}
@@ -1654,6 +1658,7 @@ int main(int argc, char *argv[])
   int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
   int avx2 = get_arch_name() == ARCH_AARCH64 || supports_avx2();
   int sha3 = get_arch_name() == ARCH_AARCH64 && supports_arm_sha3();
+  int avx512 = get_arch_name() == ARCH_X86_64 && supports_avx512();
   int aes = get_arch_name() == ARCH_AARCH64 && supports_arm_aes();
   int all = 1;
   int arm = get_arch_name() == ARCH_AARCH64;
@@ -2110,6 +2115,8 @@ int main(int argc, char *argv[])
   timingtest(sha3,"sha3_keccak2_f1600_alt",call_sha3_keccak2_f1600_alt);
   timingtest(arm ? sha3 : avx2,"sha3_keccak4_f1600",call_sha3_keccak4_f1600);
   timingtest(avx2,"sha3_keccak4_f1600_alt",call_sha3_keccak4_f1600_alt);
+  timingtest(avx512,"sha3_keccak4_f1600_avx512vl",call_sha3_keccak4_f1600_avx512vl);
+  timingtest(avx512,"sha3_keccak8_f1600_avx512",call_sha3_keccak8_f1600_avx512);
   timingtest(sha3,"sha3_keccak4_f1600_alt2",call_sha3_keccak4_f1600_alt2);
   timingtest(bmi,"sm2_montjadd",call_sm2_montjadd);
   timingtest(all,"sm2_montjadd_alt",call_sm2_montjadd_alt);
