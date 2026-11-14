@@ -42,6 +42,20 @@ int supports_avx2(void)
   return (cpuid_extendedfeatures() & (1ul<<5)) != 0;
 }
 
+// AVX-512F, AVX-512DQ and AVX-512VL (CPUID.(EAX=7,ECX=0):EBX[16,17,31])
+// need the operating system to save the opmask and ZMM state as well as the
+// YMM state (CPUID.1:ECX.OSXSAVE[27] and XCR0 bits 1, 2 and 5 to 7).
+
+int supports_avx512(void)
+{ int c = cpuid_basicfeatures();
+  unsigned int xcr0, xcr0_hi, b;
+  if (!(c & (1ul<<27))) return 0;
+  asm ("xgetbv" : "=a" (xcr0), "=d" (xcr0_hi) : "c" (0));
+  if ((xcr0 & 0xe6) != 0xe6) return 0;
+  b = (unsigned int) cpuid_extendedfeatures();
+  return (b & (1u<<16)) && (b & (1u<<17)) && (b & (1u<<31));
+}
+
 enum arch_name get_arch_name()
 { return ARCH_X86_64;
 }
@@ -65,6 +79,11 @@ int supports_bmi2_and_adx(void)
 
 int supports_avx2(void)
 { // AArch64 does not support AVX2.
+  return 0;
+}
+
+int supports_avx512(void)
+{ // AArch64 does not support AVX-512.
   return 0;
 }
 

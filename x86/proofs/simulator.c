@@ -6,7 +6,11 @@
 
 #define DEBUG 0
 
-// regs[0..111]:  integer registers, YMMs, flags and small buffer in stack
+// regs[0..STATESIZE-1]: integer registers, flags, vector registers, opmask
+// registers and a small buffer in the stack. Built with ZMM_STATE (for an
+// executor with AVX-512, by template_zmm.S), the vector registers are
+// ZMM0-31 and the opmasks K0-7 follow; otherwise they are YMM0-15, by
+// template.S, and there are no opmasks:
 //
 //      RAX = regfile[0]
 //      RCX = regfile[1]
@@ -24,24 +28,37 @@
 //      R13 = regfile[13]
 //      R14 = regfile[14]
 //      R15 = regfile[15]
-//      YMM0.d[0] = regfile[16]
-//      YMM0.d[1] = regfile[17]
-//      YMM0.d[2] = regfile[18]
-//      YMM0.d[3] = regfile[19]
-//      YMM1.d[0] = regfile[20]
+//      VEC0.d[0] = regfile[16]
 //      ...
-//      YMM15.d[2] = regfile[78]
-//      YMM15.d[3] = regfile[79]
-//      [SP,...,SP+255] = regfile[80...111]
+//      VEC0.d[VECWORDS-1] = regfile[16+VECWORDS-1]
+//      VEC1.d[0] = regfile[16+VECWORDS]
+//      ...
+//      K0 ... K7 = regfile[MASKBASE ... MASKBASE+7] (ZMM_STATE only)
+//      [SP,...,SP+255] = regfile[STACKBASE ... STACKBASE+31]
+//
+// so STATESIZE is 312 with ZMM_STATE (ZMM0 at 16..23, K0 at 272, the stack
+// buffer at 280..311) and 112 without (YMM0 at 16..19, the stack buffer at
+// 80..111).
 
-#define STATESIZE 112
+#ifdef ZMM_STATE
+#define VECREGS 32
+#define VECWORDS 8
+#define MASKREGS 8
+#else
+#define VECREGS 16
+#define VECWORDS 4
+#define MASKREGS 0
+#endif
+
+#define MASKBASE (16 + VECREGS * VECWORDS)
+#define STACKBASE (MASKBASE + MASKREGS)
+#define STATESIZE (STACKBASE + 32)
 static uint64_t regs[STATESIZE];
 
 extern uint64_t harness(uint64_t *regfile);
 
 void print_regs()
-{ uint64_t i;
-  printf("   RAX = 0x%016"PRIx64"\n",regs[0]);
+{ printf("   RAX = 0x%016"PRIx64"\n",regs[0]);
   printf("   RCX = 0x%016"PRIx64"\n",regs[1]);
   printf("   RDX = 0x%016"PRIx64"\n",regs[2]);
   printf("   RBX = 0x%016"PRIx64"\n",regs[3]);
@@ -63,30 +80,19 @@ void print_regs()
   printf("    AF = %d\n",(regs[4] & (1<<4)) != 0);
   printf("    PF = %d\n",(regs[4] & (1<<2)) != 0);
   printf("    CF = %d\n",(regs[4] & (1<<0)) != 0);
-  printf("  YMM0 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[19],regs[18],regs[17],regs[16]);
-  printf("  YMM1 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[23],regs[22],regs[21],regs[20]);
-  printf("  YMM2 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[27],regs[26],regs[25],regs[24]);
-  printf("  YMM3 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[31],regs[30],regs[29],regs[28]);
-  printf("  YMM4 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[35],regs[34],regs[33],regs[32]);
-  printf("  YMM5 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[39],regs[38],regs[37],regs[36]);
-  printf("  YMM6 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[43],regs[42],regs[41],regs[40]);
-  printf("  YMM7 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[47],regs[46],regs[45],regs[44]);
-  printf("  YMM8 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[51],regs[50],regs[49],regs[48]);
-  printf("  YMM9 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[55],regs[54],regs[53],regs[52]);
-  printf(" YMM10 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[59],regs[58],regs[57],regs[56]);
-  printf(" YMM11 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[63],regs[62],regs[61],regs[60]);
-  printf(" YMM12 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[67],regs[66],regs[65],regs[64]);
-  printf(" YMM13 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[71],regs[70],regs[69],regs[68]);
-  printf(" YMM14 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[75],regs[74],regs[73],regs[72]);
-  printf(" YMM15 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[79],regs[78],regs[77],regs[76]);
-  printf(" SP0 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[80],regs[81],regs[82],regs[83]);
-  printf(" SP1 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[84],regs[85],regs[86],regs[87]);
-  printf(" SP2 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[88],regs[89],regs[90],regs[91]);
-  printf(" SP3 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[92],regs[93],regs[94],regs[95]);
-  printf(" SP4 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[96],regs[97],regs[98],regs[99]);
-  printf(" SP5 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[100],regs[101],regs[102],regs[103]);
-  printf(" SP6 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[104],regs[105],regs[106],regs[107]);
-  printf(" SP7 = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",regs[108],regs[109],regs[110],regs[111]);
+  { int r, w;
+    for (r = 0; r < VECREGS; ++r)
+     { printf(" %cMM%-2d = 0x", VECWORDS == 8 ? 'Z' : 'Y', r);
+       for (w = VECWORDS - 1; w >= 0; --w)
+         printf("%016"PRIx64"%s", regs[16 + r * VECWORDS + w], w ? ":" : "\n");
+     }
+    for (r = 0; r < MASKREGS; ++r)
+      printf("    K%d = 0x%016"PRIx64"\n", r, regs[MASKBASE + r]);
+    for (r = 0; r < 8; ++r)
+      printf("   SP%d = 0x%016"PRIx64":%016"PRIx64":%016"PRIx64":%016"PRIx64"\n",
+             r, regs[STACKBASE + 4 * r], regs[STACKBASE + 4 * r + 1],
+             regs[STACKBASE + 4 * r + 2], regs[STACKBASE + 4 * r + 3]);
+  }
 }
 
 // The cosim campaign deliberately runs undefined encodings and faulting

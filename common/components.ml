@@ -1965,6 +1965,12 @@ let BYTES256_WBYTES = prove
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[]);;
 
+let BYTES512_WBYTES = prove
+ (`(bytes512:A word->((A word->byte),512 word)component) = wbytes`,
+  REWRITE_TAC[FUN_EQ_THM; wbytes; bytes512] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[]);;
+
 let STRONGLY_VALID_COMPONENT_BYTES8 = prove
  (`!a:A word. strongly_valid_component (bytes8 a)`,
   GEN_TAC THEN
