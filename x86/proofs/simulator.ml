@@ -15,6 +15,12 @@ needs "common/cosim.ml";;
 needs "common/sematest.ml";;
 needs "x86/proofs/base.ml";;
 
+(*** The register file is read at the full width of the ZMM registers, so
+ *** the instructions are stepped in the ZMM view (see OPERAND_CLAUSES_ZMM)
+ ***)
+
+x86_zmm_view := true;;
+
 let regfile = new_definition
  `regfile s =
    [val(read RAX s); val(read RCX s); val(read RDX s); val(read RBX s);

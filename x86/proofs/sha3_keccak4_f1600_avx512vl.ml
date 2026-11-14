@@ -6,6 +6,12 @@
 needs "x86/proofs/base.ml";;
 needs "x86/proofs/utils/keccak_spec.ml";;
 
+(*** The code uses only xmm and ymm registers, but this proof was written
+ *** for the ZMM view (see OPERAND_CLAUSES_ZMM), restored at the end
+ ***)
+
+x86_zmm_view := true;;
+
 (**** print_literal_from_elf "x86/sha3/sha3_keccak4_f1600_avx512vl.o";;
 ****)
 
@@ -1500,3 +1506,4 @@ let SHA3_KECCAK4_F1600_AVX512VL_WINDOWS_SUBROUTINE_SAFE = prove
                      memory :> bytes(word_sub stackpointer (word 0xb0), 0xb0)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE SHA3_KECCAK4_F1600_AVX512VL_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
 
+x86_zmm_view := false;;

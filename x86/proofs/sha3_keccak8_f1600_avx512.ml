@@ -6,6 +6,12 @@
 needs "x86/proofs/base.ml";;
 needs "x86/proofs/utils/keccak_spec.ml";;
 
+(*** This code accesses registers at 512 bits as well as narrower, so it is
+ *** simulated in the ZMM view (see OPERAND_CLAUSES_ZMM), restored at the end
+ ***)
+
+x86_zmm_view := true;;
+
 (**** print_literal_from_elf "x86/sha3/sha3_keccak8_f1600_avx512.o";;
 ****)
 
@@ -1805,3 +1811,5 @@ let SHA3_KECCAK8_F1600_AVX512_WINDOWS_SUBROUTINE_SAFE = prove
           MAYCHANGE [memory :> bytes (bitstate_in, 1600);
                      memory :> bytes(word_sub stackpointer (word 0xb0), 0xb0)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE SHA3_KECCAK8_F1600_AVX512_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
+
+x86_zmm_view := false;;
