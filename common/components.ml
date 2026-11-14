@@ -3319,8 +3319,8 @@ let ORTHOGONAL_COMPONENTS_RULE =
     CONJ_TAC THENL
      [REWRITE_TAC[NONOVERLAPPING_MODULO; ORTHOGONAL_COMPONENTS_BYTES] THEN
       REWRITE_TAC[WORD_VAL];
-      REWRITE_TAC[bytes512; bytes256; bytes128; bytes64; bytes32; bytes16; bytes8;
-                  bytelist; COMPONENT_COMPOSE_ASSOC] THEN
+      REWRITE_TAC[bytes512; bytes256; bytes128; bytes64; bytes32; bytes16;
+                  bytes8; bytelist; COMPONENT_COMPOSE_ASSOC] THEN
       REWRITE_TAC[ORTHOGONAL_COMPONENTS_SUB_LEFT;
                   ORTHOGONAL_COMPONENTS_SUB_RIGHT]]) in
   let baseconv = PART_MATCH rand pth

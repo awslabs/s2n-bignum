@@ -213,7 +213,7 @@ let RM_INDUCTION,RM_RECURSION = define_type
 
 let read_sib_displacement = new_definition
  `read_sib_displacement (md:2 word) (reg:4 word) l =
-  if reg = word 5 /\ md = word 0 then
+  if (word_zx reg:3 word) = word 5 /\ md = word 0 then
     read_int32 l >>= \(w,l).
     SOME((word_sx w,NONE),l)
   else
@@ -305,8 +305,11 @@ let gpr_adjust = new_definition `!sz reg. gpr_adjust (reg:4 word) sz =
     else ARB
   else Gpr reg sz`;;
 
+(* A GPR in ModRM.rm is B:rm; EVEX.X (bit 4 of RM_reg_evex) is not used. *)
 let operand_of_RM = define
  `(!reg. operand_of_RM sz (RM_reg reg) = %(gpr_adjust reg sz)) /\
+  (!reg. operand_of_RM sz (RM_reg_evex reg) =
+         %(gpr_adjust (word_zx reg:4 word) sz)) /\
   (!ea. operand_of_RM sz (RM_mem ea) = Memop (to_wordsize sz) ea)`;;
 
 let mmreg = new_definition
@@ -321,6 +324,7 @@ let simd_of_RM = define
 
 let is_memop = define
  `(!reg. is_memop (RM_reg reg) = F) /\
+  (!reg. is_memop (RM_reg_evex reg) = F) /\
   (!ea. is_memop (RM_mem ea) = T)`;;
 
 let read_ModRM_operand = new_definition
@@ -383,7 +387,8 @@ let read_EVEX = define
    read_byte l >>= \(b,l). (bitmatch b with [w; v:4; 1:1; p:2] ->
    read_byte l >>= \(b,l). (bitmatch b with [z:1; LL:2; bcast; V'; a:3] ->
    read_EVEXM m >>= \m.
-   SOME((SOME(rex_reg w (word_not rxb)), ~r', m, (word_join (word1 (~V')) (word_not v): 5 word),
+   SOME((SOME(rex_reg w (word_not rxb)), ~r', m,
+         (word_join (word1 (~V')) (word_not v): 5 word),
          read_VEXP p, z, LL, bcast, a), l)
    | _ -> NONE)
    | _ -> NONE)
@@ -393,9 +398,9 @@ let vexL_size = define
  `vexL_size F = Lower_128 /\
   vexL_size T = Lower_256`;;
 
-let evexL_size = new_definition `evexL_size (LL:2 word) = 
+let evexL_size = new_definition `evexL_size (LL:2 word) =
   bitmatch LL with
-  | [0:2] -> SOME Lower_128 
+  | [0:2] -> SOME Lower_128
   | [1:2] -> SOME Lower_256
   | [2:2] -> SOME Full_512
   | [3:2] -> NONE`;;
@@ -1860,10 +1865,6 @@ let READ_EVEXM_CONV =
      | None -> failwith "READ_EVEXM_CONV")
   | _ -> failwith "READ_EVEXM_CONV";;
 
-let operand_of_RM = define
- `(!reg. operand_of_RM sz (RM_reg reg) = %(gpr_adjust reg sz)) /\
-  (!ea. operand_of_RM sz (RM_mem ea) = Memop (to_wordsize sz) ea)`;;
-
 let OPERAND_OF_RM_CONV =
   let ga,ws,sz,sz2 = `gpr_adjust`,`to_wordsize`,`sz:regsize`,`sz2:wordsize`
   and reg,gpr,ea = `reg:4 word`,`gpr:gpr`,`ea:bsid`
@@ -1872,11 +1873,16 @@ let OPERAND_OF_RM_CONV =
       DISCH_THEN (SUBST1_TAC o SYM) THEN REWRITE_TAC [operand_of_RM])
   and pth2 = (UNDISCH o prove)
   (`to_wordsize sz = sz2 ==> operand_of_RM sz (RM_mem ea) = Memop sz2 ea`,
-    DISCH_THEN (SUBST1_TAC o SYM) THEN REWRITE_TAC [operand_of_RM]) in
+    DISCH_THEN (SUBST1_TAC o SYM) THEN REWRITE_TAC [operand_of_RM])
+  and conv1e =
+    GEN_REWRITE_CONV I [CONJUNCT1(CONJUNCT2 operand_of_RM)] THENC
+    RAND_CONV(LAND_CONV WORD_ZX_CONV THENC GPR_ADJUST_CONV) in
   function
   | Comb(Comb(Const("operand_of_RM",_),sz'),Comb(Const("RM_reg",_),reg')) ->
     let th = GPR_ADJUST_CONV (mk_comb (mk_comb (ga, reg'), sz')) in
     PROVE_HYP th (INST [sz',sz; reg',reg; rhs (concl th),gpr] pth1)
+  | Comb(Comb(Const("operand_of_RM",_),_),Comb(Const("RM_reg_evex",_),_))
+    as tm -> conv1e tm
   | Comb(Comb(Const("operand_of_RM",_),sz'),Comb(Const("RM_mem",_),ea')) ->
     let th = TO_WORDSIZE_CONV (mk_comb (ws, sz')) in
     PROVE_HYP th (INST [sz',sz; ea',ea; rhs (concl th),sz2] pth2)
@@ -2018,7 +2024,8 @@ let mk_sib_disp_thm =
       (ONCE_DEPTH_CONV WORD_RED_CONV THENC
        REWRITE_CONV [read_disp_thms md; obind])
       (SPEC_ALL (SPEC md' read_sib_displacement)) in
-    let conv = ONCE_DEPTH_CONV (WORD_RED_CONV ORELSEC GPR_CONV) THENC
+    let conv = ONCE_DEPTH_CONV WORD_ZX_CONV THENC
+      ONCE_DEPTH_CONV (WORD_RED_CONV ORELSEC GPR_CONV) THENC
       REWRITE_CONV [] in
     fun reg ->
       let reg' = mk_comb (word4, mk_numeral (num reg)) in
@@ -2026,8 +2033,9 @@ let mk_sib_disp_thm =
 
 let read_disp_scaled_thms =
   let word2 = mk_const ("word", [`:2`,`:N`]) in
-  let th = CONV_RULE (BINDER_CONV(BINDER_CONV(BINDER_CONV(RAND_CONV MATCH_CONV'))))
-             read_displacement_scaled in
+  let th = CONV_RULE
+    (BINDER_CONV(BINDER_CONV(BINDER_CONV(RAND_CONV MATCH_CONV'))))
+    read_displacement_scaled in
   fun n ->
     let n' = mk_numeral (num n) in
     let A = Array.init 3 (fun md ->
@@ -2049,7 +2057,8 @@ let mk_sib_disp_scaled_thm =
       let th = CONV_RULE
         (ONCE_DEPTH_CONV WORD_RED_CONV THENC
          REWRITE_CONV [disp md; obind])
-        (INST [n',`n:num`; md',`md:2 word`] (SPEC_ALL read_sib_displacement_scaled)) in
+        (INST [n',`n:num`; md',`md:2 word`]
+              (SPEC_ALL read_sib_displacement_scaled)) in
       let conv = ONCE_DEPTH_CONV WORD_ZX_CONV THENC
         ONCE_DEPTH_CONV (WORD_RED_CONV ORELSEC GPR_CONV) THENC
         REWRITE_CONV [] in
@@ -2200,6 +2209,8 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     ref ([]: (int * ((term*term)list -> thm)) list)
   and modRM_scaled_tables =
     ref ([]: (int * ((term*term)list -> thm) array) list)
+  and build_scaled_tables = (* overwritten below *)
+    ref (fun (_:int) -> failwith "build_scaled_tables")
   and read_vex_func = (* overwritten below *)
     ref ((fun _ -> failwith "evaluate read_VEX failed"),
          (fun _ -> failwith "evaluate read_VEX failed"))
@@ -2244,6 +2255,10 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   let scale_num n =
     if is_numeral n then n else rhs (concl (EVEX_DISP_SCALE_CONV n)) in
   let scale_of n = Num.int_of_num (dest_numeral (scale_num n)) in
+  let scaled_table tbl n =
+    let k = scale_of n in
+    (if not (can (assoc k) !tbl) then !build_scaled_tables k);
+    assoc k !tbl in
   let reroot n resth =
     if is_numeral n then resth else
     let neq = EVEX_DISP_SCALE_CONV n in
@@ -2259,22 +2274,23 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   let READ_DISP_SCALED_CONV = function
   | Comb(Comb(Comb(Const("read_displacement_scaled",_),n),
       Comb(Const("word",_),md)),l) ->
-    reroot n ((assoc (scale_of n) !disp_scaled_funcs) md [l,`l:byte list`])
+    reroot n (scaled_table disp_scaled_funcs n md [l,`l:byte list`])
   | _ -> failwith "READ_DISP_SCALED_CONV" in
   let READ_SIB_SCALED_CONV = function
   | Comb(Comb(Comb(Comb(Const("read_sib_displacement_scaled",_),n),
       Comb(Const("word",_),md)),Comb(Const("word",_),reg)),l) ->
-    reroot n ((assoc (scale_of n) !sib_disp_scaled_funcs) md reg [l,`l:byte list`])
+    reroot n
+      (scaled_table sib_disp_scaled_funcs n md reg [l,`l:byte list`])
   | Comb(Comb(Comb(Comb(Const("read_SIB_scaled",_),n),rex),md),
       Comb(Comb(Const("CONS",_),b),l)) ->
-    reroot n ((assoc (scale_of n) !sib_scaled_funcs)
+    reroot n (scaled_table sib_scaled_funcs n
       [b,`b:byte`; rex,`rex:(4 word)option`;
        md,`md:2 word`; l,`l:byte list`])
   | _ -> failwith "READ_SIB_SCALED_CONV" in
   let READ_MODRM_SCALED_CONV = function
   | Comb(Comb(Comb(Const("read_ModRM_scaled",_),n),rex),
       Comb(Comb(Const("CONS",_),Comb(Const("word",_),a)),l)) ->
-    reroot n ((assoc (scale_of n) !modRM_scaled_tables)
+    reroot n ((scaled_table modRM_scaled_tables n)
                 .(Num.int_of_num (dest_numeral a))
                 [rex,`rex:(4 word)option`; l,`l:byte list`])
   | _ -> failwith "READ_MODRM_SCALED_CONV" in
@@ -2541,7 +2557,8 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       fun ls ->
         let e2 = rev_assoc e ls in
         let pat, g =
-          try gs (repeat rator e2) with Failure _ -> failwith "match RM failed" in
+          try gs (repeat rator e2)
+          with Failure _ -> failwith "match RM failed" in
         let _,ls',_ = term_unify (frees pat) pat e2 in
         PROVE_HYP (REFL e2) (g (ls' @ ls))
     else
@@ -2718,7 +2735,13 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       log_step "v1 binop [e2]" evaluate b (fun thb ->
         let th1 = MK_COMB (AP_TERM f tha, thb) in
         let tm = rhs (concl th1) in
-        delay_if (is_var (lhand tm) || is_var (rand tm))
+        (* Converting an RM_reg_evex operand needs its register number, so
+           delay it until any holes in the register have been filled. *)
+        let evex_reg = match tm with
+          | Comb(Comb(Const(("operand_of_RM"|"simd_of_RM"),_),_),
+                 Comb(Const("RM_reg_evex",_),reg)) -> frees reg <> []
+          | _ -> false in
+        delay_if (evex_reg || is_var (lhand tm) || is_var (rand tm))
           tm (F o TRANS th1) conv))
   and eval_ternary f a b c F conv =
     log_step "ternary_op ([e1], e2, e3)" evaluate a (fun tha ->
@@ -2792,38 +2815,42 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     done in
 
   (* --------------------------------------------------------------------- *)
-  (* Precompute the EVEX "scaled" address-decoder tables.                   *)
-  (* EVEX encodes a displacement as disp8 * N, with tuple factor            *)
-  (* N in {4,8,16,32,64}.  Evaluating these readers symbolically is         *)
-  (* costly, so for each N we run `evaluate` ONCE per (small, discrete)      *)
-  (* field value and cache a specializer keyed by that field; at decode     *)
-  (* time READ_*_SCALED_CONV just indexes the table and instantiates the    *)
-  (* remaining operand bytes.  The idiom                                    *)
-  (*     evaluate (rhs (concl th)) (C INST o TRANS th)                       *)
-  (* compiles  |- lhs = body  into a closure  subst |-> |- lhs = result :    *)
-  (* `evaluate` reduces `body` leaving the operand bytes as holes, and the   *)
-  (* returned function fills those holes via INST.                          *)
+  (* The EVEX "scaled" address-decoder tables. EVEX encodes an 8-bit       *)
+  (* displacement as disp8 * N, where N (1, 2, 4, ..., 64) depends on the  *)
+  (* instruction. Evaluating these readers symbolically is costly, so for  *)
+  (* each N we run `evaluate` once per (small, discrete) field value and   *)
+  (* cache a specializer keyed by that field; at decode time               *)
+  (* READ_*_SCALED_CONV just indexes the table and instantiates the        *)
+  (* remaining operand bytes. The tables for an N are built when an        *)
+  (* instruction with that N is first decoded, so that code without EVEX   *)
+  (* instructions does not pay for them. The idiom                         *)
+  (*     evaluate (rhs (concl th)) (C INST o TRANS th)                     *)
+  (* compiles  |- lhs = body  into a closure  subst |-> |- lhs = result :  *)
+  (* `evaluate` reduces `body` leaving the operand bytes as holes, and the *)
+  (* returned function fills those holes via INST.                         *)
   (* --------------------------------------------------------------------- *)
   let () =
-    let ns = [4; 8; 16; 32; 64] in
-    disp_scaled_funcs := map (fun n ->
+    build_scaled_tables := fun n ->
       let A = Array.init 3 (fun md ->
         let th = read_disp_scaled_thms n md in
         evaluate (rhs (concl th)) (C INST o TRANS th)) in
-      n, fun md -> A.(Num.int_of_num (dest_numeral md))) ns;
-    sib_disp_scaled_funcs := map (fun n ->
+      disp_scaled_funcs :=
+        (n, fun md -> A.(Num.int_of_num (dest_numeral md))) ::
+        !disp_scaled_funcs;
       let A = Array.init 3 (fun md ->
         let f = mk_sib_disp_scaled_thm n md in
         Array.init 16 (fun reg -> let th = f reg in
           evaluate (rhs (concl th)) (C INST o TRANS th))) in
-      n, fun md reg ->
-        A.(Num.int_of_num (dest_numeral md))
-         .(Num.int_of_num (dest_numeral reg))) ns;
-    sib_scaled_funcs := map (fun n ->
+      sib_disp_scaled_funcs :=
+        (n, fun md reg ->
+              A.(Num.int_of_num (dest_numeral md))
+               .(Num.int_of_num (dest_numeral reg))) ::
+        !sib_disp_scaled_funcs;
       let th = INST [mk_numeral (num n),`n:num`]
                  (SPEC_ALL (CONJUNCT2 read_SIB_scaled)) in
-      n, evaluate (rhs (concl th)) (C INST o TRANS th)) ns;
-    modRM_scaled_tables := map (fun n ->
+      sib_scaled_funcs :=
+        (n, evaluate (rhs (concl th)) (C INST o TRANS th)) ::
+        !sib_scaled_funcs;
       let pth = INST [mk_numeral (num n),`n:num`]
                   (SPEC_ALL (CONJUNCT2 read_ModRM_scaled)) in
       let f = bm_seq_numeral (rhs (concl pth))
@@ -2839,7 +2866,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
           evaluate (rhs (concl th)) (C INST o check o TRANS th)
         with Failure _ as e -> fun _ -> raise e)
       done;
-      n, tbl) ns in
+      modRM_scaled_tables := (n, tbl) :: !modRM_scaled_tables in
 
   let decode_table =
     let rex,pfxs,t = `rex:(4 word)option`,`pfxs:pfxs`,`t:byte list`
@@ -3111,11 +3138,10 @@ let add_ll_tac,LL_TAC =
         let e = lhand (body (rand g)) in
         match type_of e with
         | Tyapp("RM",[]) ->
+          let mconv = (BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV' in
           SPEC_TAC (e, mk_var("x", type_of e)) THEN
           MATCH_MP_TAC RM_INDUCTION THEN
-          CONV_TAC (BINOP2_CONV ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV')
-                     (BINOP2_CONV ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV')
-                                  ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV')))
+          CONV_TAC (BINOP2_CONV mconv (BINOP2_CONV mconv mconv))
         | _ -> CONV_TAC ((RAND_CONV o BINDER_CONV) MATCH_CONV'));
      `a >>= b`, MATCH_MP_TAC list_linear_obind1]
     empty_net) in

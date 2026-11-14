@@ -2493,39 +2493,31 @@ let x86_VPXOR = new_definition
         let z = word_xor x y in
         (dest := (z:N word)) s`;;
 
+(*** EVEX masking of a result with elements of esize bits (8, 16, 32 or
+ *** 64): element i comes from the result if bit i of the opmask is set
+ *** (aaa = 000 selects no opmask, i.e. all ones), and otherwise is kept
+ *** from the old destination (merging) or zeroed (zeroing).
+ ***)
+
 let evex_mask = new_definition
  `evex_mask (k:3 word) (s:x86state) : 64 word =
   if k = word 0 then word_not (word 0)
   else read (maskregisters :> element k) s`;;
 
-let dword_expand_mask = new_definition
- `(dword_expand_mask:64 word->N word) m =
-  word_of_bits {i | i < dimindex(:N) /\ bit (i DIV 32) m}`;;
+let evex_expand_mask = new_definition
+ `(evex_expand_mask:num->64 word->N word) esize m =
+  word_of_bits {i | i < dimindex(:N) /\ bit (i DIV esize) m}`;;
 
-let apply_evex_masking_dword = new_definition
- `apply_evex_masking_dword masking (result:N word) (old:N word) (s:x86state) : N word =
+let apply_evex_masking = new_definition
+ `apply_evex_masking esize masking (result:N word) (old:N word)
+                     (s:x86state) : N word =
   match masking with
     Unmasked -> result
   | Merge_mask k ->
-      let m = dword_expand_mask (evex_mask k s) : N word in
+      let m = evex_expand_mask esize (evex_mask k s) : N word in
       word_or (word_and m result) (word_and (word_not m) old)
   | Zero_mask k ->
-      let m = dword_expand_mask (evex_mask k s) : N word in
-      word_and m result`;;
-
-let qword_expand_mask = new_definition
- `(qword_expand_mask:64 word->N word) m =
-  word_of_bits {i | i < dimindex(:N) /\ bit (i DIV 64) m}`;;
-
-let apply_evex_masking_qword = new_definition
- `apply_evex_masking_qword masking (result:N word) (old:N word) (s:x86state) : N word =
-  match masking with
-    Unmasked -> result
-  | Merge_mask k ->
-      let m = qword_expand_mask (evex_mask k s) : N word in
-      word_or (word_and m result) (word_and (word_not m) old)
-  | Zero_mask k ->
-      let m = qword_expand_mask (evex_mask k s) : N word in
+      let m = evex_expand_mask esize (evex_mask k s) : N word in
       word_and m result`;;
 
 (* Only deal with register-register exchange *)
@@ -2697,10 +2689,23 @@ let aligned_OPERAND256 = define
  `(aligned_OPERAND256 (Simdregister r) s <=> T) /\
   (aligned_OPERAND256 (Memop w ea) s <=> aligned 32 (bsid_semantics ea s))`;;
 
-let simd_src3 = define
- `(simd_src3 No_brc (full:(x86state,N word)component) (src:operand) s = full) /\
-  (simd_src3 Broadcast (full:(x86state,N word)component) (src:operand) s =
-     rvalue (word_duplicate (read (OPERAND32 src s) s) :N word))`;;
+(*** A source operand of an EVEX instruction: the full operand, or with
+ *** embedded broadcast (EVEX.b = 1 and a memory operand) one 32-bit or
+ *** 64-bit element repeated across the vector. The decoder gives the
+ *** memory operand the size of the element (Doubleword or Quadword).
+ ***)
+
+let evex_src = define
+ `(evex_src No_brc (full:(x86state,N word)component) (src:operand) s =
+     full) /\
+  (evex_src Broadcast (full:(x86state,N word)component)
+            (Memop Doubleword ea) s =
+     rvalue(word_duplicate
+             (read (OPERAND32 (Memop Doubleword ea) s) s):N word)) /\
+  (evex_src Broadcast (full:(x86state,N word)component)
+            (Memop Quadword ea) s =
+     rvalue(word_duplicate
+             (read (OPERAND64 (Memop Quadword ea) s) s):N word))`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Stating assumptions about instruction decoding                            *)
@@ -4716,7 +4721,7 @@ let x86_MOVSB_ALT = prove
 (*** Simplify word operations in SIMD instructions ***)
 
 let all_simd_rules =
-  [usimd16;usimd8;usimd4;usimd2;simd32;simd16;simd8;simd4;simd2;msimd16;msimd8;msimd4;msimd2];;
+   [usimd16;usimd8;usimd4;usimd2;simd32;simd16;simd8;simd4;simd2;msimd16;msimd8;msimd4;msimd2];;
 
 let EXPAND_SIMD_RULE =
   CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
@@ -4851,8 +4856,7 @@ let X86_OPERATION_CLAUSES =
     INST_TYPE[`:8`,`:N`] x86_CMP;
     INST_TYPE[`:32`,`:N`] x86_SBB;
     INST_TYPE[`:32`,`:N`] x86_SUB;
-    apply_evex_masking_dword; dword_expand_mask;
-    apply_evex_masking_qword; qword_expand_mask; evex_mask];;
+    apply_evex_masking; evex_expand_mask; evex_mask];;
 
 (* ------------------------------------------------------------------------- *)
 (* Trivial reassociation and reduction of "word((pc + m) + n)"               *)
@@ -5024,7 +5028,7 @@ let X86_CONV (decode_ths:thm option array) ths tm =
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
    REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256] THENC
    REWRITE_CONV[OPERAND_SIZE_CASES] THENC
-   REWRITE_CONV[simd_src3; OPERAND_CLAUSES] THENC
+   REWRITE_CONV[evex_src; OPERAND_CLAUSES] THENC
    ONCE_DEPTH_CONV BSID_SEMANTICS_CONV THENC
    REWRITE_CONV X86_OPERATION_CLAUSES THENC
    REWRITE_CONV([READ_RVALUE;
