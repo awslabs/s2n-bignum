@@ -447,8 +447,8 @@ let GHASH_POLYVAL_ACC_BATCHED = prove(
 
 (* ========================================================================= *)
 (* The Karatsuba middle term and the 64-bit half swap, the two operations    *)
-(* used to describe gcm_init_v8's table of powers of H (htable_mem_4 and     *)
-(* htable_mem_8 in arm/proofs/utils/aes_gcm_spec.ml)                         *)
+(* used to describe AWS-LC's gcm_init_v8 table of powers of H (htable_mem_4  *)
+(* and htable_mem_8 in arm/proofs/utils/aes_gcm_spec.ml)                     *)
 (* ========================================================================= *)
 
 let karatsuba_mid = new_definition

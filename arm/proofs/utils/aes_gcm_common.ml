@@ -996,7 +996,7 @@ let HTABLE_MEM_8_KEY_CONV cipher_def ks_def : conv =
 (* The exported correctness theorem of an 8-way kernel at the all-zero key.  *)
 (* With rk the FIPS-197 schedule of that key (ks_def), HTABLE_MEM_8_KEY_CONV *)
 (* evaluates the key-table precondition to the twelve 16-byte entries that   *)
-(* gcm_init_v8 writes for the key, which are the table the spec checks       *)
+(* AWS-LC's gcm_init_v8 writes for the key, the table the spec checks       *)
 (* HTABLE_MEM_8_AESAVS_ZERO_KEY_128 and HTABLE_MEM_8_AESAVS_ZERO_KEY_256 pin *)
 (* (arm/proofs/aes_gcm_spec_checks.ml) and the bytes the C test              *)
 (* aes_gcm_htable checks.  So the table described by the exported statement  *)

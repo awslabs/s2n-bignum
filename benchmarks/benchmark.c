@@ -1581,14 +1581,15 @@ void call_aes_xts_decrypt_512(void) { repeatfewer(10,aes_xts_decrypt_helper(512)
 
 // The AES-GCM bulk kernels, all sharing one ABI: the round keys
 // (key->rd_key, 11 or 15 of them), a 16-byte counter (aes_iv), a 16-byte tag
-// (b3) and the 192-byte table of powers of H produced by gcm_init_v8
-// (bb[0]), of which the 4-way kernels read the first 96 bytes.  Timing is
-// independent of their contents, which are seeded from the buffers once,
-// outside the timed loop: the kernels update the counter and the tag in
-// place.  All the lengths are whole blocks, as the _alt kernels require (they
-// return 0 without touching memory otherwise); those also need FEAT_SHA3,
-// take a separate path for the 16- and 64-byte calls (at most 4 blocks) and
-// run their 8-block main loop only for lengths above 256 bytes.
+// (b3) and a 192-byte table of powers of H (bb[0]), of which the 4-way kernels
+// read the first 96 bytes; arbitrary data stands in for the table that
+// AWS-LC's gcm_init_v8 would produce.  Timing is independent of their
+// contents, which are seeded from the buffers once, outside the timed loop:
+// the kernels update the counter and the tag in place.  All the lengths are
+// whole blocks, as the _alt kernels require (they return 0 without touching
+// memory otherwise); those also need FEAT_SHA3, take a separate path for the
+// 16- and 64-byte calls (at most 4 blocks) and run their 8-block main loop
+// only for lengths above 256 bytes.
 static s2n_bignum_AES_KEY aes_gcm_key;
 static void aes_gcm_setup(int rounds)
 {

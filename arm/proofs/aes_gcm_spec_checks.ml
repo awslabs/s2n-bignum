@@ -34,8 +34,8 @@ needs "arm/proofs/utils/aes_gcm_common.ml";;
 (* that precondition is evaluated by HTABLE_MEM_8_KEY_CONV, for the all-zero *)
 (* AES-128 and AES-256 keys, the FIPS-197 Appendix B AES-128 key and the     *)
 (* AES-256 key of GCM test case 15 (the key schedules of common/fips197.ml), *)
-(* to the 12 table entries.  They are the bytes gcm_init_v8 writes for those *)
-(* keys, and the bytes ref_gcm_init_htable writes in the C test              *)
+(* to the 12 table entries.  They are the bytes AWS-LC's gcm_init_v8 writes  *)
+(* for those keys, and the bytes ref_gcm_init_htable writes in the C test    *)
 (* aes_gcm_htable (tests/test.c), so they tie the precondition to the real   *)
 (* table: stated with a wrong H, such as the byte-reversed ones at the end,  *)
 (* it does not match them.  The 8-way proofs evaluate the same precondition  *)
@@ -119,7 +119,7 @@ let HTABLE_MEM_8_AES128_APPENDIX_B_KEY = prove
 (* The byte-reversed key word_reversefields 8 H (the little-endian reading   *)
 (* of AES_K(0^128)) describes a different table: at the all-zero key none of *)
 (* its 12 entries equals the real one, so a key-table precondition stated    *)
-(* with it is not satisfied by the table gcm_init_v8 builds.                 *)
+(* with it is not satisfied by the table AWS-LC's gcm_init_v8 builds.        *)
 
 let HTABLE_MEM_8_AESAVS_ZERO_KEY_128_REVERSED_H = prove
  (`!ptr s.
@@ -210,7 +210,7 @@ let HTABLE_MEM_8_NIST_TC15_KEY = prove
 (* The byte-reversed key word_reversefields 8 H (the little-endian reading   *)
 (* of AES_K(0^128)) describes a different table: at the all-zero key none of *)
 (* its 12 entries equals the real one, so a key-table precondition stated    *)
-(* with it is not satisfied by the table gcm_init_v8 builds.                 *)
+(* with it is not satisfied by the table AWS-LC's gcm_init_v8 builds.        *)
 
 let HTABLE_MEM_8_AESAVS_ZERO_KEY_256_REVERSED_H = prove
  (`!ptr s.

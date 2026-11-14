@@ -60,7 +60,7 @@ let nist_input_block = new_definition
 (* ------------------------------------------------------------------------- *)
 (* The GHASH key table, restricted to the entries the 4-way kernels read.    *)
 (* The 4-way unrolled loop uses H^1..H^4 and their Karatsuba middle terms,   *)
-(* i.e. the first 6 entries (offsets 0..80) of the table gcm_init_v8         *)
+(* i.e. the first 6 entries (offsets 0..80) of the table AWS-LC's gcm_init_v8 *)
 (* produces.  Each middle-term entry holds the lower power's Karatsuba term  *)
 (* in its low 64-bit lane.  The single-block tail loop multiplies only by    *)
 (* H^1 and its middle term, but one precondition covers every input length,  *)

@@ -17518,10 +17518,10 @@ int test_aes_xts_roundtrip(void)
 // encrypting or decrypting them in counter mode from the counter block
 // "ivec", folding the ciphertext into the GHASH accumulator "tag" and
 // incrementing the counter per block; the GHASH subkey H = AES_K(0^128) is
-// supplied as gcm_init_v8's table of its powers.  The 4-way kernels process
-// the floor(len_bits/128) whole blocks of any length and return len_bits/8;
-// the _alt kernels return 0 without touching memory unless len_bits is a
-// nonzero multiple of 128, and otherwise return len_bits/8.
+// supplied as AWS-LC's gcm_init_v8 table of its powers.  The 4-way kernels
+// process the floor(len_bits/128) whole blocks of any length and return
+// len_bits/8; the _alt kernels return 0 without touching memory unless
+// len_bits is a nonzero multiple of 128, and otherwise return len_bits/8.
 //
 // Each kernel gets one battery of tests, test_aes_gcm_kernel: random inputs
 // against the reference ref_aes_gcm_kernel of tests/ref_aes_gcm.c (after a

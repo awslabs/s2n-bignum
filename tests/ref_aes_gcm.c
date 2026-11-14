@@ -223,7 +223,9 @@ static void ref_aes_gcm_kernel(int keybytes, int encrypt,
 // Htable construction: feeds the assembly kernels' "Htable" argument
 // ***************************************************************************
 //
-// The kernels read precomputed powers of H in the OpenSSL gcm_init_v8 layout;
+// The kernels read precomputed powers of H in the layout of AWS-LC's
+// gcm_init_v8, which since AWS-LC commit 90315e2a stores each power with its
+// two 64-bit halves swapped, unlike OpenSSL's and BoringSSL's gcm_init_v8;
 // the entries the four-way kernels use are formalized as htable_mem_4, and
 // the whole table read by the 8-way _alt kernels as htable_mem_8, both in
 // arm/proofs/utils/aes_gcm_spec.ml. Rather than transliterate the SIMD
@@ -345,9 +347,10 @@ static uint64_t ref_karatsuba_mid(ref_u128 x)
 }
 
 // Build the 192-byte Htable for GHASH subkey H (16 bytes, = AES_K(0)).
-// Layout (gcm_init_v8's; slots 0..80 are htable_mem_4, all twelve are
-// htable_mem_8), 12 x 16-byte slots,
-// where mid(A,B) holds mid(A) in the low 64 bits and mid(B) in the high 64:
+// Layout (AWS-LC's gcm_init_v8; slots 0..80 are htable_mem_4, all twelve are
+// htable_mem_8), 12 x 16-byte slots, where bswap(A) swaps the two 64-bit
+// halves of A and mid(A,B) holds mid(A) in the low 64 bits and mid(B) in the
+// high 64:
 //   0:bswap(H^1) 16:mid(H^1,H^2) 32:bswap(H^2) 48:bswap(H^3) 64:mid(H^3,H^4)
 //   80:bswap(H^4) 96:bswap(H^5) 112:mid(H^5,H^6) 128:bswap(H^6) 144:bswap(H^7)
 //   160:mid(H^7,H^8) 176:bswap(H^8)
