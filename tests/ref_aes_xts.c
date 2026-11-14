@@ -117,7 +117,8 @@ static uint8_t ref_aes_gfmul(uint8_t a, uint8_t b)
 
 // Produce encryption key schedule in s2n_bignum_AES_KEY format:
 //   rd_key[0..29] = 15 round keys stored as little-endian uint64_t pairs
-//   rounds = 13 (the assembly convention: Nr - 1)
+//   rounds = 14, as AWS-LC's AES_set_encrypt_key stores it and as the
+//   aes_xts_encrypt and aes_xts_decrypt proofs require
 
 static void ref_aes256_expand_key(const uint8_t key[32],
                                   s2n_bignum_AES_KEY *ek)
@@ -155,7 +156,7 @@ static void ref_aes256_expand_key(const uint8_t key[32],
 
   // Copy into rd_key as little-endian uint64_t values
   memcpy(ek->rd_key, w, 240);
-  ek->rounds = 13;
+  ek->rounds = 14;
 }
 
 // Produce decryption key schedule: round keys reversed, InvMixColumns
@@ -193,7 +194,7 @@ static void ref_aes256_expand_decrypt_key(const uint8_t key[32],
    }
 
   memcpy(dk->rd_key, dk_bytes, 240);
-  dk->rounds = 13;
+  dk->rounds = 14;
 }
 
 // ***************************************************************************

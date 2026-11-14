@@ -6,15 +6,15 @@
 (* ========================================================================= *)
 (* NIST GHASH definitions: bit_reflect128, nist_dot, nist_ghash.             *)
 (*                                                                           *)
-(* Lightweight file containing only definitions and simple lemmas, without   *)
-(* the heavy polynomial algebra proofs. The full NIST ↔ POLYVAL bridge       *)
-(* (Gueron Proposition 1) lives in common/ghash_nist_bridge.ml.              *)
+(* Definitions and simple lemmas only, without the polynomial algebra of     *)
+(* the NIST <-> POLYVAL bridge (Gueron Proposition 1), which lives in        *)
+(* common/ghash_nist_bridge.ml.                                              *)
 (* ========================================================================= *)
 
 needs "common/ghash.ml";;
 
 (* ========================================================================= *)
-(* bit_reflect128: bit-reversal on 128-bit words (bit i ↦ bit 127-i).        *)
+(* bit_reflect128: bit-reversal on 128-bit words (bit i |-> bit 127-i).      *)
 (* ========================================================================= *)
 
 let bit_reflect128 = new_definition
@@ -80,7 +80,8 @@ let BIT_TRIVIAL_128 = prove
 
 let nist_dot = new_definition
   `nist_dot (a:int128) (b:int128) : int128 =
-   bit_reflect128(ghash_reduce(word_pmul (bit_reflect128 a) (bit_reflect128 b)))`;;
+   bit_reflect128(ghash_reduce(word_pmul (bit_reflect128 a)
+                               (bit_reflect128 b)))`;;
 
 (* ========================================================================= *)
 (* nist_ghash: recursive GHASH per NIST SP 800-38D Algorithm 2.              *)
