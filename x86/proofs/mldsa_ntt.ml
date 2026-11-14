@@ -4655,26 +4655,10 @@ let MLDSA_NTT_CORRECT = prove
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN
 
-  W(fun (asl,w) ->
-    let lfn = PROCESS_BOUND_ASSUMPTIONS
-      (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
-    and asms =
-      map snd (filter (is_local_definition [mldsa_montmul] o concl o snd) asl) in
-    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
-
-    REPEAT(GEN_REWRITE_TAC I
-     [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC) THEN
-    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o rand o lhand o rator o lhand o snd) THEN
-   (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
-     [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
-      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
-      CONV_TAC(ONCE_DEPTH_CONV MLDSA_FORWARD_NTT_CONV) THEN
-      REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
-      REWRITE_TAC[INT_REM_EQ] THEN INT_LINEAR_CONG_TAC;
-      MATCH_MP_TAC(INT_ARITH
-       `l':int <= l /\ u <= u'
-        ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
-      CONV_TAC INT_REDUCE_CONV])));;
+  CONGBOUND_NTT_TAC
+    CONGBOUND_LFN_BOUNDED [mldsa_montmul] CONGBOUND_SPLIT_X86
+    (REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`])
+    MLDSA_FORWARD_NTT_CONV);;
 
 (* ------------------------------------------------------------------------- *)
 (* Subroutine correctness theorems.                                          *)
