@@ -17,7 +17,7 @@
 (* address 0x3870, using the theorems for mlk_keccak_absorb_once_x4 at       *)
 (* 0x35d0, mlkem_keccakf1600x4_permute at 0x4740 and                         *)
 (* mlkem_keccakf1600x4_extract_bytes at 0x3d70 in the image. The result is   *)
-(* shake256 of common/fips202.ml for each input.                             *)
+(* shake256 of common/fips202/fips202.ml for each input.                     *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native_keccak_absorb_once_x4_gcc12_O2.ml";;

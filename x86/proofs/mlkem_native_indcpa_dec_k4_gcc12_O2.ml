@@ -565,12 +565,12 @@ let DE4_FINAL_TAC =
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The ciphertext ct of 1568 bytes is at c and the        *)
 (* decryption key dk of 1536 bytes at sk, and the message of 32 bytes        *)
-(* written at m is kpke_decrypt mlkem1024 dk ct in common/fips203.ml, for    *)
-(* any dk (FIPS 203 decodes s modulo q, while the code multiplies by the     *)
-(* 12-bit fields, which are congruent). The stack is the 6332 bytes below    *)
-(* the return address, for the six saved registers, up to 31 bytes for the   *)
-(* alignment, the 6176 bytes of the buffers and the 76 used by the callees   *)
-(* below them.                                                               *)
+(* written at m is kpke_decrypt mlkem1024 dk ct in                           *)
+(* common/fips203/fips203.ml, for any dk (FIPS 203 decodes s modulo q, while *)
+(* the code multiplies by the 12-bit fields, which are congruent). The stack *)
+(* is the 6332 bytes below the return address, for the six saved registers,  *)
+(* up to 31 bytes for the alignment, the 6176 bytes of the buffers and the   *)
+(* 76 used by the callees below them.                                        *)
 (* ------------------------------------------------------------------------- *)
 
 let DE4_FRAME = (6332,48,76,6176);;

@@ -252,10 +252,11 @@ let GETNOISE_RSP_TAC =
 (* sd, and the nonce is the low byte of the third argument. As for PRF and   *)
 (* SamplePolyCBD with eta = 2 in FIPS 203, the result is the centered        *)
 (* binomial distribution of mlkem_poly_cbd2 applied to the first 128 bytes   *)
-(* of shake256 of the seed followed by the nonce, as in common/fips202.ml.   *)
-(* The stack is the 888 bytes below the return address, for the four saved   *)
-(* registers, up to 31 bytes for the alignment, the 192 bytes of the buffers *)
-(* and the 632 used by mlkem_shake256 below them.                            *)
+(* of shake256 of the seed followed by the nonce, as in                      *)
+(* common/fips202/fips202.ml. The stack is the 888 bytes below the return    *)
+(* address, for the four saved registers, up to 31 bytes for the alignment,  *)
+(* the 192 bytes of the buffers and the 632 used by mlkem_shake256 below     *)
+(* them.                                                                     *)
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SHAKE256_TAC =

@@ -12,7 +12,8 @@
 (* the whole image (see mlkem_native_libmlkem_gcc12_O2.ml), where it is at   *)
 (* address 0x3510, using the theorems for mlk_keccak_absorb_once at 0x32b0,  *)
 (* mlkem_keccakf1600_permute at 0x3e70 and mlkem_keccakf1600_extract_bytes   *)
-(* at 0x3d10 in the image. The result is sha3_256 of common/fips202.ml.      *)
+(* at 0x3d10 in the image. The result is sha3_256 of                         *)
+(* common/fips202/fips202.ml.                                                *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native_keccak_absorb_once_gcc12_O2.ml";;
@@ -57,9 +58,9 @@ let MLKEM_NATIVE_SHA3_256_GCC12_O2_EXEC =
 (* of mlk_keccak_absorb_once, mlkem_keccakf1600_permute and                  *)
 (* mlkem_keccakf1600_extract_bytes. The input is a list of bytes, and the 32 *)
 (* bytes of the output, as a number, are those of sha3_256 in                *)
-(* common/fips202.ml. The stack is the 232 bytes of the function, the        *)
-(* return address of a call and the 320 bytes used by mlk_keccak_absorb_once *)
-(* below that.                                                               *)
+(* common/fips202/fips202.ml. The stack is the 232 bytes of the function,    *)
+(* the return address of a call and the 320 bytes used by                    *)
+(* mlk_keccak_absorb_once below that.                                        *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/consttime.ml";;

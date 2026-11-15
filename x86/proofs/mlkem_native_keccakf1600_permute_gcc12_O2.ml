@@ -1627,7 +1627,7 @@ let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
 
 (* ------------------------------------------------------------------------- *)
 (* The same for the state as a 1600-bit word, read by wbytes, with the       *)
-(* permutation keccak_f1600 of common/fips202.ml (see                        *)
+(* permutation keccak_f1600 of common/fips202/fips202.ml (see                *)
 (* utils/keccak_fips202.ml), and tactics for callers, which carry the state  *)
 (* between calls as 200 bytes.                                               *)
 (* ------------------------------------------------------------------------- *)

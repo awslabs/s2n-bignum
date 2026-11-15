@@ -101,16 +101,16 @@ let KR2_Z = `bytelist_of_num 32 (rnd DIV 2 EXP 256)`;;
 (* Correctness proof, assuming the contract for randombytes. Either          *)
 (* randombytes succeeds and the function returns 0, and then the             *)
 (* encapsulation key of 800 bytes at pk and the decapsulation key of 1632    *)
-(* bytes at sk are those of mlkem_keygen mlkem512 d z in common/fips203.ml   *)
-(* for some d and z of 32 bytes (the random bytes), or it fails and the      *)
-(* function returns -3. The theorem assumes that SampleNTT terminates for    *)
-(* each entry of the matrix for any seed d and that the stack does not       *)
-(* contain address 0, as for mlkem512_keypair_derand. The stack is the 9808  *)
-(* bytes below the return address, for the four saved registers, up to 31    *)
-(* bytes for the alignment, the 64 bytes of the buffer (aligned to 32 bytes  *)
-(* by AND with -32 after the pushes) and the 9680 used by                    *)
-(* mlkem512_keypair_derand below it. The proof is by cases on whether        *)
-(* randombytes succeeds.                                                     *)
+(* bytes at sk are those of mlkem_keygen_internal mlkem512 d z in            *)
+(* common/fips203/fips203.ml for some d and z of 32 bytes                    *)
+(* (the random bytes), or it fails and the function returns -3. The theorem  *)
+(* assumes that SampleNTT terminates for each entry of the matrix for any    *)
+(* seed d and that the stack does not contain address 0, as for              *)
+(* mlkem512_keypair_derand. The stack is the 9808 bytes below the return     *)
+(* address, for the four saved registers, up to 31 bytes for the alignment,  *)
+(* the 64 bytes of the buffer (aligned to 32 bytes by AND with -32 after the *)
+(* pushes) and the 9680 used by mlkem512_keypair_derand below it. The proof  *)
+(* is by cases on whether randombytes succeeds.                              *)
 (* ------------------------------------------------------------------------- *)
 
 let KR2_INTRO_TAC =
@@ -200,9 +200,11 @@ let MLKEM_NATIVE_KEYPAIR_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
               (C_RETURN s = word 0 /\
                (?d z. LENGTH d = 32 /\ LENGTH z = 32 /\
                       read (memory :> bytes(pk,800)) s =
-                      num_of_bytelist(FST(mlkem_keygen mlkem512 d z)) /\
+                      num_of_bytelist
+                        (FST(mlkem_keygen_internal mlkem512 d z)) /\
                       read (memory :> bytes(sk,1632)) s =
-                      num_of_bytelist(SND(mlkem_keygen mlkem512 d z))) \/
+                      num_of_bytelist
+                        (SND(mlkem_keygen_internal mlkem512 d z))) \/
                C_RETURN s = word 0xfffffffd))
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE

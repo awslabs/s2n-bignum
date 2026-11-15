@@ -742,7 +742,7 @@ let KD4_BAD_TAC =
 (* Correctness proof. The decapsulation key dk of 3168 bytes is at sk and    *)
 (* the ciphertext c of 1568 bytes at ct, and if they pass the check of FIPS  *)
 (* 203, the shared secret of 32 bytes written at ss is that of               *)
-(* mlkem_decaps_internal mlkem1024 dk c in common/fips203.ml and the         *)
+(* mlkem_decaps_internal mlkem1024 dk c in common/fips203/fips203.ml and the *)
 (* function returns 0, and otherwise it returns -5. The theorem assumes that *)
 (* SampleNTT terminates for each entry of the matrix from the seed in the    *)
 (* key and that the stack does not contain address 0, as for                 *)

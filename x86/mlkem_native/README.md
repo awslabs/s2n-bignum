@@ -197,8 +197,8 @@ polynomials), and for `mlkem<n>_polyvec_compress_du` and
 `mlkem_poly_decompress_d10` for 512 and 768 and `mlkem_poly_compress_d11`
 and `mlkem_poly_decompress_d11` for 1024 (with `<op>` `compress_du` and
 `decompress_du` in the file names), six of which are compiled as loops over
-the polynomials, unrolled in the proofs. As in `common/fips203.ml`, a
-vector of k polynomials is given by its 256 * k coefficients, of which
+the polynomials, unrolled in the proofs. As in `common/fips203/fips203.ml`,
+a vector of k polynomials is given by its 256 * k coefficients, of which
 those of polynomial j are `\i. x(256 * j + i)`. As for the functions they
 call, the theorems give the stack used, below the return address, and the
 stack pointer after the return, which callers need, and in the theorems of
@@ -234,12 +234,12 @@ the same specifications as on AArch64 (see
 static function `mlk_keccak_absorb_once`, at 0x32b0 in the image, which
 absorbs a whole message into a state. For these, the permutation
 `keccak 24` of `../proofs/utils/keccak_spec.ml` is shown to be
-`keccak_f1600` of `common/fips202.ml` on the state as a 1600-bit word in
-`../proofs/utils/keccak_fips202.ml`, as for AArch64, and the theorem for
-`mlkem_keccakf1600_permute` is restated in that form at the end of its
-proof. gcc zeroes the state with REP STOSQ, as an inline memset, so the
-specifications of `mlk_keccak_absorb_once` and of the functions that call
-it assume that the direction flag DF is clear, as the ABI requires on
+`keccak_f1600` of `common/fips202/fips202.ml` on the state as a 1600-bit
+word in `../proofs/utils/keccak_fips202.ml`, as for AArch64, and the
+theorem for `mlkem_keccakf1600_permute` is restated in that form at the end
+of its proof. gcc zeroes the state with REP STOSQ, as an inline memset, so
+the specifications of `mlk_keccak_absorb_once` and of the functions that
+call it assume that the direction flag DF is clear, as the ABI requires on
 entry. Since the state is not known to be aligned, the inline memset stores
 zero quadwords at the two ends of the state and clears the quadwords in
 between from the first multiple of 8 above its start, and the tactics
@@ -425,17 +425,17 @@ given by cases on `mlkem_ek_check`.
 `mlkem512_keypair_derand`, `mlkem768_keypair_derand` and
 `mlkem1024_keypair_derand` are the key generation with the seeds as
 arguments: the encapsulation key and the decapsulation key that they write
-are those of `mlkem_keygen mlkem<n> d z` for the seeds `d` and `z` of 32
-bytes each. They are verified in the image with the same specifications as
-on AArch64 apart from the stack and DF, with the same hypotheses as the key
-generation of K-PKE. The encapsulation key is copied into the decapsulation
-key by an inline `memcpy`, which copies its first and last 8 bytes directly
-and then all but 8 bytes by `rep movsq`, starting from the first multiple
-of 8 after the start of the destination; the tactics for it are in
-`../proofs/utils/mlkem_native_kem.ml`. Their theorems of constant time and
-memory safety state that their events depend only on the addresses and on
-rho, as for the key generation of K-PKE, and that rho is the end of the
-encapsulation key.
+are those of `mlkem_keygen_internal mlkem<n> d z` for the seeds `d` and `z`
+of 32 bytes each. They are verified in the image with the same
+specifications as on AArch64 apart from the stack and DF, with the same
+hypotheses as the key generation of K-PKE. The encapsulation key is copied
+into the decapsulation key by an inline `memcpy`, which copies its first
+and last 8 bytes directly and then all but 8 bytes by `rep movsq`, starting
+from the first multiple of 8 after the start of the destination; the
+tactics for it are in `../proofs/utils/mlkem_native_kem.ml`. Their theorems
+of constant time and memory safety state that their events depend only on
+the addresses and on rho, as for the key generation of K-PKE, and that rho
+is the end of the encapsulation key.
 
 `mlkem512_dec`, `mlkem768_dec` and `mlkem1024_dec` are the decapsulation,
 including the input check of FIPS 203: if the decapsulation key `dk` and

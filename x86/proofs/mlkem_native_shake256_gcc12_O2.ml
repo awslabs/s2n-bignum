@@ -14,7 +14,7 @@
 (* where it is at address 0x3480, using the theorems for                     *)
 (* mlk_keccak_absorb_once at 0x32b0, mlkem_keccakf1600_permute at 0x3e70 and *)
 (* mlkem_keccakf1600_extract_bytes at 0x3d10 in the image. The result is     *)
-(* shake256 of common/fips202.ml.                                            *)
+(* shake256 of common/fips202/fips202.ml.                                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native_keccak_absorb_once_gcc12_O2.ml";;
@@ -346,7 +346,7 @@ let SHAKE256_EXIT_TAC =
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The input is a list of bytes, and the outlen bytes of  *)
 (* the output, as a number, are the first outlen bytes of shake256 in        *)
-(* common/fips202.ml. Each iteration of the loop extracts                    *)
+(* common/fips202/fips202.ml. Each iteration of the loop extracts            *)
 (* MIN (outlen - 136 * i) 136 bytes, and the state is zeroed at the end,     *)
 (* with REP STOSQ, so the specifications assume that the direction flag DF   *)
 (* is clear, as the ABI requires on entry.                                   *)

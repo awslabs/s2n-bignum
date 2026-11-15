@@ -74,9 +74,10 @@ let EXTRACT_BYTES_TEST_TAC =
   CONJ_TAC THENL [REWRITE_TAC[WORD_ADD]; ALL_TAC];;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As in common/fips202.ml, the state is a 1600-bit word  *)
-(* S, and the bytes extracted are bytes off to off + len - 1 of it, which as *)
-(* a number are (val S DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len).             *)
+(* Correctness proof. As in common/fips202/fips202.ml, the state is a        *)
+(* 1600-bit word S, and the bytes extracted are bytes off to off + len - 1   *)
+(* of it, which as a number are                                              *)
+(* (val S DIV 2 EXP (8 * off)) MOD 2 EXP (8 * len).                          *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_O2_IMAGE_CORRECT = prove

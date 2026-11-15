@@ -273,8 +273,8 @@ let COMPRESS_D10_BODY_TAC =
   X86_STEPS_TAC MLKEM_NATIVE_POLY_COMPRESS_D10_GCC12_O2_EXEC (47--78);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_compress 10 in common/fips203.ml, the     *)
-(* result for a coefficient x in [0,3329) is the integer closest to          *)
+(* Correctness proof. As for mlkem_compress 10 in common/fips203/fips203.ml, *)
+(* the result for a coefficient x in [0,3329) is the integer closest to      *)
 (* 1024 * x / 3329, rounding up on ties, modulo 1024, i.e.                   *)
 (* ((2048 * x + 3329) DIV 6658) MOD 1024, and as for mlkem_encode 10 the     *)
 (* 10-bit values are put together little-endian. Like the C code, this       *)

@@ -9,8 +9,8 @@
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
 (* It is verified in the whole image (see                                    *)
 (* mlkem_native_libmlkem_gcc12_O2.ml), where it is at address 0x31c0. As in  *)
-(* mlkem_decode in common/fips203.ml, the bytes are given as a number n,     *)
-(* with coefficient i being bits 12 * i to 12 * i + 11 of n.                 *)
+(* mlkem_decode in common/fips203/fips203.ml, the bytes are given as a       *)
+(* number n, with coefficient i being bits 12 * i to 12 * i + 11 of n.       *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;

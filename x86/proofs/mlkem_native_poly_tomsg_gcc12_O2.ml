@@ -133,11 +133,12 @@ let TOMSG_INNER_TAC =
      ((6 + 11 * k)--(15 + 11 * k))) (0--7);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_compress 1 in common/fips203.ml, the bit  *)
-(* for a coefficient x in [0,3329) is the integer closest to 2 * x / 3329,   *)
-(* rounding up on ties, modulo 2, i.e. ((4 * x + 3329) DIV 6658) MOD 2, and  *)
-(* as for mlkem_encode 1 the bits are put together little-endian. Like the   *)
-(* C code, this relies on the coefficients being in [0,3329).                *)
+(* Correctness proof. As for mlkem_compress 1 in common/fips203/fips203.ml,  *)
+(* the bit for a coefficient x in [0,3329) is the integer closest to         *)
+(* 2 * x / 3329, rounding up on ties, modulo 2, i.e.                         *)
+(* ((4 * x + 3329) DIV 6658) MOD 2, and as for mlkem_encode 1 the bits are   *)
+(* put together little-endian. Like the C code, this relies on the           *)
+(* coefficients being in [0,3329).                                           *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_CORRECT = prove

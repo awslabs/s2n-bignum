@@ -98,12 +98,12 @@ let SQUEEZEBLOCKS_COUNTER_TAC =
 (* ------------------------------------------------------------------------- *)
 (* Combined correctness, constant-time and memory safety proof, using those  *)
 (* of mlkem_keccakf1600_permute and mlkem_keccakf1600_extract_bytes. The     *)
-(* state is a 1600-bit word S, as in common/fips202.ml and for               *)
+(* state is a 1600-bit word S, as in common/fips202/fips202.ml and for       *)
 (* mlk_keccak_absorb_once. Block i of the output, as a number, is the first  *)
 (* 168 bytes of keccak_squeeze (i + 1) S, the state after i + 1              *)
 (* permutations, and the final state is keccak_squeeze nblocks S. When S is  *)
 (* the result of mlkem_shake128_absorb_once, these are the bytes of the      *)
-(* output of shake128 in common/fips202.ml.                                  *)
+(* output of shake128 in common/fips202/fips202.ml.                          *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/consttime.ml";;

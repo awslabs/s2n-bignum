@@ -90,9 +90,9 @@ let FROMMSG_BODY_TAC =
      ((10 + 12 * k)--(14 + 12 * k))) (0--7);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_decompress 1 in common/fips203.ml, the    *)
-(* result for a bit y is the integer closest to 3329 * y / 2, rounding up on *)
-(* ties, i.e. (3329 * y + 1) DIV 2.                                          *)
+(* Correctness proof. As for mlkem_decompress 1 in                           *)
+(* common/fips203/fips203.ml, the result for a bit y is the integer closest  *)
+(* to 3329 * y / 2, rounding up on ties, i.e. (3329 * y + 1) DIV 2.          *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_FROMMSG_GCC12_O2_IMAGE_CORRECT = prove

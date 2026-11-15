@@ -224,9 +224,10 @@ let D5_LANE_RULE k th =
    (TRANS th1 (TRANS bth lth));;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_decompress 5 in common/fips203.ml, the    *)
-(* result for a 5-bit field y is the integer closest to 3329 * y / 32,       *)
-(* rounding up on ties, i.e. (3329 * y + 16) DIV 32.                         *)
+(* Correctness proof. As for mlkem_decompress 5 in                           *)
+(* common/fips203/fips203.ml, the result for a 5-bit field y is the integer  *)
+(* closest to 3329 * y / 32, rounding up on ties, i.e.                       *)
+(* (3329 * y + 16) DIV 32.                                                   *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D5_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =

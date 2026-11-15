@@ -213,9 +213,10 @@ let D10_LANE_RULE k th =
    (TRANS th1 (TRANS bth lth));;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_decompress 10 in common/fips203.ml, the   *)
-(* result for a 10-bit field y is the integer closest to 3329 * y / 1024,    *)
-(* rounding up on ties, i.e. (3329 * y + 512) DIV 1024.                      *)
+(* Correctness proof. As for mlkem_decompress 10 in                          *)
+(* common/fips203/fips203.ml, the result for a 10-bit field y is the integer *)
+(* closest to 3329 * y / 1024, rounding up on ties, i.e.                     *)
+(* (3329 * y + 512) DIV 1024.                                                *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_IMAGE_CORRECT = prove

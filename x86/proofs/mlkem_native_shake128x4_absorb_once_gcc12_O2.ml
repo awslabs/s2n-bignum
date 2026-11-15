@@ -53,8 +53,9 @@ let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_EXEC =
 (* ------------------------------------------------------------------------- *)
 (* Combined correctness, constant-time and memory safety proof, using that   *)
 (* of mlk_keccak_absorb_once_x4. The result is as for that function on each  *)
-(* message, with r = 168 and p = 0x1F as in shake128 in common/fips202.ml,   *)
-(* the states being the four consecutive 200-byte parts of the context.      *)
+(* message, with r = 168 and p = 0x1F as in shake128 in                      *)
+(* common/fips202/fips202.ml, the states being the four consecutive 200-byte *)
+(* parts of the context.                                                     *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =

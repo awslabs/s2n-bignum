@@ -1,3 +1,9 @@
+(* ------------------------------------------------------------------------- *)
+(* Vendored from https://github.com/jargh/s2n-bignum-dev, branch mlkem,      *)
+(* commit 47b8e4ed19b9d8e8df03d79096c54a987106d9cc,                          *)
+(* file common/fips202.ml. Unchanged except for this header.                 *)
+(* ------------------------------------------------------------------------- *)
+
 (*
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0

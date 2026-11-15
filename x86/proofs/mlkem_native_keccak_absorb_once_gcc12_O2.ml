@@ -345,8 +345,8 @@ let ABSORB_CS_CALL_TAC name ilist vars n =
 
 (* ------------------------------------------------------------------------- *)
 (* Combined correctness, constant-time and memory safety proof. As in        *)
-(* keccak_sponge in common/fips202.ml, the message of mlen bytes is a number *)
-(* M, and the padded message is the number                                   *)
+(* keccak_sponge in common/fips202/fips202.ml, the message of mlen bytes is  *)
+(* a number M, and the padded message is the number                          *)
 (* P = M + 2 EXP (8 * mlen) * num_of_bytelist(keccak_pad r p mlen), with     *)
 (* mlen DIV r + 1 blocks of r bytes, where p < 128 is the first byte of the  *)
 (* padding (0x1F for SHAKE and 0x06 for SHA-3). The result is the state      *)

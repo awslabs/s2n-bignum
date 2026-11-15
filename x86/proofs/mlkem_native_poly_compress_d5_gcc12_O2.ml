@@ -346,8 +346,8 @@ let COMPRESS_D5_TIDY_TAC =
     else th);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_compress 5 in common/fips203.ml, the      *)
-(* result for a coefficient x in [0,3329) is the integer closest to          *)
+(* Correctness proof. As for mlkem_compress 5 in common/fips203/fips203.ml,  *)
+(* the result for a coefficient x in [0,3329) is the integer closest to      *)
 (* 32 * x / 3329, rounding up on ties, modulo 32, i.e.                       *)
 (* ((64 * x + 3329) DIV 6658) MOD 32, and as for mlkem_encode 5 the 5-bit    *)
 (* values are put together little-endian. Like the C code, this relies on    *)

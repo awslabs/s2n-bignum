@@ -195,10 +195,11 @@ let CBD2_INNER_TAC store k =
   (if store then CBD2_STORE_TAC k else ALL_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_cbd 2 in common/fips203.ml, coefficient i *)
-(* of the result is the number of 1 bits among bits 4 * i and 4 * i + 1 of   *)
-(* the 128 bytes as a number n, minus the number among bits 4 * i + 2 and    *)
-(* 4 * i + 3, here as a 16-bit integer rather than modulo 3329.              *)
+(* Correctness proof. As for mlkem_cbd 2 in common/fips203/fips203.ml,       *)
+(* coefficient i of the result is the number of 1 bits among bits 4 * i and  *)
+(* 4 * i + 1 of the 128 bytes as a number n, minus the number among bits     *)
+(* 4 * i + 2 and 4 * i + 3, here as a 16-bit integer rather than modulo      *)
+(* 3329.                                                                     *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NATIVE_POLY_CBD2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove

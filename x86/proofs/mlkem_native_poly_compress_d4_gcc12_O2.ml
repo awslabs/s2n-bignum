@@ -323,8 +323,8 @@ let COMPRESS_D4_TIDY_TAC =
     else th);;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness proof. As for mlkem_compress 4 in common/fips203.ml, the      *)
-(* result for a coefficient x in [0,3329) is the integer closest to          *)
+(* Correctness proof. As for mlkem_compress 4 in common/fips203/fips203.ml,  *)
+(* the result for a coefficient x in [0,3329) is the integer closest to      *)
 (* 16 * x / 3329, rounding up on ties, modulo 16, i.e.                       *)
 (* ((32 * x + 3329) DIV 6658) MOD 16, and as for mlkem_encode 4 the 4-bit    *)
 (* values are put together little-endian. Like the C code, this relies on    *)
