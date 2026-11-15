@@ -181,7 +181,7 @@ let KEM_JOIN_TAC a l s =
 (* val(sk + t) MOD 8 (by MEMSET_ALIGN_ADDR), so that the parts of the first  *)
 (* and last quadwords outside them are kept. The lemmas KEM_BYTES64_OF_NUM,  *)
 (* KEM_BYTES_JOIN and KEM_MOVSQ_FACT are as in                               *)
-(* mlkem_native_shake256x4_gcc12_O2.ml. KEM_MEMCPY_REGS_TAC gives lo and the *)
+(* mlkem_native/gcc12_O2/shake256x4.ml. KEM_MEMCPY_REGS_TAC gives lo and the *)
 (* values of the registers for the REP MOVSQ, KEM_MOVSQ_STEP_TAC steps it,   *)
 (* keeping the fact for the memory it writes, which the simulation does not, *)
 (* and KEM_MEMCPY_TAC does the whole copy, leaving the fact for the n bytes  *)

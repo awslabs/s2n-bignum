@@ -32,7 +32,7 @@
 (* region (ea,el) and only writes its output.                                *)
 (* ========================================================================= *)
 
-needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+needs "x86/proofs/utils/mlkem_native_image.ml";;
 needs "x86/proofs/consttime.ml";;
 
 (* ------------------------------------------------------------------------- *)

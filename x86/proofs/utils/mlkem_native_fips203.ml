@@ -13,7 +13,7 @@
 (* forms of K-PKE in common/fips203/properties/kpke_ntt_domain.ml.           *)
 (* ========================================================================= *)
 
-needs "x86/proofs/mlkem_native_libmlkem_gcc12_O2.ml";;
+needs "x86/proofs/utils/mlkem_native_image.ml";;
 needs "common/mlkem_mldsa.ml";;
 needs "common/fips203/properties/fips203_properties.ml";;
 
