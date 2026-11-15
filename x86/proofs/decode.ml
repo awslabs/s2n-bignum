@@ -760,6 +760,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     if is_some rex then NONE else
     read_EVEX l >>= \((rex,r',m,v,pfxs,z,LL,bcast,a),l).
     evexL_size LL >>= \sz.
+    if z = word 1 /\ a = word 0 then NONE else
     let masking = if a = word 0 then Unmasked
                   else if z = word 1 then Zero_mask a
                   else Merge_mask a in
@@ -1278,12 +1279,16 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x46:8] ->
           (read_ModRM rex l >>= \((reg,rm),l).
            if rex_W rex then NONE else
-           match rm with
-           | RM_reg r ->
-             (match pfxs with
-              | (F, Rep0, SG0) ->
-                if L then SOME (KXNORW (word_zx reg) (word_zx v) (word_zx r),l)
-                else NONE
+           if rex_R rex then NONE else
+           bitmatch v with
+           | [0:1; k:3] ->
+             (match rm with
+              | RM_reg r ->
+                (match pfxs with
+                 | (F, Rep0, SG0) ->
+                   if L then SOME (KXNORW (word_zx reg) k (word_zx r),l)
+                   else NONE
+                 | _ -> NONE)
               | _ -> NONE)
            | _ -> NONE)
         | [0x12:8] -> if word_not v = (word 0b1111:4 word) then
@@ -1603,7 +1608,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x30:8] -> if word_not v = (word 0b1111:4 word) then
           (read_ModRM rex l >>= \((reg,rm),l).
            read_byte l >>= \(imm8,l).
-           if rex_W rex then
+           if rex_W rex /\ ~rex_R rex then
            (match rm with
             | RM_reg r ->
               (match pfxs with
@@ -1617,7 +1622,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x32:8] -> if word_not v = (word 0b1111:4 word) then
           (read_ModRM rex l >>= \((reg,rm),l).
            read_byte l >>= \(imm8,l).
-           if rex_W rex then
+           if rex_W rex /\ ~rex_R rex then
            (match rm with
             | RM_reg r ->
               (match pfxs with
