@@ -655,8 +655,9 @@ MLKEM_NATIVE2_SPONGE_PROOF = $(MLKEM_NATIVE2_IMAGE_PROOF) \
                              proofs/utils/mlkem_native2_sponge.ml \
                              proofs/utils/keccak_fips202.ml \
                              proofs/utils/mlkem_bytes.ml \
-                             proofs/sha3_keccak_f1600_alt.ml \
-                             sha3/sha3_keccak_f1600_alt.o
+                             proofs/utils/keccak_avx2.ml \
+                             proofs/sha3_keccak_f1600_alt2.ml \
+                             sha3/sha3_keccak_f1600_alt2.o
 mlkem_native2/mlkem_hash_g.native: \
   proofs/mlkem_hash_g.ml $(BASE_ML) $(MLKEM_NATIVE2_SPONGE_PROOF) ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"

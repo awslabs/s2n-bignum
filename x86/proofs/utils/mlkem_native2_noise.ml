@@ -705,7 +705,7 @@ let KECCAK1_CALL_TAC exec k gl =
   (RC_TAC rc k THEN TO_WBYTES_TAC a k THEN
    X86_SUBROUTINE_SIM_TAC
     (mlkem_native2_image_mc,exec,0,mlkem_native2_image_mc,
-     SHA3_KECCAK_F1600_ALT_IMAGE_CORRECT_F1600)
+     SHA3_KECCAK_F1600_ALT2_IMAGE_CORRECT_F1600)
     ([`read RDI s`; `read RSI s`; s1; `pc:num`] @ return_args) (k+1) THEN
    FROM_WBYTES_TAC (k+1)) gl;;
 

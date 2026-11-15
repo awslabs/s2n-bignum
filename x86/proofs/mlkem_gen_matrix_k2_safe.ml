@@ -55,7 +55,7 @@ let MLKEM_GEN_MATRIX_K2_SUBROUTINE_SAFE = time prove
                            (word_sub stackpointer (word 3887)) returnaddress /\
                     memaccess_inbounds e2
                      [rhop,32; c,6048;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       a,2048; word_sub stackpointer (word 3887),3903]
                      [a,2048; word_sub stackpointer (word 3887),3887]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -117,7 +117,7 @@ let MLKEM_GEN_MATRIX_K2_HASH_SUBROUTINE_SAFE = time prove
                            returnaddress /\
                     memaccess_inbounds e2
                      [rhop,32; jobs,64; msg1,800; c,6048;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       a,2048; out1,32; word_sub stackpointer (word 3887),3903]
                      [a,2048; out1,32;
                       word_sub stackpointer (word 3887),3887]))
@@ -187,7 +187,7 @@ let MLKEM_GEN_MATRIX_K2_HASHES_SUBROUTINE_SAFE = time prove
                            returnaddress /\
                     memaccess_inbounds e2
                      [rhop,32; jobs,64; msg0,800; msg1,800; c,6048;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       a,2048; out0,32; out1,32;
                       word_sub stackpointer (word 3887),3903]
                      [a,2048; out0,32; out1,32;

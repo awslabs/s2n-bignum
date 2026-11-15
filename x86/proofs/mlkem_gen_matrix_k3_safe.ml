@@ -63,7 +63,7 @@ let MLKEM_GEN_MATRIX_K3_NOISE_SUBROUTINE_SAFE = time prove
                            (word_sub stackpointer (word 3887)) returnaddress /\
                     memaccess_inbounds e2
                      [rhop,32; noise,32; sigma,32; c,6048;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       a,4608; nout,3072;
                       word_sub stackpointer (word 3887),3903]
                      [a,4608; nout,3072;
@@ -127,7 +127,7 @@ let MLKEM_GEN_MATRIX_K3_HASH_SUBROUTINE_SAFE = time prove
                            returnaddress /\
                     memaccess_inbounds e2
                      [rhop,32; jobs,64; msg1,1184; c,6048;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       a,4608; out1,32; word_sub stackpointer (word 3887),3903]
                      [a,4608; out1,32;
                       word_sub stackpointer (word 3887),3887]))
@@ -205,7 +205,7 @@ let MLKEM_GEN_MATRIX_K3_HASHES_NOISE_SUBROUTINE_SAFE = time prove
                     memaccess_inbounds e2
                      [rhop,32; jobs,64; msg0,1184; msg1,1120; noise,32;
                       sigma,32; c,6048;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       a,4608; out0,32; out1,32; nout,3584;
                       word_sub stackpointer (word 5631),5647]
                      [a,4608; out0,32; out1,32; nout,3584;

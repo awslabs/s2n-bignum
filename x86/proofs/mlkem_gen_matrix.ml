@@ -282,7 +282,7 @@ let MLKEM_GEN_MATRIX_SAMPLEPOLY = prove
     RC_TAC `c:int64` 5 THEN
     X86_SUBROUTINE_SIM_TAC
      (mlkem_native2_image_mc,MLKEM_GEN_MATRIX_EXEC,0,mlkem_native2_image_mc,
-      SHA3_KECCAK_F1600_ALT_IMAGE_CORRECT_F1600)
+      SHA3_KECCAK_F1600_ALT2_IMAGE_CORRECT_F1600)
      ([`read RDI s`; `read RSI s`; `keccak_squeeze (3 + t) (A:1600 word)`;
        `pc:num`] @ return_args) 6 THEN
     FROM_WBYTES_TAC 6 THEN

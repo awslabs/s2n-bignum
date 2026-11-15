@@ -239,7 +239,7 @@ let getnoise_derive =
 
 let getnoise_calls =
   [layout "sha3_keccak4_f1600_alt", KECCAK4_CALL_TAC MLKEM_GETNOISE_EXEC;
-   layout "sha3_keccak_f1600_alt", KECCAK1_CALL_TAC MLKEM_GETNOISE_EXEC;
+   layout "sha3_keccak_f1600_alt2", KECCAK1_CALL_TAC MLKEM_GETNOISE_EXEC;
    layout "mlkem_cbd2", CBD2_CALL_TAC MLKEM_GETNOISE_EXEC;
    layout "mlkem_cbd3", CBD3_CALL_TAC MLKEM_GETNOISE_EXEC;
    layout "mlkem_getnoise_end",
@@ -358,7 +358,7 @@ let getnoise_safe_calls =
   [layout "sha3_keccak4_f1600_alt",
    call "H_K4" (layout "sha3_keccak4_f1600_alt",sha3_keccak4_f1600_alt_mc)
     [`read RSI s`; `read RDI s`; `read RDX s`; `read RCX s`];
-   layout "sha3_keccak_f1600_alt",
+   layout "sha3_keccak_f1600_alt2",
    IMAGE_SAFE_CALL_TAC "H_K1"
     ([`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `pc:num`] @
      return_args);
@@ -420,7 +420,7 @@ let MLKEM_GETNOISE_SUBROUTINE_SAFE = time prove
                                   returnaddress /\
                     memaccess_inbounds e2
                      [r,512 * n; sigma,32; c,256;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       word_sub stackpointer (word 2527),2543]
                      [r,512 * n; word_sub stackpointer (word 2527),2527]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -430,7 +430,7 @@ let MLKEM_GETNOISE_SUBROUTINE_SAFE = time prove
   ASSUME_CALLEE_SAFETY_TAILED_TAC
      SHA3_KECCAK4_F1600_ALT_SUBROUTINE_SAFE "H_K4" THEN
   ASSUME_CALLEE_SAFETY_TAILED_TAC
-     SHA3_KECCAK_F1600_ALT_IMAGE_SAFE "H_K1" THEN
+     SHA3_KECCAK_F1600_ALT2_IMAGE_SAFE "H_K1" THEN
   ASSUME_CALLEE_SAFETY_TAILED_TAC
      MLKEM_CBD2_SUBROUTINE_SAFE_FRAMED "H_CBD2" THEN
   ASSUME_CALLEE_SAFETY_TAILED_TAC

@@ -1071,10 +1071,10 @@ let MLKEM_HASH_G_PAD_FULL = prove
  (full_step_tm_of (concl MLKEM_HASH_G_PAD)
    [`t:num`; `c:int64`; `stackpointer:int64`; `pc:num`]
    [`stackpointer:int64,200`; `c:int64,192`;
-    `word(pc + sha3_keccak_f1600_alt_rhotates_left):int64,384`;
+    `word(pc + sha3_keccak_f1600_alt2_rotations):int64,384`;
     `word_sub stackpointer (word 8):int64,8`]
    [`stackpointer:int64,200`; `word_sub stackpointer (word 8):int64,8`],
-  ASSUME_CALLEE_TAILED_TAC SHA3_KECCAK_F1600_ALT_IMAGE_FULL_F1600 "H_K1" THEN
+  ASSUME_CALLEE_TAILED_TAC SHA3_KECCAK_F1600_ALT2_IMAGE_FULL_F1600 "H_K1" THEN
   META_EXISTS_TAC THEN
   REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL;
               MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -1191,7 +1191,7 @@ let MLKEM_HASH_G_SHORT_SUBROUTINE_FULL = time prove
                            (word_sub stackpointer (word 256)) returnaddress /\
                     memaccess_inbounds e2
                      [inp,len; c,192; out,64;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       word_sub stackpointer (word 256),264]
                      [out,64; word_sub stackpointer (word 256),256]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

@@ -6,7 +6,7 @@
 (* ========================================================================= *)
 (* Correctness and constant-time/memory safety in one theorem ("FULL") for   *)
 (* the Keccak-f1600 permutations of the x86 mlkem_native2,                   *)
-(* sha3_keccak_f1600_alt (one state, also in the image) and                  *)
+(* sha3_keccak_f1600_alt2 (one state, in the image) and                      *)
 (* sha3_keccak4_f1600_alt (four states), for callers that need both facts    *)
 (* about the same final state, e.g. when their later control flow depends on *)
 (* the permuted states. As arm/proofs/utils/mlkem_native2_keccak_full.ml for *)
@@ -31,36 +31,36 @@ let EVENTS_SPLIT_TAC ctac (asl,w as gl) =
     [ctac; ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC]) gl;;
 
 (* ------------------------------------------------------------------------- *)
-(* The x1 permutation sha3_keccak_f1600_alt: the proof of                    *)
-(* SHA3_KECCAK_F1600_ALT_CORRECT with the events of                          *)
-(* SHA3_KECCAK_F1600_ALT_SAFE added, the loop taken as in the latter, with   *)
+(* The x1 permutation sha3_keccak_f1600_alt2: the proof of                   *)
+(* SHA3_KECCAK_F1600_ALT2_CORRECT with the events of                         *)
+(* SHA3_KECCAK_F1600_ALT2_SAFE added, the loop taken as in the latter, with  *)
 (* the branch back in the body.                                              *)
 (* ------------------------------------------------------------------------- *)
 
-let SHA3_KECCAK_F1600_ALT_FULL = time prove
+let SHA3_KECCAK_F1600_ALT2_FULL = time prove
  (`exists f_events.
     forall e a rc A pc tab.
-        riprel32_within_bounds (tab + 96) (pc + 7) /\
-        riprel32_within_bounds (tab + 288) (pc + 14) /\
-        nonoverlapping (a,200) (word pc,1007) /\
+        riprel32_within_bounds tab (pc + 7) /\
+        nonoverlapping (a,200) (word pc,998) /\
         nonoverlapping (a,200) (word tab,384) /\
         nonoverlapping (a,200) (rc,192)
         ==> ensures x86
-            (\s. bytes_loaded s (word pc) (sha3_keccak_f1600_alt_tmc pc tab) /\
+            (\s. bytes_loaded s (word pc)
+                   (sha3_keccak_f1600_alt2_tmc pc tab) /\
                  read RIP s = word pc /\
-                 bytes_loaded s (word tab) sha3_keccak_f1600_alt_data /\
+                 bytes_loaded s (word tab) sha3_keccak_f1600_alt2_data /\
                  C_ARGUMENTS [a; rc] s /\
                  wordlist_from_memory(rc,24) s = round_constants /\
                  wordlist_from_memory(a,25) s = A /\
                  read events s = e)
-            (\s. read RIP s = word (pc + 1006) /\
+            (\s. read RIP s = word (pc + 997) /\
                  wordlist_from_memory(a,25) s = keccak 24 A /\
                  (exists e2.
                       read events s = APPEND e2 e /\
                       e2 = f_events rc a tab pc /\
                       memaccess_inbounds e2 [a,200; rc,192; word tab,384]
                       [a,200]))
-            (MAYCHANGE [RIP; RAX; RSI; R8; R9] ,,
+            (MAYCHANGE [RIP; RAX; RCX; RSI] ,,
              MAYCHANGE
              [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9;
               ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
@@ -78,7 +78,8 @@ let SHA3_KECCAK_F1600_ALT_FULL = time prove
    [`a:int64`; `rc:int64`; `A:int64 list`; `pc:num`; `tab:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  REWRITE_TAC[SHA3_KECCAK_F1600_ALT_DATA; SHA3_KECCAK_F1600_ALT_DATA_NUM] THEN
+  REWRITE_TAC[SHA3_KECCAK_F1600_ALT2_DATA;
+              SHA3_KECCAK_F1600_ALT2_DATA_NUM] THEN
   ASM_CASES_TAC `LENGTH(A:int64 list) = 25` THENL
    [ALL_TAC;
     ENSURES_INIT_TAC "s0" THEN MATCH_MP_TAC(TAUT `F ==> p`) THEN
@@ -88,19 +89,18 @@ let SHA3_KECCAK_F1600_ALT_FULL = time prove
 
   (*** The invariant: the state after i rounds in the registers ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `24` `pc + 0xdc` `pc + 0x331`
+  ENSURES_EVENTS_WHILE_UP2_TAC `24` `pc + 0xdc` `pc + 0x328`
    `\i s. read RDI s = a /\
           read RSI s = word_add rc (word(8 * i)) /\
-          read R8 s = word_add (word tab) (word 96) /\
-          read R9 s = word_add (word tab) (word 288) /\
-          read RAX s = word(24 - i) /\
+          read RAX s = word tab /\
+          read RCX s = word(24 - i) /\
           read (memory :> bytes (word tab,384)) s =
-          num_of_bytelist sha3_keccak_f1600_alt_data /\
+          num_of_bytelist sha3_keccak_f1600_alt2_data /\
           wordlist_from_memory(rc,24) s = round_constants /\
           [read YMM0 s; read YMM1 s; read YMM2 s; read YMM3 s;
            read YMM4 s; read YMM5 s; read YMM6 s] =
-          keccak_avx2_regs (keccak i A)` THEN
-  REWRITE_TAC[SHA3_KECCAK_F1600_ALT_DATA_NUM] THEN
+          keccak_alt2_regs (keccak i A)` THEN
+  REWRITE_TAC[SHA3_KECCAK_F1600_ALT2_DATA_NUM] THEN
   REPEAT CONJ_TAC THENL
    [CONV_TAC NUM_REDUCE_CONV;
 
@@ -118,11 +118,11 @@ let SHA3_KECCAK_F1600_ALT_FULL = time prove
       `read (memory :> bytes256(word_add a (word 8))) s0`) THEN
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
     ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-    MAP_EVERY (fun n -> X86_STEPS_TAC SHA3_KECCAK_F1600_ALT_TMC_EXEC [n] THEN
-                        KECCAK_AVX2_SIMPLIFY_TAC) (1--32) THEN
+    MAP_EVERY (fun n -> X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC [n] THEN
+                        KECCAK_AVX2_SIMPLIFY_TAC) (1--31) THEN
     ENSURES_FINAL_STATE_TAC THEN
     EVENTS_SPLIT_TAC
-     (ASM_REWRITE_TAC[keccak_avx2_regs; CONS_11] THEN
+     (ASM_REWRITE_TAC[keccak_alt2_regs; CONS_11] THEN
       CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
       REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0; SUB_0] THEN
       IMP_REWRITE_TAC[RIP_REL_ADDR_FOLD] THEN CONV_TAC NUM_REDUCE_CONV THEN
@@ -136,7 +136,7 @@ let SHA3_KECCAK_F1600_ALT_FULL = time prove
     MP_TAC(ISPECL [`A:int64 list`; `i:num`] LENGTH_KECCAK) THEN
     ASM_REWRITE_TAC[] THEN REWRITE_TAC[LENGTH_EQ_25] THEN
     DISCH_THEN SUBST1_TAC THEN
-    REWRITE_TAC[keccak_avx2_regs; keccak_round] THEN
+    REWRITE_TAC[keccak_alt2_regs; keccak_round] THEN
     CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
     CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
     REWRITE_TAC[CONS_11] THEN
@@ -161,15 +161,15 @@ let SHA3_KECCAK_F1600_ALT_FULL = time prove
         vsubst [mk_small_numeral k,`k:num`] `EL k (keccak i A):int64`)))
      (0--24) THEN
     (fun gl -> keccak_avx2_lanes := 0; ALL_TAC gl) THEN
-    MAP_EVERY (fun n -> X86_STEPS_TAC SHA3_KECCAK_F1600_ALT_TMC_EXEC [n] THEN
+    MAP_EVERY (fun n -> X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC [n] THEN
                         KECCAK_AVX2_SIMPLIFY_TAC THEN
-                        KECCAK_AVX2_LANE_ABBREV_TAC n) (1--110) THEN
+                        KECCAK_AVX2_LANE_ABBREV_TAC n) (1--107) THEN
     ENSURES_FINAL_STATE_TAC THEN
     EVENTS_SPLIT_TAC
      (ASM_REWRITE_TAC[] THEN
       REWRITE_TAC[round_constants; CONS_11;
         WORDLIST_FROM_MEMORY_CONV
-         `wordlist_from_memory(rc,24) s110:int64 list`] THEN
+         `wordlist_from_memory(rc,24) s107:int64 list`] THEN
       ASM_REWRITE_TAC[] THEN
       CONV_TAC(TOP_DEPTH_CONV EL_CONV) THEN
       ASM_SIMP_TAC[KECCAK_AVX2_COUNTER; KECCAK_AVX2_BRANCH] THEN
@@ -182,7 +182,7 @@ let SHA3_KECCAK_F1600_ALT_FULL = time prove
 
     (*** The scattering of the state ***)
 
-    REWRITE_TAC[keccak_avx2_regs; round_constants; CONS_11;
+    REWRITE_TAC[keccak_alt2_regs; round_constants; CONS_11;
       WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`;
       WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(a,25) s:int64 list`] THEN
     MP_TAC(ISPECL [`A:int64 list`; `24`] LENGTH_KECCAK) THEN
@@ -190,7 +190,7 @@ let SHA3_KECCAK_F1600_ALT_FULL = time prove
     DISCH_THEN(fun th -> ONCE_REWRITE_TAC[th]) THEN
     CONV_TAC(TOP_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[CONS_11] THEN
     ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-    X86_STEPS_TAC SHA3_KECCAK_F1600_ALT_TMC_EXEC (1--28) THEN
+    X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC (1--28) THEN
     REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
       CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
       check (can (term_match [] `read qqq s:int256 = xxx`) o concl))) THEN
@@ -200,25 +200,25 @@ let SHA3_KECCAK_F1600_ALT_FULL = time prove
 
 (* ------------------------------------------------------------------------- *)
 (* The subroutine forms, without and with the IBT landing pad, as for        *)
-(* SHA3_KECCAK_F1600_ALT_NOIBT_SUBROUTINE_CORRECT and _SUBROUTINE_SAFE but   *)
+(* SHA3_KECCAK_F1600_ALT2_NOIBT_SUBROUTINE_CORRECT and _SUBROUTINE_SAFE but  *)
 (* with the frame of the former.                                             *)
 (* ------------------------------------------------------------------------- *)
 
-let SHA3_KECCAK_F1600_ALT_NOIBT_SUBROUTINE_FULL = time prove
+let SHA3_KECCAK_F1600_ALT2_NOIBT_SUBROUTINE_FULL = time prove
  (`exists f_events.
     forall e a rc A pc tab stackpointer returnaddress.
-        riprel32_within_bounds (tab + 96) (pc + 7) /\
-        riprel32_within_bounds (tab + 288) (pc + 14) /\
-        nonoverlapping (a,200) (word pc,1007) /\
+        riprel32_within_bounds tab (pc + 7) /\
+        nonoverlapping (a,200) (word pc,998) /\
         nonoverlapping (a,200) (word tab,384) /\
         nonoverlapping (a,200) (rc,192) /\
         nonoverlapping (a,200) (stackpointer,8)
         ==> ensures x86
-            (\s. bytes_loaded s (word pc) (sha3_keccak_f1600_alt_tmc pc tab) /\
+            (\s. bytes_loaded s (word pc)
+                   (sha3_keccak_f1600_alt2_tmc pc tab) /\
                  read RIP s = word pc /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
-                 bytes_loaded s (word tab) sha3_keccak_f1600_alt_data /\
+                 bytes_loaded s (word tab) sha3_keccak_f1600_alt2_data /\
                  C_ARGUMENTS [a; rc] s /\
                  wordlist_from_memory(rc,24) s = round_constants /\
                  wordlist_from_memory(a,25) s = A /\
@@ -235,28 +235,27 @@ let SHA3_KECCAK_F1600_ALT_NOIBT_SUBROUTINE_FULL = time prove
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes(a,200)])`,
   let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
-  REWRITE_TAC[SHA3_KECCAK_F1600_ALT_DATA] THEN CONV_TAC TWEAK_CONV THEN
-  X86_ADD_RETURN_NOSTACK_TAC SHA3_KECCAK_F1600_ALT_TMC_EXEC
+  REWRITE_TAC[SHA3_KECCAK_F1600_ALT2_DATA] THEN CONV_TAC TWEAK_CONV THEN
+  X86_ADD_RETURN_NOSTACK_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC
    (CONV_RULE TWEAK_CONV
-     (REWRITE_RULE[SHA3_KECCAK_F1600_ALT_DATA]
-       SHA3_KECCAK_F1600_ALT_FULL)) THEN
+     (REWRITE_RULE[SHA3_KECCAK_F1600_ALT2_DATA]
+       SHA3_KECCAK_F1600_ALT2_FULL)) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-let SHA3_KECCAK_F1600_ALT_SUBROUTINE_FULL = time prove
+let SHA3_KECCAK_F1600_ALT2_SUBROUTINE_FULL = time prove
  (`exists f_events.
     forall e a rc A pc tab stackpointer returnaddress.
-        riprel32_within_bounds (tab + 96) (pc + 11) /\
-        riprel32_within_bounds (tab + 288) (pc + 18) /\
-        nonoverlapping (a,200) (word pc,1011) /\
+        riprel32_within_bounds tab (pc + 11) /\
+        nonoverlapping (a,200) (word pc,1002) /\
         nonoverlapping (a,200) (word tab,384) /\
         nonoverlapping (a,200) (rc,192) /\
         nonoverlapping (a,200) (stackpointer,8)
         ==> ensures x86
-            (\s. bytes_loaded s (word pc) (sha3_keccak_f1600_alt_mc pc tab) /\
+            (\s. bytes_loaded s (word pc) (sha3_keccak_f1600_alt2_mc pc tab) /\
                  read RIP s = word pc /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
-                 bytes_loaded s (word tab) sha3_keccak_f1600_alt_data /\
+                 bytes_loaded s (word tab) sha3_keccak_f1600_alt2_data /\
                  C_ARGUMENTS [a; rc] s /\
                  wordlist_from_memory(rc,24) s = round_constants /\
                  wordlist_from_memory(a,25) s = A /\
@@ -275,16 +274,16 @@ let SHA3_KECCAK_F1600_ALT_SUBROUTINE_FULL = time prove
   let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
   CONV_TAC TWEAK_CONV THEN
   MATCH_ACCEPT_TAC(ADD_IBT_RULE
-   ~bridge:(Some SHA3_KECCAK_F1600_ALT_MC_BRIDGE)
-   (CONV_RULE TWEAK_CONV SHA3_KECCAK_F1600_ALT_NOIBT_SUBROUTINE_FULL)));;
+   ~bridge:(Some SHA3_KECCAK_F1600_ALT2_MC_BRIDGE)
+   (CONV_RULE TWEAK_CONV SHA3_KECCAK_F1600_ALT2_NOIBT_SUBROUTINE_FULL)));;
 
 (* ------------------------------------------------------------------------- *)
-(* In the image, as for SHA3_KECCAK_F1600_ALT_IMAGE_CORRECT and              *)
-(* SHA3_KECCAK_F1600_ALT_IMAGE_SAFE, and with the state as a 1600-bit word   *)
+(* In the image, as for SHA3_KECCAK_F1600_ALT2_IMAGE_CORRECT and             *)
+(* SHA3_KECCAK_F1600_ALT2_IMAGE_SAFE, and with the state as a 1600-bit word  *)
 (* as callers use it.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-let SHA3_KECCAK_F1600_ALT_IMAGE_FULL = prove
+let SHA3_KECCAK_F1600_ALT2_IMAGE_FULL = prove
  (`exists f_events.
     forall e a rc A pc stackpointer returnaddress.
        nonoverlapping (a,200) (word pc,mlkem_native2_image_size) /\
@@ -292,7 +291,7 @@ let SHA3_KECCAK_F1600_ALT_IMAGE_FULL = prove
        nonoverlapping (a,200) (stackpointer,8)
        ==> ensures x86
             (\s. bytes_loaded s (word pc) mlkem_native2_image_mc /\
-                 read RIP s = word(pc + sha3_keccak_f1600_alt) /\
+                 read RIP s = word(pc + sha3_keccak_f1600_alt2) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [a; rc] s /\
@@ -307,23 +306,23 @@ let SHA3_KECCAK_F1600_ALT_IMAGE_FULL = prove
                       e2 = f_events rc a pc stackpointer returnaddress /\
                       memaccess_inbounds e2
                       [a,200; rc,192;
-                       word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                       word(pc + sha3_keccak_f1600_alt2_rotations),384;
                        stackpointer,8]
                       [a,200; stackpointer,8]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes(a,200)])`,
   X_CHOOSE_TAC
    `f:int64->int64->num->num->int64->int64->(uarch_event)list`
-   SHA3_KECCAK_F1600_ALT_SUBROUTINE_FULL THEN
+   SHA3_KECCAK_F1600_ALT2_SUBROUTINE_FULL THEN
   EXISTS_TAC
    `\(rc:int64) (a:int64) (pc:num) (stackpointer:int64) (returnaddress:int64).
       (f:int64->int64->num->num->int64->int64->(uarch_event)list)
-      rc a (pc + sha3_keccak_f1600_alt_rhotates_left)
-      (pc + sha3_keccak_f1600_alt) stackpointer returnaddress` THEN
+      rc a (pc + sha3_keccak_f1600_alt2_rotations)
+      (pc + sha3_keccak_f1600_alt2) stackpointer returnaddress` THEN
   REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[] THEN
   FIRST_X_ASSUM(MP_TAC o SPECL
    [`e:(uarch_event)list`; `a:int64`; `rc:int64`; `A:int64 list`;
-    `pc + sha3_keccak_f1600_alt`; `pc + sha3_keccak_f1600_alt_rhotates_left`;
+    `pc + sha3_keccak_f1600_alt2`; `pc + sha3_keccak_f1600_alt2_rotations`;
     `stackpointer:int64`; `returnaddress:int64`]) THEN
   REWRITE_TAC[MLKEM_NATIVE2_KECCAK_X1_MC; MLKEM_NATIVE2_KECCAK_X1_TABLES] THEN
   ANTS_TAC THENL
@@ -339,7 +338,7 @@ let SHA3_KECCAK_F1600_ALT_IMAGE_FULL = prove
     FIRST_ASSUM(MP_TAC o MATCH_MP MLKEM_NATIVE2_KECCAK_X1_TABLES_LOADED) THEN
     REWRITE_TAC[]]);;
 
-let SHA3_KECCAK_F1600_ALT_IMAGE_FULL_F1600 = prove
+let SHA3_KECCAK_F1600_ALT2_IMAGE_FULL_F1600 = prove
  (`exists f_events.
     forall e a rc (S:1600 word) pc stackpointer returnaddress.
        nonoverlapping (a,200) (word pc,mlkem_native2_image_size) /\
@@ -347,7 +346,7 @@ let SHA3_KECCAK_F1600_ALT_IMAGE_FULL_F1600 = prove
        nonoverlapping (a,200) (stackpointer,8)
        ==> ensures x86
             (\s. bytes_loaded s (word pc) mlkem_native2_image_mc /\
-                 read RIP s = word(pc + sha3_keccak_f1600_alt) /\
+                 read RIP s = word(pc + sha3_keccak_f1600_alt2) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [a; rc] s /\
@@ -362,12 +361,12 @@ let SHA3_KECCAK_F1600_ALT_IMAGE_FULL_F1600 = prove
                       e2 = f_events rc a pc stackpointer returnaddress /\
                       memaccess_inbounds e2
                       [a,200; rc,192;
-                       word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                       word(pc + sha3_keccak_f1600_alt2_rotations),384;
                        stackpointer,8]
                       [a,200; stackpointer,8]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes(a,200)])`,
-  MP_TAC SHA3_KECCAK_F1600_ALT_IMAGE_FULL THEN
+  MP_TAC SHA3_KECCAK_F1600_ALT2_IMAGE_FULL THEN
   MATCH_MP_TAC MONO_EXISTS THEN
   X_GEN_TAC `f:int64->int64->num->int64->int64->(uarch_event)list` THEN
   DISCH_TAC THEN

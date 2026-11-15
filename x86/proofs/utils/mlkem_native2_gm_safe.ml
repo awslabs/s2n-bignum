@@ -326,7 +326,7 @@ let gm_samplepoly_safe_tm =
                   e2 = f_events b a c idx l stackpointer pc /\
                   memaccess_inbounds e2
                    [word_add a (word(512 * (idx + l))),512; c,6048;
-                    word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                    word(pc + sha3_keccak_f1600_alt2_rotations),384;
                     stackpointer,3072]
                    [word_add a (word(512 * (idx + l))),512;
                     stackpointer,3072]))
@@ -377,7 +377,7 @@ let MLKEM_GEN_MATRIX_SAMPLEPOLY_SAFE = prove
       return_args) k in
   ASSUME_CALLEE_TAILED_TAC MLKEM_REJ_UNIFORM_BUF_OUT_FULL "H_REJ0" THEN
   ASSUME_CALLEE_TAILED_TAC MLKEM_REJ_UNIFORM_BLOCK_OUT_FULL "H_REJ1" THEN
-  ASSUME_CALLEE_TAILED_TAC SHA3_KECCAK_F1600_ALT_IMAGE_FULL_F1600 "H_K1" THEN
+  ASSUME_CALLEE_TAILED_TAC SHA3_KECCAK_F1600_ALT2_IMAGE_FULL_F1600 "H_K1" THEN
   ASSUME_CALLEE_TAILED_TAC MLKEM_UNPACK_SUBROUTINE_SAFE_FRAMED "H_UNPACK" THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(b:byte list) (a:int64) (c:int64) (idx:num) (l:num)

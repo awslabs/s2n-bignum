@@ -5,14 +5,14 @@
 
 (* ========================================================================= *)
 (* The hash H of ML-KEM, SHA3-256 of FIPS 202, with the x1 Keccak            *)
-(* permutation sha3_keccak_f1600_alt, in the x86 mlkem_native2 image.        *)
+(* permutation sha3_keccak_f1600_alt2, in the x86 mlkem_native2 image.       *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native2_sponge.ml";;
 
 (**** The function's code is x86/mlkem_native2/mlkem_hash_h.S. Its frame of
  **** 216 bytes below the four saved registers has the 200-byte state at the
- **** stack pointer, and the call of sha3_keccak_f1600_alt puts its return
+ **** stack pointer, and the call of sha3_keccak_f1600_alt2 puts its return
  **** address below that, so the stack used is the 256 bytes below the
  **** return address. The digest is taken after the last permutation, at
  **** mlkem_hash_h_pad + 23, given the name mlkem_hash_h_digest here.
@@ -170,7 +170,7 @@ let MLKEM_HASH_H_BLOCK = prove
    [ASM_REWRITE_TAC[WORDLIST_FROM_MEMORY_ROUND_CONSTANTS]; ALL_TAC] THEN
   X86_SUBROUTINE_SIM_TAC
    (mlkem_native2_image_mc,MLKEM_HASH_H_EXEC,0,
-    mlkem_native2_image_mc,SHA3_KECCAK_F1600_ALT_IMAGE_CORRECT_F1600)
+    mlkem_native2_image_mc,SHA3_KECCAK_F1600_ALT2_IMAGE_CORRECT_F1600)
    [`read RDI s`; `read RSI s`; `word_xor (A:1600 word) (word B)`;
     `pc:num`; `read RSP s`; `read (memory :> bytes64 (read RSP s)) s`] 20 THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
@@ -590,7 +590,7 @@ X86_STEPS_TAC MLKEM_HASH_H_EXEC (3--5) THEN
    [ASM_REWRITE_TAC[WORDLIST_FROM_MEMORY_ROUND_CONSTANTS]; ALL_TAC] THEN
   X86_SUBROUTINE_SIM_TAC
    (mlkem_native2_image_mc,MLKEM_HASH_H_EXEC,0,
-    mlkem_native2_image_mc,SHA3_KECCAK_F1600_ALT_IMAGE_CORRECT_F1600)
+    mlkem_native2_image_mc,SHA3_KECCAK_F1600_ALT2_IMAGE_CORRECT_F1600)
    [`read RDI s`; `read RSI s`;
     `word_xor (word_xor (A:1600 word) (word(2 EXP (8 * t) * 6)))
               (word(2 EXP (8 * 135) * 128))`;
@@ -917,7 +917,7 @@ let MLKEM_HASH_H_SUBROUTINE_CORRECT = prove
 (* length of the message: those of the prologue and of each whole block, the *)
 (* last block's whole words and single bytes, and the padding, the last      *)
 (* permutation and the epilogue, with those of the permutations from the     *)
-(* framed theorem for sha3_keccak_f1600_alt in the image.                    *)
+(* framed theorem for sha3_keccak_f1600_alt2 in the image.                   *)
 (* ------------------------------------------------------------------------- *)
 
 (*** The registers saved in the frame, part of every invariant ***)
@@ -936,7 +936,7 @@ let mlkem_hash_h_inv tm =
 let mlkem_hash_h_loop_inv tm =
   mk_abs(`i:num`,mk_abs(`s:x86state`,mk_conj(tm,MLKEM_HASH_H_SAVED)));;
 
-(*** The call of sha3_keccak_f1600_alt, its safety theorem as H_KECCAK ***)
+(*** The call of sha3_keccak_f1600_alt2, its safety theorem as H_KECCAK ***)
 
 let MLKEM_HASH_H_SAFE_CALL_TAC extra n =
   W(fun (asl,w) ->
@@ -1013,14 +1013,14 @@ let MLKEM_HASH_H_SUBROUTINE_SAFE = time prove
                            (word_sub stackpointer (word 256)) returnaddress /\
                     memaccess_inbounds e2
                      [inp,len; c,192; out,32;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       word_sub stackpointer (word 256),264]
                      [out,32; word_sub stackpointer (word 256),256]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE
               [memory :> bytes(out,32);
                memory :> bytes(word_sub stackpointer (word 256),256)])`,
-  ASSUME_CALLEE_SAFETY_TAILED_TAC SHA3_KECCAK_F1600_ALT_IMAGE_SAFE
+  ASSUME_CALLEE_SAFETY_TAILED_TAC SHA3_KECCAK_F1600_ALT2_IMAGE_SAFE
     "H_KECCAK" THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(inp:int64) (len:num) (c:int64) (out:int64) (pc:num)

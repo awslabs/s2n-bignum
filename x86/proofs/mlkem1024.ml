@@ -124,7 +124,7 @@ let MLKEM1024_CHECK_SK_SUBROUTINE_SAFE = time prove
                                   returnaddress /\
                     memaccess_inbounds e2
                      [sk,3168; word(pc + mlkem_native2_constants),192;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       word_sub stackpointer (word 320),328]
                      [word_sub stackpointer (word 320),320]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -469,7 +469,7 @@ let MLKEM1024_KEYPAIR_DERAND_SUBROUTINE_SAFE = time prove
                     memaccess_inbounds e2
                      [coins,64; pk,1568; sk,3168;
                       word(pc + mlkem_native2_constants),6048;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       word_sub stackpointer (word 21334),21342]
                      [pk,1568; sk,3168;
                       word_sub stackpointer (word 21334),21334]))
@@ -518,7 +518,7 @@ let MLKEM1024_ENC_DERAND_SUBROUTINE_SAFE = time prove
                     memaccess_inbounds e2
                      [pk,1568; coins,32; ct,1568; ss,32;
                       word(pc + mlkem_native2_constants),6048;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       word_sub stackpointer (word 19342),19350]
                      [ct,1568; ss,32;
                       word_sub stackpointer (word 19342),19342]))
@@ -566,7 +566,7 @@ let MLKEM1024_DEC_SUBROUTINE_SAFE = time prove
                     memaccess_inbounds e2
                      [ct,1568; sk,3168; ss,32;
                       word(pc + mlkem_native2_constants),6048;
-                      word(pc + sha3_keccak_f1600_alt_rhotates_left),384;
+                      word(pc + sha3_keccak_f1600_alt2_rotations),384;
                       word_sub stackpointer (word 22606),22614]
                      [ss,32; word_sub stackpointer (word 22606),22606]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

@@ -10,7 +10,7 @@
 (* sets, the middle layer, and the leaves and Keccak permutations that they  *)
 (* call, linked in that order at address 0 by                                *)
 (* x86/mlkem_native2/mlkem_native2_image.ld and followed by their read-only  *)
-(* data (the rotation tables of sha3_keccak_f1600_alt and the constants      *)
+(* data (the rotation tables of sha3_keccak_f1600_alt2 and the constants     *)
 (* block), as one byte list.                                                 *)
 (*                                                                           *)
 (* The theorems about the image assume that it is loaded at an address pc. A *)

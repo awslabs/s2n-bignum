@@ -133,15 +133,14 @@ constant-time list) are the conditional branches (on public data only),
 input is public), the byte and word forms of `mov`, `xor` and `movzx`,
 and the NOPs of the padding between functions. All are in the x86 model.
 
-`make mlkem_native2_proofs` in `x86` runs the proofs, as on AArch64 (they
-are still those of the image with `sha3_keccak_f1600_alt` as the x1
-permutation, and have yet to be redone for `sha3_keccak_f1600_alt2`):
+`make mlkem_native2_proofs` in `x86` runs the proofs, as on AArch64:
 
 - `mlkem_hash_h` (SHA3-256) and `mlkem_hash_g` (SHA3-512), against
   `sha3_256` and `sha3_512` of `../../common/fips202.ml`, with their
   constant-time and memory safety (`../proofs/mlkem_hash_h.ml`,
   `../proofs/mlkem_hash_g.ml`, and `../proofs/utils/mlkem_native2_sponge.ml`
-  for the sponge and the use of `sha3_keccak_f1600_alt`).
+  for the sponge and the use of `sha3_keccak_f1600_alt2`, whose own proof is
+  `../proofs/sha3_keccak_f1600_alt2.ml`).
 - `mlkem_gen_matrix` for the nine configurations that the API uses (k = 2,
   3, 4 in key generation, encapsulation and decapsulation, with their hash
   jobs and noise), against `mlkem_sample_ntt` (in the order of the
