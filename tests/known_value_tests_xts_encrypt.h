@@ -65,8 +65,8 @@ key2->rd_key[24]=0x6d1ecd82358affbf; key2->rd_key[25]=0xc26c685728b9a235;
 key2->rd_key[26]=0x94e4658247817701; key2->rd_key[27]=0x4d05c122ade7966a;
 key2->rd_key[28]=0xcb775905a6699487; key2->rd_key[29]=0x21a29367e3cefb30;
 
-key1->rounds=13;
-key2->rounds=13;
+key1->rounds=14;
+key2->rounds=14;
 
 iv[0]=0x9a;iv[1]=0x78;iv[2]=0x56;iv[3]=0x34;
 iv[4]=0x12;iv[5]=0x00;iv[6]=0x00;iv[7]=0x00;

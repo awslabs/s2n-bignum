@@ -101,6 +101,85 @@ let numbit = new_definition `numbit i n = ODD(n DIV (2 EXP i))`;;
 let NUMBIT_VAL = prove (`numbit i (val (e:N word)) = bit i e`,
   REWRITE_TAC [numbit; BIT_VAL]);;
 
+let NUMBIT_BINARY_DIGITSUM = prove
+ (`!s b k.
+      FINITE s
+      ==> (numbit k (nsum s (\i. 2 EXP i * bitval (b i))) <=> k IN s /\ b k)`,
+  SIMP_TAC[numbit; ODD_MOD; DIGITSUM_DIV_MOD; BITVAL_BOUND_ALT] THEN
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[bitval] THEN
+  ARITH_TAC);;
+
+let NUMBIT_ADD_SHIFT = prove
+ (`!a b i e. a < 2 EXP e
+             ==> numbit i (a + 2 EXP e * b) =
+                 (if i < e then numbit i a else numbit (i - e) b)`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[numbit] THEN COND_CASES_TAC THENL
+   [SUBGOAL_THEN `e = i + SUC(e - i - 1)` SUBST1_TAC THENL
+     [ASM_ARITH_TAC; REWRITE_TAC[EXP_ADD; GSYM MULT_ASSOC]] THEN
+    SIMP_TAC[DIV_MULT_ADD; EXP_EQ_0; ARITH_EQ] THEN
+    REWRITE_TAC[ODD_ADD; ODD_MULT; ODD_EXP; ARITH_ODD; ARITH_EVEN; NOT_SUC];
+    SUBGOAL_THEN `i:num = e + (i - e)` SUBST1_TAC THENL
+     [ASM_ARITH_TAC; REWRITE_TAC[EXP_ADD; GSYM DIV_DIV]] THEN
+    SIMP_TAC[DIV_MULT_ADD; EXP_EQ_0; ARITH_EQ] THEN
+    ASM_SIMP_TAC[DIV_LT; ADD_CLAUSES; ONCE_REWRITE_RULE[ADD_SYM] ADD_SUB]]);;
+
+let NUMBIT_0 = prove
+ (`!i. ~(numbit i 0)`,
+  REWRITE_TAC[numbit; DIV_0; ODD]);;
+
+let NUMBIT_SHIFT = prove
+ (`!b i e. numbit i (2 EXP e * b) <=> e <= i /\ numbit (i - e) b`,
+  MP_TAC(SPEC `0` NUMBIT_ADD_SHIFT) THEN
+  REWRITE_TAC[EXP_LT_0; ARITH_EQ; ADD_CLAUSES; NUMBIT_0] THEN
+  MESON_TAC[NOT_LT]);;
+
+let NUMBIT_DIV_EXP = prove
+ (`!j k p. numbit j (k DIV 2 EXP p) <=> numbit (j + p) k`,
+  REWRITE_TAC[numbit; DIV_DIV; GSYM EXP_ADD] THEN REWRITE_TAC[ADD_SYM]);;
+
+let NUMBIT_MOD_EXP = prove
+ (`!j k p. numbit j (k MOD 2 EXP p) <=> j < p /\ numbit j k`,
+  REPEAT STRIP_TAC THEN ASM_CASES_TAC `j:num < p` THEN
+  ASM_REWRITE_TAC[numbit] THENL
+   [REWRITE_TAC[DIV_MOD; ONCE_REWRITE_RULE[MULT_SYM] (GSYM(CONJUNCT2 EXP));
+                ODD_MOD; MOD_MOD_EXP_MIN] THEN
+    ASM_SIMP_TAC[ARITH_RULE `i < n ==> MIN n (SUC i) = SUC i`];
+    MATCH_MP_TAC(MESON[ODD] `n = 0 ==> ~ODD n`) THEN
+    MATCH_MP_TAC DIV_LT THEN TRANS_TAC LTE_TRANS `2 EXP p` THEN
+    ASM_SIMP_TAC[DIVISION; LE_EXP; EXP_EQ_0; ARITH_EQ] THEN
+    ASM_REWRITE_TAC[GSYM NOT_LT]]);;
+
+let NUMBIT_MUL2 = prove
+ (`!j k. numbit j (2 * k) <=> 1 <= j /\ numbit (j - 1) k`,
+  REWRITE_TAC[GSYM NUMBIT_SHIFT; EXP_1]);;
+
+let NUMBIT_DIV2 = prove
+ (`!j k. numbit j (k DIV 2) <=> numbit (j + 1) k`,
+  REWRITE_TAC[GSYM NUMBIT_DIV_EXP; EXP_1]);;
+
+let NUMBIT_MOD2 = prove
+ (`!j k. numbit j (k MOD 2) <=> j = 0 /\ numbit j k`,
+  REWRITE_TAC[ARITH_RULE `j = 0 <=> j < 1`; GSYM NUMBIT_MOD_EXP; EXP_1]);;
+
+let BINARY_DIGITSUM_NUMBITS = prove
+ (`!n k. nsum {i | i < k} (\i. 2 EXP i * bitval(numbit i n)) =
+         n MOD (2 EXP k)`,
+  REWRITE_TAC[numbit; BITVAL_ODD; DIGITSUM_WORKS_GEN]);;
+
+let NUMBITS_EQ = prove
+ (`!m n. (!i. numbit i m = numbit i n) <=> m = n`,
+  MATCH_MP_TAC WLOG_LT THEN REWRITE_TAC[] THEN
+  CONJ_TAC THENL [REWRITE_TAC[EQ_SYM_EQ]; SIMP_TAC[LT_IMP_NE]] THEN
+  MAP_EVERY X_GEN_TAC [`m:num`; `n:num`] THEN REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`m:num`; `n:num`] BINARY_DIGITSUM_NUMBITS) THEN
+  MP_TAC(ISPECL [`n:num`; `n:num`] BINARY_DIGITSUM_NUMBITS) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+  MATCH_MP_TAC(ARITH_RULE
+   `n MOD 2 EXP n = n /\ m MOD 2 EXP n = m /\ m < n
+    ==> ~(n MOD 2 EXP n = m MOD 2 EXP n)`) THEN
+  ASM_REWRITE_TAC[] THEN CONJ_TAC THEN MATCH_MP_TAC MOD_LT THEN
+  ASM_MESON_TAC[LT_POW2_REFL; LT_TRANS]);;
+
 (* * BIT_PRED `i` returns (None, `|- i = _0`) or (Some(`j`), `|- i = SUC j`)
      if `i` is a raw numeral (a numeral without the initial `NUMERAL`).
    * NUMBIT_CONV `numbit n i` proves `numbit n i = T` or `numbit n i = F` if
@@ -458,3 +537,88 @@ let msimd16 = new_definition
 
 let simd32 = new_definition
  `simd32 (f: N word -> N word -> N word) = simd2 (simd16 f)`;;
+
+(* ------------------------------------------------------------------------- *)
+(* Variant of BITBLAST_THEN (Library/words.ml) whose BIT_WORD_CONV           *)
+(* traversals use MEMOIZED_TOP_DEPTH_CONV. Bit-blasting expands each word    *)
+(* equation into one equivalence per bit, and these share the same word      *)
+(* subterms. BIT_WORD_CONV does not depend on the context, so one memoizer   *)
+(* can serve all bits: the two memoizers of the main traversal are created   *)
+(* afresh for each goal, and the one in BITBLAST_EQUATION for each equation. *)
+(* Otherwise this is a copy of BITBLAST_THEN as of HOL Light commit 6090208, *)
+(* except for dest_finty(dest_word_ty ty) below, because Library/bitmatch.ml *)
+(* redefines dest_word_ty to return the word size as a type.                 *)
+(* ------------------------------------------------------------------------- *)
+
+let MEMOIZED_BITBLAST_THEN =
+  let carrying tm =
+    match tm with
+      Comb(Comb(Const("word_add",_),_),_) -> true
+    | Comb(Comb(Const("word_sub",_),_),_) -> true
+    | Comb(Const("word_neg",_),
+           Comb(Const("word",_),
+                Comb(Const("bitval",_),_))) -> false
+    | Comb(Const("word_neg",_),_) -> true
+    | _ -> false
+  and BITWISE_EXPAND_CONV =
+    GEN_REWRITE_CONV I [WORD_EQ_BITS_ALT] THENC
+    BINDER_CONV(LAND_CONV(RAND_CONV(!word_SIZE_CONV))) THENC
+    EXPAND_CASES_CONV in
+  let BITBLAST_EQUATION th =
+    let ths = CONJUNCTS(CONV_RULE BITWISE_EXPAND_CONV th) in
+    end_itlist CONJ (map (CONV_RULE
+     (LAND_CONV
+       (BIT_WORD_CONV THENC SUBS_CONV[th] THENC
+        MEMOIZED_TOP_DEPTH_CONV
+          (BIT_WORD_CONV o check (not o carrying o rand))) THENC
+      SYM_CONV THENC
+      RAND_CONV(REWRITE_CONV[]))) ths) in
+  let wordbits =
+    let bit_tm = `bit:num->(N)word->bool` and n_ty = `:N` in
+    let wordbits_var tm =
+      try let ty = type_of tm in
+          let n = dest_finty(dest_word_ty ty) in
+          let btm = inst[mk_finty n,n_ty] bit_tm in
+          map (fun i -> mk_comb(mk_comb(btm,mk_small_numeral i),tm))
+              (0--(Num.int_of_num n-1))
+      with Failure _ -> [] in
+    let rec interleave lis =
+      match lis with
+        [] -> []
+      | []::rst -> interleave rst
+      | (h::t)::rst -> h::(interleave(rst @ [t])) in
+    fun tm -> interleave (map wordbits_var (frees tm)) in
+  fun tac ->
+    REPEAT(GEN_TAC ORELSE CONJ_TAC) THEN
+    REPEAT((COND_CASES_TAC THEN POP_ASSUM MP_TAC) ORELSE
+           (CHANGED_TAC(CONV_TAC(ONCE_DEPTH_CONV let_CONV)))) THEN
+    W(fun (_,w) -> let vars = wordbits w in
+      let bit_conv = MEMOIZED_TOP_DEPTH_CONV BIT_WORD_CONV
+      and bit_noncarry_conv =
+        MEMOIZED_TOP_DEPTH_CONV
+          (BIT_WORD_CONV o check (not o carrying o rand)) in
+      CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+      REWRITE_TAC[word_UINT_MAX; WORD_INT_MIN; WORD_INT_MAX] THEN
+      CONV_TAC(DEPTH_CONV
+       (WORD_RED_CONV ORELSEC NUM_RED_CONV ORELSEC DIMINDEX_CONV)) THEN
+      CONV_TAC(ONCE_DEPTH_CONV WORD_INEQ_RELATION_EXPAND_CONV) THEN
+      GEN_REWRITE_TAC TOP_DEPTH_CONV
+       [WORD_ODDPARITY_POPCOUNT; WORD_EVENPARITY_POPCOUNT;
+        WORD_CTZ_EMULATION_POPCOUNT; GSYM WORD_CTZ_REVERSEFIELDS] THEN
+      CONV_TAC(ONCE_DEPTH_CONV WORD_POPCOUNT_EXPAND_CONV) THEN
+      CONV_TAC(ONCE_DEPTH_CONV WORDIFY_WORD_CONV) THEN
+      CONV_TAC(DEPTH_CONV(WORD_RED_CONV ORELSEC NUM_RED_CONV)) THEN
+      CONV_TAC(ONCE_DEPTH_CONV VAL_MOD_OR_DIV_CONV) THEN
+      CONV_TAC(DEPTH_CONV
+       (WORDIFY_ATOM_CONV ORELSEC IWORDIFY_ATOM_CONV)) THEN
+      CONV_TAC(DEPTH_CONV WORD_MUL_EXPAND_CONV) THEN
+      REPEAT(W(fun (_,w) ->
+        let t = hd(sort free_in (find_terms carrying w)) in
+        let v = genvar(type_of t) in
+         ABBREV_TAC(mk_eq(v,t)))) THEN
+      CONV_TAC(ONCE_DEPTH_CONV
+       (BITWISE_EXPAND_CONV THENC bit_conv)) THEN
+      CONV_TAC bit_noncarry_conv THEN
+      TRY(POP_ASSUM_LIST
+       (MP_TAC o end_itlist CONJ o map BITBLAST_EQUATION o rev)) THEN
+      REWRITE_TAC[] THEN tac vars);;

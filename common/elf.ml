@@ -7,16 +7,24 @@
 (* ELF and Mach-O object (.o) file reader                                    *)
 (* ========================================================================= *)
 
-(*** get int from bs[a:a+n-1] (little-endian). Fail if the resulting
-     integer is too large to fit in OCaml int type (63 bits) ***)
+(*** get unsigned int from bs[a:a+n-1] (little-endian). Fail if the
+     integer is too large to be a nonnegative OCaml int (below 2^62) ***)
 let get_int_le (bs:bytes) a n =
   if n > 8 then failwith "get_int_le: n too big" else
-  if n = 8 && Char.code (Bytes.get bs 7) >= 128
-  then failwith "get_int_le: does not fit in OCaml int (63 bits)" else
+  if n = 8 && Char.code (Bytes.get bs (a+7)) >= 64
+  then failwith "get_int_le: too large for a nonnegative OCaml int" else
   let rec fn a n =
     if n = 0 then 0 else
     Char.code (Bytes.get bs a) lor (fn (a+1) (n-1) lsl 8)
   in fn a n;;
+
+(*** get signed (two's complement) int from bs[a:a+7] (little-endian).
+     Fail if it is outside the OCaml int range [-2^62,2^62) ***)
+let get_signed_int64_le (bs:bytes) a =
+  let top = Char.code (Bytes.get bs (a+7)) in
+  if top >= 64 && top < 192
+  then failwith "get_signed_int64_le: does not fit in OCaml int (63 bits)"
+  else (if top >= 128 then top - 256 else top) lsl 56 lor get_int_le bs a 7;;
 
 (*** load the whole file at path f ***)
 let load_file (f:string): bytes =
@@ -144,7 +152,7 @@ let elf64_layout:elf_layout = {
   elf_layout_read_relocation_symbol = (fun file off ->
     get_int_le file (off + 0xc) 4);
   elf_layout_read_relocation_addend = (fun file off ->
-    get_int_le file (off + 0x10) 8)
+    get_signed_int64_le file (off + 0x10))
 };;
 
 let get_elf_layout = function

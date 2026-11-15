@@ -15,21 +15,23 @@
 #ifdef S2N_BN_HIDE_SYMBOLS
 #   ifdef __APPLE__
 #      define S2N_BN_SYM_PRIVACY_DIRECTIVE(name) .private_extern S2N_BN_SYMBOL(name)
-#   else
+#   elif !defined(_WIN32)
 #      define S2N_BN_SYM_PRIVACY_DIRECTIVE(name) .hidden S2N_BN_SYMBOL(name)
+#   else
+#      define S2N_BN_SYM_PRIVACY_DIRECTIVE(name)
 #   endif
 #else
 #   define S2N_BN_SYM_PRIVACY_DIRECTIVE(name)  /* NO-OP: S2N_BN_SYM_PRIVACY_DIRECTIVE */
 #endif
 
-#ifdef __APPLE__
-#   define S2N_BN_FUNCTION_TYPE_DIRECTIVE(name) /* Not used in Mach-O */
+#if defined(__APPLE__) || defined(_WIN32)
+#   define S2N_BN_FUNCTION_TYPE_DIRECTIVE(name) /* Not used in Mach-O or COFF */
 #else
 #   define S2N_BN_FUNCTION_TYPE_DIRECTIVE(name) .type name, %function
 #endif
 
-#ifdef __APPLE__
-#   define S2N_BN_SIZE_DIRECTIVE(name) /* Not used in Mach-O */
+#if defined(__APPLE__) || defined(_WIN32)
+#   define S2N_BN_SIZE_DIRECTIVE(name) /* Not used in Mach-O or COFF */
 #else
 #   define S2N_BN_SIZE_DIRECTIVE(name) .size S2N_BN_SYMBOL(name), .-S2N_BN_SYMBOL(name)
 #endif
@@ -42,6 +44,7 @@
 // the x86 side defers to <cet.h>. Unlike CET, BTI also needs a .note.gnu.property
 // section: it has GNU_PROPERTY_AARCH64_FEATURE_1_AND semantics, so one object
 // without the note silently disables BTI program-wide, hence emitting it here.
+// The note is ELF-only, so it is left out for Mach-O and COFF (Windows).
 
 #if NO_IBT
 #   if defined(AARCH64_VALID_CALL_TARGET)
@@ -50,7 +53,7 @@
 #   define AARCH64_VALID_CALL_TARGET
 #elif !defined(AARCH64_VALID_CALL_TARGET)
 #   define AARCH64_VALID_CALL_TARGET hint #34 /* BTI c */
-#   ifndef __APPLE__
+#   if !defined(__APPLE__) && !defined(_WIN32)
         .pushsection .note.gnu.property, "a"
         .balign 8
         .long 4                   /* n_namesz: sizeof "GNU\0" */
