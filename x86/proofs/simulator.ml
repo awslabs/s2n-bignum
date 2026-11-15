@@ -628,7 +628,8 @@ let random_regstate () =
 loadt "x86/x86-insns.ml";;
 loadt "x86/proofs/simulator_forms.ml";;
 
-let iclasses = iclasses_regreg @ iclasses_forms_reg @ iclasses_encodings_reg @
+let iclasses_base =
+  iclasses_regreg @ iclasses_forms_reg @ iclasses_encodings_reg @
 
 (*** The elements here were added manually for additional checks. ***)
 
@@ -1738,7 +1739,12 @@ let iclasses = iclasses_regreg @ iclasses_forms_reg @ iclasses_encodings_reg @
  [0x66; 0x3e; 0x0f; 0x1f; 0x44; 0x00; 0x00];  (* ds nop WORD PTR [rax+rax*1+0x0] *)
  [0x66; 0x26; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* es nop WORD PTR [rax+rax*1+0x0] *)
  [0x66; 0x36; 0x0f; 0x1f; 0x40; 0x00];        (* ss nop WORD PTR [rax+0x0] *)
-] @
+];;
+
+(*** The hand-written AVX-512 cases, each also run once in a cosimulation
+ *** with the 312-word layout (see x86_fixed_cases) ***)
+
+let iclasses_avx512 =
 [[0x62; 0xF3; 0x75; 0x48; 0x25; 0xC2; 0xCA]; (* VPTERNLOGD zmm0, zmm1, zmm2, 0xCA *)
  [0x62; 0xF3; 0x75; 0x49; 0x25; 0xC2; 0x96]; (* VPTERNLOGD zmm0{k1}, zmm1, zmm2, 0x96 *)
  [0x62; 0xF3; 0x75; 0xCA; 0x25; 0xC2; 0xD2]  (* VPTERNLOGD zmm0{k2}{z}, zmm1, zmm2, 0xD2 *)
@@ -1813,6 +1819,8 @@ let iclasses = iclasses_regreg @ iclasses_forms_reg @ iclasses_encodings_reg @
  [0xc4; 0x63; 0xf9; 0x32; 0xce; 0x0f]  (* kshiftlw k9,k6,0xf (#UD) *)
 ]
 ;;
+
+let iclasses = iclasses_base @ iclasses_avx512;;
 
 (* ------------------------------------------------------------------------- *)
 (* Run a random example.                                                     *)
@@ -2130,6 +2138,17 @@ let x86_evex_features ibytes_list =
   if exists (fun bs -> bs <> [] && hd bs = 0x62) ibytes_list
   then ["avx512f"; "avx512vl"; "avx512dq"] else [];;
 
+(*** The 112-word layout has neither the opmask registers nor ZMM16-31, nor
+ *** the top halves of ZMM0-15, so not all results of a case that needs
+ *** AVX-512 could be compared. Such a case is skipped unless the executor
+ *** uses the 312-word layout, even if it reports the features (or none).
+ ***)
+
+let x86_skip_lacking required =
+  cosim_skip_lacking (Lazy.force x86_executor_features) required ||
+  (not !x86_cosim_zmm && mem "avx512f" required &&
+   cosim_skip_lacking (Some []) ["the 312-word ZMM state"]);;
+
 (*** The instructions are normally simulated one step each. With a branch
  *** they need not all run, so nsteps can give the number of steps instead.
  ***)
@@ -2166,7 +2185,7 @@ let cosimulate_instructions_steps (nsteps: int option)
   let skip =
     match execth_opt with
       Some execth ->
-        cosim_skip_lacking (Lazy.force x86_executor_features)
+        x86_skip_lacking
           (itlist ((@) o x86_required_features) (instrs_of execth)
              (x86_evex_features ibytes_list))
     | None -> false in
@@ -2725,7 +2744,7 @@ let run_random_memopsimulation() =
 (* Cosimulation of simple memory instructions with uniform [rsp+32] address  *)
 (* ------------------------------------------------------------------------- *)
 
-let simple_memory_iclasses =
+let simple_memory_iclasses_base =
   iclasses_simplemem @ iclasses_forms_mem @ iclasses_encodings_mem @
 [
   (*** these were added manually for extra checks ***)
@@ -2885,7 +2904,12 @@ let simple_memory_iclasses =
   [0x1a; 0x44; 0x24; 0x20];                        (* sbb al,byte ptr [rsp+0x20] *)
   [0xc4; 0xe1; 0xf9; 0x6e; 0x6c; 0x24; 0x20];      (* vmovq xmm5,qword ptr [rsp+0x20] *)
   [0xc4; 0xe1; 0xf9; 0x7e; 0x74; 0x24; 0x20];      (* vmovq qword ptr [rsp+0x20],xmm6 *)
-] @
+];;
+
+(*** The hand-written AVX-512 cases (and the VEX forms to compare), each also
+ *** run once in a cosimulation with the 312-word layout ***)
+
+let simple_memory_iclasses_avx512 =
 [[0x62; 0xF3; 0x75; 0x5C; 0x25; 0x44; 0x24; 0x20; 0x96]; (* VPTERNLOGD zmm0{k4}, zmm1, DWORD BCST [rsp+0x80], 0x96 *)
  [0x62; 0xF3; 0x5D; 0xDD; 0x25; 0x5C; 0x24; 0x20; 0x80]  (* VPTERNLOGD zmm3{k5}{z}, zmm4, DWORD BCST [rsp+0x80], 0x80 *)
 ] @
@@ -2913,6 +2937,9 @@ let simple_memory_iclasses =
 ]
 ;;
 
+let simple_memory_iclasses =
+  simple_memory_iclasses_base @ simple_memory_iclasses_avx512;;
+
 let simplemem_iclasses =
   map (fun l -> [l],true) simple_memory_iclasses;;
 
@@ -2926,7 +2953,20 @@ let run_random_simplememopsimulation() =
 (* Keep running tests till a failure happens then return it.                 *)
 (* ------------------------------------------------------------------------- *)
 
+(*** Cases to run before any random ones, each a list of instruction bytes
+ *** and whether it is a simple-memory case ***)
+
+let x86_fixed_cases = ref ([]:(int list * bool) list);;
+
 let run_random_simulation() =
+  match !x86_fixed_cases with
+    (ibytes,smp)::rest ->
+      x86_fixed_cases := rest;
+      let decoded, result =
+        if smp then cosimulate_instructions (Some 0) 32 [ibytes]
+        else cosimulate_instructions None 0 [ibytes] in
+      decoded,result,(if smp then 2 else 0)
+  | [] ->
   let rn = Random.int 100 in
   if rn < 75 then
     let decoded, result = run_random_regsimulation() in
@@ -2985,6 +3025,16 @@ let rec run_random_simulations start_t =
  ***)
 
 sematest_random_init ();;
+
+(*** A random choice rarely picks a hand-written AVX-512 case, so with the
+ *** 312-word layout each of them is run once first ***)
+
+let _ = Lazy.force x86_cosim_executor in
+x86_fixed_cases :=
+  if !x86_cosim_zmm then
+    map (fun l -> l,false) iclasses_avx512 @
+    map (fun l -> l,true) simple_memory_iclasses_avx512
+  else [];;
 
 let start_t = Unix.gettimeofday() (* unit is sec *) in
   match run_random_simulations start_t with
