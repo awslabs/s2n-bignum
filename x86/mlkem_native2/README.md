@@ -35,14 +35,13 @@ The work is in three layers, as on AArch64.
       custom NTT order of mlkem-native's x86 backend) and `mlkem_unpack`
       (that permutation, for the sampled matrix); and s2n-bignum's
       Keccak-f1600 kernel `sha3_keccak4_f1600_alt` (x4);
-    - a new Keccak-f1600 kernel for one state, `sha3_keccak_f1600_alt` in
-      `../sha3` (the same function as `sha3_keccak_f1600`): the round of
-      OpenSSL's AVX2 Keccak by Andy Polyakov (keccak1600-avx2.pl), with
-      the state in seven ymm registers in an order in which pi is
-      intra-register, gathered from and scattered back to `a[25]`. (An
-      AVX2 kernel of original design for the same function,
-      `sha3_keccak_f1600_alt2`, also in `../sha3`, is not used yet: 1087
-      cycles against 1063);
+    - a new Keccak-f1600 kernel for one state, `sha3_keccak_f1600_alt2` in
+      `../sha3` (the same function as `sha3_keccak_f1600`), of original
+      design: with the lanes as the points of Z5 x Z5, pi maps each line
+      through the origin onto another, so the state is in seven ymm
+      registers, the six lines without the origin and the lane (0, 0),
+      and pi moves lanes only within registers; it is gathered from and
+      scattered back to `a[25]`;
     - mlkem-native's AVX2 compress and decompress kernels for d = 4, 5, 10
       and 11, unchanged (byte for byte, so that mlkem-native's HOL Light
       proofs of them apply), as `mlkem_compress_d4_x86` and so on: they
@@ -113,11 +112,11 @@ about the image of all the functions involved: the objects in
 `MLKEM_NATIVE2_IMAGE_OBJ` of `../Makefile`, linked at address 0 by
 `mlkem_native2_image.ld` into `mlkem_native2_image.elf` (`make
 mlkem_native2/mlkem_native2_image.elf` in `x86`, with GNU ld): the code of
-the objects in that order, then their read-only data, the rotation tables
-of `sha3_keccak_f1600_alt` and the constants block (64-byte aligned), at
+the objects in that order, then their read-only data, the rotation table
+of `sha3_keccak_f1600_alt2` and the constants block (64-byte aligned), at
 the end of the one section `.text`. The image has no relocations, every
 call in it is a direct call, and the only RIP-relative references are the
-18 to the constants block and the 2 to the rotation tables. It is all
+18 to the constants block and the one to the rotation table. It is all
 assembly, so there is no stack-protector code: no instruction uses fs or
 gs, the segment registers with a base in 64-bit mode (`check_noseg.sh` in
 the tests checks this), and the only segment prefixes are the CS prefixes
@@ -132,10 +131,11 @@ The instructions of the image that are not in `../allowed_asm` (the
 constant-time list) are the conditional branches (on public data only),
 `vpmovmskb`, `vptest`, `setcc`, `popcnt` (in the rejection sampler, whose
 input is public), the byte and word forms of `mov`, `xor` and `movzx`,
-the NOPs of the padding between functions, and `vpsllvq` (rho in
-`sha3_keccak_f1600_alt`, with constant counts). All are in the x86 model.
+and the NOPs of the padding between functions. All are in the x86 model.
 
-`make mlkem_native2_proofs` in `x86` runs the proofs, as on AArch64:
+`make mlkem_native2_proofs` in `x86` runs the proofs, as on AArch64 (they
+are still those of the image with `sha3_keccak_f1600_alt` as the x1
+permutation, and have yet to be redone for `sha3_keccak_f1600_alt2`):
 
 - `mlkem_hash_h` (SHA3-256) and `mlkem_hash_g` (SHA3-512), against
   `sha3_256` and `sha3_512` of `../../common/fips202.ml`, with their
@@ -190,13 +190,14 @@ the NOPs of the padding between functions, and `vpsllvq` (rho in
   stack pointer.
 
 There are no AT&T versions of these files, or of the new leaves and of
-`sha3_keccak_f1600_alt`, in `../../x86_att`.
+`sha3_keccak_f1600_alt2`, in `../../x86_att`.
 
 ## Where the speed comes from
 
 On the machine measured, a Xeon Platinum 8259CL (Cascade Lake), the x4
-permutation costs 1723 cycles for four states against 1063 for one with
-the x1 permutation (1260 with s2n-bignum's scalar `sha3_keccak_f1600`,
+permutation costs 1723 cycles for four states against 1087 for one with
+the x1 permutation (1063 with `sha3_keccak_f1600_alt`, the round of
+OpenSSL's AVX2 Keccak, 1260 with s2n-bignum's scalar `sha3_keccak_f1600`,
 1399 for mlkem-native's x1 in C): an x4 call pays as soon as two of its
 lanes are useful, and so all Keccak work that can run in parallel does.
 mlkem-native runs H(ek), J(z || c) and G on the x1 permutation; here
@@ -211,29 +212,31 @@ against 165, CBD3 106 against 308, the key check for k = 3 159 against
 391 for 504 bytes, 48 bytes per step while there is room for 32 more
 entries). The arithmetic kernels are mlkem-native's.
 
-Cycles per call (medians of 31 runs of 200 calls on one core, with the
+Cycles per call (the median of 31 runs of 200 calls on one core, with the
 clock measured after each run since it varies with the AVX frequency
-licences; the same clock as for mlkem-native, so the speedup in cycles is
-the speedup in time), against mlkem-native (main at 9b96caa1) built with
-clang 18 -O3 and its native backends (the fastest of the builds tried):
+licences, and the median of 11 such measurements, alternating with those
+of mlkem-native; the same clock as for mlkem-native, so the speedup in
+cycles is the speedup in time), against mlkem-native (main at 9b96caa1)
+built with clang 18 -O3 and its native backends (the fastest of the
+builds tried):
 
 | function | mlkem-native | here | speedup |
 |---|---|---|---|
-| mlkem512_keypair_derand | 24950 | 20238 | 1.23x |
-| mlkem512_enc_derand | 29269 | 20124 | 1.45x |
-| mlkem512_dec | 39724 | 21728 | 1.83x |
-| mlkem512_check_pk | 421 | 111 | 3.79x |
-| mlkem512_check_sk | 8717 | 6592 | 1.32x |
-| mlkem768_keypair_derand | 43129 | 33245 | 1.30x |
-| mlkem768_enc_derand | 46425 | 28550 | 1.63x |
-| mlkem768_dec | 61619 | 34174 | 1.80x |
-| mlkem768_check_pk | 649 | 159 | 4.08x |
-| mlkem768_check_sk | 13028 | 9962 | 1.31x |
-| mlkem1024_keypair_derand | 59056 | 49177 | 1.20x |
-| mlkem1024_enc_derand | 64784 | 44460 | 1.46x |
-| mlkem1024_dec | 84822 | 52957 | 1.60x |
-| mlkem1024_check_pk | 885 | 207 | 4.28x |
-| mlkem1024_check_sk | 17303 | 13246 | 1.31x |
+| mlkem512_keypair_derand | 24922 | 20327 | 1.23x |
+| mlkem512_enc_derand | 29189 | 19902 | 1.47x |
+| mlkem512_dec | 39618 | 21602 | 1.83x |
+| mlkem512_check_pk | 423 | 100 | 4.23x |
+| mlkem512_check_sk | 8726 | 6727 | 1.30x |
+| mlkem768_keypair_derand | 43050 | 33388 | 1.29x |
+| mlkem768_enc_derand | 46256 | 28279 | 1.64x |
+| mlkem768_dec | 61364 | 33991 | 1.81x |
+| mlkem768_check_pk | 642 | 143 | 4.49x |
+| mlkem768_check_sk | 13023 | 10186 | 1.28x |
+| mlkem1024_keypair_derand | 58874 | 49280 | 1.19x |
+| mlkem1024_enc_derand | 64496 | 43995 | 1.47x |
+| mlkem1024_dec | 84380 | 52544 | 1.61x |
+| mlkem1024_check_pk | 865 | 185 | 4.68x |
+| mlkem1024_check_sk | 17292 | 13523 | 1.28x |
 
 Key generation gains least: its H(pk) is a serial tail on the x1
 permutation, with nothing to run beside it. (check_pk takes 100-210

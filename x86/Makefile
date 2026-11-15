@@ -469,7 +469,7 @@ MLKEM_NATIVE2_IMAGE_OBJ = mlkem_native2/mlkem512.o \
                           mlkem/mlkem_tomont.o \
                           mlkem/mlkem_tomsg.o \
                           mlkem/mlkem_unpack.o \
-                          sha3/sha3_keccak_f1600_alt.o \
+                          sha3/sha3_keccak_f1600_alt2.o \
                           sha3/sha3_keccak4_f1600_alt.o \
                           mlkem_native2/mlkem_native2_constants.o
 

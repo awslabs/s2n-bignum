@@ -78,27 +78,28 @@ functions under `WINDOWS_ABI`).
 
 On a Xeon Platinum 8259CL (Cascade Lake) the x4 permutation costs 1040
 cycles against 1723 for `sha3_keccak4_f1600_alt`, and the x1 949 against
-1063 for `sha3_keccak_f1600_alt` of the AVX2 version (1260 for
+1087 for `sha3_keccak_f1600_alt2` of the AVX2 version (1260 for
 `sha3_keccak_f1600`), both at the base AVX frequency licence (they use no
-heavy or 512-bit instructions). Cycles per call, as for the AVX2 version
-(medians of 31 runs of 200 calls on one core, with the clock measured
-after each run; the same clock as for mlkem-native, so the speedup in
+heavy or 512-bit instructions). Cycles per call, measured as for the AVX2
+version and with it (the median of 31 runs of 200 calls on one core, with
+the clock measured after each run, and the median of 11 such
+measurements; the same clock as for mlkem-native, so the speedup in
 cycles is the speedup in time):
 
 | function | mlkem-native | AVX2 version | here | speedup |
 |---|---|---|---|---|
-| mlkem512_keypair_derand | 24950 | 20238 | 16371 | 1.52x |
-| mlkem512_enc_derand | 29269 | 20124 | 14632 | 2.00x |
-| mlkem512_dec | 39724 | 21728 | 16415 | 2.42x |
-| mlkem512_check_sk | 8717 | 6592 | 5847 | 1.49x |
-| mlkem768_keypair_derand | 43129 | 33245 | 26299 | 1.64x |
-| mlkem768_enc_derand | 46425 | 28550 | 21074 | 2.20x |
-| mlkem768_dec | 61619 | 34174 | 25461 | 2.42x |
-| mlkem768_check_sk | 13028 | 9962 | 8924 | 1.46x |
-| mlkem1024_keypair_derand | 59056 | 49177 | 38406 | 1.54x |
-| mlkem1024_enc_derand | 64784 | 44460 | 32844 | 1.97x |
-| mlkem1024_dec | 84822 | 52957 | 39326 | 2.16x |
-| mlkem1024_check_sk | 17303 | 13246 | 11776 | 1.47x |
+| mlkem512_keypair_derand | 24922 | 20327 | 16442 | 1.52x |
+| mlkem512_enc_derand | 29189 | 19902 | 14599 | 2.00x |
+| mlkem512_dec | 39618 | 21602 | 16366 | 2.42x |
+| mlkem512_check_sk | 8726 | 6727 | 5863 | 1.49x |
+| mlkem768_keypair_derand | 43050 | 33388 | 26354 | 1.63x |
+| mlkem768_enc_derand | 46256 | 28279 | 20998 | 2.20x |
+| mlkem768_dec | 61364 | 33991 | 25459 | 2.41x |
+| mlkem768_check_sk | 13023 | 10186 | 8917 | 1.46x |
+| mlkem1024_keypair_derand | 58874 | 49280 | 38367 | 1.53x |
+| mlkem1024_enc_derand | 64496 | 43995 | 32665 | 1.97x |
+| mlkem1024_dec | 84380 | 52544 | 39168 | 2.15x |
+| mlkem1024_check_sk | 17292 | 13523 | 11817 | 1.46x |
 
 (check_pk is as in the AVX2 version.) Stack use, in bytes (keypair_derand,
 enc_derand, dec): 9080, 8552, 10216 for ML-KEM-512; 13432, 13416, 15720 for
