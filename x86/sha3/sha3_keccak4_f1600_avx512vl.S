@@ -138,7 +138,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600_avx512vl):
 
         // Initialize the loop counter
         mov     rax, 0
-.Lkeccak_rnd_loop:
+Lsha3_keccak4_f1600_avx512vl_loop:
 
         // Theta step
         vmovdqa64       ymm25, ymm0
@@ -321,7 +321,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600_avx512vl):
 
         add     rax, 1
         cmp     rax, 24
-        jne     .Lkeccak_rnd_loop
+        jne     Lsha3_keccak4_f1600_avx512vl_loop
 
         // De-interleave and store 32 bytes to each of the 4 states (A[0-3])
         vpunpcklqdq     ymm25, ymm0, ymm1
