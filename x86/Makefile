@@ -827,6 +827,38 @@ MLKEM_NATIVE2_PROOF_LOGS = mlkem_native2/mlkem_gen_matrix_k2.correct \
 
 mlkem_native2_proofs: $(MLKEM_NATIVE2_PROOF_LOGS);
 
+# The proofs of the AVX-512 version of mlkem_native2, so far those of its
+# two Keccak permutations, and of their correctness and safety in one for
+# the callers in the image
+
+MLKEM_NATIVE2_AVX512_KECCAK_PROOF = proofs/utils/keccak_spec.ml \
+                                    proofs/utils/keccak_avx2.ml \
+                                    proofs/utils/keccak_avx512.ml
+mlkem_native2_avx512/sha3_keccak_f1600_avx512.native: \
+  proofs/sha3_keccak_f1600_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_KECCAK_PROOF) \
+  mlkem_native2_avx512/sha3_keccak_f1600_avx512.o ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native2_avx512/sha3_keccak4_f1600_avx512.native: \
+  proofs/sha3_keccak4_f1600_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_KECCAK_PROOF) \
+  mlkem_native2_avx512/sha3_keccak4_f1600_avx512.o ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native2_avx512/keccak_avx512_full.native: \
+  proofs/utils/keccak_avx512_full.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_KECCAK_PROOF) \
+  proofs/sha3_keccak_f1600_avx512.ml proofs/sha3_keccak4_f1600_avx512.ml \
+  mlkem_native2_avx512/sha3_keccak_f1600_avx512.o \
+  mlkem_native2_avx512/sha3_keccak4_f1600_avx512.o ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+
+MLKEM_NATIVE2_AVX512_PROOF_LOGS = \
+  mlkem_native2_avx512/sha3_keccak_f1600_avx512.correct \
+  mlkem_native2_avx512/sha3_keccak4_f1600_avx512.correct \
+  mlkem_native2_avx512/keccak_avx512_full.correct
+
+mlkem_native2_avx512_proofs: $(MLKEM_NATIVE2_AVX512_PROOF_LOGS);
+
 
 x86-insns.ml: ; ../tools/list-x86-insns.sh x86-insns.ml
 # Always run sematest regardless of dependency check

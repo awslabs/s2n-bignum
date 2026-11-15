@@ -48,9 +48,8 @@ or xmm registers (no zmm) and without masking: `vpternlogq`, `vprolq`,
 `vmovdqu64`, `vmovq`, `vpinsrq` and `vpextrq` (these as EVEX forms since
 they use registers 16-31), `vinserti32x4`, `vextracti32x4` and `vpxorq`
 with a broadcast memory operand (`{1to4}`, `{1to2}`). The EVEX forms of
-`vpinsrq` and `vpextrq` need AVX-512DQ. The state of the x86 model already
-has the 32 zmm and the 8 opmask registers, but it decodes no EVEX
-instruction yet.
+`vpinsrq` and `vpextrq` need AVX-512DQ. All are in the x86 model, with
+the EVEX decoding and the AVX-512 instructions of #468.
 
 No zmm registers are used. On the processor measured, 512-bit
 instructions together with the 256-bit integer multiplications of the
@@ -106,6 +105,23 @@ enc_derand, dec): 9080, 8552, 10216 for ML-KEM-512; 13432, 13416, 15720 for
 ML-KEM-768; 20520, 19304, 22568 for ML-KEM-1024 (224 more through the
 Windows wrappers), a little less than the AVX2 version since the
 permutations use no stack.
+
+## Proofs
+
+`make mlkem_native2_avx512_proofs` in `x86` runs the proofs of the two
+permutations, so far (those of the image are to come), against `keccak 24`
+of `../proofs/utils/keccak_spec.ml`, with their constant-time and memory
+safety: `../proofs/sha3_keccak4_f1600_avx512.ml` and
+`../proofs/sha3_keccak_f1600_avx512.ml`, with the common parts in
+`../proofs/utils/keccak_avx512.ml`, and the theorems of correctness and
+safety in one for the callers in the image in
+`../proofs/utils/keccak_avx512_full.ml` (as
+`../proofs/utils/mlkem_native2_keccak_full.ml` has them for the AVX2
+version). As for the AVX2 permutations, each round is simulated with the
+lanes of the registers as variables and each lane of the new state is
+compared with that of `keccak_round` by bit-blasting; the model gives
+`vpternlogq` as the disjunction of the minterms of its immediate, which
+the simulation turns into the XOR and AND-NOT forms first.
 
 ## Constant time and testing
 
