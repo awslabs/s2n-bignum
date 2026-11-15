@@ -814,7 +814,7 @@ let MLKEM_NTT_INV_CONG = prove
      `(x:int == y) (mod n) ==> (x * z == y * z) (mod n)`) THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN
-    MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ARITH_TAC;
+    MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ASM_ARITH_TAC;
     ALL_TAC] THEN
   MP_TAC(SPECL [`&3303 * I2:int`; `&3329:int`] INT_REM_MOD_SELF) THEN
   SPEC_TAC(`(&3303 * I2:int) rem &3329`,`z:int`) THEN GEN_TAC THEN
@@ -847,7 +847,7 @@ let INVERSE_NTT_CONG_MUL = prove
    `(x:int == y) (mod n) ==> (x * z == y * z) (mod n)`) THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN
-  MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ARITH_TAC);;
+  MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ASM_ARITH_TAC);;
 
 let MLKEM_NTT_INV_CONG_MUL = prove
  (`!(a:num->int) (b:num->int) c k.

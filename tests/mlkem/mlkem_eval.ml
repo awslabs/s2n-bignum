@@ -534,9 +534,7 @@ add_mlkem_handler "ring_sum"
     | _ -> failwith "ring_sum");;
 
 let BITREVERSE7_CONV =
-  let tab = Array.init 128 (fun i ->
-    (REWR_CONV bitreverse7 THENC WORD_REDUCE_CONV)
-    (mk_comb(`bitreverse7`,mk_small_numeral i))) in
+  let tab = Array.of_list(CONJUNCTS BITREVERSE7_CLAUSES) in
   fun tm ->
     match tm with
       Comb(Const("bitreverse7",_),n) when is_numeral n &&

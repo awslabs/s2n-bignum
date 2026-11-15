@@ -9,6 +9,7 @@
 
 needs "Library/isum.ml";;
 needs "common/fips203.ml";;
+needs "common/mlkem_mldsa.ml";;
 
 type_invention_error := true;;
 
@@ -713,19 +714,14 @@ let MLKEM_RQ_EQ = prove
 (* ------------------------------------------------------------------------- *)
 
 let BITREVERSE7_BOUND = prove
- (`!i. bitreverse7 i < 128`,
-  GEN_TAC THEN REWRITE_TAC[bitreverse7] THEN
+ (`!i. i < 128 ==> bitreverse7 i < 128`,
+  SIMP_TAC[BITREVERSE7_ALT] THEN REPEAT STRIP_TAC THEN
   MP_TAC(ISPEC `word_reversefields 1 (word i:7 word)` VAL_BOUND) THEN
   REWRITE_TAC[DIMINDEX_CONV `dimindex(:7)`] THEN ARITH_TAC);;
 
 let BITREVERSE7_INJ = prove
  (`!i j. i < 128 /\ j < 128 /\ bitreverse7 i = bitreverse7 j ==> i = j`,
-  REPEAT STRIP_TAC THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[bitreverse7; VAL_EQ]) THEN
-  FIRST_X_ASSUM(MP_TAC o AP_TERM `word_reversefields 1:7 word->7 word`) THEN
-  REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
-  REWRITE_TAC[WORD_EQ; DIMINDEX_CONV `dimindex(:7)`; CONG] THEN
-  ASM_SIMP_TAC[MOD_LT; ARITH_RULE `x < 128 ==> x < 2 EXP 7`]);;
+  MESON_TAC[BITREVERSE7_INVOLUTION]);;
 
 let MLKEM_ZETA_ORDER = prove
  (`order 3329 17 = 256`,
@@ -775,7 +771,7 @@ let MLKEM_GAMMA_INJ = prove
   MATCH_MP_TAC(ARITH_RULE `2 * x + 1 = 2 * y + 1 ==> x = y`) THEN
   MATCH_MP_TAC MLKEM_ZETA_EXP_INJ THEN ASM_REWRITE_TAC[] THEN
   MP_TAC(SPEC `i:num` BITREVERSE7_BOUND) THEN
-  MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN ARITH_TAC);;
+  MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN ASM_ARITH_TAC);;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1590,17 +1586,14 @@ let INT_GEOM_SERIES = prove
   REWRITE_TAC[INT_POW] THEN INT_ARITH_TAC);;
 
 let BITREVERSE7_BOUND = prove
- (`!n. bitreverse7 n < 128`,
-  GEN_TAC THEN REWRITE_TAC[bitreverse7] THEN
+ (`!n. n < 128 ==> bitreverse7 n < 128`,
+  SIMP_TAC[BITREVERSE7_ALT] THEN REPEAT STRIP_TAC THEN
   MP_TAC(ISPEC `word_reversefields 1 (word n:7 word)` VAL_BOUND) THEN
   REWRITE_TAC[DIMINDEX_CONV `dimindex(:7)`] THEN ARITH_TAC);;
 
 let BITREVERSE7_BITREVERSE7 = prove
  (`!n. n < 128 ==> bitreverse7(bitreverse7 n) = n`,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[bitreverse7; WORD_VAL] THEN
-  REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS; VAL_WORD] THEN
-  REWRITE_TAC[DIMINDEX_CONV `dimindex(:7)`] THEN
-  ASM_SIMP_TAC[MOD_LT; ARITH_RULE `n < 128 ==> n < 2 EXP 7`]);;
+  REWRITE_TAC[BITREVERSE7_INVOLUTION]);;
 
 let MLKEM_NTT_FORWARD = prove
  (`!f k. f IN ring_carrier mlkem_rq
@@ -1761,7 +1754,8 @@ let MLKEM_NTT_INV_EXPLICIT = prove
   REWRITE_TAC[ISUM_LMUL] THEN
   REWRITE_TAC[GSYM INT_POW_POW; GSYM INT_POW_MUL] THEN
   SUBGOAL_THEN `r < 128` ASSUME_TAC THENL
-   [EXPAND_TAC "r" THEN REWRITE_TAC[BITREVERSE7_BOUND]; ALL_TAC] THEN
+   [EXPAND_TAC "r" THEN MATCH_MP_TAC BITREVERSE7_BOUND THEN ASM_ARITH_TAC;
+    ALL_TAC] THEN
   MATCH_MP_TAC(INTEGER_RULE
    `!y. (x:int == y) (mod n) /\ (y == z) (mod n) ==> (x == z) (mod n)`) THEN
   EXISTS_TAC
