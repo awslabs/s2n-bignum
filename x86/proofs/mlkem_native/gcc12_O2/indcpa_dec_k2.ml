@@ -106,7 +106,7 @@ needs "x86/proofs/utils/mlkem_native_indcpa.ml";;
 
 let MLKEM_NATIVE_INDCPA_DEC_K2_GCC12_O2_EXEC =
   X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x4cf0,0x4def];;
+   [layout_range "mlkem512_indcpa_dec"];;
 
 let DE2_EXEC = MLKEM_NATIVE_INDCPA_DEC_K2_GCC12_O2_EXEC;;
 
@@ -576,7 +576,7 @@ let DE2_SETUP_TAC =
   INDCPA_BOT_TAC DE2_FRAME [108; 620] THEN
   INDCPA_FRAME_TAC ["memory :> bytes(m:int64,32)"] DE2_FRAME THEN
   INDCPA_NONOV_TAC 3692
-   [`c:int64,768`; `sk:int64,768`; `m:int64,32`; `word pc:int64,0x82a0`;
+   [`c:int64,768`; `sk:int64,768`; `m:int64,32`; `word pc:int64,libmlkem_size`;
     `word_add stackpointer (word 3724):int64,56`] THEN
   MAP_EVERY (fun (n,r) -> ENSURES_PRESERVED_TAC n r)
    ["rbx_init",`RBX`; "rbp_init",`RBP`; "r12_init",`R12`;
@@ -659,10 +659,10 @@ let MLKEM_NATIVE_INDCPA_DEC_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = time prove
     nonoverlapping (m,32) (word_sub stackpointer (word 3772),3780) /\
     ALLPAIRS nonoverlapping
      [(m,32); (word_sub stackpointer (word 3772),3780)]
-     [(c,768); (sk,768); (word pc,0x82a0)]
+     [(c,768); (sk,768); (word pc,libmlkem_size)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x4cf0) /\
+              read RIP s = word (pc + mlkem512_indcpa_dec) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [m; c; sk] s /\
@@ -770,10 +770,10 @@ let MLKEM_NATIVE_INDCPA_DEC_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
     nonoverlapping (m,32) (word_sub stackpointer (word 3772),3780) /\
     ALLPAIRS nonoverlapping
      [(m,32); (word_sub stackpointer (word 3772),3780)]
-     [(c,768); (sk,768); (word pc,0x82a0)]
+     [(c,768); (sk,768); (word pc,libmlkem_size)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x4cf0) /\
+              read RIP s = word (pc + mlkem512_indcpa_dec) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [m; c; sk] s /\
@@ -789,8 +789,8 @@ let MLKEM_NATIVE_INDCPA_DEC_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
                  memaccess_inbounds e2
                   [c,768; sk,768; m,32;
                    word_sub stackpointer (word 3772),3780;
-                   word(pc + 0x8010),8; word(pc + 0x8080),48;
-                   word(pc + 0x81a0),256]
+                   word(pc + mlkem_poly_decompress_d10_consts),8; word(pc + mlkem_poly_invntt_tomont_consts),48;
+                   word(pc + rodata_mlk_zetas),256]
                   [m,32; word_sub stackpointer (word 3772),3772]))
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE

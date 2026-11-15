@@ -195,7 +195,7 @@ needs "x86/proofs/utils/mlkem_native_kem.ml";;
 
 let MLKEM_NATIVE_DEC_K3_GCC12_O2_EXEC =
   X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x71c0,0x7469];;
+   [layout_range "mlkem768_dec"];;
 
 let KD3_EXEC = MLKEM_NATIVE_DEC_K3_GCC12_O2_EXEC;;
 
@@ -273,7 +273,7 @@ let KD3_SETUP_TAC =
   INDCPA_FRAME_TAC ["memory :> bytes(ss:int64,32)"] KD3_FRAME THEN
   INDCPA_NONOV_TAC 18280
    [`ss:int64,32`; `ct:int64,1088`; `sk:int64,2400`;
-    `word pc:int64,0x82a0`; `word_add stackpointer (word 18312):int64,56`;
+    `word pc:int64,libmlkem_size`; `word_add stackpointer (word 18312):int64,56`;
     `word 0:int64,1`]
   THEN
   MAP_EVERY (fun (n,r) -> ENSURES_PRESERVED_TAC n r)
@@ -754,11 +754,11 @@ let KD3_BAD_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let KD3_OK_TAC =
-  ENSURES_WHILE_UP2_TAC `68` `pc + 0x7320` `pc + 0x7340`
+  ENSURES_WHILE_UP2_TAC `68` `pc + mlkem768_dec_loop1` `pc + mlkem768_dec_loop1_exit`
    KD3_INV THEN
   REPEAT CONJ_TAC THENL
    [ARITH_TAC; KD3_PART1_TAC; KD3_BODY_TAC;
-    ENSURES_WHILE_UP2_TAC `32` `pc + 0x7440` `pc + 0x7464`
+    ENSURES_WHILE_UP2_TAC `32` `pc + mlkem768_dec_loop2` `pc + mlkem768_dec_loop2_exit`
      KD3_CMOV_INV THEN
     REPEAT CONJ_TAC THENL
      [ARITH_TAC; KD3_EXIT_A_TAC; KD3_CMOV_BODY_TAC; KD3_EXIT_B_TAC]];;
@@ -775,10 +775,10 @@ let MLKEM_NATIVE_DEC_K3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
     nonoverlapping (ss,32) (word_sub stackpointer (word 18360),18368) /\
     ALLPAIRS nonoverlapping
      [(ss,32); (word_sub stackpointer (word 18360),18368)]
-     [(ct,1088); (sk,2400); (word pc,0x82a0)]
+     [(ct,1088); (sk,2400); (word pc,libmlkem_size)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x71c0) /\
+              read RIP s = word (pc + mlkem768_dec) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [ss; ct; sk] s /\
@@ -983,10 +983,10 @@ let MLKEM_NATIVE_DEC_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
     nonoverlapping (ss,32) (word_sub stackpointer (word 18360),18368) /\
     ALLPAIRS nonoverlapping
      [(ss,32); (word_sub stackpointer (word 18360),18368)]
-     [(ct,1088); (sk,2400); (word pc,0x82a0)]
+     [(ct,1088); (sk,2400); (word pc,libmlkem_size)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x71c0) /\
+              read RIP s = word (pc + mlkem768_dec) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [ss; ct; sk] s /\
@@ -1003,10 +1003,10 @@ let MLKEM_NATIVE_DEC_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                  memaccess_inbounds e2
                   [ct,1088; sk,2400; ss,32;
                    word_sub stackpointer (word 18360),18368;
-                   word(pc + 0x8000),8; word(pc + 0x8008),8;
-                   word(pc + 0x8010),8; word(pc + 0x8080),48;
-                   word(pc + 0x80c0),192; word(pc + 0x8180),4;
-                   word(pc + 0x81a0),256]
+                   word(pc + mlkem_poly_compress_d4_const1),8; word(pc + mlkem_poly_compress_d4_const2),8;
+                   word(pc + mlkem_poly_decompress_d10_consts),8; word(pc + mlkem_poly_invntt_tomont_consts),48;
+                   word(pc + rodata_mlk_KeccakF_RoundConstants),192; word(pc + mlkem768_gen_matrix_consts),4;
+                   word(pc + rodata_mlk_zetas),256]
                   [ss,32; word_sub stackpointer (word 18360),18360]))
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE
@@ -1018,11 +1018,11 @@ let MLKEM_NATIVE_DEC_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   ASM_CASES_TAC
    `num_of_bytelist(hh:byte list) = num_of_bytelist(sha3_256 ekk)` THEN
   ASM_REWRITE_TAC[] THENL
-   [ENSURES_EVENTS_WHILE_UP2_TAC `68` `pc + 0x7320` `pc + 0x7340`
+   [ENSURES_EVENTS_WHILE_UP2_TAC `68` `pc + mlkem768_dec_loop1` `pc + mlkem768_dec_loop1_exit`
      KD3_SAFE_INV THEN
     REPEAT CONJ_TAC THENL
      [ARITH_TAC; KD3_SAFE_PART1_TAC; KD3_SAFE_BODY_TAC;
-      ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + 0x7440` `pc + 0x7464`
+      ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + mlkem768_dec_loop2` `pc + mlkem768_dec_loop2_exit`
        KD3_SAFE_CMOV_INV THEN
       REPEAT CONJ_TAC THENL
        [ARITH_TAC; KD3_SAFE_EXIT_A_TAC; KD3_SAFE_CMOV_BODY_TAC;

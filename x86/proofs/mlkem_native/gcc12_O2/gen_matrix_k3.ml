@@ -106,7 +106,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/poly_rej_uniform_x4.ml";;
  ***)
 
 let MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x64b0,0x663a];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem768_gen_matrix"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The seed is loaded as two 128-bit words, and stored with the two indices  *)
@@ -301,7 +301,7 @@ let GENMAT3_NONOV_TAC =
          (mk_comb(mk_comb(`nonoverlapping:int64#num->int64#num->bool`,
                           `bot:int64,3680`),r)) ASSUME_TAC THENL
          [REWRITE_TAC[bth] THEN NONOVERLAPPING_TAC; ALL_TAC])
-       [`a:int64,4608`; `seed:int64,32`; `word pc:int64,0x82a0`;
+       [`a:int64,4608`; `seed:int64,32`; `word pc:int64,libmlkem_size`;
         `word_add stackpointer (word 3712):int64,32`]
     else NO_TAC);;
 
@@ -381,12 +381,12 @@ let mlkem_native_gen_matrix_k3_gcc12_O2_data = define
 
 let GENMAT3_DATA_IN_IMAGE =
   MLKEM_NATIVE_IMAGE_DATA_RULE mlkem_native_gen_matrix_k3_gcc12_O2_data
-   0x8180;;
+   (layout "mlkem512_gen_matrix_consts");;
 
 let GENMAT3_DATA_LOADED = prove
  (`!pc s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc
-          ==> read (memory :> bytes16 (word (pc + 33152))) s = word 257 /\
-              read (memory :> bytes16 (word (pc + 33154))) s = word 514`,
+          ==> read (memory :> bytes16 (word (pc + mlkem768_gen_matrix_consts))) s = word 257 /\
+              read (memory :> bytes16 (word (pc + mlkem768_gen_matrix_const2))) s = word 514`,
   REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP GENMAT3_DATA_IN_IMAGE) THEN
   REWRITE_TAC[bytes_loaded; READ_BYTELIST_EQ_BYTES;
               mlkem_native_gen_matrix_k3_gcc12_O2_data; LENGTH] THEN
@@ -396,12 +396,12 @@ let GENMAT3_DATA_LOADED = prove
               READ_BYTES_COMBINE] THEN
   REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN
   REWRITE_TAC[CONJUNCT1 GENMAT_BYTES2] THEN
-  REWRITE_TAC[GSYM WORD_ADD; ARITH_RULE `(pc + 33152) + 2 = pc + 33154`] THEN
-  MP_TAC(ISPEC `read (memory :> bytes16 (word (pc + 33152))) s` VAL_BOUND) THEN
-  MP_TAC(ISPEC `read (memory :> bytes16 (word (pc + 33154))) s` VAL_BOUND) THEN
+  REWRITE_TAC[GSYM WORD_ADD; ARITH_RULE `(pc + mlkem768_gen_matrix_consts) + 2 = pc + mlkem768_gen_matrix_const2`] THEN
+  MP_TAC(ISPEC `read (memory :> bytes16 (word (pc + mlkem768_gen_matrix_consts))) s` VAL_BOUND) THEN
+  MP_TAC(ISPEC `read (memory :> bytes16 (word (pc + mlkem768_gen_matrix_const2))) s` VAL_BOUND) THEN
   REWRITE_TAC[DIMINDEX_16] THEN CONV_TAC NUM_REDUCE_CONV THEN
-  SPEC_TAC(`read (memory :> bytes16 (word (pc + 33152))) s`,`lo:int16`) THEN
-  SPEC_TAC(`read (memory :> bytes16 (word (pc + 33154))) s`,`hi:int16`) THEN
+  SPEC_TAC(`read (memory :> bytes16 (word (pc + mlkem768_gen_matrix_consts))) s`,`lo:int16`) THEN
+  SPEC_TAC(`read (memory :> bytes16 (word (pc + mlkem768_gen_matrix_const2))) s`,`hi:int16`) THEN
   REPEAT GEN_TAC THEN REPEAT DISCH_TAC THEN
   ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN REWRITE_TAC[VAL_WORD; DIMINDEX_16] THEN
   CONV_TAC NUM_REDUCE_CONV THEN
@@ -644,11 +644,11 @@ let MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
         nonoverlapping (a,4608) (word_sub stackpointer (word 3736),3744) /\
         ALLPAIRS nonoverlapping
          [(a,4608); (word_sub stackpointer (word 3736),3744)]
-         [(seed,32); (word pc,0x82a0)]
+         [(seed,32); (word pc,libmlkem_size)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x64b0) /\
+                  read RIP s = word (pc + mlkem768_gen_matrix) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a; seed; transposed] s /\
@@ -818,11 +818,11 @@ let MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
         nonoverlapping (a,4608) (word_sub stackpointer (word 3736),3744) /\
         ALLPAIRS nonoverlapping
          [(a,4608); (word_sub stackpointer (word 3736),3744)]
-         [(seed,32); (word pc,0x82a0)]
+         [(seed,32); (word pc,libmlkem_size)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x64b0) /\
+                  read RIP s = word (pc + mlkem768_gen_matrix) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a; seed; transposed] s /\
@@ -839,7 +839,7 @@ let MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
                      memaccess_inbounds e2
                       [seed,32; a,4608;
                        word_sub stackpointer (word 3736),3744;
-                       word(pc + 0x80c0),192; word(pc + 0x8180),4]
+                       word(pc + rodata_mlk_KeccakF_RoundConstants),192; word(pc + mlkem768_gen_matrix_consts),4]
                       [a,4608; word_sub stackpointer (word 3736),3736]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE

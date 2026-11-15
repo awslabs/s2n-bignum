@@ -36,7 +36,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x3830,0x3862];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_shake128x4_release"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The bytes at the ends and those cleared by REP STOSQ,  *)
@@ -47,13 +47,13 @@ let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_EXEC =
 let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_CORRECT = prove
  (`!st pc.
     aligned 16 (word pc:int64) /\
-    nonoverlapping (st,800) (word pc,0x82a0)
+    nonoverlapping (st,800) (word pc,libmlkem_size)
     ==> ensures x86
       (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x3830) /\
+           read RIP s = word (pc + mlkem_shake128x4_release) /\
            C_ARGUMENTS [st] s /\
            (read DF s <=> false))
-      (\s. read RIP s = word (pc + 0x3861) /\
+      (\s. read RIP s = word (pc + mlkem_shake128x4_release_ret) /\
            read (memory :> bytes(st,800)) s = 0)
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(st,800)])`,
@@ -69,10 +69,10 @@ let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_CORRECT = prove
 let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!st pc stackpointer returnaddress.
     aligned 16 (word pc:int64) /\
-    ALL (nonoverlapping (st,800)) [(word pc,0x82a0); (stackpointer,8)]
+    ALL (nonoverlapping (st,800)) [(word pc,libmlkem_size); (stackpointer,8)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x3830) /\
+           read RIP s = word (pc + mlkem_shake128x4_release) /\
            read RSP s = stackpointer /\
            read (memory :> bytes64 stackpointer) s = returnaddress /\
            C_ARGUMENTS [st] s /\
@@ -95,15 +95,15 @@ let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SAFE = time prove
  (`exists f_events.
        forall e st pc.
            aligned 16 (word pc:int64) /\
-           nonoverlapping (st,800) (word pc,0x82a0)
+           nonoverlapping (st,800) (word pc,libmlkem_size)
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x3830) /\
+                    read RIP s = word (pc + mlkem_shake128x4_release) /\
                     C_ARGUMENTS [st] s /\
                     (read DF s <=> false) /\
                     read events s = e)
-               (\s. read RIP s = word (pc + 0x3861) /\
+               (\s. read RIP s = word (pc + mlkem_shake128x4_release_ret) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events st pc /\
@@ -126,11 +126,11 @@ let MLKEM_NATIVE_SHAKE128X4_RELEASE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
  (`exists f_events.
        forall e st pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\
-           ALL (nonoverlapping (st,800)) [word pc,0x82a0; stackpointer,8]
+           ALL (nonoverlapping (st,800)) [word pc,libmlkem_size; stackpointer,8]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x3830) /\
+                    read RIP s = word (pc + mlkem_shake128x4_release) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [st] s /\

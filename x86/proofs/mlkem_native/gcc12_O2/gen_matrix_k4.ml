@@ -93,7 +93,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/poly_rej_uniform_x4.ml";;
  ***)
 
 let MLKEM_NATIVE_GEN_MATRIX_K4_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x1020,0x1101];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem1024_gen_matrix"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The seed is loaded as two 128-bit words, and stored with the two indices  *)
@@ -288,7 +288,7 @@ let GENMAT4_NONOV_TAC =
          (mk_comb(mk_comb(`nonoverlapping:int64#num->int64#num->bool`,
                           `bot:int64,3680`),r)) ASSUME_TAC THENL
          [REWRITE_TAC[bth] THEN NONOVERLAPPING_TAC; ALL_TAC])
-       [`a:int64,8192`; `seed:int64,32`; `word pc:int64,0x82a0`;
+       [`a:int64,8192`; `seed:int64,32`; `word pc:int64,libmlkem_size`;
         `word_add stackpointer (word 3712):int64,56`]
     else NO_TAC);;
 
@@ -586,11 +586,11 @@ let MLKEM_NATIVE_GEN_MATRIX_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
         nonoverlapping (a,8192) (word_sub stackpointer (word 3760),3768) /\
         ALLPAIRS nonoverlapping
          [(a,8192); (word_sub stackpointer (word 3760),3768)]
-         [(seed,32); (word pc,0x82a0)]
+         [(seed,32); (word pc,libmlkem_size)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x1020) /\
+                  read RIP s = word (pc + mlkem1024_gen_matrix) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a; seed; transposed] s /\
@@ -762,11 +762,11 @@ let MLKEM_NATIVE_GEN_MATRIX_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
         nonoverlapping (a,8192) (word_sub stackpointer (word 3760),3768) /\
         ALLPAIRS nonoverlapping
          [(a,8192); (word_sub stackpointer (word 3760),3768)]
-         [(seed,32); (word pc,0x82a0)]
+         [(seed,32); (word pc,libmlkem_size)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x1020) /\
+                  read RIP s = word (pc + mlkem1024_gen_matrix) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a; seed; transposed] s /\
@@ -783,7 +783,7 @@ let MLKEM_NATIVE_GEN_MATRIX_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
                      memaccess_inbounds e2
                       [seed,32; a,8192;
                        word_sub stackpointer (word 3760),3768;
-                       word(pc + 0x80c0),192]
+                       word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                       [a,8192; word_sub stackpointer (word 3760),3760]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE

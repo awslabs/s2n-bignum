@@ -14,6 +14,12 @@
 needs "x86/proofs/base.ml";;
 needs "x86/proofs/utils/mlkem_native.ml";;
 needs "common/int_linear.ml";;
+needs "x86/proofs/mlkem_native/gcc12_O2/layout.ml";;
+
+(* Names for the labels of this transcription, whose code is at pc.          *)
+
+install_layout (layout_copies
+ ["poly_ntt","mlkem_poly_ntt"]);;
 
 (**** print_literal_relocs_from_elf
         "x86/mlkem_native/gcc12_O2/poly_ntt.o";;
@@ -157,12 +163,12 @@ let ntt_layers_c = define
 let MLKEM_NATIVE_POLY_NTT_GCC12_O2_BLOCK = prove
  (`!a zetas pc stackpointer start len k m w12 w15 wl.
      ALL (nonoverlapping (a,512))
-         [(word pc,0xdd); (word zetas,256); (stackpointer,4)] /\
+         [(word pc,poly_ntt_size); (word zetas,256); (stackpointer,4)] /\
      1 <= len /\ start + 2 * len <= 256 /\ k < 128
      ==> ensures x86
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-               read RIP s = word(pc + 0x50) /\
+               read RIP s = word(pc + poly_ntt_loop2) /\
                read RCX s = word start /\ read RDI s = word(start + len) /\
                read R8 s = word k /\ read R11 s = word(2 * len) /\
                read RBX s = word zetas /\ read R13 s = a /\
@@ -179,7 +185,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_BLOCK = prove
                         m i))
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-               read RIP s = word(pc + 0xb4) /\
+               read RIP s = word(pc + poly_ntt_loop3_exit) /\
                read RCX s = word start /\ read RDI s = word(start + len) /\
                read R8 s = word(k + 1) /\ read R11 s = word(2 * len) /\
                read RBX s = word zetas /\ read R13 s = a /\
@@ -199,7 +205,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_BLOCK = prove
            MAYCHANGE [memory :> bytes(a,512)])`,
   REPEAT GEN_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL; SOME_FLAGS] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ENSURES_WHILE_UP_TAC `len:num` `pc + 0x80` `pc + 0xaf`
+  ENSURES_WHILE_UP_TAC `len:num` `pc + poly_ntt_loop3` `pc + poly_ntt_loop3_test`
    `\jj s. bytes_loaded s (word pc)
              (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
            read RDX s = word_add a (word(2 * (start + jj))) /\
@@ -413,7 +419,7 @@ let NTT_BLOCK_TAC l b =
 (*** The layer head, setting up the registers for the first block ***)
 
 let NTT_LAYERHEAD_TAC l =
-  ENSURES_SEQUENCE_TAC `pc + 0x50` (ntt_blockhead_tm l `0`) THEN
+  ENSURES_SEQUENCE_TAC `pc + poly_ntt_loop2` (ntt_blockhead_tm l `0`) THEN
   CONJ_TAC THENL
    [ENSURES_INIT_TAC "s0" THEN
     X86_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O2_EXEC (1--10) THEN
@@ -445,19 +451,19 @@ let NTT_LAYEREXIT_TAC =
 
 let NTT_LAYER_TAC l =
   NTT_LAYERHEAD_TAC l THEN
-  ENSURES_SEQUENCE_TAC `pc + 0xb4` (ntt_blockend_tm l `0`) THEN
+  ENSURES_SEQUENCE_TAC `pc + poly_ntt_loop3_exit` (ntt_blockend_tm l `0`) THEN
   CONJ_TAC THENL
    [NTT_BLOCK_TAC l `0`;
     if l = 0 then NTT_LAYEREXIT_TAC else
     ENSURES_WHILE_UP_TAC (mk_small_numeral(1 lsl l - 1))
-      `pc + 0xb4` `pc + 0xb4`
+      `pc + poly_ntt_loop3_exit` `pc + poly_ntt_loop3_exit`
       (mk_abs(`i:num`,ntt_blockend_tm l `i:num`)) THEN
     REPEAT CONJ_TAC THENL
      [CONV_TAC NUM_REDUCE_CONV;
       ENSURES_INIT_TAC "s0" THEN ENSURES_FINAL_STATE_TAC THEN
       CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
       X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      ENSURES_SEQUENCE_TAC `pc + 0x50` (ntt_blockhead_tm l `i + 1`) THEN
+      ENSURES_SEQUENCE_TAC `pc + poly_ntt_loop2` (ntt_blockhead_tm l `i + 1`) THEN
       CONJ_TAC THENL [NTT_BLOCKBACK_TAC; NTT_BLOCK_TAC l `i + 1`];
       X_GEN_TAC `i:num` THEN STRIP_TAC THEN
       ENSURES_INIT_TAC "s0" THEN ENSURES_FINAL_STATE_TAC THEN
@@ -467,14 +473,14 @@ let NTT_LAYER_TAC l =
 let MLKEM_NATIVE_POLY_NTT_GCC12_O2_LAYER = prove
  (`!a zetas pc stackpointer l r.
      ALL (nonoverlapping (a,512))
-         [(word pc,0xdd); (word zetas,256); (stackpointer,4)] /\
+         [(word pc,poly_ntt_size); (word zetas,256); (stackpointer,4)] /\
      ALL (nonoverlapping (stackpointer,4))
-         [(word pc,0xdd); (word zetas,256)] /\
+         [(word pc,poly_ntt_size); (word zetas,256)] /\
      l < 7
      ==> ensures x86
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-               read RIP s = word(pc + 0x30) /\
+               read RIP s = word(pc + poly_ntt_loop1) /\
                read RDX s = word(l + 1) /\
                read RBX s = word zetas /\ read R13 s = a /\
                read RBP s = word_add a (word 2) /\
@@ -489,7 +495,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_LAYER = prove
                         r i))
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-               read RIP s = word(pc + 0xc2) /\
+               read RIP s = word(pc + poly_ntt_loop2_exit) /\
                read RBX s = word zetas /\ read R13 s = a /\
                read RBP s = word_add a (word 2) /\
                read R12 s = word 1 /\ read R15 s = word 256 /\
@@ -702,13 +708,13 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_LAYERS = prove
  (`!a zetas (x:num->int16) pc stackpointer.
     riprel32_within_bounds zetas (pc + 41) /\
     ALL (nonoverlapping (a,512))
-        [(word pc,0xdd); (word zetas,256); (stackpointer,4)] /\
+        [(word pc,poly_ntt_size); (word zetas,256); (stackpointer,4)] /\
     ALL (nonoverlapping (stackpointer,4))
-        [(word pc,0xdd); (word zetas,256)]
+        [(word pc,poly_ntt_size); (word zetas,256)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-           read RIP s = word (pc + 0x22) /\
+           read RIP s = word (pc + 34) /\
            read RDX s = word 1 /\ read R15 s = word 256 /\
            read R13 s = a /\ read R12 s = word 1 /\
            read RBP s = word_add a (word 2) /\
@@ -717,7 +723,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_LAYERS = prove
            (!i. i < 256
                 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                     x i))
-      (\s. read RIP s = word(pc + 0xd2) /\
+      (\s. read RIP s = word(pc + poly_ntt_loop1_exit) /\
            (!i. i < 256
                 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                     ntt_layers_c 7 x i))
@@ -733,7 +739,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_LAYERS = prove
 
   (*** Initialization, including the address of the table ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0x30` (ntt_layerhead_tm 0) THEN CONJ_TAC THENL
+  ENSURES_SEQUENCE_TAC `pc + poly_ntt_loop1` (ntt_layerhead_tm 0) THEN CONJ_TAC THENL
    [ENSURES_INIT_TAC "s0" THEN
     FIRST_ASSUM(ASSUME_TAC o MATCH_MP MLK_ZETAS_LOADED) THEN
     X86_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O2_EXEC (1--2) THEN
@@ -747,10 +753,10 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_LAYERS = prove
   (*** The layers, with the loop back to the head between them ***)
 
   MAP_EVERY (fun l ->
-    ENSURES_SEQUENCE_TAC `pc + 0xc2` (ntt_layerend_tm l) THEN
+    ENSURES_SEQUENCE_TAC `pc + poly_ntt_loop2_exit` (ntt_layerend_tm l) THEN
     CONJ_TAC THENL [NTT_LAYER_APPLY_TAC l; ALL_TAC] THEN
     if l = 6 then ALL_TAC else
-    ENSURES_SEQUENCE_TAC `pc + 0x30` (ntt_layerhead_tm (l + 1)) THEN
+    ENSURES_SEQUENCE_TAC `pc + poly_ntt_loop1` (ntt_layerhead_tm (l + 1)) THEN
     CONJ_TAC THENL [NTT_LAYERBACK_TAC l; ALL_TAC]) (0--6) THEN
 
   (*** The exit after the last layer ***)
@@ -774,13 +780,13 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_CORRECT = prove
  (`!a zetas (x:num->int16) pc stackpointer.
     riprel32_within_bounds zetas (pc + 41) /\
     ALL (nonoverlapping (a,512))
-        [(word pc,0xdd); (word zetas,256); (stackpointer,4)] /\
+        [(word pc,poly_ntt_size); (word zetas,256); (stackpointer,4)] /\
     ALL (nonoverlapping (stackpointer,4))
-        [(word pc,0xdd); (word zetas,256)]
+        [(word pc,poly_ntt_size); (word zetas,256)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-           read RIP s = word (pc + 0x22) /\
+           read RIP s = word (pc + 34) /\
            read RDX s = word 1 /\ read R15 s = word 256 /\
            read R13 s = a /\ read R12 s = word 1 /\
            read RBP s = word_add a (word 2) /\
@@ -789,7 +795,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_CORRECT = prove
            (!i. i < 256
                 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                     x i))
-      (\s. read RIP s = word(pc + 0xd2) /\
+      (\s. read RIP s = word(pc + poly_ntt_loop1_exit) /\
            ((!i. i < 256 ==> abs(ival(x i)) <= &8191)
             ==> !i. i < 256
                     ==> let zi =
@@ -812,9 +818,9 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_CORRECT = prove
 let MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_CORRECT = prove
  (`!a zetas (x:num->int16) pc stackpointer returnaddress.
     riprel32_within_bounds zetas (pc + 41) /\
-    ALL (nonoverlapping (a,512)) [(word pc,0xdd); (word zetas,256)] /\
+    ALL (nonoverlapping (a,512)) [(word pc,poly_ntt_size); (word zetas,256)] /\
     ALL (nonoverlapping (word_sub stackpointer (word 52),60))
-        [(word pc,0xdd); (word zetas,256); (a,512)]
+        [(word pc,poly_ntt_size); (word zetas,256); (a,512)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
@@ -858,12 +864,12 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_BLOCK_SAFE = prove
  (`exists f_ev_blk.
    forall e a zetas pc stackpointer start len k w12 w15 wl.
      ALL (nonoverlapping (a,512))
-         [(word pc,0xdd); (word zetas,256); (stackpointer,4)] /\
+         [(word pc,poly_ntt_size); (word zetas,256); (stackpointer,4)] /\
      1 <= len /\ start + 2 * len <= 256 /\ k < 128
      ==> ensures x86
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-               read RIP s = word(pc + 0x50) /\
+               read RIP s = word(pc + poly_ntt_loop2) /\
                read RCX s = word start /\ read RDI s = word(start + len) /\
                read R8 s = word k /\ read R11 s = word(2 * len) /\
                read RBX s = word zetas /\ read R13 s = a /\
@@ -874,7 +880,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_BLOCK_SAFE = prove
                read events s = e)
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-               read RIP s = word(pc + 0xb4) /\
+               read RIP s = word(pc + poly_ntt_loop3_exit) /\
                read RCX s = word start /\ read RDI s = word(start + len) /\
                read R8 s = word(k + 1) /\ read R11 s = word(2 * len) /\
                read RBX s = word zetas /\ read R13 s = a /\
@@ -901,7 +907,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_BLOCK_SAFE = prove
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL; SOME_FLAGS] THEN
   REPEAT STRIP_TAC THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + 0x80` `pc + 0xb4`
+  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + poly_ntt_loop3` `pc + poly_ntt_loop3_exit`
    `\j s. read RDX s = word_add a (word(2 * (start + j))) /\
           read R10 s = word_add a (word(2 * (start + len))) /\
           read RSI s = word len /\
@@ -967,13 +973,13 @@ let lsafe_goal l =
   `exists f_ev_lay.
     forall e a zetas pc stackpointer.
      ALL (nonoverlapping (a,512))
-         [(word pc,0xdd); (word zetas,256); (stackpointer,4)] /\
+         [(word pc,poly_ntt_size); (word zetas,256); (stackpointer,4)] /\
      ALL (nonoverlapping (stackpointer,4))
-         [(word pc,0xdd); (word zetas,256)]
+         [(word pc,poly_ntt_size); (word zetas,256)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-               read RIP s = word(pc + 0x30) /\
+               read RIP s = word(pc + poly_ntt_loop1) /\
                read RDX s = word(L + 1) /\ read RBX s = word zetas /\
                read R13 s = a /\ read RBP s = word_add a (word 2) /\
                read R12 s = word 1 /\ read R15 s = word 256 /\
@@ -981,7 +987,7 @@ let lsafe_goal l =
                read events s = e)
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-               read RIP s = word(pc + 0xc2) /\
+               read RIP s = word(pc + poly_ntt_loop2_exit) /\
                read RBX s = word zetas /\
                read R13 s = a /\ read RBP s = word_add a (word 2) /\
                read R12 s = word 1 /\ read R15 s = word 256 /\
@@ -1093,7 +1099,7 @@ let NTT_LAYER_SAFE_TAC l =
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL; SOME_FLAGS] THEN
   REPEAT STRIP_TAC THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC nb `pc + 0x50` `pc + 0xc2`
+  ENSURES_EVENTS_WHILE_UP2_TAC nb `pc + poly_ntt_loop2` `pc + poly_ntt_loop2_exit`
    (mk_abs(`i:num`,lsafe_blockhead_tm l `i:num`)) THEN
   REPEAT CONJ_TAC THENL
    [CONV_TAC NUM_REDUCE_CONV;
@@ -1103,7 +1109,7 @@ let NTT_LAYER_SAFE_TAC l =
     REWRITE_TAC[ENUMERATEL_ADD1] THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
     ONCE_REWRITE_TAC[GSYM APPEND_ASSOC] THEN
     ONCE_REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xb4` (lsafe_blockend_tm l `i:num`) THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_ntt_loop3_exit` (lsafe_blockend_tm l `i:num`) THEN
     CONJ_TAC THENL
      [EVENTS_LEMMA_TAC (ntt_block_events_inst l `i:num`);
       LSAFE_SIM_TAC nb ALL_TAC 4];
@@ -1163,13 +1169,13 @@ let NTT_SAFE_TOP_TAC =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL;
               MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REPEAT STRIP_TAC THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xc2` (ntt_safe_layerend_tm 6) THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_ntt_loop2_exit` (ntt_safe_layerend_tm 6) THEN
   CONJ_TAC THENL [ALL_TAC; LSAFE_SIM_TAC `1` ALL_TAC 4] THEN
   MAP_EVERY (fun l ->
-    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x30` (ntt_safe_layerhead_tm l) THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_ntt_loop1` (ntt_safe_layerhead_tm l) THEN
     CONJ_TAC THENL [ALL_TAC; EVENTS_LEMMA_TAC (ntt_layer_events_inst l)] THEN
     if l = 0 then ALL_TAC else
-    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xc2` (ntt_safe_layerend_tm (l - 1)) THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_ntt_loop2_exit` (ntt_safe_layerend_tm (l - 1)) THEN
     CONJ_TAC THENL [ALL_TAC; LSAFE_SIM_TAC `1` ALL_TAC 4]) (rev(0--6)) THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
   REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
@@ -1193,18 +1199,18 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_SAFE = time prove
      forall e a zetas pc stackpointer.
        riprel32_within_bounds zetas (pc + 41) /\
        ALL (nonoverlapping (a,512))
-           [word pc,0xdd; word zetas,256; stackpointer,4] /\
-       ALL (nonoverlapping (stackpointer,4)) [word pc,0xdd; word zetas,256]
+           [word pc,poly_ntt_size; word zetas,256; stackpointer,4] /\
+       ALL (nonoverlapping (stackpointer,4)) [word pc,poly_ntt_size; word zetas,256]
        ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
-                read RIP s = word (pc + 0x22) /\
+                read RIP s = word (pc + 34) /\
                 read RDX s = word 1 /\ read R15 s = word 256 /\
                 read R13 s = a /\ read R12 s = word 1 /\
                 read RBP s = word_add a (word 2) /\
                 read RSP s = word_add stackpointer (word 4) /\
                 read events s = e)
-           (\s. read RIP s = word (pc + 0xd2) /\
+           (\s. read RIP s = word (pc + poly_ntt_loop1_exit) /\
                 exists e2.
                   read events s = APPEND e2 e /\
                   e2 = f_events a zetas pc stackpointer /\
@@ -1221,9 +1227,9 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_SAFE = time prove
  (`exists f_events.
      forall e a zetas pc stackpointer returnaddress.
        riprel32_within_bounds zetas (pc + 41) /\
-       ALL (nonoverlapping (a,512)) [word pc,0xdd; word zetas,256] /\
+       ALL (nonoverlapping (a,512)) [word pc,poly_ntt_size; word zetas,256] /\
        ALL (nonoverlapping (word_sub stackpointer (word 52),60))
-           [word pc,0xdd; word zetas,256; a,512]
+           [word pc,poly_ntt_size; word zetas,256; a,512]
        ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   (mlkem_native_poly_ntt_gcc12_O2_mc pc zetas) /\
@@ -1259,21 +1265,21 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 let MLKEM_NATIVE_POLY_NTT_GCC12_O2_IN_IMAGE =
   MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_poly_ntt_gcc12_O2_mc
-    0x5780 [0x81a0];;
+    (layout "mlkem_poly_ntt") [layout "rodata_mlk_zetas"];;
 
 let MLKEM_NATIVE_POLY_NTT_GCC12_O2_ZETAS_IN_IMAGE =
-  MLKEM_NATIVE_IMAGE_DATA_RULE mlk_zetas_data 0x81a0;;
+  MLKEM_NATIVE_IMAGE_DATA_RULE mlk_zetas_data (layout "rodata_mlk_zetas");;
 
 let MLKEM_NATIVE_POLY_NTT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!a (x:num->int16) pc stackpointer returnaddress.
     aligned 16 (word pc:int64) /\
-    nonoverlapping (a,512) (word pc,0x82a0) /\
+    nonoverlapping (a,512) (word pc,libmlkem_size) /\
     ALL (nonoverlapping (word_sub stackpointer (word 52),60))
-        [(word pc,0x82a0); (a,512)]
+        [(word pc,libmlkem_size); (a,512)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x5780) /\
+           read RIP s = word (pc + mlkem_poly_ntt) /\
            read RSP s = stackpointer /\
            read (memory :> bytes64 stackpointer) s = returnaddress /\
            C_ARGUMENTS [a] s /\
@@ -1292,7 +1298,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
        MAYCHANGE [memory :> bytes(a,512);
                   memory :> bytes(word_sub stackpointer (word 52),52)])`,
   MLKEM_NATIVE_IMAGE_TAC
-   (INST [`pc + 0x5780`,`pc:num`; `pc + 0x81a0`,`zetas:num`]
+   (INST [`pc + mlkem_poly_ntt`,`pc:num`; `pc + rodata_mlk_zetas`,`zetas:num`]
      (SPEC_ALL MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_CORRECT))
    [MLKEM_NATIVE_POLY_NTT_GCC12_O2_IN_IMAGE;
     MLKEM_NATIVE_POLY_NTT_GCC12_O2_ZETAS_IN_IMAGE]);;
@@ -1301,13 +1307,13 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
  (`exists f_events.
      forall e a pc stackpointer returnaddress.
        aligned 16 (word pc:int64) /\
-       nonoverlapping (a,512) (word pc,0x82a0) /\
+       nonoverlapping (a,512) (word pc,libmlkem_size) /\
        ALL (nonoverlapping (word_sub stackpointer (word 52),60))
-           [word pc,0x82a0; a,512]
+           [word pc,libmlkem_size; a,512]
        ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_libmlkem_gcc12_O2_mc /\
-                read RIP s = word (pc + 0x5780) /\
+                read RIP s = word (pc + mlkem_poly_ntt) /\
                 read RSP s = stackpointer /\
                 read (memory :> bytes64 stackpointer) s = returnaddress /\
                 C_ARGUMENTS [a] s /\
@@ -1319,13 +1325,13 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                   e2 = f_events a pc (word_sub stackpointer (word 52))
                          returnaddress /\
                   memaccess_inbounds e2
-                   [a,512; word (pc + 0x81a0),256;
+                   [a,512; word (pc + rodata_mlk_zetas),256;
                     word_sub stackpointer (word 52),60]
                    [a,512; word_sub stackpointer (word 52),52])
            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
             MAYCHANGE [memory :> bytes(a,512);
                        memory :> bytes(word_sub stackpointer (word 52),52)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O2_SUBROUTINE_SAFE
-   [`pc + 0x5780`,`pc:num`; `pc + 0x81a0`,`zetas:num`]
+   [`pc + mlkem_poly_ntt`,`pc:num`; `pc + rodata_mlk_zetas`,`zetas:num`]
    [MLKEM_NATIVE_POLY_NTT_GCC12_O2_IN_IMAGE;
     MLKEM_NATIVE_POLY_NTT_GCC12_O2_ZETAS_IN_IMAGE]);;

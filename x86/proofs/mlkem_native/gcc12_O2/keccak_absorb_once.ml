@@ -109,7 +109,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x32b0,0x33b5];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlk_keccak_absorb_once"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Lemmas about the arguments, the bytes of the message and the blocks.      *)
@@ -475,7 +475,7 @@ let ABSORB_CS_SHORT_TAC =
     DISCHARGE_SAFETY_PROPERTY_TAC];;
 
 let ABSORB_CS_LOOP_TAC =
-  ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r` `pc + 0x3308` `pc + 0x332b`
+  ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r` `pc + mlk_keccak_absorb_once_loop1` `pc + mlk_keccak_absorb_once_loop1_exit`
     ABSORB_CS_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
@@ -749,12 +749,12 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
        0 < r /\ r <= 200 /\ p < 128 /\
        PAIRWISE nonoverlapping
         [st,200; m,mlen; word_sub stackpointer (word 320),328] /\
-       ALL (nonoverlapping (word pc,0x82a0))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [st,200; word_sub stackpointer (word 320),328]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x32b0) /\
+                 read RIP s = word (pc + mlk_keccak_absorb_once) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [st; word r; m; word mlen; word p] s /\
@@ -778,14 +778,14 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
                            (word_sub stackpointer (word 320)) returnaddress /\
                     memaccess_inbounds e2
                      [m,mlen; st,200; word_sub stackpointer (word 320),328;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [st,200; word_sub stackpointer (word 320),320]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE
               [memory :> bytes(st,200);
                memory :> bytes(word_sub stackpointer (word 320),320)])`,
   ABSORB_CS_INTRO_TAC THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x332b` ABSORB_CS_MID THEN CONJ_TAC THENL
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_loop1_exit` ABSORB_CS_MID THEN CONJ_TAC THENL
    [ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THENL
      [ABSORB_CS_SHORT_TAC; ABSORB_CS_LOOP_TAC];
     ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THEN
@@ -801,12 +801,12 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
         0 < r /\ r <= 200 /\ p < 128 /\
         PAIRWISE nonoverlapping
          [(st,200); (m,mlen); (word_sub stackpointer (word 320),328)] /\
-        ALL (nonoverlapping (word pc,0x82a0))
+        ALL (nonoverlapping (word pc,libmlkem_size))
          [(st,200); (word_sub stackpointer (word 320),328)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x32b0) /\
+                  read RIP s = word (pc + mlk_keccak_absorb_once) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [st; word r; m; word mlen; word p] s /\
@@ -968,12 +968,12 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        0 < r /\ r <= 200 /\
        PAIRWISE nonoverlapping
         [st,200; m,mlen; word_sub stackpointer (word 320),328] /\
-       ALL (nonoverlapping (word pc,0x82a0))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [st,200; word_sub stackpointer (word 320),328]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x32b0) /\
+                 read RIP s = word (pc + mlk_keccak_absorb_once) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [st; word r; m; word mlen; word p] s /\
@@ -987,7 +987,7 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                            (word_sub stackpointer (word 320)) returnaddress /\
                     memaccess_inbounds e2
                      [m,mlen; st,200; word_sub stackpointer (word 320),328;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [st,200; word_sub stackpointer (word 320),320]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE
@@ -1036,7 +1036,7 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   ENSURES_PRESERVED_TAC "r12_init" `R12` THEN
   ENSURES_PRESERVED_TAC "r13_init" `R13` THEN
   ENSURES_PRESERVED_TAC "r14_init" `R14` THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x332b` ABSORB_SAFE_MID THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_loop1_exit` ABSORB_SAFE_MID THEN
   CONJ_TAC THENL
    [ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THENL
      [(*** A message shorter than a block, with no loop ***)
@@ -1055,7 +1055,7 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
 
     (*** Otherwise the loop over the whole blocks ***)
 
-    ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r` `pc + 0x3308` `pc + 0x332b`
+    ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r` `pc + mlk_keccak_absorb_once_loop1` `pc + mlk_keccak_absorb_once_loop1_exit`
       ABSORB_SAFE_INV THEN
     REPEAT CONJ_TAC THENL
      [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];

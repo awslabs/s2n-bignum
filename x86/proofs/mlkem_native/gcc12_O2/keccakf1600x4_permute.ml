@@ -34,7 +34,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x4740,0x476e];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_keccakf1600x4_permute"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The four calls of mlkem_keccakf1600_permute, keeping the states in memory *)
@@ -71,13 +71,13 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   prove
  (`!a A1 A2 A3 A4 pc stackpointer returnaddress.
         aligned 16 (word pc:int64) /\
-        nonoverlapping (a,800) (word pc,0x82a0) /\
+        nonoverlapping (a,800) (word pc,libmlkem_size) /\
         ALL (nonoverlapping (word_sub stackpointer (word 272),280))
-            [(word pc,0x82a0); (a,800)]
+            [(word pc,libmlkem_size); (a,800)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x4740) /\
+                  read RIP s = word (pc + mlkem_keccakf1600x4_permute) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
@@ -142,13 +142,13 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
  (`exists f_events.
        forall e a pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\
-           nonoverlapping (a,800) (word pc,0x82a0) /\
+           nonoverlapping (a,800) (word pc,libmlkem_size) /\
            ALL (nonoverlapping (word_sub stackpointer (word 272),280))
-               [(word pc,0x82a0); (a,800)]
+               [(word pc,libmlkem_size); (a,800)]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x4740) /\
+                    read RIP s = word (pc + mlkem_keccakf1600x4_permute) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [a] s /\
@@ -161,7 +161,7 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                                 (word_sub stackpointer (word 272))
                                 returnaddress /\
                          memaccess_inbounds e2
-                          [a,800; word (pc + 0x80c0),192;
+                          [a,800; word (pc + rodata_mlk_KeccakF_RoundConstants),192;
                            word_sub stackpointer (word 272),280]
                           [a,800; word_sub stackpointer (word 272),272]))
                (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -205,13 +205,13 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_F1600
  (`!a (S0:1600 word) (S1:1600 word) (S2:1600 word) (S3:1600 word)
     pc stackpointer returnaddress.
         aligned 16 (word pc:int64) /\
-        nonoverlapping (a,800) (word pc,0x82a0) /\
+        nonoverlapping (a,800) (word pc,libmlkem_size) /\
         ALL (nonoverlapping (word_sub stackpointer (word 272),280))
-            [(word pc,0x82a0); (a,800)]
+            [(word pc,libmlkem_size); (a,800)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x4740) /\
+                  read RIP s = word (pc + mlkem_keccakf1600x4_permute) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
@@ -269,13 +269,13 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL_F1600 =
        forall e a (S0:1600 word) (S1:1600 word) (S2:1600 word) (S3:1600 word)
               pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\
-           nonoverlapping (a,800) (word pc,0x82a0) /\
+           nonoverlapping (a,800) (word pc,libmlkem_size) /\
            ALL (nonoverlapping (word_sub stackpointer (word 272),280))
-               [(word pc,0x82a0); (a,800)]
+               [(word pc,libmlkem_size); (a,800)]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x4740) /\
+                    read RIP s = word (pc + mlkem_keccakf1600x4_permute) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [a] s /\
@@ -299,7 +299,7 @@ let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_IMAGE_SUBROUTINE_FULL_F1600 =
                                 (word_sub stackpointer (word 272))
                                 returnaddress /\
                          memaccess_inbounds e2
-                          [a,800; word (pc + 0x80c0),192;
+                          [a,800; word (pc + rodata_mlk_KeccakF_RoundConstants),192;
                            word_sub stackpointer (word 272),280]
                           [a,800; word_sub stackpointer (word 272),272]))
                (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

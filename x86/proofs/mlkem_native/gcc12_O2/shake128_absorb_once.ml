@@ -26,7 +26,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x33c0,0x33d6];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_shake128_absorb_once"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The result is as for mlk_keccak_absorb_once, with      *)
@@ -40,12 +40,12 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
         aligned 16 (word pc:int64) /\
         PAIRWISE nonoverlapping
          [(st,200); (m,mlen); (word_sub stackpointer (word 320),328)] /\
-        ALL (nonoverlapping (word pc,0x82a0))
+        ALL (nonoverlapping (word pc,libmlkem_size))
          [(st,200); (word_sub stackpointer (word 320),328)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x33c0) /\
+                  read RIP s = word (pc + mlkem_shake128_absorb_once) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [st; m; word mlen] s /\
@@ -91,12 +91,12 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        aligned 16 (word pc:int64) /\
        PAIRWISE nonoverlapping
         [st,200; m,mlen; word_sub stackpointer (word 320),328] /\
-       ALL (nonoverlapping (word pc,0x82a0))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [st,200; word_sub stackpointer (word 320),328]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x33c0) /\
+                 read RIP s = word (pc + mlkem_shake128_absorb_once) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [st; m; word mlen] s /\
@@ -110,7 +110,7 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                            (word_sub stackpointer (word 320)) returnaddress /\
                     memaccess_inbounds e2
                      [m,mlen; st,200; word_sub stackpointer (word 320),328;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [st,200; word_sub stackpointer (word 320),320]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE
@@ -155,12 +155,12 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
        aligned 16 (word pc:int64) /\
        PAIRWISE nonoverlapping
         [st,200; m,mlen; word_sub stackpointer (word 320),328] /\
-       ALL (nonoverlapping (word pc,0x82a0))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [st,200; word_sub stackpointer (word 320),328]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x33c0) /\
+                 read RIP s = word (pc + mlkem_shake128_absorb_once) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [st; m; word mlen] s /\
@@ -184,7 +184,7 @@ let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
                            (word_sub stackpointer (word 320)) returnaddress /\
                     memaccess_inbounds e2
                      [m,mlen; st,200; word_sub stackpointer (word 320),328;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [st,200; word_sub stackpointer (word 320),320]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE

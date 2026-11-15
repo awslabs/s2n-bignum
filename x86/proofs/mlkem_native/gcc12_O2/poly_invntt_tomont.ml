@@ -15,6 +15,12 @@
 needs "x86/proofs/base.ml";;
 needs "x86/proofs/utils/mlkem_native.ml";;
 needs "common/int_linear.ml";;
+needs "x86/proofs/mlkem_native/gcc12_O2/layout.ml";;
+
+(* Names for the labels of this transcription, whose code is at pc.          *)
+
+install_layout (layout_copies
+ ["poly_invntt_tomont","mlkem_poly_invntt_tomont"]);;
 
 (**** print_literal_relocs_from_elf
         ~map_symbol_name:(function
@@ -366,14 +372,14 @@ let WORD_ZX_SUB_ZX_ZX_16 = prove
 let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK = prove
  (`!a consts zetas pc sbase z start len k m w11 w15.
      ALL (nonoverlapping (a,512))
-         [(word pc,0x1e6); (word zetas,256); (sbase,4)] /\
-     ALL (nonoverlapping (sbase,4)) [(word pc,0x1e6); (word zetas,256)] /\
+         [(word pc,poly_invntt_tomont_size); (word zetas,256); (sbase,4)] /\
+     ALL (nonoverlapping (sbase,4)) [(word pc,poly_invntt_tomont_size); (word zetas,256)] /\
      1 <= len /\ start + 2 * len <= 256 /\ 1 <= k /\ k < 256
      ==> ensures x86
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
                     pc consts zetas) /\
-               read RIP s = word(pc + 0x110) /\
+               read RIP s = word(pc + poly_invntt_tomont_loop2) /\
                read RSI s = word start /\ read RDI s = word(start + len) /\
                read R10 s = word k /\
                read R8 s = word_zx(word_sx z:int32) /\
@@ -392,7 +398,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK = prove
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
                     pc consts zetas) /\
-               read RIP s = word(pc + 0x19d) /\
+               read RIP s = word(pc + poly_invntt_tomont_join2) /\
                read RSI s = word start /\ read RDI s = word(start + len) /\
                read R10 s = word(k - 1) /\
                read R8 s = word_zx(word_sx z:int32) /\
@@ -417,7 +423,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK = prove
   (*** The inner loop, RCX and RDX pointing at the lower and upper ***)
   (*** coefficients and RSI at the end of the upper ones           ***)
 
-  ENSURES_WHILE_UP_TAC `len:num` `pc + 0x140` `pc + 0x194`
+  ENSURES_WHILE_UP_TAC `len:num` `pc + poly_invntt_tomont_loop3` `pc + poly_invntt_tomont_loop3_test`
    `\jj s. bytes_loaded s (word pc)
              (mlkem_native_poly_invntt_tomont_gcc12_O2_mc pc consts zetas) /\
            read RCX s = word_add a (word(2 * (start + jj))) /\
@@ -621,7 +627,7 @@ let INVNTT_BLOCK_TAC l b =
 (*** The layer head, setting up the registers for the first block ***)
 
 let INVNTT_LAYERHEAD_TAC l =
-  ENSURES_SEQUENCE_TAC `pc + 0x110` (invntt_blockhead_tm l `0`) THEN
+  ENSURES_SEQUENCE_TAC `pc + poly_invntt_tomont_loop2` (invntt_blockhead_tm l `0`) THEN
   CONJ_TAC THENL
    [ENSURES_INIT_TAC "s0" THEN
     X86_STEPS_TAC MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_EXEC (1--9) THEN
@@ -662,19 +668,19 @@ let INVNTT_LAYEREXIT_TAC =
 
 let INVNTT_LAYER_TAC l =
   INVNTT_LAYERHEAD_TAC l THEN
-  ENSURES_SEQUENCE_TAC `pc + 0x19d` (invntt_blockend_tm l `0`) THEN
+  ENSURES_SEQUENCE_TAC `pc + poly_invntt_tomont_join2` (invntt_blockend_tm l `0`) THEN
   CONJ_TAC THENL
    [INVNTT_BLOCK_TAC l `0`;
     if l = 1 then INVNTT_LAYEREXIT_TAC else
     ENSURES_WHILE_UP_TAC (mk_small_numeral(1 lsl (l - 1) - 1))
-      `pc + 0x19d` `pc + 0x19d`
+      `pc + poly_invntt_tomont_join2` `pc + poly_invntt_tomont_join2`
       (mk_abs(`i:num`,invntt_blockend_tm l `i:num`)) THEN
     REPEAT CONJ_TAC THENL
      [CONV_TAC NUM_REDUCE_CONV;
       ENSURES_INIT_TAC "s0" THEN ENSURES_FINAL_STATE_TAC THEN
       CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
       X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      ENSURES_SEQUENCE_TAC `pc + 0x110` (invntt_blockhead_tm l `i + 1`) THEN
+      ENSURES_SEQUENCE_TAC `pc + poly_invntt_tomont_loop2` (invntt_blockhead_tm l `i + 1`) THEN
       CONJ_TAC THENL
        [INVNTT_BLOCKBACK_TAC l; INVNTT_BLOCK_TAC l `i + 1`];
       X_GEN_TAC `i:num` THEN STRIP_TAC THEN
@@ -685,14 +691,14 @@ let INVNTT_LAYER_TAC l =
 let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_LAYER = prove
  (`!a consts zetas pc sbase l r.
      ALL (nonoverlapping (a,512))
-         [(word pc,0x1e6); (word zetas,256); (sbase,4)] /\
-     ALL (nonoverlapping (sbase,4)) [(word pc,0x1e6); (word zetas,256)] /\
+         [(word pc,poly_invntt_tomont_size); (word zetas,256); (sbase,4)] /\
+     ALL (nonoverlapping (sbase,4)) [(word pc,poly_invntt_tomont_size); (word zetas,256)] /\
      l < 7
      ==> ensures x86
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
                     pc consts zetas) /\
-               read RIP s = word(pc + 0xf0) /\
+               read RIP s = word(pc + poly_invntt_tomont_join1) /\
                read RCX s = word(l + 1) /\
                read R8 s =
                word_zx(word_sx(iword(EL (2 EXP (l + 1) - 1) mlk_zetas)
@@ -710,7 +716,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_LAYER = prove
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
                     pc consts zetas) /\
-               read RIP s = word(pc + 0x1c0) /\
+               read RIP s = word(pc + poly_invntt_tomont_loop2_exit) /\
                read R11 s = word(l + 1) /\
                read R12 s = a /\ read R14 s = word_add a (word 2) /\
                read R13 s = word zetas /\ read R15 s = word 1 /\
@@ -815,12 +821,12 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_LAYERS = prove
  (`!a consts zetas (x:num->int16) pc sbase.
     riprel32_within_bounds zetas (pc + 236) /\
     ALL (nonoverlapping (a,512))
-        [(word pc,0x1e6); (word zetas,256); (sbase,4)] /\
-    ALL (nonoverlapping (sbase,4)) [(word pc,0x1e6); (word zetas,256)]
+        [(word pc,poly_invntt_tomont_size); (word zetas,256); (sbase,4)] /\
+    ALL (nonoverlapping (sbase,4)) [(word pc,poly_invntt_tomont_size); (word zetas,256)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              (mlkem_native_poly_invntt_tomont_gcc12_O2_mc pc consts zetas) /\
-           read RIP s = word(pc + 0xcf) /\
+           read RIP s = word(pc + poly_invntt_tomont_loop1_exit) /\
            read R12 s = a /\ read RSP s = word_add sbase (word 12) /\
            (!k. k < 128
                 ==> read(memory :> bytes16(word_add (word zetas)
@@ -829,7 +835,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_LAYERS = prove
            (!i. i < 256
                 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                     x i))
-      (\s. read RIP s = word(pc + 0x1db) /\
+      (\s. read RIP s = word(pc + 475) /\
            read RSP s = word_add sbase (word 12) /\
            (!i. i < 256
                 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
@@ -846,7 +852,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_LAYERS = prove
 
   (*** Initialization, including the address of the table ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0xf0` (invntt_layerhead_tm 7) THEN CONJ_TAC THENL
+  ENSURES_SEQUENCE_TAC `pc + poly_invntt_tomont_join1` (invntt_layerhead_tm 7) THEN CONJ_TAC THENL
    [ENSURES_INIT_TAC "s0" THEN
     X86_STEPS_TAC MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_EXEC (1--5) THEN
     MP_TAC(CONJUNCT1(SPECL [`pc:num`; `236`; `0`; `zetas:num`]
@@ -864,10 +870,10 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_LAYERS = prove
   (*** The layers, with the loop back to the head between them ***)
 
   MAP_EVERY (fun l ->
-    ENSURES_SEQUENCE_TAC `pc + 0x1c0` (invntt_layerend_tm l) THEN
+    ENSURES_SEQUENCE_TAC `pc + poly_invntt_tomont_loop2_exit` (invntt_layerend_tm l) THEN
     CONJ_TAC THENL [INVNTT_LAYER_APPLY_TAC l; ALL_TAC] THEN
     if l = 1 then ALL_TAC else
-    ENSURES_SEQUENCE_TAC `pc + 0xf0` (invntt_layerhead_tm (l - 1)) THEN
+    ENSURES_SEQUENCE_TAC `pc + poly_invntt_tomont_join1` (invntt_layerhead_tm (l - 1)) THEN
     CONJ_TAC THENL [INVNTT_LAYERBACK_TAC l; ALL_TAC]) (rev(1--7)) THEN
 
   (*** The exit after the last layer ***)
@@ -1006,9 +1012,9 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE = prove
     riprel32_within_bounds consts (pc + 30) /\
     riprel32_within_bounds (consts + 16) (pc + 40) /\
     ALL (nonoverlapping (a,512))
-        [(word pc,0x1e6); (word consts,48); (word_add sbase (word 12),48)] /\
+        [(word pc,poly_invntt_tomont_size); (word consts,48); (word_add sbase (word 12),48)] /\
     ALL (nonoverlapping (word_add sbase (word 12),48))
-        [(word pc,0x1e6); (word consts,48)]
+        [(word pc,poly_invntt_tomont_size); (word consts,48)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              (mlkem_native_poly_invntt_tomont_gcc12_O2_mc pc consts zetas) /\
@@ -1025,7 +1031,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE = prove
            (!i. i < 256
                 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                     x i))
-      (\s. read RIP s = word(pc + 0xcf) /\
+      (\s. read RIP s = word(pc + poly_invntt_tomont_loop1_exit) /\
            read R12 s = a /\ read RSP s = word_add sbase (word 12) /\
            read(memory :> bytes64(word_add sbase (word 52))) s = w15 /\
            read(memory :> bytes64(word_add sbase (word 44))) s = w14 /\
@@ -1050,7 +1056,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE = prove
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `32` `pc + 0x30` `pc + 0xc6`
+  ENSURES_WHILE_UP_TAC `32` `pc + poly_invntt_tomont_loop1` `pc + poly_invntt_tomont_loop1_test`
    `\i s. read RAX s = word_add a (word(16 * i)) /\
           read RDX s = word_add a (word 512) /\
           read R12 s = a /\ read RSP s = word_add sbase (word 12) /\
@@ -1180,9 +1186,9 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_CORRECT = prove
     riprel32_within_bounds (consts + 16) (pc + 40) /\
     riprel32_within_bounds zetas (pc + 236) /\
     ALL (nonoverlapping (a,512))
-        [(word pc,0x1e6); (word consts,48); (word zetas,256)] /\
+        [(word pc,poly_invntt_tomont_size); (word consts,48); (word zetas,256)] /\
     ALL (nonoverlapping (word_sub stackpointer (word 60),68))
-        [(word pc,0x1e6); (word consts,48); (word zetas,256); (a,512)]
+        [(word pc,poly_invntt_tomont_size); (word consts,48); (word zetas,256); (a,512)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              (mlkem_native_poly_invntt_tomont_gcc12_O2_mc pc consts zetas) /\
@@ -1265,15 +1271,15 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK_SAFE = prove
  (`exists f_ev_blk.
    forall e a consts zetas pc sbase start len k w11 rs
           retaddr w15 w14 w13 w12 wbp wbx.
-     ALL (nonoverlapping (a,512)) [(word pc,0x1e6); (word zetas,256)] /\
+     ALL (nonoverlapping (a,512)) [(word pc,poly_invntt_tomont_size); (word zetas,256)] /\
      ALL (nonoverlapping (sbase,68))
-         [(word pc,0x1e6); (word zetas,256); (a,512)] /\
+         [(word pc,poly_invntt_tomont_size); (word zetas,256); (a,512)] /\
      1 <= len /\ start + 2 * len <= 256 /\ 1 <= k /\ k < 256
      ==> ensures x86
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
                     pc consts zetas) /\
-               read RIP s = word(pc + 0x110) /\
+               read RIP s = word(pc + poly_invntt_tomont_loop2) /\
                read RSI s = word start /\ read RDI s = word(start + len) /\
                read R10 s = word k /\ read RBX s = word(2 * len) /\
                read R12 s = a /\ read R14 s = word_add a (word 2) /\
@@ -1291,7 +1297,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK_SAFE = prove
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
                     pc consts zetas) /\
-               read RIP s = word(pc + 0x19d) /\
+               read RIP s = word(pc + poly_invntt_tomont_join2) /\
                read RSI s = word start /\ read RDI s = word(start + len) /\
                read R10 s = word(k - 1) /\ read RBX s = word(2 * len) /\
                read R12 s = a /\ read R14 s = word_add a (word 2) /\
@@ -1325,7 +1331,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_BLOCK_SAFE = prove
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL; SOME_FLAGS] THEN
   REPEAT STRIP_TAC THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + 0x140` `pc + 0x199`
+  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + poly_invntt_tomont_loop3` `pc + poly_invntt_tomont_loop3_exit`
    `\j s. read RCX s = word_add a (word(2 * (start + j))) /\
           read RDX s = word_add a (word(2 * (start + len + j))) /\
           read RSI s = word_add a (word(2 * (start + len))) /\
@@ -1398,14 +1404,14 @@ let lsafe_goal l =
   let tm =
   `exists f_ev_lay.
     forall e a consts zetas pc sbase retaddr w15 w14 w13 w12 wbp wbx.
-     ALL (nonoverlapping (a,512)) [(word pc,0x1e6); (word zetas,256)] /\
+     ALL (nonoverlapping (a,512)) [(word pc,poly_invntt_tomont_size); (word zetas,256)] /\
      ALL (nonoverlapping (sbase,68))
-         [(word pc,0x1e6); (word zetas,256); (a,512)]
+         [(word pc,poly_invntt_tomont_size); (word zetas,256); (a,512)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
                     pc consts zetas) /\
-               read RIP s = word(pc + 0xf0) /\
+               read RIP s = word(pc + poly_invntt_tomont_join1) /\
                read RCX s = word L /\
                read R12 s = a /\ read R14 s = word_add a (word 2) /\
                read R13 s = word zetas /\ read R15 s = word 1 /\
@@ -1421,7 +1427,7 @@ let lsafe_goal l =
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
                     pc consts zetas) /\
-               read RIP s = word(pc + 0x1c0) /\
+               read RIP s = word(pc + poly_invntt_tomont_loop2_exit) /\
                read R11 s = word L /\
                read R12 s = a /\ read R14 s = word_add a (word 2) /\
                read R13 s = word zetas /\ read R15 s = word 1 /\
@@ -1553,7 +1559,7 @@ let INVNTT_LAYER_SAFE_TAC l =
   let idx = rhs(concl(NUM_REDUCE_CONV
    (subst [mk_small_numeral l,`L:num`] `2 EXP L - 1 - (i + 1)`))) in
   let blk0_tac =
-    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x19d`
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_invntt_tomont_join2`
      (rhs(concl(NUM_REDUCE_CONV(subst [mk_small_numeral l,`L:num`;
         mk_small_numeral(1 lsl (8 - l)),`LEN:num`]
        `\s. bytes_loaded s (word pc)
@@ -1573,7 +1579,7 @@ let INVNTT_LAYER_SAFE_TAC l =
             read(memory :> bytes64(word_add sbase (word 20))) s = wbp /\
             read(memory :> bytes64(word_add sbase (word 12))) s = wbx`)))) THEN
     CONJ_TAC THENL
-     [ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x110` (lsafe_blockhead_tm l `0`) THEN
+     [ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_invntt_tomont_loop2` (lsafe_blockhead_tm l `0`) THEN
       CONJ_TAC THENL
        [LSAFE_SIM_TAC k ALL_TAC 9;
         EVENTS_LEMMA_TAC (invntt_block_events_inst l `0`)];
@@ -1583,7 +1589,7 @@ let INVNTT_LAYER_SAFE_TAC l =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL; SOME_FLAGS] THEN
   REPEAT STRIP_TAC THEN
   if l = 1 then blk0_tac else
-  ENSURES_EVENTS_WHILE_UP2_TAC k `pc + 0x1a9` `pc + 0x1c0`
+  ENSURES_EVENTS_WHILE_UP2_TAC k `pc + poly_invntt_tomont_loop2_next` `pc + poly_invntt_tomont_loop2_exit`
    (mk_abs(`i:num`,lsafe_blockhead_tm l `i + 1`)) THEN
   REPEAT CONJ_TAC THENL
    [ARITH_TAC;
@@ -1594,7 +1600,7 @@ let INVNTT_LAYER_SAFE_TAC l =
     REWRITE_TAC[ENUMERATEL_ADD1] THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
     ONCE_REWRITE_TAC[GSYM APPEND_ASSOC] THEN
     ONCE_REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x19d`
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_invntt_tomont_join2`
      (rhs(concl(NUM_REDUCE_CONV(subst [mk_small_numeral l,`L:num`;
         mk_small_numeral(1 lsl (8 - l)),`LEN:num`]
        `\s. bytes_loaded s (word pc)
@@ -1616,7 +1622,7 @@ let INVNTT_LAYER_SAFE_TAC l =
             read(memory :> bytes64(word_add sbase (word 12))) s = wbx`)))) THEN
     CONJ_TAC THENL
      [ONCE_REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-      ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x110`
+      ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_invntt_tomont_loop2`
         (lsafe_blockhead_tm l `i + 1`) THEN
       CONJ_TAC THENL
        [LSAFE_SIM_TAC k (VAL_INT64_TAC idx) 3;
@@ -1640,9 +1646,9 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE_SAFE = prove
      riprel32_within_bounds (consts + 32) (pc + 10) /\
      riprel32_within_bounds consts (pc + 30) /\
      riprel32_within_bounds (consts + 16) (pc + 40) /\
-     ALL (nonoverlapping (a,512)) [(word pc,0x1e6); (word consts,48)] /\
+     ALL (nonoverlapping (a,512)) [(word pc,poly_invntt_tomont_size); (word consts,48)] /\
      ALL (nonoverlapping (sbase,68))
-         [(word pc,0x1e6); (word consts,48); (a,512)]
+         [(word pc,poly_invntt_tomont_size); (word consts,48); (a,512)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
@@ -1657,7 +1663,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE_SAFE = prove
           (\s. bytes_loaded s (word pc)
                  (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
                     pc consts zetas) /\
-               read RIP s = word(pc + 0xcf) /\
+               read RIP s = word(pc + poly_invntt_tomont_loop1_exit) /\
                read R12 s = a /\ read RSP s = word_add sbase (word 12) /\
                read(memory :> bytes64(word_add sbase (word 52))) s = w15 /\
                read(memory :> bytes64(word_add sbase (word 44))) s = w14 /\
@@ -1697,7 +1703,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SCALE_SAFE = prove
     CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN
     ASM_REWRITE_TAC[];
     ALL_TAC] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + 0x30` `pc + 0xcf`
+  ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + poly_invntt_tomont_loop1` `pc + poly_invntt_tomont_loop1_exit`
    `\i s. read RAX s = word_add a (word(16 * i)) /\
           read RDX s = word_add a (word 512) /\
           read R12 s = a /\ read RSP s = word_add sbase (word 12) /\
@@ -1821,23 +1827,23 @@ let INVNTT_SAFE_TOP_TAC =
 
   (*** Restoring the registers and returning after the last layer ***)
 
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x1c0` (invntt_safe_layerend_tm 1) THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_invntt_tomont_loop2_exit` (invntt_safe_layerend_tm 1) THEN
   CONJ_TAC THENL [ALL_TAC; LSAFE_SIM_TAC `1` ALL_TAC 10] THEN
 
   (*** The layers, with the code between them ***)
 
   MAP_EVERY (fun l ->
-    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xf0` (invntt_safe_layerhead_tm l) THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_invntt_tomont_join1` (invntt_safe_layerhead_tm l) THEN
     CONJ_TAC THENL
      [ALL_TAC; EVENTS_LEMMA_TAC (invntt_layer_events_inst l)] THEN
     if l = 7 then ALL_TAC else
-    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x1c0`
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_invntt_tomont_loop2_exit`
       (invntt_safe_layerend_tm (l + 1)) THEN
     CONJ_TAC THENL [ALL_TAC; LSAFE_SIM_TAC `1` ALL_TAC 8]) (1--7) THEN
 
   (*** The scaling, and the setup for the first layer ***)
 
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xcf` invntt_safe_scaleend_tm THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + poly_invntt_tomont_loop1_exit` invntt_safe_scaleend_tm THEN
   CONJ_TAC THENL
    [MP_TAC(SPECL [`e:(uarch_event)list`; `a:int64`; `consts:num`;
                   `zetas:num`; `pc:num`; `sbase:int64`;
@@ -1878,9 +1884,9 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_SAFE = time prove
        riprel32_within_bounds (consts + 16) (pc + 40) /\
        riprel32_within_bounds zetas (pc + 236) /\
        ALL (nonoverlapping (a,512))
-           [word pc,0x1e6; word consts,48; word zetas,256] /\
+           [word pc,poly_invntt_tomont_size; word consts,48; word zetas,256] /\
        ALL (nonoverlapping (word_sub stackpointer (word 60),68))
-           [word pc,0x1e6; word consts,48; word zetas,256; a,512]
+           [word pc,poly_invntt_tomont_size; word consts,48; word zetas,256; a,512]
        ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   (mlkem_native_poly_invntt_tomont_gcc12_O2_mc
@@ -1918,27 +1924,27 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IN_IMAGE =
   MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_poly_invntt_tomont_gcc12_O2_mc
-    0x5860 [0x8080; 0x81a0];;
+    (layout "mlkem_poly_invntt_tomont") [layout "mlkem_poly_invntt_tomont_consts"; layout "rodata_mlk_zetas"];;
 
 let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE =
   MLKEM_NATIVE_IMAGE_DATA_RULE
     (find (fun th -> name_of(lhs(concl th)) =
                    "mlkem_native_poly_invntt_tomont_gcc12_O2_data")
-          mlkem_native_poly_invntt_tomont_gcc12_O2_data) 0x8080;;
+          mlkem_native_poly_invntt_tomont_gcc12_O2_data) (layout "mlkem_poly_invntt_tomont_consts");;
 
 let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_ZETAS_IN_IMAGE =
-  MLKEM_NATIVE_IMAGE_DATA_RULE mlk_zetas_data 0x81a0;;
+  MLKEM_NATIVE_IMAGE_DATA_RULE mlk_zetas_data (layout "rodata_mlk_zetas");;
 
 let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
     aligned 16 (word pc:int64) /\
-    nonoverlapping (a,512) (word pc,0x82a0) /\
+    nonoverlapping (a,512) (word pc,libmlkem_size) /\
     ALL (nonoverlapping (word_sub stackpointer (word 60),68))
-        [(word pc,0x82a0); (a,512)]
+        [(word pc,libmlkem_size); (a,512)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x5860) /\
+           read RIP s = word (pc + mlkem_poly_invntt_tomont) /\
            read RSP s = stackpointer /\
            read (memory :> bytes64 stackpointer) s = returnaddress /\
            C_ARGUMENTS [a] s /\
@@ -1956,8 +1962,8 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
        MAYCHANGE [memory :> bytes(a,512);
                   memory :> bytes(word_sub stackpointer (word 60),60)])`,
   MLKEM_NATIVE_IMAGE_TAC
-   (INST [`pc + 0x5860`,`pc:num`; `pc + 0x8080`,`consts:num`;
-    `pc + 0x81a0`,`zetas:num`]
+   (INST [`pc + mlkem_poly_invntt_tomont`,`pc:num`; `pc + mlkem_poly_invntt_tomont_consts`,`consts:num`;
+    `pc + rodata_mlk_zetas`,`zetas:num`]
      (SPEC_ALL MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_CORRECT))
    [MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IN_IMAGE;
     MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE;
@@ -1967,13 +1973,13 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
  (`exists f_events.
      forall e a pc stackpointer returnaddress.
        aligned 16 (word pc:int64) /\
-       nonoverlapping (a,512) (word pc,0x82a0) /\
+       nonoverlapping (a,512) (word pc,libmlkem_size) /\
        ALL (nonoverlapping (word_sub stackpointer (word 60),68))
-           [word pc,0x82a0; a,512]
+           [word pc,libmlkem_size; a,512]
        ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_libmlkem_gcc12_O2_mc /\
-                read RIP s = word (pc + 0x5860) /\
+                read RIP s = word (pc + mlkem_poly_invntt_tomont) /\
                 read RSP s = stackpointer /\
                 read (memory :> bytes64 stackpointer) s = returnaddress /\
                 C_ARGUMENTS [a] s /\
@@ -1985,7 +1991,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                   e2 = f_events a pc
                          (word_sub stackpointer (word 60)) returnaddress /\
                   memaccess_inbounds e2
-                   [a,512; word (pc + 0x8080),48; word (pc + 0x81a0),256;
+                   [a,512; word (pc + mlkem_poly_invntt_tomont_consts),48; word (pc + rodata_mlk_zetas),256;
                     word_sub stackpointer (word 60),68]
                    [a,512; word_sub stackpointer (word 60),60])
            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -1993,8 +1999,8 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                        memory :> bytes(word_sub stackpointer (word 60),60)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC
    MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_SAFE
-   [`pc + 0x5860`,`pc:num`; `pc + 0x8080`,`consts:num`;
-    `pc + 0x81a0`,`zetas:num`]
+   [`pc + mlkem_poly_invntt_tomont`,`pc:num`; `pc + mlkem_poly_invntt_tomont_consts`,`consts:num`;
+    `pc + rodata_mlk_zetas`,`zetas:num`]
    [MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_IN_IMAGE;
     MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_CONSTANTS_IN_IMAGE;
     MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_ZETAS_IN_IMAGE]);;

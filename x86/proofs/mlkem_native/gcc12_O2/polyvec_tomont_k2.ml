@@ -27,7 +27,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLYVEC_TOMONT_K2_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x5cb0,0x5cc6];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem512_polyvec_tomont"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -44,13 +44,13 @@ let MLKEM_NATIVE_POLYVEC_TOMONT_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
         aligned 16 (word pc:int64) /\
         aligned 16 a /\
-        nonoverlapping (a,1024) (word pc,0x82a0) /\
+        nonoverlapping (a,1024) (word pc,libmlkem_size) /\
         ALL (nonoverlapping (word_sub stackpointer (word 16),24))
-            [(word pc,0x82a0); (a,1024)]
+            [(word pc,libmlkem_size); (a,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x5cb0) /\
+                  read RIP s = word (pc + mlkem512_polyvec_tomont) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
@@ -113,13 +113,13 @@ let MLKEM_NATIVE_POLYVEC_TOMONT_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
        forall e a pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\
            aligned 16 a /\
-           nonoverlapping (a,1024) (word pc,0x82a0) /\
+           nonoverlapping (a,1024) (word pc,libmlkem_size) /\
            ALL (nonoverlapping (word_sub stackpointer (word 16),24))
-               [(word pc,0x82a0); (a,1024)]
+               [(word pc,libmlkem_size); (a,1024)]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x5cb0) /\
+                    read RIP s = word (pc + mlkem512_polyvec_tomont) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [a] s /\
@@ -132,7 +132,7 @@ let MLKEM_NATIVE_POLYVEC_TOMONT_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
                                 (word_sub stackpointer (word 16))
                                 returnaddress /\
                          memaccess_inbounds e2
-                          [a,1024; word (pc + 0x8070),48;
+                          [a,1024; word (pc + mlkem_poly_tomont_consts),48;
                            word_sub stackpointer (word 16),24]
                           [a,1024; word_sub stackpointer (word 16),16]))
                (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

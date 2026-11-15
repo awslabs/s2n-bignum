@@ -6,8 +6,8 @@
 # proofs/mlkem_native/<build>, and the dependencies of each proof on the
 # files that it loads with `needs` and on the object files that they read.
 #
-# Every .ml file of proofs/mlkem_native/<build> is a proof, and it depends
-# on the proofs and the tools that it loads.
+# Every .ml file of proofs/mlkem_native/<build> is a proof, except layout.ml,
+# and it depends on the proofs and the tools that it loads.
 #
 # Usage, in s2n-bignum's x86 directory:
 #

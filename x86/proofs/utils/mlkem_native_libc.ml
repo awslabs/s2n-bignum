@@ -32,6 +32,7 @@
 (* region (ea,el) and only writes its output.                                *)
 (* ========================================================================= *)
 
+needs "common/layout.ml";;
 needs "x86/proofs/utils/mlkem_native_image.ml";;
 needs "x86/proofs/consttime.ml";;
 
@@ -81,17 +82,11 @@ let randombytes_safety_contract = new_definition
               MAYCHANGE [memory :> bytes(buf,val len)])`;;
 
 (* ------------------------------------------------------------------------- *)
-(* The PLT stub and the GOT entry in the image.                              *)
-(* ------------------------------------------------------------------------- *)
-
-let mlkem_native_plt_randombytes = 0x1010
-and mlkem_native_got_randombytes = 0xaff8;;
-
-(* ------------------------------------------------------------------------- *)
 (* Simulating a call. After the call of the stub at step k, the jump of the  *)
 (* stub through the GOT is step k + 1, after which RIP is the address read   *)
 (* from the GOT, which must be in the assumptions as                         *)
-(* read (memory :> bytes64 (word(pc + 0xaff8))) s = f. Then                  *)
+(* read (memory :> bytes64 (word(pc + got_randombytes))) s = f,              *)
+(* with the names of the layout of the image. Then                           *)
 (* LIBC_CALL_TAC name execth ilist (k + 2) uses the contract, which must be  *)
 (* an assumption with that label, unfolded to |- !args. P ==> ensures ...,   *)
 (* with the arguments ilist, to reach the state at step k + 2, where the     *)
@@ -113,8 +108,8 @@ let LIBC_GOT_RULE next target =
   REWRITE_RULE[GSYM eth];;
 
 let LIBC_PLT_TAC execth k =
-  let next = mlkem_native_plt_randombytes + 6
-  and target = mlkem_native_got_randombytes in
+  let next = layout "plt_randombytes" + 6
+  and target = layout "got_randombytes" in
   let pat = subst [mk_small_numeral target,`n:num`]
    `read (memory :> bytes64 (word(pc + n))) s = (f:int64)` in
   FIRST_ASSUM(fun th ->

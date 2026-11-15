@@ -38,7 +38,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x1f40,0x1f74];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem1024_polyvec_compress_du"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The output for the vector from those for the polynomials.                 *)
@@ -90,13 +90,13 @@ let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   prove
  (`!r a x pc stackpointer returnaddress.
         aligned 16 (word pc:int64) /\ aligned 16 a /\
-        ALL (nonoverlapping (r,1408)) [(word pc,0x82a0); (a,2048)] /\
+        ALL (nonoverlapping (r,1408)) [(word pc,libmlkem_size); (a,2048)] /\
         ALL (nonoverlapping (word_sub stackpointer (word 56),64))
-            [(word pc,0x82a0); (a,2048); (r,1408)]
+            [(word pc,libmlkem_size); (a,2048); (r,1408)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x1f40) /\
+                  read RIP s = word (pc + mlkem1024_polyvec_compress_du) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [r; a] s /\
@@ -184,13 +184,13 @@ let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
  (`exists f_events.
        forall e r a pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\ aligned 16 a /\
-           ALL (nonoverlapping (r,1408)) [(word pc,0x82a0); (a,2048)] /\
+           ALL (nonoverlapping (r,1408)) [(word pc,libmlkem_size); (a,2048)] /\
            ALL (nonoverlapping (word_sub stackpointer (word 56),64))
-               [(word pc,0x82a0); (a,2048); (r,1408)]
+               [(word pc,libmlkem_size); (a,2048); (r,1408)]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x1f40) /\
+                    read RIP s = word (pc + mlkem1024_polyvec_compress_du) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\
@@ -203,8 +203,8 @@ let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                                 (word_sub stackpointer (word 56))
                                 returnaddress /\
                          memaccess_inbounds e2
-                          [a,2048; r,1408; word (pc + 0x8030),16;
-                           word (pc + 0x8040),16;
+                          [a,2048; r,1408; word (pc + mlkem_poly_compress_d11_const1),16;
+                           word (pc + mlkem_poly_compress_d11_const2),16;
                            word_sub stackpointer (word 56),64]
                           [r,1408; word_sub stackpointer (word 56),56]))
                (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

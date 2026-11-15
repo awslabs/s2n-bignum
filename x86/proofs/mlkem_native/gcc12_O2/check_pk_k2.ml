@@ -104,7 +104,7 @@ needs "x86/proofs/consttime.ml";;
  ***)
 
 let MLKEM_NATIVE_CHECK_PK_K2_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x4df0,0x4f0f];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem512_check_pk"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The reduced vector, as a list of 16-bit coefficients for the encoding,    *)
@@ -330,7 +330,7 @@ let CHECK_PK_NONOV_TAC =
          (mk_comb(mk_comb(`nonoverlapping:int64#num->int64#num->bool`,
                           `bot:int64,1832`),r)) ASSUME_TAC THENL
          [REWRITE_TAC[SYM bth] THEN NONOVERLAPPING_TAC; ALL_TAC])
-       [`pk:int64,768`; `word pc:int64,0x82a0`;
+       [`pk:int64,768`; `word pc:int64,libmlkem_size`;
         `word_add stackpointer (word 1864):int64,40`]
     else NO_TAC);;
 
@@ -677,7 +677,7 @@ let CHECK_PK_TAC (events,data) =
    else CHECK_PK_INTRO_TAC) THEN
   CHECK_PK_SETUP_TAC THEN
   (if events then ENSURES_EVENTS_WHILE_UP2_TAC else ENSURES_WHILE_UP2_TAC)
-   `48` `pc + 0x4e40` `pc + 0x4e61` (CHECK_PK_INV data) THEN
+   `48` `pc + mlkem512_check_pk_loop1` `pc + mlkem512_check_pk_loop1_exit` (CHECK_PK_INV data) THEN
   REPEAT CONJ_TAC THENL
    [ARITH_TAC; CHECK_PK_PART1_TAC exec (events,data);
     CHECK_PK_BODY_TAC exec (events,data);
@@ -696,10 +696,10 @@ let MLKEM_NATIVE_CHECK_PK_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = time prove
  (`!pk n pc stackpointer returnaddress.
     aligned 16 (word pc:int64) /\
     nonoverlapping (pk,768) (word_sub stackpointer (word 1896),1904) /\
-    nonoverlapping (word_sub stackpointer (word 1896),1904) (word pc,0x82a0)
+    nonoverlapping (word_sub stackpointer (word 1896),1904) (word pc,libmlkem_size)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x4df0) /\
+              read RIP s = word (pc + mlkem512_check_pk) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [pk] s /\
@@ -729,10 +729,10 @@ let MLKEM_NATIVE_CHECK_PK_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
    forall e pk pc stackpointer returnaddress.
     aligned 16 (word pc:int64) /\
     nonoverlapping (pk,768) (word_sub stackpointer (word 1896),1904) /\
-    nonoverlapping (word_sub stackpointer (word 1896),1904) (word pc,0x82a0)
+    nonoverlapping (word_sub stackpointer (word 1896),1904) (word pc,libmlkem_size)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x4df0) /\
+              read RIP s = word (pc + mlkem512_check_pk) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [pk] s /\
@@ -758,10 +758,10 @@ let MLKEM_NATIVE_CHECK_PK_K2_GCC12_O2_IMAGE_SUBROUTINE_FULL =
    forall e pk n pc stackpointer returnaddress.
     aligned 16 (word pc:int64) /\
     nonoverlapping (pk,768) (word_sub stackpointer (word 1896),1904) /\
-    nonoverlapping (word_sub stackpointer (word 1896),1904) (word pc,0x82a0)
+    nonoverlapping (word_sub stackpointer (word 1896),1904) (word pc,libmlkem_size)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x4df0) /\
+              read RIP s = word (pc + mlkem512_check_pk) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [pk] s /\

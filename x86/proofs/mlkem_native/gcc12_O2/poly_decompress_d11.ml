@@ -127,7 +127,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x2fe0,0x3180];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_poly_decompress_d11"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The eleven bytes for eight coefficients, as parts of an 88-bit word.      *)
@@ -285,14 +285,14 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
  (`!r a n pc stackpointer returnaddress.
         aligned 16 (word pc:int64) /\ aligned 16 r /\
         ALL (nonoverlapping (r,512))
-            [(word pc,0x82a0); (a,352);
+            [(word pc,libmlkem_size); (a,352);
              (word_sub stackpointer (word 32),40)] /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),40))
-            [(word pc,0x82a0); (a,352)]
+            [(word pc,libmlkem_size); (a,352)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x2fe0) /\
+                  read RIP s = word (pc + mlkem_poly_decompress_d11) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [r; a] s /\
@@ -320,7 +320,7 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `32` `pc + 0x3008` `pc + 0x3170`
+  ENSURES_WHILE_UP_TAC `32` `pc + mlkem_poly_decompress_d11_loop1` `pc + mlkem_poly_decompress_d11_loop1_test`
    `\i s. read RDI s = word_add a (word(11 * i)) /\
           read RBX s = word_add r (word(16 * i)) /\
           read RBP s = word_add a (word 352) /\
@@ -349,13 +349,13 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
 
     GHOST_INTRO_TAC `ymm3_init:int256` `read YMM3` THEN
     GHOST_INTRO_TAC `ymm4_init:int256` `read YMM4` THEN
-    MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC 0x2fe8 0x8050 THEN
-    MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC 0x2ff0 0x8060 THEN
+    MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC (layout "mlkem_poly_decompress_d11" + 0x8) (layout "mlkem_poly_decompress_d11_const1") THEN
+    MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC (layout "mlkem_poly_decompress_d11" + 0x10) (layout "mlkem_poly_decompress_d11_const2") THEN
     ENSURES_INIT_TAC "s0" THEN
     FIRST_ASSUM(ASSUME_TAC o MATCH_MP
-      (MLKEM_NATIVE_IMAGE_RIPREL_CONST_RULE 0x2fe8 0x8050 128)) THEN
+      (MLKEM_NATIVE_IMAGE_RIPREL_CONST_RULE (layout "mlkem_poly_decompress_d11" + 0x8) (layout "mlkem_poly_decompress_d11_const1") 128)) THEN
     FIRST_ASSUM(ASSUME_TAC o MATCH_MP
-      (MLKEM_NATIVE_IMAGE_RIPREL_CONST_RULE 0x2ff0 0x8060 128)) THEN
+      (MLKEM_NATIVE_IMAGE_RIPREL_CONST_RULE (layout "mlkem_poly_decompress_d11" + 0x10) (layout "mlkem_poly_decompress_d11_const2") 128)) THEN
     X86_STEPS_TAC MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_EXEC (1--10) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     ASM_REWRITE_TAC[XMM3; XMM4; READ_ZEROTOP_128] THEN
@@ -470,13 +470,13 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        forall e r a pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\ aligned 16 r /\
            ALL (nonoverlapping (r,512))
-               [word pc,0x82a0; a,352; word_sub stackpointer (word 32),40] /\
+               [word pc,libmlkem_size; a,352; word_sub stackpointer (word 32),40] /\
            ALL (nonoverlapping (word_sub stackpointer (word 32),40))
-               [word pc,0x82a0; a,352]
+               [word pc,libmlkem_size; a,352]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x2fe0) /\
+                    read RIP s = word (pc + mlkem_poly_decompress_d11) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\
@@ -489,8 +489,8 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                                 (word_sub stackpointer (word 32))
                                 returnaddress /\
                          memaccess_inbounds e2
-                          [a,352; r,512; word (pc + 0x8050),16;
-                           word (pc + 0x8060),16;
+                          [a,352; r,512; word (pc + mlkem_poly_decompress_d11_const1),16;
+                           word (pc + mlkem_poly_decompress_d11_const2),16;
                            word_sub stackpointer (word 32),40]
                           [r,512; word_sub stackpointer (word 32),32]))
                (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -521,7 +521,7 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   ENSURES_PRESERVED_TAC "r12_init" `R12` THEN
   ENSURES_PRESERVED_TAC "r13_init" `R13` THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + 0x3008` `pc + 0x3179`
+  ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + mlkem_poly_decompress_d11_loop1` `pc + mlkem_poly_decompress_d11_loop1_exit`
    `\i s. read RDI s = word_add a (word(11 * i)) /\
           read RBX s = word_add r (word(16 * i)) /\
           read RBP s = word_add a (word 352) /\
@@ -538,8 +538,8 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   REPEAT CONJ_TAC THENL
    [ARITH_TAC;
 
-    MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC 0x2fe8 0x8050 THEN
-    MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC 0x2ff0 0x8060 THEN
+    MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC (layout "mlkem_poly_decompress_d11" + 0x8) (layout "mlkem_poly_decompress_d11_const1") THEN
+    MLKEM_NATIVE_IMAGE_RIPREL_ALIGNED_TAC (layout "mlkem_poly_decompress_d11" + 0x10) (layout "mlkem_poly_decompress_d11_const2") THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false
       MLKEM_NATIVE_POLY_DECOMPRESS_D11_GCC12_O2_EXEC (1--10) THEN

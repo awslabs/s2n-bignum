@@ -68,7 +68,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_SHAKE256_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x3480,0x3505];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_shake256"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The state is aligned down to a multiple of 32 within the stack frame, by  *)
@@ -358,12 +358,12 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
         PAIRWISE nonoverlapping
          [(out,outlen); (m,LENGTH inp);
           (word_sub stackpointer (word 624),632)] /\
-        ALL (nonoverlapping (word pc,0x82a0))
+        ALL (nonoverlapping (word pc,libmlkem_size))
          [(out,outlen); (word_sub stackpointer (word 624),632)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x3480) /\
+                  read RIP s = word (pc + mlkem_shake256) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [out; word outlen; m; word(LENGTH inp)] s /\
@@ -389,7 +389,7 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
 
   (*** The absorption, up to the test of outlen ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0x34b2` SHAKE256_MID THEN CONJ_TAC THENL
+  ENSURES_SEQUENCE_TAC `pc + mlkem_shake256_after_mlk_keccak_absorb_once` SHAKE256_MID THEN CONJ_TAC THENL
    [ENSURES_INIT_TAC "s0" THEN
     X86_STEPS_TAC MLKEM_NATIVE_SHAKE256_GCC12_O2_EXEC (1--14) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[SHAKE256_STATE_ADDRESS]) THEN
@@ -421,7 +421,7 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
   (*** Otherwise the loop, with MIN outlen (136 * i) bytes done ***)
 
   SHAKE256_BOUND_TAC THEN
-  ENSURES_WHILE_UP2_TAC `(outlen + 135) DIV 136` `pc + 0x34c0` `pc + 0x34eb`
+  ENSURES_WHILE_UP2_TAC `(outlen + 135) DIV 136` `pc + mlkem_shake256_loop1` `pc + mlkem_shake256_loop1_exit`
    SHAKE256_INV THEN
   REPEAT CONJ_TAC THENL
    [REWRITE_TAC[DIV_EQ_0; ARITH_EQ] THEN UNDISCH_TAC `~(outlen = 0)` THEN
@@ -569,12 +569,12 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        aligned 16 (word pc:int64) /\
        PAIRWISE nonoverlapping
         [out,outlen; m,inlen; word_sub stackpointer (word 624),632] /\
-       ALL (nonoverlapping (word pc,0x82a0))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [out,outlen; word_sub stackpointer (word 624),632]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x3480) /\
+                 read RIP s = word (pc + mlkem_shake256) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [out; word outlen; m; word inlen] s /\
@@ -589,7 +589,7 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                     memaccess_inbounds e2
                      [m,inlen; out,outlen;
                       word_sub stackpointer (word 624),632;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [out,outlen; word_sub stackpointer (word 624),624]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE
@@ -630,7 +630,7 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
               fst MLKEM_NATIVE_SHAKE256_GCC12_O2_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   SHAKE256_SETUP_TAC THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x34b2` SHAKE256_SAFE_MID THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlkem_shake256_after_mlk_keccak_absorb_once` SHAKE256_SAFE_MID THEN
   CONJ_TAC THENL
    [REWRITE_TAC(!simulation_precanon_thms) THEN
     ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
@@ -657,7 +657,7 @@ let MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
     ALL_TAC] THEN
   SHAKE256_BOUND_TAC THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `(outlen + 135) DIV 136`
-    `pc + 0x34c0` `pc + 0x34eb` SHAKE256_SAFE_INV THEN
+    `pc + mlkem_shake256_loop1` `pc + mlkem_shake256_loop1_exit` SHAKE256_SAFE_INV THEN
   REPEAT CONJ_TAC THENL
    [REWRITE_TAC[DIV_EQ_0; ARITH_EQ] THEN UNDISCH_TAC `~(outlen = 0)` THEN
     ARITH_TAC;

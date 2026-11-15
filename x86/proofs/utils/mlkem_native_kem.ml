@@ -489,7 +489,7 @@ let KEM_MEMCPY_TAC execth p r t n stk =
     pf "word_add sk (word %d):int64,lo:num" t;
     pf "word_add sk (word (%d + lo)):int64,8 - lo" (t + n8);
     pf "pk:int64,%d" n; pf "sk:int64,%d" t; `coins:int64,64`;
-    `word pc:int64,0x82a0`; stk] THEN
+    `word pc:int64,libmlkem_size`; stk] THEN
   X86_STEPS_TAC execth [r - 1] THEN
   KEM_MOVSQ_STEP_TAC execth r (n8 / 8) THEN
   SUBGOAL_THEN

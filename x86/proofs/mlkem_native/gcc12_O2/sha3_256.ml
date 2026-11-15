@@ -51,7 +51,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_SHA3_256_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x3510,0x3569];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_sha3_256"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Combined correctness, constant-time and memory safety proof, using those  *)
@@ -82,12 +82,12 @@ let MLKEM_NATIVE_SHA3_256_GCC12_O2_IMAGE_SUBROUTINE_FULL =
        aligned 16 (word pc:int64) /\ LENGTH inp = inlen /\
        PAIRWISE nonoverlapping
         [out,32; m,inlen; word_sub stackpointer (word 560),568] /\
-       ALL (nonoverlapping (word pc,0x82a0))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [out,32; word_sub stackpointer (word 560),568]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x3510) /\
+                 read RIP s = word (pc + mlkem_sha3_256) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [out; m; word inlen] s /\
@@ -104,7 +104,7 @@ let MLKEM_NATIVE_SHA3_256_GCC12_O2_IMAGE_SUBROUTINE_FULL =
                            (word_sub stackpointer (word 560)) returnaddress /\
                     memaccess_inbounds e2
                      [m,inlen; out,32; word_sub stackpointer (word 560),568;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [out,32; word_sub stackpointer (word 560),560]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE
@@ -179,12 +179,12 @@ let MLKEM_NATIVE_SHA3_256_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
         aligned 16 (word pc:int64) /\
         PAIRWISE nonoverlapping
          [(out,32); (m,LENGTH inp); (word_sub stackpointer (word 560),568)] /\
-        ALL (nonoverlapping (word pc,0x82a0))
+        ALL (nonoverlapping (word pc,libmlkem_size))
          [(out,32); (word_sub stackpointer (word 560),568)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x3510) /\
+                  read RIP s = word (pc + mlkem_sha3_256) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [out; m; word(LENGTH inp)] s /\
@@ -221,12 +221,12 @@ let MLKEM_NATIVE_SHA3_256_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        aligned 16 (word pc:int64) /\
        PAIRWISE nonoverlapping
         [out,32; m,inlen; word_sub stackpointer (word 560),568] /\
-       ALL (nonoverlapping (word pc,0x82a0))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [out,32; word_sub stackpointer (word 560),568]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x3510) /\
+                 read RIP s = word (pc + mlkem_sha3_256) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [out; m; word inlen] s /\
@@ -240,7 +240,7 @@ let MLKEM_NATIVE_SHA3_256_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                            (word_sub stackpointer (word 560)) returnaddress /\
                     memaccess_inbounds e2
                      [m,inlen; out,32; word_sub stackpointer (word 560),568;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [out,32; word_sub stackpointer (word 560),560]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE

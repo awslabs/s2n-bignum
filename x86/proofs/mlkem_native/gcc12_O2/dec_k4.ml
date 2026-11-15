@@ -195,7 +195,7 @@ needs "x86/proofs/utils/mlkem_native_kem.ml";;
 
 let MLKEM_NATIVE_DEC_K4_GCC12_O2_EXEC =
   X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x1c90,0x1f39];;
+   [layout_range "mlkem1024_dec"];;
 
 let KD4_EXEC = MLKEM_NATIVE_DEC_K4_GCC12_O2_EXEC;;
 
@@ -273,7 +273,7 @@ let KD4_SETUP_TAC =
   INDCPA_FRAME_TAC ["memory :> bytes(ss:int64,32)"] KD4_FRAME THEN
   INDCPA_NONOV_TAC 24672
    [`ss:int64,32`; `ct:int64,1568`; `sk:int64,3168`;
-    `word pc:int64,0x82a0`; `word_add stackpointer (word 24704):int64,56`;
+    `word pc:int64,libmlkem_size`; `word_add stackpointer (word 24704):int64,56`;
     `word 0:int64,1`]
   THEN
   MAP_EVERY (fun (n,r) -> ENSURES_PRESERVED_TAC n r)
@@ -754,11 +754,11 @@ let KD4_BAD_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let KD4_OK_TAC =
-  ENSURES_WHILE_UP2_TAC `98` `pc + 0x1df0` `pc + 0x1e10`
+  ENSURES_WHILE_UP2_TAC `98` `pc + mlkem1024_dec_loop1` `pc + mlkem1024_dec_loop1_exit`
    KD4_INV THEN
   REPEAT CONJ_TAC THENL
    [ARITH_TAC; KD4_PART1_TAC; KD4_BODY_TAC;
-    ENSURES_WHILE_UP2_TAC `32` `pc + 0x1f10` `pc + 0x1f34`
+    ENSURES_WHILE_UP2_TAC `32` `pc + mlkem1024_dec_loop2` `pc + mlkem1024_dec_loop2_exit`
      KD4_CMOV_INV THEN
     REPEAT CONJ_TAC THENL
      [ARITH_TAC; KD4_EXIT_A_TAC; KD4_CMOV_BODY_TAC; KD4_EXIT_B_TAC]];;
@@ -775,10 +775,10 @@ let MLKEM_NATIVE_DEC_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
     nonoverlapping (ss,32) (word_sub stackpointer (word 24752),24760) /\
     ALLPAIRS nonoverlapping
      [(ss,32); (word_sub stackpointer (word 24752),24760)]
-     [(ct,1568); (sk,3168); (word pc,0x82a0)]
+     [(ct,1568); (sk,3168); (word pc,libmlkem_size)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x1c90) /\
+              read RIP s = word (pc + mlkem1024_dec) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [ss; ct; sk] s /\
@@ -983,10 +983,10 @@ let MLKEM_NATIVE_DEC_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
     nonoverlapping (ss,32) (word_sub stackpointer (word 24752),24760) /\
     ALLPAIRS nonoverlapping
      [(ss,32); (word_sub stackpointer (word 24752),24760)]
-     [(ct,1568); (sk,3168); (word pc,0x82a0)]
+     [(ct,1568); (sk,3168); (word pc,libmlkem_size)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x1c90) /\
+              read RIP s = word (pc + mlkem1024_dec) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [ss; ct; sk] s /\
@@ -1003,11 +1003,11 @@ let MLKEM_NATIVE_DEC_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                  memaccess_inbounds e2
                   [ct,1568; sk,3168; ss,32;
                    word_sub stackpointer (word 24752),24760;
-                   word(pc + 0x8008),8; word(pc + 0x8018),8;
-                   word(pc + 0x8020),8; word(pc + 0x8030),16;
-                   word(pc + 0x8040),16; word(pc + 0x8050),16;
-                   word(pc + 0x8060),16; word(pc + 0x8080),48;
-                   word(pc + 0x80c0),192; word(pc + 0x81a0),256]
+                   word(pc + mlkem_poly_compress_d5_const1),8; word(pc + mlkem_poly_compress_d5_const2),8;
+                   word(pc + mlkem_poly_decompress_d5_consts),8; word(pc + mlkem_poly_compress_d11_const1),16;
+                   word(pc + mlkem_poly_compress_d11_const2),16; word(pc + mlkem_poly_decompress_d11_const1),16;
+                   word(pc + mlkem_poly_decompress_d11_const2),16; word(pc + mlkem_poly_invntt_tomont_consts),48;
+                   word(pc + rodata_mlk_KeccakF_RoundConstants),192; word(pc + rodata_mlk_zetas),256]
                   [ss,32; word_sub stackpointer (word 24752),24752]))
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE
@@ -1019,11 +1019,11 @@ let MLKEM_NATIVE_DEC_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   ASM_CASES_TAC
    `num_of_bytelist(hh:byte list) = num_of_bytelist(sha3_256 ekk)` THEN
   ASM_REWRITE_TAC[] THENL
-   [ENSURES_EVENTS_WHILE_UP2_TAC `98` `pc + 0x1df0` `pc + 0x1e10`
+   [ENSURES_EVENTS_WHILE_UP2_TAC `98` `pc + mlkem1024_dec_loop1` `pc + mlkem1024_dec_loop1_exit`
      KD4_SAFE_INV THEN
     REPEAT CONJ_TAC THENL
      [ARITH_TAC; KD4_SAFE_PART1_TAC; KD4_SAFE_BODY_TAC;
-      ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + 0x1f10` `pc + 0x1f34`
+      ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + mlkem1024_dec_loop2` `pc + mlkem1024_dec_loop2_exit`
        KD4_SAFE_CMOV_INV THEN
       REPEAT CONJ_TAC THENL
        [ARITH_TAC; KD4_SAFE_EXIT_A_TAC; KD4_SAFE_CMOV_BODY_TAC;

@@ -90,7 +90,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x2790,0x28b6];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_poly_decompress_d10"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The five bytes for four coefficients, as parts of a 40-bit word. The      *)
@@ -222,13 +222,13 @@ let D10_LANE_RULE k th =
 let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_IMAGE_CORRECT = prove
  (`!r a n pc.
     aligned 16 (word pc:int64) /\
-    ALL (nonoverlapping (r,512)) [(word pc,0x82a0); (a,320)]
+    ALL (nonoverlapping (r,512)) [(word pc,libmlkem_size); (a,320)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x2790) /\
+           read RIP s = word (pc + mlkem_poly_decompress_d10) /\
            C_ARGUMENTS [r; a] s /\
            read (memory :> bytes(a,320)) s = n)
-      (\s. read RIP s = word (pc + 0x28b5) /\
+      (\s. read RIP s = word (pc + mlkem_poly_decompress_d10_ret) /\
            !i. i < 256
                ==> read(memory :> bytes16(word_add r (word(2 * i)))) s =
                    word((3329 * (n DIV 2 EXP (10 * i)) MOD 2 EXP 10 + 512)
@@ -242,7 +242,7 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_IMAGE_CORRECT = prove
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `64` `pc + 0x27b0` `pc + 0x28ac`
+  ENSURES_WHILE_UP_TAC `64` `pc + mlkem_poly_decompress_d10_loop1` `pc + mlkem_poly_decompress_d10_loop1_test`
    `\i s. read RDX s = word_add a (word(5 * i)) /\
           read RCX s = word_add r (word(8 * i)) /\
           read RSI s = word_add a (word 320) /\
@@ -262,7 +262,7 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_IMAGE_CORRECT = prove
     GHOST_INTRO_TAC `ymm4_init:int256` `read YMM4` THEN
     ENSURES_INIT_TAC "s0" THEN
     FIRST_ASSUM(ASSUME_TAC o MATCH_MP
-      (MLKEM_NATIVE_IMAGE_RIPREL_CONST_RULE 0x2798 0x8010 64)) THEN
+      (MLKEM_NATIVE_IMAGE_RIPREL_CONST_RULE (layout "mlkem_poly_decompress_d10" + 0x8) (layout "mlkem_poly_decompress_d10_consts") 64)) THEN
     X86_STEPS_TAC MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_EXEC (1--6) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     ASM_REWRITE_TAC[XMM3; XMM4; READ_ZEROTOP_128] THEN
@@ -358,10 +358,10 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!r a n pc stackpointer returnaddress.
     aligned 16 (word pc:int64) /\
     ALL (nonoverlapping (r,512))
-        [(word pc,0x82a0); (a,320); (stackpointer,8)]
+        [(word pc,libmlkem_size); (a,320); (stackpointer,8)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x2790) /\
+           read RIP s = word (pc + mlkem_poly_decompress_d10) /\
            read RSP s = stackpointer /\
            read (memory :> bytes64 stackpointer) s = returnaddress /\
            C_ARGUMENTS [r; a] s /\
@@ -387,19 +387,19 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_IMAGE_SAFE = time prove
  (`exists f_events.
        forall e r a pc.
            aligned 16 (word pc:int64) /\
-           ALL (nonoverlapping (r,512)) [word pc,0x82a0; a,320]
+           ALL (nonoverlapping (r,512)) [word pc,libmlkem_size; a,320]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x2790) /\
+                    read RIP s = word (pc + mlkem_poly_decompress_d10) /\
                     C_ARGUMENTS [r; a] s /\
                     read events s = e)
-               (\s. read RIP s = word (pc + 0x28b5) /\
+               (\s. read RIP s = word (pc + mlkem_poly_decompress_d10_ret) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events a r pc /\
                          memaccess_inbounds e2
-                          [a,320; r,512; word (pc + 0x8010),8] [r,512]))
+                          [a,320; r,512; word (pc + mlkem_poly_decompress_d10_consts),8] [r,512]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bytes(r,512)])`,
   CONCRETIZE_F_EVENTS_TAC
@@ -417,7 +417,7 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_IMAGE_SAFE = time prove
               fst MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `64` `pc + 0x27b0` `pc + 0x28b5`
+  ENSURES_EVENTS_WHILE_UP2_TAC `64` `pc + mlkem_poly_decompress_d10_loop1` `pc + mlkem_poly_decompress_d10_loop1_exit`
     `\i s. read RDX s = word_add a (word(5 * i)) /\
            read RCX s = word_add r (word(8 * i)) /\
            read RSI s = word_add a (word 320)` THEN
@@ -470,11 +470,11 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        forall e r a pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\
            ALL (nonoverlapping (r,512))
-               [word pc,0x82a0; a,320; stackpointer,8]
+               [word pc,libmlkem_size; a,320; stackpointer,8]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x2790) /\
+                    read RIP s = word (pc + mlkem_poly_decompress_d10) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\
@@ -485,7 +485,7 @@ let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                          read events s = APPEND e2 e /\
                          e2 = f_events a r pc stackpointer returnaddress /\
                          memaccess_inbounds e2
-                          [a,320; r,512; word (pc + 0x8010),8; stackpointer,8]
+                          [a,320; r,512; word (pc + mlkem_poly_decompress_d10_consts),8; stackpointer,8]
                           [r,512]))
                (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bytes(r,512)])`,

@@ -12,6 +12,12 @@
 
 needs "x86/proofs/base.ml";;
 needs "x86/proofs/utils/mlkem_native.ml";;
+needs "x86/proofs/mlkem_native/gcc12_O2/layout.ml";;
+
+(* Names for the labels of this transcription, whose code is at pc.          *)
+
+install_layout (layout_copies
+ ["poly_mulcache_compute","mlkem_poly_mulcache_compute"]);;
 
 (**** print_literal_relocs_from_elf
         "x86/mlkem_native/gcc12_O2/poly_mulcache_compute.o";;
@@ -156,7 +162,7 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_CORRECT = prove
  (`!dst src zetas x pc.
     riprel32_within_bounds (zetas + 128) (pc + 9) /\
     ALL (nonoverlapping (dst,256))
-        [(word pc,0x69); (src,512); (word zetas,256)]
+        [(word pc,poly_mulcache_compute_size); (src,512); (word zetas,256)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              (mlkem_native_poly_mulcache_compute_gcc12_O2_mc pc zetas) /\
@@ -166,7 +172,7 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_CORRECT = prove
            (!i. i < 256
                 ==> read(memory :> bytes16(word_add src (word (2 * i)))) s =
                     x i))
-      (\s. read RIP s = word(pc + 0x68) /\
+      (\s. read RIP s = word(pc + poly_mulcache_compute_ret) /\
            !i. i < 128
                ==> let z_i = read(memory :> bytes16
                                 (word_add dst (word (2 * i)))) s in
@@ -182,7 +188,7 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_CORRECT = prove
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `64` `pc + 0x10` `pc + 0x5f`
+  ENSURES_WHILE_UP_TAC `64` `pc + poly_mulcache_compute_loop1` `pc + poly_mulcache_compute_loop1_test`
    `\i s. read RCX s = word(2 * i) /\
           read R8 s = word(zetas + 128) /\
           read RSI s = src /\ read RDI s = dst /\
@@ -277,7 +283,7 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SUBROUTINE_CORRECT = prove
  (`!dst src zetas x pc stackpointer returnaddress.
     riprel32_within_bounds (zetas + 128) (pc + 9) /\
     ALL (nonoverlapping (dst,256))
-        [(word pc,0x69); (src,512); (word zetas,256); (stackpointer,8)]
+        [(word pc,poly_mulcache_compute_size); (src,512); (word zetas,256); (stackpointer,8)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              (mlkem_native_poly_mulcache_compute_gcc12_O2_mc pc zetas) /\
@@ -331,7 +337,7 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SAFE = time prove
        forall e dst src zetas pc.
            riprel32_within_bounds (zetas + 128) (pc + 9) /\
            ALL (nonoverlapping (dst,256))
-           [word pc,0x69; src,512; word zetas,256]
+           [word pc,poly_mulcache_compute_size; src,512; word zetas,256]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                      (mlkem_native_poly_mulcache_compute_gcc12_O2_mc
@@ -340,7 +346,7 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SAFE = time prove
                     bytes_loaded s (word zetas) mlk_zetas_data /\
                     C_ARGUMENTS [dst; src] s /\
                     read events s = e)
-               (\s. read RIP s = word (pc + 0x68) /\
+               (\s. read RIP s = word (pc + poly_mulcache_compute_ret) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events src dst zetas pc /\
@@ -365,7 +371,7 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SAFE = time prove
               fst MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `64` `pc + 0x10` `pc + 0x68`
+  ENSURES_EVENTS_WHILE_UP2_TAC `64` `pc + poly_mulcache_compute_loop1` `pc + poly_mulcache_compute_loop1_exit`
     `\i s. read RCX s = word(2 * i) /\
            read R8 s = word(zetas + 128) /\
            read RSI s = src /\ read RDI s = dst` THEN
@@ -424,7 +430,7 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SUBROUTINE_SAFE = time prove
        forall e dst src zetas pc stackpointer returnaddress.
            riprel32_within_bounds (zetas + 128) (pc + 9) /\
            ALL (nonoverlapping (dst,256))
-           [word pc,0x69; src,512; word zetas,256; stackpointer,8]
+           [word pc,poly_mulcache_compute_size; src,512; word zetas,256; stackpointer,8]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                      (mlkem_native_poly_mulcache_compute_gcc12_O2_mc
@@ -459,21 +465,21 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_IN_IMAGE =
   MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_poly_mulcache_compute_gcc12_O2_mc
-    0x5710 [0x81a0];;
+    (layout "mlkem_poly_mulcache_compute") [layout "rodata_mlk_zetas"];;
 
 let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_ZETAS_IN_IMAGE =
-  MLKEM_NATIVE_IMAGE_DATA_RULE mlk_zetas_data 0x81a0;;
+  MLKEM_NATIVE_IMAGE_DATA_RULE mlk_zetas_data (layout "rodata_mlk_zetas");;
 
 let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   prove
  (`!dst src x pc stackpointer returnaddress.
     aligned 16 (word pc:int64) /\
     ALL (nonoverlapping (dst,256))
-        [(word pc,0x82a0); (src,512); (stackpointer,8)]
+        [(word pc,libmlkem_size); (src,512); (stackpointer,8)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc)
              mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x5710) /\
+           read RIP s = word (pc + mlkem_poly_mulcache_compute) /\
            read RSP s = stackpointer /\
            read (memory :> bytes64 stackpointer) s = returnaddress /\
            C_ARGUMENTS [dst; src] s /\
@@ -490,7 +496,7 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
       (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(dst,256)])`,
   MLKEM_NATIVE_IMAGE_TAC
-   (INST [`pc + 0x5710`,`pc:num`; `pc + 0x81a0`,`zetas:num`]
+   (INST [`pc + mlkem_poly_mulcache_compute`,`pc:num`; `pc + rodata_mlk_zetas`,`zetas:num`]
      (SPEC_ALL MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SUBROUTINE_CORRECT))
    [MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_IN_IMAGE;
     MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_ZETAS_IN_IMAGE]);;
@@ -500,11 +506,11 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
        forall e dst src pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\
            ALL (nonoverlapping (dst,256))
-               [word pc,0x82a0; src,512; stackpointer,8]
+               [word pc,libmlkem_size; src,512; stackpointer,8]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                      mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x5710) /\
+                    read RIP s = word (pc + mlkem_poly_mulcache_compute) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [dst; src] s /\
@@ -516,13 +522,13 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
                          e2 = f_events src dst pc stackpointer
                                        returnaddress /\
                          memaccess_inbounds e2
-                          [src,512; dst,256; word (pc + 0x81a0),256;
+                          [src,512; dst,256; word (pc + rodata_mlk_zetas),256;
                            stackpointer,8]
                           [dst,256]))
                (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bytes(dst,256)])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC
    MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SUBROUTINE_SAFE
-   [`pc + 0x5710`,`pc:num`; `pc + 0x81a0`,`zetas:num`]
+   [`pc + mlkem_poly_mulcache_compute`,`pc:num`; `pc + rodata_mlk_zetas`,`zetas:num`]
    [MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_IN_IMAGE;
     MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_ZETAS_IN_IMAGE]);;

@@ -28,6 +28,11 @@ needs "x86/proofs/mlkem_native/gcc12_O2/shake128x4_squeezeblocks.ml";;
 needs "x86/proofs/mlkem_native/gcc12_O2/shake128x4_release.ml";;
 needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
+(* A name for a point inside the function that is not a label                *)
+(* of the layout, where the proof splits the code.                           *)
+
+install_layout ["mlkem_poly_rej_uniform_x4_sampled", layout "mlkem_poly_rej_uniform_x4" + 0x1e3];;
+
 (*** The code in the image:
 
     60e0: push   rbp
@@ -161,7 +166,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x60e0,0x62e9];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_poly_rej_uniform_x4"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The samples from one more block, whatever the number of samples so far:   *)
@@ -919,7 +924,7 @@ let REJX4_EXIT_TAC =
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
 
 let REJX4_LOOP_TAC =
-  ENSURES_WHILE_UP2_TAC `k0:num` `pc + 0x6208` `pc + 0x62c3` REJX4_INV THEN
+  ENSURES_WHILE_UP2_TAC `k0:num` `pc + mlkem_poly_rej_uniform_x4_join1` `pc + mlkem_poly_rej_uniform_x4_sampled` REJX4_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[]; REJX4_LOOP_INIT_TAC; REJX4_BODY_TAC; REJX4_EXIT_TAC];;
 
@@ -971,11 +976,11 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
           (word_sub stackpointer (word 3416),3424)]
          [(seed,34); (word_add seed (word 64),34);
           (word_add seed (word 128),34); (word_add seed (word 192),34);
-          (word pc,0x82a0)]
+          (word pc,libmlkem_size)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x60e0) /\
+                  read RIP s = word (pc + mlkem_poly_rej_uniform_x4) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [vec0; vec1; vec2; vec3; seed] s /\
@@ -1027,8 +1032,8 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
 
   (*** The first three blocks of each and the samples from them ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0x62c3` REJX4_A2 THEN CONJ_TAC THENL
-   [ENSURES_SEQUENCE_TAC `pc + 0x61e9` REJX4_A1 THEN CONJ_TAC THENL
+  ENSURES_SEQUENCE_TAC `pc + mlkem_poly_rej_uniform_x4_sampled` REJX4_A2 THEN CONJ_TAC THENL
+   [ENSURES_SEQUENCE_TAC `pc + mlkem_poly_rej_uniform_x4_after_mlk_rej_uniform_c_4` REJX4_A1 THEN CONJ_TAC THENL
      [REJX4_PART1_TAC;
       ASM_CASES_TAC `k0 = 0` THENL [REJX4_NOLOOP_TAC; REJX4_LOOP_TAC]];
     REJX4_PART3_TAC]);;
@@ -1359,7 +1364,7 @@ let PREJ4_SAFE_EXIT_TAC =
 
 let PREJ4_SAFE_LOOP_TAC =
   REWRITE_TAC[EQF_INTRO(ASSUME `~(k0 = 0)`)] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `k0:num` `pc + 0x6208` `pc + 0x62c3`
+  ENSURES_EVENTS_WHILE_UP2_TAC `k0:num` `pc + mlkem_poly_rej_uniform_x4_join1` `pc + mlkem_poly_rej_uniform_x4_sampled`
     REJX4_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[]; PREJ4_SAFE_LOOP_INIT_TAC; PREJ4_SAFE_BODY_TAC;
@@ -1402,11 +1407,11 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
           (word_sub stackpointer (word 3416),3424)]
          [(seed,34); (word_add seed (word 64),34);
           (word_add seed (word 128),34); (word_add seed (word 192),34);
-          (word pc,0x82a0)]
+          (word pc,libmlkem_size)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x60e0) /\
+                  read RIP s = word (pc + mlkem_poly_rej_uniform_x4) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [vec0; vec1; vec2; vec3; seed] s /\
@@ -1432,7 +1437,7 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                        word_add seed (word 192),34;
                        vec0,512; vec1,512; vec2,512; vec3,512;
                        word_sub stackpointer (word 3416),3424;
-                       word(pc + 0x80c0),192]
+                       word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                       [vec0,512; vec1,512; vec2,512; vec3,512;
                        word_sub stackpointer (word 3416),3416]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -1441,8 +1446,8 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                 memory :> bytes(vec2,512); memory :> bytes(vec3,512);
                 memory :> bytes(word_sub stackpointer (word 3416),3416)])`,
   PREJ4_SAFE_INTRO_TAC THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x62c3` REJX4_A2 THEN CONJ_TAC THENL
-   [ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x61e9` REJX4_A1 THEN CONJ_TAC THENL
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlkem_poly_rej_uniform_x4_sampled` REJX4_A2 THEN CONJ_TAC THENL
+   [ENSURES_EVENTS_SEQUENCE_TAC `pc + mlkem_poly_rej_uniform_x4_after_mlk_rej_uniform_c_4` REJX4_A1 THEN CONJ_TAC THENL
      [PREJ4_SAFE_PART1_TAC;
       ASM_CASES_TAC `k0 = 0` THENL
        [PREJ4_SAFE_NOLOOP_TAC; PREJ4_SAFE_LOOP_TAC]];

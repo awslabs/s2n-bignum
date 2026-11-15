@@ -48,7 +48,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x3720,0x3778];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_shake128x4_absorb_once"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Combined correctness, constant-time and memory safety proof, using that   *)
@@ -67,11 +67,11 @@ let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
        nonoverlapping (st,800) (word_sub stackpointer (word 416),424) /\
        ALLPAIRS nonoverlapping
         [st,800; word_sub stackpointer (word 416),424]
-        [m0,mlen; m1,mlen; m2,mlen; m3,mlen; word pc,0x82a0]
+        [m0,mlen; m1,mlen; m2,mlen; m3,mlen; word pc,libmlkem_size]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x3720) /\
+                 read RIP s = word (pc + mlkem_shake128x4_absorb_once) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [st; m0; m1; m2; m3; word mlen] s /\
@@ -130,7 +130,7 @@ let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_FULL =
                     memaccess_inbounds e2
                      [m0,mlen; m1,mlen; m2,mlen; m3,mlen; st,800;
                       word_sub stackpointer (word 416),424;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [st,800; word_sub stackpointer (word 416),416]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE
@@ -183,11 +183,11 @@ let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
         nonoverlapping (st,800) (word_sub stackpointer (word 416),424) /\
         ALLPAIRS nonoverlapping
          [(st,800); (word_sub stackpointer (word 416),424)]
-         [(m0,mlen); (m1,mlen); (m2,mlen); (m3,mlen); (word pc,0x82a0)]
+         [(m0,mlen); (m1,mlen); (m2,mlen); (m3,mlen); (word pc,libmlkem_size)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x3720) /\
+                  read RIP s = word (pc + mlkem_shake128x4_absorb_once) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [st; m0; m1; m2; m3; word mlen] s /\
@@ -264,11 +264,11 @@ let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        nonoverlapping (st,800) (word_sub stackpointer (word 416),424) /\
        ALLPAIRS nonoverlapping
         [st,800; word_sub stackpointer (word 416),424]
-        [m0,mlen; m1,mlen; m2,mlen; m3,mlen; word pc,0x82a0]
+        [m0,mlen; m1,mlen; m2,mlen; m3,mlen; word pc,libmlkem_size]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x3720) /\
+                 read RIP s = word (pc + mlkem_shake128x4_absorb_once) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [st; m0; m1; m2; m3; word mlen] s /\
@@ -283,7 +283,7 @@ let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                     memaccess_inbounds e2
                      [m0,mlen; m1,mlen; m2,mlen; m3,mlen; st,800;
                       word_sub stackpointer (word 416),424;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [st,800; word_sub stackpointer (word 416),416]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE

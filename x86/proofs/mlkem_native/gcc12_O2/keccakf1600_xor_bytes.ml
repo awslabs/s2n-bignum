@@ -34,7 +34,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x3d40,0x3d63];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_keccakf1600_xor_bytes"];;
 
 (*** The zero-extended arguments off and len, and the test of len ***)
 
@@ -220,14 +220,14 @@ let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_CORRECT = prove
  (`!a d off len (S:1600 word) m pc.
     aligned 16 (word pc:int64) /\
     off + len <= 200 /\
-    ALL (nonoverlapping (a,200)) [(word pc,0x82a0); (d,len)]
+    ALL (nonoverlapping (a,200)) [(word pc,libmlkem_size); (d,len)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x3d40) /\
+           read RIP s = word (pc + mlkem_keccakf1600_xor_bytes) /\
            C_ARGUMENTS [a; d; word off; word len] s /\
            read (memory :> wbytes a) s = S /\
            read (memory :> bytes(d,len)) s = m)
-      (\s. read RIP s = word (pc + 0x3d62) /\
+      (\s. read RIP s = word (pc + mlkem_keccakf1600_xor_bytes_ret) /\
            read (memory :> wbytes a) s =
            word_xor S (word(2 EXP (8 * off) * m)))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -257,7 +257,7 @@ let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_CORRECT = prove
 
   (*** The loop invariant, with the loop test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `len:num` `pc + 0x3d50` `pc + 0x3d5d`
+  ENSURES_WHILE_UP_TAC `len:num` `pc + mlkem_keccakf1600_xor_bytes_loop1` `pc + mlkem_keccakf1600_xor_bytes_loop1_test`
    `\i s. read RSI s = word_add d (word i) /\
           read RDI s = word_add a (word (off + i)) /\
           read RDX s = word_add d (word len) /\
@@ -323,10 +323,10 @@ let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
     aligned 16 (word pc:int64) /\
     off + len <= 200 /\
     ALL (nonoverlapping (a,200))
-        [(word pc,0x82a0); (d,len); (stackpointer,8)]
+        [(word pc,libmlkem_size); (d,len); (stackpointer,8)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x3d40) /\
+           read RIP s = word (pc + mlkem_keccakf1600_xor_bytes) /\
            read RSP s = stackpointer /\
            read (memory :> bytes64 stackpointer) s = returnaddress /\
            C_ARGUMENTS [a; d; word off; word len] s /\
@@ -352,14 +352,14 @@ let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SAFE = time prove
        forall e a d off len pc.
            aligned 16 (word pc:int64) /\
            off + len <= 200 /\
-           ALL (nonoverlapping (a,200)) [word pc,0x82a0; d,len]
+           ALL (nonoverlapping (a,200)) [word pc,libmlkem_size; d,len]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x3d40) /\
+                    read RIP s = word (pc + mlkem_keccakf1600_xor_bytes) /\
                     C_ARGUMENTS [a; d; word off; word len] s /\
                     read events s = e)
-               (\s. read RIP s = word (pc + 0x3d62) /\
+               (\s. read RIP s = word (pc + mlkem_keccakf1600_xor_bytes_ret) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events a d off len pc /\
@@ -389,7 +389,7 @@ let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SAFE = time prove
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + 0x3d50` `pc + 0x3d62`
+  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + mlkem_keccakf1600_xor_bytes_loop1` `pc + mlkem_keccakf1600_xor_bytes_loop1_exit`
     `\i s. read RSI s = word_add d (word i) /\
            read RDI s = word_add a (word (off + i)) /\
            read RDX s = word_add d (word len)` THEN
@@ -432,11 +432,11 @@ let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
            aligned 16 (word pc:int64) /\
            off + len <= 200 /\
            ALL (nonoverlapping (a,200))
-               [word pc,0x82a0; d,len; stackpointer,8]
+               [word pc,libmlkem_size; d,len; stackpointer,8]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x3d40) /\
+                    read RIP s = word (pc + mlkem_keccakf1600_xor_bytes) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [a; d; word off; word len] s /\
@@ -465,16 +465,16 @@ let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_FULL = time prove
        forall e a d off len (S:1600 word) m pc.
            aligned 16 (word pc:int64) /\
            off + len <= 200 /\
-           ALL (nonoverlapping (a,200)) [word pc,0x82a0; d,len]
+           ALL (nonoverlapping (a,200)) [word pc,libmlkem_size; d,len]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x3d40) /\
+                    read RIP s = word (pc + mlkem_keccakf1600_xor_bytes) /\
                     C_ARGUMENTS [a; d; word off; word len] s /\
                     read (memory :> wbytes a) s = S /\
                     read (memory :> bytes(d,len)) s = m /\
                     read events s = e)
-               (\s. read RIP s = word (pc + 0x3d62) /\
+               (\s. read RIP s = word (pc + mlkem_keccakf1600_xor_bytes_ret) /\
                     read (memory :> wbytes a) s =
                     word_xor S (word(2 EXP (8 * off) * m)) /\
                     (exists e2.
@@ -522,7 +522,7 @@ let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_FULL = time prove
 
   (*** The loop invariant, with the loop test at the end of the body ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + 0x3d50` `pc + 0x3d62`
+  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + mlkem_keccakf1600_xor_bytes_loop1` `pc + mlkem_keccakf1600_xor_bytes_loop1_exit`
    `\i s. read RSI s = word_add d (word i) /\
           read RDI s = word_add a (word (off + i)) /\
           read RDX s = word_add d (word len) /\
@@ -577,11 +577,11 @@ let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL =
            aligned 16 (word pc:int64) /\
            off + len <= 200 /\
            ALL (nonoverlapping (a,200))
-               [word pc,0x82a0; d,len; stackpointer,8]
+               [word pc,libmlkem_size; d,len; stackpointer,8]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x3d40) /\
+                    read RIP s = word (pc + mlkem_keccakf1600_xor_bytes) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [a; d; word off; word len] s /\

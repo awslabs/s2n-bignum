@@ -62,7 +62,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x23e0,0x245f];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem1024_poly_getnoise_eta2"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The seed is loaded as two 128-bit words, and stored with the nonce in a   *)
@@ -202,7 +202,7 @@ let GETNOISE_NONOV_TAC =
          (mk_comb(mk_comb(`nonoverlapping:int64#num->int64#num->bool`,
                           `bot:int64,824`),r)) ASSUME_TAC THENL
          [REWRITE_TAC[SYM bth] THEN NONOVERLAPPING_TAC; ALL_TAC])
-       [`r:int64,512`; `seed:int64,32`; `word pc:int64,0x82a0`;
+       [`r:int64,512`; `seed:int64,32`; `word pc:int64,libmlkem_size`;
         `word_add stackpointer (word 856):int64,40`]
     else NO_TAC);;
 
@@ -312,12 +312,12 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
         aligned 16 (word pc:int64) /\ LENGTH sd = 32 /\
         PAIRWISE nonoverlapping
          [(r,512); (seed,32); (word_sub stackpointer (word 888),896)] /\
-        ALL (nonoverlapping (word pc,0x82a0))
+        ALL (nonoverlapping (word pc,libmlkem_size))
          [(r,512); (word_sub stackpointer (word 888),896)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x23e0) /\
+                  read RIP s = word (pc + mlkem1024_poly_getnoise_eta2) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [r; seed; nonce] s /\
@@ -420,12 +420,12 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        aligned 16 (word pc:int64) /\
        PAIRWISE nonoverlapping
         [r,512; seed,32; word_sub stackpointer (word 888),896] /\
-       ALL (nonoverlapping (word pc,0x82a0))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [r,512; word_sub stackpointer (word 888),896]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x23e0) /\
+                 read RIP s = word (pc + mlkem1024_poly_getnoise_eta2) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [r; seed; nonce] s /\
@@ -439,7 +439,7 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA2_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                            (word_sub stackpointer (word 888)) returnaddress /\
                     memaccess_inbounds e2
                      [seed,32; r,512; word_sub stackpointer (word 888),896;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [r,512; word_sub stackpointer (word 888),888]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE

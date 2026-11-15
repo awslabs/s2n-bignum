@@ -63,7 +63,7 @@ needs "x86/proofs/utils/mlkem_native_libc.ml";;
 
 let MLKEM_NATIVE_KEYPAIR_K2_GCC12_O2_EXEC =
   X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x1010,0x1016; 0x5120,0x5187];;
+   [(layout "plt_randombytes",layout "plt_randombytes" + 0x6); layout_range "mlkem512_keypair"];;
 
 let KR2_EXEC = MLKEM_NATIVE_KEYPAIR_K2_GCC12_O2_EXEC;;
 
@@ -86,9 +86,9 @@ let KR2_SETUP_TAC =
    ["memory :> bytes(pk:int64,800)"; "memory :> bytes(sk:int64,1632)"]
    KR2_FRAME THEN
   INDCPA_NONOV_TAC 9744
-   [`pk:int64,800`; `sk:int64,1632`; `word pc:int64,0x82a0`;
+   [`pk:int64,800`; `sk:int64,1632`; `word pc:int64,libmlkem_size`;
     `word_add stackpointer (word 9776):int64,40`;
-    `word(pc + 0xaff8):int64,8`; `ea:int64,el:num`; `word 0:int64,1`] THEN
+    `word(pc + got_randombytes):int64,8`; `ea:int64,el:num`; `word 0:int64,1`] THEN
   MAP_EVERY (fun (n,r) -> ENSURES_PRESERVED_TAC n r)
    ["rbx_init",`RBX`; "rbp_init",`RBP`; "r12_init",`R12`;
     "r13_init",`R13`; "r14_init",`R14`; "r15_init",`R15`];;
@@ -185,15 +185,15 @@ let MLKEM_NATIVE_KEYPAIR_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
      [(pk,800); (sk,1632); (word_sub stackpointer (word 9808),9816)] /\
     ALLPAIRS nonoverlapping
      [(pk,800); (sk,1632); (word_sub stackpointer (word 9808),9816)]
-     [(word pc,0x82a0); (word(pc + 0xaff8),8); (ea,el)]
+     [(word pc,libmlkem_size); (word(pc + got_randombytes),8); (ea,el)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x5120) /\
+              read RIP s = word (pc + mlkem512_keypair) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [pk; sk] s /\
               (read DF s <=> false) /\
-              read (memory :> bytes64(word(pc + 0xaff8))) s = mr /\
+              read (memory :> bytes64(word(pc + got_randombytes))) s = mr /\
               read (memory :> bytes(ea,el)) s = ev)
          (\s. read RIP s = returnaddress /\
               read RSP s = word_add stackpointer (word 8) /\
@@ -321,15 +321,15 @@ let MLKEM_NATIVE_KEYPAIR_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
      [(pk,800); (sk,1632); (word_sub stackpointer (word 9808),9816)] /\
     ALLPAIRS nonoverlapping
      [(pk,800); (sk,1632); (word_sub stackpointer (word 9808),9816)]
-     [(word pc,0x82a0); (word(pc + 0xaff8),8); (ea,el)]
+     [(word pc,libmlkem_size); (word(pc + got_randombytes),8); (ea,el)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x5120) /\
+              read RIP s = word (pc + mlkem512_keypair) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [pk; sk] s /\
               (read DF s <=> false) /\
-              read (memory :> bytes64(word(pc + 0xaff8))) s = mr /\
+              read (memory :> bytes64(word(pc + got_randombytes))) s = mr /\
               read (memory :> bytes(ea,el)) s = ev /\
               read events s = e)
          (\s. read RIP s = returnaddress /\
@@ -343,9 +343,9 @@ let MLKEM_NATIVE_KEYPAIR_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                               s) /\
                  memaccess_inbounds e2
                   [pk,800; sk,1632; word_sub stackpointer (word 9808),9816;
-                   word(pc + 0xaff8),8; ea,el; word(pc + 0x8070),48;
-                   word(pc + 0x80c0),192; word(pc + 0x8180),2;
-                   word(pc + 0x81a0),256]
+                   word(pc + got_randombytes),8; ea,el; word(pc + mlkem_poly_tomont_consts),48;
+                   word(pc + rodata_mlk_KeccakF_RoundConstants),192; word(pc + mlkem512_gen_matrix_consts),2;
+                   word(pc + rodata_mlk_zetas),256]
                   [pk,800; sk,1632;
                    word_sub stackpointer (word 9808),9808]))
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

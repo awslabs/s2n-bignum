@@ -61,7 +61,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x3d70,0x3de7];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_keccakf1600x4_extract_bytes"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof. The four states, each a 1600-bit word as for           *)
@@ -92,11 +92,11 @@ let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
         ALLPAIRS nonoverlapping
          [(d0,len); (d1,len); (d2,len); (d3,len);
           (word_sub stackpointer (word 64),76)]
-         [(word pc,0x82a0); (a,800)]
+         [(word pc,libmlkem_size); (a,800)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x3d70) /\
+                  read RIP s = word (pc + mlkem_keccakf1600x4_extract_bytes) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a; d0; d1; d2; d3; word off] s /\
@@ -187,11 +187,11 @@ let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        ALLPAIRS nonoverlapping
         [d0,len; d1,len; d2,len; d3,len;
          word_sub stackpointer (word 64),76]
-        [word pc,0x82a0; a,800]
+        [word pc,libmlkem_size; a,800]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x3d70) /\
+                 read RIP s = word (pc + mlkem_keccakf1600x4_extract_bytes) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [a; d0; d1; d2; d3; word off] s /\
@@ -283,11 +283,11 @@ let MLKEM_NATIVE_KECCAKF1600X4_EXTRACT_BYTES_GCC12_O2_IMAGE_SUBROUTINE_FULL =
        ALLPAIRS nonoverlapping
         [d0,len; d1,len; d2,len; d3,len;
          word_sub stackpointer (word 64),76]
-        [word pc,0x82a0; a,800]
+        [word pc,libmlkem_size; a,800]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x3d70) /\
+                 read RIP s = word (pc + mlkem_keccakf1600x4_extract_bytes) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [a; d0; d1; d2; d3; word off] s /\

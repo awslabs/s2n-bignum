@@ -41,7 +41,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x3260,0x32a6];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_poly_tomsg"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The compression of a coefficient to one bit, as computed.                 *)
@@ -144,14 +144,14 @@ let TOMSG_INNER_TAC =
 let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_CORRECT = prove
  (`!r a x pc.
     aligned 16 (word pc:int64) /\
-    ALL (nonoverlapping (r,32)) [(word pc,0x82a0); (a,512)]
+    ALL (nonoverlapping (r,32)) [(word pc,libmlkem_size); (a,512)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x3260) /\
+           read RIP s = word (pc + mlkem_poly_tomsg) /\
            C_ARGUMENTS [r; a] s /\
            !i. i < 256
                ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i)
-      (\s. read RIP s = word (pc + 0x32a5) /\
+      (\s. read RIP s = word (pc + mlkem_poly_tomsg_ret) /\
            ((!i. i < 256 ==> val(x i) < 3329)
             ==> read(memory :> bytes(r,32)) s =
                 nsum {i | i < 256}
@@ -165,7 +165,7 @@ let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_CORRECT = prove
 
   (*** The outer loop, over the bytes, with the test as a separate step ***)
 
-  ENSURES_WHILE_UP_TAC `32` `pc + 0x3268` `pc + 0x329c`
+  ENSURES_WHILE_UP_TAC `32` `pc + mlkem_poly_tomsg_loop1` `pc + mlkem_poly_tomsg_loop1_test`
    `\i s. read RDI s = word_add r (word i) /\
           read R8 s = word(8 * i) /\
           read RSI s = a /\
@@ -267,10 +267,10 @@ let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!r a x pc stackpointer returnaddress.
     aligned 16 (word pc:int64) /\
     ALL (nonoverlapping (r,32))
-        [(word pc,0x82a0); (a,512); (stackpointer,8)]
+        [(word pc,libmlkem_size); (a,512); (stackpointer,8)]
     ==> ensures x86
       (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-           read RIP s = word (pc + 0x3260) /\
+           read RIP s = word (pc + mlkem_poly_tomsg) /\
            read RSP s = stackpointer /\
            read (memory :> bytes64 stackpointer) s = returnaddress /\
            C_ARGUMENTS [r; a] s /\
@@ -297,14 +297,14 @@ let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SAFE = time prove
  (`exists f_events.
        forall e r a pc.
            aligned 16 (word pc:int64) /\
-           ALL (nonoverlapping (r,32)) [word pc,0x82a0; a,512]
+           ALL (nonoverlapping (r,32)) [word pc,libmlkem_size; a,512]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x3260) /\
+                    read RIP s = word (pc + mlkem_poly_tomsg) /\
                     C_ARGUMENTS [r; a] s /\
                     read events s = e)
-               (\s. read RIP s = word (pc + 0x32a5) /\
+               (\s. read RIP s = word (pc + mlkem_poly_tomsg_ret) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events a r pc /\
@@ -326,7 +326,7 @@ let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SAFE = time prove
               fst MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + 0x3268` `pc + 0x32a5`
+  ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + mlkem_poly_tomsg_loop1` `pc + mlkem_poly_tomsg_loop1_exit`
     `\i s. read RDI s = word_add r (word i) /\
            read R8 s = word(8 * i) /\
            read RSI s = a` THEN
@@ -378,11 +378,11 @@ let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
        forall e r a pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\
            ALL (nonoverlapping (r,32))
-               [word pc,0x82a0; a,512; stackpointer,8]
+               [word pc,libmlkem_size; a,512; stackpointer,8]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x3260) /\
+                    read RIP s = word (pc + mlkem_poly_tomsg) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\

@@ -86,7 +86,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D10_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x2660,0x2740];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_poly_compress_d10"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The compression of a coefficient to 10 bits, as computed.                 *)
@@ -286,14 +286,14 @@ let MLKEM_NATIVE_POLY_COMPRESS_D10_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
  (`!r a x pc stackpointer returnaddress.
         aligned 16 (word pc:int64) /\
         ALL (nonoverlapping (r,320))
-            [(word pc,0x82a0); (a,512);
+            [(word pc,libmlkem_size); (a,512);
              (word_sub stackpointer (word 40),48)] /\
         ALL (nonoverlapping (word_sub stackpointer (word 40),48))
-            [(word pc,0x82a0); (a,512)]
+            [(word pc,libmlkem_size); (a,512)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x2660) /\
+                  read RIP s = word (pc + mlkem_poly_compress_d10) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [r; a] s /\
@@ -326,7 +326,7 @@ let MLKEM_NATIVE_POLY_COMPRESS_D10_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
 
   (*** The outer loop, over groups of 4 coefficients ***)
 
-  ENSURES_WHILE_UP_TAC `64` `pc + 0x2688` `pc + 0x272d`
+  ENSURES_WHILE_UP_TAC `64` `pc + mlkem_poly_compress_d10_loop1` `pc + mlkem_poly_compress_d10_loop1_test`
    `\i s. read RDX s = word_add r (word(5 * i + 4)) /\
           read RCX s = word(4 * i) /\
           read RSI s = a /\
@@ -460,13 +460,13 @@ let MLKEM_NATIVE_POLY_COMPRESS_D10_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
      forall e r a pc stackpointer returnaddress.
        aligned 16 (word pc:int64) /\
        ALL (nonoverlapping (r,320))
-           [word pc,0x82a0; a,512; word_sub stackpointer (word 40),48] /\
+           [word pc,libmlkem_size; a,512; word_sub stackpointer (word 40),48] /\
        ALL (nonoverlapping (word_sub stackpointer (word 40),48))
-           [word pc,0x82a0; a,512]
+           [word pc,libmlkem_size; a,512]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x2660) /\
+                 read RIP s = word (pc + mlkem_poly_compress_d10) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [r; a] s /\
@@ -507,7 +507,7 @@ let MLKEM_NATIVE_POLY_COMPRESS_D10_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   ENSURES_PRESERVED_TAC "r12_init" `R12` THEN
   ENSURES_PRESERVED_TAC "r13_init" `R13` THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `64` `pc + 0x2688` `pc + 0x2739`
+  ENSURES_EVENTS_WHILE_UP2_TAC `64` `pc + mlkem_poly_compress_d10_loop1` `pc + mlkem_poly_compress_d10_loop1_exit`
    `\i s. read RDX s = word_add r (word(5 * i + 4)) /\
           read RCX s = word(4 * i) /\
           read RSI s = a /\

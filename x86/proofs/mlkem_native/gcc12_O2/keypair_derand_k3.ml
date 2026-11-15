@@ -70,7 +70,7 @@ needs "x86/proofs/utils/mlkem_native_kem.ml";;
 
 let MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O2_EXEC =
   X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc
-   [0x6ed0,0x6f74];;
+   [(layout "mlkem768_keypair_derand",layout "mlkem768_keypair_derand" + 0xa4)];;
 
 let KK3_EXEC = MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O2_EXEC;;
 
@@ -181,10 +181,10 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
      [(pk,1184); (sk,2400); (word_sub stackpointer (word 14064),14072)] /\
     ALLPAIRS nonoverlapping
      [(pk,1184); (sk,2400); (word_sub stackpointer (word 14064),14072)]
-     [(coins,64); (word pc,0x82a0)]
+     [(coins,64); (word pc,libmlkem_size)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x6ed0) /\
+              read RIP s = word (pc + mlkem768_keypair_derand) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [pk; sk; coins] s /\
@@ -261,7 +261,7 @@ let KK3_SAFE_MAIN_TAC =
                       `word_add sk (word (1152 + lo)):int64,1176`),r))
      ASSUME_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC])
    [`word_add pk (word 1152):int64,32`; `stackpointer:int64,14072`;
-    `word pc:int64,0x82a0`] THEN
+    `word pc:int64,libmlkem_size`] THEN
   X86_STEPS_TAC KK3_EXEC (27--28) THEN KEM_UNLO_TAC THEN
   X86_STEPS_TAC KK3_EXEC (29--31) THEN
   call "H_SHA3_256" [`read RDI s`; `read RSI s`; `1184`] 32 THEN
@@ -284,10 +284,10 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
      [(pk,1184); (sk,2400); (word_sub stackpointer (word 14064),14072)] /\
     ALLPAIRS nonoverlapping
      [(pk,1184); (sk,2400); (word_sub stackpointer (word 14064),14072)]
-     [(coins,64); (word pc,0x82a0)]
+     [(coins,64); (word pc,libmlkem_size)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mlkem_native_libmlkem_gcc12_O2_mc /\
-              read RIP s = word (pc + 0x6ed0) /\
+              read RIP s = word (pc + mlkem768_keypair_derand) /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [pk; sk; coins] s /\
@@ -307,8 +307,8 @@ let MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                  memaccess_inbounds e2
                   [coins,64; pk,1184; sk,2400;
                    word_sub stackpointer (word 14064),14072;
-                   word(pc + 0x8070),48; word(pc + 0x80c0),192;
-                   word(pc + 0x8180),4; word(pc + 0x81a0),256]
+                   word(pc + mlkem_poly_tomont_consts),48; word(pc + rodata_mlk_KeccakF_RoundConstants),192;
+                   word(pc + mlkem768_gen_matrix_consts),4; word(pc + rodata_mlk_zetas),256]
                   [pk,1184; sk,2400;
                    word_sub stackpointer (word 14064),14064]))
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

@@ -86,7 +86,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x62f0,0x63ad];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_poly_rej_uniform"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The bytes of SHAKE128 in blocks of 168, the rate, in terms of the         *)
@@ -911,7 +911,7 @@ let REJ_LOOP_TAC =
    [REWRITE_TAC[ARITH_RULE `MIN a b = b <=> b <= a`] THEN
     ASM_SIMP_TAC[LT_IMP_LE];
     ALL_TAC] THEN
-  ENSURES_WHILE_UP2_TAC `k0:num` `pc + 0x6360` `pc + 0x638b` REJ_INV THEN
+  ENSURES_WHILE_UP2_TAC `k0:num` `pc + mlkem_poly_rej_uniform_loop1` `pc + mlkem_poly_rej_uniform_loop1_exit` REJ_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];
 
@@ -968,11 +968,11 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
         nonoverlapping (entry,512) (word_sub stackpointer (word 1136),1144) /\
         ALLPAIRS nonoverlapping
          [(entry,512); (word_sub stackpointer (word 1136),1144)]
-         [(seed,34); (word pc,0x82a0)]
+         [(seed,34); (word pc,libmlkem_size)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x62f0) /\
+                  read RIP s = word (pc + mlkem_poly_rej_uniform) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [entry; seed] s /\
@@ -996,8 +996,8 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
 
   (*** The first three blocks and the samples from them ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0x638b` REJ_A2 THEN CONJ_TAC THENL
-   [ENSURES_SEQUENCE_TAC `pc + 0x6351` REJ_A1 THEN CONJ_TAC THENL
+  ENSURES_SEQUENCE_TAC `pc + mlkem_poly_rej_uniform_loop1_exit` REJ_A2 THEN CONJ_TAC THENL
+   [ENSURES_SEQUENCE_TAC `pc + mlkem_poly_rej_uniform_after_mlk_rej_uniform_c_1` REJ_A1 THEN CONJ_TAC THENL
      [REJ_PART1_TAC;
       ASM_CASES_TAC `k0 = 0` THENL [REJ_NOLOOP_TAC; REJ_LOOP_TAC]];
     REJ_PART3_TAC]);;
@@ -1187,7 +1187,7 @@ let PREJ_SAFE_LOOP_TAC =
    [REWRITE_TAC[ARITH_RULE `MIN a b = b <=> b <= a`] THEN
     ASM_SIMP_TAC[LT_IMP_LE];
     ALL_TAC] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `k0:num` `pc + 0x6360` `pc + 0x638b`
+  ENSURES_EVENTS_WHILE_UP2_TAC `k0:num` `pc + mlkem_poly_rej_uniform_loop1` `pc + mlkem_poly_rej_uniform_loop1_exit`
     REJ_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];
@@ -1249,11 +1249,11 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
        nonoverlapping (entry,512) (word_sub stackpointer (word 1136),1144) /\
        ALLPAIRS nonoverlapping
         [(entry,512); (word_sub stackpointer (word 1136),1144)]
-        [(seed,34); (word pc,0x82a0)]
+        [(seed,34); (word pc,libmlkem_size)]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x62f0) /\
+                 read RIP s = word (pc + mlkem_poly_rej_uniform) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [entry; seed] s /\
@@ -1269,15 +1269,15 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
                     memaccess_inbounds e2
                      [seed,34; entry,512;
                       word_sub stackpointer (word 1136),1144;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [entry,512; word_sub stackpointer (word 1136),1136]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE
               [memory :> bytes(entry,512);
                memory :> bytes(word_sub stackpointer (word 1136),1136)])`,
   PREJ_SAFE_INTRO_TAC THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x638b` REJ_A2 THEN CONJ_TAC THENL
-   [ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x6351` REJ_A1 THEN CONJ_TAC THENL
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlkem_poly_rej_uniform_loop1_exit` REJ_A2 THEN CONJ_TAC THENL
+   [ENSURES_EVENTS_SEQUENCE_TAC `pc + mlkem_poly_rej_uniform_after_mlk_rej_uniform_c_1` REJ_A1 THEN CONJ_TAC THENL
      [PREJ_SAFE_PART1_TAC;
       ASM_CASES_TAC `k0 = 0` THENL
        [PREJ_SAFE_NOLOOP_TAC; PREJ_SAFE_LOOP_TAC]];

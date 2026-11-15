@@ -38,7 +38,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x1fc0,0x1ff4];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem1024_polyvec_tobytes"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The input and output for the polynomials, as parts of those for the       *)
@@ -111,13 +111,13 @@ let LOCAL_TOBYTES_TAC =
 let MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!r a (l:int16 list) pc stackpointer returnaddress.
         aligned 16 (word pc:int64) /\
-        ALL (nonoverlapping (r,1536)) [(word pc,0x82a0); (a,2048)] /\
+        ALL (nonoverlapping (r,1536)) [(word pc,libmlkem_size); (a,2048)] /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),40))
-            [(word pc,0x82a0); (a,2048); (r,1536)]
+            [(word pc,libmlkem_size); (a,2048); (r,1536)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x1fc0) /\
+                  read RIP s = word (pc + mlkem1024_polyvec_tobytes) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [r; a] s /\
@@ -207,13 +207,13 @@ let MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
  (`exists f_events.
        forall e r a pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\
-           ALL (nonoverlapping (r,1536)) [(word pc,0x82a0); (a,2048)] /\
+           ALL (nonoverlapping (r,1536)) [(word pc,libmlkem_size); (a,2048)] /\
            ALL (nonoverlapping (word_sub stackpointer (word 32),40))
-               [(word pc,0x82a0); (a,2048); (r,1536)]
+               [(word pc,libmlkem_size); (a,2048); (r,1536)]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x1fc0) /\
+                    read RIP s = word (pc + mlkem1024_polyvec_tobytes) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\
@@ -287,13 +287,13 @@ let MLKEM_NATIVE_POLYVEC_TOBYTES_K4_GCC12_O2_IMAGE_SUBROUTINE_FULL = time prove
  (`exists f_events.
        forall e r a (l:int16 list) pc stackpointer returnaddress.
            aligned 16 (word pc:int64) /\
-           ALL (nonoverlapping (r,1536)) [(word pc,0x82a0); (a,2048)] /\
+           ALL (nonoverlapping (r,1536)) [(word pc,libmlkem_size); (a,2048)] /\
            ALL (nonoverlapping (word_sub stackpointer (word 32),40))
-               [(word pc,0x82a0); (a,2048); (r,1536)]
+               [(word pc,libmlkem_size); (a,2048); (r,1536)]
            ==> ensures x86
                (\s. bytes_loaded s (word pc)
                       mlkem_native_libmlkem_gcc12_O2_mc /\
-                    read RIP s = word (pc + 0x1fc0) /\
+                    read RIP s = word (pc + mlkem1024_polyvec_tobytes) /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [r; a] s /\

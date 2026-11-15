@@ -109,7 +109,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x5ed0,0x603b];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem512_poly_getnoise_eta1122_4x"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The seed is loaded as two 128-bit words, and stored with the nonce in a   *)
@@ -266,7 +266,7 @@ let GETNOISE4_NONOV_TAC n full =
          [REWRITE_TAC[SYM bth] THEN NONOVERLAPPING_TAC; ALL_TAC])
        ([`r0:int64,512`; `r1:int64,512`; `r2:int64,512`] @
         (if full then [`r3:int64,512`] else []) @
-        [`seed:int64,32`; `word pc:int64,0x82a0`;
+        [`seed:int64,32`; `word pc:int64,libmlkem_size`;
          mk_pair(mk_comb(`word_add (stackpointer:int64)`,
                          mk_comb(`word:num->int64`,mk_small_numeral n)),
                  `32`)])
@@ -461,11 +461,11 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
         ALLPAIRS nonoverlapping
          [(r0,512); (r1,512); (r2,512); (r3,512);
           (word_sub stackpointer (word 3136),3168)]
-         [(seed,32); (word pc,0x82a0)]
+         [(seed,32); (word pc,libmlkem_size)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x5ed0) /\
+                  read RIP s = word (pc + mlkem512_poly_getnoise_eta1122_4x) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [r0; r1; r2; r3; seed; nonce0] s /\
@@ -620,11 +620,11 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
         ALLPAIRS nonoverlapping
          [r0,512; r1,512; r2,512; r3,512;
           word_sub stackpointer (word 3136),3168]
-         [seed,32; word pc,0x82a0]
+         [seed,32; word pc,libmlkem_size]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x5ed0) /\
+                  read RIP s = word (pc + mlkem512_poly_getnoise_eta1122_4x) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [r0; r1; r2; r3; seed] s /\
@@ -641,7 +641,7 @@ let MLKEM_NATIVE_POLY_GETNOISE_ETA1122_4X_K2_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                       [seed,32; r0,512; r1,512; r2,512;
                        r3,512;
                        word_sub stackpointer (word 3136),3168;
-                       word(pc + 0x80c0),192]
+                       word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                       [r0,512; r1,512; r2,512;
                        r3,512;
                        word_sub stackpointer (word 3136),3136]))

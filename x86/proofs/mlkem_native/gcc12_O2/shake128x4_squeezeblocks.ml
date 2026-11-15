@@ -69,7 +69,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
  ***)
 
 let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_EXEC =
-  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [0x3780,0x3811];;
+  X86_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_gcc12_O2_mc [layout_range "mlkem_shake128x4_squeezeblocks"];;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactics for the four states, the number of blocks and the loop counter.   *)
@@ -216,13 +216,13 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_FULL =
        PAIRWISE nonoverlapping
         [out0,168 * nblocks; out1,168 * nblocks; out2,168 * nblocks;
          out3,168 * nblocks; st,800; word_sub stackpointer (word 336),344] /\
-       ALL (nonoverlapping (word pc,0x82a0))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [out0,168 * nblocks; out1,168 * nblocks; out2,168 * nblocks;
          out3,168 * nblocks; st,800; word_sub stackpointer (word 336),344]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x3780) /\
+                 read RIP s = word (pc + mlkem_shake128x4_squeezeblocks) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [out0; out1; out2; out3; word nblocks; st] s /\
@@ -264,7 +264,7 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_FULL =
                      [out0,168 * nblocks; out1,168 * nblocks;
                       out2,168 * nblocks; out3,168 * nblocks; st,800;
                       word_sub stackpointer (word 336),344;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [out0,168 * nblocks; out1,168 * nblocks;
                       out2,168 * nblocks; out3,168 * nblocks; st,800;
                       word_sub stackpointer (word 336),336]))
@@ -327,7 +327,7 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_FULL =
   ENSURES_PRESERVED_TAC "r13_init" `R13` THEN
   ENSURES_PRESERVED_TAC "r14_init" `R14` THEN
   ENSURES_PRESERVED_TAC "r15_init" `R15` THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num` `pc + 0x37b0` `pc + 0x37fc`
+  ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num` `pc + mlkem_shake128x4_squeezeblocks_loop1` `pc + mlkem_shake128x4_squeezeblocks_loop1_exit`
    SQX4_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];
@@ -407,14 +407,14 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
          [(out0,168 * nblocks); (out1,168 * nblocks); (out2,168 * nblocks);
           (out3,168 * nblocks); (st,800);
           (word_sub stackpointer (word 336),344)] /\
-        ALL (nonoverlapping (word pc,0x82a0))
+        ALL (nonoverlapping (word pc,libmlkem_size))
          [(out0,168 * nblocks); (out1,168 * nblocks); (out2,168 * nblocks);
           (out3,168 * nblocks); (st,800);
           (word_sub stackpointer (word 336),344)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mlkem_native_libmlkem_gcc12_O2_mc /\
-                  read RIP s = word (pc + 0x3780) /\
+                  read RIP s = word (pc + mlkem_shake128x4_squeezeblocks) /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [out0; out1; out2; out3; word nblocks; st] s /\
@@ -476,13 +476,13 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
        PAIRWISE nonoverlapping
         [out0,168 * nblocks; out1,168 * nblocks; out2,168 * nblocks;
          out3,168 * nblocks; st,800; word_sub stackpointer (word 336),344] /\
-       ALL (nonoverlapping (word pc,0x82a0))
+       ALL (nonoverlapping (word pc,libmlkem_size))
         [out0,168 * nblocks; out1,168 * nblocks; out2,168 * nblocks;
          out3,168 * nblocks; st,800; word_sub stackpointer (word 336),344]
        ==> ensures x86
             (\s. bytes_loaded s (word pc)
                    mlkem_native_libmlkem_gcc12_O2_mc /\
-                 read RIP s = word (pc + 0x3780) /\
+                 read RIP s = word (pc + mlkem_shake128x4_squeezeblocks) /\
                  read RSP s = stackpointer /\
                  read (memory :> bytes64 stackpointer) s = returnaddress /\
                  C_ARGUMENTS [out0; out1; out2; out3; word nblocks; st] s /\
@@ -497,7 +497,7 @@ let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
                      [out0,168 * nblocks; out1,168 * nblocks;
                       out2,168 * nblocks; out3,168 * nblocks; st,800;
                       word_sub stackpointer (word 336),344;
-                      word(pc + 0x80c0),192]
+                      word(pc + rodata_mlk_KeccakF_RoundConstants),192]
                      [out0,168 * nblocks; out1,168 * nblocks;
                       out2,168 * nblocks; out3,168 * nblocks; st,800;
                       word_sub stackpointer (word 336),336]))

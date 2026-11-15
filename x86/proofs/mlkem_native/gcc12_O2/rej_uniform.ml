@@ -16,6 +16,12 @@
 needs "x86/proofs/base.ml";;
 needs "x86/proofs/consttime.ml";;
 needs "x86/proofs/utils/mlkem_native.ml";;
+needs "x86/proofs/mlkem_native/gcc12_O2/layout.ml";;
+
+(* Names for the labels of this transcription, whose code is at pc.          *)
+
+install_layout (layout_copies
+ ["rej_uniform","mlk_rej_uniform_c"]);;
 
 (**** print_literal_from_elf
         "x86/mlkem_native/gcc12_O2/rej_uniform.o";;
@@ -569,7 +575,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_CORRECT_MEMSAFE = prove
       offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
       8 * buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
-          [(word pc,0x9b); (buf,buflen)]
+          [(word pc,rej_uniform_size); (buf,buflen)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_rej_uniform_gcc12_O2_mc /\
@@ -577,7 +583,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_CORRECT_MEMSAFE = prove
                 C_ARGUMENTS [r; word offset; buf; word buflen] s /\
                 wordlist_from_memory(buf,LENGTH inlist) s = inlist /\
                 read events s = e)
-           (\s. read RIP s = word(pc + 0x9a) /\
+           (\s. read RIP s = word(pc + rej_uniform_ret) /\
                 (let inlist' = MAP (word_zx:12 word->16 word) inlist in
                  let outlist =
                    SUB_LIST (0,256 - offset)
@@ -651,7 +657,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_CORRECT_MEMSAFE = prove
 
   (*** The initialization, up to the loop head ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0x4d` (rej_inv_at `0`) THEN CONJ_TAC THENL
+  ENSURES_SEQUENCE_TAC `pc + rej_uniform_join4` (rej_inv_at `0`) THEN CONJ_TAC THENL
    [ENSURES_INIT_TAC "s0" THEN
     X86_STEPS_TAC MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_EXEC (1--3) THEN
     W32_DECIDE_FLAGS_TAC THEN
@@ -668,12 +674,12 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_CORRECT_MEMSAFE = prove
 
   (*** The loop over the first N groups ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0x4d` (rej_inv_at `N:num`) THEN CONJ_TAC THENL
+  ENSURES_SEQUENCE_TAC `pc + rej_uniform_join4` (rej_inv_at `N:num`) THEN CONJ_TAC THENL
    [ASM_CASES_TAC `N = 0` THENL
      [FIRST_X_ASSUM SUBST_ALL_TAC THEN ENSURES_INIT_TAC "s0" THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];
       ALL_TAC] THEN
-    ENSURES_WHILE_UP_TAC `N:num` `pc + 0x4d` `pc + 0x4d` rej_inv THEN
+    ENSURES_WHILE_UP_TAC `N:num` `pc + rej_uniform_join4` `pc + rej_uniform_join4` rej_inv THEN
     REPEAT CONJ_TAC THENL
      [ASM_ARITH_TAC;
       ENSURES_INIT_TAC "s0" THEN ENSURES_FINAL_STATE_TAC THEN
@@ -701,7 +707,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_CORRECT_MEMSAFE = prove
      [ASM_SIMP_TAC[ARITH_RULE `2 * (i + 1) = 2 * i + 2`; SUB_LIST_0_SNOC2];
       ALL_TAC] THEN
     REJ_GROUP_TAC `i:num` THEN
-    REJ_CASE_TAC `i:num` `word (pc + 0x4d):int64` THEN REJ_CLOSE_TAC;
+    REJ_CASE_TAC `i:num` `word (pc + rej_uniform_join4):int64` THEN REJ_CLOSE_TAC;
     ALL_TAC] THEN
 
   (*** The last group, number N, in twelve cases ***)
@@ -775,7 +781,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_CORRECT_MEMSAFE = prove
    (ASSUME `offset + LENGTH(L:int16 list) < 256`)) THEN
   DISCH_THEN(REPEAT_TCL DISJ_CASES_THEN STRIP_ASSUME_TAC) THEN
   RESOLVE_EXIT_TAC THEN SUBLIST_EVAL_TAC THEN
-  REJ_CASE_TAC `N:num` `word (pc + 0x9a):int64` THEN REJ_CLOSE_TAC);;
+  REJ_CASE_TAC `N:num` `word (pc + rej_uniform_ret):int64` THEN REJ_CLOSE_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* The correctness and memory safety theorems separately, and the            *)
@@ -795,14 +801,14 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_CORRECT = prove
       offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
       8 * buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
-          [(word pc,0x9b); (buf,buflen)]
+          [(word pc,rej_uniform_size); (buf,buflen)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_rej_uniform_gcc12_O2_mc /\
                 read RIP s = word pc /\
                 C_ARGUMENTS [r; word offset; buf; word buflen] s /\
                 wordlist_from_memory(buf,LENGTH inlist) s = inlist)
-           (\s. read RIP s = word(pc + 0x9a) /\
+           (\s. read RIP s = word(pc + rej_uniform_ret) /\
                 let inlist' = MAP (word_zx:12 word->16 word) inlist in
                 let outlist =
                   SUB_LIST (0,256 - offset)
@@ -829,7 +835,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_CORRECT = prove
       offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
       8 * buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
-          [(word pc,0x9b); (buf,buflen); (stackpointer,8)]
+          [(word pc,rej_uniform_size); (buf,buflen); (stackpointer,8)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_rej_uniform_gcc12_O2_mc /\
@@ -865,7 +871,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_MEMSAFE = prove
       offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
       8 * buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
-          [(word pc,0x9b); (buf,buflen)]
+          [(word pc,rej_uniform_size); (buf,buflen)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_rej_uniform_gcc12_O2_mc /\
@@ -873,7 +879,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_MEMSAFE = prove
                 C_ARGUMENTS [r; word offset; buf; word buflen] s /\
                 wordlist_from_memory(buf,LENGTH inlist) s = inlist /\
                 read events s = e)
-           (\s. read RIP s = word(pc + 0x9a) /\
+           (\s. read RIP s = word(pc + rej_uniform_ret) /\
                 (exists e2.
                    read events s = APPEND e2 e /\
                    memaccess_inbounds e2 [buf,buflen]
@@ -896,7 +902,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_SAFE = prove
       offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
       8 * buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
-          [(word pc,0x9b); (buf,buflen); (stackpointer,8)]
+          [(word pc,rej_uniform_size); (buf,buflen); (stackpointer,8)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_rej_uniform_gcc12_O2_mc /\
@@ -932,7 +938,7 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IN_IMAGE =
   MLKEM_NATIVE_IMAGE_CODE_RULE mlkem_native_rej_uniform_gcc12_O2_mc
-    0x6040 [];;
+    (layout "mlk_rej_uniform_c") [];;
 
 let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
  (`!r offset buf buflen (inlist:(12 word)list) pc stackpointer returnaddress.
@@ -940,11 +946,11 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
       offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
       8 * buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
-          [(word pc,0x82a0); (buf,buflen); (stackpointer,8)]
+          [(word pc,libmlkem_size); (buf,buflen); (stackpointer,8)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_libmlkem_gcc12_O2_mc /\
-                read RIP s = word (pc + 0x6040) /\
+                read RIP s = word (pc + mlk_rej_uniform_c) /\
                 read RSP s = stackpointer /\
                 read (memory :> bytes64 stackpointer) s = returnaddress /\
                 C_ARGUMENTS [r; word offset; buf; word buflen] s /\
@@ -965,7 +971,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
             MAYCHANGE [memory :> bytes(word_add r (word(2 * offset)),
                                        2 * (256 - offset))])`,
   MLKEM_NATIVE_IMAGE_TAC
-   (INST [`pc + 0x6040`,`pc:num`]
+   (INST [`pc + mlk_rej_uniform_c`,`pc:num`]
      (SPEC_ALL MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_CORRECT))
    [MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IN_IMAGE]);;
 
@@ -976,11 +982,11 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
       offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
       8 * buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
-          [(word pc,0x82a0); (buf,buflen); (stackpointer,8)]
+          [(word pc,libmlkem_size); (buf,buflen); (stackpointer,8)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_libmlkem_gcc12_O2_mc /\
-                read RIP s = word (pc + 0x6040) /\
+                read RIP s = word (pc + mlk_rej_uniform_c) /\
                 read RSP s = stackpointer /\
                 read (memory :> bytes64 stackpointer) s = returnaddress /\
                 C_ARGUMENTS [r; word offset; buf; word buflen] s /\
@@ -998,7 +1004,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
             MAYCHANGE [memory :> bytes(word_add r (word(2 * offset)),
                                        2 * (256 - offset))])`,
   MLKEM_NATIVE_IMAGE_TAC
-   (INST [`pc + 0x6040`,`pc:num`]
+   (INST [`pc + mlk_rej_uniform_c`,`pc:num`]
      (SPEC_ALL MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_SAFE))
    [MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IN_IMAGE]);;
 
@@ -1278,7 +1284,7 @@ let REJ_FULL_NORMAL_TAC =
   (SUBGOAL_THEN `offset + LENGTH(L:int16 list) < 256` ASSUME_TAC THENL
     [ASM_ARITH_TAC; ALL_TAC]) THEN
   REJ_PRESELECT_TAC THEN
-  REJ_CASE_TAC `i:num` `word (pc + 0x4d):int64` THEN REJ_FULL_CLOSE_TAC;;
+  REJ_CASE_TAC `i:num` `word (pc + rej_uniform_join4):int64` THEN REJ_FULL_CLOSE_TAC;;
 
 let REJ_FULL_LAST_TAC =
   SUBGOAL_THEN `i:num = N` SUBST_ALL_TAC THENL
@@ -1348,7 +1354,7 @@ let REJ_FULL_LAST_TAC =
   DISCH_THEN(REPEAT_TCL DISJ_CASES_THEN STRIP_ASSUME_TAC) THEN
   RESOLVE_EXIT_TAC THEN SUBLIST_EVAL_TAC THEN
   REJ_PRESELECT_TAC THEN
-  REJ_CASE_TAC `N:num` `word (pc + 0x9a):int64` THEN REJ_FULL_CLOSE_TAC;;
+  REJ_CASE_TAC `N:num` `word (pc + rej_uniform_ret):int64` THEN REJ_FULL_CLOSE_TAC;;
 
 let REJ_FULL_EPIL_TAC =
   REWRITE_TAC[ARITH_RULE `~(N + 1 <= N)`] THEN
@@ -1365,7 +1371,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_FULL = prove
       offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
       8 * buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
-          [(word pc,0x9b); (buf,buflen); (stackpointer,8)]
+          [(word pc,rej_uniform_size); (buf,buflen); (stackpointer,8)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_rej_uniform_gcc12_O2_mc /\
@@ -1400,7 +1406,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_FULL = prove
   ASM_CASES_TAC `offset = 256` THENL
    [REJ_FULL_256_TAC;
     REJ_FULL_N_TAC THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `N + 1` `pc + 0x4d` `pc + 0x9a`
+    ENSURES_EVENTS_WHILE_UP2_TAC `N + 1` `pc + rej_uniform_join4` `pc + rej_uniform_ret`
       rej_inv_full THEN
     REPEAT CONJ_TAC THENL
      [ARITH_TAC;
@@ -1417,11 +1423,11 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
       offset <= 256 /\ 3 <= buflen /\ buflen <= 4096 /\
       8 * buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_add r (word(2 * offset)),2 * (256 - offset)))
-          [(word pc,0x82a0); (buf,buflen); (stackpointer,8)]
+          [(word pc,libmlkem_size); (buf,buflen); (stackpointer,8)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc)
                   mlkem_native_libmlkem_gcc12_O2_mc /\
-                read RIP s = word (pc + 0x6040) /\
+                read RIP s = word (pc + mlk_rej_uniform_c) /\
                 read RSP s = stackpointer /\
                 read (memory :> bytes64 stackpointer) s = returnaddress /\
                 C_ARGUMENTS [r; word offset; buf; word buflen] s /\
@@ -1450,5 +1456,5 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
                                        2 * (256 - offset))])`,
   MLKEM_NATIVE_IMAGE_SAFE_TAC
    MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_FULL
-   [`pc + 0x6040`,`pc:num`]
+   [`pc + mlk_rej_uniform_c`,`pc:num`]
    [MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_IN_IMAGE]);;
