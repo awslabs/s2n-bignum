@@ -16633,63 +16633,6 @@ int test_sha3_keccak4_f1600_alt(void)
   return 0;
 }
 
-int test_sha3_keccakN_f1600_x86(char *name, int n,
-                                void (*f)(uint64_t *a, const uint64_t *rc))
-{ uint64_t t, i;
-  uint64_t a[200], b[200], c[200];
-  if (!supports_avx512())
-   { printf("Not testing %s because there is no AVX-512 support\n",name);
-     return 0;
-   }
-  printf("Testing %s with %d cases\n",name,tests);
-  for (t = 0; t < tests; ++t)
-   { random_bignum(25*n,a);
-     for (i = 0; i < 25*n; ++i) c[i] = a[i];
-     for (i = 0; i < n; ++i) reference_keccak_f1600(b+25*i,a+25*i);
-     (*f)(c,keccak_RC);
-     for (i = 0; i < 25*n; ++i)
-      { if (b[i] != c[i])
-         { printf("Error in %s batch = %"PRIu64", element i = %"PRIu64"; "
-                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
-                  name,i/25,i%25,c[i],b[i]);
-           return 1;
-         }
-      }
-     if (VERBOSE)
-      { printf("OK: %s[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"] = "
-               "[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"]\n",
-               name,a[0],a[1],a[23],a[24],
-               c[0],c[1],c[23],c[24]);
-      }
-   }
-  printf("All OK\n");
-  return 0;
-}
-
-int test_sha3_keccak4_f1600_avx512vl(void)
-{
-#ifndef __x86_64__
-  // Do not call the x86 function to avoid a linking failure error.
-  return 1;
-#else
-  return test_sha3_keccakN_f1600_x86("sha3_keccak4_f1600_avx512vl", 4,
-                                     sha3_keccak4_f1600_avx512vl);
-#endif
-}
-
-int test_sha3_keccak8_f1600_avx512(void)
-{
-#ifndef __x86_64__
-  // Do not call the x86 function to avoid a linking failure error.
-  return 1;
-#else
-  return test_sha3_keccakN_f1600_x86("sha3_keccak8_f1600_avx512", 8,
-                                     sha3_keccak8_f1600_avx512);
-#endif
-}
-
 int test_sha3_keccak4_f1600_alt2(void)
 {
 #ifdef __x86_64__
@@ -19218,14 +19161,6 @@ int main(int argc, char *argv[])
     functionaltest(aes&&sha3,"aes256_gcm_dec_alt",test_aes256_gcm_dec_alt);
     functionaltest(aes,"aes256_gcm_enc",test_aes256_gcm_enc);
     functionaltest(aes&&sha3,"aes256_gcm_enc_alt",test_aes256_gcm_enc_alt);
-  }
-
-  // Many x86 machines lack AVX-512, so its absence does not make testing
-  // incomplete: these tests then pass after a "Not testing" message.
-
-  if (get_arch_name() == ARCH_X86_64) {
-    functionaltest(all,"sha3_keccak4_f1600_avx512vl",test_sha3_keccak4_f1600_avx512vl);
-    functionaltest(all,"sha3_keccak8_f1600_avx512",test_sha3_keccak8_f1600_avx512);
   }
 
   if (extrastrigger) function_to_test = "_";

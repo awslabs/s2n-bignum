@@ -1374,7 +1374,6 @@ extern void sha3_keccak2_f1600_alt(uint64_t a[50],const uint64_t rc[24]);
 
 /* Batched 4-way Keccak-f1600 permutation for SHA3 */
 /* On AArch64, sha3_keccak4_f1600 and sha3_keccak4_f1600_alt2 need FEAT_SHA3 */
-/* On x86, sha3_keccak4_f1600_avx512vl needs AVX-512F, AVX-512DQ and AVX-512VL */
 /* Inputs a[100], rc[24]; output a[100] */
 extern void sha3_keccak4_f1600(uint64_t a[100],const uint64_t rc[24]);
 #ifdef __x86_64__
@@ -1383,14 +1382,6 @@ extern void sha3_keccak4_f1600_alt(uint64_t a[100],const uint64_t rc[24],const u
 extern void sha3_keccak4_f1600_alt(uint64_t a[100],const uint64_t rc[24]);
 #endif
 extern void sha3_keccak4_f1600_alt2(uint64_t a[100],const uint64_t rc[24]);
-#ifdef __x86_64__
-extern void sha3_keccak4_f1600_avx512vl(uint64_t a[100],const uint64_t rc[24]);
-
-/* Batched 8-way Keccak-f1600 permutation for SHA3 */
-/* On x86, sha3_keccak8_f1600_avx512 needs AVX-512F and AVX-512DQ */
-/* Inputs a[200], rc[24]; output a[200] */
-extern void sha3_keccak8_f1600_avx512(uint64_t a[200],const uint64_t rc[24]);
-#endif
 
 /* Point addition on CC curve SM2 in Montgomery-Jacobian coordinates */
 /* Inputs p1[12], p2[12]; output p3[12] */

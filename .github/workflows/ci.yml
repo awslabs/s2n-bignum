@@ -231,22 +231,6 @@ jobs:
         # Pin attaches to the traced process via ptrace.
         sudo sysctl -w kernel.yama.ptrace_scope=0
 
-    # The runner itself may lack AVX-512, so that the tests job skips these.
-    # Selecting one function makes ./test return 1 however the test goes, so
-    # its output is checked instead.
-    - name: Run the AVX-512 Keccak tests under SDE
-      run: |
-        make -C x86
-        cd tests
-        CC=gcc make test
-        for f in sha3_keccak4_f1600_avx512vl sha3_keccak8_f1600_avx512; do
-          "$SDE_PATH" -${{ matrix.sde_cpu }} -chip_check_exe_only -- \
-            ./test -100 $f > test.out || true
-          cat test.out
-          grep -q "^Testing $f with 100 cases" test.out
-          grep -q "but all 1 selected tests passed" test.out
-        done
-
     - name: Install HOL Light
       run: |
         git clone https://github.com/jrh13/hol-light.git
