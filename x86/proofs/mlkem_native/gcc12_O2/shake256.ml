@@ -10,11 +10,10 @@
 (* into a state on the stack with mlk_keccak_absorb_once, and then for each  *)
 (* block of the output permutes the state and extracts up to 136 bytes of    *)
 (* it, the rate of SHAKE256, before zeroing the state with REP STOSQ. It is  *)
-(* verified in the whole image (see libmlkem.ml),                            *)
-(* where it is at address 0x3480, using the theorems for                     *)
-(* mlk_keccak_absorb_once at 0x32b0, mlkem_keccakf1600_permute at 0x3e70 and *)
-(* mlkem_keccakf1600_extract_bytes at 0x3d10 in the image. The result is     *)
-(* shake256 of common/fips202/fips202.ml.                                    *)
+(* verified in the whole image (see libmlkem.ml), using the theorems for     *)
+(* mlk_keccak_absorb_once, mlkem_keccakf1600_permute and                     *)
+(* mlkem_keccakf1600_extract_bytes in the image. The result is shake256 of   *)
+(* common/fips202/fips202.ml.                                                *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keccak_absorb_once.ml";;
@@ -23,48 +22,49 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    3480: push   rbp
-    3481: mov    r8d,0x1f
-    3487: mov    rbp,rsp
-    348a: push   r14
-    348c: push   r13
-    348e: mov    r13,rdi
-    3491: push   r12
-    3493: mov    r12,rsi
-    3496: mov    esi,0x88
-    349b: push   rbx
-    349c: and    rsp,0xffffffffffffffe0
-    34a0: sub    rsp,0xe0
-    34a7: mov    r14,rsp
-    34aa: mov    rdi,r14
-    34ad: call   32b0 <mlk_keccak_absorb_once>
-    34b2: test   r12,r12
-    34b5: je     34eb <mlkem_shake256+0x6b>
-    34b7: nop    WORD PTR [rax+rax*1+0x0]
-    34c0: mov    rdi,r14
-    34c3: mov    ebx,0x88
-    34c8: call   3e70 <mlkem_keccakf1600_permute>
-    34cd: cmp    r12,rbx
-    34d0: mov    rsi,r13
-    34d3: mov    rdi,r14
-    34d6: cmovbe rbx,r12
-    34da: xor    edx,edx
-    34dc: mov    ecx,ebx
-    34de: add    r13,rbx
-    34e1: call   3d10 <mlkem_keccakf1600_extract_bytes>
-    34e6: sub    r12,rbx
-    34e9: jne    34c0 <mlkem_shake256+0x40>
-    34eb: xor    eax,eax
-    34ed: mov    rdi,r14
-    34f0: mov    ecx,0x1c
-    34f5: rep    stos QWORD PTR es:[rdi],rax
-    34f8: lea    rsp,[rbp-0x20]
-    34fc: pop    rbx
-    34fd: pop    r12
-    34ff: pop    r13
-    3501: pop    r14
-    3503: pop    rbp
-    3504: ret
+    mlkem_shake256:
+       +0x0: push   rbp
+       +0x1: mov    r8d,0x1f
+       +0x7: mov    rbp,rsp
+       +0xa: push   r14
+       +0xc: push   r13
+       +0xe: mov    r13,rdi
+      +0x11: push   r12
+      +0x13: mov    r12,rsi
+      +0x16: mov    esi,0x88
+      +0x1b: push   rbx
+      +0x1c: and    rsp,0xffffffffffffffe0
+      +0x20: sub    rsp,0xe0
+      +0x27: mov    r14,rsp
+      +0x2a: mov    rdi,r14
+      +0x2d: call   <mlk_keccak_absorb_once>
+      +0x32: test   r12,r12
+      +0x35: je     <mlkem_shake256+0x6b>
+      +0x37: nop    WORD PTR [rax+rax*1+0x0]
+      +0x40: mov    rdi,r14
+      +0x43: mov    ebx,0x88
+      +0x48: call   <mlkem_keccakf1600_permute>
+      +0x4d: cmp    r12,rbx
+      +0x50: mov    rsi,r13
+      +0x53: mov    rdi,r14
+      +0x56: cmovbe rbx,r12
+      +0x5a: xor    edx,edx
+      +0x5c: mov    ecx,ebx
+      +0x5e: add    r13,rbx
+      +0x61: call   <mlkem_keccakf1600_extract_bytes>
+      +0x66: sub    r12,rbx
+      +0x69: jne    <mlkem_shake256+0x40>
+      +0x6b: xor    eax,eax
+      +0x6d: mov    rdi,r14
+      +0x70: mov    ecx,0x1c
+      +0x75: rep    stos QWORD PTR es:[rdi],rax
+      +0x78: lea    rsp,[rbp-0x20]
+      +0x7c: pop    rbx
+      +0x7d: pop    r12
+      +0x7f: pop    r13
+      +0x81: pop    r14
+      +0x83: pop    rbp
+      +0x84: ret
  ***)
 
 let MLKEM_NATIVE_SHAKE256_GCC12_O2_EXEC =

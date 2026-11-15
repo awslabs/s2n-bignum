@@ -11,11 +11,10 @@
 (* three blocks of 168 bytes and samples the coefficients below 3329 from    *)
 (* them with mlk_rej_uniform_c, and then squeezes one more block and samples *)
 (* from it until there are 256, before zeroing the state and the buffer. It  *)
-(* is verified in the whole image (see libmlkem.ml),                         *)
-(* where it is at address 0x62f0, using the theorems for mlkem_shake128_init *)
-(* at 0x3430, mlkem_shake128_absorb_once at 0x33c0,                          *)
-(* mlkem_shake128_squeezeblocks at 0x33e0, mlkem_shake128_release at 0x3440  *)
-(* and mlk_rej_uniform_c at 0x6040 in the image.                             *)
+(* is verified in the whole image (see libmlkem.ml), using the theorems for  *)
+(* mlkem_shake128_init, mlkem_shake128_absorb_once,                          *)
+(* mlkem_shake128_squeezeblocks, mlkem_shake128_release and                  *)
+(* mlk_rej_uniform_c in the image.                                           *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/rej_uniform.ml";;
@@ -27,62 +26,63 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    62f0: push   rbp
-    62f1: mov    rbp,rsp
-    62f4: push   r14
-    62f6: mov    r14,rdi
-    62f9: push   r13
-    62fb: push   r12
-    62fd: push   rbx
-    62fe: mov    rbx,rsi
-    6301: and    rsp,0xffffffffffffffe0
-    6305: sub    rsp,0x2e0
-    630c: mov    r13,rsp
-    630f: lea    r12,[rsp+0xe0]
-    6317: mov    rdi,r13
-    631a: call   3430 <mlkem_shake128_init>
-    631f: mov    edx,0x22
-    6324: mov    rsi,rbx
-    6327: mov    rdi,r13
-    632a: call   33c0 <mlkem_shake128_absorb_once>
-    632f: mov    rdx,r13
-    6332: mov    esi,0x3
-    6337: mov    rdi,r12
-    633a: call   33e0 <mlkem_shake128_squeezeblocks>
-    633f: xor    esi,esi
-    6341: mov    ecx,0x1f8
-    6346: mov    rdx,r12
-    6349: mov    rdi,r14
-    634c: call   6040 <mlk_rej_uniform_c.constprop.0>
-    6351: cmp    eax,0xff
-    6356: ja     638b <mlkem_poly_rej_uniform+0x9b>
-    6358: mov    ebx,eax
-    635a: nop    WORD PTR [rax+rax*1+0x0]
-    6360: mov    rdx,r13
-    6363: mov    esi,0x1
-    6368: mov    rdi,r12
-    636b: call   33e0 <mlkem_shake128_squeezeblocks>
-    6370: mov    esi,ebx
-    6372: mov    ecx,0xa8
-    6377: mov    rdx,r12
-    637a: mov    rdi,r14
-    637d: call   6040 <mlk_rej_uniform_c.constprop.0>
-    6382: mov    ebx,eax
-    6384: cmp    eax,0xff
-    6389: jbe    6360 <mlkem_poly_rej_uniform+0x70>
-    638b: mov    rdi,r13
-    638e: call   3440 <mlkem_shake128_release>
-    6393: xor    eax,eax
-    6395: mov    rdi,r12
-    6398: mov    ecx,0x3f
-    639d: rep    stos QWORD PTR es:[rdi],rax
-    63a0: lea    rsp,[rbp-0x20]
-    63a4: pop    rbx
-    63a5: pop    r12
-    63a7: pop    r13
-    63a9: pop    r14
-    63ab: pop    rbp
-    63ac: ret
+    mlkem_poly_rej_uniform:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r14
+       +0x6: mov    r14,rdi
+       +0x9: push   r13
+       +0xb: push   r12
+       +0xd: push   rbx
+       +0xe: mov    rbx,rsi
+      +0x11: and    rsp,0xffffffffffffffe0
+      +0x15: sub    rsp,0x2e0
+      +0x1c: mov    r13,rsp
+      +0x1f: lea    r12,[rsp+0xe0]
+      +0x27: mov    rdi,r13
+      +0x2a: call   <mlkem_shake128_init>
+      +0x2f: mov    edx,0x22
+      +0x34: mov    rsi,rbx
+      +0x37: mov    rdi,r13
+      +0x3a: call   <mlkem_shake128_absorb_once>
+      +0x3f: mov    rdx,r13
+      +0x42: mov    esi,0x3
+      +0x47: mov    rdi,r12
+      +0x4a: call   <mlkem_shake128_squeezeblocks>
+      +0x4f: xor    esi,esi
+      +0x51: mov    ecx,0x1f8
+      +0x56: mov    rdx,r12
+      +0x59: mov    rdi,r14
+      +0x5c: call   <mlk_rej_uniform_c.constprop.0>
+      +0x61: cmp    eax,0xff
+      +0x66: ja     <mlkem_poly_rej_uniform+0x9b>
+      +0x68: mov    ebx,eax
+      +0x6a: nop    WORD PTR [rax+rax*1+0x0]
+      +0x70: mov    rdx,r13
+      +0x73: mov    esi,0x1
+      +0x78: mov    rdi,r12
+      +0x7b: call   <mlkem_shake128_squeezeblocks>
+      +0x80: mov    esi,ebx
+      +0x82: mov    ecx,0xa8
+      +0x87: mov    rdx,r12
+      +0x8a: mov    rdi,r14
+      +0x8d: call   <mlk_rej_uniform_c.constprop.0>
+      +0x92: mov    ebx,eax
+      +0x94: cmp    eax,0xff
+      +0x99: jbe    <mlkem_poly_rej_uniform+0x70>
+      +0x9b: mov    rdi,r13
+      +0x9e: call   <mlkem_shake128_release>
+      +0xa3: xor    eax,eax
+      +0xa5: mov    rdi,r12
+      +0xa8: mov    ecx,0x3f
+      +0xad: rep    stos QWORD PTR es:[rdi],rax
+      +0xb0: lea    rsp,[rbp-0x20]
+      +0xb4: pop    rbx
+      +0xb5: pop    r12
+      +0xb7: pop    r13
+      +0xb9: pop    r14
+      +0xbb: pop    rbp
+      +0xbc: ret
  ***)
 
 let MLKEM_NATIVE_POLY_REJ_UNIFORM_GCC12_O2_EXEC =

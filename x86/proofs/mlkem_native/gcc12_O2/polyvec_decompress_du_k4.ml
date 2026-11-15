@@ -9,8 +9,8 @@
 (* portable C implementation compiled by gcc 12 with -O2 (see                *)
 (* mlkem_native/README.md), which calls mlkem_poly_decompress_d11 for each   *)
 (* of the polynomials, in a loop. It is verified in the whole image (see     *)
-(* libmlkem.ml), where it is at address 0x1f80, using                        *)
-(* the theorems for mlkem_poly_decompress_d11 at 0x2fe0 in the image.        *)
+(* libmlkem.ml), using the theorems for mlkem_poly_decompress_d11 in the     *)
+(* image.                                                                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_decompress_d11.ml";;
@@ -18,23 +18,24 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    1f80: push   r12
-    1f82: lea    r12,[rsi+0x580]
-    1f89: push   rbp
-    1f8a: mov    rbp,rdi
-    1f8d: push   rbx
-    1f8e: mov    rbx,rsi
-    1f91: mov    rsi,rbx
-    1f94: mov    rdi,rbp
-    1f97: add    rbx,0x160
-    1f9e: add    rbp,0x200
-    1fa5: call   2fe0 <mlkem_poly_decompress_d11>
-    1faa: cmp    rbx,r12
-    1fad: jne    1f91 <mlkem1024_polyvec_decompress_du+0x11>
-    1faf: pop    rbx
-    1fb0: pop    rbp
-    1fb1: pop    r12
-    1fb3: ret
+    mlkem1024_polyvec_decompress_du:
+       +0x0: push   r12
+       +0x2: lea    r12,[rsi+0x580]
+       +0x9: push   rbp
+       +0xa: mov    rbp,rdi
+       +0xd: push   rbx
+       +0xe: mov    rbx,rsi
+      +0x11: mov    rsi,rbx
+      +0x14: mov    rdi,rbp
+      +0x17: add    rbx,0x160
+      +0x1e: add    rbp,0x200
+      +0x25: call   <mlkem_poly_decompress_d11>
+      +0x2a: cmp    rbx,r12
+      +0x2d: jne    <mlkem1024_polyvec_decompress_du+0x11>
+      +0x2f: pop    rbx
+      +0x30: pop    rbp
+      +0x31: pop    r12
+      +0x33: ret
  ***)
 
 let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_GCC12_O2_EXEC =

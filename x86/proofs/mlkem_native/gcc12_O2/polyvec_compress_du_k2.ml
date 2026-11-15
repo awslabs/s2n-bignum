@@ -4,14 +4,13 @@
  *)
 
 (* ========================================================================= *)
-(* Compression of a vector of 2 polynomials to 10 bits per coefficient.      *)
-(* This is the code for mlkem512_polyvec_compress_du from mlkem-native's     *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
+(* Compression of a vector of 2 polynomials to 10 bits per coefficient. This *)
+(* is the code for mlkem512_polyvec_compress_du from mlkem-native's portable *)
+(* C implementation compiled by gcc 12 with -O2 (see                         *)
 (* mlkem_native/README.md), which calls mlkem_poly_compress_d10 for each of  *)
 (* the polynomials, the last time as a tail call. It is verified in the      *)
-(* whole image (see libmlkem.ml), where it is at                             *)
-(* address 0x5a50, using the theorems for mlkem_poly_compress_d10 at 0x2660  *)
-(* in the image.                                                             *)
+(* whole image (see libmlkem.ml), using the theorems for                     *)
+(* mlkem_poly_compress_d10 in the image.                                     *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_compress_d10.ml";;
@@ -19,18 +18,19 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    5a50: push   rbp
-    5a51: mov    rbp,rsi
-    5a54: push   rbx
-    5a55: mov    rbx,rdi
-    5a58: sub    rsp,0x8
-    5a5c: call   2660 <mlkem_poly_compress_d10>
-    5a61: add    rsp,0x8
-    5a65: lea    rsi,[rbp+0x200]
-    5a6c: lea    rdi,[rbx+0x140]
-    5a73: pop    rbx
-    5a74: pop    rbp
-    5a75: jmp    2660 <mlkem_poly_compress_d10>
+    mlkem512_polyvec_compress_du:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsi
+       +0x4: push   rbx
+       +0x5: mov    rbx,rdi
+       +0x8: sub    rsp,0x8
+       +0xc: call   <mlkem_poly_compress_d10>
+      +0x11: add    rsp,0x8
+      +0x15: lea    rsi,[rbp+0x200]
+      +0x1c: lea    rdi,[rbx+0x140]
+      +0x23: pop    rbx
+      +0x24: pop    rbp
+      +0x25: jmp    <mlkem_poly_compress_d10>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K2_GCC12_O2_EXEC =

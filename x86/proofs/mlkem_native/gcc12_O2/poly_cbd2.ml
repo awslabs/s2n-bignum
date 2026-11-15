@@ -8,9 +8,8 @@
 (* eta = 2. This is the code for mlkem_poly_cbd2 from mlkem-native's         *)
 (* portable C implementation compiled by gcc 12 with -O2 (see                *)
 (* mlkem_native/README.md). It is verified in the whole image (see           *)
-(* libmlkem.ml), where it is at address 0x63b0. It                           *)
-(* saves RBX on the stack, so it is verified directly as a subroutine, with  *)
-(* that part of the stack.                                                   *)
+(* libmlkem.ml). It saves RBX on the stack, so it is verified directly as a  *)
+(* subroutine, with that part of the stack.                                  *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -18,41 +17,42 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    63b0: push   rbx
-    63b1: mov    r8,rdi
-    63b4: mov    r10,rsi
-    63b7: xor    r9d,r9d
-    63ba: nop    WORD PTR [rax+rax*1+0x0]
-    63c0: mov    edi,DWORD PTR [r10+r9*4]
-    63c4: lea    esi,[r9*8+0x0]
-    63cc: xor    edx,edx
-    63ce: mov    eax,edi
-    63d0: shr    edi,1
-    63d2: and    eax,0x55555555
-    63d7: and    edi,0x55555555
-    63dd: add    edi,eax
-    63df: nop
-    63e0: mov    ecx,edx
-    63e2: mov    eax,edi
-    63e4: mov    ebx,edi
-    63e6: mov    r11d,esi
-    63e9: shr    eax,cl
-    63eb: lea    ecx,[rdx+0x2]
-    63ee: add    edx,0x4
-    63f1: add    esi,0x1
-    63f4: shr    ebx,cl
-    63f6: and    eax,0x3
-    63f9: mov    ecx,ebx
-    63fb: and    ecx,0x3
-    63fe: sub    eax,ecx
-    6400: mov    WORD PTR [r8+r11*2],ax
-    6405: cmp    edx,0x20
-    6408: jne    63e0 <mlkem_poly_cbd2+0x30>
-    640a: add    r9,0x1
-    640e: cmp    r9,0x20
-    6412: jne    63c0 <mlkem_poly_cbd2+0x10>
-    6414: pop    rbx
-    6415: ret
+    mlkem_poly_cbd2:
+       +0x0: push   rbx
+       +0x1: mov    r8,rdi
+       +0x4: mov    r10,rsi
+       +0x7: xor    r9d,r9d
+       +0xa: nop    WORD PTR [rax+rax*1+0x0]
+      +0x10: mov    edi,DWORD PTR [r10+r9*4]
+      +0x14: lea    esi,[r9*8+0x0]
+      +0x1c: xor    edx,edx
+      +0x1e: mov    eax,edi
+      +0x20: shr    edi,1
+      +0x22: and    eax,0x55555555
+      +0x27: and    edi,0x55555555
+      +0x2d: add    edi,eax
+      +0x2f: nop
+      +0x30: mov    ecx,edx
+      +0x32: mov    eax,edi
+      +0x34: mov    ebx,edi
+      +0x36: mov    r11d,esi
+      +0x39: shr    eax,cl
+      +0x3b: lea    ecx,[rdx+0x2]
+      +0x3e: add    edx,0x4
+      +0x41: add    esi,0x1
+      +0x44: shr    ebx,cl
+      +0x46: and    eax,0x3
+      +0x49: mov    ecx,ebx
+      +0x4b: and    ecx,0x3
+      +0x4e: sub    eax,ecx
+      +0x50: mov    WORD PTR [r8+r11*2],ax
+      +0x55: cmp    edx,0x20
+      +0x58: jne    <mlkem_poly_cbd2+0x30>
+      +0x5a: add    r9,0x1
+      +0x5e: cmp    r9,0x20
+      +0x62: jne    <mlkem_poly_cbd2+0x10>
+      +0x64: pop    rbx
+      +0x65: ret
  ***)
 
 let MLKEM_NATIVE_POLY_CBD2_GCC12_O2_EXEC =

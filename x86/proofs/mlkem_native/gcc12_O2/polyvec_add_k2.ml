@@ -8,9 +8,8 @@
 (* This is the code for mlkem512_polyvec_add from mlkem-native's portable C  *)
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which calls mlkem_poly_add for each of the polynomials, the last time as  *)
-(* a tail call. It is verified in the whole image (see                       *)
-(* libmlkem.ml), where it is at address 0x5c80, using                        *)
-(* the theorems for mlkem_poly_add at 0x56b0 in the image.                   *)
+(* a tail call. It is verified in the whole image (see libmlkem.ml), using   *)
+(* the theorems for mlkem_poly_add in the image.                             *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_add.ml";;
@@ -18,18 +17,19 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    5c80: push   rbp
-    5c81: mov    rbp,rsi
-    5c84: push   rbx
-    5c85: mov    rbx,rdi
-    5c88: sub    rsp,0x8
-    5c8c: call   56b0 <mlkem_poly_add>
-    5c91: add    rsp,0x8
-    5c95: lea    rsi,[rbp+0x200]
-    5c9c: lea    rdi,[rbx+0x200]
-    5ca3: pop    rbx
-    5ca4: pop    rbp
-    5ca5: jmp    56b0 <mlkem_poly_add>
+    mlkem512_polyvec_add:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsi
+       +0x4: push   rbx
+       +0x5: mov    rbx,rdi
+       +0x8: sub    rsp,0x8
+       +0xc: call   <mlkem_poly_add>
+      +0x11: add    rsp,0x8
+      +0x15: lea    rsi,[rbp+0x200]
+      +0x1c: lea    rdi,[rbx+0x200]
+      +0x23: pop    rbx
+      +0x24: pop    rbp
+      +0x25: jmp    <mlkem_poly_add>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_ADD_K2_GCC12_O2_EXEC =

@@ -8,10 +8,9 @@
 (* mlkem_shake128_squeezeblocks from mlkem-native's portable C               *)
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which for each of nblocks blocks permutes the state and extracts its      *)
-(* first 168 bytes. It is verified in the whole image (see                   *)
-(* libmlkem.ml), where it is at address 0x33e0, using                        *)
-(* the theorems for mlkem_keccakf1600_permute at 0x3e70 and                  *)
-(* mlkem_keccakf1600_extract_bytes at 0x3d10 in the image.                   *)
+(* first 168 bytes. It is verified in the whole image (see libmlkem.ml),     *)
+(* using the theorems for mlkem_keccakf1600_permute and                      *)
+(* mlkem_keccakf1600_extract_bytes in the image.                             *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keccakf1600_permute.ml";;
@@ -20,31 +19,32 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    33e0: test   rsi,rsi
-    33e3: je     3428 <mlkem_shake128_squeezeblocks+0x48>
-    33e5: push   r12
-    33e7: mov    r12,rdx
-    33ea: push   rbp
-    33eb: mov    rbp,rdi
-    33ee: push   rbx
-    33ef: mov    rbx,rsi
-    33f2: nop    WORD PTR [rax+rax*1+0x0]
-    33f8: mov    rdi,r12
-    33fb: call   3e70 <mlkem_keccakf1600_permute>
-    3400: mov    rsi,rbp
-    3403: mov    ecx,0xa8
-    3408: xor    edx,edx
-    340a: mov    rdi,r12
-    340d: add    rbp,0xa8
-    3414: call   3d10 <mlkem_keccakf1600_extract_bytes>
-    3419: sub    rbx,0x1
-    341d: jne    33f8 <mlkem_shake128_squeezeblocks+0x18>
-    341f: pop    rbx
-    3420: pop    rbp
-    3421: pop    r12
-    3423: ret
-    3424: nop    DWORD PTR [rax+0x0]
-    3428: ret
+    mlkem_shake128_squeezeblocks:
+       +0x0: test   rsi,rsi
+       +0x3: je     <mlkem_shake128_squeezeblocks+0x48>
+       +0x5: push   r12
+       +0x7: mov    r12,rdx
+       +0xa: push   rbp
+       +0xb: mov    rbp,rdi
+       +0xe: push   rbx
+       +0xf: mov    rbx,rsi
+      +0x12: nop    WORD PTR [rax+rax*1+0x0]
+      +0x18: mov    rdi,r12
+      +0x1b: call   <mlkem_keccakf1600_permute>
+      +0x20: mov    rsi,rbp
+      +0x23: mov    ecx,0xa8
+      +0x28: xor    edx,edx
+      +0x2a: mov    rdi,r12
+      +0x2d: add    rbp,0xa8
+      +0x34: call   <mlkem_keccakf1600_extract_bytes>
+      +0x39: sub    rbx,0x1
+      +0x3d: jne    <mlkem_shake128_squeezeblocks+0x18>
+      +0x3f: pop    rbx
+      +0x40: pop    rbp
+      +0x41: pop    r12
+      +0x43: ret
+      +0x44: nop    DWORD PTR [rax+0x0]
+      +0x48: ret
  ***)
 
 let MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_GCC12_O2_EXEC =

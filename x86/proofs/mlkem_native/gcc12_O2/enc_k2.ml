@@ -10,9 +10,8 @@
 (* with randombytes, through its PLT stub and GOT entry, into a buffer on    *)
 (* the stack, and returns -3 if that fails, and otherwise encapsulates with  *)
 (* them as the message with mlkem512_enc_derand. In both cases it zeroes the *)
-(* buffer. It is verified in the whole image (see                            *)
-(* libmlkem.ml), where it is at address 0x5280, using                        *)
-(* the theorem for mlkem512_enc_derand in the image and the contract for     *)
+(* buffer. It is verified in the whole image (see libmlkem.ml), using the    *)
+(* theorem for mlkem512_enc_derand in the image and the contract for         *)
 (* randombytes (see utils/mlkem_native_libc.ml).                             *)
 (* ========================================================================= *)
 
@@ -21,46 +20,48 @@ needs "x86/proofs/utils/mlkem_native_libc.ml";;
 
 (*** The code in the image:
 
-    1010: jmp    QWORD PTR [rip+0x9fe2]
+    plt_randombytes:
+       +0x0: jmp    QWORD PTR [rip+0x9fe2]
  ***)
 
 (*** The code in the image:
 
-    5280: push   rbp
-    5281: mov    rbp,rsp
-    5284: push   r14
-    5286: mov    r14,rdx
-    5289: push   r13
-    528b: mov    r13,rsi
-    528e: mov    esi,0x20
-    5293: push   r12
-    5295: mov    r12,rdi
-    5298: push   rbx
-    5299: and    rsp,0xffffffffffffffe0
-    529d: sub    rsp,0x20
-    52a1: mov    rbx,rsp
-    52a4: mov    rdi,rbx
-    52a7: call   1010 <randombytes@plt>
-    52ac: test   eax,eax
-    52ae: jne    52e0 <mlkem512_enc+0x60>
-    52b0: mov    rcx,rbx
-    52b3: mov    rdx,r14
-    52b6: mov    rsi,r13
-    52b9: mov    rdi,r12
-    52bc: call   5190 <mlkem512_enc_derand>
-    52c1: pxor   xmm0,xmm0
-    52c5: movaps XMMWORD PTR [rsp],xmm0
-    52c9: movaps XMMWORD PTR [rsp+0x10],xmm0
-    52ce: lea    rsp,[rbp-0x20]
-    52d2: pop    rbx
-    52d3: pop    r12
-    52d5: pop    r13
-    52d7: pop    r14
-    52d9: pop    rbp
-    52da: ret
-    52db: nop    DWORD PTR [rax+rax*1+0x0]
-    52e0: mov    eax,0xfffffffd
-    52e5: jmp    52c1 <mlkem512_enc+0x41>
+    mlkem512_enc:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r14
+       +0x6: mov    r14,rdx
+       +0x9: push   r13
+       +0xb: mov    r13,rsi
+       +0xe: mov    esi,0x20
+      +0x13: push   r12
+      +0x15: mov    r12,rdi
+      +0x18: push   rbx
+      +0x19: and    rsp,0xffffffffffffffe0
+      +0x1d: sub    rsp,0x20
+      +0x21: mov    rbx,rsp
+      +0x24: mov    rdi,rbx
+      +0x27: call   <randombytes@plt>
+      +0x2c: test   eax,eax
+      +0x2e: jne    <mlkem512_enc+0x60>
+      +0x30: mov    rcx,rbx
+      +0x33: mov    rdx,r14
+      +0x36: mov    rsi,r13
+      +0x39: mov    rdi,r12
+      +0x3c: call   <mlkem512_enc_derand>
+      +0x41: pxor   xmm0,xmm0
+      +0x45: movaps XMMWORD PTR [rsp],xmm0
+      +0x49: movaps XMMWORD PTR [rsp+0x10],xmm0
+      +0x4e: lea    rsp,[rbp-0x20]
+      +0x52: pop    rbx
+      +0x53: pop    r12
+      +0x55: pop    r13
+      +0x57: pop    r14
+      +0x59: pop    rbp
+      +0x5a: ret
+      +0x5b: nop    DWORD PTR [rax+rax*1+0x0]
+      +0x60: mov    eax,0xfffffffd
+      +0x65: jmp    <mlkem512_enc+0x41>
  ***)
 
 let MLKEM_NATIVE_ENC_K2_GCC12_O2_EXEC =

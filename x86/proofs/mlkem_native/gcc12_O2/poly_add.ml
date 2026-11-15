@@ -4,13 +4,12 @@
  *)
 
 (* ========================================================================= *)
-(* Addition of polynomials, coefficientwise with wraparound.                 *)
-(* This is the code for mlkem_poly_add from mlkem-native's portable C        *)
-(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
-(* which the compiler has vectorized. It is verified in the whole image (see *)
-(* libmlkem.ml), where it is at address 0x56b0. Since                        *)
-(* the code uses aligned SSE loads and stores, the polynomials must be       *)
-(* aligned, as they are in mlkem-native.                                     *)
+(* Addition of polynomials, coefficientwise with wraparound. This is the     *)
+(* code for mlkem_poly_add from mlkem-native's portable C implementation     *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which the       *)
+(* compiler has vectorized. It is verified in the whole image (see           *)
+(* libmlkem.ml). Since the code uses aligned SSE loads and stores, the       *)
+(* polynomials must be aligned, as they are in mlkem-native.                 *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -18,15 +17,16 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    56b0: xor    eax,eax
-    56b2: nop    WORD PTR [rax+rax*1+0x0]
-    56b8: movdqa xmm0,XMMWORD PTR [rdi+rax*1]
-    56bd: paddw  xmm0,XMMWORD PTR [rsi+rax*1]
-    56c2: movaps XMMWORD PTR [rdi+rax*1],xmm0
-    56c6: add    rax,0x10
-    56ca: cmp    rax,0x200
-    56d0: jne    56b8 <mlkem_poly_add+0x8>
-    56d2: ret
+    mlkem_poly_add:
+       +0x0: xor    eax,eax
+       +0x2: nop    WORD PTR [rax+rax*1+0x0]
+       +0x8: movdqa xmm0,XMMWORD PTR [rdi+rax*1]
+       +0xd: paddw  xmm0,XMMWORD PTR [rsi+rax*1]
+      +0x12: movaps XMMWORD PTR [rdi+rax*1],xmm0
+      +0x16: add    rax,0x10
+      +0x1a: cmp    rax,0x200
+      +0x20: jne    <mlkem_poly_add+0x8>
+      +0x22: ret
  ***)
 
 let MLKEM_NATIVE_POLY_ADD_GCC12_O2_EXEC =

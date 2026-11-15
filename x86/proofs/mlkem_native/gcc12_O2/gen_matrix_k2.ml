@@ -10,54 +10,54 @@
 (* the seed of 32 bytes into four buffers of 64 bytes on the stack, appends  *)
 (* the two indices of each entry of the matrix to it, samples the four       *)
 (* entries with mlkem_poly_rej_uniform_x4, and zeroes the buffers. It is     *)
-(* verified in the whole image (see libmlkem.ml),                            *)
-(* where it is at address 0x4770, using the theorem for                      *)
-(* mlkem_poly_rej_uniform_x4 at 0x60e0 in the image.                         *)
+(* verified in the whole image (see libmlkem.ml), using the theorem for      *)
+(* mlkem_poly_rej_uniform_x4 in the image.                                   *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_rej_uniform_x4.ml";;
 
 (*** The code in the image:
 
-    4770: push   rbp
-    4771: mov    rbp,rsp
-    4774: push   rbx
-    4775: and    rsp,0xffffffffffffffe0
-    4779: sub    rsp,0x100
-    4780: movdqu xmm1,XMMWORD PTR [rsi]
-    4784: movdqu xmm0,XMMWORD PTR [rsi+0x10]
-    4789: mov    rbx,rsp
-    478c: lea    rcx,[rsp+0x100]
-    4794: mov    rax,rbx
-    4797: movaps XMMWORD PTR [rax],xmm1
-    479a: add    rax,0x40
-    479e: movaps XMMWORD PTR [rax-0x30],xmm0
-    47a2: cmp    rcx,rax
-    47a5: jne    4797 <mlkem512_gen_matrix+0x27>
-    47a7: cmp    edx,0x1
-    47aa: lea    rcx,[rdi+0x600]
-    47b1: mov    r8,rbx
-    47b4: mov    WORD PTR [rsp+0x20],0x0
-    47bb: sbb    eax,eax
-    47bd: lea    rsi,[rdi+0x200]
-    47c4: add    eax,0x1
-    47c7: cmp    edx,0x1
-    47ca: setb   dl
-    47cd: mov    BYTE PTR [rsp+0x61],al
-    47d1: mov    BYTE PTR [rsp+0xa0],al
-    47d8: movzx  eax,WORD PTR [rip+0x39a1]
-    47df: mov    BYTE PTR [rsp+0x60],dl
-    47e3: mov    BYTE PTR [rsp+0xa1],dl
-    47ea: lea    rdx,[rdi+0x400]
-    47f1: mov    WORD PTR [rsp+0xe0],ax
-    47f9: call   60e0 <mlkem_poly_rej_uniform_x4>
-    47fe: xor    eax,eax
-    4800: mov    rdi,rbx
-    4803: mov    ecx,0x20
-    4808: rep    stos QWORD PTR es:[rdi],rax
-    480b: mov    rbx,QWORD PTR [rbp-0x8]
-    480f: leave
-    4810: ret
+    mlkem512_gen_matrix:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   rbx
+       +0x5: and    rsp,0xffffffffffffffe0
+       +0x9: sub    rsp,0x100
+      +0x10: movdqu xmm1,XMMWORD PTR [rsi]
+      +0x14: movdqu xmm0,XMMWORD PTR [rsi+0x10]
+      +0x19: mov    rbx,rsp
+      +0x1c: lea    rcx,[rsp+0x100]
+      +0x24: mov    rax,rbx
+      +0x27: movaps XMMWORD PTR [rax],xmm1
+      +0x2a: add    rax,0x40
+      +0x2e: movaps XMMWORD PTR [rax-0x30],xmm0
+      +0x32: cmp    rcx,rax
+      +0x35: jne    <mlkem512_gen_matrix+0x27>
+      +0x37: cmp    edx,0x1
+      +0x3a: lea    rcx,[rdi+0x600]
+      +0x41: mov    r8,rbx
+      +0x44: mov    WORD PTR [rsp+0x20],0x0
+      +0x4b: sbb    eax,eax
+      +0x4d: lea    rsi,[rdi+0x200]
+      +0x54: add    eax,0x1
+      +0x57: cmp    edx,0x1
+      +0x5a: setb   dl
+      +0x5d: mov    BYTE PTR [rsp+0x61],al
+      +0x61: mov    BYTE PTR [rsp+0xa0],al
+      +0x68: movzx  eax,WORD PTR [rip+0x39a1]
+      +0x6f: mov    BYTE PTR [rsp+0x60],dl
+      +0x73: mov    BYTE PTR [rsp+0xa1],dl
+      +0x7a: lea    rdx,[rdi+0x400]
+      +0x81: mov    WORD PTR [rsp+0xe0],ax
+      +0x89: call   <mlkem_poly_rej_uniform_x4>
+      +0x8e: xor    eax,eax
+      +0x90: mov    rdi,rbx
+      +0x93: mov    ecx,0x20
+      +0x98: rep    stos QWORD PTR es:[rdi],rax
+      +0x9b: mov    rbx,QWORD PTR [rbp-0x8]
+      +0x9f: leave
+      +0xa0: ret
  ***)
 
 let MLKEM_NATIVE_GEN_MATRIX_K2_GCC12_O2_EXEC =
@@ -301,9 +301,9 @@ let GENMAT_SP c =
 (* frame, which decide the loop that copies the seed, the values stored from *)
 (* the low halves of the YMM registers, the upper halves of which are kept   *)
 (* as their initial values, the constant 0x0101 for the indices (1,1), which *)
-(* is loaded from the image at 0x8180 by a RIP-relative MOVZX, and the bytes *)
-(* for the other indices, from SETB and from SBB and ADD after a comparison  *)
-(* of transposed with 1, which are constants in each case.                   *)
+(* is loaded from the image by a RIP-relative MOVZX, and the bytes for the   *)
+(* other indices, from SETB and from SBB and ADD after a comparison of       *)
+(* transposed with 1, which are constants in each case.                      *)
 (* ------------------------------------------------------------------------- *)
 
 let GENMAT_PTR_SUB = prove

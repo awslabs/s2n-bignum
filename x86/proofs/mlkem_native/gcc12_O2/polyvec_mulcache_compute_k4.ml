@@ -9,8 +9,8 @@
 (* mlkem-native's portable C implementation compiled by gcc 12 with -O2 (see *)
 (* mlkem_native/README.md), which calls mlkem_poly_mulcache_compute for each *)
 (* of the polynomials, in a loop. It is verified in the whole image (see     *)
-(* libmlkem.ml), where it is at address 0x2190, using                        *)
-(* the theorems for mlkem_poly_mulcache_compute at 0x5710 in the image.      *)
+(* libmlkem.ml), using the theorems for mlkem_poly_mulcache_compute in the   *)
+(* image.                                                                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_mulcache_compute.ml";;
@@ -18,23 +18,24 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    2190: push   r12
-    2192: lea    r12,[rdi+0x400]
-    2199: push   rbp
-    219a: mov    rbp,rsi
-    219d: push   rbx
-    219e: mov    rbx,rdi
-    21a1: mov    rsi,rbp
-    21a4: mov    rdi,rbx
-    21a7: add    rbx,0x100
-    21ae: add    rbp,0x200
-    21b5: call   5710 <mlkem_poly_mulcache_compute>
-    21ba: cmp    rbx,r12
-    21bd: jne    21a1 <mlkem1024_polyvec_mulcache_compute+0x11>
-    21bf: pop    rbx
-    21c0: pop    rbp
-    21c1: pop    r12
-    21c3: ret
+    mlkem1024_polyvec_mulcache_compute:
+       +0x0: push   r12
+       +0x2: lea    r12,[rdi+0x400]
+       +0x9: push   rbp
+       +0xa: mov    rbp,rsi
+       +0xd: push   rbx
+       +0xe: mov    rbx,rdi
+      +0x11: mov    rsi,rbp
+      +0x14: mov    rdi,rbx
+      +0x17: add    rbx,0x100
+      +0x1e: add    rbp,0x200
+      +0x25: call   <mlkem_poly_mulcache_compute>
+      +0x2a: cmp    rbx,r12
+      +0x2d: jne    <mlkem1024_polyvec_mulcache_compute+0x11>
+      +0x2f: pop    rbx
+      +0x30: pop    rbp
+      +0x31: pop    r12
+      +0x33: ret
  ***)
 
 let MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K4_GCC12_O2_EXEC =

@@ -4,13 +4,13 @@
  *)
 
 (* ========================================================================= *)
-(* Compression of a vector of 4 polynomials to 11 bits per coefficient.      *)
-(* This is the code for mlkem1024_polyvec_compress_du from mlkem-native's    *)
+(* Compression of a vector of 4 polynomials to 11 bits per coefficient. This *)
+(* is the code for mlkem1024_polyvec_compress_du from mlkem-native's         *)
 (* portable C implementation compiled by gcc 12 with -O2 (see                *)
 (* mlkem_native/README.md), which calls mlkem_poly_compress_d11 for each of  *)
 (* the polynomials, in a loop. It is verified in the whole image (see        *)
-(* libmlkem.ml), where it is at address 0x1f40, using                        *)
-(* the theorems for mlkem_poly_compress_d11 at 0x2af0 in the image.          *)
+(* libmlkem.ml), using the theorems for mlkem_poly_compress_d11 in the       *)
+(* image.                                                                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_compress_d11.ml";;
@@ -18,23 +18,24 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    1f40: push   r12
-    1f42: lea    r12,[rdi+0x580]
-    1f49: push   rbp
-    1f4a: mov    rbp,rsi
-    1f4d: push   rbx
-    1f4e: mov    rbx,rdi
-    1f51: mov    rsi,rbp
-    1f54: mov    rdi,rbx
-    1f57: add    rbx,0x160
-    1f5e: add    rbp,0x200
-    1f65: call   2af0 <mlkem_poly_compress_d11>
-    1f6a: cmp    rbx,r12
-    1f6d: jne    1f51 <mlkem1024_polyvec_compress_du+0x11>
-    1f6f: pop    rbx
-    1f70: pop    rbp
-    1f71: pop    r12
-    1f73: ret
+    mlkem1024_polyvec_compress_du:
+       +0x0: push   r12
+       +0x2: lea    r12,[rdi+0x580]
+       +0x9: push   rbp
+       +0xa: mov    rbp,rsi
+       +0xd: push   rbx
+       +0xe: mov    rbx,rdi
+      +0x11: mov    rsi,rbp
+      +0x14: mov    rdi,rbx
+      +0x17: add    rbx,0x160
+      +0x1e: add    rbp,0x200
+      +0x25: call   <mlkem_poly_compress_d11>
+      +0x2a: cmp    rbx,r12
+      +0x2d: jne    <mlkem1024_polyvec_compress_du+0x11>
+      +0x2f: pop    rbx
+      +0x30: pop    rbp
+      +0x31: pop    r12
+      +0x33: ret
  ***)
 
 let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_GCC12_O2_EXEC =

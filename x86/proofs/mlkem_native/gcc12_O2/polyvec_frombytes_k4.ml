@@ -5,13 +5,11 @@
 
 (* ========================================================================= *)
 (* Unpacking of a vector of 4 polynomials from bytes, 12 bits per            *)
-(* coefficient.                                                              *)
-(* This is the code for mlkem1024_polyvec_frombytes from mlkem-native's      *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
+(* coefficient. This is the code for mlkem1024_polyvec_frombytes from        *)
+(* mlkem-native's portable C implementation compiled by gcc 12 with -O2 (see *)
 (* mlkem_native/README.md), which calls mlkem_poly_frombytes for each of the *)
 (* polynomials, in a loop. It is verified in the whole image (see            *)
-(* libmlkem.ml), where it is at address 0x2000, using                        *)
-(* the theorems for mlkem_poly_frombytes at 0x31c0 in the image.             *)
+(* libmlkem.ml), using the theorems for mlkem_poly_frombytes in the image.   *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_frombytes.ml";;
@@ -19,23 +17,24 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    2000: push   r12
-    2002: lea    r12,[rsi+0x600]
-    2009: push   rbp
-    200a: mov    rbp,rdi
-    200d: push   rbx
-    200e: mov    rbx,rsi
-    2011: mov    rsi,rbx
-    2014: mov    rdi,rbp
-    2017: add    rbx,0x180
-    201e: add    rbp,0x200
-    2025: call   31c0 <mlkem_poly_frombytes>
-    202a: cmp    rbx,r12
-    202d: jne    2011 <mlkem1024_polyvec_frombytes+0x11>
-    202f: pop    rbx
-    2030: pop    rbp
-    2031: pop    r12
-    2033: ret
+    mlkem1024_polyvec_frombytes:
+       +0x0: push   r12
+       +0x2: lea    r12,[rsi+0x600]
+       +0x9: push   rbp
+       +0xa: mov    rbp,rdi
+       +0xd: push   rbx
+       +0xe: mov    rbx,rsi
+      +0x11: mov    rsi,rbx
+      +0x14: mov    rdi,rbp
+      +0x17: add    rbx,0x180
+      +0x1e: add    rbp,0x200
+      +0x25: call   <mlkem_poly_frombytes>
+      +0x2a: cmp    rbx,r12
+      +0x2d: jne    <mlkem1024_polyvec_frombytes+0x11>
+      +0x2f: pop    rbx
+      +0x30: pop    rbp
+      +0x31: pop    r12
+      +0x33: ret
  ***)
 
 let MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_GCC12_O2_EXEC =

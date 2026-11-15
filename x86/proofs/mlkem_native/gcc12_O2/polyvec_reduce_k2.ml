@@ -4,13 +4,12 @@
  *)
 
 (* ========================================================================= *)
-(* Barrett reduction of a vector of 2 polynomials.                           *)
-(* This is the code for mlkem512_polyvec_reduce from mlkem-native's portable *)
-(* C implementation compiled by gcc 12 with -O2 (see                         *)
-(* mlkem_native/README.md), which calls mlkem_poly_reduce for each of the    *)
-(* polynomials, the last time as a tail call. It is verified in the whole    *)
-(* image (see libmlkem.ml), where it is at address                           *)
-(* 0x5c60, using the theorems for mlkem_poly_reduce at 0x5660 in the image.  *)
+(* Barrett reduction of a vector of 2 polynomials. This is the code for      *)
+(* mlkem512_polyvec_reduce from mlkem-native's portable C implementation     *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which calls     *)
+(* mlkem_poly_reduce for each of the polynomials, the last time as a tail    *)
+(* call. It is verified in the whole image (see libmlkem.ml), using the      *)
+(* theorems for mlkem_poly_reduce in the image.                              *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_reduce.ml";;
@@ -18,12 +17,13 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    5c60: push   rbx
-    5c61: mov    rbx,rdi
-    5c64: call   5660 <mlkem_poly_reduce>
-    5c69: lea    rdi,[rbx+0x200]
-    5c70: pop    rbx
-    5c71: jmp    5660 <mlkem_poly_reduce>
+    mlkem512_polyvec_reduce:
+       +0x0: push   rbx
+       +0x1: mov    rbx,rdi
+       +0x4: call   <mlkem_poly_reduce>
+       +0x9: lea    rdi,[rbx+0x200]
+      +0x10: pop    rbx
+      +0x11: jmp    <mlkem_poly_reduce>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_REDUCE_K2_GCC12_O2_EXEC =

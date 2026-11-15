@@ -11,10 +11,9 @@
 (* an inline memset, as mlkem_shake128_release does for one state, and then  *)
 (* calls mlk_keccak_absorb_once_x4 with the rate 168 of SHAKE128, passing    *)
 (* the length of the messages on the stack. It is verified in the whole      *)
-(* image (see libmlkem.ml), where it is at address                           *)
-(* 0x3720, using the theorems for mlk_keccak_absorb_once_x4 at 0x35d0 in the *)
-(* image. The memset uses REP STOSQ, so the specifications assume that the   *)
-(* direction flag DF is clear, as the ABI requires on entry.                 *)
+(* image (see libmlkem.ml), using the theorems for mlk_keccak_absorb_once_x4 *)
+(* in the image. The memset uses REP STOSQ, so the specifications assume     *)
+(* that the direction flag DF is clear, as the ABI requires on entry.        *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keccak_absorb_once_x4.ml";;
@@ -22,29 +21,30 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    3720: sub    rsp,0x10
-    3724: mov    r10,rdi
-    3727: mov    QWORD PTR [rdi],0x0
-    372e: xor    eax,eax
-    3730: mov    QWORD PTR [rdi+0x318],0x0
-    373b: lea    rdi,[rdi+0x8]
-    373f: mov    r11,rcx
-    3742: mov    rcx,r10
-    3745: and    rdi,0xfffffffffffffff8
-    3749: sub    rcx,rdi
-    374c: add    ecx,0x320
-    3752: shr    ecx,0x3
-    3755: rep    stos QWORD PTR es:[rdi],rax
-    3758: push   r9
-    375a: mov    rcx,rdx
-    375d: mov    r9,r8
-    3760: mov    rdx,rsi
-    3763: mov    r8,r11
-    3766: mov    esi,0xa8
-    376b: mov    rdi,r10
-    376e: call   35d0 <mlk_keccak_absorb_once_x4.constprop.0>
-    3773: add    rsp,0x18
-    3777: ret
+    mlkem_shake128x4_absorb_once:
+       +0x0: sub    rsp,0x10
+       +0x4: mov    r10,rdi
+       +0x7: mov    QWORD PTR [rdi],0x0
+       +0xe: xor    eax,eax
+      +0x10: mov    QWORD PTR [rdi+0x318],0x0
+      +0x1b: lea    rdi,[rdi+0x8]
+      +0x1f: mov    r11,rcx
+      +0x22: mov    rcx,r10
+      +0x25: and    rdi,0xfffffffffffffff8
+      +0x29: sub    rcx,rdi
+      +0x2c: add    ecx,0x320
+      +0x32: shr    ecx,0x3
+      +0x35: rep    stos QWORD PTR es:[rdi],rax
+      +0x38: push   r9
+      +0x3a: mov    rcx,rdx
+      +0x3d: mov    r9,r8
+      +0x40: mov    rdx,rsi
+      +0x43: mov    r8,r11
+      +0x46: mov    esi,0xa8
+      +0x4b: mov    rdi,r10
+      +0x4e: call   <mlk_keccak_absorb_once_x4.constprop.0>
+      +0x53: add    rsp,0x18
+      +0x57: ret
  ***)
 
 let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_GCC12_O2_EXEC =

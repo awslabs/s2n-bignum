@@ -530,8 +530,8 @@ let MLKEM_NATIVE_POLY_TOMONT_GCC12_O2_SUBROUTINE_SAFE = time prove
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* The same code in the whole image, at address 0x55a0, with the vectors of  *)
-(* constants at 0x8070 (see libmlkem.ml).                                    *)
+(* The same code in the whole image, with the vectors of constants (see      *)
+(* libmlkem.ml).                                                             *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;

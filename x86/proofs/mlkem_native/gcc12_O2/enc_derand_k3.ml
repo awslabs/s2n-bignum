@@ -13,9 +13,8 @@
 (* 32 bytes at coins) followed by that hash with mlkem_sha3_512, encrypts m  *)
 (* with r by mlkem768_indcpa_enc into the ciphertext, and writes K as the    *)
 (* shared secret. In both cases it zeroes its buffers. It is verified in the *)
-(* whole image (see libmlkem.ml), where it is at                             *)
-(* address 0x7060, using the theorems for mlkem768_check_pk, mlkem_sha3_256, *)
-(* mlkem_sha3_512 and mlkem768_indcpa_enc in the image.                      *)
+(* whole image (see libmlkem.ml), using the theorems for mlkem768_check_pk,  *)
+(* mlkem_sha3_256, mlkem_sha3_512 and mlkem768_indcpa_enc in the image.      *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/check_pk_k3.ml";;
@@ -26,68 +25,69 @@ needs "x86/proofs/utils/mlkem_native_kem.ml";;
 
 (*** The code in the image:
 
-    7060: push   rbp
-    7061: mov    rbp,rsp
-    7064: push   r15
-    7066: mov    r15,rcx
-    7069: push   r14
-    706b: push   r13
-    706d: mov    r13,rsi
-    7070: push   r12
-    7072: mov    r12,rdi
-    7075: mov    rdi,rdx
-    7078: push   rbx
-    7079: mov    rbx,rdx
-    707c: and    rsp,0xffffffffffffffe0
-    7080: add    rsp,0xffffffffffffff80
-    7084: call   6cc0 <mlkem768_check_pk>
-    7089: mov    r14,rsp
-    708c: test   eax,eax
-    708e: je     70d0 <mlkem768_enc_derand+0x70>
-    7090: lea    r15,[rsp+0x40]
-    7095: pxor   xmm0,xmm0
-    7099: movaps XMMWORD PTR [rsp+0x40],xmm0
-    709e: movaps XMMWORD PTR [rsp+0x50],xmm0
-    70a3: movaps XMMWORD PTR [rsp+0x60],xmm0
-    70a8: movaps XMMWORD PTR [rsp+0x70],xmm0
-    70ad: movaps XMMWORD PTR [rsp],xmm0
-    70b1: movaps XMMWORD PTR [rsp+0x10],xmm0
-    70b6: movaps XMMWORD PTR [rsp+0x20],xmm0
-    70bb: movaps XMMWORD PTR [rsp+0x30],xmm0
-    70c0: lea    rsp,[rbp-0x28]
-    70c4: pop    rbx
-    70c5: pop    r12
-    70c7: pop    r13
-    70c9: pop    r14
-    70cb: pop    r15
-    70cd: pop    rbp
-    70ce: ret
-    70cf: nop
-    70d0: movdqu xmm1,XMMWORD PTR [r15]
-    70d5: movdqu xmm2,XMMWORD PTR [r15+0x10]
-    70db: lea    rdi,[rsp+0x20]
-    70e0: mov    rsi,rbx
-    70e3: mov    edx,0x4a0
-    70e8: lea    r15,[rsp+0x40]
-    70ed: movaps XMMWORD PTR [rsp],xmm1
-    70f1: movaps XMMWORD PTR [rsp+0x10],xmm2
-    70f6: call   3510 <mlkem_sha3_256>
-    70fb: mov    edx,0x40
-    7100: mov    rsi,r14
-    7103: mov    rdi,r15
-    7106: call   3570 <mlkem_sha3_512>
-    710b: lea    rcx,[rsp+0x60]
-    7110: mov    rdx,rbx
-    7113: mov    rsi,r14
-    7116: mov    rdi,r12
-    7119: call   68d0 <mlkem768_indcpa_enc>
-    711e: test   eax,eax
-    7120: jne    7095 <mlkem768_enc_derand+0x35>
-    7126: movdqa xmm3,XMMWORD PTR [rsp+0x40]
-    712c: movdqa xmm4,XMMWORD PTR [rsp+0x50]
-    7132: movups XMMWORD PTR [r13+0x0],xmm3
-    7137: movups XMMWORD PTR [r13+0x10],xmm4
-    713c: jmp    7095 <mlkem768_enc_derand+0x35>
+    mlkem768_enc_derand:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r15
+       +0x6: mov    r15,rcx
+       +0x9: push   r14
+       +0xb: push   r13
+       +0xd: mov    r13,rsi
+      +0x10: push   r12
+      +0x12: mov    r12,rdi
+      +0x15: mov    rdi,rdx
+      +0x18: push   rbx
+      +0x19: mov    rbx,rdx
+      +0x1c: and    rsp,0xffffffffffffffe0
+      +0x20: add    rsp,0xffffffffffffff80
+      +0x24: call   <mlkem768_check_pk>
+      +0x29: mov    r14,rsp
+      +0x2c: test   eax,eax
+      +0x2e: je     <mlkem768_enc_derand+0x70>
+      +0x30: lea    r15,[rsp+0x40]
+      +0x35: pxor   xmm0,xmm0
+      +0x39: movaps XMMWORD PTR [rsp+0x40],xmm0
+      +0x3e: movaps XMMWORD PTR [rsp+0x50],xmm0
+      +0x43: movaps XMMWORD PTR [rsp+0x60],xmm0
+      +0x48: movaps XMMWORD PTR [rsp+0x70],xmm0
+      +0x4d: movaps XMMWORD PTR [rsp],xmm0
+      +0x51: movaps XMMWORD PTR [rsp+0x10],xmm0
+      +0x56: movaps XMMWORD PTR [rsp+0x20],xmm0
+      +0x5b: movaps XMMWORD PTR [rsp+0x30],xmm0
+      +0x60: lea    rsp,[rbp-0x28]
+      +0x64: pop    rbx
+      +0x65: pop    r12
+      +0x67: pop    r13
+      +0x69: pop    r14
+      +0x6b: pop    r15
+      +0x6d: pop    rbp
+      +0x6e: ret
+      +0x6f: nop
+      +0x70: movdqu xmm1,XMMWORD PTR [r15]
+      +0x75: movdqu xmm2,XMMWORD PTR [r15+0x10]
+      +0x7b: lea    rdi,[rsp+0x20]
+      +0x80: mov    rsi,rbx
+      +0x83: mov    edx,0x4a0
+      +0x88: lea    r15,[rsp+0x40]
+      +0x8d: movaps XMMWORD PTR [rsp],xmm1
+      +0x91: movaps XMMWORD PTR [rsp+0x10],xmm2
+      +0x96: call   <mlkem_sha3_256>
+      +0x9b: mov    edx,0x40
+      +0xa0: mov    rsi,r14
+      +0xa3: mov    rdi,r15
+      +0xa6: call   <mlkem_sha3_512>
+      +0xab: lea    rcx,[rsp+0x60]
+      +0xb0: mov    rdx,rbx
+      +0xb3: mov    rsi,r14
+      +0xb6: mov    rdi,r12
+      +0xb9: call   <mlkem768_indcpa_enc>
+      +0xbe: test   eax,eax
+      +0xc0: jne    <mlkem768_enc_derand+0x35>
+      +0xc6: movdqa xmm3,XMMWORD PTR [rsp+0x40]
+      +0xcc: movdqa xmm4,XMMWORD PTR [rsp+0x50]
+      +0xd2: movups XMMWORD PTR [r13+0x0],xmm3
+      +0xd7: movups XMMWORD PTR [r13+0x10],xmm4
+      +0xdc: jmp    <mlkem768_enc_derand+0x35>
  ***)
 
 let MLKEM_NATIVE_ENC_DERAND_K3_GCC12_O2_EXEC =

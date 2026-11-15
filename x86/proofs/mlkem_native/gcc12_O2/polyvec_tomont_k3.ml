@@ -4,13 +4,12 @@
  *)
 
 (* ========================================================================= *)
-(* Conversion of a vector of 3 polynomials to Montgomery form.               *)
-(* This is the code for mlkem768_polyvec_tomont from mlkem-native's portable *)
-(* C implementation compiled by gcc 12 with -O2 (see                         *)
-(* mlkem_native/README.md), which calls mlkem_poly_tomont for each of the    *)
-(* polynomials, the last time as a tail call. It is verified in the whole    *)
-(* image (see libmlkem.ml), where it is at address                           *)
-(* 0x7760, using the theorems for mlkem_poly_tomont at 0x55a0 in the image.  *)
+(* Conversion of a vector of 3 polynomials to Montgomery form. This is the   *)
+(* code for mlkem768_polyvec_tomont from mlkem-native's portable C           *)
+(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
+(* which calls mlkem_poly_tomont for each of the polynomials, the last time  *)
+(* as a tail call. It is verified in the whole image (see libmlkem.ml),      *)
+(* using the theorems for mlkem_poly_tomont in the image.                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_tomont.ml";;
@@ -18,14 +17,15 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    7760: push   rbx
-    7761: mov    rbx,rdi
-    7764: call   55a0 <mlkem_poly_tomont>
-    7769: lea    rdi,[rbx+0x200]
-    7770: call   55a0 <mlkem_poly_tomont>
-    7775: lea    rdi,[rbx+0x400]
-    777c: pop    rbx
-    777d: jmp    55a0 <mlkem_poly_tomont>
+    mlkem768_polyvec_tomont:
+       +0x0: push   rbx
+       +0x1: mov    rbx,rdi
+       +0x4: call   <mlkem_poly_tomont>
+       +0x9: lea    rdi,[rbx+0x200]
+      +0x10: call   <mlkem_poly_tomont>
+      +0x15: lea    rdi,[rbx+0x400]
+      +0x1c: pop    rbx
+      +0x1d: jmp    <mlkem_poly_tomont>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_TOMONT_K3_GCC12_O2_EXEC =

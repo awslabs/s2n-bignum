@@ -1516,8 +1516,8 @@ let MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_SUBROUTINE_SAFE = prove
   SIMP_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
-(* The same code in the whole image, at address 0x3e70, with the table of    *)
-(* round constants at 0x80c0 (see libmlkem.ml).                              *)
+(* The same code in the whole image, with the table of round constants (see  *)
+(* libmlkem.ml).                                                             *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;

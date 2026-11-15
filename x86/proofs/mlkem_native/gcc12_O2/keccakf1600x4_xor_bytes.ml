@@ -8,11 +8,10 @@
 (* mlkem_keccakf1600x4_xor_bytes from mlkem-native's portable C              *)
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which calls mlkem_keccakf1600_xor_bytes for each of the states, the last  *)
-(* time as a tail call. It is verified in the whole image (see               *)
-(* libmlkem.ml), where it is at address 0x3df0, using                        *)
-(* the theorems for mlkem_keccakf1600_xor_bytes at 0x3d40 in the image. As   *)
-(* for mlkem_keccakf1600x4_extract_bytes, its seventh argument, len, is      *)
-(* passed on the stack, and only the low 32 bits of its slot are read.       *)
+(* time as a tail call. It is verified in the whole image (see libmlkem.ml), *)
+(* using the theorems for mlkem_keccakf1600_xor_bytes in the image. As for   *)
+(* mlkem_keccakf1600x4_extract_bytes, its seventh argument, len, is passed   *)
+(* on the stack, and only the low 32 bits of its slot are read.              *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keccakf1600_xor_bytes.ml";;
@@ -20,44 +19,45 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    3df0: push   r15
-    3df2: mov    r15,rdx
-    3df5: mov    edx,r9d
-    3df8: push   r14
-    3dfa: mov    r14,rcx
-    3dfd: push   r13
-    3dff: mov    r13,r8
-    3e02: push   r12
-    3e04: push   rbp
-    3e05: mov    ebp,r9d
-    3e08: push   rbx
-    3e09: mov    rbx,rdi
-    3e0c: sub    rsp,0x8
-    3e10: mov    r12d,DWORD PTR [rsp+0x40]
-    3e15: mov    ecx,r12d
-    3e18: call   3d40 <mlkem_keccakf1600_xor_bytes>
-    3e1d: mov    ecx,r12d
-    3e20: mov    edx,ebp
-    3e22: mov    rsi,r15
-    3e25: lea    rdi,[rbx+0xc8]
-    3e2c: call   3d40 <mlkem_keccakf1600_xor_bytes>
-    3e31: mov    ecx,r12d
-    3e34: mov    edx,ebp
-    3e36: mov    rsi,r14
-    3e39: lea    rdi,[rbx+0x190]
-    3e40: call   3d40 <mlkem_keccakf1600_xor_bytes>
-    3e45: add    rsp,0x8
-    3e49: mov    ecx,r12d
-    3e4c: mov    edx,ebp
-    3e4e: lea    rdi,[rbx+0x258]
-    3e55: mov    rsi,r13
-    3e58: pop    rbx
-    3e59: pop    rbp
-    3e5a: pop    r12
-    3e5c: pop    r13
-    3e5e: pop    r14
-    3e60: pop    r15
-    3e62: jmp    3d40 <mlkem_keccakf1600_xor_bytes>
+    mlkem_keccakf1600x4_xor_bytes:
+       +0x0: push   r15
+       +0x2: mov    r15,rdx
+       +0x5: mov    edx,r9d
+       +0x8: push   r14
+       +0xa: mov    r14,rcx
+       +0xd: push   r13
+       +0xf: mov    r13,r8
+      +0x12: push   r12
+      +0x14: push   rbp
+      +0x15: mov    ebp,r9d
+      +0x18: push   rbx
+      +0x19: mov    rbx,rdi
+      +0x1c: sub    rsp,0x8
+      +0x20: mov    r12d,DWORD PTR [rsp+0x40]
+      +0x25: mov    ecx,r12d
+      +0x28: call   <mlkem_keccakf1600_xor_bytes>
+      +0x2d: mov    ecx,r12d
+      +0x30: mov    edx,ebp
+      +0x32: mov    rsi,r15
+      +0x35: lea    rdi,[rbx+0xc8]
+      +0x3c: call   <mlkem_keccakf1600_xor_bytes>
+      +0x41: mov    ecx,r12d
+      +0x44: mov    edx,ebp
+      +0x46: mov    rsi,r14
+      +0x49: lea    rdi,[rbx+0x190]
+      +0x50: call   <mlkem_keccakf1600_xor_bytes>
+      +0x55: add    rsp,0x8
+      +0x59: mov    ecx,r12d
+      +0x5c: mov    edx,ebp
+      +0x5e: lea    rdi,[rbx+0x258]
+      +0x65: mov    rsi,r13
+      +0x68: pop    rbx
+      +0x69: pop    rbp
+      +0x6a: pop    r12
+      +0x6c: pop    r13
+      +0x6e: pop    r14
+      +0x70: pop    r15
+      +0x72: jmp    <mlkem_keccakf1600_xor_bytes>
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600X4_XOR_BYTES_GCC12_O2_EXEC =

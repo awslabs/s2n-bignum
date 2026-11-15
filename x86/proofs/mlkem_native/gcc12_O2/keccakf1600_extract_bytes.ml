@@ -4,12 +4,11 @@
  *)
 
 (* ========================================================================= *)
-(* Extraction of bytes from a Keccak state.                                  *)
-(* This is the code for mlkem_keccakf1600_extract_bytes from mlkem-native's  *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md), which copies len bytes of the 200-byte state     *)
-(* starting at byte off. It is verified in the whole image (see              *)
-(* libmlkem.ml), where it is at address 0x3d10.                              *)
+(* Extraction of bytes from a Keccak state. This is the code for             *)
+(* mlkem_keccakf1600_extract_bytes from mlkem-native's portable C            *)
+(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
+(* which copies len bytes of the 200-byte state starting at byte off. It is  *)
+(* verified in the whole image (see libmlkem.ml).                            *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -17,19 +16,20 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    3d10: mov    edx,edx
-    3d12: test   ecx,ecx
-    3d14: je     3d30 <mlkem_keccakf1600_extract_bytes+0x20>
-    3d16: mov    ecx,ecx
-    3d18: xor    eax,eax
-    3d1a: add    rdi,rdx
-    3d1d: nop    DWORD PTR [rax]
-    3d20: movzx  edx,BYTE PTR [rdi+rax*1]
-    3d24: mov    BYTE PTR [rsi+rax*1],dl
-    3d27: add    rax,0x1
-    3d2b: cmp    rcx,rax
-    3d2e: jne    3d20 <mlkem_keccakf1600_extract_bytes+0x10>
-    3d30: ret
+    mlkem_keccakf1600_extract_bytes:
+       +0x0: mov    edx,edx
+       +0x2: test   ecx,ecx
+       +0x4: je     <mlkem_keccakf1600_extract_bytes+0x20>
+       +0x6: mov    ecx,ecx
+       +0x8: xor    eax,eax
+       +0xa: add    rdi,rdx
+       +0xd: nop    DWORD PTR [rax]
+      +0x10: movzx  edx,BYTE PTR [rdi+rax*1]
+      +0x14: mov    BYTE PTR [rsi+rax*1],dl
+      +0x17: add    rax,0x1
+      +0x1b: cmp    rcx,rax
+      +0x1e: jne    <mlkem_keccakf1600_extract_bytes+0x10>
+      +0x20: ret
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_O2_EXEC =

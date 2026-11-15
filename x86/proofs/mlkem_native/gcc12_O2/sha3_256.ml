@@ -9,10 +9,9 @@
 (* mlkem_native/README.md), which absorbs the input into a state on the      *)
 (* stack with mlk_keccak_absorb_once, permutes it and extracts the 32 bytes  *)
 (* of the hash, and then zeroes the state with REP STOSQ. It is verified in  *)
-(* the whole image (see libmlkem.ml), where it is at                         *)
-(* address 0x3510, using the theorems for mlk_keccak_absorb_once at 0x32b0,  *)
-(* mlkem_keccakf1600_permute at 0x3e70 and mlkem_keccakf1600_extract_bytes   *)
-(* at 0x3d10 in the image. The result is sha3_256 of                         *)
+(* the whole image (see libmlkem.ml), using the theorems for                 *)
+(* mlk_keccak_absorb_once, mlkem_keccakf1600_permute and                     *)
+(* mlkem_keccakf1600_extract_bytes in the image. The result is sha3_256 of   *)
 (* common/fips202/fips202.ml.                                                *)
 (* ========================================================================= *)
 
@@ -22,32 +21,33 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    3510: push   rbp
-    3511: mov    rcx,rdx
-    3514: mov    r8d,0x6
-    351a: mov    rdx,rsi
-    351d: push   rbx
-    351e: mov    rbp,rdi
-    3521: mov    esi,0x88
-    3526: sub    rsp,0xd8
-    352d: mov    rbx,rsp
-    3530: mov    rdi,rbx
-    3533: call   32b0 <mlk_keccak_absorb_once>
-    3538: mov    rdi,rbx
-    353b: call   3e70 <mlkem_keccakf1600_permute>
-    3540: mov    rdi,rbx
-    3543: mov    ecx,0x20
-    3548: xor    edx,edx
-    354a: mov    rsi,rbp
-    354d: call   3d10 <mlkem_keccakf1600_extract_bytes>
-    3552: xor    eax,eax
-    3554: mov    rdi,rbx
-    3557: mov    ecx,0x19
-    355c: rep    stos QWORD PTR es:[rdi],rax
-    355f: add    rsp,0xd8
-    3566: pop    rbx
-    3567: pop    rbp
-    3568: ret
+    mlkem_sha3_256:
+       +0x0: push   rbp
+       +0x1: mov    rcx,rdx
+       +0x4: mov    r8d,0x6
+       +0xa: mov    rdx,rsi
+       +0xd: push   rbx
+       +0xe: mov    rbp,rdi
+      +0x11: mov    esi,0x88
+      +0x16: sub    rsp,0xd8
+      +0x1d: mov    rbx,rsp
+      +0x20: mov    rdi,rbx
+      +0x23: call   <mlk_keccak_absorb_once>
+      +0x28: mov    rdi,rbx
+      +0x2b: call   <mlkem_keccakf1600_permute>
+      +0x30: mov    rdi,rbx
+      +0x33: mov    ecx,0x20
+      +0x38: xor    edx,edx
+      +0x3a: mov    rsi,rbp
+      +0x3d: call   <mlkem_keccakf1600_extract_bytes>
+      +0x42: xor    eax,eax
+      +0x44: mov    rdi,rbx
+      +0x47: mov    ecx,0x19
+      +0x4c: rep    stos QWORD PTR es:[rdi],rax
+      +0x4f: add    rsp,0xd8
+      +0x56: pop    rbx
+      +0x57: pop    rbp
+      +0x58: ret
  ***)
 
 let MLKEM_NATIVE_SHA3_256_GCC12_O2_EXEC =

@@ -4,13 +4,12 @@
  *)
 
 (* ========================================================================= *)
-(* Unpacking of a polynomial from bytes, 12 bits per coefficient.            *)
-(* This is the code for mlkem_poly_frombytes from mlkem-native's portable C  *)
+(* Unpacking of a polynomial from bytes, 12 bits per coefficient. This is    *)
+(* the code for mlkem_poly_frombytes from mlkem-native's portable C          *)
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
-(* It is verified in the whole image (see                                    *)
-(* libmlkem.ml), where it is at address 0x31c0. As in                        *)
-(* mlkem_decode in common/fips203/fips203.ml, the bytes are given as a       *)
-(* number n, with coefficient i being bits 12 * i to 12 * i + 11 of n.       *)
+(* It is verified in the whole image (see libmlkem.ml). As in mlkem_decode   *)
+(* in common/fips203/fips203.ml, the bytes are given as a number n, with     *)
+(* coefficient i being bits 12 * i to 12 * i + 11 of n.                      *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -18,26 +17,27 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    31c0: lea    r9,[rsi+0x180]
-    31c7: nop    WORD PTR [rax+rax*1+0x0]
-    31d0: movzx  eax,BYTE PTR [rsi+0x1]
-    31d4: movzx  edx,BYTE PTR [rsi+0x2]
-    31d8: add    rsi,0x3
-    31dc: add    rdi,0x4
-    31e0: movzx  r8d,BYTE PTR [rsi-0x3]
-    31e5: mov    ecx,eax
-    31e7: shr    al,0x4
-    31ea: shl    ecx,0x8
-    31ed: movzx  eax,al
-    31f0: shl    edx,0x4
-    31f3: and    cx,0xf00
-    31f8: or     eax,edx
-    31fa: or     ecx,r8d
-    31fd: mov    WORD PTR [rdi-0x2],ax
-    3201: mov    WORD PTR [rdi-0x4],cx
-    3205: cmp    r9,rsi
-    3208: jne    31d0 <mlkem_poly_frombytes+0x10>
-    320a: ret
+    mlkem_poly_frombytes:
+       +0x0: lea    r9,[rsi+0x180]
+       +0x7: nop    WORD PTR [rax+rax*1+0x0]
+      +0x10: movzx  eax,BYTE PTR [rsi+0x1]
+      +0x14: movzx  edx,BYTE PTR [rsi+0x2]
+      +0x18: add    rsi,0x3
+      +0x1c: add    rdi,0x4
+      +0x20: movzx  r8d,BYTE PTR [rsi-0x3]
+      +0x25: mov    ecx,eax
+      +0x27: shr    al,0x4
+      +0x2a: shl    ecx,0x8
+      +0x2d: movzx  eax,al
+      +0x30: shl    edx,0x4
+      +0x33: and    cx,0xf00
+      +0x38: or     eax,edx
+      +0x3a: or     ecx,r8d
+      +0x3d: mov    WORD PTR [rdi-0x2],ax
+      +0x41: mov    WORD PTR [rdi-0x4],cx
+      +0x45: cmp    r9,rsi
+      +0x48: jne    <mlkem_poly_frombytes+0x10>
+      +0x4a: ret
  ***)
 
 let MLKEM_NATIVE_POLY_FROMBYTES_GCC12_O2_EXEC =

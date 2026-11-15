@@ -11,98 +11,97 @@
 (* the two indices of each entry of the matrix to it, samples the first      *)
 (* eight of the nine entries four at a time with mlkem_poly_rej_uniform_x4   *)
 (* and the last one with mlkem_poly_rej_uniform, and zeroes the buffers. It  *)
-(* is verified in the whole image (see libmlkem.ml),                         *)
-(* where it is at address 0x64b0, using the theorems for                     *)
-(* mlkem_poly_rej_uniform_x4 at 0x60e0 and mlkem_poly_rej_uniform at 0x62f0  *)
-(* in the image.                                                             *)
+(* is verified in the whole image (see libmlkem.ml), using the theorems for  *)
+(* mlkem_poly_rej_uniform_x4 and mlkem_poly_rej_uniform in the image.        *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_rej_uniform_x4.ml";;
 
 (*** The code in the image:
 
-    64b0: push   rbp
-    64b1: mov    rbp,rsp
-    64b4: push   r12
-    64b6: push   rbx
-    64b7: mov    rbx,rdi
-    64ba: and    rsp,0xffffffffffffffe0
-    64be: sub    rsp,0x100
-    64c5: movdqu xmm1,XMMWORD PTR [rsi]
-    64c9: movdqu xmm0,XMMWORD PTR [rsi+0x10]
-    64ce: mov    r12,rsp
-    64d1: lea    rcx,[rsp+0x100]
-    64d9: mov    rax,r12
-    64dc: movaps XMMWORD PTR [rax],xmm1
-    64df: add    rax,0x40
-    64e3: movaps XMMWORD PTR [rax-0x30],xmm0
-    64e7: cmp    rax,rcx
-    64ea: jne    64dc <mlkem768_gen_matrix+0x2c>
-    64ec: mov    WORD PTR [rsp+0x20],0x0
-    64f3: test   edx,edx
-    64f5: jne    65e0 <mlkem768_gen_matrix+0x130>
-    64fb: mov    esi,0x1
-    6500: mov    edi,0x2
-    6505: mov    r8d,0x100
-    650b: mov    WORD PTR [rsp+0x60],si
-    6510: lea    rdx,[rbx+0x400]
-    6517: lea    rsi,[rbx+0x200]
-    651e: mov    WORD PTR [rsp+0xa0],di
-    6526: lea    rcx,[rbx+0x600]
-    652d: mov    rdi,rbx
-    6530: mov    WORD PTR [rsp+0xe0],r8w
-    6539: mov    r8,r12
-    653c: call   60e0 <mlkem_poly_rej_uniform_x4>
-    6541: mov    edi,0x2
-    6546: xor    esi,esi
-    6548: mov    eax,0x1
-    654d: mov    edx,0x2
-    6552: movzx  ecx,WORD PTR [rip+0x1c27]
-    6559: mov    BYTE PTR [rsp+0x60],dl
-    655d: mov    r8,r12
-    6560: mov    BYTE PTR [rsp+0xa1],dil
-    6568: lea    rdi,[rbx+0x800]
-    656f: mov    WORD PTR [rsp+0x20],cx
-    6574: lea    rcx,[rbx+0xe00]
-    657b: mov    BYTE PTR [rsp+0xa0],sil
-    6583: lea    rsi,[rbx+0xa00]
-    658a: mov    BYTE PTR [rsp+0xe1],dl
-    6591: lea    rdx,[rbx+0xc00]
-    6598: mov    BYTE PTR [rsp+0x61],al
-    659c: mov    BYTE PTR [rsp+0xe0],al
-    65a3: call   60e0 <mlkem_poly_rej_uniform_x4>
-    65a8: movzx  eax,WORD PTR [rip+0x1bd3]
-    65af: lea    rdi,[rbx+0x1000]
-    65b6: mov    rsi,r12
-    65b9: mov    WORD PTR [rsp+0x20],ax
-    65be: call   62f0 <mlkem_poly_rej_uniform>
-    65c3: xor    eax,eax
-    65c5: mov    rdi,r12
-    65c8: mov    ecx,0x20
-    65cd: rep    stos QWORD PTR es:[rdi],rax
-    65d0: lea    rsp,[rbp-0x10]
-    65d4: pop    rbx
-    65d5: pop    r12
-    65d7: pop    rbp
-    65d8: ret
-    65d9: nop    DWORD PTR [rax+0x0]
-    65e0: mov    edx,0x200
-    65e5: mov    ecx,0x1
-    65ea: mov    rdi,rbx
-    65ed: mov    r8,r12
-    65f0: mov    eax,0x100
-    65f5: mov    WORD PTR [rsp+0xa0],dx
-    65fd: lea    rsi,[rbx+0x200]
-    6604: lea    rdx,[rbx+0x400]
-    660b: mov    WORD PTR [rsp+0xe0],cx
-    6613: lea    rcx,[rbx+0x600]
-    661a: mov    WORD PTR [rsp+0x60],ax
-    661f: call   60e0 <mlkem_poly_rej_uniform_x4>
-    6624: xor    edi,edi
-    6626: mov    esi,0x2
-    662b: mov    eax,0x2
-    6630: mov    edx,0x1
-    6635: jmp    6552 <mlkem768_gen_matrix+0xa2>
+    mlkem768_gen_matrix:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r12
+       +0x6: push   rbx
+       +0x7: mov    rbx,rdi
+       +0xa: and    rsp,0xffffffffffffffe0
+       +0xe: sub    rsp,0x100
+      +0x15: movdqu xmm1,XMMWORD PTR [rsi]
+      +0x19: movdqu xmm0,XMMWORD PTR [rsi+0x10]
+      +0x1e: mov    r12,rsp
+      +0x21: lea    rcx,[rsp+0x100]
+      +0x29: mov    rax,r12
+      +0x2c: movaps XMMWORD PTR [rax],xmm1
+      +0x2f: add    rax,0x40
+      +0x33: movaps XMMWORD PTR [rax-0x30],xmm0
+      +0x37: cmp    rax,rcx
+      +0x3a: jne    <mlkem768_gen_matrix+0x2c>
+      +0x3c: mov    WORD PTR [rsp+0x20],0x0
+      +0x43: test   edx,edx
+      +0x45: jne    <mlkem768_gen_matrix+0x130>
+      +0x4b: mov    esi,0x1
+      +0x50: mov    edi,0x2
+      +0x55: mov    r8d,0x100
+      +0x5b: mov    WORD PTR [rsp+0x60],si
+      +0x60: lea    rdx,[rbx+0x400]
+      +0x67: lea    rsi,[rbx+0x200]
+      +0x6e: mov    WORD PTR [rsp+0xa0],di
+      +0x76: lea    rcx,[rbx+0x600]
+      +0x7d: mov    rdi,rbx
+      +0x80: mov    WORD PTR [rsp+0xe0],r8w
+      +0x89: mov    r8,r12
+      +0x8c: call   <mlkem_poly_rej_uniform_x4>
+      +0x91: mov    edi,0x2
+      +0x96: xor    esi,esi
+      +0x98: mov    eax,0x1
+      +0x9d: mov    edx,0x2
+      +0xa2: movzx  ecx,WORD PTR [rip+0x1c27]
+      +0xa9: mov    BYTE PTR [rsp+0x60],dl
+      +0xad: mov    r8,r12
+      +0xb0: mov    BYTE PTR [rsp+0xa1],dil
+      +0xb8: lea    rdi,[rbx+0x800]
+      +0xbf: mov    WORD PTR [rsp+0x20],cx
+      +0xc4: lea    rcx,[rbx+0xe00]
+      +0xcb: mov    BYTE PTR [rsp+0xa0],sil
+      +0xd3: lea    rsi,[rbx+0xa00]
+      +0xda: mov    BYTE PTR [rsp+0xe1],dl
+      +0xe1: lea    rdx,[rbx+0xc00]
+      +0xe8: mov    BYTE PTR [rsp+0x61],al
+      +0xec: mov    BYTE PTR [rsp+0xe0],al
+      +0xf3: call   <mlkem_poly_rej_uniform_x4>
+      +0xf8: movzx  eax,WORD PTR [rip+0x1bd3]
+      +0xff: lea    rdi,[rbx+0x1000]
+     +0x106: mov    rsi,r12
+     +0x109: mov    WORD PTR [rsp+0x20],ax
+     +0x10e: call   <mlkem_poly_rej_uniform>
+     +0x113: xor    eax,eax
+     +0x115: mov    rdi,r12
+     +0x118: mov    ecx,0x20
+     +0x11d: rep    stos QWORD PTR es:[rdi],rax
+     +0x120: lea    rsp,[rbp-0x10]
+     +0x124: pop    rbx
+     +0x125: pop    r12
+     +0x127: pop    rbp
+     +0x128: ret
+     +0x129: nop    DWORD PTR [rax+0x0]
+     +0x130: mov    edx,0x200
+     +0x135: mov    ecx,0x1
+     +0x13a: mov    rdi,rbx
+     +0x13d: mov    r8,r12
+     +0x140: mov    eax,0x100
+     +0x145: mov    WORD PTR [rsp+0xa0],dx
+     +0x14d: lea    rsi,[rbx+0x200]
+     +0x154: lea    rdx,[rbx+0x400]
+     +0x15b: mov    WORD PTR [rsp+0xe0],cx
+     +0x163: lea    rcx,[rbx+0x600]
+     +0x16a: mov    WORD PTR [rsp+0x60],ax
+     +0x16f: call   <mlkem_poly_rej_uniform_x4>
+     +0x174: xor    edi,edi
+     +0x176: mov    esi,0x2
+     +0x17b: mov    eax,0x2
+     +0x180: mov    edx,0x1
+     +0x185: jmp    <mlkem768_gen_matrix+0xa2>
  ***)
 
 let MLKEM_NATIVE_GEN_MATRIX_K3_GCC12_O2_EXEC =
@@ -347,8 +346,8 @@ let GENMAT_SP c =
 (* frame, which decide the loop that copies the seed, the values stored from *)
 (* the low halves of the YMM registers, the upper halves of which are kept   *)
 (* as their initial values, and the constants 0x0101 and 0x0202 for the      *)
-(* indices (1,1) and (2,2), which are loaded from the image at 0x8180 and    *)
-(* 0x8182 by RIP-relative MOVZX.                                             *)
+(* indices (1,1) and (2,2), which are loaded from the image by RIP-relative  *)
+(* MOVZX.                                                                    *)
 (* ------------------------------------------------------------------------- *)
 
 let GENMAT_PTR_SUB = prove

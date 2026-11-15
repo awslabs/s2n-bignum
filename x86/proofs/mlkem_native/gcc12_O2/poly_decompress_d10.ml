@@ -4,13 +4,11 @@
  *)
 
 (* ========================================================================= *)
-(* Decompression of a polynomial from 10 bits per coefficient.               *)
-(* This is the code for mlkem_poly_decompress_d10 from mlkem-native's        *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md). It is verified in the whole image (see           *)
-(* libmlkem.ml), where it is at address 0x2790. The                          *)
-(* constant vector of 512s that it uses for the rounding is at 0x8010 in the *)
-(* image.                                                                    *)
+(* Decompression of a polynomial from 10 bits per coefficient. This is the   *)
+(* code for mlkem_poly_decompress_d10 from mlkem-native's portable C         *)
+(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
+(* It is verified in the whole image (see libmlkem.ml). The constant vector  *)
+(* of 512s that it uses for the rounding is in the image.                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -18,75 +16,76 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    2790: movq   xmm4,QWORD PTR [rip+0x5878]
-    2798: mov    rdx,rsi
-    279b: mov    rcx,rdi
-    279e: pxor   xmm3,xmm3
-    27a2: lea    rsi,[rsi+0x140]
-    27a9: nop    DWORD PTR [rax+0x0]
-    27b0: movzx  r9d,BYTE PTR [rdx+0x1]
-    27b5: movzx  edi,WORD PTR [rdx]
-    27b8: add    rdx,0x5
-    27bc: add    rcx,0x8
-    27c0: movzx  r10d,BYTE PTR [rdx-0x3]
-    27c5: movzx  eax,BYTE PTR [rdx-0x2]
-    27c9: shr    r9b,0x2
-    27cd: and    edi,0x3ff
-    27d3: mov    r8d,r10d
-    27d6: movzx  r9d,r9b
-    27da: shl    r10d,0x6
-    27de: or     r9d,r10d
-    27e1: shr    r8b,0x4
-    27e5: movzx  r10d,al
-    27e9: shl    r10d,0x4
-    27ed: movzx  r8d,r8b
-    27f1: shr    al,0x6
-    27f4: and    r9d,0x3ff
-    27fb: or     r8d,r10d
-    27fe: movzx  r10d,BYTE PTR [rdx-0x1]
-    2803: movzx  eax,al
-    2806: and    r8d,0x3ff
-    280d: shl    r10d,0x2
-    2811: or     eax,r10d
-    2814: movzx  eax,ax
-    2817: shl    rax,0x10
-    281b: or     rax,r8
-    281e: shl    rax,0x10
-    2822: or     rax,r9
-    2825: shl    rax,0x10
-    2829: or     rax,rdi
-    282c: movq   xmm0,rax
-    2831: movdqa xmm2,xmm0
-    2835: punpcklwd xmm0,xmm3
-    2839: punpcklwd xmm2,xmm3
-    283d: pshufd xmm0,xmm0,0x4e
-    2842: movdqa xmm1,xmm2
-    2846: pslld  xmm1,0x1
-    284b: paddd  xmm1,xmm2
-    284f: pslld  xmm1,0x2
-    2854: paddd  xmm1,xmm2
-    2858: paddd  xmm2,xmm4
-    285c: pslld  xmm1,0x8
-    2861: paddd  xmm1,xmm2
-    2865: movdqa xmm2,xmm0
-    2869: pslld  xmm2,0x1
-    286e: paddd  xmm2,xmm0
-    2872: psrld  xmm1,0xa
-    2877: movdqa xmm5,xmm1
-    287b: pslld  xmm2,0x2
-    2880: paddd  xmm2,xmm0
-    2884: paddd  xmm0,xmm4
-    2888: pslld  xmm2,0x8
-    288d: paddd  xmm2,xmm0
-    2891: psrld  xmm2,0xa
-    2896: punpcklwd xmm5,xmm2
-    289a: punpcklwd xmm1,xmm2
-    289e: pshufd xmm5,xmm5,0x4e
-    28a3: punpcklwd xmm1,xmm5
-    28a7: movq   QWORD PTR [rcx-0x8],xmm1
-    28ac: cmp    rdx,rsi
-    28af: jne    27b0 <mlkem_poly_decompress_d10+0x20>
-    28b5: ret
+    mlkem_poly_decompress_d10:
+       +0x0: movq   xmm4,QWORD PTR [rip+0x5878]
+       +0x8: mov    rdx,rsi
+       +0xb: mov    rcx,rdi
+       +0xe: pxor   xmm3,xmm3
+      +0x12: lea    rsi,[rsi+0x140]
+      +0x19: nop    DWORD PTR [rax+0x0]
+      +0x20: movzx  r9d,BYTE PTR [rdx+0x1]
+      +0x25: movzx  edi,WORD PTR [rdx]
+      +0x28: add    rdx,0x5
+      +0x2c: add    rcx,0x8
+      +0x30: movzx  r10d,BYTE PTR [rdx-0x3]
+      +0x35: movzx  eax,BYTE PTR [rdx-0x2]
+      +0x39: shr    r9b,0x2
+      +0x3d: and    edi,0x3ff
+      +0x43: mov    r8d,r10d
+      +0x46: movzx  r9d,r9b
+      +0x4a: shl    r10d,0x6
+      +0x4e: or     r9d,r10d
+      +0x51: shr    r8b,0x4
+      +0x55: movzx  r10d,al
+      +0x59: shl    r10d,0x4
+      +0x5d: movzx  r8d,r8b
+      +0x61: shr    al,0x6
+      +0x64: and    r9d,0x3ff
+      +0x6b: or     r8d,r10d
+      +0x6e: movzx  r10d,BYTE PTR [rdx-0x1]
+      +0x73: movzx  eax,al
+      +0x76: and    r8d,0x3ff
+      +0x7d: shl    r10d,0x2
+      +0x81: or     eax,r10d
+      +0x84: movzx  eax,ax
+      +0x87: shl    rax,0x10
+      +0x8b: or     rax,r8
+      +0x8e: shl    rax,0x10
+      +0x92: or     rax,r9
+      +0x95: shl    rax,0x10
+      +0x99: or     rax,rdi
+      +0x9c: movq   xmm0,rax
+      +0xa1: movdqa xmm2,xmm0
+      +0xa5: punpcklwd xmm0,xmm3
+      +0xa9: punpcklwd xmm2,xmm3
+      +0xad: pshufd xmm0,xmm0,0x4e
+      +0xb2: movdqa xmm1,xmm2
+      +0xb6: pslld  xmm1,0x1
+      +0xbb: paddd  xmm1,xmm2
+      +0xbf: pslld  xmm1,0x2
+      +0xc4: paddd  xmm1,xmm2
+      +0xc8: paddd  xmm2,xmm4
+      +0xcc: pslld  xmm1,0x8
+      +0xd1: paddd  xmm1,xmm2
+      +0xd5: movdqa xmm2,xmm0
+      +0xd9: pslld  xmm2,0x1
+      +0xde: paddd  xmm2,xmm0
+      +0xe2: psrld  xmm1,0xa
+      +0xe7: movdqa xmm5,xmm1
+      +0xeb: pslld  xmm2,0x2
+      +0xf0: paddd  xmm2,xmm0
+      +0xf4: paddd  xmm0,xmm4
+      +0xf8: pslld  xmm2,0x8
+      +0xfd: paddd  xmm2,xmm0
+     +0x101: psrld  xmm2,0xa
+     +0x106: punpcklwd xmm5,xmm2
+     +0x10a: punpcklwd xmm1,xmm2
+     +0x10e: pshufd xmm5,xmm5,0x4e
+     +0x113: punpcklwd xmm1,xmm5
+     +0x117: movq   QWORD PTR [rcx-0x8],xmm1
+     +0x11c: cmp    rdx,rsi
+     +0x11f: jne    <mlkem_poly_decompress_d10+0x20>
+     +0x125: ret
  ***)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D10_GCC12_O2_EXEC =

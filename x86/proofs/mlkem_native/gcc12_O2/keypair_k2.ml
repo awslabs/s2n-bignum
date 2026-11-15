@@ -11,9 +11,8 @@
 (* buffer on the stack, and returns -3 if that fails, and otherwise          *)
 (* generates the keys from them with mlkem512_keypair_derand. In both cases  *)
 (* it zeroes the buffer. It is verified in the whole image (see              *)
-(* libmlkem.ml), where it is at address 0x5120, using                        *)
-(* the theorem for mlkem512_keypair_derand in the image and the contract for *)
-(* randombytes (see utils/mlkem_native_libc.ml).                             *)
+(* libmlkem.ml), using the theorem for mlkem512_keypair_derand in the image  *)
+(* and the contract for randombytes (see utils/mlkem_native_libc.ml).        *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keypair_derand_k2.ml";;
@@ -21,44 +20,46 @@ needs "x86/proofs/utils/mlkem_native_libc.ml";;
 
 (*** The code in the image:
 
-    1010: jmp    QWORD PTR [rip+0x9fe2]
+    plt_randombytes:
+       +0x0: jmp    QWORD PTR [rip+0x9fe2]
  ***)
 
 (*** The code in the image:
 
-    5120: push   rbp
-    5121: mov    rbp,rsp
-    5124: push   r13
-    5126: mov    r13,rsi
-    5129: mov    esi,0x40
-    512e: push   r12
-    5130: mov    r12,rdi
-    5133: push   rbx
-    5134: and    rsp,0xffffffffffffffe0
-    5138: sub    rsp,0x40
-    513c: mov    rbx,rsp
-    513f: mov    rdi,rbx
-    5142: call   1010 <randombytes@plt>
-    5147: test   eax,eax
-    5149: jne    5180 <mlkem512_keypair+0x60>
-    514b: mov    rdx,rbx
-    514e: mov    rsi,r13
-    5151: mov    rdi,r12
-    5154: call   5000 <mlkem512_keypair_derand>
-    5159: pxor   xmm0,xmm0
-    515d: movaps XMMWORD PTR [rsp],xmm0
-    5161: movaps XMMWORD PTR [rsp+0x10],xmm0
-    5166: movaps XMMWORD PTR [rsp+0x20],xmm0
-    516b: movaps XMMWORD PTR [rsp+0x30],xmm0
-    5170: lea    rsp,[rbp-0x18]
-    5174: pop    rbx
-    5175: pop    r12
-    5177: pop    r13
-    5179: pop    rbp
-    517a: ret
-    517b: nop    DWORD PTR [rax+rax*1+0x0]
-    5180: mov    eax,0xfffffffd
-    5185: jmp    5159 <mlkem512_keypair+0x39>
+    mlkem512_keypair:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r13
+       +0x6: mov    r13,rsi
+       +0x9: mov    esi,0x40
+       +0xe: push   r12
+      +0x10: mov    r12,rdi
+      +0x13: push   rbx
+      +0x14: and    rsp,0xffffffffffffffe0
+      +0x18: sub    rsp,0x40
+      +0x1c: mov    rbx,rsp
+      +0x1f: mov    rdi,rbx
+      +0x22: call   <randombytes@plt>
+      +0x27: test   eax,eax
+      +0x29: jne    <mlkem512_keypair+0x60>
+      +0x2b: mov    rdx,rbx
+      +0x2e: mov    rsi,r13
+      +0x31: mov    rdi,r12
+      +0x34: call   <mlkem512_keypair_derand>
+      +0x39: pxor   xmm0,xmm0
+      +0x3d: movaps XMMWORD PTR [rsp],xmm0
+      +0x41: movaps XMMWORD PTR [rsp+0x10],xmm0
+      +0x46: movaps XMMWORD PTR [rsp+0x20],xmm0
+      +0x4b: movaps XMMWORD PTR [rsp+0x30],xmm0
+      +0x50: lea    rsp,[rbp-0x18]
+      +0x54: pop    rbx
+      +0x55: pop    r12
+      +0x57: pop    r13
+      +0x59: pop    rbp
+      +0x5a: ret
+      +0x5b: nop    DWORD PTR [rax+rax*1+0x0]
+      +0x60: mov    eax,0xfffffffd
+      +0x65: jmp    <mlkem512_keypair+0x39>
  ***)
 
 let MLKEM_NATIVE_KEYPAIR_K2_GCC12_O2_EXEC =

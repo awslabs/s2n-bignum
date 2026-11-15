@@ -4,13 +4,12 @@
  *)
 
 (* ========================================================================= *)
-(* Barrett reduction of a vector of 4 polynomials.                           *)
-(* This is the code for mlkem1024_polyvec_reduce from mlkem-native's         *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md), which calls mlkem_poly_reduce for each of the    *)
-(* polynomials, the last time as a tail call. It is verified in the whole    *)
-(* image (see libmlkem.ml), where it is at address                           *)
-(* 0x21d0, using the theorems for mlkem_poly_reduce at 0x5660 in the image.  *)
+(* Barrett reduction of a vector of 4 polynomials. This is the code for      *)
+(* mlkem1024_polyvec_reduce from mlkem-native's portable C implementation    *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which calls     *)
+(* mlkem_poly_reduce for each of the polynomials, the last time as a tail    *)
+(* call. It is verified in the whole image (see libmlkem.ml), using the      *)
+(* theorems for mlkem_poly_reduce in the image.                              *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_reduce.ml";;
@@ -18,16 +17,17 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    21d0: push   rbx
-    21d1: mov    rbx,rdi
-    21d4: call   5660 <mlkem_poly_reduce>
-    21d9: lea    rdi,[rbx+0x200]
-    21e0: call   5660 <mlkem_poly_reduce>
-    21e5: lea    rdi,[rbx+0x400]
-    21ec: call   5660 <mlkem_poly_reduce>
-    21f1: lea    rdi,[rbx+0x600]
-    21f8: pop    rbx
-    21f9: jmp    5660 <mlkem_poly_reduce>
+    mlkem1024_polyvec_reduce:
+       +0x0: push   rbx
+       +0x1: mov    rbx,rdi
+       +0x4: call   <mlkem_poly_reduce>
+       +0x9: lea    rdi,[rbx+0x200]
+      +0x10: call   <mlkem_poly_reduce>
+      +0x15: lea    rdi,[rbx+0x400]
+      +0x1c: call   <mlkem_poly_reduce>
+      +0x21: lea    rdi,[rbx+0x600]
+      +0x28: pop    rbx
+      +0x29: jmp    <mlkem_poly_reduce>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_REDUCE_K4_GCC12_O2_EXEC =

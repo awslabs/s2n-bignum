@@ -10,11 +10,10 @@
 (* It decompresses u and v from the ciphertext, decodes the secret vector s  *)
 (* in the NTT domain from the decryption key, and writes the compression     *)
 (* with d = 1 of w = v - NTT^-1(s^T NTT(u)) as the message, zeroing its      *)
-(* buffers. It is verified in the whole image (see                           *)
-(* libmlkem.ml), where it is at address 0x4cf0, using                        *)
-(* the theorems for mlkem512_polyvec_decompress_du,                          *)
-(* mlkem_poly_decompress_d4, mlkem512_polyvec_frombytes,                     *)
-(* mlkem512_polyvec_ntt, mlkem512_polyvec_mulcache_compute,                  *)
+(* buffers. It is verified in the whole image (see libmlkem.ml), using the   *)
+(* theorems for mlkem512_polyvec_decompress_du, mlkem_poly_decompress_d4,    *)
+(* mlkem512_polyvec_frombytes, mlkem512_polyvec_ntt,                         *)
+(* mlkem512_polyvec_mulcache_compute,                                        *)
 (* mlkem512_polyvec_basemul_acc_montgomery_cached, mlkem_poly_invntt_tomont, *)
 (* mlkem_poly_sub, mlkem_poly_reduce and mlkem_poly_tomsg in the image.      *)
 (* ========================================================================= *)
@@ -33,75 +32,76 @@ needs "x86/proofs/utils/mlkem_native_indcpa.ml";;
 
 (*** The code in the image:
 
-    4cf0: push   rbp
-    4cf1: mov    rbp,rsp
-    4cf4: push   r15
-    4cf6: push   r14
-    4cf8: push   r13
-    4cfa: mov    r13,rdx
-    4cfd: push   r12
-    4cff: mov    r12,rsi
-    4d02: push   rbx
-    4d03: and    rsp,0xffffffffffffffe0
-    4d07: sub    rsp,0xe20
-    4d0e: lea    rbx,[rsp+0x620]
-    4d16: mov    QWORD PTR [rsp+0x18],rdi
-    4d1b: lea    r15,[rsp+0xa20]
-    4d23: mov    rdi,rbx
-    4d26: lea    r14,[rsp+0x420]
-    4d2e: call   5a80 <mlkem512_polyvec_decompress_du>
-    4d33: lea    rsi,[r12+0x280]
-    4d3b: lea    r12,[rsp+0x20]
-    4d40: mov    rdi,r12
-    4d43: call   2740 <mlkem_poly_decompress_d4>
-    4d48: mov    rsi,r13
-    4d4b: mov    rdi,r15
-    4d4e: lea    r13,[rsp+0x220]
-    4d56: call   5ae0 <mlkem512_polyvec_frombytes>
-    4d5b: mov    rdi,rbx
-    4d5e: call   5b10 <mlkem512_polyvec_ntt>
-    4d63: mov    rsi,rbx
-    4d66: mov    rdi,r14
-    4d69: call   5c30 <mlkem512_polyvec_mulcache_compute>
-    4d6e: mov    rcx,r14
-    4d71: mov    rdx,rbx
-    4d74: mov    rsi,r15
-    4d77: mov    rdi,r13
-    4d7a: call   5b50 <mlkem512_polyvec_basemul_acc_montgomery_cached>
-    4d7f: mov    rdi,r13
-    4d82: call   5860 <mlkem_poly_invntt_tomont>
-    4d87: mov    rsi,r13
-    4d8a: mov    rdi,r12
-    4d8d: call   56e0 <mlkem_poly_sub>
-    4d92: mov    rdi,r12
-    4d95: call   5660 <mlkem_poly_reduce>
-    4d9a: mov    rdi,QWORD PTR [rsp+0x18]
-    4d9f: mov    rsi,r12
-    4da2: call   3260 <mlkem_poly_tomsg>
-    4da7: xor    eax,eax
-    4da9: mov    rdi,r14
-    4dac: mov    ecx,0x40
-    4db1: rep    stos QWORD PTR es:[rdi],rax
-    4db4: mov    ecx,0x40
-    4db9: mov    rdi,r13
-    4dbc: rep    stos QWORD PTR es:[rdi],rax
-    4dbf: mov    ecx,0x40
-    4dc4: mov    rdi,r12
-    4dc7: rep    stos QWORD PTR es:[rdi],rax
-    4dca: mov    ecx,0x80
-    4dcf: mov    rdi,r15
-    4dd2: rep    stos QWORD PTR es:[rdi],rax
-    4dd5: mov    ecx,0x80
-    4dda: mov    rdi,rbx
-    4ddd: rep    stos QWORD PTR es:[rdi],rax
-    4de0: lea    rsp,[rbp-0x28]
-    4de4: pop    rbx
-    4de5: pop    r12
-    4de7: pop    r13
-    4de9: pop    r14
-    4deb: pop    r15
-    4ded: pop    rbp
-    4dee: ret
+    mlkem512_indcpa_dec:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r15
+       +0x6: push   r14
+       +0x8: push   r13
+       +0xa: mov    r13,rdx
+       +0xd: push   r12
+       +0xf: mov    r12,rsi
+      +0x12: push   rbx
+      +0x13: and    rsp,0xffffffffffffffe0
+      +0x17: sub    rsp,0xe20
+      +0x1e: lea    rbx,[rsp+0x620]
+      +0x26: mov    QWORD PTR [rsp+0x18],rdi
+      +0x2b: lea    r15,[rsp+0xa20]
+      +0x33: mov    rdi,rbx
+      +0x36: lea    r14,[rsp+0x420]
+      +0x3e: call   <mlkem512_polyvec_decompress_du>
+      +0x43: lea    rsi,[r12+0x280]
+      +0x4b: lea    r12,[rsp+0x20]
+      +0x50: mov    rdi,r12
+      +0x53: call   <mlkem_poly_decompress_d4>
+      +0x58: mov    rsi,r13
+      +0x5b: mov    rdi,r15
+      +0x5e: lea    r13,[rsp+0x220]
+      +0x66: call   <mlkem512_polyvec_frombytes>
+      +0x6b: mov    rdi,rbx
+      +0x6e: call   <mlkem512_polyvec_ntt>
+      +0x73: mov    rsi,rbx
+      +0x76: mov    rdi,r14
+      +0x79: call   <mlkem512_polyvec_mulcache_compute>
+      +0x7e: mov    rcx,r14
+      +0x81: mov    rdx,rbx
+      +0x84: mov    rsi,r15
+      +0x87: mov    rdi,r13
+      +0x8a: call   <mlkem512_polyvec_basemul_acc_montgomery_cached>
+      +0x8f: mov    rdi,r13
+      +0x92: call   <mlkem_poly_invntt_tomont>
+      +0x97: mov    rsi,r13
+      +0x9a: mov    rdi,r12
+      +0x9d: call   <mlkem_poly_sub>
+      +0xa2: mov    rdi,r12
+      +0xa5: call   <mlkem_poly_reduce>
+      +0xaa: mov    rdi,QWORD PTR [rsp+0x18]
+      +0xaf: mov    rsi,r12
+      +0xb2: call   <mlkem_poly_tomsg>
+      +0xb7: xor    eax,eax
+      +0xb9: mov    rdi,r14
+      +0xbc: mov    ecx,0x40
+      +0xc1: rep    stos QWORD PTR es:[rdi],rax
+      +0xc4: mov    ecx,0x40
+      +0xc9: mov    rdi,r13
+      +0xcc: rep    stos QWORD PTR es:[rdi],rax
+      +0xcf: mov    ecx,0x40
+      +0xd4: mov    rdi,r12
+      +0xd7: rep    stos QWORD PTR es:[rdi],rax
+      +0xda: mov    ecx,0x80
+      +0xdf: mov    rdi,r15
+      +0xe2: rep    stos QWORD PTR es:[rdi],rax
+      +0xe5: mov    ecx,0x80
+      +0xea: mov    rdi,rbx
+      +0xed: rep    stos QWORD PTR es:[rdi],rax
+      +0xf0: lea    rsp,[rbp-0x28]
+      +0xf4: pop    rbx
+      +0xf5: pop    r12
+      +0xf7: pop    r13
+      +0xf9: pop    r14
+      +0xfb: pop    r15
+      +0xfd: pop    rbp
+      +0xfe: ret
  ***)
 
 let MLKEM_NATIVE_INDCPA_DEC_K2_GCC12_O2_EXEC =

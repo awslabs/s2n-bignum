@@ -4,16 +4,14 @@
  *)
 
 (* ========================================================================= *)
-(* Keccak-f1600 permutation of four consecutive states.                      *)
-(* This is the code for mlkem_keccakf1600x4_permute from mlkem-native's      *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md), which calls mlkem_keccakf1600_permute for each   *)
-(* of the four states, the last time as a tail call. It is verified in the   *)
-(* whole image (see libmlkem.ml), where it is at                             *)
-(* address 0x4740, using the theorems for mlkem_keccakf1600_permute at       *)
-(* 0x3e70 in the image. The specification is the same as for                 *)
-(* sha3_keccak4_f1600, except that the table of round constants is not an    *)
-(* argument, since it is part of the image.                                  *)
+(* Keccak-f1600 permutation of four consecutive states. This is the code for *)
+(* mlkem_keccakf1600x4_permute from mlkem-native's portable C implementation *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which calls     *)
+(* mlkem_keccakf1600_permute for each of the four states, the last time as a *)
+(* tail call. It is verified in the whole image (see libmlkem.ml), using the *)
+(* theorems for mlkem_keccakf1600_permute in the image. The specification is *)
+(* the same as for sha3_keccak4_f1600, except that the table of round        *)
+(* constants is not an argument, since it is part of the image.              *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keccakf1600_permute.ml";;
@@ -21,16 +19,17 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    4740: push   rbx
-    4741: mov    rbx,rdi
-    4744: call   3e70 <mlkem_keccakf1600_permute>
-    4749: lea    rdi,[rbx+0xc8]
-    4750: call   3e70 <mlkem_keccakf1600_permute>
-    4755: lea    rdi,[rbx+0x190]
-    475c: call   3e70 <mlkem_keccakf1600_permute>
-    4761: lea    rdi,[rbx+0x258]
-    4768: pop    rbx
-    4769: jmp    3e70 <mlkem_keccakf1600_permute>
+    mlkem_keccakf1600x4_permute:
+       +0x0: push   rbx
+       +0x1: mov    rbx,rdi
+       +0x4: call   <mlkem_keccakf1600_permute>
+       +0x9: lea    rdi,[rbx+0xc8]
+      +0x10: call   <mlkem_keccakf1600_permute>
+      +0x15: lea    rdi,[rbx+0x190]
+      +0x1c: call   <mlkem_keccakf1600_permute>
+      +0x21: lea    rdi,[rbx+0x258]
+      +0x28: pop    rbx
+      +0x29: jmp    <mlkem_keccakf1600_permute>
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600X4_PERMUTE_GCC12_O2_EXEC =

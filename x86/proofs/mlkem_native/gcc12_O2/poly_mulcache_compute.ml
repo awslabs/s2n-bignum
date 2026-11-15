@@ -457,8 +457,8 @@ let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_GCC12_O2_SUBROUTINE_SAFE = time prove
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* The same code in the whole image, at address 0x5710, with the table of    *)
-(* zetas at 0x81a0 (see libmlkem.ml).                                        *)
+(* The same code in the whole image, with the table of zetas (see            *)
+(* libmlkem.ml).                                                             *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;

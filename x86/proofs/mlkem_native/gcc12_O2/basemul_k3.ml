@@ -617,8 +617,7 @@ let MLKEM_NATIVE_BASEMUL_K3_GCC12_O2_SUBROUTINE_SAFE = time prove
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* The same code in the whole image, at address 0x75d0 (see                  *)
-(* libmlkem.ml).                                                             *)
+(* The same code in the whole image (see libmlkem.ml).                       *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;

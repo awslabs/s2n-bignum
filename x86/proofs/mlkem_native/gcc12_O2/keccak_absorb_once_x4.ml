@@ -16,9 +16,8 @@
 (* messages, is on the stack, and it passes the seventh argument of          *)
 (* mlkem_keccakf1600x4_xor_bytes, the number of bytes, on the stack as a     *)
 (* 64-bit word, of which the callee reads 32 bits. It is verified in the     *)
-(* whole image (see libmlkem.ml), where it is at                             *)
-(* address 0x35d0, using the theorems for those functions at 0x3df0 and      *)
-(* 0x4740 in the image.                                                      *)
+(* whole image (see libmlkem.ml), using the theorems for those functions in  *)
+(* the image.                                                                *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keccak_absorb_once.ml";;
@@ -28,116 +27,117 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    35d0: push   r15
-    35d2: mov    r15,r8
-    35d5: mov    r8,r9
-    35d8: push   r14
-    35da: mov    r14,rdi
-    35dd: push   r13
-    35df: mov    r13,rcx
-    35e2: push   r12
-    35e4: mov    r12,rdx
-    35e7: push   rbp
-    35e8: push   rbx
-    35e9: mov    ebx,esi
-    35eb: sub    rsp,0x28
-    35ef: mov    rbp,QWORD PTR [rsp+0x60]
-    35f4: mov    DWORD PTR [rsp+0xc],esi
-    35f8: mov    BYTE PTR [rsp+0x1f],0x1f
-    35fd: cmp    rbp,rbx
-    3600: jb     364f <mlk_keccak_absorb_once_x4.constprop.0+0x7f>
-    3602: nop    WORD PTR [rax+rax*1+0x0]
-    3608: sub    rsp,0x8
-    360c: xor    r9d,r9d
-    360f: mov    rcx,r15
-    3612: mov    rdx,r13
-    3615: mov    eax,DWORD PTR [rsp+0x14]
-    3619: mov    rsi,r12
-    361c: mov    rdi,r14
-    361f: sub    rbp,rbx
-    3622: add    r12,rbx
-    3625: add    r13,rbx
-    3628: add    r15,rbx
-    362b: push   rax
-    362c: mov    QWORD PTR [rsp+0x10],r8
-    3631: call   3df0 <mlkem_keccakf1600x4_xor_bytes>
-    3636: mov    rdi,r14
-    3639: call   4740 <mlkem_keccakf1600x4_permute>
-    363e: mov    r8,QWORD PTR [rsp+0x10]
-    3643: pop    r9
-    3645: pop    r10
-    3647: add    r8,rbx
-    364a: cmp    rbp,rbx
-    364d: jae    3608 <mlk_keccak_absorb_once_x4.constprop.0+0x38>
-    364f: mov    eax,DWORD PTR [rsp+0xc]
-    3653: mov    ebx,ebp
-    3655: sub    eax,0x1
-    3658: mov    DWORD PTR [rsp],eax
-    365b: test   rbp,rbp
-    365e: jne    36c0 <mlk_keccak_absorb_once_x4.constprop.0+0xf0>
-    3660: lea    rbp,[rsp+0x1f]
-    3665: sub    rsp,0x8
-    3669: mov    r9d,ebx
-    366c: mov    rdi,r14
-    366f: push   0x1
-    3671: mov    r8,rbp
-    3674: mov    rcx,rbp
-    3677: mov    rdx,rbp
-    367a: mov    rsi,rbp
-    367d: call   3df0 <mlkem_keccakf1600x4_xor_bytes>
-    3682: mov    r9d,DWORD PTR [rsp+0x10]
-    3687: mov    rdx,rbp
-    368a: mov    r8,rbp
-    368d: mov    rcx,rbp
-    3690: mov    rsi,rbp
-    3693: mov    rdi,r14
-    3696: mov    BYTE PTR [rsp+0x2f],0x80
-    369b: mov    DWORD PTR [rsp],0x1
-    36a2: call   3df0 <mlkem_keccakf1600x4_xor_bytes>
-    36a7: pop    rax
-    36a8: pop    rdx
-    36a9: add    rsp,0x28
-    36ad: pop    rbx
-    36ae: pop    rbp
-    36af: pop    r12
-    36b1: pop    r13
-    36b3: pop    r14
-    36b5: pop    r15
-    36b7: ret
-    36b8: nop    DWORD PTR [rax+rax*1+0x0]
-    36c0: sub    rsp,0x8
-    36c4: mov    rdi,r14
-    36c7: xor    r9d,r9d
-    36ca: mov    rcx,r15
-    36cd: push   rbp
-    36ce: mov    rdx,r13
-    36d1: mov    rsi,r12
-    36d4: call   3df0 <mlkem_keccakf1600x4_xor_bytes>
-    36d9: mov    eax,DWORD PTR [rsp+0x10]
-    36dd: pop    rdi
-    36de: pop    r8
-    36e0: cmp    rax,rbp
-    36e3: jne    3660 <mlk_keccak_absorb_once_x4.constprop.0+0x90>
-    36e9: lea    rsi,[rsp+0x1f]
-    36ee: or     BYTE PTR [rsp+0x1f],0x80
-    36f3: mov    r9d,ebp
-    36f6: mov    rdi,r14
-    36f9: sub    rsp,0x8
-    36fd: mov    rcx,rsi
-    3700: mov    r8,rsi
-    3703: mov    rdx,rsi
-    3706: push   0x1
-    3708: call   3df0 <mlkem_keccakf1600x4_xor_bytes>
-    370d: pop    rcx
-    370e: pop    rsi
-    370f: add    rsp,0x28
-    3713: pop    rbx
-    3714: pop    rbp
-    3715: pop    r12
-    3717: pop    r13
-    3719: pop    r14
-    371b: pop    r15
-    371d: ret
+    mlk_keccak_absorb_once_x4:
+       +0x0: push   r15
+       +0x2: mov    r15,r8
+       +0x5: mov    r8,r9
+       +0x8: push   r14
+       +0xa: mov    r14,rdi
+       +0xd: push   r13
+       +0xf: mov    r13,rcx
+      +0x12: push   r12
+      +0x14: mov    r12,rdx
+      +0x17: push   rbp
+      +0x18: push   rbx
+      +0x19: mov    ebx,esi
+      +0x1b: sub    rsp,0x28
+      +0x1f: mov    rbp,QWORD PTR [rsp+0x60]
+      +0x24: mov    DWORD PTR [rsp+0xc],esi
+      +0x28: mov    BYTE PTR [rsp+0x1f],0x1f
+      +0x2d: cmp    rbp,rbx
+      +0x30: jb     <mlk_keccak_absorb_once_x4.constprop.0+0x7f>
+      +0x32: nop    WORD PTR [rax+rax*1+0x0]
+      +0x38: sub    rsp,0x8
+      +0x3c: xor    r9d,r9d
+      +0x3f: mov    rcx,r15
+      +0x42: mov    rdx,r13
+      +0x45: mov    eax,DWORD PTR [rsp+0x14]
+      +0x49: mov    rsi,r12
+      +0x4c: mov    rdi,r14
+      +0x4f: sub    rbp,rbx
+      +0x52: add    r12,rbx
+      +0x55: add    r13,rbx
+      +0x58: add    r15,rbx
+      +0x5b: push   rax
+      +0x5c: mov    QWORD PTR [rsp+0x10],r8
+      +0x61: call   <mlkem_keccakf1600x4_xor_bytes>
+      +0x66: mov    rdi,r14
+      +0x69: call   <mlkem_keccakf1600x4_permute>
+      +0x6e: mov    r8,QWORD PTR [rsp+0x10]
+      +0x73: pop    r9
+      +0x75: pop    r10
+      +0x77: add    r8,rbx
+      +0x7a: cmp    rbp,rbx
+      +0x7d: jae    <mlk_keccak_absorb_once_x4.constprop.0+0x38>
+      +0x7f: mov    eax,DWORD PTR [rsp+0xc]
+      +0x83: mov    ebx,ebp
+      +0x85: sub    eax,0x1
+      +0x88: mov    DWORD PTR [rsp],eax
+      +0x8b: test   rbp,rbp
+      +0x8e: jne    <mlk_keccak_absorb_once_x4.constprop.0+0xf0>
+      +0x90: lea    rbp,[rsp+0x1f]
+      +0x95: sub    rsp,0x8
+      +0x99: mov    r9d,ebx
+      +0x9c: mov    rdi,r14
+      +0x9f: push   0x1
+      +0xa1: mov    r8,rbp
+      +0xa4: mov    rcx,rbp
+      +0xa7: mov    rdx,rbp
+      +0xaa: mov    rsi,rbp
+      +0xad: call   <mlkem_keccakf1600x4_xor_bytes>
+      +0xb2: mov    r9d,DWORD PTR [rsp+0x10]
+      +0xb7: mov    rdx,rbp
+      +0xba: mov    r8,rbp
+      +0xbd: mov    rcx,rbp
+      +0xc0: mov    rsi,rbp
+      +0xc3: mov    rdi,r14
+      +0xc6: mov    BYTE PTR [rsp+0x2f],0x80
+      +0xcb: mov    DWORD PTR [rsp],0x1
+      +0xd2: call   <mlkem_keccakf1600x4_xor_bytes>
+      +0xd7: pop    rax
+      +0xd8: pop    rdx
+      +0xd9: add    rsp,0x28
+      +0xdd: pop    rbx
+      +0xde: pop    rbp
+      +0xdf: pop    r12
+      +0xe1: pop    r13
+      +0xe3: pop    r14
+      +0xe5: pop    r15
+      +0xe7: ret
+      +0xe8: nop    DWORD PTR [rax+rax*1+0x0]
+      +0xf0: sub    rsp,0x8
+      +0xf4: mov    rdi,r14
+      +0xf7: xor    r9d,r9d
+      +0xfa: mov    rcx,r15
+      +0xfd: push   rbp
+      +0xfe: mov    rdx,r13
+     +0x101: mov    rsi,r12
+     +0x104: call   <mlkem_keccakf1600x4_xor_bytes>
+     +0x109: mov    eax,DWORD PTR [rsp+0x10]
+     +0x10d: pop    rdi
+     +0x10e: pop    r8
+     +0x110: cmp    rax,rbp
+     +0x113: jne    <mlk_keccak_absorb_once_x4.constprop.0+0x90>
+     +0x119: lea    rsi,[rsp+0x1f]
+     +0x11e: or     BYTE PTR [rsp+0x1f],0x80
+     +0x123: mov    r9d,ebp
+     +0x126: mov    rdi,r14
+     +0x129: sub    rsp,0x8
+     +0x12d: mov    rcx,rsi
+     +0x130: mov    r8,rsi
+     +0x133: mov    rdx,rsi
+     +0x136: push   0x1
+     +0x138: call   <mlkem_keccakf1600x4_xor_bytes>
+     +0x13d: pop    rcx
+     +0x13e: pop    rsi
+     +0x13f: add    rsp,0x28
+     +0x143: pop    rbx
+     +0x144: pop    rbp
+     +0x145: pop    r12
+     +0x147: pop    r13
+     +0x149: pop    r14
+     +0x14b: pop    r15
+     +0x14d: ret
  ***)
 
 let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_O2_EXEC =

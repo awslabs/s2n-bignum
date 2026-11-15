@@ -12,12 +12,10 @@
 (* the coefficients below 3329 from them with mlk_rej_uniform_c, and then    *)
 (* squeezes one more block of each and samples from all four until each      *)
 (* polynomial has 256 coefficients, before zeroing the state and the         *)
-(* buffers. It is verified in the whole image (see                           *)
-(* libmlkem.ml), where it is at address 0x60e0, using                        *)
-(* the theorems for mlkem_shake128x4_init at 0x3820,                         *)
-(* mlkem_shake128x4_absorb_once at 0x3720, mlkem_shake128x4_squeezeblocks at *)
-(* 0x3780, mlkem_shake128x4_release at 0x3830 and mlk_rej_uniform_c at       *)
-(* 0x6040 in the image, and the lemmas about the samples for                 *)
+(* buffers. It is verified in the whole image (see libmlkem.ml), using the   *)
+(* theorems for mlkem_shake128x4_init, mlkem_shake128x4_absorb_once,         *)
+(* mlkem_shake128x4_squeezeblocks, mlkem_shake128x4_release and              *)
+(* mlk_rej_uniform_c in the image, and the lemmas about the samples for      *)
 (* mlkem_poly_rej_uniform.                                                   *)
 (* ========================================================================= *)
 
@@ -35,134 +33,135 @@ install_layout ["mlkem_poly_rej_uniform_x4_sampled", layout "mlkem_poly_rej_unif
 
 (*** The code in the image:
 
-    60e0: push   rbp
-    60e1: mov    rbp,rsp
-    60e4: push   r15
-    60e6: push   r14
-    60e8: push   r13
-    60ea: mov    r13,rdi
-    60ed: push   r12
-    60ef: mov    r12,rsi
-    60f2: push   rbx
-    60f3: mov    rbx,r8
-    60f6: and    rsp,0xffffffffffffffe0
-    60fa: sub    rsp,0xb60
-    6101: lea    r15,[rsp+0x40]
-    6106: mov    QWORD PTR [rsp+0x8],rdi
-    610b: lea    r14,[rsp+0x360]
-    6113: mov    rdi,r15
-    6116: mov    QWORD PTR [rsp],rsi
-    611a: mov    QWORD PTR [rsp+0x20],rdx
-    611f: mov    QWORD PTR [rsp+0x18],rcx
-    6124: mov    QWORD PTR [rsp+0x10],r15
-    6129: call   3820 <mlkem_shake128x4_init>
-    612e: lea    rdx,[rbx+0x40]
-    6132: mov    rsi,rbx
-    6135: mov    rdi,r15
-    6138: lea    rcx,[rbx+0x80]
-    613f: lea    r8,[rbx+0xc0]
-    6146: mov    rbx,r15
-    6149: mov    r9d,0x22
-    614f: call   3720 <mlkem_shake128x4_absorb_once>
-    6154: lea    r15,[rsp+0x560]
-    615c: mov    r9,rbx
-    615f: mov    rdi,r14
-    6162: lea    rax,[rsp+0x960]
-    616a: lea    r11,[rsp+0x760]
-    6172: mov    r8d,0x3
-    6178: mov    rsi,r15
-    617b: mov    rcx,rax
-    617e: mov    rdx,r11
-    6181: mov    rbx,r11
-    6184: mov    QWORD PTR [rsp+0x38],rax
-    6189: mov    QWORD PTR [rsp+0x30],r11
-    618e: call   3780 <mlkem_shake128x4_squeezeblocks>
-    6193: xor    esi,esi
-    6195: mov    rdi,r13
-    6198: mov    ecx,0x1f8
-    619d: mov    rdx,r14
-    61a0: call   6040 <mlk_rej_uniform_c.constprop.0>
-    61a5: xor    esi,esi
-    61a7: mov    rdi,r12
-    61aa: mov    ecx,0x1f8
-    61af: mov    rdx,r15
-    61b2: mov    r13d,eax
-    61b5: call   6040 <mlk_rej_uniform_c.constprop.0>
-    61ba: mov    rdi,QWORD PTR [rsp+0x20]
-    61bf: mov    rdx,rbx
-    61c2: xor    esi,esi
-    61c4: mov    ecx,0x1f8
-    61c9: mov    r12d,eax
-    61cc: call   6040 <mlk_rej_uniform_c.constprop.0>
-    61d1: mov    rdx,QWORD PTR [rsp+0x38]
-    61d6: mov    rdi,QWORD PTR [rsp+0x18]
-    61db: xor    esi,esi
-    61dd: mov    ecx,0x1f8
-    61e2: mov    ebx,eax
-    61e4: call   6040 <mlk_rej_uniform_c.constprop.0>
-    61e9: cmp    r12d,0xff
-    61f0: mov    r10d,eax
-    61f3: setbe  al
-    61f6: cmp    r13d,0xff
-    61fd: jmp    62a0 <mlkem_poly_rej_uniform_x4+0x1c0>
-    6202: nop    WORD PTR [rax+rax*1+0x0]
-    6208: mov    r9,QWORD PTR [rsp+0x10]
-    620d: mov    rcx,QWORD PTR [rsp+0x38]
-    6212: mov    rsi,r15
-    6215: mov    rdi,r14
-    6218: mov    rdx,QWORD PTR [rsp+0x30]
-    621d: mov    r8d,0x1
-    6223: mov    DWORD PTR [rsp+0x2c],r10d
-    6228: call   3780 <mlkem_shake128x4_squeezeblocks>
-    622d: mov    rdi,QWORD PTR [rsp+0x8]
-    6232: mov    esi,r13d
-    6235: mov    rdx,r14
-    6238: mov    ecx,0xa8
-    623d: call   6040 <mlk_rej_uniform_c.constprop.0>
-    6242: mov    rdi,QWORD PTR [rsp]
-    6246: mov    esi,r12d
-    6249: mov    rdx,r15
-    624c: mov    ecx,0xa8
-    6251: mov    r13d,eax
-    6254: call   6040 <mlk_rej_uniform_c.constprop.0>
-    6259: mov    rdx,QWORD PTR [rsp+0x30]
-    625e: mov    rdi,QWORD PTR [rsp+0x20]
-    6263: mov    esi,ebx
-    6265: mov    ecx,0xa8
-    626a: mov    r12d,eax
-    626d: call   6040 <mlk_rej_uniform_c.constprop.0>
-    6272: mov    rdx,QWORD PTR [rsp+0x38]
-    6277: mov    esi,DWORD PTR [rsp+0x2c]
-    627b: mov    ecx,0xa8
-    6280: mov    rdi,QWORD PTR [rsp+0x18]
-    6285: mov    ebx,eax
-    6287: call   6040 <mlk_rej_uniform_c.constprop.0>
-    628c: cmp    r13d,0xff
-    6293: mov    r10d,eax
-    6296: setbe  al
-    6299: cmp    r12d,0xff
-    62a0: setbe  dl
-    62a3: or     eax,edx
-    62a5: cmp    ebx,0xff
-    62ab: setbe  dl
-    62ae: or     al,dl
-    62b0: jne    6208 <mlkem_poly_rej_uniform_x4+0x128>
-    62b6: cmp    r10d,0xff
-    62bd: jbe    6208 <mlkem_poly_rej_uniform_x4+0x128>
-    62c3: mov    rdi,QWORD PTR [rsp+0x10]
-    62c8: call   3830 <mlkem_shake128x4_release>
-    62cd: xor    eax,eax
-    62cf: mov    rdi,r14
-    62d2: mov    ecx,0x100
-    62d7: rep    stos QWORD PTR es:[rdi],rax
-    62da: lea    rsp,[rbp-0x28]
-    62de: pop    rbx
-    62df: pop    r12
-    62e1: pop    r13
-    62e3: pop    r14
-    62e5: pop    r15
-    62e7: pop    rbp
-    62e8: ret
+    mlkem_poly_rej_uniform_x4:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r15
+       +0x6: push   r14
+       +0x8: push   r13
+       +0xa: mov    r13,rdi
+       +0xd: push   r12
+       +0xf: mov    r12,rsi
+      +0x12: push   rbx
+      +0x13: mov    rbx,r8
+      +0x16: and    rsp,0xffffffffffffffe0
+      +0x1a: sub    rsp,0xb60
+      +0x21: lea    r15,[rsp+0x40]
+      +0x26: mov    QWORD PTR [rsp+0x8],rdi
+      +0x2b: lea    r14,[rsp+0x360]
+      +0x33: mov    rdi,r15
+      +0x36: mov    QWORD PTR [rsp],rsi
+      +0x3a: mov    QWORD PTR [rsp+0x20],rdx
+      +0x3f: mov    QWORD PTR [rsp+0x18],rcx
+      +0x44: mov    QWORD PTR [rsp+0x10],r15
+      +0x49: call   <mlkem_shake128x4_init>
+      +0x4e: lea    rdx,[rbx+0x40]
+      +0x52: mov    rsi,rbx
+      +0x55: mov    rdi,r15
+      +0x58: lea    rcx,[rbx+0x80]
+      +0x5f: lea    r8,[rbx+0xc0]
+      +0x66: mov    rbx,r15
+      +0x69: mov    r9d,0x22
+      +0x6f: call   <mlkem_shake128x4_absorb_once>
+      +0x74: lea    r15,[rsp+0x560]
+      +0x7c: mov    r9,rbx
+      +0x7f: mov    rdi,r14
+      +0x82: lea    rax,[rsp+0x960]
+      +0x8a: lea    r11,[rsp+0x760]
+      +0x92: mov    r8d,0x3
+      +0x98: mov    rsi,r15
+      +0x9b: mov    rcx,rax
+      +0x9e: mov    rdx,r11
+      +0xa1: mov    rbx,r11
+      +0xa4: mov    QWORD PTR [rsp+0x38],rax
+      +0xa9: mov    QWORD PTR [rsp+0x30],r11
+      +0xae: call   <mlkem_shake128x4_squeezeblocks>
+      +0xb3: xor    esi,esi
+      +0xb5: mov    rdi,r13
+      +0xb8: mov    ecx,0x1f8
+      +0xbd: mov    rdx,r14
+      +0xc0: call   <mlk_rej_uniform_c.constprop.0>
+      +0xc5: xor    esi,esi
+      +0xc7: mov    rdi,r12
+      +0xca: mov    ecx,0x1f8
+      +0xcf: mov    rdx,r15
+      +0xd2: mov    r13d,eax
+      +0xd5: call   <mlk_rej_uniform_c.constprop.0>
+      +0xda: mov    rdi,QWORD PTR [rsp+0x20]
+      +0xdf: mov    rdx,rbx
+      +0xe2: xor    esi,esi
+      +0xe4: mov    ecx,0x1f8
+      +0xe9: mov    r12d,eax
+      +0xec: call   <mlk_rej_uniform_c.constprop.0>
+      +0xf1: mov    rdx,QWORD PTR [rsp+0x38]
+      +0xf6: mov    rdi,QWORD PTR [rsp+0x18]
+      +0xfb: xor    esi,esi
+      +0xfd: mov    ecx,0x1f8
+     +0x102: mov    ebx,eax
+     +0x104: call   <mlk_rej_uniform_c.constprop.0>
+     +0x109: cmp    r12d,0xff
+     +0x110: mov    r10d,eax
+     +0x113: setbe  al
+     +0x116: cmp    r13d,0xff
+     +0x11d: jmp    <mlkem_poly_rej_uniform_x4+0x1c0>
+     +0x122: nop    WORD PTR [rax+rax*1+0x0]
+     +0x128: mov    r9,QWORD PTR [rsp+0x10]
+     +0x12d: mov    rcx,QWORD PTR [rsp+0x38]
+     +0x132: mov    rsi,r15
+     +0x135: mov    rdi,r14
+     +0x138: mov    rdx,QWORD PTR [rsp+0x30]
+     +0x13d: mov    r8d,0x1
+     +0x143: mov    DWORD PTR [rsp+0x2c],r10d
+     +0x148: call   <mlkem_shake128x4_squeezeblocks>
+     +0x14d: mov    rdi,QWORD PTR [rsp+0x8]
+     +0x152: mov    esi,r13d
+     +0x155: mov    rdx,r14
+     +0x158: mov    ecx,0xa8
+     +0x15d: call   <mlk_rej_uniform_c.constprop.0>
+     +0x162: mov    rdi,QWORD PTR [rsp]
+     +0x166: mov    esi,r12d
+     +0x169: mov    rdx,r15
+     +0x16c: mov    ecx,0xa8
+     +0x171: mov    r13d,eax
+     +0x174: call   <mlk_rej_uniform_c.constprop.0>
+     +0x179: mov    rdx,QWORD PTR [rsp+0x30]
+     +0x17e: mov    rdi,QWORD PTR [rsp+0x20]
+     +0x183: mov    esi,ebx
+     +0x185: mov    ecx,0xa8
+     +0x18a: mov    r12d,eax
+     +0x18d: call   <mlk_rej_uniform_c.constprop.0>
+     +0x192: mov    rdx,QWORD PTR [rsp+0x38]
+     +0x197: mov    esi,DWORD PTR [rsp+0x2c]
+     +0x19b: mov    ecx,0xa8
+     +0x1a0: mov    rdi,QWORD PTR [rsp+0x18]
+     +0x1a5: mov    ebx,eax
+     +0x1a7: call   <mlk_rej_uniform_c.constprop.0>
+     +0x1ac: cmp    r13d,0xff
+     +0x1b3: mov    r10d,eax
+     +0x1b6: setbe  al
+     +0x1b9: cmp    r12d,0xff
+     +0x1c0: setbe  dl
+     +0x1c3: or     eax,edx
+     +0x1c5: cmp    ebx,0xff
+     +0x1cb: setbe  dl
+     +0x1ce: or     al,dl
+     +0x1d0: jne    <mlkem_poly_rej_uniform_x4+0x128>
+     +0x1d6: cmp    r10d,0xff
+     +0x1dd: jbe    <mlkem_poly_rej_uniform_x4+0x128>
+     +0x1e3: mov    rdi,QWORD PTR [rsp+0x10]
+     +0x1e8: call   <mlkem_shake128x4_release>
+     +0x1ed: xor    eax,eax
+     +0x1ef: mov    rdi,r14
+     +0x1f2: mov    ecx,0x100
+     +0x1f7: rep    stos QWORD PTR es:[rdi],rax
+     +0x1fa: lea    rsp,[rbp-0x28]
+     +0x1fe: pop    rbx
+     +0x1ff: pop    r12
+     +0x201: pop    r13
+     +0x203: pop    r14
+     +0x205: pop    r15
+     +0x207: pop    rbp
+     +0x208: ret
  ***)
 
 let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_GCC12_O2_EXEC =

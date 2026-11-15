@@ -13,11 +13,10 @@
 (* bytes, the rate of SHAKE256, directly into the outputs, and the rest of   *)
 (* the outputs through four buffers on the stack with inline copies, before  *)
 (* zeroing the context and the buffers with REP STOSQ. It is verified in the *)
-(* whole image (see libmlkem.ml), where it is at                             *)
-(* address 0x3870, using the theorems for mlk_keccak_absorb_once_x4 at       *)
-(* 0x35d0, mlkem_keccakf1600x4_permute at 0x4740 and                         *)
-(* mlkem_keccakf1600x4_extract_bytes at 0x3d70 in the image. The result is   *)
-(* shake256 of common/fips202/fips202.ml for each input.                     *)
+(* whole image (see libmlkem.ml), using the theorems for                     *)
+(* mlk_keccak_absorb_once_x4, mlkem_keccakf1600x4_permute and                *)
+(* mlkem_keccakf1600x4_extract_bytes in the image. The result is shake256 of *)
+(* common/fips202/fips202.ml for each input.                                 *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keccak_absorb_once_x4.ml";;
@@ -33,296 +32,297 @@ needs "x86/proofs/consttime.ml";;
 
 (*** The code in the image:
 
-    3870: lea    r10,[rsp+0x8]
-    3875: and    rsp,0xffffffffffffffe0
-    3879: mov    r11,r8
-    387c: push   QWORD PTR [r10-0x8]
-    3880: mov    rax,r11
-    3883: push   rbp
-    3884: mov    rbp,rsp
-    3887: push   r15
-    3889: mov    r15,rdi
-    388c: push   r14
-    388e: mov    r14,rsi
-    3891: push   r13
-    3893: mov    r13,rdx
-    3896: push   r12
-    3898: mov    r12,rcx
-    389b: push   r10
-    389d: push   rbx
-    389e: sub    rsp,0x5a8
-    38a5: mov    QWORD PTR [rbp-0x5c0],rdx
-    38ac: movabs rdx,0xf0f0f0f0f0f0f0f1
-    38b6: mov    rbx,QWORD PTR [r10]
-    38b9: mul    rdx
-    38bc: mov    QWORD PTR [rbp-0x5a8],r11
-    38c3: lea    r11,[rbp-0x350]
-    38ca: mov    r8,QWORD PTR [r10+0x8]
-    38ce: mov    QWORD PTR [rbp-0x5b0],rdi
-    38d5: mov    rdi,r11
-    38d8: mov    QWORD PTR [rbp-0x5c8],rcx
-    38df: mov    ecx,0x64
-    38e4: mov    rax,rdx
-    38e7: mov    QWORD PTR [rbp-0x5b8],rsi
-    38ee: mov    rsi,r9
-    38f1: mov    r9,QWORD PTR [r10+0x10]
-    38f5: shr    rax,0x7
-    38f9: mov    QWORD PTR [rbp-0x598],r11
-    3900: mov    rdx,rsi
-    3903: mov    esi,0x88
-    3908: mov    QWORD PTR [rbp-0x5a0],rax
-    390f: xor    eax,eax
-    3911: rep    stos QWORD PTR es:[rdi],rax
-    3914: push   QWORD PTR [r10+0x18]
-    3918: mov    rdi,r11
-    391b: mov    rcx,rbx
-    391e: call   35d0 <mlk_keccak_absorb_once_x4.constprop.0>
-    3923: mov    r11,QWORD PTR [rbp-0x5a8]
-    392a: pop    rdi
-    392b: pop    r8
-    392d: cmp    r11,0x87
-    3934: jbe    399b <mlkem_shake256x4+0x12b>
-    3936: mov    rbx,QWORD PTR [rbp-0x5a0]
-    393d: nop    DWORD PTR [rax]
-    3940: mov    rdi,QWORD PTR [rbp-0x598]
-    3947: call   4740 <mlkem_keccakf1600x4_permute>
-    394c: sub    rsp,0x8
-    3950: mov    rcx,r13
-    3953: mov    rsi,r15
-    3956: push   0x88
-    395b: mov    r8,r12
-    395e: mov    rdx,r14
-    3961: xor    r9d,r9d
-    3964: mov    rdi,QWORD PTR [rbp-0x598]
-    396b: add    r15,0x88
-    3972: add    r14,0x88
-    3979: add    r13,0x88
-    3980: add    r12,0x88
-    3987: call   3d70 <mlkem_keccakf1600x4_extract_bytes>
-    398c: pop    rcx
-    398d: pop    rsi
-    398e: sub    rbx,0x1
-    3992: jne    3940 <mlkem_shake256x4+0xd0>
-    3994: mov    r11,QWORD PTR [rbp-0x5a8]
-    399b: movabs rax,0xf0f0f0f0f0f0f0f1
-    39a5: mul    r11
-    39a8: mov    rbx,rdx
-    39ab: shr    rbx,0x7
-    39af: mov    rax,rbx
-    39b2: shl    rax,0x4
-    39b6: add    rax,rbx
-    39b9: mov    rbx,r11
-    39bc: shl    rax,0x3
-    39c0: sub    rbx,rax
-    39c3: jne    3a40 <mlkem_shake256x4+0x1d0>
-    39c5: lea    r12,[rbp-0x3e0]
-    39cc: lea    r13,[rbp-0x470]
-    39d3: lea    r14,[rbp-0x500]
-    39da: lea    r15,[rbp-0x590]
-    39e1: mov    rdi,QWORD PTR [rbp-0x598]
-    39e8: xor    eax,eax
-    39ea: mov    ecx,0x64
-    39ef: rep    stos QWORD PTR es:[rdi],rax
-    39f2: mov    rdi,QWORD PTR [rbp-0x598]
-    39f9: mov    ecx,0x11
-    39fe: mov    rdi,r15
-    3a01: rep    stos QWORD PTR es:[rdi],rax
-    3a04: mov    ecx,0x11
-    3a09: mov    rdi,r14
-    3a0c: rep    stos QWORD PTR es:[rdi],rax
-    3a0f: mov    ecx,0x11
-    3a14: mov    rdi,r13
-    3a17: rep    stos QWORD PTR es:[rdi],rax
-    3a1a: mov    ecx,0x11
-    3a1f: mov    rdi,r12
-    3a22: rep    stos QWORD PTR es:[rdi],rax
-    3a25: lea    rsp,[rbp-0x30]
-    3a29: pop    rbx
-    3a2a: pop    r10
-    3a2c: pop    r12
-    3a2e: pop    r13
-    3a30: pop    r14
-    3a32: pop    r15
-    3a34: pop    rbp
-    3a35: lea    rsp,[r10-0x8]
-    3a39: ret
-    3a3a: nop    WORD PTR [rax+rax*1+0x0]
-    3a40: mov    rsi,QWORD PTR [rbp-0x5a0]
-    3a47: mov    rdi,QWORD PTR [rbp-0x598]
-    3a4e: lea    r12,[rbp-0x3e0]
-    3a55: lea    r13,[rbp-0x470]
-    3a5c: lea    r14,[rbp-0x500]
-    3a63: lea    r15,[rbp-0x590]
-    3a6a: mov    rax,rsi
-    3a6d: shl    rax,0x4
-    3a71: add    rax,rsi
-    3a74: shl    rax,0x3
-    3a78: mov    QWORD PTR [rbp-0x5a0],rax
-    3a7f: call   4740 <mlkem_keccakf1600x4_permute>
-    3a84: sub    rsp,0x8
-    3a88: mov    rcx,r13
-    3a8b: mov    rdx,r14
-    3a8e: push   0x88
-    3a93: xor    r9d,r9d
-    3a96: mov    r8,r12
-    3a99: mov    rsi,r15
-    3a9c: mov    rdi,QWORD PTR [rbp-0x598]
-    3aa3: call   3d70 <mlkem_keccakf1600x4_extract_bytes>
-    3aa8: mov    rdx,QWORD PTR [rbp-0x5b0]
-    3aaf: mov    rax,QWORD PTR [rbp-0x5a0]
-    3ab6: mov    ecx,ebx
-    3ab8: add    rdx,rax
-    3abb: cmp    ebx,0x8
-    3abe: jae    3b90 <mlkem_shake256x4+0x320>
-    3ac4: test   bl,0x4
-    3ac7: jne    3cc3 <mlkem_shake256x4+0x453>
-    3acd: test   ecx,ecx
-    3acf: je     3ae4 <mlkem_shake256x4+0x274>
-    3ad1: movzx  esi,BYTE PTR [rbp-0x590]
-    3ad8: mov    BYTE PTR [rdx],sil
-    3adb: test   cl,0x2
-    3ade: jne    3cd9 <mlkem_shake256x4+0x469>
-    3ae4: mov    rdx,QWORD PTR [rbp-0x5b8]
-    3aeb: mov    ecx,ebx
-    3aed: add    rdx,rax
-    3af0: cmp    ebx,0x8
-    3af3: jae    3c38 <mlkem_shake256x4+0x3c8>
-    3af9: test   bl,0x4
-    3afc: jne    3cad <mlkem_shake256x4+0x43d>
-    3b02: test   ecx,ecx
-    3b04: je     3b19 <mlkem_shake256x4+0x2a9>
-    3b06: movzx  esi,BYTE PTR [rbp-0x500]
-    3b0d: mov    BYTE PTR [rdx],sil
-    3b10: test   cl,0x2
-    3b13: jne    3cf9 <mlkem_shake256x4+0x489>
-    3b19: mov    rdx,QWORD PTR [rbp-0x5c0]
-    3b20: mov    ecx,ebx
-    3b22: add    rdx,rax
-    3b25: cmp    ebx,0x8
-    3b28: jae    3c00 <mlkem_shake256x4+0x390>
-    3b2e: test   bl,0x4
-    3b31: jne    3c97 <mlkem_shake256x4+0x427>
-    3b37: test   ecx,ecx
-    3b39: je     3b4e <mlkem_shake256x4+0x2de>
-    3b3b: movzx  esi,BYTE PTR [rbp-0x470]
-    3b42: mov    BYTE PTR [rdx],sil
-    3b45: test   cl,0x2
-    3b48: jne    3ce9 <mlkem_shake256x4+0x479>
-    3b4e: mov    rsi,QWORD PTR [rbp-0x5c8]
-    3b55: mov    ecx,ebx
-    3b57: add    rsi,rax
-    3b5a: mov    rax,rsi
-    3b5d: cmp    ebx,0x8
-    3b60: jae    3bc8 <mlkem_shake256x4+0x358>
-    3b62: and    ebx,0x4
-    3b65: jne    3c7f <mlkem_shake256x4+0x40f>
-    3b6b: test   ecx,ecx
-    3b6d: je     3b81 <mlkem_shake256x4+0x311>
-    3b6f: movzx  edx,BYTE PTR [rbp-0x3e0]
-    3b76: mov    BYTE PTR [rsi],dl
-    3b78: test   cl,0x2
-    3b7b: jne    3c6d <mlkem_shake256x4+0x3fd>
-    3b81: pop    rax
-    3b82: pop    rdx
-    3b83: jmp    39e1 <mlkem_shake256x4+0x171>
-    3b88: nop    DWORD PTR [rax+rax*1+0x0]
-    3b90: mov    rcx,QWORD PTR [rbp-0x590]
-    3b97: lea    rdi,[rdx+0x8]
-    3b9b: and    rdi,0xfffffffffffffff8
-    3b9f: mov    QWORD PTR [rdx],rcx
-    3ba2: mov    ecx,ebx
-    3ba4: mov    rsi,QWORD PTR [r15+rcx*1-0x8]
-    3ba9: mov    QWORD PTR [rdx+rcx*1-0x8],rsi
-    3bae: sub    rdx,rdi
-    3bb1: mov    rsi,r15
-    3bb4: lea    ecx,[rbx+rdx*1]
-    3bb7: sub    rsi,rdx
-    3bba: shr    ecx,0x3
-    3bbd: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
-    3bc0: jmp    3ae4 <mlkem_shake256x4+0x274>
-    3bc5: nop    DWORD PTR [rax]
-    3bc8: mov    rdx,QWORD PTR [rbp-0x3e0]
-    3bcf: lea    rdi,[rsi+0x8]
-    3bd3: and    rdi,0xfffffffffffffff8
-    3bd7: mov    QWORD PTR [rsi],rdx
-    3bda: mov    edx,ebx
-    3bdc: sub    rax,rdi
-    3bdf: mov    rcx,QWORD PTR [r12+rdx*1-0x8]
-    3be4: mov    QWORD PTR [rsi+rdx*1-0x8],rcx
-    3be9: lea    ecx,[rbx+rax*1]
-    3bec: mov    rsi,r12
-    3bef: sub    rsi,rax
-    3bf2: shr    ecx,0x3
-    3bf5: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
-    3bf8: pop    rax
-    3bf9: pop    rdx
-    3bfa: jmp    39e1 <mlkem_shake256x4+0x171>
-    3bff: nop
-    3c00: mov    rcx,QWORD PTR [rbp-0x470]
-    3c07: lea    rdi,[rdx+0x8]
-    3c0b: and    rdi,0xfffffffffffffff8
-    3c0f: mov    QWORD PTR [rdx],rcx
-    3c12: mov    ecx,ebx
-    3c14: mov    rsi,QWORD PTR [r13+rcx*1-0x8]
-    3c19: mov    QWORD PTR [rdx+rcx*1-0x8],rsi
-    3c1e: sub    rdx,rdi
-    3c21: mov    rsi,r13
-    3c24: lea    ecx,[rbx+rdx*1]
-    3c27: sub    rsi,rdx
-    3c2a: shr    ecx,0x3
-    3c2d: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
-    3c30: jmp    3b4e <mlkem_shake256x4+0x2de>
-    3c35: nop    DWORD PTR [rax]
-    3c38: mov    rcx,QWORD PTR [rbp-0x500]
-    3c3f: lea    rdi,[rdx+0x8]
-    3c43: and    rdi,0xfffffffffffffff8
-    3c47: mov    QWORD PTR [rdx],rcx
-    3c4a: mov    ecx,ebx
-    3c4c: mov    rsi,QWORD PTR [r14+rcx*1-0x8]
-    3c51: mov    QWORD PTR [rdx+rcx*1-0x8],rsi
-    3c56: sub    rdx,rdi
-    3c59: mov    rsi,r14
-    3c5c: lea    ecx,[rbx+rdx*1]
-    3c5f: sub    rsi,rdx
-    3c62: shr    ecx,0x3
-    3c65: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
-    3c68: jmp    3b19 <mlkem_shake256x4+0x2a9>
-    3c6d: movzx  edx,WORD PTR [r12+rcx*1-0x2]
-    3c73: mov    WORD PTR [rsi+rcx*1-0x2],dx
-    3c78: pop    rax
-    3c79: pop    rdx
-    3c7a: jmp    39e1 <mlkem_shake256x4+0x171>
-    3c7f: mov    edx,DWORD PTR [rbp-0x3e0]
-    3c85: mov    DWORD PTR [rsi],edx
-    3c87: mov    edx,DWORD PTR [r12+rcx*1-0x4]
-    3c8c: mov    DWORD PTR [rsi+rcx*1-0x4],edx
-    3c90: pop    rax
-    3c91: pop    rdx
-    3c92: jmp    39e1 <mlkem_shake256x4+0x171>
-    3c97: mov    esi,DWORD PTR [rbp-0x470]
-    3c9d: mov    DWORD PTR [rdx],esi
-    3c9f: mov    esi,DWORD PTR [r13+rcx*1-0x4]
-    3ca4: mov    DWORD PTR [rdx+rcx*1-0x4],esi
-    3ca8: jmp    3b4e <mlkem_shake256x4+0x2de>
-    3cad: mov    esi,DWORD PTR [rbp-0x500]
-    3cb3: mov    DWORD PTR [rdx],esi
-    3cb5: mov    esi,DWORD PTR [r14+rcx*1-0x4]
-    3cba: mov    DWORD PTR [rdx+rcx*1-0x4],esi
-    3cbe: jmp    3b19 <mlkem_shake256x4+0x2a9>
-    3cc3: mov    esi,DWORD PTR [rbp-0x590]
-    3cc9: mov    DWORD PTR [rdx],esi
-    3ccb: mov    esi,DWORD PTR [r15+rcx*1-0x4]
-    3cd0: mov    DWORD PTR [rdx+rcx*1-0x4],esi
-    3cd4: jmp    3ae4 <mlkem_shake256x4+0x274>
-    3cd9: movzx  esi,WORD PTR [r15+rcx*1-0x2]
-    3cdf: mov    WORD PTR [rdx+rcx*1-0x2],si
-    3ce4: jmp    3ae4 <mlkem_shake256x4+0x274>
-    3ce9: movzx  esi,WORD PTR [r13+rcx*1-0x2]
-    3cef: mov    WORD PTR [rdx+rcx*1-0x2],si
-    3cf4: jmp    3b4e <mlkem_shake256x4+0x2de>
-    3cf9: movzx  esi,WORD PTR [r14+rcx*1-0x2]
-    3cff: mov    WORD PTR [rdx+rcx*1-0x2],si
-    3d04: jmp    3b19 <mlkem_shake256x4+0x2a9>
+    mlkem_shake256x4:
+       +0x0: lea    r10,[rsp+0x8]
+       +0x5: and    rsp,0xffffffffffffffe0
+       +0x9: mov    r11,r8
+       +0xc: push   QWORD PTR [r10-0x8]
+      +0x10: mov    rax,r11
+      +0x13: push   rbp
+      +0x14: mov    rbp,rsp
+      +0x17: push   r15
+      +0x19: mov    r15,rdi
+      +0x1c: push   r14
+      +0x1e: mov    r14,rsi
+      +0x21: push   r13
+      +0x23: mov    r13,rdx
+      +0x26: push   r12
+      +0x28: mov    r12,rcx
+      +0x2b: push   r10
+      +0x2d: push   rbx
+      +0x2e: sub    rsp,0x5a8
+      +0x35: mov    QWORD PTR [rbp-0x5c0],rdx
+      +0x3c: movabs rdx,0xf0f0f0f0f0f0f0f1
+      +0x46: mov    rbx,QWORD PTR [r10]
+      +0x49: mul    rdx
+      +0x4c: mov    QWORD PTR [rbp-0x5a8],r11
+      +0x53: lea    r11,[rbp-0x350]
+      +0x5a: mov    r8,QWORD PTR [r10+0x8]
+      +0x5e: mov    QWORD PTR [rbp-0x5b0],rdi
+      +0x65: mov    rdi,r11
+      +0x68: mov    QWORD PTR [rbp-0x5c8],rcx
+      +0x6f: mov    ecx,0x64
+      +0x74: mov    rax,rdx
+      +0x77: mov    QWORD PTR [rbp-0x5b8],rsi
+      +0x7e: mov    rsi,r9
+      +0x81: mov    r9,QWORD PTR [r10+0x10]
+      +0x85: shr    rax,0x7
+      +0x89: mov    QWORD PTR [rbp-0x598],r11
+      +0x90: mov    rdx,rsi
+      +0x93: mov    esi,0x88
+      +0x98: mov    QWORD PTR [rbp-0x5a0],rax
+      +0x9f: xor    eax,eax
+      +0xa1: rep    stos QWORD PTR es:[rdi],rax
+      +0xa4: push   QWORD PTR [r10+0x18]
+      +0xa8: mov    rdi,r11
+      +0xab: mov    rcx,rbx
+      +0xae: call   <mlk_keccak_absorb_once_x4.constprop.0>
+      +0xb3: mov    r11,QWORD PTR [rbp-0x5a8]
+      +0xba: pop    rdi
+      +0xbb: pop    r8
+      +0xbd: cmp    r11,0x87
+      +0xc4: jbe    <mlkem_shake256x4+0x12b>
+      +0xc6: mov    rbx,QWORD PTR [rbp-0x5a0]
+      +0xcd: nop    DWORD PTR [rax]
+      +0xd0: mov    rdi,QWORD PTR [rbp-0x598]
+      +0xd7: call   <mlkem_keccakf1600x4_permute>
+      +0xdc: sub    rsp,0x8
+      +0xe0: mov    rcx,r13
+      +0xe3: mov    rsi,r15
+      +0xe6: push   0x88
+      +0xeb: mov    r8,r12
+      +0xee: mov    rdx,r14
+      +0xf1: xor    r9d,r9d
+      +0xf4: mov    rdi,QWORD PTR [rbp-0x598]
+      +0xfb: add    r15,0x88
+     +0x102: add    r14,0x88
+     +0x109: add    r13,0x88
+     +0x110: add    r12,0x88
+     +0x117: call   <mlkem_keccakf1600x4_extract_bytes>
+     +0x11c: pop    rcx
+     +0x11d: pop    rsi
+     +0x11e: sub    rbx,0x1
+     +0x122: jne    <mlkem_shake256x4+0xd0>
+     +0x124: mov    r11,QWORD PTR [rbp-0x5a8]
+     +0x12b: movabs rax,0xf0f0f0f0f0f0f0f1
+     +0x135: mul    r11
+     +0x138: mov    rbx,rdx
+     +0x13b: shr    rbx,0x7
+     +0x13f: mov    rax,rbx
+     +0x142: shl    rax,0x4
+     +0x146: add    rax,rbx
+     +0x149: mov    rbx,r11
+     +0x14c: shl    rax,0x3
+     +0x150: sub    rbx,rax
+     +0x153: jne    <mlkem_shake256x4+0x1d0>
+     +0x155: lea    r12,[rbp-0x3e0]
+     +0x15c: lea    r13,[rbp-0x470]
+     +0x163: lea    r14,[rbp-0x500]
+     +0x16a: lea    r15,[rbp-0x590]
+     +0x171: mov    rdi,QWORD PTR [rbp-0x598]
+     +0x178: xor    eax,eax
+     +0x17a: mov    ecx,0x64
+     +0x17f: rep    stos QWORD PTR es:[rdi],rax
+     +0x182: mov    rdi,QWORD PTR [rbp-0x598]
+     +0x189: mov    ecx,0x11
+     +0x18e: mov    rdi,r15
+     +0x191: rep    stos QWORD PTR es:[rdi],rax
+     +0x194: mov    ecx,0x11
+     +0x199: mov    rdi,r14
+     +0x19c: rep    stos QWORD PTR es:[rdi],rax
+     +0x19f: mov    ecx,0x11
+     +0x1a4: mov    rdi,r13
+     +0x1a7: rep    stos QWORD PTR es:[rdi],rax
+     +0x1aa: mov    ecx,0x11
+     +0x1af: mov    rdi,r12
+     +0x1b2: rep    stos QWORD PTR es:[rdi],rax
+     +0x1b5: lea    rsp,[rbp-0x30]
+     +0x1b9: pop    rbx
+     +0x1ba: pop    r10
+     +0x1bc: pop    r12
+     +0x1be: pop    r13
+     +0x1c0: pop    r14
+     +0x1c2: pop    r15
+     +0x1c4: pop    rbp
+     +0x1c5: lea    rsp,[r10-0x8]
+     +0x1c9: ret
+     +0x1ca: nop    WORD PTR [rax+rax*1+0x0]
+     +0x1d0: mov    rsi,QWORD PTR [rbp-0x5a0]
+     +0x1d7: mov    rdi,QWORD PTR [rbp-0x598]
+     +0x1de: lea    r12,[rbp-0x3e0]
+     +0x1e5: lea    r13,[rbp-0x470]
+     +0x1ec: lea    r14,[rbp-0x500]
+     +0x1f3: lea    r15,[rbp-0x590]
+     +0x1fa: mov    rax,rsi
+     +0x1fd: shl    rax,0x4
+     +0x201: add    rax,rsi
+     +0x204: shl    rax,0x3
+     +0x208: mov    QWORD PTR [rbp-0x5a0],rax
+     +0x20f: call   <mlkem_keccakf1600x4_permute>
+     +0x214: sub    rsp,0x8
+     +0x218: mov    rcx,r13
+     +0x21b: mov    rdx,r14
+     +0x21e: push   0x88
+     +0x223: xor    r9d,r9d
+     +0x226: mov    r8,r12
+     +0x229: mov    rsi,r15
+     +0x22c: mov    rdi,QWORD PTR [rbp-0x598]
+     +0x233: call   <mlkem_keccakf1600x4_extract_bytes>
+     +0x238: mov    rdx,QWORD PTR [rbp-0x5b0]
+     +0x23f: mov    rax,QWORD PTR [rbp-0x5a0]
+     +0x246: mov    ecx,ebx
+     +0x248: add    rdx,rax
+     +0x24b: cmp    ebx,0x8
+     +0x24e: jae    <mlkem_shake256x4+0x320>
+     +0x254: test   bl,0x4
+     +0x257: jne    <mlkem_shake256x4+0x453>
+     +0x25d: test   ecx,ecx
+     +0x25f: je     <mlkem_shake256x4+0x274>
+     +0x261: movzx  esi,BYTE PTR [rbp-0x590]
+     +0x268: mov    BYTE PTR [rdx],sil
+     +0x26b: test   cl,0x2
+     +0x26e: jne    <mlkem_shake256x4+0x469>
+     +0x274: mov    rdx,QWORD PTR [rbp-0x5b8]
+     +0x27b: mov    ecx,ebx
+     +0x27d: add    rdx,rax
+     +0x280: cmp    ebx,0x8
+     +0x283: jae    <mlkem_shake256x4+0x3c8>
+     +0x289: test   bl,0x4
+     +0x28c: jne    <mlkem_shake256x4+0x43d>
+     +0x292: test   ecx,ecx
+     +0x294: je     <mlkem_shake256x4+0x2a9>
+     +0x296: movzx  esi,BYTE PTR [rbp-0x500]
+     +0x29d: mov    BYTE PTR [rdx],sil
+     +0x2a0: test   cl,0x2
+     +0x2a3: jne    <mlkem_shake256x4+0x489>
+     +0x2a9: mov    rdx,QWORD PTR [rbp-0x5c0]
+     +0x2b0: mov    ecx,ebx
+     +0x2b2: add    rdx,rax
+     +0x2b5: cmp    ebx,0x8
+     +0x2b8: jae    <mlkem_shake256x4+0x390>
+     +0x2be: test   bl,0x4
+     +0x2c1: jne    <mlkem_shake256x4+0x427>
+     +0x2c7: test   ecx,ecx
+     +0x2c9: je     <mlkem_shake256x4+0x2de>
+     +0x2cb: movzx  esi,BYTE PTR [rbp-0x470]
+     +0x2d2: mov    BYTE PTR [rdx],sil
+     +0x2d5: test   cl,0x2
+     +0x2d8: jne    <mlkem_shake256x4+0x479>
+     +0x2de: mov    rsi,QWORD PTR [rbp-0x5c8]
+     +0x2e5: mov    ecx,ebx
+     +0x2e7: add    rsi,rax
+     +0x2ea: mov    rax,rsi
+     +0x2ed: cmp    ebx,0x8
+     +0x2f0: jae    <mlkem_shake256x4+0x358>
+     +0x2f2: and    ebx,0x4
+     +0x2f5: jne    <mlkem_shake256x4+0x40f>
+     +0x2fb: test   ecx,ecx
+     +0x2fd: je     <mlkem_shake256x4+0x311>
+     +0x2ff: movzx  edx,BYTE PTR [rbp-0x3e0]
+     +0x306: mov    BYTE PTR [rsi],dl
+     +0x308: test   cl,0x2
+     +0x30b: jne    <mlkem_shake256x4+0x3fd>
+     +0x311: pop    rax
+     +0x312: pop    rdx
+     +0x313: jmp    <mlkem_shake256x4+0x171>
+     +0x318: nop    DWORD PTR [rax+rax*1+0x0]
+     +0x320: mov    rcx,QWORD PTR [rbp-0x590]
+     +0x327: lea    rdi,[rdx+0x8]
+     +0x32b: and    rdi,0xfffffffffffffff8
+     +0x32f: mov    QWORD PTR [rdx],rcx
+     +0x332: mov    ecx,ebx
+     +0x334: mov    rsi,QWORD PTR [r15+rcx*1-0x8]
+     +0x339: mov    QWORD PTR [rdx+rcx*1-0x8],rsi
+     +0x33e: sub    rdx,rdi
+     +0x341: mov    rsi,r15
+     +0x344: lea    ecx,[rbx+rdx*1]
+     +0x347: sub    rsi,rdx
+     +0x34a: shr    ecx,0x3
+     +0x34d: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
+     +0x350: jmp    <mlkem_shake256x4+0x274>
+     +0x355: nop    DWORD PTR [rax]
+     +0x358: mov    rdx,QWORD PTR [rbp-0x3e0]
+     +0x35f: lea    rdi,[rsi+0x8]
+     +0x363: and    rdi,0xfffffffffffffff8
+     +0x367: mov    QWORD PTR [rsi],rdx
+     +0x36a: mov    edx,ebx
+     +0x36c: sub    rax,rdi
+     +0x36f: mov    rcx,QWORD PTR [r12+rdx*1-0x8]
+     +0x374: mov    QWORD PTR [rsi+rdx*1-0x8],rcx
+     +0x379: lea    ecx,[rbx+rax*1]
+     +0x37c: mov    rsi,r12
+     +0x37f: sub    rsi,rax
+     +0x382: shr    ecx,0x3
+     +0x385: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
+     +0x388: pop    rax
+     +0x389: pop    rdx
+     +0x38a: jmp    <mlkem_shake256x4+0x171>
+     +0x38f: nop
+     +0x390: mov    rcx,QWORD PTR [rbp-0x470]
+     +0x397: lea    rdi,[rdx+0x8]
+     +0x39b: and    rdi,0xfffffffffffffff8
+     +0x39f: mov    QWORD PTR [rdx],rcx
+     +0x3a2: mov    ecx,ebx
+     +0x3a4: mov    rsi,QWORD PTR [r13+rcx*1-0x8]
+     +0x3a9: mov    QWORD PTR [rdx+rcx*1-0x8],rsi
+     +0x3ae: sub    rdx,rdi
+     +0x3b1: mov    rsi,r13
+     +0x3b4: lea    ecx,[rbx+rdx*1]
+     +0x3b7: sub    rsi,rdx
+     +0x3ba: shr    ecx,0x3
+     +0x3bd: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
+     +0x3c0: jmp    <mlkem_shake256x4+0x2de>
+     +0x3c5: nop    DWORD PTR [rax]
+     +0x3c8: mov    rcx,QWORD PTR [rbp-0x500]
+     +0x3cf: lea    rdi,[rdx+0x8]
+     +0x3d3: and    rdi,0xfffffffffffffff8
+     +0x3d7: mov    QWORD PTR [rdx],rcx
+     +0x3da: mov    ecx,ebx
+     +0x3dc: mov    rsi,QWORD PTR [r14+rcx*1-0x8]
+     +0x3e1: mov    QWORD PTR [rdx+rcx*1-0x8],rsi
+     +0x3e6: sub    rdx,rdi
+     +0x3e9: mov    rsi,r14
+     +0x3ec: lea    ecx,[rbx+rdx*1]
+     +0x3ef: sub    rsi,rdx
+     +0x3f2: shr    ecx,0x3
+     +0x3f5: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
+     +0x3f8: jmp    <mlkem_shake256x4+0x2a9>
+     +0x3fd: movzx  edx,WORD PTR [r12+rcx*1-0x2]
+     +0x403: mov    WORD PTR [rsi+rcx*1-0x2],dx
+     +0x408: pop    rax
+     +0x409: pop    rdx
+     +0x40a: jmp    <mlkem_shake256x4+0x171>
+     +0x40f: mov    edx,DWORD PTR [rbp-0x3e0]
+     +0x415: mov    DWORD PTR [rsi],edx
+     +0x417: mov    edx,DWORD PTR [r12+rcx*1-0x4]
+     +0x41c: mov    DWORD PTR [rsi+rcx*1-0x4],edx
+     +0x420: pop    rax
+     +0x421: pop    rdx
+     +0x422: jmp    <mlkem_shake256x4+0x171>
+     +0x427: mov    esi,DWORD PTR [rbp-0x470]
+     +0x42d: mov    DWORD PTR [rdx],esi
+     +0x42f: mov    esi,DWORD PTR [r13+rcx*1-0x4]
+     +0x434: mov    DWORD PTR [rdx+rcx*1-0x4],esi
+     +0x438: jmp    <mlkem_shake256x4+0x2de>
+     +0x43d: mov    esi,DWORD PTR [rbp-0x500]
+     +0x443: mov    DWORD PTR [rdx],esi
+     +0x445: mov    esi,DWORD PTR [r14+rcx*1-0x4]
+     +0x44a: mov    DWORD PTR [rdx+rcx*1-0x4],esi
+     +0x44e: jmp    <mlkem_shake256x4+0x2a9>
+     +0x453: mov    esi,DWORD PTR [rbp-0x590]
+     +0x459: mov    DWORD PTR [rdx],esi
+     +0x45b: mov    esi,DWORD PTR [r15+rcx*1-0x4]
+     +0x460: mov    DWORD PTR [rdx+rcx*1-0x4],esi
+     +0x464: jmp    <mlkem_shake256x4+0x274>
+     +0x469: movzx  esi,WORD PTR [r15+rcx*1-0x2]
+     +0x46f: mov    WORD PTR [rdx+rcx*1-0x2],si
+     +0x474: jmp    <mlkem_shake256x4+0x274>
+     +0x479: movzx  esi,WORD PTR [r13+rcx*1-0x2]
+     +0x47f: mov    WORD PTR [rdx+rcx*1-0x2],si
+     +0x484: jmp    <mlkem_shake256x4+0x2de>
+     +0x489: movzx  esi,WORD PTR [r14+rcx*1-0x2]
+     +0x48f: mov    WORD PTR [rdx+rcx*1-0x2],si
+     +0x494: jmp    <mlkem_shake256x4+0x2a9>
  ***)
 
 let MLKEM_NATIVE_SHAKE256X4_GCC12_O2_EXEC =

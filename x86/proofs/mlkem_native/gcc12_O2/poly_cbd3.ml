@@ -7,9 +7,9 @@
 (* Centered binomial distribution with eta = 3. This is the code for         *)
 (* mlkem_poly_cbd3 from mlkem-native's portable C implementation compiled by *)
 (* gcc 12 with -O2 (see mlkem_native/README.md). It is verified in the whole *)
-(* image (see libmlkem.ml), where it is at address                           *)
-(* 0x6420. As for mlkem_poly_cbd2, it saves RBX on the stack, so it is       *)
-(* verified directly as a subroutine, with that part of the stack.           *)
+(* image (see libmlkem.ml). As for mlkem_poly_cbd2, it saves RBX on the      *)
+(* stack, so it is verified directly as a subroutine, with that part of the  *)
+(* stack.                                                                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -17,51 +17,52 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    6420: push   rbx
-    6421: mov    r8,rdi
-    6424: xor    r9d,r9d
-    6427: mov    rdi,rsi
-    642a: nop    WORD PTR [rax+rax*1+0x0]
-    6430: movzx  eax,BYTE PTR [rdi+0x1]
-    6434: movzx  edx,BYTE PTR [rdi+0x2]
-    6438: mov    r10d,r9d
-    643b: movzx  ecx,BYTE PTR [rdi]
-    643e: shl    edx,0x10
-    6441: shl    eax,0x8
-    6444: or     eax,edx
-    6446: or     eax,ecx
-    6448: mov    esi,eax
-    644a: mov    edx,eax
-    644c: shr    eax,0x2
-    644f: shr    esi,1
-    6451: and    eax,0x249249
-    6456: and    edx,0x249249
-    645c: and    esi,0x249249
-    6462: add    esi,eax
-    6464: add    esi,edx
-    6466: xor    edx,edx
-    6468: mov    ecx,edx
-    646a: mov    eax,esi
-    646c: mov    ebx,esi
-    646e: mov    r11d,r10d
-    6471: shr    eax,cl
-    6473: lea    ecx,[rdx+0x3]
-    6476: add    edx,0x6
-    6479: add    r10d,0x1
-    647d: shr    ebx,cl
-    647f: and    eax,0x7
-    6482: mov    ecx,ebx
-    6484: and    ecx,0x7
-    6487: sub    eax,ecx
-    6489: mov    WORD PTR [r8+r11*2],ax
-    648e: cmp    edx,0x18
-    6491: jne    6468 <mlkem_poly_cbd3+0x48>
-    6493: add    r9d,0x4
-    6497: add    rdi,0x3
-    649b: cmp    r9d,0x100
-    64a2: jne    6430 <mlkem_poly_cbd3+0x10>
-    64a4: pop    rbx
-    64a5: ret
+    mlkem_poly_cbd3:
+       +0x0: push   rbx
+       +0x1: mov    r8,rdi
+       +0x4: xor    r9d,r9d
+       +0x7: mov    rdi,rsi
+       +0xa: nop    WORD PTR [rax+rax*1+0x0]
+      +0x10: movzx  eax,BYTE PTR [rdi+0x1]
+      +0x14: movzx  edx,BYTE PTR [rdi+0x2]
+      +0x18: mov    r10d,r9d
+      +0x1b: movzx  ecx,BYTE PTR [rdi]
+      +0x1e: shl    edx,0x10
+      +0x21: shl    eax,0x8
+      +0x24: or     eax,edx
+      +0x26: or     eax,ecx
+      +0x28: mov    esi,eax
+      +0x2a: mov    edx,eax
+      +0x2c: shr    eax,0x2
+      +0x2f: shr    esi,1
+      +0x31: and    eax,0x249249
+      +0x36: and    edx,0x249249
+      +0x3c: and    esi,0x249249
+      +0x42: add    esi,eax
+      +0x44: add    esi,edx
+      +0x46: xor    edx,edx
+      +0x48: mov    ecx,edx
+      +0x4a: mov    eax,esi
+      +0x4c: mov    ebx,esi
+      +0x4e: mov    r11d,r10d
+      +0x51: shr    eax,cl
+      +0x53: lea    ecx,[rdx+0x3]
+      +0x56: add    edx,0x6
+      +0x59: add    r10d,0x1
+      +0x5d: shr    ebx,cl
+      +0x5f: and    eax,0x7
+      +0x62: mov    ecx,ebx
+      +0x64: and    ecx,0x7
+      +0x67: sub    eax,ecx
+      +0x69: mov    WORD PTR [r8+r11*2],ax
+      +0x6e: cmp    edx,0x18
+      +0x71: jne    <mlkem_poly_cbd3+0x48>
+      +0x73: add    r9d,0x4
+      +0x77: add    rdi,0x3
+      +0x7b: cmp    r9d,0x100
+      +0x82: jne    <mlkem_poly_cbd3+0x10>
+      +0x84: pop    rbx
+      +0x85: ret
  ***)
 
 let MLKEM_NATIVE_POLY_CBD3_GCC12_O2_EXEC =

@@ -1000,7 +1000,7 @@ let INVNTT_LAYERS_C_CORRECT = prove
 
 (* ------------------------------------------------------------------------- *)
 (* The scaling of the coefficients at the start, which also saves the        *)
-(* callee-saved registers on the stack. The stack is described relative to  *)
+(* callee-saved registers on the stack. The stack is described relative to   *)
 (* the address sbase of the red-zone slot that the layers use later, with    *)
 (* the return address at sbase + 60.                                         *)
 (* ------------------------------------------------------------------------- *)
@@ -1915,9 +1915,8 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O2_SUBROUTINE_SAFE = time prove
   INVNTT_SAFE_TOP_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* The same code in the whole image, at address 0x5860, with the vectors of  *)
-(* constants at 0x8080 and the table of zetas at 0x81a0 (see                 *)
-(* libmlkem.ml).                                                             *)
+(* The same code in the whole image, with the vectors of constants and the   *)
+(* table of zetas (see libmlkem.ml).                                         *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;

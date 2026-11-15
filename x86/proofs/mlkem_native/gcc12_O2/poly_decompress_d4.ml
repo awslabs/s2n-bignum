@@ -4,11 +4,10 @@
  *)
 
 (* ========================================================================= *)
-(* Decompression of a polynomial from 4 bits per coefficient.                *)
-(* This is the code for mlkem_poly_decompress_d4 from mlkem-native's         *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md). It is verified in the whole image (see           *)
-(* libmlkem.ml), where it is at address 0x2740.                              *)
+(* Decompression of a polynomial from 4 bits per coefficient. This is the    *)
+(* code for mlkem_poly_decompress_d4 from mlkem-native's portable C          *)
+(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
+(* It is verified in the whole image (see libmlkem.ml).                      *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -16,25 +15,26 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    2740: xor    edx,edx
-    2742: nop    WORD PTR [rax+rax*1+0x0]
-    2748: movzx  eax,BYTE PTR [rsi+rdx*1]
-    274c: and    eax,0xf
-    274f: imul   eax,eax,0xd01
-    2755: add    eax,0x8
-    2758: shr    eax,0x4
-    275b: mov    WORD PTR [rdi+rdx*4],ax
-    275f: movzx  eax,BYTE PTR [rsi+rdx*1]
-    2763: shr    al,0x4
-    2766: movzx  eax,al
-    2769: imul   eax,eax,0xd01
-    276f: add    eax,0x8
-    2772: shr    eax,0x4
-    2775: mov    WORD PTR [rdi+rdx*4+0x2],ax
-    277a: add    rdx,0x1
-    277e: cmp    rdx,0x80
-    2785: jne    2748 <mlkem_poly_decompress_d4+0x8>
-    2787: ret
+    mlkem_poly_decompress_d4:
+       +0x0: xor    edx,edx
+       +0x2: nop    WORD PTR [rax+rax*1+0x0]
+       +0x8: movzx  eax,BYTE PTR [rsi+rdx*1]
+       +0xc: and    eax,0xf
+       +0xf: imul   eax,eax,0xd01
+      +0x15: add    eax,0x8
+      +0x18: shr    eax,0x4
+      +0x1b: mov    WORD PTR [rdi+rdx*4],ax
+      +0x1f: movzx  eax,BYTE PTR [rsi+rdx*1]
+      +0x23: shr    al,0x4
+      +0x26: movzx  eax,al
+      +0x29: imul   eax,eax,0xd01
+      +0x2f: add    eax,0x8
+      +0x32: shr    eax,0x4
+      +0x35: mov    WORD PTR [rdi+rdx*4+0x2],ax
+      +0x3a: add    rdx,0x1
+      +0x3e: cmp    rdx,0x80
+      +0x45: jne    <mlkem_poly_decompress_d4+0x8>
+      +0x47: ret
  ***)
 
 let MLKEM_NATIVE_POLY_DECOMPRESS_D4_GCC12_O2_EXEC =

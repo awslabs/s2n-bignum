@@ -10,9 +10,8 @@
 (* with randombytes, through its PLT stub and GOT entry, into a buffer on    *)
 (* the stack, and returns -3 if that fails, and otherwise encapsulates with  *)
 (* them as the message with mlkem768_enc_derand. In both cases it zeroes the *)
-(* buffer. It is verified in the whole image (see                            *)
-(* libmlkem.ml), where it is at address 0x7150, using                        *)
-(* the theorem for mlkem768_enc_derand in the image and the contract for     *)
+(* buffer. It is verified in the whole image (see libmlkem.ml), using the    *)
+(* theorem for mlkem768_enc_derand in the image and the contract for         *)
 (* randombytes (see utils/mlkem_native_libc.ml).                             *)
 (* ========================================================================= *)
 
@@ -21,46 +20,48 @@ needs "x86/proofs/utils/mlkem_native_libc.ml";;
 
 (*** The code in the image:
 
-    1010: jmp    QWORD PTR [rip+0x9fe2]
+    plt_randombytes:
+       +0x0: jmp    QWORD PTR [rip+0x9fe2]
  ***)
 
 (*** The code in the image:
 
-    7150: push   rbp
-    7151: mov    rbp,rsp
-    7154: push   r14
-    7156: mov    r14,rdx
-    7159: push   r13
-    715b: mov    r13,rsi
-    715e: mov    esi,0x20
-    7163: push   r12
-    7165: mov    r12,rdi
-    7168: push   rbx
-    7169: and    rsp,0xffffffffffffffe0
-    716d: sub    rsp,0x20
-    7171: mov    rbx,rsp
-    7174: mov    rdi,rbx
-    7177: call   1010 <randombytes@plt>
-    717c: test   eax,eax
-    717e: jne    71b0 <mlkem768_enc+0x60>
-    7180: mov    rcx,rbx
-    7183: mov    rdx,r14
-    7186: mov    rsi,r13
-    7189: mov    rdi,r12
-    718c: call   7060 <mlkem768_enc_derand>
-    7191: pxor   xmm0,xmm0
-    7195: movaps XMMWORD PTR [rsp],xmm0
-    7199: movaps XMMWORD PTR [rsp+0x10],xmm0
-    719e: lea    rsp,[rbp-0x20]
-    71a2: pop    rbx
-    71a3: pop    r12
-    71a5: pop    r13
-    71a7: pop    r14
-    71a9: pop    rbp
-    71aa: ret
-    71ab: nop    DWORD PTR [rax+rax*1+0x0]
-    71b0: mov    eax,0xfffffffd
-    71b5: jmp    7191 <mlkem768_enc+0x41>
+    mlkem768_enc:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r14
+       +0x6: mov    r14,rdx
+       +0x9: push   r13
+       +0xb: mov    r13,rsi
+       +0xe: mov    esi,0x20
+      +0x13: push   r12
+      +0x15: mov    r12,rdi
+      +0x18: push   rbx
+      +0x19: and    rsp,0xffffffffffffffe0
+      +0x1d: sub    rsp,0x20
+      +0x21: mov    rbx,rsp
+      +0x24: mov    rdi,rbx
+      +0x27: call   <randombytes@plt>
+      +0x2c: test   eax,eax
+      +0x2e: jne    <mlkem768_enc+0x60>
+      +0x30: mov    rcx,rbx
+      +0x33: mov    rdx,r14
+      +0x36: mov    rsi,r13
+      +0x39: mov    rdi,r12
+      +0x3c: call   <mlkem768_enc_derand>
+      +0x41: pxor   xmm0,xmm0
+      +0x45: movaps XMMWORD PTR [rsp],xmm0
+      +0x49: movaps XMMWORD PTR [rsp+0x10],xmm0
+      +0x4e: lea    rsp,[rbp-0x20]
+      +0x52: pop    rbx
+      +0x53: pop    r12
+      +0x55: pop    r13
+      +0x57: pop    r14
+      +0x59: pop    rbp
+      +0x5a: ret
+      +0x5b: nop    DWORD PTR [rax+rax*1+0x0]
+      +0x60: mov    eax,0xfffffffd
+      +0x65: jmp    <mlkem768_enc+0x41>
  ***)
 
 let MLKEM_NATIVE_ENC_K3_GCC12_O2_EXEC =

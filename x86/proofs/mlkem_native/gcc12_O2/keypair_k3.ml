@@ -11,9 +11,8 @@
 (* buffer on the stack, and returns -3 if that fails, and otherwise          *)
 (* generates the keys from them with mlkem768_keypair_derand. In both cases  *)
 (* it zeroes the buffer. It is verified in the whole image (see              *)
-(* libmlkem.ml), where it is at address 0x6ff0, using                        *)
-(* the theorem for mlkem768_keypair_derand in the image and the contract for *)
-(* randombytes (see utils/mlkem_native_libc.ml).                             *)
+(* libmlkem.ml), using the theorem for mlkem768_keypair_derand in the image  *)
+(* and the contract for randombytes (see utils/mlkem_native_libc.ml).        *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keypair_derand_k3.ml";;
@@ -21,44 +20,46 @@ needs "x86/proofs/utils/mlkem_native_libc.ml";;
 
 (*** The code in the image:
 
-    1010: jmp    QWORD PTR [rip+0x9fe2]
+    plt_randombytes:
+       +0x0: jmp    QWORD PTR [rip+0x9fe2]
  ***)
 
 (*** The code in the image:
 
-    6ff0: push   rbp
-    6ff1: mov    rbp,rsp
-    6ff4: push   r13
-    6ff6: mov    r13,rsi
-    6ff9: mov    esi,0x40
-    6ffe: push   r12
-    7000: mov    r12,rdi
-    7003: push   rbx
-    7004: and    rsp,0xffffffffffffffe0
-    7008: sub    rsp,0x40
-    700c: mov    rbx,rsp
-    700f: mov    rdi,rbx
-    7012: call   1010 <randombytes@plt>
-    7017: test   eax,eax
-    7019: jne    7050 <mlkem768_keypair+0x60>
-    701b: mov    rdx,rbx
-    701e: mov    rsi,r13
-    7021: mov    rdi,r12
-    7024: call   6ed0 <mlkem768_keypair_derand>
-    7029: pxor   xmm0,xmm0
-    702d: movaps XMMWORD PTR [rsp],xmm0
-    7031: movaps XMMWORD PTR [rsp+0x10],xmm0
-    7036: movaps XMMWORD PTR [rsp+0x20],xmm0
-    703b: movaps XMMWORD PTR [rsp+0x30],xmm0
-    7040: lea    rsp,[rbp-0x18]
-    7044: pop    rbx
-    7045: pop    r12
-    7047: pop    r13
-    7049: pop    rbp
-    704a: ret
-    704b: nop    DWORD PTR [rax+rax*1+0x0]
-    7050: mov    eax,0xfffffffd
-    7055: jmp    7029 <mlkem768_keypair+0x39>
+    mlkem768_keypair:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r13
+       +0x6: mov    r13,rsi
+       +0x9: mov    esi,0x40
+       +0xe: push   r12
+      +0x10: mov    r12,rdi
+      +0x13: push   rbx
+      +0x14: and    rsp,0xffffffffffffffe0
+      +0x18: sub    rsp,0x40
+      +0x1c: mov    rbx,rsp
+      +0x1f: mov    rdi,rbx
+      +0x22: call   <randombytes@plt>
+      +0x27: test   eax,eax
+      +0x29: jne    <mlkem768_keypair+0x60>
+      +0x2b: mov    rdx,rbx
+      +0x2e: mov    rsi,r13
+      +0x31: mov    rdi,r12
+      +0x34: call   <mlkem768_keypair_derand>
+      +0x39: pxor   xmm0,xmm0
+      +0x3d: movaps XMMWORD PTR [rsp],xmm0
+      +0x41: movaps XMMWORD PTR [rsp+0x10],xmm0
+      +0x46: movaps XMMWORD PTR [rsp+0x20],xmm0
+      +0x4b: movaps XMMWORD PTR [rsp+0x30],xmm0
+      +0x50: lea    rsp,[rbp-0x18]
+      +0x54: pop    rbx
+      +0x55: pop    r12
+      +0x57: pop    r13
+      +0x59: pop    rbp
+      +0x5a: ret
+      +0x5b: nop    DWORD PTR [rax+rax*1+0x0]
+      +0x60: mov    eax,0xfffffffd
+      +0x65: jmp    <mlkem768_keypair+0x39>
  ***)
 
 let MLKEM_NATIVE_KEYPAIR_K3_GCC12_O2_EXEC =

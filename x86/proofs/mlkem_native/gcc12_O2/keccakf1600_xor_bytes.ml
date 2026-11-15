@@ -4,12 +4,11 @@
  *)
 
 (* ========================================================================= *)
-(* XOR of bytes into a Keccak state.                                         *)
-(* This is the code for mlkem_keccakf1600_xor_bytes from mlkem-native's      *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
-(* mlkem_native/README.md), which XORs len bytes of data into the 200-byte   *)
-(* state starting at byte off. It is verified in the whole image (see        *)
-(* libmlkem.ml), where it is at address 0x3d40.                              *)
+(* XOR of bytes into a Keccak state. This is the code for                    *)
+(* mlkem_keccakf1600_xor_bytes from mlkem-native's portable C implementation *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md), which XORs len  *)
+(* bytes of data into the 200-byte state starting at byte off. It is         *)
+(* verified in the whole image (see libmlkem.ml).                            *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -17,20 +16,21 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    3d40: mov    edx,edx
-    3d42: test   ecx,ecx
-    3d44: je     3d62 <mlkem_keccakf1600_xor_bytes+0x22>
-    3d46: mov    ecx,ecx
-    3d48: add    rdi,rdx
-    3d4b: lea    rdx,[rsi+rcx*1]
-    3d4f: nop
-    3d50: movzx  eax,BYTE PTR [rsi]
-    3d53: add    rsi,0x1
-    3d57: xor    BYTE PTR [rdi],al
-    3d59: add    rdi,0x1
-    3d5d: cmp    rsi,rdx
-    3d60: jne    3d50 <mlkem_keccakf1600_xor_bytes+0x10>
-    3d62: ret
+    mlkem_keccakf1600_xor_bytes:
+       +0x0: mov    edx,edx
+       +0x2: test   ecx,ecx
+       +0x4: je     <mlkem_keccakf1600_xor_bytes+0x22>
+       +0x6: mov    ecx,ecx
+       +0x8: add    rdi,rdx
+       +0xb: lea    rdx,[rsi+rcx*1]
+       +0xf: nop
+      +0x10: movzx  eax,BYTE PTR [rsi]
+      +0x13: add    rsi,0x1
+      +0x17: xor    BYTE PTR [rdi],al
+      +0x19: add    rdi,0x1
+      +0x1d: cmp    rsi,rdx
+      +0x20: jne    <mlkem_keccakf1600_xor_bytes+0x10>
+      +0x22: ret
  ***)
 
 let MLKEM_NATIVE_KECCAKF1600_XOR_BYTES_GCC12_O2_EXEC =

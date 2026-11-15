@@ -9,13 +9,12 @@
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
 (* It decodes the vector t in the NTT domain from the encryption key and the *)
 (* message m from its 32 bytes, generates the transposed matrix from rho     *)
-(* (the last 32 bytes of the key), samples y (with eta = 2), e1 and e2 (with *)
-(* eta = 2) from the randomness r, and computes u = NTT^-1(A^T NTT(y)) + e1  *)
-(* and v = NTT^-1(t^T NTT(y)) + e2 + mu, where mu is m decompressed. It      *)
-(* writes the compressions of u and v as the ciphertext, zeroing its         *)
-(* buffers. It is verified in the whole image (see                           *)
-(* libmlkem.ml), where it is at address 0x1390, using                        *)
-(* the theorems for mlkem1024_polyvec_frombytes, mlkem_poly_frommsg,         *)
+(* (the last 32 bytes of the key), samples y (with eta = 2), e1 and e2       *)
+(* (with eta = 2) from the randomness r, and computes u = NTT^-1(A^T         *)
+(* NTT(y)) + e1 and v = NTT^-1(t^T NTT(y)) + e2 + mu, where mu is m          *)
+(* decompressed. It writes the compressions of u and v as the ciphertext,    *)
+(* zeroing its buffers. It is verified in the whole image (see libmlkem.ml), *)
+(* using the theorems for mlkem1024_polyvec_frombytes, mlkem_poly_frommsg,   *)
 (* mlkem1024_gen_matrix, mlkem1024_poly_getnoise_eta1_4x,                    *)
 (* mlkem1024_poly_getnoise_eta2, mlkem1024_polyvec_ntt,                      *)
 (* mlkem1024_polyvec_mulcache_compute,                                       *)
@@ -46,174 +45,175 @@ needs "x86/proofs/utils/mlkem_native_indcpa.ml";;
 
 (*** The code in the image:
 
-    1390: lea    r10,[rsp+0x8]
-    1395: and    rsp,0xffffffffffffffe0
-    1399: push   QWORD PTR [r10-0x8]
-    139d: push   rbp
-    139e: mov    rbp,rsp
-    13a1: push   r15
-    13a3: push   r14
-    13a5: lea    rax,[rbp-0x3830]
-    13ac: push   r13
-    13ae: mov    r13,rcx
-    13b1: push   r12
-    13b3: mov    r12,rdx
-    13b6: push   r10
-    13b8: push   rbx
-    13b9: mov    rbx,rsi
-    13bc: mov    rsi,rdx
-    13bf: sub    rsp,0x4a60
-    13c6: mov    QWORD PTR [rbp-0x4a80],rdi
-    13cd: mov    rdi,rax
-    13d0: mov    QWORD PTR [rbp-0x4a58],rax
-    13d7: call   2000 <mlkem1024_polyvec_frombytes>
-    13dc: lea    rax,[rbp-0x4830]
-    13e3: mov    rsi,rbx
-    13e6: movdqu xmm1,XMMWORD PTR [r12+0x600]
-    13f0: movdqu xmm2,XMMWORD PTR [r12+0x610]
-    13fa: mov    rdi,rax
-    13fd: mov    QWORD PTR [rbp-0x4a70],rax
-    1404: lea    r12,[rbp-0x2030]
-    140b: movaps XMMWORD PTR [rbp-0x4a50],xmm1
-    1412: lea    rbx,[rbp-0x4030]
-    1419: mov    r14,r12
-    141c: movaps XMMWORD PTR [rbp-0x4a40],xmm2
-    1423: call   3210 <mlkem_poly_frommsg>
-    1428: lea    rax,[rbp-0x4a50]
-    142f: mov    edx,0x1
-    1434: mov    rdi,r12
-    1437: mov    rsi,rax
-    143a: mov    QWORD PTR [rbp-0x4a88],rax
-    1441: call   1020 <mlkem1024_gen_matrix>
-    1446: sub    rsp,0x8
-    144a: mov    r8,r13
-    144d: xor    r9d,r9d
-    1450: push   0x3
-    1452: lea    rcx,[rbp-0x3a30]
-    1459: mov    rdi,rbx
-    145c: lea    rdx,[rbp-0x3c30]
-    1463: push   0x2
-    1465: lea    rsi,[rbp-0x3e30]
-    146c: push   0x1
-    146e: call   2260 <mlkem1024_poly_getnoise_eta1_4x>
-    1473: add    rsp,0x18
-    1477: mov    r8,r13
-    147a: lea    rax,[rbp-0x3030]
-    1481: mov    QWORD PTR [rbp-0x4a60],rax
-    1488: lea    rcx,[rbp-0x2a30]
-    148f: mov    r9d,0x4
-    1495: mov    rdi,rax
-    1498: push   0x7
-    149a: lea    rdx,[rbp-0x2c30]
-    14a1: lea    rsi,[rbp-0x2e30]
-    14a8: push   0x6
-    14aa: push   0x5
-    14ac: call   2260 <mlkem1024_poly_getnoise_eta1_4x>
-    14b1: lea    rax,[rbp-0x4630]
-    14b8: mov    rsi,r13
-    14bb: add    rsp,0x20
-    14bf: mov    rdi,rax
-    14c2: mov    edx,0x8
-    14c7: mov    QWORD PTR [rbp-0x4a78],rax
-    14ce: lea    r13,[rbp-0x4430]
-    14d5: call   23e0 <mlkem1024_poly_getnoise_eta2>
-    14da: mov    rdi,rbx
-    14dd: call   2040 <mlkem1024_polyvec_ntt>
-    14e2: mov    rsi,rbx
-    14e5: mov    rdi,r13
-    14e8: call   2190 <mlkem1024_polyvec_mulcache_compute>
-    14ed: lea    rax,[rbp-0x2830]
-    14f4: mov    QWORD PTR [rbp-0x4a68],rax
-    14fb: mov    r15,rax
-    14fe: mov    rsi,r14
-    1501: mov    rdi,r15
-    1504: mov    rcx,r13
-    1507: mov    rdx,rbx
-    150a: add    r15,0x200
-    1511: add    r14,0x800
-    1518: call   20a0 <mlkem1024_polyvec_basemul_acc_montgomery_cached>
-    151d: cmp    r15,r12
-    1520: jne    14fe <mlkem1024_indcpa_enc+0x16e>
-    1522: lea    r12,[rbp-0x4a30]
-    1529: mov    rsi,QWORD PTR [rbp-0x4a58]
-    1530: mov    rcx,r13
-    1533: mov    rdx,rbx
-    1536: mov    rdi,r12
-    1539: call   20a0 <mlkem1024_polyvec_basemul_acc_montgomery_cached>
-    153e: mov    r14,QWORD PTR [rbp-0x4a68]
-    1545: mov    rdi,r14
-    1548: call   2070 <mlkem1024_polyvec_invntt_tomont>
-    154d: mov    rdi,r12
-    1550: call   5860 <mlkem_poly_invntt_tomont>
-    1555: mov    rsi,QWORD PTR [rbp-0x4a60]
-    155c: mov    rdi,r14
-    155f: call   2200 <mlkem1024_polyvec_add>
-    1564: mov    rsi,QWORD PTR [rbp-0x4a78]
-    156b: mov    rdi,r12
-    156e: call   56b0 <mlkem_poly_add>
-    1573: mov    rsi,QWORD PTR [rbp-0x4a70]
-    157a: mov    rdi,r12
-    157d: call   56b0 <mlkem_poly_add>
-    1582: mov    rdi,r14
-    1585: call   21d0 <mlkem1024_polyvec_reduce>
-    158a: mov    rdi,r12
-    158d: call   5660 <mlkem_poly_reduce>
-    1592: mov    rdi,QWORD PTR [rbp-0x4a80]
-    1599: mov    rsi,r14
-    159c: call   1f40 <mlkem1024_polyvec_compress_du>
-    15a1: mov    rax,QWORD PTR [rbp-0x4a80]
-    15a8: mov    rsi,r12
-    15ab: add    rax,0x580
-    15b1: mov    rdi,rax
-    15b4: call   28c0 <mlkem_poly_compress_d5>
-    15b9: xor    eax,eax
-    15bb: mov    rdi,r13
-    15be: mov    ecx,0x80
-    15c3: rep    stos QWORD PTR es:[rdi],rax
-    15c6: mov    rdi,QWORD PTR [rbp-0x4a78]
-    15cd: mov    ecx,0x40
-    15d2: mov    rdx,QWORD PTR [rbp-0x4a78]
-    15d9: rep    stos QWORD PTR es:[rdi],rax
-    15dc: mov    rdi,QWORD PTR [rbp-0x4a70]
-    15e3: mov    ecx,0x40
-    15e8: mov    rdx,QWORD PTR [rbp-0x4a70]
-    15ef: rep    stos QWORD PTR es:[rdi],rax
-    15f2: mov    ecx,0x40
-    15f7: mov    rdi,r12
-    15fa: rep    stos QWORD PTR es:[rdi],rax
-    15fd: mov    ecx,0x100
-    1602: mov    rdi,r14
-    1605: mov    QWORD PTR [rbp-0x4a68],r14
-    160c: rep    stos QWORD PTR es:[rdi],rax
-    160f: mov    rdi,QWORD PTR [rbp-0x4a60]
-    1616: mov    ecx,0x100
-    161b: mov    rdx,QWORD PTR [rbp-0x4a60]
-    1622: rep    stos QWORD PTR es:[rdi],rax
-    1625: mov    rdi,QWORD PTR [rbp-0x4a58]
-    162c: mov    ecx,0x100
-    1631: rep    stos QWORD PTR es:[rdi],rax
-    1634: mov    rdi,QWORD PTR [rbp-0x4a58]
-    163b: mov    ecx,0x100
-    1640: mov    rdi,rbx
-    1643: rep    stos QWORD PTR es:[rdi],rax
-    1646: mov    ecx,0x400
-    164b: mov    rdi,r15
-    164e: rep    stos QWORD PTR es:[rdi],rax
-    1651: pxor   xmm0,xmm0
-    1655: mov    rax,QWORD PTR [rbp-0x4a88]
-    165c: movaps XMMWORD PTR [rbp-0x4a50],xmm0
-    1663: movaps XMMWORD PTR [rbp-0x4a40],xmm0
-    166a: lea    rsp,[rbp-0x30]
-    166e: xor    eax,eax
-    1670: pop    rbx
-    1671: pop    r10
-    1673: pop    r12
-    1675: pop    r13
-    1677: pop    r14
-    1679: pop    r15
-    167b: pop    rbp
-    167c: lea    rsp,[r10-0x8]
-    1680: ret
+    mlkem1024_indcpa_enc:
+       +0x0: lea    r10,[rsp+0x8]
+       +0x5: and    rsp,0xffffffffffffffe0
+       +0x9: push   QWORD PTR [r10-0x8]
+       +0xd: push   rbp
+       +0xe: mov    rbp,rsp
+      +0x11: push   r15
+      +0x13: push   r14
+      +0x15: lea    rax,[rbp-0x3830]
+      +0x1c: push   r13
+      +0x1e: mov    r13,rcx
+      +0x21: push   r12
+      +0x23: mov    r12,rdx
+      +0x26: push   r10
+      +0x28: push   rbx
+      +0x29: mov    rbx,rsi
+      +0x2c: mov    rsi,rdx
+      +0x2f: sub    rsp,0x4a60
+      +0x36: mov    QWORD PTR [rbp-0x4a80],rdi
+      +0x3d: mov    rdi,rax
+      +0x40: mov    QWORD PTR [rbp-0x4a58],rax
+      +0x47: call   <mlkem1024_polyvec_frombytes>
+      +0x4c: lea    rax,[rbp-0x4830]
+      +0x53: mov    rsi,rbx
+      +0x56: movdqu xmm1,XMMWORD PTR [r12+0x600]
+      +0x60: movdqu xmm2,XMMWORD PTR [r12+0x610]
+      +0x6a: mov    rdi,rax
+      +0x6d: mov    QWORD PTR [rbp-0x4a70],rax
+      +0x74: lea    r12,[rbp-0x2030]
+      +0x7b: movaps XMMWORD PTR [rbp-0x4a50],xmm1
+      +0x82: lea    rbx,[rbp-0x4030]
+      +0x89: mov    r14,r12
+      +0x8c: movaps XMMWORD PTR [rbp-0x4a40],xmm2
+      +0x93: call   <mlkem_poly_frommsg>
+      +0x98: lea    rax,[rbp-0x4a50]
+      +0x9f: mov    edx,0x1
+      +0xa4: mov    rdi,r12
+      +0xa7: mov    rsi,rax
+      +0xaa: mov    QWORD PTR [rbp-0x4a88],rax
+      +0xb1: call   <mlkem1024_gen_matrix>
+      +0xb6: sub    rsp,0x8
+      +0xba: mov    r8,r13
+      +0xbd: xor    r9d,r9d
+      +0xc0: push   0x3
+      +0xc2: lea    rcx,[rbp-0x3a30]
+      +0xc9: mov    rdi,rbx
+      +0xcc: lea    rdx,[rbp-0x3c30]
+      +0xd3: push   0x2
+      +0xd5: lea    rsi,[rbp-0x3e30]
+      +0xdc: push   0x1
+      +0xde: call   <mlkem1024_poly_getnoise_eta1_4x>
+      +0xe3: add    rsp,0x18
+      +0xe7: mov    r8,r13
+      +0xea: lea    rax,[rbp-0x3030]
+      +0xf1: mov    QWORD PTR [rbp-0x4a60],rax
+      +0xf8: lea    rcx,[rbp-0x2a30]
+      +0xff: mov    r9d,0x4
+     +0x105: mov    rdi,rax
+     +0x108: push   0x7
+     +0x10a: lea    rdx,[rbp-0x2c30]
+     +0x111: lea    rsi,[rbp-0x2e30]
+     +0x118: push   0x6
+     +0x11a: push   0x5
+     +0x11c: call   <mlkem1024_poly_getnoise_eta1_4x>
+     +0x121: lea    rax,[rbp-0x4630]
+     +0x128: mov    rsi,r13
+     +0x12b: add    rsp,0x20
+     +0x12f: mov    rdi,rax
+     +0x132: mov    edx,0x8
+     +0x137: mov    QWORD PTR [rbp-0x4a78],rax
+     +0x13e: lea    r13,[rbp-0x4430]
+     +0x145: call   <mlkem1024_poly_getnoise_eta2>
+     +0x14a: mov    rdi,rbx
+     +0x14d: call   <mlkem1024_polyvec_ntt>
+     +0x152: mov    rsi,rbx
+     +0x155: mov    rdi,r13
+     +0x158: call   <mlkem1024_polyvec_mulcache_compute>
+     +0x15d: lea    rax,[rbp-0x2830]
+     +0x164: mov    QWORD PTR [rbp-0x4a68],rax
+     +0x16b: mov    r15,rax
+     +0x16e: mov    rsi,r14
+     +0x171: mov    rdi,r15
+     +0x174: mov    rcx,r13
+     +0x177: mov    rdx,rbx
+     +0x17a: add    r15,0x200
+     +0x181: add    r14,0x800
+     +0x188: call   <mlkem1024_polyvec_basemul_acc_montgomery_cached>
+     +0x18d: cmp    r15,r12
+     +0x190: jne    <mlkem1024_indcpa_enc+0x16e>
+     +0x192: lea    r12,[rbp-0x4a30]
+     +0x199: mov    rsi,QWORD PTR [rbp-0x4a58]
+     +0x1a0: mov    rcx,r13
+     +0x1a3: mov    rdx,rbx
+     +0x1a6: mov    rdi,r12
+     +0x1a9: call   <mlkem1024_polyvec_basemul_acc_montgomery_cached>
+     +0x1ae: mov    r14,QWORD PTR [rbp-0x4a68]
+     +0x1b5: mov    rdi,r14
+     +0x1b8: call   <mlkem1024_polyvec_invntt_tomont>
+     +0x1bd: mov    rdi,r12
+     +0x1c0: call   <mlkem_poly_invntt_tomont>
+     +0x1c5: mov    rsi,QWORD PTR [rbp-0x4a60]
+     +0x1cc: mov    rdi,r14
+     +0x1cf: call   <mlkem1024_polyvec_add>
+     +0x1d4: mov    rsi,QWORD PTR [rbp-0x4a78]
+     +0x1db: mov    rdi,r12
+     +0x1de: call   <mlkem_poly_add>
+     +0x1e3: mov    rsi,QWORD PTR [rbp-0x4a70]
+     +0x1ea: mov    rdi,r12
+     +0x1ed: call   <mlkem_poly_add>
+     +0x1f2: mov    rdi,r14
+     +0x1f5: call   <mlkem1024_polyvec_reduce>
+     +0x1fa: mov    rdi,r12
+     +0x1fd: call   <mlkem_poly_reduce>
+     +0x202: mov    rdi,QWORD PTR [rbp-0x4a80]
+     +0x209: mov    rsi,r14
+     +0x20c: call   <mlkem1024_polyvec_compress_du>
+     +0x211: mov    rax,QWORD PTR [rbp-0x4a80]
+     +0x218: mov    rsi,r12
+     +0x21b: add    rax,0x580
+     +0x221: mov    rdi,rax
+     +0x224: call   <mlkem_poly_compress_d5>
+     +0x229: xor    eax,eax
+     +0x22b: mov    rdi,r13
+     +0x22e: mov    ecx,0x80
+     +0x233: rep    stos QWORD PTR es:[rdi],rax
+     +0x236: mov    rdi,QWORD PTR [rbp-0x4a78]
+     +0x23d: mov    ecx,0x40
+     +0x242: mov    rdx,QWORD PTR [rbp-0x4a78]
+     +0x249: rep    stos QWORD PTR es:[rdi],rax
+     +0x24c: mov    rdi,QWORD PTR [rbp-0x4a70]
+     +0x253: mov    ecx,0x40
+     +0x258: mov    rdx,QWORD PTR [rbp-0x4a70]
+     +0x25f: rep    stos QWORD PTR es:[rdi],rax
+     +0x262: mov    ecx,0x40
+     +0x267: mov    rdi,r12
+     +0x26a: rep    stos QWORD PTR es:[rdi],rax
+     +0x26d: mov    ecx,0x100
+     +0x272: mov    rdi,r14
+     +0x275: mov    QWORD PTR [rbp-0x4a68],r14
+     +0x27c: rep    stos QWORD PTR es:[rdi],rax
+     +0x27f: mov    rdi,QWORD PTR [rbp-0x4a60]
+     +0x286: mov    ecx,0x100
+     +0x28b: mov    rdx,QWORD PTR [rbp-0x4a60]
+     +0x292: rep    stos QWORD PTR es:[rdi],rax
+     +0x295: mov    rdi,QWORD PTR [rbp-0x4a58]
+     +0x29c: mov    ecx,0x100
+     +0x2a1: rep    stos QWORD PTR es:[rdi],rax
+     +0x2a4: mov    rdi,QWORD PTR [rbp-0x4a58]
+     +0x2ab: mov    ecx,0x100
+     +0x2b0: mov    rdi,rbx
+     +0x2b3: rep    stos QWORD PTR es:[rdi],rax
+     +0x2b6: mov    ecx,0x400
+     +0x2bb: mov    rdi,r15
+     +0x2be: rep    stos QWORD PTR es:[rdi],rax
+     +0x2c1: pxor   xmm0,xmm0
+     +0x2c5: mov    rax,QWORD PTR [rbp-0x4a88]
+     +0x2cc: movaps XMMWORD PTR [rbp-0x4a50],xmm0
+     +0x2d3: movaps XMMWORD PTR [rbp-0x4a40],xmm0
+     +0x2da: lea    rsp,[rbp-0x30]
+     +0x2de: xor    eax,eax
+     +0x2e0: pop    rbx
+     +0x2e1: pop    r10
+     +0x2e3: pop    r12
+     +0x2e5: pop    r13
+     +0x2e7: pop    r14
+     +0x2e9: pop    r15
+     +0x2eb: pop    rbp
+     +0x2ec: lea    rsp,[r10-0x8]
+     +0x2f0: ret
  ***)
 
 let MLKEM_NATIVE_INDCPA_ENC_K4_GCC12_O2_EXEC =

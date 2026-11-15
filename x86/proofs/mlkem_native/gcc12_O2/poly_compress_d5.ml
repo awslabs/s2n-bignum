@@ -4,15 +4,13 @@
  *)
 
 (* ========================================================================= *)
-(* Compression of a polynomial to 5 bits per coefficient.                    *)
-(* This is the code for mlkem_poly_compress_d5 from mlkem-native's portable  *)
-(* C implementation compiled by gcc 12 with -O2 (see                         *)
-(* mlkem_native/README.md). It is verified in the whole image (see           *)
-(* libmlkem.ml), where it is at address 0x28c0. The                          *)
-(* constant vectors that it uses, of 2^26s for the rounding and of masks of  *)
-(* the low bytes of 16-bit lanes, are at 0x8018 and 0x8008 in the image. It  *)
-(* saves two registers on the stack, so it is verified directly as a         *)
-(* subroutine, with that part of the stack.                                  *)
+(* Compression of a polynomial to 5 bits per coefficient. This is the code   *)
+(* for mlkem_poly_compress_d5 from mlkem-native's portable C implementation  *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md). It is verified  *)
+(* in the whole image (see libmlkem.ml). The constant vectors that it uses,  *)
+(* of 2^26s for the rounding and of masks of the low bytes of 16-bit lanes,  *)
+(* are in the image. It saves two registers on the stack, so it is verified  *)
+(* directly as a subroutine, with that part of the stack.                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -20,144 +18,145 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    28c0: push   rbp
-    28c1: mov    rcx,rsi
-    28c4: mov    rdx,rdi
-    28c7: lea    rsi,[rdi+0xa0]
-    28ce: movq   xmm2,QWORD PTR [rip+0x5742]
-    28d6: push   rbx
-    28d7: pxor   xmm3,xmm3
-    28db: movq   xmm4,QWORD PTR [rip+0x5725]
-    28e3: nop    DWORD PTR [rax+rax*1+0x0]
-    28e8: movq   xmm0,QWORD PTR [rcx]
-    28ec: movdqa xmm1,xmm3
-    28f0: add    rdx,0x5
-    28f4: add    rcx,0x10
-    28f8: movq   xmm6,QWORD PTR [rcx-0x8]
-    28fd: pcmpgtw xmm1,xmm0
-    2901: movdqa xmm9,xmm0
-    2906: movdqa xmm8,xmm6
-    290b: punpcklwd xmm0,xmm1
-    290f: punpcklwd xmm9,xmm1
-    2914: pshufd xmm0,xmm0,0x4e
-    2919: movdqa xmm10,xmm0
-    291e: movdqa xmm0,xmm3
-    2922: pcmpgtw xmm0,xmm6
-    2926: movdqa xmm5,xmm10
-    292b: pslld  xmm5,0x2
-    2930: paddd  xmm5,xmm10
-    2935: punpcklwd xmm8,xmm0
-    293a: punpcklwd xmm6,xmm0
-    293e: movdqa xmm0,xmm9
-    2943: pslld  xmm0,0x2
-    2948: pshufd xmm6,xmm6,0x4e
-    294d: movdqa xmm11,xmm8
-    2952: paddd  xmm0,xmm9
-    2957: pslld  xmm11,0x2
-    295d: movdqa xmm7,xmm6
-    2961: paddd  xmm11,xmm8
-    2966: pslld  xmm7,0x2
-    296b: paddd  xmm7,xmm6
-    296f: movdqa xmm1,xmm0
-    2973: pslld  xmm1,0x6
-    2978: psubd  xmm1,xmm0
-    297c: movdqa xmm0,xmm5
-    2980: pslld  xmm0,0x6
-    2985: psubd  xmm0,xmm5
-    2989: pslld  xmm1,0x6
-    298e: psubd  xmm1,xmm9
-    2993: pslld  xmm0,0x6
-    2998: psubd  xmm0,xmm10
-    299d: pslld  xmm1,0x6
-    29a2: paddd  xmm1,xmm2
-    29a6: pslld  xmm0,0x6
-    29ab: paddd  xmm0,xmm2
-    29af: psrld  xmm1,0x1b
-    29b4: movdqa xmm5,xmm1
-    29b8: psrld  xmm0,0x1b
-    29bd: punpcklwd xmm5,xmm0
-    29c1: punpcklwd xmm1,xmm0
-    29c5: movdqa xmm0,xmm11
-    29ca: pshufd xmm5,xmm5,0x4e
-    29cf: pslld  xmm0,0x6
-    29d4: punpcklwd xmm1,xmm5
-    29d8: movdqa xmm5,xmm7
-    29dc: psubd  xmm0,xmm11
-    29e1: pslld  xmm5,0x6
-    29e6: pand   xmm1,xmm4
-    29ea: psubd  xmm5,xmm7
-    29ee: movdqa xmm7,xmm1
-    29f2: pslld  xmm0,0x6
-    29f7: psubd  xmm0,xmm8
-    29fc: pslld  xmm5,0x6
-    2a01: psubd  xmm5,xmm6
-    2a05: pslld  xmm0,0x6
-    2a0a: paddd  xmm0,xmm2
-    2a0e: pslld  xmm5,0x6
-    2a13: paddd  xmm5,xmm2
-    2a17: psrld  xmm0,0x1b
-    2a1c: movdqa xmm6,xmm0
-    2a20: psrld  xmm5,0x1b
-    2a25: punpcklwd xmm6,xmm5
-    2a29: punpcklwd xmm0,xmm5
-    2a2d: pshufd xmm6,xmm6,0x4e
-    2a32: punpcklwd xmm0,xmm6
-    2a36: pand   xmm0,xmm4
-    2a3a: packuswb xmm7,xmm0
-    2a3e: pshufd xmm7,xmm7,0x8
-    2a43: movq   rax,xmm7
-    2a48: mov    rdi,rax
-    2a4b: mov    rbp,rax
-    2a4e: movzx  ebx,ah
-    2a51: mov    r8,rax
-    2a54: shr    rdi,0x18
-    2a58: shr    rbp,0x10
-    2a5c: mov    r11,rbx
-    2a5f: mov    rbx,rax
-    2a62: shl    ebp,0x2
-    2a65: mov    r10d,edi
-    2a68: shr    rbx,0x20
-    2a6c: mov    r9,r11
-    2a6f: shl    r10d,0x7
-    2a73: shr    r11b,0x3
-    2a77: shr    r8,0x30
-    2a7b: or     r10d,ebp
-    2a7e: shr    dil,1
-    2a81: mov    rbp,rax
-    2a84: shr    rbp,0x28
-    2a88: or     r10d,r11d
-    2a8b: mov    r11d,ebx
-    2a8e: shr    bl,0x4
-    2a91: shl    r11d,0x4
-    2a95: add    ebp,ebp
-    2a97: shl    r9d,0x5
-    2a9b: movzx  r10d,r10b
-    2a9f: or     r11d,edi
-    2aa2: mov    edi,r8d
-    2aa5: or     r9d,eax
-    2aa8: shr    rax,0x38
-    2aac: shl    edi,0x6
-    2aaf: movzx  r11d,r11b
-    2ab3: movzx  r9d,r9b
-    2ab7: shr    r8b,0x2
-    2abb: or     edi,ebp
-    2abd: shl    eax,0x3
-    2ac0: or     edi,ebx
-    2ac2: or     r8d,eax
-    2ac5: movzx  edi,dil
-    2ac9: mov    BYTE PTR [rdx-0x1],r8b
-    2acd: shl    edi,0x8
-    2ad0: or     edi,r11d
-    2ad3: shl    edi,0x8
-    2ad6: or     edi,r10d
-    2ad9: shl    edi,0x8
-    2adc: or     edi,r9d
-    2adf: mov    DWORD PTR [rdx-0x5],edi
-    2ae2: cmp    rdx,rsi
-    2ae5: jne    28e8 <mlkem_poly_compress_d5+0x28>
-    2aeb: pop    rbx
-    2aec: pop    rbp
-    2aed: ret
+    mlkem_poly_compress_d5:
+       +0x0: push   rbp
+       +0x1: mov    rcx,rsi
+       +0x4: mov    rdx,rdi
+       +0x7: lea    rsi,[rdi+0xa0]
+       +0xe: movq   xmm2,QWORD PTR [rip+0x5742]
+      +0x16: push   rbx
+      +0x17: pxor   xmm3,xmm3
+      +0x1b: movq   xmm4,QWORD PTR [rip+0x5725]
+      +0x23: nop    DWORD PTR [rax+rax*1+0x0]
+      +0x28: movq   xmm0,QWORD PTR [rcx]
+      +0x2c: movdqa xmm1,xmm3
+      +0x30: add    rdx,0x5
+      +0x34: add    rcx,0x10
+      +0x38: movq   xmm6,QWORD PTR [rcx-0x8]
+      +0x3d: pcmpgtw xmm1,xmm0
+      +0x41: movdqa xmm9,xmm0
+      +0x46: movdqa xmm8,xmm6
+      +0x4b: punpcklwd xmm0,xmm1
+      +0x4f: punpcklwd xmm9,xmm1
+      +0x54: pshufd xmm0,xmm0,0x4e
+      +0x59: movdqa xmm10,xmm0
+      +0x5e: movdqa xmm0,xmm3
+      +0x62: pcmpgtw xmm0,xmm6
+      +0x66: movdqa xmm5,xmm10
+      +0x6b: pslld  xmm5,0x2
+      +0x70: paddd  xmm5,xmm10
+      +0x75: punpcklwd xmm8,xmm0
+      +0x7a: punpcklwd xmm6,xmm0
+      +0x7e: movdqa xmm0,xmm9
+      +0x83: pslld  xmm0,0x2
+      +0x88: pshufd xmm6,xmm6,0x4e
+      +0x8d: movdqa xmm11,xmm8
+      +0x92: paddd  xmm0,xmm9
+      +0x97: pslld  xmm11,0x2
+      +0x9d: movdqa xmm7,xmm6
+      +0xa1: paddd  xmm11,xmm8
+      +0xa6: pslld  xmm7,0x2
+      +0xab: paddd  xmm7,xmm6
+      +0xaf: movdqa xmm1,xmm0
+      +0xb3: pslld  xmm1,0x6
+      +0xb8: psubd  xmm1,xmm0
+      +0xbc: movdqa xmm0,xmm5
+      +0xc0: pslld  xmm0,0x6
+      +0xc5: psubd  xmm0,xmm5
+      +0xc9: pslld  xmm1,0x6
+      +0xce: psubd  xmm1,xmm9
+      +0xd3: pslld  xmm0,0x6
+      +0xd8: psubd  xmm0,xmm10
+      +0xdd: pslld  xmm1,0x6
+      +0xe2: paddd  xmm1,xmm2
+      +0xe6: pslld  xmm0,0x6
+      +0xeb: paddd  xmm0,xmm2
+      +0xef: psrld  xmm1,0x1b
+      +0xf4: movdqa xmm5,xmm1
+      +0xf8: psrld  xmm0,0x1b
+      +0xfd: punpcklwd xmm5,xmm0
+     +0x101: punpcklwd xmm1,xmm0
+     +0x105: movdqa xmm0,xmm11
+     +0x10a: pshufd xmm5,xmm5,0x4e
+     +0x10f: pslld  xmm0,0x6
+     +0x114: punpcklwd xmm1,xmm5
+     +0x118: movdqa xmm5,xmm7
+     +0x11c: psubd  xmm0,xmm11
+     +0x121: pslld  xmm5,0x6
+     +0x126: pand   xmm1,xmm4
+     +0x12a: psubd  xmm5,xmm7
+     +0x12e: movdqa xmm7,xmm1
+     +0x132: pslld  xmm0,0x6
+     +0x137: psubd  xmm0,xmm8
+     +0x13c: pslld  xmm5,0x6
+     +0x141: psubd  xmm5,xmm6
+     +0x145: pslld  xmm0,0x6
+     +0x14a: paddd  xmm0,xmm2
+     +0x14e: pslld  xmm5,0x6
+     +0x153: paddd  xmm5,xmm2
+     +0x157: psrld  xmm0,0x1b
+     +0x15c: movdqa xmm6,xmm0
+     +0x160: psrld  xmm5,0x1b
+     +0x165: punpcklwd xmm6,xmm5
+     +0x169: punpcklwd xmm0,xmm5
+     +0x16d: pshufd xmm6,xmm6,0x4e
+     +0x172: punpcklwd xmm0,xmm6
+     +0x176: pand   xmm0,xmm4
+     +0x17a: packuswb xmm7,xmm0
+     +0x17e: pshufd xmm7,xmm7,0x8
+     +0x183: movq   rax,xmm7
+     +0x188: mov    rdi,rax
+     +0x18b: mov    rbp,rax
+     +0x18e: movzx  ebx,ah
+     +0x191: mov    r8,rax
+     +0x194: shr    rdi,0x18
+     +0x198: shr    rbp,0x10
+     +0x19c: mov    r11,rbx
+     +0x19f: mov    rbx,rax
+     +0x1a2: shl    ebp,0x2
+     +0x1a5: mov    r10d,edi
+     +0x1a8: shr    rbx,0x20
+     +0x1ac: mov    r9,r11
+     +0x1af: shl    r10d,0x7
+     +0x1b3: shr    r11b,0x3
+     +0x1b7: shr    r8,0x30
+     +0x1bb: or     r10d,ebp
+     +0x1be: shr    dil,1
+     +0x1c1: mov    rbp,rax
+     +0x1c4: shr    rbp,0x28
+     +0x1c8: or     r10d,r11d
+     +0x1cb: mov    r11d,ebx
+     +0x1ce: shr    bl,0x4
+     +0x1d1: shl    r11d,0x4
+     +0x1d5: add    ebp,ebp
+     +0x1d7: shl    r9d,0x5
+     +0x1db: movzx  r10d,r10b
+     +0x1df: or     r11d,edi
+     +0x1e2: mov    edi,r8d
+     +0x1e5: or     r9d,eax
+     +0x1e8: shr    rax,0x38
+     +0x1ec: shl    edi,0x6
+     +0x1ef: movzx  r11d,r11b
+     +0x1f3: movzx  r9d,r9b
+     +0x1f7: shr    r8b,0x2
+     +0x1fb: or     edi,ebp
+     +0x1fd: shl    eax,0x3
+     +0x200: or     edi,ebx
+     +0x202: or     r8d,eax
+     +0x205: movzx  edi,dil
+     +0x209: mov    BYTE PTR [rdx-0x1],r8b
+     +0x20d: shl    edi,0x8
+     +0x210: or     edi,r11d
+     +0x213: shl    edi,0x8
+     +0x216: or     edi,r10d
+     +0x219: shl    edi,0x8
+     +0x21c: or     edi,r9d
+     +0x21f: mov    DWORD PTR [rdx-0x5],edi
+     +0x222: cmp    rdx,rsi
+     +0x225: jne    <mlkem_poly_compress_d5+0x28>
+     +0x22b: pop    rbx
+     +0x22c: pop    rbp
+     +0x22d: ret
  ***)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D5_GCC12_O2_EXEC =

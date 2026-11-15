@@ -10,8 +10,8 @@
 (* SHA3-256 hash of the encapsulation key in the decapsulation key into a    *)
 (* buffer on the stack, compares it in constant time with the hash stored in *)
 (* the decapsulation key, and zeroes the buffer. It is verified in the whole *)
-(* image (see libmlkem.ml), where it is at address                           *)
-(* 0x4f10, using the theorems for mlkem_sha3_256 at 0x3510 in the image.     *)
+(* image (see libmlkem.ml), using the theorems for mlkem_sha3_256 in the     *)
+(* image.                                                                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/sha3_256.ml";;
@@ -19,67 +19,68 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    4f10: push   rbp
-    4f11: lea    rsi,[rdi+0x300]
-    4f18: mov    edx,0x320
-    4f1d: mov    rbp,rsp
-    4f20: push   r12
-    4f22: push   rbx
-    4f23: mov    rbx,rdi
-    4f26: and    rsp,0xffffffffffffffe0
-    4f2a: sub    rsp,0x20
-    4f2e: mov    r12,rsp
-    4f31: mov    rdi,r12
-    4f34: call   3510 <mlkem_sha3_256>
-    4f39: movdqu xmm1,XMMWORD PTR [rbx+0x620]
-    4f41: movdqu xmm2,XMMWORD PTR [rbx+0x630]
-    4f49: pxor   xmm1,XMMWORD PTR [rsp]
-    4f4e: pxor   xmm2,XMMWORD PTR [rsp+0x10]
-    4f54: movdqa xmm0,xmm1
-    4f58: pxor   xmm1,xmm2
-    4f5c: por    xmm0,xmm2
-    4f60: movdqa xmm2,xmm1
-    4f64: psrldq xmm2,0x8
-    4f69: pxor   xmm1,xmm2
-    4f6d: movdqa xmm2,xmm1
-    4f71: psrldq xmm2,0x4
-    4f76: pxor   xmm1,xmm2
-    4f7a: movdqa xmm2,xmm1
-    4f7e: psrldq xmm2,0x2
-    4f83: pxor   xmm1,xmm2
-    4f87: movdqa xmm2,xmm1
-    4f8b: psrldq xmm2,0x1
-    4f90: pxor   xmm1,xmm2
-    4f94: movd   edx,xmm1
-    4f98: movdqa xmm1,xmm0
-    4f9c: psrldq xmm1,0x8
-    4fa1: por    xmm0,xmm1
-    4fa5: movdqa xmm1,xmm0
-    4fa9: psrldq xmm1,0x4
-    4fae: por    xmm0,xmm1
-    4fb2: movdqa xmm1,xmm0
-    4fb6: psrldq xmm1,0x2
-    4fbb: por    xmm0,xmm1
-    4fbf: movdqa xmm1,xmm0
-    4fc3: psrldq xmm1,0x1
-    4fc8: por    xmm0,xmm1
-    4fcc: movd   eax,xmm0
-    4fd0: movzx  eax,al
-    4fd3: neg    eax
-    4fd5: sar    eax,0x10
-    4fd8: xor    eax,edx
-    4fda: cmp    al,dl
-    4fdc: pxor   xmm0,xmm0
-    4fe0: sete   al
-    4fe3: movaps XMMWORD PTR [rsp],xmm0
-    4fe7: movzx  eax,al
-    4fea: movaps XMMWORD PTR [rsp+0x10],xmm0
-    4fef: lea    eax,[rax+rax*4-0x5]
-    4ff3: lea    rsp,[rbp-0x10]
-    4ff7: pop    rbx
-    4ff8: pop    r12
-    4ffa: pop    rbp
-    4ffb: ret
+    mlkem512_check_sk:
+       +0x0: push   rbp
+       +0x1: lea    rsi,[rdi+0x300]
+       +0x8: mov    edx,0x320
+       +0xd: mov    rbp,rsp
+      +0x10: push   r12
+      +0x12: push   rbx
+      +0x13: mov    rbx,rdi
+      +0x16: and    rsp,0xffffffffffffffe0
+      +0x1a: sub    rsp,0x20
+      +0x1e: mov    r12,rsp
+      +0x21: mov    rdi,r12
+      +0x24: call   <mlkem_sha3_256>
+      +0x29: movdqu xmm1,XMMWORD PTR [rbx+0x620]
+      +0x31: movdqu xmm2,XMMWORD PTR [rbx+0x630]
+      +0x39: pxor   xmm1,XMMWORD PTR [rsp]
+      +0x3e: pxor   xmm2,XMMWORD PTR [rsp+0x10]
+      +0x44: movdqa xmm0,xmm1
+      +0x48: pxor   xmm1,xmm2
+      +0x4c: por    xmm0,xmm2
+      +0x50: movdqa xmm2,xmm1
+      +0x54: psrldq xmm2,0x8
+      +0x59: pxor   xmm1,xmm2
+      +0x5d: movdqa xmm2,xmm1
+      +0x61: psrldq xmm2,0x4
+      +0x66: pxor   xmm1,xmm2
+      +0x6a: movdqa xmm2,xmm1
+      +0x6e: psrldq xmm2,0x2
+      +0x73: pxor   xmm1,xmm2
+      +0x77: movdqa xmm2,xmm1
+      +0x7b: psrldq xmm2,0x1
+      +0x80: pxor   xmm1,xmm2
+      +0x84: movd   edx,xmm1
+      +0x88: movdqa xmm1,xmm0
+      +0x8c: psrldq xmm1,0x8
+      +0x91: por    xmm0,xmm1
+      +0x95: movdqa xmm1,xmm0
+      +0x99: psrldq xmm1,0x4
+      +0x9e: por    xmm0,xmm1
+      +0xa2: movdqa xmm1,xmm0
+      +0xa6: psrldq xmm1,0x2
+      +0xab: por    xmm0,xmm1
+      +0xaf: movdqa xmm1,xmm0
+      +0xb3: psrldq xmm1,0x1
+      +0xb8: por    xmm0,xmm1
+      +0xbc: movd   eax,xmm0
+      +0xc0: movzx  eax,al
+      +0xc3: neg    eax
+      +0xc5: sar    eax,0x10
+      +0xc8: xor    eax,edx
+      +0xca: cmp    al,dl
+      +0xcc: pxor   xmm0,xmm0
+      +0xd0: sete   al
+      +0xd3: movaps XMMWORD PTR [rsp],xmm0
+      +0xd7: movzx  eax,al
+      +0xda: movaps XMMWORD PTR [rsp+0x10],xmm0
+      +0xdf: lea    eax,[rax+rax*4-0x5]
+      +0xe3: lea    rsp,[rbp-0x10]
+      +0xe7: pop    rbx
+      +0xe8: pop    r12
+      +0xea: pop    rbp
+      +0xeb: ret
  ***)
 
 let MLKEM_NATIVE_CHECK_SK_K2_GCC12_O2_EXEC =

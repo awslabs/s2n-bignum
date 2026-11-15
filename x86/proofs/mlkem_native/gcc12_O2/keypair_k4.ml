@@ -11,9 +11,8 @@
 (* buffer on the stack, and returns -3 if that fails, and otherwise          *)
 (* generates the keys from them with mlkem1024_keypair_derand. In both cases *)
 (* it zeroes the buffer. It is verified in the whole image (see              *)
-(* libmlkem.ml), where it is at address 0x1ac0, using                        *)
-(* the theorem for mlkem1024_keypair_derand in the image and the contract    *)
-(* for randombytes (see utils/mlkem_native_libc.ml).                         *)
+(* libmlkem.ml), using the theorem for mlkem1024_keypair_derand in the image *)
+(* and the contract for randombytes (see utils/mlkem_native_libc.ml).        *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keypair_derand_k4.ml";;
@@ -21,44 +20,46 @@ needs "x86/proofs/utils/mlkem_native_libc.ml";;
 
 (*** The code in the image:
 
-    1010: jmp    QWORD PTR [rip+0x9fe2]
+    plt_randombytes:
+       +0x0: jmp    QWORD PTR [rip+0x9fe2]
  ***)
 
 (*** The code in the image:
 
-    1ac0: push   rbp
-    1ac1: mov    rbp,rsp
-    1ac4: push   r13
-    1ac6: mov    r13,rsi
-    1ac9: mov    esi,0x40
-    1ace: push   r12
-    1ad0: mov    r12,rdi
-    1ad3: push   rbx
-    1ad4: and    rsp,0xffffffffffffffe0
-    1ad8: sub    rsp,0x40
-    1adc: mov    rbx,rsp
-    1adf: mov    rdi,rbx
-    1ae2: call   1010 <randombytes@plt>
-    1ae7: test   eax,eax
-    1ae9: jne    1b20 <mlkem1024_keypair+0x60>
-    1aeb: mov    rdx,rbx
-    1aee: mov    rsi,r13
-    1af1: mov    rdi,r12
-    1af4: call   19a0 <mlkem1024_keypair_derand>
-    1af9: pxor   xmm0,xmm0
-    1afd: movaps XMMWORD PTR [rsp],xmm0
-    1b01: movaps XMMWORD PTR [rsp+0x10],xmm0
-    1b06: movaps XMMWORD PTR [rsp+0x20],xmm0
-    1b0b: movaps XMMWORD PTR [rsp+0x30],xmm0
-    1b10: lea    rsp,[rbp-0x18]
-    1b14: pop    rbx
-    1b15: pop    r12
-    1b17: pop    r13
-    1b19: pop    rbp
-    1b1a: ret
-    1b1b: nop    DWORD PTR [rax+rax*1+0x0]
-    1b20: mov    eax,0xfffffffd
-    1b25: jmp    1af9 <mlkem1024_keypair+0x39>
+    mlkem1024_keypair:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r13
+       +0x6: mov    r13,rsi
+       +0x9: mov    esi,0x40
+       +0xe: push   r12
+      +0x10: mov    r12,rdi
+      +0x13: push   rbx
+      +0x14: and    rsp,0xffffffffffffffe0
+      +0x18: sub    rsp,0x40
+      +0x1c: mov    rbx,rsp
+      +0x1f: mov    rdi,rbx
+      +0x22: call   <randombytes@plt>
+      +0x27: test   eax,eax
+      +0x29: jne    <mlkem1024_keypair+0x60>
+      +0x2b: mov    rdx,rbx
+      +0x2e: mov    rsi,r13
+      +0x31: mov    rdi,r12
+      +0x34: call   <mlkem1024_keypair_derand>
+      +0x39: pxor   xmm0,xmm0
+      +0x3d: movaps XMMWORD PTR [rsp],xmm0
+      +0x41: movaps XMMWORD PTR [rsp+0x10],xmm0
+      +0x46: movaps XMMWORD PTR [rsp+0x20],xmm0
+      +0x4b: movaps XMMWORD PTR [rsp+0x30],xmm0
+      +0x50: lea    rsp,[rbp-0x18]
+      +0x54: pop    rbx
+      +0x55: pop    r12
+      +0x57: pop    r13
+      +0x59: pop    rbp
+      +0x5a: ret
+      +0x5b: nop    DWORD PTR [rax+rax*1+0x0]
+      +0x60: mov    eax,0xfffffffd
+      +0x65: jmp    <mlkem1024_keypair+0x39>
  ***)
 
 let MLKEM_NATIVE_KEYPAIR_K4_GCC12_O2_EXEC =

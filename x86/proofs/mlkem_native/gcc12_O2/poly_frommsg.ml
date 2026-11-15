@@ -4,11 +4,10 @@
  *)
 
 (* ========================================================================= *)
-(* Conversion of a 32-byte message to a polynomial.                          *)
-(* This is the code for mlkem_poly_frommsg from mlkem-native's portable C    *)
-(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
-(* It is verified in the whole image (see                                    *)
-(* libmlkem.ml), where it is at address 0x3210.                              *)
+(* Conversion of a 32-byte message to a polynomial. This is the code for     *)
+(* mlkem_poly_frommsg from mlkem-native's portable C implementation compiled *)
+(* by gcc 12 with -O2 (see mlkem_native/README.md). It is verified in the    *)
+(* whole image (see libmlkem.ml).                                            *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -16,29 +15,30 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    3210: mov    r8,rdi
-    3213: mov    r9d,0x1
-    3219: xor    edi,edi
-    321b: nop    DWORD PTR [rax+rax*1+0x0]
-    3220: xor    ecx,ecx
-    3222: nop    WORD PTR [rax+rax*1+0x0]
-    3228: mov    eax,r9d
-    322b: shl    eax,cl
-    322d: and    al,BYTE PTR [rsi]
-    322f: movzx  eax,al
-    3232: neg    eax
-    3234: sar    eax,0x10
-    3237: lea    edx,[rcx+rdi*1]
-    323a: add    ecx,0x1
-    323d: and    ax,0x681
-    3241: mov    WORD PTR [r8+rdx*2],ax
-    3246: cmp    ecx,0x8
-    3249: jne    3228 <mlkem_poly_frommsg+0x18>
-    324b: add    edi,0x8
-    324e: add    rsi,0x1
-    3252: cmp    edi,0x100
-    3258: jne    3220 <mlkem_poly_frommsg+0x10>
-    325a: ret
+    mlkem_poly_frommsg:
+       +0x0: mov    r8,rdi
+       +0x3: mov    r9d,0x1
+       +0x9: xor    edi,edi
+       +0xb: nop    DWORD PTR [rax+rax*1+0x0]
+      +0x10: xor    ecx,ecx
+      +0x12: nop    WORD PTR [rax+rax*1+0x0]
+      +0x18: mov    eax,r9d
+      +0x1b: shl    eax,cl
+      +0x1d: and    al,BYTE PTR [rsi]
+      +0x1f: movzx  eax,al
+      +0x22: neg    eax
+      +0x24: sar    eax,0x10
+      +0x27: lea    edx,[rcx+rdi*1]
+      +0x2a: add    ecx,0x1
+      +0x2d: and    ax,0x681
+      +0x31: mov    WORD PTR [r8+rdx*2],ax
+      +0x36: cmp    ecx,0x8
+      +0x39: jne    <mlkem_poly_frommsg+0x18>
+      +0x3b: add    edi,0x8
+      +0x3e: add    rsi,0x1
+      +0x42: cmp    edi,0x100
+      +0x48: jne    <mlkem_poly_frommsg+0x10>
+      +0x4a: ret
  ***)
 
 let MLKEM_NATIVE_POLY_FROMMSG_GCC12_O2_EXEC =

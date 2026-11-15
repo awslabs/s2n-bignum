@@ -11,85 +11,86 @@
 (* for each row of the matrix appends the two indices of each of its four    *)
 (* entries to it in a loop and samples them with mlkem_poly_rej_uniform_x4,  *)
 (* and zeroes the buffers. It is verified in the whole image (see            *)
-(* libmlkem.ml), where it is at address 0x1020, using                        *)
-(* the theorem for mlkem_poly_rej_uniform_x4 at 0x60e0 in the image.         *)
+(* libmlkem.ml), using the theorem for mlkem_poly_rej_uniform_x4 in the      *)
+(* image.                                                                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_rej_uniform_x4.ml";;
 
 (*** The code in the image:
 
-    1020: push   rbp
-    1021: mov    rbp,rsp
-    1024: push   r15
-    1026: push   r14
-    1028: mov    r14d,edx
-    102b: push   r13
-    102d: mov    r13,rdi
-    1030: push   r12
-    1032: push   rbx
-    1033: and    rsp,0xffffffffffffffe0
-    1037: sub    rsp,0x100
-    103e: movdqu xmm1,XMMWORD PTR [rsi]
-    1042: movdqu xmm0,XMMWORD PTR [rsi+0x10]
-    1047: mov    r15,rsp
-    104a: lea    r12,[rsp+0x100]
-    1052: mov    rax,r15
-    1055: movaps XMMWORD PTR [rax],xmm1
-    1058: add    rax,0x40
-    105c: movaps XMMWORD PTR [rax-0x30],xmm0
-    1060: cmp    rax,r12
-    1063: jne    1055 <mlkem1024_gen_matrix+0x35>
-    1065: xor    ebx,ebx
-    1067: mov    rax,r15
-    106a: mov    esi,ebx
-    106c: mov    edx,esi
-    106e: mov    ecx,esi
-    1070: and    edx,0x3
-    1073: shr    ecx,0x2
-    1076: test   r14d,r14d
-    1079: mov    edi,edx
-    107b: cmovne edx,ecx
-    107e: cmovne ecx,edi
-    1081: add    rax,0x40
-    1085: add    esi,0x1
-    1088: mov    BYTE PTR [rax-0x20],dl
-    108b: mov    BYTE PTR [rax-0x1f],cl
-    108e: cmp    rax,r12
-    1091: jne    106c <mlkem1024_gen_matrix+0x4c>
-    1093: lea    eax,[rbx+0x3]
-    1096: mov    edi,ebx
-    1098: mov    r8,r15
-    109b: shr    eax,0x2
-    109e: shr    edi,0x2
-    10a1: shl    rax,0xb
-    10a5: shl    rdi,0xb
-    10a9: lea    rcx,[r13+rax*1+0x600]
-    10b1: lea    eax,[rbx+0x2]
-    10b4: add    rdi,r13
-    10b7: shr    eax,0x2
-    10ba: shl    rax,0xb
-    10be: lea    rdx,[r13+rax*1+0x400]
-    10c6: lea    eax,[rbx+0x1]
-    10c9: add    ebx,0x4
-    10cc: shr    eax,0x2
-    10cf: shl    rax,0xb
-    10d3: lea    rsi,[r13+rax*1+0x200]
-    10db: call   60e0 <mlkem_poly_rej_uniform_x4>
-    10e0: cmp    ebx,0x10
-    10e3: jne    1067 <mlkem1024_gen_matrix+0x47>
-    10e5: xor    eax,eax
-    10e7: mov    rdi,r15
-    10ea: mov    ecx,0x20
-    10ef: rep    stos QWORD PTR es:[rdi],rax
-    10f2: lea    rsp,[rbp-0x28]
-    10f6: pop    rbx
-    10f7: pop    r12
-    10f9: pop    r13
-    10fb: pop    r14
-    10fd: pop    r15
-    10ff: pop    rbp
-    1100: ret
+    mlkem1024_gen_matrix:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsp
+       +0x4: push   r15
+       +0x6: push   r14
+       +0x8: mov    r14d,edx
+       +0xb: push   r13
+       +0xd: mov    r13,rdi
+      +0x10: push   r12
+      +0x12: push   rbx
+      +0x13: and    rsp,0xffffffffffffffe0
+      +0x17: sub    rsp,0x100
+      +0x1e: movdqu xmm1,XMMWORD PTR [rsi]
+      +0x22: movdqu xmm0,XMMWORD PTR [rsi+0x10]
+      +0x27: mov    r15,rsp
+      +0x2a: lea    r12,[rsp+0x100]
+      +0x32: mov    rax,r15
+      +0x35: movaps XMMWORD PTR [rax],xmm1
+      +0x38: add    rax,0x40
+      +0x3c: movaps XMMWORD PTR [rax-0x30],xmm0
+      +0x40: cmp    rax,r12
+      +0x43: jne    <mlkem1024_gen_matrix+0x35>
+      +0x45: xor    ebx,ebx
+      +0x47: mov    rax,r15
+      +0x4a: mov    esi,ebx
+      +0x4c: mov    edx,esi
+      +0x4e: mov    ecx,esi
+      +0x50: and    edx,0x3
+      +0x53: shr    ecx,0x2
+      +0x56: test   r14d,r14d
+      +0x59: mov    edi,edx
+      +0x5b: cmovne edx,ecx
+      +0x5e: cmovne ecx,edi
+      +0x61: add    rax,0x40
+      +0x65: add    esi,0x1
+      +0x68: mov    BYTE PTR [rax-0x20],dl
+      +0x6b: mov    BYTE PTR [rax-0x1f],cl
+      +0x6e: cmp    rax,r12
+      +0x71: jne    <mlkem1024_gen_matrix+0x4c>
+      +0x73: lea    eax,[rbx+0x3]
+      +0x76: mov    edi,ebx
+      +0x78: mov    r8,r15
+      +0x7b: shr    eax,0x2
+      +0x7e: shr    edi,0x2
+      +0x81: shl    rax,0xb
+      +0x85: shl    rdi,0xb
+      +0x89: lea    rcx,[r13+rax*1+0x600]
+      +0x91: lea    eax,[rbx+0x2]
+      +0x94: add    rdi,r13
+      +0x97: shr    eax,0x2
+      +0x9a: shl    rax,0xb
+      +0x9e: lea    rdx,[r13+rax*1+0x400]
+      +0xa6: lea    eax,[rbx+0x1]
+      +0xa9: add    ebx,0x4
+      +0xac: shr    eax,0x2
+      +0xaf: shl    rax,0xb
+      +0xb3: lea    rsi,[r13+rax*1+0x200]
+      +0xbb: call   <mlkem_poly_rej_uniform_x4>
+      +0xc0: cmp    ebx,0x10
+      +0xc3: jne    <mlkem1024_gen_matrix+0x47>
+      +0xc5: xor    eax,eax
+      +0xc7: mov    rdi,r15
+      +0xca: mov    ecx,0x20
+      +0xcf: rep    stos QWORD PTR es:[rdi],rax
+      +0xd2: lea    rsp,[rbp-0x28]
+      +0xd6: pop    rbx
+      +0xd7: pop    r12
+      +0xd9: pop    r13
+      +0xdb: pop    r14
+      +0xdd: pop    r15
+      +0xdf: pop    rbp
+      +0xe0: ret
  ***)
 
 let MLKEM_NATIVE_GEN_MATRIX_K4_GCC12_O2_EXEC =

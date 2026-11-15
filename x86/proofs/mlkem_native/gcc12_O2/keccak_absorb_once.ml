@@ -6,17 +6,15 @@
 (* ========================================================================= *)
 (* Absorbing a whole message into a Keccak state, with the padding. This is  *)
 (* the code for the static function mlk_keccak_absorb_once from              *)
-(* mlkem-native's portable C implementation compiled by gcc 12 with -O2      *)
-(* (see mlkem_native/README.md), which is used by its SHA-3 and SHAKE        *)
-(* functions. It zeroes the state, XORs in each whole block of r bytes of    *)
-(* the message and permutes the state, and then XORs in the rest of the      *)
-(* message and the padding, but does not permute the state again. It is      *)
-(* verified in the whole image (see libmlkem.ml),                            *)
-(* where it is at address 0x32b0, using the theorems for                     *)
-(* mlkem_keccakf1600_xor_bytes at 0x3d40 and mlkem_keccakf1600_permute at    *)
-(* 0x3e70 in the image. The state is zeroed with REP STOSQ, so the           *)
-(* specifications assume that the direction flag DF is clear, as the ABI     *)
-(* requires on entry.                                                        *)
+(* mlkem-native's portable C implementation compiled by gcc 12 with -O2 (see *)
+(* mlkem_native/README.md), which is used by its SHA-3 and SHAKE functions.  *)
+(* It zeroes the state, XORs in each whole block of r bytes of the message   *)
+(* and permutes the state, and then XORs in the rest of the message and the  *)
+(* padding, but does not permute the state again. It is verified in the      *)
+(* whole image (see libmlkem.ml), using the theorems for                     *)
+(* mlkem_keccakf1600_xor_bytes and mlkem_keccakf1600_permute in the image.   *)
+(* The state is zeroed with REP STOSQ, so the specifications assume that the *)
+(* direction flag DF is clear, as the ABI requires on entry.                 *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/keccakf1600_permute.ml";;
@@ -25,87 +23,88 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    32b0: push   r14
-    32b2: xor    eax,eax
-    32b4: push   r13
-    32b6: mov    r13,rdi
-    32b9: add    rdi,0x8
-    32bd: push   r12
-    32bf: mov    r12d,esi
-    32c2: push   rbp
-    32c3: mov    r14,r12
-    32c6: mov    rbp,rdx
-    32c9: push   rbx
-    32ca: mov    rbx,rcx
-    32cd: mov    rcx,r13
-    32d0: sub    rsp,0x10
-    32d4: mov    BYTE PTR [rsp+0xc],r8b
-    32d9: mov    QWORD PTR [rdi-0x8],0x0
-    32e1: mov    QWORD PTR [rdi+0xb8],0x0
-    32ec: and    rdi,0xfffffffffffffff8
-    32f0: sub    rcx,rdi
-    32f3: add    ecx,0xc8
-    32f9: shr    ecx,0x3
-    32fc: rep    stos QWORD PTR es:[rdi],rax
-    32ff: cmp    rbx,r12
-    3302: jb     332b <mlk_keccak_absorb_once+0x7b>
-    3304: nop    DWORD PTR [rax+0x0]
-    3308: mov    rsi,rbp
-    330b: mov    ecx,r14d
-    330e: xor    edx,edx
-    3310: mov    rdi,r13
-    3313: call   3d40 <mlkem_keccakf1600_xor_bytes>
-    3318: sub    rbx,r12
-    331b: mov    rdi,r13
-    331e: add    rbp,r12
-    3321: call   3e70 <mlkem_keccakf1600_permute>
-    3326: cmp    rbx,r12
-    3329: jae    3308 <mlk_keccak_absorb_once+0x58>
-    332b: sub    r14d,0x1
-    332f: mov    r12d,ebx
-    3332: test   rbx,rbx
-    3335: jne    3378 <mlk_keccak_absorb_once+0xc8>
-    3337: lea    rbx,[rsp+0xc]
-    333c: mov    edx,r12d
-    333f: mov    rdi,r13
-    3342: mov    ecx,0x1
-    3347: mov    rsi,rbx
-    334a: call   3d40 <mlkem_keccakf1600_xor_bytes>
-    334f: mov    edx,r14d
-    3352: mov    rsi,rbx
-    3355: mov    rdi,r13
-    3358: mov    ecx,0x1
-    335d: mov    BYTE PTR [rsp+0xc],0x80
-    3362: call   3d40 <mlkem_keccakf1600_xor_bytes>
-    3367: add    rsp,0x10
-    336b: pop    rbx
-    336c: pop    rbp
-    336d: pop    r12
-    336f: pop    r13
-    3371: pop    r14
-    3373: ret
-    3374: nop    DWORD PTR [rax+0x0]
-    3378: mov    ecx,ebx
-    337a: xor    edx,edx
-    337c: mov    rsi,rbp
-    337f: mov    rdi,r13
-    3382: call   3d40 <mlkem_keccakf1600_xor_bytes>
-    3387: mov    eax,r14d
-    338a: cmp    rax,rbx
-    338d: jne    3337 <mlk_keccak_absorb_once+0x87>
-    338f: lea    rsi,[rsp+0xc]
-    3394: mov    edx,ebx
-    3396: mov    rdi,r13
-    3399: mov    ecx,0x1
-    339e: or     BYTE PTR [rsp+0xc],0x80
-    33a3: call   3d40 <mlkem_keccakf1600_xor_bytes>
-    33a8: add    rsp,0x10
-    33ac: pop    rbx
-    33ad: pop    rbp
-    33ae: pop    r12
-    33b0: pop    r13
-    33b2: pop    r14
-    33b4: ret
+    mlk_keccak_absorb_once:
+       +0x0: push   r14
+       +0x2: xor    eax,eax
+       +0x4: push   r13
+       +0x6: mov    r13,rdi
+       +0x9: add    rdi,0x8
+       +0xd: push   r12
+       +0xf: mov    r12d,esi
+      +0x12: push   rbp
+      +0x13: mov    r14,r12
+      +0x16: mov    rbp,rdx
+      +0x19: push   rbx
+      +0x1a: mov    rbx,rcx
+      +0x1d: mov    rcx,r13
+      +0x20: sub    rsp,0x10
+      +0x24: mov    BYTE PTR [rsp+0xc],r8b
+      +0x29: mov    QWORD PTR [rdi-0x8],0x0
+      +0x31: mov    QWORD PTR [rdi+0xb8],0x0
+      +0x3c: and    rdi,0xfffffffffffffff8
+      +0x40: sub    rcx,rdi
+      +0x43: add    ecx,0xc8
+      +0x49: shr    ecx,0x3
+      +0x4c: rep    stos QWORD PTR es:[rdi],rax
+      +0x4f: cmp    rbx,r12
+      +0x52: jb     <mlk_keccak_absorb_once+0x7b>
+      +0x54: nop    DWORD PTR [rax+0x0]
+      +0x58: mov    rsi,rbp
+      +0x5b: mov    ecx,r14d
+      +0x5e: xor    edx,edx
+      +0x60: mov    rdi,r13
+      +0x63: call   <mlkem_keccakf1600_xor_bytes>
+      +0x68: sub    rbx,r12
+      +0x6b: mov    rdi,r13
+      +0x6e: add    rbp,r12
+      +0x71: call   <mlkem_keccakf1600_permute>
+      +0x76: cmp    rbx,r12
+      +0x79: jae    <mlk_keccak_absorb_once+0x58>
+      +0x7b: sub    r14d,0x1
+      +0x7f: mov    r12d,ebx
+      +0x82: test   rbx,rbx
+      +0x85: jne    <mlk_keccak_absorb_once+0xc8>
+      +0x87: lea    rbx,[rsp+0xc]
+      +0x8c: mov    edx,r12d
+      +0x8f: mov    rdi,r13
+      +0x92: mov    ecx,0x1
+      +0x97: mov    rsi,rbx
+      +0x9a: call   <mlkem_keccakf1600_xor_bytes>
+      +0x9f: mov    edx,r14d
+      +0xa2: mov    rsi,rbx
+      +0xa5: mov    rdi,r13
+      +0xa8: mov    ecx,0x1
+      +0xad: mov    BYTE PTR [rsp+0xc],0x80
+      +0xb2: call   <mlkem_keccakf1600_xor_bytes>
+      +0xb7: add    rsp,0x10
+      +0xbb: pop    rbx
+      +0xbc: pop    rbp
+      +0xbd: pop    r12
+      +0xbf: pop    r13
+      +0xc1: pop    r14
+      +0xc3: ret
+      +0xc4: nop    DWORD PTR [rax+0x0]
+      +0xc8: mov    ecx,ebx
+      +0xca: xor    edx,edx
+      +0xcc: mov    rsi,rbp
+      +0xcf: mov    rdi,r13
+      +0xd2: call   <mlkem_keccakf1600_xor_bytes>
+      +0xd7: mov    eax,r14d
+      +0xda: cmp    rax,rbx
+      +0xdd: jne    <mlk_keccak_absorb_once+0x87>
+      +0xdf: lea    rsi,[rsp+0xc]
+      +0xe4: mov    edx,ebx
+      +0xe6: mov    rdi,r13
+      +0xe9: mov    ecx,0x1
+      +0xee: or     BYTE PTR [rsp+0xc],0x80
+      +0xf3: call   <mlkem_keccakf1600_xor_bytes>
+      +0xf8: add    rsp,0x10
+      +0xfc: pop    rbx
+      +0xfd: pop    rbp
+      +0xfe: pop    r12
+     +0x100: pop    r13
+     +0x102: pop    r14
+     +0x104: ret
  ***)
 
 let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_EXEC =

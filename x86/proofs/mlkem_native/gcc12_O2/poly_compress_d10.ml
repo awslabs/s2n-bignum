@@ -4,15 +4,13 @@
  *)
 
 (* ========================================================================= *)
-(* Compression of a polynomial to 10 bits per coefficient.                   *)
-(* This is the code for mlkem_poly_compress_d10 from mlkem-native's portable *)
-(* C implementation compiled by gcc 12 with -O2 (see                         *)
-(* mlkem_native/README.md). It is verified in the whole image (see           *)
-(* libmlkem.ml), where it is at address 0x2660. It                           *)
-(* saves four registers on the stack and computes the four 10-bit values for *)
-(* each five bytes of the result into the eight bytes below them, in the red *)
-(* zone, so it is verified directly as a subroutine, with that part of the   *)
-(* stack.                                                                    *)
+(* Compression of a polynomial to 10 bits per coefficient. This is the code  *)
+(* for mlkem_poly_compress_d10 from mlkem-native's portable C implementation *)
+(* compiled by gcc 12 with -O2 (see mlkem_native/README.md). It is verified  *)
+(* in the whole image (see libmlkem.ml). It saves four registers on the      *)
+(* stack and computes the four 10-bit values for each five bytes of the      *)
+(* result into the eight bytes below them, in the red zone, so it is         *)
+(* verified directly as a subroutine, with that part of the stack.           *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -20,69 +18,70 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    2660: push   r13
-    2662: lea    rdx,[rdi+0x4]
-    2666: xor    ecx,ecx
-    2668: mov    r8d,0x9d7dbc00
-    266e: movabs rdi,0x100000000
-    2678: push   r12
-    267a: push   rbp
-    267b: push   rbx
-    267c: lea    r10,[rsp-0x8]
-    2681: mov    r9,rsp
-    2684: nop    DWORD PTR [rax+0x0]
-    2688: mov    r11,r10
-    268b: mov    ebx,ecx
-    268d: mov    eax,ebx
-    268f: add    r11,0x2
-    2693: add    ebx,0x1
-    2696: movsx  rax,WORD PTR [rsi+rax*2]
-    269b: imul   rax,r8
-    269f: add    rax,rdi
-    26a2: shr    rax,0x21
-    26a6: and    ax,0x3ff
-    26aa: mov    WORD PTR [r11-0x2],ax
-    26af: cmp    r9,r11
-    26b2: jne    268d <mlkem_poly_compress_d10+0x2d>
-    26b4: movzx  ebx,WORD PTR [rsp-0x8]
-    26b9: movzx  r12d,WORD PTR [rsp-0x6]
-    26bf: add    ecx,0x4
-    26c2: add    rdx,0x5
-    26c6: movzx  eax,WORD PTR [rsp-0x4]
-    26cb: movzx  r11d,WORD PTR [rsp-0x2]
-    26d1: mov    r13d,ebx
-    26d4: lea    ebp,[r12*4+0x0]
-    26dc: shr    r12w,0x6
-    26e1: movzx  ebx,bl
-    26e4: shr    r13w,0x8
-    26e9: or     ebp,r13d
-    26ec: mov    r13d,eax
-    26ef: shr    ax,0x4
-    26f3: shl    r13d,0x4
-    26f7: movzx  ebp,bpl
-    26fb: or     r12d,r13d
-    26fe: mov    r13d,eax
-    2701: mov    eax,r11d
-    2704: shr    r11w,0x2
-    2709: shl    eax,0x6
-    270c: movzx  r12d,r12b
-    2710: mov    BYTE PTR [rdx-0x5],r11b
-    2714: or     eax,r13d
-    2717: movzx  eax,al
-    271a: shl    eax,0x8
-    271d: or     eax,r12d
-    2720: shl    eax,0x8
-    2723: or     eax,ebp
-    2725: shl    eax,0x8
-    2728: or     eax,ebx
-    272a: mov    DWORD PTR [rdx-0x9],eax
-    272d: cmp    ecx,0x100
-    2733: jne    2688 <mlkem_poly_compress_d10+0x28>
-    2739: pop    rbx
-    273a: pop    rbp
-    273b: pop    r12
-    273d: pop    r13
-    273f: ret
+    mlkem_poly_compress_d10:
+       +0x0: push   r13
+       +0x2: lea    rdx,[rdi+0x4]
+       +0x6: xor    ecx,ecx
+       +0x8: mov    r8d,0x9d7dbc00
+       +0xe: movabs rdi,0x100000000
+      +0x18: push   r12
+      +0x1a: push   rbp
+      +0x1b: push   rbx
+      +0x1c: lea    r10,[rsp-0x8]
+      +0x21: mov    r9,rsp
+      +0x24: nop    DWORD PTR [rax+0x0]
+      +0x28: mov    r11,r10
+      +0x2b: mov    ebx,ecx
+      +0x2d: mov    eax,ebx
+      +0x2f: add    r11,0x2
+      +0x33: add    ebx,0x1
+      +0x36: movsx  rax,WORD PTR [rsi+rax*2]
+      +0x3b: imul   rax,r8
+      +0x3f: add    rax,rdi
+      +0x42: shr    rax,0x21
+      +0x46: and    ax,0x3ff
+      +0x4a: mov    WORD PTR [r11-0x2],ax
+      +0x4f: cmp    r9,r11
+      +0x52: jne    <mlkem_poly_compress_d10+0x2d>
+      +0x54: movzx  ebx,WORD PTR [rsp-0x8]
+      +0x59: movzx  r12d,WORD PTR [rsp-0x6]
+      +0x5f: add    ecx,0x4
+      +0x62: add    rdx,0x5
+      +0x66: movzx  eax,WORD PTR [rsp-0x4]
+      +0x6b: movzx  r11d,WORD PTR [rsp-0x2]
+      +0x71: mov    r13d,ebx
+      +0x74: lea    ebp,[r12*4+0x0]
+      +0x7c: shr    r12w,0x6
+      +0x81: movzx  ebx,bl
+      +0x84: shr    r13w,0x8
+      +0x89: or     ebp,r13d
+      +0x8c: mov    r13d,eax
+      +0x8f: shr    ax,0x4
+      +0x93: shl    r13d,0x4
+      +0x97: movzx  ebp,bpl
+      +0x9b: or     r12d,r13d
+      +0x9e: mov    r13d,eax
+      +0xa1: mov    eax,r11d
+      +0xa4: shr    r11w,0x2
+      +0xa9: shl    eax,0x6
+      +0xac: movzx  r12d,r12b
+      +0xb0: mov    BYTE PTR [rdx-0x5],r11b
+      +0xb4: or     eax,r13d
+      +0xb7: movzx  eax,al
+      +0xba: shl    eax,0x8
+      +0xbd: or     eax,r12d
+      +0xc0: shl    eax,0x8
+      +0xc3: or     eax,ebp
+      +0xc5: shl    eax,0x8
+      +0xc8: or     eax,ebx
+      +0xca: mov    DWORD PTR [rdx-0x9],eax
+      +0xcd: cmp    ecx,0x100
+      +0xd3: jne    <mlkem_poly_compress_d10+0x28>
+      +0xd9: pop    rbx
+      +0xda: pop    rbp
+      +0xdb: pop    r12
+      +0xdd: pop    r13
+      +0xdf: ret
  ***)
 
 let MLKEM_NATIVE_POLY_COMPRESS_D10_GCC12_O2_EXEC =

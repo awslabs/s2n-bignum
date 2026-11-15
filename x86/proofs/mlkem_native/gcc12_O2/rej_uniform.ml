@@ -183,7 +183,7 @@ let REJ_GROUP_BYTES = prove
 
 (* ------------------------------------------------------------------------- *)
 (* The signed 16-bit comparisons of small numbers, the 16-bit view of a      *)
-(* small number in a register, and the position in the buffer as compared   *)
+(* small number in a register, and the position in the buffer as compared    *)
 (* by the code.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
@@ -930,8 +930,7 @@ let MLKEM_NATIVE_REJ_UNIFORM_GCC12_O2_SUBROUTINE_SAFE = prove
   DISCHARGE_MEMSAFE_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* The same code in the whole image, at address 0x6040 (see                  *)
-(* libmlkem.ml).                                                             *)
+(* The same code in the whole image (see libmlkem.ml).                       *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;

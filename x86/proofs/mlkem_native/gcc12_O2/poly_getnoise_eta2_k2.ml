@@ -10,8 +10,7 @@
 (* mlkem_native/README.md), which computes 128 bytes of SHAKE256 of the seed *)
 (* and the nonce into a buffer on the stack, applies mlkem_poly_cbd2 to them *)
 (* and zeroes the buffers. It is verified in the whole image (see            *)
-(* libmlkem.ml), where it is at address 0x5e50, using                        *)
-(* the theorems for mlkem_shake256 at 0x3480 and mlkem_poly_cbd2 at 0x63b0   *)
+(* libmlkem.ml), using the theorems for mlkem_shake256 and mlkem_poly_cbd2   *)
 (* in the image.                                                             *)
 (* ========================================================================= *)
 
@@ -21,43 +20,44 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    5e50: push   rbp
-    5e51: mov    ecx,0x21
-    5e56: mov    rbp,rsp
-    5e59: push   r13
-    5e5b: push   r12
-    5e5d: mov    r12,rdi
-    5e60: push   rbx
-    5e61: and    rsp,0xffffffffffffffe0
-    5e65: sub    rsp,0xc0
-    5e6c: movdqu xmm1,XMMWORD PTR [rsi]
-    5e70: movdqu xmm2,XMMWORD PTR [rsi+0x10]
-    5e75: mov    esi,0x80
-    5e7a: lea    rbx,[rsp+0x40]
-    5e7f: mov    r13,rsp
-    5e82: mov    BYTE PTR [rsp+0x20],dl
-    5e86: mov    rdi,rbx
-    5e89: mov    rdx,r13
-    5e8c: movaps XMMWORD PTR [rsp],xmm1
-    5e90: movaps XMMWORD PTR [rsp+0x10],xmm2
-    5e95: call   3480 <mlkem_shake256>
-    5e9a: mov    rdi,r12
-    5e9d: mov    rsi,rbx
-    5ea0: call   63b0 <mlkem_poly_cbd2>
-    5ea5: xor    eax,eax
-    5ea7: mov    rdi,rbx
-    5eaa: mov    ecx,0x10
-    5eaf: rep    stos QWORD PTR es:[rdi],rax
-    5eb2: pxor   xmm0,xmm0
-    5eb6: mov    BYTE PTR [rsp+0x20],0x0
-    5ebb: movaps XMMWORD PTR [rsp],xmm0
-    5ebf: movaps XMMWORD PTR [rsp+0x10],xmm0
-    5ec4: lea    rsp,[rbp-0x18]
-    5ec8: pop    rbx
-    5ec9: pop    r12
-    5ecb: pop    r13
-    5ecd: pop    rbp
-    5ece: ret
+    mlkem512_poly_getnoise_eta2:
+       +0x0: push   rbp
+       +0x1: mov    ecx,0x21
+       +0x6: mov    rbp,rsp
+       +0x9: push   r13
+       +0xb: push   r12
+       +0xd: mov    r12,rdi
+      +0x10: push   rbx
+      +0x11: and    rsp,0xffffffffffffffe0
+      +0x15: sub    rsp,0xc0
+      +0x1c: movdqu xmm1,XMMWORD PTR [rsi]
+      +0x20: movdqu xmm2,XMMWORD PTR [rsi+0x10]
+      +0x25: mov    esi,0x80
+      +0x2a: lea    rbx,[rsp+0x40]
+      +0x2f: mov    r13,rsp
+      +0x32: mov    BYTE PTR [rsp+0x20],dl
+      +0x36: mov    rdi,rbx
+      +0x39: mov    rdx,r13
+      +0x3c: movaps XMMWORD PTR [rsp],xmm1
+      +0x40: movaps XMMWORD PTR [rsp+0x10],xmm2
+      +0x45: call   <mlkem_shake256>
+      +0x4a: mov    rdi,r12
+      +0x4d: mov    rsi,rbx
+      +0x50: call   <mlkem_poly_cbd2>
+      +0x55: xor    eax,eax
+      +0x57: mov    rdi,rbx
+      +0x5a: mov    ecx,0x10
+      +0x5f: rep    stos QWORD PTR es:[rdi],rax
+      +0x62: pxor   xmm0,xmm0
+      +0x66: mov    BYTE PTR [rsp+0x20],0x0
+      +0x6b: movaps XMMWORD PTR [rsp],xmm0
+      +0x6f: movaps XMMWORD PTR [rsp+0x10],xmm0
+      +0x74: lea    rsp,[rbp-0x18]
+      +0x78: pop    rbx
+      +0x79: pop    r12
+      +0x7b: pop    r13
+      +0x7d: pop    rbp
+      +0x7e: ret
  ***)
 
 let MLKEM_NATIVE_POLY_GETNOISE_ETA2_K2_GCC12_O2_EXEC =

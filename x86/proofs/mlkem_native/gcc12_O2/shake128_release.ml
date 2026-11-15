@@ -4,17 +4,15 @@
  *)
 
 (* ========================================================================= *)
-(* Zeroing a SHAKE128 context.                                               *)
-(* This is the code for mlkem_shake128_release from mlkem-native's portable  *)
-(* C implementation compiled by gcc 12 with -O2 (see                         *)
-(* mlkem_native/README.md). It is verified in the whole image (see           *)
-(* libmlkem.ml), where it is at address 0x3440. This                         *)
-(* zeroes the context of 224 bytes, the 200 bytes of the state padded to a   *)
-(* multiple of 32, in the way that gcc inlines a memset of memory whose      *)
-(* alignment is not known: it stores zero quadwords at both ends and then    *)
-(* clears the quadwords in between from the first multiple of 8 above the    *)
-(* start with REP STOSQ. So the specifications assume that the direction     *)
-(* flag DF is clear, as the ABI requires on entry.                           *)
+(* Zeroing a SHAKE128 context. This is the code for mlkem_shake128_release   *)
+(* from mlkem-native's portable C implementation compiled by gcc 12 with -O2 *)
+(* (see mlkem_native/README.md). It is verified in the whole image (see      *)
+(* libmlkem.ml). This zeroes the context of 224 bytes, the 200 bytes of the  *)
+(* state padded to a multiple of 32, in the way that gcc inlines a memset of *)
+(* memory whose alignment is not known: it stores zero quadwords at both     *)
+(* ends and then clears the quadwords in between from the first multiple of  *)
+(* 8 above the start with REP STOSQ. So the specifications assume that the   *)
+(* direction flag DF is clear, as the ABI requires on entry.                 *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -22,18 +20,19 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    3440: mov    QWORD PTR [rdi],0x0
-    3447: mov    rdx,rdi
-    344a: lea    rdi,[rdi+0x8]
-    344e: xor    eax,eax
-    3450: mov    QWORD PTR [rdi+0xd0],0x0
-    345b: mov    rcx,rdx
-    345e: and    rdi,0xfffffffffffffff8
-    3462: sub    rcx,rdi
-    3465: add    ecx,0xe0
-    346b: shr    ecx,0x3
-    346e: rep    stos QWORD PTR es:[rdi],rax
-    3471: ret
+    mlkem_shake128_release:
+       +0x0: mov    QWORD PTR [rdi],0x0
+       +0x7: mov    rdx,rdi
+       +0xa: lea    rdi,[rdi+0x8]
+       +0xe: xor    eax,eax
+      +0x10: mov    QWORD PTR [rdi+0xd0],0x0
+      +0x1b: mov    rcx,rdx
+      +0x1e: and    rdi,0xfffffffffffffff8
+      +0x22: sub    rcx,rdi
+      +0x25: add    ecx,0xe0
+      +0x2b: shr    ecx,0x3
+      +0x2e: rep    stos QWORD PTR es:[rdi],rax
+      +0x31: ret
  ***)
 
 let MLKEM_NATIVE_SHAKE128_RELEASE_GCC12_O2_EXEC =

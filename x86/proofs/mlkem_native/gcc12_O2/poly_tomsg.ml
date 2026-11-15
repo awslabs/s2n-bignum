@@ -4,11 +4,10 @@
  *)
 
 (* ========================================================================= *)
-(* Conversion of a polynomial to a 32-byte message.                          *)
-(* This is the code for mlkem_poly_tomsg from mlkem-native's portable C      *)
-(* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md).  *)
-(* It is verified in the whole image (see                                    *)
-(* libmlkem.ml), where it is at address 0x3260.                              *)
+(* Conversion of a polynomial to a 32-byte message. This is the code for     *)
+(* mlkem_poly_tomsg from mlkem-native's portable C implementation compiled   *)
+(* by gcc 12 with -O2 (see mlkem_native/README.md). It is verified in the    *)
+(* whole image (see libmlkem.ml).                                            *)
 (* ========================================================================= *)
 
 needs "x86/proofs/utils/mlkem_native.ml";;
@@ -16,28 +15,29 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    3260: xor    r8d,r8d
-    3263: nop    DWORD PTR [rax+rax*1+0x0]
-    3268: mov    BYTE PTR [rdi],0x0
-    326b: xor    edx,edx
-    326d: xor    ecx,ecx
-    326f: nop
-    3270: lea    eax,[rcx+r8*1]
-    3274: movsx  eax,WORD PTR [rsi+rax*2]
-    3278: imul   eax,eax,0x13afb8
-    327e: add    eax,0x40000000
-    3283: shr    eax,0x1f
-    3286: shl    eax,cl
-    3288: add    ecx,0x1
-    328b: or     edx,eax
-    328d: mov    BYTE PTR [rdi],dl
-    328f: cmp    ecx,0x8
-    3292: jne    3270 <mlkem_poly_tomsg+0x10>
-    3294: add    r8d,0x8
-    3298: add    rdi,0x1
-    329c: cmp    r8d,0x100
-    32a3: jne    3268 <mlkem_poly_tomsg+0x8>
-    32a5: ret
+    mlkem_poly_tomsg:
+       +0x0: xor    r8d,r8d
+       +0x3: nop    DWORD PTR [rax+rax*1+0x0]
+       +0x8: mov    BYTE PTR [rdi],0x0
+       +0xb: xor    edx,edx
+       +0xd: xor    ecx,ecx
+       +0xf: nop
+      +0x10: lea    eax,[rcx+r8*1]
+      +0x14: movsx  eax,WORD PTR [rsi+rax*2]
+      +0x18: imul   eax,eax,0x13afb8
+      +0x1e: add    eax,0x40000000
+      +0x23: shr    eax,0x1f
+      +0x26: shl    eax,cl
+      +0x28: add    ecx,0x1
+      +0x2b: or     edx,eax
+      +0x2d: mov    BYTE PTR [rdi],dl
+      +0x2f: cmp    ecx,0x8
+      +0x32: jne    <mlkem_poly_tomsg+0x10>
+      +0x34: add    r8d,0x8
+      +0x38: add    rdi,0x1
+      +0x3c: cmp    r8d,0x100
+      +0x43: jne    <mlkem_poly_tomsg+0x8>
+      +0x45: ret
  ***)
 
 let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC =

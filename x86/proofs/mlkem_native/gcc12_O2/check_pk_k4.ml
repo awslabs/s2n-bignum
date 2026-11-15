@@ -11,10 +11,9 @@
 (* stack, reduces it, encodes it again into another buffer, compares the     *)
 (* result in constant time with the key, and zeroes the buffers. Its code is *)
 (* that of mlkem512_check_pk apart from the sizes. It is verified in the     *)
-(* whole image (see libmlkem.ml), where it is at                             *)
-(* address 0x1790, using the theorems for mlkem1024_polyvec_frombytes at     *)
-(* 0x2000, mlkem1024_polyvec_reduce at 0x21d0 and mlkem1024_polyvec_tobytes  *)
-(* at 0x1fc0 in the image.                                                   *)
+(* whole image (see libmlkem.ml), using the theorems for                     *)
+(* mlkem1024_polyvec_frombytes, mlkem1024_polyvec_reduce and                 *)
+(* mlkem1024_polyvec_tobytes in the image.                                   *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/polyvec_frombytes_k4.ml";;
@@ -25,83 +24,84 @@ needs "x86/proofs/consttime.ml";;
 
 (*** The code in the image:
 
-    1790: push   rbp
-    1791: mov    rsi,rdi
-    1794: mov    rbp,rsp
-    1797: push   r13
-    1799: mov    r13,rdi
-    179c: push   r12
-    179e: push   rbx
-    179f: and    rsp,0xffffffffffffffe0
-    17a3: sub    rsp,0xe00
-    17aa: lea    rbx,[rsp+0x600]
-    17b2: mov    r12,rsp
-    17b5: mov    rdi,rbx
-    17b8: call   2000 <mlkem1024_polyvec_frombytes>
-    17bd: mov    rdi,rbx
-    17c0: call   21d0 <mlkem1024_polyvec_reduce>
-    17c5: mov    rsi,rbx
-    17c8: mov    rdi,r12
-    17cb: call   1fc0 <mlkem1024_polyvec_tobytes>
-    17d0: pxor   xmm2,xmm2
-    17d4: xor    eax,eax
-    17d6: movdqa xmm0,xmm2
-    17da: nop    WORD PTR [rax+rax*1+0x0]
-    17e0: movdqu xmm1,XMMWORD PTR [r13+rax*1+0x0]
-    17e7: pxor   xmm1,XMMWORD PTR [r12+rax*1]
-    17ed: add    rax,0x10
-    17f1: por    xmm0,xmm1
-    17f5: pxor   xmm2,xmm1
-    17f9: cmp    rax,0x600
-    17ff: jne    17e0 <mlkem1024_check_pk+0x50>
-    1801: movdqa xmm1,xmm2
-    1805: psrldq xmm1,0x8
-    180a: pxor   xmm2,xmm1
-    180e: movdqa xmm1,xmm2
-    1812: psrldq xmm1,0x4
-    1817: pxor   xmm2,xmm1
-    181b: movdqa xmm1,xmm2
-    181f: psrldq xmm1,0x2
-    1824: pxor   xmm2,xmm1
-    1828: movdqa xmm1,xmm2
-    182c: psrldq xmm1,0x1
-    1831: pxor   xmm2,xmm1
-    1835: movdqa xmm1,xmm0
-    1839: psrldq xmm1,0x8
-    183e: movd   edx,xmm2
-    1842: por    xmm0,xmm1
-    1846: movdqa xmm1,xmm0
-    184a: psrldq xmm1,0x4
-    184f: por    xmm0,xmm1
-    1853: movdqa xmm1,xmm0
-    1857: psrldq xmm1,0x2
-    185c: por    xmm0,xmm1
-    1860: movdqa xmm1,xmm0
-    1864: psrldq xmm1,0x1
-    1869: por    xmm0,xmm1
-    186d: movd   eax,xmm0
-    1871: movzx  eax,al
-    1874: neg    eax
-    1876: sar    eax,0x10
-    1879: xor    eax,edx
-    187b: cmp    al,dl
-    187d: mov    rdi,r12
-    1880: mov    ecx,0xc0
-    1885: sete   dl
-    1888: xor    eax,eax
-    188a: rep    stos QWORD PTR es:[rdi],rax
-    188d: movzx  edx,dl
-    1890: lea    edx,[rdx*4-0x4]
-    1897: mov    ecx,0x100
-    189c: mov    rdi,rbx
-    189f: rep    stos QWORD PTR es:[rdi],rax
-    18a2: lea    rsp,[rbp-0x18]
-    18a6: mov    eax,edx
-    18a8: pop    rbx
-    18a9: pop    r12
-    18ab: pop    r13
-    18ad: pop    rbp
-    18ae: ret
+    mlkem1024_check_pk:
+       +0x0: push   rbp
+       +0x1: mov    rsi,rdi
+       +0x4: mov    rbp,rsp
+       +0x7: push   r13
+       +0x9: mov    r13,rdi
+       +0xc: push   r12
+       +0xe: push   rbx
+       +0xf: and    rsp,0xffffffffffffffe0
+      +0x13: sub    rsp,0xe00
+      +0x1a: lea    rbx,[rsp+0x600]
+      +0x22: mov    r12,rsp
+      +0x25: mov    rdi,rbx
+      +0x28: call   <mlkem1024_polyvec_frombytes>
+      +0x2d: mov    rdi,rbx
+      +0x30: call   <mlkem1024_polyvec_reduce>
+      +0x35: mov    rsi,rbx
+      +0x38: mov    rdi,r12
+      +0x3b: call   <mlkem1024_polyvec_tobytes>
+      +0x40: pxor   xmm2,xmm2
+      +0x44: xor    eax,eax
+      +0x46: movdqa xmm0,xmm2
+      +0x4a: nop    WORD PTR [rax+rax*1+0x0]
+      +0x50: movdqu xmm1,XMMWORD PTR [r13+rax*1+0x0]
+      +0x57: pxor   xmm1,XMMWORD PTR [r12+rax*1]
+      +0x5d: add    rax,0x10
+      +0x61: por    xmm0,xmm1
+      +0x65: pxor   xmm2,xmm1
+      +0x69: cmp    rax,0x600
+      +0x6f: jne    <mlkem1024_check_pk+0x50>
+      +0x71: movdqa xmm1,xmm2
+      +0x75: psrldq xmm1,0x8
+      +0x7a: pxor   xmm2,xmm1
+      +0x7e: movdqa xmm1,xmm2
+      +0x82: psrldq xmm1,0x4
+      +0x87: pxor   xmm2,xmm1
+      +0x8b: movdqa xmm1,xmm2
+      +0x8f: psrldq xmm1,0x2
+      +0x94: pxor   xmm2,xmm1
+      +0x98: movdqa xmm1,xmm2
+      +0x9c: psrldq xmm1,0x1
+      +0xa1: pxor   xmm2,xmm1
+      +0xa5: movdqa xmm1,xmm0
+      +0xa9: psrldq xmm1,0x8
+      +0xae: movd   edx,xmm2
+      +0xb2: por    xmm0,xmm1
+      +0xb6: movdqa xmm1,xmm0
+      +0xba: psrldq xmm1,0x4
+      +0xbf: por    xmm0,xmm1
+      +0xc3: movdqa xmm1,xmm0
+      +0xc7: psrldq xmm1,0x2
+      +0xcc: por    xmm0,xmm1
+      +0xd0: movdqa xmm1,xmm0
+      +0xd4: psrldq xmm1,0x1
+      +0xd9: por    xmm0,xmm1
+      +0xdd: movd   eax,xmm0
+      +0xe1: movzx  eax,al
+      +0xe4: neg    eax
+      +0xe6: sar    eax,0x10
+      +0xe9: xor    eax,edx
+      +0xeb: cmp    al,dl
+      +0xed: mov    rdi,r12
+      +0xf0: mov    ecx,0xc0
+      +0xf5: sete   dl
+      +0xf8: xor    eax,eax
+      +0xfa: rep    stos QWORD PTR es:[rdi],rax
+      +0xfd: movzx  edx,dl
+     +0x100: lea    edx,[rdx*4-0x4]
+     +0x107: mov    ecx,0x100
+     +0x10c: mov    rdi,rbx
+     +0x10f: rep    stos QWORD PTR es:[rdi],rax
+     +0x112: lea    rsp,[rbp-0x18]
+     +0x116: mov    eax,edx
+     +0x118: pop    rbx
+     +0x119: pop    r12
+     +0x11b: pop    r13
+     +0x11d: pop    rbp
+     +0x11e: ret
  ***)
 
 let MLKEM_NATIVE_CHECK_PK_K4_GCC12_O2_EXEC =

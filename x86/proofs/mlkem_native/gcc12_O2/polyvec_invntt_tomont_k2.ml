@@ -4,14 +4,13 @@
  *)
 
 (* ========================================================================= *)
-(* Inverse number-theoretic transform of a vector of 2 polynomials.          *)
-(* This is the code for mlkem512_polyvec_invntt_tomont from mlkem-native's   *)
-(* portable C implementation compiled by gcc 12 with -O2 (see                *)
+(* Inverse number-theoretic transform of a vector of 2 polynomials. This is  *)
+(* the code for mlkem512_polyvec_invntt_tomont from mlkem-native's portable  *)
+(* C implementation compiled by gcc 12 with -O2 (see                         *)
 (* mlkem_native/README.md), which calls mlkem_poly_invntt_tomont for each of *)
 (* the polynomials, the last time as a tail call. It is verified in the      *)
-(* whole image (see libmlkem.ml), where it is at                             *)
-(* address 0x5b30, using the theorems for mlkem_poly_invntt_tomont at 0x5860 *)
-(* in the image.                                                             *)
+(* whole image (see libmlkem.ml), using the theorems for                     *)
+(* mlkem_poly_invntt_tomont in the image.                                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_invntt_tomont.ml";;
@@ -19,12 +18,13 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    5b30: push   rbx
-    5b31: mov    rbx,rdi
-    5b34: call   5860 <mlkem_poly_invntt_tomont>
-    5b39: lea    rdi,[rbx+0x200]
-    5b40: pop    rbx
-    5b41: jmp    5860 <mlkem_poly_invntt_tomont>
+    mlkem512_polyvec_invntt_tomont:
+       +0x0: push   rbx
+       +0x1: mov    rbx,rdi
+       +0x4: call   <mlkem_poly_invntt_tomont>
+       +0x9: lea    rdi,[rbx+0x200]
+      +0x10: pop    rbx
+      +0x11: jmp    <mlkem_poly_invntt_tomont>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K2_GCC12_O2_EXEC =

@@ -14,9 +14,8 @@
 (* inline memcpy, its hash H by mlkem_sha3_256 and the last 32 bytes z of    *)
 (* coins. If mlkem1024_indcpa_keypair_derand returned an error, which it     *)
 (* never does, the function would zero the keys. It is verified in the whole *)
-(* image (see libmlkem.ml), where it is at address                           *)
-(* 0x19a0, using the theorems for mlkem1024_indcpa_keypair_derand and        *)
-(* mlkem_sha3_256 in the image.                                              *)
+(* image (see libmlkem.ml), using the theorems for                           *)
+(* mlkem1024_indcpa_keypair_derand and mlkem_sha3_256 in the image.          *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/indcpa_keypair_derand_k4.ml";;
@@ -25,47 +24,48 @@ needs "x86/proofs/utils/mlkem_native_kem.ml";;
 
 (*** The code in the image:
 
-    19a0: push   r13
-    19a2: push   r12
-    19a4: mov    r12,rdx
-    19a7: push   rbp
-    19a8: mov    rbp,rdi
-    19ab: push   rbx
-    19ac: mov    rbx,rsi
-    19af: sub    rsp,0x8
-    19b3: call   1110 <mlkem1024_indcpa_keypair_derand>
-    19b8: mov    r13d,eax
-    19bb: test   eax,eax
-    19bd: jne    1a48 <mlkem1024_keypair_derand+0xa8>
-    19c3: mov    rax,QWORD PTR [rbp+0x0]
-    19c7: lea    rdi,[rbx+0x608]
-    19ce: lea    rcx,[rbx+0x600]
-    19d5: mov    rsi,rbp
-    19d8: and    rdi,0xfffffffffffffff8
-    19dc: mov    QWORD PTR [rbx+0x600],rax
-    19e3: sub    rcx,rdi
-    19e6: mov    rdx,QWORD PTR [rbp+0x618]
-    19ed: lea    rax,[rbx+0xc20]
-    19f4: sub    rsi,rcx
-    19f7: add    ecx,0x620
-    19fd: mov    QWORD PTR [rbx+0xc18],rdx
-    1a04: shr    ecx,0x3
-    1a07: mov    edx,0x620
-    1a0c: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
-    1a0f: mov    rsi,rbp
-    1a12: mov    rdi,rax
-    1a15: call   3510 <mlkem_sha3_256>
-    1a1a: movdqu xmm0,XMMWORD PTR [r12+0x20]
-    1a21: mov    eax,r13d
-    1a24: movups XMMWORD PTR [rbx+0xc40],xmm0
-    1a2b: movdqu xmm1,XMMWORD PTR [r12+0x30]
-    1a32: movups XMMWORD PTR [rbx+0xc50],xmm1
-    1a39: add    rsp,0x8
-    1a3d: pop    rbx
-    1a3e: pop    rbp
-    1a3f: pop    r12
-    1a41: pop    r13
-    1a43: ret
+    mlkem1024_keypair_derand:
+       +0x0: push   r13
+       +0x2: push   r12
+       +0x4: mov    r12,rdx
+       +0x7: push   rbp
+       +0x8: mov    rbp,rdi
+       +0xb: push   rbx
+       +0xc: mov    rbx,rsi
+       +0xf: sub    rsp,0x8
+      +0x13: call   <mlkem1024_indcpa_keypair_derand>
+      +0x18: mov    r13d,eax
+      +0x1b: test   eax,eax
+      +0x1d: jne    <mlkem1024_keypair_derand+0xa8>
+      +0x23: mov    rax,QWORD PTR [rbp+0x0]
+      +0x27: lea    rdi,[rbx+0x608]
+      +0x2e: lea    rcx,[rbx+0x600]
+      +0x35: mov    rsi,rbp
+      +0x38: and    rdi,0xfffffffffffffff8
+      +0x3c: mov    QWORD PTR [rbx+0x600],rax
+      +0x43: sub    rcx,rdi
+      +0x46: mov    rdx,QWORD PTR [rbp+0x618]
+      +0x4d: lea    rax,[rbx+0xc20]
+      +0x54: sub    rsi,rcx
+      +0x57: add    ecx,0x620
+      +0x5d: mov    QWORD PTR [rbx+0xc18],rdx
+      +0x64: shr    ecx,0x3
+      +0x67: mov    edx,0x620
+      +0x6c: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
+      +0x6f: mov    rsi,rbp
+      +0x72: mov    rdi,rax
+      +0x75: call   <mlkem_sha3_256>
+      +0x7a: movdqu xmm0,XMMWORD PTR [r12+0x20]
+      +0x81: mov    eax,r13d
+      +0x84: movups XMMWORD PTR [rbx+0xc40],xmm0
+      +0x8b: movdqu xmm1,XMMWORD PTR [r12+0x30]
+      +0x92: movups XMMWORD PTR [rbx+0xc50],xmm1
+      +0x99: add    rsp,0x8
+      +0x9d: pop    rbx
+      +0x9e: pop    rbp
+      +0x9f: pop    r12
+      +0xa1: pop    r13
+      +0xa3: ret
  ***)
 
 let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_EXEC =

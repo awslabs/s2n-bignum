@@ -4,13 +4,12 @@
  *)
 
 (* ========================================================================= *)
-(* Forward number-theoretic transform of a vector of 4 polynomials.          *)
-(* This is the code for mlkem1024_polyvec_ntt from mlkem-native's portable C *)
+(* Forward number-theoretic transform of a vector of 4 polynomials. This is  *)
+(* the code for mlkem1024_polyvec_ntt from mlkem-native's portable C         *)
 (* implementation compiled by gcc 12 with -O2 (see mlkem_native/README.md),  *)
 (* which calls mlkem_poly_ntt for each of the polynomials, the last time as  *)
-(* a tail call. It is verified in the whole image (see                       *)
-(* libmlkem.ml), where it is at address 0x2040, using                        *)
-(* the theorems for mlkem_poly_ntt at 0x5780 in the image.                   *)
+(* a tail call. It is verified in the whole image (see libmlkem.ml), using   *)
+(* the theorems for mlkem_poly_ntt in the image.                             *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_ntt.ml";;
@@ -18,16 +17,17 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    2040: push   rbx
-    2041: mov    rbx,rdi
-    2044: call   5780 <mlkem_poly_ntt>
-    2049: lea    rdi,[rbx+0x200]
-    2050: call   5780 <mlkem_poly_ntt>
-    2055: lea    rdi,[rbx+0x400]
-    205c: call   5780 <mlkem_poly_ntt>
-    2061: lea    rdi,[rbx+0x600]
-    2068: pop    rbx
-    2069: jmp    5780 <mlkem_poly_ntt>
+    mlkem1024_polyvec_ntt:
+       +0x0: push   rbx
+       +0x1: mov    rbx,rdi
+       +0x4: call   <mlkem_poly_ntt>
+       +0x9: lea    rdi,[rbx+0x200]
+      +0x10: call   <mlkem_poly_ntt>
+      +0x15: lea    rdi,[rbx+0x400]
+      +0x1c: call   <mlkem_poly_ntt>
+      +0x21: lea    rdi,[rbx+0x600]
+      +0x28: pop    rbx
+      +0x29: jmp    <mlkem_poly_ntt>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_NTT_K4_GCC12_O2_EXEC =

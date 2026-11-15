@@ -9,8 +9,8 @@
 (* portable C implementation compiled by gcc 12 with -O2 (see                *)
 (* mlkem_native/README.md), which calls mlkem_poly_tobytes for each of the   *)
 (* polynomials, the last time as a tail call. It is verified in the whole    *)
-(* image (see libmlkem.ml), where it is at address                           *)
-(* 0x74f0, using the theorems for mlkem_poly_tobytes at 0x3180 in the image. *)
+(* image (see libmlkem.ml), using the theorems for mlkem_poly_tobytes in the *)
+(* image.                                                                    *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native/gcc12_O2/poly_tobytes.ml";;
@@ -18,21 +18,22 @@ needs "x86/proofs/mlkem_native/gcc12_O2/libmlkem.ml";;
 
 (*** The code in the image:
 
-    74f0: push   rbp
-    74f1: mov    rbp,rsi
-    74f4: push   rbx
-    74f5: mov    rbx,rdi
-    74f8: sub    rsp,0x8
-    74fc: call   3180 <mlkem_poly_tobytes>
-    7501: lea    rsi,[rbp+0x200]
-    7508: lea    rdi,[rbx+0x180]
-    750f: call   3180 <mlkem_poly_tobytes>
-    7514: add    rsp,0x8
-    7518: lea    rsi,[rbp+0x400]
-    751f: lea    rdi,[rbx+0x300]
-    7526: pop    rbx
-    7527: pop    rbp
-    7528: jmp    3180 <mlkem_poly_tobytes>
+    mlkem768_polyvec_tobytes:
+       +0x0: push   rbp
+       +0x1: mov    rbp,rsi
+       +0x4: push   rbx
+       +0x5: mov    rbx,rdi
+       +0x8: sub    rsp,0x8
+       +0xc: call   <mlkem_poly_tobytes>
+      +0x11: lea    rsi,[rbp+0x200]
+      +0x18: lea    rdi,[rbx+0x180]
+      +0x1f: call   <mlkem_poly_tobytes>
+      +0x24: add    rsp,0x8
+      +0x28: lea    rsi,[rbp+0x400]
+      +0x2f: lea    rdi,[rbx+0x300]
+      +0x36: pop    rbx
+      +0x37: pop    rbp
+      +0x38: jmp    <mlkem_poly_tobytes>
  ***)
 
 let MLKEM_NATIVE_POLYVEC_TOBYTES_K3_GCC12_O2_EXEC =
