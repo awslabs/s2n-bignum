@@ -1210,27 +1210,10 @@ let MLKEM_INTT_CORRECT = prove
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN
 
-  W(fun (asl,w) ->
-    let lfn = undefined
-    and asms =
-      map snd (filter (is_local_definition [ntt_montmul; barred_x86] o concl o snd) asl) in
-    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
-
-    REPEAT(GEN_REWRITE_TAC I
-     [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC) THEN
-
-    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o rand o lhand o rator o lhand o snd) THEN
-   (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
-   [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 3329 65536`] THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
-    CONV_TAC(ONCE_DEPTH_CONV AVX2_INVERSE_NTT_CONV) THEN
-    REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
-    REWRITE_TAC[INT_REM_EQ] THEN INT_LINEAR_CONG_TAC;
-    MATCH_MP_TAC(INT_ARITH
-     `l':int <= l /\ u <= u'
-      ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
-    CONV_TAC INT_REDUCE_CONV]))
-);;
+  CONGBOUND_NTT_TAC
+    CONGBOUND_LFN_EMPTY [ntt_montmul; barred_x86] CONGBOUND_SPLIT_X86
+    (REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 3329 65536`])
+    AVX2_INVERSE_NTT_CONV);;
 
 let MLKEM_INTT_NOIBT_SUBROUTINE_CORRECT  = prove
   (`!a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.

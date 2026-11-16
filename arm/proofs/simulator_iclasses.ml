@@ -21,6 +21,12 @@ let iclasses =
   (*** ADC, ADCS, SBC, SBCS with register-register operands ***)
   "xxx11010000xxxxx000000xxxxxxxxxx";
 
+  (*** The same with XZR operands, which the template above seldom draws:
+   *** e.g. adc x0, x0, xzr; adc x0, xzr, xzr; ngc x0, x1 ***)
+  "xxx1101000011111000000xxxxxxxxxx";
+  "xxx110100001111100000011111xxxxx";
+  "xxx11010000xxxxx00000011111xxxxx";
+
   (*** ADD, ADDS, SUB, SUBS with immediate operand ***)
 
   (*** We want to avoid any use of SP since our crude simulation
@@ -33,6 +39,13 @@ let iclasses =
   "xx0100010xxxxxxxxxxxxxxx0xxxx0xx";
   "xx0100010xxxxxxxxxxxxxx0xxxx0xxx";
   "xx0100010xxxxxxxxxxxxx0xxxx0xxxx";
+
+  (*** ADD, SUB immediate: further non-SP register pairs whose encodings do not
+   *** share a zero-bit position with the templates above (e.g. add w19, w13, n).
+   *** Rn bit1 and one Rd bit forced to 0 keep both registers clear of SP.     ***)
+  "xx0100010xxxxxxxxxxxxxxxx0xxx0xx";
+  "xx0100010xxxxxxxxxxxxxxxx0xx0xxx";
+  "xx0100010xxxxxxxxxxxxxxxx0xxxxx0";
   "10010001000000001000001100110110"; (* unmatched case... *)
   "1001000100xxxxxxxxxxxx1110100010"; (* another: add x2, x29, #xxx *)
   (*** Rd of ADDS/SUBS cannot be SP *)
@@ -45,12 +58,41 @@ let iclasses =
   (*** ADD, ADDS, SUB, SUBS, shifted registers ***)
   "xxx01011xx0xxxxxxxxxxxxxxxxxxxxx";
 
+  (*** The same unshifted, and with XZR operands, which the template above
+   *** seldom draws: e.g. adds x0, x0, x1; cmp x2, x0; cmn x11, x1;
+   *** neg x0, x0; cmp x0, xzr. Shift type 11 and shifts of 32 or more
+   *** are left out so that these are all defined. One template cannot
+   *** leave out only shift type 11, so each XZR form has one template
+   *** for LSL and LSR (0x) and one for ASR (10). ***)
+  "xxx01011000xxxxx000000xxxxxxxxxx";
+  "xx1010110x0xxxxx0xxxxxxxxxx11111";
+  "xx101011100xxxxx0xxxxxxxxxx11111";
+  "x1x010110x0xxxxx0xxxxx11111xxxxx";
+  "x1x01011100xxxxx0xxxxx11111xxxxx";
+  "xxx010110x0111110xxxxxxxxxxxxxxx";
+  "xxx01011100111110xxxxxxxxxxxxxxx";
+
   (*** ADD, extended registers. No SP registers ***)
   "10001011001xxxxx010000xxxx0xxxx0"; (* uxtw *)
   "10001011001xxxxx010000xxx0xxxx0x"; (* uxtw *)
   "10001011001xxxxx010000xx0xxxx0xx"; (* uxtw *)
   "10001011001xxxxx010000x0xxxx0xxx"; (* uxtw *)
   "10001011001xxxxx0100000xxxx0xxxx"; (* uxtw *)
+
+  (*** ADD, ADDS, SUB, SUBS, extended registers: both sizes, every extend
+   *** option and the shifts 0-4 (5-7 are unallocated). A zero bit keeps Rn,
+   *** and Rd unless S is set, clear of SP. The last two are CMN and CMP
+   *** (ADDS and SUBS with Rd = XZR), which the others seldom draw. ***)
+  "xx001011001xxxxxxxx0xxxxxx0xxxx0";
+  "xx001011001xxxxxxxx0xxxxx0xxxx0x";
+  "xx001011001xxxxxxxx100xxxx0xxxx0";
+  "xx001011001xxxxxxxx100xxx0xxxx0x";
+  "xx101011001xxxxxxxx0xxxxxx0xxxxx";
+  "xx101011001xxxxxxxx0xxxxx0xxxxxx";
+  "xx101011001xxxxxxxx100xxxx0xxxxx";
+  "xx101011001xxxxxxxx100xxx0xxxxxx";
+  "xx101011001xxxxxxxx0xxxxxx011111";
+  "xx101011001xxxxxxxx100xxxx011111";
 
   (*** AND, ANDS, EOR, ORR with immediate operand, no negated forms ***)
   (*** Again we want to avoid using SP except for in ANDS ***)
@@ -77,8 +119,25 @@ let iclasses =
   (*** CSEL, CSINC, CSINV, CSNEG register-register ***)
   "xx011010100xxxxxxxxx0xxxxxxxxxxx";
 
+  (*** The same with XZR operands: e.g. cset x0, ne; csetm x1, ne;
+   *** csel x5, x3, xzr, eq; csel x1, xzr, x1, eq ***)
+  "xx01101010011111xxxx0x11111xxxxx";
+  "xx01101010011111xxxx0xxxxxxxxxxx";
+  "xx011010100xxxxxxxxx0x11111xxxxx";
+
   (*** AND, BIC, ..., ORN, shifted registers ***)
   "xxx01010xxxxxxxxxxxxxxxxxxxxxxxx";
+
+  (*** The same unshifted, and with XZR operands, which the template above
+   *** seldom draws: e.g. eor x1, x1, x0; mov x2, x0; mov x0, xzr;
+   *** mvn x0, x0; tst x1, x2. Shifts of 32 or more are left out so that
+   *** these are all defined. ***)
+  "xxx01010000xxxxx000000xxxxxxxxxx";
+  "x0101010000xxxxx00000011111xxxxx";
+  "x01010100001111100000011111xxxxx";
+  "x0101010xx1xxxxx0xxxxx11111xxxxx";
+  "xxx01010xxx111110xxxxxxxxxxxxxxx";
+  "xxx01010xxxxxxxx0xxxxxxxxxx11111";
 
   (*** MOVN, MOVZ, MOVK ***)
   "xxx100101xxxxxxxxxxxxxxxxxxxxxxx";
@@ -97,6 +156,9 @@ let iclasses =
 
   (*** MADD, MSUB ***)
   "x0011011000xxxxxxxxxxxxxxxxxxxxx";
+
+  (*** The same with Ra = XZR: mul, mneg ***)
+  "x0011011000xxxxxx11111xxxxxxxxxx";
 
   (*** UMULH ***)
   "10011011110xxxxx011111xxxxxxxxxx";
@@ -145,15 +207,22 @@ let iclasses =
   "0x00111000100000010110xxxxxxxxxx";
   "0x001110xx100000010110xxxxxxxxxx";
 
-  (*** DUP ***)
+  (*** DUP (general, from Xn) ***)
   "01001110000x1000000011xxxxxxxxxx"; (* original DUP Vd.2d, xn *)
   "0x001110000xxxxx000011xxxxxxxxxx"; (* other variants too     *)
+
+  (*** DUP (element): broadcast Vn.<T>[index] across Vd ***)
+  "0x001110000xxxxx000001xxxxxxxxxx";
+
+  (*** DUP (element), scalar form: mov Dd, Vn.<T>[index] ***)
+  "01011110000xxxxx000001xxxxxxxxxx";
 
   (*** EOR ***)
   "0x101110001xxxxx000111xxxxxxxxxx";
 
   (*** EXT ***)
-  "01101110000xxxxx0xxxx0xxxxxxxxxx"; (* 128 bits only *)
+  "01101110000xxxxx0xxxx0xxxxxxxxxx"; (* q=1, 128 bits *)
+  "00101110000xxxxx0xxxx0xxxxxxxxxx"; (* q=0, 64 bits or UNDEFINED *)
 
   (*** FCSEL, 32 and 64 bits ***)
   "00011110001xxxxxxxxx11xxxxxxxxxx";
@@ -283,6 +352,12 @@ let iclasses =
   (*** USUBW2 ***)
   "01101110xx1xxxxx001100xxxxxxxxxx";
 
+  (*** ADDV (across-vector add reduction) ***)
+  "0x001110xx110001101110xxxxxxxxxx";
+
+  (*** SMAX (signed element-wise maximum) ***)
+  "0x001110xx1xxxxx011001xxxxxxxxxx";
+
   (*** SHA256 Intrinsics ***)
   (*** SHA256H ***)
   "01011110000xxxxx010000xxxxxxxxxx";
@@ -314,10 +389,19 @@ let iclasses =
   "0x0011110001xxxx010101xxxxxxxxxx";
   "0x00111100001xxx010101xxxxxxxxxx";
 
+  (*** SHL (scalar): 64-bit form only, immh bit 3 set ***)
+  "0101111101xxxxxx010101xxxxxxxxxx";
+
   (*** SHRN ***)
   "00001111001xxxxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
   "000011110001xxxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
   "0000111100001xxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
+
+  (*** SHRN2 (make sure immh is nonzero) ***)
+  "0100111101xxxxxx100001xxxxxxxxxx"; (* immh<3> = 1, UNDEFINED *)
+  "01001111001xxxxx100001xxxxxxxxxx"; (* q=1, immh!=0 *)
+  "010011110001xxxx100001xxxxxxxxxx"; (* q=1, immh!=0 *)
+  "0100111100001xxx100001xxxxxxxxxx"; (* q=1, immh!=0 *)
 
   (*** SQSHRUN / SQSHRUN2 (make sure immh is nonzero) ***)
   "0x10111101xxxxxx100001xxxxxxxxxx";
@@ -403,8 +487,14 @@ let iclasses =
   (*** TBL2 ***)
   "0x001110000xxxxx001000xxxxxxxxxx";
 
+  (*** TBL3 (3-register table, len = 2) ***)
+  "0x001110000xxxxx010000xxxxxxxxxx";
+
   (*** TRN1 and TRN2 ***)
   "0x001110xx0xxxxx0x1010xxxxxxxxxx";
+
+  (*** UADALP (unsigned pairwise add and accumulate long) ***)
+  "0x101110xx100000011010xxxxxxxxxx";
 
   (*** UADDLP ***)
   "01101110xx100000001010xxxxxxxxxx";
@@ -412,8 +502,14 @@ let iclasses =
   (*** UADDLV ***)
   "0x101110xx110000001110xxxxxxxxxx";
 
+  (*** UMAX (unsigned element-wise maximum) ***)
+  "0x101110xx1xxxxx011001xxxxxxxxxx";
+
   (*** UMAXV ***)
   "0x101110xx110000101010xxxxxxxxxx";
+
+  (*** URHADD (unsigned rounding halving add) ***)
+  "0x101110xx1xxxxx000101xxxxxxxxxx";
 
   (*** UMIN, vector ***)
   "0x101110xx1xxxxx011011xxxxxxxxxx";
@@ -478,8 +574,11 @@ let iclasses =
   (*** UZP2 ***)
   "01001110xx0xxxxx010110xxxxxxxxxx";
 
-  (*** XTN ***)
+  (*** XTN (q=0, low half) ***)
   "00001110xx100001001010xxxxxxxxxx";
+
+  (*** XTN2 (q=1, high half) ***)
+  "01001110xx100001001010xxxxxxxxxx";
 
   (*** ZIP1 ***)
   "0x001110xx0xxxxx001110xxxxxxxxxx";
@@ -529,7 +628,8 @@ let match_bitpattern =
    iclasses. *)
 
 let check_insns () =
-  (* These commands are not going to be simulated. *)
+  (* These are not in iclasses. Memory operations, branches and calls are
+     cosimulated by separate generators in simulator.ml; ADRP is not. *)
   let skipping_iclasses = [
     (*** adr ***)
     "0xx10000xxxxxxxxxxxxxxxxxxxxxxxx";
@@ -716,6 +816,11 @@ let check_insns () =
 
     (*** ret ***)
     "1101011001011111000000xxxxx00000";
+
+    (*** bti c: the BTI landing pad at the head of an indirectly-called   ***)
+    (*** subroutine.  A hint with no register or memory effect, so there  ***)
+    (*** is nothing to simulate; arm_BTI models it as a no-op.            ***)
+    "11010101000000110010010001011111";
   ] in
 
   (* Check that iclasses and skipping_iclasses has no overlapping bitpattern. *)

@@ -123,7 +123,23 @@ and xmm11 = define `xmm11 = Simdreg (word 11) Lower_128`
 and xmm12 = define `xmm12 = Simdreg (word 12) Lower_128`
 and xmm13 = define `xmm13 = Simdreg (word 13) Lower_128`
 and xmm14 = define `xmm14 = Simdreg (word 14) Lower_128`
-and xmm15 = define `xmm15 = Simdreg (word 15) Lower_128`;;
+and xmm15 = define `xmm15 = Simdreg (word 15) Lower_128`
+and xmm16 = define `xmm16 = Simdreg (word 16) Lower_128`
+and xmm17 = define `xmm17 = Simdreg (word 17) Lower_128`
+and xmm18 = define `xmm18 = Simdreg (word 18) Lower_128`
+and xmm19 = define `xmm19 = Simdreg (word 19) Lower_128`
+and xmm20 = define `xmm20 = Simdreg (word 20) Lower_128`
+and xmm21 = define `xmm21 = Simdreg (word 21) Lower_128`
+and xmm22 = define `xmm22 = Simdreg (word 22) Lower_128`
+and xmm23 = define `xmm23 = Simdreg (word 23) Lower_128`
+and xmm24 = define `xmm24 = Simdreg (word 24) Lower_128`
+and xmm25 = define `xmm25 = Simdreg (word 25) Lower_128`
+and xmm26 = define `xmm26 = Simdreg (word 26) Lower_128`
+and xmm27 = define `xmm27 = Simdreg (word 27) Lower_128`
+and xmm28 = define `xmm28 = Simdreg (word 28) Lower_128`
+and xmm29 = define `xmm29 = Simdreg (word 29) Lower_128`
+and xmm30 = define `xmm30 = Simdreg (word 30) Lower_128`
+and xmm31 = define `xmm31 = Simdreg (word 31) Lower_128`;;
 
 let ymm0  = define `ymm0  = Simdreg (word 0) Lower_256`
 and ymm1  = define `ymm1  = Simdreg (word 1) Lower_256`
@@ -140,7 +156,23 @@ and ymm11 = define `ymm11 = Simdreg (word 11) Lower_256`
 and ymm12 = define `ymm12 = Simdreg (word 12) Lower_256`
 and ymm13 = define `ymm13 = Simdreg (word 13) Lower_256`
 and ymm14 = define `ymm14 = Simdreg (word 14) Lower_256`
-and ymm15 = define `ymm15 = Simdreg (word 15) Lower_256`;;
+and ymm15 = define `ymm15 = Simdreg (word 15) Lower_256`
+and ymm16 = define `ymm16 = Simdreg (word 16) Lower_256`
+and ymm17 = define `ymm17 = Simdreg (word 17) Lower_256`
+and ymm18 = define `ymm18 = Simdreg (word 18) Lower_256`
+and ymm19 = define `ymm19 = Simdreg (word 19) Lower_256`
+and ymm20 = define `ymm20 = Simdreg (word 20) Lower_256`
+and ymm21 = define `ymm21 = Simdreg (word 21) Lower_256`
+and ymm22 = define `ymm22 = Simdreg (word 22) Lower_256`
+and ymm23 = define `ymm23 = Simdreg (word 23) Lower_256`
+and ymm24 = define `ymm24 = Simdreg (word 24) Lower_256`
+and ymm25 = define `ymm25 = Simdreg (word 25) Lower_256`
+and ymm26 = define `ymm26 = Simdreg (word 26) Lower_256`
+and ymm27 = define `ymm27 = Simdreg (word 27) Lower_256`
+and ymm28 = define `ymm28 = Simdreg (word 28) Lower_256`
+and ymm29 = define `ymm29 = Simdreg (word 29) Lower_256`
+and ymm30 = define `ymm30 = Simdreg (word 30) Lower_256`
+and ymm31 = define `ymm31 = Simdreg (word 31) Lower_256`;;
 
 let zmm0  = define `zmm0  = Simdreg (word 0) Full_512`
 and zmm1  = define `zmm1  = Simdreg (word 1) Full_512`
@@ -238,6 +270,24 @@ let operand_INDUCTION,operand_RECURSION = define_type
   | Imm32 (32 word)
   | Imm64 (64 word)
   | Memop wordsize bsid";;
+
+(* ------------------------------------------------------------------------- *)
+(* EVEX instruction decorators.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+let evex_masking_INDUCTION,evex_masking_RECURSION = define_type
+ "evex_masking =
+    Unmasked
+  | Merge_mask (3 word)
+  | Zero_mask (3 word)";;
+
+let evex_brc_INDUCTION,evex_brc_RECURSION = define_type
+ "evex_brc =
+    No_brc
+  | Broadcast";;
+
+let evex_deco_INDUCTION,evex_deco_RECURSION = define_type
+ "evex_deco = Evex_deco evex_masking evex_brc";;
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions.                                                             *)

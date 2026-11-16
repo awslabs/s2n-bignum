@@ -1429,11 +1429,7 @@ let MLKEM_BASEMUL_K3_CORRECT = prove(
   REWRITE_TAC[pmulaccred0_k3; pmulacc0_k3; pmul0; pmulaccred0_odd_k3;
               pmulacc0_odd_k3; pmul0_odd; pmulaccred1_k3; pmulacc1_k3; pmul1] THEN
   STRIP_TAC THEN
-  ASSUM_LIST((fun ths -> W(MP_TAC o CONJUNCT1 o GEN_CONGBOUND_RULE ths o
-    rand o lhand o rator o snd))) THEN
-  REWRITE_TAC[GSYM INT_REM_EQ] THEN CONV_TAC INT_REM_DOWN_CONV THEN
-  MATCH_MP_TAC EQ_IMP THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-  CONV_TAC INT_RING
+  CONGBOUND_INT_RING_TAC
 );;
 
 let MLKEM_BASEMUL_K3_NOIBT_SUBROUTINE_CORRECT = prove(

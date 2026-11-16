@@ -1,3 +1,8 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (* ========================================================================= *)
 (* GHASH specification and Horner unrolling lemma.                           *)
 (*                                                                           *)
@@ -15,7 +20,7 @@
 (*   INNER_CONG: (a+b) * dot(h,h) == dot(a XOR b, h) * h  (mod Q)            *)
 (*   GHASH_POLYVAL_ACC_2: 2-block Horner equals batched form                 *)
 (*                                                                           *)
-(* Q(x) structural facts (integral-domain/irreducibility, cancellation,      *)
+(* Q(x) structural facts (integral domain, cancellation,                     *)
 (* congruence-to-word-equality) live in common/polyval.ml.                   *)
 (* ========================================================================= *)
 
@@ -65,19 +70,6 @@ let GHASH_ACC_APPEND = prove
   GEN_TAC THEN LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC[APPEND; ghash_polyval_acc]);;
 
-(* Step congruence: result * x^128 == (acc + x) * H (mod Q)                  *)
-let GHASH_ACC_STEP_CONG = prove
- (`!h acc x.
-   (ring_mul bool_poly
-     (poly_of_word (ghash_polyval_acc h acc [x]))
-     (ring_pow bool_poly (poly_var bool_ring one) 128)
-    == ring_mul bool_poly
-         (ring_add bool_poly (poly_of_word acc) (poly_of_word x))
-         (poly_of_word h))
-   (mod_polyval)`,
-  REWRITE_TAC[ghash_polyval_acc; GSYM POLY_OF_WORD_XOR;
-              POLYVAL_DOT_CORRECT]);;
-
 let BOOL_POLY_MUL_COMM23 = prove
  (`!a b c. a IN ring_carrier bool_poly /\
            b IN ring_carrier bool_poly /\
@@ -89,21 +81,27 @@ let BOOL_POLY_MUL_COMM23 = prove
 (* Specific ring equalities for the 2-block Horner proof *)
 let COMM23_SPEC = prove
  (`ring_mul bool_poly
-    (ring_mul bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))) (poly_of_word h))
+    (ring_mul bool_poly
+     (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)))
+       (poly_of_word h))
     (ring_pow bool_poly (poly_var bool_ring one) 128) =
    ring_mul bool_poly
-    (ring_mul bool_poly (poly_of_word (polyval_dot (word_xor a b) h)) (ring_pow bool_poly (poly_var bool_ring one) 128))
+    (ring_mul bool_poly (poly_of_word (polyval_dot (word_xor a b) h))
+     (ring_pow bool_poly (poly_var bool_ring one) 128))
     (poly_of_word h)`,
   MATCH_MP_TAC BOOL_POLY_MUL_COMM23 THEN
   REWRITE_TAC[BOOL_POLY_OF_WORD; POLY_VARPOW_BOOL_POLY]);;
 
 let ASSOC_SPEC = prove
  (`ring_mul bool_poly
-    (ring_mul bool_poly (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128))) (poly_of_word (polyval_dot (h:int128) h)))
+    (ring_mul bool_poly
+     (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128)))
+       (poly_of_word (polyval_dot (h:int128) h)))
     (ring_pow bool_poly (poly_var bool_ring one) 128) =
    ring_mul bool_poly
     (ring_add bool_poly (poly_of_word a) (poly_of_word b))
-    (ring_mul bool_poly (poly_of_word (polyval_dot h h)) (ring_pow bool_poly (poly_var bool_ring one) 128))`,
+    (ring_mul bool_poly (poly_of_word (polyval_dot h h))
+     (ring_pow bool_poly (poly_var bool_ring one) 128))`,
   MATCH_MP_TAC (GSYM RING_MUL_ASSOC) THEN
   SIMP_TAC[RING_ADD; BOOL_POLY_OF_WORD; POLY_VARPOW_BOOL_POLY]);;
 
@@ -112,7 +110,8 @@ let ASSOC_REV_SPEC = prove
     (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128)))
     (ring_mul bool_poly (poly_of_word (h:int128)) (poly_of_word h)) =
    ring_mul bool_poly
-    (ring_mul bool_poly (ring_add bool_poly (poly_of_word a) (poly_of_word b)) (poly_of_word h))
+    (ring_mul bool_poly (ring_add bool_poly (poly_of_word a) (poly_of_word b))
+     (poly_of_word h))
     (poly_of_word h)`,
   MATCH_MP_TAC RING_MUL_ASSOC THEN
   SIMP_TAC[RING_ADD; BOOL_POLY_OF_WORD]);;
@@ -138,19 +137,27 @@ let INNER_CONG = prove
   CONJ_TAC THENL
    [ONCE_REWRITE_TAC[ASSOC_REV_SPEC] THEN
     MP_TAC(ISPECL
-      [`ring_mul bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))) (ring_pow bool_poly (poly_var bool_ring one) 128)`;
-       `ring_mul bool_poly (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128))) (poly_of_word (h:int128))`;
-       `poly_of_word (h:int128)`; `poly_of_word (h:int128)`] MOD_POLYVAL_MUL) THEN
+      [`ring_mul bool_poly
+        (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)))
+          (ring_pow bool_poly (poly_var bool_ring one) 128)`;
+       `ring_mul bool_poly
+        (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128)))
+          (poly_of_word (h:int128))`;
+       `poly_of_word (h:int128)`;
+       `poly_of_word (h:int128)`] MOD_POLYVAL_MUL) THEN
     ANTS_TAC THENL
      [CONJ_TAC THENL
-       [MP_TAC(ISPECL [`word_xor (a:int128) (b:int128)`; `h:int128`] POLYVAL_DOT_CORRECT) THEN REWRITE_TAC[POLY_OF_WORD_XOR];
+       [MP_TAC(ISPECL [`word_xor (a:int128) (b:int128)`; `h:int128`]
+               POLYVAL_DOT_CORRECT) THEN REWRITE_TAC[POLY_OF_WORD_XOR];
         REWRITE_TAC[MOD_POLYVAL_REFL; BOOL_POLY_OF_WORD]]; REWRITE_TAC[]];
     ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
     MP_TAC(ISPECL
       [`ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128))`;
        `ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128))`;
-       `ring_mul bool_poly (poly_of_word (polyval_dot (h:int128) h)) (ring_pow bool_poly (poly_var bool_ring one) 128)`;
-       `ring_mul bool_poly (poly_of_word (h:int128)) (poly_of_word h)`] MOD_POLYVAL_MUL) THEN
+       `ring_mul bool_poly (poly_of_word (polyval_dot (h:int128) h))
+        (ring_pow bool_poly (poly_var bool_ring one) 128)`;
+       `ring_mul bool_poly (poly_of_word (h:int128)) (poly_of_word h)`]
+         MOD_POLYVAL_MUL) THEN
     ANTS_TAC THENL
      [CONJ_TAC THENL
        [REWRITE_TAC[MOD_POLYVAL_REFL; RING_ADD; BOOL_POLY_OF_WORD];
@@ -175,16 +182,25 @@ let GHASH_POLYVAL_ACC_2 = prove
   MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
   EXISTS_TAC
     `ring_add bool_poly
-      (ring_mul bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))) (poly_of_word h))
+      (ring_mul bool_poly
+       (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)))
+         (poly_of_word h))
       (ring_mul bool_poly (poly_of_word (c:int128)) (poly_of_word h))` THEN
   CONJ_TAC THENL
    [MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
     EXISTS_TAC
       `ring_mul bool_poly
-        (ring_add bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))) (poly_of_word (c:int128)))
+        (ring_add bool_poly
+         (poly_of_word
+          (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)))
+            (poly_of_word (c:int128)))
         (poly_of_word h)` THEN
     CONJ_TAC THENL
-     [MP_TAC(ISPECL [`word_xor (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)) (c:int128)`; `h:int128`] POLYVAL_DOT_CORRECT) THEN REWRITE_TAC[POLY_OF_WORD_XOR];
+     [MP_TAC(ISPECL
+             [`word_xor
+               (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))
+                 (c:int128)`; `h:int128`] POLYVAL_DOT_CORRECT) THEN
+                 REWRITE_TAC[POLY_OF_WORD_XOR];
       MATCH_MP_TAC MOD_POLYVAL_REFL_GEN THEN
       SIMP_TAC[RING_MUL; RING_ADD; BOOL_POLY_OF_WORD] THEN
       MATCH_MP_TAC(GSYM RING_ADD_RDISTRIB) THEN REWRITE_TAC[BOOL_POLY_OF_WORD]];
@@ -192,15 +208,31 @@ let GHASH_POLYVAL_ACC_2 = prove
     MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
     EXISTS_TAC
       `ring_add bool_poly
-        (ring_mul bool_poly (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128))) (poly_of_word (polyval_dot (h:int128) h)))
+        (ring_mul bool_poly
+         (ring_add bool_poly (poly_of_word (a:int128))
+          (poly_of_word (b:int128))) (poly_of_word (polyval_dot (h:int128) h)))
         (ring_mul bool_poly (poly_of_word (c:int128)) (poly_of_word h))` THEN
     CONJ_TAC THENL
-     [MP_TAC(ISPECL [`word_xor (word_pmul (word_xor (a:int128) (b:int128)) (polyval_dot (h:int128) h) : 256 word) (word_pmul (c:int128) h : 256 word)`] POLYVAL_REDUCE_PROP3_CORRECT) THEN REWRITE_TAC[POLY_OF_WORD_XOR; POLY_OF_WORD_PMUL_2N];
+     [MP_TAC(ISPECL
+             [`word_xor
+               (word_pmul (word_xor (a:int128) (b:int128))
+                (polyval_dot (h:int128) h) : 256 word)
+                  (word_pmul (c:int128) h : 256 word)`]
+                    POLYVAL_REDUCE_PROP3_CORRECT) THEN
+                    REWRITE_TAC[POLY_OF_WORD_XOR; POLY_OF_WORD_PMUL_2N];
       MP_TAC(ISPECL
-        [`ring_mul bool_poly (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128))) (poly_of_word (polyval_dot (h:int128) h))`;
-         `ring_mul bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))) (poly_of_word h)`;
-         `ring_mul bool_poly (poly_of_word (c:int128)) (poly_of_word (h:int128))`;
-         `ring_mul bool_poly (poly_of_word (c:int128)) (poly_of_word (h:int128))`] MOD_POLYVAL_ADD) THEN
+        [`ring_mul bool_poly
+          (ring_add bool_poly (poly_of_word (a:int128))
+           (poly_of_word (b:int128)))
+             (poly_of_word (polyval_dot (h:int128) h))`;
+         `ring_mul bool_poly
+          (poly_of_word
+           (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)))
+             (poly_of_word h)`;
+         `ring_mul bool_poly (poly_of_word (c:int128))
+          (poly_of_word (h:int128))`;
+         `ring_mul bool_poly (poly_of_word (c:int128))
+          (poly_of_word (h:int128))`] MOD_POLYVAL_ADD) THEN
       ANTS_TAC THENL
        [CONJ_TAC THENL
          [REWRITE_TAC[INNER_CONG];
@@ -272,7 +304,8 @@ let MID_COMM = prove(
 
 let INNER_CONG_GEN = prove(
   `!(h:int128) (a:int128) (k:num).
-    (ring_mul bool_poly (poly_of_word(polyval_dot a h)) (poly_of_word(h_power h k)) ==
+    (ring_mul bool_poly (poly_of_word(polyval_dot a h))
+     (poly_of_word(h_power h k)) ==
      ring_mul bool_poly (poly_of_word a) (poly_of_word(h_power h (SUC k))))
     mod_polyval`,
   REPEAT GEN_TAC THEN REWRITE_TAC[h_power] THEN
@@ -285,7 +318,8 @@ let INNER_CONG_GEN = prove(
     (poly_of_word (h_power h k))` THEN
   CONJ_TAC THENL
    [MP_TAC(ISPECL
-     [`ring_mul bool_poly (poly_of_word (polyval_dot (a:int128) (h:int128))) (ring_pow bool_poly (poly_var bool_ring one) 128)`;
+     [`ring_mul bool_poly (poly_of_word (polyval_dot (a:int128) (h:int128)))
+       (ring_pow bool_poly (poly_var bool_ring one) 128)`;
       `ring_mul bool_poly (poly_of_word (a:int128)) (poly_of_word (h:int128))`;
       `poly_of_word (h_power (h:int128) k)`;
       `poly_of_word (h_power (h:int128) k)`] MOD_POLYVAL_MUL) THEN
@@ -298,8 +332,10 @@ let INNER_CONG_GEN = prove(
     MP_TAC(ISPECL
      [`poly_of_word (a:int128)`;
       `poly_of_word (a:int128)`;
-      `ring_mul bool_poly (poly_of_word (polyval_dot (h_power (h:int128) k) h)) (ring_pow bool_poly (poly_var bool_ring one) 128)`;
-      `ring_mul bool_poly (poly_of_word (h_power (h:int128) k)) (poly_of_word h)`] MOD_POLYVAL_MUL) THEN
+      `ring_mul bool_poly (poly_of_word (polyval_dot (h_power (h:int128) k) h))
+       (ring_pow bool_poly (poly_var bool_ring one) 128)`;
+      `ring_mul bool_poly (poly_of_word (h_power (h:int128) k))
+       (poly_of_word h)`] MOD_POLYVAL_MUL) THEN
     ANTS_TAC THENL
      [CONJ_TAC THENL
        [REWRITE_TAC[MOD_POLYVAL_REFL; BOOL_POLY_OF_WORD];
@@ -322,39 +358,61 @@ let GHASH_POLYVAL_ACC_BATCHED = prove(
       word_xor (word_pmul (word_xor a b) (h_power h (LENGTH bs)) : 256 word)
                (ghash_wide h (LENGTH bs - 1) bs))`,
   GEN_TAC THEN LIST_INDUCT_TAC THENL
-   [REWRITE_TAC[ghash_polyval_acc; ghash_wide; LENGTH; h_power; WORD_XOR_0; polyval_dot; SUB_0];
+   [REWRITE_TAC[ghash_polyval_acc; ghash_wide; LENGTH; h_power; WORD_XOR_0;
+                polyval_dot; SUB_0];
     REPEAT GEN_TAC THEN
     REWRITE_TAC[ghash_polyval_acc; LENGTH; ghash_wide; SUC_SUB1] THEN
-    FIRST_X_ASSUM(MP_TAC o SPECL [`polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)`; `h':int128`]) THEN
+    FIRST_X_ASSUM(MP_TAC o SPECL
+                  [`polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)`;
+                   `h':int128`]) THEN
     REWRITE_TAC[ghash_polyval_acc] THEN DISCH_THEN SUBST1_TAC THEN
     MATCH_MP_TAC(ISPEC `128` MOD_POLYVAL_CANCEL_VARPOW) THEN
     MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
     EXISTS_TAC `poly_of_word(word_xor
-      (word_pmul (word_xor (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)) (h':int128))
+      (word_pmul
+       (word_xor (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))
+        (h':int128))
                  (h_power h (LENGTH (t:(int128)list))))
       (ghash_wide h (LENGTH t - 1) t) : 256 word)` THEN
     CONJ_TAC THENL [REWRITE_TAC[POLYVAL_REDUCE_PROP3_CORRECT]; ALL_TAC] THEN
     ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
     MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
     EXISTS_TAC `poly_of_word(word_xor
-      (word_pmul (word_xor (a:int128) (b:int128)) (h_power (h:int128) (SUC (LENGTH (t:(int128)list)))))
+      (word_pmul (word_xor (a:int128) (b:int128))
+       (h_power (h:int128) (SUC (LENGTH (t:(int128)list)))))
       (word_xor (word_pmul (h':int128) (h_power h (LENGTH t)))
                 (ghash_wide h (LENGTH t - 1) t)) : 256 word)` THEN
     CONJ_TAC THENL [REWRITE_TAC[POLYVAL_REDUCE_PROP3_CORRECT]; ALL_TAC] THEN
     REWRITE_TAC[POLY_OF_WORD_XOR; POLY_OF_WORD_PMUL_2N] THEN
     MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
     EXISTS_TAC `ring_add bool_poly
-      (ring_mul bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)))
+      (ring_mul bool_poly
+       (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)))
                           (poly_of_word (h_power h (LENGTH (t:(int128)list)))))
       (ring_add bool_poly
-        (ring_mul bool_poly (poly_of_word (h':int128)) (poly_of_word (h_power h (LENGTH t))))
+        (ring_mul bool_poly (poly_of_word (h':int128))
+         (poly_of_word (h_power h (LENGTH t))))
         (poly_of_word (ghash_wide h (LENGTH t - 1) t)))` THEN
     CONJ_TAC THENL
      [MP_TAC(ISPECL
-       [`ring_mul bool_poly (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128))) (poly_of_word (h_power (h:int128) (SUC (LENGTH (t:(int128)list)))))`;
-        `ring_mul bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))) (poly_of_word (h_power h (LENGTH (t:(int128)list))))`;
-        `ring_add bool_poly (ring_mul bool_poly (poly_of_word (h':int128)) (poly_of_word (h_power (h:int128) (LENGTH (t:(int128)list))))) (poly_of_word (ghash_wide h (LENGTH t - 1) t))`;
-        `ring_add bool_poly (ring_mul bool_poly (poly_of_word (h':int128)) (poly_of_word (h_power (h:int128) (LENGTH (t:(int128)list))))) (poly_of_word (ghash_wide h (LENGTH t - 1) t))`] MOD_POLYVAL_ADD) THEN
+       [`ring_mul bool_poly
+         (ring_add bool_poly (poly_of_word (a:int128))
+          (poly_of_word (b:int128)))
+            (poly_of_word
+             (h_power (h:int128) (SUC (LENGTH (t:(int128)list)))))`;
+        `ring_mul bool_poly
+         (poly_of_word
+          (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)))
+            (poly_of_word (h_power h (LENGTH (t:(int128)list))))`;
+        `ring_add bool_poly
+         (ring_mul bool_poly (poly_of_word (h':int128))
+          (poly_of_word (h_power (h:int128) (LENGTH (t:(int128)list)))))
+            (poly_of_word (ghash_wide h (LENGTH t - 1) t))`;
+        `ring_add bool_poly
+         (ring_mul bool_poly (poly_of_word (h':int128))
+          (poly_of_word (h_power (h:int128) (LENGTH (t:(int128)list)))))
+            (poly_of_word (ghash_wide h (LENGTH t - 1) t))`]
+              MOD_POLYVAL_ADD) THEN
       ANTS_TAC THENL
        [CONJ_TAC THENL
          [ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
@@ -366,7 +424,9 @@ let GHASH_POLYVAL_ACC_BATCHED = prove(
       SIMP_TAC[RING_ADD; RING_MUL; BOOL_POLY_OF_WORD] THEN
       SUBGOAL_THEN
         `ring_mul bool_poly
-          (ring_add bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)))
+          (ring_add bool_poly
+           (poly_of_word
+            (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)))
                               (poly_of_word (h':int128)))
           (poly_of_word (h_power h (LENGTH (t:(int128)list)))) =
          ring_add bool_poly
@@ -375,12 +435,20 @@ let GHASH_POLYVAL_ACC_BATCHED = prove(
           (ring_mul bool_poly (poly_of_word h')
                               (poly_of_word (h_power h (LENGTH t))))`
       SUBST1_TAC THENL
-       [MP_TAC(ISPECL [`bool_poly`; `poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))`; `poly_of_word (h':int128)`; `poly_of_word (h_power (h:int128) (LENGTH (t:(int128)list)))`] RING_ADD_RDISTRIB) THEN
+       [MP_TAC(ISPECL
+               [`bool_poly`;
+                `poly_of_word
+                 (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))`;
+                 `poly_of_word (h':int128)`;
+                 `poly_of_word (h_power (h:int128) (LENGTH (t:(int128)list)))`]
+                   RING_ADD_RDISTRIB) THEN
         SIMP_TAC[BOOL_POLY_OF_WORD];
         MESON_TAC[RING_ADD_ASSOC; RING_ADD; RING_MUL; BOOL_POLY_OF_WORD]]]]);;
 
 (* ========================================================================= *)
-(* Htable precondition and Karatsuba middle term                             *)
+(* The Karatsuba middle term and the 64-bit half swap, the two operations    *)
+(* used to describe AWS-LC's gcm_init_v8 table of powers of H (htable_mem_4  *)
+(* and htable_mem_8 in arm/proofs/utils/aes_gcm_spec.ml)                     *)
 (* ========================================================================= *)
 
 let karatsuba_mid = new_definition
@@ -388,58 +456,10 @@ let karatsuba_mid = new_definition
    word_xor (word_subword h (0,64) : 64 word)
             (word_subword h (64,64) : 64 word)`;;
 
-let htable_powers = new_definition
-  `htable_powers (h:int128) (powers:(int128)list) (n:num) <=>
-   LENGTH powers = n /\
-   !k. k < n ==> EL k powers = h_power h k`;;
-
-let GHASH_BATCHED_FROM_HTABLE = prove(
-  `!(h:int128) (a:int128) (b:int128) (bs:(int128)list) (powers:(int128)list).
-    htable_powers h powers (SUC(LENGTH bs))
-    ==> ghash_polyval_acc h a (CONS b bs) =
-        polyval_reduce_prop3(
-          word_xor (word_pmul (word_xor a b) (EL (LENGTH bs) powers) : 256 word)
-                   (ghash_wide h (LENGTH bs - 1) bs))`,
-  REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC o REWRITE_RULE[htable_powers]) THEN
-  STRIP_TAC THEN
-  SUBGOAL_THEN `EL (LENGTH (bs:(int128)list)) powers = h_power (h:int128) (LENGTH bs)` SUBST1_TAC THENL
-   [FIRST_X_ASSUM MATCH_MP_TAC THEN ARITH_TAC;
-    REWRITE_TAC[GHASH_POLYVAL_ACC_BATCHED]]);;
-
-(* =========================================================================  *)
-(* Memory-level Htable predicate matching H table initialization output layout*)
-(* 12 x 128-bit entries (192 bytes) for H^1..H^8 with Karatsuba middle terms  *)
-(* Layout: groups of 3 entries [H^{2k+1}, pack(mid,mid), H^{2k+2}]            *)
-(* ========================================================================== *)
-
 let byteswap128 = new_definition
   `byteswap128 (x:int128) : int128 =
    word_join (word_subword x (0,64) : 64 word)
              (word_subword x (64,64) : 64 word)`;;
-
-let htable_mem = new_definition
-  `htable_mem (h:int128) (ptr:int64) (s:armstate) <=>
-   read (memory :> bytes128 ptr) s = byteswap128(h_power h 0) /\
-   read (memory :> bytes128 (word_add ptr (word 16))) s =
-     word_join (karatsuba_mid(h_power h 0) : 64 word)
-               (karatsuba_mid(h_power h 1) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 32))) s = byteswap128(h_power h 1) /\
-   read (memory :> bytes128 (word_add ptr (word 48))) s = byteswap128(h_power h 2) /\
-   read (memory :> bytes128 (word_add ptr (word 64))) s =
-     word_join (karatsuba_mid(h_power h 2) : 64 word)
-               (karatsuba_mid(h_power h 3) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 80))) s = byteswap128(h_power h 3) /\
-   read (memory :> bytes128 (word_add ptr (word 96))) s = byteswap128(h_power h 4) /\
-   read (memory :> bytes128 (word_add ptr (word 112))) s =
-     word_join (karatsuba_mid(h_power h 4) : 64 word)
-               (karatsuba_mid(h_power h 5) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 128))) s = byteswap128(h_power h 5) /\
-   read (memory :> bytes128 (word_add ptr (word 144))) s = byteswap128(h_power h 6) /\
-   read (memory :> bytes128 (word_add ptr (word 160))) s =
-     word_join (karatsuba_mid(h_power h 6) : 64 word)
-               (karatsuba_mid(h_power h 7) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 176))) s = byteswap128(h_power h 7)`;;
 
 (* ========================================================================= *)
 (* The x-shift / twist: multiplication by x mod Q(x)                         *)
@@ -469,7 +489,8 @@ let POLY_OF_WORD_2 = prove(
     SUBST1_TAC THENL
    [ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
     X_GEN_TAC `i:num` THEN DISCH_TAC THEN
-    REWRITE_TAC[word_of_poly; BIT_WORD_OF_BITS; IN_ELIM_THM; BIT_WORD_2_128] THEN
+    REWRITE_TAC[word_of_poly; BIT_WORD_OF_BITS; IN_ELIM_THM;
+                BIT_WORD_2_128] THEN
     REWRITE_TAC[poly_var; bool_poly; POLY_RING; BOOL_RING;
                 monomial_1; monomial_var; coeff] THEN
     REWRITE_TAC[FUN_EQ_THM; FORALL_ONE_THM] THEN
@@ -479,17 +500,6 @@ let POLY_OF_WORD_2 = prove(
     REWRITE_TAC[POLY_DEG_VAR; BOOL_RING] THEN
     CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
     ARITH_TAC]);;
-
-(* Q(x) = x^128 + TWIST_CONST (at 256 bits) *)
-let POLYVAL_DECOMP = prove(
-  `polyval_poly = ring_add bool_poly
-    (poly_of_word(word(2 EXP 128) : 256 word))
-    (poly_of_word(word 0xC2000000000000000000000000000001 : 256 word))`,
-  MP_TAC(INST_TYPE [`:256`,`:N`] POLYVAL_POLY_OF_WORD) THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  CONV_TAC NUM_REDUCE_CONV THEN DISCH_THEN SUBST1_TAC THEN
-  REWRITE_TAC[GSYM POLY_OF_WORD_XOR] THEN
-  AP_TERM_TAC THEN CONV_TAC WORD_REDUCE_CONV);;
 
 (* GHASH_TWIST_CORRECT: the twist computes x * H mod Q(x).                   *)
 (* Proof: decompose word_pmul h (word 2) = word_shl (word_zx h) 1 at 256     *)
@@ -542,15 +552,19 @@ let TWIST_WORD_IDENTITY = prove(
 let GHASH_TWIST_CORRECT = prove(
   `!h:int128.
     (poly_of_word(ghash_twist h) ==
-     ring_mul bool_poly (poly_var bool_ring one) (poly_of_word h)) (mod_polyval)`,
+     ring_mul bool_poly (poly_var bool_ring one) (poly_of_word h))
+       (mod_polyval)`,
   GEN_TAC THEN
   SUBGOAL_THEN
     `poly_of_word(ghash_twist (h:int128)) =
-     poly_of_word(polyval_reduce_step(word_pmul h (word 2:int128) : 256 word) : 256 word)`
+     poly_of_word(polyval_reduce_step(word_pmul h (word 2:int128) : 256 word) :
+                  256 word)`
     SUBST1_TAC THENL
-   [TRANS_TAC EQ_TRANS `poly_of_word(word_zx(ghash_twist (h:int128)) : 256 word)` THEN
+   [TRANS_TAC EQ_TRANS
+    `poly_of_word(word_zx(ghash_twist (h:int128)) : 256 word)` THEN
     CONJ_TAC THENL
-     [SIMP_TAC[POLY_OF_WORD_ZX; DIMINDEX_128; DIMINDEX_256; ARITH_RULE `128 <= 256`];
+     [SIMP_TAC[POLY_OF_WORD_ZX; DIMINDEX_128; DIMINDEX_256;
+               ARITH_RULE `128 <= 256`];
       AP_TERM_TAC THEN REWRITE_TAC[TWIST_WORD_IDENTITY; PMUL_2_AS_SHL]];
     MP_TAC(ISPEC `word_pmul (h:int128) (word 2:int128) : 256 word`
                  POLY_EQUIV_POLYVAL_REDUCE_STEP) THEN
