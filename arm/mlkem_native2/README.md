@@ -89,8 +89,8 @@ this layout of the image, and are checked again when it changes.
 `make mlkem_native2_proofs` in `arm` runs the proofs:
 
 - `mlkem_hash_h` (SHA3-256) and `mlkem_hash_g` (SHA3-512), against
-  `sha3_256` and `sha3_512` of `../../common/fips202.ml`, with their
-  constant-time and memory safety (`../proofs/mlkem_hash_h.ml`,
+  `sha3_256` and `sha3_512` of `../../common/fips202/fips202.ml`, with
+  their constant-time and memory safety (`../proofs/mlkem_hash_h.ml`,
   `../proofs/mlkem_hash_g.ml`, and `../proofs/utils/mlkem_native2_sponge.ml`
   for the sponge and the use of `sha3_keccak_f1600`).
 - `mlkem_gen_matrix` for the nine configurations that the API uses (k = 2,
@@ -143,8 +143,17 @@ this layout of the image, and are checked again when it changes.
   matrix: it does for every seed of one block of SHAKE128, because
   Keccak-f1600 is a permutation, so the squeezing is periodic and comes
   back to the padded seed, whose last byte makes a 12-bit field < q
-  (`../../common/fips202_theory.ml` and
-  `../../common/fips203_terminates.ml`).
+  (`SAMPLE_OK_ALL` of `../../common/fips203/properties/sampling.ml`, with
+  `KECCAK_F1600_INJ` of
+  `../../common/fips202/properties/keccak_permutation.ml`).
+
+The specifications are those of `../../common/fips202/fips202.ml` and
+`../../common/fips203/fips203.ml`, written by hand from FIPS 202 and FIPS
+203, with their properties in the `properties` directories there;
+`../../common/fips203/generated/fips203_equivalence.ml` proves that for
+the three parameter sets KeyGen, Encaps, Decaps and the input checks of
+the latter are those of a model generated from the pseudocode of FIPS 203
+(see `../../common/fips203/generated/core/README.md`).
 
 ## Where the speed comes from
 

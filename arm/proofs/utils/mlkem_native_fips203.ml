@@ -16,7 +16,6 @@
 needs "arm/proofs/utils/mlkem_native_image.ml";;
 needs "common/mlkem_mldsa.ml";;
 needs "common/fips203/properties/fips203_properties.ml";;
-needs "common/fips203_terminates.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Byte strings, bit fields and lists of words.                              *)
@@ -388,18 +387,16 @@ let mlkem_samplentt_terminates = new_definition
  `mlkem_samplentt_terminates (b:byte list) <=>
     ?J. 256 <= CARD {j | j < J /\ mlkem_xof_field (mlkem_xof b) j < 3329}`;;
 
-(* It holds for every seed of at most 167 bytes                              *)
-(* (MLKEM_SAMPLE_NTT_TERMINATES in common/fips203_terminates.ml), so for all *)
-(* the seeds rho || j || i of the matrix.                                    *)
-
-let MLKEM_SAMPLENTT_TERMINATES = prove
- (`!b. LENGTH b < 168 ==> mlkem_samplentt_terminates b`,
-  SIMP_TAC[mlkem_samplentt_terminates; MLKEM_SAMPLE_NTT_TERMINATES]);;
+(* It is sample_ok of common/fips203/properties/sampling.ml, which holds    *)
+(* for every seed of 34 bytes (SAMPLE_OK_ALL), so for all the seeds          *)
+(* rho || j || i of the matrix.                                              *)
 
 let MLKEM_SAMPLENTT_TERMINATES_SEED = prove
  (`!rho (x:byte) (y:byte).
         LENGTH rho = 32 ==> mlkem_samplentt_terminates (APPEND rho [x; y])`,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC MLKEM_SAMPLENTT_TERMINATES THEN
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[mlkem_samplentt_terminates; GSYM sample_ok] THEN
+  MATCH_MP_TAC SAMPLE_OK_ALL THEN
   ASM_REWRITE_TAC[LENGTH_APPEND; LENGTH] THEN ARITH_TAC);;
 
 (* For theorems whose statements have no termination hypothesis: it proves   *)

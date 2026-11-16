@@ -3223,7 +3223,7 @@ let MLKEM_NATIVE2_KEYPAIR_DERAND_CORRECT_TAC k ex gmth =
     SUBGOAL_THEN (vsubst [state_of kk,`s:x86state`;
                           mk_small_numeral skb,`n:num`]
      (parse_term("read (memory :> bytes(sk,n)) s = "^
-                 "num_of_bytelist(SND(mlkem_keygen "^nm^" d z))")))
+                 "num_of_bytelist(SND(mlkem_keygen_internal "^nm^" d z))")))
     ASSUME_TAC THENL
      [REWRITE_TAC[pair; mlkem_h; NUM_OF_BYTELIST_APPEND; klen;
                   LENGTH_SHA3_256] THEN

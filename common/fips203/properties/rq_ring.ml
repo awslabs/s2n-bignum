@@ -220,24 +220,48 @@ let MLKEM_RQ_EQ = prove
 
 
 (* ------------------------------------------------------------------------- *)
+(* The values of bitreverse7 on 0-127 (BITREVERSE7_CLAUSES), and its form on *)
+(* them as the reversal of 7 bits (BITREVERSE7_ALT), with the statements of  *)
+(* common/mlkem_mldsa.ml (where they are proved with tools of s2n-bignum),   *)
+(* so that either file can be loaded first.                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let BITREVERSE7_CLAUSES =
+  let conv =
+    GEN_REWRITE_CONV ONCE_DEPTH_CONV [bitreverse7] THENC
+    GEN_REWRITE_CONV I [bitmap] THENC
+    DEPTH_CONV LENGTH_CONV THENC
+    GEN_REWRITE_CONV ONCE_DEPTH_CONV [NUMSEG_LT] THENC
+    NUM_REDUCE_CONV THENC
+    ONCE_DEPTH_CONV EXPAND_NSUM_CONV THENC
+    DEPTH_CONV EL_CONV THENC
+    REWRITE_CONV[numbit] THENC NUM_REDUCE_CONV THENC
+    REWRITE_CONV[BITVAL_CLAUSES] THENC NUM_REDUCE_CONV in
+  end_itlist CONJ
+   (map (fun n -> conv(mk_comb(`bitreverse7`,mk_small_numeral n))) (0--127));;
+
+let BITREVERSE7_ALT = prove
+ (`!n. n < 128 ==> bitreverse7 n = val(word_reversefields 1 (word n:7 word))`,
+  CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC[BITREVERSE7_CLAUSES] THEN
+  CONV_TAC WORD_REDUCE_CONV);;
+
+let BITREVERSE7_BITREVERSE7 = prove
+ (`!n. n < 128 ==> bitreverse7(bitreverse7 n) = n`,
+  CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC[BITREVERSE7_CLAUSES]);;
+
+(* ------------------------------------------------------------------------- *)
 (* zeta = 17 is a primitive 256-th root of unity mod q, so the 128 values    *)
 (* zeta^(2 * BitRev7(i) + 1) are distinct.                                   *)
 (* ------------------------------------------------------------------------- *)
 
 let BITREVERSE7_BOUND = prove
- (`!i. bitreverse7 i < 128`,
-  GEN_TAC THEN REWRITE_TAC[bitreverse7] THEN
-  MP_TAC(ISPEC `word_reversefields 1 (word i:7 word)` VAL_BOUND) THEN
-  REWRITE_TAC[DIMINDEX_CONV `dimindex(:7)`] THEN ARITH_TAC);;
+ (`!i. i < 128 ==> bitreverse7 i < 128`,
+  CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC[BITREVERSE7_CLAUSES] THEN
+  CONV_TAC NUM_REDUCE_CONV);;
 
 let BITREVERSE7_INJ = prove
  (`!i j. i < 128 /\ j < 128 /\ bitreverse7 i = bitreverse7 j ==> i = j`,
-  REPEAT STRIP_TAC THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[bitreverse7; VAL_EQ]) THEN
-  FIRST_X_ASSUM(MP_TAC o AP_TERM `word_reversefields 1:7 word->7 word`) THEN
-  REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
-  REWRITE_TAC[WORD_EQ; DIMINDEX_CONV `dimindex(:7)`; CONG] THEN
-  ASM_SIMP_TAC[MOD_LT; ARITH_RULE `x < 128 ==> x < 2 EXP 7`]);;
+  MESON_TAC[BITREVERSE7_BITREVERSE7]);;
 
 let MLKEM_ZETA_ORDER = prove
  (`order 3329 17 = 256`,
@@ -287,7 +311,7 @@ let MLKEM_GAMMA_INJ = prove
   MATCH_MP_TAC(ARITH_RULE `2 * x + 1 = 2 * y + 1 ==> x = y`) THEN
   MATCH_MP_TAC MLKEM_ZETA_EXP_INJ THEN ASM_REWRITE_TAC[] THEN
   MP_TAC(SPEC `i:num` BITREVERSE7_BOUND) THEN
-  MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN ARITH_TAC);;
+  MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN ASM_ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* Values of Z_q and coefficients of R_q lie in [0, q), and                  *)

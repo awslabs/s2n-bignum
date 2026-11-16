@@ -136,8 +136,8 @@ and the NOPs of the padding between functions. All are in the x86 model.
 `make mlkem_native2_proofs` in `x86` runs the proofs, as on AArch64:
 
 - `mlkem_hash_h` (SHA3-256) and `mlkem_hash_g` (SHA3-512), against
-  `sha3_256` and `sha3_512` of `../../common/fips202.ml`, with their
-  constant-time and memory safety (`../proofs/mlkem_hash_h.ml`,
+  `sha3_256` and `sha3_512` of `../../common/fips202/fips202.ml`, with
+  their constant-time and memory safety (`../proofs/mlkem_hash_h.ml`,
   `../proofs/mlkem_hash_g.ml`, and `../proofs/utils/mlkem_native2_sponge.ml`
   for the sponge and the use of `sha3_keccak_f1600_alt2`, whose own proof is
   `../proofs/sha3_keccak_f1600_alt2.ml`).
@@ -187,6 +187,11 @@ and the NOPs of the padding between functions. All are in the x86 model.
   address, so the theorems allow any alignment of the stack pointer, and
   in the safety theorems the offset of the frame is a function of the
   stack pointer.
+
+The specifications are those of `../../common/fips202/fips202.ml` and
+`../../common/fips203/fips203.ml`, as on AArch64 (see
+`../../arm/mlkem_native2/README.md` for the model of FIPS 203 generated
+from its pseudocode, which is proved equivalent to the latter).
 
 The proofs of the AVX-512 version (`../mlkem_native2_avx512`) are copies
 of these, with their own parts for its Keccak permutations, and are kept

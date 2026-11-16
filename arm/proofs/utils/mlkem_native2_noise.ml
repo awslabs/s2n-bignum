@@ -18,7 +18,7 @@ needs "arm/proofs/utils/mlkem_native2_sponge.ml";;
 needs "arm/proofs/mlkem_cbd2.ml";;
 needs "arm/proofs/mlkem_cbd3.ml";;
 needs "arm/proofs/sha3_keccak4_f1600_alt2.ml";;
-needs "common/fips203.ml";;
+needs "common/fips203/fips203.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The coefficients of SamplePolyCBD_eta(b) as integers in [-eta,eta], so    *)

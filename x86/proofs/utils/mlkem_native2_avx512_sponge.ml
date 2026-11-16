@@ -5,9 +5,9 @@
 
 (* ========================================================================= *)
 (* Tools for the proofs of the functions of the AVX-512 version of the x86   *)
-(* mlkem_native2 that run the Keccak sponge of common/fips202.ml with        *)
-(* sha3_keccak_f1600_avx512 on a state in memory (mlkem_hash_h_avx512 and    *)
-(* mlkem_hash_g_avx512): the state as the 1600-bit word read by wbytes,      *)
+(* mlkem_native2 that run the Keccak sponge of common/fips202/fips202.ml     *)
+(* with sha3_keccak_f1600_avx512 on a state in memory (mlkem_hash_h_avx512   *)
+(* and mlkem_hash_g_avx512): the state as the 1600-bit word read by wbytes,  *)
 (* given by its 25 lanes or its 200 bytes; the theorems for                  *)
 (* sha3_keccak_f1600_avx512 in the image, on such a state; the round         *)
 (* constants as bytes; and the XOR of the blocks of the message and of the   *)

@@ -4,21 +4,21 @@
  *)
 
 (* ========================================================================= *)
-(* The Keccak-f[1600] permutation of common/fips202.ml, on the state as a    *)
-(* 1600-bit word, is the same as the 24 rounds "keccak 24" on the list of    *)
-(* its 25 lanes in keccak_spec.ml, which specify the code for Keccak. This   *)
-(* is KECCAK_F1600_BRIDGE, proved as in tests/mlkem/keccak_bridge.ml (with   *)
-(* parts of tests/mlkem/fips202_eval.ml), but using keccak_spec.ml itself    *)
-(* rather than a copy of its definitions. For a state in memory, the         *)
+(* The Keccak-f[1600] permutation of common/fips202/fips202.ml, on the state *)
+(* as a 1600-bit word, is the same as the 24 rounds "keccak 24" on the list  *)
+(* of its 25 lanes in keccak_spec.ml, which specify the code for Keccak.     *)
+(* This is KECCAK_F1600_BRIDGE, proved as in tests/mlkem/keccak_bridge.ml    *)
+(* (with parts of tests/mlkem/fips202_eval.ml), but using keccak_spec.ml     *)
+(* itself rather than a copy of its definitions. For a state in memory, the  *)
 (* 1600-bit word is the one read by wbytes. There are also lemmas about the  *)
 (* padding and the blocks of the padded message, as numbers, for             *)
 (* keccak_absorb, and about the output of keccak_sponge. This is the same as *)
 (* arm/proofs/utils/keccak_fips202.ml, but for the x86 state.                *)
 (* ========================================================================= *)
 
-needs "common/fips202.ml";;
-needs "common/mlkem_mldsa.ml";;
+needs "common/fips202/properties/fips202_properties.ml";;
 needs "x86/proofs/utils/keccak_spec.ml";;
+needs "common/mlkem_mldsa.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Round constants as explicit words.                                        *)

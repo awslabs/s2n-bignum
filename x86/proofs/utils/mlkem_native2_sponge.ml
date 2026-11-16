@@ -5,14 +5,15 @@
 
 (* ========================================================================= *)
 (* Tools for the proofs of the x86 mlkem_native2 functions that run the      *)
-(* Keccak sponge of common/fips202.ml with sha3_keccak_f1600_alt2 on a state *)
-(* in memory (mlkem_hash_h and mlkem_hash_g): the state as the 1600-bit word *)
-(* read by wbytes, given by its 25 lanes or its 200 bytes; the theorems for  *)
-(* sha3_keccak_f1600_alt2 in the image, on such a state; the round constants *)
-(* as bytes; and the XOR of the blocks of the message and of the padding     *)
-(* into the state, lane by lane or byte by byte, with the padded message as  *)
-(* a number for keccak_absorb. As arm/proofs/utils/mlkem_native2_sponge.ml   *)
-(* for AArch64, with the x86 forms of the simulation.                        *)
+(* Keccak sponge of common/fips202/fips202.ml with sha3_keccak_f1600_alt2 on *)
+(* a state in memory (mlkem_hash_h and mlkem_hash_g): the state as the       *)
+(* 1600-bit word read by wbytes, given by its 25 lanes or its 200 bytes; the *)
+(* theorems for sha3_keccak_f1600_alt2 in the image, on such a state; the    *)
+(* round constants as bytes; and the XOR of the blocks of the message and of *)
+(* the padding into the state, lane by lane or byte by byte, with the padded *)
+(* message as a number for keccak_absorb. As                                 *)
+(* arm/proofs/utils/mlkem_native2_sponge.ml for AArch64, with the x86 forms  *)
+(* of the simulation.                                                        *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_native2_image.ml";;

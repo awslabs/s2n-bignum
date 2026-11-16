@@ -5,9 +5,9 @@
 
 (* ========================================================================= *)
 (* Tools for the proofs of the mlkem_native2 functions that run the Keccak   *)
-(* sponge of common/fips202.ml with sha3_keccak_f1600 on a state in memory   *)
-(* (mlkem_hash_h and mlkem_hash_g): the state as the 1600-bit word read by   *)
-(* wbytes, given by its 25 lanes or its 200 bytes; the theorem for           *)
+(* sponge of common/fips202/fips202.ml with sha3_keccak_f1600 on a state in  *)
+(* memory (mlkem_hash_h and mlkem_hash_g): the state as the 1600-bit word    *)
+(* read by wbytes, given by its 25 lanes or its 200 bytes; the theorem for   *)
 (* sha3_keccak_f1600 on such a state; the round constants as bytes; and the  *)
 (* XOR of the blocks of the message and of the padding into the state, lane  *)
 (* by lane or byte by byte, with the padded message as a number for          *)

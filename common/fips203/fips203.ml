@@ -126,14 +126,20 @@ let mlkem_dot = new_definition
 
 (* ------------------------------------------------------------------------- *)
 (* The NTT: the residues of f modulo X^2 - zeta^(2 * BitRev7(i) + 1) with    *)
-(* zeta = 17, as an array of 256 coefficients.                               *)
-(* Implements FIPS 203 equations (4.12) and (4.13), in place of Algorithms 9 *)
-(* and 10. The definition of bitreverse7 (BitRev7) is the same as in         *)
-(* common/mlkem_mldsa.ml.                                                    *)
+(* zeta = 17, as an array of 256 coefficients. Implements FIPS 203 equations *)
+(* (4.12) and (4.13), in place of Algorithms 9 and 10. The definitions of    *)
+(* bitmap and bitreverse7 (BitRev7 on the arguments 0-127, the only ones     *)
+(* used) are those of common/mlkem_mldsa.ml, so that either file can be      *)
+(* loaded first.                                                             *)
 (* ------------------------------------------------------------------------- *)
 
+let bitmap = define
+ `bitmap l n =
+  nsum {i | i < LENGTH l} (\i. 2 EXP i * bitval(numbit (EL i l) n)) +
+  2 EXP (LENGTH l) * n DIV 2 EXP (LENGTH l)`;;
+
 let bitreverse7 = define
- `bitreverse7(n) = val(word_reversefields 1 (word n:7 word))`;;
+  `bitreverse7 = bitmap [6;5;4;3;2;1;0]`;;
 
 let mlkem_ntt = new_definition
  `mlkem_ntt (f:(1->num)->int) i =

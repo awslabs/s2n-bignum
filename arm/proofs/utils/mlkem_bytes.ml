@@ -5,9 +5,9 @@
 
 (* ========================================================================= *)
 (* Byte arrays given as numbers, as in mlkem_encode and mlkem_decode of      *)
-(* common/fips203.ml, for the proofs of the ML-KEM functions. Most of these  *)
-(* are from the proofs of mlkem-native's compiled code on the mlkem branch   *)
-(* of jargh/s2n-bignum-dev.                                                  *)
+(* common/fips203/fips203.ml, for the proofs of the ML-KEM functions. Most   *)
+(* of these are from the proofs of mlkem-native's compiled code on the mlkem *)
+(* branch of jargh/s2n-bignum-dev.                                           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;

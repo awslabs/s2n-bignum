@@ -250,9 +250,9 @@ let MLKEM768_KEYPAIR_DERAND_SUBROUTINE_CORRECT = prove
                num_of_bytelist z)
           (\s. read PC s = returnaddress /\
                read (memory :> bytes(pk,1184)) s =
-               num_of_bytelist(FST(mlkem_keygen mlkem768 d z)) /\
+               num_of_bytelist(FST(mlkem_keygen_internal mlkem768 d z)) /\
                read (memory :> bytes(sk,2400)) s =
-               num_of_bytelist(SND(mlkem_keygen mlkem768 d z)) /\
+               num_of_bytelist(SND(mlkem_keygen_internal mlkem768 d z)) /\
                C_RETURN s = word 0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(pk,1184); memory :> bytes(sk,2400);

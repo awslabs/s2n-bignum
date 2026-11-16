@@ -2229,7 +2229,7 @@ let KP_FINISH_TAC k ex next (cth,z1,z2) =
     SUBGOAL_THEN (vsubst [state_of kk,`s:armstate`;
                           mk_small_numeral skb,`n:num`]
      (parse_term("read (memory :> bytes(sk,n)) s = "^
-                 "num_of_bytelist(SND(mlkem_keygen "^nm^" d z))")))
+                 "num_of_bytelist(SND(mlkem_keygen_internal "^nm^" d z))")))
     ASSUME_TAC THENL
      [REWRITE_TAC[pair; mlkem_h; NUM_OF_BYTELIST_APPEND; lens;
                   LENGTH_SHA3_256] THEN
