@@ -175,7 +175,7 @@ add(F, "ZQLIST_ZARR", r"""
 add(F, "ZQLIST_EQ", r"""
 !a b. (!i. i < 256 ==> a i rem &3329 = b i rem &3329) ==> zqlist a = zqlist b""")
 add(F, "BITREV7_HOL", r"""
-!i. i < 128 ==> BitRev7_hol (&i) = Value (&(bitreverse7 i))""")
+!i. i < 128 ==> BitRev7_hol (&i) = Value (&(bitrev7 i))""")
 add(F, "ONEBYTE_HOL", r"""
 !n. n < 256 ==> OneByte_hol (&n) = Value [word n:byte]""")
 add(F, "G_SEMANTIC", r"""

@@ -25,11 +25,11 @@ let MLKEM_NTT_EXPLICIT = prove
               (\j. ring_mul mlkem_zq (coeff (2 * j + k MOD 2) f)
                      (ring_pow mlkem_zq
                         (ring_pow mlkem_zq (&17)
-                                  (2 * bitreverse7(k DIV 2) + 1))
+                                  (2 * bitrev7(k DIV 2) + 1))
                         j))`,
   REWRITE_TAC[IN_MLKEM_RQ] THEN REPEAT STRIP_TAC THEN
   REWRITE_TAC[mlkem_ntt; mlkem_zqx; mlkem_X] THEN
-  ABBREV_TAC `c = ring_pow mlkem_zq (&17) (2 * bitreverse7(k DIV 2) + 1)` THEN
+  ABBREV_TAC `c = ring_pow mlkem_zq (&17) (2 * bitrev7(k DIV 2) + 1)` THEN
   SUBGOAL_THEN `c IN ring_carrier mlkem_zq` ASSUME_TAC THENL
    [EXPAND_TAC "c" THEN MATCH_MP_TAC RING_POW THEN
     REWRITE_TAC[IN_MLKEM_ZQ] THEN INT_ARITH_TAC;
@@ -51,7 +51,7 @@ let MLKEM_NTT_PAIR = prove
                ring_sum mlkem_zq {j | j < 128}
                 (\j. ring_mul mlkem_zq (coeff (2 * j + b) f)
                        (ring_pow mlkem_zq
-                          (ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1))
+                          (ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1))
                           j))`,
   SIMP_TAC[MLKEM_NTT_EXPLICIT] THEN REPEAT STRIP_TAC THEN
   SUBGOAL_THEN `(2 * i + b) MOD 2 = b /\ (2 * i + b) DIV 2 = i`
@@ -108,11 +108,11 @@ let MLKEM_NTT_PART = prove
         ==> mlkem_ntt f (2 * i + b) =
             poly_eval mlkem_zq
               (mlkem_poly (\j. if j < 128 then coeff (2 * j + b) f else &0))
-              (ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1))`,
+              (ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1))`,
   REPEAT STRIP_TAC THEN ASM_SIMP_TAC[MLKEM_NTT_PAIR] THEN
   ABBREV_TAC
    `p = mlkem_poly (\j. if j < 128 then coeff (2 * j + b) f else &0)` THEN
-  ABBREV_TAC `x = ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1)` THEN
+  ABBREV_TAC `x = ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1)` THEN
   SUBGOAL_THEN `x IN ring_carrier mlkem_zq` ASSUME_TAC THENL
    [EXPAND_TAC "x" THEN MATCH_MP_TAC RING_POW THEN
     REWRITE_TAC[IN_MLKEM_ZQ] THEN INT_ARITH_TAC;
@@ -182,7 +182,7 @@ let MLKEM_NTT_INJ = prove
     ASM_REWRITE_TAC[] THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
     MATCH_MP_TAC POLY_ROOTS_IMP_ZERO THEN
     MAP_EVERY EXISTS_TAC
-     [`128`; `\i. ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1)`] THEN
+     [`128`; `\i. ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1)`] THEN
     REWRITE_TAC[MLKEM_GAMMA_INJ] THEN
     REWRITE_TAC[MATCH_MP FIELD_IMP_INTEGRAL_DOMAIN (CONJUNCT1 MLKEM_ZQ)] THEN
     ASM_SIMP_TAC[RING_SUB] THEN CONJ_TAC THENL
@@ -198,7 +198,7 @@ let MLKEM_NTT_INJ = prove
       CONV_TAC INT_REDUCE_CONV;
       X_GEN_TAC `i:num` THEN DISCH_TAC THEN
       SUBGOAL_THEN
-       `ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1) IN
+       `ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1) IN
         ring_carrier mlkem_zq`
       ASSUME_TAC THENL
        [MATCH_MP_TAC RING_POW THEN REWRITE_TAC[IN_MLKEM_ZQ] THEN

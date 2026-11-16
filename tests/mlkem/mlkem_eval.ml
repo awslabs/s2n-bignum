@@ -73,7 +73,7 @@ let MLKEM_NTT_FORWARD_REM = prove
          ==> mlkem_ntt f k =
              isum (0..127)
               (\j. coeff (2 * j + k MOD 2) f *
-                   &17 pow (((2 * bitreverse7 (k DIV 2) + 1) * j) MOD 256)
+                   &17 pow (((2 * bitrev7 (k DIV 2) + 1) * j) MOD 256)
                    rem &3329) rem &3329`,
   REPEAT STRIP_TAC THEN ASM_SIMP_TAC[MLKEM_NTT_FORWARD; INT_REM_EQ] THEN
   MATCH_MP_TAC INT_CONG_ISUM THEN REWRITE_TAC[FINITE_NUMSEG] THEN
@@ -87,7 +87,7 @@ let MLKEM_NTT_INV_COEFF_REM = prove
          ==> coeff k (mlkem_ntt_inv a) =
              (&3303 *
               isum (0..127)
-               (\j. a(2 * bitreverse7 j + k MOD 2) *
+               (\j. a(2 * bitrev7 j + k MOD 2) *
                     &1175 pow (((2 * j + 1) * k DIV 2) MOD 256) rem &3329))
              rem &3329`,
   REPEAT STRIP_TAC THEN ASM_SIMP_TAC[MLKEM_NTT_INV_COEFF; INT_REM_EQ] THEN
@@ -176,7 +176,7 @@ and ev_n = `n:num` and ev_k = `k:num` and ev_j = `j:num`
 and ev_ile = `int_le` and ev_ilt = `int_lt` and ev_i0 = `&0:int`
 and ev_klt256 = `k < 256`
 and ev_ntt = `mlkem_ntt` and ev_xof = `mlkem_xof`
-and ev_xof_field = `mlkem_xof_field` and ev_bitreverse7 = `bitreverse7`
+and ev_xof_field = `mlkem_xof_field` and ev_bitrev7 = `bitrev7`
 and ev_in_rq = `(IN):((1->num)->int)->(((1->num)->int)->bool)->bool`
 and ev_carrier_rq = `ring_carrier mlkem_rq`;;
 
@@ -464,7 +464,7 @@ add_mlkem_handler "mlkem_sample_ntt"
     | _ -> failwith "mlkem_sample_ntt");;
 
 (* ------------------------------------------------------------------------- *)
-(* Sums, Z_q arithmetic, bitreverse7 and the powers of zeta mod q.           *)
+(* Sums, Z_q arithmetic, bitrev7 and the powers of zeta mod q.               *)
 (* ------------------------------------------------------------------------- *)
 
 let NUMSEG_LT_CONV =
@@ -533,18 +533,18 @@ add_mlkem_handler "ring_sum"
               RING_SUM_NUMSEG_CONV) tm
     | _ -> failwith "ring_sum");;
 
-let BITREVERSE7_CONV =
+let BITREV7_CONV =
   let tab = Array.init 128 (fun i ->
-    (REWR_CONV bitreverse7 THENC WORD_REDUCE_CONV)
-    (mk_comb(`bitreverse7`,mk_small_numeral i))) in
+    (REWR_CONV bitrev7 THENC WORD_REDUCE_CONV)
+    (mk_comb(`bitrev7`,mk_small_numeral i))) in
   fun tm ->
     match tm with
-      Comb(Const("bitreverse7",_),n) when is_numeral n &&
+      Comb(Const("bitrev7",_),n) when is_numeral n &&
                                          dest_numeral n </ num 128 ->
         tab.(Num.int_of_num(dest_numeral n))
-    | _ -> failwith "BITREVERSE7_CONV";;
+    | _ -> failwith "BITREV7_CONV";;
 
-add_mlkem_handler "bitreverse7" BITREVERSE7_CONV;;
+add_mlkem_handler "bitrev7" BITREV7_CONV;;
 
 (* (&17 pow e) rem &3329 and (&1175 pow e) rem &3329, via e MOD 256.         *)
 

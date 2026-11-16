@@ -195,7 +195,7 @@ let ZQLIST_EQ_STMT = `
  !a b. (!i. i < 256 ==> a i rem &3329 = b i rem &3329) ==> zqlist a = zqlist b`;;
 
 let BITREV7_HOL_STMT = `
- !i. i < 128 ==> BitRev7_hol (&i) = Value (&(bitreverse7 i))`;;
+ !i. i < 128 ==> BitRev7_hol (&i) = Value (&(bitrev7 i))`;;
 
 let ONEBYTE_HOL_STMT = `
  !n. n < 256 ==> OneByte_hol (&n) = Value [word n:byte]`;;

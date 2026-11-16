@@ -19,7 +19,7 @@
 (* where a is the input and e = ntt_exp: block m of size L holds the         *)
 (* residue of the input modulo X^L - 17^e(L,m). One layer (ntt_layer) maps   *)
 (* ntt_stage (2 L) to ntt_stage L (NTT_STAGE_STEP); this needs only 127      *)
-(* finite facts about bitreverse7 (NTT_EXP_FACTS). ntt_stage 256 a = a and   *)
+(* finite facts about bitrev7 (NTT_EXP_FACTS). ntt_stage 256 a = a and       *)
 (* ntt_stage 2 is the explicit sum of MLKEM_NTT_FORWARD.                     *)
 (* ========================================================================= *)
 
@@ -28,7 +28,7 @@
 (* ------------------------------------------------------------------------- *)
 
 let ntt_exp = new_definition
- `ntt_exp L m = (2 * bitreverse7 (m * (L DIV 2)) + 1) * (L DIV 2)`;;
+ `ntt_exp L m = (2 * bitrev7 (m * (L DIV 2)) + 1) * (L DIV 2)`;;
 
 let ntt_stage = new_definition
  `ntt_stage L (a:num->int) k =
@@ -36,7 +36,7 @@ let ntt_stage = new_definition
          (\t. a (k MOD L + L * t) * &17 pow (ntt_exp L (k DIV L) * t))`;;
 
 let ntt_zeta = new_definition
- `ntt_zeta L M = (&17:int) pow (bitreverse7 (128 DIV L + M))`;;
+ `ntt_zeta L M = (&17:int) pow (bitrev7 (128 DIV L + M))`;;
 
 let ntt_layer = new_definition
  `ntt_layer L (b:num->int) k =
@@ -48,15 +48,15 @@ let NTT_EXP_FACTS = prove
  (`!L M. L IN {2,4,8,16,32,64,128} /\ M < 128 DIV L
          ==> (2 * ntt_exp L (2 * M)) MOD 256 = ntt_exp (2 * L) M MOD 256 /\
              (2 * ntt_exp L (2 * M + 1)) MOD 256 = ntt_exp (2 * L) M MOD 256 /\
-             ntt_exp L (2 * M) MOD 256 = bitreverse7 (128 DIV L + M) /\
+             ntt_exp L (2 * M) MOD 256 = bitrev7 (128 DIV L + M) /\
              ntt_exp L (2 * M + 1) MOD 256 =
-             bitreverse7 (128 DIV L + M) + 128`,
+             bitrev7 (128 DIV L + M) + 128`,
   REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; FORALL_IN_INSERT;
               NOT_IN_EMPTY] THEN
   CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[ntt_exp] THEN
   CONV_TAC NUM_REDUCE_CONV THEN REPEAT CONJ_TAC THEN
   CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[bitreverse7] THEN CONV_TAC WORD_REDUCE_CONV THEN
+  REWRITE_TAC[bitrev7] THEN CONV_TAC WORD_REDUCE_CONV THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 let NTT_POW17_MOD = prove
@@ -151,7 +151,7 @@ let NTT_STAGE_STEP_CORE = prove
   REPEAT(DISCH_THEN SUBST1_TAC) THEN
   SUBGOAL_THEN
    `(2 * ntt_exp L (2 * M + c)) MOD 256 = ntt_exp (2 * L) M MOD 256 /\
-    ntt_exp L (2 * M + c) MOD 256 = bitreverse7 (128 DIV L + M) + 128 * c`
+    ntt_exp L (2 * M + c) MOD 256 = bitrev7 (128 DIV L + M) + 128 * c`
   STRIP_ASSUME_TAC THENL
    [FIRST_ASSUM(DISJ_CASES_THEN SUBST_ALL_TAC o MATCH_MP
      (ARITH_RULE `c < 2 ==> c = 0 \/ c = 1`)) THEN
@@ -163,11 +163,11 @@ let NTT_STAGE_STEP_CORE = prove
   ASSUME_TAC THENL
    [MATCH_MP_TAC(INTEGER_RULE
      `!y. (x:int == y) (mod n) /\ (y == z) (mod n) ==> (x == z) (mod n)`) THEN
-    EXISTS_TAC `(&17:int) pow (bitreverse7 (128 DIV L + M) + 128 * c)` THEN
+    EXISTS_TAC `(&17:int) pow (bitrev7 (128 DIV L + M) + 128 * c)` THEN
     CONJ_TAC THENL
      [MATCH_MP_TAC NTT_POW17_CONG THEN ASM_REWRITE_TAC[] THEN
       CONV_TAC SYM_CONV THEN MATCH_MP_TAC MOD_LT THEN
-      MP_TAC(SPEC `128 DIV L + M` BITREVERSE7_BOUND) THEN
+      MP_TAC(SPEC `128 DIV L + M` BITREV7_BOUND) THEN
       UNDISCH_TAC `c < 2` THEN ARITH_TAC;
       REWRITE_TAC[ntt_zeta] THEN
       FIRST_ASSUM(DISJ_CASES_THEN SUBST1_TAC o MATCH_MP
@@ -456,7 +456,7 @@ let NTT_MID_BODY = prove
      0 < L /\ i < 128 /\ start + 2 * L <= 256
      ==> ntt_mid_loop (&L) (&start) (&i, zqlist b) =
          Value (&(i + 1),
-                zqlist (ntt_bfly L (&17 pow bitreverse7 i) start L b))`,
+                zqlist (ntt_bfly L (&17 pow bitrev7 i) start L b))`,
   REPEAT STRIP_TAC THEN REWRITE_TAC[ntt_mid_loop; UNCURRY_DEF] THEN
   ASM_SIMP_TAC[BITREV7_HOL; NATIVE_BIND_VALUE; TYPED_HOL_POW_MOD; ARITH] THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
@@ -591,7 +591,7 @@ let NTT_STAGE_TOP = prove
   ASM_SIMP_TAC[MOD_LT]);;
 
 let NTT_EXP_2 = prove
- (`!m. ntt_exp 2 m = 2 * bitreverse7 m + 1`,
+ (`!m. ntt_exp 2 m = 2 * bitrev7 m + 1`,
   REWRITE_TAC[ntt_exp] THEN CONV_TAC NUM_REDUCE_CONV THEN
   REWRITE_TAC[MULT_CLAUSES]);;
 

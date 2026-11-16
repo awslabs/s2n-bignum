@@ -22,7 +22,7 @@
 (* ------------------------------------------------------------------------- *)
 
 let nttinv_exp = new_definition
- `nttinv_exp L m = (2 * bitreverse7 (m * (L DIV 2)) + 1) * (L DIV 2)`;;
+ `nttinv_exp L m = (2 * bitrev7 (m * (L DIV 2)) + 1) * (L DIV 2)`;;
 
 let nttinv_stage = new_definition
  `nttinv_stage L (a:num->int) k =
@@ -30,7 +30,7 @@ let nttinv_stage = new_definition
          (\t. a (k MOD L + L * t) * &17 pow (nttinv_exp L (k DIV L) * t))`;;
 
 let nttinv_zeta = new_definition
- `nttinv_zeta L M = (&17:int) pow (bitreverse7 (128 DIV L + M))`;;
+ `nttinv_zeta L M = (&17:int) pow (bitrev7 (128 DIV L + M))`;;
 
 let nttinv_layer = new_definition
  `nttinv_layer L (b:num->int) k =
@@ -42,15 +42,15 @@ let NTTINV_EXP_FACTS = prove
  (`!L M. L IN {2,4,8,16,32,64,128} /\ M < 128 DIV L
          ==> (2 * nttinv_exp L (2 * M)) MOD 256 = nttinv_exp (2 * L) M MOD 256 /\
              (2 * nttinv_exp L (2 * M + 1)) MOD 256 = nttinv_exp (2 * L) M MOD 256 /\
-             nttinv_exp L (2 * M) MOD 256 = bitreverse7 (128 DIV L + M) /\
+             nttinv_exp L (2 * M) MOD 256 = bitrev7 (128 DIV L + M) /\
              nttinv_exp L (2 * M + 1) MOD 256 =
-             bitreverse7 (128 DIV L + M) + 128`,
+             bitrev7 (128 DIV L + M) + 128`,
   REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; FORALL_IN_INSERT;
               NOT_IN_EMPTY] THEN
   CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[nttinv_exp] THEN
   CONV_TAC NUM_REDUCE_CONV THEN REPEAT CONJ_TAC THEN
   CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[bitreverse7] THEN CONV_TAC WORD_REDUCE_CONV THEN
+  REWRITE_TAC[bitrev7] THEN CONV_TAC WORD_REDUCE_CONV THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 let NTTINV_POW17_MOD = prove
@@ -145,7 +145,7 @@ let NTTINV_STAGE_STEP_CORE = prove
   REPEAT(DISCH_THEN SUBST1_TAC) THEN
   SUBGOAL_THEN
    `(2 * nttinv_exp L (2 * M + c)) MOD 256 = nttinv_exp (2 * L) M MOD 256 /\
-    nttinv_exp L (2 * M + c) MOD 256 = bitreverse7 (128 DIV L + M) + 128 * c`
+    nttinv_exp L (2 * M + c) MOD 256 = bitrev7 (128 DIV L + M) + 128 * c`
   STRIP_ASSUME_TAC THENL
    [FIRST_ASSUM(DISJ_CASES_THEN SUBST_ALL_TAC o MATCH_MP
      (ARITH_RULE `c < 2 ==> c = 0 \/ c = 1`)) THEN
@@ -157,11 +157,11 @@ let NTTINV_STAGE_STEP_CORE = prove
   ASSUME_TAC THENL
    [MATCH_MP_TAC(INTEGER_RULE
      `!y. (x:int == y) (mod n) /\ (y == z) (mod n) ==> (x == z) (mod n)`) THEN
-    EXISTS_TAC `(&17:int) pow (bitreverse7 (128 DIV L + M) + 128 * c)` THEN
+    EXISTS_TAC `(&17:int) pow (bitrev7 (128 DIV L + M) + 128 * c)` THEN
     CONJ_TAC THENL
      [MATCH_MP_TAC NTTINV_POW17_CONG THEN ASM_REWRITE_TAC[] THEN
       CONV_TAC SYM_CONV THEN MATCH_MP_TAC MOD_LT THEN
-      MP_TAC(SPEC `128 DIV L + M` BITREVERSE7_BOUND) THEN
+      MP_TAC(SPEC `128 DIV L + M` BITREV7_BOUND) THEN
       UNDISCH_TAC `c < 2` THEN ARITH_TAC;
       REWRITE_TAC[nttinv_zeta] THEN
       FIRST_ASSUM(DISJ_CASES_THEN SUBST1_TAC o MATCH_MP
@@ -247,7 +247,7 @@ let NTTINV_STAGE_STEP = prove
 (* ------------------------------------------------------------------------- *)
 
 let nttinv_izeta = new_definition
- `nttinv_izeta L M = (&17:int) pow bitreverse7 (2 * (128 DIV L) - 1 - M)`;;
+ `nttinv_izeta L M = (&17:int) pow bitrev7 (2 * (128 DIV L) - 1 - M)`;;
 
 let nttinv_ilayer = new_definition
  `nttinv_ilayer L (b:num->int) k =
@@ -573,7 +573,7 @@ let NTTINV_MID_BODY = prove
      0 < L /\ 0 < i /\ i < 128 /\ start + 2 * L <= 256
      ==> nttinv_mid_loop (&L) (&start) (&i, zqlist b) =
          Value (&(i - 1),
-                zqlist (nttinv_bfly L (&17 pow bitreverse7 i) start L b))`,
+                zqlist (nttinv_bfly L (&17 pow bitrev7 i) start L b))`,
   REPEAT STRIP_TAC THEN REWRITE_TAC[nttinv_mid_loop; UNCURRY_DEF] THEN
   ASM_SIMP_TAC[BITREV7_HOL; NATIVE_BIND_VALUE; TYPED_HOL_POW_MOD; ARITH] THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
@@ -769,7 +769,7 @@ let NTTINV_STAGE_TOP = prove
   ASM_SIMP_TAC[MOD_LT]);;
 
 let NTTINV_EXP_2 = prove
- (`!m. nttinv_exp 2 m = 2 * bitreverse7 m + 1`,
+ (`!m. nttinv_exp 2 m = 2 * bitrev7 m + 1`,
   REWRITE_TAC[nttinv_exp] THEN CONV_TAC NUM_REDUCE_CONV THEN
   REWRITE_TAC[MULT_CLAUSES]);;
 

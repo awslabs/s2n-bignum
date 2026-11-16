@@ -224,16 +224,16 @@ let MLKEM_RQ_EQ = prove
 (* zeta^(2 * BitRev7(i) + 1) are distinct.                                   *)
 (* ------------------------------------------------------------------------- *)
 
-let BITREVERSE7_BOUND = prove
- (`!i. bitreverse7 i < 128`,
-  GEN_TAC THEN REWRITE_TAC[bitreverse7] THEN
+let BITREV7_BOUND = prove
+ (`!i. bitrev7 i < 128`,
+  GEN_TAC THEN REWRITE_TAC[bitrev7] THEN
   MP_TAC(ISPEC `word_reversefields 1 (word i:7 word)` VAL_BOUND) THEN
   REWRITE_TAC[DIMINDEX_CONV `dimindex(:7)`] THEN ARITH_TAC);;
 
 let BITREVERSE7_INJ = prove
- (`!i j. i < 128 /\ j < 128 /\ bitreverse7 i = bitreverse7 j ==> i = j`,
+ (`!i j. i < 128 /\ j < 128 /\ bitrev7 i = bitrev7 j ==> i = j`,
   REPEAT STRIP_TAC THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[bitreverse7; VAL_EQ]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[bitrev7; VAL_EQ]) THEN
   FIRST_X_ASSUM(MP_TAC o AP_TERM `word_reversefields 1:7 word->7 word`) THEN
   REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
   REWRITE_TAC[WORD_EQ; DIMINDEX_CONV `dimindex(:7)`; CONG] THEN
@@ -278,16 +278,16 @@ let MLKEM_ZETA_EXP_INJ = prove
 
 let MLKEM_GAMMA_INJ = prove
  (`!i j. i < 128 /\ j < 128 /\
-         ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1) =
-         ring_pow mlkem_zq (&17) (2 * bitreverse7 j + 1)
+         ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1) =
+         ring_pow mlkem_zq (&17) (2 * bitrev7 j + 1)
          ==> i = j`,
   REWRITE_TAC[MLKEM_ZQ; INT_OF_NUM_POW; INT_OF_NUM_REM; INT_OF_NUM_EQ] THEN
   REWRITE_TAC[GSYM CONG] THEN REPEAT STRIP_TAC THEN
   MATCH_MP_TAC BITREVERSE7_INJ THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC(ARITH_RULE `2 * x + 1 = 2 * y + 1 ==> x = y`) THEN
   MATCH_MP_TAC MLKEM_ZETA_EXP_INJ THEN ASM_REWRITE_TAC[] THEN
-  MP_TAC(SPEC `i:num` BITREVERSE7_BOUND) THEN
-  MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN ARITH_TAC);;
+  MP_TAC(SPEC `i:num` BITREV7_BOUND) THEN
+  MP_TAC(SPEC `j:num` BITREV7_BOUND) THEN ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* Values of Z_q and coefficients of R_q lie in [0, q), and                  *)

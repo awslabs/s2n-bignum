@@ -259,7 +259,7 @@ let POLY_REM_QUADRATIC_MUL = prove
 
 let MLKEM_GAMMA_POW_128 = prove
  (`!i. ring_pow mlkem_zq
-        (ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1)) 128 =
+        (ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1)) 128 =
        ring_neg mlkem_zq (ring_1 mlkem_zq)`,
   GEN_TAC THEN REWRITE_TAC[MLKEM_ZQ] THEN CONV_TAC INT_REDUCE_CONV THEN
   REWRITE_TAC[INT_POW_REM; INT_POW_POW] THEN
@@ -285,11 +285,11 @@ let MLKEM_GAMMA_DIVIDES = prove
  (`!i. ring_divides mlkem_zqx
          (ring_sub mlkem_zqx (ring_pow mlkem_zqx mlkem_X 2)
             (poly_const mlkem_zq
-               (ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1))))
+               (ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1))))
          (ring_add mlkem_zqx (ring_pow mlkem_zqx mlkem_X 256)
                              (ring_1 mlkem_zqx))`,
   GEN_TAC THEN REWRITE_TAC[mlkem_zqx; mlkem_X] THEN
-  ABBREV_TAC `g = ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1)` THEN
+  ABBREV_TAC `g = ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1)` THEN
   SUBGOAL_THEN `g IN ring_carrier mlkem_zq` ASSUME_TAC THENL
    [EXPAND_TAC "g" THEN MATCH_MP_TAC RING_POW THEN
     REWRITE_TAC[IN_MLKEM_ZQ] THEN INT_ARITH_TAC;
@@ -317,12 +317,12 @@ let MLKEM_NTT_EVEN_ODD = prove
          coeff 0 (poly_rem mlkem_zq f
           (ring_sub mlkem_zqx (ring_pow mlkem_zqx mlkem_X 2)
             (poly_const mlkem_zq
-              (ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1))))) /\
+              (ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1))))) /\
          mlkem_ntt f (2 * i + 1) =
          coeff 1 (poly_rem mlkem_zq f
           (ring_sub mlkem_zqx (ring_pow mlkem_zqx mlkem_X 2)
             (poly_const mlkem_zq
-              (ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1)))))`,
+              (ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1)))))`,
   REWRITE_TAC[mlkem_ntt] THEN
   SUBGOAL_THEN `!i. (2 * i) MOD 2 = 0 /\ (2 * i) DIV 2 = i /\
                     (2 * i + 1) MOD 2 = 1 /\ (2 * i + 1) DIV 2 = i`
@@ -340,7 +340,7 @@ let MLKEM_NTT_MUL = prove
              (ring_mul mlkem_zq
                (ring_mul mlkem_zq (mlkem_ntt f (2 * i + 1))
                                   (mlkem_ntt g (2 * i + 1)))
-               (ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1))) /\
+               (ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1))) /\
             mlkem_ntt (ring_mul mlkem_rq f g) (2 * i + 1) =
             ring_add mlkem_zq
              (ring_mul mlkem_zq (mlkem_ntt f (2 * i))
@@ -349,7 +349,7 @@ let MLKEM_NTT_MUL = prove
                                 (mlkem_ntt g (2 * i)))`,
   REPEAT GEN_TAC THEN REWRITE_TAC[IN_MLKEM_RQ] THEN STRIP_TAC THEN
   REWRITE_TAC[MLKEM_NTT_EVEN_ODD; MLKEM_RQ] THEN
-  ABBREV_TAC `c = ring_pow mlkem_zq (&17) (2 * bitreverse7 i + 1)` THEN
+  ABBREV_TAC `c = ring_pow mlkem_zq (&17) (2 * bitrev7 i + 1)` THEN
   SUBGOAL_THEN `c IN ring_carrier mlkem_zq` ASSUME_TAC THENL
    [EXPAND_TAC "c" THEN MATCH_MP_TAC RING_POW THEN
     REWRITE_TAC[IN_MLKEM_ZQ] THEN INT_ARITH_TAC;
@@ -386,7 +386,7 @@ let MLKEM_NTT_ADD = prove
   REPEAT STRIP_TAC THEN
   ASM_SIMP_TAC[MLKEM_NTT_EXPLICIT; RING_ADD; MLKEM_RQ] THEN
   REWRITE_TAC[mlkem_zqx; POLY_RING_CLAUSES; COEFF_POLY_ADD] THEN
-  ABBREV_TAC `x = ring_pow mlkem_zq (&17) (2 * bitreverse7 (k DIV 2) + 1)` THEN
+  ABBREV_TAC `x = ring_pow mlkem_zq (&17) (2 * bitrev7 (k DIV 2) + 1)` THEN
   SUBGOAL_THEN `x IN ring_carrier mlkem_zq` ASSUME_TAC THENL
    [EXPAND_TAC "x" THEN MATCH_MP_TAC RING_POW THEN
     REWRITE_TAC[IN_MLKEM_ZQ] THEN INT_ARITH_TAC;
@@ -403,7 +403,7 @@ let MLKEM_NTT_SUB = prove
   REPEAT STRIP_TAC THEN
   ASM_SIMP_TAC[MLKEM_NTT_EXPLICIT; RING_SUB; MLKEM_RQ_SUB] THEN
   REWRITE_TAC[mlkem_zqx; POLY_RING_CLAUSES; COEFF_POLY_SUB] THEN
-  ABBREV_TAC `x = ring_pow mlkem_zq (&17) (2 * bitreverse7 (k DIV 2) + 1)` THEN
+  ABBREV_TAC `x = ring_pow mlkem_zq (&17) (2 * bitrev7 (k DIV 2) + 1)` THEN
   SUBGOAL_THEN `x IN ring_carrier mlkem_zq` ASSUME_TAC THENL
    [EXPAND_TAC "x" THEN MATCH_MP_TAC RING_POW THEN
     REWRITE_TAC[IN_MLKEM_ZQ] THEN INT_ARITH_TAC;
@@ -445,7 +445,7 @@ let fips203_multiply_ntts = new_definition
     if EVEN n then
       ring_add mlkem_zq (ring_mul mlkem_zq (a n) (b n))
        (ring_mul mlkem_zq (ring_mul mlkem_zq (a(n + 1)) (b(n + 1)))
-          (ring_pow mlkem_zq (&17) (2 * bitreverse7(n DIV 2) + 1)))
+          (ring_pow mlkem_zq (&17) (2 * bitrev7(n DIV 2) + 1)))
     else
       ring_add mlkem_zq (ring_mul mlkem_zq (a(n - 1)) (b n))
                         (ring_mul mlkem_zq (a n) (b(n - 1)))`;;

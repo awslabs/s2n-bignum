@@ -59,15 +59,15 @@ let INT_GEOM_SERIES = prove
   ASM_REWRITE_TAC[ISUM_CLAUSES_NUMSEG; LE_0; INT_ADD_LDISTRIB] THEN
   REWRITE_TAC[INT_POW] THEN INT_ARITH_TAC);;
 
-let BITREVERSE7_BOUND = prove
- (`!n. bitreverse7 n < 128`,
-  GEN_TAC THEN REWRITE_TAC[bitreverse7] THEN
+let BITREV7_BOUND = prove
+ (`!n. bitrev7 n < 128`,
+  GEN_TAC THEN REWRITE_TAC[bitrev7] THEN
   MP_TAC(ISPEC `word_reversefields 1 (word n:7 word)` VAL_BOUND) THEN
   REWRITE_TAC[DIMINDEX_CONV `dimindex(:7)`] THEN ARITH_TAC);;
 
-let BITREVERSE7_BITREVERSE7 = prove
- (`!n. n < 128 ==> bitreverse7(bitreverse7 n) = n`,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[bitreverse7; WORD_VAL] THEN
+let BITREV7_BITREV7 = prove
+ (`!n. n < 128 ==> bitrev7(bitrev7 n) = n`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[bitrev7; WORD_VAL] THEN
   REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS; VAL_WORD] THEN
   REWRITE_TAC[DIMINDEX_CONV `dimindex(:7)`] THEN
   ASM_SIMP_TAC[MOD_LT; ARITH_RULE `n < 128 ==> n < 2 EXP 7`]);;
@@ -77,7 +77,7 @@ let MLKEM_NTT_FORWARD = prove
          ==> mlkem_ntt f k =
              isum (0..127)
               (\j. coeff (2 * j + k MOD 2) f *
-                   &17 pow ((2 * bitreverse7 (k DIV 2) + 1) * j)) rem &3329`,
+                   &17 pow ((2 * bitrev7 (k DIV 2) + 1) * j)) rem &3329`,
   REPEAT STRIP_TAC THEN ASM_SIMP_TAC[MLKEM_NTT_EXPLICIT] THEN
   REWRITE_TAC[mlkem_zq] THEN
   W(MP_TAC o PART_MATCH (lhand o rand) RING_SUM_INTEGER_MOD_RING o
@@ -187,7 +187,7 @@ let MLKEM_NTT_INV_EXPLICIT = prove
        ==> mlkem_ntt_inv a =
            mlkem_poly
             (\k. &3303 * isum (0..127)
-                          (\j. a(2 * bitreverse7 j + k MOD 2) *
+                          (\j. a(2 * bitrev7 j + k MOD 2) *
                                &1175 pow ((2 * j + 1) * k DIV 2)))`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC MLKEM_NTT_INJ THEN
   FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP MLKEM_NTT_INV) THEN
@@ -201,14 +201,14 @@ let MLKEM_NTT_INV_EXPLICIT = prove
     ALL_TAC] THEN
   REWRITE_TAC[INT_REM_EQ] THEN ONCE_REWRITE_TAC[INTEGER_RULE
    `(x:int == y) (mod n) <=> (y == x) (mod n)`] THEN
-  ABBREV_TAC `b = k MOD 2` THEN ABBREV_TAC `r = bitreverse7 (k DIV 2)` THEN
+  ABBREV_TAC `b = k MOD 2` THEN ABBREV_TAC `r = bitrev7 (k DIV 2)` THEN
   MATCH_MP_TAC(INTEGER_RULE
    `!y. (x:int == y) (mod n) /\ (y == z) (mod n) ==> (x == z) (mod n)`) THEN
   EXISTS_TAC
    `isum (0..127)
      (\j. &3303 *
           isum (0..127)
-           (\m. a (2 * bitreverse7 m + b) *
+           (\m. a (2 * bitrev7 m + b) *
                 &1175 pow ((2 * m + 1) * j) * &17 pow ((2 * r + 1) * j)))` THEN
   CONJ_TAC THENL
    [MATCH_MP_TAC INT_CONG_ISUM THEN REWRITE_TAC[FINITE_NUMSEG; IN_NUMSEG] THEN
@@ -222,7 +222,7 @@ let MLKEM_NTT_INV_EXPLICIT = prove
                      ==> (x * y == z) (mod n)`) THEN
     EXISTS_TAC
      `&3303 * isum (0..127)
-               (\m. a (2 * bitreverse7 m + b) * &1175 pow ((2 * m + 1) * j))`
+               (\m. a (2 * bitrev7 m + b) * &1175 pow ((2 * m + 1) * j))`
     THEN REWRITE_TAC[INT_CONG_LREM; INTEGER_RULE `(x:int == x) (mod n)`] THEN
     REWRITE_TAC[GSYM INT_MUL_ASSOC; GSYM ISUM_RMUL];
     ALL_TAC] THEN
@@ -231,12 +231,12 @@ let MLKEM_NTT_INV_EXPLICIT = prove
   REWRITE_TAC[ISUM_LMUL] THEN
   REWRITE_TAC[GSYM INT_POW_POW; GSYM INT_POW_MUL] THEN
   SUBGOAL_THEN `r < 128` ASSUME_TAC THENL
-   [EXPAND_TAC "r" THEN REWRITE_TAC[BITREVERSE7_BOUND]; ALL_TAC] THEN
+   [EXPAND_TAC "r" THEN REWRITE_TAC[BITREV7_BOUND]; ALL_TAC] THEN
   MATCH_MP_TAC(INTEGER_RULE
    `!y. (x:int == y) (mod n) /\ (y == z) (mod n) ==> (x == z) (mod n)`) THEN
   EXISTS_TAC
    `&3303 * isum (0..127)
-             (\m. a (2 * bitreverse7 m + b) * (if m = r then &128 else &0))`
+             (\m. a (2 * bitrev7 m + b) * (if m = r then &128 else &0))`
   THEN CONJ_TAC THENL
    [MATCH_MP_TAC(INTEGER_RULE
      `(x:int == y) (mod n) ==> (c * x == c * y) (mod n)`) THEN
@@ -248,18 +248,18 @@ let MLKEM_NTT_INV_EXPLICIT = prove
     ALL_TAC] THEN
   SUBGOAL_THEN
    `isum (0..127)
-     (\m. a (2 * bitreverse7 m + b) * (if m = r then &128 else &0)) =
+     (\m. a (2 * bitrev7 m + b) * (if m = r then &128 else &0)) =
     isum (0..127)
-     (\m. if m = r then a (2 * bitreverse7 r + b) * &128 else &0)`
+     (\m. if m = r then a (2 * bitrev7 r + b) * &128 else &0)`
   SUBST1_TAC THENL
    [MATCH_MP_TAC ISUM_EQ_NUMSEG THEN REPEAT STRIP_TAC THEN REWRITE_TAC[] THEN
     COND_CASES_TAC THEN ASM_REWRITE_TAC[INT_MUL_RZERO];
     ALL_TAC] THEN
   REWRITE_TAC[ISUM_DELTA; IN_NUMSEG; LE_0] THEN
   ASM_SIMP_TAC[ARITH_RULE `r < 128 ==> r <= 127`] THEN
-  SUBGOAL_THEN `2 * bitreverse7 r + b = k` SUBST1_TAC THENL
+  SUBGOAL_THEN `2 * bitrev7 r + b = k` SUBST1_TAC THENL
    [MAP_EVERY EXPAND_TAC ["r"; "b"] THEN
-    ASM_SIMP_TAC[BITREVERSE7_BITREVERSE7; RDIV_LT_EQ; ARITH_EQ;
+    ASM_SIMP_TAC[BITREV7_BITREV7; RDIV_LT_EQ; ARITH_EQ;
                  ARITH_RULE `k < 256 ==> k < 2 * 128`] THEN
     MP_TAC(SPECL [`k:num`; `2`] DIVISION) THEN EXPAND_TAC "b" THEN ARITH_TAC;
     REWRITE_TAC[INTEGER_RULE `!x:int. (&3303 * x * &128 == x) (mod &3329)`]]);;
@@ -268,7 +268,7 @@ let MLKEM_NTT_INV_COEFF = prove
  (`!a k. (!i. i < 256 ==> &0 <= a i /\ a i < &3329) /\ k < 256
          ==> coeff k (mlkem_ntt_inv a) =
              (&3303 * isum (0..127)
-                       (\j. a(2 * bitreverse7 j + k MOD 2) *
+                       (\j. a(2 * bitrev7 j + k MOD 2) *
                             &1175 pow ((2 * j + 1) * k DIV 2))) rem &3329`,
   SIMP_TAC[MLKEM_NTT_INV_EXPLICIT; COEFF_MLKEM_POLY]);;
 
@@ -278,13 +278,13 @@ let MLKEM_NTT_INV_COEFF = prove
 
 let NTTINV_BR_FACT = prove
  (`!L M. L IN {2,4,8,16,32,64,128} /\ M < 128 DIV L
-         ==> bitreverse7 (2 * (128 DIV L) - 1 - M) +
-             bitreverse7 (128 DIV L + M) = 128`,
+         ==> bitrev7 (2 * (128 DIV L) - 1 - M) +
+             bitrev7 (128 DIV L + M) = 128`,
   REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; FORALL_IN_INSERT;
               NOT_IN_EMPTY] THEN
   CONV_TAC NUM_REDUCE_CONV THEN REPEAT CONJ_TAC THEN
   CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[bitreverse7] THEN CONV_TAC WORD_REDUCE_CONV THEN
+  REWRITE_TAC[bitrev7] THEN CONV_TAC WORD_REDUCE_CONV THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 (* Restore the default setting for anything loaded later.                    *)

@@ -128,12 +128,13 @@ let mlkem_dot = new_definition
 (* The NTT: the residues of f modulo X^2 - zeta^(2 * BitRev7(i) + 1) with    *)
 (* zeta = 17, as an array of 256 coefficients.                               *)
 (* Implements FIPS 203 equations (4.12) and (4.13), in place of Algorithms 9 *)
-(* and 10. The definition of bitreverse7 (BitRev7) is the same as in         *)
-(* common/mlkem_mldsa.ml.                                                    *)
+(* and 10. bitrev7 is BitRev7, the reversal of the 7 bits of its argument;   *)
+(* below 128 it agrees with bitreverse7 of common/mlkem_mldsa.ml (see        *)
+(* BITREVERSE7_ALT there), which keeps the bits above the seventh.           *)
 (* ------------------------------------------------------------------------- *)
 
-let bitreverse7 = define
- `bitreverse7(n) = val(word_reversefields 1 (word n:7 word))`;;
+let bitrev7 = define
+ `bitrev7(n) = val(word_reversefields 1 (word n:7 word))`;;
 
 let mlkem_ntt = new_definition
  `mlkem_ntt (f:(1->num)->int) i =
@@ -141,7 +142,7 @@ let mlkem_ntt = new_definition
           (poly_rem mlkem_zq f
              (ring_sub mlkem_zqx (ring_pow mlkem_zqx mlkem_X 2)
                (poly_const mlkem_zq
-                 (ring_pow mlkem_zq (&17) (2 * bitreverse7(i DIV 2) + 1)))))`;;
+                 (ring_pow mlkem_zq (&17) (2 * bitrev7(i DIV 2) + 1)))))`;;
 
 (* The inverse of the NTT on arrays of 256 coefficients: the element of R_q  *)
 (* whose NTT is a (it exists and is unique when a is reduced mod q).         *)
