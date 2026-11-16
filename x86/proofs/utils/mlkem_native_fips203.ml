@@ -712,6 +712,87 @@ let MLKEM_ZQ_ADD = prove
   REWRITE_TAC[MLKEM_ZQ]);;
 
 (* ------------------------------------------------------------------------- *)
+(* BitRev7 is bitrev7 in the FIPS 203 specification and bitreverse7 in       *)
+(* common/mlkem_mldsa.ml, whose NTT and inverse NTT the code computes. The   *)
+(* two agree below 128, and above it bitreverse7 keeps the bits above the    *)
+(* seventh, which changes the powers of zeta = 17 that it gives only by      *)
+(* powers of 17 EXP 256, which is 1 mod q.                                   *)
+(* ------------------------------------------------------------------------- *)
+
+let BITREVERSE7_MOD = prove
+ (`!n. bitreverse7 n = bitreverse7 (n MOD 128) + 128 * n DIV 128`,
+  GEN_TAC THEN REWRITE_TAC[bitreverse7] THEN
+  SIMP_TAC[BITMAP_SIMPLE; LENGTH; ARITH; MOD_LT_EQ;
+           ARITH_RULE `2 EXP 7 = 128`] THEN
+  REWRITE_TAC[bitmap; LENGTH; ARITH; ARITH_RULE `2 EXP 7 = 128`] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN MATCH_MP_TAC NSUM_EQ THEN
+  REWRITE_TAC[IN_ELIM_THM] THEN X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  REWRITE_TAC[ARITH_RULE `128 = 2 EXP 7`; NUMBIT_MOD_EXP] THEN
+  AP_TERM_TAC THEN AP_TERM_TAC THEN
+  MATCH_MP_TAC(TAUT `p ==> (q <=> p /\ q)`) THEN
+  UNDISCH_TAC `i < 7` THEN SPEC_TAC(`i:num`,`i:num`) THEN
+  CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC(DEPTH_CONV EL_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+let BITREV7_BITREVERSE7 = prove
+ (`!n. bitrev7 n = bitreverse7 (n MOD 128)`,
+  GEN_TAC THEN SIMP_TAC[BITREVERSE7_ALT; MOD_LT_EQ; ARITH_EQ] THEN
+  REWRITE_TAC[bitrev7] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  MP_TAC(INST_TYPE [`:7`,`:N`] WORD_MOD_SIZE) THEN
+  REWRITE_TAC[DIMINDEX_CONV `dimindex(:7)`] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[th]));;
+
+let MLKEM_BITREVERSE7_LT = prove
+ (`!n. n < 128 ==> bitreverse7 n < 128`,
+  REPEAT STRIP_TAC THEN
+  FIRST_ASSUM(SUBST1_TAC o SYM o MATCH_MP MOD_LT) THEN
+  REWRITE_TAC[GSYM BITREV7_BITREVERSE7; BITREV7_BOUND]);;
+
+let MLKEM_POW17_MOD = prove
+ (`!x. ((&17:int) pow x == &17 pow (x MOD 256)) (mod &3329)`,
+  GEN_TAC THEN
+  SUBGOAL_THEN `x = 256 * x DIV 256 + x MOD 256` (fun th ->
+    GEN_REWRITE_TAC (RATOR_CONV o LAND_CONV o RAND_CONV) [th])
+  THENL [ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[INT_POW_ADD; GSYM INT_POW_POW] THEN
+  MATCH_MP_TAC(INTEGER_RULE
+   `(a:int == &1) (mod n) ==> (a * b == b) (mod n)`) THEN
+  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV)
+   [GSYM(SPEC `x DIV 256` INT_POW_ONE)] THEN
+  MATCH_MP_TAC INT_CONG_POW THEN
+  REWRITE_TAC[GSYM INT_REM_EQ] THEN CONV_TAC INT_REDUCE_CONV);;
+
+let MLKEM_POW17_CONG = prove
+ (`!x y. x MOD 256 = y MOD 256 ==> ((&17:int) pow x == &17 pow y) (mod &3329)`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM INT_REM_EQ] THEN
+  ONCE_REWRITE_TAC[REWRITE_RULE[GSYM INT_REM_EQ] MLKEM_POW17_MOD] THEN
+  ASM_REWRITE_TAC[]);;
+
+let MLKEM_ZETA_BITREV7_CONG = prove
+ (`!n j. ((&17:int) pow ((2 * bitreverse7 n + 1) * j) ==
+          &17 pow ((2 * bitrev7 n + 1) * j)) (mod &3329)`,
+  REPEAT GEN_TAC THEN MATCH_MP_TAC MLKEM_POW17_CONG THEN
+  GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [BITREVERSE7_MOD] THEN
+  REWRITE_TAC[BITREV7_BITREVERSE7] THEN
+  SPEC_TAC(`n DIV 128`,`q:num`) THEN
+  SPEC_TAC(`bitreverse7(n MOD 128)`,`b:num`) THEN REPEAT GEN_TAC THEN
+  REWRITE_TAC[NUM_RING
+   `(2 * (b + 128 * q) + 1) * j = (q * j) * 256 + (2 * b + 1) * j`] THEN
+  REWRITE_TAC[MOD_MULT_ADD]);;
+
+let MLKEM_NTT_INV_COEFF_ALT = prove
+ (`!a k. (!i. i < 256 ==> &0 <= a i /\ a i < &3329) /\ k < 256
+         ==> coeff k (mlkem_ntt_inv a) =
+             (&3303 * isum (0..127)
+                       (\j. a(2 * bitreverse7 j + k MOD 2) *
+                            &1175 pow ((2 * j + 1) * k DIV 2))) rem &3329`,
+  SIMP_TAC[MLKEM_NTT_INV_COEFF] THEN REPEAT STRIP_TAC THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  MATCH_MP_TAC ISUM_EQ_NUMSEG THEN X_GEN_TAC `j:num` THEN STRIP_TAC THEN
+  ASM_SIMP_TAC[BITREV7_BITREVERSE7; MOD_LT;
+               ARITH_RULE `j <= 127 ==> j < 128`]);;
+
+(* ------------------------------------------------------------------------- *)
 (* The NTT and its inverse, as computed by the code up to congruence mod q,  *)
 (* and MultiplyNTTs (FIPS 203 Algorithm 11) as plain arithmetic.             *)
 (* ------------------------------------------------------------------------- *)
@@ -726,9 +807,11 @@ let MLKEM_NTT_FORWARD_CONG = prove
   MATCH_MP_TAC INT_CONG_ISUM THEN REWRITE_TAC[FINITE_NUMSEG; IN_NUMSEG] THEN
   X_GEN_TAC `j:num` THEN STRIP_TAC THEN
   MATCH_MP_TAC(INTEGER_RULE
-   `(x:int == y) (mod n) ==> (x * z == y * z) (mod n)`) THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN
-  MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ASM_ARITH_TAC);;
+   `(x:int == y) (mod n) /\ (z == w) (mod n) ==> (x * z == y * w) (mod n)`) THEN
+  CONJ_TAC THENL
+   [FIRST_X_ASSUM MATCH_MP_TAC THEN
+    MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ASM_ARITH_TAC;
+    ONCE_REWRITE_TAC[INT_CONG_SYM] THEN REWRITE_TAC[MLKEM_ZETA_BITREV7_CONG]]);;
 
 let MLKEM_NATIVE_NTT_CONG = prove
  (`!f (x:num->int16) (z:int16) i.
@@ -760,7 +843,7 @@ let MLKEM_NTT_INV_CONG = prove
         (!i. i < 256 ==> (b i == a i) (mod &3329)) /\ k < 256
         ==> (inverse_ntt b k == &65536 * coeff k (mlkem_ntt_inv a))
             (mod &3329)`,
-  REPEAT STRIP_TAC THEN ASM_SIMP_TAC[MLKEM_NTT_INV_COEFF; inverse_ntt] THEN
+  REPEAT STRIP_TAC THEN ASM_SIMP_TAC[MLKEM_NTT_INV_COEFF_ALT; inverse_ntt] THEN
   REWRITE_TAC[INT_CONG_LREM] THEN
   ABBREV_TAC `I1 = isum (0..127)
                     (\j. (b:num->int) (2 * bitreverse7 j + k MOD 2) *
@@ -775,8 +858,8 @@ let MLKEM_NTT_INV_CONG = prove
     MATCH_MP_TAC(INTEGER_RULE
      `(x:int == y) (mod n) ==> (x * z == y * z) (mod n)`) THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN
-    MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN
-    MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ARITH_TAC;
+    MP_TAC(SPEC `j:num` MLKEM_BITREVERSE7_LT) THEN
+    MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ASM_ARITH_TAC;
     ALL_TAC] THEN
   MP_TAC(SPECL [`&3303 * I2:int`; `&3329:int`] INT_REM_MOD_SELF) THEN
   SPEC_TAC(`(&3303 * I2:int) rem &3329`,`z:int`) THEN GEN_TAC THEN
@@ -808,8 +891,8 @@ let INVERSE_NTT_CONG_MUL = prove
   MATCH_MP_TAC(INTEGER_RULE
    `(x:int == y) (mod n) ==> (x * z == y * z) (mod n)`) THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
-  MP_TAC(SPEC `j:num` BITREVERSE7_BOUND) THEN
-  MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ARITH_TAC);;
+  MP_TAC(SPEC `j:num` MLKEM_BITREVERSE7_LT) THEN
+  MP_TAC(ARITH_RULE `k MOD 2 < 2`) THEN ASM_ARITH_TAC);;
 
 let MLKEM_NTT_INV_CONG_MUL = prove
  (`!(a:num->int) (b:num->int) c k.
@@ -843,7 +926,12 @@ let FIPS203_MULTIPLY_NTTS_INT = prove
   REPEAT GEN_TAC THEN
   REWRITE_TAC[fips203_multiply_ntts; mlkem_zq; INTEGER_MOD_RING_CLAUSES] THEN
   COND_CASES_TAC THEN CONV_TAC INT_REM_DOWN_CONV THEN
-  REWRITE_TAC[INT_MUL_ASSOC]);;
+  REWRITE_TAC[INT_MUL_ASSOC] THEN REWRITE_TAC[INT_REM_EQ] THEN
+  MATCH_MP_TAC(INTEGER_RULE
+   `(z:int == w) (mod n) ==> (x + y * z == x + y * w) (mod n)`) THEN
+  ONCE_REWRITE_TAC[INT_CONG_SYM] THEN
+  MP_TAC(SPECL [`n DIV 2`; `1`] MLKEM_ZETA_BITREV7_CONG) THEN
+  REWRITE_TAC[MULT_CLAUSES]);;
 
 let FIPS203_MULTIPLY_NTTS_IN_ZQ = prove
  (`!a b n. fips203_multiply_ntts a b n IN ring_carrier mlkem_zq`,
