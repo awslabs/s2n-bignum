@@ -86,7 +86,7 @@ let arm_ldst_s = new_definition `arm_ldst_s ld Rt =
   (if ld then arm_LDR else arm_STR) (SREG' Rt)`;;
 let arm_ldst_h = new_definition `arm_ldst_h ld Rt =
   (if ld then arm_LDR else arm_STR) (HREG' Rt)`;;
-let arm_ldst_bv = new_definition `arm_ldst_bv ld Rt =
+let arm_ldst_b_simd = new_definition `arm_ldst_b_simd ld Rt =
   (if ld then arm_LDR else arm_STR) (BREG' Rt)`;;
 let arm_ldstb = new_definition `arm_ldstb ld Rt =
   (if ld then arm_LDRB else arm_STRB) (WREG' Rt)`;;
@@ -374,7 +374,7 @@ let decode = new_definition `!w:int32. decode w =
   | [0b01:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
     SOME (arm_ldst_h is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 2))))
   | [0b00:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
-    SOME (arm_ldst_bv is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12))))
+    SOME (arm_ldst_b_simd is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12))))
   // Post-immediate offset, sizes 128 and 64
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
@@ -1837,7 +1837,7 @@ let PURE_DECODE_CONV =
     List.iter (fun tm -> add_conv (tm, 1, REG_CONV) rw) [`XREG'`; `WREG'`; `QREG'`; `DREG'`; `SREG'`; `HREG'`; `BREG'`; `XREG_SP`; `WREG_SP`];
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop;
-              arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldst_s; arm_ldst_h; arm_ldst_bv;
+              arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldst_s; arm_ldst_h; arm_ldst_b_simd;
               arm_ldstb; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
               arm_ldst2; arm_ldstp_2q; arm_ldstp_3q; arm_ldstp_3d;
               arm_ldstp_4q; arm_ldstp_4d; arm_ldst3; arm_ldst_lane] rw;
