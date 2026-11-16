@@ -108,20 +108,52 @@ permutations use no stack.
 
 ## Proofs
 
-`make mlkem_native2_avx512_proofs` in `x86` runs the proofs of the two
-permutations, so far (those of the image are to come), against `keccak 24`
-of `../proofs/utils/keccak_spec.ml`, with their constant-time and memory
-safety: `../proofs/sha3_keccak4_f1600_avx512.ml` and
-`../proofs/sha3_keccak_f1600_avx512.ml`, with the common parts in
-`../proofs/utils/keccak_avx512.ml`, and the theorems of correctness and
-safety in one for the callers in the image in
-`../proofs/utils/keccak_avx512_full.ml` (as
-`../proofs/utils/mlkem_native2_keccak_full.ml` has them for the AVX2
-version). As for the AVX2 permutations, each round is simulated with the
-lanes of the registers as variables and each lane of the new state is
-compared with that of `keccak_round` by bit-blasting; the model gives
-`vpternlogq` as the disjunction of the minterms of its immediate, which
-the simulation turns into the XOR and AND-NOT forms first.
+`make mlkem_native2_avx512_proofs` in `x86` runs the proofs of this
+version: those of the two permutations, and those of the functions of the
+image, the same theorems as for the AVX2 version (see
+`../mlkem_native2/README.md`) about the image of this one.
+
+- The permutations, against `keccak 24` of
+  `../proofs/utils/keccak_spec.ml`, with their constant-time and memory
+  safety: `../proofs/sha3_keccak4_f1600_avx512.ml` and
+  `../proofs/sha3_keccak_f1600_avx512.ml`, with the common parts in
+  `../proofs/utils/keccak_avx512.ml`, and the theorems of correctness and
+  safety in one for the callers in the image in
+  `../proofs/utils/keccak_avx512_full.ml`. As for the AVX2 permutations,
+  each round is simulated with the lanes of the registers as variables and
+  each lane of the new state is compared with that of `keccak_round` by
+  bit-blasting; the model gives `vpternlogq` as the disjunction of the
+  minterms of its immediate, which the simulation turns into the XOR and
+  AND-NOT forms first.
+- The functions of the image, in copies of the files of the AVX2 version
+  with `_avx512` added to their names, the names of the functions in them,
+  and those of the theorems about the image
+  (`MLKEM768_ENC_DERAND_AVX512_SUBROUTINE_CORRECT` etc.):
+  `../proofs/mlkem_native2_avx512_image.ml`,
+  `../proofs/mlkem_hash_h_avx512.ml`, `mlkem_hash_g_avx512.ml`,
+  `mlkem_getnoise_avx512.ml`, `mlkem_gen_matrix_avx512.ml`,
+  `mlkem_gen_matrix_k2_avx512.ml` to `mlkem_gen_matrix_k4_safe_avx512.ml`,
+  `mlkem512_avx512.ml`, `mlkem768_avx512.ml` and `mlkem1024_avx512.ml`,
+  and `../proofs/utils/mlkem_native2_avx512_*.ml`. Up to the permutations,
+  the image is the AVX2 one byte for byte, but for the displacements of
+  the three calls of the x4 permutation and of the references to the
+  constants block (which follows the permutations), so the proofs are the
+  same but for the parts about the permutations, in
+  `../proofs/utils/mlkem_native2_avx512_sponge.ml` (x1), `_noise.ml` (x4)
+  and `_keccak_full.ml`. The utilities that are not about an image
+  (`../proofs/utils/mlkem_native2_tools.ml`, `mlkem_native2_kpke.ml` and
+  `mlkem_native2_rej_full.ml`) and the proofs of the leaves are shared
+  with the AVX2 version. The copies are kept in step by hand: a change to
+  the proofs of one version is to be made to the other's too.
+- The x4 permutation is called as `sha3_keccak4_f1600_alt` is in the AVX2
+  version, with pointers to the two rotation tables of the latter (which
+  it does not read), and with the 0x31f bytes below its return address
+  that the latter uses as its stack (it uses none). Its theorems are given
+  the forms of those of `sha3_keccak4_f1600_alt` (in
+  `../proofs/utils/mlkem_native2_avx512_noise.ml`, by weakening its own),
+  so that the proofs of its callers are copies too; the theorems of this
+  version thus have the stack bounds of the AVX2 version, larger than the
+  stack use given above by up to about 800 bytes.
 
 ## Constant time and testing
 

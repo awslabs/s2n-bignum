@@ -827,9 +827,10 @@ MLKEM_NATIVE2_PROOF_LOGS = mlkem_native2/mlkem_gen_matrix_k2.correct \
 
 mlkem_native2_proofs: $(MLKEM_NATIVE2_PROOF_LOGS);
 
-# The proofs of the AVX-512 version of mlkem_native2, so far those of its
-# two Keccak permutations, and of their correctness and safety in one for
-# the callers in the image
+# The proofs of the AVX-512 version of mlkem_native2: those of its two
+# Keccak permutations, and of their correctness and safety in one for the
+# callers in the image, and then those of the image, copies of those of the
+# AVX2 version above with their own parts for the permutations
 
 MLKEM_NATIVE2_AVX512_KECCAK_PROOF = proofs/utils/keccak_spec.ml \
                                     proofs/utils/keccak_avx2.ml \
@@ -852,10 +853,147 @@ mlkem_native2_avx512/keccak_avx512_full.native: \
   mlkem_native2_avx512/sha3_keccak4_f1600_avx512.o ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
+MLKEM_NATIVE2_AVX512_IMAGE_PROOF = \
+  mlkem_native2_avx512/mlkem_native2_avx512_image.elf \
+  proofs/mlkem_native2_avx512_image.ml \
+  proofs/utils/mlkem_native2_tools.ml
+MLKEM_NATIVE2_AVX512_SPONGE_PROOF = $(MLKEM_NATIVE2_AVX512_IMAGE_PROOF) \
+  proofs/utils/mlkem_native2_avx512_sponge.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mlkem_bytes.ml \
+  $(MLKEM_NATIVE2_AVX512_KECCAK_PROOF) \
+  proofs/sha3_keccak_f1600_avx512.ml \
+  mlkem_native2_avx512/sha3_keccak_f1600_avx512.o
+mlkem_native2_avx512/mlkem_hash_g_avx512.native: \
+  proofs/mlkem_hash_g_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_SPONGE_PROOF) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native2_avx512/mlkem_hash_h_avx512.native: \
+  proofs/mlkem_hash_h_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_SPONGE_PROOF) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+MLKEM_NATIVE2_AVX512_NOISE_PROOF = $(MLKEM_NATIVE2_AVX512_SPONGE_PROOF) \
+  proofs/utils/mlkem_native2_avx512_noise.ml \
+  proofs/mlkem_cbd2.ml mlkem/mlkem_cbd2.o \
+  proofs/mlkem_cbd3.ml mlkem/mlkem_cbd3.o \
+  proofs/sha3_keccak4_f1600_avx512.ml \
+  mlkem_native2_avx512/sha3_keccak4_f1600_avx512.o
+mlkem_native2_avx512/mlkem_getnoise_avx512.native: \
+  proofs/mlkem_getnoise_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_NOISE_PROOF) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+MLKEM_NATIVE2_AVX512_GM_PROOF = $(MLKEM_NATIVE2_AVX512_NOISE_PROOF) \
+  proofs/mlkem_getnoise_avx512.ml \
+  proofs/utils/mlkem_native_fips203.ml \
+  proofs/utils/mlkem_native2_avx512_matrix.ml \
+  proofs/mlkem_rej_uniform_alt_VARIABLE_TIME.ml \
+  mlkem/mlkem_rej_uniform_alt_VARIABLE_TIME.o \
+  proofs/mlkem_unpack.ml mlkem/mlkem_unpack.o mlkem/mlkem_unpack.obj \
+  proofs/mlkem_gen_matrix_avx512.ml
+mlkem_native2_avx512/mlkem_gen_matrix_k2_avx512.native: \
+  proofs/mlkem_gen_matrix_k2_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_GM_PROOF) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native2_avx512/mlkem_gen_matrix_k3_avx512.native: \
+  proofs/mlkem_gen_matrix_k3_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_GM_PROOF) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native2_avx512/mlkem_gen_matrix_k4_avx512.native: \
+  proofs/mlkem_gen_matrix_k4_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_GM_PROOF) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+MLKEM_NATIVE2_AVX512_GM_SAFE_PROOF = $(MLKEM_NATIVE2_AVX512_GM_PROOF) \
+  proofs/utils/mlkem_native2_avx512_safety.ml \
+  proofs/utils/keccak_avx512_full.ml \
+  proofs/utils/mlkem_native2_avx512_keccak_full.ml \
+  proofs/utils/mlkem_native2_rej_full.ml \
+  proofs/utils/mlkem_native2_avx512_gm_safe.ml
+mlkem_native2_avx512/mlkem_gen_matrix_k2_safe_avx512.native: \
+  proofs/mlkem_gen_matrix_k2_safe_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_GM_SAFE_PROOF) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native2_avx512/mlkem_gen_matrix_k3_safe_avx512.native: \
+  proofs/mlkem_gen_matrix_k3_safe_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_GM_SAFE_PROOF) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native2_avx512/mlkem_gen_matrix_k4_safe_avx512.native: \
+  proofs/mlkem_gen_matrix_k4_safe_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_GM_SAFE_PROOF) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+MLKEM_NATIVE2_AVX512_API_PROOF = $(MLKEM_NATIVE2_AVX512_NOISE_PROOF) \
+  proofs/utils/mlkem_native2_avx512_safety.ml \
+  proofs/utils/mlkem_compress_consts.ml \
+  proofs/utils/mlkem_native2_avx512_api.ml \
+  proofs/mlkem_ntt.ml mlkem/mlkem_ntt.o mlkem/mlkem_ntt.obj \
+  proofs/mlkem_rej_uniform_alt_VARIABLE_TIME.ml \
+  mlkem/mlkem_rej_uniform_alt_VARIABLE_TIME.o \
+  proofs/mlkem_hash_h_avx512.ml \
+  proofs/mlkem_check_encoding.ml mlkem/mlkem_check_encoding.o
+MLKEM_NATIVE2_AVX512_KEM_PROOF = $(MLKEM_NATIVE2_AVX512_API_PROOF) \
+  $(MLKEM_NATIVE2_AVX512_GM_PROOF) \
+  proofs/utils/mlkem_native2_kpke.ml \
+  proofs/utils/mlkem_native2_avx512_kem.ml \
+  proofs/mlkem_hash_g_avx512.ml \
+  proofs/mlkem_intt.ml mlkem/mlkem_intt.o mlkem/mlkem_intt.obj \
+  proofs/mlkem_mulcache_compute.ml \
+  mlkem/mlkem_mulcache_compute.o mlkem/mlkem_mulcache_compute.obj \
+  proofs/mlkem_basemul_k2.ml mlkem/mlkem_basemul_k2.o mlkem/mlkem_basemul_k2.obj \
+  proofs/mlkem_basemul_k3.ml mlkem/mlkem_basemul_k3.o mlkem/mlkem_basemul_k3.obj \
+  proofs/mlkem_basemul_k4.ml mlkem/mlkem_basemul_k4.o mlkem/mlkem_basemul_k4.obj \
+  proofs/mlkem_tomont.ml mlkem/mlkem_tomont.o mlkem/mlkem_tomont.obj \
+  proofs/mlkem_reduce.ml mlkem/mlkem_reduce.o mlkem/mlkem_reduce.obj \
+  proofs/mlkem_add_reduce.ml mlkem/mlkem_add_reduce.o \
+  proofs/mlkem_sub_reduce.ml mlkem/mlkem_sub_reduce.o \
+  proofs/mlkem_tobytes.ml mlkem/mlkem_tobytes.o mlkem/mlkem_tobytes.obj \
+  proofs/mlkem_frombytes.ml mlkem/mlkem_frombytes.o mlkem/mlkem_frombytes.obj \
+  proofs/mlkem_frommsg.ml mlkem/mlkem_frommsg.o \
+  proofs/mlkem_tomsg.ml mlkem/mlkem_tomsg.o \
+  proofs/mlkem_compress_d4_x86.ml mlkem/mlkem_compress_d4_x86.o \
+  proofs/mlkem_compress_d5_x86.ml mlkem/mlkem_compress_d5_x86.o \
+  proofs/mlkem_compress_d10_x86.ml mlkem/mlkem_compress_d10_x86.o \
+  proofs/mlkem_compress_d11_x86.ml mlkem/mlkem_compress_d11_x86.o \
+  proofs/mlkem_decompress_d4_x86.ml mlkem/mlkem_decompress_d4_x86.o \
+  proofs/mlkem_decompress_d5_x86.ml mlkem/mlkem_decompress_d5_x86.o \
+  proofs/mlkem_decompress_d10_x86.ml mlkem/mlkem_decompress_d10_x86.o \
+  proofs/mlkem_decompress_d11_x86.ml mlkem/mlkem_decompress_d11_x86.o
+MLKEM_NATIVE2_AVX512_KEM_SAFE_PROOF = $(MLKEM_NATIVE2_AVX512_KEM_PROOF) \
+  $(MLKEM_NATIVE2_AVX512_GM_SAFE_PROOF) \
+  proofs/utils/mlkem_native2_avx512_kem_safe.ml
+mlkem_native2_avx512/mlkem512_avx512.native: \
+  proofs/mlkem512_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_KEM_SAFE_PROOF) \
+  proofs/mlkem_gen_matrix_k2_avx512.ml \
+  proofs/mlkem_gen_matrix_k2_safe_avx512.ml ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native2_avx512/mlkem768_avx512.native: \
+  proofs/mlkem768_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_KEM_SAFE_PROOF) \
+  proofs/mlkem_gen_matrix_k3_avx512.ml \
+  proofs/mlkem_gen_matrix_k3_safe_avx512.ml ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+mlkem_native2_avx512/mlkem1024_avx512.native: \
+  proofs/mlkem1024_avx512.ml $(BASE_ML) \
+  $(MLKEM_NATIVE2_AVX512_KEM_SAFE_PROOF) \
+  proofs/mlkem_gen_matrix_k4_avx512.ml \
+  proofs/mlkem_gen_matrix_k4_safe_avx512.ml ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+
 MLKEM_NATIVE2_AVX512_PROOF_LOGS = \
   mlkem_native2_avx512/sha3_keccak_f1600_avx512.correct \
   mlkem_native2_avx512/sha3_keccak4_f1600_avx512.correct \
-  mlkem_native2_avx512/keccak_avx512_full.correct
+  mlkem_native2_avx512/keccak_avx512_full.correct \
+  mlkem_native2_avx512/mlkem_gen_matrix_k2_avx512.correct \
+  mlkem_native2_avx512/mlkem_gen_matrix_k3_avx512.correct \
+  mlkem_native2_avx512/mlkem_gen_matrix_k4_avx512.correct \
+  mlkem_native2_avx512/mlkem_gen_matrix_k2_safe_avx512.correct \
+  mlkem_native2_avx512/mlkem_gen_matrix_k3_safe_avx512.correct \
+  mlkem_native2_avx512/mlkem_gen_matrix_k4_safe_avx512.correct \
+  mlkem_native2_avx512/mlkem_getnoise_avx512.correct \
+  mlkem_native2_avx512/mlkem_hash_g_avx512.correct \
+  mlkem_native2_avx512/mlkem_hash_h_avx512.correct \
+  mlkem_native2_avx512/mlkem512_avx512.correct \
+  mlkem_native2_avx512/mlkem768_avx512.correct \
+  mlkem_native2_avx512/mlkem1024_avx512.correct
 
 mlkem_native2_avx512_proofs: $(MLKEM_NATIVE2_AVX512_PROOF_LOGS);
 

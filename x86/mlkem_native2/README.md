@@ -188,6 +188,10 @@ and the NOPs of the padding between functions. All are in the x86 model.
   in the safety theorems the offset of the frame is a function of the
   stack pointer.
 
+The proofs of the AVX-512 version (`../mlkem_native2_avx512`) are copies
+of these, with their own parts for its Keccak permutations, and are kept
+in step with them by hand (see its README).
+
 There are no AT&T versions of these files, or of the new leaves and of
 `sha3_keccak_f1600_alt2`, in `../../x86_att`.
 
