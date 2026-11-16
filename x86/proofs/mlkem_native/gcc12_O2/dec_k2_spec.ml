@@ -235,7 +235,9 @@ let KD2_CHECK =
 (* mlkem512_indcpa_dec, and their addresses are offsets from the frame       *)
 (* variable bot of INDCPA_BOT_TAC, the bottom of the stacks of the callees   *)
 (* 12128 bytes below them: m' and h at bot + 12160, K' and r' at bot + 12224 *)
-(* and c', and then z and the copy of the ciphertext, at bot + 12288.        *)
+(* and c', and then z and the copy of the ciphertext, at bot + 12288. In the *)
+(* loop that compares c' with the ciphertext, PXOR reads c' from memory,     *)
+(* which needs 16-byte alignment, so that of bot + 12288 is given too.       *)
 (* ------------------------------------------------------------------------- *)
 
 let KD2_FRAME = (13168,48,12128,960);;
@@ -273,7 +275,7 @@ let KD2_INTRO_TAC =
                      (concl th)));;
 
 let KD2_SETUP_TAC =
-  INDCPA_BOT_TAC KD2_FRAME [12128] THEN
+  INDCPA_BOT_TAC KD2_FRAME [12128; 12288] THEN
   INDCPA_FRAME_TAC ["memory :> bytes(ss:int64,32)"] KD2_FRAME THEN
   INDCPA_NONOV_TAC 13088
    [`ss:int64,32`; `ct:int64,768`; `sk:int64,1632`;
@@ -548,6 +550,13 @@ let KD2_BODY_TAC =
   KD2_CHUNK_TAC `ct:int64` `num_of_bytelist c` THEN
   KD2_CHUNK_TAC (INDCPA_SP 12288) (mk_comb(`num_of_bytelist`,KD2_CP)) THEN
   VAL_INT64_TAC `16 * i` THEN KEM_INDEX_TAC THEN
+  SUBGOAL_THEN
+   `aligned 16 (word_add (word_add bot (word 12288)) (word (1 * 16 * i)):int64)`
+  ASSUME_TAC THENL
+   [MATCH_MP_TAC ALIGNED_WORD_ADD THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[ALIGNED_WORD; DIMINDEX_64] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC NUMBER_RULE;
+    ALL_TAC] THEN
   MAP_EVERY (fun k -> X86_STEPS_TAC KD2_EXEC [k] THEN SIMD_SIMPLIFY_TAC[])
    (1--7) THEN
   RULE_ASSUM_TAC(REWRITE_RULE
@@ -914,6 +923,13 @@ let KD2_SAFE_BODY_TAC =
   REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
   VAL_INT64_TAC `16 * i` THEN
+  SUBGOAL_THEN
+   `aligned 16 (word_add (word_add bot (word 12288)) (word (1 * 16 * i)):int64)`
+  ASSUME_TAC THENL
+   [MATCH_MP_TAC ALIGNED_WORD_ADD THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[ALIGNED_WORD; DIMINDEX_64] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC NUMBER_RULE;
+    ALL_TAC] THEN
   X86_STEPS_TAC KD2_EXEC (1--7) THEN
   RULE_ASSUM_TAC(REWRITE_RULE
    [MP (SPEC `i:num` KD2_TEST) (ASSUME `i < 48`)]) THEN

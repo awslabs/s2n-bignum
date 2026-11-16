@@ -235,7 +235,9 @@ let KD3_CHECK =
 (* mlkem768_indcpa_dec, and their addresses are offsets from the frame       *)
 (* variable bot of INDCPA_BOT_TAC, the bottom of the stacks of the callees   *)
 (* 17000 bytes below them: m' and h at bot + 17032, K' and r' at bot + 17096 *)
-(* and c', and then z and the copy of the ciphertext, at bot + 17160.        *)
+(* and c', and then z and the copy of the ciphertext, at bot + 17160. In the *)
+(* loop that compares c' with the ciphertext, PXOR reads c' from memory,     *)
+(* which needs 16-byte alignment, so that of bot + 17160 is given too.       *)
 (* ------------------------------------------------------------------------- *)
 
 let KD3_FRAME = (18360,48,17000,1280);;
@@ -273,7 +275,7 @@ let KD3_INTRO_TAC =
                      (concl th)));;
 
 let KD3_SETUP_TAC =
-  INDCPA_BOT_TAC KD3_FRAME [17000] THEN
+  INDCPA_BOT_TAC KD3_FRAME [17000; 17160] THEN
   INDCPA_FRAME_TAC ["memory :> bytes(ss:int64,32)"] KD3_FRAME THEN
   INDCPA_NONOV_TAC 18280
    [`ss:int64,32`; `ct:int64,1088`; `sk:int64,2400`;
@@ -549,6 +551,13 @@ let KD3_BODY_TAC =
   KD3_CHUNK_TAC `ct:int64` `num_of_bytelist c` THEN
   KD3_CHUNK_TAC (INDCPA_SP 17160) (mk_comb(`num_of_bytelist`,KD3_CP)) THEN
   VAL_INT64_TAC `16 * i` THEN KEM_INDEX_TAC THEN
+  SUBGOAL_THEN
+   `aligned 16 (word_add (word_add bot (word 17160)) (word (1 * 16 * i)):int64)`
+  ASSUME_TAC THENL
+   [MATCH_MP_TAC ALIGNED_WORD_ADD THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[ALIGNED_WORD; DIMINDEX_64] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC NUMBER_RULE;
+    ALL_TAC] THEN
   MAP_EVERY (fun k -> X86_STEPS_TAC KD3_EXEC [k] THEN SIMD_SIMPLIFY_TAC[])
    (1--7) THEN
   RULE_ASSUM_TAC(REWRITE_RULE
@@ -917,6 +926,13 @@ let KD3_SAFE_BODY_TAC =
   REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
   VAL_INT64_TAC `16 * i` THEN
+  SUBGOAL_THEN
+   `aligned 16 (word_add (word_add bot (word 17160)) (word (1 * 16 * i)):int64)`
+  ASSUME_TAC THENL
+   [MATCH_MP_TAC ALIGNED_WORD_ADD THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[ALIGNED_WORD; DIMINDEX_64] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC NUMBER_RULE;
+    ALL_TAC] THEN
   X86_STEPS_TAC KD3_EXEC (1--7) THEN
   RULE_ASSUM_TAC(REWRITE_RULE
    [MP (SPEC `i:num` KD3_TEST) (ASSUME `i < 68`)]) THEN

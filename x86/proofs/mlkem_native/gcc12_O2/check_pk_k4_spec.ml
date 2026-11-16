@@ -220,7 +220,10 @@ let CHECK_PK_SUBWORD_JOIN =
 (* the frame proved by BITBLAST through the form of delta as a word,         *)
 (* CHECK_PK_DELTA. The encoding is then at bot + 40 and the vector at        *)
 (* bot + 1576. The comparison uses SSE instructions, which keep the upper    *)
-(* halves of the YMM registers, so those are given names after the calls.    *)
+(* halves of the YMM registers, so those are given names after the calls. In *)
+(* the loop, PXOR reads the reencoded key at bot + 40 from memory, which     *)
+(* needs 16-byte alignment, so that alignment is given too, with             *)
+(* CHECK_PK_ALIGNED_16.                                                      *)
 (* ------------------------------------------------------------------------- *)
 
 let CHECK_PK_DELTA_STMT =
@@ -229,6 +232,12 @@ let CHECK_PK_DELTA_STMT =
 
 let CHECK_PK_DELTA =
   assume_spec CHECK_PK_DELTA_STMT;;
+
+let CHECK_PK_ALIGNED_16_STMT =
+  `!x:int64. aligned 16 x <=> word_and x (word 15) = word 0`;;
+
+let CHECK_PK_ALIGNED_16 =
+  assume_spec CHECK_PK_ALIGNED_16_STMT;;
 
 let CHECK_PK_BOT_TAC =
   ABBREV_TAC
@@ -239,9 +248,11 @@ let CHECK_PK_BOT_TAC =
   SUBGOAL_THEN
    `word_and (word_add stackpointer (word 3656))
              (word 18446744073709551584):int64 =
-    word_add bot (word 3624)`
-  ASSUME_TAC THENL
-   [MAP_EVERY EXPAND_TAC ["bot"; "delta"] THEN
+    word_add bot (word 3624) /\
+    aligned 16 (word_add bot (word 40):int64)`
+  STRIP_ASSUME_TAC THENL
+   [REWRITE_TAC[CHECK_PK_ALIGNED_16] THEN
+    MAP_EVERY EXPAND_TAC ["bot"; "delta"] THEN
     REWRITE_TAC[CHECK_PK_DELTA] THEN CONV_TAC BITBLAST_RULE;
     ALL_TAC];;
 
@@ -468,6 +479,13 @@ let CHECK_PK_BODY_TAC exec (events,data) =
      CHECK_PK_CHUNK_TAC `word_add bot (word 40):int64` `mm:num`
    else ALL_TAC) THEN
   VAL_INT64_TAC `16 * i` THEN
+  SUBGOAL_THEN
+   `aligned 16 (word_add (word_add bot (word 40)) (word (1 * 16 * i)):int64)`
+  ASSUME_TAC THENL
+   [MATCH_MP_TAC ALIGNED_WORD_ADD THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[ALIGNED_WORD; DIMINDEX_64] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC NUMBER_RULE;
+    ALL_TAC] THEN
   MAP_EVERY (fun k -> X86_STEPS_TAC exec [k] THEN SIMD_SIMPLIFY_TAC[])
    (1--7) THEN
   SUBGOAL_THEN
