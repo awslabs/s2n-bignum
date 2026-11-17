@@ -1624,6 +1624,7 @@ let x86_required_features instr =
   | "AESKEYGENASSIST" -> ["aes"]
   | "PSHUFB" -> ["ssse3"]
   | "PBLENDW" | "PINSRD" | "PINSRQ" -> ["sse4_1"]
+  | "PCLMULQDQ" -> ["pclmulqdq"]
   | "VPCLMULQDQ" -> if ymm then ["avx2"; "vpclmulqdq"]
                     else ["avx"; "pclmulqdq"]
   | "VMOVDQA" | "VMOVDQU" | "VMOVSHDUP" | "VMOVSLDUP" | "VPTEST"
