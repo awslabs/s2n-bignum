@@ -1,0 +1,85 @@
+SAIL_HL_X86_CLC_EQ
+|- forall s t. sail_hl_X86_5fCLC s t <=> x86_CLC s t
+
+SAIL_HL_X86_STC_EQ
+|- forall s t. sail_hl_X86_5fSTC s t <=> x86_STC s t
+
+SAIL_HL_X86_CMC_EQ
+|- forall s t. sail_hl_X86_5fCMC s t <=> x86_CMC s t
+
+SAIL_HL_X86_CLD_EQ
+|- forall s t. sail_hl_X86_5fCLD s t <=> x86_CLD s t
+
+SAIL_HL_X86_STD_EQ
+|- forall s t. sail_hl_X86_5fSTD s t <=> x86_STD s t
+
+SAIL_HL_X86_NOP_EQ
+|- forall s t. sail_hl_X86_5fNOP s t <=> x86_NOP s t
+
+SAIL_HL_X86_ENDBR64_EQ
+|- forall s t. sail_hl_X86_5fENDBR64 s t <=> x86_ENDBR64 s t
+
+SAIL_HL_X86_NOP_N_EQ
+|- forall m s t.
+     sail_hl_X86_5fNOP_5fN m s t <=> x86_NOP_N (registers :> element m) s t
+
+SAIL_HL_X86_MOV64_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fMOV64_5fRR d m s t <=>
+     x86_MOV (registers :> element m) (registers :> element d) s t
+
+SAIL_HL_X86_MOV32_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fMOV32_5fRR d m s t <=>
+     x86_MOV (GPR32_Z (Gpr m Lower_32)) (GPR32_Z (Gpr d Lower_32)) s t
+
+SAIL_HL_X86_MOV16_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fMOV16_5fRR d m s t <=>
+     x86_MOV (GPR16 (Gpr m Lower_16)) (GPR16 (Gpr d Lower_16)) s t
+
+SAIL_HL_X86_MOV8_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fMOV8_5fRR d m s t <=>
+     x86_MOV (GPR8 (Gpr m Lower_8)) (GPR8 (Gpr d Lower_8)) s t
+
+SAIL_HL_X86_MOV8_LEGACY_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fMOV8_5fLEGACY_5fRR d m s t <=>
+     x86_MOV
+       (if 4 <= val m then GPR8 (Gpr (iword (&(val m) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx m) Lower_8))
+       (if 4 <= val d then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       s t
+
+SAIL_HL_X86_XCHG64_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fXCHG64_5fRR d m s t <=>
+     x86_XCHG (registers :> element d) (registers :> element m) s t
+
+SAIL_HL_X86_XCHG32_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fXCHG32_5fRR d m s t <=>
+     x86_XCHG (GPR32_Z (Gpr d Lower_32)) (GPR32_Z (Gpr m Lower_32)) s t
+
+SAIL_HL_X86_XCHG16_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fXCHG16_5fRR d m s t <=>
+     x86_XCHG (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr m Lower_16)) s t
+
+SAIL_HL_X86_XCHG8_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fXCHG8_5fRR d m s t <=>
+     x86_XCHG (GPR8 (Gpr d Lower_8)) (GPR8 (Gpr m Lower_8)) s t
+
+SAIL_HL_X86_XCHG8_LEGACY_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fXCHG8_5fLEGACY_5fRR d m s t <=>
+     x86_XCHG
+       (if 4 <= val d then GPR8 (Gpr (iword (&(val d) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx d) Lower_8))
+       (if 4 <= val m then GPR8 (Gpr (iword (&(val m) - &4)) Upper_8)
+        else GPR8 (Gpr (word_zx m) Lower_8))
+       s t
+

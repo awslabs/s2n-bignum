@@ -1,0 +1,113 @@
+Context of the rv32 run
+The configuration under which the translator ran, and every
+interpretation that a model of the run uses. The Interpretations
+section of backend/README.md explains each interpretation; a comment
+at the top of a model lists what is specific to it.
+
+Configuration
+  extension Ext_Zca=off
+  extension Ext_Zicfilp=off
+
+Interpretations
+  Each Sail call or construct is replaced by the HOL term below it. a,
+  b, ... stand for its arguments, s for the state before it, s' for the
+  state after it and s0 for the state at the start of the instruction.
+
+  PC
+    ~> riscv_instruction_pc s0
+  cur_privilege
+    ~> read reg_cur_5fprivilege s
+  currentlyEnabled(Ext_Zca)
+    ~> F
+  currentlyEnabled(Ext_Zicfilp)
+    ~> F
+  exception_context(a, b)
+    ~> (a,b)
+  generate_event(EV_FENCE)
+    ~> one
+  get_arch_pc()
+    ~> riscv_instruction_pc s0
+  get_next_pc()
+    ~> read PC s
+  is_fiom_active()
+    ~> read reg_is_5ffiom_5factive s
+  rX_bits(a)
+    ~> read (riscv_gpr a) s
+  return Retire_Success()
+    ~> the final state is write events
+      (CONS (EventJump ((riscv_instruction_pc s0),(read PC s)))
+      (read events s)) s
+  sail_barrier(Barrier_RISCV_r_r)
+    ~> one
+  sail_barrier(Barrier_RISCV_r_rw)
+    ~> one
+  sail_barrier(Barrier_RISCV_r_w)
+    ~> one
+  sail_barrier(Barrier_RISCV_rw_r)
+    ~> one
+  sail_barrier(Barrier_RISCV_rw_rw)
+    ~> one
+  sail_barrier(Barrier_RISCV_rw_w)
+    ~> one
+  sail_barrier(Barrier_RISCV_tso)
+    ~> one
+  sail_barrier(Barrier_RISCV_w_r)
+    ~> one
+  sail_barrier(Barrier_RISCV_w_rw)
+    ~> one
+  sail_barrier(Barrier_RISCV_w_w)
+    ~> one
+  set_next_pc(a)
+    ~> s' = write PC a s
+  trap(a)
+    ~> sail_hl_ctor_Trap
+  vmem_read(a, b, 1, Load(Data), false, false, false)
+    ~> for addr = word_add (read (riscv_gpr a) s) b: if
+      ((val addr) MOD 1) = 0
+      (a copy of Sail's is_aligned_addr, not its translation) then s' =
+      write events (CONS (EventLoad (addr,1)) (read events s)) s,
+      returning INL (read (memory :> (bytes8 addr)) s); else every final
+      state, in place of Sail's plat_misaligned_exception, whose outcome
+      the platform chooses
+  vmem_read(a, b, 2, Load(Data), false, false, false)
+    ~> for addr = word_add (read (riscv_gpr a) s) b: if
+      ((val addr) MOD 2) = 0
+      (a copy of Sail's is_aligned_addr, not its translation) then s' =
+      write events (CONS (EventLoad (addr,2)) (read events s)) s,
+      returning INL (read (memory :> (bytes16 addr)) s); else every
+      final state, in place of Sail's plat_misaligned_exception, whose
+      outcome the platform chooses
+  vmem_read(a, b, 4, Load(Data), false, false, false)
+    ~> for addr = word_add (read (riscv_gpr a) s) b: if
+      ((val addr) MOD 4) = 0
+      (a copy of Sail's is_aligned_addr, not its translation) then s' =
+      write events (CONS (EventLoad (addr,4)) (read events s)) s,
+      returning INL (read (memory :> (bytes32 addr)) s); else every
+      final state, in place of Sail's plat_misaligned_exception, whose
+      outcome the platform chooses
+  vmem_write(a, b, 1, c, Store(Data), false, false, false)
+    ~> for addr = word_add (read (riscv_gpr a) s) b: if
+      ((val addr) MOD 1) = 0
+      (a copy of Sail's is_aligned_addr, not its translation) then s' =
+      write events (CONS (EventStore (addr,1)) (read events s))
+      (write (memory :> (bytes8 addr)) c s), returning INL T; else every
+      final state, in place of Sail's plat_misaligned_exception, whose
+      outcome the platform chooses
+  vmem_write(a, b, 2, c, Store(Data), false, false, false)
+    ~> for addr = word_add (read (riscv_gpr a) s) b: if
+      ((val addr) MOD 2) = 0
+      (a copy of Sail's is_aligned_addr, not its translation) then s' =
+      write events (CONS (EventStore (addr,2)) (read events s))
+      (write (memory :> (bytes16 addr)) c s), returning INL T; else
+      every final state, in place of Sail's plat_misaligned_exception,
+      whose outcome the platform chooses
+  vmem_write(a, b, 4, c, Store(Data), false, false, false)
+    ~> for addr = word_add (read (riscv_gpr a) s) b: if
+      ((val addr) MOD 4) = 0
+      (a copy of Sail's is_aligned_addr, not its translation) then s' =
+      write events (CONS (EventStore (addr,4)) (read events s))
+      (write (memory :> (bytes32 addr)) c s), returning INL T; else
+      every final state, in place of Sail's plat_misaligned_exception,
+      whose outcome the platform chooses
+  wX_bits(a, b)
+    ~> s' = write (riscv_gpr a) b s

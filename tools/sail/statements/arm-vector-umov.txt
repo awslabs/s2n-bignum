@@ -1,0 +1,10 @@
+SAIL_HL_ARM_UMOV32E32_EQ
+|- forall d n lane s t.
+     sail_hl_arm_5fUMOV32E32 d n lane s t <=>
+     arm_UMOV (WREG' d) (QREG' n) (val lane) 4 s t
+
+SAIL_HL_ARM_UMOV64E64_EQ
+|- forall d n lane s t.
+     sail_hl_arm_5fUMOV64E64 d n lane s t <=>
+     arm_UMOV (XREG' d) (QREG' n) (val lane) 8 s t
+
