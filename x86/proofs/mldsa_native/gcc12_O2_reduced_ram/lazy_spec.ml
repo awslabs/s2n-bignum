@@ -5,7 +5,7 @@
 
 (* ========================================================================= *)
 (* The results of the lazy matrix products of the reduced-RAM configuration  *)
-(* are those of the default one, where they matter: the statements.         *)
+(* are those of the default one, where they matter: the statements.          *)
 (*                                                                           *)
 (* With MLD_CONFIG_REDUCE_RAM the matrix A is sampled entry by entry when    *)
 (* it is needed, and the Montgomery products of its entries with the         *)
@@ -36,7 +36,7 @@ needs "x86/proofs/mldsa_native/relative.ml";;
 needs "common/mldsa_native_polyvec_lazy.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* ML-DSA-44                                                                *)
+(* ML-DSA-44                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 let MLD_KEYPAIR_T_LAZY_44_STMT =
@@ -128,7 +128,7 @@ let MLD_SIGN_W_LAZY_44_STMT =
 let MLD_SIGN_W_LAZY_44 = assume_spec MLD_SIGN_W_LAZY_44_STMT;;
 
 (* ------------------------------------------------------------------------- *)
-(* ML-DSA-65                                                                *)
+(* ML-DSA-65                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 let MLD_KEYPAIR_T_LAZY_65_STMT =
@@ -220,7 +220,7 @@ let MLD_SIGN_W_LAZY_65_STMT =
 let MLD_SIGN_W_LAZY_65 = assume_spec MLD_SIGN_W_LAZY_65_STMT;;
 
 (* ------------------------------------------------------------------------- *)
-(* ML-DSA-87                                                                *)
+(* ML-DSA-87                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 let MLD_KEYPAIR_T_LAZY_87_STMT =

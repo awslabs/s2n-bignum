@@ -97,7 +97,7 @@ let MLDSA_NATIVE_POLYVECK_REDUCE_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORREC
 (* Correctness, constant time and memory safety together: the same, and the  *)
 (* events are a function of the addresses only, with all accesses within the *)
 (* vector, the constants of mldsa_poly_reduce, the stack frame and the slot  *)
-(* of the return address, and the writes within the vector and the stack    *)
+(* of the return address, and the writes within the vector and the stack     *)
 (* frame.                                                                    *)
 (* ------------------------------------------------------------------------- *)
 

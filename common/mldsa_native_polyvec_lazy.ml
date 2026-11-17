@@ -13,7 +13,7 @@
 (* sampled when they are needed (mld_polymat_expand_entry), one at a time,   *)
 (* and the Montgomery product of each entry with the polynomial of the       *)
 (* vector is reduced on its own; the products are added up and the sum is    *)
-(* reduced (mld_poly_reduce). In the default configuration, the products of *)
+(* reduced (mld_poly_reduce). In the default configuration, the products of  *)
 (* a row are accumulated in 64 bits and reduced once                         *)
 (* (mld_polyvec_pointwise_acc_montgomery). The results are congruent modulo  *)
 (* q, but are not the same integers.                                         *)
@@ -76,9 +76,9 @@ let mld_polyvec_matrix_pointwise_montgomery_lazy = new_definition
 (* rho'' and kappa + j (mld_sign_y), as                                      *)
 (* mld_polyvec_matrix_pointwise_montgomery_yvec_lazy computes it: column by  *)
 (* column, each polynomial of y sampled and transformed in turn, the         *)
-(* products of the column with the entries added to the rows, and finally   *)
+(* products of the column with the entries added to the rows, and finally    *)
 (* each row reduced and transformed back. Row k gets the same sum, in the    *)
-(* same order, as mld_polyvec_matrix_row_lazy for the vector NTT(y).          *)
+(* same order, as mld_polyvec_matrix_row_lazy for the vector NTT(y).         *)
 (* ------------------------------------------------------------------------- *)
 
 let mld_yvec_lazy_w = new_definition
