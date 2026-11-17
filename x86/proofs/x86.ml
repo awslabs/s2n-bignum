@@ -6559,7 +6559,8 @@ let X86_ADD_RETURN_NOSTACK_TAC =
             MP th1 (keep(rand(rator(lhs(lhand(concl th1))))))
         | _ -> failwith "keeps_tac" in
       ACCEPT_TAC (end_itlist CONJ (map fact (conjuncts w))) (asl,w)) in
-  fun execth coreth ->
+  fun ?(tactics=(X86_STEPS_TAC,ENSURES_FINAL_STATE_TAC)) execth coreth ->
+    let steps_tac,final_tac = tactics in
     let coreth =
       REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]
       coreth in
@@ -6626,8 +6627,8 @@ let X86_ADD_RETURN_NOSTACK_TAC =
        (can (term_match [] `read PC s = a \/ Q` o concl)))) THEN
       (* Break 'exists e2. ...' for safety proofs *)
       REPEAT(STRIP_EXISTS_ASSUM_TAC) THEN
-      X86_STEPS_TAC execth [1] THEN
-      ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]];;
+      steps_tac execth [1] THEN
+      final_tac THEN ASM_REWRITE_TAC[]];;
 
 (* ------------------------------------------------------------------------- *)
 (* Version with register save/restore and stack adjustment.                  *)
@@ -6657,8 +6658,17 @@ let swap_forall = prove
     MESON_TAC[SUBROUTINE_MONO_FORALL3]);;
 
 
+(* With ~tactics:(pre_tac,call_tac,post_tac,final_tac), the prologue is      *)
+(* simulated by pre_tac execth (1--n), the body by call_tac execth "s<n+1>"  *)
+(* from the goal `ensures ... ==> eventually ...`, the epilogue by post_tac  *)
+(* and the final state by final_tac.                                         *)
+
+let x86_wrapper_tactics =
+  (X86_STEPS_TAC,X86_BIGSTEP_TAC,X86_STEPS_TAC,ENSURES_FINAL_STATE_TAC);;
+
 let GEN_X86_ADD_RETURN_STACK_TAC =
-  fun execth coreth reglist stackoff (n,m) ->
+  fun ?(tactics=x86_wrapper_tactics) execth coreth reglist stackoff (n,m) ->
+    let pre_tac,call_tac,post_tac,final_tac = tactics in
     let regs = dest_list reglist in
     (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
     let is_coreth_safety = is_exists (concl coreth) in
@@ -6729,9 +6739,9 @@ let GEN_X86_ADD_RETURN_STACK_TAC =
       MAP_EVERY (fun c -> ENSURES_PRESERVED_TAC ("init_"^fst(dest_const c)) c)
                 regs THEN
       REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
-      X86_STEPS_TAC execth (1--n) THEN
+      pre_tac execth (1--n) THEN
       MP_TAC th) THEN
-    X86_BIGSTEP_TAC execth ("s"^string_of_int(n+1)) THEN
+    call_tac execth ("s"^string_of_int(n+1)) THEN
     (* X86_BIGSTEP_TAC may leave an additional subgoal about precondition.
        If the precondition is about event trace, solve here. *)
     (if is_coreth_safety then
@@ -6740,13 +6750,14 @@ let GEN_X86_ADD_RETURN_STACK_TAC =
          NO_TAC)
      else ALL_TAC) THEN
     REWRITE_TAC(!simulation_precanon_thms) THEN
-    X86_STEPS_TAC execth ((n+2)--(m+n+1)) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
+    post_tac execth ((n+2)--(m+n+1)) THEN
+    final_tac THEN ASM_REWRITE_TAC[];;
 
-let X86_ADD_RETURN_STACK_TAC execth coreth reglist stackoff =
+let X86_ADD_RETURN_STACK_TAC ?tactics execth coreth reglist stackoff =
   let n0 = length(dest_list reglist) in
   let n = if 8 * n0 = stackoff then n0 else n0 + 1 in
-  GEN_X86_ADD_RETURN_STACK_TAC execth coreth reglist stackoff (n,n+1);;
+  GEN_X86_ADD_RETURN_STACK_TAC ?tactics
+    execth coreth reglist stackoff (n,n+1);;
 
 (* ------------------------------------------------------------------------- *)
 (* Additional tools for refined "bytes_loaded ... (BUTLAST l)" variants.     *)
@@ -6804,11 +6815,12 @@ let X86_CORE_PROMOTE =
          (MATCH_MP_TAC (CONJUNCT1 lemma))) THEN FIRST_X_ASSUM ACCEPT_TAC);;
 
 
-let X86_PROMOTE_RETURN_NOSTACK_TAC mc core =
-  X86_ADD_RETURN_NOSTACK_TAC (X86_MK_EXEC_RULE mc) (X86_CORE_PROMOTE core);;
+let X86_PROMOTE_RETURN_NOSTACK_TAC ?tactics mc core =
+  X86_ADD_RETURN_NOSTACK_TAC ?tactics
+    (X86_MK_EXEC_RULE mc) (X86_CORE_PROMOTE core);;
 
-let X86_PROMOTE_RETURN_STACK_TAC mc core regs off =
-  X86_ADD_RETURN_STACK_TAC
+let X86_PROMOTE_RETURN_STACK_TAC ?tactics mc core regs off =
+  X86_ADD_RETURN_STACK_TAC ?tactics
     (X86_MK_EXEC_RULE mc) (X86_CORE_PROMOTE core) regs off;;
 
 (* ------------------------------------------------------------------------- *)
@@ -6958,7 +6970,7 @@ let WINDOWS_X86_WRAP_STACK_TAC =
     fun t -> try
         (length o dest_list o rand o find_term is_nargle) t
       with Failure _ -> failwith "Could not find WINDOWS_C_ARGUMENTS" in
-  fun winmc stdmc coreth reglist stdstackoff (asl,w) ->
+  fun ?tactics winmc stdmc coreth reglist stdstackoff (asl,w) ->
     let stdregs = dest_list reglist in
     let n =
       let n0 = length stdregs in if 8 * n0 = stdstackoff then n0 else n0 + 1 in
@@ -6986,6 +6998,26 @@ let WINDOWS_X86_WRAP_STACK_TAC =
         if is_coreth_safety <> (is_exists w) then
           failwith "coreth must be `exists ..` iff the conclusion is"
         else ALL_TAC (asl,w) in
+    (* ~tactics:(pre_tac,call_tac,post_tac,final_tac) as for                 *)
+    (* GEN_X86_ADD_RETURN_STACK_TAC; call_tac execth subimpth "s<n+1>" also  *)
+    (* has the theorem that turns the code fact of the Windows code into     *)
+    (* that of the standard code.                                            *)
+    let pre_tac,call_tac,post_tac,final_tac =
+      match tactics with
+        Some t -> t
+      | None ->
+         (X86_STEPS_TAC,
+          (fun execth subimpth sname ->
+            X86_BIGSTEP_TAC execth sname THENL
+             [(if is_coreth_safety then
+                CONJ_TAC THENL [ALL_TAC;
+                  TRY (CONV_TAC (LAND_CONV CONS_TO_APPEND_CONV) THEN
+                    BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
+                    NO_TAC)]
+                else ALL_TAC) THEN
+              MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC;
+              ALL_TAC]),
+          X86_STEPS_TAC,ENSURES_FINAL_STATE_TAC) in
 
    (check_safety_match_tac THEN
     REWRITE_TAC [WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -7042,19 +7074,11 @@ let WINDOWS_X86_WRAP_STACK_TAC =
                     ENSURES_PRESERVED_TAC ("init_"^fst(dest_const c)) c)
                 regs THEN
       REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
-      X86_STEPS_TAC winexecth (1--prolog_len) THEN
+      pre_tac winexecth (1--prolog_len) THEN
       MP_TAC th) THEN
-    X86_BIGSTEP_TAC winexecth interstate THENL
-     [(if is_coreth_safety then
-        CONJ_TAC THENL [ALL_TAC;
-          TRY (CONV_TAC (LAND_CONV CONS_TO_APPEND_CONV) THEN
-            BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
-            NO_TAC)]
-        else ALL_TAC) THEN
-      MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC;
-      ALL_TAC] THEN
-    X86_STEPS_TAC winexecth ((prolog_len+2)--(prolog_len+epilog_len+1)) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]) (asl,w);;
+    call_tac winexecth subimpth interstate THEN
+    post_tac winexecth ((prolog_len+2)--(prolog_len+epilog_len+1)) THEN
+    final_tac THEN ASM_REWRITE_TAC[]) (asl,w);;
 
 (* ------------------------------------------------------------------------- *)
 (* Generalize MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI where the            *)
