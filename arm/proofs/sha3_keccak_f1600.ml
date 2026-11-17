@@ -8,6 +8,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
+needs "arm/proofs/bstep.ml";;
 needs "arm/proofs/utils/keccak_spec.ml";;
 
 (**** print_literal_from_elf "arm/sha3/sha3_keccak_f1600.o";;
@@ -393,8 +394,8 @@ let SHA3_KECCAK_F1600_CORRECT = prove
     FIRST_ASSUM(MP_TAC o CONV_RULE(LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
     ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
 
-    ARM_STEPS_TAC SHA3_KECCAK_F1600_EXEC (1--123) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ARM_BSTEP_TAC SHA3_KECCAK_F1600_EXEC (1--123) THEN
+    BSTEP_FINAL_TAC THEN ASM_REWRITE_TAC[] THEN
 
     EXPAND_TAC "A" THEN
     SUBST1_TAC(MESON[ADD_CLAUSES] `keccak 1 = keccak (0 + 1)`) THEN
@@ -423,8 +424,9 @@ let SHA3_KECCAK_F1600_CORRECT = prove
       CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[];
       ALL_TAC] THEN
 
-    ARM_STEPS_TAC SHA3_KECCAK_F1600_EXEC (1--112) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ARM_BSTEP_TAC ~rewrites:[ASSUME `val(word i:int64) = i`]
+      SHA3_KECCAK_F1600_EXEC (1--112) THEN
+    BSTEP_FINAL_TAC THEN ASM_REWRITE_TAC[] THEN
     CONJ_TAC THENL [CONV_TAC WORD_ARITH; ALL_TAC] THEN CONJ_TAC THENL
      [ALL_TAC;
       UNDISCH_TAC `i < 24` THEN SPEC_TAC(`i:num`,`i:num`) THEN
@@ -444,13 +446,14 @@ let SHA3_KECCAK_F1600_CORRECT = prove
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN
     REWRITE_TAC[round_constants; CONS_11; GSYM CONJ_ASSOC;
      WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`] THEN
-    ARM_SIM_TAC SHA3_KECCAK_F1600_EXEC [1] THEN
+    ARM_BSTEP_SIM_TAC SHA3_KECCAK_F1600_EXEC [1] THEN
     ASM_REWRITE_TAC[ARITH_RULE `i <= 23 <=> i < 24`];
 
     (*** The tail of deferred rotations and writeback ***)
 
     GHOST_REGLIST_TAC THEN
-    ARM_SIM_TAC SHA3_KECCAK_F1600_EXEC (1--38) THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_LE_CONV) THEN REWRITE_TAC[] THEN
+    ARM_BSTEP_SIM_TAC SHA3_KECCAK_F1600_EXEC (1--38) THEN
     CONV_TAC(LAND_CONV WORDLIST_FROM_MEMORY_CONV) THEN
     ASM_REWRITE_TAC[] THEN
     FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC RAND_CONV [SYM th]) THEN
@@ -478,8 +481,8 @@ let SHA3_KECCAK_F1600_SUBROUTINE_CORRECT = prove
             MAYCHANGE [memory :> bytes(a,200);
                        memory :> bytes(word_sub stackpointer (word 128),128)])`,
   let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
-  CONV_TAC TWEAK_CONV THEN
-  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(7,7) SHA3_KECCAK_F1600_EXEC
+  ARM_BSTEP_ADD_RETURN_STACK_TAC ~tweak:TWEAK_CONV ~pre_post_nsteps:(7,7)
+   SHA3_KECCAK_F1600_EXEC
         (CONV_RULE TWEAK_CONV SHA3_KECCAK_F1600_CORRECT)
     `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30]` 128);;
 
@@ -526,4 +529,4 @@ let SHA3_KECCAK_F1600_SUBROUTINE_SAFE = time prove
                         [a,200; word_sub stackpointer (word 128),128])
                (\s s'. true)`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SHA3_KECCAK_F1600_EXEC);;
+  ARM_BSTEP_SAFETY_TAC ~public_vars:public_vars SHA3_KECCAK_F1600_EXEC);;
