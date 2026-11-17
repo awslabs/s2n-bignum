@@ -874,17 +874,35 @@ let GM_NOISE_LANE_TAC k gl =
 
 let GM_COPY_LOAD_TAC = LANE_LOAD_TAC [0;32;64;96;128] [] [160];;
 
+(*** After the copy of the first 168 bytes of a lane to its buffer, the
+ *** buffer as one number, and the facts about the pieces loaded and stored,
+ *** which are no longer needed and whose terms (with numerals of hundreds
+ *** of digits) every later step would otherwise carry, dropped
+ ***)
+
 let GM_COPY_STORE_TAC k gl =
   let buf = find_read_fact `RDI` k gl in
   let x = rand(concl(bytes_fact (find_read_fact `RSI` k gl) 200 k gl)) in
   let sv = state_of k in
+  let piece t =
+    match t with
+      Comb(Const("word",_),Comb(Comb(Const("MOD",_),
+           Comb(Comb(Const("DIV",_),y),_)),_)) -> y = x
+    | Comb(Const("word",_),Comb(Comb(Const("MOD",_),y),_)) -> y = x
+    | _ -> false in
+  let memread t =
+    try name_of(fst(strip_comb(rand(rator t)))) = ":>"
+    with Failure _ -> false in
   (MP_TAC(SPECL [buf; x; sv] READ_MEMORY_BYTES_168_OF_PIECES) THEN
    ANTS_TAC THENL
     [CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
      CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
      REWRITE_TAC[DIV_1; WORD_ADD_0] THEN ASM_REWRITE_TAC[] THEN
      CONV_TAC NUM_REDUCE_CONV;
-     DISCH_TAC]) gl;;
+     DISCH_TAC THEN
+     DISCARD_ASSUMPTIONS_TAC (fun th ->
+       let c = concl th in is_eq c && piece(rand c) && memread(lhand c))])
+  gl;;
 
 let GM_LANE256_TAC off k gl =
   let a = addr_plus (find_read_fact `RSP` k gl) off and sv = state_of k in

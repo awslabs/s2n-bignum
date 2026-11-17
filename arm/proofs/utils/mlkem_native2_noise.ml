@@ -651,13 +651,41 @@ let SIMP_REG_TAC reg thms k =
     if lhand(concl th) = lhs then ASSUME_TAC(REWRITE_RULE thms th)
     else NO_TAC);;
 
+(* Each step adds the components it writes to the frame assumption
+   (MAYCHANGE ...) s0 sk, which every later step processes again, so over a
+   long run it would grow to thousands of terms. NATIVE2_FRAME_TAC replaces
+   it by the frame of the postcondition of the goal, which subsumes it as it
+   does at the end, and the drivers call it every 50 steps. It leaves a
+   frame with variables that the goal's has not (such as the abbreviated
+   frame base of the x86 API proofs), as the subsumption then needs more
+   than MONOTONE_MAYCHANGE_TAC. *)
+
+let NATIVE2_FRAME_TAC (asl,w as gl) =
+  let sv = rand w in
+  let isframe c =
+    is_comb c && rand c = sv && maychange_term c &&
+    is_comb(rator c) && type_of(rand(rator c)) = type_of sv in
+  match (try let bv,body = dest_abs(rand(rator w)) in
+             let fr = vsubst [sv,bv] (find maychange_term (conjuncts body)) in
+             Some(fr,find (isframe o concl) (map snd asl))
+         with Failure _ -> None) with
+    Some(fr,old) when concl old <> fr &&
+                      subset (frees(concl old)) (frees fr) ->
+      UNDISCH_THEN (concl old) (fun th ->
+        SUBGOAL_THEN fr ASSUME_TAC THENL
+         [POP_ASSUM_LIST(K ALL_TAC) THEN ASSUME_TAC th THEN
+          MONOTONE_MAYCHANGE_TAC;
+          ALL_TAC]) gl
+  | _ -> ALL_TAC gl;;
+
 let rec NATIVE2_RUN_TAC exec derive calls k gl =
   let off = get_pc_offset k gl in
   if off < 0 then ALL_TAC gl else
   let dtac = try (assoc off derive) k with Failure _ -> ALL_TAC in
   let ctac = try (assoc off calls) k
              with Failure _ -> ARM_STEPS_TAC exec [k+1] in
-  (dtac THEN ctac THEN NATIVE2_RUN_TAC exec derive calls (k+1)) gl;;
+  ((if k > 0 && k mod 50 = 0 then NATIVE2_FRAME_TAC else ALL_TAC) THEN
+   dtac THEN ctac THEN NATIVE2_RUN_TAC exec derive calls (k+1)) gl;;
 
 (*** The calls: the x4 and x1 permutations on the lanes at X0 with the
  *** round constants at X1, mlkem_cbd2 on the 128 bytes of the lane at X1
@@ -792,6 +820,7 @@ let rec NATIVE2_SAFE_RUN_TAC exec derive calls k gl =
   let ctac = try (assoc off calls) k
              with Failure _ -> ARM_STEPS_TAC exec [k+1] in
   ((if k mod 50 = 0 then NATIVE2_TRACE_DEFINE_TAC k else ALL_TAC) THEN
+   (if k > 0 && k mod 50 = 0 then NATIVE2_FRAME_TAC else ALL_TAC) THEN
    dtac THEN ctac THEN NATIVE2_SAFE_RUN_TAC exec derive calls (k+1)) gl;;
 
 (*** The bounds of the callees' accesses evaluated ***)

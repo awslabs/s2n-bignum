@@ -957,6 +957,7 @@ let rec NATIVE2_SAFE_RUN_TAC exec derive calls k gl =
   let ctac = try (assoc off calls) k
              with Failure _ -> X86_STEPS_TAC exec [k+1] in
   ((if k mod 50 = 0 then NATIVE2_TRACE_DEFINE_TAC k else ALL_TAC) THEN
+   (if k > 0 && k mod 50 = 0 then NATIVE2_FRAME_TAC else ALL_TAC) THEN
    dtac THEN ctac THEN NATIVE2_SAFE_RUN_TAC exec derive calls (k+1)) gl;;
 
 (*** The bounds of the callees' accesses evaluated ***)

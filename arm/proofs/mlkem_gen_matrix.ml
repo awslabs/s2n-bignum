@@ -895,12 +895,27 @@ let GM_COPY_LOAD_TAC k gl =
             [mk READ_MEMORY_BYTES64_OF_NUM 8 160] in
   MAP_EVERY (ASSUME_TAC o REWRITE_RULE[DIV_1]) ths gl;;
 
+(*** After the copy of the first 168 bytes of a lane to its buffer, the
+ *** buffer as one number, and the facts about the pieces loaded and stored,
+ *** which are no longer needed and whose terms (with numerals of hundreds
+ *** of digits) every later step would otherwise carry, dropped
+ ***)
+
 let GM_COPY_STORE_TAC k gl =
   let buf = find_read_fact `X0` k gl and a = find_read_fact `X1` k gl in
   let x = rand(concl(bytes_fact a 200 k gl)) in
   let sv = state_of k in
   let lhs64 = vsubst [addr_plus buf 160,`a:int64`; sv,`s:armstate`]
                 `read (memory :> bytes64 a) s` in
+  let piece t =
+    match t with
+      Comb(Const("word",_),Comb(Comb(Const("MOD",_),
+           Comb(Comb(Const("DIV",_),y),_)),_)) -> y = x
+    | Comb(Const("word",_),Comb(Comb(Const("MOD",_),y),_)) -> y = x
+    | _ -> false in
+  let memread t =
+    try name_of(fst(strip_comb(rand(rator t)))) = ":>"
+    with Failure _ -> false in
   (RULE_ASSUM_TAC(fun th ->
      if (try lhand(concl th) = lhs64 with Failure _ -> false)
      then CONV_RULE(RAND_CONV NUM_REDUCE_CONV)
@@ -911,7 +926,10 @@ let GM_COPY_STORE_TAC k gl =
     [CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
      CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
      REWRITE_TAC[DIV_1; WORD_ADD_0] THEN ASM_REWRITE_TAC[];
-     DISCH_TAC]) gl;;
+     DISCH_TAC THEN
+     DISCARD_ASSUMPTIONS_TAC (fun th ->
+       let c = concl th in is_eq c && piece(rand c) && memread(lhand c))])
+  gl;;
 
 let GM_LANE128_TAC reg k gl =
   let a = find_read_fact reg k gl and sv = state_of k in
