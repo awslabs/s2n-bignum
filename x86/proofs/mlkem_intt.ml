@@ -1,4 +1,5 @@
 needs "x86/proofs/base.ml";;
+needs "x86/proofs/bstep.ml";;
 needs "common/mlkem_mldsa.ml";;
 needs "common/int_linear.ml";;
 
@@ -1155,63 +1156,43 @@ let MLKEM_INTT_CORRECT = prove
   CONV_TAC(LAND_CONV(READ_MEMORY_SPLIT_CONV 2)) THEN
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC THEN
 
-  MAP_EVERY (fun n -> X86_STEPS_TAC MLKEM_INTT_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul; barred_x86]
-                              [ntt_montmul_add; ntt_montmul_sub])
-        (1--663) THEN
+  (*** Simulate all the way to the end and keep the facts about the
+   *** result array. The definitions are folded into the new values as
+   *** they are made, and the subword forms simplified.
+   ***)
 
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  X86_BSTEP_TAC ~keep:(memory_component_at `a:int64`)
+    ~folds:[ntt_montmul; barred_x86; ntt_montmul_add; ntt_montmul_sub]
+    ~rewrites:(map WORD_BLAST
+     [`word_subword (x:int32) (0, 32) = x`;
+      `word_subword (x:int64) (0, 64) = x`;
+      `word_subword (word_ushr (word_join (h:int16) (l:int16):int32) 16) (0, 16) = h`;
+      `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (0, 32) = h`;
+      `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (0, 16):int16 = word_subword h (0, 16)`;
+      `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (16, 16):int16 = word_subword h (16, 16)`;
+      `word_subword (word_shl (word_subword (x:int32) (0, 32):int32) 16:int32) (16, 16):int16 = word_subword x (0, 16)`;
+      `word_subword (word_shl (x:int32) 16:int32) (16, 16):int16 = word_subword x (0, 16)`])
+    MLKEM_INTT_TMC_EXEC (1--663) THEN
+  BSTEP_FINAL_TAC THEN ASM_REWRITE_TAC[] THEN
 
-  REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
-  CONV_RULE(SIMD_SIMPLIFY_CONV[]) o
-  CONV_RULE(READ_MEMORY_SPLIT_CONV 4) o
-  check (can (term_match [] `read qqq s:int256 = xxx`) o concl))) THEN
+  (*** Split the 256-bit results into lanes ***)
+
+  BSTEP_MEMORY_SPLIT_TAC 4 (memory_component_at `a:int64`) THEN
+
+  (*** Expand the cases and substitute the results in the conclusion ***)
 
   CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC(DEPTH_CONV NUM_MULT_CONV THENC
            DEPTH_CONV NUM_ADD_CONV) THEN
-  REWRITE_TAC[INT_ABS_BOUNDS; WORD_ADD_0] THEN
-  ASM_REWRITE_TAC[WORD_ADD_0] THEN
-
-  ASM_REWRITE_TAC[] THEN DISCARD_STATE_TAC "s663" THEN
-
-  W(fun (asl,w) ->
-     let asms =
-        map snd (filter (is_local_definition
-          [ntt_montmul; barred_x86] o concl o snd) asl) in
-     MP_TAC(end_itlist CONJ (rev asms)) THEN
-     MAP_EVERY (fun t -> UNDISCH_THEN (concl t) (K ALL_TAC)) asms) THEN
-
-  REWRITE_TAC[WORD_BLAST `word_subword (x:int32) (0, 32) = x`] THEN
-  REWRITE_TAC[WORD_BLAST `word_subword (x:int64) (0, 64) = x`] THEN
-  REWRITE_TAC[WORD_BLAST
-   `word_subword (word_ushr (word_join (h:int16) (l:int16):int32) 16) (0, 16) = h`] THEN
-  REWRITE_TAC[WORD_BLAST
-   `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (0, 32) = h`] THEN
-  REWRITE_TAC[WORD_BLAST
-    `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (0, 16):int16 =
-     word_subword h (0, 16)`] THEN
-  REWRITE_TAC[WORD_BLAST
-    `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (16, 16):int16 =
-     word_subword h (16, 16)`] THEN
-  REWRITE_TAC[WORD_BLAST
-    `word_subword (word_shl (word_subword (x:int32) (0, 32):int32) 16:int32) (16, 16):int16 =
-     word_subword x (0, 16)`] THEN
-  REWRITE_TAC[WORD_BLAST
-    `word_subword (word_shl (word_subword (x:int32) (0, 32):int32) 16:int32) (16, 16):int16 =
-     word_subword x (0, 16)`] THEN
-  REWRITE_TAC[WORD_BLAST
-    `word_subword (word_shl (x:int32) 16:int32) (16, 16):int16 =
-     word_subword x (0, 16)`] THEN
-  CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
-
-  STRIP_TAC THEN
-
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-  REWRITE_TAC[GSYM CONJ_ASSOC] THEN
+  REWRITE_TAC[INT_ABS_BOUNDS; WORD_ADD_0] THEN
+  READ_FACT_REWRITE_TAC (memory_component_at `a:int64`) THEN
+  DISCARD_STATE_FACTS_TAC `s663:x86state` THEN
+
+  (*** Congruence and bound propagation and finish ***)
 
   CONGBOUND_NTT_TAC
-    CONGBOUND_LFN_EMPTY [ntt_montmul; barred_x86] CONGBOUND_SPLIT_X86
+    CONGBOUND_LFN_EMPTY [ntt_montmul; barred_x86] CONGBOUND_SPLIT_ARM
     (REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 3329 65536`])
     AVX2_INVERSE_NTT_CONV);;
 
@@ -1243,7 +1224,7 @@ let MLKEM_INTT_NOIBT_SUBROUTINE_CORRECT  = prove
            MAYCHANGE [memory :> bytes(a, 512)])`,
   let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
   CONV_TAC TWEAK_CONV THEN
-  X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_intt_tmc (CONV_RULE TWEAK_CONV MLKEM_INTT_CORRECT));;
+  X86_BSTEP_PROMOTE_RETURN_NOSTACK_TAC mlkem_intt_tmc (CONV_RULE TWEAK_CONV MLKEM_INTT_CORRECT));;
 
 let MLKEM_INTT_SUBROUTINE_CORRECT  = prove
   (`!a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
@@ -1370,7 +1351,7 @@ let MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
 (*** Initialize execution and simulate the prologue (register saves)
  *** Steps 1-15 cover the Windows prologue that saves XMM registers to stack ***)
   ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC MLKEM_INTT_WINDOWS_TMC_EXEC (1--15) THEN
+  X86_BSTEP_TAC MLKEM_INTT_WINDOWS_TMC_EXEC (1--15) THEN
 
 (*** Apply the main Unix correctness theorem to the core NTT computation ***)
   MP_TAC(SPECL [`a:int64`; `zetas:int64`; `zetas_list:int16 list`; `x:num->int16`; `pc + 92`]
@@ -1386,13 +1367,15 @@ let MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
 
 (*** Execute the main NTT computation as a single big step
  *** This handles the core algorithm while preserving the register save/restore wrapper ***)
-  X86_BIGSTEP_TAC MLKEM_INTT_WINDOWS_TMC_EXEC "s16" THENL
-   [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
-     (BYTES_LOADED_SUBPROGRAM_RULE mlkem_intt_windows_tmc
-     (REWRITE_RULE[BUTLAST_CLAUSES]
-      (AP_TERM `BUTLAST:byte list->byte list` mlkem_intt_tmc))
-     92));
-    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
+  FIRST_ASSUM(ASSUME_TAC o MATCH_MP
+    (BYTES_LOADED_SUBPROGRAM_RULE mlkem_intt_windows_tmc
+    (REWRITE_RULE[BUTLAST_CLAUSES]
+     (AP_TERM `BUTLAST:byte list->byte list` mlkem_intt_tmc))
+    92) o check (can (term_match [] `bytes_loaded s pc mc`) o concl)) THEN
+  DISCH_THEN(fun core ->
+    X86_BSTEP_CALL_TAC MLKEM_INTT_WINDOWS_TMC_EXEC
+      (CONV_RULE X86_BSTEP_PC_CONV core) "s16") THEN
+  RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV)) THEN
 
     (*** Capture the final YMM register states after main computation ***)
   MAP_EVERY ABBREV_TAC
@@ -1409,14 +1392,14 @@ let MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
 
 (*** Simulate the epilogue (register restoration and return)
  *** Steps 17-30 cover the Windows epilogue that restores XMM registers from stack ***)
-  X86_STEPS_TAC MLKEM_INTT_WINDOWS_TMC_EXEC (17--30) THEN
+  X86_BSTEP_TAC MLKEM_INTT_WINDOWS_TMC_EXEC (17--30) THEN
 
 (*** Handle the MAYCHANGE clauses for ZMM register components ***)
   RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
 
 (***Finalize the proof by establishing the final state conditions ***)
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  BSTEP_FINAL_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLKEM_INTT_WINDOWS_SUBROUTINE_CORRECT  = prove
