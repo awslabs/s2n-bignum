@@ -10,6 +10,7 @@
 needs "arm/proofs/base.ml";;
 needs "common/mlkem_mldsa.ml";;
 needs "common/int_linear.ml";;
+needs "arm/proofs/bstep.ml";;
 
 (**** print_literal_from_elf "arm/mlkem/mlkem_ntt.o";;
  ****)
@@ -445,17 +446,18 @@ let MLKEM_NTT_CORRECT = prove
               NONOVERLAPPING_CLAUSES; ALL] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
-  (*** Globalize the assumptions on zeta constants by case splitting ***)
+  (*** Globalize the assumptions on zeta constants by case splitting.
+   *** In the other case only the final PC and the frame are needed.
+   ***)
 
   ASM_CASES_TAC
    `zetas_01234:int16 list = MAP iword ntt_zetas_layer01234 /\
     zetas_56:int16 list = MAP iword ntt_zetas_layer56` THEN
   ASM_REWRITE_TAC[CONJ_ASSOC] THEN REWRITE_TAC[GSYM CONJ_ASSOC] THENL
    [FIRST_X_ASSUM(CONJUNCTS_THEN SUBST1_TAC);
-    ARM_QUICKSIM_TAC MLKEM_NTT_EXEC
-     [`read X0 s = a`; `read X1 s = z`; `read X2 s = w`;
-      `read X3 s = i`; `read X4 s = i`]
-     (1--904)] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+    ARM_BSTEP_TAC ~keep:(K false) MLKEM_NTT_EXEC (1--904) THEN
+    BSTEP_FINAL_TAC THEN ASM_REWRITE_TAC[]] THEN
 
   (*** Manually expand the cases in the hypotheses ***)
 
@@ -477,23 +479,18 @@ let MLKEM_NTT_CORRECT = prove
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes16 a) s = x`] THEN
   REPEAT STRIP_TAC THEN
 
-  (*** Ghost up initial contents of Q7 since it isn't fully initialized ***)
+  (*** Simulate all the way to the end, in effect unrolling loops, and
+   *** keep the facts about the result array. barmul is folded into the
+   *** new values as they are made.
+   ***)
 
-  ABBREV_TAC `v7_init:int128 = read Q7 s0` THEN
+  ARM_BSTEP_TAC ~keep:(memory_component_at `a:int64`) ~folds:[barmul]
+    MLKEM_NTT_EXEC (1--904) THEN
+  BSTEP_FINAL_TAC THEN ASM_REWRITE_TAC[] THEN
 
-  (*** Simulate all the way to the end, in effect unrolling loops ***)
+  (*** Split the 128-bit results into 16-bit lanes ***)
 
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_NTT_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[barmul] [])
-            (1--904) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-
-  (*** Reverse the restructuring by splitting the 128-bit words up ***)
-
-  REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
-    CONV_RULE(SIMD_SIMPLIFY_CONV[]) o
-    CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
-    check (can (term_match [] `read qqq s:int128 = xxx`) o concl))) THEN
+  BSTEP_MEMORY_SPLIT_TAC 3 (memory_component_at `a:int64`) THEN
 
   (*** Expand and substitute in the conclusion we want to prove ***)
 
@@ -501,7 +498,9 @@ let MLKEM_NTT_CORRECT = prove
   CONV_TAC(ONCE_DEPTH_CONV let_CONV) THEN REWRITE_TAC[INT_ABS_BOUNDS] THEN
   GEN_REWRITE_TAC (BINDER_CONV o RAND_CONV) [GSYM I_THM] THEN
   CONV_TAC(EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
-  ASM_REWRITE_TAC[I_THM; WORD_ADD_0] THEN DISCARD_STATE_TAC "s904" THEN
+  REWRITE_TAC[I_THM; WORD_ADD_0] THEN
+  READ_FACT_REWRITE_TAC (memory_component_at `a:int64`) THEN
+  DISCARD_STATE_FACTS_TAC `s904:armstate` THEN
 
   (*** Perform congruence and bound propagation and finish ***)
 
@@ -548,8 +547,8 @@ let MLKEM_NTT_SUBROUTINE_CORRECT = prove
     ONCE_DEPTH_CONV NUM_MULT_CONV THENC
     PURE_REWRITE_CONV [WORD_ADD_0] in
   REWRITE_TAC[fst MLKEM_NTT_EXEC] THEN
-  CONV_TAC TWEAK_CONV THEN
-  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(5,5) MLKEM_NTT_EXEC
+  ARM_BSTEP_ADD_RETURN_STACK_TAC ~tweak:TWEAK_CONV ~pre_post_nsteps:(5,5)
+   MLKEM_NTT_EXEC
    (REWRITE_RULE[fst MLKEM_NTT_EXEC] (CONV_RULE TWEAK_CONV MLKEM_NTT_CORRECT))
     `[D8; D9; D10; D11; D12; D13; D14; D15]` 64);;
 
@@ -597,4 +596,4 @@ let MLKEM_NTT_SUBROUTINE_SAFE = time prove
                         [a,512; word_sub stackpointer (word 64),64])
                (\s s'. true)`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_NTT_EXEC);;
+  ARM_BSTEP_SAFETY_TAC ~public_vars:public_vars MLKEM_NTT_EXEC);;
