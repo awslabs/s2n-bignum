@@ -126,6 +126,18 @@ the coefficients nonnegative afterwards, the results of key generation,
 signing and verification are the same. The statements in
 `../../proofs/mldsa_native/gcc12_O2_reduced_ram/lazy_spec.ml` say so, for
 each parameter set: t1 and t0 of key generation and of `pk_from_sk`, the
-rows of w1' in verification and w in signing. `lazy_proof.ml` proves the
-statements of `lazy_spec.ml` from the congruences of the NTT and of the
-Montgomery products in `../../proofs/utils/mldsa_native_fips204_ntt.ml`.
+rows of w1' in verification and w in signing. The proofs of the functions
+that call the lazy products use them, so that the theorems of the API
+functions are those of the gcc12_O2 build, up to the stack frames, the
+contracts of `memset` and, for ML-DSA-65, the read-only constants of the
+eager matrix expansion, and so are the FIPS 204 theorems (`fips204*.ml`,
+whose tactics also accept a CORRECT theorem without contracts).
+`lazy_proof.ml` proves the statements of `lazy_spec.ml` from the
+congruences of the NTT and of the Montgomery products in
+`../../proofs/utils/mldsa_native_fips204_ntt.ml`, and the link file
+discharges them as it does the theorems of the callees.
+
+Three utils are for the code of this build: `mldsa_native_lazy_rr.ml` (the
+lazy products), `mldsa_native_top_rr.ml` (`pk_from_sk` without `memset`)
+and `mldsa_native_signing_rr.ml` (the signing attempts), in
+`../../proofs/utils`.
