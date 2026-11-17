@@ -750,6 +750,275 @@ let sha3_keccak4_f1600_alt_tmc = define_trimmed "sha3_keccak4_f1600_alt_tmc" sha
 
 let SHA3_KECCAK4_F1600_ALT_EXEC = X86_MK_CORE_EXEC_RULE sha3_keccak4_f1600_alt_tmc;;
 
+(* ------------------------------------------------------------------------- *)
+(* Correctness and constant-time/memory safety in one theorem ("FULL"), by   *)
+(* one symbolic execution, from which the correctness theorem follows; the   *)
+(* safety theorem below is separate since it has no precondition on the      *)
+(* data. The loop is taken from the start of a round to the end of the       *)
+(* branch back, the flag of the branch being given by its counter in         *)
+(* KECCAK4_BRANCH.                                                           *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let KECCAK4_BRANCH = prove
+ (`!i. i < 24
+       ==> (~(val(word_add (word i) (word 18446744073709551593):int64) = 0) <=>
+            i + 1 < 24)`,
+  CONV_TAC EXPAND_CASES_CONV THEN
+  CONV_TAC(DEPTH_CONV(NUM_RED_CONV ORELSEC WORD_RED_CONV)));;
+
+let SHA3_KECCAK4_F1600_ALT_FULL = time prove
+ (`exists f_events.
+   forall e rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64
+          A1 A2 A3 A4 pc:num stackpointer:int64.
+  PAIRWISE (nonoverlapping_modulo (2 EXP 64))
+  [(pc, 0x9d9);
+   (val stackpointer, 0x300);
+   (val bitstate_in, 800);
+   (val rc_pointer, 192);
+   (val rho8_ptr, 32);
+   (val rho56_ptr, 32)]
+  ==> ensures x86
+         (\s. bytes_loaded s (word pc) (BUTLAST sha3_keccak4_f1600_alt_tmc) /\
+              read RIP s = word (pc + 0xe) /\
+              read RSP s = stackpointer /\
+              read RDI s = bitstate_in /\
+              C_ARGUMENTS [bitstate_in; rc_pointer; rho8_ptr; rho56_ptr] s /\
+              wordlist_from_memory(rc_pointer,24) s = round_constants /\
+              wordlist_from_memory(rho8_ptr,4) s = rho8_constant /\
+              wordlist_from_memory(rho56_ptr,4) s = rho56_constant /\
+              wordlist_from_memory(bitstate_in,25) s = A1 /\
+              wordlist_from_memory(word_add bitstate_in (word 200),25) s =
+              A2 /\
+              wordlist_from_memory(word_add bitstate_in (word 400),25) s =
+              A3 /\
+              wordlist_from_memory(word_add bitstate_in (word 600),25) s =
+              A4 /\
+              read events s = e)
+         (\s. read RIP s = word(pc + 0x9d5) /\
+              wordlist_from_memory(bitstate_in,25) s = keccak 24 A1 /\
+              wordlist_from_memory(word_add bitstate_in (word 200),25) s =
+              keccak 24 A2 /\
+              wordlist_from_memory(word_add bitstate_in (word 400),25) s =
+              keccak 24 A3 /\
+              wordlist_from_memory(word_add bitstate_in (word 600),25) s =
+              keccak 24 A4 /\
+              (exists e2.
+                 read events s = APPEND e2 e /\
+                 e2 = f_events rc_pointer rho8_ptr rho56_ptr bitstate_in pc
+                               stackpointer /\
+                 memaccess_inbounds e2
+                   [bitstate_in,800; rc_pointer,192; rho8_ptr,32;
+                    rho56_ptr,32; stackpointer,768]
+                   [bitstate_in,800; stackpointer,768]))
+         (MAYCHANGE [RIP; R10; RSI] ,,
+          MAYCHANGE[ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8;
+                    ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+          MAYCHANGE [memory :> bytes (stackpointer, 0x300)] ,,
+          MAYCHANGE [memory :> bytes (bitstate_in, 800)])`,
+  REWRITE_TAC[SOME_FLAGS] THEN
+  CONCRETIZE_F_EVENTS_TAC
+   `\(rc_pointer:int64) (rho8_ptr:int64) (rho56_ptr:int64)
+     (bitstate_in:int64) (pc:num) (stackpointer:int64).
+      APPEND (f_ev_epil rc_pointer rho8_ptr rho56_ptr bitstate_in pc
+                        stackpointer)
+       (APPEND (ENUMERATEL 24 (\i. f_ev_loop rc_pointer rho8_ptr rho56_ptr
+                                    bitstate_in pc stackpointer i))
+               (f_ev_prol rc_pointer rho8_ptr rho56_ptr bitstate_in pc
+                          stackpointer)) :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC
+   [`rc_pointer:int64`; `bitstate_in:int64`; `rho8_ptr:int64`;
+    `rho56_ptr:int64`; `A1:int64 list`; `A2:int64 list`; `A3:int64 list`;
+    `A4:int64 list`; `pc:num`; `stackpointer:int64`] THEN
+  REWRITE_TAC[PAIRWISE; C_ARGUMENTS; ALL; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ASM_CASES_TAC `LENGTH(A1:int64 list) = 25 /\
+                 LENGTH(A2:int64 list) = 25 /\
+                 LENGTH(A3:int64 list) = 25 /\
+                 LENGTH(A4:int64 list) = 25` THENL
+   [ALL_TAC;
+    ENSURES_INIT_TAC "s0" THEN
+    MATCH_MP_TAC(TAUT `F ==> p`) THEN
+    REPEAT(FIRST_X_ASSUM(MP_TAC o AP_TERM `LENGTH:int64 list->num`)) THEN
+    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
+    REWRITE_TAC[LENGTH; ARITH] THEN ASM_MESON_TAC[]] THEN
+
+  (*** The invariant of the correctness proof but for the flag ***)
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `24` `pc + 0x26f` `pc + 0x771`
+  `\i s.
+      read R10 s = word i /\
+      read RDI s = bitstate_in /\
+      read RSP s = stackpointer /\
+      read RDX s = rho8_ptr /\
+      read RCX s = rho56_ptr /\
+      read RSI s = word_add rc_pointer (word (8 * i)) /\
+      wordlist_from_memory(rho8_ptr,4) s = rho8_constant /\
+      wordlist_from_memory(rho56_ptr,4) s = rho56_constant /\
+      wordlist_from_memory(rc_pointer,24) s = round_constants /\
+      (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND
+       (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND
+       (wordlist_from_memory(word_add stackpointer (word 0x0),7) s)
+       (CONS (read YMM10 s) []))
+       (CONS (read YMM14 s) []))
+       (wordlist_from_memory(word_add stackpointer (word 0xe0),2) s))
+       (CONS (read YMM8 s) []))
+       (CONS (read YMM15 s) []))
+       (wordlist_from_memory(word_add stackpointer (word 0x120),2) s))
+       (CONS (read YMM9 s) []))
+       (wordlist_from_memory(word_add stackpointer (word 0x160),2) s))
+       (CONS (read YMM13 s) []))
+       (wordlist_from_memory(word_add stackpointer (word 0x1a0),2) s))
+       (CONS (read YMM3 s) []))
+       (CONS (read YMM7 s) []))
+       (wordlist_from_memory(word_add stackpointer (word 0x1e0),1) s))
+       (CONS (read YMM2 s) [])) =
+      (MAP2 word_join
+        ((MAP2 word_join (keccak i A4) (keccak i A3)):int128 list)
+        ((MAP2 word_join (keccak i A2) (keccak i A1)):int128 list))
+      :int256 list` THEN
+  REPEAT CONJ_TAC THENL
+   [CONV_TAC NUM_REDUCE_CONV;
+
+    (*** The initialization ***)
+
+    REWRITE_TAC[rho56_constant; rho8_constant; round_constants;
+                GSYM CONJ_ASSOC] THEN
+    REWRITE_TAC[WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(rc_pointer,24) s:int64 list`;
+                WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(bitstate_in,100) s:int64 list`;
+                WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(rho8_ptr,4) s:int64 list`;
+                WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(rho56_ptr,4) s:int64 list`] THEN
+    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
+    REWRITE_TAC[APPEND] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    BIGNUM_DIGITIZE_TAC "A_"
+     `read (memory :> bytes (bitstate_in,8 * 100)) s0` THEN
+    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
+    MEMORY_256_FROM_64_TAC "bitstate_in" 0 25 THEN
+    MEMORY_256_FROM_64_TAC "bitstate_in" 200 25 THEN
+    MEMORY_256_FROM_64_TAC "bitstate_in" 400 25 THEN
+    MEMORY_256_FROM_64_TAC "bitstate_in" 600 25 THEN
+    MEMORY_256_FROM_64_TAC "rho8_ptr" 0 4 THEN
+    MEMORY_256_FROM_64_TAC "rho56_ptr" 0 4 THEN
+    ASM_REWRITE_TAC[WORD_ADD_0] THEN
+    REPEAT STRIP_TAC THEN
+    X86_STEPS_TAC SHA3_KECCAK4_F1600_ALT_EXEC (1--96) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    EVENTS_SPLIT_TAC
+     (ASM_REWRITE_TAC[] THEN
+      REPEAT CONJ_TAC THENL
+       [PURE_ONCE_REWRITE_TAC[ARITH_RULE `8 * 0 = 0`] THEN
+        REWRITE_TAC[WORD_ADD_0];
+        ASM_REWRITE_TAC [WORD_SUBWORD_JOIN_EXTRACT_64] THEN
+        ASM_REWRITE_TAC [WORD_SUBWORD_JOIN_EXTRACT_128] THEN
+        EXPAND_TAC "A1" THEN EXPAND_TAC "A2" THEN
+        EXPAND_TAC "A3" THEN EXPAND_TAC "A4" THEN
+        REWRITE_TAC[keccak] THEN REWRITE_TAC[MAP2] THEN
+        REWRITE_TAC[CONS_11] THEN CONV_TAC WORD_BLAST]);
+
+    (*** A round, with the branch back or out ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
+    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
+    REWRITE_TAC[rho56_constant; rho8_constant; round_constants;
+                GSYM CONJ_ASSOC] THEN
+    REWRITE_TAC[WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(rc_pointer,24) s:int64 list`;
+                WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(bitstate_in,100) s:int64 list`;
+                WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(rho8_ptr,1) s:int256 list`;
+                WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(rho56_ptr,1) s:int256 list`] THEN
+    REWRITE_TAC[APPEND] THEN
+    MP_TAC(ISPECL [`A1:int64 list`; `i:num`] LENGTH_KECCAK) THEN
+    MP_TAC(ISPECL [`A2:int64 list`; `i:num`] LENGTH_KECCAK) THEN
+    MP_TAC(ISPECL [`A3:int64 list`; `i:num`] LENGTH_KECCAK) THEN
+    MP_TAC(ISPECL [`A4:int64 list`; `i:num`] LENGTH_KECCAK) THEN
+    ASM_REWRITE_TAC[IMP_IMP] THEN REWRITE_TAC[LENGTH_EQ_25] THEN
+    DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN SUBST1_TAC) THEN
+    REWRITE_TAC[MAP2; CONS_11; GSYM CONJ_ASSOC] THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    SUBGOAL_THEN
+     `read (memory :> bytes64(word_add rc_pointer (word(8 * i)))) s0 =
+      EL i round_constants`
+    ASSUME_TAC THENL
+     [UNDISCH_TAC `i < 24` THEN SPEC_TAC(`i:num`,`i:num`) THEN
+      CONV_TAC EXPAND_CASES_CONV THEN
+      CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
+      ASM_REWRITE_TAC[round_constants; WORD_ADD_0] THEN
+      CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[];
+      ALL_TAC] THEN
+    ASM_REWRITE_TAC [WORD_SUBWORD_JOIN_EXTRACT_64] THEN
+    ASM_REWRITE_TAC [WORD_SUBWORD_JOIN_EXTRACT_128] THEN
+    BIGNUM_DIGITIZE_TAC "A_"
+     `read (memory :> bytes (bitstate_in,8 * 100)) s0` THEN
+    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
+    MEMORY_256_FROM_64_TAC "bitstate_in" 0 25 THEN
+    MEMORY_256_FROM_64_TAC "bitstate_in" 200 25 THEN
+    MEMORY_256_FROM_64_TAC "bitstate_in" 400 25 THEN
+    MEMORY_256_FROM_64_TAC "bitstate_in" 600 25 THEN
+    MEMORY_256_FROM_64_TAC "rho8_ptr" 0 4 THEN
+    MEMORY_256_FROM_64_TAC "rho56_ptr" 0 4 THEN
+    ASM_REWRITE_TAC[WORD_ADD_0] THEN REPEAT STRIP_TAC THEN
+    X86_STEPS_TAC SHA3_KECCAK4_F1600_ALT_EXEC (1--224) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    EVENTS_SPLIT_TAC
+     (ASM_REWRITE_TAC[] THEN
+      ASM_SIMP_TAC[KECCAK4_BRANCH] THEN
+      REPEAT CONJ_TAC THENL
+       [COND_CASES_TAC THEN REWRITE_TAC[];
+        REWRITE_TAC[WORD_ADD];
+        CONV_TAC WORD_BLAST;
+        REPEAT(CONJ_TAC THENL [CONV_TAC WORD_RULE]) THEN
+        REWRITE_TAC[keccak; keccak_round] THEN
+        CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
+        CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+        REWRITE_TAC[MAP2; CONS_11] THEN
+        CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
+        ASM_REWRITE_TAC[] THEN
+        REPEAT CONJ_TAC THEN BITBLAST_TAC]);
+
+    (*** The tail of logical not operation and writeback ***)
+
+    REWRITE_TAC[round_constants; CONS_11; GSYM CONJ_ASSOC] THEN
+    REWRITE_TAC[WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(rc_pointer,24) s:int64 list`;
+                WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(bitstate_in,100) s:int64 list`;
+                WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(rho8_ptr,1) s:int256 list`;
+                WORDLIST_FROM_MEMORY_CONV
+                  `wordlist_from_memory(rho56_ptr,1) s:int256 list`] THEN
+    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
+    REWRITE_TAC[APPEND] THEN
+    MP_TAC(ISPECL [`A1:int64 list`; `24:num`] LENGTH_KECCAK) THEN
+    MP_TAC(ISPECL [`A2:int64 list`; `24:num`] LENGTH_KECCAK) THEN
+    MP_TAC(ISPECL [`A3:int64 list`; `24:num`] LENGTH_KECCAK) THEN
+    MP_TAC(ISPECL [`A4:int64 list`; `24:num`] LENGTH_KECCAK) THEN
+    ASM_REWRITE_TAC[IMP_IMP] THEN REWRITE_TAC[LENGTH_EQ_25] THEN
+    DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN SUBST1_TAC) THEN
+    REWRITE_TAC[MAP2; CONS_11; GSYM CONJ_ASSOC] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC [keccak; keccak_round] THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC SHA3_KECCAK4_F1600_ALT_EXEC (1--95) THEN
+    REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
+      CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
+      check (can (term_match [] `read qqq s:int256 = xxx`) o concl))) THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    EVENTS_SPLIT_TAC
+     (ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN BITBLAST_TAC)]);;
+
 let SHA3_KECCAK4_F1600_ALT_CORRECT = prove
   (`!rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64.
   PAIRWISE (nonoverlapping_modulo (2 EXP 64))
@@ -777,226 +1046,25 @@ let SHA3_KECCAK4_F1600_ALT_CORRECT = prove
                   wordlist_from_memory(word_add bitstate_in (word 200),25) s = keccak 24 A2 /\
                   wordlist_from_memory(word_add bitstate_in (word 400),25) s = keccak 24 A3 /\
                   wordlist_from_memory(word_add bitstate_in (word 600),25) s = keccak 24 A4)
-           (MAYCHANGE [RIP; R10; RSI] ,, 
-            MAYCHANGE[ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,, 
+           (MAYCHANGE [RIP; R10; RSI] ,,
+            MAYCHANGE[ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
             MAYCHANGE [memory :> bytes (stackpointer, 0x300)],,
             MAYCHANGE [memory :> bytes (bitstate_in, 800)])`,
-  REWRITE_TAC[SOME_FLAGS] THEN
-  MAP_EVERY X_GEN_TAC [`rc_pointer:int64`;`bitstate_in:int64`;`rho8_ptr:int64`;`rho56_ptr:int64`;`A1:int64 list`;`A2:int64 list`;`A3:int64 list`;`A4:int64 list`] THEN
-  MAP_EVERY X_GEN_TAC [`pc:num`;`stackpointer:int64`] THEN
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  REWRITE_TAC[PAIRWISE; C_ARGUMENTS; ALL] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-   ASM_CASES_TAC `LENGTH(A1:int64 list) = 25 /\ 
-   LENGTH(A2:int64 list) = 25 /\
-   LENGTH(A3:int64 list) = 25 /\
-   LENGTH(A4:int64 list) = 25` THENL
-   [ALL_TAC;
-    ENSURES_INIT_TAC "s0" THEN 
-    MATCH_MP_TAC(TAUT `F ==> p`) THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC o AP_TERM `LENGTH:int64 list->num`)) THEN
-    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
-    REWRITE_TAC[LENGTH; ARITH] THEN ASM_MESON_TAC[]] THEN
-
-  (*** Set up the loop invariant ***)
-
-  ENSURES_WHILE_PAUP_TAC `0` `24` `pc + 0x26f` `pc + 0x76b`
-  `\i s.
-      (read R10 s = word i /\
-       read RDI s = bitstate_in /\
-       read RSP s = stackpointer /\
-       read RDX s = rho8_ptr /\
-       read RCX s = rho56_ptr /\
-       read RSI s = word_add rc_pointer (word (8 * i)) /\
-       wordlist_from_memory(rho8_ptr,4) s = rho8_constant /\
-       wordlist_from_memory(rho56_ptr,4) s = rho56_constant /\
-       wordlist_from_memory(rc_pointer,24) s = round_constants /\
-       (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND
-        (wordlist_from_memory(word_add stackpointer (word 0x0),7) s)
-        (CONS (read YMM10 s) []))
-        (CONS (read YMM14 s) []))
-        (wordlist_from_memory(word_add stackpointer (word 0xe0),2) s))
-        (CONS (read YMM8 s) []))
-        (CONS (read YMM15 s) []))
-        (wordlist_from_memory(word_add stackpointer (word 0x120),2) s))
-        (CONS (read YMM9 s) []))
-        (wordlist_from_memory(word_add stackpointer (word 0x160),2) s))
-        (CONS (read YMM13 s) []))
-        (wordlist_from_memory(word_add stackpointer (word 0x1a0),2) s))
-        (CONS (read YMM3 s) []))
-        (CONS (read YMM7 s) []))
-        (wordlist_from_memory(word_add stackpointer (word 0x1e0),1) s))
-        (CONS (read YMM2 s) [])) =
-       (MAP2 word_join ((MAP2 word_join (keccak (i) A4) (keccak (i) A3)):int128 list)
-                ((MAP2 word_join (keccak (i) A2) (keccak (i) A1)):int128 list)):int256 list) /\
-       (read ZF s <=> i = 24)` THEN
-  REPEAT CONJ_TAC THENL 
-    [ARITH_TAC;
-
-    (*** Initial holding of the invariant ***)
-
-    REWRITE_TAC[rho56_constant; rho8_constant; round_constants; GSYM CONJ_ASSOC] THEN
-    REWRITE_TAC[WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc_pointer,24) s:int64 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(bitstate_in,100) s:int64 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rho8_ptr,4) s:int64 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rho56_ptr,4) s:int64 list`] THEN
-    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
-    REWRITE_TAC[APPEND] THEN
-    ENSURES_INIT_TAC "s0" THEN
-    BIGNUM_DIGITIZE_TAC "A_" `read (memory :> bytes (bitstate_in,8 * 100)) s0` THEN
-    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 0 25 THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 200 25 THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 400 25 THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 600 25 THEN
-    MEMORY_256_FROM_64_TAC "rho8_ptr" 0 4 THEN
-    MEMORY_256_FROM_64_TAC "rho56_ptr" 0 4 THEN
-    ASM_REWRITE_TAC[WORD_ADD_0] THEN 
-    REPEAT STRIP_TAC THEN
-    X86_STEPS_TAC SHA3_KECCAK4_F1600_ALT_EXEC (1--96) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REPEAT CONJ_TAC THENL 
-    [PURE_ONCE_REWRITE_TAC[ARITH_RULE `8 * 0 = 0`] THEN
-        REWRITE_TAC[WORD_ADD_0];
-        ASM_REWRITE_TAC [WORD_SUBWORD_JOIN_EXTRACT_64] THEN
-        ASM_REWRITE_TAC [WORD_SUBWORD_JOIN_EXTRACT_128] THEN
-        EXPAND_TAC "A1" THEN
-        EXPAND_TAC "A2" THEN
-        EXPAND_TAC "A3" THEN
-        EXPAND_TAC "A4" THEN
-        REWRITE_TAC[keccak] THEN 
-        REWRITE_TAC[MAP2] THEN
-        REWRITE_TAC[CONS_11] THEN
-        CONV_TAC WORD_BLAST];
-
-    (*** Preservation of the invariant including end condition code ***)
-
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
-
-    REWRITE_TAC[rho56_constant; rho8_constant; round_constants; GSYM CONJ_ASSOC] THEN
-    REWRITE_TAC[WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc_pointer,24) s:int64 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(bitstate_in,100) s:int64 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rho8_ptr,1) s:int256 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rho56_ptr,1) s:int256 list`] THEN
-    REWRITE_TAC[APPEND] THEN
-    MP_TAC(ISPECL [`A1:int64 list`; `i:num`] LENGTH_KECCAK) THEN
-    MP_TAC(ISPECL [`A2:int64 list`; `i:num`] LENGTH_KECCAK) THEN
-    MP_TAC(ISPECL [`A3:int64 list`; `i:num`] LENGTH_KECCAK) THEN
-    MP_TAC(ISPECL [`A4:int64 list`; `i:num`] LENGTH_KECCAK) THEN
-    ASM_REWRITE_TAC[IMP_IMP] THEN REWRITE_TAC[LENGTH_EQ_25] THEN
-    DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN SUBST1_TAC) THEN
-    REWRITE_TAC[MAP2; CONS_11; GSYM CONJ_ASSOC] THEN
-    ENSURES_INIT_TAC "s0" THEN
-
-    SUBGOAL_THEN
-     `read (memory :> bytes64(word_add rc_pointer (word(8 * i)))) s0 =
-      EL i round_constants`
-    ASSUME_TAC THENL
-     [UNDISCH_TAC `i < 24` THEN SPEC_TAC(`i:num`,`i:num`) THEN
-      CONV_TAC EXPAND_CASES_CONV THEN
-      CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
-      ASM_REWRITE_TAC[round_constants; WORD_ADD_0] THEN
-      CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[]; 
-      ALL_TAC] THEN
-    
-    ASM_REWRITE_TAC [WORD_SUBWORD_JOIN_EXTRACT_64] THEN
-    ASM_REWRITE_TAC [WORD_SUBWORD_JOIN_EXTRACT_128] THEN
-    BIGNUM_DIGITIZE_TAC "A_" `read (memory :> bytes (bitstate_in,8 * 100)) s0` THEN
-    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 0 25 THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 200 25 THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 400 25 THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 600 25 THEN
-    MEMORY_256_FROM_64_TAC "rho8_ptr" 0 4 THEN
-    MEMORY_256_FROM_64_TAC "rho56_ptr" 0 4 THEN
-    ASM_REWRITE_TAC[WORD_ADD_0] THEN REPEAT STRIP_TAC THEN
-    X86_STEPS_TAC SHA3_KECCAK4_F1600_ALT_EXEC (1--223) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REPEAT CONJ_TAC THENL
-      [REWRITE_TAC[WORD_ADD];
-      CONV_TAC WORD_BLAST;
-      REPEAT(CONJ_TAC THENL [CONV_TAC WORD_RULE]) THEN
-      REWRITE_TAC[keccak; keccak_round] THEN
-      CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
-      CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN 
-      REWRITE_TAC[MAP2; CONS_11] THEN
-       CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
-      ASM_REWRITE_TAC[] THEN
-      REPEAT CONJ_TAC THEN BITBLAST_TAC;
-
-      REWRITE_TAC [WORD_BLAST `word_add x (word 18446744073709551593):int64 = 
-              word_sub x (word 23)`] THEN
-      REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN 
-      REWRITE_TAC[VAL_WORD;DIMINDEX_64] THEN
-      IMP_REWRITE_TAC[MOD_LT; ARITH_RULE `23 < 2 EXP 64`] THEN
-      CONJ_TAC THENL 
-        [UNDISCH_TAC `i < 24` THEN ARITH_TAC; 
-        ARITH_TAC]];
-
-    (*** The trivial loop-back goal ***)
-
-   X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
-
-    REWRITE_TAC[rho56_constant; rho8_constant; round_constants; GSYM CONJ_ASSOC] THEN
-    REWRITE_TAC[WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc_pointer,24) s:int64 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(bitstate_in,100) s:int64 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rho8_ptr,1) s:int256 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rho56_ptr,1) s:int256 list`] THEN
-    REWRITE_TAC[APPEND] THEN
-    MP_TAC(ISPECL [`A1:int64 list`; `i:num`] LENGTH_KECCAK) THEN
-    MP_TAC(ISPECL [`A2:int64 list`; `i:num`] LENGTH_KECCAK) THEN
-    MP_TAC(ISPECL [`A3:int64 list`; `i:num`] LENGTH_KECCAK) THEN
-    MP_TAC(ISPECL [`A4:int64 list`; `i:num`] LENGTH_KECCAK) THEN
-    ASM_REWRITE_TAC[IMP_IMP] THEN 
-    REWRITE_TAC[LENGTH_EQ_25] THEN
-    DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN SUBST1_TAC) THEN
-    REWRITE_TAC[MAP2; CONS_11; GSYM CONJ_ASSOC] THEN
-    ENSURES_INIT_TAC "s0" THEN
-    BIGNUM_DIGITIZE_TAC "A_" `read (memory :> bytes (bitstate_in,8 * 100)) s0` THEN
-    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 0 25 THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 200 25 THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 400 25 THEN
-    MEMORY_256_FROM_64_TAC "bitstate_in" 600 25 THEN
-    MEMORY_256_FROM_64_TAC "rho8_ptr" 0 4 THEN
-    MEMORY_256_FROM_64_TAC "rho56_ptr" 0 4 THEN
-    ASM_REWRITE_TAC[WORD_ADD_0] THEN REPEAT STRIP_TAC THEN
-    X86_STEPS_TAC SHA3_KECCAK4_F1600_ALT_EXEC (1--1) THEN
-    ENSURES_FINAL_STATE_TAC THEN 
-    ASM_REWRITE_TAC[];
-
-    (*** The tail of logical not operation and writeback ***)
-
-    REWRITE_TAC[round_constants; CONS_11; GSYM CONJ_ASSOC] THEN
-    REWRITE_TAC[WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc_pointer,24) s:int64 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(bitstate_in,100) s:int64 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rho8_ptr,1) s:int256 list`;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rho56_ptr,1) s:int256 list`] THEN
-    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
-    REWRITE_TAC[APPEND] THEN
-    MP_TAC(ISPECL [`A1:int64 list`; `24:num`] LENGTH_KECCAK) THEN
-    MP_TAC(ISPECL [`A2:int64 list`; `24:num`] LENGTH_KECCAK) THEN
-    MP_TAC(ISPECL [`A3:int64 list`; `24:num`] LENGTH_KECCAK) THEN
-    MP_TAC(ISPECL [`A4:int64 list`; `24:num`] LENGTH_KECCAK) THEN
-    ASM_REWRITE_TAC[IMP_IMP] THEN REWRITE_TAC[LENGTH_EQ_25] THEN
-    DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN SUBST1_TAC) THEN
-    REWRITE_TAC[MAP2; CONS_11; GSYM CONJ_ASSOC] THEN 
-    CONV_TAC NUM_REDUCE_CONV THEN
-    REWRITE_TAC [keccak; keccak_round] THEN
-    ENSURES_INIT_TAC "s0" THEN
-    X86_STEPS_TAC SHA3_KECCAK4_F1600_ALT_EXEC (1--96) THEN
-    REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
-      CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
-      check (can (term_match [] `read qqq s:int256 = xxx`) o concl))) THEN
-    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REPEAT CONJ_TAC THEN
-    BITBLAST_TAC]);;
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  X_CHOOSE_TAC
+   `f:int64->int64->int64->int64->num->int64->(uarch_event)list`
+   SHA3_KECCAK4_F1600_ALT_FULL THEN
+  MATCH_MP_TAC(ISPEC `read events:x86state->(uarch_event)list`
+                ENSURES_ANY_INITIAL) THEN
+  X_GEN_TAC `e:(uarch_event)list` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `rc_pointer:int64`; `bitstate_in:int64`;
+    `rho8_ptr:int64`; `rho56_ptr:int64`; `A1:int64 list`; `A2:int64 list`;
+    `A3:int64 list`; `A4:int64 list`; `pc:num`; `stackpointer:int64`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_MONO_ALL) THEN
+  SIMP_TAC[]);;
 
 
 let SHA3_KECCAK4_F1600_ALT_FULL_EXEC = X86_MK_EXEC_RULE sha3_keccak4_f1600_alt_tmc;;
@@ -1314,14 +1382,31 @@ let SHA3_KECCAK4_F1600_ALT_WINDOWS_SUBROUTINE_CORRECT = prove
 (* Constant-time and memory safety proof.                                    *)
 (* ========================================================================= *)
 
-needs "x86/proofs/consttime.ml";;
-needs "x86/proofs/subroutine_signatures.ml";;
-
 let full_spec,public_vars = mk_safety_spec
     ~keep_maychanges:true
     (assoc "sha3_keccak4_f1600_alt" subroutine_signatures)
     SHA3_KECCAK4_F1600_ALT_CORRECT
     SHA3_KECCAK4_F1600_ALT_EXEC;;
+
+(*** The simulation for the proof of safety: the values in the YMM
+ *** registers and the 256-bit ones in memory do not matter, and with them
+ *** the simulation of a round would be slow, so they are dropped after each
+ *** step
+ ***)
+
+let KECCAK4_SAFE_SIM_TAC execth n =
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  MAP_EVERY (fun k ->
+    X86_STEPS_TAC execth [k] THEN
+    DISCARD_ASSUMPTIONS_TAC
+     (can (term_match [] `read X (s:x86state):int256 = y`) o concl))
+   (1--n) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
+
+(*** The loop as in the proof of SHA3_KECCAK4_F1600_ALT_FULL, the invariant
+ *** only on the counter and the pointers
+ ***)
 
 let SHA3_KECCAK4_F1600_ALT_SAFE = time prove
  (`exists f_events.
@@ -1357,8 +1442,47 @@ let SHA3_KECCAK4_F1600_ALT_SAFE = time prove
                 MAYCHANGE [memory :> bytes (stackpointer,768)] ,,
                 MAYCHANGE [memory :> bytes (bitstate_in,800)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  REWRITE_TAC[PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SHA3_KECCAK4_F1600_ALT_EXEC);;
+  REWRITE_TAC[SOME_FLAGS] THEN
+  CONCRETIZE_F_EVENTS_TAC
+   `\(rc_pointer:int64) (rho8_ptr:int64) (rho56_ptr:int64)
+     (bitstate_in:int64) (pc:num) (stackpointer:int64).
+      APPEND (f_ev_epil rc_pointer rho8_ptr rho56_ptr bitstate_in pc
+                        stackpointer)
+       (APPEND (ENUMERATEL 24 (\i. f_ev_loop rc_pointer rho8_ptr rho56_ptr
+                                    bitstate_in pc stackpointer i))
+               (f_ev_prol rc_pointer rho8_ptr rho56_ptr bitstate_in pc
+                          stackpointer)) :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC
+   [`rc_pointer:int64`; `bitstate_in:int64`; `rho8_ptr:int64`;
+    `rho56_ptr:int64`; `pc:num`; `stackpointer:int64`] THEN
+  REWRITE_TAC[PAIRWISE; C_ARGUMENTS; ALL; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `24` `pc + 0x26f` `pc + 0x771`
+   `\i s. read R10 s = word i /\
+          read RDI s = bitstate_in /\
+          read RSP s = stackpointer /\
+          read RDX s = rho8_ptr /\
+          read RCX s = rho56_ptr /\
+          read RSI s = word_add rc_pointer (word (8 * i))` THEN
+  REPEAT CONJ_TAC THENL
+   [CONV_TAC NUM_REDUCE_CONV;
+
+    KECCAK4_SAFE_SIM_TAC SHA3_KECCAK4_F1600_ALT_EXEC 96 THEN
+    REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
+    KECCAK4_SAFE_SIM_TAC SHA3_KECCAK4_F1600_ALT_EXEC 224 THEN
+    EVENTS_SPLIT_TAC
+     (ASM_SIMP_TAC[KECCAK4_BRANCH] THEN
+      REPEAT CONJ_TAC THENL
+       [COND_CASES_TAC THEN REWRITE_TAC[];
+        REWRITE_TAC[WORD_ADD];
+        CONV_TAC WORD_RULE]);
+
+    KECCAK4_SAFE_SIM_TAC SHA3_KECCAK4_F1600_ALT_EXEC 95 THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
 
 (* ------------------------------------------------------------------------- *)
 (* The subroutine forms, with the frames of the correctness theorems, as     *)
