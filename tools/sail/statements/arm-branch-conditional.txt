@@ -1,0 +1,167 @@
+SAIL_HL_ARM_BCOND_EQ
+|- forall condition immediate s t.
+     sail_hl_arm_5fBCOND
+       (PC :> evaluate (\pc. word_sub pc (word 4))) condition immediate s t <=>
+     arm_Bcond (Condition condition) (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BEQ_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBEQ
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BEQ (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BNE_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBNE
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BNE (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BCS_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBCS
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BCS (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BHS_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBHS
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BHS (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BCC_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBCC
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BCC (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BLO_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBLO
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BLO (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BMI_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBMI
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BMI (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BPL_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBPL
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BPL (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BVS_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBVS
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BVS (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BVC_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBVC
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BVC (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BHI_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBHI
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BHI (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BLS_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBLS
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BLS (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BGE_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBGE
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BGE (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BLT_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBLT
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BLT (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BGT_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBGT
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BGT (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BLE_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBLE
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BLE (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BAL_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBAL
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BAL (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BNV_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBNV
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BNV (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_CBZ32_EQ
+|- forall register immediate s t.
+     sail_hl_arm_5fCBZ32
+       (PC :> evaluate (\pc. word_sub pc (word 4))) register immediate s t <=>
+     arm_CBZ (WREG' register) (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_CBZ64_EQ
+|- forall register immediate s t.
+     sail_hl_arm_5fCBZ64
+       (PC :> evaluate (\pc. word_sub pc (word 4))) register immediate s t <=>
+     arm_CBZ (XREG' register) (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_CBNZ32_EQ
+|- forall register immediate s t.
+     sail_hl_arm_5fCBNZ32
+       (PC :> evaluate (\pc. word_sub pc (word 4))) register immediate s t <=>
+     arm_CBNZ (WREG' register) (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_CBNZ64_EQ
+|- forall register immediate s t.
+     sail_hl_arm_5fCBNZ64
+       (PC :> evaluate (\pc. word_sub pc (word 4))) register immediate s t <=>
+     arm_CBNZ (XREG' register) (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_TBZ32_EQ
+|- forall register position immediate s t.
+     sail_hl_arm_5fTBZ32
+       (PC :> evaluate (\pc. word_sub pc (word 4))) register position immediate
+       s t <=>
+     arm_TBZ (WREG' register) (val position) (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_TBZ64_HI_EQ
+|- forall register position immediate s t.
+     sail_hl_arm_5fTBZ64_5fHI
+       (PC :> evaluate (\pc. word_sub pc (word 4))) register position immediate
+       s t <=>
+     arm_TBZ (XREG' register) (32 + val position) (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_TBNZ32_EQ
+|- forall register position immediate s t.
+     sail_hl_arm_5fTBNZ32
+       (PC :> evaluate (\pc. word_sub pc (word 4))) register position immediate
+       s t <=>
+     arm_TBNZ (WREG' register) (val position) (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_TBNZ64_HI_EQ
+|- forall register position immediate s t.
+     sail_hl_arm_5fTBNZ64_5fHI
+       (PC :> evaluate (\pc. word_sub pc (word 4))) register position immediate
+       s t <=>
+     arm_TBNZ
+       (XREG' register) (32 + val position) (word (val immediate * 4)) s t
+

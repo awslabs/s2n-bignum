@@ -1,0 +1,24 @@
+SAIL_HL_ARM_XTN64E8_EQ
+|- forall d n s t.
+     sail_hl_arm_5fXTN64E8 d n s t <=> arm_XTN (QREG' d) (QREG' n) 8 s t
+
+SAIL_HL_ARM_XTN64E16_EQ
+|- forall d n s t.
+     sail_hl_arm_5fXTN64E16 d n s t <=> arm_XTN (QREG' d) (QREG' n) 16 s t
+
+SAIL_HL_ARM_XTN64E32_EQ
+|- forall d n s t.
+     sail_hl_arm_5fXTN64E32 d n s t <=> arm_XTN (QREG' d) (QREG' n) 32 s t
+
+SAIL_HL_ARM_XTN264E8_EQ
+|- forall d n s t.
+     sail_hl_arm_5fXTN264E8 d n s t <=> arm_XTN2 (QREG' d) (QREG' n) 8 s t
+
+SAIL_HL_ARM_XTN264E16_EQ
+|- forall d n s t.
+     sail_hl_arm_5fXTN264E16 d n s t <=> arm_XTN2 (QREG' d) (QREG' n) 16 s t
+
+SAIL_HL_ARM_XTN264E32_EQ
+|- forall d n s t.
+     sail_hl_arm_5fXTN264E32 d n s t <=> arm_XTN2 (QREG' d) (QREG' n) 32 s t
+

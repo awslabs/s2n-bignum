@@ -224,6 +224,15 @@ instruction cases and memory states are generated:
 - [Arm instruction modeling](arm/INSTRUCTION.md)
 - [x86-64 instruction modeling](x86/INSTRUCTION.md)
 
+**Mitigation: formal comparison with Sail models.** In addition to
+testing against real hardware, we gain confidence in the correctness of
+our models through formal comparison with other models. Specifically,
+this repository contains a HOL Light backend for the Sail compiler,
+which exports architecture models from Sail to HOL Light, and proofs
+that relate them to s2n-bignum's instruction models.
+[tools/sail](tools/sail/README.md) says which instructions are covered,
+under which assumptions, and where the models differ.
+
 ### B2. ELF object-code loader
 
 An OCaml ELF loader extracts the `.text` section (and, where applicable, the

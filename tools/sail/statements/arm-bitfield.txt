@@ -1,0 +1,60 @@
+SAIL_HL_ARM_BFM32_EQ
+|- forall d n immr imms s t.
+     sail_hl_arm_5fBFM32 d n immr imms s t <=>
+     arm_BFM (WREG' d) (WREG' n) (val immr) (val imms) s t
+
+SAIL_HL_ARM_BFM64_EQ
+|- forall d n immr imms s t.
+     sail_hl_arm_5fBFM64 d n immr imms s t <=>
+     arm_BFM (XREG' d) (XREG' n) (val immr) (val imms) s t
+
+SAIL_HL_ARM_SBFM32_EQ
+|- forall d n immr imms s t.
+     sail_hl_arm_5fSBFM32 d n immr imms s t <=>
+     arm_SBFM (WREG' d) (WREG' n) (val immr) (val imms) s t
+
+SAIL_HL_ARM_SBFM64_EQ
+|- forall d n immr imms s t.
+     sail_hl_arm_5fSBFM64 d n immr imms s t <=>
+     arm_SBFM (XREG' d) (XREG' n) (val immr) (val imms) s t
+
+SAIL_HL_ARM_UBFM32_EQ
+|- forall d n immr imms s t.
+     sail_hl_arm_5fUBFM32 d n immr imms s t <=>
+     arm_UBFM (WREG' d) (WREG' n) (val immr) (val imms) s t
+
+SAIL_HL_ARM_UBFM64_EQ
+|- forall d n immr imms s t.
+     sail_hl_arm_5fUBFM64 d n immr imms s t <=>
+     arm_UBFM (XREG' d) (XREG' n) (val immr) (val imms) s t
+
+SAIL_HL_ARM_ASR32_EQ
+|- forall d n amount s t.
+     sail_hl_arm_5fASR32 d n amount s t <=>
+     arm_ASR (WREG' d) (WREG' n) (val amount) s t
+
+SAIL_HL_ARM_ASR64_EQ
+|- forall d n amount s t.
+     sail_hl_arm_5fASR64 d n amount s t <=>
+     arm_ASR (XREG' d) (XREG' n) (val amount) s t
+
+SAIL_HL_ARM_LSR32_EQ
+|- forall d n amount s t.
+     sail_hl_arm_5fLSR32 d n amount s t <=>
+     arm_LSR (WREG' d) (WREG' n) (val amount) s t
+
+SAIL_HL_ARM_LSR64_EQ
+|- forall d n amount s t.
+     sail_hl_arm_5fLSR64 d n amount s t <=>
+     arm_LSR (XREG' d) (XREG' n) (val amount) s t
+
+SAIL_HL_ARM_LSL32_EQ
+|- forall d n amount s t.
+     sail_hl_arm_5fLSL32 d n amount s t <=>
+     arm_LSL (WREG' d) (WREG' n) (val amount) s t
+
+SAIL_HL_ARM_LSL64_EQ
+|- forall d n amount s t.
+     sail_hl_arm_5fLSL64 d n amount s t <=>
+     arm_LSL (XREG' d) (XREG' n) (val amount) s t
+

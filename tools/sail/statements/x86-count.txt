@@ -1,0 +1,239 @@
+SAIL_HL_X86_BSF64_RR_DIFF
+|- forall d m s.
+     read (registers :> element m) s = word 0 ==>
+     x86_BSF
+       (registers :> element d) (registers :> element d)
+       (registers :> element m) s
+       (write
+          ZF true
+          (write
+             (registers :> element d)
+             (word_not (read (registers :> element d) s)) s)) /\
+     ~sail_hl_X86_5fBSF64_5fRR
+        d m s
+        (write
+           ZF true
+           (write
+              (registers :> element d)
+              (word_not (read (registers :> element d) s)) s))
+
+SAIL_HL_X86_BSF64_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBSF64_5fRR d m s t <=>
+     x86_BSF
+       (registers :> element d) (registers :> element d)
+       (registers :> element m) s t /\
+     (read (registers :> element m) s = word 0 ==>
+      read (registers :> element d) t = read (registers :> element d) s)
+
+SAIL_HL_X86_BSF32_RR_DIFF
+|- forall d m s.
+     read (GPR32_Z (Gpr m Lower_32)) s = word 0 ==>
+     x86_BSF
+       (GPR32_Z (Gpr d Lower_32)) (registers :> element d)
+       (GPR32_Z (Gpr m Lower_32)) s
+       (write
+          ZF true
+          (write
+             (registers :> element d)
+             (word_not (read (registers :> element d) s)) s)) /\
+     ~sail_hl_X86_5fBSF32_5fRR
+        d m s
+        (write
+           ZF true
+           (write
+              (registers :> element d)
+              (word_not (read (registers :> element d) s)) s))
+
+SAIL_HL_X86_BSF32_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBSF32_5fRR d m s t <=>
+     x86_BSF
+       (GPR32_Z (Gpr d Lower_32)) (registers :> element d)
+       (GPR32_Z (Gpr m Lower_32)) s t /\
+     (read (GPR32_Z (Gpr m Lower_32)) s = word 0 ==>
+      word_zx (read (registers :> element d) t) =
+      word_zx (read (registers :> element d) s))
+
+SAIL_HL_X86_BSF16_RR_DIFF
+|- forall d m s.
+     read (GPR16 (Gpr m Lower_16)) s = word 0 ==>
+     x86_BSF
+       (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr d Lower_16))
+       (GPR16 (Gpr m Lower_16)) s
+       (write
+          ZF true
+          (write
+             (GPR16 (Gpr d Lower_16))
+             (word_not (read (GPR16 (Gpr d Lower_16)) s)) s)) /\
+     ~sail_hl_X86_5fBSF16_5fRR
+        d m s
+        (write
+           ZF true
+           (write
+              (GPR16 (Gpr d Lower_16))
+              (word_not (read (GPR16 (Gpr d Lower_16)) s)) s))
+
+SAIL_HL_X86_BSF16_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBSF16_5fRR d m s t <=>
+     x86_BSF
+       (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr d Lower_16))
+       (GPR16 (Gpr m Lower_16)) s t /\
+     (read (GPR16 (Gpr m Lower_16)) s = word 0 ==>
+      read (GPR16 (Gpr d Lower_16)) t = read (GPR16 (Gpr d Lower_16)) s)
+
+SAIL_HL_X86_BSR64_RR_DIFF
+|- forall d m s.
+     read (registers :> element m) s = word 0 ==>
+     x86_BSR
+       (registers :> element d) (registers :> element d)
+       (registers :> element m) s
+       (write
+          ZF true
+          (write
+             (registers :> element d)
+             (word_not (read (registers :> element d) s)) s)) /\
+     ~sail_hl_X86_5fBSR64_5fRR
+        d m s
+        (write
+           ZF true
+           (write
+              (registers :> element d)
+              (word_not (read (registers :> element d) s)) s))
+
+SAIL_HL_X86_BSR64_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBSR64_5fRR d m s t <=>
+     x86_BSR
+       (registers :> element d) (registers :> element d)
+       (registers :> element m) s t /\
+     (read (registers :> element m) s = word 0 ==>
+      read (registers :> element d) t = read (registers :> element d) s)
+
+SAIL_HL_X86_BSR32_RR_DIFF
+|- forall d m s.
+     read (GPR32_Z (Gpr m Lower_32)) s = word 0 ==>
+     x86_BSR
+       (GPR32_Z (Gpr d Lower_32)) (registers :> element d)
+       (GPR32_Z (Gpr m Lower_32)) s
+       (write
+          ZF true
+          (write
+             (registers :> element d)
+             (word_not (read (registers :> element d) s)) s)) /\
+     ~sail_hl_X86_5fBSR32_5fRR
+        d m s
+        (write
+           ZF true
+           (write
+              (registers :> element d)
+              (word_not (read (registers :> element d) s)) s))
+
+SAIL_HL_X86_BSR32_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBSR32_5fRR d m s t <=>
+     x86_BSR
+       (GPR32_Z (Gpr d Lower_32)) (registers :> element d)
+       (GPR32_Z (Gpr m Lower_32)) s t /\
+     (read (GPR32_Z (Gpr m Lower_32)) s = word 0 ==>
+      word_zx (read (registers :> element d) t) =
+      word_zx (read (registers :> element d) s))
+
+SAIL_HL_X86_BSR16_RR_DIFF
+|- forall d m s.
+     read (GPR16 (Gpr m Lower_16)) s = word 0 ==>
+     x86_BSR
+       (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr d Lower_16))
+       (GPR16 (Gpr m Lower_16)) s
+       (write
+          ZF true
+          (write
+             (GPR16 (Gpr d Lower_16))
+             (word_not (read (GPR16 (Gpr d Lower_16)) s)) s)) /\
+     ~sail_hl_X86_5fBSR16_5fRR
+        d m s
+        (write
+           ZF true
+           (write
+              (GPR16 (Gpr d Lower_16))
+              (word_not (read (GPR16 (Gpr d Lower_16)) s)) s))
+
+SAIL_HL_X86_BSR16_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBSR16_5fRR d m s t <=>
+     x86_BSR
+       (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr d Lower_16))
+       (GPR16 (Gpr m Lower_16)) s t /\
+     (read (GPR16 (Gpr m Lower_16)) s = word 0 ==>
+      read (GPR16 (Gpr d Lower_16)) t = read (GPR16 (Gpr d Lower_16)) s)
+
+SAIL_HL_X86_TZCNT64_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fTZCNT64_5fRR d m s t <=>
+     x86_TZCNT (registers :> element d) (registers :> element m) s t
+
+SAIL_HL_X86_TZCNT32_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fTZCNT32_5fRR d m s t <=>
+     x86_TZCNT (GPR32_Z (Gpr d Lower_32)) (GPR32_Z (Gpr m Lower_32)) s t
+
+SAIL_HL_X86_TZCNT16_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fTZCNT16_5fRR d m s t <=>
+     x86_TZCNT (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr m Lower_16)) s t
+
+SAIL_HL_X86_LZCNT64_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fLZCNT64_5fRR d m s t <=>
+     x86_LZCNT (registers :> element d) (registers :> element m) s t
+
+SAIL_HL_X86_LZCNT32_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fLZCNT32_5fRR d m s t <=>
+     x86_LZCNT (GPR32_Z (Gpr d Lower_32)) (GPR32_Z (Gpr m Lower_32)) s t
+
+SAIL_HL_X86_LZCNT16_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fLZCNT16_5fRR d m s t <=>
+     x86_LZCNT (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr m Lower_16)) s t
+
+SAIL_HL_X86_POPCNT64_RR_EQ
+|- forall d m s t.
+     (sail_hl_X86_5fPOPCNT64_5fRR d m ,,
+      (\u.
+         (events :=
+          CONS
+            (EventX86POPCNT
+               (word_zx (read (registers :> element m) s),dimindex (:64)))
+            (read events u))
+           u))
+       s t <=>
+     x86_POPCNT (registers :> element d) (registers :> element m) s t
+
+SAIL_HL_X86_POPCNT32_RR_EQ
+|- forall d m s t.
+     (sail_hl_X86_5fPOPCNT32_5fRR d m ,,
+      (\u.
+         (events :=
+          CONS
+            (EventX86POPCNT
+               (word_zx (read (GPR32_Z (Gpr m Lower_32)) s),dimindex (:32)))
+            (read events u))
+           u))
+       s t <=>
+     x86_POPCNT (GPR32_Z (Gpr d Lower_32)) (GPR32_Z (Gpr m Lower_32)) s t
+
+SAIL_HL_X86_POPCNT16_RR_EQ
+|- forall d m s t.
+     (sail_hl_X86_5fPOPCNT16_5fRR d m ,,
+      (\u.
+         (events :=
+          CONS
+            (EventX86POPCNT
+               (word_zx (read (GPR16 (Gpr m Lower_16)) s),dimindex (:16)))
+            (read events u))
+           u))
+       s t <=>
+     x86_POPCNT (GPR16 (Gpr d Lower_16)) (GPR16 (Gpr m Lower_16)) s t
+
