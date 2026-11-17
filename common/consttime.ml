@@ -547,7 +547,9 @@ let rec WHILE_TAC (flag:bool ref) tac w =
   (if !flag then tac THEN WHILE_TAC flag tac else ALL_TAC) w;;
 
 (* public_vars describe the HOL Light variables that will contain public
-   information. This is for faster symbolic simulation. *)
+   information. This is for faster symbolic simulation. With ~run_tac, the
+   simulation from the initial state to the destination PC is done by
+   run_tac dest_pc instead of single_step_tac. *)
 let GEN_PROVE_SAFETY_SPEC_TAC =
   let pth =
     prove(`forall (e:((A)address_uarch_event)list) e2.
@@ -559,7 +561,8 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
           MESON_TAC[memaccess_inbounds_def;ALL]) in
 
   let mainfn ?(public_vars:term list option)
-    ?(tac_before_maychange_simp:tactic option) exec
+    ?(tac_before_maychange_simp:tactic option)
+    ?(run_tac:(term -> tactic) option) exec
     (extra_unpack_thms:thm list) single_step_tac
     :tactic =
 
@@ -599,6 +602,10 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
             is_eq t && is_binary "read" (lhs t) &&
             intersect (frees t) public_vars = [])) THEN
 
+      (match run_tac with
+       | Some run_tac ->
+         run_tac dest_pc_addr THEN ABBREV_TRACE_TAC stored_abbrevs
+       | None ->
       let chunksize = 50 in
       let i = ref 0 in
       let successful = ref true and hasnext = ref true in
@@ -626,7 +633,7 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
       W (fun (asl,w) ->
         if not !successful
         then FAIL_TAC ("could not reach to the destination pc (" ^ (string_of_term dest_pc_addr) ^ ")")
-        else ALL_TAC) THEN
+        else ALL_TAC)) THEN
 
       ENSURES_FINAL_STATE_TAC THEN
       ASM_REWRITE_TAC[] THEN
