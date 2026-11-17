@@ -562,7 +562,7 @@ let pfs_allowed =
    `stackpointer:int64`; `returnaddress:int64`; `r:num`; `bot:int64`];;
 
 let PFS_CALL_TAC prm name ilist n =
-  FULL_CALL_TAC mldsa_native_libmldsa_gcc12_O2_mc prm.pfs_exec name
+  FULL_CALL_TAC (mldsa_native_image_def prm.pfs_exec) prm.pfs_exec name
    (ilist @ [`pc:num`; `read RSP s`;
              `read (memory :> bytes64 (read RSP s)) s`])
    pfs_allowed n;;

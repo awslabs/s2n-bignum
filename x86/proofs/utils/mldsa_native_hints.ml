@@ -20,7 +20,24 @@ needs "x86/proofs/utils/mldsa_native.ml";;
 needs "x86/proofs/utils/mldsa_native_full.ml";;
 needs "x86/proofs/utils/mldsa_native_memset.ml";;
 needs "common/mldsa_native_hints.ml";;
-needs "x86/proofs/mldsa_native/gcc12_O2/libmldsa.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* The tools are for the code of any build of the image. They take the image *)
+(* from the exec theorem of the code that they are applied to, which is      *)
+(* about the constant for the image (see X86_MK_EXEC_RANGES_RULE), and its   *)
+(* definition, which FULL_CALL_TAC needs, from the definitions made so far.  *)
+(* ------------------------------------------------------------------------- *)
+
+let mldsa_native_image_const (execth:thm * thm option array) =
+  match setify (find_terms (fun t -> is_const t && type_of t = `:byte list`)
+                           (concl(fst execth))) with
+    [c] -> c
+  | _ -> failwith "mldsa_native_image_const: no unique image";;
+
+let mldsa_native_image_def execth =
+  let c = mldsa_native_image_const execth in
+  try find (fun th -> lhs(concl th) = c) (definitions())
+  with Failure _ -> failwith "mldsa_native_image_def: no definition";;
 
 (* ------------------------------------------------------------------------- *)
 (* Byte strings copied with 128-bit loads and stores. The inputs are facts   *)
@@ -658,9 +675,11 @@ let glue_suh_template prm = glue_suh_inst prm
        else f_ev_z b i h sig pc stackpointer returnaddress))
    :(uarch_event)list`;;
 
-let glue_suh_inv prm = glue_suh_inst prm
+let glue_suh_inv prm =
+  vsubst [mldsa_native_image_const prm.suh_exec,`image_mc:byte list`]
+  (glue_suh_inst prm
  `\p (s:x86state).
-   bytes_loaded s (word pc) mldsa_native_libmldsa_gcc12_O2_mc /\
+   bytes_loaded s (word pc) image_mc /\
    read RSP s = stackpointer /\
    read (memory :> bytes64 stackpointer) s = rbx_init /\
    read (memory :> bytes64 (word_add stackpointer (word 8))) s = rbp_init /\
@@ -683,7 +702,7 @@ let glue_suh_inv prm = glue_suh_inst prm
    (p < glue_suh_steps OM KK b i \/ mld_unpack_hints_ok OM KK b i
     ==> !q. q < 256
             ==> read(memory :> bytes32(word_add h (word(4 * q)))) s =
-                glue_suh_h OM b i (MIN p (glue_suh_n1 OM b i)) q)`;;
+                glue_suh_h OM b i (MIN p (glue_suh_n1 OM b i)) q)`);;
 
 let GLUE_SUH_SETUP_TAC prm =
   let inst = glue_suh_inst prm in
@@ -1971,7 +1990,7 @@ let GLUE_PSH_CALL_TAC prm (b':term) (slice:term) n =
    [X_GEN_TAC `j:num` THEN DISCH_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
     SIMPLE_ARITH_TAC;
     ALL_TAC] THEN
-  FULL_CALL_TAC mldsa_native_libmldsa_gcc12_O2_mc prm.psh_exec "H_UNPACK"
+  FULL_CALL_TAC (mldsa_native_image_def prm.psh_exec) prm.psh_exec "H_UNPACK"
    [`read RDI s`; `read RSI s`; b'; `pc:num`; `read RSP s`;
     `read (memory :> bytes64 (read RSP s)) s`] glue_psh_vars n;;
 
