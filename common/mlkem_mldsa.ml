@@ -2184,16 +2184,18 @@ let CONGBOUND_SPLIT_X86 =
 (*   cong_prelude: extra tactic before the congruence chain (ALL_TAC on ARM; *)
 (*                 REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod q R`] on x86)   *)
 (*   ntt_conv    : the forward/inverse NTT evaluation conversion.            *)
+(* One memoized rule serves all coefficient goals, so a subterm that the     *)
+(* coefficients share (as values without abbreviations do) is done once.     *)
 
 let CONGBOUND_NTT_TAC lfn_seed markers split_tac cong_prelude ntt_conv =
   W(fun (asl,w) ->
     let lfn = lfn_seed asl in
     let asms =
       map snd (filter (is_local_definition markers o concl o snd) asl) in
-    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
+    let rule =
+      MEMOIZED_ASM_CONGBOUND_RULE (LOCAL_CONGBOUND_RULE lfn (rev asms)) in
     split_tac THEN
-    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
-        rand o lhand o rator o lhand o snd) THEN
+    W(MP_TAC o rule o rand o lhand o rator o lhand o snd) THEN
     (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
       [cong_prelude THEN
        MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
