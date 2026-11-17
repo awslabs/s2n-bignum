@@ -21,9 +21,6 @@ needs "arm/proofs/mlkem_gen_matrix.ml";;
 needs "arm/proofs/mlkem_ntt_alt.ml";;
 needs "arm/proofs/mlkem_intt_alt.ml";;
 needs "arm/proofs/mlkem_mulcache_compute.ml";;
-needs "arm/proofs/mlkem_basemul_k2_alt.ml";;
-needs "arm/proofs/mlkem_basemul_k3_alt.ml";;
-needs "arm/proofs/mlkem_basemul_k4_alt.ml";;
 needs "arm/proofs/mlkem_tomont.ml";;
 needs "arm/proofs/mlkem_reduce.ml";;
 needs "arm/proofs/mlkem_add_reduce.ml";;
@@ -32,14 +29,6 @@ needs "arm/proofs/mlkem_tobytes_alt.ml";;
 needs "arm/proofs/mlkem_frombytes.ml";;
 needs "arm/proofs/mlkem_frommsg.ml";;
 needs "arm/proofs/mlkem_tomsg.ml";;
-needs "arm/proofs/mlkem_compress_d4.ml";;
-needs "arm/proofs/mlkem_compress_d5.ml";;
-needs "arm/proofs/mlkem_compress_d10.ml";;
-needs "arm/proofs/mlkem_compress_d11.ml";;
-needs "arm/proofs/mlkem_decompress_d4.ml";;
-needs "arm/proofs/mlkem_decompress_d5.ml";;
-needs "arm/proofs/mlkem_decompress_d10.ml";;
-needs "arm/proofs/mlkem_decompress_d11.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The tables of the constants block in the forms the callees take them.     *)
@@ -1060,18 +1049,42 @@ let API_GETNOISE_CALL_TAC exec seed k gl =
   (API_RC_TAC k THEN
    API_IMAGE_CALL_TAC exec (api_getnoise_th seed k gl) k) gl;;
 
+(*** The kernels that depend on the parameter set, basemul_kK_alt and the
+ *** compression and decompression for du and dv: the proof of a parameter
+ *** set loads only its own and adds them here with their code, for the
+ *** calls below
+ ***)
+
+let api_param_kernels = ref ([]:(string * thm * thm) list);;
+
+let api_add_kernels l = api_param_kernels := !api_param_kernels @ l;;
+
+let api_param_kernel name =
+  let mc,th =
+    try let _,mc,th = find (fun (n,_,_) -> n = name) !api_param_kernels in
+        mc,th
+    with Failure _ -> failwith("api_param_kernel: no " ^ name) in
+  mc,th,layout name,parse_term("pc + " ^ name);;
+
+(*** The definitions of the results of basemul_kK_alt (pmull, and
+ *** basemul2_even etc.), added with the kernel
+ ***)
+
+let api_param_basemul_defs = ref ([]:(int * (thm * thm list)) list);;
+
+let api_add_basemul_defs k pmull_th defs =
+  api_param_basemul_defs := (k,(pmull_th,defs)) :: !api_param_basemul_defs;;
+
+let api_basemul_defs k =
+  try assoc k !api_param_basemul_defs
+  with Failure _ -> failwith("api_basemul_defs: no " ^ string_of_int k);;
+
 (*** basemul_kK of row r of the matrix (X1) by s (X2) with its mulcache (X3)
  *** into X0
  ***)
 
 let api_basemul_th k =
-  match k with
-    2 -> mlkem_basemul_k2_alt_mc,MLKEM_BASEMUL_K2_ALT_SUBROUTINE_CORRECT,
-         layout "mlkem_basemul_k2_alt",`pc + mlkem_basemul_k2_alt`
-  | 3 -> mlkem_basemul_k3_alt_mc,MLKEM_BASEMUL_K3_ALT_SUBROUTINE_CORRECT,
-         layout "mlkem_basemul_k3_alt",`pc + mlkem_basemul_k3_alt`
-  | _ -> mlkem_basemul_k4_alt_mc,MLKEM_BASEMUL_K4_ALT_SUBROUTINE_CORRECT,
-         layout "mlkem_basemul_k4_alt",`pc + mlkem_basemul_k4_alt`;;
+  api_param_kernel("mlkem_basemul_k" ^ string_of_int k ^ "_alt");;
 
 let API_BASEMUL_CALL_TAC exec k r kk gl =
   let ab,a = api_addr_parts(find_read_fact `X1` kk gl)
@@ -1139,12 +1152,9 @@ let API_BASEMUL_POST_TAC v bn k r sh mc sred kk (asl,w as gl) =
                          (0--(k-1))) in
     let sreds = flat(map (fun th -> map (fun e -> MP (SPEC e th) (sub e)) idx)
                          sred) in
-    let bdefs = match k with
-        2 -> [basemul2_even; basemul2_odd; pmul_acc2; pmull_acc2]
-      | 3 -> [basemul3_even; basemul3_odd; pmul_acc3; pmull_acc3]
-      | _ -> [basemul4_even; basemul4_odd; pmul_acc4; pmull_acc4] in
+    let pmull_th,bdefs = api_basemul_defs k in
     REWRITE_TAC bdefs THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-    REWRITE_TAC(pmull :: o_THM :: bdefs) THEN
+    REWRITE_TAC(pmull_th :: o_THM :: bdefs) THEN
     CONV_TAC(DEPTH_CONV BETA_CONV) THEN
     REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 3329 65536`; INT_CONG_RREM] THEN
     REWRITE_TAC(ivals @ sreds) THEN
@@ -1311,18 +1321,13 @@ let API_INTT_POST_TAC v bn x kk (asl,w as gl) =
     (fun _ -> CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN REWRITE_TAC[o_DEF] THEN
               CONV_TAC(DEPTH_CONV BETA_CONV) THEN SIMP_TAC[])) gl;;
 
-(*** compress_d of the polynomial at X1 (all < q) into X0 ***)
+(*** compress_d of the polynomial at X1 (all < q) into X0, the stack pointer
+ *** an argument only for compress_d10, the one with a stack frame
+ ***)
 
 let api_compress_th d =
-  match d with
-    10 -> mlkem_compress_d10_mc,MLKEM_COMPRESS_D10_SUBROUTINE_CORRECT,
-          layout "mlkem_compress_d10",`pc + mlkem_compress_d10`,true
-  | 4 -> mlkem_compress_d4_mc,MLKEM_COMPRESS_D4_SUBROUTINE_CORRECT,
-          layout "mlkem_compress_d4",`pc + mlkem_compress_d4`,false
-  | 11 -> mlkem_compress_d11_mc,MLKEM_COMPRESS_D11_SUBROUTINE_CORRECT,
-          layout "mlkem_compress_d11",`pc + mlkem_compress_d11`,false
-  | _ -> mlkem_compress_d5_mc,MLKEM_COMPRESS_D5_SUBROUTINE_CORRECT,
-          layout "mlkem_compress_d5",`pc + mlkem_compress_d5`,false;;
+  let mc,th,lo,pct = api_param_kernel("mlkem_compress_d" ^ string_of_int d) in
+  mc,th,lo,pct,(d = 10);;
 
 let API_COMPRESS_CALL_TAC exec d kk gl =
   let a = find_read_fact `X1` kk gl in
@@ -1403,12 +1408,9 @@ let API_BASEMUL_T_POST_TAC v bn k tt yh mc kk (asl,w as gl) =
   let ant = lhand(concl pth) in
   let ivar = fst(dest_forall ant) in
   let fin _ =
-    let bdefs = match k with
-        2 -> [basemul2_even; basemul2_odd; pmul_acc2; pmull_acc2]
-      | 3 -> [basemul3_even; basemul3_odd; pmul_acc3; pmull_acc3]
-      | _ -> [basemul4_even; basemul4_odd; pmul_acc4; pmull_acc4] in
+    let pmull_th,bdefs = api_basemul_defs k in
     REWRITE_TAC bdefs THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-    REWRITE_TAC(pmull :: o_THM :: bdefs) THEN
+    REWRITE_TAC(pmull_th :: o_THM :: bdefs) THEN
     CONV_TAC(DEPTH_CONV BETA_CONV) THEN
     REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 3329 65536`; INT_CONG_RREM] THEN
     SIMP_TAC[] in
@@ -1440,15 +1442,7 @@ let DECOMPRESS_BOUND = prove
 (*** decompress_d of the slice of c at X1 into X0, and its post ***)
 
 let api_decompress_th d =
-  match d with
-    10 -> mlkem_decompress_d10_mc,MLKEM_DECOMPRESS_D10_SUBROUTINE_CORRECT,
-          layout "mlkem_decompress_d10",`pc + mlkem_decompress_d10`
-  | 4 -> mlkem_decompress_d4_mc,MLKEM_DECOMPRESS_D4_SUBROUTINE_CORRECT,
-          layout "mlkem_decompress_d4",`pc + mlkem_decompress_d4`
-  | 11 -> mlkem_decompress_d11_mc,MLKEM_DECOMPRESS_D11_SUBROUTINE_CORRECT,
-          layout "mlkem_decompress_d11",`pc + mlkem_decompress_d11`
-  | _ -> mlkem_decompress_d5_mc,MLKEM_DECOMPRESS_D5_SUBROUTINE_CORRECT,
-          layout "mlkem_decompress_d5",`pc + mlkem_decompress_d5`;;
+  api_param_kernel("mlkem_decompress_d" ^ string_of_int d);;
 
 let API_SLICE_FACT_TAC l off len kk gl =
   let sv = state_of kk in

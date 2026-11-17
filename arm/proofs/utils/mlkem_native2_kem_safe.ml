@@ -23,7 +23,9 @@ needs "arm/proofs/utils/mlkem_native2_keccak_full.ml";;
 (* as callers need them (their safety theorems have the frame \s s'. true):  *)
 (* for those without a stack, from the correctness theorem by mk_safety_spec *)
 (* ~keep_maychanges:true; for those that save D8-D15, that of the core and   *)
-(* then of the subroutine with the saving.                                   *)
+(* then of the subroutine with the saving. Those of the kernels that depend  *)
+(* on the parameter set are made in the same ways by the proof of each       *)
+(* parameter set, for its own.                                               *)
 (* ------------------------------------------------------------------------- *)
 
 let core_safe_of core_correct sub_safe =
@@ -170,69 +172,6 @@ let MLKEM_TOMSG_SUBROUTINE_SAFE_FRAMED =
   ARM_ADD_IBT_RULE mlkem_tomsg_mc mlkem_tomsg_tmc
     MLKEM_TOMSG_NOIBT_SUBROUTINE_SAFE_FRAMED;;
 
-let MLKEM_COMPRESS_D4_NOIBT_SUBROUTINE_SAFE_FRAMED =
-  framed_kernel_safe "mlkem_compress_d4"
-    MLKEM_COMPRESS_D4_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_COMPRESS_D4_EXEC;;
-
-let MLKEM_COMPRESS_D4_SUBROUTINE_SAFE_FRAMED =
-  ARM_ADD_IBT_RULE mlkem_compress_d4_mc mlkem_compress_d4_tmc
-    MLKEM_COMPRESS_D4_NOIBT_SUBROUTINE_SAFE_FRAMED;;
-
-let MLKEM_COMPRESS_D5_NOIBT_SUBROUTINE_SAFE_FRAMED =
-  framed_kernel_safe "mlkem_compress_d5"
-    MLKEM_COMPRESS_D5_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_COMPRESS_D5_EXEC;;
-
-let MLKEM_COMPRESS_D5_SUBROUTINE_SAFE_FRAMED =
-  ARM_ADD_IBT_RULE mlkem_compress_d5_mc mlkem_compress_d5_tmc
-    MLKEM_COMPRESS_D5_NOIBT_SUBROUTINE_SAFE_FRAMED;;
-
-let MLKEM_COMPRESS_D11_NOIBT_SUBROUTINE_SAFE_FRAMED =
-  framed_kernel_safe "mlkem_compress_d11"
-    MLKEM_COMPRESS_D11_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_COMPRESS_D11_EXEC;;
-
-let MLKEM_COMPRESS_D11_SUBROUTINE_SAFE_FRAMED =
-  ARM_ADD_IBT_RULE mlkem_compress_d11_mc mlkem_compress_d11_tmc
-    MLKEM_COMPRESS_D11_NOIBT_SUBROUTINE_SAFE_FRAMED;;
-
-let MLKEM_DECOMPRESS_D4_NOIBT_SUBROUTINE_SAFE_FRAMED =
-  framed_kernel_safe "mlkem_decompress_d4"
-    MLKEM_DECOMPRESS_D4_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_DECOMPRESS_D4_EXEC;;
-
-let MLKEM_DECOMPRESS_D4_SUBROUTINE_SAFE_FRAMED =
-  ARM_ADD_IBT_RULE mlkem_decompress_d4_mc mlkem_decompress_d4_tmc
-    MLKEM_DECOMPRESS_D4_NOIBT_SUBROUTINE_SAFE_FRAMED;;
-
-let MLKEM_DECOMPRESS_D5_NOIBT_SUBROUTINE_SAFE_FRAMED =
-  framed_kernel_safe "mlkem_decompress_d5"
-    MLKEM_DECOMPRESS_D5_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_DECOMPRESS_D5_EXEC;;
-
-let MLKEM_DECOMPRESS_D5_SUBROUTINE_SAFE_FRAMED =
-  ARM_ADD_IBT_RULE mlkem_decompress_d5_mc mlkem_decompress_d5_tmc
-    MLKEM_DECOMPRESS_D5_NOIBT_SUBROUTINE_SAFE_FRAMED;;
-
-let MLKEM_DECOMPRESS_D10_NOIBT_SUBROUTINE_SAFE_FRAMED =
-  framed_kernel_safe "mlkem_decompress_d10"
-    MLKEM_DECOMPRESS_D10_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_DECOMPRESS_D10_EXEC;;
-
-let MLKEM_DECOMPRESS_D10_SUBROUTINE_SAFE_FRAMED =
-  ARM_ADD_IBT_RULE mlkem_decompress_d10_mc mlkem_decompress_d10_tmc
-    MLKEM_DECOMPRESS_D10_NOIBT_SUBROUTINE_SAFE_FRAMED;;
-
-let MLKEM_DECOMPRESS_D11_NOIBT_SUBROUTINE_SAFE_FRAMED =
-  framed_kernel_safe "mlkem_decompress_d11"
-    MLKEM_DECOMPRESS_D11_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_DECOMPRESS_D11_EXEC;;
-
-let MLKEM_DECOMPRESS_D11_SUBROUTINE_SAFE_FRAMED =
-  ARM_ADD_IBT_RULE mlkem_decompress_d11_mc mlkem_decompress_d11_tmc
-    MLKEM_DECOMPRESS_D11_NOIBT_SUBROUTINE_SAFE_FRAMED;;
-
 let MLKEM_NTT_ALT_CORE_SAFE_FRAMED,
     MLKEM_NTT_ALT_NOIBT_SUBROUTINE_SAFE_FRAMED,
     MLKEM_NTT_ALT_SUBROUTINE_SAFE_FRAMED =
@@ -250,42 +189,6 @@ let MLKEM_INTT_ALT_CORE_SAFE_FRAMED,
     MLKEM_INTT_ALT_NOIBT_SUBROUTINE_CORRECT
     MLKEM_INTT_ALT_EXEC (5,5)
     mlkem_intt_alt_mc mlkem_intt_alt_tmc;;
-
-let MLKEM_BASEMUL_K2_ALT_CORE_SAFE_FRAMED,
-    MLKEM_BASEMUL_K2_ALT_NOIBT_SUBROUTINE_SAFE_FRAMED,
-    MLKEM_BASEMUL_K2_ALT_SUBROUTINE_SAFE_FRAMED =
-  FRAMED_STACK_KERNEL MLKEM_BASEMUL_K2_ALT_CORRECT
-    MLKEM_BASEMUL_K2_ALT_NOIBT_SUBROUTINE_SAFE
-    MLKEM_BASEMUL_K2_ALT_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_BASEMUL_K2_ALT_EXEC (5,5)
-    mlkem_basemul_k2_alt_mc mlkem_basemul_k2_alt_tmc;;
-
-let MLKEM_BASEMUL_K3_ALT_CORE_SAFE_FRAMED,
-    MLKEM_BASEMUL_K3_ALT_NOIBT_SUBROUTINE_SAFE_FRAMED,
-    MLKEM_BASEMUL_K3_ALT_SUBROUTINE_SAFE_FRAMED =
-  FRAMED_STACK_KERNEL MLKEM_BASEMUL_K3_ALT_CORRECT
-    MLKEM_BASEMUL_K3_ALT_NOIBT_SUBROUTINE_SAFE
-    MLKEM_BASEMUL_K3_ALT_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_BASEMUL_K3_ALT_EXEC (5,5)
-    mlkem_basemul_k3_alt_mc mlkem_basemul_k3_alt_tmc;;
-
-let MLKEM_BASEMUL_K4_ALT_CORE_SAFE_FRAMED,
-    MLKEM_BASEMUL_K4_ALT_NOIBT_SUBROUTINE_SAFE_FRAMED,
-    MLKEM_BASEMUL_K4_ALT_SUBROUTINE_SAFE_FRAMED =
-  FRAMED_STACK_KERNEL MLKEM_BASEMUL_K4_ALT_CORRECT
-    MLKEM_BASEMUL_K4_ALT_NOIBT_SUBROUTINE_SAFE
-    MLKEM_BASEMUL_K4_ALT_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_BASEMUL_K4_ALT_EXEC (5,5)
-    mlkem_basemul_k4_alt_mc mlkem_basemul_k4_alt_tmc;;
-
-let MLKEM_COMPRESS_D10_CORE_SAFE_FRAMED,
-    MLKEM_COMPRESS_D10_NOIBT_SUBROUTINE_SAFE_FRAMED,
-    MLKEM_COMPRESS_D10_SUBROUTINE_SAFE_FRAMED =
-  FRAMED_STACK_KERNEL MLKEM_COMPRESS_D10_CORRECT
-    MLKEM_COMPRESS_D10_NOIBT_SUBROUTINE_SAFE
-    MLKEM_COMPRESS_D10_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_COMPRESS_D10_EXEC (4,4)
-    mlkem_compress_d10_mc mlkem_compress_d10_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* The modulus check mlkem_check_encoding as correctness and safety in one:  *)
@@ -1094,9 +997,11 @@ let safe_ilist th name =
       let i = index v args in
       parse_term("read X"^string_of_int i^" s")) vs;;
 
-(*** The framed safety theorems of the kernels, with their labels ***)
+(*** The framed safety theorems of the kernels, with their labels, to which
+ *** the proof of a parameter set adds those of its own kernels
+ ***)
 
-let api_safe_kernels =
+let api_safe_kernels = ref
   ["mlkem_frombytes","H_FROMBYTES",MLKEM_FROMBYTES_SUBROUTINE_SAFE_FRAMED,
    mlkem_frombytes_mc;
    "mlkem_frommsg","H_FROMMSG",MLKEM_FROMMSG_SUBROUTINE_SAFE_FRAMED,
@@ -1107,12 +1012,6 @@ let api_safe_kernels =
    mlkem_intt_alt_mc;
    "mlkem_mulcache_compute","H_MULCACHE",
    MLKEM_MULCACHE_COMPUTE_SUBROUTINE_SAFE_FRAMED,mlkem_mulcache_compute_mc;
-   "mlkem_basemul_k2_alt","H_BASEMUL2",
-   MLKEM_BASEMUL_K2_ALT_SUBROUTINE_SAFE_FRAMED,mlkem_basemul_k2_alt_mc;
-   "mlkem_basemul_k3_alt","H_BASEMUL3",
-   MLKEM_BASEMUL_K3_ALT_SUBROUTINE_SAFE_FRAMED,mlkem_basemul_k3_alt_mc;
-   "mlkem_basemul_k4_alt","H_BASEMUL4",
-   MLKEM_BASEMUL_K4_ALT_SUBROUTINE_SAFE_FRAMED,mlkem_basemul_k4_alt_mc;
    "mlkem_tomont","H_TOMONT",MLKEM_TOMONT_SUBROUTINE_SAFE_FRAMED,
    mlkem_tomont_mc;
    "mlkem_reduce","H_REDUCE",MLKEM_REDUCE_SUBROUTINE_SAFE_FRAMED,
@@ -1124,23 +1023,9 @@ let api_safe_kernels =
    "mlkem_tobytes_alt","H_TOBYTES",MLKEM_TOBYTES_ALT_SUBROUTINE_SAFE_FRAMED,
    mlkem_tobytes_alt_mc;
    "mlkem_tomsg","H_TOMSG",MLKEM_TOMSG_SUBROUTINE_SAFE_FRAMED,
-   mlkem_tomsg_mc;
-   "mlkem_compress_d4","H_COMPRESS4",
-   MLKEM_COMPRESS_D4_SUBROUTINE_SAFE_FRAMED,mlkem_compress_d4_mc;
-   "mlkem_compress_d5","H_COMPRESS5",
-   MLKEM_COMPRESS_D5_SUBROUTINE_SAFE_FRAMED,mlkem_compress_d5_mc;
-   "mlkem_compress_d10","H_COMPRESS10",
-   MLKEM_COMPRESS_D10_SUBROUTINE_SAFE_FRAMED,mlkem_compress_d10_mc;
-   "mlkem_compress_d11","H_COMPRESS11",
-   MLKEM_COMPRESS_D11_SUBROUTINE_SAFE_FRAMED,mlkem_compress_d11_mc;
-   "mlkem_decompress_d4","H_DECOMPRESS4",
-   MLKEM_DECOMPRESS_D4_SUBROUTINE_SAFE_FRAMED,mlkem_decompress_d4_mc;
-   "mlkem_decompress_d5","H_DECOMPRESS5",
-   MLKEM_DECOMPRESS_D5_SUBROUTINE_SAFE_FRAMED,mlkem_decompress_d5_mc;
-   "mlkem_decompress_d10","H_DECOMPRESS10",
-   MLKEM_DECOMPRESS_D10_SUBROUTINE_SAFE_FRAMED,mlkem_decompress_d10_mc;
-   "mlkem_decompress_d11","H_DECOMPRESS11",
-   MLKEM_DECOMPRESS_D11_SUBROUTINE_SAFE_FRAMED,mlkem_decompress_d11_mc];;
+   mlkem_tomsg_mc];;
+
+let api_add_safe_kernels l = api_safe_kernels := !api_safe_kernels @ l;;
 
 (*** The assumptions of the safety of the kernels names and of the lemmas
  *** lems (label, theorem), and the calls of them for the run driver, with
@@ -1148,13 +1033,13 @@ let api_safe_kernels =
  ***)
 
 let API_SAFE_ASSUME_TAC names lems =
-  let ks = filter (fun (n,_,_,_) -> mem n names) api_safe_kernels in
+  let ks = filter (fun (n,_,_,_) -> mem n names) !api_safe_kernels in
   MAP_EVERY (fun (_,label,th,_) -> ASSUME_CALLEE_TAILED_TAC th label)
     ks THEN
   MAP_EVERY (fun (label,th) -> ASSUME_CALLEE_TAILED_TAC th label) lems;;
 
 let api_safe_calls exec vars names lems =
-  let ks = filter (fun (n,_,_,_) -> mem n names) api_safe_kernels in
+  let ks = filter (fun (n,_,_,_) -> mem n names) !api_safe_kernels in
   map (fun (name,label,th,mc) ->
          layout name,
          NATIVE2_SAFE_THM_TAC exec vars label (layout name,mc) I

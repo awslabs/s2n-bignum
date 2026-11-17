@@ -24,9 +24,6 @@ needs "x86/proofs/mlkem_gen_matrix.ml";;
 needs "x86/proofs/mlkem_ntt.ml";;
 needs "x86/proofs/mlkem_intt.ml";;
 needs "x86/proofs/mlkem_mulcache_compute.ml";;
-needs "x86/proofs/mlkem_basemul_k2.ml";;
-needs "x86/proofs/mlkem_basemul_k3.ml";;
-needs "x86/proofs/mlkem_basemul_k4.ml";;
 needs "x86/proofs/mlkem_tomont.ml";;
 needs "x86/proofs/mlkem_reduce.ml";;
 needs "x86/proofs/mlkem_add_reduce.ml";;
@@ -35,14 +32,6 @@ needs "x86/proofs/mlkem_tobytes.ml";;
 needs "x86/proofs/mlkem_frombytes.ml";;
 needs "x86/proofs/mlkem_frommsg.ml";;
 needs "x86/proofs/mlkem_tomsg.ml";;
-needs "x86/proofs/mlkem_compress_d4_x86.ml";;
-needs "x86/proofs/mlkem_compress_d5_x86.ml";;
-needs "x86/proofs/mlkem_compress_d10_x86.ml";;
-needs "x86/proofs/mlkem_compress_d11_x86.ml";;
-needs "x86/proofs/mlkem_decompress_d4_x86.ml";;
-needs "x86/proofs/mlkem_decompress_d5_x86.ml";;
-needs "x86/proofs/mlkem_decompress_d10_x86.ml";;
-needs "x86/proofs/mlkem_decompress_d11_x86.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The order of the coefficients in the NTT domain of the x86 kernels:       *)
@@ -292,22 +281,6 @@ let API_DECOMPRESS_TAC d th =
     REWRITE_TAC[defn; VAL_WORD] THEN
     CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN REWRITE_TAC[MULT_SYM]];;
 
-let API_DECOMPRESS_D4 = prove
- (api_decompress_tm 4 32,
-  API_DECOMPRESS_TAC 4 MLKEM_DECOMPRESS_D4_X86_SUBROUTINE_CORRECT);;
-
-let API_DECOMPRESS_D5 = prove
- (api_decompress_tm 5 96,
-  API_DECOMPRESS_TAC 5 MLKEM_DECOMPRESS_D5_X86_SUBROUTINE_CORRECT);;
-
-let API_DECOMPRESS_D10 = prove
- (api_decompress_tm 10 32,
-  API_DECOMPRESS_TAC 10 MLKEM_DECOMPRESS_D10_X86_SUBROUTINE_CORRECT);;
-
-let API_DECOMPRESS_D11 = prove
- (api_decompress_tm 11 128,
-  API_DECOMPRESS_TAC 11 MLKEM_DECOMPRESS_D11_X86_SUBROUTINE_CORRECT);;
-
 (*** frombytes: the 384 bytes at a as the number n, coefficient i of the
  *** result its 12-bit field avx_unorder i
  ***)
@@ -521,22 +494,6 @@ let API_COMPRESS_TAC d th =
     REWRITE_TAC[IN_ELIM_THM; o_THM; defn; VAL_WORD] THEN DISCH_TAC THEN
     CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
     REWRITE_TAC[api_compress_round d] THEN CONV_TAC NUM_REDUCE_CONV];;
-
-let API_COMPRESS_D4 = prove
- (api_compress_tm 4 32,
-  API_COMPRESS_TAC 4 MLKEM_COMPRESS_D4_X86_SUBROUTINE_CORRECT);;
-
-let API_COMPRESS_D5 = prove
- (api_compress_tm 5 32,
-  API_COMPRESS_TAC 5 MLKEM_COMPRESS_D5_X86_SUBROUTINE_CORRECT);;
-
-let API_COMPRESS_D10 = prove
- (api_compress_tm 10 32,
-  API_COMPRESS_TAC 10 MLKEM_COMPRESS_D10_X86_SUBROUTINE_CORRECT);;
-
-let API_COMPRESS_D11 = prove
- (api_compress_tm 11 64,
-  API_COMPRESS_TAC 11 MLKEM_COMPRESS_D11_X86_SUBROUTINE_CORRECT);;
 
 (*** basemul_kK: the K polynomials at src1 (x_c, bounded by 2^12) times
  *** those at src2 (y_c) with their mulcaches at src2t (z_c), for pair p of
@@ -764,28 +721,20 @@ let API_BASEMUL_TAC k th defs =
         post_at c0o `j0:num` true THEN fin];
       post_at c1 `j:num` false THEN fin]];;
 
-let pmul_defs2 = [pmulaccred0; pmulaccred0_odd; pmulaccred1; pmulacc0;
-                  pmulacc0_odd; pmulacc1; pmul0; pmul0_odd; pmul1];;
+(*** The kernels that depend on the parameter set, basemul_kK and the
+ *** compression and decompression for du and dv: the proof of a parameter
+ *** set loads only its own, puts their theorems in the forms above and adds
+ *** them here with their code, for the calls below
+ ***)
 
-let API_BASEMUL_K2 = time prove
- (api_basemul_tm 2,
-  API_BASEMUL_TAC 2 MLKEM_BASEMUL_K2_SUBROUTINE_CORRECT pmul_defs2);;
+let api_param_kernels = ref ([]:(string * thm * thm) list);;
 
-let pmul_defs3 = [pmulaccred0_k3; pmulaccred0_odd_k3; pmulaccred1_k3;
-                  pmulacc0_k3; pmulacc0_odd_k3; pmulacc1_k3;
-                  pmul0; pmul0_odd; pmul1];;
+let api_add_kernels l = api_param_kernels := !api_param_kernels @ l;;
 
-let API_BASEMUL_K3 = time prove
- (api_basemul_tm 3,
-  API_BASEMUL_TAC 3 MLKEM_BASEMUL_K3_SUBROUTINE_CORRECT pmul_defs3);;
-
-let pmul_defs4 = [pmulaccred0_k4; pmulaccred0_odd_k4; pmulaccred1_k4;
-                  pmulacc0_k4; pmulacc0_odd_k4; pmulacc1_k4;
-                  pmul0; pmul0_odd; pmul1];;
-
-let API_BASEMUL_K4 = time prove
- (api_basemul_tm 4,
-  API_BASEMUL_TAC 4 MLKEM_BASEMUL_K4_SUBROUTINE_CORRECT pmul_defs4);;
+let api_param_kernel name =
+  try let _,mc,th = find (fun (n,_,_) -> n = name) !api_param_kernels in
+      layout name,mc,th
+  with Failure _ -> failwith("api_param_kernel: no " ^ name);;
 
 (* ------------------------------------------------------------------------- *)
 (* K-PKE from the x86 kernels: the blocked statements of                     *)
@@ -1311,15 +1260,7 @@ let API_ALIGNED_TAC k (asl,w as gl) =
 (* ------------------------------------------------------------------------- *)
 
 let api_decompress_th d =
-  match d with
-    4 -> layout "mlkem_decompress_d4_x86",mlkem_decompress_d4_x86_mc,
-         API_DECOMPRESS_D4
-  | 5 -> layout "mlkem_decompress_d5_x86",mlkem_decompress_d5_x86_mc,
-         API_DECOMPRESS_D5
-  | 10 -> layout "mlkem_decompress_d10_x86",mlkem_decompress_d10_x86_mc,
-          API_DECOMPRESS_D10
-  | _ -> layout "mlkem_decompress_d11_x86",mlkem_decompress_d11_x86_mc,
-         API_DECOMPRESS_D11;;
+  api_param_kernel("mlkem_decompress_d" ^ string_of_int d ^ "_x86");;
 
 let API_DECOMPRESS_CALL_TAC exec d c off len kk gl =
   let n = mk_comb(`num_of_bytelist`,
@@ -1505,11 +1446,7 @@ let API_SIDE_TAC (asl,w as gl) =
   else (REWRITE_TAC[ADD_ASSOC] THEN CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
         ASM_REWRITE_TAC[] THEN NO_TAC) gl;;
 
-let api_basemul_th k =
-  match k with
-    2 -> layout "mlkem_basemul_k2",mlkem_basemul_k2_mc,API_BASEMUL_K2
-  | 3 -> layout "mlkem_basemul_k3",mlkem_basemul_k3_mc,API_BASEMUL_K3
-  | _ -> layout "mlkem_basemul_k4",mlkem_basemul_k4_mc,API_BASEMUL_K4;;
+let api_basemul_th k = api_param_kernel("mlkem_basemul_k" ^ string_of_int k);;
 
 let API_BASEMUL_CALL_TAC exec k kk gl =
   let ab,a = api_addr_parts(find_read_fact `RSI` kk gl)
@@ -2402,15 +2339,7 @@ let API_ADD_REDUCE_POST_TAC v bn x y k =
  ***)
 
 let api_compress_th d =
-  match d with
-    4 -> layout "mlkem_compress_d4_x86",mlkem_compress_d4_x86_mc,
-         API_COMPRESS_D4
-  | 5 -> layout "mlkem_compress_d5_x86",mlkem_compress_d5_x86_mc,
-         API_COMPRESS_D5
-  | 10 -> layout "mlkem_compress_d10_x86",mlkem_compress_d10_x86_mc,
-          API_COMPRESS_D10
-  | _ -> layout "mlkem_compress_d11_x86",mlkem_compress_d11_x86_mc,
-         API_COMPRESS_D11;;
+  api_param_kernel("mlkem_compress_d" ^ string_of_int d ^ "_x86");;
 
 let API_COMPRESS_CALL_TAC exec d kk gl =
   let a = find_read_fact `RSI` kk gl in

@@ -17,6 +17,94 @@ needs "arm/proofs/utils/mlkem_native2_kem.ml";;
 needs "arm/proofs/mlkem_gen_matrix_k4.ml";;
 needs "arm/proofs/utils/mlkem_native2_kem_safe.ml";;
 needs "arm/proofs/mlkem_gen_matrix_k4_safe.ml";;
+needs "arm/proofs/mlkem_basemul_k4_alt.ml";;
+needs "arm/proofs/mlkem_compress_d5.ml";;
+needs "arm/proofs/mlkem_compress_d11.ml";;
+needs "arm/proofs/mlkem_decompress_d5.ml";;
+needs "arm/proofs/mlkem_decompress_d11.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* The kernels of ML-KEM-1024 that depend on the parameter set (decompress_d *)
+(* and compress_d for du = 11 and dv = 5, and basemul_k4_alt), loaded here   *)
+(* and not by the tools, so that the proof of each parameter set proves only *)
+(* its own, added to the kernels that the tools call: their correctness      *)
+(* theorems for utils/mlkem_native2_kem.ml, and their safety with the frames *)
+(* as in utils/mlkem_native2_kem_safe.ml. The names of the theorems of       *)
+(* safety are bound in parentheses, so that tools/collect-specs.sh does not  *)
+(* take them for specifications of this file.                                *)
+(* ------------------------------------------------------------------------- *)
+
+api_add_kernels
+ ["mlkem_decompress_d5",mlkem_decompress_d5_mc,
+  MLKEM_DECOMPRESS_D5_SUBROUTINE_CORRECT;
+  "mlkem_decompress_d11",mlkem_decompress_d11_mc,
+  MLKEM_DECOMPRESS_D11_SUBROUTINE_CORRECT;
+  "mlkem_compress_d5",mlkem_compress_d5_mc,
+  MLKEM_COMPRESS_D5_SUBROUTINE_CORRECT;
+  "mlkem_compress_d11",mlkem_compress_d11_mc,
+  MLKEM_COMPRESS_D11_SUBROUTINE_CORRECT;
+  "mlkem_basemul_k4_alt",mlkem_basemul_k4_alt_mc,
+  MLKEM_BASEMUL_K4_ALT_SUBROUTINE_CORRECT];;
+
+api_add_basemul_defs 4 pmull
+ [basemul4_even; basemul4_odd; pmul_acc4; pmull_acc4];;
+
+let (MLKEM_BASEMUL_K4_ALT_CORE_SAFE_FRAMED,
+     MLKEM_BASEMUL_K4_ALT_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_BASEMUL_K4_ALT_SUBROUTINE_SAFE_FRAMED) =
+  FRAMED_STACK_KERNEL MLKEM_BASEMUL_K4_ALT_CORRECT
+    MLKEM_BASEMUL_K4_ALT_NOIBT_SUBROUTINE_SAFE
+    MLKEM_BASEMUL_K4_ALT_NOIBT_SUBROUTINE_CORRECT
+    MLKEM_BASEMUL_K4_ALT_EXEC (5,5)
+    mlkem_basemul_k4_alt_mc mlkem_basemul_k4_alt_tmc;;
+
+let (MLKEM_COMPRESS_D5_NOIBT_SUBROUTINE_SAFE_FRAMED:thm) =
+  framed_kernel_safe "mlkem_compress_d5"
+    MLKEM_COMPRESS_D5_NOIBT_SUBROUTINE_CORRECT
+    MLKEM_COMPRESS_D5_EXEC;;
+
+let (MLKEM_COMPRESS_D5_SUBROUTINE_SAFE_FRAMED:thm) =
+  ARM_ADD_IBT_RULE mlkem_compress_d5_mc mlkem_compress_d5_tmc
+    MLKEM_COMPRESS_D5_NOIBT_SUBROUTINE_SAFE_FRAMED;;
+
+let (MLKEM_COMPRESS_D11_NOIBT_SUBROUTINE_SAFE_FRAMED:thm) =
+  framed_kernel_safe "mlkem_compress_d11"
+    MLKEM_COMPRESS_D11_NOIBT_SUBROUTINE_CORRECT
+    MLKEM_COMPRESS_D11_EXEC;;
+
+let (MLKEM_COMPRESS_D11_SUBROUTINE_SAFE_FRAMED:thm) =
+  ARM_ADD_IBT_RULE mlkem_compress_d11_mc mlkem_compress_d11_tmc
+    MLKEM_COMPRESS_D11_NOIBT_SUBROUTINE_SAFE_FRAMED;;
+
+let (MLKEM_DECOMPRESS_D5_NOIBT_SUBROUTINE_SAFE_FRAMED:thm) =
+  framed_kernel_safe "mlkem_decompress_d5"
+    MLKEM_DECOMPRESS_D5_NOIBT_SUBROUTINE_CORRECT
+    MLKEM_DECOMPRESS_D5_EXEC;;
+
+let (MLKEM_DECOMPRESS_D5_SUBROUTINE_SAFE_FRAMED:thm) =
+  ARM_ADD_IBT_RULE mlkem_decompress_d5_mc mlkem_decompress_d5_tmc
+    MLKEM_DECOMPRESS_D5_NOIBT_SUBROUTINE_SAFE_FRAMED;;
+
+let (MLKEM_DECOMPRESS_D11_NOIBT_SUBROUTINE_SAFE_FRAMED:thm) =
+  framed_kernel_safe "mlkem_decompress_d11"
+    MLKEM_DECOMPRESS_D11_NOIBT_SUBROUTINE_CORRECT
+    MLKEM_DECOMPRESS_D11_EXEC;;
+
+let (MLKEM_DECOMPRESS_D11_SUBROUTINE_SAFE_FRAMED:thm) =
+  ARM_ADD_IBT_RULE mlkem_decompress_d11_mc mlkem_decompress_d11_tmc
+    MLKEM_DECOMPRESS_D11_NOIBT_SUBROUTINE_SAFE_FRAMED;;
+
+api_add_safe_kernels
+ ["mlkem_basemul_k4_alt","H_BASEMUL4",
+  MLKEM_BASEMUL_K4_ALT_SUBROUTINE_SAFE_FRAMED,mlkem_basemul_k4_alt_mc;
+  "mlkem_compress_d5","H_COMPRESS5",
+  MLKEM_COMPRESS_D5_SUBROUTINE_SAFE_FRAMED,mlkem_compress_d5_mc;
+  "mlkem_compress_d11","H_COMPRESS11",
+  MLKEM_COMPRESS_D11_SUBROUTINE_SAFE_FRAMED,mlkem_compress_d11_mc;
+  "mlkem_decompress_d5","H_DECOMPRESS5",
+  MLKEM_DECOMPRESS_D5_SUBROUTINE_SAFE_FRAMED,mlkem_decompress_d5_mc;
+  "mlkem_decompress_d11","H_DECOMPRESS11",
+  MLKEM_DECOMPRESS_D11_SUBROUTINE_SAFE_FRAMED,mlkem_decompress_d11_mc];;
 
 (* ------------------------------------------------------------------------- *)
 (* The modulus check of an encapsulation key pk: 0 if the 1024 12-bit        *)

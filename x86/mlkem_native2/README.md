@@ -177,17 +177,18 @@ and the NOPs of the padding between functions. All are in the x86 model.
   of these five, with the events a function of the addresses and of the
   public data: rho in key generation, ek in encapsulation, and ek and its
   hash in dk in decapsulation (`../proofs/mlkem512.ml`, `mlkem768.ml` and
-  `mlkem1024.ml`, with the common parts in
-  `../proofs/utils/mlkem_native2_api.ml`,
+  `mlkem1024.ml`, each with the proofs of only the kernels of its parameter
+  set, `mlkem_basemul_kK` and the compression and decompression for du and
+  dv, and the common parts in `../proofs/utils/mlkem_native2_api.ml`,
   `../proofs/utils/mlkem_native2_kem.ml` and
   `../proofs/utils/mlkem_native2_kem_safe.ml`, and the lemmas on K-PKE of
   the proofs of mlkem-native's compiled C in
   `../proofs/utils/mlkem_native2_kpke.ml`). As on AArch64, no theorem
-  assumes that SampleNTT terminates for the seeds of the matrix. The
-  frames of the API functions are realigned to 32 bytes below the return
-  address, so the theorems allow any alignment of the stack pointer, and
-  in the safety theorems the offset of the frame is a function of the
-  stack pointer.
+  assumes that SampleNTT terminates for the seeds of the matrix. The frames
+  of the API functions are realigned to 32 bytes below the return address,
+  so the theorems allow any alignment of the stack pointer, and in the
+  safety theorems the offset of the frame is a function of the stack
+  pointer.
 
 The specifications are those of `../../common/fips202/fips202.ml` and
 `../../common/fips203/fips203.ml`, as on AArch64 (see

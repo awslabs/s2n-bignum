@@ -135,16 +135,17 @@ this layout of the image, and are checked again when it changes.
   of these five, with the events a function of the addresses and of the
   public data: rho in key generation, ek in encapsulation, and ek and its
   hash in dk in decapsulation (`../proofs/mlkem512.ml`, `mlkem768.ml` and
-  `mlkem1024.ml`, with the common parts in
-  `../proofs/utils/mlkem_native2_api.ml`,
+  `mlkem1024.ml`, each with the proofs of only the kernels of its parameter
+  set, `mlkem_basemul_kK_alt` and the compression and decompression for du
+  and dv, and the common parts in `../proofs/utils/mlkem_native2_api.ml`,
   `../proofs/utils/mlkem_native2_kem.ml` and
   `../proofs/utils/mlkem_native2_kem_safe.ml`, and the lemmas on K-PKE of
   the proofs of mlkem-native's compiled C in
   `../proofs/utils/mlkem_native2_kpke.ml`). Unlike those, the theorems of
   the API do not assume that SampleNTT terminates for the seeds of the
   matrix: it does for every seed of one block of SHAKE128, because
-  Keccak-f1600 is a permutation, so the squeezing is periodic and comes
-  back to the padded seed, whose last byte makes a 12-bit field < q
+  Keccak-f1600 is a permutation, so the squeezing is periodic and comes back
+  to the padded seed, whose last byte makes a 12-bit field < q
   (`SAMPLE_OK_ALL` of `../../common/fips203/properties/sampling.ml`, with
   `KECCAK_F1600_INJ` of
   `../../common/fips202/properties/keccak_permutation.ml`).
