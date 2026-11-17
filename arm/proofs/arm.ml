@@ -574,13 +574,18 @@ let ARM_QUICKSIM_TAC execth pats snums =
 (* More convenient wrappings of basic simulation flow.                       *)
 (* ------------------------------------------------------------------------- *)
 
-let ARM_SIM_TAC ?(preprocess_tac:tactic option) ?(canonicalize_pc_diff=true)
+(* With ~tactics:(steps_tac,final_tac), the steps are done by                *)
+(* steps_tac execth snums and the final state by final_tac.                  *)
+
+let ARM_SIM_TAC ?(tactics=(ARM_STEPS_TAC,ENSURES_FINAL_STATE_TAC))
+    ?(preprocess_tac:tactic option) ?(canonicalize_pc_diff=true)
     execth snums =
+  let steps_tac,final_tac = tactics in
   REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN
   (match preprocess_tac with Some t -> t | None -> ALL_TAC) THEN
-  ARM_STEPS_TAC execth snums THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  steps_tac execth snums THEN
+  final_tac THEN ASM_REWRITE_TAC[] THEN
   (if canonicalize_pc_diff then
     REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN ASM_REWRITE_TAC[]
    else ALL_TAC);;
@@ -1031,11 +1036,19 @@ let ARM_ADD_RETURN_NOSTACK_TAC =
 (* Version with register save/restore and stack adjustment.                  *)
 (* ------------------------------------------------------------------------- *)
 
+(* With ~tactics:(pre_tac,call_tac,post_tac,final_tac), the prologue is      *)
+(* simulated by pre_tac execth (1--n), the body by call_tac execth "s<n+1>"  *)
+(* from the goal `ensures ... ==> eventually ...`, the epilogue by post_tac  *)
+(* and the final state by final_tac.                                         *)
+
 let ARM_ADD_RETURN_STACK_TAC =
   let sp_tm = `SP` and x30_tm = `X30`
   and dqd_thm = WORD_BLAST `(word_zx:int128->int64)(word_zx(x:int64)) = x` in
 
-  fun ?(pre_post_nsteps:(int*int) option) execth coreth reglist stackoff ->
+  fun ?(tactics=(ARM_STEPS_TAC,ARM_BIGSTEP_TAC,ARM_STEPS_TAC,
+                 ENSURES_FINAL_STATE_TAC))
+      ?(pre_post_nsteps:(int*int) option) execth coreth reglist stackoff ->
+    let pre_tac,call_tac,post_tac,final_tac = tactics in
     let is_coreth_safety = is_exists (concl coreth) in
     let regs = dest_list reglist in
 
@@ -1114,9 +1127,9 @@ let ARM_ADD_RETURN_STACK_TAC =
         FAIL_TAC ("callee-save registers are still in MAYCHANGE, or " ^
           "`read X30 s` does not exist in precondition")) THEN
       REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
-      ARM_STEPS_TAC execth (1--pre_n) THEN
+      pre_tac execth (1--pre_n) THEN
       MP_TAC th) THEN
-    ARM_BIGSTEP_TAC execth ("s"^string_of_int(pre_n+1)) THEN
+    call_tac execth ("s"^string_of_int(pre_n+1)) THEN
     (* ARM_BIGSTEP_TAC may leave an additional subgoal about precondition.
        If the precondition is about event trace, solve here. *)
     (if is_coreth_safety then
@@ -1127,8 +1140,8 @@ let ARM_ADD_RETURN_STACK_TAC =
          NO_TAC)
      else ALL_TAC) THEN
     REWRITE_TAC(!simulation_precanon_thms) THEN
-    ARM_STEPS_TAC execth ((pre_n+2)--(pre_n+post_n+2)) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    post_tac execth ((pre_n+2)--(pre_n+post_n+2)) THEN
+    final_tac THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[dqd_thm];;
 
 (* ------------------------------------------------------------------------- *)
