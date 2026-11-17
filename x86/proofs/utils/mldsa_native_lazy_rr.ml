@@ -1,0 +1,376 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+(* ========================================================================= *)
+(* Lemmas and tactics for the FULL proofs of the lazy matrix products of the *)
+(* x86-64 code of mldsa-native built with MLD_CONFIG_REDUCE_RAM (the code    *)
+(* for mld_polyvec_matrix_pointwise_montgomery_row_lazy and _yvec_lazy, see  *)
+(* common/mldsa_native_polyvec_lazy.ml). Both copy rho from the structure    *)
+(* mld_polymat_lazy into a buffer of 64 bytes on the stack, as two 128-bit   *)
+(* words, and store the indices j and i of each entry that they sample as    *)
+(* the two bytes after it, so that mldsa_poly_uniform reads the seed         *)
+(* rho || j || i of 34 bytes (mld_matrix_seed). The bytes come from 8-bit    *)
+(* registers holding small counters, whose values the simulation gives as    *)
+(* word(val x MOD 256) of the 64-bit register x (LAZY_BYTE_64), or through a *)
+(* byte of the stack and MOVZX (LAZY_BYTE_ZX). LAZY_RHO_OF_HALVES gives the  *)
+(* 32 bytes of rho in the buffer from the two stores, and LAZY_SEED the seed *)
+(* from rho and the two bytes after it; LAZY_TERM_TAC tm proves the          *)
+(* termination tm of the sampling of an entry from mld_matrix_terminates.    *)
+(* ========================================================================= *)
+
+needs "common/mldsa_native_polyvec_lazy.ml";;
+needs "x86/proofs/utils/mldsa_native_sampling.ml";;
+needs "x86/proofs/utils/mldsa_native_matrix.ml";;
+
+let LAZY_RHO_OF_HALVES = prove
+ (`!a:int64 n s:x86state.
+        n < 2 EXP 256 /\
+        read (memory :> bytes128 a) s =
+        word(n MOD 340282366920938463463374607431768211456) /\
+        read (memory :> bytes128(word_add a (word 16))) s =
+        word(n DIV 340282366920938463463374607431768211456)
+        ==> read (memory :> bytes(a,32)) s = n`,
+  REWRITE_TAC[GSYM(NUM_REDUCE_CONV `2 EXP 128`)] THEN
+  REWRITE_TAC[MLD_BYTES_32_OF_HALVES]);;
+
+let LAZY_SEED = prove
+ (`!a:int64 r i j s:x86state.
+        read (memory :> bytes(a,32)) s = r /\
+        read (memory :> bytes8(word_add a (word 32))) s = word j /\
+        read (memory :> bytes8(word_add a (word 33))) s = word i /\
+        i < 256 /\ j < 256
+        ==> read (memory :> bytes(a,34)) s = mld_matrix_seed r i j`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[mld_matrix_seed; ARITH_RULE `34 = 32 + 2`;
+              READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
+  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
+  AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[CONJUNCT2 MLD_BYTES2] THEN
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[VAL_WORD; DIMINDEX_8] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN ASM_SIMP_TAC[MOD_LT]);;
+
+let LAZY_BYTE_64 = prove
+ (`!n. n < 256 ==> word(val(word n:int64) MOD 256):byte = word n`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
+  SUBGOAL_THEN `n < 2 EXP 64` (fun th -> REWRITE_TAC[MATCH_MP MOD_LT th])
+  THENL [UNDISCH_TAC `n < 256` THEN ARITH_TAC; ASM_SIMP_TAC[MOD_LT]]);;
+
+let LAZY_BYTE_ZX = prove
+ (`!n. n < 256
+       ==> word(val(word_zx(word_zx(word n:byte):int32):int64) MOD 256):byte =
+           word n`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_8; DIMINDEX_32;
+              DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN `n < 4294967296 /\ n < 18446744073709551616`
+   STRIP_ASSUME_TAC THENL
+   [UNDISCH_TAC `n < 256` THEN ARITH_TAC; ASM_SIMP_TAC[MOD_LT]]);;
+
+(*** The first column, and the next one, of mld_lazy_acc ***)
+
+let MLD_POLY_OF_0 = prove
+ (`!x:num->int32. mld_poly_of x 0 = x`,
+  REWRITE_TAC[FUN_EQ_THM; mld_poly_of; MULT_CLAUSES; ADD_CLAUSES]);;
+
+let MLD_LAZY_ACC_ADD1 = prove
+ (`!rho (v:num->int32) i n.
+        mld_lazy_acc rho v i (n + 1) =
+        mld_poly_add (mld_lazy_acc rho v i n)
+         (mld_poly_pointwise_montgomery (mld_matrix_entry rho i (n + 1))
+                                        (mld_poly_of v (n + 1)))`,
+  REWRITE_TAC[GSYM ADD1; mld_lazy_acc]);;
+
+(*** The termination of the sampling of an entry, from that of the matrix ***)
+(*** (mld_matrix_terminates k l rho expanded in the assumptions)           ***)
+
+let LAZY_TERM_TAC tm =
+  SUBGOAL_THEN tm ASSUME_TAC THENL
+   [FIRST_ASSUM(fun th ->
+      let c = concl th in
+      if is_forall c &&
+         (try fst(strip_comb(snd(dest_imp(snd(strip_forall c))))) =
+              `mld_rej_uniform_terminates`
+          with Failure _ -> false)
+      then MATCH_MP_TAC th else NO_TAC) THEN
+    CONJ_TAC THEN SIMPLE_ARITH_TAC;
+    ALL_TAC];;
+
+(* ------------------------------------------------------------------------- *)
+(* The vector and its rows. Row i of the product is the reduction of the     *)
+(* sum for the columns up to l - 1 (LAZY_POLYVEC_REDUCE), which is how the   *)
+(* code for the signing product computes it, reducing the vector of the sums *)
+(* with mldsa_polyveck_reduce. The rows of a vector in memory are aligned as *)
+(* the vector is (LAZY_ALIGNED_ROW). LAZY_VAL_ZX gives the 32-bit value of a *)
+(* small counter, for the tests of the code.                                 *)
+(* ------------------------------------------------------------------------- *)
+
+let LAZY_POLYVEC_REDUCE = prove
+ (`!l rho (v:num->int32).
+        mld_polyvec_map mld_poly_reduce
+         (mld_polyvec (\r. mld_lazy_acc rho v r (l - 1))) =
+        mld_polyvec_matrix_pointwise_montgomery_lazy l rho v`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[FUN_EQ_THM; mld_polyvec_matrix_pointwise_montgomery_lazy;
+              mld_polyvec_matrix_row_lazy; mld_polyvec_map] THEN
+  X_GEN_TAC `n:num` THEN
+  REWRITE_TAC[mld_polyvec; mld_poly_of; mld_poly_reduce] THEN
+  REWRITE_TAC[ARITH_RULE `256 * n DIV 256 + n MOD 256 = n`]);;
+
+let LAZY_ALIGNED_ROW = prove
+ (`!w:int64 k. aligned 16 w ==> aligned 16 (word_add w (word(1024 * k)))`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC ALIGNED_WORD_ADD THEN
+  ASM_REWRITE_TAC[ALIGNED_WORD; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC NUMBER_RULE);;
+
+let LAZY_VAL_ZX = prove
+ (`!n. n < 2 EXP 32 ==> val(word_zx(word n:int64):int32) = n`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32; DIMINDEX_64] THEN
+  SUBGOAL_THEN `n < 2 EXP 64` ASSUME_TAC THENL
+   [UNDISCH_TAC `n < 2 EXP 32` THEN CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC;
+    ASM_SIMP_TAC[MOD_LT]]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The 16-bit nonce kappa + c of the sampling of polynomial c of y, which    *)
+(* the code computes with MOVZX, a 32-bit ADD of the column counter and      *)
+(* another MOVZX (just the MOVZX for c = 0): LAZY_NONCE_TAC c rewrites the   *)
+(* postcondition of mldsa_poly_uniform_gamma1 with the nonce as              *)
+(* word(kappa + c), proving the equation on the values, modulo 2^16, with    *)
+(* the nested reductions modulo powers of 2 collapsed (LAZY_MOD_MOD).        *)
+(* ------------------------------------------------------------------------- *)
+
+let LAZY_MOD_MOD =
+  map (fun (m,n) ->
+         GEN `x:num` (CONV_RULE NUM_REDUCE_CONV
+          (SPECL [`x:num`; `2`; mk_small_numeral m; mk_small_numeral n]
+                 MOD_MOD_EXP_MIN)))
+      [16,16; 16,32; 16,64; 32,16; 32,32; 32,64; 64,16; 64,32; 64,64];;
+
+let LAZY_NONCE_ADD = prove
+ (`!a b. (a MOD 65536 + b MOD 4294967296) MOD 65536 = (a + b) MOD 65536`,
+  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM MOD_ADD_MOD] THEN
+  REWRITE_TAC LAZY_MOD_MOD);;
+
+let LAZY_NONCE_PROVE_TAC =
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ZX_GEN; VAL_WORD; VAL_WORD_ADD;
+              DIMINDEX_16; DIMINDEX_32; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC LAZY_MOD_MOD THEN
+  REWRITE_TAC[LAZY_NONCE_ADD; ADD_CLAUSES];;
+
+let LAZY_NONCE_TAC c =
+  let is_g1 t =
+    match t with
+      Const(n,_) -> String.length n >= 23 &&
+                    String.sub n 0 23 = "mld_poly_uniform_gamma1"
+    | _ -> false in
+  let target = mk_comb(`word:num->int16`,
+                       mk_binop `(+):num->num->num` `kappa:num` c) in
+  FIRST_X_ASSUM(fun th ->
+    let ct = concl th in
+    if not (is_forall ct) || can (find_term ((=) `mld_polyvec`)) ct
+    then NO_TAC else
+    match find_terms (fun t -> is_comb t && is_comb(rator t) &&
+                               is_comb(rator(rator t)) &&
+                               is_g1(rator(rator(rator t)))) ct with
+      [t] ->
+        let nonce = rand(rator t) in
+        let eth = prove(mk_eq(nonce,target),LAZY_NONCE_PROVE_TAC) in
+        ASSUME_TAC(REWRITE_RULE[eth] th)
+    | _ -> NO_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Facts for a loop over the rows i of a vector at w whose rows before i are *)
+(* done and the rest are as before, in the form of utils/                    *)
+(* mldsa_native_polyvec.ml, with the rows given by mld_polyvec of the sums.  *)
+(* LAZY_ROW_TAC fr tm proves tm, that coefficient c of row i is fr i c, from *)
+(* the fact for the rows from i on, which are given by mld_polyvec fr, and   *)
+(* LAZY_JOIN_TAC ths the fact for the rows before i + 1, from those for the  *)
+(* rows before i and the postcondition of the callee for row i, rewritten    *)
+(* with ths.                                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+let LAZY_ROW_TAC fr tm =
+  SUBGOAL_THEN tm ASSUME_TAC THENL
+   [X_GEN_TAC `c:num` THEN DISCH_TAC THEN
+    W(fun (asl,w) ->
+      SUBGOAL_THEN
+       (mk_eq(rhs w,mk_comb(mk_comb(`mld_polyvec`,fr),`256 * i + c`)))
+       SUBST1_TAC THENL
+       [ASM_SIMP_TAC[MLD_POLYVEC_COEFF]; ALL_TAC]) THEN
+    FIRST_ASSUM(fun th ->
+      MP_TAC(SPEC `256 * i + c` th) THEN
+      REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      DISCH_THEN MATCH_MP_TAC THEN SIMPLE_ARITH_TAC);
+    ALL_TAC];;
+
+let LAZY_JOIN_TAC ths =
+  MATCH_MP_TAC VEC_JOIN_POLY THEN CONJ_TAC THENL
+   [FIRST_ASSUM ACCEPT_TAC;
+    X_GEN_TAC `c:num` THEN DISCH_TAC THEN
+    ASM_SIMP_TAC(MLD_POLYVEC_COEFF :: ths) THEN
+    REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN ASM_SIMP_TAC[]];;
+
+(* ------------------------------------------------------------------------- *)
+(* The events of nested loops. A part of a proof whose precondition fixes    *)
+(* the events so far as e2 = T, where T contains metavariables of the        *)
+(* template or the instances of some, is started with LAZY_GEN_OLD_TAC name, *)
+(* which generalizes the longest tail of T that also occurs in the events of *)
+(* the postcondition into a variable of that name, so that the rewriting of  *)
+(* the events by the simulation of calls cannot change T in one place and    *)
+(* not in the other, and the part is ended with VERIF_EVENTS_TAC of          *)
+(* utils/mldsa_native_verify.ml for that variable. LAZY_EVENTS_REASSOC_TAC   *)
+(* th rewrites the events of the postcondition, at the top only, with th,    *)
+(* e.g. LAZY_APPEND_REASSOC3, into the form that ENSURES_EVENTS_SEQUENCE_TAC *)
+(* or ENSURES_EVENTS_WHILE_UP2_TAC needs.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let LAZY_GEN_OLD_TAC name =
+  W(fun (asl,w) ->
+    let pre = rand(rator(rator w)) and post = rand(rator w) in
+    let is_e2eq t = is_eq t && is_var(lhs t) && fst(dest_var(lhs t)) = "e2" in
+    match (try Some(rhs(find_term is_e2eq pre),rhs(find_term is_e2eq post))
+           with Failure _ -> None) with
+      None -> ALL_TAC
+    | Some(tpre,tpost) ->
+        let rec pick t =
+          if free_in t tpost then t
+          else if is_comb t then pick (rand t) else failwith "pick" in
+        let x = pick tpre in
+        if is_var x then ALL_TAC
+        else SPEC_TAC(x,mk_var(name,type_of x)) THEN GEN_TAC);;
+
+let LAZY_APPEND_REASSOC3 = prove
+ (`!a b c d:(A)list.
+        APPEND (APPEND (APPEND a b) c) d = APPEND a (APPEND b (APPEND c d))`,
+  REWRITE_TAC[APPEND_ASSOC]);;
+
+let LAZY_EVENTS_REASSOC_TAC th =
+  W(fun (asl,w) ->
+    let post = rand(rator w) in
+    let e2eq = find_term (fun t -> is_eq t && is_var(lhs t) &&
+                                   fst(dest_var(lhs t)) = "e2") post in
+    REWRITE_TAC[GEN_REWRITE_CONV I [th] (rhs e2eq)]);;
+
+(* ------------------------------------------------------------------------- *)
+(* The copy of rho to the buffer at base in the frame: LAZY_RHO_PREP_TAC, at *)
+(* the start, gives the two 128-bit halves of rho at mat + 1024 and its      *)
+(* bound and names the YMM registers that the code loads them into, and      *)
+(* LAZY_RHO_STORED_TAC base s, after the stores, the 32 bytes at base.       *)
+(* ------------------------------------------------------------------------- *)
+
+let LAZY_RHO_PREP_TAC =
+  FIRST_ASSUM(MP_TAC o MATCH_MP MLD_BYTES128_HALVES o check
+   (can (term_match []
+     `read (memory :> bytes(word_add mat (word 1024),32)) s = n`) o concl))
+  THEN
+  CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
+  STRIP_TAC THEN
+  SUBGOAL_THEN `rho < 2 EXP 256` ASSUME_TAC THENL
+   [FIRST_ASSUM(SUBST1_TAC o SYM o check
+     (can (term_match []
+       `read (memory :> bytes(word_add mat (word 1024),32)) s = n`) o
+      concl)) THEN
+    REWRITE_TAC[READ_COMPONENT_COMPOSE] THEN
+    MP_TAC(ISPECL [`word_add mat (word 1024):int64`; `32`;
+                   `read memory (s0:x86state)`] READ_BYTES_BOUND) THEN
+    CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[];
+    ALL_TAC] THEN
+  SAMPLING_GHOST_REGS_TAC [`YMM1`; `YMM2`] "s0";;
+
+let LAZY_RHO_STORED_TAC base s =
+  RULE_ASSUM_TAC(REWRITE_RULE[SAMPLING_SUBWORD_JOIN_128]) THEN
+  MP_TAC(SPECL [base; `rho:num`; s] LAZY_RHO_OF_HALVES) THEN
+  ANTS_TAC THENL
+   [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+    ASM_REWRITE_TAC[];
+    DISCH_TAC];;
+
+(* ------------------------------------------------------------------------- *)
+(* The signing product (mld_polyvec_matrix_pointwise_montgomery_yvec_lazy)   *)
+(* for l columns and k rows: the template of the events, with the first      *)
+(* column apart (f_ev_..0), as its rows take another path, and for the other *)
+(* columns the events up to the NTT of the polynomial of y (cb), the setting *)
+(* of the row pointer (ib), the rows and the end of the column (ce); and the *)
+(* parts of the invariants: the frame (from RSP at bot + 1495 up), the       *)
+(* transformed vector y (YHAT), the vector w with the sums for the columns   *)
+(* up to c, polynomial c of YHAT in scratch, and the rows of w before i      *)
+(* (DONE) and from i (REST) in the inner loop.                               *)
+(* ------------------------------------------------------------------------- *)
+
+let LAZY_YVEC_ARGS = "w mat y scratch rp rho pc stackpointer returnaddress";;
+
+let LAZY_YVEC_TEMPLATE ncols nrows =
+  let lam =
+    "\\(w:int64) (mat:int64) (y:int64) (scratch:int64) (rp:int64) " ^
+    "(rho:num) (pc:num) (stackpointer:int64) (returnaddress:int64)." in
+  let a = LAZY_YVEC_ARGS in
+  let f n = "(f_ev_" ^ n ^ " " ^ a ^ ")"
+  and fl n = "(f_ev_" ^ n ^ " " ^ a ^ " l)" in
+  let col0 =
+    "(APPEND (APPEND " ^ f "ce0" ^ " (APPEND (ENUMERATEL " ^ nrows ^
+    " (\\k. f_ev_row0 " ^ a ^ " k)) " ^ f "ib0" ^ ")) " ^ f "cb0" ^ ")"
+  and col =
+    "(\\l. APPEND (APPEND " ^ fl "ce" ^ " (APPEND (ENUMERATEL " ^ nrows ^
+    " (\\k. f_ev_row " ^ a ^ " l k)) " ^ fl "ib" ^ ")) " ^ fl "cb" ^ ")" in
+  parse_term(lam ^ " APPEND " ^ f "epil" ^ " (APPEND (ENUMERATEL " ^
+             string_of_int(int_of_string ncols - 1) ^ " " ^ col ^
+             ") (APPEND " ^ col0 ^ " " ^ f "prol" ^
+             ")) :(uarch_event)list");;
+
+let LAZY_YVEC_FRAME =
+  "read RSP s = word_add bot (word 1495) /\\
+   read RBP s = word_add stackpointer (word 1662) /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1670))) s =
+   returnaddress /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1662))) s =
+   rbp_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1654))) s =
+   r15_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1646))) s =
+   r14_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1638))) s =
+   r13_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1630))) s =
+   r12_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1622))) s =
+   rbx_init /\\
+   ~read DF s /\\
+   read (memory :> bytes64 (word_add bot (word 1503))) s = y /\\
+   read (memory :> bytes64 (word_add bot (word 1511))) s = w /\\
+   read (memory :> bytes64 (word_add bot (word 1519))) s =
+   word_add bot (word 1527) /\\
+   read (memory :> bytes (word_add bot (word 1527),32)) s = rho /\\
+   read (memory :> bytes64 y) s = rp /\\
+   read (memory :> bytes16 (word_add y (word 8))) s = word kappa /\\
+   read (memory :> bytes (rp,64)) s = rhoprime";;
+
+let LAZY_YVEC_YHAT g1 =
+  "(mld_polyvec_map mld_poly_ntt
+     (mld_polyvec (\\j. " ^ g1 ^ " rhoprime (word(kappa + j)))))";;
+
+let LAZY_YVEC_W yhat n c =
+  "(!j. j < " ^ n ^ "
+        ==> read (memory :> bytes32 (word_add w (word(4 * j)))) s =
+            mld_polyvec (\\r. mld_lazy_acc rho " ^ yhat ^ " r " ^ c ^ ") j)";;
+
+let LAZY_YVEC_SCRATCH yhat c =
+  "(!j. j < 256
+        ==> read (memory :> bytes32 (word_add scratch (word(4 * j)))) s =
+            mld_poly_of " ^ yhat ^ " " ^ c ^ " j)";;
+
+let LAZY_YVEC_DONE yhat c =
+  "(!j. j < 256 * i
+        ==> read (memory :> bytes32 (word_add w (word(4 * j)))) s =
+            mld_polyvec (\\r. mld_lazy_acc rho " ^ yhat ^ " r " ^ c ^ ") j)";;
+
+let LAZY_YVEC_REST yhat n c =
+  "(!j. 256 * i <= j /\\ j < " ^ n ^ "
+        ==> read (memory :> bytes32 (word_add w (word(4 * j)))) s =
+            mld_polyvec (\\r. mld_lazy_acc rho " ^ yhat ^ " r " ^ c ^ ") j)";;

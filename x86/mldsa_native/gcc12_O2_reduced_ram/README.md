@@ -117,3 +117,15 @@ the matrix of the default configuration are not kept in memory:
  - s1, s2 and t0 are not unpacked and transformed once for all attempts:
    `unpack_sk` only records where they are in the secret key, and signing
    unpacks and transforms each polynomial when it needs it.
+
+The lazy products are specified in
+`../../../common/mldsa_native_polyvec_lazy.ml`, following the C code. They
+give different integers from the default ones, but congruent modulo q and
+within q of 0, and since the code always applies the inverse NTT and makes
+the coefficients nonnegative afterwards, the results of key generation,
+signing and verification are the same. The statements in
+`../../proofs/mldsa_native/gcc12_O2_reduced_ram/lazy_spec.ml` say so, for
+each parameter set: t1 and t0 of key generation and of `pk_from_sk`, the
+rows of w1' in verification and w in signing. `lazy_proof.ml` proves the
+statements of `lazy_spec.ml` from the congruences of the NTT and of the
+Montgomery products in `../../proofs/utils/mldsa_native_fips204_ntt.ml`.

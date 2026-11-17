@@ -15,6 +15,7 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2_reduced_ram/keccakf1600x4_extract_bytes_proof \
   mldsa_native/gcc12_O2_reduced_ram/keccakf1600x4_permute_proof \
   mldsa_native/gcc12_O2_reduced_ram/keccakf1600x4_xor_bytes_proof \
+  mldsa_native/gcc12_O2_reduced_ram/lazy_proof \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa \
   mldsa_native/gcc12_O2_reduced_ram/pack_sig_c_44_proof \
   mldsa_native/gcc12_O2_reduced_ram/pack_sig_c_65_proof \
@@ -44,7 +45,9 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2_reduced_ram/poly_reduce_proof \
   mldsa_native/gcc12_O2_reduced_ram/poly_shiftl_proof \
   mldsa_native/gcc12_O2_reduced_ram/poly_sub_proof \
+  mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_44_proof \
   mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_65_proof \
+  mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_87_proof \
   mldsa_native/gcc12_O2_reduced_ram/poly_uniform_proof \
   mldsa_native/gcc12_O2_reduced_ram/poly_use_hint_44_proof \
   mldsa_native/gcc12_O2_reduced_ram/poly_use_hint_65_proof \
@@ -59,6 +62,15 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2_reduced_ram/polyt0_unpack_proof \
   mldsa_native/gcc12_O2_reduced_ram/polyt1_pack_proof \
   mldsa_native/gcc12_O2_reduced_ram/polyt1_unpack_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_expand_lazy_44_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_expand_lazy_65_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_expand_lazy_87_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_row_lazy_44_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_row_lazy_65_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_row_lazy_87_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_44_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_65_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_87_proof \
   mldsa_native/gcc12_O2_reduced_ram/polyveck_caddq_44_proof \
   mldsa_native/gcc12_O2_reduced_ram/polyveck_caddq_65_proof \
   mldsa_native/gcc12_O2_reduced_ram/polyveck_caddq_87_proof \
@@ -68,6 +80,9 @@ MLDSA_NATIVE_PROOFS += \
   mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_44_proof \
   mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_65_proof \
   mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_87_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_44_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_65_proof \
+  mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_87_proof \
   mldsa_native/gcc12_O2_reduced_ram/polyveck_unpack_eta_chknorm_44_proof \
   mldsa_native/gcc12_O2_reduced_ram/polyveck_unpack_eta_chknorm_65_proof \
   mldsa_native/gcc12_O2_reduced_ram/polyveck_unpack_eta_chknorm_87_proof \
@@ -257,6 +272,30 @@ mldsa_native/gcc12_O2_reduced_ram/keccakf1600x4_xor_bytes_proof.native: \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/lazy_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/lazy_spec.ml \
+  proofs/utils/mldsa_native_fips204_ntt.ml \
+  proofs/utils/mldsa_native_fips204_sample.ml \
+  proofs/utils/mldsa_native_fips204_round.ml \
+  proofs/utils/mldsa_native_fips204_pack.ml \
+  proofs/utils/mldsa_native_fips204_sign.ml \
+  proofs/utils/mldsa_native_fips204_verify.ml \
+  proofs/mldsa_native/relative.ml \
+  ../common/mldsa_native_polyvec_lazy.ml \
+  ../common/mldsa_native_polyvec.ml \
+  ../common/fips204_theory.ml \
+  proofs/utils/keccak_fips202.ml \
+  ../common/mldsa_native_sampling.ml \
+  ../common/mldsa_native_challenge.ml \
+  ../common/mldsa_native_rounding.ml \
+  ../common/mldsa_native_hints.ml \
+  ../common/mldsa_native_sign.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/utils/mldsa_native_fips204_keypair.ml \
+  ../common/fips204.ml \
+  proofs/utils/keccak_spec.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_poly.ml
 mldsa_native/gcc12_O2_reduced_ram/libmldsa.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
@@ -698,6 +737,34 @@ mldsa_native/gcc12_O2_reduced_ram/poly_sub_proof.native: \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_44_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_44_spec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_unpack_44_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/utils/keccak_spec.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
 mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_65_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_65_spec.ml \
   proofs/utils/mldsa_native_sampling.ml \
@@ -711,6 +778,34 @@ mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_65_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_squeeze_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_release_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_unpack_65_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_packing.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/utils/keccak_spec.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_87_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_87_spec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_unpack_87_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_keccak.ml \
@@ -913,6 +1008,363 @@ mldsa_native/gcc12_O2_reduced_ram/polyt1_unpack_proof.native: \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_expand_lazy_44_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_expand_lazy_44_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_poly.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_expand_lazy_65_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_expand_lazy_65_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_poly.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_expand_lazy_87_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_expand_lazy_87_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_poly.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_row_lazy_44_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_row_lazy_44_spec.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  proofs/utils/mldsa_native_lazy_rr.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_polyvec_lazy.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_pointwise_montgomery_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_add_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_reduce_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_polyvec.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_matrix.ml \
+  ../common/mldsa_native_sign.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/rej_uniform_spec.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_hints.ml \
+  ../common/mldsa_native_challenge.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
+  ../common/mldsa_native_rounding.ml \
+  proofs/utils/keccak_spec.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_row_lazy_65_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_row_lazy_65_spec.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  proofs/utils/mldsa_native_lazy_rr.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_polyvec_lazy.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_pointwise_montgomery_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_add_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_reduce_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_polyvec.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_matrix.ml \
+  ../common/mldsa_native_sign.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/rej_uniform_spec.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_hints.ml \
+  ../common/mldsa_native_challenge.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
+  ../common/mldsa_native_rounding.ml \
+  proofs/utils/keccak_spec.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_row_lazy_87_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_row_lazy_87_spec.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  proofs/utils/mldsa_native_lazy_rr.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_polyvec_lazy.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_pointwise_montgomery_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_add_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_reduce_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_polyvec.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_matrix.ml \
+  ../common/mldsa_native_sign.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/rej_uniform_spec.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_fips202.ml \
+  ../common/mldsa_native_hints.ml \
+  ../common/mldsa_native_challenge.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
+  ../common/mldsa_native_rounding.ml \
+  proofs/utils/keccak_spec.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_44_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_44_spec.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  proofs/utils/mldsa_native_verify.ml \
+  proofs/utils/mldsa_native_lazy_rr.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_polyvec_lazy.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_44_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_ntt_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_pointwise_montgomery_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_add_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_44_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_44_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_polyvec.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_top.ml \
+  proofs/utils/mldsa_native_hash.ml \
+  proofs/utils/mldsa_native_libc.ml \
+  ../common/mldsa_native_prefix.ml \
+  proofs/utils/mldsa_native_matrix.ml \
+  ../common/mldsa_native_sign.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_unpack_44_spec.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/rej_uniform_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_reduce_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_invntt_tomont_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/utils/mldsa_native_scalar.ml \
+  proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_wrap.ml \
+  proofs/utils/keccak_fips202.ml \
+  ../common/mldsa_native_hints.ml \
+  ../common/mldsa_native_challenge.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
+  proofs/utils/keccak_spec.ml \
+  ../common/mldsa_native_rounding.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_65_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_65_spec.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  proofs/utils/mldsa_native_verify.ml \
+  proofs/utils/mldsa_native_lazy_rr.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_polyvec_lazy.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_65_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_ntt_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_pointwise_montgomery_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_add_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_65_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_65_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_polyvec.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_top.ml \
+  proofs/utils/mldsa_native_hash.ml \
+  proofs/utils/mldsa_native_libc.ml \
+  ../common/mldsa_native_prefix.ml \
+  proofs/utils/mldsa_native_matrix.ml \
+  ../common/mldsa_native_sign.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_unpack_65_spec.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/rej_uniform_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_reduce_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_invntt_tomont_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/utils/mldsa_native_scalar.ml \
+  proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_wrap.ml \
+  proofs/utils/keccak_fips202.ml \
+  ../common/mldsa_native_hints.ml \
+  ../common/mldsa_native_challenge.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
+  proofs/utils/keccak_spec.ml \
+  ../common/mldsa_native_rounding.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_87_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_87_spec.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
+  proofs/utils/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_realign.ml \
+  proofs/utils/mldsa_native_verify.ml \
+  proofs/utils/mldsa_native_lazy_rr.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_polyvec_lazy.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_gamma1_87_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_ntt_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_uniform_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_pointwise_montgomery_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_add_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_87_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_87_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_polyvec.ml \
+  ../common/mldsa_native_sampling.ml \
+  proofs/utils/mldsa_native_keccak.ml \
+  proofs/utils/mldsa_native_memset.ml \
+  proofs/utils/mldsa_native_absorb.ml \
+  proofs/utils/mldsa_native_top.ml \
+  proofs/utils/mldsa_native_hash.ml \
+  proofs/utils/mldsa_native_libc.ml \
+  ../common/mldsa_native_prefix.ml \
+  proofs/utils/mldsa_native_matrix.ml \
+  ../common/mldsa_native_sign.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_unpack_87_spec.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_init_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_absorb_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_finalize_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_squeeze_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/shake128_release_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/rej_uniform_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_reduce_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_invntt_tomont_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_fips202.ml \
+  proofs/utils/mldsa_native_scalar.ml \
+  proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_wrap.ml \
+  proofs/utils/keccak_fips202.ml \
+  ../common/mldsa_native_hints.ml \
+  ../common/mldsa_native_challenge.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_xor_bytes_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_permute_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
+  proofs/utils/keccak_spec.ml \
+  ../common/mldsa_native_rounding.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
 mldsa_native/gcc12_O2_reduced_ram/polyveck_caddq_44_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_caddq_44_spec.ml \
   proofs/utils/mldsa_native_polyvec.ml \
@@ -1040,6 +1492,48 @@ mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_87_proof.native: \
   proofs/utils/mldsa_native_image.ml \
   ../common/mldsa_native_polyvec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/poly_invntt_tomont_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_44_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_44_spec.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_polyvec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_reduce_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_65_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_65_spec.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_polyvec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_reduce_spec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
+  proofs/utils/mldsa_native_full.ml \
+  ../common/mldsa_native_packing.ml \
+  ../common/mldsa_native_poly.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
+  proofs/utils/mldsa_native.ml \
+  mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
+mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_87_proof.native: \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_87_spec.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
+  proofs/mldsa_native/relative.ml \
+  proofs/utils/mldsa_native_image.ml \
+  ../common/mldsa_native_polyvec.ml \
+  proofs/mldsa_native/gcc12_O2_reduced_ram/poly_reduce_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
   proofs/utils/mldsa_native_full.ml \
   ../common/mldsa_native_packing.ml \
