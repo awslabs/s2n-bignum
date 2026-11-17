@@ -5752,6 +5752,36 @@ let X86_ADD_RETURN_NOSTACK_TAC =
     FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
           ENSURES_PRECONDITION_THM)) THEN
     SIMP_TAC[]) in
+  (* The side goals of lemma2: C' subsumed C and C ,, C = C by               *)
+  (* subsumed_theorem and maychange_idempot, and                             *)
+  (* !s s'. ... /\ C' s s' ==> progdata s' /\ stackdata s' /\ retdata s'     *)
+  (* by keeps_tac, from the facts at s, with frame_keeps for each            *)
+  (* component and the code region (the nonoverlapping assumptions give      *)
+  (* orthogonality). The original proofs, for frame_check_mode, expand the   *)
+  (* frames.                                                                 *)
+  let frame_assumptions_tac (asl,w) =
+    set_component_assumptions (map snd asl); ALL_TAC (asl,w) in
+  let keeps_tac lenth =
+    REPEAT GEN_TAC THEN DISCH_THEN(fun ath (asl,w) ->
+      let cj = CONJUNCTS ath in
+      let fth = last cj in
+      let s = rand(rator(concl fth)) and s' = rand(concl fth)
+      and fr = rator(rator(concl fth)) in
+      let keep c = MP (SPECL [s;s'] (frame_keeps c fr)) fth in
+      let fact g =
+        match g with
+          Comb(Comb(Const("=",_),Comb(Comb(Const("read",_),c),_)),v) ->
+            let th = find (fun th -> concl th = mk_eq(list_mk_icomb "read"
+                                                        [c;s],v)) cj in
+            TRANS (keep c) th
+        | Comb(Comb(Comb(Const("bytes_loaded",_),_),pc),l) ->
+            let th = find (fun th -> concl th = list_mk_icomb "bytes_loaded"
+                                                  [s;pc;l]) cj in
+            let th1 = SPEC s' (MP (SPECL [s;pc]
+                        (MATCH_MP bytes_loaded_update lenth)) th) in
+            MP th1 (keep(rand(rator(lhs(lhand(concl th1))))))
+        | _ -> failwith "keeps_tac" in
+      ACCEPT_TAC (end_itlist CONJ (map fact (conjuncts w))) (asl,w)) in
   fun execth coreth ->
     let coreth =
       REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]
@@ -5791,22 +5821,29 @@ let X86_ADD_RETURN_NOSTACK_TAC =
      [REPEAT CONJ_TAC THEN TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
       ALL_TAC]) THEN
     MATCH_MP_TAC lemma2 THEN REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-     [SUBSUMED_MAYCHANGE_TAC;
-      MAYCHANGE_IDEMPOT_TAC;
-      REPEAT GEN_TAC THEN REWRITE_TAC(!simulation_precanon_thms) THEN
-      (* Strip all clauses of conjunctions in the LHS of ==> other than the
-         last MAYCHANGE predicate *)
-      REPEAT(DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
-      REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
-      REWRITE_TAC[GSYM SEQ_ASSOC] THEN
-      PURE_REWRITE_TAC[ASSIGNS_SEQ] THEN
-      CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
-      REWRITE_TAC[ASSIGNS_THM] THEN
-      REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT GEN_TAC THEN
-      NONSELFMODIFYING_STATE_UPDATE_TAC
-       (MATCH_MP bytes_loaded_update (fst execth)) THEN
-      ASSUMPTION_STATE_UPDATE_TAC THEN
-      DISCH_THEN(K ALL_TAC) THEN ASM_REWRITE_TAC[] THEN NO_TAC;
+     [FRAME_TAC "X86_ADD_RETURN_NOSTACK_TAC subsumed"
+        (frame_assumptions_tac THEN
+         W(fun (_,w) -> ACCEPT_TAC(subsumed_theorem (lhand w) (rand w))))
+        SUBSUMED_MAYCHANGE_TAC;
+      FRAME_TAC "X86_ADD_RETURN_NOSTACK_TAC idempot"
+        (W(fun (_,w) -> ACCEPT_TAC(maychange_idempot (rand w))))
+        MAYCHANGE_IDEMPOT_TAC;
+      FRAME_TAC "X86_ADD_RETURN_NOSTACK_TAC keeps"
+        (frame_assumptions_tac THEN keeps_tac (fst execth))
+       (REPEAT GEN_TAC THEN REWRITE_TAC(!simulation_precanon_thms) THEN
+        (* Strip all clauses of conjunctions in the LHS of ==> other than the
+           last MAYCHANGE predicate *)
+        REPEAT(DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
+        REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
+        REWRITE_TAC[GSYM SEQ_ASSOC] THEN
+        PURE_REWRITE_TAC[ASSIGNS_SEQ] THEN
+        CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
+        REWRITE_TAC[ASSIGNS_THM] THEN
+        REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT GEN_TAC THEN
+        NONSELFMODIFYING_STATE_UPDATE_TAC
+         (MATCH_MP bytes_loaded_update (fst execth)) THEN
+        ASSUMPTION_STATE_UPDATE_TAC THEN
+        DISCH_THEN(K ALL_TAC) THEN ASM_REWRITE_TAC[] THEN NO_TAC);
       REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
       REPEAT(FIRST_X_ASSUM(DISJ_CASES_TAC o check
        (can (term_match [] `read PC s = a \/ Q` o concl)))) THEN
@@ -6630,3 +6667,13 @@ let MAYCHANGE_YMM_SSE_QUARTER = prove
   REWRITE_TAC[MAYCHANGE_SING; COMPONENT_COMPOSE_ASSOC] THEN
   MATCH_MP_TAC ASSIGNS_TOPHALF_BOTTOMHALF THEN
   CONV_TAC VALID_COMPONENT_CONV);;
+
+(* The splits and named lists of components that the cached frame proofs     *)
+(* (subsumed_theorem, maychange_absorb in common/relational.ml) use for x86  *)
+(* frames: YMM6_SSE..YMM15_SSE as quarters of ZMM6..ZMM15, and SOME_FLAGS.   *)
+
+maychange_splits :=
+  CONJUNCTS MAYCHANGE_YMM_SSE_QUARTER @ CONJUNCTS MAYCHANGE_ZMM_QUARTER @
+  !maychange_splits;;
+
+maychange_list_defs := SOME_FLAGS :: !maychange_list_defs;;

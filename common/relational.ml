@@ -2585,11 +2585,37 @@ let ENSURES_MAYCHANGE_PRESERVED = prove
   DISCH_THEN(X_CHOOSE_TAC `y:B`) THEN
   ASM_MESON_TAC[]);;
 
-let ENSURES_PRESERVED_TAC pname ctm =
-  MATCH_MP_TAC(ISPEC ctm ENSURES_MAYCHANGE_PRESERVED) THEN
-  CONJ_TAC THENL [CONV_TAC EXTENSIONALLY_VALID_COMPONENT_CONV; ALL_TAC] THEN
-  REWRITE_TAC[] THEN CONJ_TAC THENL
-   [REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
+(* FRAME_TAC name fast original proves a frame side goal with fast, and      *)
+(* fails with the goal and the reason if fast cannot. With frame_check_mode  *)
+(* set it also runs original, the expanding proof these goals had before,    *)
+(* and fails unless both give the same subgoals: a test that the fast proofs *)
+(* do what the original ones did.                                            *)
+
+let frame_check_mode = ref false;;
+
+let FRAME_TAC (name:string) (fast:tactic) (original:tactic) : tactic =
+  fun g ->
+    let r1 =
+      try fast g with Failure msg ->
+        failwith (name ^ ": " ^ msg ^ ", on the goal " ^
+                  string_of_small_term (snd g)) in
+    if not !frame_check_mode then r1 else
+    let key (m,gs,_) =
+      m,map (fun (asl,w) -> map (fun (s,th) -> s,concl th) asl,w) gs in
+    let r0 =
+      try original g with Failure msg ->
+        failwith (name ^ ": the original proof fails (" ^ msg ^ ")") in
+    if key r1 = key r0 then r1
+    else failwith (name ^ ": the fast and the original proofs differ");;
+
+(* The goal !s s'. R s s' ==> read c s' = read c s that the tactics below    *)
+(* leave for the frame R: proved by MAYCHANGE_KEEPS_TAC, with one cached     *)
+(* orthogonality theorem per component of R (the original proof, for the     *)
+(* check mode, expands R).                                                   *)
+
+let ENSURES_PRESERVED_KEEP_TAC =
+  FRAME_TAC "ENSURES_PRESERVED_KEEP_TAC" MAYCHANGE_KEEPS_TAC
+   (REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
     REWRITE_TAC[GSYM SEQ_ASSOC] THEN
     PURE_REWRITE_TAC[ASSIGNS_SEQ] THEN
     CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
@@ -2598,7 +2624,13 @@ let ENSURES_PRESERVED_TAC pname ctm =
     DISCH_THEN(SUBST1_TAC o SYM) THEN
     CONV_TAC(LAND_CONV(DEPTH_CONV
      COMPONENT_READ_OVER_WRITE_ORTHOGONAL_CONV)) THEN
-    REFL_TAC;
+    REFL_TAC);;
+
+let ENSURES_PRESERVED_TAC pname ctm =
+  MATCH_MP_TAC(ISPEC ctm ENSURES_MAYCHANGE_PRESERVED) THEN
+  CONJ_TAC THENL [CONV_TAC EXTENSIONALLY_VALID_COMPONENT_CONV; ALL_TAC] THEN
+  REWRITE_TAC[] THEN CONJ_TAC THENL
+   [ENSURES_PRESERVED_KEEP_TAC;
     REWRITE_TAC[GSYM CONJ_ASSOC; GSYM SEQ_ASSOC] THEN
     W(fun (asl,w) -> X_GEN_TAC(mk_var(pname,type_of(fst(dest_forall w)))))];;
 
@@ -2622,18 +2654,7 @@ let ENSURES_EXISTING_PRESERVED_TAC ctm =
         EXISTS_TAC(rand(find (fun e -> is_eq e && free_in ctm (lhand e))
                              (conjuncts(body(lhand(rator w))))))) THEN
   CONJ_TAC THENL [CONV_TAC EXTENSIONALLY_VALID_COMPONENT_CONV; ALL_TAC] THEN
-  REWRITE_TAC[] THEN CONJ_TAC THENL
-   [REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
-    REWRITE_TAC[GSYM SEQ_ASSOC] THEN
-    PURE_REWRITE_TAC[ASSIGNS_SEQ] THEN
-    CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
-    REWRITE_TAC[ASSIGNS_THM] THEN
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT GEN_TAC THEN
-    DISCH_THEN(SUBST1_TAC o SYM) THEN
-    CONV_TAC(LAND_CONV(DEPTH_CONV
-     COMPONENT_READ_OVER_WRITE_ORTHOGONAL_CONV)) THEN
-    REFL_TAC;
-    ALL_TAC] THEN
+  REWRITE_TAC[] THEN CONJ_TAC THENL [ENSURES_PRESERVED_KEEP_TAC; ALL_TAC] THEN
   CONJ_TAC THENL
    [REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN NO_TAC;
     REWRITE_TAC[GSYM CONJ_ASSOC; GSYM SEQ_ASSOC]];;
