@@ -1663,35 +1663,68 @@ let KECCAK4_AVX512_ROUND_TAC r nsteps =
 (* Correctness proof.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-let SHA3_KECCAK4_F1600_AVX512_CORRECT = prove
- (`!a rc A1 A2 A3 A4 pc.
-      nonoverlapping (a,800) (word pc,0x1073) /\
-      nonoverlapping (a,800) (rc,192)
-      ==> ensures x86
-           (\s. bytes_loaded s (word pc) sha3_keccak4_f1600_avx512_tmc /\
-                read RIP s = word pc /\
-                C_ARGUMENTS [a; rc] s /\
-                wordlist_from_memory(rc,24) s = round_constants /\
-                wordlist_from_memory(a,25) s = A1 /\
-                wordlist_from_memory(word_add a (word 200),25) s = A2 /\
-                wordlist_from_memory(word_add a (word 400),25) s = A3 /\
-                wordlist_from_memory(word_add a (word 600),25) s = A4)
-           (\s. read RIP s = word(pc + 0x1072) /\
-                wordlist_from_memory(a,25) s = keccak 24 A1 /\
-                wordlist_from_memory(word_add a (word 200),25) s =
-                keccak 24 A2 /\
-                wordlist_from_memory(word_add a (word 400),25) s =
-                keccak 24 A3 /\
-                wordlist_from_memory(word_add a (word 600),25) s =
-                keccak 24 A4)
-           (MAYCHANGE [RIP; RAX; RSI] ,,
-            MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
-                       ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14;
-                       ZMM15; ZMM16; ZMM17; ZMM18; ZMM19; ZMM20; ZMM21;
-                       ZMM22; ZMM23; ZMM24; ZMM25; ZMM26; ZMM27; ZMM28;
-                       ZMM29; ZMM30; ZMM31] ,,
-            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
-            MAYCHANGE [memory :> bytes(a,800)])`,
+(* ------------------------------------------------------------------------- *)
+(* The x4 permutation sha3_keccak4_f1600_avx512.                             *)
+(* ------------------------------------------------------------------------- *)
+
+let KECCAK4_AVX512_FULL_ROUND_TAC r nsteps =
+  KECCAK4_AVX512_ROUND_GEN_TAC (TRY STRIP_EXISTS_ASSUM_TAC)
+   EVENTS_SPLIT_TAC
+   (if r = 4 then
+      MP_TAC(SPECL [`rc:int64`; `i:num`] KECCAK_AVX512_ZF_BRANCH) THEN
+      ANTS_TAC THENL [FIRST_ASSUM ACCEPT_TAC; ALL_TAC] THEN
+      DISCH_THEN(fun th ->
+        REWRITE_TAC[th; KECCAK_AVX512_RSI; KECCAK_AVX512_WORD_COND])
+    else ALL_TAC)
+   r nsteps;;
+
+let SHA3_KECCAK4_F1600_AVX512_FULL = time prove
+ (`exists f_events.
+    forall e a rc A1 A2 A3 A4 pc.
+        nonoverlapping (a,800) (word pc,0x1073) /\
+        nonoverlapping (a,800) (rc,192)
+        ==> ensures x86
+            (\s. bytes_loaded s (word pc) sha3_keccak4_f1600_avx512_tmc /\
+                 read RIP s = word pc /\
+                 C_ARGUMENTS [a; rc] s /\
+                 wordlist_from_memory(rc,24) s = round_constants /\
+                 wordlist_from_memory(a,25) s = A1 /\
+                 wordlist_from_memory(word_add a (word 200),25) s = A2 /\
+                 wordlist_from_memory(word_add a (word 400),25) s = A3 /\
+                 wordlist_from_memory(word_add a (word 600),25) s = A4 /\
+                 read events s = e)
+            (\s. read RIP s = word(pc + 0x1072) /\
+                 wordlist_from_memory(a,25) s = keccak 24 A1 /\
+                 wordlist_from_memory(word_add a (word 200),25) s =
+                 keccak 24 A2 /\
+                 wordlist_from_memory(word_add a (word 400),25) s =
+                 keccak 24 A3 /\
+                 wordlist_from_memory(word_add a (word 600),25) s =
+                 keccak 24 A4 /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events rc a pc /\
+                      memaccess_inbounds e2 [a,800; rc,192] [a,800]))
+            (MAYCHANGE [RIP; RAX; RSI] ,,
+             MAYCHANGE
+             [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9;
+              ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15; ZMM16; ZMM17;
+              ZMM18; ZMM19; ZMM20; ZMM21; ZMM22; ZMM23; ZMM24; ZMM25;
+              ZMM26; ZMM27; ZMM28; ZMM29; ZMM30; ZMM31] ,,
+             MAYCHANGE SOME_FLAGS ,,
+             MAYCHANGE [events] ,,
+             MAYCHANGE [memory :> bytes (a,800)])`,
+  CONCRETIZE_F_EVENTS_TAC
+   `\(rc:int64) (a:int64) (pc:num).
+      APPEND (f_ev_epil rc a pc)
+       (APPEND
+         (ENUMERATEL 6
+           (\i. APPEND (APPEND (APPEND (f_ev_r4 rc a pc i) (f_ev_r3 rc a pc i))
+                               (f_ev_r2 rc a pc i))
+                       (f_ev_r1 rc a pc i)))
+         (f_ev_prol rc a pc))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
   MAP_EVERY X_GEN_TAC
    [`a:int64`; `rc:int64`; `A1:int64 list`; `A2:int64 list`;
     `A3:int64 list`; `A4:int64 list`; `pc:num`] THEN
@@ -1705,11 +1738,8 @@ let SHA3_KECCAK4_F1600_AVX512_CORRECT = prove
     REPEAT(FIRST_X_ASSUM(MP_TAC o AP_TERM `LENGTH:int64 list->num`)) THEN
     CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
     REWRITE_TAC[LENGTH; ARITH] THEN ASM_MESON_TAC[]] THEN
-
-  (*** The invariant: the states after 4 * i rounds in the registers ***)
-
-  ENSURES_WHILE_PUP_TAC `6` `pc + 0x241` `pc + 0xe2f`
-   `\i s. (read RDI s = a /\
+  ENSURES_EVENTS_WHILE_UP2_TAC `6` `pc + 0x241` `pc + 0xe35`
+   `\i s. read RDI s = a /\
            read RSI s = word_add rc (word(32 * i)) /\
            read RAX s = word_add rc (word 192) /\
            wordlist_from_memory(rc,24) s = round_constants /\
@@ -1721,12 +1751,9 @@ let SHA3_KECCAK4_F1600_AVX512_CORRECT = prove
             read YMM22 s; read YMM23 s; read YMM24 s] =
            keccak4_avx512_regs keccak_avx512_layout0
             (keccak (4 * i) A1) (keccak (4 * i) A2)
-            (keccak (4 * i) A3) (keccak (4 * i) A4)) /\
-          (read ZF s <=> i = 6)` THEN
+            (keccak (4 * i) A3) (keccak (4 * i) A4)` THEN
   REPEAT CONJ_TAC THENL
    [CONV_TAC NUM_REDUCE_CONV;
-
-    (*** The initialization: the transposition of the states ***)
 
     REWRITE_TAC[round_constants;
       WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`;
@@ -1759,39 +1786,27 @@ let SHA3_KECCAK4_F1600_AVX512_CORRECT = prove
     MAP_EVERY (fun n ->
       X86_STEPS_TAC SHA3_KECCAK4_F1600_AVX512_TMC_EXEC [n] THEN
       KECCAK_AVX2_SIMPLIFY_TAC) (1--78) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONV_TAC WORD_BLAST;
-
-    (*** An iteration: four rounds, the layout after the first three given
-     *** by keccak_avx512_layout1-3
-     ***)
+    ENSURES_FINAL_STATE_TAC THEN
+    EVENTS_SPLIT_TAC
+     (ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);
 
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    ENSURES_SEQUENCE_TAC `pc + 0x510`
+    GEN_REWRITE_TAC ONCE_DEPTH_CONV [ENUMERATEL_ADD1] THEN
+    CONV_TAC(ONCE_DEPTH_CONV BETA_CONV) THEN
+    KECCAK_AVX512_EVENTS_REASSOC_TAC THEN KECCAK_AVX512_EVENTS_REASSOC_TAC THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x510`
      (keccak4_avx512_assertion `keccak_avx512_layout1` `4 * i + 1`) THEN
-    CONJ_TAC THENL [KECCAK4_AVX512_ROUND_TAC 1 105; ALL_TAC] THEN
-    ENSURES_SEQUENCE_TAC `pc + 0x7e0`
+    CONJ_TAC THENL [KECCAK4_AVX512_FULL_ROUND_TAC 1 105; ALL_TAC] THEN
+    KECCAK_AVX512_EVENTS_REASSOC_TAC THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x7e0`
      (keccak4_avx512_assertion `keccak_avx512_layout2` `4 * i + 2`) THEN
-    CONJ_TAC THENL [KECCAK4_AVX512_ROUND_TAC 2 105; ALL_TAC] THEN
-    ENSURES_SEQUENCE_TAC `pc + 0xab0`
+    CONJ_TAC THENL [KECCAK4_AVX512_FULL_ROUND_TAC 2 105; ALL_TAC] THEN
+    KECCAK_AVX512_EVENTS_REASSOC_TAC THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xab0`
      (keccak4_avx512_assertion `keccak_avx512_layout3` `4 * i + 3`) THEN
-    CONJ_TAC THENL [KECCAK4_AVX512_ROUND_TAC 3 105; ALL_TAC] THEN
-    KECCAK4_AVX512_ROUND_TAC 4 135;
+    CONJ_TAC THENL [KECCAK4_AVX512_FULL_ROUND_TAC 3 105; ALL_TAC] THEN
+    KECCAK4_AVX512_FULL_ROUND_TAC 4 136;
 
-    (*** The backward branch ***)
-
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    REWRITE_TAC[keccak4_avx512_regs; keccak_avx512_layout0; MAP;
-                round_constants; CONS_11;
-                WORDLIST_FROM_MEMORY_CONV
-                 `wordlist_from_memory(rc,24) s:int64 list`] THEN
-    ENSURES_INIT_TAC "s0" THEN
-    X86_STEPS_TAC SHA3_KECCAK4_F1600_AVX512_TMC_EXEC [1] THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];
-
-    (*** The transposition back and the stores, with the lanes z<k>_<j> of
-     *** the final states
-     ***)
 
     CONV_TAC NUM_REDUCE_CONV THEN
     MAP_EVERY (fun (j,t) ->
@@ -1818,20 +1833,61 @@ let SHA3_KECCAK4_F1600_AVX512_CORRECT = prove
       WORDLIST_FROM_MEMORY_CONV
        `wordlist_from_memory(word_add a (word 600),25) s:int64 list`] THEN
     REWRITE_TAC[CONS_11; GSYM CONJ_ASSOC] THEN
-    ENSURES_INIT_TAC "s0" THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
     MAP_EVERY (fun n ->
       X86_STEPS_TAC SHA3_KECCAK4_F1600_AVX512_TMC_EXEC [n] THEN
-      KECCAK_AVX2_SIMPLIFY_TAC) (1--79) THEN
+      KECCAK_AVX2_SIMPLIFY_TAC) (1--78) THEN
     REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
       CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
       check (can (term_match [] `read (memory :> bytes256 a) s = x`) o
              concl))) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST]);;
+    ENSURES_FINAL_STATE_TAC THEN
+    EVENTS_SPLIT_TAC
+     (ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST)]);;
 
-(* ------------------------------------------------------------------------- *)
-(* The subroutine forms, without and with the IBT landing pad.               *)
-(* ------------------------------------------------------------------------- *)
+(*** The subroutine forms, without and with the IBT landing pad ***)
+
+let SHA3_KECCAK4_F1600_AVX512_CORRECT = prove
+ (`!a rc A1 A2 A3 A4 pc.
+      nonoverlapping (a,800) (word pc,0x1073) /\
+      nonoverlapping (a,800) (rc,192)
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc) sha3_keccak4_f1600_avx512_tmc /\
+                read RIP s = word pc /\
+                C_ARGUMENTS [a; rc] s /\
+                wordlist_from_memory(rc,24) s = round_constants /\
+                wordlist_from_memory(a,25) s = A1 /\
+                wordlist_from_memory(word_add a (word 200),25) s = A2 /\
+                wordlist_from_memory(word_add a (word 400),25) s = A3 /\
+                wordlist_from_memory(word_add a (word 600),25) s = A4)
+           (\s. read RIP s = word(pc + 0x1072) /\
+                wordlist_from_memory(a,25) s = keccak 24 A1 /\
+                wordlist_from_memory(word_add a (word 200),25) s =
+                keccak 24 A2 /\
+                wordlist_from_memory(word_add a (word 400),25) s =
+                keccak 24 A3 /\
+                wordlist_from_memory(word_add a (word 600),25) s =
+                keccak 24 A4)
+           (MAYCHANGE [RIP; RAX; RSI] ,,
+            MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
+                       ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14;
+                       ZMM15; ZMM16; ZMM17; ZMM18; ZMM19; ZMM20; ZMM21;
+                       ZMM22; ZMM23; ZMM24; ZMM25; ZMM26; ZMM27; ZMM28;
+                       ZMM29; ZMM30; ZMM31] ,,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+            MAYCHANGE [memory :> bytes(a,800)])`,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  X_CHOOSE_TAC `f:int64->int64->num->(uarch_event)list`
+   SHA3_KECCAK4_F1600_AVX512_FULL THEN
+  MATCH_MP_TAC(ISPEC `read events:x86state->(uarch_event)list`
+                ENSURES_ANY_INITIAL) THEN
+  X_GEN_TAC `e:(uarch_event)list` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `a:int64`; `rc:int64`; `A1:int64 list`;
+    `A2:int64 list`; `A3:int64 list`; `A4:int64 list`; `pc:num`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_MONO_ALL) THEN
+  SIMP_TAC[]);;
 
 let SHA3_KECCAK4_F1600_AVX512_NOIBT_SUBROUTINE_CORRECT = prove
  (`!a rc A1 A2 A3 A4 pc stackpointer returnaddress.

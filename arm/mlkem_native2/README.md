@@ -105,15 +105,17 @@ this layout of the image, and are checked again when it changes.
   as states of lanes, and the sponge by blocks, with the lemmas on FIPS 203
   of the proofs of mlkem-native's compiled C in
   `../proofs/utils/mlkem_native_fips203.ml`). Its constant-time and memory
-  safety, with the events a function of the addresses and of the public
-  seed rho (and, for decapsulation, whose hash check branches on it, the
-  digest H(ek) of the first hash job as a result), are in
+  safety, with the events a function of the addresses and of the public seed
+  rho (and, for decapsulation, whose hash check branches on it, the digest
+  H(ek) of the first hash job as a result), are in
   `../proofs/mlkem_gen_matrix_k2_safe.ml`, `_k3_safe.ml` and `_k4_safe.ml`,
   with the common parts in `../proofs/utils/mlkem_native2_gm_safe.ml`, the
   tools for the callees in `../proofs/utils/mlkem_native2_safety.ml`, and
-  theorems of correctness and safety in one for the callees on whose
-  results the later events depend, the Keccak permutations and the
-  rejection sampler (`../proofs/utils/mlkem_native2_keccak_full.ml` and
+  theorems of correctness and safety in one for the callees on whose results
+  the later events depend, the Keccak permutations and the rejection sampler
+  (`../proofs/utils/mlkem_native2_keccak_full.ml`, with that of the core of
+  the x4 permutation, from which its correctness theorem follows, in
+  `../proofs/sha3_keccak4_f1600_alt2.ml`, and
   `../proofs/utils/mlkem_native2_rej_full.ml`).
 - `mlkem_getnoise` for the configurations of n polynomials that the API
   uses (n = 4, 7, 8, 9 with eta1 = 2, and the first 4 of 4 or 2 of 5 with

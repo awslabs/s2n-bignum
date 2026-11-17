@@ -399,8 +399,10 @@ let READ_MEMORY_BYTES_192_PRF_3 = prove
 (* ------------------------------------------------------------------------- *)
 (* The theorems for the callees in the forms a caller needs: the x4          *)
 (* permutation on four states as 1600-bit words, mlkem_cbd2 and mlkem_cbd3   *)
-(* with the coefficients of SamplePolyCBD, and their constant-time and       *)
-(* memory safety with the frames of their correctness theorems.              *)
+(* with the coefficients of SamplePolyCBD, and the constant-time and memory  *)
+(* safety of the latter with the frames of their correctness theorems (that  *)
+(* of the x4 permutation, SHA3_KECCAK4_F1600_ALT2_SUBROUTINE_SAFE_FRAMED, is *)
+(* in its file).                                                             *)
 (* ------------------------------------------------------------------------- *)
 
 let SHA3_KECCAK4_F1600_ALT2_SUBROUTINE_CORRECT_F1600 = prove
@@ -446,75 +448,6 @@ let SHA3_KECCAK4_F1600_ALT2_SUBROUTINE_CORRECT_F1600 = prove
   DISCH_THEN(MATCH_MP_TAC o MATCH_MP (REWRITE_RULE[IMP_CONJ]
     (ONCE_REWRITE_RULE[CONJ_SYM] ENSURES_POSTCONDITION_THM))) THEN
   MESON_TAC[KECCAK_F1600_MEMORY]);;
-
-let SHA3_KECCAK4_F1600_ALT2_SAFE_FRAMED = time prove
- (`exists f_events.
-       forall e a rc pc stackpointer.
-           aligned 16 stackpointer /\
-           nonoverlapping (a,800) (stackpointer,216) /\
-           ALLPAIRS nonoverlapping
-           [a,800; stackpointer,216]
-           [word pc,0xda0; rc,192]
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc)
-                      sha3_keccak4_f1600_alt2_mc /\
-                    read PC s = word (pc + 0x2c) /\
-                    read SP s = stackpointer /\
-                    C_ARGUMENTS [a; rc] s /\
-                    read events s = e)
-               (\s. read PC s = word (pc + 0xd70) /\
-                    (exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 = f_events rc a pc stackpointer /\
-                        memaccess_inbounds e2
-                        [a,800; rc,192; stackpointer,216]
-                        [a,800; stackpointer,216]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [X19; X20; X21; X22; X23; X24;
-                           X25; X26; X27; X28; X29; X30] ,,
-                MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15] ,,
-                MAYCHANGE [memory :> bytes(a,800);
-                           memory :> bytes(stackpointer,40);
-                           memory :> bytes(word_add stackpointer (word 208),
-                                           8)])`,
-  PROVE_SAFETY_SPEC_TAC ~public_vars:[`e:(uarch_event)list`; `a:int64`;
-    `rc:int64`; `pc:num`; `stackpointer:int64`]
-   SHA3_KECCAK4_F1600_ALT2_EXEC);;
-
-let SHA3_KECCAK4_F1600_ALT2_SUBROUTINE_SAFE_FRAMED = time prove
- (`exists f_events.
-       forall e a rc pc stackpointer returnaddress.
-           aligned 16 stackpointer /\
-           nonoverlapping (a,800) (word_sub stackpointer (word 224),224) /\
-           ALLPAIRS nonoverlapping
-           [a,800; word_sub stackpointer (word 224),224]
-           [word pc,0xda0; rc,192]
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc)
-                      sha3_keccak4_f1600_alt2_mc /\
-                    read PC s = word pc /\
-                    read SP s = stackpointer /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [a; rc] s /\
-                    read events s = e)
-               (\s. read PC s = returnaddress /\
-                    (exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 = f_events rc a pc
-                               (word_sub stackpointer (word 224))
-                               returnaddress /\
-                        memaccess_inbounds e2
-                        [a,800; rc,192; word_sub stackpointer (word 224),224]
-                        [a,800; word_sub stackpointer (word 224),224]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE
-                 [memory :> bytes(a,800);
-                  memory :> bytes(word_sub stackpointer (word 224),224)])`,
-  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(11,11)
-    SHA3_KECCAK4_F1600_ALT2_EXEC SHA3_KECCAK4_F1600_ALT2_SAFE_FRAMED
-    `[D8; D9; D10; D11; D12; D13; D14; D15;
-      X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30]` 224 THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let MLKEM_CBD2_SUBROUTINE_CORRECT_COEFF = prove
  (`!r a (b:byte list) pc returnaddress.

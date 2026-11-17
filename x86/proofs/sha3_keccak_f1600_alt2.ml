@@ -388,6 +388,180 @@ let SHA3_KECCAK_F1600_ALT2_DATA_NUM =
   `num_of_bytelist sha3_keccak_f1600_alt2_data`;;
 
 (* ------------------------------------------------------------------------- *)
+(* Correctness and constant-time/memory safety in one theorem ("FULL"), by   *)
+(* one symbolic execution, from which the correctness theorem follows: the   *)
+(* proof of correctness with the events of SHA3_KECCAK_F1600_ALT2_SAFE       *)
+(* added, the loop taken as in the latter, with the branch back in the body. *)
+(* The safety theorem below is separate since it has no precondition on the  *)
+(* data.                                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let SHA3_KECCAK_F1600_ALT2_FULL = time prove
+ (`exists f_events.
+    forall e a rc A pc tab.
+        riprel32_within_bounds tab (pc + 7) /\
+        nonoverlapping (a,200) (word pc,998) /\
+        nonoverlapping (a,200) (word tab,384) /\
+        nonoverlapping (a,200) (rc,192)
+        ==> ensures x86
+            (\s. bytes_loaded s (word pc)
+                   (sha3_keccak_f1600_alt2_tmc pc tab) /\
+                 read RIP s = word pc /\
+                 bytes_loaded s (word tab) sha3_keccak_f1600_alt2_data /\
+                 C_ARGUMENTS [a; rc] s /\
+                 wordlist_from_memory(rc,24) s = round_constants /\
+                 wordlist_from_memory(a,25) s = A /\
+                 read events s = e)
+            (\s. read RIP s = word (pc + 997) /\
+                 wordlist_from_memory(a,25) s = keccak 24 A /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events rc a tab pc /\
+                      memaccess_inbounds e2 [a,200; rc,192; word tab,384]
+                      [a,200]))
+            (MAYCHANGE [RIP; RAX; RCX; RSI] ,,
+             MAYCHANGE
+             [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9;
+              ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+             MAYCHANGE SOME_FLAGS ,,
+             MAYCHANGE [events] ,,
+             MAYCHANGE [memory :> bytes (a,200)])`,
+  CONCRETIZE_F_EVENTS_TAC
+   `\(rc:int64) (a:int64) (tab:num) (pc:num).
+      APPEND (f_ev_epil rc a tab pc)
+             (APPEND (ENUMERATEL 24 (\i. f_ev_loop rc a tab pc i))
+                     (f_ev_prol rc a tab pc))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC
+   [`a:int64`; `rc:int64`; `A:int64 list`; `pc:num`; `tab:num`] THEN
+  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  REWRITE_TAC[SHA3_KECCAK_F1600_ALT2_DATA;
+              SHA3_KECCAK_F1600_ALT2_DATA_NUM] THEN
+  ASM_CASES_TAC `LENGTH(A:int64 list) = 25` THENL
+   [ALL_TAC;
+    ENSURES_INIT_TAC "s0" THEN MATCH_MP_TAC(TAUT `F ==> p`) THEN
+    REPEAT(FIRST_X_ASSUM(MP_TAC o AP_TERM `LENGTH:int64 list->num`)) THEN
+    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
+    REWRITE_TAC[LENGTH; ARITH] THEN ASM_MESON_TAC[]] THEN
+
+  (*** The invariant: the state after i rounds in the registers ***)
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `24` `pc + 0xdc` `pc + 0x328`
+   `\i s. read RDI s = a /\
+          read RSI s = word_add rc (word(8 * i)) /\
+          read RAX s = word tab /\
+          read RCX s = word(24 - i) /\
+          read (memory :> bytes (word tab,384)) s =
+          num_of_bytelist sha3_keccak_f1600_alt2_data /\
+          wordlist_from_memory(rc,24) s = round_constants /\
+          [read YMM0 s; read YMM1 s; read YMM2 s; read YMM3 s;
+           read YMM4 s; read YMM5 s; read YMM6 s] =
+          keccak_alt2_regs (keccak i A)` THEN
+  REWRITE_TAC[SHA3_KECCAK_F1600_ALT2_DATA_NUM] THEN
+  REPEAT CONJ_TAC THENL
+   [CONV_TAC NUM_REDUCE_CONV;
+
+    (*** The initialization: the gathering of the state ***)
+
+    REWRITE_TAC[round_constants;
+      WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`;
+      WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(a,25) s:int64 list`] THEN
+    MP_TAC(ISPEC `A:int64 list` LENGTH_EQ_25) THEN ASM_REWRITE_TAC[] THEN
+    DISCH_THEN(fun th ->
+      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [th]) THEN
+    REWRITE_TAC[CONS_11; GSYM CONJ_ASSOC; keccak] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    MP_TAC(READ_MEMORY_MERGE_CONV 2
+      `read (memory :> bytes256(word_add a (word 8))) s0`) THEN
+    CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+    MAP_EVERY (fun n -> X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC [n] THEN
+                        KECCAK_AVX2_SIMPLIFY_TAC) (1--31) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    EVENTS_SPLIT_TAC
+     (ASM_REWRITE_TAC[keccak_alt2_regs; CONS_11] THEN
+      CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
+      REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0; SUB_0] THEN
+      IMP_REWRITE_TAC[RIP_REL_ADDR_FOLD] THEN CONV_TAC NUM_REDUCE_CONV THEN
+      ASM_REWRITE_TAC[WORD_ADD] THEN
+      REPEAT CONJ_TAC THEN BITBLAST_TAC);
+
+    (*** A round, with the branch back or out ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    REWRITE_TAC[CONS_11; GSYM CONJ_ASSOC; keccak] THEN
+    MP_TAC(ISPECL [`A:int64 list`; `i:num`] LENGTH_KECCAK) THEN
+    ASM_REWRITE_TAC[] THEN REWRITE_TAC[LENGTH_EQ_25] THEN
+    DISCH_THEN SUBST1_TAC THEN
+    REWRITE_TAC[keccak_alt2_regs; keccak_round] THEN
+    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+    CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
+    REWRITE_TAC[CONS_11] THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    FIRST_X_ASSUM(STRIP_ASSUME_TAC o REWRITE_RULE[round_constants; CONS_11] o
+      CONV_RULE(LAND_CONV WORDLIST_FROM_MEMORY_CONV) o
+      check (can (term_match [] `wordlist_from_memory(rc,24) s = l`) o
+             concl)) THEN
+    SUBGOAL_THEN
+     `read (memory :> bytes64(word_add rc (word(8 * i)))) s0 =
+      EL i round_constants`
+    ASSUME_TAC THENL
+     [UNDISCH_TAC `i < 24` THEN SPEC_TAC(`i:num`,`i:num`) THEN
+      CONV_TAC EXPAND_CASES_CONV THEN
+      CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
+      ASM_REWRITE_TAC[round_constants; WORD_ADD_0] THEN
+      CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[];
+      ALL_TAC] THEN
+    KECCAK_AVX2_TABLE_TAC THEN
+    MAP_EVERY (fun k ->
+      ABBREV_TAC(mk_eq(mk_var("x"^string_of_int k,`:int64`),
+        vsubst [mk_small_numeral k,`k:num`] `EL k (keccak i A):int64`)))
+     (0--24) THEN
+    (fun gl -> keccak_avx2_lanes := 0; ALL_TAC gl) THEN
+    MAP_EVERY (fun n -> X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC [n] THEN
+                        KECCAK_AVX2_SIMPLIFY_TAC THEN
+                        KECCAK_AVX2_LANE_ABBREV_TAC n) (1--107) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    EVENTS_SPLIT_TAC
+     (ASM_REWRITE_TAC[] THEN
+      REWRITE_TAC[round_constants; CONS_11;
+        WORDLIST_FROM_MEMORY_CONV
+         `wordlist_from_memory(rc,24) s107:int64 list`] THEN
+      ASM_REWRITE_TAC[] THEN
+      CONV_TAC(TOP_DEPTH_CONV EL_CONV) THEN
+      ASM_SIMP_TAC[KECCAK_AVX2_COUNTER; KECCAK_AVX2_BRANCH] THEN
+      ASM_SIMP_TAC[ARITH_RULE `i < 24 ==> (~(i + 1 = 24) <=> i + 1 < 24)`] THEN
+      CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+      CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+      REWRITE_TAC[KECCAK_AVX2_JOIN_EQ; GSYM CONJ_ASSOC] THEN
+      KECCAK_AVX2_EXPAND_TAC THEN
+      REPEAT CONJ_TAC THEN KECCAK_BITBLAST_TAC);
+
+    (*** The scattering of the state ***)
+
+    REWRITE_TAC[keccak_alt2_regs; round_constants; CONS_11;
+      WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`;
+      WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(a,25) s:int64 list`] THEN
+    MP_TAC(ISPECL [`A:int64 list`; `24`] LENGTH_KECCAK) THEN
+    ASM_REWRITE_TAC[] THEN REWRITE_TAC[LENGTH_EQ_25] THEN
+    DISCH_THEN(fun th -> ONCE_REWRITE_TAC[th]) THEN
+    CONV_TAC(TOP_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[CONS_11] THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC (1--28) THEN
+    REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
+      CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
+      check (can (term_match [] `read qqq s:int256 = xxx`) o concl))) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    EVENTS_SPLIT_TAC
+     (ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN BITBLAST_TAC)]);;
+
+
+(* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
@@ -412,137 +586,18 @@ let SHA3_KECCAK_F1600_ALT2_CORRECT = prove
                        ZMM15] ,,
             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
             MAYCHANGE [memory :> bytes(a,200)])`,
-  MAP_EVERY X_GEN_TAC
-   [`a:int64`; `rc:int64`; `A:int64 list`; `pc:num`; `tab:num`] THEN
-  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  REWRITE_TAC[SHA3_KECCAK_F1600_ALT2_DATA;
-              SHA3_KECCAK_F1600_ALT2_DATA_NUM] THEN
-  ASM_CASES_TAC `LENGTH(A:int64 list) = 25` THENL
-   [ALL_TAC;
-    ENSURES_INIT_TAC "s0" THEN MATCH_MP_TAC(TAUT `F ==> p`) THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC o AP_TERM `LENGTH:int64 list->num`)) THEN
-    CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
-    REWRITE_TAC[LENGTH; ARITH] THEN ASM_MESON_TAC[]] THEN
-
-  (*** The invariant: the state after i rounds in the registers ***)
-
-  ENSURES_WHILE_PUP_TAC `24` `pc + 0xdc` `pc + 0x322`
-   `\i s. (read RDI s = a /\
-           read RSI s = word_add rc (word(8 * i)) /\
-           read RAX s = word tab /\
-           read RCX s = word(24 - i) /\
-           read (memory :> bytes (word tab,384)) s =
-           num_of_bytelist sha3_keccak_f1600_alt2_data /\
-           wordlist_from_memory(rc,24) s = round_constants /\
-           [read YMM0 s; read YMM1 s; read YMM2 s; read YMM3 s;
-            read YMM4 s; read YMM5 s; read YMM6 s] =
-           keccak_alt2_regs (keccak i A)) /\
-          (read ZF s <=> i = 24)` THEN
-  REWRITE_TAC[SHA3_KECCAK_F1600_ALT2_DATA_NUM] THEN
-  REPEAT CONJ_TAC THENL
-   [CONV_TAC NUM_REDUCE_CONV;
-
-    (*** The initialization: the gathering of the state ***)
-
-    REWRITE_TAC[round_constants;
-      WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`;
-      WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(a,25) s:int64 list`] THEN
-    MP_TAC(ISPEC `A:int64 list` LENGTH_EQ_25) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(fun th ->
-      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) [th]) THEN
-    REWRITE_TAC[CONS_11; GSYM CONJ_ASSOC; keccak] THEN
-    ENSURES_INIT_TAC "s0" THEN
-    MP_TAC(READ_MEMORY_MERGE_CONV 2
-      `read (memory :> bytes256(word_add a (word 8))) s0`) THEN
-    CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-    MAP_EVERY (fun n -> X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC [n] THEN
-                        KECCAK_AVX2_SIMPLIFY_TAC) (1--31) THEN
-    ENSURES_FINAL_STATE_TAC THEN
-    ASM_REWRITE_TAC[keccak_alt2_regs; CONS_11] THEN
-    CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
-    REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0; SUB_0] THEN
-    IMP_REWRITE_TAC[RIP_REL_ADDR_FOLD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-    ASM_REWRITE_TAC[WORD_ADD] THEN
-    REPEAT CONJ_TAC THEN BITBLAST_TAC;
-
-    (*** A round: the lanes x<k> of the state, the round constant and the
-     *** rows of the tables, the simulation with the lanes abbreviated,
-     *** then each lane of the new state
-     ***)
-
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    REWRITE_TAC[CONS_11; GSYM CONJ_ASSOC; keccak] THEN
-    MP_TAC(ISPECL [`A:int64 list`; `i:num`] LENGTH_KECCAK) THEN
-    ASM_REWRITE_TAC[] THEN REWRITE_TAC[LENGTH_EQ_25] THEN
-    DISCH_THEN SUBST1_TAC THEN
-    REWRITE_TAC[keccak_alt2_regs; keccak_round] THEN
-    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-    CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
-    REWRITE_TAC[CONS_11] THEN
-    ENSURES_INIT_TAC "s0" THEN
-    FIRST_X_ASSUM(STRIP_ASSUME_TAC o REWRITE_RULE[round_constants; CONS_11] o
-      CONV_RULE(LAND_CONV WORDLIST_FROM_MEMORY_CONV) o
-      check (can (term_match [] `wordlist_from_memory(rc,24) s = l`) o
-             concl)) THEN
-    SUBGOAL_THEN
-     `read (memory :> bytes64(word_add rc (word(8 * i)))) s0 =
-      EL i round_constants`
-    ASSUME_TAC THENL
-     [UNDISCH_TAC `i < 24` THEN SPEC_TAC(`i:num`,`i:num`) THEN
-      CONV_TAC EXPAND_CASES_CONV THEN
-      CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
-      ASM_REWRITE_TAC[round_constants; WORD_ADD_0] THEN
-      CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[];
-      ALL_TAC] THEN
-    KECCAK_AVX2_TABLE_TAC THEN
-    MAP_EVERY (fun k ->
-      ABBREV_TAC(mk_eq(mk_var("x"^string_of_int k,`:int64`),
-        vsubst [mk_small_numeral k,`k:num`] `EL k (keccak i A):int64`)))
-     (0--24) THEN
-    (fun gl -> keccak_avx2_lanes := 0; ALL_TAC gl) THEN
-    MAP_EVERY (fun n -> X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC [n] THEN
-                        KECCAK_AVX2_SIMPLIFY_TAC THEN
-                        KECCAK_AVX2_LANE_ABBREV_TAC n) (1--106) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[round_constants; CONS_11;
-      WORDLIST_FROM_MEMORY_CONV
-       `wordlist_from_memory(rc,24) s106:int64 list`] THEN
-    ASM_REWRITE_TAC[] THEN
-    CONV_TAC(TOP_DEPTH_CONV EL_CONV) THEN
-    ASM_SIMP_TAC[KECCAK_AVX2_COUNTER] THEN
-    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-    REWRITE_TAC[KECCAK_AVX2_JOIN_EQ; GSYM CONJ_ASSOC] THEN
-    KECCAK_AVX2_EXPAND_TAC THEN
-    REPEAT CONJ_TAC THEN KECCAK_BITBLAST_TAC;
-
-    (*** The backward branch ***)
-
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    REWRITE_TAC[keccak_alt2_regs; round_constants; CONS_11;
-      WORDLIST_FROM_MEMORY_CONV
-       `wordlist_from_memory(rc,24) s:int64 list`] THEN
-    ENSURES_INIT_TAC "s0" THEN
-    X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC [1] THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];
-
-    (*** The scattering of the state ***)
-
-    REWRITE_TAC[keccak_alt2_regs; round_constants; CONS_11;
-      WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`;
-      WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(a,25) s:int64 list`] THEN
-    MP_TAC(ISPECL [`A:int64 list`; `24`] LENGTH_KECCAK) THEN
-    ASM_REWRITE_TAC[] THEN REWRITE_TAC[LENGTH_EQ_25] THEN
-    DISCH_THEN(fun th -> ONCE_REWRITE_TAC[th]) THEN
-    CONV_TAC(TOP_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[CONS_11] THEN
-    ENSURES_INIT_TAC "s0" THEN
-    X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC (1--29) THEN
-    REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
-      CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
-      check (can (term_match [] `read qqq s:int256 = xxx`) o concl))) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REPEAT CONJ_TAC THEN BITBLAST_TAC]);;
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  X_CHOOSE_TAC `f:int64->int64->num->num->(uarch_event)list`
+   SHA3_KECCAK_F1600_ALT2_FULL THEN
+  MATCH_MP_TAC(ISPEC `read events:x86state->(uarch_event)list`
+                ENSURES_ANY_INITIAL) THEN
+  X_GEN_TAC `e:(uarch_event)list` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `a:int64`; `rc:int64`; `A:int64 list`;
+    `pc:num`; `tab:num`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_MONO_ALL) THEN
+  SIMP_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
 (* The subroutine forms, without and with the IBT landing pad.               *)
@@ -621,9 +676,6 @@ let SHA3_KECCAK_F1600_ALT2_SUBROUTINE_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 (* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
-
-needs "x86/proofs/consttime.ml";;
-needs "x86/proofs/subroutine_signatures.ml";;
 
 (*** Not yet in the library, so not in subroutine_signatures, but its
  *** signature is that of sha3_keccak_f1600_alt

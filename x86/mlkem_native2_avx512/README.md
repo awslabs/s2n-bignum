@@ -113,18 +113,19 @@ version: those of the two permutations, and those of the functions of the
 image, the same theorems as for the AVX2 version (see
 `../mlkem_native2/README.md`) about the image of this one.
 
-- The permutations, against `keccak 24` of
-  `../proofs/utils/keccak_spec.ml`, with their constant-time and memory
-  safety: `../proofs/sha3_keccak4_f1600_avx512.ml` and
+- The permutations, against `keccak 24` of `../proofs/utils/keccak_spec.ml`,
+  with their constant-time and memory safety:
+  `../proofs/sha3_keccak4_f1600_avx512.ml` and
   `../proofs/sha3_keccak_f1600_avx512.ml`, with the common parts in
-  `../proofs/utils/keccak_avx512.ml`, and the theorems of correctness and
-  safety in one for the callers in the image in
-  `../proofs/utils/keccak_avx512_full.ml`. As for the AVX2 permutations,
-  each round is simulated with the lanes of the registers as variables and
-  each lane of the new state is compared with that of `keccak_round` by
-  bit-blasting; the model gives `vpternlogq` as the disjunction of the
-  minterms of its immediate, which the simulation turns into the XOR and
-  AND-NOT forms first.
+  `../proofs/utils/keccak_avx512.ml`, and theorems of correctness and safety
+  in one ("FULL"): those of the cores, in the files of the permutations,
+  from which their correctness theorems follow, and their subroutine forms
+  for the callers in the image in `../proofs/utils/keccak_avx512_full.ml`.
+  As for the AVX2 permutations, each round is simulated with the lanes of
+  the registers as variables and each lane of the new state is compared with
+  that of `keccak_round` by bit-blasting; the model gives `vpternlogq` as
+  the disjunction of the minterms of its immediate, which the simulation
+  turns into the XOR and AND-NOT forms first.
 - The functions of the image, in copies of the files of the AVX2 version
   with `_avx512` added to their names, the names of the functions in them,
   and those of the theorems about the image

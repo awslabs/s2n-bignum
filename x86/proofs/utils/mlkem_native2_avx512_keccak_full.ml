@@ -19,14 +19,6 @@ needs "x86/proofs/utils/mlkem_native2_avx512_noise.ml";;
 needs "x86/proofs/utils/keccak_avx512_full.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* The events of the safety theorems split off the end of a goal that also   *)
-(* has the facts of the correctness theorems, the latter proved by ctac, as  *)
-(* in the AVX2 version.                                                      *)
-(* ------------------------------------------------------------------------- *)
-
-let EVENTS_SPLIT_TAC = KECCAK_AVX512_EVENTS_SPLIT_TAC;;
-
-(* ------------------------------------------------------------------------- *)
 (* The x1 permutation sha3_keccak_f1600_avx512 in the image, from            *)
 (* SHA3_KECCAK_F1600_AVX512_SUBROUTINE_FULL as for                           *)
 (* SHA3_KECCAK_F1600_AVX512_IMAGE_CORRECT and                                *)

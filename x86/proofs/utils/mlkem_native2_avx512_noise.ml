@@ -440,17 +440,6 @@ let READ_MEMORY_BYTES_192_PRF_3_X86 = prove
  *** positions, with tactics for the frame and the side conditions.
  ***)
 
-let ENSURES_MONO_ALL = prove
- (`!(step:A->A->bool) P Q C P' Q' C'.
-     ensures step P Q C
-     ==> (!s. P' s ==> P s) /\ (!s. Q s ==> Q' s) /\
-         (!s s'. C s s' ==> C' s s')
-         ==> ensures step P' Q' C'`,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES_POSTCONDITION_THM_GEN THEN
-  MAP_EVERY EXISTS_TAC [`C:A->A->bool`; `Q:A->bool`] THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN
-  EXISTS_TAC `P:A->bool` THEN ASM_REWRITE_TAC[]);;
-
 let SUBSUMED_FRAME_TAC (asl,w) =
   let x,b = dest_forall w in let y,b2 = dest_forall b in
   let a,c = dest_imp b2 in

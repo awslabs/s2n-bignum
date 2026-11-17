@@ -146,20 +146,21 @@ and the NOPs of the padding between functions. All are in the x86 model.
   jobs and noise), against `mlkem_sample_ntt` (in the order of the
   coefficients of the x86 NTT domain, as `mlkem_unpack` leaves them),
   `sha3_256`, `shake256` and the coefficients of `mlkem_cbd`
-  (`../proofs/mlkem_gen_matrix_k2.ml`, `_k3.ml` and `_k4.ml`, with the
-  code and the common parts in `../proofs/mlkem_gen_matrix.ml` and
-  `../proofs/utils/mlkem_native2_matrix.ml`, and the lemmas on FIPS 203
-  of the proofs of mlkem-native's compiled C in
+  (`../proofs/mlkem_gen_matrix_k2.ml`, `_k3.ml` and `_k4.ml`, with the code
+  and the common parts in `../proofs/mlkem_gen_matrix.ml` and
+  `../proofs/utils/mlkem_native2_matrix.ml`, and the lemmas on FIPS 203 of
+  the proofs of mlkem-native's compiled C in
   `../proofs/utils/mlkem_native_fips203.ml`). Its constant-time and memory
-  safety, with the events a function of the addresses and of the public
-  seed rho (and, for decapsulation, the digest H(ek) of the first hash job
-  as a result), are in `../proofs/mlkem_gen_matrix_k2_safe.ml`,
-  `_k3_safe.ml` and `_k4_safe.ml`, with the common parts in
+  safety, with the events a function of the addresses and of the public seed
+  rho (and, for decapsulation, the digest H(ek) of the first hash job as a
+  result), are in `../proofs/mlkem_gen_matrix_k2_safe.ml`, `_k3_safe.ml` and
+  `_k4_safe.ml`, with the common parts in
   `../proofs/utils/mlkem_native2_gm_safe.ml`, the tools for the callees in
-  `../proofs/utils/mlkem_native2_safety.ml`, and theorems of correctness
-  and safety in one for the Keccak permutations and the rejection sampler
-  (`../proofs/utils/mlkem_native2_keccak_full.ml` and
-  `../proofs/utils/mlkem_native2_rej_full.ml`).
+  `../proofs/utils/mlkem_native2_safety.ml`, and theorems of correctness and
+  safety in one for the Keccak permutations and the rejection sampler
+  (`../proofs/utils/mlkem_native2_keccak_full.ml`, with those of the cores
+  of the permutations, from which their correctness theorems follow, in
+  their own files, and `../proofs/utils/mlkem_native2_rej_full.ml`).
 - `mlkem_getnoise` for the configurations that the API uses (n = 4, 7, 8,
   9 with eta1 = 2, and the first 4 of 4 or 2 of 5 with eta1 = 3), against
   `mlkem_prf` and the coefficients of `mlkem_cbd`, with its constant-time

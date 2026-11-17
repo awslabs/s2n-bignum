@@ -144,3 +144,28 @@ let KECCAK_AVX512_SAFE_SIM_TAC execth n =
    (1--n) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[VAL_WORD_SUB_EQ_0];;
+
+needs "x86/proofs/consttime.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* For the theorems that are correctness and safety in one ("FULL"): the     *)
+(* events of the rest of an iteration reassociated to split off those of its *)
+(* next round, and the branch back as a condition on the iteration.          *)
+(* ------------------------------------------------------------------------- *)
+
+let KECCAK_AVX512_EVENTS_REASSOC_TAC =
+  CONV_TAC(ONCE_DEPTH_CONV(fun t ->
+    if is_eq t && is_var(lhs t) && name_of(lhs t) = "e2"
+    then RAND_CONV(REWR_CONV(GSYM APPEND_ASSOC)) t
+    else failwith "KECCAK_AVX512_EVENTS_REASSOC_TAC"));;
+
+let KECCAK_AVX512_ZF_BRANCH = prove
+ (`!rc:int64 i.
+     i < 6
+     ==> (~(val (word_sub (word_add (word_add rc (word (32 * i))) (word 32))
+                          (word_add rc (word 192))) = 0) <=> i + 1 < 6)`,
+  SIMP_TAC[KECCAK_AVX512_ZF] THEN ARITH_TAC);;
+
+let KECCAK_AVX512_WORD_COND = prove
+ (`!p x y. (if p then word x else word y):int64 = word(if p then x else y)`,
+  MESON_TAC[]);;
