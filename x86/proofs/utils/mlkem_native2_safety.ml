@@ -63,6 +63,9 @@ let FRESH_E2_TAC (asl,w as gl) =
 let NATIVE2_DISCHARGE_FRESH_TAC =
   FRESH_E2_TAC THEN NATIVE2_DISCHARGE_SAFETY_TAC;;
 
+let NATIVE2_DISCHARGE_FRESH_NORM_TAC normtac =
+  FRESH_E2_TAC THEN NATIVE2_DISCHARGE_SAFETY_NORM_TAC normtac;;
+
 (* ------------------------------------------------------------------------- *)
 (* A call at state k by the theorem with the label in the assumptions (put   *)
 (* back after), transformed by f (e.g. specialized but for e_tail) and with  *)

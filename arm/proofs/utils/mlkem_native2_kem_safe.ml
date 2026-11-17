@@ -1084,7 +1084,7 @@ let MLKEM_NATIVE2_PKE_ENCRYPT_SAFE_TAC k ex =
   MAP_EVERY (fun n -> ENSURES_PRESERVED_TAC ("x"^string_of_int n^"_init")
               (mk_const("X"^string_of_int n,[]))) (19--29) THEN
   ENSURES_INIT_TAC "s0" THEN
-  NATIVE2_RUN_TAC ex derive calls 0 THEN
+  NATIVE2_SAFE_RUN_TAC ex derive calls 0 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   MEMACCESS_NUMERALS_TAC THEN NATIVE2_DISCHARGE_FRESH_TAC;;
 
@@ -1116,7 +1116,7 @@ let MLKEM_NATIVE2_PKE_DECRYPT_SAFE_TAC k ex =
   MAP_EVERY (fun n -> ENSURES_PRESERVED_TAC ("x"^string_of_int n^"_init")
               (mk_const("X"^string_of_int n,[]))) (19--29) THEN
   ENSURES_INIT_TAC "s0" THEN
-  NATIVE2_RUN_TAC ex derive calls 0 THEN
+  NATIVE2_SAFE_RUN_TAC ex derive calls 0 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   MEMACCESS_NUMERALS_TAC THEN NATIVE2_DISCHARGE_FRESH_TAC;;
 
@@ -1281,7 +1281,7 @@ let kp_safe_parts k ex gmth =
 let MLKEM_NATIVE2_KEYPAIR_DERAND_SAFE_TAC k ex gmth =
   let setup,derive,calls,finish = kp_safe_parts k ex gmth in
   MLKEM_SAMPLENTT_TERMINATES_TAC (api_terminates_tm k (kp_rho k) true)
-   (setup THEN NATIVE2_RUN_TAC ex derive calls 0 THEN finish);;
+   (setup THEN NATIVE2_SAFE_RUN_TAC ex derive calls 0 THEN finish);;
 
 (* ------------------------------------------------------------------------- *)
 (* enc_derand: the modulus check by its FULL theorem and the case split on   *)
@@ -1416,9 +1416,9 @@ let en_safe_parts k ex gmth peth =
 let MLKEM_NATIVE2_ENC_DERAND_SAFE_TAC k ex gmth peth =
   let setup,derive,calls,finish = en_safe_parts k ex gmth peth in
   MLKEM_SAMPLENTT_TERMINATES_TAC (api_terminates_tm k (en_rho k) true)
-   (setup THEN NATIVE2_RUN_TAC ex derive calls 0 THEN
+   (setup THEN NATIVE2_SAFE_RUN_TAC ex derive calls 0 THEN
     API_BOOL_CASE_TAC (parse_term("mlkem_ek_check "^api_param k^" ek")) THEN
-    ON_STATE(NATIVE2_RUN_TAC ex derive calls) THEN finish);;
+    ON_STATE(NATIVE2_SAFE_RUN_TAC ex derive calls) THEN finish);;
 
 (* ------------------------------------------------------------------------- *)
 (* dec: K-PKE.Decrypt, G, the matrix with H(ek) as a result, ek and h as     *)
@@ -1579,7 +1579,7 @@ let de_safe_parts k ex gmth (pdth,peth) =
 let MLKEM_NATIVE2_DEC_SAFE_TAC k ex gmth (pdth,peth) =
   let setup,derive,calls,finish = de_safe_parts k ex gmth (pdth,peth) in
   MLKEM_SAMPLENTT_TERMINATES_TAC (api_terminates_tm k (de_rho k) true)
-   (setup THEN NATIVE2_RUN_TAC ex derive calls 0 THEN
+   (setup THEN NATIVE2_SAFE_RUN_TAC ex derive calls 0 THEN
     ON_STATE(DE_HASH_SAFE_BRANCH_TAC k) THEN
     API_BOOL_CASE_TAC `sha3_256 ek = h` THEN
-    ON_STATE(NATIVE2_RUN_TAC ex derive calls) THEN finish);;
+    ON_STATE(NATIVE2_SAFE_RUN_TAC ex derive calls) THEN finish);;

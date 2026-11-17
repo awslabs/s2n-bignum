@@ -731,9 +731,81 @@ let CBD3_CALL_TAC exec k gl =
    ([`read RDI s`; `read RSI s`; bl; `pc + mlkem_cbd3`] @ return_args)
    (k+1) gl;;
 
-(*** For the safety proofs: the bounds of the callees' accesses evaluated,
- *** and the discharge of the safety property with the APPENDs normalized
+(* ------------------------------------------------------------------------- *)
+(* For the safety proofs. The events of a long simulation are a big term,    *)
+(* which the steps rewrite, and every step of the proof is instantiated with *)
+(* them when the events function of the theorem (a metavariable) is found at *)
+(* the end. So NATIVE2_SAFE_RUN_TAC, the driver for these proofs, puts the   *)
+(* events every 50 steps as APPEND (T x1 ... xn) e, T a new constant defined *)
+(* as the events since e in terms of their free variables x1 ... xn, and the *)
+(* discharge of the safety property at the end expands these definitions for *)
+(* the memory accesses only, which it proves segment by segment: the runs of *)
+(* events and the events of the calls.                                       *)
+(* ------------------------------------------------------------------------- *)
+
+let native2_trace_count = ref 0;;
+
+let native2_trace_defs = ref ([]:thm list);;
+
+(*** The events at state k, CONS and APPEND down to e, as APPEND (T x1 ...
+ *** xn) e, unless they are already in that form
  ***)
+
+let NATIVE2_TRACE_DEFINE_TAC k (asl,w as gl) =
+  let lhs = mk_comb(`read events`,state_of k) in
+  match List.find_opt (fun (_,th) -> try lhand(concl th) = lhs
+                                     with Failure _ -> false) asl with
+    None -> ALL_TAC gl
+  | Some(_,th) ->
+    let t = rand(concl th) and e = `e:(uarch_event)list` in
+    let rec prefix t =
+      if t = e then None else
+      match t with
+        Comb(Comb(Const("CONS",_) as c,h),tl) ->
+          (match prefix tl with
+             None -> Some(mk_comb(mk_comb(c,h),mk_list([],type_of h)))
+           | Some x -> Some(mk_comb(mk_comb(c,h),x)))
+      | Comb(Comb(Const("APPEND",_) as a,l),tl) ->
+          (match prefix tl with
+             None -> Some l
+           | Some x -> Some(mk_comb(mk_comb(a,l),x)))
+      | _ -> failwith "NATIVE2_TRACE_DEFINE_TAC" in
+    let defined x =
+      let h = fst(strip_comb x) in
+      is_const h &&
+      (let n = fst(dest_const h) in
+       String.length n > 14 && String.sub n 0 14 = "native2_trace_") in
+    match (try prefix t with Failure _ -> None) with
+      None -> ALL_TAC gl
+    | Some x when defined x -> ALL_TAC gl
+    | Some x ->
+      let fvs = frees x in
+      incr native2_trace_count;
+      let name = "native2_trace_"^string_of_int(!native2_trace_count) in
+      let ty = itlist (mk_fun_ty o type_of) fvs (type_of x) in
+      let def = new_definition(mk_eq(list_mk_comb(mk_var(name,ty),fvs),x)) in
+      native2_trace_defs := def :: !native2_trace_defs;
+      let eqth = prove(mk_eq(t,list_mk_icomb "APPEND" [x; e]),
+                       REWRITE_TAC[APPEND; GSYM APPEND_ASSOC]) in
+      let th' = TRANS th (TRANS eqth
+                  (AP_THM (AP_TERM (rator(rator(rand(concl eqth))))
+                                   (SYM(SPECL fvs def))) e)) in
+      RULE_ASSUM_TAC(fun th0 -> if concl th0 = concl th then th' else th0) gl;;
+
+(*** The driver for the safety proofs: NATIVE2_RUN_TAC with the events put
+ *** as above every 50 steps
+ ***)
+
+let rec NATIVE2_SAFE_RUN_TAC exec derive calls k gl =
+  let off = get_pc_offset k gl in
+  if off < 0 then ALL_TAC gl else
+  let dtac = try (assoc off derive) k with Failure _ -> ALL_TAC in
+  let ctac = try (assoc off calls) k
+             with Failure _ -> X86_STEPS_TAC exec [k+1] in
+  ((if k mod 50 = 0 then NATIVE2_TRACE_DEFINE_TAC k else ALL_TAC) THEN
+   dtac THEN ctac THEN NATIVE2_SAFE_RUN_TAC exec derive calls (k+1)) gl;;
+
+(*** The bounds of the callees' accesses evaluated ***)
 
 let MEMACCESS_NUMERALS_TAC =
   RULE_ASSUM_TAC(fun th ->
@@ -742,7 +814,35 @@ let MEMACCESS_NUMERALS_TAC =
        name_of(fst(strip_comb c)) = "memaccess_inbounds"
     then CONV_RULE(DEPTH_CONV WORD_NUM_RED_CONV) th else th);;
 
-let NATIVE2_DISCHARGE_SAFETY_TAC =
+(*** The memory accesses of the events, the definitions above expanded and
+ *** the addresses normalized by normtac, as an APPEND of the runs of
+ *** events (as lists) and of the events of the calls, each proved within
+ *** the bounds by itself (the latter by the facts of the calls); if that
+ *** fails, as for the whole events
+ ***)
+
+let rec NATIVE2_SEGMENTS_CONV t =
+  match t with
+    Comb(Comb(Const("APPEND",_),_),_) -> RAND_CONV NATIVE2_SEGMENTS_CONV t
+  | Comb(Comb(Const("CONS",_),_),_) ->
+      (CONS_TO_APPEND_CONV THENC RAND_CONV NATIVE2_SEGMENTS_CONV) t
+  | _ -> REFL t;;
+
+let NATIVE2_MEMACCESS_SEGMENTS_TAC normtac =
+  W(fun _ -> REWRITE_TAC !native2_trace_defs) THEN normtac THEN
+  REWRITE_TAC[WORD_ADD_0; GSYM APPEND_ASSOC; APPEND_NIL] THEN
+  ((CONV_TAC(RATOR_CONV(RATOR_CONV(RAND_CONV NATIVE2_SEGMENTS_CONV))) THEN
+    REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND; APPEND_NIL] THEN
+    REPEAT CONJ_TAC THEN
+    ((DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC THEN NO_TAC) ORELSE
+     DISCHARGE_MEMACCESS_INBOUNDS_USING_ASM_TAC) THEN NO_TAC) ORELSE
+   DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
+
+(*** The discharge of the safety property with the APPENDs normalized, and
+ *** with normtac for the addresses in the expanded events
+ ***)
+
+let NATIVE2_DISCHARGE_SAFETY_NORM_TAC normtac =
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
   CONJ_TAC THENL [EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
   CONJ_TAC THENL
@@ -750,4 +850,6 @@ let NATIVE2_DISCHARGE_SAFETY_TAC =
     RULE_ASSUM_TAC(REWRITE_RULE
      [WORD_ADD_0; GSYM APPEND_ASSOC; APPEND_NIL]) THEN
     REWRITE_TAC[WORD_ADD_0; GSYM APPEND_ASSOC; APPEND_NIL] THEN
-    DISCHARGE_MEMACCESS_INBOUNDS_TAC];;
+    NATIVE2_MEMACCESS_SEGMENTS_TAC normtac];;
+
+let NATIVE2_DISCHARGE_SAFETY_TAC = NATIVE2_DISCHARGE_SAFETY_NORM_TAC ALL_TAC;;

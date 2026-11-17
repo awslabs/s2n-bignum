@@ -347,7 +347,7 @@ let MLKEM_GETNOISE_INSTANCE_SAFE_TAC =
   MAP_EVERY (fun n -> ENSURES_PRESERVED_TAC ("x"^string_of_int n^"_init")
               (mk_const("X"^string_of_int n,[]))) (19--29) THEN
   ENSURES_INIT_TAC "s0" THEN
-  NATIVE2_RUN_TAC MLKEM_GETNOISE_EXEC
+  NATIVE2_SAFE_RUN_TAC MLKEM_GETNOISE_EXEC
    [layout "mlkem_getnoise_postloop" + 24, SIMP_REG_TAC `X1` [COND_ID]]
    getnoise_safe_calls 0 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN

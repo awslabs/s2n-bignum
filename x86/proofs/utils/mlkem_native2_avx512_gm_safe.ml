@@ -1312,7 +1312,7 @@ let GM_SAFE_INSTANCE_TAC n (asl,w as gl) =
   let vars,lens,absorbs,full = gm_safe_params w in
   let spoff = n - 3080 in
   (GM_SAFE_SETUP_TAC n absorbs THEN
-   NATIVE2_RUN_TAC MLKEM_GEN_MATRIX_AVX512_EXEC
+   NATIVE2_SAFE_RUN_TAC MLKEM_GEN_MATRIX_AVX512_EXEC
      (gm_safe_derive_jobs spoff full)
      (gm_safe_calls_jobs spoff lens vars full) 0 THEN
    GM_SAFE_FINALE_TAC) gl;;

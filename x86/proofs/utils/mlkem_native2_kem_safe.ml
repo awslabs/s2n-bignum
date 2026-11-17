@@ -399,10 +399,33 @@ let api_safe_calls exec vars names lems =
          NATIVE2_SAFE_THM_TAC exec vars label (0,mlkem_native2_image_mc) I
            ilist) lems;;
 
+(*** The addresses in the events of the definitions of NATIVE2_SAFE_RUN_TAC,
+ *** expanded at the end, which were in terms of fb, normalized as
+ *** API_SAFE_EXPAND_TAC normalizes those of the facts: stackpointer plus or
+ *** minus an offset from api_ofs, as the facts of the calls have them
+ ***)
+
+let API_SAFE_GOAL_EXPAND_TAC =
+  let pat = `word_sub (word_add stackpointer (word d)) (word c):int64` in
+  REWRITE_TAC[WORD_SUB_SUB_NUM] THEN CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  (fun (asl,w as gl) ->
+     let subs = setify(find_terms (fun t -> can (term_match [] pat) t &&
+                                            is_numeral(rand(rand t))) w) in
+     let fbsub t =
+       let d = rand(rand(lhand t)) and c = rand(rand t) in
+       let lo = find_asm (fun a -> is_binary "<=" a && rand a = d &&
+                                   is_numeral(lhand a)) gl in
+       let cth = MP (ARITH_RULE(mk_imp(concl lo,
+                   mk_binop `(<=):num->num->bool` c d))) lo in
+       MP (SPECL [`stackpointer:int64`; d; c] API_FB_SUB) cth in
+     REWRITE_TAC (mapfilter fbsub subs) gl);;
+
 let API_SAFE_FINAL_TAC =
   API_EXPAND_FB_TAC THEN API_SAFE_EXPAND_TAC THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  MEMACCESS_NUMERALS_TAC THEN NATIVE2_DISCHARGE_FRESH_TAC;;
+  MEMACCESS_NUMERALS_TAC THEN
+  NATIVE2_DISCHARGE_FRESH_NORM_TAC API_SAFE_GOAL_EXPAND_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* pke_decrypt.                                                              *)
@@ -435,7 +458,7 @@ let pd_safe_parts k ex =
 
 let MLKEM_NATIVE2_PKE_DECRYPT_SAFE_TAC k ex =
   let setup,calls = pd_safe_parts k ex in
-  setup THEN NATIVE2_RUN_TAC ex [] calls 11 THEN API_SAFE_FINAL_TAC;;
+  setup THEN NATIVE2_SAFE_RUN_TAC ex [] calls 11 THEN API_SAFE_FINAL_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* pke_encrypt.                                                              *)
@@ -469,7 +492,7 @@ let pe_safe_parts k ex =
 
 let MLKEM_NATIVE2_PKE_ENCRYPT_SAFE_TAC k ex =
   let setup,calls = pe_safe_parts k ex in
-  setup THEN NATIVE2_RUN_TAC ex [] calls 11 THEN API_SAFE_FINAL_TAC;;
+  setup THEN NATIVE2_SAFE_RUN_TAC ex [] calls 11 THEN API_SAFE_FINAL_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* The modulus check mlkem_check_encoding as correctness and safety in one   *)
@@ -1397,10 +1420,10 @@ let de_safe_parts k ex gmth (pdth,peth) =
 
 let MLKEM_NATIVE2_DEC_SAFE_TAC k ex gmth (pdth,peth) =
   let setup,calls = de_safe_parts k ex gmth (pdth,peth) in
-  setup THEN NATIVE2_RUN_TAC ex [] calls 11 THEN
+  setup THEN NATIVE2_SAFE_RUN_TAC ex [] calls 11 THEN
   ON_STATE DE_HASH_SAFE_BRANCH_TAC THEN
   API_BOOL_CASE_TAC `sha3_256 ek = h` THEN
-  ON_STATE(NATIVE2_RUN_TAC ex [] calls) THEN API_SAFE_FINAL_TAC;;
+  ON_STATE(NATIVE2_SAFE_RUN_TAC ex [] calls) THEN API_SAFE_FINAL_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* enc_derand: the modulus check by its FULL theorem and the case split on   *)
@@ -1498,10 +1521,10 @@ let EN_CHECK_BRANCH = prove
 
 let MLKEM_NATIVE2_ENC_DERAND_SAFE_TAC k ex gmth peth =
   let setup,calls = en_safe_parts k ex gmth peth in
-  setup THEN NATIVE2_RUN_TAC ex [] calls 11 THEN
+  setup THEN NATIVE2_SAFE_RUN_TAC ex [] calls 11 THEN
   RULE_ASSUM_TAC(REWRITE_RULE[EN_CHECK_BRANCH]) THEN
   API_BOOL_CASE_TAC (parse_term("mlkem_ek_check "^api_param k^" ek")) THEN
-  ON_STATE(NATIVE2_RUN_TAC ex [] calls) THEN API_SAFE_FINAL_TAC;;
+  ON_STATE(NATIVE2_SAFE_RUN_TAC ex [] calls) THEN API_SAFE_FINAL_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* keypair_derand: G(d || k) by its FULL theorem, rho as a variable for the  *)
@@ -1609,4 +1632,4 @@ let kp_safe_parts k ex gmth =
 
 let MLKEM_NATIVE2_KEYPAIR_DERAND_SAFE_TAC k ex gmth =
   let setup,calls,finish = kp_safe_parts k ex gmth in
-  setup THEN NATIVE2_RUN_TAC ex [] calls 11 THEN finish;;
+  setup THEN NATIVE2_SAFE_RUN_TAC ex [] calls 11 THEN finish;;

@@ -382,7 +382,7 @@ let MLKEM_GETNOISE_INSTANCE_SAFE_TAC =
                 (String.lowercase_ascii(fst(dest_const r))^"_init") r)
    [`RBX`; `RBP`; `R12`; `R13`; `R14`; `R15`] THEN
   ENSURES_INIT_TAC "s0" THEN
-  NATIVE2_RUN_TAC MLKEM_GETNOISE_EXEC
+  NATIVE2_SAFE_RUN_TAC MLKEM_GETNOISE_EXEC
    [layout "mlkem_getnoise_postloop" + 39, SIMP_REG_TAC `RCX` [COND_ID]]
    getnoise_safe_calls 0 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
