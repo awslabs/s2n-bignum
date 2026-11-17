@@ -876,34 +876,51 @@ let ENSURES_PRESERVED_DREG_TAC =
     CONV_TAC(ONCE_DEPTH_CONV COMPONENT_CANON_CONV) THEN
     REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_ZEROTOP_64;
                 bottomhalf; subword; read; FUN_EQ_THM] THEN
-    REWRITE_TAC[word_zx; DIV_1; EXP; WORD_MOD_SIZE])
-  and sth = prove
-   (`valid_component c /\
-     R ,, R = R /\
-     MAYCHANGE [c :> tophalf] subsumed R /\
-     ensures step P Q (R ,, MAYCHANGE [c])
-     ==> ensures step P Q (R ,, MAYCHANGE [c :> bottomhalf])`,
-    REWRITE_TAC[MAYCHANGE_SING] THEN
-    REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] ENSURES_FRAME_SUBSUMED) THEN
-    FIRST_ASSUM(fun th ->
-      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [SYM th]) THEN
-    REWRITE_TAC[GSYM SEQ_ASSOC] THEN MATCH_MP_TAC SUBSUMED_SEQ THEN
-    REWRITE_TAC[SUBSUMED_REFL] THEN
-    FIRST_ASSUM(SUBST1_TAC o SYM o MATCH_MP ASSIGNS_TOPHALF_BOTTOMHALF) THEN
-    MATCH_MP_TAC SUBSUMED_SEQ THEN ASM_REWRITE_TAC[SUBSUMED_REFL]) in
+    REWRITE_TAC[word_zx; DIV_1; EXP; WORD_MOD_SIZE]) in
   let alist = zip [`D8`; `D9`; `D10`; `D11`; `D12`; `D13`; `D14`; `D15`]
                   (map (lhand o lhand o concl) (CONJUNCTS pth)) in
   let dregs = map fst alist in
+  (* The frame R ,, MAYCHANGE [c :> bottomhalf] is widened to                *)
+  (* R ,, MAYCHANGE [c], which is the same when R may change c :> tophalf:   *)
+  (* R ,, MAYCHANGE [c] = R ,, MAYCHANGE [c :> tophalf] ,,                   *)
+  (* MAYCHANGE [c :> bottomhalf] = R ,, MAYCHANGE [c :> bottomhalf], where   *)
+  (* R ,, MAYCHANGE [c :> tophalf] = R moves the write to c :> tophalf back  *)
+  (* through R, as a chain of ASSIGNS, to the same write in R.               *)
+  let seq_assoc = GEN_REWRITE_CONV TOP_DEPTH_CONV [SEQ_ASSOC]
+  and seq_unassoc = GEN_REWRITE_CONV TOP_DEPTH_CONV [GSYM SEQ_ASSOC] in
+  let widen_conv f =
+    let th1 = seq_assoc f in
+    let r,b = dest_binary ",," (rand(concl th1)) in
+    let c = match b with
+        Comb(Const("MAYCHANGE",_),
+             Comb(Comb(Const("CONS",_),
+                       Comb(Comb(Const(":>",_),c),Const("bottomhalf",_))),
+                  Const("NIL",_))) -> c
+      | _ -> failwith "the frame does not end with a write to a bottomhalf" in
+    let op = rator(rator(rand(concl th1))) in
+    let vth = VALID_COMPONENT_CONV
+                (mk_icomb(`valid_component:(S,V)component->bool`,c)) in
+    let vth = if is_eq(concl vth) then EQT_ELIM vth else vth in
+    let split = MATCH_MP MAYCHANGE_TOPHALF_BOTTOMHALF vth in
+    let t = lhand(rand(concl split)) in
+    let cr = MAYCHANGE_CANON_CONV r and ct = MAYCHANGE_CANON_CONV t in
+    let n,ath = ASSIGNS_MOVE_BACK_CONV ASSIGNS_IDEMPOT_CONV
+                  (mk_comb(mk_comb(op,rand(concl cr)),rand(concl ct))) in
+    if n <> 1 || rand(concl ath) <> rand(concl cr) then
+      failwith ("the rest of the frame does not write `" ^ string_of_term t ^
+                "` once")
+    else
+    let abs = TRANS (MK_COMB(AP_TERM op cr,ct)) (TRANS ath (SYM cr)) in
+    let wth = TRANS (AP_TERM (mk_comb(op,r)) split)
+                (TRANS (ISPECL [r;t;b] SEQ_ASSOC)
+                   (AP_THM (AP_TERM op abs) b)) in
+    TRANS th1 (TRANS (SYM wth) (seq_unassoc(lhand(concl wth)))) in
+  let fast = CONV_TAC(RAND_CONV widen_conv) in
   fun pname ctm ->
     if not (mem ctm dregs) then ENSURES_PRESERVED_TAC pname ctm else
     let ctm' = assoc ctm alist in
     ENSURES_PRESERVED_TAC pname ctm' THEN REWRITE_TAC[pth] THEN
-    TRY(REWRITE_TAC[SEQ_ASSOC] THEN MATCH_MP_TAC sth THEN
-        CONJ_TAC THENL [CONV_TAC VALID_COMPONENT_CONV; ALL_TAC] THEN
-        CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC] THEN
-        CONJ_TAC THENL [SUBSUMED_MAYCHANGE_TAC THEN NO_TAC; ALL_TAC] THEN
-        REWRITE_TAC[GSYM SEQ_ASSOC]);;
+    fast;;
 
 (* ------------------------------------------------------------------------- *)
 (* Fix up call/return boilerplate given core correctness.                    *)
