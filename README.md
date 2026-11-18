@@ -437,6 +437,32 @@ configured as following:
 
 - It is assumed that s2n-bignum is run on 64-bit mode.
 
+### Running proofs in parallel
+
+Proofs can run independent parts at the same time through
+`common/par.ml` (`par_spawn`, `prove_async`, `PAR_THENL`,
+`par_run_jobs`, ...), whose header also says how to write such proofs.
+By default the parts run one after the other, as in plain HOL Light. The
+proofs of mlkem-native and mldsa-native use it: the session that checks
+a whole build runs its proof files as independent jobs.
+
+In `arm` and in `x86`, `HOL_PAR=1` builds the proofs with the backend
+`common/par_domains.ml`, which runs the parts on `S2N_PAR_DOMAINS`
+OCaml 5 domains (run `make clean` when switching: the binaries do not
+record the backend):
+
+    make clean
+    make HOLDIR=<hol-light> HOL_PAR=1 <target>.native
+    S2N_PAR_DOMAINS=12 make HOLDIR=<hol-light> HOL_PAR=1 <target>.correct
+
+This needs a HOL Light built for OCaml 5 with `HOLLIGHT_USE_MODULE=1`
+whose kernel and core can be called from several domains at once, such
+as [PR 214](https://github.com/jrh13/hol-light/pull/214); stock HOL
+Light cannot. The header of `common/par_domains.ml` states precisely
+what HOL Light must guarantee; of that, only the kernel's soundness
+bears on the soundness of the proofs. `HOL_PAR=1` asserts these
+guarantees; nothing checks them.
+
 ### Benchmarking and "constant time"
 
 The benchmarking setup included in the repository can be invoked, as mentioned

@@ -8,6 +8,7 @@
 (* ========================================================================= *)
 
 needs "Library/bitsize.ml";;
+needs "common/par.ml";;
 needs "Library/floor.ml";;
 needs "Library/iter.ml";;
 needs "Library/pocklington.ml";;
@@ -1249,8 +1250,17 @@ let (WORD_FORALL_OFFSET_RULE:int->thm->thm) =
 (* Ocaml reference variable for platform specific conversions *)
 let extra_word_CONV = ref [NO_CONV];;
 
+(* Conversions that a proof adds for itself while it runs, tried before      *)
+(* those of extra_word_CONV: per domain, and a computation that a proof      *)
+(* spawns starts with the value of the proof and leaves it unchanged (see    *)
+(* common/par.ml), so that proofs that run at the same time do not see each  *)
+(* other's. Files that are loaded before the proofs run, such as spec files, *)
+(* can change extra_word_CONV itself.                                        *)
+let extra_word_CONV_local = par_local_ref (fun () -> ([]:conv list));;
+
 (* Delay introduction of extra conversions *)
-let apply_extra_word_convs tm = FIRST_CONV (!extra_word_CONV) tm;;
+let apply_extra_word_convs tm =
+  FIRST_CONV (!(extra_word_CONV_local ()) @ !extra_word_CONV) tm;;
 
 (* Rewrite rules to apply before rewriting reads from previous states *)
 let extra_early_rewrite_rules = ref [];;
@@ -2110,17 +2120,23 @@ let HINT_EXISTS_REFL_TAC: tactic =
    SAFE_META_EXISTS_TAC receives a reference to list of variables that are
    available when META_EXISTS_TAC is run.
    The reference is then passed to SAFE_UNIFY_REFL_TAC, which checks whether
-   any unallowed variable is used during instantiation. *)
+   any unallowed variable is used during instantiation.
+   Both go through safe_meta_vars_cell, which maps the reference given to the
+   cell actually used: the identity, except that consttime.ml maps its global
+   allowed_vars_e to a cell of the calling domain (see common/par.ml), so that
+   proofs on several domains do not share it. *)
+let safe_meta_vars_cell = ref (fun (r:term list ref) -> r);;
+
 let SAFE_META_EXISTS_TAC (freevars:term list ref): tactic =
   fun (asl,w) ->
     let fvs = freesl (w::(map (concl o snd) asl)) in
-    let _ = freevars := fvs in
+    let _ = (!safe_meta_vars_cell freevars) := fvs in
     META_EXISTS_TAC (asl,w);;
 
 let SAFE_UNIFY_REFL_TAC (allowed_vars_ref:term list ref)
     (allowed_var_prefixes_ref:string list ref): tactic =
   fun (asl,w) ->
-    let allowed_vars = !allowed_vars_ref in
+    let allowed_vars = !(!safe_meta_vars_cell allowed_vars_ref) in
     let allowed_var_prefixes = !allowed_var_prefixes_ref in
 
     let w_lhs,w_rhs = dest_eq w in

@@ -7,6 +7,8 @@
 (* Additional utilities that could be part of HOL Light libraries.           *)
 (* ========================================================================= *)
 
+needs "common/par.ml";;
+
 prioritize_num();;
 
 let rec dest_list = function
@@ -249,11 +251,14 @@ let TO_BITLIST_CONV: int -> conv =
     pattern. *)
 
 let BITMATCH_MEMO_CONV =
-  let tree_memo = Hashtbl.create 64 in
+  (* One table per domain (see common/par.ml): a Hashtbl cannot be changed  *)
+  (* by several domains at once. *)
+  let tree_memo_cell = par_local (fun () -> Hashtbl.create 64) in
   function
   | Comb(Comb((Const("_BITMATCH",_) as e),(Comb(Const("word",ty), n_tm))),cs) ->
     let w_ty = snd (dest_fun_ty ty) in
     let size = Num.int_of_num (dest_finty (dest_word_ty w_ty)) in
+    let tree_memo = tree_memo_cell () in
     let tr =
       try Hashtbl.find tree_memo cs
       with Not_found ->
@@ -318,14 +323,13 @@ let conceal_bitmatch: term -> (thm * term * int * thm * conv) option =
       | Comb(Const("_BITMATCH", _), Var(_,_)) -> Some (t,rand x)
       | _ -> None
     end in
-  let fast_bitmatch_id = ref 0 in
+  let fast_bitmatch_id = par_counter () in
   fun t ->
     match find_bitmatch t with
     | None -> None (* No bitmatch found *)
     | Some (bm,bvar) -> begin
       (* Create a new opaque bitmatch definition *)
-      let newname = "__opaque_bitmatch_" ^ (string_of_int !fast_bitmatch_id) in
-      let _ = fast_bitmatch_id := !fast_bitmatch_id + 1 in
+      let newname = "__opaque_bitmatch_" ^ (string_of_int (fast_bitmatch_id ())) in
 
       (* Collect free variables. *)
       let the_freevars = frees bm in
