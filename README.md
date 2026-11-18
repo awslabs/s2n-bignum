@@ -463,6 +463,39 @@ what HOL Light must guarantee; of that, only the kernel's soundness
 bears on the soundness of the proofs. `HOL_PAR=1` asserts these
 guarantees; nothing checks them.
 
+### Reference configuration and run times of the mlkem-native and mldsa-native proofs
+
+The times below are for the proofs of the compiled code of mlkem-native
+and mldsa-native (in `arm/mlkem_native`, `arm/mldsa_native`,
+`x86/mlkem_native` and `x86/mldsa_native`). They were measured with:
+
+ - for serial runs, stock HOL Light master at commit `b5d59ef` (version
+   3.2.0+);
+ - for `HOL_PAR=1`, HOL Light with PR 214, from the branch at commit
+   `7ab61da`;
+ - OCaml 5.5.2 and camlp5 8.05.03;
+ - a 64-core AArch64 machine (Neoverse V1), with `S2N_PAR_DOMAINS=12`.
+
+Wall times of the link file of each build, with 12 domains. `Contracts`
+is the number of contracts that the run states, proves and closes (the
+count printed by `relative_report` at the end of the link file, see
+`common/relative.ml`). Each time is one run.
+
+| Build | Contracts | Wall time |
+|---|---|---|
+| arm mlkem gcc12_O2 | 546 | 1410 s |
+| arm mlkem gcc12_O2_mono | 462 | 1444 s |
+| arm mlkem gcc12_O3 | 624 | 5973 s |
+| arm mlkem clang17_O2 | 5 | not measured |
+| arm mlkem clang17_O3 | 429 | 3415 s |
+| arm mldsa gcc12_O2 | 578 | 1979 s |
+| arm mldsa gcc12_O2_reduced_ram | 545 | 6076 s |
+| x86 mlkem gcc12_O2 | 593 | 1443 s |
+| x86 mldsa gcc12_O2 | 578 | 2266 s |
+
+To run a link file, use `make <family>/<build>/link.correct` in `arm` or
+`x86`, with `<family>` one of `mlkem_native` and `mldsa_native`.
+
 ### Benchmarking and "constant time"
 
 The benchmarking setup included in the repository can be invoked, as mentioned
