@@ -152,7 +152,7 @@ S2N_BN_SYMBOL(mlkem_basemul_k3_alt):
         mul v14.8h, v14.8h, v2.8h
         sub x13, x13, #0x2
 
-mlkem_basemul_k3_alt_loop:
+Lmlkem_basemul_k3_alt_loop:
         uzp1 v6.8h, v27.8h, v11.8h
         smlal v26.4s, v29.4h, v24.4h
         uzp2 v16.8h, v25.8h, v3.8h
@@ -219,7 +219,7 @@ mlkem_basemul_k3_alt_loop:
         stur q10, [x0, #-0x10]
         uzp2 v17.8h, v27.8h, v11.8h
         subs x13, x13, #0x1
-        cbnz x13, mlkem_basemul_k3_alt_loop
+        cbnz x13, Lmlkem_basemul_k3_alt_loop
         uzp2 v3.8h, v25.8h, v3.8h
         smull2 v16.4s, v1.8h, v20.8h
         smull v25.4s, v1.4h, v20.4h

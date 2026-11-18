@@ -63,9 +63,9 @@ S2N_BN_SYMBOL(mlkem_check_encoding):
         movi    v18.2d, #0
         movi    v19.2d, #0
         lsl     x4, x1, #3
-        cbz     x4, mlkem_check_encoding_end
+        cbz     x4, Lmlkem_check_encoding_end
 
-mlkem_check_encoding_loop:
+Lmlkem_check_encoding_loop:
         ldp     q0, q1, [x0], #32
         ldr     q2, [x0], #16
 
@@ -86,9 +86,9 @@ mlkem_check_encoding_loop:
         umax    v19.8h, v19.8h, v6.8h
 
         subs    x4, x4, #1
-        bne     mlkem_check_encoding_loop
+        bne     Lmlkem_check_encoding_loop
 
-mlkem_check_encoding_end:
+Lmlkem_check_encoding_end:
         movz    x2, #0xd01
         movk    x2, #0xd010, lsl #16
         umax    v16.8h, v16.8h, v17.8h

@@ -105,27 +105,27 @@ S2N_BN_SYMBOL(mlkem_add_reduce):
         vpsubw  ymm2, ymm2, ymm0
         vpsraw  ymm12, ymm2, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm2, ymm2, ymm12
+        vpaddw  ymm2, ymm12, ymm2
         vpsubw  ymm3, ymm3, ymm0
         vpsraw  ymm12, ymm3, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm3, ymm3, ymm12
+        vpaddw  ymm3, ymm12, ymm3
         vpsubw  ymm4, ymm4, ymm0
         vpsraw  ymm12, ymm4, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm4, ymm4, ymm12
+        vpaddw  ymm4, ymm12, ymm4
         vpsubw  ymm5, ymm5, ymm0
         vpsraw  ymm12, ymm5, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm5, ymm5, ymm12
+        vpaddw  ymm5, ymm12, ymm5
         vpsubw  ymm6, ymm6, ymm0
         vpsraw  ymm12, ymm6, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm6, ymm6, ymm12
+        vpaddw  ymm6, ymm12, ymm6
         vpsubw  ymm7, ymm7, ymm0
         vpsraw  ymm12, ymm7, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm7, ymm7, ymm12
+        vpaddw  ymm7, ymm12, ymm7
         vpsubw  ymm8, ymm8, ymm0
         vpsraw  ymm12, ymm8, 15
         vpand   ymm12, ymm12, ymm0
@@ -196,27 +196,27 @@ S2N_BN_SYMBOL(mlkem_add_reduce):
         vpsubw  ymm2, ymm2, ymm0
         vpsraw  ymm12, ymm2, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm2, ymm2, ymm12
+        vpaddw  ymm2, ymm12, ymm2
         vpsubw  ymm3, ymm3, ymm0
         vpsraw  ymm12, ymm3, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm3, ymm3, ymm12
+        vpaddw  ymm3, ymm12, ymm3
         vpsubw  ymm4, ymm4, ymm0
         vpsraw  ymm12, ymm4, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm4, ymm4, ymm12
+        vpaddw  ymm4, ymm12, ymm4
         vpsubw  ymm5, ymm5, ymm0
         vpsraw  ymm12, ymm5, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm5, ymm5, ymm12
+        vpaddw  ymm5, ymm12, ymm5
         vpsubw  ymm6, ymm6, ymm0
         vpsraw  ymm12, ymm6, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm6, ymm6, ymm12
+        vpaddw  ymm6, ymm12, ymm6
         vpsubw  ymm7, ymm7, ymm0
         vpsraw  ymm12, ymm7, 15
         vpand   ymm12, ymm12, ymm0
-        vpaddw  ymm7, ymm7, ymm12
+        vpaddw  ymm7, ymm12, ymm7
         vpsubw  ymm8, ymm8, ymm0
         vpsraw  ymm12, ymm8, 15
         vpand   ymm12, ymm12, ymm0

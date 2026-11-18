@@ -93,7 +93,7 @@ S2N_BN_SYMBOL(mlkem_compress_d10):
 
         mov     x4, #4
 
-mlkem_compress_d10_loop:
+Lmlkem_compress_d10_loop:
         ldp     q0, q1, [x1], #32
         ldp     q2, q3, [x1], #32
         ldp     q4, q5, [x1], #32
@@ -216,7 +216,7 @@ mlkem_compress_d10_loop:
         str     s15, [x0], #4
 
         subs    x4, x4, #1
-        bne     mlkem_compress_d10_loop
+        bne     Lmlkem_compress_d10_loop
 
         CFI_POP2(d14, d15)
         CFI_POP2(d12, d13)

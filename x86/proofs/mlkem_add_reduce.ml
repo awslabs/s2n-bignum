@@ -109,38 +109,32 @@ let mlkem_add_reduce_mc = define_assert_from_elf
   0xc5; 0x9d; 0x71; 0xe2; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm2) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x6d; 0xfd; 0xd4;
-                           (* VPADDW (%_% ymm2) (%_% ymm2) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xd2;  (* VPADDW (%_% ymm2) (%_% ymm12) (%_% ymm2) *)
   0xc5; 0xe5; 0xf9; 0xd8;  (* VPSUBW (%_% ymm3) (%_% ymm3) (%_% ymm0) *)
   0xc5; 0x9d; 0x71; 0xe3; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm3) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x65; 0xfd; 0xdc;
-                           (* VPADDW (%_% ymm3) (%_% ymm3) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xdb;  (* VPADDW (%_% ymm3) (%_% ymm12) (%_% ymm3) *)
   0xc5; 0xdd; 0xf9; 0xe0;  (* VPSUBW (%_% ymm4) (%_% ymm4) (%_% ymm0) *)
   0xc5; 0x9d; 0x71; 0xe4; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm4) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x5d; 0xfd; 0xe4;
-                           (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xe4;  (* VPADDW (%_% ymm4) (%_% ymm12) (%_% ymm4) *)
   0xc5; 0xd5; 0xf9; 0xe8;  (* VPSUBW (%_% ymm5) (%_% ymm5) (%_% ymm0) *)
   0xc5; 0x9d; 0x71; 0xe5; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm5) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x55; 0xfd; 0xec;
-                           (* VPADDW (%_% ymm5) (%_% ymm5) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xed;  (* VPADDW (%_% ymm5) (%_% ymm12) (%_% ymm5) *)
   0xc5; 0xcd; 0xf9; 0xf0;  (* VPSUBW (%_% ymm6) (%_% ymm6) (%_% ymm0) *)
   0xc5; 0x9d; 0x71; 0xe6; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm6) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x4d; 0xfd; 0xf4;
-                           (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xf6;  (* VPADDW (%_% ymm6) (%_% ymm12) (%_% ymm6) *)
   0xc5; 0xc5; 0xf9; 0xf8;  (* VPSUBW (%_% ymm7) (%_% ymm7) (%_% ymm0) *)
   0xc5; 0x9d; 0x71; 0xe7; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm7) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x45; 0xfd; 0xfc;
-                           (* VPADDW (%_% ymm7) (%_% ymm7) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xff;  (* VPADDW (%_% ymm7) (%_% ymm12) (%_% ymm7) *)
   0xc5; 0x3d; 0xf9; 0xc0;  (* VPSUBW (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
   0xc4; 0xc1; 0x1d; 0x71; 0xe0; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm8) (Imm8 (word 15)) *)
@@ -252,38 +246,32 @@ let mlkem_add_reduce_mc = define_assert_from_elf
   0xc5; 0x9d; 0x71; 0xe2; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm2) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x6d; 0xfd; 0xd4;
-                           (* VPADDW (%_% ymm2) (%_% ymm2) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xd2;  (* VPADDW (%_% ymm2) (%_% ymm12) (%_% ymm2) *)
   0xc5; 0xe5; 0xf9; 0xd8;  (* VPSUBW (%_% ymm3) (%_% ymm3) (%_% ymm0) *)
   0xc5; 0x9d; 0x71; 0xe3; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm3) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x65; 0xfd; 0xdc;
-                           (* VPADDW (%_% ymm3) (%_% ymm3) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xdb;  (* VPADDW (%_% ymm3) (%_% ymm12) (%_% ymm3) *)
   0xc5; 0xdd; 0xf9; 0xe0;  (* VPSUBW (%_% ymm4) (%_% ymm4) (%_% ymm0) *)
   0xc5; 0x9d; 0x71; 0xe4; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm4) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x5d; 0xfd; 0xe4;
-                           (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xe4;  (* VPADDW (%_% ymm4) (%_% ymm12) (%_% ymm4) *)
   0xc5; 0xd5; 0xf9; 0xe8;  (* VPSUBW (%_% ymm5) (%_% ymm5) (%_% ymm0) *)
   0xc5; 0x9d; 0x71; 0xe5; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm5) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x55; 0xfd; 0xec;
-                           (* VPADDW (%_% ymm5) (%_% ymm5) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xed;  (* VPADDW (%_% ymm5) (%_% ymm12) (%_% ymm5) *)
   0xc5; 0xcd; 0xf9; 0xf0;  (* VPSUBW (%_% ymm6) (%_% ymm6) (%_% ymm0) *)
   0xc5; 0x9d; 0x71; 0xe6; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm6) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x4d; 0xfd; 0xf4;
-                           (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xf6;  (* VPADDW (%_% ymm6) (%_% ymm12) (%_% ymm6) *)
   0xc5; 0xc5; 0xf9; 0xf8;  (* VPSUBW (%_% ymm7) (%_% ymm7) (%_% ymm0) *)
   0xc5; 0x9d; 0x71; 0xe7; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm7) (Imm8 (word 15)) *)
   0xc5; 0x1d; 0xdb; 0xe0;  (* VPAND (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
-  0xc4; 0xc1; 0x45; 0xfd; 0xfc;
-                           (* VPADDW (%_% ymm7) (%_% ymm7) (%_% ymm12) *)
+  0xc5; 0x9d; 0xfd; 0xff;  (* VPADDW (%_% ymm7) (%_% ymm12) (%_% ymm7) *)
   0xc5; 0x3d; 0xf9; 0xc0;  (* VPSUBW (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
   0xc4; 0xc1; 0x1d; 0x71; 0xe0; 0x0f;
                            (* VPSRAW (%_% ymm12) (%_% ymm8) (Imm8 (word 15)) *)
@@ -324,7 +312,8 @@ let MLKEM_ADD_REDUCE_TMC_EXEC =
 
 (* ------------------------------------------------------------------------- *)
 (* The reduction of each lane is that of mlkem_reduce: the Barrett reduction *)
-(* barred_x86 and the conditional addition of 3329.                          *)
+(* barred_x86 and the conditional addition of 3329, whose operands are in    *)
+(* either order in the code (for the shorter VEX encoding where it has one). *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_ADD_REDUCE_REM = prove
@@ -350,8 +339,9 @@ let MLKEM_ADD_REDUCE_LANE =
                  (CONGBOUND_RULE `barred_x86 x`)] THEN
     GEN_TAC THEN MP_TAC(CONGBOUND_RULE `barred_x86 x`) THEN
     BITBLAST_TAC) in
-  GEN_ALL(REWRITE_RULE[IWORD_IVAL]
-    (AP_TERM `iword:int->int16` (SPEC_ALL th)));;
+  let th' = GEN_ALL(REWRITE_RULE[IWORD_IVAL]
+              (AP_TERM `iword:int->int16` (SPEC_ALL th))) in
+  CONJ th' (ONCE_REWRITE_RULE[WORD_ADD_SYM] th');;
 
 let MLKEM_ADD_REDUCE_IVAL = prove
  (`!x:int16. ival(iword(ival x rem &3329):int16) = ival x rem &3329`,
@@ -371,7 +361,7 @@ extra_word_CONV := [WORD_SIMPLE_SUBWORD_CONV] @ !extra_word_CONV;;
 
 let MLKEM_ADD_REDUCE_CORRECT = prove
  (`!r a x y pc.
-        ALL (nonoverlapping (word pc,972)) [(r,512); (a,512)] /\
+        ALL (nonoverlapping (word pc,960)) [(r,512); (a,512)] /\
         nonoverlapping (r,512) (a,512)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) (BUTLAST mlkem_add_reduce_tmc) /\
@@ -385,7 +375,7 @@ let MLKEM_ADD_REDUCE_CORRECT = prove
                        ==> read(memory :> bytes16
                                  (word_add a (word(2 * i)))) s =
                            y i))
-             (\s. read RIP s = word(pc + 972) /\
+             (\s. read RIP s = word(pc + 960) /\
                   !i. i < 256
                       ==> ival(read(memory :> bytes16
                                  (word_add r (word(2 * i)))) s) =
@@ -527,7 +517,7 @@ let full_spec,public_vars = mk_safety_spec
 let MLKEM_ADD_REDUCE_SAFE = time prove
  (`exists f_events.
     forall e r a pc.
-        ALL (nonoverlapping (word pc,972)) [r,512; a,512] /\
+        ALL (nonoverlapping (word pc,960)) [r,512; a,512] /\
         nonoverlapping (r,512) (a,512)
         ==> ensures x86
             (\s.
@@ -536,7 +526,7 @@ let MLKEM_ADD_REDUCE_SAFE = time prove
                  C_ARGUMENTS [r; a] s /\
                  read events s = e)
             (\s.
-                 read RIP s = word (pc + 972) /\
+                 read RIP s = word (pc + 960) /\
                  (exists e2.
                       read events s = APPEND e2 e /\
                       e2 = f_events a r pc /\

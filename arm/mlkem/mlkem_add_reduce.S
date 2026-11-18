@@ -43,7 +43,7 @@ S2N_BN_SYMBOL(mlkem_add_reduce):
         dup     v31.8h, w2
         mov     x4, #8
 
-mlkem_add_reduce_loop:
+Lmlkem_add_reduce_loop:
         ldp     q0, q1, [x0]
         ldp     q2, q3, [x0, #32]
         ldp     q4, q5, [x1], #32
@@ -80,7 +80,7 @@ mlkem_add_reduce_loop:
         stp     q2, q3, [x0], #32
 
         subs    x4, x4, #1
-        bne     mlkem_add_reduce_loop
+        bne     Lmlkem_add_reduce_loop
 
         CFI_RET
 

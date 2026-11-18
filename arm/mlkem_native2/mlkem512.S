@@ -12,8 +12,8 @@
 // ----------------------------------------------------------------------------
 
 #include "_internal_s2n_bignum_arm.h"
-#include "mlkem_native2/mlkem_native2_consts.h"
+#include "mlkem_native2_consts.h"
 
 #define MLKEM_K 2
 #define MLKEM_L 512
-#include "mlkem_native2/mlkem_kem_template.S"
+#include "mlkem_kem_template.S"

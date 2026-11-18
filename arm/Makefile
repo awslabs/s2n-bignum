@@ -20,6 +20,10 @@ SYMBOL_HIDING=
 endif
 
 
+# The sources of mlkem_native2 include their headers and templates by paths
+# relative to their own directory, which cpp does not know when a file comes
+# from standard input, hence the -Imlkem_native2.
+#
 # Add explicit language input parameter to cpp, otherwise the use of #n for
 # numeric literals in ARM code is a problem when used inside #define macros
 # since normally that means stringization.
@@ -28,9 +32,9 @@ endif
 # by single-quote characters in comments, so we eliminate // comments first.
 
 ifeq ($(OSTYPE_RESULT),Darwin)
-PREPROCESS=sed -e 's/\/\/.*//' | $(CC) -E -I../include $(SYMBOL_HIDING) -xassembler-with-cpp -
+PREPROCESS=sed -e 's/\/\/.*//' | $(CC) -E -I../include -Imlkem_native2 $(SYMBOL_HIDING) -xassembler-with-cpp -
 else
-PREPROCESS=$(CC) -E -I../include $(SYMBOL_HIDING) -xassembler-with-cpp -
+PREPROCESS=$(CC) -E -I../include -Imlkem_native2 $(SYMBOL_HIDING) -xassembler-with-cpp -
 endif
 
 # Generally GNU-type assemblers are happy with multiple instructions on

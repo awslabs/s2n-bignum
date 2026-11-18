@@ -37,6 +37,9 @@ let LENGTH_MLKEM_NATIVE2_IMAGE_MC =
 (* The symbols of the section .text of an ELF64 file, as (name, value, size) *)
 (* for the functions and other symbols with names, excluding the mapping     *)
 (* symbols $x and $d of AArch64 and those of the assembler's numeric labels. *)
+(* The labels inside the functions have names starting with L, which keeps   *)
+(* them local to the object on Mach-O; that prefix is dropped where the name *)
+(* without it is not another symbol's.                                       *)
 (* ------------------------------------------------------------------------- *)
 
 let load_elf64_text_symbols =
@@ -60,6 +63,7 @@ let load_elf64_text_symbols =
     let text = find (fun i -> name_of i = ".text")
     and symtab = find (fun i -> typ i = 2) in
     let strtab = link symtab in
+    let unlocal n = String.sub n 1 (String.length n - 1) in
     let rec syms k acc =
       if k < 0 then acc else
       let e = offset symtab + 24 * k in
@@ -68,9 +72,15 @@ let load_elf64_text_symbols =
       let acc' =
         if shndx = text && name <> "" && String.get name 0 <> '$' &&
            not (String.contains name '.')
-        then (name,u64 file (e + 8),u64 file (e + 16))::acc else acc in
+        then (name,u64 file (e + 8),u64 file (e + 16))::acc
+        else acc in
       syms (k - 1) acc' in
-    syms (size symtab / 24 - 1) [];;
+    let l = syms (size symtab / 24 - 1) [] in
+    let names = map (fun (n,_,_) -> n) l in
+    map (fun (n,v,sz as sym) ->
+           if String.length n > 1 && String.get n 0 = 'L' &&
+              not (mem (unlocal n) names)
+           then (unlocal n,v,sz) else sym) l;;
 
 (* ------------------------------------------------------------------------- *)
 (* The names of the image: f for the address of each function or label f,    *)

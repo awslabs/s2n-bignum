@@ -77,14 +77,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -104,14 +104,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[32+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -131,14 +131,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[64+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -158,14 +158,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[96+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -185,14 +185,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[128+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -212,14 +212,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[160+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -239,14 +239,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[192+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -266,14 +266,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[224+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -293,14 +293,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[256+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -324,14 +324,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[288+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -355,14 +355,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[320+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -386,14 +386,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[352+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -417,14 +417,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[384+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -448,14 +448,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[416+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -479,14 +479,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[448+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -510,14 +510,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[480+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -541,14 +541,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[512+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -572,14 +572,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[544+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -603,14 +603,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[576+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -634,14 +634,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[608+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -665,14 +665,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[640+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -696,14 +696,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[672+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -727,14 +727,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[704+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3
@@ -758,14 +758,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k3):
   vmovdqa ymm6,[736+rcx]
   vpmullw ymm13,ymm1,ymm2
   vpmullw ymm14,ymm1,ymm3
-  vpmullw ymm7,ymm4,ymm13
-  vpmullw ymm9,ymm5,ymm13
-  vpmullw ymm8,ymm6,ymm14
-  vpmullw ymm10,ymm4,ymm14
+  vpmullw ymm7,ymm13,ymm4
+  vpmullw ymm9,ymm13,ymm5
+  vpmullw ymm8,ymm14,ymm6
+  vpmullw ymm10,ymm14,ymm4
   vpmulhw ymm7,ymm0,ymm7
-  vpmulhw ymm9,ymm0,ymm9
-  vpmulhw ymm8,ymm0,ymm8
-  vpmulhw ymm10,ymm0,ymm10
+  vpmulhw ymm9,ymm9,ymm0
+  vpmulhw ymm8,ymm8,ymm0
+  vpmulhw ymm10,ymm10,ymm0
   vpmulhw ymm11,ymm4,ymm2
   vpmulhw ymm12,ymm5,ymm2
   vpmulhw ymm13,ymm6,ymm3

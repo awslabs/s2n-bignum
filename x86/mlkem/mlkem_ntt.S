@@ -72,13 +72,13 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw ymm13,ymm13,ymm0
  vpmulhw ymm14,ymm14,ymm0
  vpmulhw ymm15,ymm15,ymm0
- vpaddw ymm3,ymm4,ymm8
+ vpaddw ymm3,ymm8,ymm4
  vpsubw ymm8,ymm4,ymm8
- vpaddw ymm4,ymm5,ymm9
+ vpaddw ymm4,ymm9,ymm5
  vpsubw ymm9,ymm5,ymm9
- vpaddw ymm5,ymm6,ymm10
+ vpaddw ymm5,ymm10,ymm6
  vpsubw ymm10,ymm6,ymm10
- vpaddw ymm6,ymm7,ymm11
+ vpaddw ymm6,ymm11,ymm7
  vpsubw ymm11,ymm7,ymm11
  vpsubw ymm3,ymm3,ymm12
  vpaddw ymm8,ymm8,ymm12
@@ -118,13 +118,13 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw ymm13,ymm13,ymm0
  vpmulhw ymm14,ymm14,ymm0
  vpmulhw ymm15,ymm15,ymm0
- vpaddw ymm3,ymm4,ymm8
+ vpaddw ymm3,ymm8,ymm4
  vpsubw ymm8,ymm4,ymm8
- vpaddw ymm4,ymm5,ymm9
+ vpaddw ymm4,ymm9,ymm5
  vpsubw ymm9,ymm5,ymm9
- vpaddw ymm5,ymm6,ymm10
+ vpaddw ymm5,ymm10,ymm6
  vpsubw ymm10,ymm6,ymm10
- vpaddw ymm6,ymm7,ymm11
+ vpaddw ymm6,ymm11,ymm7
  vpsubw ymm11,ymm7,ymm11
  vpsubw ymm3,ymm3,ymm12
  vpaddw ymm8,ymm8,ymm12
@@ -164,13 +164,13 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw ymm13,ymm13,ymm0
  vpmulhw ymm14,ymm14,ymm0
  vpmulhw ymm15,ymm15,ymm0
- vpaddw ymm3,ymm4,ymm8
+ vpaddw ymm3,ymm8,ymm4
  vpsubw ymm8,ymm4,ymm8
- vpaddw ymm4,ymm5,ymm9
+ vpaddw ymm4,ymm9,ymm5
  vpsubw ymm9,ymm5,ymm9
- vpaddw ymm5,ymm6,ymm10
+ vpaddw ymm5,ymm10,ymm6
  vpsubw ymm10,ymm6,ymm10
- vpaddw ymm6,ymm7,ymm11
+ vpaddw ymm6,ymm11,ymm7
  vpsubw ymm11,ymm7,ymm11
  vpsubw ymm3,ymm3,ymm12
  vpaddw ymm8,ymm8,ymm12
@@ -186,9 +186,9 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vperm2i128 ymm11,ymm6,ymm11,0x31
  vmovdqa ymm15,[160+rsi]
  vmovdqa ymm2,[192+rsi]
- vpmullw ymm12,ymm7,ymm15
+ vpmullw ymm12,ymm15,ymm7
  vpmullw ymm13,ymm10,ymm15
- vpmullw ymm14,ymm5,ymm15
+ vpmullw ymm14,ymm15,ymm5
  vpmullw ymm15,ymm11,ymm15
  vpmulhw ymm7,ymm7,ymm2
  vpmulhw ymm10,ymm10,ymm2
@@ -211,11 +211,11 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpaddw ymm3,ymm9,ymm11
  vpsubw ymm11,ymm9,ymm11
  vpsubw ymm4,ymm4,ymm12
- vpaddw ymm7,ymm7,ymm12
+ vpaddw ymm7,ymm12,ymm7
  vpsubw ymm6,ymm6,ymm13
  vpaddw ymm10,ymm10,ymm13
  vpsubw ymm8,ymm8,ymm14
- vpaddw ymm5,ymm5,ymm14
+ vpaddw ymm5,ymm14,ymm5
  vpsubw ymm3,ymm3,ymm15
  vpaddw ymm11,ymm11,ymm15
  vpunpcklqdq ymm9,ymm8,ymm5
@@ -225,7 +225,7 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa ymm15,[224+rsi]
  vmovdqa ymm2,[256+rsi]
  vpmullw ymm12,ymm9,ymm15
- vpmullw ymm13,ymm5,ymm15
+ vpmullw ymm13,ymm15,ymm5
  vpmullw ymm14,ymm8,ymm15
  vpmullw ymm15,ymm11,ymm15
  vpmulhw ymm9,ymm9,ymm2
@@ -240,18 +240,18 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw ymm13,ymm13,ymm0
  vpmulhw ymm14,ymm14,ymm0
  vpmulhw ymm15,ymm15,ymm0
- vpaddw ymm6,ymm3,ymm9
+ vpaddw ymm6,ymm9,ymm3
  vpsubw ymm9,ymm3,ymm9
  vpaddw ymm3,ymm7,ymm5
  vpsubw ymm5,ymm7,ymm5
- vpaddw ymm7,ymm4,ymm8
+ vpaddw ymm7,ymm8,ymm4
  vpsubw ymm8,ymm4,ymm8
  vpaddw ymm4,ymm10,ymm11
  vpsubw ymm11,ymm10,ymm11
  vpsubw ymm6,ymm6,ymm12
  vpaddw ymm9,ymm9,ymm12
  vpsubw ymm3,ymm3,ymm13
- vpaddw ymm5,ymm5,ymm13
+ vpaddw ymm5,ymm13,ymm5
  vpsubw ymm7,ymm7,ymm14
  vpaddw ymm8,ymm8,ymm14
  vpsubw ymm4,ymm4,ymm15
@@ -268,7 +268,7 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa ymm2,[320+rsi]
  vpmullw ymm12,ymm10,ymm15
  vpmullw ymm13,ymm8,ymm15
- vpmullw ymm14,ymm7,ymm15
+ vpmullw ymm14,ymm15,ymm7
  vpmullw ymm15,ymm11,ymm15
  vpmulhw ymm10,ymm10,ymm2
  vpmulhw ymm8,ymm8,ymm2
@@ -286,20 +286,20 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw ymm13,ymm13,ymm0
  vpmulhw ymm14,ymm14,ymm0
  vpmulhw ymm15,ymm15,ymm0
- vpaddw ymm3,ymm4,ymm10
+ vpaddw ymm3,ymm10,ymm4
  vpsubw ymm10,ymm4,ymm10
  vpaddw ymm4,ymm9,ymm8
  vpsubw ymm8,ymm9,ymm8
  vpaddw ymm9,ymm6,ymm7
  vpsubw ymm7,ymm6,ymm7
- vpaddw ymm6,ymm5,ymm11
+ vpaddw ymm6,ymm11,ymm5
  vpsubw ymm11,ymm5,ymm11
  vpsubw ymm3,ymm3,ymm12
  vpaddw ymm10,ymm10,ymm12
  vpsubw ymm4,ymm4,ymm13
  vpaddw ymm8,ymm8,ymm13
  vpsubw ymm9,ymm9,ymm14
- vpaddw ymm7,ymm7,ymm14
+ vpaddw ymm7,ymm14,ymm7
  vpsubw ymm6,ymm6,ymm15
  vpaddw ymm11,ymm11,ymm15
  vpslld ymm5,ymm7,0x10
@@ -312,8 +312,8 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpblendw ymm11,ymm6,ymm11,0xaa
  vmovdqa ymm15,[352+rsi]
  vmovdqa ymm2,[384+rsi]
- vpmullw ymm12,ymm5,ymm15
- vpmullw ymm13,ymm7,ymm15
+ vpmullw ymm12,ymm15,ymm5
+ vpmullw ymm13,ymm15,ymm7
  vpmullw ymm14,ymm9,ymm15
  vpmullw ymm15,ymm11,ymm15
  vpmulhw ymm5,ymm5,ymm2
@@ -336,14 +336,14 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpsubw ymm5,ymm6,ymm5
  vpaddw ymm6,ymm10,ymm7
  vpsubw ymm7,ymm10,ymm7
- vpaddw ymm10,ymm3,ymm9
+ vpaddw ymm10,ymm9,ymm3
  vpsubw ymm9,ymm3,ymm9
  vpaddw ymm3,ymm8,ymm11
  vpsubw ymm11,ymm8,ymm11
  vpsubw ymm4,ymm4,ymm12
- vpaddw ymm5,ymm5,ymm12
+ vpaddw ymm5,ymm12,ymm5
  vpsubw ymm6,ymm6,ymm13
- vpaddw ymm7,ymm7,ymm13
+ vpaddw ymm7,ymm13,ymm7
  vpsubw ymm10,ymm10,ymm14
  vpaddw ymm9,ymm9,ymm14
  vpsubw ymm3,ymm3,ymm15
@@ -353,29 +353,29 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa ymm8,[448+rsi]
  vmovdqa ymm2,[512+rsi]
  vpmullw ymm12,ymm10,ymm14
- vpmullw ymm13,ymm3,ymm14
+ vpmullw ymm13,ymm14,ymm3
  vpmullw ymm14,ymm9,ymm15
  vpmullw ymm15,ymm11,ymm15
  vpmulhw ymm10,ymm10,ymm8
- vpmulhw ymm3,ymm3,ymm8
+ vpmulhw ymm3,ymm8,ymm3
  vpmulhw ymm9,ymm9,ymm2
  vpmulhw ymm11,ymm11,ymm2
  vpmulhw ymm12,ymm12,ymm0
  vpmulhw ymm13,ymm13,ymm0
  vpmulhw ymm14,ymm14,ymm0
  vpmulhw ymm15,ymm15,ymm0
- vpaddw ymm8,ymm4,ymm10
+ vpaddw ymm8,ymm10,ymm4
  vpsubw ymm10,ymm4,ymm10
  vpaddw ymm4,ymm6,ymm3
  vpsubw ymm3,ymm6,ymm3
- vpaddw ymm6,ymm5,ymm9
+ vpaddw ymm6,ymm9,ymm5
  vpsubw ymm9,ymm5,ymm9
- vpaddw ymm5,ymm7,ymm11
+ vpaddw ymm5,ymm11,ymm7
  vpsubw ymm11,ymm7,ymm11
  vpsubw ymm8,ymm8,ymm12
  vpaddw ymm10,ymm10,ymm12
  vpsubw ymm4,ymm4,ymm13
- vpaddw ymm3,ymm3,ymm13
+ vpaddw ymm3,ymm13,ymm3
  vpsubw ymm6,ymm6,ymm14
  vpaddw ymm9,ymm9,ymm14
  vpsubw ymm5,ymm5,ymm15
@@ -410,13 +410,13 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw ymm13,ymm13,ymm0
  vpmulhw ymm14,ymm14,ymm0
  vpmulhw ymm15,ymm15,ymm0
- vpaddw ymm3,ymm4,ymm8
+ vpaddw ymm3,ymm8,ymm4
  vpsubw ymm8,ymm4,ymm8
- vpaddw ymm4,ymm5,ymm9
+ vpaddw ymm4,ymm9,ymm5
  vpsubw ymm9,ymm5,ymm9
- vpaddw ymm5,ymm6,ymm10
+ vpaddw ymm5,ymm10,ymm6
  vpsubw ymm10,ymm6,ymm10
- vpaddw ymm6,ymm7,ymm11
+ vpaddw ymm6,ymm11,ymm7
  vpsubw ymm11,ymm7,ymm11
  vpsubw ymm3,ymm3,ymm12
  vpaddw ymm8,ymm8,ymm12
@@ -432,9 +432,9 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vperm2i128 ymm11,ymm6,ymm11,0x31
  vmovdqa ymm15,[608+rsi]
  vmovdqa ymm2,[640+rsi]
- vpmullw ymm12,ymm7,ymm15
+ vpmullw ymm12,ymm15,ymm7
  vpmullw ymm13,ymm10,ymm15
- vpmullw ymm14,ymm5,ymm15
+ vpmullw ymm14,ymm15,ymm5
  vpmullw ymm15,ymm11,ymm15
  vpmulhw ymm7,ymm7,ymm2
  vpmulhw ymm10,ymm10,ymm2
@@ -457,11 +457,11 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpaddw ymm3,ymm9,ymm11
  vpsubw ymm11,ymm9,ymm11
  vpsubw ymm4,ymm4,ymm12
- vpaddw ymm7,ymm7,ymm12
+ vpaddw ymm7,ymm12,ymm7
  vpsubw ymm6,ymm6,ymm13
  vpaddw ymm10,ymm10,ymm13
  vpsubw ymm8,ymm8,ymm14
- vpaddw ymm5,ymm5,ymm14
+ vpaddw ymm5,ymm14,ymm5
  vpsubw ymm3,ymm3,ymm15
  vpaddw ymm11,ymm11,ymm15
  vpunpcklqdq ymm9,ymm8,ymm5
@@ -471,7 +471,7 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa ymm15,[672+rsi]
  vmovdqa ymm2,[704+rsi]
  vpmullw ymm12,ymm9,ymm15
- vpmullw ymm13,ymm5,ymm15
+ vpmullw ymm13,ymm15,ymm5
  vpmullw ymm14,ymm8,ymm15
  vpmullw ymm15,ymm11,ymm15
  vpmulhw ymm9,ymm9,ymm2
@@ -486,18 +486,18 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw ymm13,ymm13,ymm0
  vpmulhw ymm14,ymm14,ymm0
  vpmulhw ymm15,ymm15,ymm0
- vpaddw ymm6,ymm3,ymm9
+ vpaddw ymm6,ymm9,ymm3
  vpsubw ymm9,ymm3,ymm9
  vpaddw ymm3,ymm7,ymm5
  vpsubw ymm5,ymm7,ymm5
- vpaddw ymm7,ymm4,ymm8
+ vpaddw ymm7,ymm8,ymm4
  vpsubw ymm8,ymm4,ymm8
  vpaddw ymm4,ymm10,ymm11
  vpsubw ymm11,ymm10,ymm11
  vpsubw ymm6,ymm6,ymm12
  vpaddw ymm9,ymm9,ymm12
  vpsubw ymm3,ymm3,ymm13
- vpaddw ymm5,ymm5,ymm13
+ vpaddw ymm5,ymm13,ymm5
  vpsubw ymm7,ymm7,ymm14
  vpaddw ymm8,ymm8,ymm14
  vpsubw ymm4,ymm4,ymm15
@@ -514,7 +514,7 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa ymm2,[768+rsi]
  vpmullw ymm12,ymm10,ymm15
  vpmullw ymm13,ymm8,ymm15
- vpmullw ymm14,ymm7,ymm15
+ vpmullw ymm14,ymm15,ymm7
  vpmullw ymm15,ymm11,ymm15
  vpmulhw ymm10,ymm10,ymm2
  vpmulhw ymm8,ymm8,ymm2
@@ -532,20 +532,20 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw ymm13,ymm13,ymm0
  vpmulhw ymm14,ymm14,ymm0
  vpmulhw ymm15,ymm15,ymm0
- vpaddw ymm3,ymm4,ymm10
+ vpaddw ymm3,ymm10,ymm4
  vpsubw ymm10,ymm4,ymm10
  vpaddw ymm4,ymm9,ymm8
  vpsubw ymm8,ymm9,ymm8
  vpaddw ymm9,ymm6,ymm7
  vpsubw ymm7,ymm6,ymm7
- vpaddw ymm6,ymm5,ymm11
+ vpaddw ymm6,ymm11,ymm5
  vpsubw ymm11,ymm5,ymm11
  vpsubw ymm3,ymm3,ymm12
  vpaddw ymm10,ymm10,ymm12
  vpsubw ymm4,ymm4,ymm13
  vpaddw ymm8,ymm8,ymm13
  vpsubw ymm9,ymm9,ymm14
- vpaddw ymm7,ymm7,ymm14
+ vpaddw ymm7,ymm14,ymm7
  vpsubw ymm6,ymm6,ymm15
  vpaddw ymm11,ymm11,ymm15
  vpslld ymm5,ymm7,0x10
@@ -558,8 +558,8 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpblendw ymm11,ymm6,ymm11,0xaa
  vmovdqa ymm15,[800+rsi]
  vmovdqa ymm2,[832+rsi]
- vpmullw ymm12,ymm5,ymm15
- vpmullw ymm13,ymm7,ymm15
+ vpmullw ymm12,ymm15,ymm5
+ vpmullw ymm13,ymm15,ymm7
  vpmullw ymm14,ymm9,ymm15
  vpmullw ymm15,ymm11,ymm15
  vpmulhw ymm5,ymm5,ymm2
@@ -582,14 +582,14 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpsubw ymm5,ymm6,ymm5
  vpaddw ymm6,ymm10,ymm7
  vpsubw ymm7,ymm10,ymm7
- vpaddw ymm10,ymm3,ymm9
+ vpaddw ymm10,ymm9,ymm3
  vpsubw ymm9,ymm3,ymm9
  vpaddw ymm3,ymm8,ymm11
  vpsubw ymm11,ymm8,ymm11
  vpsubw ymm4,ymm4,ymm12
- vpaddw ymm5,ymm5,ymm12
+ vpaddw ymm5,ymm12,ymm5
  vpsubw ymm6,ymm6,ymm13
- vpaddw ymm7,ymm7,ymm13
+ vpaddw ymm7,ymm13,ymm7
  vpsubw ymm10,ymm10,ymm14
  vpaddw ymm9,ymm9,ymm14
  vpsubw ymm3,ymm3,ymm15
@@ -599,29 +599,29 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa ymm8,[896+rsi]
  vmovdqa ymm2,[960+rsi]
  vpmullw ymm12,ymm10,ymm14
- vpmullw ymm13,ymm3,ymm14
+ vpmullw ymm13,ymm14,ymm3
  vpmullw ymm14,ymm9,ymm15
  vpmullw ymm15,ymm11,ymm15
  vpmulhw ymm10,ymm10,ymm8
- vpmulhw ymm3,ymm3,ymm8
+ vpmulhw ymm3,ymm8,ymm3
  vpmulhw ymm9,ymm9,ymm2
  vpmulhw ymm11,ymm11,ymm2
  vpmulhw ymm12,ymm12,ymm0
  vpmulhw ymm13,ymm13,ymm0
  vpmulhw ymm14,ymm14,ymm0
  vpmulhw ymm15,ymm15,ymm0
- vpaddw ymm8,ymm4,ymm10
+ vpaddw ymm8,ymm10,ymm4
  vpsubw ymm10,ymm4,ymm10
  vpaddw ymm4,ymm6,ymm3
  vpsubw ymm3,ymm6,ymm3
- vpaddw ymm6,ymm5,ymm9
+ vpaddw ymm6,ymm9,ymm5
  vpsubw ymm9,ymm5,ymm9
- vpaddw ymm5,ymm7,ymm11
+ vpaddw ymm5,ymm11,ymm7
  vpsubw ymm11,ymm7,ymm11
  vpsubw ymm8,ymm8,ymm12
  vpaddw ymm10,ymm10,ymm12
  vpsubw ymm4,ymm4,ymm13
- vpaddw ymm3,ymm3,ymm13
+ vpaddw ymm3,ymm13,ymm3
  vpsubw ymm6,ymm6,ymm14
  vpaddw ymm9,ymm9,ymm14
  vpsubw ymm5,ymm5,ymm15

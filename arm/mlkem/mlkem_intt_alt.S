@@ -174,7 +174,7 @@ S2N_BN_SYMBOL(mlkem_intt_alt):
         mls v24.8h, v19.8h, v7.h[0]
         sub x4, x4, #0x2
 
-mlkem_intt_alt_layer4567_start:
+Lmlkem_intt_alt_layer4567_start:
         add v16.8h, v21.8h, v10.8h
         mul v18.8h, v6.8h, v15.8h
         sub v19.8h, v20.8h, v25.8h
@@ -268,7 +268,7 @@ mlkem_intt_alt_layer4567_start:
         sub v14.8h, v21.8h, v10.8h
         stur q0, [x3, #-0x30]
         sub x4, x4, #0x1
-        cbnz x4, mlkem_intt_alt_layer4567_start
+        cbnz x4, Lmlkem_intt_alt_layer4567_start
         mul v15.8h, v6.8h, v15.8h
         sub v22.8h, v20.8h, v25.8h
         add v4.8h, v21.8h, v10.8h
@@ -416,7 +416,7 @@ mlkem_intt_alt_layer4567_start:
         sqrdmulh v10.8h, v10.8h, v0.h[1]
         sub x4, x4, #0x2
 
-mlkem_intt_alt_layer123_start:
+Lmlkem_intt_alt_layer123_start:
         sub v12.8h, v3.8h, v30.8h
         mul v11.8h, v21.8h, v1.h[0]
         add v28.8h, v4.8h, v8.8h
@@ -494,7 +494,7 @@ mlkem_intt_alt_layer123_start:
         str q17, [x0, #0x130]
         mul v17.8h, v19.8h, v0.h[0]
         sub x4, x4, #0x1
-        cbnz x4, mlkem_intt_alt_layer123_start
+        cbnz x4, Lmlkem_intt_alt_layer123_start
         mls v23.8h, v10.8h, v7.h[0]
         ldr q11, [x0, #0x190]
         str q18, [x0, #0x100]

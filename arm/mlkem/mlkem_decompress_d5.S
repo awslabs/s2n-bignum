@@ -91,7 +91,7 @@ S2N_BN_SYMBOL(mlkem_decompress_d5):
         mov     v31.d[1], x3
         mov     x4, #4
 
-mlkem_decompress_d5_loop:
+Lmlkem_decompress_d5_loop:
         ldp     q0, q1, [x1], #32
         ldr     d2, [x1], #8
 
@@ -135,7 +135,7 @@ mlkem_decompress_d5_loop:
         stp     q22, q23, [x0], #32
 
         subs    x4, x4, #1
-        bne     mlkem_decompress_d5_loop
+        bne     Lmlkem_decompress_d5_loop
 
         CFI_RET
 

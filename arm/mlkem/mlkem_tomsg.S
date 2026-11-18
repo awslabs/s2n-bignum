@@ -54,7 +54,7 @@ S2N_BN_SYMBOL(mlkem_tomsg):
         mov     v30.d[1], x3
         mov     x4, #4
 
-mlkem_tomsg_loop:
+Lmlkem_tomsg_loop:
         ldp     q0, q1, [x1], #32
         ldp     q2, q3, [x1], #32
         ldp     q4, q5, [x1], #32
@@ -94,7 +94,7 @@ mlkem_tomsg_loop:
         str     d0, [x0], #8
 
         subs    x4, x4, #1
-        bne     mlkem_tomsg_loop
+        bne     Lmlkem_tomsg_loop
 
         CFI_RET
 

@@ -282,7 +282,7 @@ let SHA3_KECCAK4_F1600_ALT_NOIBT_SUBROUTINE_FULL = time prove
    `\(rc_pointer:int64) (rho8_ptr:int64) (rho56_ptr:int64)
      (bitstate_in:int64) (pc:num) (stackpointer:int64)
      (returnaddress:int64).
-       CONS (EventJump (word(pc + 0x9d9):int64,returnaddress))
+       CONS (EventJump (word(pc + 0x9ca):int64,returnaddress))
         (CONS (EventLoad (stackpointer,8))
           (inner_f_events rc_pointer rho8_ptr rho56_ptr bitstate_in pc
              (word_sub (word_and stackpointer (word 0xffffffffffffffe0))
@@ -342,7 +342,7 @@ let SHA3_KECCAK4_F1600_ALT_NOIBT_SUBROUTINE_FULL = time prove
    ***)
 
   EXISTS_TAC
-   `CONS (EventJump (word (pc + 0x9d9):int64,returnaddress:int64))
+   `CONS (EventJump (word (pc + 0x9ca):int64,returnaddress:int64))
      (CONS (EventLoad (stackpointer:int64,8))
        ((inner_f_events:int64->int64->int64->int64->num->int64->
                         uarch_event list)

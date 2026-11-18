@@ -22,11 +22,12 @@
 
 #include "_internal_s2n_bignum_x86.h"
 #ifndef MLKEM_NATIVE2_CONSTS_H
-#include "mlkem_native2/mlkem_native2_consts.h"
+#include "mlkem_native2_consts.h"
 #endif
 #ifndef MLKEM_NATIVE2_NAMES_H
-#include "mlkem_native2/mlkem_native2_names.h"
+#include "mlkem_native2_names.h"
 #endif
+#include "mlkem_native2_macros.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(N2(mlkem_hash_h))
@@ -65,9 +66,9 @@ S2N_BN_SYMBOL(N2(mlkem_hash_h)):
 
 // Absorb the full blocks: XOR in RATE bytes and permute
 
-mlkem_hash_h_block:
+Lmlkem_hash_h_block:
         cmp     r12, RATE
-        jb      mlkem_hash_h_last
+        jb      Lmlkem_hash_h_last
         vmovdqu ymm0, [rbp+0]
         vpxor   ymm0, ymm0, [rsp+0]
         vmovdqu [rsp+0], ymm0
@@ -83,44 +84,44 @@ mlkem_hash_h_block:
         mov     rax, [rbp+128]
         xor     [rsp+128], rax
         mov     rdi, rsp
-        lea     rsi, [r13+MLKEM_C_RC]
+        leadisp rsi, r13, MLKEM_C_RC
         call    S2N_BN_SYMBOL(N2_KECCAK_X1)
         add     rbp, RATE
         sub     r12, RATE
-        jmp     mlkem_hash_h_block
+        jmp     Lmlkem_hash_h_block
 
 // The last block: XOR in the len < RATE remaining bytes, whole words and
 // then single bytes, the domain byte 0x06 after them and 0x80 at the end,
 // and permute
 
-mlkem_hash_h_last:
+Lmlkem_hash_h_last:
         mov     rdi, rsp
         mov     rcx, r12
         shr     rcx, 3
-        jz      mlkem_hash_h_lastbytes
-mlkem_hash_h_lastwords:
+        jz      Lmlkem_hash_h_lastbytes
+Lmlkem_hash_h_lastwords:
         mov     rax, [rbp]
         xor     [rdi], rax
         add     rbp, 8
         add     rdi, 8
         dec     rcx
-        jnz     mlkem_hash_h_lastwords
-mlkem_hash_h_lastbytes:
+        jnz     Lmlkem_hash_h_lastwords
+Lmlkem_hash_h_lastbytes:
         mov     rcx, r12
-        and     rcx, 7
-        jz      mlkem_hash_h_pad
-mlkem_hash_h_lastbyte:
+        and     ecx, 7
+        jz      Lmlkem_hash_h_pad
+Lmlkem_hash_h_lastbyte:
         movzx   eax, BYTE PTR [rbp]
         xor     [rdi], al
         inc     rbp
         inc     rdi
         dec     rcx
-        jnz     mlkem_hash_h_lastbyte
-mlkem_hash_h_pad:
+        jnz     Lmlkem_hash_h_lastbyte
+Lmlkem_hash_h_pad:
         xor     BYTE PTR [rdi], 0x06
         xor     BYTE PTR [rsp+RATE-1], 0x80
         mov     rdi, rsp
-        lea     rsi, [r13+MLKEM_C_RC]
+        leadisp rsi, r13, MLKEM_C_RC
         call    S2N_BN_SYMBOL(N2_KECCAK_X1)
 
 // The digest, then zero the state

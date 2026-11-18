@@ -32,7 +32,7 @@ let pc_plus name off =
 
 (*** The end of the zeroing of the lanes and buffers, before vzeroupper ***)
 
-install_layout ["mlkem_getnoise_zerodone",layout "mlkem_getnoise_end" + 47];;
+install_layout ["mlkem_getnoise_zerodone",layout "mlkem_getnoise_end" + 46];;
 
 (* ------------------------------------------------------------------------- *)
 (* The zeroing of the lanes and buffers before the return, as one step.      *)

@@ -30,8 +30,8 @@ let gm_pc label off = layout ("mlkem_gen_matrix_" ^ label) + off;;
 
 let gm_pc_tm n = mk_binop `(+):num->num->num` `pc:num` (mk_small_numeral n);;
 
-install_layout ["mlkem_gen_matrix_zeroloop",gm_pc "end" 13;
-                "mlkem_gen_matrix_zerodone",gm_pc "end" 47];;
+install_layout ["mlkem_gen_matrix_zeroloop",gm_pc "end" 12;
+                "mlkem_gen_matrix_zerodone",gm_pc "end" 46];;
 
 (* ------------------------------------------------------------------------- *)
 (* The zeroing of the Keccak state before returning, as one step: four       *)
@@ -1105,17 +1105,17 @@ let GM_SPLIT_NOISE_TAC k =
 let gm_derive spoff =
   [gm_pc "nonoise" (-14), GM_MERGE_TAC `R9` [0];
    gm_pc "nonoise" 0, (fun k -> TRY(GM_SPLIT_TAC spoff [2880] k));
-   gm_pc "nonoise" 9, GM_MERGE_TAC `R8` [0; 32];
+   gm_pc "nonoise" 8, GM_MERGE_TAC `R8` [0; 32];
    gm_pc "jobsdone" 0, (fun k -> TRY(GM_SPLIT_TAC spoff [2816; 2848] k));
    gm_pc "outer" 0, (fun k -> TRY(GM_ZERO_LANES_TAC spoff k));
    gm_pc "initloop" 133, GM_LANE_SPLIT_TAC 136;
    gm_pc "initloop" 140, GM_MATRIX_LANE_TAC;
    gm_pc "noiseinit" 149, GM_LANE_SPLIT_TAC 104;
    gm_pc "noiseinit_next" 0, (fun k -> TRY(GM_NOISE_LANE_TAC k));
-   gm_pc "nohash1" 66, GM_LANE256_TAC 400;
-   gm_pc "nohash1" 79, GM_DIGEST_TAC 400;
-   gm_pc "nohash1" 113, GM_LANE256_TAC 600;
-   gm_pc "nohash1" 126, GM_DIGEST_TAC 600;
+   gm_pc "nohash1" 65, GM_LANE256_TAC 400;
+   gm_pc "nohash1" 78, GM_DIGEST_TAC 400;
+   gm_pc "nohash1" 112, GM_LANE256_TAC 600;
+   gm_pc "nohash1" 125, GM_DIGEST_TAC 600;
    gm_pc "copyloop" 0, GM_COPY_LOAD_TAC;
    gm_pc "copyloop" 68, GM_COPY_STORE_TAC];;
 

@@ -21,7 +21,7 @@
 // ----------------------------------------------------------------------------
 
 #include "_internal_s2n_bignum_arm.h"
-#include "mlkem_native2/mlkem_native2_consts.h"
+#include "mlkem_native2_consts.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_hash_g)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(mlkem_hash_g)
@@ -62,9 +62,9 @@ S2N_BN_SYMBOL(mlkem_hash_g):
 
 // Absorb the full blocks: XOR in RATE bytes (unrolled) and permute
 
-mlkem_hash_g_block:
+Lmlkem_hash_g_block:
         cmp     x21, #RATE
-        bcc     mlkem_hash_g_last
+        bcc     Lmlkem_hash_g_last
         add     x0, sp, #ST
         ldp     x2, x3, [x20], #16
         ldp     x4, x5, [x0, #0]
@@ -91,36 +91,36 @@ mlkem_hash_g_block:
         eor     x4, x4, x2
         str     x4, [x0, #64]
         add     x1, x22, #MLKEM_C_RC
-        bl      sha3_keccak_f1600
+        bl      S2N_BN_SYMBOL(sha3_keccak_f1600)
         sub     x21, x21, #RATE
-        b       mlkem_hash_g_block
+        b       Lmlkem_hash_g_block
 
 // The last block: XOR in the len < RATE remaining bytes, whole words and
 // then single bytes, the domain byte 0x06 after them and 0x80 at the end,
 // and permute
 
-mlkem_hash_g_last:
+Lmlkem_hash_g_last:
         add     x0, sp, #ST
         lsr     x1, x21, #3
-        cbz     x1, mlkem_hash_g_lastbytes
-mlkem_hash_g_lastwords:
+        cbz     x1, Lmlkem_hash_g_lastbytes
+Lmlkem_hash_g_lastwords:
         ldr     x2, [x20], #8
         ldr     x3, [x0]
         eor     x3, x3, x2
         str     x3, [x0], #8
         subs    x1, x1, #1
-        bne     mlkem_hash_g_lastwords
-mlkem_hash_g_lastbytes:
+        bne     Lmlkem_hash_g_lastwords
+Lmlkem_hash_g_lastbytes:
         ands    x1, x21, #7
-        beq     mlkem_hash_g_pad
-mlkem_hash_g_lastbyte:
+        beq     Lmlkem_hash_g_pad
+Lmlkem_hash_g_lastbyte:
         ldrb    w2, [x20], #1
         ldrb    w3, [x0]
         eor     w3, w3, w2
         strb    w3, [x0], #1
         subs    x1, x1, #1
-        bne     mlkem_hash_g_lastbyte
-mlkem_hash_g_pad:
+        bne     Lmlkem_hash_g_lastbyte
+Lmlkem_hash_g_pad:
         ldrb    w3, [x0]
         eor     w3, w3, #0x06
         strb    w3, [x0]
@@ -129,11 +129,11 @@ mlkem_hash_g_pad:
         eor     w3, w3, #0x80
         strb    w3, [x0, #(RATE - 1)]
         add     x1, x22, #MLKEM_C_RC
-        bl      sha3_keccak_f1600
+        bl      S2N_BN_SYMBOL(sha3_keccak_f1600)
 
 // The digest, then zero the state
 
-mlkem_hash_g_digest:
+Lmlkem_hash_g_digest:
         add     x0, sp, #ST
         ldp     q0, q1, [x0]
         stp     q0, q1, [x19]

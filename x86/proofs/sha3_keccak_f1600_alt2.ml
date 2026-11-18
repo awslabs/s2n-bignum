@@ -101,8 +101,7 @@ let sha3_keccak_f1600_alt2_mc,(sha3_keccak_f1600_alt2_data::_) =
                            (* VPBROADCASTQ (%_% ymm10) (Memop Quadword (%% (rsi,0))) *)
   0xc5; 0x4d; 0x6d; 0xde;  (* VPUNPCKHQDQ (%_% ymm11) (%_% ymm6) (%_% ymm6) *)
   0xc5; 0x3d; 0xef; 0xc5;  (* VPXOR (%_% ymm8) (%_% ymm8) (%_% ymm5) *)
-  0xc4; 0xc1; 0x45; 0xef; 0xfb;
-                           (* VPXOR (%_% ymm7) (%_% ymm7) (%_% ymm11) *)
+  0xc5; 0xa5; 0xef; 0xff;  (* VPXOR (%_% ymm7) (%_% ymm11) (%_% ymm7) *)
   0xc4; 0x41; 0x3d; 0xef; 0xc1;
                            (* VPXOR (%_% ymm8) (%_% ymm8) (%_% ymm9) *)
   0xc4; 0x63; 0xfd; 0x00; 0xcf; 0x4e;
@@ -117,8 +116,7 @@ let sha3_keccak_f1600_alt2_mc,(sha3_keccak_f1600_alt2_data::_) =
                            (* VPERMQ (%_% ymm12) (%_% ymm8) (Imm8 (word 144)) *)
   0xc4; 0x43; 0xfd; 0x00; 0xeb; 0x39;
                            (* VPERMQ (%_% ymm13) (%_% ymm11) (Imm8 (word 57)) *)
-  0xc4; 0xc1; 0x45; 0xef; 0xf9;
-                           (* VPXOR (%_% ymm7) (%_% ymm7) (%_% ymm9) *)
+  0xc5; 0xb5; 0xef; 0xff;  (* VPXOR (%_% ymm7) (%_% ymm9) (%_% ymm7) *)
   0xc4; 0x43; 0xfd; 0x00; 0xcb; 0x00;
                            (* VPERMQ (%_% ymm9) (%_% ymm11) (Imm8 (word 0)) *)
   0xc5; 0xc5; 0xef; 0xf8;  (* VPXOR (%_% ymm7) (%_% ymm7) (%_% ymm0) *)
@@ -135,12 +133,9 @@ let sha3_keccak_f1600_alt2_mc,(sha3_keccak_f1600_alt2_data::_) =
                            (* VPBLENDD (%_% ymm11) (%_% ymm13) (%_% ymm11) (Imm8 (word 192)) *)
   0xc4; 0x41; 0x3d; 0xef; 0xc1;
                            (* VPXOR (%_% ymm8) (%_% ymm8) (%_% ymm9) *)
-  0xc4; 0xc1; 0x45; 0xef; 0xfb;
-                           (* VPXOR (%_% ymm7) (%_% ymm7) (%_% ymm11) *)
-  0xc4; 0x41; 0x4d; 0xef; 0xc8;
-                           (* VPXOR (%_% ymm9) (%_% ymm6) (%_% ymm8) *)
-  0xc4; 0x41; 0x7d; 0xef; 0xc0;
-                           (* VPXOR (%_% ymm8) (%_% ymm0) (%_% ymm8) *)
+  0xc5; 0xa5; 0xef; 0xff;  (* VPXOR (%_% ymm7) (%_% ymm11) (%_% ymm7) *)
+  0xc5; 0x3d; 0xef; 0xce;  (* VPXOR (%_% ymm9) (%_% ymm8) (%_% ymm6) *)
+  0xc5; 0x3d; 0xef; 0xc0;  (* VPXOR (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
   0xc5; 0x65; 0xef; 0xdf;  (* VPXOR (%_% ymm11) (%_% ymm3) (%_% ymm7) *)
   0xc5; 0x55; 0xef; 0xe7;  (* VPXOR (%_% ymm12) (%_% ymm5) (%_% ymm7) *)
   0xc5; 0x75; 0xef; 0xef;  (* VPXOR (%_% ymm13) (%_% ymm1) (%_% ymm7) *)
@@ -161,8 +156,7 @@ let sha3_keccak_f1600_alt2_mc,(sha3_keccak_f1600_alt2_data::_) =
                            (* VPSLLVQ (%_% ymm11) (%_% ymm11) (Memop Word256 (%% (rax,128))) *)
   0xc4; 0x43; 0xfd; 0x00; 0xe4; 0x1b;
                            (* VPERMQ (%_% ymm12) (%_% ymm12) (Imm8 (word 27)) *)
-  0xc4; 0x41; 0x7d; 0xeb; 0xc9;
-                           (* VPOR (%_% ymm9) (%_% ymm0) (%_% ymm9) *)
+  0xc5; 0x35; 0xeb; 0xc8;  (* VPOR (%_% ymm9) (%_% ymm9) (%_% ymm0) *)
   0xc5; 0x25; 0xeb; 0xd9;  (* VPOR (%_% ymm11) (%_% ymm11) (%_% ymm1) *)
   0xc5; 0xed; 0xef; 0xff;  (* VPXOR (%_% ymm7) (%_% ymm2) (%_% ymm7) *)
   0xc4; 0x43; 0xfd; 0x00; 0xc9; 0x8d;
@@ -273,12 +267,12 @@ let sha3_keccak_f1600_alt2_mc,(sha3_keccak_f1600_alt2_data::_) =
   0xc4; 0xe3; 0xfd; 0x00; 0xff; 0x00;
                            (* VPERMQ (%_% ymm7) (%_% ymm7) (Imm8 (word 0)) *)
   0xc5; 0xbd; 0xef; 0xff;  (* VPXOR (%_% ymm7) (%_% ymm8) (%_% ymm7) *)
-  0xc4; 0xc1; 0x45; 0xef; 0xc2;
-                           (* VPXOR (%_% ymm0) (%_% ymm7) (%_% ymm10) *)
+  0xc5; 0xad; 0xef; 0xc7;  (* VPXOR (%_% ymm0) (%_% ymm10) (%_% ymm7) *)
   0xc5; 0x7d; 0x7f; 0xe1;  (* VMOVDQA (%_% ymm1) (%_% ymm12) *)
   0xc5; 0x7d; 0x7f; 0xde;  (* VMOVDQA (%_% ymm6) (%_% ymm11) *)
-  0x0f; 0x1f; 0x44; 0x00; 0x00;
-                           (* NOP_N (Memop Doubleword (%%% (rax,0,rax))) *)
+  0x66; 0x66; 0x2e; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00;
+                           (* NOP_N (Memop Word (%%% (rax,0,rax))) *)
+  0x90;                    (* NOP *)
   0x48; 0x83; 0xc6; 0x08;  (* ADD (% rsi) (Imm8 (word 8)) *)
   0xff; 0xc9;              (* DEC (% ecx) *)
   0x0f; 0x85; 0xb4; 0xfd; 0xff; 0xff;
@@ -525,13 +519,13 @@ let SHA3_KECCAK_F1600_ALT2_FULL = time prove
     (fun gl -> keccak_avx2_lanes := 0; ALL_TAC gl) THEN
     MAP_EVERY (fun n -> X86_STEPS_TAC SHA3_KECCAK_F1600_ALT2_TMC_EXEC [n] THEN
                         KECCAK_AVX2_SIMPLIFY_TAC THEN
-                        KECCAK_AVX2_LANE_ABBREV_TAC n) (1--107) THEN
+                        KECCAK_AVX2_LANE_ABBREV_TAC n) (1--108) THEN
     ENSURES_FINAL_STATE_TAC THEN
     EVENTS_SPLIT_TAC
      (ASM_REWRITE_TAC[] THEN
       REWRITE_TAC[round_constants; CONS_11;
         WORDLIST_FROM_MEMORY_CONV
-         `wordlist_from_memory(rc,24) s107:int64 list`] THEN
+         `wordlist_from_memory(rc,24) s108:int64 list`] THEN
       ASM_REWRITE_TAC[] THEN
       CONV_TAC(TOP_DEPTH_CONV EL_CONV) THEN
       ASM_SIMP_TAC[KECCAK_AVX2_COUNTER; KECCAK_AVX2_BRANCH] THEN
@@ -746,7 +740,7 @@ let SHA3_KECCAK_F1600_ALT2_SAFE = time prove
 
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false SHA3_KECCAK_F1600_ALT2_TMC_EXEC (1--107) THEN
+      ~canonicalize_pc_diff:false SHA3_KECCAK_F1600_ALT2_TMC_EXEC (1--108) THEN
     ASM_SIMP_TAC[KECCAK_AVX2_COUNTER; KECCAK_AVX2_BRANCH] THEN
     CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
     CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN

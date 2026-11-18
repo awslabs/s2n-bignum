@@ -29,7 +29,7 @@
 // ----------------------------------------------------------------------------
 
 #include "_internal_s2n_bignum_arm.h"
-#include "mlkem_native2/mlkem_native2_consts.h"
+#include "mlkem_native2_consts.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_getnoise)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(mlkem_getnoise)
@@ -118,65 +118,65 @@ S2N_BN_SYMBOL(mlkem_getnoise):
 // the absorbed seed, permute (x1 if only one lane is busy, otherwise x4),
 // and then finish or advance each busy lane.
 
-mlkem_getnoise_loop:
+Lmlkem_getnoise_loop:
         mov     busy, #0
         mov     lane, #0
-mlkem_getnoise_assign:
+Lmlkem_getnoise_assign:
         add     x9, sp, #CUR
         ldr     x0, [x9, lane, lsl #3]
-        tbz     x0, #63, mlkem_getnoise_assigned
+        tbz     x0, #63, Lmlkem_getnoise_assigned
         cmp     next, n
-        bcs     mlkem_getnoise_nextlane
+        bcs     Lmlkem_getnoise_nextlane
         str     next, [x9, lane, lsl #3]
         add     x10, sp, #BLK
         str     xzr, [x10, lane, lsl #3]
         add     x2, nonce0, next
         initlane lane, x2
         add     next, next, #1
-mlkem_getnoise_assigned:
+Lmlkem_getnoise_assigned:
         add     busy, busy, #1
-mlkem_getnoise_nextlane:
+Lmlkem_getnoise_nextlane:
         add     lane, lane, #1
         cmp     lane, #4
-        bcc     mlkem_getnoise_assign
+        bcc     Lmlkem_getnoise_assign
 
-        cbz     busy, mlkem_getnoise_end
+        cbz     busy, Lmlkem_getnoise_end
         cmp     busy, #1
-        bne     mlkem_getnoise_x4
+        bne     Lmlkem_getnoise_x4
 
 // Only one lane busy: find it and use the x1 permutation on it
 
         mov     lane, #0
         add     x9, sp, #CUR
-mlkem_getnoise_find:
+Lmlkem_getnoise_find:
         ldr     x0, [x9, lane, lsl #3]
-        tbz     x0, #63, mlkem_getnoise_found
+        tbz     x0, #63, Lmlkem_getnoise_found
         add     lane, lane, #1
-        b       mlkem_getnoise_find
-mlkem_getnoise_found:
+        b       Lmlkem_getnoise_find
+Lmlkem_getnoise_found:
         mov     x0, #200
         mul     x0, lane, x0
         add     x0, x0, #ST
         add     x0, sp, x0
         add     x1, c, #MLKEM_C_RC
-        bl      sha3_keccak_f1600
-        b       mlkem_getnoise_post
-mlkem_getnoise_x4:
+        bl      S2N_BN_SYMBOL(sha3_keccak_f1600)
+        b       Lmlkem_getnoise_post
+Lmlkem_getnoise_x4:
         add     x0, sp, #ST
         add     x1, c, #MLKEM_C_RC
-        bl      sha3_keccak4_f1600_alt2
+        bl      S2N_BN_SYMBOL(sha3_keccak4_f1600_alt2)
 
 // For each busy lane: with eta = 2, the coefficients come from the first
 // 128 bytes of the lane; with eta = 3, the first 136 bytes are saved and
 // then, after the next permutation, 56 more, and the coefficients come
 // from the buffer.
 
-mlkem_getnoise_post:
+Lmlkem_getnoise_post:
         mov     lane, #0
-mlkem_getnoise_postloop:
+Lmlkem_getnoise_postloop:
         add     x9, sp, #CUR
         ldr     x0, [x9, lane, lsl #3]
-        tbnz    x0, #63, mlkem_getnoise_postnext
+        tbnz    x0, #63, Lmlkem_getnoise_postnext
         mov     x1, #2
         cmp     x0, n1
         csel    x1, eta1, x1, cc
@@ -186,18 +186,18 @@ mlkem_getnoise_postloop:
         add     x2, sp, x2
         add     x0, r, x0, lsl #9
         cmp     x1, #2
-        bne     mlkem_getnoise_eta3
+        bne     Lmlkem_getnoise_eta3
         mov     x1, x2
-        bl      mlkem_cbd2
-        b       mlkem_getnoise_done
-mlkem_getnoise_eta3:
+        bl      S2N_BN_SYMBOL(mlkem_cbd2)
+        b       Lmlkem_getnoise_done
+Lmlkem_getnoise_eta3:
         mov     x3, #192
         mul     x3, lane, x3
         add     x3, x3, #BUF
         add     x3, sp, x3
         add     x10, sp, #BLK
         ldr     x4, [x10, lane, lsl #3]
-        cbnz    x4, mlkem_getnoise_eta3_second
+        cbnz    x4, Lmlkem_getnoise_eta3_second
         ldp     q0, q1, [x2]
         ldp     q2, q3, [x2, #32]
         ldp     q4, q5, [x2, #64]
@@ -210,8 +210,8 @@ mlkem_getnoise_eta3:
         str     d16, [x3, #128]
         mov     x4, #1
         str     x4, [x10, lane, lsl #3]
-        b       mlkem_getnoise_postnext
-mlkem_getnoise_eta3_second:
+        b       Lmlkem_getnoise_postnext
+Lmlkem_getnoise_eta3_second:
         ldp     q0, q1, [x2]
         ldp     q2, q3, [x2, #32]
         add     x4, x3, #136
@@ -219,26 +219,26 @@ mlkem_getnoise_eta3_second:
         str     q2, [x4, #32]
         str     d3, [x4, #48]
         mov     x1, x3
-        bl      mlkem_cbd3
-mlkem_getnoise_done:
+        bl      S2N_BN_SYMBOL(mlkem_cbd3)
+Lmlkem_getnoise_done:
         add     x9, sp, #CUR
         mov     x0, #-1
         str     x0, [x9, lane, lsl #3]
-mlkem_getnoise_postnext:
+Lmlkem_getnoise_postnext:
         add     lane, lane, #1
         cmp     lane, #4
-        bcc     mlkem_getnoise_postloop
-        b       mlkem_getnoise_loop
+        bcc     Lmlkem_getnoise_postloop
+        b       Lmlkem_getnoise_loop
 
 // Zero the state and buffers, which are secret, and return
 
-mlkem_getnoise_end:
+Lmlkem_getnoise_end:
         add     x0, sp, #ST
         mov     x1, #(CUR-ST)
-mlkem_getnoise_zero:
+Lmlkem_getnoise_zero:
         stp     xzr, xzr, [x0], #16
         subs    x1, x1, #16
-        bne     mlkem_getnoise_zero
+        bne     Lmlkem_getnoise_zero
 
         CFI_STACKLOAD2(x19,x20,SAVE)
         CFI_STACKLOAD2(x21,x22,SAVE+16)

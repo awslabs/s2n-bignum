@@ -59,6 +59,14 @@
 // AVX-512 version, which assembles this template with
 // MLKEM_NATIVE2_AVX512 defined).
 
+#include "mlkem_native2_macros.h"
+
+// Assembled on its own rather than included by mlkem512.S, mlkem768.S
+// or mlkem1024.S (as by a build that takes every .S file), the
+// template is empty.
+
+#if defined(MLKEM_K)
+
 // The parameters
 
 #define N 256
@@ -107,6 +115,9 @@
 #define CAT2(a, b) a##b
 #define CAT(a, b) CAT2(a, b)
 #define FN(f) N2(CAT(CAT(mlkem, MLKEM_L), CAT(_, f)))
+// LFN(f) for the labels inside the functions: FN(f) with an L prefix,
+// which keeps the label local to the object on Mach-O
+#define LFN(f) CAT(L, FN(f))
 #define BASEMUL CAT(mlkem_basemul_k, MLKEM_K)
 #define COMPRESS_DU CAT(CAT(mlkem_compress_d, DU), _x86)
 #define COMPRESS_DV CAT(CAT(mlkem_compress_d, DV), _x86)
@@ -237,7 +248,7 @@
 #if defined(MLKEM_CT_TESTING)
         mov     eax, 0x4d430002
         mov     [rsp+(\area)], rax
-        lea     rax, [rsp+(\off)]
+        leadisp rax, rsp, (\off)
         mov     [rsp+(\area)+8], rax
         mov     eax, (\len)
         mov     [rsp+(\area)+16], rax
@@ -246,7 +257,7 @@
         mov     [rsp+(\area)+32], rax
         mov     [rsp+(\area)+40], rax
         xor     edx, edx
-        lea     rax, [rsp+(\area)]
+        leadisp rax, rsp, (\area)
         rol     rdi, 3
         rol     rdi, 13
         rol     rdi, 61
@@ -263,7 +274,7 @@
         .error  "zero: the length must be a multiple of 32"
         .endif
         vpxor   xmm0, xmm0, xmm0
-        lea     rdi, [rsp+(\off)]
+        leadisp rdi, rsp, (\off)
         .if ((\len) / 128) != 0
         mov     ecx, ((\len) / 128)
 1:
@@ -308,7 +319,7 @@
         .macro  ntt off, base=rsp
         .set    i, 0
         .rept   K
-        lea     rdi, [\base+(\off)+512*i]
+        leadisp rdi, \base, (\off)+512*i
         lea     rsi, [r15+MLKEM_C_QDATA]
         call    S2N_BN_SYMBOL(mlkem_ntt_x86)
         .set    i, i + 1
@@ -320,7 +331,7 @@
         .macro  intt off, n
         .set    i, 0
         .rept   (\n)
-        lea     rdi, [rsp+(\off)+512*i]
+        leadisp rdi, rsp, (\off)+512*i
         lea     rsi, [r15+MLKEM_C_QDATA]
         call    S2N_BN_SYMBOL(mlkem_intt_x86)
         .set    i, i + 1
@@ -333,8 +344,8 @@
         .macro  mulcache dst, src, base=rsp
         .set    i, 0
         .rept   K
-        lea     rdi, [rsp+(\dst)+256*i]
-        lea     rsi, [\base+(\src)+512*i]
+        leadisp rdi, rsp, (\dst)+256*i
+        leadisp rsi, \base, (\src)+512*i
         lea     rdx, [r15+MLKEM_C_QDATA]
         call    S2N_BN_SYMBOL(mlkem_mulcache_compute_x86)
         .set    i, i + 1
@@ -354,7 +365,7 @@
 S2N_BN_SYMBOL(FN(check_pk)):
         CFI_START
         _CET_ENDBR
-        winentry FN(check_pk_standard), 1
+        winentry LFN(check_pk_standard), 1
         sub     rsp, 8
         .cfi_adjust_cfa_offset 8
         mov     esi, K
@@ -383,7 +394,7 @@ S2N_BN_SIZE_DIRECTIVE(FN(check_pk))
 S2N_BN_SYMBOL(FN(check_sk)):
         CFI_START
         _CET_ENDBR
-        winentry FN(check_sk_standard), 1
+        winentry LFN(check_sk_standard), 1
         CFI_PUSH(rbx)
         CFI_DEC_RSP(48)
         mov     rbx, rdi
@@ -446,7 +457,7 @@ S2N_BN_SIZE_DIRECTIVE(FN(check_sk))
 S2N_BN_SYMBOL(FN(keypair_derand)):
         CFI_START
         _CET_ENDBR
-        winentry FN(keypair_derand_standard), 3
+        winentry LFN(keypair_derand_standard), 3
         enter   KP_FRAME
         mov     rbx, rdi
         mov     r12, rsi
@@ -524,10 +535,10 @@ S2N_BN_SYMBOL(FN(keypair_derand)):
 
         .set    j, 0
         .rept   K
-        lea     rdi, [rbx+POLYBYTES*j]
+        leadisp rdi, rbx, POLYBYTES*j
         lea     rsi, [rsp+KP_T+512*j]
         call    S2N_BN_SYMBOL(mlkem_tobytes)
-        lea     rdi, [r12+POLYBYTES*j]
+        leadisp rdi, r12, POLYBYTES*j
         lea     rsi, [rsp+KP_S+512*j]
         call    S2N_BN_SYMBOL(mlkem_tobytes)
         .set    j, j + 1
@@ -594,7 +605,7 @@ S2N_BN_SYMBOL(FN(pke_encrypt)):
         .set    j, 0
         .rept   K
         lea     rdi, [rsp+PE_T+512*j]
-        lea     rsi, [r13+POLYBYTES*j]
+        leadisp rsi, r13, POLYBYTES*j
         call    S2N_BN_SYMBOL(mlkem_frombytes)
         .set    j, j + 1
         .endr
@@ -609,16 +620,16 @@ S2N_BN_SYMBOL(FN(pke_encrypt)):
         .set    j, 0
         .rept   K
         lea     rdi, [rsp+PE_U+512*j]
-        lea     rsi, [r12+512*K*j]
+        leadisp rsi, r12, 512*K*j
         mov     rdx, r14
-        lea     rcx, [rsp+PE_YC]
+        leadisp rcx, rsp, PE_YC
         call    S2N_BN_SYMBOL(BASEMUL)
         .set    j, j + 1
         .endr
         lea     rdi, [rsp+PE_V]
         lea     rsi, [rsp+PE_T]
         mov     rdx, r14
-        lea     rcx, [rsp+PE_YC]
+        leadisp rcx, rsp, PE_YC
         call    S2N_BN_SYMBOL(BASEMUL)
         intt    PE_U, (K + 1)
         .set    j, 0
@@ -639,7 +650,7 @@ S2N_BN_SYMBOL(FN(pke_encrypt)):
 
         .set    j, 0
         .rept   K
-        lea     rdi, [rbx+DUBYTES*j]
+        leadisp rdi, rbx, DUBYTES*j
         lea     rsi, [rsp+PE_U+512*j]
         lea     rdx, [r15+C_COMPRESS_DU]
         call    S2N_BN_SYMBOL(COMPRESS_DU)
@@ -689,7 +700,7 @@ S2N_BN_SIZE_DIRECTIVE(FN(pke_encrypt))
 S2N_BN_SYMBOL(FN(enc_derand)):
         CFI_START
         _CET_ENDBR
-        winentry FN(enc_derand_standard), 4
+        winentry LFN(enc_derand_standard), 4
         enter   EN_FRAME
         mov     rbx, rdi
         mov     r12, rsi
@@ -700,7 +711,7 @@ S2N_BN_SYMBOL(FN(enc_derand)):
         mov     esi, K
         call    S2N_BN_SYMBOL(mlkem_check_encoding)
         test    rax, rax
-        jz      FN(enc_invalid)
+        jz      LFN(enc_invalid)
 
         copy    rsp+EN_GIN, r14, 32
 
@@ -751,10 +762,10 @@ S2N_BN_SYMBOL(FN(enc_derand)):
 
         zero    EN_GIN, (EN_AT - EN_GIN)
         xor     eax, eax
-        jmp     FN(enc_return)
-FN(enc_invalid):
+        jmp     LFN(enc_return)
+LFN(enc_invalid):
         mov     eax, ERR_INVALID_PK
-FN(enc_return):
+LFN(enc_return):
         vzeroupper
         leave_
         .cfi_endproc
@@ -792,12 +803,12 @@ S2N_BN_SYMBOL(FN(pke_decrypt)):
 
         .set    j, 0
         .rept   K
-        lea     rdi, [rsp+PD_U+512*j]
-        lea     rsi, [r12+DUBYTES*j]
+        leadisp rdi, rsp, PD_U+512*j
+        leadisp rsi, r12, DUBYTES*j
         lea     rdx, [r15+C_DECOMPRESS_DU]
         call    S2N_BN_SYMBOL(DECOMPRESS_DU)
         lea     rdi, [rsp+PD_S+512*j]
-        lea     rsi, [r13+POLYBYTES*j]
+        leadisp rsi, r13, POLYBYTES*j
         call    S2N_BN_SYMBOL(mlkem_frombytes)
         .set    j, j + 1
         .endr
@@ -810,7 +821,7 @@ S2N_BN_SYMBOL(FN(pke_decrypt)):
         mulcache PD_UC, PD_U
         lea     rdi, [rsp+PD_W]
         lea     rsi, [rsp+PD_S]
-        lea     rdx, [rsp+PD_U]
+        leadisp rdx, rsp, PD_U
         lea     rcx, [rsp+PD_UC]
         call    S2N_BN_SYMBOL(BASEMUL)
         intt    PD_W, 1
@@ -864,7 +875,7 @@ S2N_BN_SIZE_DIRECTIVE(FN(pke_decrypt))
 S2N_BN_SYMBOL(FN(dec)):
         CFI_START
         _CET_ENDBR
-        winentry FN(dec_standard), 3
+        winentry LFN(dec_standard), 3
         enter   DE_FRAME
         mov     rbx, rdi
         mov     r12, rsi
@@ -943,7 +954,7 @@ S2N_BN_SYMBOL(FN(dec)):
         mov     rcx, [rsp+DE_HEK+24]
         xor     rcx, [r13+SKBYTES-40]
         or      rax, rcx
-        jnz     FN(dec_invalid)
+        jnz     LFN(dec_invalid)
 
 // c' = K-PKE.Encrypt(ek, m', r')
 
@@ -978,11 +989,11 @@ S2N_BN_SYMBOL(FN(dec)):
 
         zero    DE_GIN, (DE_AT - DE_GIN)
         xor     eax, eax
-        jmp     FN(dec_return)
-FN(dec_invalid):
+        jmp     LFN(dec_return)
+LFN(dec_invalid):
         zero    DE_GIN, (DE_AT - DE_GIN)
         mov     eax, ERR_INVALID_SK
-FN(dec_return):
+LFN(dec_return):
         vzeroupper
         leave_
         .cfi_endproc
@@ -991,4 +1002,6 @@ S2N_BN_SIZE_DIRECTIVE(FN(dec))
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
+#endif
+
 #endif

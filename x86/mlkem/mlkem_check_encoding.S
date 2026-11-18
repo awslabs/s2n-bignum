@@ -60,11 +60,11 @@ S2N_BN_SYMBOL(mlkem_check_encoding):
         movabs  rax, 0x0f0e0e0d0c0b0b0a
         vpinsrq xmm7, xmm7, rax, 1
         vinserti128 ymm6, ymm6, xmm7, 1
-        vpxor   ymm4, ymm4, ymm4
+        vpxor   xmm4, xmm4, xmm4
         test    rsi, rsi
-        jz      mlkem_check_encoding_done
+        jz      Lmlkem_check_encoding_done
 
-mlkem_check_encoding_loop:
+Lmlkem_check_encoding_loop:
         vmovdqu xmm1, [rdi+0]
         vinserti128 ymm1, ymm1, XMMWORD PTR [rdi+8], 1
         vpshufb ymm1, ymm1, ymm6
@@ -195,9 +195,9 @@ mlkem_check_encoding_loop:
         vpor    ymm4, ymm4, ymm3
         add     rdi, 384
         dec     rsi
-        jnz     mlkem_check_encoding_loop
+        jnz     Lmlkem_check_encoding_loop
 
-mlkem_check_encoding_done:
+Lmlkem_check_encoding_done:
         xor     eax, eax
         vptest  ymm4, ymm4
         setz    al

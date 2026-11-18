@@ -53,7 +53,7 @@
 // ----------------------------------------------------------------------------
 
 #include "_internal_s2n_bignum_arm.h"
-#include "mlkem_native2/mlkem_native2_consts.h"
+#include "mlkem_native2_consts.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_gen_matrix)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(mlkem_gen_matrix)
@@ -262,20 +262,20 @@
         mov     x1, #0
         mov     x3, #BUFBYTES
         add     x4, c, #MLKEM_C_REJ_UNIFORM_TABLE
-        bl      mlkem_rej_uniform_alt_VARIABLE_TIME
+        bl      S2N_BN_SYMBOL(mlkem_rej_uniform_alt_VARIABLE_TIME)
 1:
         cmp     x0, #256
         bcs     2f
         str     x0, [sp, #RCNT]
         laneaddr x0, \l
         add     x1, c, #MLKEM_C_RC
-        bl      sha3_keccak_f1600
+        bl      S2N_BN_SYMBOL(sha3_keccak_f1600)
         add     x0, a, \e, lsl #9
         ldr     x1, [sp, #RCNT]
         laneaddr x2, \l
         mov     x3, #SHAKE128_RATE
         add     x4, c, #MLKEM_C_REJ_UNIFORM_TABLE
-        bl      mlkem_rej_uniform_alt_VARIABLE_TIME
+        bl      S2N_BN_SYMBOL(mlkem_rej_uniform_alt_VARIABLE_TIME)
         b       1b
 2:
         .endm
@@ -334,25 +334,25 @@ S2N_BN_SYMBOL(mlkem_gen_matrix):
         add     x6, sp, #NOISE
         stp     xzr, xzr, [x6, #16]
         str     xzr, [x6, #32]
-        tbz     x3, #2, mlkem_gen_matrix_nonoise
+        tbz     x3, #2, Lmlkem_gen_matrix_nonoise
         ldp     q0, q1, [x5]
         stp     q0, q1, [x6]
-mlkem_gen_matrix_nonoise:
+Lmlkem_gen_matrix_nonoise:
 
 // Copy the hash jobs (bit 1), or make them inactive (ds = 0), and zero
 // their lanes 2 and 3
 
         add     x6, sp, #JOBS
-        tbz     x3, #1, mlkem_gen_matrix_nojobs
+        tbz     x3, #1, Lmlkem_gen_matrix_nojobs
         ldp     q0, q1, [x4]
         ldp     q2, q3, [x4, #32]
         stp     q0, q1, [x6]
         stp     q2, q3, [x6, #32]
-        b       mlkem_gen_matrix_jobsdone
-mlkem_gen_matrix_nojobs:
+        b       Lmlkem_gen_matrix_jobsdone
+Lmlkem_gen_matrix_nojobs:
         str     xzr, [x6, #16]
         str     xzr, [x6, #48]
-mlkem_gen_matrix_jobsdone:
+Lmlkem_gen_matrix_jobsdone:
         zerolanes (2*LANEBYTES), (2*LANEBYTES)
 
 // The main loop: each pass samples nm polynomials in lanes 0..nm-1, where
@@ -364,9 +364,9 @@ mlkem_gen_matrix_jobsdone:
 // with the x1 permutation instead, which is cheaper than an x4 one with
 // lanes left idle.
 
-mlkem_gen_matrix_outer:
+Lmlkem_gen_matrix_outer:
         cmp     idx, kk
-        bcs     mlkem_gen_matrix_hashtail
+        bcs     Lmlkem_gen_matrix_hashtail
         mov     nmat, #4
         ldr     x0, [sp, #(JOBS+48)]
         cmp     x0, #0
@@ -379,24 +379,24 @@ mlkem_gen_matrix_outer:
         sub     x2, kk, idx
         cmp     nmat, #4
         ccmp    x2, #2, #2, eq
-        bhi     mlkem_gen_matrix_pass
+        bhi     Lmlkem_gen_matrix_pass
         ldr     x3, [sp, #(NOISE+16)]
         ldr     x4, [sp, #(NOISE+32)]
         cmp     x4, x3
-        bcs     mlkem_gen_matrix_x1tail
-mlkem_gen_matrix_pass:
+        bcs     Lmlkem_gen_matrix_x1tail
+Lmlkem_gen_matrix_pass:
         cmp     nmat, x2
         csel    nm, x2, nmat, hi
 
 // Initialize the lanes of the polynomials idx .. idx+nm-1
 
         mov     lane, #0
-mlkem_gen_matrix_initloop:
+Lmlkem_gen_matrix_initloop:
         add     x1, idx, lane
         initlane lane, x1
         add     lane, lane, #1
         cmp     lane, nm
-        bcc     mlkem_gen_matrix_initloop
+        bcc     Lmlkem_gen_matrix_initloop
 
 // Three steps: give each idle lane the next noise polynomial if any,
 // absorb a block of each active hash job, permute, copy a block of output
@@ -419,41 +419,41 @@ mlkem_gen_matrix_initloop:
         str     x2, [sp, #FLAGS]
 
         mov     step, #0
-mlkem_gen_matrix_steploop:
+Lmlkem_gen_matrix_steploop:
         ldr     x2, [sp, #FLAGS]
-        tbz     x2, #1, mlkem_gen_matrix_noiseinit_done
+        tbz     x2, #1, Lmlkem_gen_matrix_noiseinit_done
         mov     lane, nm
-mlkem_gen_matrix_noiseinit:
+Lmlkem_gen_matrix_noiseinit:
         cmp     lane, nmat
-        bcs     mlkem_gen_matrix_noiseinit_done
+        bcs     Lmlkem_gen_matrix_noiseinit_done
         add     x9, sp, #NCUR
         mov     x0, #-1
         str     x0, [x9, lane, lsl #3]
         ldr     x3, [sp, #(NOISE+16)]
         ldr     x4, [sp, #(NOISE+32)]
         cmp     x4, x3
-        bcs     mlkem_gen_matrix_noiseinit_next
+        bcs     Lmlkem_gen_matrix_noiseinit_next
         str     x4, [x9, lane, lsl #3]
         add     x5, x4, #1
         str     x5, [sp, #(NOISE+32)]
         initnoise lane, x4
-mlkem_gen_matrix_noiseinit_next:
+Lmlkem_gen_matrix_noiseinit_next:
         add     lane, lane, #1
-        b       mlkem_gen_matrix_noiseinit
-mlkem_gen_matrix_noiseinit_done:
+        b       Lmlkem_gen_matrix_noiseinit
+Lmlkem_gen_matrix_noiseinit_done:
         ldr     x2, [sp, #FLAGS]
-        tbz     x2, #0, mlkem_gen_matrix_nohash1
+        tbz     x2, #0, Lmlkem_gen_matrix_nohash1
         absorbjob 0
         absorbjob 1
-mlkem_gen_matrix_nohash1:
+Lmlkem_gen_matrix_nohash1:
         add     x0, sp, #ST
         add     x1, c, #MLKEM_C_RC
-        bl      sha3_keccak4_f1600_alt2
+        bl      S2N_BN_SYMBOL(sha3_keccak4_f1600_alt2)
         ldr     x2, [sp, #FLAGS]
-        tbz     x2, #0, mlkem_gen_matrix_nohash2
+        tbz     x2, #0, Lmlkem_gen_matrix_nohash2
         finishjob 0
         finishjob 1
-mlkem_gen_matrix_nohash2:
+Lmlkem_gen_matrix_nohash2:
 
 // Copy the block of each of the nm lanes 0..nm-1 to offset 168 * step of
 // its buffer (the buffers 504 bytes apart, the lanes 200)
@@ -464,58 +464,58 @@ mlkem_gen_matrix_nohash2:
         add     x0, sp, x0
         add     x1, sp, #ST
         mov     x2, nm
-mlkem_gen_matrix_copyloop:
+Lmlkem_gen_matrix_copyloop:
         copyblock x0, x1
         add     x0, x0, #BUFBYTES
         add     x1, x1, #LANEBYTES
         subs    x2, x2, #1
-        bne     mlkem_gen_matrix_copyloop
+        bne     Lmlkem_gen_matrix_copyloop
 
         ldr     x2, [sp, #FLAGS]
-        tbz     x2, #1, mlkem_gen_matrix_noisecbd_done
+        tbz     x2, #1, Lmlkem_gen_matrix_noisecbd_done
         mov     lane, nm
-mlkem_gen_matrix_noisecbd:
+Lmlkem_gen_matrix_noisecbd:
         cmp     lane, nmat
-        bcs     mlkem_gen_matrix_noisecbd_done
+        bcs     Lmlkem_gen_matrix_noisecbd_done
         add     x9, sp, #NCUR
         ldr     x0, [x9, lane, lsl #3]
-        tbnz    x0, #63, mlkem_gen_matrix_noisecbd_next
+        tbnz    x0, #63, Lmlkem_gen_matrix_noisecbd_next
         ldr     x1, [sp, #(NOISE+24)]
         add     x0, x1, x0, lsl #9
         laneaddr x1, lane
-        bl      mlkem_cbd2
-mlkem_gen_matrix_noisecbd_next:
+        bl      S2N_BN_SYMBOL(mlkem_cbd2)
+Lmlkem_gen_matrix_noisecbd_next:
         add     lane, lane, #1
-        b       mlkem_gen_matrix_noisecbd
-mlkem_gen_matrix_noisecbd_done:
+        b       Lmlkem_gen_matrix_noisecbd
+Lmlkem_gen_matrix_noisecbd_done:
         add     step, step, #1
         cmp     step, #3
-        bcc     mlkem_gen_matrix_steploop
+        bcc     Lmlkem_gen_matrix_steploop
 
 // Rejection sampling of the three blocks of each lane, and any more
 // blocks needed
 
         mov     lane, #0
-mlkem_gen_matrix_rejloop:
+Lmlkem_gen_matrix_rejloop:
         add     step, idx, lane
         samplepoly lane, step
         add     lane, lane, #1
         cmp     lane, nm
-        bcc     mlkem_gen_matrix_rejloop
+        bcc     Lmlkem_gen_matrix_rejloop
         add     idx, idx, nm
-        b       mlkem_gen_matrix_outer
+        b       Lmlkem_gen_matrix_outer
 
 // One or two polynomials left and no jobs or noise: one at a time in lane 0
 // with the x1 permutation
 
-mlkem_gen_matrix_x1tail:
+Lmlkem_gen_matrix_x1tail:
         mov     lane, #0
         initlane lane, idx
         mov     step, #0
-mlkem_gen_matrix_x1loop:
+Lmlkem_gen_matrix_x1loop:
         add     x0, sp, #ST
         add     x1, c, #MLKEM_C_RC
-        bl      sha3_keccak_f1600
+        bl      S2N_BN_SYMBOL(sha3_keccak_f1600)
         mov     x4, #SHAKE128_RATE
         mul     x0, step, x4
         add     x0, x0, #BUF
@@ -524,50 +524,50 @@ mlkem_gen_matrix_x1loop:
         copyblock x0, x1
         add     step, step, #1
         cmp     step, #3
-        bcc     mlkem_gen_matrix_x1loop
+        bcc     Lmlkem_gen_matrix_x1loop
         samplepoly lane, idx
         add     idx, idx, #1
         cmp     idx, kk
-        bcc     mlkem_gen_matrix_x1tail
+        bcc     Lmlkem_gen_matrix_x1tail
 
 // Any blocks of the jobs left once the matrix is done (none in the uses
 // by ML-KEM, where the jobs finish with the matrix)
 
-mlkem_gen_matrix_hashtail:
+Lmlkem_gen_matrix_hashtail:
         ldr     x0, [sp, #(JOBS+16)]
         ldr     x1, [sp, #(JOBS+48)]
         orr     x0, x0, x1
-        cbz     x0, mlkem_gen_matrix_noisetail
+        cbz     x0, Lmlkem_gen_matrix_noisetail
         absorbjob 0
         absorbjob 1
         add     x0, sp, #ST
         add     x1, c, #MLKEM_C_RC
-        bl      sha3_keccak4_f1600_alt2
+        bl      S2N_BN_SYMBOL(sha3_keccak4_f1600_alt2)
         finishjob 0
         finishjob 1
-        b       mlkem_gen_matrix_hashtail
+        b       Lmlkem_gen_matrix_hashtail
 
 // Any noise polynomials left, by mlkem_getnoise
 
-mlkem_gen_matrix_noisetail:
+Lmlkem_gen_matrix_noisetail:
         add     x9, sp, #NOISE
         ldp     x1, x2, [x9]
         ldp     x3, x4, [x9, #16]
         ldr     x5, [x9, #32]
         cmp     x5, x3
-        bcs     mlkem_gen_matrix_end
+        bcs     Lmlkem_gen_matrix_end
         add     x0, x4, x5, lsl #9
         add     x2, x2, x5
         sub     x3, x3, x5
         mov     x4, x3
         mov     x5, #2
         mov     x6, c
-        bl      mlkem_getnoise
+        bl      S2N_BN_SYMBOL(mlkem_getnoise)
 
 // Zero the Keccak state, which may hold secret hash and noise states, and
 // return
 
-mlkem_gen_matrix_end:
+Lmlkem_gen_matrix_end:
         zerolanes 0, (4*LANEBYTES)
 
         CFI_STACKLOAD2(x19,x20,SAVE)

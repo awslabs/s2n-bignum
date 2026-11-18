@@ -542,7 +542,7 @@ let SHA3_KECCAK4_F1600_AVX512_SUBROUTINE_CORRECT_F1600 = prove
 let SHA3_KECCAK4_F1600_AVX512_NOIBT_SUBROUTINE_SAFE_FRAMED = time prove
  (`exists f_events.
     forall e a rc pc stackpointer returnaddress.
-        nonoverlapping (a,800) (word pc,0x1073) /\
+        nonoverlapping (a,800) (word pc,0x1065) /\
         nonoverlapping (a,800) (rc,192) /\
         nonoverlapping (a,800) (stackpointer,8)
         ==> ensures x86

@@ -2136,6 +2136,28 @@ let SIMD_SIMPLIFY_TAC unfold_defs =
     CONV_RULE(RAND_CONV (SIMD_SIMPLIFY_CONV unfold_defs)) o
     check (simdable o concl)));;
 
+(* ------------------------------------------------------------------------- *)
+(* The equations |- l = r' for each r' given by commuting the operands of    *)
+(* any of the word_add and word_mul in r, for |- l = r in the list, so that  *)
+(* the folding above also works on code whose commutative instructions have *)
+(* their sources in the other order, e.g. for a shorter VEX encoding.        *)
+(* ------------------------------------------------------------------------- *)
+
+let COMMUTED_FORMS =
+  let syms = [WORD_ADD_SYM; WORD_MUL_SYM] in
+  let rec variants tm =
+    match tm with
+      Comb(f,x) ->
+        let ths = allpairs (curry MK_COMB) (variants f) (variants x) in
+        ths @ mapfilter
+         (fun th -> TRANS th (tryfind (fun s -> PART_MATCH lhs s
+                                         (rand(concl th))) syms)) ths
+    | _ -> [REFL tm] in
+  let forms th =
+    let th' = SPEC_ALL th in
+    map (TRANS th') (variants(rand(concl th'))) in
+  fun ths -> List.concat(map forms ths);;
+
 let is_local_definition unfold_defs =
   let pats = map (lhand o snd o strip_forall o concl) unfold_defs in
   let pam t = exists (fun p -> can(term_match [] p) t) pats in

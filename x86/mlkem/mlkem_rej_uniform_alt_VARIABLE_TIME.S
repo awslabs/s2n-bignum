@@ -90,16 +90,24 @@ S2N_BN_SYMBOL(mlkem_rej_uniform_alt_VARIABLE_TIME):
 // 48 bytes per step while there are 48 more and n <= 224
 
         cmp     rcx, 48
-        jb      mlkem_rej_uniform_alt_loop
+        jb      Lmlkem_rej_uniform_alt_loop
         cmp     rsi, 224
-        ja      mlkem_rej_uniform_alt_loop
+        ja      Lmlkem_rej_uniform_alt_loop
 
 // The fields of the chunks A and B, A0 and B0 (the first eight
 // of each) in ymm0, A1 and B1 in ymm7, those < 3329, and their
-// masks in the order A0, A1, B0, B1 in the bytes of eax
+// masks in the order A0, A1, B0, B1 in the bytes of eax. Before
+// that, .balign 32, written as the NOPs that GNU as pads with
+// (clang pads with others)
 
-        .balign 32
-mlkem_rej_uniform_alt_loop2:
+#if WINDOWS_ABI
+        .byte   0x66, 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00
+        .byte   0x66, 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00
+        .byte   0x90
+#else
+        .byte   0x0f, 0x1f, 0x00
+#endif
+Lmlkem_rej_uniform_alt_loop2:
         vmovdqu xmm0, [rdx]
         vinserti128 ymm0, ymm0, XMMWORD PTR [rdx+24], 1
         vmovdqu xmm7, [rdx+8]
@@ -154,17 +162,17 @@ mlkem_rej_uniform_alt_loop2:
         lea     rdi, [rdi+2*r9]
         add     rsi, r9
         cmp     rcx, 48
-        jb      mlkem_rej_uniform_alt_loop
+        jb      Lmlkem_rej_uniform_alt_loop
         cmp     rsi, 224
-        jbe     mlkem_rej_uniform_alt_loop2
+        jbe     Lmlkem_rej_uniform_alt_loop2
 
 // Then 24 bytes per step
 
-mlkem_rej_uniform_alt_loop:
+Lmlkem_rej_uniform_alt_loop:
         cmp     rcx, 24
-        jb      mlkem_rej_uniform_alt_end
+        jb      Lmlkem_rej_uniform_alt_end
         cmp     rsi, 256
-        jae     mlkem_rej_uniform_alt_end
+        jae     Lmlkem_rej_uniform_alt_end
         sub     rcx, 24
 
 // The 16 fields, those < 3329, and the masks m0 (r9) and m1 (r10)
@@ -200,17 +208,17 @@ mlkem_rej_uniform_alt_loop:
 // Directly to r while there is room for 16 more entries
 
         cmp     rsi, 240
-        ja      mlkem_rej_uniform_alt_last
+        ja      Lmlkem_rej_uniform_alt_last
         vmovdqu [rdi], xmm0
         vextracti128 [rdi+2*r11], ymm0, 1
         add     r11, rax
         lea     rdi, [rdi+2*r11]
         add     rsi, r11
-        jmp     mlkem_rej_uniform_alt_loop
+        jmp     Lmlkem_rej_uniform_alt_loop
 
 // Otherwise through the stack, copying min(c0 + c1, 256 - n) entries
 
-mlkem_rej_uniform_alt_last:
+Lmlkem_rej_uniform_alt_last:
         vmovdqu [rsp], xmm0
         vextracti128 [rsp+2*r11], ymm0, 1
         add     r11, rax
@@ -221,17 +229,17 @@ mlkem_rej_uniform_alt_last:
         add     rsi, r11
         xor     r9d, r9d
         test    r11, r11
-        jz      mlkem_rej_uniform_alt_loop
-mlkem_rej_uniform_alt_copy:
+        jz      Lmlkem_rej_uniform_alt_loop
+Lmlkem_rej_uniform_alt_copy:
         movzx   eax, WORD PTR [rsp+2*r9]
         mov     [rdi], ax
         add     rdi, 2
         inc     r9
         cmp     r9, r11
-        jb      mlkem_rej_uniform_alt_copy
-        jmp     mlkem_rej_uniform_alt_loop
+        jb      Lmlkem_rej_uniform_alt_copy
+        jmp     Lmlkem_rej_uniform_alt_loop
 
-mlkem_rej_uniform_alt_end:
+Lmlkem_rej_uniform_alt_end:
         add     rsp, 32
         mov     rax, rsi
 

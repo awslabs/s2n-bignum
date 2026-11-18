@@ -19,9 +19,9 @@
 
 #define MLKEM_NATIVE2_AVX512 1
 #include "_internal_s2n_bignum_x86.h"
-#include "mlkem_native2/mlkem_native2_consts.h"
-#include "mlkem_native2/mlkem_native2_names.h"
+#include "../mlkem_native2/mlkem_native2_consts.h"
+#include "../mlkem_native2/mlkem_native2_names.h"
 
 #define MLKEM_K 3
 #define MLKEM_L 768
-#include "mlkem_native2/mlkem_kem_template.S"
+#include "../mlkem_native2/mlkem_kem_template.S"

@@ -871,13 +871,10 @@ let MLKEM_HASH_G_AVX512_BYTES_FULL = prove
   SUBGOAL_THEN `t < 2 EXP 64` ASSUME_TAC THENL
    [UNDISCH_TAC `t < 72` THEN ARITH_TAC; ALL_TAC] THEN
   VAL_INT64_TAC `t:num` THEN
-  SUBGOAL_THEN `word_and (word t:int64) (word 7) = word(t MOD 8)`
-  ASSUME_TAC THENL
-   [MP_TAC(ISPECL [`word t:int64`; `3`] (CONJUNCT1 WORD_AND_MASK_WORD)) THEN
-    CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
   SUBGOAL_THEN `t MOD 8 < 8` ASSUME_TAC THENL [ARITH_TAC; ALL_TAC] THEN
   VAL_INT64_TAC `t MOD 8` THEN
+  MP_TAC(SPEC `t:num` WORD_AND_7_ZX32) THEN
+  ANTS_TAC THENL [UNDISCH_TAC `t < 72` THEN ARITH_TAC; STRIP_TAC] THEN
   SUBGOAL_THEN
    `num_of_bytelist m DIV 2 EXP (8 * 72 * q) < 2 EXP (8 * t)`
   ASSUME_TAC THENL
@@ -1334,7 +1331,7 @@ let DE_GM_SAFE_CALL_TAC exec vars k kk gl =
      api_wadd fb de_hek; api_wadd fb de_zc; api_wadd fb de_j; r `R9`] @
     (if k = 2 then []
      else [api_wadd fb (de_kr + 32); api_wadd fb (de_noise k)]) @
-    [`word(pc + 65600):int64`; `pc:num`; r `RSP`; api_ret kk gl] in
+    [api_c_tm; `pc:num`; r `RSP`; api_ret kk gl] in
   (API_SLICE_AT_TAC `sk:int64` `dk:byte list` (768 * k) 32 kk THEN
    API_SLICE_AT_TAC `sk:int64` `dk:byte list` (384 * k) (384 * k + 32) kk THEN
    RULE_ASSUM_TAC(REWRITE_RULE[GSYM(de_rho_eq k)]) THEN
@@ -1476,7 +1473,7 @@ let EN_GM_SAFE_CALL_TAC exec vars k kk gl =
   let args =
     [r `RDI`; r `RSI`; rho; r `R8`; `word 0:int64`; `word 0:int64`;
      `word 0:int64`; `pk:int64`; api_wadd `fb:int64` (en_gin + 32); r `R9`;
-     `word(pc + 65600):int64`; `pc:num`; r `RSP`; api_ret kk gl] in
+     api_c_tm; `pc:num`; r `RSP`; api_ret kk gl] in
   (API_SLICE_AT_TAC `pk:int64` `ek:byte list` (384 * k) 32 kk THEN
    API_CONSTS_TAC kk THEN API_SAFE_PRE_TAC kk THEN
    API_SAFE_SIM_TAC exec vars "H_GM" args kk THEN API_RSP_TAC) gl;;
@@ -1593,11 +1590,11 @@ let KP_GM_SAFE_CALL_TAC exec vars k kk gl =
   let args =
     if k = 2 then
       [r `RDI`; r `RSI`; `rho:byte list`; r `R8`; r `R9`;
-       `word(pc + 65600):int64`; `pc:num`; r `RSP`; api_ret kk gl]
+       api_c_tm; `pc:num`; r `RSP`; api_ret kk gl]
     else
       [r `RDI`; r `RSI`; `rho:byte list`; r `R9`;
        api_wadd fb (kp_g + 32); api_wadd fb (kp_s k); r `R8`;
-       `word(pc + 65600):int64`; `pc:num`; r `RSP`; api_ret kk gl] in
+       api_c_tm; `pc:num`; r `RSP`; api_ret kk gl] in
   (API_CONSTS_TAC kk THEN API_SAFE_PRE_TAC kk THEN
    API_SAFE_SIM_TAC exec vars "H_GM" args kk THEN API_RSP_TAC) gl;;
 

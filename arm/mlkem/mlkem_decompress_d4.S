@@ -46,7 +46,7 @@ S2N_BN_SYMBOL(mlkem_decompress_d4):
         movi    v29.16b, #0x0f
         mov     x4, #4
 
-mlkem_decompress_d4_loop:
+Lmlkem_decompress_d4_loop:
         ldp     q0, q1, [x1], #32
 
         and     v2.16b, v0.16b, v29.16b
@@ -82,7 +82,7 @@ mlkem_decompress_d4_loop:
         stp     q22, q23, [x0], #32
 
         subs    x4, x4, #1
-        bne     mlkem_decompress_d4_loop
+        bne     Lmlkem_decompress_d4_loop
 
         CFI_RET
 

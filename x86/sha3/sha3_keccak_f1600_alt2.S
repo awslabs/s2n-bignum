@@ -69,7 +69,7 @@ S2N_BN_SYMBOL(sha3_keccak_f1600_alt2):
         mov     rsi, rdx
 #endif
 
-        lea     rax, [rip+sha3_keccak_f1600_alt2_rotations]
+        lea     rax, [rip+Lsha3_keccak_f1600_alt2_rotations]
         vpbroadcastq ymm0, QWORD PTR [rdi]
         vmovdqu ymm1, YMMWORD PTR [rdi+8]
         vmovq   xmm2, QWORD PTR [rdi+48]
@@ -99,15 +99,24 @@ S2N_BN_SYMBOL(sha3_keccak_f1600_alt2):
         vinserti128 ymm6, ymm6, xmm7, 1
         mov     ecx, 24
 
-        .balign 32
-sha3_keccak_f1600_alt2_loop:
+        // .balign 32, written as the NOPs that GNU as pads with (clang pads
+        // with others)
+#if WINDOWS_ABI
+        .byte   0x66, 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00
+        .byte   0x66, 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00
+        .byte   0x0f, 0x1f, 0x00
+#else
+        .byte   0x66, 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00
+        .byte   0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00
+#endif
+Lsha3_keccak_f1600_alt2_loop:
         vpunpcklqdq ymm7, ymm6, ymm6                    // theta
         vpxor   ymm8, ymm1, ymm2                        // theta
         vpxor   ymm9, ymm3, ymm4                        // theta
         vpbroadcastq ymm10, QWORD PTR [rsi+0]           // iota
         vpunpckhqdq ymm11, ymm6, ymm6                   // theta
         vpxor   ymm8, ymm8, ymm5                        // theta
-        vpxor   ymm7, ymm7, ymm11                       // theta
+        vpxor   ymm7, ymm11, ymm7                       // theta
         vpxor   ymm8, ymm8, ymm9                        // theta
         vpermq  ymm9, ymm7, 0x4e                        // theta
         vpsrlq  ymm11, ymm8, 63                         // theta
@@ -115,7 +124,7 @@ sha3_keccak_f1600_alt2_loop:
         vpor    ymm11, ymm11, ymm12                     // theta
         vpermq  ymm12, ymm8, 0x90                       // theta
         vpermq  ymm13, ymm11, 0x39                      // theta
-        vpxor   ymm7, ymm7, ymm9                        // theta
+        vpxor   ymm7, ymm9, ymm7                        // theta
         vpermq  ymm9, ymm11, 0x00                       // theta
         vpxor   ymm7, ymm7, ymm0                        // theta
         vpermq  ymm8, ymm8, 0xff                        // theta
@@ -125,9 +134,9 @@ sha3_keccak_f1600_alt2_loop:
         vpor    ymm11, ymm11, ymm14                     // theta
         vpblendd ymm11, ymm13, ymm11, 0xc0              // theta
         vpxor   ymm8, ymm8, ymm9                        // theta
-        vpxor   ymm7, ymm7, ymm11                       // theta
-        vpxor   ymm9, ymm6, ymm8                        // theta
-        vpxor   ymm8, ymm0, ymm8                        // theta
+        vpxor   ymm7, ymm11, ymm7                       // theta
+        vpxor   ymm9, ymm8, ymm6                        // theta
+        vpxor   ymm8, ymm8, ymm0                        // theta
         vpxor   ymm11, ymm3, ymm7                       // theta
         vpxor   ymm12, ymm5, ymm7                       // theta
         vpxor   ymm13, ymm1, ymm7                       // theta
@@ -140,7 +149,7 @@ sha3_keccak_f1600_alt2_loop:
         vpsrlvq ymm9, ymm9, YMMWORD PTR [rax+352]       // rho
         vpsllvq ymm11, ymm11, YMMWORD PTR [rax+128]     // rho
         vpermq  ymm12, ymm12, 0x1b                      // pi
-        vpor    ymm9, ymm0, ymm9                        // rho
+        vpor    ymm9, ymm9, ymm0                        // rho
         vpor    ymm11, ymm11, ymm1                      // rho
         vpxor   ymm7, ymm2, ymm7                        // theta
         vpermq  ymm9, ymm9, 0x8d                        // pi
@@ -201,14 +210,17 @@ sha3_keccak_f1600_alt2_loop:
         vpandn  ymm7, ymm7, ymm14                       // chi
         vpermq  ymm7, ymm7, 0x00                        // chi
         vpxor   ymm7, ymm8, ymm7                        // chi
-        vpxor   ymm0, ymm7, ymm10                       // iota
+        vpxor   ymm0, ymm10, ymm7                       // iota
         vmovdqa ymm1, ymm12
         vmovdqa ymm6, ymm11
 
-        .balign 32
+        // .balign 32, written as the NOPs of GNU as as above (the same for
+        // both ABIs here)
+        .byte   0x66, 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00
+        .byte   0x90
         add     rsi, 8
         dec     ecx
-        jnz     sha3_keccak_f1600_alt2_loop
+        jnz     Lsha3_keccak_f1600_alt2_loop
 
         vmovq   QWORD PTR [rdi], xmm0
         vmovdqu YMMWORD PTR [rdi+8], ymm1
@@ -265,7 +277,7 @@ S2N_BN_SIZE_DIRECTIVE(sha3_keccak_f1600_alt2)
         .const_data
 #endif
         .balign 32
-sha3_keccak_f1600_alt2_rotations:
+Lsha3_keccak_f1600_alt2_rotations:
         .quad   1, 62, 28, 27
         .quad   63, 2, 36, 37
         .quad   44, 43, 21, 14

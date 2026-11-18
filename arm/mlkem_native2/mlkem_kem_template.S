@@ -50,6 +50,12 @@
 // The including file has included _internal_s2n_bignum_arm.h and
 // mlkem_native2_consts.h.
 
+// Assembled on its own rather than included by mlkem512.S, mlkem768.S
+// or mlkem1024.S (as by a build that takes every .S file), the
+// template is empty.
+
+#if defined(MLKEM_K)
+
 // The parameters
 
 #define N 256
@@ -97,6 +103,9 @@
 #define CAT2(a, b) a##b
 #define CAT(a, b) CAT2(a, b)
 #define FN(f) CAT(CAT(mlkem, MLKEM_L), CAT(_, f))
+// LFN(f) for the labels inside the functions: FN(f) with an L prefix,
+// which keeps the label local to the object on Mach-O
+#define LFN(f) CAT(L, FN(f))
 #define BASEMUL CAT(CAT(mlkem_basemul_k, MLKEM_K), _alt)
 #define COMPRESS_DU CAT(mlkem_compress_d, DU)
 #define COMPRESS_DV CAT(mlkem_compress_d, DV)
@@ -243,7 +252,7 @@
         fadd    x0, ((\off) + 512 * i)
         add     x1, x28, #MLKEM_C_NTT_ZETAS_12345
         add     x2, x28, #MLKEM_C_NTT_ZETAS_67
-        bl      mlkem_ntt_alt
+        bl      S2N_BN_SYMBOL(mlkem_ntt_alt)
         .set i, i + 1
         .endr
         .endm
@@ -256,7 +265,7 @@
         fadd    x0, ((\off) + 512 * i)
         add     x1, x28, #MLKEM_C_INTT_ZETAS_12345
         add     x2, x28, #MLKEM_C_INTT_ZETAS_67
-        bl      mlkem_intt_alt
+        bl      S2N_BN_SYMBOL(mlkem_intt_alt)
         .set i, i + 1
         .endr
         .endm
@@ -271,7 +280,7 @@
         fadd    x1, ((\src) + 512 * i)
         add     x2, x28, #MLKEM_C_MULCACHE_ZETAS
         add     x3, x28, #MLKEM_C_MULCACHE_ZETAS_TWISTED
-        bl      mlkem_mulcache_compute
+        bl      S2N_BN_SYMBOL(mlkem_mulcache_compute)
         .set i, i + 1
         .endr
         .endm
@@ -291,7 +300,7 @@ S2N_BN_SYMBOL(FN(check_pk)):
         AARCH64_VALID_CALL_TARGET
         CFI_PUSH2(x29, x30)
         mov     x1, #K
-        bl      mlkem_check_encoding
+        bl      S2N_BN_SYMBOL(mlkem_check_encoding)
         mov     w1, #ERR_INVALID_PK
         cmp     x0, #0
         csel    w0, w1, wzr, eq
@@ -323,7 +332,7 @@ S2N_BN_SYMBOL(FN(check_sk)):
         add     x1, x19, #VECBYTES
         mov     x2, #PKBYTES
         consts  x3
-        bl      mlkem_hash_h
+        bl      S2N_BN_SYMBOL(mlkem_hash_h)
         add     x0, sp, #CSK_H
         add     x1, x19, #(SKBYTES - 64)
         ldp     x2, x3, [x0]
@@ -393,7 +402,7 @@ S2N_BN_SYMBOL(FN(keypair_derand)):
         fadd    x1, KP_GIN
         mov     x2, #33
         mov     x3, x28
-        bl      mlkem_hash_g
+        bl      S2N_BN_SYMBOL(mlkem_hash_g)
 
 // rho is public, although computed from the secret d
 
@@ -420,7 +429,7 @@ S2N_BN_SYMBOL(FN(keypair_derand)):
         mov     x3, #GM_NOISE
         mov     x4, #0
         mov     x6, x28
-        bl      mlkem_gen_matrix
+        bl      S2N_BN_SYMBOL(mlkem_gen_matrix)
 #if ETA1 != 2
         fadd    x0, KP_S
         fadd    x1, (KP_G + 32)
@@ -429,7 +438,7 @@ S2N_BN_SYMBOL(FN(keypair_derand)):
         mov     x4, #(2 * K)
         mov     x5, #ETA1
         mov     x6, x28
-        bl      mlkem_getnoise
+        bl      S2N_BN_SYMBOL(mlkem_getnoise)
 #endif
 
 // t = A s + e in the NTT domain, reduced
@@ -443,14 +452,14 @@ S2N_BN_SYMBOL(FN(keypair_derand)):
         fadd    x1, (KP_A + 512 * K * j)
         fadd    x2, KP_S
         fadd    x3, KP_SC
-        bl      BASEMUL
+        bl      S2N_BN_SYMBOL(BASEMUL)
         fadd    x0, (KP_T + 512 * j)
-        bl      mlkem_tomont
+        bl      S2N_BN_SYMBOL(mlkem_tomont)
         fadd    x0, (KP_T + 512 * j)
         fadd    x1, (KP_E + 512 * j)
-        bl      mlkem_add_reduce
+        bl      S2N_BN_SYMBOL(mlkem_add_reduce)
         fadd    x0, (KP_S + 512 * j)
-        bl      mlkem_reduce
+        bl      S2N_BN_SYMBOL(mlkem_reduce)
         .set j, j + 1
         .endr
 
@@ -460,10 +469,10 @@ S2N_BN_SYMBOL(FN(keypair_derand)):
         .rept K
         add     x0, x19, #(POLYBYTES * j)
         fadd    x1, (KP_T + 512 * j)
-        bl      mlkem_tobytes_alt
+        bl      S2N_BN_SYMBOL(mlkem_tobytes_alt)
         add     x0, x20, #(POLYBYTES * j)
         fadd    x1, (KP_S + 512 * j)
-        bl      mlkem_tobytes_alt
+        bl      S2N_BN_SYMBOL(mlkem_tobytes_alt)
         .set j, j + 1
         .endr
         add     x0, x19, #VECBYTES
@@ -472,16 +481,16 @@ S2N_BN_SYMBOL(FN(keypair_derand)):
         add     x0, x20, #VECBYTES
         mov     x1, x19
         mov     x2, #(PKBYTES / 32)
-FN(keypair_copypk):
+LFN(keypair_copypk):
         ldp     q0, q1, [x1], #32
         stp     q0, q1, [x0], #32
         subs    x2, x2, #1
-        bne     FN(keypair_copypk)
+        bne     LFN(keypair_copypk)
         add     x0, x20, #(SKBYTES - 64)
         mov     x1, x19
         mov     x2, #PKBYTES
         mov     x3, x28
-        bl      mlkem_hash_h
+        bl      S2N_BN_SYMBOL(mlkem_hash_h)
         add     x0, x20, #(SKBYTES - 32)
         add     x1, x21, #32
         copy32  x0, x1
@@ -539,12 +548,12 @@ S2N_BN_SYMBOL(FN(pke_encrypt)):
         .rept K
         fadd    x0, (PE_T + 512 * j)
         add     x1, x21, #(POLYBYTES * j)
-        bl      mlkem_frombytes
+        bl      S2N_BN_SYMBOL(mlkem_frombytes)
         .set j, j + 1
         .endr
         fadd    x0, PE_M
         mov     x1, x22
-        bl      mlkem_frommsg
+        bl      S2N_BN_SYMBOL(mlkem_frommsg)
 
 // NTT(y) and its mulcache
 
@@ -553,12 +562,12 @@ S2N_BN_SYMBOL(FN(pke_encrypt)):
         add     x0, x23, #(512 * j)
         add     x1, x28, #MLKEM_C_NTT_ZETAS_12345
         add     x2, x28, #MLKEM_C_NTT_ZETAS_67
-        bl      mlkem_ntt_alt
+        bl      S2N_BN_SYMBOL(mlkem_ntt_alt)
         fadd    x0, (PE_YC + 256 * j)
         add     x1, x23, #(512 * j)
         add     x2, x28, #MLKEM_C_MULCACHE_ZETAS
         add     x3, x28, #MLKEM_C_MULCACHE_ZETAS_TWISTED
-        bl      mlkem_mulcache_compute
+        bl      S2N_BN_SYMBOL(mlkem_mulcache_compute)
         .set j, j + 1
         .endr
 
@@ -570,28 +579,28 @@ S2N_BN_SYMBOL(FN(pke_encrypt)):
         addoff  x1, x20, (512 * K * j)
         mov     x2, x23
         fadd    x3, PE_YC
-        bl      BASEMUL
+        bl      S2N_BN_SYMBOL(BASEMUL)
         .set j, j + 1
         .endr
         fadd    x0, PE_V
         fadd    x1, PE_T
         mov     x2, x23
         fadd    x3, PE_YC
-        bl      BASEMUL
+        bl      S2N_BN_SYMBOL(BASEMUL)
         intt    PE_U, (K + 1)
         .set j, 0
         .rept K
         fadd    x0, (PE_U + 512 * j)
         addoff  x1, x23, (512 * (K + j))
-        bl      mlkem_add_reduce
+        bl      S2N_BN_SYMBOL(mlkem_add_reduce)
         .set j, j + 1
         .endr
         fadd    x0, PE_V
         addoff  x1, x23, (1024 * K)
-        bl      mlkem_add_reduce
+        bl      S2N_BN_SYMBOL(mlkem_add_reduce)
         fadd    x0, PE_V
         fadd    x1, PE_M
-        bl      mlkem_add_reduce
+        bl      S2N_BN_SYMBOL(mlkem_add_reduce)
 
 // ct = Compress_du(u) || Compress_dv(v)
 
@@ -599,12 +608,12 @@ S2N_BN_SYMBOL(FN(pke_encrypt)):
         .rept K
         add     x0, x19, #(DUBYTES * j)
         fadd    x1, (PE_U + 512 * j)
-        bl      COMPRESS_DU
+        bl      S2N_BN_SYMBOL(COMPRESS_DU)
         .set j, j + 1
         .endr
         add     x0, x19, #(DUBYTES * K)
         fadd    x1, PE_V
-        bl      COMPRESS_DV
+        bl      S2N_BN_SYMBOL(COMPRESS_DV)
 
 // Zero the secrets: everything but t (the noise is the caller's)
 
@@ -654,8 +663,8 @@ S2N_BN_SYMBOL(FN(enc_derand)):
 
         mov     x0, x21
         mov     x1, #K
-        bl      mlkem_check_encoding
-        cbz     x0, FN(enc_invalid)
+        bl      S2N_BN_SYMBOL(mlkem_check_encoding)
+        cbz     x0, LFN(enc_invalid)
 
         fadd    x0, EN_GIN
         copy32  x0, x22
@@ -668,7 +677,7 @@ S2N_BN_SYMBOL(FN(enc_derand)):
         mov     x1, x21
         mov     x2, #PKBYTES
         mov     x3, x28
-        bl      mlkem_hash_h
+        bl      S2N_BN_SYMBOL(mlkem_hash_h)
         mov     x4, #0
 #define EN_GM_FLAGS GM_TRANSPOSED
 #else
@@ -688,7 +697,7 @@ S2N_BN_SYMBOL(FN(enc_derand)):
         mov     x3, #EN_GM_FLAGS
         mov     x5, #0
         mov     x6, x28
-        bl      mlkem_gen_matrix
+        bl      S2N_BN_SYMBOL(mlkem_gen_matrix)
 
 // (K, r) = G(m || H(pk)), the noise from r, ct = K-PKE.Encrypt(pk, m, r),
 // ss = K
@@ -697,7 +706,7 @@ S2N_BN_SYMBOL(FN(enc_derand)):
         fadd    x1, EN_GIN
         mov     x2, #64
         mov     x3, x28
-        bl      mlkem_hash_g
+        bl      S2N_BN_SYMBOL(mlkem_hash_g)
         fadd    x0, EN_NOISE
         fadd    x1, (EN_KR + 32)
         mov     x2, #0
@@ -705,22 +714,22 @@ S2N_BN_SYMBOL(FN(enc_derand)):
         mov     x4, #K
         mov     x5, #ETA1
         mov     x6, x28
-        bl      mlkem_getnoise
+        bl      S2N_BN_SYMBOL(mlkem_getnoise)
         mov     x0, x19
         fadd    x1, EN_AT
         mov     x2, x21
         fadd    x3, EN_GIN
         fadd    x4, EN_NOISE
-        bl      FN(pke_encrypt)
+        bl      S2N_BN_SYMBOL(FN(pke_encrypt))
         fadd    x1, EN_KR
         copy32  x20, x1
 
         zero    EN_GIN, (EN_AT - EN_GIN)
         mov     w0, #0
-        b       FN(enc_return)
-FN(enc_invalid):
+        b       LFN(enc_return)
+LFN(enc_invalid):
         mov     w0, #ERR_INVALID_PK
-FN(enc_return):
+LFN(enc_return):
         restoreregs
         framefree EN_FRAME
         CFI_RET
@@ -762,15 +771,15 @@ S2N_BN_SYMBOL(FN(pke_decrypt)):
         .rept K
         fadd    x0, (PD_U + 512 * j)
         add     x1, x20, #(DUBYTES * j)
-        bl      DECOMPRESS_DU
+        bl      S2N_BN_SYMBOL(DECOMPRESS_DU)
         fadd    x0, (PD_S + 512 * j)
         add     x1, x21, #(POLYBYTES * j)
-        bl      mlkem_frombytes
+        bl      S2N_BN_SYMBOL(mlkem_frombytes)
         .set j, j + 1
         .endr
         fadd    x0, PD_V
         add     x1, x20, #(DUBYTES * K)
-        bl      DECOMPRESS_DV
+        bl      S2N_BN_SYMBOL(DECOMPRESS_DV)
 
         ntt     PD_U
         mulcache PD_UC, PD_U
@@ -778,14 +787,14 @@ S2N_BN_SYMBOL(FN(pke_decrypt)):
         fadd    x1, PD_S
         fadd    x2, PD_U
         fadd    x3, PD_UC
-        bl      BASEMUL
+        bl      S2N_BN_SYMBOL(BASEMUL)
         intt    PD_W, 1
         fadd    x0, PD_V
         fadd    x1, PD_W
-        bl      mlkem_sub_reduce
+        bl      S2N_BN_SYMBOL(mlkem_sub_reduce)
         mov     x0, x19
         fadd    x1, PD_V
-        bl      mlkem_tomsg
+        bl      S2N_BN_SYMBOL(mlkem_tomsg)
 
         zero    PD_U, (PD_FRAME - PD_U)
         restoreregs
@@ -841,7 +850,7 @@ S2N_BN_SYMBOL(FN(dec)):
         fadd    x0, DE_GIN
         mov     x1, x20
         mov     x2, x21
-        bl      FN(pke_decrypt)
+        bl      S2N_BN_SYMBOL(FN(pke_decrypt))
         fadd    x0, (DE_GIN + 32)
         add     x1, x21, #(SKBYTES - 64)
         copy32  x0, x1
@@ -849,7 +858,7 @@ S2N_BN_SYMBOL(FN(dec)):
         fadd    x1, DE_GIN
         mov     x2, #64
         mov     x3, x28
-        bl      mlkem_hash_g
+        bl      S2N_BN_SYMBOL(mlkem_hash_g)
 
 // z || c, and the matrix with H(ek) (job 0, lane 2) and J(z || c) (job 1,
 // lane 3) beside it, and the noise in idle lanes for eta1 = 2
@@ -860,11 +869,11 @@ S2N_BN_SYMBOL(FN(dec)):
         add     x0, x0, #32
         mov     x1, x20
         mov     x2, #(CTBYTES / 32)
-FN(dec_copyct):
+LFN(dec_copyct):
         ldp     q0, q1, [x1], #32
         stp     q0, q1, [x0], #32
         subs    x2, x2, #1
-        bne     FN(dec_copyct)
+        bne     LFN(dec_copyct)
 
         fadd    x4, DE_JOBS
         add     x0, x21, #VECBYTES
@@ -895,7 +904,7 @@ FN(dec_copyct):
         mov     x2, #K
         mov     x3, #(GM_TRANSPOSED + GM_JOBS + GM_NOISE)
         mov     x6, x28
-        bl      mlkem_gen_matrix
+        bl      S2N_BN_SYMBOL(mlkem_gen_matrix)
 #if ETA1 != 2
         fadd    x0, DE_NOISE
         fadd    x1, (DE_KR + 32)
@@ -904,7 +913,7 @@ FN(dec_copyct):
         mov     x4, #K
         mov     x5, #ETA1
         mov     x6, x28
-        bl      mlkem_getnoise
+        bl      S2N_BN_SYMBOL(mlkem_getnoise)
 #endif
 
 // The hash check (its result is public)
@@ -922,7 +931,7 @@ FN(dec_copyct):
         orr     x2, x2, x3
         orr     x4, x4, x5
         orr     x2, x2, x4
-        cbnz    x2, FN(dec_invalid)
+        cbnz    x2, LFN(dec_invalid)
 
 // c' = K-PKE.Encrypt(ek, m', r')
 
@@ -931,7 +940,7 @@ FN(dec_copyct):
         add     x2, x21, #VECBYTES
         fadd    x3, DE_GIN
         fadd    x4, DE_NOISE
-        bl      FN(pke_encrypt)
+        bl      S2N_BN_SYMBOL(FN(pke_encrypt))
 
 // ss = K' if c' = c, else J(z || c), in constant time: OR together the
 // XORs of c and c', and select with the all-ones or all-zeros mask
@@ -940,13 +949,13 @@ FN(dec_copyct):
         fadd    x1, DE_CT2
         mov     x2, #(CTBYTES / 16)
         movi    v2.2d, #0
-FN(dec_compare):
+LFN(dec_compare):
         ldr     q0, [x0], #16
         ldr     q1, [x1], #16
         eor     v0.16b, v0.16b, v1.16b
         orr     v2.16b, v2.16b, v0.16b
         subs    x2, x2, #1
-        bne     FN(dec_compare)
+        bne     LFN(dec_compare)
         umaxv   s2, v2.4s
         fmov    w0, s2
         cmp     w0, #0
@@ -963,11 +972,11 @@ FN(dec_compare):
 
         zero    DE_GIN, (DE_AT - DE_GIN)
         mov     w0, #0
-        b       FN(dec_return)
-FN(dec_invalid):
+        b       LFN(dec_return)
+LFN(dec_invalid):
         zero    DE_GIN, (DE_AT - DE_GIN)
         mov     w0, #ERR_INVALID_SK
-FN(dec_return):
+LFN(dec_return):
         restoreregs
         framefree DE_FRAME
         CFI_RET
@@ -976,4 +985,6 @@ S2N_BN_SIZE_DIRECTIVE(FN(dec))
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
+#endif
+
 #endif

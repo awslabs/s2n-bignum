@@ -136,16 +136,16 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpshufb ymm2,ymm2,ymm1
  vpshufb ymm3,ymm3,ymm1
  vpsubw ymm12,ymm8,ymm4
- vpaddw ymm4,ymm4,ymm8
+ vpaddw ymm4,ymm8,ymm4
  vpsubw ymm13,ymm9,ymm5
  vpmullw ymm8,ymm12,ymm2
- vpaddw ymm5,ymm5,ymm9
+ vpaddw ymm5,ymm9,ymm5
  vpsubw ymm14,ymm10,ymm6
  vpmullw ymm9,ymm13,ymm2
- vpaddw ymm6,ymm6,ymm10
+ vpaddw ymm6,ymm10,ymm6
  vpsubw ymm15,ymm11,ymm7
  vpmullw ymm10,ymm14,ymm2
- vpaddw ymm7,ymm7,ymm11
+ vpaddw ymm7,ymm11,ymm7
  vpmullw ymm11,ymm15,ymm2
  vpmulhw ymm12,ymm12,ymm3
  vpmulhw ymm13,ymm13,ymm3
@@ -185,7 +185,7 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpaddw ymm4,ymm4,ymm7
  vpsubw ymm14,ymm9,ymm6
  vpmullw ymm7,ymm13,ymm2
- vpaddw ymm6,ymm6,ymm9
+ vpaddw ymm6,ymm9,ymm6
  vpsubw ymm15,ymm11,ymm8
  vpmullw ymm9,ymm14,ymm2
  vpaddw ymm8,ymm8,ymm11
@@ -231,13 +231,13 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpaddw ymm10,ymm10,ymm4
  vpsubw ymm13,ymm8,ymm3
  vpmullw ymm4,ymm12,ymm2
- vpaddw ymm3,ymm3,ymm8
+ vpaddw ymm3,ymm8,ymm3
  vpsubw ymm14,ymm7,ymm6
  vpmullw ymm8,ymm13,ymm2
  vpaddw ymm6,ymm6,ymm7
  vpsubw ymm15,ymm11,ymm5
  vpmullw ymm7,ymm14,ymm2
- vpaddw ymm5,ymm5,ymm11
+ vpaddw ymm5,ymm11,ymm5
  vpmullw ymm11,ymm15,ymm2
  vpmulhw ymm12,ymm12,ymm9
  vpmulhw ymm13,ymm13,ymm9
@@ -272,10 +272,10 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpaddw ymm10,ymm10,ymm5
  vpsubw ymm14,ymm8,ymm6
  vpmullw ymm5,ymm13,ymm2
- vpaddw ymm6,ymm6,ymm8
+ vpaddw ymm6,ymm8,ymm6
  vpsubw ymm15,ymm11,ymm4
  vpmullw ymm8,ymm14,ymm2
- vpaddw ymm4,ymm4,ymm11
+ vpaddw ymm4,ymm11,ymm4
  vpmullw ymm11,ymm15,ymm2
  vpmulhw ymm12,ymm12,ymm7
  vpmulhw ymm13,ymm13,ymm7
@@ -304,7 +304,7 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vmovdqa ymm2,[544+rsi]
  vmovdqa ymm8,[576+rsi]
  vpsubw ymm12,ymm10,ymm7
- vpaddw ymm7,ymm7,ymm10
+ vpaddw ymm7,ymm10,ymm7
  vpsubw ymm13,ymm4,ymm9
  vpmullw ymm10,ymm12,ymm2
  vpaddw ymm9,ymm9,ymm4
@@ -313,7 +313,7 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpaddw ymm6,ymm6,ymm5
  vpsubw ymm15,ymm11,ymm3
  vpmullw ymm5,ymm14,ymm2
- vpaddw ymm3,ymm3,ymm11
+ vpaddw ymm3,ymm11,ymm3
  vpmullw ymm11,ymm15,ymm2
  vpmulhw ymm12,ymm12,ymm8
  vpmulhw ymm13,ymm13,ymm8
@@ -424,16 +424,16 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpshufb ymm2,ymm2,ymm1
  vpshufb ymm3,ymm3,ymm1
  vpsubw ymm12,ymm8,ymm4
- vpaddw ymm4,ymm4,ymm8
+ vpaddw ymm4,ymm8,ymm4
  vpsubw ymm13,ymm9,ymm5
  vpmullw ymm8,ymm12,ymm2
- vpaddw ymm5,ymm5,ymm9
+ vpaddw ymm5,ymm9,ymm5
  vpsubw ymm14,ymm10,ymm6
  vpmullw ymm9,ymm13,ymm2
- vpaddw ymm6,ymm6,ymm10
+ vpaddw ymm6,ymm10,ymm6
  vpsubw ymm15,ymm11,ymm7
  vpmullw ymm10,ymm14,ymm2
- vpaddw ymm7,ymm7,ymm11
+ vpaddw ymm7,ymm11,ymm7
  vpmullw ymm11,ymm15,ymm2
  vpmulhw ymm12,ymm12,ymm3
  vpmulhw ymm13,ymm13,ymm3
@@ -473,7 +473,7 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpaddw ymm4,ymm4,ymm7
  vpsubw ymm14,ymm9,ymm6
  vpmullw ymm7,ymm13,ymm2
- vpaddw ymm6,ymm6,ymm9
+ vpaddw ymm6,ymm9,ymm6
  vpsubw ymm15,ymm11,ymm8
  vpmullw ymm9,ymm14,ymm2
  vpaddw ymm8,ymm8,ymm11
@@ -519,13 +519,13 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpaddw ymm10,ymm10,ymm4
  vpsubw ymm13,ymm8,ymm3
  vpmullw ymm4,ymm12,ymm2
- vpaddw ymm3,ymm3,ymm8
+ vpaddw ymm3,ymm8,ymm3
  vpsubw ymm14,ymm7,ymm6
  vpmullw ymm8,ymm13,ymm2
  vpaddw ymm6,ymm6,ymm7
  vpsubw ymm15,ymm11,ymm5
  vpmullw ymm7,ymm14,ymm2
- vpaddw ymm5,ymm5,ymm11
+ vpaddw ymm5,ymm11,ymm5
  vpmullw ymm11,ymm15,ymm2
  vpmulhw ymm12,ymm12,ymm9
  vpmulhw ymm13,ymm13,ymm9
@@ -560,10 +560,10 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpaddw ymm10,ymm10,ymm5
  vpsubw ymm14,ymm8,ymm6
  vpmullw ymm5,ymm13,ymm2
- vpaddw ymm6,ymm6,ymm8
+ vpaddw ymm6,ymm8,ymm6
  vpsubw ymm15,ymm11,ymm4
  vpmullw ymm8,ymm14,ymm2
- vpaddw ymm4,ymm4,ymm11
+ vpaddw ymm4,ymm11,ymm4
  vpmullw ymm11,ymm15,ymm2
  vpmulhw ymm12,ymm12,ymm7
  vpmulhw ymm13,ymm13,ymm7
@@ -592,7 +592,7 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vmovdqa ymm2,[96+rsi]
  vmovdqa ymm8,[128+rsi]
  vpsubw ymm12,ymm10,ymm7
- vpaddw ymm7,ymm7,ymm10
+ vpaddw ymm7,ymm10,ymm7
  vpsubw ymm13,ymm4,ymm9
  vpmullw ymm10,ymm12,ymm2
  vpaddw ymm9,ymm9,ymm4
@@ -601,7 +601,7 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpaddw ymm6,ymm6,ymm5
  vpsubw ymm15,ymm11,ymm3
  vpmullw ymm5,ymm14,ymm2
- vpaddw ymm3,ymm3,ymm11
+ vpaddw ymm3,ymm11,ymm3
  vpmullw ymm11,ymm15,ymm2
  vpmulhw ymm12,ymm12,ymm8
  vpmulhw ymm13,ymm13,ymm8
@@ -638,16 +638,16 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vmovdqa ymm11,[352+rdi]
  vpbroadcastq ymm3,[72+rsi]
  vpsubw ymm12,ymm8,ymm4
- vpaddw ymm4,ymm4,ymm8
+ vpaddw ymm4,ymm8,ymm4
  vpsubw ymm13,ymm9,ymm5
  vpmullw ymm8,ymm12,ymm2
- vpaddw ymm5,ymm5,ymm9
+ vpaddw ymm5,ymm9,ymm5
  vpsubw ymm14,ymm10,ymm6
  vpmullw ymm9,ymm13,ymm2
- vpaddw ymm6,ymm6,ymm10
+ vpaddw ymm6,ymm10,ymm6
  vpsubw ymm15,ymm11,ymm7
  vpmullw ymm10,ymm14,ymm2
- vpaddw ymm7,ymm7,ymm11
+ vpaddw ymm7,ymm11,ymm7
  vpmullw ymm11,ymm15,ymm2
  vpmulhw ymm12,ymm12,ymm3
  vpmulhw ymm13,ymm13,ymm3
@@ -680,16 +680,16 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vmovdqa ymm11,[480+rdi]
  vpbroadcastq ymm3,[72+rsi]
  vpsubw ymm12,ymm8,ymm4
- vpaddw ymm4,ymm4,ymm8
+ vpaddw ymm4,ymm8,ymm4
  vpsubw ymm13,ymm9,ymm5
  vpmullw ymm8,ymm12,ymm2
- vpaddw ymm5,ymm5,ymm9
+ vpaddw ymm5,ymm9,ymm5
  vpsubw ymm14,ymm10,ymm6
  vpmullw ymm9,ymm13,ymm2
- vpaddw ymm6,ymm6,ymm10
+ vpaddw ymm6,ymm10,ymm6
  vpsubw ymm15,ymm11,ymm7
  vpmullw ymm10,ymm14,ymm2
- vpaddw ymm7,ymm7,ymm11
+ vpaddw ymm7,ymm11,ymm7
  vpmullw ymm11,ymm15,ymm2
  vpmulhw ymm12,ymm12,ymm3
  vpmulhw ymm13,ymm13,ymm3

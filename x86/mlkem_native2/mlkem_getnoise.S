@@ -31,11 +31,12 @@
 
 #include "_internal_s2n_bignum_x86.h"
 #ifndef MLKEM_NATIVE2_CONSTS_H
-#include "mlkem_native2/mlkem_native2_consts.h"
+#include "mlkem_native2_consts.h"
 #endif
 #ifndef MLKEM_NATIVE2_NAMES_H
-#include "mlkem_native2/mlkem_native2_names.h"
+#include "mlkem_native2_names.h"
 #endif
+#include "mlkem_native2_macros.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(N2(mlkem_getnoise))
@@ -69,6 +70,9 @@
 #define next r12
 #define lane r13
 #define busy r14
+#define nextd r12d
+#define laned r13d
+#define busyd r14d
 #define c r15
 
 #define SHAKE256_DS 0x1f
@@ -112,7 +116,7 @@ S2N_BN_SYMBOL(N2(mlkem_getnoise)):
         mov     [rsp+N1], r8
         mov     [rsp+ETA1], r9
         mov     c, [rsp+ARG7]
-        xor     next, next
+        xor     nextd, nextd
         mov     rax, -1
         mov     [rsp+CUR], rax
         mov     [rsp+CUR+8], rax
@@ -123,50 +127,50 @@ S2N_BN_SYMBOL(N2(mlkem_getnoise)):
 // the absorbed seed, permute (x1 if only one lane is busy, otherwise x4),
 // and then finish or advance each busy lane.
 
-mlkem_getnoise_loop:
-        xor     busy, busy
-        xor     lane, lane
-mlkem_getnoise_assign:
+Lmlkem_getnoise_loop:
+        xor     busyd, busyd
+        xor     laned, laned
+Lmlkem_getnoise_assign:
         mov     rax, [rsp+CUR+8*lane]
         test    rax, rax
-        jns     mlkem_getnoise_assigned
+        jns     Lmlkem_getnoise_assigned
         cmp     next, [rsp+NN]
-        jae     mlkem_getnoise_nextlane
+        jae     Lmlkem_getnoise_nextlane
         mov     [rsp+CUR+8*lane], next
         mov     QWORD PTR [rsp+BLK+8*lane], 0
         mov     rax, [rsp+NONCE0]
         add     rax, next
         initlane
         inc     next
-mlkem_getnoise_assigned:
+Lmlkem_getnoise_assigned:
         inc     busy
-mlkem_getnoise_nextlane:
+Lmlkem_getnoise_nextlane:
         inc     lane
         cmp     lane, 4
-        jb      mlkem_getnoise_assign
+        jb      Lmlkem_getnoise_assign
 
         test    busy, busy
-        jz      mlkem_getnoise_end
+        jz      Lmlkem_getnoise_end
         cmp     busy, 1
-        jne     mlkem_getnoise_x4
+        jne     Lmlkem_getnoise_x4
 
 // Only one lane busy: find it and use the x1 permutation on it
 
-        xor     lane, lane
-mlkem_getnoise_find:
+        xor     laned, laned
+Lmlkem_getnoise_find:
         cmp     QWORD PTR [rsp+CUR+8*lane], 0
-        jge     mlkem_getnoise_found
+        jge     Lmlkem_getnoise_found
         inc     lane
-        jmp     mlkem_getnoise_find
-mlkem_getnoise_found:
+        jmp     Lmlkem_getnoise_find
+Lmlkem_getnoise_found:
         imul    rdi, lane, 200
         lea     rdi, [rsp+ST+rdi]
-        lea     rsi, [c+MLKEM_C_RC]
+        leadisp rsi, c, MLKEM_C_RC
         call    S2N_BN_SYMBOL(N2_KECCAK_X1)
-        jmp     mlkem_getnoise_post
-mlkem_getnoise_x4:
-        lea     rdi, [rsp+ST]
-        lea     rsi, [c+MLKEM_C_RC]
+        jmp     Lmlkem_getnoise_post
+Lmlkem_getnoise_x4:
+        leadisp rdi, rsp, ST
+        leadisp rsi, c, MLKEM_C_RC
         lea     rdx, [c+MLKEM_C_KECCAK_RHO8]
         lea     rcx, [c+MLKEM_C_KECCAK_RHO56]
         call    S2N_BN_SYMBOL(N2_KECCAK_X4)
@@ -176,12 +180,12 @@ mlkem_getnoise_x4:
 // then, after the next permutation, 56 more, and the coefficients come
 // from the buffer.
 
-mlkem_getnoise_post:
-        xor     lane, lane
-mlkem_getnoise_postloop:
+Lmlkem_getnoise_post:
+        xor     laned, laned
+Lmlkem_getnoise_postloop:
         mov     rax, [rsp+CUR+8*lane]
         test    rax, rax
-        js      mlkem_getnoise_postnext
+        js      Lmlkem_getnoise_postnext
         mov     ecx, 2
         cmp     rax, [rsp+N1]
         cmovb   rcx, [rsp+ETA1]
@@ -190,14 +194,14 @@ mlkem_getnoise_postloop:
         imul    rsi, lane, 200
         lea     rsi, [rsp+ST+rsi]
         cmp     rcx, 2
-        jne     mlkem_getnoise_eta3
+        jne     Lmlkem_getnoise_eta3
         call    S2N_BN_SYMBOL(mlkem_cbd2)
-        jmp     mlkem_getnoise_done
-mlkem_getnoise_eta3:
+        jmp     Lmlkem_getnoise_done
+Lmlkem_getnoise_eta3:
         imul    rdx, lane, 192
         lea     rdx, [rsp+BUF+rdx]
         cmp     QWORD PTR [rsp+BLK+8*lane], 0
-        jne     mlkem_getnoise_eta3_second
+        jne     Lmlkem_getnoise_eta3_second
         vmovdqu ymm0, [rsi]
         vmovdqu [rdx], ymm0
         vmovdqu ymm0, [rsi+32]
@@ -209,8 +213,8 @@ mlkem_getnoise_eta3:
         mov     rax, [rsi+128]
         mov     [rdx+128], rax
         mov     QWORD PTR [rsp+BLK+8*lane], 1
-        jmp     mlkem_getnoise_postnext
-mlkem_getnoise_eta3_second:
+        jmp     Lmlkem_getnoise_postnext
+Lmlkem_getnoise_eta3_second:
         vmovdqu ymm0, [rsi]
         vmovdqu [rdx+136], ymm0
         vmovdqu xmm0, [rsi+32]
@@ -219,28 +223,28 @@ mlkem_getnoise_eta3_second:
         mov     [rdx+184], rax
         mov     rsi, rdx
         call    S2N_BN_SYMBOL(mlkem_cbd3)
-mlkem_getnoise_done:
+Lmlkem_getnoise_done:
         mov     QWORD PTR [rsp+CUR+8*lane], -1
-mlkem_getnoise_postnext:
+Lmlkem_getnoise_postnext:
         inc     lane
         cmp     lane, 4
-        jb      mlkem_getnoise_postloop
-        jmp     mlkem_getnoise_loop
+        jb      Lmlkem_getnoise_postloop
+        jmp     Lmlkem_getnoise_loop
 
 // Zero the state and buffers, which are secret, and return
 
-mlkem_getnoise_end:
+Lmlkem_getnoise_end:
         vpxor   xmm0, xmm0, xmm0
-        lea     rdi, [rsp+ST]
+        leadisp rdi, rsp, ST
         mov     ecx, ((CUR - ST) / 128)
-mlkem_getnoise_zero:
+Lmlkem_getnoise_zero:
         vmovdqu [rdi], ymm0
         vmovdqu [rdi+32], ymm0
         vmovdqu [rdi+64], ymm0
         vmovdqu [rdi+96], ymm0
         add     rdi, 128
         dec     ecx
-        jnz     mlkem_getnoise_zero
+        jnz     Lmlkem_getnoise_zero
         .if ((CUR - ST) % 32) != 0
         .error  "the state and buffers must be a multiple of 32 bytes"
         .endif

@@ -58,7 +58,7 @@ S2N_BN_SYMBOL(mlkem_tobytes_alt):
         lsr x2, x2, #1
         sub x2, x2, #0x2
 
-mlkem_tobytes_alt_tobytes_loop_start:
+Lmlkem_tobytes_alt_tobytes_loop_start:
         uzp1 v25.8h, v17.8h, v27.8h
         uzp2 v31.8h, v17.8h, v27.8h
         uzp1 v24.8h, v16.8h, v23.8h
@@ -80,7 +80,7 @@ mlkem_tobytes_alt_tobytes_loop_start:
         xtn v28.8b, v24.8h
         shrn v30.8b, v6.8h, #0x4
         subs x2, x2, #0x1
-        cbnz x2, mlkem_tobytes_alt_tobytes_loop_start
+        cbnz x2, Lmlkem_tobytes_alt_tobytes_loop_start
         uzp2 v7.8h, v17.8h, v27.8h
         uzp1 v25.8h, v17.8h, v27.8h
         uzp2 v0.8h, v16.8h, v23.8h

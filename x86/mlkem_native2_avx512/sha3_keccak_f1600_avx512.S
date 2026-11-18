@@ -73,20 +73,24 @@ S2N_BN_SYMBOL(sha3_keccak_f1600_avx512):
         vmovq   xmm13, QWORD PTR [rdi+104]
         vmovq   xmm14, QWORD PTR [rdi+112]
         vmovq   xmm15, QWORD PTR [rdi+120]
-        vmovq   xmm16, QWORD PTR [rdi+128]
-        vmovq   xmm17, QWORD PTR [rdi+136]
-        vmovq   xmm18, QWORD PTR [rdi+144]
-        vmovq   xmm19, QWORD PTR [rdi+152]
-        vmovq   xmm20, QWORD PTR [rdi+160]
-        vmovq   xmm21, QWORD PTR [rdi+168]
-        vmovq   xmm22, QWORD PTR [rdi+176]
-        vmovq   xmm23, QWORD PTR [rdi+184]
-        vmovq   xmm24, QWORD PTR [rdi+192]
+        // The loads and stores of the lanes in xmm16 and up are written as bytes:
+        // for vmovq with an EVEX-only register, GNU as and clang choose different
+        // (equivalent) opcodes, 66 0F 6E/7E and F3 0F 7E/66 0F D6, and no syntax
+        // selects one. These are the bytes that GNU as assembles.
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x6e, 0x47, 0x10  // vmovq xmm16, QWORD PTR [rdi+128]
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x6e, 0x4f, 0x11  // vmovq xmm17, QWORD PTR [rdi+136]
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x6e, 0x57, 0x12  // vmovq xmm18, QWORD PTR [rdi+144]
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x6e, 0x5f, 0x13  // vmovq xmm19, QWORD PTR [rdi+152]
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x6e, 0x67, 0x14  // vmovq xmm20, QWORD PTR [rdi+160]
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x6e, 0x6f, 0x15  // vmovq xmm21, QWORD PTR [rdi+168]
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x6e, 0x77, 0x16  // vmovq xmm22, QWORD PTR [rdi+176]
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x6e, 0x7f, 0x17  // vmovq xmm23, QWORD PTR [rdi+184]
+        .byte   0x62, 0x61, 0xfd, 0x08, 0x6e, 0x47, 0x18  // vmovq xmm24, QWORD PTR [rdi+192]
 
 // The 24 rounds, four at a time
 
         lea     rax, [rsi+192]
-sha3_keccak_f1600_avx512_loop:
+Lsha3_keccak_f1600_avx512_loop:
 
 // Round 1 of 4: theta
 
@@ -547,9 +551,9 @@ sha3_keccak_f1600_avx512_loop:
 // Restore lane i to register i
 
         vmovdqa64 xmm30, xmm1
-        vmovdqa64 xmm1, xmm14
-        vmovdqa64 xmm14, xmm13
-        vmovdqa64 xmm13, xmm4
+        vmovdqa   xmm1, xmm14
+        vmovdqa   xmm14, xmm13
+        vmovdqa   xmm13, xmm4
         vmovdqa64 xmm4, xmm16
         vmovdqa64 xmm16, xmm17
         vmovdqa64 xmm17, xmm30
@@ -557,12 +561,12 @@ sha3_keccak_f1600_avx512_loop:
         vmovdqa64 xmm2, xmm23
         vmovdqa64 xmm23, xmm21
         vmovdqa64 xmm21, xmm3
-        vmovdqa64 xmm3, xmm7
-        vmovdqa64 xmm7, xmm9
+        vmovdqa   xmm3, xmm7
+        vmovdqa   xmm7, xmm9
         vmovdqa64 xmm9, xmm30
         vmovdqa64 xmm30, xmm5
-        vmovdqa64 xmm5, xmm11
-        vmovdqa64 xmm11, xmm6
+        vmovdqa   xmm5, xmm11
+        vmovdqa   xmm11, xmm6
         vmovdqa64 xmm6, xmm20
         vmovdqa64 xmm20, xmm19
         vmovdqa64 xmm19, xmm24
@@ -572,12 +576,12 @@ sha3_keccak_f1600_avx512_loop:
         vmovdqa64 xmm18, xmm10
         vmovdqa64 xmm10, xmm22
         vmovdqa64 xmm22, xmm12
-        vmovdqa64 xmm12, xmm15
+        vmovdqa   xmm12, xmm15
         vmovdqa64 xmm15, xmm30
 
         add     rsi, 32
         cmp     rsi, rax
-        jne     sha3_keccak_f1600_avx512_loop
+        jne     Lsha3_keccak_f1600_avx512_loop
 
 // Store the state
 
@@ -597,15 +601,15 @@ sha3_keccak_f1600_avx512_loop:
         vmovq   QWORD PTR [rdi+104], xmm13
         vmovq   QWORD PTR [rdi+112], xmm14
         vmovq   QWORD PTR [rdi+120], xmm15
-        vmovq   QWORD PTR [rdi+128], xmm16
-        vmovq   QWORD PTR [rdi+136], xmm17
-        vmovq   QWORD PTR [rdi+144], xmm18
-        vmovq   QWORD PTR [rdi+152], xmm19
-        vmovq   QWORD PTR [rdi+160], xmm20
-        vmovq   QWORD PTR [rdi+168], xmm21
-        vmovq   QWORD PTR [rdi+176], xmm22
-        vmovq   QWORD PTR [rdi+184], xmm23
-        vmovq   QWORD PTR [rdi+192], xmm24
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x7e, 0x47, 0x10  // vmovq QWORD PTR [rdi+128], xmm16
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x7e, 0x4f, 0x11  // vmovq QWORD PTR [rdi+136], xmm17
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x7e, 0x57, 0x12  // vmovq QWORD PTR [rdi+144], xmm18
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x7e, 0x5f, 0x13  // vmovq QWORD PTR [rdi+152], xmm19
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x7e, 0x67, 0x14  // vmovq QWORD PTR [rdi+160], xmm20
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x7e, 0x6f, 0x15  // vmovq QWORD PTR [rdi+168], xmm21
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x7e, 0x77, 0x16  // vmovq QWORD PTR [rdi+176], xmm22
+        .byte   0x62, 0xe1, 0xfd, 0x08, 0x7e, 0x7f, 0x17  // vmovq QWORD PTR [rdi+184], xmm23
+        .byte   0x62, 0x61, 0xfd, 0x08, 0x7e, 0x47, 0x18  // vmovq QWORD PTR [rdi+192], xmm24
 
         vzeroupper
 

@@ -27,7 +27,7 @@ needs "x86/proofs/sha3_keccak4_f1600_avx512.ml";;
 let SHA3_KECCAK_F1600_AVX512_NOIBT_SUBROUTINE_FULL = time prove
  (`exists f_events.
     forall e a rc A pc stackpointer returnaddress.
-        nonoverlapping (a,200) (word pc,0xd1b) /\
+        nonoverlapping (a,200) (word pc,0xd0d) /\
         nonoverlapping (a,200) (rc,192) /\
         nonoverlapping (a,200) (stackpointer,8)
         ==> ensures x86
@@ -59,7 +59,7 @@ let SHA3_KECCAK_F1600_AVX512_NOIBT_SUBROUTINE_FULL = time prove
 let SHA3_KECCAK_F1600_AVX512_SUBROUTINE_FULL = time prove
  (`exists f_events.
     forall e a rc A pc stackpointer returnaddress.
-        nonoverlapping (a,200) (word pc,0xd1f) /\
+        nonoverlapping (a,200) (word pc,0xd11) /\
         nonoverlapping (a,200) (rc,192) /\
         nonoverlapping (a,200) (stackpointer,8)
         ==> ensures x86
@@ -90,7 +90,7 @@ let SHA3_KECCAK_F1600_AVX512_SUBROUTINE_FULL = time prove
 let SHA3_KECCAK4_F1600_AVX512_NOIBT_SUBROUTINE_FULL = time prove
  (`exists f_events.
     forall e a rc A1 A2 A3 A4 pc stackpointer returnaddress.
-        nonoverlapping (a,800) (word pc,0x1073) /\
+        nonoverlapping (a,800) (word pc,0x1065) /\
         nonoverlapping (a,800) (rc,192) /\
         nonoverlapping (a,800) (stackpointer,8)
         ==> ensures x86
@@ -131,7 +131,7 @@ let SHA3_KECCAK4_F1600_AVX512_NOIBT_SUBROUTINE_FULL = time prove
 let SHA3_KECCAK4_F1600_AVX512_SUBROUTINE_FULL = time prove
  (`exists f_events.
     forall e a rc A1 A2 A3 A4 pc stackpointer returnaddress.
-        nonoverlapping (a,800) (word pc,0x1077) /\
+        nonoverlapping (a,800) (word pc,0x1069) /\
         nonoverlapping (a,800) (rc,192) /\
         nonoverlapping (a,800) (stackpointer,8)
         ==> ensures x86

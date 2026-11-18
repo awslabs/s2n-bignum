@@ -182,8 +182,8 @@ let sha3_keccak4_f1600_alt_mc = define_assert_from_elf
                            (* VPINSRQ (%_% xmm1) (%_% xmm1) (Memop Quadword (%% (rdi,392))) (Imm8 (word 1)) *)
   0xc4; 0xe3; 0x75; 0x38; 0xd0; 0x01;
                            (* VINSERTI128 (%_% ymm2) (%_% ymm1) (%_% xmm0) (Imm8 (word 1)) *)
-  0x49; 0xc7; 0xc2; 0x00; 0x00; 0x00; 0x00;
-                           (* MOV (% r10) (Imm32 (word 0)) *)
+  0x41; 0xba; 0x00; 0x00; 0x00; 0x00;
+                           (* MOV (% r10d) (Imm32 (word 0)) *)
   0xc5; 0xfe; 0x6f; 0xa4; 0x24; 0xa0; 0x00; 0x00; 0x00;
                            (* VMOVDQU (%_% ymm4) (Memop Word256 (%% (rsp,160))) *)
   0xc5; 0xb5; 0xef; 0x84; 0x24; 0xc0; 0x01; 0x00; 0x00;
@@ -260,8 +260,7 @@ let sha3_keccak4_f1600_alt_mc = define_assert_from_elf
   0xc5; 0xe5; 0xeb; 0xdc;  (* VPOR (%_% ymm3) (%_% ymm3) (%_% ymm4) *)
   0xc4; 0xc1; 0x5d; 0x73; 0xf3; 0x01;
                            (* VPSLLQ (%_% ymm4) (%_% ymm11) (Imm8 (word 1)) *)
-  0xc4; 0xc1; 0x75; 0xef; 0xce;
-                           (* VPXOR (%_% ymm1) (%_% ymm1) (%_% ymm14) *)
+  0xc5; 0x8d; 0xef; 0xc9;  (* VPXOR (%_% ymm1) (%_% ymm14) (%_% ymm1) *)
   0xc5; 0xdd; 0xeb; 0xe5;  (* VPOR (%_% ymm4) (%_% ymm4) (%_% ymm5) *)
   0xc4; 0xc1; 0x0d; 0x73; 0xd2; 0x3f;
                            (* VPSRLQ (%_% ymm14) (%_% ymm10) (Imm8 (word 63)) *)
@@ -269,36 +268,27 @@ let sha3_keccak4_f1600_alt_mc = define_assert_from_elf
   0xc4; 0xc1; 0x55; 0x73; 0xf2; 0x01;
                            (* VPSLLQ (%_% ymm5) (%_% ymm10) (Imm8 (word 1)) *)
   0xc5; 0xdd; 0xef; 0xe0;  (* VPXOR (%_% ymm4) (%_% ymm4) (%_% ymm0) *)
-  0xc4; 0xc1; 0x55; 0xeb; 0xee;
-                           (* VPOR (%_% ymm5) (%_% ymm5) (%_% ymm14) *)
+  0xc5; 0x8d; 0xeb; 0xed;  (* VPOR (%_% ymm5) (%_% ymm14) (%_% ymm5) *)
   0xc5; 0xdd; 0xef; 0xf6;  (* VPXOR (%_% ymm6) (%_% ymm4) (%_% ymm6) *)
-  0xc4; 0xc1; 0x55; 0xef; 0xec;
-                           (* VPXOR (%_% ymm5) (%_% ymm5) (%_% ymm12) *)
+  0xc5; 0x9d; 0xef; 0xed;  (* VPXOR (%_% ymm5) (%_% ymm12) (%_% ymm5) *)
   0xc5; 0x9d; 0x73; 0xd1; 0x3f;
                            (* VPSRLQ (%_% ymm12) (%_% ymm1) (Imm8 (word 63)) *)
   0xc5; 0xf5; 0x73; 0xf1; 0x01;
                            (* VPSLLQ (%_% ymm1) (%_% ymm1) (Imm8 (word 1)) *)
   0xc5; 0xd5; 0xef; 0xff;  (* VPXOR (%_% ymm7) (%_% ymm5) (%_% ymm7) *)
-  0xc4; 0x41; 0x55; 0xef; 0xc9;
-                           (* VPXOR (%_% ymm9) (%_% ymm5) (%_% ymm9) *)
-  0xc4; 0xc1; 0x75; 0xeb; 0xcc;
-                           (* VPOR (%_% ymm1) (%_% ymm1) (%_% ymm12) *)
+  0xc5; 0x35; 0xef; 0xcd;  (* VPXOR (%_% ymm9) (%_% ymm9) (%_% ymm5) *)
+  0xc5; 0x9d; 0xeb; 0xc9;  (* VPOR (%_% ymm1) (%_% ymm12) (%_% ymm1) *)
   0xc5; 0x65; 0xef; 0x24; 0x24;
                            (* VPXOR (%_% ymm12) (%_% ymm3) (Memop Word256 (%% (rsp,0))) *)
-  0xc4; 0xc1; 0x75; 0xef; 0xcb;
-                           (* VPXOR (%_% ymm1) (%_% ymm1) (%_% ymm11) *)
+  0xc5; 0xa5; 0xef; 0xc9;  (* VPXOR (%_% ymm1) (%_% ymm11) (%_% ymm1) *)
   0xc5; 0xa5; 0x73; 0xd0; 0x3f;
                            (* VPSRLQ (%_% ymm11) (%_% ymm0) (Imm8 (word 63)) *)
   0xc5; 0xfd; 0x73; 0xf0; 0x01;
                            (* VPSLLQ (%_% ymm0) (%_% ymm0) (Imm8 (word 1)) *)
-  0xc4; 0x41; 0x75; 0xef; 0xed;
-                           (* VPXOR (%_% ymm13) (%_% ymm1) (%_% ymm13) *)
-  0xc4; 0x41; 0x75; 0xef; 0xc0;
-                           (* VPXOR (%_% ymm8) (%_% ymm1) (%_% ymm8) *)
-  0xc4; 0xc1; 0x7d; 0xeb; 0xc3;
-                           (* VPOR (%_% ymm0) (%_% ymm0) (%_% ymm11) *)
-  0xc4; 0xc1; 0x7d; 0xef; 0xc2;
-                           (* VPXOR (%_% ymm0) (%_% ymm0) (%_% ymm10) *)
+  0xc5; 0x15; 0xef; 0xe9;  (* VPXOR (%_% ymm13) (%_% ymm13) (%_% ymm1) *)
+  0xc5; 0x3d; 0xef; 0xc1;  (* VPXOR (%_% ymm8) (%_% ymm8) (%_% ymm1) *)
+  0xc5; 0xa5; 0xeb; 0xc0;  (* VPOR (%_% ymm0) (%_% ymm11) (%_% ymm0) *)
+  0xc5; 0xad; 0xef; 0xc0;  (* VPXOR (%_% ymm0) (%_% ymm10) (%_% ymm0) *)
   0xc5; 0x5d; 0xef; 0x94; 0x24; 0xc0; 0x00; 0x00; 0x00;
                            (* VPXOR (%_% ymm10) (%_% ymm4) (Memop Word256 (%% (rsp,192))) *)
   0xc5; 0xfd; 0xef; 0xd2;  (* VPXOR (%_% ymm2) (%_% ymm0) (%_% ymm2) *)
@@ -308,8 +298,7 @@ let sha3_keccak4_f1600_alt_mc = define_assert_from_elf
                            (* VPSLLQ (%_% ymm10) (%_% ymm10) (Imm8 (word 44)) *)
   0xc4; 0x41; 0x2d; 0xeb; 0xd3;
                            (* VPOR (%_% ymm10) (%_% ymm10) (%_% ymm11) *)
-  0xc4; 0x41; 0x55; 0xef; 0xdf;
-                           (* VPXOR (%_% ymm11) (%_% ymm5) (%_% ymm15) *)
+  0xc5; 0x05; 0xef; 0xdd;  (* VPXOR (%_% ymm11) (%_% ymm15) (%_% ymm5) *)
   0xc4; 0x62; 0x7d; 0x59; 0x3e;
                            (* VPBROADCASTQ (%_% ymm15) (Memop Quadword (%% (rsi,0))) *)
   0xc4; 0xc1; 0x0d; 0x73; 0xd3; 0x15;
@@ -342,8 +331,7 @@ let sha3_keccak4_f1600_alt_mc = define_assert_from_elf
                            (* VPSLLQ (%_% ymm2) (%_% ymm2) (Imm8 (word 14)) *)
   0xc5; 0x7e; 0x7f; 0x7c; 0x24; 0x20;
                            (* VMOVDQU (Memop Word256 (%% (rsp,32))) (%_% ymm15) *)
-  0xc4; 0xc1; 0x6d; 0xeb; 0xd6;
-                           (* VPOR (%_% ymm2) (%_% ymm2) (%_% ymm14) *)
+  0xc5; 0x8d; 0xeb; 0xd2;  (* VPOR (%_% ymm2) (%_% ymm14) (%_% ymm2) *)
   0xc5; 0x15; 0xdf; 0xf2;  (* VPANDN (%_% ymm14) (%_% ymm13) (%_% ymm2) *)
   0xc4; 0x41; 0x0d; 0xef; 0xdb;
                            (* VPXOR (%_% ymm11) (%_% ymm14) (%_% ymm11) *)
@@ -371,8 +359,7 @@ let sha3_keccak4_f1600_alt_mc = define_assert_from_elf
                            (* VPSRLQ (%_% ymm10) (%_% ymm2) (Imm8 (word 44)) *)
   0xc5; 0xed; 0x73; 0xf2; 0x14;
                            (* VPSLLQ (%_% ymm2) (%_% ymm2) (Imm8 (word 20)) *)
-  0xc4; 0xc1; 0x6d; 0xeb; 0xd2;
-                           (* VPOR (%_% ymm2) (%_% ymm2) (%_% ymm10) *)
+  0xc5; 0xad; 0xeb; 0xd2;  (* VPOR (%_% ymm2) (%_% ymm10) (%_% ymm2) *)
   0xc5; 0x65; 0xef; 0x94; 0x24; 0x00; 0x01; 0x00; 0x00;
                            (* VPXOR (%_% ymm10) (%_% ymm3) (Memop Word256 (%% (rsp,256))) *)
   0xc4; 0xc1; 0x25; 0x73; 0xd2; 0x3d;
@@ -404,8 +391,7 @@ let sha3_keccak4_f1600_alt_mc = define_assert_from_elf
                            (* VPSRLQ (%_% ymm12) (%_% ymm7) (Imm8 (word 3)) *)
   0xc5; 0xc5; 0x73; 0xf7; 0x3d;
                            (* VPSLLQ (%_% ymm7) (%_% ymm7) (Imm8 (word 61)) *)
-  0xc4; 0xc1; 0x45; 0xeb; 0xfc;
-                           (* VPOR (%_% ymm7) (%_% ymm7) (%_% ymm12) *)
+  0xc5; 0x9d; 0xeb; 0xff;  (* VPOR (%_% ymm7) (%_% ymm12) (%_% ymm7) *)
   0xc5; 0x25; 0xdf; 0xe7;  (* VPANDN (%_% ymm12) (%_% ymm11) (%_% ymm7) *)
   0xc4; 0x41; 0x1d; 0xef; 0xd2;
                            (* VPXOR (%_% ymm10) (%_% ymm12) (%_% ymm10) *)
@@ -569,8 +555,8 @@ let sha3_keccak4_f1600_alt_mc = define_assert_from_elf
   0x48; 0x83; 0xc6; 0x08;  (* ADD (% rsi) (Imm8 (word 8)) *)
   0x49; 0x83; 0xc2; 0x01;  (* ADD (% r10) (Imm8 (word 1)) *)
   0x49; 0x83; 0xfa; 0x18;  (* CMP (% r10) (Imm8 (word 24)) *)
-  0x0f; 0x85; 0xfe; 0xfa; 0xff; 0xff;
-                           (* JNE (Imm32 (word 4294966014)) *)
+  0x0f; 0x85; 0x0c; 0xfb; 0xff; 0xff;
+                           (* JNE (Imm32 (word 4294966028)) *)
   0xc5; 0xfe; 0x6f; 0x24; 0x24;
                            (* VMOVDQU (%_% ymm4) (Memop Word256 (%% (rsp,0))) *)
   0xc5; 0xfe; 0x6f; 0x6c; 0x24; 0x40;
@@ -774,7 +760,7 @@ let SHA3_KECCAK4_F1600_ALT_FULL = time prove
    forall e rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64
           A1 A2 A3 A4 pc:num stackpointer:int64.
   PAIRWISE (nonoverlapping_modulo (2 EXP 64))
-  [(pc, 0x9d9);
+  [(pc, 0x9ca);
    (val stackpointer, 0x300);
    (val bitstate_in, 800);
    (val rc_pointer, 192);
@@ -797,7 +783,7 @@ let SHA3_KECCAK4_F1600_ALT_FULL = time prove
               wordlist_from_memory(word_add bitstate_in (word 600),25) s =
               A4 /\
               read events s = e)
-         (\s. read RIP s = word(pc + 0x9d5) /\
+         (\s. read RIP s = word(pc + 0x9c6) /\
               wordlist_from_memory(bitstate_in,25) s = keccak 24 A1 /\
               wordlist_from_memory(word_add bitstate_in (word 200),25) s =
               keccak 24 A2 /\
@@ -849,7 +835,7 @@ let SHA3_KECCAK4_F1600_ALT_FULL = time prove
 
   (*** The invariant of the correctness proof but for the flag ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `24` `pc + 0x26f` `pc + 0x771`
+  ENSURES_EVENTS_WHILE_UP2_TAC `24` `pc + 0x26e` `pc + 0x762`
   `\i s.
       read R10 s = word i /\
       read RDI s = bitstate_in /\
@@ -1023,7 +1009,7 @@ let SHA3_KECCAK4_F1600_ALT_FULL = time prove
 let SHA3_KECCAK4_F1600_ALT_CORRECT = prove
   (`!rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64.
   PAIRWISE (nonoverlapping_modulo (2 EXP 64))
-  [(pc, 0x9d9);
+  [(pc, 0x9ca);
    (val stackpointer, 0x300);
    (val bitstate_in, 800);
    (val rc_pointer, 192);
@@ -1042,7 +1028,7 @@ let SHA3_KECCAK4_F1600_ALT_CORRECT = prove
               wordlist_from_memory(word_add bitstate_in (word 200),25) s = A2 /\
               wordlist_from_memory(word_add bitstate_in (word 400),25) s = A3 /\
               wordlist_from_memory(word_add bitstate_in (word 600),25) s = A4)
-             (\s. read RIP s = word(pc + 0x9d5) /\
+             (\s. read RIP s = word(pc + 0x9c6) /\
                   wordlist_from_memory(bitstate_in,25) s = keccak 24 A1 /\
                   wordlist_from_memory(word_add bitstate_in (word 200),25) s = keccak 24 A2 /\
                   wordlist_from_memory(word_add bitstate_in (word 400),25) s = keccak 24 A3 /\
@@ -1413,7 +1399,7 @@ let SHA3_KECCAK4_F1600_ALT_SAFE = time prove
  (`exists f_events.
        forall e rc_pointer bitstate_in rho8_ptr rho56_ptr pc stackpointer.
            PAIRWISE (nonoverlapping_modulo (2 EXP 64))
-           [pc,0x9d9; val stackpointer,768; val bitstate_in,800;
+           [pc,0x9ca; val stackpointer,768; val bitstate_in,800;
             val rc_pointer,192; val rho8_ptr,32; val rho56_ptr,32]
            ==> ensures x86
                (\s.
@@ -1425,7 +1411,7 @@ let SHA3_KECCAK4_F1600_ALT_SAFE = time prove
                                 s /\
                     read events s = e)
                (\s.
-                    read RIP s = word (pc + 0x9d5) /\
+                    read RIP s = word (pc + 0x9c6) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events rc_pointer rho8_ptr rho56_ptr
@@ -1459,7 +1445,7 @@ let SHA3_KECCAK4_F1600_ALT_SAFE = time prove
     `rho56_ptr:int64`; `pc:num`; `stackpointer:int64`] THEN
   REWRITE_TAC[PAIRWISE; C_ARGUMENTS; ALL; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `24` `pc + 0x26f` `pc + 0x771`
+  ENSURES_EVENTS_WHILE_UP2_TAC `24` `pc + 0x26e` `pc + 0x762`
    `\i s. read R10 s = word i /\
           read RDI s = bitstate_in /\
           read RSP s = stackpointer /\
@@ -1556,7 +1542,7 @@ let SHA3_KECCAK4_F1600_ALT_NOIBT_SUBROUTINE_SAFE = time prove
    `\(rc_pointer:int64) (rho8_ptr:int64) (rho56_ptr:int64)
      (bitstate_in:int64) (pc:num) (stackpointer:int64)
      (returnaddress:int64).
-       CONS (EventJump (word(pc + 0x9d9):int64,returnaddress))
+       CONS (EventJump (word(pc + 0x9ca):int64,returnaddress))
         (CONS (EventLoad (stackpointer,8))
           (inner_f_events rc_pointer rho8_ptr rho56_ptr bitstate_in pc
              (word_sub (word_and stackpointer (word 0xffffffffffffffe0))
@@ -1610,7 +1596,7 @@ let SHA3_KECCAK4_F1600_ALT_NOIBT_SUBROUTINE_SAFE = time prove
    ***)
 
   EXISTS_TAC
-   `CONS (EventJump (word (pc + 0x9d9):int64,returnaddress:int64))
+   `CONS (EventJump (word (pc + 0x9ca):int64,returnaddress:int64))
      (CONS (EventLoad (stackpointer:int64,8))
        ((inner_f_events:int64->int64->int64->int64->num->int64->
                         uarch_event list)

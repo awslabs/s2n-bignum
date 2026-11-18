@@ -57,7 +57,7 @@ S2N_BN_SYMBOL(mlkem_frombytes):
         mvni    v29.8h, #0xf0, lsl #8
         mov     x4, #8
 
-mlkem_frombytes_loop:
+Lmlkem_frombytes_loop:
         ldp     q0, q1, [x1], #32
         ldr     q2, [x1], #16
 
@@ -80,7 +80,7 @@ mlkem_frombytes_loop:
         stp     q5, q6, [x0], #32
 
         subs    x4, x4, #1
-        bne     mlkem_frombytes_loop
+        bne     Lmlkem_frombytes_loop
 
         CFI_RET
 

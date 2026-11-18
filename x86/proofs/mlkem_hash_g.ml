@@ -15,7 +15,7 @@ needs "x86/proofs/utils/mlkem_native2_sponge.ml";;
  **** stack pointer, and the call of sha3_keccak_f1600_alt2 puts its return
  **** address below that, so the stack used is the 256 bytes below the
  **** return address. The digest is taken after the last permutation, at
- **** mlkem_hash_g_pad + 20, given the name mlkem_hash_g_digest here.
+ **** mlkem_hash_g_pad + 19, given the name mlkem_hash_g_digest here.
  ****)
 
 let MLKEM_HASH_G_EXEC = MLKEM_NATIVE2_IMAGE_EXEC ["mlkem_hash_g"];;
@@ -23,7 +23,7 @@ let MLKEM_HASH_G_EXEC = MLKEM_NATIVE2_IMAGE_EXEC ["mlkem_hash_g"];;
 let pc_plus name off =
   parse_term (Printf.sprintf "pc + %d" (layout name + off));;
 
-install_layout ["mlkem_hash_g_digest",layout "mlkem_hash_g_pad" + 20];;
+install_layout ["mlkem_hash_g_digest",layout "mlkem_hash_g_pad" + 19];;
 
 (* ------------------------------------------------------------------------- *)
 (* One whole block of 72 bytes of the message m at inp, as for keccak_absorb *)
@@ -376,13 +376,10 @@ let MLKEM_HASH_G_BYTES = prove
   SUBGOAL_THEN `t < 2 EXP 64` ASSUME_TAC THENL
    [UNDISCH_TAC `t < 72` THEN ARITH_TAC; ALL_TAC] THEN
   VAL_INT64_TAC `t:num` THEN
-  SUBGOAL_THEN `word_and (word t:int64) (word 7) = word(t MOD 8)`
-  ASSUME_TAC THENL
-   [MP_TAC(ISPECL [`word t:int64`; `3`] (CONJUNCT1 WORD_AND_MASK_WORD)) THEN
-    CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
   SUBGOAL_THEN `t MOD 8 < 8` ASSUME_TAC THENL [ARITH_TAC; ALL_TAC] THEN
   VAL_INT64_TAC `t MOD 8` THEN
+  MP_TAC(SPEC `t:num` WORD_AND_7_ZX32) THEN
+  ANTS_TAC THENL [UNDISCH_TAC `t < 72` THEN ARITH_TAC; STRIP_TAC] THEN
   SUBGOAL_THEN
    `num_of_bytelist m DIV 2 EXP (8 * 72 * q) < 2 EXP (8 * t)`
   ASSUME_TAC THENL
@@ -1240,13 +1237,8 @@ let MLKEM_HASH_G_SUBROUTINE_SAFE = time prove
 
       (*** The single bytes of the last block ***)
 
-      SUBGOAL_THEN `word_and (word (len MOD 72):int64) (word 7) =
-                    word((len MOD 72) MOD 8)`
-      ASSUME_TAC THENL
-       [MP_TAC(ISPECL [`word (len MOD 72):int64`; `3`]
-          (CONJUNCT1 WORD_AND_MASK_WORD)) THEN
-        CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
-        ALL_TAC] THEN
+      MP_TAC(SPEC `len MOD 72` WORD_AND_7_ZX32) THEN
+      ANTS_TAC THENL [ARITH_TAC; STRIP_TAC] THEN
       SUBGOAL_THEN
        `val(word((len MOD 72) MOD 8):int64) = (len MOD 72) MOD 8`
       ASSUME_TAC THENL

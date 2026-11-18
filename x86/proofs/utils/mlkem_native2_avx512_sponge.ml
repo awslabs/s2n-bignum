@@ -515,6 +515,31 @@ let BYTE_ZX_X86 = prove
   REPEAT CONJ_TAC THEN MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
+(* The count t MOD 8 of the single bytes of the last block, as the           *)
+(* simulation of the 32-bit "and ecx, 7" on the length t in RCX gives        *)
+(* RCX and the test of ZF on it.                                             *)
+(* ------------------------------------------------------------------------- *)
+
+let WORD_AND_7_ZX32 = prove
+ (`!t. t < 2 EXP 32
+       ==> word_zx(word_and (word_zx (word t:int64):int32) (word 7)):int64 =
+           word(t MOD 8) /\
+           val(word_and (word_zx (word t:int64):int32) (word 7)) = t MOD 8`,
+  GEN_TAC THEN DISCH_TAC THEN
+  SUBGOAL_THEN `word_zx (word t:int64):int32 = word t` SUBST1_TAC THENL
+   [MATCH_MP_TAC WORD_ZX_WORD_SIMPLE THEN
+    REWRITE_TAC[DIMINDEX_32; DIMINDEX_64] THEN ARITH_TAC;
+    ALL_TAC] THEN
+  MP_TAC(ISPECL [`word t:int32`; `3`] (CONJUNCT1 WORD_AND_MASK_WORD)) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[WORD_ZX_WORD; VAL_WORD; DIMINDEX_32] THEN
+  ASM_SIMP_TAC[MOD_LT] THEN
+  SUBGOAL_THEN `t MOD 8 MOD 2 EXP 32 = t MOD 8` SUBST1_TAC THENL
+   [MATCH_MP_TAC MOD_LT THEN
+    MATCH_MP_TAC(ARITH_RULE `x < 8 ==> x < 2 EXP 32`) THEN ARITH_TAC;
+    REWRITE_TAC[]]);;
+
+(* ------------------------------------------------------------------------- *)
 (* Addresses and quantified facts in the simulation.                         *)
 (* ------------------------------------------------------------------------- *)
 
@@ -592,7 +617,7 @@ needs "x86/proofs/consttime.ml";;
 let SHA3_KECCAK_F1600_AVX512_NOIBT_SUBROUTINE_SAFE_FRAMED = time prove
  (`exists f_events.
     forall e a rc pc stackpointer returnaddress.
-        nonoverlapping (a,200) (word pc,0xd1b) /\
+        nonoverlapping (a,200) (word pc,0xd0d) /\
         nonoverlapping (a,200) (rc,192) /\
         nonoverlapping (a,200) (stackpointer,8)
         ==> ensures x86

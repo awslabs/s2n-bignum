@@ -52,7 +52,7 @@ S2N_BN_SYMBOL(mlkem_compress_d4):
         dup     v31.8h, w2
         mov     x4, #4
 
-mlkem_compress_d4_loop:
+Lmlkem_compress_d4_loop:
         ldp     q0, q1, [x1], #32
         ldp     q2, q3, [x1], #32
         ldp     q4, q5, [x1], #32
@@ -88,7 +88,7 @@ mlkem_compress_d4_loop:
         stp     q20, q22, [x0], #32
 
         subs    x4, x4, #1
-        bne     mlkem_compress_d4_loop
+        bne     Lmlkem_compress_d4_loop
 
         CFI_RET
 

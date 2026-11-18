@@ -1183,7 +1183,7 @@ let GM_ABSORB_FULL_CALL_TAC vars spoff j k (asl,w as gl) =
 let gm_safe_derive spoff =
   [gm_pc "nonoise" (-14), GM_MERGE_TAC `R9` [0];
    gm_pc "nonoise" 0, (fun k -> TRY(GM_SPLIT_TAC spoff [2880] k));
-   gm_pc "nonoise" 9, GM_MERGE_TAC `R8` [0; 32];
+   gm_pc "nonoise" 8, GM_MERGE_TAC `R8` [0; 32];
    gm_pc "jobsdone" 0, (fun k -> TRY(GM_SPLIT_TAC spoff [2816; 2848] k));
    gm_pc "initloop" 133, GM_LANE_SPLIT_TAC 136;
    gm_pc "initloop" 140, GM_MATRIX_LANE_TAC;
@@ -1256,8 +1256,8 @@ let gm_safe_derive_jobs spoff full =
   gm_safe_derive spoff @
   (if full = [] then [] else
    [gm_pc "outer" 0, (fun k -> TRY(GM_ZERO_LANES_TAC spoff k));
-    gm_pc "nohash1" 66, GM_LANE256_TAC 400;
-    gm_pc "nohash1" 79, GM_DIGEST_TAC 400]);;
+    gm_pc "nohash1" 65, GM_LANE256_TAC 400;
+    gm_pc "nohash1" 78, GM_DIGEST_TAC 400]);;
 
 let gm_safe_calls_jobs spoff lens vars full =
   let absorb j =

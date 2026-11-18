@@ -72,13 +72,13 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
  vpmulhw %ymm0, %ymm15, %ymm15
- vpaddw %ymm8, %ymm4, %ymm3
+ vpaddw %ymm4, %ymm8, %ymm3
  vpsubw %ymm8, %ymm4, %ymm8
- vpaddw %ymm9, %ymm5, %ymm4
+ vpaddw %ymm5, %ymm9, %ymm4
  vpsubw %ymm9, %ymm5, %ymm9
- vpaddw %ymm10, %ymm6, %ymm5
+ vpaddw %ymm6, %ymm10, %ymm5
  vpsubw %ymm10, %ymm6, %ymm10
- vpaddw %ymm11, %ymm7, %ymm6
+ vpaddw %ymm7, %ymm11, %ymm6
  vpsubw %ymm11, %ymm7, %ymm11
  vpsubw %ymm12, %ymm3, %ymm3
  vpaddw %ymm12, %ymm8, %ymm8
@@ -118,13 +118,13 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
  vpmulhw %ymm0, %ymm15, %ymm15
- vpaddw %ymm8, %ymm4, %ymm3
+ vpaddw %ymm4, %ymm8, %ymm3
  vpsubw %ymm8, %ymm4, %ymm8
- vpaddw %ymm9, %ymm5, %ymm4
+ vpaddw %ymm5, %ymm9, %ymm4
  vpsubw %ymm9, %ymm5, %ymm9
- vpaddw %ymm10, %ymm6, %ymm5
+ vpaddw %ymm6, %ymm10, %ymm5
  vpsubw %ymm10, %ymm6, %ymm10
- vpaddw %ymm11, %ymm7, %ymm6
+ vpaddw %ymm7, %ymm11, %ymm6
  vpsubw %ymm11, %ymm7, %ymm11
  vpsubw %ymm12, %ymm3, %ymm3
  vpaddw %ymm12, %ymm8, %ymm8
@@ -164,13 +164,13 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
  vpmulhw %ymm0, %ymm15, %ymm15
- vpaddw %ymm8, %ymm4, %ymm3
+ vpaddw %ymm4, %ymm8, %ymm3
  vpsubw %ymm8, %ymm4, %ymm8
- vpaddw %ymm9, %ymm5, %ymm4
+ vpaddw %ymm5, %ymm9, %ymm4
  vpsubw %ymm9, %ymm5, %ymm9
- vpaddw %ymm10, %ymm6, %ymm5
+ vpaddw %ymm6, %ymm10, %ymm5
  vpsubw %ymm10, %ymm6, %ymm10
- vpaddw %ymm11, %ymm7, %ymm6
+ vpaddw %ymm7, %ymm11, %ymm6
  vpsubw %ymm11, %ymm7, %ymm11
  vpsubw %ymm12, %ymm3, %ymm3
  vpaddw %ymm12, %ymm8, %ymm8
@@ -186,9 +186,9 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vperm2i128 $0x31, %ymm11, %ymm6, %ymm11
  vmovdqa 160(%rsi), %ymm15
  vmovdqa 192(%rsi), %ymm2
- vpmullw %ymm15, %ymm7, %ymm12
+ vpmullw %ymm7, %ymm15, %ymm12
  vpmullw %ymm15, %ymm10, %ymm13
- vpmullw %ymm15, %ymm5, %ymm14
+ vpmullw %ymm5, %ymm15, %ymm14
  vpmullw %ymm15, %ymm11, %ymm15
  vpmulhw %ymm2, %ymm7, %ymm7
  vpmulhw %ymm2, %ymm10, %ymm10
@@ -211,11 +211,11 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpaddw %ymm11, %ymm9, %ymm3
  vpsubw %ymm11, %ymm9, %ymm11
  vpsubw %ymm12, %ymm4, %ymm4
- vpaddw %ymm12, %ymm7, %ymm7
+ vpaddw %ymm7, %ymm12, %ymm7
  vpsubw %ymm13, %ymm6, %ymm6
  vpaddw %ymm13, %ymm10, %ymm10
  vpsubw %ymm14, %ymm8, %ymm8
- vpaddw %ymm14, %ymm5, %ymm5
+ vpaddw %ymm5, %ymm14, %ymm5
  vpsubw %ymm15, %ymm3, %ymm3
  vpaddw %ymm15, %ymm11, %ymm11
  vpunpcklqdq %ymm5, %ymm8, %ymm9
@@ -225,7 +225,7 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa 224(%rsi), %ymm15
  vmovdqa 256(%rsi), %ymm2
  vpmullw %ymm15, %ymm9, %ymm12
- vpmullw %ymm15, %ymm5, %ymm13
+ vpmullw %ymm5, %ymm15, %ymm13
  vpmullw %ymm15, %ymm8, %ymm14
  vpmullw %ymm15, %ymm11, %ymm15
  vpmulhw %ymm2, %ymm9, %ymm9
@@ -240,18 +240,18 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
  vpmulhw %ymm0, %ymm15, %ymm15
- vpaddw %ymm9, %ymm3, %ymm6
+ vpaddw %ymm3, %ymm9, %ymm6
  vpsubw %ymm9, %ymm3, %ymm9
  vpaddw %ymm5, %ymm7, %ymm3
  vpsubw %ymm5, %ymm7, %ymm5
- vpaddw %ymm8, %ymm4, %ymm7
+ vpaddw %ymm4, %ymm8, %ymm7
  vpsubw %ymm8, %ymm4, %ymm8
  vpaddw %ymm11, %ymm10, %ymm4
  vpsubw %ymm11, %ymm10, %ymm11
  vpsubw %ymm12, %ymm6, %ymm6
  vpaddw %ymm12, %ymm9, %ymm9
  vpsubw %ymm13, %ymm3, %ymm3
- vpaddw %ymm13, %ymm5, %ymm5
+ vpaddw %ymm5, %ymm13, %ymm5
  vpsubw %ymm14, %ymm7, %ymm7
  vpaddw %ymm14, %ymm8, %ymm8
  vpsubw %ymm15, %ymm4, %ymm4
@@ -268,7 +268,7 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa 320(%rsi), %ymm2
  vpmullw %ymm15, %ymm10, %ymm12
  vpmullw %ymm15, %ymm8, %ymm13
- vpmullw %ymm15, %ymm7, %ymm14
+ vpmullw %ymm7, %ymm15, %ymm14
  vpmullw %ymm15, %ymm11, %ymm15
  vpmulhw %ymm2, %ymm10, %ymm10
  vpmulhw %ymm2, %ymm8, %ymm8
@@ -286,20 +286,20 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
  vpmulhw %ymm0, %ymm15, %ymm15
- vpaddw %ymm10, %ymm4, %ymm3
+ vpaddw %ymm4, %ymm10, %ymm3
  vpsubw %ymm10, %ymm4, %ymm10
  vpaddw %ymm8, %ymm9, %ymm4
  vpsubw %ymm8, %ymm9, %ymm8
  vpaddw %ymm7, %ymm6, %ymm9
  vpsubw %ymm7, %ymm6, %ymm7
- vpaddw %ymm11, %ymm5, %ymm6
+ vpaddw %ymm5, %ymm11, %ymm6
  vpsubw %ymm11, %ymm5, %ymm11
  vpsubw %ymm12, %ymm3, %ymm3
  vpaddw %ymm12, %ymm10, %ymm10
  vpsubw %ymm13, %ymm4, %ymm4
  vpaddw %ymm13, %ymm8, %ymm8
  vpsubw %ymm14, %ymm9, %ymm9
- vpaddw %ymm14, %ymm7, %ymm7
+ vpaddw %ymm7, %ymm14, %ymm7
  vpsubw %ymm15, %ymm6, %ymm6
  vpaddw %ymm15, %ymm11, %ymm11
  vpslld $0x10, %ymm7, %ymm5
@@ -312,8 +312,8 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpblendw $0xaa, %ymm11, %ymm6, %ymm11
  vmovdqa 352(%rsi), %ymm15
  vmovdqa 384(%rsi), %ymm2
- vpmullw %ymm15, %ymm5, %ymm12
- vpmullw %ymm15, %ymm7, %ymm13
+ vpmullw %ymm5, %ymm15, %ymm12
+ vpmullw %ymm7, %ymm15, %ymm13
  vpmullw %ymm15, %ymm9, %ymm14
  vpmullw %ymm15, %ymm11, %ymm15
  vpmulhw %ymm2, %ymm5, %ymm5
@@ -336,14 +336,14 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpsubw %ymm5, %ymm6, %ymm5
  vpaddw %ymm7, %ymm10, %ymm6
  vpsubw %ymm7, %ymm10, %ymm7
- vpaddw %ymm9, %ymm3, %ymm10
+ vpaddw %ymm3, %ymm9, %ymm10
  vpsubw %ymm9, %ymm3, %ymm9
  vpaddw %ymm11, %ymm8, %ymm3
  vpsubw %ymm11, %ymm8, %ymm11
  vpsubw %ymm12, %ymm4, %ymm4
- vpaddw %ymm12, %ymm5, %ymm5
+ vpaddw %ymm5, %ymm12, %ymm5
  vpsubw %ymm13, %ymm6, %ymm6
- vpaddw %ymm13, %ymm7, %ymm7
+ vpaddw %ymm7, %ymm13, %ymm7
  vpsubw %ymm14, %ymm10, %ymm10
  vpaddw %ymm14, %ymm9, %ymm9
  vpsubw %ymm15, %ymm3, %ymm3
@@ -353,29 +353,29 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa 448(%rsi), %ymm8
  vmovdqa 512(%rsi), %ymm2
  vpmullw %ymm14, %ymm10, %ymm12
- vpmullw %ymm14, %ymm3, %ymm13
+ vpmullw %ymm3, %ymm14, %ymm13
  vpmullw %ymm15, %ymm9, %ymm14
  vpmullw %ymm15, %ymm11, %ymm15
  vpmulhw %ymm8, %ymm10, %ymm10
- vpmulhw %ymm8, %ymm3, %ymm3
+ vpmulhw %ymm3, %ymm8, %ymm3
  vpmulhw %ymm2, %ymm9, %ymm9
  vpmulhw %ymm2, %ymm11, %ymm11
  vpmulhw %ymm0, %ymm12, %ymm12
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
  vpmulhw %ymm0, %ymm15, %ymm15
- vpaddw %ymm10, %ymm4, %ymm8
+ vpaddw %ymm4, %ymm10, %ymm8
  vpsubw %ymm10, %ymm4, %ymm10
  vpaddw %ymm3, %ymm6, %ymm4
  vpsubw %ymm3, %ymm6, %ymm3
- vpaddw %ymm9, %ymm5, %ymm6
+ vpaddw %ymm5, %ymm9, %ymm6
  vpsubw %ymm9, %ymm5, %ymm9
- vpaddw %ymm11, %ymm7, %ymm5
+ vpaddw %ymm7, %ymm11, %ymm5
  vpsubw %ymm11, %ymm7, %ymm11
  vpsubw %ymm12, %ymm8, %ymm8
  vpaddw %ymm12, %ymm10, %ymm10
  vpsubw %ymm13, %ymm4, %ymm4
- vpaddw %ymm13, %ymm3, %ymm3
+ vpaddw %ymm3, %ymm13, %ymm3
  vpsubw %ymm14, %ymm6, %ymm6
  vpaddw %ymm14, %ymm9, %ymm9
  vpsubw %ymm15, %ymm5, %ymm5
@@ -410,13 +410,13 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
  vpmulhw %ymm0, %ymm15, %ymm15
- vpaddw %ymm8, %ymm4, %ymm3
+ vpaddw %ymm4, %ymm8, %ymm3
  vpsubw %ymm8, %ymm4, %ymm8
- vpaddw %ymm9, %ymm5, %ymm4
+ vpaddw %ymm5, %ymm9, %ymm4
  vpsubw %ymm9, %ymm5, %ymm9
- vpaddw %ymm10, %ymm6, %ymm5
+ vpaddw %ymm6, %ymm10, %ymm5
  vpsubw %ymm10, %ymm6, %ymm10
- vpaddw %ymm11, %ymm7, %ymm6
+ vpaddw %ymm7, %ymm11, %ymm6
  vpsubw %ymm11, %ymm7, %ymm11
  vpsubw %ymm12, %ymm3, %ymm3
  vpaddw %ymm12, %ymm8, %ymm8
@@ -432,9 +432,9 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vperm2i128 $0x31, %ymm11, %ymm6, %ymm11
  vmovdqa 608(%rsi), %ymm15
  vmovdqa 640(%rsi), %ymm2
- vpmullw %ymm15, %ymm7, %ymm12
+ vpmullw %ymm7, %ymm15, %ymm12
  vpmullw %ymm15, %ymm10, %ymm13
- vpmullw %ymm15, %ymm5, %ymm14
+ vpmullw %ymm5, %ymm15, %ymm14
  vpmullw %ymm15, %ymm11, %ymm15
  vpmulhw %ymm2, %ymm7, %ymm7
  vpmulhw %ymm2, %ymm10, %ymm10
@@ -457,11 +457,11 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpaddw %ymm11, %ymm9, %ymm3
  vpsubw %ymm11, %ymm9, %ymm11
  vpsubw %ymm12, %ymm4, %ymm4
- vpaddw %ymm12, %ymm7, %ymm7
+ vpaddw %ymm7, %ymm12, %ymm7
  vpsubw %ymm13, %ymm6, %ymm6
  vpaddw %ymm13, %ymm10, %ymm10
  vpsubw %ymm14, %ymm8, %ymm8
- vpaddw %ymm14, %ymm5, %ymm5
+ vpaddw %ymm5, %ymm14, %ymm5
  vpsubw %ymm15, %ymm3, %ymm3
  vpaddw %ymm15, %ymm11, %ymm11
  vpunpcklqdq %ymm5, %ymm8, %ymm9
@@ -471,7 +471,7 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa 672(%rsi), %ymm15
  vmovdqa 704(%rsi), %ymm2
  vpmullw %ymm15, %ymm9, %ymm12
- vpmullw %ymm15, %ymm5, %ymm13
+ vpmullw %ymm5, %ymm15, %ymm13
  vpmullw %ymm15, %ymm8, %ymm14
  vpmullw %ymm15, %ymm11, %ymm15
  vpmulhw %ymm2, %ymm9, %ymm9
@@ -486,18 +486,18 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
  vpmulhw %ymm0, %ymm15, %ymm15
- vpaddw %ymm9, %ymm3, %ymm6
+ vpaddw %ymm3, %ymm9, %ymm6
  vpsubw %ymm9, %ymm3, %ymm9
  vpaddw %ymm5, %ymm7, %ymm3
  vpsubw %ymm5, %ymm7, %ymm5
- vpaddw %ymm8, %ymm4, %ymm7
+ vpaddw %ymm4, %ymm8, %ymm7
  vpsubw %ymm8, %ymm4, %ymm8
  vpaddw %ymm11, %ymm10, %ymm4
  vpsubw %ymm11, %ymm10, %ymm11
  vpsubw %ymm12, %ymm6, %ymm6
  vpaddw %ymm12, %ymm9, %ymm9
  vpsubw %ymm13, %ymm3, %ymm3
- vpaddw %ymm13, %ymm5, %ymm5
+ vpaddw %ymm5, %ymm13, %ymm5
  vpsubw %ymm14, %ymm7, %ymm7
  vpaddw %ymm14, %ymm8, %ymm8
  vpsubw %ymm15, %ymm4, %ymm4
@@ -514,7 +514,7 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa 768(%rsi), %ymm2
  vpmullw %ymm15, %ymm10, %ymm12
  vpmullw %ymm15, %ymm8, %ymm13
- vpmullw %ymm15, %ymm7, %ymm14
+ vpmullw %ymm7, %ymm15, %ymm14
  vpmullw %ymm15, %ymm11, %ymm15
  vpmulhw %ymm2, %ymm10, %ymm10
  vpmulhw %ymm2, %ymm8, %ymm8
@@ -532,20 +532,20 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
  vpmulhw %ymm0, %ymm15, %ymm15
- vpaddw %ymm10, %ymm4, %ymm3
+ vpaddw %ymm4, %ymm10, %ymm3
  vpsubw %ymm10, %ymm4, %ymm10
  vpaddw %ymm8, %ymm9, %ymm4
  vpsubw %ymm8, %ymm9, %ymm8
  vpaddw %ymm7, %ymm6, %ymm9
  vpsubw %ymm7, %ymm6, %ymm7
- vpaddw %ymm11, %ymm5, %ymm6
+ vpaddw %ymm5, %ymm11, %ymm6
  vpsubw %ymm11, %ymm5, %ymm11
  vpsubw %ymm12, %ymm3, %ymm3
  vpaddw %ymm12, %ymm10, %ymm10
  vpsubw %ymm13, %ymm4, %ymm4
  vpaddw %ymm13, %ymm8, %ymm8
  vpsubw %ymm14, %ymm9, %ymm9
- vpaddw %ymm14, %ymm7, %ymm7
+ vpaddw %ymm7, %ymm14, %ymm7
  vpsubw %ymm15, %ymm6, %ymm6
  vpaddw %ymm15, %ymm11, %ymm11
  vpslld $0x10, %ymm7, %ymm5
@@ -558,8 +558,8 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpblendw $0xaa, %ymm11, %ymm6, %ymm11
  vmovdqa 800(%rsi), %ymm15
  vmovdqa 832(%rsi), %ymm2
- vpmullw %ymm15, %ymm5, %ymm12
- vpmullw %ymm15, %ymm7, %ymm13
+ vpmullw %ymm5, %ymm15, %ymm12
+ vpmullw %ymm7, %ymm15, %ymm13
  vpmullw %ymm15, %ymm9, %ymm14
  vpmullw %ymm15, %ymm11, %ymm15
  vpmulhw %ymm2, %ymm5, %ymm5
@@ -582,14 +582,14 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpsubw %ymm5, %ymm6, %ymm5
  vpaddw %ymm7, %ymm10, %ymm6
  vpsubw %ymm7, %ymm10, %ymm7
- vpaddw %ymm9, %ymm3, %ymm10
+ vpaddw %ymm3, %ymm9, %ymm10
  vpsubw %ymm9, %ymm3, %ymm9
  vpaddw %ymm11, %ymm8, %ymm3
  vpsubw %ymm11, %ymm8, %ymm11
  vpsubw %ymm12, %ymm4, %ymm4
- vpaddw %ymm12, %ymm5, %ymm5
+ vpaddw %ymm5, %ymm12, %ymm5
  vpsubw %ymm13, %ymm6, %ymm6
- vpaddw %ymm13, %ymm7, %ymm7
+ vpaddw %ymm7, %ymm13, %ymm7
  vpsubw %ymm14, %ymm10, %ymm10
  vpaddw %ymm14, %ymm9, %ymm9
  vpsubw %ymm15, %ymm3, %ymm3
@@ -599,29 +599,29 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vmovdqa 896(%rsi), %ymm8
  vmovdqa 960(%rsi), %ymm2
  vpmullw %ymm14, %ymm10, %ymm12
- vpmullw %ymm14, %ymm3, %ymm13
+ vpmullw %ymm3, %ymm14, %ymm13
  vpmullw %ymm15, %ymm9, %ymm14
  vpmullw %ymm15, %ymm11, %ymm15
  vpmulhw %ymm8, %ymm10, %ymm10
- vpmulhw %ymm8, %ymm3, %ymm3
+ vpmulhw %ymm3, %ymm8, %ymm3
  vpmulhw %ymm2, %ymm9, %ymm9
  vpmulhw %ymm2, %ymm11, %ymm11
  vpmulhw %ymm0, %ymm12, %ymm12
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
  vpmulhw %ymm0, %ymm15, %ymm15
- vpaddw %ymm10, %ymm4, %ymm8
+ vpaddw %ymm4, %ymm10, %ymm8
  vpsubw %ymm10, %ymm4, %ymm10
  vpaddw %ymm3, %ymm6, %ymm4
  vpsubw %ymm3, %ymm6, %ymm3
- vpaddw %ymm9, %ymm5, %ymm6
+ vpaddw %ymm5, %ymm9, %ymm6
  vpsubw %ymm9, %ymm5, %ymm9
- vpaddw %ymm11, %ymm7, %ymm5
+ vpaddw %ymm7, %ymm11, %ymm5
  vpsubw %ymm11, %ymm7, %ymm11
  vpsubw %ymm12, %ymm8, %ymm8
  vpaddw %ymm12, %ymm10, %ymm10
  vpsubw %ymm13, %ymm4, %ymm4
- vpaddw %ymm13, %ymm3, %ymm3
+ vpaddw %ymm3, %ymm13, %ymm3
  vpsubw %ymm14, %ymm6, %ymm6
  vpaddw %ymm14, %ymm9, %ymm9
  vpsubw %ymm15, %ymm5, %ymm5

@@ -409,7 +409,7 @@ let API_MULCACHE = REWRITE_RULE[WORDLIST_FROM_MEMORY_QDATA]
 
 let MLKEM_NATIVE2_QDATA = prove
  (`!s pc. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc
-          ==> read (memory :> bytes(word(pc + 65856),1248)) s =
+          ==> read (memory :> bytes(word(pc + mlkem_native2_qdata),1248)) s =
               num_of_wordlist(MAP (iword:int->int16) qdata_full)`,
   REPEAT GEN_TAC THEN
   DISCH_THEN(MP_TAC o MATCH_MP MLKEM_NATIVE2_QDATA_TABLE) THEN
@@ -2519,9 +2519,12 @@ let MLKEM_NATIVE2_PKE_ENCRYPT_CORRECT_TAC k ex =
 (* block they take, and the copies of 32-byte blocks.                        *)
 (* ------------------------------------------------------------------------- *)
 
-(*** The constants block c = word(pc + 65600) and its tables, as the callees
- *** take them: at word_add c (word off), and the word list forms
+(*** The constants block c = word(pc + mlkem_native2_constants) (as the
+ *** term api_c_tm) and its tables, as the callees take them: at
+ *** word_add c (word off), and the word list forms
  ***)
+
+let api_c_tm = `word(pc + mlkem_native2_constants):int64`;;
 
 let API_C_ADDR = prove
  (`!pc a b. word(pc + a + b):int64 = word_add (word(pc + a)) (word b)`,
@@ -2536,12 +2539,14 @@ let api_c_off th off =
 
 let MLKEM_NATIVE2_RC_WORDS = prove
  (`!s pc. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc
-          ==> wordlist_from_memory(word(pc + 65600),24) s = round_constants`,
+          ==> wordlist_from_memory(word(pc + mlkem_native2_constants),24) s =
+              round_constants`,
   REWRITE_TAC[MLKEM_NATIVE2_ROUND_CONSTANTS]);;
 
 let MLKEM_NATIVE2_RHO8_WORDS = prove
  (`!s pc. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc
-          ==> wordlist_from_memory(word_add (word(pc + 65600)) (word 192),4)
+          ==> wordlist_from_memory
+                (word_add (word(pc + mlkem_native2_constants)) (word 192),4)
                 s = rho8_constant`,
   REPEAT GEN_TAC THEN
   DISCH_THEN(MP_TAC o MATCH_MP MLKEM_NATIVE2_RHO8_TABLE) THEN
@@ -2550,7 +2555,8 @@ let MLKEM_NATIVE2_RHO8_WORDS = prove
 
 let MLKEM_NATIVE2_RHO56_WORDS = prove
  (`!s pc. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc
-          ==> wordlist_from_memory(word_add (word(pc + 65600)) (word 224),4)
+          ==> wordlist_from_memory
+                (word_add (word(pc + mlkem_native2_constants)) (word 224),4)
                 s = rho56_constant`,
   REPEAT GEN_TAC THEN
   DISCH_THEN(MP_TAC o MATCH_MP MLKEM_NATIVE2_RHO56_TABLE) THEN
@@ -2559,8 +2565,9 @@ let MLKEM_NATIVE2_RHO56_WORDS = prove
 
 let MLKEM_NATIVE2_REJ_BYTES = prove
  (`!s pc. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc
-          ==> read (memory :> bytes(word_add (word(pc + 65600)) (word 1952),
-                                    4096)) s =
+          ==> read (memory :> bytes
+                (word_add (word(pc + mlkem_native2_constants)) (word 1952),
+                 4096)) s =
               num_of_wordlist mlkem_rej_uniform_table`,
   REPEAT GEN_TAC THEN
   DISCH_THEN(MP_TAC o MATCH_MP MLKEM_NATIVE2_REJ_TABLE) THEN
@@ -3074,14 +3081,14 @@ let MLKEM_NATIVE2_KEYPAIR_DERAND_CORRECT_TAC k ex gmth =
   let gm_call =
     if k = 2 then
       ON_STATE(API_GM_CALL_TAC ex gmth
-        (fun r -> [r `RDI`; r `RSI`; rho; r `R8`; r `R9`;
-                   `word(pc + 65600):int64`])) THEN API_RSP_TAC THEN
+        (fun r -> [r `RDI`; r `RSI`; rho; r `R8`; r `R9`; api_c_tm]))
+      THEN API_RSP_TAC THEN
       next THEN ON_STATE(API_GETNOISE_CALL_TAC ex sigma) THEN API_RSP_TAC
     else
       ON_STATE(API_GM_CALL_TAC ex gmth
         (fun r -> [r `RDI`; r `RSI`; rho; r `R9`;
                    wadd fb (kp_g + 32); sigma; wadd fb (kp_s k);
-                   r `R8`; `word(pc + 65600):int64`])) THEN API_RSP_TAC in
+                   r `R8`; api_c_tm])) THEN API_RSP_TAC in
   API_ENTRY_TAC ex
    [`pk:int64`; `sk:int64`; `coins:int64`; `d:byte list`; `z:byte list`;
     `pc:num`] (kp_stack k) (kp_frame k) THEN
@@ -3292,7 +3299,7 @@ let MLKEM_NATIVE2_ENC_DERAND_CORRECT_TAC k ex gmth peth =
       (fun r -> [r `RDI`; r `RSI`; rho_ek; r `R8`; `word 0:int64`;
                  `word 0:int64`; `word 0:int64`; `pk:int64`; ek;
                  wadd fb (en_gin + 32); r `R9`;
-                 `word(pc + 65600):int64`])) THEN
+                 api_c_tm])) THEN
     API_RSP_TAC THEN
     next THEN
     ON_STATE(fun kk gl ->
@@ -3580,7 +3587,7 @@ let MLKEM_NATIVE2_DEC_CORRECT_TAC k ex gmth (pdth,peth) =
      wadd fb de_hek; wadd fb de_zc; zc; wadd fb de_j; r `R9`] @
     (if k = 2 then []
      else [wadd fb (de_kr + 32); rr_t; wadd fb (de_noise k)]) @
-    [`word(pc + 65600):int64`] in
+    [api_c_tm] in
   let final =
     API_EXPAND_FB_TAC THEN ENSURES_FINAL_STATE_TAC THEN
     RULE_ASSUM_TAC(REWRITE_RULE[mlkem_g]) THEN

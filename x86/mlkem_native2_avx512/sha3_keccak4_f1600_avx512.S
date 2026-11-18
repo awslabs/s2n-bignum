@@ -133,16 +133,20 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600_avx512):
         vshufi64x2 ymm21, ymm30, ymm25, 0x0
         vshufi64x2 ymm22, ymm29, ymm31, 0x3
         vshufi64x2 ymm23, ymm30, ymm25, 0x3
-        vmovq   xmm24, QWORD PTR [rdi+192]
+        // The loads and stores of the lanes in xmm16 and up are written as bytes:
+        // for vmovq with an EVEX-only register, GNU as and clang choose different
+        // (equivalent) opcodes, 66 0F 6E/7E and F3 0F 7E/66 0F D6, and no syntax
+        // selects one. These are the bytes that GNU as assembles.
+        .byte   0x62, 0x61, 0xfd, 0x08, 0x6e, 0x47, 0x18  // vmovq xmm24, QWORD PTR [rdi+192]
         vpinsrq xmm24, xmm24, QWORD PTR [rdi+392], 1
-        vmovq   xmm25, QWORD PTR [rdi+592]
+        .byte   0x62, 0x61, 0xfd, 0x08, 0x6e, 0x4f, 0x4a  // vmovq xmm25, QWORD PTR [rdi+592]
         vpinsrq xmm25, xmm25, QWORD PTR [rdi+792], 1
         vinserti32x4 ymm24, ymm24, xmm25, 1
 
 // The 24 rounds, four at a time
 
         lea     rax, [rsi+192]
-sha3_keccak4_f1600_avx512_loop:
+Lsha3_keccak4_f1600_avx512_loop:
 
 // Round 1 of 4: theta
 
@@ -603,9 +607,9 @@ sha3_keccak4_f1600_avx512_loop:
 // Restore lane i to register i
 
         vmovdqa64 ymm30, ymm1
-        vmovdqa64 ymm1, ymm14
-        vmovdqa64 ymm14, ymm13
-        vmovdqa64 ymm13, ymm4
+        vmovdqa   ymm1, ymm14
+        vmovdqa   ymm14, ymm13
+        vmovdqa   ymm13, ymm4
         vmovdqa64 ymm4, ymm16
         vmovdqa64 ymm16, ymm17
         vmovdqa64 ymm17, ymm30
@@ -613,12 +617,12 @@ sha3_keccak4_f1600_avx512_loop:
         vmovdqa64 ymm2, ymm23
         vmovdqa64 ymm23, ymm21
         vmovdqa64 ymm21, ymm3
-        vmovdqa64 ymm3, ymm7
-        vmovdqa64 ymm7, ymm9
+        vmovdqa   ymm3, ymm7
+        vmovdqa   ymm7, ymm9
         vmovdqa64 ymm9, ymm30
         vmovdqa64 ymm30, ymm5
-        vmovdqa64 ymm5, ymm11
-        vmovdqa64 ymm11, ymm6
+        vmovdqa   ymm5, ymm11
+        vmovdqa   ymm11, ymm6
         vmovdqa64 ymm6, ymm20
         vmovdqa64 ymm20, ymm19
         vmovdqa64 ymm19, ymm24
@@ -628,12 +632,12 @@ sha3_keccak4_f1600_avx512_loop:
         vmovdqa64 ymm18, ymm10
         vmovdqa64 ymm10, ymm22
         vmovdqa64 ymm22, ymm12
-        vmovdqa64 ymm12, ymm15
+        vmovdqa   ymm12, ymm15
         vmovdqa64 ymm15, ymm30
 
         add     rsi, 32
         cmp     rsi, rax
-        jne     sha3_keccak4_f1600_avx512_loop
+        jne     Lsha3_keccak4_f1600_avx512_loop
 
 // Transpose back and store the four states
 
@@ -709,10 +713,10 @@ sha3_keccak4_f1600_avx512_loop:
         vmovdqu64 [rdi+360], ymm30
         vmovdqu64 [rdi+560], ymm31
         vmovdqu64 [rdi+760], ymm25
-        vmovq   QWORD PTR [rdi+192], xmm24
+        .byte   0x62, 0x61, 0xfd, 0x08, 0x7e, 0x47, 0x18  // vmovq QWORD PTR [rdi+192], xmm24
         vpextrq QWORD PTR [rdi+392], xmm24, 1
         vextracti32x4 xmm25, ymm24, 1
-        vmovq   QWORD PTR [rdi+592], xmm25
+        .byte   0x62, 0x61, 0xfd, 0x08, 0x7e, 0x4f, 0x4a  // vmovq QWORD PTR [rdi+592], xmm25
         vpextrq QWORD PTR [rdi+792], xmm25, 1
 
         vzeroupper

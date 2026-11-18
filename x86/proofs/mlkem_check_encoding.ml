@@ -47,7 +47,7 @@ let mlkem_check_encoding_mc = define_assert_from_elf
                            (* VPINSRQ (%_% xmm7) (%_% xmm7) (% rax) (Imm8 (word 1)) *)
   0xc4; 0xe3; 0x4d; 0x38; 0xf7; 0x01;
                            (* VINSERTI128 (%_% ymm6) (%_% ymm6) (%_% xmm7) (Imm8 (word 1)) *)
-  0xc5; 0xdd; 0xef; 0xe4;  (* VPXOR (%_% ymm4) (%_% ymm4) (%_% ymm4) *)
+  0xc5; 0xd9; 0xef; 0xe4;  (* VPXOR (%_% xmm4) (%_% xmm4) (%_% xmm4) *)
   0x48; 0x85; 0xf6;        (* TEST (% rsi) (% rsi) *)
   0x0f; 0x84; 0xce; 0x02; 0x00; 0x00;
                            (* JE (Imm32 (word 718)) *)

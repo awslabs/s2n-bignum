@@ -91,7 +91,7 @@ S2N_BN_SYMBOL(mlkem_compress_d5):
         movz    w2, #20159
         mov     x4, #4
 
-mlkem_compress_d5_loop:
+Lmlkem_compress_d5_loop:
         dup     v26.8h, w2
         movi    v27.8h, #31
         ldp     q0, q1, [x1], #32
@@ -160,7 +160,7 @@ mlkem_compress_d5_loop:
         st1     {v27.h}[4], [x0], #2
 
         subs    x4, x4, #1
-        bne     mlkem_compress_d5_loop
+        bne     Lmlkem_compress_d5_loop
 
         CFI_RET
 

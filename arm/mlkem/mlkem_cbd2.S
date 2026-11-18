@@ -64,7 +64,7 @@ S2N_BN_SYMBOL(mlkem_cbd2):
         mov     v30.d[1], x3
         mov     x2, #2
 
-mlkem_cbd2_loop:
+Lmlkem_cbd2_loop:
         ldp     q0, q1, [x1], #32
         ldp     q2, q3, [x1], #32
 
@@ -121,7 +121,7 @@ mlkem_cbd2_loop:
         stp     q26, q27, [x0], #32
 
         subs    x2, x2, #1
-        bne     mlkem_cbd2_loop
+        bne     Lmlkem_cbd2_loop
 
         CFI_RET
 

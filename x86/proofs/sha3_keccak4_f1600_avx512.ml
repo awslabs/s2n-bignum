@@ -1289,12 +1289,10 @@ let sha3_keccak4_f1600_avx512_mc = define_assert_from_elf
 (Evex_deco Unmasked No_brc) *)
   0x62; 0x61; 0xfd; 0x28; 0x6f; 0xf1;
                            (* VMOVDQA64 (%_% ymm30) (%_% ymm1) (Evex_deco Unmasked No_brc) *)
-  0x62; 0xd1; 0xfd; 0x28; 0x6f; 0xce;
-                           (* VMOVDQA64 (%_% ymm1) (%_% ymm14) (Evex_deco Unmasked No_brc) *)
-  0x62; 0x51; 0xfd; 0x28; 0x6f; 0xf5;
-                           (* VMOVDQA64 (%_% ymm14) (%_% ymm13) (Evex_deco Unmasked No_brc) *)
-  0x62; 0x71; 0xfd; 0x28; 0x6f; 0xec;
-                           (* VMOVDQA64 (%_% ymm13) (%_% ymm4) (Evex_deco Unmasked No_brc) *)
+  0xc5; 0x7d; 0x7f; 0xf1;  (* VMOVDQA (%_% ymm1) (%_% ymm14) *)
+  0xc4; 0x41; 0x7d; 0x6f; 0xf5;
+                           (* VMOVDQA (%_% ymm14) (%_% ymm13) *)
+  0xc5; 0x7d; 0x6f; 0xec;  (* VMOVDQA (%_% ymm13) (%_% ymm4) *)
   0x62; 0xb1; 0xfd; 0x28; 0x6f; 0xe0;
                            (* VMOVDQA64 (%_% ymm4) (%_% ymm16) (Evex_deco Unmasked No_brc) *)
   0x62; 0xa1; 0xfd; 0x28; 0x6f; 0xc1;
@@ -1309,18 +1307,14 @@ let sha3_keccak4_f1600_avx512_mc = define_assert_from_elf
                            (* VMOVDQA64 (%_% ymm23) (%_% ymm21) (Evex_deco Unmasked No_brc) *)
   0x62; 0xe1; 0xfd; 0x28; 0x6f; 0xeb;
                            (* VMOVDQA64 (%_% ymm21) (%_% ymm3) (Evex_deco Unmasked No_brc) *)
-  0x62; 0xf1; 0xfd; 0x28; 0x6f; 0xdf;
-                           (* VMOVDQA64 (%_% ymm3) (%_% ymm7) (Evex_deco Unmasked No_brc) *)
-  0x62; 0xd1; 0xfd; 0x28; 0x6f; 0xf9;
-                           (* VMOVDQA64 (%_% ymm7) (%_% ymm9) (Evex_deco Unmasked No_brc) *)
+  0xc5; 0xfd; 0x6f; 0xdf;  (* VMOVDQA (%_% ymm3) (%_% ymm7) *)
+  0xc5; 0x7d; 0x7f; 0xcf;  (* VMOVDQA (%_% ymm7) (%_% ymm9) *)
   0x62; 0x11; 0xfd; 0x28; 0x6f; 0xce;
                            (* VMOVDQA64 (%_% ymm9) (%_% ymm30) (Evex_deco Unmasked No_brc) *)
   0x62; 0x61; 0xfd; 0x28; 0x6f; 0xf5;
                            (* VMOVDQA64 (%_% ymm30) (%_% ymm5) (Evex_deco Unmasked No_brc) *)
-  0x62; 0xd1; 0xfd; 0x28; 0x6f; 0xeb;
-                           (* VMOVDQA64 (%_% ymm5) (%_% ymm11) (Evex_deco Unmasked No_brc) *)
-  0x62; 0x71; 0xfd; 0x28; 0x6f; 0xde;
-                           (* VMOVDQA64 (%_% ymm11) (%_% ymm6) (Evex_deco Unmasked No_brc) *)
+  0xc5; 0x7d; 0x7f; 0xdd;  (* VMOVDQA (%_% ymm5) (%_% ymm11) *)
+  0xc5; 0x7d; 0x6f; 0xde;  (* VMOVDQA (%_% ymm11) (%_% ymm6) *)
   0x62; 0xb1; 0xfd; 0x28; 0x6f; 0xf4;
                            (* VMOVDQA64 (%_% ymm6) (%_% ymm20) (Evex_deco Unmasked No_brc) *)
   0x62; 0xa1; 0xfd; 0x28; 0x6f; 0xe3;
@@ -1339,14 +1333,14 @@ let sha3_keccak4_f1600_avx512_mc = define_assert_from_elf
                            (* VMOVDQA64 (%_% ymm10) (%_% ymm22) (Evex_deco Unmasked No_brc) *)
   0x62; 0xc1; 0xfd; 0x28; 0x6f; 0xf4;
                            (* VMOVDQA64 (%_% ymm22) (%_% ymm12) (Evex_deco Unmasked No_brc) *)
-  0x62; 0x51; 0xfd; 0x28; 0x6f; 0xe7;
-                           (* VMOVDQA64 (%_% ymm12) (%_% ymm15) (Evex_deco Unmasked No_brc) *)
+  0xc4; 0x41; 0x7d; 0x6f; 0xe7;
+                           (* VMOVDQA (%_% ymm12) (%_% ymm15) *)
   0x62; 0x11; 0xfd; 0x28; 0x6f; 0xfe;
                            (* VMOVDQA64 (%_% ymm15) (%_% ymm30) (Evex_deco Unmasked No_brc) *)
   0x48; 0x83; 0xc6; 0x20;  (* ADD (% rsi) (Imm8 (word 32)) *)
   0x48; 0x39; 0xc6;        (* CMP (% rsi) (% rax) *)
-  0x0f; 0x85; 0x0c; 0xf4; 0xff; 0xff;
-                           (* JNE (Imm32 (word 4294964236)) *)
+  0x0f; 0x85; 0x1a; 0xf4; 0xff; 0xff;
+                           (* JNE (Imm32 (word 4294964250)) *)
   0x62; 0x61; 0xfd; 0x28; 0x6c; 0xc9;
                            (* VPUNPCKLQDQ (%_% ymm25) (%_% ymm0) (%_% ymm1) *)
   0x62; 0x61; 0xfd; 0x28; 0x6d; 0xd1;
@@ -1681,7 +1675,7 @@ let KECCAK4_AVX512_FULL_ROUND_TAC r nsteps =
 let SHA3_KECCAK4_F1600_AVX512_FULL = time prove
  (`exists f_events.
     forall e a rc A1 A2 A3 A4 pc.
-        nonoverlapping (a,800) (word pc,0x1073) /\
+        nonoverlapping (a,800) (word pc,0x1065) /\
         nonoverlapping (a,800) (rc,192)
         ==> ensures x86
             (\s. bytes_loaded s (word pc) sha3_keccak4_f1600_avx512_tmc /\
@@ -1693,7 +1687,7 @@ let SHA3_KECCAK4_F1600_AVX512_FULL = time prove
                  wordlist_from_memory(word_add a (word 400),25) s = A3 /\
                  wordlist_from_memory(word_add a (word 600),25) s = A4 /\
                  read events s = e)
-            (\s. read RIP s = word(pc + 0x1072) /\
+            (\s. read RIP s = word(pc + 0x1064) /\
                  wordlist_from_memory(a,25) s = keccak 24 A1 /\
                  wordlist_from_memory(word_add a (word 200),25) s =
                  keccak 24 A2 /\
@@ -1738,7 +1732,7 @@ let SHA3_KECCAK4_F1600_AVX512_FULL = time prove
     REPEAT(FIRST_X_ASSUM(MP_TAC o AP_TERM `LENGTH:int64 list->num`)) THEN
     CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
     REWRITE_TAC[LENGTH; ARITH] THEN ASM_MESON_TAC[]] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `6` `pc + 0x241` `pc + 0xe35`
+  ENSURES_EVENTS_WHILE_UP2_TAC `6` `pc + 0x241` `pc + 0xe27`
    `\i s. read RDI s = a /\
            read RSI s = word_add rc (word(32 * i)) /\
            read RAX s = word_add rc (word 192) /\
@@ -1849,7 +1843,7 @@ let SHA3_KECCAK4_F1600_AVX512_FULL = time prove
 
 let SHA3_KECCAK4_F1600_AVX512_CORRECT = prove
  (`!a rc A1 A2 A3 A4 pc.
-      nonoverlapping (a,800) (word pc,0x1073) /\
+      nonoverlapping (a,800) (word pc,0x1065) /\
       nonoverlapping (a,800) (rc,192)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) sha3_keccak4_f1600_avx512_tmc /\
@@ -1860,7 +1854,7 @@ let SHA3_KECCAK4_F1600_AVX512_CORRECT = prove
                 wordlist_from_memory(word_add a (word 200),25) s = A2 /\
                 wordlist_from_memory(word_add a (word 400),25) s = A3 /\
                 wordlist_from_memory(word_add a (word 600),25) s = A4)
-           (\s. read RIP s = word(pc + 0x1072) /\
+           (\s. read RIP s = word(pc + 0x1064) /\
                 wordlist_from_memory(a,25) s = keccak 24 A1 /\
                 wordlist_from_memory(word_add a (word 200),25) s =
                 keccak 24 A2 /\
@@ -1891,7 +1885,7 @@ let SHA3_KECCAK4_F1600_AVX512_CORRECT = prove
 
 let SHA3_KECCAK4_F1600_AVX512_NOIBT_SUBROUTINE_CORRECT = prove
  (`!a rc A1 A2 A3 A4 pc stackpointer returnaddress.
-      nonoverlapping (a,800) (word pc,0x1073) /\
+      nonoverlapping (a,800) (word pc,0x1065) /\
       nonoverlapping (a,800) (rc,192) /\
       nonoverlapping (a,800) (stackpointer,8)
       ==> ensures x86
@@ -1923,7 +1917,7 @@ let SHA3_KECCAK4_F1600_AVX512_NOIBT_SUBROUTINE_CORRECT = prove
 
 let SHA3_KECCAK4_F1600_AVX512_SUBROUTINE_CORRECT = prove
  (`!a rc A1 A2 A3 A4 pc stackpointer returnaddress.
-      nonoverlapping (a,800) (word pc,0x1077) /\
+      nonoverlapping (a,800) (word pc,0x1069) /\
       nonoverlapping (a,800) (rc,192) /\
       nonoverlapping (a,800) (stackpointer,8)
       ==> ensures x86
@@ -1978,14 +1972,14 @@ let full_spec,public_vars = mk_safety_spec
 let SHA3_KECCAK4_F1600_AVX512_SAFE = time prove
  (`exists f_events.
     forall e a rc pc.
-        nonoverlapping (a,800) (word pc,0x1073) /\
+        nonoverlapping (a,800) (word pc,0x1065) /\
         nonoverlapping (a,800) (rc,192)
         ==> ensures x86
             (\s. bytes_loaded s (word pc) sha3_keccak4_f1600_avx512_tmc /\
                  read RIP s = word pc /\
                  C_ARGUMENTS [a; rc] s /\
                  read events s = e)
-            (\s. read RIP s = word (pc + 0x1072) /\
+            (\s. read RIP s = word (pc + 0x1064) /\
                  (exists e2.
                       read events s = APPEND e2 e /\
                       e2 = f_events rc a pc /\
@@ -2010,7 +2004,7 @@ let SHA3_KECCAK4_F1600_AVX512_SAFE = time prove
   MAP_EVERY X_GEN_TAC [`a:int64`; `rc:int64`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `6` `pc + 0x241` `pc + 0xe35`
+  ENSURES_EVENTS_WHILE_UP2_TAC `6` `pc + 0x241` `pc + 0xe27`
    `\i s. read RDI s = a /\
           read RSI s = word_add rc (word(32 * i)) /\
           read RAX s = word_add rc (word 192)` THEN
@@ -2038,7 +2032,7 @@ let SHA3_KECCAK4_F1600_AVX512_SAFE = time prove
 let SHA3_KECCAK4_F1600_AVX512_NOIBT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
     forall e a rc pc stackpointer returnaddress.
-        nonoverlapping (a,800) (word pc,0x1073) /\
+        nonoverlapping (a,800) (word pc,0x1065) /\
         nonoverlapping (a,800) (rc,192) /\
         nonoverlapping (a,800) (stackpointer,8)
         ==> ensures x86
@@ -2064,7 +2058,7 @@ let SHA3_KECCAK4_F1600_AVX512_NOIBT_SUBROUTINE_SAFE = time prove
 let SHA3_KECCAK4_F1600_AVX512_SUBROUTINE_SAFE = time prove
  (`exists f_events.
     forall e a rc pc stackpointer returnaddress.
-        nonoverlapping (a,800) (word pc,0x1077) /\
+        nonoverlapping (a,800) (word pc,0x1069) /\
         nonoverlapping (a,800) (rc,192) /\
         nonoverlapping (a,800) (stackpointer,8)
         ==> ensures x86

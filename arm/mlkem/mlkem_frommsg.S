@@ -49,7 +49,7 @@ S2N_BN_SYMBOL(mlkem_frommsg):
         mov     v30.d[1], x3
         mov     x4, #4
 
-mlkem_frommsg_loop:
+Lmlkem_frommsg_loop:
         ldr     d0, [x1], #8
 
         dup     v16.16b, v0.b[0]
@@ -82,7 +82,7 @@ mlkem_frommsg_loop:
         stp     q22, q23, [x0], #32
 
         subs    x4, x4, #1
-        bne     mlkem_frommsg_loop
+        bne     Lmlkem_frommsg_loop
 
         CFI_RET
 

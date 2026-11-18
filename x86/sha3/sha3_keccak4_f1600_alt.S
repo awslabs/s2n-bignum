@@ -205,7 +205,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600_alt):
      vinserti128 ymm2,ymm1,xmm0,0x1                // Interleave into ymm2 = A[24] = [state0[24] | state1[24] | state2[24] | state3[24]]
 
      // Initialize the loop counter
-     mov r10, 0
+     mov r10d, 0
 
 Lsha3_keccak4_f1600_alt:
 
@@ -260,7 +260,7 @@ Lsha3_keccak4_f1600_alt:
      vpsllq ymm3,ymm12,0x1
      vpor   ymm3,ymm3,ymm4                         // ROL(C[1], 1)
      vpsllq ymm4,ymm11,0x1
-     vpxor  ymm1,ymm1,ymm14                        // C[4] = A[4,0] xor A[4,1] xor A[4,2] xor A[4,3] xor A[4,4] (A[4] xor A[9] xor A[14] xor A[19] xor A[24])
+     vpxor  ymm1,ymm14,ymm1                        // C[4] = A[4,0] xor A[4,1] xor A[4,2] xor A[4,3] xor A[4,4] (A[4] xor A[9] xor A[14] xor A[19] xor A[24])
 
      // C[0] = ymm0
      // C[1] = ymm12
@@ -273,22 +273,22 @@ Lsha3_keccak4_f1600_alt:
      vpxor  ymm3,ymm3,ymm1                         // D[0] = C[4] xor ROL(C[1], 1)
      vpsllq ymm5,ymm10,0x1
      vpxor  ymm4,ymm4,ymm0                         // D[1] = C[0] xor ROL(C[2], 1)
-     vpor   ymm5,ymm5,ymm14                        // ROL(C[3], 1)
+     vpor   ymm5,ymm14,ymm5                        // ROL(C[3], 1)
      vpxor  ymm6,ymm4,ymm6                         // A'[1,0] (A'[1]) = A[1,0] (A[1]) xor D[1]
-     vpxor  ymm5,ymm5,ymm12                        // D[2] = C[1] xor ROL(C[3], 1)
+     vpxor  ymm5,ymm12,ymm5                        // D[2] = C[1] xor ROL(C[3], 1)
      vpsrlq ymm12,ymm1,0x3f
      vpsllq ymm1,ymm1,0x1
      vpxor  ymm7,ymm5,ymm7                         // A'[2,4] (A'[22]) = A[2,4] (A[22]) xor D[2]
-     vpxor  ymm9,ymm5,ymm9                         // A'[2,1] (A'[7]) = A[2,1] (A[7]) xor D[2]
-     vpor   ymm1,ymm1,ymm12                        // ROL(C[4], 1)
+     vpxor  ymm9,ymm9,ymm5                         // A'[2,1] (A'[7]) = A[2,1] (A[7]) xor D[2]
+     vpor   ymm1,ymm12,ymm1                        // ROL(C[4], 1)
      vpxor  ymm12,ymm3,[rsp+0x0]                 // A'[0,0] (A'[0]) = A[0,0] (A[0]) xor D[0]
-     vpxor  ymm1,ymm1,ymm11                        // D[3] = C[2] xor ROL(C[4], 1)
+     vpxor  ymm1,ymm11,ymm1                        // D[3] = C[2] xor ROL(C[4], 1)
      vpsrlq ymm11,ymm0,0x3f
      vpsllq ymm0,ymm0,0x1
-     vpxor  ymm13,ymm1,ymm13                       // A'[3,3] (A'[18]) = A[3,3] (A[18]) xor D[3]
-     vpxor  ymm8,ymm1,ymm8                         // A'[3,0] (A'[3]) = A[3,0] (A[3]) xor D[3]
-     vpor   ymm0,ymm0,ymm11                        // ROL(C[0], 1)
-     vpxor  ymm0,ymm0,ymm10                        // D[4] = C[3] xor ROL(C[0], 1)
+     vpxor  ymm13,ymm13,ymm1                       // A'[3,3] (A'[18]) = A[3,3] (A[18]) xor D[3]
+     vpxor  ymm8,ymm8,ymm1                         // A'[3,0] (A'[3]) = A[3,0] (A[3]) xor D[3]
+     vpor   ymm0,ymm11,ymm0                        // ROL(C[0], 1)
+     vpxor  ymm0,ymm10,ymm0                        // D[4] = C[3] xor ROL(C[0], 1)
 
      // D[0] = ymm3
      // D[1] = ymm4
@@ -307,7 +307,7 @@ Lsha3_keccak4_f1600_alt:
      vpsllq ymm10,ymm10,0x2c
      vpor   ymm10,ymm10,ymm11                      // B[1,0] (B[1]) = ROL(A'[1,1] (A'[6]), 44)
 
-     vpxor  ymm11,ymm5,ymm15                       // A'[12] = A'[2,2] = A[2,2] (A[12]) xor D[2]
+     vpxor  ymm11,ymm15,ymm5                       // A'[12] = A'[2,2] = A[2,2] (A[12]) xor D[2]
      vpbroadcastq ymm15,[rsi]                      // Load Round Constant (RC)
      vpsrlq ymm14,ymm11,0x15
      vpsllq ymm11,ymm11,0x2b
@@ -328,7 +328,7 @@ Lsha3_keccak4_f1600_alt:
      vpsrlq ymm14,ymm2,0x32
      vpsllq ymm2,ymm2,0xe
      vmovdqu [rsp+0x20],ymm15                     // store A''[1,0] (A''[1]) -> on stack
-     vpor   ymm2,ymm2,ymm14                        // B[4,0] (B[4]) = ROL(A'[4,4] (A'[24]), 14)
+     vpor   ymm2,ymm14,ymm2                        // B[4,0] (B[4]) = ROL(A'[4,4] (A'[24]), 14)
 
      // **** B[0]-B[4] Register Allocation Map ****
      // B[0]  (B[0,0])    ymm12   (A'[0,0] (A'[0]) unchanged, no rotation)
@@ -354,7 +354,7 @@ Lsha3_keccak4_f1600_alt:
      vpxor  ymm2,ymm0,[rsp+0xe0]                  // A'[9] = A'[4,1] = A[4,1] (A[9]) xor D[4]
      vpsrlq ymm10,ymm2,0x2c
      vpsllq ymm2,ymm2,0x14
-     vpor   ymm2,ymm2,ymm10                        // B[1,1] (B[6]) = ROL(A'[4,1] (A'[9]), 20)
+     vpor   ymm2,ymm10,ymm2                        // B[1,1] (B[6]) = ROL(A'[4,1] (A'[9]), 20)
 
      vpxor  ymm10,ymm3,[rsp+0x100]                 // A'[10] = A'[0,2] = A[0,2] (A[10]) xor D[0]
      vpsrlq ymm11,ymm10,0x3d
@@ -376,7 +376,7 @@ Lsha3_keccak4_f1600_alt:
 
      vpsrlq ymm12,ymm7,0x3
      vpsllq ymm7,ymm7,0x3d
-     vpor   ymm7,ymm7,ymm12                        // B[4,1] (B[9]) = ROL(A'[2,4] (A'[22]), 61)
+     vpor   ymm7,ymm12,ymm7                        // B[4,1] (B[9]) = ROL(A'[2,4] (A'[22]), 61)
 
      // **** B[5]-B[9] Register Allocation Map ****
      // B[5]  (B[0,1])    ymm8    ROL(A'[3,0] (A'[3]), 28)

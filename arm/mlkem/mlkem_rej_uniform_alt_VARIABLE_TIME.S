@@ -82,11 +82,11 @@ S2N_BN_SYMBOL(mlkem_rej_uniform_alt_VARIABLE_TIME):
 // 96 bytes at a time, two chunks of 48 interleaved, while there is room in
 // r for 64 more entries
 
-mlkem_rej_uniform_alt_loop96:
+Lmlkem_rej_uniform_alt_loop96:
         cmp     buflen, #96
-        bcc     mlkem_rej_uniform_alt_loop48
+        bcc     Lmlkem_rej_uniform_alt_loop48
         cmp     count, #192
-        bhi     mlkem_rej_uniform_alt_loop48
+        bhi     Lmlkem_rej_uniform_alt_loop48
         sub     buflen, buflen, #96
         ld3     {v0.16b, v1.16b, v2.16b}, [buf], #48
         ld3     {v3.16b, v4.16b, v5.16b}, [buf], #48
@@ -196,15 +196,15 @@ mlkem_rej_uniform_alt_loop96:
         add     x12, x12, x14
         add     count, count, x8
         add     count, count, x12
-        b       mlkem_rej_uniform_alt_loop96
+        b       Lmlkem_rej_uniform_alt_loop96
 
 // 48 bytes at a time, while there is room in r for 32 more entries
 
-mlkem_rej_uniform_alt_loop48:
+Lmlkem_rej_uniform_alt_loop48:
         cmp     buflen, #48
-        bcc     mlkem_rej_uniform_alt_loop24
+        bcc     Lmlkem_rej_uniform_alt_loop24
         cmp     count, #224
-        bhi     mlkem_rej_uniform_alt_loop24
+        bhi     Lmlkem_rej_uniform_alt_loop24
         sub     buflen, buflen, #48
         ld3     {v0.16b, v1.16b, v2.16b}, [buf], #48
         zip1    v4.16b, v0.16b, v1.16b
@@ -260,17 +260,17 @@ mlkem_rej_uniform_alt_loop48:
         add     x12, x12, x14
         add     count, count, x8
         add     count, count, x12
-        b       mlkem_rej_uniform_alt_loop96
+        b       Lmlkem_rej_uniform_alt_loop96
 
 // 24 bytes at a time while fewer than 256 entries are found: directly to r
 // while there is room for all 16 that the 24 bytes could give, otherwise
 // through the buffer on the stack, copying only as many as are needed.
 
-mlkem_rej_uniform_alt_loop24:
+Lmlkem_rej_uniform_alt_loop24:
         cmp     buflen, #24
-        bcc     mlkem_rej_uniform_alt_end
+        bcc     Lmlkem_rej_uniform_alt_end
         cmp     count, #256
-        bcs     mlkem_rej_uniform_alt_end
+        bcs     Lmlkem_rej_uniform_alt_end
         sub     buflen, buflen, #24
         ld3     {v0.8b, v1.8b, v2.8b}, [buf], #24
         zip1    v4.16b, v0.16b, v1.16b
@@ -296,16 +296,16 @@ mlkem_rej_uniform_alt_loop24:
         tbl     v16.16b, {v16.16b}, v24.16b
         tbl     v17.16b, {v17.16b}, v25.16b
         cmp     count, #240
-        bhi     mlkem_rej_uniform_alt_last
+        bhi     Lmlkem_rej_uniform_alt_last
         str     q16, [out]
         add     out, out, x8, lsl #1
         str     q17, [out]
         add     out, out, x10, lsl #1
         add     count, count, x8
         add     count, count, x10
-        b       mlkem_rej_uniform_alt_loop24
+        b       Lmlkem_rej_uniform_alt_loop24
 
-mlkem_rej_uniform_alt_last:
+Lmlkem_rej_uniform_alt_last:
         str     q16, [sp]
         add     x11, sp, x8, lsl #1
         str     q17, [x11]
@@ -316,15 +316,15 @@ mlkem_rej_uniform_alt_last:
         csel    x8, x8, x9, cc
         add     count, count, x8
         mov     x11, sp
-        cbz     x8, mlkem_rej_uniform_alt_loop24
-mlkem_rej_uniform_alt_lastcopy:
+        cbz     x8, Lmlkem_rej_uniform_alt_loop24
+Lmlkem_rej_uniform_alt_lastcopy:
         ldrh    w12, [x11], #2
         strh    w12, [out], #2
         subs    x8, x8, #1
-        bne     mlkem_rej_uniform_alt_lastcopy
-        b       mlkem_rej_uniform_alt_loop24
+        bne     Lmlkem_rej_uniform_alt_lastcopy
+        b       Lmlkem_rej_uniform_alt_loop24
 
-mlkem_rej_uniform_alt_end:
+Lmlkem_rej_uniform_alt_end:
         mov     x0, count
         CFI_INC_SP(48)
         CFI_RET

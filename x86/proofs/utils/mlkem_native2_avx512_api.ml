@@ -65,6 +65,10 @@ let mlkem_native2_rho56_table,MLKEM_NATIVE2_RHO56_TABLE =
   api_table "mlkem_native2_rho56_table" 224 32;;
 let mlkem_native2_qdata_table,MLKEM_NATIVE2_QDATA_TABLE =
   api_table "mlkem_native2_qdata_table" 256 1248;;
+
+(* The address of the qdata table, as a name for the terms below *)
+
+install_layout ["mlkem_native2_qdata",layout "mlkem_native2_constants" + 256];;
 let mlkem_native2_compress_d4_table,MLKEM_NATIVE2_COMPRESS_D4_TABLE =
   api_table "mlkem_native2_compress_d4_table" 1504 32;;
 let mlkem_native2_decompress_d4_table,MLKEM_NATIVE2_DECOMPRESS_D4_TABLE =
@@ -222,7 +226,8 @@ let BIGDIGITS_32_TAC a n s =
 
 let MLKEM_NATIVE2_ROUND_CONSTANTS = prove
  (`!s pc. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc
-          ==> wordlist_from_memory(word(pc + 65600),24) s = round_constants`,
+          ==> wordlist_from_memory(word(pc + mlkem_native2_constants),24) s =
+             round_constants`,
   REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP MLKEM_NATIVE2_RC_TABLE) THEN
   REWRITE_TAC[MLKEM_NATIVE2_RC_TABLE_VALUE;
               WORDLIST_FROM_MEMORY_ROUND_CONSTANTS]);;
