@@ -1,0 +1,225 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "x86/proofs/mlkem_native/gcc12_O2/poly_tomsg_spec.ml";;
+
+
+let COMPRESS_D1_ARITH = prove
+ (COMPRESS_D1_ARITH_STMT,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`4 * v + 3329`; `6658`] DIVISION) THEN
+  REWRITE_TAC[ARITH_EQ] THEN
+  SPEC_TAC(`(4 * v + 3329) MOD 6658`,`r:num`) THEN
+  SPEC_TAC(`(4 * v + 3329) DIV 6658`,`q:num`) THEN
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC DIV_UNIQ THEN
+  EXISTS_TAC `(1073741824 + v * 1290168) - q * 2147483648` THEN
+  ASM_ARITH_TAC);;
+
+let TOMSG_BIT = prove
+ (TOMSG_BIT_STMT,
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC[WORD_SX_SMALL; ARITH_RULE `y < 3329 ==> y < 32768`] THEN
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_USHR; VAL_WORD_ZX_GEN; VAL_WORD;
+              VAL_WORD_ADD; VAL_WORD_MUL;
+              DIMINDEX_32; DIMINDEX_64; DIMINDEX_16] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[MOD_32_64; MOD_MOD_REFL] THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE `y < 3329 ==> y < 4294967296`;
+               ARITH_RULE `y < 3329 ==> y * 1290168 < 4294967296`] THEN
+  SUBGOAL_THEN `((4 * val(y:int16) + 3329) DIV 6658) MOD 2 < 4294967296`
+   (fun th -> REWRITE_TAC[MATCH_MP MOD_LT th]) THENL
+   [MATCH_MP_TAC(ARITH_RULE `x < 2 ==> x < 4294967296`) THEN
+    REWRITE_TAC[MOD_LT_EQ] THEN ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[ARITH_RULE `4294967296 = 2147483648 * 2`; GSYM DIV_MOD] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN
+  GEN_REWRITE_TAC (LAND_CONV o LAND_CONV) [ADD_SYM] THEN
+  ASM_SIMP_TAC[COMPRESS_D1_ARITH]);;
+
+let NSUM_BYTE = prove
+ (NSUM_BYTE_STMT,
+  REWRITE_TAC[EXP_ADD; GSYM NSUM_LMUL] THEN REPEAT GEN_TAC THEN
+  MATCH_MP_TAC NSUM_EQ THEN REWRITE_TAC[MULT_AC]);;
+
+let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_CORRECT = prove
+ (MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_CORRECT_STMT,
+  MAP_EVERY X_GEN_TAC [`r:int64`; `a:int64`; `x:num->int16`; `pc:num`] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              NONOVERLAPPING_CLAUSES; ALL] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+
+  (*** The outer loop, over the bytes, with the test as a separate step ***)
+
+  ENSURES_WHILE_UP_TAC `32` `pc + mlkem_poly_tomsg_loop1` `pc + mlkem_poly_tomsg_loop1_test`
+   `\i s. read RDI s = word_add r (word i) /\
+          read R8 s = word(8 * i) /\
+          read RSI s = a /\
+          (!j. j < 256
+               ==> read(memory :> bytes16(word_add a (word(2 * j)))) s =
+                   x j) /\
+          ((!j. j < 256 ==> val(x j) < 3329)
+           ==> read(memory :> bytes(r,i)) s =
+               nsum {j | j < 8 * i}
+                (\j. ((4 * val(x j) + 3329) DIV 6658) MOD 2 * 2 EXP j))` THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** Initialization ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC (1--2) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MULT_CLAUSES; NSUM_CLAUSES_NUMSEG_LT; WORD_ADD_0;
+                READ_MEMORY_BYTES_TRIVIAL];
+
+    (*** The loop body, for eight coefficients and one byte ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    MAP_EVERY (fun jt ->
+      FIRST_ASSUM(MP_TAC o SPEC jt o check (is_forall o concl)) THEN
+      ANTS_TAC THENL [UNDISCH_TAC `i < 32` THEN ARITH_TAC; DISCH_TAC])
+     tomsg_indices THEN
+    TOMSG_INNER_TAC THEN
+    X86_STEPS_TAC MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC (93--94) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+    CONJ_TAC THENL [WORD_SMALL_TAC; ALL_TAC] THEN
+    DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC o check (is_imp o concl)) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+
+    (*** Split off the new byte and the bits for it ***)
+
+    REWRITE_TAC[READ_MEMORY_BYTES_SNOC] THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[ARITH_RULE `8 * (i + 1) = 8 * i + 8`; NSUM_LT_ADD;
+                EQ_ADD_LCANCEL] THEN
+    REWRITE_TAC[BETA_RULE(ISPECL
+     [`\j. ((4 * val((x:num->int16) j) + 3329) DIV 6658) MOD 2`; `8 * i`]
+     NSUM_BYTE)] THEN
+    REWRITE_TAC[EQ_MULT_LCANCEL; EXP_EQ_0; ARITH_EQ] THEN
+    REWRITE_TAC[NUMSEG_LT; ARITH_EQ] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_SUB_CONV) THEN
+    CONV_TAC(ONCE_DEPTH_CONV EXPAND_NSUM_CONV) THEN
+    CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN REWRITE_TAC[ADD_CLAUSES] THEN
+
+    (*** The compression of each coefficient ***)
+
+    MAP_EVERY (fun jt ->
+      MP_TAC(SPEC (mk_comb(`x:num->int16`,jt)) TOMSG_BIT) THEN
+      ANTS_TAC THENL
+       [FIRST_X_ASSUM(MATCH_MP_TAC o check
+         (can (term_match []
+                `!j. j < 256 ==> val((x:num->int16) j) < 3329`) o
+          concl)) THEN
+        UNDISCH_TAC `i < 32` THEN ARITH_TAC;
+        DISCH_THEN SUBST1_TAC]) tomsg_indices THEN
+
+    (*** Check all combinations of the bits ***)
+
+    MAP_EVERY (fun jt ->
+      let ft = vsubst [mk_comb(`x:num->int16`,jt),`y:int16`]
+                `((4 * val(y:int16) + 3329) DIV 6658) MOD 2` in
+      MP_TAC(SPECL [lhand ft; `2`] MOD_LT_EQ) THEN REWRITE_TAC[ARITH_EQ] THEN
+      SPEC_TAC(ft,genvar `:num`)) (rev tomsg_indices) THEN
+    CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
+    CONV_TAC(DEPTH_CONV(NUM_RED_CONV ORELSEC WORD_RED_CONV));
+
+    (*** The loop-back branch ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC (1--2) THEN
+    SUBGOAL_THEN
+     `~(val(word_sub (word_zx (word (8 * i):int64)) (word 256):int32) = 0)`
+    (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+     [REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32;
+                  DIMINDEX_64] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+       `i < 32 ==> 8 * i < 18446744073709551616`;
+                   ARITH_RULE `i < 32 ==> 8 * i < 4294967296`] THEN
+      UNDISCH_TAC `i < 32` THEN ARITH_TAC;
+      ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]];
+
+    (*** The loop exit ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC (1--2) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    FIRST_X_ASSUM(MATCH_ACCEPT_TAC o
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV) o
+      check (is_imp o concl))]);;
+
+let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+  X86_ADD_RETURN_NOSTACK_TAC MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC
+    MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_CORRECT);;
+
+let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SAFE = time prove
+ (MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SAFE_STMT,
+  CONCRETIZE_F_EVENTS_TAC
+    `\(a:int64) (r:int64) (pc:num).
+      APPEND
+        (f_ev_epil a r pc)
+        (APPEND
+          (ENUMERATEL 32 (\i. f_ev_loop a r pc i))
+          (f_ev_prol a r pc))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+              fst MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC] THEN
+  REPEAT STRIP_TAC THEN
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `32` `pc + mlkem_poly_tomsg_loop1` `pc + mlkem_poly_tomsg_loop1_exit`
+    `\i s. read RDI s = word_add r (word i) /\
+           read R8 s = word(8 * i) /\
+           read RSI s = a` THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false
+      MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC (1--2) THEN
+    REWRITE_TAC[MULT_0; WORD_ADD_0] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC;
+
+    REWRITE_TAC[] THEN
+    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false
+      MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC (1--0) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC] THEN
+
+  REPEAT STRIP_TAC THEN REWRITE_TAC[] THEN ENSURES_INIT_TAC "s0" THEN
+  TRY STRIP_EXISTS_ASSUM_TAC THEN
+  TOMSG_INNER_TAC THEN
+  X86_STEPS_TAC MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC (93--96) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN
+   `word_zx (word_add (word_zx (word (8 * i):int64):int32) (word 8)):int64 =
+    word (8 * (i + 1))`
+  ASSUME_TAC THENL [WORD_SMALL_TAC; ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN
+   `~(val(word_sub (word_zx (word (8 * (i + 1)):int64)) (word 256):int32) =
+      0) <=> i + 1 < 32`
+  SUBST1_TAC THENL
+   [REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32;
+                DIMINDEX_64] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+     `i < 32 ==> 8 * (i + 1) < 18446744073709551616`;
+                 ARITH_RULE `i < 32 ==> 8 * (i + 1) < 4294967296`] THEN
+    UNDISCH_TAC `i < 32` THEN ARITH_TAC;
+    ALL_TAC] THEN
+  CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+  CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SUBROUTINE_SAFE = time prove
+ (MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  X86_ADD_RETURN_NOSTACK_TAC MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_EXEC
+    MLKEM_NATIVE_POLY_TOMSG_GCC12_O2_IMAGE_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
