@@ -145,15 +145,7 @@ let arm = define
 (* ------------------------------------------------------------------------- *)
 
 let OFFSET_ADDRESS_CLAUSES = prove
- (`offset_address (Register_Offset (Extendedreg rw UXTW)) s =
-       word(val(read rw s:int32)):int64 /\
-   offset_address (Shiftreg_Offset (Extendedreg rw UXTW) 1) s =
-       word(2 * val(read rw s:int32)):int64 /\
-   offset_address (Register_Offset (Extendedreg rw SXTW)) s =
-       word_sx(read rw s:int32):int64 /\
-   offset_address (Shiftreg_Offset (Extendedreg rw SXTW) 1) s =
-       word_shl (word_sx(read rw s:int32):int64) 1 /\
-   offset_address (Register_Offset r) s = word(val(read r s)) /\
+ (`offset_address (Register_Offset r) s = word(val(read r s)) /\
    offset_address (Shiftreg_Offset r 1) s = word(2 * val(read r s)) /\
    offset_address (Shiftreg_Offset r 2) s = word(4 * val(read r s)) /\
    offset_address (Shiftreg_Offset r 3) s = word(8 * val(read r s)) /\
@@ -162,10 +154,8 @@ let OFFSET_ADDRESS_CLAUSES = prove
    offset_address (Immediate_Offset w) s = w /\
    offset_address (Preimmediate_Offset w) s = w /\
    offset_address (Postimmediate_Offset w) s = word 0`,
-  REWRITE_TAC[offset_address; Extendedreg_DEF; read; extendreg_operation;
-              word_shl; WORD_VAL] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MULT_AC] THEN
-  CONV_TAC WORD_BLAST);;
+  REWRITE_TAC[offset_address; word_shl; WORD_VAL] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MULT_AC]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Basic execution of ARM instruction into sequence of state updates.        *)
@@ -410,6 +400,20 @@ let is_read_events = is_read_named_component "events";;
  *** .. if it is a valid byte sequence, or None otherwise.
  ***)
 
+(*** Evaluate closed word subterms other than numerals, which arise in
+ *** addresses using shifted or extended registers when the registers are
+ *** known. The result is a numeral reduced modulo the word size.
+ ***)
+
+let WORD_CLOSED_RED_CONV tm =
+  match tm with
+    Comb(Const("word",_),n) when is_numeral n ->
+      failwith "WORD_CLOSED_RED_CONV"
+  | _ -> match type_of tm with
+           Tyapp("word",[_]) when frees tm = [] ->
+             CHANGED_CONV(DEPTH_CONV WORD_NUM_RED_CONV) tm
+         | _ -> failwith "WORD_CLOSED_RED_CONV";;
+
 let ARM_CONV (decode_ths:thm option array) (ths:thm list) tm =
   (* Find `read PC .. = ..` from ths (assumptions). *)
   let pc_th = try find
@@ -470,8 +474,8 @@ let ARM_CONV (decode_ths:thm option array) (ths:thm list) tm =
     RAND_CONV NUM_REDUCE_CONV) THENC
   TOP_DEPTH_CONV COMPONENT_WRITE_OVER_WRITE_CONV THENC
   GEN_REWRITE_CONV (SUB_COMPONENTS_CONV o TOP_DEPTH_CONV) ths THENC
+  SUB_COMPONENTS_CONV (ONCE_DEPTH_CONV WORD_CLOSED_RED_CONV) THENC
   GEN_REWRITE_CONV TOP_DEPTH_CONV [WORD_VAL] THENC
-  DEPTH_CONV WORD_NUM_RED_CONV THENC
   ONCE_DEPTH_CONV WORD_PC_PLUS_CONV THENC
   ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV THENC
   ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV
