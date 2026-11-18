@@ -1,0 +1,4 @@
+# Seconds per job of link.ml (tools/native_link.py), from the
+# proof times of an earlier run (tools/link_costs.py); used to
+# run the costliest jobs first.
+poly_reduce	28
