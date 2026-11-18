@@ -1,0 +1,70 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/mlkem_native/gcc12_O2/keypair_derand_k4_spec.ml";;
+
+
+let KPKE_KEYGEN_LENGTHS_1024 = prove
+ (KPKE_KEYGEN_LENGTHS_1024_STMT,
+  REWRITE_TAC[mlkem1024; KPKE_KEYGEN_LENGTHS] THEN CONV_TAC NUM_REDUCE_CONV);;
+
+let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+  KK4_INTRO_TAC THEN KK4_MAIN_TAC);;
+
+let MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC ASSUME_TAC) THEN
+  FIRST_X_ASSUM(fun th1 ->
+    if can (term_match [] `memset_full_contract mf ea el ev`) (concl th1)
+    then FIRST_X_ASSUM(fun th2 ->
+      ASSUME_CALLEE_SAFETY_TAILED_TAC
+       (MATCH_MP
+         MLKEM_NATIVE_INDCPA_KEYPAIR_DERAND_K4_GCC12_O2_IMAGE_SUBROUTINE_SAFE
+         (CONJ th1 th2)) "H_INDCPA" THEN
+      ASSUME_CALLEE_SAFETY_TAILED_TAC
+       (REWRITE_RULE[memcpy_safety_contract] th2) "H_MEMCPY")
+    else NO_TAC) THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_SHA3_256_GCC12_O2_IMAGE_SUBROUTINE_SAFE "H_SHA3_256" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              C_RETURN; ALL; ALLPAIRS; PAIRWISE] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[NONOVERLAPPING_CLAUSES]) THEN
+  SUBGOAL_THEN `aligned 16 (stackpointer:int64)` ASSUME_TAC THENL
+   [UNDISCH_TAC `aligned 16 (word_add stackpointer (word 19360):int64)` THEN
+    CONV_TAC(LAND_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN REWRITE_TAC[];
+    ALL_TAC] THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  MAP_EVERY (fun n ->
+    ENSURES_PRESERVED_TAC ("x"^string_of_int n^"_init")
+     (parse_term("X"^string_of_int n))) (19--28) THEN
+  ENSURES_INIT_TAC "s0" THEN
+  FIRST_ASSUM(fun th ->
+    if can (term_match []
+         `read (memory :> bytes64(word(pc + 131024))) s = f:int64`)
+         (concl th)
+    then ASSUME_TAC(REWRITE_RULE[WORD_ADD] th) else NO_TAC) THEN
+  ARM_STEPS_TAC KK4_EXEC (1--7) THEN
+  KK4_SAFE_CALL_TAC "H_INDCPA"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+    `d:byte list`; `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 8 THEN
+  ARM_STEPS_TAC KK4_EXEC (9--14) THEN
+  LIBC_PLT_TAC KK4_EXEC 14 THEN
+  LIBC_SAFE_CALL_TAC "H_MEMCPY" KK4_EXEC
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+    `read X30 s`] (ref KK_SAFE_ALLOWED) 19 THEN
+  ARM_STEPS_TAC KK4_EXEC (20--23) THEN
+  KK4_SAFE_CALL_TAC "H_SHA3_256"
+   [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `1568`; `guard:int64`;
+    `pc:num`; `read SP s`; `read X30 s`] 24 THEN
+  ARM_STEPS_TAC KK4_EXEC (25--32) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[APPEND_NIL] THEN
+  ABBREV_TAC `rho = FST(mlkem_g(APPEND d [word 4]))` THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
