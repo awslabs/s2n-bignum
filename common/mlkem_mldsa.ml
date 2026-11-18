@@ -10,6 +10,7 @@
 needs "Library/words.ml";;
 needs "Library/isum.ml";;
 needs "common/int_linear.ml";;
+needs "common/bitmap.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The pure forms of forward and inverse NTT with no reordering.             *)
@@ -50,13 +51,10 @@ let pure_inverse_ntt_mldsa = define
 (* range [0,2^k) where k is the list length. Earlier versions of the specs   *)
 (* defined them differently (e.g. bitreverse7 via word_reversefields, which  *)
 (* truncates to 7 bits), and the definitions only agree on that range; see   *)
-(* the "_ALT" theorems below for the explicit correspondences.               *)
+(* the "_ALT" theorems below for the explicit correspondences. bitmap,       *)
+(* BITMAP_CONV, bitreverse7, bitreverse8 and BITREVERSE7_ALT/8_ALT are in    *)
+(* common/bitmap.ml, which the FIPS 203 and FIPS 204 specifications share.   *)
 (* ------------------------------------------------------------------------- *)
-
-let bitmap = define
- `bitmap l n =
-  nsum {i | i < LENGTH l} (\i. 2 EXP i * bitval(numbit (EL i l) n)) +
-  2 EXP (LENGTH l) * n DIV 2 EXP (LENGTH l)`;;
 
 let NUMBIT_BITMAP = prove
  (`!l n i. numbit i (bitmap l n) <=>
@@ -76,37 +74,8 @@ let BITMAP_SIMPLE = prove
   SIMP_TAC[bitmap; DIV_LT; ADD_CLAUSES; MULT_CLAUSES]);;
 
 (* ------------------------------------------------------------------------- *)
-(* A single conversion BITMAP_CONV evaluates any particular instance.        *)
-(* ------------------------------------------------------------------------- *)
-
-let BITMAP_CONV =
-  let conv =
-    GEN_REWRITE_CONV I [bitmap] THENC
-    DEPTH_CONV LENGTH_CONV THENC
-    GEN_REWRITE_CONV ONCE_DEPTH_CONV [NUMSEG_LT] THENC
-    NUM_REDUCE_CONV THENC
-    GEN_REWRITE_CONV ONCE_DEPTH_CONV [CONJUNCT1 NSUM_CLAUSES] THENC
-    ONCE_DEPTH_CONV EXPAND_NSUM_CONV THENC
-    DEPTH_CONV EL_CONV THENC
-    ONCE_DEPTH_CONV NUMBIT_CONV THENC
-    GEN_REWRITE_CONV ONCE_DEPTH_CONV [BITVAL_CLAUSES] THENC
-    NUM_REDUCE_CONV in
-  fun tm ->
-    match tm with
-      Comb(Comb(Const("bitmap",_),l),n) ->
-        if is_numeral n && is_list l && forall is_numeral (dest_list l)
-        then conv tm  else failwith "BITMAP_CONV"
-    | _ -> failwith "BITMAP_CONV";;
-
-(* ------------------------------------------------------------------------- *)
 (* Bit-reversing order as used in the standard/default order.                *)
 (* ------------------------------------------------------------------------- *)
-
-let bitreverse7 = define
-  `bitreverse7 = bitmap [6;5;4;3;2;1;0]`;;
-
-let bitreverse8 = define
-  `bitreverse8 = bitmap [7;6;5;4;3;2;1;0]`;;
 
 let bitreverse_pairs = define
   `bitreverse_pairs = bitmap [0;7;6;5;4;3;2;1]`;;
@@ -184,14 +153,6 @@ let BITMAP_ALT_TAC thl =
   CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC thl THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   CONV_TAC(DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC BITMAP_CONV));;
-
-let BITREVERSE7_ALT = prove
- (`!n. n < 128 ==> bitreverse7 n = val(word_reversefields 1 (word n:7 word))`,
-  BITMAP_ALT_TAC[bitreverse7]);;
-
-let BITREVERSE8_ALT = prove
- (`!n. n < 256 ==> bitreverse8 n = val(word_reversefields 1 (word n:8 word))`,
-  BITMAP_ALT_TAC[bitreverse8]);;
 
 let AVX2_NTT_ORDER_ALT = prove
  (`!i. i < 128
