@@ -37,7 +37,7 @@ let edwards25519_scalarmulbase_alt_mc,const_data_list =
       | s -> failwith ("unknown symbol: " ^ s))
     "edwards25519_scalarmulbase_alt_mc"
     "arm/curve25519/edwards25519_scalarmulbase_alt.o"
-(fun w BL ADR ADRP ADD_rri64 -> [
+(fun w BL ADR ADRP ADD_rri64 LDR_Q_rri -> [
   w 0xa9bf53f3;         (* arm_STP X19 X20 SP (Preimmediate_Offset (iword (-- &16))) *)
   w 0xa9bf5bf5;         (* arm_STP X21 X22 SP (Preimmediate_Offset (iword (-- &16))) *)
   w 0xa9bf63f7;         (* arm_STP X23 X24 SP (Preimmediate_Offset (iword (-- &16))) *)
