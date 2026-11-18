@@ -488,6 +488,16 @@ BASE_ML=proofs/base.ml \
 HOLDIR?=$(HOME)/hol-light
 HOLLIGHT:=$(HOLDIR)/hol.sh
 
+# HOL_PAR=1 builds the proofs with the parallel backend of common/par.ml,
+# which needs OCaml 5 and a HOL Light (HOLDIR) that meets the requirements
+# stated in common/par_domains.ml, such as jrh13/hol-light PR 214;
+# S2N_PAR_DOMAINS then gives the number of domains when they run. The
+# binaries do not record which backend they were built with: after
+# changing HOL_PAR or HOLDIR, remove them (make clean).
+
+HOL_PAR?=0
+export HOL_PAR
+
 PROOF_BINS = $(OBJ:.o=.native)
 PROOF_LOGS = $(OBJ:.o=.correct)
 TUTORIAL_PROOF_BINS = $(TUTORIAL_PROOFS:.ml=.native)
