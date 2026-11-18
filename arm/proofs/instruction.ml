@@ -2227,6 +2227,13 @@ let arm_UMOV = define
        let d:N word = word_subword n (idx*size*8,size*8) in
        (Rd := d) s`;;
 
+let arm_UDIV = define
+ `arm_UDIV Rd Rn Rm =
+    \s. let n:N word = read Rn (s:armstate)
+        and m:N word = read Rm s in
+        let d:N word = word(val n DIV val m) in
+        (Rd := d) s`;;
+
 let arm_UMULH = define
  `arm_UMULH Rd Rn Rm =
     \s. let n:N word = read Rn (s:armstate)
@@ -4805,6 +4812,7 @@ let ARM_OPERATION_CLAUSES =
        arm_UMLSL_VEC_ALT; arm_UMLSL2_VEC_ALT;
        arm_UMSUBL;
        arm_UMULL_VEC_ALT; arm_UMULL2_VEC_ALT;
+       arm_UDIV;
        arm_UMULH;
        arm_UMIN_VEC_ALT;
        arm_URHADD_VEC_ALT; arm_URSHR_VEC_ALT;
