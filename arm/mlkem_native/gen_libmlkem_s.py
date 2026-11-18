@@ -67,9 +67,18 @@ BRANCH = re.compile(r'^(b|bl|b\.\w+|cbz|cbnz|tbz|tbnz)$')
 TARGET = re.compile(r'\b([0-9a-f]+) <[^>]*>')
 
 def quads(data, lo, hi, out):
-    assert lo % 8 == 0 and hi % 8 == 0
+    """Quadwords from lo to hi; words at the ends if they are only 4-aligned"""
+    assert lo % 4 == 0 and hi % 4 == 0
+    if lo % 8 != 0 and lo < hi:
+        words(data, lo, lo + 4, out); lo += 4
+    if hi % 8 != 0 and lo < hi:
+        hi -= 4; tail = True
+    else:
+        tail = False
     for a in range(lo, hi, 8):
         out.append('        .quad   0x%016x' % struct.unpack_from('<Q', data, a))
+    if tail:
+        words(data, hi, hi + 4, out)
 
 def words(data, lo, hi, out):
     assert lo % 4 == 0 and hi % 4 == 0
