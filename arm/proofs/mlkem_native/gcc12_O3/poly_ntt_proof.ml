@@ -1,0 +1,797 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/mlkem_native/gcc12_O3/poly_ntt_spec.ml";;
+
+
+let RANGE8_SPLIT = prove
+ (RANGE8_SPLIT_STMT,
+  REPEAT STRIP_TAC THEN EQ_TAC THENL
+   [REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    STRIP_TAC THEN X_GEN_TAC `j:num` THEN STRIP_TAC THEN
+    ASM_CASES_TAC `8 * (i + 1) <= j` THEN ASM_SIMP_TAC[] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `j - 8 * i`) THEN
+    ASM_SIMP_TAC[ARITH_RULE `8 * i <= j ==> 8 * i + (j - 8 * i) = j`] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
+
+let NTT_VEC_ADDR = prove
+ (NTT_VEC_ADDR_STMT,
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  REPEAT GEN_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
+
+let NTT_VEC_ADDR2 = prove
+ (NTT_VEC_ADDR2_STMT,
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  REPEAT GEN_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
+
+let NTT_BLOCK_C_LO8 = prove
+ (NTT_BLOCK_C_LO8_STMT,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[ntt_block_c] THEN
+  COND_CASES_TAC THENL
+   [REPEAT AP_TERM_TAC THEN ARITH_TAC; ASM_ARITH_TAC]);;
+
+let NTT_BLOCK_C_HI8 = prove
+ (NTT_BLOCK_C_HI8_STMT,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[ntt_block_c] THEN
+  COND_CASES_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  COND_CASES_TAC THENL
+   [AP_THM_TAC THEN REPEAT AP_TERM_TAC THEN ARITH_TAC; ASM_ARITH_TAC]);;
+
+let NTT_BLOCK_JOIN = prove
+ (NTT_BLOCK_JOIN_STMT,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(fun th ->
+    let bd,h1,h2,h3,h4 =
+      match CONJUNCTS th with
+        [bd;h1;h2;h3;h4] -> bd,h1,h2,h3,h4
+      | _ -> failwith "NTT_BLOCK_JOIN" in
+    ASSUME_TAC bd THEN X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+    ASM_CASES_TAC `i < start` THENL
+     [ASM_SIMP_TAC[h1; ntt_block_c; ARITH_RULE
+       `i < start ==> ~(start <= i) /\ ~(start + len <= i)`];
+      ALL_TAC] THEN
+    ASM_CASES_TAC `i < start + len` THENL
+     [MP_TAC(SPEC `i - start:num` h3) THEN
+      ASM_SIMP_TAC[ARITH_RULE `~(i < start) ==> start + (i - start) = i`] THEN
+      DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC;
+      ALL_TAC] THEN
+    ASM_CASES_TAC `i < start + 2 * len` THENL
+     [MP_TAC(SPEC `i - (start + len):num` h4) THEN
+      ASM_SIMP_TAC[ARITH_RULE
+       `~(i < start + len) ==> start + len + (i - (start + len)) = i`] THEN
+      DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC;
+      ALL_TAC] THEN
+    REWRITE_TAC[ntt_block_c] THEN ASM_REWRITE_TAC[] THEN
+    MATCH_MP_TAC h2 THEN ASM_ARITH_TAC));;
+
+let WORD_ZX_ZX_SX_16 = prove
+ (WORD_ZX_ZX_SX_16_STMT,
+  BITBLAST_TAC);;
+
+let WORD_AND_8N_7 = prove
+ (WORD_AND_8N_7_STMT,
+  GEN_TAC THEN ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[VAL_WORD_AND_WORD_LE] THEN
+  ONCE_REWRITE_TAC[WORD_AND_SYM] THEN
+  REWRITE_TAC[ARITH_RULE `7 = 2 EXP 3 - 1`; WORD_AND_MASK_WORD] THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_MOD_EXP_MIN] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[ARITH_RULE `8 * n = n * 8`; MOD_MULT]);;
+
+let NTT_DIV8 = prove
+ (NTT_DIV8_STMT,
+  GEN_TAC THEN MATCH_MP_TAC DIV_MULT THEN ARITH_TAC);;
+
+let MOD_2N_CASES = prove
+ (MOD_2N_CASES_STMT,
+  REPEAT STRIP_TAC THEN COND_CASES_TAC THEN ASM_SIMP_TAC[MOD_LT] THEN
+  MATCH_MP_TAC MOD_UNIQ THEN EXISTS_TAC `1` THEN ASM_ARITH_TAC);;
+
+let VAL_WORD_ADD_SMALL_CASES = prove
+ (VAL_WORD_ADD_SMALL_CASES_STMT,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+  ASM_SIMP_TAC[MOD_LT] THEN MATCH_MP_TAC MOD_2N_CASES THEN
+  MP_TAC(ISPEC `a:int64` VAL_BOUND_64) THEN ASM_ARITH_TAC);;
+
+let WORD_SUB_FLAG_64 = prove
+ (WORD_SUB_FLAG_64_STMT,
+  REPEAT GEN_TAC THEN REWRITE_TAC[VAL_WORD_SUB_CASES; DIMINDEX_64] THEN
+  COND_CASES_TAC THEN ASM_SIMP_TAC[GSYM INT_OF_NUM_SUB] THEN
+  REWRITE_TAC[INT_ARITH `x - y:int = z <=> x = y + z`] THEN
+  REWRITE_TAC[INT_OF_NUM_ADD; INT_OF_NUM_EQ] THEN
+  MP_TAC(ISPEC `x:int64` VAL_BOUND_64) THEN
+  MP_TAC(ISPEC `y:int64` VAL_BOUND_64) THEN ASM_ARITH_TAC);;
+
+let NTT_ALIAS_VEC = prove
+ (NTT_ALIAS_VEC_STMT,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_SUB_FLAG_64] THEN
+  VAL_WORD_ADD_CASES_TAC THEN
+  MP_TAC(ISPEC `a:int64` VAL_BOUND_64) THEN
+  MAP_EVERY ASM_CASES_TAC
+   [`val(a:int64) + p < 2 EXP 64`; `val(a:int64) + p + 16 < 2 EXP 64`;
+    `val(a:int64) + q < 2 EXP 64`; `val(a:int64) + q + 16 < 2 EXP 64`] THEN
+  ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC);;
+
+let NTT_ALIAS_SCALAR = prove
+ (NTT_ALIAS_SCALAR_STMT,
+  REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
+  REWRITE_TAC[WORD_SUB_FLAG_64] THEN VAL_WORD_ADD_CASES_TAC THEN
+  MP_TAC(ISPEC `a:int64` VAL_BOUND_64) THEN
+  ASM_CASES_TAC `val(a:int64) + q < 2 EXP 64` THEN ASM_REWRITE_TAC[] THEN
+  DISCH_TAC THEN DISCH_TAC THENL
+   [SUBGOAL_THEN
+     `val(a:int64) + q + 8 < 2 EXP 64 /\ val(a:int64) + q + 16 < 2 EXP 64 /\
+      val(a:int64) + q + 24 < 2 EXP 64`
+     (fun th -> REWRITE_TAC[th]) THENL [ASM_ARITH_TAC; ALL_TAC];
+    SUBGOAL_THEN
+     `~(val(a:int64) + q + 8 < 2 EXP 64) /\
+      ~(val(a:int64) + q + 16 < 2 EXP 64) /\
+      ~(val(a:int64) + q + 24 < 2 EXP 64)`
+     (fun th -> REWRITE_TAC[th]) THENL [ASM_ARITH_TAC; ALL_TAC]] THEN
+  REPEAT COND_CASES_TAC THEN ASM_ARITH_TAC);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_VBLOCK = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_VBLOCK_STMT,
+  REPEAT GEN_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL; SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_WHILE_UP_TAC `n:num` `pc + mlkem_poly_ntt_loop4`
+   `pc + mlkem_poly_ntt_loop4_test` ntt_vblock_inv THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_ARITH_TAC;
+
+    (*** From the head of the block to the vector loop ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--2) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (3--6) THEN
+    REG_SMALL_TAC `X20` `word(8 * n):int64` THEN
+    REG_SMALL_TAC `X19` `word(8 * n - 1):int64` THEN
+    REG_SMALL_TAC `X1` `word start:int64` THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (7--7) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (8--18) THEN
+    REG_SMALL_TAC `X0`
+     `word_add a (word(2 * (start + 8 * n) + 16)):int64` THEN
+    REG_SMALL_TAC `X21` `word_add a (word(2 * start + 16)):int64` THEN
+    REG_SMALL_TAC `X2` `word_add a (word(2 * start)):int64` THEN
+    REG_SMALL_TAC `X3` `word_add a (word(2 * (start + 8 * n))):int64` THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (19--20) THEN
+    MP_TAC(SPECL [`a:int64`; `2 * (start + 8 * n)`; `2 * start`]
+                 NTT_ALIAS_VEC) THEN
+    ANTS_TAC THENL
+     [ASM_ARITH_TAC;
+      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (21--22) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (23--27) THEN
+    REG_SMALL_TAC `X19` `word(16 * n):int64` THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[WORD_ZX_ZX_SX_16] THEN
+    REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0] THEN
+    CONJ_TAC THENL [NTT_SMALL_TAC; ALL_TAC] THEN
+    REPEAT CONJ_TAC THEN X_GEN_TAC `j:num` THEN STRIP_TAC THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+
+    (*** The loop body, 8 butterflies at once ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    SUBGOAL_THEN `8 * (i + 1) <= 8 * n` ASSUME_TAC THENL
+     [ASM_ARITH_TAC; ALL_TAC] THEN
+    REWRITE_TAC[] THEN ENSURES_INIT_TAC "s0" THEN
+    MAP_EVERY (fun th ->
+      FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I
+        [MATCH_MP RANGE8_SPLIT th]) THEN
+      DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
+       (STRIP_ASSUME_TAC o REWRITE_RULE[WORD_ADD_0] o
+        CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV) o
+        REWRITE_RULE[ADD_CLAUSES] o REWRITE_RULE[NTT_VEC_ADDR] o
+        REWRITE_RULE[NTT_VEC_ADDR2] o CONV_RULE EXPAND_CASES_CONV)))
+     [ASSUME `8 * (i + 1) <= 8 * n`; ASSUME `8 * (i + 1) <= 8 * n`] THEN
+    MP_TAC(READ_MEMORY_MERGE_CONV 3
+      `read(memory :> bytes128(word_add a
+               (word(2 * start + 16 * i)))) s0`) THEN
+    MP_TAC(READ_MEMORY_MERGE_CONV 3
+      `read(memory :> bytes128(word_add a
+               (word(2 * (start + 8 * n) + 16 * i)))) s0`) THEN
+    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
+    DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes16 a) s = x`] THEN
+    MAP_EVERY (fun n ->
+      ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC [n] THEN
+      SIMD_SIMPLIFY_TAC[montred_neon]) (1--15) THEN
+    REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
+      CONV_RULE (SIMD_SIMPLIFY_CONV []) o
+      CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
+      check (fun th ->
+        can (term_match [] `read (memory :> bytes128 a) s15 = x`)
+            (concl th)))) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `16 * (i + 1) = 16 * i + 16`] THEN
+      CONV_TAC WORD_RULE;
+      ALL_TAC] THEN
+    REWRITE_TAC[CHUNK8_OUTPUT_SPLIT] THEN ASM_REWRITE_TAC[] THEN
+    SIMP_TAC[NTT_BLOCK_C_LO8; NTT_BLOCK_C_HI8;
+             ASSUME `8 * (i + 1) <= 8 * n`] THEN
+    CONJ_TAC THEN CONV_TAC EXPAND_CASES_CONV THEN
+    REWRITE_TAC[NTT_VEC_ADDR2] THEN REWRITE_TAC[NTT_VEC_ADDR] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
+    REWRITE_TAC[WORD_ADD_0; ADD_CLAUSES] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[MONTRED_NEON_SCALAR]) THEN
+    ASM_REWRITE_TAC[ntt_fqmul_c];
+
+    (*** The loop-back branch ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--1) THEN
+    PTR_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (2--2) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];
+
+    (*** The loop exit and the end of the block ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--1) THEN
+    PTR_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (2--5) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[WORD_AND_8N_7; VAL_WORD_0]) THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (6--8) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REPEAT CONJ_TAC THENL [NTT_SMALL_TAC; NTT_SMALL_TAC; ALL_TAC] THEN
+    MATCH_MP_TAC NTT_BLOCK_JOIN THEN
+    REWRITE_TAC[ARITH_RULE `2 * 8 * n = 16 * n`] THEN ASM_REWRITE_TAC[]]);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_SBLOCK = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_SBLOCK_STMT,
+  REPEAT GEN_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL; SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_WHILE_UP_TAC `len:num` `pc + mlkem_poly_ntt_loop3`
+   `pc + mlkem_poly_ntt_loop3_test` ntt_sblock_inv THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_ARITH_TAC;
+
+    (*** From the head of the block to the scalar loop, directly for 2 + 2
+     *** coefficients and after the check for 4 + 4 ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    FIRST_X_ASSUM(DISJ_CASES_THEN STRIP_ASSUME_TAC o
+                  check (is_disj o concl)) THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--2) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (3--6) THEN
+    REG_SMALL_TAC `X20` `word len:int64` THEN
+    REG_SMALL_TAC `X19` `word(len - 1):int64` THEN
+    REG_SMALL_TAC `X1` `word start:int64` THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (7--7) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (8--8) THENL
+     [NTT_SBLOCK_JOIN1_TAC;
+      ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (9--18) THEN
+      REG_SMALL_TAC `X0` `word_add a (word(2 * start + 24)):int64` THEN
+      REG_SMALL_TAC `X21` `word_add a (word(2 * start + 16)):int64` THEN
+      REG_SMALL_TAC `X2` `word_add a (word(2 * start)):int64` THEN
+      REG_SMALL_TAC `X3` `word_add a (word(2 * start + 8)):int64` THEN
+      ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (19--20) THEN
+      MP_TAC(SPECL [`a:int64`; `2 * start`] NTT_ALIAS_SCALAR) THEN
+      ANTS_TAC THENL
+       [ASM_ARITH_TAC;
+        DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+      ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (21--21) THEN
+      NTT_SBLOCK_JOIN1_TAC];
+
+    (*** The scalar loop body, one butterfly ***)
+
+    X_GEN_TAC `jj:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    SUBGOAL_THEN `len <= 4` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    FIRST_X_ASSUM(fun th ->
+      if is_forall(concl th) && free_in `m:num->int16` (concl th)
+      then MP_TAC(SPEC `start + jj:num` th) THEN
+           MP_TAC(SPEC `start + len + jj:num` th) THEN
+           ASSUME_TAC(BETA_RULE(MATCH_MP (SPEC
+             `\i. ~(i = start + jj) /\ ~(i = start + len + jj)`
+             (MESON[] `!R P Q. (!i:num. P i ==> Q i)
+                               ==> (!i. P i /\ R i ==> Q i)`)) th))
+      else failwith "") THEN
+    ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC[ARITH_RULE
+     `jj < len
+      ==> ~(start <= start + len + jj /\ start + len + jj < start + jj) /\
+          ~(start + len <= start + len + jj /\
+            start + len + jj < start + len + jj)`] THEN
+    REWRITE_TAC[ARITH_RULE
+     `2 * (start + len + jj) = 2 * (start + jj) + 2 * len`] THEN
+    DISCH_TAC THEN ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC[ARITH_RULE
+     `jj < len
+      ==> ~(start <= start + jj /\ start + jj < start + jj) /\
+          ~(start + len <= start + jj /\ start + jj < start + len + jj)`] THEN
+    DISCH_TAC THEN
+    SUBGOAL_THEN `val(word len:int64) = len` ASSUME_TAC THENL
+     [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN MATCH_MP_TAC MOD_LT THEN
+      ASM_ARITH_TAC;
+      ALL_TAC] THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--12) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [WORD_SMALL_TAC; ALL_TAC] THEN
+    X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+    ASM_CASES_TAC `i = start + jj` THENL
+     [FIRST_X_ASSUM SUBST1_TAC THEN ASM_REWRITE_TAC[] THEN
+      REWRITE_TAC[LE_ADD; ARITH_RULE `start + jj < start + jj + 1`] THEN
+      MLKEM_NATIVE_W_SIMP_TAC THEN REWRITE_TAC[WORD_ADD_0] THEN
+      REWRITE_TAC[GSYM montred_scalar; WORD_ZX_ADD_ZX_16] THEN
+      REWRITE_TAC[ntt_block_c; ntt_fqmul_c; LE_ADD] THEN
+      ASM_REWRITE_TAC[LT_ADD_LCANCEL] THEN
+      REWRITE_TAC[GSYM ADD_ASSOC] THEN REWRITE_TAC[ADD_AC; WORD_ADD_SYM];
+      ALL_TAC] THEN
+    ASM_CASES_TAC `i = start + len + jj` THENL
+     [FIRST_X_ASSUM SUBST1_TAC THEN
+      REWRITE_TAC[ARITH_RULE
+       `2 * (start + len + jj) = 2 * (start + jj) + 2 * len`] THEN
+      ASM_REWRITE_TAC[] THEN
+      REWRITE_TAC[ARITH_RULE `start + len + jj < start + len + jj + 1`;
+                  ARITH_RULE `start + len <= start + len + jj`] THEN
+      MLKEM_NATIVE_W_SIMP_TAC THEN REWRITE_TAC[WORD_ADD_0] THEN
+      REWRITE_TAC[GSYM montred_scalar; WORD_ZX_SUB_ZX_16] THEN
+      REWRITE_TAC[ntt_block_c; ntt_fqmul_c] THEN
+      ASM_SIMP_TAC[ARITH_RULE
+       `jj < len ==> ~(start <= start + len + jj /\
+                       start + len + jj < start + len) /\
+                     start + len <= start + len + jj /\
+                     start + len + jj < start + 2 * len`] THEN
+      REWRITE_TAC[ARITH_RULE `(start + len + jj) - len = start + jj`];
+      ALL_TAC] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `i:num` o check (fun th ->
+      is_forall(concl th) && free_in `m:num->int16` (concl th))) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+    AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
+
+    (*** The loop-back branch ***)
+
+    X_GEN_TAC `jj:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--1) THEN
+    PTR_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (2--2) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];
+
+    (*** The loop exit and the end of the block ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--1) THEN
+    PTR_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (2--4) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REPEAT CONJ_TAC THENL [NTT_SMALL_TAC; NTT_SMALL_TAC; ALL_TAC] THEN
+    X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `i:num` o check (fun th ->
+      is_forall(concl th) && free_in `m:num->int16` (concl th))) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+    COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[ntt_block_c] THEN
+    REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN ASM_ARITH_TAC]);;
+
+let NTT_ALIAS_SCALAR_WRAP = prove
+ (NTT_ALIAS_SCALAR_WRAP_STMT,
+  REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
+  REWRITE_TAC[WORD_SUB_FLAG_64] THEN VAL_WORD_ADD_CASES_TAC THEN
+  MP_TAC(ISPEC `a:int64` VAL_BOUND_64) THEN
+  MAP_EVERY ASM_CASES_TAC
+   [`val(a:int64) + q < 2 EXP 64`; `val(a:int64) + q + 8 < 2 EXP 64`;
+    `val(a:int64) + q + 16 < 2 EXP 64`;
+    `val(a:int64) + q + 24 < 2 EXP 64`] THEN
+  ASM_REWRITE_TAC[] THEN REPEAT COND_CASES_TAC THEN ASM_ARITH_TAC);;
+
+let WORD_ZX_ZX_SX_32 = prove
+ (WORD_ZX_ZX_SX_32_STMT,
+  BITBLAST_TAC);;
+
+let WORD_USHR16_SUBWORD = prove
+ (WORD_USHR16_SUBWORD_STMT,
+  BITBLAST_TAC);;
+
+let WORD_SUBWORD_ZX_64 = prove
+ (WORD_SUBWORD_ZX_64_STMT,
+  REPEAT CONJ_TAC THEN BITBLAST_TAC);;
+
+let NTT_D_ADDR = prove
+ (NTT_D_ADDR_STMT,
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  REPEAT GEN_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
+
+let NTT_D_ADDR2 = prove
+ (NTT_D_ADDR2_STMT,
+  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+  REPEAT GEN_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
+
+let NTT_BLOCK_C_LO = prove
+ (NTT_BLOCK_C_LO_STMT,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[ntt_block_c] THEN
+  COND_CASES_TAC THENL
+   [REPEAT AP_TERM_TAC THEN ARITH_TAC; ASM_ARITH_TAC]);;
+
+let NTT_BLOCK_C_HI = prove
+ (NTT_BLOCK_C_HI_STMT,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[ntt_block_c] THEN
+  COND_CASES_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  COND_CASES_TAC THENL
+   [AP_THM_TAC THEN REPEAT AP_TERM_TAC THEN ARITH_TAC; ASM_ARITH_TAC]);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_DBLOCK = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_DBLOCK_STMT,
+  REPEAT GEN_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL; SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th ->
+    is_eq(concl th) && lhs(concl th) = `len:num`)) THEN
+  ENSURES_INIT_TAC "s0" THEN
+
+  (*** The coefficients of the block as two 64-bit words ***)
+
+  NTT_DBLOCK_SPLIT_TAC THEN
+  MP_TAC(READ_MEMORY_MERGE_CONV 2
+      `read(memory :> bytes64(word_add a (word(2 * start)))) s0`) THEN
+  MP_TAC(READ_MEMORY_MERGE_CONV 2
+      `read(memory :> bytes64(word_add a (word(2 * (start + 4))))) s0`) THEN
+  ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
+  DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes16 a) s = x`] THEN
+
+  (*** The checks, taking the vector code and then the code at join4 ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--2) THEN
+  W32_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (3--6) THEN
+  REG_SMALL_TAC `X20` `word 4:int64` THEN
+  REG_SMALL_TAC `X19` `word 3:int64` THEN
+  REG_SMALL_TAC `X1` `word start:int64` THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (7--7) THEN
+  W32_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (8--18) THEN
+  REG_SMALL_TAC `X0` `word_add a (word(2 * start + 24)):int64` THEN
+  REG_SMALL_TAC `X21` `word_add a (word(2 * start + 16)):int64` THEN
+  REG_SMALL_TAC `X2` `word_add a (word(2 * start)):int64` THEN
+  REG_SMALL_TAC `X3` `word_add a (word(2 * start + 8)):int64` THEN
+  REG_SMALL_TAC `X5` `word(start + 4):int64` THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (19--20) THEN
+  MP_TAC(SPECL [`a:int64`; `2 * start`] NTT_ALIAS_SCALAR_WRAP) THEN
+  ANTS_TAC THENL
+   [ASM_ARITH_TAC;
+    DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (21--22) THEN
+  W32_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (23--33) THEN
+  REG_SMALL_TAC `X5` `word(2 * (start + 4)):int64` THEN
+  REG_SMALL_TAC `X0` `word(2 * start):int64` THEN
+
+  (*** The 4 + 4 butterflies with 64-bit vectors ***)
+
+  MAP_EVERY (fun n ->
+      ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC [n] THEN
+      SIMD_SIMPLIFY_TAC[montred_neon]) (34--47) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[WORD_SHL_ZERO; WORD_ZX_ZX_SX_32;
+                               WORD_USHR16_SUBWORD; GSYM montred_neon]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[WORD_SUBWORD_ZX_64]) THEN
+  RULE_ASSUM_TAC(CONV_RULE(SIMD_SIMPLIFY_CONV [])) THEN
+  REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
+      CONV_RULE (SIMD_SIMPLIFY_CONV []) o
+      CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
+      check (fun th ->
+        can (term_match [] `read (memory :> bytes64 a) s47 = x`)
+            (concl th)))) THEN
+
+  (*** The end of the block ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (48--51) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REPEAT(CONJ_TAC THENL [NTT_SMALL_TAC; ALL_TAC]) THEN
+  MATCH_MP_TAC NTT_BLOCK_JOIN THEN CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_REWRITE_TAC[] THEN
+  SIMP_TAC[NTT_BLOCK_C_LO; NTT_BLOCK_C_HI] THEN
+  CONJ_TAC THENL
+   [NTT_DBLOCK_HALF_TAC NTT_D_ADDR; NTT_DBLOCK_HALF_TAC NTT_D_ADDR2]);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_BLOCK4 = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_BLOCK4_STMT,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  ASM_CASES_TAC
+   `val(word_add (a:int64) (word(2 * start))) + 24 < 2 EXP 64` THENL
+   [MATCH_MP_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_SBLOCK;
+    MATCH_MP_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_DBLOCK] THEN
+  ASM_REWRITE_TAC[]);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_LAYERS =
+  map (fun l -> prove(ntt_layer_goal l,NTT_LAYER_PROOF_TAC l)) (0--6);;
+
+let NTT_BLOCKS_C_CLOSED = prove
+ (NTT_BLOCKS_C_CLOSED_STMT,
+  GEN_TAC THEN INDUCT_TAC THEN REPEAT GEN_TAC THEN
+  REWRITE_TAC[ntt_blocks_c; MULT_CLAUSES; CONJUNCT1 LT] THEN
+  REWRITE_TAC[ntt_block_c] THEN
+  SUBGOAL_THEN `1 <= 2 EXP (7 - l)` MP_TAC THENL
+   [REWRITE_TAC[ARITH_RULE `1 <= n <=> ~(n = 0)`; EXP_EQ_0; ARITH_EQ];
+    ALL_TAC] THEN
+  ABBREV_TAC `n = 2 EXP (7 - l)` THEN DISCH_TAC THEN
+  ASM_REWRITE_TAC[] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[MULT_CLAUSES; LEFT_ADD_DISTRIB] THEN
+  ASM_CASES_TAC `2 * n * b <= i /\ i < 2 * n * b + 2 * n` THENL
+   [SUBGOAL_THEN `i DIV (2 * n) = b /\ i MOD (2 * n) = i - 2 * n * b`
+    STRIP_ASSUME_TAC THENL
+     [MATCH_MP_TAC DIVMOD_UNIQ THEN ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_REWRITE_TAC[] THEN
+    ASM_SIMP_TAC[ARITH_RULE
+     `2 * n * b <= i /\ i < 2 * n * b + 2 * n
+      ==> ~(i < 2 * n * b) /\ ~(i + n < 2 * n * b) /\
+          i < 2 * n * b + 2 * n`] THEN
+    ASM_CASES_TAC `i < 2 * n * b + n` THEN ASM_REWRITE_TAC[] THEN
+    ASM_SIMP_TAC[ARITH_RULE
+     `2 * n * b <= i /\ i < 2 * n * b + n ==> i - 2 * n * b < n`;
+     ARITH_RULE `~(i < 2 * n * b + n) ==> ~(i - 2 * n * b < n)`;
+     ARITH_RULE `~(i < 2 * n * b + n) ==> ~(i - n < 2 * n * b)`] THEN
+    ASM_ARITH_TAC;
+    ASM_SIMP_TAC[ARITH_RULE
+     `~(p <= i /\ i < p + 2 * n)
+      ==> ~(p <= i /\ i < p + n) /\ ~(p + n <= i /\ i < p + 2 * n)`] THEN
+    AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC]);;
+
+let NTT_LAYERS_C_STEP = prove
+ (NTT_LAYERS_C_STEP_STMT,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[ntt_layers_c; NTT_BLOCKS_C_CLOSED] THEN
+  SUBGOAL_THEN `i < 2 * 2 EXP (7 - l) * 2 EXP l`
+   (fun th -> REWRITE_TAC[th]) THEN
+  REWRITE_TAC[GSYM MULT_ASSOC; GSYM EXP_ADD] THEN
+  ASM_SIMP_TAC[ARITH_RULE `l < 7 ==> 7 - l + l = 7`] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[]);;
+
+let NTT_LAYERS_C_CORRECT = prove
+ (NTT_LAYERS_C_CORRECT_STMT,
+  GEN_TAC THEN CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
+  REWRITE_TAC[IMP_CONJ] THEN REPEAT DISCH_TAC THEN
+  CONV_TAC EXPAND_CASES_CONV THEN
+  W(fun (asl,w) ->
+    let lfn = MLKEM_NATIVE_LOCAL_CONGBOUND_RULE
+                (PROCESS_BOUND_ASSUMPTIONS (map snd asl))
+                NTT_LAYER_EQUATIONS in
+    REPEAT CONJ_TAC THEN NTT_FINAL_TAC lfn));;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_ALL_LAYERS = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_ALL_LAYERS_STMT,
+  MAP_EVERY X_GEN_TAC [`a:int64`; `zetas:num`; `x:num->int16`; `pc:num`] THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL; SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_SEQUENCE_TAC `pc + mlkem_poly_ntt_loop1` (ntt_layerhead_tm 0) THEN
+  CONJ_TAC THENL
+   [ENSURES_INIT_TAC "s0" THEN ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[CONJUNCT1 ntt_layers_c] THEN CONV_TAC NUM_REDUCE_CONV THEN
+    ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  MAP_EVERY (fun l ->
+    ENSURES_SEQUENCE_TAC `pc + mlkem_poly_ntt_loop2_exit`
+     (ntt_layerend_tm l) THEN
+    CONJ_TAC THENL [NTT_LAYER_APPLY_TAC l; ALL_TAC] THEN
+    if l = 6 then ALL_TAC else
+    ENSURES_SEQUENCE_TAC `pc + mlkem_poly_ntt_loop1`
+     (ntt_layerhead_tm (l + 1)) THEN
+    CONJ_TAC THENL [NTT_LAYERBACK_TAC l; ALL_TAC]) (0--6) THEN
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--1) THEN
+  W32_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (2--2) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_IMAGE_SUBROUTINE_CORRECT_STMT,
+  MAP_EVERY X_GEN_TAC [`a:int64`; `x:num->int16`; `pc:num`] THEN
+  WORD_FORALL_OFFSET_TAC 32 THEN
+  MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `nonoverlapping (a:int64,512)
+                  (word(pc + rodata_mlk_zetas),256)` ASSUME_TAC THENL
+   [REWRITE_TAC[WORD_ADD] THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_INIT_TAC "s0" THEN
+  MAP_EVERY (fun th -> FIRST_ASSUM(ASSUME_TAC o MATCH_MP th))
+    MLKEM_NATIVE_POLY_NTT_GCC12_O3_CONSTANTS THEN
+  FIRST_ASSUM(ASSUME_TAC o MATCH_MP MLK_ZETAS_LOADED o
+              MATCH_MP MLKEM_NATIVE_POLY_NTT_GCC12_O3_ZETAS_IN_IMAGE) THEN
+
+  (*** The setup of the constants, which also saves X19 to X21 and X30 ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--3) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (4--5) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (6--7) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (8--18) THEN
+  REG_REWRITE_TAC `X14` [GSYM WORD_ADD] THEN
+
+  (*** The layers ***)
+
+  SUBGOAL_THEN
+   `word_zx(word_sx(iword(EL 1 mlk_zetas):int16):int32):int64 =
+    word 4294966538`
+  ASSUME_TAC THENL
+   [REWRITE_TAC[mlk_zetas] THEN CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
+    CONV_TAC(ONCE_DEPTH_CONV WORD_IWORD_CONV) THEN
+    CONV_TAC(DEPTH_CONV WORD_RED_CONV);
+    ALL_TAC] THEN
+  MP_TAC(SPECL [`a:int64`; `pc + rodata_mlk_zetas`; `x:num->int16`; `pc:num`]
+         MLKEM_NATIVE_POLY_NTT_GCC12_O3_ALL_LAYERS) THEN
+  ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL; SOME_FLAGS] THEN
+  ARM_BIGSTEP_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC "s19" THEN
+
+  (*** Restoring X19 to X21 and X30 and returning ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (20--22) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN DISCH_TAC THEN
+  X_GEN_TAC `i:num` THEN DISCH_TAC THEN ASM_SIMP_TAC[] THEN
+  MP_TAC(SPEC `x:num->int16` NTT_LAYERS_C_CORRECT) THEN ASM_SIMP_TAC[]);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_VBLOCK_SAFE = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_VBLOCK_SAFE_STMT,
+  CONCRETIZE_F_EVENTS_TAC
+   `\(a:int64) (zetas:num) (pc:num) (start:num) (n:num).
+      APPEND (f_ev_blkend a zetas pc start n)
+        (APPEND (ENUMERATEL n
+                   (\i. f_ev_vloop a zetas pc start n i))
+                (f_ev_blkhead a zetas pc start n))
+     :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
+  NTT_SAFE_FRAME_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `n:num` `pc + mlkem_poly_ntt_loop4`
+   `pc + mlkem_poly_ntt_loop4_exit`
+   `\i s. read X0 s = word(16 * i) /\
+          read X2 s = word_add a (word(2 * start)) /\
+          read X3 s = word_add a (word(2 * (start + 8 * n))) /\
+          read X19 s = word(16 * n) /\ read X20 s = word(8 * n) /\
+          read X4 s = a /\ read X17 s = word_add a (word 2) /\
+          read X7 s = word start /\ read X10 s = word(start + 8 * n) /\
+          read X11 s = word(k + 1) /\
+          read X12 s = word(16 * n) /\ read X13 s = word(8 * n) /\
+          read X15 s = word(8 * n) /\
+          read X14 s = word zetas /\ read X16 s = w16 /\
+          read X18 s = word 1 /\ read X30 s = word 256 /\
+          read SP s = sp /\
+          read(memory :> bytes64 sp) s = x19v /\
+          read(memory :> bytes64(word_add sp (word 8))) s = x20v /\
+          read(memory :> bytes64(word_add sp (word 16))) s = x21v /\
+          read(memory :> bytes64(word_add sp (word 24))) s = ra` THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_ARITH_TAC;
+
+    (*** From the head of the block to the vector loop ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+    TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--2) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (3--6) THEN
+    REG_SMALL_TAC `X20` `word(8 * n):int64` THEN
+    REG_SMALL_TAC `X19` `word(8 * n - 1):int64` THEN
+    REG_SMALL_TAC `X1` `word start:int64` THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (7--7) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (8--18) THEN
+    REG_SMALL_TAC `X0`
+     `word_add a (word(2 * (start + 8 * n) + 16)):int64` THEN
+    REG_SMALL_TAC `X21` `word_add a (word(2 * start + 16)):int64` THEN
+    REG_SMALL_TAC `X2` `word_add a (word(2 * start)):int64` THEN
+    REG_SMALL_TAC `X3` `word_add a (word(2 * (start + 8 * n))):int64` THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (19--20) THEN
+    MP_TAC(SPECL [`a:int64`; `2 * (start + 8 * n)`; `2 * start`]
+                 NTT_ALIAS_VEC) THEN
+    ANTS_TAC THENL
+     [ASM_ARITH_TAC;
+      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (21--22) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (23--27) THEN
+    REG_SMALL_TAC `X19` `word(16 * n):int64` THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MULT_CLAUSES] THEN
+    CONJ_TAC THENL [NTT_SMALL_TAC; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The loop body, 8 butterflies at once, and the loop test ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+    TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--15) THEN
+    REG_SMALL_TAC `X0` `word(16 * i + 16):int64` THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (16--16) THEN
+    PTR_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (17--17) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN `~(16 * n = 16 * i + 16) <=> i + 1 < n`
+     SUBST_ALL_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    CONJ_TAC THENL [AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The end of the block ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+    TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--3) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[WORD_AND_8N_7; VAL_WORD_0]) THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (4--6) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REPEAT(CONJ_TAC THENL [NTT_SMALL_TAC; ALL_TAC]) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_SBLOCK2_SAFE = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_SBLOCK2_SAFE_STMT,NTT_SBLOCK_SAFE_TAC false);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_SBLOCK4_SAFE = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_SBLOCK4_SAFE_STMT,
+  NTT_SBLOCK_SAFE_TAC true);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_DBLOCK_SAFE = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_DBLOCK_SAFE_STMT,
+  CONCRETIZE_F_EVENTS_TAC
+   `\(a:int64) (zetas:num) (pc:num) (start:num) (len:num).
+      f_ev_dblk a zetas pc start len:(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
+  NTT_SAFE_FRAME_TAC THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+  TRY STRIP_EXISTS_ASSUM_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (1--2) THEN
+  W32_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (3--6) THEN
+  REG_SMALL_TAC `X20` `word 4:int64` THEN
+  REG_SMALL_TAC `X19` `word 3:int64` THEN
+  REG_SMALL_TAC `X1` `word start:int64` THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (7--7) THEN
+  W32_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (8--18) THEN
+  REG_SMALL_TAC `X0` `word_add a (word(2 * start + 24)):int64` THEN
+  REG_SMALL_TAC `X21` `word_add a (word(2 * start + 16)):int64` THEN
+  REG_SMALL_TAC `X2` `word_add a (word(2 * start)):int64` THEN
+  REG_SMALL_TAC `X3` `word_add a (word(2 * start + 8)):int64` THEN
+  REG_SMALL_TAC `X5` `word(start + 4):int64` THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (19--20) THEN
+  MP_TAC(SPECL [`a:int64`; `2 * start`] NTT_ALIAS_SCALAR_WRAP) THEN
+  ANTS_TAC THENL
+   [ASM_ARITH_TAC;
+    DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (21--22) THEN
+  W32_DECIDE_FLAGS_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (23--33) THEN
+  REG_SMALL_TAC `X5` `word(2 * (start + 4)):int64` THEN
+  REG_SMALL_TAC `X0` `word(2 * start):int64` THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O3_EXEC (34--51) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REPEAT(CONJ_TAC THENL [NTT_SMALL_TAC; ALL_TAC]) THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_BLOCK4_SAFE = prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_BLOCK4_SAFE_STMT,
+  let fty = type_of(fst(dest_exists
+              (concl MLKEM_NATIVE_POLY_NTT_GCC12_O3_SBLOCK4_SAFE))) in
+  let f4 = mk_var("f4",fty) and fd = mk_var("fd",fty)
+  and args = [`a:int64`; `zetas:num`; `pc:num`; `start:num`; `len:num`] in
+  X_CHOOSE_TAC f4 MLKEM_NATIVE_POLY_NTT_GCC12_O3_SBLOCK4_SAFE THEN
+  X_CHOOSE_TAC fd MLKEM_NATIVE_POLY_NTT_GCC12_O3_DBLOCK_SAFE THEN
+  EXISTS_TAC(list_mk_abs(args,
+   mk_cond(`val(word_add (a:int64) (word(2 * start))) + 24 < 2 EXP 64`,
+           list_mk_comb(f4,args),list_mk_comb(fd,args)))) THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+  COND_CASES_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]);;
+
+let NTT_GCC12_O3_LAYER_EVENTS =
+  map (fun l ->
+        new_specification ["ntt_gcc12_O3_layer_events_" ^ string_of_int l]
+                          (prove(lsafe_goal l,NTT_LAYER_SAFE_TAC l)))
+      (0--6);;
+
+let MLKEM_NATIVE_POLY_NTT_GCC12_O3_IMAGE_SUBROUTINE_SAFE = time prove
+ (MLKEM_NATIVE_POLY_NTT_GCC12_O3_IMAGE_SUBROUTINE_SAFE_STMT,
+  ASSERT_CONCL_TAC full_spec THEN NTT_SAFE_TOP_TAC);;
