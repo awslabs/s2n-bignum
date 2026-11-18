@@ -1,0 +1,291 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/mlkem_native/gcc12_O2_mono/keccak_absorb_once_spec.ml";;
+
+
+let ABS_LA = xorF_prove ABS_EXEC ABS_LA_STMT
+  "mlk_keccak_absorb_once_loop2" "mlk_keccak_absorb_once_loop2_exit"
+  (fun i -> "read X20 s = word_add a (word off) /\\ read X19 s = word "^i^" /\\
+             read X21 s = d /\\ read X22 s = word len") 0 0 true;;
+
+let ABS_LC = xorF_prove ABS_EXEC ABS_LC_STMT
+  "mlk_keccak_absorb_once_loop3" "mlk_keccak_absorb_once_loop3_exit"
+  (fun i -> "read X20 s = word_add a (word off) /\\ read X0 s = word "^i^" /\\
+             read X21 s = d /\\ read X3 s = word len") 2 1 false;;
+
+let ABS_LA0 = OFF0_PROVE ABS_LA;;
+
+let ABS_LC0 = OFF0_PROVE ABS_LC;;
+
+let ABS_T1 = prove
+ (ABS_T1_STMT,
+  META_EXISTS_TAC THEN
+  MAP_EVERY X_GEN_TAC [`e:(uarch_event)list`; `st:int64`; `t:num`; `r:num`; `p:num`; `A:1600 word`;
+                       `pc:num`] THEN
+  REWRITE_TAC[SOME_FLAGS; NONOVERLAPPING_CLAUSES; READ_MEMORY_WBYTES_1600;
+              fst ABS_EXEC] THEN
+  STRIP_TAC THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN
+  FIRST_ASSUM(ASSUME_TAC o MATCH_MP XOR_BYTES_OF_STATE) THEN
+  SUBGOAL_THEN `t < 200` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  FIRST_X_ASSUM(fun th ->
+    if is_forall(concl th) && free_in `bytes8` (concl th) then
+      ASSUME_TAC(MP (SPEC `t:num` th) (ASSUME `t < 200`)) THEN
+      ASSUME_TAC(XOR_BYTES_RESTRICT_RULE `t:num` th)
+    else failwith "XOR_BYTES_RESTRICT_RULE") THEN
+  ARM_STEPS_TAC ABS_EXEC (1--4) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  MP_TAC(SPEC `r:num` WORD_ZX_SUB1_SMALL) THEN
+  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+  CONJ_TAC THENL
+   [MP_TAC(ISPECL [`st:int64`; `A:1600 word`; `t:num`; `1`; `p:num`;
+                 `s4:armstate`] XOR_BYTES_FINAL2) THEN
+  REWRITE_TAC[READ_MEMORY_WBYTES_1600] THEN
+  ANTS_TAC THENL
+   [CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    CONJ_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC; ALL_TAC] THEN
+    X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+    MP_TAC(SPECL [`A:1600 word`; `p:num`; `t:num`; `0`; `j:num`]
+                 XOR_BYTES_STEP) THEN
+    ASM_REWRITE_TAC[ADD_CLAUSES] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[ARITH_RULE `8 * 0 = 0`; EXP; MOD_1; MULT_CLAUSES; WORD_XOR_0;
+                DIV_1] THEN
+    DISCH_THEN SUBST1_TAC THEN
+    SUBGOAL_THEN `p MOD 256 = p` SUBST1_TAC THENL
+     [MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_CASES_TAC `j:num = t` THENL [ALL_TAC; ASM_SIMP_TAC[]] THEN
+    FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC[];
+    DISCH_THEN ACCEPT_TAC] THEN
+  SUBGOAL_THEN `word p:byte = word_zx(word_zx(word p:int64):int32)`
+   SUBST1_TAC THENL
+   [CONV_TAC SYM_CONV THEN MATCH_MP_TAC WORD_ZX_BYTE_SMALL THEN
+    ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  W(fun (_,w) -> SPEC_TAC(`word p:int64`,`u:int64`) THEN
+                 SPEC_TAC(`word_subword (A:1600 word) (8 * t,8):byte`,
+                          `x:byte`)) THEN
+  REPEAT GEN_TAC THEN W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w));
+  DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let ABS_T2 = prove
+ (ABS_T2_STMT,
+  META_EXISTS_TAC THEN
+  MAP_EVERY X_GEN_TAC [`e:(uarch_event)list`; `st:int64`; `k:num`; `A:1600 word`; `pc:num`] THEN
+  REWRITE_TAC[SOME_FLAGS; NONOVERLAPPING_CLAUSES; READ_MEMORY_WBYTES_1600;
+              fst ABS_EXEC] THEN
+  STRIP_TAC THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN
+  FIRST_ASSUM(ASSUME_TAC o MATCH_MP XOR_BYTES_OF_STATE) THEN
+  FIRST_X_ASSUM(fun th ->
+    if is_forall(concl th) && free_in `bytes8` (concl th) then
+      ASSUME_TAC(MP (SPEC `k:num` th) (ASSUME `k < 200`)) THEN
+      ASSUME_TAC(XOR_BYTES_RESTRICT_RULE `k:num` th)
+    else failwith "XOR_BYTES_RESTRICT_RULE") THEN
+  MP_TAC(SPEC `k:num` VAL_ZX_UXTW) THEN
+  ANTS_TAC THENL [SIMPLE_ARITH_TAC; STRIP_TAC] THEN
+  ARM_STEPS_TAC ABS_EXEC (1--1) THEN ARGS_32_TAC [`k:num`] THEN
+  ARM_STEPS_TAC ABS_EXEC (2--3) THEN ARGS_32_TAC [`k:num`] THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [MP_TAC(ISPECL [`st:int64`; `A:1600 word`; `k:num`; `1`; `128`;
+                 `s3:armstate`] XOR_BYTES_FINAL2) THEN
+  REWRITE_TAC[READ_MEMORY_WBYTES_1600] THEN
+  ANTS_TAC THENL
+   [CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    CONJ_TAC THENL [CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+    X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+    MP_TAC(SPECL [`A:1600 word`; `128`; `k:num`; `0`; `j:num`]
+                 XOR_BYTES_STEP) THEN
+    ASM_REWRITE_TAC[ADD_CLAUSES] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[ARITH_RULE `8 * 0 = 0`; EXP; MOD_1; MULT_CLAUSES; WORD_XOR_0;
+                DIV_1] THEN
+    DISCH_THEN SUBST1_TAC THEN
+    ASM_CASES_TAC `j:num = k` THENL [ALL_TAC; ASM_SIMP_TAC[]] THEN
+    FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC[];
+    DISCH_THEN ACCEPT_TAC] THEN
+  W(fun (_,w) -> SPEC_TAC(`word_subword (A:1600 word) (8 * k,8):byte`,
+                          `x:byte`)) THEN
+  GEN_TAC THEN W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w));
+  DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let LTMUL = prove
+ (LTMUL_STMT,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC LTE_TRANS THEN
+  EXISTS_TAC `E * (p + 1)` THEN CONJ_TAC THENL
+   [REWRITE_TAC[MULT_CLAUSES; ADD_ASSOC] THEN ASM_ARITH_TAC;
+    REWRITE_TAC[LE_MULT_LCANCEL] THEN ASM_ARITH_TAC]);;
+
+let TAIL_NUM = prove
+ (TAIL_NUM_STMT,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `!(K:1600 word) a b c.
+                  word_xor (word_xor (word_xor K a) b) c =
+                  word_xor K (word_xor (word_xor a b) c)`
+   (fun th -> REWRITE_TAC[th]) THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+  AP_TERM_TAC THEN
+  MP_TAC(INST_TYPE [`:1600`,`:N`]
+    (SPECL [`Mr:num`; `p:num`; `8 * t`] WORD_XOR_DISJOINT_ADD)) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_THEN SUBST1_TAC] THEN
+  ASM_CASES_TAC `t = r - 1` THENL
+   [FIRST_ASSUM(fun th -> REWRITE_TAC[GSYM th]) THEN REWRITE_TAC[] THEN
+    MP_TAC(INST_TYPE [`:1600`,`:N`]
+      (SPECL [`Mr + 2 EXP (8 * t) * p`; `1`; `8 * t + 7`]
+             WORD_XOR_DISJOINT_ADD)) THEN
+    REWRITE_TAC[EXP_ADD; MULT_CLAUSES] THEN CONV_TAC NUM_REDUCE_CONV THEN
+    ANTS_TAC THENL [MATCH_MP_TAC LTMUL THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
+    DISCH_THEN SUBST1_TAC THEN AP_TERM_TAC THEN ARITH_TAC;
+    ASM_REWRITE_TAC[] THEN
+    MP_TAC(INST_TYPE [`:1600`,`:N`]
+      (SPECL [`Mr + 2 EXP (8 * t) * p`; `128`; `8 * (r - 1)`]
+             WORD_XOR_DISJOINT_ADD)) THEN
+    ANTS_TAC THENL
+     [SUBGOAL_THEN `Mr + 2 EXP (8 * t) * p < 2 EXP (8 * t) * 128` MP_TAC THENL
+       [MATCH_MP_TAC LTMUL THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
+      SUBGOAL_THEN `2 EXP (8 * t) * 128 <= 2 EXP (8 * (r - 1))` MP_TAC THENL
+       [SUBGOAL_THEN `2 EXP (8 * t) * 128 <= 2 EXP (8 * t) * 2 EXP 8`
+          MP_TAC THENL
+         [REWRITE_TAC[LE_MULT_LCANCEL] THEN CONV_TAC NUM_REDUCE_CONV;
+          ALL_TAC] THEN
+        REWRITE_TAC[GSYM EXP_ADD] THEN
+        SUBGOAL_THEN `2 EXP (8 * t + 8) <= 2 EXP (8 * (r - 1))` MP_TAC THENL
+         [REWRITE_TAC[LE_EXP] THEN ASM_ARITH_TAC; ARITH_TAC];
+        ARITH_TAC];
+      DISCH_THEN SUBST1_TAC THEN AP_TERM_TAC THEN
+      SUBGOAL_THEN
+       `2 EXP (8 * (r - 1)) = 2 EXP (8 * t) * 2 EXP (8 * (r - t - 1))`
+       SUBST1_TAC THENL
+       [REWRITE_TAC[GSYM EXP_ADD] THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
+        ALL_TAC] THEN
+      ARITH_TAC]]);;
+
+let FINAL_EQ = prove
+ (FINAL_EQ_STMT,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`M:num`; `num_of_bytelist(keccak_pad r p mlen)`; `mlen:num`;
+                `r:num`] KECCAK_BLOCK_LAST) THEN
+  ANTS_TAC THENL
+   [ASM_REWRITE_TAC[] THEN MATCH_MP_TAC KECCAK_PAD_BOUND THEN ASM_ARITH_TAC;
+    DISCH_THEN SUBST1_TAC] THEN
+  ASM_SIMP_TAC[KECCAK_PAD_NUM; ARITH_RULE `p < 128 ==> p < 128`] THEN
+  MP_TAC(SPECL [`K:1600 word`; `M DIV 2 EXP (8 * r * mlen DIV r)`;
+                `mlen MOD r`; `r:num`; `p:num`] TAIL_NUM) THEN
+  ANTS_TAC THENL
+   [ASM_REWRITE_TAC[] THEN
+    MP_TAC(SPECL [`mlen:num`; `r:num`] MOD_LT_EQ) THEN
+    MP_TAC(SPECL [`mlen:num`; `r:num`] DIVISION) THEN
+    ASM_SIMP_TAC[ARITH_RULE `0 < r ==> ~(r = 0)`] THEN
+    REPEAT STRIP_TAC THEN
+    ASM_REWRITE_TAC[] THEN
+    SIMP_TAC[RDIV_LT_EQ; EXP_EQ_0; ARITH_EQ; GSYM EXP_ADD] THEN
+    REWRITE_TAC[GSYM LEFT_ADD_DISTRIB] THEN
+    SUBGOAL_THEN `r * mlen DIV r + mlen MOD r = mlen`
+     (fun th -> ASM_REWRITE_TAC[th]) THEN
+    ASM_ARITH_TAC;
+    DISCH_THEN ACCEPT_TAC]);;
+
+let ABSORB_BLOCK_BOUND = prove
+ (ABSORB_BLOCK_BOUND_STMT,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`mlen:num`; `r:num`] DIVISION) THEN
+  ASM_SIMP_TAC[ARITH_RULE `0 < r ==> ~(r = 0)`] THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (fun th -> GEN_REWRITE_TAC RAND_CONV [th])
+    ASSUME_TAC) THEN
+  MATCH_MP_TAC(ARITH_RULE `a <= b ==> a <= b + c`) THEN
+  REWRITE_TAC[ARITH_RULE `r * i + r = (i + 1) * r`; LE_MULT_RCANCEL] THEN
+  ASM_ARITH_TAC);;
+
+let ABSORB_MOD_EQ = prove
+ (ABSORB_MOD_EQ_STMT,
+  REPEAT GEN_TAC THEN
+  MP_TAC(SPECL [`mlen:num`; `r:num`] (CONJUNCT2 DIVISION_SIMP)) THEN
+  ARITH_TAC);;
+
+let ABSORB_LOOP_TEST = prove
+ (ABSORB_LOOP_TEST_STMT,
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC[ARITH_RULE `i + 1 < q <=> i + 2 <= q`; LE_RDIV_EQ;
+               ARITH_RULE `0 < r ==> ~(r = 0)`] THEN
+  ASM_ARITH_TAC);;
+
+let P8 = prove
+ (P8_STMT,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `word p:int64 = word_zx(word p:byte)` SUBST1_TAC THENL
+   [REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_8;
+                DIMINDEX_64] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    ASM_SIMP_TAC[MOD_LT; ARITH_RULE `p < 256 ==> p < 18446744073709551616`];
+    ALL_TAC] THEN
+  SUBGOAL_THEN `word p:int64 = word_zx(word_zx(word p:byte):int32)`
+   SUBST1_TAC THENL
+   [REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_8;
+                DIMINDEX_32; DIMINDEX_64] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+     `p < 256 ==> p < 4294967296 /\ p < 18446744073709551616`];
+    ALL_TAC] THEN
+  W(fun (_,w) -> SPEC_TAC(`word p:byte`,`x:byte`)) THEN GEN_TAC THEN
+  W(fun (_,w) -> ACCEPT_TAC(BITBLAST_RULE w)));;
+
+let NONOVERLAPPING_SUBRANGE = prove
+ (NONOVERLAPPING_SUBRANGE_STMT,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC NONOVERLAPPING_SUBREGIONS THEN
+  MAP_EVERY EXISTS_TAC [`s:int64`; `sn:num`; `m:int64`; `n:num`] THEN
+  ASM_REWRITE_TAC[] THEN CONJ_TAC THEN
+  REWRITE_TAC[CONTAINED] THEN X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  FIRST
+   [EXISTS_TAC `i:num` THEN ASM_REWRITE_TAC[] THEN NO_TAC;
+    EXISTS_TAC `k + i` THEN CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    REWRITE_TAC[WORD_ADD; WORD_ADD_ASSOC]]);;
+
+let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL = prove
+ (MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL_STMT,
+  ABS_INTRO_TAC THEN
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_join1`
+   ABS_MID_J1 THEN
+  CONJ_TAC THENL
+   [ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THENL
+     [ENSURES_EVENTS_SEQUENCE_TAC `pc + mlk_keccak_absorb_once_join2`
+        ABS_MID_J2 THEN
+      CONJ_TAC THENL [ABS_ENTRY_S_TAC; ABS_J2_TAC];
+      ENSURES_EVENTS_SEQUENCE_TAC
+       `pc + mlk_keccak_absorb_once_loop1_exit` ABS_MID_LX THEN
+      CONJ_TAC THENL [ABS_LOOP_TAC; ABS_LX_TAC]];
+    ASM_CASES_TAC `mlen < r` THEN ASM_REWRITE_TAC[] THEN ABS_PART2_TAC]);;
+
+let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT_STMT,
+  REPEAT STRIP_TAC THEN
+  X_CHOOSE_TAC `f:int64->int64->num->num->num->int64->int64->(uarch_event)list`
+   MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL THEN
+  GHOST_INTRO_TAC `e:(uarch_event)list` `read events` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `st:int64`; `r:num`; `m:int64`; `mlen:num`;
+    `p:num`; `M:num`; `pc:num`; `stackpointer:int64`;
+    `returnaddress:int64`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_PREPOST_WEAKEN) THEN
+  SIMP_TAC[]);;
+
+let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE = prove
+ (MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE_STMT,
+  MP_TAC MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL THEN
+  MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC THEN DISCH_TAC THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  GHOST_INTRO_TAC `M:num` `read (memory :> bytes(m,mlen))` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `st:int64`; `r:num`; `m:int64`; `mlen:num`;
+    `p:num`; `M:num`; `pc:num`; `stackpointer:int64`;
+    `returnaddress:int64`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_PREPOST_WEAKEN) THEN
+  SIMP_TAC[]);;
