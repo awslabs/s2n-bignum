@@ -96,6 +96,9 @@ let arm_ldrsb = new_definition `arm_ldrsb w Rt =
   if w then arm_LDRSB (WREG' Rt) else arm_LDRSB (XREG' Rt)`;;
 let arm_ldrsh = new_definition `arm_ldrsh w Rt =
   if w then arm_LDRSH (WREG' Rt) else arm_LDRSH (XREG' Rt)`;;
+let arm_extoff = new_definition `arm_extoff sx S k Rm =
+  let r = Extendedreg (WREG' Rm) (if sx then SXTW else UXTW) in
+  if S then Shiftreg_Offset r k else Register_Offset r`;;
 let arm_ldstp = new_definition `arm_ldstp ld x Rt Rt2 =
   if x then (if ld then arm_LDP else arm_STP) (XREG' Rt) (XREG' Rt2)
        else (if ld then arm_LDP else arm_STP) (WREG' Rt) (WREG' Rt2)`;;
@@ -137,6 +140,12 @@ let arm_ldst3 = new_definition `arm_ldst3 ld Rt1 =
   let Rt2:(5 word) = word ((val Rt1 + 1) MOD 32) in
   let Rt3:(5 word) = word ((val Rt1 + 2) MOD 32) in
   (if ld then arm_LD3 else arm_ST3) [QREG' Rt1; QREG' Rt2; QREG' Rt3]`;;
+let arm_ldst4 = new_definition `arm_ldst4 ld Rt1 =
+  let Rt2:(5 word) = word ((val Rt1 + 1) MOD 32) in
+  let Rt3:(5 word) = word ((val Rt1 + 2) MOD 32) in
+  let Rt4:(5 word) = word ((val Rt1 + 3) MOD 32) in
+  (if ld then arm_LD4 else arm_ST4)
+    [QREG' Rt1; QREG' Rt2; QREG' Rt3; QREG' Rt4]`;;
 
 (* The 'AdvSimdExpandImm' shared function in the A64 ISA specification.
    This definition takes one 8-bit word and expands it to 64 bit according to
@@ -165,8 +174,18 @@ let arm_adv_simd_expand_imm = new_definition
       SOME(word_duplicate (word_join (word 0:byte) abcdefgh:int16))
     else if cmode = word 0b1010 \/ cmode = word 0b1011 then
        SOME(word_duplicate (word_join abcdefgh (word 0:byte):int16))
-    else if cmode = word 0b0100 then
+    else if cmode = word 0b0000 \/ cmode = word 0b0001 then
+      SOME(word_duplicate (word_zx abcdefgh:int32))
+    else if cmode = word 0b0010 \/ cmode = word 0b0011 then
+      SOME(word_duplicate
+        (word_join (word_zx abcdefgh:(24)word) (word 0:byte):int32))
+    else if cmode = word 0b0100 \/ cmode = word 0b0101 then
       SOME(word_duplicate (word_join (word_zx abcdefgh:int16) (word 0:int16):int32))
+    else if cmode = word 0b0110 \/ cmode = word 0b0111 then
+      SOME(word_duplicate (word_join abcdefgh (word 0:(24)word):int32))
+    else if cmode = word 0b1100 then
+      SOME(word_duplicate
+        (word_join (word_zx abcdefgh:(24)word) (word 255:byte):int32))
     else if cmode = word 0b1101 then
       SOME(word_duplicate (word_join (word_zx abcdefgh:int16) (word 65535:int16):int32))
     else // Other cases are uncovered.
@@ -312,6 +331,8 @@ let decode = new_definition `!w:int32. decode w =
                   (XREG' Rd) (XREG' Rn) (XREG' Rm) (XREG' Ra)
                 else (if o0 then arm_MSUB else arm_MADD)
                   (WREG' Rd) (WREG' Rn) (WREG' Rm) (WREG' Ra))
+  | [0b1101011000011111000000:22; Rn:5; 0:5] ->
+    SOME (arm_BR (XREG' Rn))
   | [0b1101011001011111000000:22; Rn:5; 0:5] ->
     SOME (arm_RET (XREG' Rn))
   | [sf; 0b10110101100000000001:20; N; Rn:5; Rd:5] ->
@@ -324,6 +345,9 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_UMULH (XREG' Rd) (XREG' Rn) (XREG' Rm))
   | [0b10011011101:11; Rm:5; o0; Ra:5; Rn:5; Rd:5] ->
     SOME ((if o0 then arm_UMSUBL else arm_UMADDL)
+          (XREG' Rd) (WREG' Rn) (WREG' Rm) (XREG' Ra))
+  | [0b10011011001:11; Rm:5; o0; Ra:5; Rn:5; Rd:5] ->
+    SOME ((if o0 then arm_SMSUBL else arm_SMADDL)
           (XREG' Rd) (WREG' Rn) (WREG' Rm) (XREG' Ra))
   | [0:1; immlo:2; 0b10000:5; immhi:19; Rd:5] ->
     SOME (arm_ADR (XREG' Rd) (word_join immhi immlo))
@@ -340,6 +364,14 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldst ld x Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) (if x then 3 else 2)
             else Register_Offset (XREG' Rm)))
+    // Register offset with UXTW or SXTW (sx) extension, or SXTX
+  | [1:1; x; 0b1110000:7; ld; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst ld x Rt (XREG_SP Rn)
+      (arm_extoff sx S (if x then 3 else 2) Rm))
+  | [1:1; x; 0b1110000:7; ld; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst ld x Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) (if x then 3 else 2)
+            else Register_Offset (XREG' Rm)))
   | [0b001110000:9; ld; 0b0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
   | [0b001110000:9; ld; 0b0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
@@ -348,6 +380,12 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Immediate_Offset (word_zx imm12)))
     // LDRB/STRB shifted register, no shift: option:011 S:0
   | [0b001110000:9; ld; 0b1:1; Rm:5; 0b011010:6; Rn:5; Rt:5] ->
+    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
+    // ... and with LSL #0 written explicitly (S:1), or with SXTX, which
+    // is the same as LSL for an X register offset
+  | [0b001110000:9; ld; 0b1:1; Rm:5; 0b011110:6; Rn:5; Rt:5] ->
+    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
+  | [0b001110000:9; ld; 0b1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
     // LDRB/STRB with a UXTW or SXTW register offset. Both values of S
     // encode the byte access scale of zero.
@@ -382,6 +420,10 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldsth ld Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (Extendedreg (WREG' Rm) SXTW) 1
             else Register_Offset (Extendedreg (WREG' Rm) SXTW)))
+    // LDRH/STRH with an SXTX register offset, the same as LSL
+  | [0b011110000:9; ld; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldsth ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 1 else Register_Offset (XREG' Rm)))
 
     // LDRSB, post-indexed and pre-indexed immediate
   | [0b001110001:9; w; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
@@ -403,6 +445,9 @@ let decode = new_definition `!w:int32. decode w =
   | [0b001110001:9; w; 1:1; Rm:5; 0b110:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_ldrsb w Rt (XREG_SP Rn)
       (Register_Offset (Extendedreg (WREG' Rm) SXTW)))
+    // LDRSB with an SXTX register offset, the same as LSL
+  | [0b001110001:9; w; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsb w Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
 
     // LDRSH, post-indexed and pre-indexed immediate
   | [0b011110001:9; w; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
@@ -428,6 +473,10 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldrsh w Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (Extendedreg (WREG' Rm) SXTW) 1
             else Register_Offset (Extendedreg (WREG' Rm) SXTW)))
+    // LDRSH with an SXTX register offset, the same as LSL
+  | [0b011110001:9; w; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsh w Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 1 else Register_Offset (XREG' Rm)))
 
   | [x; 0b010100:6; pre; 0b1:1; ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)
@@ -469,6 +518,24 @@ let decode = new_definition `!w:int32. decode w =
   | [0b00:2; 0b1111001:7; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2;  Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) 4 else Register_Offset (XREG' Rm)))
+  // Register offset, size 64, with LSL #0 or #3, UXTW, SXTW or SXTX
+  | [0b11:2; 0b1111000:7; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 3 else Register_Offset (XREG' Rm)))
+  | [0b11:2; 0b1111000:7; is_ld; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (arm_extoff sx S 3 Rm))
+  | [0b11:2; 0b1111000:7; is_ld; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 3 else Register_Offset (XREG' Rm)))
+  // Register offset, size 32, with LSL #0 or #2, UXTW, SXTW or SXTX
+  | [0b10:2; 0b1111000:7; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_s is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 2 else Register_Offset (XREG' Rm)))
+  | [0b10:2; 0b1111000:7; is_ld; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_s is_ld Rt (XREG_SP Rn) (arm_extoff sx S 2 Rm))
+  | [0b10:2; 0b1111000:7; is_ld; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_s is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 2 else Register_Offset (XREG' Rm)))
   // LDP/STP (signed offset, SIMD&FP), only sizes 128 and 64
   | [0b10:2; 0b1011010:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)
@@ -528,6 +595,29 @@ let decode = new_definition `!w:int32. decode w =
   // LDURSH
   | [0b011110001:9; w; 0:1; imm9:9; 0:2; Rn:5; Rt:5] ->
     SOME (arm_ldrsh w Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+
+  // LDRSW (sign-extending word load to an X register): post-index,
+  // pre-index, unscaled (LDURSW), unsigned offset, and register offset
+  // with LSL #0 or #2, UXTW, SXTW or SXTX
+  | [0b1011100010:10; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
+      (Postimmediate_Offset (word_sx imm9)))
+  | [0b1011100010:10; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
+      (Preimmediate_Offset (word_sx imm9)))
+  | [0b1011100010:10; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+  | [0b1011100110:10; imm12:12; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
+      (Immediate_Offset (word (val imm12 * 4))))
+  | [0b1011100010:10; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 2 else Register_Offset (XREG' Rm)))
+  | [0b1011100010:10; 1:1; Rm:5; sx; 0b10:2; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn) (arm_extoff sx S 2 Rm))
+  | [0b1011100010:10; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_LDRSW (XREG' Rt) (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 2 else Register_Offset (XREG' Rm)))
 
   // LD1/ST1 (multiple structures), 1 register,
   //   Post-immediate offset and post-register offset, and no offset.
@@ -656,12 +746,45 @@ let decode = new_definition `!w:int32. decode w =
                             else Postreg_Offset (XREG' Rm))
             32 (2 * (if q then 1 else 0) + (if sb then 1 else 0)))
 
-  // LD1R, Post-immediate offset, size 64 and 128
-  | [0b0:1; q; 0b001101110111111100:18; size:2; Rn:5; Rt:5] ->
-    let esize = 8 * (2 EXP (val size)) in
-    let datasize = if q then 128 else 64 in
-    let off = word (esize DIV 8) in
-    SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) (Postimmediate_Offset off) esize datasize)
+  // LD1R, no offset, post-immediate offset and post-register offset
+  | [0b0:1; q; 0b001101:6; p; 0b10:2; Rm:5; 0b1100:4; size:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let esize = 8 * (2 EXP (val size)) in
+      let datasize = if q then 128 else 64 in
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word (esize DIV 8))
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) off esize datasize)
+
+  // LD1 (single structure) of one lane, no offset, post-immediate offset
+  // and post-register offset, for the element sizes other than 32 (whose
+  // LD1 and ST1 forms are decoded above). The lane index is Q:S:size for
+  // bytes, Q:S:size<1> for halfwords (with size<0> = 0) and Q for
+  // doublewords (S = 0, size = 01). The other combinations are unallocated.
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b000:3; S:1; size:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 1)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1_LANE (QREG' Rt) (XREG_SP Rn) off 8
+                         (8 * val Q + 4 * val S + val size))
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b010:3; S:1; h:1; 0:1; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 2)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1_LANE (QREG' Rt) (XREG_SP Rn) off 16
+                         (4 * val Q + 2 * val S + val h))
+  | [0:1; Q:1; 0b001101:6; p; 0b10:2; Rm:5; 0b100:3; 0:1; 0b01:2; Rn:5; Rt:5] ->
+    if ~p /\ ~(Rm = word 0) then NONE // "UNDEFINED"
+    else
+      let off = if ~p then No_Offset
+                else if val Rm = 31 then Postimmediate_Offset (word 8)
+                else Postreg_Offset (XREG' Rm) in
+      SOME (arm_LD1_LANE (QREG' Rt) (XREG_SP Rn) off 64 (val Q))
 
   // LD3/ST3 (multiple structures), 3 registers, Post-immediate and register offset
   | [0:1; q; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0100:4; size:2; Rn:5; Rt:5] ->
@@ -673,6 +796,31 @@ let decode = new_definition `!w:int32. decode w =
            (if val Rm = 31 then (Postimmediate_Offset offset)
                            else Postreg_Offset (XREG' Rm))
            datasize esize)
+
+  // LD3/ST3 (multiple structures), 3 registers, no offset
+  | [0:1; q; 0b0011000:7; is_ld; 0b000000:6; 0b0100:4; size:2; Rn:5; Rt:5] ->
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_ldst3 is_ld Rt (XREG_SP Rn) No_Offset datasize esize)
+
+  // LD4/ST4 (multiple structures), 4 registers, Post-immediate and register offset
+  | [0:1; q; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0000:4; size:2; Rn:5; Rt:5] ->
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    let offset = if q then word 64 else word 32 in
+    SOME (arm_ldst4 is_ld Rt (XREG_SP Rn)
+           (if val Rm = 31 then (Postimmediate_Offset offset)
+                           else Postreg_Offset (XREG' Rm))
+           datasize esize)
+
+  // LD4/ST4 (multiple structures), 4 registers, no offset
+  | [0:1; q; 0b0011000:7; is_ld; 0b000000:6; 0b0000:4; size:2; Rn:5; Rt:5] ->
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_ldst4 is_ld Rt (XREG_SP Rn) No_Offset datasize esize)
 
   // SIMD operations
   | [0:1; q; u; 0b01110:5; size:2; 1:1; Rm:5; 0b100001:6; Rn:5; Rd:5] ->
@@ -802,21 +950,36 @@ let decode = new_definition `!w:int32. decode w =
   | [0:1; q; 1:1; 0b011110:6; immh:4; abc:3; cmode:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI (op=1), USHR (Vector), USRA (Vector), SLI (Vector), SRI (vector)
     if val immh = 0 then
-      // MOVI, 128-bit only
-      if cmode = word 0b1110 /\ q then
+      // MOVI, 64-bit elements (the scalar form MOVI Dd if q = 0)
+      if cmode = word 0b1110 then
         let abcdefgh:(8)word = word_join abc defgh in
         let imm = arm_adv_simd_expand_imm abcdefgh (word 1:(1)word) cmode in
         match imm with
-        | SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
+        | SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                      else SOME (arm_MOVI (DREG' Rd) imm)
         | NONE -> NONE
-      // BIC (vector immediate), 16-bit size only
-      else if cmode = word 0b1001 \/ cmode = word 0b1011 then
+      // BIC (vector immediate), 32-bit (0xx1) and 16-bit (10x1) sizes
+      else if cmode = word 0b0001 \/ cmode = word 0b0011 \/
+              cmode = word 0b0101 \/ cmode = word 0b0111 \/
+              cmode = word 0b1001 \/ cmode = word 0b1011 then
         let abcdefgh:(8)word = word_join abc defgh in
         let datasize = if q then 128 else 64 in
         match arm_adv_simd_expand_imm abcdefgh (word 1:(1)word) cmode with
           SOME imm ->
             let imm2 = if q then word_duplicate imm else word_zx imm in
             SOME (arm_BIC_VEC (QREG' Rd) (QREG' Rd) (rvalue imm2) datasize)
+         | NONE -> NONE
+      // MVNI, 32-bit shifted (cmode = 0xx0), 16-bit shifted (10x0) and
+      // 32-bit shifting ones (110x)
+      else if cmode = word 0b0000 \/ cmode = word 0b0010 \/
+              cmode = word 0b0100 \/ cmode = word 0b0110 \/
+              cmode = word 0b1000 \/ cmode = word 0b1010 \/
+              cmode = word 0b1100 \/ cmode = word 0b1101 then
+        let abcdefgh:(8)word = word_join abc defgh in
+        match arm_adv_simd_expand_imm abcdefgh (word 1:(1)word) cmode with
+          SOME imm ->
+            if q then SOME (arm_MOVI (QREG' Rd) (word_not imm))
+            else SOME (arm_MOVI (DREG' Rd) (word_not imm))
          | NONE -> NONE
       else NONE
     else if cmode = (word 0b0000:(4)word) then
@@ -883,10 +1046,9 @@ let decode = new_definition `!w:int32. decode w =
       // decode discrimination tree (it would share a leaf and shadow the
       // immh=0 modified-immediate encodings).  We therefore decode SQSHRUN
       // here, inside the asimdimm clause that owns this region.  immh=0 was
-      // already handled above (cmode=1000 / immh=0 is MVNI, currently
-      // unsupported -> NONE); here immh<>0.  esize is Rd's (narrow) element
-      // size; the source lanes are 2*esize wide.  immh top bit set
-      // (2*esize = 128) is reserved/UNDEFINED.
+      // already handled above (cmode=1000 / immh=0 is MVNI); here immh<>0.
+      // esize is Rd's (narrow) element size; the source lanes are 2*esize
+      // wide.  immh top bit set (2*esize = 128) is reserved/UNDEFINED.
       let immb = abc in
       let Rn = defgh in
       if bit 3 immh then NONE // "UNDEFINED"
@@ -953,6 +1115,10 @@ let decode = new_definition `!w:int32. decode w =
   | [0b1001111001100111000000:22; Rn:5; Rd:5] ->
     // FMOV (double, from general)
     SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 0)
+
+  | [0b0001111000100111000000:22; Rn:5; Rd:5] ->
+    // FMOV (single, from general)
+    SOME (arm_FMOV_ItoF (QREG' Rd) (WREG' Rn) 0)
 
   | [0b1001111010101111000000:22; Rn:5; Rd:5] ->
     // FMOV (double high part, from general)
@@ -1033,11 +1199,11 @@ let decode = new_definition `!w:int32. decode w =
 
   | [0:1; q; 0b001110:6; size:2; 0b100000000010:12; Rn:5; Rd:5] ->
     // REV64
-    if ~q then NONE // datasize = 64 is unsupported yet
-    else if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
     else
       let esize:(64)word = word_shl (word 0b1000: (64)word) (val size) in
-      SOME (arm_REV64_VEC (QREG' Rd) (QREG' Rn) (val esize))
+      let datasize = if q then 128 else 64 in
+      SOME (arm_REV64_VEC (QREG' Rd) (QREG' Rn) (val esize) datasize)
 
   | [0:1; q; 0b101110:6; size:2; 0b100000000010:12; Rn:5; Rd:5] ->
     // REV32
@@ -1136,15 +1302,14 @@ let decode = new_definition `!w:int32. decode w =
       SOME (arm_SHL_VEC (QREG' Rd) (QREG' Rn) amt esize datasize)
 
   | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b101001:6; Rn:5; Rd:5] ->
-    // SSHLL, SSHLL2 (or MOVI with cmode=1010 when immh=0 and Q=1)
+    // SSHLL, SSHLL2 (or MOVI with cmode=1010 when immh=0)
     if immh = (word 0b0:(4)word) then
-      if q then
-        let abcdefgh:(8)word = word_join immb Rn in
-        let imm = arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1010) in
-        match imm with
-        | SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
-        | NONE -> NONE
-      else NONE
+      let abcdefgh:(8)word = word_join immb Rn in
+      let imm = arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1010) in
+      match imm with
+      | SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                    else SOME (arm_MOVI (DREG' Rd) imm)
+      | NONE -> NONE
     else if bit 3 immh then NONE // "UNDEFINED"
     else
       let esize = 8 * 2 EXP (3 - word_clz immh) in
@@ -1156,15 +1321,14 @@ let decode = new_definition `!w:int32. decode w =
 
   | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b100001:6; Rn:5; Rd:5] ->
     // SHRN (Q=0, low half) / SHRN2 (Q=1, high half)
-    // (or MOVI with cmode=1000 when immh=0 and Q=1)
+    // (or MOVI with cmode=1000 when immh=0)
     if immh = (word 0b0:(4)word) then
-      if q then
-        let abcdefgh:(8)word = word_join immb Rn in
-        let imm = arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1000) in
-        match imm with
-        | SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
-        | NONE -> NONE
-      else NONE
+      let abcdefgh:(8)word = word_join immb Rn in
+      let imm = arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1000) in
+      match imm with
+      | SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                    else SOME (arm_MOVI (DREG' Rd) imm)
+      | NONE -> NONE
     else if bit 3 immh then NONE // "UNDEFINED"
     else
       let esize = 8 * 2 EXP (3 - word_clz immh) in
@@ -1249,8 +1413,13 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_SQRDMULH_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
 
   | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b001001:6; Rn:5; Rd:5] ->
-    // SRSHR
-    if immh = (word 0b0: (4)word) then NONE // "asimdimm case"
+    // SRSHR, or MOVI 32-bit with LSL #8 (op=0, cmode=0010) when immh=0
+    if immh = (word 0b0: (4)word) then
+      let abcdefgh:(8)word = word_join immb Rn in
+      match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b0010) with
+        SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                    else SOME (arm_MOVI (DREG' Rd) imm)
+      | NONE -> NONE
     else if bit 3 immh /\ ~q then NONE // "UNDEFINED"
     else
       let esize = 8 * 2 EXP (3 - word_clz immh) in
@@ -1292,20 +1461,32 @@ let decode = new_definition `!w:int32. decode w =
 
   | [0:1; q; 0:1; 0b011110:6; 0b0000:4; abc:3; 0b0100:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI (op=0, cmode=0100, 32-bit element with LSL #16)
-    if q then
-      let abcdefgh:(8)word = word_join abc defgh in
-      match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b0100) with
-        SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
-      | NONE -> NONE
-    else NONE
+    let abcdefgh:(8)word = word_join abc defgh in
+    (match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b0100) with
+       SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                   else SOME (arm_MOVI (DREG' Rd) imm)
+     | NONE -> NONE)
+  | [0:1; q; 0:1; 0b011110:6; 0b0000:4; abc:3; 0b0110:4; 0b01:2; defgh:5; Rd:5] ->
+    // MOVI (op=0, cmode=0110, 32-bit element with LSL #24)
+    let abcdefgh:(8)word = word_join abc defgh in
+    (match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b0110) with
+       SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                   else SOME (arm_MOVI (DREG' Rd) imm)
+     | NONE -> NONE)
+  | [0:1; q; 0:1; 0b011110:6; 0b0000:4; abc:3; 0b1100:4; 0b01:2; defgh:5; Rd:5] ->
+    // MOVI (op=0, cmode=1100, 32-bit element with MSL #8)
+    let abcdefgh:(8)word = word_join abc defgh in
+    (match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1100) with
+       SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                   else SOME (arm_MOVI (DREG' Rd) imm)
+     | NONE -> NONE)
   | [0:1; q; 0:1; 0b011110:6; 0b0000:4; abc:3; 0b1101:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI (op=0, cmode=1101, 32-bit element with MSL #16)
-    if q then
-      let abcdefgh:(8)word = word_join abc defgh in
-      match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1101) with
-        SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
-      | NONE -> NONE
-    else NONE
+    let abcdefgh:(8)word = word_join abc defgh in
+    (match arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1101) with
+       SOME imm -> if q then SOME (arm_MOVI (QREG' Rd) imm)
+                   else SOME (arm_MOVI (DREG' Rd) imm)
+     | NONE -> NONE)
 
   | [0:1; q; 0b001110:6; size:2; 0:1; Rm:5; 0:1; op; 0b1010:4; Rn:5; Rd:5] ->
     // TRN1 and TRN2
@@ -1465,6 +1646,19 @@ let decode = new_definition `!w:int32. decode w =
       else
         SOME (arm_SSUBW (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
 
+  | [0:1; q; 0b001110:6; size:2; 0b1:1; Rm:5; 0b010000:6; Rn:5; Rd:5] ->
+    // ADDHN (vector, Q = 0). ADDHN2 (vector, Q = 1)
+    // Add narrowing high half: the 2*esize-bit lanes of Vn and Vm are
+    // added and the high esize bits of each sum are kept. esize is the
+    // destination (narrow) element size. size=11 is UNDEFINED.
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize: (64)word = word_shl (word 8: (64)word) (val size) in
+      if q then
+        SOME (arm_ADDHN2 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      else
+        SOME (arm_ADDHN (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+
   | [0:1; q; 0b001110:6; size:2; 0b1:1; Rm:5; 0b100000:6; Rn:5; Rd:5] ->
     // SMLAL (vector, Q = 0). SMLAL2 (vector, Q=1)
     if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
@@ -1491,7 +1685,11 @@ let decode = new_definition `!w:int32. decode w =
       SOME (arm_UMOV (XREG' Rd) (QREG' Rn) (val (word_subword imm5 (4,1): 1 word)) 8)
     else if ~q /\ word_subword imm5 (0,3) = (word 0b100: 3 word) then // v.s
       SOME (arm_UMOV (WREG' Rd) (QREG' Rn) (val (word_subword imm5 (3,2): 2 word)) 4)
-    else NONE // v.h, v.b are unsupported
+    else if ~q /\ word_subword imm5 (0,2) = (word 0b10: 2 word) then // v.h
+      SOME (arm_UMOV (WREG' Rd) (QREG' Rn) (val (word_subword imm5 (2,3): 3 word)) 2)
+    else if ~q /\ bit 0 imm5 then // v.b
+      SOME (arm_UMOV (WREG' Rd) (QREG' Rn) (val (word_subword imm5 (1,4): 4 word)) 1)
+    else NONE
 
   | [0:1; q; 0b101110:6; size:2; 1:1; Rm:5; 0b110000:6; Rn:5; Rd:5] ->
     // UMULL (vector, Q = 0). UMULL2 (vector, Q = 1)
@@ -1527,17 +1725,19 @@ let decode = new_definition `!w:int32. decode w =
 
   | [0:1; q; 0b001110:6; size:2; 0b0:1; Rm:5; 0b000110:6; Rn:5; Rd:5] ->
     // UZP1
-    if ~q then NONE // datasize = 64 is unsupported yet
+    if size = word 0b11 /\ ~q then NONE // "UNDEFINED"
     else
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
-      SOME (arm_UZP1 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      let datasize = if q then 128 else 64 in
+      SOME (arm_UZP1 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize) datasize)
 
   | [0:1; q; 0b001110:6; size:2; 0b0:1; Rm:5; 0b010110:6; Rn:5; Rd:5] ->
     // UZP2
-    if ~q then NONE // datasize = 64 is unsupported yet
+    if size = word 0b11 /\ ~q then NONE // "UNDEFINED"
     else
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
-      SOME (arm_UZP2 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      let datasize = if q then 128 else 64 in
+      SOME (arm_UZP2 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize) datasize)
 
   | [0:1; q; 0b001110:6; size:2; 0b100001001010:12; Rn:5; Rd:5] ->
     // XTN (q=0, low half) / XTN2 (q=1, high half)
@@ -1546,6 +1746,17 @@ let decode = new_definition `!w:int32. decode w =
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
       if q then SOME (arm_XTN2 (QREG' Rd) (QREG' Rn) (val esize))
       else SOME (arm_XTN (QREG' Rd) (QREG' Rn) (val esize))
+
+  | [0:1; q; 0b101110:6; size:2; 0b100001001110:12; Rn:5; Rd:5] ->
+    // SHLL (Q = 0), SHLL2 (Q = 1): shift each element of the low (high)
+    // half of Vn left by esize into a 2*esize-bit element. This is
+    // USHLL/USHLL2 with shift = esize, which their own encoding cannot
+    // express. (Zero and sign extension give the same result here.)
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize = 8 * 2 EXP (val size) in
+      if q then SOME (arm_USHLL2_VEC (QREG' Rd) (QREG' Rn) esize esize)
+      else SOME (arm_USHLL_VEC (QREG' Rd) (QREG' Rn) esize esize)
 
   | [0:1; q; 0b001110:6; size:2; 0:1; Rm:5; 0:1; op; 0b1110:4; Rn:5; Rd:5] ->
     // ZIP1 (op = 0) and ZIP2 (op = 1)
@@ -1675,6 +1886,31 @@ let decode_encode_ADD_rri64 = prove (
       INST [`T`,`sf:bool`;`F`,`S:bool`;`F`,`op:bool`;`F`,`sh:bool`] o TRANS th)
       (hd (snd (snd (get_dt a (bm_add_pos tr tm)))))) THEN
   REWRITE_TAC [encode_ADD_rri64] THEN
+  MAP_EVERY SPEC_TAC [`imm12:12 word`,`imm12:12 word`;`dstreg:(5)word`,`dstreg:(5)word`;
+      `srcreg:(5)word`,`srcreg:(5)word`] THEN
+  REWRITE_TAC [FORALL_VAL_GEN; VAL_WORD; CONSPAT_pat_set; NILPAT_pat_set;
+    word1; bitval] THEN
+  CONV_TAC (DEPTH_CONV UNWIND_CONV THENC ONCE_DEPTH_CONV DIMINDEX_CONV THENC
+    NUM_REDUCE_CONV) THEN IMP_REWRITE_TAC [MOD_LT] THEN ARITH_TAC);;
+
+let encode_LDR_Q_rri = new_definition `encode_LDR_Q_rri (dstreg:(5)word) (srcreg:(5)word) (imm12:(12)word) =
+  0x3DC00000 + val (imm12) * 2 EXP 10 +
+               val srcreg * 2 EXP 5 +
+               val dstreg`;;
+
+let decode_encode_LDR_Q_rri = prove (
+  `decode (word (encode_LDR_Q_rri dstreg srcreg imm12)) =
+    SOME (arm_LDR (QREG' dstreg) (XREG_SP srcreg)
+                  (Immediate_Offset (word (val imm12 * 16))))`,
+  MATCH_MP_TAC (
+    let th = SPEC `word (encode_LDR_Q_rri dstreg srcreg imm12):int32` decode in
+    let tm = rhs (concl th) in
+    let A, tr = bm_build_tree (rhs (concl th)) in
+    let a = Array.init 32 (fun i -> Some ((0x3DC00000 land (1 lsl i)) != 0)) in
+    (DISCH_ALL o REWRITE_RULE [arm_ldst_q] o
+      INST [`T`,`is_ld:bool`] o TRANS th)
+      (hd (snd (snd (get_dt a (bm_add_pos tr tm)))))) THEN
+  REWRITE_TAC [encode_LDR_Q_rri] THEN
   MAP_EVERY SPEC_TAC [`imm12:12 word`,`imm12:12 word`;`dstreg:(5)word`,`dstreg:(5)word`;
       `srcreg:(5)word`,`srcreg:(5)word`] THEN
   REWRITE_TAC [FORALL_VAL_GEN; VAL_WORD; CONSPAT_pat_set; NILPAT_pat_set;
@@ -1935,10 +2171,11 @@ let PURE_DECODE_CONV =
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop;
               arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldst_s; arm_ldst_h; arm_ldst_b_simd;
-              arm_ldstb; arm_ldsth; arm_ldrsb; arm_ldrsh;
+              arm_ldstb; arm_ldsth; arm_ldrsb; arm_ldrsh; arm_extoff;
               arm_ldstp; arm_ldstp_q; arm_ldstp_d;
               arm_ldst2; arm_ldstp_2q; arm_ldstp_3q; arm_ldstp_3d;
-              arm_ldstp_4q; arm_ldstp_4d; arm_ldst3; arm_ldst_lane] rw;
+              arm_ldstp_4q; arm_ldstp_4d; arm_ldst3; arm_ldst4;
+              arm_ldst_lane] rw;
     (* .. that have bitmatch exprs inside *)
     List.iter (fun def_th ->
         let Some (conceal_th, opaque_const, opaque_arity, opaque_def, opaque_conv) =
@@ -1968,7 +2205,8 @@ let PURE_DECODE_CONV =
     (* adding decode_encode* lemmas after decode gives higher priority
        to these rules *)
     add_thms [decode_encode_BL; decode_encode_ADR;
-              decode_encode_ADRP; decode_encode_ADD_rri64] rw;
+              decode_encode_ADRP; decode_encode_ADD_rri64;
+              decode_encode_LDR_Q_rri] rw;
 
     rw in
   let the_conv = WEAK_CBV_CONV decode_rw in
@@ -2058,10 +2296,12 @@ let make_fn_word_list, make_fn_word_list_reloc =
           let dstreg = opcode land 31 in
           Printf.bprintf buf "  ADRP (mk_var(\"%s\",`:num`),%d,%d,%d)%s\n" sym addend pc dstreg s
 
-          | Some (Arm_add_abs_lo12_nc,sym,addend) ->
+          | Some ((Arm_add_abs_lo12_nc|Arm_ldst128_abs_lo12_nc),sym,addend) ->
           let dstreg = opcode land 31 in
           let srcreg = (opcode lsr 5) land 31 in
-          Printf.bprintf buf "  ADD_rri64 (mk_var(\"%s\",`:num`),%d,%d,%d)%s\n"
+          Printf.bprintf buf "  %s (mk_var(\"%s\",`:num`),%d,%d,%d)%s\n"
+              (if opcode land 0xFFC00000 = 0x3DC00000 then "LDR_Q_rri"
+               else "ADD_rri64")
               sym addend dstreg srcreg s
 
           | Some (Arm_condbr19,sym,0) -> failwith "unsupported Arm_condbr19") l in
@@ -2078,7 +2318,8 @@ let make_fn_word_list, make_fn_word_list_reloc =
     (* The input argument of function X must match that of append_reloc_X.
      * ex) BL: append_reloc_BL
      *)
-    print_list_reloc next_rel "(fun w BL ADR ADRP ADD_rri64 -> [\n" "]);;\n" "w " bstext;;
+    print_list_reloc next_rel "(fun w BL ADR ADRP ADD_rri64 LDR_Q_rri -> [\n"
+      "]);;\n" "w " bstext;;
 (*
 let trim_ret_core dec =
   let m1 = Array.length dec - 1 in
@@ -2336,6 +2577,17 @@ let term_of_relocs_arm, assert_relocs =
          sym,`sym:num`; mk_small_numeral addend,`addend:num`] reloc_ADD_rri64)
         next_instbytes in
 
+  (* R_AARCH64_LDST128_ABS_LO12_NC *)
+  let reloc_LDR_Q_rri = `APPEND (bytelist_of_num 4
+      (encode_LDR_Q_rri (word dstreg) (word srcreg)
+        (word_subword (word (sym + addend):int64) (4,8):(12)word)))` in
+  let append_reloc_LDR_Q_rri (sym,addend,dstreg,srcreg: term*int*int*int) next_instbytes =
+      curry mk_comb (vsubst
+        [mk_small_numeral dstreg,`dstreg:num`;
+         mk_small_numeral srcreg,`srcreg:num`;
+         sym,`sym:num`; mk_small_numeral addend,`addend:num`] reloc_LDR_Q_rri)
+        next_instbytes in
+
   ((* term_of_relocs_arm *)
    term_of_relocs (fun bstext,ty,pcoffset,sym,addend -> 4,
     let opcode = get_int_le bstext pcoffset 4 in
@@ -2354,13 +2606,17 @@ let term_of_relocs_arm, assert_relocs =
       then append_reloc_ADRP (sym,addend,pcoffset,(opcode land 31))
       else failwith "Cannot apply R_AARCH64_ADR_PREL_PG_HI21"
 
-    else if ty = Arm_add_abs_lo12_nc then
-      if opcode land 0xFFFFFC00 = 0x91000000 (* ADD with zero imm. *)
-      then
-        let dstreg = opcode land 31 in
-        let srcreg = (opcode lsr 5) land 31 in
-        append_reloc_ADD_rri64 (sym,addend,dstreg,srcreg)
-      else failwith "Cannot apply R_AARCH64_ADD_ABS_LO12_NC"
+    else if ty = Arm_add_abs_lo12_nc || ty = Arm_ldst128_abs_lo12_nc then
+      let dstreg = opcode land 31 in
+      let srcreg = (opcode lsr 5) land 31 in
+      if ty = Arm_add_abs_lo12_nc &&
+         opcode land 0xFFFFFC00 = 0x91000000 (* ADD with zero imm. *)
+      then append_reloc_ADD_rri64 (sym,addend,dstreg,srcreg)
+      else if opcode land 0xFFFFFC00 = 0x3DC00000 (* LDR Q with zero imm. *)
+      then append_reloc_LDR_Q_rri (sym,addend,dstreg,srcreg)
+      else failwith ("Cannot apply " ^
+        (if ty = Arm_add_abs_lo12_nc then "R_AARCH64_ADD_ABS_LO12_NC"
+         else "R_AARCH64_LDST128_ABS_LO12_NC"))
 
     else failwith "unsupported relocation kind")),
 
@@ -2395,7 +2651,8 @@ let term_of_relocs_arm, assert_relocs =
           (assert_reloc_maker append_reloc_BL) (* BL *)
           (assert_reloc_maker append_reloc_ADR) (* ADR *)
           (assert_reloc_maker append_reloc_ADRP) (* ADRP *)
-          (assert_reloc_maker append_reloc_ADD_rri64) (* ADD_rri64 *) in
+          (assert_reloc_maker append_reloc_ADD_rri64) (* ADD_rri64 *)
+          (assert_reloc_maker append_reloc_LDR_Q_rri) (* LDR_Q_rri *) in
       if type_of tm = `:byte list` then
         match rev_itlist I opcode_fn_implemented (0,tm) with
         | _,Const("NIL",_) -> ()
