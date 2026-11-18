@@ -1,0 +1,192 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/mlkem_native/gcc12_O2_mono/sha3_512_spec.ml";;
+
+
+let SHA3_MOD512 = prove
+ (SHA3_MOD512_STMT,
+  GEN_TAC THEN
+  MP_TAC(SPECL [`n:num`; `2 EXP 256`; `2 EXP 256`] MOD_MULT_MOD) THEN
+  REWRITE_TAC[GSYM EXP_ADD; ARITH_RULE `256 + 256 = 512`] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[th; ADD_SYM]));;
+
+let SHA3_BYTES64 = prove
+ (SHA3_BYTES64_STMT,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`a:int64`; `n:num`; `s:armstate`] SHA3_BYTES32) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_TAC] THEN
+  MP_TAC(SPECL [`word_add a (word 32):int64`; `n DIV 2 EXP 256`;
+                `s:armstate`] SHA3_BYTES32) THEN
+  SUBGOAL_THEN
+   `word_add (word_add a (word 32)) (word 16):int64 = word_add a (word 48) /\
+    (n DIV 2 EXP 256) DIV 2 EXP 128 = n DIV 2 EXP 384`
+  (fun th -> REWRITE_TAC[th]) THENL
+   [CONJ_TAC THENL
+     [CONV_TAC WORD_RULE;
+      REWRITE_TAC[DIV_DIV; GSYM EXP_ADD; ARITH_RULE `256 + 128 = 384`]];
+    ALL_TAC] THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_TAC] THEN
+  REWRITE_TAC[ARITH_RULE `64 = 32 + 32`; READ_COMPONENT_COMPOSE;
+              READ_BYTES_COMBINE] THEN
+  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[ARITH_RULE `8 * 32 = 256`; SHA3_MOD512]);;
+
+let MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT_STMT,
+  MAP_EVERY X_GEN_TAC
+   [`out:int64`; `m:int64`; `inp:byte list`; `guard:int64`; `pc:num`] THEN
+  WORD_FORALL_OFFSET_TAC 496 THEN
+  MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD]) THEN
+  GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_INIT_TAC "s0" THEN
+
+  (*** Saving the registers and the stack guard, and the absorption ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC (1--4) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC (5--15) THEN
+  ARM_SUBROUTINE_SIM_TAC
+   (mlkem_native_libmlkem_gcc12_O2_mono_mc,
+    MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC,
+    0x0,mlkem_native_libmlkem_gcc12_O2_mono_mc,
+    MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT)
+   [`read X0 s`; `72`; `read X2 s`; `LENGTH(inp:byte list)`; `6`;
+    `num_of_bytelist(inp:byte list)`; `pc:num`; `read SP s`; `read X30 s`]
+   16 THEN
+
+  (*** The permutation ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC (17--19) THEN
+  KECCAK_STATE_THEN `word_add (stackpointer:int64) (word 288)` (fun v ->
+    ARM_SUBROUTINE_SIM_TAC
+     (mlkem_native_libmlkem_gcc12_O2_mono_mc,
+      MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC,
+      0x0,mlkem_native_libmlkem_gcc12_O2_mono_mc,
+      MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_MONO_IMAGE_SUBROUTINE_CORRECT_F1600)
+     [`read X0 s`; v; `pc:num`; `read SP s`; `read X30 s`] 20) THEN
+
+  (*** The extraction of the hash, the zeroing of the state and the return ***)
+
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
+  FIRST_ASSUM(fun th ->
+    let c = concl th in
+    if is_eq c && lhand c =
+       `read (memory :> bytes(word_add (stackpointer:int64) (word 288),200)) s20`
+    then ABBREV_TAC(mk_eq(`X:1600 word`,rand(rand c))) else NO_TAC) THEN
+  SHA3_512_HALVES_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC (21--32) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC (33--41) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+
+  (*** The first 64 bytes of the state after absorbing, as in sha3_512 ***)
+
+  MP_TAC(SPECL [`out:int64`; `val(X:1600 word)`; `s41:armstate`]
+               SHA3_BYTES64) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+  DISCH_TAC THEN ASM_REWRITE_TAC[] THEN EXPAND_TAC "X" THEN
+  REWRITE_TAC[sha3_512] THEN CONV_TAC SYM_CONV THEN
+  REWRITE_TAC[MULT_CLAUSES; EXP; DIV_1] THEN
+  REWRITE_TAC[ARITH_RULE `2 EXP 512 = 2 EXP (8 * 64)`] THEN
+  MATCH_MP_TAC KECCAK_SPONGE_BYTES THEN
+  REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV);;
+
+let MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL = prove
+ (MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL_STMT,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL
+    "H_ABSORB" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+    MLKEM_NATIVE_KECCAKF1600_PERMUTE_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL_F1600
+    "H_PERMUTE" THEN
+  META_EXISTS_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`;
+                                     `got_stack_chk_guard:num`] WORD_ADD]) THEN
+  GHOST_INTRO_TAC `canary:int64` `read (memory :> bytes64 guard)` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
+  ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
+  ENSURES_INIT_TAC "s0" THEN
+
+  (*** Saving the registers and the stack guard, and the absorption ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC (1--4) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC (5--15) THEN
+  SHA3_512_SAFE_CALL_TAC "H_ABSORB"
+   [`e:(uarch_event)list`; `read X0 s`; `72`; `read X2 s`; `inlen:num`;
+    `6`; `num_of_bytelist(inp:byte list)`; `pc:num`; `read SP s`;
+    `read X30 s`] 16 THEN
+
+  (*** The permutation ***)
+
+  ARM_STEPS_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC (17--19) THEN
+  KECCAK_STATE_THEN `word_add (stackpointer:int64) (word 288)` (fun v ->
+    SHA3_512_SAFE_CALL_TAC "H_PERMUTE"
+     [`e:(uarch_event)list`; `read X0 s`; v; `pc:num`; `read SP s`;
+      `read X30 s`] 20) THEN
+
+  (*** The extraction of the hash, the zeroing of the state and the return ***)
+
+  RULE_ASSUM_TAC(REWRITE_RULE[READ_MEMORY_WBYTES_1600]) THEN
+  FIRST_ASSUM(fun th ->
+    let c = concl th in
+    if is_eq c && lhand c =
+       `read (memory :> bytes(word_add (stackpointer:int64) (word 288),200)) s20`
+    then ABBREV_TAC(mk_eq(`X:1600 word`,rand(rand c))) else NO_TAC) THEN
+  SHA3_512_HALVES_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC (21--32) THEN
+  MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_EXEC (33--41) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [(*** The first 64 bytes of the state after absorbing, as in sha3_512 ***)
+
+    MP_TAC(SPECL [`out:int64`; `val(X:1600 word)`; `s41:armstate`]
+                 SHA3_BYTES64) THEN
+    ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
+                    ALL_TAC] THEN
+    DISCH_TAC THEN ASM_REWRITE_TAC[] THEN EXPAND_TAC "X" THEN
+    UNDISCH_THEN `LENGTH(inp:byte list) = inlen` (SUBST_ALL_TAC o SYM) THEN
+    REWRITE_TAC[sha3_512] THEN CONV_TAC SYM_CONV THEN
+    REWRITE_TAC[MULT_CLAUSES; EXP; DIV_1] THEN
+    REWRITE_TAC[ARITH_RULE `2 EXP 512 = 2 EXP (8 * 64)`] THEN
+    MATCH_MP_TAC KECCAK_SPONGE_BYTES THEN
+    REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE = prove
+ (MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_IMAGE_SUBROUTINE_SAFE_STMT,
+  MP_TAC MLKEM_NATIVE_SHA3_512_GCC12_O2_MONO_IMAGE_SUBROUTINE_FULL THEN
+  MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC THEN DISCH_TAC THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  GHOST_INTRO_TAC `X:num` `read (memory :> bytes(m,inlen))` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `out:int64`; `m:int64`;
+    `bytelist_of_num inlen X`; `inlen:num`; `guard:int64`; `pc:num`;
+    `stackpointer:int64`; `returnaddress:int64`]) THEN
+  ASM_REWRITE_TAC[LENGTH_BYTELIST_OF_NUM] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_PREPOST_WEAKEN) THEN
+  CONJ_TAC THENL
+   [GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+    ASM_MESON_TAC[SHA3_LIST_OF_BYTES];
+    SIMP_TAC[]]);;
