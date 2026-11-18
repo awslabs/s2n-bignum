@@ -28,6 +28,11 @@
 import argparse, collections, hashlib, os, re, subprocess, sys, textwrap
 
 BRANCH = re.compile(r'^(b|b\.\w+|cbz|cbnz|tbz|tbnz)$')
+# The names of functions that are also constants of the specifications that
+# load the layout: keccak_absorb of common/fips202/fips202.ml (the static
+# function keccak_absorb of gcc 12 -Os, and keccak_squeeze by symmetry).
+HOL_CONSTANTS = {'keccak_absorb', 'keccak_squeeze'}
+
 CLONE = re.compile(r'\.(constprop|isra|part|cold)\.\d+$')
 
 def run(cmd):
@@ -233,14 +238,20 @@ class Layout:
             if (addr, sym) not in self.names:
                 addr = by_sym[sym][0] if len(by_sym[sym]) == 1 else None
             return self.names[addr, sym] if addr is not None else plain(sym)
+        # A function whose name is that of a HOL constant of the
+        # specifications cannot be installed in the layout (and the
+        # specification could not be loaded after it): it gets the suffix
+        # _fn. The labels after calls of it keep the name of the symbol.
+        def hol(name):
+            return name + '_fn' if name in HOL_CONSTANTS else name
         self.functions = collections.OrderedDict()
         for a, sz, t, n in fsyms:
-            self.functions[self.names[a, n]] = (a, sz)
+            self.functions[hol(self.names[a, n])] = (a, sz)
         # objdump shows the code under only one of several symbols at the
         # same address (e.g. after GCC's identical code folding), so the
         # code of a function is found by its address
-        self.labels = {self.names[a, n]: labels(code[a][1], fname) for a, sz, t, n in fsyms}
-        self.code = {self.names[a, n]: code[a][1] for a, sz, t, n in fsyms}
+        self.labels = {hol(self.names[a, n]): labels(code[a][1], fname) for a, sz, t, n in fsyms}
+        self.code = {hol(self.names[a, n]): code[a][1] for a, sz, t, n in fsyms}
         self.fname = fname
         self.data = collections.OrderedDict(
             ('rodata_' + n.replace('.', '_'), (a, sz))
