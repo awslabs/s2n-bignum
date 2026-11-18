@@ -10,6 +10,7 @@
 (* ========================================================================= *)
 
 needs "common/maychange.ml";;
+needs "common/par.ml";;
 needs "common/safety.ml";;
 
 let is_uarch_event_list_ty ty =
@@ -463,10 +464,9 @@ let DISCHARGE_MEMACCESS_INBOUNDS_TAC =
       "list in the conclusion")));;
 
 let mk_freshvar =
-  let n = ref 0 in
+  let n = par_counter () in
   fun ty ->
-    let s = "trace_" ^ (string_of_int !n) in
-    n := 1 + !n;
+    let s = "trace_" ^ (string_of_int (n ())) in
     mk_var(s,ty);;
 
 let ABBREV_TRACE_TAC (stored_abbrevs:thm list ref)=
@@ -651,6 +651,14 @@ let ASSERT_CONCL_TAC (t:term): tactic =
 
 (*monomorphic type annotation to avoid value-restriction weak vars in generated files*)
 let allowed_vars_e : term list ref = ref [];;
+
+(* SAFE_META_EXISTS_TAC allowed_vars_e stores the free variables of the goal *)
+(* for a later SAFE_UNIFY_REFL_TAC allowed_vars_e of the same proof: keep    *)
+(* them per domain (see common/par.ml), not in the one shared reference; a   *)
+(* computation that a proof spawns starts with the values of the proof.      *)
+let allowed_vars_e_cell = par_local_ref (fun () -> ([]:term list));;
+safe_meta_vars_cell :=
+  (fun r -> if r == allowed_vars_e then allowed_vars_e_cell () else r);;
 
 let NIL_IMPLIES_APPEND_EQ =
   prove(`forall (l:(A)list) m m'. m = m' /\ [] = l ==> m = APPEND l m'`,

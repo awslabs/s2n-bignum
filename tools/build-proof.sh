@@ -29,7 +29,20 @@ fi
 template_ml="$(mktemp).ml"
 echo "Generating a template .ml that loads the file...: ${template_ml}"
 
+# With HOL_PAR=1, the proof runs the computations that common/par.ml spawns
+# on several OCaml 5 domains (S2N_PAR_DOMAINS at run time): the parallel
+# backend common/par_domains.ml is loaded first, before any file makes state
+# that proofs share. It needs OCaml 5 and a HOL Light that meets the
+# requirements stated in common/par_domains.ml, such as jrh13/hol-light
+# PR 214; HOL_PAR=1 asserts that the HOL Light used meets them.
+par_backend=""
+if [ "${HOL_PAR:-0}" = "1" ]; then
+  par_backend='loadt "common/par_domains.ml";;'
+  echo "Parallel backend: common/par_domains.ml"
+fi
+
 (echo 'let s2n_bignum_build_proof_start_time = Unix.time();;'; \
+ if [ -n "${par_backend}" ]; then echo "${par_backend}"; fi; \
  echo "loadt \"${ml_path}\";;"; \
  echo "check_axioms ();;") >> ${template_ml}
 

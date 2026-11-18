@@ -8,6 +8,7 @@
 (* ========================================================================= *)
 
 needs "common/overlap.ml";;
+needs "common/par.ml";;
 
 (*** We define that an instruction raises an observable microarchitectural
  *** event if its cycles/power consumption/anything that can be observed by
@@ -325,12 +326,12 @@ let safety_print_log = ref false;;
 (* Do ASSUME_TAC for safety proof which is `exists f_events. ...` after
   stripping the exists f_events part. *)
 let ASSUME_CALLEE_SAFETY_TAC =
-  let fresh_f_events_var_counter = ref 0 in
+  let fresh_f_events_var_counter = par_counter () in
   fun (callee_safety_proof:thm) (asmname:string) ->
     let f_events_var_type = type_of (fst (dest_exists (concl callee_safety_proof))) in
     let f_events_callee =
-      let _ = fresh_f_events_var_counter := 1 + !fresh_f_events_var_counter in
-      mk_var("f_events_callee" ^ (string_of_int !fresh_f_events_var_counter),
+      let n = 1 + fresh_f_events_var_counter () in
+      mk_var("f_events_callee" ^ (string_of_int n),
               f_events_var_type) in
     (X_CHOOSE_THEN f_events_callee (LABEL_TAC asmname)) callee_safety_proof;;
 
