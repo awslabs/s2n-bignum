@@ -1,0 +1,382 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_mulcache_compute_spec.ml";;
+
+
+let MULCACHE_ALIAS_CHECK = prove
+ (MULCACHE_ALIAS_CHECK_STMT,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  REWRITE_TAC[VAL_WORD_SUB_EQ_0; ARITH_RULE
+   `~(a <= b /\ ~(b = a)) <=> b <= a`] THEN
+  MP_TAC(SPECL [`dst:int64`; `src:int64`; `256`; `512`]
+    NONOVERLAPPING_ALIAS_CHECK) THEN
+  ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_CASES_TAC `val(src:int64) + 2 < 2 EXP 64` THENL
+   [REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+    ASM_SIMP_TAC[MOD_LT; ARITH_RULE `2 < 2 EXP 64`] THEN ARITH_TAC;
+    DISCH_THEN(K ALL_TAC) THEN DISJ1_TAC] THEN
+  UNDISCH_TAC `nonoverlapping (dst:int64,256) (src,512)` THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; nonoverlapping_modulo] THEN
+  REWRITE_TAC[NOT_IMP; NOT_FORALL_THM; CONG] THEN
+  REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+  MP_TAC(ISPEC `src:int64` VAL_BOUND_64) THEN
+  MP_TAC(ISPEC `dst:int64` VAL_BOUND_64) THEN
+  UNDISCH_TAC `~(val(src:int64) + 2 < 2 EXP 64)` THEN
+  SPEC_TAC(`val(src:int64)`,`b:num`) THEN
+  SPEC_TAC(`val(dst:int64)`,`d:num`) THEN
+  REPEAT GEN_TAC THEN REPEAT DISCH_TAC THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN
+   `(b + 512) MOD 18446744073709551616 = (b + 512) - 18446744073709551616`
+  SUBST1_TAC THENL
+   [MATCH_MP_TAC MOD_UNIQ THEN EXISTS_TAC `1` THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[GSYM NOT_LT] THEN DISCH_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL [`0`; `(2 EXP 64 + d) - b`] o
+    REWRITE_RULE[NOT_EXISTS_THM]) THEN
+  REWRITE_TAC[ADD_CLAUSES; ARITH_RULE `0 < 256`] THEN
+  CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `b + (2 EXP 64 + d) - b = 1 * 2 EXP 64 + d` SUBST1_TAC THENL
+   [ASM_ARITH_TAC; REWRITE_TAC[MOD_MULT_ADD]]);;
+
+let WORD_ISHR_16_SUBWORD = prove
+ (WORD_ISHR_16_SUBWORD_STMT,
+  BITBLAST_TAC);;
+
+let MULCACHE_QUOT = prove
+ (MULCACHE_QUOT_STMT,
+  REPEAT GEN_TAC THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[WORD_ISHR_16_SUBWORD] THEN AP_TERM_TAC THEN
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_SUBWORD; VAL_WORD_MUL; VAL_WORD;
+              DIMINDEX_16; DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  SPEC_TAC(`val(y:int32)`,`v:num`) THEN GEN_TAC THEN
+  REWRITE_TAC[MOD_MOD_REFL; DIV_1] THEN
+  SUBGOAL_THEN `65536 * (z * 62209) MOD 65536 < 4294967296`
+   (fun th -> REWRITE_TAC[MATCH_MP MOD_LT th]) THENL
+   [MP_TAC(SPECL [`z * 62209`; `65536`] MOD_LT_EQ) THEN ARITH_TAC;
+    ALL_TAC] THEN
+  REWRITE_TAC[ARITH_RULE `v * 65536 * r = 65536 * v * r`;
+              ARITH_RULE `4294967296 = 65536 * 65536`] THEN
+  REWRITE_TAC[MOD_MULT2] THEN
+  SIMP_TAC[DIV_MULT; ARITH_EQ; MOD_MOD_REFL] THEN
+  REWRITE_TAC[MOD_MOD; ARITH_EQ] THEN
+  REWRITE_TAC[MOD_MULT_LMOD; MOD_MULT_RMOD] THEN
+  REWRITE_TAC[MULT_ASSOC] THEN
+  MP_TAC(SPECL [`z:num`; `65536`; `65536`] MOD_MOD) THEN
+  REWRITE_TAC[GSYM CONG] THEN DISCH_TAC THEN
+  MATCH_MP_TAC CONG_MULT THEN REWRITE_TAC[CONG_REFL] THEN
+  MATCH_MP_TAC CONG_MULT THEN REWRITE_TAC[CONG_REFL] THEN
+  ONCE_REWRITE_TAC[CONG_SYM] THEN ASM_REWRITE_TAC[]);;
+
+let MULCACHE_LANE = prove
+ (MULCACHE_LANE_STMT,
+  REPEAT GEN_TAC THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[GSYM MONTRED_NEON_SCALAR; montred_neon; WORD_SHL_ZERO] THEN
+  REWRITE_TAC[MATCH_MP MULCACHE_QUOT (REFL `(z * 62209) MOD 65536`)]);;
+
+let WORD_ZX_USHR_16 = prove
+ (WORD_ZX_USHR_16_STMT,
+  BITBLAST_TAC);;
+
+let MULCACHE_SCALAR = prove
+ (MULCACHE_SCALAR_STMT,
+  GEN_TAC THEN
+  REWRITE_TAC[GSYM MONTRED_NEON_SCALAR; montred_neon; WORD_ZX_USHR_16] THEN
+  MP_TAC(SPECL [`t:int32`; `1`; `62209`] MULCACHE_QUOT) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[WORD_RULE `word_mul (t:int32) (word 1) = t`] THEN
+  REWRITE_TAC[WORD_ADD_SYM]);;
+
+let MULCACHE_PROD_BOUND = prove
+ (MULCACHE_PROD_BOUND_STMT,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[INT_ABS_MUL] THEN
+  MATCH_MP_TAC INT_LE_TRANS THEN EXISTS_TAC `&32768 * &1664:int` THEN
+  CONJ_TAC THENL [MATCH_MP_TAC INT_LE_MUL2 THEN ASM_REWRITE_TAC[INT_ABS_POS];
+                  INT_ARITH_TAC]);;
+
+let MULCACHE_LANE_CONG = prove
+ (MULCACHE_LANE_CONG_STMT,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  MP_TAC(ISPECL [`word_mul (word_sx (x:int16)) (word z):int32`;
+                 `ival(x:int16) * ival(word z:int32)`;
+                 `--(&54525952):int`; `&54525952:int`]
+         CONGBOUND_MONTRED_SCALAR) THEN
+  SUBGOAL_THEN
+   `ival(word_mul (word_sx (x:int16)) (word z):int32) =
+    ival x * ival(word z:int32)`
+  SUBST1_TAC THENL
+   [REWRITE_TAC[WORD_RULE `word_mul (a:int32) b = iword(ival a * ival b)`] THEN
+    SIMP_TAC[IVAL_WORD_SX; DIMINDEX_16; DIMINDEX_32; ARITH] THEN
+    MATCH_MP_TAC IVAL_IWORD THEN REWRITE_TAC[DIMINDEX_32] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    MP_TAC(ISPEC `x:int16` IVAL_BOUND) THEN REWRITE_TAC[DIMINDEX_16] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    STRIP_TAC THEN MATCH_MP_TAC(INT_ARITH
+     `!a:int. abs(a) <= &54525952
+              ==> --(&2 pow 31) <= a /\ a < &2 pow 31`) THEN
+    MATCH_MP_TAC MULCACHE_PROD_BOUND THEN ASM_INT_ARITH_TAC;
+    ALL_TAC] THEN
+  ANTS_TAC THENL
+   [REWRITE_TAC[INT_CONG_REFL] THEN
+    MATCH_MP_TAC(INT_ARITH
+     `!a:int. abs(a) <= &54525952
+              ==> --(&54525952) <= a /\ a <= &54525952`) THEN
+    MATCH_MP_TAC MULCACHE_PROD_BOUND THEN ASM_REWRITE_TAC[] THEN
+    MP_TAC(ISPEC `x:int16` IVAL_BOUND) THEN REWRITE_TAC[DIMINDEX_16] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN INT_ARITH_TAC;
+    ALL_TAC] THEN
+  CONV_TAC(ONCE_DEPTH_CONV INVERSE_MOD_CONV) THEN CONV_TAC INT_REDUCE_CONV THEN
+  STRIP_TAC THEN CONJ_TAC THENL
+   [FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (INTEGER_RULE
+     `!m a x z c n:int. (m == a * x * z) (mod n)
+                        ==> (a * z == c) (mod n)
+                        ==> (m == x * c) (mod n)`)) THEN
+    ASM_REWRITE_TAC[];
+    ASM_INT_ARITH_TAC]);;
+
+let MULCACHE_LANE_CONG1 = prove
+ (MULCACHE_LANE_CONG1_STMT,
+  MESON_TAC[MULCACHE_LANE_CONG]);;
+
+let MULCACHE_LANE_BOUND = prove
+ (MULCACHE_LANE_BOUND_STMT,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`x:int16`; `z:num`; `&169 * ival(word z:int32)`]
+    MULCACHE_LANE_CONG) THEN
+  ASM_SIMP_TAC[INT_CONG_REFL]);;
+
+let MLK_ZETAS_MULCACHE = prove
+ (MLK_ZETAS_MULCACHE_STMT,
+  CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[mlk_zetas] THEN CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
+  REWRITE_TAC[BITREVERSE7_CLAUSES] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[GSYM INT_REM_EQ] THEN CONV_TAC INT_REDUCE_CONV);;
+
+let MLK_ZETAS_MULCACHE_IVAL = prove
+ (MLK_ZETAS_MULCACHE_IVAL_STMT,
+  GEN_TAC THEN DISCH_TAC THEN
+  FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP MLK_ZETAS_MULCACHE) THEN
+  SUBGOAL_THEN
+   `ival(iword(EL (64 + i) mlk_zetas):int16) = EL (64 + i) mlk_zetas`
+  SUBST1_TAC THENL [MATCH_MP_TAC IVAL_IWORD; ALL_TAC] THEN
+  REWRITE_TAC[DIMINDEX_16] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_REWRITE_TAC[] THEN ASM_INT_ARITH_TAC);;
+
+let WORD_ZX_NEG_SX = prove
+ (WORD_ZX_NEG_SX_STMT,
+  BITBLAST_TAC);;
+
+let MULCACHE_LOOP_FLAG = prove
+ (MULCACHE_LOOP_FLAG_STMT,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[GSYM WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+  ASM_CASES_TAC `i = 7` THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ASM_SIMP_TAC[MOD_LT; ARITH_RULE
+   `i < 8 /\ ~(i = 7)
+    ==> (2 * i + 112) + 18446744073709551490 < 18446744073709551616`] THEN
+  SIMPLE_ARITH_TAC);;
+
+let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT_STMT,
+  MAP_EVERY X_GEN_TAC
+   [`dst:int64`; `src:int64`; `x:num->int16`; `pc:num`;
+    `returnaddress:int64`] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              NONOVERLAPPING_CLAUSES; ALL] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+
+  (*** The scalar loop for the last 8 pairs, with the test at the end ***)
+
+  ENSURES_WHILE_UP2_TAC `8` `pc + mlkem_poly_mulcache_compute_loop1`
+   `pc + mlkem_poly_mulcache_compute_loop1_exit` mulcache_inv THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** The check for overlap, which goes to the vector code ***)
+
+    ENSURES_SEQUENCE_TAC `pc + mlkem_poly_mulcache_compute_join1`
+     `\s. read X0 s = dst /\ read X1 s = src /\
+          read X8 s = word_add src (word 2) /\
+          read X30 s = returnaddress /\
+          (!i. i < 256
+               ==> read(memory :> bytes16(word_add src (word(2 * i)))) s =
+                   x i)` THEN
+    CONJ_TAC THENL
+     [ENSURES_INIT_TAC "s0" THEN
+      MP_TAC(SPECL [`dst:int64`; `src:int64`] MULCACHE_ALIAS_CHECK) THEN
+      ANTS_TAC THENL [ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES]; DISCH_TAC] THEN
+      ARM_STEPS_TAC MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_EXEC
+       (1--4) THEN
+      ASM_CASES_TAC MULCACHE_CHECK_1 THENL
+       [USE_CASE_TAC MULCACHE_CHECK_1 THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];
+        USE_CASE_TAC (mk_neg MULCACHE_CHECK_1) THEN
+        ARM_STEPS_TAC MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_EXEC
+         (5--7) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]];
+      ALL_TAC] THEN
+
+    (*** The vector code for the first 112 outputs, and the setup of the
+     *** scalar loop
+     ***)
+
+    ENSURES_INIT_TAC "s0" THEN MULCACHE_INPUTS_TAC THEN
+    MAP_EVERY (fun th -> ASSUME_TAC(MATCH_MP th (ASSUME
+      `aligned_bytes_loaded s0 (word pc)
+         mlkem_native_libmlkem_clang17_O3_mc`)))
+     MULCACHE_CONSTANTS THEN
+    MAP_EVERY MULCACHE_STEP_TAC (1--331) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o CONV_RULE(SIMD_SIMPLIFY_CONV []) o
+      CONV_RULE(READ_MEMORY_SPLIT_CONV 4) o
+      check (fun th ->
+        can (term_match [] `read (memory :> bytes256 a) s331 = x`)
+            (concl th) && free_in `dst:int64` (concl th)))) THEN
+    RULE_ASSUM_TAC(fun th ->
+      if free_in `bytes16` (concl th) && not(is_forall(concl th))
+      then CONV_RULE ADDR_NORM_CONV th else th) THEN
+    REWRITE_TAC[GSYM WORD_ADD; MULT_CLAUSES; ADD_CLAUSES; WORD_ADD_0] THEN
+    CONV_TAC EXPAND_CASES_CONV THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
+    REWRITE_TAC[WORD_ADD_0] THEN
+    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[] THEN
+    REPEAT CONJ_TAC THEN MULCACHE_VEC_OUTPUT_TAC;
+
+    (*** The loop body, computing two output coefficients ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    MULCACHE_LOOP_INPUTS_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_EXEC
+     (1--22) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ASM_SIMP_TAC[MULCACHE_LOOP_FLAG] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    REPEAT(CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `2 * (i + 1) + 112 = (2 * i + 112) + 2`;
+                  ARITH_RULE `8 * (i + 1) = 8 * i + 8`;
+                  ARITH_RULE `4 * (i + 1) = 4 * i + 4`] THEN
+      CONV_TAC WORD_RULE;
+      ALL_TAC]) THEN
+    X_GEN_TAC `j:num` THEN
+    REWRITE_TAC[ARITH_RULE
+     `j < 2 * (i + 1) + 112 <=>
+      j < 2 * i + 112 \/ j = 2 * i + 112 \/ j = 2 * i + 113`] THEN
+    STRIP_TAC THENL
+     [FIRST_X_ASSUM(MP_TAC o SPEC `j:num` o check
+       (fun th -> is_forall(concl th) &&
+                  can (find_term (fun t -> try fst(dest_const t) = "mulcache"
+                                           with _ -> false)) (concl th))) THEN
+      ASM_REWRITE_TAC[];
+      ALL_TAC; ALL_TAC] THEN
+    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[ARITH_RULE `2 * (2 * i + 112) = 4 * i + 224`;
+                ARITH_RULE `2 * (2 * i + 113) = 4 * i + 226`] THEN
+    ASM_REWRITE_TAC[] THEN MLKEM_NATIVE_W_SIMP_TAC THEN
+    REWRITE_TAC[WORD_ADD_0; SXFROM_15_SUBWORD; WORD_ZX_NEG_SX] THEN
+    REWRITE_TAC[MULCACHE_SCALAR] THEN MULCACHE_OUTPUT_TAC;
+
+    (*** The return ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_EXEC
+     (1--1) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    FIRST_X_ASSUM(MP_TAC o check (fun th -> is_forall(concl th) &&
+      can (find_term (fun t -> try fst(dest_const t) = "mulcache"
+                               with _ -> false)) (concl th))) THEN
+    CONV_TAC(LAND_CONV NUM_REDUCE_CONV) THEN DISCH_THEN ACCEPT_TAC]);;
+
+let MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE = time prove
+ (MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_STMT,
+  ASSERT_CONCL_TAC full_spec THEN
+  CONCRETIZE_F_EVENTS_TAC
+    `\(src:int64) (dst:int64) (pc:num) (returnaddress:int64).
+      APPEND
+        (f_ev_epil src dst pc returnaddress)
+        (APPEND
+          (ENUMERATEL 8 (\i. f_ev_loop src dst pc returnaddress i))
+          (APPEND
+            (f_ev_vec src dst pc returnaddress)
+            (if ~(val dst <= val (word_add src (word 512)) /\
+                  ~(val (word_sub (word_add src (word 512)) dst) = 0))
+             then f_ev_check1 src dst pc returnaddress
+             else f_ev_check2 src dst pc returnaddress)))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALL] THEN
+  REPEAT STRIP_TAC THEN
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `8` `pc + mlkem_poly_mulcache_compute_loop1`
+   `pc + mlkem_poly_mulcache_compute_loop1_exit`
+    `\i s. read X30 s = returnaddress /\
+           read X9 s = word(2 * i + 112) /\
+           read X10 s = word_add (word_add src (word(8 * i))) (word 454) /\
+           read X11 s = word_add (word_add dst (word(4 * i))) (word 226) /\
+           read X13 s = word_add (word pc) (word(rodata_mlk_zetas:num))` THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** The check for overlap and the vector code ***)
+
+    REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + mlkem_poly_mulcache_compute_join1`
+     `\s. read X0 s = dst /\ read X1 s = src /\
+          read X8 s = word_add src (word 2) /\
+          read X30 s = returnaddress` THEN
+    CONJ_TAC THENL
+     [MP_TAC(SPECL [`dst:int64`; `src:int64`] MULCACHE_ALIAS_CHECK) THEN
+      ANTS_TAC THENL [ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES]; DISCH_TAC] THEN
+      REWRITE_TAC(!simulation_precanon_thms) THEN
+      ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+      ARM_STEPS_TAC MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_EXEC
+       (1--4) THEN
+      ASM_CASES_TAC MULCACHE_CHECK_1 THENL
+       [USE_CASE_TAC MULCACHE_CHECK_1 THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC;
+        USE_CASE_TAC (mk_neg MULCACHE_CHECK_1) THEN
+        ARM_STEPS_TAC MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_EXEC
+         (5--7) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC];
+      ALL_TAC] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    MAP_EVERY (fun n ->
+      ARM_STEPS_TAC MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_EXEC [n] THEN
+      MLKEM_NATIVE_ADRP_TAC) (1--331) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; WORD_ADD_0] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The loop body and the loop test ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+    TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_EXEC
+     (1--22) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ASM_SIMP_TAC[MULCACHE_LOOP_FLAG] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    REPEAT(CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `2 * (i + 1) + 112 = (2 * i + 112) + 2`;
+                  ARITH_RULE `8 * (i + 1) = 8 * i + 8`;
+                  ARITH_RULE `4 * (i + 1) = 4 * i + 4`] THEN
+      CONV_TAC WORD_RULE;
+      ALL_TAC]) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The return ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+    TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLKEM_NATIVE_POLY_MULCACHE_COMPUTE_CLANG17_O3_EXEC
+     (1--1) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;

@@ -1,0 +1,741 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_invntt_tomont_spec.ml";;
+
+
+let INVNTT_BLOCKS_C_CLOSED = prove
+ (INVNTT_BLOCKS_C_CLOSED_STMT,
+  GEN_TAC THEN INDUCT_TAC THEN REPEAT GEN_TAC THEN
+  REWRITE_TAC[invntt_blocks_c; MULT_CLAUSES; CONJUNCT1 LT] THEN
+  REWRITE_TAC[invntt_block_c] THEN
+  SUBGOAL_THEN `1 <= 2 EXP (8 - l)` MP_TAC THENL
+   [REWRITE_TAC[ARITH_RULE `1 <= n <=> ~(n = 0)`; EXP_EQ_0; ARITH_EQ];
+    ALL_TAC] THEN
+  ABBREV_TAC `n = 2 EXP (8 - l)` THEN DISCH_TAC THEN
+  ASM_REWRITE_TAC[] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[MULT_CLAUSES; LEFT_ADD_DISTRIB] THEN
+  ASM_CASES_TAC `2 * n * b <= i /\ i < 2 * n * b + 2 * n` THENL
+   [SUBGOAL_THEN `i DIV (2 * n) = b /\ i MOD (2 * n) = i - 2 * n * b`
+    STRIP_ASSUME_TAC THENL
+     [MATCH_MP_TAC DIVMOD_UNIQ THEN ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_REWRITE_TAC[] THEN
+    ASM_SIMP_TAC[ARITH_RULE
+     `2 * n * b <= i /\ i < 2 * n * b + 2 * n
+      ==> ~(i < 2 * n * b) /\ ~(i + n < 2 * n * b) /\
+          i < 2 * n * b + 2 * n`] THEN
+    ASM_CASES_TAC `i < 2 * n * b + n` THEN ASM_REWRITE_TAC[] THEN
+    ASM_SIMP_TAC[ARITH_RULE
+     `2 * n * b <= i /\ i < 2 * n * b + n ==> i - 2 * n * b < n`;
+     ARITH_RULE `~(i < 2 * n * b + n) ==> ~(i - 2 * n * b < n)`;
+     ARITH_RULE `~(i < 2 * n * b + n) ==> ~(i - n < 2 * n * b)`] THEN
+    ASM_ARITH_TAC;
+    ASM_SIMP_TAC[ARITH_RULE
+     `~(p <= i /\ i < p + 2 * n)
+      ==> ~(p <= i /\ i < p + n) /\ ~(p + n <= i /\ i < p + 2 * n)`] THEN
+    AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC]);;
+
+let INVNTT_LAYERS_C_STEP = prove
+ (INVNTT_LAYERS_C_STEP_STMT,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[invntt_layers_c; INVNTT_BLOCKS_C_CLOSED] THEN
+  SUBGOAL_THEN `2 * 2 EXP (8 - (7 - n)) * 2 EXP (6 - n) = 256`
+   (fun th -> ASM_REWRITE_TAC[th]) THEN
+  REWRITE_TAC[GSYM MULT_ASSOC; GSYM EXP_ADD] THEN
+  ASM_SIMP_TAC[ARITH_RULE `n < 7 ==> 8 - (7 - n) + 6 - n = 7`] THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+let INVNTT_LAYERS_C_CORRECT = prove
+ (INVNTT_LAYERS_C_CORRECT_STMT,
+  GEN_TAC THEN CONV_TAC EXPAND_CASES_CONV THEN
+  REPEAT CONJ_TAC THEN INVNTT_FINAL_TAC);;
+
+let WORD_ISHR_16_SUBWORD = prove
+ (WORD_ISHR_16_SUBWORD_STMT,
+  BITBLAST_TAC);;
+
+let MULCACHE_QUOT = prove
+ (MULCACHE_QUOT_STMT,
+  REPEAT GEN_TAC THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[WORD_ISHR_16_SUBWORD] THEN AP_TERM_TAC THEN
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_SUBWORD; VAL_WORD_MUL; VAL_WORD;
+              DIMINDEX_16; DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  SPEC_TAC(`val(y:int32)`,`v:num`) THEN GEN_TAC THEN
+  REWRITE_TAC[MOD_MOD_REFL; DIV_1] THEN
+  SUBGOAL_THEN `65536 * (z * 62209) MOD 65536 < 4294967296`
+   (fun th -> REWRITE_TAC[MATCH_MP MOD_LT th]) THENL
+   [MP_TAC(SPECL [`z * 62209`; `65536`] MOD_LT_EQ) THEN ARITH_TAC;
+    ALL_TAC] THEN
+  REWRITE_TAC[ARITH_RULE `v * 65536 * r = 65536 * v * r`;
+              ARITH_RULE `4294967296 = 65536 * 65536`] THEN
+  REWRITE_TAC[MOD_MULT2] THEN
+  SIMP_TAC[DIV_MULT; ARITH_EQ; MOD_MOD_REFL] THEN
+  REWRITE_TAC[MOD_MOD; ARITH_EQ] THEN
+  REWRITE_TAC[MOD_MULT_LMOD; MOD_MULT_RMOD] THEN
+  REWRITE_TAC[MULT_ASSOC] THEN
+  MP_TAC(SPECL [`z:num`; `65536`; `65536`] MOD_MOD) THEN
+  REWRITE_TAC[GSYM CONG] THEN DISCH_TAC THEN
+  MATCH_MP_TAC CONG_MULT THEN REWRITE_TAC[CONG_REFL] THEN
+  MATCH_MP_TAC CONG_MULT THEN REWRITE_TAC[CONG_REFL] THEN
+  ONCE_REWRITE_TAC[CONG_SYM] THEN ASM_REWRITE_TAC[]);;
+
+let MULCACHE_LANE = prove
+ (MULCACHE_LANE_STMT,
+  REPEAT GEN_TAC THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[GSYM MONTRED_NEON_SCALAR; montred_neon; WORD_SHL_ZERO] THEN
+  REWRITE_TAC[MATCH_MP MULCACHE_QUOT (REFL `(z * 62209) MOD 65536`)]);;
+
+let BASEMUL_LANE = prove
+ (BASEMUL_LANE_STMT,
+  GEN_TAC THEN REWRITE_TAC[GSYM MONTRED_NEON_SCALAR; montred_neon] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[WORD_ISHR_16_SUBWORD] THEN AP_TERM_TAC THEN
+  REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_SUBWORD; VAL_WORD_MUL; VAL_WORD;
+              DIMINDEX_16; DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  SPEC_TAC(`val(t:int32)`,`v:num`) THEN GEN_TAC THEN
+  REWRITE_TAC[MOD_MOD_REFL; DIV_1] THEN
+  REWRITE_TAC[ARITH_RULE `v * 4076929024 = 65536 * v * 62209`;
+              ARITH_RULE `4294967296 = 65536 * 65536`] THEN
+  REWRITE_TAC[MOD_MULT2] THEN
+  SIMP_TAC[DIV_MULT; ARITH_EQ; MOD_MOD_REFL] THEN
+  REWRITE_TAC[MOD_MOD; ARITH_EQ; MOD_MULT_LMOD]);;
+
+let BARRED_VEC_LANE = prove
+ (BARRED_VEC_LANE_STMT,
+  GEN_TAC THEN REWRITE_TAC[GSYM BARRED_SCALAR] THEN
+  REWRITE_TAC[WORD_RULE
+   `word_add (word_mul (word_sx (t:int16)) (word 20159))
+             (word 33554432):int32 =
+    word_add (word 33554432) (word_mul (word_sx t) (word 20159))`] THEN
+  SPEC_TAC(`word_ishr (word_add (word 33554432)
+                        (word_mul (word_sx (t:int16)) (word 20159))) 26:int32`,
+           `q:int32`) THEN
+  GEN_TAC THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) WORD_ZX_ADD o rand o snd) THEN
+  REWRITE_TAC[DIMINDEX_16; DIMINDEX_32; ARITH] THEN DISCH_THEN SUBST1_TAC THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) WORD_ZX_MUL o rand o rand o snd) THEN
+  REWRITE_TAC[DIMINDEX_16; DIMINDEX_32; ARITH] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[WORD_BLAST `word_zx(word_sx (x:int16):int32):int16 = x`;
+              WORD_BLAST
+               `word_subword (q:int32) (0,16):int16 = word_zx q`] THEN
+  CONV_TAC WORD_REDUCE_CONV);;
+
+let WORD_SUBWORD_ZX_128_64 = prove
+ (WORD_SUBWORD_ZX_128_64_STMT,
+  CONV_TAC WORD_BLAST);;
+
+let WORD_ZX_ZX_64_128 = prove
+ (WORD_ZX_ZX_64_128_STMT,
+  SIMP_TAC[WORD_ZX_ZX; DIMINDEX_64; DIMINDEX_128; ARITH]);;
+
+let CHUNK16_INPUT_SPLIT = prove
+ (CHUNK16_INPUT_SPLIT_STMT,
+  REPEAT STRIP_TAC THEN EQ_TAC THENL
+   [REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    STRIP_TAC THEN X_GEN_TAC `j:num` THEN STRIP_TAC THEN
+    ASM_CASES_TAC `16 * (i + 1) <= j` THEN ASM_SIMP_TAC[] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `j - 16 * i`) THEN
+    ASM_SIMP_TAC[ARITH_RULE `16 * i <= j ==> 16 * i + (j - 16 * i) = j`] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
+
+let CHUNK16_OUTPUT_SPLIT = prove
+ (CHUNK16_OUTPUT_SPLIT_STMT,
+  REPEAT GEN_TAC THEN EQ_TAC THENL
+   [REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    STRIP_TAC THEN X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+    ASM_CASES_TAC `j < 16 * i` THEN ASM_SIMP_TAC[] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `j - 16 * i`) THEN
+    ASM_SIMP_TAC[ARITH_RULE `~(j < 16 * i) ==> 16 * i + (j - 16 * i) = j`] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
+
+let INVNTT_LAYER_LO = prove
+ (INVNTT_LAYER_LO_STMT,
+  REPEAT STRIP_TAC THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) INVNTT_LAYERS_C_STEP o lhand o snd) THEN
+  ANTS_TAC THENL
+   [ASM_REWRITE_TAC[] THEN INVNTT_BLOCK_BOUND_TAC; DISCH_THEN SUBST1_TAC] THEN
+  SUBGOAL_THEN
+   `(2 * 2 EXP (8 - (7 - n)) * b + k) DIV (2 * 2 EXP (8 - (7 - n))) = b /\
+    (2 * 2 EXP (8 - (7 - n)) * b + k) MOD (2 * 2 EXP (8 - (7 - n))) = k`
+  (fun th -> REWRITE_TAC[th]) THENL
+   [MATCH_MP_TAC DIVMOD_UNIQ THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[]);;
+
+let INVNTT_LAYER_HI = prove
+ (INVNTT_LAYER_HI_STMT,
+  REPEAT STRIP_TAC THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) INVNTT_LAYERS_C_STEP o lhand o snd) THEN
+  ANTS_TAC THENL
+   [ASM_REWRITE_TAC[] THEN INVNTT_BLOCK_BOUND_TAC; DISCH_THEN SUBST1_TAC] THEN
+  SUBGOAL_THEN
+   `(2 * 2 EXP (8 - (7 - n)) * b + 2 EXP (8 - (7 - n)) + k) DIV
+    (2 * 2 EXP (8 - (7 - n))) = b /\
+    (2 * 2 EXP (8 - (7 - n)) * b + 2 EXP (8 - (7 - n)) + k) MOD
+    (2 * 2 EXP (8 - (7 - n))) = 2 EXP (8 - (7 - n)) + k`
+  (fun th -> REWRITE_TAC[th]) THENL
+   [MATCH_MP_TAC DIVMOD_UNIQ THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[ARITH_RULE `~(n + k < n)`] THEN
+  AP_TERM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
+
+let ZETA_ADDR_DOWN = prove
+ (ZETA_ADDR_DOWN_STMT,
+  REWRITE_TAC[LEFT_ADD_DISTRIB; WORD_ADD; WORD_ADD_ASSOC]);;
+
+let INVNTT_SCALE = prove
+ (INVNTT_SCALE_STMT,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_WHILE_UP2_TAC `16` `pc + mlkem_poly_invntt_tomont_loop1`
+   `pc + mlkem_poly_invntt_tomont_loop1_exit` invntt_scale_inv THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    ENSURES_INIT_TAC "s0" THEN INVNTT_ENTRY_EXPAND_TAC THEN
+    MAP_EVERY INVNTT_STEP_TAC (1--6) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_entry] THEN
+    REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0] THEN ASM_REWRITE_TAC[];
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    INVNTT_ENTRY_EXPAND_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I
+        [MATCH_MP CHUNK16_INPUT_SPLIT (ASSUME `i < 16`)] o
+        check (fun th -> is_forall(concl th) && free_in `a:int64` (concl th) &&
+                         free_in `x:num->int16` (concl th) &&
+                         not(free_in `invntt_scale_c` (concl th)))) THEN
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+    CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
+    REWRITE_TAC CHUNK16_ADDRS_IN THEN STRIP_TAC THEN
+    MP_TAC(READ_MEMORY_MERGE_CONV 3
+     `read(memory :> bytes128(word_add a (word(32 * i)))) s0`) THEN
+    MP_TAC(CONV_RULE(LAND_CONV(ONCE_DEPTH_CONV
+                                 NORMALIZE_RELATIVE_ADDRESS_CONV))
+     (READ_MEMORY_MERGE_CONV 3
+      `read(memory :> bytes128(word_add (word_add a (word(32 * i)))
+                                        (word 16))) s0`)) THEN
+    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
+    MAP_EVERY INVNTT_STEP_TAC (1--30) THEN
+    REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o CONV_RULE(SIMD_SIMPLIFY_CONV []) o
+      CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
+      check (fun th ->
+        can (term_match [] `read (memory :> bytes128 a) s30 = x`)
+            (concl th) && free_in `a:int64` (concl th)))) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_entry] THEN
+    ASM_SIMP_TAC[INVNTT_SCALE_FLAG] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `32 * (i + 1) = 32 * i + 32`] THEN
+      CONV_TAC WORD_RULE;
+      ALL_TAC] THEN
+    REWRITE_TAC[CHUNK16_OUTPUT_SPLIT] THEN CONJ_TAC THENL
+     [FIRST_X_ASSUM(fun th ->
+        if is_forall(concl th) && free_in `invntt_scale_c` (concl th)
+        then ACCEPT_TAC th else failwith "");
+      ALL_TAC] THEN
+    CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC CHUNK16_ADDRS THEN
+    ASM_REWRITE_TAC[invntt_scale_c; MONTRED_NEON_SCALAR];
+
+    MATCH_MP_TAC ENSURES_ALREADY THEN CONJ_TAC THENL
+     [CONV_TAC NUM_REDUCE_CONV THEN MESON_TAC[];
+      SUBSUMED_ID_MAYCHANGE_TAC]]);;
+
+let INVNTT_L7 = prove
+ (INVNTT_L7_STMT,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALLPAIRS; ALL] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_WHILE_UP2_TAC `8` `pc + mlkem_poly_invntt_tomont_loop2`
+   `pc + mlkem_poly_invntt_tomont_loop2_exit` invntt_l7_inv THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** The prologue ***)
+
+    INVNTT_DREG_GHOST_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    MAP_EVERY INVNTT_STEP_TAC (1--15) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_frame] THEN
+    REWRITE_TAC[WORD_SUBWORD_ZX_128_64] THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0; SUB_0] THEN
+    ASM_REWRITE_TAC[] THEN CONV_TAC WORD_RULE;
+
+    (*** The loop body ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    INVNTT_FRAME_EXPAND_TAC THEN
+    INVNTT_ZETAS_TAC `X9` 8 120 128 THEN
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I
+        [MATCH_MP CHUNK32_INPUT_SPLIT (ASSUME `i < 8`)] o
+        check (fun th -> is_forall(concl th) && free_in `a:int64` (concl th) &&
+                         not(free_in `invntt_layers_c` (concl th)) &&
+                         free_in `invntt_scale_c` (concl th))) THEN
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+    CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
+    REWRITE_TAC INVNTT_L7_ADDRS_IN THEN STRIP_TAC THEN
+    INVNTT_MERGE4_TAC 64 THEN
+    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
+    MAP_EVERY INVNTT_STEP_TAC (1--49) THEN
+    REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o CONV_RULE(SIMD_SIMPLIFY_CONV []) o
+      CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
+      check (fun th ->
+        can (term_match [] `read (memory :> bytes128 a) s49 = x`)
+            (concl th) && free_in `a:int64` (concl th)))) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_frame] THEN
+    ASM_SIMP_TAC[INVNTT_L7_FLAG] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `64 * (i + 1) = 64 * i + 64`] THEN
+      CONV_TAC WORD_RULE;
+      ALL_TAC] THEN
+    CONJ_TAC THENL
+     [MATCH_MP_TAC INVNTT_L7_PTR THEN UNDISCH_TAC `i < 8` THEN ARITH_TAC;
+      ALL_TAC] THEN
+    REWRITE_TAC[CHUNK32_OUTPUT_SPLIT] THEN CONJ_TAC THENL
+     [FIRST_X_ASSUM(fun th ->
+        if is_forall(concl th) && free_in `invntt_layers_c` (concl th)
+        then ACCEPT_TAC th else failwith "");
+      ALL_TAC] THEN
+    CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC INVNTT_L7_ADDRS THEN
+    ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN
+    INVNTT_OUT_TAC `i < 8` 4 INVNTT_L7_LO INVNTT_L7_HI;
+
+    (*** The exit ***)
+
+    MATCH_MP_TAC ENSURES_ALREADY THEN CONJ_TAC THENL
+     [CONV_TAC NUM_REDUCE_CONV THEN MESON_TAC[];
+      SUBSUMED_ID_MAYCHANGE_TAC]]);;
+
+let INVNTT_L6 = prove
+ (INVNTT_L6_STMT,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_WHILE_UP2_TAC `8` `pc + mlkem_poly_invntt_tomont_loop3`
+   `pc + mlkem_poly_invntt_tomont_loop3_exit` invntt_l6_inv THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** The setup of the vectors of constants ***)
+
+    ENSURES_INIT_TAC "s0" THEN INVNTT_FRAME_EXPAND_TAC THEN
+    INVNTT_CONSTANTS_TAC THEN
+    MAP_EVERY INVNTT_STEP_TAC (1--24) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_frame] THEN
+    REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0; SUB_0] THEN
+    ASM_REWRITE_TAC[] THEN CONV_TAC WORD_RULE;
+
+    (*** The loop body ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    INVNTT_FRAME_EXPAND_TAC THEN
+    INVNTT_ZETAS_TAC `X9` 4 60 64 THEN
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I
+        [MATCH_MP CHUNK32_INPUT_SPLIT (ASSUME `i < 8`)] o
+        check (fun th -> is_forall(concl th) && free_in `a:int64` (concl th) &&
+                         free_in `invntt_layers_c 1 (invntt_scale_c x)`
+                                 (concl th))) THEN
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+    CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
+    REWRITE_TAC INVNTT_L6_ADDRS_IN THEN STRIP_TAC THEN
+    MAP_EVERY INVNTT_STEP_TAC (1--127) THEN
+    INVNTT_SPLIT_TAC "s127" THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_frame] THEN
+    ASM_SIMP_TAC[INVNTT_L6_FLAG] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `64 * (i + 1) = 64 * i + 64`] THEN
+      CONV_TAC WORD_RULE;
+      ALL_TAC] THEN
+    CONJ_TAC THENL
+     [MATCH_MP_TAC INVNTT_L6_PTR THEN UNDISCH_TAC `i < 8` THEN ARITH_TAC;
+      ALL_TAC] THEN
+    REWRITE_TAC[CHUNK32_OUTPUT_SPLIT] THEN CONJ_TAC THENL
+     [FIRST_X_ASSUM(fun th ->
+        if is_forall(concl th) &&
+           free_in `invntt_layers_c 2 (invntt_scale_c x)` (concl th)
+        then ACCEPT_TAC th else failwith "");
+      ALL_TAC] THEN
+    CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC INVNTT_L7_ADDRS THEN
+    ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN
+    INVNTT_OUT_TAC `i < 8` 8 INVNTT_L6_LO INVNTT_L6_HI;
+
+    (*** The exit ***)
+
+    MATCH_MP_TAC ENSURES_ALREADY THEN CONJ_TAC THENL
+     [CONV_TAC NUM_REDUCE_CONV THEN MESON_TAC[];
+      SUBSUMED_ID_MAYCHANGE_TAC]]);;
+
+let INVNTT_L5_FLAG = prove
+ (INVNTT_L5_FLAG_STMT,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
+  SUBGOAL_THEN `16 * i < 2 EXP 64` (fun th -> REWRITE_TAC[MATCH_MP MOD_LT th])
+  THENL [UNDISCH_TAC `i < 16` THEN ARITH_TAC; ALL_TAC] THEN
+  UNDISCH_TAC `i < 16` THEN ARITH_TAC);;
+
+let INVNTT_L5 = prove
+ (INVNTT_L5_STMT,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_WHILE_UP2_TAC `16` `pc + mlkem_poly_invntt_tomont_loop4`
+   `pc + mlkem_poly_invntt_tomont_loop4_exit` invntt_l5_inv THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** The setup ***)
+
+    ENSURES_INIT_TAC "s0" THEN INVNTT_FRAME_EXPAND_TAC THEN
+    MAP_EVERY INVNTT_STEP_TAC (1--9) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_frame] THEN
+    REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0; SUB_0; ADD_CLAUSES] THEN
+    ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN CONV_TAC WORD_RULE;
+
+    (*** The loop body ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    INVNTT_FRAME_EXPAND_TAC THEN
+    INVNTT_ZETAS_TAC `X8` 1 31 16 THEN
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I
+        [MATCH_MP CHUNK16_INPUT_SPLIT (ASSUME `i < 16`)] o
+        check (fun th -> is_forall(concl th) && free_in `a:int64` (concl th) &&
+                         free_in `invntt_layers_c 2 (invntt_scale_c x)`
+                                 (concl th))) THEN
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+    CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
+    REWRITE_TAC CHUNK16_ADDRS_IN THEN STRIP_TAC THEN
+    MP_TAC(READ_MEMORY_MERGE_CONV 3
+     `read(memory :> bytes128(word_add a (word(32 * i)))) s0`) THEN
+    MP_TAC(CONV_RULE(LAND_CONV(ONCE_DEPTH_CONV
+                                 NORMALIZE_RELATIVE_ADDRESS_CONV))
+     (READ_MEMORY_MERGE_CONV 3
+      `read(memory :> bytes128(word_add (word_add a (word(32 * i)))
+                                        (word 16))) s0`)) THEN
+    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
+    MAP_EVERY INVNTT_STEP_TAC (1--31) THEN
+    INVNTT_SPLIT_TAC "s31" THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_frame] THEN
+    ASM_SIMP_TAC[INVNTT_L5_FLAG] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [MATCH_MP_TAC INVNTT_L5_PTR THEN UNDISCH_TAC `i < 16` THEN ARITH_TAC;
+      ALL_TAC] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `32 * (i + 1) = 32 * i + 32`] THEN
+      CONV_TAC WORD_RULE;
+      ALL_TAC] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `16 * (i + 1) = 16 * i + 16`] THEN
+      REWRITE_TAC[WORD_ADD; GSYM WORD_ADD_ASSOC] THEN
+      CONV_TAC(ONCE_DEPTH_CONV WORD_REDUCE_CONV) THEN REWRITE_TAC[WORD_ADD_0];
+      ALL_TAC] THEN
+    REWRITE_TAC[CHUNK16_OUTPUT_SPLIT] THEN CONJ_TAC THENL
+     [FIRST_X_ASSUM(fun th ->
+        if is_forall(concl th) &&
+           free_in `invntt_layers_c 3 (invntt_scale_c x)` (concl th)
+        then ACCEPT_TAC th else failwith "");
+      ALL_TAC] THEN
+    CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC CHUNK16_ADDRS THEN
+    ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN
+    INVNTT_OUT_TAC `i < 16` 16 INVNTT_L5_LO INVNTT_L5_HI THEN
+    REWRITE_TAC[WORD_MUL_SYM];
+
+    (*** The exit ***)
+
+    MATCH_MP_TAC ENSURES_ALREADY THEN CONJ_TAC THENL
+     [CONV_TAC NUM_REDUCE_CONV THEN MESON_TAC[];
+      SUBSUMED_ID_MAYCHANGE_TAC]]);;
+
+let INVNTT_L432 = prove
+ (INVNTT_L432_STMT,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALLPAIRS; ALL] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_INIT_TAC "s0" THEN INVNTT_FRAME_EXPAND_TAC THEN INVNTT_MERGE_TAC THEN
+  MAP_EVERY INVNTT_STEP_TAC (1--1346) THEN
+  INVNTT_FOLD_TAC "s1346" [INVNTT_EQ3; INVNTT_EQ4; INVNTT_EQ5] THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_frame] THEN
+  CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
+  REWRITE_TAC[WORD_ADD_0] THEN ASM_REWRITE_TAC[]);;
+
+let CHUNK8_HALF_INPUT_SPLIT = prove
+ (CHUNK8_HALF_INPUT_SPLIT_STMT,
+  REPEAT STRIP_TAC THEN EQ_TAC THENL
+   [REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    STRIP_TAC THEN X_GEN_TAC `j:num` THEN STRIP_TAC THEN
+    ASM_CASES_TAC `8 * (i + 1) <= j` THEN ASM_SIMP_TAC[] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `j - 8 * i`) THEN
+    ASM_SIMP_TAC[ARITH_RULE `8 * i <= j ==> 8 * i + (j - 8 * i) = j`] THEN
+    DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
+
+let INVNTT_L1_LO = prove
+ (INVNTT_L1_LO_STMT,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`6`; `x:num->int16`; `0`; `8 * i + k`] INVNTT_LAYER_LO) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN
+  ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN SUBST1_TAC] THEN
+  REWRITE_TAC[ARITH_RULE `(8 * i + k) + 128 = 128 + (8 * i + k)`]);;
+
+let INVNTT_L1_HI = prove
+ (INVNTT_L1_HI_STMT,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`6`; `x:num->int16`; `0`; `8 * i + k`] INVNTT_LAYER_HI) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN
+  ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN SUBST1_TAC] THEN
+  REWRITE_TAC[]);;
+
+let INVNTT_L1 = prove
+ (INVNTT_L1_STMT,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_WHILE_UP2_TAC `16` `pc + mlkem_poly_invntt_tomont_loop5`
+   `pc + mlkem_poly_invntt_tomont_loop5_exit` invntt_l1_inv THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** The loop is entered with i = 0 ***)
+
+    MATCH_MP_TAC ENSURES_ALREADY THEN CONJ_TAC THENL
+     [GEN_TAC THEN REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0] THEN
+      STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+      X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+      CONJ_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+      SUBSUMED_ID_MAYCHANGE_TAC];
+
+    (*** The loop body ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+    INVNTT_FRAME_EXPAND_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I
+        [MATCH_MP CHUNK8_HALF_INPUT_SPLIT (ASSUME `i < 16`)] o
+        check (fun th -> is_forall(concl th) && free_in `a:int64` (concl th) &&
+                         free_in `invntt_layers_c 6 (invntt_scale_c x)`
+                                 (concl th))) THEN
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+    CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
+    REWRITE_TAC INVNTT_L1_ADDRS THEN STRIP_TAC THEN
+    MP_TAC(READ_MEMORY_MERGE_CONV 3
+     `read(memory :> bytes128(word_add a (word(16 * i)))) s0`) THEN
+    MP_TAC(READ_MEMORY_MERGE_CONV 3
+     `read(memory :> bytes128(word_add a (word(16 * i + 256)))) s0`) THEN
+    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
+    MAP_EVERY INVNTT_STEP_TAC (1--32) THEN
+    INVNTT_SPLIT_TAC "s32" THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_frame] THEN
+    ASM_SIMP_TAC[INVNTT_L1_FLAG] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `16 * (i + 1) = 16 * i + 16`] THEN
+      CONV_TAC WORD_RULE;
+      ALL_TAC] THEN
+    REWRITE_TAC[CHUNK_OUTPUT_SPLIT_RULE 8] THEN CONJ_TAC THENL
+     [FIRST_X_ASSUM(fun th ->
+        if is_forall(concl th) &&
+           free_in `invntt_layers_c 7 (invntt_scale_c x)` (concl th)
+        then ACCEPT_TAC th else failwith "");
+      ALL_TAC] THEN
+    CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC INVNTT_L1_ADDRS THEN
+    ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN INVNTT_L1_OUT_TAC;
+
+    (*** The exit ***)
+
+    MATCH_MP_TAC ENSURES_ALREADY THEN CONJ_TAC THENL
+     [GEN_TAC THEN CONV_TAC NUM_REDUCE_CONV THEN STRIP_TAC THEN
+      ASM_REWRITE_TAC[] THEN X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+      ASM_CASES_TAC `j < 128` THENL
+       [FIRST_X_ASSUM(MP_TAC o SPEC `j:num` o check (fun th ->
+          is_forall(concl th) &&
+          free_in `invntt_layers_c 7 (invntt_scale_c x)` (concl th))) THEN
+        ASM_SIMP_TAC[];
+        FIRST_X_ASSUM(MP_TAC o SPEC `j - 128` o check (fun th ->
+          is_forall(concl th) &&
+          free_in `invntt_layers_c 7 (invntt_scale_c x)` (concl th))) THEN
+        ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+        ASM_SIMP_TAC[ARITH_RULE `~(j < 128) ==> 128 + (j - 128) = j`]];
+      SUBSUMED_ID_MAYCHANGE_TAC]]);;
+
+let INVNTT_TAIL = prove
+ (INVNTT_TAIL_STMT,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALLPAIRS; ALL] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_INIT_TAC "s0" THEN INVNTT_FRAME_EXPAND_TAC THEN
+  MAP_EVERY INVNTT_STEP_TAC (1--7) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[invntt_clang17_entry] THEN
+  ASM_REWRITE_TAC[WORD_ZX_ZX_64_128] THEN CONV_TAC WORD_RULE);;
+
+let MLKEM_NATIVE_POLY_INVNTT_TOMONT_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLKEM_NATIVE_POLY_INVNTT_TOMONT_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT_STMT,
+  MAP_EVERY X_GEN_TAC [`a:int64`; `x:num->int16`; `pc:num`] THEN
+  WORD_FORALL_OFFSET_TAC 688 THEN
+  MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  RULE_ASSUM_TAC(CONV_RULE(TRY_CONV NORMALIZE_ALIGNED_WORD_CONV)) THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x29_init" `X29` THEN
+  MAP_EVERY (fun (n,c) -> ENSURES_PRESERVED_DREG_TAC n c)
+   ["d8_init",`D8`; "d9_init",`D9`; "d10_init",`D10`; "d11_init",`D11`;
+    "d12_init",`D12`; "d13_init",`D13`; "d14_init",`D14`;
+    "d15_init",`D15`] THEN
+  ENSURES_INIT_TAC "s0" THEN
+  SUBGOAL_THEN
+   `invntt_clang17_entry (word_add stackpointer (word 688)) returnaddress
+      d8_init d9_init d10_init d11_init d12_init d13_init d14_init d15_init
+      x29_init s0`
+  ASSUME_TAC THENL [ASM_REWRITE_TAC[invntt_clang17_entry]; ALL_TAC] THEN
+  MP_TAC(SPECL [`a:int64`; `x:num->int16`; `pc:num`;
+                `word_add stackpointer (word 688):int64`;
+                `returnaddress:int64`;
+                `d8_init:int64`; `d9_init:int64`; `d10_init:int64`;
+                `d11_init:int64`; `d12_init:int64`; `d13_init:int64`;
+                `d14_init:int64`; `d15_init:int64`; `x29_init:int64`]
+               INVNTT_SCALE) THEN
+  ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+  ARM_BIGSTEP_TAC MLKEM_NATIVE_POLY_INVNTT_TOMONT_CLANG17_O3_EXEC "s1" THEN
+  MAP_EVERY (fun (th,s) ->
+    MP_TAC(SPECL [`a:int64`; `x:num->int16`; `pc:num`; `stackpointer:int64`;
+                  `returnaddress:int64`;
+                  `d8_init:int64`; `d9_init:int64`; `d10_init:int64`;
+                  `d11_init:int64`; `d12_init:int64`; `d13_init:int64`;
+                  `d14_init:int64`; `d15_init:int64`; `x29_init:int64`]
+                 th) THEN
+    ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALLPAIRS; ALL] THEN
+    ARM_BIGSTEP_TAC MLKEM_NATIVE_POLY_INVNTT_TOMONT_CLANG17_O3_EXEC s)
+   [INVNTT_L7,"s2"; INVNTT_L6,"s3"; INVNTT_L5,"s4"; INVNTT_L432,"s5";
+    INVNTT_L1,"s6"; INVNTT_TAIL,"s7"] THEN
+  INVNTT_ENTRY_EXPAND_TAC THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  ASM_SIMP_TAC[INVNTT_LAYERS_C_CORRECT]);;
+
+let MLKEM_NATIVE_POLY_INVNTT_TOMONT_CLANG17_O3_IMAGE_SUBROUTINE_SAFE = time prove
+ (MLKEM_NATIVE_POLY_INVNTT_TOMONT_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_STMT,
+  ASSERT_CONCL_TAC full_spec THEN
+  CONCRETIZE_F_EVENTS_TAC
+   `\(a:int64) (pc:num) (sp:int64) (returnaddress:int64).
+     APPEND (f_ev_t a pc sp returnaddress)
+      (APPEND (ENUMERATEL 16 (\i. f_ev_l1 a pc sp returnaddress i))
+       (APPEND (f_ev_m4 a pc sp returnaddress)
+        (APPEND (ENUMERATEL 16 (\i. f_ev_l5 a pc sp returnaddress i))
+         (APPEND (f_ev_m3 a pc sp returnaddress)
+          (APPEND (ENUMERATEL 8 (\i. f_ev_l6 a pc sp returnaddress i))
+           (APPEND (f_ev_m2 a pc sp returnaddress)
+            (APPEND (ENUMERATEL 8 (\i. f_ev_l7 a pc sp returnaddress i))
+             (APPEND (f_ev_m1 a pc sp returnaddress)
+              (APPEND (ENUMERATEL 16 (\i. f_ev_sc a pc sp returnaddress i))
+               (f_ev_e a pc sp returnaddress))))))))))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT STRIP_TAC THEN
+  RULE_ASSUM_TAC(CONV_RULE(TRY_CONV NORMALIZE_ALIGNED_WORD_CONV)) THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  ENSURES_PRESERVED_TAC "x29_init" `X29` THEN
+  MAP_EVERY (fun (n,c) -> ENSURES_PRESERVED_DREG_TAC n c)
+   ["d8_init",`D8`; "d9_init",`D9`; "d10_init",`D10`; "d11_init",`D11`;
+    "d12_init",`D12`; "d13_init",`D13`; "d14_init",`D14`;
+    "d15_init",`D15`] THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `16` `pc + mlkem_poly_invntt_tomont_loop5`
+   `pc + mlkem_poly_invntt_tomont_loop5_exit` invntt_l1_einv THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+    REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `16` `pc + mlkem_poly_invntt_tomont_loop4`
+     `pc + mlkem_poly_invntt_tomont_loop4_exit` invntt_l5_einv THEN
+    REPEAT CONJ_TAC THENL
+     [ARITH_TAC;
+      REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `8` `pc + mlkem_poly_invntt_tomont_loop3`
+       `pc + mlkem_poly_invntt_tomont_loop3_exit` invntt_l6_einv THEN
+      REPEAT CONJ_TAC THENL
+       [ARITH_TAC;
+        REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN
+        ENSURES_EVENTS_WHILE_UP2_TAC `8` `pc + mlkem_poly_invntt_tomont_loop2`
+         `pc + mlkem_poly_invntt_tomont_loop2_exit` invntt_l7_einv THEN
+        REPEAT CONJ_TAC THENL
+         [ARITH_TAC;
+          REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN
+          ENSURES_EVENTS_WHILE_UP2_TAC `16`
+           `pc + mlkem_poly_invntt_tomont_loop1`
+           `pc + mlkem_poly_invntt_tomont_loop1_exit` invntt_sc_einv THEN
+          REPEAT CONJ_TAC THENL
+           [ARITH_TAC;
+
+            (*** The entry, up to the scaling loop ***)
+
+            INVNTT_SAFE_SEGMENT_TAC ALL_TAC 6
+             (REWRITE_TAC[MULT_CLAUSES] THEN ASM_REWRITE_TAC[]);
+
+            (*** The scaling loop ***)
+
+            X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+            INVNTT_SAFE_SEGMENT_TAC ALL_TAC 30
+             (INVNTT_SAFE_BODY_FIN_TAC INVNTT_SCALE_FLAG [INVNTT_CTR_TAC 32]);
+
+            (*** The prologue and the setup of the loop for layer 7 ***)
+
+            INVNTT_SAFE_SEGMENT_TAC INVNTT_DREG_GHOST_TAC 15
+             (REWRITE_TAC[WORD_SUBWORD_ZX_128_64] THEN ASM_REWRITE_TAC[] THEN
+              REWRITE_TAC[MULT_CLAUSES; SUB_0] THEN
+              ASM_REWRITE_TAC[] THEN INVNTT_WORD_CONJS_TAC)];
+
+          (*** The loop for layer 7 ***)
+
+          X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+          INVNTT_SAFE_SEGMENT_TAC ALL_TAC 49
+           (INVNTT_SAFE_BODY_FIN_TAC INVNTT_L7_FLAG
+             [INVNTT_CTR_TAC 64; INVNTT_PTR_TAC INVNTT_L7_PTR `i < 8`]);
+
+          (*** The setup of the loop for layer 6 ***)
+
+          INVNTT_SAFE_SEGMENT_TAC ALL_TAC 24
+           (REWRITE_TAC[MULT_CLAUSES; SUB_0] THEN
+            ASM_REWRITE_TAC[] THEN INVNTT_WORD_CONJS_TAC)];
+
+        (*** The loop for layer 6 ***)
+
+        X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+        INVNTT_SAFE_SEGMENT_TAC ALL_TAC 127
+         (INVNTT_SAFE_BODY_FIN_TAC INVNTT_L6_FLAG
+           [INVNTT_CTR_TAC 64; INVNTT_PTR_TAC INVNTT_L6_PTR `i < 8`]);
+
+        (*** The setup of the loop for layer 5 ***)
+
+        INVNTT_SAFE_SEGMENT_TAC ALL_TAC 9
+         (REWRITE_TAC[MULT_CLAUSES; SUB_0; ADD_CLAUSES] THEN
+          ASM_REWRITE_TAC[] THEN INVNTT_WORD_CONJS_TAC)];
+
+      (*** The loop for layer 5 ***)
+
+      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+      INVNTT_SAFE_SEGMENT_TAC ALL_TAC 31
+       (INVNTT_SAFE_BODY_FIN_TAC INVNTT_L5_FLAG
+         [INVNTT_PTR_TAC INVNTT_L5_PTR `i < 16`; INVNTT_CTR_TAC 32;
+          INVNTT_X10_TAC]);
+
+      (*** Layers 4, 3 and 2 ***)
+
+      INVNTT_SAFE_SEGMENT_TAC ALL_TAC 1346
+       (REWRITE_TAC[ARITH_RULE `16 * 0 = 0`])];
+
+    (*** The loop for layer 1 ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    INVNTT_SAFE_SEGMENT_TAC ALL_TAC 32
+     (INVNTT_SAFE_BODY_FIN_TAC INVNTT_L1_FLAG [INVNTT_CTR_TAC 16]);
+
+    (*** The epilogue ***)
+
+    INVNTT_SAFE_SEGMENT_STEP_TAC INVNTT_STEP_TAC ALL_TAC 7
+     (REWRITE_TAC[WORD_ZX_ZX_64_128] THEN
+      ASM_REWRITE_TAC[WORD_ZX_ZX_64_128] THEN
+      INVNTT_WORD_CONJS_TAC)]);;
