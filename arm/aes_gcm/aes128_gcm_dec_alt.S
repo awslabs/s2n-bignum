@@ -122,7 +122,7 @@
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(aes128_gcm_dec_alt)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(aes128_gcm_dec_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(aes128_gcm_dec_alt)
-.align	4
+.align	5
 S2N_BN_SYMBOL(aes128_gcm_dec_alt):
 	CFI_START
 	AARCH64_VALID_CALL_TARGET
