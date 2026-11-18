@@ -20,6 +20,8 @@ compiler and the optimization level, `<build>` = `<compiler>_<level>`:
  - `gcc12_O2` for the gcc 12 `-O2` binary, whose whole image is verified;
  - `gcc12_O3` for the gcc 12 `-O3` binary, whose whole image is verified
    in the same way (see `gcc12_O3/README.md`);
+ - `gcc12_Os` for the gcc 12 `-Os` binary, whose whole image is verified
+   in the same way (see `gcc12_Os/README.md`);
  - `gcc12_O2_mono` for the gcc 12 `-O2` binary of the monolithic build,
    which compiles all of mlkem-native as one translation unit (see
    `gcc12_O2_mono/README.md`);
@@ -279,9 +281,12 @@ functions that expand the matrix A, the `_IMAGE_SUBROUTINE_FIPS203` and
 The code is transcribed from the disassembly of the pre-built binaries in
 the `binary` branch of mlkem-native (commit `83fb34a`). These were built
 from mlkem-native commit `03392e41` by its `scripts/build-binaries`, as
-recorded in `binaries/builds.json` there. We use the "multilevel" builds
-(`examples/multilevel_build`), compiled with `CFLAGS` set to
-`-O<level> -g -gdwarf-4 -gsplit-dwarf -fPIC`. The file
+recorded in `binaries/builds.json` there. The `-Os` binary is in commit
+`bf078650` of the `binary` branch, which builds it with the same script
+from the same source commit `03392e41`; the `-O2` and `-O3` binaries are
+the same in that commit. We use the
+"multilevel" builds (`examples/multilevel_build`), compiled with `CFLAGS`
+set to `-O<level> -g -gdwarf-4 -gsplit-dwarf -fPIC`. The file
 `<compiler>_<level>/<function>.S`, with the symbol
 `mlkem_native_<function>_<compiler>_<level>`, contains the code of the
 function `mlkem_<function>` in the binary
@@ -307,6 +312,7 @@ function `mlkem_<function>` in the binary
 | gcc12_O2/poly_tomont.S           | gcc 12.3.0   |
 | gcc12_O2/rej_uniform.S           | gcc 12.3.0   |
 | gcc12_O3/libmlkem.S              | gcc 12.3.0   |
+| gcc12_Os/libmlkem.S              | gcc 12.3.0   |
 | gcc12_O2_mono/libmlkem.S         | gcc 12.3.0   |
 | clang17_O2/poly_reduce.S         | clang 17.0.6 |
 | clang17_O3/libmlkem.S            | clang 17.0.6 |
@@ -343,6 +349,8 @@ binaries/multilevel/gcc12/O2/libmlkem.so
   ed9a4710c0ec93ef1eab794f3e854dfadf92b45e08c76101cffdf1a36b035692
 binaries/multilevel/gcc12/O3/libmlkem.so
   5139544fd8a5aa5d0ac9d3895dadbe23d9168b2853dce9f5a9a758b0f0dfdd77
+binaries/multilevel/gcc12/Os/libmlkem.so
+  d93a97f48fc3ded91aff42a9a3a5ff335b33cec6a533a855812d28bd1a2144dc
 binaries/multilevel-mono/gcc12/O2/libmlkem.so
   218c21e6488dd7d9005ed0dd728d1511e6acce8be2ff981c4870c309b3c31e58
 ```
