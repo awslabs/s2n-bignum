@@ -358,7 +358,11 @@ let DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC g =
 
 let DISCHARGE_MEMACCESS_INBOUNDS_USING_ASM_TAC:tactic =
   let try_discharge (meminb_th:thm):tactic =
-    UNDISCH_TAC (concl meminb_th) THEN
+    (* all copies of the assumption go: a callee called twice with the same *)
+    (* arguments gives the same fact twice, and a copy left would rewrite   *)
+    (* the antecedent to T                                                  *)
+    REPEAT(UNDISCH_THEN (concl meminb_th) (K ALL_TAC)) THEN
+    MP_TAC meminb_th THEN
     ASM_REWRITE_TAC[] THEN (* to expand "e2" *)
     (* this is sometimes needed *)
     REWRITE_TAC[APPEND;APPEND_NIL] THEN
