@@ -3665,12 +3665,14 @@ let rec SUB_COMPONENTS_CONV conv tm =
   | _ -> REFL tm;;
 
 (* ------------------------------------------------------------------------- *)
-(* Cached orthogonality theorems.                                            *)
+(* Cached orthogonality and read-over-write theorems.                        *)
 (*                                                                           *)
-(* Frame proofs need |- orthogonal_components c d for the same pairs of      *)
-(* components again and again. orthogonality_theorem c d proves it once per  *)
-(* pair. Theorems without hypotheses are kept for the session; those that    *)
-(* use the assumptions set by set_component_assumptions (nonoverlapping      *)
+(* A simulation that keeps one fact read c s = v per component c moves the   *)
+(* fact across a write to d by the row |- read c (write d y s) = read c s.   *)
+(* The row is made once per pair (c,d) from |- orthogonal_components c d,    *)
+(* and each use is one INST of y and s, which does not walk the value or     *)
+(* the state. Theorems without hypotheses are kept for the session; those    *)
+(* that use the assumptions set by set_component_assumptions (nonoverlapping *)
 (* facts, bounds) are kept until the assumptions are set again.              *)
 (* ------------------------------------------------------------------------- *)
 
@@ -3700,6 +3702,11 @@ let NONOVERLAPPING_MODULO_64_OFFSET_BASES = prove
   CONV_TAC(ONCE_DEPTH_CONV MOD_DOWN_CONV) THEN
   REWRITE_TAC[CONTAINED_MODULO_LMOD] THEN
   MATCH_MP_TAC CONTAINED_MODULO_OFFSET_SIMPLE THEN ASM_ARITH_TAC);;
+
+let READ_COMPONENT_COMPOSE_EQ = prove
+ (`read (c:(S,V)component) s = read c t
+   ==> read (c :> (d:(V,W)component)) s = read (c :> d) t`,
+  SIMP_TAC[READ_COMPONENT_COMPOSE]);;
 
 (* `memory :> K x` for the byte components K, as (x, length in bytes).       *)
 
@@ -3757,6 +3764,10 @@ let memory_bytes_orthogonality_lemma =
 let orthogonality_cache : thm Termtbl2.t = Termtbl2.create 4096;;
 let orthogonality_context_cache : thm option Termtbl2.t =
   Termtbl2.create 4096;;
+let read_write_row_cache : (thm * term * term) Termtbl2.t =
+  Termtbl2.create 4096;;
+let read_write_row_context_cache : (thm * term * term) Termtbl2.t =
+  Termtbl2.create 4096;;
 
 (* The assumptions that the proofs may use (those that do not mention the    *)
 (* state), the nonoverlapping ones indexed by their pair of base addresses,  *)
@@ -3803,6 +3814,7 @@ let set_component_assumptions (ths:thm list) =
   component_assumptions := ths;
   Termtbl2.reset component_nonoverlapping;
   Termtbl2.reset orthogonality_context_cache;
+  Termtbl2.reset read_write_row_context_cache;
   List.iter (fun th ->
       match (try nonoverlapping_val_form th with Failure _ -> None) with
         Some th' ->
@@ -3941,3 +3953,54 @@ and orthogonality_theorem c d =
     Some th -> th
   | None -> failwith ("cannot show `" ^ string_of_term c ^
                       "` orthogonal to `" ^ string_of_term d ^ "`");;
+
+(* read_write_row c d y t: |- read c (write d y t) = read c t.               *)
+
+let read_write_row =
+  let inst = lemma_instance READ_WRITE_ORTHOGONAL_COMPONENTS
+               ["c";"d"] ["x";"s"] in
+  let row c d =
+    let key = (c,d) in
+    try Termtbl2.find read_write_row_cache key with Not_found ->
+    try Termtbl2.find read_write_row_context_cache key with Not_found ->
+    let oth = orthogonality_theorem c d in
+    let ith,vs = inst [c;d] in
+    let th = MP ith oth in
+    let r = (th,hd vs,el 1 vs) in
+    (if hyp th = [] then Termtbl2.replace read_write_row_cache key r
+     else Termtbl2.replace read_write_row_context_cache key r);
+    r in
+  fun c d y t ->
+    let th,yv,sv = row c d in
+    INST [y,yv; t,sv] th;;
+
+(* read_write_same d y t: |- read d (write d y t) = y. Fails if d is not a   *)
+(* valid component, such as a byte region whose length is not a numeral.     *)
+
+let read_write_same =
+  let inst = lemma_instance READ_WRITE_VALID_COMPONENT ["c"] ["y";"s"] in
+  let cache : (thm * term * term) Termtbl.t = Termtbl.create 1024 in
+  fun d y t ->
+    let th,yv,sv =
+      try Termtbl.find cache d with Not_found ->
+      let vth =
+        try VALID_COMPONENT_CONV
+              (mk_icomb(`valid_component:(S,V)component->bool`,d))
+        with Failure _ ->
+          failwith ("a write to `" ^ string_of_term d ^ "`, which is not " ^
+                    "a valid component (such as a byte region whose " ^
+                    "length is not a numeral)") in
+      let vth = if is_eq(concl vth) then EQT_ELIM vth else vth in
+      let ith,vs = inst [d] in
+      let r = (MP ith vth,hd vs,el 1 vs) in
+      Termtbl.replace cache d r; r in
+    INST [y,yv; t,sv] th;;
+
+(* read_compose_lift c d eq: |- read (c :> d) s = read (c :> d) t from       *)
+(* eq: |- read c s = read c t.                                               *)
+
+let read_compose_lift =
+  let inst = lemma_instance READ_COMPONENT_COMPOSE_EQ ["c";"d";"s";"t"] [] in
+  fun c d eq ->
+    let s = rand(lhs(concl eq)) and t = rand(rhs(concl eq)) in
+    MP (fst(inst [c;d;s;t])) eq;;
