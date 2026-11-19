@@ -744,6 +744,44 @@ let lemma2 = prove
   ASM_SIMP_TAC[VAL_WORD_SUB_CASES; GSYM REAL_OF_NUM_SUB] THEN
   REAL_ARITH_TAC);;
 
+(* The sign cases of the Karatsuba-style 4x4 multiplications are handled    *)
+(* without case splits: the conditional negations are rewritten into        *)
+(* polynomials in the bits b = bitval(...) and then, since b^2 = b, the     *)
+(* final identity is a polynomial one that REAL_INTEGER_TAC can check.      *)
+
+let ADK_VAL_COND_NOT = prove
+ (`!(c:bool) (m:int64).
+        &(val(if c then word_not m else m)):real =
+        &(val m) + &(bitval c) * (&2 pow 64 - &1 - &2 * &(val m))`,
+  REPEAT GEN_TAC THEN BOOL_CASES_TAC `c:bool` THEN
+  REWRITE_TAC[BITVAL_CLAUSES; REAL_VAL_WORD_NOT; DIMINDEX_64] THEN
+  REAL_ARITH_TAC);;
+
+let ADK_VAL_MASK = prove
+ (`!b. &(val(word_neg(word(bitval b):int64))):real =
+       (&2 pow 64 - &1) * &(bitval b)`,
+  REWRITE_TAC[REAL_VAL_WORD_MASK; DIMINDEX_64]);;
+
+let ADK_CARRY_IN = prove
+ (`!b. bitval(2 EXP 64 <= val(word_neg(word(bitval b):int64)) + 1) =
+       bitval b`,
+  GEN_TAC THEN BOOL_CASES_TAC `b:bool` THEN REWRITE_TAC[BITVAL_CLAUSES] THEN
+  CONV_TAC WORD_REDUCE_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[BITVAL_CLAUSES]);;
+
+let ADK_SIGN = prove
+ (`!b. --(&1) pow bitval b = &1 - &2 * &(bitval b)`,
+  GEN_TAC THEN BOOL_CASES_TAC `b:bool` THEN REWRITE_TAC[BITVAL_CLAUSES] THEN
+  CONV_TAC REAL_RAT_REDUCE_CONV);;
+
+let ADK_BIT_POW = prove
+ (`(!b. &(bitval b) pow 2 = &(bitval b)) /\
+   (!b. &(bitval b) pow 3 = &(bitval b))`,
+  CONJ_TAC THEN GEN_TAC THEN BOOL_CASES_TAC `b:bool` THEN
+  REWRITE_TAC[BITVAL_CLAUSES] THEN CONV_TAC REAL_RAT_REDUCE_CONV);;
+
+let BITVAL_POW_CONV = GEN_REWRITE_CONV DEPTH_CONV [ADK_BIT_POW];;
+
 let ADK_48_TAC =
   MATCH_MP_TAC EQUAL_FROM_CONGRUENT_REAL THEN
   MAP_EVERY EXISTS_TAC [`512`; `&0:real`] THEN
@@ -752,14 +790,12 @@ let ADK_48_TAC =
   ACCUMULATOR_POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
   POP_ASSUM_LIST(K ALL_TAC) THEN
   REWRITE_TAC[lemma1; lemma2] THEN REWRITE_TAC[WORD_XOR_MASK] THEN
-  REPEAT(COND_CASES_TAC THEN
-         ASM_REWRITE_TAC[BITVAL_CLAUSES; REAL_VAL_WORD_NOT]) THEN
-  CONV_TAC WORD_REDUCE_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[BITVAL_CLAUSES; DIMINDEX_64] THEN
-  POP_ASSUM_LIST(K ALL_TAC) THEN DISCH_TAC THEN
+  REWRITE_TAC[ADK_VAL_COND_NOT; ADK_VAL_MASK; ADK_CARRY_IN; ADK_SIGN] THEN
+  DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o end_itlist CONJ o DESUM_RULE o CONJUNCTS) THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
-  CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN
+  CONV_TAC(RAND_CONV
+   (REAL_POLY_CONV THENC BITVAL_POW_CONV THENC REAL_POLY_CONV)) THEN
   FIRST_ASSUM(MP_TAC o end_itlist CONJ o filter (is_ratconst o rand o concl) o
              DECARRY_RULE o CONJUNCTS) THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC;;
