@@ -5212,7 +5212,10 @@ let X86_FORCE_CONDITIONAL_CONV =
        TRY_CONV (GEN_REWRITE_CONV
         (RATOR_CONV o RATOR_CONV o LAND_CONV o TOP_DEPTH_CONV) ths) THENC
        TRY_CONV (GEN_REWRITE_CONV RATOR_CONV [COND_CLAUSES]) in
-     let chconv t = if trigger t then baseconv t else failwith "baseconv" in
+     (* CHANGED_CONV: a condition that the theorems do not decide stays,     *)
+     (* instead of baseconv being repeated on it forever.                    *)
+     let chconv t = if trigger t then CHANGED_CONV baseconv t
+                    else failwith "baseconv" in
      fun tm -> if trigger tm then (REPEATC chconv THENC TRY_CONV BETA_CONV) tm
                else REFL tm;;
 
