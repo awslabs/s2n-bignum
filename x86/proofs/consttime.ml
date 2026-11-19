@@ -82,8 +82,9 @@ let EXPAND_MAYCHANGE_YMM_REGS_TAC:tactic =
     DISCH_TAC
   ];;
 
-let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) exec:tactic =
-  GEN_PROVE_SAFETY_SPEC_TAC ?public_vars:public_vars exec
+let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) ?run_tac
+    exec:tactic =
+  GEN_PROVE_SAFETY_SPEC_TAC ?public_vars:public_vars ?run_tac exec
     ?tac_before_maychange_simp:(Some EXPAND_MAYCHANGE_YMM_REGS_TAC)
     [BYTES_LOADED_APPEND_CLAUSE]
     X86_SINGLE_STEP_TAC;;

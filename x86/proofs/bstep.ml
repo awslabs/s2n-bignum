@@ -8,6 +8,7 @@
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
+needs "x86/proofs/consttime.ml";;
 needs "common/bstep.ml";;
 
 (* The instruction at offset k, for messages.                                *)
@@ -85,6 +86,13 @@ let x86_bstep_arch =
 (* XOR, for example) become fresh variables bstep_u<k> in that goal.         *)
 
 let X86_BSTEP_TAC = BSTEP_STEPS_TAC x86_bstep_arch;;
+
+(* X86_BSTEP_SAFETY_TAC ~public_vars execth proves a safety statement made   *)
+(* by mk_safety_spec: PROVE_SAFETY_SPEC_TAC with one block of steps.         *)
+
+let X86_BSTEP_SAFETY_TAC ?public_vars exec =
+  PROVE_SAFETY_SPEC_TAC ?public_vars
+    ~run_tac:(BSTEP_SAFETY_RUN_TAC x86_bstep_arch exec) exec;;
 
 (* X86_BSTEP_CALL_TAC execth th "s<n>" goes through th: |- ensures x86 ...   *)
 (* (see GEN_BSTEP_CALL_TAC in common/bstep.ml).                              *)
