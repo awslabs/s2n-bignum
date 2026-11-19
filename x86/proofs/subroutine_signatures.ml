@@ -1689,6 +1689,26 @@ let subroutine_signatures = [
    ])
 );
 
+("bignum_mod",
+  ([(*args*)
+     ("k", "uint64_t", (*is const?*)"false");
+     ("z", "uint64_t*", (*is const?*)"false");
+     ("n", "uint64_t", (*is const?*)"false");
+     ("x", "uint64_t*", (*is const?*)"true");
+     ("m", "uint64_t*", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("x", "n"(* num elems *), 8(* elem bytesize *));
+    ("m", "k"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("z", "k"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("bignum_mod_m25519",
   ([(*args*)
      ("z", "uint64_t[static 4]", (*is const?*)"false");

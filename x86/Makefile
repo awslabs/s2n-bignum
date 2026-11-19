@@ -212,6 +212,7 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              generic/bignum_le.o \
              generic/bignum_lt.o \
              generic/bignum_madd.o \
+             generic/bignum_mod.o \
              generic/bignum_modadd.o \
              generic/bignum_moddouble.o \
              generic/bignum_modexp.o \
