@@ -2218,3 +2218,72 @@ let GEN_EX_SUBSET_LIST = prove(`
 (* ------------------------------------------------------------------------- *)
 
 needs "common/actions_merger.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* Term tables and instances of lemmas.                                      *)
+(* ------------------------------------------------------------------------- *)
+
+(* Tables keyed by terms: components, pairs of components, and frames.       *)
+(* OCaml's Hashtbl.hash looks at too few nodes, most of them in types, so    *)
+(* memory components that differ only in an address offset all collide.      *)
+(* term_hash ignores types and visits the first 32 variables and constants   *)
+(* depth first from the left and the first 32 from the right, so that        *)
+(* frames that differ only in their last clauses (a frame grows at the end)  *)
+(* hash apart too. Only leaves count, so that the right pass gets past the   *)
+(* long spine of ,, in a frame.                                              *)
+
+let term_hash =
+  let rec h budget right acc tm =
+    if !budget <= 0 then acc else
+    match tm with
+      Var(n,_) -> decr budget; acc * 31 + Hashtbl.hash n
+    | Const(n,_) -> decr budget; acc * 37 + Hashtbl.hash n
+    | Comb(f,x) ->
+        let acc = acc * 41 + 1 in
+        if right then h budget right (h budget right acc x) f
+        else h budget right (h budget right acc f) x
+    | Abs(v,b) -> h budget right (h budget right (acc * 43 + 2) v) b in
+  fun (tm:term) -> Hashtbl.hash (h (ref 32) false 0 tm,h (ref 32) true 0 tm);;
+
+module Termtbl = Hashtbl.Make (struct
+  type t = term
+  let equal x y = compare x y = 0
+  let hash = term_hash
+end);;
+
+module Termtbl2 = Hashtbl.Make (struct
+  type t = term * term
+  let equal (x,y) (x',y') = compare x x' = 0 && compare y y' = 0
+  let hash (x,y) = Hashtbl.hash (term_hash x,term_hash y)
+end);;
+
+(* Instances of a theorem for large terms. lemma_instance th names rest      *)
+(* gives a function from terms for the variables of SPEC_ALL th named in     *)
+(* names to the instance and the variables named in rest, renamed apart      *)
+(* from the terms put in. The type instance is made once per list of types,  *)
+(* so a use costs one INST. For a lemma without binders that INST does not   *)
+(* walk the terms put in; at each binder whose body changes it checks them   *)
+(* for capture, which walks them. They are also walked once for their free   *)
+(* variables if rest is not empty.                                           *)
+
+let lemma_instance (th:thm) (names:string list) (rest:string list) =
+  let th = SPEC_ALL th in
+  let var_of th n =
+    let vs = itlist (union o frees) (concl th::hyp th) [] in
+    try find (fun v -> name_of v = n) vs
+    with Failure _ -> failwith ("lemma_instance: no variable " ^ n) in
+  let cache = ref [] in
+  fun (tms:term list) ->
+    let tys = map type_of tms in
+    let th',vs,rs =
+      try assoc tys !cache with Failure _ ->
+      let tyin = itlist2 (fun n t i -> type_match (type_of(var_of th n))
+                                                  (type_of t) i)
+                         names tms [] in
+      let th' = INST_TYPE tyin th in
+      let r = (th',map (var_of th') names,map (var_of th') rest) in
+      cache := (tys,r) :: !cache; r in
+    let rs' = if rs = [] then [] else
+              let avoid = itlist (union o frees) tms [] in
+              map (variant avoid) rs in
+    INST (zip tms vs @ zip rs' rs) th',rs';;
