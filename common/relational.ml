@@ -3676,14 +3676,26 @@ let ENSURES_N_WHILE_PUP_TAC,ENSURES_N_WHILE_PDOWN_TAC,
     CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Cached frame theorems.                                                    *)
+(* Cached frame theorems for symbolic simulation.                            *)
 (*                                                                           *)
 (* A frame C is made of MAYCHANGE lists joined by ,,. subsumed_theorem R C   *)
 (* proves |- R subsumed C from one theorem |- MAYCHANGE [d] subsumed C per   *)
-(* component d of R, absorbing the components of R into the clauses of C     *)
-(* (maychange_absorb), and keeps the theorems for the session, since a frame *)
-(* is usually used many times.                                               *)
+(* component d of R, and maychange_write_theorem C d proves                  *)
+(* |- C s0 t ==> C s0 (write d y t) with the variables s0, t and y. Both     *)
+(* absorb writes into the clauses of C (maychange_absorb), and both are kept *)
+(* for the session, since a frame is usually used by many writes.            *)
 (* ------------------------------------------------------------------------- *)
+
+(* tm is `R x s` for a frame R built with MAYCHANGE and ,, (checked at the   *)
+(* head only, so that large terms are not walked).                           *)
+
+let is_maychange_frame tm =
+  match tm with
+    Comb(Comb(r,_),_) ->
+      (match fst(strip_comb r) with
+         Const(("MAYCHANGE"|",,"),_) -> true
+       | _ -> false)
+  | _ -> false;;
 
 let MAYCHANGE_CONS_SEQ = prove
  (`MAYCHANGE (CONS (c:(S,V)component) (CONS d l)) =
@@ -3774,7 +3786,8 @@ let component_may_contain d e =
 (* CF and X1 ,, X1 is X1. Components that the frame names in parts (Q8 in    *)
 (* halves, x86 YMM registers in quarters) are split: no clause contains      *)
 (* them whole. Fails if no clause contains d or a later clause is not        *)
-(* orthogonal to d. subsumed_theorem uses it for sequences.                  *)
+(* orthogonal to d. It is the only proof that its users take                 *)
+(* (maychange_write_theorem, subsumed_theorem for sequences).                *)
 
 let MAYCHANGE_ABSORB_NIL = prove
  (`((C:S->S->bool) ,, (MAYCHANGE:((S,V)component)list->S->S->bool) [])
@@ -4072,3 +4085,99 @@ let subsumed_theorem =
                        SUBSUMED_MAYCHANGE_TAC) in
     if hyp th = [] then Termtbl2.replace cache (r,ct) th; th in
   subsumed;;
+
+let MAYCHANGE_WRITE_SUBSUMED = prove
+ (`((C:S->S->bool) ,, MAYCHANGE [c:(S,V)component]) subsumed C
+   ==> C s0 t ==> C s0 (write c y t)`,
+  REWRITE_TAC[subsumed] THEN MESON_TAC[MAYCHANGE_WRITE]);;
+
+let maychange_write_theorem =
+  let cache : (thm * term * term * term) Termtbl2.t = Termtbl2.create 256
+  and inst = lemma_instance MAYCHANGE_WRITE_SUBSUMED ["C";"c"] ["s0";"t";"y"]
+  and aty = `:A` and bty = `:B` in
+  fun ct d ->
+    try Termtbl2.find cache (ct,d) with Not_found ->
+    let sty = hd(snd(dest_type(type_of d)))
+    and vty = last(snd(dest_type(type_of d))) in
+    let mc = mk_comb(mk_const("MAYCHANGE",[sty,aty; vty,bty]),mk_flist [d]) in
+    let sub = maychange_absorb ct mc in
+    let ith,vs = inst [ct;d] in
+    let th = MP ith sub in
+    let r = (th,el 0 vs,el 1 vs,el 2 vs) in
+    if hyp th = [] then Termtbl2.replace cache (ct,d) r;
+    r;;
+
+let SUBSUMED_MP = prove
+ (`(R:S->S->bool) s s' ==> R subsumed C ==> C s s'`,
+  REWRITE_TAC[subsumed] THEN MESON_TAC[]);;
+
+let SEQ_INTRO = prove
+ (`(R:S->S->bool) x s ==> (C:S->S->bool) s s' ==> (R ,, C) x s'`,
+  REWRITE_TAC[seq] THEN MESON_TAC[]);;
+
+(* prove_from_assumptions asl tm proves the conjunction tm from the          *)
+(* assumptions asl, conjunct by conjunct, looking them up in a table; a      *)
+(* conjunct that is not an assumption is proved by rewriting with them, then *)
+(* putting both sides in one normal form: ground terms                       *)
+(* reduced, the address forms of NORMALIZE_RELATIVE_ADDRESS_CONV (which the  *)
+(* preconditions have been normalized with), additions associated to the     *)
+(* right and ground terms reduced again. For example, with the assumptions   *)
+(* t = 0, read X10 s = word_add z (word (a + 1016)) and read X5 s =          *)
+(* word_add (word_add z (word a)) (word 168), it proves                      *)
+(*                                                                           *)
+(*   word_zx (word_zx (word t)) = word 0                                     *)
+(*   read X10 s = word_add z (word ((a + 512) + 504))                        *)
+(*   read X5 s = word_add z (word (a + 168))                                 *)
+
+let prove_from_assumptions (asl:(string * thm) list) =
+  let tbl = Termtbl.create 1024 in
+  List.iter (fun (_,th) -> Termtbl.replace tbl (concl th) th) asl;
+  let red = DEPTH_CONV(WORD_RED_CONV ORELSEC NUM_RED_CONV) THENC
+            REWRITE_CONV[] in
+  let norm = lazy(REWRITE_CONV (map snd asl) THENC red THENC
+                  ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV THENC
+                  REWRITE_CONV[GSYM ADD_ASSOC] THENC red) in
+  let rec prove_conj tm =
+    try Termtbl.find tbl tm with Not_found ->
+    match tm with
+      Comb(Comb(Const("/\\",_),l),r) -> CONJ (prove_conj l) (prove_conj r)
+    | Const("T",_) -> TRUTH
+    | _ -> try EQT_ELIM(Lazy.force norm tm) with Failure _ ->
+           failwith ("the precondition needs " ^ string_of_small_term tm ^
+                     ", which does not follow from the assumptions") in
+  prove_conj;;
+
+(* READ_FACT_REWRITE_TAC p rewrites the conclusion once, top down, with the  *)
+(* assumptions read c s = v for which p c holds; it does not look into the   *)
+(* values it puts in.                                                        *)
+
+let READ_FACT_REWRITE_TAC (p:term -> bool) : tactic =
+  fun (asl,w) ->
+    let tbl = Termtbl.create 1024 in
+    List.iter (fun (_,th) -> match concl th with
+        Comb(Comb(Const("=",_),(Comb(Comb(Const("read",_),c),_) as l)),_)
+          when p c -> Termtbl.replace tbl l th
+      | _ -> ()) asl;
+    let conv tm =
+      try Termtbl.find tbl tm with Not_found -> failwith "fact" in
+    CONV_TAC (ONCE_DEPTH_CONV conv) (asl,w);;
+
+(* DISCARD_STATE_FACTS_TAC s drops the assumptions about the state s (read   *)
+(* facts, code and MAYCHANGE facts) by their shape, without looking into     *)
+(* their values.                                                             *)
+
+let DISCARD_STATE_FACTS_TAC (s:term) : tactic =
+  fun (asl,w) ->
+    let about th = match concl th with
+        Comb(Comb(Const("=",_),Comb(Comb(Const("read",_),_),s')),_) -> s' = s
+      | Comb(Comb(Comb(Const(_,_),s'),_),_) when s' = s -> true
+      | tm -> is_maychange_frame tm && rand tm = s in
+    ALL_TAC (filter (fun (_,th) -> not(about th)) asl,w);;
+
+(* memory_component_at a c: c is a memory component whose address mentions   *)
+(* the variable a; for selecting facts to keep, split and rewrite with.      *)
+
+let memory_component_at (a:term) (c:term) =
+  match c with
+    Comb(Comb(Const(":>",_),Const("memory",_)),Comb(_,addr)) -> vfree_in a addr
+  | _ -> false;;
