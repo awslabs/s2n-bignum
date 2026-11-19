@@ -3157,6 +3157,34 @@ let add_load_event = define
                         (read events s0)) s0
       | _ -> (=) s0`;;
 
+(* An EVEX instruction with a write mask and a memory operand records the
+   mask. On hardware such an instruction accesses only the elements that
+   the mask enables: a masked store leaves the other elements of memory
+   unchanged, and in the exception classes with fault suppression (E1,
+   E4) a masked-off element does not fault. The load and store events
+   above record the whole operand whatever the mask. For memory safety
+   that over-approximation is sound; for constant time it is not, since
+   the hardware's accesses and faults then depend on the mask. Recording
+   the mask means that a constant-time proof must show that it is
+   public. Nothing is recorded without a write mask or for a register
+   operand: a masked register-only instruction, such as a select with
+   VPBLENDMQ, may use a secret mask. *)
+let add_mask_event = define
+  `(add_mask_event:
+      evex_masking->operand->x86state->x86state->x86state->bool) =
+    \masking (op:operand) (s:x86state) (s0:x86state).
+      match op with
+      Memop w (bs:bsid) ->
+        (match masking with
+           Unmasked -> (=) s0
+         | Merge_mask k ->
+             (events := CONS (EventX86Opmask (evex_mask k s))
+                             (read events s0)) s0
+         | Zero_mask k ->
+             (events := CONS (EventX86Opmask (evex_mask k s))
+                             (read events s0)) s0)
+      | _ -> (=) s0`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Execution of a single instruction.                                        *)
 (* ------------------------------------------------------------------------- *)
@@ -4243,7 +4271,7 @@ let x86_execute = define
         | 128 -> x86_VPSRLW (OPERAND128 dest s) (OPERAND128 src s)
                             (OPERAND8 imm8 s)) s)) s
     | VPTERNLOGD dest src2 src3 imm8 (Evex_deco masking brc) ->
-        (add_load_event dest s ,, add_load_event src2 s ,,
+        (add_mask_event masking src3 s ,, add_load_event dest s ,, add_load_event src2 s ,,
          add_load_event src3 s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
           512 -> x86_VPTERNLOGD (OPERAND512 dest s) (OPERAND512 src2 s)
@@ -4253,7 +4281,7 @@ let x86_execute = define
         | 128 -> x86_VPTERNLOGD (OPERAND128 dest s) (OPERAND128 src2 s)
                    (evex_src brc (OPERAND128 src3 s) src3 s) (OPERAND8 imm8 s) masking) s)) s
     | VPTERNLOGQ dest src2 src3 imm8 (Evex_deco masking brc) ->
-        (add_load_event dest s ,, add_load_event src2 s ,,
+        (add_mask_event masking src3 s ,, add_load_event dest s ,, add_load_event src2 s ,,
          add_load_event src3 s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
           512 -> x86_VPTERNLOGQ (OPERAND512 dest s) (OPERAND512 src2 s)
@@ -4266,7 +4294,7 @@ let x86_execute = define
                    (evex_src brc (OPERAND128 src3 s) src3 s) (OPERAND8 imm8 s)
                    masking) s)) s
     | VPXORQ dest src1 src2 (Evex_deco masking brc) ->
-        (add_load_event dest s ,, add_load_event src1 s ,,
+        (add_mask_event masking src2 s ,, add_load_event dest s ,, add_load_event src1 s ,,
          add_load_event src2 s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
           512 -> x86_VPXORQ (OPERAND512 dest s) (OPERAND512 src1 s)
@@ -4276,34 +4304,36 @@ let x86_execute = define
         | 128 -> x86_VPXORQ (OPERAND128 dest s) (OPERAND128 src1 s)
                    (evex_src brc (OPERAND128 src2 s) src2 s) masking) s)) s
     | VPROLQ dest src imm8 (Evex_deco masking brc) ->
-        (add_load_event dest s ,, add_load_event src s ,, add_store_event dest s ,,
+        (add_mask_event masking src s ,,
+         add_load_event dest s ,, add_load_event src s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
           512 -> x86_VPROLQ (OPERAND512 dest s) (OPERAND512 src s) (OPERAND8 imm8 s) masking
         | 256 -> x86_VPROLQ (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s) masking
         | 128 -> x86_VPROLQ (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s) masking) s)) s
     | VPROLVQ dest src cnt (Evex_deco masking brc) ->
-        (add_load_event dest s ,, add_load_event src s ,,
+        (add_mask_event masking cnt s ,, add_load_event dest s ,, add_load_event src s ,,
          add_load_event cnt s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
           512 -> x86_VPROLVQ (OPERAND512 dest s) (OPERAND512 src s) (OPERAND512 cnt s) masking
         | 256 -> x86_VPROLVQ (OPERAND256 dest s) (OPERAND256 src s) (OPERAND256 cnt s) masking
         | 128 -> x86_VPROLVQ (OPERAND128 dest s) (OPERAND128 src s) (OPERAND128 cnt s) masking) s)) s
     | VPERMQV dest idx src (Evex_deco masking brc) ->
-        (add_load_event dest s ,, add_load_event idx s ,,
+        (add_mask_event masking src s ,, add_load_event dest s ,, add_load_event idx s ,,
          add_load_event src s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
           512 -> x86_VPERMQV (OPERAND512 dest s) (OPERAND512 idx s) (OPERAND512 src s) masking
         | 256 -> x86_VPERMQV (OPERAND256 dest s) (OPERAND256 idx s) (OPERAND256 src s) masking
         | 128 -> x86_VPERMQV (OPERAND128 dest s) (OPERAND128 idx s) (OPERAND128 src s) masking) s)) s
     | VPBLENDMQ dest src1 src2 (Evex_deco masking brc) ->
-        (add_load_event dest s ,, add_load_event src1 s ,,
+        (add_mask_event masking src2 s ,, add_load_event dest s ,, add_load_event src1 s ,,
          add_load_event src2 s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
           512 -> x86_VPBLENDMQ (OPERAND512 dest s) (OPERAND512 src1 s) (OPERAND512 src2 s) masking
         | 256 -> x86_VPBLENDMQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s) masking
         | 128 -> x86_VPBLENDMQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s) masking) s)) s
     | VMOVDQA64 dest src (Evex_deco masking brc) ->
-        (add_load_event src s ,, add_store_event dest s ,,
+        (add_mask_event masking src s ,, add_mask_event masking dest s ,,
+         add_load_event src s ,, add_store_event dest s ,,
         (\s. match operand_size dest with
           512 -> if aligned_OPERAND512 src s /\ aligned_OPERAND512 dest s
                  then x86_VMOVDQ64 (OPERAND512 dest s) (OPERAND512 src s)
@@ -4318,7 +4348,8 @@ let x86_execute = define
                                    masking s
                  else (\s'. F))) s
     | VMOVDQU64 dest src (Evex_deco masking brc) ->
-        (add_load_event src s ,, add_store_event dest s ,,
+        (add_mask_event masking src s ,, add_mask_event masking dest s ,,
+         add_load_event src s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
           512 -> x86_VMOVDQ64 (OPERAND512 dest s) (OPERAND512 src s) masking
         | 256 -> x86_VMOVDQ64 (OPERAND256 dest s) (OPERAND256 src s) masking
@@ -5988,7 +6019,7 @@ let X86_CONV (decode_ths:thm option array) ths tm =
       try Some ((assoc (name_of t) X86_EXECUTE_CASES)) with Failure _ -> None) ts in
   (K eth THENC
    PURE_ONCE_REWRITE_CONV(x86_execute_case_rules) THENC
-   REWRITE_CONV[add_store_event;add_load_event;SEQ_ID] THENC
+   REWRITE_CONV[add_store_event;add_load_event;add_mask_event;SEQ_ID] THENC
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
    REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256;
                 aligned_OPERAND512] THENC
