@@ -2231,3 +2231,87 @@ let GEN_EX_SUBSET_LIST = prove(`
 (* ------------------------------------------------------------------------- *)
 
 needs "common/actions_merger.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* Term tables, instances of lemmas, and terms in messages.                  *)
+(* ------------------------------------------------------------------------- *)
+
+(* Tables keyed by small terms (components, pairs of components, ground      *)
+(* terms). OCaml's Hashtbl.hash looks at too few nodes, most of them in      *)
+(* types, so memory components that differ only in an address offset all     *)
+(* collide. This hash visits the first 64 nodes depth first and ignores      *)
+(* types.                                                                    *)
+
+let term_hash (tm:term) =
+  let budget = ref 64 in
+  let rec h acc tm =
+    if !budget <= 0 then acc else begin
+      decr budget;
+      match tm with
+        Var(n,_) -> acc * 31 + Hashtbl.hash n
+      | Const(n,_) -> acc * 37 + Hashtbl.hash n
+      | Comb(f,x) -> h (h (acc * 41 + 1) f) x
+      | Abs(v,b) -> h (h (acc * 43 + 2) v) b
+    end in
+  (h 0 tm) land max_int;;
+
+module Termtbl = Hashtbl.Make (struct
+  type t = term
+  let equal x y = compare x y = 0
+  let hash = term_hash
+end);;
+
+module Termtbl2 = Hashtbl.Make (struct
+  type t = term * term
+  let equal (x,y) (x',y') = compare x x' = 0 && compare y y' = 0
+  let hash (x,y) = (term_hash x * 65599 + term_hash y) land max_int
+end);;
+
+(* Instances of a theorem for large terms. lemma_instance th names rest      *)
+(* gives a function from terms for the variables of SPEC_ALL th named in     *)
+(* names to the instance and the variables named in rest, renamed apart      *)
+(* from the terms put in. The type instance is made once per list of types,  *)
+(* so a use costs one INST, which does not walk the terms put in; they are   *)
+(* walked once for their free variables only if rest is not empty.           *)
+
+let lemma_instance (th:thm) (names:string list) (rest:string list) =
+  let th = SPEC_ALL th in
+  let var_of th n =
+    let vs = itlist (union o frees) (concl th::hyp th) [] in
+    try find (fun v -> name_of v = n) vs
+    with Failure _ -> failwith ("lemma_instance: no variable " ^ n) in
+  let cache = ref [] in
+  fun (tms:term list) ->
+    let tys = map type_of tms in
+    let th',vs,rs =
+      try assoc tys !cache with Failure _ ->
+      let tyin = itlist2 (fun n t i -> type_match (type_of(var_of th n))
+                                                  (type_of t) i)
+                         names tms [] in
+      let th' = INST_TYPE tyin th in
+      let r = (th',map (var_of th') names,map (var_of th') rest) in
+      cache := (tys,r) :: !cache; r in
+    let rs' = if rs = [] then [] else
+              let avoid = itlist (union o frees) tms [] in
+              map (variant avoid) rs in
+    INST (zip tms vs @ zip rs' rs) th',rs';;
+
+(* Whether tm has more than n nodes counted as a tree, at a cost of at most  *)
+(* n: for terms that may be huge trees of shared subterms.                   *)
+
+let term_size_exceeds n (tm:term) =
+  let budget = ref n in
+  let rec go tm =
+    decr budget;
+    if !budget < 0 then raise Exit else
+    match tm with
+      Comb(f,x) -> go f; go x
+    | Abs(v,b) -> go v; go b
+    | _ -> () in
+  try go tm; false with Exit -> true;;
+
+(* A term for a message, printed only if it is small as a tree.              *)
+
+let string_of_small_term tm =
+  if term_size_exceeds 2000 tm then "(a large term)"
+  else "`" ^ string_of_term tm ^ "`";;
