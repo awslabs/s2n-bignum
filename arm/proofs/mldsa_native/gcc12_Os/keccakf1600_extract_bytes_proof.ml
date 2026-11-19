@@ -1,0 +1,151 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/mldsa_native/gcc12_Os/keccakf1600_extract_bytes_spec.ml";;
+
+let MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_IMAGE_SUBROUTINE_FULL = prove
+ (MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_IMAGE_SUBROUTINE_FULL_STMT,
+  CONCRETIZE_F_EVENTS_TAC
+    `\(a:int64) (d:int64) (off:num) (len:num) (pc:num)
+      (returnaddress:int64).
+      if len = 0 then f_ev_len0 a d off len pc returnaddress
+      else
+        APPEND
+          (f_ev_epil a d off len pc returnaddress)
+          (APPEND
+            (ENUMERATEL len (\i. f_ev_loop a d off len pc returnaddress i))
+            (f_ev_prol a d off len pc returnaddress))
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC
+   [`a:int64`; `d:int64`; `off:num`; `len:num`; `S:1600 word`;
+    `pc:num`; `returnaddress:int64`] THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+              READ_MEMORY_WBYTES_VAL;
+              fst MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_EXEC] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_DIV_CONV) THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+
+  (*** The case len = 0, where nothing is done ***)
+
+  ASM_CASES_TAC `len = 0` THEN ASM_REWRITE_TAC[] THENL
+   [ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_EXEC
+     (1--3) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_EXEC
+     (4--5) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_TRIVIAL] THEN
+    REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  (*** The loop invariant, with the loop test at the end of the body, where
+       pc + 5476 is the first instruction of the loop body ***)
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `len:num`
+   `pc + 5476`
+   `pc + mldsa_keccakf1600_extract_bytes_loop1_exit`
+   `\i s. read X4 s = word i /\ read X1 s = d /\ read X3 s = word len /\
+          read X2 s = word_add a (word off) /\
+          read X30 s = returnaddress /\
+          read (memory :> bytes(a,200)) s = val(S:1600 word) /\
+          read (memory :> bytes(d,i)) s =
+          (val S DIV 2 EXP (8 * off)) MOD 2 EXP (8 * i)` THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+
+    (*** Initialization ***)
+
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_EXEC
+     (1--1) THEN
+    ARGS_32_TAC [`off:num`; `len:num`] THEN
+    ARM_STEPS_TAC MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_EXEC (2--3) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_EXEC
+     (4--4) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_TRIVIAL] THEN
+    REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The loop body, copying one byte, and the loop test ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    MP_TAC(SPECL [`a:int64`; `200`; `val(S:1600 word)`; `off + i`;
+                  `s0:armstate`] READ_MEMORY_BYTES8_OF_NUM) THEN
+    ANTS_TAC THENL
+     [ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC; DISCH_TAC] THEN
+    ARM_STEPS_TAC MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_EXEC
+     (1--5) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[GSYM WORD_ADD]) THEN
+    W32_DECIDE_FLAGS_TAC THEN
+    ARM_STEPS_TAC MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_EXEC
+     (6--6) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN `~(len = i + 1) <=> i + 1 < len` SUBST_ALL_TAC THENL
+     [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[WORD_ADD; READ_MEMORY_BYTES_SNOC] THEN ASM_REWRITE_TAC[] THEN
+      REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_8; DIMINDEX_16;
+                  DIMINDEX_32; DIMINDEX_64] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      REWRITE_TAC[ARITH_RULE `256 = 2 EXP 8 /\ 4294967296 = 2 EXP 32 /\
+                              18446744073709551616 = 2 EXP 64`;
+                  MOD_MOD_EXP_MIN] THEN
+      CONV_TAC(ONCE_DEPTH_CONV NUM_MIN_CONV) THEN
+      REWRITE_TAC[LEFT_ADD_DISTRIB; EXP_ADD; GSYM DIV_DIV] THEN
+      SPEC_TAC(`val(S:1600 word) DIV 2 EXP (8 * off)`,`x:num`) THEN
+      REWRITE_TAC[MULT_CLAUSES; MOD_MULT_MOD] THEN ARITH_TAC;
+      ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The return ***)
+
+    REWRITE_TAC[] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_EXEC
+     (1--1) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let ENSURES_PREPOST_WEAKEN = MESON[ENSURES_PREPOSTCONDITION_THM]
+ `ensures step P Q C
+  ==> (!x. P' x ==> P x) /\ (!x. Q x ==> Q' x)
+      ==> ensures step P' Q' C`;;
+
+let MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_IMAGE_SUBROUTINE_CORRECT = prove
+ (MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_IMAGE_SUBROUTINE_CORRECT_STMT,
+  X_CHOOSE_TAC `f:int64->int64->num->num->num->int64->(uarch_event)list`
+   MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_IMAGE_SUBROUTINE_FULL THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  GHOST_INTRO_TAC `e:(uarch_event)list` `read events` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `a:int64`; `d:int64`; `off:num`; `len:num`;
+    `S:1600 word`; `pc:num`; `returnaddress:int64`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_PREPOST_WEAKEN) THEN
+  SIMP_TAC[]);;
+
+let MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_IMAGE_SUBROUTINE_SAFE = prove
+ (MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_IMAGE_SUBROUTINE_SAFE_STMT,
+  MP_TAC MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_IMAGE_SUBROUTINE_FULL THEN
+  MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC THEN DISCH_TAC THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  GHOST_INTRO_TAC `S:1600 word` `read (memory :> wbytes a):armstate->1600 word` THEN
+  FIRST_X_ASSUM(MP_TAC o SPECL
+   [`e:(uarch_event)list`; `a:int64`; `d:int64`; `off:num`; `len:num`;
+    `S:1600 word`; `pc:num`; `returnaddress:int64`]) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MATCH_MP_TAC o MATCH_MP ENSURES_PREPOST_WEAKEN) THEN
+  SIMP_TAC[]);;

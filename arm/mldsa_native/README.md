@@ -76,10 +76,18 @@ and `mldsa87_`.
 | gcc12_O2/keccakf1600_permute.S | gcc 12.3.0 | binaries/multilevel/gcc12/O2/libmldsa.so |
 | gcc12_O2_reduced_ram/libmldsa.S | gcc 12.3.0 | binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so |
 | gcc12_O2_reduced_ram/keccakf1600_permute.S | gcc 12.3.0 | binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so |
+| gcc12_Os/libmldsa.S            | gcc 12.3.0 | binaries/multilevel/gcc12/Os/libmldsa.so |
 
 The reduced-RAM build is compiled with `-DMLD_CONFIG_REDUCE_RAM` in
 addition, from the `binary` branch of mldsa-native; see
 `gcc12_O2_reduced_ram/README.md` for its source and how it differs.
+
+The gcc12_Os build is the default configuration compiled with `-Os`, from
+the `binary` branch of mldsa-native; see `gcc12_Os/README.md` for its
+source, how it differs and which functions it proves. It has no separate
+transcription of `mldsa_keccakf1600_permute`: that function is proved in
+the image itself, with the proof of the same code in the gcc12_Os image of
+mlkem-native.
 
 `gcc12_O2/keccakf1600_permute.S` is the code of `mldsa_keccakf1600_permute`
 alone, with its table of round constants as a separate symbol: the code
@@ -133,7 +141,7 @@ that the image has the size given in the layout file.
 ## What is proved
 
 For each of the 192 functions of the gcc12_O2 image (176 for the
-reduced-RAM one), `<f>_proof.ml` proves three
+reduced-RAM one and 206 for the gcc12_Os one), `<f>_proof.ml` proves three
 theorems about its code: the leaf functions, the polynomial and vector
 functions, the samplers, the packing functions, the top-level functions
 and the API functions.
@@ -323,7 +331,8 @@ machine code involved:
  - `_verify`: verification is FIPS 204 verification
    (`MLD_FIPS204_VERIFY_44` etc.).
 
-`../proofs/mldsa_native/gcc12_O2/fips204.ml` derives these from the
+`../proofs/mldsa_native/gcc12_O2/fips204.ml` (and the same files of
+the other builds) derives these from the
 lemmas and the CORRECT theorems. For each API function and parameter
 set, a theorem `..._FIPS204` states the function with the FIPS 204
 functions, with its inputs and outputs as byte strings:
