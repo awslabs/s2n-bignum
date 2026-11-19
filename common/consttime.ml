@@ -356,9 +356,20 @@ let DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC g =
              CONTAINED_TAC) THEN NO_TAC))) g;;
 
 let DISCHARGE_MEMACCESS_INBOUNDS_USING_ASM_TAC:tactic =
-  let try_discharge (meminb_th:thm):tactic =
-    UNDISCH_TAC (concl meminb_th) THEN
-    ASM_REWRITE_TAC[] THEN (* to expand "e2" *)
+  let is_meminb th =
+    let cth = concl th in
+    is_comb cth && name_of (fst (strip_comb cth)) = "memaccess_inbounds" in
+  let try_discharge net meminbs (meminb_th:thm):tactic =
+    (* all copies of the assumption go: a callee called twice with the same *)
+    (* arguments gives the same fact twice, and a copy left would rewrite   *)
+    (* the antecedent to T                                                  *)
+    REPEAT(UNDISCH_THEN (concl meminb_th) (K ALL_TAC)) THEN
+    MP_TAC meminb_th THEN
+    (* ASM_REWRITE_TAC[], to expand "e2": net has the rewrites of the       *)
+    (* assumptions that are not memaccess_inbounds facts, and the ones that *)
+    (* are, other than meminb_th, are added                                 *)
+    CONV_TAC(GENERAL_REWRITE_CONV true TOP_DEPTH_CONV net
+      (filter (fun th -> concl th <> concl meminb_th) meminbs)) THEN
     (* this is sometimes needed *)
     REWRITE_TAC[APPEND;APPEND_NIL] THEN
     (* at this point, simple goals must have been already proven *)
@@ -372,17 +383,19 @@ let DISCHARGE_MEMACCESS_INBOUNDS_USING_ASM_TAC:tactic =
       DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC THEN
       NO_TAC)) in
 
-  (* try for each memaccess_inbounds assumption *)
+  (* try for each memaccess_inbounds assumption, with the rewrites of the   *)
+  (* other assumptions made once for all the tries: making them in every    *)
+  (* try took most of the time when there are many large assumptions        *)
   W (fun (asl,w) ->
-    let meminbounds = map snd (filter (fun (_,th) ->
-          let cth = concl th in
-          is_comb cth &&
-          name_of (fst (strip_comb cth)) = "memaccess_inbounds")
-        asl) in
+    let ths = map snd asl in
+    let meminbounds = filter is_meminb ths in
     if meminbounds = [] then
       failwith "No memaccess_inbounds assumption" else
+    let net = itlist (net_of_thm true)
+                (itlist (mk_rewrites false) (filter (not o is_meminb) ths) [])
+                (basic_net()) in
     end_itlist (fun tac1 tac2 -> tac1 ORELSE tac2)
-      (map try_discharge meminbounds));;
+      (map (try_discharge net meminbounds) meminbounds));;
 
 let DISCHARGE_MEMACCESS_INBOUNDS_TAC =
   let cons_to_append_th =
@@ -534,7 +547,9 @@ let rec WHILE_TAC (flag:bool ref) tac w =
   (if !flag then tac THEN WHILE_TAC flag tac else ALL_TAC) w;;
 
 (* public_vars describe the HOL Light variables that will contain public
-   information. This is for faster symbolic simulation. *)
+   information. This is for faster symbolic simulation. With ~run_tac, the
+   simulation from the initial state to the destination PC is done by
+   run_tac dest_pc instead of single_step_tac. *)
 let GEN_PROVE_SAFETY_SPEC_TAC =
   let pth =
     prove(`forall (e:((A)address_uarch_event)list) e2.
@@ -546,7 +561,8 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
           MESON_TAC[memaccess_inbounds_def;ALL]) in
 
   let mainfn ?(public_vars:term list option)
-    ?(tac_before_maychange_simp:tactic option) exec
+    ?(tac_before_maychange_simp:tactic option)
+    ?(run_tac:(term -> tactic) option) exec
     (extra_unpack_thms:thm list) single_step_tac
     :tactic =
 
@@ -586,6 +602,10 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
             is_eq t && is_binary "read" (lhs t) &&
             intersect (frees t) public_vars = [])) THEN
 
+      (match run_tac with
+       | Some run_tac ->
+         run_tac dest_pc_addr THEN ABBREV_TRACE_TAC stored_abbrevs
+       | None ->
       let chunksize = 50 in
       let i = ref 0 in
       let successful = ref true and hasnext = ref true in
@@ -613,7 +633,7 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
       W (fun (asl,w) ->
         if not !successful
         then FAIL_TAC ("could not reach to the destination pc (" ^ (string_of_term dest_pc_addr) ^ ")")
-        else ALL_TAC) THEN
+        else ALL_TAC)) THEN
 
       ENSURES_FINAL_STATE_TAC THEN
       ASM_REWRITE_TAC[] THEN

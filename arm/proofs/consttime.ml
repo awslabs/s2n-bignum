@@ -30,8 +30,9 @@ let mk_safety_spec
     subroutine_correct_th exec
     (read_sth_eq (fun t -> t = `SP`)) (read_sth_eq (fun t -> t = `X30`));;
 
-let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) exec:tactic =
-  GEN_PROVE_SAFETY_SPEC_TAC ?public_vars:public_vars exec
+let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) ?run_tac
+    exec:tactic =
+  GEN_PROVE_SAFETY_SPEC_TAC ?public_vars:public_vars ?run_tac exec
     [ALIGNED_BYTES_LOADED_APPEND_CLAUSE;MODIFIABLE_SIMD_REGS;
      MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]
     ARM_SINGLE_STEP_TAC;;

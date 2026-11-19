@@ -190,6 +190,20 @@ let REPEAT_GEN_ALPHA_TAC:tactic =
         rev_itlist (fun (x,x') th -> CONV_RULE (GEN_ALPHA_CONV x) (GEN x' th))
                    ps th;;
 
+(* From an ensures theorem to the goal `eventually step R s`: its
+   precondition at s, and R from any state its postcondition and frame
+   allow. *)
+let ENSURES_IMP_EVENTUALLY = prove
+ (`P s /\ (!s':S. Q s' /\ C s s' ==> eventually step R s')
+   ==> ensures step P Q C ==> eventually step R s`,
+  STRIP_TAC THEN GEN_REWRITE_TAC LAND_CONV [ensures] THEN
+  DISCH_THEN(MP_TAC o SPEC `s:S`) THEN ASM_REWRITE_TAC[] THEN
+  MATCH_MP_TAC(MESON[]
+   `(!s:S. eventually step P s ==> eventually step Q s)
+    ==> eventually step P s ==> eventually step Q s`) THEN
+  GEN_REWRITE_TAC I [EVENTUALLY_IMP_EVENTUALLY] THEN
+  ASM_REWRITE_TAC[]);;
+
 (* Simulate through a core ensures theorem while preserving the surrounding
    eventual-execution goal. Backends supply their code-loading update theorem
    and old-state cleanup tactic.
@@ -207,16 +221,7 @@ let REPEAT_GEN_ALPHA_TAC:tactic =
    frame has 58 components: the 56 of MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI
    on AArch64 and two more). *)
 let GEN_BIGSTEP_TAC backend_name loaded_update discard_oldstate_tac =
-  let lemma = prove
-   (`P s /\ (!s':S. Q s' /\ C s s' ==> eventually step R s')
-     ==> ensures step P Q C ==> eventually step R s`,
-    STRIP_TAC THEN GEN_REWRITE_TAC LAND_CONV [ensures] THEN
-    DISCH_THEN(MP_TAC o SPEC `s:S`) THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC(MESON[]
-     `(!s:S. eventually step P s ==> eventually step Q s)
-      ==> eventually step P s ==> eventually step Q s`) THEN
-    GEN_REWRITE_TAC I [EVENTUALLY_IMP_EVENTUALLY] THEN
-    ASM_REWRITE_TAC[]) in
+  let lemma = ENSURES_IMP_EVENTUALLY in
   fun (execth1,_) sname (asl,w) ->
     if not (is_imp w) ||
        let the_lhs,the_rhs = dest_imp w in

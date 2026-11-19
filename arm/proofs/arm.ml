@@ -570,13 +570,18 @@ let ARM_QUICKSIM_TAC execth pats snums =
 (* More convenient wrappings of basic simulation flow.                       *)
 (* ------------------------------------------------------------------------- *)
 
-let ARM_SIM_TAC ?(preprocess_tac:tactic option) ?(canonicalize_pc_diff=true)
+(* With ~tactics:(steps_tac,final_tac), the steps are done by                *)
+(* steps_tac execth snums and the final state by final_tac.                  *)
+
+let ARM_SIM_TAC ?(tactics=(ARM_STEPS_TAC,ENSURES_FINAL_STATE_TAC))
+    ?(preprocess_tac:tactic option) ?(canonicalize_pc_diff=true)
     execth snums =
+  let steps_tac,final_tac = tactics in
   REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN
   (match preprocess_tac with Some t -> t | None -> ALL_TAC) THEN
-  ARM_STEPS_TAC execth snums THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  steps_tac execth snums THEN
+  final_tac THEN ASM_REWRITE_TAC[] THEN
   (if canonicalize_pc_diff then
     REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN ASM_REWRITE_TAC[]
    else ALL_TAC);;
@@ -889,15 +894,55 @@ let ENSURES_PRESERVED_DREG_TAC =
   let alist = zip [`D8`; `D9`; `D10`; `D11`; `D12`; `D13`; `D14`; `D15`]
                   (map (lhand o lhand o concl) (CONJUNCTS pth)) in
   let dregs = map fst alist in
-  fun pname ctm ->
-    if not (mem ctm dregs) then ENSURES_PRESERVED_TAC pname ctm else
-    let ctm' = assoc ctm alist in
-    ENSURES_PRESERVED_TAC pname ctm' THEN REWRITE_TAC[pth] THEN
+  (* The frame R ,, MAYCHANGE [c :> bottomhalf] is widened to                *)
+  (* R ,, MAYCHANGE [c], which is the same when R may change c :> tophalf:   *)
+  (* R ,, MAYCHANGE [c] = R ,, MAYCHANGE [c :> tophalf] ,,                   *)
+  (* MAYCHANGE [c :> bottomhalf] = R ,, MAYCHANGE [c :> bottomhalf], where   *)
+  (* R ,, MAYCHANGE [c :> tophalf] = R moves the write to c :> tophalf back  *)
+  (* through R, as a chain of ASSIGNS, to the same write in R. The original  *)
+  (* proof, for frame_check_mode, shows R ,, R = R instead, which takes      *)
+  (* time quadratic in the size of R.                                        *)
+  let original =
     TRY(REWRITE_TAC[SEQ_ASSOC] THEN MATCH_MP_TAC sth THEN
         CONJ_TAC THENL [CONV_TAC VALID_COMPONENT_CONV; ALL_TAC] THEN
         CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC] THEN
         CONJ_TAC THENL [SUBSUMED_MAYCHANGE_TAC THEN NO_TAC; ALL_TAC] THEN
-        REWRITE_TAC[GSYM SEQ_ASSOC]);;
+        REWRITE_TAC[GSYM SEQ_ASSOC])
+  and seq_assoc = GEN_REWRITE_CONV TOP_DEPTH_CONV [SEQ_ASSOC]
+  and seq_unassoc = GEN_REWRITE_CONV TOP_DEPTH_CONV [GSYM SEQ_ASSOC] in
+  let widen_conv f =
+    let th1 = seq_assoc f in
+    let r,b = dest_binary ",," (rand(concl th1)) in
+    let c = match b with
+        Comb(Const("MAYCHANGE",_),
+             Comb(Comb(Const("CONS",_),
+                       Comb(Comb(Const(":>",_),c),Const("bottomhalf",_))),
+                  Const("NIL",_))) -> c
+      | _ -> failwith "the frame does not end with a write to a bottomhalf" in
+    let op = rator(rator(rand(concl th1))) in
+    let vth = VALID_COMPONENT_CONV
+                (mk_icomb(`valid_component:(S,V)component->bool`,c)) in
+    let vth = if is_eq(concl vth) then EQT_ELIM vth else vth in
+    let split = MATCH_MP MAYCHANGE_TOPHALF_BOTTOMHALF vth in
+    let t = lhand(rand(concl split)) in
+    let cr = MAYCHANGE_CANON_CONV r and ct = MAYCHANGE_CANON_CONV t in
+    let n,ath = ASSIGNS_MOVE_BACK_CONV ASSIGNS_IDEMPOT_CONV
+                  (mk_comb(mk_comb(op,rand(concl cr)),rand(concl ct))) in
+    if n <> 1 || rand(concl ath) <> rand(concl cr) then
+      failwith ("the rest of the frame does not write `" ^ string_of_term t ^
+                "` once")
+    else
+    let abs = TRANS (MK_COMB(AP_TERM op cr,ct)) (TRANS ath (SYM cr)) in
+    let wth = TRANS (AP_TERM (mk_comb(op,r)) split)
+                (TRANS (ISPECL [r;t;b] SEQ_ASSOC)
+                   (AP_THM (AP_TERM op abs) b)) in
+    TRANS th1 (TRANS (SYM wth) (seq_unassoc(lhand(concl wth)))) in
+  let fast = CONV_TAC(RAND_CONV widen_conv) in
+  fun pname ctm ->
+    if not (mem ctm dregs) then ENSURES_PRESERVED_TAC pname ctm else
+    let ctm' = assoc ctm alist in
+    ENSURES_PRESERVED_TAC pname ctm' THEN REWRITE_TAC[pth] THEN
+    FRAME_TAC "ENSURES_PRESERVED_DREG_TAC" fast original;;
 
 (* ------------------------------------------------------------------------- *)
 (* Fix up call/return boilerplate given core correctness.                    *)
@@ -1008,11 +1053,19 @@ let ARM_ADD_RETURN_NOSTACK_TAC =
 (* Version with register save/restore and stack adjustment.                  *)
 (* ------------------------------------------------------------------------- *)
 
+(* With ~tactics:(pre_tac,call_tac,post_tac,final_tac), the prologue is      *)
+(* simulated by pre_tac execth (1--n), the body by call_tac execth "s<n+1>"  *)
+(* from the goal `ensures ... ==> eventually ...`, the epilogue by post_tac  *)
+(* and the final state by final_tac.                                         *)
+
 let ARM_ADD_RETURN_STACK_TAC =
   let sp_tm = `SP` and x30_tm = `X30`
   and dqd_thm = WORD_BLAST `(word_zx:int128->int64)(word_zx(x:int64)) = x` in
 
-  fun ?(pre_post_nsteps:(int*int) option) execth coreth reglist stackoff ->
+  fun ?(tactics=(ARM_STEPS_TAC,ARM_BIGSTEP_TAC,ARM_STEPS_TAC,
+                 ENSURES_FINAL_STATE_TAC))
+      ?(pre_post_nsteps:(int*int) option) execth coreth reglist stackoff ->
+    let pre_tac,call_tac,post_tac,final_tac = tactics in
     let is_coreth_safety = is_exists (concl coreth) in
     let regs = dest_list reglist in
 
@@ -1091,9 +1144,9 @@ let ARM_ADD_RETURN_STACK_TAC =
         FAIL_TAC ("callee-save registers are still in MAYCHANGE, or " ^
           "`read X30 s` does not exist in precondition")) THEN
       REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
-      ARM_STEPS_TAC execth (1--pre_n) THEN
+      pre_tac execth (1--pre_n) THEN
       MP_TAC th) THEN
-    ARM_BIGSTEP_TAC execth ("s"^string_of_int(pre_n+1)) THEN
+    call_tac execth ("s"^string_of_int(pre_n+1)) THEN
     (* ARM_BIGSTEP_TAC may leave an additional subgoal about precondition.
        If the precondition is about event trace, solve here. *)
     (if is_coreth_safety then
@@ -1104,8 +1157,8 @@ let ARM_ADD_RETURN_STACK_TAC =
          NO_TAC)
      else ALL_TAC) THEN
     REWRITE_TAC(!simulation_precanon_thms) THEN
-    ARM_STEPS_TAC execth ((pre_n+2)--(pre_n+post_n+2)) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    post_tac execth ((pre_n+2)--(pre_n+post_n+2)) THEN
+    final_tac THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[dqd_thm];;
 
 (* ------------------------------------------------------------------------- *)

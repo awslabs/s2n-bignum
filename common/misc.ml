@@ -2215,3 +2215,271 @@ let GEN_EX_SUBSET_LIST = prove(`
 (* ------------------------------------------------------------------------- *)
 
 needs "common/actions_merger.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* Term tables, walks of shared terms, and word normal forms.                *)
+(* ------------------------------------------------------------------------- *)
+
+(* Tables keyed by small terms (components, pairs of components, ground      *)
+(* terms). OCaml's Hashtbl.hash looks at too few nodes, most of them in      *)
+(* types, so memory components that differ only in an address offset all     *)
+(* collide. This hash visits the first 64 nodes depth first and ignores      *)
+(* types.                                                                    *)
+
+let term_hash (tm:term) =
+  let budget = ref 64 in
+  let rec h acc tm =
+    if !budget <= 0 then acc else begin
+      decr budget;
+      match tm with
+        Var(n,_) -> acc * 31 + Hashtbl.hash n
+      | Const(n,_) -> acc * 37 + Hashtbl.hash n
+      | Comb(f,x) -> h (h (acc * 41 + 1) f) x
+      | Abs(v,b) -> h (h (acc * 43 + 2) v) b
+    end in
+  (h 0 tm) land max_int;;
+
+module Termtbl = Hashtbl.Make (struct
+  type t = term
+  let equal x y = compare x y = 0
+  let hash = term_hash
+end);;
+
+module Termtbl2 = Hashtbl.Make (struct
+  type t = term * term
+  let equal (x,y) (x',y') = compare x x' = 0 && compare y y' = 0
+  let hash (x,y) = (term_hash x * 65599 + term_hash y) land max_int
+end);;
+
+(* Instances of a theorem for large terms. lemma_instance th names rest      *)
+(* gives a function from terms for the variables of SPEC_ALL th named in     *)
+(* names to the instance and the variables named in rest, renamed apart      *)
+(* from the terms put in. The type instance is made once per list of types,  *)
+(* so a use costs one INST, which does not walk the terms put in; they are   *)
+(* walked once for their free variables only if rest is not empty.           *)
+
+let lemma_instance (th:thm) (names:string list) (rest:string list) =
+  let th = SPEC_ALL th in
+  let var_of th n =
+    let vs = itlist (union o frees) (concl th::hyp th) [] in
+    try find (fun v -> name_of v = n) vs
+    with Failure _ -> failwith ("lemma_instance: no variable " ^ n) in
+  let cache = ref [] in
+  fun (tms:term list) ->
+    let tys = map type_of tms in
+    let th',vs,rs =
+      try assoc tys !cache with Failure _ ->
+      let tyin = itlist2 (fun n t i -> type_match (type_of(var_of th n))
+                                                  (type_of t) i)
+                         names tms [] in
+      let th' = INST_TYPE tyin th in
+      let r = (th',map (var_of th') names,map (var_of th') rest) in
+      cache := (tys,r) :: !cache; r in
+    let rs' = if rs = [] then [] else
+              let avoid = itlist (union o frees) tms [] in
+              map (variant avoid) rs in
+    INST (zip tms vs @ zip rs' rs) th',rs';;
+
+(* Whether tm has more than n nodes counted as a tree, at a cost of at most  *)
+(* n: for terms that may be huge trees of shared subterms.                   *)
+
+let term_size_exceeds n (tm:term) =
+  let budget = ref n in
+  let rec go tm =
+    decr budget;
+    if !budget < 0 then raise Exit else
+    match tm with
+      Comb(f,x) -> go f; go x
+    | Abs(v,b) -> go v; go b
+    | _ -> () in
+  try go tm; false with Exit -> true;;
+
+(* A term for a message, printed only if it is small as a tree.              *)
+
+let string_of_small_term tm =
+  if term_size_exceeds 2000 tm then "(a large term)"
+  else "`" ^ string_of_term tm ^ "`";;
+
+(* Walks that visit each physically distinct subterm once, for terms that    *)
+(* share their subterms: the variables of terms (free or bound), and         *)
+(* whether a variable (satisfying p, or v) occurs in a term. The second      *)
+(* keeps its table across calls, for the assumptions of a goal.              *)
+
+let phys_seen tbl tm =
+  let h = term_hash tm in
+  let bucket = try Hashtbl.find tbl h with Not_found -> [] in
+  List.exists (fun t -> t == tm) bucket;;
+
+let phys_add tbl tm =
+  let h = term_hash tm in
+  let bucket = try Hashtbl.find tbl h with Not_found -> [] in
+  Hashtbl.replace tbl h (tm::bucket);;
+
+let shared_vars (tms:term list) =
+  let tbl = Hashtbl.create 4096 and acc = ref [] in
+  let rec go tm =
+    match tm with
+      Var(_,_) -> if not(mem tm !acc) then acc := tm :: !acc
+    | Const(_,_) -> ()
+    | _ -> if phys_seen tbl tm then () else begin
+             phys_add tbl tm;
+             match tm with
+               Comb(f,x) -> go f; go x
+             | Abs(v,b) -> go v; go b
+             | _ -> ()
+           end in
+  List.iter go tms; !acc;;
+
+let shared_occurs_var (p:term -> bool) =
+  let tbl = Hashtbl.create 4096 in
+  let rec go tm =
+    match tm with
+      Var(_,_) -> p tm
+    | Const(_,_) -> false
+    | _ -> not(phys_seen tbl tm) &&
+           ((match tm with
+               Comb(f,x) -> go f || go x
+             | Abs(u,b) -> go u || go b
+             | _ -> false) ||
+            (phys_add tbl tm; false)) in
+  go;;
+
+let shared_occurs (v:term) = shared_occurs_var (fun t -> compare t v = 0);;
+
+(* Reductions of terms whose arguments are all literals are kept: the same   *)
+(* constants come up again and again (lanes of constant vectors, offsets).   *)
+
+let ground_reduce_memo : thm Termtbl.t = Termtbl.create 4096;;
+
+let rec is_ground_literal tm =
+  match tm with
+    Comb(Const("NUMERAL",_),_) -> true
+  | Const(("T"|"F"),_) -> true
+  | Comb(Const(("word"|"iword"|"int_of_num"|"int_neg"),_),x) ->
+      is_ground_literal x
+  | Comb(Comb(Const(",",_),a),b) -> is_ground_literal a && is_ground_literal b
+  | _ -> false;;
+
+let MEMO_GROUND_REDUCE_CONV =
+  let conv = WORD_RED_CONV ORELSEC NUM_RED_CONV ORELSEC INT_RED_CONV in
+  fun tm ->
+    let _,args = strip_comb tm in
+    if args = [] || not(forall is_ground_literal args)
+    then failwith "MEMO_GROUND_REDUCE_CONV" else
+    try Termtbl.find ground_reduce_memo tm with Not_found ->
+    let th = conv tm in Termtbl.replace ground_reduce_memo tm th; th;;
+
+(* word_subword V (p,l) for V a tree of word_join: one instance of a lemma   *)
+(* proved once per shape of V and (p,l), instead of one rewrite per level.   *)
+
+let rec word_join_leaves tm acc =
+  match tm with
+    Comb(Comb(Const("word_join",_),a),b) ->
+      word_join_leaves a (word_join_leaves b acc)
+  | _ -> tm::acc;;
+
+let rec word_join_pattern tm =
+  match tm with
+    Comb(Comb(Const("word_join",_) as j,a),b) ->
+      mk_comb(mk_comb(j,word_join_pattern a),word_join_pattern b)
+  | _ -> genvar(type_of tm);;
+
+(* The shape of a join tree, with the lane position and the result type,     *)
+(* determines the lemma.                                                     *)
+
+let rec type_key ty =
+  match ty with
+    Tyapp(n,[]) -> n
+  | Tyapp(n,l) -> n ^ "(" ^ String.concat "," (map type_key l) ^ ")"
+  | Tyvar n -> "'" ^ n;;
+
+let rec word_join_key tm =
+  match tm with
+    Comb(Comb(Const("word_join",_),a),b) ->
+      "J" ^ type_key(type_of tm) ^
+      "(" ^ word_join_key a ^ "," ^ word_join_key b ^ ")"
+  | _ -> type_key(type_of tm);;
+
+let word_join_lane_cache : (string,thm * term list) Hashtbl.t =
+  Hashtbl.create 64;;
+
+let WORD_JOIN_LANE_CONV tm =
+  match tm with
+    Comb(Comb(Const("word_subword",_) as sw,
+              (Comb(Comb(Const("word_join",_),_),_) as v)),pl) ->
+      let leaves = word_join_leaves v [] in
+      let key = word_join_key v ^ "/" ^
+                (match pl with
+                   Comb(Comb(_,p),l) -> string_of_int(dest_small_numeral p) ^
+                     "," ^ string_of_int(dest_small_numeral l)
+                 | _ -> failwith "WORD_JOIN_LANE_CONV") ^
+                "/" ^ type_key(type_of tm) in
+      let th,vars =
+        try Hashtbl.find word_join_lane_cache key with Not_found ->
+        let pat = word_join_pattern v in
+        let ptm = mk_comb(mk_comb(sw,pat),pl) in
+        let th = (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV THENC
+                  DEPTH_CONV WORD_NUM_RED_CONV) ptm in
+        if rand(concl th) = ptm then failwith "WORD_JOIN_LANE_CONV" else
+        let r = (th,word_join_leaves pat []) in
+        Hashtbl.add word_join_lane_cache key r; r in
+      INST (zip leaves vars) th
+  | _ -> failwith "WORD_JOIN_LANE_CONV";;
+
+(* A zero extension of a zero extension, and a subword of a subword, as one  *)
+(* operation on the word inside, whatever the width in between:              *)
+(*                                                                           *)
+(*   word_zx (word_zx (x:int32):int64):int32 = x                             *)
+(*   word_subword (word_subword (x:int16) (0,64):int64) (0,16):int16 = x     *)
+(*                                                                           *)
+(* (moves between registers of different sizes make these; the library's     *)
+(* WORD_SUBWORD_SUBWORD needs the width in between to be at most that of x). *)
+
+let WORD_ZX_ZX_GEN = prove
+ (`!x:M word.
+     dimindex(:M) <= dimindex(:N) \/ dimindex(:P) <= dimindex(:N)
+     ==> (word_zx:N word->P word) ((word_zx:M word->N word) x) = word_zx x`,
+  GEN_TAC THEN REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_ZX_GEN] THEN STRIP_TAC THENL
+   [AP_THM_TAC THEN AP_TERM_TAC THEN MATCH_MP_TAC MOD_LT THEN
+    MATCH_MP_TAC LTE_TRANS THEN EXISTS_TAC `2 EXP dimindex(:M)` THEN
+    ASM_REWRITE_TAC[VAL_BOUND; LE_EXP; ARITH_EQ];
+    REWRITE_TAC[MOD_MOD_EXP_MIN] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+    ASM_ARITH_TAC]);;
+
+let WORD_SUBWORD_SUBWORD_GEN = prove
+ (`!(x:M word) pos1 len1 pos2 len2.
+        len1 <= dimindex(:N)
+        ==> word_subword (word_subword x (pos1,len1):N word)
+                         (pos2,len2):P word =
+            word_subword x (pos1+pos2,MIN len2 (len1-pos2))`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[WORD_EQ_BITS_ALT; BIT_WORD_SUBWORD] THEN
+  X_GEN_TAC `i:num` THEN DISCH_TAC THEN REWRITE_TAC[ADD_AC] THEN
+  W(fun (_,w) -> ASM_CASES_TAC (find_term (fun t ->
+      match t with
+        Comb(Comb(Const("bit",_),_),_) -> true
+      | _ -> false) w)) THEN
+  ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC);;
+
+let WORD_WIDTH_CONV =
+  let dimarith =
+    DEPTH_CONV(!word_SIZE_CONV ORELSEC NUM_RED_CONV) THENC REWRITE_CONV[] in
+  let discharge th = MP th (EQT_ELIM(dimarith(lhand(concl th)))) in
+  let zx = PART_MATCH (lhand o rand) WORD_ZX_ZX_GEN
+  and sw = PART_MATCH (lhand o rand) WORD_SUBWORD_SUBWORD_GEN
+  and post = CONV_RULE(RAND_CONV(RAND_CONV(DEPTH_CONV NUM_RED_CONV))) in
+  fun tm ->
+    match tm with
+      Comb(Const("word_zx",_),Comb(Const("word_zx",_),_)) -> discharge(zx tm)
+    | Comb(Comb(Const("word_subword",_),
+                Comb(Comb(Const("word_subword",_),_),
+                     Comb(Comb(Const(",",_),p1),l1))),
+           Comb(Comb(Const(",",_),p2),l2))
+        when is_numeral p1 && is_numeral l1 &&
+             is_numeral p2 && is_numeral l2 -> post(discharge(sw tm))
+    | _ -> failwith "WORD_WIDTH_CONV";;
+
+let is_word_subword tm =
+  match tm with
+    Comb(Comb(Const("word_subword",_),_),_) -> true
+  | _ -> false;;
