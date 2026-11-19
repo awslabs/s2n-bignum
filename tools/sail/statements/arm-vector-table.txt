@@ -1,0 +1,35 @@
+SAIL_HL_ARM_TBL64_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fTBL64 d n m s t <=>
+     arm_TBL (QREG' d) [QREG' n] (QREG' m) 64 s t
+
+SAIL_HL_ARM_TBL128_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fTBL128 d n m s t <=>
+     arm_TBL (QREG' d) [QREG' n] (QREG' m) 128 s t
+
+SAIL_HL_ARM_TBL264_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fTBL264 d n m s t <=>
+     arm_TBL2 (QREG' d) (QREG' n) (QREG' (word_add n (word 1))) (QREG' m) 64 s t
+
+SAIL_HL_ARM_TBL2128_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fTBL2128 d n m s t <=>
+     arm_TBL2
+       (QREG' d) (QREG' n) (QREG' (word_add n (word 1))) (QREG' m) 128 s t
+
+SAIL_HL_ARM_TBL364_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fTBL364 d n m s t <=>
+     arm_TBL3
+       (QREG' d) (QREG' n) (QREG' (word_add n (word 1)))
+       (QREG' (word_add n (word 2))) (QREG' m) 64 s t
+
+SAIL_HL_ARM_TBL3128_EQ
+|- forall d n m s t.
+     sail_hl_arm_5fTBL3128 d n m s t <=>
+     arm_TBL3
+       (QREG' d) (QREG' n) (QREG' (word_add n (word 1)))
+       (QREG' (word_add n (word 2))) (QREG' m) 128 s t
+

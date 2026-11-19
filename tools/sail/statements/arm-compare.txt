@@ -1,0 +1,36 @@
+SAIL_HL_ARM_CCMN32_EQ
+|- forall use_immediate operand n nzcv condition s t.
+     sail_hl_arm_5fCCMN32 use_immediate operand n nzcv condition s t <=>
+     arm_CCMN
+       (WREG' n)
+       (if use_immediate = word 1 then rvalue (word_zx operand)
+        else WREG' operand)
+       nzcv (Condition condition) s t
+
+SAIL_HL_ARM_CCMN64_EQ
+|- forall use_immediate operand n nzcv condition s t.
+     sail_hl_arm_5fCCMN64 use_immediate operand n nzcv condition s t <=>
+     arm_CCMN
+       (XREG' n)
+       (if use_immediate = word 1 then rvalue (word_zx operand)
+        else XREG' operand)
+       nzcv (Condition condition) s t
+
+SAIL_HL_ARM_CCMP32_EQ
+|- forall use_immediate operand n nzcv condition s t.
+     sail_hl_arm_5fCCMP32 use_immediate operand n nzcv condition s t <=>
+     arm_CCMP
+       (WREG' n)
+       (if use_immediate = word 1 then rvalue (word_zx operand)
+        else WREG' operand)
+       nzcv (Condition condition) s t
+
+SAIL_HL_ARM_CCMP64_EQ
+|- forall use_immediate operand n nzcv condition s t.
+     sail_hl_arm_5fCCMP64 use_immediate operand n nzcv condition s t <=>
+     arm_CCMP
+       (XREG' n)
+       (if use_immediate = word 1 then rvalue (word_zx operand)
+        else XREG' operand)
+       nzcv (Condition condition) s t
+

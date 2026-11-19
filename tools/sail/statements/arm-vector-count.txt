@@ -1,0 +1,8 @@
+SAIL_HL_ARM_CNT64_EQ
+|- forall d n s t.
+     sail_hl_arm_5fCNT64 d n s t <=> arm_CNT (QREG' d) (QREG' n) 64 s t
+
+SAIL_HL_ARM_CNT128_EQ
+|- forall d n s t.
+     sail_hl_arm_5fCNT128 d n s t <=> arm_CNT (QREG' d) (QREG' n) 128 s t
+

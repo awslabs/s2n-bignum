@@ -1,0 +1,35 @@
+SAIL_HL_ARM_DUP_GEN64E8_EQ
+|- forall d n s t.
+     sail_hl_arm_5fDUP_5fGEN64E8 d n s t <=>
+     arm_DUP_GEN (QREG' d) (XREG' n) 8 64 s t
+
+SAIL_HL_ARM_DUP_GEN64E16_EQ
+|- forall d n s t.
+     sail_hl_arm_5fDUP_5fGEN64E16 d n s t <=>
+     arm_DUP_GEN (QREG' d) (XREG' n) 16 64 s t
+
+SAIL_HL_ARM_DUP_GEN64E32_EQ
+|- forall d n s t.
+     sail_hl_arm_5fDUP_5fGEN64E32 d n s t <=>
+     arm_DUP_GEN (QREG' d) (XREG' n) 32 64 s t
+
+SAIL_HL_ARM_DUP_GEN128E8_EQ
+|- forall d n s t.
+     sail_hl_arm_5fDUP_5fGEN128E8 d n s t <=>
+     arm_DUP_GEN (QREG' d) (XREG' n) 8 128 s t
+
+SAIL_HL_ARM_DUP_GEN128E16_EQ
+|- forall d n s t.
+     sail_hl_arm_5fDUP_5fGEN128E16 d n s t <=>
+     arm_DUP_GEN (QREG' d) (XREG' n) 16 128 s t
+
+SAIL_HL_ARM_DUP_GEN128E32_EQ
+|- forall d n s t.
+     sail_hl_arm_5fDUP_5fGEN128E32 d n s t <=>
+     arm_DUP_GEN (QREG' d) (XREG' n) 32 128 s t
+
+SAIL_HL_ARM_DUP_GEN128E64_EQ
+|- forall d n s t.
+     sail_hl_arm_5fDUP_5fGEN128E64 d n s t <=>
+     arm_DUP_GEN (QREG' d) (XREG' n) 64 128 s t
+
