@@ -6544,8 +6544,17 @@ let X86_ADD_RETURN_NOSTACK_TAC =
         | Comb(Comb(Comb(Const("bytes_loaded",_),_),pc),l) ->
             let th = find (fun th -> concl th = list_mk_icomb "bytes_loaded"
                                                   [s;pc;l]) cj in
+            (* the length of the code, or of another list loaded, such as  *)
+            (* the constants of the code, from its definition              *)
+            let n = try PART_MATCH lhand lenth
+                          (mk_comb(mk_const("LENGTH",[`:byte`,`:A`]),l))
+                    with Failure _ ->
+              let d = find (fun d -> try compare (lhs(concl d)) l = 0
+                                     with Failure _ -> false) (definitions()) in
+              CONV_RULE(RAND_CONV LENGTH_CONV)
+                (AP_TERM (mk_const("LENGTH",[`:byte`,`:A`])) d) in
             let th1 = SPEC s' (MP (SPECL [s;pc]
-                        (MATCH_MP bytes_loaded_update lenth)) th) in
+                        (MATCH_MP bytes_loaded_update n)) th) in
             MP th1 (keep(rand(rator(lhs(lhand(concl th1))))))
         | _ -> failwith "keeps_tac" in
       ACCEPT_TAC (end_itlist CONJ (map fact (conjuncts w))) (asl,w)) in
