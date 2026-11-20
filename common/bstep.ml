@@ -726,6 +726,180 @@ let bstep_side c =
 (* 6. One step.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
+(* The fact for a component that an instruction reads, |- read c s = v at    *)
+(* the current state s = st, with the address of c in normal form.           *)
+(*                                                                           *)
+(* A memory component c that has a fact (or none: then it starts from the    *)
+(* state s_0) is moved to s across the stores since, one row per write. That *)
+(* does not work if a store d covers only part of c, or c is part of d (the  *)
+(* components are not orthogonal, and neither contains the other as a fact). *)
+(* The shapes of c and of the stores since the fact decide what to do, and   *)
+(* nothing is tried and caught; the latest such store d, with c and d of     *)
+(* constant sizes at the same base, gives one of two rules:                  *)
+(*                                                                           *)
+(*  - d is strictly inside c, and c is a read of 16, 8, 4, 2 or 1 byte pairs *)
+(*    (bytes256 to bytes16) whose halves contain d or are disjoint from it:  *)
+(*    c is read as the two halves, with READ_MEMORY_BYTESIZED_SPLIT,         *)
+(*      |- read (m :> bytes128 a) s =                                        *)
+(*         word_join (read (m :> bytes64 (word_add a (word 8))) s)           *)
+(*                   (read (m :> bytes64 a) s)                               *)
+(*    for example after stp x0, x1, [sp, #288] and then ldr q3, [sp, #288].  *)
+(*                                                                           *)
+(*  - c is strictly inside d, and the component P of twice the size of c     *)
+(*    that holds c and is aligned as d is, lies in d: c is the subword of P, *)
+(*      |- read (m :> bytes64 a) s =                                         *)
+(*         word_subword (read (m :> bytes128 a) s) (0,64)                    *)
+(*    for example after str q0, [sp, #288] and then ldr x3, [sp, #288].      *)
+(*                                                                           *)
+(* Each part is read by the same rule, so that a part may be split or        *)
+(* widened in turn; a component that is being read is not read again within  *)
+(* itself. If no rule applies, the fact is moved as before, and a store that *)
+(* overlaps c in another way fails the step with the message of the row.     *)
+(* The fact made by a rule is kept for c like any other fact.                *)
+
+let bstep_split_info =
+  [("bytes256",16,"bytes128",128); ("bytes128",8,"bytes64",64);
+   ("bytes64",4,"bytes32",32); ("bytes32",2,"bytes16",16);
+   ("bytes16",1,"bytes8",8)];;
+
+(* The position of the split lemma of a component name.                      *)
+
+let bstep_split_index pn =
+  let rec idx n l =
+    match l with
+      (p,_,_,_)::rest -> if p = pn then n else idx (n + 1) rest
+    | [] -> failwith "bstep_split_index" in
+  idx 0 bstep_split_info;;
+
+(* c = |- read (m :> c a) s = word_subword (read (m :> p a) s) (0,bits) and  *)
+(* the same for the part at word_add a (word half), for each split lemma.    *)
+
+let bstep_subword_lemmas =
+  let splits = CONJUNCTS READ_MEMORY_BYTESIZED_SPLIT in
+  let mk (pn,half,cn,bits) =
+    let i = bstep_split_index pn in
+    let th = el i splits in
+    let tac =
+      REWRITE_TAC[th] THEN
+      SIMP_TAC[WORD_SUBWORD_JOIN_UPPER; WORD_SUBWORD_JOIN_LOWER;
+               DIMINDEX_256; DIMINDEX_128; DIMINDEX_64; DIMINDEX_32;
+               DIMINDEX_16; DIMINDEX_8; ARITH] THEN
+      CONV_TAC(DEPTH_CONV NUM_RED_CONV) THEN
+      SIMP_TAC[WORD_SUBWORD_TRIVIAL; DIMINDEX_256; DIMINDEX_128; DIMINDEX_64;
+               DIMINDEX_32; DIMINDEX_16; DIMINDEX_8; LE_REFL] in
+    let hi = parse_term (Printf.sprintf
+      "!m (x:A word) s. read (m :> %s (word_add x (word %d))) s = \
+       word_subword (read (m :> %s x) s) (%d,%d)" cn half pn bits bits)
+    and lo = parse_term (Printf.sprintf
+      "!m (x:A word) s. read (m :> %s x) s = \
+       word_subword (read (m :> %s x) s) (0,%d)" cn pn bits) in
+    prove(hi,REPEAT GEN_TAC THEN tac),prove(lo,REPEAT GEN_TAC THEN tac) in
+  map mk bstep_split_info;;
+
+type bstep_cut = Cut_inside | Cut_around;;
+
+(* The latest store since the state s_j whose range cuts that of c, as the   *)
+(* kind of cut and the range of the store; None if there is none.            *)
+
+let bstep_cut blk c j =
+  match memory_byte_range c with
+    None -> None
+  | Some(b,ofs,n) ->
+      let rec look ls =
+        match ls with
+          [] -> None
+        | (d,_,_)::rest ->
+            (match memory_byte_range d with
+               Some(b2,ofs2,n2)
+                 when compare b b2 = 0 && (ofs2,n2) <> (ofs,n) ->
+                 if ofs <= ofs2 && ofs2 + n2 <= ofs + n
+                 then Some(Cut_inside,ofs2,n2)
+                 else if ofs2 <= ofs && ofs + n <= ofs2 + n2
+                 then Some(Cut_around,ofs2,n2)
+                 else look rest
+             | _ -> look rest) in
+      let rec scan m =
+        let m',_ = Hashtbl.find blk.b_memsnap m in
+        if m' <= j then None else
+        match look (snd(bstep_state blk m')) with
+          Some r -> Some r
+        | None -> scan (m' - 1) in
+      scan blk.b_n;;
+
+let bstep_address_term b ofs =
+  if ofs = 0 then b else
+  let aty = hd(snd(dest_type(type_of b))) in
+  let word_add_tm = inst [aty,`:A`] `word_add:A word->A word->A word`
+  and word_tm = inst [aty,`:A`] `word:num->A word` in
+  mk_comb(mk_comb(word_add_tm,b),mk_comb(word_tm,mk_small_numeral ofs));;
+
+let rec bstep_read_fact blk st active ci =
+  match bstep_norm_component ci with
+    None -> bstep_read_normal blk st active ci
+  | Some e ->
+      let th0 = bstep_read_normal blk st active (rand(concl e)) in
+      let rd = rator(rator(lhs(concl th0))) in
+      TRANS (AP_THM (AP_TERM rd e) st) th0
+
+and bstep_read_normal blk st active c =
+  let j = try fst(Termtbl.find blk.b_facts c) with Not_found -> 0 in
+  let cut = if j = blk.b_n then None else bstep_cut blk c j in
+  let active' = c :: active in
+  let fresh x = not(exists (fun y -> compare x y = 0) active') in
+  let mem_comp =
+    match c with
+      Comb(Comb(Const(":>",_),m),Comb(Const(nm,_),a)) -> Some(m,nm,a)
+    | _ -> None in
+  match cut,mem_comp,memory_byte_range c with
+    Some(Cut_inside,ofs2,n2),Some(m,nm,a),Some(b,ofs,n)
+      when mem nm (map (fun (p,_,_,_) -> p) bstep_split_info) &&
+           (ofs2 + n2 <= ofs + n / 2 || ofs + n / 2 <= ofs2) ->
+      let i = bstep_split_index nm in
+      let sth =
+        ISPECL [m;a;st] (el i (CONJUNCTS READ_MEMORY_BYTESIZED_SPLIT)) in
+      let rhs = rand(concl sth) in
+      let wj = rator(rator rhs) in
+      let hi_c = rand(rator(rand(rator rhs)))
+      and lo_c = rand(rator(rand rhs)) in
+      let hi_th = bstep_read_fact blk st active' hi_c in
+      let lo_th = bstep_read_fact blk st active' lo_c in
+      let th = TRANS sth (MK_COMB(AP_TERM wj hi_th,lo_th)) in
+      bstep_put blk c (blk.b_n,th); th
+  | Some(Cut_around,ofs2,n2),Some(m,nm,a),Some(b,ofs,n)
+      when exists (fun (_,_,cn,_) -> cn = nm) bstep_split_info &&
+           (let rel = (ofs - ofs2) mod (2 * n) in rel = 0 || rel = n) &&
+           (let pofs = if (ofs - ofs2) mod (2 * n) = 0 then ofs else ofs - n in
+            ofs2 <= pofs && pofs + 2 * n <= ofs2 + n2) ->
+      let pofs = if (ofs - ofs2) mod (2 * n) = 0 then ofs else ofs - n in
+      let pn,_,_,_ = find (fun (_,h,_,_) -> h = n) bstep_split_info in
+      let i = bstep_split_index pn in
+      let aty = hd(snd(dest_type(type_of a))) in
+      let split = el i (CONJUNCTS READ_MEMORY_BYTESIZED_SPLIT) in
+      let pconst = inst [aty,`:A`]
+        (find_term (fun t -> is_const t && fst(dest_const t) = pn)
+           (concl split)) in
+      let pa = bstep_address_term b pofs in
+      let pc = list_mk_icomb ":>" [m;mk_comb(pconst,pa)] in
+      let hi_lemma,lo_lemma = el i bstep_subword_lemmas in
+      let sth = ISPECL [m;pa;st] (if pofs = ofs then lo_lemma else hi_lemma) in
+      let c' = rand(rator(lhs(concl sth))) in
+      let e = bstep_norm_component c' in
+      let cn = match e with None -> c' | Some e -> rand(concl e) in
+      if compare cn c <> 0 || not(fresh pc) then bstep_get_fact blk c else
+      let sth' = match e with
+          None -> sth
+        | Some e ->
+            let rd = rator(rator(lhs(concl sth))) in
+            TRANS (SYM(AP_THM (AP_TERM rd e) st)) sth in
+      let p_th = bstep_read_fact blk st active' pc in
+      let th1 = SUBS [p_th] sth' in
+      let conv = bstep_node_conv [] in
+      let th = match bstep_top conv (rand(concl th1)) with
+          None -> th1 | Some e -> TRANS th1 e in
+      bstep_put blk c (blk.b_n,th); th
+  | _ -> bstep_get_fact blk c
+
+
 let bstep_mp what ith th =
   try MP ith th with Failure _ ->
     bstep_fail (what ^ ": `" ^
@@ -848,12 +1022,7 @@ let bstep_one_step blk (gen:int -> bstep_gen) (conv:conv) pcv =
         Req_side c -> ths := bstep_side (vsubst !theta c) :: !ths
       | Req_read(c,v) ->
           let ci = vsubst !theta c in
-          let th = match bstep_norm_component ci with
-              None -> bstep_get_fact blk ci
-            | Some e ->
-                let th0 = bstep_get_fact blk (rand(concl e)) in
-                let rd = rator(rator(lhs(concl th0))) in
-                TRANS (AP_THM (AP_TERM rd e) st) th0 in
+          let th = bstep_read_fact blk st [] ci in
           theta := (rand(concl th),v) :: !theta; ths := th :: !ths)
     g.gen_reqs;
   let ith = INST !theta gth in
