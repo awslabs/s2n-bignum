@@ -20,7 +20,8 @@
 (* BSTEP_FINAL_TAC ends a simulation. The options, for what only the proof   *)
 (* knows, are ~keep (the components whose facts the new goal needs, default  *)
 (* all), ~folds (definitions to fold into new values) and ~rewrites (more    *)
-(* local rewrites, such as facts the proof has derived).                     *)
+(* local rewrites, such as facts the proof has derived). ~forget and ~carry  *)
+(* are for the safety layer (section 9).                                     *)
 (*                                                                           *)
 (* COST MODEL                                                                *)
 (*                                                                           *)
@@ -620,6 +621,11 @@ type bstep_block =
        (* the earlier segments, latest first: the chain to the state s_k     *)
        (* before a step with undefined values u, and                         *)
        (* |- (!u. eventually step P s_{k+1}) ==> eventually step P s_k       *)
+    b_forget : (term -> term -> bool) option;
+       (* forget c v: the value v written to the component c is forgotten   *)
+    b_vars : unit Termtbl.t;
+       (* the variables that the run introduced: undefined and forgotten    *)
+       (* values                                                            *)
   };;
 
 let bstep_state blk i = Hashtbl.find blk.b_states i;;
@@ -906,6 +912,8 @@ let bstep_mp what ith th =
                 (try bstep_describe(lhand(concl ith)) with Failure _ -> "?") ^
                 "` does not match `" ^ bstep_describe(concl th) ^ "`");;
 
+let bstep_eventually =
+  lemma_instance STEPS_TO_EVENTUALLY ["step";"s";"t";"P"] [];;
 let bstep_trans = lemma_instance STEPS_TO_TRANS ["step";"s";"t";"u"] [];;
 let bstep_refl = lemma_instance STEPS_TO_REFL ["step";"s"] [];;
 
@@ -1027,6 +1035,40 @@ let bstep_one_step blk (gen:int -> bstep_gen) (conv:conv) pcv =
     g.gen_reqs;
   let ith = INST !theta gth in
   let ith = rev_itlist (fun f th -> bstep_mp "step" th f) (rev !ths) ith in
+  (* A value for which the ~forget of the run says so is forgotten: it      *)
+  (* becomes a fresh variable x, and the step is cut like a step with        *)
+  (* undefined values, with the segment                                      *)
+  (* |- (!x. eventually step P w') ==> eventually step P st, where w' has x  *)
+  (* for the value y. What holds for every x holds for y. A proof that needs *)
+  (* the value then fails, as at a branch on data.                           *)
+  let ith,undef =
+    match blk.b_forget with
+      None -> ith,undef
+    | Some _ when undef <> [] -> ith,undef
+    | Some forget ->
+    let w0 = rand(concl ith) in
+    let vars = ref [] in
+    let rec go tm =
+      if tm == st then tm else
+      match tm with
+        Comb(Comb(Comb(Const("write",_) as wr,d),y),t) ->
+          let t' = go t in
+          if forget d y then begin
+            let x = bstep_fresh_var "u" (type_of y) in
+            vars := (x,y) :: !vars;
+            mk_comb(mk_comb(mk_comb(wr,d),x),t')
+          end else if t' == t then tm
+          else mk_comb(mk_comb(mk_comb(wr,d),y),t')
+      | _ -> bstep_fail "the update is not a chain of writes" in
+    let w0' = go w0 in
+    if !vars = [] then ith,undef else
+    let xs = map fst !vars and ys = map snd !vars in
+    let all_tm = list_mk_forall(xs,list_mk_icomb "eventually"
+                                [blk.b_arch.arch_step;blk.b_post;w0']) in
+    let est = fst(bstep_eventually
+                    [blk.b_arch.arch_step; st; w0; blk.b_post]) in
+    DISCH all_tm (MP (MP est ith) (SPECL ys (ASSUME all_tm))),xs in
+  List.iter (fun u -> Termtbl.replace blk.b_vars u ()) undef;
   (* The state after the step: from |- steps_to step st w, or with undefined *)
   (* values u from |- (!u. eventually step P w) ==> eventually step P st,    *)
   (* where u is free in w and a new segment of the chain starts at w.        *)
@@ -1214,8 +1256,6 @@ let bstep_loaded_rule arch mc_length_th mc_tm base_w =
 (* are used at template nodes and on memory addresses, and ~folds are        *)
 (* folded into new values (see bstep_node_conv).                             *)
 
-let bstep_eventually =
-  lemma_instance STEPS_TO_EVENTUALLY ["step";"s";"t";"P"] [];;
 let bstep_mono = lemma_instance SUBSUMED_MP ["R";"s";"s'";"C"] [];;
 
 (* Metavariables. In a safety proof the postcondition holds metavariables,   *)
@@ -1241,6 +1281,7 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
     ?(keep:term -> bool = fun _ -> true)
     ?(folds:thm list = []) ?(rewrites:thm list = [])
     ?(stop:term -> bool = fun _ -> false) ?(first:int = 1)
+    ?forget ?carry
     ((mc_length_th,decode_ths):thm * thm option array)
     (count:int) (sname:string) : tactic =
   fun (asl,w) ->
@@ -1339,7 +1380,9 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
       b_post = p_tm;
       b_chain = fst(bstep_refl [arch.arch_step; s0]);
       b_start = s0;
-      b_segs = [] } in
+      b_segs = [];
+      b_forget = forget;
+      b_vars = Termtbl.create 64 } in
   Hashtbl.replace blk.b_states 0 (s0,[]);
   Hashtbl.replace blk.b_memsnap 0
     (0,REFL(list_mk_icomb "read" [blk.b_memory;s0]));
@@ -1420,8 +1463,21 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
   let pc_th = try bstep_decide_branch pc_th
               with Failure _ | Bstep_failure _ -> pc_th in
   (* 3. The read facts, in the order their components first got a fact.      *)
-  let keys = filter (fun c -> compare c arch.arch_pc <> 0 && keep c)
-                    (rev blk.b_keys) in
+  (* With ~carry, a component that is not kept has its fact in the new goal  *)
+  (* if carry c v holds for its value v and v has none of the variables the  *)
+  (* run introduced (a fact with such a variable cannot leave the block: the *)
+  (* justification generalizes it). The facts of the other components that   *)
+  (* are not kept are dropped, and so are their facts at s0.                 *)
+  let carried c =
+    match carry with
+      None -> false
+    | Some p ->
+        (try let v = rand(concl(snd(Termtbl.find blk.b_facts c))) in
+             p c v && not(exists (Termtbl.mem blk.b_vars) (frees v))
+         with Not_found -> false) in
+  let keys = filter (fun c ->
+      compare c arch.arch_pc <> 0 && (keep c || carried c))
+    (rev blk.b_keys) in
   let kept =
     mapfilter (fun c -> try c,bstep_get_fact blk c
                         with Bstep_failure _ -> failwith "") keys in
@@ -1458,7 +1514,8 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
   List.iter (fun (c,_) -> Termtbl.replace kept_tbl c ()) kept;
   let moved_comp c =
     let c = try Termtbl.find seed_key c with Not_found -> c in
-    compare c arch.arch_pc = 0 || Termtbl.mem kept_tbl c in
+    compare c arch.arch_pc = 0 || Termtbl.mem kept_tbl c ||
+    (carry <> None && not(keep c)) in
   let moved th =
     th == ld_th ||
     (match frame0 with Some f -> f == th | None -> false) ||
@@ -1473,8 +1530,9 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
   let stays = filter (fun (_,th) -> not(moved th)) asl in
   let newasl = rev_itlist (fun tm l -> ("",ASSUME tm)::l) fin_tms stays in
   if !bstep_verbose then
-    Printf.printf "%s_BSTEP_TAC: %d steps to %s, %.2f s, %d facts kept\n%!"
-      arch.arch_name n (fst(dest_var sn)) (Sys.time() -. t0) (length fin);
+    Printf.printf "%s_BSTEP_TAC: %d steps to %s, %.2f s, %d facts kept, %d assumptions\n%!"
+      arch.arch_name n (fst(dest_var sn)) (Sys.time() -. t0) (length fin)
+      (length newasl);
   let chain = blk.b_chain and segs = blk.b_segs in
   let w' = mk_comb(rator w,sn) in
   let just i ths =
@@ -1507,13 +1565,14 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
 (* The step tactics of the architectures: BSTEP_STEPS_TAC arch execth (m--n) *)
 (* runs the steps m..n as one block, leaving a goal about the state "s<n>".  *)
 
-let BSTEP_STEPS_TAC (arch:bstep_arch) ?keep ?folds ?rewrites execth snums =
+let BSTEP_STEPS_TAC (arch:bstep_arch) ?keep ?folds ?rewrites ?forget execth
+    snums =
   if snums = [] then ALL_TAC else
   let m = hd snums and n = last snums in
   if snums <> (m--n) then
     failwith (arch.arch_name ^ "_BSTEP_TAC: the steps are not m--n") else
-  BSTEP_RUN_TAC arch ?keep ?folds ?rewrites ~first:m execth (length snums)
-    ("s" ^ string_of_int n);;
+  BSTEP_RUN_TAC arch ?keep ?folds ?rewrites ?forget ~first:m execth
+    (length snums) ("s" ^ string_of_int n);;
 
 (* ------------------------------------------------------------------------- *)
 (* 8. Working with the final facts without walking their values.             *)
@@ -1568,12 +1627,49 @@ let BSTEP_MEMORY_SPLIT_TAC n (p:term -> bool) : tactic =
 (* The goal is `exists f_events. forall e ... ensures step                   *)
 (* (\s. ... read events s = e) (\s. read PC s = dest /\ exists e2.           *)
 (* read events s = APPEND e2 e /\ e2 = f_events ... /\ memaccess_inbounds    *)
-(* e2 ...) ...`. f_events becomes a metavariable; the whole code is run as   *)
-(* one block until the PC reaches dest, keeping the events and the           *)
-(* components the postcondition reads; the trace is abbreviated once and     *)
-(* f_events is found by unification at the end. The chain of steps does not  *)
-(* mention the postcondition, so the metavariable costs nothing per step.    *)
+(* e2 ...) ...`. f_events becomes a metavariable; the code is run until the  *)
+(* PC reaches dest, keeping the events and the components the postcondition  *)
+(* reads; the trace is abbreviated once and f_events is found by             *)
+(* unification at the end. The chain of steps does not mention the           *)
+(* postcondition, so the metavariable costs nothing per step.                *)
+(*                                                                           *)
+(* The engine knows nothing of this policy. BSTEP_RUN_TAC has two hooks:     *)
+(* ~forget c v generalizes the value v written to the component c at the    *)
+(* step: it becomes a fresh variable x and the step is cut like a step with  *)
+(* undefined values, with |- (!x. eventually step P w') ==> eventually step  *)
+(* P st (a proof for all x is a proof for the value, and one that needs the  *)
+(* value fails, as at a branch on data). ~carry c v takes the fact of a      *)
+(* component that is not kept to the new goal; a fact whose value has a      *)
+(* variable that the run introduced (undefined or forgotten) never is.      *)
+(*                                                                           *)
+(* The data of the code, such as the digits in a multiplication, do not      *)
+(* matter for a safety proof, but their values do: in a carry chain each     *)
+(* value contains the earlier ones twice, so as a tree it grows              *)
+(* exponentially with the number of steps, and the kernel walks values as    *)
+(* trees where a step is cut (undefined flags such as those of x86 MUL) and  *)
+(* when the justification instantiates. The safety layer, below, forgets     *)
+(* the data and runs in blocks, so that the state of a block is a chain of   *)
+(* the writes of the block, not of all the steps before. A new block starts  *)
+(* with the facts of the components that are not kept and are small (the     *)
+(* pointers) and with the events, abbreviated by a variable and an           *)
+(* assumption (the events grow with the steps, and walks of them would be    *)
+(* quadratic); at the end the events are expanded once and the facts of the  *)
+(* other components are dropped.                                             *)
 (* ------------------------------------------------------------------------- *)
+
+(* The policy: a value of more than bstep_data_size nodes as a tree is data  *)
+(* and is forgotten if its component is not kept, and the run goes in       *)
+(* blocks of bstep_block_length steps. The sizes were chosen from the        *)
+(* measured safety proofs of x86 P-521 point addition and scalar             *)
+(* multiplication; the values of pointers and addresses, as in the stack     *)
+(* and the loop counters, are much smaller than the digits of an             *)
+(* arithmetic, so the same numbers do for the proofs of other code.         *)
+
+let bstep_data_size = 400;;
+let bstep_block_length = 256;;
+
+let bstep_forget_data (keep:term -> bool) = fun c v ->
+  not(keep c) && term_size_exceeds bstep_data_size v;;
 
 let BSTEP_SAFETY_RUN_TAC (arch:bstep_arch) exec (dest_pc:term) : tactic =
   W(fun (asl,w) ->
@@ -1584,8 +1680,60 @@ let BSTEP_SAFETY_RUN_TAC (arch:bstep_arch) exec (dest_pc:term) : tactic =
         Comb(Comb(Const("read",_),_),s) -> s = bv | _ -> false) bod) in
     let keep c = (match c with Const("events",_) -> true | _ -> false) ||
                  exists (fun d -> compare c d = 0) post_reads in
-    BSTEP_RUN_TAC arch ~keep ~stop:(fun pc -> compare pc dest_pc = 0)
-      exec 10000000 "s_end") THEN
+    let forget = bstep_forget_data keep
+    and carry = fun _ v -> not(term_size_exceeds bstep_data_size v) in
+    let reached (asl,w) =
+      exists (fun (_,th) ->
+         let c = concl th in
+         is_eq c && is_binary "read" (lhs c) &&
+         compare (lhand(lhs c)) arch.arch_pc = 0 &&
+         rand(lhs c) = rand w && compare (rhs c) dest_pc = 0) asl in
+    (* The value of the events grows with the steps, and the kernel walks   *)
+    (* it as a tree in each step with undefined or forgotten values. So     *)
+    (* after each block it is abbreviated, by a variable and an assumption  *)
+    (* `value = variable` (the value has the previous variable in it, and   *)
+    (* is small); the end expands them again, once.                         *)
+    let ev_vars = ref [] in
+    let is_ev_var v = is_var v && mem v !ev_vars in
+    let is_events_fact sn th =
+      match concl th with
+        Comb(Comb(Const("=",_),Comb(Comb(Const("read",_),
+             Const("events",_)),s)),_) -> s = sn
+      | _ -> false in
+    let abbrev_events (asl,w as g) =
+      match (try Some(find (fun (_,th) -> is_events_fact (rand w) th) asl)
+             with Failure _ -> None) with
+        Some(_,th) when not(is_var(rand(concl th))) ->
+          let v = rand(concl th) in
+          let e = bstep_fresh_var "ev" (type_of v) in
+          ev_vars := e :: !ev_vars;
+          ABBREV_TAC (mk_eq(e,v)) g
+      | _ -> ALL_TAC g in
+    let expand_events (asl,w as g) =
+      let eqs = mapfilter (fun (_,th) ->
+          let c = concl th in
+          if is_eq c && is_ev_var(rhs c) then SYM th else failwith "") asl in
+      if eqs = [] then ALL_TAC g else
+      (RULE_ASSUM_TAC (fun th ->
+          if is_events_fact (rand w) th then REWRITE_RULE eqs th else th) THEN
+       DISCARD_ASSUMPTIONS_TAC (fun th ->
+          let c = concl th in is_eq c && is_ev_var(rhs c))) g in
+    (* At the end, the facts about the components that are not kept are of  *)
+    (* no use to what follows; the many assumptions slow it down.           *)
+    let drop_facts (asl,w as g) =
+      let sn = rand w in
+      DISCARD_ASSUMPTIONS_TAC (fun th ->
+          match concl th with
+            Comb(Comb(Const("=",_),Comb(Comb(Const("read",_),c),s)),_) ->
+              s = sn && compare c arch.arch_pc <> 0 && not(keep c)
+          | _ -> false) g in
+    let rec blocks () =
+      BSTEP_RUN_TAC arch ~keep ~forget ~carry
+        ~stop:(fun pc -> compare pc dest_pc = 0)
+        exec bstep_block_length "s_end" THEN
+      (fun g -> if reached g then (expand_events THEN drop_facts) g
+                else (abbrev_events THEN blocks ()) g) in
+    blocks ()) THEN
   W(fun (asl,w) ->
     if exists (fun (_,th) ->
          let c = concl th in
