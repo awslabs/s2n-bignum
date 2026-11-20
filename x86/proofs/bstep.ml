@@ -88,7 +88,8 @@ let x86_bstep_arch =
 let X86_BSTEP_TAC = BSTEP_STEPS_TAC x86_bstep_arch;;
 
 (* X86_BSTEP_SAFETY_TAC ~public_vars execth proves a safety statement made   *)
-(* by mk_safety_spec: PROVE_SAFETY_SPEC_TAC with one block of steps.         *)
+(* by mk_safety_spec: PROVE_SAFETY_SPEC_TAC with BSTEP_SAFETY_RUN_TAC (see   *)
+(* common/bstep.ml), which runs the code in blocks and forgets the data.     *)
 
 let X86_BSTEP_SAFETY_TAC ?public_vars exec =
   PROVE_SAFETY_SPEC_TAC ?public_vars
