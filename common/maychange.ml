@@ -240,6 +240,15 @@ let simplify_maychanges: term -> term =
    symbolic steps have fragmented a memory frame. The x86 equivalence driver
    does not currently invoke it automatically. *)
 let SIMPLIFY_MAYCHANGES_TAC =
+  (* The components of a MAYCHANGE sequence, in a canonical order. *)
+  let rec components t =
+    if is_binary ",," t then
+      let l,r = dest_binary ",," t in
+      components l @ components r
+    else dest_list (rand t) in
+  let same_components t1 t2 =
+    sort (fun a b -> compare a b <= 0) (components t1) =
+    sort (fun a b -> compare a b <= 0) (components t2) in
   W(fun (asl,w) ->
     let mcs = filter_map
       (fun (_,asm) ->
@@ -248,12 +257,15 @@ let SIMPLIFY_MAYCHANGES_TAC =
       let x,st2 = dest_comb (concl asm) in
       let mainterm,st1 = dest_comb x in
       let newterm = simplify_maychanges mainterm in
-      let _ =
-        Printf.printf
-          "SIMPLIFY_MAYCHANGES_TAC: Simplifying `%s` to `%s`\n"
-          (string_of_term (concl asm)) (string_of_term newterm) in
-      if mainterm = newterm then ALL_TAC
+      (* Same components, in another order: nothing coalesces, and proving *)
+      (* the reordering would be the cost of the whole call, again for     *)
+      (* each call as the order comes out reversed each time.              *)
+      if mainterm = newterm || same_components mainterm newterm then ALL_TAC
       else
+        let _ =
+          Printf.printf
+            "SIMPLIFY_MAYCHANGES_TAC: Simplifying `%s` to `%s`\n"
+            (string_of_term (concl asm)) (string_of_term newterm) in
         (SUBGOAL_THEN (list_mk_comb (newterm,[st1;st2])) ASSUME_TAC THENL
          [POP_ASSUM_LIST (K ALL_TAC) THEN
           ASSUME_TAC asm THEN
