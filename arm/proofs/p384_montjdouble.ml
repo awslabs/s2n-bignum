@@ -2859,6 +2859,7 @@ let P384_MONTJDOUBLE_SUBROUTINE_CORRECT = time prove
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/bstep.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
@@ -2900,7 +2901,7 @@ let P384_MONTJDOUBLE_SAFE = time prove
                 [memory :> bytes (p3,144); memory :> bytes (stackpointer,384)])`,
   (* ASSERT_CONCL_TAC full_spec THEN <- fails because pc2 is renamed to pc *)
   REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P384_MONTJDOUBLE_EXEC);;
+  ARM_BSTEP_SAFETY_TAC ~public_vars:public_vars P384_MONTJDOUBLE_EXEC);;
 
 let P384_MONTJDOUBLE_SUBROUTINE_SAFE = time prove
  (`exists f_events.
