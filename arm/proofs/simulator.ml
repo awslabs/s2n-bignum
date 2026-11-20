@@ -1589,6 +1589,22 @@ let rec run_random_simulations start_t =
 
 sematest_random_init ();;
 
+(* Exercise every SHA-3 instruction before the random campaign when the
+   backend is required to support SHA-3. *)
+let () =
+  if List.mem "sha3" (cosim_expected_features ()) then
+    List.iter (fun code ->
+      let decoded,result = cosimulate_instructions None [num code] in
+      if not result || cosim_take_skipped () <> [] ||
+         not (List.mem "sha3" (arm_required_features (lhand decoded))) then
+        failwith ("SHA-3 cosimulation failed: " ^ string_of_term decoded);
+      Printf.printf "OK: %s\n%!" (string_of_term decoded))
+      [0xce031041; (* EOR3 V1.16B,V2.16B,V3.16B,V4.16B *)
+       0xce231041; (* BCAX V1.16B,V2.16B,V3.16B,V4.16B *)
+       0xce638c41; (* RAX1 V1.2D,V2.2D,V3.2D *)
+       0xce831c41] (* XAR V1.2D,V2.2D,V3.2D,#7 *)
+;;
+
 let start_t = Unix.gettimeofday() (* unit is sec *) in
   match run_random_simulations start_t with
   | Some (t,_) -> Printf.printf "Error: term `%s`" (string_of_term t);

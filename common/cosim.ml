@@ -26,6 +26,8 @@
  *   S2N_BIGNUM_RV32IM_EXECUTOR
  *     Complete shell command for the RV32IM executor. Defaults to
  *     riscv/proofs/cosim-runner.
+ *   COSIM_EXPECT_FEATURES
+ *     Optional comma-separated features required in the READY greeting.
  *   S2N_BIGNUM_EXECUTOR_TIMEOUT
  *     Positive per-response timeout in seconds. Defaults to 10.
  *   S2N_BIGNUM_SEMATEST_SECONDS
@@ -236,6 +238,11 @@ let cosim_feature_list s =
   List.filter (fun f -> f <> "")
     (List.map String.trim (String.split_on_char ',' s));;
 
+let cosim_expected_features () =
+  match cosim_getenv "COSIM_EXPECT_FEATURES" with
+  | None -> []
+  | Some names -> cosim_feature_list names;;
+
 (*** An executor may offer one of several state-vector shapes, such as the
  *** x86 register file with or without the AVX-512 state, and the client
  *** then adapts to the size it reports.
@@ -286,11 +293,18 @@ let start_cosim_executor_of_sizes env_name default_command expected_arch
     | [s] -> Some (cosim_feature_list s)
     | _ -> fail ("instruction executor reports its features twice: " ^
                  command) in
-  Printf.printf "Instruction executor %s features: %s\n%!" arch
-    (match features with
-     | Some [] -> "none"
-     | Some names -> String.concat ", " names
-     | None -> "unknown");
+  let reported =
+    match features with
+    | Some [] -> "none"
+    | Some names -> String.concat ", " names
+    | None -> "unknown" in
+  let expected = cosim_expected_features () in
+  let advertised = match features with Some names -> names | None -> [] in
+  let missing = List.filter (fun name -> not (List.mem name advertised)) expected in
+  if missing <> [] then
+    fail ("Instruction executor " ^ command ^ " is missing expected features: " ^
+          String.concat ", " missing ^ " (reported: " ^ reported ^ ")");
+  Printf.printf "Instruction executor %s features: %s\n%!" arch reported;
   let executor =
     { partial with cosim_state_words = state_words;
                    cosim_metadata = metadata; cosim_features = features } in

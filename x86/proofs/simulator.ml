@@ -2115,9 +2115,12 @@ let decode_inst ibytes =
  ***)
 
 let x86_cosim_executor = lazy
-  (let executor =
+  (let sizes =
+     if List.mem "avx512f" (cosim_expected_features ()) then [312]
+     else [112; 312] in
+   let executor =
      start_cosim_executor_of_sizes "S2N_BIGNUM_X86_64_EXECUTOR"
-       "tools/simulate-persistent x86" "x86_64" [112; 312] in
+       "tools/simulate-persistent x86" "x86_64" sizes in
    x86_cosim_zmm := (executor.cosim_state_words = 312);
    x86_zmm_view := !x86_cosim_zmm;
    executor);;

@@ -133,6 +133,7 @@ jobs:
           executor_env: S2N_BIGNUM_AARCH64_EXECUTOR
           executor: tools/simulate-persistent arm
           run: qemu-aarch64
+          expect_features: sha3
         - arch: x86
           runner: ubuntu-24.04-arm
           packages: gcc-x86-64-linux-gnu binutils-x86-64-linux-gnu qemu-user
@@ -180,6 +181,7 @@ jobs:
         COSIM_LDFLAGS: -static
         COSIM_RUN: ${{ matrix.run }}
         COSIM_RUN_ARGS: -cpu max
+        COSIM_EXPECT_FEATURES: ${{ matrix.expect_features }}
         EXECUTOR_ENV: ${{ matrix.executor_env }}
         EXECUTOR_COMMAND: ${{ matrix.executor }}
       run: |
@@ -247,6 +249,7 @@ jobs:
       env:
         COSIM_LDFLAGS: -static
         COSIM_RUN_ARGS: -${{ matrix.sde_cpu }} -chip_check_exe_only --
+        COSIM_EXPECT_FEATURES: avx512f,avx512bw,avx512dq,avx512vl
       run: |
         export HOLDIR=`pwd`/hol-light
         "$SDE_PATH" -${{ matrix.sde_cpu }} -- /bin/true
