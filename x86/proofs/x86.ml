@@ -337,6 +337,12 @@ let K5 = define `K5 = maskregisters :> element(word 5)`;;
 let K6 = define `K6 = maskregisters :> element(word 6)`;;
 let K7 = define `K7 = maskregisters :> element(word 7)`;;
 
+(*** Register the opmask registers like the other registers, so that
+ *** COMPONENT_CANON_CONV can keep facts such as `read K1 s = k` across steps.
+ ***)
+
+add_component_alias_thms [K0; K1; K2; K3; K4; K5; K6; K7];;
+
 (* ------------------------------------------------------------------------- *)
 (* Shorthands for the SSE&AESNI SIMD registers                               *)
 (*                                                                           *)
@@ -6031,6 +6037,10 @@ let X86_CONV (decode_ths:thm option array) ths tm =
    ONCE_DEPTH_CONV BSID_SEMANTICS_CONV THENC
    REWRITE_CONV(if !x86_zmm_view then X86_OPERATION_CLAUSES_ZMM
                 else X86_OPERATION_CLAUSES) THENC
+   (*** Opmask accesses (evex_mask, KXNORW, ...) read and write
+    *** `maskregisters :> element (word n)`; fold it into Kn so that it
+    *** matches the assumptions and the component canonicalization. ***)
+   REWRITE_CONV(map GSYM [K0; K1; K2; K3; K4; K5; K6; K7]) THENC
    REWRITE_CONV([READ_RVALUE;
                 ASSIGN_ZEROTOP_32; READ_ZEROTOP_32; WRITE_ZEROTOP_32;
                 ASSIGN_ZEROTOP_128; READ_ZEROTOP_128; WRITE_ZEROTOP_128;

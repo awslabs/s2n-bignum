@@ -396,14 +396,14 @@ let regfile_zmm = new_definition
     val(word_subword (read ZMM31 s) (320,64):int64);
     val(word_subword (read ZMM31 s) (384,64):int64);
     val(word_subword (read ZMM31 s) (448,64):int64);
-    val(read (maskregisters :> element(word 0)) s:int64);
-    val(read (maskregisters :> element(word 1)) s:int64);
-    val(read (maskregisters :> element(word 2)) s:int64);
-    val(read (maskregisters :> element(word 3)) s:int64);
-    val(read (maskregisters :> element(word 4)) s:int64);
-    val(read (maskregisters :> element(word 5)) s:int64);
-    val(read (maskregisters :> element(word 6)) s:int64);
-    val(read (maskregisters :> element(word 7)) s:int64);
+    val(read K0 s:int64);
+    val(read K1 s:int64);
+    val(read K2 s:int64);
+    val(read K3 s:int64);
+    val(read K4 s:int64);
+    val(read K5 s:int64);
+    val(read K6 s:int64);
+    val(read K7 s:int64);
     val(word_subword (read (memory :> bytes256(read RSP s)) s) (0,64):int64);
     val(word_subword (read (memory :> bytes256(read RSP s)) s) (64,64):int64);
     val(word_subword (read (memory :> bytes256(read RSP s)) s) (128,64):int64);
@@ -1898,10 +1898,7 @@ let template_zmm =
                  ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15;
                  ZMM16; ZMM17; ZMM18; ZMM19; ZMM20; ZMM21; ZMM22; ZMM23;
                  ZMM24; ZMM25; ZMM26; ZMM27; ZMM28; ZMM29; ZMM30; ZMM31] ,,
-      MAYCHANGE [maskregisters :> element(word 0); maskregisters :> element(word 1);
-                 maskregisters :> element(word 2); maskregisters :> element(word 3);
-                 maskregisters :> element(word 4); maskregisters :> element(word 5);
-                 maskregisters :> element(word 6); maskregisters :> element(word 7)] ,,
+      MAYCHANGE [K0; K1; K2; K3; K4; K5; K6; K7] ,,
       MAYCHANGE [memory :> bytes(stackpointer,256)] ,,
       MAYCHANGE [CF; PF; AF; ZF; SF; OF; DF] ,, MAYCHANGE [events])`;;
 
