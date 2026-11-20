@@ -8,6 +8,7 @@
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
+needs "x86/proofs/bstep.ml";;
 needs "common/ecencoding.ml";;
 needs "EC/jacobian.ml";;
 needs "EC/nistp521.ml";;
@@ -10417,6 +10418,9 @@ let lvs =
   "resz",[`RSP`;`360`];
   "y1a",[`RSP`;`432`]];;
 
+(* The unused case of the macros only needs the PC and the frame: *)
+let rip_only c = (c = `RIP`);;
+
 let DESUM_RULE' = cache DESUM_RULE and DECARRY_RULE' = cache DECARRY_RULE;;
 
 (* ------------------------------------------------------------------------- *)
@@ -10458,7 +10462,11 @@ let LOCAL_SQR_P521_TAC =
   (*** Globalize the n < p_521 assumption for simplicity's sake ***)
 
   ASM_CASES_TAC `n < p_521` THENL
-   [ASM_REWRITE_TAC[]; X86_SIM_TAC P521_JADD_ALT_EXEC (1--353)] THEN
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+    X86_BSTEP_TAC ~keep:rip_only ~forget:(bstep_forget_data rip_only)
+      P521_JADD_ALT_EXEC (1--353) THEN
+    BSTEP_FINAL_TAC THEN ASM_REWRITE_TAC[]] THEN
 
   (*** Digitize, deduce the bound on the top word specifically ***)
 
@@ -10669,7 +10677,10 @@ let LOCAL_MUL_P521_TAC =
 
   ASM_CASES_TAC `a < p_521 /\ b < p_521` THENL
    [ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC);
-    X86_SIM_TAC P521_JADD_ALT_EXEC (2--466)] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+    X86_BSTEP_TAC ~keep:rip_only ~forget:(bstep_forget_data rip_only)
+      P521_JADD_ALT_EXEC (2--466) THEN
+    BSTEP_FINAL_TAC THEN ASM_REWRITE_TAC[]] THEN
 
   (*** Digitize, deduce the bound on the top words ***)
 
@@ -11306,7 +11317,7 @@ let P521_JADD_ALT_SAFE = time prove
                 MAYCHANGE
                 [memory :> bytes (p3,216); memory :> bytes (stackpointer,576)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P521_JADD_ALT_EXEC);;
+  X86_BSTEP_SAFETY_TAC ~public_vars:public_vars P521_JADD_ALT_EXEC);;
 
 let P521_JADD_ALT_NOIBT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
