@@ -1,5 +1,5 @@
 name: Run HOL Light proofs
-description: Build and run the proof executables and tutorial
+description: Build the proof executables, run them, and collect their timings
 inputs:
   arch:
     description: Proof architecture (arm or x86)
@@ -19,19 +19,24 @@ runs:
         apt-update-options: --allow-insecure-repositories
 
     - name: Build proofs and tutorial
+      id: build
       shell: bash
       env:
         PROOF_ARCH: ${{ inputs.arch }}
         JOBS: ${{ inputs.build-jobs }}
       run: |
+        trap 'echo "seconds=$SECONDS" >> "$GITHUB_OUTPUT"' EXIT
         make -C "$PROOF_ARCH" -j "$JOBS" build_proofs build_tutorial
 
     - name: Run proofs and tutorial
+      id: proofs
       shell: bash
       env:
         PROOF_ARCH: ${{ inputs.arch }}
         JOBS: ${{ inputs.proof-jobs }}
+        PROOF_TIMING_MARKERS: ${{ runner.temp }}/proof-markers-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.arch }}
       run: |
+        trap 'echo "seconds=$SECONDS" >> "$GITHUB_OUTPUT"' EXIT
         make -C "$PROOF_ARCH" -j "$JOBS" proofs tutorial
 
     - name: Print proof and tutorial timing lines
@@ -39,3 +44,27 @@ runs:
       env:
         PROOF_ARCH: ${{ inputs.arch }}
       run: tools/collect-times.sh "$PROOF_ARCH"
+
+    - name: Collect crypto proof timings
+      if: ${{ !cancelled() }}
+      id: collect
+      continue-on-error: ${{ github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        PROOF_ARCH: ${{ inputs.arch }}
+        BUILD_JOBS: ${{ inputs.build-jobs }}
+        PROOF_JOBS: ${{ inputs.proof-jobs }}
+        BUILD_SECONDS: ${{ steps.build.outputs.seconds }}
+        PROOF_SECONDS: ${{ steps.proofs.outputs.seconds }}
+        PROOF_OUTCOME: ${{ steps.proofs.outcome }}
+        PROOF_TIMING_MARKERS: ${{ runner.temp }}/proof-markers-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.arch }}
+      run: python3 tools/proof_timing/collect.py "$PROOF_ARCH" "$RUNNER_TEMP/timing.json"
+
+    - name: Upload proof timings
+      if: ${{ !cancelled() && steps.collect.outcome == 'success' }}
+      uses: actions/upload-artifact@v4
+      continue-on-error: ${{ github.event_name == 'pull_request' }}
+      with:
+        name: proof-timing-${{ inputs.arch }}-${{ github.run_attempt }}
+        path: ${{ runner.temp }}/timing.json
+        if-no-files-found: error
