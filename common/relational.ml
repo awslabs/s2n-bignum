@@ -4139,3 +4139,78 @@ let MAYCHANGE_STATE_UPDATE_TAC =
     MP_TAC uth THEN
     FIRST_X_ASSUM(ASSUME_TAC o MAYCHANGE_UPDATE_RULE uth o
            check(maychange_term o concl)));;
+
+let SUBSUMED_MP = prove
+ (`(R:S->S->bool) s s' ==> R subsumed C ==> C s s'`,
+  REWRITE_TAC[subsumed] THEN MESON_TAC[]);;
+
+let SEQ_INTRO = prove
+ (`(R:S->S->bool) x s ==> (C:S->S->bool) s s' ==> (R ,, C) x s'`,
+  REWRITE_TAC[seq] THEN MESON_TAC[]);;
+
+(* prove_from_assumptions asl tm proves the conjunction tm from the          *)
+(* assumptions asl, conjunct by conjunct, looking them up in a table; a      *)
+(* conjunct that is not an assumption is proved by rewriting with them, then *)
+(* putting both sides in one normal form: ground terms                       *)
+(* reduced, the address forms of NORMALIZE_RELATIVE_ADDRESS_CONV (which the  *)
+(* preconditions have been normalized with), additions associated to the     *)
+(* right and ground terms reduced again. For example, with the assumptions   *)
+(* t = 0, read X10 s = word_add z (word (a + 1016)) and read X5 s =          *)
+(* word_add (word_add z (word a)) (word 168), it proves                      *)
+(*                                                                           *)
+(*   word_zx (word_zx (word t)) = word 0                                     *)
+(*   read X10 s = word_add z (word ((a + 512) + 504))                        *)
+(*   read X5 s = word_add z (word (a + 168))                                 *)
+
+let prove_from_assumptions (asl:(string * thm) list) =
+  let tbl = Termtbl.create 1024 in
+  List.iter (fun (_,th) -> Termtbl.replace tbl (concl th) th) asl;
+  let red = DEPTH_CONV(WORD_RED_CONV ORELSEC NUM_RED_CONV) THENC
+            REWRITE_CONV[] in
+  let norm = lazy(REWRITE_CONV (map snd asl) THENC red THENC
+                  ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV THENC
+                  REWRITE_CONV[GSYM ADD_ASSOC] THENC red) in
+  let rec prove_conj tm =
+    try Termtbl.find tbl tm with Not_found ->
+    match tm with
+      Comb(Comb(Const("/\\",_),l),r) -> CONJ (prove_conj l) (prove_conj r)
+    | Const("T",_) -> TRUTH
+    | _ -> try EQT_ELIM(Lazy.force norm tm) with Failure _ ->
+           failwith ("the precondition needs " ^ string_of_small_term tm ^
+                     ", which does not follow from the assumptions") in
+  prove_conj;;
+
+(* READ_FACT_REWRITE_TAC p rewrites the conclusion once, top down, with the  *)
+(* assumptions read c s = v for which p c holds; it does not look into the   *)
+(* values it puts in.                                                        *)
+
+let READ_FACT_REWRITE_TAC (p:term -> bool) : tactic =
+  fun (asl,w) ->
+    let tbl = Termtbl.create 1024 in
+    List.iter (fun (_,th) -> match concl th with
+        Comb(Comb(Const("=",_),(Comb(Comb(Const("read",_),c),_) as l)),_)
+          when p c -> Termtbl.replace tbl l th
+      | _ -> ()) asl;
+    let conv tm =
+      try Termtbl.find tbl tm with Not_found -> failwith "fact" in
+    CONV_TAC (ONCE_DEPTH_CONV conv) (asl,w);;
+
+(* DISCARD_STATE_FACTS_TAC s drops the assumptions about the state s (read   *)
+(* facts, code and MAYCHANGE facts) by their shape, without looking into     *)
+(* their values.                                                             *)
+
+let DISCARD_STATE_FACTS_TAC (s:term) : tactic =
+  fun (asl,w) ->
+    let about th = match concl th with
+        Comb(Comb(Const("=",_),Comb(Comb(Const("read",_),_),s')),_) -> s' = s
+      | Comb(Comb(Comb(Const(_,_),s'),_),_) when s' = s -> true
+      | tm -> is_maychange_frame tm && rand tm = s in
+    ALL_TAC (filter (fun (_,th) -> not(about th)) asl,w);;
+
+(* memory_component_at a c: c is a memory component whose address mentions   *)
+(* the variable a; for selecting facts to keep, split and rewrite with.      *)
+
+let memory_component_at (a:term) (c:term) =
+  match c with
+    Comb(Comb(Const(":>",_),Const("memory",_)),Comb(_,addr)) -> vfree_in a addr
+  | _ -> false;;
