@@ -5980,7 +5980,67 @@ let is_read_events = is_read_named_component "events";;
  *** .. if it is a valid byte sequence, or None otherwise.
  ***)
 
-let X86_CONV (decode_ths:thm option array) ths tm =
+(* The parts of the X86_CONV chain that do not depend on decode_ths, ths     *)
+(* or tm are made once, when this file is loaded: making a REWRITE_CONV or   *)
+(* GEN_REWRITE_CONV builds the net of its theorems, which is costly for      *)
+(* long lists such as X86_OPERATION_CLAUSES. expand_conv depends on          *)
+(* x86_zmm_view, so it is made for both views. REWRITE_CONV also takes       *)
+(* basic_net() when it is made, so later changes to the basic rewrites       *)
+(* do not reach X86_CONV.                                                    *)
+
+let X86_CONV =
+  let expand_conv zmm =
+   REWRITE_CONV[add_store_event;add_load_event;add_mask_event;SEQ_ID] THENC
+   ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
+   REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256;
+                aligned_OPERAND512] THENC
+   REWRITE_CONV[OPERAND_SIZE_CASES] THENC
+   REWRITE_CONV[evex_src;
+                if zmm then OPERAND_CLAUSES_ZMM else OPERAND_CLAUSES] THENC
+   X86_VIEW_CHECK_CONV THENC
+   ONCE_DEPTH_CONV BSID_SEMANTICS_CONV THENC
+   REWRITE_CONV(if zmm then X86_OPERATION_CLAUSES_ZMM
+                else X86_OPERATION_CLAUSES) THENC
+   (*** Opmask accesses (evex_mask, KXNORW, ...) read and write
+    *** `maskregisters :> element (word n)`; fold it into Kn so that it
+    *** matches the assumptions and the component canonicalization. ***)
+   REWRITE_CONV(map GSYM [K0; K1; K2; K3; K4; K5; K6; K7]) THENC
+   REWRITE_CONV([READ_RVALUE;
+                ASSIGN_ZEROTOP_32; READ_ZEROTOP_32; WRITE_ZEROTOP_32;
+                ASSIGN_ZEROTOP_128; READ_ZEROTOP_128; WRITE_ZEROTOP_128;
+                READ_BOTTOM_128;
+                ASSIGN_ZEROTOP_256; READ_ZEROTOP_256; WRITE_ZEROTOP_256;
+                READ_BOTTOM_256]) THENC
+   DEPTH_CONV WORD_NUM_RED_CONV THENC
+   REWRITE_CONV[SEQ; condition_semantics] THENC
+   REWRITE_CONV[bytesize] THENC (* bytesize in add_{load,store}_event *)
+   GEN_REWRITE_CONV TOP_DEPTH_CONV
+    [UNDEFINED_VALUE; UNDEFINED_VALUES; SEQ_ID] THENC
+   GEN_REWRITE_CONV TOP_DEPTH_CONV
+    [ASSIGNS_PULL_ZEROTOP_THM; ASSIGNS_PULL_THM] THENC
+   REWRITE_CONV[ASSIGNS_THM] THENC
+   GEN_REWRITE_CONV TOP_DEPTH_CONV [SEQ_PULL_THM; BETA_THM] THENC
+   GEN_REWRITE_CONV TOP_DEPTH_CONV[assign; seq; UNWIND_THM1; BETA_THM] THENC
+   TRY_CONV(REWRITE_CONV[WRITE_BOTTOM_128; READ_BOTTOM_128;
+                         WRITE_BOTTOM_256; READ_BOTTOM_256]) THENC
+   TRY_CONV(REWRITE_CONV READ_YMM_SSE_EQUIV) THENC
+   REWRITE_CONV[] THENC REWRITE_CONV[WRITE_SHORT; READ_SHORT] THENC
+   TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV
+  in
+  let expand_std = expand_conv false
+  and expand_zmm = expand_conv true in
+  let writes_conv =
+   ONCE_DEPTH_CONV
+    (GEN_REWRITE_CONV I [GSYM WORD_ADD] THENC
+     GEN_REWRITE_CONV (RAND_CONV o TOP_DEPTH_CONV) [GSYM ADD_ASSOC] THENC
+     RAND_CONV NUM_REDUCE_CONV) THENC
+   TOP_DEPTH_CONV COMPONENT_WRITE_OVER_WRITE_CONV
+  and tidy_conv =
+   GEN_REWRITE_CONV TOP_DEPTH_CONV [WORD_VAL] THENC
+   ONCE_DEPTH_CONV WORD_PC_PLUS_CONV THENC
+   DEPTH_CONV WORD_NUM_RED_CONV THENC
+   ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV in
+  fun (decode_ths:thm option array) ths tm ->
   (* Find `read RIP .. = ..` from ths (assumptions). *)
   let pc_th = try find
     (fun th ->
@@ -6025,55 +6085,11 @@ let X86_CONV (decode_ths:thm option array) ths tm =
       try Some ((assoc (name_of t) X86_EXECUTE_CASES)) with Failure _ -> None) ts in
   (K eth THENC
    PURE_ONCE_REWRITE_CONV(x86_execute_case_rules) THENC
-   REWRITE_CONV[add_store_event;add_load_event;add_mask_event;SEQ_ID] THENC
-   ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
-   REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256;
-                aligned_OPERAND512] THENC
-   REWRITE_CONV[OPERAND_SIZE_CASES] THENC
-   REWRITE_CONV[evex_src;
-                if !x86_zmm_view then OPERAND_CLAUSES_ZMM
-                else OPERAND_CLAUSES] THENC
-   X86_VIEW_CHECK_CONV THENC
-   ONCE_DEPTH_CONV BSID_SEMANTICS_CONV THENC
-   REWRITE_CONV(if !x86_zmm_view then X86_OPERATION_CLAUSES_ZMM
-                else X86_OPERATION_CLAUSES) THENC
-   (*** Opmask accesses (evex_mask, KXNORW, ...) read and write
-    *** `maskregisters :> element (word n)`; fold it into Kn so that it
-    *** matches the assumptions and the component canonicalization. ***)
-   REWRITE_CONV(map GSYM [K0; K1; K2; K3; K4; K5; K6; K7]) THENC
-   REWRITE_CONV([READ_RVALUE;
-                ASSIGN_ZEROTOP_32; READ_ZEROTOP_32; WRITE_ZEROTOP_32;
-                ASSIGN_ZEROTOP_128; READ_ZEROTOP_128; WRITE_ZEROTOP_128;
-                READ_BOTTOM_128;
-                ASSIGN_ZEROTOP_256; READ_ZEROTOP_256; WRITE_ZEROTOP_256;
-                READ_BOTTOM_256]) THENC
-   DEPTH_CONV WORD_NUM_RED_CONV THENC
-   REWRITE_CONV[SEQ; condition_semantics] THENC
-   REWRITE_CONV[bytesize] THENC (* bytesize in add_{load,store}_event *)
-   GEN_REWRITE_CONV TOP_DEPTH_CONV
-    [UNDEFINED_VALUE; UNDEFINED_VALUES; SEQ_ID] THENC
-   GEN_REWRITE_CONV TOP_DEPTH_CONV
-    [ASSIGNS_PULL_ZEROTOP_THM; ASSIGNS_PULL_THM] THENC
-   REWRITE_CONV[ASSIGNS_THM] THENC
-   GEN_REWRITE_CONV TOP_DEPTH_CONV [SEQ_PULL_THM; BETA_THM] THENC
-   GEN_REWRITE_CONV TOP_DEPTH_CONV[assign; seq; UNWIND_THM1; BETA_THM] THENC
-   TRY_CONV(REWRITE_CONV[WRITE_BOTTOM_128; READ_BOTTOM_128;
-                         WRITE_BOTTOM_256; READ_BOTTOM_256]) THENC
-   TRY_CONV(REWRITE_CONV READ_YMM_SSE_EQUIV) THENC
-   REWRITE_CONV[] THENC REWRITE_CONV[WRITE_SHORT; READ_SHORT] THENC
-   TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV THENC
+   (if !x86_zmm_view then expand_zmm else expand_std) THENC
    X86_FORCE_CONDITIONAL_CONV ths THENC
-   ONCE_DEPTH_CONV
-    (GEN_REWRITE_CONV I [GSYM WORD_ADD] THENC
-     GEN_REWRITE_CONV (RAND_CONV o TOP_DEPTH_CONV) [GSYM ADD_ASSOC] THENC
-     RAND_CONV NUM_REDUCE_CONV) THENC
-   TOP_DEPTH_CONV COMPONENT_WRITE_OVER_WRITE_CONV THENC
+   writes_conv THENC
    GEN_REWRITE_CONV (SUB_COMPONENTS_CONV o TOP_DEPTH_CONV) ths THENC
-   GEN_REWRITE_CONV TOP_DEPTH_CONV [WORD_VAL] THENC
-   ONCE_DEPTH_CONV WORD_PC_PLUS_CONV THENC
-   DEPTH_CONV WORD_NUM_RED_CONV THENC
-   ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV
- ) tm;;
+   tidy_conv) tm;;
 
 let X86_BASIC_STEP_TAC =
   GEN_BASIC_STEP_TAC "X86" `x86` `:x86state` X86_CONV
