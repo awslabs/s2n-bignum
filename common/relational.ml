@@ -4042,16 +4042,55 @@ let maychange_write_theorem =
     if hyp th = [] then Termtbl2.replace cache (ct,d) r;
     r;;
 
+(* A memory component of a constant number of bytes at base + a numeral     *)
+(* offset, as (base, offset, size); `memory :> bytes (a,n)` and              *)
+(* `memory :> bytes64 a` and so on are of this form, other components give   *)
+(* None. A clause of the frame that contains such a write in full is one     *)
+(* that the write is absorbed into.                                          *)
+
+let memory_byte_range c =
+  let sizes = ["bytes8",1; "bytes16",2; "bytes32",4; "bytes64",8;
+               "bytes128",16; "bytes256",32] in
+  let split a =
+    match a with
+      Comb(Comb(Const("word_add",_),b),Comb(Const("word",_),k))
+        when is_numeral k -> b,dest_small_numeral k
+    | _ -> a,0 in
+  try
+    match c with
+      Comb(Comb(Const(":>",_),Const("memory",_)),Comb(Const(n,_),a)) ->
+        if n = "bytes" then
+          (match a with
+             Comb(Comb(Const(",",_),a'),k) when is_numeral k ->
+               let b,ofs = split a' in Some(b,ofs,dest_small_numeral k)
+           | _ -> None)
+        else
+          let b,ofs = split a in Some(b,ofs,List.assoc n sizes)
+    | _ -> None
+  with Failure _ | Not_found -> None;;
+
+let memory_in_frame c comps =
+  match memory_byte_range c with
+    None -> false
+  | Some(b,ofs,n) ->
+      exists (fun e ->
+        match memory_byte_range e with
+          Some(b',ofs',n') -> b = b' && ofs' <= ofs && ofs + n <= ofs' + n'
+        | None -> false) comps;;
+
 (* The fast case of MAYCHANGE_UPDATE_RULE below: th is |- R s0 t for a     *)
-(* frame R of MAYCHANGE lists that has the component c among its elements,  *)
-(* as the walk of the rule would take it (an element equal to c absorbs the  *)
-(* write); the result is |- R s0 (write c y t), with the same R, from the    *)
-(* cached maychange_write_theorem R c. Fails in the other cases.             *)
+(* frame R of MAYCHANGE lists where the write to c is absorbed: c is one of *)
+(* its elements (the walk of the rule takes it so), or a memory component   *)
+(* that one of its elements contains. The result is |- R s0 (write c y t),   *)
+(* with the same R, from the cached maychange_write_theorem R c. Fails in    *)
+(* the other cases.                                                          *)
 
 let maychange_write_fast th c y =
   match concl th with
     Comb(Comb(r,s0),t) when is_maychange_frame (concl th) ->
-      if not(mem c (maychange_components r)) then failwith "not in frame"
+      let comps = maychange_components r in
+      if not(mem c comps || memory_in_frame c comps)
+      then failwith "not in frame"
       else
         let lth,s0v,tv,yv = maychange_write_theorem r c in
         (* only a theorem without hypotheses: one that needed   *)
