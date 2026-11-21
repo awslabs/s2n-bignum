@@ -3613,6 +3613,11 @@ let NONOVERLAPPING_MODULO_OFFSET_BASES = prove
   REWRITE_TAC[CONTAINED_MODULO_LMOD] THEN
   MATCH_MP_TAC CONTAINED_MODULO_OFFSET_SIMPLE THEN ASM_ARITH_TAC);;
 
+let READ_COMPONENT_COMPOSE_EQ = prove
+ (`read (c:(S,V)component) s = read c t
+   ==> read (c :> (d:(V,W)component)) s = read (c :> d) t`,
+  SIMP_TAC[READ_COMPONENT_COMPOSE]);;
+
 (* A region given by a number n (as for code at word n) as val(word n).      *)
 
 let NONOVERLAPPING_MODULO_VAL_WORD = prove
@@ -3913,6 +3918,37 @@ let read_write_row =
   fun c d y t ->
     let th,yv,sv = row c d in
     INST [y,yv; t,sv] th;;
+
+(* read_write_same d y t: |- read d (write d y t) = y. Fails if d is not a   *)
+(* valid component, such as a byte region whose length is not a numeral.     *)
+
+let read_write_same =
+  let inst = lemma_instance READ_WRITE_VALID_COMPONENT ["c"] ["y";"s"] in
+  let cache : (thm * term * term) Termtbl.t = Termtbl.create 1024 in
+  fun d y t ->
+    let th,yv,sv =
+      try Termtbl.find cache d with Not_found ->
+      let vth =
+        try VALID_COMPONENT_CONV
+              (mk_icomb(`valid_component:(S,V)component->bool`,d))
+        with Failure _ ->
+          failwith ("a write to `" ^ string_of_term d ^ "`, which is not " ^
+                    "a valid component (such as a byte region whose " ^
+                    "length is not a numeral)") in
+      let vth = if is_eq(concl vth) then EQT_ELIM vth else vth in
+      let ith,vs = inst [d] in
+      let r = (MP ith vth,hd vs,el 1 vs) in
+      Termtbl.replace cache d r; r in
+    INST [y,yv; t,sv] th;;
+
+(* read_compose_lift c d eq: |- read (c :> d) s = read (c :> d) t from       *)
+(* eq: |- read c s = read c t.                                               *)
+
+let read_compose_lift =
+  let inst = lemma_instance READ_COMPONENT_COMPOSE_EQ ["c";"d";"s";"t"] [] in
+  fun c d eq ->
+    let s = rand(lhs(concl eq)) and t = rand(rhs(concl eq)) in
+    MP (fst(inst [c;d;s;t])) eq;;
 
 (* ------------------------------------------------------------------------- *)
 (* Rule applying a state update theorem of the form                          *)
