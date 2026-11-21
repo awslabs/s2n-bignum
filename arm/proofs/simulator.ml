@@ -171,6 +171,31 @@ let extra_simp_tac =
   CONV_TAC(DEPTH_CONV
    (WORD_NUM_RED_CONV ORELSEC apply_extra_word_convs)) THEN REWRITE_TAC[];;
 
+(*** Step tactic for the memory operation. In a cosimulation the index
+ *** register of a load or store holds a constant, and with a W-register
+ *** extension the offset is a ground term such as word_sx(word n:int32)
+ *** rather than a numeral. ARM_CONV only merges numeral offsets into the
+ *** base address, so a store address would stay unmerged and the step
+ *** could not prove that the store leaves the code unmodified. Reduce
+ *** ground terms inside components and redo the merge before that check,
+ *** through the normalization hook of GEN_STEP_TAC.
+ ***)
+
+let COSIM_ADDRESS_NORMALIZE_TAC =
+  CONV_TAC(SUB_COMPONENTS_CONV (DEPTH_CONV WORD_NUM_RED_CONV) THENC
+           ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV THENC
+           ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV);;
+
+let COSIM_ARM_STEP_TAC (mc_length_th,decode_ths) (subths:thm list) sname
+      (store_inst_term_to: term ref option)
+      (strip_component_tac: thm_tactic) =
+  GEN_STEP_TAC ARM_BASIC_STEP_TAC COSIM_ADDRESS_NORMALIZE_TAC
+    aligned_bytes_loaded_update (fun _ _ -> ()) (mc_length_th,decode_ths)
+    subths sname store_inst_term_to strip_component_tac;;
+
+let COSIM_ARM_VSTEPS_TAC =
+  GEN_VSTEPS_TAC (GEN_VERBOSE_STEP_TAC COSIM_ARM_STEP_TAC);;
+
 let tac_before memop =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
   REWRITE_TAC[regfile; CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
@@ -195,22 +220,12 @@ and tac_main (memopidx: int option) mc states =
   | Some idx ->
     let states1, states2 = chop_list idx states in
     (if states1 <> [] then ARM_STEPS_TAC mc states1 else ALL_TAC) THEN
-    (if states2 <> [] then ARM_VSTEPS_TAC mc states2 else ALL_TAC)
+    (if states2 <> [] then COSIM_ARM_VSTEPS_TAC mc states2 else ALL_TAC)
   | None -> ARM_STEPS_TAC mc states
   end
 and tac_after memop =
-  (* Normalize concrete extended-register addresses before splitting memory. *)
-  (if memop then
-     ASM_REWRITE_TAC[] THEN
-     CONV_TAC WORD_REDUCE_CONV THEN
-     RULE_ASSUM_TAC(CONV_RULE WORD_REDUCE_CONV)
-   else ALL_TAC) THEN
   (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  (if memop then
-     CONV_TAC WORD_REDUCE_CONV THEN
-     RULE_ASSUM_TAC(CONV_RULE WORD_REDUCE_CONV)
-   else ALL_TAC) THEN
   (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_FULLMERGE_CONV)
    else ALL_TAC) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[CONJUNCT1 WORD_ADD_0; WORD_SUB_0]) THEN
@@ -1573,6 +1588,22 @@ let rec run_random_simulations start_t =
   else Some (decoded,result);;
 
 sematest_random_init ();;
+
+(* Exercise every SHA-3 instruction before the random campaign when the
+   backend is required to support SHA-3. *)
+let () =
+  if List.mem "sha3" (cosim_expected_features ()) then
+    List.iter (fun code ->
+      let decoded,result = cosimulate_instructions None [num code] in
+      if not result || cosim_take_skipped () <> [] ||
+         not (List.mem "sha3" (arm_required_features (lhand decoded))) then
+        failwith ("SHA-3 cosimulation failed: " ^ string_of_term decoded);
+      Printf.printf "OK: %s\n%!" (string_of_term decoded))
+      [0xce031041; (* EOR3 V1.16B,V2.16B,V3.16B,V4.16B *)
+       0xce231041; (* BCAX V1.16B,V2.16B,V3.16B,V4.16B *)
+       0xce638c41; (* RAX1 V1.2D,V2.2D,V3.2D *)
+       0xce831c41] (* XAR V1.2D,V2.2D,V3.2D,#7 *)
+;;
 
 let start_t = Unix.gettimeofday() (* unit is sec *) in
   match run_random_simulations start_t with
