@@ -2492,6 +2492,72 @@ let ENSURES_SUBSUBLEMMA_TAC (execth::subths) s0 s1 =
     ASSUMPTION_STATE_UPDATE_TAC THEN DISCH_THEN(K ALL_TAC)];;
 
 (* ------------------------------------------------------------------------- *)
+(* Components kept by a frame, by cached orthogonality.                      *)
+(*                                                                           *)
+(* frame_keeps c fr proves |- !s s'. fr s s' ==> read c s' = read c s for a  *)
+(* frame fr made of MAYCHANGE lists and ,, whose components are orthogonal   *)
+(* to c, with one orthogonality_theorem per component of fr, without         *)
+(* expanding fr. MAYCHANGE_KEEPS_TAC proves such a goal with it, using the   *)
+(* assumptions of the goal for orthogonality.                                *)
+(* ------------------------------------------------------------------------- *)
+
+let MAYCHANGE_KEEP_NIL = prove
+ (`!s s'. (MAYCHANGE:((S,V)component)list->S->S->bool) [] s s'
+          ==> read (c:(S,W)component) s' = read c s`,
+  REWRITE_TAC[MAYCHANGE] THEN MESON_TAC[]);;
+
+let MAYCHANGE_KEEP_CONS = prove
+ (`orthogonal_components (c:(S,W)component) (d:(S,V)component)
+   ==> (!s s'. MAYCHANGE l s s' ==> read c s' = read c s)
+   ==> (!s s'. MAYCHANGE (CONS d l) s s' ==> read c s' = read c s)`,
+  REWRITE_TAC[MAYCHANGE; ASSIGNS_SEQ] THEN REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(fun th -> FIRST_X_ASSUM(MP_TAC o MATCH_MP th)) THEN
+  DISCH_THEN SUBST1_TAC THEN ASM_SIMP_TAC[READ_WRITE_ORTHOGONAL_COMPONENTS]);;
+
+let SEQ_KEEP = prove
+ (`(!s s'. (R1:S->S->bool) s s' ==> read (c:(S,W)component) s' = read c s)
+   ==> (!s s'. (R2:S->S->bool) s s' ==> read c s' = read c s)
+   ==> (!s s'. (R1 ,, R2) s s' ==> read c s' = read c s)`,
+  REWRITE_TAC[seq] THEN MESON_TAC[]);;
+
+let frame_keeps =
+  let cache : thm Termtbl2.t = Termtbl2.create 256 in
+  let seq_inst = lemma_instance SEQ_KEEP ["R1";"R2";"c"] []
+  and cons_inst = lemma_instance MAYCHANGE_KEEP_CONS ["c";"d";"l"] []
+  and nil_th = MAYCHANGE_KEEP_NIL in
+  let nil_c = find (fun v -> name_of v = "c") (frees(concl nil_th))
+  and nil_l = rand(rator(rator(lhand(snd(strip_forall(concl nil_th)))))) in
+  let rec keeps c fr =
+    try Termtbl2.find cache (c,fr) with Not_found ->
+    let th = match fr with
+        Comb(Comb(Const(",,",_),r1),r2) ->
+          MP (MP (fst(seq_inst [r1;r2;c])) (keeps c r1)) (keeps c r2)
+      | Comb(Const("MAYCHANGE",_),Comb(Comb(Const("CONS",_),d),l')) ->
+          MP (MP (fst(cons_inst [c;d;l'])) (orthogonality_theorem c d))
+             (keeps c (mk_comb(rator fr,l')))
+      | Comb(Const("MAYCHANGE",_),(Const("NIL",lty))) ->
+          let tyin = type_match (type_of nil_c) (type_of c)
+                       (type_match (type_of nil_l) lty []) in
+          INST [c,inst tyin nil_c] (INST_TYPE tyin nil_th)
+      | _ -> failwith ("the frame is not made of MAYCHANGE lists: `" ^
+                       string_of_term fr ^ "`") in
+    if hyp th = [] then Termtbl2.replace cache (c,fr) th;
+    th in
+  keeps;;
+
+let MAYCHANGE_KEEPS_TAC : tactic =
+  fun (asl,w) ->
+    match w with
+      Comb(Const("!",_),Abs(_,Comb(Const("!",_),Abs(_,
+        Comb(Comb(Const("==>",_),Comb(Comb(r,_),_)),
+             Comb(Comb(Const("=",_),Comb(Comb(Const("read",_),c),_)),_)))))) ->
+        set_component_assumptions (map snd asl);
+        (try ACCEPT_TAC (frame_keeps c r) (asl,w)
+         with Failure msg -> failwith ("MAYCHANGE_KEEPS_TAC: " ^ msg))
+    | _ -> failwith ("MAYCHANGE_KEEPS_TAC: not " ^
+                     "`!s s'. R s s' ==> read c s' = read c s`");;
+
+(* ------------------------------------------------------------------------- *)
 (* Scrub a "preserved" component from the MAYCHANGE list.                    *)
 (* ------------------------------------------------------------------------- *)
 
@@ -3587,3 +3653,435 @@ let ENSURES_N_WHILE_PUP_TAC,ENSURES_N_WHILE_PDOWN_TAC,
     MAP_EVERY EXISTS_TAC [a; b; pc1; pc2; p; q; nsteps_pre; f_nsteps; nsteps_post] THEN
     BETA_TAC THEN
     CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Cached frame theorems for symbolic simulation.                            *)
+(*                                                                           *)
+(* A frame C is made of MAYCHANGE lists joined by ,,. subsumed_theorem R C   *)
+(* proves |- R subsumed C from one theorem |- MAYCHANGE [d] subsumed C per   *)
+(* component d of R, and maychange_write_theorem C d proves                  *)
+(* |- C s0 t ==> C s0 (write d y t) with the variables s0, t and y. Both     *)
+(* absorb writes into the clauses of C (maychange_absorb), and both are kept *)
+(* for the session, since a frame is usually used by many writes.            *)
+(* ------------------------------------------------------------------------- *)
+
+(* tm is `R x s` for a frame R built with MAYCHANGE and ,, (checked at the   *)
+(* head only, so that large terms are not walked).                           *)
+
+let is_maychange_frame tm =
+  match tm with
+    Comb(Comb(r,_),_) ->
+      (match fst(strip_comb r) with
+         Const(("MAYCHANGE"|",,"),_) -> true
+       | _ -> false)
+  | _ -> false;;
+
+let MAYCHANGE_CONS_SEQ = prove
+ (`MAYCHANGE (CONS (c:(S,V)component) (CONS d l)) =
+   MAYCHANGE [c] ,, MAYCHANGE (CONS d l)`,
+  REWRITE_TAC[MAYCHANGE; SEQ_ID]);;
+
+let MAYCHANGE_TOPHALF_BOTTOMHALF = prove
+ (`valid_component (c:(S,(N tybit0)word)component)
+   ==> MAYCHANGE [c] =
+       MAYCHANGE [c :> tophalf] ,, MAYCHANGE [c :> bottomhalf]`,
+  SIMP_TAC[MAYCHANGE_SING; ASSIGNS_TOPHALF_BOTTOMHALF]);;
+
+let MAYCHANGE_NIL_EQ = prove
+ (`MAYCHANGE ([]:((S,V)component)list) = (=)`,
+  REWRITE_TAC[MAYCHANGE]);;
+
+(* Equations |- MAYCHANGE [d] = R that split a component into parts the      *)
+(* frames name (x86: YMM6_SSE into two quarters of ZMM6), and definitions    *)
+(* |- L = [c1; ...] of named lists of components that frames use (x86:       *)
+(* SOME_FLAGS); set by the architecture.                                     *)
+
+let maychange_splits = ref ([]:thm list);;
+
+let maychange_list_defs = ref ([]:thm list);;
+
+let maychange_list_def l =
+  find (fun th -> compare (lhs(concl th)) l = 0) !maychange_list_defs;;
+
+(* |- C ,, C = C and |- (=) subsumed C, per frame C.                         *)
+
+let maychange_idempot =
+  let cache : thm Termtbl.t = Termtbl.create 16 in
+  fun ct ->
+    try Termtbl.find cache ct with Not_found ->
+    let th = TAC_PROOF(([],mk_eq(list_mk_icomb ",," [ct;ct],ct)),
+                       REWRITE_TAC !maychange_list_defs THEN
+                       MAYCHANGE_IDEMPOT_TAC) in
+    Termtbl.replace cache ct th; th;;
+
+(* The component assumptions (the bounds of variable offsets) are given to   *)
+(* a subsumption proof when the goal has a numeric variable, as in an        *)
+(* address word_add a (word (16 * i)) or a size bytes(a,n), and none         *)
+(* otherwise.                                                                *)
+
+let subsumed_context =
+  let numty = `:num` in
+  fun tm ->
+    if exists (fun v -> type_of v = numty) (frees tm)
+    then map (fun th -> "",th) !component_assumptions else [];;
+
+let subsumed_id =
+  let cache : thm Termtbl.t = Termtbl.create 64 and aty = `:A` in
+  fun c ->
+    try Termtbl.find cache c with Not_found ->
+    let eq = mk_const("=",[hd(snd(dest_type(type_of c))),aty]) in
+    let th = TAC_PROOF(([],list_mk_icomb "subsumed" [eq;c]),
+                       REWRITE_TAC !maychange_list_defs THEN
+                       SUBSUMED_ID_MAYCHANGE_TAC) in
+    Termtbl.replace cache c th; th;;
+
+(* Components are compared in canonical form (COMPONENT_CANON_CONV), where   *)
+(* a named register such as YMM0 is a path below ZMM0.                       *)
+
+let component_canon_path =
+  let rec path t = match t with
+      Comb(Comb(Const(":>",_),a),b) -> path a @ path b
+    | _ -> [t] in
+  fun c -> path(try rand(concl(COMPONENT_CANON_CONV c)) with Failure _ -> c);;
+
+let component_may_contain d e =
+  compare d e = 0 ||
+  (mentions_memory d && mentions_memory e) ||
+  let rec prefix l m = match l,m with
+      [],_ -> true
+    | x::l',y::m' -> compare x y = 0 && prefix l' m'
+    | _ -> false in
+  prefix (component_canon_path e) (component_canon_path d);;
+
+(* Absorbing writes into a frame. maychange_absorb ct r proves               *)
+(* |- (ct ,, r) subsumed ct for a frame r made of MAYCHANGE lists, without   *)
+(* ct ,, ct = ct (whose proof takes time quadratic in the size of ct): each  *)
+(* component d of r is moved back through the clauses of ct after the        *)
+(* rightmost clause e that contains d (d commutes with them, as they are     *)
+(* orthogonal to d) and absorbed into e                                      *)
+(* (ASSIGNS e ,, ASSIGNS e = ASSIGNS e).                                     *)
+(* For example, (MAYCHANGE [PC; X1] ,, MAYCHANGE [CF]) ,, MAYCHANGE [X1] is  *)
+(* subsumed by MAYCHANGE [PC; X1] ,, MAYCHANGE [CF] since X1 commutes with   *)
+(* CF and X1 ,, X1 is X1. Components that the frame names in parts (Q8 in    *)
+(* halves, x86 YMM registers in quarters) are split: no clause contains      *)
+(* them whole. Fails if no clause contains d or a later clause is not        *)
+(* orthogonal to d. It is the only proof that its users take                 *)
+(* (maychange_write_theorem, subsumed_theorem for sequences).                *)
+
+let MAYCHANGE_ABSORB_NIL = prove
+ (`((C:S->S->bool) ,, (MAYCHANGE:((S,V)component)list->S->S->bool) [])
+   subsumed C`,
+  REWRITE_TAC[MAYCHANGE_NIL_EQ; SEQ_ID; SUBSUMED_REFL]);;
+
+let MAYCHANGE_ABSORB_SEQ_RIGHT = prove
+ (`((B:S->S->bool) ,, (D:S->S->bool)) subsumed B
+   ==> (((A:S->S->bool) ,, B) ,, D) subsumed (A ,, B)`,
+  DISCH_TAC THEN REWRITE_TAC[GSYM SEQ_ASSOC] THEN
+  MATCH_MP_TAC SUBSUMED_SEQ THEN ASM_REWRITE_TAC[SUBSUMED_REFL]);;
+
+let MAYCHANGE_ABSORB_SEQ_LEFT = prove
+ (`(B:S->S->bool) ,, (D:S->S->bool) = D ,, B /\
+   ((A:S->S->bool) ,, D) subsumed A
+   ==> ((A ,, B) ,, D) subsumed (A ,, B)`,
+  STRIP_TAC THEN REWRITE_TAC[GSYM SEQ_ASSOC] THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[SEQ_ASSOC] THEN MATCH_MP_TAC SUBSUMED_SEQ THEN
+  ASM_REWRITE_TAC[SUBSUMED_REFL]);;
+
+let MAYCHANGE_COMMUTE_SEQ = prove
+ (`(A:S->S->bool) ,, (D:S->S->bool) = D ,, A /\
+   (B:S->S->bool) ,, D = D ,, B
+   ==> (A ,, B) ,, D = D ,, (A ,, B)`,
+  STRIP_TAC THEN REWRITE_TAC[GSYM SEQ_ASSOC] THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[SEQ_ASSOC] THEN ASM_REWRITE_TAC[]);;
+
+let MAYCHANGE_ABSORB_CONS_RIGHT = prove
+ (`(MAYCHANGE (l:((S,W)component)list) ,, MAYCHANGE [d:(S,V)component])
+   subsumed MAYCHANGE l
+   ==> (MAYCHANGE (CONS (e:(S,W)component) l) ,, MAYCHANGE [d]) subsumed
+       MAYCHANGE (CONS e l)`,
+  REWRITE_TAC[CONJUNCT2 MAYCHANGE] THEN
+  REWRITE_TAC[MAYCHANGE_ABSORB_SEQ_RIGHT]);;
+
+let MAYCHANGE_ABSORB_CONS_LEFT = prove
+ (`MAYCHANGE (l:((S,W)component)list) ,, MAYCHANGE [d:(S,V)component] =
+   MAYCHANGE [d] ,, MAYCHANGE l /\
+   (ASSIGNS (e:(S,W)component) ,, MAYCHANGE [d]) subsumed ASSIGNS e
+   ==> (MAYCHANGE (CONS e l) ,, MAYCHANGE [d]) subsumed MAYCHANGE (CONS e l)`,
+  REWRITE_TAC[CONJUNCT2 MAYCHANGE] THEN
+  REWRITE_TAC[MAYCHANGE_ABSORB_SEQ_LEFT]);;
+
+let MAYCHANGE_COMMUTE_CONS = prove
+ (`orthogonal_components (e:(S,W)component) (d:(S,V)component) /\
+   MAYCHANGE (l:((S,W)component)list) ,, MAYCHANGE [d] =
+   MAYCHANGE [d] ,, MAYCHANGE l
+   ==> MAYCHANGE (CONS e l) ,, MAYCHANGE [d] =
+       MAYCHANGE [d] ,, MAYCHANGE (CONS e l)`,
+  REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN STRIP_TAC THEN
+  MATCH_MP_TAC MAYCHANGE_COMMUTE_SEQ THEN CONJ_TAC THENL
+   [MATCH_MP_TAC ASSIGNS_SWAP_ORTHOGONAL_COMPONENTS THEN ASM_REWRITE_TAC[];
+    ASM_REWRITE_TAC[]]);;
+
+let MAYCHANGE_COMMUTE_NIL = prove
+ (`(MAYCHANGE:((S,W)component)list->S->S->bool) [] ,,
+   MAYCHANGE [d:(S,V)component] =
+   MAYCHANGE [d] ,, (MAYCHANGE:((S,W)component)list->S->S->bool) []`,
+  REWRITE_TAC[CONJUNCT1 MAYCHANGE; SEQ_ID]);;
+
+let MAYCHANGE_ABSORB_ONE = prove
+ (`weakly_valid_component (e:(S,W)component) /\
+   MAYCHANGE [d:(S,V)component] subsumed ASSIGNS e
+   ==> (ASSIGNS e ,, MAYCHANGE [d]) subsumed ASSIGNS e`,
+  STRIP_TAC THEN MATCH_MP_TAC SUBSUMED_FOR_SEQ THEN
+  ASM_SIMP_TAC[ASSIGNS_ABSORB_SAME_COMPONENTS; SUBSUMED_REFL]);;
+
+let MAYCHANGE_ABSORB_SPLIT = prove
+ (`((C:S->S->bool) ,, (M1:S->S->bool)) subsumed C /\
+   (C ,, (M2:S->S->bool)) subsumed C
+   ==> (C ,, (M1 ,, M2)) subsumed C`,
+  REWRITE_TAC[subsumed; seq] THEN MESON_TAC[]);;
+
+(* The components of a frame of MAYCHANGE lists, in order.                   *)
+
+let rec maychange_components x =
+  match x with
+    Comb(Comb(Const(",,",_),a),b) ->
+      maychange_components a @ maychange_components b
+  | Comb(Const("MAYCHANGE",_),Const("NIL",_)) -> []
+  | Comb(Const("MAYCHANGE",_),Comb(Comb(Const("CONS",_),e),l)) ->
+      e :: maychange_components (mk_comb(rator x,l))
+  | Comb(Const("MAYCHANGE",_) as mch,(Const(_,_) as l)) ->
+      maychange_components (rhs(concl(AP_TERM mch (maychange_list_def l))))
+  | _ -> failwith "maychange_components: not a frame of MAYCHANGE lists";;
+
+let maychange_absorb =
+  let abs_seq_r = lemma_instance MAYCHANGE_ABSORB_SEQ_RIGHT ["A";"B";"D"] []
+  and abs_seq_l = lemma_instance MAYCHANGE_ABSORB_SEQ_LEFT ["A";"B";"D"] []
+  and com_seq = lemma_instance MAYCHANGE_COMMUTE_SEQ ["A";"B";"D"] []
+  and split = lemma_instance MAYCHANGE_ABSORB_SPLIT ["C";"M1";"M2"] []
+  and abs_cons_r = lemma_instance MAYCHANGE_ABSORB_CONS_RIGHT ["l";"d";"e"] []
+  and comp_tac = REWRITE_TAC[MAYCHANGE_SING] THEN SUBSUMED_ASSIGNS_TAC in
+  let unfold mch l = AP_TERM mch (maychange_list_def l) in
+  let elements = maychange_components in
+  (* x ,, dm = dm ,, x, dm = MAYCHANGE [d]                                   *)
+  let rec commute x dm d =
+    match x with
+      Comb(Comb(Const(",,",_),a),b) ->
+        MP (fst(com_seq [a;b;dm])) (CONJ (commute a dm d) (commute b dm d))
+    | Comb(Const("MAYCHANGE",_),Comb(Comb(Const("CONS",_),e),l)) ->
+        MATCH_MP MAYCHANGE_COMMUTE_CONS
+          (CONJ (orthogonality_theorem e d)
+                (commute (mk_comb(rator x,l)) dm d))
+    | Comb(Const("MAYCHANGE",_),Const("NIL",_)) ->
+        PART_MATCH lhs MAYCHANGE_COMMUTE_NIL
+          (mk_icomb(mk_icomb(`(,,)`,x),dm))
+    | Comb(Const("MAYCHANGE",_) as mch,(Const(_,_) as l)) ->
+        let eq = unfold mch l in
+        SUBS [SYM eq] (commute (rhs(concl eq)) dm d)
+    | _ -> failwith "maychange_absorb: commute" in
+  (* (x ,, dm) subsumed x, the container being the element k of x, with      *)
+  (* bth: (ASSIGNS e ,, dm) subsumed ASSIGNS e for that element e.           *)
+  let rec absorb x k bth dm d =
+    match x with
+      Comb(Comb(Const(",,",_),a),b) ->
+        let na = length(elements a) in
+        if k >= na
+        then MP (fst(abs_seq_r [a;b;dm])) (absorb b (k - na) bth dm d)
+        else MP (fst(abs_seq_l [a;b;dm]))
+                (CONJ (commute b dm d) (absorb a k bth dm d))
+    | Comb(Const("MAYCHANGE",_),Comb(Comb(Const("CONS",_),e),l)) ->
+        let x' = mk_comb(rator x,l) in
+        if k > 0 then MP (fst(abs_cons_r [l;d;e])) (absorb x' (k-1) bth dm d)
+        else (match l with
+                Const("NIL",_) -> SUBS [SYM(ISPEC e MAYCHANGE_SING)] bth
+              | _ -> MATCH_MP MAYCHANGE_ABSORB_CONS_LEFT
+                       (CONJ (commute x' dm d) bth))
+    | Comb(Const("MAYCHANGE",_) as mch,(Const(_,_) as l)) ->
+        let eq = unfold mch l in
+        SUBS [SYM eq] (absorb (rhs(concl eq)) k bth dm d)
+    | _ -> failwith "maychange_absorb" in
+  let base e dm =
+    let wth = WEAKLY_VALID_COMPONENT_CONV
+                (mk_icomb(`weakly_valid_component:(S,V)component->bool`,e)) in
+    let wth = if is_eq(concl wth) then EQT_ELIM wth else wth in
+    let ae = mk_icomb(`ASSIGNS:(S,V)component->S->S->bool`,e) in
+    let tm = list_mk_icomb "subsumed" [dm;ae] in
+    let sth = TAC_PROOF((subsumed_context tm,tm),comp_tac) in
+    MATCH_MP MAYCHANGE_ABSORB_ONE (CONJ wth sth) in
+  (* Memory components whose addresses are in different variables (an        *)
+  (* argument and the stack pointer) are not tried as containers.            *)
+  let address c =
+    match c with
+      Comb(Comb(Const(":>",_),Const("memory",_)),Comb(_,a)) ->
+        (match a with Comb(Comb(Const(",",_),x),_) -> Some x | _ -> Some a)
+    | _ -> None in
+  let same_region d e =
+    match address d,address e with
+      Some a,Some b -> intersect (frees a) (frees b) <> [] ||
+                       (frees a = [] && frees b = [])
+    | _ -> true in
+  (* The candidates are the clauses that may contain d, from the right: the  *)
+  (* first one that takes the write is used (with memory, a clause of        *)
+  (* another part of the same region may not).                               *)
+  let container d e = component_may_contain d e && same_region d e in
+  let one ct d dm =
+    let rec from i es msg =
+      match es with
+        [] -> failwith ("maychange_absorb: no clause takes the write to `" ^
+                        string_of_term d ^ "`" ^ msg)
+      | e::rest ->
+          if not(container d e) then from (i - 1) rest msg else
+          (try absorb ct i (base e dm) dm d
+           with Failure m -> from (i - 1) rest (" (" ^ m ^ ")")) in
+    let es = elements ct in
+    from (length es - 1) (rev es) "" in
+  (* From |- (ct ,, R) subsumed ct and |- L = R, |- (ct ,, L) subsumed ct.   *)
+  let back eq th =
+    let sub,c = dest_comb(concl th) in
+    let sq,_ = dest_comb(rand sub) in
+    EQ_MP (AP_THM (AP_TERM (rator sub) (AP_TERM sq (SYM eq))) c) th in
+  let rec frame ct r =
+    match r with
+      Comb(Comb(Const(",,",_),r1),r2) ->
+        MP (fst(split [ct;r1;r2])) (CONJ (frame ct r1) (frame ct r2))
+    | Comb(Const("MAYCHANGE",_),Const("NIL",_)) ->
+        PART_MATCH I MAYCHANGE_ABSORB_NIL (list_mk_icomb "subsumed"
+          [list_mk_icomb ",," [ct;r]; ct])
+    | Comb(Const("MAYCHANGE",_),
+           Comb(Comb(Const("CONS",_),d),Const("NIL",_))) ->
+        if exists (container d) (elements ct) then one ct d r else
+        let eq =
+          try find (fun th -> compare (lhs(concl th)) r = 0) !maychange_splits
+          with Failure _ ->
+            let vth =
+              try VALID_COMPONENT_CONV
+                   (mk_icomb(`valid_component:(S,V)component->bool`,d))
+              with Failure _ ->
+                failwith ("maychange_absorb: no clause contains `" ^
+                          string_of_term d ^ "`, which cannot be split") in
+            let vth = if is_eq(concl vth) then EQT_ELIM vth else vth in
+            MATCH_MP MAYCHANGE_TOPHALF_BOTTOMHALF vth in
+        back eq (frame ct (rhs(concl eq)))
+    | Comb(Const("MAYCHANGE",_),Comb(Comb(Const("CONS",_),_),_)) ->
+        let eq = PART_MATCH lhs MAYCHANGE_CONS_SEQ r in
+        back eq (frame ct (rhs(concl eq)))
+    | Comb(Const("MAYCHANGE",_) as mch,(Const(_,_) as l)) ->
+        let eq = unfold mch l in
+        back eq (frame ct (rhs(concl eq)))
+    | _ -> failwith "maychange_absorb: not a frame of MAYCHANGE lists" in
+  frame;;
+
+let SUBSUMED_SEQ_ABSORB = prove
+ (`(R1:S->S->bool) subsumed C /\ (C ,, (R2:S->S->bool)) subsumed C
+   ==> (R1 ,, R2) subsumed C`,
+  REWRITE_TAC[subsumed; seq] THEN MESON_TAC[]);;
+
+(* |- R subsumed C. For one component d, from the clause of C that may       *)
+(* contain d (SUBSUMED_MAYCHANGE_TAC, with the component assumptions if the  *)
+(* goal has a numeric variable, as in a variable offset), or from the parts  *)
+(* of d if C names d in parts; for R1 ,, R2, from R1 subsumed C and          *)
+(* (C ,, R2) subsumed C (maychange_absorb).                                  *)
+
+let subsumed_theorem =
+  let cache : thm Termtbl2.t = Termtbl2.create 256
+  and seq_absorb = lemma_instance SUBSUMED_SEQ_ABSORB ["R1";"C";"R2"] [] in
+  let rec component_list l =
+    match l with
+      Comb(Comb(Const("CONS",_),d),t) -> d::component_list t
+    | _ -> [] in
+  let sub_prove tm =
+    let tac = REWRITE_TAC !maychange_list_defs THEN SUBSUMED_MAYCHANGE_TAC in
+    TAC_PROOF((subsumed_context tm,tm),tac) in
+  let rec sub1 mtm c =
+    match c with
+      Comb(Comb(Const(",,",_),c1),c2) ->
+        (try MATCH_MP SUBSUMED_SEQ_LEFT (CONJ (sub1 mtm c1) (subsumed_id c2))
+         with Failure _ ->
+           MATCH_MP SUBSUMED_SEQ_RIGHT (CONJ (subsumed_id c1) (sub1 mtm c2)))
+    | Comb(Const("MAYCHANGE",_) as mch,(Const(_,_) as l)) ->
+        let eq = maychange_list_def l in
+        SUBS [SYM eq] (sub1 mtm (mk_comb(mch,rhs(concl eq))))
+    | Comb(Const("MAYCHANGE",_),l) ->
+        let d = hd(component_list(rand mtm)) in
+        if not(exists (component_may_contain d) (component_list l))
+        then failwith "subsumed_theorem" else
+        sub_prove (list_mk_icomb "subsumed" [mtm;c])
+    | _ -> sub_prove (list_mk_icomb "subsumed" [mtm;c]) in
+  let rec subsumed r ct =
+    try Termtbl2.find cache (r,ct) with Not_found ->
+    (* (r1 ,, r2) subsumed ct from r1 subsumed ct and (ct ,, r2) subsumed    *)
+    (* ct (maychange_absorb).                                                *)
+    let seq r1 r2 =
+      MP (fst(seq_absorb [r1;ct;r2]))
+         (CONJ (subsumed r1 ct) (maychange_absorb ct r2)) in
+    let via eq th =
+      let sub = rator(rator(list_mk_icomb "subsumed" [r;ct])) in
+      EQ_MP (AP_THM (AP_TERM sub (SYM eq)) ct) th in
+    let th =
+      match ct with
+        Abs(_,Abs(_,Const("T",_))) ->
+          (* the trivial frame \s s'. true subsumes any frame                *)
+          ISPEC r SUBSUMED_TRIVIAL
+      | _ ->
+      match r with
+        Comb(Comb(Const(",,",_),r1),r2) ->
+          seq r1 r2
+      | Comb(Const("MAYCHANGE",_),Const("NIL",_)) ->
+          let eq = PART_MATCH lhs MAYCHANGE_NIL_EQ r in
+          via eq (subsumed_id ct)
+      | Comb(Const("MAYCHANGE",_) as mch,(Const(_,_) as l))
+          when can maychange_list_def l ->
+          let eq = AP_TERM mch (maychange_list_def l) in
+          via eq (subsumed (rhs(concl eq)) ct)
+      | Comb(Const("MAYCHANGE",_),
+             Comb(Comb(Const("CONS",_),d),Comb(Comb(Const("CONS",_),_),_))) ->
+          let eq = PART_MATCH lhs MAYCHANGE_CONS_SEQ r in
+          let r1,r2 = dest_binary ",," (rhs(concl eq)) in
+          via eq (seq r1 r2)
+      | Comb(Const("MAYCHANGE",_),
+             Comb(Comb(Const("CONS",_),d),Const("NIL",_))) ->
+          (* A clause that may contain d, or else d in parts (Q8 in halves,  *)
+          (* x86 YMM registers in quarters), as the frame names it.          *)
+          (* A frame of another shape goes to sub1 as a whole.               *)
+          if (match (try Some(maychange_components ct) with Failure _ -> None)
+              with None -> true
+                 | Some cs -> exists (component_may_contain d) cs)
+          then sub1 r ct else
+          (match filter (fun th -> compare (lhs(concl th)) r = 0)
+                        !maychange_splits with
+             eq::_ -> via eq (subsumed (rhs(concl eq)) ct)
+           | [] ->
+               let vth =
+                 try VALID_COMPONENT_CONV
+                      (mk_icomb(`valid_component:(S,V)component->bool`,d))
+                 with Failure _ ->
+                   failwith ("subsumed_theorem: no clause of the frame " ^
+                             "contains `" ^ string_of_term d ^ "`") in
+               let vth = if is_eq(concl vth) then EQT_ELIM vth else vth in
+               let eq = MATCH_MP MAYCHANGE_TOPHALF_BOTTOMHALF vth in
+               let r1,r2 = dest_binary ",," (rhs(concl eq)) in
+               via eq (seq r1 r2))
+      | _ -> TAC_PROOF(([],list_mk_icomb "subsumed" [r;ct]),
+                       SUBSUMED_MAYCHANGE_TAC) in
+    if hyp th = [] then Termtbl2.replace cache (r,ct) th; th in
+  subsumed;;
+
+let MAYCHANGE_WRITE_SUBSUMED = prove
+ (`((C:S->S->bool) ,, MAYCHANGE [c:(S,V)component]) subsumed C
+   ==> C s0 t ==> C s0 (write c y t)`,
+  REWRITE_TAC[subsumed] THEN MESON_TAC[MAYCHANGE_WRITE]);;
+
+let maychange_write_theorem =
+  let cache : (thm * term * term * term) Termtbl2.t = Termtbl2.create 256
+  and inst = lemma_instance MAYCHANGE_WRITE_SUBSUMED ["C";"c"] ["s0";"t";"y"]
+  and aty = `:A` and bty = `:B` in
+  fun ct d ->
+    try Termtbl2.find cache (ct,d) with Not_found ->
+    let sty = hd(snd(dest_type(type_of d)))
+    and vty = last(snd(dest_type(type_of d))) in
+    let mc = mk_comb(mk_const("MAYCHANGE",[sty,aty; vty,bty]),mk_flist [d]) in
+    let sub = maychange_absorb ct mc in
+    let ith,vs = inst [ct;d] in
+    let th = MP ith sub in
+    let r = (th,el 0 vs,el 1 vs,el 2 vs) in
+    if hyp th = [] then Termtbl2.replace cache (ct,d) r;
+    r;;
