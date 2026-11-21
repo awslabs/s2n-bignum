@@ -3570,6 +3570,351 @@ let READ_OVER_WRITE_TAC =
   ASM_REWRITE_TAC[] THEN tac;;
 
 (* ------------------------------------------------------------------------- *)
+(* Cached orthogonality and read-over-write theorems.                        *)
+(*                                                                           *)
+(* A simulation that keeps one fact read c s = v per component c moves the   *)
+(* fact across a write to d by the row |- read c (write d y s) = read c s.   *)
+(* The row is made once per pair (c,d) from |- orthogonal_components c d,    *)
+(* and each use is one INST of y and s, which does not walk the value or     *)
+(* the state. Theorems without hypotheses are kept for the session; those    *)
+(* that use the assumptions set by set_component_assumptions (nonoverlapping *)
+(* facts, bounds) are kept until the assumptions are set again.              *)
+(* ------------------------------------------------------------------------- *)
+
+(* Two regions at numeral offsets from base addresses do not overlap, from   *)
+(* arithmetic on the offsets when the bases are the same, and from a         *)
+(* nonoverlapping fact about the bases otherwise. The addresses are of any   *)
+(* word type :N word (int64 on AArch64 and x86, int32 on RISC-V).            *)
+
+let NONOVERLAPPING_MODULO_SAME_BASE = prove
+ (`!(x:N word) (y:N word) (z:N word) m n k l.
+     x = word_add z (word m) /\ y = word_add z (word n) /\
+     (m + k <= n /\ n + l <= m + 2 EXP dimindex(:N) \/
+      n + l <= m /\ m + k <= n + 2 EXP dimindex(:N))
+     ==> nonoverlapping_modulo (2 EXP dimindex(:N)) (val x,k) (val y,l)`,
+  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+  MATCH_MP_TAC NONOVERLAPPING_MODULO_OFFSET_BOTH THEN
+  ASM_REWRITE_TAC[]);;
+
+let NONOVERLAPPING_MODULO_OFFSET_BASES = prove
+ (`!(x:N word) (y:N word) (p:N word) (q:N word) k0 l0 m n k l.
+     x = word_add p (word m) /\ y = word_add q (word n) /\
+     nonoverlapping_modulo (2 EXP dimindex(:N)) (val p,k0) (val q,l0) /\
+     m + k <= k0 /\ n + l <= l0
+     ==> nonoverlapping_modulo (2 EXP dimindex(:N)) (val x,k) (val y,l)`,
+  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+  MATCH_MP_TAC NONOVERLAPPING_MODULO_SUBREGIONS THEN
+  MAP_EVERY EXISTS_TAC
+   [`val(p:N word)`; `k0:num`; `val(q:N word)`; `l0:num`] THEN
+  ASM_REWRITE_TAC[VAL_WORD_ADD; VAL_WORD] THEN
+  CONJ_TAC THEN REWRITE_TAC[CONTAINED_MODULO_LMOD] THEN
+  ONCE_REWRITE_TAC[GSYM CONTAINED_MODULO_LMOD] THEN
+  CONV_TAC(ONCE_DEPTH_CONV MOD_DOWN_CONV) THEN
+  REWRITE_TAC[CONTAINED_MODULO_LMOD] THEN
+  MATCH_MP_TAC CONTAINED_MODULO_OFFSET_SIMPLE THEN ASM_ARITH_TAC);;
+
+(* A region given by a number n (as for code at word n) as val(word n).      *)
+
+let NONOVERLAPPING_MODULO_VAL_WORD = prove
+ (`(nonoverlapping_modulo (2 EXP dimindex(:N)) (n,k) (y,l) <=>
+    nonoverlapping_modulo (2 EXP dimindex(:N)) (val(word n:N word),k) (y,l)) /\
+   (nonoverlapping_modulo (2 EXP dimindex(:N)) (x,k) (n,l) <=>
+    nonoverlapping_modulo (2 EXP dimindex(:N)) (x,k) (val(word n:N word),l))`,
+  REWRITE_TAC[VAL_WORD; NONOVERLAPPING_MODULO_LMOD;
+              NONOVERLAPPING_MODULO_RMOD]);;
+
+(* The lemmas above for one address type, with dimindex(:N) reduced to a     *)
+(* numeral where DIMINDEX_CONV can (2 EXP 64 for int64), made once per type, *)
+(* with the variables of the instances and the modulus 2 EXP dimindex(:N).   *)
+
+type offset_lemmas =
+  { ol_same : thm; ol_same_vars : term list;
+    ol_diff : thm; ol_diff_vars : term list;
+    ol_val_word : thm * thm; ol_modulus : term; ol_dims : thm list };;
+
+let offset_lemmas =
+  let cache = ref [] and nty = `:N` in
+  let var th n = find (fun v -> name_of v = n) (frees(concl th)) in
+  fun aty ->
+    try assoc aty !cache with Failure _ ->
+    let tyin = match dest_type aty with
+        "word",[n] -> [n,nty]
+      | _ -> failwith "offset_lemmas: not a word type" in
+    let dims = try [DIMINDEX_CONV(inst tyin `dimindex(:N)`)]
+               with Failure _ -> [] in
+    let red th =
+      let th = INST_TYPE tyin (SPEC_ALL th) in
+      if dims = [] then th else PURE_REWRITE_RULE dims th in
+    let same = red NONOVERLAPPING_MODULO_SAME_BASE
+    and diff = red NONOVERLAPPING_MODULO_OFFSET_BASES
+    and vw = red NONOVERLAPPING_MODULO_VAL_WORD in
+    let r = { ol_same = same;
+              ol_same_vars = map (var same) ["x";"y";"z";"m";"n";"k";"l"];
+              ol_diff = diff;
+              ol_diff_vars =
+                map (var diff) ["x";"y";"p";"q";"k0";"l0";"m";"n";"k";"l"];
+              ol_val_word = (CONJUNCT1 vw,CONJUNCT2 vw);
+              ol_modulus = lhand(rator(rand(concl same)));
+              ol_dims = dims } in
+    cache := (aty,r) :: !cache; r;;
+
+(* `memory :> K a` for a byte component K of constant size, as (a, size in   *)
+(* bytes): bytes8 to bytes512, and bytes(a,n) for a numeral n. None for      *)
+(* other components (bytelist, bignum, a size that is not a numeral).        *)
+
+let memory_bytes_sizes =
+  ["bytes8",(1,bytes8); "bytes16",(2,bytes16); "bytes32",(4,bytes32);
+   "bytes64",(8,bytes64); "bytes128",(16,bytes128);
+   "bytes256",(32,bytes256); "bytes512",(64,bytes512)];;
+
+let memory_bytes_region c =
+  match c with
+    Comb(Comb(Const(":>",_),Const("memory",_)),Comb(Const(k,_),x))
+      when List.mem_assoc k memory_bytes_sizes ->
+        Some(x,fst(List.assoc k memory_bytes_sizes))
+  | Comb(Comb(Const(":>",_),Const("memory",_)),
+         Comb(Const("bytes",_),Comb(Comb(Const(",",_),x),n)))
+      when is_numeral n ->
+        (try Some(x,dest_small_numeral n) with Failure _ -> None)
+  | _ -> None;;
+
+(* An address word_add b (word n) for a numeral n as (b,n), any other        *)
+(* address a as (a,0).                                                       *)
+
+let address_base_offset =
+  let zero = `0` in
+  fun a ->
+    match a with
+      Comb(Comb(Const("word_add",_),p),Comb(Const("word",_),m))
+        when is_numeral m -> (p,m)
+    | _ -> (a,zero);;
+
+(* |- nonoverlapping_modulo (2 EXP dimindex(:N)) (val x,k) (val y,l)         *)
+(*    ==> orthogonal_components (memory :> K x) (memory :> L y)              *)
+(* proved once per pair of component shapes, with the variables x and y.     *)
+
+let memory_bytes_orthogonality_lemma =
+  let cache = Termtbl2.create 32 in
+  let defs = map (snd o snd) memory_bytes_sizes in
+  let pattern c v =
+    match c with
+      Comb(Comb(cop,m),Comb(Const(_,_) as k,
+                            Comb(Comb(Const(",",_) as cm,_),n))) ->
+        mk_comb(mk_comb(cop,m),mk_comb(k,mk_comb(mk_comb(cm,v),n)))
+    | Comb(Comb(cop,m),Comb(k,_)) -> mk_comb(mk_comb(cop,m),mk_comb(k,v))
+    | _ -> failwith "memory_bytes_orthogonality_lemma" in
+  let region c = match memory_bytes_region c with
+      Some(a,n) -> type_of a,mk_small_numeral n
+    | None -> failwith "memory_bytes_orthogonality_lemma" in
+  fun c d ->
+    let aty,k = region c and _,l = region d in
+    let x = mk_var("x",aty) and y = mk_var("y",aty) in
+    let pc = pattern c x and pd = pattern d y in
+    let key = (pc,pd) in
+    try Termtbl2.find cache key with Not_found ->
+    let ls = offset_lemmas aty in
+    let tm = mk_imp
+     (list_mk_icomb "nonoverlapping_modulo"
+       [ls.ol_modulus; mk_pair(mk_icomb(`val:N word->num`,x),k);
+                       mk_pair(mk_icomb(`val:N word->num`,y),l)],
+      list_mk_icomb "orthogonal_components" [pc;pd]) in
+    let th = prove(tm,
+      DISCH_TAC THEN MATCH_MP_TAC ORTHOGONAL_COMPONENTS_COMPOSE_RIGHT THEN
+      CONJ_TAC THENL
+       [CONV_TAC VALID_COMPONENT_CONV;
+        REWRITE_TAC defs THEN
+        TRY(MATCH_MP_TAC ORTHOGONAL_COMPONENTS_SUB_LEFT) THEN
+        TRY(MATCH_MP_TAC ORTHOGONAL_COMPONENTS_SUB_RIGHT) THEN
+        ASM_REWRITE_TAC(ORTHOGONAL_COMPONENTS_BYTES :: ls.ol_dims)]) in
+    Termtbl2.add cache key (th,x,y); (th,x,y);;
+
+let orthogonality_cache : thm Termtbl2.t = Termtbl2.create 4096;;
+let orthogonality_context_cache : thm option Termtbl2.t =
+  Termtbl2.create 4096;;
+let read_write_row_cache : (thm * term * term) Termtbl2.t =
+  Termtbl2.create 4096;;
+let read_write_row_context_cache : (thm * term * term) Termtbl2.t =
+  Termtbl2.create 4096;;
+
+(* The assumptions that the proofs may use (those that do not mention the    *)
+(* state), the nonoverlapping ones indexed by their pair of base addresses,  *)
+(* and the context for ORTHOGONAL_COMPONENTS_RULE, made only if needed.      *)
+
+let component_assumptions = ref ([]:thm list);;
+let component_nonoverlapping : thm Termtbl2.t = Termtbl2.create 64;;
+let component_orthogonality_context =
+  ref (lazy ([],[]) : (thm list * thm list) Lazy.t);;
+
+(* A nonoverlapping fact in the form nonoverlapping_modulo                   *)
+(* (2 EXP dimindex(:N)) (val p,k) (val q,l), with dimindex(:N) reduced as in *)
+(* offset_lemmas; a region given by a number n is written as val(word n).    *)
+(* None if neither region is at an address val p, which gives the type.      *)
+
+let nonoverlapping_val_form =
+  let clauses = GEN_REWRITE_CONV I [NONOVERLAPPING_CLAUSES_GEN] THENC
+                ONCE_DEPTH_CONV DIMINDEX_CONV in
+  fun th ->
+    let th = try CONV_RULE clauses th with Failure _ -> th in
+    match concl th with
+      Comb(Comb(Comb(Const("nonoverlapping_modulo",_),n),
+                Comb(Comb(Const(",",_),x),_)),Comb(Comb(Const(",",_),y),_)) ->
+        let aty = match x,y with
+            Comb(Const("val",_),p),_ | _,Comb(Const("val",_),p) -> type_of p
+          | _ -> failwith "nonoverlapping_val_form" in
+        let ls = offset_lemmas aty in
+        if compare n ls.ol_modulus <> 0 then None else
+        let lth,rth = ls.ol_val_word in
+        let th = match x with
+            Comb(Const("val",_),_) -> th
+          | _ -> CONV_RULE (REWR_CONV lth) th in
+        let th = match y with
+            Comb(Const("val",_),_) -> th
+          | _ -> CONV_RULE (REWR_CONV rth) th in
+        Some th
+    | _ -> None;;
+
+let set_component_assumptions (ths:thm list) =
+  component_assumptions := ths;
+  Termtbl2.reset component_nonoverlapping;
+  Termtbl2.reset orthogonality_context_cache;
+  Termtbl2.reset read_write_row_context_cache;
+  List.iter (fun th ->
+      match (try nonoverlapping_val_form th with Failure _ -> None) with
+        Some th' ->
+          (match concl th' with
+             Comb(Comb(_,Comb(Comb(_,Comb(_,p)),_)),
+                  Comb(Comb(_,Comb(_,q)),_)) ->
+               Termtbl2.replace component_nonoverlapping (p,q) th';
+               Termtbl2.replace component_nonoverlapping (q,p)
+                 (ONCE_REWRITE_RULE[NONOVERLAPPING_MODULO_SYM] th')
+           | _ -> ())
+      | None -> ()) ths;
+  component_orthogonality_context :=
+    lazy (NONOVERLAPPING_DRIVERS ths,FILTER_CANONIZE_ASSUMPTIONS ths);;
+
+(* Orthogonality of memory components at constant offsets from base          *)
+(* addresses: from arithmetic on the offsets when the bases are the same,    *)
+(* and from one nonoverlapping assumption about the bases otherwise. None if *)
+(* the rule does not apply: not two such components, no assumption about the *)
+(* bases, offsets outside the regions of the assumption, or any failure.     *)
+
+let offset_orthogonality =
+  let arith tm =
+    let th = NUM_REDUCE_CONV tm in
+    match rand(concl th) with
+      Const("T",_) -> EQT_ELIM th
+    | _ -> failwith "offset_orthogonality" in
+  (* (b, n, |- a = word_add b (word n))                                      *)
+  let split a =
+    let p,m = address_base_offset a in
+    if p == a then p,m,SYM(ISPEC a (CONJUNCT1 WORD_ADD_0)) else p,m,REFL a in
+  let rule c d x k y l =
+    let ls = offset_lemmas (type_of x) in
+    let p,m,ex = split x and q,n,ey = split y in
+    let k = mk_small_numeral k and l = mk_small_numeral l in
+    let nov =
+      if compare p q = 0 then
+        let ith = INST (zip [x;y;p;m;n;k;l] ls.ol_same_vars) ls.ol_same in
+        MP ith (CONJ ex (CONJ ey (arith(rand(rand(lhand(concl ith)))))))
+      else
+        let sth = Termtbl2.find component_nonoverlapping (p,q) in
+        let k0,l0 = match concl sth with
+            Comb(Comb(_,Comb(_,k0)),Comb(_,l0)) -> k0,l0
+          | _ -> failwith "offset_orthogonality" in
+        let ith = INST (zip [x;y;p;q;k0;l0;m;n;k;l] ls.ol_diff_vars)
+                       ls.ol_diff in
+        MP ith (CONJ ex (CONJ ey (CONJ sth
+                 (arith(rand(rand(rand(lhand(concl ith))))))))) in
+    let lth,xv,yv = memory_bytes_orthogonality_lemma c d in
+    MP (INST [x,xv; y,yv] lth) nov in
+  fun c d ->
+    match memory_bytes_region c,memory_bytes_region d with
+      Some(x,k),Some(y,l) ->
+        (try Some(rule c d x k y l) with Failure _ | Not_found -> None)
+    | _ -> None;;
+
+let rec mentions_memory tm =
+  match tm with
+    Const("memory",_) -> true
+  | Comb(a,b) -> mentions_memory a || mentions_memory b
+  | Abs(_,b) -> mentions_memory b
+  | _ -> false;;
+
+(* |- orthogonal_components c d, cached, by one rule chosen from the shapes  *)
+(* of c and d: the offset rule above for memory regions it applies to; a     *)
+(* part of memory and a component that is not memory are orthogonal if       *)
+(* memory and that component are; ORTHOGONAL_COMPONENTS_RULE without         *)
+(* assumptions for two components that are not memory, and with the          *)
+(* component assumptions for the other memory components. Memory             *)
+(* components are put in canonical form first. Fails if the chosen rule      *)
+(* fails.                                                                    *)
+
+let rec prove_orthogonality c d =
+  let memory_part c = match c with
+      Comb(Comb(Const(":>",_),(Const("memory",_) as m)),_) -> Some m
+    | _ -> None in
+  (* Memory components in canonical form first: bignum (a,k) as              *)
+  (* bytes (a,8 * k) (a component alias), the size reduced.                  *)
+  let canon c =
+    if not(mentions_memory c) then REFL c else
+    (TRY_CONV COMPONENT_CANON_CONV THENC DEPTH_CONV NUM_MULT_CONV) c in
+  let cth = canon c and dth = canon d in
+  if compare (rand(concl cth)) c <> 0 || compare (rand(concl dth)) d <> 0 then
+    let oc = rator(rator(list_mk_icomb "orthogonal_components" [c;d])) in
+    EQ_MP (SYM(MK_COMB(AP_TERM oc cth,dth)))
+          (orthogonality_theorem (rand(concl cth)) (rand(concl dth)))
+  else
+  match offset_orthogonality c d with Some th -> th | None ->
+  match memory_part c,memory_part d with
+    Some m,None when not(mentions_memory d) ->
+      MATCH_MP (ISPECL [m;d;rand c] ORTHOGONAL_COMPONENTS_SUB_LEFT)
+               (orthogonality_theorem m d)
+  | None,Some m when not(mentions_memory c) ->
+      MATCH_MP (ISPECL [c;m;rand d] ORTHOGONAL_COMPONENTS_SUB_RIGHT)
+               (orthogonality_theorem c m)
+  | _ ->
+  let tm = list_mk_icomb "orthogonal_components" [c;d] in
+  if not(mentions_memory c) && not(mentions_memory d)
+  then ORTHOGONAL_COMPONENTS_RULE ([],[]) tm
+  else ORTHOGONAL_COMPONENTS_RULE (Lazy.force !component_orthogonality_context)
+         tm
+
+and orthogonality_theorem c d =
+  let key = (c,d) in
+  try Termtbl2.find orthogonality_cache key with Not_found ->
+  let r =
+    try Termtbl2.find orthogonality_context_cache key with Not_found ->
+    let r = try Some(prove_orthogonality c d) with Failure _ -> None in
+    (match r with
+       Some th when hyp th = [] -> Termtbl2.replace orthogonality_cache key th
+     | _ -> Termtbl2.replace orthogonality_context_cache key r);
+    r in
+  match r with
+    Some th -> th
+  | None -> failwith ("cannot show `" ^ string_of_term c ^
+                      "` orthogonal to `" ^ string_of_term d ^ "`");;
+
+(* read_write_row c d y t: |- read c (write d y t) = read c t.               *)
+
+let read_write_row =
+  let inst = lemma_instance READ_WRITE_ORTHOGONAL_COMPONENTS
+               ["c";"d"] ["x";"s"] in
+  let row c d =
+    let key = (c,d) in
+    try Termtbl2.find read_write_row_cache key with Not_found ->
+    try Termtbl2.find read_write_row_context_cache key with Not_found ->
+    let oth = orthogonality_theorem c d in
+    let ith,vs = inst [c;d] in
+    let th = MP ith oth in
+    let r = (th,hd vs,el 1 vs) in
+    (if hyp th = [] then Termtbl2.replace read_write_row_cache key r
+     else Termtbl2.replace read_write_row_context_cache key r);
+    r in
+  fun c d y t ->
+    let th,yv,sv = row c d in
+    INST [y,yv; t,sv] th;;
+
+(* ------------------------------------------------------------------------- *)
 (* Rule applying a state update theorem of the form                          *)
 (* uth |- (write c1 t1) (... (write cn tn) s) = s'                           *)
 (* to a theorem involving terms of the form "read d s" and attempting to     *)
