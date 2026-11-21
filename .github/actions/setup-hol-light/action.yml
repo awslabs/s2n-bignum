@@ -1,0 +1,49 @@
+name: Set up HOL Light
+description: Install opam and build the pinned HOL Light revision
+inputs:
+  linux-packages:
+    description: Additional apt packages required by the job
+    default: ''
+  apt-update-options:
+    description: Extra arguments for apt update on the runner
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: Install Linux dependencies and opam
+      if: runner.os == 'Linux'
+      shell: bash
+      env:
+        EXTRA_PACKAGES: ${{ inputs.linux-packages }}
+        UPDATE_OPTIONS: ${{ inputs.apt-update-options }}
+      run: |
+        read -r -a packages <<< "$EXTRA_PACKAGES"
+        read -r -a options <<< "$UPDATE_OPTIONS"
+        sudo apt "${options[@]}" update
+        sudo apt -y install libpcre2-dev ocaml libstring-shellquote-perl libgmp-dev xdot "${packages[@]}"
+        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
+        chmod +x install.sh
+        echo /usr/local/bin | sh ./install.sh --version 2.5.2
+        opam init --disable-sandboxing
+
+    - name: Install opam on macOS
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        brew install opam
+        opam init -a
+
+    - name: Build HOL Light
+      shell: bash
+      env:
+        HOLLIGHT_COMMIT: e5236a5839b4d08dc2536b325cea0af855e6c379
+      run: |
+        git clone https://github.com/jrh13/hol-light.git
+        cd hol-light
+        git checkout "$HOLLIGHT_COMMIT"
+        make switch-5
+        eval "$(opam env)"
+        ocamlc -version
+        camlp5 -v
+        HOLLIGHT_USE_MODULE=1 make
+        echo "HOLDIR=$PWD" >> "$GITHUB_ENV"
