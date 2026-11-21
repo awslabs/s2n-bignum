@@ -994,71 +994,6 @@ let maychange_term =
   can (find_term pred);;
 
 (* ------------------------------------------------------------------------- *)
-(* Produce a modified update list given theorems                             *)
-(* th = |- (MAYCHANGE [....] ,, MAYCHANGE [...] ... ) s0 s1                  *)
-(* uth = |- write c1 y1 (write c2 y2 (write .... s1)) = s2                   *)
-(* give back                                                                 *)
-(* th' = |- (MAYCHANGE [....] ,, MAYCHANGE [...] ... ) s0 s1                 *)
-(* Tries to absorb components already in the list, otherwise                 *)
-(* simply appends them individually. Not optimal but OK.                     *)
-(* ------------------------------------------------------------------------- *)
-
-let MAYCHANGE_UPDATE_RULE =
-  let JUSTADD_CONV =
-    GEN_REWRITE_CONV I [MAYCHANGE_LID] ORELSEC
-    GEN_REWRITE_CONV TOP_DEPTH_CONV [GSYM SEQ_ASSOC] in
-  let MAYCHANGE_SIMPLE_ABSORB_CONV tm =
-    match tm with
-      Comb(Comb(Const(",,",_) as cop,ltm),rtm) ->
-          let lth = MAYCHANGE_CANON_CONV ltm
-          and rth = MAYCHANGE_CANON_CONV rtm in
-          let tm' = mk_comb(mk_comb(cop,rand(concl lth)),rand(concl rth)) in
-          let n,eth = ASSIGNS_MOVE_BACK_CONV ASSIGNS_IDEMPOT_CONV tm' in
-          if n <> 1 then JUSTADD_CONV tm else
-          let th' = MK_COMB(AP_TERM cop lth,rth) in
-          TRANS (TRANS th' eth) (SYM lth)
-    | _ -> failwith "MAYCHANGE_SIMPLE_ABSORB_CONV" in
-  let rec BASIC_MAYCHANGE_UPDATE_RULE tm th =
-      match tm with
-        Comb(Comb(Comb(Const("write",_),c),y),s) ->
-           let th1 = BASIC_MAYCHANGE_UPDATE_RULE s th in
-           let th2 = ISPECL [c;y] (MATCH_MP MAYCHANGE_WRITE th1) in
-           CONV_RULE(RATOR_CONV(RATOR_CONV MAYCHANGE_SIMPLE_ABSORB_CONV)) th2
-      | _ -> th in
-  fun uth th ->
-    let th' = BASIC_MAYCHANGE_UPDATE_RULE (lhand(concl uth)) th in
-    EQ_MP (AP_TERM (rator(concl th')) uth) th';;
-
-(*** Example
-
-let th = ASSUME `(MAYCHANGE [PC; X19] ,, MAYCHANGE [CF]) s s'`
-and uth = ASSUME
- `write VF
-      (~(ival (read X0 s1) - ival (read X1 s1) =
-         ival (word_sub (read X0 s1) (read X1 s1))))
-     (write CF (~(val (read X0 s1) < val (read X1 s1)))
-     (write ZF (val (word_sub (read X0 s1) (read X1 s1)) = 0)
-     (write NF (ival (word_sub (read X0 s1) (read X1 s1)) < &0)
-     (write X1 (word_sub (read X0 s1) (read X1 s1))
-     (write PC (word (pc + 8)) s'))))) = s''`;;
-
-MAYCHANGE_UPDATE_RULE uth th;;
-
- ***)
-
-(* ------------------------------------------------------------------------- *)
-(* Produce updated "MAYCHANGE" assumption from one in assumptions.           *)
-(* Absorbs simple duplicates but otherwise doesn't try to be clever.         *)
-(* Works from antecedent in the goal specifying the state update.            *)
-(* ------------------------------------------------------------------------- *)
-
-let MAYCHANGE_STATE_UPDATE_TAC =
-  DISCH_THEN(fun uth ->
-    MP_TAC uth THEN
-    FIRST_X_ASSUM(ASSUME_TAC o MAYCHANGE_UPDATE_RULE uth o
-           check(maychange_term o concl)));;
-
-(* ------------------------------------------------------------------------- *)
 (* A property P always becomes true "eventually". This correctly reflects    *)
 (* nondeterminism: we need the property to hold eventually along *every*     *)
 (* possible path from the initial state. It also requires (unless P already  *)
@@ -4106,3 +4041,89 @@ let maychange_write_theorem =
     let r = (th,el 0 vs,el 1 vs,el 2 vs) in
     if hyp th = [] then Termtbl2.replace cache (ct,d) r;
     r;;
+
+(* The fast case of MAYCHANGE_UPDATE_RULE below: th is |- R s0 t for a     *)
+(* frame R of MAYCHANGE lists that has the component c among its elements,  *)
+(* as the walk of the rule would take it (an element equal to c absorbs the  *)
+(* write); the result is |- R s0 (write c y t), with the same R, from the    *)
+(* cached maychange_write_theorem R c. Fails in the other cases.             *)
+
+let maychange_write_fast th c y =
+  match concl th with
+    Comb(Comb(r,s0),t) when is_maychange_frame (concl th) ->
+      if not(mem c (maychange_components r)) then failwith "not in frame"
+      else
+        let lth,s0v,tv,yv = maychange_write_theorem r c in
+        (* only a theorem without hypotheses: one that needed   *)
+        (* component assumptions (set for another goal, as this *)
+        (* simulation does not set them) would add them to the  *)
+        (* frame fact of this goal                              *)
+        if hyp lth <> [] then failwith "maychange_write_fast" else
+        MP (INST [s0,s0v; t,tv; y,yv] lth) th
+  | _ -> failwith "maychange_write_fast";;
+
+(* ------------------------------------------------------------------------- *)
+(* Produce a modified update list given theorems                             *)
+(* th = |- (MAYCHANGE [....] ,, MAYCHANGE [...] ... ) s0 s1                  *)
+(* uth = |- write c1 y1 (write c2 y2 (write .... s1)) = s2                   *)
+(* give back                                                                 *)
+(* th' = |- (MAYCHANGE [....] ,, MAYCHANGE [...] ... ) s0 s1                 *)
+(* Tries to absorb components already in the list, otherwise                 *)
+(* simply appends them individually. Not optimal but OK.                     *)
+(* ------------------------------------------------------------------------- *)
+
+let MAYCHANGE_UPDATE_RULE =
+  let JUSTADD_CONV =
+    GEN_REWRITE_CONV I [MAYCHANGE_LID] ORELSEC
+    GEN_REWRITE_CONV TOP_DEPTH_CONV [GSYM SEQ_ASSOC] in
+  let MAYCHANGE_SIMPLE_ABSORB_CONV tm =
+    match tm with
+      Comb(Comb(Const(",,",_) as cop,ltm),rtm) ->
+          let lth = MAYCHANGE_CANON_CONV ltm
+          and rth = MAYCHANGE_CANON_CONV rtm in
+          let tm' = mk_comb(mk_comb(cop,rand(concl lth)),rand(concl rth)) in
+          let n,eth = ASSIGNS_MOVE_BACK_CONV ASSIGNS_IDEMPOT_CONV tm' in
+          if n <> 1 then JUSTADD_CONV tm else
+          let th' = MK_COMB(AP_TERM cop lth,rth) in
+          TRANS (TRANS th' eth) (SYM lth)
+    | _ -> failwith "MAYCHANGE_SIMPLE_ABSORB_CONV" in
+  let rec BASIC_MAYCHANGE_UPDATE_RULE tm th =
+      match tm with
+        Comb(Comb(Comb(Const("write",_),c),y),s) ->
+           let th1 = BASIC_MAYCHANGE_UPDATE_RULE s th in
+           (try maychange_write_fast th1 c y with Failure _ ->
+            let th2 = ISPECL [c;y] (MATCH_MP MAYCHANGE_WRITE th1) in
+            CONV_RULE(RATOR_CONV(RATOR_CONV MAYCHANGE_SIMPLE_ABSORB_CONV)) th2)
+      | _ -> th in
+  fun uth th ->
+    let th' = BASIC_MAYCHANGE_UPDATE_RULE (lhand(concl uth)) th in
+    EQ_MP (AP_TERM (rator(concl th')) uth) th';;
+
+(*** Example
+
+let th = ASSUME `(MAYCHANGE [PC; X19] ,, MAYCHANGE [CF]) s s'`
+and uth = ASSUME
+ `write VF
+      (~(ival (read X0 s1) - ival (read X1 s1) =
+         ival (word_sub (read X0 s1) (read X1 s1))))
+     (write CF (~(val (read X0 s1) < val (read X1 s1)))
+     (write ZF (val (word_sub (read X0 s1) (read X1 s1)) = 0)
+     (write NF (ival (word_sub (read X0 s1) (read X1 s1)) < &0)
+     (write X1 (word_sub (read X0 s1) (read X1 s1))
+     (write PC (word (pc + 8)) s'))))) = s''`;;
+
+MAYCHANGE_UPDATE_RULE uth th;;
+
+ ***)
+
+(* ------------------------------------------------------------------------- *)
+(* Produce updated "MAYCHANGE" assumption from one in assumptions.           *)
+(* Absorbs simple duplicates but otherwise doesn't try to be clever.         *)
+(* Works from antecedent in the goal specifying the state update.            *)
+(* ------------------------------------------------------------------------- *)
+
+let MAYCHANGE_STATE_UPDATE_TAC =
+  DISCH_THEN(fun uth ->
+    MP_TAC uth THEN
+    FIRST_X_ASSUM(ASSUME_TAC o MAYCHANGE_UPDATE_RULE uth o
+           check(maychange_term o concl)));;
