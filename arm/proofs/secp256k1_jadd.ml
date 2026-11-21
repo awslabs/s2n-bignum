@@ -2778,7 +2778,7 @@ let lvs =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SQR_P256K1_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC secp256k1_jadd_mc 134 lvs
+  ARM_MACRO_SIM_ABBREV_TAC SECP256K1_JADD_EXEC secp256k1_jadd_mc 134 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1.
     !n. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = n
     ==>
@@ -3134,7 +3134,7 @@ let LOCAL_SQR_P256K1_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_P256K1_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC secp256k1_jadd_mc 156 lvs
+  ARM_MACRO_SIM_ABBREV_TAC SECP256K1_JADD_EXEC secp256k1_jadd_mc 156 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>
@@ -3525,7 +3525,7 @@ let LOCAL_MUL_P256K1_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_P256K1_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC secp256k1_jadd_mc 17 lvs
+  ARM_MACRO_SIM_ABBREV_TAC SECP256K1_JADD_EXEC secp256k1_jadd_mc 17 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>

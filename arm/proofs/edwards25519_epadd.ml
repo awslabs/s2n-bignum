@@ -1907,7 +1907,7 @@ let lvs =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_P25519_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_epadd_mc 180 lvs
+  ARM_MACRO_SIM_ABBREV_TAC EDWARDS25519_EPADD_EXEC edwards25519_epadd_mc 180 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2355,7 +2355,7 @@ let LOCAL_MUL_P25519_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_epadd_mc 172 lvs
+  ARM_MACRO_SIM_ABBREV_TAC EDWARDS25519_EPADD_EXEC edwards25519_epadd_mc 172 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2779,7 +2779,7 @@ let LOCAL_MUL_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ADD_4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_epadd_mc 10 lvs
+  ARM_MACRO_SIM_ABBREV_TAC EDWARDS25519_EPADD_EXEC edwards25519_epadd_mc 10 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2827,7 +2827,7 @@ let LOCAL_ADD_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_DOUBLE_4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_epadd_mc 8 lvs
+  ARM_MACRO_SIM_ABBREV_TAC EDWARDS25519_EPADD_EXEC edwards25519_epadd_mc 8 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1.
       !n. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = n
       ==>
@@ -2870,7 +2870,7 @@ let LOCAL_DOUBLE_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_epadd_mc 16 lvs
+  ARM_MACRO_SIM_ABBREV_TAC EDWARDS25519_EPADD_EXEC edwards25519_epadd_mc 16 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2938,7 +2938,7 @@ let LOCAL_SUB_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ADD_TWICE4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_epadd_mc 16 lvs
+  ARM_MACRO_SIM_ABBREV_TAC EDWARDS25519_EPADD_EXEC edwards25519_epadd_mc 16 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
@@ -3008,7 +3008,7 @@ let LOCAL_ADD_TWICE4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_TWICE4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_epadd_mc 16 lvs
+  ARM_MACRO_SIM_ABBREV_TAC EDWARDS25519_EPADD_EXEC edwards25519_epadd_mc 16 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>

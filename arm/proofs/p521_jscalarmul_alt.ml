@@ -3210,7 +3210,8 @@ let LOCAL_SQR_P521_TAC =
    `read (memory :> bytes(read X0 s,8 * 9)) s'`;;
 
 let LOCAL_ADD_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jscalarmul_alt_mc 37 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JSCALARMUL_ALT_EXEC
+    p521_jscalarmul_alt_mc 37 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = m
     ==>
@@ -3313,7 +3314,8 @@ let LOCAL_ADD_P521_TAC =
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC);;
 
 let LOCAL_SUB_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jscalarmul_alt_mc 34 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JSCALARMUL_ALT_EXEC
+    p521_jscalarmul_alt_mc 34 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = m
     ==>
@@ -3393,7 +3395,8 @@ let LOCAL_SUB_P521_TAC =
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC);;
 
 let LOCAL_CMSUBC9_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jscalarmul_alt_mc 107 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JSCALARMUL_ALT_EXEC
+    p521_jscalarmul_alt_mc 107 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = m
     ==>
@@ -3658,7 +3661,8 @@ let LOCAL_CMSUBC9_P521_TAC =
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC);;
 
 let LOCAL_CMSUB41_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jscalarmul_alt_mc 57 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JSCALARMUL_ALT_EXEC
+    p521_jscalarmul_alt_mc 57 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = m
     ==>
@@ -3959,7 +3963,8 @@ let LOCAL_CMSUB41_P521_TAC =
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC);;
 
 let LOCAL_CMSUB38_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jscalarmul_alt_mc 82 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JSCALARMUL_ALT_EXEC
+    p521_jscalarmul_alt_mc 82 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = m
     ==>

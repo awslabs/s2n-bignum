@@ -1719,7 +1719,8 @@ let LOCAL_ADD_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_WEAKADD_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_unopt_core_mc 27 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC
+    p384_montjdouble_unopt_core_mc 27 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = m
     ==>
@@ -1815,7 +1816,8 @@ let LOCAL_WEAKADD_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUBC9_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_unopt_core_mc 86 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC
+    p384_montjdouble_unopt_core_mc 86 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = m
     ==>
@@ -1967,7 +1969,8 @@ let LOCAL_CMSUBC9_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUB41_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_unopt_core_mc 44 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC
+    p384_montjdouble_unopt_core_mc 44 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = m
     ==>
@@ -2138,7 +2141,8 @@ let LOCAL_CMSUB41_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUB38_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_unopt_core_mc 74 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC
+    p384_montjdouble_unopt_core_mc 74 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = m
     ==>

@@ -2782,7 +2782,7 @@ let DESUM_RULE' = cache DESUM_RULE and DECARRY_RULE' = cache DECARRY_RULE;;
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SQR_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jdouble_alt_mc 230 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JDOUBLE_ALT_EXEC p521_jdouble_alt_mc 230 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1.
     !n. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = n
     ==>
@@ -3012,7 +3012,7 @@ let LOCAL_SQR_P521_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jdouble_alt_mc 373 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JDOUBLE_ALT_EXEC p521_jdouble_alt_mc 373 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = a
     ==>
@@ -3223,7 +3223,7 @@ let LOCAL_MUL_P521_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ADD_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jdouble_alt_mc 37 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JDOUBLE_ALT_EXEC p521_jdouble_alt_mc 37 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = m
     ==>
@@ -3330,7 +3330,7 @@ let LOCAL_ADD_P521_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jdouble_alt_mc 34 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JDOUBLE_ALT_EXEC p521_jdouble_alt_mc 34 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = m
     ==>
@@ -3414,7 +3414,7 @@ let LOCAL_SUB_P521_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_WEAKMUL_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jdouble_alt_mc 362 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JDOUBLE_ALT_EXEC p521_jdouble_alt_mc 362 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = a
     ==>
@@ -3602,7 +3602,7 @@ let LOCAL_WEAKMUL_P521_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUBC9_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jdouble_alt_mc 107 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JDOUBLE_ALT_EXEC p521_jdouble_alt_mc 107 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = m
     ==>
@@ -3871,7 +3871,7 @@ let LOCAL_CMSUBC9_P521_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUB41_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jdouble_alt_mc 57 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JDOUBLE_ALT_EXEC p521_jdouble_alt_mc 57 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = m
     ==>
@@ -4176,7 +4176,7 @@ let LOCAL_CMSUB41_P521_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUB38_P521_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p521_jdouble_alt_mc 82 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P521_JDOUBLE_ALT_EXEC p521_jdouble_alt_mc 82 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 9)) t = m
     ==>

@@ -2400,12 +2400,16 @@ let lvs =
 let curve25519_x25519base_alt_mc' =
   SPECL [`pc:num`; `tables:num`] curve25519_x25519base_alt_mc;;
 
+let CURVE25519_X25519BASE_ALT_EXEC' =
+  ARM_MK_EXEC_RULE curve25519_x25519base_alt_mc';;
+
 (* ------------------------------------------------------------------------- *)
 (* Instances of mul_p25519.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_P25519_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC curve25519_x25519base_alt_mc' 100 lvs
+  ARM_MACRO_SIM_ABBREV_TAC CURVE25519_X25519BASE_ALT_EXEC'
+    curve25519_x25519base_alt_mc' 100 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2568,7 +2572,8 @@ let LOCAL_MUL_P25519_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC curve25519_x25519base_alt_mc' 94 lvs
+  ARM_MACRO_SIM_ABBREV_TAC CURVE25519_X25519BASE_ALT_EXEC'
+    curve25519_x25519base_alt_mc' 94 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2722,7 +2727,8 @@ let LOCAL_MUL_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ADD_TWICE4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC curve25519_x25519base_alt_mc' 16 lvs
+  ARM_MACRO_SIM_ABBREV_TAC CURVE25519_X25519BASE_ALT_EXEC'
+    curve25519_x25519base_alt_mc' 16 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2795,7 +2801,8 @@ let LOCAL_ADD_TWICE4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_DOUBLE_TWICE4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC curve25519_x25519base_alt_mc' 14 lvs
+  ARM_MACRO_SIM_ABBREV_TAC CURVE25519_X25519BASE_ALT_EXEC'
+    curve25519_x25519base_alt_mc' 14 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1.
       !n. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = n
       ==>
@@ -2862,7 +2869,8 @@ let LOCAL_DOUBLE_TWICE4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_TWICE4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC curve25519_x25519base_alt_mc' 16 lvs
+  ARM_MACRO_SIM_ABBREV_TAC CURVE25519_X25519BASE_ALT_EXEC'
+    curve25519_x25519base_alt_mc' 16 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>

@@ -3379,7 +3379,7 @@ let p25519weakredlemma = prove
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN REWRITE_TAC[p_25519] THEN ARITH_TAC);;
 
 let LOCAL_MUL_P25519_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC curve25519_x25519_mc 180 lvs
+  ARM_MACRO_SIM_ABBREV_TAC CURVE25519_X25519_EXEC curve25519_x25519_mc 180 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
