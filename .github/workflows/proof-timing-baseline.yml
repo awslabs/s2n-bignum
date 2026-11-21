@@ -1,0 +1,51 @@
+name: Proof timing baseline
+
+# Make sure every commit on main has proof timings, so that PRs based on it
+# can be compared. Timings are found by git tree. If the merged PR's last CI
+# run tested the same files, its timings already serve and nothing runs.
+on:
+  push:
+    branches: [main]
+  # Remeasure main's tip, e.g. after its timings expired.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # PR reports only use timings of commits on main.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      arches: ${{ steps.missing.outputs.arches }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Find architectures without timings for this tree
+        id: missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # If the lookup itself fails, measure both architectures.
+        run: |
+          arches=$(python3 tools/proof_timing/report.py --missing) || arches='["arm", "x86"]'
+          echo "arches=$arches" >> "$GITHUB_OUTPUT"
+
+  s2n-bignum-proofs:
+    name: s2n-bignum-proofs (${{ matrix.arch }})
+    needs: check
+    if: needs.check.outputs.arches != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.check.outputs.arches) }}
+    runs-on: codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/proofs
+        with:
+          arch: ${{ matrix.arch }}

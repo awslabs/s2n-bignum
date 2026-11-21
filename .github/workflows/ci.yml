@@ -349,7 +349,11 @@ jobs:
         make tutorial -j2
 
   s2n-bignum-proofs:
+    name: s2n-bignum-proofs (${{ matrix.arch }})
+    permissions:
+      contents: read
     strategy:
+      fail-fast: false
       matrix:
         arch: [arm, x86]
     runs-on: codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
@@ -358,3 +362,22 @@ jobs:
       - uses: ./.github/actions/proofs
         with:
           arch: ${{ matrix.arch }}
+
+  proof-timing-report:
+    needs: s2n-bignum-proofs
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      # Post the report comment. Fork PRs only get read access.
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Compare proof times with the tested merge's base
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/proof_timing/report.py
