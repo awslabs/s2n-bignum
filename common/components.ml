@@ -3883,11 +3883,60 @@ let read_write_row =
 (* involve the old state variable s anyway.                                  *)
 (* ------------------------------------------------------------------------- *)
 
+(* A faster case of STATE_UPDATE_RULE below, for a fact `read c s = v` (or  *)
+(* the bare `read c s` for a flag) that does not mention s otherwise: the    *)
+(* row |- read c (write d y t) = read c t of each write of the update uth    *)
+(* moves the read to s' without walking the fact, and the result is the      *)
+(* same fact about s'. It fails if c is written by the update, or if a row   *)
+(* needs assumptions (then the general rule runs, with its context).         *)
+
+let state_update_fast_fail : unit Termtbl2.t = Termtbl2.create 256;;
+let state_update_fast_ctx = ref ([]:thm list);;
+
+let state_update_fast uth th =
+  let utm,s' = dest_eq(concl uth) in
+  let s = repeat rand utm in
+  let fact,rd,v =
+    match concl th with
+      Comb(Comb(Const("=",_),(Comb(Comb(Const("read",_),c),s1) as l)),v)
+        when s1 = s && not(vfree_in s c) && not(vfree_in s v) ->
+        true,l,v
+    | Comb(Comb(Const("read",_),c),s1) as l
+        when s1 = s && not(vfree_in s c) -> false,l,l
+    | _ -> failwith "state_update_fast" in
+  let c = rand(rator rd) in
+  (* The pairs without a row of their own (a written component, or a pair   *)
+  (* that needs assumptions) are remembered, as a failing proof costs time  *)
+  (* at each step for each fact; the table is reset when the component      *)
+  (* assumptions are set again.                                             *)
+  if !state_update_fast_ctx != !component_assumptions
+  then (Termtbl2.reset state_update_fast_fail;
+        state_update_fast_ctx := !component_assumptions);
+  let rec go t =
+    match t with
+      Comb(Comb(Comb(Const("write",_),d),y),t') ->
+        if Termtbl2.mem state_update_fast_fail (c,d)
+        then failwith "state_update_fast" else
+        let row = try read_write_row c d y t' with Failure _ ->
+          (Termtbl2.replace state_update_fast_fail (c,d) ();
+           failwith "state_update_fast") in
+        if hyp row <> [] then
+          (Termtbl2.replace state_update_fast_fail (c,d) ();
+           failwith "state_update_fast") else
+        TRANS row (go t')
+    | _ -> if t = s then REFL(mk_comb(rator rd,s))
+           else failwith "state_update_fast" in
+  let moved = go utm in
+  let uth' = AP_TERM (rator rd) uth in
+  let eq = TRANS (SYM uth') moved in
+  if fact then TRANS eq th else EQ_MP (SYM eq) th;;
+
 let STATE_UPDATE_RULE cxt uth th =
   let utm,s' = dest_eq(concl uth)
   and tm = concl th in
   let s = repeat rand utm in
   if not(vfree_in s tm) then failwith "STATE_UPDATE_RULE" else
+  try state_update_fast uth th with Failure _ ->
   let th0 = SUBS_CONV[uth] (vsubst[utm,s] (concl th)) in
   let th1 = CONV_RULE(LAND_CONV
     (COMPONENTS_READ_OVER_WRITE_ORTHOGONAL_CONV cxt)) th0 in
