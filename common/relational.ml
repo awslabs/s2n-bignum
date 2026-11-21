@@ -4030,16 +4030,40 @@ let maychange_write_theorem =
     if hyp th = [] then Termtbl2.replace cache (ct,d) r;
     r;;
 
+(* A memory component of a constant number of bytes at base + a numeral     *)
+(* offset (memory_bytes_region), as (base, offset, size); other components   *)
+(* give None. A clause of the frame that contains such a write in full is    *)
+(* one that the write is absorbed into.                                      *)
+
+let memory_byte_range c =
+  match memory_bytes_region c with
+    Some(a,n) ->
+      let b,ofs = address_base_offset a in
+      (try Some(b,dest_small_numeral ofs,n) with Failure _ -> None)
+  | None -> None;;
+
+let memory_in_frame c comps =
+  match memory_byte_range c with
+    None -> false
+  | Some(b,ofs,n) ->
+      exists (fun e ->
+        match memory_byte_range e with
+          Some(b',ofs',n') -> b = b' && ofs' <= ofs && ofs + n <= ofs' + n'
+        | None -> false) comps;;
+
 (* The fast case of MAYCHANGE_UPDATE_RULE below: th is |- R s0 t for a     *)
-(* frame R of MAYCHANGE lists that has the component c among its elements,  *)
-(* as the walk of the rule would take it (an element equal to c absorbs the  *)
-(* write); the result is |- R s0 (write c y t), with the same R, from the    *)
-(* cached maychange_write_theorem R c. Fails in the other cases.             *)
+(* frame R of MAYCHANGE lists where the write to c is absorbed: c is one of *)
+(* its elements (the walk of the rule takes it so), or a memory component   *)
+(* that one of its elements contains. The result is |- R s0 (write c y t),   *)
+(* with the same R, from the cached maychange_write_theorem R c. Fails in    *)
+(* the other cases.                                                          *)
 
 let maychange_write_fast th c y =
   match concl th with
     Comb(Comb(r,s0),t) when is_maychange_frame (concl th) ->
-      if not(mem c (maychange_components r)) then failwith "not in frame"
+      let comps = maychange_components r in
+      if not(mem c comps || memory_in_frame c comps)
+      then failwith "not in frame"
       else
         let lth,s0v,tv,yv = maychange_write_theorem r c in
         (* only a theorem without hypotheses: one that needed   *)
