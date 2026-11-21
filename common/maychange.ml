@@ -19,7 +19,8 @@ let get_memory_read_info =
     "bytes32",`4`;
     "bytes64",`8`;
     "bytes128",`16`;
-    "bytes256",`32`
+    "bytes256",`32`;
+    "bytes512",`64`
   ] in
   fun (t:term): (term * term * string) option ->
     if not (is_binary ":>" t) then None else

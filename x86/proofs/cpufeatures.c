@@ -11,10 +11,12 @@
 // using the names of Linux's /proc/cpuinfo flags, from:
 //
 //   pclmulqdq ssse3 sse4_1 popcnt aes avx abm bmi1 avx2 bmi2 adx vpclmulqdq
+//   avx512f avx512dq avx512bw avx512vl
 //
 // Names are omitted if the feature is absent. avx, avx2 and vpclmulqdq,
 // whose VEX forms use the YMM state, also require the operating system to
-// enable that state (CPUID.1:ECX.OSXSAVE and XCR0 bits 1 and 2).
+// enable that state (CPUID.1:ECX.OSXSAVE and XCR0 bits 1 and 2), and the
+// AVX-512 features the opmask and ZMM state as well (XCR0 bits 5 to 7).
 // -------------------------------------------------------------------------
 
 #include <stdint.h>
@@ -39,7 +41,7 @@ static void feature(int present, const char *name, int *first)
 int main(void)
 {
   uint32_t r[4], max_leaf, max_extended, ecx1, ebx7 = 0, ecx7 = 0, ecx81 = 0;
-  int ymm = 0, avx, first = 1;
+  int ymm = 0, zmm = 0, avx, avx512, first = 1;
 
   cpuid(0, 0, r);
   max_leaf = r[0];
@@ -52,6 +54,7 @@ int main(void)
     uint32_t xcr0, xcr0_hi;
     __asm__ __volatile__("xgetbv" : "=a"(xcr0), "=d"(xcr0_hi) : "c"(0));
     ymm = (xcr0 & 6) == 6;
+    zmm = (xcr0 & 0xe6) == 0xe6;
   }
 
   // Leaves above the maximum return the data of another leaf
@@ -70,6 +73,7 @@ int main(void)
   }
 
   avx = ymm && bit(ecx1, 28);
+  avx512 = zmm && bit(ebx7, 16);
 
   feature(bit(ecx1, 1), "pclmulqdq", &first);
   feature(bit(ecx1, 9), "ssse3", &first);
@@ -83,6 +87,10 @@ int main(void)
   feature(bit(ebx7, 8), "bmi2", &first);
   feature(bit(ebx7, 19), "adx", &first);
   feature(avx && bit(ecx7, 10), "vpclmulqdq", &first);
+  feature(avx512, "avx512f", &first);
+  feature(avx512 && bit(ebx7, 17), "avx512dq", &first);
+  feature(avx512 && bit(ebx7, 30), "avx512bw", &first);
+  feature(avx512 && bit(ebx7, 31), "avx512vl", &first);
   printf("\n");
   return 0;
 }

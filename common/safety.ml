@@ -48,6 +48,9 @@ let address_uarch_event_INDUCT, address_uarch_event_RECURSION = define_type
     | EventX86PEXT (int64#int64#num)
     // POPCNT (src, bitwidth)
     | EventX86POPCNT (int64#num)
+    // Opmask (the 64-bit value of the write mask) of an EVEX instruction
+    // with a write mask and a memory operand
+    | EventX86Opmask (int64)
   ";;
 
 (* Before this type was parameterized, every event constructor produced a
@@ -97,6 +100,13 @@ overload_interface
  ("EventX86POPCNT",`EventX86POPCNT:int64#num->(A)address_uarch_event`);;
 overload_interface
  ("EventX86POPCNT",`EventX86POPCNT:int64#num->(64)address_uarch_event`);;
+
+make_overloadable "EventX86Opmask"
+ `:int64->(A)address_uarch_event`;;
+overload_interface
+ ("EventX86Opmask",`EventX86Opmask:int64->(A)address_uarch_event`);;
+overload_interface
+ ("EventX86Opmask",`EventX86Opmask:int64->(64)address_uarch_event`);;
 
 let uarch_event_INDUCT =
   address_uarch_event_INDUCT
