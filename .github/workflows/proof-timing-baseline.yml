@@ -1,0 +1,26 @@
+name: Proof timing baseline
+
+on:
+  push:
+    branches: [main]
+  # Remeasure main's tip, e.g. after a failed run or expired artifacts.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  s2n-bignum-proofs:
+    name: s2n-bignum-proofs (${{ matrix.arch }})
+    # PR reports only use baselines measured on main.
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm, x86]
+    runs-on: codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/proofs
+        with:
+          arch: ${{ matrix.arch }}

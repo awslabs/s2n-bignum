@@ -3,9 +3,6 @@ name: CI
 on:
   pull_request:
 
-env:
-  HOLLIGHT_COMMIT: "e5236a5839b4d08dc2536b325cea0af855e6c379"
-
 jobs:
   s2n-bignum-tests:
     strategy:
@@ -93,30 +90,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependent packages
-      run: |
-        sudo apt update
-        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl libgmp-dev xdot
-        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
-        chmod +x install.sh
-        echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
-        opam init --disable-sandboxing
-
-    - name: Install HOL Light
-      run: |
-        git clone https://github.com/jrh13/hol-light.git
-        cd hol-light
-        git checkout ${{ env.HOLLIGHT_COMMIT }}
-        make switch-5
-        eval $(opam env)
-        echo $(ocamlc -version)
-        echo $(camlp5 -v)
-        HOLLIGHT_USE_MODULE=1 make
-        cd ..
+    - uses: ./.github/actions/setup-hol-light
 
     - name: Run tests
       run: |
-        export HOLDIR=`pwd`/hol-light
         cd ${{ matrix.arch }}
         make sematest
 
@@ -150,27 +127,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependent packages
-      run: |
-        sudo apt update
-        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl \
-          libgmp-dev xdot ${{ matrix.packages }}
-        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
-        chmod +x install.sh
-        echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
-        opam init --disable-sandboxing
-
-    - name: Install HOL Light
-      run: |
-        git clone https://github.com/jrh13/hol-light.git
-        cd hol-light
-        git checkout ${{ env.HOLLIGHT_COMMIT }}
-        make switch-5
-        eval $(opam env)
-        echo $(ocamlc -version)
-        echo $(camlp5 -v)
-        HOLLIGHT_USE_MODULE=1 make
-        cd ..
+    - uses: ./.github/actions/setup-hol-light
+      with:
+        linux-packages: ${{ matrix.packages }}
 
     - name: Run cross-cosimulation tests
       env:
@@ -185,7 +144,6 @@ jobs:
         EXECUTOR_ENV: ${{ matrix.executor_env }}
         EXECUTOR_COMMAND: ${{ matrix.executor }}
       run: |
-        export HOLDIR=`pwd`/hol-light
         make -C "$TARGET" \
           HOLDIR="$HOLDIR" \
           proofs/simulator.native
@@ -215,14 +173,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependent packages
-      run: |
-        sudo apt update
-        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl libgmp-dev xdot
-        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
-        chmod +x install.sh
-        echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
-        opam init --disable-sandboxing
+    - uses: ./.github/actions/setup-hol-light
 
     - name: Install Intel SDE
       run: |
@@ -233,25 +184,12 @@ jobs:
         # Pin attaches to the traced process via ptrace.
         sudo sysctl -w kernel.yama.ptrace_scope=0
 
-    - name: Install HOL Light
-      run: |
-        git clone https://github.com/jrh13/hol-light.git
-        cd hol-light
-        git checkout ${{ env.HOLLIGHT_COMMIT }}
-        make switch-5
-        eval $(opam env)
-        echo $(ocamlc -version)
-        echo $(camlp5 -v)
-        HOLLIGHT_USE_MODULE=1 make
-        cd ..
-
     - name: Run SDE cosimulation tests
       env:
         COSIM_LDFLAGS: -static
         COSIM_RUN_ARGS: -${{ matrix.sde_cpu }} -chip_check_exe_only --
         COSIM_EXPECT_FEATURES: avx512f,avx512bw,avx512dq,avx512vl
       run: |
-        export HOLDIR=`pwd`/hol-light
         "$SDE_PATH" -${{ matrix.sde_cpu }} -- /bin/true
         make -C x86 HOLDIR="$HOLDIR" proofs/simulator.native
         env COSIM_RUN="$SDE_PATH" \
@@ -267,32 +205,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependent packages
-      run: |
-        sudo apt update
-        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl \
-          libgmp-dev xdot qemu-system-misc \
-          gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
-        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
-        chmod +x install.sh
-        echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
-        opam init --disable-sandboxing
-
-    - name: Install HOL Light
-      run: |
-        git clone https://github.com/jrh13/hol-light.git
-        cd hol-light
-        git checkout ${{ env.HOLLIGHT_COMMIT }}
-        make switch-5
-        eval $(opam env)
-        echo $(ocamlc -version)
-        echo $(camlp5 -v)
-        HOLLIGHT_USE_MODULE=1 make
-        cd ..
+    - uses: ./.github/actions/setup-hol-light
+      with:
+        linux-packages: qemu-system-misc gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
 
     - name: Run RV32IM cosimulation tests
       run: |
-        export HOLDIR=`pwd`/hol-light
         make -C riscv \
           HOLDIR="$HOLDIR" \
           proofs/simulator.native
@@ -312,16 +230,9 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependent packages
-      run: |
-        sudo apt update
-        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl \
-          libgmp-dev xdot \
-          gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
-        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
-        chmod +x install.sh
-        echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
-        opam init --disable-sandboxing
+    - uses: ./.github/actions/setup-hol-light
+      with:
+        linux-packages: gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf
 
     - name: Install the Sail RISC-V model
       run: |
@@ -330,21 +241,8 @@ jobs:
         tar -xzf sail-riscv-Linux-x86_64.tar.gz
         echo "SAIL_RISCV_SIM=`pwd`/sail-riscv-Linux-x86_64/bin/sail_riscv_sim" >> "$GITHUB_ENV"
 
-    - name: Install HOL Light
-      run: |
-        git clone https://github.com/jrh13/hol-light.git
-        cd hol-light
-        git checkout ${{ env.HOLLIGHT_COMMIT }}
-        make switch-5
-        eval $(opam env)
-        echo $(ocamlc -version)
-        echo $(camlp5 -v)
-        HOLLIGHT_USE_MODULE=1 make
-        cd ..
-
     - name: Run RV32IM cosimulation tests on the Sail model
       run: |
-        export HOLDIR=`pwd`/hol-light
         make -C riscv \
           HOLDIR="$HOLDIR" \
           proofs/simulator.native proofs/sail-cosim.elf
@@ -364,30 +262,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependent packages
-      run: |
-        sudo apt update
-        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl libgmp-dev xdot
-        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
-        chmod +x install.sh
-        echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
-        opam init --disable-sandboxing
-
-    - name: Install HOL Light
-      run: |
-        git clone https://github.com/jrh13/hol-light.git
-        cd hol-light
-        git checkout ${{ env.HOLLIGHT_COMMIT }}
-        make switch-5
-        eval $(opam env)
-        echo $(ocamlc -version)
-        echo $(camlp5 -v)
-        HOLLIGHT_USE_MODULE=1 make
-        cd ..
+    - uses: ./.github/actions/setup-hol-light
 
     - name: Run tutorial
       run: |
-        export HOLDIR=`pwd`/hol-light
         cd ${{ matrix.arch }}
         make tutorial -j2
 
@@ -463,67 +341,41 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install dependent packages
-      run: |
-        brew install opam
-        opam init -a
-
-    - name: Install HOL Light
-      run: |
-        git clone https://github.com/jrh13/hol-light.git
-        cd hol-light
-        git checkout ${{ env.HOLLIGHT_COMMIT }}
-        make switch-5
-        eval $(opam env)
-        echo $(ocamlc -version)
-        echo $(camlp5 -v)
-        HOLLIGHT_USE_MODULE=1 make
-        cd ..
+    - uses: ./.github/actions/setup-hol-light
 
     - name: Run tutorial
       run: |
-        export HOLDIR=`pwd`/hol-light
         cd arm
         make tutorial -j2
 
   s2n-bignum-proofs:
+    name: s2n-bignum-proofs (${{ matrix.arch }})
+    permissions:
+      contents: read
     strategy:
-        matrix:
-          arch: [arm, x86]
-    runs-on:
-      - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
-
+      fail-fast: false
+      matrix:
+        arch: [arm, x86]
+    runs-on: codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/proofs
+        with:
+          arch: ${{ matrix.arch }}
 
-    - name: Install dependent packages
-      run: |
-        sudo apt --allow-insecure-repositories update
-        sudo apt -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
-        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
-        chmod +x install.sh
-        echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
-        opam init --disable-sandboxing
-
-    - name: Install HOL Light
-      run: |
-        git clone https://github.com/jrh13/hol-light.git
-        cd hol-light
-        git checkout ${{ env.HOLLIGHT_COMMIT }}
-        make switch-5
-        eval $(opam env)
-        echo $(ocamlc -version)
-        echo $(camlp5 -v)
-        HOLLIGHT_USE_MODULE=1 make
-        cd ..
-
-    - name: Run proofs and tutorial
-      run: |
-        export HOLDIR=`pwd`/hol-light
-        export BUILD_CORE_COUNT=15
-        export CORE_COUNT=64
-        cd ${{ matrix.arch }}
-        make -j ${BUILD_CORE_COUNT} build_proofs build_tutorial
-        make -j ${CORE_COUNT} proofs tutorial
-        ../tools/collect-times.sh ${{ matrix.arch }}
+  proof-timing-report:
+    needs: s2n-bignum-proofs
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Compare proof times with the tested merge's base
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/proof_timing/report.py

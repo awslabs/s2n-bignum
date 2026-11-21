@@ -568,6 +568,10 @@ build_proofs: $(PROOF_BINS);
 build_tutorial: $(TUTORIAL_OBJ) $(TUTORIAL_PROOF_BINS);
 run_proofs: build_proofs $(PROOF_LOGS);
 
+.PHONY: proof-timing-targets
+proof-timing-targets:
+	@printf '%s\n' $(PROOF_LOGS)
+
 proofs: run_proofs ; ../tools/count-proofs.sh .
 tutorial: build_tutorial $(TUTORIAL_PROOF_LOGS);
 
