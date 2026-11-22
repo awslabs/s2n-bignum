@@ -260,9 +260,9 @@ class Layout:
                 m = re.match(r'(x\d+), ([0-9a-f]+) <', args)
                 if o == 'adrp' and m:
                     page[m.group(1)] = int(m.group(2), 16); continue
-                m = re.match(r'([qds])\d+, \[(x\d+), #(\d+)\]', args)
+                m = re.match(r'([qds])\d+, \[(x\d+)(?:, #(\d+))?\]', args)
                 if o == 'ldr' and m and m.group(2) in page:
-                    v = page[m.group(2)] + int(m.group(3))
+                    v = page[m.group(2)] + int(m.group(3) or 0)
                     if self.rodata[0] <= v < self.image_size and \
                        not any(lo <= v < hi for lo, hi in named):
                         used[v] = max(used.get(v, 0), width[m.group(1)])
