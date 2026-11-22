@@ -28,8 +28,7 @@ compiler and the optimization level, `<build>` = `<compiler>_<level>`:
  - `clang17_O2` for the one function transcribed from the clang 17 `-O2`
    binary;
  - `clang17_O3` for the clang 17 `-O3` binary, whose whole image is
-   transcribed and 77 of whose functions are verified in it, none of
-   them an API function (see "The clang 17 -O3 image");
+   verified in the same way (see "The clang 17 -O3 image");
  - `asm` for the API in hand-written assembly, which is not compiled code:
    its files and proofs are organized differently, as described in
    `asm/README.md` (the proofs are about the image of its objects linked
@@ -905,19 +904,20 @@ way, with the address 0x0. Its layout is
 `../proofs/mlkem_native/clang17_O3/layout.ml`, and
 `../proofs/mlkem_native/clang17_O3/libmlkem.ml` defines the image.
 
-`../proofs/mlkem_native/clang17_O3/` has a spec file and a proof file for 77
-of the 116 functions that have proofs in the gcc 12 `-O2` build, with the
-specifications of the gcc 12 `-O2` theorems. They are the polynomial and
-polyvec functions, `mlkem_rej_uniform` and the two rejection sampling
-functions, the SHA3 and SHAKE functions and the Keccak functions they use.
-The other 39 have no proof here: `check_pk`, `check_sk`, `gen_matrix`,
-`poly_getnoise_*`, `indcpa_*`, `keypair_derand`, `keypair`, `enc_derand`,
-`enc` and `dec`, for the parameter sets that the `gcc12_O2` build has them
-for. So no API function is verified for this build. Each function has
+`../proofs/mlkem_native/clang17_O3/` has a spec file and a proof file for
+each of the 116 functions that have proofs in the gcc 12 `-O2` build, with
+the specifications of the gcc 12 `-O2` theorems, and `fips203.ml` with the
+theorems of the API functions without the hypothesis that SampleNTT
+terminates. All are verified directly in the image. Each function has
 `..._IMAGE_SUBROUTINE_CORRECT` and `..._IMAGE_SUBROUTINE_SAFE`, and some
 also `..._IMAGE_SUBROUTINE_FULL` (the end of `link.ml` lists them). The
-functions that use memset assume its contracts, as for gcc 12. The code
-differs from that of gcc 12 as follows, for example:
+functions that use memset assume its contracts, as for gcc 12. The
+statements are those of `gcc12_O2` except for the stack frames, which
+follow from the code of clang, and the read-only data in the lists of
+memory accesses. The hypotheses of the API functions are those of the gcc
+12 `-O2` image (see "Hypotheses").
+
+The code differs from that of gcc 12 as follows, for example:
 
  - `mlkem_poly_reduce` is the same 20 instructions as with `-O2`.
  - `mlkem_poly_add` and `mlkem_poly_sub` first check whether the two
@@ -932,6 +932,25 @@ differs from that of gcc 12 as follows, for example:
    Montgomery reduction with ADDHN and ADDHN2.
  - `mlkem_poly_frommsg` unrolls the loop over the bits of each byte, with
    stores at negative offsets from a pointer into the output.
+ - Functions with large buffers round the stack pointer down to a multiple
+   of 32 (`sub x9, sp, #N; and sp, x9, #~31`) and keep x29 as frame
+   pointer. The incoming stack pointer is a multiple of 16, so the proofs
+   split on `aligned 32 stackpointer`; the frame in each statement is the
+   saved registers, the buffers, up to 16 bytes of padding and the frame
+   of the largest callee.
+ - `mlkem512_gen_matrix` and the other `gen_matrix` functions exist as
+   functions, but for ML-KEM-512 and ML-KEM-768 the code of
+   `indcpa_keypair_derand` and `indcpa_enc` has `gen_matrix` inlined: it
+   calls `mlkem_poly_rej_uniform_x4` (and, for ML-KEM-768,
+   `mlkem_poly_rej_uniform`) itself. `mlkem1024_gen_matrix` calls
+   `mlkem_poly_rej_uniform_x4` four times.
+ - `mlkem<n>_enc_derand` has `check_pk` inlined and `mlkem<n>_keypair` has
+   `keypair_derand` inlined. For ML-KEM-512, the comparison of the public
+   key in `check_pk` and `enc_derand`, and that of the ciphertexts in
+   `dec`, is straight-line code on 24 pairs of Q registers that saves and
+   restores D8-D15; for ML-KEM-768 and ML-KEM-1024 it is a loop over
+   blocks of 32 bytes. The proofs of the API functions follow the code,
+   with the statements of `gcc12_O2`.
 
 The check that the instructions of all object files are covered by the
 classes for cosimulation, `check_insns` in `../proofs/simulator_iclasses.ml`

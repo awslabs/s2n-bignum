@@ -21,7 +21,15 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
+needs "arm/proofs/utils/mlkem_native_libc.ml";;
+needs "arm/proofs/utils/mlkem_native_libc_full.ml";;
+needs "arm/proofs/mlkem_native/clang17_O3/poly_rej_uniform_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_init_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_absorb_once_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_squeezeblocks_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_release_spec.ml";;
 needs "arm/proofs/mlkem_native/clang17_O3/rej_uniform_spec.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
 
 (*** The code in the image:
 
@@ -417,3 +425,185 @@ let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_LOOPS_CORRECT =
   assuming_proofs (fun () ->
   map2 REJ_LOOP_CORRECT MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_LOOPS
    MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_LOOPS_FULL);;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness. The seeds are 34 bytes at seed, seed + 64, seed + 128 and    *)
+(* seed + 192, given as lists of bytes inp0, ..., inp3. As for               *)
+(* mlkem_poly_rej_uniform, the theorem has the hypothesis that for some k    *)
+(* there are at least 256 samples among the 12-bit fields of the first 504 + *)
+(* 168 * k bytes of shake128 of each seed, and the results are the first 256 *)
+(* samples for each. The stack is the 3056 bytes of the function (the saved  *)
+(* registers and the buffers, with the stack pointer rounded down to a       *)
+(* multiple of 32) and the 320 used by mlkem_shake128x4_absorb_once below    *)
+(* them, 3376 bytes, taken as 3392 so that its bottom is a multiple of 32 if *)
+(* the stack pointer is.                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT_STMT =
+  `!vec0 vec1 vec2 vec3 seed (inp0:byte list) (inp1:byte list)
+   (inp2:byte list) (inp3:byte list) k guard mf ea el ev pc stackpointer
+   returnaddress.
+        memset_contract mf ea el ev /\
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        aligned 16 stackpointer /\
+        LENGTH inp0 = 34 /\ LENGTH inp1 = 34 /\
+        LENGTH inp2 = 34 /\ LENGTH inp3 = 34 /\
+        ALL (\inp. 256 <= LENGTH(FILTER (\x. val x < 3329)
+                            (MAP (word_zx:12 word->16 word)
+                              (wordlist_of_num (336 + 112 * k)
+                                (num_of_bytelist
+                                  (list_of_seq (shake128 inp)
+                                               (504 + 168 * k)))))))
+            [inp0; inp1; inp2; inp3] /\
+        PAIRWISE nonoverlapping
+         [(vec0,512); (vec1,512); (vec2,512); (vec3,512);
+          (word_sub stackpointer (word 3392),3392)] /\
+        ALLPAIRS nonoverlapping
+         [(vec0,512); (vec1,512); (vec2,512); (vec3,512);
+          (word_sub stackpointer (word 3392),3392)]
+         [(seed,34); (word_add seed (word 64),34);
+          (word_add seed (word 128),34); (word_add seed (word 192),34);
+          (word pc,libmlkem_size); (word(pc + got_stack_chk_guard),8);
+          (guard,8);
+          (word(pc + got_memset),8); (ea,el)]
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc)
+                    mlkem_native_libmlkem_clang17_O3_mc /\
+                  read PC s = word (pc + mlkem_poly_rej_uniform_x4) /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [vec0; vec1; vec2; vec3; seed] s /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                  read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                  read (memory :> bytes(ea,el)) s = ev /\
+                  read (memory :> bytes(seed,34)) s = num_of_bytelist inp0 /\
+                  read (memory :> bytes(word_add seed (word 64),34)) s =
+                  num_of_bytelist inp1 /\
+                  read (memory :> bytes(word_add seed (word 128),34)) s =
+                  num_of_bytelist inp2 /\
+                  read (memory :> bytes(word_add seed (word 192),34)) s =
+                  num_of_bytelist inp3)
+             (\s. read PC s = returnaddress /\
+                  wordlist_from_memory(vec0,256) s =
+                  SUB_LIST(0,256)
+                   (FILTER (\x. val x < 3329)
+                     (MAP (word_zx:12 word->16 word)
+                       (wordlist_of_num (336 + 112 * k)
+                         (num_of_bytelist
+                           (list_of_seq (shake128 inp0) (504 + 168 * k)))))) /\
+                  wordlist_from_memory(vec1,256) s =
+                  SUB_LIST(0,256)
+                   (FILTER (\x. val x < 3329)
+                     (MAP (word_zx:12 word->16 word)
+                       (wordlist_of_num (336 + 112 * k)
+                         (num_of_bytelist
+                           (list_of_seq (shake128 inp1) (504 + 168 * k)))))) /\
+                  wordlist_from_memory(vec2,256) s =
+                  SUB_LIST(0,256)
+                   (FILTER (\x. val x < 3329)
+                     (MAP (word_zx:12 word->16 word)
+                       (wordlist_of_num (336 + 112 * k)
+                         (num_of_bytelist
+                           (list_of_seq (shake128 inp2) (504 + 168 * k)))))) /\
+                  wordlist_from_memory(vec3,256) s =
+                  SUB_LIST(0,256)
+                   (FILTER (\x. val x < 3329)
+                     (MAP (word_zx:12 word->16 word)
+                       (wordlist_of_num (336 + 112 * k)
+                         (num_of_bytelist
+                           (list_of_seq (shake128 inp3) (504 + 168 * k)))))))
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+              MAYCHANGE
+               [memory :> bytes(vec0,512); memory :> bytes(vec1,512);
+                memory :> bytes(vec2,512); memory :> bytes(vec3,512);
+                memory :> bytes(word_sub stackpointer (word 3392),3392)])`;;
+
+let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  assume_spec MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety, assuming the combined contract for       *)
+(* memset in utils/mlkem_native_libc_full.ml, as the combined theorem for    *)
+(* mlkem_shake128x4_absorb_once does, which implies the safety contract for  *)
+(* the other calls. The events depend only on the addresses and on the       *)
+(* seeds, which are public, through the samples and the number of            *)
+(* iterations of loop5, the least k for which all four have 256 samples.     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_STMT =
+  `!mf ea el ev.
+   memset_full_contract mf ea el ev
+   ==> exists f_events.
+        forall e vec0 vec1 vec2 vec3 seed (inp0:byte list) (inp1:byte list)
+               (inp2:byte list) (inp3:byte list) k guard pc stackpointer
+               returnaddress.
+         aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+         aligned 16 stackpointer /\
+         LENGTH inp0 = 34 /\ LENGTH inp1 = 34 /\
+         LENGTH inp2 = 34 /\ LENGTH inp3 = 34 /\
+         ALL (\inp. 256 <= LENGTH(FILTER (\x. val x < 3329)
+                             (MAP (word_zx:12 word->16 word)
+                               (wordlist_of_num (336 + 112 * k)
+                                 (num_of_bytelist
+                                   (list_of_seq (shake128 inp)
+                                                (504 + 168 * k)))))))
+             [inp0; inp1; inp2; inp3] /\
+         PAIRWISE nonoverlapping
+          [(vec0,512); (vec1,512); (vec2,512); (vec3,512);
+           (word_sub stackpointer (word 3392),3392)] /\
+         ALLPAIRS nonoverlapping
+          [(vec0,512); (vec1,512); (vec2,512); (vec3,512);
+           (word_sub stackpointer (word 3392),3392)]
+          [(seed,34); (word_add seed (word 64),34);
+           (word_add seed (word 128),34); (word_add seed (word 192),34);
+           (word pc,libmlkem_size); (word(pc + got_stack_chk_guard),8);
+           (guard,8);
+           (word(pc + got_memset),8); (ea,el)]
+         ==> ensures arm
+              (\s. aligned_bytes_loaded s (word pc)
+                     mlkem_native_libmlkem_clang17_O3_mc /\
+                   read PC s = word (pc + mlkem_poly_rej_uniform_x4) /\
+                   read SP s = stackpointer /\
+                   read X30 s = returnaddress /\
+                   C_ARGUMENTS [vec0; vec1; vec2; vec3; seed] s /\
+                   read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                     guard /\
+                   read (memory :> bytes64(word(pc + got_memset))) s = mf /\
+                   read (memory :> bytes(ea,el)) s = ev /\
+                   read (memory :> bytes(seed,34)) s = num_of_bytelist inp0 /\
+                   read (memory :> bytes(word_add seed (word 64),34)) s =
+                   num_of_bytelist inp1 /\
+                   read (memory :> bytes(word_add seed (word 128),34)) s =
+                   num_of_bytelist inp2 /\
+                   read (memory :> bytes(word_add seed (word 192),34)) s =
+                   num_of_bytelist inp3 /\
+                   read events s = e)
+              (\s. read PC s = returnaddress /\
+                   (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events vec0 vec1 vec2 vec3 seed inp0 inp1 inp2
+                             inp3 guard mf pc
+                             (word_sub stackpointer (word 3392))
+                             returnaddress /\
+                      memaccess_inbounds e2
+                       [seed,34; word_add seed (word 64),34;
+                        word_add seed (word 128),34;
+                        word_add seed (word 192),34;
+                        vec0,512; vec1,512; vec2,512; vec3,512;
+                        word_sub stackpointer (word 3392),3392;
+                        word(pc + got_stack_chk_guard),8; guard,8;
+                        word(pc + got_memset),8;
+                        ea,el;
+                        word(pc + rodata_mlk_KeccakF_RoundConstants),192]
+                       [vec0,512; vec1,512; vec2,512; vec3,512;
+                        word_sub stackpointer (word 3392),3392]))
+              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
+               MAYCHANGE
+                [memory :> bytes(vec0,512); memory :> bytes(vec1,512);
+                 memory :> bytes(vec2,512); memory :> bytes(vec3,512);
+                 memory :> bytes(word_sub stackpointer (word 3392),3392)])`;;
+
+let MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLKEM_NATIVE_POLY_REJ_UNIFORM_X4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_STMT;;

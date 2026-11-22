@@ -35,6 +35,81 @@ module Par_job_basemul_k4 (Par_unit : sig end) = struct
 needs "arm/proofs/mlkem_native/clang17_O3/basemul_k4_proof.ml";;
 end;;
 
+needs "arm/proofs/mlkem_native/clang17_O3/poly_frombytes_spec.ml";;
+module Par_job_poly_frombytes (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_frombytes_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k2_spec.ml";;
+module Par_job_polyvec_frombytes_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_reduce_spec.ml";;
+module Par_job_poly_reduce (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_reduce_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k2_spec.ml";;
+module Par_job_polyvec_reduce_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_tobytes_spec.ml";;
+module Par_job_poly_tobytes (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_tobytes_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k2_spec.ml";;
+module Par_job_polyvec_tobytes_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/check_pk_k2_spec.ml";;
+module Par_job_check_pk_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/check_pk_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k3_spec.ml";;
+module Par_job_polyvec_frombytes_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k3_spec.ml";;
+module Par_job_polyvec_reduce_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k3_spec.ml";;
+module Par_job_polyvec_tobytes_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/check_pk_k3_spec.ml";;
+module Par_job_check_pk_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/check_pk_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k4_spec.ml";;
+module Par_job_polyvec_frombytes_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k4_spec.ml";;
+module Par_job_polyvec_reduce_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k4_spec.ml";;
+module Par_job_polyvec_tobytes_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/check_pk_k4_spec.ml";;
+module Par_job_check_pk_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/check_pk_k4_proof.ml";;
+end;;
+
 needs "arm/proofs/mlkem_native/clang17_O3/keccakf1600_permute_spec.ml";;
 module Par_job_keccakf1600_permute (Par_unit : sig end) = struct
 needs "arm/proofs/mlkem_native/clang17_O3/keccakf1600_permute_proof.ml";;
@@ -48,6 +123,131 @@ end;;
 needs "arm/proofs/mlkem_native/clang17_O3/keccak_absorb_once_spec.ml";;
 module Par_job_keccak_absorb_once (Par_unit : sig end) = struct
 needs "arm/proofs/mlkem_native/clang17_O3/keccak_absorb_once_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes_spec.ml";;
+module Par_job_keccakf1600_extract_bytes (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/sha3_256_spec.ml";;
+module Par_job_sha3_256 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/sha3_256_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/check_sk_k2_spec.ml";;
+module Par_job_check_sk_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/check_sk_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/check_sk_k3_spec.ml";;
+module Par_job_check_sk_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/check_sk_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/check_sk_k4_spec.ml";;
+module Par_job_check_sk_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/check_sk_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d10_spec.ml";;
+module Par_job_poly_decompress_d10 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d10_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k2_spec.ml";;
+module Par_job_polyvec_decompress_du_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d4_spec.ml";;
+module Par_job_poly_decompress_d4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_ntt_spec.ml";;
+module Par_job_poly_ntt (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_ntt_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k2_spec.ml";;
+module Par_job_polyvec_ntt_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_mulcache_compute_spec.ml";;
+module Par_job_poly_mulcache_compute (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_mulcache_compute_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k2_spec.ml";;
+module Par_job_polyvec_mulcache_compute_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_invntt_tomont_spec.ml";;
+module Par_job_poly_invntt_tomont (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_invntt_tomont_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_sub_spec.ml";;
+module Par_job_poly_sub (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_sub_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_tomsg_spec.ml";;
+module Par_job_poly_tomsg (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_tomsg_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_dec_k2_spec.ml";;
+module Par_job_indcpa_dec_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_dec_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/sha3_512_spec.ml";;
+module Par_job_sha3_512 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/sha3_512_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_frommsg_spec.ml";;
+module Par_job_poly_frommsg (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_frommsg_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/shake128_init_spec.ml";;
+module Par_job_shake128_init (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/shake128_init_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/shake128_absorb_once_spec.ml";;
+module Par_job_shake128_absorb_once (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/shake128_absorb_once_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/shake128_squeezeblocks_spec.ml";;
+module Par_job_shake128_squeezeblocks (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/shake128_squeezeblocks_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/shake128_release_spec.ml";;
+module Par_job_shake128_release (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/shake128_release_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/rej_uniform_spec.ml";;
+module Par_job_rej_uniform (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/rej_uniform_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_rej_uniform_spec.ml";;
+module Par_job_poly_rej_uniform (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_rej_uniform_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_init_spec.ml";;
+module Par_job_shake128x4_init (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_init_proof.ml";;
 end;;
 
 needs "arm/proofs/mlkem_native/clang17_O3/keccakf1600x4_permute_spec.ml";;
@@ -65,9 +265,9 @@ module Par_job_keccak_absorb_once_x4 (Par_unit : sig end) = struct
 needs "arm/proofs/mlkem_native/clang17_O3/keccak_absorb_once_x4_proof.ml";;
 end;;
 
-needs "arm/proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes_spec.ml";;
-module Par_job_keccakf1600_extract_bytes (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/keccakf1600_extract_bytes_proof.ml";;
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_absorb_once_spec.ml";;
+module Par_job_shake128x4_absorb_once (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_absorb_once_proof.ml";;
 end;;
 
 needs "arm/proofs/mlkem_native/clang17_O3/keccakf1600x4_extract_bytes_spec.ml";;
@@ -75,9 +275,31 @@ module Par_job_keccakf1600x4_extract_bytes (Par_unit : sig end) = struct
 needs "arm/proofs/mlkem_native/clang17_O3/keccakf1600x4_extract_bytes_proof.ml";;
 end;;
 
-needs "arm/proofs/mlkem_native/clang17_O3/poly_add_spec.ml";;
-module Par_job_poly_add (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_add_proof.ml";;
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_squeezeblocks_spec.ml";;
+module Par_job_shake128x4_squeezeblocks (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_squeezeblocks_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_release_spec.ml";;
+module Par_job_shake128x4_release (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_release_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_rej_uniform_x4_spec.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/mlkem_native_libc_full.ml";;
+module Par_job_poly_rej_uniform_x4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_rej_uniform_x4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/gen_matrix_k2_spec.ml";;
+module Par_job_gen_matrix_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/gen_matrix_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/shake256x4_spec.ml";;
+module Par_job_shake256x4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/shake256x4_proof.ml";;
 end;;
 
 needs "arm/proofs/mlkem_native/clang17_O3/poly_cbd2_spec.ml";;
@@ -90,309 +312,9 @@ module Par_job_poly_cbd3 (Par_unit : sig end) = struct
 needs "arm/proofs/mlkem_native/clang17_O3/poly_cbd3_proof.ml";;
 end;;
 
-needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d10_spec.ml";;
-module Par_job_poly_compress_d10 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d10_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d11_spec.ml";;
-module Par_job_poly_compress_d11 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d11_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d4_spec.ml";;
-module Par_job_poly_compress_d4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d5_spec.ml";;
-module Par_job_poly_compress_d5 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d5_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d10_spec.ml";;
-module Par_job_poly_decompress_d10 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d10_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d11_spec.ml";;
-module Par_job_poly_decompress_d11 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d11_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d4_spec.ml";;
-module Par_job_poly_decompress_d4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d5_spec.ml";;
-module Par_job_poly_decompress_d5 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d5_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_frombytes_spec.ml";;
-module Par_job_poly_frombytes (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_frombytes_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_frommsg_spec.ml";;
-module Par_job_poly_frommsg (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_frommsg_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_invntt_tomont_spec.ml";;
-module Par_job_poly_invntt_tomont (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_invntt_tomont_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_mulcache_compute_spec.ml";;
-module Par_job_poly_mulcache_compute (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_mulcache_compute_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_ntt_spec.ml";;
-module Par_job_poly_ntt (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_ntt_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_reduce_spec.ml";;
-module Par_job_poly_reduce (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_reduce_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/rej_uniform_spec.ml";;
-module Par_job_rej_uniform (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/rej_uniform_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_rej_uniform_spec.ml";;
-module Par_job_poly_rej_uniform (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_rej_uniform_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_rej_uniform_x4_spec.ml";;
-module Par_job_poly_rej_uniform_x4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_rej_uniform_x4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_sub_spec.ml";;
-module Par_job_poly_sub (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_sub_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_tobytes_spec.ml";;
-module Par_job_poly_tobytes (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_tobytes_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_tomont_spec.ml";;
-module Par_job_poly_tomont (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_tomont_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/poly_tomsg_spec.ml";;
-module Par_job_poly_tomsg (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/poly_tomsg_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k2_spec.ml";;
-module Par_job_polyvec_add_k2 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k2_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k3_spec.ml";;
-module Par_job_polyvec_add_k3 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k3_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k4_spec.ml";;
-module Par_job_polyvec_add_k4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k2_spec.ml";;
-module Par_job_polyvec_compress_du_k2 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k2_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k3_spec.ml";;
-module Par_job_polyvec_compress_du_k3 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k3_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k4_spec.ml";;
-module Par_job_polyvec_compress_du_k4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k2_spec.ml";;
-module Par_job_polyvec_decompress_du_k2 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k2_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k3_spec.ml";;
-module Par_job_polyvec_decompress_du_k3 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k3_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k4_spec.ml";;
-module Par_job_polyvec_decompress_du_k4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k2_spec.ml";;
-module Par_job_polyvec_frombytes_k2 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k2_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k3_spec.ml";;
-module Par_job_polyvec_frombytes_k3 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k3_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k4_spec.ml";;
-module Par_job_polyvec_frombytes_k4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_frombytes_k4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k2_spec.ml";;
-module Par_job_polyvec_invntt_tomont_k2 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k2_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k3_spec.ml";;
-module Par_job_polyvec_invntt_tomont_k3 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k3_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k4_spec.ml";;
-module Par_job_polyvec_invntt_tomont_k4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k2_spec.ml";;
-module Par_job_polyvec_mulcache_compute_k2 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k2_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k3_spec.ml";;
-module Par_job_polyvec_mulcache_compute_k3 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k3_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k4_spec.ml";;
-module Par_job_polyvec_mulcache_compute_k4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k2_spec.ml";;
-module Par_job_polyvec_ntt_k2 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k2_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k3_spec.ml";;
-module Par_job_polyvec_ntt_k3 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k3_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k4_spec.ml";;
-module Par_job_polyvec_ntt_k4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k2_spec.ml";;
-module Par_job_polyvec_reduce_k2 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k2_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k3_spec.ml";;
-module Par_job_polyvec_reduce_k3 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k3_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k4_spec.ml";;
-module Par_job_polyvec_reduce_k4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_reduce_k4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k2_spec.ml";;
-module Par_job_polyvec_tobytes_k2 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k2_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k3_spec.ml";;
-module Par_job_polyvec_tobytes_k3 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k3_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k4_spec.ml";;
-module Par_job_polyvec_tobytes_k4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tobytes_k4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k2_spec.ml";;
-module Par_job_polyvec_tomont_k2 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k2_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k3_spec.ml";;
-module Par_job_polyvec_tomont_k3 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k3_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k4_spec.ml";;
-module Par_job_polyvec_tomont_k4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k4_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/sha3_256_spec.ml";;
-module Par_job_sha3_256 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/sha3_256_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/sha3_512_spec.ml";;
-module Par_job_sha3_512 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/sha3_512_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/shake128_absorb_once_spec.ml";;
-module Par_job_shake128_absorb_once (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/shake128_absorb_once_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/shake128_init_spec.ml";;
-module Par_job_shake128_init (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/shake128_init_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/shake128_release_spec.ml";;
-module Par_job_shake128_release (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/shake128_release_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/shake128_squeezeblocks_spec.ml";;
-module Par_job_shake128_squeezeblocks (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/shake128_squeezeblocks_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_absorb_once_spec.ml";;
-module Par_job_shake128x4_absorb_once (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_absorb_once_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_init_spec.ml";;
-module Par_job_shake128x4_init (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_init_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_release_spec.ml";;
-module Par_job_shake128x4_release (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_release_proof.ml";;
-end;;
-
-needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_squeezeblocks_spec.ml";;
-module Par_job_shake128x4_squeezeblocks (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/shake128x4_squeezeblocks_proof.ml";;
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta1122_4x_k2_spec.ml";;
+module Par_job_poly_getnoise_eta1122_4x_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta1122_4x_k2_proof.ml";;
 end;;
 
 needs "arm/proofs/mlkem_native/clang17_O3/shake256_spec.ml";;
@@ -400,682 +322,850 @@ module Par_job_shake256 (Par_unit : sig end) = struct
 needs "arm/proofs/mlkem_native/clang17_O3/shake256_proof.ml";;
 end;;
 
-needs "arm/proofs/mlkem_native/clang17_O3/shake256x4_spec.ml";;
-module Par_job_shake256x4 (Par_unit : sig end) = struct
-needs "arm/proofs/mlkem_native/clang17_O3/shake256x4_proof.ml";;
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta2_k2_spec.ml";;
+module Par_job_poly_getnoise_eta2_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta2_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k2_spec.ml";;
+module Par_job_polyvec_invntt_tomont_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_add_spec.ml";;
+module Par_job_poly_add (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_add_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k2_spec.ml";;
+module Par_job_polyvec_add_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d10_spec.ml";;
+module Par_job_poly_compress_d10 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d10_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k2_spec.ml";;
+module Par_job_polyvec_compress_du_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d4_spec.ml";;
+module Par_job_poly_compress_d4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_enc_k2_spec.ml";;
+module Par_job_indcpa_enc_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_enc_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/dec_k2_spec.ml";;
+module Par_job_dec_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/dec_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k3_spec.ml";;
+module Par_job_polyvec_decompress_du_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k3_spec.ml";;
+module Par_job_polyvec_ntt_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k3_spec.ml";;
+module Par_job_polyvec_mulcache_compute_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_dec_k3_spec.ml";;
+module Par_job_indcpa_dec_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_dec_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/gen_matrix_k3_spec.ml";;
+module Par_job_gen_matrix_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/gen_matrix_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta1_4x_k3_spec.ml";;
+module Par_job_poly_getnoise_eta1_4x_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta1_4x_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k3_spec.ml";;
+module Par_job_polyvec_invntt_tomont_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k3_spec.ml";;
+module Par_job_polyvec_add_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k3_spec.ml";;
+module Par_job_polyvec_compress_du_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_enc_k3_spec.ml";;
+module Par_job_indcpa_enc_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_enc_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/dec_k3_spec.ml";;
+module Par_job_dec_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/dec_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d11_spec.ml";;
+module Par_job_poly_decompress_d11 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d11_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k4_spec.ml";;
+module Par_job_polyvec_decompress_du_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_decompress_du_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d5_spec.ml";;
+module Par_job_poly_decompress_d5 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_decompress_d5_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k4_spec.ml";;
+module Par_job_polyvec_ntt_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_ntt_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k4_spec.ml";;
+module Par_job_polyvec_mulcache_compute_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_mulcache_compute_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_dec_k4_spec.ml";;
+module Par_job_indcpa_dec_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_dec_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/gen_matrix_k4_spec.ml";;
+module Par_job_gen_matrix_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/gen_matrix_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta1_4x_k4_spec.ml";;
+module Par_job_poly_getnoise_eta1_4x_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta1_4x_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta2_k4_spec.ml";;
+module Par_job_poly_getnoise_eta2_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta2_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k4_spec.ml";;
+module Par_job_polyvec_invntt_tomont_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_invntt_tomont_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k4_spec.ml";;
+module Par_job_polyvec_add_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_add_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d11_spec.ml";;
+module Par_job_poly_compress_d11 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d11_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k4_spec.ml";;
+module Par_job_polyvec_compress_du_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_compress_du_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d5_spec.ml";;
+module Par_job_poly_compress_d5 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_compress_d5_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_enc_k4_spec.ml";;
+module Par_job_indcpa_enc_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_enc_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/dec_k4_spec.ml";;
+module Par_job_dec_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/dec_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/enc_derand_k2_spec.ml";;
+module Par_job_enc_derand_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/enc_derand_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/enc_derand_k3_spec.ml";;
+module Par_job_enc_derand_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/enc_derand_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/enc_derand_k4_spec.ml";;
+module Par_job_enc_derand_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/enc_derand_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/enc_k2_spec.ml";;
+module Par_job_enc_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/enc_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/enc_k3_spec.ml";;
+module Par_job_enc_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/enc_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/enc_k4_spec.ml";;
+module Par_job_enc_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/enc_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta1_4x_k2_spec.ml";;
+module Par_job_poly_getnoise_eta1_4x_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_getnoise_eta1_4x_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/poly_tomont_spec.ml";;
+module Par_job_poly_tomont (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/poly_tomont_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k2_spec.ml";;
+module Par_job_polyvec_tomont_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_keypair_derand_k2_spec.ml";;
+module Par_job_indcpa_keypair_derand_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_keypair_derand_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k3_spec.ml";;
+module Par_job_polyvec_tomont_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_keypair_derand_k3_spec.ml";;
+module Par_job_indcpa_keypair_derand_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_keypair_derand_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k4_spec.ml";;
+module Par_job_polyvec_tomont_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/polyvec_tomont_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_keypair_derand_k4_spec.ml";;
+module Par_job_indcpa_keypair_derand_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/indcpa_keypair_derand_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_derand_k2_spec.ml";;
+module Par_job_keypair_derand_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_derand_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_derand_k3_spec.ml";;
+module Par_job_keypair_derand_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_derand_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_derand_k4_spec.ml";;
+module Par_job_keypair_derand_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_derand_k4_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_k2_spec.ml";;
+module Par_job_keypair_k2 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_k2_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_k3_spec.ml";;
+module Par_job_keypair_k3 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_k3_proof.ml";;
+end;;
+
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_k4_spec.ml";;
+module Par_job_keypair_k4 (Par_unit : sig end) = struct
+needs "arm/proofs/mlkem_native/clang17_O3/keypair_k4_proof.ml";;
 end;;
 
 (* The jobs, and the theorems of the top-level functions *)
 
 let par_link_results = par_run_jobs [
   "basemul_k2", 17.0,
-  (fun () -> let module Par_this = Par_job_basemul_k2 (struct end) in
-     ["MLKEM_NATIVE_BASEMUL_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_BASEMUL_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_BASEMUL_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_BASEMUL_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  (fun () -> let module Par_this = Par_job_basemul_k2 (struct end) in []);
   "basemul_k3", 28.0,
-  (fun () -> let module Par_this = Par_job_basemul_k3 (struct end) in
-     ["MLKEM_NATIVE_BASEMUL_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_BASEMUL_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_BASEMUL_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_BASEMUL_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "basemul_k4", 42.0,
-  (fun () -> let module Par_this = Par_job_basemul_k4 (struct end) in
-     ["MLKEM_NATIVE_BASEMUL_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_BASEMUL_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_BASEMUL_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_BASEMUL_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "keccakf1600_permute", 58.0,
-  (fun () -> let module Par_this = Par_job_keccakf1600_permute (struct end) in []);
-  "keccakf1600_xor_bytes", 87.0,
-  (fun () -> let module Par_this = Par_job_keccakf1600_xor_bytes (struct end) in []);
-  "keccak_absorb_once", 422.0,
-  (fun () -> let module Par_this = Par_job_keccak_absorb_once (struct end) in []);
-  "keccakf1600x4_permute", 27.0,
-  (fun () -> let module Par_this = Par_job_keccakf1600x4_permute (struct end) in []);
-  "keccakf1600x4_xor_bytes", 2654.0,
-  (fun () -> let module Par_this = Par_job_keccakf1600x4_xor_bytes (struct end) in []);
-  "keccak_absorb_once_x4", 3009.0,
-  (fun () -> let module Par_this = Par_job_keccak_absorb_once_x4 (struct end) in []);
-  "keccakf1600_extract_bytes", 68.0,
-  (fun () -> let module Par_this = Par_job_keccakf1600_extract_bytes (struct end) in []);
-  "keccakf1600x4_extract_bytes", 1777.0,
-  (fun () -> let module Par_this = Par_job_keccakf1600x4_extract_bytes (struct end) in []);
-  "poly_add", 41.0,
-  (fun () -> let module Par_this = Par_job_poly_add (struct end) in []);
-  "poly_cbd2", 483.0,
-  (fun () -> let module Par_this = Par_job_poly_cbd2 (struct end) in
-     ["MLKEM_NATIVE_POLY_CBD2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLY_CBD2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLY_CBD2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLY_CBD2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "poly_cbd3", 309.0,
-  (fun () -> let module Par_this = Par_job_poly_cbd3 (struct end) in
-     ["MLKEM_NATIVE_POLY_CBD3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLY_CBD3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLY_CBD3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLY_CBD3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "poly_compress_d10", 6.0,
-  (fun () -> let module Par_this = Par_job_poly_compress_d10 (struct end) in []);
-  "poly_compress_d11", 9.0,
-  (fun () -> let module Par_this = Par_job_poly_compress_d11 (struct end) in []);
-  "poly_compress_d4", 604.0,
-  (fun () -> let module Par_this = Par_job_poly_compress_d4 (struct end) in
-     ["MLKEM_NATIVE_POLY_COMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLY_COMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLY_COMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLY_COMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "poly_compress_d5", 8.0,
-  (fun () -> let module Par_this = Par_job_poly_compress_d5 (struct end) in
-     ["MLKEM_NATIVE_POLY_COMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLY_COMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLY_COMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLY_COMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "poly_decompress_d10", 34.0,
-  (fun () -> let module Par_this = Par_job_poly_decompress_d10 (struct end) in []);
-  "poly_decompress_d11", 34.0,
-  (fun () -> let module Par_this = Par_job_poly_decompress_d11 (struct end) in []);
-  "poly_decompress_d4", 245.0,
-  (fun () -> let module Par_this = Par_job_poly_decompress_d4 (struct end) in
-     ["MLKEM_NATIVE_POLY_DECOMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLY_DECOMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLY_DECOMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLY_DECOMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "poly_decompress_d5", 637.0,
-  (fun () -> let module Par_this = Par_job_poly_decompress_d5 (struct end) in
-     ["MLKEM_NATIVE_POLY_DECOMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLY_DECOMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLY_DECOMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLY_DECOMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  (fun () -> let module Par_this = Par_job_basemul_k3 (struct end) in []);
+  "basemul_k4", 46.0,
+  (fun () -> let module Par_this = Par_job_basemul_k4 (struct end) in []);
   "poly_frombytes", 230.0,
   (fun () -> let module Par_this = Par_job_poly_frombytes (struct end) in []);
-  "poly_frommsg", 11.0,
-  (fun () -> let module Par_this = Par_job_poly_frommsg (struct end) in
-     ["MLKEM_NATIVE_POLY_FROMMSG_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLY_FROMMSG_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLY_FROMMSG_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLY_FROMMSG_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "poly_invntt_tomont", 1376.0,
-  (fun () -> let module Par_this = Par_job_poly_invntt_tomont (struct end) in []);
-  "poly_mulcache_compute", 132.0,
-  (fun () -> let module Par_this = Par_job_poly_mulcache_compute (struct end) in []);
-  "poly_ntt", 953.0,
-  (fun () -> let module Par_this = Par_job_poly_ntt (struct end) in []);
-  "poly_reduce", 76.0,
+  "polyvec_frombytes_k2", 19.0,
+  (fun () -> let module Par_this = Par_job_polyvec_frombytes_k2 (struct end) in []);
+  "poly_reduce", 78.0,
   (fun () -> let module Par_this = Par_job_poly_reduce (struct end) in []);
+  "polyvec_reduce_k2", 16.0,
+  (fun () -> let module Par_this = Par_job_polyvec_reduce_k2 (struct end) in []);
+  "poly_tobytes", 266.0,
+  (fun () -> let module Par_this = Par_job_poly_tobytes (struct end) in []);
+  "polyvec_tobytes_k2", 19.0,
+  (fun () -> let module Par_this = Par_job_polyvec_tobytes_k2 (struct end) in []);
+  "check_pk_k2", 350.0,
+  (fun () -> let module Par_this = Par_job_check_pk_k2 (struct end) in
+     ["MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
+      "MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
+  "polyvec_frombytes_k3", 24.0,
+  (fun () -> let module Par_this = Par_job_polyvec_frombytes_k3 (struct end) in []);
+  "polyvec_reduce_k3", 20.0,
+  (fun () -> let module Par_this = Par_job_polyvec_reduce_k3 (struct end) in []);
+  "polyvec_tobytes_k3", 23.0,
+  (fun () -> let module Par_this = Par_job_polyvec_tobytes_k3 (struct end) in []);
+  "check_pk_k3", 216.0,
+  (fun () -> let module Par_this = Par_job_check_pk_k3 (struct end) in
+     ["MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
+      "MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
+  "polyvec_frombytes_k4", 29.0,
+  (fun () -> let module Par_this = Par_job_polyvec_frombytes_k4 (struct end) in []);
+  "polyvec_reduce_k4", 25.0,
+  (fun () -> let module Par_this = Par_job_polyvec_reduce_k4 (struct end) in []);
+  "polyvec_tobytes_k4", 28.0,
+  (fun () -> let module Par_this = Par_job_polyvec_tobytes_k4 (struct end) in []);
+  "check_pk_k4", 220.0,
+  (fun () -> let module Par_this = Par_job_check_pk_k4 (struct end) in
+     ["MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
+      "MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
+  "keccakf1600_permute", 58.0,
+  (fun () -> let module Par_this = Par_job_keccakf1600_permute (struct end) in []);
+  "keccakf1600_xor_bytes", 117.0,
+  (fun () -> let module Par_this = Par_job_keccakf1600_xor_bytes (struct end) in []);
+  "keccak_absorb_once", 419.0,
+  (fun () -> let module Par_this = Par_job_keccak_absorb_once (struct end) in []);
+  "keccakf1600_extract_bytes", 92.0,
+  (fun () -> let module Par_this = Par_job_keccakf1600_extract_bytes (struct end) in []);
+  "sha3_256", 43.0,
+  (fun () -> let module Par_this = Par_job_sha3_256 (struct end) in []);
+  "check_sk_k2", 55.0,
+  (fun () -> let module Par_this = Par_job_check_sk_k2 (struct end) in
+     ["MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
+      "MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
+  "check_sk_k3", 54.0,
+  (fun () -> let module Par_this = Par_job_check_sk_k3 (struct end) in
+     ["MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
+      "MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
+  "check_sk_k4", 54.0,
+  (fun () -> let module Par_this = Par_job_check_sk_k4 (struct end) in
+     ["MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
+      "MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
+  "poly_decompress_d10", 35.0,
+  (fun () -> let module Par_this = Par_job_poly_decompress_d10 (struct end) in []);
+  "polyvec_decompress_du_k2", 12.0,
+  (fun () -> let module Par_this = Par_job_polyvec_decompress_du_k2 (struct end) in []);
+  "poly_decompress_d4", 290.0,
+  (fun () -> let module Par_this = Par_job_poly_decompress_d4 (struct end) in []);
+  "poly_ntt", 1117.0,
+  (fun () -> let module Par_this = Par_job_poly_ntt (struct end) in []);
+  "polyvec_ntt_k2", 11.0,
+  (fun () -> let module Par_this = Par_job_polyvec_ntt_k2 (struct end) in []);
+  "poly_mulcache_compute", 167.0,
+  (fun () -> let module Par_this = Par_job_poly_mulcache_compute (struct end) in []);
+  "polyvec_mulcache_compute_k2", 12.0,
+  (fun () -> let module Par_this = Par_job_polyvec_mulcache_compute_k2 (struct end) in []);
+  "poly_invntt_tomont", 1594.0,
+  (fun () -> let module Par_this = Par_job_poly_invntt_tomont (struct end) in []);
+  "poly_sub", 47.0,
+  (fun () -> let module Par_this = Par_job_poly_sub (struct end) in []);
+  "poly_tomsg", 693.0,
+  (fun () -> let module Par_this = Par_job_poly_tomsg (struct end) in []);
+  "indcpa_dec_k2", 279.0,
+  (fun () -> let module Par_this = Par_job_indcpa_dec_k2 (struct end) in []);
+  "sha3_512", 41.0,
+  (fun () -> let module Par_this = Par_job_sha3_512 (struct end) in []);
+  "poly_frommsg", 11.0,
+  (fun () -> let module Par_this = Par_job_poly_frommsg (struct end) in []);
+  "shake128_init", 1.0,
+  (fun () -> let module Par_this = Par_job_shake128_init (struct end) in []);
+  "shake128_absorb_once", 6.0,
+  (fun () -> let module Par_this = Par_job_shake128_absorb_once (struct end) in []);
+  "shake128_squeezeblocks", 31.0,
+  (fun () -> let module Par_this = Par_job_shake128_squeezeblocks (struct end) in []);
+  "shake128_release", 2.0,
+  (fun () -> let module Par_this = Par_job_shake128_release (struct end) in []);
   "rej_uniform", 0.0,
   (fun () -> let module Par_this = Par_job_rej_uniform (struct end) in []);
-  "poly_rej_uniform", 70.0,
+  "poly_rej_uniform", 145.0,
   (fun () -> let module Par_this = Par_job_poly_rej_uniform (struct end) in []);
-  "poly_rej_uniform_x4", 316.0,
-  (fun () -> let module Par_this = Par_job_poly_rej_uniform_x4 (struct end) in []);
-  "poly_sub", 41.0,
-  (fun () -> let module Par_this = Par_job_poly_sub (struct end) in
-     ["MLKEM_NATIVE_POLY_SUB_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLY_SUB_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLY_SUB_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLY_SUB_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "poly_tobytes", 264.0,
-  (fun () -> let module Par_this = Par_job_poly_tobytes (struct end) in []);
-  "poly_tomont", 11.0,
-  (fun () -> let module Par_this = Par_job_poly_tomont (struct end) in []);
-  "poly_tomsg", 566.0,
-  (fun () -> let module Par_this = Par_job_poly_tomsg (struct end) in
-     ["MLKEM_NATIVE_POLY_TOMSG_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLY_TOMSG_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLY_TOMSG_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLY_TOMSG_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_add_k2", 12.0,
-  (fun () -> let module Par_this = Par_job_polyvec_add_k2 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_ADD_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_ADD_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_ADD_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_ADD_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_add_k3", 14.0,
-  (fun () -> let module Par_this = Par_job_polyvec_add_k3 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_ADD_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_ADD_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_ADD_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_ADD_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_add_k4", 17.0,
-  (fun () -> let module Par_this = Par_job_polyvec_add_k4 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_ADD_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_ADD_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_ADD_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_ADD_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_compress_du_k2", 14.0,
-  (fun () -> let module Par_this = Par_job_polyvec_compress_du_k2 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_compress_du_k3", 16.0,
-  (fun () -> let module Par_this = Par_job_polyvec_compress_du_k3 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_compress_du_k4", 20.0,
-  (fun () -> let module Par_this = Par_job_polyvec_compress_du_k4 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_decompress_du_k2", 12.0,
-  (fun () -> let module Par_this = Par_job_polyvec_decompress_du_k2 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_decompress_du_k3", 14.0,
-  (fun () -> let module Par_this = Par_job_polyvec_decompress_du_k3 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_decompress_du_k4", 18.0,
-  (fun () -> let module Par_this = Par_job_polyvec_decompress_du_k4 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_frombytes_k2", 19.0,
-  (fun () -> let module Par_this = Par_job_polyvec_frombytes_k2 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "polyvec_frombytes_k3", 24.0,
-  (fun () -> let module Par_this = Par_job_polyvec_frombytes_k3 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "polyvec_frombytes_k4", 28.0,
-  (fun () -> let module Par_this = Par_job_polyvec_frombytes_k4 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "polyvec_invntt_tomont_k2", 11.0,
-  (fun () -> let module Par_this = Par_job_polyvec_invntt_tomont_k2 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_invntt_tomont_k3", 14.0,
-  (fun () -> let module Par_this = Par_job_polyvec_invntt_tomont_k3 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_invntt_tomont_k4", 17.0,
-  (fun () -> let module Par_this = Par_job_polyvec_invntt_tomont_k4 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_mulcache_compute_k2", 12.0,
-  (fun () -> let module Par_this = Par_job_polyvec_mulcache_compute_k2 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_mulcache_compute_k3", 15.0,
-  (fun () -> let module Par_this = Par_job_polyvec_mulcache_compute_k3 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_mulcache_compute_k4", 17.0,
-  (fun () -> let module Par_this = Par_job_polyvec_mulcache_compute_k4 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_ntt_k2", 11.0,
-  (fun () -> let module Par_this = Par_job_polyvec_ntt_k2 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_NTT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_NTT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_NTT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_NTT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_ntt_k3", 14.0,
-  (fun () -> let module Par_this = Par_job_polyvec_ntt_k3 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_NTT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_NTT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_NTT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_NTT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_ntt_k4", 17.0,
-  (fun () -> let module Par_this = Par_job_polyvec_ntt_k4 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_NTT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_NTT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_NTT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_NTT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_reduce_k2", 16.0,
-  (fun () -> let module Par_this = Par_job_polyvec_reduce_k2 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "polyvec_reduce_k3", 20.0,
-  (fun () -> let module Par_this = Par_job_polyvec_reduce_k3 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "polyvec_reduce_k4", 25.0,
-  (fun () -> let module Par_this = Par_job_polyvec_reduce_k4 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "polyvec_tobytes_k2", 18.0,
-  (fun () -> let module Par_this = Par_job_polyvec_tobytes_k2 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "polyvec_tobytes_k3", 24.0,
-  (fun () -> let module Par_this = Par_job_polyvec_tobytes_k3 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "polyvec_tobytes_k4", 28.0,
-  (fun () -> let module Par_this = Par_job_polyvec_tobytes_k4 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "polyvec_tomont_k2", 10.0,
-  (fun () -> let module Par_this = Par_job_polyvec_tomont_k2 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_tomont_k3", 12.0,
-  (fun () -> let module Par_this = Par_job_polyvec_tomont_k3 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_tomont_k4", 15.0,
-  (fun () -> let module Par_this = Par_job_polyvec_tomont_k4 (struct end) in
-     ["MLKEM_NATIVE_POLYVEC_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_POLYVEC_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_POLYVEC_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_POLYVEC_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "sha3_256", 41.0,
-  (fun () -> let module Par_this = Par_job_sha3_256 (struct end) in
-     ["MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "sha3_512", 41.0,
-  (fun () -> let module Par_this = Par_job_sha3_512 (struct end) in
-     ["MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "shake128_absorb_once", 5.0,
-  (fun () -> let module Par_this = Par_job_shake128_absorb_once (struct end) in
-     ["MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL;
-      "MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "shake128_init", 1.0,
-  (fun () -> let module Par_this = Par_job_shake128_init (struct end) in
-     ["MLKEM_NATIVE_SHAKE128_INIT_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHAKE128_INIT_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHAKE128_INIT_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHAKE128_INIT_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "shake128_release", 2.0,
-  (fun () -> let module Par_this = Par_job_shake128_release (struct end) in
-     ["MLKEM_NATIVE_SHAKE128_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHAKE128_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHAKE128_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHAKE128_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "shake128_squeezeblocks", 31.0,
-  (fun () -> let module Par_this = Par_job_shake128_squeezeblocks (struct end) in
-     ["MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "shake128x4_absorb_once", 42.0,
-  (fun () -> let module Par_this = Par_job_shake128x4_absorb_once (struct end) in
-     ["MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
   "shake128x4_init", 1.0,
-  (fun () -> let module Par_this = Par_job_shake128x4_init (struct end) in
-     ["MLKEM_NATIVE_SHAKE128X4_INIT_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHAKE128X4_INIT_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHAKE128X4_INIT_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHAKE128X4_INIT_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  (fun () -> let module Par_this = Par_job_shake128x4_init (struct end) in []);
+  "keccakf1600x4_permute", 27.0,
+  (fun () -> let module Par_this = Par_job_keccakf1600x4_permute (struct end) in []);
+  "keccakf1600x4_xor_bytes", 1420.0,
+  (fun () -> let module Par_this = Par_job_keccakf1600x4_xor_bytes (struct end) in []);
+  "keccak_absorb_once_x4", 3072.0,
+  (fun () -> let module Par_this = Par_job_keccak_absorb_once_x4 (struct end) in []);
+  "shake128x4_absorb_once", 44.0,
+  (fun () -> let module Par_this = Par_job_shake128x4_absorb_once (struct end) in []);
+  "keccakf1600x4_extract_bytes", 2480.0,
+  (fun () -> let module Par_this = Par_job_keccakf1600x4_extract_bytes (struct end) in []);
+  "shake128x4_squeezeblocks", 57.0,
+  (fun () -> let module Par_this = Par_job_shake128x4_squeezeblocks (struct end) in []);
   "shake128x4_release", 8.0,
-  (fun () -> let module Par_this = Par_job_shake128x4_release (struct end) in
-     ["MLKEM_NATIVE_SHAKE128X4_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHAKE128X4_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHAKE128X4_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHAKE128X4_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "shake128x4_squeezeblocks", 56.0,
-  (fun () -> let module Par_this = Par_job_shake128x4_squeezeblocks (struct end) in
-     ["MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_SAFE;
-      "MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL]);
-  "shake256", 49.0,
-  (fun () -> let module Par_this = Par_job_shake256 (struct end) in
-     ["MLKEM_NATIVE_SHAKE256_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHAKE256_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHAKE256_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHAKE256_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
-  "shake256x4", 167.0,
-  (fun () -> let module Par_this = Par_job_shake256x4 (struct end) in
-     ["MLKEM_NATIVE_SHAKE256X4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_SHAKE256X4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
-      "MLKEM_NATIVE_SHAKE256X4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_SHAKE256X4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  (fun () -> let module Par_this = Par_job_shake128x4_release (struct end) in []);
+  "poly_rej_uniform_x4", 822.0,
+  (fun () -> let module Par_this = Par_job_poly_rej_uniform_x4 (struct end) in []);
+  "gen_matrix_k2", 108.0,
+  (fun () -> let module Par_this = Par_job_gen_matrix_k2 (struct end) in []);
+  "shake256x4", 172.0,
+  (fun () -> let module Par_this = Par_job_shake256x4 (struct end) in []);
+  "poly_cbd2", 485.0,
+  (fun () -> let module Par_this = Par_job_poly_cbd2 (struct end) in []);
+  "poly_cbd3", 309.0,
+  (fun () -> let module Par_this = Par_job_poly_cbd3 (struct end) in []);
+  "poly_getnoise_eta1122_4x_k2", 104.0,
+  (fun () -> let module Par_this = Par_job_poly_getnoise_eta1122_4x_k2 (struct end) in []);
+  "shake256", 50.0,
+  (fun () -> let module Par_this = Par_job_shake256 (struct end) in []);
+  "poly_getnoise_eta2_k2", 27.0,
+  (fun () -> let module Par_this = Par_job_poly_getnoise_eta2_k2 (struct end) in []);
+  "polyvec_invntt_tomont_k2", 11.0,
+  (fun () -> let module Par_this = Par_job_polyvec_invntt_tomont_k2 (struct end) in []);
+  "poly_add", 48.0,
+  (fun () -> let module Par_this = Par_job_poly_add (struct end) in []);
+  "polyvec_add_k2", 12.0,
+  (fun () -> let module Par_this = Par_job_polyvec_add_k2 (struct end) in []);
+  "poly_compress_d10", 6.0,
+  (fun () -> let module Par_this = Par_job_poly_compress_d10 (struct end) in []);
+  "polyvec_compress_du_k2", 13.0,
+  (fun () -> let module Par_this = Par_job_polyvec_compress_du_k2 (struct end) in []);
+  "poly_compress_d4", 730.0,
+  (fun () -> let module Par_this = Par_job_poly_compress_d4 (struct end) in []);
+  "indcpa_enc_k2", 929.0,
+  (fun () -> let module Par_this = Par_job_indcpa_enc_k2 (struct end) in []);
+  "dec_k2", 394.0,
+  (fun () -> let module Par_this = Par_job_dec_k2 (struct end) in
+     ["MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "polyvec_decompress_du_k3", 14.0,
+  (fun () -> let module Par_this = Par_job_polyvec_decompress_du_k3 (struct end) in []);
+  "polyvec_ntt_k3", 14.0,
+  (fun () -> let module Par_this = Par_job_polyvec_ntt_k3 (struct end) in []);
+  "polyvec_mulcache_compute_k3", 14.0,
+  (fun () -> let module Par_this = Par_job_polyvec_mulcache_compute_k3 (struct end) in []);
+  "indcpa_dec_k3", 238.0,
+  (fun () -> let module Par_this = Par_job_indcpa_dec_k3 (struct end) in []);
+  "gen_matrix_k3", 232.0,
+  (fun () -> let module Par_this = Par_job_gen_matrix_k3 (struct end) in []);
+  "poly_getnoise_eta1_4x_k3", 191.0,
+  (fun () -> let module Par_this = Par_job_poly_getnoise_eta1_4x_k3 (struct end) in []);
+  "polyvec_invntt_tomont_k3", 14.0,
+  (fun () -> let module Par_this = Par_job_polyvec_invntt_tomont_k3 (struct end) in []);
+  "polyvec_add_k3", 14.0,
+  (fun () -> let module Par_this = Par_job_polyvec_add_k3 (struct end) in []);
+  "polyvec_compress_du_k3", 16.0,
+  (fun () -> let module Par_this = Par_job_polyvec_compress_du_k3 (struct end) in []);
+  "indcpa_enc_k3", 1020.0,
+  (fun () -> let module Par_this = Par_job_indcpa_enc_k3 (struct end) in []);
+  "dec_k3", 216.0,
+  (fun () -> let module Par_this = Par_job_dec_k3 (struct end) in
+     ["MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "poly_decompress_d11", 42.0,
+  (fun () -> let module Par_this = Par_job_poly_decompress_d11 (struct end) in []);
+  "polyvec_decompress_du_k4", 18.0,
+  (fun () -> let module Par_this = Par_job_polyvec_decompress_du_k4 (struct end) in []);
+  "poly_decompress_d5", 651.0,
+  (fun () -> let module Par_this = Par_job_poly_decompress_d5 (struct end) in []);
+  "polyvec_ntt_k4", 17.0,
+  (fun () -> let module Par_this = Par_job_polyvec_ntt_k4 (struct end) in []);
+  "polyvec_mulcache_compute_k4", 17.0,
+  (fun () -> let module Par_this = Par_job_polyvec_mulcache_compute_k4 (struct end) in []);
+  "indcpa_dec_k4", 243.0,
+  (fun () -> let module Par_this = Par_job_indcpa_dec_k4 (struct end) in []);
+  "gen_matrix_k4", 350.0,
+  (fun () -> let module Par_this = Par_job_gen_matrix_k4 (struct end) in []);
+  "poly_getnoise_eta1_4x_k4", 191.0,
+  (fun () -> let module Par_this = Par_job_poly_getnoise_eta1_4x_k4 (struct end) in []);
+  "poly_getnoise_eta2_k4", 27.0,
+  (fun () -> let module Par_this = Par_job_poly_getnoise_eta2_k4 (struct end) in []);
+  "polyvec_invntt_tomont_k4", 17.0,
+  (fun () -> let module Par_this = Par_job_polyvec_invntt_tomont_k4 (struct end) in []);
+  "polyvec_add_k4", 18.0,
+  (fun () -> let module Par_this = Par_job_polyvec_add_k4 (struct end) in []);
+  "poly_compress_d11", 9.0,
+  (fun () -> let module Par_this = Par_job_poly_compress_d11 (struct end) in []);
+  "polyvec_compress_du_k4", 19.0,
+  (fun () -> let module Par_this = Par_job_polyvec_compress_du_k4 (struct end) in []);
+  "poly_compress_d5", 8.0,
+  (fun () -> let module Par_this = Par_job_poly_compress_d5 (struct end) in []);
+  "indcpa_enc_k4", 789.0,
+  (fun () -> let module Par_this = Par_job_indcpa_enc_k4 (struct end) in []);
+  "dec_k4", 216.0,
+  (fun () -> let module Par_this = Par_job_dec_k4 (struct end) in
+     ["MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "enc_derand_k2", 648.0,
+  (fun () -> let module Par_this = Par_job_enc_derand_k2 (struct end) in
+     ["MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "enc_derand_k3", 244.0,
+  (fun () -> let module Par_this = Par_job_enc_derand_k3 (struct end) in
+     ["MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "enc_derand_k4", 251.0,
+  (fun () -> let module Par_this = Par_job_enc_derand_k4 (struct end) in
+     ["MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "enc_k2", 71.0,
+  (fun () -> let module Par_this = Par_job_enc_k2 (struct end) in
+     ["MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "enc_k3", 73.0,
+  (fun () -> let module Par_this = Par_job_enc_k3 (struct end) in
+     ["MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "enc_k4", 73.0,
+  (fun () -> let module Par_this = Par_job_enc_k4 (struct end) in
+     ["MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "poly_getnoise_eta1_4x_k2", 155.0,
+  (fun () -> let module Par_this = Par_job_poly_getnoise_eta1_4x_k2 (struct end) in []);
+  "poly_tomont", 12.0,
+  (fun () -> let module Par_this = Par_job_poly_tomont (struct end) in []);
+  "polyvec_tomont_k2", 10.0,
+  (fun () -> let module Par_this = Par_job_polyvec_tomont_k2 (struct end) in []);
+  "indcpa_keypair_derand_k2", 472.0,
+  (fun () -> let module Par_this = Par_job_indcpa_keypair_derand_k2 (struct end) in []);
+  "polyvec_tomont_k3", 13.0,
+  (fun () -> let module Par_this = Par_job_polyvec_tomont_k3 (struct end) in []);
+  "indcpa_keypair_derand_k3", 586.0,
+  (fun () -> let module Par_this = Par_job_indcpa_keypair_derand_k3 (struct end) in []);
+  "polyvec_tomont_k4", 15.0,
+  (fun () -> let module Par_this = Par_job_polyvec_tomont_k4 (struct end) in []);
+  "indcpa_keypair_derand_k4", 374.0,
+  (fun () -> let module Par_this = Par_job_indcpa_keypair_derand_k4 (struct end) in []);
+  "keypair_derand_k2", 42.0,
+  (fun () -> let module Par_this = Par_job_keypair_derand_k2 (struct end) in
+     ["MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "keypair_derand_k3", 41.0,
+  (fun () -> let module Par_this = Par_job_keypair_derand_k3 (struct end) in
+     ["MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "keypair_derand_k4", 43.0,
+  (fun () -> let module Par_this = Par_job_keypair_derand_k4 (struct end) in
+     ["MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "keypair_k2", 92.0,
+  (fun () -> let module Par_this = Par_job_keypair_k2 (struct end) in
+     ["MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "keypair_k3", 92.0,
+  (fun () -> let module Par_this = Par_job_keypair_k3 (struct end) in
+     ["MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
+  "keypair_k4", 93.0,
+  (fun () -> let module Par_this = Par_job_keypair_k4 (struct end) in
+     ["MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT;
+      "MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE]);
 ];;
 
 let par_link_thm name = assoc name (flat par_link_results);;
+
+(* The theorems stated with FIPS 203, at the top level *)
+
+needs "arm/proofs/mlkem_native/clang17_O3/fips203.ml";;
 
 (* The contracts stated and proved, and those not proved, if any *)
 
 relative_report ();;
 
-let MLKEM_NATIVE_BASEMUL_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_BASEMUL_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_BASEMUL_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_BASEMUL_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_BASEMUL_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_BASEMUL_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
 
-let MLKEM_NATIVE_BASEMUL_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_BASEMUL_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_BASEMUL_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_BASEMUL_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_BASEMUL_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_BASEMUL_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
 
-let MLKEM_NATIVE_POLY_CBD2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_CBD2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLY_CBD2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_CBD2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLY_CBD3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_CBD3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
 
-let MLKEM_NATIVE_POLY_CBD3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_CBD3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLY_COMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_COMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLY_COMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_COMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
 
-let MLKEM_NATIVE_POLY_COMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_COMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLY_COMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_COMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLY_DECOMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_DECOMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
 
-let MLKEM_NATIVE_POLY_DECOMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_DECOMPRESS_D4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLY_DECOMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_DECOMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLY_DECOMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_DECOMPRESS_D5_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
+  relative_close (par_link_thm "MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
 
-let MLKEM_NATIVE_POLY_FROMMSG_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_FROMMSG_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLY_FROMMSG_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_FROMMSG_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLY_SUB_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_SUB_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLY_SUB_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_SUB_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLY_TOMSG_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_TOMSG_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLY_TOMSG_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLY_TOMSG_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_ADD_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_ADD_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_ADD_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_ADD_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_ADD_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_ADD_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_ADD_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_ADD_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_ADD_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_ADD_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_ADD_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_ADD_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_COMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_DECOMPRESS_DU_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
+let MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
 
-let MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
+let MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
+  relative_close (par_link_thm "MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
 
-let MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
+let MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_INVNTT_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_MULCACHE_COMPUTE_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_NTT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_NTT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_NTT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_NTT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_NTT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_NTT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_NTT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_NTT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_NTT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_NTT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_NTT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_NTT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
+let MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
+let MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
+let MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 =
+  relative_close MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203;;
 
-let MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
-
-let MLKEM_NATIVE_POLYVEC_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_POLYVEC_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOMONT_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_POLYVEC_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_POLYVEC_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOMONT_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_POLYVEC_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_POLYVEC_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_POLYVEC_TOMONT_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
-
-let MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
-
-let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
-
-let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHAKE128_INIT_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128_INIT_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHAKE128_INIT_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128_INIT_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHAKE128_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHAKE128_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
-
-let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
-
-let MLKEM_NATIVE_SHAKE128X4_INIT_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128X4_INIT_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHAKE128X4_INIT_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128X4_INIT_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHAKE128X4_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128X4_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHAKE128X4_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128X4_RELEASE_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL");;
-
-let MLKEM_NATIVE_SHAKE256_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE256_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHAKE256_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE256_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
-
-let MLKEM_NATIVE_SHAKE256X4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE256X4_CLANG17_O3_IMAGE_SUBROUTINE_CORRECT");;
-
-let MLKEM_NATIVE_SHAKE256X4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE =
-  relative_close (par_link_thm "MLKEM_NATIVE_SHAKE256X4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE");;
+let MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  relative_close MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203;;
 
 (* The theorems that the build does not print itself *)
 
-Printf.printf "val MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_POLYVEC_FROMBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_POLYVEC_FROMBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_POLYVEC_FROMBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_POLYVEC_REDUCE_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_POLYVEC_REDUCE_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_POLYVEC_REDUCE_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_POLYVEC_TOBYTES_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_POLYVEC_TOBYTES_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_POLYVEC_TOBYTES_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_SHA3_256_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_SHA3_512_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_SHAKE128_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_SHAKE128X4_ABSORB_ONCE_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
-Printf.printf "val MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_SHAKE128X4_SQUEEZEBLOCKS_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
+Printf.printf "val MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_CHECK_PK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
+Printf.printf "val MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_CHECK_PK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
+Printf.printf "val MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_CHECK_PK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
+Printf.printf "val MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_CHECK_SK_K2_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
+Printf.printf "val MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_CHECK_SK_K3_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
+Printf.printf "val MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL : thm = %s\n" (string_of_thm MLKEM_NATIVE_CHECK_SK_K4_CLANG17_O3_IMAGE_SUBROUTINE_FULL);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_DEC_K2_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_DEC_K3_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_ENC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_FIPS203);;
+Printf.printf "val MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203 : thm = %s\n" (string_of_thm MLKEM_NATIVE_DEC_K4_CLANG17_O3_IMAGE_SUBROUTINE_SAFE_FIPS203);;
