@@ -373,20 +373,21 @@ install_layout (layout_objects [
   "mlkem_poly_mulcache_compute_const11", 0xafd0, 0x010;
   "mlkem_poly_mulcache_compute_const12", 0xafe0, 0x010;
   "mlkem_poly_mulcache_compute_const13", 0xaff0, 0x010;
-  "mlkem_poly_mulcache_compute_const14", 0xb010, 0x010;
-  "mlkem_poly_mulcache_compute_const15", 0xb020, 0x010;
-  "mlkem_poly_mulcache_compute_const16", 0xb030, 0x010;
-  "mlkem_poly_mulcache_compute_const17", 0xb040, 0x010;
-  "mlkem_poly_mulcache_compute_const18", 0xb050, 0x010;
-  "mlkem_poly_mulcache_compute_const19", 0xb060, 0x010;
-  "mlkem_poly_mulcache_compute_const20", 0xb070, 0x010;
-  "mlkem_poly_mulcache_compute_const21", 0xb080, 0x010;
-  "mlkem_poly_mulcache_compute_const22", 0xb090, 0x010;
-  "mlkem_poly_mulcache_compute_const23", 0xb0a0, 0x010;
-  "mlkem_poly_mulcache_compute_const24", 0xb0b0, 0x010;
-  "mlkem_poly_mulcache_compute_const25", 0xb0c0, 0x010;
-  "mlkem_poly_mulcache_compute_const26", 0xb0d0, 0x010;
-  "mlkem_poly_mulcache_compute_const27", 0xb0e0, 0x010;
+  "mlkem_poly_mulcache_compute_const14", 0xb000, 0x010;
+  "mlkem_poly_mulcache_compute_const15", 0xb010, 0x010;
+  "mlkem_poly_mulcache_compute_const16", 0xb020, 0x010;
+  "mlkem_poly_mulcache_compute_const17", 0xb030, 0x010;
+  "mlkem_poly_mulcache_compute_const18", 0xb040, 0x010;
+  "mlkem_poly_mulcache_compute_const19", 0xb050, 0x010;
+  "mlkem_poly_mulcache_compute_const20", 0xb060, 0x010;
+  "mlkem_poly_mulcache_compute_const21", 0xb070, 0x010;
+  "mlkem_poly_mulcache_compute_const22", 0xb080, 0x010;
+  "mlkem_poly_mulcache_compute_const23", 0xb090, 0x010;
+  "mlkem_poly_mulcache_compute_const24", 0xb0a0, 0x010;
+  "mlkem_poly_mulcache_compute_const25", 0xb0b0, 0x010;
+  "mlkem_poly_mulcache_compute_const26", 0xb0c0, 0x010;
+  "mlkem_poly_mulcache_compute_const27", 0xb0d0, 0x010;
+  "mlkem_poly_mulcache_compute_const28", 0xb0e0, 0x010;
   "mlkem_poly_cbd2_const5",              0xb0f0, 0x010;
   "mlkem_poly_cbd2_const6",              0xb100, 0x010;
   "mlkem_poly_cbd2_const7",              0xb110, 0x010;
@@ -398,34 +399,34 @@ install_layout (layout_objects [
   "mlkem_poly_cbd3_const4",              0xb170, 0x010;
   "mlkem_poly_decompress_d5_const31",    0xb180, 0x008;
   "mlkem_poly_decompress_d5_const32",    0xb188, 0x008;
-  "mlkem_poly_mulcache_compute_const28", 0xb190, 0x008;
-  "mlkem_poly_mulcache_compute_const29", 0xb198, 0x008;
-  "mlkem_poly_mulcache_compute_const30", 0xb1a0, 0x008;
-  "mlkem_poly_mulcache_compute_const31", 0xb1a8, 0x008;
-  "mlkem_poly_mulcache_compute_const32", 0xb1b0, 0x008;
-  "mlkem_poly_mulcache_compute_const33", 0xb1b8, 0x008;
-  "mlkem_poly_mulcache_compute_const34", 0xb1c0, 0x008;
-  "mlkem_poly_mulcache_compute_const35", 0xb1c8, 0x008;
-  "mlkem_poly_mulcache_compute_const36", 0xb1d0, 0x008;
-  "mlkem_poly_mulcache_compute_const37", 0xb1d8, 0x008;
-  "mlkem_poly_mulcache_compute_const38", 0xb1e0, 0x008;
-  "mlkem_poly_mulcache_compute_const39", 0xb1e8, 0x008;
-  "mlkem_poly_mulcache_compute_const40", 0xb1f0, 0x008;
-  "mlkem_poly_mulcache_compute_const41", 0xb1f8, 0x008;
-  "mlkem_poly_mulcache_compute_const42", 0xb200, 0x008;
-  "mlkem_poly_mulcache_compute_const43", 0xb208, 0x008;
-  "mlkem_poly_mulcache_compute_const44", 0xb210, 0x008;
-  "mlkem_poly_mulcache_compute_const45", 0xb218, 0x008;
-  "mlkem_poly_mulcache_compute_const46", 0xb220, 0x008;
-  "mlkem_poly_mulcache_compute_const47", 0xb228, 0x008;
-  "mlkem_poly_mulcache_compute_const48", 0xb230, 0x008;
-  "mlkem_poly_mulcache_compute_const49", 0xb238, 0x008;
-  "mlkem_poly_mulcache_compute_const50", 0xb240, 0x008;
-  "mlkem_poly_mulcache_compute_const51", 0xb248, 0x008;
-  "mlkem_poly_mulcache_compute_const52", 0xb250, 0x008;
-  "mlkem_poly_mulcache_compute_const53", 0xb258, 0x008;
-  "mlkem_poly_mulcache_compute_const54", 0xb260, 0x008;
-  "mlkem_poly_mulcache_compute_const55", 0xb268, 0x008;
+  "mlkem_poly_mulcache_compute_const29", 0xb190, 0x008;
+  "mlkem_poly_mulcache_compute_const30", 0xb198, 0x008;
+  "mlkem_poly_mulcache_compute_const31", 0xb1a0, 0x008;
+  "mlkem_poly_mulcache_compute_const32", 0xb1a8, 0x008;
+  "mlkem_poly_mulcache_compute_const33", 0xb1b0, 0x008;
+  "mlkem_poly_mulcache_compute_const34", 0xb1b8, 0x008;
+  "mlkem_poly_mulcache_compute_const35", 0xb1c0, 0x008;
+  "mlkem_poly_mulcache_compute_const36", 0xb1c8, 0x008;
+  "mlkem_poly_mulcache_compute_const37", 0xb1d0, 0x008;
+  "mlkem_poly_mulcache_compute_const38", 0xb1d8, 0x008;
+  "mlkem_poly_mulcache_compute_const39", 0xb1e0, 0x008;
+  "mlkem_poly_mulcache_compute_const40", 0xb1e8, 0x008;
+  "mlkem_poly_mulcache_compute_const41", 0xb1f0, 0x008;
+  "mlkem_poly_mulcache_compute_const42", 0xb1f8, 0x008;
+  "mlkem_poly_mulcache_compute_const43", 0xb200, 0x008;
+  "mlkem_poly_mulcache_compute_const44", 0xb208, 0x008;
+  "mlkem_poly_mulcache_compute_const45", 0xb210, 0x008;
+  "mlkem_poly_mulcache_compute_const46", 0xb218, 0x008;
+  "mlkem_poly_mulcache_compute_const47", 0xb220, 0x008;
+  "mlkem_poly_mulcache_compute_const48", 0xb228, 0x008;
+  "mlkem_poly_mulcache_compute_const49", 0xb230, 0x008;
+  "mlkem_poly_mulcache_compute_const50", 0xb238, 0x008;
+  "mlkem_poly_mulcache_compute_const51", 0xb240, 0x008;
+  "mlkem_poly_mulcache_compute_const52", 0xb248, 0x008;
+  "mlkem_poly_mulcache_compute_const53", 0xb250, 0x008;
+  "mlkem_poly_mulcache_compute_const54", 0xb258, 0x008;
+  "mlkem_poly_mulcache_compute_const55", 0xb260, 0x008;
+  "mlkem_poly_mulcache_compute_const56", 0xb268, 0x008;
   "mlkem_poly_cbd2_const11",             0xb270, 0x008;
   "mlkem_poly_cbd2_const12",             0xb278, 0x008;
   "mlkem_poly_cbd3_const5",              0xb280, 0x008;
@@ -4412,497 +4413,498 @@ install_layout (layout_labels [
     +0x14  sub     sp, sp, #0x2c0
     +0x18  add     x8, x1, #0xa0
     +0x1c  cmp     x8, x0
-    +0x20  b.ls    join1                                -----+
-    +0x24  add     x8, x0, #0x200                            |
-    +0x28  cmp     x8, x1                                    |
-    +0x2c  b.ls    join1                                ---+ |
-  adrp1:                                                   | |
-    +0x30  adrp    x9, <page>                              | |
-  adrp2:                                                   | |
-    +0x34  adrp    x10, <page>                             | |
-    +0x38  mov     w11, #0xd01                             | |
-    +0x3c  movi    d0, #0xff000000ff                       | |
-    +0x40  mov     x8, xzr                                 | |
-    +0x44  ldr     d1, [x9, #384]                          | |
-                   // mlkem_poly_decompress_d5_const31     | |
-    +0x48  add     x9, x1, #0x2                            | |
-    +0x4c  ldr     d2, [x10, #392]                         | |
-                   // mlkem_poly_decompress_d5_const32     | |
-    +0x50  dup     v3.8h, w11                              | |
-  loop1:                                                   | |
-    +0x54  ldrb    w10, [x9]                            <+ | |
-    +0x58  ldrb    w11, [x9, #1]                         | | |
-    +0x5c  fmov    s4, w10                               | | |
-    +0x60  ldurb   w10, [x9, #-2]                        | | |
-    +0x64  mov     v4.s[1], w11                          | | |
-    +0x68  ldurb   w11, [x9, #-1]                        | | |
-    +0x6c  and     w12, w10, #0x1f                       | | |
-    +0x70  lsr     w10, w10, #5                          | | |
-    +0x74  dup     v5.2s, w11                            | | |
-    +0x78  bfi     w10, w11, #3, #2                      | | |
-    +0x7c  fmov    w13, s4                               | | |
-    +0x80  fmov    s6, w12                               | | |
-    +0x84  mov     w14, v4.s[1]                          | | |
-    +0x88  ldrb    w11, [x9, #2]                         | | |
-    +0x8c  ushl    v4.2s, v4.2s, v2.2s                   | | |
-    +0x90  add     x9, x9, #0x5                          | | |
-    +0x94  ubfiz   w13, w13, #1, #4                      | | |
-    +0x98  and     v5.8b, v5.8b, v0.8b                   | | |
-    +0x9c  mov     v6.b[1], w10                          | | |
-    +0xa0  ushl    v5.2s, v5.2s, v1.2s                   | | |
-    +0xa4  ubfiz   w12, w14, #4, #1                      | | |
-    +0xa8  ubfiz   w10, w11, #2, #3                      | | |
-    +0xac  dup     v7.2s, w13                            | | |
-    +0xb0  fmov    s16, w12                              | | |
-    +0xb4  orr     v7.8b, v5.8b, v7.8b                   | | |
-    +0xb8  bic     v5.2s, #0x20                          | | |
-    +0xbc  mov     w13, v7.s[1]                          | | |
-    +0xc0  fmov    s7, w10                               | | |
-    +0xc4  mov     v6.b[2], v5.b[0]                      | | |
-    +0xc8  orr     v16.8b, v4.8b, v16.8b                 | | |
-    +0xcc  bic     v4.2s, #0xe0                          | | |
-    +0xd0  lsr     w10, w14, #6                          | | |
-    +0xd4  mov     v17.16b, v7.16b                       | | |
-    +0xd8  mov     w12, v4.s[1]                          | | |
-    +0xdc  mov     v17.s[1], w11                         | | |
-    +0xe0  mov     v6.b[3], w13                          | | |
-    +0xe4  fmov    s4, w10                               | | |
-    +0xe8  and     v17.8b, v17.8b, v0.8b                 | | |
-    +0xec  mov     v6.b[4], v16.b[0]                     | | |
-    +0xf0  ushr    v17.2s, v17.2s, #3                    | | |
-    +0xf4  orr     v4.8b, v7.8b, v4.8b                   | | |
-    +0xf8  mov     w10, v17.s[1]                         | | |
-    +0xfc  mov     v6.b[5], w12                          | | |
-   +0x100  mov     v6.b[6], v4.b[0]                      | | |
-   +0x104  mov     v6.b[7], w10                          | | |
-   +0x108  uxtl    v6.8h, v6.8b                          | | |
-   +0x10c  umull   v7.4s, v6.4h, v3.4h                   | | |
-   +0x110  umull2  v6.4s, v6.8h, v3.8h                   | | |
-   +0x114  rshrn   v7.4h, v7.4s, #5                      | | |
-   +0x118  rshrn2  v7.8h, v6.4s, #5                      | | |
-   +0x11c  str     q7, [x0, x8]                          | | |
-   +0x120  add     x8, x8, #0x10                         | | |
-  loop1_test:                                            | | |
-   +0x124  cmp     x8, #0x200                            | | |
-  loop1_back:                                            | | |
-   +0x128  b.ne    loop1                                -+ | |
-  loop1_exit:                                              | |
-   +0x12c  b       join2                                -------+
-  join1: adrp3:                                            | | |
-   +0x130  adrp    x9, <page>                           <--+-+ |
-  adrp4:                                                       |
-   +0x134  adrp    x10, <page>                                 |
-  adrp5:                                                       |
-   +0x138  adrp    x11, <page>                                 |
-   +0x13c  mov     x8, xzr                                     |
-   +0x140  ldr     q0, [x9, #3376]                             |
-                   // mlkem_poly_decompress_d5_const1          |
-  adrp6:                                                       |
-   +0x144  adrp    x9, <page>                                  |
-   +0x148  str     q0, [sp, #400]                              |
-   +0x14c  ldr     q0, [x10, #3392]                            |
-                   // mlkem_poly_decompress_d5_const2          |
-  adrp7:                                                       |
-   +0x150  adrp    x10, <page>                                 |
-   +0x154  str     q0, [sp, #384]                              |
-   +0x158  ldr     q0, [x11, #3408]                            |
-                   // mlkem_poly_decompress_d5_const3          |
-  adrp8:                                                       |
-   +0x15c  adrp    x11, <page>                                 |
-   +0x160  str     q0, [sp, #368]                              |
-   +0x164  ldr     q0, [x9, #3424]                             |
-                   // mlkem_poly_decompress_d5_const4          |
-  adrp9:                                                       |
-   +0x168  adrp    x9, <page>                                  |
-   +0x16c  str     q0, [sp, #352]                              |
-   +0x170  ldr     q0, [x10, #3440]                            |
-                   // mlkem_poly_decompress_d5_const5          |
-  adrp10:                                                      |
-   +0x174  adrp    x10, <page>                                 |
-   +0x178  str     q0, [sp, #336]                              |
-   +0x17c  ldr     q0, [x11, #3456]                            |
-                   // mlkem_poly_decompress_d5_const6          |
-  adrp11:                                                      |
-   +0x180  adrp    x11, <page>                                 |
-   +0x184  str     q0, [sp, #320]                              |
-   +0x188  ldr     q0, [x9, #3472]                             |
-                   // mlkem_poly_decompress_d5_const7          |
-  adrp12:                                                      |
-   +0x18c  adrp    x9, <page>                                  |
-   +0x190  str     q0, [sp, #304]                              |
-   +0x194  ldr     q0, [x10, #3488]                            |
-                   // mlkem_poly_decompress_d5_const8          |
-  adrp13:                                                      |
-   +0x198  adrp    x10, <page>                                 |
-   +0x19c  str     q0, [sp, #288]                              |
-   +0x1a0  ldr     q0, [x11, #3504]                            |
-                   // mlkem_poly_decompress_d5_const9          |
-  adrp14:                                                      |
-   +0x1a4  adrp    x11, <page>                                 |
-   +0x1a8  str     q0, [sp, #272]                              |
-   +0x1ac  ldr     q0, [x9, #3520]                             |
-                   // mlkem_poly_decompress_d5_const10         |
-  adrp15:                                                      |
-   +0x1b0  adrp    x9, <page>                                  |
-   +0x1b4  str     q0, [sp, #256]                              |
-   +0x1b8  ldr     q0, [x10, #3536]                            |
-                   // mlkem_poly_decompress_d5_const11         |
-  adrp16:                                                      |
-   +0x1bc  adrp    x10, <page>                                 |
-   +0x1c0  str     q0, [sp, #240]                              |
-   +0x1c4  ldr     q0, [x11, #3552]                            |
-                   // mlkem_poly_decompress_d5_const12         |
-  adrp17:                                                      |
-   +0x1c8  adrp    x11, <page>                                 |
-   +0x1cc  str     q0, [sp, #224]                              |
-   +0x1d0  ldr     q0, [x9, #3568]                             |
-                   // mlkem_poly_decompress_d5_const13         |
-  adrp18:                                                      |
-   +0x1d4  adrp    x9, <page>                                  |
-   +0x1d8  str     q0, [sp, #208]                              |
-   +0x1dc  ldr     q0, [x10, #3584]                            |
-                   // mlkem_poly_decompress_d5_const14         |
-  adrp19:                                                      |
-   +0x1e0  adrp    x10, <page>                                 |
-   +0x1e4  str     q0, [sp, #192]                              |
-   +0x1e8  ldr     q0, [x11, #3600]                            |
-                   // mlkem_poly_decompress_d5_const15         |
-  adrp20:                                                      |
-   +0x1ec  adrp    x11, <page>                                 |
-   +0x1f0  str     q0, [sp, #176]                              |
-   +0x1f4  ldr     q0, [x9, #3616]                             |
-                   // mlkem_poly_decompress_d5_const16         |
-  adrp21:                                                      |
-   +0x1f8  adrp    x9, <page>                                  |
-   +0x1fc  str     q0, [sp, #160]                              |
-   +0x200  ldr     q0, [x10, #3632]                            |
-                   // mlkem_poly_decompress_d5_const17         |
-  adrp22:                                                      |
-   +0x204  adrp    x10, <page>                                 |
-   +0x208  str     q0, [sp, #144]                              |
-   +0x20c  ldr     q0, [x11, #3648]                            |
-                   // mlkem_poly_decompress_d5_const18         |
-  adrp23:                                                      |
-   +0x210  adrp    x11, <page>                                 |
-   +0x214  str     q0, [sp, #128]                              |
-   +0x218  ldr     q0, [x9, #3664]                             |
-                   // mlkem_poly_decompress_d5_const19         |
-  adrp24:                                                      |
-   +0x21c  adrp    x9, <page>                                  |
-   +0x220  str     q0, [sp, #112]                              |
-   +0x224  ldr     q0, [x10, #3680]                            |
-                   // mlkem_poly_decompress_d5_const20         |
-  adrp25:                                                      |
-   +0x228  adrp    x10, <page>                                 |
-   +0x22c  str     q0, [sp, #96]                               |
-   +0x230  ldr     q0, [x11, #3696]                            |
-                   // mlkem_poly_decompress_d5_const21         |
-   +0x234  str     q0, [sp, #80]                               |
-   +0x238  ldr     q0, [x9, #3712]                             |
-                   // mlkem_poly_decompress_d5_const22         |
-  adrp26:                                                      |
-   +0x23c  adrp    x9, <page>                                  |
-   +0x240  str     q0, [sp, #64]                               |
-   +0x244  ldr     q0, [x10, #3728]                            |
-                   // mlkem_poly_decompress_d5_const23         |
-  adrp27:                                                      |
-   +0x248  adrp    x10, <page>                                 |
-   +0x24c  str     q0, [sp, #48]                               |
-   +0x250  ldr     q0, [x9, #3744]                             |
-                   // mlkem_poly_decompress_d5_const24         |
-  adrp28:                                                      |
-   +0x254  adrp    x9, <page>                                  |
-   +0x258  str     q0, [sp, #32]                               |
-   +0x25c  ldr     q0, [x10, #3760]                            |
-                   // mlkem_poly_decompress_d5_const25         |
-  adrp29:                                                      |
-   +0x260  adrp    x10, <page>                                 |
-   +0x264  str     q0, [sp, #16]                               |
-   +0x268  ldr     q0, [x9, #3776]                             |
-                   // mlkem_poly_decompress_d5_const26         |
-  adrp30:                                                      |
-   +0x26c  adrp    x9, <page>                                  |
-   +0x270  str     q0, [sp]                                    |
-   +0x274  ldr     q0, [x10, #3792]                            |
-                   // mlkem_poly_decompress_d5_const27         |
-  adrp31:                                                      |
-   +0x278  adrp    x10, <page>                                 |
-   +0x27c  str     q0, [sp, #688]                              |
-   +0x280  ldr     q0, [x9, #3808]                             |
-                   // mlkem_poly_decompress_d5_const28         |
-   +0x284  mov     w9, #0xd01                                  |
-   +0x288  str     q0, [sp, #672]                              |
-   +0x28c  ldr     q0, [x10, #3824]                            |
-                   // mlkem_poly_decompress_d5_const29         |
-  adrp32:                                                      |
-   +0x290  adrp    x10, <page>                                 |
-   +0x294  dup     v13.8h, w9                                  |
-   +0x298  str     q0, [sp, #656]                              |
-   +0x29c  ldr     q0, [x10, #3840]                            |
-                   // mlkem_poly_decompress_d5_const30         |
-   +0x2a0  str     q0, [sp, #640]                              |
-  loop2:                                                       |
-   +0x2a4  add     x9, x1, x8                           <+     |
-   +0x2a8  ldr     q22, [sp, #368]                       |     |
-   +0x2ac  ldp     q16, q6, [sp, #384]                   |     |
-   +0x2b0  movi    v23.16b, #0x1f                        |     |
-   +0x2b4  add     x8, x8, #0x50                         |     |
-   +0x2b8  cmp     x8, #0xa0                             |     |
-   +0x2bc  ldp     q5, q2, [x9, #16]                     |     |
-   +0x2c0  ldp     q3, q1, [x9, #48]                     |     |
-   +0x2c4  tbl     v7.16b, {v2.16b-v3.16b}, v6.16b       |     |
-   +0x2c8  ldr     q4, [x9]                              |     |
-   +0x2cc  ldr     q18, [sp, #288]                       |     |
-   +0x2d0  ldr     q20, [sp, #176]                       |     |
-   +0x2d4  tbl     v6.16b, {v4.16b-v5.16b}, v16.16b      |     |
-   +0x2d8  ldr     q16, [sp, #336]                       |     |
-   +0x2dc  tbl     v19.16b, {v2.16b-v3.16b}, v18.16b     |     |
-   +0x2e0  tbl     v21.16b, {v2.16b-v3.16b}, v20.16b     |     |
-   +0x2e4  tbl     v17.16b, {v2.16b-v3.16b}, v16.16b     |     |
-   +0x2e8  tbl     v0.16b, {v6.16b-v7.16b}, v22.16b      |     |
-   +0x2ec  ldr     q6, [sp, #320]                        |     |
-   +0x2f0  tbl     v16.16b, {v4.16b-v5.16b}, v6.16b      |     |
-   +0x2f4  ldr     q6, [sp, #224]                        |     |
-   +0x2f8  tbl     v7.16b, {v2.16b-v3.16b}, v6.16b       |     |
-   +0x2fc  ldr     q2, [sp, #352]                        |     |
-   +0x300  tbl     v2.16b, {v0.16b-v1.16b}, v2.16b       |     |
-   +0x304  tbl     v0.16b, {v16.16b-v17.16b}, v22.16b    |     |
-   +0x308  ldp     q22, q3, [sp, #256]                   |     |
-   +0x30c  tbl     v18.16b, {v4.16b-v5.16b}, v3.16b      |     |
-   +0x310  ldr     q3, [sp, #208]                        |     |
-   +0x314  tbl     v6.16b, {v4.16b-v5.16b}, v3.16b       |     |
-   +0x318  ldr     q3, [sp, #160]                        |     |
-   +0x31c  tbl     v20.16b, {v4.16b-v5.16b}, v3.16b      |     |
-   +0x320  ldr     q3, [sp, #304]                        |     |
-   +0x324  tbl     v4.16b, {v0.16b-v1.16b}, v3.16b       |     |
-   +0x328  and     v3.16b, v2.16b, v23.16b               |     |
-   +0x32c  uxtl    v5.8h, v3.8b                          |     |
-   +0x330  tbl     v0.16b, {v18.16b-v19.16b}, v22.16b    |     |
-   +0x334  ldr     q19, [sp, #144]                       |     |
-   +0x338  uxtl2   v16.8h, v3.16b                        |     |
-   +0x33c  umull   v3.4s, v5.4h, v13.4h                  |     |
-   +0x340  umull2  v17.4s, v5.8h, v13.8h                 |     |
-   +0x344  ldr     q5, [sp, #240]                        |     |
-   +0x348  movi    v18.16b, #0x18                        |     |
-   +0x34c  tbl     v5.16b, {v0.16b-v1.16b}, v5.16b       |     |
-   +0x350  tbl     v0.16b, {v6.16b-v7.16b}, v22.16b      |     |
-   +0x354  shl     v6.16b, v4.16b, #3                    |     |
-   +0x358  ushr    v7.16b, v4.16b, #2                    |     |
-   +0x35c  and     v6.16b, v6.16b, v18.16b               |     |
-   +0x360  and     v18.16b, v7.16b, v23.16b              |     |
-   +0x364  ldr     q7, [sp, #192]                        |     |
-   +0x368  usra    v6.16b, v2.16b, #5                    |     |
-   +0x36c  movi    v2.16b, #0x1e                         |     |
-   +0x370  tbl     v7.16b, {v0.16b-v1.16b}, v7.16b       |     |
-   +0x374  tbl     v0.16b, {v20.16b-v21.16b}, v19.16b    |     |
-   +0x378  add     v19.16b, v5.16b, v5.16b               |     |
-   +0x37c  umull   v22.4s, v16.4h, v13.4h                |     |
-   +0x380  and     v2.16b, v19.16b, v2.16b               |     |
-   +0x384  ldr     q19, [sp, #128]                       |     |
-   +0x388  usra    v2.16b, v4.16b, #7                    |     |
-   +0x38c  movi    v4.16b, #0x10                         |     |
-   +0x390  tbl     v19.16b, {v0.16b-v1.16b}, v19.16b     |     |
-   +0x394  ushr    v1.16b, v7.16b, #1                    |     |
-   +0x398  shl     v0.16b, v7.16b, #4                    |     |
-   +0x39c  and     v20.16b, v1.16b, v23.16b              |     |
-   +0x3a0  movi    v1.16b, #0x1c                         |     |
-   +0x3a4  and     v4.16b, v0.16b, v4.16b                |     |
-   +0x3a8  shl     v0.16b, v19.16b, #2                   |     |
-   +0x3ac  usra    v4.16b, v5.16b, #4                    |     |
-   +0x3b0  ushr    v15.16b, v19.16b, #3                  |     |
-   +0x3b4  and     v5.16b, v0.16b, v1.16b                |     |
-   +0x3b8  uxtl2   v1.8h, v6.16b                         |     |
-   +0x3bc  usra    v5.16b, v7.16b, #6                    |     |
-   +0x3c0  umull2  v7.4s, v1.8h, v13.8h                  |     |
-   +0x3c4  umull   v1.4s, v1.4h, v13.4h                  |     |
-   +0x3c8  uxtl    v6.8h, v6.8b                          |     |
-   +0x3cc  umull2  v0.4s, v16.8h, v13.8h                 |     |
-   +0x3d0  umull2  v25.4s, v6.8h, v13.8h                 |     |
-   +0x3d4  str     q1, [sp, #560]                        |     |
-   +0x3d8  umull   v1.4s, v6.4h, v13.4h                  |     |
-   +0x3dc  uxtl    v6.8h, v18.8b                         |     |
-   +0x3e0  uxtl2   v16.8h, v18.16b                       |     |
-   +0x3e4  umull   v21.4s, v6.4h, v13.4h                 |     |
-   +0x3e8  umull2  v23.4s, v6.8h, v13.8h                 |     |
-   +0x3ec  uxtl2   v6.8h, v2.16b                         |     |
-   +0x3f0  uxtl    v18.8h, v2.8b                         |     |
-   +0x3f4  umull2  v2.4s, v6.8h, v13.8h                  |     |
-   +0x3f8  umull   v24.4s, v16.4h, v13.4h                |     |
-   +0x3fc  umull2  v26.4s, v16.8h, v13.8h                |     |
-   +0x400  umull2  v16.4s, v18.8h, v13.8h                |     |
-   +0x404  stp     q2, q7, [sp, #608]                    |     |
-   +0x408  umull   v2.4s, v6.4h, v13.4h                  |     |
-   +0x40c  uxtl    v6.8h, v4.8b                          |     |
-   +0x410  uxtl2   v4.8h, v4.16b                         |     |
-   +0x414  umull   v28.4s, v18.4h, v13.4h                |     |
-   +0x418  umull   v18.4s, v4.4h, v13.4h                 |     |
-   +0x41c  str     q2, [sp, #544]                        |     |
-   +0x420  umull2  v8.4s, v4.8h, v13.8h                  |     |
-   +0x424  uxtl2   v4.8h, v20.16b                        |     |
-   +0x428  umull   v30.4s, v6.4h, v13.4h                 |     |
-   +0x42c  umull2  v2.4s, v4.8h, v13.8h                  |     |
-   +0x430  uxtl    v20.8h, v20.8b                        |     |
-   +0x434  rshrn   v18.4h, v18.4s, #5                    |     |
-   +0x438  umull2  v27.4s, v20.8h, v13.8h                |     |
-   +0x43c  rshrn   v9.4h, v30.4s, #5                     |     |
-   +0x440  str     q2, [sp, #576]                        |     |
-   +0x444  umull   v2.4s, v4.4h, v13.4h                  |     |
-   +0x448  uxtl    v4.8h, v5.8b                          |     |
-   +0x44c  uxtl2   v5.8h, v5.16b                         |     |
-   +0x450  umull   v12.4s, v4.4h, v13.4h                 |     |
-   +0x454  umull   v14.4s, v5.4h, v13.4h                 |     |
-   +0x458  str     q2, [sp, #512]                        |     |
-   +0x45c  umull2  v11.4s, v4.8h, v13.8h                 |     |
-   +0x460  umull2  v31.4s, v6.8h, v13.8h                 |     |
-   +0x464  rshrn   v6.4h, v3.4s, #5                      |     |
-   +0x468  rshrn   v19.4h, v14.4s, #5                    |     |
-   +0x46c  rshrn   v10.4h, v12.4s, #5                    |     |
-   +0x470  umull   v14.4s, v20.4h, v13.4h                |     |
-   +0x474  rshrn   v7.4h, v21.4s, #5                     |     |
-   +0x478  uxtl2   v20.8h, v15.16b                       |     |
-   +0x47c  uxtl    v2.8h, v15.8b                         |     |
-   +0x480  umull2  v4.4s, v20.8h, v13.8h                 |     |
-   +0x484  str     q2, [sp, #592]                        |     |
-   +0x488  umull2  v30.4s, v2.8h, v13.8h                 |     |
-   +0x48c  rshrn   v2.4h, v17.4s, #5                     |     |
-   +0x490  umull   v15.4s, v20.4h, v13.4h                |     |
-   +0x494  rshrn2  v6.8h, v1.4s, #5                      |     |
-   +0x498  rshrn   v20.4h, v0.4s, #5                     |     |
-   +0x49c  umull2  v5.4s, v5.8h, v13.8h                  |     |
-   +0x4a0  rshrn   v21.4h, v26.4s, #5                    |     |
-   +0x4a4  rshrn2  v10.8h, v11.4s, #5                    |     |
-   +0x4a8  rshrn   v3.4h, v23.4s, #5                     |     |
-   +0x4ac  rshrn2  v7.8h, v28.4s, #5                     |     |
-   +0x4b0  rshrn   v4.4h, v4.4s, #5                      |     |
-   +0x4b4  ldp     q26, q28, [sp, #96]                   |     |
-   +0x4b8  rshrn2  v9.8h, v14.4s, #5                     |     |
-   +0x4bc  rshrn   v0.4h, v31.4s, #5                     |     |
-   +0x4c0  rshrn2  v2.8h, v25.4s, #5                     |     |
-   +0x4c4  str     q4, [sp, #528]                        |     |
-   +0x4c8  rshrn2  v19.8h, v5.4s, #5                     |     |
-   +0x4cc  tbl     v5.16b, {v9.16b-v10.16b}, v26.16b     |     |
-   +0x4d0  rshrn2  v0.8h, v27.4s, #5                     |     |
-   +0x4d4  ldr     q25, [sp, #64]                        |     |
-   +0x4d8  rshrn   v30.4h, v30.4s, #5                    |     |
-   +0x4dc  ldr     q31, [sp, #32]                        |     |
-   +0x4e0  rshrn   v17.4h, v15.4s, #5                    |     |
-   +0x4e4  mov     v1.16b, v10.16b                       |     |
-   +0x4e8  ldr     q14, [sp]                             |     |
-   +0x4ec  tbl     v4.16b, {v9.16b-v10.16b}, v25.16b     |     |
-   +0x4f0  rshrn2  v3.8h, v16.4s, #5                     |     |
-   +0x4f4  rshrn   v11.4h, v22.4s, #5                    |     |
-   +0x4f8  ldr     q22, [sp, #80]                        |     |
-   +0x4fc  rshrn   v12.4h, v24.4s, #5                    |     |
-   +0x500  rshrn   v23.4h, v8.4s, #5                     |     |
-   +0x504  stp     q4, q5, [sp, #480]                    |     |
-   +0x508  ldr     q4, [sp, #688]                        |     |
-   +0x50c  tbl     v8.16b, {v2.16b-v3.16b}, v22.16b      |     |
-   +0x510  tbl     v5.16b, {v0.16b-v1.16b}, v4.16b       |     |
-   +0x514  tbl     v4.16b, {v9.16b-v10.16b}, v31.16b     |     |
-   +0x518  mov     v5.h[7], v30.h[0]                     |     |
-   +0x51c  str     q4, [sp, #464]                        |     |
-   +0x520  tbl     v4.16b, {v9.16b-v10.16b}, v14.16b     |     |
-   +0x524  str     q4, [sp, #448]                        |     |
-   +0x528  tbl     v4.16b, {v2.16b-v3.16b}, v28.16b      |     |
-   +0x52c  stp     q5, q4, [sp, #416]                    |     |
-   +0x530  ldr     q4, [sp, #672]                        |     |
-   +0x534  ldr     q5, [sp, #48]                         |     |
-   +0x538  tbl     v15.16b, {v0.16b-v1.16b}, v4.16b      |     |
-   +0x53c  ldr     q4, [sp, #656]                        |     |
-   +0x540  tbl     v9.16b, {v2.16b-v3.16b}, v5.16b       |     |
-   +0x544  tbl     v10.16b, {v0.16b-v1.16b}, v4.16b      |     |
-   +0x548  ldr     q4, [sp, #640]                        |     |
-   +0x54c  mov     v15.h[7], v30.h[1]                    |     |
-   +0x550  tbl     v29.16b, {v0.16b-v1.16b}, v4.16b      |     |
-   +0x554  ldr     q0, [sp, #560]                        |     |
-   +0x558  ldr     q4, [sp, #16]                         |     |
-   +0x55c  mov     v10.h[7], v30.h[2]                    |     |
-   +0x560  rshrn2  v11.8h, v0.4s, #5                     |     |
-   +0x564  ldr     q0, [sp, #512]                        |     |
-   +0x568  tbl     v27.16b, {v2.16b-v3.16b}, v4.16b      |     |
-   +0x56c  mov     v29.h[7], v30.h[3]                    |     |
-   +0x570  rshrn2  v18.8h, v0.4s, #5                     |     |
-   +0x574  ldr     q0, [sp, #544]                        |     |
-   +0x578  mov     v8.d[1], v15.d[1]                     |     |
-   +0x57c  mov     v9.d[1], v10.d[1]                     |     |
-   +0x580  rshrn2  v12.8h, v0.4s, #5                     |     |
-   +0x584  ldr     q0, [sp, #624]                        |     |
-   +0x588  tbl     v16.16b, {v18.16b-v19.16b}, v26.16b   |     |
-   +0x58c  tbl     v2.16b, {v18.16b-v19.16b}, v25.16b    |     |
-   +0x590  rshrn2  v20.8h, v0.4s, #5                     |     |
-   +0x594  ldr     q0, [sp, #608]                        |     |
-   +0x598  tbl     v25.16b, {v18.16b-v19.16b}, v31.16b   |     |
-   +0x59c  tbl     v30.16b, {v18.16b-v19.16b}, v14.16b   |     |
-   +0x5a0  rshrn2  v21.8h, v0.4s, #5                     |     |
-   +0x5a4  ldr     q0, [sp, #576]                        |     |
-   +0x5a8  tbl     v26.16b, {v11.16b-v12.16b}, v28.16b   |     |
-   +0x5ac  tbl     v3.16b, {v11.16b-v12.16b}, v22.16b    |     |
-   +0x5b0  rshrn2  v23.8h, v0.4s, #5                     |     |
-   +0x5b4  ldr     q0, [sp, #688]                        |     |
-   +0x5b8  mov     v24.16b, v19.16b                      |     |
-   +0x5bc  tbl     v1.16b, {v11.16b-v12.16b}, v5.16b     |     |
-   +0x5c0  tbl     v18.16b, {v23.16b-v24.16b}, v0.16b    |     |
-   +0x5c4  ldr     q0, [sp, #672]                        |     |
-   +0x5c8  tbl     v11.16b, {v11.16b-v12.16b}, v4.16b    |     |
-   +0x5cc  mov     v25.h[7], v17.h[2]                    |     |
-   +0x5d0  tbl     v19.16b, {v23.16b-v24.16b}, v0.16b    |     |
-   +0x5d4  ldr     q0, [sp, #656]                        |     |
-   +0x5d8  mov     v30.h[7], v17.h[3]                    |     |
-   +0x5dc  mov     v16.h[7], v17.h[0]                    |     |
-   +0x5e0  tbl     v12.16b, {v23.16b-v24.16b}, v0.16b    |     |
-   +0x5e4  ldr     q0, [sp, #640]                        |     |
-   +0x5e8  mov     v2.h[7], v17.h[1]                     |     |
-   +0x5ec  tbl     v17.16b, {v20.16b-v21.16b}, v28.16b   |     |
-   +0x5f0  tbl     v23.16b, {v23.16b-v24.16b}, v0.16b    |     |
-   +0x5f4  tbl     v24.16b, {v20.16b-v21.16b}, v22.16b   |     |
-   +0x5f8  tbl     v0.16b, {v20.16b-v21.16b}, v5.16b     |     |
-   +0x5fc  tbl     v20.16b, {v20.16b-v21.16b}, v4.16b    |     |
-   +0x600  ldr     q21, [sp, #528]                       |     |
-   +0x604  mov     v11.d[1], v30.d[1]                    |     |
-   +0x608  mov     v1.d[1], v25.d[1]                     |     |
-   +0x60c  mov     v23.h[7], v21.h[3]                    |     |
-   +0x610  mov     v12.h[7], v21.h[2]                    |     |
-   +0x614  mov     v26.d[1], v16.d[1]                    |     |
-   +0x618  stp     q1, q11, [x0, #160]                   |     |
-   +0x61c  ldp     q1, q16, [sp, #416]                   |     |
-   +0x620  mov     v20.d[1], v23.d[1]                    |     |
-   +0x624  mov     v0.d[1], v12.d[1]                     |     |
-   +0x628  mov     v3.d[1], v2.d[1]                      |     |
-   +0x62c  tbl     v2.16b, {v6.16b-v7.16b}, v22.16b      |     |
-   +0x630  tbl     v4.16b, {v6.16b-v7.16b}, v4.16b       |     |
-   +0x634  stp     q0, q20, [x0, #224]                   |     |
-   +0x638  ldr     q0, [sp, #592]                        |     |
-   +0x63c  mov     v16.d[1], v1.d[1]                     |     |
-   +0x640  stp     q26, q3, [x0, #128]                   |     |
-   +0x644  tbl     v1.16b, {v6.16b-v7.16b}, v28.16b      |     |
-   +0x648  umull   v0.4s, v0.4h, v13.4h                  |     |
-   +0x64c  tbl     v3.16b, {v6.16b-v7.16b}, v5.16b       |     |
-   +0x650  stp     q16, q8, [x0, #64]                    |     |
-   +0x654  ldp     q16, q7, [sp, #448]                   |     |
-   +0x658  rshrn   v0.4h, v0.4s, #5                      |     |
-   +0x65c  mov     v19.h[7], v21.h[1]                    |     |
-   +0x660  mov     v18.h[7], v21.h[0]                    |     |
-   +0x664  mov     v16.h[7], v0.h[3]                     |     |
-   +0x668  mov     v27.d[1], v29.d[1]                    |     |
-   +0x66c  ldp     q6, q5, [sp, #480]                    |     |
-   +0x670  mov     v7.h[7], v0.h[2]                      |     |
-   +0x674  mov     v24.d[1], v19.d[1]                    |     |
-   +0x678  mov     v17.d[1], v18.d[1]                    |     |
-   +0x67c  stp     q9, q27, [x0, #96]                    |     |
-   +0x680  mov     v6.h[7], v0.h[1]                      |     |
-   +0x684  mov     v4.d[1], v16.d[1]                     |     |
-   +0x688  mov     v5.h[7], v0.h[0]                      |     |
-   +0x68c  mov     v3.d[1], v7.d[1]                      |     |
-   +0x690  stp     q17, q24, [x0, #192]                  |     |
-   +0x694  mov     v2.d[1], v6.d[1]                      |     |
-   +0x698  mov     v1.d[1], v5.d[1]                      |     |
-   +0x69c  stp     q3, q4, [x0, #32]                     |     |
-  loop2_test:                                            |     |
-   +0x6a0  stp     q1, q2, [x0], #256                    |     |
-  loop2_back:                                            |     |
-   +0x6a4  b.ne    loop2                                -+     |
-  join2: loop2_exit:                                           |
-   +0x6a8  add     sp, sp, #0x2c0                       <------+
+    +0x20  b.ls    join1                                   -----+
+    +0x24  add     x8, x0, #0x200                               |
+    +0x28  cmp     x8, x1                                       |
+    +0x2c  b.ls    join1                                   ---+ |
+  adrp1:                                                      | |
+    +0x30  adrp    x9, <page>                                 | |
+  adrp2:                                                      | |
+    +0x34  adrp    x10, <page>                                | |
+    +0x38  mov     w11, #0xd01                                | |
+    +0x3c  movi    d0, #0xff000000ff                          | |
+    +0x40  mov     x8, xzr                                    | |
+    +0x44  ldr     d1, [x9, #384]                             | |
+                   // mlkem_poly_decompress_d5_const31        | |
+    +0x48  add     x9, x1, #0x2                               | |
+    +0x4c  ldr     d2, [x10, #392]                            | |
+                   // mlkem_poly_decompress_d5_const32        | |
+    +0x50  dup     v3.8h, w11                                 | |
+  loop1:                                                      | |
+    +0x54  ldrb    w10, [x9]                               <+ | |
+                   // mlkem_poly_mulcache_compute_const14   | | |
+    +0x58  ldrb    w11, [x9, #1]                            | | |
+    +0x5c  fmov    s4, w10                                  | | |
+    +0x60  ldurb   w10, [x9, #-2]                           | | |
+    +0x64  mov     v4.s[1], w11                             | | |
+    +0x68  ldurb   w11, [x9, #-1]                           | | |
+    +0x6c  and     w12, w10, #0x1f                          | | |
+    +0x70  lsr     w10, w10, #5                             | | |
+    +0x74  dup     v5.2s, w11                               | | |
+    +0x78  bfi     w10, w11, #3, #2                         | | |
+    +0x7c  fmov    w13, s4                                  | | |
+    +0x80  fmov    s6, w12                                  | | |
+    +0x84  mov     w14, v4.s[1]                             | | |
+    +0x88  ldrb    w11, [x9, #2]                            | | |
+    +0x8c  ushl    v4.2s, v4.2s, v2.2s                      | | |
+    +0x90  add     x9, x9, #0x5                             | | |
+    +0x94  ubfiz   w13, w13, #1, #4                         | | |
+    +0x98  and     v5.8b, v5.8b, v0.8b                      | | |
+    +0x9c  mov     v6.b[1], w10                             | | |
+    +0xa0  ushl    v5.2s, v5.2s, v1.2s                      | | |
+    +0xa4  ubfiz   w12, w14, #4, #1                         | | |
+    +0xa8  ubfiz   w10, w11, #2, #3                         | | |
+    +0xac  dup     v7.2s, w13                               | | |
+    +0xb0  fmov    s16, w12                                 | | |
+    +0xb4  orr     v7.8b, v5.8b, v7.8b                      | | |
+    +0xb8  bic     v5.2s, #0x20                             | | |
+    +0xbc  mov     w13, v7.s[1]                             | | |
+    +0xc0  fmov    s7, w10                                  | | |
+    +0xc4  mov     v6.b[2], v5.b[0]                         | | |
+    +0xc8  orr     v16.8b, v4.8b, v16.8b                    | | |
+    +0xcc  bic     v4.2s, #0xe0                             | | |
+    +0xd0  lsr     w10, w14, #6                             | | |
+    +0xd4  mov     v17.16b, v7.16b                          | | |
+    +0xd8  mov     w12, v4.s[1]                             | | |
+    +0xdc  mov     v17.s[1], w11                            | | |
+    +0xe0  mov     v6.b[3], w13                             | | |
+    +0xe4  fmov    s4, w10                                  | | |
+    +0xe8  and     v17.8b, v17.8b, v0.8b                    | | |
+    +0xec  mov     v6.b[4], v16.b[0]                        | | |
+    +0xf0  ushr    v17.2s, v17.2s, #3                       | | |
+    +0xf4  orr     v4.8b, v7.8b, v4.8b                      | | |
+    +0xf8  mov     w10, v17.s[1]                            | | |
+    +0xfc  mov     v6.b[5], w12                             | | |
+   +0x100  mov     v6.b[6], v4.b[0]                         | | |
+   +0x104  mov     v6.b[7], w10                             | | |
+   +0x108  uxtl    v6.8h, v6.8b                             | | |
+   +0x10c  umull   v7.4s, v6.4h, v3.4h                      | | |
+   +0x110  umull2  v6.4s, v6.8h, v3.8h                      | | |
+   +0x114  rshrn   v7.4h, v7.4s, #5                         | | |
+   +0x118  rshrn2  v7.8h, v6.4s, #5                         | | |
+   +0x11c  str     q7, [x0, x8]                             | | |
+   +0x120  add     x8, x8, #0x10                            | | |
+  loop1_test:                                               | | |
+   +0x124  cmp     x8, #0x200                               | | |
+  loop1_back:                                               | | |
+   +0x128  b.ne    loop1                                   -+ | |
+  loop1_exit:                                                 | |
+   +0x12c  b       join2                                   -------+
+  join1: adrp3:                                               | | |
+   +0x130  adrp    x9, <page>                              <--+-+ |
+  adrp4:                                                          |
+   +0x134  adrp    x10, <page>                                    |
+  adrp5:                                                          |
+   +0x138  adrp    x11, <page>                                    |
+   +0x13c  mov     x8, xzr                                        |
+   +0x140  ldr     q0, [x9, #3376]                                |
+                   // mlkem_poly_decompress_d5_const1             |
+  adrp6:                                                          |
+   +0x144  adrp    x9, <page>                                     |
+   +0x148  str     q0, [sp, #400]                                 |
+   +0x14c  ldr     q0, [x10, #3392]                               |
+                   // mlkem_poly_decompress_d5_const2             |
+  adrp7:                                                          |
+   +0x150  adrp    x10, <page>                                    |
+   +0x154  str     q0, [sp, #384]                                 |
+   +0x158  ldr     q0, [x11, #3408]                               |
+                   // mlkem_poly_decompress_d5_const3             |
+  adrp8:                                                          |
+   +0x15c  adrp    x11, <page>                                    |
+   +0x160  str     q0, [sp, #368]                                 |
+   +0x164  ldr     q0, [x9, #3424]                                |
+                   // mlkem_poly_decompress_d5_const4             |
+  adrp9:                                                          |
+   +0x168  adrp    x9, <page>                                     |
+   +0x16c  str     q0, [sp, #352]                                 |
+   +0x170  ldr     q0, [x10, #3440]                               |
+                   // mlkem_poly_decompress_d5_const5             |
+  adrp10:                                                         |
+   +0x174  adrp    x10, <page>                                    |
+   +0x178  str     q0, [sp, #336]                                 |
+   +0x17c  ldr     q0, [x11, #3456]                               |
+                   // mlkem_poly_decompress_d5_const6             |
+  adrp11:                                                         |
+   +0x180  adrp    x11, <page>                                    |
+   +0x184  str     q0, [sp, #320]                                 |
+   +0x188  ldr     q0, [x9, #3472]                                |
+                   // mlkem_poly_decompress_d5_const7             |
+  adrp12:                                                         |
+   +0x18c  adrp    x9, <page>                                     |
+   +0x190  str     q0, [sp, #304]                                 |
+   +0x194  ldr     q0, [x10, #3488]                               |
+                   // mlkem_poly_decompress_d5_const8             |
+  adrp13:                                                         |
+   +0x198  adrp    x10, <page>                                    |
+   +0x19c  str     q0, [sp, #288]                                 |
+   +0x1a0  ldr     q0, [x11, #3504]                               |
+                   // mlkem_poly_decompress_d5_const9             |
+  adrp14:                                                         |
+   +0x1a4  adrp    x11, <page>                                    |
+   +0x1a8  str     q0, [sp, #272]                                 |
+   +0x1ac  ldr     q0, [x9, #3520]                                |
+                   // mlkem_poly_decompress_d5_const10            |
+  adrp15:                                                         |
+   +0x1b0  adrp    x9, <page>                                     |
+   +0x1b4  str     q0, [sp, #256]                                 |
+   +0x1b8  ldr     q0, [x10, #3536]                               |
+                   // mlkem_poly_decompress_d5_const11            |
+  adrp16:                                                         |
+   +0x1bc  adrp    x10, <page>                                    |
+   +0x1c0  str     q0, [sp, #240]                                 |
+   +0x1c4  ldr     q0, [x11, #3552]                               |
+                   // mlkem_poly_decompress_d5_const12            |
+  adrp17:                                                         |
+   +0x1c8  adrp    x11, <page>                                    |
+   +0x1cc  str     q0, [sp, #224]                                 |
+   +0x1d0  ldr     q0, [x9, #3568]                                |
+                   // mlkem_poly_decompress_d5_const13            |
+  adrp18:                                                         |
+   +0x1d4  adrp    x9, <page>                                     |
+   +0x1d8  str     q0, [sp, #208]                                 |
+   +0x1dc  ldr     q0, [x10, #3584]                               |
+                   // mlkem_poly_decompress_d5_const14            |
+  adrp19:                                                         |
+   +0x1e0  adrp    x10, <page>                                    |
+   +0x1e4  str     q0, [sp, #192]                                 |
+   +0x1e8  ldr     q0, [x11, #3600]                               |
+                   // mlkem_poly_decompress_d5_const15            |
+  adrp20:                                                         |
+   +0x1ec  adrp    x11, <page>                                    |
+   +0x1f0  str     q0, [sp, #176]                                 |
+   +0x1f4  ldr     q0, [x9, #3616]                                |
+                   // mlkem_poly_decompress_d5_const16            |
+  adrp21:                                                         |
+   +0x1f8  adrp    x9, <page>                                     |
+   +0x1fc  str     q0, [sp, #160]                                 |
+   +0x200  ldr     q0, [x10, #3632]                               |
+                   // mlkem_poly_decompress_d5_const17            |
+  adrp22:                                                         |
+   +0x204  adrp    x10, <page>                                    |
+   +0x208  str     q0, [sp, #144]                                 |
+   +0x20c  ldr     q0, [x11, #3648]                               |
+                   // mlkem_poly_decompress_d5_const18            |
+  adrp23:                                                         |
+   +0x210  adrp    x11, <page>                                    |
+   +0x214  str     q0, [sp, #128]                                 |
+   +0x218  ldr     q0, [x9, #3664]                                |
+                   // mlkem_poly_decompress_d5_const19            |
+  adrp24:                                                         |
+   +0x21c  adrp    x9, <page>                                     |
+   +0x220  str     q0, [sp, #112]                                 |
+   +0x224  ldr     q0, [x10, #3680]                               |
+                   // mlkem_poly_decompress_d5_const20            |
+  adrp25:                                                         |
+   +0x228  adrp    x10, <page>                                    |
+   +0x22c  str     q0, [sp, #96]                                  |
+   +0x230  ldr     q0, [x11, #3696]                               |
+                   // mlkem_poly_decompress_d5_const21            |
+   +0x234  str     q0, [sp, #80]                                  |
+   +0x238  ldr     q0, [x9, #3712]                                |
+                   // mlkem_poly_decompress_d5_const22            |
+  adrp26:                                                         |
+   +0x23c  adrp    x9, <page>                                     |
+   +0x240  str     q0, [sp, #64]                                  |
+   +0x244  ldr     q0, [x10, #3728]                               |
+                   // mlkem_poly_decompress_d5_const23            |
+  adrp27:                                                         |
+   +0x248  adrp    x10, <page>                                    |
+   +0x24c  str     q0, [sp, #48]                                  |
+   +0x250  ldr     q0, [x9, #3744]                                |
+                   // mlkem_poly_decompress_d5_const24            |
+  adrp28:                                                         |
+   +0x254  adrp    x9, <page>                                     |
+   +0x258  str     q0, [sp, #32]                                  |
+   +0x25c  ldr     q0, [x10, #3760]                               |
+                   // mlkem_poly_decompress_d5_const25            |
+  adrp29:                                                         |
+   +0x260  adrp    x10, <page>                                    |
+   +0x264  str     q0, [sp, #16]                                  |
+   +0x268  ldr     q0, [x9, #3776]                                |
+                   // mlkem_poly_decompress_d5_const26            |
+  adrp30:                                                         |
+   +0x26c  adrp    x9, <page>                                     |
+   +0x270  str     q0, [sp]                                       |
+   +0x274  ldr     q0, [x10, #3792]                               |
+                   // mlkem_poly_decompress_d5_const27            |
+  adrp31:                                                         |
+   +0x278  adrp    x10, <page>                                    |
+   +0x27c  str     q0, [sp, #688]                                 |
+   +0x280  ldr     q0, [x9, #3808]                                |
+                   // mlkem_poly_decompress_d5_const28            |
+   +0x284  mov     w9, #0xd01                                     |
+   +0x288  str     q0, [sp, #672]                                 |
+   +0x28c  ldr     q0, [x10, #3824]                               |
+                   // mlkem_poly_decompress_d5_const29            |
+  adrp32:                                                         |
+   +0x290  adrp    x10, <page>                                    |
+   +0x294  dup     v13.8h, w9                                     |
+   +0x298  str     q0, [sp, #656]                                 |
+   +0x29c  ldr     q0, [x10, #3840]                               |
+                   // mlkem_poly_decompress_d5_const30            |
+   +0x2a0  str     q0, [sp, #640]                                 |
+  loop2:                                                          |
+   +0x2a4  add     x9, x1, x8                              <+     |
+   +0x2a8  ldr     q22, [sp, #368]                          |     |
+   +0x2ac  ldp     q16, q6, [sp, #384]                      |     |
+   +0x2b0  movi    v23.16b, #0x1f                           |     |
+   +0x2b4  add     x8, x8, #0x50                            |     |
+   +0x2b8  cmp     x8, #0xa0                                |     |
+   +0x2bc  ldp     q5, q2, [x9, #16]                        |     |
+   +0x2c0  ldp     q3, q1, [x9, #48]                        |     |
+   +0x2c4  tbl     v7.16b, {v2.16b-v3.16b}, v6.16b          |     |
+   +0x2c8  ldr     q4, [x9]                                 |     |
+   +0x2cc  ldr     q18, [sp, #288]                          |     |
+   +0x2d0  ldr     q20, [sp, #176]                          |     |
+   +0x2d4  tbl     v6.16b, {v4.16b-v5.16b}, v16.16b         |     |
+   +0x2d8  ldr     q16, [sp, #336]                          |     |
+   +0x2dc  tbl     v19.16b, {v2.16b-v3.16b}, v18.16b        |     |
+   +0x2e0  tbl     v21.16b, {v2.16b-v3.16b}, v20.16b        |     |
+   +0x2e4  tbl     v17.16b, {v2.16b-v3.16b}, v16.16b        |     |
+   +0x2e8  tbl     v0.16b, {v6.16b-v7.16b}, v22.16b         |     |
+   +0x2ec  ldr     q6, [sp, #320]                           |     |
+   +0x2f0  tbl     v16.16b, {v4.16b-v5.16b}, v6.16b         |     |
+   +0x2f4  ldr     q6, [sp, #224]                           |     |
+   +0x2f8  tbl     v7.16b, {v2.16b-v3.16b}, v6.16b          |     |
+   +0x2fc  ldr     q2, [sp, #352]                           |     |
+   +0x300  tbl     v2.16b, {v0.16b-v1.16b}, v2.16b          |     |
+   +0x304  tbl     v0.16b, {v16.16b-v17.16b}, v22.16b       |     |
+   +0x308  ldp     q22, q3, [sp, #256]                      |     |
+   +0x30c  tbl     v18.16b, {v4.16b-v5.16b}, v3.16b         |     |
+   +0x310  ldr     q3, [sp, #208]                           |     |
+   +0x314  tbl     v6.16b, {v4.16b-v5.16b}, v3.16b          |     |
+   +0x318  ldr     q3, [sp, #160]                           |     |
+   +0x31c  tbl     v20.16b, {v4.16b-v5.16b}, v3.16b         |     |
+   +0x320  ldr     q3, [sp, #304]                           |     |
+   +0x324  tbl     v4.16b, {v0.16b-v1.16b}, v3.16b          |     |
+   +0x328  and     v3.16b, v2.16b, v23.16b                  |     |
+   +0x32c  uxtl    v5.8h, v3.8b                             |     |
+   +0x330  tbl     v0.16b, {v18.16b-v19.16b}, v22.16b       |     |
+   +0x334  ldr     q19, [sp, #144]                          |     |
+   +0x338  uxtl2   v16.8h, v3.16b                           |     |
+   +0x33c  umull   v3.4s, v5.4h, v13.4h                     |     |
+   +0x340  umull2  v17.4s, v5.8h, v13.8h                    |     |
+   +0x344  ldr     q5, [sp, #240]                           |     |
+   +0x348  movi    v18.16b, #0x18                           |     |
+   +0x34c  tbl     v5.16b, {v0.16b-v1.16b}, v5.16b          |     |
+   +0x350  tbl     v0.16b, {v6.16b-v7.16b}, v22.16b         |     |
+   +0x354  shl     v6.16b, v4.16b, #3                       |     |
+   +0x358  ushr    v7.16b, v4.16b, #2                       |     |
+   +0x35c  and     v6.16b, v6.16b, v18.16b                  |     |
+   +0x360  and     v18.16b, v7.16b, v23.16b                 |     |
+   +0x364  ldr     q7, [sp, #192]                           |     |
+   +0x368  usra    v6.16b, v2.16b, #5                       |     |
+   +0x36c  movi    v2.16b, #0x1e                            |     |
+   +0x370  tbl     v7.16b, {v0.16b-v1.16b}, v7.16b          |     |
+   +0x374  tbl     v0.16b, {v20.16b-v21.16b}, v19.16b       |     |
+   +0x378  add     v19.16b, v5.16b, v5.16b                  |     |
+   +0x37c  umull   v22.4s, v16.4h, v13.4h                   |     |
+   +0x380  and     v2.16b, v19.16b, v2.16b                  |     |
+   +0x384  ldr     q19, [sp, #128]                          |     |
+   +0x388  usra    v2.16b, v4.16b, #7                       |     |
+   +0x38c  movi    v4.16b, #0x10                            |     |
+   +0x390  tbl     v19.16b, {v0.16b-v1.16b}, v19.16b        |     |
+   +0x394  ushr    v1.16b, v7.16b, #1                       |     |
+   +0x398  shl     v0.16b, v7.16b, #4                       |     |
+   +0x39c  and     v20.16b, v1.16b, v23.16b                 |     |
+   +0x3a0  movi    v1.16b, #0x1c                            |     |
+   +0x3a4  and     v4.16b, v0.16b, v4.16b                   |     |
+   +0x3a8  shl     v0.16b, v19.16b, #2                      |     |
+   +0x3ac  usra    v4.16b, v5.16b, #4                       |     |
+   +0x3b0  ushr    v15.16b, v19.16b, #3                     |     |
+   +0x3b4  and     v5.16b, v0.16b, v1.16b                   |     |
+   +0x3b8  uxtl2   v1.8h, v6.16b                            |     |
+   +0x3bc  usra    v5.16b, v7.16b, #6                       |     |
+   +0x3c0  umull2  v7.4s, v1.8h, v13.8h                     |     |
+   +0x3c4  umull   v1.4s, v1.4h, v13.4h                     |     |
+   +0x3c8  uxtl    v6.8h, v6.8b                             |     |
+   +0x3cc  umull2  v0.4s, v16.8h, v13.8h                    |     |
+   +0x3d0  umull2  v25.4s, v6.8h, v13.8h                    |     |
+   +0x3d4  str     q1, [sp, #560]                           |     |
+   +0x3d8  umull   v1.4s, v6.4h, v13.4h                     |     |
+   +0x3dc  uxtl    v6.8h, v18.8b                            |     |
+   +0x3e0  uxtl2   v16.8h, v18.16b                          |     |
+   +0x3e4  umull   v21.4s, v6.4h, v13.4h                    |     |
+   +0x3e8  umull2  v23.4s, v6.8h, v13.8h                    |     |
+   +0x3ec  uxtl2   v6.8h, v2.16b                            |     |
+   +0x3f0  uxtl    v18.8h, v2.8b                            |     |
+   +0x3f4  umull2  v2.4s, v6.8h, v13.8h                     |     |
+   +0x3f8  umull   v24.4s, v16.4h, v13.4h                   |     |
+   +0x3fc  umull2  v26.4s, v16.8h, v13.8h                   |     |
+   +0x400  umull2  v16.4s, v18.8h, v13.8h                   |     |
+   +0x404  stp     q2, q7, [sp, #608]                       |     |
+   +0x408  umull   v2.4s, v6.4h, v13.4h                     |     |
+   +0x40c  uxtl    v6.8h, v4.8b                             |     |
+   +0x410  uxtl2   v4.8h, v4.16b                            |     |
+   +0x414  umull   v28.4s, v18.4h, v13.4h                   |     |
+   +0x418  umull   v18.4s, v4.4h, v13.4h                    |     |
+   +0x41c  str     q2, [sp, #544]                           |     |
+   +0x420  umull2  v8.4s, v4.8h, v13.8h                     |     |
+   +0x424  uxtl2   v4.8h, v20.16b                           |     |
+   +0x428  umull   v30.4s, v6.4h, v13.4h                    |     |
+   +0x42c  umull2  v2.4s, v4.8h, v13.8h                     |     |
+   +0x430  uxtl    v20.8h, v20.8b                           |     |
+   +0x434  rshrn   v18.4h, v18.4s, #5                       |     |
+   +0x438  umull2  v27.4s, v20.8h, v13.8h                   |     |
+   +0x43c  rshrn   v9.4h, v30.4s, #5                        |     |
+   +0x440  str     q2, [sp, #576]                           |     |
+   +0x444  umull   v2.4s, v4.4h, v13.4h                     |     |
+   +0x448  uxtl    v4.8h, v5.8b                             |     |
+   +0x44c  uxtl2   v5.8h, v5.16b                            |     |
+   +0x450  umull   v12.4s, v4.4h, v13.4h                    |     |
+   +0x454  umull   v14.4s, v5.4h, v13.4h                    |     |
+   +0x458  str     q2, [sp, #512]                           |     |
+   +0x45c  umull2  v11.4s, v4.8h, v13.8h                    |     |
+   +0x460  umull2  v31.4s, v6.8h, v13.8h                    |     |
+   +0x464  rshrn   v6.4h, v3.4s, #5                         |     |
+   +0x468  rshrn   v19.4h, v14.4s, #5                       |     |
+   +0x46c  rshrn   v10.4h, v12.4s, #5                       |     |
+   +0x470  umull   v14.4s, v20.4h, v13.4h                   |     |
+   +0x474  rshrn   v7.4h, v21.4s, #5                        |     |
+   +0x478  uxtl2   v20.8h, v15.16b                          |     |
+   +0x47c  uxtl    v2.8h, v15.8b                            |     |
+   +0x480  umull2  v4.4s, v20.8h, v13.8h                    |     |
+   +0x484  str     q2, [sp, #592]                           |     |
+   +0x488  umull2  v30.4s, v2.8h, v13.8h                    |     |
+   +0x48c  rshrn   v2.4h, v17.4s, #5                        |     |
+   +0x490  umull   v15.4s, v20.4h, v13.4h                   |     |
+   +0x494  rshrn2  v6.8h, v1.4s, #5                         |     |
+   +0x498  rshrn   v20.4h, v0.4s, #5                        |     |
+   +0x49c  umull2  v5.4s, v5.8h, v13.8h                     |     |
+   +0x4a0  rshrn   v21.4h, v26.4s, #5                       |     |
+   +0x4a4  rshrn2  v10.8h, v11.4s, #5                       |     |
+   +0x4a8  rshrn   v3.4h, v23.4s, #5                        |     |
+   +0x4ac  rshrn2  v7.8h, v28.4s, #5                        |     |
+   +0x4b0  rshrn   v4.4h, v4.4s, #5                         |     |
+   +0x4b4  ldp     q26, q28, [sp, #96]                      |     |
+   +0x4b8  rshrn2  v9.8h, v14.4s, #5                        |     |
+   +0x4bc  rshrn   v0.4h, v31.4s, #5                        |     |
+   +0x4c0  rshrn2  v2.8h, v25.4s, #5                        |     |
+   +0x4c4  str     q4, [sp, #528]                           |     |
+   +0x4c8  rshrn2  v19.8h, v5.4s, #5                        |     |
+   +0x4cc  tbl     v5.16b, {v9.16b-v10.16b}, v26.16b        |     |
+   +0x4d0  rshrn2  v0.8h, v27.4s, #5                        |     |
+   +0x4d4  ldr     q25, [sp, #64]                           |     |
+   +0x4d8  rshrn   v30.4h, v30.4s, #5                       |     |
+   +0x4dc  ldr     q31, [sp, #32]                           |     |
+   +0x4e0  rshrn   v17.4h, v15.4s, #5                       |     |
+   +0x4e4  mov     v1.16b, v10.16b                          |     |
+   +0x4e8  ldr     q14, [sp]                                |     |
+   +0x4ec  tbl     v4.16b, {v9.16b-v10.16b}, v25.16b        |     |
+   +0x4f0  rshrn2  v3.8h, v16.4s, #5                        |     |
+   +0x4f4  rshrn   v11.4h, v22.4s, #5                       |     |
+   +0x4f8  ldr     q22, [sp, #80]                           |     |
+   +0x4fc  rshrn   v12.4h, v24.4s, #5                       |     |
+   +0x500  rshrn   v23.4h, v8.4s, #5                        |     |
+   +0x504  stp     q4, q5, [sp, #480]                       |     |
+   +0x508  ldr     q4, [sp, #688]                           |     |
+   +0x50c  tbl     v8.16b, {v2.16b-v3.16b}, v22.16b         |     |
+   +0x510  tbl     v5.16b, {v0.16b-v1.16b}, v4.16b          |     |
+   +0x514  tbl     v4.16b, {v9.16b-v10.16b}, v31.16b        |     |
+   +0x518  mov     v5.h[7], v30.h[0]                        |     |
+   +0x51c  str     q4, [sp, #464]                           |     |
+   +0x520  tbl     v4.16b, {v9.16b-v10.16b}, v14.16b        |     |
+   +0x524  str     q4, [sp, #448]                           |     |
+   +0x528  tbl     v4.16b, {v2.16b-v3.16b}, v28.16b         |     |
+   +0x52c  stp     q5, q4, [sp, #416]                       |     |
+   +0x530  ldr     q4, [sp, #672]                           |     |
+   +0x534  ldr     q5, [sp, #48]                            |     |
+   +0x538  tbl     v15.16b, {v0.16b-v1.16b}, v4.16b         |     |
+   +0x53c  ldr     q4, [sp, #656]                           |     |
+   +0x540  tbl     v9.16b, {v2.16b-v3.16b}, v5.16b          |     |
+   +0x544  tbl     v10.16b, {v0.16b-v1.16b}, v4.16b         |     |
+   +0x548  ldr     q4, [sp, #640]                           |     |
+   +0x54c  mov     v15.h[7], v30.h[1]                       |     |
+   +0x550  tbl     v29.16b, {v0.16b-v1.16b}, v4.16b         |     |
+   +0x554  ldr     q0, [sp, #560]                           |     |
+   +0x558  ldr     q4, [sp, #16]                            |     |
+   +0x55c  mov     v10.h[7], v30.h[2]                       |     |
+   +0x560  rshrn2  v11.8h, v0.4s, #5                        |     |
+   +0x564  ldr     q0, [sp, #512]                           |     |
+   +0x568  tbl     v27.16b, {v2.16b-v3.16b}, v4.16b         |     |
+   +0x56c  mov     v29.h[7], v30.h[3]                       |     |
+   +0x570  rshrn2  v18.8h, v0.4s, #5                        |     |
+   +0x574  ldr     q0, [sp, #544]                           |     |
+   +0x578  mov     v8.d[1], v15.d[1]                        |     |
+   +0x57c  mov     v9.d[1], v10.d[1]                        |     |
+   +0x580  rshrn2  v12.8h, v0.4s, #5                        |     |
+   +0x584  ldr     q0, [sp, #624]                           |     |
+   +0x588  tbl     v16.16b, {v18.16b-v19.16b}, v26.16b      |     |
+   +0x58c  tbl     v2.16b, {v18.16b-v19.16b}, v25.16b       |     |
+   +0x590  rshrn2  v20.8h, v0.4s, #5                        |     |
+   +0x594  ldr     q0, [sp, #608]                           |     |
+   +0x598  tbl     v25.16b, {v18.16b-v19.16b}, v31.16b      |     |
+   +0x59c  tbl     v30.16b, {v18.16b-v19.16b}, v14.16b      |     |
+   +0x5a0  rshrn2  v21.8h, v0.4s, #5                        |     |
+   +0x5a4  ldr     q0, [sp, #576]                           |     |
+   +0x5a8  tbl     v26.16b, {v11.16b-v12.16b}, v28.16b      |     |
+   +0x5ac  tbl     v3.16b, {v11.16b-v12.16b}, v22.16b       |     |
+   +0x5b0  rshrn2  v23.8h, v0.4s, #5                        |     |
+   +0x5b4  ldr     q0, [sp, #688]                           |     |
+   +0x5b8  mov     v24.16b, v19.16b                         |     |
+   +0x5bc  tbl     v1.16b, {v11.16b-v12.16b}, v5.16b        |     |
+   +0x5c0  tbl     v18.16b, {v23.16b-v24.16b}, v0.16b       |     |
+   +0x5c4  ldr     q0, [sp, #672]                           |     |
+   +0x5c8  tbl     v11.16b, {v11.16b-v12.16b}, v4.16b       |     |
+   +0x5cc  mov     v25.h[7], v17.h[2]                       |     |
+   +0x5d0  tbl     v19.16b, {v23.16b-v24.16b}, v0.16b       |     |
+   +0x5d4  ldr     q0, [sp, #656]                           |     |
+   +0x5d8  mov     v30.h[7], v17.h[3]                       |     |
+   +0x5dc  mov     v16.h[7], v17.h[0]                       |     |
+   +0x5e0  tbl     v12.16b, {v23.16b-v24.16b}, v0.16b       |     |
+   +0x5e4  ldr     q0, [sp, #640]                           |     |
+   +0x5e8  mov     v2.h[7], v17.h[1]                        |     |
+   +0x5ec  tbl     v17.16b, {v20.16b-v21.16b}, v28.16b      |     |
+   +0x5f0  tbl     v23.16b, {v23.16b-v24.16b}, v0.16b       |     |
+   +0x5f4  tbl     v24.16b, {v20.16b-v21.16b}, v22.16b      |     |
+   +0x5f8  tbl     v0.16b, {v20.16b-v21.16b}, v5.16b        |     |
+   +0x5fc  tbl     v20.16b, {v20.16b-v21.16b}, v4.16b       |     |
+   +0x600  ldr     q21, [sp, #528]                          |     |
+   +0x604  mov     v11.d[1], v30.d[1]                       |     |
+   +0x608  mov     v1.d[1], v25.d[1]                        |     |
+   +0x60c  mov     v23.h[7], v21.h[3]                       |     |
+   +0x610  mov     v12.h[7], v21.h[2]                       |     |
+   +0x614  mov     v26.d[1], v16.d[1]                       |     |
+   +0x618  stp     q1, q11, [x0, #160]                      |     |
+   +0x61c  ldp     q1, q16, [sp, #416]                      |     |
+   +0x620  mov     v20.d[1], v23.d[1]                       |     |
+   +0x624  mov     v0.d[1], v12.d[1]                        |     |
+   +0x628  mov     v3.d[1], v2.d[1]                         |     |
+   +0x62c  tbl     v2.16b, {v6.16b-v7.16b}, v22.16b         |     |
+   +0x630  tbl     v4.16b, {v6.16b-v7.16b}, v4.16b          |     |
+   +0x634  stp     q0, q20, [x0, #224]                      |     |
+   +0x638  ldr     q0, [sp, #592]                           |     |
+   +0x63c  mov     v16.d[1], v1.d[1]                        |     |
+   +0x640  stp     q26, q3, [x0, #128]                      |     |
+   +0x644  tbl     v1.16b, {v6.16b-v7.16b}, v28.16b         |     |
+   +0x648  umull   v0.4s, v0.4h, v13.4h                     |     |
+   +0x64c  tbl     v3.16b, {v6.16b-v7.16b}, v5.16b          |     |
+   +0x650  stp     q16, q8, [x0, #64]                       |     |
+   +0x654  ldp     q16, q7, [sp, #448]                      |     |
+   +0x658  rshrn   v0.4h, v0.4s, #5                         |     |
+   +0x65c  mov     v19.h[7], v21.h[1]                       |     |
+   +0x660  mov     v18.h[7], v21.h[0]                       |     |
+   +0x664  mov     v16.h[7], v0.h[3]                        |     |
+   +0x668  mov     v27.d[1], v29.d[1]                       |     |
+   +0x66c  ldp     q6, q5, [sp, #480]                       |     |
+   +0x670  mov     v7.h[7], v0.h[2]                         |     |
+   +0x674  mov     v24.d[1], v19.d[1]                       |     |
+   +0x678  mov     v17.d[1], v18.d[1]                       |     |
+   +0x67c  stp     q9, q27, [x0, #96]                       |     |
+   +0x680  mov     v6.h[7], v0.h[1]                         |     |
+   +0x684  mov     v4.d[1], v16.d[1]                        |     |
+   +0x688  mov     v5.h[7], v0.h[0]                         |     |
+   +0x68c  mov     v3.d[1], v7.d[1]                         |     |
+   +0x690  stp     q17, q24, [x0, #192]                     |     |
+   +0x694  mov     v2.d[1], v6.d[1]                         |     |
+   +0x698  mov     v1.d[1], v5.d[1]                         |     |
+   +0x69c  stp     q3, q4, [x0, #32]                        |     |
+  loop2_test:                                               |     |
+   +0x6a0  stp     q1, q2, [x0], #256                       |     |
+  loop2_back:                                               |     |
+   +0x6a4  b.ne    loop2                                   -+     |
+  join2: loop2_exit:                                              |
+   +0x6a8  add     sp, sp, #0x2c0                          <------+
    +0x6ac  ldp     d9, d8, [sp, #48]
    +0x6b0  ldp     d11, d10, [sp, #32]
    +0x6b4  ldp     d13, d12, [sp, #16]
@@ -9394,11 +9396,11 @@ install_layout (layout_labels [
     +0x34  adrp    x10, <page>                                  |
     +0x38  mvni    v0.4s, #0xd, lsl #8                          |
     +0x3c  ldr     d5, [x8, #400]                               |
-                   // mlkem_poly_mulcache_compute_const28       |
+                   // mlkem_poly_mulcache_compute_const29       |
   adrp5:                                                        |
     +0x40  adrp    x8, <page>                                   |
     +0x44  ldr     d6, [x9, #408]                               |
-                   // mlkem_poly_mulcache_compute_const29       |
+                   // mlkem_poly_mulcache_compute_const30       |
   adrp6:                                                        |
     +0x48  adrp    x9, <page>                                   |
     +0x4c  ldr     q7, [x11, #3904]                             |
@@ -9406,7 +9408,7 @@ install_layout (layout_labels [
   adrp7:                                                        |
     +0x50  adrp    x11, <page>                                  |
     +0x54  ldr     d16, [x8, #424]                              |
-                   // mlkem_poly_mulcache_compute_const31       |
+                   // mlkem_poly_mulcache_compute_const32       |
   adrp8:                                                        |
     +0x58  adrp    x8, <page>                                   |
     +0x5c  sxtl    v17.4s, v1.4h                                |
@@ -9428,7 +9430,7 @@ install_layout (layout_labels [
                    // mlkem_poly_mulcache_compute_const3        |
     +0x90  mul     v7.4s, v18.4s, v23.4s                        |
     +0x94  ldr     d16, [x8, #416]                              |
-                   // mlkem_poly_mulcache_compute_const30       |
+                   // mlkem_poly_mulcache_compute_const31       |
     +0x98  mul     v4.4s, v20.4s, v4.4s                         |
     +0x9c  mov     x8, x0                                       |
     +0xa0  mul     v2.4s, v21.4s, v2.4s                         |
@@ -9444,7 +9446,7 @@ install_layout (layout_labels [
     +0xc4  mul     v4.4s, v4.4s, v0.4s                          |
     +0xc8  addhn   v17.4h, v3.4s, v6.4s                         |
     +0xcc  ldr     d6, [x10, #440]                              |
-                   // mlkem_poly_mulcache_compute_const33       |
+                   // mlkem_poly_mulcache_compute_const34       |
     +0xd0  sshr    v2.4s, v2.4s, #16                            |
   adrp11:                                                       |
     +0xd4  adrp    x10, <page>                                  |
@@ -9462,11 +9464,11 @@ install_layout (layout_labels [
   adrp13:                                                       |
     +0xfc  adrp    x9, <page>                                   |
    +0x100  ldr     d5, [x9, #432]                               |
-                   // mlkem_poly_mulcache_compute_const32       |
+                   // mlkem_poly_mulcache_compute_const33       |
   adrp14:                                                       |
    +0x104  adrp    x9, <page>                                   |
    +0x108  ldr     d17, [x10, #456]                             |
-                   // mlkem_poly_mulcache_compute_const35       |
+                   // mlkem_poly_mulcache_compute_const36       |
   adrp15:                                                       |
    +0x10c  adrp    x10, <page>                                  |
    +0x110  ldr     q18, [x11, #3984]                            |
@@ -9493,7 +9495,7 @@ install_layout (layout_labels [
    +0x150  mul     v2.4s, v22.4s, v2.4s                         |
    +0x154  mul     v7.4s, v23.4s, v18.4s                        |
    +0x158  ldr     d16, [x9, #448]                              |
-                   // mlkem_poly_mulcache_compute_const34       |
+                   // mlkem_poly_mulcache_compute_const35       |
    +0x15c  sshr    v3.4s, v3.4s, #16                            |
    +0x160  add     x9, x1, #0x82                                |
    +0x164  sshr    v4.4s, v4.4s, #16                            |
@@ -9520,11 +9522,11 @@ install_layout (layout_labels [
   adrp20:                                                       |
    +0x1ac  adrp    x9, <page>                                   |
    +0x1b0  ldr     d5, [x8, #464]                               |
-                   // mlkem_poly_mulcache_compute_const36       |
+                   // mlkem_poly_mulcache_compute_const37       |
   adrp21:                                                       |
    +0x1b4  adrp    x8, <page>                                   |
    +0x1b8  ldr     d6, [x9, #472]                               |
-                   // mlkem_poly_mulcache_compute_const37       |
+                   // mlkem_poly_mulcache_compute_const38       |
   adrp22:                                                       |
    +0x1bc  adrp    x9, <page>                                   |
    +0x1c0  ldr     q18, [x10, #4048]                            |
@@ -9536,7 +9538,7 @@ install_layout (layout_labels [
   adrp24:                                                       |
    +0x1cc  adrp    x8, <page>                                   |
    +0x1d0  ldr     d17, [x9, #488]                              |
-                   // mlkem_poly_mulcache_compute_const39       |
+                   // mlkem_poly_mulcache_compute_const40       |
    +0x1d4  add     x9, x1, #0xc2                                |
    +0x1d8  sxtl    v19.4s, v1.4h                                |
    +0x1dc  sxtl2   v20.4s, v1.8h                                |
@@ -9555,7 +9557,7 @@ install_layout (layout_labels [
    +0x208  mul     v2.4s, v22.4s, v2.4s                         |
    +0x20c  mul     v7.4s, v23.4s, v18.4s                        |
    +0x210  ldr     d16, [x8, #480]                              |
-                   // mlkem_poly_mulcache_compute_const38       |
+                   // mlkem_poly_mulcache_compute_const39       |
    +0x214  sshr    v3.4s, v3.4s, #16                            |
    +0x218  add     x8, x0, #0x40                                |
    +0x21c  sshr    v4.4s, v4.4s, #16                            |
@@ -9582,22 +9584,23 @@ install_layout (layout_labels [
   adrp28:                                                       |
    +0x264  adrp    x9, <page>                                   |
    +0x268  ldr     d5, [x8, #496]                               |
-                   // mlkem_poly_mulcache_compute_const40       |
+                   // mlkem_poly_mulcache_compute_const41       |
   adrp29:                                                       |
    +0x26c  adrp    x8, <page>                                   |
    +0x270  ldr     d6, [x9, #504]                               |
-                   // mlkem_poly_mulcache_compute_const41       |
+                   // mlkem_poly_mulcache_compute_const42       |
   adrp30:                                                       |
    +0x274  adrp    x9, <page>                                   |
    +0x278  ldr     q18, [x10, #16]                              |
-                   // mlkem_poly_mulcache_compute_const14       |
+                   // mlkem_poly_mulcache_compute_const15       |
   adrp31:                                                       |
    +0x27c  adrp    x10, <page>                                  |
    +0x280  ldr     q16, [x8]                                    |
+                   // mlkem_poly_mulcache_compute_const14       |
   adrp32:                                                       |
    +0x284  adrp    x8, <page>                                   |
    +0x288  ldr     d17, [x9, #520]                              |
-                   // mlkem_poly_mulcache_compute_const43       |
+                   // mlkem_poly_mulcache_compute_const44       |
    +0x28c  add     x9, x1, #0x102                               |
    +0x290  sxtl    v19.4s, v1.4h                                |
    +0x294  sxtl2   v20.4s, v1.8h                                |
@@ -9608,7 +9611,7 @@ install_layout (layout_labels [
    +0x2a8  smull   v17.4s, v3.4h, v17.4h                        |
    +0x2ac  ext     v1.16b, v3.16b, v3.16b, #8                   |
    +0x2b0  ldr     q2, [x8, #32]                                |
-                   // mlkem_poly_mulcache_compute_const15       |
+                   // mlkem_poly_mulcache_compute_const16       |
    +0x2b4  mul     v3.4s, v19.4s, v16.4s                        |
   adrp33:                                                       |
    +0x2b8  adrp    x8, <page>                                   |
@@ -9616,7 +9619,7 @@ install_layout (layout_labels [
    +0x2c0  mul     v2.4s, v22.4s, v2.4s                         |
    +0x2c4  mul     v7.4s, v23.4s, v18.4s                        |
    +0x2c8  ldr     d16, [x8, #512]                              |
-                   // mlkem_poly_mulcache_compute_const42       |
+                   // mlkem_poly_mulcache_compute_const43       |
    +0x2cc  sshr    v3.4s, v3.4s, #16                            |
    +0x2d0  add     x8, x0, #0x60                                |
    +0x2d4  sshr    v4.4s, v4.4s, #16                            |
@@ -9630,7 +9633,7 @@ install_layout (layout_labels [
    +0x2f4  smull   v1.4s, v1.4h, v16.4h                         |
    +0x2f8  mul     v3.4s, v7.4s, v0.4s                          |
    +0x2fc  ldr     q7, [x10, #48]                               |
-                   // mlkem_poly_mulcache_compute_const16       |
+                   // mlkem_poly_mulcache_compute_const17       |
    +0x300  addhn2  v18.8h, v4.4s, v5.4s                         |
   adrp34:                                                       |
    +0x304  adrp    x10, <page>                                  |
@@ -9643,23 +9646,23 @@ install_layout (layout_labels [
   adrp36:                                                       |
    +0x31c  adrp    x9, <page>                                   |
    +0x320  ldr     d5, [x8, #528]                               |
-                   // mlkem_poly_mulcache_compute_const44       |
+                   // mlkem_poly_mulcache_compute_const45       |
   adrp37:                                                       |
    +0x324  adrp    x8, <page>                                   |
    +0x328  ldr     d6, [x9, #536]                               |
-                   // mlkem_poly_mulcache_compute_const45       |
+                   // mlkem_poly_mulcache_compute_const46       |
   adrp38:                                                       |
    +0x32c  adrp    x9, <page>                                   |
    +0x330  ldr     q18, [x10, #80]                              |
-                   // mlkem_poly_mulcache_compute_const18       |
+                   // mlkem_poly_mulcache_compute_const19       |
   adrp39:                                                       |
    +0x334  adrp    x10, <page>                                  |
    +0x338  ldr     q16, [x8, #64]                               |
-                   // mlkem_poly_mulcache_compute_const17       |
+                   // mlkem_poly_mulcache_compute_const18       |
   adrp40:                                                       |
    +0x33c  adrp    x8, <page>                                   |
    +0x340  ldr     d17, [x9, #552]                              |
-                   // mlkem_poly_mulcache_compute_const47       |
+                   // mlkem_poly_mulcache_compute_const48       |
    +0x344  add     x9, x1, #0x142                               |
    +0x348  sxtl    v19.4s, v1.4h                                |
    +0x34c  sxtl2   v20.4s, v1.8h                                |
@@ -9670,7 +9673,7 @@ install_layout (layout_labels [
    +0x360  smull   v17.4s, v3.4h, v17.4h                        |
    +0x364  ext     v1.16b, v3.16b, v3.16b, #8                   |
    +0x368  ldr     q2, [x8, #96]                                |
-                   // mlkem_poly_mulcache_compute_const19       |
+                   // mlkem_poly_mulcache_compute_const20       |
    +0x36c  mul     v3.4s, v19.4s, v16.4s                        |
   adrp41:                                                       |
    +0x370  adrp    x8, <page>                                   |
@@ -9678,7 +9681,7 @@ install_layout (layout_labels [
    +0x378  mul     v2.4s, v22.4s, v2.4s                         |
    +0x37c  mul     v7.4s, v23.4s, v18.4s                        |
    +0x380  ldr     d16, [x8, #544]                              |
-                   // mlkem_poly_mulcache_compute_const46       |
+                   // mlkem_poly_mulcache_compute_const47       |
    +0x384  sshr    v3.4s, v3.4s, #16                            |
    +0x388  add     x8, x0, #0x80                                |
    +0x38c  sshr    v4.4s, v4.4s, #16                            |
@@ -9692,7 +9695,7 @@ install_layout (layout_labels [
    +0x3ac  smull   v1.4s, v1.4h, v16.4h                         |
    +0x3b0  mul     v3.4s, v7.4s, v0.4s                          |
    +0x3b4  ldr     q7, [x10, #112]                              |
-                   // mlkem_poly_mulcache_compute_const20       |
+                   // mlkem_poly_mulcache_compute_const21       |
    +0x3b8  addhn2  v18.8h, v4.4s, v5.4s                         |
   adrp42:                                                       |
    +0x3bc  adrp    x10, <page>                                  |
@@ -9705,19 +9708,19 @@ install_layout (layout_labels [
   adrp44:                                                       |
    +0x3d4  adrp    x9, <page>                                   |
    +0x3d8  ldr     d5, [x8, #560]                               |
-                   // mlkem_poly_mulcache_compute_const48       |
+                   // mlkem_poly_mulcache_compute_const49       |
   adrp45:                                                       |
    +0x3dc  adrp    x8, <page>                                   |
    +0x3e0  ldr     d6, [x9, #568]                               |
-                   // mlkem_poly_mulcache_compute_const49       |
+                   // mlkem_poly_mulcache_compute_const50       |
   adrp46:                                                       |
    +0x3e4  adrp    x9, <page>                                   |
    +0x3e8  ldr     q16, [x8, #128]                              |
-                   // mlkem_poly_mulcache_compute_const21       |
+                   // mlkem_poly_mulcache_compute_const22       |
   adrp47:                                                       |
    +0x3ec  adrp    x8, <page>                                   |
    +0x3f0  ldr     d17, [x9, #584]                              |
-                   // mlkem_poly_mulcache_compute_const51       |
+                   // mlkem_poly_mulcache_compute_const52       |
    +0x3f4  add     x9, x1, #0x182                               |
    +0x3f8  sxtl    v18.4s, v1.4h                                |
    +0x3fc  sxtl2   v19.4s, v1.8h                                |
@@ -9728,10 +9731,10 @@ install_layout (layout_labels [
    +0x410  smull   v17.4s, v3.4h, v17.4h                        |
    +0x414  ext     v1.16b, v3.16b, v3.16b, #8                   |
    +0x418  ldr     q4, [x8, #160]                               |
-                   // mlkem_poly_mulcache_compute_const23       |
+                   // mlkem_poly_mulcache_compute_const24       |
    +0x41c  mul     v3.4s, v18.4s, v16.4s                        |
    +0x420  ldr     q2, [x10, #144]                              |
-                   // mlkem_poly_mulcache_compute_const22       |
+                   // mlkem_poly_mulcache_compute_const23       |
    +0x424  mul     v7.4s, v19.4s, v7.4s                         |
   adrp48:                                                       |
    +0x428  adrp    x8, <page>                                   |
@@ -9741,7 +9744,7 @@ install_layout (layout_labels [
    +0x434  mul     v2.4s, v22.4s, v2.4s                         |
    +0x438  sshr    v3.4s, v3.4s, #16                            |
    +0x43c  ldr     d16, [x8, #576]                              |
-                   // mlkem_poly_mulcache_compute_const50       |
+                   // mlkem_poly_mulcache_compute_const51       |
    +0x440  sshr    v7.4s, v7.4s, #16                            |
    +0x444  add     x8, x0, #0xa0                                |
    +0x448  mul     v3.4s, v3.4s, v0.4s                          |
@@ -9755,7 +9758,7 @@ install_layout (layout_labels [
    +0x468  mul     v2.4s, v2.4s, v0.4s                          |
    +0x46c  addhn2  v18.8h, v7.4s, v5.4s                         |
    +0x470  ldr     d7, [x10, #616]                              |
-                   // mlkem_poly_mulcache_compute_const55       |
+                   // mlkem_poly_mulcache_compute_const56       |
    +0x474  addhn   v19.4h, v4.4s, v17.4s                        |
    +0x478  addhn2  v19.8h, v2.4s, v1.4s                         |
    +0x47c  st2     {v18.8h-v19.8h}, [x8]                        |
@@ -9765,11 +9768,11 @@ install_layout (layout_labels [
   adrp51:                                                       |
    +0x488  adrp    x9, <page>                                   |
    +0x48c  ldr     d5, [x8, #600]                               |
-                   // mlkem_poly_mulcache_compute_const53       |
+                   // mlkem_poly_mulcache_compute_const54       |
   adrp52:                                                       |
    +0x490  adrp    x8, <page>                                   |
    +0x494  ldr     q6, [x9, #192]                               |
-                   // mlkem_poly_mulcache_compute_const25       |
+                   // mlkem_poly_mulcache_compute_const26       |
   adrp53:                                                       |
    +0x498  adrp    x9, <page>                                   |
    +0x49c  sxtl    v16.4s, v1.4h                                |
@@ -9781,28 +9784,28 @@ install_layout (layout_labels [
    +0x4b4  smull   v7.4s, v3.4h, v7.4h                          |
    +0x4b8  ext     v1.16b, v3.16b, v3.16b, #8                   |
    +0x4bc  ldr     q2, [x8, #176]                               |
-                   // mlkem_poly_mulcache_compute_const24       |
+                   // mlkem_poly_mulcache_compute_const25       |
    +0x4c0  mul     v3.4s, v16.4s, v6.4s                         |
   adrp54:                                                       |
    +0x4c4  adrp    x8, <page>                                   |
    +0x4c8  ldr     q4, [x9, #224]                               |
-                   // mlkem_poly_mulcache_compute_const27       |
+                   // mlkem_poly_mulcache_compute_const28       |
   adrp55:                                                       |
    +0x4cc  adrp    x9, <page>                                   |
    +0x4d0  mul     v2.4s, v17.4s, v2.4s                         |
    +0x4d4  ldr     q6, [x8, #208]                               |
-                   // mlkem_poly_mulcache_compute_const26       |
+                   // mlkem_poly_mulcache_compute_const27       |
   adrp56:                                                       |
    +0x4d8  adrp    x8, <page>                                   |
    +0x4dc  mul     v4.4s, v19.4s, v4.4s                         |
    +0x4e0  sshr    v3.4s, v3.4s, #16                            |
    +0x4e4  ldr     d16, [x9, #592]                              |
-                   // mlkem_poly_mulcache_compute_const52       |
+                   // mlkem_poly_mulcache_compute_const53       |
    +0x4e8  mul     v3.4s, v3.4s, v0.4s                          |
    +0x4ec  sshr    v2.4s, v2.4s, #16                            |
    +0x4f0  mul     v6.4s, v20.4s, v6.4s                         |
    +0x4f4  ldr     d17, [x8, #608]                              |
-                   // mlkem_poly_mulcache_compute_const54       |
+                   // mlkem_poly_mulcache_compute_const55       |
    +0x4f8  sshr    v4.4s, v4.4s, #16                            |
    +0x4fc  add     x8, x0, #0xc0                                |
    +0x500  smull   v16.4s, v18.4h, v16.4h                       |
@@ -9843,6 +9846,7 @@ install_layout (layout_labels [
    +0x57c  lsr     w15, w15, #16                            |
    +0x580  sturh   w15, [x11, #-2]                          |
    +0x584  ldrsh   w15, [x10]                               |
+                   // mlkem_poly_mulcache_compute_const14   |
    +0x588  add     x10, x10, #0x8                           |
    +0x58c  mul     w14, w15, w14                            |
    +0x590  mul     w15, w14, w8                             |
@@ -11294,170 +11298,171 @@ install_layout (layout_labels [
 
      +0x0  add     x8, x1, #0x80
      +0x4  cmp     x8, x0
-     +0x8  b.ls    join1                                -----+
-     +0xc  add     x8, x0, #0x200                            |
-    +0x10  cmp     x8, x1                                    |
-    +0x14  b.ls    join1                                ---+ |
-  adrp1:                                                   | |
-    +0x18  adrp    x9, <page>                              | |
-  adrp2:                                                   | |
-    +0x1c  adrp    x10, <page>                             | |
-  adrp3:                                                   | |
-    +0x20  adrp    x11, <page>                             | |
-  adrp4:                                                   | |
-    +0x24  adrp    x12, <page>                             | |
-    +0x28  movi    v2.4s, #0x3                             | |
-    +0x2c  mov     x8, xzr                                 | |
-    +0x30  ldr     d0, [x9, #624]                          | |
-                   // mlkem_poly_cbd2_const11              | |
-    +0x34  mov     w9, #0x55555555                         | |
-    +0x38  ldr     q1, [x10, #304]                         | |
-                   // mlkem_poly_cbd2_const9               | |
-    +0x3c  add     x10, x0, #0x8                           | |
-    +0x40  ldr     d3, [x11, #632]                         | |
-                   // mlkem_poly_cbd2_const12              | |
-    +0x44  ldr     q4, [x12, #320]                         | |
-                   // mlkem_poly_cbd2_const10              | |
-  loop1:                                                   | |
-    +0x48  ldr     w11, [x1, x8]                        <+ | |
-    +0x4c  add     x8, x8, #0x4                          | | |
-    +0x50  cmp     x8, #0x80                             | | |
-    +0x54  and     w12, w11, w9                          | | |
-    +0x58  and     w11, w9, w11, lsr #1                  | | |
-    +0x5c  add     w11, w11, w12                         | | |
-    +0x60  lsr     w12, w11, #26                         | | |
-    +0x64  dup     v5.4s, w11                            | | |
-    +0x68  fmov    s16, w11                              | | |
-    +0x6c  ushl    v6.2s, v5.2s, v3.2s                   | | |
-    +0x70  ushl    v17.2s, v5.2s, v0.2s                  | | |
-    +0x74  mov     v6.s[2], w12                          | | |
-    +0x78  lsr     w12, w11, #4                          | | |
-    +0x7c  mov     v16.s[1], w12                         | | |
-    +0x80  and     v7.16b, v6.16b, v2.16b                | | |
-    +0x84  mov     v6.s[3], w11                          | | |
-    +0x88  mov     v16.d[1], v17.d[0]                    | | |
-    +0x8c  ushr    v6.4s, v6.4s, #30                     | | |
-    +0x90  mov     v7.s[3], v6.s[3]                      | | |
-    +0x94  ushl    v6.4s, v5.4s, v1.4s                   | | |
-    +0x98  ushl    v5.4s, v5.4s, v4.4s                   | | |
-    +0x9c  and     v6.16b, v6.16b, v2.16b                | | |
-    +0xa0  and     v16.16b, v16.16b, v2.16b              | | |
-    +0xa4  and     v5.16b, v5.16b, v2.16b                | | |
-    +0xa8  sub     v6.4s, v16.4s, v6.4s                  | | |
-    +0xac  sub     v5.4s, v5.4s, v7.4s                   | | |
-    +0xb0  xtn     v6.4h, v6.4s                          | | |
-    +0xb4  xtn     v5.4h, v5.4s                          | | |
-    +0xb8  stur    d6, [x10, #-8]                        | | |
-  loop1_test:                                            | | |
-    +0xbc  str     d5, [x10], #16                        | | |
-  loop1_back:                                            | | |
-    +0xc0  b.ne    loop1                                -+ | |
-  loop1_exit:                                              | |
-    +0xc4  b       join2                                -------+
-  join1: adrp5:                                            | | |
-    +0xc8  adrp    x9, <page>                           <--+-+ |
-  adrp6:                                                       |
-    +0xcc  adrp    x10, <page>                                 |
-  adrp7:                                                       |
-    +0xd0  adrp    x11, <page>                                 |
-    +0xd4  mov     x8, xzr                                     |
-    +0xd8  movi    v7.16b, #0x55                               |
-    +0xdc  ldr     q0, [x9, #240]                              |
-                   // mlkem_poly_cbd2_const5                   |
-  adrp8:                                                       |
-    +0xe0  adrp    x9, <page>                                  |
-    +0xe4  ldr     q1, [x10, #3664]                            |
-                   // mlkem_poly_decompress_d5_const19         |
-  adrp9:                                                       |
-    +0xe8  adrp    x10, <page>                                 |
-    +0xec  ldr     q2, [x11, #256]                             |
-                   // mlkem_poly_cbd2_const6                   |
-  adrp10:                                                      |
-    +0xf0  adrp    x11, <page>                                 |
-    +0xf4  ldr     q3, [x9, #3696]                             |
-                   // mlkem_poly_decompress_d5_const21         |
-  adrp11:                                                      |
-    +0xf8  adrp    x9, <page>                                  |
-    +0xfc  movi    v16.4s, #0x3                                |
-   +0x100  ldr     q4, [x10, #272]                             |
-                   // mlkem_poly_cbd2_const7                   |
-   +0x104  ldr     q5, [x11, #3728]                            |
-                   // mlkem_poly_decompress_d5_const23         |
-   +0x108  ldr     q6, [x9, #288]                              |
-                   // mlkem_poly_cbd2_const8                   |
-  adrp12:                                                      |
-   +0x10c  adrp    x9, <page>                                  |
-   +0x110  ldr     q17, [x9, #3760]                            |
-                   // mlkem_poly_decompress_d5_const25         |
-  loop2:                                                       |
-   +0x114  ldr     q18, [x1, x8]                        <+     |
-   +0x118  add     x8, x8, #0x10                         |     |
-   +0x11c  cmp     x8, #0x80                             |     |
-   +0x120  ushr    v19.4s, v18.4s, #1                    |     |
-   +0x124  and     v18.16b, v18.16b, v7.16b              |     |
-   +0x128  and     v19.16b, v19.16b, v7.16b              |     |
-   +0x12c  add     v18.4s, v19.4s, v18.4s                |     |
-   +0x130  ushr    v20.4s, v18.4s, #2                    |     |
-   +0x134  ushr    v21.4s, v18.4s, #4                    |     |
-   +0x138  ushr    v22.4s, v18.4s, #6                    |     |
-   +0x13c  ushr    v23.4s, v18.4s, #8                    |     |
-   +0x140  ushr    v24.4s, v18.4s, #10                   |     |
-   +0x144  ushr    v25.4s, v18.4s, #26                   |     |
-   +0x148  and     v19.16b, v18.16b, v16.16b             |     |
-   +0x14c  ushr    v26.4s, v18.4s, #30                   |     |
-   +0x150  and     v20.16b, v20.16b, v16.16b             |     |
-   +0x154  and     v21.16b, v21.16b, v16.16b             |     |
-   +0x158  and     v22.16b, v22.16b, v16.16b             |     |
-   +0x15c  and     v23.16b, v23.16b, v16.16b             |     |
-   +0x160  sub     v19.4s, v19.4s, v20.4s                |     |
-   +0x164  sub     v20.4s, v21.4s, v22.4s                |     |
-   +0x168  and     v21.16b, v24.16b, v16.16b             |     |
-   +0x16c  sub     v21.4s, v23.4s, v21.4s                |     |
-   +0x170  ushr    v22.4s, v18.4s, #16                   |     |
-   +0x174  ushr    v23.4s, v18.4s, #18                   |     |
-   +0x178  ushr    v24.4s, v18.4s, #22                   |     |
-   +0x17c  and     v22.16b, v22.16b, v16.16b             |     |
-   +0x180  ushr    v27.4s, v18.4s, #12                   |     |
-   +0x184  and     v23.16b, v23.16b, v16.16b             |     |
-   +0x188  sub     v22.4s, v22.4s, v23.4s                |     |
-   +0x18c  ushr    v23.4s, v18.4s, #20                   |     |
-   +0x190  and     v24.16b, v24.16b, v16.16b             |     |
-   +0x194  and     v23.16b, v23.16b, v16.16b             |     |
-   +0x198  sub     v23.4s, v23.4s, v24.4s                |     |
-   +0x19c  ushr    v24.4s, v18.4s, #24                   |     |
-   +0x1a0  bic     v25.4s, #0x3c                         |     |
-   +0x1a4  bic     v24.4s, #0xfc                         |     |
-   +0x1a8  sub     v24.4s, v24.4s, v25.4s                |     |
-   +0x1ac  ushr    v25.4s, v18.4s, #28                   |     |
-   +0x1b0  ushr    v18.4s, v18.4s, #14                   |     |
-   +0x1b4  bic     v25.4s, #0xc                          |     |
-   +0x1b8  sub     v25.4s, v25.4s, v26.4s                |     |
-   +0x1bc  and     v26.16b, v27.16b, v16.16b             |     |
-   +0x1c0  and     v18.16b, v18.16b, v16.16b             |     |
-   +0x1c4  sub     v18.4s, v26.4s, v18.4s                |     |
-   +0x1c8  uzp1    v22.8h, v22.8h, v23.8h                |     |
-   +0x1cc  uzp1    v19.8h, v19.8h, v20.8h                |     |
-   +0x1d0  uzp1    v23.8h, v24.8h, v25.8h                |     |
-   +0x1d4  uzp1    v20.8h, v21.8h, v18.8h                |     |
-   +0x1d8  tbl     v18.16b, {v22.16b-v23.16b}, v0.16b    |     |
-   +0x1dc  tbl     v21.16b, {v22.16b-v23.16b}, v2.16b    |     |
-   +0x1e0  tbl     v24.16b, {v22.16b-v23.16b}, v4.16b    |     |
-   +0x1e4  tbl     v22.16b, {v22.16b-v23.16b}, v6.16b    |     |
-   +0x1e8  tbl     v23.16b, {v19.16b-v20.16b}, v17.16b   |     |
-   +0x1ec  tbl     v25.16b, {v19.16b-v20.16b}, v5.16b    |     |
-   +0x1f0  tbl     v26.16b, {v19.16b-v20.16b}, v3.16b    |     |
-   +0x1f4  tbl     v19.16b, {v19.16b-v20.16b}, v1.16b    |     |
-   +0x1f8  mov     v23.d[1], v22.d[1]                    |     |
-   +0x1fc  mov     v25.d[1], v24.d[1]                    |     |
-   +0x200  mov     v26.d[1], v21.d[1]                    |     |
-   +0x204  mov     v19.d[1], v18.d[1]                    |     |
-   +0x208  stp     q25, q23, [x0, #32]                   |     |
-  loop2_test:                                            |     |
-   +0x20c  stp     q19, q26, [x0], #64                   |     |
-  loop2_back:                                            |     |
-   +0x210  b.ne    loop2                                -+     |
-  join2: loop2_exit: ret:                                      |
-   +0x214  ret                                          <------+
+     +0x8  b.ls    join1                                   -----+
+     +0xc  add     x8, x0, #0x200                               |
+    +0x10  cmp     x8, x1                                       |
+    +0x14  b.ls    join1                                   ---+ |
+  adrp1:                                                      | |
+    +0x18  adrp    x9, <page>                                 | |
+  adrp2:                                                      | |
+    +0x1c  adrp    x10, <page>                                | |
+  adrp3:                                                      | |
+    +0x20  adrp    x11, <page>                                | |
+  adrp4:                                                      | |
+    +0x24  adrp    x12, <page>                                | |
+    +0x28  movi    v2.4s, #0x3                                | |
+    +0x2c  mov     x8, xzr                                    | |
+    +0x30  ldr     d0, [x9, #624]                             | |
+                   // mlkem_poly_cbd2_const11                 | |
+    +0x34  mov     w9, #0x55555555                            | |
+    +0x38  ldr     q1, [x10, #304]                            | |
+                   // mlkem_poly_cbd2_const9                  | |
+    +0x3c  add     x10, x0, #0x8                              | |
+    +0x40  ldr     d3, [x11, #632]                            | |
+                   // mlkem_poly_cbd2_const12                 | |
+    +0x44  ldr     q4, [x12, #320]                            | |
+                   // mlkem_poly_cbd2_const10                 | |
+  loop1:                                                      | |
+    +0x48  ldr     w11, [x1, x8]                           <+ | |
+    +0x4c  add     x8, x8, #0x4                             | | |
+    +0x50  cmp     x8, #0x80                                | | |
+    +0x54  and     w12, w11, w9                             | | |
+    +0x58  and     w11, w9, w11, lsr #1                     | | |
+    +0x5c  add     w11, w11, w12                            | | |
+    +0x60  lsr     w12, w11, #26                            | | |
+    +0x64  dup     v5.4s, w11                               | | |
+    +0x68  fmov    s16, w11                                 | | |
+    +0x6c  ushl    v6.2s, v5.2s, v3.2s                      | | |
+    +0x70  ushl    v17.2s, v5.2s, v0.2s                     | | |
+    +0x74  mov     v6.s[2], w12                             | | |
+    +0x78  lsr     w12, w11, #4                             | | |
+    +0x7c  mov     v16.s[1], w12                            | | |
+    +0x80  and     v7.16b, v6.16b, v2.16b                   | | |
+    +0x84  mov     v6.s[3], w11                             | | |
+    +0x88  mov     v16.d[1], v17.d[0]                       | | |
+    +0x8c  ushr    v6.4s, v6.4s, #30                        | | |
+    +0x90  mov     v7.s[3], v6.s[3]                         | | |
+    +0x94  ushl    v6.4s, v5.4s, v1.4s                      | | |
+    +0x98  ushl    v5.4s, v5.4s, v4.4s                      | | |
+    +0x9c  and     v6.16b, v6.16b, v2.16b                   | | |
+    +0xa0  and     v16.16b, v16.16b, v2.16b                 | | |
+    +0xa4  and     v5.16b, v5.16b, v2.16b                   | | |
+    +0xa8  sub     v6.4s, v16.4s, v6.4s                     | | |
+    +0xac  sub     v5.4s, v5.4s, v7.4s                      | | |
+    +0xb0  xtn     v6.4h, v6.4s                             | | |
+    +0xb4  xtn     v5.4h, v5.4s                             | | |
+    +0xb8  stur    d6, [x10, #-8]                           | | |
+  loop1_test:                                               | | |
+    +0xbc  str     d5, [x10], #16                           | | |
+                   // mlkem_poly_mulcache_compute_const14   | | |
+  loop1_back:                                               | | |
+    +0xc0  b.ne    loop1                                   -+ | |
+  loop1_exit:                                                 | |
+    +0xc4  b       join2                                   -------+
+  join1: adrp5:                                               | | |
+    +0xc8  adrp    x9, <page>                              <--+-+ |
+  adrp6:                                                          |
+    +0xcc  adrp    x10, <page>                                    |
+  adrp7:                                                          |
+    +0xd0  adrp    x11, <page>                                    |
+    +0xd4  mov     x8, xzr                                        |
+    +0xd8  movi    v7.16b, #0x55                                  |
+    +0xdc  ldr     q0, [x9, #240]                                 |
+                   // mlkem_poly_cbd2_const5                      |
+  adrp8:                                                          |
+    +0xe0  adrp    x9, <page>                                     |
+    +0xe4  ldr     q1, [x10, #3664]                               |
+                   // mlkem_poly_decompress_d5_const19            |
+  adrp9:                                                          |
+    +0xe8  adrp    x10, <page>                                    |
+    +0xec  ldr     q2, [x11, #256]                                |
+                   // mlkem_poly_cbd2_const6                      |
+  adrp10:                                                         |
+    +0xf0  adrp    x11, <page>                                    |
+    +0xf4  ldr     q3, [x9, #3696]                                |
+                   // mlkem_poly_decompress_d5_const21            |
+  adrp11:                                                         |
+    +0xf8  adrp    x9, <page>                                     |
+    +0xfc  movi    v16.4s, #0x3                                   |
+   +0x100  ldr     q4, [x10, #272]                                |
+                   // mlkem_poly_cbd2_const7                      |
+   +0x104  ldr     q5, [x11, #3728]                               |
+                   // mlkem_poly_decompress_d5_const23            |
+   +0x108  ldr     q6, [x9, #288]                                 |
+                   // mlkem_poly_cbd2_const8                      |
+  adrp12:                                                         |
+   +0x10c  adrp    x9, <page>                                     |
+   +0x110  ldr     q17, [x9, #3760]                               |
+                   // mlkem_poly_decompress_d5_const25            |
+  loop2:                                                          |
+   +0x114  ldr     q18, [x1, x8]                           <+     |
+   +0x118  add     x8, x8, #0x10                            |     |
+   +0x11c  cmp     x8, #0x80                                |     |
+   +0x120  ushr    v19.4s, v18.4s, #1                       |     |
+   +0x124  and     v18.16b, v18.16b, v7.16b                 |     |
+   +0x128  and     v19.16b, v19.16b, v7.16b                 |     |
+   +0x12c  add     v18.4s, v19.4s, v18.4s                   |     |
+   +0x130  ushr    v20.4s, v18.4s, #2                       |     |
+   +0x134  ushr    v21.4s, v18.4s, #4                       |     |
+   +0x138  ushr    v22.4s, v18.4s, #6                       |     |
+   +0x13c  ushr    v23.4s, v18.4s, #8                       |     |
+   +0x140  ushr    v24.4s, v18.4s, #10                      |     |
+   +0x144  ushr    v25.4s, v18.4s, #26                      |     |
+   +0x148  and     v19.16b, v18.16b, v16.16b                |     |
+   +0x14c  ushr    v26.4s, v18.4s, #30                      |     |
+   +0x150  and     v20.16b, v20.16b, v16.16b                |     |
+   +0x154  and     v21.16b, v21.16b, v16.16b                |     |
+   +0x158  and     v22.16b, v22.16b, v16.16b                |     |
+   +0x15c  and     v23.16b, v23.16b, v16.16b                |     |
+   +0x160  sub     v19.4s, v19.4s, v20.4s                   |     |
+   +0x164  sub     v20.4s, v21.4s, v22.4s                   |     |
+   +0x168  and     v21.16b, v24.16b, v16.16b                |     |
+   +0x16c  sub     v21.4s, v23.4s, v21.4s                   |     |
+   +0x170  ushr    v22.4s, v18.4s, #16                      |     |
+   +0x174  ushr    v23.4s, v18.4s, #18                      |     |
+   +0x178  ushr    v24.4s, v18.4s, #22                      |     |
+   +0x17c  and     v22.16b, v22.16b, v16.16b                |     |
+   +0x180  ushr    v27.4s, v18.4s, #12                      |     |
+   +0x184  and     v23.16b, v23.16b, v16.16b                |     |
+   +0x188  sub     v22.4s, v22.4s, v23.4s                   |     |
+   +0x18c  ushr    v23.4s, v18.4s, #20                      |     |
+   +0x190  and     v24.16b, v24.16b, v16.16b                |     |
+   +0x194  and     v23.16b, v23.16b, v16.16b                |     |
+   +0x198  sub     v23.4s, v23.4s, v24.4s                   |     |
+   +0x19c  ushr    v24.4s, v18.4s, #24                      |     |
+   +0x1a0  bic     v25.4s, #0x3c                            |     |
+   +0x1a4  bic     v24.4s, #0xfc                            |     |
+   +0x1a8  sub     v24.4s, v24.4s, v25.4s                   |     |
+   +0x1ac  ushr    v25.4s, v18.4s, #28                      |     |
+   +0x1b0  ushr    v18.4s, v18.4s, #14                      |     |
+   +0x1b4  bic     v25.4s, #0xc                             |     |
+   +0x1b8  sub     v25.4s, v25.4s, v26.4s                   |     |
+   +0x1bc  and     v26.16b, v27.16b, v16.16b                |     |
+   +0x1c0  and     v18.16b, v18.16b, v16.16b                |     |
+   +0x1c4  sub     v18.4s, v26.4s, v18.4s                   |     |
+   +0x1c8  uzp1    v22.8h, v22.8h, v23.8h                   |     |
+   +0x1cc  uzp1    v19.8h, v19.8h, v20.8h                   |     |
+   +0x1d0  uzp1    v23.8h, v24.8h, v25.8h                   |     |
+   +0x1d4  uzp1    v20.8h, v21.8h, v18.8h                   |     |
+   +0x1d8  tbl     v18.16b, {v22.16b-v23.16b}, v0.16b       |     |
+   +0x1dc  tbl     v21.16b, {v22.16b-v23.16b}, v2.16b       |     |
+   +0x1e0  tbl     v24.16b, {v22.16b-v23.16b}, v4.16b       |     |
+   +0x1e4  tbl     v22.16b, {v22.16b-v23.16b}, v6.16b       |     |
+   +0x1e8  tbl     v23.16b, {v19.16b-v20.16b}, v17.16b      |     |
+   +0x1ec  tbl     v25.16b, {v19.16b-v20.16b}, v5.16b       |     |
+   +0x1f0  tbl     v26.16b, {v19.16b-v20.16b}, v3.16b       |     |
+   +0x1f4  tbl     v19.16b, {v19.16b-v20.16b}, v1.16b       |     |
+   +0x1f8  mov     v23.d[1], v22.d[1]                       |     |
+   +0x1fc  mov     v25.d[1], v24.d[1]                       |     |
+   +0x200  mov     v26.d[1], v21.d[1]                       |     |
+   +0x204  mov     v19.d[1], v18.d[1]                       |     |
+   +0x208  stp     q25, q23, [x0, #32]                      |     |
+  loop2_test:                                               |     |
+   +0x20c  stp     q19, q26, [x0], #64                      |     |
+  loop2_back:                                               |     |
+   +0x210  b.ne    loop2                                   -+     |
+  join2: loop2_exit: ret:                                         |
+   +0x214  ret                                             <------+
  ***)
 
 (*** mlkem_poly_cbd3: 0x9060, 0x334 bytes

@@ -25,8 +25,8 @@ compiler and the optimization level, `<build>` = `<compiler>_<level>`:
  - `gcc12_O2_mono` for the gcc 12 `-O2` binary of the monolithic build,
    which compiles all of mlkem-native as one translation unit (see
    `gcc12_O2_mono/README.md`);
- - `clang17_O2` for the one function transcribed from the clang 17 `-O2`
-   binary;
+ - `clang17_O2` for the clang 17 `-O2` binary, whose whole image is verified
+   in the same way (see "The clang 17 -O2 image");
  - `clang17_O3` for the clang 17 `-O3` binary, whose whole image is
    verified in the same way (see "The clang 17 -O3 image");
  - `asm` for the API in hand-written assembly, which is not compiled code:
@@ -313,7 +313,7 @@ function `mlkem_<function>` in the binary
 | gcc12_O3/libmlkem.S              | gcc 12.3.0   |
 | gcc12_Os/libmlkem.S              | gcc 12.3.0   |
 | gcc12_O2_mono/libmlkem.S         | gcc 12.3.0   |
-| clang17_O2/poly_reduce.S         | clang 17.0.6 |
+| clang17_O2/libmlkem.S            | clang 17.0.6 |
 | clang17_O3/libmlkem.S            | clang 17.0.6 |
 
 The rejection sampling in mlkem-native is done by the static function
@@ -955,3 +955,68 @@ The code differs from that of gcc 12 as follows, for example:
 The check that the instructions of all object files are covered by the
 classes for cosimulation, `check_insns` in `../proofs/simulator_iclasses.ml`
 (run by `make sematest`), covers `clang17_O3/libmlkem.o` like the others.
+
+## The clang 17 -O2 image
+
+`clang17_O2/libmlkem.S` is the transcription of the image of the clang 17
+`-O2` binary, from address 0 up to the end of the read-only data at
+0xb460, in the same style as `clang17_O3/libmlkem.S` but with a symbol
+`mlkem_native_libmlkem_clang17_O2` at its start. It is checked in the same
+way, with the address 0x0. Its layout is
+`../proofs/mlkem_native/clang17_O2/layout.ml`, and
+`../proofs/mlkem_native/clang17_O2/libmlkem.ml` defines the image.
+
+`../proofs/mlkem_native/clang17_O2/` has a spec file and a proof file for
+each of the 116 functions that have proofs in the gcc 12 `-O2` build, with
+the same theorems (`..._IMAGE_SUBROUTINE_CORRECT` and `..._SAFE`, and
+`..._FULL` where gcc 12 `-O2` has it), including the key generation,
+encapsulation and decapsulation functions for the three parameter sets.
+`fips203.ml` states their theorems without the hypothesis that SampleNTT
+terminates, and `link.ml` closes and prints all of them. The statements
+are those of the gcc 12 `-O2` theorems, except for what the code forces:
+the stack frames (the frame of a function includes that of the deepest
+function it calls), the read-only objects that the safety theorems list,
+and the callees whose theorems a function uses. For example,
+`mlkem_poly_ntt` has a frame of 80 bytes and keeps its constants in
+immediates, `mlkem_poly_compress_d4` and `mlkem_poly_tomsg` have frames of
+320 and 480 bytes and read seven vectors of constants from the read-only
+data, and `mlkem_poly_cbd3` reads four. There is no function for the
+specialized copy `mlk_rej_uniform_c.constprop.0` of gcc 12: as at
+`-O3`, clang inlines it into `mlkem_poly_rej_uniform` (two copies of its
+loop) and `mlkem_poly_rej_uniform_x4` (eight), so `rej_uniform_spec.ml` has
+the lemmas and the tool that prove each copy. Since the code of
+`mlkemN_check_sk` is inlined into `mlkemN_dec`, the theorems of `dec` use
+those of `mlkem_sha3_256` in its place. The code differs from that of
+gcc 12 and of clang `-O3` as follows, for example:
+
+ - 75 of the 115 functions with a symbol have the same code as at `-O3`
+   up to addresses, among them the polyvec functions, the SHA3, SHAKE and
+   Keccak functions, `mlkem_poly_reduce`, `mlkem_poly_add`,
+   `mlkem_poly_sub`, `mlkem_poly_tomont` and `mlkem_poly_frommsg`. So do
+   `mlkem_poly_cbd2`, `mlkem_poly_decompress_d10`,
+   `mlkem_poly_decompress_d11`, `mlkem_poly_rej_uniform` and
+   `mlkem_poly_rej_uniform_x4`, except for the offsets of the vectors of
+   constants in the read-only data. The proofs of all of these are those of
+   the `-O3` build with the names changed.
+ - `mlkem_poly_ntt` and `mlkem_poly_invntt_tomont` are loops over the 7
+   layers and the blocks, as at gcc 12 `-O2`, not unrolled as at `-O3`.
+   The butterflies of a block are vectorized, except in the last two
+   layers, after a check that the two halves of the block do not overlap,
+   which always succeeds, since both ends are computed with the same
+   arithmetic modulo 2^64. The scalar loops after a failed check, and
+   after the vector loop, are not reached and not verified.
+ - `mlkem_poly_cbd2`, `mlkem_poly_cbd3`, `mlkem_poly_decompress_d5`,
+   `mlkem_poly_compress_d4` and `mlkem_poly_tomsg` check whether their
+   arrays overlap, as `mlkem_poly_add` does at `-O3`, and use vector code
+   with TBL, LD3, LD4 and ST4 if they do not. `mlkem_poly_compress_d4` and
+   `mlkem_poly_tomsg` use TBL with a table of four registers, which the
+   model has as `arm_TBL4`.
+ - `mlkem_poly_mulcache_compute` is vectorized and unrolled, and loads its
+   vectors of constants from the read-only data.
+ - The functions that call `mlkem_poly_rej_uniform_x4` or inline it
+   (`gen_matrix`, `indcpa_keypair_derand`, `indcpa_enc`) have frames that
+   include its 3392 bytes.
+
+The check that the instructions of all object files are covered by the
+classes for cosimulation, `check_insns` in `../proofs/simulator_iclasses.ml`
+(run by `make sematest`), covers `clang17_O2/libmlkem.o` like the others.

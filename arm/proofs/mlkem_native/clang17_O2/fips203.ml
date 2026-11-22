@@ -1,0 +1,168 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+(* ========================================================================= *)
+(* The API functions of mlkem-native in the clang 17 -O2 image, without the  *)
+(* hypothesis that SampleNTT terminates. The CORRECT and SAFE theorems of    *)
+(* the key generation, encapsulation and decapsulation functions assume that *)
+(* SampleNTT finds 256 coefficients for each entry of the matrix             *)
+(* (mlkem_samplentt_terminates), which holds for all their seeds             *)
+(* (common/fips203/properties/terminates.ml). For each such function and     *)
+(* parameter set, ..._IMAGE_SUBROUTINE_FIPS203 is its CORRECT theorem and    *)
+(* ..._IMAGE_SUBROUTINE_SAFE_FIPS203 its SAFE theorem with that hypothesis   *)
+(* discharged by MLKEM_FIPS203_DISCHARGE                                     *)
+(* (common/fips203/properties/mlkem_native_fips203_terminates.ml); they      *)
+(* assume only the contracts that those theorems assume.                     *)
+(* ========================================================================= *)
+
+needs "arm/proofs/mlkem_native/relative.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/keypair_derand_k2_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/keypair_k2_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/enc_derand_k2_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/enc_k2_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/dec_k2_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/keypair_derand_k3_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/keypair_k3_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/enc_derand_k3_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/enc_k3_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/dec_k3_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/keypair_derand_k4_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/keypair_k4_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/enc_derand_k4_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/enc_k4_spec.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/dec_k4_spec.ml";;
+needs "common/fips203/properties/mlkem_native_fips203_terminates.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* ML-KEM-512.                                                               *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_DERAND_K2_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_K2_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_DERAND_K2_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_ENC_K2_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_K2_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_ENC_K2_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_K2_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_DEC_K2_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_DEC_K2_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_DEC_K2_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_DEC_K2_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+(* ------------------------------------------------------------------------- *)
+(* ML-KEM-768.                                                               *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_DERAND_K3_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_K3_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_DERAND_K3_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_ENC_K3_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_K3_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_ENC_K3_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_K3_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_DEC_K3_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_DEC_K3_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_DEC_K3_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_DEC_K3_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+(* ------------------------------------------------------------------------- *)
+(* ML-KEM-1024.                                                              *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_DERAND_K4_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_KEYPAIR_K4_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_DERAND_K4_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_ENC_K4_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_K4_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_ENC_K4_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_ENC_K4_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;
+
+let MLKEM_NATIVE_DEC_K4_CLANG17_O2_IMAGE_SUBROUTINE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_DEC_K4_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT;;
+
+let MLKEM_NATIVE_DEC_K4_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_FIPS203 =
+  MLKEM_FIPS203_DISCHARGE
+   MLKEM_NATIVE_DEC_K4_CLANG17_O2_IMAGE_SUBROUTINE_SAFE;;

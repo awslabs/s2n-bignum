@@ -6,51 +6,42 @@
 (* ========================================================================= *)
 (* Reduction of polynomial coefficients producing nonnegative remainders.    *)
 (* This is the code for mlkem_poly_reduce from mlkem-native's portable C     *)
-(* implementation compiled by clang 17 with -O2 (see mlkem_native/README.md).*)
+(* implementation compiled by clang 17 with -O2 (see mlkem_native/README.md) *)
+(* and verified in the whole image (see libmlkem.ml).                        *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
-needs "arm/proofs/base.ml";;
-needs "arm/proofs/mlkem_native/clang17_O2/layout.ml";;
 needs "arm/proofs/utils/mlkem_native.ml";;
+needs "arm/proofs/mlkem_native/clang17_O2/libmlkem.ml";;
 
-(* Names for the labels of this transcription, whose code is at pc.          *)
+(*** The code in the image:
 
-install_layout (layout_copies
- ["poly_reduce","mlkem_poly_reduce"]);;
-
-(**** print_literal_from_elf
-        "arm/mlkem_native/clang17_O2/poly_reduce.o";;
- ****)
-
-let mlkem_native_poly_reduce_clang17_O2_mc = define_assert_from_elf
-  "mlkem_native_poly_reduce_clang17_O2_mc"
-  "arm/mlkem_native/clang17_O2/poly_reduce.o"
-[
-  0xaa1f03e8;       (* arm_MOV X8 XZR *)
-  0x5289d7e9;       (* arm_MOV W9 (rvalue (word 20159)) *)
-  0x52a0400a;       (* arm_MOVZ W10 (word 512) 16 *)
-  0x1281a00b;       (* arm_MOVN W11 (word 3328) 0 *)
-  0x78e8680c;       (* arm_LDRSH W12 X0 (Register_Offset X8) *)
-  0x1b09298d;       (* arm_MADD W13 W12 W9 W10 *)
-  0x131a7dad;       (* arm_ASR W13 W13 26 *)
-  0x1b0b31ac;       (* arm_MADD W12 W13 W11 W12 *)
-  0x13003d8d;       (* arm_SBFM W13 W12 0 15 *)
-  0x1134058e;       (* arm_ADD W14 W12 (rvalue (word 3329)) *)
-  0x4b4d43ed;       (* arm_NEG W13 (Shiftedreg W13 LSR 16) *)
-  0x53107dad;       (* arm_LSR W13 W13 16 *)
-  0x0a2d018c;       (* arm_BIC W12 W12 W13 *)
-  0x0a0d01cd;       (* arm_AND W13 W14 W13 *)
-  0x2a0c01ac;       (* arm_ORR W12 W13 W12 *)
-  0x7828680c;       (* arm_STRH W12 X0 (Register_Offset X8) *)
-  0x91000908;       (* arm_ADD X8 X8 (rvalue (word 2)) *)
-  0xf108011f;       (* arm_CMP X8 (rvalue (word 512)) *)
-  0x54fffe41;       (* arm_BNE (word 2097096) *)
-  0xd65f03c0        (* arm_RET X30 *)
-];;
+    mlkem_poly_reduce:
+       +0x0: mov     x8, xzr
+       +0x4: mov     w9, #0x4ebf
+       +0x8: mov     w10, #0x2000000
+       +0xc: mov     w11, #0xfffff2ff
+      +0x10: ldrsh   w12, [x0, x8]
+      +0x14: madd    w13, w12, w9, w10
+      +0x18: asr     w13, w13, #26
+      +0x1c: madd    w12, w13, w11, w12
+      +0x20: sxth    w13, w12
+      +0x24: add     w14, w12, #0xd01
+      +0x28: neg     w13, w13, lsr #16
+      +0x2c: lsr     w13, w13, #16
+      +0x30: bic     w12, w12, w13
+      +0x34: and     w13, w14, w13
+      +0x38: orr     w12, w13, w12
+      +0x3c: strh    w12, [x0, x8]
+      +0x40: add     x8, x8, #0x2
+      +0x44: cmp     x8, #0x200
+      +0x48: b.ne    <mlkem_poly_reduce+0x10>
+      +0x4c: ret
+ ***)
 
 let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_EXEC =
-  ARM_MK_EXEC_RULE mlkem_native_poly_reduce_clang17_O2_mc;;
+  ARM_MK_EXEC_RANGES_RULE mlkem_native_libmlkem_clang17_O2_mc
+   [layout_range "mlkem_poly_reduce"];;
 
 (* ------------------------------------------------------------------------- *)
 (* The value computed for each coefficient.                                  *)
@@ -107,35 +98,14 @@ let REDUCE_ELEMENT = assume_spec REDUCE_ELEMENT_STMT;;
 (* Correctness proof.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_CORRECT_STMT =
-  `!a x pc.
-        nonoverlapping (word pc,poly_reduce_size) (a,512)
-        ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc)
-                    mlkem_native_poly_reduce_clang17_O2_mc /\
-                  read PC s = word pc /\
-                  C_ARGUMENTS [a] s /\
-                  !i. i < 256
-                      ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
-                          x i)
-             (\s. read PC s = word(pc + poly_reduce_ret) /\
-                  !i. i < 256
-                      ==> ival(read(memory :> bytes16
-                                 (word_add a (word(2 * i)))) s) =
-                          ival(x i) rem &3329)
-             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(a,512)])`;;
-
-let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_CORRECT =
-  assume_spec MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_CORRECT_STMT;;
-
-let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_CORRECT_STMT =
+let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
   `!a x pc returnaddress.
-        nonoverlapping (word pc,poly_reduce_size) (a,512)
+        aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+        nonoverlapping (word pc,libmlkem_size) (a,512)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
-                    mlkem_native_poly_reduce_clang17_O2_mc /\
-                  read PC s = word pc /\
+                    mlkem_native_libmlkem_clang17_O2_mc /\
+                  read PC s = word (pc + mlkem_poly_reduce) /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [a] s /\
                   !i. i < 256
@@ -149,8 +119,8 @@ let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_CORRECT_STMT =
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(a,512)])`;;
 
-let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_CORRECT =
-  assume_spec MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_CORRECT_STMT;;
+let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT =
+  assume_spec MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT_STMT;;
 
 (* ------------------------------------------------------------------------- *)
 (* Constant-time and memory safety proof.                                    *)
@@ -162,20 +132,21 @@ needs "arm/proofs/subroutine_signatures.ml";;
 (*** The C signature is the same as that of mlkem_reduce ***)
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mlkem_reduce" subroutine_signatures)
-    MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_CORRECT
+    MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT
     MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_EXEC;;
 
-let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_SAFE_STMT =
+let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_STMT =
   `exists f_events.
        forall e a pc returnaddress.
-           nonoverlapping (word pc,80) (a,512)
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           nonoverlapping (word pc,libmlkem_size) (a,512)
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)
-                      mlkem_native_poly_reduce_clang17_O2_mc /\
-                    read PC s = word pc /\
+                      mlkem_native_libmlkem_clang17_O2_mc /\
+                    read PC s = word (pc + mlkem_poly_reduce) /\
                     read X30 s = returnaddress /\
                     C_ARGUMENTS [a] s /\
                     read events s = e)
@@ -185,7 +156,45 @@ let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_SAFE_STMT =
                         read events s = APPEND e2 e /\
                         e2 = f_events a pc returnaddress /\
                         memaccess_inbounds e2 [a,512] [a,512])
-               (\s s'. true)`;;
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,512)])`;;
 
-let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_SAFE =
-  assume_spec MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_SUBROUTINE_SAFE_STMT;;
+let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_IMAGE_SUBROUTINE_SAFE =
+  assume_spec MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_IMAGE_SUBROUTINE_SAFE_STMT;;
+
+(* ------------------------------------------------------------------------- *)
+(* Combined correctness, constant-time and memory safety proof, for the      *)
+(* modulus check of the encapsulation key, whose result the encapsulation    *)
+(* branches on. The loop is that of the correctness proof, but with the loop *)
+(* test at the end of the body, as ENSURES_EVENTS_WHILE_UP2_TAC requires.    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_IMAGE_SUBROUTINE_FULL_STMT =
+  `exists f_events.
+       forall e a x pc returnaddress.
+           aligned 4096 (word pc:int64) /\ pc + libmlkem_size <= 2 EXP 64 /\
+           nonoverlapping (word pc,libmlkem_size) (a,512)
+           ==> ensures arm
+               (\s. aligned_bytes_loaded s (word pc)
+                      mlkem_native_libmlkem_clang17_O2_mc /\
+                    read PC s = word (pc + mlkem_poly_reduce) /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [a] s /\
+                    (!i. i < 256
+                         ==> read(memory :> bytes16
+                                   (word_add a (word(2 * i)))) s = x i) /\
+                    read events s = e)
+               (\s. read PC s = returnaddress /\
+                    (!i. i < 256
+                         ==> ival(read(memory :> bytes16
+                                    (word_add a (word(2 * i)))) s) =
+                             ival(x i) rem &3329) /\
+                    (exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 = f_events a pc returnaddress /\
+                        memaccess_inbounds e2 [a,512] [a,512]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,512)])`;;
+
+let MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_IMAGE_SUBROUTINE_FULL =
+  assume_spec MLKEM_NATIVE_POLY_REDUCE_CLANG17_O2_IMAGE_SUBROUTINE_FULL_STMT;;
