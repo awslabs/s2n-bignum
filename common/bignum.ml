@@ -821,29 +821,6 @@ BIGNUM_EXPAND_CONV `read (memory :> bytes (x,8 * 6)) s0`;;
 ****)
 
 (* ------------------------------------------------------------------------- *)
-(* Expand a bignum and introduce abbreviations for digits                    *)
-(* ------------------------------------------------------------------------- *)
-
-let BIGNUM_DIGITIZE_TAC =
-  let strip_add = striplist (dest_binop `(+):num->num->num`)
-  and ty64 = `:int64` in
-  fun s tm ->
-    let th = BIGNUM_EXPAND_CONV tm in
-    let mts = strip_add(rand(concl th)) in
-    let tms =
-      if mts = [] then [] else map rand ((hd mts)::map rand (tl mts)) in
-    let vs =
-      map (fun i -> mk_var(s^string_of_int i,ty64)) (0--(length tms - 1)) in
-    let abseqs = map2 (curry mk_eq) vs tms in
-    SUBST_ALL_TAC th THEN MAP_EVERY ABBREV_TAC abseqs;;
-
-(*** Example:
-
-  BIGNUM_DIGITIZE_TAC "m_" `read(memory :> bytes(x,8 * 6)) s0`
-
-***)
-
-(* ------------------------------------------------------------------------- *)
 (* Expansion of bignum_of_wordlist, corresponding digitization variants.     *)
 (* ------------------------------------------------------------------------- *)
 
@@ -891,15 +868,90 @@ let BIGNUM_LEXPAND_CONV =
     let tm' = mk_comb(ofw_tm,mk_list(tms,ty64)) in
     TRANS th (SYM(BIGNUM_OF_WORDLIST_CONV tm'));;
 
-let BIGNUM_LDIGITIZE_TAC =
-  let ty64 = `:int64` in
-  fun s tm ->
-    let th = BIGNUM_LEXPAND_CONV tm in
-    let tms = dest_list(rand(rand(concl th))) in
+(* ------------------------------------------------------------------------- *)
+(* Expand a bignum and introduce abbreviations for digits                    *)
+(* ------------------------------------------------------------------------- *)
+
+(* The words t_i of the bignum are abbreviated by variables v_i as         *)
+(* MAP_EVERY ABBREV_TAC [`v_0 = t_0`; ...] does it, with the same          *)
+(* assumptions in the same order, but in one pass. Each ABBREV_TAC         *)
+(* computes the free variables of all assumptions and rewrites all of      *)
+(* them, so for k words that is k passes. Here the t_i are replaced by     *)
+(* their v_i in one walk over each assumption and the goal, and the        *)
+(* justification instantiates the v_i back and discharges the equations    *)
+(* t_i = v_i. As with the rewriting in ABBREV_TAC, a t_i is not replaced   *)
+(* under a binder of one of its free variables, a replaced t_i is not      *)
+(* entered, and the t_i match up to alpha-conversion. A binder that has    *)
+(* the name of v_i and covers an occurrence of t_i is renamed as ABS_CONV  *)
+(* does when ABBREV_TAC rewrites t_i: to a primed variant that avoids the  *)
+(* free variables of the binder's term at that ABBREV_TAC, when only t_0,  *)
+(* ..., t_(i-1) are replaced. This keeps v_i from being captured. The t_i  *)
+(* are reads (read c s) at different addresses; if one of them contains    *)
+(* another, where the walk would differ from the sequence of ABBREV_TACs,  *)
+(* they are abbreviated one by one.                                        *)
+
+let BIGNUM_DIGITIZE_TAC,BIGNUM_LDIGITIZE_TAC =
+  let strip_add = striplist (dest_binop `(+):num->num->num`)
+  and ty64 = `:int64` in
+  let is_read t =
+    match t with Comb(Comb(Const("read",_),_),_) -> true | _ -> false in
+  let abbrevs_tac tms vs (asl,w) =
+    let avoids = itlist (union o frees o concl o snd) asl (frees w) in
+    if exists (fun v -> mem v avoids) vs
+    then failwith "ABBREV_TAC: variable already used" else
+    let rec rewr ps t =
+      if ps = [] then t else
+      match t with
+        Comb(l,r) ->
+          (try if is_read t then snd(find (fun (u,_) -> aconv u t) ps)
+               else fail()
+           with Failure _ ->
+             let l' = rewr ps l and r' = rewr ps r in
+             if l' == l && r' == r then t else mk_comb(l',r'))
+      | Abs(v,b) ->
+          let ps' = filter (fun (u,_) -> not(vfree_in v u)) ps in
+          (match filter (fun (_,w) -> w = v) ps' with
+             [u,_] when free_in u b ->
+               let ps0 = fst(chop_list (index u (map fst ps')) ps') in
+               let v' = variant (v::frees(rewr ps0 t)) v in
+               mk_abs(v',rewr ps' (vsubst[v',v] b))
+           | _ ->
+               let b' = rewr ps' b in
+               if b' == b then t else mk_abs(v,b'))
+      | _ -> t in
+    let ps = zip tms vs in
+    let eqs = map (fun (t,v) -> "",ASSUME(mk_eq(t,v))) ps in
+    let asl' =
+      rev eqs @ map (fun (l,th) -> l,ASSUME(rewr ps (concl th))) asl in
+    null_meta,[asl',rewr ps w],
+    fun _ [th] ->
+      itlist (fun t th -> PROVE_HYP (REFL t) th) tms (INST ps th) in
+  let digitize_tac th tms s =
     let vs =
       map (fun i -> mk_var(s^string_of_int i,ty64)) (0--(length tms - 1)) in
-    let abseqs = map2 (curry mk_eq) vs tms in
-    SUBST_ALL_TAC th THEN MAP_EVERY ABBREV_TAC abseqs;;
+    if tms = [] then SUBST_ALL_TAC th
+    else if forall is_read tms &&
+            not(exists (fun u -> exists (fun t -> not(t == u) && free_in u t)
+                                        tms) tms)
+    then SUBST_ALL_TAC th THEN abbrevs_tac tms vs
+    else SUBST_ALL_TAC th THEN
+         MAP_EVERY ABBREV_TAC (map2 (curry mk_eq) vs tms) in
+  (fun s tm ->
+    let th = BIGNUM_EXPAND_CONV tm in
+    let mts = strip_add(rand(concl th)) in
+    let tms =
+      if mts = [] then [] else map rand ((hd mts)::map rand (tl mts)) in
+    digitize_tac th tms s),
+  (fun s tm ->
+    let th = BIGNUM_LEXPAND_CONV tm in
+    digitize_tac th (dest_list(rand(rand(concl th)))) s);;
+
+(*** Example:
+
+  BIGNUM_DIGITIZE_TAC "m_" `read(memory :> bytes(x,8 * 6)) s0`
+
+***)
+
 
 (* ------------------------------------------------------------------------- *)
 (* Expansion of bytes by analogy.                                            *)
