@@ -380,4 +380,4 @@ jobs:
       - name: Compare proof times with the tested merge's base
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 tools/proof_timing/report.py
+        run: python3 tools/proof_timing/report.py --slowest 150 --min-seconds 600
