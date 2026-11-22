@@ -23,10 +23,11 @@
 (*   drain 0x8a8..0xa88; b at 0xa8c -> 0xdd0                                 *)
 (*   iter_1 block 0xa90..0xdcc (loop_count = 1), falling through to 0xdd0    *)
 (*   key-table reloads 0xdd0..0xdd8; cbz x16 at 0xddc -> 0xed0               *)
-(*   tail loop 0xde0..0xecc; tag and counter stores 0xed0..0xee0; ret 0xf10  *)
+(*   tail loop 0xde0..0xecc; tag and counter stores 0xed0..0xee0;            *)
+(*   stack-slot clears 0xee4..0xef0; ret 0xf20                               *)
 (*                                                                           *)
 (* The core theorem AES256_GCM_ENC_CORRECT runs from pc + 0x2c, after the    *)
-(* register saves, to pc + 0xee4, before the restores.  The preamble (round  *)
+(* register saves, to pc + 0xef4, before the restores.  The preamble (round  *)
 (* keys, tag, counter registers, block counts and key table) ends at         *)
 (* pc + 0xb0 and CORE_FROM88 covers the rest.  The loop over groups of four  *)
 (* blocks is software-pipelined: the fill completes group 0 and starts group *)
@@ -38,7 +39,8 @@
 (* (pc + 0xbc -> pc + 0x55c), BODYLEG (one iteration, pc + 0x560 ->          *)
 (* pc + 0x8a4), DRAINLEG_8A8 (pc + 0x8a8 -> pc + 0xdd0), ITER1_LEG           *)
 (* (loop_count = 1, pc + 0xb0 -> pc + 0xdd0) and TAILLEG (the single-block   *)
-(* tail loop and the tag and counter stores, pc + 0xdd0 -> pc + 0xee4).  The *)
+(* tail loop, the tag and counter stores and the stack-slot clears,          *)
+(* pc + 0xdd0 -> pc + 0xef4).  The                                           *)
 (* one-instruction hops FILLLEG, LC2_PARTA and DRAINLEG share the fill and   *)
 (* drain simulations between the loop_count cases.  MAINLEG composes         *)
 (* FILLLEG, an ENSURES_WHILE_UP over loop_count - 3 iterations at pc + 0x560 *)
@@ -1022,6 +1024,10 @@ let aes256_gcm_enc_mc =
   0x3d80007e;       (* arm_STR Q30 X3 (Immediate_Offset (word 0)) *)
   0x5ac009ae;       (* arm_REV W14 W13 *)
   0xb9000c8e;       (* arm_STR W14 X4 (Immediate_Offset (word 12)) *)
+  0xa90a7fff;       (* arm_STP XZR XZR SP (Immediate_Offset (iword (&160))) *)
+  0xa90b7fff;       (* arm_STP XZR XZR SP (Immediate_Offset (iword (&176))) *)
+  0xa90c7fff;       (* arm_STP XZR XZR SP (Immediate_Offset (iword (&192))) *)
+  0xa90d7fff;       (* arm_STP XZR XZR SP (Immediate_Offset (iword (&208))) *)
   0x6d4627e8;       (* arm_LDP D8 D9 SP (Immediate_Offset (iword (&96))) *)
   0x6d472fea;       (* arm_LDP D10 D11 SP (Immediate_Offset (iword (&112))) *)
   0x6d4837ec;       (* arm_LDP D12 D13 SP (Immediate_Offset (iword (&128))) *)
@@ -1253,7 +1259,7 @@ let mk_body_goal_b bound inv =
      nblocks MOD 4 = loop_remain /\
      2 <= loop_count /\ i < loop_count - 2 /\ 16 * nblocks < 2 EXP 64 /\
      aligned 16 (stackpointer:int64) /\
-     nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3860) /\
+     nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3876) /\
      (in_p:int64 = out_p \/
       nonoverlapping (in_p:int64,16 * nblocks) (out_p:int64,16 * nblocks)) /\
      nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
@@ -1261,19 +1267,19 @@ let mk_body_goal_b bound inv =
      nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
      nonoverlapping (out_p:int64,16*nblocks)
        (word_add stackpointer (word 160):int64,64) /\
-     nonoverlapping (tag_p:int64,16) (word pc:int64,3860) /\
+     nonoverlapping (tag_p:int64,16) (word pc:int64,3876) /\
      nonoverlapping (in_p:int64,16*nblocks) (tag_p:int64,16) /\
      nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
      nonoverlapping (tag_p:int64,16)
        (word_add stackpointer (word 160):int64,64) /\
-     nonoverlapping (ivec_p:int64,16) (word pc:int64,3860) /\
+     nonoverlapping (ivec_p:int64,16) (word pc:int64,3876) /\
      nonoverlapping (in_p:int64,16*nblocks) (ivec_p:int64,16) /\
      nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
      nonoverlapping (ivec_p:int64,16)
        (word_add stackpointer (word 160):int64,64) /\
      nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
      nonoverlapping (word_add stackpointer (word 160):int64,64)
-       (word pc:int64,3860) /\
+       (word pc:int64,3876) /\
      nonoverlapping (in_p:int64,16*nblocks)
        (word_add stackpointer (word 160):int64,64) /\
      nonoverlapping (word_add stackpointer (word 160):int64,64)
@@ -2064,7 +2070,7 @@ let fill_goal = mk_imp
    nblocks MOD 4 = loop_remain /\
    3 <= loop_count /\ 16 * nblocks < 2 EXP 64 /\
    aligned 16 (stackpointer:int64) /\
-   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3860) /\
+   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3876) /\
    (in_p:int64 = out_p \/
     nonoverlapping (in_p:int64,16 * nblocks) (out_p:int64,16 * nblocks)) /\
    nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
@@ -2072,19 +2078,19 @@ let fill_goal = mk_imp
    nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
    nonoverlapping (out_p:int64,16*nblocks)
      (word_add stackpointer (word 160):int64,64) /\
-   nonoverlapping (tag_p:int64,16) (word pc:int64,3860) /\
+   nonoverlapping (tag_p:int64,16) (word pc:int64,3876) /\
    nonoverlapping (in_p:int64,16*nblocks) (tag_p:int64,16) /\
    nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (tag_p:int64,16)
      (word_add stackpointer (word 160):int64,64) /\
-   nonoverlapping (ivec_p:int64,16) (word pc:int64,3860) /\
+   nonoverlapping (ivec_p:int64,16) (word pc:int64,3876) /\
    nonoverlapping (in_p:int64,16*nblocks) (ivec_p:int64,16) /\
    nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (ivec_p:int64,16)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
-     (word pc:int64,3860) /\
+     (word pc:int64,3876) /\
    nonoverlapping (in_p:int64,16*nblocks)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
@@ -2503,7 +2509,7 @@ let drain_goal = mk_imp
    nblocks MOD 4 = loop_remain /\
    2 <= loop_count /\ 16 * nblocks < 2 EXP 64 /\
    aligned 16 (stackpointer:int64) /\
-   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3860) /\
+   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3876) /\
    (in_p:int64 = out_p \/
     nonoverlapping (in_p:int64,16 * nblocks) (out_p:int64,16 * nblocks)) /\
    nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
@@ -2511,19 +2517,19 @@ let drain_goal = mk_imp
    nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
    nonoverlapping (out_p:int64,16*nblocks)
      (word_add stackpointer (word 160):int64,64) /\
-   nonoverlapping (tag_p:int64,16) (word pc:int64,3860) /\
+   nonoverlapping (tag_p:int64,16) (word pc:int64,3876) /\
    nonoverlapping (in_p:int64,16*nblocks) (tag_p:int64,16) /\
    nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (tag_p:int64,16)
      (word_add stackpointer (word 160):int64,64) /\
-   nonoverlapping (ivec_p:int64,16) (word pc:int64,3860) /\
+   nonoverlapping (ivec_p:int64,16) (word pc:int64,3876) /\
    nonoverlapping (in_p:int64,16*nblocks) (ivec_p:int64,16) /\
    nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (ivec_p:int64,16)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
-     (word pc:int64,3860) /\
+     (word pc:int64,3876) /\
    nonoverlapping (in_p:int64,16*nblocks)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
@@ -2781,12 +2787,12 @@ let DRAINLEG = GEN_ALL(prove(drain_goal,
     REFOLD_ABI_TAC THEN MATCH_MP_TAC DRAINLEG_8A8 THEN ASM_REWRITE_TAC[]]));;
 
 (* ------------------------------------------------------------------------- *)
-(* The tail: TAILLEG, drain_bridge at pc + 0xdd0 -> tail_post at pc + 0xee4  *)
+(* The tail: TAILLEG, drain_bridge at pc + 0xdd0 -> tail_post at pc + 0xef4  *)
 (* (the tag, the counter and all output blocks stored, before the            *)
 (* restores).  After the three key-table reloads, the cbz x16 at 0xddc       *)
 (* skips or enters the loop over the loop_remain remaining blocks            *)
 (* (pc + 0xde0 .. pc + 0xecc); X0 and the tag and counter stores follow at   *)
-(* 0xed0..0xee0.                                                             *)
+(* 0xed0..0xee0, and the four stack-slot clears at 0xee4..0xef0.             *)
 (* ------------------------------------------------------------------------- *)
 
 (* The closer of the tail's final state, after ENSURES_FINAL_STATE_TAC, the
@@ -2860,11 +2866,11 @@ let tail_inv = `\(i:num) s.
      ==> read (memory :> bytes128 (word_add out_p (word(16*j)))) s =
              word_xor (aes_ctr_block aes256_cipher c nonce rk j) (inblock j))`;;
 
-(* The tail postcondition at pc + 0xee4: the tag and the counter stored and
+(* The tail postcondition at pc + 0xef4: the tag and the counter stored and
    all nblocks output blocks written. *)
 let tail_post = mk_abs(`s:armstate`, list_mk_conj
  [`aligned_bytes_loaded s (word pc) aes256_gcm_enc_tmc`;
-  `read PC s = word (pc + 0xee4)`;
+  `read PC s = word (pc + 0xef4)`;
   `read (memory :> bytes128 tag_p) s = word_reversefields 8
      (nist_ghash (aes256_cipher (word 0) rk) tag0
         (list_of_seq (nist_cipher_block aes256_cipher c nonce rk inblock)
@@ -2876,7 +2882,7 @@ let tail_post = mk_abs(`s:armstate`, list_mk_conj
    ==> read (memory :> bytes128 (word_add out_p (word(16*j)))) s =
            word_xor (aes_ctr_block aes256_cipher c nonce rk j) (inblock j)`]);;
 
-(* The tail goal: drain_bridge at pc + 0xdd0 -> tail_post at pc + 0xee4,
+(* The tail goal: drain_bridge at pc + 0xdd0 -> tail_post at pc + 0xef4,
    for any loop_remain < 4, with the broad frame plus tag_p and ivec_p. *)
 let tail_goal = mk_imp
  (`([EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk; EL 7 rk;
@@ -2885,16 +2891,16 @@ let tail_goal = mk_imp
    len_bits DIV 128 = nblocks /\ nblocks DIV 4 = loop_count /\
    nblocks MOD 4 = loop_remain /\
    16 * nblocks < 2 EXP 64 /\ aligned 16 (stackpointer:int64) /\
-   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3860) /\
+   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3876) /\
    (in_p:int64 = out_p \/
     nonoverlapping (in_p:int64,16 * nblocks) (out_p:int64,16 * nblocks)) /\
    nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
    nonoverlapping (out_p:int64,16 * nblocks) (tag_p:int64,16) /\
    nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
-   nonoverlapping (tag_p:int64,16) (word pc:int64,3860) /\
+   nonoverlapping (tag_p:int64,16) (word pc:int64,3876) /\
    nonoverlapping (in_p:int64,16*nblocks) (tag_p:int64,16) /\
    nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
-   nonoverlapping (ivec_p:int64,16) (word pc:int64,3860) /\
+   nonoverlapping (ivec_p:int64,16) (word pc:int64,3876) /\
    nonoverlapping (in_p:int64,16*nblocks) (ivec_p:int64,16) /\
    nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
@@ -2905,7 +2911,7 @@ let tail_goal = mk_imp
    nonoverlapping (ivec_p:int64,16)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
-     (word pc:int64,3860) /\
+     (word pc:int64,3876) /\
    nonoverlapping (in_p:int64,16*nblocks)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
@@ -3015,7 +3021,7 @@ let tail_stepconv n =
   ARM_STEPS_TAC AES256_GCM_ENC_EXEC [n] THEN
   RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV));;
 
-(* tail_tac: drain_bridge at pc + 0xdd0 -> tail_post at pc + 0xee4.  Three
+(* tail_tac: drain_bridge at pc + 0xdd0 -> tail_post at pc + 0xef4.  Three
    table reloads (ldr q12/q13/q14), then the cbz x16 at 0xddc guards the
    loop. *)
 let tail_tac =
@@ -3027,7 +3033,7 @@ let tail_tac =
      q12/q13/q14 reloads). *)
   ASM_CASES_TAC `loop_remain = 0` THENL
    [(* loop_remain = 0: nblocks = 4 * loop_count; the cbz x16 is taken to
-       0xed0, the tag and counter stores. *)
+       0xed0, the tag and counter stores and the stack-slot clears. *)
     POP_ASSUM SUBST_ALL_TAC THEN
     ENSURES_INIT_TAC "s0" THEN
     RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_4]) THEN
@@ -3043,10 +3049,11 @@ let tail_tac =
         not(free_in `out_p:int64` (lhs c)) &&
           not(free_in `htable_p:int64` (lhs c)) &&
             not(free_in `tag_p:int64` (lhs c)))) THEN
-    (* nine steps: the three reloads (s1..s3), the cbz at 0xddc taken (s4),
-       and mov, rev64, str q30, rev, str w14 at 0xed0..0xee0 (s5..s9), ending
-       at 0xee4 *)
-    MAP_EVERY tail_stepconv (1--9) THEN
+    (* thirteen steps: the three reloads (s1..s3), the cbz at 0xddc taken
+       (s4), mov, rev64, str q30, rev, str w14 at 0xed0..0xee0 (s5..s9) and
+       the four stack-slot clears at 0xee4..0xef0 (s10..s13), ending at
+       0xef4 *)
+    MAP_EVERY tail_stepconv (1--13) THEN
     ENSURES_FINAL_STATE_TAC THEN
     (* abbreviate the settled GHASH value as gval, so that WORD_BLAST sees
        a variable *)
@@ -3149,8 +3156,8 @@ let tail_tac =
           ARITH_TAC;
         ALL_TAC] THEN
       ASM_SIMP_TAC[ARITH_RULE `i < loop_remain ==> ~(loop_remain = i)`];
-      (* The exit: tail_inv loop_remain at 0xecc -> tail_post at 0xee4, six
-         steps (the cbnz not taken, then the stores up to 0xee0);
+      (* The exit: tail_inv loop_remain at 0xecc -> tail_post at 0xef4, ten
+         steps (the cbnz not taken, then the stores up to 0xef0);
          nblocks = 4 * loop_count + loop_remain. *)
       ENSURES_INIT_TAC "s0" THEN
       FIRST_X_ASSUM(STRIP_ASSUME_TAC o CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
@@ -3159,7 +3166,7 @@ let tail_tac =
           not(free_in `out_p:int64` (lhs c)) &&
             not(free_in `htable_p:int64` (lhs c)) &&
               not(free_in `tag_p:int64` (lhs c)))) THEN
-      MAP_EVERY tail_stepconv (1--6) THEN
+      MAP_EVERY tail_stepconv (1--10) THEN
       ENSURES_FINAL_STATE_TAC THEN
       SUBGOAL_THEN `nblocks = 4 * loop_count + loop_remain` SUBST_ALL_TAC THENL
       [SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -3795,12 +3802,12 @@ let CORE_FROM88 = prove(core_from88_goal,
       REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
       REWRITE_TAC[GSYM htable_mem_4] THEN
       MATCH_MP_TAC MAINLEG_W THEN leg_precond_close];
-    (* drain_bridge at 0xdd0 -> tail_post at 0xee4 *)
+    (* drain_bridge at 0xdd0 -> tail_post at 0xef4 *)
     REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     MATCH_MP_TAC TAILLEG THEN leg_precond_close]);;
 
 (* ========================================================================= *)
-(* The core correctness theorem, pc + 0x2c -> pc + 0xee4.                    *)
+(* The core correctness theorem, pc + 0x2c -> pc + 0xef4.                    *)
 (* ========================================================================= *)
 
 (* The witness for ENSURES_POSTCONDITION_THM below: the stronger
@@ -3843,7 +3850,7 @@ let AES256_GCM_ENC_CORRECT = prove
                     inblock i) /\
            htable_mem_4 (ghash_twist (aes256_cipher (word 0) rk))
                       htable_p s)
-      (\s. read PC s = word (pc + 0xee4) /\
+      (\s. read PC s = word (pc + 0xef4) /\
            (!i. i < val len_bits DIV 128
                 ==> read (memory :> bytes128 (word_add out_p (word(16*i)))) s =
                     word_xor (aes_ctr_block aes256_cipher c nonce rk i)
@@ -4019,7 +4026,7 @@ let AES256_GCM_ENC_CORRECT = prove
       REWRITE_TAC[byteswap128] THEN CONV_TAC WORD_BLAST];
     MAP_EVERY VAL_INT64_TAC
      [`nblocks:num`; `loop_count:num`; `loop_remain:num`]] THEN
-  (* The second branch, pc + 0xb0 -> pc + 0xee4, is CORE_FROM88 up to two
+  (* The second branch, pc + 0xb0 -> pc + 0xef4, is CORE_FROM88 up to two
      differences.  (1) htable_mem_4 is unfolded and flattened in the goal's
      precondition (the preamble branch rewrote with htable_mem_4 and
      GSYM CONJ_ASSOC) but folded in from88_entry, so the flattened
@@ -4174,7 +4181,7 @@ let AES256_GCM_ENC_SUBROUTINE_CORRECT = prove
 
 (* ========================================================================= *)
 (* Constant time and memory safety.  AES256_GCM_ENC_SAFE covers the same     *)
-(* core as AES256_GCM_ENC_CORRECT (pc + 0x2c -> pc + 0xee4): the event trace *)
+(* core as AES256_GCM_ENC_CORRECT (pc + 0x2c -> pc + 0xef4): the event trace *)
 (* is a function of the public arguments only, given by the scaffold         *)
 (* scaffold_enc (CONCRETIZE_F_EVENTS_TAC), and every memory access stays     *)
 (* within the declared buffers.  The proof walks the same regions with the   *)
@@ -4278,7 +4285,7 @@ let AES256_GCM_ENC_SAFE = prove
                C_ARGUMENTS
                  [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                read events s = e)
-          (\s. read PC s = word (pc + 0xee4) /\
+          (\s. read PC s = word (pc + 0xef4) /\
                (exists e2.
                     read events s = APPEND e2 e /\
                     e2 =
@@ -4345,9 +4352,9 @@ let AES256_GCM_ENC_SAFE = prove
       SAFE_SIM_TAC (1--210) THEN CLOSE_ENC_TAC;
       SAFE_SIM_TAC (1--122) THEN CLOSE_ENC_TAC];
     ALL_TAC] THEN
-  (* the tail region, pc + 0xdd0 -> pc + 0xee4 *)
+  (* the tail region, pc + 0xdd0 -> pc + 0xef4 *)
   ASM_CASES_TAC `loop_remain = 0` THENL
-   [REDUCE_IF0_TAC `loop_remain:num` THEN SAFE_SIM_TAC (1--9) THEN
+   [REDUCE_IF0_TAC `loop_remain:num` THEN SAFE_SIM_TAC (1--13) THEN
     CLOSE_ENC_TAC; ALL_TAC] THEN
   REDUCE_IFN0_TAC `loop_remain:num` THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `loop_remain:num` `pc + 0xde0` `pc + 0xed0`
@@ -4358,7 +4365,7 @@ let AES256_GCM_ENC_SAFE = prove
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
    [SAFE_SIM_TAC (1--4) THEN CLOSE_ENC_TAC;
     ALL_TAC;
-    REWRITE_TAC[] THEN SAFE_SIM_TAC (1--5) THEN CLOSE_ENC_TAC] THEN
+    REWRITE_TAC[] THEN SAFE_SIM_TAC (1--9) THEN CLOSE_ENC_TAC] THEN
   REWRITE_TAC[] THEN X_GEN_TAC `i:num` THEN STRIP_TAC THEN
   VAL_INT64_TAC `i:num` THEN
   SAFE_SIM_TAC (1--60) THEN CLOSE_ENC_TAC);;
