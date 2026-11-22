@@ -2100,7 +2100,7 @@ let lvs =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MONTSQR_P256_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p256_montjmixadd_mc 124 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P256_MONTJMIXADD_EXEC p256_montjmixadd_mc 124 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = a
     ==>
@@ -2279,7 +2279,7 @@ let LOCAL_MONTSQR_P256_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MONTMUL_P256_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p256_montjmixadd_mc 175 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P256_MONTJMIXADD_EXEC p256_montjmixadd_mc 175 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = a
     ==>
@@ -2725,7 +2725,7 @@ let LOCAL_MONTMUL_P256_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_P256_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p256_montjmixadd_mc 19 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P256_MONTJMIXADD_EXEC p256_montjmixadd_mc 19 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>

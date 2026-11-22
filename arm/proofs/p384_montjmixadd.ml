@@ -4401,7 +4401,7 @@ let DESUM_RULE' = cache DESUM_RULE and DECARRY_RULE' = cache DECARRY_RULE;;
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MONTSQR_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjmixadd_mc 260 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P384_MONTJMIXADD_EXEC p384_montjmixadd_mc 260 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = a
     ==>
@@ -4669,7 +4669,7 @@ let LOCAL_MONTSQR_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MONTMUL_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjmixadd_mc 377 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P384_MONTJMIXADD_EXEC p384_montjmixadd_mc 377 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = a
     ==>
@@ -5182,7 +5182,7 @@ let LOCAL_MONTMUL_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjmixadd_mc 27 lvs
+  ARM_MACRO_SIM_ABBREV_TAC P384_MONTJMIXADD_EXEC p384_montjmixadd_mc 27 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = m
     ==>

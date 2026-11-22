@@ -768,6 +768,9 @@ let ARM_SUBROUTINE_SIM_ABBREV_TAC tupper ilist0 =
 (* ------------------------------------------------------------------------- *)
 (* Simulate a macro, generating subgoal from a template                      *)
 (* The state variable of template's postcondition must be 's'.               *)
+(* ARM_MACRO_SIM_ABBREV_TAC execth mc ... takes the execution theorem of the *)
+(* machine code mc, execth = ARM_MK_EXEC_RULE mc, made once by the caller    *)
+(* and shared by all macros of mc (decoding mc takes long for long code).    *)
 (* ------------------------------------------------------------------------- *)
 
 let ARM_MACRO_SIM_ABBREV_TAC =
@@ -800,8 +803,7 @@ let ARM_MACRO_SIM_ABBREV_TAC =
     CONV_RULE (ONCE_DEPTH_CONV NORMALIZE_ADD_SUBTRACT_WORD_CONV) o
     GEN_REWRITE_RULE ONCE_DEPTH_CONV
      [WORD_RULE `word_add z (word 0):int64 = z`] in
-  fun mc ->
-    let execth = ARM_MK_EXEC_RULE mc in
+  fun execth mc ->
     fun codelen localvars template core_tac prep ilist ->
       (* Rewrite 'LENGTH ..._mc = ..' *)
       let _,template = dest_eq(concl(REWRITE_CONV[fst execth] template)) in
