@@ -19,6 +19,12 @@ else
 SYMBOL_HIDING=
 endif
 
+# The sources of the ML-KEM API in assembly (mlkem_native/asm and
+# mlkem_native/asm_avx512) include their headers and templates by paths
+# relative to their own directory (or to mlkem_native/asm), which cpp does
+# not know when a file comes from standard input, hence the
+# -Imlkem_native/asm.
+#
 # Add explicit language input parameter to cpp, otherwise the use of #n for
 # numeric literals in ARM code is a problem when used inside #define macros
 # since normally that means stringization.
@@ -27,12 +33,12 @@ endif
 # by single-quote characters in comments, so we eliminate // comments first.
 
 ifeq ($(OSTYPE_RESULT),Darwin)
-PREPROCESS=sed -e 's/\/\/.*//' | $(CC) -E -I../include -DWINDOWS_ABI=0 $(SYMBOL_HIDING) -xassembler-with-cpp -
+PREPROCESS=sed -e 's/\/\/.*//' | $(CC) -E -I../include -Imlkem_native/asm -DWINDOWS_ABI=0 $(SYMBOL_HIDING) -xassembler-with-cpp -
 else
 ifeq ($(OSTYPE_RESULT),CYGWIN_NT-10.0)
-PREPROCESS=$(CC) -E -I../include -DWINDOWS_ABI=1 $(SYMBOL_HIDING) -xassembler-with-cpp -
+PREPROCESS=$(CC) -E -I../include -Imlkem_native/asm -DWINDOWS_ABI=1 $(SYMBOL_HIDING) -xassembler-with-cpp -
 else
-PREPROCESS=$(CC) -E -I../include -DWINDOWS_ABI=0 $(SYMBOL_HIDING) -xassembler-with-cpp -
+PREPROCESS=$(CC) -E -I../include -Imlkem_native/asm -DWINDOWS_ABI=0 $(SYMBOL_HIDING) -xassembler-with-cpp -
 endif
 endif
 
@@ -53,11 +59,14 @@ SPLIT=tr ';' '\n'
 
 ifeq ($(ARCHTYPE_RESULT),x86_64)
 ASSEMBLE=as
+LINK=ld
 else
 ifeq ($(OSTYPE_RESULT),Darwin)
 ASSEMBLE=as -arch x86_64
+LINK=ld
 else
 ASSEMBLE=x86_64-linux-gnu-as
+LINK=x86_64-linux-gnu-ld
 endif
 endif
 
@@ -66,9 +75,9 @@ endif
 # for proof-checking, not used for actual code execution.
 
 ifeq ($(OSTYPE_RESULT),Darwin)
-WINPREPROCESS=sed -e 's/\/\/.*//' | $(CC) -E -I../include -DWINDOWS_ABI=1 -xassembler-with-cpp -
+WINPREPROCESS=sed -e 's/\/\/.*//' | $(CC) -E -I../include -Imlkem_native/asm -DWINDOWS_ABI=1 -xassembler-with-cpp -
 else
-WINPREPROCESS=$(CC) -E -I../include -DWINDOWS_ABI=1 -xassembler-with-cpp -
+WINPREPROCESS=$(CC) -E -I../include -Imlkem_native/asm -DWINDOWS_ABI=1 -xassembler-with-cpp -
 endif
 
 # List of object files for point operations and bignum operations
@@ -474,7 +483,7 @@ libs2nbignum.a: $(OBJ) ; ar -rc libs2nbignum.a $(OBJ)
 winobj: $(WINOBJ) ;
 
 clean:; rm -f libs2nbignum.a */*.o */*.obj */*.correct */*.native \
-  */*/*.o */*/*.correct */*/*.native
+  */*/*.o */*/*.obj */*/*.correct */*/*.native */*/*.elf
 
 # Dynamically regenerate or destroy the files recording which functions
 # use BMI and/or ADX instructions in the x86 versions. These won't run

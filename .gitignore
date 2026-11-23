@@ -13,3 +13,5 @@ riscv/proofs/cosim-runner.bin
 riscv/proofs/cosim-runner.elf
 riscv/proofs/sail-cosim.elf
 arm/mlkem_native/asm/mlkem_native2_image.elf
+x86/mlkem_native/asm/mlkem_native2_image.elf
+x86/mlkem_native/asm_avx512/mlkem_native2_avx512_image.elf

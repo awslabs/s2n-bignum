@@ -4,7 +4,10 @@ This directory contains x86-64 code compiled from the portable C
 implementation in [mlkem-native][1], for the same operations as some of the
 hand-written kernels in `../mlkem`, as `../../arm/mlkem_native` does for
 AArch64. The code here is only used for the proofs and is not part of the
-library.
+library. It also contains, as the builds `asm` (AVX2) and `asm_avx512`
+(AVX-512), implementations of mlkem-native's API in hand-written
+assembly, on kernels in `../mlkem` and `../sha3` (see `asm/README.md` and
+`asm_avx512/README.md`).
 
 [1]: https://github.com/pq-code-package/mlkem-native
 
@@ -21,7 +24,13 @@ on all platforms.
 The files for each build of the binary are in directories named after the
 compiler and the optimization level, `<build>` = `<compiler>_<level>`, as
 for AArch64. There is one, `gcc12_O2` for the gcc 12 `-O2` binary, whose
-whole image is verified. For a build:
+whole image is verified. The builds `asm` and `asm_avx512` of the API in
+hand-written assembly, which is not compiled code, are organized
+differently, as described in their READMEs (as for the AArch64 build
+`asm`: their proofs are about the image of their objects linked by GNU
+ld, each proves the theorems of its callees again rather than assuming
+their contracts, there is no link file, and their `proofs.mk` is written
+by hand); the rest of this file is about the compiled build. For a build:
 
  - `<build>/libmlkem.S` is the transcription of the whole image, and
    `<build>/<function>.S` those of single functions;
