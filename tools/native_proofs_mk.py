@@ -12,7 +12,9 @@
 # of a build of the API in assembly). A proof depends on the object files
 # and linked images (.elf) that it reads, in any directory (the kernels of
 # mlkem and sha3 that such a build links), and on the files that it loads
-# with loadt as with needs. The rules for the images are not generated.
+# with loadt as with needs. The rules for the images are not generated: a
+# build that links one has them in its hand-written image.mk, whose objects
+# count as read if a proof reads the image.
 #
 # Every .ml file of proofs/<family>/<build> is a proof, except layout.ml and
 # the spec files X_spec.ml, which the proof file X_proof.ml and the spec
@@ -100,6 +102,12 @@ def main():
     for f in os.listdir(prf):
         if f.endswith('.ml'):
             read |= set(objects_read(isa, '%s/%s' % (prf, f), src))
+    # The objects that a hand-written image.mk of the build links into an
+    # image count as read when a proof reads the image.
+    imgmk = '%s/image.mk' % src
+    if os.path.exists(imgmk) and any(o.endswith('.elf') for o in read):
+        read |= set(re.findall(r'(%s/[A-Za-z0-9_]+\.o)' % re.escape(src),
+                               open(imgmk).read()))
     missing = [o for o in objs if '%s/%s.o' % (src, o) not in read]
     if missing:
         sys.exit('native_proofs_mk.py: no proofs read ' + ' '.join(missing))

@@ -89,9 +89,9 @@ def file_hoisted(path, seen=None):
     for kind, f in file_loads(path):
         if kind == 'needs':
             out.append(f)
-        elif f not in seen and os.path.exists(f):
+        elif f not in seen and os.path.exists('../' + f):
             seen.add(f)
-            out += file_hoisted(f, seen)
+            out += file_hoisted('../' + f, seen)
     return out
 
 def read_costs(prf):
