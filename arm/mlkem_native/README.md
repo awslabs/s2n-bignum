@@ -6,7 +6,9 @@ hand-written kernels in `../mlkem`. The proofs in `../proofs` are done in
 the same way as for those kernels, with the same specifications. The aim is
 to explore what is involved in verifying compiler-generated rather than
 hand-written code. The code here is only used for the proofs and is not
-part of the library.
+part of the library. It also contains, as the build `asm`, an
+implementation of mlkem-native's API in hand-written assembly, on kernels
+of the library in `../mlkem` and `../sha3` (see `asm/README.md`).
 
 [1]: https://github.com/pq-code-package/mlkem-native
 
@@ -25,7 +27,14 @@ compiler and the optimization level, `<build>` = `<compiler>_<level>`:
    binary;
  - `clang17_O3` for the clang 17 `-O3` binary, whose whole image is
    transcribed and 77 of whose functions are verified in it, none of
-   them an API function (see "The clang 17 -O3 image").
+   them an API function (see "The clang 17 -O3 image");
+ - `asm` for the API in hand-written assembly, which is not compiled code:
+   its files and proofs are organized differently, as described in
+   `asm/README.md` (the proofs are about the image of its objects linked
+   by GNU ld, each proves the theorems of its callees again rather than
+   assuming their contracts, there is no link file, and `asm/proofs.mk` is
+   written by hand), and the rest of this file is about the compiled
+   builds.
 
 For a build:
 

@@ -20,6 +20,11 @@ SYMBOL_HIDING=
 endif
 
 
+# The sources of the ML-KEM API in assembly (mlkem_native/asm) include
+# their headers and templates by paths relative to their own directory,
+# which cpp does not know when a file comes from standard input, hence the
+# -Imlkem_native/asm.
+#
 # Add explicit language input parameter to cpp, otherwise the use of #n for
 # numeric literals in ARM code is a problem when used inside #define macros
 # since normally that means stringization.
@@ -28,9 +33,9 @@ endif
 # by single-quote characters in comments, so we eliminate // comments first.
 
 ifeq ($(OSTYPE_RESULT),Darwin)
-PREPROCESS=sed -e 's/\/\/.*//' | $(CC) -E -I../include $(SYMBOL_HIDING) -xassembler-with-cpp -
+PREPROCESS=sed -e 's/\/\/.*//' | $(CC) -E -I../include -Imlkem_native/asm $(SYMBOL_HIDING) -xassembler-with-cpp -
 else
-PREPROCESS=$(CC) -E -I../include $(SYMBOL_HIDING) -xassembler-with-cpp -
+PREPROCESS=$(CC) -E -I../include -Imlkem_native/asm $(SYMBOL_HIDING) -xassembler-with-cpp -
 endif
 
 # Generally GNU-type assemblers are happy with multiple instructions on
@@ -51,17 +56,21 @@ SPLIT=tr ';' '\n'
 ifeq ($(ARCHTYPE_RESULT),aarch64)
 ASSEMBLE=as -march=armv8.2-a+sha3
 OBJDUMP=objdump -d
+LINK=ld
 else
 ifeq ($(ARCHTYPE_RESULT),arm64)
 ASSEMBLE=as -march=armv8.2-a+sha3
 OBJDUMP=objdump -d
+LINK=ld
 else
 ifeq ($(OSTYPE_RESULT),Darwin)
 ASSEMBLE=as -arch arm64 -march=armv8.2-a+sha3
 OBJDUMP=otool -tvV
+LINK=ld
 else
 ASSEMBLE=aarch64-linux-gnu-as -march=armv8.2-a+sha3
 OBJDUMP=aarch64-linux-gnu-objdump -d
+LINK=aarch64-linux-gnu-ld
 endif
 endif
 endif
@@ -500,9 +509,15 @@ TUTORIAL_OBJ = $(filter-out tutorial/aes_encrypt_decrypt.o tutorial/safety.o, $(
 
 # The compiled code from mlkem-native and mldsa-native is for Linux, where x18 is just a
 # temporary register (and the compilers do use it), so the check that x18
-# is not used is not applied to it.
+# is not used is not applied to it. It is to the ML-KEM API in assembly,
+# whose rule has the shorter stem.
 
 mlkem_native/%.o : mlkem_native/%.S
+	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
+
+mlkem_native/asm/%.o : mlkem_native/asm/%.S
+	cat $< | $(PREPROCESS) | $(SPLIT) | grep -v -E '^\s+.quad\s+0x[0-9a-f]+$$' | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
+	$(OBJDUMP) $@ | ( ( ! grep --ignore-case -E 'w18|[^0]x18' ) || ( rm $@ ; exit 1 ) )
 	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
 
 mldsa_native/%.o : mldsa_native/%.S
@@ -510,7 +525,8 @@ mldsa_native/%.o : mldsa_native/%.S
 
 libs2nbignum.a: $(OBJ) ; ar -rc libs2nbignum.a $(OBJ)
 
-clean:; rm -f libs2nbignum.a */*.o */*/*.o */*.correct */*.native */*/*.correct */*/*.native
+clean:; rm -f libs2nbignum.a */*.o */*/*.o */*.correct */*.native */*/*.correct */*/*.native \
+              */*/*.elf
 
 # Proof-related parts
 #
