@@ -492,6 +492,7 @@ count printed by `relative_report` at the end of the link file, see
 | arm mldsa gcc12_O2_reduced_ram | 545 | 5680 s |
 | x86 mlkem gcc12_O2 | 593 | 1726 s |
 | x86 mldsa gcc12_O2 | 578 | 2156 s |
+| x86 mldsa gcc12_O2_reduced_ram | 540 | not measured |
 
 To run a link file, use `make <family>/<build>/link.correct` in `arm` or
 `x86`, with `<family>` one of `mlkem_native` and `mldsa_native`.

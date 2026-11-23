@@ -180,16 +180,33 @@ def main():
         body += data_lines(ro_start, end, data_targets, dsyms)
         return body
 
+    def wrap(text):
+        words, line, out = text.split(), '//', []
+        for w in words:
+            if len(line) + 1 + len(w) > 79:
+                out.append(line)
+                line = '//'
+            line += ' ' + w
+        return out + [line]
+
+    def directive(macro):
+        # as in keccakf1600_permute.S, the argument on its own line if the
+        # line would be too long
+        line = '        %s(%s)' % (macro, symbol)
+        if len(line) <= 79:
+            return [line]
+        return ['        %s(' % macro, '          %s)' % symbol]
+
     def full(body):
         hdr = [
             '// Copyright (c) The mldsa-native project authors',
             '// Copyright Amazon.com, Inc. or its affiliates. '
             'All Rights Reserved.',
             '// SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT', '',
-            '// ' + '-' * 76,
-            "// The code and read-only data of mldsa-native's libmldsa.so "
-            '(%s)' % title,
-            '//']
+            '// ' + '-' * 76]
+        hdr += wrap("The code and read-only data of mldsa-native's "
+                    'libmldsa.so (%s)' % title)
+        hdr.append('//')
         text = (
             'This is a transcription of the binary %s for x86-64 (see '
             'README.md), as loaded at an address that is a multiple of '
@@ -204,18 +221,12 @@ def main():
             'any instruction that the assembler would encode differently. '
             'The labels are named after the addresses in the binary.'
             % binpath)
-        words, line = text.split(), '//'
-        for w in words:
-            if len(line) + 1 + len(w) > 79:
-                hdr.append(line)
-                line = '//'
-            line += ' ' + w
-        hdr.append(line)
+        hdr += wrap(text)
         hdr += ['// ' + '-' * 76, '',
                 '#include "_internal_s2n_bignum_x86.h"', '',
-                '        .intel_syntax noprefix',
-                '        S2N_BN_SYM_VISIBILITY_DIRECTIVE(%s)' % symbol,
-                '        S2N_BN_SYM_PRIVACY_DIRECTIVE(%s)' % symbol,
+                '        .intel_syntax noprefix'] + \
+               directive('S2N_BN_SYM_VISIBILITY_DIRECTIVE') + \
+               directive('S2N_BN_SYM_PRIVACY_DIRECTIVE') + [
                 '        .text',
                 '        .balign 16', '',
                 'S2N_BN_SYMBOL(%s):' % symbol, '']
