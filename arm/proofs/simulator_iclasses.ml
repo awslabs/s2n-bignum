@@ -274,11 +274,20 @@ let iclasses =
   (*** BIF ***)
   "0x101110111xxxxx000111xxxxxxxxxx";
 
+  (*** BSL ***)
+  "0x101110011xxxxx000111xxxxxxxxxx";
+
   (*** CMGT, vector, register, signed ***)
   "0x001110xx1xxxxx001101xxxxxxxxxx";
 
   (*** CMHI, vector ***)
   "0x101110xx1xxxxx001101xxxxxxxxxx";
+
+  (*** CMHS, vector ***)
+  "0x101110xx1xxxxx001111xxxxxxxxxx";
+
+  (*** CMTST, vector ***)
+  "0x001110xx1xxxxx100011xxxxxxxxxx";
 
   (*** CMGE, vector ***)
   "0x001110xx1xxxxx001111xxxxxxxxxx";
@@ -363,6 +372,9 @@ let iclasses =
   (*** ORR (vector, immediate, 32-bit) ***)
   "0x00111100000xxx000101xxxxxxxxxx"; (* 32-bit ORR imm, immh=0 *)
 
+  (*** ORR (vector, immediate, 16-bit, cmode=10x1) ***)
+  "0x00111100000xxx10x101xxxxxxxxxx";
+
   (*** MUL (by element; focus on defined sizes) ***)
   "0x00111101xxxxxx1000x0xxxxxxxxxx";
   "0x00111110xxxxxx1000x0xxxxxxxxxx";
@@ -425,6 +437,15 @@ let iclasses =
 
   (*** ADDHN2 ***)
   "01001110xx1xxxxx010000xxxxxxxxxx";
+
+  (*** ADDP (vector) ***)
+  "0x001110xx1xxxxx101111xxxxxxxxxx";
+
+  (*** RADDHN ***)
+  "00101110xx1xxxxx010000xxxxxxxxxx";
+
+  (*** RADDHN2 ***)
+  "01101110xx1xxxxx010000xxxxxxxxxx";
 
   (*** USUBL ***)
   "00101110xx1xxxxx001000xxxxxxxxxx";
@@ -576,6 +597,9 @@ let iclasses =
   (*** TBL3 (3-register table, len = 2) ***)
   "0x001110000xxxxx010000xxxxxxxxxx";
 
+  (*** TBL4 (4-register table, len = 3) ***)
+  "0x001110000xxxxx011000xxxxxxxxxx";
+
   (*** TRN1 and TRN2 ***)
   "0x001110xx0xxxxx0x1010xxxxxxxxxx";
 
@@ -649,6 +673,12 @@ let iclasses =
   "0x101111001xxxxx000001xxxxxxxxxx";
   "0x1011110001xxxx000001xxxxxxxxxx";
   "0x10111100001xxx000001xxxxxxxxxx";
+
+  (*** URSHR (make sure immh is nonzero) ***)
+  "0x10111101xxxxxx001001xxxxxxxxxx";
+  "0x101111001xxxxx001001xxxxxxxxxx";
+  "0x1011110001xxxx001001xxxxxxxxxx";
+  "0x10111100001xxx001001xxxxxxxxxx";
 
   (*** USRA ***)
   "0110111101xxxxxx000101xxxxxxxxxx"; (* q=1 *)
@@ -938,6 +968,15 @@ let check_insns () =
     "0x001101110xxxxx010xx0xxxxxxxxxx";
     "0x00110101000000100001xxxxxxxxxx";
     "0x001101110xxxxx100001xxxxxxxxxx";
+
+    (*** st1 (single structure) of one lane, with the same addressing ***)
+    (*** modes and element sizes as ld1 of one lane above              ***)
+    "0x00110100000000000xxxxxxxxxxxxx";
+    "0x001101100xxxxx000xxxxxxxxxxxxx";
+    "0x00110100000000010xx0xxxxxxxxxx";
+    "0x001101100xxxxx010xx0xxxxxxxxxx";
+    "0x00110100000000100001xxxxxxxxxx";
+    "0x001101100xxxxx100001xxxxxxxxxx";
 
     (*** ld1r (no offset, post-immediate and post-register ofs) ***)
     "0x001101010000001100xxxxxxxxxxxx";
