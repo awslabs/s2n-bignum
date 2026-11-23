@@ -1214,21 +1214,29 @@ extern uint64_t mldsa_rej_uniform_eta4_VARIABLE_TIME_x86(int32_t r[256], const u
 /* Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 32-bit words), return */
 extern uint64_t mldsa_rej_uniform_VARIABLE_TIME(int32_t r[256],const uint8_t *buf,uint64_t buflen,const uint8_t *table);
 
+/* Add ML-KEM polynomials and reduce the coefficients */
+/* Inputs r[256], a[256] (signed 16-bit words); output r[256] (signed 16-bit words) */
+extern void mlkem_add_reduce(int16_t r[256],const int16_t a[256]);
+
 /* Scalar product of 2-element polynomial vectors in NTT domain, with mulcache */
 /* Inputs a[512], b[512], bt[256] (signed 16-bit words); output r[256] (signed 16-bit words) */
 extern void mlkem_basemul_k2(int16_t r[256],const int16_t a[512],const int16_t b[512],const int16_t bt[256]);
+extern void mlkem_basemul_k2_alt(int16_t r[256],const int16_t a[512],const int16_t b[512],const int16_t bt[256]);
 
 /* Scalar product of 3-element polynomial vectors in NTT domain, with mulcache */
 /* Inputs a[768], b[768], bt[384] (signed 16-bit words); output r[256] (signed 16-bit words) */
 extern void mlkem_basemul_k3(int16_t r[256],const int16_t a[768],const int16_t b[768],const int16_t bt[384]);
+extern void mlkem_basemul_k3_alt(int16_t r[256],const int16_t a[768],const int16_t b[768],const int16_t bt[384]);
 
 /* Scalar product of 4-element polynomial vectors in NTT domain, with mulcache */
 /* Inputs a[1024], b[1024], bt[512] (signed 16-bit words); output r[256] (signed 16-bit words) */
 extern void mlkem_basemul_k4(int16_t r[256],const int16_t a[1024],const int16_t b[1024],const int16_t bt[512]);
+extern void mlkem_basemul_k4_alt(int16_t r[256],const int16_t a[1024],const int16_t b[1024],const int16_t bt[512]);
 
 /* Inverse number-theoretic transform from ML-KEM */
 /* Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words) */
 extern void mlkem_intt(int16_t a[256],const int16_t z_01234[80],const int16_t z_56[384]);
+extern void mlkem_intt_alt(int16_t a[256],const int16_t z_01234[80],const int16_t z_56[384]);
 
 /* Inverse number-theoretic transform from ML-KEM */
 /* Input a[256] (signed 16-bit words), qdata[624]; output a[256] (signed 16-bit words) */
@@ -1249,26 +1257,120 @@ extern void mlkem_ntt_x86(int16_t a[256],const int16_t qdata[624]);
 /* Forward number-theoretic transform from ML-KEM */
 /* Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words) */
 extern void mlkem_ntt(int16_t a[256],const int16_t z_01234[80],const int16_t z_56[384]);
+extern void mlkem_ntt_alt(int16_t a[256],const int16_t z_01234[80],const int16_t z_56[384]);
+
+/* Check that bytes encode ML-KEM polynomials with reduced coefficients */
+/* Input a[384*k] (bytes), k; output function return */
+extern uint64_t mlkem_check_encoding(const uint8_t *a,uint64_t k);
+
+/* Compress ML-KEM polynomial coefficients to 10 bits and pack them */
+/* Input a[256] (signed 16-bit words); output r[320] (bytes) */
+extern void mlkem_compress_d10(uint8_t r[320],const int16_t a[256]);
+
+// Compress ML-KEM polynomial coefficients to 10 bits and pack them
+// Inputs a[256] (signed 16-bit words), data[32] (bytes); output r[320] (bytes)
+extern void mlkem_compress_d10_x86(uint8_t r[320],const int16_t a[256],const uint8_t data[32]);
+
+/* Compress ML-KEM polynomial coefficients to 11 bits and pack them */
+/* Input a[256] (signed 16-bit words); output r[352] (bytes) */
+extern void mlkem_compress_d11(uint8_t r[352],const int16_t a[256]);
+
+// Compress ML-KEM polynomial coefficients to 11 bits and pack them
+// Inputs a[256] (signed 16-bit words), data[64] (bytes); output r[352] (bytes)
+extern void mlkem_compress_d11_x86(uint8_t r[352],const int16_t a[256],const uint8_t data[64]);
+
+/* Compress ML-KEM polynomial coefficients to 4 bits and pack them */
+/* Input a[256] (signed 16-bit words); output r[128] (bytes) */
+extern void mlkem_compress_d4(uint8_t r[128],const int16_t a[256]);
+
+// Compress ML-KEM polynomial coefficients to 4 bits and pack them
+// Inputs a[256] (signed 16-bit words), data[32] (bytes); output r[128] (bytes)
+extern void mlkem_compress_d4_x86(uint8_t r[128],const int16_t a[256],const uint8_t data[32]);
+
+/* Compress ML-KEM polynomial coefficients to 5 bits and pack them */
+/* Input a[256] (signed 16-bit words); output r[160] (bytes) */
+extern void mlkem_compress_d5(uint8_t r[160],const int16_t a[256]);
+
+// Compress ML-KEM polynomial coefficients to 5 bits and pack them
+// Inputs a[256] (signed 16-bit words), data[32] (bytes); output r[160] (bytes)
+extern void mlkem_compress_d5_x86(uint8_t r[160],const int16_t a[256],const uint8_t data[32]);
 
 /* Canonical modular reduction of polynomial coefficients for ML-KEM */
 /* Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words) */
 extern void mlkem_reduce(int16_t a[256]);
 
+/* Convert a 32-byte message to an ML-KEM polynomial */
+/* Input msg[32] (bytes); output r[256] (signed 16-bit words) */
+extern void mlkem_frommsg(int16_t r[256],const uint8_t msg[32]);
+
+/* Unpack 10-bit ML-KEM compressed coefficients and decompress them */
+/* Input a[320] (bytes); output r[256] (signed 16-bit words) */
+extern void mlkem_decompress_d10(int16_t r[256],const uint8_t a[320]);
+
+// Unpack 10-bit ML-KEM compressed coefficients and decompress them
+// Inputs a[320], data[32] (bytes); output r[256] (signed 16-bit words)
+extern void mlkem_decompress_d10_x86(int16_t r[256],const uint8_t a[320],const uint8_t data[32]);
+
+/* Unpack 11-bit ML-KEM compressed coefficients and decompress them */
+/* Input a[352] (bytes); output r[256] (signed 16-bit words) */
+extern void mlkem_decompress_d11(int16_t r[256],const uint8_t a[352]);
+
+// Unpack 11-bit ML-KEM compressed coefficients and decompress them
+// Inputs a[352], data[128] (bytes); output r[256] (signed 16-bit words)
+extern void mlkem_decompress_d11_x86(int16_t r[256],const uint8_t a[352],const uint8_t data[128]);
+
+/* Unpack 4-bit ML-KEM compressed coefficients and decompress them */
+/* Input a[128] (bytes); output r[256] (signed 16-bit words) */
+extern void mlkem_decompress_d4(int16_t r[256],const uint8_t a[128]);
+
+// Unpack 4-bit ML-KEM compressed coefficients and decompress them
+// Inputs a[128], data[32] (bytes); output r[256] (signed 16-bit words)
+extern void mlkem_decompress_d4_x86(int16_t r[256],const uint8_t a[128],const uint8_t data[32]);
+
+/* Unpack 5-bit ML-KEM compressed coefficients and decompress them */
+/* Input a[160] (bytes); output r[256] (signed 16-bit words) */
+extern void mlkem_decompress_d5(int16_t r[256],const uint8_t a[160]);
+
+// Unpack 5-bit ML-KEM compressed coefficients and decompress them
+// Inputs a[160], data[96] (bytes); output r[256] (signed 16-bit words)
+extern void mlkem_decompress_d5_x86(int16_t r[256],const uint8_t a[160],const uint8_t data[96]);
+
 /* Unpack ML-KEM polynomial coefficients */
 /* Input a[384] (bytes); output r[256] (signed 16-bit words) */
 extern void mlkem_frombytes(int16_t r[256],const uint8_t a[384]);
 
+/* Subtract ML-KEM polynomials and reduce the coefficients */
+/* Inputs r[256], a[256] (signed 16-bit words); output r[256] (signed 16-bit words) */
+extern void mlkem_sub_reduce(int16_t r[256],const int16_t a[256]);
+
 /* Pack ML-KEM polynomial coefficients as 12-bit numbers */
 /* Input a[256] (signed 16-bit words); output r[384] (bytes) */
 extern void mlkem_tobytes(uint8_t r[384],const int16_t a[256]);
+extern void mlkem_tobytes_alt(uint8_t r[384],const int16_t a[256]);
+
+/* Convert an ML-KEM polynomial to a 32-byte message */
+/* Input a[256] (signed 16-bit words); output msg[32] (bytes) */
+extern void mlkem_tomsg(uint8_t msg[32],const int16_t a[256]);
 
 /* Conversion of ML-KEM polynomial coefficients to Montgomery form */
 /* Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words) */
 extern void mlkem_tomont(int16_t a[256]);
 
+/* Sample from the centered binomial distribution with eta = 2 for ML-KEM */
+/* Input buf[128] (bytes); output r[256] (signed 16-bit words) */
+extern void mlkem_cbd2(int16_t r[256],const uint8_t buf[128]);
+
+/* Sample from the centered binomial distribution with eta = 3 for ML-KEM */
+/* Input buf[192] (bytes); output r[256] (signed 16-bit words) */
+extern void mlkem_cbd3(int16_t r[256],const uint8_t buf[192]);
+
 /* Uniform rejection sampling for ML-KEM */
 /* Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 16-bit words), return */
 extern uint64_t mlkem_rej_uniform_VARIABLE_TIME(int16_t r[256],const uint8_t *buf,uint64_t buflen,const uint8_t *table);
+
+/* Uniform rejection sampling for ML-KEM, appending to a partial result */
+/* Inputs r[n], n, *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 16-bit words), return */
+extern uint64_t mlkem_rej_uniform_alt_VARIABLE_TIME(int16_t r[256],uint64_t n,const uint8_t *buf,uint64_t buflen,const uint8_t *table);
 
 /* Reorders ML-KEM polynomial coefficients for x86 implementation */
 /* Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words) */

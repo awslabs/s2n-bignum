@@ -51,7 +51,7 @@ S2N_BN_SYMBOL(mlkem_reduce):
         add     v16.8h, v23.8h, v7.8h
         sub     x1, x1, #0x1
 
-mlkem_reduce_loop:
+Lmlkem_reduce_loop:
         ldr     q6, [x0], #0x40
         ldr     q30, [x0, #0x20]
         sqdmulh v31.8h, v6.8h, v4.h[0]
@@ -85,7 +85,7 @@ mlkem_reduce_loop:
         and     v27.16b, v3.16b, v18.16b
         add     v16.8h, v2.8h, v27.8h
         sub     x1, x1, #0x1
-        cbnz    x1, mlkem_reduce_loop
+        cbnz    x1, Lmlkem_reduce_loop
         sqdmulh v20.8h, v5.8h, v4.h[0]
         ldr     q24, [x0], #0x40
         stur    q21, [x0, #-0x20]

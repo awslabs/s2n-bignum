@@ -130,8 +130,7 @@ let mlkem_frombytes_mc =
                            (* VPSRLW (%_% ymm15) (%_% ymm5) (Imm8 (word 8)) *)
   0xc4; 0xc1; 0x75; 0x71; 0xf1; 0x08;
                            (* VPSLLW (%_% ymm1) (%_% ymm9) (Imm8 (word 8)) *)
-  0xc4; 0x41; 0x75; 0xeb; 0xff;
-                           (* VPOR (%_% ymm15) (%_% ymm1) (%_% ymm15) *)
+  0xc5; 0x05; 0xeb; 0xf9;  (* VPOR (%_% ymm15) (%_% ymm15) (%_% ymm1) *)
   0xc5; 0x05; 0xdb; 0xf8;  (* VPAND (%_% ymm15) (%_% ymm15) (%_% ymm0) *)
   0xc4; 0xc1; 0x75; 0x71; 0xd1; 0x04;
                            (* VPSRLW (%_% ymm1) (%_% ymm9) (Imm8 (word 4)) *)
@@ -261,8 +260,7 @@ let mlkem_frombytes_mc =
                            (* VPSRLW (%_% ymm15) (%_% ymm5) (Imm8 (word 8)) *)
   0xc4; 0xc1; 0x75; 0x71; 0xf1; 0x08;
                            (* VPSLLW (%_% ymm1) (%_% ymm9) (Imm8 (word 8)) *)
-  0xc4; 0x41; 0x75; 0xeb; 0xff;
-                           (* VPOR (%_% ymm15) (%_% ymm1) (%_% ymm15) *)
+  0xc5; 0x05; 0xeb; 0xf9;  (* VPOR (%_% ymm15) (%_% ymm15) (%_% ymm1) *)
   0xc5; 0x05; 0xdb; 0xf8;  (* VPAND (%_% ymm15) (%_% ymm15) (%_% ymm0) *)
   0xc4; 0xc1; 0x75; 0x71; 0xd1; 0x04;
                            (* VPSRLW (%_% ymm1) (%_% ymm9) (Imm8 (word 4)) *)
@@ -319,15 +317,15 @@ let DIMINDEX_12 = DIMINDEX_CONV `dimindex(:12)`;;
 let MLKEM_FROMBYTES_CORRECT = prove(
     `!r a (l:(12 word) list) pc.
         aligned 32 r /\
-        nonoverlapping (word pc, 818) (a, 384) /\
-        nonoverlapping (word pc, 818) (r, 512) /\
+        nonoverlapping (word pc, 816) (a, 384) /\
+        nonoverlapping (word pc, 816) (r, 512) /\
         nonoverlapping (a, 384) (r, 512)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) (BUTLAST mlkem_frombytes_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [r; a] s /\
                   read (memory :> bytes(a, 384)) s = num_of_wordlist l)
-             (\s. read RIP s = word (pc + 818) /\
+             (\s. read RIP s = word (pc + 816) /\
                   (LENGTH l = 256
                    ==> read(memory :> bytes(r, 512)) s =
                        num_of_wordlist (MAP word_zx (unpermute_list l):int16 list)))

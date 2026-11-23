@@ -268,16 +268,39 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              mldsa/mldsa_polyz_unpack_19.o \
              mldsa/mldsa_rej_uniform_eta2_VARIABLE_TIME.o \
              mldsa/mldsa_rej_uniform_eta4_VARIABLE_TIME.o \
+             mlkem/mlkem_add_reduce.o \
              mlkem/mlkem_basemul_k2.o \
+             mlkem/mlkem_basemul_k2_alt.o \
              mlkem/mlkem_basemul_k3.o \
+             mlkem/mlkem_basemul_k3_alt.o \
              mlkem/mlkem_basemul_k4.o \
+             mlkem/mlkem_basemul_k4_alt.o \
+             mlkem/mlkem_cbd2.o \
+             mlkem/mlkem_cbd3.o \
+             mlkem/mlkem_check_encoding.o \
+             mlkem/mlkem_compress_d10.o \
+             mlkem/mlkem_compress_d11.o \
+             mlkem/mlkem_compress_d4.o \
+             mlkem/mlkem_compress_d5.o \
+             mlkem/mlkem_decompress_d10.o \
+             mlkem/mlkem_decompress_d11.o \
+             mlkem/mlkem_decompress_d4.o \
+             mlkem/mlkem_decompress_d5.o \
+             mlkem/mlkem_frombytes.o \
+             mlkem/mlkem_frommsg.o \
              mlkem/mlkem_intt.o \
+             mlkem/mlkem_intt_alt.o \
              mlkem/mlkem_mulcache_compute.o \
              mlkem/mlkem_ntt.o \
+             mlkem/mlkem_ntt_alt.o \
              mlkem/mlkem_reduce.o \
+             mlkem/mlkem_sub_reduce.o \
              mlkem/mlkem_tobytes.o \
+             mlkem/mlkem_tobytes_alt.o \
              mlkem/mlkem_tomont.o \
+             mlkem/mlkem_tomsg.o \
              mlkem/mlkem_rej_uniform_VARIABLE_TIME.o \
+             mlkem/mlkem_rej_uniform_alt_VARIABLE_TIME.o \
              mldsa/mldsa_rej_uniform_VARIABLE_TIME.o \
              p256/bignum_add_p256.o \
              p256/bignum_bigendian_4.o \

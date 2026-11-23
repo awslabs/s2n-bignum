@@ -319,6 +319,25 @@ for arch in ["arm", "x86"]:
         # in a file
         i += 1
 
+# Functions in the assembly files that are not in the library, and so are
+# not declared in s2n-bignum.h either: sha3_keccak_f1600_alt2, which the
+# ML-KEM API in assembly uses. Remove each from this list when it is added
+# to the library. (The code of the ML-KEM API in assembly, in
+# arm/mlkem_native/asm, x86/mlkem_native/asm and x86/mlkem_native/asm_avx512,
+# is not scanned.)
+notInLibrary = {
+  "arm": [],
+  "x86": [
+    "sha3_keccak_f1600_alt2",
+  ],
+}
+
+for arch in notInLibrary:
+  for fnname in notInLibrary[arch]:
+    assert fnname in fnsigsFromAsm[arch], \
+        f"{fnname} is in notInLibrary but not in the {arch} assembly files"
+    del fnsigsFromAsm[arch][fnname]
+
 ###############################################################################
 #  STEP 3. Compare collected function signatures as well as memory in/outs    #
 ###############################################################################
@@ -357,6 +376,20 @@ onlyInArm = [
   "mldsa_rej_uniform_eta2_VARIABLE_TIME",
   "mldsa_rej_uniform_eta4_VARIABLE_TIME",
   "mldsa_rej_uniform_VARIABLE_TIME",
+  "mlkem_basemul_k2_alt",
+  "mlkem_basemul_k3_alt",
+  "mlkem_basemul_k4_alt",
+  "mlkem_compress_d10",
+  "mlkem_compress_d11",
+  "mlkem_compress_d4",
+  "mlkem_compress_d5",
+  "mlkem_decompress_d10",
+  "mlkem_decompress_d11",
+  "mlkem_decompress_d4",
+  "mlkem_decompress_d5",
+  "mlkem_intt_alt",
+  "mlkem_ntt_alt",
+  "mlkem_tobytes_alt",
   "mlkem_ntt",
   "mlkem_intt",
   "mlkem_mulcache_compute",
@@ -400,7 +433,14 @@ onlyInX86 = [
   "mldsa_rej_uniform_VARIABLE_TIME_x86",
   "mldsa_rej_uniform_eta2_VARIABLE_TIME_x86",
   "mldsa_rej_uniform_eta4_VARIABLE_TIME_x86",
-  "mlkem_frombytes",
+  "mlkem_compress_d10_x86",
+  "mlkem_compress_d11_x86",
+  "mlkem_compress_d4_x86",
+  "mlkem_compress_d5_x86",
+  "mlkem_decompress_d10_x86",
+  "mlkem_decompress_d11_x86",
+  "mlkem_decompress_d4_x86",
+  "mlkem_decompress_d5_x86",
   "mlkem_mulcache_compute_x86",
   "mlkem_ntt_x86",
   "mlkem_intt_x86",

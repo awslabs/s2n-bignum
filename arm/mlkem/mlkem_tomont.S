@@ -45,7 +45,7 @@ S2N_BN_SYMBOL(mlkem_tomont):
         ldr     q27, [x0, #0x20]
         sub     x1, x1, #0x1
 
-mlkem_tomont_loop:
+Lmlkem_tomont_loop:
         mls     v17.8h, v7.8h, v4.h[0]
         sqrdmulh v5.8h, v23.8h, v3.8h
         ldr     q7, [x0], #0x40
@@ -67,7 +67,7 @@ mlkem_tomont_loop:
         ldr     q27, [x0, #0x20]
         stur    q26, [x0, #-0x20]
         sub     x1, x1, #0x1
-        cbnz    x1, mlkem_tomont_loop
+        cbnz    x1, Lmlkem_tomont_loop
 
         mls     v17.8h, v7.8h, v4.h[0]
         sqrdmulh v7.8h, v23.8h, v3.8h

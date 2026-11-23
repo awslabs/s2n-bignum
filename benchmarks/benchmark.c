@@ -1427,6 +1427,28 @@ void call_bignum_copy_row_from_table_32__32(void) {}
 void call_bignum_emontredc_8n_cdiff__32(void) {}
 void call_sha3_keccak_f1600_alt(void) {}
 void call_sha3_keccak_f1600_alt2(void) {}
+void call_mlkem_add_reduce(void) {}
+void call_mlkem_cbd2(void) {}
+void call_mlkem_cbd3(void) {}
+void call_mlkem_check_encoding(void) {}
+void call_mlkem_basemul_k2_alt(void) {}
+void call_mlkem_basemul_k3_alt(void) {}
+void call_mlkem_basemul_k4_alt(void) {}
+void call_mlkem_intt_alt(void) {}
+void call_mlkem_ntt_alt(void) {}
+void call_mlkem_tobytes_alt(void) {}
+void call_mlkem_rej_uniform_alt(void) {}
+void call_mlkem_compress_d10(void) {}
+void call_mlkem_compress_d11(void) {}
+void call_mlkem_compress_d4(void) {}
+void call_mlkem_compress_d5(void) {}
+void call_mlkem_decompress_d10(void) {}
+void call_mlkem_decompress_d11(void) {}
+void call_mlkem_decompress_d4(void) {}
+void call_mlkem_decompress_d5(void) {}
+void call_mlkem_frommsg(void) {}
+void call_mlkem_sub_reduce(void) {}
+void call_mlkem_tomsg(void) {}
 void call_sha3_keccak2_f1600(void) {}
 void call_sha3_keccak2_f1600_alt(void) {}
 void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1,b2,b3))
@@ -1530,7 +1552,52 @@ void call_sha3_keccak2_f1600_alt(void) repeat(sha3_keccak2_f1600_alt(b0,b1))
 void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1))
 void call_sha3_keccak4_f1600_alt2(void) repeat(sha3_keccak4_f1600_alt2(b0,b1))
 
-void call_mlkem_frombytes(void) {}
+void call_mlkem_add_reduce(void) \
+    repeat(mlkem_add_reduce((int16_t*)b0,(int16_t*)b1))
+void call_mlkem_cbd2(void) repeat(mlkem_cbd2((int16_t*)b0,(uint8_t*)b1))
+void call_mlkem_cbd3(void) repeat(mlkem_cbd3((int16_t*)b0,(uint8_t*)b1))
+void call_mlkem_check_encoding(void) \
+    repeat(mlkem_check_encoding((uint8_t*)b0,4))
+void call_mlkem_compress_d10(void) \
+    repeat(mlkem_compress_d10((uint8_t*)b0,(int16_t*)b1))
+void call_mlkem_compress_d11(void) \
+    repeat(mlkem_compress_d11((uint8_t*)b0,(int16_t*)b1))
+void call_mlkem_compress_d4(void) \
+    repeat(mlkem_compress_d4((uint8_t*)b0,(int16_t*)b1))
+void call_mlkem_compress_d5(void) \
+    repeat(mlkem_compress_d5((uint8_t*)b0,(int16_t*)b1))
+void call_mlkem_decompress_d10(void) \
+    repeat(mlkem_decompress_d10((int16_t*)b0,(uint8_t*)b1))
+void call_mlkem_decompress_d11(void) \
+    repeat(mlkem_decompress_d11((int16_t*)b0,(uint8_t*)b1))
+void call_mlkem_decompress_d4(void) \
+    repeat(mlkem_decompress_d4((int16_t*)b0,(uint8_t*)b1))
+void call_mlkem_decompress_d5(void) \
+    repeat(mlkem_decompress_d5((int16_t*)b0,(uint8_t*)b1))
+void call_mlkem_frommsg(void) repeat(mlkem_frommsg((int16_t*)b0,(uint8_t*)b1))
+void call_mlkem_sub_reduce(void) \
+    repeat(mlkem_sub_reduce((int16_t*)b0,(int16_t*)b1))
+void call_mlkem_tomsg(void) repeat(mlkem_tomsg((uint8_t*)b0,(int16_t*)b1))
+void call_mlkem_basemul_k2_alt(void) \
+    repeat(mlkem_basemul_k2_alt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2, \
+                         (int16_t*)b3))
+void call_mlkem_basemul_k3_alt(void) \
+    repeat(mlkem_basemul_k3_alt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2, \
+                         (int16_t*)b3))
+void call_mlkem_basemul_k4_alt(void) \
+    repeat(mlkem_basemul_k4_alt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2, \
+                         (int16_t*)b3))
+void call_mlkem_intt_alt(void) \
+    repeat(mlkem_intt_alt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
+void call_mlkem_ntt_alt(void) \
+    repeat(mlkem_ntt_alt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
+void call_mlkem_tobytes_alt(void) \
+    repeat(mlkem_tobytes_alt((uint8_t*)b0,(int16_t*)b1))
+void call_mlkem_rej_uniform_alt(void) \
+    repeat(mlkem_rej_uniform_alt_VARIABLE_TIME((int16_t*)b0,0,(uint8_t*)b1, \
+                         1200,mlkem_rej_uniform_table))
+void call_mlkem_frombytes(void) \
+    repeat(mlkem_frombytes((int16_t*)b0,(uint8_t*)b1))
 void call_mlkem_unpack(void) {}
 
 // Helper function for AES XTS encrypt with parameterized length
@@ -2033,17 +2100,40 @@ int main(int argc, char *argv[])
   timingtest(all,"edwards25519_scalarmulbase_alt",call_edwards25519_scalarmulbase_alt);
   timingtest(bmi,"edwards25519_scalarmuldouble",call_edwards25519_scalarmuldouble);
   timingtest(all,"edwards25519_scalarmuldouble_alt",call_edwards25519_scalarmuldouble_alt);
+  timingtest(arm,"mlkem_add_reduce",call_mlkem_add_reduce);
   timingtest(avx2,"mlkem_basemul_k2",call_mlkem_basemul_k2);
+  timingtest(arm,"mlkem_basemul_k2_alt",call_mlkem_basemul_k2_alt);
   timingtest(avx2,"mlkem_basemul_k3",call_mlkem_basemul_k3);
+  timingtest(arm,"mlkem_basemul_k3_alt",call_mlkem_basemul_k3_alt);
   timingtest(avx2,"mlkem_basemul_k4",call_mlkem_basemul_k4);
-  timingtest(!arm && avx2,"mlkem_frombytes",call_mlkem_frombytes);
+  timingtest(arm,"mlkem_basemul_k4_alt",call_mlkem_basemul_k4_alt);
+  timingtest(arm,"mlkem_cbd2",call_mlkem_cbd2);
+  timingtest(arm,"mlkem_cbd3",call_mlkem_cbd3);
+  timingtest(arm,"mlkem_check_encoding (k = 4)",call_mlkem_check_encoding);
+  timingtest(arm,"mlkem_compress_d10",call_mlkem_compress_d10);
+  timingtest(arm,"mlkem_compress_d11",call_mlkem_compress_d11);
+  timingtest(arm,"mlkem_compress_d4",call_mlkem_compress_d4);
+  timingtest(arm,"mlkem_compress_d5",call_mlkem_compress_d5);
+  timingtest(arm,"mlkem_decompress_d10",call_mlkem_decompress_d10);
+  timingtest(arm,"mlkem_decompress_d11",call_mlkem_decompress_d11);
+  timingtest(arm,"mlkem_decompress_d4",call_mlkem_decompress_d4);
+  timingtest(arm,"mlkem_decompress_d5",call_mlkem_decompress_d5);
+  timingtest(avx2,"mlkem_frombytes",call_mlkem_frombytes);
+  timingtest(arm,"mlkem_frommsg",call_mlkem_frommsg);
   timingtest(avx2,"mlkem_intt",call_mlkem_intt);
+  timingtest(arm,"mlkem_intt_alt",call_mlkem_intt_alt);
   timingtest(avx2,"mlkem_mulcache_compute",call_mlkem_mulcache_compute);
   timingtest(avx2,"mlkem_ntt",call_mlkem_ntt);
+  timingtest(arm,"mlkem_ntt_alt",call_mlkem_ntt_alt);
   timingtest(avx2,"mlkem_reduce",call_mlkem_reduce);
+  timingtest(arm,"mlkem_sub_reduce",call_mlkem_sub_reduce);
   timingtest(bmi,"mlkem_rej_uniform_VARIABLE_TIME (1200 bytes)",call_mlkem_rej_uniform);
+  timingtest(arm,"mlkem_rej_uniform_alt_VARIABLE_TIME (1200 bytes)",
+             call_mlkem_rej_uniform_alt);
   timingtest(avx2,"mlkem_tobytes",call_mlkem_tobytes);
+  timingtest(arm,"mlkem_tobytes_alt",call_mlkem_tobytes_alt);
   timingtest(avx2,"mlkem_tomont",call_mlkem_tomont);
+  timingtest(arm,"mlkem_tomsg",call_mlkem_tomsg);
   timingtest(!arm && avx2,"mlkem_unpack",call_mlkem_unpack);
   timingtest(avx2,"mldsa_caddq",call_mldsa_caddq);
   timingtest(avx2,"mldsa_intt",call_mldsa_intt);

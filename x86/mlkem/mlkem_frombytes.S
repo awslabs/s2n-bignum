@@ -109,7 +109,7 @@ S2N_BN_SYMBOL(mlkem_frombytes):
  vpand ymm14,ymm14,ymm0
  vpsrlw ymm15,ymm5,0x8
  vpsllw ymm1,ymm9,0x8
- vpor ymm15,ymm1,ymm15
+ vpor ymm15,ymm15,ymm1
  vpand ymm15,ymm15,ymm0
  vpsrlw ymm1,ymm9,0x4
  vpand ymm1,ymm1,ymm0
@@ -181,7 +181,7 @@ S2N_BN_SYMBOL(mlkem_frombytes):
  vpand ymm14,ymm14,ymm0
  vpsrlw ymm15,ymm5,0x8
  vpsllw ymm1,ymm9,0x8
- vpor ymm15,ymm1,ymm15
+ vpor ymm15,ymm15,ymm1
  vpand ymm15,ymm15,ymm0
  vpsrlw ymm1,ymm9,0x4
  vpand ymm1,ymm1,ymm0
