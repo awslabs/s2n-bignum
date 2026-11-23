@@ -303,29 +303,40 @@ jobs:
         # rejects. The tutorial and proofs trees are excluded as HOL Light
         # scaffolding rather than library code: tutorial has unguarded ELF
         # .type/.section directives, and proofs/template.S carries a deliberate
-        # ICODE placeholder.
+        # ICODE placeholder. Some objects call functions of others (those of
+        # the ML-KEM API in assembly do), so all are assembled first, and a
+        # symbol is flagged only if it is undefined in an object and defined
+        # in none.
         set -e
         status=0
         checked=0
+        objdir=$(mktemp -d -t machocheck)
         for src in $(find "$SRCDIR" -name '*.S' \
                        -not -path "$SRCDIR/tutorial/*" \
                        -not -path "$SRCDIR/proofs/*" | sort); do
           checked=$((checked + 1))
-          obj=$(mktemp -t machocheck).o
+          obj="$objdir/$src.o"
+          mkdir -p "$(dirname "$obj")"
           if ! clang -arch "$MACHO_ARCH" -c -I include -o "$obj" "$src" 2>/tmp/asm.err; then
             echo "ASSEMBLE FAILED: $src"
             cat /tmp/asm.err
             status=1
             rm -f "$obj"
-            continue
           fi
-          undef=$(nm -u "$obj")
+        done
+        objs=$(find "$objdir" -name '*.o' | sort)
+        for obj in $objs; do
+          nm -gUj "$obj" 2>/dev/null
+        done | LC_ALL=C sort -u > "$objdir/defined.txt"
+        for obj in $objs; do
+          undef=$(nm -u "$obj" 2>/dev/null | LC_ALL=C sort -u |
+                  LC_ALL=C comm -23 - "$objdir/defined.txt")
           if [ -n "$undef" ]; then
-            echo "UNDEFINED SYMBOL(S) in $src:"
+            src=${obj#"$objdir/"}
+            echo "UNDEFINED SYMBOL(S) in ${src%.o}:"
             echo "$undef" | sed 's/^/    /'
             status=1
           fi
-          rm -f "$obj"
         done
         echo "Checked $checked Mach-O ($MACHO_ARCH) object(s) from $SRCDIR."
         if [ $status -ne 0 ]; then

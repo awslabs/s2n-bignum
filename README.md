@@ -497,6 +497,16 @@ count printed by `relative_report` at the end of the link file, see
 To run a link file, use `make <family>/<build>/link.correct` in `arm` or
 `x86`, with `<family>` one of `mlkem_native` and `mldsa_native`.
 
+The builds `asm` of `arm/mlkem_native` and `x86/mlkem_native` and
+`asm_avx512` of `x86/mlkem_native` are not compiled code but the ML-KEM API
+in hand-written assembly, on kernels of the library (see their
+`README.md`). They have no link file: each of their proof targets, listed
+in their `proofs.mk`, proves the theorems of the functions that it calls
+again. Their 39 targets took about 126000 s of CPU time together in serial
+runs with HOL Light e5236a58 (on the nativity branch, where they were
+developed): 51000 s for the 12 AArch64 targets and 75000 s for the 27 x86
+targets.
+
 ### Benchmarking and "constant time"
 
 The benchmarking setup included in the repository can be invoked, as mentioned
