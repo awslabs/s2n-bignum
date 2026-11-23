@@ -2551,6 +2551,19 @@ let x86_VPSLLVD = new_definition
         let res:(128)word = simd4 f (word_zx x) (word_zx c) in
         (dest := (word_zx res):N word) s`;;
 
+(* VPSLLVQ: variable left shift on 64-bit lanes, following VPSRLVQ *)
+let x86_VPSLLVQ = new_definition
+  `x86_VPSLLVQ dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (c:N word) = read src2 s in
+      let f = (\(x:64 word) (c:64 word). word_shl x (MIN (val c) 64)) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd4 f (word_zx x) (word_zx c) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd2 f (word_zx x) (word_zx c) in
+        (dest := (word_zx res):N word) s`;;
+
 (* Only VPSLLD version where shift count is an immediate value is supported *)
 let x86_VPSLLD = new_definition
   `x86_VPSLLD dest src imm8 (s:x86state) =
@@ -4684,6 +4697,14 @@ let x86_execute = define
                              (OPERAND256 src2 s)
         | 128 -> x86_VPSLLVD (OPERAND128 dest s) (OPERAND128 src1 s)
                              (OPERAND128 src2 s)) s)) s
+    | VPSLLVQ dest src1 src2 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSLLVQ (OPERAND256 dest s) (OPERAND256 src1 s)
+                             (OPERAND256 src2 s)
+        | 128 -> x86_VPSLLVQ (OPERAND128 dest s) (OPERAND128 src1 s)
+                             (OPERAND128 src2 s)) s)) s
     | VPSLLD dest src imm8 ->
         (add_load_event src s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
@@ -6251,6 +6272,7 @@ let x86_VPSHUFB_ALT = EXPAND_SIMD_RULE x86_VPSHUFB;;
 let x86_VPSHUFD_ALT = EXPAND_SIMD_RULE x86_VPSHUFD;;
 let x86_VPSLLD_ALT = EXPAND_SIMD_RULE x86_VPSLLD;;
 let x86_VPSLLVD_ALT = EXPAND_SIMD_RULE x86_VPSLLVD;;
+let x86_VPSLLVQ_ALT = EXPAND_SIMD_RULE x86_VPSLLVQ;;
 let x86_VPSLLQ_ALT = EXPAND_SIMD_RULE x86_VPSLLQ;;
 let x86_VPSLLW_ALT = EXPAND_SIMD_RULE x86_VPSLLW;;
 let x86_VPSUBB_ALT = EXPAND_SIMD_RULE x86_VPSUBB;;
@@ -6373,7 +6395,7 @@ let X86_OPERATION_CLAUSES =
     x86_VPBLENDMQ; x86_VMOVDQ64;
     x86_VSHUFI64X2; x86_VINSERTI32X4; x86_VEXTRACTI32X4;
     x86_KXNORW; x86_KSHIFTRW; x86_KSHIFTLW;
-    x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPBROADCASTW_ALT; x86_VPSLLD_ALT; x86_VPSLLVD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT;
+    x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPBROADCASTW_ALT; x86_VPSLLD_ALT; x86_VPSLLVD_ALT; x86_VPSLLVQ_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT;
     x86_VMOVDQA_ALT; x86_VMOVDQU_ALT; x86_VPMADDUBSW_ALT; x86_VPMADDWD_ALT; x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPACKUSWB_ALT; x86_VPBLENDVB_ALT;
     x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPCLMULQDQ_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT; x86_VPSHUFD_ALT;

@@ -1228,6 +1228,12 @@ let iclasses_base =
  [0xc4; 0xe2; 0x6d; 0x47; 0xcb]; (* VPSLLVD ymm1, ymm2, ymm3 *)
  [0xc4; 0xe2; 0x79; 0x47; 0xc1]; (* VPSLLVD xmm0, xmm0, xmm1 *)
  [0xc4; 0xe2; 0x69; 0x47; 0xcb]; (* VPSLLVD xmm1, xmm2, xmm3 *)
+ [0xc4; 0xe2; 0xfd; 0x47; 0xc1]; (* VPSLLVQ ymm0, ymm0, ymm1 *)
+ [0xc4; 0xe2; 0xc5; 0x47; 0xfa]; (* VPSLLVQ ymm7, ymm7, ymm2 *)
+ [0xc4; 0x42; 0xbd; 0x47; 0xc1]; (* VPSLLVQ ymm8, ymm8, ymm9 *)
+ [0xc4; 0xe2; 0xed; 0x47; 0xcb]; (* VPSLLVQ ymm1, ymm2, ymm3 *)
+ [0xc4; 0xe2; 0xf9; 0x47; 0xc1]; (* VPSLLVQ xmm0, xmm0, xmm1 *)
+ [0xc4; 0xe2; 0xe9; 0x47; 0xcb]; (* VPSLLVQ xmm1, xmm2, xmm3 *)
  [0xc4; 0xe2; 0x7d; 0x45; 0xc1]; (* VPSRLVD ymm0, ymm0, ymm1 *)
  [0xc4; 0xe2; 0x45; 0x45; 0xfa]; (* VPSRLVD ymm7, ymm7, ymm2 *)
  [0xc4; 0x42; 0x3d; 0x45; 0xc1]; (* VPSRLVD ymm8, ymm8, ymm9 *)
@@ -2314,7 +2320,7 @@ let x86_required_features instr =
   | "VMOVDQA" | "VMOVDQU" | "VMOVSHDUP" | "VMOVSLDUP" | "VPTEST"
   | "VZEROUPPER" | "VMOVMSKPS" -> ["avx"]
   | "VPBROADCASTW" | "VPBROADCASTD" | "VPBROADCASTQ" | "VPBLENDD"
-  | "VPSLLVD" | "VPSRLVD" | "VPSRLVQ" | "VPERMD" | "VPERMQ"
+  | "VPSLLVD" | "VPSLLVQ" | "VPSRLVD" | "VPSRLVQ" | "VPERMD" | "VPERMQ"
   | "VPERM2I128" | "VINSERTI128" | "VEXTRACTI128" -> ["avx2"]
   | "VPTERNLOGD" | "VPTERNLOGQ" | "VPXORQ" | "VPROLQ" | "VPROLVQ"
   | "VPERMQV" | "VPBLENDMQ" | "VMOVDQA64" | "VMOVDQU64" | "VSHUFI64X2"
