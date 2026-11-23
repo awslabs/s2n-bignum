@@ -7,6 +7,13 @@
 # that it loads with `needs` (other than base.ml and what it loads) and on
 # the object files that they read.
 #
+# The objects are the .S files of <family>/<build>, except those that others
+# of them include (such as the template of the files for the parameter sets
+# of a build of the API in assembly). A proof depends on the object files
+# and linked images (.elf) that it reads, in any directory (the kernels of
+# mlkem and sha3 that such a build links), and on the files that it loads
+# with loadt as with needs. The rules for the images are not generated.
+#
 # Every .ml file of proofs/<family>/<build> is a proof, except layout.ml and
 # the spec files X_spec.ml, which the proof file X_proof.ml and the spec
 # files of the callers load (see common/relative.ml). The proof link.ml,
@@ -22,9 +29,10 @@ import os, re, sys
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from native_link import file_needs
+from native_link import file_needs, file_loads
 
 LOADT = re.compile(r'\s*loadt\s+"([^"]+)"')
+INCLUDE = re.compile(r'^\s*#\s*include\s+"([^"/]+\.S)"', re.M)
 
 def base_files(isa):
     """The files that base.ml loads: they are not dependencies."""
@@ -33,26 +41,29 @@ def base_files(isa):
                 for m in [LOADT.match(l)] if m) | {'%s/proofs/base.ml' % isa})
 
 def needs(isa, path):
-    """The files that path loads with needs, as paths relative to the
-    directory of the instruction set: those under proofs/, and those of
+    """The files that path loads with needs or loadt, as paths relative to
+    the directory of the instruction set: those under proofs/, and those of
     common/ (as ../common/...)."""
     if not os.path.exists(path):
         return []
     return [l[len(isa) + 1:] if l.startswith(isa + '/proofs/') else '../' + l
-            for l in file_needs(path)
+            for _, l in file_loads(path)
             if l.startswith(isa + '/proofs/') or l.startswith('common/')]
 
-def objects_read(isa, path, src):
-    """The object files of the build that the file reads, e.g. with
-    define_from_elf."""
-    pat = re.compile(r'"%s/(%s/[A-Za-z0-9_]+\.o)"' % (isa, re.escape(src)))
+def objects_read(isa, path, src=None):
+    """The object files and linked images (.o and .elf) that the file reads,
+    e.g. with define_from_elf: those in the directory src, or, if src is
+    None, in any directory (such as the kernels in mlkem and sha3 that a
+    build of the API in assembly links)."""
+    dirs = re.escape(src) + '/' if src else r'(?:[A-Za-z0-9_]+/)+'
+    pat = re.compile(r'"%s/(%s[A-Za-z0-9_]+\.(?:o|elf))"' % (isa, dirs))
     return pat.findall(open(path).read()) if os.path.exists(path) else []
 
-def closure(isa, skip, src, path):
+def closure(isa, skip, path):
     """The files that path loads, directly or not, other than base.ml and
-    what it loads, and the object files of the build that they read."""
+    what it loads, and the object files and images that they read."""
     deps = []; todo = needs(isa, path)
-    objs = objects_read(isa, path, src)
+    objs = objects_read(isa, path)
     while todo:
         d = todo.pop(0)
         if d in deps:
@@ -61,7 +72,7 @@ def closure(isa, skip, src, path):
         if name in skip or not os.path.exists(d):
             continue
         deps.append(d); todo += needs(isa, d)
-        objs += [o for o in objects_read(isa, d, src) if o not in objs]
+        objs += [o for o in objects_read(isa, d) if o not in objs]
     return deps, sorted(set(objs))
 
 def main():
@@ -75,7 +86,13 @@ def main():
     src = '%s/%s' % (family, build)
     prf = 'proofs/%s/%s' % (family, build)
     skip = base_files(isa)
-    objs = sorted(f[:-2] for f in os.listdir(src) if f.endswith('.S'))
+    # The assembly files that others include, such as the template that the
+    # files of the three parameter sets of a build of the API in assembly
+    # share, are not objects.
+    included = set(m for f in os.listdir(src) if f.endswith('.S')
+                   for m in INCLUDE.findall(open('%s/%s' % (src, f)).read()))
+    objs = sorted(f[:-2] for f in os.listdir(src)
+                  if f.endswith('.S') and f not in included)
     proofs = sorted(f[:-3] for f in os.listdir(prf)
                     if f.endswith('.ml') and f != 'layout.ml' and
                        not f.endswith('_spec.ml'))
@@ -97,7 +114,7 @@ def main():
     lst(var + '_OBJ', objs, '.o')
     lst(var + '_PROOFS', proofs, '')
     for p in proofs:
-        deps, os_ = closure(isa, skip, src, '%s/%s.ml' % (prf, p))
+        deps, os_ = closure(isa, skip, '%s/%s.ml' % (prf, p))
         deps = deps + os_
         if deps:
             out.append('%s/%s.native: \\' % (src, p))

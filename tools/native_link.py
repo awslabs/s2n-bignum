@@ -29,6 +29,13 @@
 # are not jobs, so that what they load (such as Library/ringtheory.ml)
 # does not exist while the proof files run.
 #
+# A proof file can load a standalone proof with `loadt "path";;` (on a line of
+# its own) instead of needs, to run it inside its job: a build of the ML-KEM
+# API in assembly proves the contracts of its kernels from the standalone
+# proofs of the library, which should not run before the jobs, one after the
+# other, nor be run by each caller. What the loaded file loads with needs is
+# loaded before the jobs, as the files that the proof file loads itself.
+#
 # The cost of a job is its time in seconds from the file link_costs.tsv of
 # the build directory (lines "X<tab>seconds", see link_costs.py), if it
 # lists X, and otherwise estimated from the size of the proof file.
@@ -56,11 +63,36 @@ FAMILIES = {
 RELATIVE = '%s/proofs/mlkem_native/relative.ml'
 
 NEEDS = re.compile(r'\s*needs\s+"([^"]+)"\s*;;')
+LOADT = re.compile(r'\s*loadt\s+"([^"]+)"\s*;;')
 THM = re.compile(r'^let\s+([A-Z0-9_]+_SUBROUTINE_(CORRECT|SAFE|FULL))\s*=', re.M)
 
 def file_needs(path):
     """The files that path loads with needs, in order."""
     return [m.group(1) for l in open(path) for m in [NEEDS.match(l)] if m]
+
+def file_loads(path):
+    """The files that path loads with needs or loadt, in order, as pairs
+    (kind, file)."""
+    return [(k, m.group(1)) for l in open(path)
+            for k, r in (('needs', NEEDS), ('loadt', LOADT))
+            for m in [r.match(l)] if m]
+
+def file_hoisted(path, seen=None):
+    """The files that the link file loads with needs before it makes the
+    functor of the proof file path: the files that path loads with needs,
+    and the files that the files it loads with loadt load with needs (a
+    proof file loads a standalone proof with loadt to run it inside its
+    job, but what that proof needs is loaded before any job, so that its
+    names mean the same in all jobs)."""
+    seen = set() if seen is None else seen
+    out = []
+    for kind, f in file_loads(path):
+        if kind == 'needs':
+            out.append(f)
+        elif f not in seen and os.path.exists(f):
+            seen.add(f)
+            out += file_hoisted(f, seen)
+    return out
 
 def read_costs(prf):
     """The costs of the jobs from link_costs.tsv of prf, if it exists."""
@@ -148,7 +180,8 @@ def main():
         return m
     costs = read_costs(prf)
     for x in order:
-        out += ['needs "%s";;' % l for l in file_needs('%s/%s_proof.ml' % (prf, x))]
+        out += ['needs "%s";;' % l
+                for l in file_hoisted('%s/%s_proof.ml' % (prf, x))]
         out += ['module %s (Par_unit : sig end) = struct' % module(x),
                 'needs "%s%s_proof.ml";;' % (here, x), 'end;;', '']
 
