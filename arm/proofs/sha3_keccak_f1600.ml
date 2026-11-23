@@ -336,7 +336,7 @@ let GHOST_REGLIST_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let SHA3_KECCAK_F1600_CORRECT = prove
- (`!a rc A pc stackpointer.
+ (`forall a rc A pc stackpointer.
       aligned 16 stackpointer /\
       nonoverlapping (a,200) (stackpointer,32) /\
       ALLPAIRS nonoverlapping
@@ -458,7 +458,7 @@ let SHA3_KECCAK_F1600_CORRECT = prove
     REPEAT CONJ_TAC THEN KECCAK_BITBLAST_TAC]);;
 
 let SHA3_KECCAK_F1600_SUBROUTINE_CORRECT = prove
- (`!a rc A pc stackpointer returnaddress.
+ (`forall a rc A pc stackpointer returnaddress.
       aligned 16 stackpointer /\
       nonoverlapping (a,200) (word_sub stackpointer (word 128),128) /\
       ALLPAIRS nonoverlapping

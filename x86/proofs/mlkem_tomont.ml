@@ -180,18 +180,18 @@ let mlkem_tomont_tmc = define_trimmed "mlkem_tomont_tmc" mlkem_tomont_mc;;
 let mlkem_tomont_TMC_EXEC = X86_MK_CORE_EXEC_RULE mlkem_tomont_tmc;;
 
 let MLKEM_TOMONT_CORRECT = prove(
-  `!a x pc.
+  `forall a x pc.
         aligned 32 a /\
         nonoverlapping (word pc, 544) (a, 512)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) (BUTLAST mlkem_tomont_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read RIP s = word (pc + 544) /\
-                  !i. i < 256
+                  forall i. i < 256
                     ==> let z_i = read(memory :> bytes16
                                      (word_add a (word (2 * i)))) s in
                         (ival z_i == (tomont_3329 (ival o x)) i) (mod &3329) /\
@@ -283,7 +283,7 @@ let MLKEM_TOMONT_CORRECT = prove(
 );;
 
 let MLKEM_TOMONT_NOIBT_SUBROUTINE_CORRECT = prove(
-  `!a x pc stackpointer returnaddress.
+  `forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_tomont_tmc) (a, 512) /\
         nonoverlapping (stackpointer, 8) (a, 512)
@@ -293,12 +293,12 @@ let MLKEM_TOMONT_NOIBT_SUBROUTINE_CORRECT = prove(
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  forall i. i < 256
                     ==> let z_i = read(memory :> bytes16
                                      (word_add a (word (2 * i)))) s in
                         (ival z_i == (tomont_3329 (ival o x)) i) (mod &3329) /\
@@ -308,7 +308,7 @@ let MLKEM_TOMONT_NOIBT_SUBROUTINE_CORRECT = prove(
   X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_tomont_tmc MLKEM_TOMONT_CORRECT);;
 
 let MLKEM_TOMONT_SUBROUTINE_CORRECT = prove(
-  `!a x pc stackpointer returnaddress.
+  `forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_tomont_mc) (a, 512) /\
         nonoverlapping (stackpointer, 8) (a, 512)
@@ -318,12 +318,12 @@ let MLKEM_TOMONT_SUBROUTINE_CORRECT = prove(
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  forall i. i < 256
                     ==> let z_i = read(memory :> bytes16
                                      (word_add a (word (2 * i)))) s in
                         (ival z_i == (tomont_3329 (ival o x)) i) (mod &3329) /\
@@ -346,7 +346,7 @@ let mlkem_tomont_windows_tmc = define_trimmed
 let mlkem_tomont_windows_tmc_EXEC = X86_MK_EXEC_RULE mlkem_tomont_windows_tmc;;
 
 let MLKEM_TOMONT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
-  `!a x pc stackpointer returnaddress.
+  `forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_tomont_windows_tmc) (a, 512) /\
         nonoverlapping (word_sub stackpointer (word 176), 184) (a, 512) /\
@@ -358,12 +358,12 @@ let MLKEM_TOMONT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   WINDOWS_C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  forall i. i < 256
                     ==> let z_i = read(memory :> bytes16
                                      (word_add a (word (2 * i)))) s in
                         (ival z_i == (tomont_3329 (ival o x)) i) (mod &3329) /\
@@ -447,7 +447,7 @@ let MLKEM_TOMONT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLKEM_TOMONT_WINDOWS_SUBROUTINE_CORRECT = prove(
-  `!a x pc stackpointer returnaddress.
+  `forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_tomont_windows_mc) (a, 512) /\
         nonoverlapping (word_sub stackpointer (word 176), 184) (a, 512) /\
@@ -459,12 +459,12 @@ let MLKEM_TOMONT_WINDOWS_SUBROUTINE_CORRECT = prove(
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   WINDOWS_C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  forall i. i < 256
                     ==> let z_i = read(memory :> bytes16
                                      (word_add a (word (2 * i)))) s in
                         (ival z_i == (tomont_3329 (ival o x)) i) (mod &3329) /\

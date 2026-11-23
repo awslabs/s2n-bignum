@@ -265,12 +265,12 @@ let mldsa_caddq = define
       (word 8380417))`;;
 
 let mldsa_caddq_direct = prove
- (`!x:int32.
+ (`forall x:int32.
     ival(mldsa_caddq x) = if ival x < &0 then ival x + &8380417 else ival x`,
   REWRITE_TAC[mldsa_caddq] THEN BITBLAST_TAC);;
 
 let mldsa_caddq_rem = prove
- (`!x:int32. abs(ival x) < &8380417
+ (`forall x:int32. abs(ival x) < &8380417
     ==> ival(mldsa_caddq x) = ival x rem &8380417`,
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[mldsa_caddq_direct] THEN
@@ -284,7 +284,7 @@ let mldsa_caddq_rem = prove
   ]);;
 
 let mldsa_caddq_bound = prove
- (`!x:int32. abs(ival x) < &8380417
+ (`forall x:int32. abs(ival x) < &8380417
     ==> &0 <= ival(mldsa_caddq x) /\ ival(mldsa_caddq x) < &8380417`,
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(SPEC `x:int32` mldsa_caddq_rem) THEN ASM_REWRITE_TAC[] THEN
@@ -295,12 +295,12 @@ let mldsa_caddq_bound = prove
     INT_ARITH_TAC]);;
 
 let mldsa_caddq_lower = prove
- (`!x:int32. abs(ival x) < &8380417
+ (`forall x:int32. abs(ival x) < &8380417
     ==> &0 <= ival(mldsa_caddq x)`,
   MESON_TAC[mldsa_caddq_bound]);;
 
 let mldsa_caddq_upper = prove
- (`!x:int32. abs(ival x) < &8380417
+ (`forall x:int32. abs(ival x) < &8380417
     ==> ival(mldsa_caddq x) < &8380417`,
   MESON_TAC[mldsa_caddq_bound]);;
 
@@ -309,23 +309,23 @@ let mldsa_caddq_upper = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_CADDQ_CORRECT = time prove
- (`!a x pc.
+ (`forall a x pc.
         aligned 32 a /\
         nonoverlapping (word pc,876) (a, 1024)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) (BUTLAST mldsa_caddq_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [a] s /\
-                  (!i. i < 256
+                  (forall i. i < 256
                       ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                           x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &8380417))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &8380417))
              (\s. read RIP s = word(pc + 875) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                       ==> ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) =
                           ival(x i) rem &8380417) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                       ==> &0 <= ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) /\
                           ival(read(memory :> bytes32
@@ -377,7 +377,7 @@ let MLDSA_CADDQ_CORRECT = time prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_CADDQ_NOIBT_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_caddq_tmc) (a,1024) /\
         nonoverlapping (stackpointer,8) (a,1024)
@@ -387,17 +387,17 @@ let MLDSA_CADDQ_NOIBT_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
-                  (!i. i < 256
+                  (forall i. i < 256
                       ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                           x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &8380417))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &8380417))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                       ==> ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) =
                           ival(x i) rem &8380417) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                       ==> &0 <= ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) /\
                           ival(read(memory :> bytes32
@@ -407,7 +407,7 @@ let MLDSA_CADDQ_NOIBT_SUBROUTINE_CORRECT = prove
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_caddq_tmc MLDSA_CADDQ_CORRECT);;
 
 let MLDSA_CADDQ_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_caddq_mc) (a,1024) /\
         nonoverlapping (stackpointer,8) (a,1024)
@@ -417,17 +417,17 @@ let MLDSA_CADDQ_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
-                  (!i. i < 256
+                  (forall i. i < 256
                       ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                           x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &8380417))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &8380417))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                       ==> ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) =
                           ival(x i) rem &8380417) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                       ==> &0 <= ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) /\
                           ival(read(memory :> bytes32
@@ -516,7 +516,7 @@ let MLDSA_CADDQ_WINDOWS_TMC_EXEC =
   X86_MK_EXEC_RULE mldsa_caddq_windows_tmc;;
 
 let MLDSA_CADDQ_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_caddq_windows_tmc) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (a,1024) /\
@@ -528,17 +528,17 @@ let MLDSA_CADDQ_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    WINDOWS_C_ARGUMENTS [a] s /\
-                   (!i. i < 256
+                   (forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                            x i) /\
-                   (!i. i < 256 ==> abs(ival(x i)) < &8380417))
+                   (forall i. i < 256 ==> abs(ival(x i)) < &8380417))
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   (!i. i < 256
+                   (forall i. i < 256
                        ==> ival(read(memory :> bytes32
                                   (word_add a (word(4 * i)))) s) =
                            ival(x i) rem &8380417) /\
-                   (!i. i < 256
+                   (forall i. i < 256
                        ==> &0 <= ival(read(memory :> bytes32
                                   (word_add a (word(4 * i)))) s) /\
                            ival(read(memory :> bytes32
@@ -551,7 +551,7 @@ let MLDSA_CADDQ_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
       MLDSA_CADDQ_CORRECT);;
 
 let MLDSA_CADDQ_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_caddq_windows_mc) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (a,1024) /\
@@ -563,17 +563,17 @@ let MLDSA_CADDQ_WINDOWS_SUBROUTINE_CORRECT = prove
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    WINDOWS_C_ARGUMENTS [a] s /\
-                   (!i. i < 256
+                   (forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                            x i) /\
-                   (!i. i < 256 ==> abs(ival(x i)) < &8380417))
+                   (forall i. i < 256 ==> abs(ival(x i)) < &8380417))
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   (!i. i < 256
+                   (forall i. i < 256
                        ==> ival(read(memory :> bytes32
                                   (word_add a (word(4 * i)))) s) =
                            ival(x i) rem &8380417) /\
-                   (!i. i < 256
+                   (forall i. i < 256
                        ==> &0 <= ival(read(memory :> bytes32
                                   (word_add a (word(4 * i)))) s) /\
                            ival(read(memory :> bytes32

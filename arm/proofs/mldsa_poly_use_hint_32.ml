@@ -119,7 +119,7 @@ let mldsa_use_hint_32_code = new_definition
 (* ========================================================================= *)
 
 let WORD_2SMULH_NOSATURATE_32 = prove(
-  `!a:int32. val a < 8380417
+  `forall a:int32. val a < 8380417
    ==> word_2smulh a (word 1074791425:int32) : int32 =
        iword((&2 * &(val a) * &1074791425) div &2 pow 32)`,
   GEN_TAC THEN DISCH_TAC THEN
@@ -142,7 +142,7 @@ let WORD_2SMULH_NOSATURATE_32 = prove(
    CONV_TAC NUM_REDUCE_CONV]);;
 
 let VAL_DECOMPOSE_A1 = prove(
-  `!a:int32. val a < 8380417
+  `forall a:int32. val a < 8380417
    ==> val(word_ishr_round (word_2smulh a (word 1074791425:int32)) 18 : int32)
        = ((2 * val a * 1074791425) DIV 4294967296 + 131072) DIV 262144`,
   GEN_TAC THEN DISCH_TAC THEN
@@ -177,11 +177,11 @@ let VAL_DECOMPOSE_A1 = prove(
     (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC[]);;
 
 let WORD_IGT_THRESHOLD_32 = BITBLAST_RULE
-  `!a:int32. val a < 8380417
+  `forall a:int32. val a < 8380417
     ==> word_igt a (word 8118528:int32) <=> val a > 8118528`;;
 
 let A1_BOUND = prove(
-  `!a. a < 8380417
+  `forall a. a < 8380417
    ==> ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304 <= 16`,
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(SPEC `128` (SPEC `8380416 + 127` (SPEC `a + 127` DIV_MONO))) THEN
@@ -195,7 +195,7 @@ let A1_BOUND = prove(
    CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC]);;
 
 let A1_WRAP = prove(
-  `!a. 8118528 < a /\ a < 8380417
+  `forall a. 8118528 < a /\ a < 8380417
    ==> ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304 = 16`,
   GEN_TAC THEN STRIP_TAC THEN
   SUBGOAL_THEN `16 <= ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304`
@@ -213,7 +213,7 @@ let A1_WRAP = prove(
   DISCH_TAC THEN ASM_ARITH_TAC);;
 
 let A1_BOUND_NOWRAP = prove(
-  `!a. a <= 8118528
+  `forall a. a <= 8118528
    ==> ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304 <= 15`,
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(SPEC `128` (SPEC `8118528 + 127` (SPEC `a + 127` DIV_MONO))) THEN
@@ -227,7 +227,7 @@ let A1_BOUND_NOWRAP = prove(
    CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC]);;
 
 let A0_UPPER_32 = prove(
-  `!a. a <= 8118528
+  `forall a. a <= 8118528
    ==> a < (((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304 + 1) * 523776`,
   GEN_TAC THEN DISCH_TAC THEN
   ABBREV_TAC `nv = ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304` THEN
@@ -246,11 +246,11 @@ let A0_UPPER_32 = prove(
   ASM_ARITH_TAC);;
 
 let WORD_SUB_SIGN_32 = BITBLAST_RULE
-  `!a:int32 b:int32. val b <= 7856640 /\ val a <= 8118528 ==>
+  `forall a:int32 b:int32. val b <= 7856640 /\ val a <= 8118528 ==>
    ((bit 31 (word_sub a b) \/ word_sub a b = word 0) <=> val a <= val b)`;;
 
 let WRAP_A0_NEGATIVE = BITBLAST_RULE
-  `!a:int32. val a < 8380417 /\ val a > 8118528
+  `forall a:int32. val a < 8380417 /\ val a > 8118528
    ==> bit 31 (word_add (word_sub a (word 8380416:int32)) (word 4294967295:int32))`;;
 
 (* Barrett equivalence: assembly and C decomposition formulas agree.
@@ -258,7 +258,7 @@ let WRAP_A0_NEGATIVE = BITBLAST_RULE
    approximation paths. Proved by case analysis on 17 output intervals
    using DIV_MONO to sandwich both LHS and RHS to the same constant. *)
 let BARRETT_INTERVAL_32 = prove(
-  `!a lo hi k.
+  `forall a lo hi k.
     lo <= a /\ a <= hi /\
     k * 262144 <= (2 * lo * 1074791425) DIV 4294967296 + 131072 /\
     (2 * hi * 1074791425) DIV 4294967296 + 131072 < (k + 1) * 262144 /\
@@ -290,7 +290,7 @@ let BARRETT_INTERVAL_32 = prove(
     MATCH_MP_TAC DIV_MONO THEN ASM_ARITH_TAC]]);;
 
 let BARRETT_EQUIV = prove(
-  `!a. a < 8380417 ==>
+  `forall a. a < 8380417 ==>
   ((2 * a * 1074791425) DIV 4294967296 + 131072) DIV 262144 =
   ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304`,
   GEN_TAC THEN DISCH_TAC THEN
@@ -324,7 +324,7 @@ let BARRETT_EQUIV = prove(
 (* ========================================================================= *)
 
 let ELEMENT_CORRECT = prove(
-  `!a:int32 h:int32.
+  `forall a:int32 h:int32.
      val a < 8380417 /\ val h <= 1
      ==> val(mldsa_use_hint_32_asm a h) = mldsa_use_hint_32_code (val a) (val h)`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -389,7 +389,7 @@ let ELEMENT_CORRECT = prove(
 
 
 let ELEMENT_CORRECT_WORD = prove(
-  `!a:int32 h:int32.
+  `forall a:int32 h:int32.
      val a < 8380417 /\ val h <= 1
      ==> mldsa_use_hint_32_asm a h =
          word(mldsa_use_hint_32_code (val a) (val h))`,
@@ -506,7 +506,7 @@ let DECOMPOSE_R1_NOWRAP_TAC =
   TRY DECOMPOSE_R1_LOWER_TAC THEN TRY DECOMPOSE_R1_UPPER_TAC;;
 
 let DECOMPOSE_32_R1_EQUIV = time prove(
-  `!r. r < 8380417 ==>
+  `forall r. r < 8380417 ==>
    (((r + 127) DIV 128 * 1025 + 2097152) DIV 4194304) MOD 16 =
    decompose_32_r1 r`,
   GEN_TAC THEN DISCH_TAC THEN
@@ -580,7 +580,7 @@ let DECOMPOSE_32_R1_EQUIV = time prove(
   cascade 0 intervals);;
 
 let R1_IS_DIV_LOWER = prove(
-  `!r. r < 8380417 /\ r MOD 523776 * 2 <= 523776 /\
+  `forall r. r < 8380417 /\ r MOD 523776 * 2 <= 523776 /\
        ~((&r:int) - &(r MOD 523776) = &8380416) ==>
    (((r + 127) DIV 128 * 1025 + 2097152) DIV 4194304) MOD 16 = r DIV 523776`,
   GEN_TAC THEN STRIP_TAC THEN
@@ -589,7 +589,7 @@ let R1_IS_DIV_LOWER = prove(
   REPEAT DISCH_TAC THEN ASM_REWRITE_TAC[]);;
 
 let R1_IS_DIV_PLUS1_UPPER = prove(
-  `!r. r < 8380417 /\ ~(r MOD 523776 * 2 <= 523776) /\
+  `forall r. r < 8380417 /\ ~(r MOD 523776 * 2 <= 523776) /\
        ~((&r:int) - (&(r MOD 523776) - &523776) = &8380416) ==>
    (((r + 127) DIV 128 * 1025 + 2097152) DIV 4194304) MOD 16 =
    r DIV 523776 + 1`,
@@ -641,7 +641,7 @@ let R0_SIGN_WRAP_TAC =
   ASM_ARITH_TAC;;
 
 let DECOMPOSE_32_R0_SIGN = time prove(
-  `!r. r < 8380417 ==>
+  `forall r. r < 8380417 ==>
     let a1 = (((r + 127) DIV 128 * 1025 + 2097152) DIV 4194304) MOD 16 in
     let a0':int = if (&r:int) - &a1 * &523776 > &4190208
                   then &r - &a1 * &523776 - &8380417
@@ -680,7 +680,7 @@ let DECOMPOSE_32_R0_SIGN = time prove(
   ));;
 
 let MLDSA_USE_HINT_32_EQUIV = prove(
-  `!r h. r < 8380417 /\ h <= 1
+  `forall r h. r < 8380417 /\ h <= 1
          ==> mldsa_use_hint_32 h r = mldsa_use_hint_32_code r h`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   REWRITE_TAC[MLDSA_USE_HINT_32_UNFOLD] THEN
@@ -702,8 +702,8 @@ let MLDSA_USE_HINT_32_EQUIV = prove(
 (* ========================================================================= *)
 
 let ENSURES_STRENGTHEN_POST = prove(
-  `!P (Q:armstate->bool) Q' R.
-     ensures arm P Q' R /\ (!s. Q' s ==> Q s) ==> ensures arm P Q R`,
+  `forall P (Q:armstate->bool) Q' R.
+     ensures arm P Q' R /\ (forall s. Q' s ==> Q s) ==> ensures arm P Q R`,
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
   REWRITE_TAC[ensures] THEN MATCH_MP_TAC MONO_FORALL THEN
   X_GEN_TAC `s0:armstate` THEN MATCH_MP_TAC MONO_IMP THEN REWRITE_TAC[] THEN
@@ -724,7 +724,7 @@ let ENSURES_STRENGTHEN_POST = prove(
    (decompose-style): the assembly executes regardless of input ranges,
    and only the FIPS-equivalence + output bound require the input bounds. *)
 let MLDSA_USE_HINT_32_CORRECT = prove
- (`!b a h x y pc.
+ (`forall b a h x y pc.
     nonoverlapping (word pc, LENGTH mldsa_poly_use_hint_32_mc) (b, 1024) /\
     nonoverlapping (b, 1024) (a, 1024) /\
     nonoverlapping (b, 1024) (h, 1024)
@@ -732,17 +732,17 @@ let MLDSA_USE_HINT_32_CORRECT = prove
           (\s. aligned_bytes_loaded s (word pc) mldsa_poly_use_hint_32_mc /\
                read PC s = word pc /\
                C_ARGUMENTS [b; a; h] s /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                  read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                  read(memory :> bytes32(word_add h (word(4 * i)))) s = y i))
           (\s. read PC s = word(pc + LENGTH mldsa_poly_use_hint_32_mc - 4) /\
-               ((!i. i < 256 ==> val(x i:int32) < 8380417) /\
-                (!i. i < 256 ==> val(y i:int32) <= 1)
-                ==> (!i. i < 256 ==>
+               ((forall i. i < 256 ==> val(x i:int32) < 8380417) /\
+                (forall i. i < 256 ==> val(y i:int32) <= 1)
+                ==> (forall i. i < 256 ==>
                       read(memory :> bytes32(word_add b (word(4 * i)))) s =
                         word(mldsa_use_hint_32 (val(y i)) (val(x i)))) /\
-                    (!i. i < 256 ==>
+                    (forall i. i < 256 ==>
                       val(read(memory :> bytes32
                         (word_add b (word(4 * i)))) s) < 16)))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -797,7 +797,7 @@ let MLDSA_USE_HINT_32_CORRECT = prove
   REWRITE_TAC[WORD_SUBWORD_AND; WORD_SUBWORD_OR] THEN
   let WSN_TAC = REWRITE_TAC(map (fun n -> prove(
     subst [mk_small_numeral n, `n:num`]
-      `!x:int128. word_subword(word_not x) (n,32):int32 = word_not(word_subword x (n,32))`,
+      `forall x:int128. word_subword(word_not x) (n,32):int32 = word_not(word_subword x (n,32))`,
     GEN_TAC THEN MATCH_MP_TAC WORD_SUBWORD_NOT THEN
     REWRITE_TAC[DIMINDEX_32; DIMINDEX_128] THEN ARITH_TAC)) [0;32;64;96]) in
   WSN_TAC THEN
@@ -848,7 +848,7 @@ let MLDSA_USE_HINT_32_CORRECT = prove
    antecedents inside the postcondition pass through unchanged (decompose
    pattern). *)
 let MLDSA_USE_HINT_32_SUBROUTINE_CORRECT = prove
- (`!b a h x y pc returnaddress.
+ (`forall b a h x y pc returnaddress.
     nonoverlapping (word pc, LENGTH mldsa_poly_use_hint_32_mc) (b, 1024) /\
     nonoverlapping (b, 1024) (a, 1024) /\
     nonoverlapping (b, 1024) (h, 1024)
@@ -857,17 +857,17 @@ let MLDSA_USE_HINT_32_SUBROUTINE_CORRECT = prove
                read PC s = word pc /\
                read X30 s = returnaddress /\
                C_ARGUMENTS [b; a; h] s /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                  read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                  read(memory :> bytes32(word_add h (word(4 * i)))) s = y i))
           (\s. read PC s = returnaddress /\
-               ((!i. i < 256 ==> val(x i:int32) < 8380417) /\
-                (!i. i < 256 ==> val(y i:int32) <= 1)
-                ==> (!i. i < 256 ==>
+               ((forall i. i < 256 ==> val(x i:int32) < 8380417) /\
+                (forall i. i < 256 ==> val(y i:int32) <= 1)
+                ==> (forall i. i < 256 ==>
                       read(memory :> bytes32(word_add b (word(4 * i)))) s =
                         word(mldsa_use_hint_32 (val(y i)) (val(x i)))) /\
-                    (!i. i < 256 ==>
+                    (forall i. i < 256 ==>
                       val(read(memory :> bytes32
                         (word_add b (word(4 * i)))) s) < 16)))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

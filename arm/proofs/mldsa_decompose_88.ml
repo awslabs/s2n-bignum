@@ -123,7 +123,7 @@ let decompose88_a0 = define
 
 (* ival equals val across the full non-negative int32 range (val < 2^31) *)
 let IVAL_EQ_VAL = prove(
-  `!x:int32. val x < 2 EXP 31 ==> ival x = &(val x)`,
+  `forall x:int32. val x < 2 EXP 31 ==> ival x = &(val x)`,
   GEN_TAC THEN REWRITE_TAC[IVAL_VAL; DIMINDEX_32] THEN
   CONV_TAC(ONCE_DEPTH_CONV NUM_EXP_CONV) THEN
   DISCH_TAC THEN
@@ -139,13 +139,13 @@ let IVAL_EQ_VAL = prove(
 
 (* Case split: a1 is either h88 or 0 depending on the threshold *)
 let DECOMPOSE88_A1_CASES = prove(
-  `!x:int32. decompose88_a1 x =
+  `forall x:int32. decompose88_a1 x =
      if ival x > &8285184 then word 0 else h88 x`,
   REWRITE_TAC[decompose88_a1] THEN BITBLAST_TAC);;
 
 (* Case split: a0 subtracts 1 in the special case *)
 let DECOMPOSE88_A0_CASES = prove(
-  `!x:int32. decompose88_a0 x =
+  `forall x:int32. decompose88_a0 x =
      if ival x > &8285184
      then word_sub (word_sub x (word_mul (h88 x) (word 190464))) (word 1)
      else word_sub x (word_mul (h88 x) (word 190464))`,
@@ -161,7 +161,7 @@ let DECOMPOSE88_A0_CASES = prove(
 (* Algebraic expansion: n*K + q*E = q*D*P + r*K
    where q = n DIV M_asm, r = n MOD M_asm *)
 let BARRETT88_EXPAND = prove(
-  `!n. n * 2955676418 + (n DIV 190464) * 143360 =
+  `forall n. n * 2955676418 + (n DIV 190464) * 143360 =
        (n DIV 190464) * 131072 * 4294967296 + (n MOD 190464) * 2955676418`,
   GEN_TAC THEN
   MP_TAC(SPECL [`n:num`; `190464`] DIVISION) THEN
@@ -172,7 +172,7 @@ let BARRETT88_EXPAND = prove(
 
 (* Barrett reduction: (n*K) DIV P with rounding = round(n / M_asm) *)
 let BARRETT88_CORRECT = prove(
-  `!n. n < 8380417 ==>
+  `forall n. n < 8380417 ==>
     ((n * 2955676418) DIV 4294967296 + 65536) DIV 131072 =
     (if n MOD 190464 * 2 <= 190464
      then n DIV 190464
@@ -229,7 +229,7 @@ let BARRETT88_CORRECT = prove(
    Eliminates iword_saturate by inlining its definition and using BOUNDER_TAC
    to discharge the impossible saturation cases (consistent with mlkem-native). *)
 let H88_CORRECT = prove(
-  `!x:int32. val x < 8380417 ==>
+  `forall x:int32. val x < 8380417 ==>
     val(h88 x) = (if val x MOD 190464 * 2 <= 190464
                   then val x DIV 190464
                   else val x DIV 190464 + 1)`,
@@ -265,7 +265,7 @@ let H88_CORRECT = prove(
 
 (* Special case: rounding quotient = 44 when val x > 8285184 *)
 let ROUND88_SPECIAL = prove(
-  `!n. 8285184 < n /\ n < 8380417 ==>
+  `forall n. 8285184 < n /\ n < 8380417 ==>
     (if n MOD 190464 * 2 <= 190464 then n DIV 190464 else n DIV 190464 + 1) = 44`,
   REPEAT STRIP_TAC THEN
   ASM_CASES_TAC `n < 8380416` THENL [
@@ -288,7 +288,7 @@ let ROUND88_SPECIAL = prove(
 
 (* decompose88_a1 computes FST(mldsa_decompose_88(val x)) *)
 let DECOMPOSE88_A1_CORRECT = prove(
-  `!x:int32. val x < 8380417
+  `forall x:int32. val x < 8380417
     ==> val(decompose88_a1 x) = FST(mldsa_decompose_88(val x))`,
   GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[DECOMPOSE88_A1_CASES; MLDSA_DECOMPOSE_88_EXPAND; LET_DEF; LET_END_DEF; FST] THEN
@@ -333,7 +333,7 @@ let DECOMPOSE88_A1_CORRECT = prove(
 
 (* mldsa_cmod n 190464 is bounded by [-95232, 95232], well within int32 range *)
 let CMOD_ABS_BOUND_190464 = prove(
-  `!n. abs(mldsa_cmod n 190464) <= &95232`,
+  `forall n. abs(mldsa_cmod n 190464) <= &95232`,
   GEN_TAC THEN REWRITE_TAC[mldsa_cmod] THEN
   SUBGOAL_THEN `n MOD 190464 < 190464` MP_TAC THENL [
     SIMP_TAC[MOD_LT_EQ; ARITH_RULE `~(190464 = 0)`]; ALL_TAC] THEN
@@ -345,7 +345,7 @@ let CMOD_ABS_BOUND_190464 = prove(
 
 (* decompose88_a0 computes SND(mldsa_decompose_88(val x)) *)
 let DECOMPOSE88_A0_CORRECT = prove(
-  `!x:int32. val x < 8380417
+  `forall x:int32. val x < 8380417
     ==> ival(decompose88_a0 x) = SND(mldsa_decompose_88(val x))`,
   GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[DECOMPOSE88_A0_CASES; MLDSA_DECOMPOSE_88_EXPAND; LET_DEF; LET_END_DEF; SND] THEN
@@ -429,7 +429,7 @@ let DECOMPOSE88_A0_CORRECT = prove(
 (* ========================================================================= *)
 
 let MLDSA_DECOMPOSE_88_CORRECT = prove(
- `!pc a r1 x.
+ `forall pc a r1 x.
     nonoverlapping (word pc, LENGTH mldsa_decompose_88_mc)
                    (r1, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_decompose_88_mc)
@@ -439,16 +439,16 @@ let MLDSA_DECOMPOSE_88_CORRECT = prove(
          (\s. aligned_bytes_loaded s (word pc) mldsa_decompose_88_mc /\
               read PC s = word(pc + MLDSA_DECOMPOSE_88_CORE_START) /\
               C_ARGUMENTS [r1; a] s /\
-              (!i. i < 256
+              (forall i. i < 256
                    ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                        x i))
          (\s. read PC s = word(pc + MLDSA_DECOMPOSE_88_CORE_END) /\
-              ((!i. i < 256 ==> val(x i:int32) < 8380417)
-               ==> (!i. i < 256
+              ((forall i. i < 256 ==> val(x i:int32) < 8380417)
+               ==> (forall i. i < 256
                         ==> val(read(memory :> bytes32
                           (word_add r1 (word(4 * i)))) s) =
                             FST(mldsa_decompose_88(val(x i)))) /\
-                   (!i. i < 256
+                   (forall i. i < 256
                         ==> ival(read(memory :> bytes32
                           (word_add a (word(4 * i)))) s) =
                             SND(mldsa_decompose_88(val(x i))))))
@@ -523,7 +523,7 @@ let MLDSA_DECOMPOSE_88_CORRECT = prove(
 (* ========================================================================= *)
 
 let MLDSA_DECOMPOSE_88_SUBROUTINE_CORRECT = prove(
- `!pc a r1 x returnaddress.
+ `forall pc a r1 x returnaddress.
     nonoverlapping (word pc, LENGTH mldsa_decompose_88_mc)
                    (r1, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_decompose_88_mc)
@@ -534,23 +534,23 @@ let MLDSA_DECOMPOSE_88_SUBROUTINE_CORRECT = prove(
               read PC s = word pc /\
               read X30 s = returnaddress /\
               C_ARGUMENTS [r1; a] s /\
-              (!i. i < 256
+              (forall i. i < 256
                    ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                        x i))
          (\s. read PC s = returnaddress /\
-              ((!i. i < 256 ==> val(x i:int32) < 8380417)
-               ==> (!i. i < 256
+              ((forall i. i < 256 ==> val(x i:int32) < 8380417)
+               ==> (forall i. i < 256
                         ==> val(read(memory :> bytes32
                           (word_add r1 (word(4 * i)))) s) =
                             FST(mldsa_decompose_88(val(x i)))) /\
-                   (!i. i < 256
+                   (forall i. i < 256
                         ==> ival(read(memory :> bytes32
                           (word_add a (word(4 * i)))) s) =
                             SND(mldsa_decompose_88(val(x i)))) /\
-                   (!i. i < 256
+                   (forall i. i < 256
                         ==> val(read(memory :> bytes32
                           (word_add r1 (word(4 * i)))) s) <= 43) /\
-                   (!i. i < 256
+                   (forall i. i < 256
                         ==> --(&95232) <=
                             ival(read(memory :> bytes32
                               (word_add a (word(4 * i)))) s) /\
@@ -576,7 +576,7 @@ let MLDSA_DECOMPOSE_88_SUBROUTINE_CORRECT = prove(
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCH_TAC THEN
   FIRST_X_ASSUM(ASSUME_TAC o C MATCH_MP
-    (ASSUME `!i. i < 256 ==> val((x:num->int32) i) < 8380417`)) THEN
+    (ASSUME `forall i. i < 256 ==> val((x:num->int32) i) < 8380417`)) THEN
   ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [
     REPEAT STRIP_TAC THEN ASM_SIMP_TAC[] THEN

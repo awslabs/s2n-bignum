@@ -120,7 +120,7 @@ let lemma =
             DEPTH_CONV (NUM_RED_CONV ORELSEC EL_CONV)) th';;
 
 let MLKEM_TOBYTES_CORRECT = prove
- (`!r a (l:int16 list) pc.
+ (`forall r a (l:int16 list) pc.
         ALL (nonoverlapping (r,384)) [(word pc,0x158); (a,512)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) mlkem_tobytes_mc /\
@@ -196,7 +196,7 @@ let MLKEM_TOBYTES_CORRECT = prove
   ABBREV_TAC `twae = &2:real` THEN REAL_ARITH_TAC);;
 
 let MLKEM_TOBYTES_SUBROUTINE_CORRECT = prove
- (`!r a (l:int16 list) pc returnaddress.
+ (`forall r a (l:int16 list) pc returnaddress.
         ALL (nonoverlapping (r,384)) [(word pc,0x158); (a,512)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) mlkem_tobytes_mc /\

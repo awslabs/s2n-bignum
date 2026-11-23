@@ -79,17 +79,17 @@ let MLKEM_TOMONT_EXEC = ARM_MK_EXEC_RULE mlkem_tomont_mc;;
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_TOMONT_CORRECT = prove
- (`!ptr x pc.
+ (`forall ptr x pc.
       nonoverlapping (word pc,LENGTH mlkem_tomont_mc) (ptr,512)
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) mlkem_tomont_mc /\
                 read PC s = word pc /\
                 C_ARGUMENTS [ptr] s /\
-                !i. i < 256
+                forall i. i < 256
                     ==> read(memory :> bytes16(word_add ptr (word(2 * i)))) s =
                         x i)
            (\s. read PC s = word(pc + 0xd0) /\
-                !i. i < 256
+                forall i. i < 256
                     ==> let z_i = read(memory :> bytes16
                                      (word_add ptr (word (2 * i)))) s in
                         (ival z_i == (tomont_3329 (ival o x)) i) (mod &3329) /\
@@ -178,7 +178,7 @@ let MLKEM_TOMONT_CORRECT = prove
 );;
 
 let MLKEM_TOMONT_SUBROUTINE_CORRECT = prove
- (`!ptr x pc returnaddress.
+ (`forall ptr x pc returnaddress.
     nonoverlapping (word pc, LENGTH mlkem_tomont_mc) (ptr, 512)
     ==>
     ensures arm
@@ -191,7 +191,7 @@ let MLKEM_TOMONT_SUBROUTINE_CORRECT = prove
            C_ARGUMENTS [ptr] s  /\
            // Give name to 16-bit coefficients stored at ptr to be
            // able to refer to them in the post-condition
-           (!i. i < 256
+           (forall i. i < 256
                 ==> read(memory :> bytes16(word_add ptr (word (2 * i)))) s =
                     x i)
           )
@@ -199,7 +199,7 @@ let MLKEM_TOMONT_SUBROUTINE_CORRECT = prove
            read PC s = returnaddress /\
            // Coefficients have changed according to tomont_3329 and
            // are < MLKEM_Q in absolute value.
-           (!i. i < 256
+           (forall i. i < 256
                 ==> let z_i = read(memory :> bytes16
                                        (word_add ptr (word (2 * i)))) s in
                     (ival z_i == (tomont_3329 (ival o x)) i) (mod &3329) /\

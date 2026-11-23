@@ -123,7 +123,7 @@ let MLDSA_POINTWISE_ACC_L4_EXEC = ARM_MK_EXEC_RULE mldsa_pointwise_acc_l4_mc;;
 (* ========================================================================= *)
 
 let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
- (`!r a b x y pc.
+ (`forall r a b x y pc.
     nonoverlapping (word pc, LENGTH mldsa_pointwise_acc_l4_mc) (r, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_pointwise_acc_l4_mc) (a, 4096) /\
     nonoverlapping (word pc, LENGTH mldsa_pointwise_acc_l4_mc) (b, 4096) /\
@@ -134,14 +134,14 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
           (\s. aligned_bytes_loaded s (word pc) mldsa_pointwise_acc_l4_mc /\
                read PC s = word pc /\
                C_ARGUMENTS [r; a; b] s /\
-               (!i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
-               (!i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
-               (!i. i < 1024 ==>
+               (forall i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
+               (forall i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
+               (forall i. i < 1024 ==>
                  read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-               (!i. i < 1024 ==>
+               (forall i. i < 1024 ==>
                  read(memory :> bytes32(word_add b (word(4 * i)))) s = y i))
           (\s. read PC s = word(pc + 0x184) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                  let zi = read(memory :> bytes32(word_add r (word(4 * i)))) s in
                  (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
                    (mod &8380417) /\
@@ -161,7 +161,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
 
   (* Lift x bound to match y bound for product lemma *)
   SUBGOAL_THEN
-    `!i. i < 1024 ==> abs(ival((x:num->int32) i)) <= &75423752`
+    `forall i. i < 1024 ==> abs(ival((x:num->int32) i)) <= &75423752`
     ASSUME_TAC THENL
   [GEN_TAC THEN DISCH_TAC THEN
    MATCH_MP_TAC INT_LE_TRANS THEN EXISTS_TAC `&8380416:int` THEN
@@ -211,7 +211,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
 
   (* Product bounds (tight: 8380416 * 75423752 = 632082418040832) *)
   SUBGOAL_THEN
-   `!i. i < 1024 ==>
+   `forall i. i < 1024 ==>
      abs(ival(word_mul (word_sx ((x:num->int32) i):int64)
                        (word_sx ((y:num->int32) i):int64))) <= &632082418040832`
    ASSUME_TAC THENL
@@ -286,7 +286,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
 (* ========================================================================= *)
 
 let MLDSA_POINTWISE_ACC_L4_SUBROUTINE_CORRECT = prove
- (`!r a b x y pc returnaddress.
+ (`forall r a b x y pc returnaddress.
     nonoverlapping (word pc, LENGTH mldsa_pointwise_acc_l4_mc) (r, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_pointwise_acc_l4_mc) (a, 4096) /\
     nonoverlapping (word pc, LENGTH mldsa_pointwise_acc_l4_mc) (b, 4096) /\
@@ -298,14 +298,14 @@ let MLDSA_POINTWISE_ACC_L4_SUBROUTINE_CORRECT = prove
                read PC s = word pc /\
                read X30 s = returnaddress /\
                C_ARGUMENTS [r; a; b] s /\
-               (!i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
-               (!i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
-               (!i. i < 1024 ==>
+               (forall i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
+               (forall i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
+               (forall i. i < 1024 ==>
                  read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-               (!i. i < 1024 ==>
+               (forall i. i < 1024 ==>
                  read(memory :> bytes32(word_add b (word(4 * i)))) s = y i))
           (\s. read PC s = returnaddress /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                  let zi = read(memory :> bytes32(word_add r (word(4 * i)))) s in
                  (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
                    (mod &8380417) /\

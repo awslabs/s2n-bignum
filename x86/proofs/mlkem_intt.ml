@@ -1088,7 +1088,7 @@ let qdata_full = define
     -- &20257; &7756; &23132]`;;
 
 let MLKEM_INTT_CORRECT = prove
-  (`!a zetas (zetas_list:int16 list) x pc.
+  (`forall a zetas (zetas_list:int16 list) x pc.
     aligned 32 a /\
     aligned 32 zetas /\
     nonoverlapping (word pc, 3341) (a, 512) /\
@@ -1099,9 +1099,9 @@ let MLKEM_INTT_CORRECT = prove
               read RIP s = word pc /\
               C_ARGUMENTS [a; zetas] s /\
               wordlist_from_memory(zetas, 624) s = MAP (iword: int -> 16 word) qdata_full /\
-              (!i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
+              (forall i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
           (\s. read RIP s = word(pc + 3341) /\
-              (!i. i < 256
+              (forall i. i < 256
                         ==> let zi =
                       read(memory :> bytes16(word_add a (word(2 * i)))) s in
                       (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
@@ -1216,7 +1216,7 @@ let MLKEM_INTT_CORRECT = prove
     AVX2_INVERSE_NTT_CONV);;
 
 let MLKEM_INTT_NOIBT_SUBROUTINE_CORRECT  = prove
-  (`!a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
+  (`forall a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
     aligned 32 a /\
     aligned 32 zetas /\
     nonoverlapping (word pc, LENGTH mlkem_intt_tmc) (a, 512) /\
@@ -1231,10 +1231,10 @@ let MLKEM_INTT_NOIBT_SUBROUTINE_CORRECT  = prove
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [a; zetas] s /\
               wordlist_from_memory(zetas, 624) s = MAP (iword: int -> 16 word) qdata_full /\
-              (!i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
+              (forall i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
           (\s. read RIP s = returnaddress /\
                read RSP s = word_add stackpointer (word 8) /\
-              (!i. i < 256
+              (forall i. i < 256
                         ==> let zi =
                       read(memory :> bytes16(word_add a (word(2 * i)))) s in
                       (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
@@ -1246,7 +1246,7 @@ let MLKEM_INTT_NOIBT_SUBROUTINE_CORRECT  = prove
   X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_intt_tmc (CONV_RULE TWEAK_CONV MLKEM_INTT_CORRECT));;
 
 let MLKEM_INTT_SUBROUTINE_CORRECT  = prove
-  (`!a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
+  (`forall a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
     aligned 32 a /\
     aligned 32 zetas /\
     nonoverlapping (word pc, LENGTH mlkem_intt_mc) (a, 512) /\
@@ -1261,10 +1261,10 @@ let MLKEM_INTT_SUBROUTINE_CORRECT  = prove
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [a; zetas] s /\
               wordlist_from_memory(zetas, 624) s = MAP (iword: int -> 16 word) qdata_full /\
-              (!i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
+              (forall i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
           (\s. read RIP s = returnaddress /\
                read RSP s = word_add stackpointer (word 8) /\
-              (!i. i < 256
+              (forall i. i < 256
                         ==> let zi =
                       read(memory :> bytes16(word_add a (word(2 * i)))) s in
                       (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
@@ -1289,7 +1289,7 @@ let mlkem_intt_windows_tmc = define_trimmed
 let MLKEM_INTT_WINDOWS_TMC_EXEC = X86_MK_EXEC_RULE mlkem_intt_windows_tmc;;
 
 let MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
-  (`!a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
+  (`forall a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
     aligned 32 a /\
     aligned 32 zetas /\
     nonoverlapping (word pc, LENGTH mlkem_intt_windows_tmc) (a, 512) /\
@@ -1306,10 +1306,10 @@ let MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               WINDOWS_C_ARGUMENTS [a; zetas] s /\
               wordlist_from_memory(zetas, 624) s = MAP (iword: int -> 16 word) qdata_full /\
-              (!i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
+              (forall i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
           (\s. read RIP s = returnaddress /\
                read RSP s = word_add stackpointer (word 8) /\
-              (!i. i < 256
+              (forall i. i < 256
                         ==> let zi =
                       read(memory :> bytes16(word_add a (word(2 * i)))) s in
                       (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
@@ -1420,7 +1420,7 @@ let MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLKEM_INTT_WINDOWS_SUBROUTINE_CORRECT  = prove
-  (`!a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
+  (`forall a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
     aligned 32 a /\
     aligned 32 zetas /\
     nonoverlapping (word pc, LENGTH mlkem_intt_windows_mc) (a, 512) /\
@@ -1437,10 +1437,10 @@ let MLKEM_INTT_WINDOWS_SUBROUTINE_CORRECT  = prove
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               WINDOWS_C_ARGUMENTS [a; zetas] s /\
               wordlist_from_memory(zetas, 624) s = MAP (iword: int -> 16 word) qdata_full /\
-              (!i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
+              (forall i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
           (\s. read RIP s = returnaddress /\
                read RSP s = word_add stackpointer (word 8) /\
-              (!i. i < 256
+              (forall i. i < 256
                         ==> let zi =
                       read(memory :> bytes16(word_add a (word(2 * i)))) s in
                       (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\

@@ -95,10 +95,10 @@ let mulcache_zetas_twisted = define
 
 let have_mulcache_zetas = define
  `have_mulcache_zetas zetas zetas_twisted s <=>
-     (!i. i < 128
+     (forall i. i < 128
           ==> read(memory :> bytes16(word_add zetas (word (2*i)))) s =
               iword (EL i mulcache_zetas)) /\
-     (!i. i < 128
+     (forall i. i < 128
           ==> read(memory :> bytes16(word_add zetas_twisted (word (2*i)))) s =
              iword (EL i mulcache_zetas_twisted))`;;
 
@@ -107,7 +107,7 @@ let have_mulcache_zetas = define
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_MULCACHE_COMPUTE_CORRECT = prove
- (`!dst src zetas zetas_twisted x pc.
+ (`forall dst src zetas zetas_twisted x pc.
     ALL (nonoverlapping (dst, 256))
         [(word pc, LENGTH mlkem_mulcache_compute_mc);
          (src, 512); (zetas, 256); (zetas_twisted, 256)]
@@ -116,12 +116,12 @@ let MLKEM_MULCACHE_COMPUTE_CORRECT = prove
       (\s. aligned_bytes_loaded s (word pc) mlkem_mulcache_compute_mc /\
            read PC s = word pc  /\
            C_ARGUMENTS [dst; src; zetas; zetas_twisted] s  /\
-           (!i. i < 256
+           (forall i. i < 256
                 ==> read(memory :> bytes16(word_add src (word (2 * i)))) s =
                     x i) /\
            have_mulcache_zetas zetas zetas_twisted s)
       (\s. read PC s = word(pc + 0x68) /\
-           !i. i < 128
+           forall i. i < 128
                ==> let z_i = read(memory :> bytes16
                                 (word_add dst (word (2 * i)))) s in
                    (ival z_i == (mulcache (ival o x)) i) (mod &3329) /\
@@ -211,7 +211,7 @@ let MLKEM_MULCACHE_COMPUTE_CORRECT = prove
 );;
 
 let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT = prove
- (`!dst src zetas zetas_twisted x pc returnaddress.
+ (`forall dst src zetas zetas_twisted x pc returnaddress.
     ALL (nonoverlapping (dst, 256))
         [(word pc, LENGTH mlkem_mulcache_compute_mc);
          (src, 512); (zetas, 256); (zetas_twisted, 256)]
@@ -225,7 +225,7 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT = prove
            C_ARGUMENTS [dst; src; zetas; zetas_twisted] s  /\
            // Give name to 16-bit coefficients stored at src to be
            // able to refer to them in the post-condition
-           (!i. i < 256
+           (forall i. i < 256
                 ==> read(memory :> bytes16(word_add src (word (2 * i)))) s =
                     x i) /\
            // Assert that zetas are correct
@@ -234,7 +234,7 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT = prove
            read PC s = returnaddress /\
            // Odd coefficients have been multiplied with
            // respective root of unity
-           !i. i < 128
+           forall i. i < 128
                ==> let z_i = read(memory :> bytes16
                                 (word_add dst (word (2 * i)))) s in
                    (ival z_i == (mulcache (ival o x)) i) (mod &3329) /\

@@ -265,7 +265,7 @@ let WORD_SUBWORD_NUM_OF_WORDLIST_CASES_D20 = mk_subword_cases 20 16;;
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_POLYZ_UNPACK_19_CORRECT = prove
- (`!r b t (l:(20 word) list) pc.
+ (`forall r b t (l:(20 word) list) pc.
         LENGTH l = 256 /\
         ALLPAIRS nonoverlapping
          [(r,1024)]
@@ -364,7 +364,7 @@ let MLDSA_POLYZ_UNPACK_19_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_POLYZ_UNPACK_19_SUBROUTINE_CORRECT = prove
- (`!r b t (l:(20 word) list) pc returnaddress.
+ (`forall r b t (l:(20 word) list) pc returnaddress.
         LENGTH l = 256 /\
         ALLPAIRS nonoverlapping
          [(r,1024)]
@@ -380,7 +380,7 @@ let MLDSA_POLYZ_UNPACK_19_SUBROUTINE_CORRECT = prove
              (\s. read PC s = returnaddress /\
                   read(memory :> bytes(r,1024)) s =
                        num_of_wordlist (MAP zunpack19 l) /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                        --(&(2 EXP 19) - &1) <= ival(EL i (MAP zunpack19 l)) /\
                        ival(EL i (MAP zunpack19 l)) <= &(2 EXP 19)))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

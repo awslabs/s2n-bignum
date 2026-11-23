@@ -291,7 +291,7 @@ let DERIVE_OVERLAP_TAC_D18 i =
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_POLYZ_UNPACK_17_CORRECT = prove
- (`!r b t (l:(18 word) list) pc.
+ (`forall r b t (l:(18 word) list) pc.
         LENGTH l = 256 /\
         ALLPAIRS nonoverlapping
          [(r,1024)]
@@ -393,7 +393,7 @@ let MLDSA_POLYZ_UNPACK_17_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_POLYZ_UNPACK_17_SUBROUTINE_CORRECT = prove
- (`!r b t (l:(18 word) list) pc returnaddress.
+ (`forall r b t (l:(18 word) list) pc returnaddress.
         LENGTH l = 256 /\
         ALLPAIRS nonoverlapping
          [(r,1024)]
@@ -409,7 +409,7 @@ let MLDSA_POLYZ_UNPACK_17_SUBROUTINE_CORRECT = prove
              (\s. read PC s = returnaddress /\
                   read(memory :> bytes(r,1024)) s =
                        num_of_wordlist (MAP zunpack17 l) /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                        --(&(2 EXP 17) - &1) <= ival(EL i (MAP zunpack17 l)) /\
                        ival(EL i (MAP zunpack17 l)) <= &(2 EXP 17)))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

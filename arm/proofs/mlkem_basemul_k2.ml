@@ -223,7 +223,7 @@ let basemul2_odd = define
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_BASEMUL_K2_CORRECT = prove
- (`!srcA srcB srcBt dst x0 y0 y0t x1 y1 y1t pc.
+ (`forall srcA srcB srcBt dst x0 y0 y0t x1 y1 y1t pc.
      ALL (nonoverlapping (dst, 512))
          [(word pc, LENGTH mlkem_basemul_k2_mc);
           (srcA, 1024); (srcB, 1024); (srcBt, 512)]
@@ -232,29 +232,29 @@ let MLKEM_BASEMUL_K2_CORRECT = prove
        (\s. aligned_bytes_loaded s (word pc) mlkem_basemul_k2_mc /\
             read PC s = word (pc + 0x14)  /\
             C_ARGUMENTS [dst; srcA; srcB; srcBt] s  /\
-            (!i. i < 256
+            (forall i. i < 256
                  ==> read(memory :> bytes16
                       (word_add srcA (word (2 * i)))) s = x0 i) /\
-            (!i. i < 256
+            (forall i. i < 256
                  ==> read(memory :> bytes16
                       (word_add srcB  (word (2 * i)))) s = y0 i) /\
-            (!i. i < 128
+            (forall i. i < 128
                  ==> read(memory :> bytes16
                       (word_add srcBt (word (2 * i)))) s = y0t i) /\
-            (!i. i < 256
+            (forall i. i < 256
                  ==> read(memory :> bytes16
                       (word_add srcA (word (512 + 2 * i)))) s = x1 i) /\
-            (!i. i < 256
+            (forall i. i < 256
                  ==> read(memory :> bytes16
                       (word_add srcB (word (512 + 2 * i)))) s = y1 i) /\
-            (!i. i < 128
+            (forall i. i < 128
                  ==> read(memory :> bytes16
                       (word_add srcBt (word (256 + 2 * i)))) s = y1t i))
        (\s. read PC s = word (pc + 0x280) /\
-            ((!i. i < 256
+            ((forall i. i < 256
                   ==> abs(ival(x0 i)) <= &2 pow 12 /\
                       abs(ival(x1 i)) <= &2 pow 12)
-             ==> (!i. i < 128
+             ==> (forall i. i < 128
                       ==> (ival(read(memory :> bytes16
                              (word_add dst (word (4 * i)))) s) ==
                            basemul2_even (ival o x0) (ival o y0) (ival o y0t)
@@ -328,7 +328,7 @@ let MLKEM_BASEMUL_K2_CORRECT = prove
   CONGBOUND_INT_RING_TAC);;
 
 let MLKEM_BASEMUL_K2_SUBROUTINE_CORRECT = prove
- (`!srcA srcB srcBt dst x0 y0 y0t x1 y1 y1t pc stackpointer returnaddress.
+ (`forall srcA srcB srcBt dst x0 y0 y0t x1 y1 y1t pc stackpointer returnaddress.
       aligned 16 stackpointer /\
       ALLPAIRS nonoverlapping
         [(dst, 512); (word_sub stackpointer (word 64),64)]
@@ -345,30 +345,30 @@ let MLKEM_BASEMUL_K2_SUBROUTINE_CORRECT = prove
             C_ARGUMENTS [dst; srcA; srcB; srcBt] s  /\
             // Give names to in-memory data to be
             // able to refer to them in the post-condition
-            (!i. i < 256
+            (forall i. i < 256
                  ==> read(memory :> bytes16
                       (word_add srcA (word (2 * i)))) s = x0 i) /\
-            (!i. i < 256
+            (forall i. i < 256
                  ==> read(memory :> bytes16
                       (word_add srcB  (word (2 * i)))) s = y0 i) /\
-            (!i. i < 128
+            (forall i. i < 128
                  ==> read(memory :> bytes16
                       (word_add srcBt (word (2 * i)))) s = y0t i) /\
-            (!i. i < 256
+            (forall i. i < 256
                  ==> read(memory :> bytes16
                       (word_add srcA (word (512 + 2 * i)))) s = x1 i) /\
-            (!i. i < 256
+            (forall i. i < 256
                  ==> read(memory :> bytes16
                       (word_add srcB (word (512 + 2 * i)))) s = y1 i) /\
-            (!i. i < 128
+            (forall i. i < 128
                  ==> read(memory :> bytes16
                       (word_add srcBt (word (256 + 2 * i)))) s = y1t i)
        )
        (\s. read PC s = returnaddress /\
-            ((!i. i < 256
+            ((forall i. i < 256
                  ==> abs(ival(x0 i)) <= &2 pow 12 /\
                      abs(ival(x1 i)) <= &2 pow 12)
-             ==> (!i. i < 128
+             ==> (forall i. i < 128
                       ==> (ival(read(memory :> bytes16
                              (word_add dst (word (4 * i)))) s) ==
                            basemul2_even (ival o x0) (ival o y0) (ival o y0t)

@@ -730,7 +730,7 @@ let MLDSA_DECOMPOSE_88_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_decompose_88_tmc;;
 
 (* The shifted representative val(word_ushr (x+127) 7). *)
 let H_T = prove(
-  `!x:int32. val x < 8380417 ==>
+  `forall x:int32. val x < 8380417 ==>
      val(word_ushr (word_add (x:int32) (word 127)) 7) = (val x + 127) DIV 128`,
   GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[VAL_WORD_USHR; VAL_WORD_ADD; VAL_WORD; DIMINDEX_32] THEN
@@ -740,13 +740,13 @@ let H_T = prove(
 
 (* The shifted value stays below the next power-of-two boundary. *)
 let T_BOUND = prove(
-  `!x:int32. val x < 8380417 ==> (val x + 127) DIV 128 < 65473`,
+  `forall x:int32. val x < 8380417 ==> (val x + 127) DIV 128 < 65473`,
   GEN_TAC THEN DISCH_TAC THEN
   SIMP_TAC[RDIV_LT_EQ; ARITH_RULE `~(128 = 0)`] THEN ASM_ARITH_TAC);;
 
 (* DIV bound helper: pins a quotient from a multiplicative bracket. *)
 let DIV_BOUNDS_EQ = prove(
-  `!b d q. ~(d = 0) /\ q * d <= b /\ b < (q + 1) * d ==> b DIV d = q`,
+  `forall b d q. ~(d = 0) /\ q * d <= b /\ b < (q + 1) * d ==> b DIV d = q`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC(ARITH_RULE `q <= r /\ r < q + 1 ==> r = q`) THEN
   CONJ_TAC THENL
    [ASM_SIMP_TAC[LE_RDIV_EQ] THEN ASM_ARITH_TAC;
@@ -754,7 +754,7 @@ let DIV_BOUNDS_EQ = prove(
 
 (* ival = val for in-range positive int32. *)
 let IVAL_EQ_VAL = prove(
-  `!x:int32. val x < 2 EXP 31 ==> ival x = &(val x)`,
+  `forall x:int32. val x < 2 EXP 31 ==> ival x = &(val x)`,
   GEN_TAC THEN REWRITE_TAC[IVAL_VAL; DIMINDEX_32] THEN
   CONV_TAC(ONCE_DEPTH_CONV NUM_EXP_CONV) THEN
   DISCH_TAC THEN
@@ -764,7 +764,7 @@ let IVAL_EQ_VAL = prove(
 
 (* val of a 16->32 sign extension when the source is below 2^15. *)
 let VAL_SX_16_32 = prove(
-  `!w:16 word. val w < 32768 ==> val(word_sx w:int32) = val w`,
+  `forall w:16 word. val w < 32768 ==> val(word_sx w:int32) = val w`,
   GEN_TAC THEN DISCH_TAC THEN
   SUBGOAL_THEN `bit 15 (w:16 word) = F` ASSUME_TAC THENL
    [REWRITE_TAC[BIT_VAL; DIMINDEX_16] THEN CONV_TAC NUM_REDUCE_CONV THEN
@@ -789,7 +789,7 @@ let VAL_SX_16_32 = prove(
 
 (* Signed comparison against a non-negative bound below 2^31. *)
 let IGT_BOUND_GEN = prove(
-  `!x:int32 b. b < 2147483648 ==> (word_igt x (word b) <=> ival x > &b)`,
+  `forall x:int32 b. b < 2147483648 ==> (word_igt x (word b) <=> ival x > &b)`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   SUBGOAL_THEN `ival(word b:int32) = &b` ASSUME_TAC THENL
    [MP_TAC(ISPEC `word b:int32` IVAL_EQ_VAL) THEN
@@ -801,7 +801,7 @@ let IGT_BOUND_GEN = prove(
 
 (* High 16 bits of a 16x16->32 unsigned multiply (VPMULHUW lane semantics). *)
 let MULHI_LANE_GEN = prove(
-  `!t:int32 m. val t < 65536 /\ m < 65536 ==>
+  `forall t:int32 m. val t < 65536 /\ m < 65536 ==>
      val(word_subword (word_mul (word_zx (word_subword t (0,16):16 word):int32)
                                 (word m)) (16,16):16 word) =
      (val t * m) DIV 65536`,
@@ -826,13 +826,13 @@ let MULHI_LANE_GEN = prove(
 
 (* word_not distributes over word_join at the 64/128/256-bit AVX2 lane widths. *)
 let WORD_NOT_JOIN_64 = WORD_BLAST
-  `!a b : int32. word_not ((word_join:int32->int32->int64) a b) =
+  `forall a b : int32. word_not ((word_join:int32->int32->int64) a b) =
    word_join (word_not a) (word_not b)`;;
 let WORD_NOT_JOIN_128 = WORD_BLAST
-  `!a b : int64. word_not ((word_join:int64->int64->int128) a b) =
+  `forall a b : int64. word_not ((word_join:int64->int64->int128) a b) =
    word_join (word_not a) (word_not b)`;;
 let WORD_NOT_JOIN_256 = WORD_BLAST
-  `!a b : int128. word_not ((word_join:int128->int128->int256) a b) =
+  `forall a b : int128. word_not ((word_join:int128->int128->int256) a b) =
    word_join (word_not a) (word_not b)`;;
 
 (* ========================================================================= *)
@@ -879,7 +879,7 @@ let decompose88_a0 = define
 (* The unsigned high-16 multiply (VPMULHUW) on a sub-2^16 lane, specialized
    to the Barrett magic constant 11275 from the shared MULHI_LANE_GEN. *)
 let MULHI_LANE = prove(
-  `!t:int32. val t < 65536 ==>
+  `forall t:int32. val t < 65536 ==>
      val(word_subword (word_mul (word_zx (word_subword t (0,16):16 word):int32)
                                 (word 11275)) (16,16):16 word) =
      (val t * 11275) DIV 65536`,
@@ -898,7 +898,7 @@ let HI16_ZERO =
 
 (* Numerical form of decompose88_h: the nested mulhi/mulhrs floors. *)
 let H_NUM = prove(
-  `!x:int32. val x < 8380417 ==>
+  `forall x:int32. val x < 8380417 ==>
      val(decompose88_h x) =
      (((((val x + 127) DIV 128 * 11275) DIV 65536) * 128) DIV 16384 + 1) DIV 2`,
   GEN_TAC THEN DISCH_TAC THEN
@@ -936,25 +936,25 @@ let H_NUM = prove(
 
 (* Collapse the two trailing right-shift floors into one. *)
 let ADD128_DIV = prove(
-  `!c1. (c1 + 128) DIV 128 = c1 DIV 128 + 1`,
+  `forall c1. (c1 + 128) DIV 128 = c1 DIV 128 + 1`,
   GEN_TAC THEN SUBGOAL_THEN `c1 + 128 = c1 + 1 * 128` SUBST1_TAC THENL
    [ARITH_TAC; SIMP_TAC[DIV_MULT_ADD; ARITH_RULE `~(128 = 0)`]]);;
 
-let DIVMUL_HELP = prove(`!a. (a * 128) DIV 16384 = a DIV 128`,
+let DIVMUL_HELP = prove(`forall a. (a * 128) DIV 16384 = a DIV 128`,
   GEN_TAC THEN REWRITE_TAC[ARITH_RULE `16384 = 128 * 128`] THEN
   GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [MULT_SYM] THEN
   ONCE_REWRITE_TAC[MULT_SYM] THEN
   SIMP_TAC[DIV_MULT2; ARITH_RULE `~(128 = 0)`]);;
 
 let E_COLLAPSE = prove(
-  `!c. ((((c * 11275) DIV 65536) * 128) DIV 16384 + 1) DIV 2 =
+  `forall c. ((((c * 11275) DIV 65536) * 128) DIV 16384 + 1) DIV 2 =
        ((c * 11275) DIV 65536 + 128) DIV 256`,
   GEN_TAC THEN REWRITE_TAC[DIVMUL_HELP; GSYM ADD128_DIV] THEN
   REWRITE_TAC[ARITH_RULE `256 = 128 * 2`; DIV_DIV]);;
 
 (* Barrett-style correctness of the mulhi/mulhrs quotient. *)
 let BARRETT_CORE = prove(
-  `!c. c < 65473 ==> ((c * 11275) DIV 65536 + 128) DIV 256 = (c + 743) DIV 1488`,
+  `forall c. c < 65473 ==> ((c * 11275) DIV 65536 + 128) DIV 256 = (c + 743) DIV 1488`,
   GEN_TAC THEN DISCH_TAC THEN
   ABBREV_TAC `c1 = (c * 11275) DIV 65536` THEN
   MP_TAC(SPECL [`c * 11275`; `65536`] DIVISION) THEN ANTS_TAC THENL [ARITH_TAC; ALL_TAC] THEN
@@ -969,7 +969,7 @@ let BARRETT_CORE = prove(
 
 (* round-half-down closed form. *)
 let ROUND_CLOSED = prove(
-  `!r. (if r MOD 190464 * 2 <= 190464 then r DIV 190464 else r DIV 190464 + 1) =
+  `forall r. (if r MOD 190464 * 2 <= 190464 then r DIV 190464 else r DIV 190464 + 1) =
        (r + 95231) DIV 190464`,
   GEN_TAC THEN
   MP_TAC(SPECL [`r:num`; `190464`] DIVISION) THEN ANTS_TAC THENL [ARITH_TAC; STRIP_TAC] THEN
@@ -982,7 +982,7 @@ let ROUND_CLOSED = prove(
     MATCH_MP_TAC DIV_UNIQ THEN EXISTS_TAC `m - 95233` THEN ASM_ARITH_TAC]);;
 
 let C_TO_R = prove(
-  `!r. (((r + 127) DIV 128) + 743) DIV 1488 = (r + 95231) DIV 190464`,
+  `forall r. (((r + 127) DIV 128) + 743) DIV 1488 = (r + 95231) DIV 190464`,
   GEN_TAC THEN
   SUBGOAL_THEN `(r + 127) DIV 128 + 743 = (r + 95231) DIV 128` SUBST1_TAC THENL
    [SUBGOAL_THEN `r + 95231 = (r + 127) + 743 * 128` SUBST1_TAC THENL
@@ -990,7 +990,7 @@ let C_TO_R = prove(
   REWRITE_TAC[DIV_DIV] THEN REWRITE_TAC[ARITH_RULE `128 * 1488 = 190464`]);;
 
 let H_ROUND = prove(
-  `!r. r < 8380417 ==>
+  `forall r. r < 8380417 ==>
      (((((r + 127) DIV 128 * 11275) DIV 65536) * 128) DIV 16384 + 1) DIV 2 =
      (if r MOD 190464 * 2 <= 190464 then r DIV 190464 else r DIV 190464 + 1)`,
   GEN_TAC THEN DISCH_TAC THEN
@@ -1003,7 +1003,7 @@ let H_ROUND = prove(
 (* Correctness of the high-bits quotient: same round-half-down form proven for
    AArch64 (h32), enabling reuse of the spec-connection lemmas below. *)
 let H32_CORRECT = prove(
-  `!x:int32. val x < 8380417 ==>
+  `forall x:int32. val x < 8380417 ==>
     val(decompose88_h x) = (if val x MOD 190464 * 2 <= 190464
                             then val x DIV 190464
                             else val x DIV 190464 + 1)`,
@@ -1017,14 +1017,14 @@ let IGT_BOUND =
 
 (* a1 = 0 on wrap-around, else h. *)
 let DECOMPOSE88_A1_CASES = prove(
-  `!x:int32. decompose88_a1 x = if ival x > &8285184 then word 0 else decompose88_h x`,
+  `forall x:int32. decompose88_a1 x = if ival x > &8285184 then word 0 else decompose88_h x`,
   GEN_TAC THEN REWRITE_TAC[decompose88_a1; GSYM IGT_BOUND] THEN
   ABBREV_TAC `h = decompose88_h x` THEN
   COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN BITBLAST_TAC);;
 
 (* a0 subtracts one extra on wrap-around. *)
 let DECOMPOSE88_A0_CASES = prove(
-  `!x:int32. decompose88_a0 x =
+  `forall x:int32. decompose88_a0 x =
      if ival x > &8285184
      then word_sub (word_sub x (word_mul (decompose88_h x) (word 190464))) (word 1)
      else word_sub x (word_mul (decompose88_h x) (word 190464))`,
@@ -1036,7 +1036,7 @@ let DECOMPOSE88_A0_CASES = prove(
 
 (* On wrap-around (val x > 87*GAMMA2) the rounding quotient is exactly 44. *)
 let ROUND32_SPECIAL = prove(
-  `!n. 8285184 < n /\ n < 8380417 ==>
+  `forall n. 8285184 < n /\ n < 8380417 ==>
     (if n MOD 190464 * 2 <= 190464 then n DIV 190464 else n DIV 190464 + 1) = 44`,
   REPEAT STRIP_TAC THEN
   ASM_CASES_TAC `n < 8380416` THENL
@@ -1051,7 +1051,7 @@ let ROUND32_SPECIAL = prove(
     CONV_TAC NUM_REDUCE_CONV]);;
 
 let CMOD_ABS_BOUND_190464 = prove(
-  `!n. abs(mldsa_cmod n 190464) <= &95232`,
+  `forall n. abs(mldsa_cmod n 190464) <= &95232`,
   GEN_TAC THEN REWRITE_TAC[mldsa_cmod] THEN
   SUBGOAL_THEN `n MOD 190464 < 190464` MP_TAC THENL
    [SIMP_TAC[MOD_LT_EQ; ARITH_RULE `~(190464 = 0)`]; ALL_TAC] THEN
@@ -1062,7 +1062,7 @@ let CMOD_ABS_BOUND_190464 = prove(
 
 (* a1 lane computes the high bits FST(mldsa_decompose_88(val x)). *)
 let DECOMPOSE88_A1_CORRECT = prove(
-  `!x:int32. val x < 8380417
+  `forall x:int32. val x < 8380417
     ==> val(decompose88_a1 x) = FST(mldsa_decompose_88(val x))`,
   GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[DECOMPOSE88_A1_CASES; MLDSA_DECOMPOSE_88_EXPAND; LET_DEF; LET_END_DEF; FST] THEN
@@ -1100,7 +1100,7 @@ let DECOMPOSE88_A1_CORRECT = prove(
 
 (* a0 lane computes the low bits SND(mldsa_decompose_88(val x)). *)
 let DECOMPOSE88_A0_CORRECT = prove(
-  `!x:int32. val x < 8380417
+  `forall x:int32. val x < 8380417
     ==> ival(decompose88_a0 x) = SND(mldsa_decompose_88(val x))`,
   GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[DECOMPOSE88_A0_CASES; MLDSA_DECOMPOSE_88_EXPAND; LET_DEF; LET_END_DEF; SND] THEN
@@ -1168,18 +1168,18 @@ let DECOMPOSE88_A0_CORRECT = prove(
 (* Range bounds on the lane outputs, phrased on the word-level lane functions
    so the main proof can discharge the CBMC-contract bounds uniformly. *)
 let DECOMPOSE88_A1_BOUND_LEMMA = prove(
-  `!x:int32. val x < 8380417 ==> val(decompose88_a1 x) <= 43`,
+  `forall x:int32. val x < 8380417 ==> val(decompose88_a1 x) <= 43`,
   GEN_TAC THEN DISCH_TAC THEN
   ASM_SIMP_TAC[DECOMPOSE88_A1_CORRECT; MLDSA_DECOMPOSE_88_A1_BOUND]);;
 
 let DECOMPOSE88_A0_BOUND_LO = prove(
-  `!x:int32. val x < 8380417 ==> --(&95232) <= ival(decompose88_a0 x)`,
+  `forall x:int32. val x < 8380417 ==> --(&95232) <= ival(decompose88_a0 x)`,
   GEN_TAC THEN DISCH_TAC THEN
   ASM_SIMP_TAC[DECOMPOSE88_A0_CORRECT] THEN
   MP_TAC(SPEC `val(x:int32)` MLDSA_DECOMPOSE_88_A0_BOUND) THEN ASM_REWRITE_TAC[] THEN INT_ARITH_TAC);;
 
 let DECOMPOSE88_A0_BOUND_HI = prove(
-  `!x:int32. val x < 8380417 ==> ival(decompose88_a0 x) <= &95232`,
+  `forall x:int32. val x < 8380417 ==> ival(decompose88_a0 x) <= &95232`,
   GEN_TAC THEN DISCH_TAC THEN
   ASM_SIMP_TAC[DECOMPOSE88_A0_CORRECT] THEN
   MP_TAC(SPEC `val(x:int32)` MLDSA_DECOMPOSE_88_A0_BOUND) THEN ASM_REWRITE_TAC[] THEN INT_ARITH_TAC);;
@@ -1189,7 +1189,7 @@ let DECOMPOSE88_A0_BOUND_HI = prove(
 (* ========================================================================= *)
 
 let MLDSA_DECOMPOSE_88_CORRECT = prove(
- `!a1 a (x:num->int32) pc.
+ `forall a1 a (x:num->int32) pc.
         ALL (nonoverlapping (word pc, 2144))
             [(a1,1024); (a,1024)] /\
         nonoverlapping (a1,1024) (a,1024) /\
@@ -1198,19 +1198,19 @@ let MLDSA_DECOMPOSE_88_CORRECT = prove(
              (\s. bytes_loaded s (word pc) (BUTLAST mldsa_decompose_88_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [a1; a] s /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> val(x i:int32) < 8380417))
+                  (forall i. i < 256 ==> val(x i:int32) < 8380417))
              (\s. read RIP s = word(pc + 2143) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> val(read(memory :> bytes32(word_add a1 (word(4*i)))) s) =
                            FST(mldsa_decompose_88(val(x i)))) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> ival(read(memory :> bytes32(word_add a (word(4*i)))) s) =
                            SND(mldsa_decompose_88(val(x i)))) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> val(read(memory :> bytes32(word_add a1 (word(4*i)))) s) <= 43) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> --(&95232) <=
                            ival(read(memory :> bytes32(word_add a (word(4*i)))) s) /\
                            ival(read(memory :> bytes32(word_add a (word(4*i)))) s) <= &95232))
@@ -1257,7 +1257,7 @@ let MLDSA_DECOMPOSE_88_CORRECT = prove(
 (* ========================================================================= *)
 
 let MLDSA_DECOMPOSE_88_NOIBT_SUBROUTINE_CORRECT = prove(
- `!a1 a (x:num->int32) pc stackpointer returnaddress.
+ `forall a1 a (x:num->int32) pc stackpointer returnaddress.
         aligned 32 a1 /\ aligned 32 a /\
         ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_88_tmc))
             [(a1,1024); (a,1024)] /\
@@ -1270,20 +1270,20 @@ let MLDSA_DECOMPOSE_88_NOIBT_SUBROUTINE_CORRECT = prove(
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a1; a] s /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> val(x i:int32) < 8380417))
+                  (forall i. i < 256 ==> val(x i:int32) < 8380417))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> val(read(memory :> bytes32(word_add a1 (word(4*i)))) s) =
                            FST(mldsa_decompose_88(val(x i)))) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> ival(read(memory :> bytes32(word_add a (word(4*i)))) s) =
                            SND(mldsa_decompose_88(val(x i)))) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> val(read(memory :> bytes32(word_add a1 (word(4*i)))) s) <= 43) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> --(&95232) <=
                            ival(read(memory :> bytes32(word_add a (word(4*i)))) s) /\
                            ival(read(memory :> bytes32(word_add a (word(4*i)))) s) <= &95232))
@@ -1293,7 +1293,7 @@ let MLDSA_DECOMPOSE_88_NOIBT_SUBROUTINE_CORRECT = prove(
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_decompose_88_tmc MLDSA_DECOMPOSE_88_CORRECT);;
 
 let MLDSA_DECOMPOSE_88_SUBROUTINE_CORRECT = prove(
- `!a1 a (x:num->int32) pc stackpointer returnaddress.
+ `forall a1 a (x:num->int32) pc stackpointer returnaddress.
         aligned 32 a1 /\ aligned 32 a /\
         ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_88_mc))
             [(a1,1024); (a,1024)] /\
@@ -1306,20 +1306,20 @@ let MLDSA_DECOMPOSE_88_SUBROUTINE_CORRECT = prove(
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a1; a] s /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> val(x i:int32) < 8380417))
+                  (forall i. i < 256 ==> val(x i:int32) < 8380417))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> val(read(memory :> bytes32(word_add a1 (word(4*i)))) s) =
                            FST(mldsa_decompose_88(val(x i)))) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> ival(read(memory :> bytes32(word_add a (word(4*i)))) s) =
                            SND(mldsa_decompose_88(val(x i)))) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> val(read(memory :> bytes32(word_add a1 (word(4*i)))) s) <= 43) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> --(&95232) <=
                            ival(read(memory :> bytes32(word_add a (word(4*i)))) s) /\
                            ival(read(memory :> bytes32(word_add a (word(4*i)))) s) <= &95232))
@@ -1431,7 +1431,7 @@ let MLDSA_DECOMPOSE_88_WINDOWS_TMC_EXEC =
   X86_MK_EXEC_RULE mldsa_decompose_88_windows_tmc;;
 
 let MLDSA_DECOMPOSE_88_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a1 a (x:num->int32) pc stackpointer returnaddress.
+ (`forall a1 a (x:num->int32) pc stackpointer returnaddress.
         aligned 32 a1 /\ aligned 32 a /\
         ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_88_windows_tmc))
             [(a1,1024); (a,1024)] /\
@@ -1446,20 +1446,20 @@ let MLDSA_DECOMPOSE_88_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   WINDOWS_C_ARGUMENTS [a1; a] s /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> val(x i:int32) < 8380417))
+                  (forall i. i < 256 ==> val(x i:int32) < 8380417))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> val(read(memory :> bytes32(word_add a1 (word(4*i)))) s) =
                            FST(mldsa_decompose_88(val(x i)))) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> ival(read(memory :> bytes32(word_add a (word(4*i)))) s) =
                            SND(mldsa_decompose_88(val(x i)))) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> val(read(memory :> bytes32(word_add a1 (word(4*i)))) s) <= 43) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> --(&95232) <=
                            ival(read(memory :> bytes32(word_add a (word(4*i)))) s) /\
                            ival(read(memory :> bytes32(word_add a (word(4*i)))) s) <= &95232))
@@ -1529,7 +1529,7 @@ let MLDSA_DECOMPOSE_88_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLDSA_DECOMPOSE_88_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a1 a (x:num->int32) pc stackpointer returnaddress.
+ (`forall a1 a (x:num->int32) pc stackpointer returnaddress.
         aligned 32 a1 /\ aligned 32 a /\
         ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_88_windows_mc))
             [(a1,1024); (a,1024)] /\
@@ -1544,20 +1544,20 @@ let MLDSA_DECOMPOSE_88_WINDOWS_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   WINDOWS_C_ARGUMENTS [a1; a] s /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> val(x i:int32) < 8380417))
+                  (forall i. i < 256 ==> val(x i:int32) < 8380417))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> val(read(memory :> bytes32(word_add a1 (word(4*i)))) s) =
                            FST(mldsa_decompose_88(val(x i)))) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> ival(read(memory :> bytes32(word_add a (word(4*i)))) s) =
                            SND(mldsa_decompose_88(val(x i)))) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> val(read(memory :> bytes32(word_add a1 (word(4*i)))) s) <= 43) /\
-                  (!i. i < 256
+                  (forall i. i < 256
                        ==> --(&95232) <=
                            ival(read(memory :> bytes32(word_add a (word(4*i)))) s) /\
                            ival(read(memory :> bytes32(word_add a (word(4*i)))) s) <= &95232))

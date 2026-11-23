@@ -54,13 +54,13 @@ let NIBBLES_OF_BYTES = define
    APPEND (NIBBLE_PAIR b) (NIBBLES_OF_BYTES t)`;;
 
 let NIBBLES_OF_BYTES_APPEND = prove
- (`!l1 l2. NIBBLES_OF_BYTES(APPEND l1 l2) =
+ (`forall l1 l2. NIBBLES_OF_BYTES(APPEND l1 l2) =
            APPEND (NIBBLES_OF_BYTES l1) (NIBBLES_OF_BYTES l2)`,
   LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC[NIBBLES_OF_BYTES; APPEND; APPEND_ASSOC]);;
 
 let NIBBLES_OF_BYTES_4 = prove
- (`!b0 b1 b2 b3:byte.
+ (`forall b0 b1 b2 b3:byte.
    NIBBLES_OF_BYTES [b0;b1;b2;b3] =
    [word(val b0 MOD 16); word(val b0 DIV 16);
     word(val b1 MOD 16); word(val b1 DIV 16);
@@ -71,7 +71,7 @@ let NIBBLES_OF_BYTES_4 = prove
 let DIMINDEX_16 = DIMINDEX_CONV `dimindex(:16)`;;
 
 let VAL_WORD_NIBBLE_LT = prove
- (`!b:byte.
+ (`forall b:byte.
    val(word(val b MOD 16):int16) = val b MOD 16 /\
    val(word(val b DIV 16):int16) = val b DIV 16`,
   GEN_TAC THEN REWRITE_TAC[VAL_WORD; DIMINDEX_16] THEN
@@ -97,7 +97,7 @@ let BYTES_TO_NIBBLES = define
 (* Bridge: little-endian bit-content of a byte list equals little-endian    *)
 (* bit-content of its nibble decomposition.                                 *)
 let NUM_OF_BYTES_TO_NIBBLES = prove
- (`!l:byte list. num_of_wordlist (BYTES_TO_NIBBLES l) = num_of_wordlist l`,
+ (`forall l:byte list. num_of_wordlist (BYTES_TO_NIBBLES l) = num_of_wordlist l`,
   LIST_INDUCT_TAC THEN
   REWRITE_TAC[BYTES_TO_NIBBLES; num_of_wordlist; NUM_OF_WORDLIST_APPEND;
               LENGTH; DIMINDEX_4; DIMINDEX_8; VAL_WORD; MOD_MOD_REFL] THEN
@@ -111,15 +111,15 @@ let NUM_OF_BYTES_TO_NIBBLES = prove
   MP_TAC(SPECL [`val(h:byte)`; `16`] DIVISION) THEN ARITH_TAC);;
 
 let LENGTH_BYTES_TO_NIBBLES = prove
- (`!l:byte list. LENGTH(BYTES_TO_NIBBLES l) = 2 * LENGTH l`,
+ (`forall l:byte list. LENGTH(BYTES_TO_NIBBLES l) = 2 * LENGTH l`,
   LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC[BYTES_TO_NIBBLES; LENGTH; LENGTH_APPEND] THEN ARITH_TAC);;
 
 (* Surjectivity onto even-length nibble lists: any nibble list of even      *)
 (* length is the BYTES_TO_NIBBLES image of some byte list (twice as short). *)
 let BYTES_TO_NIBBLES_SURJ = prove
- (`!l:(4 word) list. EVEN(LENGTH l)
-                     ==> ?bs:byte list. BYTES_TO_NIBBLES bs = l /\
+ (`forall l:(4 word) list. EVEN(LENGTH l)
+                     ==> exists bs:byte list. BYTES_TO_NIBBLES bs = l /\
                                         LENGTH bs = LENGTH l DIV 2`,
   GEN_TAC THEN WF_INDUCT_TAC `LENGTH(l:(4 word) list)` THEN
   DISCH_TAC THEN ASM_CASES_TAC `l:(4 word) list = []` THENL
@@ -166,7 +166,7 @@ let BYTES_TO_NIBBLES_SURJ = prove
 (* int16 lanes (matching SIMD storage), whereas BYTES_TO_NIBBLES uses the   *)
 (* natural 4-bit width consumed by the public REJ_SAMPLE_ETA{2,4} spec.     *)
 let NIBBLES_OF_BYTES_EQ_BYTES_TO_NIBBLES = prove
- (`!l:byte list.
+ (`forall l:byte list.
      NIBBLES_OF_BYTES l = MAP (\x:4 word. word_zx x:int16) (BYTES_TO_NIBBLES l)`,
   LIST_INDUCT_TAC THENL
    [REWRITE_TAC[NIBBLES_OF_BYTES; BYTES_TO_NIBBLES; MAP]; ALL_TAC] THEN
@@ -185,7 +185,7 @@ let NIBBLES_OF_BYTES_EQ_BYTES_TO_NIBBLES = prove
 (* bytes from the input via LDR Q0,[buf,...]; this lemma exposes those 8   *)
 (* bytes as the components of the SUB_LIST(8*i, 8) of the abstract list.    *)
 let SUB_LIST_8_BYTES_FROM_INT64 = prove
- (`!buf:int64 buflen inlist i s.
+ (`forall buf:int64 buflen inlist i s.
     8 * (i + 1) <= buflen /\
     LENGTH (inlist:byte list) = buflen /\
     read (memory :> bytes (buf, buflen)) s = num_of_wordlist inlist
@@ -233,7 +233,7 @@ let SUB_LIST_8_BYTES_FROM_INT64 = prove
 
 let BYTE_SPLIT_AND = map (fun k ->
     BITBLAST_RULE(parse_term(Printf.sprintf
-     "!x:int128 b:byte. \
+     "forall x:int128 b:byte. \
        word_subword x (%d,16):int16 = word_zx(word_and b (word 15):byte):int16 \
        ==> word_subword x (%d,8):byte = word_and b (word 15):byte /\\ \
            word_subword x (%d,8):byte = word 0:byte"
@@ -242,7 +242,7 @@ let BYTE_SPLIT_AND = map (fun k ->
 
 let BYTE_SPLIT_USHR = map (fun k ->
     BITBLAST_RULE(parse_term(Printf.sprintf
-     "!x:int128 b:byte. \
+     "forall x:int128 b:byte. \
        word_subword x (%d,16):int16 = word_zx(word_ushr b 4:byte):int16 \
        ==> word_subword x (%d,8):byte = word_ushr b 4:byte /\\ \
            word_subword x (%d,8):byte = word 0:byte"
@@ -263,7 +263,7 @@ let POPCOUNT_AND_POWERS = BITBLAST_RULE
    word_popcount(word_and (word 128) x:byte) = bitval(bit 7 x)`;;
 
 let UADDLV_BOUND_LEMMA = prove
- (`!b0 b1 b2 b3 b4 b5 b6 b7.
+ (`forall b0 b1 b2 b3 b4 b5 b6 b7.
    val(word_zx(word_subword
      (word_add (word_subword(word_join (word 0:byte) (word(bitval b0):byte):int16)(0,16):int128)
      (word_add (word_subword(word_join (word 0:byte) (word(bitval b1):byte):int16)(0,16):int128)
@@ -279,7 +279,7 @@ let UADDLV_BOUND_LEMMA = prove
   REWRITE_TAC[bitval] THEN CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV));;
 
 let UADDLV_COUNT_LEMMA = prove
- (`!b0 b1 b2 b3 b4 b5 b6 b7.
+ (`forall b0 b1 b2 b3 b4 b5 b6 b7.
    val(word_zx(word_subword
      (word_add (word_subword(word_join (word 0:byte) (word(bitval b0):byte):int16)(0,16):int128)
      (word_add (word_subword(word_join (word 0:byte) (word(bitval b1):byte):int16)(0,16):int128)
@@ -300,30 +300,30 @@ let VAL_WORD_ZX_BYTE16 = WORD_BLAST
   `val(word_zx (b:byte):int16) = val b`;;
 
 let VAL_BYTE_NIB_MOD_65536 = prove(
-  `!b:byte. (val b DIV 16) MOD 65536 = val b DIV 16 /\
+  `forall b:byte. (val b DIV 16) MOD 65536 = val b DIV 16 /\
             val b MOD 16 MOD 65536 = val b MOD 16`,
   GEN_TAC THEN CONJ_TAC THEN MATCH_MP_TAC MOD_LT THEN
   MP_TAC(ISPEC `b:byte` VAL_BOUND) THEN REWRITE_TAC[DIMINDEX_8] THEN ARITH_TAC);;
 
 let WORD_ADD_SHL1 = WORD_BLAST
- `!sp (x:int64) k.
+ `forall sp (x:int64) k.
     word_add (word_add sp (word(2 * k):int64))
              (word_shl x 1:int64) =
     word_add sp (word(2 * (k + val(x:int64))):int64)`;;
 
 let LENGTH_FILTER = prove
- (`!P l:A list. LENGTH(FILTER P l) <= LENGTH l`,
+ (`forall P l:A list. LENGTH(FILTER P l) <= LENGTH l`,
   GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[FILTER; LE_REFL] THEN
   COND_CASES_TAC THEN REWRITE_TAC[LENGTH] THEN ASM_ARITH_TAC);;
 
 let SUB_LIST_MAP = prove(
-  `!f (l:A list) n.
+  `forall f (l:A list) n.
      SUB_LIST(0,n)(MAP f l) = MAP f (SUB_LIST(0,n) l):B list`,
   GEN_TAC THEN LIST_INDUCT_TAC THEN INDUCT_TAC THEN
   ASM_REWRITE_TAC[MAP; SUB_LIST_CLAUSES]);;
 
 let EL_SUB_LIST = prove
- (`!l:(A)list. !m n i:num.
+ (`forall l:(A)list. forall m n i:num.
      i < n /\ m + i < LENGTH l
      ==> EL i (SUB_LIST (m,n) l) = EL (m + i) l`,
   LIST_INDUCT_TAC THEN REWRITE_TAC[LENGTH; LT] THEN
@@ -347,7 +347,7 @@ let EL_SUB_LIST = prove
     ASM_REWRITE_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
 
 let SUB_LIST_4_EL = prove
- (`!l:(A)list. !k:num.
+ (`forall l:(A)list. forall k:num.
      k + 4 <= LENGTH l
      ==> SUB_LIST(k, 4) l =
          [EL k l; EL (k+1) l; EL (k+2) l; EL (k+3) l]`,
@@ -360,7 +360,7 @@ let SUB_LIST_4_EL = prove
   MP_TAC(ISPECL [`l:(A)list`; `k:num`; `4`; `i:num`] EL_SUB_LIST) THEN
   ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN SUBST1_TAC] THEN
   SUBGOAL_THEN
-    `!P (a:A) b c d.
+    `forall P (a:A) b c d.
        (i = 0 ==> P a) /\ (i = 1 ==> P b) /\
        (i = 2 ==> P c) /\ (i = 3 ==> P d)
        ==> P(EL i [a;b;c;d])`
@@ -375,7 +375,7 @@ let SUB_LIST_4_EL = prove
     REWRITE_TAC[ADD_CLAUSES]]);;
 
 let SUB_LIST_SPLIT_AT = prove
- (`!(l:A list) i.
+ (`forall (l:A list) i.
      i <= LENGTH l
      ==> l = APPEND (SUB_LIST(0, i) l) (SUB_LIST(i, LENGTH l - i) l)`,
   REPEAT STRIP_TAC THEN
@@ -384,7 +384,7 @@ let SUB_LIST_SPLIT_AT = prove
   REFL_TAC);;
 
 let SUB_LIST_8nn_INLIST = prove
- (`!inlist:byte list. !nn:num. !buflen:num.
+ (`forall inlist:byte list. forall nn:num. forall buflen:num.
      8 divides buflen /\
      buflen < 8 * (nn + 1) /\
      LENGTH inlist = buflen
@@ -405,14 +405,14 @@ let STACK_CONTENT = define
     SUB_LIST(0, 256) (APPEND niblist (REPLICATE 256 (word 0:int16)))`;;
 
 let STACK_CONTENT_LARGE = prove
- (`!niblist:int16 list.
+ (`forall niblist:int16 list.
      256 <= LENGTH niblist
      ==> STACK_CONTENT niblist = SUB_LIST(0, 256) niblist`,
   REPEAT STRIP_TAC THEN REWRITE_TAC[STACK_CONTENT] THEN
   MATCH_MP_TAC SUB_LIST_APPEND_LEFT THEN ASM_REWRITE_TAC[]);;
 
 let BYTES8_INT16S_TO_BYTES64 = prove
- (`!s:armstate (a:int64) (ws:int16 list).
+ (`forall s:armstate (a:int64) (ws:int16 list).
     LENGTH ws = 4 /\
     read (memory :> bytes (a, 8)) s = num_of_wordlist ws
     ==>
@@ -429,7 +429,7 @@ let BYTES8_INT16S_TO_BYTES64 = prove
   MATCH_MP_TAC MOD_LT THEN ASM_REWRITE_TAC[]);;
 
 let BK_FROM_STACK = prove
- (`!s:armstate. !sp:int64. !niblist:int16 list. !k:num.
+ (`forall s:armstate. forall sp:int64. forall niblist:int16 list. forall k:num.
     4 * (k + 1) <= LENGTH niblist /\
     read (memory :> bytes (sp, 2 * LENGTH niblist)) s = num_of_wordlist niblist
     ==>
@@ -494,7 +494,7 @@ let BK_FROM_STACK = prove
   REWRITE_TAC[]);;
 
 let BK_FROM_STACK_GE256 = prove
- (`!s:armstate. !sp:int64. !niblist:int16 list. !k:num.
+ (`forall s:armstate. forall sp:int64. forall niblist:int16 list. forall k:num.
     k < 64 /\ 256 <= LENGTH niblist /\
     read (memory :> bytes (sp, 2 * LENGTH niblist)) s = num_of_wordlist niblist
     ==>
@@ -505,8 +505,8 @@ let BK_FROM_STACK_GE256 = prove
   ASM_ARITH_TAC);;
 
 let BYTES_EXISTS_WORDLIST = prove
- (`!(a:int64) n s.
-    ?(L:int16 list). LENGTH L = n /\
+ (`forall (a:int64) n s.
+    exists (L:int16 list). LENGTH L = n /\
     read (memory :> bytes (a, 2 * n)) s = num_of_wordlist L`,
   GEN_TAC THEN INDUCT_TAC THEN GEN_TAC THENL
    [EXISTS_TAC `[]:int16 list` THEN
@@ -535,7 +535,7 @@ let BYTES_EXISTS_WORDLIST = prove
   CONV_TAC NUM_REDUCE_CONV);;
 
 let PREFIX_FROM_STACK = prove
- (`!stackpointer:int64 (niblist:int16 list) (L:int16 list) s:armstate niblen.
+ (`forall stackpointer:int64 (niblist:int16 list) (L:int16 list) s:armstate niblen.
     LENGTH niblist = niblen /\
     LENGTH L = 256 /\
     niblen <= 256 /\
@@ -573,12 +573,12 @@ let PREFIX_FROM_STACK = prove
   ASM_ARITH_TAC);;
 
 let BIGNUM_OF_WORDLIST_EQ_NUM_OF_WORDLIST = prove
- (`!l:int64 list. bignum_of_wordlist l = num_of_wordlist l`,
+ (`forall l:int64 list. bignum_of_wordlist l = num_of_wordlist l`,
   LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC[bignum_of_wordlist; num_of_wordlist; DIMINDEX_64]);;
 
 let BIGNUM_CONS_WORDJOIN = prove
- (`!a:int32. !b:int32. !t:int64 list.
+ (`forall a:int32. forall b:int32. forall t:int64 list.
      bignum_of_wordlist (CONS (word_join a b:int64) t) =
      num_of_wordlist [b; a] + 2 EXP 64 * bignum_of_wordlist t`,
   REPEAT GEN_TAC THEN
@@ -594,7 +594,7 @@ let BIGNUM_CONS_WORDJOIN = prove
     ARITH_TAC]);;
 
 let VAL_WORD_JOIN_INT32_INT64 = prove
- (`!a:int32. !b:int32.
+ (`forall a:int32. forall b:int32.
      val (word_join (a:int32) (b:int32):int64) = 2 EXP 32 * val a + val b`,
   REPEAT GEN_TAC THEN REWRITE_TAC[VAL_WORD_JOIN; DIMINDEX_64; DIMINDEX_32] THEN
   MP_TAC(ISPEC `a:int32` VAL_BOUND) THEN
@@ -603,11 +603,11 @@ let VAL_WORD_JOIN_INT32_INT64 = prove
   MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC);;
 
 let BIGNUM_WORDJOIN_PAIRS_EXISTS = prove
- (`!n l:int32 list. LENGTH l = 2 * n
-   ==> ?pairs:int64 list.
+ (`forall n l:int32 list. LENGTH l = 2 * n
+   ==> exists pairs:int64 list.
          LENGTH pairs = n /\
          bignum_of_wordlist pairs = num_of_wordlist l /\
-         (!i. i < n ==> EL i pairs = word_join (EL (2*i+1) l) (EL (2*i) l))`,
+         (forall i. i < n ==> EL i pairs = word_join (EL (2*i+1) l) (EL (2*i) l))`,
   INDUCT_TAC THENL
    [REWRITE_TAC[MULT_CLAUSES; LENGTH_EQ_NIL] THEN
     GEN_TAC THEN DISCH_THEN SUBST1_TAC THEN
@@ -644,7 +644,7 @@ let BIGNUM_WORDJOIN_PAIRS_EXISTS = prove
       REWRITE_TAC[EL; TL; HD]]]);;
 
 let SUB_LIST_EQ_LIST_OF_SEQ = prove
- (`!n l:A list. n <= LENGTH l ==> SUB_LIST (0,n) l = list_of_seq (\i. EL i l) n`,
+ (`forall n l:A list. n <= LENGTH l ==> SUB_LIST (0,n) l = list_of_seq (\i. EL i l) n`,
   INDUCT_TAC THENL
    [REWRITE_TAC[SUB_LIST_CLAUSES; LIST_OF_SEQ]; ALL_TAC] THEN
   LIST_INDUCT_TAC THENL [REWRITE_TAC[LENGTH] THEN ARITH_TAC; ALL_TAC] THEN
@@ -657,7 +657,7 @@ let SUB_LIST_EQ_LIST_OF_SEQ = prove
   REWRITE_TAC[FUN_EQ_THM; o_THM; EL; TL]);;
 
 let WORD_OF_NUM_4INT16 = prove
- (`!h0 h1 h2 h3:int16.
+ (`forall h0 h1 h2 h3:int16.
      word (num_of_wordlist [h0;h1;h2;h3]):int64 =
      word_join (word_join h3 h2:int32) (word_join h1 h0:int32)`,
   REPEAT GEN_TAC THEN
@@ -678,7 +678,7 @@ let WORD_OF_NUM_4INT16 = prove
   AP_THM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
 
 let WORD_SUBWORD_JOIN_SUB_LIST_H = prove
- (`!niblist:int16 list. !a:num.
+ (`forall niblist:int16 list. forall a:num.
      a + 8 <= LENGTH niblist
      ==>
      word_subword (word_join
@@ -731,7 +731,7 @@ let WORD_INSERT_Q31 = prove(
   CONV_TAC WORD_BLAST);;
 
 let FILTER_EL_SATISFIES = prove(
- `!(P:A->bool) l i. i < LENGTH(FILTER P l) ==> P(EL i (FILTER P l))`,
+ `forall (P:A->bool) l i. i < LENGTH(FILTER P l) ==> P(EL i (FILTER P l))`,
  GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[FILTER; LENGTH; LT] THEN
  GEN_TAC THEN COND_CASES_TAC THENL
   [STRUCT_CASES_TAC(SPEC `i:num` num_CASES) THEN
@@ -751,20 +751,20 @@ let FILTER_EL_SATISFIES = prove(
 (* ========================================================================= *)
 
 let WORD_ZX_INT32_INT64 = prove
- (`!w:int32. val(word_zx w:int64) = val w`,
+ (`forall w:int32. val(word_zx w:int64) = val w`,
   REWRITE_TAC[VAL_WORD_ZX_GEN; DIMINDEX_64] THEN
   GEN_TAC THEN MATCH_MP_TAC MOD_LT THEN
   MP_TAC(SPEC `w:int32` (INST_TYPE [`:32`,`:N`] VAL_BOUND)) THEN
   REWRITE_TAC[DIMINDEX_32] THEN ARITH_TAC);;
 
 let VAL_WORD_SUBWORD_0_32 = prove
- (`!X:M word. val(word_subword X (0,32):int32) = val X MOD 2 EXP 32`,
+ (`forall X:M word. val(word_subword X (0,32):int32) = val X MOD 2 EXP 32`,
   GEN_TAC THEN REWRITE_TAC[VAL_WORD_SUBWORD; DIMINDEX_32] THEN
   REWRITE_TAC[ARITH_RULE `MIN 32 32 = 32`; EXP; DIV_1]);;
 
 (* Polymorphic version: works for any word width N where 256 <= 2^dimindex(:N). *)
 let SUM_8_BIT_BOUND_POLY = prove
- (`!a1 a2 a3 a4 a5 a6 a7 a8:N word.
+ (`forall a1 a2 a3 a4 a5 a6 a7 a8:N word.
      256 <= 2 EXP dimindex(:N) /\
      val a1 <= 1 /\ val a2 <= 2 /\ val a3 <= 4 /\ val a4 <= 8 /\
      val a5 <= 16 /\ val a6 <= 32 /\ val a7 <= 64 /\ val a8 <= 128
@@ -779,7 +779,7 @@ let SUM_8_BIT_BOUND_POLY = prove
 
 (* Polymorphic SBND for any (k, N): val(word_and (word k:N word) X) <= k for k <= 128. *)
 let SBND_K_POLY = prove
- (`!k:num B:bool X.
+ (`forall k:num B:bool X.
      k <= 128 /\ 8 <= dimindex(:N)
      ==> val((word_and (word k:N word) X):N word) <= k`,
   REPEAT STRIP_TAC THEN
@@ -794,7 +794,7 @@ let SBND_K_POLY = prove
 (* num_of_wordlist of MAP f over a 2*n-element prefix of niblist. Used by  *)
 (* rej_uniform_eta_{2,4} with f instantiated to the per-element decode.    *)
 let BIGNUM_LIST_OF_SEQ_EQ_NUM_SUB_LIST_POLY = prove
- (`!(f:int16 -> int32) (niblist:int16 list) n.
+ (`forall (f:int16 -> int32) (niblist:int16 list) n.
      2 * n <= LENGTH niblist
      ==>
      bignum_of_wordlist
@@ -1000,14 +1000,14 @@ let REJ_SAMPLE_ETA2_BYTES = define
 (* Bridge: byte-shape composition equals the public nibble-list spec        *)
 (* applied to BYTES_TO_NIBBLES. Used only at the subroutine-spec boundary.  *)
 let REJ_SAMPLE_ETA2_BYTES_EQ = prove
- (`!l:byte list. REJ_SAMPLE_ETA2_BYTES l =
+ (`forall l:byte list. REJ_SAMPLE_ETA2_BYTES l =
                  REJ_SAMPLE_ETA2 (BYTES_TO_NIBBLES l)`,
   GEN_TAC THEN
   REWRITE_TAC[REJ_SAMPLE_ETA2_BYTES; REJ_NIBBLES_ETA2; REJ_SAMPLE_ETA2;
               NIBBLES_OF_BYTES_EQ_BYTES_TO_NIBBLES] THEN
   REWRITE_TAC[FILTER_MAP; o_DEF; GSYM MAP_o] THEN
   (* Reduce val(word_zx x:int16) to val x in the FILTER predicate. *)
-  SUBGOAL_THEN `!x:4 word. val (word_zx x:int16) = val x`
+  SUBGOAL_THEN `forall x:4 word. val (word_zx x:int16) = val x`
     (fun th -> REWRITE_TAC[th]) THENL
    [GEN_TAC THEN MATCH_MP_TAC VAL_WORD_ZX THEN
     REWRITE_TAC[DIMINDEX_4; DIMINDEX_16] THEN ARITH_TAC;
@@ -1020,14 +1020,14 @@ let REJ_SAMPLE_ETA2_BYTES_EQ = prove
   COND_CASES_TAC THEN ASM_REWRITE_TAC[MAP] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN
   SUBGOAL_THEN
-   `!x:4 word. val x < 15
+   `forall x:4 word. val x < 15
       ==> word_sx (word_sub (word 2:int16)
                              (word_umod (word_zx x:int16) (word 5))):int32 =
           word_sx (word_sub (word 2:4 word)
                              (word_umod x (word 5:4 word))):int32`
    (fun th -> ASM_MESON_TAC[th]) THEN
   SUBGOAL_THEN
-   `!n. n < 15
+   `forall n. n < 15
       ==> word_sx (word_sub (word 2:int16)
                              (word_umod (word_zx (word n:4 word):int16)
                                         (word 5))):int32 =
@@ -1053,12 +1053,12 @@ let REJ_NIBBLES_ETA2_EMPTY = prove
   REWRITE_TAC[REJ_NIBBLES_ETA2; NIBBLES_OF_BYTES; FILTER]);;
 
 let REJ_NIBBLES_ETA2_APPEND = prove
- (`!l1 l2. REJ_NIBBLES_ETA2(APPEND l1 l2) =
+ (`forall l1 l2. REJ_NIBBLES_ETA2(APPEND l1 l2) =
            APPEND (REJ_NIBBLES_ETA2 l1) (REJ_NIBBLES_ETA2 l2)`,
   REWRITE_TAC[REJ_NIBBLES_ETA2; NIBBLES_OF_BYTES_APPEND; FILTER_APPEND]);;
 
 let REJ_NIBBLES_ETA2_STEP = prove
- (`!inlist:byte list. !i:num.
+ (`forall inlist:byte list. forall i:num.
    8 * (i + 1) <= LENGTH inlist
    ==> REJ_NIBBLES_ETA2(SUB_LIST(0, 8 * (i + 1)) inlist) =
        APPEND (REJ_NIBBLES_ETA2(SUB_LIST(0, 8 * i) inlist))
@@ -1070,7 +1070,7 @@ let REJ_NIBBLES_ETA2_STEP = prove
   REWRITE_TAC[SUB_LIST_SPLIT; SUB_LIST_CLAUSES; APPEND; ADD_CLAUSES]);;
 
 let LENGTH_REJ_NIBBLES_ETA2 = prove
- (`!l:byte list. LENGTH(REJ_NIBBLES_ETA2 l) <= 2 * LENGTH l`,
+ (`forall l:byte list. LENGTH(REJ_NIBBLES_ETA2 l) <= 2 * LENGTH l`,
   GEN_TAC THEN REWRITE_TAC[REJ_NIBBLES_ETA2] THEN
   TRANS_TAC LE_TRANS `LENGTH(NIBBLES_OF_BYTES l:int16 list)` THEN
   CONJ_TAC THENL [REWRITE_TAC[LENGTH_FILTER]; ALL_TAC] THEN
@@ -1082,7 +1082,7 @@ let LENGTH_REJ_NIBBLES_ETA2 = prove
                2 * LENGTH(t:byte list)` THEN ARITH_TAC);;
 
 let BYTES_EQ_NUM_OF_WORDLIST_APPEND = prove
- (`!m (a:int64) (s:S) lis1 (lis2:(N word)list) len1 len2.
+ (`forall m (a:int64) (s:S) lis1 (lis2:(N word)list) len1 len2.
         dimindex(:N) * LENGTH lis1 = 8 * len1
         ==>  (read (m :> bytes(a,len1+len2)) s =
               num_of_wordlist(APPEND lis1 lis2) <=>
@@ -1108,14 +1108,14 @@ let MEMORY_128_FROM_64_TAC =
     MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
 
 let BARRETT_QUOTIENT = prove
- (`!v. v < 15 ==> (2 * v * 6554) DIV 65536 = v DIV 5`,
+ (`forall v. v < 15 ==> (2 * v * 6554) DIV 65536 = v DIV 5`,
   REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN
   SPEC_TAC(`v:num`, `v:num`) THEN
   CONV_TAC EXPAND_CASES_CONV THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 let BARRETT_MOD5_LANE = prove
- (`!x:int16. val x < 15
+ (`forall x:int16. val x < 15
    ==> word_sub x (word_mul
          (iword_saturate((&2 * ival x * &6554) div &65536):int16)
          (word 5:int16)):int16 = word(val x MOD 5):int16`,
@@ -1168,7 +1168,7 @@ let BARRETT_MOD5_LANE = prove
   MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC);;
 
 let BARRETT_SUB_FROM_2 = prove
- (`!x:int16. val x < 15
+ (`forall x:int16. val x < 15
    ==> word_sub (word 2:int16)
         (word_sub x (word_mul
           (iword_saturate((&2 * ival x * &6554) div &65536):int16)
@@ -1186,7 +1186,7 @@ let BARRETT_SUB_FROM_2 = prove
     REFL_TAC]);;
 
 let BARRETT_RAW_EQ_UMOD = prove
- (`!x:int16. val x < 15
+ (`forall x:int16. val x < 15
    ==> word_sub x (word_mul
          (iword_saturate((&2 * ival x * &6554) div &65536):int16)
          (word 5:int16)):int16 =
@@ -1428,7 +1428,7 @@ let SSHLL_CHUNK_WORD_SUBWORD_HI_INT64_HIINNER_ETA2 = BITBLAST_RULE
 
 (* FILTER length = sum of bitvals for 8 elements *)
 let FILTER_LENGTH_BITVAL = prove(
-  `!a b c d e f g h:int16.
+  `forall a b c d e f g h:int16.
    LENGTH(FILTER (\x:int16. val x < 15) [a;b;c;d;e;f;g;h]) =
    bitval(val a < 15) + bitval(val b < 15) + bitval(val c < 15) +
    bitval(val d < 15) + bitval(val e < 15) + bitval(val f < 15) +
@@ -1438,7 +1438,7 @@ let FILTER_LENGTH_BITVAL = prove(
   ARITH_TAC);;
 
 let REJ_NIBBLES_COUNT_4 = prove
- (`!b0 b1 b2 b3:byte.
+ (`forall b0 b1 b2 b3:byte.
    LENGTH(FILTER (\x:int16. val x < 15) (NIBBLES_OF_BYTES [b0;b1;b2;b3])) =
    bitval(val b0 MOD 16 < 15) + bitval(val b0 DIV 16 < 15) +
    bitval(val b1 MOD 16 < 15) + bitval(val b1 DIV 16 < 15) +
@@ -1456,9 +1456,9 @@ let REJ_NIBBLES_COUNT_4 = prove
   REWRITE_TAC[VAL_WORD_NIBBLE_LT]);;
 
 let NIBLEN_BOUND_FROM_WOP = prove
- (`!inlist:byte list. !N.
+ (`forall inlist:byte list. forall N.
    0 < N /\
-   (!m. m < N ==> 8 * (m + 1) <= LENGTH inlist /\
+   (forall m. m < N ==> 8 * (m + 1) <= LENGTH inlist /\
         LENGTH(REJ_NIBBLES_ETA2(SUB_LIST(0,8*m) inlist)) < 256)
    ==> LENGTH(REJ_NIBBLES_ETA2(SUB_LIST(0,8*N) inlist):int16 list) < 272`,
   REPEAT STRIP_TAC THEN
@@ -1476,7 +1476,7 @@ let NIBLEN_BOUND_FROM_WOP = prove
   ARITH_TAC);;
 
 let COUNT_BRIDGE_ABSTRACT_4 = prove(
-  `!x0:int128. !b0 b1 b2 b3:byte.
+  `forall x0:int128. forall b0 b1 b2 b3:byte.
       word_subword x0 (0,16):int16 = word_zx(word_and b0 (word 15):byte):int16 /\
       word_subword x0 (16,16):int16 = word_zx(word_ushr b0 4:byte):int16 /\
       word_subword x0 (32,16):int16 = word_zx(word_and b1 (word 15):byte):int16 /\
@@ -1501,12 +1501,12 @@ let COUNT_BRIDGE_ABSTRACT_4 = prove(
   ARITH_TAC);;
 
 let ALL_REJ_NIBBLES_ETA2 = prove(
-  `!l. ALL (\x. val(x:int16) < 15) (REJ_NIBBLES_ETA2 l)`,
+  `forall l. ALL (\x. val(x:int16) < 15) (REJ_NIBBLES_ETA2 l)`,
   GEN_TAC THEN REWRITE_TAC[REJ_NIBBLES_ETA2; GSYM ALL_MEM; MEM_FILTER] THEN
   SIMP_TAC[]);;
 
 let REJ_NIBBLES_ETA2_LENGTH_4 = prove
- (`!b0 b1 b2 b3:byte.
+ (`forall b0 b1 b2 b3:byte.
      LENGTH(REJ_NIBBLES_ETA2 [b0;b1;b2;b3]:int16 list) <= 8`,
   REPEAT GEN_TAC THEN REWRITE_TAC[REJ_NIBBLES_ETA2] THEN
   W(MP_TAC o PART_MATCH lhand LENGTH_FILTER o lhand o snd) THEN
@@ -1514,7 +1514,7 @@ let REJ_NIBBLES_ETA2_LENGTH_4 = prove
   ARITH_TAC);;
 
 let WORD_SUBWORD_OF_NUM_OF_WORDLIST_INT64_4 = prove
- (`!niblist:int16 list. !a:num.
+ (`forall niblist:int16 list. forall a:num.
      a + 4 <= LENGTH niblist
      ==>
      word_subword (word(num_of_wordlist(SUB_LIST(a,4) niblist)):int64) (0,16):int16 =
@@ -1554,9 +1554,9 @@ let WORD_SUBWORD_OF_JOIN_8X16 =
   end_itlist CONJ (List.map mk_clause (0--7));;
 
 let REJ_SAMPLE_ETA2_SUB_LIST_PREFIX = prove
- (`!k (l:byte list).
+ (`forall k (l:byte list).
      k <= LENGTH l
-     ==> ?rest:int32 list.
+     ==> exists rest:int32 list.
          APPEND (REJ_SAMPLE_ETA2_BYTES (SUB_LIST (0,k) l)) rest =
          REJ_SAMPLE_ETA2_BYTES l`,
   REPEAT STRIP_TAC THEN
@@ -1573,7 +1573,7 @@ let REJ_SAMPLE_ETA2_SUB_LIST_PREFIX = prove
   REFL_TAC);;
 
 let SUB_LIST_256_PREFIX_LARGE = prove
- (`!inlist:byte list. !nn:num.
+ (`forall inlist:byte list. forall nn:num.
      256 <= LENGTH(REJ_NIBBLES_ETA2(SUB_LIST(0, 8*nn) inlist):int16 list)
      ==>
      SUB_LIST(0,256)(REJ_SAMPLE_ETA2_BYTES inlist) =
@@ -1604,7 +1604,7 @@ let PAIR_MAP_IDX_128 =
          "word_join (word_sx (word_sub (word 2:int16) (word_umod (EL %d l) (word 5:int16))):int32) (word_sx (word_sub (word 2:int16) (word_umod (EL %d l) (word 5:int16))):int32)"
          (2*k+1) (2*k)) (0--127)) in
   let goal_str = Printf.sprintf
-    "!l:int16 list. 256 <= LENGTH l ==> \
+    "forall l:int16 list. 256 <= LENGTH l ==> \
      bignum_of_wordlist [%s] = \
      num_of_wordlist (MAP (\\x:int16. word_sx (word_sub (word 2:int16) (word_umod x (word 5:int16))):int32) (SUB_LIST (0,256) l))"
     pairs_str in
@@ -1630,7 +1630,7 @@ let PAIR_MAP_IDX_128_BARRETT =
          "word_join (word_sx (word_sub (word 2:int16) (word_sub (EL %d l) (word_mul (iword_saturate ((&2 * ival (EL %d l) * &6554) div &65536):int16) (word 5:int16)))):int32) (word_sx (word_sub (word 2:int16) (word_sub (EL %d l) (word_mul (iword_saturate ((&2 * ival (EL %d l) * &6554) div &65536):int16) (word 5:int16)))):int32)"
          (2*k+1) (2*k+1) (2*k) (2*k)) (0--127)) in
   let goal_str = Printf.sprintf
-    "!l:int16 list. 256 <= LENGTH l ==> \
+    "forall l:int16 list. 256 <= LENGTH l ==> \
      bignum_of_wordlist [%s] = \
      num_of_wordlist (MAP (\\x:int16. word_sx (word_sub (word 2:int16) (word_sub x (word_mul (iword_saturate ((&2 * ival x * &6554) div &65536):int16) (word 5:int16)))):int32) (SUB_LIST (0,256) l))"
     pairs_str in
@@ -1650,7 +1650,7 @@ let PAIR_MAP_IDX_128_BARRETT =
     REWRITE_TAC[MAP]);;
 
 let REJ_NIBBLES_ETA2_SPLIT_8 = prove
- (`!b0 b1 b2 b3 b4 b5 b6 b7:byte.
+ (`forall b0 b1 b2 b3 b4 b5 b6 b7:byte.
      REJ_NIBBLES_ETA2 [b0;b1;b2;b3;b4;b5;b6;b7] =
      APPEND (REJ_NIBBLES_ETA2 [b0;b1;b2;b3])
             (REJ_NIBBLES_ETA2 [b4;b5;b6;b7]:int16 list)`,
@@ -1661,12 +1661,12 @@ let REJ_NIBBLES_ETA2_SPLIT_8 = prove
   REWRITE_TAC[REJ_NIBBLES_ETA2_APPEND]);;
 
 let CASE_B_TRUNCATE_L_BARRETT = prove
- (`!res:int64 niblen:num niblist:int16 list (L:int16 list) s:armstate.
+ (`forall res:int64 niblen:num niblist:int16 list (L:int16 list) s:armstate.
     niblen <= 256 /\
     LENGTH niblist = niblen /\
     LENGTH L = 256 /\
     SUB_LIST(0, niblen) L = niblist /\
-    (!k. k < niblen ==> val(EL k niblist:int16) < 15) /\
+    (forall k. k < niblen ==> val(EL k niblist:int16) < 15) /\
     read (memory :> bytes (res, 1024)) s =
     num_of_wordlist
      (MAP (\x:int16. word_sx (word_sub (word 2:int16)
@@ -1714,7 +1714,7 @@ let CASE_B_TRUNCATE_L_BARRETT = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_REJ_UNIFORM_ETA2_CORRECT = prove
- (`!res buf buflen table (inlist:byte list) pc stackpointer.
+ (`forall res buf buflen table (inlist:byte list) pc stackpointer.
       8 divides val buflen /\
       8 <= val buflen /\
       LENGTH inlist = val buflen /\
@@ -1758,7 +1758,7 @@ let MLDSA_REJ_UNIFORM_ETA2_CORRECT = prove
        read X0 s = res /\ read X4 s = word 256 /\
        read X8 s = stackpointer /\
        ALL (nonoverlapping (res,1024)) [(word pc,372); (stackpointer,576)] /\
-       ?n. let niblist = REJ_NIBBLES_ETA2(SUB_LIST(0,8*n) inlist) in
+       exists n. let niblist = REJ_NIBBLES_ETA2(SUB_LIST(0,8*n) inlist) in
            let niblen = LENGTH niblist in
            niblen < 272 /\
            (buflen < 8 * (n + 1) \/ 256 <= niblen) /\
@@ -1982,7 +1982,7 @@ let MLDSA_REJ_UNIFORM_ETA2_CORRECT = prove
            THENC TOP_DEPTH_CONV BETA_CONV
            THENC NUM_REDUCE_CONV)) THEN
          SUBGOAL_THEN
-           `!k. k < LENGTH (niblist:int16 list)
+           `forall k. k < LENGTH (niblist:int16 list)
                 ==> val(EL k niblist:int16) < 15`
            ASSUME_TAC THENL
           [REWRITE_TAC[ALL_EL] THEN
@@ -2009,7 +2009,7 @@ let MLDSA_REJ_UNIFORM_ETA2_CORRECT = prove
          (fun (asl, _ as gl) ->
            let univ_th =
              try snd (List.find (fun (_, th) ->
-               concl th = `!k. k < LENGTH (niblist:int16 list)
+               concl th = `forall k. k < LENGTH (niblist:int16 list)
                             ==> val(EL k niblist:int16) < 15`) asl)
              with Not_found -> failwith "could not find !k val<15 hyp" in
            let len_ge = snd (List.find (fun (_, th) ->
@@ -2053,7 +2053,7 @@ let MLDSA_REJ_UNIFORM_ETA2_CORRECT = prove
          SUBGOAL_THEN `niblen <= 256` ASSUME_TAC THENL
           [ASM_ARITH_TAC; ALL_TAC] THEN
          SUBGOAL_THEN
-           `!k. k < niblen ==> val(EL k niblist:int16) < 15`
+           `forall k. k < niblen ==> val(EL k niblist:int16) < 15`
            ASSUME_TAC THENL
           [SUBGOAL_THEN `niblen = LENGTH(niblist:int16 list)` SUBST1_TAC THENL
             [CONV_TAC SYM_CONV THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
@@ -2242,7 +2242,7 @@ let MLDSA_REJ_UNIFORM_ETA2_CORRECT = prove
         [MATCH_MP_TAC STACK_CONTENT_LARGE THEN ASM_REWRITE_TAC[];
          ALL_TAC] THEN
        SUBGOAL_THEN
-         `!k. k < LENGTH (niblist:int16 list)
+         `forall k. k < LENGTH (niblist:int16 list)
               ==> val(EL k niblist:int16) < 15`
          ASSUME_TAC THENL
         [REWRITE_TAC[ALL_EL] THEN
@@ -2269,7 +2269,7 @@ let MLDSA_REJ_UNIFORM_ETA2_CORRECT = prove
        (fun (asl, _ as gl) ->
          let univ_th =
            try snd (List.find (fun (_, th) ->
-             concl th = `!k. k < LENGTH (niblist:int16 list)
+             concl th = `forall k. k < LENGTH (niblist:int16 list)
                           ==> val(EL k niblist:int16) < 15`) asl)
            with Not_found -> failwith "could not find !k val<15 hyp" in
          let len_ge = snd (List.find (fun (_, th) ->
@@ -2289,7 +2289,7 @@ let MLDSA_REJ_UNIFORM_ETA2_CORRECT = prove
        MATCH_MP_TAC PAIR_MAP_IDX_128 THEN ASM_REWRITE_TAC[]]]] THEN
 
  SUBGOAL_THEN
-  `?N. buflen < 8 * (N + 1) \/
+  `exists N. buflen < 8 * (N + 1) \/
        256 <= LENGTH(REJ_NIBBLES_ETA2(SUB_LIST(0,8*N) inlist):int16 list)`
  MP_TAC THENL
   [EXISTS_TAC `buflen:num` THEN DISJ1_TAC THEN ARITH_TAC;
@@ -2368,7 +2368,7 @@ let MLDSA_REJ_UNIFORM_ETA2_CORRECT = prove
          read X8 s = stackpointer /\ read X9 s = word curlen /\
          read (memory :> bytes (stackpointer,2 * curlen)) s =
          num_of_wordlist (curlist:int16 list) /\
-         (?lis0 lis1:int16 list.
+         (exists lis0 lis1:int16 list.
             LENGTH lis0 <= 8 /\ LENGTH lis1 <= 8 /\
             val(read X12 s:int64) = LENGTH lis0 /\
             val(read X13 s:int64) = LENGTH lis1 /\
@@ -2922,7 +2922,7 @@ let MLDSA_REJ_UNIFORM_ETA2_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let REJ_SAMPLE_ETA2_ELEMENT_BOUND = prove(
- `!x:int16. val x < 15
+ `forall x:int16. val x < 15
     ==> ival(word_sx(word_sub (word 2:int16) (word_umod x (word 5:int16))):int32) < &3 /\
         -- &3 < ival(word_sx(word_sub (word 2:int16) (word_umod x (word 5:int16))):int32)`,
  GEN_TAC THEN DISCH_TAC THEN
@@ -2944,7 +2944,7 @@ let REJ_SAMPLE_ETA2_ELEMENT_BOUND = prove(
  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV));;
 
 let REJ_SAMPLE_ETA2_ALL_BOUND = prove(
- `!l:byte list i. i < LENGTH(REJ_SAMPLE_ETA2_BYTES l)
+ `forall l:byte list i. i < LENGTH(REJ_SAMPLE_ETA2_BYTES l)
     ==> ival(EL i (REJ_SAMPLE_ETA2_BYTES l):int32) < &3 /\
         -- &3 < ival(EL i (REJ_SAMPLE_ETA2_BYTES l):int32)`,
  REWRITE_TAC[REJ_SAMPLE_ETA2_BYTES; LENGTH_MAP] THEN
@@ -2967,7 +2967,7 @@ let REJ_SAMPLE_ETA2_ALL_BOUND = prove(
 (* subroutine postcondition.                                                 *)
 
 let EL_REJ_SAMPLE_ETA2_SUB_LIST_256 = prove
- (`!l:byte list i.
+ (`forall l:byte list i.
         i < LENGTH(SUB_LIST(0,256)(REJ_SAMPLE_ETA2_BYTES l):int32 list)
         ==> EL i (SUB_LIST(0,256)(REJ_SAMPLE_ETA2_BYTES l):int32 list) =
             EL i (REJ_SAMPLE_ETA2_BYTES l)`,
@@ -2990,7 +2990,7 @@ let EL_REJ_SAMPLE_ETA2_SUB_LIST_256 = prove
  * in mldsa/src/native/aarch64/src/arith_native_aarch64.h *)
 
 let MLDSA_REJ_UNIFORM_ETA2_SUBROUTINE_CORRECT = prove
- (`!res buf buflen table (inlist:(4 word) list) pc stackpointer returnaddress.
+ (`forall res buf buflen table (inlist:(4 word) list) pc stackpointer returnaddress.
       8 divides val buflen /\
       8 <= val buflen /\
       LENGTH inlist = 2 * val buflen /\
@@ -3017,7 +3017,7 @@ let MLDSA_REJ_UNIFORM_ETA2_SUBROUTINE_CORRECT = prove
                 C_RETURN s = word outlen /\
                 read(memory :> bytes(res,4 * outlen)) s =
                 num_of_wordlist outlist /\
-                (!i. i < outlen
+                (forall i. i < outlen
                      ==> ival(EL i outlist:int32) < &3 /\
                          -- &3 < ival(EL i outlist:int32)))
            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -3044,7 +3044,7 @@ let MLDSA_REJ_UNIFORM_ETA2_SUBROUTINE_CORRECT = prove
    [`res:int64`; `buf:int64`; `buflen:int64`; `table:int64`;
     `bs:byte list`; `pc:num`; `stackpointer:int64`; `returnaddress:int64`]
    (prove
-    (`!res buf buflen table (inlist:byte list) pc stackpointer returnaddress.
+    (`forall res buf buflen table (inlist:byte list) pc stackpointer returnaddress.
         8 divides val buflen /\
         8 <= val buflen /\
         LENGTH inlist = val buflen /\
@@ -3072,7 +3072,7 @@ let MLDSA_REJ_UNIFORM_ETA2_SUBROUTINE_CORRECT = prove
                   C_RETURN s = word outlen /\
                   read(memory :> bytes(res,4 * outlen)) s =
                   num_of_wordlist outlist /\
-                  (!i. i < outlen
+                  (forall i. i < outlen
                        ==> ival(EL i outlist:int32) < &3 /\
                            -- &3 < ival(EL i outlist:int32)))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -3186,7 +3186,7 @@ let STRIP_EXISTS_ASSUM_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_REJ_UNIFORM_ETA2_MEMSAFE = prove
- (`!res buf buflen table (inlist:byte list) pc e stackpointer.
+ (`forall res buf buflen table (inlist:byte list) pc e stackpointer.
       8 divides val buflen /\
       8 <= val buflen /\
       LENGTH inlist = val buflen /\
@@ -3237,14 +3237,14 @@ let MLDSA_REJ_UNIFORM_ETA2_MEMSAFE = prove
         read X0 s = res /\ read X4 s = word 256 /\
         read X8 s = stackpointer /\
         ALL (nonoverlapping (res,1024)) [(word pc,372); (stackpointer,576)] /\
-        (?n. let niblist = REJ_NIBBLES_ETA2(SUB_LIST(0,8*n) inlist) in
+        (exists n. let niblist = REJ_NIBBLES_ETA2(SUB_LIST(0,8*n) inlist) in
              let niblen = LENGTH niblist in
              niblen < 272 /\
              (buflen < 8 * (n + 1) \/ 256 <= niblen) /\
              read X9 s = word niblen /\
              read (memory :> bytes (stackpointer,2 * niblen)) s =
              num_of_wordlist niblist) /\
-        (?e_acc. read events s = APPEND e_acc e /\
+        (exists e_acc. read events s = APPEND e_acc e /\
                  memaccess_inbounds e_acc
                    [buf,buflen; table,4096; stackpointer,576]
                    [stackpointer,576; res,1024])` THEN
@@ -3257,7 +3257,7 @@ let MLDSA_REJ_UNIFORM_ETA2_MEMSAFE = prove
 
     (* WOP: find smallest N where loop exits *)
     SUBGOAL_THEN
-     `?N. buflen < 8 * (N + 1) \/
+     `exists N. buflen < 8 * (N + 1) \/
           256 <= LENGTH(REJ_NIBBLES_ETA2(SUB_LIST(0,8*N) inlist):int16 list)`
     MP_TAC THENL
      [EXISTS_TAC `buflen:num` THEN DISJ1_TAC THEN ARITH_TAC;
@@ -3293,7 +3293,7 @@ let MLDSA_REJ_UNIFORM_ETA2_MEMSAFE = prove
              read X8 s = stackpointer /\ read X9 s = word niblen /\
              read (memory :> bytes (stackpointer,2 * niblen)) s =
              num_of_wordlist niblist) /\
-            (?e_acc. read events s = APPEND e_acc e /\
+            (exists e_acc. read events s = APPEND e_acc e /\
                      memaccess_inbounds e_acc
                        [buf,buflen; table,4096; stackpointer,576]
                        [stackpointer,576; res,1024])` THEN
@@ -3343,7 +3343,7 @@ let MLDSA_REJ_UNIFORM_ETA2_MEMSAFE = prove
             read X8 s = stackpointer /\ read X9 s = word curlen /\
             read (memory :> bytes (stackpointer,2 * curlen)) s =
             num_of_wordlist (curlist:int16 list) /\
-            (?lis0 lis1:int16 list.
+            (exists lis0 lis1:int16 list.
                LENGTH lis0 <= 8 /\ LENGTH lis1 <= 8 /\
                val(read X12 s:int64) = LENGTH lis0 /\
                val(read X13 s:int64) = LENGTH lis1 /\
@@ -3880,7 +3880,7 @@ let MLDSA_REJ_UNIFORM_ETA2_MEMSAFE = prove
                  read (memory :> bytes (stackpointer,2 * niblen)) s =
                  num_of_wordlist (REJ_NIBBLES_ETA2(SUB_LIST(0,8*N) inlist):int16 list) /\
                  ALL (nonoverlapping (res,1024)) [(word pc,372); (stackpointer,576)] /\
-                 (?e_acc. read events s = APPEND e_acc e /\
+                 (exists e_acc. read events s = APPEND e_acc e /\
                           memaccess_inbounds e_acc
                             [buf,buflen; table,4096; stackpointer,576]
                             [stackpointer,576; res,1024])` THEN
@@ -3987,7 +3987,7 @@ let MLDSA_REJ_UNIFORM_ETA2_MEMSAFE = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_REJ_UNIFORM_ETA2_SUBROUTINE_SAFE = time prove
- (`!res buf buflen table (inlist:byte list) pc e stackpointer returnaddress.
+ (`forall res buf buflen table (inlist:byte list) pc e stackpointer returnaddress.
       8 divides val buflen /\
       8 <= val buflen /\
       LENGTH inlist = val buflen /\
