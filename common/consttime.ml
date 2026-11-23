@@ -1127,6 +1127,43 @@ let DISCHARGE_SAFETY_PROPERTY_TAC =
     DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
 
 (* ------------------------------------------------------------------------- *)
+(* Correctness and safety in one theorem ("FULL"), by one symbolic           *)
+(* execution: its precondition fixes the initial events e and its            *)
+(* postcondition has the events as its last conjunct. EVENTS_SPLIT_TAC ctac  *)
+(* splits that conjunct off a goal of such a postcondition, proving the rest *)
+(* by ctac and the events by DISCHARGE_SAFETY_PROPERTY_TAC.                  *)
+(* ENSURES_ANY_INITIAL and ENSURES_MONO_ALL give the correctness theorem     *)
+(* from a FULL one: the initial events taken as any, and the precondition,   *)
+(* postcondition and frame weakened.                                         *)
+(* ------------------------------------------------------------------------- *)
+
+let EVENTS_SPLIT_TAC ctac (asl,w as gl) =
+  let cs = conjuncts w in
+  let ev = last cs in
+  if not (is_exists ev) then failwith "EVENTS_SPLIT_TAC" else
+  let rest = list_mk_conj(butlast cs) in
+  let th = CONJ_ACI_RULE(mk_eq(w,mk_conj(rest,ev))) in
+  (GEN_REWRITE_TAC I [th] THEN
+   CONJ_TAC THENL
+    [ctac; ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC]) gl;;
+
+let ENSURES_ANY_INITIAL = prove
+ (`!(ev:S->A) (step:S->S->bool) P Q C.
+        (!e. ensures step (\s. P s /\ ev s = e) Q C) ==> ensures step P Q C`,
+  REWRITE_TAC[ensures] THEN MESON_TAC[]);;
+
+let ENSURES_MONO_ALL = prove
+ (`!(step:S->S->bool) P Q C P' Q' C'.
+     ensures step P Q C
+     ==> (!s. P' s ==> P s) /\ (!s. Q s ==> Q' s) /\
+         (!s s'. C s s' ==> C' s s')
+         ==> ensures step P' Q' C'`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES_POSTCONDITION_THM_GEN THEN
+  MAP_EVERY EXISTS_TAC [`C:S->S->bool`; `Q:S->bool`] THEN
+  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN
+  EXISTS_TAC `P:S->bool` THEN ASM_REWRITE_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
 (* Loop-body memory-safety helpers.                                          *)
 (*                                                                           *)
 (* These support memory-safety proofs of loops whose event trace is          *)

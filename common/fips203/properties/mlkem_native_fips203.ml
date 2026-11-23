@@ -1219,3 +1219,39 @@ let NONOVERLAPPING_MODULO_ZERO_LEN = prove
  (`(!n a b k. nonoverlapping_modulo n (a,0) (b,k)) /\
    (!n a b k. nonoverlapping_modulo n (b,k) (a,0))`,
   REWRITE_TAC[NONOVERLAPPING_MODULO_DIFFERENCE]);;
+
+(* ------------------------------------------------------------------------- *)
+(* SampleNTT terminates for the seeds rho || x || y with rho of 32 bytes     *)
+(* (SAMPLE_OK_ALL of common/fips203/properties/sampling.ml), for the proofs  *)
+(* of the ML-KEM API in assembly, whose theorems have no termination         *)
+(* hypothesis. MLKEM_SAMPLENTT_TERMINATES_TAC tm tac proves                  *)
+(* !x1 ... xn. p ==> q, or ?f. !x1 ... xn. p ==> q, by tac for the same goal *)
+(* with p /\ tm for p, where tm says that SampleNTT terminates for such      *)
+(* seeds (such as mlkem_slice a 32 l, the first half of mlkem_g c, or a      *)
+(* variable rho with LENGTH rho = 32 in p).                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_SAMPLENTT_TERMINATES_SEED = prove
+ (`!rho (x:byte) (y:byte).
+        LENGTH rho = 32 ==> mlkem_samplentt_terminates (APPEND rho [x; y])`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[mlkem_samplentt_terminates; GSYM sample_ok] THEN
+  MATCH_MP_TAC SAMPLE_OK_ALL THEN
+  ASM_REWRITE_TAC[LENGTH_APPEND; LENGTH] THEN ARITH_TAC);;
+
+let MLKEM_SAMPLENTT_TERMINATES_TAC tm tac (asl,w) =
+  let addhyp w =
+    let vs,bod = strip_forall w in
+    let p,q = dest_imp bod in
+    list_mk_forall(vs,mk_imp(mk_conj(p,tm),q)) in
+  let isex = is_exists w in
+  let w' = if isex then let f,b = dest_exists w in mk_exists(f,addhyp b)
+           else addhyp w in
+  (SUBGOAL_THEN w' MP_TAC THENL
+    [tac;
+     (if isex then MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC else ALL_TAC) THEN
+     DISCH_THEN(fun th -> REPEAT GEN_TAC THEN DISCH_TAC THEN
+                          MATCH_MP_TAC(SPEC_ALL th)) THEN
+     CONJ_TAC THENL [FIRST_ASSUM ACCEPT_TAC; ALL_TAC] THEN
+     REPEAT STRIP_TAC THEN MATCH_MP_TAC MLKEM_SAMPLENTT_TERMINATES_SEED THEN
+     ASM_REWRITE_TAC[mlkem_slice; mlkem_g; LENGTH_LIST_OF_SEQ]]) (asl,w);;

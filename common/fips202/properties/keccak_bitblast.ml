@@ -92,3 +92,34 @@ let KECCAK_BITBLAST_TAC =
    (BINOP_CONV(IFF_NOT_CONV THENC IFF_NORM_CONV) THENC
     GEN_REWRITE_CONV I [REFL_CLAUSE])) THEN
   REWRITE_TAC[] THEN NO_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* KECCAK_BITBLAST_TAC with a cache, for permutations with many lane goals   *)
+(* of the same form: several states computed in parallel, or loops that run  *)
+(* the same code on other states. The goal with its lanes (the subterms      *)
+(* EL n l of word type, in the order of find_terms) replaced by variables    *)
+(* lane_0, lane_1, ... is proved by KECCAK_BITBLAST_TAC once, and the        *)
+(* theorem is instantiated for each later goal of the same form.             *)
+(* ------------------------------------------------------------------------- *)
+
+let KECCAK_BITBLAST_CACHED_TAC =
+  let cache = ref ([]:(term * thm) list) in
+  let lane t =
+    match t with
+      Comb(Comb(Const("EL",_),_),_) ->
+        (try fst(dest_type(type_of t)) = "word" with Failure _ -> false)
+    | _ -> false
+  and reserved v =
+    let n = name_of v in String.length n > 5 && String.sub n 0 5 = "lane_" in
+  fun (asl,w as gl) ->
+    if exists reserved (frees w) then KECCAK_BITBLAST_TAC gl else
+    let ls = find_terms lane w in
+    let ilist = map2 (fun l k -> l,mk_var("lane_"^string_of_int k,type_of l))
+                     ls (0--(length ls - 1)) in
+    let w' = subst (map (fun (l,v) -> v,l) ilist) w in
+    match (try Some(assoc w' !cache) with Failure _ ->
+           try let th = prove(w',KECCAK_BITBLAST_TAC) in
+               cache := (w',th) :: !cache; Some th
+           with Failure _ -> None) with
+      Some th -> ACCEPT_TAC(INST ilist th) gl
+    | None -> KECCAK_BITBLAST_TAC gl;;

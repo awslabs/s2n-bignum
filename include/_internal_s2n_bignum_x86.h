@@ -1,5 +1,9 @@
+// On Mach-O, S2N_BN_SYMBOL expands its argument before pasting the
+// underscore onto it, so that the name may also be given by a macro.
+
 #ifdef __APPLE__
-#   define S2N_BN_SYMBOL(NAME) _##NAME
+#   define S2N_BN_SYMBOL_PASTE(NAME) _##NAME
+#   define S2N_BN_SYMBOL(NAME) S2N_BN_SYMBOL_PASTE(NAME)
 #else
 #   define S2N_BN_SYMBOL(name) name
 #endif
