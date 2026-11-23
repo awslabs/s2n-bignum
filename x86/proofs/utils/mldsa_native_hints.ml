@@ -16,10 +16,6 @@
 (* ========================================================================= *)
 
 needs "common/layout.ml";;
-
-(* The tactics for the calls below are for the gcc12_O2 build, whose image   *)
-(* mldsa_native_libmldsa_gcc12_O2_mc they step through.                      *)
-needs "x86/proofs/mldsa_native/gcc12_O2/libmldsa.ml";;
 needs "x86/proofs/utils/mldsa_native.ml";;
 needs "x86/proofs/utils/mldsa_native_full.ml";;
 needs "x86/proofs/utils/mldsa_native_memset.ml";;
@@ -283,9 +279,11 @@ let glue_suh_template prm = glue_suh_inst prm
        else f_ev_z b i h sig pc stackpointer returnaddress))
    :(uarch_event)list`;;
 
-let glue_suh_inv prm = glue_suh_inst prm
+let glue_suh_inv prm =
+  let mc = lhs(concl !mldsa_native_image) in
+  glue_suh_inst prm (subst [mc,`MC:byte list`]
  `\p (s:x86state).
-   bytes_loaded s (word pc) mldsa_native_libmldsa_gcc12_O2_mc /\
+   bytes_loaded s (word pc) (MC:byte list) /\
    read RSP s = stackpointer /\
    read (memory :> bytes64 stackpointer) s = rbx_init /\
    read (memory :> bytes64 (word_add stackpointer (word 8))) s = rbp_init /\
@@ -308,7 +306,7 @@ let glue_suh_inv prm = glue_suh_inst prm
    (p < glue_suh_steps OM KK b i \/ mld_unpack_hints_ok OM KK b i
     ==> !q. q < 256
             ==> read(memory :> bytes32(word_add h (word(4 * q)))) s =
-                glue_suh_h OM b i (MIN p (glue_suh_n1 OM b i)) q)`;;
+                glue_suh_h OM b i (MIN p (glue_suh_n1 OM b i)) q)`);;
 
 let GLUE_SUH_SETUP_TAC prm =
   let inst = glue_suh_inst prm in
@@ -1231,7 +1229,7 @@ let GLUE_PSH_CALL_TAC prm (b':term) (slice:term) n =
    [X_GEN_TAC `j:num` THEN DISCH_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
     SIMPLE_ARITH_TAC;
     ALL_TAC] THEN
-  FULL_CALL_TAC mldsa_native_libmldsa_gcc12_O2_mc prm.psh_exec "H_UNPACK"
+  FULL_CALL_TAC !mldsa_native_image prm.psh_exec "H_UNPACK"
    [`read RDI s`; `read RSI s`; b'; `pc:num`; `read RSP s`;
     `read (memory :> bytes64 (read RSP s)) s`] glue_psh_vars n;;
 
