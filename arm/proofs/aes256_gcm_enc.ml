@@ -2799,11 +2799,23 @@ let DRAINLEG = GEN_ALL(prove(drain_goal,
    WORD_BLAST); the output forall holds by assumption, since the tag and
    counter stores do not write out_p; the tag and ivec conjuncts close by
    the byteswap128 and ctr_block word identities. *)
+(* Split the 64-byte scratch-zeroing postcondition into the eight 64-bit
+   reads established by the four STP XZR,XZR instructions. The saved-register
+   area is outside this guarantee. *)
+let ZERO_SCRATCH_CONV =
+  let pat =
+    `read (memory :> bytes512 p) (s:armstate) = (word 0:int512)` in
+  fun tm ->
+    ignore(term_match [] pat tm);
+    READ_MEMORY_SPLIT_CONV 3 tm;;
+
 let tail_final_close : tactic =
   REPEAT CONJ_TAC THEN
   FIRST
    [close_goal10_b2;
     FIRST_ASSUM MATCH_ACCEPT_TAC;
+    (CONV_TAC ZERO_SCRATCH_CONV THEN
+     ASM_REWRITE_TAC[WORD_SUBWORD_0] THEN NO_TAC);
     (REWRITE_TAC[byteswap128; ctr_block] THEN
      REWRITE_TAC[ADD_ASSOC; ZX_COUNTER_UD; CTR_ZX_NORM] THEN
      CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
@@ -2875,6 +2887,8 @@ let tail_post = mk_abs(`s:armstate`, list_mk_conj
          nblocks))`;
   `read (memory :> bytes128 ivec_p) s =
    word_reversefields 8 (ctr_block nonce (nblocks + c))`;
+  `read (memory :> bytes512 (word_add stackpointer (word 160))) s =
+   word 0`;
   `read X0 s = word (len_bits DIV 8)`;
   `!j. j < nblocks
    ==> read (memory :> bytes128 (word_add out_p (word(16*j)))) s =
@@ -3862,6 +3876,8 @@ let AES256_GCM_ENC_CORRECT = prove
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
                (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read (memory :> bytes512 (word_add stackpointer (word 160))) s =
+             word 0 /\
            read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28] ,,
@@ -4100,6 +4116,8 @@ let AES256_GCM_ENC_NOIBT_SUBROUTINE_CORRECT = prove
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
                (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read (memory :> bytes512 (word_sub stackpointer (word 64))) s =
+             word 0 /\
            read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
@@ -4167,6 +4185,8 @@ let AES256_GCM_ENC_SUBROUTINE_CORRECT = prove
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
                (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read (memory :> bytes512 (word_sub stackpointer (word 64))) s =
+             word 0 /\
            read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);

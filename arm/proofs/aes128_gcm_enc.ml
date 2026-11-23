@@ -1818,7 +1818,7 @@ let REDUCELAST = GEN_ALL(prove(reducelast_goal,
 (* loop_remain remaining blocks (head pc + 0x628, back edge pc + 0x6f4),     *)
 (* then the tag and the counter word are stored and the four stack slots     *)
 (* are cleared; the postcondition gives all the output blocks, the tag, the  *)
-(* ivec and X0.                                                              *)
+(* ivec, X0 and the zeroed 64-byte scratch area.                             *)
 (* ------------------------------------------------------------------------- *)
 (* WORD_SIMPLE_SUBWORD_CONV on every assumption except the quantified
    memory facts. *)
@@ -1832,6 +1832,17 @@ let SUBWORD_NONFORALL_TAC =
 let swps_tail_precond =
   list_mk_conj(filter (fun c -> c <> `2 <= loop_count`)
                (conjuncts swps_leg_precond));;
+
+(* The four STP XZR,XZR instructions clear the 64-byte scratch area, rather
+   than the saved-register area. Split only this postcondition into the
+   eight 64-bit reads established by the instruction simulator. *)
+let ZERO_SCRATCH_CONV =
+  let pat =
+    `read (memory :> bytes512 p) (s:armstate) = (word 0:int512)` in
+  fun tm ->
+    ignore(term_match [] pat tm);
+    READ_MEMORY_SPLIT_CONV 3 tm;;
+
 let swps_tail_goal =
   mk_imp(swps_tail_precond,
    list_mk_icomb "ensures" [`arm`;
@@ -1849,6 +1860,8 @@ let swps_tail_goal =
                 nblocks))`;
         `read (memory :> bytes128 ivec_p) s =
            word_reversefields 8 (ctr_block nonce (nblocks + c))`;
+        `read (memory :> bytes512 (word_add stackpointer (word 160))) s =
+           word 0`;
         `read X0 s = word (len_bits DIV 8)`]) ;
      swps_broad_frame]);;
 
@@ -1870,6 +1883,8 @@ let swps_tail_tac =
           RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)))
             (1--13) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONV_TAC(ONCE_DEPTH_CONV ZERO_SCRATCH_CONV) THEN
+    ASM_REWRITE_TAC[WORD_SUBWORD_0] THEN
     FIRST_ASSUM(MP_TAC o MATCH_MP
                 (ARITH_RULE `n MOD 4 = 0 ==> 4 * n DIV 4 = n`)) THEN
     ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST_ALL_TAC THEN
@@ -2088,6 +2103,8 @@ let swps_tail_tac =
           RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)))
             (1--10) THEN
     ENSURES_FINAL_STATE_TAC THEN
+    CONV_TAC(ONCE_DEPTH_CONV ZERO_SCRATCH_CONV) THEN
+    ASM_REWRITE_TAC[WORD_SUBWORD_0] THEN
     SUBGOAL_THEN `nblocks = 4 * loop_count + loop_remain` SUBST_ALL_TAC THENL
      [SIMPLE_ARITH_TAC; ALL_TAC] THEN
     CONV_TAC(ONCE_DEPTH_CONV(fun t ->
@@ -2749,6 +2766,8 @@ let core_from88_stmt =
                     nblocks)) /\
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8 (ctr_block nonce (nblocks + c)) /\
+           read (memory :> bytes512 (word_add stackpointer (word 160))) s =
+             word 0 /\
            read X0 s = word (len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28] ,,
@@ -2929,6 +2948,8 @@ let AES128_GCM_ENC_CORRECT = prove
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
                (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read (memory :> bytes512 (word_add stackpointer (word 160))) s =
+             word 0 /\
            read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [X19; X20; X21; X22; X23; X24;
@@ -3123,6 +3144,8 @@ let AES128_GCM_ENC_NOIBT_SUBROUTINE_CORRECT = prove
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
                (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read (memory :> bytes512 (word_sub stackpointer (word 64))) s =
+             word 0 /\
            read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
@@ -3191,6 +3214,8 @@ let AES128_GCM_ENC_SUBROUTINE_CORRECT = prove
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
                (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read (memory :> bytes512 (word_sub stackpointer (word 64))) s =
+             word 0 /\
            read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
