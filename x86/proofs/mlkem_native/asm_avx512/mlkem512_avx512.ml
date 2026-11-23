@@ -1,0 +1,686 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+(* ========================================================================= *)
+(* The API of ML-KEM-512 in the AVX-512 version of the x86 mlkem_native2     *)
+(* (x86/mlkem_native/asm_avx512/mlkem512_avx512.S), in the image: the key    *)
+(* checks of FIPS 203 (section 7), the internal functions for K-PKE          *)
+(* encryption and decryption, and key generation, encapsulation and          *)
+(* decapsulation, with the results, and their constant-time and memory       *)
+(* safety, stated as in the proofs of the compiled C of mlkem-native. A copy *)
+(* of x86/proofs/mlkem_native/asm/mlkem512.ml for the AVX2 version, with the *)
+(* same bounds on the stack (see utils/mlkem_native2_avx512_noise.ml).       *)
+(* ========================================================================= *)
+
+needs "x86/proofs/utils/mlkem_native2_avx512_api.ml";;
+needs "x86/proofs/utils/mlkem_native2_avx512_kem.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/mlkem_gen_matrix_k2_avx512.ml";;
+needs "x86/proofs/utils/mlkem_native2_avx512_kem_safe.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/mlkem_gen_matrix_k2_safe_avx512.ml";;
+needs "x86/proofs/mlkem_basemul_k2.ml";;
+needs "x86/proofs/mlkem_compress_d4_x86.ml";;
+needs "x86/proofs/mlkem_compress_d10_x86.ml";;
+needs "x86/proofs/mlkem_decompress_d4_x86.ml";;
+needs "x86/proofs/mlkem_decompress_d10_x86.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* The kernels of ML-KEM-512 that depend on the parameter set (decompress_d  *)
+(* and compress_d for du = 10 and dv = 4, and basemul_k2), loaded here and   *)
+(* not by the tools, so that the proof of each parameter set proves only its *)
+(* own: their theorems in the forms of utils/mlkem_native2_avx512_kem.ml,    *)
+(* and their safety with the frames as in                                    *)
+(* utils/mlkem_native2_avx512_kem_safe.ml, added to the kernels that the     *)
+(* tools call. The names of the theorems of safety are bound in parentheses, *)
+(* so that tools/collect-specs.sh does not take them for specifications of   *)
+(* this file.                                                                *)
+(* ------------------------------------------------------------------------- *)
+
+let API_DECOMPRESS_D4 = prove
+ (api_decompress_tm 4 32,
+  API_DECOMPRESS_TAC 4 MLKEM_DECOMPRESS_D4_X86_SUBROUTINE_CORRECT);;
+
+let API_DECOMPRESS_D10 = prove
+ (api_decompress_tm 10 32,
+  API_DECOMPRESS_TAC 10 MLKEM_DECOMPRESS_D10_X86_SUBROUTINE_CORRECT);;
+
+let API_COMPRESS_D4 = prove
+ (api_compress_tm 4 32,
+  API_COMPRESS_TAC 4 MLKEM_COMPRESS_D4_X86_SUBROUTINE_CORRECT);;
+
+let API_COMPRESS_D10 = prove
+ (api_compress_tm 10 32,
+  API_COMPRESS_TAC 10 MLKEM_COMPRESS_D10_X86_SUBROUTINE_CORRECT);;
+
+let pmul_defs2 = [pmulaccred0; pmulaccred0_odd; pmulaccred1; pmulacc0;
+                  pmulacc0_odd; pmulacc1; pmul0; pmul0_odd; pmul1];;
+
+let API_BASEMUL_K2 = time prove
+ (api_basemul_tm 2,
+  API_BASEMUL_TAC 2 MLKEM_BASEMUL_K2_SUBROUTINE_CORRECT pmul_defs2);;
+
+api_add_kernels
+ ["mlkem_decompress_d4_x86",mlkem_decompress_d4_x86_mc,API_DECOMPRESS_D4;
+  "mlkem_decompress_d10_x86",mlkem_decompress_d10_x86_mc,API_DECOMPRESS_D10;
+  "mlkem_compress_d4_x86",mlkem_compress_d4_x86_mc,API_COMPRESS_D4;
+  "mlkem_compress_d10_x86",mlkem_compress_d10_x86_mc,API_COMPRESS_D10;
+  "mlkem_basemul_k2",mlkem_basemul_k2_mc,API_BASEMUL_K2];;
+
+let (MLKEM_BASEMUL_K2_CORE_SAFE_FRAMED,
+     MLKEM_BASEMUL_K2_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_BASEMUL_K2_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_safe "mlkem_basemul_k2" MLKEM_BASEMUL_K2_CORRECT
+    mlkem_basemul_k2_tmc_EXEC MLKEM_BASEMUL_K2_NOIBT_SUBROUTINE_CORRECT
+    mlkem_basemul_k2_tmc;;
+
+let (MLKEM_COMPRESS_D4_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_COMPRESS_D4_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_COMPRESS_D4_X86_MC; LENGTH_MLKEM_COMPRESS_D4_X86_TMC;
+     MLKEM_COMPRESS_D4_X86_CORE_END; MLKEM_COMPRESS_D4_X86_POSTAMBLE_LENGTH]
+    MLKEM_COMPRESS_D4_X86_SAFE
+    MLKEM_COMPRESS_D4_X86_NOIBT_SUBROUTINE_CORRECT mlkem_compress_d4_x86_tmc;;
+
+let (MLKEM_COMPRESS_D10_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_COMPRESS_D10_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_COMPRESS_D10_X86_MC; LENGTH_MLKEM_COMPRESS_D10_X86_TMC;
+     MLKEM_COMPRESS_D10_X86_CORE_END; MLKEM_COMPRESS_D10_X86_POSTAMBLE_LENGTH]
+    MLKEM_COMPRESS_D10_X86_SAFE
+    MLKEM_COMPRESS_D10_X86_NOIBT_SUBROUTINE_CORRECT
+    mlkem_compress_d10_x86_tmc;;
+
+let (MLKEM_DECOMPRESS_D4_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_DECOMPRESS_D4_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_DECOMPRESS_D4_X86_MC; LENGTH_MLKEM_DECOMPRESS_D4_X86_TMC;
+     MLKEM_DECOMPRESS_D4_X86_CORE_END;
+     MLKEM_DECOMPRESS_D4_X86_POSTAMBLE_LENGTH]
+    MLKEM_DECOMPRESS_D4_X86_SAFE
+    MLKEM_DECOMPRESS_D4_X86_NOIBT_SUBROUTINE_CORRECT
+    mlkem_decompress_d4_x86_tmc;;
+
+let (MLKEM_DECOMPRESS_D10_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_DECOMPRESS_D10_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_DECOMPRESS_D10_X86_MC; LENGTH_MLKEM_DECOMPRESS_D10_X86_TMC;
+     MLKEM_DECOMPRESS_D10_X86_CORE_END;
+     MLKEM_DECOMPRESS_D10_X86_POSTAMBLE_LENGTH]
+    MLKEM_DECOMPRESS_D10_X86_SAFE
+    MLKEM_DECOMPRESS_D10_X86_NOIBT_SUBROUTINE_CORRECT
+    mlkem_decompress_d10_x86_tmc;;
+
+api_add_safe_kernels
+ ["mlkem_basemul_k2","H_BASEMUL2",MLKEM_BASEMUL_K2_SUBROUTINE_SAFE_FRAMED,
+  mlkem_basemul_k2_mc;
+  "mlkem_compress_d4_x86","H_COMPRESS4",
+  MLKEM_COMPRESS_D4_X86_SUBROUTINE_SAFE_FRAMED,mlkem_compress_d4_x86_mc;
+  "mlkem_compress_d10_x86","H_COMPRESS10",
+  MLKEM_COMPRESS_D10_X86_SUBROUTINE_SAFE_FRAMED,mlkem_compress_d10_x86_mc;
+  "mlkem_decompress_d4_x86","H_DECOMPRESS4",
+  MLKEM_DECOMPRESS_D4_X86_SUBROUTINE_SAFE_FRAMED,mlkem_decompress_d4_x86_mc;
+  "mlkem_decompress_d10_x86","H_DECOMPRESS10",
+  MLKEM_DECOMPRESS_D10_X86_SUBROUTINE_SAFE_FRAMED,
+  mlkem_decompress_d10_x86_mc];;
+
+(* ------------------------------------------------------------------------- *)
+(* The modulus check of an encapsulation key pk: 0 if the 512 12-bit         *)
+(* fields of its polynomial vector are all < q, else -4                      *)
+(* (MLK_ERR_INVALID_PK).                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_CHECK_PK_AVX512_EXEC =
+  MLKEM_NATIVE2_AVX512_IMAGE_EXEC ["mlkem512_check_pk_avx512"];;
+
+let MLKEM512_CHECK_PK_AVX512_SUBROUTINE_CORRECT = prove
+ (`!pk n pc stackpointer returnaddress.
+     ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+         [(word pc,mlkem_native2_avx512_image_size); (pk,768)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+               read RIP s = word(pc + mlkem512_check_pk_avx512) /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [pk] s /\
+               read (memory :> bytes(pk,768)) s = n)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               C_RETURN s =
+               if !i. i < 512 ==> (n DIV 2 EXP (12 * i)) MOD 2 EXP 12 < 3329
+               then word 0 else word 0xfffffffc)
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MLKEM_NATIVE2_CHECK_PK_CORRECT_TAC MLKEM512_CHECK_PK_AVX512_EXEC 2);;
+
+let MLKEM512_CHECK_PK_AVX512_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e pk pc stackpointer returnaddress.
+       ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+           [(word pc,mlkem_native2_avx512_image_size); (pk,768)]
+       ==> ensures x86
+            (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+                 read RIP s = word(pc + mlkem512_check_pk_avx512) /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [pk] s /\
+                 read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events pk pc (word_sub stackpointer (word 16))
+                                  returnaddress /\
+                    memaccess_inbounds e2
+                     [pk,768; word_sub stackpointer (word 16),24]
+                     [word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MLKEM_NATIVE2_CHECK_PK_SAFE_TAC MLKEM512_CHECK_PK_AVX512_EXEC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The hash check of a decapsulation key sk, with ek at offset 768 and the   *)
+(* hash h of ek at offset 1568: 0 if h = H(ek), else -5                      *)
+(* (MLK_ERR_INVALID_SK). The stack is the 320 bytes of the frame and those   *)
+(* used by mlkem_hash_h_avx512.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_CHECK_SK_AVX512_EXEC =
+  MLKEM_NATIVE2_AVX512_IMAGE_EXEC ["mlkem512_check_sk_avx512"];;
+
+let MLKEM512_CHECK_SK_AVX512_SUBROUTINE_CORRECT = prove
+ (`!sk (ek:byte list) h pc stackpointer returnaddress.
+     LENGTH ek = 800 /\
+     ALL (nonoverlapping (word_sub stackpointer (word 320),320))
+         [(word pc,mlkem_native2_avx512_image_size); (sk,1632)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+               read RIP s = word(pc + mlkem512_check_sk_avx512) /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [sk] s /\
+               read (memory :> bytes(word_add sk (word 768),800)) s =
+               num_of_bytelist ek /\
+               read (memory :> bytes(word_add sk (word 1568),32)) s = h)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               C_RETURN s =
+               if h = num_of_bytelist(sha3_256 ek) then word 0
+               else word 0xfffffffb)
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(word_sub stackpointer (word 320),320)])`,
+  MLKEM_NATIVE2_CHECK_SK_CORRECT_TAC MLKEM512_CHECK_SK_AVX512_EXEC 1568);;
+
+let MLKEM512_CHECK_SK_AVX512_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e sk pc stackpointer returnaddress.
+       ALL (nonoverlapping (word_sub stackpointer (word 320),320))
+           [(word pc,mlkem_native2_avx512_image_size); (sk,1632)]
+       ==> ensures x86
+            (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+                 read RIP s = word(pc + mlkem512_check_sk_avx512) /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [sk] s /\
+                 read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events sk pc (word_sub stackpointer (word 320))
+                                  returnaddress /\
+                    memaccess_inbounds e2
+                     [sk,1632; word(pc + mlkem_native2_constants),192;
+                      word_sub stackpointer (word 320),328]
+                     [word_sub stackpointer (word 320),320]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+              [memory :> bytes(word_sub stackpointer (word 320),320)])`,
+  MLKEM_NATIVE2_CHECK_SK_SAFE_TAC MLKEM512_CHECK_SK_AVX512_EXEC 800);;
+
+(* ------------------------------------------------------------------------- *)
+(* K-PKE.Encrypt (FIPS 203 Algorithm 14) as the internal function            *)
+(* mlkem512_pke_encrypt_avx512(ct, at, pk, m, noise): the ciphertext of the  *)
+(* message m under the encryption key ek at pk with randomness r, given the  *)
+(* transposed matrix at (row i, column j sampled from rho || i || j, in the  *)
+(* order of the coefficients of the x86 NTT domain) and the noise y, e1, e2  *)
+(* sampled from r as 16-bit coefficients at noise, which are overwritten.    *)
+(* The buffers at and noise are 32-byte aligned.                             *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_PKE_ENCRYPT_AVX512_EXEC =
+  MLKEM_NATIVE2_AVX512_IMAGE_EXEC ["mlkem512_pke_encrypt_avx512"];;
+
+let MLKEM512_PKE_ENCRYPT_AVX512_SUBROUTINE_CORRECT = prove
+ (`!ct at pk mp noise (ek:byte list) (m:byte list) (r:byte list)
+    pc stackpointer returnaddress.
+     aligned 32 (word pc:int64) /\ aligned 32 at /\ aligned 32 noise /\
+     LENGTH ek = 800 /\ LENGTH m = 32 /\
+     nonoverlapping (pk,800) (word pc,mlkem_native2_avx512_image_size) /\
+     PAIRWISE nonoverlapping
+      [(ct,768); (noise,2560); (word_sub stackpointer (word 3671),3679)] /\
+     ALLPAIRS nonoverlapping
+      [(ct,768); (noise,2560); (word_sub stackpointer (word 3671),3679)]
+      [(word pc,mlkem_native2_avx512_image_size); (at,2048); (pk,800); (mp,32)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+               read RIP s = word(pc + mlkem512_pke_encrypt_avx512) /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [ct; at; pk; mp; noise] s /\
+               (!i j t. i < 2 /\ j < 2 /\ t < 256
+                        ==> read(memory :> bytes16(word_add at
+                                 (word(512 * (2 * i + j) + 2 * t)))) s =
+                            iword(mlkem_sample_ntt
+                                   (APPEND (mlkem_slice 768 32 ek)
+                                           [word i; word j])
+                                   (avx_unorder t))) /\
+               read (memory :> bytes(pk,800)) s = num_of_bytelist ek /\
+               read (memory :> bytes(mp,32)) s = num_of_bytelist m /\
+               (!i t. i < 5 /\ t < 256
+                      ==> read(memory :> bytes16(word_add noise
+                                 (word(512 * i + 2 * t)))) s =
+                          iword(mlkem_cbd_coeff (if i < 2 then 3 else 2)
+                                 (mlkem_prf (if i < 2 then 3 else 2) r
+                                   (word i)) t)))
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               read (memory :> bytes(ct,768)) s =
+               num_of_bytelist(kpke_encrypt mlkem512 ek m r))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(ct,768); memory :> bytes(noise,2560);
+                      memory :> bytes(word_sub stackpointer (word 3671),
+                                      3671)])`,
+  MLKEM_NATIVE2_PKE_ENCRYPT_CORRECT_TAC 2 MLKEM512_PKE_ENCRYPT_AVX512_EXEC);;
+
+(* ------------------------------------------------------------------------- *)
+(* K-PKE.Decrypt (FIPS 203 Algorithm 15) as the internal function            *)
+(* mlkem512_pke_decrypt_avx512(m, ct, sk): the message of the ciphertext c   *)
+(* at ct under the decryption key dk at sk.                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_PKE_DECRYPT_AVX512_EXEC =
+  MLKEM_NATIVE2_AVX512_IMAGE_EXEC ["mlkem512_pke_decrypt_avx512"];;
+
+let MLKEM512_PKE_DECRYPT_AVX512_SUBROUTINE_CORRECT = prove
+ (`!mp ct sk (c:byte list) (dk:byte list) pc stackpointer returnaddress.
+     aligned 32 (word pc:int64) /\ LENGTH c = 768 /\ LENGTH dk = 768 /\
+     nonoverlapping (sk,768) (word pc,mlkem_native2_avx512_image_size) /\
+     PAIRWISE nonoverlapping
+      [(mp,32); (word_sub stackpointer (word 3671),3679)] /\
+     ALLPAIRS nonoverlapping
+      [(mp,32); (word_sub stackpointer (word 3671),3679)]
+      [(word pc,mlkem_native2_avx512_image_size); (ct,768); (sk,768)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+               read RIP s = word(pc + mlkem512_pke_decrypt_avx512) /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [mp; ct; sk] s /\
+               read (memory :> bytes(ct,768)) s = num_of_bytelist c /\
+               read (memory :> bytes(sk,768)) s = num_of_bytelist dk)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               read (memory :> bytes(mp,32)) s =
+               num_of_bytelist(kpke_decrypt mlkem512 dk c))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(mp,32);
+                      memory :> bytes(word_sub stackpointer (word 3671),
+                                      3671)])`,
+  MLKEM_NATIVE2_PKE_DECRYPT_CORRECT_TAC 2 MLKEM512_PKE_DECRYPT_AVX512_EXEC);;
+
+(* ------------------------------------------------------------------------- *)
+(* ML-KEM.KeyGen_internal (FIPS 203 Algorithm 16) from d and z at            *)
+(* coins, the keys at pk and sk; the return value is 0.                      *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_KEYPAIR_DERAND_AVX512_EXEC =
+  MLKEM_NATIVE2_AVX512_IMAGE_EXEC ["mlkem512_keypair_derand_avx512"];;
+
+let MLKEM512_KEYPAIR_DERAND_AVX512_SUBROUTINE_CORRECT = prove
+ (`!pk sk coins (d:byte list) (z:byte list) pc stackpointer returnaddress.
+     aligned 32 (word pc:int64) /\ LENGTH d = 32 /\ LENGTH z = 32 /\
+     PAIRWISE nonoverlapping
+      [(pk,800); (sk,1632); (word_sub stackpointer (word 9862),9870)] /\
+     ALLPAIRS nonoverlapping
+      [(pk,800); (sk,1632); (word_sub stackpointer (word 9862),9870)]
+      [(coins,64); (word pc,mlkem_native2_avx512_image_size)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+               read RIP s = word(pc + mlkem512_keypair_derand_avx512) /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [pk; sk; coins] s /\
+               read (memory :> bytes(coins,32)) s = num_of_bytelist d /\
+               read (memory :> bytes(word_add coins (word 32),32)) s =
+               num_of_bytelist z)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               read (memory :> bytes(pk,800)) s =
+               num_of_bytelist(FST(mlkem_keygen_internal mlkem512 d z)) /\
+               read (memory :> bytes(sk,1632)) s =
+               num_of_bytelist(SND(mlkem_keygen_internal mlkem512 d z)) /\
+               C_RETURN s = word 0)
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(pk,800); memory :> bytes(sk,1632);
+                      memory :> bytes(word_sub stackpointer (word 9862),
+                                      9862)])`,
+  MLKEM_NATIVE2_KEYPAIR_DERAND_CORRECT_TAC 2
+    MLKEM512_KEYPAIR_DERAND_AVX512_EXEC
+   MLKEM_GEN_MATRIX_AVX512_K2_SUBROUTINE_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* ML-KEM.Encaps_internal (FIPS 203 Algorithm 17), after the modulus         *)
+(* check of the encapsulation key (FIPS 203 section 7.2): if the check       *)
+(* passes, the shared secret at ss, the ciphertext at ct and the return      *)
+(* value 0, else -4 (MLK_ERR_INVALID_PK).                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_ENC_DERAND_AVX512_EXEC =
+  MLKEM_NATIVE2_AVX512_IMAGE_EXEC ["mlkem512_enc_derand_avx512"];;
+
+let MLKEM512_ENC_DERAND_AVX512_SUBROUTINE_CORRECT = prove
+ (`!ct ss pk coins (ek:byte list) (m:byte list) pc stackpointer
+    returnaddress.
+     aligned 32 (word pc:int64) /\ LENGTH ek = 800 /\ LENGTH m = 32 /\
+     nonoverlapping (pk,800) (word pc,mlkem_native2_avx512_image_size) /\
+     PAIRWISE nonoverlapping
+      [(ct,768); (ss,32); (word_sub stackpointer (word 8806),8814)] /\
+     ALLPAIRS nonoverlapping
+      [(ct,768); (ss,32); (word_sub stackpointer (word 8806),8814)]
+      [(pk,800); (coins,32); (word pc,mlkem_native2_avx512_image_size)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+               read RIP s = word(pc + mlkem512_enc_derand_avx512) /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [ct; ss; pk; coins] s /\
+               read (memory :> bytes(pk,800)) s = num_of_bytelist ek /\
+               read (memory :> bytes(coins,32)) s = num_of_bytelist m)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               (mlkem_ek_check mlkem512 ek
+                ==> read (memory :> bytes(ss,32)) s =
+                    num_of_bytelist
+                     (FST(mlkem_encaps_internal mlkem512 ek m)) /\
+                    read (memory :> bytes(ct,768)) s =
+                    num_of_bytelist
+                     (SND(mlkem_encaps_internal mlkem512 ek m))) /\
+               C_RETURN s =
+               (if mlkem_ek_check mlkem512 ek then word 0
+                else word 0xfffffffc))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(ct,768); memory :> bytes(ss,32);
+                      memory :> bytes(word_sub stackpointer (word 8806),
+                                      8806)])`,
+  MLKEM_NATIVE2_ENC_DERAND_CORRECT_TAC 2 MLKEM512_ENC_DERAND_AVX512_EXEC
+   MLKEM_GEN_MATRIX_AVX512_K2_HASH_SUBROUTINE_CORRECT
+   MLKEM512_PKE_ENCRYPT_AVX512_SUBROUTINE_CORRECT);;
+
+(* ------------------------------------------------------------------------- *)
+(* ML-KEM.Decaps_internal (FIPS 203 Algorithm 18), after the hash check      *)
+(* of the decapsulation key (FIPS 203 section 7.3): if the check             *)
+(* passes, the shared secret at ss and the return value 0, else -5           *)
+(* (MLK_ERR_INVALID_SK).                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_DEC_AVX512_EXEC =
+  MLKEM_NATIVE2_AVX512_IMAGE_EXEC ["mlkem512_dec_avx512"];;
+
+let MLKEM512_DEC_AVX512_SUBROUTINE_CORRECT = prove
+ (`!ss ct sk (dk:byte list) (c:byte list) pc stackpointer returnaddress.
+     aligned 32 (word pc:int64) /\ LENGTH dk = 1632 /\ LENGTH c = 768 /\
+     nonoverlapping (ct,768) (word pc,mlkem_native2_avx512_image_size) /\
+     nonoverlapping (sk,1632) (word pc,mlkem_native2_avx512_image_size) /\
+     nonoverlapping (ss,32) (word_sub stackpointer (word 10470),10478) /\
+     ALLPAIRS nonoverlapping
+      [(ss,32); (word_sub stackpointer (word 10470),10478)]
+      [(ct,768); (sk,1632); (word pc,mlkem_native2_avx512_image_size)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+               read RIP s = word(pc + mlkem512_dec_avx512) /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [ss; ct; sk] s /\
+               read (memory :> bytes(ct,768)) s = num_of_bytelist c /\
+               read (memory :> bytes(sk,1632)) s = num_of_bytelist dk)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               (mlkem_decaps_check mlkem512 dk c
+                ==> read (memory :> bytes(ss,32)) s =
+                    num_of_bytelist(mlkem_decaps_internal mlkem512 dk c)) /\
+               C_RETURN s =
+               (if mlkem_decaps_check mlkem512 dk c then word 0
+                else word 0xfffffffb))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(ss,32);
+                      memory :> bytes(word_sub stackpointer (word 10470),
+                                      10470)])`,
+  MLKEM_NATIVE2_DEC_CORRECT_TAC 2 MLKEM512_DEC_AVX512_EXEC
+   MLKEM_GEN_MATRIX_AVX512_K2_HASHES_SUBROUTINE_CORRECT
+   (MLKEM512_PKE_DECRYPT_AVX512_SUBROUTINE_CORRECT,
+    MLKEM512_PKE_ENCRYPT_AVX512_SUBROUTINE_CORRECT));;
+
+(* ------------------------------------------------------------------------- *)
+(* The constant-time and memory safety of the K-PKE encryption: the          *)
+(* events depend only on the addresses.                                      *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_PKE_ENCRYPT_AVX512_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e ct at pk mp noise pc stackpointer returnaddress.
+       aligned 32 (word pc:int64) /\ aligned 32 at /\ aligned 32 noise /\
+       nonoverlapping (pk,800) (word pc,mlkem_native2_avx512_image_size) /\
+       PAIRWISE nonoverlapping
+        [(ct,768); (noise,2560); (word_sub stackpointer (word 3671),3679)] /\
+       ALLPAIRS nonoverlapping
+        [(ct,768); (noise,2560); (word_sub stackpointer (word 3671),3679)]
+        [(word pc,mlkem_native2_avx512_image_size); (at,2048); (pk,800);
+         (mp,32)]
+       ==> ensures x86
+            (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+                 read RIP s = word(pc + mlkem512_pke_encrypt_avx512) /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [ct; at; pk; mp; noise] s /\
+                 read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events ct at pk mp noise pc
+                           (word_sub stackpointer (word 3671)) returnaddress /\
+                    memaccess_inbounds e2
+                     [ct,768; at,2048; pk,800; mp,32; noise,2560;
+                      word(pc + mlkem_native2_constants),6048;
+                      word_sub stackpointer (word 3671),3679]
+                     [ct,768; noise,2560;
+                      word_sub stackpointer (word 3671),3671]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes(ct,768); memory :> bytes(noise,2560);
+                        memory :> bytes(word_sub stackpointer (word 3671),
+                                        3671)])`,
+  MLKEM_NATIVE2_PKE_ENCRYPT_SAFE_TAC 2 MLKEM512_PKE_ENCRYPT_AVX512_EXEC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The constant-time and memory safety of the K-PKE decryption: the          *)
+(* events depend only on the addresses.                                      *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_PKE_DECRYPT_AVX512_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e mp ct sk pc stackpointer returnaddress.
+       aligned 32 (word pc:int64) /\
+       nonoverlapping (sk,768) (word pc,mlkem_native2_avx512_image_size) /\
+       PAIRWISE nonoverlapping
+        [(mp,32); (word_sub stackpointer (word 3671),3679)] /\
+       ALLPAIRS nonoverlapping
+        [(mp,32); (word_sub stackpointer (word 3671),3679)]
+        [(word pc,mlkem_native2_avx512_image_size); (ct,768); (sk,768)]
+       ==> ensures x86
+            (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+                 read RIP s = word(pc + mlkem512_pke_decrypt_avx512) /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [mp; ct; sk] s /\
+                 read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events mp ct sk pc
+                           (word_sub stackpointer (word 3671)) returnaddress /\
+                    memaccess_inbounds e2
+                     [mp,32; ct,768; sk,768;
+                      word(pc + mlkem_native2_constants),6048;
+                      word_sub stackpointer (word 3671),3679]
+                     [mp,32; word_sub stackpointer (word 3671),3671]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes(mp,32);
+                        memory :> bytes(word_sub stackpointer (word 3671),
+                                        3671)])`,
+  MLKEM_NATIVE2_PKE_DECRYPT_SAFE_TAC 2 MLKEM512_PKE_DECRYPT_AVX512_EXEC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The constant-time and memory safety of key generation: the events         *)
+(* depend only on the addresses and on rho, which is public although         *)
+(* computed from d (rho is at the end of pk). As in the proofs of the        *)
+(* compiled C, the postcondition also gives rho in pk and the return         *)
+(* value.                                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_KEYPAIR_DERAND_AVX512_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e pk sk coins (d:byte list) pc stackpointer returnaddress.
+       aligned 32 (word pc:int64) /\ LENGTH d = 32 /\
+       PAIRWISE nonoverlapping
+        [(pk,800); (sk,1632); (word_sub stackpointer (word 9862),9870)] /\
+       ALLPAIRS nonoverlapping
+        [(pk,800); (sk,1632); (word_sub stackpointer (word 9862),9870)]
+        [(coins,64); (word pc,mlkem_native2_avx512_image_size)]
+       ==> ensures x86
+            (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+                 read RIP s = word(pc + mlkem512_keypair_derand_avx512) /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [pk; sk; coins] s /\
+                 read (memory :> bytes(coins,32)) s = num_of_bytelist d /\
+                 read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 C_RETURN s = word 0 /\
+                 read (memory :> bytes(word_add pk (word 768),32)) s =
+                 num_of_bytelist(FST(mlkem_g(APPEND d [word 2]))) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events pk sk coins pc
+                           (word_sub stackpointer (word 9862)) returnaddress
+                           (FST(mlkem_g(APPEND d [word 2]))) /\
+                    memaccess_inbounds e2
+                     [coins,64; pk,800; sk,1632;
+                      word(pc + mlkem_native2_constants),6048;
+                      word_sub stackpointer (word 9862),9870]
+                     [pk,800; sk,1632;
+                      word_sub stackpointer (word 9862),9862]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes(pk,800); memory :> bytes(sk,1632);
+                        memory :> bytes(word_sub stackpointer (word 9862),
+                                        9862)])`,
+  MLKEM_NATIVE2_KEYPAIR_DERAND_SAFE_TAC 2 MLKEM512_KEYPAIR_DERAND_AVX512_EXEC
+   MLKEM_GEN_MATRIX_AVX512_K2_SUBROUTINE_SAFE);;
+
+(* ------------------------------------------------------------------------- *)
+(* The constant-time and memory safety of encapsulation: the events          *)
+(* depend only on the addresses and on ek, which is public, and on           *)
+(* whether it passes the modulus check. As in the proofs of the              *)
+(* compiled C, the postcondition also gives the return value.                *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_ENC_DERAND_AVX512_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e ct ss pk coins (ek:byte list) pc stackpointer returnaddress.
+       aligned 32 (word pc:int64) /\ LENGTH ek = 800 /\
+       nonoverlapping (pk,800) (word pc,mlkem_native2_avx512_image_size) /\
+       PAIRWISE nonoverlapping
+        [(ct,768); (ss,32); (word_sub stackpointer (word 8806),8814)] /\
+       ALLPAIRS nonoverlapping
+        [(ct,768); (ss,32); (word_sub stackpointer (word 8806),8814)]
+        [(pk,800); (coins,32); (word pc,mlkem_native2_avx512_image_size)]
+       ==> ensures x86
+            (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+                 read RIP s = word(pc + mlkem512_enc_derand_avx512) /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [ct; ss; pk; coins] s /\
+                 read (memory :> bytes(pk,800)) s = num_of_bytelist ek /\
+                 read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 C_RETURN s =
+                 (if mlkem_ek_check mlkem512 ek then word 0
+                  else word 0xfffffffc) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events ct ss pk coins pc
+                           (word_sub stackpointer (word 8806))
+                           returnaddress ek /\
+                    memaccess_inbounds e2
+                     [pk,800; coins,32; ct,768; ss,32;
+                      word(pc + mlkem_native2_constants),6048;
+                      word_sub stackpointer (word 8806),8814]
+                     [ct,768; ss,32;
+                      word_sub stackpointer (word 8806),8806]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes(ct,768); memory :> bytes(ss,32);
+                        memory :> bytes(word_sub stackpointer (word 8806),
+                                        8806)])`,
+  MLKEM_NATIVE2_ENC_DERAND_SAFE_TAC 2 MLKEM512_ENC_DERAND_AVX512_EXEC
+   MLKEM_GEN_MATRIX_AVX512_K2_HASH_SUBROUTINE_SAFE
+   MLKEM512_PKE_ENCRYPT_AVX512_SUBROUTINE_SAFE);;
+
+(* ------------------------------------------------------------------------- *)
+(* The constant-time and memory safety of decapsulation: the events          *)
+(* depend only on the addresses and on ek and h in dk, which are             *)
+(* public, and on whether h = H(ek) (the hash check). As in the proofs       *)
+(* of the compiled C, there are no results in the postcondition.             *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_DEC_AVX512_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e ss ct sk (dk:byte list) pc stackpointer returnaddress.
+       aligned 32 (word pc:int64) /\ LENGTH dk = 1632 /\
+       nonoverlapping (ct,768) (word pc,mlkem_native2_avx512_image_size) /\
+       nonoverlapping (sk,1632) (word pc,mlkem_native2_avx512_image_size) /\
+       nonoverlapping (ss,32) (word_sub stackpointer (word 10470),10478) /\
+       ALLPAIRS nonoverlapping
+        [(ss,32); (word_sub stackpointer (word 10470),10478)]
+        [(ct,768); (sk,1632); (word pc,mlkem_native2_avx512_image_size)]
+       ==> ensures x86
+            (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+                 read RIP s = word(pc + mlkem512_dec_avx512) /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [ss; ct; sk] s /\
+                 read (memory :> bytes(sk,1632)) s = num_of_bytelist dk /\
+                 read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events ss ct sk pc
+                           (word_sub stackpointer (word 10470)) returnaddress
+                           (mlkem_slice 768 800 dk)
+                           (mlkem_slice 1568 32 dk) /\
+                    memaccess_inbounds e2
+                     [ct,768; sk,1632; ss,32;
+                      word(pc + mlkem_native2_constants),6048;
+                      word_sub stackpointer (word 10470),10478]
+                     [ss,32; word_sub stackpointer (word 10470),10470]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes(ss,32);
+                        memory :> bytes(word_sub stackpointer (word 10470),
+                                        10470)])`,
+  MLKEM_NATIVE2_DEC_SAFE_TAC 2 MLKEM512_DEC_AVX512_EXEC
+   MLKEM_GEN_MATRIX_AVX512_K2_HASHES_SUBROUTINE_SAFE
+   (MLKEM512_PKE_DECRYPT_AVX512_SUBROUTINE_SAFE,
+    MLKEM512_PKE_ENCRYPT_AVX512_SUBROUTINE_SAFE));;
