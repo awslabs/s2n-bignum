@@ -84,7 +84,7 @@ let MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_OS_IMAGE_SUBROUTINE_CORRECT = prove
           read (memory :> bytes64 stackpointer) s = returnaddress /\
           read (memory :> bytes64 (word_add stackpointer (word 40))) s =
           canary /\
-          read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+          read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
           guard /\
           read (memory :> bytes64 guard) s = canary /\
           (!j. j < 256
@@ -228,7 +228,7 @@ let MLKEM_NATIVE_POLY_COMPRESS_D11_GCC12_OS_IMAGE_SUBROUTINE_SAFE = time prove
            read (memory :> bytes64 stackpointer) s = returnaddress /\
            read (memory :> bytes64 (word_add stackpointer (word 40))) s =
            canary /\
-           read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+           read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
            guard /\
            read (memory :> bytes64 guard) s = canary` THEN
   REPEAT CONJ_TAC THENL

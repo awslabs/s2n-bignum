@@ -461,9 +461,9 @@ let REJ_FRAME =
   read (memory :> bytes64 (word_add stackpointer (word 336))) s =
   returnaddress /\
   read (memory :> bytes64 (word_add stackpointer (word 1112))) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 131064))) s = guard /\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\
   read (memory :> bytes64 guard) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
   read (memory :> bytes(ea,el)) s = ev /\
   read X19 s =
   word_add stackpointer (word(if aligned 32 stackpointer then 352 else 368)) /\
