@@ -54,6 +54,7 @@ def bare_uses(path):
     if not defined:
         return
 
+    in_macro = False
     for lineno, raw in enumerate(lines, 1):
         code = raw.split('//')[0]
         stripped_code = code.strip()
@@ -61,10 +62,19 @@ def bare_uses(path):
         # mention bare names, e.g. in #define or #if defined(...)).
         if not stripped_code or stripped_code.startswith('#'):
             continue
+        # Skip the lines that continue the arguments of a macro that takes a
+        # bare name, up to the one that closes its parenthesis.
+        if in_macro:
+            if ')' in code:
+                in_macro = False
+            continue
         # Skip the symbol's own definition line.
         if DEF_RE.match(code):
             continue
-        if MACRO_TAKES_BARE_NAME.search(code):
+        m = MACRO_TAKES_BARE_NAME.search(code)
+        if m:
+            rest = code[m.end():]
+            in_macro = rest.count('(') + 1 > rest.count(')')
             continue
 
         residue = WRAPPED_RE.sub('@@', code)
