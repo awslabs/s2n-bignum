@@ -448,7 +448,7 @@ OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 
 MLKEM_NATIVE_OBJ =
 MLKEM_NATIVE_PROOFS =
-include $(wildcard mlkem_native/*/proofs.mk)
+include $(wildcard mlkem_native/*/proofs.mk mlkem_native/*/image.mk)
 
 # The same for mldsa-native's portable C implementation (see
 # mldsa_native/README.md).

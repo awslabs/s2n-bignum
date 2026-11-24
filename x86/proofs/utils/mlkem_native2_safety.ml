@@ -11,7 +11,7 @@
 (* property. As arm/proofs/utils/mlkem_native2_safety.ml for AArch64.        *)
 (* ========================================================================= *)
 
-needs "x86/proofs/utils/mlkem_native2_noise.ml";;
+needs "x86/proofs/mlkem_native/asm/noise_spec.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* A callee's safety theorem |- ?f_events. !e x1 ... xn. P e as an           *)
@@ -40,11 +40,10 @@ let ASSUME_CALLEE_TAILED_TAC th name =
 (* composed by THEN.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-let native2_fresh_counter = ref 0;;
+let native2_fresh_counter = par_counter ();;
 
 let native2_fresh_var s ty =
-  incr native2_fresh_counter;
-  mk_var(s^"_"^string_of_int(!native2_fresh_counter),ty);;
+  mk_var(s^"_"^string_of_int(native2_fresh_counter ()),ty);;
 
 let FRESH_TAIL_RULE th =
   let vs = fst(strip_forall(concl th)) in

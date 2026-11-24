@@ -26,11 +26,14 @@ compiler and the optimization level, `<build>` = `<compiler>_<level>`, as
 for AArch64. There is one, `gcc12_O2` for the gcc 12 `-O2` binary, whose
 whole image is verified. The builds `asm` and `asm_avx512` of the API in
 hand-written assembly, which is not compiled code, are organized
-differently, as described in their READMEs (as for the AArch64 build
-`asm`: their proofs are about the image of their objects linked by GNU
-ld, each proves the theorems of its callees again rather than assuming
-their contracts, there is no link file, and their `proofs.mk` is written
-by hand); the rest of this file is about the compiled build. For a build:
+differently, as described in their READMEs: their proofs are about the
+image of their objects linked by GNU ld, and the rest of the proofs is as
+here, a spec file and a proof file for each function, `link.ml` for the
+whole build and a `proofs.mk` generated from the `needs` of the proofs,
+with `image.mk` written by hand for the rules that link the image; the
+standalone proofs of their kernels in `../proofs` are loaded by the proof
+files of the kernels (see "Spec and proof files" in their READMEs). The
+rest of this file is about the compiled build. For a build:
 
  - `<build>/libmlkem.S` is the transcription of the whole image, and
    `<build>/<function>.S` those of single functions;

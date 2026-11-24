@@ -11,6 +11,7 @@
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
+needs "common/par.ml";;
 needs "x86/proofs/utils/keccak_spec.ml";;
 
 let KECCAK_AVX2_JOIN_EQ = prove
@@ -146,7 +147,15 @@ let keccak_avx2_lane_form t =
   try forall keccak_avx2_atom (keccak_avx2_lanes_of t)
   with Failure _ -> false;;
 
+(* The numbers of the abbreviations y<n> of the lanes come from an atomic    *)
+(* counter, so that proofs that run at the same time on several domains      *)
+(* (common/par.ml) do not make the same name: ABBREV_TAC fails if the name   *)
+(* is free in the goal. The reference keccak_avx2_lanes, which proofs reset  *)
+(* before a round, is not used any more.                                     *)
+
 let keccak_avx2_lanes = ref 0;;
+
+let keccak_avx2_lane_counter = par_counter ();;
 
 let KECCAK_AVX2_LANE_ABBREV_TAC k (asl,w) =
   let sv = mk_var("s"^string_of_int k,`:x86state`) in
@@ -166,8 +175,7 @@ let KECCAK_AVX2_LANE_ABBREV_TAC k (asl,w) =
                  (SPEC (rhs(concl th)) KECCAK_AVX2_SPLIT) in
       let abv = setify(filter (not o keccak_avx2_atom)
                   (keccak_avx2_lanes_of(rhs(concl sth)))) in
-      let mk1 e = (incr keccak_avx2_lanes;
-                   mk_eq(mk_var("y"^string_of_int(!keccak_avx2_lanes),
+      let mk1 e = (mk_eq(mk_var("y"^string_of_int(keccak_avx2_lane_counter ()),
                                 `:int64`),e)) in
       (UNDISCH_THEN (concl th) (K ALL_TAC) THEN
        MP_TAC(TRANS th sth) THEN
