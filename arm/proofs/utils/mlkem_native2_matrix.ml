@@ -15,7 +15,30 @@
 
 needs "arm/proofs/utils/mlkem_native2_noise.ml";;
 needs "arm/proofs/utils/mlkem_native_fips203.ml";;
-needs "arm/proofs/mlkem_rej_uniform_alt_VARIABLE_TIME.ml";;
+needs "arm/proofs/mlkem_native/asm/rej_uniform_alt_variable_time_spec.ml";;
+
+(*** Two lemmas on SUB_LIST of the standalone proof of the rejection sampler,
+ *** which have a type variable and so are not contracts of its spec
+ ***)
+
+let SUB_LIST_0_LE = prove
+ (`!l:A list n. LENGTH l <= n ==> SUB_LIST(0,n) l = l`,
+  REPEAT STRIP_TAC THEN
+  FIRST_ASSUM(SUBST1_TAC o MATCH_MP
+    (ARITH_RULE `a <= n ==> n = a + (n - a)`)) THEN
+  REWRITE_TAC[SUB_LIST_SPLIT; SUB_LIST_LENGTH; ADD_CLAUSES] THEN
+  SIMP_TAC[SUB_LIST_TRIVIAL; LE_REFL; APPEND_NIL]);;
+
+let SUB_LIST_0_APPEND_SUB_LIST = prove
+ (`!(X:A list) Y n.
+        SUB_LIST(0,n) (APPEND (SUB_LIST(0,n) X) Y) =
+        SUB_LIST(0,n) (APPEND X Y)`,
+  REPEAT GEN_TAC THEN ASM_CASES_TAC `LENGTH(X:A list) <= n` THENL
+   [ASM_SIMP_TAC[SUB_LIST_0_LE]; ALL_TAC] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[NOT_LE]) THEN
+  ASM_SIMP_TAC[SUB_LIST_APPEND_LEFT; LT_IMP_LE; LENGTH_SUB_LIST; SUB_0;
+               ARITH_RULE `n < l ==> MIN n l = n`; LE_REFL] THEN
+  REWRITE_TAC[SUB_LIST_IDEMPOTENT]);;
 
 (* ------------------------------------------------------------------------- *)
 (* SampleNTT as the first 256 accepted 12-bit fields (those < q) of the      *)

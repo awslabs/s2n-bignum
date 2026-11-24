@@ -39,11 +39,10 @@ let ASSUME_CALLEE_TAILED_TAC th name =
 (* composed by THEN.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-let native2_fresh_counter = ref 0;;
+let native2_fresh_next = par_counter ();;
 
 let native2_fresh_var s ty =
-  incr native2_fresh_counter;
-  mk_var(s^"_"^string_of_int(!native2_fresh_counter),ty);;
+  mk_var(s^"_"^string_of_int(native2_fresh_next()),ty);;
 
 let FRESH_TAIL_RULE th =
   let vs = fst(strip_forall(concl th)) in

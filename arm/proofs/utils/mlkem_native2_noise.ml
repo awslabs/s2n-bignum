@@ -8,73 +8,19 @@
 (* SamplePolyCBD_eta(PRF_eta(sigma, b)) of FIPS 203, in the lanes of the     *)
 (* Keccak permutations: the coefficients of SamplePolyCBD, the PRF output as *)
 (* the state of a lane after one or two permutations, the lane as stored by  *)
-(* the code, the theorems for the callees (sha3_keccak4_f1600_alt2,          *)
-(* mlkem_cbd2, mlkem_cbd3) in the forms a caller needs, and a simulation     *)
-(* driver that steps through the code and takes each call as one step.       *)
+(* the code, the calls of the callees (sha3_keccak4_f1600_alt2, mlkem_cbd2,  *)
+(* mlkem_cbd3, whose contracts are in the spec files of the build), and a    *)
+(* simulation driver that steps through the code and takes each call as one  *)
+(* step.                                                                     *)
 (* ========================================================================= *)
 
-needs "arm/proofs/mlkem_native/asm/mlkem_native2_image.ml";;
+needs "arm/proofs/mlkem_native/asm/layout.ml";;
 needs "arm/proofs/utils/mlkem_native2_sponge.ml";;
-needs "arm/proofs/mlkem_cbd2.ml";;
-needs "arm/proofs/mlkem_cbd3.ml";;
-needs "arm/proofs/sha3_keccak4_f1600_alt2.ml";;
+needs "arm/proofs/mlkem_native/asm/keccak4_f1600_alt2_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/cbd2_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/cbd3_spec.ml";;
+needs "arm/proofs/utils/mlkem_native2_cbd.ml";;
 needs "common/fips203/fips203.ml";;
-
-(* ------------------------------------------------------------------------- *)
-(* The coefficients of SamplePolyCBD_eta(b) as integers in [-eta,eta], so    *)
-(* that mlkem_cbd eta b is their polynomial, and as computed by mlkem_cbd2   *)
-(* and mlkem_cbd3.                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-let mlkem_cbd_coeff = new_definition
- `mlkem_cbd_coeff eta (b:byte list) i =
-    &(nsum {j | j < eta}
-           (\j. (num_of_bytelist b DIV 2 EXP (2 * eta * i + j)) MOD 2)) -
-    &(nsum {j | j < eta}
-           (\j. (num_of_bytelist b DIV 2 EXP (2 * eta * i + eta + j)) MOD 2)):
-    int`;;
-
-let MLKEM_CBD_COEFF = prove
- (`!eta b. mlkem_cbd eta b = mlkem_poly(mlkem_cbd_coeff eta b)`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[mlkem_cbd] THEN
-  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN AP_TERM_TAC THEN
-  REWRITE_TAC[FUN_EQ_THM; mlkem_cbd_coeff]);;
-
-let NSUM_LT_2 = prove
- (`!f. nsum {j | j < 2} f = f 0 + f 1`,
-  GEN_TAC THEN REWRITE_TAC[ARITH_RULE `2 = SUC(SUC 0)`] THEN
-  REWRITE_TAC[NSUM_CLAUSES_NUMSEG_LT; ADD_CLAUSES; ARITH_RULE `SUC 0 = 1`]);;
-
-let NSUM_LT_3 = prove
- (`!f. nsum {j | j < 3} f = f 0 + f 1 + f 2`,
-  GEN_TAC THEN REWRITE_TAC[ARITH_RULE `3 = SUC(SUC(SUC 0))`] THEN
-  REWRITE_TAC[NSUM_CLAUSES_NUMSEG_LT; ADD_CLAUSES;
-              ARITH_RULE `SUC 0 = 1 /\ SUC 1 = 2`; ADD_ASSOC]);;
-
-let MLKEM_CBD_COEFF_2 = prove
- (`!b i. mlkem_cbd_coeff 2 b i =
-         &((num_of_bytelist b DIV 2 EXP (4 * i)) MOD 2 +
-           (num_of_bytelist b DIV 2 EXP (4 * i + 1)) MOD 2) -
-         &((num_of_bytelist b DIV 2 EXP (4 * i + 2)) MOD 2 +
-           (num_of_bytelist b DIV 2 EXP (4 * i + 3)) MOD 2)`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[mlkem_cbd_coeff; NSUM_LT_2] THEN
-  REWRITE_TAC[ARITH_RULE
-   `2 * 2 * i + 0 = 4 * i /\ 2 * 2 * i + 1 = 4 * i + 1 /\
-    2 * 2 * i + 2 + 0 = 4 * i + 2 /\ 2 * 2 * i + 2 + 1 = 4 * i + 3`]);;
-
-let MLKEM_CBD_COEFF_3 = prove
- (`!b i. mlkem_cbd_coeff 3 b i =
-         &((num_of_bytelist b DIV 2 EXP (6 * i)) MOD 2 +
-           (num_of_bytelist b DIV 2 EXP (6 * i + 1)) MOD 2 +
-           (num_of_bytelist b DIV 2 EXP (6 * i + 2)) MOD 2) -
-         &((num_of_bytelist b DIV 2 EXP (6 * i + 3)) MOD 2 +
-           (num_of_bytelist b DIV 2 EXP (6 * i + 4)) MOD 2 +
-           (num_of_bytelist b DIV 2 EXP (6 * i + 5)) MOD 2)`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[mlkem_cbd_coeff; NSUM_LT_3] THEN
-  REWRITE_TAC[ARITH_RULE
-   `2 * 3 * i + 0 = 6 * i /\ 2 * 3 * i + 1 = 6 * i + 1 /\
-    2 * 3 * i + 2 = 6 * i + 2 /\ 2 * 3 * i + 3 + 0 = 6 * i + 3 /\
-    2 * 3 * i + 3 + 1 = 6 * i + 4 /\ 2 * 3 * i + 3 + 2 = 6 * i + 5`]);;
 
 (* ------------------------------------------------------------------------- *)
 (* PRF_eta(s, b) = SHAKE256(s || b, 64 * eta) for a 32-byte seed s: the      *)
@@ -397,191 +343,6 @@ let READ_MEMORY_BYTES_192_PRF_3 = prove
   CONV_TAC NUM_REDUCE_CONV THEN SIMP_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
-(* The theorems for the callees in the forms a caller needs: the x4          *)
-(* permutation on four states as 1600-bit words, mlkem_cbd2 and mlkem_cbd3   *)
-(* with the coefficients of SamplePolyCBD, and the constant-time and memory  *)
-(* safety of the latter with the frames of their correctness theorems (that  *)
-(* of the x4 permutation, SHA3_KECCAK4_F1600_ALT2_SUBROUTINE_SAFE_FRAMED, is *)
-(* in its file).                                                             *)
-(* ------------------------------------------------------------------------- *)
-
-let SHA3_KECCAK4_F1600_ALT2_SUBROUTINE_CORRECT_F1600 = prove
- (`!a rc (S1:1600 word) (S2:1600 word) (S3:1600 word) (S4:1600 word)
-    pc stackpointer returnaddress.
-      aligned 16 stackpointer /\
-      nonoverlapping (a,800) (word_sub stackpointer (word 224),224) /\
-      ALLPAIRS nonoverlapping
-               [(a,800); (word_sub stackpointer (word 224),224)]
-               [(word pc,0xda0); (rc,192)]
-      ==> ensures arm
-           (\s. aligned_bytes_loaded s (word pc) sha3_keccak4_f1600_alt2_mc /\
-                read PC s = word pc /\
-                read SP s = stackpointer /\
-                read X30 s = returnaddress /\
-                C_ARGUMENTS [a; rc] s /\
-                read (memory :> wbytes a) s = S1 /\
-                read (memory :> wbytes(word_add a (word 200))) s = S2 /\
-                read (memory :> wbytes(word_add a (word 400))) s = S3 /\
-                read (memory :> wbytes(word_add a (word 600))) s = S4 /\
-                wordlist_from_memory(rc,24) s = round_constants)
-           (\s. read PC s = returnaddress /\
-                read (memory :> wbytes a) s = keccak_f1600 S1 /\
-                read (memory :> wbytes(word_add a (word 200))) s =
-                keccak_f1600 S2 /\
-                read (memory :> wbytes(word_add a (word 400))) s =
-                keccak_f1600 S3 /\
-                read (memory :> wbytes(word_add a (word 600))) s =
-                keccak_f1600 S4)
-           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-            MAYCHANGE
-             [memory :> bytes(a,800);
-              memory :> bytes(word_sub stackpointer (word 224),224)])`,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN
-  MP_TAC(SPECL [`a:int64`; `rc:int64`;
-                `wordlist_of_num 25 (val(S1:1600 word)):int64 list`;
-                `wordlist_of_num 25 (val(S2:1600 word)):int64 list`;
-                `wordlist_of_num 25 (val(S3:1600 word)):int64 list`;
-                `wordlist_of_num 25 (val(S4:1600 word)):int64 list`;
-                `pc:num`; `stackpointer:int64`; `returnaddress:int64`]
-               SHA3_KECCAK4_F1600_ALT2_SUBROUTINE_CORRECT) THEN
-  ASM_REWRITE_TAC[GSYM READ_MEMORY_WBYTES_KECCAK] THEN
-  DISCH_THEN(MATCH_MP_TAC o MATCH_MP (REWRITE_RULE[IMP_CONJ]
-    (ONCE_REWRITE_RULE[CONJ_SYM] ENSURES_POSTCONDITION_THM))) THEN
-  MESON_TAC[KECCAK_F1600_MEMORY]);;
-
-let MLKEM_CBD2_SUBROUTINE_CORRECT_COEFF = prove
- (`!r a (b:byte list) pc returnaddress.
-        ALL (nonoverlapping (r,512)) [(word pc,0x10c); (a,128)]
-        ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) mlkem_cbd2_mc /\
-                  read PC s = word pc /\
-                  read X30 s = returnaddress /\
-                  C_ARGUMENTS [r; a] s /\
-                  read (memory :> bytes(a,128)) s = num_of_bytelist b)
-             (\s. read PC s = returnaddress /\
-                  !i. i < 256
-                      ==> read(memory :> bytes16(word_add r (word(2 * i)))) s =
-                          iword(mlkem_cbd_coeff 2 b i))
-             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(r,512)])`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[MLKEM_CBD_COEFF_2] THEN
-  ACCEPT_TAC(SPECL [`r:int64`; `a:int64`; `num_of_bytelist(b:byte list)`;
-                    `pc:num`; `returnaddress:int64`]
-                   MLKEM_CBD2_SUBROUTINE_CORRECT));;
-
-let MLKEM_CBD3_SUBROUTINE_CORRECT_COEFF = prove
- (`!r a (b:byte list) pc returnaddress.
-        ALL (nonoverlapping (r,512)) [(word pc,0xd4); (a,192)]
-        ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) mlkem_cbd3_mc /\
-                  read PC s = word pc /\
-                  read X30 s = returnaddress /\
-                  C_ARGUMENTS [r; a] s /\
-                  read (memory :> bytes(a,192)) s = num_of_bytelist b)
-             (\s. read PC s = returnaddress /\
-                  !i. i < 256
-                      ==> read(memory :> bytes16(word_add r (word(2 * i)))) s =
-                          iword(mlkem_cbd_coeff 3 b i))
-             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(r,512)])`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[MLKEM_CBD_COEFF_3] THEN
-  ACCEPT_TAC(SPECL [`r:int64`; `a:int64`; `num_of_bytelist(b:byte list)`;
-                    `pc:num`; `returnaddress:int64`]
-                   MLKEM_CBD3_SUBROUTINE_CORRECT));;
-
-let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:true
-    (assoc "mlkem_cbd2" subroutine_signatures)
-    MLKEM_CBD2_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_CBD2_EXEC;;
-
-let MLKEM_CBD2_NOIBT_SUBROUTINE_SAFE_FRAMED = time prove
- (`exists f_events.
-       forall e r a pc returnaddress.
-           ALL (nonoverlapping (r,512)) [word pc,0x108; a,128]
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc) mlkem_cbd2_tmc /\
-                    read PC s = word pc /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [r; a] s /\
-                    read events s = e)
-               (\s. read PC s = returnaddress /\
-                    (exists e2.
-                         read events s = APPEND e2 e /\
-                         e2 = f_events a r pc returnaddress /\
-                         memaccess_inbounds e2 [a,128; r,512] [r,512]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [memory :> bytes(r,512)])`,
-  ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_CBD2_EXEC);;
-
-let MLKEM_CBD2_SUBROUTINE_SAFE_FRAMED = time prove
- (`exists f_events.
-       forall e r a pc returnaddress.
-           ALL (nonoverlapping (r,512)) [word pc,0x10c; a,128]
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc) mlkem_cbd2_mc /\
-                    read PC s = word pc /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [r; a] s /\
-                    read events s = e)
-               (\s. read PC s = returnaddress /\
-                    (exists e2.
-                         read events s = APPEND e2 e /\
-                         e2 = f_events a r pc returnaddress /\
-                         memaccess_inbounds e2 [a,128; r,512] [r,512]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [memory :> bytes(r,512)])`,
-  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE
-    mlkem_cbd2_mc mlkem_cbd2_tmc MLKEM_CBD2_NOIBT_SUBROUTINE_SAFE_FRAMED));;
-
-let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:true
-    (assoc "mlkem_cbd3" subroutine_signatures)
-    MLKEM_CBD3_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_CBD3_EXEC;;
-
-let MLKEM_CBD3_NOIBT_SUBROUTINE_SAFE_FRAMED = time prove
- (`exists f_events.
-       forall e r a pc returnaddress.
-           ALL (nonoverlapping (r,512)) [word pc,0xd0; a,192]
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc) mlkem_cbd3_tmc /\
-                    read PC s = word pc /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [r; a] s /\
-                    read events s = e)
-               (\s. read PC s = returnaddress /\
-                    (exists e2.
-                         read events s = APPEND e2 e /\
-                         e2 = f_events a r pc returnaddress /\
-                         memaccess_inbounds e2 [a,192; r,512] [r,512]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [memory :> bytes(r,512)])`,
-  ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_CBD3_EXEC);;
-
-let MLKEM_CBD3_SUBROUTINE_SAFE_FRAMED = time prove
- (`exists f_events.
-       forall e r a pc returnaddress.
-           ALL (nonoverlapping (r,512)) [word pc,0xd4; a,192]
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc) mlkem_cbd3_mc /\
-                    read PC s = word pc /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [r; a] s /\
-                    read events s = e)
-               (\s. read PC s = returnaddress /\
-                    (exists e2.
-                         read events s = APPEND e2 e /\
-                         e2 = f_events a r pc returnaddress /\
-                         memaccess_inbounds e2 [a,192; r,512] [r,512]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [memory :> bytes(r,512)])`,
-  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE
-    mlkem_cbd3_mc mlkem_cbd3_tmc MLKEM_CBD3_NOIBT_SUBROUTINE_SAFE_FRAMED));;
-
-(* ------------------------------------------------------------------------- *)
 (* A simulation driver for code whose control flow is fixed once its         *)
 (* parameters are: NATIVE2_RUN_TAC exec derive calls k steps from state sk   *)
 (* until the return (the PC no longer an offset of pc), first applying the   *)
@@ -760,9 +521,13 @@ let NATIVE2_SAFE_CALL_TAC exec vars label (offset,submc) ilist k =
 (* events and the events of the calls.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let native2_trace_count = ref 0;;
+(* The counter and the list are for the jobs of a link run at the same time  *)
+(* on several domains (see common/par.ml): the counter is atomic, so the    *)
+(* names are distinct, and the list is of the domain.                        *)
 
-let native2_trace_defs = ref ([]:thm list);;
+let native2_trace_next = par_counter ();;
+
+let native2_trace_defs = par_local_ref (fun () -> ([]:thm list));;
 
 (*** The events at state k, CONS and APPEND down to e, as APPEND (T x1 ...
  *** xn) e, unless they are already in that form
@@ -797,11 +562,10 @@ let NATIVE2_TRACE_DEFINE_TAC k (asl,w as gl) =
     | Some x when defined x -> ALL_TAC gl
     | Some x ->
       let fvs = frees x in
-      incr native2_trace_count;
-      let name = "native2_trace_"^string_of_int(!native2_trace_count) in
+      let name = "native2_trace_"^string_of_int(native2_trace_next()) in
       let ty = itlist (mk_fun_ty o type_of) fvs (type_of x) in
       let def = new_definition(mk_eq(list_mk_comb(mk_var(name,ty),fvs),x)) in
-      native2_trace_defs := def :: !native2_trace_defs;
+      (native2_trace_defs()) := def :: !(native2_trace_defs());
       let eqth = prove(mk_eq(t,list_mk_icomb "APPEND" [x; e]),
                        REWRITE_TAC[APPEND; GSYM APPEND_ASSOC]) in
       let th' = TRANS th (TRANS eqth
@@ -847,7 +611,7 @@ let rec NATIVE2_SEGMENTS_CONV t =
   | _ -> REFL t;;
 
 let NATIVE2_MEMACCESS_SEGMENTS_TAC normtac =
-  W(fun _ -> REWRITE_TAC !native2_trace_defs) THEN normtac THEN
+  W(fun _ -> REWRITE_TAC !(native2_trace_defs())) THEN normtac THEN
   REWRITE_TAC[WORD_ADD_0; GSYM APPEND_ASSOC; APPEND_NIL] THEN
   ((CONV_TAC(RATOR_CONV(RATOR_CONV(RAND_CONV NATIVE2_SEGMENTS_CONV))) THEN
     REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND; APPEND_NIL] THEN

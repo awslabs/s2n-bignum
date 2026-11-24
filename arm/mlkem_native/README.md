@@ -30,12 +30,14 @@ compiler and the optimization level, `<build>` = `<compiler>_<level>`:
  - `clang17_O3` for the clang 17 `-O3` binary, whose whole image is
    verified in the same way (see "The clang 17 -O3 image");
  - `asm` for the API in hand-written assembly, which is not compiled code:
-   its files and proofs are organized differently, as described in
-   `asm/README.md` (the proofs are about the image of its objects linked
-   by GNU ld, each proves the theorems of its callees again rather than
-   assuming their contracts, there is no link file, and `asm/proofs.mk` is
-   written by hand), and the rest of this file is about the compiled
-   builds.
+   its files are organized differently, as described in `asm/README.md`.
+   Its proofs are done in the way described below, with a spec and a
+   proof file for each function and a generated `link.ml` and `proofs.mk`,
+   but are about the image of its objects linked by GNU ld, whose make rule
+   is written by hand (`asm/image.mk`), and the contracts of its kernels
+   (in `../mlkem` and `../sha3`) are proved from the standalone proofs of
+   the library, which the proof file of each kernel runs as its job. The
+   rest of this file is about the compiled builds.
 
 For a build:
 

@@ -5,15 +5,18 @@
 
 (* ========================================================================= *)
 (* Tools for the proofs of the API functions of mlkem_native2 for the three  *)
-(* parameter sets (arm/proofs/mlkem_native/asm/mlkem512.ml, mlkem768.ml and  *)
-(* mlkem1024.ml): the tables of the constants block in the image, the        *)
-(* theorems for the functions they call in the form a caller needs, and the  *)
-(* proofs that are the same for the three sets up to the sizes.              *)
+(* parameter sets (the proof files of arm/proofs/mlkem_native/asm for k = 2, *)
+(* 3, 4): the tables of the constants block in the image, the use of the     *)
+(* contracts of the functions they call, and the proofs that are the same    *)
+(* for the three sets up to the sizes.                                       *)
 (* ========================================================================= *)
 
-needs "arm/proofs/mlkem_native/asm/mlkem_native2_image.ml";;
-needs "arm/proofs/mlkem_native/asm/mlkem_hash_h.ml";;
-needs "arm/proofs/mlkem_check_encoding.ml";;
+needs "arm/proofs/mlkem_native/relative.ml";;
+needs "arm/proofs/mlkem_native/asm/layout.ml";;
+needs "arm/proofs/mlkem_native/asm/hash_h_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/check_encoding_spec.ml";;
+needs "arm/proofs/utils/mlkem_native2_sponge.ml";;
+needs "arm/proofs/utils/mlkem_native2_safety.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The tables of the constants block, at mlkem_native2_constants in the      *)
@@ -54,123 +57,6 @@ let MLKEM_NATIVE2_ROUND_CONSTANTS = prove
               CONV_RULE(RAND_CONV LENGTH_CONV)
                (AP_TERM `LENGTH:byte list->num` mlkem_native2_rc_data)] THEN
   SIMP_TAC[]);;
-
-(* ------------------------------------------------------------------------- *)
-(* The constant-time and memory safety of mlkem_check_encoding with the      *)
-(* frame of its correctness theorem, as needed to use it as a callee (that   *)
-(* in its proof file is for the library, with a trivial frame), and its      *)
-(* correctness for a given number k of polynomials.                          *)
-(* ------------------------------------------------------------------------- *)
-
-let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:true
-    (assoc "mlkem_check_encoding" subroutine_signatures)
-    MLKEM_CHECK_ENCODING_NOIBT_SUBROUTINE_CORRECT
-    MLKEM_CHECK_ENCODING_EXEC;;
-
-let MLKEM_CHECK_ENCODING_NOIBT_SUBROUTINE_SAFE_FRAMED = time prove
- (`exists f_events.
-       forall e a k pc returnaddress.
-           val k < 2 EXP 61
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc)
-                      mlkem_check_encoding_tmc /\
-                    read PC s = word pc /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [a; k] s /\
-                    read events s = e)
-               (\s. read PC s = returnaddress /\
-                    (exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 = f_events a k pc returnaddress /\
-                        memaccess_inbounds e2 [a,(384 * val k) * 1] []))
-               MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
-  ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(a:int64) (k:int64) (pc:num) (returnaddress:int64).
-      if val k = 0 then f_ev_zero a k pc returnaddress
-      else APPEND (f_ev_epil a k pc returnaddress)
-                  (APPEND (ENUMERATEL (8 * val k)
-                             (\i. f_ev_loop a k pc returnaddress i))
-                          (f_ev_prol a k pc returnaddress))
-    :(uarch_event)list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  X_GEN_TAC `a:int64` THEN W64_GEN_TAC `k:num` THEN
-  MAP_EVERY X_GEN_TAC [`pc:num`; `returnaddress:int64`] THEN
-  REWRITE_TAC[C_ARGUMENTS; fst MLKEM_CHECK_ENCODING_EXEC;
-              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  DISCH_TAC THEN ASM_REWRITE_TAC[] THEN ASM_CASES_TAC `k = 0` THENL
-   [ASM_REWRITE_TAC[] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false MLKEM_CHECK_ENCODING_EXEC (1--31) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `word_shl (word k:int64) 3 = word(8 * k)` ASSUME_TAC THENL
-   [REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_SHL; VAL_WORD; DIMINDEX_64] THEN
-    CONV_TAC MOD_DOWN_CONV THEN
-    REWRITE_TAC[ARITH_RULE `2 EXP 3 * k = 8 * k`];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `val(word(8 * k):int64) = 8 * k /\ ~(8 * k = 0)`
-  STRIP_ASSUME_TAC THENL
-   [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN CONJ_TAC THENL
-     [MATCH_MP_TAC MOD_LT THEN UNDISCH_TAC `k < 2 EXP 61` THEN ARITH_TAC;
-      ASM_ARITH_TAC];
-    ALL_TAC] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `8 * k` `pc + 0x4c` `pc + 0x98`
-   `\i s. read X30 s = returnaddress /\
-          read X0 s = word_add a (word(48 * i)) /\
-          read X4 s = word(8 * k - i)` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false MLKEM_CHECK_ENCODING_EXEC (1--19) THEN
-    REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0; SUB_0] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SUBGOAL_THEN
-     `word_sub (word (8 * k - i)) (word 1):int64 = word(8 * k - (i + 1)) /\
-      val(word(8 * k - (i + 1)):int64) = 8 * k - (i + 1)`
-    STRIP_ASSUME_TAC THENL
-     [CONJ_TAC THENL
-       [MP_TAC(ISPECL [`8 * k - i`; `1`]
-          (INST_TYPE [`:64`,`:N`] WORD_SUB)) THEN
-        ASM_SIMP_TAC[ARITH_RULE `i < 8 * k ==> 1 <= 8 * k - i`] THEN
-        DISCH_THEN(SUBST1_TAC o SYM) THEN AP_TERM_TAC THEN ARITH_TAC;
-        REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN MATCH_MP_TAC MOD_LT THEN
-        UNDISCH_TAC `k < 2 EXP 61` THEN ARITH_TAC];
-      ALL_TAC] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false MLKEM_CHECK_ENCODING_EXEC (1--19) THEN
-    CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
-    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false MLKEM_CHECK_ENCODING_EXEC (1--12) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC]);;
-
-let MLKEM_CHECK_ENCODING_SUBROUTINE_SAFE_FRAMED = time prove
- (`exists f_events.
-       forall e a k pc returnaddress.
-           val k < 2 EXP 61
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc) mlkem_check_encoding_mc /\
-                    read PC s = word pc /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [a; k] s /\
-                    read events s = e)
-               (\s. read PC s = returnaddress /\
-                    (exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 = f_events a k pc returnaddress /\
-                        memaccess_inbounds e2 [a,(384 * val k) * 1] []))
-               MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
-  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE
-    mlkem_check_encoding_mc mlkem_check_encoding_tmc
-    MLKEM_CHECK_ENCODING_NOIBT_SUBROUTINE_SAFE_FRAMED));;
 
 (*** The correctness of mlkem_check_encoding for k = 2, 3 or 4 ***)
 
@@ -328,7 +214,7 @@ let MLKEM_NATIVE2_CHECK_SK_CORRECT_TAC exec hoff =
     MATCH_MP MLKEM_NATIVE2_ROUND_CONSTANTS) THEN
   ARM_SUBROUTINE_SIM_TAC
    (mlkem_native2_image_mc,exec,0,
-    mlkem_native2_image_mc,MLKEM_HASH_H_SUBROUTINE_CORRECT)
+    mlkem_native2_image_mc,MLKEM_NATIVE_HASH_H_ASM_IMAGE_SUBROUTINE_CORRECT)
    [`read X0 s`; `read X1 s`; `ek:byte list`; `read X3 s`; `pc:num`;
     `read SP s`; `read X30 s`] 11 THEN
 
@@ -359,7 +245,7 @@ let MLKEM_NATIVE2_CHECK_SK_CORRECT_TAC exec hoff =
   REWRITE_TAC[EQ_SYM_EQ] THEN COND_CASES_TAC THEN CONV_TAC WORD_REDUCE_CONV;;
 
 let MLKEM_NATIVE2_CHECK_SK_SAFE_TAC exec eklen =
-  ASSUME_CALLEE_SAFETY_TAILED_TAC MLKEM_HASH_H_SUBROUTINE_SAFE "H_HASH" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC MLKEM_NATIVE_HASH_H_ASM_IMAGE_SUBROUTINE_SAFE "H_HASH" THEN
   META_EXISTS_TAC THEN
   REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;

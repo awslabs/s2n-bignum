@@ -501,15 +501,20 @@ count printed by `relative_report` at the end of the link file, see
 To run a link file, use `make <family>/<build>/link.correct` in `arm` or
 `x86`, with `<family>` one of `mlkem_native` and `mldsa_native`.
 
-The builds `asm` and `asm_avx512` of `x86/mlkem_native` are not compiled
-code but the ML-KEM API in hand-written assembly, on kernels of the library
-(see their `README.md`). They have a link file like the others, whose jobs
-include the standalone proofs of the kernels. The two x86 rows were
-measured with both link files running at the same time, each on 12 domains
-of CPUs 0-31 of the machine above (other users were on the machine too):
-about 14 minutes of each is the serial loading of the spec files, which
-includes the definitions of the kernels, and the 70 and 71 jobs take
-1875 s and 1867 s.
+The builds `asm` of `arm/mlkem_native` and of `x86/mlkem_native` and
+`asm_avx512` of `x86/mlkem_native` are not compiled code but the ML-KEM API
+in hand-written assembly, on kernels of the library (see their
+`README.md`). They have link files like the others, whose jobs include the
+standalone proofs of the kernels, each run once, in the job of the kernel.
+The two x86 rows were measured with both link files running at the same
+time, each on 12 domains of CPUs 0-31 of the machine above (other users
+were on the machine too): about 14 minutes of each is the serial loading
+of the spec files, which includes the definitions of the kernels, and the
+70 and 71 jobs take 1875 s and 1867 s. The AArch64 build states 160
+contracts; its 60 jobs take 18700 s of CPU time together. Its job
+`decompress_d11` fails with `HOL_PAR=1` when it runs beside the other jobs
+and passes otherwise (see `arm/mlkem_native/asm/README.md`), so its row is
+for a run with the serial backend.
 
 ### Benchmarking and "constant time"
 

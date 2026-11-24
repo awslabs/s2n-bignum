@@ -1,0 +1,19 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/mlkem_native/asm/gen_matrix_k4_safe_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/gen_matrix_safe_common_spec.ml";;
+
+let MLKEM_NATIVE_GEN_MATRIX_K4_NOISE_ASM_IMAGE_SUBROUTINE_SAFE = time prove
+ (MLKEM_NATIVE_GEN_MATRIX_K4_NOISE_ASM_IMAGE_SUBROUTINE_SAFE_STMT,
+  GM_SAFE_INSTANCE_TAC 5040);;
+
+let MLKEM_NATIVE_GEN_MATRIX_K4_HASH_ASM_IMAGE_SUBROUTINE_SAFE = time prove
+ (MLKEM_NATIVE_GEN_MATRIX_K4_HASH_ASM_IMAGE_SUBROUTINE_SAFE_STMT,
+  GM_SAFE_INSTANCE_TAC 3312);;
+
+let MLKEM_NATIVE_GEN_MATRIX_K4_HASHES_NOISE_ASM_IMAGE_SUBROUTINE_SAFE = time prove
+ (MLKEM_NATIVE_GEN_MATRIX_K4_HASHES_NOISE_ASM_IMAGE_SUBROUTINE_SAFE_STMT,
+  GM_SAFE_INSTANCE_TAC 5040);;

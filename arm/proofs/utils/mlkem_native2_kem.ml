@@ -5,31 +5,76 @@
 
 (* ========================================================================= *)
 (* Tools for the proofs of key generation, encapsulation and decapsulation   *)
-(* in mlkem_native2 (arm/proofs/mlkem_native/asm/mlkem512.ml, mlkem768.ml    *)
-(* and mlkem1024.ml): the tables of the constants block in the forms the     *)
-(* kernels take them, tactics for the steps of the functions in the image    *)
+(* in mlkem_native2 (the proof files in arm/proofs/mlkem_native/asm): the   *)
+(* tables of the constants block in the forms the kernels take them,         *)
+(* tactics for the steps of the functions in the image                       *)
 (* (the calls of the kernels as single steps with their results as ghost     *)
 (* functions for the coefficients, and the loops as lemmas), and the proofs  *)
 (* for a parameter set from the results of K-PKE in                          *)
 (* utils/mlkem_native2_kpke.ml.                                              *)
 (* ========================================================================= *)
 
+needs "arm/proofs/mlkem_native/relative.ml";;
 needs "arm/proofs/utils/mlkem_native2_kpke.ml";;
 needs "arm/proofs/utils/mlkem_native2_api.ml";;
 needs "arm/proofs/utils/mlkem_bytes.ml";;
-needs "arm/proofs/mlkem_native/asm/mlkem_hash_g.ml";;
-needs "arm/proofs/mlkem_native/asm/mlkem_gen_matrix.ml";;
-needs "arm/proofs/mlkem_ntt_alt.ml";;
-needs "arm/proofs/mlkem_intt_alt.ml";;
-needs "arm/proofs/mlkem_mulcache_compute.ml";;
-needs "arm/proofs/mlkem_tomont.ml";;
-needs "arm/proofs/mlkem_reduce.ml";;
-needs "arm/proofs/mlkem_add_reduce.ml";;
-needs "arm/proofs/mlkem_sub_reduce.ml";;
-needs "arm/proofs/mlkem_tobytes_alt.ml";;
-needs "arm/proofs/mlkem_frombytes.ml";;
-needs "arm/proofs/mlkem_frommsg.ml";;
-needs "arm/proofs/mlkem_tomsg.ml";;
+needs "arm/proofs/utils/mlkem_native2_cbd.ml";;
+needs "arm/proofs/utils/mlkem_native2_noise.ml";;
+needs "arm/proofs/utils/mlkem_native2_matrix.ml";;
+needs "arm/proofs/mlkem_native/asm/hash_g_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/getnoise_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/ntt_alt_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/intt_alt_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/mulcache_compute_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/tomont_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/reduce_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/add_reduce_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/sub_reduce_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/tobytes_alt_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/frombytes_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/frommsg_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/tomsg_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/basemul_k2_alt_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/basemul_k3_alt_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/basemul_k4_alt_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/compress_d4_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/compress_d5_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/compress_d10_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/compress_d11_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/decompress_d4_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/decompress_d5_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/decompress_d10_spec.ml";;
+needs "arm/proofs/mlkem_native/asm/decompress_d11_spec.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* After a call of mlkem_getnoise or mlkem_cbd2 in the proofs of the         *)
+(* functions that call mlkem_gen_matrix: the facts about the coefficients of *)
+(* the noise polynomials, as one assumption for each polynomial.             *)
+(* ------------------------------------------------------------------------- *)
+
+let GM_NORMALIZE_OUT_TAC k =
+  let sv = state_of k in
+  RULE_ASSUM_TAC(fun th ->
+    let c = concl th in
+    if is_forall c && free_in sv c &&
+       can (find_term (fun t -> is_const t && name_of t = "mlkem_cbd_coeff")) c
+    then CONV_RULE(ONCE_DEPTH_CONV NUM_REDUCE_CONV)
+          (REWRITE_RULE[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD; ADD_ASSOC;
+                        ADD_CLAUSES] th)
+    else th);;
+
+let GM_SPLIT_NOISE_TAC k =
+  let sv = state_of k in
+  FIRST_X_ASSUM(fun th ->
+    let c = concl th in
+    if is_forall c && free_in sv c && length(fst(strip_forall c)) = 2 &&
+       can (find_term (fun t -> is_const t && name_of t = "mlkem_prf")) c
+    then
+      let th1 = CONV_RULE EXPAND_CASES_CONV
+                 (REWRITE_RULE[IMP_CONJ; RIGHT_FORALL_IMP_THM] th) in
+      MAP_EVERY ASSUME_TAC (CONJUNCTS th1)
+    else NO_TAC) THEN
+  GM_NORMALIZE_OUT_TAC k;;
 
 (* ------------------------------------------------------------------------- *)
 (* The tables of the constants block in the forms the callees take them.     *)
@@ -512,7 +557,7 @@ let API_HASH_G_CALL_TAC exec d kbyte k gl =
             (SPECL [find_read_fact `X0` k gl; a; m; find_read_fact `X3` k gl;
                     `pc:num`; find_read_fact `SP` k gl;
                     find_read_fact `X30` k gl]
-                   MLKEM_HASH_G_SUBROUTINE_CORRECT) in
+                   MLKEM_NATIVE_HASH_G_ASM_IMAGE_SUBROUTINE_CORRECT) in
   (MP_TAC gin THEN ANTS_TAC THENL
     [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
      CONV_TAC(DEPTH_CONV NUM_EXP_CONV) THEN ASM_REWRITE_TAC[] THEN NO_TAC;
@@ -992,7 +1037,7 @@ let API_HASH_H_CALL_TAC exec m lenth k gl =
             (SPECL [find_read_fact `X0` k gl; find_read_fact `X1` k gl; m;
                     find_read_fact `X3` k gl; `pc:num`;
                     find_read_fact `SP` k gl; find_read_fact `X30` k gl]
-                   MLKEM_HASH_H_SUBROUTINE_CORRECT) in
+                   MLKEM_NATIVE_HASH_H_ASM_IMAGE_SUBROUTINE_CORRECT) in
   (API_RC_TAC k THEN
    ARM_SUBROUTINE_SIM_TAC
     (mlkem_native2_image_mc,exec,0,mlkem_native2_image_mc,th) [] (k+1)) gl;;
@@ -1041,7 +1086,7 @@ let api_getnoise_th seed k gl =
                   ns(v `X2`); ns(v `X3`); ns(v `X4`); ns(v `X5`);
                   find_read_fact `X6` k gl; `pc:num`;
                   find_read_fact `SP` k gl; find_read_fact `X30` k gl]
-                 MLKEM_GETNOISE_SUBROUTINE_CORRECT in
+                 MLKEM_NATIVE_GETNOISE_ASM_IMAGE_SUBROUTINE_CORRECT in
   let th' = CONV_RULE(LAND_CONV(LAND_CONV(REWRITE_CONV[ARITH_EQ]))) th in
   REWRITE_RULE[COND_ID; LENGTH_MLKEM_G; ALL; NONOVERLAPPING_CLAUSES]
    (CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV) (REWRITE_RULE[] th'));;
@@ -1051,33 +1096,53 @@ let API_GETNOISE_CALL_TAC exec seed k gl =
    API_IMAGE_CALL_TAC exec (api_getnoise_th seed k gl) k) gl;;
 
 (*** The kernels that depend on the parameter set, basemul_kK_alt and the
- *** compression and decompression for du and dv: the proof of a parameter
- *** set loads only its own and adds them here with their code, for the
+ *** compression and decompression for du and dv, with their code and
+ *** correctness theorems (the contracts of their spec files), for the
  *** calls below
  ***)
 
-let api_param_kernels = ref ([]:(string * thm * thm) list);;
-
-let api_add_kernels l = api_param_kernels := !api_param_kernels @ l;;
+let api_param_kernels =
+ ["mlkem_decompress_d4",mlkem_decompress_d4_mc,
+  MLKEM_DECOMPRESS_D4_SUBROUTINE_CORRECT;
+  "mlkem_decompress_d5",mlkem_decompress_d5_mc,
+  MLKEM_DECOMPRESS_D5_SUBROUTINE_CORRECT;
+  "mlkem_decompress_d10",mlkem_decompress_d10_mc,
+  MLKEM_DECOMPRESS_D10_SUBROUTINE_CORRECT;
+  "mlkem_decompress_d11",mlkem_decompress_d11_mc,
+  MLKEM_DECOMPRESS_D11_SUBROUTINE_CORRECT;
+  "mlkem_compress_d4",mlkem_compress_d4_mc,
+  MLKEM_COMPRESS_D4_SUBROUTINE_CORRECT;
+  "mlkem_compress_d5",mlkem_compress_d5_mc,
+  MLKEM_COMPRESS_D5_SUBROUTINE_CORRECT;
+  "mlkem_compress_d10",mlkem_compress_d10_mc,
+  MLKEM_COMPRESS_D10_SUBROUTINE_CORRECT;
+  "mlkem_compress_d11",mlkem_compress_d11_mc,
+  MLKEM_COMPRESS_D11_SUBROUTINE_CORRECT;
+  "mlkem_basemul_k2_alt",mlkem_basemul_k2_alt_mc,
+  MLKEM_BASEMUL_K2_ALT_SUBROUTINE_CORRECT;
+  "mlkem_basemul_k3_alt",mlkem_basemul_k3_alt_mc,
+  MLKEM_BASEMUL_K3_ALT_SUBROUTINE_CORRECT;
+  "mlkem_basemul_k4_alt",mlkem_basemul_k4_alt_mc,
+  MLKEM_BASEMUL_K4_ALT_SUBROUTINE_CORRECT];;
 
 let api_param_kernel name =
   let mc,th =
-    try let _,mc,th = find (fun (n,_,_) -> n = name) !api_param_kernels in
+    try let _,mc,th = find (fun (n,_,_) -> n = name) api_param_kernels in
         mc,th
     with Failure _ -> failwith("api_param_kernel: no " ^ name) in
   mc,th,layout name,parse_term("pc + " ^ name);;
 
 (*** The definitions of the results of basemul_kK_alt (pmull, and
- *** basemul2_even etc.), added with the kernel
+ *** basemul2_even etc.)
  ***)
 
-let api_param_basemul_defs = ref ([]:(int * (thm * thm list)) list);;
-
-let api_add_basemul_defs k pmull_th defs =
-  api_param_basemul_defs := (k,(pmull_th,defs)) :: !api_param_basemul_defs;;
+let api_param_basemul_defs =
+ [2,(pmull,[basemul2_even; basemul2_odd; pmul_acc2; pmull_acc2]);
+  3,(pmull,[basemul3_even; basemul3_odd; pmul_acc3; pmull_acc3]);
+  4,(pmull,[basemul4_even; basemul4_odd; pmul_acc4; pmull_acc4])];;
 
 let api_basemul_defs k =
-  try assoc k !api_param_basemul_defs
+  try assoc k api_param_basemul_defs
   with Failure _ -> failwith("api_basemul_defs: no " ^ string_of_int k);;
 
 (*** basemul_kK of row r of the matrix (X1) by s (X2) with its mulcache (X3)
@@ -1652,7 +1717,7 @@ let API_HASH_G_MSG_CALL_TAC exec m lenth k gl =
             (SPECL [find_read_fact `X0` k gl; find_read_fact `X1` k gl; m;
                     find_read_fact `X3` k gl; `pc:num`;
                     find_read_fact `SP` k gl; find_read_fact `X30` k gl]
-                   MLKEM_HASH_G_SUBROUTINE_CORRECT) in
+                   MLKEM_NATIVE_HASH_G_ASM_IMAGE_SUBROUTINE_CORRECT) in
   (API_RC_TAC k THEN
    ARM_SUBROUTINE_SIM_TAC
     (mlkem_native2_image_mc,exec,0,mlkem_native2_image_mc,th) [] (k+1)) gl;;

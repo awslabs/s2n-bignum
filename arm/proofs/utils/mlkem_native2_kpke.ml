@@ -5,9 +5,9 @@
 
 (* ========================================================================= *)
 (* The algorithms of FIPS 203 for the proofs of the API functions of         *)
-(* mlkem_native2 (arm/proofs/mlkem_native/asm/mlkem512.ml, mlkem768.ml and   *)
-(* mlkem1024.ml): K-PKE key generation, encryption and decryption from the   *)
-(* coefficients the kernels compute, given as congruences mod q with bounds, *)
+(* mlkem_native2 (pke_encrypt_k2_proof.ml etc. in                            *)
+(* arm/proofs/mlkem_native/asm): K-PKE key generation, encryption and        *)
+(* decryption from the                                                       *)
 (* for the three parameter sets. The lemmas are those of the proofs of the   *)
 (* compiled C of mlkem-native, with the vectors also given as blocks of      *)
 (* polynomials.                                                              *)

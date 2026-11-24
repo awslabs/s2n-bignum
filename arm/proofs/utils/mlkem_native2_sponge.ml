@@ -7,14 +7,13 @@
 (* Tools for the proofs of the mlkem_native2 functions that run the Keccak   *)
 (* sponge of common/fips202/fips202.ml with sha3_keccak_f1600 on a state in  *)
 (* memory (mlkem_hash_h and mlkem_hash_g): the state as the 1600-bit word    *)
-(* read by wbytes, given by its 25 lanes or its 200 bytes; the theorem for   *)
-(* sha3_keccak_f1600 on such a state; the round constants as bytes; and the  *)
-(* XOR of the blocks of the message and of the padding into the state, lane  *)
-(* by lane or byte by byte, with the padded message as a number for          *)
-(* keccak_absorb.                                                            *)
+(* read by wbytes, given by its 25 lanes or its 200 bytes; the round         *)
+(* constants as bytes; and the XOR of the blocks of the message and of the   *)
+(* padding into the state, lane by lane or byte by byte, with the padded     *)
+(* message as a number for keccak_absorb.                                    *)
 (* ========================================================================= *)
 
-needs "arm/proofs/sha3_keccak_f1600.ml";;
+needs "arm/proofs/mlkem_native/asm/keccak_f1600_spec.ml";;
 needs "arm/proofs/utils/keccak_fips202.ml";;
 needs "arm/proofs/utils/mlkem_bytes.ml";;
 needs "arm/proofs/utils/mlkem_native_image.ml";;
@@ -140,43 +139,6 @@ let READ_MEMORY_WBYTES_ZERO = prove
   REWRITE_TAC[BYTES64_WBYTES; READ_COMPONENT_COMPOSE; VAL_READ_WBYTES;
               DIMINDEX_64; VAL_WORD_0] THEN
   CONV_TAC NUM_REDUCE_CONV THEN SIMP_TAC[] THEN ARITH_TAC);;
-
-(* ------------------------------------------------------------------------- *)
-(* The theorem for sha3_keccak_f1600 with the state as a 1600-bit word, and  *)
-(* the round constants that it needs as bytes in memory, which unlike        *)
-(* wordlist_from_memory are kept by the simulation over other stores.        *)
-(* ------------------------------------------------------------------------- *)
-
-let SHA3_KECCAK_F1600_SUBROUTINE_CORRECT_F1600 = prove
- (`!a rc (S:1600 word) pc stackpointer returnaddress.
-      aligned 16 stackpointer /\
-      nonoverlapping (a,200) (word_sub stackpointer (word 128),128) /\
-      ALLPAIRS nonoverlapping
-               [(a,200); (word_sub stackpointer (word 128),128)]
-               [(word pc,0x480); (rc,192)]
-      ==> ensures arm
-           (\s. aligned_bytes_loaded s (word pc) sha3_keccak_f1600_mc /\
-                read PC s = word pc /\
-                read SP s = stackpointer /\
-                read X30 s = returnaddress /\
-                C_ARGUMENTS [a; rc] s /\
-                read (memory :> wbytes a) s = S /\
-                wordlist_from_memory(rc,24) s = round_constants)
-           (\s. read PC s = returnaddress /\
-                read (memory :> wbytes a) s = keccak_f1600 S)
-           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-            MAYCHANGE
-             [memory :> bytes(a,200);
-              memory :> bytes(word_sub stackpointer (word 128),128)])`,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN
-  MP_TAC(SPECL [`a:int64`; `rc:int64`;
-                `wordlist_of_num 25 (val(S:1600 word)):int64 list`;
-                `pc:num`; `stackpointer:int64`; `returnaddress:int64`]
-               SHA3_KECCAK_F1600_SUBROUTINE_CORRECT) THEN
-  ASM_REWRITE_TAC[GSYM READ_MEMORY_WBYTES_KECCAK] THEN
-  DISCH_THEN(MATCH_MP_TAC o MATCH_MP (REWRITE_RULE[IMP_CONJ]
-    (ONCE_REWRITE_RULE[CONJ_SYM] ENSURES_POSTCONDITION_THM))) THEN
-  MESON_TAC[KECCAK_F1600_MEMORY]);;
 
 let WORDLIST_FROM_MEMORY_ROUND_CONSTANTS = prove
  (`!c s. wordlist_from_memory(c,24) s = round_constants <=>
@@ -437,77 +399,3 @@ let RESTRICT_RULE t th =
   let p,q = dest_imp bod in
   let p' = mk_conj(p,mk_neg(mk_eq(j,t))) in
   GEN j (DISCH p' (MP (SPEC j th) (CONJUNCT1(ASSUME p'))));;
-
-(* ------------------------------------------------------------------------- *)
-(* The constant-time and memory safety of sha3_keccak_f1600 with the frame   *)
-(* of its correctness theorem, as needed to use it as a callee: that of      *)
-(* the core without the saving of registers, and the subroutine from it.     *)
-(* ------------------------------------------------------------------------- *)
-
-let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:true
-    (assoc "sha3_keccak_f1600" subroutine_signatures)
-    SHA3_KECCAK_F1600_CORRECT
-    SHA3_KECCAK_F1600_EXEC;;
-
-let SHA3_KECCAK_F1600_SAFE_FRAMED = time prove
- (`exists f_events.
-       forall e a rc pc stackpointer.
-           aligned 16 stackpointer /\
-           nonoverlapping (a,200) (stackpointer,32) /\
-           ALLPAIRS nonoverlapping
-           [a,200; stackpointer,32]
-           [word pc,0x480; rc,192]
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc) sha3_keccak_f1600_mc /\
-                    read PC s = word (pc + 0x1c) /\
-                    read SP s = stackpointer /\
-                    C_ARGUMENTS [a; rc] s /\
-                    read events s = e)
-               (\s. read PC s = word (pc + 0x460) /\
-                    (exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 = f_events rc a pc stackpointer /\
-                        memaccess_inbounds e2
-                        [a,200; rc,192; stackpointer,32]
-                        [a,200; stackpointer,32]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [X19; X20; X21; X22; X23; X24;
-                           X25; X26; X27; X28; X29; X30] ,,
-                MAYCHANGE [memory :> bytes(a,200);
-                           memory :> bytes(stackpointer,32)])`,
-  ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SHA3_KECCAK_F1600_EXEC);;
-
-let SHA3_KECCAK_F1600_SUBROUTINE_SAFE_FRAMED = time prove
- (`exists f_events.
-       forall e a rc pc stackpointer returnaddress.
-           aligned 16 stackpointer /\
-           nonoverlapping (a,200) (word_sub stackpointer (word 128),128) /\
-           ALLPAIRS nonoverlapping
-           [a,200; word_sub stackpointer (word 128),128]
-           [word pc,0x480; rc,192]
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc) sha3_keccak_f1600_mc /\
-                    read PC s = word pc /\
-                    read SP s = stackpointer /\
-                    read X30 s = returnaddress /\
-                    C_ARGUMENTS [a; rc] s /\
-                    read events s = e)
-               (\s. read PC s = returnaddress /\
-                    (exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 = f_events rc a pc
-                               (word_sub stackpointer (word 128))
-                               returnaddress /\
-                        memaccess_inbounds e2
-                        [a,200; rc,192; word_sub stackpointer (word 128),128]
-                        [a,200; word_sub stackpointer (word 128),128]))
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE
-                 [memory :> bytes(a,200);
-                  memory :> bytes(word_sub stackpointer (word 128),128)])`,
-  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(7,7) SHA3_KECCAK_F1600_EXEC
-    SHA3_KECCAK_F1600_SAFE_FRAMED
-    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30]` 128 THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;

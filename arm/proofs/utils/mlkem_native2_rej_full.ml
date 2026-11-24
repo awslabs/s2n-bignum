@@ -7,10 +7,11 @@
 (* Uniform rejection sampling, mlkem_rej_uniform_alt_VARIABLE_TIME,          *)
 (* appending to a partial result: the events as a function of the inputs,    *)
 (* alone and together with the result ("FULL"), for the subroutine with its  *)
-(* BTI landing pad.                                                          *)
+(* BTI landing pad. Loaded by the proof file of the leaf, with loadt, after  *)
+(* the standalone proof of arm/proofs/mlkem_rej_uniform_alt_VARIABLE_TIME.ml, *)
+(* whose names it uses.                                                      *)
 (* ========================================================================= *)
 
-needs "arm/proofs/mlkem_rej_uniform_alt_VARIABLE_TIME.ml";;
 
 (* The events depend on which numbers are accepted, so they do not follow a  *)
 (* fixed template, but they depend only on the addresses, the count n and    *)
