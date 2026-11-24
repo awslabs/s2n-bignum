@@ -12,13 +12,16 @@
 (* fails. Otherwise it decrypts the ciphertext into m' (the inlined          *)
 (* mlkem1024_indcpa_dec), computes K' and r' as G of m' followed by the hash *)
 (* h in the key with mlkem_sha3_512, encrypts m' with r' again by            *)
-(* mlkem1024_indcpa_enc, compares the result with the ciphertext in          *)
-(* constant time, computes J of z (in the key) followed by the ciphertext    *)
-(* into the shared secret with mlkem_shake256, and replaces it by K' if the  *)
-(* ciphertexts are equal, again in constant time. In both cases it zeroes    *)
-(* its buffers. It is verified in the whole image (see libmlkem.ml), using   *)
-(* the theorems for mlkem1024_check_sk, mlk_poly_frombytes_c,                *)
-(* mlk_poly_ntt_c, mlk_poly_mulcache_compute_c,                              *)
+(* mlkem1024_indcpa_enc, compares the result with the ciphertext in constant *)
+(* time, computes J of z (in the key) followed by the ciphertext with        *)
+(* mlkem_shake256 into a 32-byte buffer of its frame (the one of m', which   *)
+(* is no longer needed), replaces it there by K' if the ciphertexts are      *)
+(* equal, again in constant time, and copies the 32 bytes to the shared      *)
+(* secret with two 128-bit loads and stores. It writes the shared secret     *)
+(* only by this copy. In both cases it zeroes its buffers. It is verified in *)
+(* the whole image (see libmlkem.ml), using the theorems for                 *)
+(* mlkem1024_check_sk, mlk_poly_frombytes_c, mlk_poly_ntt_c,                 *)
+(* mlk_poly_mulcache_compute_c,                                              *)
 (* mlk_polyvec_basemul_acc_montgomery_cached_c1024,                          *)
 (* mlk_poly_invntt_tomont_c, mlk_poly_reduce_c, mlkem_poly_tomsg,            *)
 (* mlkem_sha3_512, mlkem1024_indcpa_enc and mlkem_shake256 in the image and  *)
@@ -33,13 +36,13 @@
 (* -O2 indcpa_dec with the glue for the polyvec functions, and the loops of  *)
 (* poly_sub and of the two decompressions as lemmas themselves (those of the *)
 (* decompressions redo the proofs of the gcc 12 -O2 kernels). The lemma also *)
-(* saves X25 to X28, which this code saves only after the check of the key,  *)
-(* and keeps the pointer to the ciphertext on the stack, from which the      *)
-(* comparison loop loads it in each iteration. The rest is the gcc 12 -O2    *)
-(* proof of mlkem1024_dec, with the buffers of indcpa_dec now in this frame. *)
-(* The comparison of the ciphertexts keeps an XOR accumulator besides the OR *)
-(* accumulator, from which the mask is computed in another way, with the     *)
-(* same result.                                                              *)
+(* saves X23 to X26, which this code saves only after the check of the key   *)
+(* (X27 and X28 at the start), and keeps the pointer to the ciphertext on    *)
+(* the stack, from which the comparison loop loads it in each iteration. The *)
+(* rest is the gcc 12 -O2 proof of mlkem1024_dec, with the buffers of        *)
+(* indcpa_dec now in this frame. The comparison of the ciphertexts keeps an  *)
+(* XOR accumulator besides the OR accumulator, from which the mask is        *)
+(* computed in another way, with the same result.                            *)
 (*                                                                           *)
 (* The frame is the 8032 bytes of the function and the 22864 of              *)
 (* mlkem1024_indcpa_enc below them, 30896 in all.                            *)
@@ -349,7 +352,7 @@ let KD4_D5_GOAL = `exists f_events.
                    mlkem_native_libmlkem_gcc12_O2_mono_mc /\
                  read PC s = word (pc + mlkem1024_dec_loop3) /\
                  read X2 s = a /\ read X8 s = r /\
-                 read X27 s = word_add r (word 512) /\
+                 read X28 s = word_add r (word 512) /\
                  read Q2 s = word 0x00000010000000100000001000000010 /\
                  read Q3 s = word 0x0d010d010d010d010d010d010d010d01 /\
                  read (memory :> bytes(a,160)) s = n /\
@@ -370,7 +373,7 @@ let KD4_D5_GOAL = `exists f_events.
 
 let KD4_D5_INV = `\i s. read X2 s = word_add a (word(5 * i)) /\
           read X8 s = word_add r (word(16 * i)) /\
-          read X27 s = word_add r (word 512) /\
+          read X28 s = word_add r (word 512) /\
           read Q2 s = word 0x00000010000000100000001000000010 /\
           read Q3 s = word 0x0d010d010d010d010d010d010d010d01 /\
           read (memory :> bytes(a,160)) s = n /\
@@ -391,8 +394,8 @@ let KD4_D5 = assume_spec KD4_D5_STMT;;
 (* indcpa_dec: the message m' at b + 7808. The buffers of indcpa_dec are at  *)
 (* b (s), b + 2048 (u), b + 5696 (the multiplication cache), b + 6720 (the   *)
 (* product) and b + 7232 (v), where the gcc 12 -O2 function had them at 0,   *)
-(* 2048, 4096, 5120 and 5632 in its own frame. The lemma also saves X25 to   *)
-(* X28 and the pointer c to the ciphertext at SP + 48 to SP + 72 and SP +    *)
+(* 2048, 4096, 5120 and 5632 in its own frame. The lemma also saves X23 to   *)
+(* X26 and the pointer c to the ciphertext at SP + 32 to SP + 56 and SP +    *)
 (* 112, and leaves the pointer to the encapsulation key in the decapsulation *)
 (* key in X26, as the code of the function does in it. The proof is that of  *)
 (* the gcc 12 -O2 function, with the glue for the inlined polyvec functions, *)
@@ -652,7 +655,7 @@ let KD4_DEC_FINAL_TAC =
 
 let KD4_SUB = INLINE_PTR_LOOP "mlkem_native_libmlkem_gcc12_O2_mono_mc"
   KD4_EXEC "sub" "mlkem1024_dec_loop6" "mlkem1024_dec_loop6_exit"
-  "X23" "X0" "X27";;
+  "X27" "X0" "X28";;
 
 (*** The callees of the inlined indcpa_dec ***)
 
@@ -695,7 +698,7 @@ let KD4_SP n = Printf.sprintf "word_add stackpointer (word %d)" n;;
 (*** The lemma, for the two values of b ***)
 
 let KD4_DEC_GOAL b = parse_term(Printf.sprintf
- "!dk ct sk c mf ea el ev pc stackpointer x25 x26 x27 x28.
+ "!dk ct sk c mf ea el ev pc stackpointer x23 x24 x25 x26.
     memset_contract mf ea el ev /\\
     aligned 4096 (word pc:int64) /\\ pc + libmlkem_size <= 2 EXP 64 /\\
     aligned 16 stackpointer /\\ LENGTH dk = 1536 /\\ LENGTH ct = 1568 /\\
@@ -704,7 +707,7 @@ let KD4_DEC_GOAL b = parse_term(Printf.sprintf
     ALLPAIRS nonoverlapping
      [(word_add stackpointer (word %d),7840);
       (word_add stackpointer (word 22848),16);
-      (word_add stackpointer (word 22912),32);
+      (word_add stackpointer (word 22896),32);
       (word_add stackpointer (word 22960),8);
       (word_add stackpointer (word 22976),8)]
      [(c,1568); (sk,1536); (word pc,libmlkem_size);
@@ -716,9 +719,9 @@ let KD4_DEC_GOAL b = parse_term(Printf.sprintf
               read SP s = word_add stackpointer (word 22864) /\\
               read X0 s = c /\\
               read X19 s = word_add stackpointer (word %d) /\\
-              read X21 s = sk /\\
+              read X20 s = sk /\\
+              read X23 s = x23 /\\ read X24 s = x24 /\\
               read X25 s = x25 /\\ read X26 s = x26 /\\
-              read X27 s = x27 /\\ read X28 s = x28 /\\
               read (memory :> bytes64(word_add stackpointer (word 22968))) s =
               c /\\
               read (memory :> bytes64(word(pc + got_memset))) s = mf /\\
@@ -726,25 +729,25 @@ let KD4_DEC_GOAL b = parse_term(Printf.sprintf
               read (memory :> bytes(c,1568)) s = num_of_bytelist ct /\\
               read (memory :> bytes(sk,1536)) s = num_of_bytelist dk)
          (\\s. read PC s = word (pc + mlkem1024_dec_in_indcpa_dec_end) /\\
-              read X20 s = word_add stackpointer (word %d) /\\
+              read X27 s = word_add stackpointer (word %d) /\\
               read X26 s = word_add sk (word 1536) /\\
+              read (memory :> bytes64(word_add stackpointer (word 22896))) s =
+              x23 /\\
+              read (memory :> bytes64(word_add stackpointer (word 22904))) s =
+              x24 /\\
               read (memory :> bytes64(word_add stackpointer (word 22912))) s =
               x25 /\\
               read (memory :> bytes64(word_add stackpointer (word 22920))) s =
               x26 /\\
-              read (memory :> bytes64(word_add stackpointer (word 22928))) s =
-              x27 /\\
-              read (memory :> bytes64(word_add stackpointer (word 22936))) s =
-              x28 /\\
               read (memory :> bytes64(word_add stackpointer (word 22976))) s =
               c /\\
               read (memory :> bytes(word_add stackpointer (word %d),32)) s =
               num_of_bytelist(kpke_decrypt mlkem1024 dk ct))
          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,, MAYCHANGE [X18] ,,
-          MAYCHANGE [X20; X22; X23; X24; X25; X26; X27; X28; X30] ,,
+          MAYCHANGE [X21; X22; X23; X24; X25; X26; X27; X28; X30] ,,
           MAYCHANGE [memory :> bytes(word_add stackpointer (word %d),7840);
                      memory :> bytes(word_add stackpointer (word 22848),16);
-                     memory :> bytes(word_add stackpointer (word 22912),32);
+                     memory :> bytes(word_add stackpointer (word 22896),32);
                      memory :> bytes(word_add stackpointer (word 22960),8);
                      memory :> bytes(word_add stackpointer (word 22976),8)])"
   b b (b + 7808) (b + 7808) b);;
@@ -753,7 +756,7 @@ let KD4_DEC_INTRO_TAC =
   MAP_EVERY X_GEN_TAC
    [`dk:byte list`; `ct:byte list`; `sk:int64`; `c:int64`; `mf:int64`;
     `ea:int64`; `el:num`; `ev:num`; `pc:num`; `stackpointer:int64`;
-    `x25:int64`; `x26:int64`; `x27:int64`; `x28:int64`] THEN
+    `x23:int64`; `x24:int64`; `x25:int64`; `x26:int64`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALL; ALLPAIRS] THEN
   REPEAT STRIP_TAC THEN
   RULE_ASSUM_TAC(REWRITE_RULE[NONOVERLAPPING_CLAUSES]) THEN
@@ -868,7 +871,7 @@ let KD4_DEC_TAC b =
   INDCPA_INVNTT1_TAC "WI" (b + 6720) "WP" (st 158) THEN
   ARM_STEPS_TAC KD4_EXEC (159--159) THEN
   USE_THEN "H_SUB" (fun th -> KD4_SUB_TAC th
-   [`read events s`; `read X23 s`; `read X0 s`; `VD:num->int16`;
+   [`read events s`; `read X27 s`; `read X0 s`; `VD:num->int16`;
     `WI:num->int16`; `pc:num`] 160) THEN
   ARM_STEPS_TAC KD4_EXEC (161--164) THEN
   LOCAL_REDUCE_TAC
@@ -1015,10 +1018,12 @@ let KD4_FAIL_TAC =
 (* first 16 * i bytes of the ciphertext and of c' are equal (the code also   *)
 (* keeps an XOR accumulator in Q0, whose value does not matter), with the    *)
 (* pointer into the ciphertext at SP + 112, and the invariant of the         *)
-(* conditional move at iteration i that the first i bytes at ss are those of *)
-(* K' if the ciphertexts are equal and those of the result of J otherwise,   *)
-(* and the others still those of the result of J. The frame has the facts    *)
-(* needed after both loops, with X25 to X28 saved by the inlined indcpa_dec. *)
+(* conditional move at iteration i that the first i bytes of the buffer at   *)
+(* b + 7808, where J was written, are those of K' if the ciphertexts are     *)
+(* equal and those of the result of J otherwise, and the others still those  *)
+(* of the result of J. The copy to ss follows the loop. The frame has the    *)
+(* facts needed after both loops, with X23 to X26 saved by the inlined       *)
+(* indcpa_dec.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
 let KD4_MP = `kpke_decrypt mlkem1024 (mlkem_slice 0 1536 dk) c`;;
@@ -1050,9 +1055,9 @@ let KD4_SUBST tm =
 let KD4_FRAME b = KD4_SUBST(parse_term(Printf.sprintf
  "read SP s = word_add stackpointer (word 22864) /\\
   read X19 s = word_add stackpointer (word %d) /\\
-  read X20 s = word_add stackpointer (word %d) /\\
-  read X22 s = word_add stackpointer (word %d) /\\
-  read X24 s = word 0 /\\
+  read X21 s = word_add stackpointer (word %d) /\\
+  read X22 s = word 0 /\\
+  read X27 s = word_add stackpointer (word %d) /\\
   read (memory :> bytes64 (word_add stackpointer (word 22864))) s =
   x19_init /\\
   read (memory :> bytes64 (word_add stackpointer (word 22872))) s =
@@ -1085,14 +1090,14 @@ let KD4_FRAME b = KD4_SUBST(parse_term(Printf.sprintf
   read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\\
   read (memory :> bytes(ea,el)) s = ev /\\
   read (memory :> bytes(word_add stackpointer (word %d),32)) s = KP"
-  (b + 4096) (b + 7808) (b + 7744) (b + 7744)));;
+  (b + 4096) (b + 7744) (b + 7808) (b + 7744)));;
 
 let KD4_INV b = KD4_SUBST(parse_term(Printf.sprintf
  "\\i s. read X0 s = word_add stackpointer (word(%d + 16 * i)) /\\
         read X1 s = word_add stackpointer (word %d) /\\
         read (memory :> bytes64 (word_add stackpointer (word 22976))) s =
         word_add ct (word(16 * i)) /\\
-        read X21 s = sk /\\
+        read X20 s = sk /\\
         (read Q4 s = word 0 <=>
          num_of_bytelist c MOD 2 EXP (128 * i) = CP MOD 2 EXP (128 * i)) /\\
         read (memory :> bytes(ct,1568)) s = num_of_bytelist c /\\
@@ -1110,12 +1115,12 @@ let KD4_INV_FRAME b =
 
 let KD4_CMOV_INV b = KD4_SUBST(parse_term(Printf.sprintf
  "\\i s. read X0 s = word(i + 1) /\\
-        read X1 s = word_sub ss (word 1) /\\
-        read X21 s = (if EQ then word 0 else word 4294967041) /\\
-        read (memory :> bytes(ss,i)) s =
+        read X20 s = (if EQ then word 0 else word 4294967041) /\\
+        read (memory :> bytes(word_add stackpointer (word %d),i)) s =
         (if EQ then KP else KB) MOD 2 EXP (8 * i) /\\
-        read (memory :> bytes(word_add ss (word i),32 - i)) s =
-        KB DIV 2 EXP (8 * i) /\\ FRAME"));;
+        read (memory :> bytes(word_add (word_add stackpointer (word %d))
+                                       (word i),32 - i)) s =
+        KB DIV 2 EXP (8 * i) /\\ FRAME" (b + 7808) (b + 7808)));;
 
 let KD4_CMOV_INV_FRAME b =
   let inv = KD4_CMOV_INV b in
@@ -1176,18 +1181,18 @@ let KD4_PART1_TAC b =
   KEM_HALVES_TAC `word_add sk (word 3104):int64` THEN
   KEM_HALVES_TAC `word_add sk (word 3136):int64` THEN
   ARM_STEPS_TAC KD4_EXEC (1--3) THEN MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC KD4_EXEC (4--10) THEN KD4_BUFFER_TAC THEN
-  ARM_STEPS_TAC KD4_EXEC (11--18) THEN INLINE_GOT_TAC THEN
+  ARM_STEPS_TAC KD4_EXEC (4--9) THEN KD4_BUFFER_TAC THEN
+  ARM_STEPS_TAC KD4_EXEC (10--18) THEN INLINE_GOT_TAC THEN
   KD4_CHECK_TAC THEN
 
   (*** The decryption, G and the reencryption ***)
 
   ARM_STEPS_TAC KD4_EXEC (20--21) THEN INLINE_GOT_TAC THEN
   LOCAL_INDCPA_DEC_TAC b
-   [`mlkem_slice 0 1536 (dk:byte list)`; `c:byte list`; `read X21 s`;
+   [`mlkem_slice 0 1536 (dk:byte list)`; `c:byte list`; `read X20 s`;
     `read X0 s`; `mf:int64`; `ea:int64`; `el:num`; `ev:num`; `pc:num`;
-    `stackpointer:int64`; `read X25 s`; `read X26 s`; `read X27 s`;
-    `read X28 s`] 22 THEN
+    `stackpointer:int64`; `read X23 s`; `read X24 s`; `read X25 s`;
+    `read X26 s`] 22 THEN
   ARM_STEPS_TAC KD4_EXEC (23--32) THEN
   KEM_JOIN_TAC (KEM_SP(b + 7840)) `mlkem_slice 3104 32 (dk:byte list)`
     (st 32) THEN
@@ -1284,10 +1289,10 @@ let KD4_DONE_TAC =
     ALL_TAC];;
 
 let KD4_MASK_TAC s =
-  let x21 = mk_comb(`read X21`,mk_var(s,`:armstate`)) in
+  let x20 = mk_comb(`read X20`,mk_var(s,`:armstate`)) in
   FIRST_X_ASSUM(fun th ->
     let c = concl th in
-    if is_eq c && lhand c = x21 then
+    if is_eq c && lhand c = x20 then
       let e = rand c in
       let eth = BITBLAST_RULE
         (mk_eq(e,`if q4:int128 = word 0 then word 0:int64 else word 255`)) in
@@ -1295,7 +1300,7 @@ let KD4_MASK_TAC s =
     else NO_TAC) THEN
   FIRST_X_ASSUM(fun th ->
     let c = concl th in
-    if is_eq c && lhand c = x21 then
+    if is_eq c && lhand c = x20 then
       FIRST_ASSUM(fun th' ->
         if is_iff(concl th') && lhand(concl th') = `q4:int128 = word 0`
         then ASSUME_TAC(REWRITE_RULE[th'] th) else NO_TAC)
@@ -1335,13 +1340,13 @@ let KD4_EXIT_A_TAC b =
    [`read X0 s`; `read X1 s`; `read X2 s`; `num_of_bytelist(c:byte list)`;
     `read X30 s`] 36 THEN
   KD4_J_INPUT_TAC b (st 36) THEN
-  ARM_STEPS_TAC KD4_EXEC (37--42) THEN INLINE_GOT_TAC THEN
+  ARM_STEPS_TAC KD4_EXEC (37--41) THEN INLINE_GOT_TAC THEN
   LOCAL_SHAKE256_TAC
    [`read X0 s`; `32`; `read X2 s`;
     `APPEND (mlkem_slice 3136 32 (dk:byte list)) c`; `guard:int64`;
     `mc:int64`; `ea:int64`; `el:num`; `ev:num`;
-    `pc:num`; `read SP s`; `read X30 s`] 43 THEN
-  ARM_STEPS_TAC KD4_EXEC (44--45) THEN
+    `pc:num`; `read SP s`; `read X30 s`] 42 THEN
+  ARM_STEPS_TAC KD4_EXEC (43--43) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1; DIV_1; SUB_0; WORD_ADD_0;
               READ_MEMORY_BYTES_TRIVIAL] THEN
@@ -1362,31 +1367,52 @@ let KD4_KP_ADDR2_STMT =
 
 let KD4_KP_ADDR2 = assume_spec KD4_KP_ADDR2_STMT;;
 
+(* The byte at the address of the store in the selection loop is at the     *)
+(* base of the buffer plus i; the code gets it as that plus (i + 1) - 1, and  *)
+(* the offset 2^64 - 1 of that makes the proof that the store does not change *)
+(* the code fail. So the (i + 1) is split as i and 1 before the store.        *)
+
+let KD4_X5_TAC st target =
+  let x5 = mk_comb(`read X4`,mk_var(st,`:armstate`)) in
+  FIRST_X_ASSUM(fun th ->
+    if is_eq(concl th) && lhand(concl th) = x5 then
+      let eq = TAC_PROOF(([],mk_eq(rand(concl th),target)),
+                         REWRITE_TAC[WORD_ADD] THEN CONV_TAC WORD_RULE) in
+      ASSUME_TAC(TRANS th eq)
+    else NO_TAC);;
+
 let KD4_CMOV_BODY_TAC b =
+  let buf = KEM_SP(b + 7808) in
+  let nrm = CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) in
   X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
   MP_TAC(SPECL [KEM_SP(b + 7744); `32`; mk_comb(`num_of_bytelist`,KD4_KP);
                 `i:num`; `s0:armstate`] READ_MEMORY_BYTES8_OF_NUM) THEN
-  ASM_REWRITE_TAC[KEM_KP_ADDR; GSYM KD4_KP_ADDR2] THEN DISCH_TAC THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  DISCH_THEN(ASSUME_TAC o REWRITE_RULE[KEM_KP_ADDR; GSYM KD4_KP_ADDR2]) THEN
   SUBGOAL_THEN
-   (KD4_SUBST `read (memory :> bytes(word_add ss (word i),(31 - i) + 1)) s0 =
-               KB DIV 2 EXP (8 * i)`)
+   (KD4_SUBST(subst [buf,`bf:int64`]
+     `read (memory :> bytes(word_add bf (word i),(31 - i) + 1)) s0 =
+      KB DIV 2 EXP (8 * i)`))
   MP_TAC THENL
    [SIMP_TAC[ARITH_RULE `i < 32 ==> (31 - i) + 1 = 32 - i`;
              ASSUME `i < 32`] THEN ASM_REWRITE_TAC[];
     DISCH_THEN(fun th ->
       let th1,th2 = CONJ_PAIR(MATCH_MP KEM_SPLIT1 th) in
-      ASSUME_TAC(ONCE_REWRITE_RULE
-       [GSYM(SPECL [`ss:int64`; `i:num`] KEM_SS_ADDR)] th1) THEN
-      ASSUME_TAC th2)] THEN
-  ARM_STEPS_TAC KD4_EXEC (1--11) THEN
+      ASSUME_TAC(nrm th1) THEN ASSUME_TAC(nrm th2))] THEN
+  ARM_STEPS_TAC KD4_EXEC (1--4) THEN
+  KD4_X5_TAC "s4"
+   (subst [buf,`bf:int64`]
+     `word_add (word_add bf (word i)) (word 1):int64`) THEN
+  ARM_STEPS_TAC KD4_EXEC (5--12) THEN
   RULE_ASSUM_TAC(REWRITE_RULE
-   [KEM_SS_ADDR; MP (SPEC `i:num` KEM_CMOV_TEST) (ASSUME `i < 32`)]) THEN
+   [MP (SPEC `i:num` KEM_CMOV_TEST) (ASSUME `i < 32`)]) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THENL
    [ASM_CASES_TAC `i + 1 < 32` THEN ASM_REWRITE_TAC[];
     REWRITE_TAC[GSYM WORD_ADD];
     REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
     REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE; READ_MEMORY_BYTES_1] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
     ASM_REWRITE_TAC[] THEN REWRITE_TAC[KEM_MOD_BYTE] THEN
     AP_TERM_TAC THEN AP_TERM_TAC THEN
     ASM_CASES_TAC KD4_EQ THEN ASM_REWRITE_TAC[] THEN
@@ -1396,8 +1422,7 @@ let KD4_CMOV_BODY_TAC b =
     SPEC_TAC(KD4_SUBST `word((KB DIV 2 EXP (8 * i)) MOD 256):byte`,
              `y:byte`) THEN
     REPEAT GEN_TAC THEN AP_TERM_TAC THEN BITBLAST_TAC;
-    REWRITE_TAC[ARITH_RULE `32 - (i + 1) = 31 - i`; WORD_ADD; WORD_ADD_ASSOC;
-                KEM_DIV_BYTE] THEN
+    REWRITE_TAC[ARITH_RULE `32 - (i + 1) = 31 - i`; KEM_DIV_BYTE] THEN
     ASM_REWRITE_TAC[]];;
 
 let KD4_FINAL_TAC =
@@ -1414,14 +1439,25 @@ let KD4_FINAL_TAC =
   REWRITE_TAC[mlkem_slice; LENGTH_LIST_OF_SEQ] THEN
   CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[];;
 
-let KD4_EXIT_B_TAC =
+let KD4_EXIT_B_TAC b =
   ENSURES_INIT_TAC "s0" THEN
-  ARM_STEPS_TAC KD4_EXEC (1--7) THEN
-  LIBC_PLT_TAC KD4_EXEC 7 THEN
+  KEM_HALVES_TAC (KEM_SP(b + 7808)) THEN
+  ARM_STEPS_TAC KD4_EXEC (1--3) THEN
+  MP_TAC(SPECL [`ss:int64`;
+                KD4_SUBST `(if EQ then KP else KB) MOD 2 EXP (8 * 32)`;
+                `s3:armstate`] KEM_BYTES_32_OF_HALVES) THEN
+  ANTS_TAC THENL
+   [CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MOD_LT_EQ; ARITH_EQ] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN ASM_REWRITE_TAC[];
+    DISCH_TAC] THEN
+  ARM_STEPS_TAC KD4_EXEC (4--10) THEN
+  LIBC_PLT_TAC KD4_EXEC 10 THEN
   LIBC_CALL_TAC "H_MEMSET" KD4_EXEC
-   [`read X0 s`; `read X1 s`; `read X2 s`; `read X30 s`] 12 THEN
-  ARM_STEPS_TAC KD4_EXEC (13--18) THEN MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC KD4_EXEC (19--32) THEN
+   [`read X0 s`; `read X1 s`; `read X2 s`; `read X30 s`] 15 THEN
+  ARM_STEPS_TAC KD4_EXEC (16--21) THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC KD4_EXEC (22--35) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN KD4_FINAL_TAC;;
 
 (* ------------------------------------------------------------------------- *)
@@ -1489,13 +1525,13 @@ let KD4_OK_TAC b =
      `pc + mlkem1024_dec_loop8_exit`
      (KD4_CMOV_INV_FRAME b) THEN
     REPEAT CONJ_TAC THENL
-     [ARITH_TAC; KD4_EXIT_A_TAC b; KD4_CMOV_BODY_TAC b; KD4_EXIT_B_TAC]];;
+     [ARITH_TAC; KD4_EXIT_A_TAC b; KD4_CMOV_BODY_TAC b; KD4_EXIT_B_TAC b]];;
 
 let KD4_BAD_TAC =
   ENSURES_INIT_TAC "s0" THEN KD4_SK_TAC THEN
   ARM_STEPS_TAC KD4_EXEC (1--3) THEN MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC KD4_EXEC (4--10) THEN KD4_BUFFER_TAC THEN
-  ARM_STEPS_TAC KD4_EXEC (11--18) THEN INLINE_GOT_TAC THEN
+  ARM_STEPS_TAC KD4_EXEC (4--9) THEN KD4_BUFFER_TAC THEN
+  ARM_STEPS_TAC KD4_EXEC (10--18) THEN INLINE_GOT_TAC THEN
   KD4_CHECK_TAC THEN KD4_FAIL_TAC;;
 
 let KD4_CASE_TAC b =
@@ -1644,7 +1680,7 @@ let KD4_DEC_SAFE_GOAL_GEN qb hb fb bs = parse_term(Printf.sprintf
  "!mf ea el ev.
      memset_safety_contract mf ea el ev
      ==> exists f_events.
-          forall e sk c pc stackpointer x25 x26 x27 x28%s.
+          forall e sk c pc stackpointer x23 x24 x25 x26%s.
             %saligned 4096 (word pc:int64) /\\
             pc + libmlkem_size <= 2 EXP 64 /\\
             aligned 16 stackpointer /\\
@@ -1653,7 +1689,7 @@ let KD4_DEC_SAFE_GOAL_GEN qb hb fb bs = parse_term(Printf.sprintf
             ALLPAIRS nonoverlapping
              [(word_add stackpointer (word %s),7840);
               (word_add stackpointer (word 22848),16);
-              (word_add stackpointer (word 22912),32);
+              (word_add stackpointer (word 22896),32);
               (word_add stackpointer (word 22960),8);
               (word_add stackpointer (word 22976),8)]
              [(c,1568); (sk,1536); (word pc,libmlkem_size);
@@ -1665,9 +1701,9 @@ let KD4_DEC_SAFE_GOAL_GEN qb hb fb bs = parse_term(Printf.sprintf
                       read SP s = word_add stackpointer (word 22864) /\\
                       read X0 s = c /\\
                       read X19 s = word_add stackpointer (word %s) /\\
-                      read X21 s = sk /\\
+                      read X20 s = sk /\\
+                      read X23 s = x23 /\\ read X24 s = x24 /\\
                       read X25 s = x25 /\\ read X26 s = x26 /\\
-                      read X27 s = x27 /\\ read X28 s = x28 /\\
                       read (memory :> bytes64
                              (word_add stackpointer (word 22968))) s = c /\\
                       read (memory :> bytes64(word(pc + got_memset))) s =
@@ -1676,16 +1712,16 @@ let KD4_DEC_SAFE_GOAL_GEN qb hb fb bs = parse_term(Printf.sprintf
                       read events s = e)
                  (\\s. read PC s =
                       word (pc + mlkem1024_dec_in_indcpa_dec_end) /\\
-                      read X20 s = word_add stackpointer (word(%s + 7808)) /\\
+                      read X27 s = word_add stackpointer (word(%s + 7808)) /\\
                       read X26 s = word_add sk (word 1536) /\\
+                      read (memory :> bytes64
+                             (word_add stackpointer (word 22896))) s = x23 /\\
+                      read (memory :> bytes64
+                             (word_add stackpointer (word 22904))) s = x24 /\\
                       read (memory :> bytes64
                              (word_add stackpointer (word 22912))) s = x25 /\\
                       read (memory :> bytes64
                              (word_add stackpointer (word 22920))) s = x26 /\\
-                      read (memory :> bytes64
-                             (word_add stackpointer (word 22928))) s = x27 /\\
-                      read (memory :> bytes64
-                             (word_add stackpointer (word 22936))) s = x28 /\\
                       read (memory :> bytes64
                              (word_add stackpointer (word 22976))) s = c /\\
                       (exists e2.
@@ -1695,7 +1731,7 @@ let KD4_DEC_SAFE_GOAL_GEN qb hb fb bs = parse_term(Printf.sprintf
                           [c,1568; sk,1536;
                            word_add stackpointer (word %s),7840;
                            word_add stackpointer (word 22848),16;
-                           word_add stackpointer (word 22912),32;
+                           word_add stackpointer (word 22896),32;
                            word_add stackpointer (word 22960),24;
                            word(pc + got_memset),8; ea,el;
                            word(pc + mlkem1024_dec_consts),16;
@@ -1703,16 +1739,16 @@ let KD4_DEC_SAFE_GOAL_GEN qb hb fb bs = parse_term(Printf.sprintf
                            word(pc + rodata_mlk_zetas),256]
                           [word_add stackpointer (word %s),7840;
                            word_add stackpointer (word 22848),16;
-                           word_add stackpointer (word 22912),32;
+                           word_add stackpointer (word 22896),32;
                            word_add stackpointer (word 22960),8;
                            word_add stackpointer (word 22976),8]))
                  (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                   MAYCHANGE [X18] ,,
-                  MAYCHANGE [X20; X22; X23; X24; X25; X26; X27; X28; X30] ,,
+                  MAYCHANGE [X21; X22; X23; X24; X25; X26; X27; X28; X30] ,,
                   MAYCHANGE
                    [memory :> bytes(word_add stackpointer (word %s),7840);
                     memory :> bytes(word_add stackpointer (word 22848),16);
-                    memory :> bytes(word_add stackpointer (word 22912),32);
+                    memory :> bytes(word_add stackpointer (word 22896),32);
                     memory :> bytes(word_add stackpointer (word 22960),8);
                     memory :> bytes(word_add stackpointer (word 22976),8)])"
   qb hb bs bs bs fb bs bs bs);;
@@ -1798,7 +1834,7 @@ let KD4_DEC_SAFE_TAC =
   ARM_STEPS_TAC KD4_EXEC (156--157) THEN
   call "H_INVNTT" [e; x 0; `pc:num`; `read SP s`; `read X30 s`] 158 THEN
   ARM_STEPS_TAC KD4_EXEC (159--159) THEN
-  KD4_DEC_SAFE_CALL0_TAC "H_SUB" [e; x 23; x 0; KD4_DEC_SAFE_CONTENTS `X23`;
+  KD4_DEC_SAFE_CALL0_TAC "H_SUB" [e; x 27; x 0; KD4_DEC_SAFE_CONTENTS `X27`;
                 KD4_DEC_SAFE_CONTENTS `X0`; `pc:num`] 160 THEN
   ARM_STEPS_TAC KD4_EXEC (161--164) THEN
   call "H_REDUCE" ([e; x 0] @ rest0) 165 THEN
@@ -1867,9 +1903,9 @@ let KD4_SAFE_CALL_TAC name ilist n =
 let KD4_SAFE_FRAME = subst [KD4_SAFE_B,`b:num`]
  `read SP s = word_add stackpointer (word 22864) /\
   read X19 s = word_add stackpointer (word(b + 4096)) /\
-  read X20 s = word_add stackpointer (word(b + 7808)) /\
-  read X22 s = word_add stackpointer (word(b + 7744)) /\
-  read X24 s = word 0 /\
+  read X21 s = word_add stackpointer (word(b + 7744)) /\
+  read X22 s = word 0 /\
+  read X27 s = word_add stackpointer (word(b + 7808)) /\
   read (memory :> bytes64 (word_add stackpointer (word 22864))) s =
   x19_init /\
   read (memory :> bytes64 (word_add stackpointer (word 22872))) s =
@@ -1908,14 +1944,13 @@ let KD4_SAFE_INV =
           read X1 s = word_add stackpointer (word(b + 5664)) /\
           read (memory :> bytes64 (word_add stackpointer (word 22976))) s =
           word_add ct (word(16 * i)) /\
-          read X21 s = sk /\ FRAME` in
+          read X20 s = sk /\ FRAME` in
   let vs,bod = strip_abs inv in
   list_mk_abs(vs,subst [KD4_SAFE_FRAME,`FRAME:bool`] bod);;
 
 let KD4_SAFE_CMOV_INV =
   let inv =
-   `\i s. read X0 s = word(i + 1) /\
-          read X1 s = word_sub ss (word 1) /\ FRAME` in
+   `\i s. read X0 s = word(i + 1) /\ FRAME` in
   let vs,bod = strip_abs inv in
   list_mk_abs(vs,subst [KD4_SAFE_FRAME,`FRAME:bool`] bod);;
 
@@ -1998,8 +2033,8 @@ let KD4_SAFE_START_TAC =
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
   KD4_SK_TAC THEN
   ARM_STEPS_TAC KD4_EXEC (1--3) THEN MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC KD4_EXEC (4--10) THEN KD4_SAFE_BUFFER_TAC THEN
-  ARM_STEPS_TAC KD4_EXEC (11--18) THEN INLINE_GOT_TAC THEN
+  ARM_STEPS_TAC KD4_EXEC (4--9) THEN KD4_SAFE_BUFFER_TAC THEN
+  ARM_STEPS_TAC KD4_EXEC (10--18) THEN INLINE_GOT_TAC THEN
   KD4_SAFE_CALL_TAC "H_CHECK"
    [`e:(uarch_event)list`; `read X0 s`; `ekk:byte list`;
     `num_of_bytelist(hh:byte list)`; `guard:int64`; `pc:num`; `read SP s`;
@@ -2011,9 +2046,9 @@ let KD4_SAFE_PART1_TAC =
    `num_of_bytelist(hh:byte list) = num_of_bytelist(sha3_256 ekk)`)]) THEN
   ARM_STEPS_TAC KD4_EXEC (20--21) THEN INLINE_GOT_TAC THEN
   KD4_SAFE_CALL_TAC "H_DEC"
-   [`e:(uarch_event)list`; `read X21 s`; `read X0 s`; `pc:num`;
-    `stackpointer:int64`; `read X25 s`; `read X26 s`; `read X27 s`;
-    `read X28 s`; KD4_SAFE_B] 22 THEN
+   [`e:(uarch_event)list`; `read X20 s`; `read X0 s`; `pc:num`;
+    `stackpointer:int64`; `read X23 s`; `read X24 s`; `read X25 s`;
+    `read X26 s`; KD4_SAFE_B] 22 THEN
   ARM_STEPS_TAC KD4_EXEC (23--32) THEN INLINE_GOT_TAC THEN
   KD4_SAFE_CALL_TAC "H_SHA3_512"
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `64`; `guard:int64`;
@@ -2058,11 +2093,11 @@ let KD4_SAFE_EXIT_A_TAC =
   KD4_SAFE_NORMALIZE_TAC THEN LIBC_SAFE_CALL_TAC "H_MEMCPY" KD4_EXEC
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
     `read X30 s`] (ref KD4_SAFE_ALLOWED) 36 THEN
-  ARM_STEPS_TAC KD4_EXEC (37--42) THEN INLINE_GOT_TAC THEN
+  ARM_STEPS_TAC KD4_EXEC (37--41) THEN INLINE_GOT_TAC THEN
   KD4_SAFE_CALL_TAC "H_SHAKE256"
    [`e:(uarch_event)list`; `read X0 s`; `32`; `read X2 s`; `1600`;
-    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 43 THEN
-  ARM_STEPS_TAC KD4_EXEC (44--45) THEN
+    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 42 THEN
+  ARM_STEPS_TAC KD4_EXEC (43--43) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[ARITH_RULE `0 + 1 = 1`; APPEND_NIL; ENUMERATEL_APPEND_ZERO] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC;;
@@ -2081,9 +2116,12 @@ let KD4_SAFE_CMOV_BODY_TAC =
   X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
   REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC KD4_EXEC (1--11) THEN
+  ARM_STEPS_TAC KD4_EXEC (1--4) THEN
+  KD4_X5_TAC "s4" (subst [KD4_SAFE_B,`b:num`]
+   `word_add (word_add stackpointer (word (b + 7808 + i))) (word 1):int64`) THEN
+  ARM_STEPS_TAC KD4_EXEC (5--12) THEN
   RULE_ASSUM_TAC(REWRITE_RULE
-   [KEM_SS_ADDR; KD4_KBAR_ADDR;
+   [KD4_KBAR_ADDR;
     MP (SPEC `i:num` KEM_CMOV_TEST) (ASSUME `i < 32`)]) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
@@ -2093,12 +2131,12 @@ let KD4_SAFE_CMOV_BODY_TAC =
 let KD4_SAFE_EXIT_B_TAC =
   REWRITE_TAC[] THEN REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC KD4_EXEC (1--7) THEN LIBC_PLT_TAC KD4_EXEC 7 THEN
+  ARM_STEPS_TAC KD4_EXEC (1--10) THEN LIBC_PLT_TAC KD4_EXEC 10 THEN
   KD4_SAFE_NORMALIZE_TAC THEN LIBC_SAFE_CALL_TAC "H_MEMSET" KD4_EXEC
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
-    `read X30 s`] (ref KD4_SAFE_ALLOWED) 12 THEN
-  ARM_STEPS_TAC KD4_EXEC (13--18) THEN MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC KD4_EXEC (19--32) THEN
+    `read X30 s`] (ref KD4_SAFE_ALLOWED) 15 THEN
+  ARM_STEPS_TAC KD4_EXEC (16--21) THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC KD4_EXEC (22--35) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC;;
 

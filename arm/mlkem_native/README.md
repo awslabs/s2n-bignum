@@ -352,7 +352,7 @@ binaries/multilevel/gcc12/O3/libmlkem.so
 binaries/multilevel/gcc12/Os/libmlkem.so
   d93a97f48fc3ded91aff42a9a3a5ff335b33cec6a533a855812d28bd1a2144dc
 binaries/multilevel-mono/gcc12/O2/libmlkem.so
-  218c21e6488dd7d9005ed0dd728d1511e6acce8be2ff981c4870c309b3c31e58
+  9bc12b37fe915c89b1b6fe76aa619130fa755b1bac8daeb1af8cee442065cc5e
 ```
 
 ## Checking a transcription

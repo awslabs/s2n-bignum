@@ -81,37 +81,38 @@ needs "arm/proofs/mlkem_native/gcc12_O2_mono/poly_tobytes_spec.ml";;
        +0xa0  mov     x0, x8
        +0xa4  mov     x1, x20
        +0xa8  add     x2, x19, #0xa80
+       +0xac  nop
     loop1:
-       +0xac  ldr     q0, [x0], #16
-       +0xb0  ldr     q1, [x1], #16
-       +0xb4  eor     v0.16b, v0.16b, v1.16b
-       +0xb8  orr     v3.16b, v3.16b, v0.16b
-       +0xbc  eor     v2.16b, v2.16b, v0.16b
-       +0xc0  cmp     x2, x1
-       +0xc4  b.ne    loop1
+       +0xb0  ldr     q0, [x0], #16
+       +0xb4  ldr     q1, [x1], #16
+       +0xb8  eor     v0.16b, v0.16b, v1.16b
+       +0xbc  orr     v3.16b, v3.16b, v0.16b
+       +0xc0  eor     v2.16b, v2.16b, v0.16b
+       +0xc4  cmp     x2, x1
+       +0xc8  b.ne    loop1
     loop1_exit:
-       +0xc8  movi    v1.4s, #0x0
+       +0xcc  movi    v1.4s, #0x0
        ...    (the reduction of the accumulators, as in gcc12_O2)
-      +0x12c  mov     w21, #0xfffffffc
-      +0x130  csel    w21, wzr, w21, eq
-      +0x134  bl      memset                   // the encoding, 1152 bytes
-      +0x138  mov     x2, #0x600
-      +0x13c  mov     x0, x19
-      +0x140  mov     w1, #0x0
-      +0x144  bl      memset                   // the vector, 1536 bytes
-      +0x148  adrp    x0, <page>
-      +0x14c  ldr     x0, [x0, #4088]          // got_stack_chk_guard
-      +0x150  ldr     x2, [sp, #2744]
-      +0x154  ldr     x1, [x0]
-      +0x158  subs    x2, x2, x1
-      +0x15c  mov     x1, #0x0
-      +0x160  b.ne    +0x178
-      +0x164  ldp     x19, x20, [sp]
-      +0x168  mov     w0, w21
-      +0x16c  ldp     x21, x30, [sp, #16]
-      +0x170  add     sp, sp, #0xac0
-      +0x174  ret
-      +0x178  bl      stack_chk_fail
+      +0x130  mov     w21, #0xfffffffc
+      +0x134  csel    w21, wzr, w21, eq
+      +0x138  bl      memset                   // the encoding, 1152 bytes
+      +0x13c  mov     x2, #0x600
+      +0x140  mov     x0, x19
+      +0x144  mov     w1, #0x0
+      +0x148  bl      memset                   // the vector, 1536 bytes
+      +0x14c  adrp    x0, <page>
+      +0x150  ldr     x0, [x0, #4088]          // got_stack_chk_guard
+      +0x154  ldr     x2, [sp, #2744]
+      +0x158  ldr     x1, [x0]
+      +0x15c  subs    x2, x2, x1
+      +0x160  mov     x1, #0x0
+      +0x164  b.ne    +0x17c
+      +0x168  ldp     x19, x20, [sp]
+      +0x16c  mov     w0, w21
+      +0x170  ldp     x21, x30, [sp, #16]
+      +0x174  add     sp, sp, #0xac0
+      +0x178  ret
+      +0x17c  bl      stack_chk_fail
 
     memset@plt:
       +0x0: adrp    x16, <page>
@@ -484,7 +485,7 @@ let CHECKPK3_PART1_TAC =
     mk_comb(`SUB_LIST(512,256):int16 list->int16 list`,CHECKPK_L);
     `pc:num`; `read X30 s`] 49 THEN
   CHECKPK3_ENCODED_TAC `s49:armstate` THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_MONO_EXEC (50--52) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_MONO_EXEC (50--53) THEN
   CHECKPK_NORMALIZE_TAC THEN
   ENSURES_FINAL_STATE_TAC THEN
   REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; WORD_ADD_0; EXP; MOD_1] THEN
@@ -782,7 +783,7 @@ let CHECKPK3_SAFE_PART1_TAC =
   ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_MONO_EXEC (46--48) THEN
   CHECKPK3_SAFE_CALL_TAC "H_TOBYTES"
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `pc:num`; `read X30 s`] 49 THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_MONO_EXEC (50--52) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_MONO_EXEC (50--53) THEN
   CHECKPK_SAFE_NORMALIZE_TAC THEN
   ENSURES_FINAL_STATE_TAC THEN
   REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; WORD_ADD_0] THEN
@@ -1019,7 +1020,7 @@ let CHECKPK3_FULL_PART1_TAC =
     mk_comb(`SUB_LIST(512,256):int16 list->int16 list`,CHECKPK_L);
     `pc:num`; `read X30 s`] 49 THEN
   CHECKPK3_ENCODED_TAC `s49:armstate` THEN
-  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_MONO_EXEC (50--52) THEN
+  ARM_STEPS_TAC MLKEM_NATIVE_CHECK_PK_K3_GCC12_O2_MONO_EXEC (50--53) THEN
   CHECKPK_NORMALIZE_TAC THEN
   ENSURES_FINAL_STATE_TAC THEN
   REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; WORD_ADD_0; EXP; MOD_1] THEN
