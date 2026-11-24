@@ -1107,27 +1107,163 @@ let cosimulate_ldstu() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
-(*** This covers LD1R ***)
+(*** This covers LD1R with the addressing modes no-offset, post-immediate
+ *** offset and post-register offset. As in cosimulate_ldst3, the base is
+ *** SP only with the post-immediate offset, and the offset register is
+ *** never the base or the zero register.
+ ***)
 
 let cosimulate_ld1r() =
   let q = Random.int 2
   and size = Random.int 4
   and rn = Random.int 32
-  and rt = Random.int 32 in
+  and rt = Random.int 32
+  and mode = Random.int 3 in
+  let rm =
+    if mode = 0 || (mode = 2 && rn = 31) then 31
+    else if mode = 1 then 0
+    else (rn + 1 + Random.int 30) mod 31 in
   let stackoff =
     if rn = 31 then Random.int 14 * 16
     else Random.int 224 in
-  let stackoff' = (8 lsl size)/8 + stackoff in
+  let postinc = if mode <> 1 && rm = 31 then (8 lsl size)/8 else 0 in
   let code =
     pow2 30 */ num q +/
-    pow2 12 */ num 0b001101110111111100 +/
+    pow2 24 */ num 0b001101 +/
+    pow2 23 */ num (if mode = 1 then 0 else 1) +/
+    pow2 22 */ num 1 +/
+    pow2 16 */ num rm +/
+    pow2 12 */ num 0b1100 +/
     pow2 10 */ num size +/
     pow2 5 */ num rn +/
     num rt in
   if rn = 31 then
-    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff']
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LD1 of a single lane, for bytes, halfwords and doublewords,
+ *** with the addressing modes no-offset, post-immediate offset and
+ *** post-register offset, in the same way as cosimulate_ld1r. The 32-bit
+ *** lanes, for LD1 and ST1, are covered by cosimulate_ldst1_lane.
+ ***)
+
+let cosimulate_ld1_lane() =
+  let esz = el (Random.int 3) [0; 1; 3]
+  and rn = Random.int 32
+  and rt = Random.int 32
+  and mode = Random.int 3 in
+  let index = Random.int (16 lsr esz) in
+  let q,s,size,opcode =
+    match esz with
+      0 -> index lsr 3,(index lsr 2) land 1,index land 3,0b000
+    | 1 -> index lsr 2,(index lsr 1) land 1,(index land 1) lsl 1,0b010
+    | _ -> index,0,1,0b100 in
+  let rm =
+    if mode = 0 || (mode = 2 && rn = 31) then 31
+    else if mode = 1 then 0
+    else (rn + 1 + Random.int 30) mod 31 in
+  let stackoff =
+    if rn = 31 then Random.int 14 * 16
+    else Random.int 224 in
+  let postinc = if mode <> 1 && rm = 31 then 1 lsl esz else 0 in
+  let code =
+    pow2 30 */ num q +/
+    pow2 24 */ num 0b001101 +/
+    pow2 23 */ num (if mode = 1 then 0 else 1) +/
+    pow2 22 */ num 1 +/
+    pow2 16 */ num rm +/
+    pow2 13 */ num opcode +/
+    pow2 12 */ num s +/
+    pow2 10 */ num size +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers ST1 of a single lane in the same way as
+ *** cosimulate_ld1_lane does LD1.
+ ***)
+
+let cosimulate_st1_lane() =
+  let esz = Random.int 4
+  and rn = Random.int 32
+  and rt = Random.int 32
+  and mode = Random.int 3 in
+  let index = Random.int (16 lsr esz) in
+  let q,s,size,opcode =
+    match esz with
+      0 -> index lsr 3,(index lsr 2) land 1,index land 3,0b000
+    | 1 -> index lsr 2,(index lsr 1) land 1,(index land 1) lsl 1,0b010
+    | 2 -> index lsr 1,index land 1,0,0b100
+    | _ -> index,0,1,0b100 in
+  let rm =
+    if mode = 0 || (mode = 2 && rn = 31) then 31
+    else if mode = 1 then 0
+    else (rn + 1 + Random.int 30) mod 31 in
+  let stackoff =
+    if rn = 31 then Random.int 14 * 16
+    else Random.int 224 in
+  let postinc = if mode <> 1 && rm = 31 then 1 lsl esz else 0 in
+  let code =
+    pow2 30 */ num q +/
+    pow2 24 */ num 0b001101 +/
+    pow2 23 */ num (if mode = 1 then 0 else 1) +/
+    pow2 16 */ num rm +/
+    pow2 13 */ num opcode +/
+    pow2 12 */ num s +/
+    pow2 10 */ num size +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LDR and STR of S registers with a post-index or pre-index
+ *** immediate offset (with writeback), and LDUR and STUR of S registers,
+ *** with negative as well as positive offsets. The access is within the
+ *** 256-byte buffer; with SP as the base, the base is 16-byte aligned and
+ *** the final SP is set back from the written-back value.
+ ***)
+
+let cosimulate_ldst_s_imm9() =
+  let isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32
+  and mode = el (Random.int 3) [0b00; 0b01; 0b11] in
+  let stackoff =
+    if rn = 31 then 16 * Random.int 16
+    else Random.int 253 in
+  let target =
+    if mode = 0b01 then stackoff
+    else Random.int 253 in
+  let imm9 =
+    if mode = 0b01 then
+      let lo = max (-256) (-stackoff) and hi = min 255 (252 - stackoff) in
+      lo + Random.int (hi - lo + 1)
+    else target - stackoff in
+  let code =
+    pow2 30 */ num 0b10 +/
+    pow2 24 */ num 0b111100 +/
+    pow2 22 */ num isld +/
+    pow2 12 */ num((imm9 + 512) mod 512) +/
+    pow2 10 */ num mode +/
+    pow2 5 */ num rn +/
+    num rt in
+  let final = if mode = 0b00 then stackoff else stackoff + imm9 in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code;
+     if final >= 0 then sub_Xn_SP_imm 31 final
+     else add_Xn_SP_imm 31 (-final)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LD3 and ST3 with the addressing modes no-offset,
+ *** post-immediate offset and post-register offset.
+ ***)
 
 let cosimulate_ldst3() =
   let datasize = Random.int 2
@@ -1135,17 +1271,20 @@ let cosimulate_ldst3() =
   and esize = Random.int 4
   and rn = random_base_reg()
   and rt = Random.int 32 in
-  let someoffset = 1 in
+  let someoffset = Random.int 2 in
   let regoffr = Random.int 32 in
   let regoff =
-    if regoffr = rn || Random.bool() then 31
+    if someoffset = 0 then 0
+    else if regoffr = rn || Random.bool() then 31
     else regoffr in
   let stackoff =
     if rn = 31 then Random.int 13 * 16
     else Random.int 208 in
-  let postreg = regoff <> 31 in
+  let postreg = someoffset = 1 && regoff <> 31 in
   let regpostinc = 1 + Random.int 64 in
-  let postinc = if postreg then regpostinc else 24 * (datasize + 1) in
+  let postinc =
+    if someoffset = 0 then 0
+    else if postreg then regpostinc else 24 * (datasize + 1) in
   let code =
     pow2 30 */ num datasize +/
     pow2 24 */ num 0b001100 +/
@@ -1414,14 +1553,15 @@ let cosimulate_ldst_simd_bhs() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
-(*** This covers LDUR/STUR (SIMD&FP, unscaled immediate) for sizes 64 (D)
- *** and 32 (S). The 9-bit immediate is a signed, unscaled byte offset.
+(*** This covers LDUR/STUR (SIMD&FP, unscaled immediate) for sizes 128 (Q),
+ *** 64 (D) and 32 (S). The 9-bit immediate is a signed, unscaled byte offset.
  ***)
 
 let cosimulate_ldstu_simd() =
-  let is_d = Random.int 2 in
-  let size = if is_d = 1 then 0b11 else 0b10 in
-  let access = if is_d = 1 then 8 else 4 in
+  let kind = Random.int 3 in (* 0 = S, 1 = D, 2 = Q *)
+  let size = el kind [0b10; 0b11; 0b00]
+  and opc1 = if kind = 2 then 1 else 0
+  and access = el kind [4; 8; 16] in
   let isld = Random.int 2
   and rn = Random.int 32
   and rt = Random.int 32 in
@@ -1435,6 +1575,7 @@ let cosimulate_ldstu_simd() =
   let code =
     pow2 30 */ num size +/
     pow2 24 */ num 0b111100 +/
+    pow2 23 */ num opc1 +/
     pow2 22 */ num isld +/
     pow2 12 */ num encodedoff +/
     pow2 5 */ num rn +/
@@ -1518,6 +1659,151 @@ let cosimulate_sp_subst() =
   [addsub 0 29 31 0 0; addsub 0 31 xs 0 0; code;
    addsub 0 28 31 0 0; addsub 0 31 29 0 0; sub_Xn_SP_Xn 29];;
 
+(*** This covers LD4 and ST4 (multiple structures, interleaved) with the
+ *** addressing modes no-offset, post-immediate and post-register, in the
+ *** same way as cosimulate_ldst1_4reg covers LD1/ST1 with 4 registers.
+ ***)
+
+let cosimulate_ldst4() =
+  let datasize = Random.int 2
+  and isld = Random.int 2
+  and esize = Random.int 4
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let someoffset = Random.int 2 in
+  let regoffr = Random.int 32 in
+  let regoff =
+    if someoffset = 0 then 0
+    else if regoffr = rn || rn = 31 || Random.bool() then 31
+    else regoffr in
+  let stackoff =
+    if rn = 31 then Random.int 12 * 16
+    else Random.int 192 in
+  let postinc = if someoffset = 1 && regoff = 31 then 32 * (datasize + 1) else 0 in
+  let code =
+    pow2 30 */ num datasize +/
+    pow2 24 */ num 0b001100 +/
+    pow2 23 */ num someoffset +/
+    pow2 22 */ num isld +/
+    pow2 16 */ num regoff +/
+    pow2 12 */ num 0b0000 +/
+    pow2 10 */ num esize +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LDRSW with all its supported addressing modes: unscaled
+ *** immediate (LDURSW), unsigned immediate, register offset with optional
+ *** shift, pre-index and post-index. LDRH/STRH, LDRSB and LDRSH are covered
+ *** by cosimulate_ldsth, cosimulate_ldrsb and cosimulate_ldrsh. The base
+ *** register is never the transfer register, and when it is SP any
+ *** writeback keeps it 16-byte aligned. Accesses stay within the 256 bytes
+ *** above SP.
+ ***)
+
+let cosimulate_ldrsw() =
+  let mode = Random.int 5 and rn = Random.int 32 in
+  let size = 2 and opc = 2 in
+  let bytes = 1 lsl size in
+  let rt = (rn + 1 + Random.int 31) mod 32 in
+  let rec pick() = let c = Random.int 31 in
+                   if c = rn || c = rt then pick() else c in
+  let rm = pick() in
+  let stackoff = if rn = 31 then 16 * Random.int 8 else Random.int 128 in
+  let room = 256 - bytes - stackoff in
+  let anyoff() = Random.int (room + 1 + stackoff) - stackoff in
+  let wboff() = if rn = 31 then 16 * Random.int 16 - stackoff
+                else anyoff() in
+  let head =
+    pow2 30 */ num size +/ pow2 27 */ num 0b111 +/
+    pow2 22 */ num opc +/ pow2 5 */ num rn +/ num rt in
+  let imm9 off = pow2 12 */ num ((off + 512) mod 512) in
+  let pre,code,inc =
+    match mode with
+      0 -> [],head +/ imm9 (anyoff()),0
+    | 1 -> let imm12 = Random.int (room / bytes + 1) in
+           [],head +/ pow2 24 */ num 1 +/ pow2 10 */ num imm12,0
+    | 2 -> let s = Random.int 2 in
+           let shift = if s = 1 then size else 0 in
+           let regoff = Random.int ((room lsr shift) + 1) in
+           [movz_Xn_imm rm regoff],
+           head +/ pow2 21 */ num 1 +/ pow2 16 */ num rm +/
+           pow2 13 */ num 0b011 +/ pow2 12 */ num s +/ pow2 10 */ num 0b10,0
+    | 3 -> let off = wboff() in
+           [],head +/ imm9 off +/ pow2 10 */ num 0b11,off
+    | _ -> let off = if rn = 31 then wboff() else Random.int 512 - 256 in
+           [],head +/ imm9 off +/ pow2 10 */ num 0b01,off in
+  let restore =
+    if rn = 31 then sub_Xn_SP_imm 31 (stackoff + inc) else sub_Xn_SP_Xn rn in
+  [add_Xn_SP_imm rn stackoff] @ pre @ [code; restore];;
+
+(*** This covers the extended register offsets UXTW, SXTW and SXTX, as
+ *** well as LSL, with or without the shift, for LDR and STR of 32-bit and
+ *** 64-bit values and of D and S registers, and LDRSW (v = 1 selects the
+ *** SIMD&FP register for the D and S cases). LDRB/STRB, LDRH/STRH, LDRSB
+ *** and LDRSH get only the offsets that cosimulate_ldst_extreg and the
+ *** generators before it do not cover: SXTX, and for LDRB/STRB also LSL
+ *** written with S = 1. For UXTW and SXTW the top 32 bits of the offset
+ *** register are random junk, and for the signed extensions (and LSL, by
+ *** wraparound) the offset can be negative. The offset register can also
+ *** be the zero register.
+ ***)
+
+let movn_Xn_imm rd imm =
+  pow2 21 */ num_of_string "0b10010010100" +/
+  pow2 5 */ num(imm mod 65536) +/
+  num rd;;
+
+let cosimulate_ldst_ext() =
+  let size,opc,v =
+    match Random.int 9 with
+      0 -> 2,Random.int 2,0
+    | 1 -> 3,Random.int 2,0
+    | 2 -> 0,Random.int 2,0
+    | 3 -> 1,Random.int 2,0
+    | 4 -> 0,2 + Random.int 2,0
+    | 5 -> 1,2 + Random.int 2,0
+    | 6 -> 2,2,0
+    | 7 -> 3,Random.int 2,1
+    | _ -> 2,Random.int 2,1 in
+  let subword = v = 0 && size < 2 in
+  let ext =
+    if not subword then Random.int 4
+    else if size = 0 && opc < 2 && Random.bool() then 3
+    else 2 in
+  let s = if subword && ext = 3 then 1 else Random.int 2
+  and rn = Random.int 32 in
+  let option = el ext [0b010; 0b110; 0b111; 0b011] in
+  let shift = if s = 1 then size else 0 in
+  let bytes = 1 lsl size in
+  let rt = (rn + 1 + Random.int 31) mod 32 in
+  let rec pick() = let c = Random.int 32 in
+                   if c = rn || c = rt then pick() else c in
+  let rm = pick() in
+  let stackoff = if rn = 31 then 16 * Random.int 16 else Random.int 256 in
+  let stackoff = min stackoff (256 - bytes) in
+  let lo = if ext = 0 then 0 else -(stackoff asr shift)
+  and hi = (256 - bytes - stackoff) asr shift in
+  let k = if rm = 31 then 0 else lo + Random.int (hi - lo + 1) in
+  let junk = Random.int 65536 in
+  let pre =
+    if rm = 31 then []
+    else if ext < 2 then
+      [if k >= 0 then movz_Xn_imm rm k else movn_Wn_imm rm (-k - 1);
+       movk_Xn_imm_lsl32 rm junk]
+    else [if k >= 0 then movz_Xn_imm rm k else movn_Xn_imm rm (-k - 1)] in
+  let code =
+    pow2 30 */ num size +/ pow2 27 */ num 0b111 +/ pow2 26 */ num v +/
+    pow2 22 */ num opc +/ pow2 21 +/ pow2 16 */ num rm +/
+    pow2 13 */ num option +/ pow2 12 */ num s +/ pow2 10 */ num 0b10 +/
+    pow2 5 */ num rn +/ num rt in
+  let restore =
+    if rn = 31 then sub_Xn_SP_imm 31 stackoff else sub_Xn_SP_Xn rn in
+  [add_Xn_SP_imm rn stackoff] @ pre @ [code; restore];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldstp_gpr; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ldsth;
@@ -1527,7 +1813,9 @@ let memclasses =
     cosimulate_ldst1_3reg; cosimulate_ldst1_4reg;
     cosimulate_ldst2_noofs; cosimulate_ldst1_lane;
     cosimulate_ldst_simd_bhs; cosimulate_ldstu_simd;
-    cosimulate_ldst_imm; cosimulate_sp_arith; cosimulate_sp_subst
+    cosimulate_ldst_imm; cosimulate_sp_arith; cosimulate_sp_subst;
+    cosimulate_ldrsw; cosimulate_ldst_ext; cosimulate_ldst4;
+    cosimulate_ld1_lane; cosimulate_st1_lane; cosimulate_ldst_s_imm9
     ];;
 
 let run_random_memopsimulation() =
