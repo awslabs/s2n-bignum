@@ -2644,33 +2644,33 @@ mldsa_native/gcc12_O2_reduced_ram/pack_sig_h_87_proof.native: \
 mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_44_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_44_spec.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_44_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
   ../common/layout.ml \
-  proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_libc.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
   ../common/fips204/properties/mldsa_native_hints.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
+  ../common/fips204/properties/mldsa_native_full.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   proofs/utils/mldsa_native_pack.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   proofs/utils/mlkem_native_image.ml \
-  proofs/utils/mlkem_native_libc_full.ml \
-  ../common/fips204/properties/mldsa_native_full.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/fips204/properties/mldsa_native_polyvec.ml \
   ../common/mldsa_native_rounding.ml \
+  proofs/utils/mlkem_native_libc.ml \
+  ../common/fips203/properties/mlkem_native_libc_full.ml \
   ../common/par.ml \
   ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/mldsa_native_poly.ml \
   ../common/fips203/properties/mlkem_native_image.ml \
-  proofs/utils/mlkem_native_libc.ml \
-  ../common/fips203/properties/mlkem_native_libc_full.ml \
   proofs/consttime.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/consttime.ml \
@@ -2679,33 +2679,33 @@ mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_44_proof.native: \
 mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_65_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_65_spec.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_65_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
   ../common/layout.ml \
-  proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_libc.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
   ../common/fips204/properties/mldsa_native_hints.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
+  ../common/fips204/properties/mldsa_native_full.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   proofs/utils/mldsa_native_pack.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   proofs/utils/mlkem_native_image.ml \
-  proofs/utils/mlkem_native_libc_full.ml \
-  ../common/fips204/properties/mldsa_native_full.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/fips204/properties/mldsa_native_polyvec.ml \
   ../common/mldsa_native_rounding.ml \
+  proofs/utils/mlkem_native_libc.ml \
+  ../common/fips203/properties/mlkem_native_libc_full.ml \
   ../common/par.ml \
   ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/mldsa_native_poly.ml \
   ../common/fips203/properties/mlkem_native_image.ml \
-  proofs/utils/mlkem_native_libc.ml \
-  ../common/fips203/properties/mlkem_native_libc_full.ml \
   proofs/consttime.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/consttime.ml \
@@ -2714,33 +2714,33 @@ mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_65_proof.native: \
 mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_87_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_87_spec.ml \
   proofs/utils/mldsa_native_hints.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_87_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
   ../common/layout.ml \
-  proofs/utils/mldsa_native_full.ml \
   proofs/utils/mldsa_native_libc.ml \
   proofs/utils/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
   ../common/fips204/properties/mldsa_native_hints.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
+  ../common/fips204/properties/mldsa_native_full.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   proofs/utils/mldsa_native_pack.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   proofs/utils/mlkem_native_image.ml \
-  proofs/utils/mlkem_native_libc_full.ml \
-  ../common/fips204/properties/mldsa_native_full.ml \
   ../common/mldsa_native_polyvec.ml \
   ../common/fips204/properties/mldsa_native_polyvec.ml \
   ../common/mldsa_native_rounding.ml \
+  proofs/utils/mlkem_native_libc.ml \
+  ../common/fips203/properties/mlkem_native_libc_full.ml \
   ../common/par.ml \
   ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/mldsa_native_poly.ml \
   ../common/fips203/properties/mlkem_native_image.ml \
-  proofs/utils/mlkem_native_libc.ml \
-  ../common/fips203/properties/mlkem_native_libc_full.ml \
   proofs/consttime.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/consttime.ml \
@@ -5856,25 +5856,25 @@ mldsa_native/gcc12_O2_reduced_ram/polyw1_unpack_88_proof.native: \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
 mldsa_native/gcc12_O2_reduced_ram/polyz_pack_44_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_44_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native_pack.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
-  ../common/relative.ml \
   proofs/utils/mldsa_native.ml \
-  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
+  ../common/fips204/properties/mldsa_native_full.ml \
+  ../common/relative.ml \
   ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   proofs/utils/mlkem_native_image.ml \
-  ../common/par.ml \
   ../common/fips204/properties/mldsa_native.ml \
-  proofs/utils/mlkem_native_libc_full.ml \
-  ../common/fips204/properties/mldsa_native_full.ml \
-  ../common/layout.ml \
-  ../common/fips203/properties/mlkem_native_image.ml \
   proofs/utils/mlkem_native_libc.ml \
   ../common/fips203/properties/mlkem_native_libc_full.ml \
+  ../common/par.ml \
+  ../common/layout.ml \
+  ../common/fips203/properties/mlkem_native_image.ml \
   proofs/consttime.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/consttime.ml \
@@ -5882,25 +5882,25 @@ mldsa_native/gcc12_O2_reduced_ram/polyz_pack_44_proof.native: \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
 mldsa_native/gcc12_O2_reduced_ram/polyz_pack_65_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_65_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native_pack.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
-  ../common/relative.ml \
   proofs/utils/mldsa_native.ml \
-  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
+  ../common/fips204/properties/mldsa_native_full.ml \
+  ../common/relative.ml \
   ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   proofs/utils/mlkem_native_image.ml \
-  ../common/par.ml \
   ../common/fips204/properties/mldsa_native.ml \
-  proofs/utils/mlkem_native_libc_full.ml \
-  ../common/fips204/properties/mldsa_native_full.ml \
-  ../common/layout.ml \
-  ../common/fips203/properties/mlkem_native_image.ml \
   proofs/utils/mlkem_native_libc.ml \
   ../common/fips203/properties/mlkem_native_libc_full.ml \
+  ../common/par.ml \
+  ../common/layout.ml \
+  ../common/fips203/properties/mlkem_native_image.ml \
   proofs/consttime.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/consttime.ml \
@@ -5908,25 +5908,25 @@ mldsa_native/gcc12_O2_reduced_ram/polyz_pack_65_proof.native: \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
 mldsa_native/gcc12_O2_reduced_ram/polyz_pack_87_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_87_spec.ml \
+  proofs/utils/mldsa_native_full.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native_pack.ml \
   ../common/mldsa_native_packing.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
-  ../common/relative.ml \
   proofs/utils/mldsa_native.ml \
-  proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mlkem_native_libc_full.ml \
+  ../common/fips204/properties/mldsa_native_full.ml \
+  ../common/relative.ml \
   ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/mldsa_native_poly.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   proofs/utils/mlkem_native_image.ml \
-  ../common/par.ml \
   ../common/fips204/properties/mldsa_native.ml \
-  proofs/utils/mlkem_native_libc_full.ml \
-  ../common/fips204/properties/mldsa_native_full.ml \
-  ../common/layout.ml \
-  ../common/fips203/properties/mlkem_native_image.ml \
   proofs/utils/mlkem_native_libc.ml \
   ../common/fips203/properties/mlkem_native_libc_full.ml \
+  ../common/par.ml \
+  ../common/layout.ml \
+  ../common/fips203/properties/mlkem_native_image.ml \
   proofs/consttime.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/consttime.ml \
