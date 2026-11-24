@@ -10,7 +10,10 @@
 (* MLD_CONFIG_REDUCE_RAM (see mldsa_native/README.md), a tail call of        *)
 (* mldsa87_polyz_pack at offset 64 + 640 * i of the signature. It is         *)
 (* verified in the whole image (see libmldsa.ml), using the theorems for     *)
-(* mldsa87_polyz_pack, and shown to be constant time and memory safe.        *)
+(* mldsa87_polyz_pack, and shown to be constant time and memory safe. As     *)
+(* mldsa87_polyz_pack, it has a stack frame of 48 bytes and uses the stack   *)
+(* guard, so its statements carry the address of the stack guard in the      *)
+(* global offset table.                                                      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/mlkem_native/relative.ml";;
@@ -35,55 +38,77 @@ let MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_EXEC =
 (* ------------------------------------------------------------------------- *)
 (* Correctness. For i < 7, the polynomial x at zi is packed into the 640     *)
 (* bytes at offset 64 + 640 * i of the signature at sig, which may not       *)
-(* overlap it, as mld_polyz_pack_19 of common/mldsa_native_packing.ml.       *)
+(* overlap it, as mld_polyz_pack_19 of common/mldsa_native_packing.ml. The   *)
+(* stack frame is that of mldsa87_polyz_pack.                                *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT_STMT =
- `!sig zi x i pc returnaddress.
+ `!sig zi x i guard pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
-        i < 7 /\
-        ALL (nonoverlapping (word_add sig (word(64 + 640 * i)),640))
-            [(word pc,libmldsa_size); (zi,1024)]
+        i < 7 /\ aligned 16 stackpointer /\
+        PAIRWISE nonoverlapping
+         [(word_add sig (word(64 + 640 * i)),640);
+          (word_sub stackpointer (word 48),48)] /\
+        ALLPAIRS nonoverlapping
+         [(word_add sig (word(64 + 640 * i)),640);
+          (word_sub stackpointer (word 48),48)]
+         [(zi,1024); (word pc,libmldsa_size);
+          (word(pc + got_stack_chk_guard),8); (guard,8)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mldsa_native_libmldsa_gcc12_O2_reduced_ram_mc /\
                   read PC s = word (pc + mldsa87_pack_sig_z) /\
+                  read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [sig; zi; word i] s /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
                   (!j. j < 256
                        ==> read(memory :> bytes32(word_add zi (word(4 * j))))
                              s = x j))
              (\s. read PC s = returnaddress /\
-                  !j. j < 640
-                      ==> read(memory :> bytes8
-                            (word_add sig (word(64 + 640 * i + j)))) s =
-                          mld_polyz_pack_19 x j)
+                  (!j. j < 640
+                       ==> read(memory :> bytes8
+                             (word_add sig (word(64 + 640 * i + j)))) s =
+                           mld_polyz_pack_19 x j))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
-               [memory :> bytes(word_add sig (word(64 + 640 * i)),640)])`;;
+               [memory :> bytes(word_add sig (word(64 + 640 * i)),640);
+                memory :> bytes(word_sub stackpointer (word 48),48)])`;;
 
 let MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT =
-  assume_spec MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT_STMT;;
+  assume_spec
+   MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT_STMT;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness, constant time and memory safety together: the same, and the  *)
 (* events are a function of the addresses only, with all accesses within the *)
-(* inputs and outputs and the writes within the outputs.                     *)
+(* inputs and outputs, the stack frame, the GOT entry of the stack guard and *)
+(* the guard, and the writes within the output and the stack frame.          *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL_STMT =
  `exists f_events.
-     forall e sig zi x i pc returnaddress.
+     forall e sig zi x i guard pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
-        i < 7 /\
-        ALL (nonoverlapping (word_add sig (word(64 + 640 * i)),640))
-            [(word pc,libmldsa_size); (zi,1024)]
+        i < 7 /\ aligned 16 stackpointer /\
+        PAIRWISE nonoverlapping
+         [(word_add sig (word(64 + 640 * i)),640);
+          (word_sub stackpointer (word 48),48)] /\
+        ALLPAIRS nonoverlapping
+         [(word_add sig (word(64 + 640 * i)),640);
+          (word_sub stackpointer (word 48),48)]
+         [(zi,1024); (word pc,libmldsa_size);
+          (word(pc + got_stack_chk_guard),8); (guard,8)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mldsa_native_libmldsa_gcc12_O2_reduced_ram_mc /\
                   read PC s = word (pc + mldsa87_pack_sig_z) /\
+                  read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [sig; zi; word i] s /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
                   (!j. j < 256
                        ==> read(memory :> bytes32(word_add zi (word(4 * j))))
                              s = x j) /\
@@ -95,13 +120,19 @@ let MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL_STMT =
                            mld_polyz_pack_19 x j) /\
                   (exists e2.
                      read events s = APPEND e2 e /\
-                     e2 = f_events sig zi i pc returnaddress /\
+                     e2 = f_events sig zi i guard pc
+                            (word_sub stackpointer (word 48))
+                            returnaddress /\
                      memaccess_inbounds e2
-                      [zi,1024; word_add sig (word(64 + 640 * i)),640]
-                      [word_add sig (word(64 + 640 * i)),640]))
+                      [zi,1024; word_add sig (word(64 + 640 * i)),640;
+                       word_sub stackpointer (word 48),48;
+                       word(pc + got_stack_chk_guard),8; guard,8]
+                      [word_add sig (word(64 + 640 * i)),640;
+                       word_sub stackpointer (word 48),48]))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
-               [memory :> bytes(word_add sig (word(64 + 640 * i)),640)])`;;
+               [memory :> bytes(word_add sig (word(64 + 640 * i)),640);
+                memory :> bytes(word_sub stackpointer (word 48),48)])`;;
 
 let MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL =
   assume_spec MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL_STMT;;
@@ -112,28 +143,43 @@ let MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL =
 
 let MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE_STMT =
  `exists f_events.
-     forall e sig zi i pc returnaddress.
+     forall e sig zi i guard pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
-        i < 7 /\
-        ALL (nonoverlapping (word_add sig (word(64 + 640 * i)),640))
-            [(word pc,libmldsa_size); (zi,1024)]
+        i < 7 /\ aligned 16 stackpointer /\
+        PAIRWISE nonoverlapping
+         [(word_add sig (word(64 + 640 * i)),640);
+          (word_sub stackpointer (word 48),48)] /\
+        ALLPAIRS nonoverlapping
+         [(word_add sig (word(64 + 640 * i)),640);
+          (word_sub stackpointer (word 48),48)]
+         [(zi,1024); (word pc,libmldsa_size);
+          (word(pc + got_stack_chk_guard),8); (guard,8)]
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc)
                     mldsa_native_libmldsa_gcc12_O2_reduced_ram_mc /\
                   read PC s = word (pc + mldsa87_pack_sig_z) /\
+                  read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [sig; zi; word i] s /\
+                  read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
                   read events s = e)
              (\s. read PC s = returnaddress /\
                   (exists e2.
                      read events s = APPEND e2 e /\
-                     e2 = f_events sig zi i pc returnaddress /\
+                     e2 = f_events sig zi i guard pc
+                            (word_sub stackpointer (word 48))
+                            returnaddress /\
                      memaccess_inbounds e2
-                      [zi,1024; word_add sig (word(64 + 640 * i)),640]
-                      [word_add sig (word(64 + 640 * i)),640]))
+                      [zi,1024; word_add sig (word(64 + 640 * i)),640;
+                       word_sub stackpointer (word 48),48;
+                       word(pc + got_stack_chk_guard),8; guard,8]
+                      [word_add sig (word(64 + 640 * i)),640;
+                       word_sub stackpointer (word 48),48]))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
-               [memory :> bytes(word_add sig (word(64 + 640 * i)),640)])`;;
+               [memory :> bytes(word_add sig (word(64 + 640 * i)),640);
+                memory :> bytes(word_sub stackpointer (word 48),48)])`;;
 
 let MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE =
   assume_spec MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE_STMT;;

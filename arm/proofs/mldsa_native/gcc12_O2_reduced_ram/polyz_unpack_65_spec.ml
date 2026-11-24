@@ -26,32 +26,33 @@ needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml";;
     mldsa65_polyz_unpack:
        +0x0: add     x6, x1, #0x280
        +0x4: mov     w5, #0x80000
-       +0x8: ldrb    w2, [x1]
-       +0xc: add     x1, x1, #0x5
-      +0x10: str     w2, [x0]
-      +0x14: add     x0, x0, #0x8
-      +0x18: ldurb   w3, [x1, #-4]
-      +0x1c: orr     w3, w2, w3, lsl #8
-      +0x20: stur    w3, [x0, #-8]
-      +0x24: ldurb   w2, [x1, #-3]
-      +0x28: orr     w2, w3, w2, lsl #16
-      +0x2c: and     w2, w2, #0xfffff
-      +0x30: stur    w2, [x0, #-8]
-      +0x34: sub     w2, w5, w2
-      +0x38: ldurb   w3, [x1, #-3]
-      +0x3c: lsr     w3, w3, #4
-      +0x40: stur    w3, [x0, #-4]
-      +0x44: ldurb   w4, [x1, #-2]
-      +0x48: orr     w4, w3, w4, lsl #4
-      +0x4c: stur    w4, [x0, #-4]
-      +0x50: ldurb   w3, [x1, #-1]
-      +0x54: stur    w2, [x0, #-8]
-      +0x58: orr     w2, w4, w3, lsl #12
-      +0x5c: sub     w2, w5, w2
-      +0x60: stur    w2, [x0, #-4]
-      +0x64: cmp     x6, x1
-      +0x68: b.ne    <mldsa65_polyz_unpack+0x8>
-      +0x6c: ret
+       +0x8: nop
+       +0xc: ldrb    w2, [x1]
+      +0x10: add     x1, x1, #0x5
+      +0x14: str     w2, [x0]
+      +0x18: add     x0, x0, #0x8
+      +0x1c: ldurb   w3, [x1, #-4]
+      +0x20: orr     w3, w2, w3, lsl #8
+      +0x24: stur    w3, [x0, #-8]
+      +0x28: ldurb   w2, [x1, #-3]
+      +0x2c: orr     w2, w3, w2, lsl #16
+      +0x30: and     w2, w2, #0xfffff
+      +0x34: stur    w2, [x0, #-8]
+      +0x38: sub     w2, w5, w2
+      +0x3c: ldurb   w3, [x1, #-3]
+      +0x40: lsr     w3, w3, #4
+      +0x44: stur    w3, [x0, #-4]
+      +0x48: ldurb   w4, [x1, #-2]
+      +0x4c: orr     w4, w3, w4, lsl #4
+      +0x50: stur    w4, [x0, #-4]
+      +0x54: ldurb   w3, [x1, #-1]
+      +0x58: stur    w2, [x0, #-8]
+      +0x5c: orr     w2, w4, w3, lsl #12
+      +0x60: sub     w2, w5, w2
+      +0x64: stur    w2, [x0, #-4]
+      +0x68: cmp     x6, x1
+      +0x6c: b.ne    <mldsa65_polyz_unpack+0xc>
+      +0x70: ret
  ***)
 
 let MLDSA_NATIVE_POLYZ_UNPACK_65_GCC12_O2_REDUCED_RAM_EXEC =

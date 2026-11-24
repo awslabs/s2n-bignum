@@ -155,7 +155,8 @@ let SIGN44_ZPRE_STMT =
                        e2 = f_zpre m sig B sp s1p guard mf pc /\
                        memaccess_inbounds e2
                         [sig,2420; B,9384; sp,112;
-                         word_sub sp (word 1328),1328; s1p,384;
+                         word_sub sp (word 1328),1328;
+                         word_sub sp (word 48),48; s1p,384;
                          word(pc + got_stack_chk_guard),8; guard,8;
                          word(pc + got_memset),8; ea,el;
                          word(pc + rodata_mld_KeccakF_RoundConstants),192;
@@ -164,14 +165,16 @@ let SIGN44_ZPRE_STMT =
                          word(pc + mldsa_poly_reduce_consts),16;
                          word(pc + mldsa_poly_pointwise_montgomery_const1),16;
                          word(pc + mldsa_poly_pointwise_montgomery_const2),16]
-                        [sig,2420; B,9384; word_sub sp (word 1328),1328]))
+                        [sig,2420; B,9384; word_sub sp (word 1328),1328;
+                         word_sub sp (word 48),48]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [X18; X23; X26; X30] ,,
                 MAYCHANGE
                  [memory :> bytes(word_add B (word 5152),1024);
                   memory :> bytes(word_add B (word 7200),1024);
                   memory :> bytes(word_add sig (word 32),2304);
-                  memory :> bytes(word_sub sp (word 1328),1328)])`;;
+                  memory :> bytes(word_sub sp (word 1328),1328);
+                  memory :> bytes(word_sub sp (word 48),48)])`;;
 
 let SIGN44_ZALLOWED =
   [`pc:num`; `sig:int64`; `B:int64`; `sp:int64`; `s1p:int64`;
@@ -314,7 +317,8 @@ let SIGN44_ZBODY2_TAC =
     UNDISCH_TAC `i < m` THEN UNDISCH_TAC `m <= 4` THEN ARITH_TAC;
     ALL_TAC] THEN
   SIGN44_ZCALL_TAC "H_PZ"
-   [`read X0 s`; `read X1 s`; SIGN44_ZI; `i:num`; `pc:num`; `read X30 s`]
+   [`read X0 s`; `read X1 s`; SIGN44_ZI; `i:num`; `guard:int64`; `pc:num`;
+    `read SP s`; `read X30 s`]
    41 THEN
   ARM_STEPS_TAC SIGN44_EXEC (42--43) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN

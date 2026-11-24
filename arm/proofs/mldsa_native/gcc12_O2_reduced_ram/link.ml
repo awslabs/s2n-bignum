@@ -493,34 +493,40 @@ needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/pack_sig_h_87_proof.ml";;
 end;;
 
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_44_spec.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 module Par_job_polyz_pack_44 (Par_unit : sig end) = struct
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_44_proof.ml";;
 end;;
 
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_44_spec.ml";;
 needs "arm/proofs/utils/mldsa_native_hints.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 module Par_job_pack_sig_z_44 (Par_unit : sig end) = struct
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_44_proof.ml";;
 end;;
 
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_65_spec.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 module Par_job_polyz_pack_65 (Par_unit : sig end) = struct
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_65_proof.ml";;
 end;;
 
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_65_spec.ml";;
 needs "arm/proofs/utils/mldsa_native_hints.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 module Par_job_pack_sig_z_65 (Par_unit : sig end) = struct
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_65_proof.ml";;
 end;;
 
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_87_spec.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 module Par_job_polyz_pack_87 (Par_unit : sig end) = struct
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyz_pack_87_proof.ml";;
 end;;
 
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_87_spec.ml";;
 needs "arm/proofs/utils/mldsa_native_hints.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 module Par_job_pack_sig_z_87 (Par_unit : sig end) = struct
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/pack_sig_z_87_proof.ml";;
 end;;
@@ -1205,13 +1211,13 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_keccakf1600_xor_bytes (struct end) in []);
   "keccakf1600_permute", 68.0,
   (fun () -> let module Par_this = Par_job_keccakf1600_permute (struct end) in []);
-  "shake256_absorb", 31.0,
+  "shake256_absorb", 30.0,
   (fun () -> let module Par_this = Par_job_shake256_absorb (struct end) in []);
   "shake256_finalize", 7.0,
   (fun () -> let module Par_this = Par_job_shake256_finalize (struct end) in []);
   "keccakf1600_extract_bytes", 2.0,
   (fun () -> let module Par_this = Par_job_keccakf1600_extract_bytes (struct end) in []);
-  "shake256_squeeze", 89.0,
+  "shake256_squeeze", 86.0,
   (fun () -> let module Par_this = Par_job_shake256_squeeze (struct end) in []);
   "shake256_release", 1.0,
   (fun () -> let module Par_this = Par_job_shake256_release (struct end) in []);
@@ -1221,7 +1227,7 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_h_65 (struct end) in []);
   "H_87", 58.0,
   (fun () -> let module Par_this = Par_job_h_87 (struct end) in []);
-  "polyvec_matrix_expand_lazy_44", 1.0,
+  "polyvec_matrix_expand_lazy_44", 0.0,
   (fun () -> let module Par_this = Par_job_polyvec_matrix_expand_lazy_44 (struct end) in []);
   "shake128_init", 1.0,
   (fun () -> let module Par_this = Par_job_shake128_init (struct end) in []);
@@ -1229,13 +1235,13 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_shake128_absorb (struct end) in []);
   "shake128_finalize", 7.0,
   (fun () -> let module Par_this = Par_job_shake128_finalize (struct end) in []);
-  "shake128_squeeze", 89.0,
+  "shake128_squeeze", 87.0,
   (fun () -> let module Par_this = Par_job_shake128_squeeze (struct end) in []);
   "shake128_release", 1.0,
   (fun () -> let module Par_this = Par_job_shake128_release (struct end) in []);
   "rej_uniform", 8.0,
   (fun () -> let module Par_this = Par_job_rej_uniform (struct end) in []);
-  "poly_uniform", 39.0,
+  "poly_uniform", 38.0,
   (fun () -> let module Par_this = Par_job_poly_uniform (struct end) in []);
   "poly_pointwise_montgomery", 3.0,
   (fun () -> let module Par_this = Par_job_poly_pointwise_montgomery (struct end) in []);
@@ -1251,13 +1257,13 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_polyeta_unpack_44 (struct end) in []);
   "poly_caddq", 2.0,
   (fun () -> let module Par_this = Par_job_poly_caddq (struct end) in []);
-  "poly_power2round", 4.0,
+  "poly_power2round", 5.0,
   (fun () -> let module Par_this = Par_job_poly_power2round (struct end) in []);
   "polyt1_pack", 3.0,
   (fun () -> let module Par_this = Par_job_polyt1_pack (struct end) in []);
-  "polyt0_pack", 59.0,
+  "polyt0_pack", 61.0,
   (fun () -> let module Par_this = Par_job_polyt0_pack (struct end) in []);
-  "compute_pack_t0_t1_44", 96.0,
+  "compute_pack_t0_t1_44", 98.0,
   (fun () -> let module Par_this = Par_job_compute_pack_t0_t1_44 (struct end) in []);
   "polyvec_matrix_expand_lazy_65", 1.0,
   (fun () -> let module Par_this = Par_job_polyvec_matrix_expand_lazy_65 (struct end) in []);
@@ -1265,15 +1271,15 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_polyvec_matrix_pointwise_montgomery_row_lazy_65 (struct end) in []);
   "polyeta_unpack_65", 2.0,
   (fun () -> let module Par_this = Par_job_polyeta_unpack_65 (struct end) in []);
-  "compute_pack_t0_t1_65", 96.0,
+  "compute_pack_t0_t1_65", 98.0,
   (fun () -> let module Par_this = Par_job_compute_pack_t0_t1_65 (struct end) in []);
   "polyvec_matrix_expand_lazy_87", 1.0,
   (fun () -> let module Par_this = Par_job_polyvec_matrix_expand_lazy_87 (struct end) in []);
-  "polyvec_matrix_pointwise_montgomery_row_lazy_87", 147.0,
+  "polyvec_matrix_pointwise_montgomery_row_lazy_87", 146.0,
   (fun () -> let module Par_this = Par_job_polyvec_matrix_pointwise_montgomery_row_lazy_87 (struct end) in []);
   "polyeta_unpack_87", 6.0,
   (fun () -> let module Par_this = Par_job_polyeta_unpack_87 (struct end) in []);
-  "compute_pack_t0_t1_87", 96.0,
+  "compute_pack_t0_t1_87", 98.0,
   (fun () -> let module Par_this = Par_job_compute_pack_t0_t1_87 (struct end) in []);
   "keccakf1600x4_extract_bytes", 15.0,
   (fun () -> let module Par_this = Par_job_keccakf1600x4_extract_bytes (struct end) in []);
@@ -1285,7 +1291,7 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_shake256 (struct end) in []);
   "shake256x4_init", 0.0,
   (fun () -> let module Par_this = Par_job_shake256x4_init (struct end) in []);
-  "shake256x4_absorb_once", 167.0,
+  "shake256x4_absorb_once", 166.0,
   (fun () -> let module Par_this = Par_job_shake256x4_absorb_once (struct end) in []);
   "shake256x4_squeezeblocks", 24.0,
   (fun () -> let module Par_this = Par_job_shake256x4_squeezeblocks (struct end) in []);
@@ -1293,9 +1299,9 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_shake256x4_release (struct end) in []);
   "rej_eta_44", 32.0,
   (fun () -> let module Par_this = Par_job_rej_eta_44 (struct end) in []);
-  "poly_uniform_eta_4x_44", 191.0,
+  "poly_uniform_eta_4x_44", 194.0,
   (fun () -> let module Par_this = Par_job_poly_uniform_eta_4x_44 (struct end) in []);
-  "polyeta_pack_44", 3.0,
+  "polyeta_pack_44", 5.0,
   (fun () -> let module Par_this = Par_job_polyeta_pack_44 (struct end) in []);
   "poly_ntt", 30.0,
   (fun () -> let module Par_this = Par_job_poly_ntt (struct end) in []);
@@ -1303,7 +1309,7 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_polyvecl_ntt_44 (struct end) in []);
   "pack_sk_rho_key_tr_44", 1.0,
   (fun () -> let module Par_this = Par_job_pack_sk_rho_key_tr_44 (struct end) in []);
-  "keypair_internal_44", 203.0,
+  "keypair_internal_44", 215.0,
   (fun () -> let module Par_this = Par_job_keypair_internal_44 (struct end) in
      ["MLDSA_NATIVE_KEYPAIR_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_KEYPAIR_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_KEYPAIR_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_KEYPAIR_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
@@ -1315,15 +1321,15 @@ let par_link_results = par_run_jobs [
       "MLDSA_NATIVE_KEYPAIR_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_KEYPAIR_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
   "rej_eta_65", 23.0,
   (fun () -> let module Par_this = Par_job_rej_eta_65 (struct end) in []);
-  "poly_uniform_eta_4x_65", 182.0,
+  "poly_uniform_eta_4x_65", 184.0,
   (fun () -> let module Par_this = Par_job_poly_uniform_eta_4x_65 (struct end) in []);
-  "polyeta_pack_65", 2.0,
+  "polyeta_pack_65", 4.0,
   (fun () -> let module Par_this = Par_job_polyeta_pack_65 (struct end) in []);
-  "polyvecl_ntt_65", 6.0,
+  "polyvecl_ntt_65", 7.0,
   (fun () -> let module Par_this = Par_job_polyvecl_ntt_65 (struct end) in []);
   "pack_sk_rho_key_tr_65", 1.0,
   (fun () -> let module Par_this = Par_job_pack_sk_rho_key_tr_65 (struct end) in []);
-  "keypair_internal_65", 249.0,
+  "keypair_internal_65", 267.0,
   (fun () -> let module Par_this = Par_job_keypair_internal_65 (struct end) in
      ["MLDSA_NATIVE_KEYPAIR_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_KEYPAIR_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_KEYPAIR_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_KEYPAIR_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
@@ -1335,15 +1341,15 @@ let par_link_results = par_run_jobs [
       "MLDSA_NATIVE_KEYPAIR_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_KEYPAIR_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
   "rej_eta_87", 32.0,
   (fun () -> let module Par_this = Par_job_rej_eta_87 (struct end) in []);
-  "poly_uniform_eta_4x_87", 192.0,
+  "poly_uniform_eta_4x_87", 193.0,
   (fun () -> let module Par_this = Par_job_poly_uniform_eta_4x_87 (struct end) in []);
-  "polyeta_pack_87", 3.0,
+  "polyeta_pack_87", 5.0,
   (fun () -> let module Par_this = Par_job_polyeta_pack_87 (struct end) in []);
   "polyvecl_ntt_87", 7.0,
   (fun () -> let module Par_this = Par_job_polyvecl_ntt_87 (struct end) in []);
   "pack_sk_rho_key_tr_87", 1.0,
   (fun () -> let module Par_this = Par_job_pack_sk_rho_key_tr_87 (struct end) in []);
-  "keypair_internal_87", 331.0,
+  "keypair_internal_87", 359.0,
   (fun () -> let module Par_this = Par_job_keypair_internal_87 (struct end) in
      ["MLDSA_NATIVE_KEYPAIR_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_KEYPAIR_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_KEYPAIR_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_KEYPAIR_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
@@ -1353,7 +1359,7 @@ let par_link_results = par_run_jobs [
      ["MLDSA_NATIVE_KEYPAIR_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_KEYPAIR_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_KEYPAIR_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_KEYPAIR_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_KEYPAIR_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_KEYPAIR_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "lazy_eq", 4.0,
+  "lazy_eq", 0.0,
   (fun () -> let module Par_this = Par_job_lazy_eq (struct end) in []);
   "pack_sig_c_44", 0.0,
   (fun () -> let module Par_this = Par_job_pack_sig_c_44 (struct end) in []);
@@ -1371,17 +1377,17 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_pack_sig_h_65 (struct end) in []);
   "pack_sig_h_87", 53.0,
   (fun () -> let module Par_this = Par_job_pack_sig_h_87 (struct end) in []);
-  "polyz_pack_44", 6.0,
+  "polyz_pack_44", 8.0,
   (fun () -> let module Par_this = Par_job_polyz_pack_44 (struct end) in []);
-  "pack_sig_z_44", 2.0,
+  "pack_sig_z_44", 4.0,
   (fun () -> let module Par_this = Par_job_pack_sig_z_44 (struct end) in []);
-  "polyz_pack_65", 3.0,
+  "polyz_pack_65", 5.0,
   (fun () -> let module Par_this = Par_job_polyz_pack_65 (struct end) in []);
-  "pack_sig_z_65", 2.0,
+  "pack_sig_z_65", 4.0,
   (fun () -> let module Par_this = Par_job_pack_sig_z_65 (struct end) in []);
-  "polyz_pack_87", 3.0,
+  "polyz_pack_87", 5.0,
   (fun () -> let module Par_this = Par_job_polyz_pack_87 (struct end) in []);
-  "pack_sig_z_87", 2.0,
+  "pack_sig_z_87", 4.0,
   (fun () -> let module Par_this = Par_job_pack_sig_z_87 (struct end) in []);
   "polyvecl_unpack_eta_44", 8.0,
   (fun () -> let module Par_this = Par_job_polyvecl_unpack_eta_44 (struct end) in []);
@@ -1391,7 +1397,7 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_polyvecl_chknorm_44 (struct end) in []);
   "polyveck_unpack_eta_chknorm_44", 11.0,
   (fun () -> let module Par_this = Par_job_polyveck_unpack_eta_chknorm_44 (struct end) in []);
-  "pk_from_sk_44", 175.0,
+  "pk_from_sk_44", 174.0,
   (fun () -> let module Par_this = Par_job_pk_from_sk_44 (struct end) in
      ["MLDSA_NATIVE_PK_FROM_SK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_PK_FROM_SK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_PK_FROM_SK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_PK_FROM_SK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
@@ -1418,13 +1424,13 @@ let par_link_results = par_run_jobs [
      ["MLDSA_NATIVE_PK_FROM_SK_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_PK_FROM_SK_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_PK_FROM_SK_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_PK_FROM_SK_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_PK_FROM_SK_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_PK_FROM_SK_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "poly_challenge_44", 79.0,
+  "poly_challenge_44", 78.0,
   (fun () -> let module Par_this = Par_job_poly_challenge_44 (struct end) in []);
   "poly_challenge_65", 79.0,
   (fun () -> let module Par_this = Par_job_poly_challenge_65 (struct end) in []);
-  "poly_challenge_87", 79.0,
+  "poly_challenge_87", 80.0,
   (fun () -> let module Par_this = Par_job_poly_challenge_87 (struct end) in []);
-  "poly_decompose_44", 3.0,
+  "poly_decompose_44", 2.0,
   (fun () -> let module Par_this = Par_job_poly_decompose_44 (struct end) in []);
   "poly_decompose_65", 2.0,
   (fun () -> let module Par_this = Par_job_poly_decompose_65 (struct end) in []);
@@ -1460,25 +1466,25 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_polyveck_reduce_44 (struct end) in []);
   "polyveck_invntt_tomont_44", 9.0,
   (fun () -> let module Par_this = Par_job_polyveck_invntt_tomont_44 (struct end) in []);
-  "polyvec_matrix_pointwise_montgomery_yvec_lazy_44", 589.0,
+  "polyvec_matrix_pointwise_montgomery_yvec_lazy_44", 598.0,
   (fun () -> let module Par_this = Par_job_polyvec_matrix_pointwise_montgomery_yvec_lazy_44 (struct end) in []);
   "polyveck_reduce_65", 7.0,
   (fun () -> let module Par_this = Par_job_polyveck_reduce_65 (struct end) in []);
   "polyveck_invntt_tomont_65", 7.0,
   (fun () -> let module Par_this = Par_job_polyveck_invntt_tomont_65 (struct end) in []);
-  "polyvec_matrix_pointwise_montgomery_yvec_lazy_65", 1734.0,
+  "polyvec_matrix_pointwise_montgomery_yvec_lazy_65", 1725.0,
   (fun () -> let module Par_this = Par_job_polyvec_matrix_pointwise_montgomery_yvec_lazy_65 (struct end) in []);
-  "polyveck_reduce_87", 7.0,
+  "polyveck_reduce_87", 6.0,
   (fun () -> let module Par_this = Par_job_polyveck_reduce_87 (struct end) in []);
   "polyveck_invntt_tomont_87", 7.0,
   (fun () -> let module Par_this = Par_job_polyveck_invntt_tomont_87 (struct end) in []);
-  "polyvec_matrix_pointwise_montgomery_yvec_lazy_87", 4455.0,
+  "polyvec_matrix_pointwise_montgomery_yvec_lazy_87", 4905.0,
   (fun () -> let module Par_this = Par_job_polyvec_matrix_pointwise_montgomery_yvec_lazy_87 (struct end) in []);
   "polyveck_caddq_44", 9.0,
   (fun () -> let module Par_this = Par_job_polyveck_caddq_44 (struct end) in []);
-  "polyveck_caddq_65", 7.0,
+  "polyveck_caddq_65", 6.0,
   (fun () -> let module Par_this = Par_job_polyveck_caddq_65 (struct end) in []);
-  "polyveck_caddq_87", 6.0,
+  "polyveck_caddq_87", 7.0,
   (fun () -> let module Par_this = Par_job_polyveck_caddq_87 (struct end) in []);
   "polyw1_pack_88", 3.0,
   (fun () -> let module Par_this = Par_job_polyw1_pack_88 (struct end) in []);
@@ -1511,33 +1517,33 @@ let par_link_results = par_run_jobs [
      ["MLDSA_NATIVE_PREPARE_DOMAIN_SEPARATION_PREFIX_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_PREPARE_DOMAIN_SEPARATION_PREFIX_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_PREPARE_DOMAIN_SEPARATION_PREFIX_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_PREPARE_DOMAIN_SEPARATION_PREFIX_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_PREPARE_DOMAIN_SEPARATION_PREFIX_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_PREPARE_DOMAIN_SEPARATION_PREFIX_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "sig_unpack_hints_44", 70.0,
+  "sig_unpack_hints_44", 71.0,
   (fun () -> let module Par_this = Par_job_sig_unpack_hints_44 (struct end) in []);
-  "sig_unpack_hints_65", 70.0,
+  "sig_unpack_hints_65", 71.0,
   (fun () -> let module Par_this = Par_job_sig_unpack_hints_65 (struct end) in []);
-  "sig_unpack_hints_87", 71.0,
+  "sig_unpack_hints_87", 70.0,
   (fun () -> let module Par_this = Par_job_sig_unpack_hints_87 (struct end) in []);
-  "signature_internal_44", 501.0,
+  "signature_internal_44", 509.0,
   (fun () -> let module Par_this = Par_job_signature_internal_44 (struct end) in
      ["MLDSA_NATIVE_SIGNATURE_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_SIGNATURE_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_SIGNATURE_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "signature_44", 93.0,
+  "signature_44", 95.0,
   (fun () -> let module Par_this = Par_job_signature_44 (struct end) in
      ["MLDSA_NATIVE_SIGNATURE_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_SIGNATURE_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_SIGNATURE_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "signature_internal_65", 508.0,
+  "signature_internal_65", 514.0,
   (fun () -> let module Par_this = Par_job_signature_internal_65 (struct end) in
      ["MLDSA_NATIVE_SIGNATURE_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_SIGNATURE_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_SIGNATURE_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "signature_65", 95.0,
+  "signature_65", 94.0,
   (fun () -> let module Par_this = Par_job_signature_65 (struct end) in
      ["MLDSA_NATIVE_SIGNATURE_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_SIGNATURE_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_SIGNATURE_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "signature_internal_87", 501.0,
+  "signature_internal_87", 508.0,
   (fun () -> let module Par_this = Par_job_signature_internal_87 (struct end) in
      ["MLDSA_NATIVE_SIGNATURE_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
@@ -1547,12 +1553,12 @@ let par_link_results = par_run_jobs [
      ["MLDSA_NATIVE_SIGNATURE_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_SIGNATURE_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_SIGNATURE_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "signature_extmu_44", 28.0,
+  "signature_extmu_44", 27.0,
   (fun () -> let module Par_this = Par_job_signature_extmu_44 (struct end) in
      ["MLDSA_NATIVE_SIGNATURE_EXTMU_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_EXTMU_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_EXTMU_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_EXTMU_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_SIGNATURE_EXTMU_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_SIGNATURE_EXTMU_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "signature_extmu_65", 28.0,
+  "signature_extmu_65", 27.0,
   (fun () -> let module Par_this = Par_job_signature_extmu_65 (struct end) in
      ["MLDSA_NATIVE_SIGNATURE_EXTMU_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_EXTMU_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_EXTMU_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_EXTMU_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
@@ -1562,12 +1568,12 @@ let par_link_results = par_run_jobs [
      ["MLDSA_NATIVE_SIGNATURE_EXTMU_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_EXTMU_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_EXTMU_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_EXTMU_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_SIGNATURE_EXTMU_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_SIGNATURE_EXTMU_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "signature_pre_hash_internal_44", 51.0,
+  "signature_pre_hash_internal_44", 50.0,
   (fun () -> let module Par_this = Par_job_signature_pre_hash_internal_44 (struct end) in
      ["MLDSA_NATIVE_SIGNATURE_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_SIGNATURE_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_SIGNATURE_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "signature_pre_hash_internal_65", 51.0,
+  "signature_pre_hash_internal_65", 50.0,
   (fun () -> let module Par_this = Par_job_signature_pre_hash_internal_65 (struct end) in
      ["MLDSA_NATIVE_SIGNATURE_PRE_HASH_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_SIGNATURE_PRE_HASH_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_SIGNATURE_PRE_HASH_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_SIGNATURE_PRE_HASH_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
@@ -1604,27 +1610,27 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_unpack_sk_65 (struct end) in []);
   "unpack_sk_87", 2.0,
   (fun () -> let module Par_this = Par_job_unpack_sk_87 (struct end) in []);
-  "verify_internal_44", 545.0,
+  "verify_internal_44", 552.0,
   (fun () -> let module Par_this = Par_job_verify_internal_44 (struct end) in
      ["MLDSA_NATIVE_VERIFY_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_VERIFY_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_VERIFY_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_VERIFY_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_VERIFY_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_VERIFY_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "verify_44", 26.0,
+  "verify_44", 25.0,
   (fun () -> let module Par_this = Par_job_verify_44 (struct end) in
      ["MLDSA_NATIVE_VERIFY_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_VERIFY_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_VERIFY_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_VERIFY_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_VERIFY_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_VERIFY_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "verify_internal_65", 580.0,
+  "verify_internal_65", 585.0,
   (fun () -> let module Par_this = Par_job_verify_internal_65 (struct end) in
      ["MLDSA_NATIVE_VERIFY_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_VERIFY_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_VERIFY_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_VERIFY_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_VERIFY_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_VERIFY_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "verify_65", 26.0,
+  "verify_65", 25.0,
   (fun () -> let module Par_this = Par_job_verify_65 (struct end) in
      ["MLDSA_NATIVE_VERIFY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_VERIFY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_VERIFY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_VERIFY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_VERIFY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_VERIFY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "verify_internal_87", 571.0,
+  "verify_internal_87", 578.0,
   (fun () -> let module Par_this = Par_job_verify_internal_87 (struct end) in
      ["MLDSA_NATIVE_VERIFY_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_VERIFY_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_VERIFY_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_VERIFY_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
@@ -1654,12 +1660,12 @@ let par_link_results = par_run_jobs [
      ["MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "verify_pre_hash_internal_65", 28.0,
+  "verify_pre_hash_internal_65", 27.0,
   (fun () -> let module Par_this = Par_job_verify_pre_hash_internal_65 (struct end) in
      ["MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;
       "MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE", Par_this.MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE]);
-  "verify_pre_hash_internal_87", 27.0,
+  "verify_pre_hash_internal_87", 28.0,
   (fun () -> let module Par_this = Par_job_verify_pre_hash_internal_87 (struct end) in
      ["MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL", Par_this.MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL;
       "MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT", Par_this.MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_87_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT;

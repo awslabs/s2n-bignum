@@ -202,7 +202,7 @@ let CPT65_BODY_TAC =
   ARM_STEPS_TAC CPT65_EXEC (35--38) THEN
   CPT65_LOOP_CALL_TAC "H_T0"
    [`read X0 s`; `read X1 s`; mk_comb(`mld_poly_power2round_lo`,CPT65_CADDQ);
-    `pc:num`; `read X30 s`] 39 THEN
+    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 39 THEN
   ARM_STEPS_TAC CPT65_EXEC (40--42) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   W32_LOOP_TEST_TAC THEN LOOP_COND_TAC THEN

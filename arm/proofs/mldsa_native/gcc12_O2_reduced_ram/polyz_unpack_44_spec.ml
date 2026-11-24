@@ -26,55 +26,56 @@ needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml";;
     mldsa44_polyz_unpack:
        +0x0: add     x8, x1, #0x240
        +0x4: mov     w7, #0x20000
-       +0x8: ldrb    w2, [x1]
-       +0xc: add     x1, x1, #0x9
-      +0x10: str     w2, [x0]
-      +0x14: ldurb   w3, [x1, #-8]
-      +0x18: orr     w3, w2, w3, lsl #8
-      +0x1c: str     w3, [x0]
-      +0x20: ldurb   w2, [x1, #-7]
-      +0x24: orr     w2, w3, w2, lsl #16
-      +0x28: and     w2, w2, #0x3ffff
-      +0x2c: str     w2, [x0]
-      +0x30: sub     w4, w7, w2
-      +0x34: ldurb   w2, [x1, #-7]
-      +0x38: lsr     w2, w2, #2
-      +0x3c: str     w2, [x0, #4]
-      +0x40: ldurb   w3, [x1, #-6]
-      +0x44: orr     w3, w2, w3, lsl #6
-      +0x48: str     w3, [x0, #4]
-      +0x4c: ldurb   w2, [x1, #-5]
-      +0x50: orr     w2, w3, w2, lsl #14
-      +0x54: and     w2, w2, #0x3ffff
-      +0x58: str     w2, [x0, #4]
-      +0x5c: sub     w3, w7, w2
-      +0x60: ldurb   w2, [x1, #-5]
-      +0x64: lsr     w2, w2, #4
-      +0x68: str     w2, [x0, #8]
-      +0x6c: ldurb   w5, [x1, #-4]
-      +0x70: orr     w5, w2, w5, lsl #4
-      +0x74: str     w5, [x0, #8]
-      +0x78: ldurb   w2, [x1, #-3]
-      +0x7c: orr     w2, w5, w2, lsl #12
-      +0x80: and     w2, w2, #0x3ffff
-      +0x84: str     w2, [x0, #8]
-      +0x88: sub     w2, w7, w2
-      +0x8c: ldurb   w5, [x1, #-3]
-      +0x90: lsr     w5, w5, #6
-      +0x94: str     w5, [x0, #12]
-      +0x98: ldurb   w6, [x1, #-2]
-      +0x9c: orr     w6, w5, w6, lsl #2
-      +0xa0: str     w6, [x0, #12]
-      +0xa4: ldurb   w5, [x1, #-1]
-      +0xa8: stp     w4, w3, [x0]
-      +0xac: add     x0, x0, #0x10
-      +0xb0: stur    w2, [x0, #-8]
-      +0xb4: orr     w3, w6, w5, lsl #10
-      +0xb8: sub     w2, w7, w3
-      +0xbc: stur    w2, [x0, #-4]
-      +0xc0: cmp     x8, x1
-      +0xc4: b.ne    <mldsa44_polyz_unpack+0x8>
-      +0xc8: ret
+       +0x8: nop
+       +0xc: ldrb    w2, [x1]
+      +0x10: add     x1, x1, #0x9
+      +0x14: str     w2, [x0]
+      +0x18: ldurb   w3, [x1, #-8]
+      +0x1c: orr     w3, w2, w3, lsl #8
+      +0x20: str     w3, [x0]
+      +0x24: ldurb   w2, [x1, #-7]
+      +0x28: orr     w2, w3, w2, lsl #16
+      +0x2c: and     w2, w2, #0x3ffff
+      +0x30: str     w2, [x0]
+      +0x34: sub     w4, w7, w2
+      +0x38: ldurb   w2, [x1, #-7]
+      +0x3c: lsr     w2, w2, #2
+      +0x40: str     w2, [x0, #4]
+      +0x44: ldurb   w3, [x1, #-6]
+      +0x48: orr     w3, w2, w3, lsl #6
+      +0x4c: str     w3, [x0, #4]
+      +0x50: ldurb   w2, [x1, #-5]
+      +0x54: orr     w2, w3, w2, lsl #14
+      +0x58: and     w2, w2, #0x3ffff
+      +0x5c: str     w2, [x0, #4]
+      +0x60: sub     w3, w7, w2
+      +0x64: ldurb   w2, [x1, #-5]
+      +0x68: lsr     w2, w2, #4
+      +0x6c: str     w2, [x0, #8]
+      +0x70: ldurb   w5, [x1, #-4]
+      +0x74: orr     w5, w2, w5, lsl #4
+      +0x78: str     w5, [x0, #8]
+      +0x7c: ldurb   w2, [x1, #-3]
+      +0x80: orr     w2, w5, w2, lsl #12
+      +0x84: and     w2, w2, #0x3ffff
+      +0x88: str     w2, [x0, #8]
+      +0x8c: sub     w2, w7, w2
+      +0x90: ldurb   w5, [x1, #-3]
+      +0x94: lsr     w5, w5, #6
+      +0x98: str     w5, [x0, #12]
+      +0x9c: ldurb   w6, [x1, #-2]
+      +0xa0: orr     w6, w5, w6, lsl #2
+      +0xa4: str     w6, [x0, #12]
+      +0xa8: ldurb   w5, [x1, #-1]
+      +0xac: stp     w4, w3, [x0]
+      +0xb0: add     x0, x0, #0x10
+      +0xb4: stur    w2, [x0, #-8]
+      +0xb8: orr     w3, w6, w5, lsl #10
+      +0xbc: sub     w2, w7, w3
+      +0xc0: stur    w2, [x0, #-4]
+      +0xc4: cmp     x8, x1
+      +0xc8: b.ne    <mldsa44_polyz_unpack+0xc>
+      +0xcc: ret
  ***)
 
 let MLDSA_NATIVE_POLYZ_UNPACK_44_GCC12_O2_REDUCED_RAM_EXEC =
