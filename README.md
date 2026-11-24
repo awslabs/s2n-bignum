@@ -494,7 +494,7 @@ count printed by `relative_report` at the end of the link file, see
 | arm mldsa gcc12_Os | 629 | 1922 s |
 | x86 mlkem gcc12_O2 | 593 | 1853 s |
 | x86 mldsa gcc12_O2 | 578 | 1860 s |
-| x86 mldsa gcc12_O2_reduced_ram | 540 | not measured |
+| x86 mldsa gcc12_O2_reduced_ram | 540 | 2233 s |
 | x86 mlkem asm (AVX2) | 768 | 2697 s |
 | x86 mlkem asm_avx512 | 759 | 2662 s |
 

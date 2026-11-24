@@ -38,8 +38,11 @@ needs "x86/proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml";;
       +0x2a  cmp     rax, 0x80
      loop1_back:
       +0x30  jne     loop1
-     loop1_exit: ret:
-      +0x32  ret
+     loop1_exit:
+      +0x32  mov     QWORD PTR [rsp-0x8], 0x0
+      +0x3b  lea     rax, [rsp-0x8]
+     ret:
+      +0x40  ret
  ***)
 
 let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_EXEC =
@@ -47,14 +50,19 @@ let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_EXEC =
    [layout_range "mldsa65_polyeta_pack"];;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness.                                                              *)
+(* Correctness. The function clears the 8 bytes below the return address,    *)
+(* the temporary array that mld_polyeta_pack zeroizes, which it keeps in the *)
+(* red zone (so the frame is 8 bytes).                                       *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT_STMT =
  `!r a x pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
         ALL (nonoverlapping (r,128))
-            [(word pc,libmldsa_size); (a,1024); (stackpointer,8)]
+            [(word pc,libmldsa_size); (a,1024);
+             (word_sub stackpointer (word 8),8); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 8),8))
+            [(word pc,libmldsa_size); (a,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mldsa_native_libmldsa_gcc12_O2_reduced_ram_mc /\
@@ -71,7 +79,9 @@ let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT_S
                       ==> read(memory :> bytes8(word_add r (word j))) s =
                           mld_polyeta_pack_4 x j)
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(r,128)])`;;
+              MAYCHANGE
+               [memory :> bytes(r,128);
+                memory :> bytes(word_sub stackpointer (word 8),8)])`;;
 
 let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT =
   assume_spec
@@ -89,7 +99,10 @@ let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL_STMT
      forall e r a x pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
         ALL (nonoverlapping (r,128))
-            [(word pc,libmldsa_size); (a,1024); (stackpointer,8)]
+            [(word pc,libmldsa_size); (a,1024);
+             (word_sub stackpointer (word 8),8); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 8),8))
+            [(word pc,libmldsa_size); (a,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mldsa_native_libmldsa_gcc12_O2_reduced_ram_mc /\
@@ -108,11 +121,16 @@ let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL_STMT
                            mld_polyeta_pack_4 x j) /\
                   (exists e2.
                      read events s = APPEND e2 e /\
-                     e2 = f_events r a pc stackpointer returnaddress /\
+                     e2 = f_events r a pc (word_sub stackpointer (word 8))
+                                   returnaddress /\
                      memaccess_inbounds e2
-                       [a,1024; r,128; stackpointer,8] [r,128]))
+                       [a,1024; r,128; word_sub stackpointer (word 8),8;
+                        stackpointer,8]
+                       [r,128; word_sub stackpointer (word 8),8]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(r,128)])`;;
+              MAYCHANGE
+               [memory :> bytes(r,128);
+                memory :> bytes(word_sub stackpointer (word 8),8)])`;;
 
 let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL =
   assume_spec
@@ -127,7 +145,10 @@ let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE_STMT
      forall e r a pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
         ALL (nonoverlapping (r,128))
-            [(word pc,libmldsa_size); (a,1024); (stackpointer,8)]
+            [(word pc,libmldsa_size); (a,1024);
+             (word_sub stackpointer (word 8),8); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 8),8))
+            [(word pc,libmldsa_size); (a,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
                     mldsa_native_libmldsa_gcc12_O2_reduced_ram_mc /\
@@ -140,11 +161,16 @@ let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE_STMT
                   read RSP s = word_add stackpointer (word 8) /\
                   (exists e2.
                      read events s = APPEND e2 e /\
-                     e2 = f_events r a pc stackpointer returnaddress /\
+                     e2 = f_events r a pc (word_sub stackpointer (word 8))
+                                   returnaddress /\
                      memaccess_inbounds e2
-                       [a,1024; r,128; stackpointer,8] [r,128]))
+                       [a,1024; r,128; word_sub stackpointer (word 8),8;
+                        stackpointer,8]
+                       [r,128; word_sub stackpointer (word 8),8]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(r,128)])`;;
+              MAYCHANGE
+               [memory :> bytes(r,128);
+                memory :> bytes(word_sub stackpointer (word 8),8)])`;;
 
 let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE =
   assume_spec

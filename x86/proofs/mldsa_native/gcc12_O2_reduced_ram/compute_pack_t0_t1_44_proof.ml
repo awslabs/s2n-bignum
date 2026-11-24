@@ -277,7 +277,7 @@ let CPT44_SETUP_TAC =
     `rho:int64,32`; `word pc:int64,libmldsa_size`;
     `word_add stackpointer (word 4845):int64,48`;
     `word_add stackpointer (word 4893):int64,8`] THEN
-  REALIGN_ALIGNED_TAC [1710; 2734; 3758] THEN
+  REALIGN_ALIGNED_TAC [1678; 1710; 2734; 3758] THEN
   ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN
   ENSURES_PRESERVED_TAC "rbp_init" `RBP` THEN
   ENSURES_PRESERVED_TAC "r12_init" `R12` THEN

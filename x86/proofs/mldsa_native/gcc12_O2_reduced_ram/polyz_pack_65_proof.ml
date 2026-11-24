@@ -15,11 +15,12 @@ needs "x86/proofs/utils/mldsa_native_pack.ml";;
 (* Correctness, constant time and memory safety. Each of the 128 iterations  *)
 (* of the loop handles 2 coefficients and 5 bytes, 4 of them stored as one   *)
 (* 32-bit word, whose fact is split into facts about the bytes. The register *)
-(* RBX is saved in the stack frame, below the return address; after          *)
-(* REPEAT_GEN_AND_OFFSET_STACKPTR_TAC, stackpointer is the bottom of the     *)
-(* frame, 8 bytes below the value of RSP on entry. The loop test is the end  *)
-(* of the body, as ENSURES_EVENTS_WHILE_UP2_TAC requires, and the events of  *)
-(* an iteration depend on its index only.                                    *)
+(* RBX is saved in the stack frame, below the return address, and the 16     *)
+(* bytes below it are cleared after the loop (the zeroized temporary array); *)
+(* after REPEAT_GEN_AND_OFFSET_STACKPTR_TAC, stackpointer is the bottom of   *)
+(* the frame, 24 bytes below the value of RSP on entry. The loop test is the *)
+(* end of the body, as ENSURES_EVENTS_WHILE_UP2_TAC requires, and the events *)
+(* of an iteration depend on its index only.                                 *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_POLYZ_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL = prove
@@ -47,10 +48,11 @@ let MLDSA_NATIVE_POLYZ_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL = prov
           read RDI s = word_add a (word(8 * i)) /\
           read R9 s = word_add r (word 640) /\
           read R8 s = word 524288 /\
-          read RSP s = stackpointer /\
-          read (memory :> bytes64 (word_add stackpointer (word 8))) s =
+          read RSP s = word_add stackpointer (word 16) /\
+          read (memory :> bytes64 (word_add stackpointer (word 24))) s =
           returnaddress /\
-          read (memory :> bytes64 stackpointer) s = rbx_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 16))) s =
+          rbx_init /\
           (!j. j < 256
                ==> read(memory :> bytes32(word_add a (word(4 * j)))) s =
                    x j) /\
@@ -79,7 +81,7 @@ let MLDSA_NATIVE_POLYZ_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL = prov
 
     (*** The return ***)
 
-    FULL_EXIT_TAC EXEC 2]);;
+    FULL_EXIT_TAC EXEC 5]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness, and constant time and memory safety alone.                   *)

@@ -17,7 +17,11 @@ needs "x86/proofs/utils/mldsa_native_pack.ml";;
 (* the addresses that the simulation forms from it); the code loads only the *)
 (* low byte of each coefficient, so the inputs are split into bytes. The     *)
 (* loop test is the end of the body, as ENSURES_EVENTS_WHILE_UP2_TAC         *)
-(* requires, and the events of an iteration depend on its index only.        *)
+(* requires, and the events of an iteration depend on its index only. After  *)
+(* the loop, the 8 bytes below the return address, which the function does   *)
+(* not otherwise use, are cleared (the zeroized temporary array); after      *)
+(* REPEAT_GEN_AND_OFFSET_STACKPTR_TAC, stackpointer is the bottom of this    *)
+(* frame, 8 bytes below the value of RSP on entry.                           *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL = prove
@@ -34,9 +38,7 @@ let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL = pr
           (f_ev_prol r a pc stackpointer returnaddress))
     :(uarch_event)list` THEN
   REPEAT META_EXISTS_TAC THEN
-  MAP_EVERY X_GEN_TAC
-   [`e:(uarch_event)list`; `r:int64`; `a:int64`; `x:num->int32`; `pc:num`;
-    `stackpointer:int64`; `returnaddress:int64`] THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               NONOVERLAPPING_CLAUSES; ALL; fst EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -44,8 +46,9 @@ let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL = pr
    `pc + mldsa65_polyeta_pack_loop1_exit`
    `\i s. read RDI s = r /\ read RSI s = a /\ read RAX s = word i /\
           read RCX s = word 4 /\
-          read RSP s = stackpointer /\
-          read (memory :> bytes64 stackpointer) s = returnaddress /\
+          read RSP s = word_add stackpointer (word 8) /\
+          read (memory :> bytes64 (word_add stackpointer (word 8))) s =
+          returnaddress /\
           (!j. j < 256
                ==> read(memory :> bytes32(word_add a (word(4 * j)))) s =
                    x j) /\
@@ -75,7 +78,7 @@ let MLDSA_NATIVE_POLYETA_PACK_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL = pr
 
     (*** The return ***)
 
-    FULL_EXIT_TAC EXEC 1]);;
+    FULL_EXIT_TAC EXEC 3]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness, and constant time and memory safety alone.                   *)

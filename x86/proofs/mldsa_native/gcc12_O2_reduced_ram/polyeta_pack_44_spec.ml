@@ -75,11 +75,13 @@ needs "x86/proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml";;
      loop1_back:
       +0x9d  jne     loop1
      loop1_exit:
-      +0x9f  pop     rbx
-      +0xa0  pop     rbp
-      +0xa1  pop     r12
+      +0x9f  mov     QWORD PTR [rsp-0x8], 0x0
+      +0xa8  lea     rax, [rsp-0x8]
+      +0xad  pop     rbx
+      +0xae  pop     rbp
+      +0xaf  pop     r12
      ret:
-      +0xa3  ret
+      +0xb1  ret
  ***)
 
 let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_EXEC =
@@ -88,7 +90,9 @@ let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_EXEC =
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness. The function saves R12, RBP and RBX, which it uses, in the   *)
-(* 24 bytes below the return address.                                        *)
+(* 24 bytes below the return address, and clears the 8 bytes below them, the *)
+(* temporary array that mld_polyeta_pack zeroizes (so the frame is 32        *)
+(* bytes).                                                                   *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT_STMT =
@@ -96,8 +100,8 @@ let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT_S
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
         ALL (nonoverlapping (r,96))
             [(word pc,libmldsa_size); (a,1024);
-             (word_sub stackpointer (word 24),24); (stackpointer,8)] /\
-        ALL (nonoverlapping (word_sub stackpointer (word 24),24))
+             (word_sub stackpointer (word 32),32); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 32),32))
             [(word pc,libmldsa_size); (a,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
@@ -117,7 +121,7 @@ let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT_S
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
                [memory :> bytes(r,96);
-                memory :> bytes(word_sub stackpointer (word 24),24)])`;;
+                memory :> bytes(word_sub stackpointer (word 32),32)])`;;
 
 let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_CORRECT =
   assume_spec
@@ -136,8 +140,8 @@ let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL_STMT
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
         ALL (nonoverlapping (r,96))
             [(word pc,libmldsa_size); (a,1024);
-             (word_sub stackpointer (word 24),24); (stackpointer,8)] /\
-        ALL (nonoverlapping (word_sub stackpointer (word 24),24))
+             (word_sub stackpointer (word 32),32); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 32),32))
             [(word pc,libmldsa_size); (a,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
@@ -157,16 +161,16 @@ let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL_STMT
                            mld_polyeta_pack_2 x j) /\
                   (exists e2.
                      read events s = APPEND e2 e /\
-                     e2 = f_events r a pc (word_sub stackpointer (word 24))
+                     e2 = f_events r a pc (word_sub stackpointer (word 32))
                                    returnaddress /\
                      memaccess_inbounds e2
-                       [a,1024; r,96; word_sub stackpointer (word 24),24;
+                       [a,1024; r,96; word_sub stackpointer (word 32),32;
                         stackpointer,8]
-                       [r,96; word_sub stackpointer (word 24),24]))
+                       [r,96; word_sub stackpointer (word 32),32]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
                [memory :> bytes(r,96);
-                memory :> bytes(word_sub stackpointer (word 24),24)])`;;
+                memory :> bytes(word_sub stackpointer (word 32),32)])`;;
 
 let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL =
   assume_spec
@@ -182,8 +186,8 @@ let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE_STMT
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
         ALL (nonoverlapping (r,96))
             [(word pc,libmldsa_size); (a,1024);
-             (word_sub stackpointer (word 24),24); (stackpointer,8)] /\
-        ALL (nonoverlapping (word_sub stackpointer (word 24),24))
+             (word_sub stackpointer (word 32),32); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 32),32))
             [(word pc,libmldsa_size); (a,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
@@ -197,16 +201,16 @@ let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE_STMT
                   read RSP s = word_add stackpointer (word 8) /\
                   (exists e2.
                      read events s = APPEND e2 e /\
-                     e2 = f_events r a pc (word_sub stackpointer (word 24))
+                     e2 = f_events r a pc (word_sub stackpointer (word 32))
                                    returnaddress /\
                      memaccess_inbounds e2
-                       [a,1024; r,96; word_sub stackpointer (word 24),24;
+                       [a,1024; r,96; word_sub stackpointer (word 32),32;
                         stackpointer,8]
-                       [r,96; word_sub stackpointer (word 24),24]))
+                       [r,96; word_sub stackpointer (word 32),32]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
                [memory :> bytes(r,96);
-                memory :> bytes(word_sub stackpointer (word 24),24)])`;;
+                memory :> bytes(word_sub stackpointer (word 32),32)])`;;
 
 let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_SAFE =
   assume_spec

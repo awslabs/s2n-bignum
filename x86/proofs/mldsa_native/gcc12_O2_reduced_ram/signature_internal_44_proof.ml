@@ -79,6 +79,7 @@ let SIGN44_ZPRE_STMT =
  `?f_zpre.
     !e m sig sk skb bot rhop kappa cphat pc.
       aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+      aligned 16 (word_add bot (word 1678)) /\
       aligned 16 (word_add bot (word 2990)) /\
       aligned 16 (word_add bot (word 5038)) /\ m <= 4 /\
       (!i. i < m
@@ -1440,6 +1441,7 @@ let SIGN44_ATT_STMT = subst [SIGN44_CMP_OFF,`cmpoff:num`]
  `?f_att.
     !e sig sk skb bot rho mu rhop n C r x b pc.
       aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+      aligned 16 (word_add bot (word 1678)) /\
       aligned 16 (word_add bot (word 1902)) /\
       aligned 16 (word_add bot (word 1934)) /\
       aligned 16 (word_add bot (word 2990)) /\
@@ -2097,7 +2099,7 @@ let SIGN44_START_TAC =
     `rnd:int64,32`; `sk:int64,2560`; `word pc:int64,51232`;
     `word_add stackpointer (word 11309):int64,8`;
     `word_add stackpointer (word 11317):int64,16`] THEN
-  REALIGN_ALIGNED_TAC [1902; 1934; 2094; 2990; 5038; 6062; 7118; 11262] THEN
+  REALIGN_ALIGNED_TAC [1678; 1902; 1934; 2094; 2990; 5038; 6062; 7118; 11262] THEN
   MAP_EVERY (fun (n,r) -> ENSURES_PRESERVED_TAC n r)
    [("rbx_init",`RBX`); ("rbp_init",`RBP`); ("r12_init",`R12`);
     ("r13_init",`R13`); ("r14_init",`R14`); ("r15_init",`R15`)] THEN

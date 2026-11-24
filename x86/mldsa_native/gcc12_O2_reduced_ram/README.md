@@ -2,45 +2,43 @@
 
 This directory is for mldsa-native's `libmldsa.so` built with gcc 12 and
 `-O2` in the reduced-RAM configuration, `MLD_CONFIG_REDUCE_RAM`: the x86-64
-counterpart of `binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so` in the
-`binary` branch of mldsa-native, which, like all the binaries there, is for
-AArch64. The gcc12_O2 build (see `../README.md`) is the same sources and
-compiler in the default configuration.
+`binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so` of the `binary`
+branch of mldsa-native, at commit `01be6a9` ("binaries: Rebuild x86-64
+ML-DSA without stack protection"). The gcc12_O2 build (see `../README.md`)
+is the same sources and compiler in the default configuration.
 
 ## Source of the code
 
-The binary was built as the one of the gcc12_O2 build (see "Source of the
-code" in `../README.md`), from the same C sources (those of mldsa-native
-commit `e71e3d6f`, from which the AArch64 binaries of the `binary` branch,
-including the reduced-RAM ones, were built: its `binaries/builds.json`
-records the source commit `3d3b1bdb`, whose sources are those of
-`e71e3d6f`), with `-DMLD_CONFIG_REDUCE_RAM` added at the end of `CFLAGS`,
-where `scripts/build-binaries` of the `binary` branch puts the defines of a
-configuration:
+As recorded in `binaries/builds.json` of the `binary` branch at that
+commit, the binary was built by `scripts/build-binaries` from mldsa-native
+commit `d38418ea3d4c`, as the one of the gcc12_O2 build (see "Source of the
+code" in `../README.md`), with `-DMLD_CONFIG_REDUCE_RAM` added to the
+flags, where `scripts/build-binaries` puts the defines of a configuration:
 
 ```
 -O2 -g -gdwarf-4 -gsplit-dwarf -fPIC -fno-stack-protector
--fdebug-prefix-map=<source>=. -DMLD_CONFIG_REDUCE_RAM
+-DMLD_CONFIG_REDUCE_RAM
 ```
 
-The test program of the example passes with it. As for the gcc12_O2
-build, the stack protector is off; this binary does not call `memset`
-either (gcc zeroes the small structures of this configuration with inlined
-stores), so it imports only `memcpy` and `randombytes`.
+As for the gcc12_O2 build, the stack protector is off; this binary does
+not call `memset` either (gcc zeroes the small structures of this
+configuration with inlined stores), so it imports only `memcpy` and
+`randombytes`.
 
-The SHA-256 hash of the binary used is:
+The SHA-256 hash of the binary used, which is that in
+`binaries/SHA256SUMS` of commit `01be6a9`, is:
 
 ```
 reduced-ram/multilevel/gcc12/O2/libmldsa.so
-  a8f7e730134bf9be39bbb790ad0655fc45e9787562d417b244ee2b0d1a563bf6
+  f71841a36d28e8ab6d445900dc5357310b26efa71a6a922fdbc048c18f6db458
 ```
 
 The image starts at address 0, so it includes the dynamic string table,
-where the linker wrapper of the nix shell records the directory in which
-the shell was started (`RUNPATH`, `<directory>/outputs/out/lib`, as in the
-AArch64 binaries of the `binary` branch). A binary built from another
-directory therefore differs there, and in the split debug information,
-but its code and read-only data are the same.
+where the linker records the directory of the build as `RUNPATH`
+(`/tmp/native-x86-no-stack-protector.16lXCUsN/mldsa-source/outputs/out/lib`
+for this binary). A binary built from the same source in another directory
+therefore differs there, and in the split debug information, but its code
+and read-only data are the same.
 
 `libmldsa.S` transcribes the image, from address 0 to the end of the
 read-only data at `libmldsa_size` = 0xc820, and is the same as the binary
@@ -51,7 +49,9 @@ byte for byte; `keccakf1600_permute.S` is the code of
 definition of the image and the proofs.
 
 To regenerate the files of the build, in the `x86` directory, with
-`<build>` the directory of the build of the binary:
+`<build>` the `binaries` directory of a checkout of mldsa-native at commit
+`01be6a9` of the `binary` branch (see "Source of the code" in
+`../README.md` for the x86-64 `as` that the first command needs):
 
 ```
 python3 mldsa_native/gen_libmldsa_s.py \
