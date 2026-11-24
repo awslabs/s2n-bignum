@@ -346,7 +346,7 @@ binaries/multilevel/clang17/O2/libmlkem.so
 binaries/multilevel/clang17/O3/libmlkem.so
   c0b9cda5f78ff1baddc6f47c38aec02bb416c31fd559f390e845ee55f35375db
 binaries/multilevel/gcc12/O2/libmlkem.so
-  ed9a4710c0ec93ef1eab794f3e854dfadf92b45e08c76101cffdf1a36b035692
+  c926029cccbe71c97b0e2339e959ceb3473507c820f39fb62eed16a05751be10
 binaries/multilevel/gcc12/O3/libmlkem.so
   34e148dbc5318e8b46579ebb647416884b106f33855b2c0b2ece7f4368ffc9fa
 binaries/multilevel/gcc12/Os/libmlkem.so
