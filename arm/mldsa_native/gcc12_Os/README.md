@@ -110,8 +110,8 @@ The signing code checks z first and then both checks of each row, as at
 the functions above it use `mld_sign_declass` of
 `common/mldsa_native_sign.ml`, as at -O2. The statements of the API
 functions and so the FIPS 204 theorems (`fips204.ml`, `fips204_sign.ml`,
-`fips204_verify.ml`) differ from those of O2 only in the sizes of the stack
-regions.
+`fips204_verify.ml` and `fips204_safe.ml`) differ from those of O2 only in
+the sizes of the stack regions.
 
 The proofs of the functions that share code between parameter sets are
 the same up to the constants, layouts and registers; the files of the
