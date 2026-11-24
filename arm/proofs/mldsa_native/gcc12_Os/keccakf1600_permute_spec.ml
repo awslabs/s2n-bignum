@@ -40,7 +40,7 @@ needs "arm/proofs/mldsa_native/gcc12_Os/libmldsa.ml";;
       +0x2c: ldr     x1, [x0, #64]
       +0x30: stp     x21, x22, [sp, #16]
       +0x34: stp     x23, x24, [sp, #32]
-      +0x38: add     x24, x2, #0xa60  // rodata_mld_KeccakF_RoundConstants
+      +0x38: add     x24, x2, #0xdb8  // rodata_mld_KeccakF_RoundConstants
       +0x3c: stp     x25, x26, [sp, #48]
       +0x40: stp     x27, x28, [sp, #64]
       +0x44: str     x1, [sp, #136]

@@ -45,10 +45,10 @@ let MLDSA_NATIVE_KECCAKF1600_EXTRACT_BYTES_GCC12_OS_IMAGE_SUBROUTINE_FULL = prov
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
   (*** The loop invariant, with the loop test at the end of the body, where
-       pc + 5476 is the first instruction of the loop body ***)
+       pc + 5508 is the first instruction of the loop body ***)
 
   ENSURES_EVENTS_WHILE_UP2_TAC `len:num`
-   `pc + 5476`
+   `pc + 5508`
    `pc + mldsa_keccakf1600_extract_bytes_loop1_exit`
    `\i s. read X4 s = word i /\ read X1 s = d /\ read X3 s = word len /\
           read X2 s = word_add a (word off) /\

@@ -220,7 +220,7 @@ let CPT87_BODY_TAC =
   CPT_REG_TAC `X0` `word_add t0 (word(416 * i)):int64` THEN
   CPT87_LOOP_CALL_TAC "H_T0"
    [`read X0 s`; `read X1 s`; mk_comb(`mld_poly_power2round_lo`,CPT87_CADDQ);
-    `pc:num`; `read X30 s`] 37 THEN
+    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 37 THEN
   ARM_STEPS_TAC CPT87_EXEC (38--39) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   LOOP_TEST_TAC THEN LOOP_COND_TAC THEN

@@ -25,7 +25,7 @@ needs "arm/proofs/mldsa_native/gcc12_Os/libmldsa.ml";;
     mldsa_poly_invntt_tomont:
        +0x0: adrp    x9, <page>
        +0x4: mov     w14, #0x2001
-       +0x8: add     x9, x9, #0xe90
+       +0x8: add     x9, x9, #0xe78
        +0xc: mov     w3, #0x8
       +0x10: mov     w12, #0x100
       +0x14: mov     w13, #0x1

@@ -67,8 +67,8 @@ let MLDSA_NATIVE_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_YVEC_EAGER_44_GCC12_OS_IMAG
   ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
   ENSURES_PRESERVED_TAC "x22_init" `X22` THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `4`
-   `pc + 14140`
-   `pc + 14172`
+   `pc + 14540`
+   `pc + 14572`
    `\i s. read X19 s = word i /\
           read X20 s = scratch /\
           read X21 s = w /\ read X22 s = mat /\

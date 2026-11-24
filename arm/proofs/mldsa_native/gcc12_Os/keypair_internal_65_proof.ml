@@ -75,8 +75,8 @@ let KP65_ETA_TAC m n n0 n1 n2 n3 =
 let KP65_PACK_TAC nonce m n =
   ARM_STEPS_TAC KP65_EXEC (m--(n-1)) THEN
   KP65_CALL_TAC "H_PACK"
-   [`read X0 s`; `read X1 s`; KP65_POLY nonce; `pc:num`;
-    `read X30 s`] n;;
+   [`read X0 s`; `read X1 s`; KP65_POLY nonce; `guard:int64`; `pc:num`;
+    `read SP s`; `read X30 s`] n;;
 
 (* ------------------------------------------------------------------------- *)
 (* For each nonce n of the samplings, as a numeral: the termination of its   *)
@@ -467,8 +467,10 @@ let MLDSA_NATIVE_KEYPAIR_INTERNAL_65_GCC12_OS_IMAGE_SUBROUTINE_FULL = prove
     ASSUME_CALLEE_SAFETY_TAILED_TAC
      (MP (SPEC_ALL MLDSA_NATIVE_SHAKE256_GCC12_OS_IMAGE_SUBROUTINE_FULL) th)
      "H_SHAKE") THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC
-   MLDSA_NATIVE_POLYETA_PACK_65_GCC12_OS_IMAGE_SUBROUTINE_FULL "H_PACK" THEN
+  FIRST_ASSUM(fun th ->
+    ASSUME_CALLEE_SAFETY_TAILED_TAC
+     (MATCH_MP MLDSA_NATIVE_POLYETA_PACK_65_GCC12_OS_IMAGE_SUBROUTINE_FULL th)
+     "H_PACK") THEN
   ASSUME_CALLEE_SAFETY_TAILED_TAC
    MLDSA_NATIVE_POLYVECL_NTT_65_GCC12_OS_IMAGE_SUBROUTINE_FULL "H_NTT" THEN
   ASSUME_CALLEE_SAFETY_TAILED_TAC

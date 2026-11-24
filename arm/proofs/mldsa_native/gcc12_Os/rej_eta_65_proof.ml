@@ -257,13 +257,13 @@ let REJ_ETA_LOOP_PC_TAC k ths =
 
 let REJ_ETA_65_PATH_TAC =
   REJ_ETA_RUN_TAC REJ_ETA_65_EXEC 5
-   [`word(pc + 20508):int64`;
+   [`word(pc + 20908):int64`;
     `word(pc + mld_rej_eta_c65_loop1_exit):int64`] THEN
   (REJ_ETA_LOOP_PC_TAC `LENGTH (D:bool list) DIV 2`
      [SYM(ASSUME `M = LENGTH (D:bool list) DIV 2`)] ORELSE
    SAMPLING_LOOP_EXIT_TAC `LENGTH (D:bool list) DIV 2`
      [SYM(ASSUME `M = LENGTH (D:bool list) DIV 2`)]
-     `word(pc + 20508):int64`) THEN
+     `word(pc + 20908):int64`) THEN
   FIRST_X_ASSUM(K ALL_TAC o check (fun th ->
     is_iff(concl th) && lhand(concl th) = `i + 1 < M`)) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -333,7 +333,7 @@ let MLDSA_NATIVE_REJ_ETA_65_GCC12_OS_IMAGE_SUBROUTINE_FULL = prove
   FIRST_X_ASSUM(ASSUME_TAC o MATCH_MP (ARITH_RULE `l = 2 * M ==> M = l DIV 2`) o
     check (fun th -> concl th = `LENGTH (D:bool list) = 2 * M`)) THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `LENGTH (D:bool list) DIV 2`
-   `pc + 20508` `pc + mld_rej_eta_c65_loop1_exit`
+   `pc + 20908` `pc + mld_rej_eta_c65_loop1_exit`
    REJ_ETA_65_INV THEN
   REPEAT CONJ_TAC THENL
    [FIRST_ASSUM(SUBST1_TAC o SYM o check (fun th ->

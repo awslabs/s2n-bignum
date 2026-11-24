@@ -91,10 +91,10 @@ let SIGN_SHL_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let SIGN65_ZPRE_STMT =
- `!mc ea el ev.
-    memcpy_full_contract mc ea el ev
+ `!mf mc ea el ev.
+    memset_full_contract mf ea el ev /\ memcpy_full_contract mc ea el ev
     ==> ?f_zpre.
-        !e m sig B sp0 s1h cphat y pc.
+        !e m sig B sp0 s1h cphat y guard pc.
           aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
           aligned 16 sp0 /\ m <= 5 /\
           (!i. i < m
@@ -103,7 +103,9 @@ let SIGN65_ZPRE_STMT =
           PAIRWISE nonoverlapping
            [(sig,3309); (B,67632); (sp0,5248)] /\
           ALLPAIRS nonoverlapping [(sig,3309); (B,67632); (sp0,5248)]
-           [(word pc,libmldsa_size); (word(pc + got_memcpy),8); (ea,el)]
+           [(word pc,libmldsa_size); (word(pc + got_stack_chk_guard),8);
+            (guard,8); (word(pc + got_memset),8); (word(pc + got_memcpy),8);
+            (ea,el)]
           ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mldsa_native_libmldsa_gcc12_Os_mc /\
@@ -118,6 +120,9 @@ let SIGN65_ZPRE_STMT =
                     read X28 s = word 0 /\
                     read (memory :> bytes64 (word_add sp0 (word 5224))) s =
                     word_add B (word 59392) /\
+                    read (memory :> bytes64(word(pc + got_stack_chk_guard))) s =
+                    guard /\
+                    read (memory :> bytes64(word(pc + got_memset))) s = mf /\
                     read (memory :> bytes64 (word(pc + got_memcpy))) s =
                       mc /\
                     read (memory :> bytes(ea,el)) s = ev /\
@@ -146,10 +151,12 @@ let SIGN65_ZPRE_STMT =
                               (mld_polyvec (mld_sign_z s1h cphat y)) t) /\
                     (exists e2.
                        read events s = APPEND e2 e /\
-                       e2 = f_zpre m sig B sp0 mc pc /\
+                       e2 = f_zpre m sig B sp0 guard mf mc pc /\
                        memaccess_inbounds e2
                         [sig,3309; B,67632; sp0,5248;
-                         word(pc + got_memcpy),8; ea,el;
+                         word(pc + got_stack_chk_guard),8; guard,8;
+                         word(pc + got_memset),8; word(pc + got_memcpy),8;
+                         ea,el;
                          word(pc + rodata_mld_zetas),1024]
                         [sig,3309; B,67632; sp0,5248]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -162,7 +169,8 @@ let SIGN65_ZPRE_STMT =
                   memory :> bytes(word_add sp0 (word 5240),8)])`;;
 
 let SIGN65_ZALLOWED =
-  [`pc:num`; `sig:int64`; `B:int64`; `sp0:int64`; `mc:int64`; `i:num`];;
+  [`pc:num`; `sig:int64`; `B:int64`; `sp0:int64`; `guard:int64`;
+   `mf:int64`; `mc:int64`; `i:num`];;
 
 let SIGN65_ZCALL_TAC name ilist n =
   FULL_CALL_TAC SIGN65_MC SIGN65_EXEC name ilist SIGN65_ZALLOWED n;;
@@ -185,6 +193,10 @@ let SIGN65_ZPRE_INV =
         read X28 s = word i /\
         read (memory :> bytes64 (word_add sp0 (word 5224))) s =
         word_add B (word 59392) /\
+        read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard)))
+          s = guard /\
+        read (memory :> bytes64 (word_add (word pc) (word got_memset))) s =
+        mf /\
         read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s =
         mc /\
         read (memory :> bytes(ea,el)) s = ev /\
@@ -269,7 +281,7 @@ let SIGN65_ZBODY_TAC =
     ALL_TAC] THEN
   SIGN65_ZCALL_TAC "H_PZ"
    [`read X0 s`; `read X1 s`; `mld_sign_z s1h cphat y i`; `i:num`;
-    `pc:num`; `read X30 s`] 47 THEN
+    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 47 THEN
   ARM_STEPS_TAC SIGN65_EXEC (48--49) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   ASM_SIMP_TAC[SIGN_LOOP4_TEST] THEN REPEAT CONJ_TAC THEN
@@ -292,26 +304,48 @@ let SIGN65_ZCALLEES =
   MLDSA_NATIVE_POLY_CHKNORM_GCC12_OS_IMAGE_SUBROUTINE_FULL,"H_CHK";
   MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_OS_IMAGE_SUBROUTINE_FULL,"H_PZ"];;
 
+let SIGN65_ZPRE_CALLEES_TAC calls =
+  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC ASSUME_TAC) THEN
+  FIRST_X_ASSUM(fun th ->
+    if can (term_match [] `memcpy_full_contract mc ea el ev`) (concl th)
+    then ASSUME_CALLEE_SAFETY_TAILED_TAC
+          (REWRITE_RULE[memcpy_full_contract] th) "H_MEMCPY"
+    else NO_TAC) THEN
+  MAP_EVERY (fun (fth,name) ->
+    FIRST_ASSUM(fun th ->
+      if can (term_match [] `memset_full_contract mf ea el ev`) (concl th)
+      then ASSUME_CALLEE_SAFETY_TAILED_TAC (MATCH_MP fth th) name
+      else NO_TAC))
+   (filter (fun (fth,_) -> is_imp(snd(strip_forall(concl fth)))) calls) THEN
+  MAP_EVERY (fun (fth,name) -> ASSUME_CALLEE_SAFETY_TAILED_TAC fth name)
+   (filter (fun (fth,_) -> not(is_imp(snd(strip_forall(concl fth))))) calls);;
+
 let SIGN65_ZPRE_ASYNC = prove_async
  (SIGN65_ZPRE_STMT,
-  REPEAT GEN_TAC THEN REWRITE_TAC[memcpy_full_contract] THEN
-  SIGN65_CALLEES_TAC SIGN65_ZCALLEES THEN
+  REPEAT GEN_TAC THEN SIGN65_ZPRE_CALLEES_TAC SIGN65_ZCALLEES THEN
   CONCRETIZE_F_EVENTS_TAC
-   `\(m:num) (sig:int64) (B:int64) (sp0:int64) (mc:int64) (pc:num).
-     APPEND (f_ev_back m sig B sp0 mc pc)
-      (APPEND (ENUMERATEL m (\i. f_ev_zit sig B sp0 mc pc i))
-              (f_ev_front m sig B sp0 mc pc))
+   `\(m:num) (sig:int64) (B:int64) (sp0:int64) (guard:int64) (mf:int64)
+     (mc:int64) (pc:num).
+     APPEND (f_ev_back m sig B sp0 guard mf mc pc)
+      (APPEND (ENUMERATEL m (\i. f_ev_zit sig B sp0 guard mf mc pc i))
+              (f_ev_front m sig B sp0 guard mf mc pc))
      :(uarch_event)list` THEN
   REPEAT META_EXISTS_TAC THEN
   MAP_EVERY X_GEN_TAC
    [`e:(uarch_event)list`; `m:num`; `sig:int64`; `B:int64`; `sp0:int64`;
-    `s1h:num->int32`; `cphat:num->int32`; `y:num->int32`; `pc:num`] THEN
+    `s1h:num->int32`; `cphat:num->int32`; `y:num->int32`; `guard:int64`;
+    `pc:num`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               C_ARGUMENTS; ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES;
               fst SIGN65_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  REWRITE_TAC[SPECL [`pc:num`; `got_memcpy:num`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `got_memcpy:num`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_memcpy:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_memset:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE
+   [SPECL [`pc:num`; `got_memcpy:num`] WORD_ADD;
+    SPECL [`pc:num`; `got_memset:num`] WORD_ADD;
+    SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD]) THEN
   ASM_CASES_TAC `0 < m` THENL
    [ENSURES_EVENTS_WHILE_UP2_TAC `m:num`
      `pc + mldsa65_signature_internal_loop2`
@@ -1637,7 +1671,7 @@ let SIGN65_ZCASE_TAC =
   ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
   SIGN65_ATTCALL_TAC "H_ZPRE"
    [`r:num`; `sig:int64`; `B:int64`; `sp0:int64`; `s1h:num->int32`;
-    SIGN65_CPH; SIGN65_Y; `pc:num`] 2 THEN
+    SIGN65_CPH; SIGN65_Y; `guard:int64`; `pc:num`] 2 THEN
   SIGN_PC_SIMP_TAC THEN
   SIGN65_ATTCALL_TAC "H_ZFAIL"
    [`r:num`; `B:int64`; `sp0:int64`; `s1h:num->int32`;
@@ -1794,7 +1828,7 @@ let SIGN65_PATHS_TAC =
     ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
     SIGN65_ATTCALL_TAC "H_ZPRE"
      [`5`; `sig:int64`; `B:int64`; `sp0:int64`; `s1h:num->int32`;
-      SIGN65_CPH; SIGN65_Y; `pc:num`] 2 THEN
+      SIGN65_CPH; SIGN65_Y; `guard:int64`; `pc:num`] 2 THEN
     RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_LT_CONV)) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[]) THEN
     ASM_CASES_TAC `r < 17` THENL [SIGN65_WCASE_TAC; SIGN65_TCASE_TAC]];;
@@ -1815,13 +1849,14 @@ let SIGN65_ATT_ASYNC = prove_async
   FIRST_ASSUM(CONJUNCTS_THEN2 ASSUME_TAC ASSUME_TAC) THEN
   FIRST_X_ASSUM(fun th ->
     if is_conj(concl th) then
-    ASSUME_CALLEE_SAFETY_TAILED_TAC (MATCH_MP SIGN65_HEAD th) "H_HEAD"
+    ASSUME_CALLEE_SAFETY_TAILED_TAC (MATCH_MP SIGN65_HEAD th) "H_HEAD" THEN
+    ASSUME_CALLEE_SAFETY_TAILED_TAC (MATCH_MP SIGN65_ZPRE th) "H_ZPRE"
     else NO_TAC) THEN
   FIRST_ASSUM(fun th ->
     if can (term_match [] `memcpy_full_contract mc ea el ev`) (concl th) then
     MAP_EVERY (fun (fth,name) ->
       ASSUME_CALLEE_SAFETY_TAILED_TAC (MATCH_MP fth th) name)
-     [SIGN65_ZPRE,"H_ZPRE"; SIGN65_ZFAIL,"H_ZFAIL"; SIGN65_RPRE,"H_RPRE";
+     [SIGN65_ZFAIL,"H_ZFAIL"; SIGN65_RPRE,"H_RPRE";
       SIGN65_RFAIL1,"H_RFAIL1"; SIGN65_RFAIL2,"H_RFAIL2"]
     else NO_TAC) THEN
   FIRST_ASSUM(fun th ->
