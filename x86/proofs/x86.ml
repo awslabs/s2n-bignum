@@ -1428,6 +1428,36 @@ let x86_MOVUPS = new_definition
  `x86_MOVUPS dest src s =
     let x = read src s in (dest := x) s`;;
 
+(*** MOVLPS xmm, m64 loads the low quadword and keeps the high one.   ***)
+
+let x86_MOVLPS = new_definition
+ `x86_MOVLPS dest src s =
+    let (x:128 word) = read dest s
+    and (y:64 word) = read src s in
+    let res:(128)word = word_join (word_subword x (64,64):int64) y in
+    (dest := res) s`;;
+
+(*** MOVSS and MOVSD between two XMM registers move the low doubleword  ***)
+(*** or quadword and keep the rest of the destination.                  ***)
+
+let x86_MOVSS = new_definition
+ `x86_MOVSS dest src s =
+    let (x:128 word) = read dest s
+    and (y:128 word) = read src s in
+    let res:(128)word =
+        word_join (word_subword x (32,96):(96)word)
+                  (word_subword y (0,32):int32) in
+    (dest := res) s`;;
+
+let x86_MOVSD_SSE = new_definition
+ `x86_MOVSD_SSE dest src s =
+    let (x:128 word) = read dest s
+    and (y:128 word) = read src s in
+    let res:(128)word =
+        word_join (word_subword x (64,64):int64)
+                  (word_subword y (0,64):int64) in
+    (dest := res) s`;;
+
 (*** This has a complicated iterative semantics via the
  *** auxiliary function x86_movsb (in lowercase). Here
  *** the "rept" argument is true iff this is a repeated
@@ -1765,6 +1795,29 @@ let x86_PSHUFD = new_definition
     let od = read imm8 s in
     let res:(128)word = usimd4 (\(od:(2)word).
         word_subword src ((val od)*32,32)) od in
+    (dest := res) s`;;
+
+(* PSHUFLW shuffles the four low words by imm8 and keeps the high quadword. *)
+
+let x86_PSHUFLW = new_definition
+ `x86_PSHUFLW dest src imm8 s =
+    let src:(128)word = read src s in
+    let od = read imm8 s in
+    let lo:(64)word = usimd4 (\(od:(2)word).
+        word_subword src ((val od)*16,16):int16) od in
+    let res:(128)word = word_join (word_subword src (64,64):int64) lo in
+    (dest := res) s`;;
+
+(* PMULUDQ multiplies the low doublewords of each quadword, unsigned. *)
+
+let x86_PMULUDQ = new_definition
+ `x86_PMULUDQ dest src s =
+    let (x:128 word) = read dest s
+    and (y:128 word) = read src s in
+    let f = \(x:int64) (y:int64).
+          word_mul (word_zx ((word_subword:int64->num#num->int32) x (0,32)):int64)
+                   (word_zx ((word_subword:int64->num#num->int32) y (0,32)):int64) in
+    let res:(128)word = simd2 f x y in
     (dest := res) s`;;
 
 (* SSE PSLLDQ: byte-granular left shift of the whole 128-bit register by
@@ -3913,6 +3966,22 @@ let x86_execute = define
         (add_load_event src s ,,
          add_store_event dest s ,,
         (\s. x86_MOVUPS (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+    | MOVUPD dest src ->
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. x86_MOVUPS (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+    | MOVLPS dest src ->
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. x86_MOVLPS (OPERAND128_SSE dest s) (OPERAND64 src s) s)) s
+    | MOVSS dest src ->
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. x86_MOVSS (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+    | MOVSD_SSE dest src ->
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. x86_MOVSD_SSE (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | MOVZX dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
@@ -4133,6 +4202,50 @@ let x86_execute = define
         add_store_event dest s ,,
        (\s. x86_VPOR (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
                     (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
+    | ORPS dest src ->
+       if aligned_OPERAND128 src s then
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPOR (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
+    | PANDN dest src ->
+       if aligned_OPERAND128 src s then
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPANDN (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
+    | PMULUDQ dest src ->
+       if aligned_OPERAND128 src s then
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PMULUDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
+    | PSHUFLW dest src imm8 ->
+       if aligned_OPERAND128 src s then
+       (add_load_event src s ,, add_load_event dest s ,,
+        add_store_event dest s ,,
+       (\s. x86_PSHUFLW (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
+                       (OPERAND8 imm8 s) s)) s
+       else (\s'. F)
+    | PSLLW dest imm8 ->
+       (add_load_event dest s ,, add_store_event dest s ,,
+       (\s. x86_VPSLLW (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND8 imm8 s) s)) s
+    | PSUBB dest src ->
+       if aligned_OPERAND128 src s then
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_VPSUBB (OPERAND128_SSE dest s) (OPERAND128_SSE dest s)
+                    (OPERAND128_SSE src s) s)) s
+       else (\s'. F)
+    | XORPS dest src ->
+       if aligned_OPERAND128 src s then
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PXOR (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
        else (\s'. F)
     | PSLLD dest imm8 ->
        (add_load_event dest s ,, add_store_event dest s ,,
@@ -6214,6 +6327,8 @@ let x86_PEXT_ALT =
 let x86_PMOVMSKB_ALT = EXPAND_SIMD_RULE x86_PMOVMSKB;;
 let x86_PSHUFB_ALT = EXPAND_SIMD_RULE x86_PSHUFB;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
+let x86_PSHUFLW_ALT = EXPAND_SIMD_RULE x86_PSHUFLW;;
+let x86_PMULUDQ_ALT = EXPAND_SIMD_RULE x86_PMULUDQ;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
 let x86_PSRLW_ALT = EXPAND_SIMD_RULE x86_PSRLW;;
 let x86_VMOVDQA_ALT = EXPAND_SIMD_RULE x86_VMOVDQA;;
@@ -6375,6 +6490,7 @@ let X86_OPERATION_CLAUSES =
     x86_LZCNT;
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ;
     x86_VMOVHPD; x86_MOVSX; x86_MOVUPS; x86_MOVSB_ALT; x86_MOVSQ_ALT;
+    x86_MOVLPS; x86_MOVSS; x86_MOVSD_SSE; x86_PMULUDQ_ALT; x86_PSHUFLW_ALT;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCLMULQDQ; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;

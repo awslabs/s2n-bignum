@@ -339,11 +339,15 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | MOVSB bool operand operand operand
    | MOVSQ bool operand operand operand
    | MOVSX operand operand
+   | MOVSS operand operand
+   | MOVSD_SSE operand operand
    | MOVZX operand operand
    | MOVAPS operand operand
    | MOVDQA operand operand
    | MOVDQU operand operand
+   | MOVLPS operand operand
    | MOVUPS operand operand
+   | MOVUPD operand operand
    | MUL2 (operand#operand) operand
    | MULX4 (operand#operand) (operand#operand)
    | NEG operand
@@ -351,11 +355,13 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | NOP_N operand
    | NOT operand
    | OR operand operand
+   | ORPS operand operand
    | PACKUSWB operand operand
    | PADDD operand operand
    | PADDQ operand operand
    | PADDW operand operand
    | PAND operand operand
+   | PANDN operand operand
    | PBLENDW operand operand operand
    | PCLMULQDQ operand operand operand
    | PCMPGTD operand operand
@@ -369,19 +375,23 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | PMULHUW operand operand
    | PMULHW operand operand
    | PMULLW operand operand
+   | PMULUDQ operand operand
    | POP operand
    | POPCNT operand operand
    | POR operand operand
    | PSHUFB operand operand
    | PSHUFD operand operand operand
+   | PSHUFLW operand operand operand
    | PSLLD operand operand
    | PSLLDQ operand operand
    | PSLLQ operand operand
+   | PSLLW operand operand
    | PSRAD operand operand
    | PSRLD operand operand
    | PSRLDQ operand operand
    | PSRLQ operand operand
    | PSRLW operand operand
+   | PSUBB operand operand
    | PSUBD operand operand
    | PSUBQ operand operand
    | PSUBW operand operand
@@ -502,7 +512,8 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | KSHIFTLW (3 word) (3 word) (8 word)
    | VZEROUPPER
    | XCHG operand operand
-   | XOR operand operand";;
+   | XOR operand operand
+   | XORPS operand operand";;
 
 (* ------------------------------------------------------------------------- *)
 (* Some shorthands for addressing modes etc.                                 *)
