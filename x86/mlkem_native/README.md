@@ -67,10 +67,10 @@ use too, the x86 parts of them in `../proofs/utils/mlkem_native*.ml` and
 `../proofs/utils/keccak_*.ml` (including `mlkem_native_image.ml` for the
 proofs about a whole image and `mlkem_native_libc.ml` for the C library
 function `randombytes`), `../../common/relative.ml` for the spec and proof
-files (see below), the scripts `check_transcription.py` and
-`gen_layout.py` here, and `../../tools/native_proofs_mk.py` and
-`../../tools/native_link.py` and `../../tools/link_costs.py`, which serve
-both instruction sets.
+files (see below), the scripts `check_transcription.py`,
+`gen_libmlkem_s.py` and `gen_layout.py` here, and
+`../../tools/native_proofs_mk.py` and `../../tools/native_link.py` and
+`../../tools/link_costs.py`, which serve both instruction sets.
 
 The proofs name the addresses in the binary as in `layout.ml`, as for
 AArch64: a function `f` of the image is at `pc + f` when the image is at
@@ -170,11 +170,10 @@ The theorems depend on the following, which the proofs do not establish.
    proofs are about the code in `gcc12_O2/libmlkem.S` and in the `.S` files
    of single functions, as assembled into the `.o` files by `../Makefile`.
    `check_transcription.py` compares that code, byte for byte, with the
-   code of the `libmlkem.so` that was built for this directory (see
-   "Checking a transcription"); it is run by hand, and neither `make` nor
-   CI runs it. That binary is not a pre-built one: it was built on an
-   x86-64 machine as described in "Source of the code", which also gives its
-   SHA-256 hash.
+   code of the `libmlkem.so` of mlkem-native's `binary` branch that this
+   directory is for (see "Checking a transcription"); it is run by hand,
+   and neither `make` nor CI runs it. "Source of the code" gives the commit
+   of the branch and the SHA-256 hash of the binary.
  - The specifications of FIPS 202 and FIPS 203 in
    `../../common/fips202/fips202.ml` and `../../common/fips203/fips203.ml`,
    written by hand. The theorems for the API functions are stated with
@@ -262,21 +261,21 @@ functions that expand the matrix A, the `_IMAGE_SUBROUTINE_FIPS203` and
 
 ## Source of the code
 
-The `binary` branch of mlkem-native (commit `83fb34a`) only has binaries
-for AArch64, so the code is transcribed from the disassembly of a binary
-built in the same way on an x86-64 Linux machine, except for the stack
-protector (see below). Following its `scripts/build-binaries`, as recorded
-in `binaries/builds.json` there, the "multilevel" build
-(`examples/multilevel_build`) of mlkem-native commit `03392e41` was
-compiled in the nix shell `.#gcc12` (gcc 12.3.0 and binutils 2.41) with
-`CFLAGS` set to `-O2 -g -gdwarf-4 -gsplit-dwarf -fPIC -fno-stack-protector`
-and `-fdebug-prefix-map` for the source directory. The object files were
-archived with `ar rcsD`, in the sorted order of their paths, and the
-archive was linked with `ld -shared -Bsymbolic -soname libmlkem.so`, using
-the version script `binaries/libmlkem.map`, to give `libmlkem.so`. The test
-program of the example passes with it. The file `gcc12_O2/<function>.S`
-contains the code of the function `mlkem_<function>` in this binary, except
-that the `basemul_k2`, `basemul_k3` and `basemul_k4` files are for
+The code is transcribed from the disassembly of the pre-built binary
+`binaries/multilevel/gcc12/O2/libmlkem.so` on the `binary` branch of
+mlkem-native, at commit `e03d9d19` ("binaries: Rebuild x86-64 ML-KEM
+without stack protection"). As recorded in `binaries/builds.json` there, it
+was built from mlkem-native commit `3979073e2137` by `scripts/build-binaries`:
+the "multilevel" build (`examples/multilevel_build`) was compiled in the
+nix shell `.#gcc12` (gcc 12.3.0 and binutils 2.41) on an x86-64 Linux
+machine with `CFLAGS` set to `-O2 -g -gdwarf-4 -gsplit-dwarf -fPIC
+-fno-stack-protector` and `-fdebug-prefix-map` for the source directory.
+The object files were archived with `ar rcsD` and the archive was linked
+with `ld -shared -Bsymbolic -soname libmlkem.so`, using the version script
+`binaries/libmlkem.map`, to give `libmlkem.so`. The file
+`gcc12_O2/<function>.S` contains the code of the function
+`mlkem_<function>` in this binary, except that the `basemul_k2`,
+`basemul_k3` and `basemul_k4` files are for
 `mlkem512_polyvec_basemul_acc_montgomery_cached`,
 `mlkem768_polyvec_basemul_acc_montgomery_cached` and
 `mlkem1024_polyvec_basemul_acc_montgomery_cached` respectively, and the
@@ -314,11 +313,12 @@ is the output of SHAKE128 from a public seed, there is also a combined
 theorem `..._IMAGE_SUBROUTINE_FULL`, as for AArch64, whose events are a
 function of the arguments and of the list of 12-bit fields.
 
-The SHA-256 hash of the binary used is:
+The SHA-256 hash of the binary used, as in `binaries/SHA256SUMS` of that
+commit, is:
 
 ```
 multilevel/gcc12/O2/libmlkem.so
-  864eca00b2123faab8a1c54caffbb4bee4c7ed5e3905a84c9f32bc4d522cb388
+  29d5e06f549b1fac8c28ea8c2cfdaa951623117cccc476119f1bbedfb898795c
 ```
 
 A binary built in another directory has a different hash, since the split
@@ -326,20 +326,25 @@ debug information records the paths of its files, but the contents of its
 loaded segments are the same.
 
 Unlike the AArch64 binaries, this one is built without gcc's stack
-protector, which the nix shell otherwise enables. On x86-64 Linux, the
-stack protector reads the guard at offset 0x28 from the base of the FS
-segment, in thread-local storage, rather than through the global offset
-table as on AArch64, and the x86 model has no segment bases. With the stack
-protector, 44 functions copy the guard to the stack and check it before
-returning. The other functions, including all of those here, are the same
-in both binaries apart from their addresses, and the read-only data is at
-the same addresses.
+protector, which the nix shell otherwise enables, by `-fno-stack-protector`
+(the commit rebuilt all x86-64 binaries of the branch with it). On x86-64
+Linux, the stack protector reads the guard at offset 0x28 from the base of
+the FS segment, in thread-local storage, rather than through the global
+offset table as on AArch64, and the x86 model has no segment bases.
+
+The source of this binary has the change of mlkem-native commit
+`948be12f5` ("kem: Don't write rejection key to output buffer in
+decaps"): `mlk_kem_dec` selects the shared secret in a buffer on its stack
+and writes `ss` once, at the end, rather than writing the rejection key to
+`ss` and overwriting it with the key from the decapsulation if the
+ciphertexts are equal.
 
 ## Checking a transcription
 
 After building the object file, `check_transcription.py` checks that its
 code is byte-for-byte identical to the function in the binary, e.g. in the
-`x86` directory:
+`x86` directory, with `<build>` the `binaries` directory of the `binary`
+branch of mlkem-native at the commit named above:
 
 ```
 make mlkem_native/gcc12_O2/poly_reduce.o
@@ -390,9 +395,16 @@ loaded, from address 0 up to the end of the read-only data at 0x82a0. This
 covers its first two loadable segments, one with the ELF header and dynamic
 linking information and one with the procedure linkage table and all the
 code, the start of the third, with the constant tables, and the padding
-between them. It was generated from the disassembly, with the data as
-`.quad` directives, and it assembles to exactly these bytes, with no
-relocations. To check it, the symbol is given as `-` and the binary symbol
+between them. It is generated from the disassembly by `gen_libmlkem_s.py`,
+with the data as `.quad` directives, e.g. in the `x86` directory:
+
+```
+python3 mlkem_native/gen_libmlkem_s.py <build>/multilevel/gcc12/O2/libmlkem.so \
+  "gcc 12, -O2" multilevel/gcc12/O2/libmlkem.so \
+  > mlkem_native/gcc12_O2/libmlkem.S
+```
+
+and it assembles to exactly these bytes, with no relocations. To check it, the symbol is given as `-` and the binary symbol
 as the address 0x0, and the whole `.text` section of the object file is
 then compared with the contents of memory from that address when the binary
 is loaded:
@@ -693,8 +705,12 @@ and `memcpy` of AArch64, since gcc inlines them here as `rep stosq` and
 `rep movsq`. The comparison of the ciphertexts, 16 bytes at a time with an
 SSE accumulator, and the conditional move of the shared secret, one byte at
 a time, are loops, which the proofs handle with invariants, as on AArch64,
-using the lemmas and tactics of `../proofs/utils/mlkem_native_kem.ml`.
-Their theorems of constant time and memory safety state that their events
+using the lemmas and tactics of `../proofs/utils/mlkem_native_kem.ml`. The
+shared secret is not computed in `ss`: the code writes the result of
+SHAKE256 to a buffer of 32 bytes in its frame, over the buffer that held
+the decrypted message, selects the key there, and copies the buffer to `ss`
+with two 16-byte moves at the end, so that `ss` is written once, and only
+if the key check passes. Their theorems of constant time and memory safety state that their events
 depend only on the addresses and on the encapsulation key and its hash in
 the decapsulation key, not on the secret key, z or the ciphertext.
 

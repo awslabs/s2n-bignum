@@ -13,10 +13,11 @@
 (* and r' as G of m' followed by the hash h in the key with mlkem_sha3_512,  *)
 (* encrypts m' with r' again by mlkem1024_indcpa_enc, compares the result    *)
 (* with the ciphertext in constant time, computes J of z (in the key)        *)
-(* followed by the ciphertext into the shared secret with mlkem_shake256,    *)
-(* and replaces it by K' if the ciphertexts are equal, again in constant     *)
-(* time. In both cases it zeroes its buffers. It is verified in the whole    *)
-(* image (see libmlkem.ml), using the theorems for mlkem1024_check_sk,       *)
+(* followed by the ciphertext into a buffer on the stack with                *)
+(* mlkem_shake256, replaces it by K' if the ciphertexts are equal, again in  *)
+(* constant time, and copies the 32 bytes to ss, which it writes only there. *)
+(* In both cases it zeroes its buffers. It is verified in the whole image    *)
+(* (see libmlkem.ml), using the theorems for mlkem1024_check_sk,             *)
 (* mlkem1024_indcpa_dec, mlkem_sha3_512, mlkem1024_indcpa_enc and            *)
 (* mlkem_shake256 in the image.                                              *)
 (* ========================================================================= *)
@@ -35,164 +36,167 @@ needs "x86/proofs/utils/mlkem_native_kem.ml";;
        +0x0: push   rbp
        +0x1: mov    rbp,rsp
        +0x4: push   r15
-       +0x6: mov    r15,rsi
-       +0x9: push   r14
-       +0xb: mov    r14,rdi
-       +0xe: mov    rdi,rdx
-      +0x11: push   r13
-      +0x13: mov    r13,rdx
-      +0x16: push   r12
-      +0x18: push   rbx
-      +0x19: and    rsp,0xffffffffffffffe0
-      +0x1d: sub    rsp,0x6e0
-      +0x24: call   <mlkem1024_check_sk>
-      +0x29: test   eax,eax
-      +0x2b: je     <mlkem1024_dec+0x98>
-      +0x2d: mov    ebx,eax
-      +0x2f: lea    r10,[rsp+0x20]
-      +0x34: lea    r9,[rsp+0x60]
-      +0x39: lea    r8,[rsp+0xa0]
-      +0x41: xor    eax,eax
-      +0x43: mov    rdi,r8
-      +0x46: mov    ecx,0xc8
-      +0x4b: rep    stos QWORD PTR es:[rdi],rax
-      +0x4e: pxor   xmm0,xmm0
-      +0x52: movaps XMMWORD PTR [rsp+0x60],xmm0
-      +0x57: movaps XMMWORD PTR [rsp+0x70],xmm0
-      +0x5c: movaps XMMWORD PTR [rsp+0x80],xmm0
-      +0x64: movaps XMMWORD PTR [rsp+0x90],xmm0
-      +0x6c: movaps XMMWORD PTR [rsp+0x20],xmm0
-      +0x71: movaps XMMWORD PTR [rsp+0x30],xmm0
-      +0x76: movaps XMMWORD PTR [rsp+0x40],xmm0
-      +0x7b: movaps XMMWORD PTR [rsp+0x50],xmm0
-      +0x80: lea    rsp,[rbp-0x28]
-      +0x84: mov    eax,ebx
-      +0x86: pop    rbx
-      +0x87: pop    r12
-      +0x89: pop    r13
-      +0x8b: pop    r14
-      +0x8d: pop    r15
-      +0x8f: pop    rbp
-      +0x90: ret
-      +0x91: nop    DWORD PTR [rax+0x0]
-      +0x98: lea    r10,[rsp+0x20]
+       +0x6: push   r14
+       +0x8: mov    r14,rsi
+       +0xb: push   r13
+       +0xd: mov    r13,rdx
+      +0x10: push   r12
+      +0x12: push   rbx
+      +0x13: and    rsp,0xffffffffffffffe0
+      +0x17: sub    rsp,0x6e0
+      +0x1e: mov    QWORD PTR [rsp+0x18],rdi
+      +0x23: mov    rdi,rdx
+      +0x26: call   <mlkem1024_check_sk>
+      +0x2b: test   eax,eax
+      +0x2d: je     <mlkem1024_dec+0x98>
+      +0x2f: mov    ebx,eax
+      +0x31: lea    r15,[rsp+0x20]
+      +0x36: lea    r10,[rsp+0x60]
+      +0x3b: lea    r8,[rsp+0xa0]
+      +0x43: xor    eax,eax
+      +0x45: mov    rdi,r8
+      +0x48: mov    ecx,0xc8
+      +0x4d: rep    stos QWORD PTR es:[rdi],rax
+      +0x50: pxor   xmm0,xmm0
+      +0x54: movaps XMMWORD PTR [rsp+0x60],xmm0
+      +0x59: movaps XMMWORD PTR [rsp+0x70],xmm0
+      +0x5e: movaps XMMWORD PTR [rsp+0x80],xmm0
+      +0x66: movaps XMMWORD PTR [rsp+0x90],xmm0
+      +0x6e: movaps XMMWORD PTR [rsp+0x20],xmm0
+      +0x73: movaps XMMWORD PTR [rsp+0x30],xmm0
+      +0x78: movaps XMMWORD PTR [rsp+0x40],xmm0
+      +0x7d: movaps XMMWORD PTR [rsp+0x50],xmm0
+      +0x82: lea    rsp,[rbp-0x28]
+      +0x86: mov    eax,ebx
+      +0x88: pop    rbx
+      +0x89: pop    r12
+      +0x8b: pop    r13
+      +0x8d: pop    r14
+      +0x8f: pop    r15
+      +0x91: pop    rbp
+      +0x92: ret
+      +0x93: nop    DWORD PTR [rax+rax*1+0x0]
+      +0x98: lea    r15,[rsp+0x20]
       +0x9d: mov    rdx,r13
-      +0xa0: mov    rsi,r15
-      +0xa3: mov    rdi,r10
-      +0xa6: mov    QWORD PTR [rsp+0x18],r10
-      +0xab: call   <mlkem1024_indcpa_dec>
-      +0xb0: mov    r10,QWORD PTR [rsp+0x18]
-      +0xb5: test   eax,eax
-      +0xb7: mov    ebx,eax
-      +0xb9: je     <mlkem1024_dec+0xd0>
-      +0xbb: lea    r9,[rsp+0x60]
-      +0xc0: lea    r8,[rsp+0xa0]
-      +0xc8: jmp    <mlkem1024_dec+0x41>
-      +0xcd: nop    DWORD PTR [rax]
-      +0xd0: lea    r9,[rsp+0x60]
-      +0xd5: mov    rsi,r10
-      +0xd8: mov    edx,0x40
-      +0xdd: mov    QWORD PTR [rsp+0x18],r10
-      +0xe2: movdqu xmm3,XMMWORD PTR [r13+0xc20]
-      +0xeb: mov    rdi,r9
-      +0xee: mov    QWORD PTR [rsp+0x8],r9
-      +0xf3: movdqu xmm4,XMMWORD PTR [r13+0xc30]
-      +0xfc: movaps XMMWORD PTR [rsp+0x40],xmm3
-     +0x101: movaps XMMWORD PTR [rsp+0x50],xmm4
-     +0x106: call   <mlkem_sha3_512>
-     +0x10b: mov    r10,QWORD PTR [rsp+0x18]
-     +0x110: lea    r8,[rsp+0xa0]
-     +0x118: lea    rcx,[rsp+0x80]
-     +0x120: mov    rdi,r8
-     +0x123: lea    rdx,[r13+0x600]
-     +0x12a: mov    QWORD PTR [rsp+0x18],r8
-     +0x12f: mov    rsi,r10
-     +0x132: mov    QWORD PTR [rsp+0x10],r10
-     +0x137: call   <mlkem1024_indcpa_enc>
-     +0x13c: mov    r8,QWORD PTR [rsp+0x18]
-     +0x141: mov    r10,QWORD PTR [rsp+0x10]
-     +0x146: test   eax,eax
-     +0x148: mov    r9,QWORD PTR [rsp+0x8]
-     +0x14d: mov    ebx,eax
-     +0x14f: jne    <mlkem1024_dec+0x41>
-     +0x155: pxor   xmm2,xmm2
-     +0x159: xor    eax,eax
-     +0x15b: movdqa xmm0,xmm2
-     +0x15f: nop
-     +0x160: movdqu xmm1,XMMWORD PTR [r15+rax*1]
-     +0x166: pxor   xmm1,XMMWORD PTR [r8+rax*1]
-     +0x16c: add    rax,0x10
-     +0x170: por    xmm0,xmm1
-     +0x174: pxor   xmm2,xmm1
-     +0x178: cmp    rax,0x620
-     +0x17e: jne    <mlkem1024_dec+0x160>
-     +0x180: movdqa xmm1,xmm2
-     +0x184: mov    QWORD PTR [rsp+0x8],r9
-     +0x189: psrldq xmm1,0x8
-     +0x18e: mov    QWORD PTR [rsp+0x10],r10
-     +0x193: pxor   xmm2,xmm1
-     +0x197: movdqa xmm1,xmm2
-     +0x19b: psrldq xmm1,0x4
-     +0x1a0: pxor   xmm2,xmm1
-     +0x1a4: movdqa xmm1,xmm2
-     +0x1a8: psrldq xmm1,0x2
-     +0x1ad: pxor   xmm2,xmm1
-     +0x1b1: movdqa xmm1,xmm2
-     +0x1b5: psrldq xmm1,0x1
-     +0x1ba: pxor   xmm2,xmm1
+      +0xa0: mov    rsi,r14
+      +0xa3: mov    rdi,r15
+      +0xa6: call   <mlkem1024_indcpa_dec>
+      +0xab: mov    ebx,eax
+      +0xad: test   eax,eax
+      +0xaf: je     <mlkem1024_dec+0xc0>
+      +0xb1: lea    r10,[rsp+0x60]
+      +0xb6: lea    r8,[rsp+0xa0]
+      +0xbe: jmp    <mlkem1024_dec+0x43>
+      +0xc0: lea    r10,[rsp+0x60]
+      +0xc5: mov    edx,0x40
+      +0xca: mov    rsi,r15
+      +0xcd: movdqu xmm3,XMMWORD PTR [r13+0xc20]
+      +0xd6: movdqu xmm4,XMMWORD PTR [r13+0xc30]
+      +0xdf: mov    rdi,r10
+      +0xe2: mov    QWORD PTR [rsp+0x8],r10
+      +0xe7: movaps XMMWORD PTR [rsp+0x40],xmm3
+      +0xec: movaps XMMWORD PTR [rsp+0x50],xmm4
+      +0xf1: call   <mlkem_sha3_512>
+      +0xf6: lea    r8,[rsp+0xa0]
+      +0xfe: lea    r11,[rsp+0x80]
+     +0x106: mov    rsi,r15
+     +0x109: mov    rdi,r8
+     +0x10c: lea    rdx,[r13+0x600]
+     +0x113: mov    rcx,r11
+     +0x116: mov    QWORD PTR [rsp],r11
+     +0x11a: mov    QWORD PTR [rsp+0x10],r8
+     +0x11f: call   <mlkem1024_indcpa_enc>
+     +0x124: mov    r8,QWORD PTR [rsp+0x10]
+     +0x129: mov    r10,QWORD PTR [rsp+0x8]
+     +0x12e: test   eax,eax
+     +0x130: mov    ebx,eax
+     +0x132: jne    <mlkem1024_dec+0x43>
+     +0x138: pxor   xmm2,xmm2
+     +0x13c: mov    r11,QWORD PTR [rsp]
+     +0x140: xor    eax,eax
+     +0x142: movdqa xmm0,xmm2
+     +0x146: cs     nop WORD PTR [rax+rax*1+0x0]
+     +0x150: movdqu xmm1,XMMWORD PTR [r14+rax*1]
+     +0x156: pxor   xmm1,XMMWORD PTR [r8+rax*1]
+     +0x15c: add    rax,0x10
+     +0x160: por    xmm0,xmm1
+     +0x164: pxor   xmm2,xmm1
+     +0x168: cmp    rax,0x620
+     +0x16e: jne    <mlkem1024_dec+0x150>
+     +0x170: movdqa xmm1,xmm2
+     +0x174: mov    QWORD PTR [rsp],r10
+     +0x178: psrldq xmm1,0x8
+     +0x17d: mov    QWORD PTR [rsp+0x8],r11
+     +0x182: pxor   xmm2,xmm1
+     +0x186: movdqa xmm1,xmm2
+     +0x18a: psrldq xmm1,0x4
+     +0x18f: pxor   xmm2,xmm1
+     +0x193: movdqa xmm1,xmm2
+     +0x197: psrldq xmm1,0x2
+     +0x19c: pxor   xmm2,xmm1
+     +0x1a0: movdqa xmm1,xmm2
+     +0x1a4: psrldq xmm1,0x1
+     +0x1a9: pxor   xmm2,xmm1
+     +0x1ad: movdqa xmm1,xmm0
+     +0x1b1: psrldq xmm1,0x8
+     +0x1b6: movd   eax,xmm2
+     +0x1ba: por    xmm0,xmm1
      +0x1be: movdqa xmm1,xmm0
-     +0x1c2: psrldq xmm1,0x8
-     +0x1c7: movd   eax,xmm2
-     +0x1cb: por    xmm0,xmm1
-     +0x1cf: movdqa xmm1,xmm0
-     +0x1d3: psrldq xmm1,0x4
-     +0x1d8: por    xmm0,xmm1
-     +0x1dc: movdqa xmm1,xmm0
-     +0x1e0: psrldq xmm1,0x2
-     +0x1e5: por    xmm0,xmm1
-     +0x1e9: movdqa xmm1,xmm0
-     +0x1ed: psrldq xmm1,0x1
-     +0x1f2: por    xmm0,xmm1
-     +0x1f6: movd   r12d,xmm0
-     +0x1fb: movzx  r12d,r12b
-     +0x1ff: neg    r12d
-     +0x202: sar    r12d,0x10
-     +0x206: xor    r12d,eax
-     +0x209: xor    r12d,eax
-     +0x20c: mov    rdx,r8
-     +0x20f: mov    ecx,0xc4
-     +0x214: mov    rsi,r15
-     +0x217: movdqu xmm6,XMMWORD PTR [r13+0xc50]
-     +0x220: mov    QWORD PTR [rsp+0x18],r8
-     +0x225: movzx  r12d,r12b
-     +0x229: lea    rax,[rsp+0xc0]
-     +0x231: movdqu xmm5,XMMWORD PTR [r13+0xc40]
-     +0x23a: mov    rdi,rax
-     +0x23d: neg    r12d
-     +0x240: movaps XMMWORD PTR [rsp+0xb0],xmm6
-     +0x248: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
-     +0x24b: mov    ecx,0x640
-     +0x250: mov    esi,0x20
-     +0x255: mov    rdi,r14
-     +0x258: movaps XMMWORD PTR [rsp+0xa0],xmm5
-     +0x260: call   <mlkem_shake256>
-     +0x265: mov    r9,QWORD PTR [rsp+0x8]
-     +0x26a: mov    r10,QWORD PTR [rsp+0x10]
-     +0x26f: xor    eax,eax
-     +0x271: mov    r8,QWORD PTR [rsp+0x18]
-     +0x276: cs     nop WORD PTR [rax+rax*1+0x0]
-     +0x280: movzx  esi,BYTE PTR [r9+rax*1]
-     +0x285: mov    ecx,r12d
-     +0x288: movzx  edx,BYTE PTR [r14+rax*1]
-     +0x28d: sar    ecx,0x10
-     +0x290: xor    edx,esi
-     +0x292: and    edx,ecx
-     +0x294: xor    edx,esi
-     +0x296: mov    BYTE PTR [r14+rax*1],dl
-     +0x29a: add    rax,0x1
-     +0x29e: cmp    rax,0x20
-     +0x2a2: jne    <mlkem1024_dec+0x280>
-     +0x2a4: jmp    <mlkem1024_dec+0x41>
+     +0x1c2: psrldq xmm1,0x4
+     +0x1c7: por    xmm0,xmm1
+     +0x1cb: movdqa xmm1,xmm0
+     +0x1cf: psrldq xmm1,0x2
+     +0x1d4: por    xmm0,xmm1
+     +0x1d8: movdqa xmm1,xmm0
+     +0x1dc: psrldq xmm1,0x1
+     +0x1e1: por    xmm0,xmm1
+     +0x1e5: movd   r12d,xmm0
+     +0x1ea: movzx  r12d,r12b
+     +0x1ee: neg    r12d
+     +0x1f1: sar    r12d,0x10
+     +0x1f5: xor    r12d,eax
+     +0x1f8: xor    r12d,eax
+     +0x1fb: mov    rdx,r8
+     +0x1fe: mov    ecx,0xc4
+     +0x203: mov    rsi,r14
+     +0x206: movdqu xmm6,XMMWORD PTR [r13+0xc50]
+     +0x20f: mov    QWORD PTR [rsp+0x10],r8
+     +0x214: movzx  r12d,r12b
+     +0x218: lea    rax,[rsp+0xc0]
+     +0x220: movdqu xmm5,XMMWORD PTR [r13+0xc40]
+     +0x229: mov    rdi,rax
+     +0x22c: neg    r12d
+     +0x22f: movaps XMMWORD PTR [rsp+0xb0],xmm6
+     +0x237: rep    movs QWORD PTR es:[rdi],QWORD PTR ds:[rsi]
+     +0x23a: mov    ecx,0x640
+     +0x23f: mov    esi,0x20
+     +0x244: mov    rdi,r15
+     +0x247: movaps XMMWORD PTR [rsp+0xa0],xmm5
+     +0x24f: call   <mlkem_shake256>
+     +0x254: mov    r10,QWORD PTR [rsp]
+     +0x258: mov    r11,QWORD PTR [rsp+0x8]
+     +0x25d: mov    rcx,r15
+     +0x260: mov    r8,QWORD PTR [rsp+0x10]
+     +0x265: mov    rsi,r10
+     +0x268: nop    DWORD PTR [rax+rax*1+0x0]
+     +0x270: movzx  edi,BYTE PTR [rsi]
+     +0x273: mov    edx,r12d
+     +0x276: movzx  eax,BYTE PTR [rcx]
+     +0x279: sar    edx,0x10
+     +0x27c: add    rsi,0x1
+     +0x280: add    rcx,0x1
+     +0x284: xor    eax,edi
+     +0x286: and    eax,edx
+     +0x288: xor    eax,edi
+     +0x28a: mov    BYTE PTR [rcx-0x1],al
+     +0x28d: cmp    r11,rsi
+     +0x290: jne    <mlkem1024_dec+0x270>
+     +0x292: mov    rax,QWORD PTR [rsp+0x18]
+     +0x297: movdqa xmm7,XMMWORD PTR [rsp+0x20]
+     +0x29d: movdqa xmm5,XMMWORD PTR [rsp+0x30]
+     +0x2a3: movups XMMWORD PTR [rax],xmm7
+     +0x2a6: movups XMMWORD PTR [rax+0x10],xmm5
+     +0x2aa: jmp    <mlkem1024_dec+0x43>
  ***)
 
 let MLKEM_NATIVE_DEC_K4_GCC12_O2_EXEC =
@@ -235,9 +239,13 @@ let KD4_CHECK =
 (* mlkem1024_indcpa_dec, and their addresses are offsets from the frame      *)
 (* variable bot of INDCPA_BOT_TAC, the bottom of the stacks of the callees   *)
 (* 22912 bytes below them: m' and h at bot + 22944, K' and r' at bot + 23008 *)
-(* and c', and then z and the copy of the ciphertext, at bot + 23072. In the *)
-(* loop that compares c' with the ciphertext, PXOR reads c' from memory,     *)
-(* which needs 16-byte alignment, so that of bot + 23072 is given too.       *)
+(* and c', and then z and the copy of the ciphertext, at bot + 23072. The    *)
+(* result of J is written to bot + 22944, over m', and K' is selected into   *)
+(* it there, so ss is written once, at the end, from that buffer, whose      *)
+(* address is kept in the stack slot at bot + 22936. In the loop that        *)
+(* compares c' with the ciphertext, PXOR reads c' from memory, which needs   *)
+(* 16-byte alignment, so that of bot + 23072 is given too; the aligned moves *)
+(* at the end read the buffer at bot + 22944.                                *)
 (* ------------------------------------------------------------------------- *)
 
 let KD4_FRAME = (24752,48,22912,1760);;
@@ -275,7 +283,7 @@ let KD4_INTRO_TAC =
                      (concl th)));;
 
 let KD4_SETUP_TAC =
-  INDCPA_BOT_TAC KD4_FRAME [22912; 23072] THEN
+  INDCPA_BOT_TAC KD4_FRAME [22912; 22944; 23072] THEN
   INDCPA_FRAME_TAC ["memory :> bytes(ss:int64,32)"] KD4_FRAME THEN
   INDCPA_NONOV_TAC 24672
    [`ss:int64,32`; `ct:int64,1568`; `sk:int64,3168`;
@@ -331,20 +339,24 @@ let KD4_SUBST tm =
 (* The invariant of the comparison loop at iteration i states that the OR    *)
 (* accumulator in XMM0 is zero if and only if the first 16 * i bytes of the  *)
 (* ciphertext and of c' are equal, and the invariant of the conditional move *)
-(* at iteration i that the first i bytes at ss are those of K' if the        *)
-(* ciphertexts are equal and those of the result of J otherwise, and the     *)
-(* others still those of the result of J. Both keep the registers, the       *)
-(* pushes and K' (KEEP).                                                     *)
+(* at iteration i that the first i bytes of the buffer for the result of J,  *)
+(* at bot + 22944, are those of K' if the ciphertexts are equal and those of *)
+(* the result of J otherwise, and the others still those of the result of J, *)
+(* with the pointers into the buffer and K' at offset i. Both keep the       *)
+(* registers, the pushes, K' and the slot with ss (KEEP).                    *)
 (* ------------------------------------------------------------------------- *)
 
 let KD4_SAFE_KEEP =
  `read RSP s = word_add bot (word 22912) /\
   read RBP s = word_add stackpointer (word 24744) /\
   read RBX s = word 0 /\
-  read R13 s = sk /\ read R14 s = ss /\ read R15 s = ct /\
+  read R13 s = sk /\ read R14 s = ct /\
+  read R15 s = word_add bot (word 22944) /\
   read R8 s = word_add bot (word 23072) /\
-  read R9 s = word_add bot (word 23008) /\
+  read R10 s = word_add bot (word 23008) /\
+  read R11 s = word_add bot (word 23040) /\
   (read DF s <=> false) /\
+  read (memory :> bytes64 (word_add bot (word 22936))) s = ss /\
   read (memory :> bytes64 (word_add stackpointer (word 24752))) s =
   returnaddress /\
   read (memory :> bytes64 (word_add stackpointer (word 24744))) s =
@@ -364,10 +376,13 @@ let KD4_KEEP = KD4_SUBST
  `read RSP s = word_add bot (word 22912) /\
   read RBP s = word_add stackpointer (word 24744) /\
   read RBX s = word 0 /\
-  read R13 s = sk /\ read R14 s = ss /\ read R15 s = ct /\
+  read R13 s = sk /\ read R14 s = ct /\
+  read R15 s = word_add bot (word 22944) /\
   read R8 s = word_add bot (word 23072) /\
-  read R9 s = word_add bot (word 23008) /\
+  read R10 s = word_add bot (word 23008) /\
+  read R11 s = word_add bot (word 23040) /\
   (read DF s <=> false) /\
+  read (memory :> bytes64 (word_add bot (word 22936))) s = ss /\
   read (memory :> bytes64 (word_add stackpointer (word 24752))) s =
   returnaddress /\
   read (memory :> bytes64 (word_add stackpointer (word 24744))) s =
@@ -390,7 +405,6 @@ let KD4_WITH_KEEP keep inv =
 
 let KD4_INV = KD4_WITH_KEEP KD4_KEEP (KD4_SUBST
  `\i s. read RAX s = word(16 * i) /\
-        read R10 s = word_add bot (word 22944) /\
         read R12 s = r12_init /\
         (word_subword (read YMM0 s) (0,128):int128 = word 0 <=>
          num_of_bytelist c MOD 2 EXP (128 * i) = CP MOD 2 EXP (128 * i)) /\
@@ -402,11 +416,12 @@ let KD4_INV = KD4_WITH_KEEP KD4_KEEP (KD4_SUBST
         word(ZZ DIV 2 EXP 128) /\ KEEP`);;
 
 let KD4_CMOV_INV = KD4_WITH_KEEP KD4_KEEP (KD4_SUBST
- `\i s. read RAX s = word i /\
+ `\i s. read RSI s = word_add bot (word (23008 + i)) /\
+        read RCX s = word_add bot (word (22944 + i)) /\
         read R12 s = (if EQ then word 0 else word 4294967041) /\
-        read (memory :> bytes(ss,i)) s =
+        read (memory :> bytes(word_add bot (word 22944),i)) s =
         (if EQ then KP else KB) MOD 2 EXP (8 * i) /\
-        read (memory :> bytes(word_add ss (word i),32 - i)) s =
+        read (memory :> bytes(word_add bot (word (22944 + i)),32 - i)) s =
         KB DIV 2 EXP (8 * i) /\ KEEP`);;
 
 (* ------------------------------------------------------------------------- *)
@@ -471,8 +486,8 @@ let KD4_PART1_TAC =
 
   (*** The check of the key ***)
 
-  X86_STEPS_TAC KD4_EXEC (1--12) THEN INDCPA_RSP_TAC THEN
-  X86_STEPS_TAC KD4_EXEC (13--14) THEN INDCPA_NORM_TAC THEN
+  X86_STEPS_TAC KD4_EXEC (1--10) THEN INDCPA_RSP_TAC THEN
+  X86_STEPS_TAC KD4_EXEC (11--14) THEN INDCPA_NORM_TAC THEN
   call MLKEM_NATIVE_CHECK_SK_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
    ([`read RDI s`; `mlkem_slice 1536 1568 (dk:byte list)`;
      `num_of_bytelist(mlkem_slice 3104 32 (dk:byte list))`] @ post) 15 THEN
@@ -480,36 +495,36 @@ let KD4_PART1_TAC =
 
   (*** The decryption, G and the reencryption ***)
 
-  X86_STEPS_TAC KD4_EXEC (16--23) THEN INDCPA_NORM_TAC THEN
+  X86_STEPS_TAC KD4_EXEC (16--22) THEN INDCPA_NORM_TAC THEN
   call MLKEM_NATIVE_INDCPA_DEC_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
    ([`read RDI s`; `read RSI s`; `read RDX s`;
-     `mlkem_slice 0 1536 (dk:byte list)`; `c:byte list`] @ post) 24 THEN
-  INDCPA_NORM_TAC THEN INDCPA_YMMS_TAC "s24" [3; 4] THEN
-  X86_STEPS_TAC KD4_EXEC (25--32) THEN
+     `mlkem_slice 0 1536 (dk:byte list)`; `c:byte list`] @ post) 23 THEN
+  INDCPA_NORM_TAC THEN INDCPA_YMMS_TAC "s23" [3; 4] THEN
+  X86_STEPS_TAC KD4_EXEC (24--29) THEN
   MAP_EVERY (fun k -> X86_STEPS_TAC KD4_EXEC [k] THEN SIMD_SIMPLIFY_TAC[])
-   (33--38) THEN
+   (30--35) THEN
   INDCPA_NORM_TAC THEN
-  KEM_JOIN_TAC (INDCPA_SP 22976) `mlkem_slice 3104 32 (dk:byte list)` "s38"
-  THEN KD4_G_INPUT_TAC "s38" THEN
-  X86_STEPS_TAC KD4_EXEC [39] THEN
+  KEM_JOIN_TAC (INDCPA_SP 22976) `mlkem_slice 3104 32 (dk:byte list)` "s35"
+  THEN KD4_G_INPUT_TAC "s35" THEN
+  X86_STEPS_TAC KD4_EXEC [36] THEN
   call MLKEM_NATIVE_SHA3_512_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
    ([`read RDI s`; `read RSI s`;
      mk_comb(mk_comb(`APPEND:byte list->byte list->byte list`,KD4_MP),
-             `mlkem_slice 3104 32 (dk:byte list)`)] @ post) 40 THEN
-  INDCPA_NORM_TAC THEN KD4_KR_TAC "s40" THEN
+             `mlkem_slice 3104 32 (dk:byte list)`)] @ post) 37 THEN
+  INDCPA_NORM_TAC THEN KD4_KR_TAC "s37" THEN
   SUBGOAL_THEN (mk_eq(mk_comb(`LENGTH:byte list->num`,KD4_MP),`32`))
   ASSUME_TAC THENL [REWRITE_TAC[KPKE_DECRYPT_LENGTH_1024]; ALL_TAC] THEN
-  X86_STEPS_TAC KD4_EXEC (41--49) THEN INDCPA_NORM_TAC THEN
+  X86_STEPS_TAC KD4_EXEC (38--46) THEN INDCPA_NORM_TAC THEN
   call MLKEM_NATIVE_INDCPA_ENC_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
    ([`read RDI s`; `read RSI s`; `read RDX s`; `read RCX s`;
-     `mlkem_slice 1536 1568 (dk:byte list)`; KD4_MP; KD4_RR] @ post) 50 THEN
+     `mlkem_slice 1536 1568 (dk:byte list)`; KD4_MP; KD4_RR] @ post) 47 THEN
   INDCPA_NORM_TAC THEN
 
   (*** The start of the comparison ***)
 
-  X86_STEPS_TAC KD4_EXEC (51--56) THEN INDCPA_YMMS_TAC "s56" [0; 2] THEN
+  X86_STEPS_TAC KD4_EXEC (48--52) THEN INDCPA_YMMS_TAC "s52" [0; 2] THEN
   MAP_EVERY (fun k -> X86_STEPS_TAC KD4_EXEC [k] THEN SIMD_SIMPLIFY_TAC[])
-   (57--60) THEN
+   (53--57) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[KEM_SUBWORD_JOIN_128; MOD_1] THEN CONV_TAC NUM_REDUCE_CONV;;
 
@@ -652,19 +667,40 @@ let KD4_EXIT_A_TAC =
   call MLKEM_NATIVE_SHAKE256_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
    ([`read RDI s`; `32`; `read RDX s`;
      `APPEND (mlkem_slice 3136 32 (dk:byte list)) c`] @ post) 51 THEN
-  X86_STEPS_TAC KD4_EXEC (52--56) THEN
+  X86_STEPS_TAC KD4_EXEC (52--57) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1; DIV_1; SUB_0; WORD_ADD_0;
+  REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1; DIV_1; SUB_0; WORD_ADD_0; ADD_CLAUSES;
               READ_MEMORY_BYTES_TRIVIAL] THEN
   ASM_REWRITE_TAC[];;
 
 (* ------------------------------------------------------------------------- *)
-(* One iteration of the conditional move, and the end: the zeroing of the    *)
-(* buffers by REP STOSQ and SSE stores, and the result in terms of FIPS 203, *)
-(* and the case where the check of the key fails.                            *)
+(* One iteration of the conditional move, and the end: the copy of the       *)
+(* buffer to ss by two 128-bit moves, the zeroing of the buffers by REP      *)
+(* STOSQ and SSE stores, and the result in terms of FIPS 203, and the case   *)
+(* where the check of the key fails.                                         *)
 (* ------------------------------------------------------------------------- *)
 
+let KD4_CMOV_TEST_TAC =
+  SUBGOAL_THEN
+   `val(word_sub (word_add bot (word 23040))
+                 (word_add (word_add bot (word (23008 + i))) (word 1)):int64) = 0
+    <=> ~(i + 1 < 32)`
+   (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+   [SUBGOAL_THEN
+     `word_sub (word_add bot (word 23040))
+               (word_add (word_add bot (word (23008 + i))) (word 1)):int64 =
+      word_neg(word_add (word i) (word 18446744073709551585))`
+     SUBST1_TAC THENL
+     [SUBGOAL_THEN `word 18446744073709551585:int64 = word_neg(word 31)`
+       SUBST1_TAC THENL [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
+      REWRITE_TAC[WORD_ADD] THEN CONV_TAC WORD_RULE;
+      ALL_TAC] THEN
+    REWRITE_TAC[VAL_EQ_0; WORD_NEG_EQ_0] THEN
+    REWRITE_TAC[GSYM VAL_EQ_0] THEN ASM_SIMP_TAC[KEM_CMOV_TEST];
+    ALL_TAC];;
+
 let KD4_CMOV_BODY_TAC =
+  let nrm = CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) in
   X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
   MP_TAC(SPECL [INDCPA_SP 23008; `32`; mk_comb(`num_of_bytelist`,KD4_KP);
                 `i:num`; `s0:x86state`] READ_MEMORY_BYTES8_OF_NUM) THEN
@@ -672,25 +708,26 @@ let KD4_CMOV_BODY_TAC =
   CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
   DISCH_TAC THEN
   SUBGOAL_THEN
-   (KD4_SUBST `read (memory :> bytes(word_add ss (word i),(31 - i) + 1)) s0 =
+   (KD4_SUBST `read (memory :> bytes(word_add bot (word (22944 + i)),
+                                      (31 - i) + 1)) s0 =
                KB DIV 2 EXP (8 * i)`)
   MP_TAC THENL
    [SIMP_TAC[ARITH_RULE `i < 32 ==> (31 - i) + 1 = 32 - i`;
              ASSUME `i < 32`] THEN ASM_REWRITE_TAC[];
     DISCH_THEN(fun th ->
       let th1,th2 = CONJ_PAIR(MATCH_MP KEM_SPLIT1 th) in
-      ASSUME_TAC th1 THEN ASSUME_TAC th2)] THEN
-  VAL_INT64_TAC `i:num` THEN KEM_INDEX1_TAC THEN
-  X86_STEPS_TAC KD4_EXEC (1--11) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE
-   [MP (SPEC `i:num` KEM_CMOV_TEST) (ASSUME `i < 32`)]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MULT_CLAUSES]) THEN
+      ASSUME_TAC(nrm th1) THEN ASSUME_TAC(nrm th2))] THEN
+  VAL_INT64_TAC `i:num` THEN
+  X86_STEPS_TAC KD4_EXEC (1--12) THEN
+  KD4_CMOV_TEST_TAC THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THENL
    [ASM_CASES_TAC `i + 1 < 32` THEN ASM_REWRITE_TAC[];
-    REWRITE_TAC[GSYM WORD_ADD];
+    REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD; ADD_ASSOC];
+    REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD; ADD_ASSOC];
     REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
     REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE; READ_MEMORY_BYTES_1] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
     ASM_REWRITE_TAC[] THEN REWRITE_TAC[KEM_MOD_BYTE] THEN
     AP_TERM_TAC THEN AP_TERM_TAC THEN
     ASM_CASES_TAC KD4_EQ THEN ASM_REWRITE_TAC[] THEN
@@ -700,8 +737,7 @@ let KD4_CMOV_BODY_TAC =
     SPEC_TAC(KD4_SUBST `word((KB DIV 2 EXP (8 * i)) MOD 256):byte`,
              `y:byte`) THEN
     REPEAT GEN_TAC THEN AP_TERM_TAC THEN BITBLAST_TAC;
-    REWRITE_TAC[ARITH_RULE `32 - (i + 1) = 31 - i`; WORD_ADD; WORD_ADD_ASSOC;
-                KEM_DIV_BYTE] THEN
+    REWRITE_TAC[ARITH_RULE `32 - (i + 1) = 31 - i`; KEM_DIV_BYTE; ADD_ASSOC] THEN
     ASM_REWRITE_TAC[]];;
 
 let KD4_FINAL_TAC =
@@ -719,11 +755,26 @@ let KD4_FINAL_TAC =
   CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[];;
 
 let KD4_EXIT_B_TAC =
-  GHOST_INTRO_TAC `y0:int256` `read YMM0` THEN ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC KD4_EXEC (1--5) THEN
+  GHOST_INTRO_TAC `y0:int256` `read YMM0` THEN
+  GHOST_INTRO_TAC `y5:int256` `read YMM5` THEN
+  GHOST_INTRO_TAC `y7:int256` `read YMM7` THEN ENSURES_INIT_TAC "s0" THEN
+  KEM_HALVES_TAC (INDCPA_SP 22944) THEN
+  X86_STEPS_TAC KD4_EXEC [1] THEN
   MAP_EVERY (fun k -> X86_STEPS_TAC KD4_EXEC [k] THEN SIMD_SIMPLIFY_TAC[])
-   (6--14) THEN
-  X86_STEPS_TAC KD4_EXEC (15--23) THEN
+   (2--5) THEN
+  MP_TAC(SPECL [`ss:int64`;
+                KD4_SUBST `(if EQ then KP else KB) MOD 2 EXP (8 * 32)`;
+                `s5:x86state`] KEM_BYTES_32_OF_HALVES) THEN
+  ANTS_TAC THENL
+   [CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MOD_LT_EQ; ARITH_EQ] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN ASM_REWRITE_TAC[];
+    DISCH_TAC] THEN
+  X86_STEPS_TAC KD4_EXEC (6--10) THEN
+  MAP_EVERY (fun k -> X86_STEPS_TAC KD4_EXEC [k] THEN SIMD_SIMPLIFY_TAC[])
+   (11--19) THEN
+  X86_STEPS_TAC KD4_EXEC (20--28) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN KD4_FINAL_TAC;;
 
 let KD4_BAD_TAC =
@@ -731,8 +782,8 @@ let KD4_BAD_TAC =
               `read (memory :> bytes64(read RSP s)) s`] in
   let call = KD4_CALL in
   ENSURES_INIT_TAC "s0" THEN KD4_SK_TAC THEN
-  X86_STEPS_TAC KD4_EXEC (1--12) THEN INDCPA_RSP_TAC THEN
-  X86_STEPS_TAC KD4_EXEC (13--14) THEN INDCPA_NORM_TAC THEN
+  X86_STEPS_TAC KD4_EXEC (1--10) THEN INDCPA_RSP_TAC THEN
+  X86_STEPS_TAC KD4_EXEC (11--14) THEN INDCPA_NORM_TAC THEN
   call MLKEM_NATIVE_CHECK_SK_K4_GCC12_O2_IMAGE_SUBROUTINE_CORRECT
    ([`read RDI s`; `mlkem_slice 1536 1568 (dk:byte list)`;
      `num_of_bytelist(mlkem_slice 3104 32 (dk:byte list))`] @ post) 15 THEN
@@ -856,10 +907,11 @@ let KD4_SAFE_CALL_TAC name ilist n =
 
 let KD4_SAFE_INV = KD4_WITH_KEEP KD4_SAFE_KEEP
  `\i s. read RAX s = word(16 * i) /\
-        read R10 s = word_add bot (word 22944) /\ KEEP`;;
+        KEEP`;;
 
 let KD4_SAFE_CMOV_INV = KD4_WITH_KEEP KD4_SAFE_KEEP
- `\i s. read RAX s = word i /\ KEEP`;;
+ `\i s. read RSI s = word_add bot (word (23008 + i)) /\
+        read RCX s = word_add bot (word (22944 + i)) /\ KEEP`;;
 
 let KD4_SAFE_INTRO_TAC =
   MAP_EVERY (fun (th,n) -> ASSUME_CALLEE_SAFETY_TAILED_TAC th n)
@@ -897,8 +949,8 @@ let KD4_SAFE_START_TAC =
   let call = KD4_SAFE_CALL_TAC in
   REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN KD4_SK_TAC THEN
-  X86_STEPS_TAC KD4_EXEC (1--12) THEN INDCPA_RSP_TAC THEN
-  X86_STEPS_TAC KD4_EXEC (13--14) THEN INDCPA_NORM_TAC THEN
+  X86_STEPS_TAC KD4_EXEC (1--10) THEN INDCPA_RSP_TAC THEN
+  X86_STEPS_TAC KD4_EXEC (11--14) THEN INDCPA_NORM_TAC THEN
   call "H_CHECK"
    [`read RDI s`; `ekk:byte list`; `num_of_bytelist(hh:byte list)`] 15 THEN
   INDCPA_NORM_TAC;;
@@ -906,17 +958,17 @@ let KD4_SAFE_START_TAC =
 let KD4_SAFE_PART1_TAC =
   let call = KD4_SAFE_CALL_TAC in
   KD4_SAFE_START_TAC THEN
-  X86_STEPS_TAC KD4_EXEC (16--23) THEN INDCPA_NORM_TAC THEN
-  call "H_DEC" [`read RDI s`; `read RSI s`; `read RDX s`] 24 THEN
+  X86_STEPS_TAC KD4_EXEC (16--22) THEN INDCPA_NORM_TAC THEN
+  call "H_DEC" [`read RDI s`; `read RSI s`; `read RDX s`] 23 THEN
   INDCPA_NORM_TAC THEN
-  X86_STEPS_TAC KD4_EXEC (25--39) THEN INDCPA_NORM_TAC THEN
-  call "H_SHA3_512" [`read RDI s`; `read RSI s`; `64`] 40 THEN
+  X86_STEPS_TAC KD4_EXEC (24--36) THEN INDCPA_NORM_TAC THEN
+  call "H_SHA3_512" [`read RDI s`; `read RSI s`; `64`] 37 THEN
   INDCPA_NORM_TAC THEN
-  X86_STEPS_TAC KD4_EXEC (41--49) THEN INDCPA_NORM_TAC THEN
+  X86_STEPS_TAC KD4_EXEC (38--46) THEN INDCPA_NORM_TAC THEN
   call "H_ENC"
    [`read RDI s`; `read RSI s`; `read RDX s`; `read RCX s`; `ekk:byte list`]
-   50 THEN
-  INDCPA_NORM_TAC THEN X86_STEPS_TAC KD4_EXEC (51--60) THEN
+   47 THEN
+  INDCPA_NORM_TAC THEN X86_STEPS_TAC KD4_EXEC (48--57) THEN
   ENSURES_FINAL_STATE_TAC THEN
   REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; WORD_ADD_0] THEN
   ASM_REWRITE_TAC[] THEN INDCPA_UNBOT_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
@@ -949,9 +1001,9 @@ let KD4_SAFE_EXIT_A_TAC =
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
   X86_STEPS_TAC KD4_EXEC (1--50) THEN
   call "H_SHAKE256" [`read RDI s`; `32`; `read RDX s`; `1600`] 51 THEN
-  X86_STEPS_TAC KD4_EXEC (52--56) THEN
+  X86_STEPS_TAC KD4_EXEC (52--57) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[ARITH_RULE `0 + 1 = 1`; APPEND_NIL; ENUMERATEL_APPEND_ZERO] THEN
+  REWRITE_TAC[ADD_CLAUSES; ARITH_RULE `0 + 1 = 1`; APPEND_NIL; ENUMERATEL_APPEND_ZERO] THEN
   INDCPA_UNBOT_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
 
 let KD4_SAFE_CMOV_BODY_TAC =
@@ -959,18 +1011,19 @@ let KD4_SAFE_CMOV_BODY_TAC =
   REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
   VAL_INT64_TAC `i:num` THEN
-  X86_STEPS_TAC KD4_EXEC (1--11) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE
-   [MP (SPEC `i:num` KEM_CMOV_TEST) (ASSUME `i < 32`)]) THEN
+  X86_STEPS_TAC KD4_EXEC (1--12) THEN
+  KD4_CMOV_TEST_TAC THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
-  CONJ_TAC THENL [REWRITE_TAC[GSYM WORD_ADD]; ALL_TAC] THEN
+  CONJ_TAC THENL [REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD; ADD_ASSOC]; ALL_TAC] THEN
+  CONJ_TAC THENL [REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD; ADD_ASSOC]; ALL_TAC] THEN
   INDCPA_UNBOT_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
 
 let KD4_SAFE_EXIT_B_TAC =
   REWRITE_TAC[] THEN REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-  X86_STEPS_TAC KD4_EXEC (1--23) THEN
+  X86_STEPS_TAC KD4_EXEC (1--28) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   INDCPA_UNBOT_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
 
