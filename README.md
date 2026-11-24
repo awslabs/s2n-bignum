@@ -495,19 +495,21 @@ count printed by `relative_report` at the end of the link file, see
 | x86 mlkem gcc12_O2 | 593 | 1726 s |
 | x86 mldsa gcc12_O2 | 578 | 2156 s |
 | x86 mldsa gcc12_O2_reduced_ram | 540 | not measured |
+| x86 mlkem asm (AVX2) | 768 | 2697 s |
+| x86 mlkem asm_avx512 | 759 | 2662 s |
 
 To run a link file, use `make <family>/<build>/link.correct` in `arm` or
 `x86`, with `<family>` one of `mlkem_native` and `mldsa_native`.
 
-The builds `asm` of `arm/mlkem_native` and `x86/mlkem_native` and
-`asm_avx512` of `x86/mlkem_native` are not compiled code but the ML-KEM API
-in hand-written assembly, on kernels of the library (see their
-`README.md`). They have no link file: each of their proof targets, listed
-in their `proofs.mk`, proves the theorems of the functions that it calls
-again. Their 39 targets took about 126000 s of CPU time together in serial
-runs with HOL Light e5236a58 (on the nativity branch, where they were
-developed): 51000 s for the 12 AArch64 targets and 75000 s for the 27 x86
-targets.
+The builds `asm` and `asm_avx512` of `x86/mlkem_native` are not compiled
+code but the ML-KEM API in hand-written assembly, on kernels of the library
+(see their `README.md`). They have a link file like the others, whose jobs
+include the standalone proofs of the kernels. The two x86 rows were
+measured with both link files running at the same time, each on 12 domains
+of CPUs 0-31 of the machine above (other users were on the machine too):
+about 14 minutes of each is the serial loading of the spec files, which
+includes the definitions of the kernels, and the 70 and 71 jobs take
+1875 s and 1867 s.
 
 ### Benchmarking and "constant time"
 

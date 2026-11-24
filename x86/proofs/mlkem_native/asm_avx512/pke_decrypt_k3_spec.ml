@@ -1,0 +1,100 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+(* ========================================================================= *)
+(* The function mlkem768_pke_decrypt_avx512 of the build asm_avx512:         *)
+(* K-PKE.Decrypt, with its correctness and its constant-time and memory      *)
+(* safety.                                                                   *)
+(* ========================================================================= *)
+
+needs "x86/proofs/mlkem_native/relative.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/api_spec.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/kem_spec.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/gen_matrix_k3_spec.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/kem_safe_spec.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/gen_matrix_k3_safe_spec.ml";;
+
+
+
+(* ------------------------------------------------------------------------- *)
+(* K-PKE.Decrypt (FIPS 203 Algorithm 15) as the internal function            *)
+(* mlkem768_pke_decrypt_avx512(m, ct, sk): the message of the ciphertext c   *)
+(* at ct under the decryption key dk at sk.                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM768_PKE_DECRYPT_AVX512_EXEC =
+  MLKEM_NATIVE2_AVX512_IMAGE_EXEC ["mlkem768_pke_decrypt_avx512"];;
+
+
+
+let MLKEM_NATIVE_PKE_DECRYPT_K3_ASM_AVX512_IMAGE_SUBROUTINE_CORRECT_STMT =
+  `!mp ct sk (c:byte list) (dk:byte list) pc stackpointer returnaddress.
+     aligned 32 (word pc:int64) /\ LENGTH c = 1088 /\ LENGTH dk = 1152 /\
+     nonoverlapping (sk,1152) (word pc,mlkem_native2_avx512_image_size) /\
+     PAIRWISE nonoverlapping
+      [(mp,32); (word_sub stackpointer (word 4951),4959)] /\
+     ALLPAIRS nonoverlapping
+      [(mp,32); (word_sub stackpointer (word 4951),4959)]
+      [(word pc,mlkem_native2_avx512_image_size); (ct,1088); (sk,1152)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+               read RIP s = word(pc + mlkem768_pke_decrypt_avx512) /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [mp; ct; sk] s /\
+               read (memory :> bytes(ct,1088)) s = num_of_bytelist c /\
+               read (memory :> bytes(sk,1152)) s = num_of_bytelist dk)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               read (memory :> bytes(mp,32)) s =
+               num_of_bytelist(kpke_decrypt mlkem768 dk c))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(mp,32);
+                      memory :> bytes(word_sub stackpointer (word 4951),
+                                      4951)])`;;
+
+let MLKEM_NATIVE_PKE_DECRYPT_K3_ASM_AVX512_IMAGE_SUBROUTINE_CORRECT = assume_spec MLKEM_NATIVE_PKE_DECRYPT_K3_ASM_AVX512_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+
+
+(* ------------------------------------------------------------------------- *)
+(* The constant-time and memory safety of the K-PKE decryption: the          *)
+(* events depend only on the addresses.                                      *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_PKE_DECRYPT_K3_ASM_AVX512_IMAGE_SUBROUTINE_SAFE_STMT =
+  `exists f_events.
+     forall e mp ct sk pc stackpointer returnaddress.
+       aligned 32 (word pc:int64) /\
+       nonoverlapping (sk,1152) (word pc,mlkem_native2_avx512_image_size) /\
+       PAIRWISE nonoverlapping
+        [(mp,32); (word_sub stackpointer (word 4951),4959)] /\
+       ALLPAIRS nonoverlapping
+        [(mp,32); (word_sub stackpointer (word 4951),4959)]
+        [(word pc,mlkem_native2_avx512_image_size); (ct,1088); (sk,1152)]
+       ==> ensures x86
+            (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+                 read RIP s = word(pc + mlkem768_pke_decrypt_avx512) /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [mp; ct; sk] s /\
+                 read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events mp ct sk pc
+                           (word_sub stackpointer (word 4951)) returnaddress /\
+                    memaccess_inbounds e2
+                     [mp,32; ct,1088; sk,1152;
+                      word(pc + mlkem_native2_constants),6048;
+                      word_sub stackpointer (word 4951),4959]
+                     [mp,32; word_sub stackpointer (word 4951),4951]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes(mp,32);
+                        memory :> bytes(word_sub stackpointer (word 4951),
+                                        4951)])`;;
+
+let MLKEM_NATIVE_PKE_DECRYPT_K3_ASM_AVX512_IMAGE_SUBROUTINE_SAFE = assume_spec MLKEM_NATIVE_PKE_DECRYPT_K3_ASM_AVX512_IMAGE_SUBROUTINE_SAFE_STMT;;

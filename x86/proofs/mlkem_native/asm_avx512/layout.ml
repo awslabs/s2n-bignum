@@ -1,0 +1,53 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+(* ========================================================================= *)
+(* The image of the AVX-512 version of the x86 mlkem_native2 functions, for  *)
+(* the proofs about the ones that call others: the code of the objects       *)
+(* listed in MLKEM_ASM_AVX512_IMAGE_OBJ in                                   *)
+(* x86/mlkem_native/asm_avx512/image.mk, the API for the three parameter     *)
+(* sets, the middle layer, and the leaves and Keccak permutations that they  *)
+(* call, linked in that order at address 0 by                                *)
+(* x86/mlkem_native/asm_avx512/mlkem_native2_avx512_image.ld and followed by *)
+(* their read-only data (the constants block), as one byte list. The         *)
+(* objects of this directory are                                             *)
+(* "x86/mlkem_native/asm_avx512/mlkem512_avx512.o",                          *)
+(* "x86/mlkem_native/asm_avx512/mlkem768_avx512.o",                          *)
+(* "x86/mlkem_native/asm_avx512/mlkem1024_avx512.o",                         *)
+(* "x86/mlkem_native/asm_avx512/mlkem_gen_matrix_avx512.o",                  *)
+(* "x86/mlkem_native/asm_avx512/mlkem_getnoise_avx512.o",                    *)
+(* "x86/mlkem_native/asm_avx512/mlkem_hash_g_avx512.o" and                   *)
+(* "x86/mlkem_native/asm_avx512/mlkem_hash_h_avx512.o". Up to the            *)
+(* permutations, at 0xe280, it is the AVX2 image of                          *)
+(* x86/proofs/mlkem_native/asm/layout.ml but for the displacements of the    *)
+(* three calls of the x4 permutation and of the references to the constants  *)
+(* block, so the proofs about this image are copies of those about the AVX2  *)
+(* one, with the names of the AVX-512 version and their own parts for the    *)
+(* permutations.                                                             *)
+(*                                                                           *)
+(* The theorems about the image assume that it is loaded at an address pc. A *)
+(* function or label f of the image is then at pc + f, with the names for    *)
+(* its address, and for a function f also f_size for its size, taken from    *)
+(* the symbol table of the linked file and installed as in common/layout.ml. *)
+(* The theorems for the leaves and the Keccak permutations, about their own  *)
+(* code, apply to the same code in the image, at pc + f, which               *)
+(* X86_SUBROUTINE_SIM_TAC checks when it uses them.                          *)
+(* ========================================================================= *)
+
+needs "x86/proofs/base.ml";;
+needs "x86/proofs/utils/mlkem_native2_tools.ml";;
+
+let mlkem_native2_avx512_image_mc,LENGTH_MLKEM_NATIVE2_AVX512_IMAGE_MC =
+  x86_image "mlkem_native2_avx512_image_mc"
+    "x86/mlkem_native/asm_avx512/mlkem_native2_avx512_image.elf";;
+
+(* ------------------------------------------------------------------------- *)
+(* The decoding theorems for the simulation of the functions with the given  *)
+(* names, as for an X86_MK_EXEC_RULE theorem.                                *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE2_AVX512_IMAGE_EXEC names =
+  X86_MK_EXEC_RANGES_RULE mlkem_native2_avx512_image_mc
+   (map layout_range names);;

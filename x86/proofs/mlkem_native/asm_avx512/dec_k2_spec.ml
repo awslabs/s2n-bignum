@@ -1,0 +1,112 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+(* ========================================================================= *)
+(* The function mlkem512_dec_avx512 of the build asm_avx512:                 *)
+(* decapsulation, with its correctness and its constant-time and memory      *)
+(* safety.                                                                   *)
+(* ========================================================================= *)
+
+needs "x86/proofs/mlkem_native/relative.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/api_spec.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/kem_spec.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/gen_matrix_k2_spec.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/kem_safe_spec.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/gen_matrix_k2_safe_spec.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/pke_decrypt_k2_spec.ml";;
+needs "x86/proofs/mlkem_native/asm_avx512/pke_encrypt_k2_spec.ml";;
+
+
+
+(* ------------------------------------------------------------------------- *)
+(* ML-KEM.Decaps_internal (FIPS 203 Algorithm 18), after the hash check      *)
+(* of the decapsulation key (FIPS 203 section 7.3): if the check             *)
+(* passes, the shared secret at ss and the return value 0, else -5           *)
+(* (MLK_ERR_INVALID_SK).                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM512_DEC_AVX512_EXEC =
+  MLKEM_NATIVE2_AVX512_IMAGE_EXEC ["mlkem512_dec_avx512"];;
+
+
+
+let MLKEM_NATIVE_DEC_K2_ASM_AVX512_IMAGE_SUBROUTINE_CORRECT_STMT =
+  `!ss ct sk (dk:byte list) (c:byte list) pc stackpointer returnaddress.
+     aligned 32 (word pc:int64) /\ LENGTH dk = 1632 /\ LENGTH c = 768 /\
+     nonoverlapping (ct,768) (word pc,mlkem_native2_avx512_image_size) /\
+     nonoverlapping (sk,1632) (word pc,mlkem_native2_avx512_image_size) /\
+     nonoverlapping (ss,32) (word_sub stackpointer (word 10470),10478) /\
+     ALLPAIRS nonoverlapping
+      [(ss,32); (word_sub stackpointer (word 10470),10478)]
+      [(ct,768); (sk,1632); (word pc,mlkem_native2_avx512_image_size)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+               read RIP s = word(pc + mlkem512_dec_avx512) /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [ss; ct; sk] s /\
+               read (memory :> bytes(ct,768)) s = num_of_bytelist c /\
+               read (memory :> bytes(sk,1632)) s = num_of_bytelist dk)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               (mlkem_decaps_check mlkem512 dk c
+                ==> read (memory :> bytes(ss,32)) s =
+                    num_of_bytelist(mlkem_decaps_internal mlkem512 dk c)) /\
+               C_RETURN s =
+               (if mlkem_decaps_check mlkem512 dk c then word 0
+                else word 0xfffffffb))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(ss,32);
+                      memory :> bytes(word_sub stackpointer (word 10470),
+                                      10470)])`;;
+
+let MLKEM_NATIVE_DEC_K2_ASM_AVX512_IMAGE_SUBROUTINE_CORRECT = assume_spec MLKEM_NATIVE_DEC_K2_ASM_AVX512_IMAGE_SUBROUTINE_CORRECT_STMT;;
+
+
+
+(* ------------------------------------------------------------------------- *)
+(* The constant-time and memory safety of decapsulation: the events          *)
+(* depend only on the addresses and on ek and h in dk, which are             *)
+(* public, and on whether h = H(ek) (the hash check). As in the proofs       *)
+(* of the compiled C, there are no results in the postcondition.             *)
+(* ------------------------------------------------------------------------- *)
+
+let MLKEM_NATIVE_DEC_K2_ASM_AVX512_IMAGE_SUBROUTINE_SAFE_STMT =
+  `exists f_events.
+     forall e ss ct sk (dk:byte list) pc stackpointer returnaddress.
+       aligned 32 (word pc:int64) /\ LENGTH dk = 1632 /\
+       nonoverlapping (ct,768) (word pc,mlkem_native2_avx512_image_size) /\
+       nonoverlapping (sk,1632) (word pc,mlkem_native2_avx512_image_size) /\
+       nonoverlapping (ss,32) (word_sub stackpointer (word 10470),10478) /\
+       ALLPAIRS nonoverlapping
+        [(ss,32); (word_sub stackpointer (word 10470),10478)]
+        [(ct,768); (sk,1632); (word pc,mlkem_native2_avx512_image_size)]
+       ==> ensures x86
+            (\s. bytes_loaded s (word pc) mlkem_native2_avx512_image_mc /\
+                 read RIP s = word(pc + mlkem512_dec_avx512) /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [ss; ct; sk] s /\
+                 read (memory :> bytes(sk,1632)) s = num_of_bytelist dk /\
+                 read events s = e)
+            (\s. read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events ss ct sk pc
+                           (word_sub stackpointer (word 10470)) returnaddress
+                           (mlkem_slice 768 800 dk)
+                           (mlkem_slice 1568 32 dk) /\
+                    memaccess_inbounds e2
+                     [ct,768; sk,1632; ss,32;
+                      word(pc + mlkem_native2_constants),6048;
+                      word_sub stackpointer (word 10470),10478]
+                     [ss,32; word_sub stackpointer (word 10470),10470]))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes(ss,32);
+                        memory :> bytes(word_sub stackpointer (word 10470),
+                                        10470)])`;;
+
+let MLKEM_NATIVE_DEC_K2_ASM_AVX512_IMAGE_SUBROUTINE_SAFE = assume_spec MLKEM_NATIVE_DEC_K2_ASM_AVX512_IMAGE_SUBROUTINE_SAFE_STMT;;

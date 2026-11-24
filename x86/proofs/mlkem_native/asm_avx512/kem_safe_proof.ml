@@ -1,0 +1,656 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "x86/proofs/mlkem_native/asm_avx512/kem_safe_spec.ml";;
+
+let MLKEM_NTT_CORE_SAFE_FRAMED,MLKEM_NTT_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_NTT_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_safe "mlkem_ntt_x86" MLKEM_NTT_CORRECT MLKEM_NTT_TMC_EXEC
+    MLKEM_NTT_NOIBT_SUBROUTINE_CORRECT mlkem_ntt_tmc;;
+
+let MLKEM_INTT_CORE_SAFE_FRAMED,MLKEM_INTT_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_INTT_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_safe "mlkem_intt_x86" MLKEM_INTT_CORRECT MLKEM_INTT_TMC_EXEC
+    MLKEM_INTT_NOIBT_SUBROUTINE_CORRECT mlkem_intt_tmc;;
+
+let MLKEM_MULCACHE_COMPUTE_CORE_SAFE_FRAMED,
+    MLKEM_MULCACHE_COMPUTE_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_MULCACHE_COMPUTE_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_safe "mlkem_mulcache_compute_x86" MLKEM_MULCACHE_COMPUTE_CORRECT
+    MLKEM_MULCACHE_COMPUTE_TMC_EXEC
+    MLKEM_MULCACHE_COMPUTE_NOIBT_SUBROUTINE_CORRECT
+    mlkem_mulcache_compute_tmc;;
+
+let MLKEM_FROMBYTES_CORE_SAFE_FRAMED,
+    MLKEM_FROMBYTES_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_FROMBYTES_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_safe "mlkem_frombytes" MLKEM_FROMBYTES_CORRECT
+    mlkem_frombytes_TMC_EXEC MLKEM_FROMBYTES_NOIBT_SUBROUTINE_CORRECT
+    mlkem_frombytes_tmc;;
+
+let MLKEM_TOBYTES_CORE_SAFE_FRAMED,
+    MLKEM_TOBYTES_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_TOBYTES_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_safe "mlkem_tobytes" MLKEM_TOBYTES_CORRECT
+    mlkem_tobytes_TMC_EXEC MLKEM_TOBYTES_NOIBT_SUBROUTINE_CORRECT
+    mlkem_tobytes_tmc;;
+
+let MLKEM_TOMONT_CORE_SAFE_FRAMED,MLKEM_TOMONT_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_TOMONT_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_safe "mlkem_tomont" MLKEM_TOMONT_CORRECT mlkem_tomont_TMC_EXEC
+    MLKEM_TOMONT_NOIBT_SUBROUTINE_CORRECT mlkem_tomont_tmc;;
+
+let MLKEM_REDUCE_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_REDUCE_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_of_core MLKEM_REDUCE_SAFE MLKEM_REDUCE_NOIBT_SUBROUTINE_CORRECT
+    mlkem_reduce_tmc;;
+
+let MLKEM_ADD_REDUCE_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_ADD_REDUCE_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_of_core MLKEM_ADD_REDUCE_SAFE
+    MLKEM_ADD_REDUCE_NOIBT_SUBROUTINE_CORRECT mlkem_add_reduce_tmc;;
+
+let MLKEM_SUB_REDUCE_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_SUB_REDUCE_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_of_core MLKEM_SUB_REDUCE_SAFE
+    MLKEM_SUB_REDUCE_NOIBT_SUBROUTINE_CORRECT mlkem_sub_reduce_tmc;;
+
+let MLKEM_FROMMSG_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_FROMMSG_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_of_core MLKEM_FROMMSG_SAFE
+    MLKEM_FROMMSG_NOIBT_SUBROUTINE_CORRECT mlkem_frommsg_tmc;;
+
+let MLKEM_TOMSG_NOIBT_SUBROUTINE_SAFE_FRAMED,
+    MLKEM_TOMSG_SUBROUTINE_SAFE_FRAMED =
+  x86_framed_of_core MLKEM_TOMSG_SAFE
+    MLKEM_TOMSG_NOIBT_SUBROUTINE_CORRECT mlkem_tomsg_tmc;;
+
+let API_ALIGN_FRAME_OFS = prove
+ (API_ALIGN_FRAME_OFS_STMT,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[api_ofs] THEN
+  ABBREV_TAC `x:int64 = word_add stk (word m)` THEN
+  MP_TAC(ISPECL [`x:int64`; `31`] (CONJUNCT1 VAL_WORD_AND_WORD_LE)) THEN
+  DISCH_TAC THEN
+  SUBGOAL_THEN
+   `word_add stk (word(m - val(word_and x (word 31):int64))):int64 =
+    word_and x (word 18446744073709551584)`
+  SUBST1_TAC THENL
+   [ASM_SIMP_TAC[WORD_SUB; ARITH_RULE `r <= 31 /\ 31 <= m ==> r <= m`] THEN
+    REWRITE_TAC[WORD_VAL; WORD_AND_NOT31] THEN EXPAND_TAC "x" THEN
+    CONV_TAC WORD_RULE;
+    REWRITE_TAC[ALIGNED_WORD_AND_NOT31] THEN ASM_ARITH_TAC]);;
+
+let MLKEM_TOBYTES_NOIBT_SUBROUTINE_SAFE_FRAMED_384,
+    MLKEM_TOBYTES_SUBROUTINE_SAFE_FRAMED_384 =
+  x86_framed_of_core MLKEM_TOBYTES_CORE_SAFE_FRAMED
+    MLKEM_TOBYTES_NOIBT_SUBROUTINE_CORRECT_384 mlkem_tobytes_tmc;;
+
+let MLKEM_CHECK_ENCODING_FULL = time prove
+ (MLKEM_CHECK_ENCODING_FULL_STMT,
+  CHECK_ENCODING_FULL_SETUP_TAC THEN
+  ASM_CASES_TAC `k = 0` THENL [CHECK_ENCODING_FULL_ZERO_TAC; ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x6d` `pc + 0x33b`
+    check_encoding_full_inv THEN
+  CONV_TAC(ONCE_DEPTH_CONV WORD_JOIN_CONV) THEN REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+
+    (*** The initialization, with all lanes 0 ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    MAP_EVERY (fun n -> X86_STEPS_TAC MLKEM_CHECK_ENCODING_TMC_EXEC [n] THEN
+                        SIMD_SIMPLIFY_TAC[]) (1--18) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    EVENTS_SPLIT_TAC
+     (REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0; SUB_0; LT; WORD_SUBWORD_0;
+                  EXISTS_SIMP]);
+
+    (*** The loop body with the branch back ***)
+
+    CHECK_ENCODING_FULL_BODY_TAC;
+
+    (*** The test of the accumulator ***)
+
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ABBREV_TAC `acc = read YMM4 s0` THEN
+    MAP_EVERY (fun n -> X86_STEPS_TAC MLKEM_CHECK_ENCODING_TMC_EXEC [n] THEN
+                        SIMD_SIMPLIFY_TAC[]) (1--4) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    EVENTS_SPLIT_TAC
+     (REWRITE_TAC[VAL_EQ_0; CHECK_ENCODING_ALL; CHECK_ENCODING_ZERO] THEN
+      ASM_SIMP_TAC[CHECK_ENCODING_MASK_ZERO] THEN
+      COND_CASES_TAC THEN CONV_TAC WORD_REDUCE_CONV)]);;
+
+let MLKEM_CHECK_ENCODING_NOIBT_SUBROUTINE_FULL = time prove
+ (MLKEM_CHECK_ENCODING_NOIBT_SUBROUTINE_FULL_STMT,
+  X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_check_encoding_tmc
+    MLKEM_CHECK_ENCODING_FULL THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let MLKEM_HASH_G_AVX512_WORDS_FULL = prove
+ (MLKEM_HASH_G_AVX512_WORDS_FULL_STMT,
+  CONCRETIZE_F_EVENTS_TAC
+   `\(inp:int64) (q:num) (t:num) (stackpointer:int64) (pc:num).
+      if t DIV 8 = 0 then f_ev_skip inp q t stackpointer pc
+      else APPEND (f_ev_exit inp q t stackpointer pc)
+             (APPEND (ENUMERATEL (t DIV 8)
+                       (\k. f_ev_word inp q t stackpointer pc k))
+                     (f_ev_entry inp q t stackpointer pc))
+      :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  FIRST_X_ASSUM(ASSUME_TAC o SYM o
+    check (fun th -> concl th = `LENGTH(m:byte list) = 72 * q + t`)) THEN
+  SUBGOAL_THEN `t < 2 EXP 64` ASSUME_TAC THENL
+   [UNDISCH_TAC `t < 72` THEN ARITH_TAC; ALL_TAC] THEN
+  VAL_INT64_TAC `t:num` THEN
+  SUBGOAL_THEN `word_ushr (word t:int64) 3 = word(t DIV 8)` ASSUME_TAC THENL
+   [REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_USHR] THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN CONV_TAC NUM_REDUCE_CONV THEN
+    CONV_TAC SYM_CONV THEN MATCH_MP_TAC MOD_LT THEN
+    UNDISCH_TAC `t < 72` THEN ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN `t DIV 8 < 9` ASSUME_TAC THENL
+   [UNDISCH_TAC `t < 72` THEN ARITH_TAC; ALL_TAC] THEN
+  VAL_INT64_TAC `t DIV 8` THEN
+  SUBGOAL_THEN `val(word t:int64) < 72` ASSUME_TAC THENL
+   [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  ASM_CASES_TAC `t DIV 8 = 0` THEN ASM_REWRITE_TAC[] THENL
+   [ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC MLKEM_HASH_G_AVX512_EXEC (1--6) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; EXP; MOD_1; WORD_XOR_0;
+                    WORD_ADD_0] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `t DIV 8` `pc + mlkem_hash_g_lastwords`
+   `pc + mlkem_hash_g_lastbytes`
+   `\k s. read RSP s = stackpointer /\
+          read RDI s = word_add stackpointer (word(8 * k)) /\
+          read RCX s = word(t DIV 8 - k) /\
+          read RBP s = word_add inp (word(72 * q + 8 * k)) /\
+          read R12 s = word t /\
+          read R13 s = c /\
+          read (memory :> bytes(inp,LENGTH m)) s = num_of_bytelist m /\
+          read (memory :> bytes(c,192)) s =
+          num_of_wordlist round_constants /\
+          read (memory :> wbytes stackpointer) s =
+          word_xor (A:1600 word)
+           (word((num_of_bytelist m DIV 2 EXP (8 * 72 * q)) MOD
+                 2 EXP (64 * k)))` THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+
+    (*** The entry, past the test for no whole words ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC MLKEM_HASH_G_AVX512_EXEC (1--6) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; EXP; MOD_1; WORD_XOR_0;
+                    WORD_ADD_0; SUB_0] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The loop body, for word and lane k ***)
+
+    X_GEN_TAC `k:num` THEN STRIP_TAC THEN
+    SUBGOAL_THEN `k < 25 /\ (72 * q + 8 * k) + 8 <= LENGTH(m:byte list)`
+    STRIP_ASSUME_TAC THENL
+     [MAP_EVERY UNDISCH_TAC [`k < t DIV 8`; `t < 72`;
+                             `72 * q + t = LENGTH(m:byte list)`] THEN
+      ARITH_TAC;
+      ALL_TAC] THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o REWRITE_RULE[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] o
+      REWRITE_RULE[READ_MEMORY_WBYTES_LANES] o
+      check (can (term_match []
+        `read (memory :> wbytes a) s = (x:1600 word)`) o concl)) THEN
+    DISCH_THEN(fun th ->
+      ASSUME_TAC(MP (SPEC `k:num` th) (ASSUME `k < 25`)) THEN
+      ASSUME_TAC(RESTRICT_RULE `k:num` th)) THEN
+    MP_TAC(SPECL [`inp:int64`; `LENGTH(m:byte list)`; `num_of_bytelist m`;
+                  `72 * q + 8 * k`; `s0:x86state`]
+      READ_MEMORY_BYTES64_OF_NUM) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+    X86_STEPS_TAC MLKEM_HASH_G_AVX512_EXEC (1--6) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    HG_COUNTER_TAC `t DIV 8` `k:num`
+     (UNDISCH_TAC `t DIV 8 < 9` THEN ARITH_TAC) THEN
+    REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
+     [COND_CASES_TAC THEN REWRITE_TAC[];
+      REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+      AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;
+      REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+      AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;
+      REWRITE_TAC[READ_MEMORY_WBYTES_LANES] THEN
+      X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+      REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+      ASM_SIMP_TAC[LANE_XOR_STEP] THEN COND_CASES_TAC THENL
+       [FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC[] THEN
+        REWRITE_TAC[DIV_DIV; GSYM EXP_ADD; ARITH_RULE
+          `8 * 72 * q + 64 * k = 8 * (72 * q + 8 * k)`];
+        ASM_SIMP_TAC[]];
+      DISCHARGE_SAFETY_PROPERTY_TAC];
+
+    (*** The exit to the single bytes ***)
+
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let MLKEM_HASH_G_AVX512_BYTES_FULL = prove
+ (MLKEM_HASH_G_AVX512_BYTES_FULL_STMT,
+  CONCRETIZE_F_EVENTS_TAC
+   `\(inp:int64) (q:num) (t:num) (stackpointer:int64) (pc:num).
+      if t MOD 8 = 0 then f_ev_skip inp q t stackpointer pc
+      else APPEND (f_ev_exit inp q t stackpointer pc)
+             (APPEND (ENUMERATEL (t MOD 8)
+                       (\k. f_ev_byte inp q t stackpointer pc k))
+                     (f_ev_entry inp q t stackpointer pc))
+      :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  FIRST_X_ASSUM(ASSUME_TAC o SYM o
+    check (fun th -> concl th = `LENGTH(m:byte list) = 72 * q + t`)) THEN
+  SUBGOAL_THEN `t < 2 EXP 64` ASSUME_TAC THENL
+   [UNDISCH_TAC `t < 72` THEN ARITH_TAC; ALL_TAC] THEN
+  VAL_INT64_TAC `t:num` THEN
+  SUBGOAL_THEN `t MOD 8 < 8` ASSUME_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+  VAL_INT64_TAC `t MOD 8` THEN
+  MP_TAC(SPEC `t:num` WORD_AND_7_ZX32) THEN
+  ANTS_TAC THENL [UNDISCH_TAC `t < 72` THEN ARITH_TAC; STRIP_TAC] THEN
+  SUBGOAL_THEN
+   `num_of_bytelist m DIV 2 EXP (8 * 72 * q) < 2 EXP (8 * t)`
+  ASSUME_TAC THENL
+   [SIMP_TAC[RDIV_LT_EQ; EXP_EQ_0; ARITH_EQ; GSYM EXP_ADD] THEN
+    REWRITE_TAC[GSYM LEFT_ADD_DISTRIB; GSYM MULT_ASSOC] THEN
+    ASM_REWRITE_TAC[GSYM EXP_EXP] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_EXP_CONV) THEN
+    REWRITE_TAC[NUM_OF_BYTELIST_BOUND];
+    ALL_TAC] THEN
+  ASM_CASES_TAC `t MOD 8 = 0` THEN ASM_REWRITE_TAC[] THENL
+   [SUBGOAL_THEN `8 * t DIV 8 = t` ASSUME_TAC THENL
+     [MP_TAC(SPECL [`t:num`; `8`] DIVISION) THEN ASM_REWRITE_TAC[] THEN
+      ARITH_TAC;
+      ALL_TAC] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC MLKEM_HASH_G_AVX512_EXEC (1--3) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[ARITH_RULE `64 * t DIV 8 = 8 * (8 * t DIV 8)`] THEN
+    REPEAT CONJ_TAC THEN TRY(ASM_SIMP_TAC[MOD_LT] THEN NO_TAC) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `t MOD 8` `pc + mlkem_hash_g_lastbyte`
+   `pc + mlkem_hash_g_pad`
+   `\k s. read RSP s = stackpointer /\
+          read RDI s = word_add stackpointer (word(8 * t DIV 8 + k)) /\
+          read RCX s = word(t MOD 8 - k) /\
+          read RBP s = word_add inp (word(72 * q + 8 * t DIV 8 + k)) /\
+          read R12 s = word t /\
+          read R13 s = c /\
+          read (memory :> bytes(inp,LENGTH m)) s = num_of_bytelist m /\
+          read (memory :> bytes(c,192)) s =
+          num_of_wordlist round_constants /\
+          read (memory :> wbytes stackpointer) s =
+          word_xor (A:1600 word)
+           (word((num_of_bytelist m DIV 2 EXP (8 * 72 * q)) MOD
+                 2 EXP (8 * (8 * t DIV 8 + k))))` THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+
+    (*** The entry, past the test for no single bytes ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC MLKEM_HASH_G_AVX512_EXEC (1--3) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0;
+                    ARITH_RULE `8 * 8 * t DIV 8 = 64 * t DIV 8`] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The loop body, for byte 8 * t DIV 8 + k ***)
+
+    X_GEN_TAC `k:num` THEN STRIP_TAC THEN
+    SUBGOAL_THEN
+     `8 * t DIV 8 + k < 200 /\
+      72 * q + 8 * t DIV 8 + k < LENGTH(m:byte list)`
+    STRIP_ASSUME_TAC THENL
+     [MAP_EVERY UNDISCH_TAC [`k < t MOD 8`; `t < 72`;
+                             `72 * q + t = LENGTH(m:byte list)`] THEN
+      ARITH_TAC;
+      ALL_TAC] THEN
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o REWRITE_RULE[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] o
+      REWRITE_RULE[READ_MEMORY_WBYTES_BYTES] o
+      check (can (term_match []
+        `read (memory :> wbytes a) s = (x:1600 word)`) o concl)) THEN
+    DISCH_THEN(fun th ->
+      ASSUME_TAC(MP (SPEC `8 * t DIV 8 + k` th)
+                    (ASSUME `8 * t DIV 8 + k < 200`)) THEN
+      ASSUME_TAC(RESTRICT_RULE `8 * t DIV 8 + k` th)) THEN
+    MP_TAC(SPECL [`inp:int64`; `LENGTH(m:byte list)`; `num_of_bytelist m`;
+                  `72 * q + 8 * t DIV 8 + k`; `s0:x86state`]
+      READ_MEMORY_BYTES8_OF_NUM) THEN
+    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+    X86_STEPS_TAC MLKEM_HASH_G_AVX512_EXEC (1--6) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[BYTE_ZX_X86]) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    HG_COUNTER_TAC `t MOD 8` `k:num` ARITH_TAC THEN
+    REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
+     [COND_CASES_TAC THEN REWRITE_TAC[];
+      REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+      AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;
+      REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+      AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;
+      REWRITE_TAC[READ_MEMORY_WBYTES_BYTES] THEN
+      X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+      REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+      REWRITE_TAC[ARITH_RULE
+       `8 * t DIV 8 + k + 1 = (8 * t DIV 8 + k) + 1`] THEN
+      ASM_SIMP_TAC[BYTE_XOR_STEP] THEN COND_CASES_TAC THENL
+       [FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC[] THEN
+        REWRITE_TAC[DIV_DIV; GSYM EXP_ADD; ARITH_RULE `2 EXP 8 = 256`;
+                    ARITH_RULE `8 * 72 * q + 8 * (8 * t DIV 8 + k) =
+                                8 * (72 * q + 8 * t DIV 8 + k)`];
+        ASM_SIMP_TAC[]];
+      DISCHARGE_SAFETY_PROPERTY_TAC];
+
+    (*** The exit to the padding ***)
+
+    ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN `8 * t DIV 8 + t MOD 8 = t` SUBST1_TAC THENL
+     [MP_TAC(SPECL [`t:num`; `8`] DIVISION) THEN ARITH_TAC;
+      ALL_TAC] THEN
+    REPEAT CONJ_TAC THEN TRY(ASM_SIMP_TAC[MOD_LT] THEN NO_TAC) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let MLKEM_HASH_G_AVX512_PAD_FULL = prove
+ (MLKEM_HASH_G_AVX512_PAD_FULL_STMT,
+  ASSUME_CALLEE_TAILED_TAC SHA3_KECCAK_F1600_AVX512_IMAGE_FULL_F1600
+    "H_K1" THEN
+  META_EXISTS_TAC THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+
+  (*** The domain byte at byte t ***)
+
+  FIRST_X_ASSUM(MP_TAC o REWRITE_RULE[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] o
+    REWRITE_RULE[READ_MEMORY_WBYTES_BYTES] o
+    check (can (term_match [] `read (memory :> wbytes a) s = (x:1600 word)`) o
+           concl)) THEN
+  DISCH_THEN(fun th ->
+    ASSUME_TAC(MP (SPEC `t:num` th)
+                  (MP (ARITH_RULE `t < 72 ==> t < 200`)
+                      (ASSUME `t < 72`))) THEN
+    ASSUME_TAC(RESTRICT_RULE `t:num` th)) THEN
+  X86_STEPS_TAC MLKEM_HASH_G_AVX512_EXEC [1] THEN
+  SUBGOAL_THEN
+   `!j. j < 200
+        ==> read (memory :> bytes8 (word_add stackpointer (word j))) s1 =
+            word_subword (word_xor (A:1600 word) (word(2 EXP (8 * t) * 6)))
+                         (8 * j,8)`
+  MP_TAC THENL
+   [X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+    ASM_SIMP_TAC[BYTE_XOR_SHIFT; ARITH_RULE `6 < 256`;
+                 ARITH_RULE `t < 72 ==> t < 200`] THEN
+    COND_CASES_TAC THENL
+     [FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_REWRITE_TAC[]; ASM_SIMP_TAC[]];
+    ALL_TAC] THEN
+
+  (*** The final bit at byte 71 ***)
+
+  DISCH_THEN(fun th ->
+    ASSUME_TAC(CONV_RULE NUM_REDUCE_CONV
+      (MP (SPEC `71` th) (ARITH_RULE `71 < 200`))) THEN
+    ASSUME_TAC(RESTRICT_RULE `71` th)) THEN
+  X86_STEPS_TAC MLKEM_HASH_G_AVX512_EXEC (2--5) THEN
+  SUBGOAL_THEN
+   `read (memory :> wbytes stackpointer) s5 =
+    word_xor (word_xor (A:1600 word) (word(2 EXP (8 * t) * 6)))
+             (word(2 EXP (8 * 71) * 128))`
+  ASSUME_TAC THENL
+   [REWRITE_TAC[READ_MEMORY_WBYTES_BYTES] THEN
+    X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+    ASM_SIMP_TAC[BYTE_XOR_SHIFT; ARITH_RULE `128 < 256 /\ 71 < 200`] THEN
+    COND_CASES_TAC THENL
+     [FIRST_X_ASSUM SUBST_ALL_TAC THEN CONV_TAC NUM_REDUCE_CONV THEN
+      ASM_REWRITE_TAC[];
+      ASM_SIMP_TAC[]];
+    ALL_TAC] THEN
+
+  (*** The permutation ***)
+
+  SUBGOAL_THEN `wordlist_from_memory(c,24) s5 = round_constants`
+  ASSUME_TAC THENL
+   [ASM_REWRITE_TAC[WORDLIST_FROM_MEMORY_ROUND_CONSTANTS]; ALL_TAC] THEN
+  REMOVE_THEN "H_K1" (fun th ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+     (mlkem_native2_avx512_image_mc,MLKEM_HASH_G_AVX512_EXEC,0,
+      mlkem_native2_avx512_image_mc,
+      FRESH_TAIL_RULE th)
+     [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
+      `word_xor (word_xor (A:1600 word) (word(2 EXP (8 * t) * 6)))
+                (word(2 EXP (8 * 71) * 128))`;
+      `pc:num`; `read RSP s`; `read (memory :> bytes64 (read RSP s)) s`] 6
+    THENL
+     [EXISTS_E2_TAC (ref [`t:num`; `c:int64`; `stackpointer:int64`;
+                          `pc:num`]);
+      LABEL_TAC "H_K1" th]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
+   `word_add (word_sub x (word 8)) (word 8):int64 = x`]) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let MLKEM_HASH_G_AVX512_SHORT_SUBROUTINE_FULL = time prove
+ (MLKEM_HASH_G_AVX512_SHORT_SUBROUTINE_FULL_STMT,
+  ASSUME_CALLEE_TAILED_TAC MLKEM_HASH_G_AVX512_WORDS_FULL "H_W" THEN
+  ASSUME_CALLEE_TAILED_TAC MLKEM_HASH_G_AVX512_BYTES_FULL "H_B" THEN
+  ASSUME_CALLEE_TAILED_TAC MLKEM_HASH_G_AVX512_PAD_FULL "H_P" THEN
+  META_EXISTS_TAC THEN
+  MAP_EVERY X_GEN_TAC
+   [`e:(uarch_event)list`; `out:int64`; `inp:int64`; `m:byte list`;
+    `len:num`; `c:int64`; `pc:num`] THEN
+  WORD_FORALL_OFFSET_TAC 256 THEN
+  MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              ALL; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `len < 2 EXP 64` ASSUME_TAC THENL
+   [UNDISCH_TAC `len < 72` THEN ARITH_TAC; ALL_TAC] THEN
+  ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN
+  ENSURES_PRESERVED_TAC "rbp_init" `RBP` THEN
+  ENSURES_PRESERVED_TAC "r12_init" `R12` THEN
+  ENSURES_PRESERVED_TAC "r13_init" `R13` THEN
+  ENSURES_INIT_TAC "s0" THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[WORDLIST_FROM_MEMORY_ROUND_CONSTANTS]) THEN
+  X86_STEPS_TAC MLKEM_HASH_G_AVX512_EXEC (1--18) THEN
+  SUBGOAL_THEN
+   `read (memory :> wbytes (word_add stackpointer (word 8))) s18 =
+    (word 0:1600 word)`
+  ASSUME_TAC THENL
+   [MATCH_MP_TAC READ_MEMORY_WBYTES_ZERO THEN
+    CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+    ASM_REWRITE_TAC[WORD_ADD_0];
+    ALL_TAC] THEN
+  HG_LEMMA_CALL_TAC "H_W"
+   [`m:byte list`; `inp:int64`; `c:int64`; `pc:num`;
+    `word_add stackpointer (word 8):int64`; `0`; `len:num`;
+    `word 0:1600 word`] 19 THEN
+  HG_LEMMA_CALL_TAC "H_B"
+   [`m:byte list`; `inp:int64`; `c:int64`; `pc:num`;
+    `word_add stackpointer (word 8):int64`; `0`; `len:num`;
+    `word 0:1600 word`] 20 THEN
+  HG_LEMMA_CALL_TAC "H_P"
+   [`inp:int64`; `len:num`; `c:int64`; `pc:num`;
+    `word_add stackpointer (word 8):int64`; `len:num`;
+    `word_xor (word 0) (word(num_of_bytelist(m:byte list))):1600 word`;
+    `num_of_bytelist(m:byte list)`] 21 THEN
+  SUBGOAL_THEN `LENGTH(m:byte list) DIV 72 = 0 /\ len DIV 72 = 0 /\
+                LENGTH(m:byte list) MOD 72 = len /\ len MOD 72 = len`
+  STRIP_ASSUME_TAC THENL
+   [ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN
+    TRY(MATCH_MP_TAC DIV_LT) THEN TRY(MATCH_MP_TAC MOD_LT) THEN
+    ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `keccak_f1600
+     (word_xor
+       (keccak_absorb 72 (keccak_padded 72 6 m) (LENGTH(m:byte list) DIV 72))
+       (word((keccak_padded 72 6 m DIV
+              2 EXP (8 * 72 * LENGTH m DIV 72)) MOD 2 EXP (8 * 72)))) =
+    keccak_f1600(((word 0 ^^ word(num_of_bytelist m)) ^^
+                  word(2 EXP (8 * len) * 6)) ^^ word(2 EXP (8 * 71) * 128))`
+  ASSUME_TAC THENL
+   [AP_TERM_TAC THEN
+    SIMP_TAC[KECCAK_LAST_BLOCK_XOR; ARITH_RULE `0 < 72 /\ 6 < 128`] THEN
+    ASM_REWRITE_TAC[CONJUNCT1 keccak_absorb; MULT_CLAUSES; EXP; DIV_1;
+                    ARITH_RULE `72 - 1 = 71`; WORD_XOR_ASSOC];
+    ALL_TAC] THEN
+  FIRST_X_ASSUM(fun th ->
+    if is_eq(concl th) &&
+       can (term_match [] `keccak_f1600 x = keccak_f1600 y`) (concl th)
+    then RULE_ASSUM_TAC(REWRITE_RULE[GSYM th]) else NO_TAC) THEN
+  FIRST_X_ASSUM(MP_TAC o check (can (term_match []
+    `read (memory :> wbytes a) s21 = keccak_f1600 x`) o concl)) THEN
+  ABBREV_TAC
+   `S = keccak_f1600
+         (word_xor
+           (keccak_absorb 72 (keccak_padded 72 6 m) (LENGTH m DIV 72))
+           (word((keccak_padded 72 6 m DIV
+                  2 EXP (8 * 72 * LENGTH m DIV 72)) MOD 2 EXP (8 * 72))))`
+  THEN
+  REWRITE_TAC[READ_MEMORY_WBYTES_1600] THEN DISCH_TAC THEN
+  MAP_EVERY (fun k ->
+    MP_TAC(SPECL [`word_add stackpointer (word 8):int64`; `200`;
+                  `val(S:1600 word)`; k; `s21:x86state`]
+      READ_MEMORY_BYTES256_OF_NUM))
+   [`0`; `32`] THEN
+  ASM_REWRITE_TAC[] THEN CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
+  CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+  REWRITE_TAC[WORD_ADD_0; DIV_1] THEN REPEAT DISCH_TAC THEN
+  X86_STEPS_TAC MLKEM_HASH_G_AVX512_EXEC (22--40) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [MP_TAC(SPECL [`out:int64`; `2`; `val(S:1600 word)`; `s40:x86state`]
+      READ_MEMORY_BYTES_OF_BYTES256) THEN
+    CONV_TAC(LAND_CONV(LAND_CONV EXPAND_CASES_CONV)) THEN
+    CONV_TAC(LAND_CONV(LAND_CONV NUM_REDUCE_CONV)) THEN
+    REWRITE_TAC[ARITH_RULE `32 * 2 = 64 /\ 256 * 2 = 512`] THEN
+    ASM_REWRITE_TAC[WORD_ADD_0; DIV_1] THEN DISCH_THEN SUBST1_TAC THEN
+    REWRITE_TAC[sha3_512] THEN
+    MP_TAC(SPECL [`1024`; `6`; `m:byte list`; `72`; `keccak_padded 72 6 m`;
+                  `64`] KECCAK_SPONGE_BYTES) THEN
+    ANTS_TAC THENL
+     [REWRITE_TAC[keccak_padded] THEN CONV_TAC NUM_REDUCE_CONV;
+      DISCH_THEN SUBST1_TAC] THEN
+    ASM_REWRITE_TAC[ARITH_RULE `8 * 64 = 512`];
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let EN_CHECK_BRANCH = prove
+ (EN_CHECK_BRANCH_STMT,
+  GEN_TAC THEN BOOL_CASES_TAC `b:bool` THEN REWRITE_TAC[] THEN
+  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV));;
+
+let (MLKEM_BASEMUL_K2_CORE_SAFE_FRAMED,
+     MLKEM_BASEMUL_K2_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_BASEMUL_K2_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_safe "mlkem_basemul_k2" MLKEM_BASEMUL_K2_CORRECT
+    mlkem_basemul_k2_tmc_EXEC MLKEM_BASEMUL_K2_NOIBT_SUBROUTINE_CORRECT
+    mlkem_basemul_k2_tmc;;
+
+let (MLKEM_COMPRESS_D4_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_COMPRESS_D4_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_COMPRESS_D4_X86_MC; LENGTH_MLKEM_COMPRESS_D4_X86_TMC;
+     MLKEM_COMPRESS_D4_X86_CORE_END; MLKEM_COMPRESS_D4_X86_POSTAMBLE_LENGTH]
+    MLKEM_COMPRESS_D4_X86_SAFE
+    MLKEM_COMPRESS_D4_X86_NOIBT_SUBROUTINE_CORRECT mlkem_compress_d4_x86_tmc;;
+
+let (MLKEM_COMPRESS_D10_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_COMPRESS_D10_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_COMPRESS_D10_X86_MC; LENGTH_MLKEM_COMPRESS_D10_X86_TMC;
+     MLKEM_COMPRESS_D10_X86_CORE_END; MLKEM_COMPRESS_D10_X86_POSTAMBLE_LENGTH]
+    MLKEM_COMPRESS_D10_X86_SAFE
+    MLKEM_COMPRESS_D10_X86_NOIBT_SUBROUTINE_CORRECT
+    mlkem_compress_d10_x86_tmc;;
+
+let (MLKEM_DECOMPRESS_D4_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_DECOMPRESS_D4_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_DECOMPRESS_D4_X86_MC; LENGTH_MLKEM_DECOMPRESS_D4_X86_TMC;
+     MLKEM_DECOMPRESS_D4_X86_CORE_END;
+     MLKEM_DECOMPRESS_D4_X86_POSTAMBLE_LENGTH]
+    MLKEM_DECOMPRESS_D4_X86_SAFE
+    MLKEM_DECOMPRESS_D4_X86_NOIBT_SUBROUTINE_CORRECT
+    mlkem_decompress_d4_x86_tmc;;
+
+let (MLKEM_DECOMPRESS_D10_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_DECOMPRESS_D10_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_DECOMPRESS_D10_X86_MC; LENGTH_MLKEM_DECOMPRESS_D10_X86_TMC;
+     MLKEM_DECOMPRESS_D10_X86_CORE_END;
+     MLKEM_DECOMPRESS_D10_X86_POSTAMBLE_LENGTH]
+    MLKEM_DECOMPRESS_D10_X86_SAFE
+    MLKEM_DECOMPRESS_D10_X86_NOIBT_SUBROUTINE_CORRECT
+    mlkem_decompress_d10_x86_tmc;;
+
+let (MLKEM_BASEMUL_K3_CORE_SAFE_FRAMED,
+     MLKEM_BASEMUL_K3_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_BASEMUL_K3_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_safe "mlkem_basemul_k3" MLKEM_BASEMUL_K3_CORRECT
+    mlkem_basemul_k3_tmc_EXEC MLKEM_BASEMUL_K3_NOIBT_SUBROUTINE_CORRECT
+    mlkem_basemul_k3_tmc;;
+
+let (MLKEM_BASEMUL_K4_CORE_SAFE_FRAMED,
+     MLKEM_BASEMUL_K4_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_BASEMUL_K4_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_safe "mlkem_basemul_k4" MLKEM_BASEMUL_K4_CORRECT
+    mlkem_basemul_k4_tmc_EXEC MLKEM_BASEMUL_K4_NOIBT_SUBROUTINE_CORRECT
+    mlkem_basemul_k4_tmc;;
+
+let (MLKEM_COMPRESS_D5_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_COMPRESS_D5_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_COMPRESS_D5_X86_MC; LENGTH_MLKEM_COMPRESS_D5_X86_TMC;
+     MLKEM_COMPRESS_D5_X86_CORE_END; MLKEM_COMPRESS_D5_X86_POSTAMBLE_LENGTH]
+    MLKEM_COMPRESS_D5_X86_SAFE
+    MLKEM_COMPRESS_D5_X86_NOIBT_SUBROUTINE_CORRECT mlkem_compress_d5_x86_tmc;;
+
+let (MLKEM_COMPRESS_D11_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_COMPRESS_D11_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_COMPRESS_D11_X86_MC; LENGTH_MLKEM_COMPRESS_D11_X86_TMC;
+     MLKEM_COMPRESS_D11_X86_CORE_END; MLKEM_COMPRESS_D11_X86_POSTAMBLE_LENGTH]
+    MLKEM_COMPRESS_D11_X86_SAFE
+    MLKEM_COMPRESS_D11_X86_NOIBT_SUBROUTINE_CORRECT
+    mlkem_compress_d11_x86_tmc;;
+
+let (MLKEM_DECOMPRESS_D5_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_DECOMPRESS_D5_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_DECOMPRESS_D5_X86_MC; LENGTH_MLKEM_DECOMPRESS_D5_X86_TMC;
+     MLKEM_DECOMPRESS_D5_X86_CORE_END;
+     MLKEM_DECOMPRESS_D5_X86_POSTAMBLE_LENGTH]
+    MLKEM_DECOMPRESS_D5_X86_SAFE
+    MLKEM_DECOMPRESS_D5_X86_NOIBT_SUBROUTINE_CORRECT
+    mlkem_decompress_d5_x86_tmc;;
+
+let (MLKEM_DECOMPRESS_D11_X86_NOIBT_SUBROUTINE_SAFE_FRAMED,
+     MLKEM_DECOMPRESS_D11_X86_SUBROUTINE_SAFE_FRAMED) =
+  x86_framed_of_core_lens
+    [LENGTH_MLKEM_DECOMPRESS_D11_X86_MC; LENGTH_MLKEM_DECOMPRESS_D11_X86_TMC;
+     MLKEM_DECOMPRESS_D11_X86_CORE_END;
+     MLKEM_DECOMPRESS_D11_X86_POSTAMBLE_LENGTH]
+    MLKEM_DECOMPRESS_D11_X86_SAFE
+    MLKEM_DECOMPRESS_D11_X86_NOIBT_SUBROUTINE_CORRECT
+    mlkem_decompress_d11_x86_tmc;;
