@@ -37,7 +37,7 @@ let MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_GCC12_OS_IMAGE_SUBROUTINE_CORRECT = prov
   (*** The loop, with i blocks done, from the call of the permutation: the
        body starts at +0x24 = 36 from mlkem_shake128_squeezeblocks = 9080 ***)
 
-  ENSURES_WHILE_UP2_TAC `nblocks:num` `pc + 9100`
+  ENSURES_WHILE_UP2_TAC `nblocks:num` `pc + 9128`
    `pc + mlkem_shake128_squeezeblocks_loop1_exit`
    `\i s. read X19 s = word(nblocks - i) /\
           read X20 s = word_add out (word(168 * i)) /\
@@ -146,7 +146,7 @@ let MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_GCC12_OS_IMAGE_SUBROUTINE_SAFE = time pr
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num`
-   `pc + 9100`
+   `pc + 9128`
    `pc + mlkem_shake128_squeezeblocks_loop1_exit`
    `\i s. read X19 s = word(nblocks - i) /\
           read X20 s = word_add out (word(168 * i)) /\
@@ -243,7 +243,7 @@ let MLKEM_NATIVE_SHAKE128_SQUEEZEBLOCKS_GCC12_OS_IMAGE_SUBROUTINE_FULL = prove
     ALL_TAC] THEN
   SQUEEZEBLOCKS_BOUND_TAC THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num`
-   `pc + 9100`
+   `pc + 9128`
    `pc + mlkem_shake128_squeezeblocks_loop1_exit`
    `\i s. read X19 s = word(nblocks - i) /\
           read X20 s = word_add out (word(168 * i)) /\

@@ -49,7 +49,7 @@ let MLKEM_NATIVE_KECCAK_SQUEEZEBLOCKS_X4_GCC12_OS_IMAGE_SUBROUTINE_FULL = prove
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num`
-   `pc + 9704` `pc + mlk_keccak_squeezeblocks_x4_loop1_exit`
+   `pc + 9732` `pc + mlk_keccak_squeezeblocks_x4_loop1_exit`
    `\i s. read X19 s = word(r * i) /\ read X20 s = word(nblocks - i) /\
           read X21 s = st /\ read X22 s = word r /\
           read X23 s = out0 /\ read X24 s = out1 /\

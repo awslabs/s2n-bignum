@@ -807,7 +807,7 @@ let REJ_LOOP_TAC =
     ASM_SIMP_TAC[LT_IMP_LE];
     ALL_TAC] THEN
   ENSURES_WHILE_UP2_TAC `k0:num` `pc + mlkem_poly_rej_uniform_join1`
-   `pc + 18404` REJ_INV THEN
+   `pc + 18444` REJ_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];
 
@@ -1100,7 +1100,7 @@ let PREJ_SAFE_LOOP_TAC =
     ASM_SIMP_TAC[LT_IMP_LE];
     ALL_TAC] THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `k0:num` `pc + mlkem_poly_rej_uniform_join1`
-   `pc + 18404`
+   `pc + 18444`
     REJ_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];

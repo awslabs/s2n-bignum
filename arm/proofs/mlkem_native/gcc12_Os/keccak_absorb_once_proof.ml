@@ -121,7 +121,7 @@ let ABSORB_COR_SHORT_TAC =
 
 let ABSORB_COR_LOOP_TAC =
   ENSURES_WHILE_UP2_TAC `mlen DIV r`
-   `pc + 8868` `pc + mlk_keccak_absorb_once_loop1_exit` ABSORB_CS_INV THEN
+   `pc + 8896` `pc + mlk_keccak_absorb_once_loop1_exit` ABSORB_CS_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
 
@@ -463,7 +463,7 @@ let MLKEM_NATIVE_KECCAK_ABSORB_ONCE_GCC12_OS_IMAGE_SUBROUTINE_SAFE = time prove
       (*** Otherwise the loop over the whole blocks ***)
 
       ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r`
-       `pc + 8868` `pc + mlk_keccak_absorb_once_loop1_exit` ABSORB_SAFE_INV THEN
+       `pc + 8896` `pc + mlk_keccak_absorb_once_loop1_exit` ABSORB_SAFE_INV THEN
       REPEAT CONJ_TAC THENL
        [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
 

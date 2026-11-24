@@ -602,7 +602,7 @@ let ABSX4_CS_FRAME =
   read (memory :> bytes(m2,mlen)) s = M2 /\
   read (memory :> bytes(m3,mlen)) s = M3`;;
 
-(*** At the end of the loop and the start of the last block, pc + 9868: the
+(*** At the end of the loop and the start of the last block, pc + 9896: the
      state is [r * q] bytes of each message in, with q = mlen DIV r ***)
 
 let ABSX4_CS_MID = mk_abs(`s:armstate`,list_mk_conj
@@ -719,7 +719,7 @@ let ABSX4_CS_XOR_TAC off len ms vars n =
 
 let ABSX4_CS_LOOP_TAC =
   ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r`
-   `pc + mlk_keccak_absorb_once_x4_join2` `pc + 9868` ABSX4_CS_INV THEN
+   `pc + mlk_keccak_absorb_once_x4_join2` `pc + 9896` ABSX4_CS_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
 

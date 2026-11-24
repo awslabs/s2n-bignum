@@ -102,7 +102,7 @@ let MLKEM_NATIVE_KECCAK_SQUEEZE_ONCE_GCC12_OS_IMAGE_SUBROUTINE_FULL = prove
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `(outlen + r - 1) DIV r`
-   `pc + 8996` `pc + mlk_keccak_squeeze_once_loop1_exit`
+   `pc + 9024` `pc + mlk_keccak_squeeze_once_loop1_exit`
    `\i s. read X19 s = word(outlen - MIN outlen (r * i)) /\
           read X20 s = word_add out (word(MIN outlen (r * i))) /\
           read X21 s = st /\ read X22 s = word r /\

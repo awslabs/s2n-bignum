@@ -93,7 +93,7 @@ let MLKEM_NATIVE_CT_MEMCMP_2_GCC12_OS_IMAGE_SUBROUTINE_FULL = prove
        iteration, and the last iteration ends at the loop exit. ***)
 
   ENSURES_EVENTS_WHILE_UP2_TAC `len:num`
-   `pc + 14176` `pc + mlk_ct_memcmp_2_loop1_exit`
+   `pc + 14204` `pc + mlk_ct_memcmp_2_loop1_exit`
    `\i s. read X0 s = a /\ read X1 s = b /\ read X2 s = word len /\
           read X30 s = returnaddress /\
           read X6 s = word i /\ read X7 s = word i /\

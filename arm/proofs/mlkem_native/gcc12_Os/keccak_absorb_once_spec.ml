@@ -559,7 +559,7 @@ let ABSORB_CS_MID = mk_abs(`s:armstate`,list_mk_conj
   ABSORB_CS_FRAME;
   `read (memory :> bytes(st,200)) s = val(keccak_absorb r P (mlen DIV r))`]);;
 
-(*** The loop invariant at pc + 8868, with k blocks done ***)
+(*** The loop invariant at pc + 8896, with k blocks done ***)
 
 let ABSORB_CS_INV = list_mk_abs([`k:num`; `s:armstate`],list_mk_conj
  [`read X19 s = word(mlen - r * k)`; `read X20 s = st`;
@@ -641,7 +641,7 @@ let ABSORB_CS_CALL_TAC name ilist vars n =
 
 let ABSORB_CS_LOOP_TAC =
   ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r`
-   `pc + 8868` `pc + mlk_keccak_absorb_once_loop1_exit` ABSORB_CS_INV THEN
+   `pc + 8896` `pc + mlk_keccak_absorb_once_loop1_exit` ABSORB_CS_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
 
