@@ -36,7 +36,7 @@ runs:
     - name: Build HOL Light
       shell: bash
       env:
-        HOLLIGHT_COMMIT: e5236a5839b4d08dc2536b325cea0af855e6c379
+        HOLLIGHT_COMMIT: 096417cac706ff0818f739bbc19f2ed499e43283
       run: |
         git clone https://github.com/jrh13/hol-light.git
         cd hol-light
