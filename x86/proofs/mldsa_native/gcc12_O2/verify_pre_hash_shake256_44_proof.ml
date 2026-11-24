@@ -70,7 +70,7 @@ let MLDSA_NATIVE_VERIFY_PRE_HASH_SHAKE256_44_GCC12_O2_IMAGE_SUBROUTINE_FULL =
   REALIGN_TAC 30651 THEN REALIGN_FRAME_TAC 30651 30651 THEN
   REALIGN_NONOV_TAC 30620
    [`sig:int64,2420`; `m:int64,mlen:num`; `ctx:int64,ctxlen:num`;
-    `pk:int64,1312`; `word pc:int64,51232`;
+    `pk:int64,1312`; `word pc:int64,libmldsa_size`;
     `word(pc + got_memset):int64,8`; `word(pc + got_memcpy):int64,8`;
     `ea:int64,el:num`; `word_add stackpointer (word 30651):int64,8`] THEN
   REALIGN_ALIGNED_TAC [30604; 30492] THEN

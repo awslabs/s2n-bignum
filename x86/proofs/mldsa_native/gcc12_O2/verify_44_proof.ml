@@ -119,7 +119,7 @@ let MLDSA_NATIVE_VERIFY_44_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
   REALIGN_TAC 30468 THEN REALIGN_FRAME_TAC 30468 30468 THEN
   REALIGN_NONOV_TAC 30437
    [`sig:int64,2420`; `m:int64,mlen:num`; `ctx:int64,ctxlen:num`;
-    `pk:int64,1312`; `word pc:int64,51232`;
+    `pk:int64,1312`; `word pc:int64,libmldsa_size`;
     `word(pc + got_memset):int64,8`; `word(pc + got_memcpy):int64,8`;
     `ea:int64,el:num`; `word_add stackpointer (word 30468):int64,8`] THEN
   ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN

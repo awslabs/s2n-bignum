@@ -169,7 +169,7 @@ let MLDSA_NATIVE_VERIFY_PRE_HASH_INTERNAL_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTI
   REALIGN_TAC 11652 THEN REALIGN_FRAME_TAC 11652 11652 THEN
   REALIGN_NONOV_TAC 11621
    [`sig:int64,2420`; `ph:int64,phlen:num`; `ctx:int64,ctxlen:num`;
-    `pk:int64,1312`; `word pc:int64,51232`; `word(pc + got_memcpy):int64,8`;
+    `pk:int64,1312`; `word pc:int64,libmldsa_size`; `word(pc + got_memcpy):int64,8`;
     `ea:int64,el:num`; `word_add stackpointer (word 11652):int64,8`;
     `word_add stackpointer (word 11660):int64,8`] THEN
   ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN

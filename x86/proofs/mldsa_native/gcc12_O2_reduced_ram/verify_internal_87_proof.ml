@@ -988,7 +988,7 @@ let VI87_SETUP_TAC =
   REALIGN_TAC 14573 THEN REALIGN_FRAME_TAC 14573 14573 THEN
   REALIGN_NONOV_TAC 14542
    [`sig:int64,4627`; `m:int64,mlen:num`; `pre:int64,prelen:num`;
-    `pk:int64,2592`; `word pc:int64,51232`;
+    `pk:int64,2592`; `word pc:int64,libmldsa_size`;
     `word_add stackpointer (word 14573):int64,8`;
     `word_add stackpointer (word 14581):int64,8`] THEN
   REALIGN_ALIGNED_TAC

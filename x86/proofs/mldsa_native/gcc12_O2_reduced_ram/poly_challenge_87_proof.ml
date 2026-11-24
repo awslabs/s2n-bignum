@@ -104,7 +104,7 @@ let POLY_CHALLENGE_87_INTRO_TAC =
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REALIGN_TAC 743 THEN REALIGN_FRAME_TAC 791 743 THEN
   REALIGN_NONOV_TAC 712
-   [`c:int64,1024`; `seed:int64,64`; `word pc:int64,51232`;
+   [`c:int64,1024`; `seed:int64,64`; `word pc:int64,libmldsa_size`;
     `word_add stackpointer (word 743):int64,48`;
     `word_add stackpointer (word 791):int64,8`] THEN
   MAP_EVERY (fun (n,r) -> ENSURES_PRESERVED_TAC n r)

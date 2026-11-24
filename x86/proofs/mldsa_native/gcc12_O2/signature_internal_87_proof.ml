@@ -2031,7 +2031,7 @@ let SIGN87_START_TAC =
   REALIGN_TAC 112221 THEN REALIGN_FRAME_TAC 112221 112221 THEN
   REALIGN_NONOV_TAC 112190
    [`sig:int64,4627`; `m:int64,mlen:num`; `pre:int64,prelen:num`;
-    `rnd:int64,32`; `sk:int64,4896`; `word pc:int64,51232`;
+    `rnd:int64,32`; `sk:int64,4896`; `word pc:int64,libmldsa_size`;
     `word(pc + got_memset):int64,8`; `ea:int64,el:num`;
     `word_add stackpointer (word 112221):int64,8`;
     `word_add stackpointer (word 112229):int64,16`] THEN

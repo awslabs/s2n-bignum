@@ -297,7 +297,7 @@ let ETA_4X_44_SETUP_TAC =
   REALIGN_FRAME_TAC 2391 2343 THEN
   REALIGN_NONOV_TAC 2312
    [`r0:int64,1024`; `r1:int64,1024`; `r2:int64,1024`; `r3:int64,1024`;
-    `seed:int64,64`; `word pc:int64,51232`;
+    `seed:int64,64`; `word pc:int64,libmldsa_size`;
     `word_add stackpointer (word 2343):int64,48`;
     `word_add stackpointer (word 2391):int64,32`] THEN
   ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN

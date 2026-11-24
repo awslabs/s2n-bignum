@@ -278,7 +278,7 @@ let POLY_UNIFORM_4X_SETUP_TAC =
    [`vec0:int64,1024`; `vec1:int64,1024`; `vec2:int64,1024`;
     `vec3:int64,1024`; `seed:int64,34`; `word_add seed (word 64):int64,34`;
     `word_add seed (word 128):int64,34`; `word_add seed (word 192):int64,34`;
-    `word pc:int64,51232`;
+    `word pc:int64,libmldsa_size`;
     `word_add stackpointer (word 4775):int64,48`;
     `word_add stackpointer (word 4823):int64,8`] THEN
   ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN

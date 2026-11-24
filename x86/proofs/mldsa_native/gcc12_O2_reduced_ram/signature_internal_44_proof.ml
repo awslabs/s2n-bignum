@@ -2096,7 +2096,7 @@ let SIGN44_START_TAC =
   REALIGN_TAC 11309 THEN REALIGN_FRAME_TAC 11309 11309 THEN
   REALIGN_NONOV_TAC 11278
    [`sig:int64,2420`; `m:int64,mlen:num`; `pre:int64,prelen:num`;
-    `rnd:int64,32`; `sk:int64,2560`; `word pc:int64,51232`;
+    `rnd:int64,32`; `sk:int64,2560`; `word pc:int64,libmldsa_size`;
     `word_add stackpointer (word 11309):int64,8`;
     `word_add stackpointer (word 11317):int64,16`] THEN
   REALIGN_ALIGNED_TAC [1678; 1902; 1934; 2094; 2990; 5038; 6062; 7118; 11262] THEN

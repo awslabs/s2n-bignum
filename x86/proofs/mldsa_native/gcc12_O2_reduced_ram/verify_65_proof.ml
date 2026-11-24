@@ -117,7 +117,7 @@ let MLDSA_NATIVE_VERIFY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL = prove
   REALIGN_TAC 12740 THEN REALIGN_FRAME_TAC 12740 12740 THEN
   REALIGN_NONOV_TAC 12709
    [`sig:int64,3309`; `m:int64,mlen:num`; `ctx:int64,ctxlen:num`;
-    `pk:int64,1952`; `word pc:int64,51232`; `word(pc + got_memcpy):int64,8`;
+    `pk:int64,1952`; `word pc:int64,libmldsa_size`; `word(pc + got_memcpy):int64,8`;
     `ea:int64,el:num`; `word_add stackpointer (word 12740):int64,8`] THEN
   ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN
   ENSURES_PRESERVED_TAC "rbp_init" `RBP` THEN

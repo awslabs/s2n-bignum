@@ -71,7 +71,7 @@ let MEXP87_SETUP_TAC =
   SAMPLING_ALIGNED_FROM_TAC `bot:int64` 4831 16 [4895; 4959; 5023; 5087] THEN
   REALIGN_FRAME_TAC 5158 5118 THEN
   REALIGN_NONOV_TAC 5087
-   [`mat:int64,57344`; `rho:int64,32`; `word pc:int64,51232`;
+   [`mat:int64,57344`; `rho:int64,32`; `word pc:int64,libmldsa_size`;
     `word_add stackpointer (word 5118):int64,40`;
     `word_add stackpointer (word 5158):int64,8`] THEN
   ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN

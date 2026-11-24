@@ -205,7 +205,7 @@ let POLY_UNIFORM_INTRO_TAC =
 let POLY_UNIFORM_SETUP_TAC =
   REALIGN_TAC 1447 THEN REALIGN_FRAME_TAC 1487 1447 THEN
   REALIGN_NONOV_TAC 1416
-   [`a:int64,1024`; `seed:int64,34`; `word pc:int64,51232`;
+   [`a:int64,1024`; `seed:int64,34`; `word pc:int64,libmldsa_size`;
     `word_add stackpointer (word 1447):int64,40`;
     `word_add stackpointer (word 1487):int64,8`] THEN
   ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN
