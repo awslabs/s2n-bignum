@@ -36,17 +36,20 @@ let MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_EXEC =
 (* bytes at offset 48 + 640 * i of the signature at sig, which may not       *)
 (* overlap it, as mld_polyz_pack_19 of common/mldsa_native_packing.ml. The   *)
 (* tail call of mldsa65_polyz_pack saves RBX, which that function uses, in   *)
-(* the 8 bytes below the return address.                                     *)
+(* the 8 bytes below the return address, and clears 16 bytes below it (so    *)
+(* the frame is 24 bytes); RSP + 8 must be a multiple of 16 on entry (see    *)
+(* mldsa65_polyz_pack).                                                      *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
  `!sig zi x i pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 (word_add stackpointer (word 8)) /\
         i < 5 /\
         ALL (nonoverlapping (word_add sig (word(48 + 640 * i)),640))
             [(word pc,libmldsa_size); (zi,1024);
-             (word_sub stackpointer (word 8),8); (stackpointer,8)] /\
-        ALL (nonoverlapping (word_sub stackpointer (word 8),8))
+             (word_sub stackpointer (word 24),24); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 24),24))
             [(word pc,libmldsa_size); (zi,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) mldsa_native_libmldsa_gcc12_O2_mc /\
@@ -66,7 +69,7 @@ let MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
                [memory :> bytes(word_add sig (word(48 + 640 * i)),640);
-                memory :> bytes(word_sub stackpointer (word 8),8)])`;;
+                memory :> bytes(word_sub stackpointer (word 24),24)])`;;
 
 let MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec
@@ -83,11 +86,12 @@ let MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
  `exists f_events.
      forall e sig zi x i pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 (word_add stackpointer (word 8)) /\
         i < 5 /\
         ALL (nonoverlapping (word_add sig (word(48 + 640 * i)),640))
             [(word pc,libmldsa_size); (zi,1024);
-             (word_sub stackpointer (word 8),8); (stackpointer,8)] /\
-        ALL (nonoverlapping (word_sub stackpointer (word 8),8))
+             (word_sub stackpointer (word 24),24); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 24),24))
             [(word pc,libmldsa_size); (zi,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) mldsa_native_libmldsa_gcc12_O2_mc /\
@@ -107,17 +111,17 @@ let MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
                            mld_polyz_pack_19 x j) /\
                   (exists e2.
                      read events s = APPEND e2 e /\
-                     e2 = f_events sig zi i pc (word_sub stackpointer (word 8))
+                     e2 = f_events sig zi i pc (word_sub stackpointer (word 24))
                                    returnaddress /\
                      memaccess_inbounds e2
                        [zi,1024; word_add sig (word(48 + 640 * i)),640;
-                        word_sub stackpointer (word 8),8; stackpointer,8]
+                        word_sub stackpointer (word 24),24; stackpointer,8]
                        [word_add sig (word(48 + 640 * i)),640;
-                        word_sub stackpointer (word 8),8]))
+                        word_sub stackpointer (word 24),24]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
                [memory :> bytes(word_add sig (word(48 + 640 * i)),640);
-                memory :> bytes(word_sub stackpointer (word 8),8)])`;;
+                memory :> bytes(word_sub stackpointer (word 24),24)])`;;
 
 let MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_FULL =
   assume_spec MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
@@ -130,11 +134,12 @@ let MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
  `exists f_events.
      forall e sig zi i pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 (word_add stackpointer (word 8)) /\
         i < 5 /\
         ALL (nonoverlapping (word_add sig (word(48 + 640 * i)),640))
             [(word pc,libmldsa_size); (zi,1024);
-             (word_sub stackpointer (word 8),8); (stackpointer,8)] /\
-        ALL (nonoverlapping (word_sub stackpointer (word 8),8))
+             (word_sub stackpointer (word 24),24); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 24),24))
             [(word pc,libmldsa_size); (zi,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) mldsa_native_libmldsa_gcc12_O2_mc /\
@@ -147,17 +152,17 @@ let MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
                   read RSP s = word_add stackpointer (word 8) /\
                   (exists e2.
                      read events s = APPEND e2 e /\
-                     e2 = f_events sig zi i pc (word_sub stackpointer (word 8))
+                     e2 = f_events sig zi i pc (word_sub stackpointer (word 24))
                                    returnaddress /\
                      memaccess_inbounds e2
                        [zi,1024; word_add sig (word(48 + 640 * i)),640;
-                        word_sub stackpointer (word 8),8; stackpointer,8]
+                        word_sub stackpointer (word 24),24; stackpointer,8]
                        [word_add sig (word(48 + 640 * i)),640;
-                        word_sub stackpointer (word 8),8]))
+                        word_sub stackpointer (word 24),24]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
                [memory :> bytes(word_add sig (word(48 + 640 * i)),640);
-                memory :> bytes(word_sub stackpointer (word 8),8)])`;;
+                memory :> bytes(word_sub stackpointer (word 24),24)])`;;
 
 let MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   assume_spec MLDSA_NATIVE_PACK_SIG_Z_65_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;

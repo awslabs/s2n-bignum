@@ -54,6 +54,7 @@ let SIGN87_ZPRE_STMT =
  `?f_zpre.
     !e m sig bot s1h cphat y pc.
       aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+      aligned 16 (word_add bot (word 5182)) /\
       aligned 16 (word_add bot (word 7678)) /\
       aligned 16 (word_add bot (word 23038)) /\ m <= 7 /\
       (!i. i < m
@@ -1346,6 +1347,7 @@ let SIGN87_ATT_STMT = subst [SIGN87_CMP_OFF,`cmpoff:num`]
  `?f_att.
     !e sig bot A s1h s2h t0h mu rhop n C r x b pc.
       aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+      aligned 16 (word_add bot (word 5182)) /\
       aligned 16 (word_add bot (word 5310)) /\
       aligned 16 (word_add bot (word 7678)) /\
       aligned 16 (word_add bot (word 23038)) /\
@@ -2033,7 +2035,7 @@ let SIGN87_START_TAC =
     `word(pc + got_memset):int64,8`; `ea:int64,el:num`;
     `word_add stackpointer (word 112221):int64,8`;
     `word_add stackpointer (word 112229):int64,16`] THEN
-  REALIGN_ALIGNED_TAC [5310; 7678; 23038; 46590; 112174] THEN
+  REALIGN_ALIGNED_TAC [5182; 5310; 7678; 23038; 46590; 112174] THEN
   MAP_EVERY (fun (n,r) -> ENSURES_PRESERVED_TAC n r)
    [("rbx_init",`RBX`); ("rbp_init",`RBP`); ("r12_init",`R12`);
     ("r13_init",`R13`); ("r14_init",`R14`); ("r15_init",`R15`)] THEN

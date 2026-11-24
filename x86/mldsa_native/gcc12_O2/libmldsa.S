@@ -35,22 +35,22 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2):
         .quad   0x00000001003e0003
         .quad   0x0000000000000000
         .quad   0x0000000000000040
-        .quad   0x000000000002fcb8
+        .quad   0x000000000002fdd8
         .quad   0x0038004000000000
         .quad   0x0019001a00400009
         .quad   0x0000000400000001
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x0000000000000000
-        .quad   0x0000000000000e48
-        .quad   0x0000000000000e48
+        .quad   0x0000000000000e58
+        .quad   0x0000000000000e58
         .quad   0x0000000000001000
         .quad   0x0000000500000001
         .quad   0x0000000000001000
         .quad   0x0000000000001000
         .quad   0x0000000000001000
-        .quad   0x000000000000ad70
-        .quad   0x000000000000ad70
+        .quad   0x000000000000ade0
+        .quad   0x000000000000ade0
         .quad   0x0000000000001000
         .quad   0x0000000400000001
         .quad   0x000000000000c000
@@ -203,130 +203,130 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2):
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x000700120000018b
-        .quad   0x0000000000007350
+        .quad   0x00000000000073a0
         .quad   0x0000000000000362
         .quad   0x00070012000001cf
-        .quad   0x0000000000007d60
+        .quad   0x0000000000007db0
         .quad   0x0000000000000087
         .quad   0x00070012000000cd
-        .quad   0x0000000000005640
+        .quad   0x0000000000005670
         .quad   0x0000000000000125
         .quad   0x0007001200000058
-        .quad   0x0000000000004ee0
+        .quad   0x0000000000004f10
         .quad   0x0000000000000087
         .quad   0x00070012000003ce
-        .quad   0x000000000000b720
+        .quad   0x000000000000b790
         .quad   0x00000000000000cc
         .quad   0x000700120000003d
-        .quad   0x00000000000048b0
+        .quad   0x00000000000048e0
         .quad   0x000000000000062a
         .quad   0x0007001200000357
-        .quad   0x000000000000ae20
+        .quad   0x000000000000ae90
         .quad   0x00000000000005af
         .quad   0x0007001200000416
-        .quad   0x000000000000b880
+        .quad   0x000000000000b8f0
         .quad   0x000000000000009e
         .quad   0x0007001200000324
-        .quad   0x000000000000a750
+        .quad   0x000000000000a7c0
         .quad   0x0000000000000639
         .quad   0x00070012000001e7
-        .quad   0x0000000000007df0
+        .quad   0x0000000000007e40
         .quad   0x000000000000057f
         .quad   0x0007001200000282
-        .quad   0x0000000000008790
+        .quad   0x00000000000087e0
         .quad   0x0000000000000090
         .quad   0x00070012000002fb
-        .quad   0x000000000000a2f0
+        .quad   0x000000000000a360
         .quad   0x00000000000003f2
         .quad   0x00070012000002c7
-        .quad   0x00000000000088c0
+        .quad   0x0000000000008910
         .quad   0x000000000000008d
         .quad   0x000700120000024f
-        .quad   0x0000000000008620
+        .quad   0x0000000000008670
         .quad   0x000000000000009f
         .quad   0x0007001200000021
-        .quad   0x0000000000004850
+        .quad   0x0000000000004880
         .quad   0x000000000000005f
         .quad   0x00070012000000ee
-        .quad   0x0000000000005810
+        .quad   0x0000000000005840
         .quad   0x00000000000000cc
         .quad   0x00070012000003f2
-        .quad   0x000000000000b7f0
+        .quad   0x000000000000b860
         .quad   0x0000000000000090
         .quad   0x000700120000036f
-        .quad   0x000000000000b3d0
+        .quad   0x000000000000b440
         .quad   0x000000000000001d
         .quad   0x0007001200000088
-        .quad   0x00000000000054c0
+        .quad   0x00000000000054f0
         .quad   0x000000000000001d
         .quad   0x00070012000000df
-        .quad   0x0000000000005770
+        .quad   0x00000000000057a0
         .quad   0x000000000000009f
         .quad   0x00070012000001b4
-        .quad   0x0000000000007720
+        .quad   0x0000000000007770
         .quad   0x0000000000000631
         .quad   0x0007001200000136
-        .quad   0x0000000000005970
+        .quad   0x00000000000059a0
         .quad   0x000000000000009e
         .quad   0x00070012000003bf
-        .quad   0x000000000000b680
+        .quad   0x000000000000b6f0
         .quad   0x000000000000009f
         .quad   0x00070012000003ad
-        .quad   0x000000000000b550
+        .quad   0x000000000000b5c0
         .quad   0x0000000000000125
         .quad   0x0007001200000458
-        .quad   0x000000000000b9b0
+        .quad   0x000000000000ba20
         .quad   0x00000000000003c0
         .quad   0x0007001200000178
-        .quad   0x0000000000005aa0
+        .quad   0x0000000000005ad0
         .quad   0x00000000000003c0
         .quad   0x000700120000009d
-        .quad   0x00000000000054e0
+        .quad   0x0000000000005510
         .quad   0x000000000000015f
         .quad   0x000700120000023d
-        .quad   0x00000000000084f0
+        .quad   0x0000000000008540
         .quad   0x0000000000000125
         .quad   0x0007001200000214
-        .quad   0x0000000000008390
+        .quad   0x00000000000083e0
         .quad   0x000000000000015f
         .quad   0x0007001200000008
-        .quad   0x0000000000004560
+        .quad   0x0000000000004590
         .quad   0x00000000000002eb
         .quad   0x0007001200000384
-        .quad   0x000000000000b3f0
+        .quad   0x000000000000b460
         .quad   0x000000000000015f
         .quad   0x0007001200000112
-        .quad   0x00000000000058e0
+        .quad   0x0000000000005910
         .quad   0x0000000000000090
         .quad   0x0007001200000314
-        .quad   0x000000000000a6f0
+        .quad   0x000000000000a760
         .quad   0x000000000000005f
         .quad   0x0007001200000437
-        .quad   0x000000000000b920
+        .quad   0x000000000000b990
         .quad   0x000000000000008d
         .quad   0x00070012000001ff
-        .quad   0x0000000000008370
+        .quad   0x00000000000083c0
         .quad   0x000000000000001d
         .quad   0x00070012000002a6
-        .quad   0x0000000000008820
+        .quad   0x0000000000008870
         .quad   0x000000000000009e
         .quad   0x00070012000001a4
-        .quad   0x00000000000076c0
+        .quad   0x0000000000007710
         .quad   0x000000000000005f
         .quad   0x000700120000025e
-        .quad   0x00000000000086c0
+        .quad   0x0000000000008710
         .quad   0x00000000000000cc
         .quad   0x00070012000002e8
-        .quad   0x0000000000008950
+        .quad   0x00000000000089a0
         .quad   0x00000000000003c0
         .quad   0x000700120000033f
-        .quad   0x000000000000ad90
+        .quad   0x000000000000ae00
         .quad   0x0000000000000087
         .quad   0x0007001200000070
-        .quad   0x0000000000004f70
+        .quad   0x0000000000004fa0
         .quad   0x000000000000054f
         .quad   0x0007001200000157
-        .quad   0x0000000000005a10
+        .quad   0x0000000000005a40
         .quad   0x000000000000008d
         .quad   0x007465736d656d00
         .quad   0x5f34346173646c6d
@@ -471,13 +471,15 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2):
         .quad   0x5f6d6f72665f6b70
         .quad   0x6c6d62696c006b73
         .quad   0x2f006f732e617364
-        .quad   0x616c632f656d6f68
-        .quad   0x73646c6d2f656475
-        .quad   0x782f6b726f772f61
-        .quad   0x646c6975622f3638
-        .quad   0x7374757074756f2f
-        .quad   0x62696c2f74756f2f
-        .quad   0x0000000000000000
+        .quad   0x6974616e2f706d74
+        .quad   0x6e2d3638782d6576
+        .quad   0x2d6b636174732d6f
+        .quad   0x6f746365746f7270
+        .quad   0x5543586c36312e72
+        .quad   0x6173646c6d2f4e73
+        .quad   0x2f656372756f732d
+        .quad   0x2f7374757074756f
+        .quad   0x0062696c2f74756f
         .quad   0x000000000000ffe8
         .quad   0x0000000100000007
         .quad   0x0000000000000000
@@ -486,7 +488,7 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2):
         .quad   0x0000000000000000
         .quad   0x000000000000fff8
         .quad   0x0000000300000007
-        .zero   448
+        .zero   432
 
 // The procedure linkage table (0x1000 to 0x1040)
 
@@ -516,7 +518,7 @@ L1030:
         .byte   0x68,0x02,0x00,0x00,0x00
         {disp32} jmp     L1000
 
-// The code (0x1040 to 0xbd70)
+// The code (0x1040 to 0xbde0)
 
 // mldsa_shake128_init (0x1040)
 
@@ -2088,23 +2090,23 @@ L2360:
         movdqu  xmm7, XMMWORD PTR [rbp+0x70]
         movups  XMMWORD PTR [rsi+0x30], xmm7
         lea     rsi, [rbp+0x80]
-        call    L4170
+        call    L41a0
         mov     rdi, r12
         mov     r12, r13
-        call    L3f60
+        call    L3f90
         lea     rsi, [rbp+0x200]
         mov     rdi, rbx
-        call    L41f0
+        call    L4220
         mov     rdi, rbx
         lea     rbx, [rbp+0x380]
         add     rbp, 0xa00
-        call    L4070
+        call    L40a0
 L23fc:
         mov     rsi, rbx
         mov     rdi, r12
         add     rbx, 0x1a0
         add     r12, 0x400
-        call    L3020
+        call    L3030
         cmp     rbx, rbp
         jne     L23fc
         add     rsp, 0x8
@@ -2113,7 +2115,7 @@ L23fc:
         pop     rbp
         pop     r12
         pop     r13
-        jmp     L4070
+        jmp     L40a0
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
@@ -2162,7 +2164,7 @@ L2450:
 L24b2:
         mov     rsi, r12
         mov     rdi, r13
-        call    L32b0
+        call    L32c0
         xor     eax, eax
         jmp     L24dd
         // nop     DWORD PTR [rax+0x0]
@@ -2215,7 +2217,7 @@ L2540:
         lea     eax, [rdx+rdx*8]
         shl     eax, 0x6
         lea     rdi, [rax+rdi*1+0x20]
-        jmp     L3b50
+        jmp     L3b70
 
 // mldsa44_sig_unpack_hints (0x2550)
 
@@ -3016,7 +3018,7 @@ L2ea0:
         push    rbp
         push    rbx
         mov     rbx, rdi
-        mov     QWORD PTR [rsp-0x8], rax
+        mov     QWORD PTR [rsp-0x30], rax
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
 L2ec8:
@@ -3113,8 +3115,12 @@ L2ec8:
         shl     edi, 0x8
         or      edi, eax
         mov     DWORD PTR [rbx-0x5], edi
-        cmp     QWORD PTR [rsp-0x8], rdx
+        cmp     QWORD PTR [rsp-0x30], rdx
         jne     L2ec8
+        pxor    xmm0, xmm0
+        lea     rax, [rsp-0x28]
+        movaps  XMMWORD PTR [rsp-0x28], xmm0
+        movaps  XMMWORD PTR [rsp-0x18], xmm0
         pop     rbx
         pop     rbp
         pop     r12
@@ -3123,11 +3129,11 @@ L2ec8:
         pop     r15
         ret
         // nop     WORD PTR [rax+rax*1+0x0]
-        .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
+        .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa_polyt0_unpack (0x3020)
+// mldsa_polyt0_unpack (0x3030)
 
-L3020:
+L3030:
         push    r13
         mov     rdx, rsi
         mov     rax, rdi
@@ -3138,7 +3144,7 @@ L3020:
         mov     ebx, 0x1000
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L3040:
+L3050:
         movzx   ecx, BYTE PTR [rdx]
         mov     DWORD PTR [rax], ecx
         movzx   r11d, BYTE PTR [rdx+0x1]
@@ -3250,7 +3256,7 @@ L3040:
         mov     DWORD PTR [rax-0x8], esi
         mov     DWORD PTR [rax-0x4], ecx
         cmp     r12, rdx
-        jne     L3040
+        jne     L3050
         pop     rbx
         pop     rbp
         pop     r12
@@ -3261,16 +3267,16 @@ L3040:
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa_poly_chknorm (0x31e0)
+// mldsa_poly_chknorm (0x31f0)
 
-L31e0:
+L31f0:
         mov     rcx, rdi
         lea     edi, [rsi-0x1]
         xor     esi, esi
         lea     r8, [rcx+0x400]
         // nop
         .byte   0x90
-L31f0:
+L3200:
         movsxd  rax, DWORD PTR [rcx]
         mov     r9, rax
         sar     rax, 0x1f
@@ -3286,19 +3292,19 @@ L31f0:
         add     rcx, 0x4
         or      esi, eax
         cmp     rcx, r8
-        jne     L31f0
+        jne     L3200
         mov     eax, esi
         ret
         // nop
         .byte   0x90
 
-// mldsa_polyw1_pack_88 (0x3220)
+// mldsa_polyw1_pack_88 (0x3230)
 
-L3220:
+L3230:
         lea     rcx, [rdi+0xc0]
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L3230:
+L3240:
         mov     eax, DWORD PTR [rsi]
         add     rdi, 0x3
         add     rsi, 0x10
@@ -3322,40 +3328,40 @@ L3230:
         or      eax, edx
         mov     BYTE PTR [rdi-0x1], al
         cmp     rdi, rcx
-        jne     L3230
+        jne     L3240
         ret
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa_polyw1_pack_32 (0x3280)
+// mldsa_polyw1_pack_32 (0x3290)
 
-L3280:
+L3290:
         xor     eax, eax
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L3288:
+L3298:
         mov     edx, DWORD PTR [rsi+rax*8+0x4]
         shl     edx, 0x4
         or      dl, BYTE PTR [rsi+rax*8]
         mov     BYTE PTR [rdi+rax*1], dl
         add     rax, 0x1
         cmp     rax, 0x80
-        jne     L3288
+        jne     L3298
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa_polyw1_unpack_88 (0x32b0)
+// mldsa_polyw1_unpack_88 (0x32c0)
 
-L32b0:
+L32c0:
         mov     rcx, rdi
         mov     rdx, rsi
         lea     rdi, [rsi+0xc0]
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L32c0:
+L32d0:
         movzx   eax, BYTE PTR [rdx]
         add     rdx, 0x3
         add     rcx, 0x10
@@ -3382,18 +3388,18 @@ L32c0:
         movzx   eax, al
         mov     DWORD PTR [rcx-0x4], eax
         cmp     rdx, rdi
-        jne     L32c0
+        jne     L32d0
         ret
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa_polyw1_unpack_32 (0x3320)
+// mldsa_polyw1_unpack_32 (0x3330)
 
-L3320:
+L3330:
         xor     eax, eax
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L3328:
+L3338:
         movzx   edx, BYTE PTR [rsi+rax*1]
         and     edx, 0xf
         mov     DWORD PTR [rdi+rax*8], edx
@@ -3403,30 +3409,30 @@ L3328:
         mov     DWORD PTR [rdi+rax*8+0x4], edx
         add     rax, 0x1
         cmp     rax, 0x80
-        jne     L3328
+        jne     L3338
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mld_rej_eta_c44.constprop.0 (0x3350)
+// mld_rej_eta_c44.constprop.0 (0x3360)
 
-L3350:
+L3360:
         mov     r8, rdi
         cmp     esi, 0xff
-        ja      L33f6
+        ja      L3406
         mov     r9d, 0x1
         mov     r10d, 0x2
         sub     r9d, edx
         // xchg    ax, ax
         .byte   0x66,0x90
-L3370:
+L3380:
         movzx   eax, BYTE PTR [rdx]
         mov     ecx, eax
         shr     al, 0x4
         and     ecx, 0xf
         movzx   eax, al
         cmp     cl, 0xf
-        je      L33a5
+        je      L33b5
         movzx   ecx, cl
         imul    edi, ecx, 0xcd
         shr     edi, 0xa
@@ -3437,13 +3443,13 @@ L3370:
         mov     r11d, r10d
         sub     r11d, ecx
         mov     DWORD PTR [r8+rdi*4], r11d
-L33a5:
+L33b5:
         cmp     esi, 0xff
         setbe   cl
         cmp     eax, 0xe
-        ja      L33de
+        ja      L33ee
         test    cl, cl
-        je      L33de
+        je      L33ee
         imul    ecx, eax, 0xcd
         lea     edi, [rsi+0x1]
         mov     esi, esi
@@ -3456,28 +3462,28 @@ L33a5:
         mov     DWORD PTR [r8+rsi*4], ecx
         setbe   cl
         mov     esi, edi
-L33de:
+L33ee:
         lea     eax, [r9+rdx*1]
         cmp     eax, 0x87
         setbe   al
         add     rdx, 0x1
         test    al, cl
-        jne     L3370
-L33f6:
+        jne     L3380
+L3406:
         mov     eax, esi
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
 
-// mldsa44_poly_decompose (0x3400)
+// mldsa44_poly_decompose (0x3410)
 
-L3400:
+L3410:
         xor     ecx, ecx
         mov     r9d, 0x2b
         mov     r8d, 0x3ff000
         // xchg    ax, ax
         .byte   0x66,0x90
-L3410:
+L3420:
         mov     r10d, DWORD PTR [rsi+rcx*1]
         mov     eax, r9d
         lea     edx, [r10+0x7f]
@@ -3504,36 +3510,36 @@ L3410:
         mov     DWORD PTR [rsi+rcx*1], eax
         add     rcx, 0x4
         cmp     rcx, 0x400
-        jne     L3410
+        jne     L3420
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa44_poly_use_hint (0x3480)
+// mldsa44_poly_use_hint (0x3490)
 
-L3480:
+L3490:
         mov     r8, rsi
         push    rbx
         xor     ecx, ecx
         mov     esi, 0x2b
         mov     r9d, 0x3ff000
         xor     r10d, r10d
-        jmp     L34bc
+        jmp     L34cc
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L34a0:
+L34b0:
         lea     edx, [rax+0x1]
         cmp     eax, 0x2b
         mov     eax, edx
         cmove   eax, r10d
-L34ac:
+L34bc:
         mov     DWORD PTR [rdi+rcx*1], eax
         add     rcx, 0x4
         cmp     rcx, 0x400
-        je      L3529
-L34bc:
+        je      L3539
+L34cc:
         mov     r11d, DWORD PTR [rdi+rcx*1]
         mov     eax, esi
         lea     edx, [r11+0x7f]
@@ -3554,27 +3560,27 @@ L34bc:
         sar     rdx, 0x1f
         mov     ebx, DWORD PTR [r8+rcx*1]
         test    ebx, ebx
-        je      L34ac
+        je      L34bc
         lea     ebx, [r11-0x7fe001]
         xor     ebx, r11d
         and     edx, ebx
         xor     edx, r11d
-        jg      L34a0
+        jg      L34b0
         sub     eax, 0x1
         cmovb   eax, esi
         mov     DWORD PTR [rdi+rcx*1], eax
         add     rcx, 0x4
         cmp     rcx, 0x400
-        jne     L34bc
-L3529:
+        jne     L34cc
+L3539:
         pop     rbx
         ret
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa44_poly_uniform_eta_4x (0x3530)
+// mldsa44_poly_uniform_eta_4x (0x3540)
 
-L3530:
+L3540:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -3654,28 +3660,28 @@ L3530:
         mov     rdi, QWORD PTR [rsp+0x40]
         xor     esi, esi
         mov     rdx, r14
-        call    L3350
+        call    L3360
         mov     rdi, QWORD PTR [rsp+0x38]
         xor     esi, esi
         mov     rdx, r15
         mov     r13d, eax
-        call    L3350
+        call    L3360
         mov     rdi, QWORD PTR [rsp+0x30]
         mov     rdx, rbx
         xor     esi, esi
         mov     r12d, eax
-        call    L3350
+        call    L3360
         mov     rdx, QWORD PTR [rsp+0x58]
         mov     rdi, QWORD PTR [rsp+0x28]
         xor     esi, esi
         mov     ebx, eax
-        call    L3350
+        call    L3360
         cmp     r12d, 0xff
         mov     r10d, eax
         setbe   al
         cmp     r13d, 0xff
-        jmp     L37b5
-L3730:
+        jmp     L37c5
+L3740:
         mov     r9, QWORD PTR [rsp+0x20]
         mov     rcx, QWORD PTR [rsp+0x58]
         mov     rsi, r15
@@ -3687,35 +3693,35 @@ L3730:
         mov     rdi, QWORD PTR [rsp+0x40]
         mov     esi, r13d
         mov     rdx, r14
-        call    L3350
+        call    L3360
         mov     rdi, QWORD PTR [rsp+0x38]
         mov     esi, r12d
         mov     rdx, r15
         mov     r13d, eax
-        call    L3350
+        call    L3360
         mov     rdx, QWORD PTR [rsp+0x50]
         mov     rdi, QWORD PTR [rsp+0x30]
         mov     esi, ebx
         mov     r12d, eax
-        call    L3350
+        call    L3360
         mov     rdx, QWORD PTR [rsp+0x58]
         mov     esi, DWORD PTR [rsp+0x4c]
         mov     rdi, QWORD PTR [rsp+0x28]
         mov     ebx, eax
-        call    L3350
+        call    L3360
         cmp     r13d, 0xff
         mov     r10d, eax
         setbe   al
         cmp     r12d, 0xff
-L37b5:
+L37c5:
         setbe   dl
         or      eax, edx
         cmp     ebx, 0xff
         setbe   dl
         or      al, dl
-        jne     L3730
+        jne     L3740
         cmp     r10d, 0xff
-        jbe     L3730
+        jbe     L3740
         mov     rdi, QWORD PTR [rsp+0x20]
         call    L1860
         xor     eax, eax
@@ -3735,9 +3741,9 @@ L37b5:
         pop     rbp
         ret
 
-// mldsa44_poly_challenge (0x3810)
+// mldsa44_poly_challenge (0x3820)
 
-L3810:
+L3820:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -3769,14 +3775,14 @@ L3810:
         xor     esi, esi
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L3880:
+L3890:
         movzx   edx, BYTE PTR [rax]
         add     rax, 0x1
         shl     rdx, cl
         add     ecx, 0x8
         or      rsi, rdx
         cmp     rax, rdi
-        jne     L3880
+        jne     L3890
         lea     rdi, [r14+0x8]
         mov     rcx, r14
         xor     eax, eax
@@ -3791,19 +3797,19 @@ L3880:
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
         mov     ecx, 0x8
-        jmp     L38ef
+        jmp     L38ff
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L38e0:
+L38f0:
         mov     eax, ecx
-L38e2:
+L38f2:
         movzx   edx, BYTE PTR [rsp+rax*1+0x20]
         lea     ecx, [rax+0x1]
         cmp     r15d, edx
-        jae     L391b
-L38ef:
+        jae     L392b
+L38ff:
         cmp     ecx, 0x88
-        jne     L38e0
+        jne     L38f0
         mov     rdx, r12
         mov     esi, 0x88
         mov     rdi, rbx
@@ -3811,9 +3817,9 @@ L38ef:
         movzx   edx, BYTE PTR [rsp+0x20]
         mov     eax, 0x1
         cmp     r15d, edx
-        jb      L38e2
+        jb      L38f2
         mov     ecx, 0x1
-L391b:
+L392b:
         mov     eax, DWORD PTR [r14+rdx*4]
         mov     edi, r13d
         mov     DWORD PTR [r14+r15*4], eax
@@ -3827,7 +3833,7 @@ L391b:
         sub     edi, esi
         mov     DWORD PTR [r14+rdx*4], edi
         cmp     r15, 0x100
-        jne     L38ef
+        jne     L38ff
         mov     rdi, r12
         call    L1400
         xor     eax, eax
@@ -3849,9 +3855,9 @@ L391b:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa44_polyeta_pack (0x3990)
+// mldsa44_polyeta_pack (0x39a0)
 
-L3990:
+L39a0:
         push    r12
         mov     rax, rsi
         mov     r8, rdi
@@ -3861,7 +3867,7 @@ L3990:
         push    rbx
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L39b0:
+L39c0:
         mov     r11d, edx
         sub     r11b, BYTE PTR [rax+0x8]
         mov     r12d, edx
@@ -3902,19 +3908,21 @@ L39b0:
         mov     BYTE PTR [r8-0x2], sil
         mov     BYTE PTR [r8-0x1], cl
         cmp     r9, rax
-        jne     L39b0
+        jne     L39c0
+        mov     QWORD PTR [rsp-0x8], 0x0
+        lea     rax, [rsp-0x8]
         pop     rbx
         pop     rbp
         pop     r12
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-        // nop
-        .byte   0x90
+        // nop     DWORD PTR [rax]
+        .byte   0x0f,0x1f,0x00
 
-// mldsa44_polyeta_unpack (0x3a40)
+// mldsa44_polyeta_unpack (0x3a60)
 
-L3a40:
+L3a60:
         push    r13
         mov     rax, rdi
         lea     r11, [rdi+0x400]
@@ -3925,7 +3933,7 @@ L3a40:
         push    rbx
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L3a60:
+L3a80:
         movzx   r10d, BYTE PTR [rdx]
         mov     r13d, edi
         add     rax, 0x20
@@ -3991,7 +3999,7 @@ L3a60:
         mov     DWORD PTR [rax-0xc], esi
         mov     DWORD PTR [rax-0x4], ecx
         cmp     r11, rax
-        jne     L3a60
+        jne     L3a80
         pop     rbx
         pop     rbp
         pop     r12
@@ -4000,9 +4008,9 @@ L3a60:
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa44_polyz_pack (0x3b50)
+// mldsa44_polyz_pack (0x3b70)
 
-L3b50:
+L3b70:
         push    r13
         mov     rdx, rsi
         mov     rsi, rdi
@@ -4013,7 +4021,7 @@ L3b50:
         push    rbx
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L3b70:
+L3b90:
         mov     r9d, edi
         sub     r9d, DWORD PTR [rdx]
         mov     ebp, edi
@@ -4070,25 +4078,28 @@ L3b70:
         add     rsi, 0x9
         mov     QWORD PTR [rsi-0x9], rax
         cmp     r8, rdx
-        jne     L3b70
+        jne     L3b90
+        pxor    xmm0, xmm0
+        lea     rax, [rsp-0x18]
+        movaps  XMMWORD PTR [rsp-0x18], xmm0
         pop     rbx
         pop     rbp
         pop     r12
         pop     r13
         ret
-        // nop     DWORD PTR [rax+0x0]
-        .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
+        // nop     WORD PTR [rax+rax*1+0x0]
+        .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa44_polyz_unpack (0x3c40)
+// mldsa44_polyz_unpack (0x3c70)
 
-L3c40:
+L3c70:
         mov     rdx, rsi
         mov     rax, rdi
         lea     r11, [rdi+0x400]
         mov     r10d, 0x20000
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L3c58:
+L3c88:
         movzx   esi, BYTE PTR [rdx]
         add     rax, 0x10
         add     rdx, 0x9
@@ -4152,14 +4163,14 @@ L3c58:
         mov     DWORD PTR [rax-0x8], esi
         mov     DWORD PTR [rax-0x4], ecx
         cmp     rax, r11
-        jne     L3c58
+        jne     L3c88
         ret
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa44_poly_uniform_gamma1_4x (0x3d40)
+// mldsa44_poly_uniform_gamma1_4x (0x3d70)
 
-L3d40:
+L3d70:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -4228,16 +4239,16 @@ L3d40:
         call    L17b0
         mov     rdi, QWORD PTR [rsp+0x38]
         mov     rsi, r13
-        call    L3c40
+        call    L3c70
         mov     rsi, QWORD PTR [rsp+0x18]
         mov     rdi, QWORD PTR [rsp+0x30]
-        call    L3c40
+        call    L3c70
         mov     rdi, QWORD PTR [rsp+0x28]
         mov     rsi, r15
-        call    L3c40
+        call    L3c70
         mov     rdi, QWORD PTR [rsp+0x20]
         mov     rsi, r14
-        call    L3c40
+        call    L3c70
         mov     rdi, r12
         call    L1860
         xor     eax, eax
@@ -4258,9 +4269,9 @@ L3d40:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa44_polyvecl_uniform_gamma1 (0x3f10)
+// mldsa44_polyvecl_uniform_gamma1 (0x3f40)
 
-L3f10:
+L3f40:
         lea     eax, [rdx+0x3]
         sub     rsp, 0x10
         mov     r8, rsi
@@ -4277,7 +4288,7 @@ L3f10:
         mov     rdx, r10
         movzx   eax, ax
         push    rax
-        call    L3d40
+        call    L3d70
         add     rsp, 0x28
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
@@ -4285,9 +4296,9 @@ L3f10:
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa44_polyvecl_ntt (0x3f60)
+// mldsa44_polyvecl_ntt (0x3f90)
 
-L3f60:
+L3f90:
         push    rbx
         mov     rbx, rdi
         call    L27d0
@@ -4301,27 +4312,27 @@ L3f60:
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa44_polyvecl_pointwise_acc_montgomery (0x3f90)
+// mldsa44_polyvecl_pointwise_acc_montgomery (0x3fc0)
 
-L3f90:
+L3fc0:
         mov     r10, rdx
         mov     r8, rdi
         mov     r9, rsi
         xor     edx, edx
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L3fa0:
+L3fd0:
         mov     rax, rdx
         xor     esi, esi
         lea     rcx, [rdx+0x1000]
-L3fac:
+L3fdc:
         movsxd  rdi, DWORD PTR [r9+rax*1]
         movsxd  r11, DWORD PTR [r10+rax*1]
         add     rax, 0x400
         imul    rdi, r11
         add     rsi, rdi
         cmp     rcx, rax
-        jne     L3fac
+        jne     L3fdc
         imul    ecx, esi, 0x3802001
         movsxd  rcx, ecx
         mov     rdi, rcx
@@ -4335,14 +4346,14 @@ L3fac:
         mov     DWORD PTR [r8+rdx*1], eax
         add     rdx, 0x4
         cmp     rdx, 0x400
-        jne     L3fa0
+        jne     L3fd0
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa44_polyvecl_chknorm (0x4000)
+// mldsa44_polyvecl_chknorm (0x4030)
 
-L4000:
+L4030:
         push    r13
         lea     r13, [rdi+0x1000]
         push    r12
@@ -4352,14 +4363,14 @@ L4000:
         push    rbx
         mov     rbx, rdi
         sub     rsp, 0x8
-L4019:
+L4049:
         mov     rdi, rbx
         mov     esi, r12d
         add     rbx, 0x400
-        call    L31e0
+        call    L31f0
         or      ebp, eax
         cmp     rbx, r13
-        jne     L4019
+        jne     L4049
         add     rsp, 0x8
         mov     eax, ebp
         pop     rbx
@@ -4370,9 +4381,9 @@ L4019:
         // nop
         .byte   0x90
 
-// mldsa44_polyveck_caddq (0x4040)
+// mldsa44_polyveck_caddq (0x4070)
 
-L4040:
+L4070:
         push    rbx
         mov     rbx, rdi
         call    L2700
@@ -4386,9 +4397,9 @@ L4040:
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa44_polyveck_ntt (0x4070)
+// mldsa44_polyveck_ntt (0x40a0)
 
-L4070:
+L40a0:
         push    rbx
         mov     rbx, rdi
         call    L27d0
@@ -4402,9 +4413,9 @@ L4070:
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa44_polyveck_invntt_tomont (0x40a0)
+// mldsa44_polyveck_invntt_tomont (0x40d0)
 
-L40a0:
+L40d0:
         push    rbx
         mov     rbx, rdi
         call    L28e0
@@ -4418,9 +4429,9 @@ L40a0:
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa44_polyveck_unpack_eta_chknorm (0x40d0)
+// mldsa44_polyveck_unpack_eta_chknorm (0x4100)
 
-L40d0:
+L4100:
         push    r14
         lea     r14, [rdi+0x180]
         push    r13
@@ -4431,17 +4442,17 @@ L40d0:
         mov     rbp, rdx
         push    rbx
         mov     rbx, rdi
-L40eb:
+L411b:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x60
-        call    L3a40
+        call    L3a60
         mov     esi, r13d
         mov     rdi, rbp
-        call    L31e0
+        call    L31f0
         or      r12d, eax
         cmp     rbx, r14
-        jne     L40eb
+        jne     L411b
         pop     rbx
         mov     eax, r12d
         pop     rbp
@@ -4452,9 +4463,9 @@ L40eb:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
 
-// mldsa44_polyveck_decompose_pack_w1 (0x4120)
+// mldsa44_polyveck_decompose_pack_w1 (0x4150)
 
-L4120:
+L4150:
         push    r13
         lea     r13, [rdi+0x300]
         push    r12
@@ -4464,17 +4475,17 @@ L4120:
         push    rbx
         mov     rbx, rdi
         sub     rsp, 0x8
-L413a:
+L416a:
         mov     rsi, rbp
         mov     rdi, r12
         add     rbp, 0x400
-        call    L3400
+        call    L3410
         mov     rdi, rbx
         mov     rsi, r12
         add     rbx, 0xc0
-        call    L3220
+        call    L3230
         cmp     rbx, r13
-        jne     L413a
+        jne     L416a
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -4484,23 +4495,23 @@ L413a:
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa44_polyvecl_unpack_eta (0x4170)
+// mldsa44_polyvecl_unpack_eta (0x41a0)
 
-L4170:
+L41a0:
         push    r12
         lea     r12, [rsi+0x180]
         push    rbp
         mov     rbp, rdi
         push    rbx
         mov     rbx, rsi
-L4181:
+L41b1:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x60
         add     rbp, 0x400
-        call    L3a40
+        call    L3a60
         cmp     rbx, r12
-        jne     L4181
+        jne     L41b1
         pop     rbx
         pop     rbp
         pop     r12
@@ -4510,23 +4521,23 @@ L4181:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa44_polyvecl_unpack_z (0x41b0)
+// mldsa44_polyvecl_unpack_z (0x41e0)
 
-L41b0:
+L41e0:
         push    r12
         lea     r12, [rsi+0x900]
         push    rbp
         mov     rbp, rdi
         push    rbx
         mov     rbx, rsi
-L41c1:
+L41f1:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x240
         add     rbp, 0x400
-        call    L3c40
+        call    L3c70
         cmp     rbx, r12
-        jne     L41c1
+        jne     L41f1
         pop     rbx
         pop     rbp
         pop     r12
@@ -4536,23 +4547,23 @@ L41c1:
         // nop
         .byte   0x90
 
-// mldsa44_polyveck_unpack_eta (0x41f0)
+// mldsa44_polyveck_unpack_eta (0x4220)
 
-L41f0:
+L4220:
         push    r12
         lea     r12, [rsi+0x180]
         push    rbp
         mov     rbp, rdi
         push    rbx
         mov     rbx, rsi
-L4201:
+L4231:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x60
         add     rbp, 0x400
-        call    L3a40
+        call    L3a60
         cmp     rbx, r12
-        jne     L4201
+        jne     L4231
         pop     rbx
         pop     rbp
         pop     r12
@@ -4562,9 +4573,9 @@ L4201:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa44_polyvec_matrix_expand_eager (0x4230)
+// mldsa44_polyvec_matrix_expand_eager (0x4260)
 
-L4230:
+L4260:
         push    rbp
         mov     rbp, rsp
         push    r14
@@ -4579,17 +4590,17 @@ L4230:
         mov     r14, rsp
         lea     r12, [rsp+0x100]
         mov     rax, r14
-L4260:
+L4290:
         movaps  XMMWORD PTR [rax], xmm1
         add     rax, 0x40
         movaps  XMMWORD PTR [rax-0x30], xmm0
         cmp     r12, rax
-        jne     L4260
+        jne     L4290
         xor     ebx, ebx
-L4272:
+L42a2:
         mov     rax, r14
         mov     edx, ebx
-L4277:
+L42a7:
         mov     ecx, edx
         add     rax, 0x40
         and     ecx, 0x3
@@ -4599,7 +4610,7 @@ L4277:
         shr     ecx, 0x2
         mov     BYTE PTR [rax-0x1f], cl
         cmp     r12, rax
-        jne     L4277
+        jne     L42a7
         lea     eax, [rbx+0x3]
         mov     edi, ebx
         mov     r8, r14
@@ -4620,7 +4631,7 @@ L4277:
         lea     rsi, [r13+rax*1+0x400]
         call    L2ba0
         cmp     ebx, 0x10
-        jne     L4272
+        jne     L42a2
         xor     eax, eax
         mov     rdi, r14
         mov     ecx, 0x20
@@ -4635,19 +4646,19 @@ L4277:
         // nop
         .byte   0x90
 
-// mldsa44_polyvec_matrix_pointwise_montgomery_row_eager (0x4300)
+// mldsa44_polyvec_matrix_pointwise_montgomery_row_eager (0x4330)
 
-L4300:
+L4330:
         mov     ecx, ecx
         shl     rcx, 0xc
         add     rsi, rcx
-        jmp     L3f90
+        jmp     L3fc0
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa44_polyvec_matrix_pointwise_montgomery_yvec_eager (0x4310)
+// mldsa44_polyvec_matrix_pointwise_montgomery_yvec_eager (0x4340)
 
-L4310:
+L4340:
         push    r14
         mov     r14, rdi
         push    r13
@@ -4663,30 +4674,30 @@ L4310:
         xor     ebx, ebx
         rep movs QWORD PTR es:[rdi], QWORD PTR ds:[rsi]
         mov     rdi, r12
-        call    L3f60
-L433c:
+        call    L3f90
+L436c:
         mov     ecx, ebx
         mov     rdi, rbp
         mov     rdx, r12
         mov     rsi, r13
-        call    L4300
+        call    L4330
         add     ebx, 0x1
         add     rbp, 0x400
         cmp     ebx, 0x4
-        jne     L433c
+        jne     L436c
         pop     rbx
         mov     rdi, r14
         pop     rbp
         pop     r12
         pop     r13
         pop     r14
-        jmp     L40a0
+        jmp     L40d0
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mld_compute_pack_t0_t144 (0x4370)
+// mld_compute_pack_t0_t144 (0x43a0)
 
-L4370:
+L43a0:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -4706,21 +4717,21 @@ L4370:
         mov     rdi, rax
         mov     QWORD PTR [rsp+0x10], rax
         lea     r12, [rsp+0x420]
-        call    L4230
+        call    L4260
         xor     eax, eax
-L43bd:
+L43ed:
         mov     rdx, QWORD PTR [rsp+0x8]
         mov     rsi, QWORD PTR [rsp+0x10]
         mov     ecx, eax
         mov     rdi, rbx
         mov     DWORD PTR [rsp+0x1c], eax
-        call    L4300
+        call    L4330
         mov     rdi, rbx
         call    L28e0
         mov     rsi, r15
         mov     rdi, r12
         add     r15, 0x60
-        call    L3a40
+        call    L3a60
         mov     rsi, r12
         mov     rdi, rbx
         call    L2740
@@ -4743,7 +4754,7 @@ L43bd:
         mov     eax, DWORD PTR [rsp+0x1c]
         add     eax, 0x1
         cmp     eax, 0x4
-        jne     L43bd
+        jne     L43ed
         xor     eax, eax
         mov     rdi, r12
         mov     ecx, 0x80
@@ -4768,9 +4779,9 @@ L43bd:
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mld_H44 (0x4490)
+// mld_H44 (0x44c0)
 
-L4490:
+L44c0:
         push    r15
         mov     r15, r9
         push    r14
@@ -4792,10 +4803,10 @@ L4490:
         mov     rdi, rbx
         call    L1280
         test    r15, r15
-        jne     L4520
+        jne     L4550
         cmp     QWORD PTR [rsp+0x128], 0x0
-        jne     L453b
-L44e0:
+        jne     L456b
+L4510:
         mov     rdi, rbx
         call    L1310
         mov     rdx, rbx
@@ -4818,25 +4829,25 @@ L44e0:
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L4520:
+L4550:
         mov     rsi, QWORD PTR [rsp+0x8]
         mov     rdx, r15
         mov     rdi, rbx
         call    L1280
         cmp     QWORD PTR [rsp+0x128], 0x0
-        je      L44e0
-L453b:
+        je      L4510
+L456b:
         mov     rdx, QWORD PTR [rsp+0x128]
         mov     rsi, QWORD PTR [rsp+0x120]
         mov     rdi, rbx
         call    L1280
-        jmp     L44e0
+        jmp     L4510
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa44_keypair_internal (0x4560)
+// mldsa44_keypair_internal (0x4590)
 
-L4560:
+L4590:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         mov     ecx, 0x22
@@ -4884,20 +4895,20 @@ L4560:
         push    0x5
         mov     QWORD PTR [rbp-0x1140], rax
         mov     QWORD PTR [rbp-0x1158], r8
-        call    L3530
+        call    L3540
         mov     rdi, QWORD PTR [rbp-0x1148]
         add     rsp, 0x20
         mov     rsi, r12
-        call    L3990
+        call    L39a0
         mov     rsi, r15
         lea     rdi, [rbx+0x260]
-        call    L3990
+        call    L39a0
         mov     rsi, r14
         lea     rdi, [rbx+0x2c0]
-        call    L3990
+        call    L39a0
         mov     rsi, QWORD PTR [rbp-0x1140]
         lea     rdi, [rbx+0x320]
-        call    L3990
+        call    L39a0
         sub     rsp, 0x8
         mov     rdx, r14
         xor     r9d, r9d
@@ -4908,23 +4919,23 @@ L4560:
         push    0x2
         mov     rcx, QWORD PTR [rbp-0x1140]
         push    0x1
-        call    L3530
+        call    L3540
         add     rsp, 0x20
         lea     rdi, [rbx+0x80]
         mov     rsi, r12
-        call    L3990
+        call    L39a0
         mov     rsi, r15
         lea     rdi, [rbx+0xe0]
         lea     r15, [rbp-0x10f0]
-        call    L3990
+        call    L39a0
         mov     rsi, r14
         lea     rdi, [rbx+0x140]
-        call    L3990
+        call    L39a0
         mov     rsi, QWORD PTR [rbp-0x1140]
         lea     rdi, [rbx+0x1a0]
-        call    L3990
+        call    L39a0
         mov     rdi, r12
-        call    L3f60
+        call    L3f90
         movdqa  xmm3, XMMWORD PTR [rbp-0x10b0]
         lea     rdi, [r13+0x20]
         movdqa  xmm4, XMMWORD PTR [rbp-0x10a0]
@@ -4934,10 +4945,10 @@ L4560:
         mov     rdx, r12
         movups  XMMWORD PTR [r13+0x0], xmm3
         movups  XMMWORD PTR [r13+0x10], xmm4
-        call    L4370
+        call    L43a0
         mov     r14d, eax
         test    eax, eax
-        jne     L476f
+        jne     L479f
         mov     ecx, 0x520
         mov     rdx, r13
         mov     esi, 0x40
@@ -4948,7 +4959,7 @@ L4560:
         mov     rdi, rbx
         lea     rcx, [rbp-0x1050]
         call    L2310
-L476f:
+L479f:
         xor     eax, eax
         mov     rdi, r12
         mov     ecx, 0x200
@@ -4968,8 +4979,8 @@ L476f:
         rep stos QWORD PTR es:[rdi], rax
         mov     rdi, QWORD PTR [rbp-0x1138]
         test    r14d, r14d
-        jne     L47f0
-L47d5:
+        jne     L4820
+L4805:
         lea     rsp, [rbp-0x30]
         mov     eax, r14d
         pop     rbx
@@ -4983,7 +4994,7 @@ L47d5:
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L47f0:
+L4820:
         lea     rdi, [r13+0x8]
         mov     rcx, r13
         mov     QWORD PTR [r13+0x0], 0x0
@@ -5002,13 +5013,13 @@ L47f0:
         add     ecx, 0xa00
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-        jmp     L47d5
+        jmp     L4805
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa44_keypair (0x4850)
+// mldsa44_keypair (0x4880)
 
-L4850:
+L4880:
         push    rbp
         mov     rbp, rsp
         push    r13
@@ -5023,12 +5034,12 @@ L4850:
         mov     rdi, rbx
         call    L1020
         test    eax, eax
-        jne     L48a8
+        jne     L48d8
         mov     rdx, rbx
         mov     rsi, r13
         mov     rdi, r12
-        call    L4560
-L4889:
+        call    L4590
+L48b9:
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rsp], xmm0
         movaps  XMMWORD PTR [rsp+0x10], xmm0
@@ -5040,15 +5051,15 @@ L4889:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L48a8:
+L48d8:
         mov     eax, 0xfffffffd
-        jmp     L4889
+        jmp     L48b9
         // nop
         .byte   0x90
 
-// mldsa44_signature_internal (0x48b0)
+// mldsa44_signature_internal (0x48e0)
 
-L48b0:
+L48e0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -5087,7 +5098,7 @@ L48b0:
         pop     rdi
         pop     r8
         test    r14d, r14d
-        jne     L4e90
+        jne     L4ec0
         lea     rax, [rbp-0xabb0]
         mov     r9, QWORD PTR [rbp-0xac68]
         mov     ecx, 0x40
@@ -5098,10 +5109,10 @@ L48b0:
         mov     rdi, rax
         push    QWORD PTR [rbp-0xac58]
         push    r12
-        call    L4490
+        call    L44c0
         pop     rcx
         pop     rsi
-L499a:
+L49ca:
         mov     rdx, r15
         mov     r8, rbx
         mov     ecx, 0x20
@@ -5116,12 +5127,12 @@ L499a:
         push    0x40
         mov     r12, r15
         push    QWORD PTR [rbp-0xacc0]
-        call    L4490
+        call    L44c0
         lea     rax, [rbp-0x4030]
         mov     rsi, QWORD PTR [rbp-0xacd8]
         mov     rdi, rax
         mov     QWORD PTR [rbp-0xacc8], rax
-        call    L4230
+        call    L4260
         pop     rax
         lea     rax, [rbp-0x7030]
         pop     rdx
@@ -5137,26 +5148,26 @@ L499a:
         mov     QWORD PTR [rbp-0xac60], r14
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L4a58:
+L4a88:
         mov     r14, QWORD PTR [rbp-0xac70]
         mov     edx, DWORD PTR [rbp-0xac7c]
         mov     rsi, QWORD PTR [rbp-0xacd0]
         mov     rdi, r14
-        call    L3f10
+        call    L3f40
         mov     r13, QWORD PTR [rbp-0xac58]
         mov     rdx, r14
         mov     r14, QWORD PTR [rbp-0xac78]
         mov     rsi, QWORD PTR [rbp-0xacc8]
         mov     rcx, r13
         mov     rdi, r14
-        call    L4310
+        call    L4340
         mov     rdi, r14
-        call    L4040
+        call    L4070
         mov     rsi, r14
         mov     r14, QWORD PTR [rbp-0xac90]
         mov     rdx, r13
         mov     rdi, r14
-        call    L4120
+        call    L4150
         mov     rdi, r15
         call    L1240
         mov     rsi, QWORD PTR [rbp-0xacc0]
@@ -5184,10 +5195,10 @@ L4a58:
         mov     r14, QWORD PTR [rbp-0xac60]
         xor     r13d, r13d
         mov     rdi, r14
-        call    L3810
+        call    L3820
         mov     rdi, r14
         call    L27d0
-L4b31:
+L4b61:
         mov     rax, QWORD PTR [rbp-0xac98]
         mov     r14, r13
         mov     rdi, r15
@@ -5215,21 +5226,21 @@ L4b31:
         call    L26b0
         mov     esi, 0x1ffb2
         mov     rdi, r12
-        call    L31e0
+        call    L31f0
         test    eax, eax
-        jne     L4e85
+        jne     L4eb5
         mov     edx, DWORD PTR [rbp-0xac68]
         mov     rdi, QWORD PTR [rbp-0xac88]
         mov     rsi, r12
         add     r13, 0x1
         call    L2540
         cmp     r13, 0x4
-        jne     L4b31
+        jne     L4b61
         mov     QWORD PTR [rbp-0xac68], r12
         xor     r13d, r13d
         mov     QWORD PTR [rbp-0xacb8], r12
         mov     r12, QWORD PTR [rbp-0xac60]
-L4bf3:
+L4c23:
         mov     rax, QWORD PTR [rbp-0xaca8]
         mov     ecx, 0x80
         mov     rdi, rbx
@@ -5250,9 +5261,9 @@ L4bf3:
         call    L26b0
         mov     esi, 0x173b2
         mov     rdi, r14
-        call    L31e0
+        call    L31f0
         test    eax, eax
-        jne     L4e70
+        jne     L4ea0
         mov     rax, QWORD PTR [rbp-0xacb0]
         mov     ecx, 0x80
         mov     rdi, rbx
@@ -5267,15 +5278,15 @@ L4bf3:
         call    L26b0
         mov     esi, 0x17400
         mov     rdi, rbx
-        call    L31e0
+        call    L31f0
         test    eax, eax
-        jne     L4e70
+        jne     L4ea0
         mov     rsi, rbx
         mov     rdi, r14
         add     r13, 0x400
         call    L2740
         cmp     r13, 0x1000
-        jne     L4bf3
+        jne     L4c23
         mov     r14, QWORD PTR [rbp-0xac88]
         mov     rsi, QWORD PTR [rbp-0xaca0]
         mov     QWORD PTR [rbp-0xac58], rbx
@@ -5289,7 +5300,7 @@ L4bf3:
         mov     rsi, QWORD PTR [rbp-0xac78]
         call    L2450
         mov     r13d, eax
-L4cfe:
+L4d2e:
         mov     rdi, r12
         xor     eax, eax
         mov     ecx, 0x80
@@ -5318,15 +5329,15 @@ L4cfe:
         movaps  XMMWORD PTR [rax], xmm0
         movaps  XMMWORD PTR [rax+0x10], xmm0
         test    r13d, r13d
-        je      L4dde
+        je      L4e0e
         cmp     r13d, 0xffffffff
-        jne     L4da9
+        jne     L4dd9
         add     DWORD PTR [rbp-0xac7c], 0x4
         mov     eax, DWORD PTR [rbp-0xac7c]
         cmp     eax, 0xfff8
-        jne     L4a58
+        jne     L4a88
         mov     r13d, 0xfffffffc
-L4da9:
+L4dd9:
         mov     rdx, QWORD PTR [rbp-0xac88]
         xor     eax, eax
         lea     rdi, [rdx+0x8]
@@ -5338,7 +5349,7 @@ L4da9:
         add     ecx, 0x974
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-L4dde:
+L4e0e:
         mov     rdi, QWORD PTR [rbp-0xaca8]
         xor     ebx, ebx
         mov     ecx, 0x200
@@ -5376,14 +5387,14 @@ L4dde:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L4e70:
+L4ea0:
         mov     QWORD PTR [rbp-0xac58], r15
         mov     r12, QWORD PTR [rbp-0xacb8]
         mov     r15, QWORD PTR [rbp-0xac68]
-L4e85:
+L4eb5:
         mov     r13d, 0xffffffff
-        jmp     L4cfe
-L4e90:
+        jmp     L4d2e
+L4ec0:
         movdqu  xmm1, XMMWORD PTR [r12]
         movdqu  xmm2, XMMWORD PTR [r12+0x10]
         lea     rax, [rbp-0xabb0]
@@ -5394,13 +5405,13 @@ L4e90:
         movaps  XMMWORD PTR [rbp-0xaba0], xmm2
         movaps  XMMWORD PTR [rbp-0xab90], xmm3
         movaps  XMMWORD PTR [rbp-0xab80], xmm4
-        jmp     L499a
+        jmp     L49ca
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa44_signature_extmu (0x4ee0)
+// mldsa44_signature_extmu (0x4f10)
 
-L4ee0:
+L4f10:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -5420,7 +5431,7 @@ L4ee0:
         sub     rsp, 0x28
         call    L1020
         test    eax, eax
-        jne     L4f60
+        jne     L4f90
         push    0x1
         xor     ecx, ecx
         mov     edx, 0x40
@@ -5429,10 +5440,10 @@ L4ee0:
         xor     r8d, r8d
         mov     rsi, r13
         mov     rdi, r12
-        call    L48b0
+        call    L48e0
         pop     rdx
         pop     rcx
-L4f3a:
+L4f6a:
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x50], xmm0
         movaps  XMMWORD PTR [rbp-0x40], xmm0
@@ -5447,15 +5458,15 @@ L4f3a:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L4f60:
+L4f90:
         mov     eax, 0xfffffffd
-        jmp     L4f3a
+        jmp     L4f6a
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa44_verify_internal (0x4f70)
+// mldsa44_verify_internal (0x4fa0)
 
-L4f70:
+L4fa0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -5484,15 +5495,15 @@ L4f70:
         mov     QWORD PTR [rbp-0x60a0], rax
         movaps  XMMWORD PTR [rbp-0x6090], xmm3
         movaps  XMMWORD PTR [rbp-0x6080], xmm4
-        call    L41b0
+        call    L41e0
         mov     esi, 0x1ffb2
         mov     rdi, r13
-        call    L4000
+        call    L4030
         test    eax, eax
-        jne     L5462
+        jne     L5492
         mov     r13d, eax
         test    ebx, ebx
-        je      L5380
+        je      L53b0
         movdqu  xmm5, XMMWORD PTR [r12]
         lea     rax, [rbp-0x4030]
         movdqu  xmm6, XMMWORD PTR [r12+0x10]
@@ -5506,32 +5517,32 @@ L4f70:
         movaps  XMMWORD PTR [rbp-0x6040], xmm6
         movaps  XMMWORD PTR [rbp-0x6030], xmm7
         movaps  XMMWORD PTR [rbp-0x6020], xmm5
-L5062:
+L5092:
         mov     rdi, QWORD PTR [rbp-0x60a0]
         lea     r12, [rbp-0x5830]
-        call    L3f60
+        call    L3f90
         mov     rsi, QWORD PTR [rbp-0x60b0]
         mov     rdi, QWORD PTR [rbp-0x6098]
-        call    L4230
+        call    L4260
         lea     rax, [rbp-0x5c30]
         lea     rsi, [rbp-0x6090]
         mov     r15, rax
         mov     rdi, rax
         mov     QWORD PTR [rbp-0x60a8], rax
         mov     QWORD PTR [rbp-0x60d0], rsi
-        call    L3810
+        call    L3820
         mov     rdi, r15
         call    L27d0
         lea     rax, [rbp-0x5f30]
         mov     QWORD PTR [rbp-0x60b8], r14
         mov     QWORD PTR [rbp-0x60c0], rax
         mov     r15, rax
-L50cf:
+L50ff:
         mov     rdx, QWORD PTR [rbp-0x60a0]
         mov     rsi, QWORD PTR [rbp-0x6098]
         mov     ecx, r13d
         mov     rdi, r12
-        call    L4300
+        call    L4330
         mov     rsi, QWORD PTR [rbp-0x60b0]
         mov     edx, r13d
         mov     rdi, rbx
@@ -5558,17 +5569,17 @@ L50cf:
         call    L2550
         mov     r14d, eax
         test    eax, eax
-        jne     L5450
+        jne     L5480
         mov     rsi, rbx
         mov     rdi, r12
         add     r13d, 0x1
-        call    L3480
+        call    L3490
         mov     rdi, r15
         mov     rsi, r12
         add     r15, 0xc0
-        call    L3220
+        call    L3230
         cmp     r13d, 0x4
-        jne     L50cf
+        jne     L50ff
         lea     r13, [rbp-0x6000]
         lea     r15, [rbp-0x6070]
         mov     rdi, r13
@@ -5631,8 +5642,8 @@ L50cf:
         sar     rax, 0x20
         xor     eax, edx
         cmp     al, dl
-        jne     L5457
-L529f:
+        jne     L5487
+L52cf:
         xor     r13d, r13d
         mov     rdi, rbx
         mov     ecx, 0x80
@@ -5684,7 +5695,7 @@ L529f:
         ret
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L5380:
+L53b0:
         lea     rax, [rbp-0x4030]
         mov     rdi, rax
         mov     rbx, rax
@@ -5718,7 +5729,7 @@ L5380:
         mov     rdi, rax
         push    r15
         push    r12
-        call    L4490
+        call    L44c0
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x5430], xmm0
         movaps  XMMWORD PTR [rbp-0x5420], xmm0
@@ -5726,13 +5737,13 @@ L5380:
         movaps  XMMWORD PTR [rbp-0x5400], xmm0
         pop     rax
         pop     rdx
-        jmp     L5062
-L5450:
+        jmp     L5092
+L5480:
         lea     r15, [rbp-0x6070]
-L5457:
+L5487:
         mov     r14d, 0xfffffffa
-        jmp     L529f
-L5462:
+        jmp     L52cf
+L5492:
         lea     rax, [rbp-0x4030]
         lea     rbx, [rbp-0x5430]
         mov     QWORD PTR [rbp-0x6098], rax
@@ -5746,31 +5757,31 @@ L5462:
         mov     QWORD PTR [rbp-0x60a8], rax
         lea     rax, [rbp-0x5f30]
         mov     QWORD PTR [rbp-0x60c0], rax
-        jmp     L5457
+        jmp     L5487
         // nop
         .byte   0x90
 
-// mldsa44_verify_extmu (0x54c0)
+// mldsa44_verify_extmu (0x54f0)
 
-L54c0:
+L54f0:
         sub     rsp, 0x10
         mov     r9, rdx
         xor     r8d, r8d
         xor     ecx, ecx
         push    0x1
         mov     edx, 0x40
-        call    L4f70
+        call    L4fa0
         add     rsp, 0x18
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa44_prepare_domain_separation_prefix (0x54e0)
+// mldsa44_prepare_domain_separation_prefix (0x5510)
 
-L54e0:
+L5510:
         xor     eax, eax
         cmp     r8, 0xff
-        ja      L5550
+        ja      L5580
         push    r14
         push    r13
         push    r12
@@ -5779,14 +5790,14 @@ L54e0:
         mov     rbp, r8
         sub     rsp, 0x18
         test    r9d, r9d
-        jne     L5528
+        jne     L5558
         mov     BYTE PTR [rdi], 0x0
         mov     BYTE PTR [r12+0x1], r8b
         test    r8, r8
-        jne     L5608
-L5512:
+        jne     L5638
+L5542:
         lea     rax, [rbp+0x2]
-L5516:
+L5546:
         add     rsp, 0x18
         pop     rbp
         pop     r12
@@ -5795,9 +5806,9 @@ L5516:
         ret
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L5528:
+L5558:
         cmp     r9d, 0xc
-        ja      L55be
+        ja      L55ee
         mov     r13, rdx
         mov     eax, r9d
         lea     rdx, [rip+Lc500]
@@ -5807,31 +5818,31 @@ L5528:
         jmp     rax
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L5550:
+L5580:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
         cmp     r13, 0x20
-        jne     L55be
-L555e:
+        jne     L55ee
+L558e:
         mov     BYTE PTR [r12], 0x1
         mov     BYTE PTR [r12+0x1], bpl
         test    rbp, rbp
-        jne     L5620
-L5571:
+        jne     L5650
+L55a1:
         lea     rcx, [rip+Lc540]
         xor     eax, eax
         mov     rdx, rcx
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L5580:
+L55b0:
         cmp     r9d, DWORD PTR [rdx]
-        je      L55e8
+        je      L5618
         add     eax, 0x1
         add     rdx, 0x10
         cmp     eax, 0xc
-        jne     L5580
-L5591:
+        jne     L55b0
+L55c1:
         lea     rdi, [r12+rbp*1+0xd]
         mov     rdx, r13
         mov     rsi, r14
@@ -5846,25 +5857,25 @@ L5591:
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
         cmp     r13, 0x1c
-        je      L555e
-L55be:
+        je      L558e
+L55ee:
         xor     eax, eax
-        jmp     L5516
+        jmp     L5546
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
         cmp     r13, 0x40
-        je      L555e
+        je      L558e
         xor     eax, eax
-        jmp     L5516
+        jmp     L5546
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
         cmp     r13, 0x30
-        je      L555e
+        je      L558e
         xor     eax, eax
-        jmp     L5516
+        jmp     L5546
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L55e8:
+L5618:
         shl     rax, 0x4
         lea     rdx, [r12+rbp*1+0x2]
         lea     rax, [rcx+rax*1+0x4]
@@ -5872,31 +5883,31 @@ L55e8:
         mov     QWORD PTR [rdx], rcx
         mov     eax, DWORD PTR [rax+0x7]
         mov     DWORD PTR [rdx+0x7], eax
-        jmp     L5591
+        jmp     L55c1
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L5608:
+L5638:
         lea     rdi, [rdi+0x2]
         mov     rdx, r8
         mov     rsi, rcx
         call    L1010
-        jmp     L5512
+        jmp     L5542
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L5620:
+L5650:
         lea     rdi, [r12+0x2]
         mov     rdx, rbp
         mov     rsi, rcx
         mov     DWORD PTR [rsp+0xc], r9d
         call    L1010
         mov     r9d, DWORD PTR [rsp+0xc]
-        jmp     L5571
+        jmp     L55a1
         // nop
         .byte   0x90
 
-// mldsa44_signature (0x5640)
+// mldsa44_signature (0x5670)
 
-L5640:
+L5670:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -5918,13 +5929,13 @@ L5640:
         sub     rsp, 0x1a0
         mov     QWORD PTR [rbp-0x1b8], rsi
         xor     esi, esi
-        call    L54e0
+        call    L5510
         test    rax, rax
         mov     QWORD PTR [rbp-0x1c0], rax
-        jne     L5710
+        jne     L5740
         mov     edx, 0xfffffff7
         lea     r13, [rbp-0x1b0]
-L56a1:
+L56d1:
         lea     rdi, [rbx+0x8]
         mov     rcx, rbx
         xor     eax, eax
@@ -5935,7 +5946,7 @@ L56a1:
         add     ecx, 0x974
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-L56cf:
+L56ff:
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x1b0], xmm0
         movaps  XMMWORD PTR [rbp-0x1a0], xmm0
@@ -5957,14 +5968,14 @@ L56cf:
         ret
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L5710:
+L5740:
         lea     r13, [rbp-0x1b0]
         mov     esi, 0x20
         mov     rdi, r13
         call    L1020
         mov     edx, 0xfffffffd
         test    eax, eax
-        jne     L56a1
+        jne     L56d1
         push    0x0
         mov     r8, QWORD PTR [rbp-0x1c0]
         mov     rcx, r12
@@ -5973,19 +5984,19 @@ L5710:
         mov     rsi, QWORD PTR [rbp-0x1b8]
         mov     r9, r13
         mov     rdi, rbx
-        call    L48b0
+        call    L48e0
         mov     edx, eax
         pop     rax
         pop     rcx
         test    edx, edx
-        je      L56cf
-        jmp     L56a1
+        je      L56ff
+        jmp     L56d1
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa44_verify (0x5770)
+// mldsa44_verify (0x57a0)
 
-L5770:
+L57a0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -6007,9 +6018,9 @@ L5770:
         lea     rbx, [rbp-0x190]
         mov     rdi, rbx
         sub     rsp, 0x160
-        call    L54e0
+        call    L5510
         test    rax, rax
-        je      L5808
+        je      L5838
         sub     rsp, 0x8
         mov     rcx, rbx
         mov     rdx, r14
@@ -6018,11 +6029,11 @@ L5770:
         mov     r9, r15
         mov     rsi, r13
         mov     rdi, r12
-        call    L4f70
+        call    L4fa0
         mov     edx, eax
         pop     rax
         pop     rcx
-L57db:
+L580b:
         xor     eax, eax
         mov     rdi, rbx
         mov     ecx, 0x29
@@ -6041,15 +6052,15 @@ L57db:
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L5808:
+L5838:
         mov     edx, 0xfffffff7
-        jmp     L57db
+        jmp     L580b
         // nop
         .byte   0x90
 
-// mldsa44_signature_pre_hash_internal (0x5810)
+// mldsa44_signature_pre_hash_internal (0x5840)
 
-L5810:
+L5840:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -6067,10 +6078,10 @@ L5810:
         mov     r9d, DWORD PTR [r10+0x8]
         mov     r14, QWORD PTR [r10]
         test    r9d, r9d
-        jne     L58a8
-L584a:
+        jne     L58d8
+L587a:
         mov     edx, 0xfffffff7
-L584f:
+L587f:
         lea     rdi, [rbx+0x8]
         mov     rcx, rbx
         xor     eax, eax
@@ -6081,7 +6092,7 @@ L584f:
         add     ecx, 0x974
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-L587d:
+L58ad:
         xor     eax, eax
         mov     rdi, r12
         mov     ecx, 0x29
@@ -6099,11 +6110,11 @@ L587d:
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L58a8:
+L58d8:
         mov     rdi, r12
-        call    L54e0
+        call    L5510
         test    rax, rax
-        je      L584a
+        je      L587a
         push    0x0
         xor     ecx, ecx
         mov     rdx, rax
@@ -6112,19 +6123,19 @@ L58a8:
         xor     r8d, r8d
         mov     rsi, r12
         mov     rdi, rbx
-        call    L48b0
+        call    L48e0
         mov     edx, eax
         pop     rax
         pop     rcx
         test    edx, edx
-        je      L587d
-        jmp     L584f
+        je      L58ad
+        jmp     L587f
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa44_signature_pre_hash_shake256 (0x58e0)
+// mldsa44_signature_pre_hash_shake256 (0x5910)
 
-L58e0:
+L5910:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -6156,7 +6167,7 @@ L58e0:
         mov     rcx, r13
         mov     edx, 0x40
         mov     rsi, rbx
-        call    L5810
+        call    L5840
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x70], xmm0
         movaps  XMMWORD PTR [rbp-0x60], xmm0
@@ -6175,9 +6186,9 @@ L58e0:
         lea     rsp, [r10-0x8]
         ret
 
-// mldsa44_verify_pre_hash_internal (0x5970)
+// mldsa44_verify_pre_hash_internal (0x59a0)
 
-L5970:
+L59a0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -6191,14 +6202,14 @@ L5970:
         sub     rsp, 0x170
         mov     r9d, DWORD PTR [r10]
         test    r9d, r9d
-        je      L5a00
+        je      L5a30
         lea     rbx, [rbp-0x190]
         mov     r12, rdi
         mov     rdi, rbx
-        call    L54e0
+        call    L5510
         mov     rdx, rax
         test    rax, rax
-        je      L5a07
+        je      L5a37
         sub     rsp, 0x8
         xor     ecx, ecx
         mov     r9, r13
@@ -6206,11 +6217,11 @@ L5970:
         push    0x0
         mov     rsi, rbx
         mov     rdi, r12
-        call    L4f70
+        call    L4fa0
         mov     edx, eax
         pop     rax
         pop     rcx
-L59d1:
+L5a01:
         xor     eax, eax
         mov     rdi, rbx
         mov     ecx, 0x29
@@ -6227,17 +6238,17 @@ L59d1:
         ret
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L5a00:
+L5a30:
         lea     rbx, [rbp-0x190]
-L5a07:
+L5a37:
         mov     edx, 0xfffffff7
-        jmp     L59d1
+        jmp     L5a01
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa44_verify_pre_hash_shake256 (0x5a10)
+// mldsa44_verify_pre_hash_shake256 (0x5a40)
 
-L5a10:
+L5a40:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -6268,7 +6279,7 @@ L5a10:
         mov     edx, 0x40
         mov     rsi, rbx
         mov     rdi, r12
-        call    L5970
+        call    L59a0
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x70], xmm0
         movaps  XMMWORD PTR [rbp-0x60], xmm0
@@ -6289,9 +6300,9 @@ L5a10:
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa44_pk_from_sk (0x5aa0)
+// mldsa44_pk_from_sk (0x5ad0)
 
-L5aa0:
+L5ad0:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -6323,20 +6334,20 @@ L5aa0:
         movaps  XMMWORD PTR [rsp+0x90], xmm3
         movaps  XMMWORD PTR [rsp+0xa0], xmm4
         movaps  XMMWORD PTR [rsp+0xb0], xmm5
-        call    L4170
+        call    L41a0
         mov     esi, 0x3
         mov     rdi, r14
-        call    L4000
+        call    L4030
         lea     rcx, [rbx+0x200]
         mov     rdx, r15
         mov     esi, 0x3
         mov     rdi, rcx
         mov     QWORD PTR [rsp+0x38], rcx
         mov     r13d, eax
-        call    L40d0
+        call    L4100
         mov     rdi, r14
         mov     DWORD PTR [rsp+0x2c], eax
-        call    L3f60
+        call    L3f90
         movdqa  xmm6, XMMWORD PTR [rsp+0x40]
         movdqa  xmm7, XMMWORD PTR [rsp+0x50]
         lea     r9, [rsp+0x500]
@@ -6349,15 +6360,15 @@ L5aa0:
         movups  XMMWORD PTR [r12+0x10], xmm7
         mov     QWORD PTR [rsp+0x30], r8
         mov     QWORD PTR [rsp+0x38], r9
-        call    L4370
+        call    L43a0
         mov     r9, QWORD PTR [rsp+0x38]
         mov     r8, QWORD PTR [rsp+0x30]
         test    eax, eax
         mov     r11d, eax
-        je      L5ca0
+        je      L5cd0
         lea     rbx, [rsp+0xc0]
         lea     rdx, [rsp+0x80]
-L5bd6:
+L5c06:
         lea     rdi, [r12+0x8]
         mov     rcx, r12
         xor     eax, eax
@@ -6368,7 +6379,7 @@ L5bd6:
         add     ecx, 0x520
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-L5c07:
+L5c37:
         xor     eax, eax
         mov     rdi, r9
         mov     ecx, 0xd0
@@ -6404,20 +6415,20 @@ L5c07:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L5ca0:
+L5cd0:
         pxor    xmm2, xmm2
         xor     eax, eax
         movdqa  xmm0, xmm2
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L5cb0:
+L5ce0:
         movdqu  xmm1, XMMWORD PTR [rbx+rax*1+0x380]
         pxor    xmm1, XMMWORD PTR [r9+rax*1]
         add     rax, 0x10
         por     xmm0, xmm1
         pxor    xmm2, xmm1
         cmp     rax, 0x680
-        jne     L5cb0
+        jne     L5ce0
         movdqa  xmm1, xmm2
         mov     QWORD PTR [rsp+0x18], r8
         psrldq  xmm1, 0x8
@@ -6466,14 +6477,14 @@ L5cb0:
         mov     r11d, DWORD PTR [rsp+0x30]
         movdqa  xmm0, xmm1
         lea     rdx, [rsp+0x80]
-L5da2:
+L5dd2:
         movdqa  xmm2, XMMWORD PTR [rbx+rax*1]
         pxor    xmm2, XMMWORD PTR [rdx+rax*1]
         add     rax, 0x10
         por     xmm0, xmm2
         pxor    xmm1, xmm2
         cmp     rax, 0x40
-        jne     L5da2
+        jne     L5dd2
         movdqa  xmm2, xmm1
         psrldq  xmm2, 0x8
         pxor    xmm1, xmm2
@@ -6510,21 +6521,21 @@ L5da2:
         or      r13b, BYTE PTR [rsp+0x38]
         or      r13d, eax
         test    r13b, r13b
-        je      L5c07
+        je      L5c37
         mov     r11d, 0xfffffff9
-        jmp     L5bd6
+        jmp     L5c06
 
-// mldsa65_unpack_pk_t1 (0x5e60)
+// mldsa65_unpack_pk_t1 (0x5e90)
 
-L5e60:
+L5e90:
         lea     eax, [rdx+rdx*4]
         shl     eax, 0x6
         lea     rsi, [rax+rsi*1+0x20]
         jmp     L2e10
 
-// mldsa65_pack_sk_rho_key_tr (0x5e70)
+// mldsa65_pack_sk_rho_key_tr (0x5ea0)
 
-L5e70:
+L5ea0:
         movdqu  xmm0, XMMWORD PTR [rsi]
         movups  XMMWORD PTR [rdi], xmm0
         movdqu  xmm1, XMMWORD PTR [rsi+0x10]
@@ -6545,9 +6556,9 @@ L5e70:
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa65_unpack_sk (0x5ec0)
+// mldsa65_unpack_sk (0x5ef0)
 
-L5ec0:
+L5ef0:
         push    r13
         mov     r13, rcx
         push    r12
@@ -6575,38 +6586,38 @@ L5ec0:
         movdqu  xmm7, XMMWORD PTR [r12+0x70]
         movups  XMMWORD PTR [rsi+0x30], xmm7
         lea     rsi, [r12+0x80]
-        call    L6ea0
+        call    L6ef0
         mov     rdi, rbp
         mov     rbp, r13
-        call    L6c70
+        call    L6cc0
         lea     rsi, [r12+0x300]
         mov     rdi, rbx
-        call    L6f20
+        call    L6f70
         mov     rdi, rbx
         lea     rbx, [r12+0x600]
         add     r12, 0xfc0
-        call    L6d90
+        call    L6de0
         // xchg    ax, ax
         .byte   0x66,0x90
-L5f70:
+L5fa0:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x1a0
         add     rbp, 0x400
-        call    L3020
+        call    L3030
         cmp     rbx, r12
-        jne     L5f70
+        jne     L5fa0
         add     rsp, 0x8
         mov     rdi, r13
         pop     rbx
         pop     rbp
         pop     r12
         pop     r13
-        jmp     L6d90
+        jmp     L6de0
 
-// mldsa65_pack_sig_c (0x5fa0)
+// mldsa65_pack_sig_c (0x5fd0)
 
-L5fa0:
+L5fd0:
         movdqu  xmm0, XMMWORD PTR [rsi]
         movups  XMMWORD PTR [rdi], xmm0
         movdqu  xmm1, XMMWORD PTR [rsi+0x10]
@@ -6617,9 +6628,9 @@ L5fa0:
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa65_pack_sig_h (0x5fc0)
+// mldsa65_pack_sig_h (0x5ff0)
 
-L5fc0:
+L5ff0:
         push    r15
         lea     rax, [rdx+0x300]
         pxor    xmm0, xmm0
@@ -6640,37 +6651,37 @@ L5fc0:
         movups  XMMWORD PTR [r15+0x20], xmm0
         movups  XMMWORD PTR [r15+0x10], xmm0
         movups  XMMWORD PTR [r15+0x2d], xmm0
-L600d:
+L603d:
         mov     rsi, r12
         mov     rdi, r13
-        call    L3320
+        call    L3330
         xor     eax, eax
-        jmp     L6035
+        jmp     L6065
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L6020:
+L6050:
         mov     ecx, ebx
         add     ebx, 0x1
         mov     BYTE PTR [r15+rcx*1], al
-L6029:
+L6059:
         add     rax, 0x1
         cmp     rax, 0x100
-        je      L6071
-L6035:
+        je      L60a1
+L6065:
         mov     ecx, DWORD PTR [r14+rax*4]
         mov     edi, DWORD PTR [r13+rax*4+0x0]
         lea     esi, [rcx+0x3ff00]
         cmp     esi, 0x7fe00
-        ja      L6058
+        ja      L6088
         cmp     ecx, 0xfffc0100
-        jne     L6029
+        jne     L6059
         test    edi, edi
-        je      L6029
-L6058:
+        je      L6059
+L6088:
         cmp     ebx, 0x37
-        jne     L6020
+        jne     L6050
         mov     eax, 0xffffffff
-L6062:
+L6092:
         add     rsp, 0x18
         pop     rbx
         pop     rbp
@@ -6679,32 +6690,32 @@ L6062:
         pop     r14
         pop     r15
         ret
-L6071:
+L60a1:
         mov     rax, QWORD PTR [rsp+0x8]
         sub     r12, 0xffffffffffffff80
         mov     BYTE PTR [rbp+0x0], bl
         add     rbp, 0x1
         add     r14, 0x400
         cmp     r12, rax
-        jne     L600d
+        jne     L603d
         xor     eax, eax
-        jmp     L6062
+        jmp     L6092
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa65_pack_sig_z (0x60a0)
+// mldsa65_pack_sig_z (0x60d0)
 
-L60a0:
+L60d0:
         lea     eax, [rdx+rdx*4]
         shl     eax, 0x7
         lea     rdi, [rax+rdi*1+0x30]
-        jmp     L6860
+        jmp     L68a0
 
-// mldsa65_sig_unpack_hints (0x60b0)
+// mldsa65_sig_unpack_hints (0x60e0)
 
-L60b0:
+L60e0:
         push    rbp
         mov     r11, rsi
         mov     r8, rdi
@@ -6713,17 +6724,17 @@ L60b0:
         lea     rbx, [rsi+0xcb0]
         xor     esi, esi
         test    edx, edx
-        je      L60d3
+        je      L6103
         lea     eax, [rdx+0x36]
         movzx   esi, BYTE PTR [r11+rax*1+0xcb0]
-L60d3:
+L6103:
         lea     eax, [rbp+0x37]
         movzx   r9d, BYTE PTR [r11+rax*1+0xcb0]
         mov     r10, r9
         cmp     r9d, esi
-        jb      L6156
+        jb      L6186
         cmp     r9d, 0x37
-        ja      L6156
+        ja      L6186
         lea     rdi, [r8+0x8]
         mov     rcx, r8
         xor     eax, eax
@@ -6735,64 +6746,64 @@ L60d3:
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
         cmp     esi, r9d
-        jae     L6160
+        jae     L6190
         lea     edx, [rsi+0xcb0]
         mov     eax, esi
         add     rdx, r11
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L6130:
+L6160:
         movzx   ecx, BYTE PTR [rdx]
         add     rdx, 0x1
         mov     DWORD PTR [r8+rcx*4], 0x1
         mov     ecx, eax
         add     eax, 0x1
         cmp     eax, r9d
-        jae     L6160
+        jae     L6190
         cmp     esi, eax
-        jae     L6130
+        jae     L6160
         movzx   edi, BYTE PTR [rdx]
         cmp     BYTE PTR [rbx+rcx*1], dil
-        jb      L6130
-L6156:
+        jb      L6160
+L6186:
         mov     eax, 0xffffffff
         pop     rbx
         pop     rbp
         ret
         // xchg    ax, ax
         .byte   0x66,0x90
-L6160:
+L6190:
         cmp     ebp, 0x5
-        je      L6170
-L6165:
+        je      L61a0
+L6195:
         xor     eax, eax
         pop     rbx
         pop     rbp
         ret
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L6170:
+L61a0:
         cmp     r9d, 0x37
-        je      L6165
+        je      L6195
         cmp     BYTE PTR [r11+r10*1+0xcb0], 0x0
-        jne     L6156
+        jne     L6186
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L6188:
+L61b8:
         add     r10, 0x1
         cmp     r10d, 0x37
-        je      L6165
+        je      L6195
         cmp     BYTE PTR [r11+r10*1+0xcb0], 0x0
-        je      L6188
-        jmp     L6156
+        je      L61b8
+        jmp     L6186
         // nop
         .byte   0x90
 
-// mld_rej_eta_c65.constprop.0 (0x61a0)
+// mld_rej_eta_c65.constprop.0 (0x61d0)
 
-L61a0:
+L61d0:
         cmp     esi, 0xff
-        ja      L6230
+        ja      L6260
         push    rbx
         mov     r10d, 0x1
         mov     r8, rdi
@@ -6801,26 +6812,26 @@ L61a0:
         sub     r10d, edx
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L61c8:
+L61f8:
         movzx   eax, BYTE PTR [rdx]
         mov     ecx, eax
         shr     al, 0x4
         and     ecx, 0xf
         cmp     cl, 0x8
-        ja      L61e9
+        ja      L6219
         movzx   ecx, cl
         mov     ebx, r11d
         mov     edi, esi
         add     esi, 0x1
         sub     ebx, ecx
         mov     DWORD PTR [r8+rdi*4], ebx
-L61e9:
+L6219:
         cmp     esi, 0xff
         setbe   cl
         cmp     al, 0x8
-        ja      L6216
+        ja      L6246
         test    cl, cl
-        je      L6216
+        je      L6246
         lea     edi, [rsi+0x1]
         movzx   eax, al
         mov     ecx, r11d
@@ -6830,19 +6841,19 @@ L61e9:
         mov     DWORD PTR [r8+rsi*4], ecx
         setbe   cl
         mov     esi, edi
-L6216:
+L6246:
         lea     eax, [r10+rdx*1]
         cmp     eax, r9d
         setb    al
         add     rdx, 0x1
         test    al, cl
-        jne     L61c8
+        jne     L61f8
         mov     eax, esi
         pop     rbx
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L6230:
+L6260:
         mov     eax, esi
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
@@ -6850,14 +6861,14 @@ L6230:
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa65_poly_decompose (0x6240)
+// mldsa65_poly_decompose (0x6270)
 
-L6240:
+L6270:
         xor     ecx, ecx
         mov     r8d, 0x3ff000
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L6250:
+L6280:
         mov     edx, DWORD PTR [rsi+rcx*1]
         lea     eax, [rdx+0x7f]
         sar     eax, 0x7
@@ -6883,29 +6894,29 @@ L6250:
         mov     DWORD PTR [rsi+rcx*1], eax
         add     rcx, 0x4
         cmp     rcx, 0x400
-        jne     L6250
+        jne     L6280
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa65_poly_use_hint (0x62b0)
+// mldsa65_poly_use_hint (0x62e0)
 
-L62b0:
+L62e0:
         mov     r8, rsi
         mov     r9d, 0x3ff000
         xor     esi, esi
-        jmp     L62d6
+        jmp     L6306
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L62c0:
+L62f0:
         add     edx, 0x1
         and     edx, 0xf
-L62c6:
+L62f6:
         mov     DWORD PTR [rdi+rsi*1], edx
         add     rsi, 0x4
         cmp     rsi, 0x400
-        je      L633d
-L62d6:
+        je      L636d
+L6306:
         mov     r10d, DWORD PTR [rdi+rsi*1]
         lea     eax, [r10+0x7f]
         sar     eax, 0x7
@@ -6926,26 +6937,26 @@ L62d6:
         sar     rax, 0x1f
         mov     r10d, DWORD PTR [r8+rsi*1]
         test    r10d, r10d
-        je      L62c6
+        je      L62f6
         lea     r10d, [rcx-0x7fe001]
         xor     r10d, ecx
         and     eax, r10d
         xor     eax, ecx
-        jg      L62c0
+        jg      L62f0
         sub     edx, 0x1
         and     edx, 0xf
         mov     DWORD PTR [rdi+rsi*1], edx
         add     rsi, 0x4
         cmp     rsi, 0x400
-        jne     L62d6
-L633d:
+        jne     L6306
+L636d:
         ret
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa65_poly_uniform_eta_4x (0x6340)
+// mldsa65_poly_uniform_eta_4x (0x6370)
 
-L6340:
+L6370:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -7026,33 +7037,33 @@ L6340:
         xor     esi, esi
         mov     rdx, r14
         mov     ecx, 0x110
-        call    L61a0
+        call    L61d0
         mov     rdi, QWORD PTR [rsp+0x38]
         mov     rdx, rbx
         xor     esi, esi
         mov     ecx, 0x110
         mov     r13d, eax
-        call    L61a0
+        call    L61d0
         mov     rdi, QWORD PTR [rsp+0x30]
         xor     esi, esi
         mov     rdx, r15
         mov     ecx, 0x110
         mov     r12d, eax
-        call    L61a0
+        call    L61d0
         mov     rdx, QWORD PTR [rsp+0x58]
         mov     rdi, QWORD PTR [rsp+0x28]
         xor     esi, esi
         mov     ecx, 0x110
         mov     ebx, eax
-        call    L61a0
+        call    L61d0
         cmp     r12d, 0xff
         mov     r10d, eax
         setbe   al
         cmp     r13d, 0xff
-        jmp     L65f1
+        jmp     L6621
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L6558:
+L6588:
         mov     r9, QWORD PTR [rsp+0x20]
         mov     rcx, QWORD PTR [rsp+0x58]
         mov     rdx, r15
@@ -7065,38 +7076,38 @@ L6558:
         mov     esi, r13d
         mov     rdx, r14
         mov     ecx, 0x88
-        call    L61a0
+        call    L61d0
         mov     rdx, QWORD PTR [rsp+0x50]
         mov     rdi, QWORD PTR [rsp+0x38]
         mov     esi, r12d
         mov     ecx, 0x88
         mov     r13d, eax
-        call    L61a0
+        call    L61d0
         mov     rdi, QWORD PTR [rsp+0x30]
         mov     esi, ebx
         mov     rdx, r15
         mov     ecx, 0x88
         mov     r12d, eax
-        call    L61a0
+        call    L61d0
         mov     rdx, QWORD PTR [rsp+0x58]
         mov     esi, DWORD PTR [rsp+0x4c]
         mov     ecx, 0x88
         mov     rdi, QWORD PTR [rsp+0x28]
         mov     ebx, eax
-        call    L61a0
+        call    L61d0
         cmp     r13d, 0xff
         mov     r10d, eax
         setbe   al
         cmp     r12d, 0xff
-L65f1:
+L6621:
         setbe   dl
         or      eax, edx
         cmp     ebx, 0xff
         setbe   dl
         or      al, dl
-        jne     L6558
+        jne     L6588
         cmp     r10d, 0xff
-        jbe     L6558
+        jbe     L6588
         mov     rdi, QWORD PTR [rsp+0x20]
         call    L1860
         xor     eax, eax
@@ -7118,9 +7129,9 @@ L65f1:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa65_poly_challenge (0x6650)
+// mldsa65_poly_challenge (0x6680)
 
-L6650:
+L6680:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -7152,14 +7163,14 @@ L6650:
         xor     esi, esi
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L66c0:
+L66f0:
         movzx   edx, BYTE PTR [rax]
         add     rax, 0x1
         shl     rdx, cl
         add     ecx, 0x8
         or      rsi, rdx
         cmp     rax, rdi
-        jne     L66c0
+        jne     L66f0
         lea     rdi, [r14+0x8]
         mov     rcx, r14
         xor     eax, eax
@@ -7174,19 +7185,19 @@ L66c0:
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
         mov     ecx, 0x8
-        jmp     L672f
+        jmp     L675f
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L6720:
+L6750:
         mov     eax, ecx
-L6722:
+L6752:
         movzx   edx, BYTE PTR [rsp+rax*1+0x20]
         lea     ecx, [rax+0x1]
         cmp     r15d, edx
-        jae     L675b
-L672f:
+        jae     L678b
+L675f:
         cmp     ecx, 0x88
-        jne     L6720
+        jne     L6750
         mov     rdx, r12
         mov     esi, 0x88
         mov     rdi, rbx
@@ -7194,9 +7205,9 @@ L672f:
         movzx   edx, BYTE PTR [rsp+0x20]
         mov     eax, 0x1
         cmp     r15d, edx
-        jb      L6722
+        jb      L6752
         mov     ecx, 0x1
-L675b:
+L678b:
         mov     eax, DWORD PTR [r14+rdx*4]
         mov     edi, r13d
         mov     DWORD PTR [r14+r15*4], eax
@@ -7210,7 +7221,7 @@ L675b:
         sub     edi, esi
         mov     DWORD PTR [r14+rdx*4], edi
         cmp     r15, 0x100
-        jne     L672f
+        jne     L675f
         mov     rdi, r12
         call    L1400
         xor     eax, eax
@@ -7232,14 +7243,14 @@ L675b:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa65_polyeta_pack (0x67d0)
+// mldsa65_polyeta_pack (0x6800)
 
-L67d0:
+L6800:
         xor     eax, eax
         mov     ecx, 0x4
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L67e0:
+L6810:
         mov     edx, ecx
         sub     dl, BYTE PTR [rsi+rax*8+0x4]
         mov     r8d, ecx
@@ -7249,20 +7260,22 @@ L67e0:
         mov     BYTE PTR [rdi+rax*1], dl
         add     rax, 0x1
         cmp     rax, 0x80
-        jne     L67e0
+        jne     L6810
+        mov     QWORD PTR [rsp-0x8], 0x0
+        lea     rax, [rsp-0x8]
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-        // xchg    ax, ax
-        .byte   0x66,0x90
+        // nop     DWORD PTR [rax+0x0]
+        .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa65_polyeta_unpack (0x6810)
+// mldsa65_polyeta_unpack (0x6850)
 
-L6810:
+L6850:
         lea     rdx, [rdi+0x4]
         lea     r9, [rsi+0x80]
         mov     edi, 0x4
-L6820:
+L6860:
         movzx   ecx, BYTE PTR [rsi]
         mov     r8d, edi
         add     rsi, 0x1
@@ -7278,16 +7291,16 @@ L6820:
         sub     ecx, eax
         mov     DWORD PTR [rdx-0x8], ecx
         cmp     rsi, r9
-        jne     L6820
+        jne     L6860
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa65_polyz_pack (0x6860)
+// mldsa65_polyz_pack (0x68a0)
 
-L6860:
+L68a0:
         push    rbx
         mov     rax, rdi
         mov     r8d, 0x80000
@@ -7296,7 +7309,7 @@ L6860:
         mov     rsi, rax
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L6880:
+L68c0:
         mov     ecx, r8d
         mov     edx, r8d
         sub     ecx, DWORD PTR [rdi]
@@ -7323,24 +7336,27 @@ L6880:
         or      eax, ecx
         mov     DWORD PTR [rsi-0x5], eax
         cmp     r9, rsi
-        jne     L6880
+        jne     L68c0
+        pxor    xmm0, xmm0
+        lea     rax, [rsp-0x10]
+        movaps  XMMWORD PTR [rsp-0x10], xmm0
         pop     rbx
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-        // xchg    ax, ax
-        .byte   0x66,0x90
+        // nop     DWORD PTR [rax+0x0]
+        .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa65_polyz_unpack (0x68e0)
+// mldsa65_polyz_unpack (0x6930)
 
-L68e0:
+L6930:
         mov     rax, rsi
         mov     rdx, rdi
         lea     r9, [rsi+0x280]
         mov     r8d, 0x80000
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L68f8:
+L6948:
         movzx   ecx, BYTE PTR [rax]
         add     rax, 0x5
         add     rdx, 0x8
@@ -7372,14 +7388,14 @@ L68f8:
         mov     DWORD PTR [rdx-0x8], edi
         mov     DWORD PTR [rdx-0x4], ecx
         cmp     r9, rax
-        jne     L68f8
+        jne     L6948
         ret
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa65_poly_uniform_gamma1 (0x6960)
+// mldsa65_poly_uniform_gamma1 (0x69b0)
 
-L6960:
+L69b0:
         push    rbp
         mov     rbp, rsp
         push    r14
@@ -7415,7 +7431,7 @@ L6960:
         call    L1360
         mov     rsi, rbx
         mov     rdi, r13
-        call    L68e0
+        call    L6930
         mov     rdi, r12
         call    L1400
         xor     eax, eax
@@ -7439,9 +7455,9 @@ L6960:
         // nop
         .byte   0x90
 
-// mldsa65_poly_uniform_gamma1_4x (0x6a30)
+// mldsa65_poly_uniform_gamma1_4x (0x6a80)
 
-L6a30:
+L6a80:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -7510,16 +7526,16 @@ L6a30:
         call    L17b0
         mov     rdi, QWORD PTR [rsp+0x38]
         mov     rsi, r13
-        call    L68e0
+        call    L6930
         mov     rsi, QWORD PTR [rsp+0x18]
         mov     rdi, QWORD PTR [rsp+0x30]
-        call    L68e0
+        call    L6930
         mov     rdi, QWORD PTR [rsp+0x28]
         mov     rsi, r15
-        call    L68e0
+        call    L6930
         mov     rdi, QWORD PTR [rsp+0x20]
         mov     rsi, r14
-        call    L68e0
+        call    L6930
         mov     rdi, r12
         call    L1860
         xor     eax, eax
@@ -7540,9 +7556,9 @@ L6a30:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa65_polyvecl_uniform_gamma1 (0x6c00)
+// mldsa65_polyvecl_uniform_gamma1 (0x6c50)
 
-L6c00:
+L6c50:
         push    r12
         mov     r12, rsi
         lea     rcx, [rdi+0xc00]
@@ -7564,7 +7580,7 @@ L6c00:
         lea     eax, [rbx+0x1]
         movzx   eax, ax
         push    rax
-        call    L6a30
+        call    L6a80
         add     rsp, 0x20
         lea     edx, [rbx+0x4]
         mov     rsi, r12
@@ -7573,26 +7589,26 @@ L6c00:
         movzx   edx, dx
         pop     rbp
         pop     r12
-        jmp     L6960
+        jmp     L69b0
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa65_polyvecl_ntt (0x6c70)
+// mldsa65_polyvecl_ntt (0x6cc0)
 
-L6c70:
+L6cc0:
         push    rbp
         lea     rbp, [rdi+0x1400]
         push    rbx
         mov     rbx, rdi
         sub     rsp, 0x8
-L6c80:
+L6cd0:
         mov     rdi, rbx
         add     rbx, 0x400
         call    L27d0
         cmp     rbx, rbp
-        jne     L6c80
+        jne     L6cd0
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -7600,28 +7616,28 @@ L6c80:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa65_polyvecl_pointwise_acc_montgomery (0x6ca0)
+// mldsa65_polyvecl_pointwise_acc_montgomery (0x6cf0)
 
-L6ca0:
+L6cf0:
         mov     r9, rdx
         mov     r8, rsi
         xor     edx, edx
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L6cb0:
+L6d00:
         mov     rax, rdx
         xor     esi, esi
         lea     r11, [rdx+0x1400]
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L6cc0:
+L6d10:
         movsxd  rcx, DWORD PTR [r8+rax*1]
         movsxd  r10, DWORD PTR [r9+rax*1]
         add     rax, 0x400
         imul    rcx, r10
         add     rsi, rcx
         cmp     r11, rax
-        jne     L6cc0
+        jne     L6d10
         imul    ecx, esi, 0x3802001
         movsxd  rcx, ecx
         mov     r10, rcx
@@ -7635,14 +7651,14 @@ L6cc0:
         mov     DWORD PTR [rdi+rdx*1], eax
         add     rdx, 0x4
         cmp     rdx, 0x400
-        jne     L6cb0
+        jne     L6d00
         ret
         // nop
         .byte   0x90
 
-// mldsa65_polyvecl_chknorm (0x6d10)
+// mldsa65_polyvecl_chknorm (0x6d60)
 
-L6d10:
+L6d60:
         push    r13
         lea     r13, [rdi+0x1400]
         push    r12
@@ -7654,14 +7670,14 @@ L6d10:
         sub     rsp, 0x8
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L6d30:
+L6d80:
         mov     rdi, rbx
         mov     esi, r12d
         add     rbx, 0x400
-        call    L31e0
+        call    L31f0
         or      ebp, eax
         cmp     rbx, r13
-        jne     L6d30
+        jne     L6d80
         add     rsp, 0x8
         mov     eax, ebp
         pop     rbx
@@ -7672,20 +7688,20 @@ L6d30:
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa65_polyveck_caddq (0x6d60)
+// mldsa65_polyveck_caddq (0x6db0)
 
-L6d60:
+L6db0:
         push    rbp
         lea     rbp, [rdi+0x1800]
         push    rbx
         mov     rbx, rdi
         sub     rsp, 0x8
-L6d70:
+L6dc0:
         mov     rdi, rbx
         add     rbx, 0x400
         call    L2700
         cmp     rbx, rbp
-        jne     L6d70
+        jne     L6dc0
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -7693,20 +7709,20 @@ L6d70:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa65_polyveck_ntt (0x6d90)
+// mldsa65_polyveck_ntt (0x6de0)
 
-L6d90:
+L6de0:
         push    rbp
         lea     rbp, [rdi+0x1800]
         push    rbx
         mov     rbx, rdi
         sub     rsp, 0x8
-L6da0:
+L6df0:
         mov     rdi, rbx
         add     rbx, 0x400
         call    L27d0
         cmp     rbx, rbp
-        jne     L6da0
+        jne     L6df0
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -7714,20 +7730,20 @@ L6da0:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa65_polyveck_invntt_tomont (0x6dc0)
+// mldsa65_polyveck_invntt_tomont (0x6e10)
 
-L6dc0:
+L6e10:
         push    rbp
         lea     rbp, [rdi+0x1800]
         push    rbx
         mov     rbx, rdi
         sub     rsp, 0x8
-L6dd0:
+L6e20:
         mov     rdi, rbx
         add     rbx, 0x400
         call    L28e0
         cmp     rbx, rbp
-        jne     L6dd0
+        jne     L6e20
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -7735,9 +7751,9 @@ L6dd0:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa65_polyveck_unpack_eta_chknorm (0x6df0)
+// mldsa65_polyveck_unpack_eta_chknorm (0x6e40)
 
-L6df0:
+L6e40:
         push    r14
         lea     r14, [rdi+0x300]
         push    r13
@@ -7750,17 +7766,17 @@ L6df0:
         mov     rbx, rdi
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L6e10:
+L6e60:
         mov     rsi, rbx
         mov     rdi, rbp
         sub     rbx, 0xffffffffffffff80
-        call    L6810
+        call    L6850
         mov     esi, r13d
         mov     rdi, rbp
-        call    L31e0
+        call    L31f0
         or      r12d, eax
         cmp     rbx, r14
-        jne     L6e10
+        jne     L6e60
         pop     rbx
         mov     eax, r12d
         pop     rbp
@@ -7771,9 +7787,9 @@ L6e10:
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa65_polyveck_decompose_pack_w1 (0x6e40)
+// mldsa65_polyveck_decompose_pack_w1 (0x6e90)
 
-L6e40:
+L6e90:
         push    r13
         lea     r13, [rsi+0x1800]
         push    r12
@@ -7785,17 +7801,17 @@ L6e40:
         sub     rsp, 0x8
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L6e60:
+L6eb0:
         mov     rsi, rbx
         mov     rdi, r12
         add     rbx, 0x400
-        call    L6240
+        call    L6270
         mov     rdi, rbp
         mov     rsi, r12
         sub     rbp, 0xffffffffffffff80
-        call    L3280
+        call    L3290
         cmp     rbx, r13
-        jne     L6e60
+        jne     L6eb0
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -7807,9 +7823,9 @@ L6e60:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa65_polyvecl_unpack_eta (0x6ea0)
+// mldsa65_polyvecl_unpack_eta (0x6ef0)
 
-L6ea0:
+L6ef0:
         push    r12
         lea     r12, [rdi+0x1400]
         push    rbp
@@ -7818,14 +7834,14 @@ L6ea0:
         mov     rbx, rdi
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L6eb8:
+L6f08:
         mov     rsi, rbp
         mov     rdi, rbx
         add     rbx, 0x400
         sub     rbp, 0xffffffffffffff80
-        call    L6810
+        call    L6850
         cmp     rbx, r12
-        jne     L6eb8
+        jne     L6f08
         pop     rbx
         pop     rbp
         pop     r12
@@ -7833,9 +7849,9 @@ L6eb8:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa65_polyvecl_unpack_z (0x6ee0)
+// mldsa65_polyvecl_unpack_z (0x6f30)
 
-L6ee0:
+L6f30:
         push    r12
         lea     r12, [rsi+0xc80]
         push    rbp
@@ -7844,14 +7860,14 @@ L6ee0:
         mov     rbx, rsi
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L6ef8:
+L6f48:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x280
         add     rbp, 0x400
-        call    L68e0
+        call    L6930
         cmp     rbx, r12
-        jne     L6ef8
+        jne     L6f48
         pop     rbx
         pop     rbp
         pop     r12
@@ -7859,9 +7875,9 @@ L6ef8:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa65_polyveck_unpack_eta (0x6f20)
+// mldsa65_polyveck_unpack_eta (0x6f70)
 
-L6f20:
+L6f70:
         push    r12
         lea     r12, [rdi+0x1800]
         push    rbp
@@ -7870,14 +7886,14 @@ L6f20:
         mov     rbx, rdi
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L6f38:
+L6f88:
         mov     rsi, rbp
         mov     rdi, rbx
         add     rbx, 0x400
         sub     rbp, 0xffffffffffffff80
-        call    L6810
+        call    L6850
         cmp     rbx, r12
-        jne     L6f38
+        jne     L6f88
         pop     rbx
         pop     rbp
         pop     r12
@@ -7885,9 +7901,9 @@ L6f38:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa65_polyvec_matrix_expand_eager (0x6f60)
+// mldsa65_polyvec_matrix_expand_eager (0x6fb0)
 
-L6f60:
+L6fb0:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -7903,20 +7919,20 @@ L6f60:
         mov     rbx, rsp
         lea     r15, [rsp+0x100]
         mov     rax, rbx
-L6f92:
+L6fe2:
         movaps  XMMWORD PTR [rax], xmm1
         add     rax, 0x40
         movaps  XMMWORD PTR [rax-0x30], xmm0
         cmp     r15, rax
-        jne     L6f92
+        jne     L6fe2
         xor     r12d, r12d
         mov     r13d, 0xcccccccd
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L6fb0:
+L7000:
         mov     rdx, rbx
         mov     ecx, r12d
-L6fb6:
+L7006:
         mov     eax, ecx
         mov     esi, ecx
         add     rdx, 0x40
@@ -7928,7 +7944,7 @@ L6fb6:
         sub     esi, edi
         mov     BYTE PTR [rdx-0x20], sil
         cmp     r15, rdx
-        jne     L6fb6
+        jne     L7006
         lea     eax, [r12+0x3]
         lea     esi, [r12+0x2]
         mov     rdx, rax
@@ -7977,7 +7993,7 @@ L6fb6:
         add     rdi, r14
         call    L2ba0
         cmp     r12d, 0x1c
-        jne     L6fb0
+        jne     L7000
         movzx   eax, WORD PTR [rip+Lc602]
         lea     rdi, [r14+0x7000]
         mov     rsi, rbx
@@ -8005,22 +8021,22 @@ L6fb6:
         // nop
         .byte   0x90
 
-// mldsa65_polyvec_matrix_pointwise_montgomery_row_eager (0x70e0)
+// mldsa65_polyvec_matrix_pointwise_montgomery_row_eager (0x7130)
 
-L70e0:
+L7130:
         mov     ecx, ecx
         lea     rax, [rcx+rcx*4]
         shl     rax, 0xa
         add     rsi, rax
-        jmp     L6ca0
+        jmp     L6cf0
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa65_polyvec_matrix_pointwise_montgomery_yvec_eager (0x7100)
+// mldsa65_polyvec_matrix_pointwise_montgomery_yvec_eager (0x7150)
 
-L7100:
+L7150:
         push    r14
         mov     r14, rdi
         push    r13
@@ -8036,32 +8052,32 @@ L7100:
         xor     ebx, ebx
         rep movs QWORD PTR es:[rdi], QWORD PTR ds:[rsi]
         mov     rdi, r12
-        call    L6c70
+        call    L6cc0
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L7130:
+L7180:
         mov     ecx, ebx
         mov     rdi, rbp
         mov     rdx, r12
         mov     rsi, r13
-        call    L70e0
+        call    L7130
         add     ebx, 0x1
         add     rbp, 0x400
         cmp     ebx, 0x6
-        jne     L7130
+        jne     L7180
         pop     rbx
         mov     rdi, r14
         pop     rbp
         pop     r12
         pop     r13
         pop     r14
-        jmp     L6dc0
+        jmp     L6e10
         // nop
         .byte   0x90
 
-// mld_compute_pack_t0_t165 (0x7160)
+// mld_compute_pack_t0_t165 (0x71b0)
 
-L7160:
+L71b0:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -8081,23 +8097,23 @@ L7160:
         mov     rdi, rax
         mov     QWORD PTR [rsp+0x10], rax
         lea     r12, [rsp+0x420]
-        call    L6f60
+        call    L6fb0
         xor     eax, eax
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L71b0:
+L7200:
         mov     rdx, QWORD PTR [rsp+0x8]
         mov     rsi, QWORD PTR [rsp+0x10]
         mov     ecx, eax
         mov     rdi, rbx
         mov     DWORD PTR [rsp+0x1c], eax
-        call    L70e0
+        call    L7130
         mov     rdi, rbx
         call    L28e0
         mov     rsi, r15
         mov     rdi, r12
         sub     r15, 0xffffffffffffff80
-        call    L6810
+        call    L6850
         mov     rsi, r12
         mov     rdi, rbx
         call    L2740
@@ -8120,7 +8136,7 @@ L71b0:
         mov     eax, DWORD PTR [rsp+0x1c]
         add     eax, 0x1
         cmp     eax, 0x6
-        jne     L71b0
+        jne     L7200
         xor     eax, eax
         mov     rdi, r12
         mov     ecx, 0x80
@@ -8145,9 +8161,9 @@ L71b0:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
 
-// mld_H65 (0x7280)
+// mld_H65 (0x72d0)
 
-L7280:
+L72d0:
         push    r15
         mov     r15, r9
         push    r14
@@ -8169,10 +8185,10 @@ L7280:
         mov     rdi, rbx
         call    L1280
         test    r15, r15
-        jne     L7310
+        jne     L7360
         cmp     QWORD PTR [rsp+0x128], 0x0
-        jne     L732b
-L72d0:
+        jne     L737b
+L7320:
         mov     rdi, rbx
         call    L1310
         mov     rdx, rbx
@@ -8195,25 +8211,25 @@ L72d0:
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L7310:
+L7360:
         mov     rsi, QWORD PTR [rsp+0x8]
         mov     rdx, r15
         mov     rdi, rbx
         call    L1280
         cmp     QWORD PTR [rsp+0x128], 0x0
-        je      L72d0
-L732b:
+        je      L7320
+L737b:
         mov     rdx, QWORD PTR [rsp+0x128]
         mov     rsi, QWORD PTR [rsp+0x120]
         mov     rdi, rbx
         call    L1280
-        jmp     L72d0
+        jmp     L7320
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa65_keypair_internal (0x7350)
+// mldsa65_keypair_internal (0x73a0)
 
-L7350:
+L73a0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         mov     ecx, 0x22
@@ -8261,20 +8277,20 @@ L7350:
         push    0x8
         mov     QWORD PTR [rbp-0x1558], r8
         mov     QWORD PTR [rbp-0x1540], rax
-        call    L6340
+        call    L6370
         add     rsp, 0x20
         lea     rdi, [rbx+0x400]
         mov     rsi, r12
-        call    L67d0
+        call    L6800
         mov     rsi, r13
         lea     rdi, [rbx+0x480]
-        call    L67d0
+        call    L6800
         mov     rsi, r15
         lea     rdi, [rbx+0x500]
-        call    L67d0
+        call    L6800
         mov     rsi, QWORD PTR [rbp-0x1540]
         lea     rdi, [rbx+0x580]
-        call    L67d0
+        call    L6800
         sub     rsp, 0x8
         mov     rcx, r15
         mov     rdx, r13
@@ -8288,17 +8304,17 @@ L7350:
         push    0x5
         mov     QWORD PTR [rbp-0x1558], rax
         mov     QWORD PTR [rbp-0x1560], r8
-        call    L6340
+        call    L6370
         mov     rsi, QWORD PTR [rbp-0x1558]
         add     rsp, 0x20
         lea     rdi, [rbx+0x280]
-        call    L67d0
+        call    L6800
         mov     rdi, QWORD PTR [rbp-0x1548]
         mov     rsi, r12
-        call    L67d0
+        call    L6800
         mov     rsi, r13
         lea     rdi, [rbx+0x380]
-        call    L67d0
+        call    L6800
         sub     rsp, 0x8
         mov     rdx, r15
         xor     r9d, r9d
@@ -8309,23 +8325,23 @@ L7350:
         push    0x2
         mov     rcx, QWORD PTR [rbp-0x1540]
         push    0x1
-        call    L6340
+        call    L6370
         add     rsp, 0x20
         lea     rdi, [rbx+0x80]
         mov     rsi, r12
-        call    L67d0
+        call    L6800
         mov     rsi, r13
         lea     rdi, [rbx+0x100]
-        call    L67d0
+        call    L6800
         mov     rsi, r15
         lea     rdi, [rbx+0x180]
         lea     r15, [rbp-0x14f0]
-        call    L67d0
+        call    L6800
         mov     rsi, QWORD PTR [rbp-0x1540]
         lea     rdi, [rbx+0x200]
-        call    L67d0
+        call    L6800
         mov     rdi, r12
-        call    L6c70
+        call    L6cc0
         movdqa  xmm3, XMMWORD PTR [rbp-0x14b0]
         lea     rdi, [r14+0x20]
         movdqa  xmm4, XMMWORD PTR [rbp-0x14a0]
@@ -8335,10 +8351,10 @@ L7350:
         mov     rdx, r12
         movups  XMMWORD PTR [r14], xmm3
         movups  XMMWORD PTR [r14+0x10], xmm4
-        call    L7160
+        call    L71b0
         mov     r13d, eax
         test    eax, eax
-        jne     L75d3
+        jne     L7623
         mov     ecx, 0x7a0
         mov     rdx, r14
         mov     esi, 0x40
@@ -8348,8 +8364,8 @@ L7350:
         mov     rdx, r15
         mov     rdi, rbx
         lea     rcx, [rbp-0x1450]
-        call    L5e70
-L75d3:
+        call    L5ea0
+L7623:
         xor     eax, eax
         mov     rdi, r12
         mov     ecx, 0x280
@@ -8369,8 +8385,8 @@ L75d3:
         rep stos QWORD PTR es:[rdi], rax
         mov     rdi, QWORD PTR [rbp-0x1538]
         test    r13d, r13d
-        jne     L7658
-L7639:
+        jne     L76a8
+L7689:
         lea     rsp, [rbp-0x30]
         mov     eax, r13d
         pop     rbx
@@ -8384,7 +8400,7 @@ L7639:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L7658:
+L76a8:
         lea     rdi, [r14+0x8]
         mov     rcx, r14
         mov     QWORD PTR [r14], 0x0
@@ -8403,15 +8419,15 @@ L7658:
         add     ecx, 0xfc0
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-        jmp     L7639
+        jmp     L7689
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa65_keypair (0x76c0)
+// mldsa65_keypair (0x7710)
 
-L76c0:
+L7710:
         push    rbp
         mov     rbp, rsp
         push    r13
@@ -8426,12 +8442,12 @@ L76c0:
         mov     rdi, rbx
         call    L1020
         test    eax, eax
-        jne     L7718
+        jne     L7768
         mov     rdx, rbx
         mov     rsi, r13
         mov     rdi, r12
-        call    L7350
-L76f9:
+        call    L73a0
+L7749:
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rsp], xmm0
         movaps  XMMWORD PTR [rsp+0x10], xmm0
@@ -8443,15 +8459,15 @@ L76f9:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L7718:
+L7768:
         mov     eax, 0xfffffffd
-        jmp     L76f9
+        jmp     L7749
         // nop
         .byte   0x90
 
-// mldsa65_signature_internal (0x7720)
+// mldsa65_signature_internal (0x7770)
 
-L7720:
+L7770:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -8486,11 +8502,11 @@ L7720:
         mov     QWORD PTR [rbp-0x108a8], rax
         mov     QWORD PTR [rbp-0x108c8], rcx
         push    QWORD PTR [r10]
-        call    L5ec0
+        call    L5ef0
         pop     rdi
         pop     r8
         test    r13d, r13d
-        jne     L7d07
+        jne     L7d57
         lea     rax, [rbp-0x107b0]
         mov     r9, QWORD PTR [rbp-0x10888]
         mov     ecx, 0x40
@@ -8501,10 +8517,10 @@ L7720:
         mov     rdi, rax
         push    QWORD PTR [rbp-0x10878]
         push    r12
-        call    L7280
+        call    L72d0
         pop     rcx
         pop     rsi
-L780a:
+L785a:
         mov     rdx, r14
         mov     r8, rbx
         mov     ecx, 0x20
@@ -8519,12 +8535,12 @@ L780a:
         push    0x40
         mov     r12, r15
         push    QWORD PTR [rbp-0x108e0]
-        call    L7280
+        call    L72d0
         lea     rax, [rbp-0x7830]
         mov     rsi, QWORD PTR [rbp-0x108f0]
         mov     rdi, rax
         mov     QWORD PTR [rbp-0x108d8], rax
-        call    L6f60
+        call    L6fb0
         pop     rax
         lea     rax, [rbp-0xe830]
         pop     rdx
@@ -8539,25 +8555,25 @@ L780a:
         mov     QWORD PTR [rbp-0x108d0], rax
         // xchg    ax, ax
         .byte   0x66,0x90
-L78c0:
+L7910:
         mov     r13, QWORD PTR [rbp-0x10888]
         mov     edx, DWORD PTR [rbp-0x108ac]
         mov     rsi, QWORD PTR [rbp-0x108e8]
         mov     rdi, r13
-        call    L6c00
+        call    L6c50
         mov     rdx, r13
         mov     r13, QWORD PTR [rbp-0x10890]
         mov     rcx, QWORD PTR [rbp-0x10878]
         mov     rsi, QWORD PTR [rbp-0x108d8]
         mov     rdi, r13
-        call    L7100
+        call    L7150
         mov     rdi, r13
-        call    L6d60
+        call    L6db0
         mov     rsi, r13
         mov     r13, QWORD PTR [rbp-0x108b8]
         mov     rdx, QWORD PTR [rbp-0x10878]
         mov     rdi, r13
-        call    L6e40
+        call    L6e90
         mov     rdi, r15
         call    L1240
         mov     rsi, QWORD PTR [rbp-0x108e0]
@@ -8584,12 +8600,12 @@ L78c0:
         mov     rsi, r13
         mov     rdi, r14
         xor     r13d, r13d
-        call    L6650
+        call    L6680
         mov     rdi, r14
         call    L27d0
         mov     QWORD PTR [rbp-0x10898], r14
         mov     r14, r13
-L799d:
+L79ed:
         mov     rax, QWORD PTR [rbp-0x108a8]
         mov     r13, r14
         mov     rdi, r15
@@ -8617,21 +8633,21 @@ L799d:
         call    L26b0
         mov     esi, 0x7ff3c
         mov     rdi, r12
-        call    L31e0
+        call    L31f0
         test    eax, eax
-        jne     L7cd8
+        jne     L7d28
         mov     edx, DWORD PTR [rbp-0x10880]
         mov     rdi, QWORD PTR [rbp-0x108a0]
         mov     rsi, r12
         add     r14, 0x1
-        call    L60a0
+        call    L60d0
         cmp     r14, 0x5
-        jne     L799d
+        jne     L79ed
         mov     QWORD PTR [rbp-0x10878], r12
         mov     r14, QWORD PTR [rbp-0x10898]
         xor     r13d, r13d
         mov     QWORD PTR [rbp-0x10880], r12
-L7a5f:
+L7aaf:
         mov     rax, QWORD PTR [rbp-0x108c0]
         mov     ecx, 0x80
         mov     rdi, rbx
@@ -8652,9 +8668,9 @@ L7a5f:
         call    L26b0
         mov     esi, 0x3fe3c
         mov     rdi, r15
-        call    L31e0
+        call    L31f0
         test    eax, eax
-        jne     L7cf0
+        jne     L7d40
         mov     rax, QWORD PTR [rbp-0x108c8]
         mov     ecx, 0x80
         mov     rdi, rbx
@@ -8669,29 +8685,29 @@ L7a5f:
         call    L26b0
         mov     esi, 0x3ff00
         mov     rdi, rbx
-        call    L31e0
+        call    L31f0
         test    eax, eax
-        jne     L7cf0
+        jne     L7d40
         mov     rsi, rbx
         mov     rdi, r15
         add     r13, 0x400
         call    L2740
         cmp     r13, 0x1800
-        jne     L7a5f
+        jne     L7aaf
         mov     r13, QWORD PTR [rbp-0x108a0]
         mov     rsi, QWORD PTR [rbp-0x108d0]
         mov     r15, QWORD PTR [rbp-0x10878]
         mov     r12, QWORD PTR [rbp-0x10880]
         mov     QWORD PTR [rbp-0x10878], rbx
         mov     rdi, r13
-        call    L5fa0
+        call    L5fd0
         mov     rdx, QWORD PTR [rbp-0x108b8]
         mov     rdi, r13
         mov     rcx, rbx
         mov     rsi, QWORD PTR [rbp-0x10890]
-        call    L5fc0
+        call    L5ff0
         mov     r13d, eax
-L7b6a:
+L7bba:
         mov     rdi, r12
         xor     eax, eax
         mov     ecx, 0x80
@@ -8720,15 +8736,15 @@ L7b6a:
         movaps  XMMWORD PTR [rax+0x10], xmm0
         movaps  XMMWORD PTR [rax+0x20], xmm0
         test    r13d, r13d
-        je      L7c43
+        je      L7c93
         cmp     r13d, 0xffffffff
-        jne     L7c0e
+        jne     L7c5e
         add     DWORD PTR [rbp-0x108ac], 0x5
         mov     eax, DWORD PTR [rbp-0x108ac]
         cmp     eax, 0xfffa
-        jne     L78c0
+        jne     L7910
         mov     r13d, 0xfffffffc
-L7c0e:
+L7c5e:
         mov     rdx, QWORD PTR [rbp-0x108a0]
         xor     eax, eax
         lea     rdi, [rdx+0x8]
@@ -8740,7 +8756,7 @@ L7c0e:
         add     ecx, 0xced
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-L7c43:
+L7c93:
         mov     rdi, QWORD PTR [rbp-0x108c0]
         xor     ebx, ebx
         mov     ecx, 0x300
@@ -8778,19 +8794,19 @@ L7c43:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L7cd8:
+L7d28:
         mov     r14, QWORD PTR [rbp-0x10898]
-L7cdf:
+L7d2f:
         mov     r13d, 0xffffffff
-        jmp     L7b6a
+        jmp     L7bba
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L7cf0:
+L7d40:
         mov     r15, QWORD PTR [rbp-0x10878]
         mov     QWORD PTR [rbp-0x10878], r12
         mov     r12, QWORD PTR [rbp-0x10880]
-        jmp     L7cdf
-L7d07:
+        jmp     L7d2f
+L7d57:
         movdqu  xmm1, XMMWORD PTR [r12]
         movdqu  xmm2, XMMWORD PTR [r12+0x10]
         lea     rax, [rbp-0x107b0]
@@ -8801,15 +8817,15 @@ L7d07:
         movaps  XMMWORD PTR [rbp-0x107a0], xmm2
         movaps  XMMWORD PTR [rbp-0x10790], xmm3
         movaps  XMMWORD PTR [rbp-0x10780], xmm4
-        jmp     L780a
+        jmp     L785a
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa65_signature_extmu (0x7d60)
+// mldsa65_signature_extmu (0x7db0)
 
-L7d60:
+L7db0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -8829,7 +8845,7 @@ L7d60:
         sub     rsp, 0x28
         call    L1020
         test    eax, eax
-        jne     L7de0
+        jne     L7e30
         push    0x1
         xor     ecx, ecx
         mov     edx, 0x40
@@ -8838,10 +8854,10 @@ L7d60:
         xor     r8d, r8d
         mov     rsi, r13
         mov     rdi, r12
-        call    L7720
+        call    L7770
         pop     rdx
         pop     rcx
-L7dba:
+L7e0a:
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x50], xmm0
         movaps  XMMWORD PTR [rbp-0x40], xmm0
@@ -8856,15 +8872,15 @@ L7dba:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L7de0:
+L7e30:
         mov     eax, 0xfffffffd
-        jmp     L7dba
+        jmp     L7e0a
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa65_verify_internal (0x7df0)
+// mldsa65_verify_internal (0x7e40)
 
-L7df0:
+L7e40:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -8895,16 +8911,16 @@ L7df0:
         movaps  XMMWORD PTR [rbp-0x9cd0], xmm3
         movaps  XMMWORD PTR [rbp-0x9cc0], xmm4
         movaps  XMMWORD PTR [rbp-0x9cb0], xmm5
-        call    L6ee0
+        call    L6f30
         mov     esi, 0x7ff3c
         mov     rdi, r13
-        call    L6d10
+        call    L6d60
         mov     r11, QWORD PTR [rbp-0x9cd8]
         test    eax, eax
-        jne     L8312
+        jne     L8362
         mov     r13d, eax
         test    ebx, ebx
-        je      L8220
+        je      L8270
         movdqu  xmm6, XMMWORD PTR [r12]
         movdqu  xmm7, XMMWORD PTR [r12+0x10]
         lea     rax, [rbp-0x7830]
@@ -8918,36 +8934,36 @@ L7df0:
         mov     QWORD PTR [rbp-0x9d10], rax
         movaps  XMMWORD PTR [rbp-0x9c30], xmm6
         movaps  XMMWORD PTR [rbp-0x9c20], xmm7
-L7ef5:
+L7f45:
         mov     rdi, QWORD PTR [rbp-0x9ce0]
         mov     QWORD PTR [rbp-0x9cf8], r11
         lea     r12, [rbp-0x9430]
-        call    L6c70
+        call    L6cc0
         mov     rsi, QWORD PTR [rbp-0x9cf0]
         mov     rdi, QWORD PTR [rbp-0x9cd8]
-        call    L6f60
+        call    L6fb0
         lea     rax, [rbp-0x9830]
         lea     rsi, [rbp-0x9cd0]
         mov     r14, rax
         mov     rdi, rax
         mov     QWORD PTR [rbp-0x9ce8], rax
         mov     QWORD PTR [rbp-0x9d08], rsi
-        call    L6650
+        call    L6680
         mov     rdi, r14
         call    L27d0
         lea     rax, [rbp-0x9b30]
         mov     QWORD PTR [rbp-0x9d00], rax
         mov     r15, rax
-L7f62:
+L7fb2:
         mov     rdx, QWORD PTR [rbp-0x9ce0]
         mov     rsi, QWORD PTR [rbp-0x9cd8]
         mov     ecx, r13d
         mov     rdi, r12
-        call    L70e0
+        call    L7130
         mov     rsi, QWORD PTR [rbp-0x9cf0]
         mov     edx, r13d
         mov     rdi, rbx
-        call    L5e60
+        call    L5e90
         mov     rdi, rbx
         call    L27a0
         mov     rdi, rbx
@@ -8967,20 +8983,20 @@ L7f62:
         mov     rsi, QWORD PTR [rbp-0x9cf8]
         mov     edx, r13d
         mov     rdi, rbx
-        call    L60b0
+        call    L60e0
         mov     r14d, eax
         test    eax, eax
-        jne     L8300
+        jne     L8350
         mov     rsi, rbx
         mov     rdi, r12
         add     r13d, 0x1
-        call    L62b0
+        call    L62e0
         mov     rdi, r15
         mov     rsi, r12
         sub     r15, 0xffffffffffffff80
-        call    L3280
+        call    L3290
         cmp     r13d, 0x6
-        jne     L7f62
+        jne     L7fb2
         lea     r13, [rbp-0x9c00]
         lea     r15, [rbp-0x9c90]
         mov     rdi, r13
@@ -9008,14 +9024,14 @@ L7f62:
         pxor    xmm1, xmm1
         mov     rdx, QWORD PTR [rbp-0x9d08]
         movdqa  xmm0, xmm1
-L808e:
+L80de:
         movdqa  xmm2, XMMWORD PTR [rdx+rax*1]
         pxor    xmm2, XMMWORD PTR [r15+rax*1]
         add     rax, 0x10
         por     xmm0, xmm2
         pxor    xmm1, xmm2
         cmp     rax, 0x30
-        jne     L808e
+        jne     L80de
         movdqa  xmm2, xmm1
         psrldq  xmm2, 0x8
         pxor    xmm1, xmm2
@@ -9047,8 +9063,8 @@ L808e:
         sar     rax, 0x20
         xor     eax, edx
         cmp     al, dl
-        jne     L8307
-L812f:
+        jne     L8357
+L817f:
         xor     r13d, r13d
         mov     rdi, rbx
         mov     ecx, 0x80
@@ -9102,7 +9118,7 @@ L812f:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L8220:
+L8270:
         lea     rax, [rbp-0x7830]
         mov     QWORD PTR [rbp-0x9cf8], r11
         mov     rdi, rax
@@ -9137,7 +9153,7 @@ L8220:
         mov     rdi, rax
         push    r15
         push    r12
-        call    L7280
+        call    L72d0
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x9030], xmm0
         movaps  XMMWORD PTR [rbp-0x9020], xmm0
@@ -9146,15 +9162,15 @@ L8220:
         pop     rax
         mov     r11, QWORD PTR [rbp-0x9cf8]
         pop     rdx
-        jmp     L7ef5
+        jmp     L7f45
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L8300:
+L8350:
         lea     r15, [rbp-0x9c90]
-L8307:
+L8357:
         mov     r14d, 0xfffffffa
-        jmp     L812f
-L8312:
+        jmp     L817f
+L8362:
         lea     rax, [rbp-0x7830]
         lea     rbx, [rbp-0x9030]
         mov     QWORD PTR [rbp-0x9cd8], rax
@@ -9168,31 +9184,31 @@ L8312:
         mov     QWORD PTR [rbp-0x9ce8], rax
         lea     rax, [rbp-0x9b30]
         mov     QWORD PTR [rbp-0x9d00], rax
-        jmp     L8307
+        jmp     L8357
         // nop
         .byte   0x90
 
-// mldsa65_verify_extmu (0x8370)
+// mldsa65_verify_extmu (0x83c0)
 
-L8370:
+L83c0:
         sub     rsp, 0x10
         mov     r9, rdx
         xor     r8d, r8d
         xor     ecx, ecx
         push    0x1
         mov     edx, 0x40
-        call    L7df0
+        call    L7e40
         add     rsp, 0x18
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa65_prepare_domain_separation_prefix (0x8390)
+// mldsa65_prepare_domain_separation_prefix (0x83e0)
 
-L8390:
+L83e0:
         xor     eax, eax
         cmp     r8, 0xff
-        ja      L8400
+        ja      L8450
         push    r14
         push    r13
         push    r12
@@ -9201,14 +9217,14 @@ L8390:
         mov     rbp, r8
         sub     rsp, 0x18
         test    r9d, r9d
-        jne     L83d8
+        jne     L8428
         mov     BYTE PTR [rdi], 0x0
         mov     BYTE PTR [r12+0x1], r8b
         test    r8, r8
-        jne     L84b8
-L83c2:
+        jne     L8508
+L8412:
         lea     rax, [rbp+0x2]
-L83c6:
+L8416:
         add     rsp, 0x18
         pop     rbp
         pop     r12
@@ -9217,9 +9233,9 @@ L83c6:
         ret
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L83d8:
+L8428:
         cmp     r9d, 0xc
-        ja      L846e
+        ja      L84be
         mov     r13, rdx
         mov     eax, r9d
         lea     rdx, [rip+Lc620]
@@ -9229,31 +9245,31 @@ L83d8:
         jmp     rax
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L8400:
+L8450:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
         cmp     r13, 0x20
-        jne     L846e
-L840e:
+        jne     L84be
+L845e:
         mov     BYTE PTR [r12], 0x1
         mov     BYTE PTR [r12+0x1], bpl
         test    rbp, rbp
-        jne     L84d0
-L8421:
+        jne     L8520
+L8471:
         lea     rcx, [rip+Lc660]
         xor     eax, eax
         mov     rdx, rcx
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L8430:
+L8480:
         cmp     r9d, DWORD PTR [rdx]
-        je      L8498
+        je      L84e8
         add     eax, 0x1
         add     rdx, 0x10
         cmp     eax, 0xc
-        jne     L8430
-L8441:
+        jne     L8480
+L8491:
         lea     rdi, [r12+rbp*1+0xd]
         mov     rdx, r13
         mov     rsi, r14
@@ -9268,25 +9284,25 @@ L8441:
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
         cmp     r13, 0x1c
-        je      L840e
-L846e:
+        je      L845e
+L84be:
         xor     eax, eax
-        jmp     L83c6
+        jmp     L8416
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
         cmp     r13, 0x40
-        je      L840e
+        je      L845e
         xor     eax, eax
-        jmp     L83c6
+        jmp     L8416
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
         cmp     r13, 0x30
-        je      L840e
+        je      L845e
         xor     eax, eax
-        jmp     L83c6
+        jmp     L8416
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L8498:
+L84e8:
         shl     rax, 0x4
         lea     rdx, [r12+rbp*1+0x2]
         lea     rax, [rcx+rax*1+0x4]
@@ -9294,31 +9310,31 @@ L8498:
         mov     QWORD PTR [rdx], rcx
         mov     eax, DWORD PTR [rax+0x7]
         mov     DWORD PTR [rdx+0x7], eax
-        jmp     L8441
+        jmp     L8491
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L84b8:
+L8508:
         lea     rdi, [rdi+0x2]
         mov     rdx, r8
         mov     rsi, rcx
         call    L1010
-        jmp     L83c2
+        jmp     L8412
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L84d0:
+L8520:
         lea     rdi, [r12+0x2]
         mov     rdx, rbp
         mov     rsi, rcx
         mov     DWORD PTR [rsp+0xc], r9d
         call    L1010
         mov     r9d, DWORD PTR [rsp+0xc]
-        jmp     L8421
+        jmp     L8471
         // nop
         .byte   0x90
 
-// mldsa65_signature (0x84f0)
+// mldsa65_signature (0x8540)
 
-L84f0:
+L8540:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -9340,13 +9356,13 @@ L84f0:
         sub     rsp, 0x1a0
         mov     QWORD PTR [rbp-0x1b8], rsi
         xor     esi, esi
-        call    L8390
+        call    L83e0
         test    rax, rax
         mov     QWORD PTR [rbp-0x1c0], rax
-        jne     L85c0
+        jne     L8610
         mov     edx, 0xfffffff7
         lea     r13, [rbp-0x1b0]
-L8551:
+L85a1:
         lea     rdi, [rbx+0x8]
         mov     rcx, rbx
         xor     eax, eax
@@ -9357,7 +9373,7 @@ L8551:
         add     ecx, 0xced
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-L857f:
+L85cf:
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x1b0], xmm0
         movaps  XMMWORD PTR [rbp-0x1a0], xmm0
@@ -9379,14 +9395,14 @@ L857f:
         ret
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L85c0:
+L8610:
         lea     r13, [rbp-0x1b0]
         mov     esi, 0x20
         mov     rdi, r13
         call    L1020
         mov     edx, 0xfffffffd
         test    eax, eax
-        jne     L8551
+        jne     L85a1
         push    0x0
         mov     r8, QWORD PTR [rbp-0x1c0]
         mov     rcx, r12
@@ -9395,19 +9411,19 @@ L85c0:
         mov     rsi, QWORD PTR [rbp-0x1b8]
         mov     r9, r13
         mov     rdi, rbx
-        call    L7720
+        call    L7770
         mov     edx, eax
         pop     rax
         pop     rcx
         test    edx, edx
-        je      L857f
-        jmp     L8551
+        je      L85cf
+        jmp     L85a1
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa65_verify (0x8620)
+// mldsa65_verify (0x8670)
 
-L8620:
+L8670:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -9429,9 +9445,9 @@ L8620:
         lea     rbx, [rbp-0x190]
         mov     rdi, rbx
         sub     rsp, 0x160
-        call    L8390
+        call    L83e0
         test    rax, rax
-        je      L86b8
+        je      L8708
         sub     rsp, 0x8
         mov     rcx, rbx
         mov     rdx, r14
@@ -9440,11 +9456,11 @@ L8620:
         mov     r9, r15
         mov     rsi, r13
         mov     rdi, r12
-        call    L7df0
+        call    L7e40
         mov     edx, eax
         pop     rax
         pop     rcx
-L868b:
+L86db:
         xor     eax, eax
         mov     rdi, rbx
         mov     ecx, 0x29
@@ -9463,15 +9479,15 @@ L868b:
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L86b8:
+L8708:
         mov     edx, 0xfffffff7
-        jmp     L868b
+        jmp     L86db
         // nop
         .byte   0x90
 
-// mldsa65_signature_pre_hash_internal (0x86c0)
+// mldsa65_signature_pre_hash_internal (0x8710)
 
-L86c0:
+L8710:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -9489,10 +9505,10 @@ L86c0:
         mov     r9d, DWORD PTR [r10+0x8]
         mov     r14, QWORD PTR [r10]
         test    r9d, r9d
-        jne     L8758
-L86fa:
+        jne     L87a8
+L874a:
         mov     edx, 0xfffffff7
-L86ff:
+L874f:
         lea     rdi, [rbx+0x8]
         mov     rcx, rbx
         xor     eax, eax
@@ -9503,7 +9519,7 @@ L86ff:
         add     ecx, 0xced
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-L872d:
+L877d:
         xor     eax, eax
         mov     rdi, r12
         mov     ecx, 0x29
@@ -9521,11 +9537,11 @@ L872d:
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L8758:
+L87a8:
         mov     rdi, r12
-        call    L8390
+        call    L83e0
         test    rax, rax
-        je      L86fa
+        je      L874a
         push    0x0
         xor     ecx, ecx
         mov     rdx, rax
@@ -9534,19 +9550,19 @@ L8758:
         xor     r8d, r8d
         mov     rsi, r12
         mov     rdi, rbx
-        call    L7720
+        call    L7770
         mov     edx, eax
         pop     rax
         pop     rcx
         test    edx, edx
-        je      L872d
-        jmp     L86ff
+        je      L877d
+        jmp     L874f
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa65_signature_pre_hash_shake256 (0x8790)
+// mldsa65_signature_pre_hash_shake256 (0x87e0)
 
-L8790:
+L87e0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -9578,7 +9594,7 @@ L8790:
         mov     rcx, r13
         mov     edx, 0x40
         mov     rsi, rbx
-        call    L86c0
+        call    L8710
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x70], xmm0
         movaps  XMMWORD PTR [rbp-0x60], xmm0
@@ -9597,9 +9613,9 @@ L8790:
         lea     rsp, [r10-0x8]
         ret
 
-// mldsa65_verify_pre_hash_internal (0x8820)
+// mldsa65_verify_pre_hash_internal (0x8870)
 
-L8820:
+L8870:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -9613,14 +9629,14 @@ L8820:
         sub     rsp, 0x170
         mov     r9d, DWORD PTR [r10]
         test    r9d, r9d
-        je      L88b0
+        je      L8900
         lea     rbx, [rbp-0x190]
         mov     r12, rdi
         mov     rdi, rbx
-        call    L8390
+        call    L83e0
         mov     rdx, rax
         test    rax, rax
-        je      L88b7
+        je      L8907
         sub     rsp, 0x8
         xor     ecx, ecx
         mov     r9, r13
@@ -9628,11 +9644,11 @@ L8820:
         push    0x0
         mov     rsi, rbx
         mov     rdi, r12
-        call    L7df0
+        call    L7e40
         mov     edx, eax
         pop     rax
         pop     rcx
-L8881:
+L88d1:
         xor     eax, eax
         mov     rdi, rbx
         mov     ecx, 0x29
@@ -9649,17 +9665,17 @@ L8881:
         ret
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L88b0:
+L8900:
         lea     rbx, [rbp-0x190]
-L88b7:
+L8907:
         mov     edx, 0xfffffff7
-        jmp     L8881
+        jmp     L88d1
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa65_verify_pre_hash_shake256 (0x88c0)
+// mldsa65_verify_pre_hash_shake256 (0x8910)
 
-L88c0:
+L8910:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -9690,7 +9706,7 @@ L88c0:
         mov     edx, 0x40
         mov     rsi, rbx
         mov     rdi, r12
-        call    L8820
+        call    L8870
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x70], xmm0
         movaps  XMMWORD PTR [rbp-0x60], xmm0
@@ -9711,9 +9727,9 @@ L88c0:
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa65_pk_from_sk (0x8950)
+// mldsa65_pk_from_sk (0x89a0)
 
-L8950:
+L89a0:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -9745,20 +9761,20 @@ L8950:
         movaps  XMMWORD PTR [rsp+0x90], xmm3
         movaps  XMMWORD PTR [rsp+0xa0], xmm4
         movaps  XMMWORD PTR [rsp+0xb0], xmm5
-        call    L6ea0
+        call    L6ef0
         mov     esi, 0x5
         mov     rdi, r14
-        call    L6d10
+        call    L6d60
         lea     rcx, [rbx+0x300]
         mov     rdx, r15
         mov     esi, 0x5
         mov     rdi, rcx
         mov     QWORD PTR [rsp+0x38], rcx
         mov     r13d, eax
-        call    L6df0
+        call    L6e40
         mov     rdi, r14
         mov     DWORD PTR [rsp+0x2c], eax
-        call    L6c70
+        call    L6cc0
         movdqa  xmm6, XMMWORD PTR [rsp+0x40]
         movdqa  xmm7, XMMWORD PTR [rsp+0x50]
         lea     r9, [rsp+0x500]
@@ -9771,15 +9787,15 @@ L8950:
         movups  XMMWORD PTR [r12+0x10], xmm7
         mov     QWORD PTR [rsp+0x30], r8
         mov     QWORD PTR [rsp+0x38], r9
-        call    L7160
+        call    L71b0
         mov     r9, QWORD PTR [rsp+0x38]
         mov     r8, QWORD PTR [rsp+0x30]
         test    eax, eax
         mov     r11d, eax
-        je      L8b50
+        je      L8ba0
         lea     rbx, [rsp+0xc0]
         lea     rdx, [rsp+0x80]
-L8a86:
+L8ad6:
         lea     rdi, [r12+0x8]
         mov     rcx, r12
         xor     eax, eax
@@ -9790,7 +9806,7 @@ L8a86:
         add     ecx, 0x7a0
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-L8ab7:
+L8b07:
         xor     eax, eax
         mov     rdi, r9
         mov     ecx, 0x138
@@ -9826,20 +9842,20 @@ L8ab7:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L8b50:
+L8ba0:
         pxor    xmm2, xmm2
         xor     eax, eax
         movdqa  xmm0, xmm2
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L8b60:
+L8bb0:
         movdqu  xmm1, XMMWORD PTR [rbx+rax*1+0x600]
         pxor    xmm1, XMMWORD PTR [r9+rax*1]
         add     rax, 0x10
         por     xmm0, xmm1
         pxor    xmm2, xmm1
         cmp     rax, 0x9c0
-        jne     L8b60
+        jne     L8bb0
         movdqa  xmm1, xmm2
         mov     QWORD PTR [rsp+0x18], r9
         psrldq  xmm1, 0x8
@@ -9888,14 +9904,14 @@ L8b60:
         mov     r11d, DWORD PTR [rsp+0x30]
         movdqa  xmm0, xmm1
         lea     rdx, [rsp+0x80]
-L8c52:
+L8ca2:
         movdqa  xmm2, XMMWORD PTR [rbx+rax*1]
         pxor    xmm2, XMMWORD PTR [rdx+rax*1]
         add     rax, 0x10
         por     xmm0, xmm2
         pxor    xmm1, xmm2
         cmp     rax, 0x40
-        jne     L8c52
+        jne     L8ca2
         movdqa  xmm2, xmm1
         psrldq  xmm2, 0x8
         pxor    xmm1, xmm2
@@ -9932,21 +9948,21 @@ L8c52:
         or      r13b, BYTE PTR [rsp+0x38]
         or      r13d, eax
         test    r13b, r13b
-        je      L8ab7
+        je      L8b07
         mov     r11d, 0xfffffff9
-        jmp     L8a86
+        jmp     L8ad6
 
-// mldsa87_unpack_pk_t1 (0x8d10)
+// mldsa87_unpack_pk_t1 (0x8d60)
 
-L8d10:
+L8d60:
         lea     eax, [rdx+rdx*4]
         shl     eax, 0x6
         lea     rsi, [rax+rsi*1+0x20]
         jmp     L2e10
 
-// mldsa87_pack_sk_rho_key_tr (0x8d20)
+// mldsa87_pack_sk_rho_key_tr (0x8d70)
 
-L8d20:
+L8d70:
         movdqu  xmm0, XMMWORD PTR [rsi]
         movups  XMMWORD PTR [rdi], xmm0
         movdqu  xmm1, XMMWORD PTR [rsi+0x10]
@@ -9967,9 +9983,9 @@ L8d20:
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa87_unpack_sk (0x8d70)
+// mldsa87_unpack_sk (0x8dc0)
 
-L8d70:
+L8dc0:
         push    r13
         mov     r13, rcx
         push    r12
@@ -9997,38 +10013,38 @@ L8d70:
         movdqu  xmm7, XMMWORD PTR [r12+0x70]
         movups  XMMWORD PTR [rsi+0x30], xmm7
         lea     rsi, [r12+0x80]
-        call    L9df0
+        call    L9e60
         mov     rdi, rbp
         mov     rbp, r13
-        call    L9bb0
+        call    L9c20
         lea     rsi, [r12+0x320]
         mov     rdi, rbx
-        call    L9e70
+        call    L9ee0
         mov     rdi, rbx
         lea     rbx, [r12+0x620]
         add     r12, 0x1320
-        call    L9ce0
+        call    L9d50
         // xchg    ax, ax
         .byte   0x66,0x90
-L8e20:
+L8e70:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x1a0
         add     rbp, 0x400
-        call    L3020
+        call    L3030
         cmp     rbx, r12
-        jne     L8e20
+        jne     L8e70
         add     rsp, 0x8
         mov     rdi, r13
         pop     rbx
         pop     rbp
         pop     r12
         pop     r13
-        jmp     L9ce0
+        jmp     L9d50
 
-// mldsa87_pack_sig_c (0x8e50)
+// mldsa87_pack_sig_c (0x8ea0)
 
-L8e50:
+L8ea0:
         movdqu  xmm0, XMMWORD PTR [rsi]
         movups  XMMWORD PTR [rdi], xmm0
         movdqu  xmm1, XMMWORD PTR [rsi+0x10]
@@ -10043,9 +10059,9 @@ L8e50:
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa87_pack_sig_h (0x8e80)
+// mldsa87_pack_sig_h (0x8ed0)
 
-L8e80:
+L8ed0:
         push    r15
         lea     r15, [rdi+0x11c0]
         xor     eax, eax
@@ -10072,37 +10088,37 @@ L8e80:
         rep stos QWORD PTR es:[rdi], rax
         lea     rax, [rdx+0x400]
         mov     QWORD PTR [rsp+0x8], rax
-L8ee2:
+L8f32:
         mov     rsi, r12
         mov     rdi, r13
-        call    L3320
+        call    L3330
         xor     eax, eax
-        jmp     L8f0d
+        jmp     L8f5d
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L8ef8:
+L8f48:
         mov     ecx, ebx
         add     ebx, 0x1
         mov     BYTE PTR [r15+rcx*1], al
-L8f01:
+L8f51:
         add     rax, 0x1
         cmp     rax, 0x100
-        je      L8f49
-L8f0d:
+        je      L8f99
+L8f5d:
         mov     ecx, DWORD PTR [r14+rax*4]
         mov     edi, DWORD PTR [r13+rax*4+0x0]
         lea     esi, [rcx+0x3ff00]
         cmp     esi, 0x7fe00
-        ja      L8f30
+        ja      L8f80
         cmp     ecx, 0xfffc0100
-        jne     L8f01
+        jne     L8f51
         test    edi, edi
-        je      L8f01
-L8f30:
+        je      L8f51
+L8f80:
         cmp     ebx, 0x4b
-        jne     L8ef8
+        jne     L8f48
         mov     eax, 0xffffffff
-L8f3a:
+L8f8a:
         add     rsp, 0x18
         pop     rbx
         pop     rbp
@@ -10111,30 +10127,30 @@ L8f3a:
         pop     r14
         pop     r15
         ret
-L8f49:
+L8f99:
         mov     rax, QWORD PTR [rsp+0x8]
         sub     r12, 0xffffffffffffff80
         mov     BYTE PTR [rbp+0x0], bl
         add     rbp, 0x1
         add     r14, 0x400
         cmp     r12, rax
-        jne     L8ee2
+        jne     L8f32
         xor     eax, eax
-        jmp     L8f3a
+        jmp     L8f8a
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa87_pack_sig_z (0x8f70)
+// mldsa87_pack_sig_z (0x8fc0)
 
-L8f70:
+L8fc0:
         lea     eax, [rdx+rdx*4]
         shl     eax, 0x7
         lea     rdi, [rax+rdi*1+0x40]
-        jmp     L9840
+        jmp     L98a0
 
-// mldsa87_sig_unpack_hints (0x8f80)
+// mldsa87_sig_unpack_hints (0x8fd0)
 
-L8f80:
+L8fd0:
         push    rbp
         mov     r11, rsi
         mov     r8, rdi
@@ -10143,17 +10159,17 @@ L8f80:
         lea     rbx, [rsi+0x11c0]
         xor     esi, esi
         test    edx, edx
-        je      L8fa3
+        je      L8ff3
         lea     eax, [rdx+0x4a]
         movzx   esi, BYTE PTR [r11+rax*1+0x11c0]
-L8fa3:
+L8ff3:
         lea     eax, [rbp+0x4b]
         movzx   r9d, BYTE PTR [r11+rax*1+0x11c0]
         mov     r10, r9
         cmp     r9d, esi
-        jb      L9026
+        jb      L9076
         cmp     r9d, 0x4b
-        ja      L9026
+        ja      L9076
         lea     rdi, [r8+0x8]
         mov     rcx, r8
         xor     eax, eax
@@ -10165,78 +10181,78 @@ L8fa3:
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
         cmp     esi, r9d
-        jae     L9030
+        jae     L9080
         lea     edx, [rsi+0x11c0]
         mov     eax, esi
         add     rdx, r11
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L9000:
+L9050:
         movzx   ecx, BYTE PTR [rdx]
         add     rdx, 0x1
         mov     DWORD PTR [r8+rcx*4], 0x1
         mov     ecx, eax
         add     eax, 0x1
         cmp     eax, r9d
-        jae     L9030
+        jae     L9080
         cmp     esi, eax
-        jae     L9000
+        jae     L9050
         movzx   edi, BYTE PTR [rdx]
         cmp     BYTE PTR [rbx+rcx*1], dil
-        jb      L9000
-L9026:
+        jb      L9050
+L9076:
         mov     eax, 0xffffffff
         pop     rbx
         pop     rbp
         ret
         // xchg    ax, ax
         .byte   0x66,0x90
-L9030:
+L9080:
         cmp     ebp, 0x7
-        je      L9040
-L9035:
+        je      L9090
+L9085:
         xor     eax, eax
         pop     rbx
         pop     rbp
         ret
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L9040:
+L9090:
         cmp     r9d, 0x4b
-        je      L9035
+        je      L9085
         cmp     BYTE PTR [r11+r10*1+0x11c0], 0x0
-        jne     L9026
+        jne     L9076
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L9058:
+L90a8:
         add     r10, 0x1
         cmp     r10d, 0x4b
-        je      L9035
+        je      L9085
         cmp     BYTE PTR [r11+r10*1+0x11c0], 0x0
-        je      L9058
-        jmp     L9026
+        je      L90a8
+        jmp     L9076
         // nop
         .byte   0x90
 
-// mld_rej_eta_c87.constprop.0 (0x9070)
+// mld_rej_eta_c87.constprop.0 (0x90c0)
 
-L9070:
+L90c0:
         mov     r8, rdi
         cmp     esi, 0xff
-        ja      L9116
+        ja      L9166
         mov     r9d, 0x1
         mov     r10d, 0x2
         sub     r9d, edx
         // xchg    ax, ax
         .byte   0x66,0x90
-L9090:
+L90e0:
         movzx   eax, BYTE PTR [rdx]
         mov     ecx, eax
         shr     al, 0x4
         and     ecx, 0xf
         movzx   eax, al
         cmp     cl, 0xf
-        je      L90c5
+        je      L9115
         movzx   ecx, cl
         imul    edi, ecx, 0xcd
         shr     edi, 0xa
@@ -10247,13 +10263,13 @@ L9090:
         mov     r11d, r10d
         sub     r11d, ecx
         mov     DWORD PTR [r8+rdi*4], r11d
-L90c5:
+L9115:
         cmp     esi, 0xff
         setbe   cl
         cmp     eax, 0xe
-        ja      L90fe
+        ja      L914e
         test    cl, cl
-        je      L90fe
+        je      L914e
         imul    ecx, eax, 0xcd
         lea     edi, [rsi+0x1]
         mov     esi, esi
@@ -10266,27 +10282,27 @@ L90c5:
         mov     DWORD PTR [r8+rsi*4], ecx
         setbe   cl
         mov     esi, edi
-L90fe:
+L914e:
         lea     eax, [r9+rdx*1]
         cmp     eax, 0x87
         setbe   al
         add     rdx, 0x1
         test    al, cl
-        jne     L9090
-L9116:
+        jne     L90e0
+L9166:
         mov     eax, esi
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
 
-// mldsa87_poly_decompose (0x9120)
+// mldsa87_poly_decompose (0x9170)
 
-L9120:
+L9170:
         xor     ecx, ecx
         mov     r8d, 0x3ff000
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L9130:
+L9180:
         mov     edx, DWORD PTR [rsi+rcx*1]
         lea     eax, [rdx+0x7f]
         sar     eax, 0x7
@@ -10312,29 +10328,29 @@ L9130:
         mov     DWORD PTR [rsi+rcx*1], eax
         add     rcx, 0x4
         cmp     rcx, 0x400
-        jne     L9130
+        jne     L9180
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa87_poly_use_hint (0x9190)
+// mldsa87_poly_use_hint (0x91e0)
 
-L9190:
+L91e0:
         mov     r8, rsi
         mov     r9d, 0x3ff000
         xor     esi, esi
-        jmp     L91b6
+        jmp     L9206
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-L91a0:
+L91f0:
         add     edx, 0x1
         and     edx, 0xf
-L91a6:
+L91f6:
         mov     DWORD PTR [rdi+rsi*1], edx
         add     rsi, 0x4
         cmp     rsi, 0x400
-        je      L921d
-L91b6:
+        je      L926d
+L9206:
         mov     r10d, DWORD PTR [rdi+rsi*1]
         lea     eax, [r10+0x7f]
         sar     eax, 0x7
@@ -10355,26 +10371,26 @@ L91b6:
         sar     rax, 0x1f
         mov     r10d, DWORD PTR [r8+rsi*1]
         test    r10d, r10d
-        je      L91a6
+        je      L91f6
         lea     r10d, [rcx-0x7fe001]
         xor     r10d, ecx
         and     eax, r10d
         xor     eax, ecx
-        jg      L91a0
+        jg      L91f0
         sub     edx, 0x1
         and     edx, 0xf
         mov     DWORD PTR [rdi+rsi*1], edx
         add     rsi, 0x4
         cmp     rsi, 0x400
-        jne     L91b6
-L921d:
+        jne     L9206
+L926d:
         ret
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa87_poly_uniform_eta_4x (0x9220)
+// mldsa87_poly_uniform_eta_4x (0x9270)
 
-L9220:
+L9270:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -10454,28 +10470,28 @@ L9220:
         mov     rdi, QWORD PTR [rsp+0x40]
         xor     esi, esi
         mov     rdx, r14
-        call    L9070
+        call    L90c0
         mov     rdi, QWORD PTR [rsp+0x38]
         xor     esi, esi
         mov     rdx, r15
         mov     r13d, eax
-        call    L9070
+        call    L90c0
         mov     rdi, QWORD PTR [rsp+0x30]
         mov     rdx, rbx
         xor     esi, esi
         mov     r12d, eax
-        call    L9070
+        call    L90c0
         mov     rdx, QWORD PTR [rsp+0x58]
         mov     rdi, QWORD PTR [rsp+0x28]
         xor     esi, esi
         mov     ebx, eax
-        call    L9070
+        call    L90c0
         cmp     r12d, 0xff
         mov     r10d, eax
         setbe   al
         cmp     r13d, 0xff
-        jmp     L94a5
-L9420:
+        jmp     L94f5
+L9470:
         mov     r9, QWORD PTR [rsp+0x20]
         mov     rcx, QWORD PTR [rsp+0x58]
         mov     rsi, r15
@@ -10487,35 +10503,35 @@ L9420:
         mov     rdi, QWORD PTR [rsp+0x40]
         mov     esi, r13d
         mov     rdx, r14
-        call    L9070
+        call    L90c0
         mov     rdi, QWORD PTR [rsp+0x38]
         mov     esi, r12d
         mov     rdx, r15
         mov     r13d, eax
-        call    L9070
+        call    L90c0
         mov     rdx, QWORD PTR [rsp+0x50]
         mov     rdi, QWORD PTR [rsp+0x30]
         mov     esi, ebx
         mov     r12d, eax
-        call    L9070
+        call    L90c0
         mov     rdx, QWORD PTR [rsp+0x58]
         mov     esi, DWORD PTR [rsp+0x4c]
         mov     rdi, QWORD PTR [rsp+0x28]
         mov     ebx, eax
-        call    L9070
+        call    L90c0
         cmp     r13d, 0xff
         mov     r10d, eax
         setbe   al
         cmp     r12d, 0xff
-L94a5:
+L94f5:
         setbe   dl
         or      eax, edx
         cmp     ebx, 0xff
         setbe   dl
         or      al, dl
-        jne     L9420
+        jne     L9470
         cmp     r10d, 0xff
-        jbe     L9420
+        jbe     L9470
         mov     rdi, QWORD PTR [rsp+0x20]
         call    L1860
         xor     eax, eax
@@ -10535,9 +10551,9 @@ L94a5:
         pop     rbp
         ret
 
-// mldsa87_poly_challenge (0x9500)
+// mldsa87_poly_challenge (0x9550)
 
-L9500:
+L9550:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -10569,14 +10585,14 @@ L9500:
         xor     esi, esi
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L9570:
+L95c0:
         movzx   edx, BYTE PTR [rax]
         add     rax, 0x1
         shl     rdx, cl
         add     ecx, 0x8
         or      rsi, rdx
         cmp     rax, rdi
-        jne     L9570
+        jne     L95c0
         lea     rdi, [r14+0x8]
         mov     rcx, r14
         xor     eax, eax
@@ -10591,19 +10607,19 @@ L9570:
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
         mov     ecx, 0x8
-        jmp     L95df
+        jmp     L962f
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L95d0:
+L9620:
         mov     eax, ecx
-L95d2:
+L9622:
         movzx   edx, BYTE PTR [rsp+rax*1+0x20]
         lea     ecx, [rax+0x1]
         cmp     r15d, edx
-        jae     L960b
-L95df:
+        jae     L965b
+L962f:
         cmp     ecx, 0x88
-        jne     L95d0
+        jne     L9620
         mov     rdx, r12
         mov     esi, 0x88
         mov     rdi, rbx
@@ -10611,9 +10627,9 @@ L95df:
         movzx   edx, BYTE PTR [rsp+0x20]
         mov     eax, 0x1
         cmp     r15d, edx
-        jb      L95d2
+        jb      L9622
         mov     ecx, 0x1
-L960b:
+L965b:
         mov     eax, DWORD PTR [r14+rdx*4]
         mov     edi, r13d
         mov     DWORD PTR [r14+r15*4], eax
@@ -10627,7 +10643,7 @@ L960b:
         sub     edi, esi
         mov     DWORD PTR [r14+rdx*4], edi
         cmp     r15, 0x100
-        jne     L95df
+        jne     L962f
         mov     rdi, r12
         call    L1400
         xor     eax, eax
@@ -10649,9 +10665,9 @@ L960b:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa87_polyeta_pack (0x9680)
+// mldsa87_polyeta_pack (0x96d0)
 
-L9680:
+L96d0:
         push    r12
         mov     rax, rsi
         mov     r8, rdi
@@ -10661,7 +10677,7 @@ L9680:
         push    rbx
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L96a0:
+L96f0:
         mov     r11d, edx
         sub     r11b, BYTE PTR [rax+0x8]
         mov     r12d, edx
@@ -10702,19 +10718,21 @@ L96a0:
         mov     BYTE PTR [r8-0x2], sil
         mov     BYTE PTR [r8-0x1], cl
         cmp     r9, rax
-        jne     L96a0
+        jne     L96f0
+        mov     QWORD PTR [rsp-0x8], 0x0
+        lea     rax, [rsp-0x8]
         pop     rbx
         pop     rbp
         pop     r12
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-        // nop
-        .byte   0x90
+        // nop     DWORD PTR [rax]
+        .byte   0x0f,0x1f,0x00
 
-// mldsa87_polyeta_unpack (0x9730)
+// mldsa87_polyeta_unpack (0x9790)
 
-L9730:
+L9790:
         push    r13
         mov     rax, rdi
         lea     r11, [rdi+0x400]
@@ -10725,7 +10743,7 @@ L9730:
         push    rbx
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L9750:
+L97b0:
         movzx   r10d, BYTE PTR [rdx]
         mov     r13d, edi
         add     rax, 0x20
@@ -10791,7 +10809,7 @@ L9750:
         mov     DWORD PTR [rax-0xc], esi
         mov     DWORD PTR [rax-0x4], ecx
         cmp     r11, rax
-        jne     L9750
+        jne     L97b0
         pop     rbx
         pop     rbp
         pop     r12
@@ -10800,9 +10818,9 @@ L9750:
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa87_polyz_pack (0x9840)
+// mldsa87_polyz_pack (0x98a0)
 
-L9840:
+L98a0:
         push    rbx
         mov     rax, rdi
         mov     r8d, 0x80000
@@ -10811,7 +10829,7 @@ L9840:
         mov     rsi, rax
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-L9860:
+L98c0:
         mov     ecx, r8d
         mov     edx, r8d
         sub     ecx, DWORD PTR [rdi]
@@ -10838,24 +10856,27 @@ L9860:
         or      eax, ecx
         mov     DWORD PTR [rsi-0x5], eax
         cmp     r9, rsi
-        jne     L9860
+        jne     L98c0
+        pxor    xmm0, xmm0
+        lea     rax, [rsp-0x10]
+        movaps  XMMWORD PTR [rsp-0x10], xmm0
         pop     rbx
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-        // xchg    ax, ax
-        .byte   0x66,0x90
+        // nop     DWORD PTR [rax+0x0]
+        .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa87_polyz_unpack (0x98c0)
+// mldsa87_polyz_unpack (0x9930)
 
-L98c0:
+L9930:
         mov     rax, rsi
         mov     rdx, rdi
         lea     r9, [rsi+0x280]
         mov     r8d, 0x80000
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L98d8:
+L9948:
         movzx   ecx, BYTE PTR [rax]
         add     rax, 0x5
         add     rdx, 0x8
@@ -10887,14 +10908,14 @@ L98d8:
         mov     DWORD PTR [rdx-0x8], edi
         mov     DWORD PTR [rdx-0x4], ecx
         cmp     r9, rax
-        jne     L98d8
+        jne     L9948
         ret
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa87_poly_uniform_gamma1_4x (0x9940)
+// mldsa87_poly_uniform_gamma1_4x (0x99b0)
 
-L9940:
+L99b0:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -10963,16 +10984,16 @@ L9940:
         call    L17b0
         mov     rdi, QWORD PTR [rsp+0x38]
         mov     rsi, r13
-        call    L98c0
+        call    L9930
         mov     rsi, QWORD PTR [rsp+0x18]
         mov     rdi, QWORD PTR [rsp+0x30]
-        call    L98c0
+        call    L9930
         mov     rdi, QWORD PTR [rsp+0x28]
         mov     rsi, r15
-        call    L98c0
+        call    L9930
         mov     rdi, QWORD PTR [rsp+0x20]
         mov     rsi, r14
-        call    L98c0
+        call    L9930
         mov     rdi, r12
         call    L1860
         xor     eax, eax
@@ -10993,9 +11014,9 @@ L9940:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa87_polyvecl_uniform_gamma1 (0x9b10)
+// mldsa87_polyvecl_uniform_gamma1 (0x9b80)
 
-L9b10:
+L9b80:
         push    r13
         lea     r13, [rdi+0xc00]
         push    r12
@@ -11017,7 +11038,7 @@ L9b10:
         lea     eax, [rbx+0x1]
         movzx   eax, ax
         push    rax
-        call    L9940
+        call    L99b0
         lea     eax, [rbx+0x6]
         add     rsp, 0x18
         lea     r9d, [rbx+0x3]
@@ -11035,7 +11056,7 @@ L9b10:
         push    rax
         lea     rsi, [rbp+0x1000]
         push    rbx
-        call    L9940
+        call    L99b0
         add     rsp, 0x28
         pop     rbx
         pop     rbp
@@ -11045,20 +11066,20 @@ L9b10:
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa87_polyvecl_ntt (0x9bb0)
+// mldsa87_polyvecl_ntt (0x9c20)
 
-L9bb0:
+L9c20:
         push    rbp
         lea     rbp, [rdi+0x1c00]
         push    rbx
         mov     rbx, rdi
         sub     rsp, 0x8
-L9bc0:
+L9c30:
         mov     rdi, rbx
         add     rbx, 0x400
         call    L27d0
         cmp     rbx, rbp
-        jne     L9bc0
+        jne     L9c30
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -11066,30 +11087,30 @@ L9bc0:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa87_polyvecl_pointwise_acc_montgomery (0x9be0)
+// mldsa87_polyvecl_pointwise_acc_montgomery (0x9c50)
 
-L9be0:
+L9c50:
         push    rbx
         mov     r9, rdx
         mov     r8, rsi
         xor     edx, edx
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L9bf0:
+L9c60:
         xor     eax, eax
         lea     r11, [r8+rdx*1]
         lea     r10, [r9+rdx*1]
         xor     esi, esi
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-L9c00:
+L9c70:
         movsxd  rcx, DWORD PTR [r11+rax*1]
         movsxd  rbx, DWORD PTR [r10+rax*1]
         add     rax, 0x400
         imul    rcx, rbx
         add     rsi, rcx
         cmp     rax, 0x1c00
-        jne     L9c00
+        jne     L9c70
         imul    ecx, esi, 0x3802001
         movsxd  rcx, ecx
         mov     r10, rcx
@@ -11103,7 +11124,7 @@ L9c00:
         mov     DWORD PTR [rdi+rdx*1], eax
         add     rdx, 0x4
         cmp     rdx, 0x400
-        jne     L9bf0
+        jne     L9c60
         pop     rbx
         ret
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
@@ -11111,9 +11132,9 @@ L9c00:
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa87_polyvecl_chknorm (0x9c60)
+// mldsa87_polyvecl_chknorm (0x9cd0)
 
-L9c60:
+L9cd0:
         push    r13
         lea     r13, [rdi+0x1c00]
         push    r12
@@ -11125,14 +11146,14 @@ L9c60:
         sub     rsp, 0x8
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L9c80:
+L9cf0:
         mov     rdi, rbx
         mov     esi, r12d
         add     rbx, 0x400
-        call    L31e0
+        call    L31f0
         or      ebp, eax
         cmp     rbx, r13
-        jne     L9c80
+        jne     L9cf0
         add     rsp, 0x8
         mov     eax, ebp
         pop     rbx
@@ -11143,20 +11164,20 @@ L9c80:
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa87_polyveck_caddq (0x9cb0)
+// mldsa87_polyveck_caddq (0x9d20)
 
-L9cb0:
+L9d20:
         push    rbp
         lea     rbp, [rdi+0x2000]
         push    rbx
         mov     rbx, rdi
         sub     rsp, 0x8
-L9cc0:
+L9d30:
         mov     rdi, rbx
         add     rbx, 0x400
         call    L2700
         cmp     rbx, rbp
-        jne     L9cc0
+        jne     L9d30
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -11164,20 +11185,20 @@ L9cc0:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa87_polyveck_ntt (0x9ce0)
+// mldsa87_polyveck_ntt (0x9d50)
 
-L9ce0:
+L9d50:
         push    rbp
         lea     rbp, [rdi+0x2000]
         push    rbx
         mov     rbx, rdi
         sub     rsp, 0x8
-L9cf0:
+L9d60:
         mov     rdi, rbx
         add     rbx, 0x400
         call    L27d0
         cmp     rbx, rbp
-        jne     L9cf0
+        jne     L9d60
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -11185,20 +11206,20 @@ L9cf0:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa87_polyveck_invntt_tomont (0x9d10)
+// mldsa87_polyveck_invntt_tomont (0x9d80)
 
-L9d10:
+L9d80:
         push    rbp
         lea     rbp, [rdi+0x2000]
         push    rbx
         mov     rbx, rdi
         sub     rsp, 0x8
-L9d20:
+L9d90:
         mov     rdi, rbx
         add     rbx, 0x400
         call    L28e0
         cmp     rbx, rbp
-        jne     L9d20
+        jne     L9d90
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -11206,9 +11227,9 @@ L9d20:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa87_polyveck_unpack_eta_chknorm (0x9d40)
+// mldsa87_polyveck_unpack_eta_chknorm (0x9db0)
 
-L9d40:
+L9db0:
         push    r14
         lea     r14, [rdi+0x300]
         push    r13
@@ -11221,17 +11242,17 @@ L9d40:
         mov     rbx, rdi
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L9d60:
+L9dd0:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x60
-        call    L9730
+        call    L9790
         mov     esi, r13d
         mov     rdi, rbp
-        call    L31e0
+        call    L31f0
         or      r12d, eax
         cmp     rbx, r14
-        jne     L9d60
+        jne     L9dd0
         pop     rbx
         mov     eax, r12d
         pop     rbp
@@ -11242,9 +11263,9 @@ L9d60:
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa87_polyveck_decompose_pack_w1 (0x9d90)
+// mldsa87_polyveck_decompose_pack_w1 (0x9e00)
 
-L9d90:
+L9e00:
         push    r13
         lea     r13, [rsi+0x2000]
         push    r12
@@ -11256,17 +11277,17 @@ L9d90:
         sub     rsp, 0x8
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-L9db0:
+L9e20:
         mov     rsi, rbx
         mov     rdi, r12
         add     rbx, 0x400
-        call    L9120
+        call    L9170
         mov     rdi, rbp
         mov     rsi, r12
         sub     rbp, 0xffffffffffffff80
-        call    L3280
+        call    L3290
         cmp     rbx, r13
-        jne     L9db0
+        jne     L9e20
         add     rsp, 0x8
         pop     rbx
         pop     rbp
@@ -11278,9 +11299,9 @@ L9db0:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa87_polyvecl_unpack_eta (0x9df0)
+// mldsa87_polyvecl_unpack_eta (0x9e60)
 
-L9df0:
+L9e60:
         push    r12
         lea     r12, [rsi+0x2a0]
         push    rbp
@@ -11289,14 +11310,14 @@ L9df0:
         mov     rbx, rsi
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L9e08:
+L9e78:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x60
         add     rbp, 0x400
-        call    L9730
+        call    L9790
         cmp     rbx, r12
-        jne     L9e08
+        jne     L9e78
         pop     rbx
         pop     rbp
         pop     r12
@@ -11304,9 +11325,9 @@ L9e08:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa87_polyvecl_unpack_z (0x9e30)
+// mldsa87_polyvecl_unpack_z (0x9ea0)
 
-L9e30:
+L9ea0:
         push    r12
         lea     r12, [rsi+0x1180]
         push    rbp
@@ -11315,14 +11336,14 @@ L9e30:
         mov     rbx, rsi
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L9e48:
+L9eb8:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x280
         add     rbp, 0x400
-        call    L98c0
+        call    L9930
         cmp     rbx, r12
-        jne     L9e48
+        jne     L9eb8
         pop     rbx
         pop     rbp
         pop     r12
@@ -11330,9 +11351,9 @@ L9e48:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
 
-// mldsa87_polyveck_unpack_eta (0x9e70)
+// mldsa87_polyveck_unpack_eta (0x9ee0)
 
-L9e70:
+L9ee0:
         push    r12
         lea     r12, [rsi+0x300]
         push    rbp
@@ -11341,14 +11362,14 @@ L9e70:
         mov     rbx, rsi
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-L9e88:
+L9ef8:
         mov     rsi, rbx
         mov     rdi, rbp
         add     rbx, 0x60
         add     rbp, 0x400
-        call    L9730
+        call    L9790
         cmp     rbx, r12
-        jne     L9e88
+        jne     L9ef8
         pop     rbx
         pop     rbp
         pop     r12
@@ -11356,9 +11377,9 @@ L9e88:
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa87_polyvec_matrix_expand_eager (0x9eb0)
+// mldsa87_polyvec_matrix_expand_eager (0x9f20)
 
-L9eb0:
+L9f20:
         push    rbp
         mov     rbp, rsp
         push    r14
@@ -11373,19 +11394,19 @@ L9eb0:
         mov     rbx, rsp
         lea     r13, [rsp+0x100]
         mov     rax, rbx
-L9ee0:
+L9f50:
         movaps  XMMWORD PTR [rax], xmm1
         add     rax, 0x40
         movaps  XMMWORD PTR [rax-0x30], xmm0
         cmp     r13, rax
-        jne     L9ee0
+        jne     L9f50
         xor     r12d, r12d
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-L9ef8:
+L9f68:
         mov     rsi, rbx
         mov     ecx, r12d
-L9efe:
+L9f6e:
         mov     edx, ecx
         mov     eax, ecx
         mov     edi, ecx
@@ -11403,7 +11424,7 @@ L9efe:
         sub     edi, edx
         mov     BYTE PTR [rsi-0x20], dil
         cmp     r13, rsi
-        jne     L9efe
+        jne     L9f6e
         lea     edx, [r12+0x3]
         lea     esi, [r12+0x2]
         mov     r8, rdx
@@ -11480,7 +11501,7 @@ L9efe:
         add     rdi, r14
         call    L2ba0
         cmp     r12d, 0x38
-        jne     L9ef8
+        jne     L9f68
         xor     eax, eax
         mov     rdi, rbx
         mov     ecx, 0x20
@@ -11497,21 +11518,21 @@ L9efe:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa87_polyvec_matrix_pointwise_montgomery_row_eager (0xa080)
+// mldsa87_polyvec_matrix_pointwise_montgomery_row_eager (0xa0f0)
 
-La080:
+La0f0:
         mov     ecx, ecx
         lea     rax, [rcx*8+0x0]
         sub     rax, rcx
         shl     rax, 0xa
         add     rsi, rax
-        jmp     L9be0
+        jmp     L9c50
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
 
-// mldsa87_polyvec_matrix_pointwise_montgomery_yvec_eager (0xa0a0)
+// mldsa87_polyvec_matrix_pointwise_montgomery_yvec_eager (0xa110)
 
-La0a0:
+La110:
         push    r14
         mov     r14, rdi
         push    r13
@@ -11527,32 +11548,32 @@ La0a0:
         xor     ebx, ebx
         rep movs QWORD PTR es:[rdi], QWORD PTR ds:[rsi]
         mov     rdi, r12
-        call    L9bb0
+        call    L9c20
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-La0d0:
+La140:
         mov     ecx, ebx
         mov     rdi, rbp
         mov     rdx, r12
         mov     rsi, r13
-        call    La080
+        call    La0f0
         add     ebx, 0x1
         add     rbp, 0x400
         cmp     ebx, 0x8
-        jne     La0d0
+        jne     La140
         pop     rbx
         mov     rdi, r14
         pop     rbp
         pop     r12
         pop     r13
         pop     r14
-        jmp     L9d10
+        jmp     L9d80
         // nop
         .byte   0x90
 
-// mld_compute_pack_t0_t187 (0xa100)
+// mld_compute_pack_t0_t187 (0xa170)
 
-La100:
+La170:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -11572,23 +11593,23 @@ La100:
         mov     rdi, rax
         mov     QWORD PTR [rsp+0x10], rax
         lea     r12, [rsp+0x420]
-        call    L9eb0
+        call    L9f20
         xor     eax, eax
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-La150:
+La1c0:
         mov     rdx, QWORD PTR [rsp+0x8]
         mov     rsi, QWORD PTR [rsp+0x10]
         mov     ecx, eax
         mov     rdi, rbx
         mov     DWORD PTR [rsp+0x1c], eax
-        call    La080
+        call    La0f0
         mov     rdi, rbx
         call    L28e0
         mov     rsi, r15
         mov     rdi, r12
         add     r15, 0x60
-        call    L9730
+        call    L9790
         mov     rsi, r12
         mov     rdi, rbx
         call    L2740
@@ -11611,7 +11632,7 @@ La150:
         mov     eax, DWORD PTR [rsp+0x1c]
         add     eax, 0x1
         cmp     eax, 0x8
-        jne     La150
+        jne     La1c0
         xor     eax, eax
         mov     rdi, r12
         mov     ecx, 0x80
@@ -11636,9 +11657,9 @@ La150:
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
 
-// mld_H87.constprop.0 (0xa220)
+// mld_H87.constprop.0 (0xa290)
 
-La220:
+La290:
         push    r15
         mov     r15, r8
         push    r14
@@ -11660,10 +11681,10 @@ La220:
         mov     rdi, rbx
         call    L1280
         test    r15, r15
-        jne     La2b8
+        jne     La328
         cmp     QWORD PTR [rsp+0x120], 0x0
-        jne     La2d1
-La272:
+        jne     La341
+La2e2:
         mov     rdi, rbx
         call    L1310
         mov     rdx, rbx
@@ -11686,25 +11707,25 @@ La272:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-La2b8:
+La328:
         mov     rdx, r15
         mov     rsi, r14
         mov     rdi, rbx
         call    L1280
         cmp     QWORD PTR [rsp+0x120], 0x0
-        je      La272
-La2d1:
+        je      La2e2
+La341:
         mov     rdx, QWORD PTR [rsp+0x120]
         mov     rsi, r13
         mov     rdi, rbx
         call    L1280
-        jmp     La272
+        jmp     La2e2
         // cs      nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa87_keypair_internal (0xa2f0)
+// mldsa87_keypair_internal (0xa360)
 
-La2f0:
+La360:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         mov     ecx, 0x22
@@ -11752,20 +11773,20 @@ La2f0:
         push    0xd
         push    0xc
         mov     QWORD PTR [rbp-0x1d38], rax
-        call    L9220
+        call    L9270
         add     rsp, 0x20
         lea     rdi, [rbx+0x4a0]
         mov     rsi, r12
-        call    L9680
+        call    L96d0
         mov     rsi, r15
         lea     rdi, [rbx+0x500]
-        call    L9680
+        call    L96d0
         mov     rsi, r14
         lea     rdi, [rbx+0x560]
-        call    L9680
+        call    L96d0
         mov     rsi, r13
         lea     rdi, [rbx+0x5c0]
-        call    L9680
+        call    L96d0
         sub     rsp, 0x8
         mov     rcx, r13
         mov     rdx, r14
@@ -11776,20 +11797,20 @@ La2f0:
         push    0x9
         mov     r9d, 0x7
         push    0x8
-        call    L9220
+        call    L9270
         mov     rdi, QWORD PTR [rbp-0x1d48]
         add     rsp, 0x20
         mov     rsi, r12
-        call    L9680
+        call    L96d0
         mov     rsi, r15
         lea     rdi, [rbx+0x380]
-        call    L9680
+        call    L96d0
         mov     rsi, r14
         lea     rdi, [rbx+0x3e0]
-        call    L9680
+        call    L96d0
         mov     rsi, r13
         lea     rdi, [rbx+0x440]
-        call    L9680
+        call    L96d0
         sub     rsp, 0x8
         mov     rcx, r12
         lea     rax, [rbp-0x430]
@@ -11806,17 +11827,17 @@ La2f0:
         mov     QWORD PTR [rbp-0x1d68], rax
         mov     QWORD PTR [rbp-0x1d60], r11
         mov     QWORD PTR [rbp-0x1d50], r10
-        call    L9220
+        call    L9270
         mov     rsi, QWORD PTR [rbp-0x1d50]
         add     rsp, 0x20
         lea     rdi, [rbx+0x200]
-        call    L9680
+        call    L96d0
         mov     rsi, QWORD PTR [rbp-0x1d60]
         lea     rdi, [rbx+0x260]
-        call    L9680
+        call    L96d0
         mov     rsi, QWORD PTR [rbp-0x1d68]
         lea     rdi, [rbx+0x2c0]
-        call    L9680
+        call    L96d0
         sub     rsp, 0x8
         mov     rcx, r13
         mov     rdx, r14
@@ -11827,23 +11848,23 @@ La2f0:
         push    0x2
         mov     rdi, r12
         push    0x1
-        call    L9220
+        call    L9270
         add     rsp, 0x20
         lea     rdi, [rbx+0x80]
         mov     rsi, r12
-        call    L9680
+        call    L96d0
         mov     rsi, r15
         lea     rdi, [rbx+0xe0]
-        call    L9680
+        call    L96d0
         mov     rsi, r14
         lea     rdi, [rbx+0x140]
         lea     r14, [rbp-0x1cf0]
-        call    L9680
+        call    L96d0
         mov     rsi, r13
         lea     rdi, [rbx+0x1a0]
-        call    L9680
+        call    L96d0
         mov     rdi, r12
-        call    L9bb0
+        call    L9c20
         mov     r10, QWORD PTR [rbp-0x1d70]
         mov     rdx, r12
         movdqa  xmm3, XMMWORD PTR [rbp-0x1cb0]
@@ -11856,11 +11877,11 @@ La2f0:
         movups  XMMWORD PTR [r10+0x10], xmm4
         mov     r8, r15
         mov     QWORD PTR [rbp-0x1d38], r10
-        call    La100
+        call    La170
         mov     r10, QWORD PTR [rbp-0x1d38]
         test    eax, eax
         mov     r13d, eax
-        jne     La607
+        jne     La677
         mov     rdx, r10
         mov     ecx, 0xa20
         mov     esi, 0x40
@@ -11870,9 +11891,9 @@ La2f0:
         mov     rsi, r15
         mov     rdi, rbx
         lea     rcx, [rbp-0x1c50]
-        call    L8d20
+        call    L8d70
         mov     r10, QWORD PTR [rbp-0x1d38]
-La607:
+La677:
         xor     eax, eax
         mov     rdi, r12
         mov     ecx, 0x380
@@ -11892,8 +11913,8 @@ La607:
         rep stos QWORD PTR es:[rdi], rax
         mov     rdi, QWORD PTR [rbp-0x1d40]
         test    r13d, r13d
-        jne     La688
-La66d:
+        jne     La6f8
+La6dd:
         lea     rsp, [rbp-0x30]
         mov     eax, r13d
         pop     rbx
@@ -11907,7 +11928,7 @@ La66d:
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-La688:
+La6f8:
         lea     rdi, [r10+0x8]
         mov     rcx, r10
         mov     QWORD PTR [r10], 0x0
@@ -11926,15 +11947,15 @@ La688:
         add     ecx, 0x1320
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-        jmp     La66d
+        jmp     La6dd
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa87_keypair (0xa6f0)
+// mldsa87_keypair (0xa760)
 
-La6f0:
+La760:
         push    rbp
         mov     rbp, rsp
         push    r13
@@ -11949,12 +11970,12 @@ La6f0:
         mov     rdi, rbx
         call    L1020
         test    eax, eax
-        jne     La748
+        jne     La7b8
         mov     rdx, rbx
         mov     rsi, r13
         mov     rdi, r12
-        call    La2f0
-La729:
+        call    La360
+La799:
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rsp], xmm0
         movaps  XMMWORD PTR [rsp+0x10], xmm0
@@ -11966,15 +11987,15 @@ La729:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-La748:
+La7b8:
         mov     eax, 0xfffffffd
-        jmp     La729
+        jmp     La799
         // nop
         .byte   0x90
 
-// mldsa87_signature_internal (0xa750)
+// mldsa87_signature_internal (0xa7c0)
 
-La750:
+La7c0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -12009,11 +12030,11 @@ La750:
         mov     QWORD PTR [rbp-0x1a1b8], r9
         mov     QWORD PTR [rbp-0x1a1a0], rax
         push    QWORD PTR [r10]
-        call    L8d70
+        call    L8dc0
         pop     rdi
         pop     r8
         test    r14d, r14d
-        jne     Lad3f
+        jne     Ladaf
         sub     rsp, 0x8
         mov     rsi, r15
         mov     r9, r12
@@ -12024,10 +12045,10 @@ La750:
         mov     QWORD PTR [rbp-0x1a1d8], rax
         mov     rdi, rax
         push    QWORD PTR [rbp-0x1a178]
-        call    La220
+        call    La290
         pop     rcx
         pop     rsi
-La83a:
+La8aa:
         sub     rsp, 0x8
         mov     rcx, rbx
         mov     edx, 0x20
@@ -12042,12 +12063,12 @@ La83a:
         lea     r14, [rbp-0x19c30]
         push    0x40
         mov     r12, r15
-        call    La220
+        call    La290
         lea     rax, [rbp-0xe030]
         mov     rsi, QWORD PTR [rbp-0x1a1f0]
         mov     rdi, rax
         mov     QWORD PTR [rbp-0x1a1e0], rax
-        call    L9eb0
+        call    L9f20
         pop     rax
         lea     rax, [rbp-0x17830]
         pop     rdx
@@ -12062,25 +12083,25 @@ La83a:
         mov     QWORD PTR [rbp-0x1a1d0], rax
         // xchg    ax, ax
         .byte   0x66,0x90
-La8f0:
+La960:
         mov     r13, QWORD PTR [rbp-0x1a188]
         mov     edx, DWORD PTR [rbp-0x1a1ac]
         mov     rsi, QWORD PTR [rbp-0x1a1e8]
         mov     rdi, r13
-        call    L9b10
+        call    L9b80
         mov     rdx, r13
         mov     r13, QWORD PTR [rbp-0x1a198]
         mov     rcx, QWORD PTR [rbp-0x1a178]
         mov     rsi, QWORD PTR [rbp-0x1a1e0]
         mov     rdi, r13
-        call    La0a0
+        call    La110
         mov     rdi, r13
-        call    L9cb0
+        call    L9d20
         mov     rsi, r13
         mov     r13, QWORD PTR [rbp-0x1a1c0]
         mov     rdx, QWORD PTR [rbp-0x1a178]
         mov     rdi, r13
-        call    L9d90
+        call    L9e00
         mov     rdi, r15
         call    L1240
         mov     rsi, QWORD PTR [rbp-0x1a1d8]
@@ -12107,14 +12128,14 @@ La8f0:
         mov     rsi, r13
         mov     rdi, r14
         xor     r13d, r13d
-        call    L9500
+        call    L9550
         mov     rdi, r14
         call    L27d0
         mov     QWORD PTR [rbp-0x1a190], r14
         mov     r14, r13
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-La9d0:
+Laa40:
         mov     rax, QWORD PTR [rbp-0x1a1a0]
         mov     r13, r14
         mov     rdi, r15
@@ -12142,23 +12163,23 @@ La9d0:
         call    L26b0
         mov     esi, 0x7ff88
         mov     rdi, r12
-        call    L31e0
+        call    L31f0
         test    eax, eax
-        jne     Lad10
+        jne     Lad80
         mov     edx, DWORD PTR [rbp-0x1a180]
         mov     rdi, QWORD PTR [rbp-0x1a1a8]
         mov     rsi, r12
         add     r14, 0x1
-        call    L8f70
+        call    L8fc0
         cmp     r14, 0x7
-        jne     La9d0
+        jne     Laa40
         mov     r14, QWORD PTR [rbp-0x1a190]
         mov     QWORD PTR [rbp-0x1a180], r12
         xor     r13d, r13d
         mov     QWORD PTR [rbp-0x1a190], r12
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-Laa98:
+Lab08:
         mov     rax, QWORD PTR [rbp-0x1a1b8]
         mov     ecx, 0x80
         mov     rdi, rbx
@@ -12179,9 +12200,9 @@ Laa98:
         call    L26b0
         mov     esi, 0x3fe88
         mov     rdi, r15
-        call    L31e0
+        call    L31f0
         test    eax, eax
-        jne     Lad28
+        jne     Lad98
         mov     rax, QWORD PTR [rbp-0x1a1c8]
         mov     ecx, 0x80
         mov     rdi, rbx
@@ -12196,29 +12217,29 @@ Laa98:
         call    L26b0
         mov     esi, 0x3ff00
         mov     rdi, rbx
-        call    L31e0
+        call    L31f0
         test    eax, eax
-        jne     Lad28
+        jne     Lad98
         mov     rsi, rbx
         mov     rdi, r15
         add     r13, 0x400
         call    L2740
         cmp     r13, 0x2000
-        jne     Laa98
+        jne     Lab08
         mov     r13, QWORD PTR [rbp-0x1a1a8]
         mov     rsi, QWORD PTR [rbp-0x1a1d0]
         mov     QWORD PTR [rbp-0x1a178], rbx
         mov     r15, QWORD PTR [rbp-0x1a180]
         mov     r12, QWORD PTR [rbp-0x1a190]
         mov     rdi, r13
-        call    L8e50
+        call    L8ea0
         mov     rdx, QWORD PTR [rbp-0x1a1c0]
         mov     rdi, r13
         mov     rcx, rbx
         mov     rsi, QWORD PTR [rbp-0x1a198]
-        call    L8e80
+        call    L8ed0
         mov     r13d, eax
-Laba3:
+Lac13:
         mov     rdi, r12
         xor     eax, eax
         mov     ecx, 0x80
@@ -12248,15 +12269,15 @@ Laba3:
         movaps  XMMWORD PTR [rax+0x20], xmm0
         movaps  XMMWORD PTR [rax+0x30], xmm0
         test    r13d, r13d
-        je      Lac80
+        je      Lacf0
         cmp     r13d, 0xffffffff
-        jne     Lac4b
+        jne     Lacbb
         add     DWORD PTR [rbp-0x1a1ac], 0x7
         mov     eax, DWORD PTR [rbp-0x1a1ac]
         cmp     eax, 0xfff7
-        jne     La8f0
+        jne     La960
         mov     r13d, 0xfffffffc
-Lac4b:
+Lacbb:
         mov     rdx, QWORD PTR [rbp-0x1a1a8]
         xor     eax, eax
         lea     rdi, [rdx+0x8]
@@ -12268,7 +12289,7 @@ Lac4b:
         add     ecx, 0x1213
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-Lac80:
+Lacf0:
         mov     rdi, QWORD PTR [rbp-0x1a1b8]
         xor     ebx, ebx
         mov     ecx, 0x400
@@ -12306,19 +12327,19 @@ Lac80:
         ret
         // xchg    ax, ax
         .byte   0x66,0x90
-Lad10:
+Lad80:
         mov     r14, QWORD PTR [rbp-0x1a190]
-Lad17:
+Lad87:
         mov     r13d, 0xffffffff
-        jmp     Laba3
+        jmp     Lac13
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-Lad28:
+Lad98:
         mov     QWORD PTR [rbp-0x1a178], r12
         mov     r15, QWORD PTR [rbp-0x1a180]
         mov     r12, QWORD PTR [rbp-0x1a190]
-        jmp     Lad17
-Lad3f:
+        jmp     Lad87
+Ladaf:
         movdqu  xmm1, XMMWORD PTR [r12]
         movdqu  xmm2, XMMWORD PTR [r12+0x10]
         lea     rax, [rbp-0x1a0b0]
@@ -12329,13 +12350,13 @@ Lad3f:
         movaps  XMMWORD PTR [rbp-0x1a0a0], xmm2
         movaps  XMMWORD PTR [rbp-0x1a090], xmm3
         movaps  XMMWORD PTR [rbp-0x1a080], xmm4
-        jmp     La83a
+        jmp     La8aa
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
 
-// mldsa87_signature_extmu (0xad90)
+// mldsa87_signature_extmu (0xae00)
 
-Lad90:
+Lae00:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -12355,7 +12376,7 @@ Lad90:
         sub     rsp, 0x28
         call    L1020
         test    eax, eax
-        jne     Lae10
+        jne     Lae80
         push    0x1
         xor     ecx, ecx
         mov     edx, 0x40
@@ -12364,10 +12385,10 @@ Lad90:
         xor     r8d, r8d
         mov     rsi, r13
         mov     rdi, r12
-        call    La750
+        call    La7c0
         pop     rdx
         pop     rcx
-Ladea:
+Lae5a:
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x50], xmm0
         movaps  XMMWORD PTR [rbp-0x40], xmm0
@@ -12382,15 +12403,15 @@ Ladea:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-Lae10:
+Lae80:
         mov     eax, 0xfffffffd
-        jmp     Ladea
+        jmp     Lae5a
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa87_verify_internal (0xae20)
+// mldsa87_verify_internal (0xae90)
 
-Lae20:
+Lae90:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -12423,16 +12444,16 @@ Lae20:
         movaps  XMMWORD PTR [rbp-0x10d80], xmm4
         movaps  XMMWORD PTR [rbp-0x10d70], xmm5
         movaps  XMMWORD PTR [rbp-0x10d60], xmm6
-        call    L9e30
+        call    L9ea0
         mov     esi, 0x7ff88
         mov     rdi, r13
-        call    L9c60
+        call    L9cd0
         mov     r11, QWORD PTR [rbp-0x10dd8]
         test    eax, eax
-        jne     Lb379
+        jne     Lb3e9
         mov     r13d, eax
         test    ebx, ebx
-        je      Lb280
+        je      Lb2f0
         movdqu  xmm7, XMMWORD PTR [r14]
         lea     rax, [rbp-0xe030]
         movdqu  xmm3, XMMWORD PTR [r14+0x20]
@@ -12446,14 +12467,14 @@ Lae20:
         movaps  XMMWORD PTR [rbp-0x10dc0], xmm7
         movaps  XMMWORD PTR [rbp-0x10db0], xmm3
         movaps  XMMWORD PTR [rbp-0x10da0], xmm4
-Laf2d:
+Laf9d:
         mov     rdi, QWORD PTR [rbp-0x10de0]
         mov     QWORD PTR [rbp-0x10df8], r11
         lea     r12, [rbp-0x10430]
-        call    L9bb0
+        call    L9c20
         mov     rsi, QWORD PTR [rbp-0x10df0]
         mov     rdi, QWORD PTR [rbp-0x10dd8]
-        call    L9eb0
+        call    L9f20
         lea     rax, [rbp-0x10830]
         lea     r8, [rbp-0x10d90]
         mov     r14, rax
@@ -12461,7 +12482,7 @@ Laf2d:
         mov     rsi, r8
         mov     QWORD PTR [rbp-0x10de8], rax
         mov     QWORD PTR [rbp-0x10e10], r8
-        call    L9500
+        call    L9550
         mov     rdi, r14
         call    L27d0
         lea     rax, [rbp-0x10c30]
@@ -12469,16 +12490,16 @@ Laf2d:
         mov     r15, rax
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-Lafa0:
+Lb010:
         mov     rdx, QWORD PTR [rbp-0x10de0]
         mov     rsi, QWORD PTR [rbp-0x10dd8]
         mov     ecx, r13d
         mov     rdi, r12
-        call    La080
+        call    La0f0
         mov     rsi, QWORD PTR [rbp-0x10df0]
         mov     edx, r13d
         mov     rdi, rbx
-        call    L8d10
+        call    L8d60
         mov     rdi, rbx
         call    L27a0
         mov     rdi, rbx
@@ -12498,20 +12519,20 @@ Lafa0:
         mov     rsi, QWORD PTR [rbp-0x10df8]
         mov     edx, r13d
         mov     rdi, rbx
-        call    L8f80
+        call    L8fd0
         mov     r14d, eax
         test    eax, eax
-        jne     Lb360
+        jne     Lb3d0
         mov     rsi, rbx
         mov     rdi, r12
         add     r13d, 0x1
-        call    L9190
+        call    L91e0
         mov     rdi, r15
         mov     rsi, r12
         sub     r15, 0xffffffffffffff80
-        call    L3280
+        call    L3290
         cmp     r13d, 0x8
-        jne     Lafa0
+        jne     Lb010
         mov     r8, QWORD PTR [rbp-0x10e10]
         lea     r13, [rbp-0x10d00]
         lea     r15, [rbp-0x10d50]
@@ -12541,14 +12562,14 @@ Lafa0:
         pxor    xmm1, xmm1
         mov     r8, QWORD PTR [rbp-0x10df0]
         movdqa  xmm0, xmm1
-Lb0da:
+Lb14a:
         movdqa  xmm2, XMMWORD PTR [r8+rax*1]
         pxor    xmm2, XMMWORD PTR [r15+rax*1]
         add     rax, 0x10
         por     xmm0, xmm2
         pxor    xmm1, xmm2
         cmp     rax, 0x40
-        jne     Lb0da
+        jne     Lb14a
         movdqa  xmm2, xmm1
         psrldq  xmm2, 0x8
         pxor    xmm1, xmm2
@@ -12580,8 +12601,8 @@ Lb0da:
         sar     rax, 0x20
         xor     eax, edx
         cmp     al, dl
-        jne     Lb36e
-Lb17c:
+        jne     Lb3de
+Lb1ec:
         xor     r13d, r13d
         mov     rdi, rbx
         mov     ecx, 0x80
@@ -12638,7 +12659,7 @@ Lb17c:
         ret
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-Lb280:
+Lb2f0:
         lea     rax, [rbp-0xe030]
         mov     QWORD PTR [rbp-0x10df8], r11
         mov     rdi, rax
@@ -12673,7 +12694,7 @@ Lb280:
         mov     rdi, rax
         push    r12
         mov     r8, QWORD PTR [rbp-0x10de8]
-        call    La220
+        call    La290
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x10030], xmm0
         movaps  XMMWORD PTR [rbp-0x10020], xmm0
@@ -12682,16 +12703,16 @@ Lb280:
         pop     rax
         mov     r11, QWORD PTR [rbp-0x10df8]
         pop     rdx
-        jmp     Laf2d
+        jmp     Laf9d
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-Lb360:
+Lb3d0:
         mov     r8, QWORD PTR [rbp-0x10e10]
         lea     r15, [rbp-0x10d50]
-Lb36e:
+Lb3de:
         mov     r14d, 0xfffffffa
-        jmp     Lb17c
-Lb379:
+        jmp     Lb1ec
+Lb3e9:
         lea     rax, [rbp-0xe030]
         lea     rbx, [rbp-0x10030]
         mov     QWORD PTR [rbp-0x10dd8], rax
@@ -12704,31 +12725,31 @@ Lb379:
         lea     rax, [rbp-0x10c30]
         lea     r15, [rbp-0x10d50]
         mov     QWORD PTR [rbp-0x10e00], rax
-        jmp     Lb36e
+        jmp     Lb3de
         // nop
         .byte   0x90
 
-// mldsa87_verify_extmu (0xb3d0)
+// mldsa87_verify_extmu (0xb440)
 
-Lb3d0:
+Lb440:
         sub     rsp, 0x10
         mov     r9, rdx
         xor     r8d, r8d
         xor     ecx, ecx
         push    0x1
         mov     edx, 0x40
-        call    Lae20
+        call    Lae90
         add     rsp, 0x18
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa87_prepare_domain_separation_prefix (0xb3f0)
+// mldsa87_prepare_domain_separation_prefix (0xb460)
 
-Lb3f0:
+Lb460:
         xor     eax, eax
         cmp     r8, 0xff
-        ja      Lb460
+        ja      Lb4d0
         push    r14
         push    r13
         push    r12
@@ -12737,14 +12758,14 @@ Lb3f0:
         mov     rbp, r8
         sub     rsp, 0x18
         test    r9d, r9d
-        jne     Lb438
+        jne     Lb4a8
         mov     BYTE PTR [rdi], 0x0
         mov     BYTE PTR [r12+0x1], r8b
         test    r8, r8
-        jne     Lb518
-Lb422:
+        jne     Lb588
+Lb492:
         lea     rax, [rbp+0x2]
-Lb426:
+Lb496:
         add     rsp, 0x18
         pop     rbp
         pop     r12
@@ -12753,9 +12774,9 @@ Lb426:
         ret
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-Lb438:
+Lb4a8:
         cmp     r9d, 0xc
-        ja      Lb4ce
+        ja      Lb53e
         mov     r13, rdx
         mov     eax, r9d
         lea     rdx, [rip+Lc720]
@@ -12765,31 +12786,31 @@ Lb438:
         jmp     rax
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-Lb460:
+Lb4d0:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
         cmp     r13, 0x20
-        jne     Lb4ce
-Lb46e:
+        jne     Lb53e
+Lb4de:
         mov     BYTE PTR [r12], 0x1
         mov     BYTE PTR [r12+0x1], bpl
         test    rbp, rbp
-        jne     Lb530
-Lb481:
+        jne     Lb5a0
+Lb4f1:
         lea     rcx, [rip+Lc760]
         xor     eax, eax
         mov     rdx, rcx
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-Lb490:
+Lb500:
         cmp     r9d, DWORD PTR [rdx]
-        je      Lb4f8
+        je      Lb568
         add     eax, 0x1
         add     rdx, 0x10
         cmp     eax, 0xc
-        jne     Lb490
-Lb4a1:
+        jne     Lb500
+Lb511:
         lea     rdi, [r12+rbp*1+0xd]
         mov     rdx, r13
         mov     rsi, r14
@@ -12804,25 +12825,25 @@ Lb4a1:
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
         cmp     r13, 0x1c
-        je      Lb46e
-Lb4ce:
+        je      Lb4de
+Lb53e:
         xor     eax, eax
-        jmp     Lb426
+        jmp     Lb496
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
         cmp     r13, 0x40
-        je      Lb46e
+        je      Lb4de
         xor     eax, eax
-        jmp     Lb426
+        jmp     Lb496
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
         cmp     r13, 0x30
-        je      Lb46e
+        je      Lb4de
         xor     eax, eax
-        jmp     Lb426
+        jmp     Lb496
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-Lb4f8:
+Lb568:
         shl     rax, 0x4
         lea     rdx, [r12+rbp*1+0x2]
         lea     rax, [rcx+rax*1+0x4]
@@ -12830,31 +12851,31 @@ Lb4f8:
         mov     QWORD PTR [rdx], rcx
         mov     eax, DWORD PTR [rax+0x7]
         mov     DWORD PTR [rdx+0x7], eax
-        jmp     Lb4a1
+        jmp     Lb511
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-Lb518:
+Lb588:
         lea     rdi, [rdi+0x2]
         mov     rdx, r8
         mov     rsi, rcx
         call    L1010
-        jmp     Lb422
+        jmp     Lb492
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
-Lb530:
+Lb5a0:
         lea     rdi, [r12+0x2]
         mov     rdx, rbp
         mov     rsi, rcx
         mov     DWORD PTR [rsp+0xc], r9d
         call    L1010
         mov     r9d, DWORD PTR [rsp+0xc]
-        jmp     Lb481
+        jmp     Lb4f1
         // nop
         .byte   0x90
 
-// mldsa87_signature (0xb550)
+// mldsa87_signature (0xb5c0)
 
-Lb550:
+Lb5c0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -12876,13 +12897,13 @@ Lb550:
         sub     rsp, 0x1a0
         mov     QWORD PTR [rbp-0x1b8], rsi
         xor     esi, esi
-        call    Lb3f0
+        call    Lb460
         test    rax, rax
         mov     QWORD PTR [rbp-0x1c0], rax
-        jne     Lb620
+        jne     Lb690
         mov     edx, 0xfffffff7
         lea     r13, [rbp-0x1b0]
-Lb5b1:
+Lb621:
         lea     rdi, [rbx+0x8]
         mov     rcx, rbx
         xor     eax, eax
@@ -12893,7 +12914,7 @@ Lb5b1:
         add     ecx, 0x1213
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-Lb5df:
+Lb64f:
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x1b0], xmm0
         movaps  XMMWORD PTR [rbp-0x1a0], xmm0
@@ -12915,14 +12936,14 @@ Lb5df:
         ret
         // nop     DWORD PTR [rax+rax*1+0x0]
         .byte   0x0f,0x1f,0x44,0x00,0x00
-Lb620:
+Lb690:
         lea     r13, [rbp-0x1b0]
         mov     esi, 0x20
         mov     rdi, r13
         call    L1020
         mov     edx, 0xfffffffd
         test    eax, eax
-        jne     Lb5b1
+        jne     Lb621
         push    0x0
         mov     r8, QWORD PTR [rbp-0x1c0]
         mov     rcx, r12
@@ -12931,19 +12952,19 @@ Lb620:
         mov     rsi, QWORD PTR [rbp-0x1b8]
         mov     r9, r13
         mov     rdi, rbx
-        call    La750
+        call    La7c0
         mov     edx, eax
         pop     rax
         pop     rcx
         test    edx, edx
-        je      Lb5df
-        jmp     Lb5b1
+        je      Lb64f
+        jmp     Lb621
         // data16  cs nop WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x66,0x2e,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
 
-// mldsa87_verify (0xb680)
+// mldsa87_verify (0xb6f0)
 
-Lb680:
+Lb6f0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -12965,9 +12986,9 @@ Lb680:
         lea     rbx, [rbp-0x190]
         mov     rdi, rbx
         sub     rsp, 0x160
-        call    Lb3f0
+        call    Lb460
         test    rax, rax
-        je      Lb718
+        je      Lb788
         sub     rsp, 0x8
         mov     rcx, rbx
         mov     rdx, r14
@@ -12976,11 +12997,11 @@ Lb680:
         mov     r9, r15
         mov     rsi, r13
         mov     rdi, r12
-        call    Lae20
+        call    Lae90
         mov     edx, eax
         pop     rax
         pop     rcx
-Lb6eb:
+Lb75b:
         xor     eax, eax
         mov     rdi, rbx
         mov     ecx, 0x29
@@ -12999,15 +13020,15 @@ Lb6eb:
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-Lb718:
+Lb788:
         mov     edx, 0xfffffff7
-        jmp     Lb6eb
+        jmp     Lb75b
         // nop
         .byte   0x90
 
-// mldsa87_signature_pre_hash_internal (0xb720)
+// mldsa87_signature_pre_hash_internal (0xb790)
 
-Lb720:
+Lb790:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -13025,10 +13046,10 @@ Lb720:
         mov     r9d, DWORD PTR [r10+0x8]
         mov     r14, QWORD PTR [r10]
         test    r9d, r9d
-        jne     Lb7b8
-Lb75a:
+        jne     Lb828
+Lb7ca:
         mov     edx, 0xfffffff7
-Lb75f:
+Lb7cf:
         lea     rdi, [rbx+0x8]
         mov     rcx, rbx
         xor     eax, eax
@@ -13039,7 +13060,7 @@ Lb75f:
         add     ecx, 0x1213
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-Lb78d:
+Lb7fd:
         xor     eax, eax
         mov     rdi, r12
         mov     ecx, 0x29
@@ -13057,11 +13078,11 @@ Lb78d:
         ret
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
-Lb7b8:
+Lb828:
         mov     rdi, r12
-        call    Lb3f0
+        call    Lb460
         test    rax, rax
-        je      Lb75a
+        je      Lb7ca
         push    0x0
         xor     ecx, ecx
         mov     rdx, rax
@@ -13070,19 +13091,19 @@ Lb7b8:
         xor     r8d, r8d
         mov     rsi, r12
         mov     rdi, rbx
-        call    La750
+        call    La7c0
         mov     edx, eax
         pop     rax
         pop     rcx
         test    edx, edx
-        je      Lb78d
-        jmp     Lb75f
+        je      Lb7fd
+        jmp     Lb7cf
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x40,0x00
 
-// mldsa87_signature_pre_hash_shake256 (0xb7f0)
+// mldsa87_signature_pre_hash_shake256 (0xb860)
 
-Lb7f0:
+Lb860:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -13114,7 +13135,7 @@ Lb7f0:
         mov     rcx, r13
         mov     edx, 0x40
         mov     rsi, rbx
-        call    Lb720
+        call    Lb790
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x70], xmm0
         movaps  XMMWORD PTR [rbp-0x60], xmm0
@@ -13133,9 +13154,9 @@ Lb7f0:
         lea     rsp, [r10-0x8]
         ret
 
-// mldsa87_verify_pre_hash_internal (0xb880)
+// mldsa87_verify_pre_hash_internal (0xb8f0)
 
-Lb880:
+Lb8f0:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -13149,14 +13170,14 @@ Lb880:
         sub     rsp, 0x170
         mov     r9d, DWORD PTR [r10]
         test    r9d, r9d
-        je      Lb910
+        je      Lb980
         lea     rbx, [rbp-0x190]
         mov     r12, rdi
         mov     rdi, rbx
-        call    Lb3f0
+        call    Lb460
         mov     rdx, rax
         test    rax, rax
-        je      Lb917
+        je      Lb987
         sub     rsp, 0x8
         xor     ecx, ecx
         mov     r9, r13
@@ -13164,11 +13185,11 @@ Lb880:
         push    0x0
         mov     rsi, rbx
         mov     rdi, r12
-        call    Lae20
+        call    Lae90
         mov     edx, eax
         pop     rax
         pop     rcx
-Lb8e1:
+Lb951:
         xor     eax, eax
         mov     rdi, rbx
         mov     ecx, 0x29
@@ -13185,17 +13206,17 @@ Lb8e1:
         ret
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x84,0x00,0x00,0x00,0x00,0x00
-Lb910:
+Lb980:
         lea     rbx, [rbp-0x190]
-Lb917:
+Lb987:
         mov     edx, 0xfffffff7
-        jmp     Lb8e1
+        jmp     Lb951
         // xchg    ax, ax
         .byte   0x66,0x90
 
-// mldsa87_verify_pre_hash_shake256 (0xb920)
+// mldsa87_verify_pre_hash_shake256 (0xb990)
 
-Lb920:
+Lb990:
         lea     r10, [rsp+0x8]
         and     rsp, 0xffffffffffffffe0
         push    QWORD PTR [r10-0x8]
@@ -13226,7 +13247,7 @@ Lb920:
         mov     edx, 0x40
         mov     rsi, rbx
         mov     rdi, r12
-        call    Lb880
+        call    Lb8f0
         pxor    xmm0, xmm0
         movaps  XMMWORD PTR [rbp-0x70], xmm0
         movaps  XMMWORD PTR [rbp-0x60], xmm0
@@ -13247,9 +13268,9 @@ Lb920:
         // nop     DWORD PTR [rax]
         .byte   0x0f,0x1f,0x00
 
-// mldsa87_pk_from_sk (0xb9b0)
+// mldsa87_pk_from_sk (0xba20)
 
-Lb9b0:
+Lba20:
         push    rbp
         mov     rbp, rsp
         push    r15
@@ -13281,20 +13302,20 @@ Lb9b0:
         movaps  XMMWORD PTR [rsp+0x90], xmm3
         movaps  XMMWORD PTR [rsp+0xa0], xmm4
         movaps  XMMWORD PTR [rsp+0xb0], xmm5
-        call    L9df0
+        call    L9e60
         mov     esi, 0x3
         mov     rdi, r14
-        call    L9c60
+        call    L9cd0
         lea     rcx, [rbx+0x320]
         mov     rdx, r15
         mov     esi, 0x3
         mov     rdi, rcx
         mov     QWORD PTR [rsp+0x38], rcx
         mov     r13d, eax
-        call    L9d40
+        call    L9db0
         mov     rdi, r14
         mov     DWORD PTR [rsp+0x2c], eax
-        call    L9bb0
+        call    L9c20
         movdqa  xmm6, XMMWORD PTR [rsp+0x40]
         movdqa  xmm7, XMMWORD PTR [rsp+0x50]
         lea     r9, [rsp+0x500]
@@ -13307,15 +13328,15 @@ Lb9b0:
         movups  XMMWORD PTR [r12+0x10], xmm7
         mov     QWORD PTR [rsp+0x30], r8
         mov     QWORD PTR [rsp+0x38], r9
-        call    La100
+        call    La170
         mov     r9, QWORD PTR [rsp+0x38]
         mov     r8, QWORD PTR [rsp+0x30]
         test    eax, eax
         mov     r11d, eax
-        je      Lbbb0
+        je      Lbc20
         lea     rbx, [rsp+0xc0]
         lea     rdx, [rsp+0x80]
-Lbae6:
+Lbb56:
         lea     rdi, [r12+0x8]
         mov     rcx, r12
         xor     eax, eax
@@ -13326,7 +13347,7 @@ Lbae6:
         add     ecx, 0xa20
         shr     ecx, 0x3
         rep stos QWORD PTR es:[rdi], rax
-Lbb17:
+Lbb87:
         xor     eax, eax
         mov     rdi, r9
         mov     ecx, 0x1a0
@@ -13362,20 +13383,20 @@ Lbb17:
         ret
         // nop     DWORD PTR [rax+0x0]
         .byte   0x0f,0x1f,0x80,0x00,0x00,0x00,0x00
-Lbbb0:
+Lbc20:
         pxor    xmm2, xmm2
         xor     eax, eax
         movdqa  xmm0, xmm2
         // nop     WORD PTR [rax+rax*1+0x0]
         .byte   0x66,0x0f,0x1f,0x44,0x00,0x00
-Lbbc0:
+Lbc30:
         movdqu  xmm1, XMMWORD PTR [rbx+rax*1+0x620]
         pxor    xmm1, XMMWORD PTR [r9+rax*1]
         add     rax, 0x10
         por     xmm0, xmm1
         pxor    xmm2, xmm1
         cmp     rax, 0xd00
-        jne     Lbbc0
+        jne     Lbc30
         movdqa  xmm1, xmm2
         mov     QWORD PTR [rsp+0x18], r8
         psrldq  xmm1, 0x8
@@ -13424,14 +13445,14 @@ Lbbc0:
         mov     r11d, DWORD PTR [rsp+0x30]
         movdqa  xmm0, xmm1
         lea     rdx, [rsp+0x80]
-Lbcb2:
+Lbd22:
         movdqa  xmm2, XMMWORD PTR [rbx+rax*1]
         pxor    xmm2, XMMWORD PTR [rdx+rax*1]
         add     rax, 0x10
         por     xmm0, xmm2
         pxor    xmm1, xmm2
         cmp     rax, 0x40
-        jne     Lbcb2
+        jne     Lbd22
         movdqa  xmm2, xmm1
         psrldq  xmm2, 0x8
         pxor    xmm1, xmm2
@@ -13468,13 +13489,13 @@ Lbcb2:
         or      r13b, BYTE PTR [rsp+0x38]
         or      r13d, eax
         test    r13b, r13b
-        je      Lbb17
+        je      Lbb87
         mov     r11d, 0xfffffff9
-        jmp     Lbae6
+        jmp     Lbb56
 
-// Padding (0xbd70 to 0xc000)
+// Padding (0xbde0 to 0xc000)
 
-        .zero   656
+        .zero   544
 
 // The read-only data (0xc000 to 0xc820)
 
@@ -13645,13 +13666,13 @@ Lc4e0:
         .quad   0xffffe000ffffe000
         .zero   16
 Lc500:
-        .quad   0xffff90b8ffff90be
-        .quad   0xffff90d8ffff9058
-        .quad   0xffff90b8ffff90c8
-        .quad   0xffff90b8ffff9058
-        .quad   0xffff90d8ffff9058
-        .quad   0xffff9058ffff90c8
-        .quad   0x00000000ffff90c8
+        .quad   0xffff90e8ffff90ee
+        .quad   0xffff9108ffff9088
+        .quad   0xffff90e8ffff90f8
+        .quad   0xffff90e8ffff9088
+        .quad   0xffff9108ffff9088
+        .quad   0xffff9088ffff90f8
+        .quad   0x00000000ffff90f8
         .quad   0x0000000000000000
 // oid_map.0 (0xc0 bytes)
 Lc540:
@@ -13695,13 +13716,13 @@ Lc608:
         .quad   0x0000000000000708
         .zero   16
 Lc620:
-        .quad   0xffffbe48ffffbe4e
-        .quad   0xffffbe68ffffbde8
-        .quad   0xffffbe48ffffbe58
-        .quad   0xffffbe48ffffbde8
-        .quad   0xffffbe68ffffbde8
-        .quad   0xffffbde8ffffbe58
-        .quad   0x00000000ffffbe58
+        .quad   0xffffbe98ffffbe9e
+        .quad   0xffffbeb8ffffbe38
+        .quad   0xffffbe98ffffbea8
+        .quad   0xffffbe98ffffbe38
+        .quad   0xffffbeb8ffffbe38
+        .quad   0xffffbe38ffffbea8
+        .quad   0x00000000ffffbea8
         .quad   0x0000000000000000
 // oid_map.0 (0xc0 bytes)
 Lc660:
@@ -13730,13 +13751,13 @@ Lc660:
         .quad   0x866009060000000c
         .quad   0x000c020403650148
 Lc720:
-        .quad   0xffffeda8ffffedae
-        .quad   0xffffedc8ffffed48
-        .quad   0xffffeda8ffffedb8
-        .quad   0xffffeda8ffffed48
-        .quad   0xffffedc8ffffed48
-        .quad   0xffffed48ffffedb8
-        .quad   0x00000000ffffedb8
+        .quad   0xffffee18ffffee1e
+        .quad   0xffffee38ffffedb8
+        .quad   0xffffee18ffffee28
+        .quad   0xffffee18ffffedb8
+        .quad   0xffffee38ffffedb8
+        .quad   0xffffedb8ffffee28
+        .quad   0x00000000ffffee28
         .quad   0x0000000000000000
 // oid_map.0 (0xc0 bytes)
 Lc760:

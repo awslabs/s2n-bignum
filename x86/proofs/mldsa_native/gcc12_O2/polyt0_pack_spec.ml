@@ -32,7 +32,7 @@ needs "x86/proofs/mldsa_native/gcc12_O2/libmldsa.ml";;
       +0x17  push    rbp
       +0x18  push    rbx
       +0x19  mov     rbx, rdi
-      +0x1c  mov     QWORD PTR [rsp-0x8], rax
+      +0x1c  mov     QWORD PTR [rsp-0x30], rax
       +0x21  nop     DWORD PTR [rax+0x0]
      loop1:
       +0x28  mov     r13d, ecx
@@ -129,18 +129,22 @@ needs "x86/proofs/mldsa_native/gcc12_O2/libmldsa.ml";;
      +0x15c  or      edi, eax
      +0x15e  mov     DWORD PTR [rbx-0x5], edi
      loop1_test:
-     +0x161  cmp     QWORD PTR [rsp-0x8], rdx
+     +0x161  cmp     QWORD PTR [rsp-0x30], rdx
      loop1_back:
      +0x166  jne     loop1
      loop1_exit:
-     +0x16c  pop     rbx
-     +0x16d  pop     rbp
-     +0x16e  pop     r12
-     +0x170  pop     r13
-     +0x172  pop     r14
-     +0x174  pop     r15
+     +0x16c  pxor    xmm0, xmm0
+     +0x170  lea     rax, [rsp-0x28]
+     +0x175  movaps  XMMWORD PTR [rsp-0x28], xmm0
+     +0x17a  movaps  XMMWORD PTR [rsp-0x18], xmm0
+     +0x17f  pop     rbx
+     +0x180  pop     rbp
+     +0x181  pop     r12
+     +0x183  pop     r13
+     +0x185  pop     r14
+     +0x187  pop     r15
      ret:
-     +0x176  ret
+     +0x189  ret
  ***)
 
 let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_EXEC =
@@ -149,17 +153,22 @@ let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_EXEC =
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness. The function saves R15, R14, R13, R12, RBP and RBX, which it *)
-(* uses, in the 48 bytes below the return address, and keeps the end of the  *)
-(* input in the 8 bytes below them, in the red zone.                         *)
+(* uses, in the 48 bytes below the return address. Below them it keeps the   *)
+(* end of the input, in the red zone, at the bottom of the frame, and clears *)
+(* 32 bytes above that, the temporary array that mld_polyt0_pack zeroizes,   *)
+(* with two aligned SSE stores (so the frame is 96 bytes). The stores fault  *)
+(* unless RSP + 8 is a multiple of 16 on entry, as the ABI requires, which   *)
+(* the statements assume.                                                    *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
  `!r a x pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 (word_add stackpointer (word 8)) /\
         ALL (nonoverlapping (r,416))
             [(word pc,libmldsa_size); (a,1024);
-             (word_sub stackpointer (word 56),56); (stackpointer,8)] /\
-        ALL (nonoverlapping (word_sub stackpointer (word 56),56))
+             (word_sub stackpointer (word 96),96); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 96),96))
             [(word pc,libmldsa_size); (a,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) mldsa_native_libmldsa_gcc12_O2_mc /\
@@ -178,7 +187,7 @@ let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT =
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
                [memory :> bytes(r,416);
-                memory :> bytes(word_sub stackpointer (word 56),56)])`;;
+                memory :> bytes(word_sub stackpointer (word 96),96)])`;;
 
 let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_CORRECT =
   assume_spec
@@ -195,10 +204,11 @@ let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
  `exists f_events.
      forall e r a x pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 (word_add stackpointer (word 8)) /\
         ALL (nonoverlapping (r,416))
             [(word pc,libmldsa_size); (a,1024);
-             (word_sub stackpointer (word 56),56); (stackpointer,8)] /\
-        ALL (nonoverlapping (word_sub stackpointer (word 56),56))
+             (word_sub stackpointer (word 96),96); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 96),96))
             [(word pc,libmldsa_size); (a,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) mldsa_native_libmldsa_gcc12_O2_mc /\
@@ -217,16 +227,16 @@ let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT =
                            mld_polyt0_pack x j) /\
                   (exists e2.
                      read events s = APPEND e2 e /\
-                     e2 = f_events r a pc (word_sub stackpointer (word 56))
+                     e2 = f_events r a pc (word_sub stackpointer (word 96))
                                    returnaddress /\
                      memaccess_inbounds e2
-                       [a,1024; r,416; word_sub stackpointer (word 56),56;
+                       [a,1024; r,416; word_sub stackpointer (word 96),96;
                         stackpointer,8]
-                       [r,416; word_sub stackpointer (word 56),56]))
+                       [r,416; word_sub stackpointer (word 96),96]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
                [memory :> bytes(r,416);
-                memory :> bytes(word_sub stackpointer (word 56),56)])`;;
+                memory :> bytes(word_sub stackpointer (word 96),96)])`;;
 
 let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_FULL =
   assume_spec MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_FULL_STMT;;
@@ -239,10 +249,11 @@ let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
  `exists f_events.
      forall e r a pc stackpointer returnaddress.
         aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
+        aligned 16 (word_add stackpointer (word 8)) /\
         ALL (nonoverlapping (r,416))
             [(word pc,libmldsa_size); (a,1024);
-             (word_sub stackpointer (word 56),56); (stackpointer,8)] /\
-        ALL (nonoverlapping (word_sub stackpointer (word 56),56))
+             (word_sub stackpointer (word 96),96); (stackpointer,8)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 96),96))
             [(word pc,libmldsa_size); (a,1024)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) mldsa_native_libmldsa_gcc12_O2_mc /\
@@ -255,16 +266,16 @@ let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT =
                   read RSP s = word_add stackpointer (word 8) /\
                   (exists e2.
                      read events s = APPEND e2 e /\
-                     e2 = f_events r a pc (word_sub stackpointer (word 56))
+                     e2 = f_events r a pc (word_sub stackpointer (word 96))
                                    returnaddress /\
                      memaccess_inbounds e2
-                       [a,1024; r,416; word_sub stackpointer (word 56),56;
+                       [a,1024; r,416; word_sub stackpointer (word 96),96;
                         stackpointer,8]
-                       [r,416; word_sub stackpointer (word 56),56]))
+                       [r,416; word_sub stackpointer (word 96),96]))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE
                [memory :> bytes(r,416);
-                memory :> bytes(word_sub stackpointer (word 56),56)])`;;
+                memory :> bytes(word_sub stackpointer (word 96),96)])`;;
 
 let MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_SAFE =
   assume_spec MLDSA_NATIVE_POLYT0_PACK_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT;;

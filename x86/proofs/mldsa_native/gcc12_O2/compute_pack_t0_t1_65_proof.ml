@@ -293,7 +293,7 @@ let CPT65_SETUP_TAC =
     `word(pc + got_memset):int64,8`; `ea:int64,el:num`;
     `word_add stackpointer (word 38005):int64,48`;
     `word_add stackpointer (word 38053):int64,8`] THEN
-  REALIGN_ALIGNED_TAC [5206; 6230] THEN
+  REALIGN_ALIGNED_TAC [5174; 5206; 6230] THEN
   ENSURES_PRESERVED_TAC "rbx_init" `RBX` THEN
   ENSURES_PRESERVED_TAC "rbp_init" `RBP` THEN
   ENSURES_PRESERVED_TAC "r12_init" `R12` THEN

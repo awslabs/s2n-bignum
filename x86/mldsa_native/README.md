@@ -1,8 +1,8 @@
 # Compiled code from mldsa-native
 
 This directory contains x86-64 code compiled from the portable C
-implementation in [mldsa-native][1], transcribed from a binary built in the
-same way as its pre-built binaries, and the scripts that produce and check
+implementation in [mldsa-native][1], transcribed from the x86-64 binaries
+in its `binary` branch, and the scripts that produce and check
 the files the proofs in `../proofs/mldsa_native` use. As for the AArch64
 code of mldsa-native in `../../arm/mldsa_native`, the aim is to verify
 compiler-generated rather than hand-written code; the code here is only
@@ -67,38 +67,34 @@ AArch64 proofs; `../proofs/utils/mldsa_native*.ml` has the x86 parts.
 
 ## Source of the code
 
-The `binary` branch of mldsa-native only has binaries for AArch64, and its
-`scripts/build-binaries` only builds for AArch64, so the code is
-transcribed from the disassembly of a binary built in the same way on an
-x86-64 Linux machine, except for the stack protector (see below).
-Following `scripts/build-binaries` of the `binary` branch (commit
-`3d3b1bdb`, whose C sources are those of commit `e71e3d6f`), as recorded
-in `binaries/builds.json` there, the "multilevel" build
-(`examples/multilevel_build`) was compiled in the nix shell `.#gcc12`
-(gcc 12.3.0 and binutils 2.41, from nixpkgs 24.05) with `CFLAGS` set to
-`-O2 -g -gdwarf-4 -gsplit-dwarf -fPIC -fno-stack-protector` and
-`-fdebug-prefix-map` for the source directory, with `AUTO=0` and without
-the native backends, using the target `mldsa_objs`. The object files were
-archived with `ar rcsD`, in the sorted order of their paths, and the
-archive was linked with
+The code is transcribed from the x86-64 binaries in the `binary` branch of
+mldsa-native, at commit `01be6a9` ("binaries: Rebuild x86-64 ML-DSA
+without stack protection"), which replaced the AArch64 binaries at the same
+paths by x86-64 ones (the AArch64 binaries are at commit `65f9995`). As
+recorded in `binaries/builds.json` there, `scripts/build-binaries` built
+them from mldsa-native commit `d38418ea3d4c`, in the nix shell `.#gcc12`
+(gcc 12.3.0 and binutils 2.41) on an x86-64 Linux machine, with the flags
+`-g -gdwarf-4 -gsplit-dwarf -fPIC -fno-stack-protector` and the
+optimization level `-O2`, and, for the reduced-RAM configuration,
+`-DMLD_CONFIG_REDUCE_RAM` in addition. The "multilevel" build
+(`examples/multilevel_build`) was linked with
 `ld -shared -Bsymbolic -soname libmldsa.so --whole-archive`, using the
-version script `binaries/libmldsa.map`, to give `libmldsa.so`. The test
-program of the example passes with it. In this build the code shared by
-the three parameter sets is compiled once, with the namespace `mldsa_`,
-and the rest once per parameter set, with the namespaces `mldsa44_`,
-`mldsa65_` and `mldsa87_`. The binary has the same 192 functions, with the
-same names, as the AArch64 binary of the same build.
+version script `binaries/libmldsa.map`, to give `libmldsa.so`. In this
+build the code shared by the three parameter sets is compiled once, with
+the namespace `mldsa_`, and the rest once per parameter set, with the
+namespaces `mldsa44_`, `mldsa65_` and `mldsa87_`. The binary has the same
+192 functions, with the same names, as the AArch64 binary of the same
+build.
 
-| File (gcc 12.3.0)                          | Binary                                      |
+| File (gcc 12.3.0)                          | Binary in the `binary` branch               |
 |--------------------------------------------|---------------------------------------------|
-| gcc12_O2/libmldsa.S                        | multilevel/gcc12/O2/libmldsa.so             |
-| gcc12_O2/keccakf1600_permute.S             | multilevel/gcc12/O2/libmldsa.so             |
-| gcc12_O2_reduced_ram/libmldsa.S            | reduced-ram/multilevel/gcc12/O2/libmldsa.so |
-| gcc12_O2_reduced_ram/keccakf1600_permute.S | reduced-ram/multilevel/gcc12/O2/libmldsa.so |
+| gcc12_O2/libmldsa.S                        | binaries/multilevel/gcc12/O2/libmldsa.so    |
+| gcc12_O2/keccakf1600_permute.S             | binaries/multilevel/gcc12/O2/libmldsa.so    |
+| gcc12_O2_reduced_ram/libmldsa.S            | binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so |
+| gcc12_O2_reduced_ram/keccakf1600_permute.S | binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so |
 
-The reduced-RAM build is compiled with `-DMLD_CONFIG_REDUCE_RAM` in
-addition; see `gcc12_O2_reduced_ram/README.md` for its source, its hash
-and how it differs.
+The reduced-RAM build is compiled with `-DMLD_CONFIG_REDUCE_RAM`; see
+`gcc12_O2_reduced_ram/README.md` for its hash and how it differs.
 
 `gcc12_O2/keccakf1600_permute.S` is the code of `mldsa_keccakf1600_permute`
 alone, with its table of round constants as a separate symbol. Its code is
@@ -118,28 +114,35 @@ python3 mldsa_native/check_transcription.py \
   mld_KeccakF_RoundConstants mld_KeccakF_RoundConstants
 ```
 
-The SHA-256 hash of the binary used is:
+The SHA-256 hash of the binary used, which is that in
+`binaries/SHA256SUMS` of commit `01be6a9`, is:
 
 ```
 multilevel/gcc12/O2/libmldsa.so
-  6e07fad018cdc3fb6edc9ca9be9753aa1c6e6a103e7075d32ebfd113eddeeecc
+  60e02b1c1efa208bd35d21fc6e46faf798c1e1a311ace8c96551a9ae6515281d
 ```
 
-A binary built in another directory has a different hash, since the split
-debug information records the paths of its files, and the dynamic string
-table, at the start of the image, the directory in which the nix shell was
-started (the linker wrapper of the shell adds `<directory>/outputs/out/lib`
-as `RUNPATH`); the code and the read-only data are the same.
+The image starts at address 0, so it includes the dynamic string table,
+where the linker records the directory of the build as `RUNPATH`
+(`/tmp/native-x86-no-stack-protector.16lXCUsN/mldsa-source/outputs/out/lib`);
+the split debug information records the paths of its files. A binary built
+from the same source in another directory therefore differs from this one
+there, but its code and read-only data are the same.
 
 Unlike the AArch64 binaries, this one is built without gcc's stack
-protector, which the nix shell otherwise enables. On x86-64 Linux the stack
+protector, which the nix shell otherwise enables (the x86-64 binaries first
+committed to the branch, built from the same source, imported
+`__stack_chk_fail`, and `01be6a9` rebuilt them for this reason). On x86-64 Linux the stack
 protector reads its guard at offset 0x28 from the base of the FS segment,
 in thread-local storage, rather than through the global offset table as on
 AArch64, and the x86 model has no segment bases. With the stack
 protector, 61 of the 192 functions, including 36 of the 42 API functions,
 would copy the guard to the stack and check it before returning.
 
-To regenerate the files of the build, in the `x86` directory:
+To regenerate the files of the build, in the `x86` directory, with
+`<build>` the `binaries` directory of a checkout of mldsa-native at
+commit `01be6a9` of the `binary` branch (the same holds for the commands
+above):
 
 ```
 python3 mldsa_native/gen_libmldsa_s.py \
@@ -153,13 +156,18 @@ python3 mldsa_native/gen_layout.py \
   > proofs/mldsa_native/gcc12_O2/layout.ml
 python3 ../tools/native_proofs_mk.py mldsa_native gcc12_O2 \
   > mldsa_native/gcc12_O2/proofs.mk
+python3 ../tools/native_link.py mldsa_native gcc12_O2 \
+  > proofs/mldsa_native/gcc12_O2/link.ml
 ```
 
-`gen_libmldsa_s.py` assembles the transcription as the `Makefile` does and
-checks that it is byte-for-byte the image of the binary, from address 0 to
-the end of the read-only data, writing any instruction that the assembler
-would encode differently, the NOPs and the instructions that refer to the
-global offset table, which is outside the image, as `.byte`.
+`gen_libmldsa_s.py` assembles the transcription as the `Makefile` does
+(it calls `as`, which must be an x86-64 assembler: on another host, put a
+cross-assembler first in the `PATH`, and give the `Makefile` its name as
+`ASSEMBLE`) and checks that it is byte-for-byte the image of the binary,
+from address 0 to the end of the read-only data, writing any instruction
+that the assembler would encode differently, the NOPs and the
+instructions that refer to the global offset table, which is outside the
+image, as `.byte`.
 `libmldsa.ml` checks that the image has the size given in the layout file.
 
 ## The compiled code
@@ -181,7 +189,12 @@ library through the procedure linkage table, whose entries jump to the
 addresses in the global offset table. In each of the three
 `prepare_domain_separation_prefix` functions, gcc compiles the `switch`
 on the hash function to an indirect jump through a table of offsets in
-the read-only data.
+the read-only data. The packing functions `mld_polyeta_pack`,
+`mld_polyz_pack` and `mld_polyt0_pack` write to the stack below their
+frames: mldsa-native zeroizes their temporary arrays (commit `ea97cc798`,
+"poly: Zeroize intermediate buffers of the packing functions"), which gcc
+compiles to stores of zeros to the stack, in the red zone, with no call of
+`memset`; the frames in their statements include these stores.
 
 ## What is proved
 
@@ -271,10 +284,10 @@ The theorems depend on the following, which the proofs do not establish.
    transcription is byte for byte the image of `libmldsa.so` when it writes
    it, and `check_transcription.py` compares `keccakf1600_permute.o` with
    the binary; the second is run by hand, and neither `make` nor CI runs
-   either. The binaries are not pre-built ones: they were built on an
-   x86-64 machine as described in "Source of the code" (and, for the
-   reduced-RAM build, in `gcc12_O2_reduced_ram/README.md`), which also give
-   their SHA-256 hashes.
+   either. The binaries are those of the `binary` branch of mldsa-native, at
+   the commit given in "Source of the code" (and, for the reduced-RAM
+   build, in `gcc12_O2_reduced_ram/README.md`), which also give their
+   SHA-256 hashes.
  - The specifications. The theorems about the code (`..._FULL`, `..._CORRECT`
    and `..._SAFE`) state results with the functional specification of each
    C function in `../../common/mldsa_native_*.ml`. The `..._FIPS204`
@@ -314,7 +327,14 @@ discharges all others.
    `../proofs/utils/mldsa_native_realign.ml`. The five functions that
    use aligned SSE loads and stores on the polynomials that they are
    given (poly_add, poly_sub, poly_shiftl, poly_reduce and
-   poly_power2round) assume them 16-aligned.
+   poly_power2round) assume them 16-aligned. Seven more functions
+   assume that the stack pointer is aligned as the ABI requires on entry,
+   `aligned 16 (word_add stackpointer (word 8))`: `mldsa_polyt0_pack` and
+   `mldsa{44,65,87}_polyz_pack`, which clear their temporary array
+   (mldsa-native zeroizes it) with aligned SSE stores to the stack, and
+   `mldsa{44,65,87}_pack_sig_z`, which tail-calls the latter. Their callers
+   have realigned the stack, so the theorems of the API functions do not
+   assume it.
  - The direction flag is clear on entry, as the ABI requires, for the 83
    functions whose code, or that of their callees, uses `rep stos` or
    `rep movs` or calls the C library.

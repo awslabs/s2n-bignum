@@ -15,10 +15,12 @@ needs "x86/proofs/utils/mldsa_native_pack.ml";;
 (* of the loop handles 8 coefficients and 3 bytes; the code loads only the   *)
 (* low byte of each coefficient, so the inputs are split into bytes. The     *)
 (* registers R12, RBP and RBX are saved in the stack frame, below the return *)
-(* address; after REPEAT_GEN_AND_OFFSET_STACKPTR_TAC, stackpointer is the    *)
-(* bottom of the frame, 24 bytes below the value of RSP on entry. The loop   *)
-(* test is the end of the body, as ENSURES_EVENTS_WHILE_UP2_TAC requires,    *)
-(* and the events of an iteration depend on its index only.                  *)
+(* address, and the 8 bytes below them are cleared after the loop (the       *)
+(* zeroized temporary array); after REPEAT_GEN_AND_OFFSET_STACKPTR_TAC,      *)
+(* stackpointer is the bottom of the frame, 32 bytes below the value of RSP  *)
+(* on entry. The loop test is the end of the body, as                        *)
+(* ENSURES_EVENTS_WHILE_UP2_TAC requires, and the events of an iteration     *)
+(* depend on its index only.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
@@ -48,14 +50,15 @@ let MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
           read RAX s = word_add a (word(32 * i)) /\
           read R9 s = word_add a (word 1024) /\
           read RDX s = word 2 /\
-          read RSP s = stackpointer /\
-          read (memory :> bytes64 (word_add stackpointer (word 24))) s =
+          read RSP s = word_add stackpointer (word 8) /\
+          read (memory :> bytes64 (word_add stackpointer (word 32))) s =
           returnaddress /\
-          read (memory :> bytes64 (word_add stackpointer (word 16))) s =
+          read (memory :> bytes64 (word_add stackpointer (word 24))) s =
           r12_init /\
-          read (memory :> bytes64 (word_add stackpointer (word 8))) s =
+          read (memory :> bytes64 (word_add stackpointer (word 16))) s =
           rbp_init /\
-          read (memory :> bytes64 stackpointer) s = rbx_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 8))) s =
+          rbx_init /\
           (!j. j < 256
                ==> read(memory :> bytes32(word_add a (word(4 * j)))) s =
                    x j) /\
@@ -85,7 +88,7 @@ let MLDSA_NATIVE_POLYETA_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
 
     (*** The return ***)
 
-    FULL_EXIT_TAC EXEC 4]);;
+    FULL_EXIT_TAC EXEC 6]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness, and constant time and memory safety alone.                   *)

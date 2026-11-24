@@ -16,10 +16,12 @@ needs "x86/proofs/utils/mldsa_native_pack.ml";;
 (* of the loop handles 4 coefficients and 9 bytes, 8 of them stored as one   *)
 (* 64-bit word, whose fact is split into facts about the bytes. The          *)
 (* registers R13, R12, RBP and RBX are saved in the stack frame, below the   *)
-(* return address; after REPEAT_GEN_AND_OFFSET_STACKPTR_TAC, stackpointer is *)
-(* the bottom of the frame, 32 bytes below the value of RSP on entry. The    *)
-(* loop test is the end of the body, as ENSURES_EVENTS_WHILE_UP2_TAC         *)
-(* requires, and the events of an iteration depend on its index only.        *)
+(* return address, and the 16 bytes below them are cleared after the loop    *)
+(* (the zeroized temporary array); after REPEAT_GEN_AND_OFFSET_STACKPTR_TAC, *)
+(* stackpointer is the bottom of the frame, 56 bytes below the value of RSP  *)
+(* on entry. The loop test is the end of the body, as                        *)
+(* ENSURES_EVENTS_WHILE_UP2_TAC requires, and the events of an iteration     *)
+(* depend on its index only.                                                 *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NATIVE_POLYZ_PACK_44_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
@@ -40,6 +42,17 @@ let MLDSA_NATIVE_POLYZ_PACK_44_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               NONOVERLAPPING_CLAUSES; ALL; fst EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_ALIGNED_WORD_CONV)) THEN
+  SUBGOAL_THEN
+   `aligned 16
+     (word_add (word_add stackpointer (word 24)) (word 18446744073709551592)
+      :int64)`
+  ASSUME_TAC THENL
+   [SUBGOAL_THEN
+     `word_add (word_add stackpointer (word 24)) (word 18446744073709551592)
+      :int64 = stackpointer`
+    SUBST1_TAC THENL [CONV_TAC WORD_BLAST; FIRST_ASSUM ACCEPT_TAC];
+    ALL_TAC] THEN
   ENSURES_PRESERVED_TAC "r13_init" `R13` THEN
   ENSURES_PRESERVED_TAC "r12_init" `R12` THEN
   ENSURES_PRESERVED_TAC "rbp_init" `RBP` THEN
@@ -50,16 +63,17 @@ let MLDSA_NATIVE_POLYZ_PACK_44_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
           read RDX s = word_add a (word(16 * i)) /\
           read R8 s = word_add a (word 1024) /\
           read RDI s = word 131072 /\
-          read RSP s = stackpointer /\
-          read (memory :> bytes64 (word_add stackpointer (word 32))) s =
+          read RSP s = word_add stackpointer (word 24) /\
+          read (memory :> bytes64 (word_add stackpointer (word 56))) s =
           returnaddress /\
-          read (memory :> bytes64 (word_add stackpointer (word 24))) s =
+          read (memory :> bytes64 (word_add stackpointer (word 48))) s =
           r13_init /\
-          read (memory :> bytes64 (word_add stackpointer (word 16))) s =
+          read (memory :> bytes64 (word_add stackpointer (word 40))) s =
           r12_init /\
-          read (memory :> bytes64 (word_add stackpointer (word 8))) s =
+          read (memory :> bytes64 (word_add stackpointer (word 32))) s =
           rbp_init /\
-          read (memory :> bytes64 stackpointer) s = rbx_init /\
+          read (memory :> bytes64 (word_add stackpointer (word 24))) s =
+          rbx_init /\
           (!j. j < 256
                ==> read(memory :> bytes32(word_add a (word(4 * j)))) s =
                    x j) /\
@@ -88,7 +102,7 @@ let MLDSA_NATIVE_POLYZ_PACK_44_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
 
     (*** The return ***)
 
-    FULL_EXIT_TAC EXEC 5]);;
+    FULL_EXIT_TAC EXEC 8]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness, and constant time and memory safety alone.                   *)
