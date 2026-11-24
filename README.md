@@ -487,7 +487,7 @@ count printed by `relative_report` at the end of the link file, see
 | arm mlkem gcc12_O2_mono | 462 | 1646 s |
 | arm mlkem gcc12_O3 | 624 | 5885 s |
 | arm mlkem gcc12_Os | 528 | 1325 s |
-| arm mlkem clang17_O2 | 674 | 5353 s |
+| arm mlkem clang17_O2 | 674 | 3907 s |
 | arm mlkem clang17_O3 | 612 | 4169 s |
 | arm mldsa gcc12_O2 | 578 | 1898 s |
 | arm mldsa gcc12_O2_reduced_ram | 545 | 5955 s |
