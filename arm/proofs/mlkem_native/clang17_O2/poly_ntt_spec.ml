@@ -1745,10 +1745,10 @@ let NTT_SAFE_TOP_TAC =
               MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
-   `nonoverlapping_modulo (2 EXP 64) (val (a:int64),512) (pc + 45920,256)`
+   `nonoverlapping_modulo (2 EXP 64) (val (a:int64),512) (pc + 45952,256)`
   ASSUME_TAC THENL
-   [MP_TAC(ISPECL [`2 EXP 64`; `val(a:int64)`; `512`; `pc:num`; `46176`;
-                   `val(a:int64)`; `512`; `pc + 45920`; `256`]
+   [MP_TAC(ISPECL [`2 EXP 64`; `val(a:int64)`; `512`; `pc:num`; `46208`;
+                   `val(a:int64)`; `512`; `pc + 45952`; `256`]
             NONOVERLAPPING_MODULO_SUBREGIONS) THEN
     ASM_REWRITE_TAC[CONTAINED_MODULO_REFL] THEN
     DISCH_THEN MATCH_MP_TAC THEN CONJ_TAC THENL

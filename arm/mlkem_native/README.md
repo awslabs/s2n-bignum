@@ -342,7 +342,7 @@ The SHA-256 hashes of the binaries used, which match those recorded in
 
 ```
 binaries/multilevel/clang17/O2/libmlkem.so
-  b7589e6e7ae228dd0dfa30424b0375e99a281979f70a5a40e6d163058fb50955
+  86aa349a9199f2c6a6b9c3910bade867974d4e5b767269423186c514c4472082
 binaries/multilevel/clang17/O3/libmlkem.so
   c0b9cda5f78ff1baddc6f47c38aec02bb416c31fd559f390e845ee55f35375db
 binaries/multilevel/gcc12/O2/libmlkem.so
@@ -965,7 +965,7 @@ classes for cosimulation, `check_insns` in `../proofs/simulator_iclasses.ml`
 
 `clang17_O2/libmlkem.S` is the transcription of the image of the clang 17
 `-O2` binary, from address 0 up to the end of the read-only data at
-0xb460, in the same style as `clang17_O3/libmlkem.S` but with a symbol
+0xb480, in the same style as `clang17_O3/libmlkem.S` but with a symbol
 `mlkem_native_libmlkem_clang17_O2` at its start. It is checked in the same
 way, with the address 0x0. Its layout is
 `../proofs/mlkem_native/clang17_O2/layout.ml`, and

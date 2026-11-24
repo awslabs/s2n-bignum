@@ -422,7 +422,7 @@ let MLKEM_NATIVE_POLY_INVNTT_TOMONT_CLANG17_O2_IMAGE_SUBROUTINE_CORRECT = prove
   SUBGOAL_THEN
    `nonoverlapping_modulo (2 EXP 64) (val (a:int64),512) (pc + rodata_mlk_zetas,256)`
   ASSUME_TAC THENL
-   [MP_TAC(ISPECL [`2 EXP 64`; `val(a:int64)`; `512`; `pc:num`; `46176`;
+   [MP_TAC(ISPECL [`2 EXP 64`; `val(a:int64)`; `512`; `pc:num`; `46208`;
                    `val(a:int64)`; `512`; `pc + rodata_mlk_zetas`; `256`]
             NONOVERLAPPING_MODULO_SUBREGIONS) THEN
     ASM_REWRITE_TAC[CONTAINED_MODULO_REFL] THEN
