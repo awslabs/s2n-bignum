@@ -52,7 +52,7 @@ let MLDSA_NATIVE_POLYETA_PACK_44_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL = pr
           read (memory :> bytes64 stackpointer) s = returnaddress /\
           read (memory :> bytes64 (word_add stackpointer (word 24))) s =
           canary /\
-          read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+          read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
           guard /\
           read (memory :> bytes64 guard) s = canary /\
           (!j. j < 256

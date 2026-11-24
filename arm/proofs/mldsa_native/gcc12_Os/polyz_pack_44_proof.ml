@@ -85,10 +85,10 @@ let PZ44_INV =
          returnaddress /\
          read (memory :> bytes64 (word_add stackpointer (word 56))) s =
          canary /\
-         read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+         read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
          guard /\
          read (memory :> bytes64 guard) s = canary /\
-         read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\
+         read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
          read (memory :> bytes(ea,el)) s = ev /\
          (!j. j < 256
               ==> read(memory :> bytes32(word_add a (word(4 * j)))) s =

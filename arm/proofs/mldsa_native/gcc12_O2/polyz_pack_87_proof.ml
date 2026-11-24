@@ -55,7 +55,7 @@ let MLDSA_NATIVE_POLYZ_PACK_87_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
           read (memory :> bytes64 stackpointer) s = returnaddress /\
           read (memory :> bytes64 (word_add stackpointer (word 40))) s =
           canary /\
-          read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+          read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
           guard /\
           read (memory :> bytes64 guard) s = canary /\
           (!j. j < 256
