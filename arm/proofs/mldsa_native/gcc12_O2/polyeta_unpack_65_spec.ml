@@ -24,18 +24,19 @@ needs "arm/proofs/mldsa_native/gcc12_O2/libmldsa.ml";;
     mldsa65_polyeta_unpack:
        +0x0: add     x5, x0, #0x400
        +0x4: mov     w4, #0x4
-       +0x8: ldrb    w2, [x1]
-       +0xc: add     x0, x0, #0x8
-      +0x10: and     w2, w2, #0xf
-      +0x14: stur    w2, [x0, #-8]
-      +0x18: sub     w2, w4, w2
-      +0x1c: ldrb    w3, [x1], #1
-      +0x20: stur    w2, [x0, #-8]
-      +0x24: sub     w2, w4, w3, lsr #4
-      +0x28: stur    w2, [x0, #-4]
-      +0x2c: cmp     x0, x5
-      +0x30: b.ne    <mldsa65_polyeta_unpack+0x8>
-      +0x34: ret
+       +0x8: nop
+       +0xc: ldrb    w2, [x1]
+      +0x10: add     x0, x0, #0x8
+      +0x14: and     w2, w2, #0xf
+      +0x18: stur    w2, [x0, #-8]
+      +0x1c: sub     w2, w4, w2
+      +0x20: ldrb    w3, [x1], #1
+      +0x24: stur    w2, [x0, #-8]
+      +0x28: sub     w2, w4, w3, lsr #4
+      +0x2c: stur    w2, [x0, #-4]
+      +0x30: cmp     x0, x5
+      +0x34: b.ne    <mldsa65_polyeta_unpack+0xc>
+      +0x38: ret
  ***)
 
 let MLDSA_NATIVE_POLYETA_UNPACK_65_GCC12_O2_EXEC =

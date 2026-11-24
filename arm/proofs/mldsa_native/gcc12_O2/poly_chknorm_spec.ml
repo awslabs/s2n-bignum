@@ -26,20 +26,21 @@ needs "arm/proofs/mldsa_native/gcc12_O2/libmldsa.ml";;
        +0x4: mov     x4, x0
        +0x8: add     x6, x0, #0x400
        +0xc: mov     w0, #0x0
-      +0x10: ldr     w3, [x4], #4
-      +0x14: sxtw    x2, w3
-      +0x18: asr     x2, x2, #31
-      +0x1c: neg     w1, w3
-      +0x20: eor     w1, w1, w3
-      +0x24: and     w1, w1, w2
-      +0x28: eor     w1, w1, w3
-      +0x2c: sub     w1, w5, w1
-      +0x30: sxtw    x1, w1
-      +0x34: asr     x1, x1, #31
-      +0x38: orr     w0, w0, w1
-      +0x3c: cmp     x4, x6
-      +0x40: b.ne    <mldsa_poly_chknorm+0x10>
-      +0x44: ret
+      +0x10: nop
+      +0x14: ldr     w3, [x4], #4
+      +0x18: sxtw    x2, w3
+      +0x1c: asr     x2, x2, #31
+      +0x20: neg     w1, w3
+      +0x24: eor     w1, w1, w3
+      +0x28: and     w1, w1, w2
+      +0x2c: eor     w1, w1, w3
+      +0x30: sub     w1, w5, w1
+      +0x34: sxtw    x1, w1
+      +0x38: asr     x1, x1, #31
+      +0x3c: orr     w0, w0, w1
+      +0x40: cmp     x4, x6
+      +0x44: b.ne    <mldsa_poly_chknorm+0x14>
+      +0x48: ret
  ***)
 
 let MLDSA_NATIVE_POLY_CHKNORM_GCC12_O2_EXEC =

@@ -62,7 +62,9 @@ AArch64 parts.
 
 The code is transcribed from the disassembly of the pre-built binaries
 made by `scripts/build-binaries` of mldsa-native from its commit
-`e71e3d6f`, as recorded in `binaries/builds.json` there. We use the
+`d38418ea3d4c`, as recorded in `binaries/builds.json` of the `binary`
+branch there (commit `65f9995`, "binaries: Rebuild the AArch64 matrix from
+main"), which has the binaries of all three builds. We use the
 "multilevel" build (`examples/multilevel_build`), compiled with `CFLAGS`
 set to `-O<level> -g -gdwarf-4 -gsplit-dwarf -fPIC`, with `AUTO=0` and
 without the native backends. In this build the code shared by the three
@@ -79,7 +81,8 @@ and `mldsa87_`.
 | gcc12_Os/libmldsa.S            | gcc 12.3.0 | binaries/multilevel/gcc12/Os/libmldsa.so |
 
 The reduced-RAM build is compiled with `-DMLD_CONFIG_REDUCE_RAM` in
-addition, from the `binary` branch of mldsa-native; see
+addition, from the same source and the same `binary` branch of
+mldsa-native; see
 `gcc12_O2_reduced_ram/README.md` for its source and how it differs.
 
 The gcc12_Os build is the default configuration compiled with `-Os`, from
@@ -113,7 +116,7 @@ The SHA-256 hash of the binary used, which matches that recorded in
 
 ```
 binaries/multilevel/gcc12/O2/libmldsa.so
-  0dc6756e5098cf2a01d9b61f38656b5bb2a7804dcea81ab7c31638966f979965
+  37d12a5bf9ae1a5c8a06d8224147eaafcd78d42aad5d5ca242c9f461e907f69b
 ```
 
 To regenerate the files of the build, in the `arm` directory:

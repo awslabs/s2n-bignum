@@ -24,7 +24,7 @@ needs "arm/proofs/mldsa_native/gcc12_O2/libmldsa.ml";;
        +0x0: adrp    x9, <page>
        +0x4: mov     w15, #0x2001
        +0x8: mov     x6, x0
-       +0xc: add     x9, x9, #0xe00
+       +0xc: add     x9, x9, #0xfe0
       +0x10: mov     w3, #0x0
       +0x14: mov     w8, #0x64f7
       +0x18: mov     w13, #0x1

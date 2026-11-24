@@ -24,9 +24,9 @@ needs "arm/proofs/mldsa_native/gcc12_O2/libmldsa.ml";;
 
     mldsa_poly_pointwise_montgomery:
        +0x0: adrp    x2, <page>
-       +0x4: ldr     q4, [x2, #3568]
+       +0x4: ldr     q4, [x2, #4048]
        +0x8: adrp    x2, <page>
-       +0xc: ldr     q3, [x2, #3536]
+       +0xc: ldr     q3, [x2, #4016]
       +0x10: mov     x2, #0x0
       +0x14: nop
       +0x18: ldr     q2, [x0, x2]

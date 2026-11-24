@@ -61,15 +61,18 @@ let SIGN87_ZPRE_STMT =
  `!mc ea el ev.
     memcpy_full_contract mc ea el ev
     ==> ?f_zpre.
-        !e m sig B sp s1h cphat y pc.
+        !e m sig B sp s1h cphat y guard pc.
           aligned 4096 (word pc:int64) /\ pc + libmldsa_size <= 2 EXP 64 /\
           aligned 16 sp /\ m <= 7 /\
           (!i. i < m
                ==> mld_poly_chknorm (mld_sign_z s1h cphat y i) (word 524168) =
                    word 0) /\
-          PAIRWISE nonoverlapping [(sig,4627); (B,106816); (sp,160)] /\
-          ALLPAIRS nonoverlapping [(sig,4627); (B,106816)]
-           [(word pc,libmldsa_size); (word(pc + got_memcpy),8); (ea,el)]
+          PAIRWISE nonoverlapping
+           [(sig,4627); (B,106816); (sp,160); (word_sub sp (word 48),48)] /\
+          ALLPAIRS nonoverlapping
+           [(sig,4627); (B,106816); (word_sub sp (word 48),48)]
+           [(word pc,libmldsa_size); (word(pc + got_stack_chk_guard),8);
+            (guard,8); (word(pc + got_memcpy),8); (ea,el)]
           ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc)
                       mldsa_native_libmldsa_gcc12_O2_mc /\
@@ -82,6 +85,8 @@ let SIGN87_ZPRE_STMT =
                     read X24 s = word_add B (word 89088) /\
                     read X28 s = word_add B (word 96256) /\
                     read (memory :> bytes64 (word_add sp (word 96))) s = sig /\
+                    read (memory :> bytes64
+                           (word(pc + got_stack_chk_guard))) s = guard /\
                     read (memory :> bytes64 (word(pc + got_memcpy))) s = mc /\
                     read (memory :> bytes(ea,el)) s = ev /\
                     (!j. j < 256
@@ -111,24 +116,29 @@ let SIGN87_ZPRE_STMT =
                               (mld_polyvec (mld_sign_z s1h cphat y)) t) /\
                     (exists e2.
                        read events s = APPEND e2 e /\
-                       e2 = f_zpre m sig B sp mc pc /\
+                       e2 = f_zpre m sig B sp guard mc pc /\
                        memaccess_inbounds e2
-                        [sig,4627; B,106816; sp,160; word(pc + got_memcpy),8;
-                         ea,el; word(pc + rodata_mld_zetas),1024;
+                        [sig,4627; B,106816; sp,160;
+                         word_sub sp (word 48),48;
+                         word(pc + got_stack_chk_guard),8; guard,8;
+                         word(pc + got_memcpy),8; ea,el;
+                         word(pc + rodata_mld_zetas),1024;
                          word(pc + mldsa_poly_invntt_tomont_consts),48;
                          word(pc + mldsa_poly_reduce_consts),16;
                          word(pc + mldsa_poly_pointwise_montgomery_const1),16;
                          word(pc + mldsa_poly_pointwise_montgomery_const2),16]
-                        [sig,4627; B,106816]))
+                        [sig,4627; B,106816; word_sub sp (word 48),48]))
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [X18; X21; X24; X28; X30] ,,
                 MAYCHANGE
                  [memory :> bytes(word_add B (word 81920),1024);
                   memory :> bytes(word_add B (word 103424),1024);
-                  memory :> bytes(word_add sig (word 64),4480)])`;;
+                  memory :> bytes(word_add sig (word 64),4480);
+                  memory :> bytes(word_sub sp (word 48),48)])`;;
 
 let SIGN87_ZALLOWED =
-  [`pc:num`; `sig:int64`; `B:int64`; `sp:int64`; `mc:int64`; `i:num`];;
+  [`pc:num`; `sig:int64`; `B:int64`; `sp:int64`; `guard:int64`; `mc:int64`;
+   `i:num`];;
 
 let SIGN87_ZCALL_TAC name ilist n =
   FULL_CALL_TAC mldsa_native_libmldsa_gcc12_O2_mc SIGN87_EXEC name ilist
@@ -150,6 +160,8 @@ let SIGN87_ZPRE_INV =
         read X24 s = word_add B (word(89088 + 1024 * i)) /\
         read X28 s = word_add B (word(96256 + 1024 * i)) /\
         read (memory :> bytes64 (word_add sp (word 96))) s = sig /\
+        read (memory :> bytes64
+               (word_add (word pc) (word got_stack_chk_guard))) s = guard /\
         read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s =
         mc /\
         read (memory :> bytes(ea,el)) s = ev /\
@@ -235,7 +247,7 @@ let SIGN87_ZBODY_TAC =
    [UNDISCH_TAC `i < m` THEN UNDISCH_TAC `m <= 7` THEN ARITH_TAC; ALL_TAC] THEN
   SIGN87_ZCALL_TAC "H_PZ"
    [`read X0 s`; `read X1 s`; `mld_sign_z s1h cphat y i`; `i:num`;
-    `pc:num`; `read X30 s`] 46 THEN
+    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 46 THEN
   ARM_STEPS_TAC SIGN87_EXEC (47--48) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   W32_LOOP_TEST_TAC THEN REPEAT CONJ_TAC THEN
@@ -263,21 +275,26 @@ let SIGN87_ZPRE_ASYNC = prove_async
   ASSUME_CALLEE_SAFETY_TAILED_TAC
     MLDSA_NATIVE_PACK_SIG_Z_87_GCC12_O2_IMAGE_SUBROUTINE_FULL "H_PZ" THEN
   CONCRETIZE_F_EVENTS_TAC
-   `\(m:num) (sig:int64) (B:int64) (sp:int64) (mc:int64) (pc:num).
-     APPEND (f_ev_back m sig B sp mc pc)
-      (APPEND (ENUMERATEL m (\i. f_ev_zit sig B sp mc pc i))
-              (f_ev_front m sig B sp mc pc))
+   `\(m:num) (sig:int64) (B:int64) (sp:int64) (guard:int64) (mc:int64)
+     (pc:num).
+     APPEND (f_ev_back m sig B sp guard mc pc)
+      (APPEND (ENUMERATEL m (\i. f_ev_zit sig B sp guard mc pc i))
+              (f_ev_front m sig B sp guard mc pc))
      :(uarch_event)list` THEN
   REPEAT META_EXISTS_TAC THEN
   MAP_EVERY X_GEN_TAC
    [`e:(uarch_event)list`; `m:num`; `sig:int64`; `B:int64`; `sp:int64`;
-    `s1h:num->int32`; `cphat:num->int32`; `y:num->int32`; `pc:num`] THEN
+    `s1h:num->int32`; `cphat:num->int32`; `y:num->int32`; `guard:int64`;
+    `pc:num`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               C_ARGUMENTS; ALL; ALLPAIRS; PAIRWISE; NONOVERLAPPING_CLAUSES;
               fst SIGN87_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  REWRITE_TAC[SPECL [`pc:num`; `got_memcpy:num`] WORD_ADD] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SPECL [`pc:num`; `got_memcpy:num`] WORD_ADD]) THEN
+  REWRITE_TAC[SPECL [`pc:num`; `got_memcpy:num`] WORD_ADD;
+              SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE
+   [SPECL [`pc:num`; `got_memcpy:num`] WORD_ADD;
+    SPECL [`pc:num`; `got_stack_chk_guard:num`] WORD_ADD]) THEN
   ASM_CASES_TAC `0 < m` THENL
    [ENSURES_EVENTS_WHILE_UP2_TAC `m:num`
      `pc + mldsa87_signature_internal_loop2`
@@ -1682,7 +1699,7 @@ let SIGN87_ZCASE_TAC =
   ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
   SIGN87_ACALL_TAC "H_ZPRE"
    [`r:num`; `sig:int64`; `B:int64`; SIGN87_SP; `s1h:num->int32`;
-    SIGN87_CPH; SIGN87_Y; `pc:num`] 2 THEN
+    SIGN87_CPH; SIGN87_Y; `guard:int64`; `pc:num`] 2 THEN
   SIGN_PC_SIMP_TAC THEN
   SIGN87_ACALL_TAC "H_ZFAIL"
    [`r:num`; `sig:int64`; `B:int64`; SIGN87_SP; `s1h:num->int32`;
@@ -1839,7 +1856,7 @@ let SIGN87_PATHS_TAC =
     ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
     SIGN87_ACALL_TAC "H_ZPRE"
      [`7`; `sig:int64`; `B:int64`; SIGN87_SP; `s1h:num->int32`;
-      SIGN87_CPH; SIGN87_Y; `pc:num`] 2 THEN
+      SIGN87_CPH; SIGN87_Y; `guard:int64`; `pc:num`] 2 THEN
     RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_LT_CONV)) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[]) THEN
     ASM_CASES_TAC `r < 23` THENL [SIGN87_WCASE_TAC; SIGN87_TCASE_TAC]];;

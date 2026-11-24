@@ -30,11 +30,11 @@ needs "arm/proofs/mldsa_native/gcc12_O2/libmldsa.ml";;
        +0x4: adrp    x0, <page>
        +0x8: mov     x5, x2
        +0xc: mov     x6, x1
-      +0x10: ldr     q5, [x0, #3568]
+      +0x10: ldr     q5, [x0, #4048]
       +0x14: adrp    x0, <page>
       +0x18: mov     x1, #0x0
       +0x1c: mov     x4, #0x1400
-      +0x20: ldr     q4, [x0, #3536]
+      +0x20: ldr     q4, [x0, #4016]
       +0x24: nop
       +0x28: add     x3, x5, x1
       +0x2c: movi    v1.4s, #0x0

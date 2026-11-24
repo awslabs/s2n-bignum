@@ -75,7 +75,8 @@ let KP87_ETA_TAC m n n0 n1 n2 n3 =
 let KP87_PACK_TAC nonce m n =
   ARM_STEPS_TAC KP87_EXEC (m--(n-1)) THEN
   KP87_CALL_TAC "H_PACK"
-   [`read X0 s`; `read X1 s`; KP87_POLY nonce; `pc:num`; `read X30 s`] n;;
+   [`read X0 s`; `read X1 s`; KP87_POLY nonce; `guard:int64`; `pc:num`;
+    `read SP s`; `read X30 s`] n;;
 
 (* ------------------------------------------------------------------------- *)
 (* For each nonce n of the samplings, as a numeral: the termination of its   *)

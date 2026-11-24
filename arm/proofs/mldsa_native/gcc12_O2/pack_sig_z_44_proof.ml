@@ -10,6 +10,7 @@
 
 needs "arm/proofs/mldsa_native/gcc12_O2/pack_sig_z_44_spec.ml";;
 needs "arm/proofs/utils/mldsa_native_hints.ml";;
+needs "arm/proofs/utils/mldsa_native_full.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness, constant time and memory safety: the address of the output,  *)
@@ -22,17 +23,17 @@ let MLDSA_NATIVE_PACK_SIG_Z_44_GCC12_O2_IMAGE_SUBROUTINE_FULL = prove
   ASSUME_CALLEE_SAFETY_TAILED_TAC
     MLDSA_NATIVE_POLYZ_PACK_44_GCC12_O2_IMAGE_SUBROUTINE_FULL "H_PACK" THEN
   META_EXISTS_TAC THEN
-  MAP_EVERY X_GEN_TAC
-   [`e:(uarch_event)list`; `sig:int64`; `zi:int64`; `x:num->int32`;
-    `i:num`; `pc:num`; `returnaddress:int64`] THEN
+  REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
-              NONOVERLAPPING_CLAUSES; ALL; fst EXEC] THEN
+              NONOVERLAPPING_CLAUSES; ALL; ALLPAIRS; PAIRWISE; fst EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   FULL_INIT_TAC THEN ARM_STEPS_TAC EXEC (1--5) THEN
   GLUE_REG_TAC `X0` `word_add sig (word(32 + 576 * i)):int64` THEN
   FULL_CALL_TAC mldsa_native_libmldsa_gcc12_O2_mc EXEC "H_PACK"
-   [`read X0 s`; `read X1 s`; `x:num->int32`; `pc:num`; `read X30 s`]
-   [`pc:num`; `sig:int64`; `zi:int64`; `i:num`; `returnaddress:int64`] 6 THEN
+   [`read X0 s`; `read X1 s`; `x:num->int32`; `guard:int64`; `pc:num`;
+    `read SP s`; `read X30 s`]
+   [`pc:num`; `sig:int64`; `zi:int64`; `i:num`; `guard:int64`;
+    `stackpointer:int64`; `returnaddress:int64`] 6 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL
    [REWRITE_TAC[ADD_ASSOC] THEN ASM_REWRITE_TAC[];
