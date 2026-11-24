@@ -734,6 +734,24 @@ let arm_ABS_VEC = define
             else usimd8 (\x. iword(abs(ival x))) n in
           (Rd := word_zx d:(128)word) s`;;
 
+let arm_NEG_VEC = define
+ `arm_NEG_VEC Rd Rn esize datasize =
+    \s. let n = read Rn (s:armstate) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then usimd2 word_neg n
+            else if esize = 32 then usimd4 word_neg n
+            else if esize = 16 then usimd8 word_neg n
+            else usimd16 word_neg n in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let d:(64)word =
+            if esize = 32 then usimd2 word_neg n
+            else if esize = 16 then usimd4 word_neg n
+            else usimd8 word_neg n in
+          (Rd := word_zx d:(128)word) s`;;
+
 let arm_ADDS = define
  `arm_ADDS Rd Rm Rn =
     \s. let m = read Rm s
@@ -3406,6 +3424,52 @@ let arm_LDP = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+(*** LDP of two S registers. The S registers have no named constants as ***)
+(*** the D and Q registers have, so that ~(Rt1 = Rt2) of arm_LDP cannot  ***)
+(*** be decided for them; for S registers the orthogonality condition    ***)
+(*** alone excludes Rt1 = Rt2, as there is no zero register to exempt.   ***)
+
+let arm_LDP_S = define
+ `arm_LDP_S (Rt1:(armstate,N word)component)
+            (Rt2:(armstate,N word)component) Rn off =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            orthogonal_components Rt1 Rt2 /\
+            (offset_writesback off
+             ==> orthogonal_components Rt1 Rn /\ orthogonal_components Rt2 Rn)
+         then
+           let w = dimindex(:N) DIV 8 in
+           Rt1 := read (memory :> wbytes addr) s ,,
+           Rt2 := read (memory :> wbytes(word_add addr (word w))) s ,,
+           events := CONS (EventLoad (addr,2 * w)) (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add base (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+(*** LDPSW loads two words and sign-extends each to an X register. As for ***)
+(*** LDP, Rt1 = Rt2 is CONSTRAINED UNPREDICTABLE and has arbitrary     ***)
+(*** semantics; the decoder always supplies X registers.                 ***)
+
+let arm_LDPSW = define
+ `arm_LDPSW (Rt1:(armstate,N word)component)
+            (Rt2:(armstate,N word)component) Rn off =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            ~(Rt1 = Rt2) /\ orthogonal_components Rt1 Rt2 /\
+            (offset_writesback off
+             ==> orthogonal_components Rt1 Rn /\ orthogonal_components Rt2 Rn)
+         then
+           Rt1 := word_sx (read (memory :> bytes32 addr) s) ,,
+           Rt2 := word_sx (read (memory :> bytes32 (word_add addr (word 4))) s) ,,
+           events := CONS (EventLoad (addr,8)) (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add base (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
 let arm_STP = define
  `arm_STP (Rt1:(armstate,N word)component)
           (Rt2:(armstate,N word)component) Rn off =
@@ -4466,6 +4530,7 @@ let arm_ADDHN_ALT =      EXPAND_SIMD_RULE arm_ADDHN;;
 let arm_ADDHN2_ALT =     EXPAND_SIMD_RULE arm_ADDHN2;;
 let arm_ADDP_VEC_ALT =   EXPAND_SIMD_RULE arm_ADDP_VEC;;
 let arm_ABS_VEC_ALT =    EXPAND_SIMD_RULE arm_ABS_VEC;;
+let arm_NEG_VEC_ALT =    EXPAND_SIMD_RULE arm_NEG_VEC;;
 let arm_CMGE_VEC_ALT =   EXPAND_SIMD_RULE arm_CMGE_VEC;;
 let arm_CMGT_VEC_ALT =   EXPAND_SIMD_RULE arm_CMGT_VEC;;
 let arm_CMHI_VEC_ALT =   EXPAND_SIMD_RULE arm_CMHI_VEC;;
@@ -4764,7 +4829,7 @@ let arm_ST4_ALT = end_itlist CONJ
 let ARM_OPERATION_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
     (*** Alphabetically sorted, new alphabet appears in the next line ***)
-      [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDHN_ALT; arm_ADDHN2_ALT; arm_ADDP_VEC_ALT; arm_ADDV_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
+      [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDHN_ALT; arm_ADDHN2_ALT; arm_ADDP_VEC_ALT; arm_ADDV_ALT; arm_ABS_VEC_ALT; arm_NEG_VEC_ALT; arm_ADDS_ALT; arm_ADR;
        arm_ADRP; arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
        arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIF; arm_BIT; arm_BSL;
        arm_BL; arm_BL_ABSOLUTE; arm_BR; arm_Bcond;
@@ -4849,7 +4914,7 @@ let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB;
        arm_LDRH; arm_STRH; arm_LDRSB; arm_LDRSH; arm_LDRSW;
-       arm_LDP; arm_STP;
+       arm_LDP; arm_LDP_S; arm_LDPSW; arm_STP;
        arm_LDP3; arm_STP3;
        arm_LDP4; arm_STP4;
        arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT;

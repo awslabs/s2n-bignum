@@ -104,6 +104,8 @@ let arm_ldstp = new_definition `arm_ldstp ld x Rt Rt2 =
        else (if ld then arm_LDP else arm_STP) (WREG' Rt) (WREG' Rt2)`;;
 let arm_ldstp_d = new_definition `arm_ldstp_d ld Rt Rt2 =
   (if ld then arm_LDP else arm_STP) (DREG' Rt) (DREG' Rt2)`;;
+let arm_ldstp_s = new_definition `arm_ldstp_s ld Rt Rt2 =
+  (if ld then arm_LDP_S else arm_STP) (SREG' Rt) (SREG' Rt2)`;;
 let arm_ldstp_q = new_definition `arm_ldstp_q ld Rt Rt2 =
   (if ld then arm_LDP else arm_STP) (QREG' Rt) (QREG' Rt2)`;;
 let arm_ldstp_2q = new_definition `arm_ldstp_2q ld Rt =
@@ -541,29 +543,50 @@ let decode = new_definition `!w:int32. decode w =
   | [0b10:2; 0b1111000:7; is_ld; 1:1; Rm:5; 0b111:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_s is_ld Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) 2 else Register_Offset (XREG' Rm)))
-  // LDP/STP (signed offset, SIMD&FP), only sizes 128 and 64
+  // LDP/STP (signed offset, SIMD&FP), only sizes 128, 64 and 32
   | [0b10:2; 0b1011010:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)
      (Immediate_Offset (iword (ival imm7 * &16))))
   | [0b01:2; 0b1011010:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_d is_ld Rt Rt2 (XREG_SP Rn)
      (Immediate_Offset (iword (ival imm7 * &8))))
+  | [0b00:2; 0b1011010:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_s is_ld Rt Rt2 (XREG_SP Rn)
+     (Immediate_Offset (iword (ival imm7 * &4))))
 
-  // LDP/STP (pre-index, SIMD&FP), only sizes 128 and 64
+  // LDP/STP (pre-index, SIMD&FP), only sizes 128, 64 and 32
   | [0b10:2; 0b1011011:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)
      (Preimmediate_Offset (iword (ival imm7 * &16))))
   | [0b01:2; 0b1011011:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_d is_ld Rt Rt2 (XREG_SP Rn)
      (Preimmediate_Offset (iword (ival imm7 * &8))))
+  | [0b00:2; 0b1011011:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_s is_ld Rt Rt2 (XREG_SP Rn)
+     (Preimmediate_Offset (iword (ival imm7 * &4))))
 
-  // LDP/STP (post-index, SIMD&FP), only sizes 128 and 64
+  // LDP/STP (post-index, SIMD&FP), only sizes 128, 64 and 32
   | [0b10:2; 0b1011001:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)
      (Postimmediate_Offset (iword (ival imm7 * &16))))
   | [0b01:2; 0b1011001:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_d is_ld Rt Rt2 (XREG_SP Rn)
      (Postimmediate_Offset (iword (ival imm7 * &8))))
+  | [0b00:2; 0b1011001:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_s is_ld Rt Rt2 (XREG_SP Rn)
+     (Postimmediate_Offset (iword (ival imm7 * &4))))
+
+  // LDPSW (sign-extending load of two words to X registers): signed offset,
+  // pre-index and post-index. The L bit is 1; with L = 0 it is STGP.
+  | [0b01:2; 0b1010010:7; 1:1; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    SOME (arm_LDPSW (XREG' Rt) (XREG' Rt2) (XREG_SP Rn)
+     (Immediate_Offset (iword (ival imm7 * &4))))
+  | [0b01:2; 0b1010011:7; 1:1; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    SOME (arm_LDPSW (XREG' Rt) (XREG' Rt2) (XREG_SP Rn)
+     (Preimmediate_Offset (iword (ival imm7 * &4))))
+  | [0b01:2; 0b1010001:7; 1:1; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    SOME (arm_LDPSW (XREG' Rt) (XREG' Rt2) (XREG_SP Rn)
+     (Postimmediate_Offset (iword (ival imm7 * &4))))
 
   // LDR/STR (immediate, SIMD&FP), Pre-index (has writeback), sizes 128, 64
   // and 32
@@ -578,11 +601,14 @@ let decode = new_definition `!w:int32. decode w =
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
 
-  // LDUR/STUR (SIMD&FP), unscaled immediate, sizes 64 (D) and 32 (S)
+  // LDUR/STUR (SIMD&FP), unscaled immediate, sizes 64 (D), 32 (S) and 8 (B)
   | [0b11:2; 0b1111000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
   | [0b10:2; 0b1111000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_s is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+  | [0b00:2; 0b1111000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_b_simd is_ld Rt (XREG_SP Rn)
+      (Immediate_Offset (word_sx imm9)))
 
   // LDUR/STUR, only sizes 64 and 32
   | [0b1:1; x; 0b1110000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
@@ -1238,6 +1264,14 @@ let decode = new_definition `!w:int32. decode w =
       let esize = 8 * (2 EXP (val size)) in
       let datasize = if q then 128 else 64 in
       SOME (arm_ABS_VEC (QREG' Rd) (QREG' Rn) esize datasize)
+
+  | [0:1; q; 0b101110:6; size:2; 0b100000101110:12; Rn:5; Rd:5] ->
+    // NEG (vector)
+    if size = word 0b11 /\ ~q then NONE // "UNDEFINED" - 64-bit only with Q=1
+    else
+      let esize = 8 * (2 EXP (val size)) in
+      let datasize = if q then 128 else 64 in
+      SOME (arm_NEG_VEC (QREG' Rd) (QREG' Rn) esize datasize)
 
   | [0:1; q; 0b001111:6; sz:2; L:1; M:1; R:4; 0b1000:4; H:1; 0:1; Rn:5; Rd:5] ->
     // MUL (by element)
@@ -2283,7 +2317,7 @@ let PURE_DECODE_CONV =
               arm_bfmop; arm_ccop; arm_csop;
               arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldst_s; arm_ldst_h; arm_ldst_b_simd;
               arm_ldstb; arm_ldsth; arm_ldrsb; arm_ldrsh; arm_extoff;
-              arm_ldstp; arm_ldstp_q; arm_ldstp_d;
+              arm_ldstp; arm_ldstp_q; arm_ldstp_d; arm_ldstp_s;
               arm_ldst2; arm_ldstp_2q; arm_ldstp_3q; arm_ldstp_3d;
               arm_ldstp_4q; arm_ldstp_4d; arm_ldst3; arm_ldst4;
               arm_ldst_lane] rw;

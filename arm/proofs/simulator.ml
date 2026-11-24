@@ -541,13 +541,14 @@ let cosimulate_ldstr() =
   else
     [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code; sub_Xn_SP_Xn rn];;
 
-(*** This covers simd (128-bit or 64-bit) LDP and STP with
+(*** This covers simd (128-bit, 64-bit or 32-bit) LDP and STP with
  *** post-index, pre-index and signed offset.
  ***)
 
 let cosimulate_ldstp() =
-  let size_rd = Random.int 2 in
-  let size = if size_rd = 0 then 0b01 else 0b10 in
+  let size_rd = Random.int 3 in
+  let size = if size_rd = 0 then 0b01 else if size_rd = 1 then 0b10
+             else 0b00 in
   let scale = 2 + size in
   let index_rd = Random.int 3 in
   let index_mode =
@@ -556,7 +557,8 @@ let cosimulate_ldstp() =
   let rt2 = Random.int 32 in
   let rt = (rt2 + 1 + Random.int 31) mod 32 in
   let rn = random_base_reg() in
-  let headroom = if size_rd = 0 then 8*2 else 16*2 in
+  let headroom = if size_rd = 0 then 8*2 else if size_rd = 1 then 16*2
+                 else 4*2 in
   let rawstackoff = Random.int (256 - headroom) in
   let stackoff =
     if rn = 31 then 16 * (rawstackoff / 16)
@@ -1554,14 +1556,15 @@ let cosimulate_ldst_simd_bhs() =
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
 (*** This covers LDUR/STUR (SIMD&FP, unscaled immediate) for sizes 128 (Q),
- *** 64 (D) and 32 (S). The 9-bit immediate is a signed, unscaled byte offset.
+ *** 64 (D), 32 (S) and 8 (B). The 9-bit immediate is a signed, unscaled
+ *** byte offset.
  ***)
 
 let cosimulate_ldstu_simd() =
-  let kind = Random.int 3 in (* 0 = S, 1 = D, 2 = Q *)
-  let size = el kind [0b10; 0b11; 0b00]
+  let kind = Random.int 4 in (* 0 = S, 1 = D, 2 = Q, 3 = B *)
+  let size = el kind [0b10; 0b11; 0b00; 0b00]
   and opc1 = if kind = 2 then 1 else 0
-  and access = el kind [4; 8; 16] in
+  and access = el kind [4; 8; 16; 1] in
   let isld = Random.int 2
   and rn = Random.int 32
   and rt = Random.int 32 in
@@ -1804,6 +1807,48 @@ let cosimulate_ldst_ext() =
     if rn = 31 then sub_Xn_SP_imm 31 stackoff else sub_Xn_SP_Xn rn in
   [add_Xn_SP_imm rn stackoff] @ pre @ [code; restore];;
 
+(*** This covers LDPSW with post-index, pre-index and signed offset. The
+ *** registers avoid the CONSTRAINED UNPREDICTABLE cases (Rt = Rt2,
+ *** writeback with Rt or Rt2 = Rn) and, because the base address is only
+ *** known relative to SP, any use of Rn as Rt or Rt2; XZR is drawn more
+ *** often than 1 in 32. The offset is a multiple of 4.
+ ***)
+
+let cosimulate_ldpsw() =
+  let index_rd = Random.int 3 in
+  let index_mode =
+    if index_rd = 0 then 0b001 else if index_rd = 1 then 0b011 else 0b010 in
+  let rn = random_base_reg() in
+  let rec pick avoid =
+    let r = if Random.int 8 = 0 then 31 else Random.int 32 in
+    if List.mem r avoid then pick avoid else r in
+  let rt2 = pick (if rn = 31 then [] else [rn]) in
+  let rt = pick ((if rn = 31 then [] else [rn]) @ [rt2]) in
+  let headroom = 4*2 in
+  let rawstackoff = Random.int (256 - headroom) in
+  let stackoff =
+    if rn = 31 then 16 * (rawstackoff / 16)
+    else rawstackoff in
+  let extraoff_neg = if stackoff = 0 then 0 else - (Random.int stackoff) in
+  let extraoff_pos = Random.int (256-headroom-stackoff) in
+  let extraoff = if Random.int 2 = 0 then extraoff_neg else extraoff_pos in
+  let regoff = extraoff / 4 in
+  let unsigned_regoff = if regoff < 0 then 128 + regoff else regoff in
+  let postinc = if index_rd = 2 then 0 else regoff lsl 2 in
+  let code =
+    pow2 30 */ num 0b01 +/
+    pow2 26 */ num 0b1010 +/
+    pow2 23 */ num index_mode +/
+    pow2 22 */ num 1 +/
+    pow2 15 */ num unsigned_regoff +/
+    pow2 10 */ num rt2 +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldstp_gpr; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ldsth;
@@ -1814,7 +1859,7 @@ let memclasses =
     cosimulate_ldst2_noofs; cosimulate_ldst1_lane;
     cosimulate_ldst_simd_bhs; cosimulate_ldstu_simd;
     cosimulate_ldst_imm; cosimulate_sp_arith; cosimulate_sp_subst;
-    cosimulate_ldrsw; cosimulate_ldst_ext; cosimulate_ldst4;
+    cosimulate_ldrsw; cosimulate_ldpsw; cosimulate_ldst_ext; cosimulate_ldst4;
     cosimulate_ld1_lane; cosimulate_st1_lane; cosimulate_ldst_s_imm9
     ];;
 

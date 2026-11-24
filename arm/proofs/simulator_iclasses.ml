@@ -260,6 +260,7 @@ let iclasses =
 
   (*** ABS ***)
   "0x001110xx100000101110xxxxxxxxxx";
+  "0x101110xx100000101110xxxxxxxxxx"; (* NEG (vector) *)
 
   (*** AND ***)
   "0x001110001xxxxx000111xxxxxxxxxx";
@@ -761,6 +762,10 @@ let check_insns () =
     (*** adrp ***)
     "1xx10000xxxxxxxxxxxxxxxxxxxxxxxx";
 
+    (*** cmp, cmn (extended register) with SP as Rn: cosimulated with SP
+     *** set to a random value by cosimulate_sp_subst in simulator.ml ***)
+    "xx101011001xxxxxxxxxxx1111111111";
+
     (*** b ***)
     "000101xxxxxxxxxxxxxxxxxxxxxxxxxx";
 
@@ -786,6 +791,11 @@ let check_insns () =
     "xx10110011xxxxxxxxxxxxxxxxxxxxxx";
     "xx10110111xxxxxxxxxxxxxxxxxxxxxx";
     "xx10110101xxxxxxxxxxxxxxxxxxxxxx";
+
+    (*** ldpsw ***)
+    "0110100011xxxxxxxxxxxxxxxxxxxxxx";
+    "0110100111xxxxxxxxxxxxxxxxxxxxxx";
+    "0110100101xxxxxxxxxxxxxxxxxxxxxx";
 
     (*** ldr (immediate ofs) ***)
     "1x111000010xxxxxxxxx01xxxxxxxxxx";
@@ -959,9 +969,10 @@ let check_insns () =
     (*** ld1 / st1 (single lane, .s) post-index ***)
     "0x0011011x0xxxxx100x00xxxxxxxxxx";
 
-    (*** ldur / stur (SIMD & FP), unscaled, sizes 64 and 32 ***)
+    (*** ldur / stur (SIMD & FP), unscaled, sizes 64, 32 and 8 ***)
     "111111000x0xxxxxxxxx00xxxxxxxxxx";
     "101111000x0xxxxxxxxx00xxxxxxxxxx";
+    "001111000x0xxxxxxxxx00xxxxxxxxxx";
 
     (*** ld1 (single structure) of one lane: no offset, post-immediate and ***)
     (*** post-register ofs, for bytes, halfwords and doublewords          ***)
