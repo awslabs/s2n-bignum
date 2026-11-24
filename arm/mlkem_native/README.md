@@ -280,12 +280,11 @@ functions that expand the matrix A, the `_IMAGE_SUBROUTINE_FIPS203` and
 ## Source of the code
 
 The code is transcribed from the disassembly of the pre-built binaries in
-the `binary` branch of mlkem-native (commit `83fb34a`). These were built
-from mlkem-native commit `03392e41` by its `scripts/build-binaries`, as
-recorded in `binaries/builds.json` there. The `-Os` binary is in commit
-`bf078650` of the `binary` branch, which builds it with the same script
-from the same source commit `03392e41`; the `-O2` and `-O3` binaries are
-the same in that commit. We use the
+the `binary` branch of mlkem-native (commit `f6988e31`). These were built
+from mlkem-native commit `3979073e` by its `scripts/build-binaries`, as
+recorded in `binaries/builds.json` there. All six binaries are in that
+commit of the `binary` branch, built with the same script from the same
+source commit. We use the
 "multilevel" builds (`examples/multilevel_build`), compiled with `CFLAGS`
 set to `-O<level> -g -gdwarf-4 -gsplit-dwarf -fPIC`. The file
 `<compiler>_<level>/<function>.S`, with the symbol
@@ -349,7 +348,7 @@ binaries/multilevel/clang17/O3/libmlkem.so
 binaries/multilevel/gcc12/O2/libmlkem.so
   ed9a4710c0ec93ef1eab794f3e854dfadf92b45e08c76101cffdf1a36b035692
 binaries/multilevel/gcc12/O3/libmlkem.so
-  5139544fd8a5aa5d0ac9d3895dadbe23d9168b2853dce9f5a9a758b0f0dfdd77
+  34e148dbc5318e8b46579ebb647416884b106f33855b2c0b2ece7f4368ffc9fa
 binaries/multilevel/gcc12/Os/libmlkem.so
   d93a97f48fc3ded91aff42a9a3a5ff335b33cec6a533a855812d28bd1a2144dc
 binaries/multilevel-mono/gcc12/O2/libmlkem.so
@@ -840,8 +839,12 @@ if the decapsulation key `dk` and the ciphertext `c` pass it
 of `mlkem_decaps_internal mlkem768 dk c`, including the implicit rejection,
 and otherwise it returns -5. The comparison of the ciphertexts and the
 selection of the shared secret are loops in constant time, which are
-verified with invariants. It has the same hypotheses as
-`mlkem768_indcpa_enc`, for the matrix from the seed in `dk`. Its theorem of
+verified with invariants. The code selects the shared secret in a buffer
+on its stack and copies it to `ss` once at the end, so `ss` is written
+only with the final value (this is the change of mlkem-native commit
+`948be12f5`, "Don't write rejection key to output buffer in decaps"). It
+has the same hypotheses as `mlkem768_indcpa_enc`, for the matrix from the
+seed in `dk`. Its theorem of
 constant time and memory safety, with the same contracts, states that its
 events depend only on the addresses and on the encapsulation key and the
 hash stored in `dk`, which are public, and not on the rest of the key or on

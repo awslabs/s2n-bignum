@@ -598,11 +598,11 @@ end;;
 (* The jobs, and the theorems of the top-level functions *)
 
 let par_link_results = par_run_jobs [
-  "basemul_k2", 36.0,
+  "basemul_k2", 37.0,
   (fun () -> let module Par_this = Par_job_basemul_k2 (struct end) in []);
-  "basemul_k3", 177.0,
+  "basemul_k3", 179.0,
   (fun () -> let module Par_this = Par_job_basemul_k3 (struct end) in []);
-  "basemul_k4", 264.0,
+  "basemul_k4", 274.0,
   (fun () -> let module Par_this = Par_job_basemul_k4 (struct end) in []);
   "poly_frombytes", 73.0,
   (fun () -> let module Par_this = Par_job_poly_frombytes (struct end) in []);
@@ -612,11 +612,11 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_poly_reduce (struct end) in []);
   "polyvec_reduce_k2", 15.0,
   (fun () -> let module Par_this = Par_job_polyvec_reduce_k2 (struct end) in []);
-  "poly_tobytes", 66.0,
+  "poly_tobytes", 68.0,
   (fun () -> let module Par_this = Par_job_poly_tobytes (struct end) in []);
   "polyvec_tobytes_k2", 19.0,
   (fun () -> let module Par_this = Par_job_polyvec_tobytes_k2 (struct end) in []);
-  "check_pk_k2", 130.0,
+  "check_pk_k2", 127.0,
   (fun () -> let module Par_this = Par_job_check_pk_k2 (struct end) in
      ["MLKEM_NATIVE_CHECK_PK_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_PK_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_CHECK_PK_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_PK_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE;
@@ -627,7 +627,7 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_polyvec_reduce_k3 (struct end) in []);
   "polyvec_tobytes_k3", 24.0,
   (fun () -> let module Par_this = Par_job_polyvec_tobytes_k3 (struct end) in []);
-  "check_pk_k3", 131.0,
+  "check_pk_k3", 126.0,
   (fun () -> let module Par_this = Par_job_check_pk_k3 (struct end) in
      ["MLKEM_NATIVE_CHECK_PK_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_PK_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_CHECK_PK_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_PK_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE;
@@ -636,34 +636,34 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_polyvec_frombytes_k4 (struct end) in []);
   "polyvec_reduce_k4", 22.0,
   (fun () -> let module Par_this = Par_job_polyvec_reduce_k4 (struct end) in []);
-  "polyvec_tobytes_k4", 32.0,
+  "polyvec_tobytes_k4", 33.0,
   (fun () -> let module Par_this = Par_job_polyvec_tobytes_k4 (struct end) in []);
-  "check_pk_k4", 129.0,
+  "check_pk_k4", 128.0,
   (fun () -> let module Par_this = Par_job_check_pk_k4 (struct end) in
      ["MLKEM_NATIVE_CHECK_PK_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_PK_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_CHECK_PK_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_PK_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE;
       "MLKEM_NATIVE_CHECK_PK_K4_GCC12_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_CHECK_PK_K4_GCC12_O3_IMAGE_SUBROUTINE_FULL]);
-  "keccakf1600_permute", 61.0,
+  "keccakf1600_permute", 63.0,
   (fun () -> let module Par_this = Par_job_keccakf1600_permute (struct end) in []);
-  "keccakf1600_xor_bytes", 6489.0,
+  "keccakf1600_xor_bytes", 5079.0,
   (fun () -> let module Par_this = Par_job_keccakf1600_xor_bytes (struct end) in []);
   "keccak_absorb_once", 55.0,
   (fun () -> let module Par_this = Par_job_keccak_absorb_once (struct end) in []);
-  "keccakf1600_extract_bytes", 3668.0,
+  "keccakf1600_extract_bytes", 3146.0,
   (fun () -> let module Par_this = Par_job_keccakf1600_extract_bytes (struct end) in []);
-  "sha3_256", 36.0,
+  "sha3_256", 35.0,
   (fun () -> let module Par_this = Par_job_sha3_256 (struct end) in []);
   "check_sk_k2", 52.0,
   (fun () -> let module Par_this = Par_job_check_sk_k2 (struct end) in
      ["MLKEM_NATIVE_CHECK_SK_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_SK_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_CHECK_SK_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_SK_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE;
       "MLKEM_NATIVE_CHECK_SK_K2_GCC12_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_CHECK_SK_K2_GCC12_O3_IMAGE_SUBROUTINE_FULL]);
-  "check_sk_k3", 53.0,
+  "check_sk_k3", 52.0,
   (fun () -> let module Par_this = Par_job_check_sk_k3 (struct end) in
      ["MLKEM_NATIVE_CHECK_SK_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_SK_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_CHECK_SK_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_SK_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE;
       "MLKEM_NATIVE_CHECK_SK_K3_GCC12_O3_IMAGE_SUBROUTINE_FULL", Par_this.MLKEM_NATIVE_CHECK_SK_K3_GCC12_O3_IMAGE_SUBROUTINE_FULL]);
-  "check_sk_k4", 52.0,
+  "check_sk_k4", 51.0,
   (fun () -> let module Par_this = Par_job_check_sk_k4 (struct end) in
      ["MLKEM_NATIVE_CHECK_SK_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_CHECK_SK_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_CHECK_SK_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_CHECK_SK_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE;
@@ -672,23 +672,23 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_poly_decompress_d10 (struct end) in []);
   "polyvec_decompress_du_k2", 11.0,
   (fun () -> let module Par_this = Par_job_polyvec_decompress_du_k2 (struct end) in []);
-  "poly_decompress_d4", 123.0,
+  "poly_decompress_d4", 126.0,
   (fun () -> let module Par_this = Par_job_poly_decompress_d4 (struct end) in []);
-  "poly_ntt", 253.0,
+  "poly_ntt", 255.0,
   (fun () -> let module Par_this = Par_job_poly_ntt (struct end) in []);
   "polyvec_ntt_k2", 10.0,
   (fun () -> let module Par_this = Par_job_polyvec_ntt_k2 (struct end) in []);
-  "poly_mulcache_compute", 164.0,
+  "poly_mulcache_compute", 158.0,
   (fun () -> let module Par_this = Par_job_poly_mulcache_compute (struct end) in []);
   "polyvec_mulcache_compute_k2", 12.0,
   (fun () -> let module Par_this = Par_job_polyvec_mulcache_compute_k2 (struct end) in []);
-  "poly_invntt_tomont", 649.0,
+  "poly_invntt_tomont", 678.0,
   (fun () -> let module Par_this = Par_job_poly_invntt_tomont (struct end) in []);
   "poly_sub", 4.0,
   (fun () -> let module Par_this = Par_job_poly_sub (struct end) in []);
-  "poly_tomsg", 67.0,
+  "poly_tomsg", 69.0,
   (fun () -> let module Par_this = Par_job_poly_tomsg (struct end) in []);
-  "indcpa_dec_k2", 110.0,
+  "indcpa_dec_k2", 116.0,
   (fun () -> let module Par_this = Par_job_indcpa_dec_k2 (struct end) in []);
   "sha3_512", 58.0,
   (fun () -> let module Par_this = Par_job_sha3_512 (struct end) in []);
@@ -704,7 +704,7 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_shake128_release (struct end) in []);
   "rej_uniform", 0.0,
   (fun () -> let module Par_this = Par_job_rej_uniform (struct end) in []);
-  "poly_rej_uniform", 158.0,
+  "poly_rej_uniform", 156.0,
   (fun () -> let module Par_this = Par_job_poly_rej_uniform (struct end) in []);
   "shake128x4_init", 1.0,
   (fun () -> let module Par_this = Par_job_shake128x4_init (struct end) in []);
@@ -712,29 +712,29 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_keccakf1600x4_permute (struct end) in []);
   "keccakf1600x4_xor_bytes", 39.0,
   (fun () -> let module Par_this = Par_job_keccakf1600x4_xor_bytes (struct end) in []);
-  "shake128x4_absorb_once", 201.0,
+  "shake128x4_absorb_once", 206.0,
   (fun () -> let module Par_this = Par_job_shake128x4_absorb_once (struct end) in []);
-  "keccakf1600x4_extract_bytes", 41.0,
+  "keccakf1600x4_extract_bytes", 40.0,
   (fun () -> let module Par_this = Par_job_keccakf1600x4_extract_bytes (struct end) in []);
   "shake128x4_squeezeblocks", 60.0,
   (fun () -> let module Par_this = Par_job_shake128x4_squeezeblocks (struct end) in []);
-  "shake128x4_release", 7.0,
+  "shake128x4_release", 8.0,
   (fun () -> let module Par_this = Par_job_shake128x4_release (struct end) in []);
-  "poly_rej_uniform_x4", 706.0,
+  "poly_rej_uniform_x4", 733.0,
   (fun () -> let module Par_this = Par_job_poly_rej_uniform_x4 (struct end) in []);
-  "gen_matrix_k2", 101.0,
+  "gen_matrix_k2", 103.0,
   (fun () -> let module Par_this = Par_job_gen_matrix_k2 (struct end) in []);
-  "shake256x4", 261.0,
+  "shake256x4", 270.0,
   (fun () -> let module Par_this = Par_job_shake256x4 (struct end) in []);
-  "poly_cbd2", 83.0,
+  "poly_cbd2", 84.0,
   (fun () -> let module Par_this = Par_job_poly_cbd2 (struct end) in []);
   "poly_cbd3", 232.0,
   (fun () -> let module Par_this = Par_job_poly_cbd3 (struct end) in []);
-  "poly_getnoise_eta1122_4x_k2", 96.0,
+  "poly_getnoise_eta1122_4x_k2", 97.0,
   (fun () -> let module Par_this = Par_job_poly_getnoise_eta1122_4x_k2 (struct end) in []);
   "shake256", 43.0,
   (fun () -> let module Par_this = Par_job_shake256 (struct end) in []);
-  "poly_getnoise_eta2_k2", 24.0,
+  "poly_getnoise_eta2_k2", 23.0,
   (fun () -> let module Par_this = Par_job_poly_getnoise_eta2_k2 (struct end) in []);
   "polyvec_invntt_tomont_k2", 10.0,
   (fun () -> let module Par_this = Par_job_polyvec_invntt_tomont_k2 (struct end) in []);
@@ -746,25 +746,25 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_poly_compress_d10 (struct end) in []);
   "polyvec_compress_du_k2", 12.0,
   (fun () -> let module Par_this = Par_job_polyvec_compress_du_k2 (struct end) in []);
-  "poly_compress_d4", 35.0,
+  "poly_compress_d4", 36.0,
   (fun () -> let module Par_this = Par_job_poly_compress_d4 (struct end) in []);
-  "indcpa_enc_k2", 443.0,
+  "indcpa_enc_k2", 465.0,
   (fun () -> let module Par_this = Par_job_indcpa_enc_k2 (struct end) in []);
-  "dec_k2", 148.0,
+  "dec_k2", 156.0,
   (fun () -> let module Par_this = Par_job_dec_k2 (struct end) in
      ["MLKEM_NATIVE_DEC_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_DEC_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_DEC_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_DEC_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "polyvec_decompress_du_k3", 13.0,
+  "polyvec_decompress_du_k3", 14.0,
   (fun () -> let module Par_this = Par_job_polyvec_decompress_du_k3 (struct end) in []);
   "polyvec_ntt_k3", 13.0,
   (fun () -> let module Par_this = Par_job_polyvec_ntt_k3 (struct end) in []);
   "polyvec_mulcache_compute_k3", 14.0,
   (fun () -> let module Par_this = Par_job_polyvec_mulcache_compute_k3 (struct end) in []);
-  "indcpa_dec_k3", 112.0,
+  "indcpa_dec_k3", 118.0,
   (fun () -> let module Par_this = Par_job_indcpa_dec_k3 (struct end) in []);
-  "gen_matrix_k3", 170.0,
+  "gen_matrix_k3", 173.0,
   (fun () -> let module Par_this = Par_job_gen_matrix_k3 (struct end) in []);
-  "poly_getnoise_eta1_4x_k3", 150.0,
+  "poly_getnoise_eta1_4x_k3", 151.0,
   (fun () -> let module Par_this = Par_job_poly_getnoise_eta1_4x_k3 (struct end) in []);
   "polyvec_invntt_tomont_k3", 13.0,
   (fun () -> let module Par_this = Par_job_polyvec_invntt_tomont_k3 (struct end) in []);
@@ -772,9 +772,9 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_polyvec_add_k3 (struct end) in []);
   "polyvec_compress_du_k3", 15.0,
   (fun () -> let module Par_this = Par_job_polyvec_compress_du_k3 (struct end) in []);
-  "indcpa_enc_k3", 526.0,
+  "indcpa_enc_k3", 553.0,
   (fun () -> let module Par_this = Par_job_indcpa_enc_k3 (struct end) in []);
-  "dec_k3", 151.0,
+  "dec_k3", 155.0,
   (fun () -> let module Par_this = Par_job_dec_k3 (struct end) in
      ["MLKEM_NATIVE_DEC_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_DEC_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_DEC_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_DEC_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
@@ -784,79 +784,79 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_polyvec_decompress_du_k4 (struct end) in []);
   "poly_decompress_d5", 7.0,
   (fun () -> let module Par_this = Par_job_poly_decompress_d5 (struct end) in []);
-  "polyvec_ntt_k4", 16.0,
+  "polyvec_ntt_k4", 15.0,
   (fun () -> let module Par_this = Par_job_polyvec_ntt_k4 (struct end) in []);
   "polyvec_mulcache_compute_k4", 20.0,
   (fun () -> let module Par_this = Par_job_polyvec_mulcache_compute_k4 (struct end) in []);
-  "indcpa_dec_k4", 113.0,
+  "indcpa_dec_k4", 120.0,
   (fun () -> let module Par_this = Par_job_indcpa_dec_k4 (struct end) in []);
-  "gen_matrix_k4", 325.0,
+  "gen_matrix_k4", 340.0,
   (fun () -> let module Par_this = Par_job_gen_matrix_k4 (struct end) in []);
-  "poly_getnoise_eta1_4x_k4", 150.0,
+  "poly_getnoise_eta1_4x_k4", 152.0,
   (fun () -> let module Par_this = Par_job_poly_getnoise_eta1_4x_k4 (struct end) in []);
-  "poly_getnoise_eta2_k4", 23.0,
+  "poly_getnoise_eta2_k4", 22.0,
   (fun () -> let module Par_this = Par_job_poly_getnoise_eta2_k4 (struct end) in []);
   "polyvec_invntt_tomont_k4", 15.0,
   (fun () -> let module Par_this = Par_job_polyvec_invntt_tomont_k4 (struct end) in []);
-  "polyvec_add_k4", 18.0,
+  "polyvec_add_k4", 19.0,
   (fun () -> let module Par_this = Par_job_polyvec_add_k4 (struct end) in []);
-  "poly_compress_d11", 7.0,
+  "poly_compress_d11", 8.0,
   (fun () -> let module Par_this = Par_job_poly_compress_d11 (struct end) in []);
   "polyvec_compress_du_k4", 21.0,
   (fun () -> let module Par_this = Par_job_polyvec_compress_du_k4 (struct end) in []);
   "poly_compress_d5", 8.0,
   (fun () -> let module Par_this = Par_job_poly_compress_d5 (struct end) in []);
-  "indcpa_enc_k4", 558.0,
+  "indcpa_enc_k4", 586.0,
   (fun () -> let module Par_this = Par_job_indcpa_enc_k4 (struct end) in []);
-  "dec_k4", 150.0,
+  "dec_k4", 155.0,
   (fun () -> let module Par_this = Par_job_dec_k4 (struct end) in
      ["MLKEM_NATIVE_DEC_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_DEC_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_DEC_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_DEC_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "enc_derand_k2", 106.0,
+  "enc_derand_k2", 109.0,
   (fun () -> let module Par_this = Par_job_enc_derand_k2 (struct end) in
      ["MLKEM_NATIVE_ENC_DERAND_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_DERAND_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_ENC_DERAND_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_DERAND_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "enc_derand_k3", 106.0,
+  "enc_derand_k3", 110.0,
   (fun () -> let module Par_this = Par_job_enc_derand_k3 (struct end) in
      ["MLKEM_NATIVE_ENC_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_ENC_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "enc_derand_k4", 107.0,
+  "enc_derand_k4", 111.0,
   (fun () -> let module Par_this = Par_job_enc_derand_k4 (struct end) in
      ["MLKEM_NATIVE_ENC_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_ENC_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "enc_k2", 68.0,
+  "enc_k2", 70.0,
   (fun () -> let module Par_this = Par_job_enc_k2 (struct end) in
      ["MLKEM_NATIVE_ENC_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_ENC_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "enc_k3", 70.0,
+  "enc_k3", 71.0,
   (fun () -> let module Par_this = Par_job_enc_k3 (struct end) in
      ["MLKEM_NATIVE_ENC_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_ENC_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "enc_k4", 69.0,
+  "enc_k4", 70.0,
   (fun () -> let module Par_this = Par_job_enc_k4 (struct end) in
      ["MLKEM_NATIVE_ENC_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_ENC_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_ENC_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_ENC_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "poly_getnoise_eta1_4x_k2", 154.0,
+  "poly_getnoise_eta1_4x_k2", 156.0,
   (fun () -> let module Par_this = Par_job_poly_getnoise_eta1_4x_k2 (struct end) in []);
   "poly_tomont", 5.0,
   (fun () -> let module Par_this = Par_job_poly_tomont (struct end) in []);
   "polyvec_tomont_k2", 9.0,
   (fun () -> let module Par_this = Par_job_polyvec_tomont_k2 (struct end) in []);
-  "indcpa_keypair_derand_k2", 280.0,
+  "indcpa_keypair_derand_k2", 295.0,
   (fun () -> let module Par_this = Par_job_indcpa_keypair_derand_k2 (struct end) in []);
   "polyvec_tomont_k3", 12.0,
   (fun () -> let module Par_this = Par_job_polyvec_tomont_k3 (struct end) in []);
-  "indcpa_keypair_derand_k3", 360.0,
+  "indcpa_keypair_derand_k3", 378.0,
   (fun () -> let module Par_this = Par_job_indcpa_keypair_derand_k3 (struct end) in []);
   "polyvec_tomont_k4", 14.0,
   (fun () -> let module Par_this = Par_job_polyvec_tomont_k4 (struct end) in []);
-  "indcpa_keypair_derand_k4", 365.0,
+  "indcpa_keypair_derand_k4", 387.0,
   (fun () -> let module Par_this = Par_job_indcpa_keypair_derand_k4 (struct end) in []);
-  "keypair_derand_k2", 41.0,
+  "keypair_derand_k2", 42.0,
   (fun () -> let module Par_this = Par_job_keypair_derand_k2 (struct end) in
      ["MLKEM_NATIVE_KEYPAIR_DERAND_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_KEYPAIR_DERAND_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "keypair_derand_k3", 40.0,
+  "keypair_derand_k3", 41.0,
   (fun () -> let module Par_this = Par_job_keypair_derand_k3 (struct end) in
      ["MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
@@ -864,15 +864,15 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_keypair_derand_k4 (struct end) in
      ["MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_DERAND_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "keypair_k2", 64.0,
+  "keypair_k2", 66.0,
   (fun () -> let module Par_this = Par_job_keypair_k2 (struct end) in
      ["MLKEM_NATIVE_KEYPAIR_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_K2_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_KEYPAIR_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_K2_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "keypair_k3", 63.0,
+  "keypair_k3", 66.0,
   (fun () -> let module Par_this = Par_job_keypair_k3 (struct end) in
      ["MLKEM_NATIVE_KEYPAIR_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_K3_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_KEYPAIR_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_K3_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);
-  "keypair_k4", 64.0,
+  "keypair_k4", 66.0,
   (fun () -> let module Par_this = Par_job_keypair_k4 (struct end) in
      ["MLKEM_NATIVE_KEYPAIR_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT", Par_this.MLKEM_NATIVE_KEYPAIR_K4_GCC12_O3_IMAGE_SUBROUTINE_CORRECT;
       "MLKEM_NATIVE_KEYPAIR_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE", Par_this.MLKEM_NATIVE_KEYPAIR_K4_GCC12_O3_IMAGE_SUBROUTINE_SAFE]);

@@ -10,6 +10,11 @@ of the read-only data at `libmlkem_size` = 0x8c80, and
 functions are verified directly in the image: unlike for `-O2`, there are
 no separate transcriptions of single functions.
 
+The binary is the one in commit `f6988e31` of the `binary` branch, built
+from mlkem-native commit `3979073e`, with SHA-256
+`34e148dbc5318e8b46579ebb647416884b106f33855b2c0b2ece7f4368ffc9fa`
+(see "Source of the code" in `../README.md`).
+
 ## Compared with gcc 12 -O2
 
 Of the 116 functions of the `-O2` binary:
