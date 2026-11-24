@@ -13,14 +13,15 @@
 (* r' as G of m' followed by the hash h in the key with mlkem_sha3_512,      *)
 (* encrypts m' with r' again by mlkem768_indcpa_enc, compares the result     *)
 (* with the ciphertext in constant time (a loop of 34 iterations of 32       *)
-(* bytes), computes J of z (in the key) followed by the ciphertext into the  *)
-(* shared secret with mlkem_shake256, and replaces it by K' if the           *)
-(* ciphertexts are equal, again in constant time. In both cases it zeroes    *)
-(* its buffers. The statements are those of the gcc 12 -O2 image, except    *)
-(* for the stack: the function saves its registers, aligns the buffers to 32 *)
-(* bytes below them, and the frame also includes the 16656 bytes of          *)
-(* mlkem768_indcpa_enc below the buffers. It is verified in the whole image  *)
-(* (see libmlkem.ml), using the theorems for mlkem768_check_sk,              *)
+(* bytes), computes J of z (in the key) followed by the ciphertext with      *)
+(* mlkem_shake256 into a buffer of 32 bytes on the stack, replaces it by K'  *)
+(* if the ciphertexts are equal, again in constant time, and only then       *)
+(* copies it to the shared secret, as two 16-byte loads and stores. In both  *)
+(* cases it zeroes its buffers. The statements are those of the gcc 12 -O2   *)
+(* image, except for the stack: the function saves its registers, aligns the *)
+(* buffers to 32 bytes below them, and the frame also includes the 16656     *)
+(* bytes of mlkem768_indcpa_enc below the buffers. It is verified in the     *)
+(* whole image (see libmlkem.ml), using the theorems for mlkem768_check_sk,  *)
 (* mlkem768_indcpa_dec, mlkem_sha3_512, mlkem768_indcpa_enc and              *)
 (* mlkem_shake256 in the image and the contracts for memset and memcpy.      *)
 (* ========================================================================= *)
@@ -53,13 +54,13 @@ needs "arm/proofs/utils/mlkem_native_kem.ml";;
       +0x38: str     x8, [sp, #1272]
       +0x3c: bl      <mlkem768_check_sk>
       +0x40: mov     w22, w0
-      +0x44: cbnz    w0, <mlkem768_dec+0x1b0>
+      +0x44: cbnz    w0, <mlkem768_dec+0x1c0>
       +0x48: add     x0, sp, #0x4a0
       +0x4c: mov     x1, x20
       +0x50: mov     x2, x21
       +0x54: bl      <mlkem768_indcpa_dec>
       +0x58: mov     w22, w0
-      +0x5c: cbnz    w0, <mlkem768_dec+0x1b0>
+      +0x5c: cbnz    w0, <mlkem768_dec+0x1c0>
       +0x60: ldr     q0, [x21, #2336]
       +0x64: add     x0, sp, #0x460
       +0x68: ldr     q1, [x21, #2352]
@@ -77,7 +78,7 @@ needs "arm/proofs/utils/mlkem_native_kem.ml";;
       +0x98: mov     x23, sp
       +0x9c: bl      <mlkem768_indcpa_enc>
       +0xa0: mov     w22, w0
-      +0xa4: cbnz    w0, <mlkem768_dec+0x1b0>
+      +0xa4: cbnz    w0, <mlkem768_dec+0x1c0>
       +0xa8: movi    v0.2d, #0x0
       +0xac: mov     x8, xzr
       +0xb0: movi    v1.2d, #0x0
@@ -124,56 +125,60 @@ needs "arm/proofs/utils/mlkem_native_kem.ml";;
      +0x154: eor     w21, w9, w10
      +0x158: stp     q0, q1, [sp]
      +0x15c: bl      <memcpy>
-     +0x160: mov     x2, sp
-     +0x164: mov     x0, x19
+     +0x160: add     x0, sp, #0x4a0
+     +0x164: mov     x2, sp
      +0x168: mov     w1, #0x20
      +0x16c: mov     w3, #0x460
-     +0x170: bl      <mlkem_shake256>
-     +0x174: mov     x8, xzr
-     +0x178: sub     w9, w22, w21, uxtb
-     +0x17c: add     x10, sp, #0x460
-     +0x180: ldrb    w11, [x19, x8]
-     +0x184: mov     w12, w9
-     +0x188: ldrb    w13, [x10, x8]
-     +0x18c: lsr     w12, w12, #16
-     +0x190: and     w11, w11, w12
-     +0x194: bic     w13, w13, w12
-     +0x198: orr     w11, w11, w13
-     +0x19c: strb    w11, [x19, x8]
-     +0x1a0: add     x8, x8, #0x1
-     +0x1a4: cmp     x8, #0x20
-     +0x1a8: b.ne    <mlkem768_dec+0x180>
-     +0x1ac: mov     w22, wzr
-     +0x1b0: mov     x0, sp
-     +0x1b4: mov     w1, wzr
-     +0x1b8: mov     w2, #0x460
-     +0x1bc: mov     x19, sp
-     +0x1c0: bl      <memset>
-     +0x1c4: movi    v0.2d, #0x0
-     +0x1c8: add     x8, sp, #0x460
-     +0x1cc: str     q0, [sp, #1168]
-     +0x1d0: str     q0, [sp, #1152]
-     +0x1d4: str     q0, [sp, #1136]
-     +0x1d8: str     q0, [sp, #1120]
-     +0x1dc: str     q0, [sp, #1232]
-     +0x1e0: add     x8, sp, #0x4a0
-     +0x1e4: str     q0, [sp, #1216]
-     +0x1e8: str     q0, [sp, #1200]
-     +0x1ec: str     q0, [sp, #1184]
-     +0x1f0: adrp    x8, <page>
-     +0x1f4: ldr     x8, [x8, #4088]
-     +0x1f8: ldr     x9, [sp, #1272]
-     +0x1fc: ldr     x8, [x8]
-     +0x200: cmp     x8, x9
-     +0x204: b.ne    <mlkem768_dec+0x224>
-     +0x208: mov     w0, w22
-     +0x20c: mov     sp, x29
-     +0x210: ldp     x20, x19, [sp, #48]
-     +0x214: ldp     x22, x21, [sp, #32]
-     +0x218: ldp     x28, x23, [sp, #16]
-     +0x21c: ldp     x29, x30, [sp], #64
-     +0x220: ret
-     +0x224: bl      <stack_chk_fail>
+     +0x170: add     x20, sp, #0x4a0
+     +0x174: bl      <mlkem_shake256>
+     +0x178: mov     x8, xzr
+     +0x17c: sub     w9, w22, w21, uxtb
+     +0x180: add     x10, sp, #0x460
+     +0x184: ldrb    w11, [x20, x8]
+     +0x188: mov     w12, w9
+     +0x18c: ldrb    w13, [x10, x8]
+     +0x190: lsr     w12, w12, #16
+     +0x194: and     w11, w11, w12
+     +0x198: bic     w13, w13, w12
+     +0x19c: orr     w11, w11, w13
+     +0x1a0: strb    w11, [x20, x8]
+     +0x1a4: add     x8, x8, #0x1
+     +0x1a8: cmp     x8, #0x20
+     +0x1ac: b.ne    <mlkem768_dec+0x184>
+     +0x1b0: mov     w22, wzr
+     +0x1b4: ldr     q0, [sp, #1184]
+     +0x1b8: ldr     q1, [sp, #1200]
+     +0x1bc: stp     q0, q1, [x19]
+     +0x1c0: mov     x0, sp
+     +0x1c4: mov     w1, wzr
+     +0x1c8: mov     w2, #0x460
+     +0x1cc: mov     x19, sp
+     +0x1d0: bl      <memset>
+     +0x1d4: movi    v0.2d, #0x0
+     +0x1d8: add     x8, sp, #0x460
+     +0x1dc: str     q0, [sp, #1168]
+     +0x1e0: str     q0, [sp, #1152]
+     +0x1e4: str     q0, [sp, #1136]
+     +0x1e8: str     q0, [sp, #1120]
+     +0x1ec: str     q0, [sp, #1232]
+     +0x1f0: add     x8, sp, #0x4a0
+     +0x1f4: str     q0, [sp, #1216]
+     +0x1f8: str     q0, [sp, #1200]
+     +0x1fc: str     q0, [sp, #1184]
+     +0x200: adrp    x8, <page>
+     +0x204: ldr     x8, [x8, #4088]
+     +0x208: ldr     x9, [sp, #1272]
+     +0x20c: ldr     x8, [x8]
+     +0x210: cmp     x8, x9
+     +0x214: b.ne    <mlkem768_dec+0x234>
+     +0x218: mov     w0, w22
+     +0x21c: mov     sp, x29
+     +0x220: ldp     x20, x19, [sp, #48]
+     +0x224: ldp     x22, x21, [sp, #32]
+     +0x228: ldp     x28, x23, [sp, #16]
+     +0x22c: ldp     x29, x30, [sp], #64
+     +0x230: ret
+     +0x234: bl      <stack_chk_fail>
  ***)
 
 let MLKEM_NATIVE_DEC_K3_CLANG17_O3_EXEC =
@@ -384,12 +389,14 @@ let KD3_CMOV_INV b = KD3_SUBST(parse_term(Printf.sprintf
  "\\i s. read X8 s = word i /\\
         read X9 s = (if EQ then word 0 else word 4294967041) /\\
         read X10 s = word_add stackpointer (word %d) /\\
+        read X20 s = word_add stackpointer (word %d) /\\
         read X19 s = ss /\\
-        read (memory :> bytes(ss,i)) s =
+        read (memory :> bytes(word_add stackpointer (word %d),i)) s =
         (if EQ then KP else KB) MOD 2 EXP (8 * i) /\\
-        read (memory :> bytes(word_add ss (word i),32 - i)) s =
+        read (memory :> bytes(word_add (word_add stackpointer (word %d))
+                                       (word i),32 - i)) s =
         KB DIV 2 EXP (8 * i) /\\ FRAME"
-  (b + 1120)));;
+  (b + 1120) (b + 1184) (b + 1184) (b + 1184)));;
 
 let KD3_CMOV_INV_FRAME b =
   let inv = KD3_CMOV_INV b in
@@ -639,12 +646,12 @@ let KD3_EXIT_A_TAC b =
    [`read X0 s`; `read X1 s`; `read X2 s`; `num_of_bytelist(c:byte list)`;
     `read X30 s`] 33 THEN
   KD3_J_INPUT_TAC b (st 33) THEN
-  ARM_STEPS_TAC KD3_EXEC (34--38) THEN KEM_GOT_TAC THEN
+  ARM_STEPS_TAC KD3_EXEC (34--39) THEN KEM_GOT_TAC THEN
   LOCAL_SHAKE256_TAC
    [`read X0 s`; `32`; `read X2 s`;
     `APPEND (mlkem_slice 2368 32 (dk:byte list)) c`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 39 THEN
-  ARM_STEPS_TAC KD3_EXEC (40--42) THEN
+    `pc:num`; `read SP s`; `read X30 s`] 40 THEN
+  ARM_STEPS_TAC KD3_EXEC (41--43) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1; DIV_1; SUB_0; WORD_ADD_0;
               READ_MEMORY_BYTES_TRIVIAL] THEN
@@ -665,20 +672,22 @@ let KD3_CMOV_TEST_STMT =
 let KD3_CMOV_TEST = assume_spec KD3_CMOV_TEST_STMT;;
 
 let KD3_CMOV_BODY_TAC b =
+  let nrm = CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) in
   X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
   MP_TAC(SPECL [KEM_SP(b + 1120); `32`; mk_comb(`num_of_bytelist`,KD3_KP);
                 `i:num`; `s0:armstate`] READ_MEMORY_BYTES8_OF_NUM) THEN
   ASM_REWRITE_TAC[] THEN
   DISCH_THEN(ASSUME_TAC o REWRITE_RULE[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD]) THEN
   SUBGOAL_THEN
-   (KD3_SUBST `read (memory :> bytes(word_add ss (word i),(31 - i) + 1)) s0 =
-               KB DIV 2 EXP (8 * i)`)
+   (KD3_SUBST(subst [KEM_SP(b + 1184),`ss:int64`]
+     `read (memory :> bytes(word_add ss (word i),(31 - i) + 1)) s0 =
+      KB DIV 2 EXP (8 * i)`))
   MP_TAC THENL
    [SIMP_TAC[ARITH_RULE `i < 32 ==> (31 - i) + 1 = 32 - i`;
              ASSUME `i < 32`] THEN ASM_REWRITE_TAC[];
     DISCH_THEN(fun th ->
       let th1,th2 = CONJ_PAIR(MATCH_MP KEM_SPLIT1 th) in
-      ASSUME_TAC th1 THEN ASSUME_TAC th2)] THEN
+      ASSUME_TAC(nrm th1) THEN ASSUME_TAC(nrm th2))] THEN
   ARM_STEPS_TAC KD3_EXEC (1--11) THEN
   RULE_ASSUM_TAC(REWRITE_RULE
    [MP (SPEC `i:num` KD3_CMOV_TEST) (ASSUME `i < 32`)]) THEN
@@ -688,6 +697,7 @@ let KD3_CMOV_BODY_TAC b =
     REWRITE_TAC[GSYM WORD_ADD];
     REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
     REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE; READ_MEMORY_BYTES_1] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
     ASM_REWRITE_TAC[] THEN REWRITE_TAC[KEM_MOD_BYTE] THEN
     AP_TERM_TAC THEN AP_TERM_TAC THEN
     ASM_CASES_TAC KD3_EQ THEN ASM_REWRITE_TAC[] THEN
@@ -697,8 +707,11 @@ let KD3_CMOV_BODY_TAC b =
     SPEC_TAC(KD3_SUBST `word((KB DIV 2 EXP (8 * i)) MOD 256):byte`,
              `y:byte`) THEN
     REPEAT GEN_TAC THEN AP_TERM_TAC THEN BITBLAST_TAC;
-    REWRITE_TAC[ARITH_RULE `32 - (i + 1) = 31 - i`; WORD_ADD; WORD_ADD_ASSOC;
-                KEM_DIV_BYTE] THEN
+    REWRITE_TAC[ARITH_RULE `32 - (i + 1) = 31 - i`; KEM_DIV_BYTE] THEN
+    RULE_ASSUM_TAC(fun th ->
+      if can (find_term (fun t -> t = `31 - i`)) (concl th)
+      then nrm th else th) THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
     ASM_REWRITE_TAC[]];;
 
 let KD3_FINAL_TAC =
@@ -714,14 +727,30 @@ let KD3_FINAL_TAC =
   REWRITE_TAC[mlkem_slice; LENGTH_LIST_OF_SEQ] THEN
   CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[];;
 
-let KD3_EXIT_B_TAC =
+(*** The 32 bytes at the shared secret after the copy from the buffer ***)
+
+let KD3_COPY_TAC s =
+  MP_TAC(SPECL [`ss:int64`;
+                KD3_SUBST `(if EQ then KP else KB) MOD 2 EXP (8 * 32)`;
+                mk_var(s,`:armstate`)] KEM_BYTES_32_OF_HALVES) THEN
+  ANTS_TAC THENL
+   [CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MOD_LT_EQ; ARITH_EQ] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN ASM_REWRITE_TAC[];
+    DISCH_TAC];;
+
+let KD3_EXIT_B_TAC b =
   ENSURES_INIT_TAC "s0" THEN
-  ARM_STEPS_TAC KD3_EXEC (1--6) THEN
-  LIBC_PLT_TAC KD3_EXEC 6 THEN
+  KEM_HALVES_TAC (KEM_SP(b + 1184)) THEN
+  ARM_STEPS_TAC KD3_EXEC (1--4) THEN
+  KD3_COPY_TAC "s4" THEN
+  ARM_STEPS_TAC KD3_EXEC (5--9) THEN
+  LIBC_PLT_TAC KD3_EXEC 9 THEN
   LIBC_CALL_TAC "H_MEMSET" KD3_EXEC
-   [`read X0 s`; `read X1 s`; `read X2 s`; `read X30 s`] 11 THEN
-  ARM_STEPS_TAC KD3_EXEC (12--23) THEN MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC KD3_EXEC (24--35) THEN
+   [`read X0 s`; `read X1 s`; `read X2 s`; `read X30 s`] 14 THEN
+  ARM_STEPS_TAC KD3_EXEC (15--26) THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC KD3_EXEC (27--38) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN KD3_FINAL_TAC;;
 
 (* ------------------------------------------------------------------------- *)
@@ -798,7 +827,7 @@ let KD3_OK_TAC b =
      `pc + mlkem768_dec_loop2_exit`
      (KD3_CMOV_INV_FRAME b) THEN
     REPEAT CONJ_TAC THENL
-     [ARITH_TAC; KD3_EXIT_A_TAC b; KD3_CMOV_BODY_TAC b; KD3_EXIT_B_TAC]];;
+     [ARITH_TAC; KD3_EXIT_A_TAC b; KD3_CMOV_BODY_TAC b; KD3_EXIT_B_TAC b]];;
 
 let KD3_BAD_TAC =
   ENSURES_INIT_TAC "s0" THEN KD3_SK_TAC THEN
@@ -988,7 +1017,8 @@ let KD3_SAFE_INV b = KD3_SAFE_WITH_FRAME b (parse_term(Printf.sprintf
 let KD3_SAFE_CMOV_INV b = KD3_SAFE_WITH_FRAME b (parse_term(Printf.sprintf
  "\\i s. read X8 s = word i /\\
         read X10 s = word_add stackpointer (word %d) /\\
-        read X19 s = ss /\\ FRAME" (b + 1120)));;
+        read X20 s = word_add stackpointer (word %d) /\\
+        read X19 s = ss /\\ FRAME" (b + 1120) (b + 1184)));;
 
 let KD3_SAFE_INTRO_TAC =
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC ASSUME_TAC) THEN
@@ -1113,11 +1143,11 @@ let KD3_SAFE_EXIT_A_TAC =
   KD3_SAFE_NORMALIZE_TAC THEN LIBC_SAFE_CALL_TAC "H_MEMCPY" KD3_EXEC
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
     `read X30 s`] (ref KD3_SAFE_ALLOWED) 33 THEN
-  ARM_STEPS_TAC KD3_EXEC (34--38) THEN KEM_GOT_TAC THEN
+  ARM_STEPS_TAC KD3_EXEC (34--39) THEN KEM_GOT_TAC THEN
   KD3_SAFE_CALL_TAC "H_SHAKE256"
    [`e:(uarch_event)list`; `read X0 s`; `32`; `read X2 s`; `1120`;
-    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 39 THEN
-  ARM_STEPS_TAC KD3_EXEC (40--42) THEN
+    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 40 THEN
+  ARM_STEPS_TAC KD3_EXEC (41--43) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[ARITH_RULE `0 + 1 = 1`; APPEND_NIL; ENUMERATEL_APPEND_ZERO] THEN
   KD3_DISCHARGE_EXIT_TAC;;
@@ -1137,12 +1167,12 @@ let KD3_SAFE_CMOV_BODY_TAC =
 let KD3_SAFE_EXIT_B_TAC =
   REWRITE_TAC[] THEN REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC KD3_EXEC (1--6) THEN LIBC_PLT_TAC KD3_EXEC 6 THEN
+  ARM_STEPS_TAC KD3_EXEC (1--9) THEN LIBC_PLT_TAC KD3_EXEC 9 THEN
   KD3_SAFE_NORMALIZE_TAC THEN LIBC_SAFE_CALL_TAC "H_MEMSET" KD3_EXEC
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
-    `read X30 s`] (ref KD3_SAFE_ALLOWED) 11 THEN
-  ARM_STEPS_TAC KD3_EXEC (12--23) THEN MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC KD3_EXEC (24--35) THEN
+    `read X30 s`] (ref KD3_SAFE_ALLOWED) 14 THEN
+  ARM_STEPS_TAC KD3_EXEC (15--26) THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC KD3_EXEC (27--38) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   KD3_DISCHARGE_EXIT_TAC;;
 

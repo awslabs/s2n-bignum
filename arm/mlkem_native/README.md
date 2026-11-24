@@ -344,7 +344,7 @@ The SHA-256 hashes of the binaries used, which match those recorded in
 binaries/multilevel/clang17/O2/libmlkem.so
   86aa349a9199f2c6a6b9c3910bade867974d4e5b767269423186c514c4472082
 binaries/multilevel/clang17/O3/libmlkem.so
-  c0b9cda5f78ff1baddc6f47c38aec02bb416c31fd559f390e845ee55f35375db
+  c7ae93a088a992ae6c8887c99d0bb9dcac06ae7b66cd7316c07c1f6b45205a02
 binaries/multilevel/gcc12/O2/libmlkem.so
   c926029cccbe71c97b0e2339e959ceb3473507c820f39fb62eed16a05751be10
 binaries/multilevel/gcc12/O3/libmlkem.so
@@ -903,7 +903,7 @@ and `..._IMAGE_SUBROUTINE_SAFE_FIPS203` (e.g.
 
 `clang17_O3/libmlkem.S` is the transcription of the image of the clang 17
 `-O3` binary, from address 0 up to the end of the read-only data at
-0xf940, in the same style as `gcc12_O2/libmlkem.S` but with a symbol
+0xf960, in the same style as `gcc12_O2/libmlkem.S` but with a symbol
 `mlkem_native_libmlkem_clang17_O3` at its start. It is checked in the same
 way, with the address 0x0. Its layout is
 `../proofs/mlkem_native/clang17_O3/layout.ml`, and

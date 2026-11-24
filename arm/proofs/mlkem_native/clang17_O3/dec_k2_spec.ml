@@ -14,9 +14,10 @@
 (* encrypts m' with r' again by mlkem512_indcpa_enc, compares the result     *)
 (* with the ciphertext in constant time (straight-line code over 24 blocks   *)
 (* of 32 bytes, which also saves and restores d8-d15), computes J of z (in   *)
-(* the key) followed by the ciphertext into the shared secret with           *)
-(* mlkem_shake256, and replaces it by K' if the ciphertexts are equal,       *)
-(* again in constant time. In both cases it zeroes its buffers. The          *)
+(* the key) followed by the ciphertext with mlkem_shake256 into a buffer of  *)
+(* 32 bytes on the stack, replaces it by K' if the ciphertexts are equal,    *)
+(* again in constant time, and only then copies it to the shared secret, as  *)
+(* two 16-byte loads and stores. In both cases it zeroes its buffers. The    *)
 (* statements are those of the gcc 12 -O2 image, except for the stack: the   *)
 (* function saves its registers, aligns the buffers to 32 bytes below them,  *)
 (* and the frame also includes the 11792 bytes of mlkem512_indcpa_enc below  *)
@@ -42,7 +43,7 @@ needs "arm/proofs/utils/mlkem_native_kem.ml";;
        +0x8: stp     d11, d10, [sp, #32]
        +0xc: stp     d9, d8, [sp, #48]
       +0x10: stp     x29, x30, [sp, #64]
-      +0x14: str     x28, [sp, #80]
+      +0x14: stp     x28, x25, [sp, #80]
       +0x18: stp     x24, x23, [sp, #96]
       +0x1c: stp     x22, x21, [sp, #112]
       +0x20: stp     x20, x19, [sp, #128]
@@ -59,13 +60,13 @@ needs "arm/proofs/utils/mlkem_native_kem.ml";;
       +0x4c: str     x8, [sp, #936]
       +0x50: bl      <mlkem512_check_sk>
       +0x54: mov     w22, w0
-      +0x58: cbnz    w0, <mlkem512_dec+0x45c>
+      +0x58: cbnz    w0, <mlkem512_dec+0x468>
       +0x5c: add     x0, sp, #0x360
       +0x60: mov     x1, x20
       +0x64: mov     x2, x21
       +0x68: bl      <mlkem512_indcpa_dec>
       +0x6c: mov     w22, w0
-      +0x70: cbnz    w0, <mlkem512_dec+0x45c>
+      +0x70: cbnz    w0, <mlkem512_dec+0x468>
       +0x74: ldr     q0, [x21, #1568]
       +0x78: add     x0, sp, #0x320
       +0x7c: ldr     q1, [x21, #1584]
@@ -73,280 +74,283 @@ needs "arm/proofs/utils/mlkem_native_kem.ml";;
       +0x84: mov     w2, #0x40
       +0x88: add     x22, x21, #0x300
       +0x8c: add     x23, sp, #0x320
-      +0x90: stp     q0, q1, [sp, #896]
-      +0x94: bl      <mlkem_sha3_512>
-      +0x98: add     x3, x23, #0x20
-      +0x9c: mov     x0, sp
-      +0xa0: add     x1, sp, #0x360
-      +0xa4: mov     x2, x22
-      +0xa8: mov     x24, sp
-      +0xac: bl      <mlkem512_indcpa_enc>
-      +0xb0: mov     w22, w0
-      +0xb4: cbnz    w0, <mlkem512_dec+0x45c>
-      +0xb8: ldp     q0, q1, [x20]
-      +0xbc: add     x0, x24, #0x20
-      +0xc0: mov     x1, x20
-      +0xc4: mov     w2, #0x300
-      +0xc8: ldp     q2, q3, [sp]
-      +0xcc: eor     v2.16b, v2.16b, v0.16b
-      +0xd0: ldp     q4, q5, [x20, #32]
-      +0xd4: eor     v0.16b, v3.16b, v1.16b
-      +0xd8: ldp     q6, q7, [sp, #32]
-      +0xdc: eor     v4.16b, v6.16b, v4.16b
-      +0xe0: ldp     q16, q17, [x20, #64]
-      +0xe4: eor     v1.16b, v7.16b, v5.16b
-      +0xe8: orr     v7.16b, v4.16b, v2.16b
-      +0xec: eor     v4.16b, v4.16b, v2.16b
-      +0xf0: ldp     q18, q3, [sp, #64]
-      +0xf4: eor     v16.16b, v18.16b, v16.16b
-      +0xf8: eor     v4.16b, v16.16b, v4.16b
-      +0xfc: ldp     q6, q5, [x20, #96]
-     +0x100: eor     v2.16b, v3.16b, v17.16b
-     +0x104: ldp     q19, q20, [sp, #96]
-     +0x108: eor     v6.16b, v19.16b, v6.16b
-     +0x10c: orr     v16.16b, v6.16b, v16.16b
-     +0x110: ldp     q18, q17, [x20, #128]
-     +0x114: eor     v3.16b, v20.16b, v5.16b
-     +0x118: orr     v7.16b, v16.16b, v7.16b
-     +0x11c: eor     v6.16b, v6.16b, v4.16b
-     +0x120: ldp     q21, q19, [sp, #128]
-     +0x124: eor     v18.16b, v21.16b, v18.16b
-     +0x128: eor     v6.16b, v18.16b, v6.16b
-     +0x12c: ldp     q5, q20, [x20, #160]
-     +0x130: eor     v4.16b, v19.16b, v17.16b
-     +0x134: ldp     q16, q22, [sp, #160]
-     +0x138: eor     v16.16b, v16.16b, v5.16b
-     +0x13c: orr     v18.16b, v16.16b, v18.16b
-     +0x140: ldp     q21, q17, [x20, #192]
-     +0x144: eor     v5.16b, v22.16b, v20.16b
-     +0x148: eor     v16.16b, v16.16b, v6.16b
-     +0x14c: ldp     q19, q23, [sp, #192]
-     +0x150: eor     v19.16b, v19.16b, v21.16b
-     +0x154: orr     v18.16b, v19.16b, v18.16b
-     +0x158: ldp     q20, q22, [x20, #224]
-     +0x15c: eor     v6.16b, v23.16b, v17.16b
-     +0x160: orr     v25.16b, v18.16b, v7.16b
-     +0x164: eor     v16.16b, v19.16b, v16.16b
-     +0x168: ldp     q24, q21, [sp, #224]
-     +0x16c: eor     v20.16b, v24.16b, v20.16b
-     +0x170: ldp     q17, q23, [x20, #256]
-     +0x174: eor     v7.16b, v21.16b, v22.16b
-     +0x178: eor     v22.16b, v20.16b, v16.16b
-     +0x17c: ldp     q18, q19, [sp, #256]
-     +0x180: eor     v17.16b, v18.16b, v17.16b
-     +0x184: orr     v20.16b, v17.16b, v20.16b
-     +0x188: ldp     q24, q21, [x20, #288]
-     +0x18c: eor     v16.16b, v19.16b, v23.16b
-     +0x190: eor     v22.16b, v17.16b, v22.16b
-     +0x194: ldp     q26, q18, [sp, #288]
-     +0x198: eor     v24.16b, v26.16b, v24.16b
-     +0x19c: orr     v20.16b, v24.16b, v20.16b
-     +0x1a0: ldp     q19, q23, [x20, #320]
-     +0x1a4: eor     v17.16b, v18.16b, v21.16b
-     +0x1a8: eor     v22.16b, v24.16b, v22.16b
-     +0x1ac: ldp     q27, q26, [sp, #320]
-     +0x1b0: eor     v19.16b, v27.16b, v19.16b
-     +0x1b4: orr     v20.16b, v19.16b, v20.16b
-     +0x1b8: ldp     q21, q28, [x20, #352]
-     +0x1bc: eor     v18.16b, v26.16b, v23.16b
-     +0x1c0: orr     v25.16b, v20.16b, v25.16b
-     +0x1c4: eor     v22.16b, v19.16b, v22.16b
-     +0x1c8: ldp     q24, q27, [sp, #352]
-     +0x1cc: eor     v21.16b, v24.16b, v21.16b
-     +0x1d0: eor     v22.16b, v21.16b, v22.16b
-     +0x1d4: ldp     q23, q26, [x20, #384]
-     +0x1d8: eor     v19.16b, v27.16b, v28.16b
-     +0x1dc: ldp     q20, q29, [sp, #384]
-     +0x1e0: eor     v23.16b, v20.16b, v23.16b
-     +0x1e4: eor     v22.16b, v23.16b, v22.16b
-     +0x1e8: ldp     q24, q27, [x20, #416]
-     +0x1ec: eor     v20.16b, v29.16b, v26.16b
-     +0x1f0: orr     v29.16b, v23.16b, v21.16b
-     +0x1f4: ldp     q28, q30, [sp, #416]
-     +0x1f8: eor     v24.16b, v28.16b, v24.16b
-     +0x1fc: orr     v29.16b, v24.16b, v29.16b
-     +0x200: ldp     q26, q31, [x20, #448]
-     +0x204: eor     v21.16b, v30.16b, v27.16b
-     +0x208: eor     v24.16b, v24.16b, v22.16b
-     +0x20c: ldp     q23, q28, [sp, #448]
-     +0x210: eor     v23.16b, v23.16b, v26.16b
-     +0x214: orr     v29.16b, v23.16b, v29.16b
-     +0x218: ldp     q27, q30, [x20, #480]
-     +0x21c: eor     v22.16b, v28.16b, v31.16b
-     +0x220: eor     v24.16b, v23.16b, v24.16b
-     +0x224: ldp     q8, q26, [sp, #480]
-     +0x228: eor     v27.16b, v8.16b, v27.16b
-     +0x22c: orr     v29.16b, v27.16b, v29.16b
-     +0x230: ldp     q28, q31, [x20, #512]
-     +0x234: eor     v23.16b, v26.16b, v30.16b
-     +0x238: orr     v10.16b, v29.16b, v25.16b
-     +0x23c: eor     v27.16b, v27.16b, v24.16b
-     +0x240: ldp     q9, q8, [sp, #512]
-     +0x244: eor     v28.16b, v9.16b, v28.16b
-     +0x248: eor     v27.16b, v28.16b, v27.16b
-     +0x24c: ldp     q26, q30, [x20, #544]
-     +0x250: eor     v24.16b, v8.16b, v31.16b
-     +0x254: ldp     q25, q29, [sp, #544]
-     +0x258: eor     v26.16b, v25.16b, v26.16b
-     +0x25c: orr     v28.16b, v26.16b, v28.16b
-     +0x260: ldp     q9, q31, [x20, #576]
-     +0x264: eor     v25.16b, v29.16b, v30.16b
-     +0x268: eor     v27.16b, v26.16b, v27.16b
-     +0x26c: ldp     q8, q11, [sp, #576]
-     +0x270: eor     v8.16b, v8.16b, v9.16b
-     +0x274: orr     v28.16b, v8.16b, v28.16b
-     +0x278: ldp     q29, q30, [x20, #608]
-     +0x27c: eor     v26.16b, v11.16b, v31.16b
-     +0x280: eor     v8.16b, v8.16b, v27.16b
-     +0x284: ldp     q12, q9, [sp, #608]
-     +0x288: eor     v29.16b, v12.16b, v29.16b
-     +0x28c: ldp     q31, q11, [x20, #640]
-     +0x290: eor     v27.16b, v9.16b, v30.16b
-     +0x294: orr     v9.16b, v29.16b, v28.16b
-     +0x298: eor     v29.16b, v29.16b, v8.16b
-     +0x29c: ldp     q13, q12, [sp, #640]
-     +0x2a0: eor     v31.16b, v13.16b, v31.16b
-     +0x2a4: orr     v9.16b, v31.16b, v9.16b
-     +0x2a8: ldp     q30, q14, [x20, #672]
-     +0x2ac: eor     v28.16b, v12.16b, v11.16b
-     +0x2b0: eor     v31.16b, v31.16b, v29.16b
-     +0x2b4: ldp     q8, q13, [sp, #672]
-     +0x2b8: eor     v30.16b, v8.16b, v30.16b
-     +0x2bc: orr     v9.16b, v30.16b, v9.16b
-     +0x2c0: ldp     q11, q12, [x20, #704]
-     +0x2c4: eor     v29.16b, v13.16b, v14.16b
-     +0x2c8: orr     v9.16b, v9.16b, v10.16b
-     +0x2cc: eor     v30.16b, v30.16b, v31.16b
-     +0x2d0: ldp     q15, q8, [sp, #704]
-     +0x2d4: eor     v11.16b, v15.16b, v11.16b
-     +0x2d8: eor     v30.16b, v11.16b, v30.16b
-     +0x2dc: ldp     q13, q14, [x20, #736]
-     +0x2e0: eor     v8.16b, v8.16b, v12.16b
-     +0x2e4: ldp     q10, q15, [sp, #736]
-     +0x2e8: eor     v10.16b, v10.16b, v13.16b
-     +0x2ec: orr     v13.16b, v10.16b, v11.16b
-     +0x2f0: orr     v13.16b, v0.16b, v13.16b
-     +0x2f4: orr     v13.16b, v13.16b, v1.16b
-     +0x2f8: orr     v13.16b, v13.16b, v2.16b
-     +0x2fc: orr     v13.16b, v13.16b, v3.16b
-     +0x300: eor     v0.16b, v0.16b, v1.16b
-     +0x304: orr     v13.16b, v13.16b, v4.16b
-     +0x308: eor     v0.16b, v0.16b, v2.16b
-     +0x30c: orr     v9.16b, v13.16b, v9.16b
-     +0x310: orr     v13.16b, v5.16b, v6.16b
-     +0x314: eor     v0.16b, v0.16b, v3.16b
-     +0x318: orr     v13.16b, v13.16b, v7.16b
-     +0x31c: eor     v0.16b, v0.16b, v4.16b
-     +0x320: orr     v13.16b, v13.16b, v16.16b
-     +0x324: eor     v0.16b, v0.16b, v5.16b
-     +0x328: orr     v13.16b, v13.16b, v17.16b
-     +0x32c: eor     v0.16b, v0.16b, v6.16b
-     +0x330: orr     v13.16b, v13.16b, v18.16b
-     +0x334: eor     v0.16b, v0.16b, v7.16b
-     +0x338: orr     v13.16b, v13.16b, v19.16b
-     +0x33c: eor     v0.16b, v0.16b, v16.16b
-     +0x340: orr     v13.16b, v13.16b, v20.16b
-     +0x344: eor     v0.16b, v0.16b, v17.16b
-     +0x348: orr     v9.16b, v9.16b, v13.16b
-     +0x34c: orr     v13.16b, v21.16b, v22.16b
-     +0x350: eor     v0.16b, v0.16b, v18.16b
-     +0x354: orr     v13.16b, v13.16b, v23.16b
-     +0x358: eor     v0.16b, v0.16b, v19.16b
-     +0x35c: orr     v13.16b, v13.16b, v24.16b
-     +0x360: eor     v0.16b, v0.16b, v20.16b
-     +0x364: orr     v13.16b, v13.16b, v25.16b
-     +0x368: eor     v0.16b, v0.16b, v21.16b
-     +0x36c: orr     v13.16b, v13.16b, v26.16b
-     +0x370: eor     v0.16b, v0.16b, v22.16b
-     +0x374: orr     v13.16b, v13.16b, v27.16b
-     +0x378: eor     v0.16b, v0.16b, v23.16b
-     +0x37c: orr     v13.16b, v13.16b, v28.16b
-     +0x380: eor     v0.16b, v0.16b, v24.16b
-     +0x384: eor     v12.16b, v15.16b, v14.16b
-     +0x388: orr     v13.16b, v13.16b, v29.16b
-     +0x38c: eor     v0.16b, v0.16b, v25.16b
-     +0x390: orr     v9.16b, v9.16b, v13.16b
-     +0x394: orr     v13.16b, v8.16b, v12.16b
-     +0x398: eor     v0.16b, v0.16b, v26.16b
-     +0x39c: orr     v9.16b, v9.16b, v13.16b
-     +0x3a0: eor     v0.16b, v0.16b, v27.16b
-     +0x3a4: ext     v13.16b, v9.16b, v9.16b, #8
-     +0x3a8: eor     v0.16b, v0.16b, v28.16b
-     +0x3ac: eor     v0.16b, v0.16b, v29.16b
-     +0x3b0: eor     v0.16b, v0.16b, v8.16b
-     +0x3b4: eor     v30.16b, v10.16b, v30.16b
-     +0x3b8: eor     v0.16b, v0.16b, v12.16b
-     +0x3bc: orr     v31.8b, v9.8b, v13.8b
-     +0x3c0: eor     v0.16b, v0.16b, v30.16b
-     +0x3c4: fmov    x8, d31
-     +0x3c8: ext     v1.16b, v0.16b, v0.16b, #8
-     +0x3cc: orr     x8, x8, x8, lsr #32
-     +0x3d0: lsr     x9, x8, #16
-     +0x3d4: eor     v0.8b, v0.8b, v1.8b
-     +0x3d8: orr     w8, w8, w9
-     +0x3dc: fmov    x9, d0
-     +0x3e0: orr     w8, w8, w8, lsr #8
-     +0x3e4: sub     w8, w22, w8, uxtb
-     +0x3e8: eor     x9, x9, x9, lsr #32
-     +0x3ec: eor     x9, x9, x9, lsr #16
-     +0x3f0: lsr     x10, x9, #8
-     +0x3f4: eor     w9, w9, w10
-     +0x3f8: eor     w8, w9, w8, lsr #16
-     +0x3fc: ldr     q0, [x21, #1600]
-     +0x400: ldr     q1, [x21, #1616]
-     +0x404: eor     w21, w8, w9
-     +0x408: stp     q0, q1, [sp]
-     +0x40c: bl      <memcpy>
-     +0x410: mov     x2, sp
-     +0x414: mov     x0, x19
-     +0x418: mov     w1, #0x20
-     +0x41c: mov     w3, #0x320
-     +0x420: bl      <mlkem_shake256>
-     +0x424: mov     x8, xzr
-     +0x428: sub     w9, w22, w21, uxtb
-     +0x42c: ldrb    w10, [x19, x8]
-     +0x430: mov     w11, w9
-     +0x434: ldrb    w12, [x23, x8]
-     +0x438: lsr     w11, w11, #16
-     +0x43c: and     w10, w10, w11
-     +0x440: bic     w12, w12, w11
-     +0x444: orr     w10, w10, w12
-     +0x448: strb    w10, [x19, x8]
-     +0x44c: add     x8, x8, #0x1
-     +0x450: cmp     x8, #0x20
-     +0x454: b.ne    <mlkem512_dec+0x42c>
-     +0x458: mov     w22, wzr
-     +0x45c: mov     x0, sp
-     +0x460: mov     w1, wzr
-     +0x464: mov     w2, #0x320
-     +0x468: mov     x19, sp
-     +0x46c: bl      <memset>
-     +0x470: movi    v0.2d, #0x0
-     +0x474: add     x8, sp, #0x320
-     +0x478: stp     q0, q0, [sp, #800]
-     +0x47c: stp     q0, q0, [sp, #832]
-     +0x480: stp     q0, q0, [sp, #896]
-     +0x484: add     x8, sp, #0x360
-     +0x488: stp     q0, q0, [sp, #864]
-     +0x48c: adrp    x8, <page>
-     +0x490: ldr     x8, [x8, #4088]
-     +0x494: ldr     x9, [sp, #936]
-     +0x498: ldr     x8, [x8]
-     +0x49c: cmp     x8, x9
-     +0x4a0: b.ne    <mlkem512_dec+0x4d4>
-     +0x4a4: mov     w0, w22
-     +0x4a8: sub     sp, x29, #0x40
-     +0x4ac: ldp     x20, x19, [sp, #128]
-     +0x4b0: ldp     x22, x21, [sp, #112]
-     +0x4b4: ldp     x24, x23, [sp, #96]
-     +0x4b8: ldp     x29, x30, [sp, #64]
-     +0x4bc: ldp     d9, d8, [sp, #48]
-     +0x4c0: ldp     d11, d10, [sp, #32]
-     +0x4c4: ldp     d13, d12, [sp, #16]
-     +0x4c8: ldr     x28, [sp, #80]
-     +0x4cc: ldp     d15, d14, [sp], #144
-     +0x4d0: ret
-     +0x4d4: bl      <stack_chk_fail>
+      +0x90: add     x24, sp, #0x360
+      +0x94: stp     q0, q1, [sp, #896]
+      +0x98: bl      <mlkem_sha3_512>
+      +0x9c: add     x3, x23, #0x20
+      +0xa0: mov     x0, sp
+      +0xa4: add     x1, sp, #0x360
+      +0xa8: mov     x2, x22
+      +0xac: mov     x25, sp
+      +0xb0: bl      <mlkem512_indcpa_enc>
+      +0xb4: mov     w22, w0
+      +0xb8: cbnz    w0, <mlkem512_dec+0x468>
+      +0xbc: ldp     q0, q1, [x20]
+      +0xc0: add     x0, x25, #0x20
+      +0xc4: mov     x1, x20
+      +0xc8: mov     w2, #0x300
+      +0xcc: ldp     q2, q3, [sp]
+      +0xd0: eor     v2.16b, v2.16b, v0.16b
+      +0xd4: ldp     q4, q5, [x20, #32]
+      +0xd8: eor     v0.16b, v3.16b, v1.16b
+      +0xdc: ldp     q6, q7, [sp, #32]
+      +0xe0: eor     v4.16b, v6.16b, v4.16b
+      +0xe4: ldp     q16, q17, [x20, #64]
+      +0xe8: eor     v1.16b, v7.16b, v5.16b
+      +0xec: orr     v7.16b, v4.16b, v2.16b
+      +0xf0: eor     v4.16b, v4.16b, v2.16b
+      +0xf4: ldp     q18, q3, [sp, #64]
+      +0xf8: eor     v16.16b, v18.16b, v16.16b
+      +0xfc: eor     v4.16b, v16.16b, v4.16b
+     +0x100: ldp     q6, q5, [x20, #96]
+     +0x104: eor     v2.16b, v3.16b, v17.16b
+     +0x108: ldp     q19, q20, [sp, #96]
+     +0x10c: eor     v6.16b, v19.16b, v6.16b
+     +0x110: orr     v16.16b, v6.16b, v16.16b
+     +0x114: ldp     q18, q17, [x20, #128]
+     +0x118: eor     v3.16b, v20.16b, v5.16b
+     +0x11c: orr     v7.16b, v16.16b, v7.16b
+     +0x120: eor     v6.16b, v6.16b, v4.16b
+     +0x124: ldp     q21, q19, [sp, #128]
+     +0x128: eor     v18.16b, v21.16b, v18.16b
+     +0x12c: eor     v6.16b, v18.16b, v6.16b
+     +0x130: ldp     q5, q20, [x20, #160]
+     +0x134: eor     v4.16b, v19.16b, v17.16b
+     +0x138: ldp     q16, q22, [sp, #160]
+     +0x13c: eor     v16.16b, v16.16b, v5.16b
+     +0x140: orr     v18.16b, v16.16b, v18.16b
+     +0x144: ldp     q21, q17, [x20, #192]
+     +0x148: eor     v5.16b, v22.16b, v20.16b
+     +0x14c: eor     v16.16b, v16.16b, v6.16b
+     +0x150: ldp     q19, q23, [sp, #192]
+     +0x154: eor     v19.16b, v19.16b, v21.16b
+     +0x158: orr     v18.16b, v19.16b, v18.16b
+     +0x15c: ldp     q20, q22, [x20, #224]
+     +0x160: eor     v6.16b, v23.16b, v17.16b
+     +0x164: orr     v25.16b, v18.16b, v7.16b
+     +0x168: eor     v16.16b, v19.16b, v16.16b
+     +0x16c: ldp     q24, q21, [sp, #224]
+     +0x170: eor     v20.16b, v24.16b, v20.16b
+     +0x174: ldp     q17, q23, [x20, #256]
+     +0x178: eor     v7.16b, v21.16b, v22.16b
+     +0x17c: eor     v22.16b, v20.16b, v16.16b
+     +0x180: ldp     q18, q19, [sp, #256]
+     +0x184: eor     v17.16b, v18.16b, v17.16b
+     +0x188: orr     v20.16b, v17.16b, v20.16b
+     +0x18c: ldp     q24, q21, [x20, #288]
+     +0x190: eor     v16.16b, v19.16b, v23.16b
+     +0x194: eor     v22.16b, v17.16b, v22.16b
+     +0x198: ldp     q26, q18, [sp, #288]
+     +0x19c: eor     v24.16b, v26.16b, v24.16b
+     +0x1a0: orr     v20.16b, v24.16b, v20.16b
+     +0x1a4: ldp     q19, q23, [x20, #320]
+     +0x1a8: eor     v17.16b, v18.16b, v21.16b
+     +0x1ac: eor     v22.16b, v24.16b, v22.16b
+     +0x1b0: ldp     q27, q26, [sp, #320]
+     +0x1b4: eor     v19.16b, v27.16b, v19.16b
+     +0x1b8: orr     v20.16b, v19.16b, v20.16b
+     +0x1bc: ldp     q21, q28, [x20, #352]
+     +0x1c0: eor     v18.16b, v26.16b, v23.16b
+     +0x1c4: orr     v25.16b, v20.16b, v25.16b
+     +0x1c8: eor     v22.16b, v19.16b, v22.16b
+     +0x1cc: ldp     q24, q27, [sp, #352]
+     +0x1d0: eor     v21.16b, v24.16b, v21.16b
+     +0x1d4: eor     v22.16b, v21.16b, v22.16b
+     +0x1d8: ldp     q23, q26, [x20, #384]
+     +0x1dc: eor     v19.16b, v27.16b, v28.16b
+     +0x1e0: ldp     q20, q29, [sp, #384]
+     +0x1e4: eor     v23.16b, v20.16b, v23.16b
+     +0x1e8: eor     v22.16b, v23.16b, v22.16b
+     +0x1ec: ldp     q24, q27, [x20, #416]
+     +0x1f0: eor     v20.16b, v29.16b, v26.16b
+     +0x1f4: orr     v29.16b, v23.16b, v21.16b
+     +0x1f8: ldp     q28, q30, [sp, #416]
+     +0x1fc: eor     v24.16b, v28.16b, v24.16b
+     +0x200: orr     v29.16b, v24.16b, v29.16b
+     +0x204: ldp     q26, q31, [x20, #448]
+     +0x208: eor     v21.16b, v30.16b, v27.16b
+     +0x20c: eor     v24.16b, v24.16b, v22.16b
+     +0x210: ldp     q23, q28, [sp, #448]
+     +0x214: eor     v23.16b, v23.16b, v26.16b
+     +0x218: orr     v29.16b, v23.16b, v29.16b
+     +0x21c: ldp     q27, q30, [x20, #480]
+     +0x220: eor     v22.16b, v28.16b, v31.16b
+     +0x224: eor     v24.16b, v23.16b, v24.16b
+     +0x228: ldp     q8, q26, [sp, #480]
+     +0x22c: eor     v27.16b, v8.16b, v27.16b
+     +0x230: orr     v29.16b, v27.16b, v29.16b
+     +0x234: ldp     q28, q31, [x20, #512]
+     +0x238: eor     v23.16b, v26.16b, v30.16b
+     +0x23c: orr     v10.16b, v29.16b, v25.16b
+     +0x240: eor     v27.16b, v27.16b, v24.16b
+     +0x244: ldp     q9, q8, [sp, #512]
+     +0x248: eor     v28.16b, v9.16b, v28.16b
+     +0x24c: eor     v27.16b, v28.16b, v27.16b
+     +0x250: ldp     q26, q30, [x20, #544]
+     +0x254: eor     v24.16b, v8.16b, v31.16b
+     +0x258: ldp     q25, q29, [sp, #544]
+     +0x25c: eor     v26.16b, v25.16b, v26.16b
+     +0x260: orr     v28.16b, v26.16b, v28.16b
+     +0x264: ldp     q9, q31, [x20, #576]
+     +0x268: eor     v25.16b, v29.16b, v30.16b
+     +0x26c: eor     v27.16b, v26.16b, v27.16b
+     +0x270: ldp     q8, q11, [sp, #576]
+     +0x274: eor     v8.16b, v8.16b, v9.16b
+     +0x278: orr     v28.16b, v8.16b, v28.16b
+     +0x27c: ldp     q29, q30, [x20, #608]
+     +0x280: eor     v26.16b, v11.16b, v31.16b
+     +0x284: eor     v8.16b, v8.16b, v27.16b
+     +0x288: ldp     q12, q9, [sp, #608]
+     +0x28c: eor     v29.16b, v12.16b, v29.16b
+     +0x290: ldp     q31, q11, [x20, #640]
+     +0x294: eor     v27.16b, v9.16b, v30.16b
+     +0x298: orr     v9.16b, v29.16b, v28.16b
+     +0x29c: eor     v29.16b, v29.16b, v8.16b
+     +0x2a0: ldp     q13, q12, [sp, #640]
+     +0x2a4: eor     v31.16b, v13.16b, v31.16b
+     +0x2a8: orr     v9.16b, v31.16b, v9.16b
+     +0x2ac: ldp     q30, q14, [x20, #672]
+     +0x2b0: eor     v28.16b, v12.16b, v11.16b
+     +0x2b4: eor     v31.16b, v31.16b, v29.16b
+     +0x2b8: ldp     q8, q13, [sp, #672]
+     +0x2bc: eor     v30.16b, v8.16b, v30.16b
+     +0x2c0: orr     v9.16b, v30.16b, v9.16b
+     +0x2c4: ldp     q11, q12, [x20, #704]
+     +0x2c8: eor     v29.16b, v13.16b, v14.16b
+     +0x2cc: orr     v9.16b, v9.16b, v10.16b
+     +0x2d0: eor     v30.16b, v30.16b, v31.16b
+     +0x2d4: ldp     q15, q8, [sp, #704]
+     +0x2d8: eor     v11.16b, v15.16b, v11.16b
+     +0x2dc: eor     v30.16b, v11.16b, v30.16b
+     +0x2e0: ldp     q13, q14, [x20, #736]
+     +0x2e4: eor     v8.16b, v8.16b, v12.16b
+     +0x2e8: ldp     q10, q15, [sp, #736]
+     +0x2ec: eor     v10.16b, v10.16b, v13.16b
+     +0x2f0: orr     v13.16b, v10.16b, v11.16b
+     +0x2f4: orr     v13.16b, v0.16b, v13.16b
+     +0x2f8: orr     v13.16b, v13.16b, v1.16b
+     +0x2fc: orr     v13.16b, v13.16b, v2.16b
+     +0x300: orr     v13.16b, v13.16b, v3.16b
+     +0x304: eor     v0.16b, v0.16b, v1.16b
+     +0x308: orr     v13.16b, v13.16b, v4.16b
+     +0x30c: eor     v0.16b, v0.16b, v2.16b
+     +0x310: orr     v9.16b, v13.16b, v9.16b
+     +0x314: orr     v13.16b, v5.16b, v6.16b
+     +0x318: eor     v0.16b, v0.16b, v3.16b
+     +0x31c: orr     v13.16b, v13.16b, v7.16b
+     +0x320: eor     v0.16b, v0.16b, v4.16b
+     +0x324: orr     v13.16b, v13.16b, v16.16b
+     +0x328: eor     v0.16b, v0.16b, v5.16b
+     +0x32c: orr     v13.16b, v13.16b, v17.16b
+     +0x330: eor     v0.16b, v0.16b, v6.16b
+     +0x334: orr     v13.16b, v13.16b, v18.16b
+     +0x338: eor     v0.16b, v0.16b, v7.16b
+     +0x33c: orr     v13.16b, v13.16b, v19.16b
+     +0x340: eor     v0.16b, v0.16b, v16.16b
+     +0x344: orr     v13.16b, v13.16b, v20.16b
+     +0x348: eor     v0.16b, v0.16b, v17.16b
+     +0x34c: orr     v9.16b, v9.16b, v13.16b
+     +0x350: orr     v13.16b, v21.16b, v22.16b
+     +0x354: eor     v0.16b, v0.16b, v18.16b
+     +0x358: orr     v13.16b, v13.16b, v23.16b
+     +0x35c: eor     v0.16b, v0.16b, v19.16b
+     +0x360: orr     v13.16b, v13.16b, v24.16b
+     +0x364: eor     v0.16b, v0.16b, v20.16b
+     +0x368: orr     v13.16b, v13.16b, v25.16b
+     +0x36c: eor     v0.16b, v0.16b, v21.16b
+     +0x370: orr     v13.16b, v13.16b, v26.16b
+     +0x374: eor     v0.16b, v0.16b, v22.16b
+     +0x378: orr     v13.16b, v13.16b, v27.16b
+     +0x37c: eor     v0.16b, v0.16b, v23.16b
+     +0x380: orr     v13.16b, v13.16b, v28.16b
+     +0x384: eor     v0.16b, v0.16b, v24.16b
+     +0x388: eor     v12.16b, v15.16b, v14.16b
+     +0x38c: orr     v13.16b, v13.16b, v29.16b
+     +0x390: eor     v0.16b, v0.16b, v25.16b
+     +0x394: orr     v9.16b, v9.16b, v13.16b
+     +0x398: orr     v13.16b, v8.16b, v12.16b
+     +0x39c: eor     v0.16b, v0.16b, v26.16b
+     +0x3a0: orr     v9.16b, v9.16b, v13.16b
+     +0x3a4: eor     v0.16b, v0.16b, v27.16b
+     +0x3a8: ext     v13.16b, v9.16b, v9.16b, #8
+     +0x3ac: eor     v0.16b, v0.16b, v28.16b
+     +0x3b0: eor     v0.16b, v0.16b, v29.16b
+     +0x3b4: eor     v0.16b, v0.16b, v8.16b
+     +0x3b8: eor     v30.16b, v10.16b, v30.16b
+     +0x3bc: eor     v0.16b, v0.16b, v12.16b
+     +0x3c0: orr     v31.8b, v9.8b, v13.8b
+     +0x3c4: eor     v0.16b, v0.16b, v30.16b
+     +0x3c8: fmov    x8, d31
+     +0x3cc: ext     v1.16b, v0.16b, v0.16b, #8
+     +0x3d0: orr     x8, x8, x8, lsr #32
+     +0x3d4: lsr     x9, x8, #16
+     +0x3d8: eor     v0.8b, v0.8b, v1.8b
+     +0x3dc: orr     w8, w8, w9
+     +0x3e0: fmov    x9, d0
+     +0x3e4: orr     w8, w8, w8, lsr #8
+     +0x3e8: sub     w8, w22, w8, uxtb
+     +0x3ec: eor     x9, x9, x9, lsr #32
+     +0x3f0: eor     x9, x9, x9, lsr #16
+     +0x3f4: lsr     x10, x9, #8
+     +0x3f8: eor     w9, w9, w10
+     +0x3fc: eor     w8, w9, w8, lsr #16
+     +0x400: ldr     q0, [x21, #1600]
+     +0x404: ldr     q1, [x21, #1616]
+     +0x408: eor     w21, w8, w9
+     +0x40c: stp     q0, q1, [sp]
+     +0x410: bl      <memcpy>
+     +0x414: add     x0, sp, #0x360
+     +0x418: mov     x2, sp
+     +0x41c: mov     w1, #0x20
+     +0x420: mov     w3, #0x320
+     +0x424: bl      <mlkem_shake256>
+     +0x428: mov     x8, xzr
+     +0x42c: sub     w9, w22, w21, uxtb
+     +0x430: ldrb    w10, [x24, x8]
+     +0x434: mov     w11, w9
+     +0x438: ldrb    w12, [x23, x8]
+     +0x43c: lsr     w11, w11, #16
+     +0x440: and     w10, w10, w11
+     +0x444: bic     w12, w12, w11
+     +0x448: orr     w10, w10, w12
+     +0x44c: strb    w10, [x24, x8]
+     +0x450: add     x8, x8, #0x1
+     +0x454: cmp     x8, #0x20
+     +0x458: b.ne    <mlkem512_dec+0x430>
+     +0x45c: ldp     q0, q1, [sp, #864]
+     +0x460: mov     w22, wzr
+     +0x464: stp     q0, q1, [x19]
+     +0x468: mov     x0, sp
+     +0x46c: mov     w1, wzr
+     +0x470: mov     w2, #0x320
+     +0x474: mov     x19, sp
+     +0x478: bl      <memset>
+     +0x47c: movi    v0.2d, #0x0
+     +0x480: add     x8, sp, #0x320
+     +0x484: stp     q0, q0, [sp, #800]
+     +0x488: stp     q0, q0, [sp, #832]
+     +0x48c: stp     q0, q0, [sp, #896]
+     +0x490: add     x8, sp, #0x360
+     +0x494: stp     q0, q0, [sp, #864]
+     +0x498: adrp    x8, <page>
+     +0x49c: ldr     x8, [x8, #4088]
+     +0x4a0: ldr     x9, [sp, #936]
+     +0x4a4: ldr     x8, [x8]
+     +0x4a8: cmp     x8, x9
+     +0x4ac: b.ne    <mlkem512_dec+0x4e0>
+     +0x4b0: mov     w0, w22
+     +0x4b4: sub     sp, x29, #0x40
+     +0x4b8: ldp     x20, x19, [sp, #128]
+     +0x4bc: ldp     x22, x21, [sp, #112]
+     +0x4c0: ldp     x24, x23, [sp, #96]
+     +0x4c4: ldp     x28, x25, [sp, #80]
+     +0x4c8: ldp     x29, x30, [sp, #64]
+     +0x4cc: ldp     d9, d8, [sp, #48]
+     +0x4d0: ldp     d11, d10, [sp, #32]
+     +0x4d4: ldp     d13, d12, [sp, #16]
+     +0x4d8: ldp     d15, d14, [sp], #144
+     +0x4dc: ret
+     +0x4e0: bl      <stack_chk_fail>
  ***)
 
 let MLKEM_NATIVE_DEC_K2_CLANG17_O3_EXEC =
@@ -511,7 +515,7 @@ let KD2_SUBST tm =
 let KD2_FRAME_FMT = Printf.sprintf
  "read SP s = word_add stackpointer (word %d) /\\
   read X29 s = word_add stackpointer (word 12816) /\\
-  read X25 s = x25_init /\\ read X26 s = x26_init /\\
+  read X26 s = x26_init /\\
   read X27 s = x27_init /\\ read X28 s = x28_init /\\
   read (memory :> bytes64 (word_add stackpointer (word 12752))) s = d15_init /\\
   read (memory :> bytes64 (word_add stackpointer (word 12760))) s = d14_init /\\
@@ -525,6 +529,7 @@ let KD2_FRAME_FMT = Printf.sprintf
   read (memory :> bytes64 (word_add stackpointer (word 12824))) s =
   returnaddress /\\
   read (memory :> bytes64 (word_add stackpointer (word 12832))) s = x28_init /\\
+  read (memory :> bytes64 (word_add stackpointer (word 12840))) s = x25_init /\\
   read (memory :> bytes64 (word_add stackpointer (word 12848))) s = x24_init /\\
   read (memory :> bytes64 (word_add stackpointer (word 12856))) s = x23_init /\\
   read (memory :> bytes64 (word_add stackpointer (word 12864))) s = x22_init /\\
@@ -546,12 +551,14 @@ let KD2_CMOV_INV b = KD2_SUBST(parse_term(Printf.sprintf
  "\\i s. read X8 s = word i /\\
         read X9 s = (if EQ then word 0 else word 4294967041) /\\
         read X23 s = word_add stackpointer (word %d) /\\
+        read X24 s = word_add stackpointer (word %d) /\\
         read X19 s = ss /\\
-        read (memory :> bytes(ss,i)) s =
+        read (memory :> bytes(word_add stackpointer (word %d),i)) s =
         (if EQ then KP else KB) MOD 2 EXP (8 * i) /\\
-        read (memory :> bytes(word_add ss (word i),32 - i)) s =
+        read (memory :> bytes(word_add (word_add stackpointer (word %d))
+                                       (word i),32 - i)) s =
         KB DIV 2 EXP (8 * i) /\\ FRAME"
-  (b + 800)));;
+  (b + 800) (b + 864) (b + 864) (b + 864)));;
 
 let KD2_CMOV_INV_FRAME b =
   let inv = KD2_CMOV_INV b in
@@ -777,25 +784,25 @@ let KD2_PART_A_TAC b =
     `mlkem_slice 0 768 (dk:byte list)`; `c:byte list`; `guard:int64`;
     `mf:int64`; `ea:int64`; `el:num`; `ev:num`; `pc:num`; `read SP s`;
     `read X30 s`] 29 THEN
-  ARM_STEPS_TAC KD2_EXEC (30--40) THEN
+  ARM_STEPS_TAC KD2_EXEC (30--41) THEN
   KEM_JOIN_TAC (KEM_SP(b + 896)) `mlkem_slice 1568 32 (dk:byte list)`
-    (st 40) THEN
-  KD2_G_INPUT_TAC b (st 40) THEN KEM_GOT_TAC THEN
+    (st 41) THEN
+  KD2_G_INPUT_TAC b (st 41) THEN KEM_GOT_TAC THEN
   LOCAL_SHA3_512_TAC
    [`read X0 s`; `read X1 s`;
     mk_comb(mk_comb(`APPEND:byte list->byte list->byte list`,KD2_MP),
             `mlkem_slice 1568 32 (dk:byte list)`);
-    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 41 THEN
-  KD2_KR_TAC b (st 41) THEN
-  ARM_STEPS_TAC KD2_EXEC (42--47) THEN KEM_GOT_TAC THEN
+    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 42 THEN
+  KD2_KR_TAC b (st 42) THEN
+  ARM_STEPS_TAC KD2_EXEC (43--48) THEN KEM_GOT_TAC THEN
   SUBGOAL_THEN (mk_eq(mk_comb(`LENGTH:byte list->num`,KD2_MP),`32`))
   ASSUME_TAC THENL [REWRITE_TAC[KPKE_DECRYPT_LENGTH_512]; ALL_TAC] THEN
   LOCAL_INDCPA_ENC_TAC
    [`read X0 s`; `read X1 s`; `read X2 s`; `read X3 s`;
     `mlkem_slice 768 800 (dk:byte list)`; KD2_MP; KD2_RR;
     `guard:int64`; `mf:int64`; `mc:int64`; `ea:int64`; `el:num`; `ev:num`;
-    `pc:num`; `read SP s`; `read X30 s`] 48 THEN
-  ARM_STEPS_TAC KD2_EXEC (49--50) THEN
+    `pc:num`; `read SP s`; `read X30 s`] 49 THEN
+  ARM_STEPS_TAC KD2_EXEC (50--51) THEN
 
   (*** The comparison: 48 blocks of the ciphertext and of c' ***)
 
@@ -805,30 +812,30 @@ let KD2_PART_A_TAC b =
     KD2_CHUNK_TAC true (KEM_SP b) (mk_comb(`num_of_bytelist`,KD2_CP)) k)
    (0--47) THEN
   MAP_EVERY (fun k ->
-    ARM_STEPS_TAC KD2_EXEC [k] THEN SIMD_SIMPLIFY_TAC[]) (51--236) THEN
-  KD2_ABBREV_TAC `Q9` "s236" "q9" THEN
+    ARM_STEPS_TAC KD2_EXEC [k] THEN SIMD_SIMPLIFY_TAC[]) (52--237) THEN
+  KD2_ABBREV_TAC `Q9` "s237" "q9" THEN
   KD2_IFF_TAC THEN
   KD2_CLEAN_TAC THEN
   MAP_EVERY (fun k ->
-    ARM_STEPS_TAC KD2_EXEC [k] THEN SIMD_SIMPLIFY_TAC[]) (237--245) THEN
-  KD2_ABBREV_TAC `Q0` "s245" "q0" THEN
+    ARM_STEPS_TAC KD2_EXEC [k] THEN SIMD_SIMPLIFY_TAC[]) (238--246) THEN
+  KD2_ABBREV_TAC `Q0` "s246" "q0" THEN
   KD2_CLEAN_TAC THEN
   MAP_EVERY (fun k ->
-    ARM_STEPS_TAC KD2_EXEC [k] THEN SIMD_SIMPLIFY_TAC[]) (246--262) THEN
-  KD2_MASK_TAC (st 262) THEN
-  ARM_STEPS_TAC KD2_EXEC (263--264) THEN
-  KEM_JOIN_TAC (KEM_SP b) KD2_ZZ (st 264) THEN
-  LIBC_PLT_TAC KD2_EXEC 264 THEN
+    ARM_STEPS_TAC KD2_EXEC [k] THEN SIMD_SIMPLIFY_TAC[]) (247--263) THEN
+  KD2_MASK_TAC (st 263) THEN
+  ARM_STEPS_TAC KD2_EXEC (264--265) THEN
+  KEM_JOIN_TAC (KEM_SP b) KD2_ZZ (st 265) THEN
+  LIBC_PLT_TAC KD2_EXEC 265 THEN
   LIBC_CALL_TAC "H_MEMCPY" KD2_EXEC
    [`read X0 s`; `read X1 s`; `read X2 s`; `num_of_bytelist(c:byte list)`;
-    `read X30 s`] 269 THEN
-  KD2_J_INPUT_TAC b (st 269) THEN
-  ARM_STEPS_TAC KD2_EXEC (270--274) THEN KEM_GOT_TAC THEN
+    `read X30 s`] 270 THEN
+  KD2_J_INPUT_TAC b (st 270) THEN
+  ARM_STEPS_TAC KD2_EXEC (271--275) THEN KEM_GOT_TAC THEN
   LOCAL_SHAKE256_TAC
    [`read X0 s`; `32`; `read X2 s`;
     `APPEND (mlkem_slice 1600 32 (dk:byte list)) c`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 275 THEN
-  ARM_STEPS_TAC KD2_EXEC (276--277) THEN
+    `pc:num`; `read SP s`; `read X30 s`] 276 THEN
+  ARM_STEPS_TAC KD2_EXEC (277--278) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[MULT_CLAUSES; EXP; MOD_1; DIV_1; SUB_0; WORD_ADD_0;
               READ_MEMORY_BYTES_TRIVIAL] THEN
@@ -849,20 +856,22 @@ let KD2_CMOV_TEST_STMT =
 let KD2_CMOV_TEST = assume_spec KD2_CMOV_TEST_STMT;;
 
 let KD2_CMOV_BODY_TAC b =
+  let nrm = CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) in
   X_GEN_TAC `i:num` THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
   MP_TAC(SPECL [KEM_SP(b + 800); `32`; mk_comb(`num_of_bytelist`,KD2_KP);
                 `i:num`; `s0:armstate`] READ_MEMORY_BYTES8_OF_NUM) THEN
   ASM_REWRITE_TAC[] THEN
   DISCH_THEN(ASSUME_TAC o REWRITE_RULE[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD]) THEN
   SUBGOAL_THEN
-   (KD2_SUBST `read (memory :> bytes(word_add ss (word i),(31 - i) + 1)) s0 =
-               KB DIV 2 EXP (8 * i)`)
+   (KD2_SUBST(subst [KEM_SP(b + 864),`ss:int64`]
+     `read (memory :> bytes(word_add ss (word i),(31 - i) + 1)) s0 =
+      KB DIV 2 EXP (8 * i)`))
   MP_TAC THENL
    [SIMP_TAC[ARITH_RULE `i < 32 ==> (31 - i) + 1 = 32 - i`;
              ASSUME `i < 32`] THEN ASM_REWRITE_TAC[];
     DISCH_THEN(fun th ->
       let th1,th2 = CONJ_PAIR(MATCH_MP KEM_SPLIT1 th) in
-      ASSUME_TAC th1 THEN ASSUME_TAC th2)] THEN
+      ASSUME_TAC(nrm th1) THEN ASSUME_TAC(nrm th2))] THEN
   ARM_STEPS_TAC KD2_EXEC (1--11) THEN
   RULE_ASSUM_TAC(REWRITE_RULE
    [MP (SPEC `i:num` KD2_CMOV_TEST) (ASSUME `i < 32`)]) THEN
@@ -872,6 +881,7 @@ let KD2_CMOV_BODY_TAC b =
     REWRITE_TAC[GSYM WORD_ADD];
     REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
     REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE; READ_MEMORY_BYTES_1] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
     ASM_REWRITE_TAC[] THEN REWRITE_TAC[KEM_MOD_BYTE] THEN
     AP_TERM_TAC THEN AP_TERM_TAC THEN
     ASM_CASES_TAC KD2_EQ THEN ASM_REWRITE_TAC[] THEN
@@ -881,8 +891,11 @@ let KD2_CMOV_BODY_TAC b =
     SPEC_TAC(KD2_SUBST `word((KB DIV 2 EXP (8 * i)) MOD 256):byte`,
              `y:byte`) THEN
     REPEAT GEN_TAC THEN AP_TERM_TAC THEN BITBLAST_TAC;
-    REWRITE_TAC[ARITH_RULE `32 - (i + 1) = 31 - i`; WORD_ADD; WORD_ADD_ASSOC;
-                KEM_DIV_BYTE] THEN
+    REWRITE_TAC[ARITH_RULE `32 - (i + 1) = 31 - i`; KEM_DIV_BYTE] THEN
+    RULE_ASSUM_TAC(fun th ->
+      if can (find_term (fun t -> t = `31 - i`)) (concl th)
+      then nrm th else th) THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
     ASM_REWRITE_TAC[]];;
 
 let KD2_FINAL_TAC =
@@ -898,14 +911,30 @@ let KD2_FINAL_TAC =
   REWRITE_TAC[mlkem_slice; LENGTH_LIST_OF_SEQ] THEN
   CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[];;
 
-let KD2_EXIT_B_TAC =
+(*** The 32 bytes at the shared secret after the copy from the buffer ***)
+
+let KD2_COPY_TAC s =
+  MP_TAC(SPECL [`ss:int64`;
+                KD2_SUBST `(if EQ then KP else KB) MOD 2 EXP (8 * 32)`;
+                mk_var(s,`:armstate`)] KEM_BYTES_32_OF_HALVES) THEN
+  ANTS_TAC THENL
+   [CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[MOD_LT_EQ; ARITH_EQ] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+    CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN ASM_REWRITE_TAC[];
+    DISCH_TAC];;
+
+let KD2_EXIT_B_TAC b =
   ENSURES_INIT_TAC "s0" THEN
-  ARM_STEPS_TAC KD2_EXEC (1--6) THEN
-  LIBC_PLT_TAC KD2_EXEC 6 THEN
+  KEM_HALVES_TAC (KEM_SP(b + 864)) THEN
+  ARM_STEPS_TAC KD2_EXEC (1--3) THEN
+  KD2_COPY_TAC "s3" THEN
+  ARM_STEPS_TAC KD2_EXEC (4--8) THEN
+  LIBC_PLT_TAC KD2_EXEC 8 THEN
   LIBC_CALL_TAC "H_MEMSET" KD2_EXEC
-   [`read X0 s`; `read X1 s`; `read X2 s`; `read X30 s`] 11 THEN
-  ARM_STEPS_TAC KD2_EXEC (12--19) THEN MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC KD2_EXEC (20--36) THEN
+   [`read X0 s`; `read X1 s`; `read X2 s`; `read X30 s`] 13 THEN
+  ARM_STEPS_TAC KD2_EXEC (14--21) THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC KD2_EXEC (22--38) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[KD2_DREG] THEN KD2_FINAL_TAC;;
 
 (* ------------------------------------------------------------------------- *)
@@ -922,7 +951,8 @@ let KD2_EXIT_B_TAC =
 (* mlkem512_indcpa_enc below the buffers. The proof is by cases on whether   *)
 (* the stack pointer is a multiple of 32, which gives the address b of the   *)
 (* buffers, at offsets 0 (c' and then z and the ciphertext), 800 (K' and    *)
-(* r') and 800 (m' and h), and on the check of the key.                     *)
+(* r') and 864 (m', then the result of J, and h), and on the check of the   *)
+(* key.                                                                      *)
 (* ------------------------------------------------------------------------- *)
 
 let KD2_INTRO_TAC =
@@ -981,7 +1011,7 @@ let KD2_OK_TAC b =
    `pc + mlkem512_dec_loop1_exit`
    (KD2_CMOV_INV_FRAME b) THEN
   REPEAT CONJ_TAC THENL
-   [ARITH_TAC; KD2_PART_A_TAC b; KD2_CMOV_BODY_TAC b; KD2_EXIT_B_TAC];;
+   [ARITH_TAC; KD2_PART_A_TAC b; KD2_CMOV_BODY_TAC b; KD2_EXIT_B_TAC b];;
 
 let KD2_BAD_TAC =
   ENSURES_INIT_TAC "s0" THEN KD2_SK_TAC THEN
@@ -1125,7 +1155,8 @@ let KD2_SAFE_WITH_FRAME b inv =
 let KD2_SAFE_CMOV_INV b = KD2_SAFE_WITH_FRAME b (parse_term(Printf.sprintf
  "\\i s. read X8 s = word i /\\
         read X23 s = word_add stackpointer (word %d) /\\
-        read X19 s = ss /\\ FRAME" (b + 800)));;
+        read X24 s = word_add stackpointer (word %d) /\\
+        read X19 s = ss /\\ FRAME" (b + 800) (b + 864)));;
 
 let KD2_SAFE_INTRO_TAC =
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC ASSUME_TAC) THEN
@@ -1218,26 +1249,26 @@ let KD2_SAFE_PART_A_TAC =
   KD2_SAFE_CALL_TAC "H_DEC"
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
     `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 29 THEN
-  ARM_STEPS_TAC KD2_EXEC (30--40) THEN KEM_GOT_TAC THEN
+  ARM_STEPS_TAC KD2_EXEC (30--41) THEN KEM_GOT_TAC THEN
   KD2_SAFE_CALL_TAC "H_SHA3_512"
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `64`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 41 THEN
-  ARM_STEPS_TAC KD2_EXEC (42--47) THEN KEM_GOT_TAC THEN
+    `pc:num`; `read SP s`; `read X30 s`] 42 THEN
+  ARM_STEPS_TAC KD2_EXEC (43--48) THEN KEM_GOT_TAC THEN
   KD2_SAFE_CALL_TAC "H_ENC"
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
     `read X3 s`; `ekk:byte list`; `guard:int64`; `pc:num`; `read SP s`;
-    `read X30 s`] 48 THEN
+    `read X30 s`] 49 THEN
   MAP_EVERY (fun k ->
-    ARM_STEPS_TAC KD2_EXEC [k] THEN SIMD_SIMPLIFY_TAC[]) (49--264) THEN
-  LIBC_PLT_TAC KD2_EXEC 264 THEN
+    ARM_STEPS_TAC KD2_EXEC [k] THEN SIMD_SIMPLIFY_TAC[]) (50--265) THEN
+  LIBC_PLT_TAC KD2_EXEC 265 THEN
   KD2_SAFE_NORMALIZE_TAC THEN LIBC_SAFE_CALL_TAC "H_MEMCPY" KD2_EXEC
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
-    `read X30 s`] (ref KD2_SAFE_ALLOWED) 269 THEN
-  ARM_STEPS_TAC KD2_EXEC (270--274) THEN KEM_GOT_TAC THEN
+    `read X30 s`] (ref KD2_SAFE_ALLOWED) 270 THEN
+  ARM_STEPS_TAC KD2_EXEC (271--275) THEN KEM_GOT_TAC THEN
   KD2_SAFE_CALL_TAC "H_SHAKE256"
    [`e:(uarch_event)list`; `read X0 s`; `32`; `read X2 s`; `800`;
-    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 275 THEN
-  ARM_STEPS_TAC KD2_EXEC (276--277) THEN
+    `guard:int64`; `pc:num`; `read SP s`; `read X30 s`] 276 THEN
+  ARM_STEPS_TAC KD2_EXEC (277--278) THEN
   KD2_SAFE_NORMALIZE_TAC THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   KD2_DISCHARGE_EXIT_TAC;;
@@ -1257,12 +1288,12 @@ let KD2_SAFE_CMOV_BODY_TAC =
 let KD2_SAFE_EXIT_B_TAC =
   REWRITE_TAC[] THEN REWRITE_TAC(!simulation_precanon_thms) THEN
   ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC KD2_EXEC (1--6) THEN LIBC_PLT_TAC KD2_EXEC 6 THEN
+  ARM_STEPS_TAC KD2_EXEC (1--8) THEN LIBC_PLT_TAC KD2_EXEC 8 THEN
   KD2_SAFE_NORMALIZE_TAC THEN LIBC_SAFE_CALL_TAC "H_MEMSET" KD2_EXEC
    [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
-    `read X30 s`] (ref KD2_SAFE_ALLOWED) 11 THEN
-  ARM_STEPS_TAC KD2_EXEC (12--19) THEN MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC KD2_EXEC (20--36) THEN
+    `read X30 s`] (ref KD2_SAFE_ALLOWED) 13 THEN
+  ARM_STEPS_TAC KD2_EXEC (14--21) THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC KD2_EXEC (22--38) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[KD2_DREG] THEN
   KD2_DISCHARGE_EXIT_TAC;;
 
