@@ -105,11 +105,14 @@ let assuming_proofs f =
 
 (* ------------------------------------------------------------------------- *)
 (* prove: as HOL Light's prove, except that the result may have assumptions  *)
-(* that are stated contracts.                                                *)
+(* that are stated contracts. While assuming_proofs is in effect (or         *)
+(* relative_assuming is set), it assumes the statement instead of proving    *)
+(* it, unless the statement has type variables: its types could not be       *)
+(* instantiated as an assumption (see assume_spec), so it is proved.         *)
 (* ------------------------------------------------------------------------- *)
 
 let prove(t,tac) =
-  if !(relative_assuming ()) then assume_spec t else
+  if !(relative_assuming ()) && type_vars_in_term t = [] then assume_spec t else
   let th = TAC_PROOF(([],t),tac) in
   let asl,t' = dest_thm th in
   let bad = filter (fun a -> relative_find_contract a = None) asl in
