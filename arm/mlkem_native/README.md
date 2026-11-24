@@ -350,7 +350,7 @@ binaries/multilevel/gcc12/O2/libmlkem.so
 binaries/multilevel/gcc12/O3/libmlkem.so
   34e148dbc5318e8b46579ebb647416884b106f33855b2c0b2ece7f4368ffc9fa
 binaries/multilevel/gcc12/Os/libmlkem.so
-  d93a97f48fc3ded91aff42a9a3a5ff335b33cec6a533a855812d28bd1a2144dc
+  92813b241fb6b2a5847773221dda8f858ea89cae7b912292fab7e00e09c1bbf8
 binaries/multilevel-mono/gcc12/O2/libmlkem.so
   9bc12b37fe915c89b1b6fe76aa619130fa755b1bac8daeb1af8cee442065cc5e
 ```
