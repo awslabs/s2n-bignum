@@ -1,0 +1,3 @@
+SAIL_HL_X86_LEAVE64_EQ
+|- forall s t. sail_hl_X86_5fLEAVE64 s t <=> x86_LEAVE s t
+

@@ -1,0 +1,35 @@
+SAIL_HL_X86_AESENC128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fAESENC128_5fRR d m s t <=>
+     x86_AESENC
+       (SIMD128_SSE (Simdreg (word_zx d) Lower_128))
+       (SIMD128_SSE (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_AESENCLAST128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fAESENCLAST128_5fRR d m s t <=>
+     x86_AESENCLAST
+       (SIMD128_SSE (Simdreg (word_zx d) Lower_128))
+       (SIMD128_SSE (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_AESDEC128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fAESDEC128_5fRR d m s t <=>
+     x86_AESDEC
+       (SIMD128_SSE (Simdreg (word_zx d) Lower_128))
+       (SIMD128_SSE (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_AESDECLAST128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fAESDECLAST128_5fRR d m s t <=>
+     x86_AESDECLAST
+       (SIMD128_SSE (Simdreg (word_zx d) Lower_128))
+       (SIMD128_SSE (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_AESKEYGENASSIST128_RRI_EQ
+|- forall d m imm s t.
+     sail_hl_X86_5fAESKEYGENASSIST128_5fRRI d m imm s t <=>
+     x86_AESKEYGENASSIST
+       (SIMD128_SSE (Simdreg (word_zx d) Lower_128))
+       (SIMD128_SSE (Simdreg (word_zx m) Lower_128)) (rvalue imm) s t
+

@@ -1,0 +1,18 @@
+SAIL_HL_ARM_B_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fB
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_B (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_BL_EQ
+|- forall immediate s t.
+     sail_hl_arm_5fBL
+       (PC :> evaluate (\pc. word_sub pc (word 4))) immediate s t <=>
+     arm_BL (word (val immediate * 4)) s t
+
+SAIL_HL_ARM_RET_EQ
+|- forall register s t.
+     sail_hl_arm_5fRET
+       (PC :> evaluate (\pc. word_sub pc (word 4))) register s t <=>
+     arm_RET (XREG' register) s t
+

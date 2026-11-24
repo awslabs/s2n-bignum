@@ -1,0 +1,401 @@
+SAIL_HL_X86_VPSHUFB128_RRR_EQ
+|- forall d n m s t.
+     sail_hl_X86_5fVPSHUFB128_5fRRR d n m s t <=>
+     x86_VPSHUFB
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VPSHUFB256_RRR_EQ
+|- forall d n m s t.
+     sail_hl_X86_5fVPSHUFB256_5fRRR d n m s t <=>
+     x86_VPSHUFB
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_VPCMPEQW128_RRR_EQ
+|- forall d n m s t.
+     sail_hl_X86_5fVPCMPEQW128_5fRRR d n m s t <=>
+     x86_VPCMPEQW
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VPCMPEQW256_RRR_EQ
+|- forall d n m s t.
+     sail_hl_X86_5fVPCMPEQW256_5fRRR d n m s t <=>
+     x86_VPCMPEQW
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_VPSHUFD128_RRI_EQ
+|- forall d m imm s t.
+     sail_hl_X86_5fVPSHUFD128_5fRRI d m imm s t <=>
+     x86_VPSHUFD
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) (rvalue imm) s t
+
+SAIL_HL_X86_VPSHUFD256_RRI_EQ
+|- forall d m imm s t.
+     sail_hl_X86_5fVPSHUFD256_5fRRI d m imm s t <=>
+     x86_VPSHUFD
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) (rvalue imm) s t
+
+SAIL_HL_X86_VPUNPCKLQDQ128_RRR_EQ
+|- forall d n m s t.
+     sail_hl_X86_5fVPUNPCKLQDQ128_5fRRR d n m s t <=>
+     x86_VPUNPCKLQDQ
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VPUNPCKLQDQ256_RRR_EQ
+|- forall d n m s t.
+     sail_hl_X86_5fVPUNPCKLQDQ256_5fRRR d n m s t <=>
+     x86_VPUNPCKLQDQ
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_VPUNPCKHQDQ128_RRR_EQ
+|- forall d n m s t.
+     sail_hl_X86_5fVPUNPCKHQDQ128_5fRRR d n m s t <=>
+     x86_VPUNPCKHQDQ
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VPUNPCKHQDQ256_RRR_EQ
+|- forall d n m s t.
+     sail_hl_X86_5fVPUNPCKHQDQ256_5fRRR d n m s t <=>
+     x86_VPUNPCKHQDQ
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_VPBROADCASTD128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVPBROADCASTD128_5fRR d m s t <=>
+     x86_VPBROADCASTD
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VPBROADCASTD256_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVPBROADCASTD256_5fRR d m s t <=>
+     x86_VPBROADCASTD
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VPBROADCASTQ128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVPBROADCASTQ128_5fRR d m s t <=>
+     x86_VPBROADCASTQ
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VPBROADCASTQ256_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVPBROADCASTQ256_5fRR d m s t <=>
+     x86_VPBROADCASTQ
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VPBROADCASTW128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVPBROADCASTW128_5fRR d m s t <=>
+     x86_VPBROADCASTW
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VPBROADCASTW256_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVPBROADCASTW256_5fRR d m s t <=>
+     x86_VPBROADCASTW
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VPBLENDD128_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVPBLENDD128_5fRRRI d n m imm s t <=>
+     x86_VPBLENDD
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) (rvalue imm) s t
+
+SAIL_HL_X86_VPBLENDD256_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVPBLENDD256_5fRRRI d n m imm s t <=>
+     x86_VPBLENDD
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) (rvalue imm) s t
+
+SAIL_HL_X86_VPBLENDW128_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVPBLENDW128_5fRRRI d n m imm s t <=>
+     x86_VPBLENDW
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) (rvalue imm) s t
+
+SAIL_HL_X86_VPBLENDW256_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVPBLENDW256_5fRRRI d n m imm s t <=>
+     x86_VPBLENDW
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) (rvalue imm) s t
+
+SAIL_HL_X86_VPERMQ256_RRI_EQ
+|- forall d m imm s t.
+     sail_hl_X86_5fVPERMQ256_5fRRI d m imm s t <=>
+     x86_VPERMQ
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) (rvalue imm) s t
+
+SAIL_HL_X86_VPERMD256_RRR_EQ
+|- forall d n m s t.
+     sail_hl_X86_5fVPERMD256_5fRRR d n m s t <=>
+     x86_VPERMD
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_VINSERTI128256_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVINSERTI128256_5fRRRI d n m imm s t <=>
+     x86_VINSERTI128
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) (rvalue imm) s t
+
+SAIL_HL_X86_VEXTRACTI128256_RRI_EQ
+|- forall m x imm s t.
+     sail_hl_X86_5fVEXTRACTI128256_5fRRI m x imm s t <=>
+     x86_VEXTRACTI128
+       (SIMD128 (Simdreg (word_zx m) Lower_128))
+       (SIMD256 (Simdreg (word_zx x) Lower_256)) (rvalue imm) s t
+
+SAIL_HL_X86_VMOVSLDUP128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVSLDUP128_5fRR d m s t <=>
+     x86_VMOVSLDUP
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VMOVSLDUP256_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVSLDUP256_5fRR d m s t <=>
+     x86_VMOVSLDUP
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_VMOVSHDUP128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVSHDUP128_5fRR d m s t <=>
+     x86_VMOVSHDUP
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VMOVSHDUP256_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVSHDUP256_5fRR d m s t <=>
+     x86_VMOVSHDUP
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_VMOVDQA128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVDQA128_5fRR d m s t <=>
+     x86_VMOVDQA
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VMOVDQA256_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVDQA256_5fRR d m s t <=>
+     x86_VMOVDQA
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_VMOVDQA128_STORE_RR_EQ
+|- forall m x s t.
+     sail_hl_X86_5fVMOVDQA128_5fSTORE_5fRR m x s t <=>
+     x86_VMOVDQA
+       (SIMD128 (Simdreg (word_zx m) Lower_128))
+       (SIMD128 (Simdreg (word_zx x) Lower_128)) s t
+
+SAIL_HL_X86_VMOVDQA256_STORE_RR_EQ
+|- forall m x s t.
+     sail_hl_X86_5fVMOVDQA256_5fSTORE_5fRR m x s t <=>
+     x86_VMOVDQA
+       (SIMD256 (Simdreg (word_zx m) Lower_256))
+       (SIMD256 (Simdreg (word_zx x) Lower_256)) s t
+
+SAIL_HL_X86_VMOVDQU128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVDQU128_5fRR d m s t <=>
+     x86_VMOVDQU
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VMOVDQU256_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVDQU256_5fRR d m s t <=>
+     x86_VMOVDQU
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_VMOVDQU128_STORE_RR_EQ
+|- forall m x s t.
+     sail_hl_X86_5fVMOVDQU128_5fSTORE_5fRR m x s t <=>
+     x86_VMOVDQU
+       (SIMD128 (Simdreg (word_zx m) Lower_128))
+       (SIMD128 (Simdreg (word_zx x) Lower_128)) s t
+
+SAIL_HL_X86_VMOVDQU256_STORE_RR_EQ
+|- forall m x s t.
+     sail_hl_X86_5fVMOVDQU256_5fSTORE_5fRR m x s t <=>
+     x86_VMOVDQU
+       (SIMD256 (Simdreg (word_zx m) Lower_256))
+       (SIMD256 (Simdreg (word_zx x) Lower_256)) s t
+
+SAIL_HL_X86_VMOVD128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVD128_5fRR d m s t <=>
+     x86_VMOVD
+       (SIMD128 (Simdreg (word_zx d) Lower_128)) (GPR32_Z (Gpr m Lower_32)) s t
+
+SAIL_HL_X86_VMOVD128_STORE_RR_EQ
+|- forall m x s t.
+     sail_hl_X86_5fVMOVD128_5fSTORE_5fRR m x s t <=>
+     x86_VMOVD
+       (GPR32_Z (Gpr m Lower_32)) (SIMD128 (Simdreg (word_zx x) Lower_128)) s t
+
+SAIL_HL_X86_VMOVQ128_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVQ128_5fRR d m s t <=>
+     x86_VMOVQ
+       (SIMD128 (Simdreg (word_zx d) Lower_128)) (GPR64 (Gpr m Full_64)) s t
+
+SAIL_HL_X86_VMOVQ128_STORE_RR_EQ
+|- forall m x s t.
+     sail_hl_X86_5fVMOVQ128_5fSTORE_5fRR m x s t <=>
+     x86_VMOVQ
+       (GPR64 (Gpr m Full_64)) (SIMD128 (Simdreg (word_zx x) Lower_128)) s t
+
+SAIL_HL_X86_VMOVQ128_F3_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVQ128_5fF3_5fRR d m s t <=>
+     x86_VMOVQ
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_VMOVQ128_D6_RR_EQ
+|- forall m x s t.
+     sail_hl_X86_5fVMOVQ128_5fD6_5fRR m x s t <=>
+     x86_VMOVQ
+       (SIMD128 (Simdreg (word_zx m) Lower_128))
+       (SIMD128 (Simdreg (word_zx x) Lower_128)) s t
+
+SAIL_HL_X86_VPEXTRW128_RRI_EQ
+|- forall d m imm s t.
+     sail_hl_X86_5fVPEXTRW128_5fRRI d m imm s t <=>
+     x86_VPEXTRW
+       (GPR32_Z (Gpr d Lower_32)) (SIMD128 (Simdreg (word_zx m) Lower_128))
+       (rvalue imm) s t
+
+SAIL_HL_X86_VPINSRW128_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVPINSRW128_5fRRRI d n m imm s t <=>
+     x86_VPINSRW
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128)) (GPR32_Z (Gpr m Lower_32))
+       (rvalue imm) s t
+
+SAIL_HL_X86_VPINSRD128_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVPINSRD128_5fRRRI d n m imm s t <=>
+     x86_VPINSRD
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128)) (GPR32_Z (Gpr m Lower_32))
+       (rvalue imm) s t
+
+SAIL_HL_X86_VPINSRQ128_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVPINSRQ128_5fRRRI d n m imm s t <=>
+     x86_VPINSRQ
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128)) (GPR64 (Gpr m Full_64))
+       (rvalue imm) s t
+
+SAIL_HL_X86_VPERM2I128256_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVPERM2I128256_5fRRRI d n m imm s t <=>
+     x86_VPERM2I128
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) (rvalue imm) s t
+
+SAIL_HL_X86_VPBLENDVB128_RRRR_EQ
+|- forall d n m k s t.
+     sail_hl_X86_5fVPBLENDVB128_5fRRRR d n m k s t <=>
+     x86_VPBLENDVB
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128))
+       (SIMD128 (Simdreg (word_zx k) Lower_128)) s t
+
+SAIL_HL_X86_VPBLENDVB256_RRRR_EQ
+|- forall d n m k s t.
+     sail_hl_X86_5fVPBLENDVB256_5fRRRR d n m k s t <=>
+     x86_VPBLENDVB
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256))
+       (SIMD256 (Simdreg (word_zx k) Lower_256)) s t
+
+SAIL_HL_X86_VPCLMULQDQ128_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVPCLMULQDQ128_5fRRRI d n m imm s t <=>
+     x86_VPCLMULQDQ
+       (SIMD128 (Simdreg (word_zx d) Lower_128))
+       (SIMD128 (Simdreg (word_zx n) Lower_128))
+       (SIMD128 (Simdreg (word_zx m) Lower_128)) (rvalue imm) s t
+
+SAIL_HL_X86_VPCLMULQDQ256_RRRI_EQ
+|- forall d n m imm s t.
+     sail_hl_X86_5fVPCLMULQDQ256_5fRRRI d n m imm s t <=>
+     x86_VPCLMULQDQ
+       (SIMD256 (Simdreg (word_zx d) Lower_256))
+       (SIMD256 (Simdreg (word_zx n) Lower_256))
+       (SIMD256 (Simdreg (word_zx m) Lower_256)) (rvalue imm) s t
+
+SAIL_HL_X86_VMOVMSKPS256_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVMOVMSKPS256_5fRR d m s t <=>
+     x86_VMOVMSKPS
+       (GPR32_Z (Gpr d Lower_32)) (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_VPMOVMSKB256_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fVPMOVMSKB256_5fRR d m s t <=>
+     x86_VPMOVMSKB
+       (GPR32_Z (Gpr d Lower_32)) (SIMD256 (Simdreg (word_zx m) Lower_256)) s t
+
+SAIL_HL_X86_PMOVMSKB32_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fPMOVMSKB32_5fRR d m s t <=>
+     x86_PMOVMSKB
+       (GPR32_Z (Gpr d Lower_32)) (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+
+SAIL_HL_X86_PMOVMSKB64_RR_EQ
+|- forall d m s t.
+     sail_hl_X86_5fPMOVMSKB64_5fRR d m s t <=>
+     x86_PMOVMSKB
+       (GPR64 (Gpr d Full_64)) (SIMD128 (Simdreg (word_zx m) Lower_128)) s t
+

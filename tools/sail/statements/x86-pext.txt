@@ -1,0 +1,34 @@
+SAIL_HL_X86_PEXT64_RRR_EQ
+|- forall d n m s t.
+     (sail_hl_X86_5fPEXT64_5fRRR d n m ,,
+      (\u.
+         (events :=
+          CONS
+            (EventX86PEXT
+               (word_zx (read (registers :> element n) s) ,
+                word_zx (read (registers :> element m) s) ,
+                dimindex (:64)))
+            (read events u))
+           u))
+       s t <=>
+     x86_PEXT
+       (registers :> element d) (registers :> element n)
+       (registers :> element m) s t
+
+SAIL_HL_X86_PEXT32_RRR_EQ
+|- forall d n m s t.
+     (sail_hl_X86_5fPEXT32_5fRRR d n m ,,
+      (\u.
+         (events :=
+          CONS
+            (EventX86PEXT
+               (word_zx (read (GPR32_Z (Gpr n Lower_32)) s) ,
+                word_zx (read (GPR32_Z (Gpr m Lower_32)) s) ,
+                dimindex (:32)))
+            (read events u))
+           u))
+       s t <=>
+     x86_PEXT
+       (GPR32_Z (Gpr d Lower_32)) (GPR32_Z (Gpr n Lower_32))
+       (GPR32_Z (Gpr m Lower_32)) s t
+

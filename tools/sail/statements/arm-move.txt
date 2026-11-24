@@ -1,0 +1,30 @@
+SAIL_HL_ARM_MOVK32_EQ
+|- forall d imm hw s t.
+     sail_hl_arm_5fMOVK32 d imm hw s t <=>
+     arm_MOVK (WREG' d) imm (16 * val hw) s t
+
+SAIL_HL_ARM_MOVK64_EQ
+|- forall d imm hw s t.
+     sail_hl_arm_5fMOVK64 d imm hw s t <=>
+     arm_MOVK (XREG' d) imm (16 * val hw) s t
+
+SAIL_HL_ARM_MOVN32_EQ
+|- forall d imm hw s t.
+     sail_hl_arm_5fMOVN32 d imm hw s t <=>
+     arm_MOVN (WREG' d) imm (16 * val hw) s t
+
+SAIL_HL_ARM_MOVN64_EQ
+|- forall d imm hw s t.
+     sail_hl_arm_5fMOVN64 d imm hw s t <=>
+     arm_MOVN (XREG' d) imm (16 * val hw) s t
+
+SAIL_HL_ARM_MOVZ32_EQ
+|- forall d imm hw s t.
+     sail_hl_arm_5fMOVZ32 d imm hw s t <=>
+     arm_MOVZ (WREG' d) imm (16 * val hw) s t
+
+SAIL_HL_ARM_MOVZ64_EQ
+|- forall d imm hw s t.
+     sail_hl_arm_5fMOVZ64 d imm hw s t <=>
+     arm_MOVZ (XREG' d) imm (16 * val hw) s t
+

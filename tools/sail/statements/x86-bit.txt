@@ -1,0 +1,280 @@
+SAIL_HL_X86_BT64_RR_DIFF
+|- forall d m s.
+     x86_BT
+       (registers :> element m) (registers :> element d) s
+       (write
+          ZF (~read ZF s)
+          (write
+             CF
+             (bit
+                (val (read (registers :> element d) s) MOD 64)
+                (read (registers :> element m) s))
+             s)) /\
+     ~sail_hl_X86_5fBT64_5fRR
+        d m s
+        (write
+           ZF (~read ZF s)
+           (write
+              CF
+              (bit
+                 (val (read (registers :> element d) s) MOD 64)
+                 (read (registers :> element m) s))
+              s))
+
+SAIL_HL_X86_BT64_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBT64_5fRR d m s t <=>
+     x86_BT (registers :> element m) (registers :> element d) s t /\
+     (read ZF t <=> read ZF s)
+
+SAIL_HL_X86_BT32_RR_DIFF
+|- forall d m s.
+     x86_BT
+       (GPR32_Z (Gpr m Lower_32)) (GPR32_Z (Gpr d Lower_32)) s
+       (write
+          ZF (~read ZF s)
+          (write
+             CF
+             (bit
+                (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32)
+                (read (GPR32_Z (Gpr m Lower_32)) s))
+             s)) /\
+     ~sail_hl_X86_5fBT32_5fRR
+        d m s
+        (write
+           ZF (~read ZF s)
+           (write
+              CF
+              (bit
+                 (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32)
+                 (read (GPR32_Z (Gpr m Lower_32)) s))
+              s))
+
+SAIL_HL_X86_BT32_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBT32_5fRR d m s t <=>
+     x86_BT (GPR32_Z (Gpr m Lower_32)) (GPR32_Z (Gpr d Lower_32)) s t /\
+     (read ZF t <=> read ZF s)
+
+SAIL_HL_X86_BTC64_RR_DIFF
+|- forall d m s.
+     x86_BTC
+       (registers :> element m) (registers :> element d) s
+       (write
+          ZF (~read ZF s)
+          (write
+             CF
+             (bit
+                (val (read (registers :> element d) s) MOD 64)
+                (read (registers :> element m) s))
+             (write
+                ((registers :> element m) :>
+                 bitelement (val (read (registers :> element d) s) MOD 64))
+                (~bit
+                    (val (read (registers :> element d) s) MOD 64)
+                    (read (registers :> element m) s))
+                s))) /\
+     ~sail_hl_X86_5fBTC64_5fRR
+        d m s
+        (write
+           ZF (~read ZF s)
+           (write
+              CF
+              (bit
+                 (val (read (registers :> element d) s) MOD 64)
+                 (read (registers :> element m) s))
+              (write
+                 ((registers :> element m) :>
+                  bitelement (val (read (registers :> element d) s) MOD 64))
+                 (~bit
+                     (val (read (registers :> element d) s) MOD 64)
+                     (read (registers :> element m) s))
+                 s)))
+
+SAIL_HL_X86_BTC64_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBTC64_5fRR d m s t <=>
+     x86_BTC (registers :> element m) (registers :> element d) s t /\
+     (read ZF t <=> read ZF s)
+
+SAIL_HL_X86_BTC32_RR_DIFF
+|- forall d m s.
+     x86_BTC
+       (GPR32_Z (Gpr m Lower_32)) (GPR32_Z (Gpr d Lower_32)) s
+       (write
+          ZF (~read ZF s)
+          (write
+             CF
+             (bit
+                (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32)
+                (read (GPR32_Z (Gpr m Lower_32)) s))
+             (write
+                (GPR32_Z (Gpr m Lower_32) :>
+                 bitelement (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32))
+                (~bit
+                    (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32)
+                    (read (GPR32_Z (Gpr m Lower_32)) s))
+                s))) /\
+     ~sail_hl_X86_5fBTC32_5fRR
+        d m s
+        (write
+           ZF (~read ZF s)
+           (write
+              CF
+              (bit
+                 (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32)
+                 (read (GPR32_Z (Gpr m Lower_32)) s))
+              (write
+                 (GPR32_Z (Gpr m Lower_32) :>
+                  bitelement (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32))
+                 (~bit
+                     (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32)
+                     (read (GPR32_Z (Gpr m Lower_32)) s))
+                 s)))
+
+SAIL_HL_X86_BTC32_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBTC32_5fRR d m s t <=>
+     x86_BTC (GPR32_Z (Gpr m Lower_32)) (GPR32_Z (Gpr d Lower_32)) s t /\
+     (read ZF t <=> read ZF s)
+
+SAIL_HL_X86_BTR64_RR_DIFF
+|- forall d m s.
+     x86_BTR
+       (registers :> element m) (registers :> element d) s
+       (write
+          ZF (~read ZF s)
+          (write
+             CF
+             (bit
+                (val (read (registers :> element d) s) MOD 64)
+                (read (registers :> element m) s))
+             (write
+                ((registers :> element m) :>
+                 bitelement (val (read (registers :> element d) s) MOD 64))
+                false s))) /\
+     ~sail_hl_X86_5fBTR64_5fRR
+        d m s
+        (write
+           ZF (~read ZF s)
+           (write
+              CF
+              (bit
+                 (val (read (registers :> element d) s) MOD 64)
+                 (read (registers :> element m) s))
+              (write
+                 ((registers :> element m) :>
+                  bitelement (val (read (registers :> element d) s) MOD 64))
+                 false s)))
+
+SAIL_HL_X86_BTR64_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBTR64_5fRR d m s t <=>
+     x86_BTR (registers :> element m) (registers :> element d) s t /\
+     (read ZF t <=> read ZF s)
+
+SAIL_HL_X86_BTR32_RR_DIFF
+|- forall d m s.
+     x86_BTR
+       (GPR32_Z (Gpr m Lower_32)) (GPR32_Z (Gpr d Lower_32)) s
+       (write
+          ZF (~read ZF s)
+          (write
+             CF
+             (bit
+                (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32)
+                (read (GPR32_Z (Gpr m Lower_32)) s))
+             (write
+                (GPR32_Z (Gpr m Lower_32) :>
+                 bitelement (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32))
+                false s))) /\
+     ~sail_hl_X86_5fBTR32_5fRR
+        d m s
+        (write
+           ZF (~read ZF s)
+           (write
+              CF
+              (bit
+                 (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32)
+                 (read (GPR32_Z (Gpr m Lower_32)) s))
+              (write
+                 (GPR32_Z (Gpr m Lower_32) :>
+                  bitelement (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32))
+                 false s)))
+
+SAIL_HL_X86_BTR32_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBTR32_5fRR d m s t <=>
+     x86_BTR (GPR32_Z (Gpr m Lower_32)) (GPR32_Z (Gpr d Lower_32)) s t /\
+     (read ZF t <=> read ZF s)
+
+SAIL_HL_X86_BTS64_RR_DIFF
+|- forall d m s.
+     x86_BTS
+       (registers :> element m) (registers :> element d) s
+       (write
+          ZF (~read ZF s)
+          (write
+             CF
+             (bit
+                (val (read (registers :> element d) s) MOD 64)
+                (read (registers :> element m) s))
+             (write
+                ((registers :> element m) :>
+                 bitelement (val (read (registers :> element d) s) MOD 64))
+                true s))) /\
+     ~sail_hl_X86_5fBTS64_5fRR
+        d m s
+        (write
+           ZF (~read ZF s)
+           (write
+              CF
+              (bit
+                 (val (read (registers :> element d) s) MOD 64)
+                 (read (registers :> element m) s))
+              (write
+                 ((registers :> element m) :>
+                  bitelement (val (read (registers :> element d) s) MOD 64))
+                 true s)))
+
+SAIL_HL_X86_BTS64_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBTS64_5fRR d m s t <=>
+     x86_BTS (registers :> element m) (registers :> element d) s t /\
+     (read ZF t <=> read ZF s)
+
+SAIL_HL_X86_BTS32_RR_DIFF
+|- forall d m s.
+     x86_BTS
+       (GPR32_Z (Gpr m Lower_32)) (GPR32_Z (Gpr d Lower_32)) s
+       (write
+          ZF (~read ZF s)
+          (write
+             CF
+             (bit
+                (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32)
+                (read (GPR32_Z (Gpr m Lower_32)) s))
+             (write
+                (GPR32_Z (Gpr m Lower_32) :>
+                 bitelement (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32))
+                true s))) /\
+     ~sail_hl_X86_5fBTS32_5fRR
+        d m s
+        (write
+           ZF (~read ZF s)
+           (write
+              CF
+              (bit
+                 (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32)
+                 (read (GPR32_Z (Gpr m Lower_32)) s))
+              (write
+                 (GPR32_Z (Gpr m Lower_32) :>
+                  bitelement (val (read (GPR32_Z (Gpr d Lower_32)) s) MOD 32))
+                 true s)))
+
+SAIL_HL_X86_BTS32_RR_EXACT
+|- forall d m s t.
+     sail_hl_X86_5fBTS32_5fRR d m s t <=>
+     x86_BTS (GPR32_Z (Gpr m Lower_32)) (GPR32_Z (Gpr d Lower_32)) s t /\
+     (read ZF t <=> read ZF s)
+
