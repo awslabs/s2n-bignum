@@ -16,34 +16,34 @@
 (* be the input buffer itself (in-place operation).                          *)
 (*                                                                           *)
 (* Control flow (offsets in the trimmed code, see below; 965 instructions):  *)
-(*   preamble 0x2c..0xac; cbz x1 at 0xb0 -> 0xdd0 (loop_count = 0)           *)
-(*   cmp x1,#1; b.eq at 0xb8 -> 0xa90 (loop_count = 1)                       *)
-(*   fill 0xbc..0x558; cbz x1 at 0x55c -> 0x8a8 (loop_count = 2)             *)
-(*   loop head 0x560; body 0x560..0x8a0; cbnz x1 at 0x8a4 -> 0x560           *)
-(*   drain 0x8a8..0xa88; b at 0xa8c -> 0xdd0                                 *)
-(*   iter_1 block 0xa90..0xdcc (loop_count = 1), falling through to 0xdd0    *)
-(*   key-table reloads 0xdd0..0xdd8; cbz x16 at 0xddc -> 0xed0               *)
-(*   tail loop 0xde0..0xecc; tag and counter stores 0xed0..0xee0;            *)
-(*   stack-slot clears 0xee4..0xef0; ret 0xf20                               *)
+(*   preamble 0x28..0xa8; cbz x1 at 0xac -> 0xdcc (loop_count = 0)           *)
+(*   cmp x1,#1; b.eq at 0xb4 -> 0xa8c (loop_count = 1)                       *)
+(*   fill 0xb8..0x554; cbz x1 at 0x558 -> 0x8a4 (loop_count = 2)             *)
+(*   loop head 0x55c; body 0x55c..0x89c; cbnz x1 at 0x8a0 -> 0x55c           *)
+(*   drain 0x8a4..0xa84; b at 0xa88 -> 0xdcc                                 *)
+(*   iter_1 block 0xa8c..0xdc8 (loop_count = 1), falling through to 0xdcc    *)
+(*   key-table reloads 0xdcc..0xdd4; cbz x16 at 0xdd8 -> 0xecc               *)
+(*   tail loop 0xddc..0xec8; tag and counter stores 0xecc..0xedc;            *)
+(*   stack-slot clears 0xee0..0xeec; ret 0xf18                               *)
 (*                                                                           *)
-(* The core theorem AES256_GCM_ENC_CORRECT runs from pc + 0x2c, after the    *)
-(* register saves, to pc + 0xef4, before the restores.  The preamble (round  *)
+(* The core theorem AES256_GCM_ENC_CORRECT runs from pc + 0x28, after the    *)
+(* register saves, to pc + 0xef0, before the restores.  The preamble (round  *)
 (* keys, tag, counter registers, block counts and key table) ends at         *)
-(* pc + 0xb0 and CORE_FROM88 covers the rest.  The loop over groups of four  *)
+(* pc + 0xac and CORE_FROM88 covers the rest.  The loop over groups of four  *)
 (* blocks is software-pipelined: the fill completes group 0 and starts group *)
 (* 1, each iteration completes one group and starts the next, and the drain  *)
 (* completes the last one.  So the loop invariant swp_inv i, asserted at the *)
-(* loop head pc + 0x560, records the partial encryptions and the inputs of   *)
+(* loop head pc + 0x55c, records the partial encryptions and the inputs of   *)
 (* group i besides the GHASH accumulator and the output of groups 0..i-1,    *)
 (* and the fill establishes it at i = 1.  The stepped legs are FILL_TO_CBZ   *)
-(* (pc + 0xbc -> pc + 0x55c), BODYLEG (one iteration, pc + 0x560 ->          *)
-(* pc + 0x8a4), DRAINLEG_8A8 (pc + 0x8a8 -> pc + 0xdd0), ITER1_LEG           *)
-(* (loop_count = 1, pc + 0xb0 -> pc + 0xdd0) and TAILLEG (the single-block   *)
+(* (pc + 0xb8 -> pc + 0x558), BODYLEG (one iteration, pc + 0x55c ->          *)
+(* pc + 0x8a0), DRAINLEG_8A8 (pc + 0x8a4 -> pc + 0xdcc), ITER1_LEG           *)
+(* (loop_count = 1, pc + 0xac -> pc + 0xdcc) and TAILLEG (the single-block   *)
 (* tail loop, the tag and counter stores and the stack-slot clears,          *)
-(* pc + 0xdd0 -> pc + 0xef4).  The                                           *)
+(* pc + 0xdcc -> pc + 0xef0).  The                                           *)
 (* one-instruction hops FILLLEG, LC2_PARTA and DRAINLEG share the fill and   *)
 (* drain simulations between the loop_count cases.  MAINLEG composes         *)
-(* FILLLEG, an ENSURES_WHILE_UP over loop_count - 3 iterations at pc + 0x560 *)
+(* FILLLEG, an ENSURES_WHILE_UP over loop_count - 3 iterations at pc + 0x55c *)
 (* and BODY_DRAIN (one more iteration and DRAINLEG); LEG_LC0, LEG_LC1 and    *)
 (* LEG_LC2 cover loop_count = 0, 1 and 2, and CORE_FROM88 dispatches on      *)
 (* loop_count before TAILLEG.  The safety theorems follow the same regions   *)
@@ -77,7 +77,6 @@ let aes256_gcm_enc_mc =
   0xa90263f7;       (* arm_STP X23 X24 SP (Immediate_Offset (iword (&32))) *)
   0xa9036bf9;       (* arm_STP X25 X26 SP (Immediate_Offset (iword (&48))) *)
   0xa90473fb;       (* arm_STP X27 X28 SP (Immediate_Offset (iword (&64))) *)
-  0xa9057bfd;       (* arm_STP X29 X30 SP (Immediate_Offset (iword (&80))) *)
   0x6d0627e8;       (* arm_STP D8 D9 SP (Immediate_Offset (iword (&96))) *)
   0x6d072fea;       (* arm_STP D10 D11 SP (Immediate_Offset (iword (&112))) *)
   0x6d0837ec;       (* arm_STP D12 D13 SP (Immediate_Offset (iword (&128))) *)
@@ -122,28 +121,28 @@ let aes256_gcm_enc_mc =
   0xa9424c08;       (* arm_LDP X8 X19 X0 (Immediate_Offset (iword (&32))) *)
   0x110005bc;       (* arm_ADD W28 W13 (rvalue (word 1)) *)
   0xca1402e7;       (* arm_EOR X7 X23 X20 *)
-  0xa943781b;       (* arm_LDP X27 X30 X0 (Immediate_Offset (iword (&48))) *)
-  0x110001bd;       (* arm_ADD W29 W13 (rvalue (word 0)) *)
+  0xa943141b;       (* arm_LDP X27 X5 X0 (Immediate_Offset (iword (&48))) *)
+  0x110001a9;       (* arm_ADD W9 W13 (rvalue (word 0)) *)
   0xca14010a;       (* arm_EOR X10 X8 X20 *)
-  0x5ac00bb8;       (* arm_REV W24 W29 *)
+  0x5ac00938;       (* arm_REV W24 W9 *)
   0xca15026e;       (* arm_EOR X14 X19 X21 *)
   0x110009a8;       (* arm_ADD W8 W13 (rvalue (word 2)) *)
   0xaa188196;       (* arm_ORR X22 X12 (Shiftedreg X24 LSL 32) *)
   0xa90a5beb;       (* arm_STP X11 X22 SP (Immediate_Offset (iword (&160))) *)
-  0xca1503da;       (* arm_EOR X26 X30 X21 *)
-  0x5ac0091d;       (* arm_REV W29 W8 *)
+  0xca1500ba;       (* arm_EOR X26 X5 X21 *)
+  0x5ac00909;       (* arm_REV W9 W8 *)
   0x11000da8;       (* arm_ADD W8 W13 (rvalue (word 3)) *)
   0x110011ad;       (* arm_ADD W13 W13 (rvalue (word 4)) *)
   0xca140378;       (* arm_EOR X24 X27 X20 *)
   0x5ac00919;       (* arm_REV W25 W8 *)
-  0xaa1d819e;       (* arm_ORR X30 X12 (Shiftedreg X29 LSL 32) *)
-  0x5ac00b9d;       (* arm_REV W29 W28 *)
+  0xaa098185;       (* arm_ORR X5 X12 (Shiftedreg X9 LSL 32) *)
+  0x5ac00b89;       (* arm_REV W9 W28 *)
   0xaa198188;       (* arm_ORR X8 X12 (Shiftedreg X25 LSL 32) *)
-  0xaa1d819d;       (* arm_ORR X29 X12 (Shiftedreg X29 LSL 32) *)
+  0xaa098189;       (* arm_ORR X9 X12 (Shiftedreg X9 LSL 32) *)
   0x3dc02be3;       (* arm_LDR Q3 SP (Immediate_Offset (word 160)) *)
-  0xa90c7beb;       (* arm_STP X11 X30 SP (Immediate_Offset (iword (&192))) *)
+  0xa90c17eb;       (* arm_STP X11 X5 SP (Immediate_Offset (iword (&192))) *)
   0xa90d23eb;       (* arm_STP X11 X8 SP (Immediate_Offset (iword (&208))) *)
-  0xa90b77eb;       (* arm_STP X11 X29 SP (Immediate_Offset (iword (&176))) *)
+  0xa90b27eb;       (* arm_STP X11 X9 SP (Immediate_Offset (iword (&176))) *)
   0x4e284a43;       (* arm_AESE Q3 Q18 *)
   0x4e286863;       (* arm_AESMC Q3 Q3 *)
   0x3dc033e4;       (* arm_LDR Q4 SP (Immediate_Offset (word 192)) *)
@@ -168,7 +167,7 @@ let aes256_gcm_enc_mc =
   0x4e286863;       (* arm_AESMC Q3 Q3 *)
   0x4e284a5f;       (* arm_AESE Q31 Q18 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
-  0xca15015d;       (* arm_EOR X29 X10 X21 *)
+  0xca150149;       (* arm_EOR X9 X10 X21 *)
   0x3dc02fe8;       (* arm_LDR Q8 SP (Immediate_Offset (word 176)) *)
   0xca14032a;       (* arm_EOR X10 X25 X20 *)
   0x4e284ae3;       (* arm_AESE Q3 Q23 *)
@@ -177,13 +176,13 @@ let aes256_gcm_enc_mc =
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x4e284ac4;       (* arm_AESE Q4 Q22 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
-  0xa90a77ea;       (* arm_STP X10 X29 SP (Immediate_Offset (iword (&160))) *)
-  0xca15023d;       (* arm_EOR X29 X17 X21 *)
+  0xa90a27ea;       (* arm_STP X10 X9 SP (Immediate_Offset (iword (&160))) *)
+  0xca150229;       (* arm_EOR X9 X17 X21 *)
   0x4e284a48;       (* arm_AESE Q8 Q18 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0x4e284ae4;       (* arm_AESE Q4 Q23 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
-  0xa90b77e7;       (* arm_STP X7 X29 SP (Immediate_Offset (iword (&176))) *)
+  0xa90b27e7;       (* arm_STP X7 X9 SP (Immediate_Offset (iword (&176))) *)
   0x4e284b03;       (* arm_AESE Q3 Q24 *)
   0x4e286863;       (* arm_AESMC Q3 Q3 *)
   0x4e284b04;       (* arm_AESE Q4 Q24 *)
@@ -236,15 +235,15 @@ let aes256_gcm_enc_mc =
   0x4e284b84;       (* arm_AESE Q4 Q28 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
   0x4e20082b;       (* arm_REV64_VEC Q11 Q1 8 *)
-  0xa943781b;       (* arm_LDP X27 X30 X0 (Immediate_Offset (iword (&48))) *)
-  0x110001bd;       (* arm_ADD W29 W13 (rvalue (word 0)) *)
+  0xa943141b;       (* arm_LDP X27 X5 X0 (Immediate_Offset (iword (&48))) *)
+  0x110001a9;       (* arm_ADD W9 W13 (rvalue (word 0)) *)
   0x4e284a88;       (* arm_AESE Q8 Q20 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0xca14010a;       (* arm_EOR X10 X8 X20 *)
   0x4e284b5f;       (* arm_AESE Q31 Q26 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x6e3e1d69;       (* arm_EOR_VEC Q9 Q11 Q30 128 *)
-  0x5ac00bb8;       (* arm_REV W24 W29 *)
+  0x5ac00938;       (* arm_REV W24 W9 *)
   0xca15026e;       (* arm_EOR X14 X19 X21 *)
   0x3dc008de;       (* arm_LDR Q30 X6 (Immediate_Offset (word 32)) *)
   0x4e284aa8;       (* arm_AESE Q8 Q21 *)
@@ -261,12 +260,12 @@ let aes256_gcm_enc_mc =
   0x3dc02fe0;       (* arm_LDR Q0 SP (Immediate_Offset (word 176)) *)
   0x4e2849e4;       (* arm_AESE Q4 Q15 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
-  0xca1503da;       (* arm_EOR X26 X30 X21 *)
+  0xca1500ba;       (* arm_EOR X26 X5 X21 *)
   0x4e284b9f;       (* arm_AESE Q31 Q28 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x4e284a04;       (* arm_AESE Q4 Q16 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
-  0x5ac0091d;       (* arm_REV W29 W8 *)
+  0x5ac00909;       (* arm_REV W9 W8 *)
   0x4e284ae8;       (* arm_AESE Q8 Q23 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0x11000da8;       (* arm_ADD W8 W13 (rvalue (word 3)) *)
@@ -279,8 +278,8 @@ let aes256_gcm_enc_mc =
   0x4e2849ff;       (* arm_AESE Q31 Q15 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x6e241d4a;       (* arm_EOR_VEC Q10 Q10 Q4 128 *)
-  0xaa1d819e;       (* arm_ORR X30 X12 (Shiftedreg X29 LSL 32) *)
-  0x5ac00b9d;       (* arm_REV W29 W28 *)
+  0xaa098185;       (* arm_ORR X5 X12 (Shiftedreg X9 LSL 32) *)
+  0x5ac00b89;       (* arm_REV W9 W28 *)
   0x3dc037e4;       (* arm_LDR Q4 SP (Immediate_Offset (word 208)) *)
   0x4e284b28;       (* arm_AESE Q8 Q25 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
@@ -288,7 +287,7 @@ let aes256_gcm_enc_mc =
   0x4e284a1f;       (* arm_AESE Q31 Q16 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x6e291ca5;       (* arm_EOR_VEC Q5 Q5 Q9 128 *)
-  0xaa1d819d;       (* arm_ORR X29 X12 (Shiftedreg X29 LSL 32) *)
+  0xaa098189;       (* arm_ORR X9 X12 (Shiftedreg X9 LSL 32) *)
   0x3d80084a;       (* arm_STR Q10 X2 (Immediate_Offset (word 32)) *)
   0x4e284b48;       (* arm_AESE Q8 Q26 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
@@ -296,7 +295,7 @@ let aes256_gcm_enc_mc =
   0x3dc02be3;       (* arm_LDR Q3 SP (Immediate_Offset (word 160)) *)
   0x0ee2e13d;       (* arm_PMULL_VEC Q29 Q9 Q2 64 *)
   0x4e200942;       (* arm_REV64_VEC Q2 Q10 8 *)
-  0xa90c7beb;       (* arm_STP X11 X30 SP (Immediate_Offset (iword (&192))) *)
+  0xa90c17eb;       (* arm_STP X11 X5 SP (Immediate_Offset (iword (&192))) *)
   0x6e3f1c84;       (* arm_EOR_VEC Q4 Q4 Q31 128 *)
   0x4e284b68;       (* arm_AESE Q8 Q27 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
@@ -313,7 +312,7 @@ let aes256_gcm_enc_mc =
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0x5e180524;       (* arm_DUP_ELEM_SCALAR Q4 Q9 1 64 *)
   0x4eece1ce;       (* arm_PMULL2_VEC Q14 Q14 Q12 64 *)
-  0xa90b77eb;       (* arm_STP X11 X29 SP (Immediate_Offset (iword (&176))) *)
+  0xa90b27eb;       (* arm_STP X11 X9 SP (Immediate_Offset (iword (&176))) *)
   0x4e284a08;       (* arm_AESE Q8 Q16 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0x2e291c9e;       (* arm_EOR_VEC Q30 Q4 Q9 64 *)
@@ -361,7 +360,7 @@ let aes256_gcm_enc_mc =
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x6e3d1d0a;       (* arm_EOR_VEC Q10 Q8 Q29 128 *)
   0x4ee6e0a1;       (* arm_PMULL2_VEC Q1 Q5 Q6 64 *)
-  0xca15015d;       (* arm_EOR X29 X10 X21 *)
+  0xca150149;       (* arm_EOR X9 X10 X21 *)
   0x0ee6e18d;       (* arm_PMULL_VEC Q13 Q12 Q6 64 *)
   0x3dc02fe8;       (* arm_LDR Q8 SP (Immediate_Offset (word 176)) *)
   0xca14032a;       (* arm_EOR X10 X25 X20 *)
@@ -375,15 +374,15 @@ let aes256_gcm_enc_mc =
   0x6e2d1fc2;       (* arm_EOR_VEC Q2 Q30 Q13 128 *)
   0x4e284ac4;       (* arm_AESE Q4 Q22 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
-  0xa90a77ea;       (* arm_STP X10 X29 SP (Immediate_Offset (iword (&160))) *)
-  0xca15023d;       (* arm_EOR X29 X17 X21 *)
+  0xa90a27ea;       (* arm_STP X10 X9 SP (Immediate_Offset (iword (&160))) *)
+  0xca150229;       (* arm_EOR X9 X17 X21 *)
   0x6e0c418b;       (* arm_EXT Q11 Q12 Q12 64 *)
   0x4e284a48;       (* arm_AESE Q8 Q18 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0x6e211c4e;       (* arm_EOR_VEC Q14 Q2 Q1 128 *)
   0x4e284ae4;       (* arm_AESE Q4 Q23 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
-  0xa90b77e7;       (* arm_STP X7 X29 SP (Immediate_Offset (iword (&176))) *)
+  0xa90b27e7;       (* arm_STP X7 X9 SP (Immediate_Offset (iword (&176))) *)
   0x6e201d60;       (* arm_EOR_VEC Q0 Q11 Q0 128 *)
   0x4e284b03;       (* arm_AESE Q3 Q24 *)
   0x4e286863;       (* arm_AESMC Q3 Q3 *)
@@ -446,15 +445,15 @@ let aes256_gcm_enc_mc =
   0x4e284b84;       (* arm_AESE Q4 Q28 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
   0x4e20082b;       (* arm_REV64_VEC Q11 Q1 8 *)
-  0xa943781b;       (* arm_LDP X27 X30 X0 (Immediate_Offset (iword (&48))) *)
-  0x110001bd;       (* arm_ADD W29 W13 (rvalue (word 0)) *)
+  0xa943141b;       (* arm_LDP X27 X5 X0 (Immediate_Offset (iword (&48))) *)
+  0x110001a9;       (* arm_ADD W9 W13 (rvalue (word 0)) *)
   0x4e284a88;       (* arm_AESE Q8 Q20 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0xca14010a;       (* arm_EOR X10 X8 X20 *)
   0x4e284b5f;       (* arm_AESE Q31 Q26 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x6e3e1d69;       (* arm_EOR_VEC Q9 Q11 Q30 128 *)
-  0x5ac00bb8;       (* arm_REV W24 W29 *)
+  0x5ac00938;       (* arm_REV W24 W9 *)
   0xca15026e;       (* arm_EOR X14 X19 X21 *)
   0x3dc008de;       (* arm_LDR Q30 X6 (Immediate_Offset (word 32)) *)
   0x4e284aa8;       (* arm_AESE Q8 Q21 *)
@@ -471,12 +470,12 @@ let aes256_gcm_enc_mc =
   0x3dc02fe0;       (* arm_LDR Q0 SP (Immediate_Offset (word 176)) *)
   0x4e2849e4;       (* arm_AESE Q4 Q15 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
-  0xca1503da;       (* arm_EOR X26 X30 X21 *)
+  0xca1500ba;       (* arm_EOR X26 X5 X21 *)
   0x4e284b9f;       (* arm_AESE Q31 Q28 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x4e284a04;       (* arm_AESE Q4 Q16 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
-  0x5ac0091d;       (* arm_REV W29 W8 *)
+  0x5ac00909;       (* arm_REV W9 W8 *)
   0x4e284ae8;       (* arm_AESE Q8 Q23 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0x11000da8;       (* arm_ADD W8 W13 (rvalue (word 3)) *)
@@ -489,8 +488,8 @@ let aes256_gcm_enc_mc =
   0x4e2849ff;       (* arm_AESE Q31 Q15 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x6e241d4a;       (* arm_EOR_VEC Q10 Q10 Q4 128 *)
-  0xaa1d819e;       (* arm_ORR X30 X12 (Shiftedreg X29 LSL 32) *)
-  0x5ac00b9d;       (* arm_REV W29 W28 *)
+  0xaa098185;       (* arm_ORR X5 X12 (Shiftedreg X9 LSL 32) *)
+  0x5ac00b89;       (* arm_REV W9 W28 *)
   0x3dc037e4;       (* arm_LDR Q4 SP (Immediate_Offset (word 208)) *)
   0x4e284b28;       (* arm_AESE Q8 Q25 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
@@ -498,7 +497,7 @@ let aes256_gcm_enc_mc =
   0x4e284a1f;       (* arm_AESE Q31 Q16 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x6e291ca5;       (* arm_EOR_VEC Q5 Q5 Q9 128 *)
-  0xaa1d819d;       (* arm_ORR X29 X12 (Shiftedreg X29 LSL 32) *)
+  0xaa098189;       (* arm_ORR X9 X12 (Shiftedreg X9 LSL 32) *)
   0x3d80084a;       (* arm_STR Q10 X2 (Immediate_Offset (word 32)) *)
   0x4e284b48;       (* arm_AESE Q8 Q26 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
@@ -506,7 +505,7 @@ let aes256_gcm_enc_mc =
   0x3dc02be3;       (* arm_LDR Q3 SP (Immediate_Offset (word 160)) *)
   0x0ee2e13d;       (* arm_PMULL_VEC Q29 Q9 Q2 64 *)
   0x4e200942;       (* arm_REV64_VEC Q2 Q10 8 *)
-  0xa90c7beb;       (* arm_STP X11 X30 SP (Immediate_Offset (iword (&192))) *)
+  0xa90c17eb;       (* arm_STP X11 X5 SP (Immediate_Offset (iword (&192))) *)
   0x6e3f1c84;       (* arm_EOR_VEC Q4 Q4 Q31 128 *)
   0x4e284b68;       (* arm_AESE Q8 Q27 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
@@ -523,7 +522,7 @@ let aes256_gcm_enc_mc =
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0x5e180524;       (* arm_DUP_ELEM_SCALAR Q4 Q9 1 64 *)
   0x4eece1ce;       (* arm_PMULL2_VEC Q14 Q14 Q12 64 *)
-  0xa90b77eb;       (* arm_STP X11 X29 SP (Immediate_Offset (iword (&176))) *)
+  0xa90b27eb;       (* arm_STP X11 X9 SP (Immediate_Offset (iword (&176))) *)
   0x4e284a08;       (* arm_AESE Q8 Q16 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0x2e291c9e;       (* arm_EOR_VEC Q30 Q4 Q9 64 *)
@@ -571,7 +570,7 @@ let aes256_gcm_enc_mc =
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0x6e3d1d0a;       (* arm_EOR_VEC Q10 Q8 Q29 128 *)
   0x4ee6e0a1;       (* arm_PMULL2_VEC Q1 Q5 Q6 64 *)
-  0xca15015d;       (* arm_EOR X29 X10 X21 *)
+  0xca150149;       (* arm_EOR X9 X10 X21 *)
   0x0ee6e18d;       (* arm_PMULL_VEC Q13 Q12 Q6 64 *)
   0x3dc02fe8;       (* arm_LDR Q8 SP (Immediate_Offset (word 176)) *)
   0xca14032a;       (* arm_EOR X10 X25 X20 *)
@@ -585,15 +584,15 @@ let aes256_gcm_enc_mc =
   0x6e2d1fc2;       (* arm_EOR_VEC Q2 Q30 Q13 128 *)
   0x4e284ac4;       (* arm_AESE Q4 Q22 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
-  0xa90a77ea;       (* arm_STP X10 X29 SP (Immediate_Offset (iword (&160))) *)
-  0xca15023d;       (* arm_EOR X29 X17 X21 *)
+  0xa90a27ea;       (* arm_STP X10 X9 SP (Immediate_Offset (iword (&160))) *)
+  0xca150229;       (* arm_EOR X9 X17 X21 *)
   0x6e0c418b;       (* arm_EXT Q11 Q12 Q12 64 *)
   0x4e284a48;       (* arm_AESE Q8 Q18 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0x6e211c4e;       (* arm_EOR_VEC Q14 Q2 Q1 128 *)
   0x4e284ae4;       (* arm_AESE Q4 Q23 *)
   0x4e286884;       (* arm_AESMC Q4 Q4 *)
-  0xa90b77e7;       (* arm_STP X7 X29 SP (Immediate_Offset (iword (&176))) *)
+  0xa90b27e7;       (* arm_STP X7 X9 SP (Immediate_Offset (iword (&176))) *)
   0x6e201d60;       (* arm_EOR_VEC Q0 Q11 Q0 128 *)
   0x4e284b03;       (* arm_AESE Q3 Q24 *)
   0x4e286863;       (* arm_AESMC Q3 Q3 *)
@@ -760,21 +759,21 @@ let aes256_gcm_enc_mc =
   0xa90c4feb;       (* arm_STP X11 X19 SP (Immediate_Offset (iword (&192))) *)
   0xa90d2beb;       (* arm_STP X11 X10 SP (Immediate_Offset (iword (&208))) *)
   0x5ac00b99;       (* arm_REV W25 W28 *)
-  0x110005be;       (* arm_ADD W30 W13 (rvalue (word 1)) *)
+  0x110005a5;       (* arm_ADD W5 W13 (rvalue (word 1)) *)
   0x110011ad;       (* arm_ADD W13 W13 (rvalue (word 4)) *)
   0xaa198193;       (* arm_ORR X19 X12 (Shiftedreg X25 LSL 32) *)
   0x3dc037ff;       (* arm_LDR Q31 SP (Immediate_Offset (word 208)) *)
-  0x5ac00bca;       (* arm_REV W10 W30 *)
+  0x5ac008aa;       (* arm_REV W10 W5 *)
   0xca140377;       (* arm_EOR X23 X27 X20 *)
   0xa90a4feb;       (* arm_STP X11 X19 SP (Immediate_Offset (iword (&160))) *)
   0x3dc033e3;       (* arm_LDR Q3 SP (Immediate_Offset (word 192)) *)
   0xca15023a;       (* arm_EOR X26 X17 X21 *)
-  0xca1400fd;       (* arm_EOR X29 X7 X20 *)
+  0xca1400e9;       (* arm_EOR X9 X7 X20 *)
   0x3dc02be8;       (* arm_LDR Q8 SP (Immediate_Offset (word 160)) *)
   0xa9412011;       (* arm_LDP X17 X8 X0 (Immediate_Offset (iword (&16))) *)
   0xaa0a8193;       (* arm_ORR X19 X12 (Shiftedreg X10 LSL 32) *)
   0xca1502d8;       (* arm_EOR X24 X22 X21 *)
-  0xa90c63fd;       (* arm_STP X29 X24 SP (Immediate_Offset (iword (&192))) *)
+  0xa90c63e9;       (* arm_STP X9 X24 SP (Immediate_Offset (iword (&192))) *)
   0x4e284a5f;       (* arm_AESE Q31 Q18 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
   0xa8c4640a;       (* arm_LDP X10 X25 X0 (Postimmediate_Offset (iword (&64))) *)
@@ -785,10 +784,10 @@ let aes256_gcm_enc_mc =
   0x4e284a48;       (* arm_AESE Q8 Q18 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0xca140231;       (* arm_EOR X17 X17 X20 *)
-  0xca15011d;       (* arm_EOR X29 X8 X21 *)
+  0xca150109;       (* arm_EOR X9 X8 X21 *)
   0x4e284a7f;       (* arm_AESE Q31 Q19 *)
   0x4e286bff;       (* arm_AESMC Q31 Q31 *)
-  0xa90b77f1;       (* arm_STP X17 X29 SP (Immediate_Offset (iword (&176))) *)
+  0xa90b27f1;       (* arm_STP X17 X9 SP (Immediate_Offset (iword (&176))) *)
   0x4e284a68;       (* arm_AESE Q8 Q19 *)
   0x4e286908;       (* arm_AESMC Q8 Q8 *)
   0xca150336;       (* arm_EOR X22 X25 X21 *)
@@ -959,8 +958,8 @@ let aes256_gcm_enc_mc =
   0x3dc008cd;       (* arm_LDR Q13 X6 (Immediate_Offset (word 32)) *)
   0x3dc004ce;       (* arm_LDR Q14 X6 (Immediate_Offset (word 16)) *)
   0xb40007b0;       (* arm_CBZ X16 (word 244) *)
-  0x110001be;       (* arm_ADD W30 W13 (rvalue (word 0)) *)
-  0x5ac00bdc;       (* arm_REV W28 W30 *)
+  0x110001a5;       (* arm_ADD W5 W13 (rvalue (word 0)) *)
+  0x5ac008bc;       (* arm_REV W28 W5 *)
   0xaa1c819a;       (* arm_ORR X26 X12 (Shiftedreg X28 LSL 32) *)
   0x110005ad;       (* arm_ADD W13 W13 (rvalue (word 1)) *)
   0xa90a6beb;       (* arm_STP X11 X26 SP (Immediate_Offset (iword (&160))) *)
@@ -1037,7 +1036,6 @@ let aes256_gcm_enc_mc =
   0xa94263f7;       (* arm_LDP X23 X24 SP (Immediate_Offset (iword (&32))) *)
   0xa9436bf9;       (* arm_LDP X25 X26 SP (Immediate_Offset (iword (&48))) *)
   0xa94473fb;       (* arm_LDP X27 X28 SP (Immediate_Offset (iword (&64))) *)
-  0xa9457bfd;       (* arm_LDP X29 X30 SP (Immediate_Offset (iword (&80))) *)
   0x910383ff;       (* arm_ADD SP SP (rvalue (word 224)) *)
   0xd65f03c0        (* arm_RET X30 *)
 ];;
@@ -1068,7 +1066,7 @@ let swpgrp = define
     ghash_polyval_acc gt (swpgrp gt acc i blk)
       [blk (4*i); blk (4*i+1); blk (4*i+2); blk (4*i+3)]`;;
 
-(* The invariant swp_inv i at the loop head pc + 0x560: groups 0..i-1 are
+(* The invariant swp_inv i at the loop head pc + 0x55c: groups 0..i-1 are
    stored and hashed (Q29), group i is in flight, and X0 already points at
    group i+1.  For group i, the input blocks XOR the last round key are in
    the stack slots sp+160, sp+176, sp+192 (blocks 4i..4i+2) and in X26/X24
@@ -1147,8 +1145,8 @@ let swp_inv = `\(i:num) s.
 (* ------------------------------------------------------------------------- *)
 (* Stepping a leg: the pruning policy, the registers whose latest values the *)
 (* stepper keeps, the stack-store merge sites, and the goal, setup and       *)
-(* stepper of BODYLEG (swp_inv i at pc + 0x560 -> swp_inv (i+1) at           *)
-(* pc + 0x8a4, 209 steps).                                                   *)
+(* stepper of BODYLEG (swp_inv i at pc + 0x55c -> swp_inv (i+1) at           *)
+(* pc + 0x8a0, 209 steps).                                                   *)
 (* ------------------------------------------------------------------------- *)
 
 (* The pruning policy of the steppers of this proof: the in_p reads and all
@@ -1191,11 +1189,11 @@ let REDSETX256 =
   ["Q1";"Q2";"Q3";"Q4";"Q5";"Q6";"Q7";"Q8";"Q11";"Q13";"Q14";"Q16";"Q17";"Q28";
    "Q29";"Q30";"Q31";
                   "X7";"X8";"X10";"X11";"X13";"X14";"X17";"X22";"X23";"X24";
-                  "X25";"X26";"X28";"X29";"X30"];;
+                  "X25";"X26";"X28";"X9";"X5"];;
 (* The scalar registers introduced as ghosts (GHOST_INTRO_TAC) at the start
    of a leg, so that their initial values stay available as variables. *)
 let ghost_lanes256 =
-  ["X7";"X8";"X17";"X22";"X23";"X24";"X25";"X26";"X28";"X29";"X30";"X10";"X14";
+  ["X7";"X8";"X17";"X22";"X23";"X24";"X25";"X26";"X28";"X9";"X5";"X10";"X14";
    "X19";"X27"];;
 
 (* The stack stores of the loop body, as (step, sp offset) pairs for
@@ -1247,8 +1245,8 @@ let INPUT_SPLIT256_TAC = INPUT_SPLIT256_BOUND_TAC `i < loop_count - 1`;;
 (* Leg pre/postconditions over this kernel's code (see mk_leg_state). *)
 let leg_state = mk_leg_state `aes256_gcm_enc_tmc`;;
 
-(* The body-leg goal, swp_inv i at pc + 0x560 -> swp_inv (i+1) at
-   pc + 0x8a4, for i < loop_count - 1 (mk_body_goal_b takes the bound). *)
+(* The body-leg goal, swp_inv i at pc + 0x55c -> swp_inv (i+1) at
+   pc + 0x8a0, for i < loop_count - 1 (mk_body_goal_b takes the bound). *)
 let mk_body_goal_b bound inv =
   mk_imp(subst [bound,`i < loop_count - 2`]
          `([EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk;
@@ -1259,7 +1257,7 @@ let mk_body_goal_b bound inv =
      nblocks MOD 4 = loop_remain /\
      2 <= loop_count /\ i < loop_count - 2 /\ 16 * nblocks < 2 EXP 64 /\
      aligned 16 (stackpointer:int64) /\
-     nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3876) /\
+     nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3868) /\
      (in_p:int64 = out_p \/
       nonoverlapping (in_p:int64,16 * nblocks) (out_p:int64,16 * nblocks)) /\
      nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
@@ -1267,28 +1265,28 @@ let mk_body_goal_b bound inv =
      nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
      nonoverlapping (out_p:int64,16*nblocks)
        (word_add stackpointer (word 160):int64,64) /\
-     nonoverlapping (tag_p:int64,16) (word pc:int64,3876) /\
+     nonoverlapping (tag_p:int64,16) (word pc:int64,3868) /\
      nonoverlapping (in_p:int64,16*nblocks) (tag_p:int64,16) /\
      nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
      nonoverlapping (tag_p:int64,16)
        (word_add stackpointer (word 160):int64,64) /\
-     nonoverlapping (ivec_p:int64,16) (word pc:int64,3876) /\
+     nonoverlapping (ivec_p:int64,16) (word pc:int64,3868) /\
      nonoverlapping (in_p:int64,16*nblocks) (ivec_p:int64,16) /\
      nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
      nonoverlapping (ivec_p:int64,16)
        (word_add stackpointer (word 160):int64,64) /\
      nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
      nonoverlapping (word_add stackpointer (word 160):int64,64)
-       (word pc:int64,3876) /\
+       (word pc:int64,3868) /\
      nonoverlapping (in_p:int64,16*nblocks)
        (word_add stackpointer (word 160):int64,64) /\
      nonoverlapping (word_add stackpointer (word 160):int64,64)
        (htable_p:int64,96)`,
    list_mk_icomb "ensures" [`arm`;
-     leg_state inv `0x560` `i:num` ;
-     leg_state inv `0x8a4` `i+1` ;
+     leg_state inv `0x55c` `i:num` ;
+     leg_state inv `0x8a0` `i+1` ;
      `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-      MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30] ,,
+      MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28] ,,
       MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15] ,,
       MAYCHANGE [memory :> bytes(out_p:int64, 16 * nblocks)] ,,
       MAYCHANGE [memory :> bytes(word_add stackpointer (word 160):int64, 64)] ,,
@@ -1328,9 +1326,9 @@ let setup_tac_s split =
                  (asl,w));;
 let setup_tac = setup_tac_s INPUT_SPLIT256_TAC;;
 
-(* The body stepper: steps 1..209 (pc + 0x560 .. pc + 0x8a0) with gkeepN over
+(* The body stepper: steps 1..209 (pc + 0x55c .. pc + 0x89c) with gkeepN over
    REDSETX256, the subword and address normalization after each step, and
-   MERGE_CTR128_TAC at the merges256 sites; the cbnz at pc + 0x8a4 is left to
+   MERGE_CTR128_TAC at the merges256 sites; the cbnz at pc + 0x8a0 is left to
    the loop composition.  step_body_prefix stops before
    ENSURES_FINAL_STATE_TAC, so the facts about s209 are still assumptions. *)
 let step_body_prefix_s setup =
@@ -2044,24 +2042,24 @@ let close_all_iter1 =
   close_all_c close_goal7_iter1 close_goal8_b1 close_goal10_b1;;
 
 (* ------------------------------------------------------------------------- *)
-(* The fill: FILL_TO_CBZ, pc + 0xbc -> pc + 0x55c, establishing swp_inv 1    *)
+(* The fill: FILL_TO_CBZ, pc + 0xb8 -> pc + 0x558, establishing swp_inv 1    *)
 (* just before the cbz that separates loop_count = 2 from loop_count >= 3.   *)
 (* The fill completes group 0 (stored and hashed) and starts group 1, so it  *)
 (* ends at index i = 1: X13 = word_zx (word (c + 8)), X2 = out_p + 64,       *)
 (* X0 = in_p + 128, Q29 = swpgrp gt tag0 1.  Its 296 instructions are        *)
-(* simulated once; FILLLEG (cbz not taken, loop_count >= 3, -> pc + 0x560)   *)
-(* and LC2_PARTA (cbz taken, loop_count = 2, -> pc + 0x8a8) add one          *)
+(* simulated once; FILLLEG (cbz not taken, loop_count >= 3, -> pc + 0x55c)   *)
+(* and LC2_PARTA (cbz taken, loop_count = 2, -> pc + 0x8a4) add one          *)
 (* instruction each.  No ext precedes the GHASH of group 0: the reduction    *)
 (* reads Q30 = byteswap128 tag0 directly (close_goal7_i0_c, A := tag0).      *)
 (* ------------------------------------------------------------------------- *)
 
-(* The fill goal, from pc + 0xbc to swp_inv 1 at pc + 0x560 (FILLLEG;
+(* The fill goal, from pc + 0xb8 to swp_inv 1 at pc + 0x55c (FILLLEG;
    FILL_TO_CBZ and the other legs reuse its precondition and frame).  The
    precondition includes the nonoverlapping facts of tag_p and ivec_p with
    the code, the input, the key table and the stack slots, and with each
    other, as body_goal does: without the stack ones the tag_p and ivec_p
    reads could not be carried across the stack stores (the first is step
-   12, stp x11,x22,[sp,#160] at 0xe8) to the final state s296. *)
+   12, stp x11,x22,[sp,#160] at 0xe4) to the final state s296. *)
 let fill_goal = mk_imp
  (`([EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk; EL 7 rk;
      EL 8 rk; EL 9 rk;
@@ -2070,7 +2068,7 @@ let fill_goal = mk_imp
    nblocks MOD 4 = loop_remain /\
    3 <= loop_count /\ 16 * nblocks < 2 EXP 64 /\
    aligned 16 (stackpointer:int64) /\
-   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3876) /\
+   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3868) /\
    (in_p:int64 = out_p \/
     nonoverlapping (in_p:int64,16 * nblocks) (out_p:int64,16 * nblocks)) /\
    nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
@@ -2078,19 +2076,19 @@ let fill_goal = mk_imp
    nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
    nonoverlapping (out_p:int64,16*nblocks)
      (word_add stackpointer (word 160):int64,64) /\
-   nonoverlapping (tag_p:int64,16) (word pc:int64,3876) /\
+   nonoverlapping (tag_p:int64,16) (word pc:int64,3868) /\
    nonoverlapping (in_p:int64,16*nblocks) (tag_p:int64,16) /\
    nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (tag_p:int64,16)
      (word_add stackpointer (word 160):int64,64) /\
-   nonoverlapping (ivec_p:int64,16) (word pc:int64,3876) /\
+   nonoverlapping (ivec_p:int64,16) (word pc:int64,3868) /\
    nonoverlapping (in_p:int64,16*nblocks) (ivec_p:int64,16) /\
    nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (ivec_p:int64,16)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
-     (word pc:int64,3876) /\
+     (word pc:int64,3868) /\
    nonoverlapping (in_p:int64,16*nblocks)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
@@ -2100,7 +2098,7 @@ let fill_goal = mk_imp
   list_mk_icomb "ensures" [`arm`;
     mk_abs(`s:armstate`, list_mk_conj
       [`aligned_bytes_loaded s (word pc) aes256_gcm_enc_tmc`;
-       `read PC s = word (pc + 0xbc)`;
+       `read PC s = word (pc + 0xb8)`;
        `read X0 s = in_p`; `read X2 s = out_p`; `read X3 s = tag_p`;
        `read X4 s = ivec_p`;
        `read X5 s = key_p`; `read X6 s = htable_p`; `read SP s = stackpointer`;
@@ -2141,9 +2139,9 @@ let fill_goal = mk_imp
        `!j. j < nblocks
         ==> read (memory :> bytes128 (word_add in_p (word(16*j)))) s =
           inblock j`]) ;
-    leg_state swp_inv `0x560` `1` ;
+    leg_state swp_inv `0x55c` `1` ;
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-     MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30] ,,
+     MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28] ,,
      MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15; Q29;
                 Q30; Q31] ,,
      MAYCHANGE [memory :> bytes(out_p:int64, 16 * nblocks)] ,,
@@ -2180,7 +2178,7 @@ let FILL_INPUT_SPLIT_TAC =
        can (find_term (fun t -> is_const t && fst(dest_const t) = "bytes128"))
          (lhs c))));;
 
-(* The fill setup: enter at pc + 0xbc, introduce the ghost lanes,
+(* The fill setup: enter at pc + 0xb8, introduce the ghost lanes,
    ENSURES_INIT_TAC, unfold htable_mem_4 and split blocks 0..7.  Unlike
    setup_tac it abbreviates no initial reads as init_k: that would leave
    opaque init_k variables in the tag_p, ivec_p and rk14 conjuncts and in
@@ -2198,14 +2196,14 @@ let fill_setup_tac =
   FILL_INPUT_SPLIT_TAC THEN INPUT_LEG_TAC [];;
 
 (* The stack-store merge sites of the fill, as (step, sp offset) with step =
-   (address - 0xbc)/4 + 1: the group-0 counter blocks at steps 12, 24, 25
+   (address - 0xb8)/4 + 1: the group-0 counter blocks at steps 12, 24, 25
    and 26, the group-0 inputs XOR the last round key at 30, 60, 66 and 114,
    and the group-1 stores at 136, 179, 185, 196 (counter blocks) and 205,
    258, 266 (inputs).  Without a merge at a store step, the 128-bit reload
    of the slot would stay an unresolved stack read and the AES tower or
    the block completion built on it would not fold.  The fill is
-   straight-line code of 296 instructions, 0xbc..0x558 (the last is the
-   sub x1,x1,#2); the cbz at 0x55c is left to FILLLEG and LC2_PARTA. *)
+   straight-line code of 296 instructions, 0xb8..0x554 (the last is the
+   sub x1,x1,#2); the cbz at 0x558 is left to FILLLEG and LC2_PARTA. *)
 let fill_merges_guess = [(12,160);(24,192);(25,208);(26,176);
                          (30,192);(60,160);(66,176);
                          (114,208);(136,160);(179,192);(185,208);(196,176);
@@ -2320,7 +2318,7 @@ let fill_close_all_256_c cg10 cg7 : tactic =
           ASM_REWRITE_TAC[]; CONV_TAC WORD_BLAST;
           CONV_TAC WORD_RULE ])) (asl,w);;
 let fill_close_all_256 = fill_close_all_256_c close_goal10_b2 close_goal7_fill;;
-(* FILL_TO_CBZ: the shared 296-instruction fill, pc + 0xbc -> pc + 0x55c,
+(* FILL_TO_CBZ: the shared 296-instruction fill, pc + 0xb8 -> pc + 0x558,
    under 2 <= loop_count (the precondition of fill_goal with 3 <= loop_count
    weakened), ending at swp_inv 1 before the cbz.  The output forall closes
    by close_goal9_i0. *)
@@ -2331,7 +2329,7 @@ let fill_cbz_goal = mk_imp
   (map (fun c -> if c = `3 <= loop_count` then `2 <= loop_count` else c)
    (conjuncts (lhand fill_goal))),
   list_mk_icomb "ensures"
-    [`arm`; fill_pre_state; leg_state swp_inv `0x55c` `1`; fill_frame]);;
+    [`arm`; fill_pre_state; leg_state swp_inv `0x558` `1`; fill_frame]);;
 let FILL_TO_CBZ = GEN_ALL(prove(fill_cbz_goal,
   fill_step_prefix THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -2354,12 +2352,12 @@ let HOP_CLOSE_TAC : tactic =
   (FIRST_ASSUM ACCEPT_TAC ORELSE (ASM_REWRITE_TAC[] THEN NO_TAC) ORELSE
    (ASM_REWRITE_TAC[COND_CLAUSES; VAL_WORD_0] THEN CONV_TAC WORD_RULE));;
 
-(* FILLLEG: pc + 0xbc -> pc + 0x560 for loop_count >= 3, FILL_TO_CBZ then
-   the cbz at 0x55c not taken (X1 = word (loop_count - 2), nonzero). *)
+(* FILLLEG: pc + 0xb8 -> pc + 0x55c for loop_count >= 3, FILL_TO_CBZ then
+   the cbz at 0x558 not taken (X1 = word (loop_count - 2), nonzero). *)
 let FILLLEG = GEN_ALL(prove(fill_goal,
   INTRO_HYPS_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  ENSURES_SEQUENCE_TAC `pc + 0x55c` (swp_inv_at `1`) THEN CONJ_TAC THENL
+  ENSURES_SEQUENCE_TAC `pc + 0x558` (swp_inv_at `1`) THEN CONJ_TAC THENL
    [REFOLD_ABI_TAC THEN MATCH_MP_TAC FILL_TO_CBZ THEN ASM_REWRITE_TAC[] THEN
     TRY(UNDISCH_TAC `3 <= loop_count` THEN ARITH_TAC);
     hop_init THEN
@@ -2376,15 +2374,15 @@ let FILLLEG = GEN_ALL(prove(fill_goal,
     ARM_STEPS_TAC AES256_GCM_ENC_EXEC [1] THEN ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[] THEN HOP_CLOSE_TAC]));;
 
-(* LC2_PARTA: pc + 0xbc -> pc + 0x8a8 for loop_count = 2, FILL_TO_CBZ then
-   the cbz at 0x55c taken (X1 = word 0).  The waypoint is swp_inv at the
+(* LC2_PARTA: pc + 0xb8 -> pc + 0x8a4 for loop_count = 2, FILL_TO_CBZ then
+   the cbz at 0x558 taken (X1 = word 0).  The waypoint is swp_inv at the
    literal index 1 (loop_count - 1 for loop_count = 2); LEG_LC2 converts the
    index before applying DRAINLEG_8A8. *)
 let lc2a_precond =
   list_mk_conj
     ((filter (fun c -> c <> `3 <= loop_count`) (conjuncts (lhand fill_goal))) @
      [`loop_count = 2`]);;
-let lc2_waypoint = leg_state swp_inv `0x8a8` `1`;;
+let lc2_waypoint = leg_state swp_inv `0x8a4` `1`;;
 let lc2a_goal =
   mk_imp(lc2a_precond,
          list_mk_icomb "ensures"
@@ -2392,7 +2390,7 @@ let lc2a_goal =
 let LC2_PARTA = prove(lc2a_goal,
   INTRO_HYPS_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  ENSURES_SEQUENCE_TAC `pc + 0x55c` (swp_inv_at `1`) THEN CONJ_TAC THENL
+  ENSURES_SEQUENCE_TAC `pc + 0x558` (swp_inv_at `1`) THEN CONJ_TAC THENL
    [REFOLD_ABI_TAC THEN MATCH_MP_TAC FILL_TO_CBZ THEN ASM_REWRITE_TAC[] THEN
     TRY(UNDISCH_TAC `loop_count = 2` THEN ARITH_TAC);
     hop_init THEN
@@ -2404,16 +2402,16 @@ let LC2_PARTA = prove(lc2a_goal,
     ARM_STEPS_TAC AES256_GCM_ENC_EXEC [1] THEN ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[] THEN HOP_CLOSE_TAC]);;
 
-(* BODYLEG: swp_inv i at pc + 0x560 -> swp_inv (i+1) at pc + 0x8a4, one
+(* BODYLEG: swp_inv i at pc + 0x55c -> swp_inv (i+1) at pc + 0x8a0, one
    iteration of the loop body. *)
 let BODYLEG =
   prove(body_goal, step_body_tac THEN REPEAT CONJ_TAC THEN close_all_body);;
 
 (* ------------------------------------------------------------------------- *)
-(* The drain: swp_inv (loop_count - 1) at pc + 0x8a4 -> the bridge state at  *)
-(* pc + 0xdd0.  After the last iteration X1 = word 0, so the cbnz at 0x8a4   *)
-(* is not taken; the drain 0x8a8..0xa8c (122 instructions, ending with the b *)
-(* to 0xdd0 over the iter_1 block) completes the last group, blocks 4m..4m+3 *)
+(* The drain: swp_inv (loop_count - 1) at pc + 0x8a0 -> the bridge state at  *)
+(* pc + 0xdcc.  After the last iteration X1 = word 0, so the cbnz at 0x8a0   *)
+(* is not taken; the drain 0x8a4..0xa88 (122 instructions, ending with the b *)
+(* to 0xdcc over the iter_1 block) completes the last group, blocks 4m..4m+3 *)
 (* with m = loop_count - 1: it stores them and hashes them into Q29, and its *)
 (* final ext leaves Q30 = byteswap128 (nist_ghash .. (4 * loop_count)).      *)
 (* ------------------------------------------------------------------------- *)
@@ -2437,12 +2435,12 @@ let SWPGRP_IS_NIST_GHASH = prove
     REWRITE_TAC[ARITH_RULE `4*i+0 = 4*i`] THEN
     REWRITE_TAC[NIST_GHASH_IS_POLYVAL]]);;
 
-(* The bridge state at pc + 0xdd0, after 4 * loop_count blocks: the
+(* The bridge state at pc + 0xdcc, after 4 * loop_count blocks: the
    postcondition of the drain and of LEG_LC0, LEG_LC1 and LEG_LC2, and the
    precondition of TAILLEG. *)
 let drain_bridge = mk_abs(`s:armstate`, list_mk_conj
  [`aligned_bytes_loaded s (word pc) aes256_gcm_enc_tmc`;
-  `read PC s = word (pc + 0xdd0)`;
+  `read PC s = word (pc + 0xdcc)`;
   `read X0 s = word_add in_p (word (64 * loop_count))`;
   `read X2 s = word_add out_p (word (64 * loop_count))`;
   `read X3 s = tag_p`; `read X4 s = ivec_p`; `read X6 s = htable_p`;
@@ -2484,7 +2482,7 @@ let drain_bridge = mk_abs(`s:armstate`, list_mk_conj
        (word_reversefields 8 (ctr_block nonce c):int128)
          (64,64):int64):int32):int64`;
   (* Q12 and Q14 are not carried: the drain leaves other values in them, and
-     the tail reloads Q12, Q13 and Q14 from the table at 0xdd0..0xdd8;
+     the tail reloads Q12, Q13 and Q14 from the table at 0xdcc..0xdd4;
      htable_mem_4 below supplies the values, so tail_inv's Q12 and Q14
      conjuncts come from the tail's own stepping. *)
   `read Q30 s = byteswap128 (nist_ghash (aes256_cipher (word 0) rk) tag0
@@ -2498,8 +2496,8 @@ let drain_bridge = mk_abs(`s:armstate`, list_mk_conj
    ==> read (memory :> bytes128 (word_add out_p (word(16*j)))) s =
            word_xor (aes_ctr_block aes256_cipher c nonce rk j) (inblock j)`]);;
 
-(* The drain goal (DRAINLEG): swp_inv (loop_count - 1) at pc + 0x8a4 ->
-   drain_bridge at pc + 0xdd0, with the broad frame (the working registers
+(* The drain goal (DRAINLEG): swp_inv (loop_count - 1) at pc + 0x8a0 ->
+   drain_bridge at pc + 0xdcc, with the broad frame (the working registers
    including the AES partials, the out_p bytes and the stack slots). *)
 let drain_goal = mk_imp
  (`([EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk; EL 7 rk;
@@ -2509,7 +2507,7 @@ let drain_goal = mk_imp
    nblocks MOD 4 = loop_remain /\
    2 <= loop_count /\ 16 * nblocks < 2 EXP 64 /\
    aligned 16 (stackpointer:int64) /\
-   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3876) /\
+   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3868) /\
    (in_p:int64 = out_p \/
     nonoverlapping (in_p:int64,16 * nblocks) (out_p:int64,16 * nblocks)) /\
    nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
@@ -2517,28 +2515,28 @@ let drain_goal = mk_imp
    nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
    nonoverlapping (out_p:int64,16*nblocks)
      (word_add stackpointer (word 160):int64,64) /\
-   nonoverlapping (tag_p:int64,16) (word pc:int64,3876) /\
+   nonoverlapping (tag_p:int64,16) (word pc:int64,3868) /\
    nonoverlapping (in_p:int64,16*nblocks) (tag_p:int64,16) /\
    nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (tag_p:int64,16)
      (word_add stackpointer (word 160):int64,64) /\
-   nonoverlapping (ivec_p:int64,16) (word pc:int64,3876) /\
+   nonoverlapping (ivec_p:int64,16) (word pc:int64,3868) /\
    nonoverlapping (in_p:int64,16*nblocks) (ivec_p:int64,16) /\
    nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (ivec_p:int64,16)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
-     (word pc:int64,3876) /\
+     (word pc:int64,3868) /\
    nonoverlapping (in_p:int64,16*nblocks)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
      (htable_p:int64,96)`,
   list_mk_icomb "ensures" [`arm`;
-    leg_state swp_inv `0x8a4` `loop_count - 1` ;
+    leg_state swp_inv `0x8a0` `loop_count - 1` ;
     drain_bridge ;
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-     MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30] ,,
+     MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28] ,,
      MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15; Q29;
                 Q30; Q31] ,,
      MAYCHANGE [memory :> bytes(out_p:int64, 16 * nblocks)] ,,
@@ -2687,18 +2685,18 @@ let drain_close_all_c dq30 closeall : tactic =
     else closeall (asl,w);;
 let drain_close_all = drain_close_all_c drain_close_q30 close_all_drain;;
 
-(* DRAINLEG_8A8: the drain proper, pc + 0x8a8 -> drain_bridge, from
+(* DRAINLEG_8A8: the drain proper, pc + 0x8a4 -> drain_bridge, from
    swp_inv (loop_count - 1) with X1 = word 0; drain_goal_8a8 is drain_goal
-   with the entry PC 0x8a8.  It is simulated once and shared: the loop exit
-   (DRAINLEG, the cbnz at 0x8a4 not taken) and the loop_count = 2 path
-   (LEG_LC2, the cbz at 0x55c taken) both land here. *)
+   with the entry PC 0x8a4.  It is simulated once and shared: the loop exit
+   (DRAINLEG, the cbnz at 0x8a0 not taken) and the loop_count = 2 path
+   (LEG_LC2, the cbz at 0x558 taken) both land here. *)
 let drain_goal_8a8 =
-  let pre8a8 = leg_state swp_inv `0x8a8` `loop_count - 1` in
+  let pre8a8 = leg_state swp_inv `0x8a4` `loop_count - 1` in
   mk_imp(lhand drain_goal,
     list_mk_icomb "ensures" [`arm`; pre8a8; drain_bridge;
       last(snd(strip_comb(snd(dest_imp drain_goal))))]);;
 
-(* The setup at 0x8a8: m = loop_count - 1, X1 = word 0, and the input split
+(* The setup at 0x8a4: m = loop_count - 1, X1 = word 0, and the input split
    of the last group (blocks 4m..4m+3). *)
 let drain_setup_tac_8a8 =
   INTRO_HYPS_TAC THEN REWRITE_TAC[fst AES256_GCM_ENC_EXEC] THEN
@@ -2745,7 +2743,7 @@ let drain_setup_tac_8a8 =
          (lhs c)))) THEN
   INPUT_LEG_TAC [];;
 (* The only stack store of the drain is step 24 (stp x24,x26,[sp,#208],
-   block 4m+3 XOR the last round key); step 122, at 0xa8c, is the b to 0xdd0
+   block 4m+3 XOR the last round key); step 122, at 0xa88, is the b to 0xdcc
    over the iter_1 block. *)
 let drain_merges_8a8 = [(24,208)];;
 let NSTEP_DRAIN_8a8 = 122;;
@@ -2770,13 +2768,13 @@ let DRAINLEG_8A8 = GEN_ALL(prove(drain_goal_8a8,
   ENSURES_FINAL_STATE_TAC THEN INPUT_POSTS_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN drain_close_all));;
 
-(* DRAINLEG: entry at the cbnz at 0x8a4 with swp_inv (loop_count - 1) and
+(* DRAINLEG: entry at the cbnz at 0x8a0 with swp_inv (loop_count - 1) and
    X1 = word 0, so that it is not taken, then DRAINLEG_8A8.  GEN_ALL so that
    MATCH_MP_TAC in the composition leaves key_p existential. *)
 let DRAINLEG = GEN_ALL(prove(drain_goal,
   INTRO_HYPS_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  ENSURES_SEQUENCE_TAC `pc + 0x8a8` (swp_inv_at `loop_count - 1`) THEN
+  ENSURES_SEQUENCE_TAC `pc + 0x8a4` (swp_inv_at `loop_count - 1`) THEN
   CONJ_TAC THENL
    [hop_init THEN
     SUBGOAL_THEN `loop_count - ((loop_count - 1) + 1) = 0`
@@ -2787,12 +2785,12 @@ let DRAINLEG = GEN_ALL(prove(drain_goal,
     REFOLD_ABI_TAC THEN MATCH_MP_TAC DRAINLEG_8A8 THEN ASM_REWRITE_TAC[]]));;
 
 (* ------------------------------------------------------------------------- *)
-(* The tail: TAILLEG, drain_bridge at pc + 0xdd0 -> tail_post at pc + 0xef4  *)
+(* The tail: TAILLEG, drain_bridge at pc + 0xdcc -> tail_post at pc + 0xef0  *)
 (* (the tag, the counter and all output blocks stored, before the            *)
-(* restores).  After the three key-table reloads, the cbz x16 at 0xddc       *)
+(* restores).  After the three key-table reloads, the cbz x16 at 0xdd8       *)
 (* skips or enters the loop over the loop_remain remaining blocks            *)
-(* (pc + 0xde0 .. pc + 0xecc); X0 and the tag and counter stores follow at   *)
-(* 0xed0..0xee0, and the four stack-slot clears at 0xee4..0xef0.             *)
+(* (pc + 0xddc .. pc + 0xec8); X0 and the tag and counter stores follow at   *)
+(* 0xecc..0xedc, and the four stack-slot clears at 0xee0..0xeec.             *)
 (* ------------------------------------------------------------------------- *)
 
 (* The closer of the tail's final state, after ENSURES_FINAL_STATE_TAC, the
@@ -2801,17 +2799,29 @@ let DRAINLEG = GEN_ALL(prove(drain_goal,
    WORD_BLAST); the output forall holds by assumption, since the tag and
    counter stores do not write out_p; the tag and ivec conjuncts close by
    the byteswap128 and ctr_block word identities. *)
+(* Split the 64-byte scratch-zeroing postcondition into the eight 64-bit
+   reads established by the four STP XZR,XZR instructions. The saved-register
+   area is outside this guarantee. *)
+let ZERO_SCRATCH_CONV =
+  let pat =
+    `read (memory :> bytes512 p) (s:armstate) = (word 0:int512)` in
+  fun tm ->
+    ignore(term_match [] pat tm);
+    READ_MEMORY_SPLIT_CONV 3 tm;;
+
 let tail_final_close : tactic =
   REPEAT CONJ_TAC THEN
   FIRST
    [close_goal10_b2;
     FIRST_ASSUM MATCH_ACCEPT_TAC;
+    (CONV_TAC ZERO_SCRATCH_CONV THEN
+     ASM_REWRITE_TAC[WORD_SUBWORD_0] THEN NO_TAC);
     (REWRITE_TAC[byteswap128; ctr_block] THEN
      REWRITE_TAC[ADD_ASSOC; ZX_COUNTER_UD; CTR_ZX_NORM] THEN
      CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
      CONV_TAC WORD_BLAST)];;
 
-(* The tail loop invariant at pc + 0xde0: the bridge state advanced by i
+(* The tail loop invariant at pc + 0xddc: the bridge state advanced by i
    blocks, with the reloaded table entries Q12 (byteswap128 of h_power 0) and
    Q14 (the middle terms of h_power 0 and 1) for the single-block GHASH. *)
 let tail_inv = `\(i:num) s.
@@ -2866,23 +2876,25 @@ let tail_inv = `\(i:num) s.
      ==> read (memory :> bytes128 (word_add out_p (word(16*j)))) s =
              word_xor (aes_ctr_block aes256_cipher c nonce rk j) (inblock j))`;;
 
-(* The tail postcondition at pc + 0xef4: the tag and the counter stored and
+(* The tail postcondition at pc + 0xef0: the tag and the counter stored and
    all nblocks output blocks written. *)
 let tail_post = mk_abs(`s:armstate`, list_mk_conj
  [`aligned_bytes_loaded s (word pc) aes256_gcm_enc_tmc`;
-  `read PC s = word (pc + 0xef4)`;
+  `read PC s = word (pc + 0xef0)`;
   `read (memory :> bytes128 tag_p) s = word_reversefields 8
      (nist_ghash (aes256_cipher (word 0) rk) tag0
         (list_of_seq (nist_cipher_block aes256_cipher c nonce rk inblock)
          nblocks))`;
   `read (memory :> bytes128 ivec_p) s =
    word_reversefields 8 (ctr_block nonce (nblocks + c))`;
+  `read (memory :> bytes512 (word_add stackpointer (word 160))) s =
+   word 0`;
   `read X0 s = word (len_bits DIV 8)`;
   `!j. j < nblocks
    ==> read (memory :> bytes128 (word_add out_p (word(16*j)))) s =
            word_xor (aes_ctr_block aes256_cipher c nonce rk j) (inblock j)`]);;
 
-(* The tail goal: drain_bridge at pc + 0xdd0 -> tail_post at pc + 0xef4,
+(* The tail goal: drain_bridge at pc + 0xdcc -> tail_post at pc + 0xef0,
    for any loop_remain < 4, with the broad frame plus tag_p and ivec_p. *)
 let tail_goal = mk_imp
  (`([EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk; EL 7 rk;
@@ -2891,16 +2903,16 @@ let tail_goal = mk_imp
    len_bits DIV 128 = nblocks /\ nblocks DIV 4 = loop_count /\
    nblocks MOD 4 = loop_remain /\
    16 * nblocks < 2 EXP 64 /\ aligned 16 (stackpointer:int64) /\
-   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3876) /\
+   nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3868) /\
    (in_p:int64 = out_p \/
     nonoverlapping (in_p:int64,16 * nblocks) (out_p:int64,16 * nblocks)) /\
    nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
    nonoverlapping (out_p:int64,16 * nblocks) (tag_p:int64,16) /\
    nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
-   nonoverlapping (tag_p:int64,16) (word pc:int64,3876) /\
+   nonoverlapping (tag_p:int64,16) (word pc:int64,3868) /\
    nonoverlapping (in_p:int64,16*nblocks) (tag_p:int64,16) /\
    nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
-   nonoverlapping (ivec_p:int64,16) (word pc:int64,3876) /\
+   nonoverlapping (ivec_p:int64,16) (word pc:int64,3868) /\
    nonoverlapping (in_p:int64,16*nblocks) (ivec_p:int64,16) /\
    nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
@@ -2911,7 +2923,7 @@ let tail_goal = mk_imp
    nonoverlapping (ivec_p:int64,16)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
-     (word pc:int64,3876) /\
+     (word pc:int64,3868) /\
    nonoverlapping (in_p:int64,16*nblocks)
      (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64)
@@ -2922,7 +2934,7 @@ let tail_goal = mk_imp
     drain_bridge ;
     tail_post ;
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-     MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30] ,,
+     MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28] ,,
      MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15; Q29;
                 Q30; Q31] ,,
      MAYCHANGE [memory :> bytes(out_p:int64, 16 * nblocks)] ,,
@@ -3021,8 +3033,8 @@ let tail_stepconv n =
   ARM_STEPS_TAC AES256_GCM_ENC_EXEC [n] THEN
   RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV));;
 
-(* tail_tac: drain_bridge at pc + 0xdd0 -> tail_post at pc + 0xef4.  Three
-   table reloads (ldr q12/q13/q14), then the cbz x16 at 0xddc guards the
+(* tail_tac: drain_bridge at pc + 0xdcc -> tail_post at pc + 0xef0.  Three
+   table reloads (ldr q12/q13/q14), then the cbz x16 at 0xdd8 guards the
    loop. *)
 let tail_tac =
   REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
@@ -3033,7 +3045,7 @@ let tail_tac =
      q12/q13/q14 reloads). *)
   ASM_CASES_TAC `loop_remain = 0` THENL
    [(* loop_remain = 0: nblocks = 4 * loop_count; the cbz x16 is taken to
-       0xed0, the tag and counter stores and the stack-slot clears. *)
+       0xecc, the tag and counter stores and the stack-slot clears. *)
     POP_ASSUM SUBST_ALL_TAC THEN
     ENSURES_INIT_TAC "s0" THEN
     RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_4]) THEN
@@ -3049,10 +3061,10 @@ let tail_tac =
         not(free_in `out_p:int64` (lhs c)) &&
           not(free_in `htable_p:int64` (lhs c)) &&
             not(free_in `tag_p:int64` (lhs c)))) THEN
-    (* thirteen steps: the three reloads (s1..s3), the cbz at 0xddc taken
-       (s4), mov, rev64, str q30, rev, str w14 at 0xed0..0xee0 (s5..s9) and
-       the four stack-slot clears at 0xee4..0xef0 (s10..s13), ending at
-       0xef4 *)
+    (* thirteen steps: the three reloads (s1..s3), the cbz at 0xdd8 taken
+       (s4), mov, rev64, str q30, rev, str w14 at 0xecc..0xedc (s5..s9) and
+       the four stack-slot clears at 0xee0..0xeec (s10..s13), ending at
+       0xef0 *)
     MAP_EVERY tail_stepconv (1--13) THEN
     ENSURES_FINAL_STATE_TAC THEN
     (* abbreviate the settled GHASH value as gval, so that WORD_BLAST sees
@@ -3071,21 +3083,21 @@ let tail_tac =
        assumption); the frame by close_goal10; tag and ivec by WORD_BLAST *)
     tail_final_close;
 
-    (* loop_remain > 0: ENSURES_WHILE_UP over loop_remain from 0xde0 to
-       0xecc.  Expand the ABI macro first, so that the C ,, C = C
+    (* loop_remain > 0: ENSURES_WHILE_UP over loop_remain from 0xddc to
+       0xec8.  Expand the ABI macro first, so that the C ,, C = C
        idempotence of ENSURES_WHILE_UP_TAC (MAYCHANGE_IDEMPOT_TAC,
        ASSIGNS_SEQ_ABSORB_CONV) can decompose the frame; with the macro
        folded ASSIGNS_SEQ_ABSORB_CONV fails. *)
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-    ENSURES_WHILE_UP_TAC `loop_remain:num` `pc + 0xde0` `pc + 0xecc`
+    ENSURES_WHILE_UP_TAC `loop_remain:num` `pc + 0xddc` `pc + 0xec8`
       tail_inv THEN
     REPEAT CONJ_TAC THENL
      [(* ~(loop_remain = 0) *) ASM_REWRITE_TAC[];
       (* The initialization: from drain_bridge, the three reloads and the cbz
-         at 0xddc, not taken: resolve its condition on
+         at 0xdd8, not taken: resolve its condition on
          val (word loop_remain) = 0 with val (word loop_remain) = loop_remain
          (VAL_WORD_EQ, loop_remain < 4) and ~(loop_remain = 0), so that
-         execution continues at 0xde0. *)
+         execution continues at 0xddc. *)
       ENSURES_INIT_TAC "s0" THEN RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_4]) THEN
       MAP_EVERY tail_stepconv (1--4) THEN
       ENSURES_FINAL_STATE_TAC THEN
@@ -3138,7 +3150,7 @@ let tail_tac =
       REWRITE_TAC[FORALL_UNWIND_THM2] THEN
       ASM_REWRITE_TAC[ARITH_RULE `16 * (4 * a + b) = 64 * a + 16 * b`] THEN
       tail_g3_close;
-      (* The back edge, the cbnz at 0xecc taken (X16 = word (loop_remain - i)
+      (* The back edge, the cbnz at 0xec8 taken (X16 = word (loop_remain - i)
          with i < loop_remain): unfold htable_mem_4 in the assumption and in
          the goal before the step, so that the six reads carry through it,
          and resolve the condition with val (word loop_remain) = loop_remain
@@ -3156,8 +3168,8 @@ let tail_tac =
           ARITH_TAC;
         ALL_TAC] THEN
       ASM_SIMP_TAC[ARITH_RULE `i < loop_remain ==> ~(loop_remain = i)`];
-      (* The exit: tail_inv loop_remain at 0xecc -> tail_post at 0xef4, ten
-         steps (the cbnz not taken, then the stores up to 0xef0);
+      (* The exit: tail_inv loop_remain at 0xec8 -> tail_post at 0xef0, ten
+         steps (the cbnz not taken, then the stores up to 0xeec);
          nblocks = 4 * loop_count + loop_remain. *)
       ENSURES_INIT_TAC "s0" THEN
       FIRST_X_ASSUM(STRIP_ASSUME_TAC o CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
@@ -3188,15 +3200,15 @@ let tail_tac =
 let TAILLEG = GEN_ALL(prove(tail_goal, tail_tac));;
 
 (* ------------------------------------------------------------------------- *)
-(* loop_count = 1: ITER1_LEG, pc + 0xb0 -> drain_bridge at pc + 0xdd0.  The  *)
-(* cbz at 0xb0 is not taken and the b.eq at 0xb8 is taken to the iter_1      *)
-(* block 0xa90..0xdcc, 208 straight-line instructions that fall through to   *)
-(* 0xdd0 (211 steps in all).                                                 *)
+(* loop_count = 1: ITER1_LEG, pc + 0xac -> drain_bridge at pc + 0xdcc.  The  *)
+(* cbz at 0xac is not taken and the b.eq at 0xb4 is taken to the iter_1      *)
+(* block 0xa8c..0xdc8, 208 straight-line instructions that fall through to   *)
+(* 0xdcc (211 steps in all).                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-(* The entry state at pc + 0xb0: fill_pre_state with the PC changed. *)
+(* The entry state at pc + 0xac: fill_pre_state with the PC changed. *)
 let iter1_entry = mk_abs(`s:armstate`,
-  subst [`word (pc + 0xb0):int64`, `word (pc + 188):int64`]
+  subst [`word (pc + 0xac):int64`, `word (pc + 0xb8):int64`]
     (snd(dest_abs fill_pre_state)));;
 
 (* The precondition: fill_goal's with 3 <= loop_count dropped and
@@ -3256,7 +3268,7 @@ let iter1_head =
   iter1_prime THEN INPUT_LEG_TAC [];;
 
 (* The stack-store merge sites of ITER1_LEG, as (step, sp offset) with steps
-   counted from 0xb0 (step k >= 4 is at 0xa90 + 4*(k-4)): each site is the
+   counted from 0xac (step k >= 4 is at 0xa8c + 4*(k-4)): each site is the
    step just before the 128-bit reload of the slot. *)
 let iter1_merges_abs =
   [(19,208);(23,192);(26,160);(34,192);(54,160);(60,176);(66,208);(69,176)];;
@@ -3464,19 +3476,19 @@ let broad_frame =
 let widen_leg = WIDEN_LEG_FRAME_RULE broad_frame;;
 let BODYLEG_BROAD = widen_leg BODYLEG;;
 
-(* BODY_DRAIN: swp_inv (loop_count - 2) at pc + 0x560 -> drain_bridge at
-   pc + 0xdd0, the last iteration of the loop body and the drain. *)
+(* BODY_DRAIN: swp_inv (loop_count - 2) at pc + 0x55c -> drain_bridge at
+   pc + 0xdcc, the last iteration of the loop body and the drain. *)
 let body_drain_goal =
   mk_imp(lhand drain_goal,
     list_mk_icomb "ensures" [`arm`;
-      leg_state swp_inv `0x560` `loop_count - 2` ; drain_bridge ;
+      leg_state swp_inv `0x55c` `loop_count - 2` ; drain_bridge ;
       broad_frame]);;
 let BODY_DRAIN = prove(body_drain_goal,
    REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
    REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
    SUBGOAL_THEN `(loop_count - 2) + 1 = loop_count - 1` ASSUME_TAC THENL
     [UNDISCH_TAC `2 <= loop_count` THEN ARITH_TAC; ALL_TAC] THEN
-   ENSURES_SEQUENCE_TAC `pc + 0x8a4`
+   ENSURES_SEQUENCE_TAC `pc + 0x8a0`
      (rhs(concl((BETA_CONV THENC REWRITE_CONV[ADD_CLAUSES])
                 (mk_comb(swp_inv,`loop_count - 1`))))) THEN
    CONJ_TAC THENL
@@ -3489,11 +3501,11 @@ let BODY_DRAIN = prove(body_drain_goal,
      REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
      MATCH_MP_TAC DRAINLEG THEN ASM_REWRITE_TAC[]]);;
 
-(* MAINLEG: pc + 0xbc -> drain_bridge for loop_count >= 3.  After FILLLEG
-   (swp_inv 1 at pc + 0x560), loop_count = 3 goes straight to BODY_DRAIN;
+(* MAINLEG: pc + 0xb8 -> drain_bridge for loop_count >= 3.  After FILLLEG
+   (swp_inv 1 at pc + 0x55c), loop_count = 3 goes straight to BODY_DRAIN;
    otherwise an ENSURES_WHILE_UP over loop_count - 3 iterations from
-   pc + 0x560 to pc + 0x560, with while_inv k = swp_inv (k+1) (each
-   iteration is BODYLEG_BROAD and the cbnz back edge at 0x8a4), reaches
+   pc + 0x55c to pc + 0x55c, with while_inv k = swp_inv (k+1) (each
+   iteration is BODYLEG_BROAD and the cbnz back edge at 0x8a0), reaches
    swp_inv (loop_count - 2), and BODY_DRAIN finishes. *)
 let while_inv = mk_gabs(`k:num`, mk_comb(swp_inv, `k + 1`));;
 
@@ -3505,7 +3517,7 @@ let mainleg_goal =
 let MAINLEG = prove(mainleg_goal,
   REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  ENSURES_SEQUENCE_TAC `pc + 0x560`
+  ENSURES_SEQUENCE_TAC `pc + 0x55c`
     (rhs(concl((BETA_CONV THENC REWRITE_CONV[ADD_CLAUSES])
                (mk_comb(swp_inv,`1`))))) THEN
   CONJ_TAC THENL
@@ -3520,7 +3532,7 @@ let MAINLEG = prove(mainleg_goal,
       let invbody_s = rhs(concl(BETA_CONV(mk_comb(invbody,sv)))) in
       let dpre = mk_abs(sv, list_mk_conj(
         [`aligned_bytes_loaded s (word pc) aes256_gcm_enc_tmc`;
-         `read PC s = word (pc + 0x560)`] @ conjuncts invbody_s)) in
+         `read PC s = word (pc + 0x55c)`] @ conjuncts invbody_s)) in
       (ENSURES_PRECONDITION_TAC dpre THEN CONJ_TAC THENL
         [GEN_TAC THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
          ASM_REWRITE_TAC[ARITH_RULE `3 - 2 = 1`; ADD_CLAUSES] THEN
@@ -3530,11 +3542,11 @@ let MAINLEG = prove(mainleg_goal,
          MAP_EVERY (fun t -> TRY(UNDISCH_TAC t)) [`3 <= loop_count`] THEN
          ARITH_TAC]) (asl,w));
     ALL_TAC] THEN
-  ENSURES_SEQUENCE_TAC `pc + 0x560`
+  ENSURES_SEQUENCE_TAC `pc + 0x55c`
     (rhs(concl((BETA_CONV THENC REWRITE_CONV[ADD_CLAUSES])
                (mk_comb(swp_inv,`loop_count - 2`))))) THEN
   CONJ_TAC THENL
-   [ENSURES_WHILE_UP_TAC `loop_count - 3` `pc + 0x560` `pc + 0x560`
+   [ENSURES_WHILE_UP_TAC `loop_count - 3` `pc + 0x55c` `pc + 0x55c`
     while_inv THEN
     REPEAT CONJ_TAC THENL
      [MAP_EVERY (fun t -> TRY(UNDISCH_TAC t))
@@ -3543,7 +3555,7 @@ let MAINLEG = prove(mainleg_goal,
       REWRITE_TAC[ADD_CLAUSES] THEN ASM_REWRITE_TAC[];
       X_GEN_TAC `k:num` THEN STRIP_TAC THEN
       CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN REWRITE_TAC[ADD_CLAUSES] THEN
-      ENSURES_SEQUENCE_TAC `pc + 0x8a4`
+      ENSURES_SEQUENCE_TAC `pc + 0x8a0`
         (rhs(concl((BETA_CONV THENC REWRITE_CONV[ADD_CLAUSES])
                    (mk_comb(swp_inv,`(k+1)+1`))))) THEN
       CONJ_TAC THENL
@@ -3591,15 +3603,15 @@ let MAINLEG = prove(mainleg_goal,
     MAP_EVERY (fun t -> TRY(UNDISCH_TAC t)) [`3 <= loop_count`] THEN
     ARITH_TAC]);;
 
-(* CORE_FROM88: pc + 0xb0 -> tail_post.  Its frame is TAILLEG's, the widest
+(* CORE_FROM88: pc + 0xac -> tail_post.  Its frame is TAILLEG's, the widest
    (the out_p bytes, the stack slots, ivec_p and tag_p); the legs ending at
    drain_bridge are widened to it. *)
 let from88_frame =
   last(snd(strip_comb(snd(dest_imp(concl(SPEC_ALL TAILLEG))))));;
 let widen_to_from88 = WIDEN_LEG_FRAME_RULE from88_frame;;
-(* The same entry state at pc + 0xb0, for CORE_FROM88. *)
+(* The same entry state at pc + 0xac, for CORE_FROM88. *)
 let from88_entry = mk_abs(`s:armstate`,
-  subst [`word (pc + 0xb0):int64`, `word (pc + 188):int64`]
+  subst [`word (pc + 0xac):int64`, `word (pc + 0xb8):int64`]
     (snd(dest_abs fill_pre_state)));;
 (* The general precondition: drain_goal's without 2 <= loop_count. *)
 let gen_precond =
@@ -3614,7 +3626,7 @@ let core_from88_goal =
 let mk_lcN_goal n =
   mk_imp(mk_conj(gen_precond, mk_eq(`loop_count:num`, mk_small_numeral n)),
     list_mk_icomb "ensures" [`arm`; from88_entry; drain_bridge; broad_frame]);;
-(* loop_count = 0: the cbz x1 at 0xb0 is taken to 0xdd0, skipping the loop.
+(* loop_count = 0: the cbz x1 at 0xac is taken to 0xdcc, skipping the loop.
    One instruction; drain_bridge reduces by list_of_seq _ 0 = [],
    nist_ghash h tag0 [] = tag0, 64*0 = 0 etc.  htable_mem_4 is unfolded in
    the goal first, so that its memory reads carry through the step. *)
@@ -3697,9 +3709,9 @@ let APPLY_LEG_TAC (leg:thm) : tactic =
   ORELSE
   (apply_leg_1 (REWRITE_RULE[GSYM CONJ_ASSOC] leg));;
 let LC2_PARTA_W = WIDEN_LEG_FRAME_RULE broad_frame LC2_PARTA;;
-(* LEG_LC2 (loop_count = 2): the hop pc + 0xb0 -> pc + 0xbc (with
+(* LEG_LC2 (loop_count = 2): the hop pc + 0xac -> pc + 0xb8 (with
    htable_mem_4 folded again at the waypoint), LC2_PARTA (the fill,
-   pc + 0xbc -> pc + 0x8a8) and DRAINLEG_8A8 (pc + 0x8a8 -> drain_bridge).
+   pc + 0xb8 -> pc + 0x8a4) and DRAINLEG_8A8 (pc + 0x8a4 -> drain_bridge).
    For the drain, ENSURES_PRECONDITION_TAC takes the full leg_state
    predicate (with the aligned and PC conjuncts) and normalizes the literal
    index 1 against loop_count - 1 under loop_count = 2.  REFOLD_ABI_TAC is
@@ -3709,9 +3721,9 @@ let LC2_PARTA_W = WIDEN_LEG_FRAME_RULE broad_frame LC2_PARTA;;
 let LEG_LC2 = GEN_ALL(prove(mk_lcN_goal 2,
   REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  ENSURES_SEQUENCE_TAC `pc + 0xbc` (strip_aligned_pc fill_pre_state) THEN
+  ENSURES_SEQUENCE_TAC `pc + 0xb8` (strip_aligned_pc fill_pre_state) THEN
   CONJ_TAC THENL
-   [(* the hop 0xb0 -> 0xbc, with htable_mem_4 folded at the end *)
+   [(* the hop 0xac -> 0xb8, with htable_mem_4 folded at the end *)
     ENSURES_INIT_TAC "s0" THEN RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_4]) THEN
     SUBGOAL_THEN `val(word loop_count:int64) = loop_count` ASSUME_TAC THENL
      [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
@@ -3727,7 +3739,7 @@ let LEG_LC2 = GEN_ALL(prove(mk_lcN_goal 2,
     MAP_EVERY (fun n -> ARM_STEPS_TAC AES256_GCM_ENC_EXEC [n]) (1--3) THEN
     ENSURES_FINAL_STATE_TAC THEN REWRITE_TAC[htable_mem_4] THEN
     ASM_REWRITE_TAC[];
-    ENSURES_SEQUENCE_TAC `pc + 0x8a8` (strip_aligned_pc lc2_waypoint) THEN
+    ENSURES_SEQUENCE_TAC `pc + 0x8a4` (strip_aligned_pc lc2_waypoint) THEN
     CONJ_TAC THENL
      [(* LC2_PARTA (widened), then the leftover hypotheses of its
          precondition *)
@@ -3736,7 +3748,7 @@ let LEG_LC2 = GEN_ALL(prove(mk_lcN_goal 2,
        TRY(FIRST_ASSUM ACCEPT_TAC) THEN
        TRY(ASM_ARITH_TAC) THEN TRY NONOVERLAPPING_TAC);
       (* the drain, after normalizing the index under loop_count = 2 *)
-      ENSURES_PRECONDITION_TAC (leg_state swp_inv `0x8a8` `loop_count - 1`) THEN
+      ENSURES_PRECONDITION_TAC (leg_state swp_inv `0x8a4` `loop_count - 1`) THEN
       CONJ_TAC THENL
        [GEN_TAC THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
         FIRST_ASSUM(fun th -> if lhs(concl th)=`loop_count:num`
@@ -3760,14 +3772,14 @@ let leg_precond_close =
   ASM_REWRITE_TAC[];;
 
 (* CORE_FROM88: by cases on loop_count, LEG_LC0, LEG_LC1, LEG_LC2 or (for
-   loop_count >= 3, after the hop to pc + 0xbc) MAINLEG, all ending at
+   loop_count >= 3, after the hop to pc + 0xb8) MAINLEG, all ending at
    drain_bridge; then TAILLEG. *)
 let CORE_FROM88 = prove(core_from88_goal,
   REPEAT GEN_TAC THEN INTRO_HYPS_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  ENSURES_SEQUENCE_TAC `pc + 0xdd0` drain_bridge_body THEN
+  ENSURES_SEQUENCE_TAC `pc + 0xdcc` drain_bridge_body THEN
   CONJ_TAC THENL
-   [(* the entry at 0xb0 -> drain_bridge at 0xdd0, by cases on
+   [(* the entry at 0xac -> drain_bridge at 0xdcc, by cases on
        loop_count *)
     ASM_CASES_TAC `loop_count = 0` THENL
      [REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -3782,9 +3794,9 @@ let CORE_FROM88 = prove(core_from88_goal,
      [MAP_EVERY (fun t -> TRY(UNDISCH_TAC t))
         [`~(loop_count=0)`;`~(loop_count=1)`;`~(loop_count=2)`] THEN
         ARITH_TAC; ALL_TAC] THEN
-    (* loop_count >= 3: the hop 0xb0 -> 0xbc (the cmp x1,#1 and b.eq at
-       0xb8 fall through), then MAINLEG *)
-    ENSURES_SEQUENCE_TAC `pc + 0xbc` fill_pre_body_flat THEN
+    (* loop_count >= 3: the hop 0xac -> 0xb8 (the cmp x1,#1 and b.eq at
+       0xb4 fall through), then MAINLEG *)
+    ENSURES_SEQUENCE_TAC `pc + 0xb8` fill_pre_body_flat THEN
     CONJ_TAC THENL
      [ENSURES_INIT_TAC "s0" THEN RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_4]) THEN
       SUBGOAL_THEN `val(word loop_count:int64) = loop_count` ASSUME_TAC THENL
@@ -3802,12 +3814,12 @@ let CORE_FROM88 = prove(core_from88_goal,
       REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
       REWRITE_TAC[GSYM htable_mem_4] THEN
       MATCH_MP_TAC MAINLEG_W THEN leg_precond_close];
-    (* drain_bridge at 0xdd0 -> tail_post at 0xef4 *)
+    (* drain_bridge at 0xdcc -> tail_post at 0xef0 *)
     REWRITE_TAC[GSYM MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     MATCH_MP_TAC TAILLEG THEN leg_precond_close]);;
 
 (* ========================================================================= *)
-(* The core correctness theorem, pc + 0x2c -> pc + 0xef4.                    *)
+(* The core correctness theorem, pc + 0x28 -> pc + 0xef0.                    *)
 (* ========================================================================= *)
 
 (* The witness for ENSURES_POSTCONDITION_THM below: the stronger
@@ -3836,7 +3848,7 @@ let AES256_GCM_ENC_CORRECT = prove
     ==>
     ensures arm
       (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_tmc /\
-           read PC s = word (pc + 0x2c) /\
+           read PC s = word (pc + 0x28) /\
            read SP s = stackpointer /\
            C_ARGUMENTS
             [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
@@ -3850,7 +3862,7 @@ let AES256_GCM_ENC_CORRECT = prove
                     inblock i) /\
            htable_mem_4 (ghash_twist (aes256_cipher (word 0) rk))
                       htable_p s)
-      (\s. read PC s = word (pc + 0xef4) /\
+      (\s. read PC s = word (pc + 0xef0) /\
            (!i. i < val len_bits DIV 128
                 ==> read (memory :> bytes128 (word_add out_p (word(16*i)))) s =
                     word_xor (aes_ctr_block aes256_cipher c nonce rk i)
@@ -3864,9 +3876,11 @@ let AES256_GCM_ENC_CORRECT = prove
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
                (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read (memory :> bytes512 (word_add stackpointer (word 160))) s =
+             word 0 /\
            read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-       MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30] ,,
+       MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28] ,,
        MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q8; Q9; Q10; Q11; Q12; Q13; Q14;
                   Q15; Q29; Q30; Q31] ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128)] ,,
@@ -3902,7 +3916,7 @@ let AES256_GCM_ENC_CORRECT = prove
 
   (***** Initial state setup ****)
 
-  ENSURES_SEQUENCE_TAC `pc + 0xb0`
+  ENSURES_SEQUENCE_TAC `pc + 0xac`
    `\s. read X0 s = in_p /\
         read X2 s = out_p /\
         read X3 s = tag_p /\
@@ -4026,7 +4040,7 @@ let AES256_GCM_ENC_CORRECT = prove
       REWRITE_TAC[byteswap128] THEN CONV_TAC WORD_BLAST];
     MAP_EVERY VAL_INT64_TAC
      [`nblocks:num`; `loop_count:num`; `loop_remain:num`]] THEN
-  (* The second branch, pc + 0xb0 -> pc + 0xef4, is CORE_FROM88 up to two
+  (* The second branch, pc + 0xac -> pc + 0xef0, is CORE_FROM88 up to two
      differences.  (1) htable_mem_4 is unfolded and flattened in the goal's
      precondition (the preamble branch rewrote with htable_mem_4 and
      GSYM CONJ_ASSOC) but folded in from88_entry, so the flattened
@@ -4048,8 +4062,8 @@ let AES256_GCM_ENC_CORRECT = prove
 
 (* ========================================================================= *)
 (* The subroutine theorems: AES256_GCM_ENC_CORRECT lifted through the        *)
-(* 11-instruction prologue and epilogue, which save and restore D8-D15 and   *)
-(* X19-X30 in a 224-byte frame (ARM_ADD_RETURN_STACK_TAC), then to the full  *)
+(* 10-instruction prologue and epilogue, which save and restore D8-D15 and   *)
+(* X19-X28 in a 224-byte frame (ARM_ADD_RETURN_STACK_TAC), then to the full  *)
 (* code with its BTI landing pad.                                            *)
 (* ========================================================================= *)
 
@@ -4102,6 +4116,8 @@ let AES256_GCM_ENC_NOIBT_SUBROUTINE_CORRECT = prove
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
                (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read (memory :> bytes512 (word_sub stackpointer (word 64))) s =
+             word 0 /\
            read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
@@ -4110,12 +4126,12 @@ let AES256_GCM_ENC_NOIBT_SUBROUTINE_CORRECT = prove
                   memory :> bytes(word_sub stackpointer (word 224), 224)])`,
   REWRITE_TAC[fst AES256_GCM_ENC_EXEC; htable_mem_4; KEY15_SPLIT] THEN
   ARM_ADD_RETURN_STACK_TAC
-    ~pre_post_nsteps:(11, 11)
+    ~pre_post_nsteps:(10, 10)
     AES256_GCM_ENC_EXEC
     (REWRITE_RULE[KEY15_SPLIT]
        (REWRITE_RULE[fst AES256_GCM_ENC_EXEC; htable_mem_4]
         AES256_GCM_ENC_CORRECT))
-    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30;
+    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28;
       D8; D9; D10; D11; D12; D13; D14; D15]` 224);;
 
 (* The same for the full code, with its BTI landing pad. *)
@@ -4169,6 +4185,8 @@ let AES256_GCM_ENC_SUBROUTINE_CORRECT = prove
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
                (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read (memory :> bytes512 (word_sub stackpointer (word 64))) s =
+             word 0 /\
            read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
@@ -4181,13 +4199,13 @@ let AES256_GCM_ENC_SUBROUTINE_CORRECT = prove
 
 (* ========================================================================= *)
 (* Constant time and memory safety.  AES256_GCM_ENC_SAFE covers the same     *)
-(* core as AES256_GCM_ENC_CORRECT (pc + 0x2c -> pc + 0xef4): the event trace *)
+(* core as AES256_GCM_ENC_CORRECT (pc + 0x28 -> pc + 0xef0): the event trace *)
 (* is a function of the public arguments only, given by the scaffold         *)
 (* scaffold_enc (CONCRETIZE_F_EVENTS_TAC), and every memory access stays     *)
 (* within the declared buffers.  The proof walks the same regions with the   *)
 (* event-tracking simulator SAFE_SIM_TAC: the preamble, the cases loop_count *)
 (* = 0, 1 and 2, and for loop_count >= 3 a loop of loop_count - 2 iterations *)
-(* from pc + 0x560 to pc + 0x8a8 between the fill and the drain, then the    *)
+(* from pc + 0x55c to pc + 0x8a4 between the fill and the drain, then the    *)
 (* tail loop.  The leaf obligations are closed by the shared closers of      *)
 (* utils/aes_gcm_common.ml and the reconcilers FILL_X1_TAC and               *)
 (* DRAIN_ADDR_K_TAC.                                                         *)
@@ -4281,11 +4299,11 @@ let AES256_GCM_ENC_SAFE = prove
          (word_add stackpointer (word 160), 64)]
       ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aes256_gcm_enc_tmc /\
-               read PC s = word (pc + 0x2c) /\ read SP s = stackpointer /\
+               read PC s = word (pc + 0x28) /\ read SP s = stackpointer /\
                C_ARGUMENTS
                  [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
                read events s = e)
-          (\s. read PC s = word (pc + 0xef4) /\
+          (\s. read PC s = word (pc + 0xef0) /\
                (exists e2.
                     read events s = APPEND e2 e /\
                     e2 =
@@ -4300,22 +4318,22 @@ let AES256_GCM_ENC_SAFE = prove
                        word_add stackpointer (word 160), 64]))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [X19; X20; X21; X22; X23; X24;
-                      X25; X26; X27; X28; X29; X30] ,,
+                      X25; X26; X27; X28] ,,
            MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15] ,,
            MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
                       memory :> bytes(tag_p, 16);
                       memory :> bytes(ivec_p, 16);
                       memory :> bytes(word_add stackpointer (word 160), 64)])`,
   CONCRETIZE_F_EVENTS_TAC scaffold_enc THEN OPEN_ENC_TAC THEN
-  (* the top split at 0xdd0, between the main region and the tail *)
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xdd0`
+  (* the top split at 0xdcc, between the main region and the tail *)
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xdcc`
    `\s. read X0 s = word_add in_p (word (64 * loop_count)) /\
         read X2 s = word_add out_p (word (64 * loop_count)) /\
         read X3 s = tag_p /\ read X4 s = ivec_p /\ read X6 s = htable_p /\
         read SP s = stackpointer /\ read X16 s = word loop_remain` THEN
   CONJ_TAC THENL
-   [(* the main region, pc + 0x2c -> pc + 0xdd0 *)
-    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xb0`
+   [(* the main region, pc + 0x28 -> pc + 0xdcc *)
+    ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xac`
      `\s. read X0 s = in_p /\ read X2 s = out_p /\ read X3 s = tag_p /\
           read X4 s = ivec_p /\ read X6 s = htable_p /\
           read SP s = stackpointer /\
@@ -4335,7 +4353,7 @@ let AES256_GCM_ENC_SAFE = prove
     REDUCE_IFNE_TAC `loop_count:num` `2` THEN
     SUBGOAL_THEN `3 <= loop_count` ASSUME_TAC THENL
     [ASM_ARITH_TAC; ALL_TAC] THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `loop_count - 2` `pc + 0x560` `pc + 0x8a8`
+    ENSURES_EVENTS_WHILE_UP2_TAC `loop_count - 2` `pc + 0x55c` `pc + 0x8a4`
      `\i s. read X0 s = word_add in_p (word (64 * i + 128)) /\
             read X2 s = word_add out_p (word (64 * i + 64)) /\
             read X3 s = tag_p /\ read X4 s = ivec_p /\ read X6 s = htable_p /\
@@ -4352,12 +4370,12 @@ let AES256_GCM_ENC_SAFE = prove
       SAFE_SIM_TAC (1--210) THEN CLOSE_ENC_TAC;
       SAFE_SIM_TAC (1--122) THEN CLOSE_ENC_TAC];
     ALL_TAC] THEN
-  (* the tail region, pc + 0xdd0 -> pc + 0xef4 *)
+  (* the tail region, pc + 0xdcc -> pc + 0xef0 *)
   ASM_CASES_TAC `loop_remain = 0` THENL
    [REDUCE_IF0_TAC `loop_remain:num` THEN SAFE_SIM_TAC (1--13) THEN
     CLOSE_ENC_TAC; ALL_TAC] THEN
   REDUCE_IFN0_TAC `loop_remain:num` THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `loop_remain:num` `pc + 0xde0` `pc + 0xed0`
+  ENSURES_EVENTS_WHILE_UP2_TAC `loop_remain:num` `pc + 0xddc` `pc + 0xecc`
    `\i s. read X0 s = word_add in_p (word (64 * loop_count + 16 * i)) /\
           read X2 s = word_add out_p (word (64 * loop_count + 16 * i)) /\
           read X3 s = tag_p /\ read X4 s = ivec_p /\ read X6 s = htable_p /\
@@ -4372,7 +4390,7 @@ let AES256_GCM_ENC_SAFE = prove
 
 (* ------------------------------------------------------------------------- *)
 (* The whole-function version, obtained from the core theorem exactly as the *)
-(* correctness theorem is: the 11-instruction prologue and epilogue save and *)
+(* correctness theorem is: the 10-instruction prologue and epilogue save and *)
 (* restore the callee-saved registers in a 224-byte frame.                   *)
 (* ------------------------------------------------------------------------- *)
 let AES256_GCM_ENC_NOIBT_SUBROUTINE_SAFE = prove
@@ -4420,9 +4438,9 @@ let AES256_GCM_ENC_NOIBT_SUBROUTINE_SAFE = prove
                       memory :> bytes(ivec_p, 16);
                       memory :> bytes(word_sub stackpointer (word 224), 224)])`,
   ARM_ADD_RETURN_STACK_TAC
-    ~pre_post_nsteps:(11, 11)
+    ~pre_post_nsteps:(10, 10)
     AES256_GCM_ENC_EXEC AES256_GCM_ENC_SAFE
-    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30;
+    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28;
       D8; D9; D10; D11; D12; D13; D14; D15]` 224 THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
