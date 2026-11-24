@@ -7298,6 +7298,14 @@ let X86_TRIM_EXEC_RULE =
 
 let X86_MK_CORE_EXEC_RULE = X86_MK_EXEC_RULE o X86_TRIM_EXEC_RULE;;
 
+(* The prove that the rules X86_CORE_PROMOTE and ADD_IBT_RULE use: HOL      *)
+(* Light's, unless a file that proves theorems relative to contracts         *)
+(* (common/relative.ml) sets it to its own, so that the rules also apply to  *)
+(* a theorem with assumptions that are contracts (see                        *)
+(* x86/proofs/mlkem_native/relative.ml).                                     *)
+
+let x86_rule_prove = ref prove;;
+
 let X86_CORE_PROMOTE =
   let lemma = prove
    (`(ensures x86 (\s. bytes_loaded s (word pc) (BUTLAST l) /\ P s) Q C
@@ -7329,7 +7337,7 @@ let X86_CORE_PROMOTE =
       let new_body:term =
         concl (try rule2 (ASSUME body) with Failure _ -> rule1 (ASSUME body)) in
       let new_goal = mk_exists (ex_var, list_mk_forall (univ_vars,new_body)) in
-      prove(new_goal,
+      !x86_rule_prove(new_goal,
         MP_TAC th THEN STRIP_TAC THEN
         (* exists f_events ... *)
         EXISTS_TAC ex_var THEN
@@ -7842,7 +7850,7 @@ let ADD_IBT_RULE ?(bridge:thm option = None) th =
       | Comb(s,t) -> mk_comb(adjust s,adjust t)
       | Abs(x,t) -> mk_abs(x,adjust t)
       | _ -> if tm = trimctm then fullmctm else tm in
-    prove(adjust (concl th), ADD_IBT_TAC fullmc trimc th)
+    !x86_rule_prove(adjust (concl th), ADD_IBT_TAC fullmc trimc th)
   | Some bridge_th, _ ->
     (* Parametrized path: read mc/tmc head constants from the bridge, sanity-
        check the tmc head matches the input theorem, then bump every numeric
@@ -7872,7 +7880,7 @@ let ADD_IBT_RULE ?(bridge:thm option = None) th =
       | Comb(s,t) -> mk_comb(adjust s,adjust t)
       | Abs(x,t) -> mk_abs(x,adjust t)
       | _ -> if tm = trim_head_const then fullmctm else tm in
-    prove(adjust (concl th), ADD_IBT_TAC_PARAMETRIZED bridge_th th);;
+    !x86_rule_prove(adjust (concl th), ADD_IBT_TAC_PARAMETRIZED bridge_th th);;
 
 let READ_ZMM_BOTTOM_QUARTER = prove
  (`!zmmx:(S,512 word)component s.

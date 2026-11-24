@@ -10,3 +10,7 @@
 
 needs "x86/proofs/base.ml";;
 needs "common/relative.ml";;
+
+(* X86_CORE_PROMOTE and ADD_IBT_RULE (x86/proofs/x86.ml) use prove through  *)
+(* x86_rule_prove                                                            *)
+x86_rule_prove := prove;;
