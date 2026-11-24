@@ -109,7 +109,7 @@ let lemma_rem = prove
   SPEC_TAC(`&3329:int`,`p:int`) THEN CONV_TAC INTEGER_RULE);;
 
 let overall_lemma = prove
- (`!x:int16.
+ (`forall x:int16.
         ival(word_add (barred x)
                       (word_and (word_ishr (barred x) 15) (word 3329))) =
         ival x rem &3329`,
@@ -117,17 +117,17 @@ let overall_lemma = prove
   BITBLAST_TAC);;
 
 let MLKEM_REDUCE_CORRECT = prove
- (`!a x pc.
+ (`forall a x pc.
         nonoverlapping (word pc,0x124) (a,512)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) mlkem_reduce_mc /\
                   read PC s = word pc /\
                   C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read PC s = word(pc + 0x120) /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> ival(read(memory :> bytes16
                                  (word_add a (word(2 * i)))) s) =
                           ival(x i) rem &3329)
@@ -179,18 +179,18 @@ let MLKEM_REDUCE_CORRECT = prove
   REWRITE_TAC[GSYM barred; overall_lemma]);;
 
 let MLKEM_REDUCE_SUBROUTINE_CORRECT = prove
- (`!a x pc returnaddress.
+ (`forall a x pc returnaddress.
         nonoverlapping (word pc,0x124) (a,512)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) mlkem_reduce_mc /\
                   read PC s = word pc /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read PC s = returnaddress /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> ival(read(memory :> bytes16
                                  (word_add a (word(2 * i)))) s) =
                           ival(x i) rem &3329)

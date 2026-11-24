@@ -240,7 +240,7 @@ let VPABSD_VPCMPGTD_BD = prove(
 
 (* val(word_join a b) = 0 iff val a = 0 /\ val b = 0 (for tybit0 doubled type) *)
 let VAL_WORD_JOIN_TYBIT0_EQ_0 = prove(
-  `!a:N word. !b:N word. (val(word_join a b :(N tybit0)word) = 0) <=> val a = 0 /\ val b = 0`,
+  `forall a:N word. forall b:N word. (val(word_join a b :(N tybit0)word) = 0) <=> val a = 0 /\ val b = 0`,
   REPEAT GEN_TAC THEN
   SIMP_TAC[VAL_WORD_JOIN_SIMPLE; ARITH_RULE `n + n = 2 * n`; DIMINDEX_TYBIT0] THEN
   MP_TAC(ISPEC `a:N word` VAL_BOUND) THEN
@@ -271,26 +271,26 @@ let WORD_JOIN_BYTE_BIT_TO_BITVAL = prove(
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_CHKNORM_CORRECT = prove(
- `!a (x:num->int32) (bound:int32) pc.
+ `forall a (x:num->int32) (bound:int32) pc.
         nonoverlapping (word pc, 558) (a, 1024)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) (BUTLAST mldsa_chknorm_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [a; word_zx bound] s /\
                   &0 <= ival bound /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
              (\s. read RIP s = word(pc + 557) /\
-                  read RAX s = word(bitval(~(!i. i < 256 ==> abs(ival(x i)) < ival bound))))
+                  read RAX s = word(bitval(~(forall i. i < 256 ==> abs(ival(x i)) < ival bound))))
              (MAYCHANGE [RIP] ,, MAYCHANGE [events] ,,
               MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5] ,,
               MAYCHANGE [RAX; RSI] ,, MAYCHANGE SOME_FLAGS)`,
   (* Bridge the CBMC-aligned universal-negation postcondition to the existential
      form that the rest of the proof reasons about. *)
   REWRITE_TAC[MESON[INT_NOT_LT; INT_GE]
-   `(~(!i. i < n ==> abs(ival((x:num->int32) i)) < (b:int))) <=>
-    (?i. i < n /\ abs(ival(x i)) >= b)`] THEN
+   `(~(forall i. i < n ==> abs(ival((x:num->int32) i)) < (b:int))) <=>
+    (exists i. i < n /\ abs(ival(x i)) >= b)`] THEN
   MAP_EVERY X_GEN_TAC [`a:int64`; `x:num->int32`; `bound:int32`; `pc:num`] THEN
   REWRITE_TAC[SOME_FLAGS; C_ARGUMENTS;
               NONOVERLAPPING_CLAUSES; fst MLDSA_CHKNORM_TMC_EXEC] THEN
@@ -341,7 +341,7 @@ let MLDSA_CHKNORM_CORRECT = prove(
   GEN_REWRITE_TAC (BINOP_CONV o ONCE_DEPTH_CONV)
     [prove(`b = ~ (~ (b : bool))`, REWRITE_TAC[])] THEN
   GEN_REWRITE_TAC TOP_SWEEP_CONV
-    [MESON[] `~(?i. i < n /\ P i) <=> (!i. i < n ==> ~P i)`; DE_MORGAN_THM] THEN
+    [MESON[] `~(exists i. i < n /\ P i) <=> (forall i. i < n ==> ~P i)`; DE_MORGAN_THM] THEN
   CONV_TAC (ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
   REPEAT AP_TERM_TAC THEN EQ_TAC THEN SIMP_TAC[]);;
 
@@ -350,7 +350,7 @@ let MLDSA_CHKNORM_CORRECT = prove(
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_CHKNORM_NOIBT_SUBROUTINE_CORRECT = prove(
- `!a (x:num->int32) (bound:int32) pc stackpointer returnaddress.
+ `forall a (x:num->int32) (bound:int32) pc stackpointer returnaddress.
         nonoverlapping (word pc, LENGTH mldsa_chknorm_tmc) (a, 1024) /\
         nonoverlapping (stackpointer,8) (a, 1024)
         ==> ensures x86
@@ -360,17 +360,17 @@ let MLDSA_CHKNORM_NOIBT_SUBROUTINE_CORRECT = prove(
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a; word_zx bound] s /\
                   &0 <= ival bound /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  read RAX s = word(bitval(~(!i. i < 256 ==> abs(ival(x i)) < ival bound))))
+                  read RAX s = word(bitval(~(forall i. i < 256 ==> abs(ival(x i)) < ival bound))))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_chknorm_tmc MLDSA_CHKNORM_CORRECT);;
 
 let MLDSA_CHKNORM_SUBROUTINE_CORRECT = prove(
- `!a (x:num->int32) (bound:int32) pc stackpointer returnaddress.
+ `forall a (x:num->int32) (bound:int32) pc stackpointer returnaddress.
         nonoverlapping (word pc, LENGTH mldsa_chknorm_mc) (a, 1024) /\
         nonoverlapping (stackpointer,8) (a, 1024)
         ==> ensures x86
@@ -380,12 +380,12 @@ let MLDSA_CHKNORM_SUBROUTINE_CORRECT = prove(
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a; word_zx bound] s /\
                   &0 <= ival bound /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  read RAX s = word(bitval(~(!i. i < 256 ==> abs(ival(x i)) < ival bound))))
+                  read RAX s = word(bitval(~(forall i. i < 256 ==> abs(ival(x i)) < ival bound))))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_CHKNORM_NOIBT_SUBROUTINE_CORRECT));;
 
@@ -471,7 +471,7 @@ let MLDSA_CHKNORM_WINDOWS_TMC_EXEC =
   X86_MK_EXEC_RULE mldsa_chknorm_windows_tmc;;
 
 let MLDSA_CHKNORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
- `!a (x:num->int32) (bound:int32) pc stackpointer returnaddress.
+ `forall a (x:num->int32) (bound:int32) pc stackpointer returnaddress.
         nonoverlapping (word pc, LENGTH mldsa_chknorm_windows_tmc) (a, 1024) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (a,1024) /\
         nonoverlapping (word pc,LENGTH mldsa_chknorm_windows_tmc)
@@ -483,12 +483,12 @@ let MLDSA_CHKNORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   WINDOWS_C_ARGUMENTS [a; word_zx bound] s /\
                   &0 <= ival bound /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  read RAX s = word(bitval(~(!i. i < 256 ==> abs(ival(x i)) < ival bound))))
+                  read RAX s = word(bitval(~(forall i. i < 256 ==> abs(ival(x i)) < ival bound))))
              (MAYCHANGE [RSP] ,,
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
@@ -496,7 +496,7 @@ let MLDSA_CHKNORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
       MLDSA_CHKNORM_CORRECT);;
 
 let MLDSA_CHKNORM_WINDOWS_SUBROUTINE_CORRECT = prove(
- `!a (x:num->int32) (bound:int32) pc stackpointer returnaddress.
+ `forall a (x:num->int32) (bound:int32) pc stackpointer returnaddress.
         nonoverlapping (word pc, LENGTH mldsa_chknorm_windows_mc) (a, 1024) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (a,1024) /\
         nonoverlapping (word pc,LENGTH mldsa_chknorm_windows_mc)
@@ -508,12 +508,12 @@ let MLDSA_CHKNORM_WINDOWS_SUBROUTINE_CORRECT = prove(
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   WINDOWS_C_ARGUMENTS [a; word_zx bound] s /\
                   &0 <= ival bound /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  read RAX s = word(bitval(~(!i. i < 256 ==> abs(ival(x i)) < ival bound))))
+                  read RAX s = word(bitval(~(forall i. i < 256 ==> abs(ival(x i)) < ival bound))))
              (MAYCHANGE [RSP] ,,
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,

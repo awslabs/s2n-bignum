@@ -303,7 +303,7 @@ let lemma_rem = prove
   SPEC_TAC(`&3329:int`,`p:int`) THEN CONV_TAC INTEGER_RULE);;
 
 let overall_lemma = prove
- (`!x:int16.
+ (`forall x:int16.
         ival(word_add (word_sub (barred_x86 x) (word 3329))
                       (word_and (word_ishr
                                   (word_sub (barred_x86 x) (word 3329)) 15)
@@ -321,23 +321,23 @@ let SIMD_SIMPLIFY_TAC_LOCAL unfold_defs =
   RULE_ASSUM_TAC(CONV_RULE(SIMD_SIMPLIFY_CONV unfold_defs));;
 
 let helper_lemma = prove
- (`!x:int16. ival(iword(ival x rem &3329):int16) = ival x rem &3329`,
+ (`forall x:int16. ival(iword(ival x rem &3329):int16) = ival x rem &3329`,
   GEN_TAC THEN MATCH_MP_TAC IVAL_IWORD THEN
   REWRITE_TAC[DIMINDEX_16; ARITH] THEN INT_ARITH_TAC);;
 
 let MLKEM_REDUCE_CORRECT = prove(
-  `!a x pc.
+  `forall a x pc.
         aligned 32 a /\
         nonoverlapping (word pc, 854) (a, 512)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) (BUTLAST mlkem_reduce_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read RIP s = word (pc + 854) /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> ival(read(memory :> bytes16
                                  (word_add a (word(2 * i)))) s) =
                           ival(x i) rem &3329)
@@ -393,7 +393,7 @@ let MLKEM_REDUCE_CORRECT = prove(
 );;
 
 let MLKEM_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_reduce_tmc) (a, 512) /\
         nonoverlapping (stackpointer, 8) (a, 512)
@@ -403,12 +403,12 @@ let MLKEM_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> ival(read(memory :> bytes16
                                  (word_add a (word(2 * i)))) s) =
                           ival(x i) rem &3329)
@@ -417,7 +417,7 @@ let MLKEM_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
   X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_reduce_tmc MLKEM_REDUCE_CORRECT);;
 
 let MLKEM_REDUCE_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mlkem_reduce_mc) (a,512) /\
         nonoverlapping (stackpointer,8) (a,512)
@@ -427,13 +427,13 @@ let MLKEM_REDUCE_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
 
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> ival(read(memory :> bytes16
                                  (word_add a (word(2 * i)))) s) =
                           ival(x i) rem &3329)
@@ -455,7 +455,7 @@ let mlkem_reduce_windows_tmc = define_trimmed
 let mlkem_reduce_windows_tmc_EXEC = X86_MK_EXEC_RULE mlkem_reduce_windows_tmc;;
 
 let MLKEM_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_reduce_windows_tmc) (a, 512) /\
         nonoverlapping (word_sub stackpointer (word 96), 104) (a, 512) /\
@@ -467,12 +467,12 @@ let MLKEM_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   WINDOWS_C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> ival(read(memory :> bytes16
                                  (word_add a (word(2 * i)))) s) =
                           ival(x i) rem &3329)
@@ -540,7 +540,7 @@ let MLKEM_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLKEM_REDUCE_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_reduce_windows_mc) (a, 512) /\
         nonoverlapping (word_sub stackpointer (word 96), 104) (a, 512) /\
@@ -552,12 +552,12 @@ let MLKEM_REDUCE_WINDOWS_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   WINDOWS_C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> ival(read(memory :> bytes16
                                  (word_add a (word(2 * i)))) s) =
                           ival(x i) rem &3329)

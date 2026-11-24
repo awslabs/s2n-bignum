@@ -404,7 +404,7 @@ let unpack_nttunpack = new_definition
 (* ------------------------------------------------------------------------- *)
 
 let NTTUNPACK_UNORDER_EQUIV = prove
- (`!i. i < 256 ==> nttunpack_unorder i = mldsa_avx2_ntt_order'(bitreverse8 i)`,
+ (`forall i. i < 256 ==> nttunpack_unorder i = mldsa_avx2_ntt_order'(bitreverse8 i)`,
   REWRITE_TAC[nttunpack_unorder; mldsa_avx2_ntt_order'; bitreverse8] THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   CONV_TAC EXPAND_CASES_CONV THEN
@@ -415,7 +415,7 @@ let NTTUNPACK_UNORDER_EQUIV = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NTTUNPACK_CORRECT = prove
-  (`!a (l:int32 list) pc.
+  (`forall a (l:int32 list) pc.
     aligned 32 a /\
     nonoverlapping (word pc, 1171) (a, 1024)
     ==> ensures x86
@@ -493,7 +493,7 @@ let MLDSA_NTTUNPACK_CORRECT = prove
   ABBREV_TAC `two = &2:real` THEN REAL_ARITH_TAC);;
 
 let MLDSA_NTTUNPACK_NOIBT_SUBROUTINE_CORRECT = prove
- (`!a (l:int32 list) pc stackpointer returnaddress.
+ (`forall a (l:int32 list) pc stackpointer returnaddress.
   aligned 32 a /\
   nonoverlapping (word pc, LENGTH mldsa_nttunpack_tmc) (a, 1024) /\
   nonoverlapping (stackpointer, 8) (a, 1024)
@@ -514,7 +514,7 @@ let MLDSA_NTTUNPACK_NOIBT_SUBROUTINE_CORRECT = prove
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_nttunpack_tmc MLDSA_NTTUNPACK_CORRECT);;
 
 let MLDSA_NTTUNPACK_SUBROUTINE_CORRECT = prove
- (`!a (l:int32 list) pc stackpointer returnaddress.
+ (`forall a (l:int32 list) pc stackpointer returnaddress.
   aligned 32 a /\
   nonoverlapping (word pc, LENGTH mldsa_nttunpack_mc) (a, 1024) /\
   nonoverlapping (stackpointer, 8) (a, 1024)
@@ -548,7 +548,7 @@ let MLDSA_NTTUNPACK_WINDOWS_TMC_EXEC =
   X86_MK_EXEC_RULE mldsa_nttunpack_windows_tmc;;
 
 let MLDSA_NTTUNPACK_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a (l:int32 list) pc stackpointer returnaddress.
+ (`forall a (l:int32 list) pc stackpointer returnaddress.
     aligned 32 a /\
     nonoverlapping (word pc, LENGTH mldsa_nttunpack_windows_tmc) (a, 1024) /\
     nonoverlapping (word_sub stackpointer (word 176), 184) (a, 1024) /\
@@ -646,7 +646,7 @@ let MLDSA_NTTUNPACK_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLDSA_NTTUNPACK_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a (l:int32 list) pc stackpointer returnaddress.
+ (`forall a (l:int32 list) pc stackpointer returnaddress.
     aligned 32 a /\
     nonoverlapping (word pc, LENGTH mldsa_nttunpack_windows_mc) (a, 1024) /\
     nonoverlapping (word_sub stackpointer (word 176), 184) (a, 1024) /\

@@ -751,7 +751,7 @@ let sha3_keccak4_f1600_alt_tmc = define_trimmed "sha3_keccak4_f1600_alt_tmc" sha
 let SHA3_KECCAK4_F1600_ALT_EXEC = X86_MK_CORE_EXEC_RULE sha3_keccak4_f1600_alt_tmc;;
 
 let SHA3_KECCAK4_F1600_ALT_CORRECT = prove
-  (`!rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64.
+  (`forall rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64.
   PAIRWISE (nonoverlapping_modulo (2 EXP 64))
   [(pc, 0x9d9);
    (val stackpointer, 0x300);
@@ -1002,7 +1002,7 @@ let SHA3_KECCAK4_F1600_ALT_CORRECT = prove
 let SHA3_KECCAK4_F1600_ALT_FULL_EXEC = X86_MK_EXEC_RULE sha3_keccak4_f1600_alt_tmc;;
 
 let SHA3_KECCAK4_F1600_ALT_NOIBT_SUBROUTINE_CORRECT = prove
- (`!rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
   PAIRWISE (nonoverlapping_modulo (2 EXP 64))
     [(pc, LENGTH sha3_keccak4_f1600_alt_tmc);
     (val (word_sub stackpointer (word 0x31f)), 0x31f);
@@ -1079,7 +1079,7 @@ let SHA3_KECCAK4_F1600_ALT_NOIBT_SUBROUTINE_CORRECT = prove
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
 
 let SHA3_KECCAK4_F1600_ALT_SUBROUTINE_CORRECT = prove
- (`!rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
   PAIRWISE (nonoverlapping_modulo (2 EXP 64))
     [(pc, LENGTH sha3_keccak4_f1600_alt_mc);
     (val (word_sub stackpointer (word 0x31f)), 0x31f);
@@ -1131,7 +1131,7 @@ let sha3_keccak4_f1600_alt_windows_tmc = define_trimmed "sha3_keccak4_f1600_alt_
 let sha3_keccak4_f1600_alt_windows_tmc_EXEC = X86_MK_EXEC_RULE sha3_keccak4_f1600_alt_windows_tmc;;
 
 let SHA3_KECCAK4_F1600_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
   PAIRWISE (nonoverlapping_modulo (2 EXP 64))
     [(pc, LENGTH sha3_keccak4_f1600_alt_windows_tmc);
     (val (word_sub stackpointer (word 0x3cf)), 0x3cf);
@@ -1270,7 +1270,7 @@ let SHA3_KECCAK4_F1600_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let SHA3_KECCAK4_F1600_ALT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 rho8_ptr:int64 rho56_ptr:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
   PAIRWISE (nonoverlapping_modulo (2 EXP 64))
     [(pc, LENGTH sha3_keccak4_f1600_alt_windows_mc);
     (val (word_sub stackpointer (word 0x3cf)), 0x3cf);

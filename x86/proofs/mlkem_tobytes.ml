@@ -279,10 +279,10 @@ let permute_list = new_definition
   `permute_list l = list_of_seq (\i. EL (avx_order i) l) 256`;;
 
 let BIT_BOUND = BITBLAST_RULE
-  `!x:int16. val x < 3329 ==> ~bit 12 x /\ ~bit 13 x /\ ~bit 14 x /\ ~bit 15 x`;;
+  `forall x:int16. val x < 3329 ==> ~bit 12 x /\ ~bit 13 x /\ ~bit 14 x /\ ~bit 15 x`;;
 
 let MLKEM_TOBYTES_CORRECT = prove(
-  `!r a (l:int16 list) pc.
+  `forall r a (l:int16 list) pc.
         aligned 32 a /\
         nonoverlapping (word pc, 764) (a, 512) /\
         nonoverlapping (word pc, 764) (r, 384) /\
@@ -294,7 +294,7 @@ let MLKEM_TOBYTES_CORRECT = prove(
                   read (memory :> bytes(a, 512)) s = num_of_wordlist l)
              (\s. read RIP s = word (pc + 764) /\
                   (LENGTH l = 256
-                   ==> (!i. i < LENGTH l ==> val(EL i l) < 3329)
+                   ==> (forall i. i < LENGTH l ==> val(EL i l) < 3329)
                    ==> read(memory :> bytes(r, 384)) s =
                        num_of_wordlist (MAP word_zx (permute_list l):(12 word)list)))
              (MAYCHANGE [events] ,,
@@ -375,7 +375,7 @@ let MLKEM_TOBYTES_CORRECT = prove(
 );;
 
 let MLKEM_TOBYTES_NOIBT_SUBROUTINE_CORRECT = prove
-(`!r a (l:int16 list) pc.
+(`forall r a (l:int16 list) pc.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_tmc) (a, 512) /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_tmc) (r, 384) /\
@@ -391,7 +391,7 @@ let MLKEM_TOBYTES_NOIBT_SUBROUTINE_CORRECT = prove
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
                   (LENGTH l = 256
-                   ==> (!i. i < LENGTH l ==> val(EL i l) < 3329)
+                   ==> (forall i. i < LENGTH l ==> val(EL i l) < 3329)
                    ==> read(memory :> bytes(r, 384)) s =
                        num_of_wordlist (MAP word_zx (permute_list l):(12 word)list)))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -399,7 +399,7 @@ let MLKEM_TOBYTES_NOIBT_SUBROUTINE_CORRECT = prove
   X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_tobytes_tmc MLKEM_TOBYTES_CORRECT);;
 
 let MLKEM_TOBYTES_SUBROUTINE_CORRECT = prove
-(`!r a (l:int16 list) pc.
+(`forall r a (l:int16 list) pc.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_mc) (a, 512) /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_mc) (r, 384) /\
@@ -415,7 +415,7 @@ let MLKEM_TOBYTES_SUBROUTINE_CORRECT = prove
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
                   (LENGTH l = 256
-                   ==> (!i. i < LENGTH l ==> val(EL i l) < 3329)
+                   ==> (forall i. i < LENGTH l ==> val(EL i l) < 3329)
                    ==> read(memory :> bytes(r, 384)) s =
                        num_of_wordlist (MAP word_zx (permute_list l):(12 word)list)))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -436,7 +436,7 @@ let mlkem_tobytes_windows_tmc = define_trimmed
 let mlkem_tobytes_windows_tmc_EXEC = X86_MK_EXEC_RULE mlkem_tobytes_windows_tmc;;
 
 let MLKEM_TOBYTES_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
-(`!r a (l:int16 list) pc stackpointer returnaddress.
+(`forall r a (l:int16 list) pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_windows_tmc) (a, 512) /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_windows_tmc) (r, 384) /\
@@ -455,7 +455,7 @@ let MLKEM_TOBYTES_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
                   (LENGTH l = 256
-                   ==> (!i. i < LENGTH l ==> val(EL i l) < 3329)
+                   ==> (forall i. i < LENGTH l ==> val(EL i l) < 3329)
                    ==> read(memory :> bytes(r, 384)) s =
                        num_of_wordlist (MAP word_zx (permute_list l):(12 word)list)))
               (MAYCHANGE [RSP] ,,
@@ -529,7 +529,7 @@ let MLKEM_TOBYTES_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLKEM_TOBYTES_WINDOWS_SUBROUTINE_CORRECT = prove
-(`!r a (l:int16 list) pc stackpointer returnaddress.
+(`forall r a (l:int16 list) pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_windows_mc) (a, 512) /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_windows_mc) (r, 384) /\
@@ -548,7 +548,7 @@ let MLKEM_TOBYTES_WINDOWS_SUBROUTINE_CORRECT = prove
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
                   (LENGTH l = 256
-                   ==> (!i. i < LENGTH l ==> val(EL i l) < 3329)
+                   ==> (forall i. i < LENGTH l ==> val(EL i l) < 3329)
                    ==> read(memory :> bytes(r, 384)) s =
                        num_of_wordlist (MAP word_zx (permute_list l):(12 word)list)))
               (MAYCHANGE [RSP] ,,

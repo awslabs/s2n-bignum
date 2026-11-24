@@ -378,7 +378,7 @@ let REJ_SAMPLE_EMPTY = prove
   REWRITE_TAC[REJ_SAMPLE; FILTER; MAP]);;
 
 let REJ_SAMPLE_APPEND = prove
- (`!l1 l2. REJ_SAMPLE(APPEND l1 l2) =
+ (`forall l1 l2. REJ_SAMPLE(APPEND l1 l2) =
            APPEND (REJ_SAMPLE l1) (REJ_SAMPLE l2)`,
   REWRITE_TAC[REJ_SAMPLE; MAP_APPEND; FILTER_APPEND]);;
 
@@ -387,8 +387,8 @@ let REJ_SAMPLE_APPEND = prove
 (* ------------------------------------------------------------------------- *)
 
 let XMM_EXISTSTOP = prove
- (`!c s:S. read (c :> zerotop_128) s = l
-           ==> ?h. read c s = (word_join:int128->int128->int256) h l`,
+ (`forall c s:S. read (c :> zerotop_128) s = l
+           ==> exists h. read c s = (word_join:int128->int128->int256) h l`,
   REPEAT STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
   EXISTS_TAC `word_subword (read c (s:S):int256) (128,128):int128` THEN
   REWRITE_TAC[READ_ZEROTOP_128] THEN CONV_TAC WORD_BLAST);;
@@ -411,7 +411,7 @@ let DIMINDEX_12 = DIMINDEX_CONV `dimindex(:12)`;;
 
 let lemma1a = prove
  ((rand o concl o (EXPAND_CASES_CONV THENC NUM_REDUCE_CONV))
-  `!i. i < 12
+  `forall i. i < 12
          ==> word_join (word_subword q (8*i+8,8):byte)
                        (word_subword q (8*i,8):byte):int16 =
              word_subword (q:int128) (8*i,16)`,
@@ -419,7 +419,7 @@ let lemma1a = prove
 
 let lemma1b = prove
  ((rand o concl o (EXPAND_CASES_CONV THENC NUM_REDUCE_CONV))
-  `!i. i < 12
+  `forall i. i < 12
          ==> word_ushr
               (word_join (word_subword q (8*i+8,8):byte)
                          (word_subword q (8*i,8):byte)) 4 =
@@ -427,25 +427,25 @@ let lemma1b = prove
   CONV_TAC WORD_BLAST);;
 
 let lemma2 = WORD_BLAST
- `(!h l m. word_and ((word_join:int64->int64->int128) h l) m =
+ `(forall h l m. word_and ((word_join:int64->int64->int128) h l) m =
            word_join (word_and h (word_subword m (64,64)))
                      (word_and l (word_subword m (0,64)))) /\
-  (!h l m. word_and ((word_join:int32->int32->int64) h l) m =
+  (forall h l m. word_and ((word_join:int32->int32->int64) h l) m =
            word_join (word_and h (word_subword m (32,32)))
                      (word_and l (word_subword m (0,32)))) /\
-  (!h l m. word_and ((word_join:int16->int16->int32) h l) m =
+  (forall h l m. word_and ((word_join:int16->int16->int32) h l) m =
            word_join (word_and h (word_subword m (16,16)))
                      (word_and l (word_subword m (0,16))))`;;
 
 let lemma3 = prove
  ((rand o concl o (EXPAND_CASES_CONV THENC NUM_REDUCE_CONV))
-  `!i. i < 12
+  `forall i. i < 12
          ==> word_and (word_subword (q:int128) (12*i,16)) (word 4095) =
              (word_zx:12 word->int16) (word_subword (q:int128) (12*i,12))`,
   CONV_TAC WORD_BLAST);;
 
 let MLKEM_REJ_UNIFORM_CORRECT = prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer.
+ (`forall res buf buflen table (inlist:(12 word)list) pc stackpointer.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (stackpointer,528))
@@ -514,7 +514,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
   (*** Pick a number characterizing the number of times round the loop ***)
 
   SUBGOAL_THEN
-   `?i. buflen < 12 * (i + 1) \/
+   `exists i. buflen < 12 * (i + 1) \/
         256 <= LENGTH(REJ_SAMPLE(SUB_LIST(0,8 * i) inlist))`
   MP_TAC THENL
    [EXISTS_TAC `buflen:num` THEN ARITH_TAC;
@@ -613,7 +613,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
       CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
 
     ASSUME_TAC(WORD_RULE
-     `!x. word (1 * val(word x:int64)):int64 = word x`) THEN
+     `forall x. word (1 * val(word x:int64)):int64 = word x`) THEN
     MAP_EVERY (fun n ->
       X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC [n] THEN
       RULE_ASSUM_TAC(REWRITE_RULE[WORD_SUBWORD_AND]) THEN
@@ -679,7 +679,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
     (**** Later in the proof, we actually want this equivalent ***)
 
     SUBGOAL_THEN
-     `!j. j < 8
+     `forall j. j < 8
           ==> (word_zx:12 word->int16)
               (EL j (SUB_LIST(8 * i,8) inlist)) = x j`
     ASSUME_TAC THENL
@@ -946,7 +946,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
     ENSURES_INIT_TAC "s0" THEN
     X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (1--3) THEN
     FIRST_X_ASSUM(MP_TAC o SPEC `word(MIN 256 outlen):int64` o MATCH_MP
-     (MESON[] `read RAX s = x ==> !x'. x = x' ==> read RAX s = x'`)) THEN
+     (MESON[] `read RAX s = x ==> forall x'. x = x' ==> read RAX s = x'`)) THEN
     ANTS_TAC THENL
      [REWRITE_TAC[VAL_EQ_0; WORD_SUB_EQ_0] THEN
       ONCE_REWRITE_TAC[GSYM COND_RAND] THEN AP_TERM_TAC THEN
@@ -1036,7 +1036,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
       FIRST_ASSUM ACCEPT_TAC]]);;
 
 let MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_CORRECT = prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
+ (`forall res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_sub stackpointer (word 528),528))
@@ -1073,7 +1073,7 @@ let MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_CORRECT = prove
     (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_CORRECT) `[]` 528);;
 
 let MLKEM_REJ_UNIFORM_SUBROUTINE_CORRECT = prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
+ (`forall res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_sub stackpointer (word 528),528))
@@ -1120,7 +1120,7 @@ let mlkem_rej_uniform_windows_tmc =
   define_trimmed "mlkem_rej_uniform_windows_tmc" mlkem_rej_uniform_windows_mc;;
 
 let MLKEM_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
+ (`forall res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_sub stackpointer (word 544),544))
@@ -1163,7 +1163,7 @@ let MLKEM_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
     `[]` 528);;
 
 let MLKEM_REJ_UNIFORM_WINDOWS_SUBROUTINE_CORRECT = time prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
+ (`forall res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_sub stackpointer (word 544),544))
@@ -1223,7 +1223,7 @@ let DISCHARGE_MEMSAFE_TAC:tactic =
   DISCHARGE_MEMACCESS_INBOUNDS_TAC;;
 
 let MLKEM_REJ_UNIFORM_MEMSAFE = prove
- (`!res buf buflen table (inlist:(12 word)list) e pc stackpointer.
+ (`forall res buf buflen table (inlist:(12 word)list) e pc stackpointer.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (stackpointer,528))
@@ -1291,7 +1291,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
   (* === Phase 2: Characterize N via WOP (same as CORRECT) === *)
 
   SUBGOAL_THEN
-   `?i. buflen < 12 * (i + 1) \/
+   `exists i. buflen < 12 * (i + 1) \/
         256 <= LENGTH(REJ_SAMPLE(SUB_LIST(0,8 * i) inlist))`
   MP_TAC THENL
    [EXISTS_TAC `buflen:num` THEN ARITH_TAC;
@@ -1402,7 +1402,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 
     (* Simulate up to table index computation, same as CORRECT *)
     ASSUME_TAC(WORD_RULE
-     `!x. word (1 * val(word x:int64)):int64 = word x`) THEN
+     `forall x. word (1 * val(word x:int64)):int64 = word x`) THEN
     MAP_EVERY (fun n ->
       X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC [n] THEN
       RULE_ASSUM_TAC(REWRITE_RULE[WORD_SUBWORD_AND]) THEN
@@ -1478,7 +1478,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 
     (* Relate x(j) to SUB_LIST, same as CORRECT *)
     SUBGOAL_THEN
-     `!j. j < 8
+     `forall j. j < 8
           ==> (word_zx:12 word->int16)
               (EL j (SUB_LIST(8 * i,8) inlist)) = x j`
     ASSUME_TAC THENL
@@ -1763,7 +1763,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
     STRIP_EXISTS_ASSUM_TAC THEN
     X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (1--3) THEN
     FIRST_X_ASSUM(MP_TAC o SPEC `word(MIN 256 outlen):int64` o MATCH_MP
-     (MESON[] `read RAX s = x ==> !x'. x = x' ==> read RAX s = x'`)) THEN
+     (MESON[] `read RAX s = x ==> forall x'. x = x' ==> read RAX s = x'`)) THEN
     ANTS_TAC THENL
      [REWRITE_TAC[VAL_EQ_0; WORD_SUB_EQ_0] THEN
       ONCE_REWRITE_TAC[GSYM COND_RAND] THEN AP_TERM_TAC THEN
@@ -1814,7 +1814,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_SAFE = time prove
- (`!res buf buflen table (inlist:(12 word)list) e pc stackpointer returnaddress.
+ (`forall res buf buflen table (inlist:(12 word)list) e pc stackpointer returnaddress.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_sub stackpointer (word 528),528))
@@ -1854,7 +1854,7 @@ let MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_SAFE = time prove
   DISCHARGE_MEMSAFE_TAC);;
 
 let MLKEM_REJ_UNIFORM_SUBROUTINE_SAFE = time prove
- (`!res buf buflen table (inlist:(12 word)list) e pc stackpointer returnaddress.
+ (`forall res buf buflen table (inlist:(12 word)list) e pc stackpointer returnaddress.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_sub stackpointer (word 528),528))

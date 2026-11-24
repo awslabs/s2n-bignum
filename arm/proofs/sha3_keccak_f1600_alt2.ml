@@ -281,7 +281,7 @@ let GHOST_STATELIST_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let SHA3_KECCAK_F1600_ALT2_SUBROUTINE_CORRECT = prove
- (`!a rc A pc stackpointer returnaddress.
+ (`forall a rc A pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         ALL (nonoverlapping (word_sub stackpointer (word 208),208))
             [(word pc,0x3d0); (a,200); (rc,192)] /\

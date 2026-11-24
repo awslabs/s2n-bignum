@@ -458,7 +458,7 @@ let intt_zetas_layer56 = define
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_INTT_CORRECT = prove
- (`!a z_01234 z_56 (zetas_01234:int16 list) (zetas_56:int16 list) x pc.
+ (`forall a z_01234 z_56 (zetas_01234:int16 list) (zetas_56:int16 list) x pc.
       ALL (nonoverlapping (a,512))
           [(word pc,0x5b8); (z_01234,160); (z_56,768)]
       ==> ensures arm
@@ -467,13 +467,13 @@ let MLKEM_INTT_CORRECT = prove
                 C_ARGUMENTS [a; z_01234; z_56] s /\
                 wordlist_from_memory(z_01234,80) s = zetas_01234 /\
                 wordlist_from_memory(z_56,384) s = zetas_56 /\
-                !i. i < 256
+                forall i. i < 256
                     ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                         x i)
            (\s. read PC s = word(pc + 0x5a0) /\
                 (zetas_01234 = MAP iword intt_zetas_layer01234 /\
                  zetas_56 = MAP iword intt_zetas_layer56
-                 ==> !i. i < 256
+                 ==> forall i. i < 256
                          ==> let zi =
                         read(memory :> bytes16(word_add a (word(2 * i)))) s in
                         (ival zi == inverse_ntt (ival o x) i) (mod &3329) /\
@@ -554,7 +554,7 @@ let MLKEM_INTT_CORRECT = prove
 (*** Subroutine form, somewhat messy elaboration of the usual wrapper ***)
 
 let MLKEM_INTT_SUBROUTINE_CORRECT = prove
- (`!a z_01234 z_56 zetas_01234 zetas_56 x pc stackpointer returnaddress.
+ (`forall a z_01234 z_56 zetas_01234 zetas_56 x pc stackpointer returnaddress.
       aligned 16 stackpointer /\
       ALLPAIRS nonoverlapping
        [(a,512); (word_sub stackpointer (word 64),64)]
@@ -568,13 +568,13 @@ let MLKEM_INTT_SUBROUTINE_CORRECT = prove
                 C_ARGUMENTS [a; z_01234; z_56] s /\
                 wordlist_from_memory(z_01234,80) s:int16 list = zetas_01234 /\
                 wordlist_from_memory(z_56,384) s:int16 list = zetas_56 /\
-                !i. i < 256
+                forall i. i < 256
                     ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                         x i)
            (\s. read PC s = returnaddress /\
                 (zetas_01234 = MAP iword intt_zetas_layer01234 /\
                  zetas_56 = MAP iword intt_zetas_layer56
-                 ==> !i. i < 256
+                 ==> forall i. i < 256
                          ==> let zi =
                         read(memory :> bytes16(word_add a (word(2 * i)))) s in
                         (ival zi == inverse_ntt (ival o x) i) (mod &3329) /\

@@ -708,7 +708,7 @@ let ntt_zetas_layer67 = define
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_NTT_CORRECT = prove
- (`!a z_012345 z_67 (zetas_012345:int32 list) (zetas_67:int32 list) x pc.
+ (`forall a z_012345 z_67 (zetas_012345:int32 list) (zetas_67:int32 list) x pc.
       ALL (nonoverlapping (a,1024))
           [(word pc,0x920); (z_012345,576); (z_67,1536)]
       ==> ensures arm
@@ -717,14 +717,14 @@ let MLDSA_NTT_CORRECT = prove
                 C_ARGUMENTS [a; z_012345; z_67] s /\
                 wordlist_from_memory(z_012345,144) s = zetas_012345 /\
                 wordlist_from_memory(z_67,384) s = zetas_67 /\
-                !i. i < 256
+                forall i. i < 256
                     ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                         x i)
            (\s. read PC s = word(pc + 0x908) /\
                 (zetas_012345 = MAP iword ntt_zetas_layer012345 /\
                  zetas_67 = MAP iword ntt_zetas_layer67 /\
-                 (!i. i < 256 ==> abs(ival(x i)) <= &8380416)
-                 ==> !i. i < 256
+                 (forall i. i < 256 ==> abs(ival(x i)) <= &8380416)
+                 ==> forall i. i < 256
                          ==> let zi =
                         read(memory :> bytes32(word_add a (word(4 * i)))) s in
                         (ival zi == arm_mldsa_forward_ntt (ival o x) i) (mod &8380417) /\
@@ -800,7 +800,7 @@ let MLDSA_NTT_CORRECT = prove
 
 (*** Subroutine form, somewhat messy elaboration of the usual wrapper ***)
 let MLDSA_NTT_SUBROUTINE_CORRECT = prove
- (`!a z_012345 z_67 zetas_012345 zetas_67 x pc stackpointer returnaddress.
+ (`forall a z_012345 z_67 zetas_012345 zetas_67 x pc stackpointer returnaddress.
       aligned 16 stackpointer /\
       ALLPAIRS nonoverlapping
        [(a,1024); (word_sub stackpointer (word 64),64)]
@@ -814,14 +814,14 @@ let MLDSA_NTT_SUBROUTINE_CORRECT = prove
                 C_ARGUMENTS [a; z_012345; z_67] s /\
                 wordlist_from_memory(z_012345,144) s:int32 list = zetas_012345 /\
                 wordlist_from_memory(z_67,384) s:int32 list = zetas_67 /\
-                !i. i < 256
+                forall i. i < 256
                     ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                         x i)
            (\s. read PC s = returnaddress /\
                 (zetas_012345 = MAP iword ntt_zetas_layer012345 /\
                  zetas_67 = MAP iword ntt_zetas_layer67 /\
-                 (!i. i < 256 ==> abs(ival(x i)) <= &8380416)
-                 ==> !i. i < 256
+                 (forall i. i < 256 ==> abs(ival(x i)) <= &8380416)
+                 ==> forall i. i < 256
                          ==> let zi =
                         read(memory :> bytes32(word_add a (word(4 * i)))) s in
                         (ival zi == arm_mldsa_forward_ntt (ival o x) i) (mod &8380417) /\

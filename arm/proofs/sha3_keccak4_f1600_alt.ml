@@ -1005,7 +1005,7 @@ let deferred_rotates = define
 (* ------------------------------------------------------------------------- *)
 
 let SHA3_KECCAK4_F1600_ALT_CORRECT = prove
- (`!a rc A1 A2 A3 A4 pc stackpointer.
+ (`forall a rc A1 A2 A3 A4 pc stackpointer.
       aligned 16 stackpointer /\
       nonoverlapping (a,800) (stackpointer,216) /\
       ALLPAIRS nonoverlapping
@@ -1414,7 +1414,7 @@ let SHA3_KECCAK4_F1600_ALT_CORRECT = prove
   REWRITE_TAC[CONS_11] THEN REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let SHA3_KECCAK4_F1600_ALT_SUBROUTINE_CORRECT = prove
- (`!a rc A1 A2 A3 A4 pc stackpointer returnaddress.
+ (`forall a rc A1 A2 A3 A4 pc stackpointer returnaddress.
       aligned 16 stackpointer /\
       nonoverlapping (a,800) (word_sub stackpointer (word 224),224) /\
       ALLPAIRS nonoverlapping

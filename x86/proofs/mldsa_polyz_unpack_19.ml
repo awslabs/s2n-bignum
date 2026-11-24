@@ -531,7 +531,7 @@ let mk_split_theorem d ncoeffs chunk_size =
            mk_small_numeral chunk_size, `cs:num`;
            mk_small_numeral nchunks, `nc:num`]
     (inst [d_ty, `:D`; total_ty, `:T`]
-      `!(l: (D word) list). LENGTH l = ncoeffs ==>
+      `forall (l: (D word) list). LENGTH l = ncoeffs ==>
          num_of_wordlist l = num_of_wordlist (MAP ((word:num->T word) o num_of_wordlist)
            (list_of_seq (\i. SUB_LIST (cs * i, cs) l) nc))`),
     REPEAT STRIP_TAC THEN
@@ -580,7 +580,7 @@ let mk_subword_cases d chunk_size =
 (* Split a 256-element 32-bit-word list into 32 chunks of 8 (256-bit words),
    used to express the output spec as 32 store-sized pieces. *)
 let NUM_OF_WORDLIST_SPLIT_32_256_8 = prove
- (`!(L:(32 word) list). LENGTH L = 256 ==> num_of_wordlist L =
+ (`forall (L:(32 word) list). LENGTH L = 256 ==> num_of_wordlist L =
      num_of_wordlist (MAP ((word:num->256 word) o num_of_wordlist)
        (list_of_seq (\i. SUB_LIST(8*i,8) L) 32))`,
   REPEAT STRIP_TAC THEN
@@ -595,9 +595,9 @@ let NUM_OF_WORDLIST_SPLIT_32_256_8 = prove
 
 (* MAP commutes with SUB_LIST. *)
 let MAP_SUB_LIST = prove
- (`!(f:A->B) p q l. MAP f (SUB_LIST(p,q) l) = SUB_LIST(p,q) (MAP f l)`,
+ (`forall (f:A->B) p q l. MAP f (SUB_LIST(p,q) l) = SUB_LIST(p,q) (MAP f l)`,
   GEN_TAC THEN
-  ONCE_REWRITE_TAC[MESON[] `(!p q l. P p q l) <=> (!l p q. P p q l)`] THEN
+  ONCE_REWRITE_TAC[MESON[] `(forall p q l. P p q l) <=> (forall l p q. P p q l)`] THEN
   LIST_INDUCT_TAC THEN REWRITE_TAC[MAP; SUB_LIST_CLAUSES] THEN
   REPEAT GEN_TAC THEN SPEC_TAC(`q:num`,`q:num`) THEN SPEC_TAC(`p:num`,`p:num`) THEN
   MATCH_MP_TAC num_INDUCTION THEN ASM_REWRITE_TAC[SUB_LIST_CLAUSES; MAP] THEN
@@ -615,7 +615,7 @@ let WORD_SUBWORD_NUM_OF_WORDLIST_CASES_D20 = mk_subword_cases 20 8;;
 (* One 256-bit AVX2 store reassembles 8 zunpack19 coefficients into the       *)
 (* num_of_wordlist of the mapped 8-element sublist.                           *)
 let POLYZ19_STORE = prove
- (`!sl:(20 word) list. LENGTH sl = 8 ==>
+ (`forall sl:(20 word) list. LENGTH sl = 8 ==>
      ((word_join:int128->int128->int256)
       ((word_join:int64->int64->int128)
        ((word_join:int32->int32->int64)
@@ -761,7 +761,7 @@ let ZUNPACK19_FOLD_TAC (asl,w as gl) =
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_POLYZ_UNPACK_19_CORRECT = prove
- (`!r b (l:(20 word) list) pc.
+ (`forall r b (l:(20 word) list) pc.
         aligned 32 r /\
         LENGTH l = 256 /\
         ALL (nonoverlapping (r,1024))
@@ -864,7 +864,7 @@ let MLDSA_POLYZ_UNPACK_19_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_POLYZ_UNPACK_19_NOIBT_SUBROUTINE_CORRECT = prove
- (`!r b (l:(20 word) list) pc stackpointer returnaddress.
+ (`forall r b (l:(20 word) list) pc stackpointer returnaddress.
         aligned 32 r /\
         ALL (nonoverlapping (word pc, LENGTH mldsa_polyz_unpack_19_tmc))
             [(r,1024)] /\
@@ -882,7 +882,7 @@ let MLDSA_POLYZ_UNPACK_19_NOIBT_SUBROUTINE_CORRECT = prove
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
                   read(memory :> bytes(r,1024)) s = num_of_wordlist (MAP zunpack19 l) /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                        --(&(2 EXP 19) - &1) <= ival(EL i (MAP zunpack19 l)) /\
                        ival(EL i (MAP zunpack19 l)) <= &(2 EXP 19)))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -894,7 +894,7 @@ let MLDSA_POLYZ_UNPACK_19_NOIBT_SUBROUTINE_CORRECT = prove
   ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[]);;
 
 let MLDSA_POLYZ_UNPACK_19_SUBROUTINE_CORRECT = prove
- (`!r b (l:(20 word) list) pc stackpointer returnaddress.
+ (`forall r b (l:(20 word) list) pc stackpointer returnaddress.
         aligned 32 r /\
         ALL (nonoverlapping (word pc, LENGTH mldsa_polyz_unpack_19_mc))
             [(r,1024)] /\
@@ -912,7 +912,7 @@ let MLDSA_POLYZ_UNPACK_19_SUBROUTINE_CORRECT = prove
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
                   read(memory :> bytes(r,1024)) s = num_of_wordlist (MAP zunpack19 l) /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                        --(&(2 EXP 19) - &1) <= ival(EL i (MAP zunpack19 l)) /\
                        ival(EL i (MAP zunpack19 l)) <= &(2 EXP 19)))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -1010,7 +1010,7 @@ let MLDSA_POLYZ_UNPACK_19_WINDOWS_TMC_EXEC =
   X86_MK_EXEC_RULE mldsa_polyz_unpack_19_windows_tmc;;
 
 let MLDSA_POLYZ_UNPACK_19_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!r b (l:(20 word) list) pc stackpointer returnaddress.
+ (`forall r b (l:(20 word) list) pc stackpointer returnaddress.
         aligned 32 r /\
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
             [(word pc,LENGTH mldsa_polyz_unpack_19_windows_tmc); (b,640)] /\
@@ -1030,7 +1030,7 @@ let MLDSA_POLYZ_UNPACK_19_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
                   read(memory :> bytes(r,1024)) s = num_of_wordlist (MAP zunpack19 l) /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                        --(&(2 EXP 19) - &1) <= ival(EL i (MAP zunpack19 l)) /\
                        ival(EL i (MAP zunpack19 l)) <= &(2 EXP 19)))
              (MAYCHANGE [RSP] ,,
@@ -1044,7 +1044,7 @@ let MLDSA_POLYZ_UNPACK_19_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[]);;
 
 let MLDSA_POLYZ_UNPACK_19_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!r b (l:(20 word) list) pc stackpointer returnaddress.
+ (`forall r b (l:(20 word) list) pc stackpointer returnaddress.
         aligned 32 r /\
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
             [(word pc,LENGTH mldsa_polyz_unpack_19_windows_mc); (b,640)] /\
@@ -1064,7 +1064,7 @@ let MLDSA_POLYZ_UNPACK_19_WINDOWS_SUBROUTINE_CORRECT = prove
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
                   read(memory :> bytes(r,1024)) s = num_of_wordlist (MAP zunpack19 l) /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                        --(&(2 EXP 19) - &1) <= ival(EL i (MAP zunpack19 l)) /\
                        ival(EL i (MAP zunpack19 l)) <= &(2 EXP 19)))
              (MAYCHANGE [RSP] ,,

@@ -186,7 +186,7 @@ let SHA3_KECCAK2_F1600_EXEC = ARM_MK_EXEC_RULE sha3_keccak2_f1600_mc;;
 (* ------------------------------------------------------------------------- *)
 
 let SHA3_KECCAK2_F1600_CORRECT = prove
- (`!a rc A A' pc.
+ (`forall a rc A A' pc.
       ALL (nonoverlapping (a,400)) [(word pc,0x284); (rc,192)]
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) sha3_keccak2_f1600_mc /\
@@ -311,7 +311,7 @@ let SHA3_KECCAK2_F1600_CORRECT = prove
     REWRITE_TAC[CONS_11] THEN REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST]);;
 
 let SHA3_KECCAK2_F1600_SUBROUTINE_CORRECT = prove
-(`!a rc A A' pc stackpointer returnaddress.
+(`forall a rc A A' pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         nonoverlapping (a,400) (word_sub stackpointer (word 64),64) /\
         ALLPAIRS nonoverlapping

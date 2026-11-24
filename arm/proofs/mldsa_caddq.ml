@@ -80,12 +80,12 @@ let mldsa_caddq = define
    `mldsa_caddq (x:int32) = word_add x (word_mul (word_ushr x 31) (word 8380417))`;;
 
 let mldsa_caddq_direct = prove
-   (`!x:int32.
+   (`forall x:int32.
       ival(mldsa_caddq x) = if ival x < &0 then ival x + &8380417 else ival x`,
     REWRITE_TAC[mldsa_caddq] THEN BITBLAST_TAC);;
 
 let mldsa_caddq_rem = prove
-   (`!x:int32. abs(ival x) < &8380417
+   (`forall x:int32. abs(ival x) < &8380417
       ==> ival(mldsa_caddq x) = ival x rem &8380417`,
     REPEAT STRIP_TAC THEN
     REWRITE_TAC[mldsa_caddq_direct] THEN
@@ -99,7 +99,7 @@ let mldsa_caddq_rem = prove
     ]);;
 
 let mldsa_caddq_bound = prove
- (`!x:int32. abs(ival x) < &8380417
+ (`forall x:int32. abs(ival x) < &8380417
     ==> &0 <= ival(mldsa_caddq x) /\ ival(mldsa_caddq x) < &8380417`,
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(SPEC `x:int32` mldsa_caddq_rem) THEN ASM_REWRITE_TAC[] THEN
@@ -110,12 +110,12 @@ let mldsa_caddq_bound = prove
     INT_ARITH_TAC]);;
 
 let mldsa_caddq_lower = prove
- (`!x:int32. abs(ival x) < &8380417
+ (`forall x:int32. abs(ival x) < &8380417
     ==> &0 <= ival(mldsa_caddq x)`,
   MESON_TAC[mldsa_caddq_bound]);;
 
 let mldsa_caddq_upper = prove
- (`!x:int32. abs(ival x) < &8380417
+ (`forall x:int32. abs(ival x) < &8380417
     ==> ival(mldsa_caddq x) < &8380417`,
   MESON_TAC[mldsa_caddq_bound]);;
 
@@ -124,20 +124,20 @@ let mldsa_caddq_upper = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_CADDQ_CORRECT = prove
- (`!a x pc.
+ (`forall a x pc.
         nonoverlapping (word pc,LENGTH mldsa_caddq_mc) (a,1024)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) mldsa_caddq_mc /\
                   read PC s = word (pc + MLDSA_CADDQ_CORE_START) /\
                   C_ARGUMENTS [a] s /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &8380417))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &8380417))
              (\s. read PC s = word(pc + MLDSA_CADDQ_CORE_END) /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      ival(read(memory :> bytes32(word_add a (word(4 * i)))) s) =
                      ival(x i) rem &8380417) /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      &0 <= ival(read(memory :> bytes32(word_add a (word(4 * i)))) s) /\
                      ival(read(memory :> bytes32(word_add a (word(4 * i)))) s) < &8380417))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -195,21 +195,21 @@ let MLDSA_CADDQ_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_CADDQ_SUBROUTINE_CORRECT = prove
- (`!a x pc returnaddress.
+ (`forall a x pc returnaddress.
         nonoverlapping (word pc,LENGTH mldsa_caddq_mc) (a,1024)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) mldsa_caddq_mc /\
                   read PC s = word pc /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [a] s /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &8380417))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &8380417))
              (\s. read PC s = returnaddress /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      ival(read(memory :> bytes32(word_add a (word(4 * i)))) s) =
                      ival(x i) rem &8380417) /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      &0 <= ival(read(memory :> bytes32(word_add a (word(4 * i)))) s) /\
                      ival(read(memory :> bytes32(word_add a (word(4 * i)))) s) < &8380417))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

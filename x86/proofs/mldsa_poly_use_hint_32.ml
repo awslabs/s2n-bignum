@@ -18,7 +18,7 @@ needs "common/mlkem_mldsa.ml";;
 
 (* A coefficient (bytes32) read is the matching lane of the block (bytes256) read. *)
 let BLOCK_SPLIT = prove(
-  `!p:int64 s:x86state b. !k. k < 8 ==>
+  `forall p:int64 s:x86state b. forall k. k < 8 ==>
       read (memory :> bytes32 (word_add p (word(4*(8*b+k))))) s =
       word_subword (read (memory :> bytes256 (word_add p (word(32*b)))) s) (32*k,32):int32`,
   GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN
@@ -30,14 +30,14 @@ let BLOCK_SPLIT = prove(
 
 (* The block (bytes256) read assembles from its eight coefficient reads. *)
 let PACK8_MERGE = prove(
-  `!(x:num->int32) p:int64 s:x86state b.
+  `forall (x:num->int32) p:int64 s:x86state b.
       b < 32 /\
-      (!i. i < 256 ==> read(memory :> bytes32(word_add p (word(4*i)))) s = x i)
+      (forall i. i < 256 ==> read(memory :> bytes32(word_add p (word(4*i)))) s = x i)
       ==> read (memory :> bytes256 (word_add p (word(32*b)))) s = pack8 x b`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[pack8] THEN
   CONV_TAC(LAND_CONV(READ_MEMORY_MERGE_CONV 3)) THEN
   SUBGOAL_THEN
-   `!k. k < 8 ==> read (memory :> bytes32 (word_add (word_add p (word(32*b))) (word(4*k)))) (s:x86state) = x(8*b+k)`
+   `forall k. k < 8 ==> read (memory :> bytes32 (word_add (word_add p (word(32*b))) (word(4*k)))) (s:x86state) = x(8*b+k)`
    (fun th ->
       MP_TAC(SPEC `0` th) THEN MP_TAC(SPEC `1` th) THEN MP_TAC(SPEC `2` th) THEN MP_TAC(SPEC `3` th) THEN
       MP_TAC(SPEC `4` th) THEN MP_TAC(SPEC `5` th) THEN MP_TAC(SPEC `6` th) THEN MP_TAC(SPEC `7` th)) THENL
@@ -147,7 +147,7 @@ let mldsa_use_hint_32_code = new_definition
    else (a1 + 15) MOD 16`;;
 
 let A1_BOUND = prove(
-  `!a. a < 8380417
+  `forall a. a < 8380417
    ==> ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304 <= 16`,
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(SPEC `128` (SPEC `8380416 + 127` (SPEC `a + 127` DIV_MONO))) THEN
@@ -161,7 +161,7 @@ let A1_BOUND = prove(
    CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC]);;
 
 let A1_WRAP = prove(
-  `!a. 8118528 < a /\ a < 8380417
+  `forall a. 8118528 < a /\ a < 8380417
    ==> ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304 = 16`,
   GEN_TAC THEN STRIP_TAC THEN
   SUBGOAL_THEN `16 <= ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304`
@@ -179,7 +179,7 @@ let A1_WRAP = prove(
   DISCH_TAC THEN ASM_ARITH_TAC);;
 
 let BARRETT_INTERVAL_32 = prove(
-  `!a lo hi k.
+  `forall a lo hi k.
     lo <= a /\ a <= hi /\
     k * 4194304 <= (lo + 127) DIV 128 * 1025 + 2097152 /\
     (hi + 127) DIV 128 * 1025 + 2097152 < (k + 1) * 4194304
@@ -248,7 +248,7 @@ let DECOMPOSE_R1_NOWRAP_TAC =
   TRY DECOMPOSE_R1_LOWER_TAC THEN TRY DECOMPOSE_R1_UPPER_TAC;;
 
 let DECOMPOSE_32_R1_EQUIV = time prove(
-  `!r. r < 8380417 ==>
+  `forall r. r < 8380417 ==>
    (((r + 127) DIV 128 * 1025 + 2097152) DIV 4194304) MOD 16 =
    decompose_32_r1 r`,
   GEN_TAC THEN DISCH_TAC THEN
@@ -322,7 +322,7 @@ let DECOMPOSE_32_R1_EQUIV = time prove(
   cascade 0 intervals);;
 
 let R1_IS_DIV_LOWER = prove(
-  `!r. r < 8380417 /\ r MOD 523776 * 2 <= 523776 /\
+  `forall r. r < 8380417 /\ r MOD 523776 * 2 <= 523776 /\
        ~((&r:int) - &(r MOD 523776) = &8380416) ==>
    (((r + 127) DIV 128 * 1025 + 2097152) DIV 4194304) MOD 16 = r DIV 523776`,
   GEN_TAC THEN STRIP_TAC THEN
@@ -331,7 +331,7 @@ let R1_IS_DIV_LOWER = prove(
   REPEAT DISCH_TAC THEN ASM_REWRITE_TAC[]);;
 
 let R1_IS_DIV_PLUS1_UPPER = prove(
-  `!r. r < 8380417 /\ ~(r MOD 523776 * 2 <= 523776) /\
+  `forall r. r < 8380417 /\ ~(r MOD 523776 * 2 <= 523776) /\
        ~((&r:int) - (&(r MOD 523776) - &523776) = &8380416) ==>
    (((r + 127) DIV 128 * 1025 + 2097152) DIV 4194304) MOD 16 =
    r DIV 523776 + 1`,
@@ -383,7 +383,7 @@ let R0_SIGN_WRAP_TAC =
   ASM_ARITH_TAC;;
 
 let DECOMPOSE_32_R0_SIGN = time prove(
-  `!r. r < 8380417 ==>
+  `forall r. r < 8380417 ==>
     let a1 = (((r + 127) DIV 128 * 1025 + 2097152) DIV 4194304) MOD 16 in
     let a0':int = if (&r:int) - &a1 * &523776 > &4190208
                   then &r - &a1 * &523776 - &8380417
@@ -422,7 +422,7 @@ let DECOMPOSE_32_R0_SIGN = time prove(
   ));;
 
 let MLDSA_USE_HINT_32_EQUIV = prove(
-  `!r h. r < 8380417 /\ h <= 1
+  `forall r h. r < 8380417 /\ h <= 1
          ==> mldsa_use_hint_32 h r = mldsa_use_hint_32_code r h`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   REWRITE_TAC[MLDSA_USE_HINT_32_UNFOLD] THEN
@@ -448,7 +448,7 @@ let MLDSA_USE_HINT_32_EQUIV = prove(
 (* ------------------------------------------------------------------------- *)
 
 (* Lane lemma: high 16 bits of the unsigned 16x16->32 multiply by 1025.      *)
-let LANE_MULHUW = prove(`!u:16 word. val u < 65536 ==>
+let LANE_MULHUW = prove(`forall u:16 word. val u < 65536 ==>
    val(word_subword (word_mul ((word_zx u):int32) ((word_zx (word 1025:16 word)):int32)) (16,16):16 word)
    = (val u * 1025) DIV 65536`,
   GEN_TAC THEN DISCH_TAC THEN
@@ -467,7 +467,7 @@ let LANE_MULHUW = prove(`!u:16 word. val u < 65536 ==>
 (* Lane lemma: the vpmulhrsw rounding-multiply lane by 512, for a 16-bit input
    below 1024 (the range of the m16 = round(t/B) intermediate). This is the
    second Barrett step:  a1_lane = ((m16 * 512) >> 14 + 1) >> 1. *)
-let LANE_MULHRSW = prove(`!u:16 word. val u < 1024 ==>
+let LANE_MULHRSW = prove(`forall u:16 word. val u < 1024 ==>
    val(word_subword (word_add (word_ushr (word_mul ((word_sx u):int32)((word_sx (word 512:16 word)):int32)) 14) (word 1:int32)) (1,16) :16 word)
    = ((val u * 512) DIV 16384 + 1) DIV 2`,
   GEN_TAC THEN DISCH_TAC THEN
@@ -498,12 +498,12 @@ let LANE_MULHRSW = prove(`!u:16 word. val u < 1024 ==>
 (* Arithmetic bridge: the assembly's two rounding steps (vpmulhuw by 1025 giving
    m16 = (t*1025) DIV 2^16, then vpmulhrsw by 512 giving ((m16*512) DIV 2^14 + 1) DIV 2)
    equal the single code-form Barrett division (t*1025 + 2^21) DIV 2^22. *)
-let MUL_DIV_512 = prove(`!m. (m * 512) DIV 16384 = m DIV 32`,
+let MUL_DIV_512 = prove(`forall m. (m * 512) DIV 16384 = m DIV 32`,
   GEN_TAC THEN REWRITE_TAC[ARITH_RULE `16384 = 512 * 32`] THEN
   REWRITE_TAC[GSYM DIV_DIV] THEN AP_THM_TAC THEN AP_TERM_TAC THEN
   ONCE_REWRITE_TAC[MULT_SYM] THEN SIMP_TAC[DIV_MULT; ARITH_RULE `~(512=0)`]);;
 
-let A1_TWOSTEP = prove(`!t. ((((t * 1025) DIV 65536) * 512) DIV 16384 + 1) DIV 2 =
+let A1_TWOSTEP = prove(`forall t. ((((t * 1025) DIV 65536) * 512) DIV 16384 + 1) DIV 2 =
                             (t * 1025 + 2097152) DIV 4194304`,
   GEN_TAC THEN REWRITE_TAC[MUL_DIV_512] THEN
   REWRITE_TAC[DIV_DIV] THEN CONV_TAC NUM_REDUCE_CONV THEN
@@ -517,7 +517,7 @@ let A1_TWOSTEP = prove(`!t. ((((t * 1025) DIV 65536) * 512) DIV 16384 + 1) DIV 2
    selections pick the relevant 16-bit halves; the multipliers appear as raw int32
    numerals (word 1025)/(word 512), bridged to the word_zx/word_sx lane forms of the
    helper lemmas by WORD_REDUCE_CONV. *)
-let A1_LANE = prove(`!a:int32. val a < 8380417 ==>
+let A1_LANE = prove(`forall a:int32. val a < 8380417 ==>
    val(word_subword
         (word_add
           (word_ushr
@@ -584,7 +584,7 @@ let A1_LANE = prove(`!a:int32. val a < 8380417 ==>
 (* shared with the AArch64 proof.                                            *)
 (* ------------------------------------------------------------------------- *)
 let A1_BOUND_NOWRAP = prove(
-  `!a. a <= 8118528
+  `forall a. a <= 8118528
    ==> ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304 <= 15`,
   GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(SPEC `128` (SPEC `8118528 + 127` (SPEC `a + 127` DIV_MONO))) THEN
@@ -598,7 +598,7 @@ let A1_BOUND_NOWRAP = prove(
    CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC]);;
 
 let A0_UPPER_32 = prove(
-  `!a. a <= 8118528
+  `forall a. a <= 8118528
    ==> a < (((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304 + 1) * 523776`,
   GEN_TAC THEN DISCH_TAC THEN
   ABBREV_TAC `nv = ((a + 127) DIV 128 * 1025 + 2097152) DIV 4194304` THEN
@@ -641,7 +641,7 @@ let mldsa_use_hint_32_x86_asm = new_definition
    word_and (word_add a1' (word_mul delta h)) (word 15)`;;
 
 let A1_LANE_VAL = prove(
-  `!a:int32. val a < 8380417
+  `forall a:int32. val a < 8380417
     ==> val(word_zx (word_subword
               (word_add (word_ushr (word_mul (word_sx (word_subword
                  (word_mul (word_zx (word_subword (word_ushr (word_add (word 127) a) 7) (0,16) :16 word) :int32)
@@ -660,21 +660,21 @@ let A1_LANE_VAL = prove(
   MATCH_MP_TAC MOD_LT THEN MP_TAC(SPEC `val(a:int32)` A1_BOUND) THEN ASM_REWRITE_TAC[] THEN ARITH_TAC);;
 
 let WORD_IGT_THRESHOLD_X86_32 = BITBLAST_RULE
-  `!a:int32. val a < 8380417 ==> (word_igt a (word 8118528:int32) <=> val a > 8118528)`;;
+  `forall a:int32. val a < 8380417 ==> (word_igt a (word 8118528:int32) <=> val a > 8118528)`;;
 
 let WRAP_A0_NEGATIVE_X86 = BITBLAST_RULE
-  `!a:int32. val a < 8380417 /\ val a > 8118528
+  `forall a:int32. val a < 8380417 /\ val a > 8118528
    ==> bit 31 (word_add (word_sub a (word 8380416:int32)) (word 4294967295:int32))`;;
 
 (* Bare (no +word 0) sign form, used in the no-wrap a0-sign bridge. *)
 let WORD_SUB_SIGN_BARE = BITBLAST_RULE
-  `!a:int32 b:int32. val b <= 7856640 /\ val a <= 8118528 ==>
+  `forall a:int32 b:int32. val b <= 7856640 /\ val a <= 8118528 ==>
    ((bit 31 (word_sub a b) \/ word_sub a b = word 0) <=> val a <= val b)`;;
 
 (* Small word identities used to simplify the lane after the wrap/no-wrap mask
    is resolved (these specific shapes are not in the standard word library). *)
-let WORD_ADD_LID = WORD_RULE `!x:N word. word_add (word 0) x = x`;;
-let WORD_SUB_RZERO = WORD_RULE `!x:N word. word_sub x (word 0) = x`;;
+let WORD_ADD_LID = WORD_RULE `forall x:N word. word_add (word 0) x = x`;;
+let WORD_SUB_RZERO = WORD_RULE `forall x:N word. word_sub x (word 0) = x`;;
 
 (* word_ile against 0 reduces to "sign bit set or value zero". *)
 let WORD_ILE_ZERO_X86_32 = WORD_ILE_ZERO_32;;
@@ -685,7 +685,7 @@ let WORD_ILE_ZERO_X86_32 = WORD_ILE_ZERO_32;;
 (* Case split is wrap (a > 87*GAMMA2 => a1 lane = 16, masked 0) vs no-wrap.  *)
 (* ------------------------------------------------------------------------- *)
 let ELEMENT_CORRECT = prove(
-  `!a:int32 h:int32.
+  `forall a:int32 h:int32.
      val a < 8380417 /\ val h <= 1
      ==> val(mldsa_use_hint_32_x86_asm a h) = mldsa_use_hint_32_code (val a) (val h)`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -830,7 +830,7 @@ let ELEMENT_CORRECT = prove(
 
 (* Word form, directly usable in the loop body discharge. *)
 let ELEMENT_CORRECT_WORD = prove(
-  `!a:int32 h:int32.
+  `forall a:int32 h:int32.
      val a < 8380417 /\ val h <= 1
      ==> mldsa_use_hint_32_x86_asm a h = word(mldsa_use_hint_32_code (val a) (val h))`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -848,7 +848,7 @@ let ELEMENT_CORRECT_WORD = prove(
 
 (* a1 * 2*GAMMA2 = a1*523776 computed as (a1<<10 - a1)<<9. *)
 let SHL_523776 = BITBLAST_RULE
-  `!a:int32. word_shl (word_sub (word_shl a 10) a) 9 = word_mul a (word 523776)`;;
+  `forall a:int32. word_shl (word_sub (word_shl a 10) a) 9 = word_mul a (word 523776)`;;
 
 (* The high 16-bit half of the VPMULHRSW lane uses multiplier (word 0), so it
    contributes nothing: the high a1 lane is zero. *)
@@ -866,7 +866,7 @@ let A1HI_ZERO = BITBLAST_RULE
 
 (* Final commutativity closer used after the surface rewrites line up the lane. *)
 let LANE_AC_CLOSE = prove
- (`!d m a:int32. word_and (word_add d (word_and m a)) (word 15) =
+ (`forall d m a:int32. word_and (word_add d (word_and m a)) (word 15) =
                  word_and (word_add (word_and a m) d) (word 15)`,
   REPEAT GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
@@ -874,19 +874,19 @@ let LANE_AC_CLOSE = prove
    word_join tree, pushing the &15 mask down to each 32-bit lane.  Used to line
    up the assembly's whole-vector mask with the per-lane &15 of the lane model. *)
 let ANDDUP_256 = prove
- (`!a b:int128. word_and (word_join a b:int256) (word_duplicate (word 15:int32)) =
+ (`forall a b:int128. word_and (word_join a b:int256) (word_duplicate (word 15:int32)) =
      word_join (word_and a (word_duplicate (word 15:int32):int128))
                (word_and b (word_duplicate (word 15:int32):int128))`,
   REPEAT GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
 let ANDDUP_128 = prove
- (`!a b:int64. word_and (word_join a b:int128) (word_duplicate (word 15:int32)) =
+ (`forall a b:int64. word_and (word_join a b:int128) (word_duplicate (word 15:int32)) =
      word_join (word_and a (word_duplicate (word 15:int32):int64))
                (word_and b (word_duplicate (word 15:int32):int64))`,
   REPEAT GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
 let ANDDUP_64 = prove
- (`!a b:int32. word_and (word_join a b:int64) (word_duplicate (word 15:int32)) =
+ (`forall a b:int32. word_and (word_join a b:int64) (word_duplicate (word 15:int32)) =
      word_join (word_and a (word_duplicate (word 15:int32):int32))
                (word_and b (word_duplicate (word 15:int32):int32))`,
   REPEAT GEN_TAC THEN CONV_TAC WORD_BLAST);;
@@ -903,7 +903,7 @@ let DUP15_32 = prove
 (* word_subword distributes through word_not on each 32-bit lane. *)
 let UH32_WSN = map (fun n -> prove(
     subst [mk_small_numeral n, `n:num`]
-      `!z:int256. word_subword(word_not z) (n,32):int32 = word_not(word_subword z (n,32))`,
+      `forall z:int256. word_subword(word_not z) (n,32):int32 = word_not(word_subword z (n,32))`,
     GEN_TAC THEN MATCH_MP_TAC WORD_SUBWORD_NOT THEN
     REWRITE_TAC[DIMINDEX_32; DIMINDEX_256] THEN ARITH_TAC)) [0;32;64;96;128;160;192;224];;
 
@@ -938,7 +938,7 @@ let UH32_STORE_DISCHARGE_TAC : tactic =
         MP_TAC(SPECL [a0term; `y:int32`] DELTA_EQ_BOUNDED) THEN ASM_REWRITE_TAC[] THEN
         DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN MATCH_ACCEPT_TAC LANE_AC_CLOSE) in
       let lane_gen = GENL [`x:int32`;`y:int32`] luh in
-      let bound_hyp = snd(find (fun (_,th) -> try concl th = `!k. k < 8 ==> val(word_subword (hv:int256) (32*k,32):int32) <= 1` with _->false) asl2) in
+      let bound_hyp = snd(find (fun (_,th) -> try concl th = `forall k. k < 8 ==> val(word_subword (hv:int256) (32*k,32):int32) <= 1` with _->false) asl2) in
       let bridges = map (fun k ->
         let off = mk_small_numeral (32*k) in
         let xk = mk_comb(mk_comb(`word_subword:int256->num#num->int32`,`av:int256`),mk_pair(off,`32`)) in
@@ -976,27 +976,27 @@ let MLDSA_POLY_USE_HINT_32_BODY_BLOCK_TAC : tactic =
   SUBGOAL_THEN `read (memory :> bytes256 (word_add a (word(32*i)))) s0 = xb i` ASSUME_TAC THENL
    [FIRST_ASSUM(fun th ->
       if can (term_match []
-        `!b. i <= b /\ b < 32 ==> read(memory :> bytes256(word_add a (word(32*b)))) s0 = xb b`) (concl th)
+        `forall b. i <= b /\ b < 32 ==> read(memory :> bytes256(word_add a (word(32*b)))) s0 = xb b`) (concl th)
       then MP_TAC(SPEC `i:num` th) else failwith "no") THEN
     ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN ACCEPT_TAC]; ALL_TAC] THEN
   SUBGOAL_THEN `read (memory :> bytes256 (word_add h (word(32*i)))) s0 = yb i` ASSUME_TAC THENL
    [FIRST_ASSUM(fun th ->
       if can (term_match []
-        `!b. b < 32 ==> read(memory :> bytes256(word_add h (word(32*b)))) s0 = yb b`) (concl th)
+        `forall b. b < 32 ==> read(memory :> bytes256(word_add h (word(32*b)))) s0 = yb b`) (concl th)
       then MP_TAC(SPEC `i:num` th) else failwith "no") THEN
     ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN ACCEPT_TAC]; ALL_TAC] THEN
-  SUBGOAL_THEN `!k. k < 8 ==> val(word_subword ((yb:num->int256) i) (32*k,32):int32) <= 1` ASSUME_TAC THENL
+  SUBGOAL_THEN `forall k. k < 8 ==> val(word_subword ((yb:num->int256) i) (32*k,32):int32) <= 1` ASSUME_TAC THENL
    [GEN_TAC THEN DISCH_TAC THEN
     FIRST_ASSUM(fun th -> if can (term_match []
-        `!b k. b < 32 /\ k < 8 ==> val(word_subword ((yb:num->int256) b) (32*k,32):int32) <= 1`) (concl th)
+        `forall b k. b < 32 /\ k < 8 ==> val(word_subword ((yb:num->int256) b) (32*k,32):int32) <= 1`) (concl th)
       then MP_TAC(SPECL [`i:num`;`k:num`] th) else failwith "no") THEN
     ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN ACCEPT_TAC]; ALL_TAC] THEN
   SUBGOAL_THEN
-    `!b. i+1 <= b /\ b < 32 ==> read(memory :> bytes256(word_add a (word(32*b)))) s0 = xb b`
+    `forall b. i+1 <= b /\ b < 32 ==> read(memory :> bytes256(word_add a (word(32*b)))) s0 = xb b`
     ASSUME_TAC THENL
    [REPEAT STRIP_TAC THEN
     FIRST_ASSUM(fun th -> if can (term_match []
-        `!b. i <= b /\ b < 32 ==> read(memory :> bytes256(word_add a (word(32*b)))) s0 = xb b`) (concl th)
+        `forall b. i <= b /\ b < 32 ==> read(memory :> bytes256(word_add a (word(32*b)))) s0 = xb b`) (concl th)
       then MP_TAC(SPEC `b:num` th) else failwith "no") THEN
     ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN ACCEPT_TAC]; ALL_TAC] THEN
   EVERY (map (fun n -> X86_STEPS_TAC MLDSA_POLY_USE_HINT_32_EXEC [n] THEN SIMD_SIMPLIFY_TAC[]) (1--24)) THEN
@@ -1005,7 +1005,7 @@ let MLDSA_POLY_USE_HINT_32_BODY_BLOCK_TAC : tactic =
   TRY(REWRITE_TAC[ARITH_RULE `32 * (i + 1) = 32 * i + 32`] THEN CONV_TAC WORD_RULE) THEN
   TRY(X_GEN_TAC `b:num` THEN DISCH_TAC THEN ASM_CASES_TAC `b < i` THENL
        [UNDISCH_TAC `b:num < i` THEN
-        UNDISCH_TAC `!b. b < i ==> read (memory :> bytes256 (word_add a (word (32 * b)))) s24 = simd8 mldsa_use_hint_32_x86_asm (xb b) (yb b)` THEN
+        UNDISCH_TAC `forall b. b < i ==> read (memory :> bytes256 (word_add a (word (32 * b)))) s24 = simd8 mldsa_use_hint_32_x86_asm (xb b) (yb b)` THEN
         MESON_TAC[];
         SUBGOAL_THEN `b:num = i` SUBST_ALL_TAC THENL
          [UNDISCH_TAC `b:num < i + 1` THEN UNDISCH_TAC `~(b:num < i)` THEN ARITH_TAC; ALL_TAC] THEN
@@ -1028,18 +1028,18 @@ let MLDSA_POLY_USE_HINT_32_BODY_BLOCK_TAC : tactic =
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_POLY_USE_HINT_32_BLOCK_CORRECT = prove
- (`!a h xb yb pc.
+ (`forall a h xb yb pc.
     aligned 32 a /\ aligned 32 h /\
     nonoverlapping (word pc, 0xbc) (a, 1024) /\ nonoverlapping (a, 1024) (h, 1024) /\
-    (!b k. b < 32 /\ k < 8 ==> val(word_subword (yb b:int256) (32*k,32):int32) <= 1)
+    (forall b k. b < 32 /\ k < 8 ==> val(word_subword (yb b:int256) (32*k,32):int32) <= 1)
     ==> ensures x86
           (\s. bytes_loaded s (word pc) (BUTLAST mldsa_poly_use_hint_32_tmc) /\
                read RIP s = word pc /\
                C_ARGUMENTS [a; h] s /\
-               (!b. b < 32 ==> read(memory :> bytes256(word_add a (word(32 * b)))) s = xb b) /\
-               (!b. b < 32 ==> read(memory :> bytes256(word_add h (word(32 * b)))) s = yb b))
+               (forall b. b < 32 ==> read(memory :> bytes256(word_add a (word(32 * b)))) s = xb b) /\
+               (forall b. b < 32 ==> read(memory :> bytes256(word_add h (word(32 * b)))) s = yb b))
           (\s. read RIP s = word(pc + 0xbc) /\
-               (!b. b < 32 ==>
+               (forall b. b < 32 ==>
                       read(memory :> bytes256(word_add a (word(32 * b)))) s =
                         simd8 mldsa_use_hint_32_x86_asm (xb b) (yb b)))
           (MAYCHANGE [RIP] ,, MAYCHANGE [events] ,,
@@ -1062,10 +1062,10 @@ let MLDSA_POLY_USE_HINT_32_BLOCK_CORRECT = prove
        read YMM4 s = (word_duplicate (word 8118528:int32):int256) /\
        read YMM6 s = (word 0:int256) /\
        read YMM3 s = (word_duplicate (word 15:int32):int256) /\
-       (!b. b < 32 ==> read(memory :> bytes256(word_add h (word(32 * b)))) s = yb b) /\
-       (!b. i <= b /\ b < 32
+       (forall b. b < 32 ==> read(memory :> bytes256(word_add h (word(32 * b)))) s = yb b) /\
+       (forall b. i <= b /\ b < 32
             ==> read(memory :> bytes256(word_add a (word(32 * b)))) s = xb b) /\
-       (!b. b < i
+       (forall b. b < i
             ==> read(memory :> bytes256(word_add a (word(32 * b)))) s =
                 simd8 mldsa_use_hint_32_x86_asm (xb b) (yb b)))
       /\
@@ -1102,22 +1102,22 @@ let MLDSA_POLY_USE_HINT_32_BLOCK_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_POLY_USE_HINT_32_CORRECT = prove
- (`!a h x y pc.
+ (`forall a h x y pc.
     aligned 32 a /\ aligned 32 h /\
     nonoverlapping (word pc, 0xbc) (a, 1024) /\ nonoverlapping (a, 1024) (h, 1024)
     ==> ensures x86
           (\s. bytes_loaded s (word pc) (BUTLAST mldsa_poly_use_hint_32_tmc) /\
                read RIP s = word pc /\
                C_ARGUMENTS [a; h] s /\
-               (!i. i < 256 ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-               (!i. i < 256 ==> read(memory :> bytes32(word_add h (word(4 * i)))) s = y i) /\
-               (!i. i < 256 ==> val(x i:int32) < 8380417) /\
-               (!i. i < 256 ==> val(y i:int32) <= 1))
+               (forall i. i < 256 ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
+               (forall i. i < 256 ==> read(memory :> bytes32(word_add h (word(4 * i)))) s = y i) /\
+               (forall i. i < 256 ==> val(x i:int32) < 8380417) /\
+               (forall i. i < 256 ==> val(y i:int32) <= 1))
           (\s. read RIP s = word(pc + 0xbc) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                       read(memory :> bytes32(word_add a (word(4 * i)))) s =
                         word(mldsa_use_hint_32 (val(y i)) (val(x i)))) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                       val(read(memory :> bytes32(word_add a (word(4 * i)))) s) < 16))
           (MAYCHANGE [RIP] ,, MAYCHANGE [events] ,,
            MAYCHANGE [RAX; RCX; RDI; RSI; R8; R9] ,,
@@ -1126,8 +1126,8 @@ let MLDSA_POLY_USE_HINT_32_CORRECT = prove
            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [memory :> bytes(a, 1024)])`,
   MAP_EVERY X_GEN_TAC [`a:int64`;`h:int64`;`x:num->int32`;`y:num->int32`;`pc:num`] THEN
   STRIP_TAC THEN
-  ASM_CASES_TAC `(!i. i < 256 ==> val(x i:int32) < 8380417) /\
-                 (!i. i < 256 ==> val(y i:int32) <= 1)`
+  ASM_CASES_TAC `(forall i. i < 256 ==> val(x i:int32) < 8380417) /\
+                 (forall i. i < 256 ==> val(y i:int32) <= 1)`
   THENL
   [FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC) THEN
    MATCH_MP_TAC ENSURES_PREPOSTCONDITION_THM THEN
@@ -1135,10 +1135,10 @@ let MLDSA_POLY_USE_HINT_32_CORRECT = prove
    [`\s. bytes_loaded s (word pc) (BUTLAST mldsa_poly_use_hint_32_tmc) /\
          read RIP s = word pc /\
          C_ARGUMENTS [a; h] s /\
-         (!b. b < 32 ==> read(memory :> bytes256(word_add a (word(32 * b)))) s = pack8 x b) /\
-         (!b. b < 32 ==> read(memory :> bytes256(word_add h (word(32 * b)))) s = pack8 y b)`;
+         (forall b. b < 32 ==> read(memory :> bytes256(word_add a (word(32 * b)))) s = pack8 x b) /\
+         (forall b. b < 32 ==> read(memory :> bytes256(word_add h (word(32 * b)))) s = pack8 y b)`;
     `\s. read RIP s = word(pc + 0xbc) /\
-         (!b. b < 32 ==>
+         (forall b. b < 32 ==>
                 read(memory :> bytes256(word_add a (word(32 * b)))) s =
                   simd8 mldsa_use_hint_32_x86_asm (pack8 x b) (pack8 y b))`] THEN
   CONJ_TAC THENL
@@ -1153,7 +1153,7 @@ let MLDSA_POLY_USE_HINT_32_CORRECT = prove
     (* postcondition weakening: block result ==> coefficient FIPS result + bound *)
     X_GEN_TAC `s:x86state` THEN REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
     SUBGOAL_THEN
-      `!i. i < 256 ==>
+      `forall i. i < 256 ==>
              read(memory :> bytes32(word_add a (word(4 * i)))) s =
                mldsa_use_hint_32_x86_asm (x i) (y i)`
       ASSUME_TAC THENL
@@ -1225,7 +1225,7 @@ let MLDSA_POLY_USE_HINT_32_CORRECT = prove
 (* ========================================================================= *)
 
 let MLDSA_POLY_USE_HINT_32_NOIBT_SUBROUTINE_CORRECT = prove
- (`!a h x y pc stackpointer returnaddress.
+ (`forall a h x y pc stackpointer returnaddress.
     aligned 32 a /\ aligned 32 h /\
     nonoverlapping (word pc, LENGTH mldsa_poly_use_hint_32_tmc) (a, 1024) /\
     nonoverlapping (a, 1024) (h, 1024) /\
@@ -1236,23 +1236,23 @@ let MLDSA_POLY_USE_HINT_32_NOIBT_SUBROUTINE_CORRECT = prove
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
                C_ARGUMENTS [a; h] s /\
-               (!i. i < 256 ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-               (!i. i < 256 ==> read(memory :> bytes32(word_add h (word(4 * i)))) s = y i) /\
-               (!i. i < 256 ==> val(x i:int32) < 8380417) /\
-               (!i. i < 256 ==> val(y i:int32) <= 1))
+               (forall i. i < 256 ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
+               (forall i. i < 256 ==> read(memory :> bytes32(word_add h (word(4 * i)))) s = y i) /\
+               (forall i. i < 256 ==> val(x i:int32) < 8380417) /\
+               (forall i. i < 256 ==> val(y i:int32) <= 1))
           (\s. read RIP s = returnaddress /\
                read RSP s = word_add stackpointer (word 8) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                       read(memory :> bytes32(word_add a (word(4 * i)))) s =
                         word(mldsa_use_hint_32 (val(y i)) (val(x i)))) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                       val(read(memory :> bytes32(word_add a (word(4 * i)))) s) < 16))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(a, 1024)])`,
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_poly_use_hint_32_tmc MLDSA_POLY_USE_HINT_32_CORRECT);;
 
 let MLDSA_POLY_USE_HINT_32_SUBROUTINE_CORRECT = prove
- (`!a h x y pc stackpointer returnaddress.
+ (`forall a h x y pc stackpointer returnaddress.
     aligned 32 a /\ aligned 32 h /\
     nonoverlapping (word pc, LENGTH mldsa_poly_use_hint_32_mc) (a, 1024) /\
     nonoverlapping (a, 1024) (h, 1024) /\
@@ -1263,16 +1263,16 @@ let MLDSA_POLY_USE_HINT_32_SUBROUTINE_CORRECT = prove
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
                C_ARGUMENTS [a; h] s /\
-               (!i. i < 256 ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-               (!i. i < 256 ==> read(memory :> bytes32(word_add h (word(4 * i)))) s = y i) /\
-               (!i. i < 256 ==> val(x i:int32) < 8380417) /\
-               (!i. i < 256 ==> val(y i:int32) <= 1))
+               (forall i. i < 256 ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
+               (forall i. i < 256 ==> read(memory :> bytes32(word_add h (word(4 * i)))) s = y i) /\
+               (forall i. i < 256 ==> val(x i:int32) < 8380417) /\
+               (forall i. i < 256 ==> val(y i:int32) <= 1))
           (\s. read RIP s = returnaddress /\
                read RSP s = word_add stackpointer (word 8) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                       read(memory :> bytes32(word_add a (word(4 * i)))) s =
                         word(mldsa_use_hint_32 (val(y i)) (val(x i)))) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                       val(read(memory :> bytes32(word_add a (word(4 * i)))) s) < 16))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(a, 1024)])`,
@@ -1386,7 +1386,7 @@ let MLDSA_POLY_USE_HINT_32_WINDOWS_TMC_EXEC =
   X86_MK_EXEC_RULE mldsa_poly_use_hint_32_windows_tmc;;
 
 let MLDSA_POLY_USE_HINT_32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a h x y pc stackpointer returnaddress.
+ (`forall a h x y pc stackpointer returnaddress.
     aligned 32 a /\ aligned 32 h /\
     nonoverlapping (word pc, LENGTH mldsa_poly_use_hint_32_windows_tmc) (a, 1024) /\
     nonoverlapping (a, 1024) (h, 1024) /\
@@ -1400,16 +1400,16 @@ let MLDSA_POLY_USE_HINT_32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
                WINDOWS_C_ARGUMENTS [a; h] s /\
-               (!i. i < 256 ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-               (!i. i < 256 ==> read(memory :> bytes32(word_add h (word(4 * i)))) s = y i) /\
-               (!i. i < 256 ==> val(x i:int32) < 8380417) /\
-               (!i. i < 256 ==> val(y i:int32) <= 1))
+               (forall i. i < 256 ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
+               (forall i. i < 256 ==> read(memory :> bytes32(word_add h (word(4 * i)))) s = y i) /\
+               (forall i. i < 256 ==> val(x i:int32) < 8380417) /\
+               (forall i. i < 256 ==> val(y i:int32) <= 1))
           (\s. read RIP s = returnaddress /\
                read RSP s = word_add stackpointer (word 8) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                       read(memory :> bytes32(word_add a (word(4 * i)))) s =
                         word(mldsa_use_hint_32 (val(y i)) (val(x i)))) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                       val(read(memory :> bytes32(word_add a (word(4 * i)))) s) < 16))
           (MAYCHANGE [RSP] ,,
            WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -1478,7 +1478,7 @@ let MLDSA_POLY_USE_HINT_32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLDSA_POLY_USE_HINT_32_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a h x y pc stackpointer returnaddress.
+ (`forall a h x y pc stackpointer returnaddress.
     aligned 32 a /\ aligned 32 h /\
     nonoverlapping (word pc, LENGTH mldsa_poly_use_hint_32_windows_mc) (a, 1024) /\
     nonoverlapping (a, 1024) (h, 1024) /\
@@ -1492,16 +1492,16 @@ let MLDSA_POLY_USE_HINT_32_WINDOWS_SUBROUTINE_CORRECT = prove
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
                WINDOWS_C_ARGUMENTS [a; h] s /\
-               (!i. i < 256 ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-               (!i. i < 256 ==> read(memory :> bytes32(word_add h (word(4 * i)))) s = y i) /\
-               (!i. i < 256 ==> val(x i:int32) < 8380417) /\
-               (!i. i < 256 ==> val(y i:int32) <= 1))
+               (forall i. i < 256 ==> read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
+               (forall i. i < 256 ==> read(memory :> bytes32(word_add h (word(4 * i)))) s = y i) /\
+               (forall i. i < 256 ==> val(x i:int32) < 8380417) /\
+               (forall i. i < 256 ==> val(y i:int32) <= 1))
           (\s. read RIP s = returnaddress /\
                read RSP s = word_add stackpointer (word 8) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                       read(memory :> bytes32(word_add a (word(4 * i)))) s =
                         word(mldsa_use_hint_32 (val(y i)) (val(x i)))) /\
-               (!i. i < 256 ==>
+               (forall i. i < 256 ==>
                       val(read(memory :> bytes32(word_add a (word(4 * i)))) s) < 16))
           (MAYCHANGE [RSP] ,,
            WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,

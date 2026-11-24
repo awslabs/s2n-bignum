@@ -283,7 +283,7 @@ let unpermute_list = new_definition
   `unpermute_list l = list_of_seq (\i. EL (avx_unorder i) l) 256`;;
 
 let MLKEM_UNPACK_CORRECT = prove(
-    `!a (l:int16 list) pc.
+    `forall a (l:int16 list) pc.
         aligned 32 a /\
         nonoverlapping (word pc, 754) (a, 512)
         ==> ensures x86
@@ -360,7 +360,7 @@ let MLKEM_UNPACK_CORRECT = prove(
 
 
 let MLKEM_UNPACK_NOIBT_SUBROUTINE_CORRECT = prove(
-    `!a (l:int16 list) pc.
+    `forall a (l:int16 list) pc.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_unpack_tmc) (a, 512) /\
         nonoverlapping (stackpointer, 8) (a, 512)
@@ -381,7 +381,7 @@ let MLKEM_UNPACK_NOIBT_SUBROUTINE_CORRECT = prove(
   X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_unpack_tmc MLKEM_UNPACK_CORRECT);;
 
 let MLKEM_UNPACK_SUBROUTINE_CORRECT = prove(
-    `!a (l:int16 list) pc.
+    `forall a (l:int16 list) pc.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_unpack_mc) (a, 512) /\
         nonoverlapping (stackpointer, 8) (a, 512)
@@ -415,7 +415,7 @@ let mlkem_unpack_windows_tmc = define_trimmed
 let mlkem_unpack_windows_tmc_EXEC = X86_MK_EXEC_RULE mlkem_unpack_windows_tmc;;
 
 let MLKEM_UNPACK_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
-    `!a (l:int16 list) pc stackpointer returnaddress.
+    `forall a (l:int16 list) pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_unpack_windows_tmc) (a, 512) /\
         nonoverlapping (word_sub stackpointer (word 176), 184) (a, 512) /\
@@ -514,7 +514,7 @@ let MLKEM_UNPACK_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLKEM_UNPACK_WINDOWS_SUBROUTINE_CORRECT = prove(
-    `!a (l:int16 list) pc stackpointer returnaddress.
+    `forall a (l:int16 list) pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mlkem_unpack_windows_mc) (a, 512) /\
         nonoverlapping (word_sub stackpointer (word 176), 184) (a, 512) /\

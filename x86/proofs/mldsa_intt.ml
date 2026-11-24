@@ -4372,7 +4372,7 @@ let mldsa_complete_qdata = define
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_INTT_CORRECT = prove
- (`!a zetas x pc.
+ (`forall a zetas x pc.
     aligned 32 a /\
     aligned 32 zetas /\
     nonoverlapping (word pc,0x2F39) (a, 1024) /\
@@ -4383,12 +4383,12 @@ let MLDSA_INTT_CORRECT = prove
               read RIP s = word pc /\
               C_ARGUMENTS [a; zetas] s /\
               wordlist_from_memory(zetas,624) s = MAP (iword: int -> 32 word) mldsa_complete_qdata /\
-              (!i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
-              !i. i < 256
+              (forall i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
+              forall i. i < 256
                   ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                       x i)
           (\s. read RIP s = word(pc + 0x2F38) /\
-              (!i. i < 256
+              (forall i. i < 256
                         ==> let zi =
                       read(memory :> bytes32(word_add a (word(4 * i)))) s in
                       (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
@@ -4505,7 +4505,7 @@ let MLDSA_INTT_CORRECT = prove
     MLDSA_INVERSE_NTT_CONV);;
 
 let MLDSA_INTT_NOIBT_SUBROUTINE_CORRECT = prove
-  (`!a zetas x pc stackpointer returnaddress.
+  (`forall a zetas x pc stackpointer returnaddress.
     aligned 32 a /\
     aligned 32 zetas /\
     nonoverlapping (word pc, LENGTH mldsa_intt_tmc) (a, 1024) /\
@@ -4520,13 +4520,13 @@ let MLDSA_INTT_NOIBT_SUBROUTINE_CORRECT = prove
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [a; zetas] s /\
               wordlist_from_memory(zetas,624) s = MAP (iword: int -> 32 word) mldsa_complete_qdata /\
-              (!i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
-              !i. i < 256
+              (forall i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
+              forall i. i < 256
                   ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                       x i)
           (\s. read RIP s = returnaddress /\
                read RSP s = word_add stackpointer (word 8) /\
-              (!i. i < 256
+              (forall i. i < 256
                         ==> let zi =
                       read(memory :> bytes32(word_add a (word(4 * i)))) s in
                       (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
@@ -4538,7 +4538,7 @@ let MLDSA_INTT_NOIBT_SUBROUTINE_CORRECT = prove
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_intt_tmc (CONV_RULE TWEAK_CONV MLDSA_INTT_CORRECT));;
 
 let MLDSA_INTT_SUBROUTINE_CORRECT = prove
-  (`!a zetas x pc stackpointer returnaddress.
+  (`forall a zetas x pc stackpointer returnaddress.
     aligned 32 a /\
     aligned 32 zetas /\
     nonoverlapping (word pc, LENGTH mldsa_intt_mc) (a, 1024) /\
@@ -4553,13 +4553,13 @@ let MLDSA_INTT_SUBROUTINE_CORRECT = prove
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [a; zetas] s /\
               wordlist_from_memory(zetas,624) s = MAP (iword: int -> 32 word) mldsa_complete_qdata /\
-              (!i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
-              !i. i < 256
+              (forall i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
+              forall i. i < 256
                   ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                       x i)
           (\s. read RIP s = returnaddress /\
                read RSP s = word_add stackpointer (word 8) /\
-              (!i. i < 256
+              (forall i. i < 256
                         ==> let zi =
                       read(memory :> bytes32(word_add a (word(4 * i)))) s in
                       (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
@@ -4584,7 +4584,7 @@ let mldsa_intt_windows_tmc = define_trimmed
 let MLDSA_INTT_WINDOWS_TMC_EXEC = X86_MK_EXEC_RULE mldsa_intt_windows_tmc;;
 
 let MLDSA_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a zetas (zetas_list:int32 list) x pc stackpointer returnaddress.
+ (`forall a zetas (zetas_list:int32 list) x pc stackpointer returnaddress.
         aligned 32 a /\
         aligned 32 zetas /\
         nonoverlapping (word pc,LENGTH mldsa_intt_windows_tmc) (a, 1024) /\
@@ -4601,13 +4601,13 @@ let MLDSA_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    WINDOWS_C_ARGUMENTS [a; zetas] s /\
                    wordlist_from_memory(zetas,624) s = MAP (iword: int -> 32 word) mldsa_complete_qdata /\
-                   (!i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
-                   !i. i < 256
+                   (forall i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
+                   forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                            x i)
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   (!i. i < 256
+                   (forall i. i < 256
                              ==> let zi =
                            read(memory :> bytes32(word_add a (word(4 * i)))) s in
                            (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
@@ -4696,7 +4696,7 @@ let MLDSA_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLDSA_INTT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a zetas (zetas_list:int32 list) x pc stackpointer returnaddress.
+ (`forall a zetas (zetas_list:int32 list) x pc stackpointer returnaddress.
         aligned 32 a /\
         aligned 32 zetas /\
         nonoverlapping (word pc,LENGTH mldsa_intt_windows_mc) (a, 1024) /\
@@ -4713,13 +4713,13 @@ let MLDSA_INTT_WINDOWS_SUBROUTINE_CORRECT = prove
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    WINDOWS_C_ARGUMENTS [a; zetas] s /\
                    wordlist_from_memory(zetas,624) s = MAP (iword: int -> 32 word) mldsa_complete_qdata /\
-                   (!i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
-                   !i. i < 256
+                   (forall i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
+                   forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                            x i)
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   (!i. i < 256
+                   (forall i. i < 256
                              ==> let zi =
                            read(memory :> bytes32(word_add a (word(4 * i)))) s in
                            (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\

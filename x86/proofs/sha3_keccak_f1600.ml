@@ -510,7 +510,7 @@ let SHA3_KECCAK_F1600_EXEC = X86_MK_CORE_EXEC_RULE sha3_keccak_f1600_tmc;;
 (* ------------------------------------------------------------------------- *)
 
  let WORD_ROL_NOT_SYM = prove
- (`!(x:N word) n. word_rol (word_not x) n = word_not (word_rol x n)`,
+ (`forall (x:N word) n. word_rol (word_not x) n = word_not (word_rol x n)`,
   REWRITE_TAC[WORD_EQ_BITS_ALT; BIT_WORD_ROL; BIT_WORD_NOT] THEN
   REPEAT GEN_TAC THEN
   REPEAT(COND_CASES_TAC THEN ASM_SIMP_TAC[]) THEN
@@ -518,13 +518,13 @@ let SHA3_KECCAK_F1600_EXEC = X86_MK_CORE_EXEC_RULE sha3_keccak_f1600_tmc;;
   ASM_ARITH_TAC);;
 
   let WORD_NEG_EL_DEMORGAN = prove(
-  `!(p:N word) (q:N word). 
+  `forall (p:N word) (q:N word).
     (word_or p (word_not q)) = word_not(word_and (word_not p) q)`,
     REPEAT GEN_TAC THEN
     WORD_BITWISE_TAC);;
 
 let SHA3_KECCAK_F1600_CORRECT = prove
-  (`!rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64.
+  (`forall rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64.
   nonoverlapping_modulo (2 EXP 64) (pc, 0x66a) (val  stackpointer, 208) /\
   nonoverlapping_modulo (2 EXP 64) (pc, 0x66a) (val bitstate_in, 200) /\
   nonoverlapping_modulo (2 EXP 64) (pc, 0x66a) (val rc_pointer, 192) /\
@@ -706,7 +706,7 @@ let SHA3_KECCAK_F1600_CORRECT = prove
     ASM_REWRITE_TAC[WORD_NOT_NOT]]);;
 
 let SHA3_KECCAK_F1600_NOIBT_SUBROUTINE_CORRECT = time prove
- (`!rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_tmc) (val (word_sub stackpointer (word 256)), 256) /\
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_tmc) (val bitstate_in, 200) /\
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_tmc) (val rc_pointer, 192) /\
@@ -734,7 +734,7 @@ let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
   `[RBX; RBP; R12; R13; R14; R15]` 256);;
 
 let SHA3_KECCAK_F1600_SUBROUTINE_CORRECT = time prove
- (`!rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_mc) (val (word_sub stackpointer (word 256)), 256) /\
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_mc) (val bitstate_in, 200) /\
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_mc) (val rc_pointer, 192) /\
@@ -771,7 +771,7 @@ let sha3_keccak_f1600_windows_mc = define_from_elf
 let sha3_keccak_f1600_windows_tmc = define_trimmed "sha3_keccak_f1600_windows_tmc" sha3_keccak_f1600_windows_mc;;
 
 let SHA3_KECCAK_F1600_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_tmc) (val (word_sub stackpointer (word 272)), 272) /\
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_tmc) (val bitstate_in, 200) /\
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_tmc) (val rc_pointer, 192) /\
@@ -800,7 +800,7 @@ let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
     `[RBX; RBP; R12; R13; R14; R15]` 256);;
 
 let SHA3_KECCAK_F1600_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val (word_sub stackpointer (word 272)), 272) /\
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val bitstate_in, 200) /\
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val rc_pointer, 192) /\

@@ -871,7 +871,7 @@ let sha3_keccak4_f1600_tmc = define_trimmed "sha3_keccak4_f1600_tmc" sha3_keccak
 let SHA3_KECCAK4_F1600_EXEC = X86_MK_CORE_EXEC_RULE sha3_keccak4_f1600_tmc;;
 
 let SHA3_KECCAK4_F1600_CORRECT = prove
-  (`!rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64.
+  (`forall rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64.
   nonoverlapping_modulo (2 EXP 64) (pc, 0xc1b) (val stackpointer, 0x360) /\
   nonoverlapping_modulo (2 EXP 64) (pc, 0xc1b) (val bitstate_in, 800) /\
   nonoverlapping_modulo (2 EXP 64) (pc, 0xc1b) (val rc_pointer, 192) /\
@@ -1037,7 +1037,7 @@ let SHA3_KECCAK4_F1600_CORRECT = prove
 let SHA3_KECCAK4_F1600_FULL_EXEC = X86_MK_EXEC_RULE sha3_keccak4_f1600_tmc;;
 
 let SHA3_KECCAK4_F1600_NOIBT_SUBROUTINE_CORRECT = time prove
- (`!rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_tmc) (val (word_sub stackpointer (word 0x37f)), 0x37f) /\
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_tmc) (val bitstate_in, 800) /\
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_tmc) (val rc_pointer, 192) /\
@@ -1103,7 +1103,7 @@ let SHA3_KECCAK4_F1600_NOIBT_SUBROUTINE_CORRECT = time prove
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
 
 let SHA3_KECCAK4_F1600_SUBROUTINE_CORRECT = time prove
- (`!rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_mc) (val (word_sub stackpointer (word 0x37f)), 0x37f) /\
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_mc) (val bitstate_in, 800) /\
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_mc) (val rc_pointer, 192) /\
@@ -1148,7 +1148,7 @@ let sha3_keccak4_f1600_windows_tmc = define_trimmed "sha3_keccak4_f1600_windows_
 let sha3_keccak4_f1600_windows_tmc_EXEC = X86_MK_EXEC_RULE sha3_keccak4_f1600_windows_tmc;;
 
 let SHA3_KECCAK4_F1600_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
+ (`forall rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_windows_tmc) (val (word_sub stackpointer (word 0x42f)), 0x42f) /\
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_windows_tmc) (val bitstate_in, 800) /\
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_windows_tmc) (val rc_pointer, 192) /\
@@ -1273,7 +1273,7 @@ let SHA3_KECCAK4_F1600_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let SHA3_KECCAK4_F1600_WINDOWS_SUBROUTINE_CORRECT = prove
-  (`!rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
+  (`forall rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_windows_mc) (val (word_sub stackpointer (word 0x42f)), 0x42f) /\
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_windows_mc) (val bitstate_in, 800) /\
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_windows_mc) (val rc_pointer, 192) /\

@@ -1698,7 +1698,7 @@ let pmulaccred1_k4 = define
         pmulacc1_k4 a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3) rem &3329`;;
 
 let MLKEM_BASEMUL_K4_CORRECT = prove(
-  `!src1 src2 src2t dst a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3 pc.
+  `forall src1 src2 src2t dst a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3 pc.
         aligned 32 src1 /\
         aligned 32 src2 /\
         aligned 32 src2t /\
@@ -1709,71 +1709,71 @@ let MLKEM_BASEMUL_K4_CORRECT = prove(
               (\s. bytes_loaded s (word pc) (BUTLAST mlkem_basemul_k4_tmc) /\
                    read RIP s = word pc /\
                    C_ARGUMENTS [dst; src1; src2; src2t] s /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (64*j + 2*i)))) s = a0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (64*j + 32 + 2*i)))) s = b0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (64*j + 2*i)))) s = c0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (64*j + 32 + 2*i)))) s = d0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (32*j + 2*i)))) s = dz0 i j) /\
                              
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (512 + 64*j + 2*i)))) s = a1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (512 + 64*j + 32 + 2*i)))) s = b1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (512 + 64*j + 2*i)))) s = c1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (512 + 64*j + 32 + 2*i)))) s = d1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (256 + 32*j + 2*i)))) s = dz1 i j) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1024 + 64*j + 2*i)))) s = a2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1024 + 64*j + 32 + 2*i)))) s = b2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1024 + 64*j + 2*i)))) s = c2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1024 + 64*j + 32 + 2*i)))) s = d2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (512 + 32*j + 2*i)))) s = dz2 i j) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1536 + 64*j + 2*i)))) s = a3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1536 + 64*j + 32 + 2*i)))) s = b3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1536 + 64*j + 2*i)))) s = c3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1536 + 64*j + 32 + 2*i)))) s = d3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (768 + 32*j + 2*i)))) s = dz3 i j))
               (\s. read RIP s = word (pc + 5202) /\
-                   (!i. i < 16 ==> !j. j < 4
+                   (forall i. i < 16 ==> forall j. j < 4
                         ==> (let j' = 2*j in
                               (abs(ival(a0 i j')) <= &2 pow 12  /\
                                abs(ival(b0 i j')) <= &2 pow 12  /\
@@ -1792,7 +1792,7 @@ let MLKEM_BASEMUL_K4_CORRECT = prove(
                                                (ival (a3 i j')) (ival (b3 i j')) (ival (c3 i j')) (ival (d3 i j')) (ival (dz3 i j'))
                                ) (mod &3329)))) /\
 
-                   (!i. i < 16 ==> !j. j < 4
+                   (forall i. i < 16 ==> forall j. j < 4
                         ==> (let j' = 2*j+1 in
                               (abs(ival(a0 i j')) <= &2 pow 12  /\
                                abs(ival(b0 i j')) <= &2 pow 12  /\
@@ -1811,7 +1811,7 @@ let MLKEM_BASEMUL_K4_CORRECT = prove(
                                                    (ival (a3 i j')) (ival (b3 i j')) (ival (c3 i j')) (ival (d3 i j')) (ival (dz3 i j'))
                                ) (mod &3329)))) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> abs(ival(a0 i j)) <= &2 pow 12  /\
                             abs(ival(b0 i j)) <= &2 pow 12  /\
                             abs(ival(a1 i j)) <= &2 pow 12  /\
@@ -1885,7 +1885,7 @@ let MLKEM_BASEMUL_K4_CORRECT = prove(
 );;
 
 let MLKEM_BASEMUL_K4_NOIBT_SUBROUTINE_CORRECT = prove(
-  `!src1 src2 src2t dst a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3 pc stackpointer returnaddress.
+  `forall src1 src2 src2t dst a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3 pc stackpointer returnaddress.
         aligned 32 src1 /\
         aligned 32 src2 /\
         aligned 32 src2t /\
@@ -1899,72 +1899,72 @@ let MLKEM_BASEMUL_K4_NOIBT_SUBROUTINE_CORRECT = prove(
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    C_ARGUMENTS [dst; src1; src2; src2t] s /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (64*j + 2*i)))) s = a0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (64*j + 32 + 2*i)))) s = b0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (64*j + 2*i)))) s = c0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (64*j + 32 + 2*i)))) s = d0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (32*j + 2*i)))) s = dz0 i j) /\
                              
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (512 + 64*j + 2*i)))) s = a1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (512 + 64*j + 32 + 2*i)))) s = b1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (512 + 64*j + 2*i)))) s = c1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (512 + 64*j + 32 + 2*i)))) s = d1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (256 + 32*j + 2*i)))) s = dz1 i j) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1024 + 64*j + 2*i)))) s = a2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1024 + 64*j + 32 + 2*i)))) s = b2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1024 + 64*j + 2*i)))) s = c2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1024 + 64*j + 32 + 2*i)))) s = d2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (512 + 32*j + 2*i)))) s = dz2 i j) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1536 + 64*j + 2*i)))) s = a3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1536 + 64*j + 32 + 2*i)))) s = b3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1536 + 64*j + 2*i)))) s = c3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1536 + 64*j + 32 + 2*i)))) s = d3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (768 + 32*j + 2*i)))) s = dz3 i j))
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   (!i. i < 16 ==> !j. j < 4
+                   (forall i. i < 16 ==> forall j. j < 4
                         ==> (let j' = 2*j in
                               (abs(ival(a0 i j')) <= &2 pow 12  /\
                                abs(ival(b0 i j')) <= &2 pow 12  /\
@@ -1983,7 +1983,7 @@ let MLKEM_BASEMUL_K4_NOIBT_SUBROUTINE_CORRECT = prove(
                                                (ival (a3 i j')) (ival (b3 i j')) (ival (c3 i j')) (ival (d3 i j')) (ival (dz3 i j'))
                                ) (mod &3329)))) /\
 
-                   (!i. i < 16 ==> !j. j < 4
+                   (forall i. i < 16 ==> forall j. j < 4
                         ==> (let j' = 2*j+1 in
                               (abs(ival(a0 i j')) <= &2 pow 12  /\
                                abs(ival(b0 i j')) <= &2 pow 12  /\
@@ -2002,7 +2002,7 @@ let MLKEM_BASEMUL_K4_NOIBT_SUBROUTINE_CORRECT = prove(
                                                    (ival (a3 i j')) (ival (b3 i j')) (ival (c3 i j')) (ival (d3 i j')) (ival (dz3 i j'))
                                ) (mod &3329)))) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> abs(ival(a0 i j)) <= &2 pow 12  /\
                             abs(ival(b0 i j)) <= &2 pow 12  /\
                             abs(ival(a1 i j)) <= &2 pow 12  /\
@@ -2023,7 +2023,7 @@ let MLKEM_BASEMUL_K4_NOIBT_SUBROUTINE_CORRECT = prove(
   X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_basemul_k4_tmc MLKEM_BASEMUL_K4_CORRECT);;
 
 let MLKEM_BASEMUL_K4_SUBROUTINE_CORRECT = prove(
-  `!src1 src2 src2t dst a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3 pc stackpointer returnaddress.
+  `forall src1 src2 src2t dst a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3 pc stackpointer returnaddress.
         aligned 32 src1 /\
         aligned 32 src2 /\
         aligned 32 src2t /\
@@ -2037,72 +2037,72 @@ let MLKEM_BASEMUL_K4_SUBROUTINE_CORRECT = prove(
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    C_ARGUMENTS [dst; src1; src2; src2t] s /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (64*j + 2*i)))) s = a0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (64*j + 32 + 2*i)))) s = b0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (64*j + 2*i)))) s = c0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (64*j + 32 + 2*i)))) s = d0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (32*j + 2*i)))) s = dz0 i j) /\
                              
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (512 + 64*j + 2*i)))) s = a1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (512 + 64*j + 32 + 2*i)))) s = b1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (512 + 64*j + 2*i)))) s = c1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (512 + 64*j + 32 + 2*i)))) s = d1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (256 + 32*j + 2*i)))) s = dz1 i j) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1024 + 64*j + 2*i)))) s = a2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1024 + 64*j + 32 + 2*i)))) s = b2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1024 + 64*j + 2*i)))) s = c2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1024 + 64*j + 32 + 2*i)))) s = d2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (512 + 32*j + 2*i)))) s = dz2 i j) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1536 + 64*j + 2*i)))) s = a3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1536 + 64*j + 32 + 2*i)))) s = b3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1536 + 64*j + 2*i)))) s = c3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1536 + 64*j + 32 + 2*i)))) s = d3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (768 + 32*j + 2*i)))) s = dz3 i j))
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   (!i. i < 16 ==> !j. j < 4
+                   (forall i. i < 16 ==> forall j. j < 4
                         ==> (let j' = 2*j in
                               (abs(ival(a0 i j')) <= &2 pow 12  /\
                                abs(ival(b0 i j')) <= &2 pow 12  /\
@@ -2121,7 +2121,7 @@ let MLKEM_BASEMUL_K4_SUBROUTINE_CORRECT = prove(
                                                (ival (a3 i j')) (ival (b3 i j')) (ival (c3 i j')) (ival (d3 i j')) (ival (dz3 i j'))
                                ) (mod &3329)))) /\
 
-                   (!i. i < 16 ==> !j. j < 4
+                   (forall i. i < 16 ==> forall j. j < 4
                         ==> (let j' = 2*j+1 in
                               (abs(ival(a0 i j')) <= &2 pow 12  /\
                                abs(ival(b0 i j')) <= &2 pow 12  /\
@@ -2140,7 +2140,7 @@ let MLKEM_BASEMUL_K4_SUBROUTINE_CORRECT = prove(
                                                    (ival (a3 i j')) (ival (b3 i j')) (ival (c3 i j')) (ival (d3 i j')) (ival (dz3 i j'))
                                ) (mod &3329)))) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> abs(ival(a0 i j)) <= &2 pow 12  /\
                             abs(ival(b0 i j)) <= &2 pow 12  /\
                             abs(ival(a1 i j)) <= &2 pow 12  /\
@@ -2174,7 +2174,7 @@ let mlkem_basemul_k4_windows_tmc = define_trimmed
 let mlkem_basemul_k4_windows_tmc_EXEC = X86_MK_EXEC_RULE mlkem_basemul_k4_windows_tmc;;
 
 let MLKEM_BASEMUL_K4_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
-  `!src1 src2 src2t dst a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3 pc stackpointer returnaddress.
+  `forall src1 src2 src2t dst a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3 pc stackpointer returnaddress.
         aligned 32 src1 /\
         aligned 32 src2 /\
         aligned 32 src2t /\
@@ -2198,72 +2198,72 @@ let MLKEM_BASEMUL_K4_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    WINDOWS_C_ARGUMENTS [dst; src1; src2; src2t] s /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (64*j + 2*i)))) s = a0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (64*j + 32 + 2*i)))) s = b0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (64*j + 2*i)))) s = c0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (64*j + 32 + 2*i)))) s = d0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (32*j + 2*i)))) s = dz0 i j) /\
                              
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (512 + 64*j + 2*i)))) s = a1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (512 + 64*j + 32 + 2*i)))) s = b1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (512 + 64*j + 2*i)))) s = c1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (512 + 64*j + 32 + 2*i)))) s = d1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (256 + 32*j + 2*i)))) s = dz1 i j) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1024 + 64*j + 2*i)))) s = a2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1024 + 64*j + 32 + 2*i)))) s = b2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1024 + 64*j + 2*i)))) s = c2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1024 + 64*j + 32 + 2*i)))) s = d2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (512 + 32*j + 2*i)))) s = dz2 i j) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1536 + 64*j + 2*i)))) s = a3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1536 + 64*j + 32 + 2*i)))) s = b3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1536 + 64*j + 2*i)))) s = c3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1536 + 64*j + 32 + 2*i)))) s = d3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (768 + 32*j + 2*i)))) s = dz3 i j))
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   (!i. i < 16 ==> !j. j < 4
+                   (forall i. i < 16 ==> forall j. j < 4
                         ==> (let j' = 2*j in
                               (abs(ival(a0 i j')) <= &2 pow 12  /\
                                abs(ival(b0 i j')) <= &2 pow 12  /\
@@ -2282,7 +2282,7 @@ let MLKEM_BASEMUL_K4_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
                                                (ival (a3 i j')) (ival (b3 i j')) (ival (c3 i j')) (ival (d3 i j')) (ival (dz3 i j'))
                                ) (mod &3329)))) /\
 
-                   (!i. i < 16 ==> !j. j < 4
+                   (forall i. i < 16 ==> forall j. j < 4
                         ==> (let j' = 2*j+1 in
                               (abs(ival(a0 i j')) <= &2 pow 12  /\
                                abs(ival(b0 i j')) <= &2 pow 12  /\
@@ -2301,7 +2301,7 @@ let MLKEM_BASEMUL_K4_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
                                                    (ival (a3 i j')) (ival (b3 i j')) (ival (c3 i j')) (ival (d3 i j')) (ival (dz3 i j'))
                                ) (mod &3329)))) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> abs(ival(a0 i j)) <= &2 pow 12  /\
                             abs(ival(b0 i j)) <= &2 pow 12  /\
                             abs(ival(a1 i j)) <= &2 pow 12  /\
@@ -2399,7 +2399,7 @@ let MLKEM_BASEMUL_K4_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
 );;
 
 let MLKEM_BASEMUL_K4_WINDOWS_SUBROUTINE_CORRECT = prove(
-  `!src1 src2 src2t dst a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3 pc stackpointer returnaddress.
+  `forall src1 src2 src2t dst a0 b0 c0 d0 dz0 a1 b1 c1 d1 dz1 a2 b2 c2 d2 dz2 a3 b3 c3 d3 dz3 pc stackpointer returnaddress.
         aligned 32 src1 /\
         aligned 32 src2 /\
         aligned 32 src2t /\
@@ -2423,72 +2423,72 @@ let MLKEM_BASEMUL_K4_WINDOWS_SUBROUTINE_CORRECT = prove(
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    WINDOWS_C_ARGUMENTS [dst; src1; src2; src2t] s /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (64*j + 2*i)))) s = a0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (64*j + 32 + 2*i)))) s = b0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (64*j + 2*i)))) s = c0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (64*j + 32 + 2*i)))) s = d0 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (32*j + 2*i)))) s = dz0 i j) /\
                              
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (512 + 64*j + 2*i)))) s = a1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (512 + 64*j + 32 + 2*i)))) s = b1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (512 + 64*j + 2*i)))) s = c1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (512 + 64*j + 32 + 2*i)))) s = d1 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (256 + 32*j + 2*i)))) s = dz1 i j) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1024 + 64*j + 2*i)))) s = a2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1024 + 64*j + 32 + 2*i)))) s = b2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1024 + 64*j + 2*i)))) s = c2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1024 + 64*j + 32 + 2*i)))) s = d2 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (512 + 32*j + 2*i)))) s = dz2 i j) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1536 + 64*j + 2*i)))) s = a3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src1 (word (1536 + 64*j + 32 + 2*i)))) s = b3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1536 + 64*j + 2*i)))) s = c3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2 (word (1536 + 64*j + 32 + 2*i)))) s = d3 i j) /\
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> read(memory :> bytes16
                              (word_add src2t (word (768 + 32*j + 2*i)))) s = dz3 i j))
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   (!i. i < 16 ==> !j. j < 4
+                   (forall i. i < 16 ==> forall j. j < 4
                         ==> (let j' = 2*j in
                               (abs(ival(a0 i j')) <= &2 pow 12  /\
                                abs(ival(b0 i j')) <= &2 pow 12  /\
@@ -2507,7 +2507,7 @@ let MLKEM_BASEMUL_K4_WINDOWS_SUBROUTINE_CORRECT = prove(
                                                (ival (a3 i j')) (ival (b3 i j')) (ival (c3 i j')) (ival (d3 i j')) (ival (dz3 i j'))
                                ) (mod &3329)))) /\
 
-                   (!i. i < 16 ==> !j. j < 4
+                   (forall i. i < 16 ==> forall j. j < 4
                         ==> (let j' = 2*j+1 in
                               (abs(ival(a0 i j')) <= &2 pow 12  /\
                                abs(ival(b0 i j')) <= &2 pow 12  /\
@@ -2526,7 +2526,7 @@ let MLKEM_BASEMUL_K4_WINDOWS_SUBROUTINE_CORRECT = prove(
                                                    (ival (a3 i j')) (ival (b3 i j')) (ival (c3 i j')) (ival (d3 i j')) (ival (dz3 i j'))
                                ) (mod &3329)))) /\
 
-                   (!i. i < 16 ==> !j. j < 8
+                   (forall i. i < 16 ==> forall j. j < 8
                         ==> abs(ival(a0 i j)) <= &2 pow 12  /\
                             abs(ival(b0 i j)) <= &2 pow 12  /\
                             abs(ival(a1 i j)) <= &2 pow 12  /\

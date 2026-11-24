@@ -391,7 +391,7 @@ let MLDSA_REDUCE_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_reduce_tmc;;
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_BARRED_CONGBOUND = prove
- (`!x:int32. ival x <= &0x7fbfffff
+ (`forall x:int32. ival x <= &0x7fbfffff
              ==> (ival(mldsa_barred x) == ival x) (mod &8380417) /\
                  --(&6283009) <= ival(mldsa_barred x) /\
                  ival(mldsa_barred x) <= &6283008`,
@@ -411,18 +411,18 @@ let MLDSA_BARRED_CONGBOUND = prove
 (* congruence-and-bound statement given the necessary input range hypothesis. *)
 
 let MLDSA_REDUCE_BARRED = prove
- (`!a x pc.
+ (`forall a x pc.
         aligned 32 a /\
         nonoverlapping (word pc,0x482) (a, 1024)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) (BUTLAST mldsa_reduce_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [a] s /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                           x i)
              (\s. read RIP s = word(pc + 0x482) /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) =
                           ival(mldsa_barred (x i)))
@@ -486,19 +486,19 @@ let MLDSA_REDUCE_BARRED = prove
 (* would overflow) the output is centered and congruent to the input mod q.    *)
 
 let MLDSA_REDUCE_CORRECT = prove
- (`!a x pc.
+ (`forall a x pc.
         aligned 32 a /\
         nonoverlapping (word pc,0x482) (a, 1024)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) (BUTLAST mldsa_reduce_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [a] s /\
-                  (!i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
-                  !i. i < 256
+                  (forall i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
+                  forall i. i < 256
                       ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                           x i)
              (\s. read RIP s = word(pc + 0x482) /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> let zi = read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s in
                           (ival zi == ival(x i)) (mod &8380417) /\
@@ -526,7 +526,7 @@ let MLDSA_REDUCE_CORRECT = prove
   FIRST_X_ASSUM(MP_TAC o SPEC `i:num`) THEN ASM_REWRITE_TAC[]);;
 
 let MLDSA_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_reduce_tmc) (a,1024) /\
         nonoverlapping (stackpointer,8) (a,1024)
@@ -536,13 +536,13 @@ let MLDSA_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
-                  (!i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
-                  !i. i < 256
+                  (forall i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
+                  forall i. i < 256
                       ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> let zi = read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s in
                           (ival zi == ival(x i)) (mod &8380417) /\
@@ -552,7 +552,7 @@ let MLDSA_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_reduce_tmc MLDSA_REDUCE_CORRECT);;
 
 let MLDSA_REDUCE_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_reduce_mc) (a,1024) /\
         nonoverlapping (stackpointer,8) (a,1024)
@@ -562,13 +562,13 @@ let MLDSA_REDUCE_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
-                  (!i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
-                  !i. i < 256
+                  (forall i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
+                  forall i. i < 256
                       ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  forall i. i < 256
                       ==> let zi = read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s in
                           (ival zi == ival(x i)) (mod &8380417) /\
@@ -593,7 +593,7 @@ let MLDSA_REDUCE_WINDOWS_TMC_EXEC =
   X86_MK_EXEC_RULE mldsa_reduce_windows_tmc;;
 
 let MLDSA_REDUCE_NOIBT_WINDOWS_BARRED = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_reduce_windows_tmc) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 176),184) (a,1024) /\
@@ -605,12 +605,12 @@ let MLDSA_REDUCE_NOIBT_WINDOWS_BARRED = prove
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    WINDOWS_C_ARGUMENTS [a] s /\
-                   !i. i < 256
+                   forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                            x i)
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   !i. i < 256
+                   forall i. i < 256
                        ==> ival(read(memory :> bytes32
                                   (word_add a (word(4 * i)))) s) =
                            ival(mldsa_barred (x i)))
@@ -695,7 +695,7 @@ let MLDSA_REDUCE_NOIBT_WINDOWS_BARRED = prove
 (* hypothesis, matching the SysV MLDSA_REDUCE_CORRECT above.                    *)
 
 let MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_reduce_windows_tmc) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 176),184) (a,1024) /\
@@ -707,13 +707,13 @@ let MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    WINDOWS_C_ARGUMENTS [a] s /\
-                   (!i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
-                   !i. i < 256
+                   (forall i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
+                   forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                            x i)
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   !i. i < 256
+                   forall i. i < 256
                        ==> let zi = read(memory :> bytes32
                                   (word_add a (word(4 * i)))) s in
                            (ival zi == ival(x i)) (mod &8380417) /\
@@ -738,7 +738,7 @@ let MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   FIRST_X_ASSUM(MP_TAC o SPEC `i:num`) THEN ASM_REWRITE_TAC[]);;
 
 let MLDSA_REDUCE_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!a x pc stackpointer returnaddress.
+ (`forall a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_reduce_windows_mc) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 176),184) (a,1024) /\
@@ -750,13 +750,13 @@ let MLDSA_REDUCE_WINDOWS_SUBROUTINE_CORRECT = prove
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    WINDOWS_C_ARGUMENTS [a] s /\
-                   (!i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
-                   !i. i < 256
+                   (forall i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
+                   forall i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                            x i)
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   !i. i < 256
+                   forall i. i < 256
                        ==> let zi = read(memory :> bytes32
                                   (word_add a (word(4 * i)))) s in
                            (ival zi == ival(x i)) (mod &8380417) /\

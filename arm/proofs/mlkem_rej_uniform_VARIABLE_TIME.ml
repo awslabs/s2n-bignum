@@ -445,7 +445,7 @@ let REJ_SAMPLE_EMPTY = prove
   REWRITE_TAC[REJ_SAMPLE; FILTER; MAP]);;
 
 let REJ_SAMPLE_APPEND = prove
- (`!l1 l2. REJ_SAMPLE(APPEND l1 l2) =
+ (`forall l1 l2. REJ_SAMPLE(APPEND l1 l2) =
            APPEND (REJ_SAMPLE l1) (REJ_SAMPLE l2)`,
   REWRITE_TAC[REJ_SAMPLE; MAP_APPEND; FILTER_APPEND]);;
 
@@ -458,7 +458,7 @@ let DIMINDEX_192 = DIMINDEX_CONV `dimindex(:192)`;;
 let DIMINDEX_384 = DIMINDEX_CONV `dimindex(:384)`;;
 
 let MLKEM_REJ_UNIFORM_CORRECT = prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer.
+ (`forall res buf buflen table (inlist:(12 word)list) pc stackpointer.
       24 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (stackpointer,576))
@@ -509,7 +509,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
    `\s. read X0 s = res /\
         read X4 s = word 256 /\
         read X8 s = stackpointer /\
-        ?n. let outlist = REJ_SAMPLE (SUB_LIST (0,16 * n) inlist) in
+        exists n. let outlist = REJ_SAMPLE (SUB_LIST (0,16 * n) inlist) in
             let outlen = LENGTH outlist in
             outlen < 288 /\
             read X9 s = word outlen /\
@@ -603,7 +603,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
   (*** Characterize the number of times round the main loop. ***)
 
   SUBGOAL_THEN
-   `?i. buflen < 48 * (i + 1) \/
+   `exists i. buflen < 48 * (i + 1) \/
         256 <= LENGTH(REJ_SAMPLE(SUB_LIST(0,32 * i) inlist))`
   MP_TAC THENL
    [EXISTS_TAC `buflen:num` THEN ARITH_TAC;
@@ -615,7 +615,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
   (*** Slightly elaborated sequencing to handle N = 0 case as well ***)
 
   MATCH_MP_TAC(MESON[]
-   `!P'. (ensures arm P' Q R ==> ensures arm P Q R) /\ ensures arm P' Q R
+   `forall P'. (ensures arm P' Q R ==> ensures arm P Q R) /\ ensures arm P' Q R
         ==> ensures arm P Q R`) THEN
   EXISTS_TAC
    `\s. aligned_bytes_loaded s (word pc) mlkem_rej_uniform_mc /\
@@ -761,7 +761,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
       (**** Later in the proof, we actually want this equivalent ***)
 
       SUBGOAL_THEN
-       `!j. j < 32
+       `forall j. j < 32
             ==> (word_zx:12 word->int16)
                 (EL j (SUB_LIST(32 * i,32) inlist)) = x j`
       ASSUME_TAC THENL
@@ -1351,7 +1351,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
   (**** Later in the proof, we actually want this equivalent ***)
 
   SUBGOAL_THEN
-   `!j. j < 16
+   `forall j. j < 16
         ==> (word_zx:12 word->int16)
             (EL j (SUB_LIST(32 * N,16) inlist)) = x j`
   ASSUME_TAC THENL
@@ -1624,7 +1624,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
   CONV_TAC WORD_RULE);;
 
 let MLKEM_REJ_UNIFORM_SUBROUTINE_CORRECT = prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
+ (`forall res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
         24 divides val buflen /\
         8 * val buflen = 12 * LENGTH inlist /\
         ALL (nonoverlapping (word_sub stackpointer (word 576),576))
@@ -1691,7 +1691,7 @@ let STRIP_EXISTS_ASSUM_TAC =
 (* ========================================================================= *)
 
 let MLKEM_REJ_UNIFORM_MEMSAFE = prove
- (`!res buf buflen table (inlist:(12 word)list) pc e stackpointer.
+ (`forall res buf buflen table (inlist:(12 word)list) pc e stackpointer.
       24 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (stackpointer,576))
@@ -1747,7 +1747,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
    `\s. read X0 s = res /\
         read X4 s = word 256 /\
         read X8 s = stackpointer /\
-        ?n. let outlist = REJ_SAMPLE (SUB_LIST (0,16 * n) inlist) in
+        exists n. let outlist = REJ_SAMPLE (SUB_LIST (0,16 * n) inlist) in
             let outlen = LENGTH outlist in
             outlen < 288 /\
             read X9 s = word outlen /\
@@ -1795,7 +1795,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
   (*** Characterize the number of times round the main loop. ***)
 
   SUBGOAL_THEN
-   `?i. buflen < 48 * (i + 1) \/
+   `exists i. buflen < 48 * (i + 1) \/
         256 <= LENGTH(REJ_SAMPLE(SUB_LIST(0,32 * i) inlist))`
   MP_TAC THENL
    [EXISTS_TAC `buflen:num` THEN ARITH_TAC;
@@ -1807,7 +1807,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
   (*** Slightly elaborated sequencing to handle N = 0 case as well ***)
 
   MATCH_MP_TAC(MESON[]
-   `!P'. (ensures arm P' Q R ==> ensures arm P Q R) /\ ensures arm P' Q R
+   `forall P'. (ensures arm P' Q R ==> ensures arm P Q R) /\ ensures arm P' Q R
         ==> ensures arm P Q R`) THEN
   EXISTS_TAC
    `\s. aligned_bytes_loaded s (word pc) mlkem_rej_uniform_mc /\
@@ -1970,7 +1970,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
       (**** Later in the proof, we actually want this equivalent ***)
 
       SUBGOAL_THEN
-       `!j. j < 32
+       `forall j. j < 32
             ==> (word_zx:12 word->int16)
                 (EL j (SUB_LIST(32 * i,32) inlist)) = x j`
       ASSUME_TAC THENL
@@ -2677,7 +2677,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
   (**** Later in the proof, we actually want this equivalent ***)
 
   SUBGOAL_THEN
-   `!j. j < 16
+   `forall j. j < 16
         ==> (word_zx:12 word->int16)
             (EL j (SUB_LIST(32 * N,16) inlist)) = x j`
   ASSUME_TAC THENL
@@ -3022,7 +3022,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_REJ_UNIFORM_SUBROUTINE_SAFE = time prove
- (`!res buf buflen table (inlist:(12 word)list) pc e stackpointer returnaddress.
+ (`forall res buf buflen table (inlist:(12 word)list) pc e stackpointer returnaddress.
       24 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_sub stackpointer (word 576),576))

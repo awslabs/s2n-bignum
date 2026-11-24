@@ -111,7 +111,7 @@ let MLDSA_REJ_UNIFORM_EXEC = X86_MK_CORE_EXEC_RULE mldsa_rej_uniform_tmc;;
 (* ========================================================================= *)
 
 let VPSUBD_SIGN_BIT_BOUNDED = prove
- (`!x:int32. val x < 8388608
+ (`forall x:int32. val x < 8388608
      ==> (bit 31 (word_sub x (word 8380417)) <=> val x < 8380417)`,
   GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[BIT_VAL; DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV THEN
@@ -137,7 +137,7 @@ let VPSUBD_SIGN_BIT_BOUNDED = prove
     SIMP_TAC[DIV_LT; EVEN] THEN ASM_ARITH_TAC]);;
 
 let SIGN_BIT_BITVAL = prove
- (`!x0:int32. val x0 < 8388608
+ (`forall x0:int32. val x0 < 8388608
    ==> bitval(bit 31 (word_sub x0 (word 8380417):int32)) = bitval(val x0 < 8380417)`,
   GEN_TAC THEN DISCH_TAC THEN AP_TERM_TAC THEN
   REWRITE_TAC[BIT_VAL; DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV THEN
@@ -160,7 +160,7 @@ let SIGN_BIT_BITVAL = prove
 
 (* word_popcount is preserved through word_zx *)
 let WORD_POPCOUNT_WORD_ZX = prove
- (`!(w:N word). dimindex(:N) <= dimindex(:M) ==> word_popcount(word_zx w:M word) = word_popcount w`,
+ (`forall (w:N word). dimindex(:N) <= dimindex(:M) ==> word_popcount(word_zx w:M word) = word_popcount w`,
   GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[word_popcount] THEN AP_TERM_TAC THEN
   REWRITE_TAC[EXTENSION; IN_ELIM_THM; bits_of_word; BIT_WORD_ZX] THEN
@@ -170,7 +170,7 @@ let WORD_POPCOUNT_WORD_ZX = prove
 
 (* word_of_bits VMOVMSKPS pattern = sum of bitvals *)
 let VMOVMSKPS_BYTE_EQ = prove
- (`!x:int256. word_of_bits(\i. i < 8 /\ bit(32*i+31) x):byte =
+ (`forall x:int256. word_of_bits(\i. i < 8 /\ bit(32*i+31) x):byte =
    word(bitval(bit 31 x) + 2 * bitval(bit 63 x) + 4 * bitval(bit 95 x) +
         8 * bitval(bit 127 x) + 16 * bitval(bit 159 x) + 32 * bitval(bit 191 x) +
         64 * bitval(bit 223 x) + 128 * bitval(bit 255 x))`,
@@ -184,13 +184,13 @@ let VMOVMSKPS_BYTE_EQ = prove
 (* bit(32*k+31)(x:int256) = bit 31(word_subword x (32*k,32):int32) *)
 let BIT_SUBWORD_256 = prove
  ((rand o concl o (EXPAND_CASES_CONV THENC NUM_REDUCE_CONV))
-  `!i. i < 8 ==>
-    !x:int256. bit(32*i+31) x = bit 31 (word_subword x (32*i,32):int32)`,
+  `forall i. i < 8 ==>
+    forall x:int256. bit(32*i+31) x = bit 31 (word_subword x (32*i,32):int32)`,
   CONV_TAC WORD_BLAST);;
 
 (* Combined: word_popcount of word_of_bits = word_popcount of bitval sum *)
 let VMOVMSKPS_POPCOUNT_EQ = prove
- (`!x:int256.
+ (`forall x:int256.
    word_popcount(word_of_bits(\i. i < 8 /\ bit(32*i+31) x):byte) =
    word_popcount(word(
      bitval(bit 31 (word_subword x (0,32):int32)) +
@@ -206,7 +206,7 @@ let VMOVMSKPS_POPCOUNT_EQ = prove
 
 (* Extract bit 31 from each lane of nested word_join of int32's *)
 let BIT_NESTED_JOIN_8 = REWRITE_RULE[LET_DEF; LET_END_DEF] (prove
- (`!(a0:int32) (a1:int32) (a2:int32) (a3:int32) (a4:int32) (a5:int32) (a6:int32) (a7:int32).
+ (`forall (a0:int32) (a1:int32) (a2:int32) (a3:int32) (a4:int32) (a5:int32) (a6:int32) (a7:int32).
    let x:int256 = word_join
      (word_join (word_join a7 a6:int64) (word_join a5 a4:int64):int128)
      (word_join (word_join a3 a2:int64) (word_join a1 a0:int64):int128) in
@@ -225,7 +225,7 @@ let BIT_NESTED_JOIN_8 = REWRITE_RULE[LET_DEF; LET_END_DEF] (prove
 
 (* 3-byte word_join with zero high byte = word_zx of 24-bit join *)
 let BYTE_JOIN_ZX = prove
- (`!b0 b1 b2:byte.
+ (`forall b0 b1 b2:byte.
     word_join (word_join (word 0:byte) (b2:byte):int16)
               (word_join (b1:byte) (b0:byte):int16):int32 =
     word_zx(word_join (word_join (b2:byte) (b1:byte):int16) (b0:byte):24 word):int32`,
@@ -233,7 +233,7 @@ let BYTE_JOIN_ZX = prove
 
 (* word_and with 0x7FFFFF mask on word_zx of 24-bit = word_zx of 23-bit subword *)
 let BYTE_JOIN_SUBWORD_ZX = prove
- (`!b0 b1 b2:byte.
+ (`forall b0 b1 b2:byte.
     word_and (word_zx(word_join (word_join (b2:byte) (b1:byte):int16) (b0:byte):24 word):int32)
              (word 8388607:int32) =
     word_zx(word_subword (word_join (word_join (b2:byte) (b1:byte):int16) (b0:byte):24 word) (0,23):23 word):int32`,
@@ -241,7 +241,7 @@ let BYTE_JOIN_SUBWORD_ZX = prove
 
 (* Little-endian 3-byte reconstruction at num level *)
 let BYTES3_NUM = prove
- (`!n. n MOD 256 + 256 * (n DIV 256) MOD 256 + 65536 * (n DIV 65536) MOD 256 = n MOD 16777216`,
+ (`forall n. n MOD 256 + 256 * (n DIV 256) MOD 256 + 65536 * (n DIV 65536) MOD 256 = n MOD 16777216`,
   GEN_TAC THEN
   SUBGOAL_THEN `16777216 = 65536 * 256` SUBST1_TAC THENL
    [ARITH_TAC; ALL_TAC] THEN
@@ -256,7 +256,7 @@ let BYTES3_NUM = prove
 
 (* val of 3-byte word_join *)
 let BYTE_JOIN_VAL = prove
- (`!b0 b1 b2:byte.
+ (`forall b0 b1 b2:byte.
     val(word_join (word_join (b2:byte) (b1:byte):int16) (b0:byte) : 24 word) =
     val b0 + 256 * val b1 + 65536 * val b2`,
   REPEAT GEN_TAC THEN
@@ -274,7 +274,7 @@ let BYTE_JOIN_VAL = prove
 
 (* val of byte_join from word n : int256 = n DIV 2^ofs MOD 2^24 *)
 let BYTE_JOIN_VAL_WORD = prove
- (`!n ofs.
+ (`forall n ofs.
     val(word_join (word_join (word_subword (word n:int256) (ofs+16,8):byte)
                              (word_subword (word n:int256) (ofs+8,8):byte):int16)
                   (word_subword (word n:int256) (ofs,8):byte) : 24 word) =
@@ -289,7 +289,7 @@ let BYTE_JOIN_VAL_WORD = prove
 
 (* Full coefficient lemma: byte_join + 23-bit mask from word n = word(n DIV 2^ofs MOD 2^23) *)
 let COEFF_BYTE_JOIN_WORD = prove
- (`!n ofs.
+ (`forall n ofs.
     word_zx(word_subword
       (word_join (word_join (word_subword (word n:int256) (ofs+16,8):byte)
                             (word_subword (word n:int256) (ofs+8,8):byte):int16)
@@ -309,7 +309,7 @@ let COEFF_BYTE_JOIN_WORD = prove
 
 (* Reduce MOD 2^256 to MOD 2^192 in DIV/MOD extraction context *)
 let MOD_256_192 = prove
- (`!n k. k + 23 <= 192 ==>
+ (`forall n k. k + 23 <= 192 ==>
     (n MOD 2 EXP 256) DIV (2 EXP k) MOD (2 EXP 23) =
     (n MOD 2 EXP 192) DIV (2 EXP k) MOD (2 EXP 23)`,
   REPEAT STRIP_TAC THEN
@@ -320,7 +320,7 @@ let MOD_256_192 = prove
 (* word_popcount is preserved through word_zx *)
 (* val(word n : 24 word) MOD 2^23 = n MOD 2^23 — avoids MOD_MOD_EXP_MIN loop *)
 let VAL_WORD_24_MOD_23 = prove
- (`!n. val(word n : 24 word) MOD 2 EXP 23 = n MOD 2 EXP 23`,
+ (`forall n. val(word n : 24 word) MOD 2 EXP 23 = n MOD 2 EXP 23`,
   GEN_TAC THEN REWRITE_TAC[VAL_WORD] THEN
   CONV_TAC(DEPTH_CONV DIMINDEX_CONV) THEN
   REWRITE_TAC[MOD_MOD_EXP_MIN] THEN
@@ -328,7 +328,7 @@ let VAL_WORD_24_MOD_23 = prove
 
 (* MAP of REJ_SAMPLE coefficient extraction = concrete list *)
 let MAP_REJ_COEFFS = prove
- (`!l:(24 word)list. LENGTH l = 8 ==>
+ (`forall l:(24 word)list. LENGTH l = 8 ==>
    MAP (\x:24 word. word(val x MOD 2 EXP 23):int32) l =
    [word(num_of_wordlist l MOD 2 EXP 23);
     word(num_of_wordlist l DIV 2 EXP 24 MOD 2 EXP 23);
@@ -355,7 +355,7 @@ let MAP_REJ_COEFFS = prove
 
 (* Memory bytes split: read(bytes(a, m+n)) = read(bytes(a,m)) + 2^(8m) * read(bytes(a+m, n)) *)
 let MEMORY_BYTES_SPLIT = prove
- (`!a m n s. read (memory :> bytes (a:int64, m + n)) s =
+ (`forall a m n s. read (memory :> bytes (a:int64, m + n)) s =
              read (memory :> bytes (a, m)) s +
              2 EXP (8 * m) * read (memory :> bytes (word_add a (word m), n)) s`,
   REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE]);;
@@ -363,7 +363,7 @@ let MEMORY_BYTES_SPLIT = prove
 (* CMP_MASK_CORRECT: VMOVMSKPS(VPSUBD(coeffs, Q)) = bitval sum of (val c_k < Q).
    Connects the comparison mask byte to the FILTER predicate. *)
 let CMP_MASK_CORRECT = prove(
- `!c0 c1 c2 c3 c4 c5 c6 c7:int32.
+ `forall c0 c1 c2 c3 c4 c5 c6 c7:int32.
   val c0 < 8388608 /\ val c1 < 8388608 /\ val c2 < 8388608 /\
   val c3 < 8388608 /\ val c4 < 8388608 /\ val c5 < 8388608 /\
   val c6 < 8388608 /\ val c7 < 8388608 ==>
@@ -427,7 +427,7 @@ let TABLE_ENTRY_VALS =
 (* TABLE_ENTRY_FROM_MEMORY: connect bytes64 memory read at table+8k to
    (table_num DIV 2^(64k)) MOD 2^64 via bigdigit/bignum_from_memory *)
 let TABLE_ENTRY_FROM_MEMORY = prove(
-  `!table (s:x86state) k.
+  `forall table (s:x86state) k.
    read(memory :> bytes(table:int64, 2048)) s =
      num_of_wordlist(mldsa_rej_uniform_table:byte list) /\
    k < 256
@@ -449,14 +449,14 @@ let TABLE_NUM_THM =
 
 (* VAL_WORD_GALOIS_64: derive x = word n from val x = n *)
 let VAL_WORD_GALOIS_64 = prove(
-  `!x:int64 n. val x = n /\ n < 18446744073709551616 ==> x = word n`,
+  `forall x:int64 n. val x = n /\ n < 18446744073709551616 ==> x = word n`,
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN `x:int64 = word(val x)` SUBST1_TAC THENL
   [REWRITE_TAC[WORD_VAL]; ASM_REWRITE_TAC[]]);;
 
 (* VAL_WORD_JOIN8: flatten nested val(word_join^8) to sum of 2^(32*k) * val(ck) *)
 let VAL_WORD_JOIN8 = prove(
-  `!(c0:int32)(c1:int32)(c2:int32)(c3:int32)(c4:int32)(c5:int32)(c6:int32)(c7:int32).
+  `forall (c0:int32)(c1:int32)(c2:int32)(c3:int32)(c4:int32)(c5:int32)(c6:int32)(c7:int32).
    val(word_join
      (word_join (word_join c7 c6:(64)word) (word_join c5 c4:(64)word):(128)word)
      (word_join (word_join c3 c2:(64)word) (word_join c1 c0:(64)word):(128)word)
@@ -508,7 +508,7 @@ let MOD_BASE_REWRITES = [
 
 (* VAL_BOUND_256: val(x:int256) < 2 EXP 256 *)
 let VAL_BOUND_256 = prove(
-  `!x:int256. val x < 2 EXP 256`,
+  `forall x:int256. val x < 2 EXP 256`,
   GEN_TAC THEN MP_TAC(ISPEC `x:int256` VAL_BOUND) THEN
   REWRITE_TAC[DIMINDEX_256]);;
 
@@ -554,7 +554,7 @@ let VPERMD_FACTOR_STRIP_TAC : tactic = fun (asl, w) ->
    Preconditions: 8 coefficients bounded < 2^23, table entry for the mask.
    Conclusion: val(VPERMD result) MOD 2^(32*popcount) = num_of_wordlist(FILTER ...) *)
 let VPERMD_TABLE_CORRECT = time prove(
-  `!(c0:int32) (c1:int32) (c2:int32) (c3:int32) (c4:int32) (c5:int32) (c6:int32) (c7:int32) (te:int64).
+  `forall (c0:int32) (c1:int32) (c2:int32) (c3:int32) (c4:int32) (c5:int32) (c6:int32) (c7:int32) (te:int64).
    val c0 < 8388608 /\ val c1 < 8388608 /\ val c2 < 8388608 /\ val c3 < 8388608 /\
    val c4 < 8388608 /\ val c5 < 8388608 /\ val c6 < 8388608 /\ val c7 < 8388608 /\
    val te = (num_of_wordlist mldsa_rej_uniform_table DIV
@@ -671,7 +671,7 @@ let RESOLVE_TABLE_READ_TAC : tactic = fun (asl,w) ->
 (* VPERMD_MEMORY_BRIDGE: connect a sub-read of the 32-byte VMOVDQU write
    region to the VPERMD MOD result, closing the memory store goal. *)
 let VPERMD_MEMORY_BRIDGE = prove
- (`!a (s:x86state) vr n l.
+ (`forall a (s:x86state) vr n l.
     read(memory :> bytes(a:int64, 32)) s = vr /\
     vr MOD 2 EXP (32 * n) = num_of_wordlist(l:int32 list) /\
     n <= 8
@@ -693,7 +693,7 @@ let VPERMD_MEMORY_BRIDGE = prove
 (* VAL_READ_BYTES256: val(read(bytes256 addr) s) = read(bytes(addr,32)) s
    Converts a 256-bit word read to a numeric bytes read. *)
 let VAL_READ_BYTES256 = prove(
-  `!addr (s:(int64->byte)).
+  `forall addr (s:(int64->byte)).
     val(read(bytes256 addr) s :int256) = read(bytes(addr,32)) s`,
   REWRITE_TAC[BYTES256_WBYTES; VAL_READ_WBYTES; DIMINDEX_256] THEN
   CONV_TAC NUM_REDUCE_CONV);;
@@ -708,7 +708,7 @@ let DIMINDEX_23 = DIMINDEX_CONV `dimindex(:23)`;;
 let DIMINDEX_24 = DIMINDEX_CONV `dimindex(:24)`;;
 
 let VAL_MOD_23_EQ_AND = prove
- (`!w:24 word. (word(val w MOD 2 EXP 23):int32) =
+ (`forall w:24 word. (word(val w MOD 2 EXP 23):int32) =
                word_and (word_zx w:int32) (word 8388607)`,
   GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
@@ -721,19 +721,19 @@ let REJ_SAMPLE_EMPTY = prove
   REWRITE_TAC[REJ_SAMPLE; FILTER; MAP]);;
 
 let REJ_SAMPLE_APPEND = prove
- (`!l1 l2. REJ_SAMPLE(APPEND l1 l2) =
+ (`forall l1 l2. REJ_SAMPLE(APPEND l1 l2) =
            APPEND (REJ_SAMPLE l1) (REJ_SAMPLE l2)`,
   REWRITE_TAC[REJ_SAMPLE; MAP_APPEND; FILTER_APPEND]);;
 
 let mldsa_mask_lemma = prove
  ((rand o concl o (EXPAND_CASES_CONV THENC NUM_REDUCE_CONV))
-  `!i. i < 8
+  `forall i. i < 8
        ==> word_and (word_subword (q:int256) (32*i,32)) (word 8388607):int32 =
            word_zx(word_subword (q:int256) (32*i,23):23 word)`,
   CONV_TAC WORD_BLAST);;
 
 let VAL_WORD_ZX_23 = prove
- (`!w:23 word. val(word_zx w:int32) < 8388608`,
+ (`forall w:23 word. val(word_zx w:int32) < 8388608`,
   GEN_TAC THEN REWRITE_TAC[VAL_WORD_ZX_GEN; DIMINDEX_23; DIMINDEX_32] THEN
   CONV_TAC NUM_REDUCE_CONV THEN
   MP_TAC(ISPEC `w:23 word` VAL_BOUND) THEN
@@ -744,7 +744,7 @@ let VAL_WORD_ZX_23 = prove
 
 let COEFF_FROM_BYTES = prove
  ((rand o concl o (EXPAND_CASES_CONV THENC NUM_REDUCE_CONV))
-  `!j. j < 8 ==>
+  `forall j. j < 8 ==>
     word_and (word_zx(word_subword (buf:192 word) (24*j,24):24 word):int32)
              (word 8388607) =
     word_zx(word_subword (buf:192 word) (24*j,23):23 word)`,
@@ -759,7 +759,7 @@ let COEFF_FROM_BYTES = prove
 
 (* POPCNT of VMOVMSKPS sign-bit mask = LENGTH(FILTER) — 256-case brute force *)
 let POPCNT_EQ_LENGTH_FILTER = prove
- (`!x0 x1 x2 x3 x4 x5 x6 x7:int32.
+ (`forall x0 x1 x2 x3 x4 x5 x6 x7:int32.
    val x0 < 8388608 /\ val x1 < 8388608 /\ val x2 < 8388608 /\ val x3 < 8388608 /\
    val x4 < 8388608 /\ val x5 < 8388608 /\ val x6 < 8388608 /\ val x7 < 8388608
    ==> word_popcount(word(
@@ -785,7 +785,7 @@ let POPCNT_EQ_LENGTH_FILTER = prove
 
 (* LENGTH(FILTER) = sum of bitvals — the 256-case brute force *)
 let FILTER_LENGTH_8 = prove
- (`!x0 x1 x2 x3 x4 x5 x6 x7:int32.
+ (`forall x0 x1 x2 x3 x4 x5 x6 x7:int32.
    val x0 < 8388608 /\ val x1 < 8388608 /\ val x2 < 8388608 /\ val x3 < 8388608 /\
    val x4 < 8388608 /\ val x5 < 8388608 /\ val x6 < 8388608 /\ val x7 < 8388608
    ==> LENGTH(FILTER (\x. val x < 8380417) [x0;x1;x2;x3;x4;x5;x6;x7]) =
@@ -804,7 +804,7 @@ let FILTER_LENGTH_8 = prove
 
 (* VMOVMSKPS sign bits + POPCNT = LENGTH(FILTER) for 8 dword lanes *)
 let POPCNT_VMOVMSKPS_LEMMA = prove
- (`!q:int256.
+ (`forall q:int256.
   word_popcount(word(
     bitval(bit 31 (word_sub (word_subword (word_and q (word 226156397384342666605459106258636701594091082888230722833791023177481060351):int256) (0,32):int32) (word 8380417):int32)) +
     2 * bitval(bit 31 (word_sub (word_subword (word_and q (word 226156397384342666605459106258636701594091082888230722833791023177481060351):int256) (32,32):int32) (word 8380417):int32)) +
@@ -831,7 +831,7 @@ let POPCNT_VMOVMSKPS_LEMMA = prove
 
 (* Full iteration bridge: split, length, and bound *)
 let SIMD_ITERATION_BRIDGE = prove
- (`!inlist:(24 word)list i curlist curlen.
+ (`forall inlist:(24 word)list i curlist curlen.
     REJ_SAMPLE(SUB_LIST(0,8*i) inlist) = curlist /\
     LENGTH curlist = curlen /\
     8*(i+1) <= LENGTH inlist
@@ -857,7 +857,7 @@ let SIMD_ITERATION_BRIDGE = prove
 (* word_join of 8 consecutive 32-bit subwords reconstructs the original 256-bit word.
    Used by the VPERMD bridge to fold the VPERMD expression back to coeffs_ymm3. *)
 let WORD_JOIN_SUBWORDS_256 = prove
- (`!q:int256.
+ (`forall q:int256.
     word_join
      (word_join (word_join ((word_subword q (224,32)):int32) ((word_subword q (192,32)):int32):int64)
                 (word_join ((word_subword q (160,32)):int32) ((word_subword q (128,32)):int32):int64):int128)
@@ -871,7 +871,7 @@ let WORD_JOIN_SUBWORDS_256 = prove
    Packages VPERMD_TABLE_CORRECT + WORD_JOIN_SUBWORDS_256 into one MP_TAC-able form
    that eliminates the 256-case brute force (255 CHEATs) in the main proof. *)
 let MLDSA_VPERMD_BRIDGE = prove
- (`!(q:int256) (te:int64).
+ (`forall (q:int256) (te:int64).
      val(word_subword q (0,32):int32) < 8388608 /\
      val(word_subword q (32,32):int32) < 8388608 /\
      val(word_subword q (64,32):int32) < 8388608 /\
@@ -939,7 +939,7 @@ let MLDSA_VPERMD_BRIDGE = prove
 
 (* REJ_SAMPLE of a list is APPEND of REJ_SAMPLE of a prefix and a suffix. *)
 let REJ_SAMPLE_SPLIT = prove
- (`!(l:(24 word)list) n.
+ (`forall (l:(24 word)list) n.
     REJ_SAMPLE l = APPEND (REJ_SAMPLE (SUB_LIST (0,n) l))
                           (REJ_SAMPLE (SUB_LIST (n, LENGTH l - n) l))`,
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM REJ_SAMPLE_APPEND] THEN
@@ -949,7 +949,7 @@ let REJ_SAMPLE_SPLIT = prove
    of the full list equals REJ_SAMPLE of that prefix. Used in the post-loop
    JAE-exit case to conclude outlist = SUB_LIST (0,256) (REJ_SAMPLE inlist). *)
 let REJ_SAMPLE_PREFIX_256 = prove
- (`!(inlist:(24 word)list) k.
+ (`forall (inlist:(24 word)list) k.
     LENGTH (REJ_SAMPLE (SUB_LIST (0,k) inlist)) = 256
     ==> SUB_LIST (0,256) (REJ_SAMPLE inlist) = REJ_SAMPLE (SUB_LIST (0,k) inlist)`,
   REPEAT STRIP_TAC THEN
@@ -966,7 +966,7 @@ let REJ_SAMPLE_PREFIX_256 = prove
 
 (* Monotonicity: one more input element adds at most 1 to REJ_SAMPLE length. *)
 let REJ_SAMPLE_STEP_LE = prove
- (`!(l:(24 word)list) k.
+ (`forall (l:(24 word)list) k.
     LENGTH (REJ_SAMPLE (SUB_LIST (0, k + 1) l)) <=
     LENGTH (REJ_SAMPLE (SUB_LIST (0, k) l)) + 1`,
   REPEAT GEN_TAC THEN
@@ -1032,7 +1032,7 @@ let RESOLVE_JA_OFFSET_TAC =
 (* ========================================================================= *)
 
 let READ_3BYTES_EL = prove
- (`!(inlist:(24 word)list) (buf:int64) mem j n.
+ (`forall (inlist:(24 word)list) (buf:int64) mem j n.
      LENGTH inlist = n /\ j < n /\ 3 * j + 3 <= 3 * n /\
      read(memory :> bytes(buf, 3 * n)) mem = num_of_wordlist inlist
      ==> read(memory :> bytes(word_add buf (word(3 * j)), 3)) mem =
@@ -1058,7 +1058,7 @@ let READ_3BYTES_EL = prove
    + word_or (as the AVX2 scalar path does), equal val(EL j inlist). This is
    the semantic heart of the filter-rejection reasoning in the scalar body. *)
 let BYTE_BRIDGE_3BYTES = prove
- (`!(inlist:(24 word)list) (buf:int64) s j n.
+ (`forall (inlist:(24 word)list) (buf:int64) s j n.
      LENGTH inlist = n /\ j < n /\ 3 * j + 3 <= 3 * n /\
      read(memory :> bytes(buf, 3 * n)) s = num_of_wordlist inlist
      ==>
@@ -1116,7 +1116,7 @@ let BYTE_BRIDGE_3BYTES = prove
 (* Two-state variant: the bytes16 and bytes8 reads can come from different
    states as long as both states have the same num_of_wordlist read at buf. *)
 let BYTE_BRIDGE_3BYTES_2STATE = prove
- (`!(inlist:(24 word)list) (buf:int64) (s1:x86state) (s2:x86state) j n.
+ (`forall (inlist:(24 word)list) (buf:int64) (s1:x86state) (s2:x86state) j n.
      LENGTH inlist = n /\ j < n /\ 3 * j + 3 <= 3 * n /\
      read(memory :> bytes(buf, 3 * n)) s1 = num_of_wordlist inlist /\
      read(memory :> bytes(buf, 3 * n)) s2 = num_of_wordlist inlist
@@ -1135,7 +1135,7 @@ let BYTE_BRIDGE_3BYTES_2STATE = prove
    [REWRITE_TAC[bytes8; READ_COMPONENT_COMPOSE; asword; through; read] THEN
     AP_TERM_TAC THEN REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN
     SUBGOAL_THEN
-      `!(s:x86state).
+      `forall (s:x86state).
          read (memory :> bytes (word_add buf (word (3 * j + 2)),1)) s =
          (read(memory :> bytes(buf, 3 * n)) s DIV 2 EXP (8 * (3 * j + 2))) MOD
          2 EXP (8 * 1)`
@@ -1155,7 +1155,7 @@ let BYTE_BRIDGE_3BYTES_2STATE = prove
    VSTEPS can then propagate unchanged through s49 (ADD) and s50 (JMP). *)
 
 let BYTES32_TO_BYTES = prove
- (`!(mem:(x86state,int64->byte)component) (s:x86state) (a:int64) (w:(32)word).
+ (`forall (mem:(x86state,int64->byte)component) (s:x86state) (a:int64) (w:(32)word).
       read(mem :> bytes32 a) s = w
       ==> read(mem :> bytes(a,4)) s = val w`,
   REPEAT GEN_TAC THEN
@@ -1184,7 +1184,7 @@ let BYTES32_TO_BYTES = prove
    (which would pollute downstream ASM_REWRITE_TAC rewrites). *)
 
 let ACCEPT_REJ_SAMPLE_SINGLETON = prove
- (`!(inlist:(24 word)list) (buf:int64) (s1:x86state) (s2:x86state)
+ (`forall (inlist:(24 word)list) (buf:int64) (s1:x86state) (s2:x86state)
     (r8val:int64) (N:num) (i:num).
      LENGTH inlist = 280 /\
      8 * N + i < 280 /\
@@ -1216,33 +1216,33 @@ let ACCEPT_REJ_SAMPLE_SINGLETON = prove
     REWRITE_TAC[VAL_WORD_ZX_GEN; DIMINDEX_32; DIMINDEX_64] THEN
     CONV_TAC NUM_REDUCE_CONV THEN
     SUBGOAL_THEN
-      `!(x:(32)word).
+      `forall (x:(32)word).
           word_and (word_zx (word_zx x:(64)word):(32)word)
                    (word 8388607:(32)word) =
           word_and x (word 8388607:(32)word)`
       (fun th -> REWRITE_TAC[th]) THENL
      [CONV_TAC WORD_BLAST; ALL_TAC] THEN
     SUBGOAL_THEN
-      `!(x:(16)word).
+      `forall (x:(16)word).
           word_zx(word_zx(word_zx x:(32)word):(64)word):(32)word = word_zx x`
       (fun th -> REWRITE_TAC[th]) THENL
      [CONV_TAC WORD_BLAST; ALL_TAC] THEN
     SUBGOAL_THEN
-      `!(x:(8)word).
+      `forall (x:(8)word).
           word_zx(word_zx(word_shl(word_zx(word_zx(word_zx x:(32)word):(64)word):(32)word) 16):(64)word):(32)word =
           word_shl(word_zx x:(32)word) 16`
       (fun th -> REWRITE_TAC[th]) THENL
      [CONV_TAC WORD_BLAST; ALL_TAC] THEN
     SUBGOAL_THEN
-      `!(w:(32)word). word 8388607:(32)word = word(2 EXP 23 - 1)`
+      `forall (w:(32)word). word 8388607:(32)word = word(2 EXP 23 - 1)`
       (fun th -> REWRITE_TAC[th]) THENL
      [GEN_TAC THEN AP_TERM_TAC THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
     REWRITE_TAC[VAL_WORD_AND_MASK_WORD] THEN
     SUBGOAL_THEN
-      `!(w:(32)word). val w MOD 2 EXP 23 MOD 18446744073709551616 = val w MOD 2 EXP 23`
+      `forall (w:(32)word). val w MOD 2 EXP 23 MOD 18446744073709551616 = val w MOD 2 EXP 23`
       (fun th -> REWRITE_TAC[th]) THENL
      [GEN_TAC THEN MATCH_MP_TAC MOD_LT THEN
-      MP_TAC(ARITH_RULE `!x. x MOD 2 EXP 23 < 8388608`) THEN
+      MP_TAC(ARITH_RULE `forall x. x MOD 2 EXP 23 < 8388608`) THEN
       DISCH_THEN(MP_TAC o SPEC `val(w:(32)word)`) THEN ARITH_TAC;
       ALL_TAC] THEN
     MP_TAC(SPECL [`inlist:(24 word)list`; `buf:int64`; `s1:x86state`;
@@ -1261,7 +1261,7 @@ let ACCEPT_REJ_SAMPLE_SINGLETON = prove
                   val (EL (8*N+i) inlist) MOD 2 EXP 23`
       SUBST1_TAC THENL
      [MATCH_MP_TAC MOD_LT THEN
-      MP_TAC(ARITH_RULE `!x. x MOD 2 EXP 23 < 8388608`) THEN
+      MP_TAC(ARITH_RULE `forall x. x MOD 2 EXP 23 < 8388608`) THEN
       DISCH_THEN(MP_TAC o SPEC `val(EL (8*N+i) (inlist:(24 word)list))`) THEN
       ARITH_TAC;
       FIRST_X_ASSUM(fun th -> REWRITE_TAC[SYM th])];
@@ -1293,33 +1293,33 @@ let PIVOT_VAL_EQ = prove(stmt,
   REWRITE_TAC[VAL_WORD_ZX_GEN; DIMINDEX_32; DIMINDEX_64] THEN
   CONV_TAC NUM_REDUCE_CONV THEN
   SUBGOAL_THEN
-    `!(x:(32)word).
+    `forall (x:(32)word).
         word_and (word_zx (word_zx x:(64)word):(32)word)
                  (word 8388607:(32)word) =
         word_and x (word 8388607:(32)word)`
     (fun th -> REWRITE_TAC[th]) THENL
    [CONV_TAC WORD_BLAST; ALL_TAC] THEN
   SUBGOAL_THEN
-    `!(x:(16)word).
+    `forall (x:(16)word).
         word_zx(word_zx(word_zx x:(32)word):(64)word):(32)word = word_zx x`
     (fun th -> REWRITE_TAC[th]) THENL
    [CONV_TAC WORD_BLAST; ALL_TAC] THEN
   SUBGOAL_THEN
-    `!(x:(8)word).
+    `forall (x:(8)word).
         word_zx(word_zx(word_shl(word_zx(word_zx(word_zx x:(32)word):(64)word):(32)word) 16):(64)word):(32)word =
         word_shl(word_zx x:(32)word) 16`
     (fun th -> REWRITE_TAC[th]) THENL
    [CONV_TAC WORD_BLAST; ALL_TAC] THEN
   SUBGOAL_THEN
-    `!(w:(32)word). word 8388607:(32)word = word(2 EXP 23 - 1)`
+    `forall (w:(32)word). word 8388607:(32)word = word(2 EXP 23 - 1)`
     (fun th -> REWRITE_TAC[th]) THENL
    [GEN_TAC THEN AP_TERM_TAC THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
   REWRITE_TAC[VAL_WORD_AND_MASK_WORD] THEN
   SUBGOAL_THEN
-    `!(w:(32)word). val w MOD 2 EXP 23 MOD 18446744073709551616 = val w MOD 2 EXP 23`
+    `forall (w:(32)word). val w MOD 2 EXP 23 MOD 18446744073709551616 = val w MOD 2 EXP 23`
     (fun th -> REWRITE_TAC[th]) THENL
    [GEN_TAC THEN MATCH_MP_TAC MOD_LT THEN
-    MP_TAC(ARITH_RULE `!x. x MOD 2 EXP 23 < 8388608`) THEN
+    MP_TAC(ARITH_RULE `forall x. x MOD 2 EXP 23 < 8388608`) THEN
     DISCH_THEN(MP_TAC o SPEC `val(w:(32)word)`) THEN ARITH_TAC;
     ALL_TAC] THEN
   MP_TAC(SPECL [`inlist:(24 word)list`; `buf:int64`; `s1:x86state`;
@@ -1347,7 +1347,7 @@ let PIVOT_VAL_EQ = prove(stmt,
    Using it inline: MATCH_MP_TAC MEMORY_CONJUNCT_CLOSURE THEN ASM_REWRITE_TAC[] *)
 
 let MEMORY_CONJUNCT_CLOSURE = prove
- (`!(res:int64) (s:x86state) (curlist:int32 list) (curlen:num) (wa:int32).
+ (`forall (res:int64) (s:x86state) (curlist:int32 list) (curlen:num) (wa:int32).
       curlen < 256 /\
       LENGTH curlist = curlen /\
       read (memory :> bytes (res, 4 * curlen)) s = num_of_wordlist curlist /\
@@ -1369,13 +1369,13 @@ let MEMORY_CONJUNCT_CLOSURE = prove
 (* Helper lemmas for Case B. *)
 
 let VAL_RCX_ADD3 = prove
- (`!N i:num. 24 * N + 3 * i <= 837
+ (`forall N i:num. 24 * N + 3 * i <= 837
              ==> val(word_add (word_zx (word (24*N+3*i):int64):(32)word) (word 3:(32)word))
                  = 24 * N + 3 * i + 3`,
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[VAL_WORD_ADD; VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32; DIMINDEX_64] THEN
   CONV_TAC NUM_REDUCE_CONV THEN
-  SUBGOAL_THEN `!m. m <= 837 ==> m MOD 18446744073709551616 = m /\
+  SUBGOAL_THEN `forall m. m <= 837 ==> m MOD 18446744073709551616 = m /\
                                  m MOD 4294967296 = m /\
                                  (m + 3) MOD 4294967296 = m + 3 /\
                                  (m + 3) MOD 18446744073709551616 = m + 3`
@@ -1386,7 +1386,7 @@ let VAL_RCX_ADD3 = prove
   ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN ARITH_TAC);;
 
 let VAL_RCX_ADD3_ZX = prove
- (`!N i:num. 24 * N + 3 * i <= 837
+ (`forall N i:num. 24 * N + 3 * i <= 837
              ==> val(word_zx(word_zx(word_add (word_zx (word (24*N+3*i):int64):(32)word) (word 3:(32)word)):(64)word):(32)word)
                  = 24 * N + 3 * i + 3`,
   REPEAT STRIP_TAC THEN
@@ -1406,7 +1406,7 @@ let VAL_RCX_ADD3_ZX = prove
 (* Extract 3 bytes of memory at offset 3*j from a 3*n-byte buffer (the natural
    byte size for a (24 word)list of length n: 24*n bits = 3*n bytes). *)
 let SCALAR_BODY_LEMMA = prove
- (`!res buf table (inlist:(24 word)list) pc stackpointer N K i.
+ (`forall res buf table (inlist:(24 word)list) pc stackpointer N K i.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, 243) (res, 1024) /\
     nonoverlapping (word pc, 243) (buf, 840) /\
@@ -1416,7 +1416,7 @@ let SCALAR_BODY_LEMMA = prove
     24 * N <= 832 /\
     LENGTH(REJ_SAMPLE(SUB_LIST(0, 8 * N) inlist)) <= 256 /\
     i < K /\ ~(i = K) /\ 0 < K /\
-    (!j. j < K
+    (forall j. j < K
          ==> LENGTH(REJ_SAMPLE(SUB_LIST(0, 8*N + j) inlist)) < 256 /\
              24 * N + 3 * j <= 837) /\
     (256 <= LENGTH(REJ_SAMPLE(SUB_LIST(0, 8*N + K) inlist)) \/
@@ -2272,7 +2272,7 @@ let SCALAR_BODY_LEMMA = prove
 (* ========================================================================= *)
 
 let MLDSA_REJ_UNIFORM_CORRECT = prove
- (`!res buf table (inlist:(24 word)list) pc.
+ (`forall res buf table (inlist:(24 word)list) pc.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, 243) (res, 1024) /\
     nonoverlapping (word pc, 243) (buf, 840) /\
@@ -2318,7 +2318,7 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
   (* =================================================================== *)
 
   SUBGOAL_THEN
-   `?i. 832 < 24 * (i + 1) \/ 248 < LENGTH(REJ_SAMPLE(SUB_LIST(0,8 * i) inlist))`
+   `exists i. 832 < 24 * (i + 1) \/ 248 < LENGTH(REJ_SAMPLE(SUB_LIST(0,8 * i) inlist))`
   MP_TAC THENL
    [EXISTS_TAC `280:num` THEN ARITH_TAC;
     GEN_REWRITE_TAC LAND_CONV [num_WOP]] THEN
@@ -3729,7 +3729,7 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
     (* Characterize the number of scalar iterations K via WOP.
        K = smallest j such that LENGTH(REJ_SAMPLE(SUB_LIST(0,8*N+j))) >= 256 OR 837 < 24*N+3*j. *)
     SUBGOAL_THEN
-      `?j. 256 <= LENGTH(REJ_SAMPLE(SUB_LIST(0, 8 * N + j) (inlist:(24 word)list))) \/
+      `exists j. 256 <= LENGTH(REJ_SAMPLE(SUB_LIST(0, 8 * N + j) (inlist:(24 word)list))) \/
            837 < 24 * N + 3 * j`
       MP_TAC THENL
      [EXISTS_TAC `280:num` THEN DISJ2_TAC THEN
@@ -3961,7 +3961,7 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
 (* ========================================================================= *)
 
 let REJ_SAMPLE_COEFF_BOUND = prove
- (`!(inlist:(24 word)list) c.
+ (`forall (inlist:(24 word)list) c.
       MEM c (SUB_LIST(0,256) (REJ_SAMPLE inlist)) ==> val c < 8380417`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   SUBGOAL_THEN `MEM (c:int32) (REJ_SAMPLE(inlist:(24 word)list))` MP_TAC THENL
@@ -3973,7 +3973,7 @@ let REJ_SAMPLE_COEFF_BOUND = prove
 
 (* Helper: val of a memory-resident 32-bit word = read of its 4 bytes.       *)
 let VAL_READ_BYTES32 = prove
- (`!(a:int64) (s:x86state).
+ (`forall (a:int64) (s:x86state).
       val(read (memory :> bytes32 a) s) = read(memory :> bytes(a,4)) s`,
   REPEAT GEN_TAC THEN
   REWRITE_TAC[bytes32; READ_COMPONENT_COMPOSE; asword; through; read] THEN
@@ -3986,8 +3986,8 @@ let VAL_READ_BYTES32 = prove
 
 (* x86 postcondition-strengthening lemma (analogue of aarch64/ENSURES_STRENGTHEN_POST) *)
 let ENSURES_STRENGTHEN_POST_X86 = prove
- (`!P (Q:x86state->bool) Q' R.
-     ensures x86 P Q' R /\ (!s. Q' s ==> Q s) ==> ensures x86 P Q R`,
+ (`forall P (Q:x86state->bool) Q' R.
+     ensures x86 P Q' R /\ (forall s. Q' s ==> Q s) ==> ensures x86 P Q R`,
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
   REWRITE_TAC[ensures] THEN MATCH_MP_TAC MONO_FORALL THEN
   X_GEN_TAC `s0:x86state` THEN MATCH_MP_TAC MONO_IMP THEN REWRITE_TAC[] THEN
@@ -4001,7 +4001,7 @@ let ENSURES_STRENGTHEN_POST_X86 = prove
 (* int32 list, the i-th 32-bit element read back equals the list's i-th     *)
 (* element (as num).                                                        *)
 let VAL_READ_BYTES32_FROM_WORDLIST = prove
- (`!(outlist:int32 list) (a:int64) (s:x86state) i.
+ (`forall (outlist:int32 list) (a:int64) (s:x86state) i.
       i < LENGTH outlist /\
       read(memory :> bytes(a, 4 * LENGTH outlist)) s = num_of_wordlist outlist
       ==> val(read(memory :> bytes32(word_add a (word(4 * i)))) s) =
@@ -4028,7 +4028,7 @@ let VAL_READ_BYTES32_FROM_WORDLIST = prove
 (* Strengthened core correctness: adds per-coefficient bound, matching the  *)
 (* CBMC contract `ensures(array_bound(buf, 0, len, 0, 8380417))`.           *)
 let MLDSA_REJ_UNIFORM_CORRECT_BOUND = prove
- (`!res buf table (inlist:(24 word)list) pc.
+ (`forall res buf table (inlist:(24 word)list) pc.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, 243) (res, 1024) /\
     nonoverlapping (word pc, 243) (buf, 840) /\
@@ -4048,7 +4048,7 @@ let MLDSA_REJ_UNIFORM_CORRECT_BOUND = prove
               C_RETURN s = word outlen /\
               read(memory :> bytes(res,4 * outlen)) s =
                 num_of_wordlist outlist /\
-              (!i. i < outlen
+              (forall i. i < outlen
                    ==> val(read(memory :> bytes32
                                  (word_add res (word(4 * i)))) s) < 8380417))
          (MAYCHANGE [RIP; RAX; RCX; R8; R9; R10] ,,
@@ -4084,7 +4084,7 @@ let MLDSA_REJ_UNIFORM_CORRECT_BOUND = prove
 (* ========================================================================= *)
 
 let MLDSA_REJ_UNIFORM_NOIBT_SUBROUTINE_CORRECT = prove
- (`!res buf table (inlist:(24 word)list) pc stackpointer returnaddress.
+ (`forall res buf table (inlist:(24 word)list) pc stackpointer returnaddress.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_tmc) (res, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_tmc) (buf, 840) /\
@@ -4111,7 +4111,7 @@ let MLDSA_REJ_UNIFORM_NOIBT_SUBROUTINE_CORRECT = prove
                C_RETURN s = word outlen /\
                read(memory :> bytes(res,4 * outlen)) s =
                  num_of_wordlist outlist /\
-               (!i. i < outlen
+               (forall i. i < outlen
                     ==> val(read(memory :> bytes32
                                   (word_add res (word(4 * i)))) s) < 8380417)))
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -4120,7 +4120,7 @@ let MLDSA_REJ_UNIFORM_NOIBT_SUBROUTINE_CORRECT = prove
     MLDSA_REJ_UNIFORM_CORRECT_BOUND);;
 
 let MLDSA_REJ_UNIFORM_SUBROUTINE_CORRECT = prove
- (`!res buf table (inlist:(24 word)list) pc stackpointer returnaddress.
+ (`forall res buf table (inlist:(24 word)list) pc stackpointer returnaddress.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_mc) (res, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_mc) (buf, 840) /\
@@ -4147,7 +4147,7 @@ let MLDSA_REJ_UNIFORM_SUBROUTINE_CORRECT = prove
                C_RETURN s = word outlen /\
                read(memory :> bytes(res,4 * outlen)) s =
                  num_of_wordlist outlist /\
-               (!i. i < outlen
+               (forall i. i < outlen
                     ==> val(read(memory :> bytes32
                                   (word_add res (word(4 * i)))) s) < 8380417)))
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -4275,7 +4275,7 @@ let DISCHARGE_MEMSAFE_ASM_TAC:tactic =
     FIRST_ASSUM ACCEPT_TAC];;
 
 let SCALAR_BODY_LEMMA_MEMSAFE = prove
- (`!res buf table (inlist:(24 word)list) e pc stackpointer N K i.
+ (`forall res buf table (inlist:(24 word)list) e pc stackpointer N K i.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, 243) (res, 1024) /\
     nonoverlapping (word pc, 243) (buf, 840) /\
@@ -4285,7 +4285,7 @@ let SCALAR_BODY_LEMMA_MEMSAFE = prove
     24 * N <= 832 /\
     LENGTH(REJ_SAMPLE(SUB_LIST(0, 8 * N) inlist)) <= 256 /\
     i < K /\ ~(i = K) /\ 0 < K /\
-    (!j. j < K
+    (forall j. j < K
          ==> LENGTH(REJ_SAMPLE(SUB_LIST(0, 8*N + j) inlist)) < 256 /\
              24 * N + 3 * j <= 837) /\
     (256 <= LENGTH(REJ_SAMPLE(SUB_LIST(0, 8*N + K) inlist)) \/
@@ -5149,7 +5149,7 @@ let SCALAR_BODY_LEMMA_MEMSAFE = prove
 
 
 let MLDSA_REJ_UNIFORM_MEMSAFE = prove
- (`!res buf table (inlist:(24 word)list) e pc.
+ (`forall res buf table (inlist:(24 word)list) e pc.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, 243) (res, 1024) /\
     nonoverlapping (word pc, 243) (buf, 840) /\
@@ -5182,7 +5182,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
   GHOST_INTRO_TAC `stackpointer:int64` `read RSP` THEN
 
   SUBGOAL_THEN
-   `?i. 832 < 24 * (i + 1) \/ 248 < LENGTH(REJ_SAMPLE(SUB_LIST(0,8 * i) inlist))`
+   `exists i. 832 < 24 * (i + 1) \/ 248 < LENGTH(REJ_SAMPLE(SUB_LIST(0,8 * i) inlist))`
   MP_TAC THENL
    [EXISTS_TAC `280:num` THEN ARITH_TAC;
     GEN_REWRITE_TAC LAND_CONV [num_WOP]] THEN
@@ -6788,7 +6788,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
       ARITH_TAC;
       ALL_TAC] THEN
     SUBGOAL_THEN
-      `?j. 256 <= LENGTH(REJ_SAMPLE(SUB_LIST(0, 8 * N + j) (inlist:(24 word)list))) \/
+      `exists j. 256 <= LENGTH(REJ_SAMPLE(SUB_LIST(0, 8 * N + j) (inlist:(24 word)list))) \/
            837 < 24 * N + 3 * j`
       MP_TAC THENL
      [EXISTS_TAC `280:num` THEN DISJ2_TAC THEN
@@ -7068,7 +7068,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_REJ_UNIFORM_NOIBT_SUBROUTINE_SAFE = time prove
- (`!res buf table (inlist:(24 word)list) e pc stackpointer returnaddress.
+ (`forall res buf table (inlist:(24 word)list) e pc stackpointer returnaddress.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_tmc) (res, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_tmc) (buf, 840) /\
@@ -7103,7 +7103,7 @@ let MLDSA_REJ_UNIFORM_NOIBT_SUBROUTINE_SAFE = time prove
   DISCHARGE_MEMSAFE_TAC);;
 
 let MLDSA_REJ_UNIFORM_SUBROUTINE_SAFE = time prove
- (`!res buf table (inlist:(24 word)list) e pc stackpointer returnaddress.
+ (`forall res buf table (inlist:(24 word)list) e pc stackpointer returnaddress.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_mc) (res, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_mc) (buf, 840) /\
@@ -7153,7 +7153,7 @@ let MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC =
 (* ENSURES_STRENGTHEN_POST_X86, matching the MLDSA_REJ_UNIFORM_CORRECT_BOUND  *)
 (* strengthening of MLDSA_REJ_UNIFORM_CORRECT.                                *)
 let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT_NOBOUND = prove
- (`!res buf table (inlist:(24 word)list) pc stackpointer returnaddress.
+ (`forall res buf table (inlist:(24 word)list) pc stackpointer returnaddress.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_tmc) (res, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_tmc) (buf, 840) /\
@@ -7231,7 +7231,7 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT_NOBOUND = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!res buf table (inlist:(24 word)list) pc stackpointer returnaddress.
+ (`forall res buf table (inlist:(24 word)list) pc stackpointer returnaddress.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_tmc) (res, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_tmc) (buf, 840) /\
@@ -7259,7 +7259,7 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                WINDOWS_C_RETURN s = word outlen /\
                read(memory :> bytes(res,4 * outlen)) s =
                  num_of_wordlist outlist /\
-               (!i. i < outlen
+               (forall i. i < outlen
                     ==> val(read(memory :> bytes32
                                   (word_add res (word(4 * i)))) s) < 8380417)))
          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -7292,7 +7292,7 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
     MATCH_MP_TAC MEM_EL THEN ASM_REWRITE_TAC[]]);;
 
 let MLDSA_REJ_UNIFORM_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!res buf table (inlist:(24 word)list) pc stackpointer returnaddress.
+ (`forall res buf table (inlist:(24 word)list) pc stackpointer returnaddress.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_mc) (res, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_mc) (buf, 840) /\
@@ -7320,7 +7320,7 @@ let MLDSA_REJ_UNIFORM_WINDOWS_SUBROUTINE_CORRECT = prove
                WINDOWS_C_RETURN s = word outlen /\
                read(memory :> bytes(res,4 * outlen)) s =
                  num_of_wordlist outlist /\
-               (!i. i < outlen
+               (forall i. i < outlen
                     ==> val(read(memory :> bytes32
                                   (word_add res (word(4 * i)))) s) < 8380417)))
          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -7341,7 +7341,7 @@ let MLDSA_REJ_UNIFORM_WINDOWS_SUBROUTINE_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
- (`!res buf table (inlist:(24 word)list) e pc stackpointer returnaddress.
+ (`forall res buf table (inlist:(24 word)list) e pc stackpointer returnaddress.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_tmc) (res, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_tmc) (buf, 840) /\
@@ -7431,7 +7431,7 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
     DISCHARGE_MEMSAFE_TAC]);;
 
 let MLDSA_REJ_UNIFORM_WINDOWS_SUBROUTINE_SAFE = time prove
- (`!res buf table (inlist:(24 word)list) e pc stackpointer returnaddress.
+ (`forall res buf table (inlist:(24 word)list) e pc stackpointer returnaddress.
     LENGTH inlist = 280 /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_mc) (res, 1024) /\
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_mc) (buf, 840) /\

@@ -127,17 +127,17 @@ let WORD_JOIN_OR_TYBIT0 = prove(
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_CHKNORM_CORRECT = prove(
- `!a (x:num->int32) (bound:int32) pc.
+ `forall a (x:num->int32) (bound:int32) pc.
         nonoverlapping (word pc, LENGTH mldsa_chknorm_mc) (a, 1024)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) mldsa_chknorm_mc /\
                   read PC s = word(pc + MLDSA_CHKNORM_CORE_START) /\
                   C_ARGUMENTS [a; word_zx bound] s /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
              (\s. read PC s = word(pc + MLDSA_CHKNORM_CORE_END) /\
-                  read X0 s = word(bitval(?i. i < 256 /\ abs(ival(x i)) >= ival bound)))
+                  read X0 s = word(bitval(exists i. i < 256 /\ abs(ival(x i)) >= ival bound)))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   CONV_TAC CHKNORM_LENGTH_SIMPLIFY_CONV THEN
   MAP_EVERY X_GEN_TAC [`a:int64`; `x:num->int32`; `bound:int32`; `pc:num`] THEN
@@ -175,7 +175,7 @@ let MLDSA_CHKNORM_CORRECT = prove(
 
   (* Convert to ! instead of ? and split *)
   GEN_REWRITE_TAC (BINOP_CONV o ONCE_DEPTH_CONV) [prove (`b = ~ (~ (b : bool))`, REWRITE_TAC[])] THEN
-  GEN_REWRITE_TAC TOP_SWEEP_CONV [MESON[] `~(?i. i < n /\ P i) <=> (!i. i < n ==> ~P i)`; DE_MORGAN_THM] THEN
+  GEN_REWRITE_TAC TOP_SWEEP_CONV [MESON[] `~(exists i. i < n /\ P i) <=> (forall i. i < n ==> ~P i)`; DE_MORGAN_THM] THEN
   CONV_TAC (ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
   REPEAT AP_TERM_TAC THEN EQ_TAC THEN SIMP_TAC[]);;
 
@@ -184,18 +184,18 @@ let MLDSA_CHKNORM_CORRECT = prove(
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_CHKNORM_SUBROUTINE_CORRECT = prove(
- `!a (x:num->int32) (bound:int32) pc returnaddress.
+ `forall a (x:num->int32) (bound:int32) pc returnaddress.
         nonoverlapping (word pc, LENGTH mldsa_chknorm_mc) (a, 1024)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) mldsa_chknorm_mc /\
                   read PC s = word pc /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [a; word_zx bound] s /\
-                  (!i. i < 256 ==>
+                  (forall i. i < 256 ==>
                      read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
-                  (!i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
+                  (forall i. i < 256 ==> abs(ival(x i)) < &2 pow 31))
              (\s. read PC s = returnaddress /\
-                  read X0 s = word(bitval(?i. i < 256 /\ abs(ival(x i)) >= ival bound)))
+                  read X0 s = word(bitval(exists i. i < 256 /\ abs(ival(x i)) >= ival bound)))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   CONV_TAC CHKNORM_LENGTH_SIMPLIFY_CONV THEN
   let TWEAK_CONV =

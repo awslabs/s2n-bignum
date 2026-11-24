@@ -145,7 +145,7 @@ let GHOST_SUBREGLIST_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let SHA3_KECCAK_F1600_ALT_CORRECT = prove
- (`!a rc A pc.
+ (`forall a rc A pc.
       ALL (nonoverlapping (a,200)) [(word pc,0x1ac); (rc,192)]
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) sha3_keccak_f1600_alt_mc /\
@@ -243,7 +243,7 @@ let SHA3_KECCAK_F1600_ALT_CORRECT = prove
     ASM_REWRITE_TAC[]]);;
 
 let SHA3_KECCAK_F1600_ALT_SUBROUTINE_CORRECT = prove
-(`!a rc A pc stackpointer returnaddress.
+(`forall a rc A pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         nonoverlapping (a,200) (word_sub stackpointer (word 64),64) /\
         ALLPAIRS nonoverlapping

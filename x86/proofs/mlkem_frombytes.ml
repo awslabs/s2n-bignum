@@ -308,7 +308,7 @@ let unpermute_list = new_definition
   `unpermute_list l = list_of_seq (\i. EL (avx_unorder i) l) 256`;;
 
 let AVX_ORDER_UNORDER = prove(
-  `!i. i < 256 ==> avx_order (avx_unorder i) = i`,
+  `forall i. i < 256 ==> avx_order (avx_unorder i) = i`,
   CONV_TAC EXPAND_CASES_CONV THEN
   REWRITE_TAC[avx_order; avx_unorder] THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
@@ -317,7 +317,7 @@ let AVX_ORDER_UNORDER = prove(
 let DIMINDEX_12 = DIMINDEX_CONV `dimindex(:12)`;;
 
 let MLKEM_FROMBYTES_CORRECT = prove(
-    `!r a (l:(12 word) list) pc.
+    `forall r a (l:(12 word) list) pc.
         aligned 32 r /\
         nonoverlapping (word pc, 818) (a, 384) /\
         nonoverlapping (word pc, 818) (r, 512) /\
@@ -418,7 +418,7 @@ let MLKEM_FROMBYTES_CORRECT = prove(
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLKEM_FROMBYTES_NOIBT_SUBROUTINE_CORRECT = prove(
-    `!r a (l:(12 word) list) pc.
+    `forall r a (l:(12 word) list) pc.
         aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_tmc) (a, 384) /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_tmc) (r, 512) /\
@@ -441,7 +441,7 @@ let MLKEM_FROMBYTES_NOIBT_SUBROUTINE_CORRECT = prove(
   X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_frombytes_tmc MLKEM_FROMBYTES_CORRECT);;
 
 let MLKEM_FROMBYTES_SUBROUTINE_CORRECT = prove(
-    `!r a (l:(12 word) list) pc.
+    `forall r a (l:(12 word) list) pc.
         aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_mc) (a, 384) /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_mc) (r, 512) /\
@@ -477,7 +477,7 @@ let mlkem_frombytes_windows_tmc = define_trimmed
 let mlkem_frombytes_windows_tmc_EXEC = X86_MK_EXEC_RULE mlkem_frombytes_windows_tmc;;
 
 let MLKEM_FROMBYTES_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
-    `!r a (l:(12 word) list) pc stackpointer returnaddress.
+    `forall r a (l:(12 word) list) pc stackpointer returnaddress.
         aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_windows_tmc) (a, 384) /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_windows_tmc) (r, 512) /\
@@ -578,7 +578,7 @@ let MLKEM_FROMBYTES_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLKEM_FROMBYTES_WINDOWS_SUBROUTINE_CORRECT = prove(
-    `!r a (l:(12 word) list) pc stackpointer returnaddress.
+    `forall r a (l:(12 word) list) pc stackpointer returnaddress.
         aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_windows_mc) (a, 384) /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_windows_mc) (r, 512) /\
