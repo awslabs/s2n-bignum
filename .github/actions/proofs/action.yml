@@ -1,5 +1,5 @@
 name: Run HOL Light proofs
-description: Build the proof executables, run them, and collect their timings
+description: Build the shared HOL base, fork a process per proof, and collect timings
 inputs:
   arch:
     description: Proof architecture (arm or x86)
@@ -18,38 +18,31 @@ runs:
         linux-packages: binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu
         apt-update-options: --allow-insecure-repositories
 
-    # tools/run-proof.sh records each passing proof here and
-    # tools/proof_timing/collect.py reads the records. The runner empties
-    # its temporary directory at the start and end of every job.
-    - name: Choose the proof completion marker directory
-      shell: bash
-      run: echo "PROOF_TIMING_MARKERS=$RUNNER_TEMP/proof-markers" >> "$GITHUB_ENV"
-
-    - name: Build proofs and tutorial
-      id: build
-      shell: bash
-      env:
-        PROOF_ARCH: ${{ inputs.arch }}
-        JOBS: ${{ inputs.build-jobs }}
-      run: |
-        trap 'echo "seconds=$SECONDS" >> "$GITHUB_OUTPUT"' EXIT
-        make -C "$PROOF_ARCH" -j "$JOBS" build_proofs build_tutorial
-
-    - name: Run proofs and tutorial
+    - name: Build and run proofs and tutorials
       id: proofs
       shell: bash
       env:
         PROOF_ARCH: ${{ inputs.arch }}
-        JOBS: ${{ inputs.proof-jobs }}
-      run: |
-        trap 'echo "seconds=$SECONDS" >> "$GITHUB_OUTPUT"' EXIT
-        make -C "$PROOF_ARCH" -j "$JOBS" proofs tutorial
+        BUILD_JOBS: ${{ inputs.build-jobs }}
+        PROOF_JOBS: ${{ inputs.proof-jobs }}
+      run: make -C "$PROOF_ARCH" fork-proofs PROOF_OUTPUT="$RUNNER_TEMP/proof-logs"
 
     - name: Print proof and tutorial timing lines
       shell: bash
       env:
         PROOF_ARCH: ${{ inputs.arch }}
-      run: tools/collect-times.sh "$PROOF_ARCH"
+      run: tools/collect-times.sh "$RUNNER_TEMP/proof-logs/$PROOF_ARCH"
+
+    - name: Upload failed proof diagnostics
+      if: ${{ failure() && steps.proofs.outcome == 'failure' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: proof-errors-${{ inputs.arch }}
+        path: |
+          ${{ runner.temp }}/proof-logs/base.log
+          ${{ runner.temp }}/proof-logs/**/*.partial
+        if-no-files-found: ignore
+        overwrite: true
 
     - name: Collect crypto proof timings
       if: ${{ !cancelled() }}
@@ -60,11 +53,11 @@ runs:
         PROOF_ARCH: ${{ inputs.arch }}
         BUILD_JOBS: ${{ inputs.build-jobs }}
         PROOF_JOBS: ${{ inputs.proof-jobs }}
-        BUILD_SECONDS: ${{ steps.build.outputs.seconds }}
-        PROOF_SECONDS: ${{ steps.proofs.outputs.seconds }}
+        BUILD_SECONDS: ${{ steps.proofs.outputs.build_seconds }}
+        PROOF_SECONDS: ${{ steps.proofs.outputs.proof_seconds }}
         PROOF_OUTCOME: ${{ steps.proofs.outcome }}
       run: |
-        python3 tools/proof_timing/collect.py "$PROOF_ARCH" "$RUNNER_TEMP/timing.json"
+        python3 tools/proof_timing/collect.py "$PROOF_ARCH" "$RUNNER_TEMP/timing.json" "$RUNNER_TEMP/proof-logs"
         echo "tree=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
 
     # tools/proof_timing/report.py finds timings repository-wide by this
