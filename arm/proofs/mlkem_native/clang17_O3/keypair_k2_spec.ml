@@ -378,7 +378,7 @@ let KR2_SAFE_CASE_TAC b =
   ENSURES_INIT_TAC "s0" THEN
   FIRST_ASSUM(fun th ->
     if can (term_match []
-         `read (memory :> bytes64(word(pc + 196560))) s = f:int64`)
+         `read (memory :> bytes64(word(pc + got_memcpy))) s = f:int64`)
          (concl th)
     then ASSUME_TAC(REWRITE_RULE[WORD_ADD] th) else NO_TAC) THEN
   ARM_STEPS_TAC KR2_EXEC (1--6) THEN KR2_BUFFER_TAC THEN

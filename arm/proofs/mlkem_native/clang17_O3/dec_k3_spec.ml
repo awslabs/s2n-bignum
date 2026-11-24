@@ -358,10 +358,10 @@ let KD3_FRAME b = KD3_SUBST(parse_term(Printf.sprintf
   read (memory :> bytes64 (word_add stackpointer (word 18008))) s =
   x19_init /\\
   read (memory :> bytes64 (word_add stackpointer (word %d))) s = canary /\\
-  read (memory :> bytes64 (word_add (word pc) (word 196600))) s = guard /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\\
   read (memory :> bytes64 guard) s = canary /\\
-  read (memory :> bytes64 (word_add (word pc) (word 196584))) s = mf /\\
-  read (memory :> bytes64 (word_add (word pc) (word 196560))) s = mc /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\\
   read (memory :> bytes(ea,el)) s = ev /\\
   read (memory :> bytes(word_add stackpointer (word %d),32)) s = KP"
   b (b + 1272) (b + 1120)));;
@@ -998,10 +998,10 @@ let KD3_SAFE_FRAME b = parse_term(Printf.sprintf
   read (memory :> bytes64 (word_add stackpointer (word 18008))) s =
   x19_init /\\
   read (memory :> bytes64 (word_add stackpointer (word %d))) s = canary /\\
-  read (memory :> bytes64 (word_add (word pc) (word 196600))) s = guard /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\\
   read (memory :> bytes64 guard) s = canary /\\
-  read (memory :> bytes64 (word_add (word pc) (word 196584))) s = mf /\\
-  read (memory :> bytes64 (word_add (word pc) (word 196560))) s = mc /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\\
   read (memory :> bytes(ea,el)) s = ev"
   b (b + 1272));;
 

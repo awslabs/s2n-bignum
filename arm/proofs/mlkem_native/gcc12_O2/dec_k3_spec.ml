@@ -342,10 +342,10 @@ let KD3_FRAME b = KD3_SUBST(parse_term(Printf.sprintf
   read (memory :> bytes64 (word_add stackpointer (word 16952))) s =
   returnaddress /\\
   read (memory :> bytes64 (word_add stackpointer (word 18232))) s = canary /\\
-  read (memory :> bytes64 (word_add (word pc) (word 131064))) s = guard /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\\
   read (memory :> bytes64 guard) s = canary /\\
-  read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\\
-  read (memory :> bytes64 (word_add (word pc) (word 131024))) s = mc /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\\
   read (memory :> bytes(ea,el)) s = ev /\\
   read (memory :> bytes(word_add stackpointer (word %d),32)) s = KP"
   b (b + 1184) (b + 1120) (b + 1120)));;
@@ -941,11 +941,11 @@ let KD3_SAFE_INV = subst [KD3_SAFE_B,`b:num`]
         returnaddress /\
         read (memory :> bytes64 (word_add stackpointer (word 18232))) s =
         canary /\
-        read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+        read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
         guard /\
         read (memory :> bytes64 guard) s = canary /\
-        read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\
-        read (memory :> bytes64 (word_add (word pc) (word 131024))) s = mc /\
+        read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
+        read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\
         read (memory :> bytes(ea,el)) s = ev`;;
 
 let KD3_SAFE_CMOV_INV = subst [KD3_SAFE_B,`b:num`]
@@ -977,11 +977,11 @@ let KD3_SAFE_CMOV_INV = subst [KD3_SAFE_B,`b:num`]
         returnaddress /\
         read (memory :> bytes64 (word_add stackpointer (word 18232))) s =
         canary /\
-        read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+        read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
         guard /\
         read (memory :> bytes64 guard) s = canary /\
-        read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\
-        read (memory :> bytes64 (word_add (word pc) (word 131024))) s = mc /\
+        read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
+        read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\
         read (memory :> bytes(ea,el)) s = ev`;;
 
 let KD3_SAFE_INTRO_TAC =

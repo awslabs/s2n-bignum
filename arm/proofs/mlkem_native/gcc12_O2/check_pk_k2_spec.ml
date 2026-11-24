@@ -320,9 +320,9 @@ let CHECKPK2_FRAME = vsubst [CHECKPK_M,`M:num`]
   read (memory :> bytes64 (word_add stackpointer (word 56))) s =
   returnaddress /\
   read (memory :> bytes64 (word_add stackpointer (word 1880))) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 131064))) s = guard /\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\
   read (memory :> bytes64 guard) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
   read (memory :> bytes(ea,el)) s = ev /\
   read X20 s = word_add stackpointer (word boff) /\
   read X21 s = word_add stackpointer (word(boff + 1024)) /\
@@ -627,10 +627,10 @@ let CHECKPK2_SAFE_INV =
         returnaddress /\
         read (memory :> bytes64 (word_add stackpointer (word 1880))) s =
         canary /\
-        read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+        read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
         guard /\
         read (memory :> bytes64 guard) s = canary /\
-        read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\
+        read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
         read (memory :> bytes(ea,el)) s = ev /\
         read X20 s =
         word_add stackpointer

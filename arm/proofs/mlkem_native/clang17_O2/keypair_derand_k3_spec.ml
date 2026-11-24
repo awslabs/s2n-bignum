@@ -99,7 +99,7 @@ let KK3_MEMCPY_TAC =
     else NO_TAC) THEN
   FIRST_ASSUM(fun th ->
     if can (term_match []
-         `read (memory :> bytes64(word(pc + 131024))) s = f:int64`)
+         `read (memory :> bytes64(word(pc + got_memcpy))) s = f:int64`)
          (concl th)
     then ASSUME_TAC(REWRITE_RULE[WORD_ADD] th) else NO_TAC);;
 

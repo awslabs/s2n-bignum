@@ -488,9 +488,9 @@ let REJX4_FRAME =
   read (memory :> bytes64 (word_add stackpointer (word 416))) s = vec2 /\
   read (memory :> bytes64 (word_add stackpointer (word 424))) s = vec3 /\
   read (memory :> bytes64 (word_add stackpointer (word 3304))) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 131064))) s = guard /\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\
   read (memory :> bytes64 guard) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
   read (memory :> bytes(ea,el)) s = ev /\
   read X22 s =
   word_add stackpointer (word(if aligned 32 stackpointer then 448 else 432)) /\

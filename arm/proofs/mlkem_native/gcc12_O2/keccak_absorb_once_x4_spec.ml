@@ -598,7 +598,7 @@ let ABSX4_CS_FRAME =
   returnaddress /\
   read (memory :> bytes8 (word_add stackpointer (word 295))) s = word 31 /\
   read (memory :> bytes64 (word_add stackpointer (word 296))) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 131064))) s = guard /\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\
   read (memory :> bytes64 guard) s = canary /\
   read (memory :> bytes(m0,mlen)) s = M0 /\
   read (memory :> bytes(m1,mlen)) s = M1 /\

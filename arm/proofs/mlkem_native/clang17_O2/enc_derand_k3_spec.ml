@@ -366,10 +366,10 @@ let ke3_frame b =
    read (memory :> bytes64 (word_add stackpointer (word 19840))) s = x20_init /\\
    read (memory :> bytes64 (word_add stackpointer (word 19848))) s = x19_init /\\
    read (memory :> bytes64 (word_add stackpointer (word %d))) s = canary /\\
-   read (memory :> bytes64 (word_add (word pc) (word 131064))) s = guard /\\
+   read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\\
    read (memory :> bytes64 guard) s = canary /\\
-   read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\\
-   read (memory :> bytes64 (word_add (word pc) (word 131024))) s = mc /\\
+   read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\\
+   read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\\
    read (memory :> bytes(ea,el)) s = ev /\\
    read X27 s = x27_init /\\
    read X19 s = ss /\\ read X20 s = pk /\\ read X21 s = ct /\\

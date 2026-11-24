@@ -230,11 +230,11 @@ let GETNOISE4_GOT_TAC =
     FIRST_ASSUM(fun th ->
       if can (term_match [] t) (concl th)
       then ASSUME_TAC(REWRITE_RULE[GSYM WORD_ADD] th) else NO_TAC))
-   [`read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+   [`read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
      g:int64`;
-    `read (memory :> bytes64 (word_add (word pc) (word 131048))) s =
+    `read (memory :> bytes64 (word_add (word pc) (word got_memset))) s =
      g:int64`;
-    `read (memory :> bytes64 (word_add (word pc) (word 131024))) s =
+    `read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s =
      g:int64`];;
 
 (*** The test of whether the fourth pointer is null ***)

@@ -342,10 +342,10 @@ let KD4_FRAME b = KD4_SUBST(parse_term(Printf.sprintf
   read (memory :> bytes64 (word_add stackpointer (word 22888))) s =
   returnaddress /\\
   read (memory :> bytes64 (word_add stackpointer (word 24648))) s = canary /\\
-  read (memory :> bytes64 (word_add (word pc) (word 131064))) s = guard /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\\
   read (memory :> bytes64 guard) s = canary /\\
-  read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\\
-  read (memory :> bytes64 (word_add (word pc) (word 131024))) s = mc /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\\
   read (memory :> bytes(ea,el)) s = ev /\\
   read (memory :> bytes(word_add stackpointer (word %d),32)) s = KP"
   b (b + 1664) (b + 1600) (b + 1600)));;
@@ -943,11 +943,11 @@ let KD4_SAFE_INV = subst [KD4_SAFE_B,`b:num`]
         returnaddress /\
         read (memory :> bytes64 (word_add stackpointer (word 24648))) s =
         canary /\
-        read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+        read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
         guard /\
         read (memory :> bytes64 guard) s = canary /\
-        read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\
-        read (memory :> bytes64 (word_add (word pc) (word 131024))) s = mc /\
+        read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
+        read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\
         read (memory :> bytes(ea,el)) s = ev`;;
 
 let KD4_SAFE_CMOV_INV = subst [KD4_SAFE_B,`b:num`]
@@ -979,11 +979,11 @@ let KD4_SAFE_CMOV_INV = subst [KD4_SAFE_B,`b:num`]
         returnaddress /\
         read (memory :> bytes64 (word_add stackpointer (word 24648))) s =
         canary /\
-        read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+        read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
         guard /\
         read (memory :> bytes64 guard) s = canary /\
-        read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\
-        read (memory :> bytes64 (word_add (word pc) (word 131024))) s = mc /\
+        read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
+        read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\
         read (memory :> bytes(ea,el)) s = ev`;;
 
 let KD4_SAFE_INTRO_TAC =

@@ -537,10 +537,10 @@ let KD2_FRAME_FMT = Printf.sprintf
   read (memory :> bytes64 (word_add stackpointer (word 12880))) s = x20_init /\\
   read (memory :> bytes64 (word_add stackpointer (word 12888))) s = x19_init /\\
   read (memory :> bytes64 (word_add stackpointer (word %d))) s = canary /\\
-  read (memory :> bytes64 (word_add (word pc) (word 196600))) s = guard /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\\
   read (memory :> bytes64 guard) s = canary /\\
-  read (memory :> bytes64 (word_add (word pc) (word 196584))) s = mf /\\
-  read (memory :> bytes64 (word_add (word pc) (word 196560))) s = mc /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\\
+  read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\\
   read (memory :> bytes(ea,el)) s = ev";;
 
 let KD2_FRAME b = KD2_SUBST(parse_term(

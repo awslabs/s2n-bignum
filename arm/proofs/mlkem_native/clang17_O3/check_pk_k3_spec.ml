@@ -375,9 +375,9 @@ let CHECKPK3_FRAME = vsubst [CHECKPK_M,`M:num`]
   read (memory :> bytes64 (word_add stackpointer (word 2792))) s = x19_init /\
   read (memory :> bytes64 (word_add stackpointer (word(boff + 2696)))) s =
   canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 196600))) s = guard /\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\
   read (memory :> bytes64 guard) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 196584))) s = mf /\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
   read (memory :> bytes(ea,el)) s = ev /\
   read X19 s = pk /\
   read X20 s = word_add stackpointer (word boff) /\
@@ -819,9 +819,9 @@ let CHECKPK3_SAFE_FRAME =
   read (memory :> bytes64 (word_add stackpointer (word 2792))) s = x19_init /\
   read (memory :> bytes64 (word_add stackpointer (word((if aligned 32 (stackpointer:int64) then 32 else 48) + 2696)))) s =
   canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 196600))) s = guard /\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\
   read (memory :> bytes64 guard) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 196584))) s = mf /\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
   read (memory :> bytes(ea,el)) s = ev /\
   read X19 s = pk /\
   read X20 s = word_add stackpointer (word (if aligned 32 (stackpointer:int64) then 32 else 48))`;;

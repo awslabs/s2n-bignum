@@ -377,7 +377,7 @@ let SHAKE256X4_SETUP_TAC =
 let SHAKE256X4_GOT_TAC =
   FIRST_ASSUM(fun th ->
     if can (term_match []
-         `read (memory :> bytes64 (word_add (word pc) (word 131064))) s =
+         `read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s =
           g:int64`)
          (concl th)
     then ASSUME_TAC(REWRITE_RULE[GSYM WORD_ADD] th) else NO_TAC);;
@@ -397,10 +397,10 @@ let SHAKE256X4_FRAME =
   read (memory :> bytes64 (word_add stackpointer (word 384))) s =
   returnaddress /\
   read (memory :> bytes64 (word_add stackpointer (word 1784))) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 131064))) s = guard /\
+  read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = guard /\
   read (memory :> bytes64 guard) s = canary /\
-  read (memory :> bytes64 (word_add (word pc) (word 131048))) s = mf /\
-  read (memory :> bytes64 (word_add (word pc) (word 131024))) s = mc /\
+  read (memory :> bytes64 (word_add (word pc) (word got_memset))) s = mf /\
+  read (memory :> bytes64 (word_add (word pc) (word got_memcpy))) s = mc /\
   read (memory :> bytes(ea,el)) s = ev`;;
 
 let SHAKE256X4_AT t =

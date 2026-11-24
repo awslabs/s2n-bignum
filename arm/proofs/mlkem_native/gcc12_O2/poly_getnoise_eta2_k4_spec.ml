@@ -173,7 +173,7 @@ let LOCAL_CBD2_TAC =
 let GETNOISE_GOT_TAC =
   TRY(FIRST_ASSUM(fun th ->
     if can (term_match []
-         `read (memory :> bytes64 (word_add (word pc) (word 131064))) s = g`)
+         `read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard))) s = g`)
          (concl th)
     then ASSUME_TAC(REWRITE_RULE[GSYM WORD_ADD] th) else NO_TAC));;
 
