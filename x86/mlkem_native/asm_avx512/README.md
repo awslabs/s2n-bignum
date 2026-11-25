@@ -124,7 +124,8 @@ in `../../../README.md`), and `make
 mlkem_native/asm_avx512/enc_derand_k3_proof.correct` runs one proof file.
 They are the same theorems as for the AVX2 version about the image of this
 one, with `ASM_AVX512` in the names
-(`MLKEM_NATIVE_ENC_DERAND_K3_ASM_AVX512_IMAGE_SUBROUTINE_CORRECT`). The names
+(`MLKEM_NATIVE_ENC_DERAND_K3_ASM_AVX512_IMAGE_SUBROUTINE_CORRECT`, and
+`_FIPS203` and `_SAFE_FIPS203` from `fips203.ml`, as in `../asm`). The names
 follow the table of `../asm/README.md` with `ASM_AVX512_IMAGE` for
 `ASM_IMAGE`, from those of the files of this directory before the
 conversion, `MLKEM<n>_<F>_AVX512_SUBROUTINE_CORRECT` and `_SAFE`, e.g.

@@ -163,7 +163,10 @@ The files, named by the function as in the compiled build:
   all, with the events a function of the addresses and of the public data:
   rho in key generation, ek in encapsulation, and ek and its hash in dk in
   decapsulation. As on AArch64, no theorem assumes that SampleNTT
-  terminates for the seeds of the matrix, so the build has no `fips203.ml`.
+  terminates for the seeds of the matrix; `fips203.ml` gives the theorems
+  of keypair_derand, enc_derand and dec the names `_FIPS203` and
+  `_SAFE_FIPS203` too, which in the compiled builds are those of the
+  theorems without that hypothesis.
   The frames of the API functions are realigned to 32 bytes below the
   return address, so the theorems allow any alignment of the stack pointer,
   and in the safety theorems the offset of the frame is a function of the

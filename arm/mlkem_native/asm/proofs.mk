@@ -39,6 +39,7 @@ MLKEM_NATIVE_PROOFS += \
   mlkem_native/asm/enc_derand_k2_proof \
   mlkem_native/asm/enc_derand_k3_proof \
   mlkem_native/asm/enc_derand_k4_proof \
+  mlkem_native/asm/fips203 \
   mlkem_native/asm/frombytes_proof \
   mlkem_native/asm/frommsg_proof \
   mlkem_native/asm/gen_matrix_common_proof \
@@ -1300,6 +1301,125 @@ mlkem_native/asm/enc_derand_k4_proof.native: \
   mlkem_native/asm/mlkem_native2_image.elf \
   sha3/sha3_keccak4_f1600_alt2.o \
   sha3/sha3_keccak_f1600.o
+mlkem_native/asm/fips203.native: \
+  proofs/mlkem_native/relative.ml \
+  proofs/mlkem_native/asm/keypair_derand_k2_spec.ml \
+  proofs/mlkem_native/asm/enc_derand_k2_spec.ml \
+  proofs/mlkem_native/asm/dec_k2_spec.ml \
+  proofs/mlkem_native/asm/keypair_derand_k3_spec.ml \
+  proofs/mlkem_native/asm/enc_derand_k3_spec.ml \
+  proofs/mlkem_native/asm/dec_k3_spec.ml \
+  proofs/mlkem_native/asm/keypair_derand_k4_spec.ml \
+  proofs/mlkem_native/asm/enc_derand_k4_spec.ml \
+  proofs/mlkem_native/asm/dec_k4_spec.ml \
+  ../common/relative.ml \
+  proofs/mlkem_native/asm/layout.ml \
+  proofs/mlkem_native/asm/hash_g_spec.ml \
+  proofs/mlkem_native/asm/hash_h_spec.ml \
+  proofs/mlkem_native/asm/getnoise_spec.ml \
+  proofs/mlkem_native/asm/gen_matrix_k2_spec.ml \
+  proofs/mlkem_native/asm/gen_matrix_k2_safe_spec.ml \
+  proofs/mlkem_native/asm/ntt_alt_spec.ml \
+  proofs/mlkem_native/asm/intt_alt_spec.ml \
+  proofs/mlkem_native/asm/mulcache_compute_spec.ml \
+  proofs/mlkem_native/asm/tomont_spec.ml \
+  proofs/mlkem_native/asm/reduce_spec.ml \
+  proofs/mlkem_native/asm/add_reduce_spec.ml \
+  proofs/mlkem_native/asm/sub_reduce_spec.ml \
+  proofs/mlkem_native/asm/tobytes_alt_spec.ml \
+  proofs/mlkem_native/asm/frombytes_spec.ml \
+  proofs/mlkem_native/asm/frommsg_spec.ml \
+  proofs/mlkem_native/asm/tomsg_spec.ml \
+  proofs/mlkem_native/asm/basemul_k2_alt_spec.ml \
+  proofs/mlkem_native/asm/compress_d10_spec.ml \
+  proofs/mlkem_native/asm/compress_d4_spec.ml \
+  proofs/mlkem_native/asm/decompress_d10_spec.ml \
+  proofs/mlkem_native/asm/decompress_d4_spec.ml \
+  ../common/fips203/fips203.ml \
+  proofs/utils/mlkem_native2_cbd.ml \
+  proofs/consttime.ml \
+  proofs/subroutine_signatures.ml \
+  proofs/mlkem_native/asm/check_encoding_spec.ml \
+  proofs/mlkem_native/asm/pke_encrypt_k2_spec.ml \
+  proofs/mlkem_native/asm/pke_decrypt_k2_spec.ml \
+  proofs/mlkem_native/asm/gen_matrix_k3_spec.ml \
+  proofs/mlkem_native/asm/gen_matrix_k3_safe_spec.ml \
+  proofs/mlkem_native/asm/basemul_k3_alt_spec.ml \
+  proofs/mlkem_native/asm/pke_encrypt_k3_spec.ml \
+  proofs/mlkem_native/asm/pke_decrypt_k3_spec.ml \
+  proofs/mlkem_native/asm/gen_matrix_k4_spec.ml \
+  proofs/mlkem_native/asm/gen_matrix_k4_safe_spec.ml \
+  proofs/mlkem_native/asm/basemul_k4_alt_spec.ml \
+  proofs/mlkem_native/asm/compress_d11_spec.ml \
+  proofs/mlkem_native/asm/compress_d5_spec.ml \
+  proofs/mlkem_native/asm/decompress_d11_spec.ml \
+  proofs/mlkem_native/asm/decompress_d5_spec.ml \
+  proofs/mlkem_native/asm/pke_encrypt_k4_spec.ml \
+  proofs/mlkem_native/asm/pke_decrypt_k4_spec.ml \
+  ../common/par.ml \
+  ../common/layout.ml \
+  proofs/utils/mlkem_native_image.ml \
+  proofs/mlkem_native/asm/keccak_f1600_spec.ml \
+  ../common/fips202/fips202.ml \
+  proofs/mlkem_native/asm/keccak4_f1600_alt2_spec.ml \
+  proofs/mlkem_native/asm/cbd2_spec.ml \
+  proofs/mlkem_native/asm/cbd3_spec.ml \
+  proofs/mlkem_native/asm/rej_uniform_alt_variable_time_spec.ml \
+  proofs/utils/mlkem_native_fips203.ml \
+  ../common/mlkem_mldsa.ml \
+  ../common/int_linear.ml \
+  proofs/utils/mlkem_bytes.ml \
+  ../common/bitmap.ml \
+  ../common/consttime.ml \
+  ../common/fips203/properties/mlkem_native_image.ml \
+  proofs/utils/keccak_spec.ml \
+  ../common/fips203/properties/fips203_properties.ml \
+  ../common/fips203/properties/mlkem_native_fips203.ml \
+  ../common/maychange.ml \
+  ../common/fips202/properties/keccak_spec.ml \
+  ../common/fips202/properties/keccak_bitblast.ml \
+  ../common/fips203/properties/poly_remainder.ml \
+  ../common/fips203/properties/rq_ring.ml \
+  ../common/fips203/properties/ntt_sums.ml \
+  ../common/fips203/properties/ntt_multiplication.ml \
+  ../common/fips203/properties/ntt_formulas.ml \
+  ../common/fips203/properties/compression.ml \
+  ../common/fips203/properties/encoding.ml \
+  ../common/fips203/properties/kpke_ntt_domain.ml \
+  ../common/fips203/properties/input_checks.ml \
+  ../common/fips203/properties/sampling.ml \
+  ../common/fips202/properties/keccak_permutation.ml \
+  ../common/fips202/properties/keccak_lanes.ml \
+  ../common/fips202/properties/keccak_theta_injective.ml \
+  mlkem/mlkem_add_reduce.o \
+  mlkem/mlkem_basemul_k2_alt.o \
+  mlkem/mlkem_basemul_k3_alt.o \
+  mlkem/mlkem_basemul_k4_alt.o \
+  mlkem/mlkem_cbd2.o \
+  mlkem/mlkem_cbd3.o \
+  mlkem/mlkem_check_encoding.o \
+  mlkem/mlkem_compress_d10.o \
+  mlkem/mlkem_compress_d11.o \
+  mlkem/mlkem_compress_d4.o \
+  mlkem/mlkem_compress_d5.o \
+  mlkem/mlkem_decompress_d10.o \
+  mlkem/mlkem_decompress_d11.o \
+  mlkem/mlkem_decompress_d4.o \
+  mlkem/mlkem_decompress_d5.o \
+  mlkem/mlkem_frombytes.o \
+  mlkem/mlkem_frommsg.o \
+  mlkem/mlkem_intt_alt.o \
+  mlkem/mlkem_mulcache_compute.o \
+  mlkem/mlkem_ntt_alt.o \
+  mlkem/mlkem_reduce.o \
+  mlkem/mlkem_rej_uniform_alt_VARIABLE_TIME.o \
+  mlkem/mlkem_sub_reduce.o \
+  mlkem/mlkem_tobytes_alt.o \
+  mlkem/mlkem_tomont.o \
+  mlkem/mlkem_tomsg.o \
+  mlkem_native/asm/mlkem_native2_image.elf \
+  sha3/sha3_keccak4_f1600_alt2.o \
+  sha3/sha3_keccak_f1600.o
 mlkem_native/asm/frombytes_proof.native: \
   proofs/mlkem_native/asm/frombytes_spec.ml \
   proofs/utils/mlkem_native2_framed.ml \
@@ -2499,6 +2619,7 @@ mlkem_native/asm/link.native: \
   proofs/mlkem_native/asm/keypair_derand_k3_proof.ml \
   proofs/mlkem_native/asm/keypair_derand_k4_spec.ml \
   proofs/mlkem_native/asm/keypair_derand_k4_proof.ml \
+  proofs/mlkem_native/asm/fips203.ml \
   ../common/relative.ml \
   ../common/bitmap.ml \
   ../common/consttime.ml \

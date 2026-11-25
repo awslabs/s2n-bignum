@@ -221,8 +221,15 @@ theorems of the library (e.g. `MLKEM_NTT_ALT_SUBROUTINE_CORRECT` and
 `MLKEM_NTT_ALT_SUBROUTINE_SAFE_FRAMED`). The theorems of the API functions
 that `link.ml` closes and prints are the `_SUBROUTINE_CORRECT` and
 `_SUBROUTINE_SAFE` theorems of `keypair_derand`, `enc_derand`, `dec`,
-`check_pk` and `check_sk`. Before this build used the linking approach the
-theorems were named as follows (the statements are unchanged):
+`check_pk` and `check_sk`, and, as for the compiled builds, the
+`_SUBROUTINE_FIPS203` and `_SUBROUTINE_SAFE_FIPS203` theorems of
+`keypair_derand`, `enc_derand` and `dec` of
+`../../proofs/mlkem_native/asm/fips203.ml`: there the compiled builds have
+their theorems without the hypothesis that SampleNTT terminates, and here
+they are the same theorems as `_CORRECT` and `_SAFE`, so that every build
+has its final theorems under the same names. Before this build used the
+linking approach the theorems were named as follows (the statements are
+unchanged):
 
 | old name | new name |
 |---|---|

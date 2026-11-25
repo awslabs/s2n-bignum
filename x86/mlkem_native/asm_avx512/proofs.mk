@@ -41,6 +41,7 @@ MLKEM_NATIVE_PROOFS += \
   mlkem_native/asm_avx512/enc_derand_k2_proof \
   mlkem_native/asm_avx512/enc_derand_k3_proof \
   mlkem_native/asm_avx512/enc_derand_k4_proof \
+  mlkem_native/asm_avx512/fips203 \
   mlkem_native/asm_avx512/frombytes_proof \
   mlkem_native/asm_avx512/frommsg_proof \
   mlkem_native/asm_avx512/gen_matrix_common_proof \
@@ -2340,6 +2341,186 @@ mlkem_native/asm_avx512/enc_derand_k4_proof.native: \
   mlkem_native/asm_avx512/mlkem_native2_avx512_image.elf \
   mlkem_native/asm_avx512/sha3_keccak4_f1600_avx512.o \
   mlkem_native/asm_avx512/sha3_keccak_f1600_avx512.o
+mlkem_native/asm_avx512/fips203.native: \
+  proofs/mlkem_native/relative.ml \
+  proofs/mlkem_native/asm_avx512/keypair_derand_k2_spec.ml \
+  proofs/mlkem_native/asm_avx512/enc_derand_k2_spec.ml \
+  proofs/mlkem_native/asm_avx512/dec_k2_spec.ml \
+  proofs/mlkem_native/asm_avx512/keypair_derand_k3_spec.ml \
+  proofs/mlkem_native/asm_avx512/enc_derand_k3_spec.ml \
+  proofs/mlkem_native/asm_avx512/dec_k3_spec.ml \
+  proofs/mlkem_native/asm_avx512/keypair_derand_k4_spec.ml \
+  proofs/mlkem_native/asm_avx512/enc_derand_k4_spec.ml \
+  proofs/mlkem_native/asm_avx512/dec_k4_spec.ml \
+  ../common/relative.ml \
+  proofs/mlkem_native/asm_avx512/api_spec.ml \
+  proofs/mlkem_native/asm_avx512/kem_spec.ml \
+  proofs/mlkem_native/asm_avx512/gen_matrix_k2_spec.ml \
+  proofs/mlkem_native/asm_avx512/kem_safe_spec.ml \
+  proofs/mlkem_native/asm_avx512/gen_matrix_k2_safe_spec.ml \
+  proofs/mlkem_native/asm_avx512/pke_encrypt_k2_spec.ml \
+  proofs/mlkem_native/asm_avx512/pke_decrypt_k2_spec.ml \
+  proofs/mlkem_native/asm_avx512/gen_matrix_k3_spec.ml \
+  proofs/mlkem_native/asm_avx512/gen_matrix_k3_safe_spec.ml \
+  proofs/mlkem_native/asm_avx512/pke_encrypt_k3_spec.ml \
+  proofs/mlkem_native/asm_avx512/pke_decrypt_k3_spec.ml \
+  proofs/mlkem_native/asm_avx512/gen_matrix_k4_spec.ml \
+  proofs/mlkem_native/asm_avx512/gen_matrix_k4_safe_spec.ml \
+  proofs/mlkem_native/asm_avx512/pke_encrypt_k4_spec.ml \
+  proofs/mlkem_native/asm_avx512/pke_decrypt_k4_spec.ml \
+  ../common/par.ml \
+  proofs/mlkem_native/asm_avx512/layout.ml \
+  proofs/utils/mlkem_native2_avx512_safety.ml \
+  proofs/utils/mlkem_compress_consts.ml \
+  proofs/mlkem_native/asm_avx512/ntt_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/rej_uniform_alt_VARIABLE_TIME_spec.ml \
+  proofs/mlkem_native/asm_avx512/hash_h_spec.ml \
+  proofs/mlkem_native/asm_avx512/check_encoding_spec.ml \
+  proofs/mlkem_native/asm_avx512/kpke_spec.ml \
+  proofs/utils/mlkem_bytes.ml \
+  proofs/mlkem_native/asm_avx512/hash_g_spec.ml \
+  proofs/mlkem_native/asm_avx512/gen_matrix_common_spec.ml \
+  proofs/mlkem_native/asm_avx512/intt_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/mulcache_compute_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/tomont_spec.ml \
+  proofs/mlkem_native/asm_avx512/reduce_spec.ml \
+  proofs/mlkem_native/asm_avx512/add_reduce_spec.ml \
+  proofs/mlkem_native/asm_avx512/sub_reduce_spec.ml \
+  proofs/mlkem_native/asm_avx512/tobytes_spec.ml \
+  proofs/mlkem_native/asm_avx512/frombytes_spec.ml \
+  proofs/mlkem_native/asm_avx512/frommsg_spec.ml \
+  proofs/mlkem_native/asm_avx512/tomsg_spec.ml \
+  proofs/mlkem_native/asm_avx512/compress_d4_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/compress_d5_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/compress_d10_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/compress_d11_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/decompress_d4_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/decompress_d5_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/decompress_d10_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/decompress_d11_x86_spec.ml \
+  proofs/mlkem_native/asm_avx512/basemul_k2_spec.ml \
+  proofs/mlkem_native/asm_avx512/basemul_k3_spec.ml \
+  proofs/mlkem_native/asm_avx512/basemul_k4_spec.ml \
+  proofs/mlkem_native/asm_avx512/keccak_full_spec.ml \
+  proofs/mlkem_native/asm_avx512/gm_safe_spec.ml \
+  proofs/utils/mlkem_native2_tools.ml \
+  proofs/mlkem_native/asm_avx512/noise_spec.ml \
+  ../common/mlkem_mldsa.ml \
+  ../common/int_linear.ml \
+  proofs/mlkem_ntt.ml \
+  proofs/consttime.ml \
+  proofs/utils/mlkem_lanes.ml \
+  proofs/utils/mlkem_codec_specs.ml \
+  proofs/mlkem_rej_uniform_alt_VARIABLE_TIME.ml \
+  proofs/mlkem_native/asm_avx512/sponge_spec.ml \
+  proofs/subroutine_signatures.ml \
+  proofs/mlkem_check_encoding.ml \
+  proofs/utils/mlkem_native_fips203.ml \
+  proofs/mlkem_native/asm_avx512/matrix_spec.ml \
+  proofs/mlkem_native/asm_avx512/getnoise_spec.ml \
+  proofs/mlkem_intt.ml \
+  proofs/mlkem_mulcache_compute.ml \
+  proofs/mlkem_tomont.ml \
+  proofs/mlkem_reduce.ml \
+  proofs/mlkem_add_reduce.ml \
+  proofs/mlkem_sub_reduce.ml \
+  proofs/mlkem_tobytes.ml \
+  proofs/mlkem_frombytes.ml \
+  proofs/mlkem_frommsg.ml \
+  proofs/mlkem_tomsg.ml \
+  proofs/utils/mlkem_codec_utils.ml \
+  proofs/utils/mlkem_compress_common.ml \
+  proofs/mlkem_compress_d4_x86.ml \
+  proofs/mlkem_compress_d5_x86.ml \
+  proofs/mlkem_compress_d10_x86.ml \
+  proofs/mlkem_compress_d11_x86.ml \
+  proofs/mlkem_decompress_d4_x86.ml \
+  proofs/mlkem_decompress_d5_x86.ml \
+  proofs/mlkem_decompress_d10_x86.ml \
+  proofs/mlkem_decompress_d11_x86.ml \
+  proofs/mlkem_basemul_k2.ml \
+  proofs/mlkem_basemul_k3.ml \
+  proofs/mlkem_basemul_k4.ml \
+  proofs/mlkem_native/asm_avx512/keccak_avx512_full_spec.ml \
+  proofs/mlkem_native/asm_avx512/rej_full_spec.ml \
+  ../common/layout.ml \
+  proofs/mlkem_native/asm_avx512/cbd2_spec.ml \
+  proofs/mlkem_native/asm_avx512/cbd3_spec.ml \
+  proofs/mlkem_native/asm_avx512/sha3_keccak4_f1600_avx512_spec.ml \
+  ../common/fips203/fips203.ml \
+  ../common/bitmap.ml \
+  ../common/consttime.ml \
+  proofs/mlkem_native/asm_avx512/sha3_keccak_f1600_avx512_spec.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mlkem_native_image.ml \
+  ../common/fips203/properties/fips203_properties.ml \
+  ../common/fips203/properties/mlkem_native_fips203.ml \
+  proofs/mlkem_native/asm_avx512/unpack_spec.ml \
+  proofs/mlkem_cbd2.ml \
+  proofs/mlkem_cbd3.ml \
+  proofs/utils/keccak_spec.ml \
+  proofs/utils/keccak_avx512.ml \
+  ../common/fips202/fips202.ml \
+  ../common/maychange.ml \
+  ../common/fips202/properties/fips202_properties.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
+  ../common/fips203/properties/mlkem_native_image.ml \
+  ../common/fips203/properties/poly_remainder.ml \
+  ../common/fips203/properties/rq_ring.ml \
+  ../common/fips203/properties/ntt_sums.ml \
+  ../common/fips203/properties/ntt_multiplication.ml \
+  ../common/fips203/properties/ntt_formulas.ml \
+  ../common/fips203/properties/compression.ml \
+  ../common/fips203/properties/encoding.ml \
+  ../common/fips203/properties/kpke_ntt_domain.ml \
+  ../common/fips203/properties/input_checks.ml \
+  ../common/fips203/properties/sampling.ml \
+  proofs/mlkem_unpack.ml \
+  ../common/fips202/properties/keccak_spec.ml \
+  ../common/fips202/properties/keccak_bitblast.ml \
+  proofs/utils/keccak_avx2.ml \
+  ../common/fips202/properties/keccak_lanes.ml \
+  ../common/fips202/properties/keccak_rho_offsets.ml \
+  ../common/fips202/properties/keccak_theta_injective.ml \
+  ../common/fips202/properties/keccak_permutation.ml \
+  mlkem/mlkem_add_reduce.o \
+  mlkem/mlkem_basemul_k2.o \
+  mlkem/mlkem_basemul_k3.o \
+  mlkem/mlkem_basemul_k4.o \
+  mlkem/mlkem_cbd2.o \
+  mlkem/mlkem_cbd3.o \
+  mlkem/mlkem_check_encoding.o \
+  mlkem/mlkem_compress_d10_x86.o \
+  mlkem/mlkem_compress_d11_x86.o \
+  mlkem/mlkem_compress_d4_x86.o \
+  mlkem/mlkem_compress_d5_x86.o \
+  mlkem/mlkem_decompress_d10_x86.o \
+  mlkem/mlkem_decompress_d11_x86.o \
+  mlkem/mlkem_decompress_d4_x86.o \
+  mlkem/mlkem_decompress_d5_x86.o \
+  mlkem/mlkem_frombytes.o \
+  mlkem/mlkem_frommsg.o \
+  mlkem/mlkem_intt.o \
+  mlkem/mlkem_mulcache_compute.o \
+  mlkem/mlkem_ntt.o \
+  mlkem/mlkem_reduce.o \
+  mlkem/mlkem_rej_uniform_alt_VARIABLE_TIME.o \
+  mlkem/mlkem_sub_reduce.o \
+  mlkem/mlkem_tobytes.o \
+  mlkem/mlkem_tomont.o \
+  mlkem/mlkem_tomsg.o \
+  mlkem/mlkem_unpack.o \
+  mlkem_native/asm_avx512/mlkem1024_avx512.o \
+  mlkem_native/asm_avx512/mlkem512_avx512.o \
+  mlkem_native/asm_avx512/mlkem768_avx512.o \
+  mlkem_native/asm_avx512/mlkem_gen_matrix_avx512.o \
+  mlkem_native/asm_avx512/mlkem_getnoise_avx512.o \
+  mlkem_native/asm_avx512/mlkem_hash_g_avx512.o \
+  mlkem_native/asm_avx512/mlkem_hash_h_avx512.o \
+  mlkem_native/asm_avx512/mlkem_native2_avx512_image.elf \
+  mlkem_native/asm_avx512/sha3_keccak4_f1600_avx512.o \
+  mlkem_native/asm_avx512/sha3_keccak_f1600_avx512.o
 mlkem_native/asm_avx512/frombytes_proof.native: \
   proofs/mlkem_native/asm_avx512/frombytes_spec.ml \
   proofs/mlkem_frombytes.ml \
@@ -4193,6 +4374,7 @@ mlkem_native/asm_avx512/link.native: \
   proofs/mlkem_native/asm_avx512/keypair_derand_k3_proof.ml \
   proofs/mlkem_native/asm_avx512/keypair_derand_k4_spec.ml \
   proofs/mlkem_native/asm_avx512/keypair_derand_k4_proof.ml \
+  proofs/mlkem_native/asm_avx512/fips203.ml \
   ../common/relative.ml \
   proofs/mlkem_add_reduce.ml \
   ../common/bitmap.ml \
