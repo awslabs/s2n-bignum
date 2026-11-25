@@ -1,0 +1,2 @@
+g++ (GCC) 12.4.0
+GNU ld (GNU Binutils for Debian) 2.40
