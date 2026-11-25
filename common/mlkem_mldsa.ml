@@ -1552,29 +1552,29 @@ let MONTRED_LEMMA = prove
    `(a * b + 1 == 0) (mod d) ==> d divides ((x * a) * b + x)`) THEN
   REWRITE_TAC[CONG] THEN ARITH_TAC);;
 
+let IVAL_WORD_SUBWORD_DIV_32 = prove
+ (`!x:int64. ival(word_subword x (32,32):int32) = ival x div &2 pow 32`,
+  REWRITE_TAC[GSYM DIMINDEX_16; GSYM IVAL_WORD_ISHR] THEN
+  GEN_TAC THEN REWRITE_TAC[DIMINDEX_16] THEN BITBLAST_TAC);;
+
 let MONTRED_MLDSA_LEMMA = prove
  (`!x. &2 pow 32 * ival(mldsa_montred x) =
        ival(word_add
          (word_mul (word_sx(iword(ival x * &4236238847):int32)) (word 8380417)) x)`,
-  GEN_TAC THEN REWRITE_TAC[mldsa_montred] THEN REWRITE_TAC[WORD_BLAST
+  GEN_TAC THEN REWRITE_TAC[mldsa_montred; IVAL_WORD_SUBWORD_DIV_32; WORD_BLAST
    `word_subword (x:int64) (0,32):int32 = word_sx x`] THEN
-  REWRITE_TAC[IWORD_INT_MUL; GSYM word_sx; GSYM WORD_IWORD] THEN
-  REWRITE_TAC[WORD_BLAST `(word_sx:int64->int32) x = word_zx x`] THEN
-  CONV_TAC INT_REDUCE_CONV THEN MATCH_MP_TAC(BITBLAST_RULE
-   `word_and x (word 4294967295):int64 = word 0
-    ==> &4294967296 * ival(word_subword x (32,32):int32) = ival x`) THEN
-  REWRITE_TAC[BITBLAST_RULE
-   `word_and x (word 4294967295):int64 = word 0 <=> word_zx x:int32 = word 0`] THEN
-  W(MP_TAC o PART_MATCH (lhand o rand) WORD_ZX_ADD o lhand o snd) THEN
-  REWRITE_TAC[DIMINDEX_32; DIMINDEX_64; ARITH] THEN DISCH_THEN SUBST1_TAC THEN
-  W(MP_TAC o PART_MATCH (lhand o rand) WORD_ZX_MUL o lhand o lhand o snd) THEN
-  REWRITE_TAC[DIMINDEX_32; DIMINDEX_64; ARITH] THEN DISCH_THEN SUBST1_TAC THEN
-  REWRITE_TAC[WORD_BLAST `word_zx(word_sx (x:int32):int64) = x`] THEN
-  REWRITE_TAC[GSYM VAL_EQ_0; VAL_WORD_ADD; VAL_WORD_MUL; VAL_WORD] THEN
-  CONV_TAC MOD_DOWN_CONV THEN REWRITE_TAC[GSYM DIVIDES_MOD; DIMINDEX_32] THEN
-  CONV_TAC WORD_REDUCE_CONV THEN MATCH_MP_TAC(NUMBER_RULE
-   `(a * b + 1 == 0) (mod d) ==> d divides ((x * a) * b + x)`) THEN
-  REWRITE_TAC[CONG] THEN ARITH_TAC);;
+  REWRITE_TAC[word_sx; WORD_IWORD; GSYM IWORD_INT_MUL; WORD_RULE
+   `word_add (iword a) x = iword(a + ival x)`] THEN
+  (* The factor 4236238847 * 8380417 + 1 is divisible by 2^32, so the
+     low half is zero and the signed high half is the exact quotient. *)
+  MATCH_MP_TAC(INT_ARITH
+   `x rem &2 pow 32 = &0 ==> &2 pow 32 * x div &2 pow 32 = x`) THEN
+  SIMP_TAC[INT_REM_IVAL_IWORD; DIMINDEX_64; ARITH] THEN
+  ONCE_REWRITE_TAC[GSYM INT_ADD_REM] THEN
+  ONCE_REWRITE_TAC[GSYM INT_MUL_REM] THEN
+  SIMP_TAC[INT_REM_IVAL_IWORD; DIMINDEX_32; LE_REFL] THEN
+  CONV_TAC INT_REM_DOWN_CONV THEN REWRITE_TAC[INT_REM_EQ_0] THEN
+  CONV_TAC INTEGER_RULE);;
 
 let CONGBOUND_MONTRED = prove
  (`!a a' l u.
@@ -1684,11 +1684,6 @@ let IWORD_CONG_32 = prove
     SIMP_TAC[INT_REM_IVAL_IWORD; DIMINDEX_64; LE_REFL] THEN
     REWRITE_TAC[INT_SUB_REFL; INT_REM_ZERO]]);;
 
-let IVAL_WORD_SUBWORD_DIV_32 = prove
- (`!x:int64. ival(word_subword x (32,32):int32) = ival x div &2 pow 32`,
-  REWRITE_TAC[GSYM DIMINDEX_16; GSYM IVAL_WORD_ISHR] THEN
-  GEN_TAC THEN REWRITE_TAC[DIMINDEX_16] THEN BITBLAST_TAC);;
-
 let MLDSA_POINTWISE_MONTRED_LEMMA = prove
  (`!x:int64. &2 pow 32 * ival(mldsa_pointwise_montred x) =
        ival(word_sub x
@@ -1790,21 +1785,23 @@ let CONGBOUND_MLDSA_BARRED = prove
             ==> (ival(mldsa_barred a) == a') (mod &8380417) /\
                 --(&6283009) <= ival(mldsa_barred a) /\
                 ival(mldsa_barred a) <= &6283008`,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
-  MP_TAC(ISPEC `a:int32` (BITBLAST_RULE
-     `!a:int32.
-        let ML_DSA_Q = &8380417 in
-        let t = word_ishr (word_add a (word 4194304)) 23 in
-        let r = word_sub a (word_mul t (word 8380417)) in
-        ival(a) < &0x7fc00000
-        ==> ival(a) - ML_DSA_Q * ival t = ival r /\
-            --(&6283009) <= ival r /\ ival r <= &6283008`)) THEN
-  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-  ASM_REWRITE_TAC[GSYM mldsa_barred] THEN
-  ANTS_TAC THENL [ASM_INT_ARITH_TAC; ALL_TAC] THEN
-  DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN DISCH_TAC THEN
+  MP_TAC(ISPEC `a:int32` IVAL_BOUND) THEN REWRITE_TAC[DIMINDEX_32; ARITH] THEN
+  STRIP_TAC THEN REWRITE_TAC[mldsa_barred; WORD_RULE
+   `word_sub a (word_mul b (word n)) = iword(ival a - ival b * &n)`;
+   IVAL_WORD_ISHR; WORD_RULE `word_add a (word n) = iword(ival a + &n)`] THEN
+  SUBGOAL_THEN
+   `ival(iword(ival a + &4194304):int32) = ival(a:int32) + &4194304`
+  SUBST1_TAC THENL
+   [MATCH_MP_TAC IVAL_IWORD THEN REWRITE_TAC[DIMINDEX_32; ARITH] THEN
+    ASM_INT_ARITH_TAC; ALL_TAC] THEN
+  MATCH_MP_TAC(REWRITE_RULE[IMP_IMP] CONGBOUND_IWORD) THEN
   ASM_REWRITE_TAC[INTEGER_RULE
-   `(x - p * q:int == y) (mod p) <=> (x == y) (mod p)`]);;
+   `(x - t * p:int == y) (mod p) <=> (x == y) (mod p)`; DIMINDEX_32; ARITH] THEN
+  CONV_TAC INT_REDUCE_CONV THEN
+  (* The lowest quotient has only half a rounding interval above -2^31. *)
+  ASM_CASES_TAC `(ival(a:int32) + &4194304) div &8388608 = --(&256)` THEN
+  ASM_INT_ARITH_TAC);;
 
 let CONGBOUND_MLDSA_MONTMUL = prove
  (`!x x' lx ux.
