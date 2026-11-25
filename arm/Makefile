@@ -458,7 +458,7 @@ TUTORIAL_OBJ = $(filter-out tutorial/aes_encrypt_decrypt.o tutorial/safety.o, $(
 
 libs2nbignum.a: $(OBJ) ; ar -rc libs2nbignum.a $(OBJ)
 
-clean:; rm -f libs2nbignum.a */*.o */*/*.o */*.correct */*.native
+clean:; rm -f libs2nbignum.a */*.o */*/*.o */*.correct */*.native */*/*.correct */*/*.native
 
 # Proof-related parts
 #
@@ -613,6 +613,17 @@ tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \
                                      tutorial/aes_encrypt.o tutorial/aes_decrypt.o ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
+# The heap model of proofs/heap.ml: an allocator that meets it and clients
+# of it (heap/), each proof with its .o file.
+
+HEAP_ML = proofs/heap.ml proofs/bstep.ml ../common/bstep.ml \
+          ../common/footprint.ml ../common/heap.ml
+HEAP_PROOFS = heap/heap_slab.ml heap/heap_demo.ml heap/heap_demo2.ml
+heap/%.native: heap/%.ml heap/%.o $(BASE_ML) $(HEAP_ML) ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+heap/heap_demo.native: heap/heap_slab.ml heap/heap_slab.o
+heap: $(HEAP_PROOFS:.ml=.correct);
+
 # other tutorials have their .o files
 .SECONDEXPANSION:
 tutorial/%.native: tutorial/%.ml tutorial/%.o ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
@@ -635,7 +646,7 @@ build_tutorial: $(TUTORIAL_OBJ) $(TUTORIAL_PROOF_BINS);
 ALL_PROOF_LOGS = $(PROOF_LOGS) $(SPEC_CHECK_PROOFS:.ml=.correct)
 run_proofs: build_proofs $(ALL_PROOF_LOGS);
 
-.PHONY: proof_timing_targets
+.PHONY: proof_timing_targets heap
 proof_timing_targets:
 	@printf '%s\n' $(ALL_PROOF_LOGS)
 
