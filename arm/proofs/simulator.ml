@@ -442,9 +442,30 @@ let cosimulate_call() =
                  movz x30,#0; E: *)
     [b_rel 2; ret; bl_rel (-1); adr; sub; movz_x30],6;;
 
+(*** BLR: adr xr,F; blr xr; adr xt,#imm; sub xt,xt,x30; movz x30,#0;
+ *** movz xr,#0; b E; F: ret; E:, for random distinct r in 0-30 and t in
+ *** 0-29. The target in xr is a code address too, so it is cleared. ***)
+
+let cosimulate_call_reg() =
+  let t = Random.int 30 in
+  let r = let r = Random.int 30 in if r = t then 30 else r in
+  let imm = Random.int 0x200000 in
+  let adr_t = num(0x10000000 + 0x20000000 * (imm mod 4) + 32 * (imm / 4) + t)
+  and adr_r = num(0x10000000 + 32 * 7 + r)
+  and blr = num(0xd63f0000 + 32 * r)
+  and sub = num(0xcb1e0000 + 33 * t)
+  and movz_x30 = num 0xd280001e
+  and movz_r = num(0xd2800000 + r)
+  and b_rel d = num(0x14000000 + (d + 0x4000000) mod 0x4000000)
+  and ret = num 0xd65f03c0 in
+  [adr_r; blr; adr_t; sub; movz_x30; movz_r; b_rel 2; ret],8;;
+
 let run_random_branchsimulation () =
   let icodes,nsteps =
-    if Random.int 4 = 0 then cosimulate_call() else cosimulate_branch() in
+    match Random.int 8 with
+      0 -> cosimulate_call()
+    | 1 -> cosimulate_call_reg()
+    | _ -> cosimulate_branch() in
   cosimulate_instructions_steps (Some nsteps) None icodes;;
 
 (* ------------------------------------------------------------------------- *)
@@ -1554,14 +1575,15 @@ let cosimulate_ldst_simd_bhs() =
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
 (*** This covers LDUR/STUR (SIMD&FP, unscaled immediate) for sizes 128 (Q),
- *** 64 (D) and 32 (S). The 9-bit immediate is a signed, unscaled byte offset.
+ *** 64 (D), 32 (S), 16 (H) and 8 (B). The 9-bit immediate is a signed,
+ *** unscaled byte offset.
  ***)
 
 let cosimulate_ldstu_simd() =
-  let kind = Random.int 3 in (* 0 = S, 1 = D, 2 = Q *)
-  let size = el kind [0b10; 0b11; 0b00]
+  let kind = Random.int 5 in (* 0 = S, 1 = D, 2 = Q, 3 = H, 4 = B *)
+  let size = el kind [0b10; 0b11; 0b00; 0b01; 0b00]
   and opc1 = if kind = 2 then 1 else 0
-  and access = el kind [4; 8; 16] in
+  and access = el kind [4; 8; 16; 2; 1] in
   let isld = Random.int 2
   and rn = Random.int 32
   and rt = Random.int 32 in

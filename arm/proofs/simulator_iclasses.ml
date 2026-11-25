@@ -236,6 +236,16 @@ let iclasses =
   (*** CLZ ***)
   "x101101011000000000100xxxxxxxxxx";
 
+  (*** RBIT ***)
+  "x101101011000000000000xxxxxxxxxx";
+
+  (*** PRFM (immediate), PRFUM, PRFM (literal), all prefetch operations.
+   *** They have no architectural effect and do not fault, so they are
+   *** run with the random register values as base addresses. ***)
+  "1111100110xxxxxxxxxxxxxxxxxxxxxx";
+  "11111000100xxxxxxxxx00xxxxxxxxxx";
+  "11011000xxxxxxxxxxxxxxxxxxxxxxxx";
+
   (*** MADD, MSUB ***)
   "x0011011000xxxxxxxxxxxxxxxxxxxxx";
 
@@ -959,9 +969,11 @@ let check_insns () =
     (*** ld1 / st1 (single lane, .s) post-index ***)
     "0x0011011x0xxxxx100x00xxxxxxxxxx";
 
-    (*** ldur / stur (SIMD & FP), unscaled, sizes 64 and 32 ***)
+    (*** ldur / stur (SIMD & FP), unscaled, sizes 64, 32, 16 and 8 ***)
     "111111000x0xxxxxxxxx00xxxxxxxxxx";
     "101111000x0xxxxxxxxx00xxxxxxxxxx";
+    "011111000x0xxxxxxxxx00xxxxxxxxxx";
+    "001111000x0xxxxxxxxx00xxxxxxxxxx";
 
     (*** ld1 (single structure) of one lane: no offset, post-immediate and ***)
     (*** post-register ofs, for bytes, halfwords and doublewords          ***)
@@ -1046,9 +1058,10 @@ let check_insns () =
     "x01100100xxxxxxxxxxxxxxxxxx11111";
     "x10100100xxxxxxxxxxxxxxxxxx11111";
 
-    (*** ret, br ***)
+    (*** ret, br, blr ***)
     "1101011001011111000000xxxxx00000";
     "1101011000011111000000xxxxx00000";
+    "1101011000111111000000xxxxx00000";
 
     (*** bti c: the BTI landing pad at the head of an indirectly-called   ***)
     (*** subroutine.  A hint with no register or memory effect, so there  ***)

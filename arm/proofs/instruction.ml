@@ -903,6 +903,19 @@ let arm_BL_ABSOLUTE = define
          PC := target ,,
          events := CONS (EventJump (pc,target)) (read events s)) s`;;
 
+(*** BLR, branch with link to the address in a register. As in the Arm    ***)
+(*** ARM, the target is read before X30 is written, so BLR X30 branches to ***)
+(*** the old value of X30.                                                 ***)
+
+let arm_BLR = define
+ `arm_BLR Rn =
+    \s. let pc_incr = read PC s in
+        let pc = word_sub pc_incr (word 4) in
+        let pc_next = read Rn s in
+        (X30 := pc_incr ,,
+         PC := pc_next ,,
+         events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+
 (*** For conditional branches, including CBZ and CBNZ the offset is       ***)
 (*** encoded as a 19-bit word that's turned into a 21-bit word multiplied ***)
 (*** by 4 then sign-extended.                                             ***)
@@ -1425,6 +1438,23 @@ let arm_NOP = new_definition
 let arm_BTI = new_definition
   `arm_BTI = \s s':armstate. s = s'`;;
 
+(*** PRFM and PRFUM, prefetch of memory. In the Arm ARM, the execution of
+ *** these is only Prefetch(address, prfop), a hint which has no effect on
+ *** the architectural state: it writes no register (there is no writeback
+ *** form) and no memory, does not check the alignment of SP, and never
+ *** causes a synchronous abort, whatever the address. So it is modelled as
+ *** a no-op, and it emits no event: an EventLoad would make memory safety
+ *** require the prefetched address to be readable, which the architecture
+ *** does not, and compiled code does prefetch beyond the end of its
+ *** buffers. The prefetch can still change the cache, so a theorem of
+ *** constant time says nothing about the address of a prefetch in the
+ *** code. As for arm_BTI, it is its own constant so that decoded code
+ *** shows the prefetches.
+ ***)
+
+let arm_PRFM = new_definition
+  `arm_PRFM = \s s':armstate. s = s'`;;
+
 let arm_ORN = define
  `arm_ORN Rd Rm Rn =
     \s. let m = read Rm s
@@ -1467,6 +1497,13 @@ let arm_BR = define
         let pc_next = read Rn s in
         (PC := pc_next ,,
          events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+
+(*** RBIT: Rd := the bits of Rn in reverse order ***)
+
+let arm_RBIT = define
+ `arm_RBIT Rd Rn =
+    \s. let n:N word = read Rn s in
+        (Rd := word_reversefields 1 n) s`;;
 
 let arm_REV = define
  `arm_REV Rd Rn =
@@ -4767,7 +4804,7 @@ let ARM_OPERATION_CLAUSES =
       [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDHN_ALT; arm_ADDHN2_ALT; arm_ADDP_VEC_ALT; arm_ADDV_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
        arm_ADRP; arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
        arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIF; arm_BIT; arm_BSL;
-       arm_BL; arm_BL_ABSOLUTE; arm_BR; arm_Bcond;
+       arm_BL; arm_BL_ABSOLUTE; arm_BLR; arm_BR; arm_Bcond;
        arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ;
        arm_CMGE_VEC_ALT; arm_CMGT_VEC_ALT; arm_CMHI_VEC_ALT; arm_CMHS_VEC_ALT; arm_CMLE_VEC_ZERO_ALT;
        arm_CMTST_VEC_ALT; arm_CNT_ALT;
@@ -4785,8 +4822,8 @@ let ARM_OPERATION_CLAUSES =
        arm_NOP;
        arm_ORN; arm_ORR; arm_ORR_VEC;
        arm_PMUL_VEC_ALT;
-       arm_PMULL_VEC_ALT; arm_PMULL2_VEC_ALT;
-       arm_RET; arm_REV; arm_REV32_VEC_ALT; arm_REV64_VEC_ALT; arm_RORV;
+       arm_PMULL_VEC_ALT; arm_PMULL2_VEC_ALT; arm_PRFM;
+       arm_RBIT; arm_RET; arm_REV; arm_REV32_VEC_ALT; arm_REV64_VEC_ALT; arm_RORV;
        arm_RADDHN_ALT; arm_RADDHN2_ALT; arm_RSHRN_ALT; arm_RSHRN2_ALT;
        arm_SADDW_ALT; arm_SADDW2_ALT;
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT; arm_SHRN2_ALT;

@@ -329,6 +329,9 @@ let decode = new_definition `!w:int32. decode w =
   | [sf; 0b101101011000000000100:21; Rn:5; Rd:5] ->
     SOME (if sf then arm_CLZ (XREG' Rd) (XREG' Rn)
           else arm_CLZ (WREG' Rd) (WREG' Rn))
+  | [sf; 0b101101011000000000000:21; Rn:5; Rd:5] ->
+    SOME (if sf then arm_RBIT (XREG' Rd) (XREG' Rn)
+          else arm_RBIT (WREG' Rd) (WREG' Rn))
   | [sf; 0b0011011000:10; Rm:5; o0; Ra:5; Rn:5; Rd:5] ->
     SOME (if sf then (if o0 then arm_MSUB else arm_MADD)
                   (XREG' Rd) (XREG' Rn) (XREG' Rm) (XREG' Ra)
@@ -336,6 +339,8 @@ let decode = new_definition `!w:int32. decode w =
                   (WREG' Rd) (WREG' Rn) (WREG' Rm) (WREG' Ra))
   | [0b1101011000011111000000:22; Rn:5; 0:5] ->
     SOME (arm_BR (XREG' Rn))
+  | [0b1101011000111111000000:22; Rn:5; 0:5] ->
+    SOME (arm_BLR (XREG' Rn))
   | [0b1101011001011111000000:22; Rn:5; 0:5] ->
     SOME (arm_RET (XREG' Rn))
   | [sf; 0b10110101100000000001:20; N; Rn:5; Rd:5] ->
@@ -489,6 +494,16 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)
       (Immediate_Offset (iword (ival imm7 * &(if x then 8 else 4)))))
 
+  // PRFM (immediate), PRFUM and PRFM (literal), for every prefetch
+  // operation in Rt; see arm_PRFM. The register-offset PRFM shares its
+  // encoding space with RPRFM and is not decoded.
+  | [0b1111100110:10; imm12:12; Rn:5; Rt:5] ->
+    SOME arm_PRFM
+  | [0b11111000100:11; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME arm_PRFM
+  | [0b11011000:8; imm19:19; Rt:5] ->
+    SOME arm_PRFM
+
   // NOP
   | [0b11010101000000110010000000011111:32] ->
     SOME arm_NOP
@@ -583,6 +598,11 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
   | [0b10:2; 0b1111000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_s is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+  // ... and sizes 16 (H) and 8 (B)
+  | [0b01:2; 0b1111000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_h is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+  | [0b00:2; 0b1111000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_b_simd is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
 
   // LDUR/STUR, only sizes 64 and 32
   | [0b1:1; x; 0b1110000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
