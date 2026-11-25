@@ -50,6 +50,9 @@
 (*    instruction semantics (ARM_CONV, X86_CONV) once on a state variable    *)
 (*    with every value read named by a variable; a step is one INST of it    *)
 (*    and one MP per antecedent (section 4).                                 *)
+(*    A fact about the base pc of the code alone that the goal has, such as  *)
+(*    aligned 4096 (word pc) on AArch64, may be an antecedent too, so that   *)
+(*    the template is simplified with it once (the pages of ADRP).           *)
 (*  - Facts |- read c s_j = v are kept in a table keyed by c, with memory    *)
 (*    addresses in one normal form, and are moved to the current state only  *)
 (*    when an instruction reads c, by cached read-over-write theorems        *)
@@ -82,6 +85,9 @@
 (* state after it. The subroutine wrappers (ARM_BSTEP_ADD_RETURN_STACK_TAC,  *)
 (* X86_BSTEP_PROMOTE_RETURN_STACK_TAC and others) simulate the prologue and  *)
 (* the epilogue as blocks and go through the core theorem with it.           *)
+(* Frames given by name, such as MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI   *)
+(* (bstep_frame_defs), are unfolded for the checks and composition, and the  *)
+(* frame facts of the new goals are in the form of the postcondition.        *)
 (* ARM_BSTEP_SAFETY_TAC is PROVE_SAFETY_SPEC_TAC with one block from the     *)
 (* start to the return address (BSTEP_SAFETY_RUN_TAC).                       *)
 (*                                                                           *)
@@ -348,27 +354,37 @@ let bstep_node_conv ?(rewrites:thm list = []) (folds:thm list) : conv =
 (* the fact about the same bytes however the code computed the address. The  *)
 (* results are kept for the session, unless a block has its own rewrites     *)
 (* (which may depend on its assumptions): then for that block only.          *)
+(*                                                                           *)
+(* This state, like the other state of the block being run below (the side  *)
+(* conditions, the branch rewrites and the decided conditions), is per       *)
+(* domain (see common/par.ml): a block runs on one domain from start to end, *)
+(* without waiting for other computations, and sets it when it starts. The  *)
+(* caches for the session are per domain too.                                *)
 
-let bstep_component_cache : thm option Termtbl.t = Termtbl.create 1024;;
-let bstep_component_block : thm option Termtbl.t = Termtbl.create 256;;
+let bstep_component_cache : unit -> thm option Termtbl.t =
+  par_local (fun () -> Termtbl.create 1024);;
+let bstep_component_block : unit -> thm option Termtbl.t =
+  par_local (fun () -> Termtbl.create 256);;
 let bstep_address_conv rewrites =
   DEPTH_CONV
    (NORMALIZE_RELATIVE_ADDRESS_CONV ORELSEC bstep_node_conv ~rewrites []);;
-let bstep_component_conv = ref (bstep_address_conv []);;
-let bstep_component_local = ref false;;
+let bstep_component_conv =
+  let default = bstep_address_conv [] in
+  par_local (fun () -> ref default);;
+let bstep_component_local = par_local (fun () -> ref false);;
 
 let bstep_set_component_rewrites (rewrites:thm list) =
-  Termtbl.reset bstep_component_block;
-  bstep_component_conv := bstep_address_conv rewrites;
-  bstep_component_local := (rewrites <> []);;
+  Termtbl.reset (bstep_component_block ());
+  bstep_component_conv () := bstep_address_conv rewrites;
+  bstep_component_local () := (rewrites <> []);;
 
 let bstep_norm_component c =
-  let tbl = if !bstep_component_local then bstep_component_block
-            else bstep_component_cache in
+  let tbl = if !(bstep_component_local ()) then bstep_component_block ()
+            else bstep_component_cache () in
   try Termtbl.find tbl c with Not_found ->
   let r = match c with
       Comb(Comb(Const(":>",_) as op,(Const("memory",_) as m)),Comb(k,a)) ->
-        (match bstep_top !bstep_component_conv a with
+        (match bstep_top !(bstep_component_conv ()) a with
            None -> None
          | Some th -> Some(AP_TERM (mk_comb(op,m)) (AP_TERM k th)))
     | _ -> None in
@@ -411,6 +427,15 @@ let bstep_generic_conv =
 (* terms of the values. The update W is a chain of writes ending in s; its   *)
 (* values are simplified once, here. A step is then one INST with the        *)
 (* actual values and state, and one MP per antecedent.                       *)
+(*                                                                           *)
+(* Facts about the base pc of the code alone, which the architecture names   *)
+(* (arch_base_facts) and the goal has as assumptions, are assumed too when   *)
+(* they simplify the update: on AArch64, aligned 4096 (word pc), with which  *)
+(* the page that ADRP computes, word_and (word(pc + k)) (word 0xFF..F000),   *)
+(* is word_add (word pc) (word k') for the numeral k' = k - k MOD 4096.      *)
+(* Such a fact becomes an antecedent of the step theorem, which is made and  *)
+(* kept for the goals that have the fact, and a step proves it from the      *)
+(* assumption (Req_base), at no cost that depends on the values.             *)
 (* ------------------------------------------------------------------------- *)
 
 (* What an architecture provides.                                            *)
@@ -428,11 +453,17 @@ type bstep_arch =
     arch_alias : term -> (term * thm) option;
        (* for a written component d that another component c reads in full   *)
        (* (x86: YMM0_SSE and YMM0), c and |- !y t. read c (write d y t) = y  *)
+    arch_base_facts : term -> (term * (thm -> conv)) list;
+       (* for the base `word pc` of the code, facts about pc that the step    *)
+       (* theorems may assume when the goal has them, each with a conversion  *)
+       (* of the template that uses it (AArch64: aligned 4096 (word pc), and  *)
+       (* the pages that ADRP computes; see bstep_make_gen)                  *)
   };;
 
 type bstep_req =
     Req_read of term * term       (* component, variable *)
-  | Req_side of term;;            (* side condition on the variables *)
+  | Req_side of term              (* side condition on the variables *)
+  | Req_base of term;;            (* a fact about the base of the code *)
 
 type bstep_gen =
   { gen_th : thm;
@@ -445,11 +476,12 @@ type bstep_gen =
     gen_insn : string;
   };;
 
-let bstep_var_count = ref 0;;
+(* Numbered from 1, distinct over all domains.                              *)
+
+let bstep_var_count = par_counter ();;
 
 let bstep_fresh_var pre ty =
-  incr bstep_var_count;
-  mk_var("bstep_" ^ pre ^ string_of_int !bstep_var_count,ty);;
+  mk_var("bstep_" ^ pre ^ string_of_int (bstep_var_count () + 1),ty);;
 
 (* The distinct `read c s` subterms of tm, inner ones first.                 *)
 
@@ -473,7 +505,8 @@ let rec bstep_write_layers tm =
 
 let bstep_post_var s = mk_var("bstep_P",mk_fun_ty (type_of s) bool_ty);;
 
-let bstep_make_gen arch decode_ths mc pcv k =
+let bstep_make_gen arch decode_ths mc pcv k
+    (base:(term * (thm -> conv)) list) =
   let s = mk_var("s",arch.arch_state) and s' = mk_var("s'",arch.arch_state) in
   let insn = try arch.arch_insn decode_ths k with Failure _ -> "?" in
   let fail msg =
@@ -520,6 +553,18 @@ let bstep_make_gen arch decode_ths mc pcv k =
   let rec under_ex c tm =
     if is_exists tm then BINDER_CONV (under_ex c) tm else LAND_CONV c tm in
   let eth3 = CONV_RULE(RAND_CONV(under_ex bstep_generic_conv)) eth2 in
+  (* The facts about the base, where they change the update.                *)
+  let eth3,base_used =
+    if base = [] then eth3,[] else
+    let bconv = FIRST_CONV (map (fun (t,mk) -> mk (ASSUME t)) base) in
+    match (try Some(CONV_RULE(RAND_CONV(under_ex
+                     (CHANGED_CONV(ONCE_DEPTH_CONV bconv) THENC
+                      bstep_generic_conv))) eth3)
+           with Failure _ -> None) with
+      None -> eth3,[]
+    | Some th ->
+        th,filter (fun t -> exists (fun h -> compare h t = 0) (hyp th))
+                  (map fst base) in
   let undef,weq = strip_exists(rand(concl eth3)) in
   let w = match weq with
       Comb(Comb(Const("=",_),w),s'') when s'' = s' -> w
@@ -567,19 +612,21 @@ let bstep_make_gen arch decode_ths mc pcv k =
     let lth = CONV_RULE(ONCE_DEPTH_CONV BETA_CONV) lth in
     DISCH all_tm (MP (MP (MP lth (GEN s' eth3)) eth_ex) th_all) in
   let ants = [concl pc_th; ld_tm] @ map (concl o snd) regfacts @
-             map (concl o snd) memfacts @ map fst alfacts in
+             map (concl o snd) memfacts @ map fst alfacts @ base_used in
   let th2 = itlist DISCH ants th1 in
   if hyp th2 <> [] then fail "unexpected hypotheses" else
   { gen_th = th2;
     gen_undef = undef;
     gen_reqs = map (fun ((c,v),_) -> Req_read(c,v)) (regfacts @ memfacts) @
-               map (fun (c,_) -> Req_side c) alfacts;
+               map (fun (c,_) -> Req_side c) alfacts @
+               map (fun t -> Req_base t) base_used;
     gen_layers = layers;
     gen_s = s;
     gen_insn = insn };;
 
-let bstep_gen_cache : (term * term * int,bstep_gen) Hashtbl.t =
-  Hashtbl.create 1024;;
+let bstep_gen_cache :
+    unit -> (term * term * int * term list,bstep_gen) Hashtbl.t =
+  par_local (fun () -> Hashtbl.create 1024);;
 
 (* ------------------------------------------------------------------------- *)
 (* 5. The state of a block of steps.                                         *)
@@ -626,6 +673,9 @@ type bstep_block =
     b_vars : unit Termtbl.t;
        (* the variables that the run introduced: undefined and forgotten    *)
        (* values                                                            *)
+    b_base : (term * thm) list;
+       (* the facts about the base of the code that the step theorems may   *)
+       (* assume, with their assumptions                                    *)
   };;
 
 let bstep_state blk i = Hashtbl.find blk.b_states i;;
@@ -718,12 +768,15 @@ let rec bstep_layers st tm =
 (* The side conditions of a step for the actual values, alignments such as   *)
 (* aligned 16 (word_add stackpointer (word 64)), from the static facts.      *)
 
-let bstep_side_cache : thm Termtbl.t = Termtbl.create 64;;
+let bstep_side_cache : unit -> thm Termtbl.t =
+  par_local (fun () -> Termtbl.create 64);;
 
 let bstep_side c =
+  let bstep_side_cache = bstep_side_cache () in
   try Termtbl.find bstep_side_cache c with Not_found ->
   let th =
-    try EQT_ELIM(ALIGNED_WORD_CONV (component_assumptions ()) c) with Failure _ ->
+    try EQT_ELIM(ALIGNED_WORD_CONV (component_assumptions ()) c)
+    with Failure _ ->
       bstep_fail ("cannot prove the side condition " ^
                   string_of_small_term c) in
   Termtbl.replace bstep_side_cache c th; th;;
@@ -929,7 +982,7 @@ let bstep_refl = lemma_instance STEPS_TO_REFL ["step";"s"] [];;
 (* small; a large one is an error. If the condition is still not decided,    *)
 (* the PC fact keeps the simplified condition, and the next step fails.      *)
 
-let bstep_branch_conv = ref (lazy (ALL_CONV,ALL_CONV));;
+let bstep_branch_conv = par_local (fun () -> ref (lazy (ALL_CONV,ALL_CONV)));;
 
 let bstep_branch_forms =
   let neg = GEN_REWRITE_CONV I [NOT_LE; NOT_LT]
@@ -947,7 +1000,7 @@ let bstep_branch_forms =
     with Failure _ -> [];;
 
 let bstep_set_branch_rewrites (ths:thm list) =
-  bstep_branch_conv :=
+  bstep_branch_conv () :=
     lazy (let ths = ths @ flat(map bstep_branch_forms ths) in
           REWRITE_CONV ths,REWRITE_CONV(BSTEP_WORD_THMS @ ths));;
 
@@ -956,12 +1009,13 @@ let bstep_set_branch_rewrites (ths:thm list) =
 (* decisions are kept for the block; a condition larger than 2000 nodes as   *)
 (* a tree is not tried.                                                      *)
 
-let bstep_cond_memo : thm option Termtbl.t = Termtbl.create 256;;
+let bstep_cond_memo : unit -> thm option Termtbl.t =
+  par_local (fun () -> Termtbl.create 256);;
 
 let bstep_decide c =
   let red = DEPTH_CONV(WORD_RED_CONV ORELSEC NUM_RED_CONV ORELSEC
                        INT_RED_CONV) in
-  let rw0,rw = Lazy.force !bstep_branch_conv in
+  let rw0,rw = Lazy.force !(bstep_branch_conv ()) in
   (red THENC rw0 THENC rw THENC red THENC rw) c;;
 
 let bstep_cond_conv cth =
@@ -972,6 +1026,7 @@ let BSTEP_COND_CONV tm =
   match tm with
     Comb(Comb(Comb(Const("COND",_),c),_),_) ->
       let r =
+        let bstep_cond_memo = bstep_cond_memo () in
         try Termtbl.find bstep_cond_memo c with Not_found ->
         let r =
           try if term_size_exceeds 2000 c then None else
@@ -1003,15 +1058,39 @@ let bstep_pc_offset pcv tm =
   | Comb(Const("word",_),p) when p = pcv -> Some 0
   | _ -> None;;
 
+(* The PC value of the last block run on this domain that stopped because   *)
+(* its PC was not at a constant offset in the code, such as a branch on a     *)
+(* condition that the facts do not decide (None if the last block did not    *)
+(* stop so): a tactic that runs a block can then decide the condition itself  *)
+(* and run the block again, without parsing the message of the failure.     *)
+(* Per domain, as the other state of a block.                                *)
+
+let bstep_stopped_pc : unit -> term option ref =
+  par_local (fun () -> ref None);;
+
+(* A PC value word_add (word pc) (word k), as from a register that holds an  *)
+(* address that ADRP computed in the code, is word(pc + k).                  *)
+
+let bstep_pc_norm =
+  let conv = REWR_CONV(GSYM WORD_ADD) in
+  fun pcv pc_th ->
+    match rand(concl pc_th) with
+      Comb(Comb(Const("word_add",_),Comb(Const("word",_),p)),
+           Comb(Const("word",_),kt)) as t when p = pcv && is_numeral kt ->
+        TRANS pc_th (conv t)
+    | _ -> pc_th;;
+
 let bstep_one_step blk (gen:int -> bstep_gen) (conv:conv) pcv =
   let i = blk.b_n + 1 in
   let st,_ = bstep_state blk blk.b_n in
   let pc_th = bstep_get_fact blk blk.b_arch.arch_pc in
-  let pc_th = bstep_decide_branch pc_th in
+  let pc_th = bstep_pc_norm pcv (bstep_decide_branch pc_th) in
   let k = match bstep_pc_offset pcv (rand(concl pc_th)) with
       Some k -> k
-    | None -> bstep_fail ("the PC is not at a constant offset in the code: " ^
-                          string_of_small_term(rand(concl pc_th))) in
+    | None ->
+        bstep_stopped_pc () := Some(rand(concl pc_th));
+        bstep_fail ("the PC is not at a constant offset in the code: " ^
+                    string_of_small_term(rand(concl pc_th))) in
   let g = gen k in
   (* 1. The instance of the step theorem, with the facts it reads. Undefined *)
   (* values get fresh names, so that each step has its own.                  *)
@@ -1028,6 +1107,7 @@ let bstep_one_step blk (gen:int -> bstep_gen) (conv:conv) pcv =
   List.iter (fun r ->
       match r with
         Req_side c -> ths := bstep_side (vsubst !theta c) :: !ths
+      | Req_base t -> ths := assoc t blk.b_base :: !ths
       | Req_read(c,v) ->
           let ci = vsubst !theta c in
           let th = bstep_read_fact blk st [] ci in
@@ -1195,7 +1275,7 @@ let bstep_move_general s (avoid:term list Lazy.t) (move:term -> thm) th =
   let cs = match bstep_reads_only s (concl th2) with
       Some cs when cs <> [] -> cs
     | _ -> failwith "bstep_move_general" in
-  let old = (component_assumptions ()) in
+  let old = component_assumptions () in
   if ants <> [] then
     set_component_assumptions (flat(map (CONJUNCTS o ASSUME) ants) @ old);
   let eqs = try Some(map move cs) with Failure _ | Bstep_failure _ -> None in
@@ -1258,6 +1338,58 @@ let bstep_loaded_rule arch mc_length_th mc_tm base_w =
 
 let bstep_mono = lemma_instance SUBSUMED_MP ["R";"s";"s'";"C"] [];;
 
+(* Named frames. A frame may be a constant defined as a frame of MAYCHANGE   *)
+(* lists, such as MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI on AArch64, or   *)
+(* have such constants among its clauses; the architecture lists their       *)
+(* definitions |- C = R in bstep_frame_defs. bstep works with the frames     *)
+(* unfolded (bstep_frame_unfold, |- R0 = R0' with every named frame in R0    *)
+(* unfolded, None if there is none) and gives the frame facts of the new     *)
+(* goal in the form of the postcondition, which BSTEP_FINAL_TAC matches.     *)
+
+let bstep_frame_defs = ref ([]:thm list);;
+
+let bstep_frame_unfold =
+  let cache =
+    par_local (fun () -> (Termtbl.create 64 : thm option Termtbl.t)) in
+  fun r ->
+    if !bstep_frame_defs = [] then None else
+    let cache = cache () in
+    try Termtbl.find cache r with Not_found ->
+    let res =
+      match (try Some(PURE_REWRITE_CONV !bstep_frame_defs r)
+             with Failure _ -> None) with
+        Some th when compare (rand(concl th)) r <> 0 -> Some th
+      | _ -> None in
+    Termtbl.replace cache r res; res;;
+
+(* tm is `R x s` for a frame R of MAYCHANGE lists, ,, and named frames       *)
+(* (checked at the head only).                                               *)
+
+let bstep_is_frame tm =
+  is_maychange_frame tm ||
+  match tm with
+    Comb(Comb(Comb(Const(_,_) as r,_),_),_) ->
+      exists (fun th -> compare (lhs(concl th)) r = 0) !bstep_frame_defs
+  | Comb(Comb(Const(_,_) as r,_),_) ->
+      exists (fun th -> compare (lhs(concl th)) r = 0) !bstep_frame_defs
+  | _ -> false;;
+
+(* From |- R x s, |- R' x s with the named frames of R unfolded; and back,   *)
+(* from |- R' x s and the R of the original form.                            *)
+
+let bstep_frame_expand th =
+  match concl th with
+    Comb(Comb(r,x),s) ->
+      (match bstep_frame_unfold r with
+         None -> th
+       | Some eq -> EQ_MP (AP_THM (AP_THM eq x) s) th)
+  | _ -> th;;
+
+let bstep_frame_fold r th =
+  match bstep_frame_unfold r,concl th with
+    Some eq,Comb(Comb(_,x),s) -> EQ_MP (SYM(AP_THM (AP_THM eq x) s)) th
+  | _ -> th;;
+
 (* Metavariables. In a safety proof the postcondition holds metavariables,   *)
 (* and in a loop body the assumptions too (the events of the invariant).     *)
 (* They are instantiated when the proof is finished, and the theorems        *)
@@ -1286,6 +1418,7 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
     (count:int) (sname:string) : tactic =
   fun (asl,w) ->
   let t0 = Sys.time() in
+  bstep_stopped_pc () := None;
   let fail msg = failwith (arch.arch_name ^ "_BSTEP_TAC: " ^ msg) in
   let s0,p_tm = match w with
       Comb(Comb(Comb(Const("eventually",_),st),p),s0)
@@ -1302,7 +1435,7 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
   let is_loaded th = match strip_comb(concl th) with
       Const(c,_),[s;_;_] -> c = arch.arch_loaded && s = s0
     | _ -> false in
-  let is_frame th = is_maychange_frame(concl th) && rand(concl th) = s0 in
+  let is_frame th = bstep_is_frame(concl th) && rand(concl th) = s0 in
   (* A flag fact `read c s0` or `~read c s0` is the fact read c s0 = T or F, *)
   (* and the conjuncts of a conjunction of facts are facts too.              *)
   let flag_fact th = match concl th with
@@ -1336,7 +1469,7 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
       | _ -> failwith "") others_asl in
   set_component_assumptions static;
   bstep_set_branch_rewrites (static @ map snd others_asl);
-  Termtbl.reset bstep_side_cache;
+  Termtbl.reset (bstep_side_cache ());
   (* The code, its base address and the code component.                      *)
   let base_w,mc_tm = match snd(strip_comb(concl ld_th)) with
       [_;b;m] -> b,m | _ -> fail "code fact" in
@@ -1344,25 +1477,40 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
   if not(is_var pcv) then fail "the code is not loaded at `word pc`" else
   let loaded_th,loaded_s,code =
     bstep_loaded_rule arch mc_length_th mc_tm base_w in
+  (* The facts about the base of the code that the goal has.                 *)
+  let base_convs = filter (fun (t,_) ->
+      exists (fun th -> compare (concl th) t = 0) static)
+    (arch.arch_base_facts base_w) in
+  let base = map (fun (t,_) ->
+      t,find (fun th -> compare (concl th) t = 0) static) base_convs in
   (* The frame of the postcondition, if it has one.                          *)
   let frame_conj =
     try let bv,bod = dest_abs p_tm in
-        Some(find (fun c -> maychange_term c && rand c = bv) (conjuncts bod))
+        Some(find (fun c -> (maychange_term c || bstep_is_frame c) &&
+                            rand c = bv) (conjuncts bod))
     with Failure _ -> None in
+  (* The frame and the assumption are used with their named frames          *)
+  (* unfolded (bstep_frame_unfold); the frame fact of the new goal is folded *)
+  (* back into the form of the postcondition.                                *)
+  let frame_post = match frame_conj with
+      Some cj -> Some(rator(rator cj)) | None -> None in
   let frame,frame0 = match frame_conj with
       None -> None,None
     | Some cj ->
-        let ct = rator(rator cj) and x = rand(rator cj) in
-        let fth =
+        let ct0 = rator(rator cj) and x = rand(rator cj) in
+        let ct = match bstep_frame_unfold ct0 with
+            Some eq -> rand(concl eq) | None -> ct0 in
+        let fth0 =
           try find (fun th -> compare (rand(rator(concl th))) x = 0) frames
           with Failure _ -> fail "no MAYCHANGE assumption for the frame" in
+        let fth = bstep_frame_expand fth0 in
         let r = rator(rator(concl fth)) in
-        if compare r ct = 0 then Some(ct,fth),Some fth else
+        if compare r ct = 0 then Some(ct,fth),Some fth0 else
         let sub =
           try subsumed_theorem r ct with Failure _ ->
             fail ("the MAYCHANGE assumption " ^ string_of_small_term r ^
                   " is not within the frame " ^ string_of_small_term ct) in
-        Some(ct,MP (MP (fst(bstep_mono [r;x;s0;ct])) fth) sub),Some fth in
+        Some(ct,MP (MP (fst(bstep_mono [r;x;s0;ct])) fth) sub),Some fth0 in
   (* The block.                                                              *)
   let blk =
     { b_arch = arch;
@@ -1382,7 +1530,8 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
       b_start = s0;
       b_segs = [];
       b_forget = forget;
-      b_vars = Termtbl.create 64 } in
+      b_vars = Termtbl.create 64;
+      b_base = base } in
   Hashtbl.replace blk.b_states 0 (s0,[]);
   Hashtbl.replace blk.b_memsnap 0
     (0,REFL(list_mk_icomb "read" [blk.b_memory;s0]));
@@ -1390,11 +1539,12 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
                 read_facts)
   then fail "no PC fact" else
   let gen k =
-    let key = (mc_tm,pcv,k) in
-    try Hashtbl.find bstep_gen_cache key with Not_found ->
-    let g = bstep_make_gen arch decode_ths mc_tm pcv k in
-    Hashtbl.add bstep_gen_cache key g; g in
-  Termtbl.reset bstep_cond_memo;
+    let key = (mc_tm,pcv,k,map fst base) in
+    let cache = bstep_gen_cache () in
+    try Hashtbl.find cache key with Not_found ->
+    let g = bstep_make_gen arch decode_ths mc_tm pcv k base_convs in
+    Hashtbl.add cache key g; g in
+  Termtbl.reset (bstep_cond_memo ());
   let conv = BSTEP_COND_CONV ORELSEC bstep_node_conv ~rewrites folds in
   bstep_set_component_rewrites rewrites;
   (* The facts at s0, keyed by their components in the normal form that      *)
@@ -1460,7 +1610,7 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
   let gvars = shared_vars (w :: map (concl o snd) asl) in
   let sn = variant gvars (mk_var(sname,arch.arch_state)) in
   let pc_th = bstep_get_fact blk arch.arch_pc in
-  let pc_th = try bstep_decide_branch pc_th
+  let pc_th = try bstep_pc_norm pcv (bstep_decide_branch pc_th)
               with Failure _ | Bstep_failure _ -> pc_th in
   (* 3. The read facts, in the order their components first got a fact.      *)
   (* With ~carry, a component that is not kept has its fact in the new goal  *)
@@ -1491,7 +1641,9 @@ let BSTEP_RUN_TAC (arch:bstep_arch)
         th,bstep_move_general s0 (Lazy.from_val gvars) move th)
       (rev generals) in
   let moved_generals = map snd moved_pairs in
-  let frame_ths = match blk.b_frame with Some(_,f) -> [f] | None -> [] in
+  let frame_ths = match blk.b_frame,frame_post with
+      Some(_,f),Some ct0 -> [bstep_frame_fold ct0 f]
+    | _ -> [] in
   let fin = [blk.b_loaded; pc_th] @ frame_ths @ map snd kept @
             moved_generals in
   let retarget th =
@@ -1790,39 +1942,51 @@ let GEN_BSTEP_CALL_TAC (arch:bstep_arch) ?(keep:term -> bool = fun _ -> true)
   let after qth (asl,w) =
     let cj = CONJUNCTS qth in
     let fth = last cj in
-    let posts = if maychange_term(concl fth) then butlast cj else cj in
+    let posts = if bstep_is_frame(concl fth) then butlast cj else cj in
     let fr = rator(rator(concl fth)) in
+    (* The callee's frame with its named frames unfolded, for the components *)
+    (* that it keeps.                                                        *)
+    let fthx = bstep_frame_expand fth in
+    let frx = rator(rator(concl fthx)) in
     let rec move th =
       let tm = concl th in
       match tm with
         Comb(Comb(Const("=",_),Comb(Comb(Const("read",_),c),s1)),_)
           when s1 = s && keep c ->
-          (try TRANS (MP (SPECL [s;s'] (frame_keeps c fr)) fth) th
+          (try TRANS (MP (SPECL [s;s'] (frame_keeps c frx)) fthx) th
            with Failure _ -> failwith "")
       | Comb(Comb(Comb(Const(ld,_),s1),base),mc)
           when ld = arch.arch_loaded && s1 = s ->
           let lrule,(sv,sv'),code =
             bstep_loaded_rule arch mc_length_th mc base in
           (try
-             let kth = MP (SPECL [s;s'] (frame_keeps code fr)) fth in
+             let kth = MP (SPECL [s;s'] (frame_keeps code frx)) fthx in
              MP (MP (INST [s,sv; s',sv'] lrule) th) kth
            with Failure _ -> failwith "")
-      | Comb(Comb(r,x),s1) when s1 = s && is_maychange_frame tm ->
+      | Comb(Comb(r,x),s1) when s1 = s && bstep_is_frame tm ->
           (* (r ,, fr) x s', and r x s' if every component of fr is within   *)
-          (* a clause of r (maychange_absorb, which must then succeed).      *)
+          (* a clause of r (maychange_absorb, which must then succeed). The  *)
+          (* named frames of r and fr are unfolded for that (rx and frx),    *)
+          (* and the result has r as it is.                                  *)
           let th1 = MP (MP (fst(bstep_seq [r;x;s;fr;s'])) th) fth in
+          let rx = match bstep_frame_unfold r with
+              Some eq -> rand(concl eq) | None -> r in
           let within =
-            match (try Some(maychange_components r,maychange_components fr)
+            match (try Some(maychange_components rx,maychange_components frx)
                    with Failure _ -> None) with
               Some(rs,fs) ->
                 forall (fun d -> exists (component_may_contain d) rs) fs
             | None -> false in
           if not within then th1 else
           let sub =
-            try maychange_absorb r fr with Failure msg ->
+            try maychange_absorb rx frx with Failure msg ->
               bstep_fail ("the callee's frame `" ^ string_of_small_term fr ^
                     "` is not absorbed into `" ^ string_of_small_term r ^
                     "`: " ^ msg) in
+          let sub =
+            if rx == r && frx == fr then sub else
+            let tm = list_mk_icomb "subsumed" [list_mk_icomb ",," [r;fr]; r] in
+            EQ_MP (SYM(PURE_REWRITE_CONV !bstep_frame_defs tm)) sub in
           MP (MP (fst(bstep_mono [rator(rator(concl th1));x;s';r])) th1) sub
       | _ when in_s tm -> general th
       | _ -> failwith ""
@@ -1883,7 +2047,7 @@ let GEN_BSTEP_CALL_TAC (arch:bstep_arch) ?(keep:term -> bool = fun _ -> true)
 let BSTEP_FINAL_TAC : tactic =
   W(fun (asl,w) ->
     let sn = rand w in
-    let frames = filter (fun th -> is_maychange_frame(concl th) &&
+    let frames = filter (fun th -> bstep_is_frame(concl th) &&
                                    rand(concl th) = sn) (map snd asl) in
     GEN_REWRITE_TAC I [eventually_CASES] THEN DISJ1_TAC THEN
     GEN_REWRITE_TAC TRY_CONV [BETA_THM] THEN REWRITE_TAC frames);;

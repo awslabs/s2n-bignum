@@ -78,7 +78,13 @@ let x86_bstep_arch =
     arch_loaded_update = bytes_loaded_update;
     arch_conv = x86_bstep_conv;
     arch_insn = x86_bstep_insn;
-    arch_alias = x86_bstep_alias };;
+    arch_alias = x86_bstep_alias;
+    arch_base_facts = (fun _ -> []) };;
+
+(* The frames of the ABI, which contracts and theorems use by name.          *)
+
+bstep_frame_defs := [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                     WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI];;
 
 (* X86_BSTEP_TAC execth (m--n) simulates the steps m..n from the goal        *)
 (* `eventually x86 P s` after ENSURES_INIT_TAC, leaving a goal about the     *)

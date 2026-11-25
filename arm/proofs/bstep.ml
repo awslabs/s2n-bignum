@@ -10,6 +10,7 @@
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/consttime.ml";;
 needs "common/bstep.ml";;
+needs "common/loaded_image.ml";;
 
 (* The instruction at offset k, for messages.                                *)
 
@@ -17,6 +18,40 @@ let arm_bstep_insn (decode_ths:thm option array) k =
   match decode_ths.(k) with
     Some th -> string_of_term(rand(rand(snd(strip_forall(concl th)))))
   | None -> "no instruction";;
+
+(* ADRP in code loaded at a 4096-aligned pc. From |- aligned 4096 (word p), *)
+(* the conversion of the page word_and (word(p + k)) (word 0xFF..F000), k a *)
+(* numeral, to word_add (word p) (word k') with k' = k - k MOD 4096, and of *)
+(* word_and (word p) (word 0xFF..F000) to word p. The step theorems of bstep *)
+(* use it when the goal has the alignment (arch_base_facts), so that ADRP   *)
+(* gives these values directly.                                            *)
+
+let ARM_PAGE_ALIGNED = prove
+ (`!x:int64. word_and x (word 4095) = word 0
+             ==> word_and x (word 0xFFFFFFFFFFFFF000) = x`,
+  BITBLAST_TAC);;
+
+let ARM_ADRP_PAGE_CONV =
+  let mask = `word 0xFFFFFFFFFFFFF000:int64` in
+  fun ath ->
+    let p = rand(rand(concl ath)) in
+    let ath' = REWRITE_RULE[ALIGNED_4096_WORD_AND] ath in
+    let pth = GEN_ALL(CONJUNCT1(SPEC_ALL(MATCH_MP PAGE_ADD_ALIGNED ath'))) in
+    let zth = MP (ISPEC (rand(concl ath)) ARM_PAGE_ALIGNED) ath' in
+    fun tm ->
+      match tm with
+        Comb(Comb(Const("word_and",_),Comb(Const("word",_),
+             Comb(Comb(Const("+",_),p'),k))),m)
+          when m = mask && p' = p && is_numeral k ->
+          (LAND_CONV(REWR_CONV WORD_ADD) THENC REWR_CONV pth THENC
+           RAND_CONV WORD_REDUCE_CONV) tm
+      | Comb(Comb(Const("word_and",_),Comb(Const("word",_),p')),m)
+          when m = mask && p' = p -> zth
+      | _ -> failwith "ARM_ADRP_PAGE_CONV";;
+
+let arm_bstep_base_facts =
+  let aligned_tm = `aligned 4096:int64->bool` in
+  fun base_w -> [mk_comb(aligned_tm,base_w),ARM_ADRP_PAGE_CONV];;
 
 let arm_bstep_arch =
   { arch_name = "ARM";
@@ -27,7 +62,12 @@ let arm_bstep_arch =
     arch_loaded_update = aligned_bytes_loaded_update;
     arch_conv = ARM_CONV;
     arch_insn = arm_bstep_insn;
-    arch_alias = (fun _ -> None) };;
+    arch_alias = (fun _ -> None);
+    arch_base_facts = arm_bstep_base_facts };;
+
+(* The frames of the ABI, which contracts and theorems use by name.          *)
+
+bstep_frame_defs := [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI];;
 
 (* ARM_BSTEP_TAC execth (m--n) simulates the steps m..n from the goal        *)
 (* `eventually arm P s` after ENSURES_INIT_TAC, leaving a goal about the     *)
