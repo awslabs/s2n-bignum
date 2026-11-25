@@ -70,6 +70,21 @@ let () =
   par_check "par_local_ref per task" (ws = 1--16);
   par_check "par_local_ref restored" (!(par_test_cell ()) = 42);;
 
+(* par_once: forced by many computations at once, it gives the value (where  *)
+(* Lazy.force raises Undefined), computed at most once per domain.           *)
+
+let () =
+  let c = par_counter () in
+  let v = par_once (fun () ->
+    ignore (c ()); prove(`!x y. x + y = y + x`, ARITH_TAC)) in
+  let ths = par_map (fun _ -> v ()) (1--64) in
+  par_check "par_once value"
+    (forall (fun th -> concl th = `!x y. x + y = y + x`) ths);
+  par_check "par_once computed at most once per domain"
+    (c () <= par_requested_domains ());
+  let w = par_once (fun () -> failwith "once") in
+  par_check "par_once failure keeps nothing" (not (can w ()) && not (can w ()));;
+
 (* Proofs at the same time with prove_async.                                 *)
 
 let () =

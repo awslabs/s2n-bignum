@@ -28,6 +28,8 @@
 (*   par_locked f     f () while holding a lock (the same for all calls)     *)
 (*   par_counter ()   a function giving 0, 1, 2, ... on successive calls,    *)
 (*                    atomically with the parallel backend                   *)
+(*   par_once f       a function giving f (), made on first use and kept:    *)
+(*                    a Lazy.t that several domains may force at once        *)
 (*                                                                           *)
 (* common/par_domains.ml is the parallel backend; its header says how to     *)
 (* enable it and what it needs of HOL Light. It is loaded first, before any  *)
@@ -79,6 +81,17 @@ module Par : sig
   val par_local_ref : (unit -> 'a) -> unit -> 'a ref
   val par_locked : (unit -> 'a) -> 'a
   val par_counter : unit -> unit -> int
+
+  (* par_once f is fun () -> Lazy.force v for v = lazy (f ()), except that   *)
+  (* several domains may call it at the same time: Lazy.force raises         *)
+  (* CamlinternalLazy.Undefined on a domain while another domain forces the  *)
+  (* same value. Domains that call it before a value is kept each compute   *)
+  (* f () and keep one of the results, so f must give equivalent results    *)
+  (* (theorems that differ at most in the names of variables made by        *)
+  (* genvar, say) and have no other effects. A call that raises keeps        *)
+  (* nothing.                                                                *)
+
+  val par_once : (unit -> 'a) -> unit -> 'a
 
   type 'a par_future
   val par_spawn : (unit -> 'a) -> 'a par_future
@@ -190,6 +203,17 @@ let par_local f = state_made := true; (!backend).par_backend_local f;;
 let par_locked f = (!backend).par_backend_locked f;;
 
 let par_counter () = state_made := true; (!backend).par_backend_counter ();;
+
+(* A race on the reference can only make several domains compute f (): the  *)
+(* OCaml 5 memory model ensures that a domain that reads Some v sees v as   *)
+(* it was made. Without domains (OCaml 4) it is a plain memo.                *)
+
+let par_once (f : unit -> 'a) : unit -> 'a =
+  let cell = ref None in
+  fun () ->
+    match !cell with
+      Some v -> v
+    | None -> let v = f () in cell := Some v; v;;
 
 let par_local_ref (f : unit -> 'a) : unit -> 'a ref =
   let get = par_local (fun () -> ref (f ())) in

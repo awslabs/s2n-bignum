@@ -723,7 +723,7 @@ let bstep_side_cache : thm Termtbl.t = Termtbl.create 64;;
 let bstep_side c =
   try Termtbl.find bstep_side_cache c with Not_found ->
   let th =
-    try EQT_ELIM(ALIGNED_WORD_CONV !component_assumptions c) with Failure _ ->
+    try EQT_ELIM(ALIGNED_WORD_CONV (component_assumptions ()) c) with Failure _ ->
       bstep_fail ("cannot prove the side condition " ^
                   string_of_small_term c) in
   Termtbl.replace bstep_side_cache c th; th;;
@@ -1195,7 +1195,7 @@ let bstep_move_general s (avoid:term list Lazy.t) (move:term -> thm) th =
   let cs = match bstep_reads_only s (concl th2) with
       Some cs when cs <> [] -> cs
     | _ -> failwith "bstep_move_general" in
-  let old = !component_assumptions in
+  let old = (component_assumptions ()) in
   if ants <> [] then
     set_component_assumptions (flat(map (CONJUNCTS o ASSUME) ants) @ old);
   let eqs = try Some(map move cs) with Failure _ | Bstep_failure _ -> None in

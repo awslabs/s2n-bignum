@@ -3634,7 +3634,7 @@ let memory_bytes_region c =
 (* proved once per pair of component shapes, with the variables x and y.     *)
 
 let memory_bytes_orthogonality_lemma =
-  let cache = Termtbl2.create 32 in
+  let cache = par_local (fun () -> Termtbl2.create 32) in
   let x = `x:int64` and y = `y:int64` in
   let pattern c v =
     match c with
@@ -3649,6 +3649,7 @@ let memory_bytes_orthogonality_lemma =
   fun c d ->
     let pc = pattern c x and pd = pattern d y in
     let key = (pc,pd) in
+    let cache = cache () in
     try Termtbl2.find cache key with Not_found ->
     let tm = mk_imp
      (list_mk_icomb "nonoverlapping_modulo"
@@ -3666,22 +3667,14 @@ let memory_bytes_orthogonality_lemma =
         ASM_REWRITE_TAC[ORTHOGONAL_COMPONENTS_BYTES; DIMINDEX_64]]) in
     Termtbl2.add cache key (th,x,y); (th,x,y);;
 
-let orthogonality_cache : thm Termtbl2.t = Termtbl2.create 4096;;
-let orthogonality_context_cache : thm option Termtbl2.t =
-  Termtbl2.create 4096;;
-let read_write_row_cache : (thm * term * term) Termtbl2.t =
-  Termtbl2.create 4096;;
-let read_write_row_context_cache : (thm * term * term) Termtbl2.t =
-  Termtbl2.create 4096;;
+(* The caches of the orthogonality theorems and read-over-write rows that    *)
+(* need no assumptions, for the session. Each domain has its own (see        *)
+(* common/par.ml): a Hashtbl cannot be changed by several domains at once.   *)
 
-(* The assumptions that the proofs may use (those that do not mention the    *)
-(* state), the nonoverlapping ones indexed by their pair of base addresses,  *)
-(* and the context for ORTHOGONAL_COMPONENTS_RULE, made only if needed.      *)
-
-let component_assumptions = ref ([]:thm list);;
-let component_nonoverlapping : thm Termtbl2.t = Termtbl2.create 64;;
-let component_orthogonality_context =
-  ref (lazy ([],[]) : (thm list * thm list) Lazy.t);;
+let orthogonality_cache : unit -> thm Termtbl2.t =
+  par_local (fun () -> Termtbl2.create 4096);;
+let read_write_row_cache : unit -> (thm * term * term) Termtbl2.t =
+  par_local (fun () -> Termtbl2.create 4096);;
 
 (* A nonoverlapping fact in the form nonoverlapping_modulo (2 EXP 64)        *)
 (* (val p,k) (val q,l); a region given by a number n (as for code at word n) *)
@@ -3715,24 +3708,84 @@ let nonoverlapping_val_form =
         Some th
     | _ -> None;;
 
+(* The component assumptions: the assumptions that the proofs may use (those *)
+(* that do not mention the state), which set_component_assumptions sets for  *)
+(* a goal, with their nonoverlapping ones indexed by their pair of base      *)
+(* addresses. They are the context of the rules below, and of the footprint  *)
+(* rules (common/footprint.ml), and they belong to the proof that sets them: *)
+(* the cell is per domain, and a computation that a proof spawns starts with *)
+(* the context of the proof and leaves it unchanged (par_local_ref of        *)
+(* common/par.ml). A context, once made, does not change, so a context that  *)
+(* a spawned computation shares with its proof is only read.                 *)
+
+type component_context =
+  { ctx_id : int;                          (* distinct for each context     *)
+    ctx_assumptions : thm list;
+    ctx_nonoverlapping : thm Termtbl2.t;
+    ctx_drivers : unit -> thm list * thm list };;
+                         (* the context for ORTHOGONAL_COMPONENTS_RULE, made *)
+                         (* only if needed                                  *)
+
+let component_context_id = par_counter ();;
+
+let component_context_empty =
+  { ctx_id = component_context_id ();
+    ctx_assumptions = [];
+    ctx_nonoverlapping = Termtbl2.create 1;
+    ctx_drivers = fun () -> [],[] };;
+
+let component_context = par_local_ref (fun () -> component_context_empty);;
+
+let component_assumptions () = (!(component_context ())).ctx_assumptions;;
+
 let set_component_assumptions (ths:thm list) =
-  component_assumptions := ths;
-  Termtbl2.reset component_nonoverlapping;
-  Termtbl2.reset orthogonality_context_cache;
-  Termtbl2.reset read_write_row_context_cache;
+  let nov : thm Termtbl2.t = Termtbl2.create 64 in
   List.iter (fun th ->
       match (try nonoverlapping_val_form th with Failure _ -> None) with
         Some th' ->
           (match concl th' with
              Comb(Comb(_,Comb(Comb(_,Comb(_,p)),_)),
                   Comb(Comb(_,Comb(_,q)),_)) ->
-               Termtbl2.replace component_nonoverlapping (p,q) th';
-               Termtbl2.replace component_nonoverlapping (q,p)
+               Termtbl2.replace nov (p,q) th';
+               Termtbl2.replace nov (q,p)
                  (ONCE_REWRITE_RULE[NONOVERLAPPING_MODULO_SYM] th')
            | _ -> ())
       | None -> ()) ths;
-  component_orthogonality_context :=
-    lazy (NONOVERLAPPING_DRIVERS ths,FILTER_CANONIZE_ASSUMPTIONS ths);;
+  component_context () :=
+    { ctx_id = component_context_id ();
+      ctx_assumptions = ths;
+      ctx_nonoverlapping = nov;
+      ctx_drivers = par_once (fun () ->
+        NONOVERLAPPING_DRIVERS ths,FILTER_CANONIZE_ASSUMPTIONS ths) };;
+
+(* The caches of the results that need the assumptions of a context: the    *)
+(* orthogonality theorems (None if there is none), the read-over-write rows  *)
+(* and the pairs that state_update_fast below cannot do. They are those of   *)
+(* one context at a time, per domain: on a domain that runs computations     *)
+(* for several proofs in turn (and returns to one when the computation it    *)
+(* waits for is done), a context other than the last one used gets them     *)
+(* emptied.                                                                  *)
+
+type component_context_caches =
+  { cc_id : int;
+    cc_orthogonality : thm option Termtbl2.t;
+    cc_read_write_row : (thm * term * term) Termtbl2.t;
+    cc_update_fail : unit Termtbl2.t };;
+
+let component_context_caches =
+  let slot = par_local (fun () ->
+    ref { cc_id = -1;
+          cc_orthogonality = Termtbl2.create 4096;
+          cc_read_write_row = Termtbl2.create 4096;
+          cc_update_fail = Termtbl2.create 256 }) in
+  fun () ->
+    let id = (!(component_context ())).ctx_id and r = slot () in
+    let c = !r in
+    if c.cc_id = id then c else
+     (Termtbl2.reset c.cc_orthogonality;
+      Termtbl2.reset c.cc_read_write_row;
+      Termtbl2.reset c.cc_update_fail;
+      let c' = { c with cc_id = id } in r := c'; c');;
 
 (* An address as (base, offset, |- address = word_add base (word offset)).   *)
 
@@ -3780,7 +3833,8 @@ let offset_orthogonality =
                Some ath -> Some(MP ith (CONJ ex (CONJ ey ath)))
              | None -> None)
           else
-            match Termtbl2.find_opt component_nonoverlapping (p,q) with
+            match Termtbl2.find_opt
+                    (!(component_context ())).ctx_nonoverlapping (p,q) with
               None -> None
             | Some sth ->
                 let k0,l0 = match concl sth with
@@ -3805,14 +3859,22 @@ let rec mentions_memory tm =
   | Abs(_,b) -> mentions_memory b
   | _ -> false;;
 
+(* Extensions for components that the rules below do not know, such as a    *)
+(* set of addresses (common/footprint.ml): each takes c and d in canonical   *)
+(* form and gives |- orthogonal_components c d, possibly with component      *)
+(* assumptions as hypotheses, or fails if it does not apply. The first one   *)
+(* that succeeds is used, before the other rules.                            *)
+
+let orthogonality_extensions = ref ([]:(term -> term -> thm) list);;
+
 (* |- orthogonal_components c d, cached, by one rule chosen from the shapes  *)
-(* of c and d: the offset rule above for memory regions it applies to; a     *)
-(* part of memory and a component that is not memory are orthogonal if       *)
-(* memory and that component are; ORTHOGONAL_COMPONENTS_RULE without         *)
-(* assumptions for two components that are not memory, and with the          *)
-(* component assumptions for the other memory components. Memory             *)
-(* components are put in canonical form first. Fails if the chosen rule      *)
-(* fails.                                                                    *)
+(* of c and d: an extension that applies; the offset rule above for memory   *)
+(* regions it applies to; a part of memory and a component that is not       *)
+(* memory are orthogonal if memory and that component are;                  *)
+(* ORTHOGONAL_COMPONENTS_RULE without assumptions for two components that   *)
+(* are not memory, and with the component assumptions for the other memory  *)
+(* components. Memory components are put in canonical form first. Fails if  *)
+(* the chosen rule fails.                                                    *)
 
 let rec prove_orthogonality c d =
   let memory_part c = match c with
@@ -3829,6 +3891,8 @@ let rec prove_orthogonality c d =
     EQ_MP (SYM(MK_COMB(AP_TERM oc cth,dth)))
           (orthogonality_theorem (rand(concl cth)) (rand(concl dth)))
   else
+  match (try Some(tryfind (fun f -> f c d) !orthogonality_extensions)
+         with Failure _ -> None) with Some th -> th | None ->
   match offset_orthogonality c d with Some th -> th | None ->
   match memory_part c,memory_part d with
     Some m,None when not(mentions_memory d) ->
@@ -3841,18 +3905,21 @@ let rec prove_orthogonality c d =
   let tm = list_mk_icomb "orthogonal_components" [c;d] in
   if not(mentions_memory c) && not(mentions_memory d)
   then ORTHOGONAL_COMPONENTS_RULE ([],[]) tm
-  else ORTHOGONAL_COMPONENTS_RULE (Lazy.force !component_orthogonality_context)
+  else ORTHOGONAL_COMPONENTS_RULE ((!(component_context ())).ctx_drivers ())
          tm
 
 and orthogonality_theorem c d =
   let key = (c,d) in
-  try Termtbl2.find orthogonality_cache key with Not_found ->
+  try Termtbl2.find (orthogonality_cache ()) key with Not_found ->
   let r =
-    try Termtbl2.find orthogonality_context_cache key with Not_found ->
+    let ccache = (component_context_caches ()).cc_orthogonality in
+    try Termtbl2.find ccache key with Not_found ->
     let r = try Some(prove_orthogonality c d) with Failure _ -> None in
     (match r with
-       Some th when hyp th = [] -> Termtbl2.replace orthogonality_cache key th
-     | _ -> Termtbl2.replace orthogonality_context_cache key r);
+       Some th when hyp th = [] ->
+         Termtbl2.replace (orthogonality_cache ()) key th
+     | _ -> Termtbl2.replace
+              (component_context_caches ()).cc_orthogonality key r);
     r in
   match r with
     Some th -> th
@@ -3866,14 +3933,16 @@ let read_write_row =
                ["c";"d"] ["x";"s"] in
   let row c d =
     let key = (c,d) in
-    try Termtbl2.find read_write_row_cache key with Not_found ->
-    try Termtbl2.find read_write_row_context_cache key with Not_found ->
+    try Termtbl2.find (read_write_row_cache ()) key with Not_found ->
+    try Termtbl2.find (component_context_caches ()).cc_read_write_row key
+    with Not_found ->
     let oth = orthogonality_theorem c d in
     let ith,vs = inst [c;d] in
     let th = MP ith oth in
     let r = (th,hd vs,el 1 vs) in
-    (if hyp th = [] then Termtbl2.replace read_write_row_cache key r
-     else Termtbl2.replace read_write_row_context_cache key r);
+    (if hyp th = [] then Termtbl2.replace (read_write_row_cache ()) key r
+     else Termtbl2.replace (component_context_caches ()).cc_read_write_row
+            key r);
     r in
   fun c d y t ->
     let th,yv,sv = row c d in
@@ -3884,8 +3953,10 @@ let read_write_row =
 
 let read_write_same =
   let inst = lemma_instance READ_WRITE_VALID_COMPONENT ["c"] ["y";"s"] in
-  let cache : (thm * term * term) Termtbl.t = Termtbl.create 1024 in
+  let cache = par_local (fun () ->
+    (Termtbl.create 1024 : (thm * term * term) Termtbl.t)) in
   fun d y t ->
+    let cache = cache () in
     let th,yv,sv =
       try Termtbl.find cache d with Not_found ->
       let vth =
@@ -3926,9 +3997,6 @@ let read_compose_lift =
 (* same fact about s'. It fails if c is written by the update, or if a row   *)
 (* needs assumptions (then the general rule runs, with its context).         *)
 
-let state_update_fast_fail : unit Termtbl2.t = Termtbl2.create 256;;
-let state_update_fast_ctx = ref ([]:thm list);;
-
 let state_update_fast uth th =
   let utm,s' = dest_eq(concl uth) in
   let s = repeat rand utm in
@@ -3943,11 +4011,9 @@ let state_update_fast uth th =
   let c = rand(rator rd) in
   (* The pairs without a row of their own (a written component, or a pair   *)
   (* that needs assumptions) are remembered, as a failing proof costs time  *)
-  (* at each step for each fact; the table is reset when the component      *)
-  (* assumptions are set again.                                             *)
-  if !state_update_fast_ctx != !component_assumptions
-  then (Termtbl2.reset state_update_fast_fail;
-        state_update_fast_ctx := !component_assumptions);
+  (* at each step for each fact, for the context of the component           *)
+  (* assumptions (component_context_caches).                                *)
+  let state_update_fast_fail = (component_context_caches ()).cc_update_fail in
   let rec go t =
     match t with
       Comb(Comb(Comb(Const("write",_),d),y),t') ->

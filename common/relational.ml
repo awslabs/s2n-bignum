@@ -2456,14 +2456,14 @@ let SEQ_KEEP = prove
   REWRITE_TAC[seq] THEN MESON_TAC[]);;
 
 let frame_keeps =
-  let cache : thm Termtbl2.t = Termtbl2.create 256 in
+  let cache = par_local (fun () -> (Termtbl2.create 256 : thm Termtbl2.t)) in
   let seq_inst = lemma_instance SEQ_KEEP ["R1";"R2";"c"] []
   and cons_inst = lemma_instance MAYCHANGE_KEEP_CONS ["c";"d";"l"] []
   and nil_th = MAYCHANGE_KEEP_NIL in
   let nil_c = find (fun v -> name_of v = "c") (frees(concl nil_th))
   and nil_l = rand(rator(rator(lhand(snd(strip_forall(concl nil_th)))))) in
   let rec keeps c fr =
-    try Termtbl2.find cache (c,fr) with Not_found ->
+    try Termtbl2.find (cache ()) (c,fr) with Not_found ->
     let th = match fr with
         Comb(Comb(Const(",,",_),r1),r2) ->
           MP (MP (fst(seq_inst [r1;r2;c])) (keeps c r1)) (keeps c r2)
@@ -2476,7 +2476,7 @@ let frame_keeps =
           INST [c,inst tyin nil_c] (INST_TYPE tyin nil_th)
       | _ -> failwith ("the frame is not made of MAYCHANGE lists: `" ^
                        string_of_term fr ^ "`") in
-    if hyp th = [] then Termtbl2.replace cache (c,fr) th;
+    if hyp th = [] then Termtbl2.replace (cache ()) (c,fr) th;
     th in
   keeps;;
 
@@ -3662,13 +3662,13 @@ let maychange_list_def l =
 (* |- C ,, C = C and |- (=) subsumed C, per frame C.                         *)
 
 let maychange_idempot =
-  let cache : thm Termtbl.t = Termtbl.create 16 in
+  let cache = par_local (fun () -> (Termtbl.create 16 : thm Termtbl.t)) in
   fun ct ->
-    try Termtbl.find cache ct with Not_found ->
+    try Termtbl.find (cache ()) ct with Not_found ->
     let th = TAC_PROOF(([],mk_eq(list_mk_icomb ",," [ct;ct],ct)),
                        REWRITE_TAC !maychange_list_defs THEN
                        MAYCHANGE_IDEMPOT_TAC) in
-    Termtbl.replace cache ct th; th;;
+    Termtbl.replace (cache ()) ct th; th;;
 
 (* The component assumptions (the bounds of variable offsets) are given to   *)
 (* a subsumption proof when the goal has a numeric variable, as in an        *)
@@ -3679,17 +3679,18 @@ let subsumed_context =
   let numty = `:num` in
   fun tm ->
     if exists (fun v -> type_of v = numty) (frees tm)
-    then map (fun th -> "",th) !component_assumptions else [];;
+    then map (fun th -> "",th) (component_assumptions ()) else [];;
 
 let subsumed_id =
-  let cache : thm Termtbl.t = Termtbl.create 64 and aty = `:A` in
+  let cache = par_local (fun () -> (Termtbl.create 64 : thm Termtbl.t))
+  and aty = `:A` in
   fun c ->
-    try Termtbl.find cache c with Not_found ->
+    try Termtbl.find (cache ()) c with Not_found ->
     let eq = mk_const("=",[hd(snd(dest_type(type_of c))),aty]) in
     let th = TAC_PROOF(([],list_mk_icomb "subsumed" [eq;c]),
                        REWRITE_TAC !maychange_list_defs THEN
                        SUBSUMED_ID_MAYCHANGE_TAC) in
-    Termtbl.replace cache c th; th;;
+    Termtbl.replace (cache ()) c th; th;;
 
 (* Components are compared in canonical form (COMPONENT_CANON_CONV), where   *)
 (* a named register such as YMM0 is a path below ZMM0.                       *)
@@ -3809,6 +3810,17 @@ let rec maychange_components x =
       maychange_components (rhs(concl(AP_TERM mch (maychange_list_def l))))
   | _ -> failwith "maychange_components: not a frame of MAYCHANGE lists";;
 
+(* Extensions for clauses that SUBSUMED_ASSIGNS_TAC does not know, such as  *)
+(* a set of addresses (common/footprint.ml): each takes a component d and a  *)
+(* clause e of the frame and gives |- MAYCHANGE [d] subsumed ASSIGNS e,      *)
+(* possibly with component assumptions as hypotheses, or fails if it does   *)
+(* not apply. A clause that an extension takes d into is a container of d.   *)
+
+let maychange_absorb_extensions = ref ([]:(term -> term -> thm) list);;
+
+let maychange_absorb_extension d e =
+  tryfind (fun f -> f d e) !maychange_absorb_extensions;;
+
 let maychange_absorb =
   let abs_seq_r = lemma_instance MAYCHANGE_ABSORB_SEQ_RIGHT ["A";"B";"D"] []
   and abs_seq_l = lemma_instance MAYCHANGE_ABSORB_SEQ_LEFT ["A";"B";"D"] []
@@ -3855,14 +3867,15 @@ let maychange_absorb =
         let eq = unfold mch l in
         SUBS [SYM eq] (absorb (rhs(concl eq)) k bth dm d)
     | _ -> failwith "maychange_absorb" in
-  let base e dm =
+  let base_with sth e =
     let wth = WEAKLY_VALID_COMPONENT_CONV
                 (mk_icomb(`weakly_valid_component:(S,V)component->bool`,e)) in
     let wth = if is_eq(concl wth) then EQT_ELIM wth else wth in
+    MATCH_MP MAYCHANGE_ABSORB_ONE (CONJ wth sth) in
+  let base e dm =
     let ae = mk_icomb(`ASSIGNS:(S,V)component->S->S->bool`,e) in
     let tm = list_mk_icomb "subsumed" [dm;ae] in
-    let sth = TAC_PROOF((subsumed_context tm,tm),comp_tac) in
-    MATCH_MP MAYCHANGE_ABSORB_ONE (CONJ wth sth) in
+    base_with (TAC_PROOF((subsumed_context tm,tm),comp_tac)) e in
   (* Memory components whose addresses are in different variables (an        *)
   (* argument and the stack pointer) are not tried as containers.            *)
   let address c =
@@ -3885,6 +3898,12 @@ let maychange_absorb =
         [] -> failwith ("maychange_absorb: no clause takes the write to `" ^
                         string_of_term d ^ "`" ^ msg)
       | e::rest ->
+          match (try Some(maychange_absorb_extension d e)
+                 with Failure _ -> None) with
+            Some sth ->
+              (try absorb ct i (base_with sth e) dm d
+               with Failure m -> from (i - 1) rest (" (" ^ m ^ ")"))
+          | None ->
           if not(container d e) then from (i - 1) rest msg else
           (try absorb ct i (base e dm) dm d
            with Failure m -> from (i - 1) rest (" (" ^ m ^ ")")) in
@@ -3904,7 +3923,10 @@ let maychange_absorb =
           [list_mk_icomb ",," [ct;r]; ct])
     | Comb(Const("MAYCHANGE",_),
            Comb(Comb(Const("CONS",_),d),Const("NIL",_))) ->
-        if exists (container d) (elements ct) then one ct d r else
+        if exists (fun e -> container d e ||
+                            can (maychange_absorb_extension d) e)
+                  (elements ct)
+        then one ct d r else
         let eq =
           try find (fun th -> compare (lhs(concl th)) r = 0) !maychange_splits
           with Failure _ ->
@@ -3938,7 +3960,7 @@ let SUBSUMED_SEQ_ABSORB = prove
 (* (C ,, R2) subsumed C (maychange_absorb).                                  *)
 
 let subsumed_theorem =
-  let cache : thm Termtbl2.t = Termtbl2.create 256
+  let cache = par_local (fun () -> (Termtbl2.create 256 : thm Termtbl2.t))
   and seq_absorb = lemma_instance SUBSUMED_SEQ_ABSORB ["R1";"C";"R2"] [] in
   let rec component_list l =
     match l with
@@ -3963,7 +3985,7 @@ let subsumed_theorem =
         sub_prove (list_mk_icomb "subsumed" [mtm;c])
     | _ -> sub_prove (list_mk_icomb "subsumed" [mtm;c]) in
   let rec subsumed r ct =
-    try Termtbl2.find cache (r,ct) with Not_found ->
+    try Termtbl2.find (cache ()) (r,ct) with Not_found ->
     (* (r1 ,, r2) subsumed ct from r1 subsumed ct and (ct ,, r2) subsumed    *)
     (* ct (maychange_absorb).                                                *)
     let seq r1 r2 =
@@ -4018,7 +4040,7 @@ let subsumed_theorem =
                via eq (seq r1 r2))
       | _ -> TAC_PROOF(([],list_mk_icomb "subsumed" [r;ct]),
                        SUBSUMED_MAYCHANGE_TAC) in
-    if hyp th = [] then Termtbl2.replace cache (r,ct) th; th in
+    if hyp th = [] then Termtbl2.replace (cache ()) (r,ct) th; th in
   subsumed;;
 
 let MAYCHANGE_WRITE_SUBSUMED = prove
@@ -4027,11 +4049,12 @@ let MAYCHANGE_WRITE_SUBSUMED = prove
   REWRITE_TAC[subsumed] THEN MESON_TAC[MAYCHANGE_WRITE]);;
 
 let maychange_write_theorem =
-  let cache : (thm * term * term * term) Termtbl2.t = Termtbl2.create 256
+  let cache = par_local (fun () ->
+    (Termtbl2.create 256 : (thm * term * term * term) Termtbl2.t))
   and inst = lemma_instance MAYCHANGE_WRITE_SUBSUMED ["C";"c"] ["s0";"t";"y"]
   and aty = `:A` and bty = `:B` in
   fun ct d ->
-    try Termtbl2.find cache (ct,d) with Not_found ->
+    try Termtbl2.find (cache ()) (ct,d) with Not_found ->
     let sty = hd(snd(dest_type(type_of d)))
     and vty = last(snd(dest_type(type_of d))) in
     let mc = mk_comb(mk_const("MAYCHANGE",[sty,aty; vty,bty]),mk_flist [d]) in
@@ -4039,7 +4062,7 @@ let maychange_write_theorem =
     let ith,vs = inst [ct;d] in
     let th = MP ith sub in
     let r = (th,el 0 vs,el 1 vs,el 2 vs) in
-    if hyp th = [] then Termtbl2.replace cache (ct,d) r;
+    if hyp th = [] then Termtbl2.replace (cache ()) (ct,d) r;
     r;;
 
 (* A memory component of a constant number of bytes at base + a numeral     *)

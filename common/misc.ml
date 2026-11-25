@@ -2367,8 +2367,10 @@ let shared_occurs (v:term) = shared_occurs_var (fun t -> compare t v = 0);;
 
 (* Reductions of terms whose arguments are all literals are kept: the same   *)
 (* constants come up again and again (lanes of constant vectors, offsets).   *)
+(* Each domain has its own table (see common/par.ml).                        *)
 
-let ground_reduce_memo : thm Termtbl.t = Termtbl.create 4096;;
+let ground_reduce_memo : unit -> thm Termtbl.t =
+  par_local (fun () -> Termtbl.create 4096);;
 
 let rec is_ground_literal tm =
   match tm with
@@ -2385,8 +2387,9 @@ let MEMO_GROUND_REDUCE_CONV =
     let _,args = strip_comb tm in
     if args = [] || not(forall is_ground_literal args)
     then failwith "MEMO_GROUND_REDUCE_CONV" else
-    try Termtbl.find ground_reduce_memo tm with Not_found ->
-    let th = conv tm in Termtbl.replace ground_reduce_memo tm th; th;;
+    let memo = ground_reduce_memo () in
+    try Termtbl.find memo tm with Not_found ->
+    let th = conv tm in Termtbl.replace memo tm th; th;;
 
 (* word_subword V (p,l) for V a tree of word_join: one instance of a lemma   *)
 (* proved once per shape of V and (p,l), instead of one rewrite per level.   *)
@@ -2419,8 +2422,8 @@ let rec word_join_key tm =
       "(" ^ word_join_key a ^ "," ^ word_join_key b ^ ")"
   | _ -> type_key(type_of tm);;
 
-let word_join_lane_cache : (string,thm * term list) Hashtbl.t =
-  Hashtbl.create 64;;
+let word_join_lane_cache : unit -> (string,thm * term list) Hashtbl.t =
+  par_local (fun () -> Hashtbl.create 64);;
 
 let WORD_JOIN_LANE_CONV tm =
   match tm with
@@ -2433,15 +2436,16 @@ let WORD_JOIN_LANE_CONV tm =
                      "," ^ string_of_int(dest_small_numeral l)
                  | _ -> failwith "WORD_JOIN_LANE_CONV") ^
                 "/" ^ type_key(type_of tm) in
+      let cache = word_join_lane_cache () in
       let th,vars =
-        try Hashtbl.find word_join_lane_cache key with Not_found ->
+        try Hashtbl.find cache key with Not_found ->
         let pat = word_join_pattern v in
         let ptm = mk_comb(mk_comb(sw,pat),pl) in
         let th = (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV THENC
                   DEPTH_CONV WORD_NUM_RED_CONV) ptm in
         if rand(concl th) = ptm then failwith "WORD_JOIN_LANE_CONV" else
         let r = (th,word_join_leaves pat []) in
-        Hashtbl.add word_join_lane_cache key r; r in
+        Hashtbl.add cache key r; r in
       INST (zip leaves vars) th
   | _ -> failwith "WORD_JOIN_LANE_CONV";;
 
