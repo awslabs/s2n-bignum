@@ -1,0 +1,47 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "arm/proofs/snappy/gcc12_O2/working_memory_dtor_spec.ml";;
+
+(*** OWNED: the flag is 1, so the code loads mem_ and goes to the stub of   ***)
+(*** operator delete (a tail call: X30 is still the caller's return         ***)
+(*** address), which reads the GOT slot of _ZdlPv; the contract of delete   ***)
+(*** returns to the caller.                                                 ***)
+
+let SNAPPY_WORKING_MEMORY_DTOR_OWNED_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (SNAPPY_WORKING_MEMORY_DTOR_OWNED_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  MAP_EVERY X_GEN_TAC
+   [`heap_ok:(int64#num)list->(int64->byte)->bool`;
+    `heap_fp:(int64#num)list->int64->bool`;
+    `heap_room:(int64#num)list->num->bool`; `stk:num`] THEN
+  DISCH_THEN(fun model -> ASSUME_TAC model THEN
+    REPEAT GEN_TAC THEN STRIP_TAC THEN
+    ENSURES_INIT_TAC "s0" THEN
+    ELF_RELOCATED_DATA_TAC ~defs:[snappy_libsnappy_gcc12_O2_relocated]
+      ~select:(elf_slots_importing ["_ZdlPv"]) THEN
+    ARM_BSTEP_TAC SNAPPY_WORKING_MEMORY_DTOR_GCC12_O2_EXEC (1--4) THEN
+    ARM_BSTEP_PLT_HEAP_DELETE_TAC SNAPPY_WORKING_MEMORY_DTOR_GCC12_O2_EXEC
+      model "s9" THEN
+    BSTEP_FINAL_TAC THEN ASM_REWRITE_TAC[] THEN MEMACCESS_INSET_TAC));;
+
+let SNAPPY_WORKING_MEMORY_DTOR_OWNED_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (SNAPPY_WORKING_MEMORY_DTOR_OWNED_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+  ENSURES_DROP_EVENTS_TAC
+    SNAPPY_WORKING_MEMORY_DTOR_OWNED_GCC12_O2_IMAGE_SUBROUTINE_SAFE);;
+
+(*** BORROWED: the flag is 0 and the code returns.                          ***)
+
+let SNAPPY_WORKING_MEMORY_DTOR_BORROWED_GCC12_O2_IMAGE_SUBROUTINE_SAFE = prove
+ (SNAPPY_WORKING_MEMORY_DTOR_BORROWED_GCC12_O2_IMAGE_SUBROUTINE_SAFE_STMT,
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
+  ARM_BSTEP_TAC SNAPPY_WORKING_MEMORY_DTOR_GCC12_O2_EXEC (1--3) THEN
+  BSTEP_FINAL_TAC THEN ASM_REWRITE_TAC[] THEN MEMACCESS_INSET_TAC);;
+
+let SNAPPY_WORKING_MEMORY_DTOR_BORROWED_GCC12_O2_IMAGE_SUBROUTINE_CORRECT = prove
+ (SNAPPY_WORKING_MEMORY_DTOR_BORROWED_GCC12_O2_IMAGE_SUBROUTINE_CORRECT_STMT,
+  ENSURES_DROP_EVENTS_TAC
+    SNAPPY_WORKING_MEMORY_DTOR_BORROWED_GCC12_O2_IMAGE_SUBROUTINE_SAFE);;
