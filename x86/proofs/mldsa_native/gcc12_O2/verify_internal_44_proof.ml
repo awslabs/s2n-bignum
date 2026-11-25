@@ -766,7 +766,7 @@ let VI44_CMP_REDUCE_TAC s =
           (concl th)) asl) in
     let c = rand(rator(rator(rhs(concl pcth)))) in
     let c' = subst [`vv:int128`,VI44_OR_FOLD; `ww:int128`,VI44_XOR_FOLD] c in
-    let nth = REWRITE_CONV[WORD_VAL_MOD_256; VAL_EQ_0; WORD_SUB_EQ_0] c' in
+    let nth = REWRITE_CONV[WORD_VAL_MOD_256_ZX; VAL_EQ_0; WORD_SUB_EQ_0] c' in
     let c'' = rhs(concl nth) in
     let tm = mk_forall(`vv:int128`,mk_forall(`ww:int128`,
                mk_eq(c'',`~(vv = word 0:int128)`))) in

@@ -166,7 +166,7 @@ let MLKEM_DECOMPRESS_D11_CORRECT = prove
 
   MP_TAC(end_itlist CONJ (map (fun k ->
     let th = SPECL [`a:int64`; `352`; `n:num`; mk_small_numeral k;
-                    `s0:armstate`] READ_MEMORY_BYTES32_OF_NUM in
+                    `s0:armstate`] READ_MEMORY_BYTES32_OF_NUM_EXP in
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV THENC
               REWRITE_CONV[WORD_ADD_0]) th)
     [40; 84; 128; 172; 216; 260; 304; 348])) THEN

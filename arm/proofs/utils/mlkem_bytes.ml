@@ -359,7 +359,7 @@ let QWORD64_AS_SUBWORD = prove
              word_subword (word n:N word) (p,64)`,
   SIMP_TAC[WORD_SUBWORD_WORD]);;
 
-let READ_MEMORY_BYTES32_OF_NUM = prove
+let READ_MEMORY_BYTES32_OF_NUM_EXP = prove
  (`!a:int64 m n k s:armstate.
         read (memory :> bytes(a,m)) s = n /\ k + 4 <= m
         ==> read (memory :> bytes32(word_add a (word k))) s =

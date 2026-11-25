@@ -211,7 +211,7 @@ let MLD_CHUNKS4_EQ0 = prove
   DISCH_THEN(SUBST1_TAC o SYM) THEN
   CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN REWRITE_TAC[]);;
 
-let WORD_VAL_MOD_256 = prove
+let WORD_VAL_MOD_256_ZX = prove
  (`!x:M word. (word(val x MOD 256):N word) = word_zx(word_zx x:byte)`,
   GEN_TAC THEN REWRITE_TAC[word_zx; VAL_WORD; DIMINDEX_8] THEN
   CONV_TAC NUM_REDUCE_CONV);;
@@ -271,7 +271,7 @@ let YMM_GHOST_TAC st regs =
 
 let X86_CMP_RULE vor vxor hi th =
   let th1 = CONV_RULE(RAND_CONV(SIMD_SIMPLIFY_CONV [] THENC
-                                REWRITE_CONV[WORD_VAL_MOD_256])) th in
+                                REWRITE_CONV[WORD_VAL_MOD_256_ZX])) th in
   let e = rhs(concl th1) in
   let isatom v t = type_of t = `:int128` && free_in v t in
   let x0 = find_term (isatom vor) e and x1 = find_term (isatom vxor) e in
@@ -730,7 +730,7 @@ let PFS_EXIT_TAC prm =
     SUBGOAL_THEN (mk_iff(cond,valid)) (LABEL_TAC "CHECK") THENL
      [USE_THEN "T0EQ" (fun t0th -> USE_THEN "TREQ" (fun trth ->
         REWRITE_TAC[vth; t0th; trth])) THEN
-      REWRITE_TAC[WORD_VAL_MOD_256; VAL_EQ_0] THEN
+      REWRITE_TAC[WORD_VAL_MOD_256_ZX; VAL_EQ_0] THEN
       SPEC_TAC(`(w2:int128) = word 0`,`b:bool`) THEN
       SPEC_TAC(`(v2:int128) = word 0`,`a:bool`) THEN
       SPEC_TAC(chk2,`c2:int32`) THEN SPEC_TAC(chk1,`c1:int32`) THEN
