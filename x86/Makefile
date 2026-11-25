@@ -561,16 +561,11 @@ tutorial/rel_equivtac.native: tutorial/rel_equivtac2.o tutorial/rel_equivtac_sse
 tutorial/rel_reordertac.native: tutorial/rel_reordertac2.o
 
 
-build_proofs: $(PROOF_BINS);
-# Conservatively check that there is no redefinition of "check_axioms"
-# '-I' excludes binary files (*.native).
-	! grep -RI "check_axioms" . ../common/ --exclude="Makefile"
+# check-axioms is defined in ../tools/proof_batch/proofs.mk.
+build_proofs: check-axioms $(PROOF_BINS);
 build_tutorial: $(TUTORIAL_OBJ) $(TUTORIAL_PROOF_BINS);
-run_proofs: build_proofs $(PROOF_LOGS);
-
-.PHONY: proof_timing_targets
-proof_timing_targets:
-	@printf '%s\n' $(PROOF_LOGS)
+ALL_PROOF_LOGS = $(PROOF_LOGS)
+run_proofs: build_proofs $(ALL_PROOF_LOGS);
 
 proofs: run_proofs ; ../tools/count-proofs.sh .
 tutorial: build_tutorial $(TUTORIAL_PROOF_LOGS);
@@ -584,3 +579,5 @@ FORCE: ;
 # https://stackoverflow.com/a/23569003/1488216
 NUM_CORES_FOR_SEMATEST = $(shell getconf _NPROCESSORS_ONLN)
 sematest: FORCE proofs/simulator.native; cat x86-insns.ml; ../tools/run-sematest.sh x86 $(NUM_CORES_FOR_SEMATEST)
+
+include ../tools/proof_batch/proofs.mk

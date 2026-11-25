@@ -22,16 +22,9 @@ output_path=${s2n_bignum_arch}/$2
 # Revert the exit code option since 'grep' may return non-zero.
 set +e
 
+# tools/proof_batch/runner.py applies the same check (ERROR) to batch logs.
 grep -i "error:\|exception:" "$output_path"
 if [ $? -eq 0 ]; then
   echo "${s2n_bignum_arch}/${native_path} had error(s)"
   exit 1
-fi
-
-# Only a successful invocation reaches here. A failed make can leave
-# complete-looking .correct files alongside proofs that really did finish.
-if [ -n "${PROOF_TIMING_MARKERS:-}" ]; then
-  marker="${PROOF_TIMING_MARKERS}/${output_path}"
-  { mkdir -p "$(dirname "$marker")" && touch "$marker"; } ||
-    echo "Could not record proof timing completion for ${output_path}" >&2
 fi

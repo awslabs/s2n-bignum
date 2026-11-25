@@ -17,6 +17,7 @@ cd $s2n_bignum_arch > /dev/null
 # An env. var for sorting
 export LC_ALL=C
 tmpfile=$(mktemp)
+trap 'rm -f "$tmpfile"' EXIT
 grep 'let [A-Z_0-9]*_SUBROUTINE_CORRECT' ${filepat} | cut -f2 -d' ' >$tmpfile
 grep 'let [A-Z_0-9]*_SUBROUTINE_SAFE' ${filepat} | cut -f2 -d' ' >>$tmpfile
 cat $tmpfile | sort
