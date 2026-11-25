@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Generate the proofs.mk of a build of mlkem-native or mldsa-native, which
+# Generate the proofs.mk of a build of mlkem-native, mldsa-native or another family, which
 # the Makefile of s2n-bignum's arm or x86 directory includes: the object
 # files of the transcriptions in <family>/<build>, the proofs in
 # proofs/<family>/<build>, and the dependencies of each proof on the files
@@ -65,8 +65,9 @@ def closure(isa, skip, src, path):
     return deps, sorted(set(objs))
 
 def main():
-    if len(sys.argv) != 3 or sys.argv[1] not in ('mlkem_native', 'mldsa_native'):
-        sys.exit('usage: native_proofs_mk.py (mlkem_native|mldsa_native) BUILD')
+    if len(sys.argv) != 3 or not os.path.isdir(os.path.join('proofs', sys.argv[1])):
+        sys.exit('usage: native_proofs_mk.py FAMILY BUILD (run in arm/ or x86/, '
+                 'with proofs/FAMILY/BUILD present)')
     family, build = sys.argv[1], sys.argv[2]
     isa = os.path.basename(os.getcwd())
     if isa not in ('arm', 'x86'):

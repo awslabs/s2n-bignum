@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-# Generate the link file of a build of mlkem-native or mldsa-native, which
+# Generate the link file of a build of a family of compiled code (mlkem-native, mldsa-native, ...),
+# which
 # proves all the theorems of the build in one session and then turns the
 # theorems of the top-level functions into theorems without assumptions
 # (see common/relative.ml). It serves both instruction sets: run it in
@@ -18,7 +19,8 @@
 #
 # The top-level functions are the API functions of the family that the
 # build has proofs for; if it has none, the functions whose files no other
-# file loads. The theorems of their proof files that the jobs return are
+# file loads. For a family whose API is not given, every function
+# is top-level, so the theorems of every proof file are closed. The theorems of their proof files that the jobs return are
 # closed. The files of the tail of the family, fips203.ml for mlkem-native
 # and fips204.ml and fips204_*.ml for mldsa-native, are loaded after the
 # jobs, fips20N.ml first, and their theorems X_SUBROUTINE_FIPS20N and
@@ -37,6 +39,12 @@
 #
 #   python3 ../tools/native_link.py mldsa_native gcc12_O2 \
 #     > proofs/mldsa_native/gcc12_O2/link.ml
+#
+# A spec file without a proof file is an error, unless it is listed with
+# --open SPEC,... (the names X of X_spec.ml): its contracts (the X_STMT of
+# the spec file) then stay open, the link closes the theorems relative to
+# them, prints the remaining assumptions of each theorem and fails if any
+# other contract is not proved.
 
 import os, re, sys
 
@@ -49,10 +57,17 @@ FAMILIES = {
                r'signature_pre_hash_internal|signature_pre_hash_shake256|verify_internal|'
                r'verify|verify_extmu|verify_pre_hash_internal|verify_pre_hash_shake256|'
                r'prepare_domain_separation_prefix|pk_from_sk)_(44|65|87)$',
-        'tail': 'fips204'}}
+        'tail': 'fips204'},
+}
+
+# A family whose API is not given ('api': None) closes the theorems of every
+# function; 'tail': None means no tail files; 'relative' names the wrapper
+# of common/relative.ml that its spec files load, e.g.
+#   FAMILIES['mylib'] = {'api': None, 'tail': None,
+#                        'relative': '%s/proofs/mylib/relative.ml'}
 
 # The wrapper of common/relative.ml for the instruction set, which the spec
-# files of both families load.
+# files of a family load, unless the family gives its own.
 RELATIVE = '%s/proofs/mlkem_native/relative.ml'
 
 NEEDS = re.compile(r'\s*needs\s+"([^"]+)"\s*;;')
@@ -74,14 +89,30 @@ def read_costs(prf):
     return costs
 
 def main():
-    if len(sys.argv) != 3 or sys.argv[1] not in FAMILIES:
-        sys.exit('usage: native_link.py (%s) BUILD' % '|'.join(sorted(FAMILIES)))
-    family, build = sys.argv[1], sys.argv[2]
+    args = sys.argv[1:]
+    allowed_open = []
+    if len(args) == 4 and args[2] == '--open':
+        allowed_open = [x for x in args[3].split(',') if x]
+        args = args[:2]
+    if len(args) != 2:
+        sys.exit('usage: native_link.py FAMILY BUILD [--open SPEC,...] (FAMILY '
+                 'one of %s, or any family with proofs/FAMILY/BUILD)'
+                 % '|'.join(sorted(FAMILIES)))
+    family, build = args[0], args[1]
     isa = os.path.basename(os.getcwd())
     if isa not in ('arm', 'x86'):
         sys.exit('native_link.py: run it in the arm or x86 directory')
-    api = re.compile(FAMILIES[family]['api'])
-    tail = FAMILIES[family]['tail']
+    # A family not in FAMILIES has no API pattern (every function is closed)
+    # and no tail; its spec files load proofs/FAMILY/relative.ml if there is
+    # one, the instruction set's wrapper otherwise.
+    own = 'proofs/%s/relative.ml' % family
+    conf = FAMILIES.get(family, {'api': None, 'tail': None,
+                                 'relative': ('%s/' + own) if os.path.isfile(own)
+                                             else RELATIVE})
+    api = conf['api']
+    api = re.compile(api) if api is not None else None
+    tail = conf['tail']
+    relative = conf.get('relative', RELATIVE)
     prf = 'proofs/%s/%s' % (family, build)
     here = '%s/%s/' % (isa, prf)
 
@@ -90,6 +121,41 @@ def main():
     deps = dict((x, [l[len(here):-8] for l in file_needs('%s/%s_spec.ml' % (prf, x))
                      if l.startswith(here) and l.endswith('_spec.ml')])
                 for x in files)
+    # The callees whose spec file has no proof file yet: their contracts
+    # stay open, and the theorems are closed relative to them.
+    open_specs = set(y for x in files for y in deps[x] if y not in deps)
+    # and, transitively, the callees of open spec files that have no proof
+    # file either (their contracts are assumptions of the open ones)
+    todo = list(open_specs)
+    while todo:
+        y = todo.pop()
+        for l in file_needs('%s/%s_spec.ml' % (prf, y)):
+            if l.startswith(here) and l.endswith('_spec.ml'):
+                z = l[len(here):-8]
+                if z not in deps and z not in open_specs:
+                    open_specs.add(z); todo.append(z)
+    # Specs named with --open that no proof loads, directly or through an
+    # open spec, are open too (if their spec file exists).
+    for y in allowed_open:
+        if y not in deps and y not in open_specs:
+            if not os.path.isfile('%s/%s_spec.ml' % (prf, y)):
+                sys.exit('native_link.py: --open %s: no %s_spec.ml' % (y, y))
+            open_specs.add(y)
+    open_specs = sorted(open_specs)
+    # A spec file that states no contract (no ..._STMT, e.g. one with shared
+    # definitions only) has nothing to leave open.
+    STMT0 = re.compile(r'^let\s+([A-Z0-9_]+_STMT)\s*=', re.M)
+    open_specs = [y for y in open_specs
+                  if STMT0.search(open('%s/%s_spec.ml' % (prf, y)).read())]
+    for y in open_specs:
+        if y not in allowed_open:
+            sys.exit('native_link.py: %s_spec.ml has no proof file '
+                     '(allow it with --open %s)' % (y, y))
+    deps = dict((x, [y for y in deps[x] if y in deps]) for x in files)
+    STMT = re.compile(r'^let\s+([A-Z0-9_]+_STMT)\s*=', re.M)
+    open_stmts = [t for y in open_specs
+                  for t in STMT.findall(open('%s/%s_spec.ml' % (prf, y)).read())]
+    allowed_tm = '[%s]' % '; '.join(open_stmts)
     order = []; seen = set()
     def visit(x, path):
         if x in seen: return
@@ -99,7 +165,7 @@ def main():
     for x in files: visit(x, [])
 
     # The theorems to close: those of the top-level functions and the tail
-    top = [x for x in files if api.match(x)]
+    top = [x for x in files if api is None or api.match(x)]
     if not top:
         needed = set(y for x in files for y in deps[x])
         top = [x for x in files if x not in needed]
@@ -135,7 +201,7 @@ def main():
            '(* closed: each assumption is discharged by the theorem proved for it, so    *)',
            '(* the theorems below have no assumptions.                                   *)',
            '(* ========================================================================= *)',
-           '', 'needs "%s";;' % (RELATIVE % isa), '',
+           '', 'needs "%s";;' % (relative % isa), '',
            '(* Each proof file as a functor, after the files that it loads *)', '']
 
     # Module names in lower case after the prefix: pa_j does not read some
@@ -172,12 +238,24 @@ def main():
                 % re.sub(r'([A-Z]+)([0-9]+)', r'\1 \2', tail.upper()), '']
         out += ['needs "%s%s";;' % (here, f) for f in tail_files]
         out.append('')
-    out += ['(* The contracts stated and proved, and those not proved, if any *)', '',
-            'relative_report ();;', '']
-    for t in job_thms:
-        out += ['let %s =' % t, '  relative_close (par_link_thm "%s");;' % t, '']
-    for t in tail_thms:
-        out += ['let %s =' % t, '  relative_close %s;;' % t, '']
+    if open_specs:
+        out += ['(* The contracts stated and proved, and the open ones, of the spec files',
+                '   without a proof file: %s *)' % ', '.join(open_specs), '',
+                'let relative_allowed_open = %s;;' % allowed_tm, '',
+                'relative_report_open relative_allowed_open;;', '']
+        for t in job_thms:
+            out += ['let %s =' % t, '  relative_close_open relative_allowed_open (par_link_thm "%s");;' % t,
+                    'relative_print_open "%s" %s;;' % (t, t), '']
+        for t in tail_thms:
+            out += ['let %s =' % t, '  relative_close_open relative_allowed_open %s;;' % t,
+                    'relative_print_open "%s" %s;;' % (t, t), '']
+    else:
+        out += ['(* The contracts stated and proved, and those not proved, if any *)', '',
+                'relative_report ();;', '']
+        for t in job_thms:
+            out += ['let %s =' % t, '  relative_close (par_link_thm "%s");;' % t, '']
+        for t in tail_thms:
+            out += ['let %s =' % t, '  relative_close %s;;' % t, '']
 
     full = [t for t in thms if t.endswith('_FULL') or
             (tail and t.endswith('_' + tail.upper()))]

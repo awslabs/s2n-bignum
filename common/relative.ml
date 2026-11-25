@@ -253,3 +253,61 @@ let relative_report () =
       Format.print_string "relative: not proved: "; print_qterm s;
       Format.print_newline()) unproved;
     failwith "relative_report: contracts not proved");;
+
+(* ------------------------------------------------------------------------- *)
+(* For a build in which some contracts are not proved yet (an open          *)
+(* contract between two streams of work), with the list of the statements   *)
+(* that may stay open, given explicitly: relative_close_open allowed th      *)
+(* discharges each assumption whose contract has a recorded theorem,         *)
+(* recursively, and keeps the assumptions of the contracts in allowed that   *)
+(* have none; it fails on any other contract without a theorem, so the       *)
+(* result is the theorem relative to exactly the allowed open contracts that *)
+(* it uses. relative_report_open allowed lists the open contracts and fails  *)
+(* if one of them is not allowed. relative_print_open prints the remaining   *)
+(* assumptions of a theorem.                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+let relative_is_allowed allowed s =
+  exists (fun t -> aconv (relative_contract_of t) s) allowed;;
+
+let relative_close_open (allowed:term list) =
+  let rec close visiting th =
+    itlist (fun h th ->
+      match relative_find_contract h with
+        None -> failwith("relative_close_open: no contract for "^string_of_term h)
+      | Some(s,p,c) ->
+          if exists (aconv s) visiting then
+            failwith("relative_close_open: circular contract: "^string_of_term s)
+          else if !p = [] then
+            if relative_is_allowed allowed s then th else
+            failwith("relative_close_open: contract not proved and not allowed open: "^
+                     string_of_term s)
+          else
+          let cth = match !c with
+              Some cth -> cth
+            | None -> close (s::visiting) (hd !p) in
+          let ith = INSTANTIATE (term_match [] (concl cth) h) cth in
+          let ith = if concl ith = h then ith
+                    else EQ_MP (ALPHA (concl ith) h) ith in
+          PROVE_HYP ith th) (hyp th) th in
+  close [];;
+
+let relative_report_open (allowed:term list) =
+  let l = rev(!relative_contracts) in
+  let unproved = filter (fun (_,p,_) -> !p = []) l in
+  Format.print_string(Printf.sprintf
+    "relative: %d contracts stated, %d proved, %d open"
+    (length l) (length l - length unproved) (length unproved));
+  Format.print_newline();
+  do_list (fun (s,_,_) ->
+    Format.print_string "relative: open: "; print_qterm s;
+    Format.print_newline()) unproved;
+  if exists (fun (s,_,_) -> not(relative_is_allowed allowed s)) unproved then
+    failwith "relative_report_open: contracts not proved and not allowed open";;
+
+let relative_print_open name th =
+  Format.print_string(Printf.sprintf "relative: %s: %d open contracts"
+    name (length(hyp th)));
+  Format.print_newline();
+  do_list (fun h -> Format.print_string "relative:   "; print_qterm h;
+                    Format.print_newline()) (hyp th);;
