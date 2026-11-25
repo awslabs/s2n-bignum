@@ -481,6 +481,100 @@ let lemma2 = prove
   ASM_SIMP_TAC[VAL_WORD_SUB_CASES; GSYM REAL_OF_NUM_SUB] THEN
   REAL_ARITH_TAC);;
 
+(* The sign cases of the Karatsuba-style 4x4 multiplication are handled     *)
+(* without case splits: the conditional negations are rewritten into        *)
+(* polynomials in the bits b = bitval(...) and then, since b^2 = b, the     *)
+(* final identity is a polynomial one that REAL_INTEGER_TAC can check.      *)
+
+let ADK_VAL_COND_NOT = prove
+ (`!(c:bool) (m:int64).
+        &(val(if c then word_not m else m)):real =
+        &(val m) + &(bitval c) * (&2 pow 64 - &1 - &2 * &(val m))`,
+  REPEAT GEN_TAC THEN BOOL_CASES_TAC `c:bool` THEN
+  REWRITE_TAC[BITVAL_CLAUSES; REAL_VAL_WORD_NOT; DIMINDEX_64] THEN
+  REAL_ARITH_TAC);;
+
+let ADK_VAL_MASK = prove
+ (`!b. &(val(word_neg(word(bitval b):int64))):real =
+       (&2 pow 64 - &1) * &(bitval b)`,
+  REWRITE_TAC[REAL_VAL_WORD_MASK; DIMINDEX_64]);;
+
+let ADK_CARRY_IN = prove
+ (`!b. bitval(2 EXP 64 <= val(word_neg(word(bitval b):int64)) + 1) =
+       bitval b`,
+  GEN_TAC THEN BOOL_CASES_TAC `b:bool` THEN REWRITE_TAC[BITVAL_CLAUSES] THEN
+  CONV_TAC WORD_REDUCE_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[BITVAL_CLAUSES]);;
+
+let ADK_SIGN = prove
+ (`!b. --(&1) pow bitval b = &1 - &2 * &(bitval b)`,
+  GEN_TAC THEN BOOL_CASES_TAC `b:bool` THEN REWRITE_TAC[BITVAL_CLAUSES] THEN
+  CONV_TAC REAL_RAT_REDUCE_CONV);;
+
+let ADK_BIT_POW = prove
+ (`(!b. &(bitval b) pow 2 = &(bitval b)) /\
+   (!b. &(bitval b) pow 3 = &(bitval b))`,
+  CONJ_TAC THEN GEN_TAC THEN BOOL_CASES_TAC `b:bool` THEN
+  REWRITE_TAC[BITVAL_CLAUSES] THEN CONV_TAC REAL_RAT_REDUCE_CONV);;
+
+let BITVAL_POW_CONV = GEN_REWRITE_CONV DEPTH_CONV [ADK_BIT_POW];;
+
+(* Rotation of a 9-word number by 9 bits: for s_i = 2^9 * q_i + r_i and  *)
+(* 2^521 == 1 (mod p_521), 2^512 * sum s_i 2^(64 i) is congruent to the    *)
+(* word-wise rotation, whose words are (2^55 * r_(i+1) + q_i).             *)
+
+let SQR_ROT_LEMMA = prove
+ (`!s0 s1 s2 s3 s4 s5 s6 s7 s8.
+    (2 EXP 512 *
+     (s0 + 2 EXP 64 * (s1 + 2 EXP 64 * (s2 + 2 EXP 64 * (s3 + 2 EXP 64 *
+      (s4 + 2 EXP 64 * (s5 + 2 EXP 64 * (s6 + 2 EXP 64 * (s7 + 2 EXP 64 *
+      (s8 + 2 EXP 64 * 0))))))))) ==
+     (2 EXP 55 * s1 MOD 2 EXP 9 + s0 DIV 2 EXP 9) + 2 EXP 64 *
+     ((2 EXP 55 * s2 MOD 2 EXP 9 + s1 DIV 2 EXP 9) + 2 EXP 64 *
+      ((2 EXP 55 * s3 MOD 2 EXP 9 + s2 DIV 2 EXP 9) + 2 EXP 64 *
+       ((2 EXP 55 * s4 MOD 2 EXP 9 + s3 DIV 2 EXP 9) + 2 EXP 64 *
+        ((2 EXP 55 * s5 MOD 2 EXP 9 + s4 DIV 2 EXP 9) + 2 EXP 64 *
+         ((2 EXP 55 * s6 MOD 2 EXP 9 + s5 DIV 2 EXP 9) + 2 EXP 64 *
+          ((2 EXP 55 * s7 MOD 2 EXP 9 + s6 DIV 2 EXP 9) + 2 EXP 64 *
+           ((2 EXP 55 * s8 MOD 2 EXP 9 + s7 DIV 2 EXP 9) + 2 EXP 64 *
+            ((s0 MOD 2 EXP 9 + s8 DIV 2 EXP 9) + 2 EXP 64 * 0)))))))))
+    (mod p_521)`,
+  REPEAT GEN_TAC THEN
+  MP_TAC(SPECL
+   (map (fun i -> mk_comb(mk_comb(`(DIV):num->num->num`,
+                           mk_var("s"^string_of_int i,`:num`)),`2 EXP 9`))
+        (0--8) @
+    map (fun i -> mk_comb(mk_comb(`(MOD):num->num->num`,
+                           mk_var("s"^string_of_int i,`:num`)),`2 EXP 9`))
+        (0--8))
+   (prove(`!q0 q1 q2 q3 q4 q5 q6 q7 q8 r0 r1 r2 r3 r4 r5 r6 r7 r8.
+    (2 EXP 512 *
+     ((2 EXP 9 * q0 + r0) + 2 EXP 64 *
+      ((2 EXP 9 * q1 + r1) + 2 EXP 64 *
+       ((2 EXP 9 * q2 + r2) + 2 EXP 64 *
+        ((2 EXP 9 * q3 + r3) + 2 EXP 64 *
+         ((2 EXP 9 * q4 + r4) + 2 EXP 64 *
+          ((2 EXP 9 * q5 + r5) + 2 EXP 64 *
+           ((2 EXP 9 * q6 + r6) + 2 EXP 64 *
+            ((2 EXP 9 * q7 + r7) + 2 EXP 64 *
+             ((2 EXP 9 * q8 + r8) + 2 EXP 64 * 0))))))))) ==
+     (2 EXP 55 * r1 + q0) + 2 EXP 64 *
+     ((2 EXP 55 * r2 + q1) + 2 EXP 64 *
+      ((2 EXP 55 * r3 + q2) + 2 EXP 64 *
+       ((2 EXP 55 * r4 + q3) + 2 EXP 64 *
+        ((2 EXP 55 * r5 + q4) + 2 EXP 64 *
+         ((2 EXP 55 * r6 + q5) + 2 EXP 64 *
+          ((2 EXP 55 * r7 + q6) + 2 EXP 64 *
+           ((2 EXP 55 * r8 + q7) + 2 EXP 64 *
+            ((r0 + q8) + 2 EXP 64 * 0)))))))))
+    (mod p_521)`,
+    REPEAT GEN_TAC THEN
+    REWRITE_TAC[REAL_CONGRUENCE; p_521; ARITH_EQ] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES] THEN
+    REAL_INTEGER_TAC))) THEN
+  REWRITE_TAC[ARITH_RULE `2 EXP 9 * (n DIV 2 EXP 9) + n MOD 2 EXP 9 = n`]);;
+
 let BIGNUM_SQR_P521_UNOPT_CORE_CORRECT = time prove
  (`!z x n pc.
         nonoverlapping (word pc,LENGTH bignum_sqr_p521_unopt_core_mc) (z,8 * 9)
@@ -771,21 +865,10 @@ let BIGNUM_SQR_P521_UNOPT_CORE_CORRECT = time prove
       REWRITE_TAC[VAL_WORD_USHR; VAL_WORD_AND_MASK_WORD] THEN
       MP_TAC(ISPEC `sum_s144:int64` VAL_BOUND_64) THEN ARITH_TAC;
       ALL_TAC] THEN
-    REWRITE_TAC[REAL_CONGRUENCE; p_521; ARITH_EQ] THEN
-    CONV_TAC NUM_REDUCE_CONV THEN
-    REWRITE_TAC[val_def; DIMINDEX_64; bignum_of_wordlist] THEN
-    REWRITE_TAC[ARITH_RULE `i < 64 <=> 0 <= i /\ i <= 63`] THEN
-    REWRITE_TAC[GSYM IN_NUMSEG; IN_GSPEC] THEN
-    REWRITE_TAC[BIT_WORD_SUBWORD; BIT_WORD_JOIN; BIT_WORD_USHR;
-                BIT_WORD_AND; BIT_WORD_SHL; DIMINDEX_64; DIMINDEX_128] THEN
-    CONV_TAC NUM_REDUCE_CONV THEN
-    CONV_TAC(ONCE_DEPTH_CONV EXPAND_NSUM_CONV) THEN
-    CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[BITVAL_CLAUSES] THEN
-    CONV_TAC WORD_REDUCE_CONV THEN REWRITE_TAC[BITVAL_CLAUSES] THEN
-    ONCE_REWRITE_TAC[BIT_GUARD] THEN REWRITE_TAC[DIMINDEX_64] THEN
-    CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[BITVAL_CLAUSES] THEN
-    REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES; p_521] THEN
-    REAL_INTEGER_TAC;
+    REWRITE_TAC[MATCH_MP VAL_WORD_SUBWORD_JOIN_64 (ARITH_RULE `9 <= 64`);
+                ARITH_RULE `64 - 9 = 55`; SYM(NUM_REDUCE_CONV `2 EXP 9 - 1`);
+                VAL_WORD_AND_MASK_WORD; VAL_WORD_USHR] THEN
+    MATCH_ACCEPT_TAC SQR_ROT_LEMMA;
     ALL_TAC] THEN
 
   (*** Squaring of the lower "half" ***)
@@ -893,14 +976,13 @@ let BIGNUM_SQR_P521_UNOPT_CORE_CORRECT = time prove
     ACCUMULATOR_POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
     POP_ASSUM_LIST(K ALL_TAC) THEN
     REWRITE_TAC[lemma1; lemma2] THEN REWRITE_TAC[WORD_XOR_MASK] THEN
-    REPEAT(COND_CASES_TAC THEN
-           ASM_REWRITE_TAC[BITVAL_CLAUSES; REAL_VAL_WORD_NOT]) THEN
-    CONV_TAC WORD_REDUCE_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
-    REWRITE_TAC[BITVAL_CLAUSES; DIMINDEX_64] THEN
-    POP_ASSUM_LIST(K ALL_TAC) THEN DISCH_TAC THEN
+    REWRITE_TAC[ADK_VAL_COND_NOT; ADK_VAL_MASK; ADK_CARRY_IN; ADK_SIGN] THEN
+    DISCH_TAC THEN
     FIRST_ASSUM(MP_TAC o end_itlist CONJ o DESUM_RULE o CONJUNCTS) THEN
     DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
-    CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN FIRST_ASSUM
+    CONV_TAC(RAND_CONV
+     (REAL_POLY_CONV THENC BITVAL_POW_CONV THENC REAL_POLY_CONV)) THEN
+    FIRST_ASSUM
      (MP_TAC o end_itlist CONJ o filter (is_ratconst o rand o concl) o
       DECARRY_RULE o CONJUNCTS) THEN
     DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC;
