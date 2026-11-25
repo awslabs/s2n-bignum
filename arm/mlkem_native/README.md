@@ -133,7 +133,9 @@ To add the proof of a function f to a build:
  - in `..`, `python3 ../tools/native_proofs_mk.py mlkem_native <build> >
    mlkem_native/<build>/proofs.mk` and `python3 ../tools/native_link.py
    mlkem_native <build> > proofs/mlkem_native/<build>/link.ml` update the
-   targets and the link file.
+   targets and the link file. CI checks that these two files are what
+   the generators write (`../../tools/check-native-generated.py`, which
+   checks all the builds of both families and instruction sets).
 
 `make mlkem_native/<build>/f_proof.correct` (in `..`) runs the proofs of
 f, and `make mlkem_native/<build>/link.correct` checks the whole build;

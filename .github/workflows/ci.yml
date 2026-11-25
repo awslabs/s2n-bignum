@@ -20,6 +20,9 @@ jobs:
         sudo apt update
         sudo apt install valgrind
 
+    - name: Check the generated files of the mlkem-native and mldsa-native builds
+      run: python3 tools/check-native-generated.py ${{ matrix.arch }}
+
     - name: Run tests
       run: |
         cd ${{ matrix.arch }}
