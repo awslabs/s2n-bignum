@@ -130,3 +130,20 @@ varies with the turbo and the AVX frequency licences (on a Cascade Lake
 Xeon, for example, 3.1 GHz for scalar code, 2.7 GHz while 256-bit
 multiplications run): each line also gives the time per call in ns and
 the clock of the run.
+
+`perf_kit.sh` makes the comparison on any machine, with more builds of
+mlkem-native, and needs nothing but itself (see its header):
+
+    curl -O https://raw.githubusercontent.com/awslabs/s2n-bignum/native-unify/tests/mlkem_native2/perf_kit.sh
+    bash perf_kit.sh ~/mlkem-perf
+
+It fetches s2n-bignum (the branch native-unify, or uses the checkout
+`S2N_DIR`) and mlkem-native, and builds the assembly (on x86_64 with
+AVX-512 also its AVX-512 version) and mlkem-native at the pinned commit
+and at main, with gcc and with clang, as its multilevel and its
+monolithic build, with the flags of its examples and with
+`-march=native`, and on x86_64 with AVX-512 with and without AVX-512.
+It measures all of them in turn with `bench_api.c`, in 11 rounds, and
+reports for each function the fastest mlkem-native build on the machine
+and the speedup over it: the AVX2 assembly against the builds without
+AVX-512, the AVX-512 one against all of them.
