@@ -140,9 +140,13 @@ def build_batch(arch, targets, build_dir, holdir, jobs, names=None):
         raise ValueError(f"proof compiler requires an empty build directory: {build_dir}")
     env = dict(os.environ, HOLLIGHT_DIR=str(holdir))
     pp = subprocess.check_output([holdir / "hol.sh", "-pp"], text=True, env=env).strip()
-    compiler = ["ocamlopt.byte", "-w", "-a", "-pp", pp, "-I", holdir, "-I", "+unix",
+    # A proof's top level compiles to one huge initialization function. The
+    # native compiler with linear-scan register allocation handles that about
+    # 7x faster than ocamlopt.byte with the default graph-colouring allocator
+    # (p256_scalarmul: 929 s -> 122 s), and it compiles even the largest
+    # plugins (~145K lines) within the default 8 MB stack.
+    compiler = ["ocamlopt.opt", "-linscan", "-w", "-a", "-pp", pp, "-I", holdir, "-I", "+unix",
                 "-I", build_dir, "-c"]
-    compiler_env = dict(env, OCAMLRUNPARAM="l=2000000000")
 
     def inline(label, source, dest):
         run(label, ["ocaml", holdir / "inline_load.ml", source, dest], env=env)
@@ -172,7 +176,7 @@ def build_batch(arch, targets, build_dir, holdir, jobs, names=None):
                        os.path.relpath(native, arch)], cwd=arch,
                 env=dict(env, TMPDIR=str(build_dir)))
             return native
-        run(name, [*compiler, source], env=compiler_env)
+        run(name, [*compiler, source], env=env)
         plugin = source.with_suffix(".cmxs")
         run(name, ["ocamlopt", "-shared", "-I", holdir, "-I", build_dir,
                    source.with_suffix(".cmx"), "-o", plugin])
@@ -204,7 +208,7 @@ def build_batch(arch, targets, build_dir, holdir, jobs, names=None):
         start = time.monotonic()
         mapper = build_exporter(build_dir)
         run("proofs/base.ml", [*compiler, "-ppx", shlex.quote(str(mapper)), base_ml],
-            env=compiler_env)
+            env=env)
         print(f"Compiled the shared base ({time.monotonic() - start:.1f} s)", flush=True)
         artifacts = list(pool.map(compile_proof, enumerate(sources)))
     print_slowest("compiles", seconds)
