@@ -235,6 +235,18 @@ let NTT_SMALL_TAC =
               (MP_TAC th THEN SIMPLE_ARITH_TAC) else NO_TAC)))) THEN
   SIMPLE_ARITH_TAC;;
 
+(*** The arithmetic side conditions: SIMPLE_ARITH_TAC, from the simple     ***)
+(*** arithmetic facts, and only then ASM_ARITH_TAC, which is slow with the ***)
+(*** many facts of the simulations; for an equation of words, also as the  ***)
+(*** equation of their arguments (AP_TERM_TAC) before ASM_ARITH_TAC, which ***)
+(*** fails slowly on it.                                                   ***)
+
+let NTT_ARITH_TAC = SIMPLE_ARITH_TAC ORELSE ASM_ARITH_TAC;;
+
+let NTT_EQ_ARITH_TAC =
+  SIMPLE_ARITH_TAC ORELSE (AP_TERM_TAC THEN SIMPLE_ARITH_TAC) ORELSE
+  ASM_ARITH_TAC ORELSE (AP_TERM_TAC THEN ASM_ARITH_TAC);;
+
 let REG_SMALL_TAC r v =
   FIRST_X_ASSUM(fun th ->
     let l,t = dest_eq(concl th) in
@@ -281,7 +293,7 @@ let VAL_WORD_ADD_CASES_TAC =
     let t = find_term
       (can (term_match [] `val(word_add (a:int64) (word p))`)) w in
     MP_TAC(PART_MATCH (lhand o rand) VAL_WORD_ADD_SMALL_CASES t) THEN
-    ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN SUBST1_TAC]));;
+    ANTS_TAC THENL [NTT_ARITH_TAC; DISCH_THEN SUBST1_TAC]));;
 
 let NTT_ALIAS_VEC_STMT =
   `!a:int64 p q.
@@ -626,7 +638,7 @@ let NTT_DBLOCK_SPLIT_TAC =
          ==> read(memory :> bytes16(word_add a (word(2 * j)))) s0 = m j)`
   STRIP_ASSUME_TAC THENL
    [CONJ_TAC THEN REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ASM_ARITH_TAC;
+    NTT_ARITH_TAC;
     ALL_TAC] THEN
   FIRST_X_ASSUM(fun th ->
     if is_forall(concl th) && free_in `m:num->int16` (concl th) &&
@@ -641,7 +653,7 @@ let NTT_DBLOCK_SPLIT_TAC =
                                           `start + 4 + K`) th,
                               rule NTT_D_ADDR2) (0--3) in
       MAP_EVERY (fun (t,r) -> MP_TAC t THEN ANTS_TAC THENL
-                  [ASM_ARITH_TAC; DISCH_THEN(ASSUME_TAC o r)]) ths
+                  [NTT_ARITH_TAC; DISCH_THEN(ASSUME_TAC o r)]) ths
     else failwith "NTT_DBLOCK_SPLIT_TAC");;
 
 (*** The statement of the block lemmas for blocks of len + len coefficients
@@ -869,7 +881,7 @@ let INVNTT_BLOCK_TAC l b =
     (INST [mk_small_numeral l,`l:num`; b,`b:num`]
           (SPEC_ALL(CONJUNCT2 invntt_blocks_c)))) in
   MP_TAC th THEN ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN
-  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN NTT_ARITH_TAC; ALL_TAC] THEN
   DISCH_THEN(ENSURES_WEAKEN_TAC o CONV_RULE NUM_REDUCE_CONV) THEN
   REPEAT CONJ_TAC THENL
    [GEN_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
@@ -1326,8 +1338,7 @@ let INVNTT_SAFE_SIM_TAC pre_tac n =
   REPEAT(CONJ_TAC THENL
    [W(fun (_,w) -> if is_exists w then NO_TAC else ALL_TAC) THEN
     REPEAT COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-    (NTT_SMALL_TAC ORELSE ASM_ARITH_TAC ORELSE
-     (AP_TERM_TAC THEN ASM_ARITH_TAC));
+    (NTT_SMALL_TAC ORELSE NTT_EQ_ARITH_TAC);
     ALL_TAC]) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC;;
 
@@ -1459,7 +1470,7 @@ let INVNTT_SBLOCK_HEAD_SAFE_TAC long =
    ARM_STEPS_TAC MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O3_EXEC (19--20) THEN
    MP_TAC(SPECL [`a:int64`; `2 * start`] NTT_ALIAS_SCALAR) THEN
    ANTS_TAC THENL
-    [ASM_ARITH_TAC;
+    [NTT_ARITH_TAC;
      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
    ARM_STEPS_TAC MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O3_EXEC (21--21)) THEN
   ARM_STEPS_TAC MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_O3_EXEC
@@ -1496,7 +1507,7 @@ let INVNTT_SBLOCK_SAFE_TAC long =
           read(memory :> bytes64(word_add sp (word 16))) s = x21v /\
           read(memory :> bytes64(word_add sp (word 24))) s = ra` THEN
   REPEAT CONJ_TAC THENL
-   [ASM_ARITH_TAC;
+   [NTT_ARITH_TAC;
 
     INVNTT_SBLOCK_HEAD_SAFE_TAC long;
 
@@ -1525,7 +1536,7 @@ let INVNTT_SBLOCK_SAFE_TAC long =
       let t = rand(rator(rator(find_term
                 (fun t -> is_cond t && is_neg(rand(rator(rator t)))) w))) in
       SUBGOAL_THEN (mk_eq(t,`i + 1 < len`)) SUBST_ALL_TAC THENL
-       [ASM_ARITH_TAC; ALL_TAC]) THEN
+       [NTT_ARITH_TAC; ALL_TAC]) THEN
     REWRITE_TAC[GSYM CONJ_ASSOC] THEN
     CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
     CONJ_TAC THENL [AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
@@ -1712,11 +1723,11 @@ let LSAFE_TEST_TAC k =
          let c = rand(rator(rator(hd(sort (fun a b -> free_in b a) tms)))) in
          if c = subst [k,`K:num`] `i + 1 < K` then ALL_TAC (asl,w) else
          (SUBGOAL_THEN (mk_eq(c,subst [k,`K:num`] `~(i + 1 < K)`))
-          SUBST_ALL_TAC THENL [ASM_ARITH_TAC; ALL_TAC]) (asl,w)) THEN
+          SUBST_ALL_TAC THENL [NTT_ARITH_TAC; ALL_TAC]) (asl,w)) THEN
   REPEAT(CONJ_TAC THENL
    [W(fun (_,w) -> if is_exists w then NO_TAC else ALL_TAC) THEN
     REPEAT COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-    (ASM_ARITH_TAC ORELSE (AP_TERM_TAC THEN ASM_ARITH_TAC));
+    NTT_EQ_ARITH_TAC;
     ALL_TAC]) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC;;
 

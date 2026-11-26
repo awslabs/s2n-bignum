@@ -280,6 +280,18 @@ let invntt_blockhead_tm =
                     headtm in
     rhs(concl(NUM_REDUCE_CONV tm'));;
 
+(*** The arithmetic side conditions: SIMPLE_ARITH_TAC, from the simple     ***)
+(*** arithmetic facts, and only then ASM_ARITH_TAC, which is slow with the ***)
+(*** many facts of the simulations; for an equation of words, also as the  ***)
+(*** equation of their arguments (AP_TERM_TAC) before ASM_ARITH_TAC, which ***)
+(*** fails slowly on it.                                                   ***)
+
+let NTT_ARITH_TAC = SIMPLE_ARITH_TAC ORELSE ASM_ARITH_TAC;;
+
+let NTT_EQ_ARITH_TAC =
+  SIMPLE_ARITH_TAC ORELSE (AP_TERM_TAC THEN SIMPLE_ARITH_TAC) ORELSE
+  ASM_ARITH_TAC ORELSE (AP_TERM_TAC THEN ASM_ARITH_TAC);;
+
 (*** Apply the block lemma at the head of block b of layer l ***)
 
 let INVNTT_BLOCK_TAC l b =
@@ -297,7 +309,7 @@ let INVNTT_BLOCK_TAC l b =
     (INST [mk_small_numeral l,`l:num`; b,`b:num`]
           (SPEC_ALL(CONJUNCT2 invntt_blocks_c)))) in
   MP_TAC th THEN ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN
-  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN NTT_ARITH_TAC; ALL_TAC] THEN
   DISCH_THEN(ENSURES_WEAKEN_TAC o CONV_RULE NUM_REDUCE_CONV) THEN
   REPEAT CONJ_TAC THENL
    [GEN_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
@@ -424,7 +436,7 @@ let INVNTT_LAYERS_TAC =
 
     X_GEN_TAC `n:num` THEN STRIP_TAC THEN
     SUBGOAL_THEN `(6 - n) + 1 = 7 - n` ASSUME_TAC THENL
-     [ASM_ARITH_TAC; ALL_TAC] THEN
+     [NTT_ARITH_TAC; ALL_TAC] THEN
     ENSURES_SEQUENCE_TAC `pc + mlkem_poly_invntt_tomont_loop2_test`
      `\s. aligned_bytes_loaded s (word pc)
             mlkem_native_libmlkem_gcc12_Os_mc /\
@@ -445,7 +457,7 @@ let INVNTT_LAYERS_TAC =
                     `invntt_layers_c n x`; `w30:int64`]
              MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_OS_LAYER) THEN
       ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN
-      ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+      ANTS_TAC THENL [NTT_ARITH_TAC; ALL_TAC] THEN
       DISCH_THEN(ENSURES_WEAKEN_TAC) THEN
       REPEAT CONJ_TAC THENL
        [GEN_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
@@ -458,7 +470,7 @@ let INVNTT_LAYERS_TAC =
       ARM_STEPS_TAC MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_OS_EXEC (2--2) THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
       CONJ_TAC THENL
-       [REPEAT COND_CASES_TAC THEN REWRITE_TAC[] THEN ASM_ARITH_TAC;
+       [REPEAT COND_CASES_TAC THEN REWRITE_TAC[] THEN NTT_ARITH_TAC;
         WORD_SMALL_TAC]];
 
     (*** The exit after the last layer ***)
@@ -544,11 +556,11 @@ let INVNTT_SCALE_TAC =
              (MESON[] `!R P Q. (!i:num. P i ==> Q i)
                                ==> (!i. P i /\ R i ==> Q i)`)) th))
       else failwith "") THEN
-    ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    ANTS_TAC THENL [NTT_ARITH_TAC; ALL_TAC] THEN
     ASM_SIMP_TAC[ARITH_RULE `i < 256 ==> ~(i < i)`] THEN DISCH_TAC THEN
     SUBGOAL_THEN `val(word i:int64) = i` ASSUME_TAC THENL
      [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN MATCH_MP_TAC MOD_LT THEN
-      ASM_ARITH_TAC;
+      NTT_ARITH_TAC;
       ALL_TAC] THEN
     ARM_STEPS_TAC MLKEM_NATIVE_POLY_INVNTT_TOMONT_GCC12_OS_EXEC (1--8) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -563,7 +575,7 @@ let INVNTT_SCALE_TAC =
     FIRST_X_ASSUM(MP_TAC o SPEC `j:num` o check (fun th ->
       is_forall(concl th) && free_in `x:num->int16` (concl th))) THEN
     ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
-    REPEAT COND_CASES_TAC THEN REWRITE_TAC[] THEN ASM_ARITH_TAC;
+    REPEAT COND_CASES_TAC THEN REWRITE_TAC[] THEN NTT_ARITH_TAC;
 
     (*** The back edge ***)
 
@@ -939,10 +951,10 @@ let LSAFE_TEST_TAC n =
      | tms ->
          let c = rand(rator(rator(hd(sort (fun a b -> free_in b a) tms)))) in
          (SUBGOAL_THEN (mk_eq(c,subst [n,`N:num`] `i + 1 < N`))
-           SUBST_ALL_TAC THENL [ASM_ARITH_TAC; ALL_TAC]) (asl,w)) THEN
+           SUBST_ALL_TAC THENL [NTT_ARITH_TAC; ALL_TAC]) (asl,w)) THEN
   REPEAT(CONJ_TAC THENL
    [REPEAT COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-    (ASM_ARITH_TAC ORELSE (AP_TERM_TAC THEN ASM_ARITH_TAC));
+    NTT_EQ_ARITH_TAC;
     ALL_TAC]) THEN
   REWRITE_TAC[APPEND_NIL] THEN
   DISCHARGE_SAFETY_PROPERTY_TAC;;

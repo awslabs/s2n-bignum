@@ -35,7 +35,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_BLOCK = prove
                        start + len <= i /\ i < start + len + jj
                     then ntt_block_c z start len m i else m i)` THEN
   REPEAT CONJ_TAC THENL
-   [ASM_ARITH_TAC;
+   [NTT_ARITH_TAC;
 
     (*** Setting up the pointers for the inner loop ***)
 
@@ -59,7 +59,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_BLOCK = prove
              (MESON[] `!R P Q. (!i:num. P i ==> Q i)
                                ==> (!i. P i /\ R i ==> Q i)`)) th))
       else failwith "") THEN
-    ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    ANTS_TAC THENL [NTT_ARITH_TAC; ALL_TAC] THEN
     ASM_SIMP_TAC[ARITH_RULE
      `jj < len
       ==> ~(start <= start + len + jj /\ start + len + jj < start + jj) /\
@@ -67,7 +67,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_BLOCK = prove
             start + len + jj < start + len + jj)`] THEN
     REWRITE_TAC[ARITH_RULE
      `2 * (start + len + jj) = 2 * (start + jj) + 2 * len`] THEN
-    DISCH_TAC THEN ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    DISCH_TAC THEN ANTS_TAC THENL [NTT_ARITH_TAC; ALL_TAC] THEN
     ASM_SIMP_TAC[ARITH_RULE
      `jj < len
       ==> ~(start <= start + jj /\ start + jj < start + jj) /\
@@ -75,7 +75,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_BLOCK = prove
     DISCH_TAC THEN
     SUBGOAL_THEN `val(word len:int64) = len` ASSUME_TAC THENL
      [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN MATCH_MP_TAC MOD_LT THEN
-      ASM_ARITH_TAC;
+      NTT_ARITH_TAC;
       ALL_TAC] THEN
     ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_EXEC (1--12) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -110,7 +110,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_BLOCK = prove
     FIRST_X_ASSUM(MP_TAC o SPEC `i:num` o check (fun th ->
       is_forall(concl th) && free_in `m:num->int16` (concl th))) THEN
     ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
-    AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
+    AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN NTT_ARITH_TAC;
 
     (*** The inner loop back-edge ***)
 
@@ -134,7 +134,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_BLOCK = prove
     ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
     COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[ntt_block_c] THEN
-    REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN ASM_ARITH_TAC]);;
+    REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN NTT_ARITH_TAC]);;
 
 let MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_LAYER = prove
  (MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_LAYER_STMT,
@@ -159,7 +159,7 @@ let NTT_BLOCKS_C_CLOSED = prove
   ASM_CASES_TAC `2 * n * b <= i /\ i < 2 * n * b + 2 * n` THENL
    [SUBGOAL_THEN `i DIV (2 * n) = b /\ i MOD (2 * n) = i - 2 * n * b`
     STRIP_ASSUME_TAC THENL
-     [MATCH_MP_TAC DIVMOD_UNIQ THEN ASM_ARITH_TAC; ALL_TAC] THEN
+     [MATCH_MP_TAC DIVMOD_UNIQ THEN NTT_ARITH_TAC; ALL_TAC] THEN
     ASM_REWRITE_TAC[] THEN
     ASM_SIMP_TAC[ARITH_RULE
      `2 * n * b <= i /\ i < 2 * n * b + 2 * n
@@ -170,11 +170,11 @@ let NTT_BLOCKS_C_CLOSED = prove
      `2 * n * b <= i /\ i < 2 * n * b + n ==> i - 2 * n * b < n`;
      ARITH_RULE `~(i < 2 * n * b + n) ==> ~(i - 2 * n * b < n)`;
      ARITH_RULE `~(i < 2 * n * b + n) ==> ~(i - n < 2 * n * b)`] THEN
-    ASM_ARITH_TAC;
+    NTT_ARITH_TAC;
     ASM_SIMP_TAC[ARITH_RULE
      `~(p <= i /\ i < p + 2 * n)
       ==> ~(p <= i /\ i < p + n) /\ ~(p + n <= i /\ i < p + 2 * n)`] THEN
-    AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC]);;
+    AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN NTT_ARITH_TAC]);;
 
 let NTT_LAYERS_C_STEP = prove
  (NTT_LAYERS_C_STEP_STMT,
@@ -295,7 +295,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_BLOCK_SAFE = prove
           read X16 s = w15 /\ read X17 s = w16 /\ read X18 s = w17 /\
           read X30 s = returnaddress` THEN
   REPEAT CONJ_TAC THENL
-   [ASM_ARITH_TAC;
+   [NTT_ARITH_TAC;
 
     (*** Setting up the pointers for the inner loop ***)
 
@@ -315,7 +315,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_BLOCK_SAFE = prove
     TRY STRIP_EXISTS_ASSUM_TAC THEN
     SUBGOAL_THEN `val(word len:int64) = len` ASSUME_TAC THENL
      [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN MATCH_MP_TAC MOD_LT THEN
-      ASM_ARITH_TAC;
+      NTT_ARITH_TAC;
       ALL_TAC] THEN
     ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_EXEC (1--12) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
@@ -326,7 +326,7 @@ let MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_BLOCK_SAFE = prove
     ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_GCC12_O2_MONO_EXEC (14--14) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     SUBGOAL_THEN `~(2 * (start + len) = 2 * (start + i) + 2) <=> i + 1 < len`
-     SUBST_ALL_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+     SUBST_ALL_TAC THENL [NTT_ARITH_TAC; ALL_TAC] THEN
     CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
     CONJ_TAC THENL [AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;

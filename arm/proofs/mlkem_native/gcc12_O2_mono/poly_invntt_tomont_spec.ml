@@ -323,6 +323,18 @@ let invntt_blockhead_tm,invntt_blockend_tm =
     rhs(concl(NUM_REDUCE_CONV tm')) in
   (fun l b -> mk headtm l b),(fun l b -> mk endtm l b);;
 
+(*** The arithmetic side conditions: SIMPLE_ARITH_TAC, from the simple     ***)
+(*** arithmetic facts, and only then ASM_ARITH_TAC, which is slow with the ***)
+(*** many facts of the simulations; for an equation of words, also as the  ***)
+(*** equation of their arguments (AP_TERM_TAC) before ASM_ARITH_TAC, which ***)
+(*** fails slowly on it.                                                   ***)
+
+let NTT_ARITH_TAC = SIMPLE_ARITH_TAC ORELSE ASM_ARITH_TAC;;
+
+let NTT_EQ_ARITH_TAC =
+  SIMPLE_ARITH_TAC ORELSE (AP_TERM_TAC THEN SIMPLE_ARITH_TAC) ORELSE
+  ASM_ARITH_TAC ORELSE (AP_TERM_TAC THEN ASM_ARITH_TAC);;
+
 (*** Apply the block lemma at the head of block b of layer l ***)
 
 let INVNTT_BLOCK_TAC l b =
@@ -340,7 +352,7 @@ let INVNTT_BLOCK_TAC l b =
     (INST [mk_small_numeral l,`l:num`; b,`b:num`]
           (SPEC_ALL(CONJUNCT2 invntt_blocks_c)))) in
   MP_TAC th THEN ASM_REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALL] THEN
-  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN NTT_ARITH_TAC; ALL_TAC] THEN
   DISCH_THEN(ENSURES_WEAKEN_TAC o CONV_RULE NUM_REDUCE_CONV) THEN
   REPEAT CONJ_TAC THENL
    [GEN_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
@@ -949,11 +961,11 @@ let LSAFE_TEST_TAC k =
          let c = rand(rator(rator(hd(sort (fun a b -> free_in b a) tms)))) in
          if c = subst [k,`K:num`] `i + 1 < K` then ALL_TAC (asl,w) else
          (SUBGOAL_THEN (mk_eq(c,subst [k,`K:num`] `~(i + 1 < K)`))
-          SUBST_ALL_TAC THENL [ARITH_TAC ORELSE ASM_ARITH_TAC; ALL_TAC])
+          SUBST_ALL_TAC THENL [ARITH_TAC ORELSE NTT_ARITH_TAC; ALL_TAC])
          (asl,w)) THEN
   REPEAT(CONJ_TAC THENL
    [REPEAT COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-    ((AP_TERM_TAC THEN ARITH_TAC) ORELSE ARITH_TAC ORELSE ASM_ARITH_TAC);
+    ((AP_TERM_TAC THEN ARITH_TAC) ORELSE ARITH_TAC ORELSE NTT_ARITH_TAC);
     ALL_TAC]) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC;;
 
@@ -970,7 +982,7 @@ let LSAFE_SIM_TAC pre_tac n =
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
   REPEAT(CONJ_TAC THENL
    [REPEAT COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-    ((AP_TERM_TAC THEN ARITH_TAC) ORELSE ARITH_TAC ORELSE ASM_ARITH_TAC);
+    ((AP_TERM_TAC THEN ARITH_TAC) ORELSE ARITH_TAC ORELSE NTT_ARITH_TAC);
     ALL_TAC]) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC;;
 
