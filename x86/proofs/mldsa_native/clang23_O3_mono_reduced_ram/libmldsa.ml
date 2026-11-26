@@ -1,0 +1,43 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+(* ========================================================================= *)
+(* The code and read-only data of mldsa-native's libmldsa.so for x86-64      *)
+(* compiled by clang 23 with -O3, in the monolithic layout and with          *)
+(* MLD_CONFIG_REDUCE_RAM (see mldsa_native/clang23_O3_mono_reduced_ram/      *)
+(* README.md), as one image. The code refers to other code                   *)
+(* and data in the image only by displacements from the instruction pointer, *)
+(* so the image works in the same way wherever it is loaded. The theorems    *)
+(* about the image assume that it is loaded at an address pc that is a       *)
+(* multiple of 4096, as the dynamic loader does, and that it does not wrap   *)
+(* around the end of the address space, i.e. pc + libmldsa_size <= 2 EXP 64. *)
+(* A function f in it is then at pc + f, with the names for the addresses    *)
+(* and sizes in the binary that are listed in layout.ml.                     *)
+(* ========================================================================= *)
+
+needs "x86/proofs/base.ml";;
+needs "x86/proofs/mldsa_native/clang23_O3_mono_reduced_ram/layout.ml";;
+needs "x86/proofs/utils/mldsa_native.ml";;
+
+let mldsa_native_libmldsa_clang23_O3_mono_reduced_ram_mc = define_from_elf
+  "mldsa_native_libmldsa_clang23_O3_mono_reduced_ram_mc"
+  "x86/mldsa_native/clang23_O3_mono_reduced_ram/libmldsa.o";;
+
+let LENGTH_MLDSA_NATIVE_LIBMLDSA_CLANG23_O3_MONO_REDUCED_RAM_MC =
+  CONV_RULE(RAND_CONV LENGTH_CONV)
+   (AP_TERM `LENGTH:byte list->num`
+     mldsa_native_libmldsa_clang23_O3_mono_reduced_ram_mc);;
+
+(* The image has the size given in the layout file.                          *)
+
+let () =
+  if dest_small_numeral(rhs(concl
+    LENGTH_MLDSA_NATIVE_LIBMLDSA_CLANG23_O3_MONO_REDUCED_RAM_MC)) <>
+     layout "libmldsa_size"
+  then failwith "The size of the image is not libmldsa_size";;
+
+(* The image for the tools of utils/ that simulate calls in it.              *)
+
+mldsa_native_image := mldsa_native_libmldsa_clang23_O3_mono_reduced_ram_mc;;
