@@ -223,12 +223,14 @@ let CHUNK16_OUTPUT_SPLIT_STMT =
 
 let CHUNK16_OUTPUT_SPLIT = assume_spec CHUNK16_OUTPUT_SPLIT_STMT;;
 
-let NTT_STEP_TAC n =
+let NTT_STEP_TAC =
+  let ishr = `word_ishr:int32->num->int32` in
+  fun n ->
   ARM_STEPS_TAC MLKEM_NATIVE_POLY_NTT_CLANG17_O3_EXEC [n] THEN
   MLKEM_NATIVE_ADRP_TAC THEN MLKEM_NATIVE_INTERLEAVE_TAC THEN
   SIMD_SIMPLIFY_TAC[] THEN RULE_ASSUM_TAC(REWRITE_RULE NTT_SHL_RULES) THEN
   RULE_ASSUM_TAC(fun th ->
-    if free_in `word_ishr:int32->num->int32` (concl th)
+    if free_in ishr (concl th)
     then CONV_RULE(ONCE_DEPTH_CONV(MULCACHE_LANE_CONV ORELSEC
                                    BASEMUL_LANE_CONV)) th else th);;
 

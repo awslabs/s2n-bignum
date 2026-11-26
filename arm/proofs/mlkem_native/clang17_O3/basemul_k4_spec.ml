@@ -303,11 +303,13 @@ let BASEMUL_LANE_CONV =
 
 (*** One step of the simulation of the vector loop ***)
 
-let BASEMUL_STEP_TAC n =
+let BASEMUL_STEP_TAC =
+  let ishr = `word_ishr:int32->num->int32` in
+  fun n ->
   ARM_STEPS_TAC MLKEM_NATIVE_BASEMUL_K4_CLANG17_O3_EXEC [n] THEN
   SIMD_SIMPLIFY_TAC[] THEN
   RULE_ASSUM_TAC(fun th ->
-    if free_in `word_ishr:int32->num->int32` (concl th)
+    if free_in ishr (concl th)
     then CONV_RULE(ONCE_DEPTH_CONV BASEMUL_LANE_CONV) th else th);;
 
 (*** The loop test, at the end of the body ***)

@@ -320,16 +320,18 @@ let WORD_ZX_ZX_64_128 = assume_spec WORD_ZX_ZX_64_128_STMT;;
 (* The simulation, and lemmas for the loops.                                 *)
 (* ------------------------------------------------------------------------- *)
 
-let INVNTT_STEP_TAC n =
+let INVNTT_STEP_TAC =
+  let ishr = `word_ishr:int32->num->int32` and bty = `:byte` in
+  fun n ->
   ARM_STEPS_TAC MLKEM_NATIVE_POLY_INVNTT_TOMONT_CLANG17_O3_EXEC [n] THEN
   MLKEM_NATIVE_ADRP_TAC THEN MLKEM_NATIVE_INTERLEAVE_TAC THEN
   SIMD_SIMPLIFY_TAC[] THEN
   RULE_ASSUM_TAC(fun th ->
-    if free_in `word_ishr:int32->num->int32` (concl th)
+    if free_in ishr (concl th)
     then CONV_RULE(ONCE_DEPTH_CONV(MULCACHE_LANE_CONV ORELSEC
                                    BASEMUL_LANE_CONV ORELSEC
                                    REWR_CONV BARRED_VEC_LANE)) th
-    else if can (find_term (fun t -> type_of t = `:byte`)) (concl th)
+    else if can (find_term (fun t -> type_of t = bty)) (concl th)
     then CONV_RULE(SIMD_SIMPLIFY_CONV[]) (REWRITE_RULE INVNTT_TBL_RULES th)
     else th);;
 

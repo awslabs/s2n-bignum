@@ -151,7 +151,8 @@ let BYTES_BITBLAST_TAC (asl,w) =
   ACCEPT_TAC (INST (zip bts vs) th) (asl,w);;
 
 let MLKEM_NATIVE_ADRP_TAC =
-  let mask = `word 0xFFFFFFFFFFFFF000:int64` in
+  let mask = `word 0xFFFFFFFFFFFFF000:int64`
+  and aligned_pc = `aligned 4096 (word pc:int64)` in
   let is_page t =
     match t with
       Comb(Comb(Const("word_and",_),
@@ -160,8 +161,7 @@ let MLKEM_NATIVE_ADRP_TAC =
         -> m = mask && is_numeral k
     | _ -> false in
   W(fun (asl,w) ->
-    let ath = snd(find (fun (_,th) ->
-                concl th = `aligned 4096 (word pc:int64)`) asl) in
+    let ath = snd(find (fun (_,th) -> concl th = aligned_pc) asl) in
     let pth = GEN_ALL(CONJUNCT1(SPEC_ALL(MATCH_MP PAGE_ADD_ALIGNED
                 (REWRITE_RULE[ALIGNED_4096_WORD_AND] ath)))) in
     let conv t =
