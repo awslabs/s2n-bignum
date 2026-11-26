@@ -108,7 +108,10 @@ async def run_tree(cli, build_dir, layers, tasks, jobs, log_dir):
                 release(child, error)
         else:
             ready_layers.extend(children[parent])
-            ready_proofs.extend(proofs[parent])
+            # Put a newly ready session's proofs first. They waited for its
+            # chain of loads, and deep sessions hold the longest proofs, such
+            # as p384_montjscalarmul, which bound the batch's wall time.
+            ready_proofs.extendleft(reversed(proofs[parent]))
 
     async def initialize(session):
         started = time.monotonic()
