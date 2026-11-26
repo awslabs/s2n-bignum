@@ -15,6 +15,7 @@
 (* the domain separation prefix and when signing succeeds.                   *)
 (* ========================================================================= *)
 
+needs "x86/proofs/base.ml";;
 needs "common/mldsa_native_sign.ml";;
 needs "common/mldsa_native_prefix.ml";;
 needs "x86/proofs/utils/mldsa_native_libc.ml";;

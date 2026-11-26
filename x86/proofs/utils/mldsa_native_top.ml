@@ -13,6 +13,7 @@
 (* (PFS_FULL_TAC).                                                           *)
 (* ========================================================================= *)
 
+needs "x86/proofs/base.ml";;
 needs "common/mldsa_native_sign.ml";;
 needs "x86/proofs/utils/mldsa_native_full.ml";;
 needs "x86/proofs/utils/mldsa_native_realign.ml";;
