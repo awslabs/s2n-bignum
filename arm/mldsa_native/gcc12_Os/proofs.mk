@@ -8222,6 +8222,7 @@ mldsa_native/gcc12_Os/signature_44_proof.native: \
   ../common/mldsa_native_fips202.ml \
   ../common/fips204/properties/mldsa_native_hash.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   ../common/mldsa_native_polyvec.ml \
@@ -8240,6 +8241,8 @@ mldsa_native/gcc12_Os/signature_44_proof.native: \
   proofs/utils/keccak_fips202.ml \
   ../common/fips204/properties/mldsa_native_absorb.ml \
   ../common/fips202/fips202.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/par.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/fips204/properties/mldsa_native_prefix.ml \
@@ -8248,19 +8251,16 @@ mldsa_native/gcc12_Os/signature_44_proof.native: \
   ../common/consttime.ml \
   ../common/mldsa_native_poly.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
-  ../common/maychange.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  ../common/maychange.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_65_proof.native: \
@@ -8289,6 +8289,7 @@ mldsa_native/gcc12_Os/signature_65_proof.native: \
   ../common/mldsa_native_fips202.ml \
   ../common/fips204/properties/mldsa_native_hash.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   ../common/mldsa_native_polyvec.ml \
@@ -8307,6 +8308,8 @@ mldsa_native/gcc12_Os/signature_65_proof.native: \
   proofs/utils/keccak_fips202.ml \
   ../common/fips204/properties/mldsa_native_absorb.ml \
   ../common/fips202/fips202.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/par.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/fips204/properties/mldsa_native_prefix.ml \
@@ -8315,19 +8318,16 @@ mldsa_native/gcc12_Os/signature_65_proof.native: \
   ../common/consttime.ml \
   ../common/mldsa_native_poly.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
-  ../common/maychange.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  ../common/maychange.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_87_proof.native: \
@@ -8356,6 +8356,7 @@ mldsa_native/gcc12_Os/signature_87_proof.native: \
   ../common/mldsa_native_fips202.ml \
   ../common/fips204/properties/mldsa_native_hash.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   ../common/mldsa_native_polyvec.ml \
@@ -8374,6 +8375,8 @@ mldsa_native/gcc12_Os/signature_87_proof.native: \
   proofs/utils/keccak_fips202.ml \
   ../common/fips204/properties/mldsa_native_absorb.ml \
   ../common/fips202/fips202.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/par.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/fips204/properties/mldsa_native_prefix.ml \
@@ -8382,19 +8385,16 @@ mldsa_native/gcc12_Os/signature_87_proof.native: \
   ../common/consttime.ml \
   ../common/mldsa_native_poly.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
-  ../common/maychange.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  ../common/maychange.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_extmu_44_proof.native: \
@@ -8422,6 +8422,7 @@ mldsa_native/gcc12_Os/signature_extmu_44_proof.native: \
   ../common/mldsa_native_fips202.ml \
   ../common/fips204/properties/mldsa_native_hash.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   ../common/mldsa_native_polyvec.ml \
@@ -8439,6 +8440,8 @@ mldsa_native/gcc12_Os/signature_extmu_44_proof.native: \
   proofs/utils/keccak_fips202.ml \
   ../common/fips204/properties/mldsa_native_absorb.ml \
   ../common/fips202/fips202.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/par.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/layout.ml \
@@ -8446,19 +8449,16 @@ mldsa_native/gcc12_Os/signature_extmu_44_proof.native: \
   ../common/consttime.ml \
   ../common/mldsa_native_poly.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
-  ../common/maychange.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  ../common/maychange.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_extmu_65_proof.native: \
@@ -8486,6 +8486,7 @@ mldsa_native/gcc12_Os/signature_extmu_65_proof.native: \
   ../common/mldsa_native_fips202.ml \
   ../common/fips204/properties/mldsa_native_hash.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   ../common/mldsa_native_polyvec.ml \
@@ -8503,6 +8504,8 @@ mldsa_native/gcc12_Os/signature_extmu_65_proof.native: \
   proofs/utils/keccak_fips202.ml \
   ../common/fips204/properties/mldsa_native_absorb.ml \
   ../common/fips202/fips202.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/par.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/layout.ml \
@@ -8510,19 +8513,16 @@ mldsa_native/gcc12_Os/signature_extmu_65_proof.native: \
   ../common/consttime.ml \
   ../common/mldsa_native_poly.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
-  ../common/maychange.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  ../common/maychange.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_extmu_87_proof.native: \
@@ -8550,6 +8550,7 @@ mldsa_native/gcc12_Os/signature_extmu_87_proof.native: \
   ../common/mldsa_native_fips202.ml \
   ../common/fips204/properties/mldsa_native_hash.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   ../common/mldsa_native_polyvec.ml \
@@ -8567,6 +8568,8 @@ mldsa_native/gcc12_Os/signature_extmu_87_proof.native: \
   proofs/utils/keccak_fips202.ml \
   ../common/fips204/properties/mldsa_native_absorb.ml \
   ../common/fips202/fips202.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/par.ml \
   ../common/mldsa_native_rounding.ml \
   ../common/layout.ml \
@@ -8574,19 +8577,16 @@ mldsa_native/gcc12_Os/signature_extmu_87_proof.native: \
   ../common/consttime.ml \
   ../common/mldsa_native_poly.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
-  ../common/maychange.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  ../common/maychange.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_internal_44_proof.native: \
@@ -8653,6 +8653,7 @@ mldsa_native/gcc12_Os/signature_internal_44_proof.native: \
   ../common/fips204/properties/mldsa_native_hash.ml \
   proofs/utils/mldsa_native_full.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   proofs/mldsa_native/gcc12_Os/layout.ml \
@@ -8687,13 +8688,13 @@ mldsa_native/gcc12_Os/signature_internal_44_proof.native: \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/fips204/properties/mldsa_native_polyvec.ml \
   ../common/fips204/properties/mldsa_native_full.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/par.ml \
   ../common/layout.ml \
   ../common/fips203/properties/mlkem_native_image.ml \
   ../common/fips204/properties/mldsa_native_pack.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
   ../common/consttime.ml \
   proofs/mldsa_native/gcc12_Os/keccakf1600_permute_spec.ml \
   proofs/subroutine_signatures.ml \
@@ -8702,17 +8703,16 @@ mldsa_native/gcc12_Os/signature_internal_44_proof.native: \
   proofs/mldsa_native/gcc12_Os/keccakf1600x4_permute_spec.ml \
   proofs/mldsa_native/gcc12_Os/keccakf1600x4_extract_bytes_spec.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/maychange.ml \
   proofs/mldsa_native/gcc12_Os/keccakf1600x4_xor_bytes_spec.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_internal_65_proof.native: \
@@ -8781,6 +8781,7 @@ mldsa_native/gcc12_Os/signature_internal_65_proof.native: \
   ../common/fips204/properties/mldsa_native_hash.ml \
   proofs/utils/mldsa_native_full.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   proofs/mldsa_native/gcc12_Os/layout.ml \
@@ -8819,13 +8820,13 @@ mldsa_native/gcc12_Os/signature_internal_65_proof.native: \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/fips204/properties/mldsa_native_polyvec.ml \
   ../common/fips204/properties/mldsa_native_full.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/par.ml \
   ../common/layout.ml \
   ../common/fips203/properties/mlkem_native_image.ml \
   ../common/fips204/properties/mldsa_native_pack.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
   ../common/consttime.ml \
   proofs/mldsa_native/gcc12_Os/keccakf1600_permute_spec.ml \
   proofs/subroutine_signatures.ml \
@@ -8834,17 +8835,16 @@ mldsa_native/gcc12_Os/signature_internal_65_proof.native: \
   proofs/mldsa_native/gcc12_Os/keccakf1600x4_permute_spec.ml \
   proofs/mldsa_native/gcc12_Os/keccakf1600x4_extract_bytes_spec.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/maychange.ml \
   proofs/mldsa_native/gcc12_Os/keccakf1600x4_xor_bytes_spec.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_internal_87_proof.native: \
@@ -8911,6 +8911,7 @@ mldsa_native/gcc12_Os/signature_internal_87_proof.native: \
   ../common/fips204/properties/mldsa_native_hash.ml \
   proofs/utils/mldsa_native_full.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   proofs/mldsa_native/gcc12_Os/layout.ml \
@@ -8945,13 +8946,13 @@ mldsa_native/gcc12_Os/signature_internal_87_proof.native: \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/fips204/properties/mldsa_native_polyvec.ml \
   ../common/fips204/properties/mldsa_native_full.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/par.ml \
   ../common/layout.ml \
   ../common/fips203/properties/mlkem_native_image.ml \
   ../common/fips204/properties/mldsa_native_pack.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
   ../common/consttime.ml \
   proofs/mldsa_native/gcc12_Os/keccakf1600_permute_spec.ml \
   proofs/subroutine_signatures.ml \
@@ -8960,17 +8961,16 @@ mldsa_native/gcc12_Os/signature_internal_87_proof.native: \
   proofs/mldsa_native/gcc12_Os/keccakf1600x4_permute_spec.ml \
   proofs/mldsa_native/gcc12_Os/keccakf1600x4_extract_bytes_spec.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/maychange.ml \
   proofs/mldsa_native/gcc12_Os/keccakf1600x4_xor_bytes_spec.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_pre_hash_internal_44_proof.native: \
@@ -8997,6 +8997,7 @@ mldsa_native/gcc12_Os/signature_pre_hash_internal_44_proof.native: \
   ../common/mldsa_native_fips202.ml \
   ../common/fips204/properties/mldsa_native_hash.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   proofs/utils/mlkem_native_libc.ml \
   proofs/utils/mlkem_native_libc_full.ml \
   ../common/relative.ml \
@@ -9015,6 +9016,8 @@ mldsa_native/gcc12_Os/signature_pre_hash_internal_44_proof.native: \
   proofs/consttime.ml \
   ../common/fips204/properties/mldsa_native_absorb.ml \
   ../common/fips202/fips202.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/fips203/properties/mlkem_native_libc_full.ml \
   ../common/par.ml \
@@ -9024,20 +9027,17 @@ mldsa_native/gcc12_Os/signature_pre_hash_internal_44_proof.native: \
   ../common/fips203/properties/mlkem_native_image.ml \
   ../common/mldsa_native_poly.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
   ../common/consttime.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/maychange.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_pre_hash_internal_65_proof.native: \
@@ -9064,6 +9064,7 @@ mldsa_native/gcc12_Os/signature_pre_hash_internal_65_proof.native: \
   ../common/mldsa_native_fips202.ml \
   ../common/fips204/properties/mldsa_native_hash.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   proofs/utils/mlkem_native_libc.ml \
   proofs/utils/mlkem_native_libc_full.ml \
   ../common/relative.ml \
@@ -9082,6 +9083,8 @@ mldsa_native/gcc12_Os/signature_pre_hash_internal_65_proof.native: \
   proofs/consttime.ml \
   ../common/fips204/properties/mldsa_native_absorb.ml \
   ../common/fips202/fips202.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/fips203/properties/mlkem_native_libc_full.ml \
   ../common/par.ml \
@@ -9091,20 +9094,17 @@ mldsa_native/gcc12_Os/signature_pre_hash_internal_65_proof.native: \
   ../common/fips203/properties/mlkem_native_image.ml \
   ../common/mldsa_native_poly.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
   ../common/consttime.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/maychange.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_pre_hash_internal_87_proof.native: \
@@ -9131,6 +9131,7 @@ mldsa_native/gcc12_Os/signature_pre_hash_internal_87_proof.native: \
   ../common/mldsa_native_fips202.ml \
   ../common/fips204/properties/mldsa_native_hash.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
   proofs/utils/mlkem_native_libc.ml \
   proofs/utils/mlkem_native_libc_full.ml \
   ../common/relative.ml \
@@ -9149,6 +9150,8 @@ mldsa_native/gcc12_Os/signature_pre_hash_internal_87_proof.native: \
   proofs/consttime.ml \
   ../common/fips204/properties/mldsa_native_absorb.ml \
   ../common/fips202/fips202.ml \
+  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/fips203/properties/mlkem_native_libc_full.ml \
   ../common/par.ml \
@@ -9158,20 +9161,17 @@ mldsa_native/gcc12_Os/signature_pre_hash_internal_87_proof.native: \
   ../common/fips203/properties/mlkem_native_image.ml \
   ../common/mldsa_native_poly.ml \
   proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
   ../common/consttime.ml \
   ../common/fips202/properties/fips202_properties.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips202/properties/keccak_f1600.ml \
+  ../common/fips202/properties/keccak_spec.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/maychange.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
-  ../common/fips202/properties/keccak_spec.ml \
   ../common/fips202/properties/keccak_bitblast.ml \
   mldsa_native/gcc12_Os/libmldsa.o
 mldsa_native/gcc12_Os/signature_pre_hash_shake256_44_proof.native: \

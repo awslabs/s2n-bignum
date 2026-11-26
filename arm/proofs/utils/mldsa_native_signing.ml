@@ -22,6 +22,7 @@ needs "common/mldsa_native_sign.ml";;
 needs "arm/proofs/utils/mldsa_native_full.ml";;
 needs "arm/proofs/utils/mldsa_native_polyvec.ml";;
 needs "common/fips204/properties/mldsa_native_signing.ml";;
+needs "common/fips202/properties/keccak_fips202.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Bytes in memory: the bytes of n bytes as a number, and the converse, at a *)
