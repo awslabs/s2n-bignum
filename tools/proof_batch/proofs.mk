@@ -3,11 +3,17 @@
 # Omit PROOFS to check every proof target and tutorial.
 PROOF_JOBS ?= 2
 BUILD_JOBS ?= $(PROOF_JOBS)
-.PHONY: fork-proofs batch-inputs batch-targets proof_timing_targets check-axioms
+.PHONY: fork-proofs proof-modules batch-inputs batch-targets proof_timing_targets check-axioms
 fork-proofs:
 	@python3 ../tools/proof_batch/run.py "$(notdir $(CURDIR))" \
 	    --holdir "$(HOLDIR)" --build-jobs "$(BUILD_JOBS)" --jobs "$(PROOF_JOBS)" \
 	    $(if $(PROOF_OUTPUT),--output "$(PROOF_OUTPUT)") $(PROOFS)
+
+# Build the architecture, any requested SESSIONS and the selected proof modules.
+proof-modules:
+	@python3 ../tools/proof_batch/run.py "$(notdir $(CURDIR))" --modules \
+	    --holdir "$(HOLDIR)" --build-jobs "$(BUILD_JOBS)" \
+	    $(if $(MODULE_DIR),--output "$(MODULE_DIR)") $(foreach s,$(SESSIONS),--session "$(s)") $(PROOFS)
 
 # Conservatively check that no OCaml source redefines check_axioms, which
 # every proof footer calls. Only grep's "no matches" exit status passes.

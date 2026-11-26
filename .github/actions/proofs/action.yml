@@ -1,5 +1,5 @@
 name: Run HOL Light proofs
-description: Build the shared HOL base, fork a process per proof, and collect timings
+description: Check proof modules in forked hol-d sessions and collect timings
 inputs:
   arch:
     description: Proof architecture (arm or x86)
@@ -18,7 +18,16 @@ runs:
         linux-packages: binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu
         apt-update-options: --allow-insecure-repositories
 
-    - name: Build and run proofs and tutorials
+    # Proof times depend on the host. Record what this runner provides, so
+    # that a timing comparison can be checked against it.
+    - name: Print runner CPUs and memory
+      shell: bash
+      run: |
+        echo "nproc: $(nproc)"
+        lscpu | grep -E '^(Model name|CPU\(s\)|Thread|Core|Socket|NUMA node\(s\))'
+        free -g
+
+    - name: Build proof modules and run proofs and tutorials through hol-d
       id: proofs
       shell: bash
       env:
@@ -40,6 +49,8 @@ runs:
         name: proof-errors-${{ inputs.arch }}
         path: |
           ${{ runner.temp }}/proof-logs/base.log
+          ${{ runner.temp }}/proof-logs/sessions/**/*.log
+          ${{ runner.temp }}/proof-logs/plan.json
           ${{ runner.temp }}/proof-logs/**/*.partial
         if-no-files-found: ignore
         overwrite: true

@@ -1,0 +1,35 @@
+name: hol-d
+
+on:
+  pull_request:
+    paths:
+      - 'tools/hol-d/**'
+      - '.github/workflows/hol-d.yml'
+      - '.github/actions/setup-hol-light/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hol-d-tutorial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-hol-light
+      - name: Run the hol-d tutorial
+        run: |
+          eval "$(opam env --switch "$HOLDIR" --set-switch)"
+          make -C tools/hol-d/tutorial HOLDIR="$HOLDIR"
+
+  hol-d-stress-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-hol-light
+      - name: Run the hol-d stress tests
+        run: |
+          eval "$(opam env --switch "$HOLDIR" --set-switch)"
+          make -C tools/hol-d/tests HOLDIR="$HOLDIR"
