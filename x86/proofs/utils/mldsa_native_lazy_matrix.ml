@@ -18,8 +18,10 @@
 (* 64-bit register x (LAZY_BYTE_64), or through a byte of the stack and      *)
 (* MOVZX (LAZY_BYTE_ZX). LAZY_RHO_OF_HALVES gives the 32 bytes of rho in the *)
 (* buffer from the two stores, and LAZY_SEED the seed from rho and the two   *)
-(* bytes after it; LAZY_TERM_TAC tm proves the termination tm of the         *)
-(* sampling of an entry from mld_matrix_terminates.                          *)
+(* bytes after it. The loops of these products use the tools of              *)
+(* common/fips204/properties/mldsa_native_lazy_matrix.ml (MLD_LAZY_TERM_TAC, *)
+(* MLD_LAZY_ROW_TAC, MLD_LAZY_JOIN_TAC, MLD_LAZY_GEN_OLD_TAC, ...), shared   *)
+(* with the AArch64 proofs.                                                  *)
 (* ========================================================================= *)
 
 needs "common/mldsa_native_lazy.ml";;
@@ -74,39 +76,15 @@ let LAZY_BYTE_ZX = prove
    STRIP_ASSUME_TAC THENL
    [UNDISCH_TAC `n < 256` THEN ARITH_TAC; ASM_SIMP_TAC[MOD_LT]]);;
 
-(*** The first column, and the next one, of mld_lazy_acc ***)
+(*** The first column of mld_lazy_acc ***)
 
 let MLD_POLY_OF_0 = prove
  (`!x:num->int32. mld_poly_of x 0 = x`,
   REWRITE_TAC[FUN_EQ_THM; mld_poly_of; MULT_CLAUSES; ADD_CLAUSES]);;
 
-let MLD_LAZY_ACC_ADD1 = prove
- (`!rho i (v:num->int32) n.
-        mld_lazy_acc rho i v (n + 1) =
-        mld_poly_add (mld_lazy_acc rho i v n)
-         (mld_poly_pointwise_montgomery (mld_matrix_entry rho i (n + 1))
-                                        (mld_poly_of v (n + 1)))`,
-  REWRITE_TAC[GSYM ADD1; mld_lazy_acc]);;
-
-(*** The termination of the sampling of an entry, from that of the matrix ***)
-(*** (mld_matrix_terminates k l rho expanded in the assumptions)           ***)
-
-let LAZY_TERM_TAC tm =
-  SUBGOAL_THEN tm ASSUME_TAC THENL
-   [FIRST_ASSUM(fun th ->
-      let c = concl th in
-      if is_forall c &&
-         (try fst(strip_comb(snd(dest_imp(snd(strip_forall c))))) =
-              `mld_rej_uniform_terminates`
-          with Failure _ -> false)
-      then MATCH_MP_TAC th else NO_TAC) THEN
-    CONJ_TAC THEN SIMPLE_ARITH_TAC;
-    ALL_TAC];;
-
 (* ------------------------------------------------------------------------- *)
-(* The vector and its rows. The rows of a vector in memory are aligned as    *)
-(* the vector is (LAZY_ALIGNED_ROW). LAZY_VAL_ZX gives the 32-bit value of a *)
-(* small counter, for the tests of the code.                                 *)
+(* The rows of a vector in memory are aligned as the vector is               *)
+(* (LAZY_ALIGNED_ROW).                                                       *)
 (* ------------------------------------------------------------------------- *)
 
 let LAZY_ALIGNED_ROW = prove
@@ -114,14 +92,6 @@ let LAZY_ALIGNED_ROW = prove
   REPEAT STRIP_TAC THEN MATCH_MP_TAC ALIGNED_WORD_ADD THEN
   ASM_REWRITE_TAC[ALIGNED_WORD; DIMINDEX_64] THEN
   CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC NUMBER_RULE);;
-
-let LAZY_VAL_ZX = prove
- (`!n. n < 2 EXP 32 ==> val(word_zx(word n:int64):int32) = n`,
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_32; DIMINDEX_64] THEN
-  SUBGOAL_THEN `n < 2 EXP 64` ASSUME_TAC THENL
-   [UNDISCH_TAC `n < 2 EXP 32` THEN CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC;
-    ASM_SIMP_TAC[MOD_LT]]);;
 
 (* ------------------------------------------------------------------------- *)
 (* The 16-bit nonce kappa + c of the sampling of polynomial c of y, which    *)
@@ -172,79 +142,16 @@ let LAZY_NONCE_TAC c =
     | _ -> NO_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* Facts for a loop over the rows i of a vector at w whose rows before i are *)
-(* done and the rest are as before, in the form of utils/                    *)
-(* mldsa_native_polyvec.ml, with the rows given by mld_polyvec of the sums.  *)
-(* LAZY_ROW_TAC fr tm proves tm, that coefficient c of row i is fr i c, from *)
-(* the fact for the rows from i on, which are given by mld_polyvec fr, and   *)
-(* LAZY_JOIN_TAC ths the fact for the rows before i + 1, from those for the  *)
-(* rows before i and the postcondition of the callee for row i, rewritten    *)
-(* with ths.                                                                 *)
+(* The events of nested loops are handled with MLD_LAZY_GEN_OLD_TAC and      *)
+(* MLD_LAZY_EVENTS_REASSOC_TAC (common/fips204/properties/                   *)
+(* mldsa_native_lazy_matrix.ml); LAZY_APPEND_REASSOC3 is the reassociation   *)
+(* that the x86-64 product needs for ENSURES_EVENTS_SEQUENCE_TAC.            *)
 (* ------------------------------------------------------------------------- *)
-
-let LAZY_ROW_TAC fr tm =
-  SUBGOAL_THEN tm ASSUME_TAC THENL
-   [X_GEN_TAC `c:num` THEN DISCH_TAC THEN
-    W(fun (asl,w) ->
-      SUBGOAL_THEN
-       (mk_eq(rhs w,mk_comb(mk_comb(`mld_polyvec`,fr),`256 * i + c`)))
-       SUBST1_TAC THENL
-       [ASM_SIMP_TAC[MLD_POLYVEC_COEFF]; ALL_TAC]) THEN
-    FIRST_ASSUM(fun th ->
-      MP_TAC(SPEC `256 * i + c` th) THEN
-      REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC] THEN
-      CONV_TAC NUM_REDUCE_CONV THEN
-      DISCH_THEN MATCH_MP_TAC THEN SIMPLE_ARITH_TAC);
-    ALL_TAC];;
-
-let LAZY_JOIN_TAC ths =
-  MATCH_MP_TAC VEC_JOIN_POLY THEN CONJ_TAC THENL
-   [FIRST_ASSUM ACCEPT_TAC;
-    X_GEN_TAC `c:num` THEN DISCH_TAC THEN
-    ASM_SIMP_TAC(MLD_POLYVEC_COEFF :: ths) THEN
-    REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC] THEN
-    CONV_TAC NUM_REDUCE_CONV THEN ASM_SIMP_TAC[]];;
-
-(* ------------------------------------------------------------------------- *)
-(* The events of nested loops. A part of a proof whose precondition fixes    *)
-(* the events so far as e2 = T, where T contains metavariables of the        *)
-(* template or the instances of some, is started with LAZY_GEN_OLD_TAC name, *)
-(* which generalizes the longest tail of T that also occurs in the events of *)
-(* the postcondition into a variable of that name, so that the rewriting of  *)
-(* the events by the simulation of calls cannot change T in one place and    *)
-(* not in the other, and the part is ended with VERIF_EVENTS_TAC of          *)
-(* utils/mldsa_native_verify.ml for that variable. LAZY_EVENTS_REASSOC_TAC   *)
-(* th rewrites the events of the postcondition, at the top only, with th,    *)
-(* e.g. LAZY_APPEND_REASSOC3, into the form that ENSURES_EVENTS_SEQUENCE_TAC *)
-(* or ENSURES_EVENTS_WHILE_UP2_TAC needs.                                    *)
-(* ------------------------------------------------------------------------- *)
-
-let LAZY_GEN_OLD_TAC name =
-  W(fun (asl,w) ->
-    let pre = rand(rator(rator w)) and post = rand(rator w) in
-    let is_e2eq t = is_eq t && is_var(lhs t) && fst(dest_var(lhs t)) = "e2" in
-    match (try Some(rhs(find_term is_e2eq pre),rhs(find_term is_e2eq post))
-           with Failure _ -> None) with
-      None -> ALL_TAC
-    | Some(tpre,tpost) ->
-        let rec pick t =
-          if free_in t tpost then t
-          else if is_comb t then pick (rand t) else failwith "pick" in
-        let x = pick tpre in
-        if is_var x then ALL_TAC
-        else SPEC_TAC(x,mk_var(name,type_of x)) THEN GEN_TAC);;
 
 let LAZY_APPEND_REASSOC3 = prove
  (`!a b c d:(A)list.
         APPEND (APPEND (APPEND a b) c) d = APPEND a (APPEND b (APPEND c d))`,
   REWRITE_TAC[APPEND_ASSOC]);;
-
-let LAZY_EVENTS_REASSOC_TAC th =
-  W(fun (asl,w) ->
-    let post = rand(rator w) in
-    let e2eq = find_term (fun t -> is_eq t && is_var(lhs t) &&
-                                   fst(dest_var(lhs t)) = "e2") post in
-    REWRITE_TAC[GEN_REWRITE_CONV I [th] (rhs e2eq)]);;
 
 (* ------------------------------------------------------------------------- *)
 (* The copy of rho to the buffer at base in the frame: LAZY_RHO_PREP_TAC, at *)

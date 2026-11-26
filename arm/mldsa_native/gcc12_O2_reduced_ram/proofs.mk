@@ -2436,6 +2436,7 @@ mldsa_native/gcc12_O2_reduced_ram/link.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_44_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_44_proof.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_44_spec.ml \
+  proofs/utils/mldsa_native_verify.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_44_proof.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_65_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_reduce_65_proof.ml \
@@ -2528,7 +2529,6 @@ mldsa_native/gcc12_O2_reduced_ram/link.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/unpack_sk_65_proof.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/unpack_sk_87_proof.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/verify_internal_44_spec.ml \
-  proofs/utils/mldsa_native_verify.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/verify_internal_44_proof.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/verify_44_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/verify_44_proof.ml \
@@ -2606,9 +2606,9 @@ mldsa_native/gcc12_O2_reduced_ram/link.native: \
   ../common/mldsa_native_rounding.ml \
   proofs/utils/mldsa_native_scalar.ml \
   ../common/fips204/properties/mldsa_native_rounding.ml \
+  ../common/fips204/properties/mldsa_native_verify.ml \
   ../common/fips204/properties/mldsa_native_matrix.ml \
   ../common/fips204/properties/mldsa_native_signing.ml \
-  ../common/fips204/properties/mldsa_native_verify.ml \
   ../common/mldsa_native_errors.ml \
   ../common/fips204/properties/mldsa_native_fips204_pk_from_sk.ml \
   ../common/fips204/properties/mldsa_native_fips204_terminates.ml \
@@ -4909,7 +4909,9 @@ mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_row_lazy_8
 mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_44_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_44_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_lazy_matrix.ml \
+  proofs/utils/mldsa_native_verify.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mlkem_native_libc_full.ml \
@@ -4924,15 +4926,19 @@ mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_44_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
   ../common/fips204/properties/mldsa_native_full.ml \
+  ../common/mldsa_native_polyvec.ml \
+  ../common/fips204/properties/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_matrix.ml \
   proofs/utils/mldsa_native_keypair.ml \
   ../common/fips204/properties/mldsa_native_lazy_matrix.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mldsa_native_top.ml \
+  ../common/fips204/properties/mldsa_native_verify.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   proofs/utils/mlkem_native_libc.ml \
   ../common/fips203/properties/mlkem_native_libc_full.ml \
   ../common/mldsa_native_sampling.ml \
-  ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_challenge.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_init_spec.ml \
@@ -4953,15 +4959,18 @@ mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_
   proofs/mldsa_native/gcc12_O2_reduced_ram/poly_invntt_tomont_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   proofs/utils/mlkem_native_image.ml \
-  proofs/utils/mldsa_native_polyvec.ml \
+  ../common/mldsa_native_packing.ml \
   ../common/fips204/properties/mldsa_native_matrix.ml \
-  proofs/utils/keccak_fips202.ml \
   ../common/fips204/properties/mldsa_native_keypair.ml \
+  proofs/utils/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
+  ../common/layout.ml \
+  ../common/fips204/properties/mldsa_native_top.ml \
   ../common/par.ml \
   proofs/consttime.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/mldsa_native_fips202.ml \
-  ../common/mldsa_native_packing.ml \
   ../common/mldsa_native_rounding.ml \
   proofs/utils/mldsa_native_keccak.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -4970,33 +4979,30 @@ mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_
   proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
   proofs/utils/mldsa_native_pack.ml \
   ../common/fips204/properties/mldsa_native_ntt.ml \
-  ../common/layout.ml \
   ../common/fips203/properties/mlkem_native_image.ml \
-  ../common/fips204/properties/mldsa_native_polyvec.ml \
-  proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
-  ../common/consttime.ml \
-  ../common/fips202/fips202.ml \
-  ../common/fips204/properties/mldsa_native_absorb.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/fips202/properties/fips202_properties.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/fips202/properties/keccak_f1600.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
-  ../common/maychange.ml \
-  ../common/fips202/properties/keccak_spec.ml \
-  ../common/fips202/properties/keccak_bitblast.ml \
+  ../common/consttime.ml \
+  ../common/fips202/fips202.ml \
+  ../common/fips204/properties/mldsa_native_absorb.ml \
+  ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
+  ../common/fips202/properties/keccak_spec.ml \
+  ../common/fips202/properties/keccak_bitblast.ml \
+  ../common/maychange.ml \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
 mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_65_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_65_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_lazy_matrix.ml \
+  proofs/utils/mldsa_native_verify.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mlkem_native_libc_full.ml \
@@ -5011,15 +5017,19 @@ mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_65_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
   ../common/fips204/properties/mldsa_native_full.ml \
+  ../common/mldsa_native_polyvec.ml \
+  ../common/fips204/properties/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_matrix.ml \
   proofs/utils/mldsa_native_keypair.ml \
   ../common/fips204/properties/mldsa_native_lazy_matrix.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mldsa_native_top.ml \
+  ../common/fips204/properties/mldsa_native_verify.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   proofs/utils/mlkem_native_libc.ml \
   ../common/fips203/properties/mlkem_native_libc_full.ml \
   ../common/mldsa_native_sampling.ml \
-  ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_challenge.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_init_spec.ml \
@@ -5040,15 +5050,18 @@ mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_
   proofs/mldsa_native/gcc12_O2_reduced_ram/poly_invntt_tomont_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   proofs/utils/mlkem_native_image.ml \
-  proofs/utils/mldsa_native_polyvec.ml \
+  ../common/mldsa_native_packing.ml \
   ../common/fips204/properties/mldsa_native_matrix.ml \
-  proofs/utils/keccak_fips202.ml \
   ../common/fips204/properties/mldsa_native_keypair.ml \
+  proofs/utils/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
+  ../common/layout.ml \
+  ../common/fips204/properties/mldsa_native_top.ml \
   ../common/par.ml \
   proofs/consttime.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/mldsa_native_fips202.ml \
-  ../common/mldsa_native_packing.ml \
   ../common/mldsa_native_rounding.ml \
   proofs/utils/mldsa_native_keccak.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -5057,33 +5070,30 @@ mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_
   proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
   proofs/utils/mldsa_native_pack.ml \
   ../common/fips204/properties/mldsa_native_ntt.ml \
-  ../common/layout.ml \
   ../common/fips203/properties/mlkem_native_image.ml \
-  ../common/fips204/properties/mldsa_native_polyvec.ml \
-  proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
-  ../common/consttime.ml \
-  ../common/fips202/fips202.ml \
-  ../common/fips204/properties/mldsa_native_absorb.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/fips202/properties/fips202_properties.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/fips202/properties/keccak_f1600.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
-  ../common/maychange.ml \
-  ../common/fips202/properties/keccak_spec.ml \
-  ../common/fips202/properties/keccak_bitblast.ml \
+  ../common/consttime.ml \
+  ../common/fips202/fips202.ml \
+  ../common/fips204/properties/mldsa_native_absorb.ml \
+  ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
+  ../common/fips202/properties/keccak_spec.ml \
+  ../common/fips202/properties/keccak_bitblast.ml \
+  ../common/maychange.ml \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
 mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_87_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_87_spec.ml \
   proofs/utils/mldsa_native_full.ml \
+  proofs/utils/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_lazy_matrix.ml \
+  proofs/utils/mldsa_native_verify.ml \
   proofs/mlkem_native/relative.ml \
   proofs/utils/mldsa_native.ml \
   proofs/utils/mlkem_native_libc_full.ml \
@@ -5098,15 +5108,19 @@ mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_invntt_tomont_87_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/libmldsa.ml \
   ../common/fips204/properties/mldsa_native_full.ml \
+  ../common/mldsa_native_polyvec.ml \
+  ../common/fips204/properties/mldsa_native_polyvec.ml \
   proofs/utils/mldsa_native_matrix.ml \
   proofs/utils/mldsa_native_keypair.ml \
   ../common/fips204/properties/mldsa_native_lazy_matrix.ml \
+  proofs/utils/keccak_fips202.ml \
+  proofs/utils/mldsa_native_top.ml \
+  ../common/fips204/properties/mldsa_native_verify.ml \
   ../common/relative.ml \
   ../common/fips204/properties/mldsa_native.ml \
   proofs/utils/mlkem_native_libc.ml \
   ../common/fips203/properties/mlkem_native_libc_full.ml \
   ../common/mldsa_native_sampling.ml \
-  ../common/mldsa_native_polyvec.ml \
   ../common/mldsa_native_hints.ml \
   ../common/mldsa_native_challenge.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/shake256_init_spec.ml \
@@ -5127,15 +5141,18 @@ mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_
   proofs/mldsa_native/gcc12_O2_reduced_ram/poly_invntt_tomont_spec.ml \
   proofs/mldsa_native/gcc12_O2_reduced_ram/layout.ml \
   proofs/utils/mlkem_native_image.ml \
-  proofs/utils/mldsa_native_polyvec.ml \
+  ../common/mldsa_native_packing.ml \
   ../common/fips204/properties/mldsa_native_matrix.ml \
-  proofs/utils/keccak_fips202.ml \
   ../common/fips204/properties/mldsa_native_keypair.ml \
+  proofs/utils/keccak_f1600.ml \
+  ../common/mlkem_mldsa.ml \
+  ../common/fips202/properties/keccak_fips202.ml \
+  ../common/layout.ml \
+  ../common/fips204/properties/mldsa_native_top.ml \
   ../common/par.ml \
   proofs/consttime.ml \
   ../common/fips203/properties/mlkem_native_libc.ml \
   ../common/mldsa_native_fips202.ml \
-  ../common/mldsa_native_packing.ml \
   ../common/mldsa_native_rounding.ml \
   proofs/utils/mldsa_native_keccak.ml \
   proofs/utils/mldsa_native_absorb.ml \
@@ -5144,28 +5161,23 @@ mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_
   proofs/mldsa_native/gcc12_O2_reduced_ram/keccakf1600_extract_bytes_spec.ml \
   proofs/utils/mldsa_native_pack.ml \
   ../common/fips204/properties/mldsa_native_ntt.ml \
-  ../common/layout.ml \
   ../common/fips203/properties/mlkem_native_image.ml \
-  ../common/fips204/properties/mldsa_native_polyvec.ml \
-  proofs/utils/keccak_f1600.ml \
-  ../common/mlkem_mldsa.ml \
-  ../common/fips202/properties/keccak_fips202.ml \
-  ../common/consttime.ml \
-  ../common/fips202/fips202.ml \
-  ../common/fips204/properties/mldsa_native_absorb.ml \
-  proofs/utils/keccak_spec.ml \
-  ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/fips202/properties/fips202_properties.ml \
+  proofs/utils/keccak_spec.ml \
   ../common/fips202/properties/keccak_f1600.ml \
   ../common/int_linear.ml \
   ../common/bitmap.ml \
-  ../common/maychange.ml \
-  ../common/fips202/properties/keccak_spec.ml \
-  ../common/fips202/properties/keccak_bitblast.ml \
+  ../common/consttime.ml \
+  ../common/fips202/fips202.ml \
+  ../common/fips204/properties/mldsa_native_absorb.ml \
+  ../common/fips204/properties/mldsa_native_pack.ml \
   ../common/fips202/properties/keccak_lanes.ml \
   ../common/fips202/properties/keccak_rho_offsets.ml \
   ../common/fips202/properties/keccak_theta_injective.ml \
   ../common/fips202/properties/keccak_permutation.ml \
+  ../common/fips202/properties/keccak_spec.ml \
+  ../common/fips202/properties/keccak_bitblast.ml \
+  ../common/maychange.ml \
   mldsa_native/gcc12_O2_reduced_ram/libmldsa.o
 mldsa_native/gcc12_O2_reduced_ram/polyveck_caddq_44_proof.native: \
   proofs/mldsa_native/gcc12_O2_reduced_ram/polyveck_caddq_44_spec.ml \

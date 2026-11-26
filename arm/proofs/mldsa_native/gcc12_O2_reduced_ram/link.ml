@@ -741,7 +741,9 @@ end;;
 
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_44_spec.ml";;
 needs "arm/proofs/utils/mldsa_native_full.ml";;
+needs "arm/proofs/utils/mldsa_native_polyvec.ml";;
 needs "arm/proofs/utils/mldsa_native_lazy_matrix.ml";;
+needs "arm/proofs/utils/mldsa_native_verify.ml";;
 module Par_job_polyvec_matrix_pointwise_montgomery_yvec_lazy_44 (Par_unit : sig end) = struct
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_44_proof.ml";;
 end;;
@@ -760,7 +762,9 @@ end;;
 
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_65_spec.ml";;
 needs "arm/proofs/utils/mldsa_native_full.ml";;
+needs "arm/proofs/utils/mldsa_native_polyvec.ml";;
 needs "arm/proofs/utils/mldsa_native_lazy_matrix.ml";;
+needs "arm/proofs/utils/mldsa_native_verify.ml";;
 module Par_job_polyvec_matrix_pointwise_montgomery_yvec_lazy_65 (Par_unit : sig end) = struct
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_65_proof.ml";;
 end;;
@@ -779,7 +783,9 @@ end;;
 
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_87_spec.ml";;
 needs "arm/proofs/utils/mldsa_native_full.ml";;
+needs "arm/proofs/utils/mldsa_native_polyvec.ml";;
 needs "arm/proofs/utils/mldsa_native_lazy_matrix.ml";;
+needs "arm/proofs/utils/mldsa_native_verify.ml";;
 module Par_job_polyvec_matrix_pointwise_montgomery_yvec_lazy_87 (Par_unit : sig end) = struct
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_87_proof.ml";;
 end;;
@@ -1466,19 +1472,19 @@ let par_link_results = par_run_jobs [
   (fun () -> let module Par_this = Par_job_polyveck_reduce_44 (struct end) in []);
   "polyveck_invntt_tomont_44", 9.0,
   (fun () -> let module Par_this = Par_job_polyveck_invntt_tomont_44 (struct end) in []);
-  "polyvec_matrix_pointwise_montgomery_yvec_lazy_44", 598.0,
+  "polyvec_matrix_pointwise_montgomery_yvec_lazy_44", 77.0,
   (fun () -> let module Par_this = Par_job_polyvec_matrix_pointwise_montgomery_yvec_lazy_44 (struct end) in []);
   "polyveck_reduce_65", 7.0,
   (fun () -> let module Par_this = Par_job_polyveck_reduce_65 (struct end) in []);
   "polyveck_invntt_tomont_65", 7.0,
   (fun () -> let module Par_this = Par_job_polyveck_invntt_tomont_65 (struct end) in []);
-  "polyvec_matrix_pointwise_montgomery_yvec_lazy_65", 1725.0,
+  "polyvec_matrix_pointwise_montgomery_yvec_lazy_65", 74.0,
   (fun () -> let module Par_this = Par_job_polyvec_matrix_pointwise_montgomery_yvec_lazy_65 (struct end) in []);
   "polyveck_reduce_87", 6.0,
   (fun () -> let module Par_this = Par_job_polyveck_reduce_87 (struct end) in []);
   "polyveck_invntt_tomont_87", 7.0,
   (fun () -> let module Par_this = Par_job_polyveck_invntt_tomont_87 (struct end) in []);
-  "polyvec_matrix_pointwise_montgomery_yvec_lazy_87", 4905.0,
+  "polyvec_matrix_pointwise_montgomery_yvec_lazy_87", 75.0,
   (fun () -> let module Par_this = Par_job_polyvec_matrix_pointwise_montgomery_yvec_lazy_87 (struct end) in []);
   "polyveck_caddq_44", 9.0,
   (fun () -> let module Par_this = Par_job_polyveck_caddq_44 (struct end) in []);

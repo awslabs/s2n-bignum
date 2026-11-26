@@ -177,7 +177,7 @@ let RL65_PROLOGUE_TAC =
    [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
     ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
     DISCH_TAC] THEN
-  LAZY_TERM_TAC
+  MLD_LAZY_TERM_TAC
    `mld_rej_uniform_terminates
      (mld_shake128_stream 34 (mld_matrix_seed rho i 0))` THEN
   X86_STEPS_TAC RL65_EXEC (23--23) THEN
@@ -222,7 +222,7 @@ let RL65_BODY_TAC =
    [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
     ASM_REWRITE_TAC[];
     DISCH_TAC] THEN
-  LAZY_TERM_TAC
+  MLD_LAZY_TERM_TAC
    `mld_rej_uniform_terminates
      (mld_shake128_stream 34 (mld_matrix_seed rho i (k + 1)))` THEN
   X86_STEPS_TAC RL65_EXEC (7--7) THEN

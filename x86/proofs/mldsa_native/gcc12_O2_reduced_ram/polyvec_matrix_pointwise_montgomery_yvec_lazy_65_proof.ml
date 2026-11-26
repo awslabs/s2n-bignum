@@ -222,7 +222,7 @@ let YV65_COL0_BODY_TAC =
    [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
     ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
     DISCH_TAC] THEN
-  LAZY_TERM_TAC
+  MLD_LAZY_TERM_TAC
    `mld_rej_uniform_terminates
      (mld_shake128_stream 34 (mld_matrix_seed rho i 0))` THEN
   X86_STEPS_TAC YV65_EXEC (7--7) THEN
@@ -243,7 +243,7 @@ let YV65_COL0_BODY_TAC =
   TRY(REWRITE_TAC[COND_SWAP] THEN COND_CASES_TAC THEN REWRITE_TAC[] THEN
       NO_TAC) THEN
   TRY(CONV_TAC WORD_RULE THEN NO_TAC) THEN
-  TRY(LAZY_JOIN_TAC [mld_lazy_acc] THEN NO_TAC) THEN
+  TRY(MLD_LAZY_JOIN_TAC [mld_lazy_acc] THEN NO_TAC) THEN
   REWRITE_TAC[NOT_LT] THEN
   REALIGN_UNBOT_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
 
@@ -260,11 +260,11 @@ let YV65_COL0_EXIT_TAC =
 (* into the polynomial of the structure, multiplied by scratch and added to  *)
 (* row i of w), and the end of the column with the test of the outer loop.   *)
 (* The events so far are generalized at the start of each part               *)
-(* (LAZY_GEN_OLD_TAC).                                                       *)
+(* (MLD_LAZY_GEN_OLD_TAC).                                                   *)
 (* ------------------------------------------------------------------------- *)
 
 let YV65_COL_INIT_TAC =
-  LAZY_GEN_OLD_TAC "old2" THEN
+  MLD_LAZY_GEN_OLD_TAC "old2" THEN
   FULL_INIT_TAC THEN X86_STEPS_TAC YV65_EXEC (1--2) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0; WORD_ADD_0] THEN
@@ -274,14 +274,15 @@ let YV65_COL_INIT_TAC =
 let YV65_COL_BODY_TAC =
   let vars = [`i:num`; `l:num`; `old2:(uarch_event)list`] in
   X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
-  LAZY_GEN_OLD_TAC "old2" THEN
+  MLD_LAZY_GEN_OLD_TAC "old2" THEN
   FULL_INIT_TAC THEN
   SUBGOAL_THEN `i < 256 /\ i + 1 < 2 EXP 32 /\ l + 1 < 256 /\ l + 1 < 2 EXP 32`
    STRIP_ASSUME_TAC THENL
    [REPEAT CONJ_TAC THEN CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
     ALL_TAC] THEN
   X86_STEPS_TAC YV65_EXEC (1--1) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP LAZY_VAL_ZX (ASSUME `l + 1 < 2 EXP 32`);
+  RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP MLD_LAZY_VAL_ZX
+                               (ASSUME `l + 1 < 2 EXP 32`);
                               ADD_EQ_0; ARITH_EQ]) THEN
   X86_STEPS_TAC YV65_EXEC (2--6) THEN
   RULE_ASSUM_TAC(REWRITE_RULE
@@ -293,7 +294,7 @@ let YV65_COL_BODY_TAC =
    [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
     ASM_REWRITE_TAC[];
     DISCH_TAC] THEN
-  LAZY_TERM_TAC
+  MLD_LAZY_TERM_TAC
    `mld_rej_uniform_terminates
      (mld_shake128_stream 34 (mld_matrix_seed rho i (l + 1)))` THEN
   X86_STEPS_TAC YV65_EXEC (7--7) THEN
@@ -305,7 +306,7 @@ let YV65_COL_BODY_TAC =
    [`read RDI s`; `read RSI s`; `mld_matrix_entry rho i (l + 1)`;
     mk_comb(mk_comb(`mld_poly_of`,parse_term YV65_YHAT),`l + 1`)] 12 THEN
   X86_STEPS_TAC YV65_EXEC (13--14) THEN
-  LAZY_ROW_TAC
+  MLD_LAZY_ROW_TAC
    (parse_term("\\r. mld_lazy_acc rho r " ^ YV65_YHAT ^ " l"))
    (parse_term
      ("!c. c < 256 ==> read (memory :> bytes32 (word_add w " ^
@@ -335,12 +336,12 @@ let YV65_COL_BODY_TAC =
   TRY(REWRITE_TAC[COND_SWAP] THEN COND_CASES_TAC THEN REWRITE_TAC[] THEN
       NO_TAC) THEN
   TRY(CONV_TAC WORD_RULE THEN NO_TAC) THEN
-  TRY(LAZY_JOIN_TAC [MLD_LAZY_ACC_ADD1] THEN NO_TAC) THEN
+  TRY(MLD_LAZY_JOIN_TAC [MLD_LAZY_ACC_ADD1] THEN NO_TAC) THEN
   REWRITE_TAC[NOT_LT] THEN
   REALIGN_UNBOT_TAC THEN VERIF_EVENTS_TAC [`old2:(uarch_event)list`];;
 
 let YV65_COL_EXIT_TAC =
-  REWRITE_TAC[] THEN LAZY_GEN_OLD_TAC "old2" THEN FULL_INIT_TAC THEN
+  REWRITE_TAC[] THEN MLD_LAZY_GEN_OLD_TAC "old2" THEN FULL_INIT_TAC THEN
   RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
   SUBGOAL_THEN `(l + 1) + 1 < 2 EXP 32` ASSUME_TAC THENL
    [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -364,7 +365,7 @@ let YV65_COL_EXIT_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let YV65_EPILOGUE_TAC =
-  REWRITE_TAC[] THEN LAZY_GEN_OLD_TAC "old" THEN FULL_INIT_TAC THEN
+  REWRITE_TAC[] THEN MLD_LAZY_GEN_OLD_TAC "old" THEN FULL_INIT_TAC THEN
   X86_STEPS_TAC YV65_EXEC (1--9) THEN
   YV65_CALL_TAC [`old:(uarch_event)list`] "H_VRED"
    [`read RDI s`;
@@ -405,7 +406,7 @@ let MLDSA_NATIVE_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_YVEC_LAZY_65_GCC12_O2_REDUC
      YV65_J1_0 THEN
     CONJ_TAC THENL
      [YV65_PROLOGUE_TAC;
-      LAZY_EVENTS_REASSOC_TAC (GSYM APPEND_ASSOC) THEN
+      MLD_LAZY_EVENTS_REASSOC_TAC (GSYM APPEND_ASSOC) THEN
       ENSURES_EVENTS_SEQUENCE_TAC
        `pc +
         mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_after_mldsa_poly_ntt`
@@ -424,15 +425,15 @@ let MLDSA_NATIVE_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_YVEC_LAZY_65_GCC12_O2_REDUC
 
     X_GEN_TAC `l:num` THEN STRIP_TAC THEN
     REWRITE_TAC[ENUMERATEL_ADD1] THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-    LAZY_EVENTS_REASSOC_TAC LAZY_APPEND_REASSOC3 THEN
+    MLD_LAZY_EVENTS_REASSOC_TAC LAZY_APPEND_REASSOC3 THEN
     ENSURES_EVENTS_SEQUENCE_TAC
      `pc +
       mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_after_mldsa_poly_ntt`
      YV65_MID THEN
     CONJ_TAC THENL
-     [LAZY_GEN_OLD_TAC "old" THEN
+     [MLD_LAZY_GEN_OLD_TAC "old" THEN
       YV65_POLY_Y_TAC [`l:num`; `old:(uarch_event)list`] `l + 1`;
-      LAZY_GEN_OLD_TAC "old" THEN
+      MLD_LAZY_GEN_OLD_TAC "old" THEN
       ENSURES_EVENTS_WHILE_UP2_TAC `6`
        `pc + mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_join4`
        `pc + mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_join5`

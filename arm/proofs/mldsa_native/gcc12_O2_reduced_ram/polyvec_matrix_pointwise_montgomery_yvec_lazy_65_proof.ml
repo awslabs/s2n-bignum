@@ -11,601 +11,83 @@
 
 needs "arm/proofs/mldsa_native/gcc12_O2_reduced_ram/polyvec_matrix_pointwise_montgomery_yvec_lazy_65_spec.ml";;
 needs "arm/proofs/utils/mldsa_native_full.ml";;
+needs "arm/proofs/utils/mldsa_native_polyvec.ml";;
 needs "arm/proofs/utils/mldsa_native_lazy_matrix.ml";;
+needs "arm/proofs/utils/mldsa_native_verify.ml";;
 
 let YVL65_EXEC = MLDSA_NATIVE_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_YVEC_LAZY_65_GCC12_O2_REDUCED_RAM_EXEC;;
 
 let YVL65_G = `mld_poly_uniform_gamma1_19`;;
 
 (* ------------------------------------------------------------------------- *)
-(* The frame of 176 bytes is at stackpointer + 1392 (the 1392 bytes below it *)
-(* are those of mldsa_poly_uniform), with the saved registers at             *)
-(* stackpointer + 1392, the canary at stackpointer + 1560 and the buffer of  *)
-(* the seed, aligned to 32 bytes, at stackpointer + 1472 or + 1488. The code *)
-(* is simulated with both loops unrolled, in each case of the stack          *)
-(* alignment, with the calls at the steps of the schedule given by the code: *)
-(* for each column j, the sampling of polynomial j of y and its transform,   *)
-(* and for each row i the seed and the termination hypothesis of entry (i,j) *)
-(* before its sampling, its product with polynomial j of the transform of y, *)
-(* and for j > 0 its addition to polynomial i of w; then the reduction and   *)
-(* the inverse transform of w.                                               *)
+(* The events (MLD_LAZY_YVEC_TEMPLATE of                                     *)
+(* common/fips204/properties/mldsa_native_lazy_matrix.ml): the prologue, the *)
+(* first column, the loop over the columns 1, ..., 4, each with the loop     *)
+(* over the 6 rows, and the epilogue. The buffer of the seed, which the code *)
+(* aligns to 32 bytes in its frame, is the variable buf                      *)
+(* (MLD_LAZY_BUFFER_SETUP_TAC), which MLD_LAZY_UNBUF_TAC expands at the end  *)
+(* of each part, and the events of the samplings of the entries depend on    *)
+(* their seeds, functions of rho and the indices.                            *)
 (* ------------------------------------------------------------------------- *)
 
-let YVL65_BUFFER_ADDRESS = MEXP_BUFFER_ADDRESS_RULE 1503 1472 1488;;
+let YVL65_TEMPLATE = MLD_LAZY_YVEC_TEMPLATE 5 6;;
 
 let YVL65_ALLOWED =
   [`pc:num`; `w:int64`; `mat:int64`; `y:int64`; `scratch:int64`; `r:num`;
    `rp:int64`; `guard:int64`; `mf:int64`; `stackpointer:int64`;
-   `returnaddress:int64`];;
+   `returnaddress:int64`; `buf:int64`];;
 
-let YVL65_CALL_TAC name ilist n =
+let YVL65_CALL_TAC vars name ilist n =
   FULL_CALL_TAC mldsa_native_libmldsa_gcc12_O2_reduced_ram_mc YVL65_EXEC name
-   ilist YVL65_ALLOWED n;;
-
-let YVL65_CASE_TAC bf =
-  ENSURES_INIT_TAC "s0" THEN
-  FIRST_ASSUM(MP_TAC o MATCH_MP MLD_BYTES128_HALVES o check
-   (can (term_match []
-      `read (memory :> bytes(word_add mat (word 1024),32)) s = n`) o concl)) THEN
-  REWRITE_TAC[WORD_RULE `word_add (word_add mat (word 1024)) (word 16):int64 =
-                          word_add mat (word 1040)`] THEN
-  STRIP_TAC THEN MLD_LAZY_RBOUND_TAC "s0" THEN
-  ARM_STEPS_TAC YVL65_EXEC (1--7) THEN
-  MEXP_BUFFER_TAC YVL65_BUFFER_ADDRESS THEN
-  ARM_STEPS_TAC YVL65_EXEC (8--13) THEN
-  MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC YVL65_EXEC (14--27) THEN
-  YVL65_CALL_TAC "H_G1"
-   [`read X0 s`; `read X1 s`; `RP:num`; `read X2 s`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 28 THEN
-  MLD_LAZY_YVEC_Y_TAC YVL65_G 0 THEN
-  ARM_STEPS_TAC YVL65_EXEC (29--30) THEN
-  YVL65_CALL_TAC "H_NTT"
-   [`read X0 s`; MLD_LAZY_YVEC_Y YVL65_G 0;
-    `pc:num`; `read X30 s`] 31 THEN
-  MLD_LAZY_YVEC_YHAT_TAC YVL65_G 0 THEN
-  ARM_STEPS_TAC YVL65_EXEC (32--37) THEN
-  MEXP_INPUT_TAC bf 0 0 `s37:armstate` THEN
-  MEXP_HYP_TAC 0 0 THEN
-  ARM_STEPS_TAC YVL65_EXEC [38] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 0 0`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 39 THEN
-  ARM_STEPS_TAC YVL65_EXEC (40--43) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 0 0;
-    MLD_LAZY_YVEC_YHAT YVL65_G 0;
-    `pc:num`; `read X30 s`] 44 THEN
-  ARM_STEPS_TAC YVL65_EXEC (45--52) THEN
-  MEXP_INPUT_TAC bf 1 0 `s52:armstate` THEN
-  MEXP_HYP_TAC 1 0 THEN
-  ARM_STEPS_TAC YVL65_EXEC [53] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 1 0`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 54 THEN
-  ARM_STEPS_TAC YVL65_EXEC (55--58) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 1 0;
-    MLD_LAZY_YVEC_YHAT YVL65_G 0;
-    `pc:num`; `read X30 s`] 59 THEN
-  ARM_STEPS_TAC YVL65_EXEC (60--67) THEN
-  MEXP_INPUT_TAC bf 2 0 `s67:armstate` THEN
-  MEXP_HYP_TAC 2 0 THEN
-  ARM_STEPS_TAC YVL65_EXEC [68] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 2 0`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 69 THEN
-  ARM_STEPS_TAC YVL65_EXEC (70--73) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 2 0;
-    MLD_LAZY_YVEC_YHAT YVL65_G 0;
-    `pc:num`; `read X30 s`] 74 THEN
-  ARM_STEPS_TAC YVL65_EXEC (75--82) THEN
-  MEXP_INPUT_TAC bf 3 0 `s82:armstate` THEN
-  MEXP_HYP_TAC 3 0 THEN
-  ARM_STEPS_TAC YVL65_EXEC [83] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 3 0`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 84 THEN
-  ARM_STEPS_TAC YVL65_EXEC (85--88) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 3 0;
-    MLD_LAZY_YVEC_YHAT YVL65_G 0;
-    `pc:num`; `read X30 s`] 89 THEN
-  ARM_STEPS_TAC YVL65_EXEC (90--97) THEN
-  MEXP_INPUT_TAC bf 4 0 `s97:armstate` THEN
-  MEXP_HYP_TAC 4 0 THEN
-  ARM_STEPS_TAC YVL65_EXEC [98] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 4 0`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 99 THEN
-  ARM_STEPS_TAC YVL65_EXEC (100--103) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 4 0;
-    MLD_LAZY_YVEC_YHAT YVL65_G 0;
-    `pc:num`; `read X30 s`] 104 THEN
-  ARM_STEPS_TAC YVL65_EXEC (105--112) THEN
-  MEXP_INPUT_TAC bf 5 0 `s112:armstate` THEN
-  MEXP_HYP_TAC 5 0 THEN
-  ARM_STEPS_TAC YVL65_EXEC [113] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 5 0`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 114 THEN
-  ARM_STEPS_TAC YVL65_EXEC (115--118) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 5 0;
-    MLD_LAZY_YVEC_YHAT YVL65_G 0;
-    `pc:num`; `read X30 s`] 119 THEN
-  ARM_STEPS_TAC YVL65_EXEC (120--132) THEN
-  YVL65_CALL_TAC "H_G1"
-   [`read X0 s`; `read X1 s`; `RP:num`; `read X2 s`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 133 THEN
-  MLD_LAZY_YVEC_Y_TAC YVL65_G 1 THEN
-  ARM_STEPS_TAC YVL65_EXEC (134--135) THEN
-  YVL65_CALL_TAC "H_NTT"
-   [`read X0 s`; MLD_LAZY_YVEC_Y YVL65_G 1;
-    `pc:num`; `read X30 s`] 136 THEN
-  MLD_LAZY_YVEC_YHAT_TAC YVL65_G 1 THEN
-  ARM_STEPS_TAC YVL65_EXEC (137--142) THEN
-  MEXP_INPUT_TAC bf 0 1 `s142:armstate` THEN
-  MEXP_HYP_TAC 0 1 THEN
-  ARM_STEPS_TAC YVL65_EXEC [143] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 0 1`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 144 THEN
-  ARM_STEPS_TAC YVL65_EXEC (145--147) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 0 1;
-    MLD_LAZY_YVEC_YHAT YVL65_G 1;
-    `pc:num`; `read X30 s`] 148 THEN
-  ARM_STEPS_TAC YVL65_EXEC (149--152) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 0 0;
-    MLD_LAZY_YVEC_PW YVL65_G 0 1; `pc:num`; `read X30 s`]
-   153 THEN
-  ARM_STEPS_TAC YVL65_EXEC (154--161) THEN
-  MEXP_INPUT_TAC bf 1 1 `s161:armstate` THEN
-  MEXP_HYP_TAC 1 1 THEN
-  ARM_STEPS_TAC YVL65_EXEC [162] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 1 1`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 163 THEN
-  ARM_STEPS_TAC YVL65_EXEC (164--166) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 1 1;
-    MLD_LAZY_YVEC_YHAT YVL65_G 1;
-    `pc:num`; `read X30 s`] 167 THEN
-  ARM_STEPS_TAC YVL65_EXEC (168--171) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 1 0;
-    MLD_LAZY_YVEC_PW YVL65_G 1 1; `pc:num`; `read X30 s`]
-   172 THEN
-  ARM_STEPS_TAC YVL65_EXEC (173--180) THEN
-  MEXP_INPUT_TAC bf 2 1 `s180:armstate` THEN
-  MEXP_HYP_TAC 2 1 THEN
-  ARM_STEPS_TAC YVL65_EXEC [181] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 2 1`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 182 THEN
-  ARM_STEPS_TAC YVL65_EXEC (183--185) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 2 1;
-    MLD_LAZY_YVEC_YHAT YVL65_G 1;
-    `pc:num`; `read X30 s`] 186 THEN
-  ARM_STEPS_TAC YVL65_EXEC (187--190) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 2 0;
-    MLD_LAZY_YVEC_PW YVL65_G 2 1; `pc:num`; `read X30 s`]
-   191 THEN
-  ARM_STEPS_TAC YVL65_EXEC (192--199) THEN
-  MEXP_INPUT_TAC bf 3 1 `s199:armstate` THEN
-  MEXP_HYP_TAC 3 1 THEN
-  ARM_STEPS_TAC YVL65_EXEC [200] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 3 1`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 201 THEN
-  ARM_STEPS_TAC YVL65_EXEC (202--204) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 3 1;
-    MLD_LAZY_YVEC_YHAT YVL65_G 1;
-    `pc:num`; `read X30 s`] 205 THEN
-  ARM_STEPS_TAC YVL65_EXEC (206--209) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 3 0;
-    MLD_LAZY_YVEC_PW YVL65_G 3 1; `pc:num`; `read X30 s`]
-   210 THEN
-  ARM_STEPS_TAC YVL65_EXEC (211--218) THEN
-  MEXP_INPUT_TAC bf 4 1 `s218:armstate` THEN
-  MEXP_HYP_TAC 4 1 THEN
-  ARM_STEPS_TAC YVL65_EXEC [219] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 4 1`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 220 THEN
-  ARM_STEPS_TAC YVL65_EXEC (221--223) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 4 1;
-    MLD_LAZY_YVEC_YHAT YVL65_G 1;
-    `pc:num`; `read X30 s`] 224 THEN
-  ARM_STEPS_TAC YVL65_EXEC (225--228) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 4 0;
-    MLD_LAZY_YVEC_PW YVL65_G 4 1; `pc:num`; `read X30 s`]
-   229 THEN
-  ARM_STEPS_TAC YVL65_EXEC (230--237) THEN
-  MEXP_INPUT_TAC bf 5 1 `s237:armstate` THEN
-  MEXP_HYP_TAC 5 1 THEN
-  ARM_STEPS_TAC YVL65_EXEC [238] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 5 1`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 239 THEN
-  ARM_STEPS_TAC YVL65_EXEC (240--242) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 5 1;
-    MLD_LAZY_YVEC_YHAT YVL65_G 1;
-    `pc:num`; `read X30 s`] 243 THEN
-  ARM_STEPS_TAC YVL65_EXEC (244--247) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 5 0;
-    MLD_LAZY_YVEC_PW YVL65_G 5 1; `pc:num`; `read X30 s`]
-   248 THEN
-  ARM_STEPS_TAC YVL65_EXEC (249--261) THEN
-  YVL65_CALL_TAC "H_G1"
-   [`read X0 s`; `read X1 s`; `RP:num`; `read X2 s`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 262 THEN
-  MLD_LAZY_YVEC_Y_TAC YVL65_G 2 THEN
-  ARM_STEPS_TAC YVL65_EXEC (263--264) THEN
-  YVL65_CALL_TAC "H_NTT"
-   [`read X0 s`; MLD_LAZY_YVEC_Y YVL65_G 2;
-    `pc:num`; `read X30 s`] 265 THEN
-  MLD_LAZY_YVEC_YHAT_TAC YVL65_G 2 THEN
-  ARM_STEPS_TAC YVL65_EXEC (266--271) THEN
-  MEXP_INPUT_TAC bf 0 2 `s271:armstate` THEN
-  MEXP_HYP_TAC 0 2 THEN
-  ARM_STEPS_TAC YVL65_EXEC [272] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 0 2`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 273 THEN
-  ARM_STEPS_TAC YVL65_EXEC (274--276) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 0 2;
-    MLD_LAZY_YVEC_YHAT YVL65_G 2;
-    `pc:num`; `read X30 s`] 277 THEN
-  ARM_STEPS_TAC YVL65_EXEC (278--281) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 0 1;
-    MLD_LAZY_YVEC_PW YVL65_G 0 2; `pc:num`; `read X30 s`]
-   282 THEN
-  ARM_STEPS_TAC YVL65_EXEC (283--290) THEN
-  MEXP_INPUT_TAC bf 1 2 `s290:armstate` THEN
-  MEXP_HYP_TAC 1 2 THEN
-  ARM_STEPS_TAC YVL65_EXEC [291] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 1 2`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 292 THEN
-  ARM_STEPS_TAC YVL65_EXEC (293--295) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 1 2;
-    MLD_LAZY_YVEC_YHAT YVL65_G 2;
-    `pc:num`; `read X30 s`] 296 THEN
-  ARM_STEPS_TAC YVL65_EXEC (297--300) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 1 1;
-    MLD_LAZY_YVEC_PW YVL65_G 1 2; `pc:num`; `read X30 s`]
-   301 THEN
-  ARM_STEPS_TAC YVL65_EXEC (302--309) THEN
-  MEXP_INPUT_TAC bf 2 2 `s309:armstate` THEN
-  MEXP_HYP_TAC 2 2 THEN
-  ARM_STEPS_TAC YVL65_EXEC [310] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 2 2`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 311 THEN
-  ARM_STEPS_TAC YVL65_EXEC (312--314) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 2 2;
-    MLD_LAZY_YVEC_YHAT YVL65_G 2;
-    `pc:num`; `read X30 s`] 315 THEN
-  ARM_STEPS_TAC YVL65_EXEC (316--319) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 2 1;
-    MLD_LAZY_YVEC_PW YVL65_G 2 2; `pc:num`; `read X30 s`]
-   320 THEN
-  ARM_STEPS_TAC YVL65_EXEC (321--328) THEN
-  MEXP_INPUT_TAC bf 3 2 `s328:armstate` THEN
-  MEXP_HYP_TAC 3 2 THEN
-  ARM_STEPS_TAC YVL65_EXEC [329] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 3 2`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 330 THEN
-  ARM_STEPS_TAC YVL65_EXEC (331--333) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 3 2;
-    MLD_LAZY_YVEC_YHAT YVL65_G 2;
-    `pc:num`; `read X30 s`] 334 THEN
-  ARM_STEPS_TAC YVL65_EXEC (335--338) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 3 1;
-    MLD_LAZY_YVEC_PW YVL65_G 3 2; `pc:num`; `read X30 s`]
-   339 THEN
-  ARM_STEPS_TAC YVL65_EXEC (340--347) THEN
-  MEXP_INPUT_TAC bf 4 2 `s347:armstate` THEN
-  MEXP_HYP_TAC 4 2 THEN
-  ARM_STEPS_TAC YVL65_EXEC [348] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 4 2`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 349 THEN
-  ARM_STEPS_TAC YVL65_EXEC (350--352) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 4 2;
-    MLD_LAZY_YVEC_YHAT YVL65_G 2;
-    `pc:num`; `read X30 s`] 353 THEN
-  ARM_STEPS_TAC YVL65_EXEC (354--357) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 4 1;
-    MLD_LAZY_YVEC_PW YVL65_G 4 2; `pc:num`; `read X30 s`]
-   358 THEN
-  ARM_STEPS_TAC YVL65_EXEC (359--366) THEN
-  MEXP_INPUT_TAC bf 5 2 `s366:armstate` THEN
-  MEXP_HYP_TAC 5 2 THEN
-  ARM_STEPS_TAC YVL65_EXEC [367] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 5 2`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 368 THEN
-  ARM_STEPS_TAC YVL65_EXEC (369--371) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 5 2;
-    MLD_LAZY_YVEC_YHAT YVL65_G 2;
-    `pc:num`; `read X30 s`] 372 THEN
-  ARM_STEPS_TAC YVL65_EXEC (373--376) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 5 1;
-    MLD_LAZY_YVEC_PW YVL65_G 5 2; `pc:num`; `read X30 s`]
-   377 THEN
-  ARM_STEPS_TAC YVL65_EXEC (378--390) THEN
-  YVL65_CALL_TAC "H_G1"
-   [`read X0 s`; `read X1 s`; `RP:num`; `read X2 s`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 391 THEN
-  MLD_LAZY_YVEC_Y_TAC YVL65_G 3 THEN
-  ARM_STEPS_TAC YVL65_EXEC (392--393) THEN
-  YVL65_CALL_TAC "H_NTT"
-   [`read X0 s`; MLD_LAZY_YVEC_Y YVL65_G 3;
-    `pc:num`; `read X30 s`] 394 THEN
-  MLD_LAZY_YVEC_YHAT_TAC YVL65_G 3 THEN
-  ARM_STEPS_TAC YVL65_EXEC (395--400) THEN
-  MEXP_INPUT_TAC bf 0 3 `s400:armstate` THEN
-  MEXP_HYP_TAC 0 3 THEN
-  ARM_STEPS_TAC YVL65_EXEC [401] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 0 3`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 402 THEN
-  ARM_STEPS_TAC YVL65_EXEC (403--405) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 0 3;
-    MLD_LAZY_YVEC_YHAT YVL65_G 3;
-    `pc:num`; `read X30 s`] 406 THEN
-  ARM_STEPS_TAC YVL65_EXEC (407--410) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 0 2;
-    MLD_LAZY_YVEC_PW YVL65_G 0 3; `pc:num`; `read X30 s`]
-   411 THEN
-  ARM_STEPS_TAC YVL65_EXEC (412--419) THEN
-  MEXP_INPUT_TAC bf 1 3 `s419:armstate` THEN
-  MEXP_HYP_TAC 1 3 THEN
-  ARM_STEPS_TAC YVL65_EXEC [420] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 1 3`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 421 THEN
-  ARM_STEPS_TAC YVL65_EXEC (422--424) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 1 3;
-    MLD_LAZY_YVEC_YHAT YVL65_G 3;
-    `pc:num`; `read X30 s`] 425 THEN
-  ARM_STEPS_TAC YVL65_EXEC (426--429) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 1 2;
-    MLD_LAZY_YVEC_PW YVL65_G 1 3; `pc:num`; `read X30 s`]
-   430 THEN
-  ARM_STEPS_TAC YVL65_EXEC (431--438) THEN
-  MEXP_INPUT_TAC bf 2 3 `s438:armstate` THEN
-  MEXP_HYP_TAC 2 3 THEN
-  ARM_STEPS_TAC YVL65_EXEC [439] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 2 3`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 440 THEN
-  ARM_STEPS_TAC YVL65_EXEC (441--443) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 2 3;
-    MLD_LAZY_YVEC_YHAT YVL65_G 3;
-    `pc:num`; `read X30 s`] 444 THEN
-  ARM_STEPS_TAC YVL65_EXEC (445--448) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 2 2;
-    MLD_LAZY_YVEC_PW YVL65_G 2 3; `pc:num`; `read X30 s`]
-   449 THEN
-  ARM_STEPS_TAC YVL65_EXEC (450--457) THEN
-  MEXP_INPUT_TAC bf 3 3 `s457:armstate` THEN
-  MEXP_HYP_TAC 3 3 THEN
-  ARM_STEPS_TAC YVL65_EXEC [458] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 3 3`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 459 THEN
-  ARM_STEPS_TAC YVL65_EXEC (460--462) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 3 3;
-    MLD_LAZY_YVEC_YHAT YVL65_G 3;
-    `pc:num`; `read X30 s`] 463 THEN
-  ARM_STEPS_TAC YVL65_EXEC (464--467) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 3 2;
-    MLD_LAZY_YVEC_PW YVL65_G 3 3; `pc:num`; `read X30 s`]
-   468 THEN
-  ARM_STEPS_TAC YVL65_EXEC (469--476) THEN
-  MEXP_INPUT_TAC bf 4 3 `s476:armstate` THEN
-  MEXP_HYP_TAC 4 3 THEN
-  ARM_STEPS_TAC YVL65_EXEC [477] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 4 3`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 478 THEN
-  ARM_STEPS_TAC YVL65_EXEC (479--481) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 4 3;
-    MLD_LAZY_YVEC_YHAT YVL65_G 3;
-    `pc:num`; `read X30 s`] 482 THEN
-  ARM_STEPS_TAC YVL65_EXEC (483--486) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 4 2;
-    MLD_LAZY_YVEC_PW YVL65_G 4 3; `pc:num`; `read X30 s`]
-   487 THEN
-  ARM_STEPS_TAC YVL65_EXEC (488--495) THEN
-  MEXP_INPUT_TAC bf 5 3 `s495:armstate` THEN
-  MEXP_HYP_TAC 5 3 THEN
-  ARM_STEPS_TAC YVL65_EXEC [496] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 5 3`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 497 THEN
-  ARM_STEPS_TAC YVL65_EXEC (498--500) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 5 3;
-    MLD_LAZY_YVEC_YHAT YVL65_G 3;
-    `pc:num`; `read X30 s`] 501 THEN
-  ARM_STEPS_TAC YVL65_EXEC (502--505) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 5 2;
-    MLD_LAZY_YVEC_PW YVL65_G 5 3; `pc:num`; `read X30 s`]
-   506 THEN
-  ARM_STEPS_TAC YVL65_EXEC (507--519) THEN
-  YVL65_CALL_TAC "H_G1"
-   [`read X0 s`; `read X1 s`; `RP:num`; `read X2 s`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 520 THEN
-  MLD_LAZY_YVEC_Y_TAC YVL65_G 4 THEN
-  ARM_STEPS_TAC YVL65_EXEC (521--522) THEN
-  YVL65_CALL_TAC "H_NTT"
-   [`read X0 s`; MLD_LAZY_YVEC_Y YVL65_G 4;
-    `pc:num`; `read X30 s`] 523 THEN
-  MLD_LAZY_YVEC_YHAT_TAC YVL65_G 4 THEN
-  ARM_STEPS_TAC YVL65_EXEC (524--529) THEN
-  MEXP_INPUT_TAC bf 0 4 `s529:armstate` THEN
-  MEXP_HYP_TAC 0 4 THEN
-  ARM_STEPS_TAC YVL65_EXEC [530] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 0 4`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 531 THEN
-  ARM_STEPS_TAC YVL65_EXEC (532--534) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 0 4;
-    MLD_LAZY_YVEC_YHAT YVL65_G 4;
-    `pc:num`; `read X30 s`] 535 THEN
-  ARM_STEPS_TAC YVL65_EXEC (536--539) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 0 3;
-    MLD_LAZY_YVEC_PW YVL65_G 0 4; `pc:num`; `read X30 s`]
-   540 THEN
-  ARM_STEPS_TAC YVL65_EXEC (541--548) THEN
-  MEXP_INPUT_TAC bf 1 4 `s548:armstate` THEN
-  MEXP_HYP_TAC 1 4 THEN
-  ARM_STEPS_TAC YVL65_EXEC [549] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 1 4`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 550 THEN
-  ARM_STEPS_TAC YVL65_EXEC (551--553) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 1 4;
-    MLD_LAZY_YVEC_YHAT YVL65_G 4;
-    `pc:num`; `read X30 s`] 554 THEN
-  ARM_STEPS_TAC YVL65_EXEC (555--558) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 1 3;
-    MLD_LAZY_YVEC_PW YVL65_G 1 4; `pc:num`; `read X30 s`]
-   559 THEN
-  ARM_STEPS_TAC YVL65_EXEC (560--567) THEN
-  MEXP_INPUT_TAC bf 2 4 `s567:armstate` THEN
-  MEXP_HYP_TAC 2 4 THEN
-  ARM_STEPS_TAC YVL65_EXEC [568] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 2 4`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 569 THEN
-  ARM_STEPS_TAC YVL65_EXEC (570--572) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 2 4;
-    MLD_LAZY_YVEC_YHAT YVL65_G 4;
-    `pc:num`; `read X30 s`] 573 THEN
-  ARM_STEPS_TAC YVL65_EXEC (574--577) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 2 3;
-    MLD_LAZY_YVEC_PW YVL65_G 2 4; `pc:num`; `read X30 s`]
-   578 THEN
-  ARM_STEPS_TAC YVL65_EXEC (579--586) THEN
-  MEXP_INPUT_TAC bf 3 4 `s586:armstate` THEN
-  MEXP_HYP_TAC 3 4 THEN
-  ARM_STEPS_TAC YVL65_EXEC [587] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 3 4`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 588 THEN
-  ARM_STEPS_TAC YVL65_EXEC (589--591) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 3 4;
-    MLD_LAZY_YVEC_YHAT YVL65_G 4;
-    `pc:num`; `read X30 s`] 592 THEN
-  ARM_STEPS_TAC YVL65_EXEC (593--596) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 3 3;
-    MLD_LAZY_YVEC_PW YVL65_G 3 4; `pc:num`; `read X30 s`]
-   597 THEN
-  ARM_STEPS_TAC YVL65_EXEC (598--605) THEN
-  MEXP_INPUT_TAC bf 4 4 `s605:armstate` THEN
-  MEXP_HYP_TAC 4 4 THEN
-  ARM_STEPS_TAC YVL65_EXEC [606] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 4 4`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 607 THEN
-  ARM_STEPS_TAC YVL65_EXEC (608--610) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 4 4;
-    MLD_LAZY_YVEC_YHAT YVL65_G 4;
-    `pc:num`; `read X30 s`] 611 THEN
-  ARM_STEPS_TAC YVL65_EXEC (612--615) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 4 3;
-    MLD_LAZY_YVEC_PW YVL65_G 4 4; `pc:num`; `read X30 s`]
-   616 THEN
-  ARM_STEPS_TAC YVL65_EXEC (617--624) THEN
-  MEXP_INPUT_TAC bf 5 4 `s624:armstate` THEN
-  MEXP_HYP_TAC 5 4 THEN
-  ARM_STEPS_TAC YVL65_EXEC [625] THEN
-  YVL65_CALL_TAC "H_UNIF"
-   [`read X0 s`; `read X1 s`; `mld_matrix_seed r 5 4`; `guard:int64`;
-    `pc:num`; `read SP s`; `read X30 s`] 626 THEN
-  ARM_STEPS_TAC YVL65_EXEC (627--629) THEN
-  YVL65_CALL_TAC "H_PW"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ENTRY 5 4;
-    MLD_LAZY_YVEC_YHAT YVL65_G 4;
-    `pc:num`; `read X30 s`] 630 THEN
-  ARM_STEPS_TAC YVL65_EXEC (631--634) THEN
-  YVL65_CALL_TAC "H_ADD"
-   [`read X0 s`; `read X1 s`; MLD_LAZY_YVEC_ACC YVL65_G 5 3;
-    MLD_LAZY_YVEC_PW YVL65_G 5 4; `pc:num`; `read X30 s`]
-   635 THEN
-  ARM_STEPS_TAC YVL65_EXEC (636--646) THEN
-  MLD_LAZY_YVEC_JOIN_TAC YVL65_G 6 5 "s646" THEN
-  YVL65_CALL_TAC "H_VRED"
-   [`read X0 s`; MLD_LAZY_YVEC_W YVL65_G 5; `pc:num`; `read SP s`;
-    `read X30 s`] 647 THEN
-  ARM_STEPS_TAC YVL65_EXEC (648--649) THEN
-  YVL65_CALL_TAC "H_VINV"
-   [`read X0 s`; mk_comb(`mld_polyvec_map mld_poly_reduce`,
-                         MLD_LAZY_YVEC_W YVL65_G 5);
-    `pc:num`; `read SP s`; `read X30 s`] 650 THEN
-  ARM_STEPS_TAC YVL65_EXEC [651] THEN
-  MLKEM_NATIVE_ADRP_TAC THEN
-  ARM_STEPS_TAC YVL65_EXEC (652--663) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL [MLD_LAZY_YVEC_POST_TAC; DISCHARGE_SAFETY_PROPERTY_TAC];;
+   ilist (vars @ YVL65_ALLOWED) n;;
 
 (* ------------------------------------------------------------------------- *)
-(* Correctness, constant time and memory safety.                             *)
+(* The invariants, with the frame of utils/mldsa_native_lazy_matrix.ml       *)
+(* (MLD_LAZY_INV_FRAME). The column j is counted in W22 and the row i in     *)
+(* W19, with the address of row i of w in X20, and the buffer of the seed is *)
+(* at X21. From loop2, a row of the first column (W22 = 0) samples entry     *)
+(* (i,0) into row i of w and multiplies it with scratch, and a row of        *)
+(* another column samples entry (i,j) into the polynomial cur at mat,        *)
+(* multiplies it with scratch and adds it to row i of w; the inner loop      *)
+(* exits to join1, where the column is incremented. At loop1 for column l +  *)
+(* 1 (OUTER), w holds the sums for the columns up to l; at loop2 for row i   *)
+(* (INNER), polynomial l + 1 of the transform of y is in scratch and the     *)
+(* rows before i also have the products for column l + 1; and the same for   *)
+(* the first column (J1_0, INNER0).                                          *)
 (* ------------------------------------------------------------------------- *)
 
-let MLDSA_NATIVE_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_YVEC_LAZY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL = prove
- (MLDSA_NATIVE_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_YVEC_LAZY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL_STMT,
+let YVL65_YHAT = MLD_LAZY_INV_YHAT "mld_poly_uniform_gamma1_19";;
+
+let YVL65_YH = parse_term YVL65_YHAT;;
+
+let YVL65_FRAME = MLD_LAZY_INV_FRAME "X21";;
+
+let YVL65_OUTER = parse_term
+ ("\\l s. " ^ YVL65_FRAME ^ " /\\ read X22 s = word(l + 1) /\\ " ^
+  MLD_LAZY_INV_W YVL65_YHAT "1536" "l");;
+
+let YVL65_J1_0 = parse_term
+ ("\\s. " ^ YVL65_FRAME ^ " /\\ read X22 s = word 0");;
+
+let YVL65_INNER0 = parse_term
+ ("\\i s. " ^ YVL65_FRAME ^ " /\\ read X22 s = word 0 /\\ " ^
+  "read X19 s = word i /\\ read X20 s = word_add w (word(1024 * i)) /\\ " ^
+  MLD_LAZY_INV_SCRATCH YVL65_YHAT "0" ^ " /\\ " ^
+  MLD_LAZY_INV_DONE YVL65_YHAT "0");;
+
+let YVL65_INNER = parse_term
+ ("\\i s. " ^ YVL65_FRAME ^ " /\\ read X22 s = word(l + 1) /\\ " ^
+  "read X19 s = word i /\\ read X20 s = word_add w (word(1024 * i)) /\\ " ^
+  MLD_LAZY_INV_SCRATCH YVL65_YHAT "(l + 1)" ^ " /\\ " ^
+  MLD_LAZY_INV_DONE YVL65_YHAT "(l + 1)" ^ " /\\ " ^
+  MLD_LAZY_INV_REST YVL65_YHAT "1536" "l");;
+
+(* ------------------------------------------------------------------------- *)
+(* The setup: the callee theorems, the template, the saved registers, the    *)
+(* canary, the buffer, and the termination of the samplings of the entries.  *)
+(* ------------------------------------------------------------------------- *)
+
+let YVL65_SETUP_TAC =
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(fun th ->
     ASSUME_CALLEE_SAFETY_TAILED_TAC
@@ -625,14 +107,7 @@ let MLDSA_NATIVE_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_YVEC_LAZY_65_GCC12_O2_REDUC
    MLDSA_NATIVE_POLYVECK_REDUCE_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL "H_VRED" THEN
   ASSUME_CALLEE_SAFETY_TAILED_TAC
    MLDSA_NATIVE_POLYVECK_INVNTT_TOMONT_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL "H_VINV" THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(w:int64) (mat:int64) (y:int64) (scratch:int64) (r:num) (rp:int64)
-     (guard:int64) (mf:int64) (pc:num) (stackpointer:int64)
-     (returnaddress:int64).
-     if aligned 32 stackpointer
-     then f_ev_a w mat y scratch r rp guard mf pc stackpointer returnaddress
-     else f_ev_u w mat y scratch r rp guard mf pc stackpointer returnaddress
-     :(uarch_event)list` THEN
+  CONCRETIZE_F_EVENTS_TAC YVL65_TEMPLATE THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
   REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
@@ -653,11 +128,288 @@ let MLDSA_NATIVE_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_YVEC_LAZY_65_GCC12_O2_REDUC
     let r = "X"^string_of_int n in
     ENSURES_PRESERVED_TAC ("x"^string_of_int n^"_init")
      (mk_const(r,[]))) (19--26) THEN
-  PAR_THENL (ASM_CASES_TAC `aligned 32 (stackpointer:int64)`)
-   [REWRITE_TAC[ASSUME `aligned 32 (stackpointer:int64)`] THEN
-    YVL65_CASE_TAC 1472;
-    REWRITE_TAC[ASSUME `~aligned 32 (stackpointer:int64)`] THEN
-    YVL65_CASE_TAC 1488]);;
+  MLD_LAZY_BUFFER_SETUP_TAC 6144 THEN
+  FIRST_ASSUM(ASSUME_TAC o REWRITE_RULE[mld_matrix_terminates] o check
+    (can (term_match [] `mld_matrix_terminates k l r`) o concl));;
+
+(* ------------------------------------------------------------------------- *)
+(* The prologue: rho is loaded as two 128-bit halves and stored to the       *)
+(* buffer, whose address the AND gives at step 7, and the canary is stored   *)
+(* in the frame.                                                             *)
+(* ------------------------------------------------------------------------- *)
+
+let YVL65_PROLOGUE_TAC =
+  FULL_INIT_TAC THEN
+  FIRST_ASSUM(MP_TAC o MATCH_MP MLD_BYTES128_HALVES o check
+   (can (term_match []
+      `read (memory :> bytes(word_add mat (word 1024),32)) s = n`) o
+    concl)) THEN
+  REWRITE_TAC[WORD_RULE `word_add (word_add mat (word 1024)) (word 16):int64 =
+                          word_add mat (word 1040)`] THEN
+  STRIP_TAC THEN MLD_LAZY_RBOUND_TAC "s0" THEN
+  ARM_STEPS_TAC YVL65_EXEC (1--7) THEN MLD_LAZY_BUFFER_REG_TAC `X21` THEN
+  ARM_STEPS_TAC YVL65_EXEC (8--13) THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC YVL65_EXEC (14--20) THEN
+  MP_TAC(SPECL [`buf:int64`; `r:num`; `s20:armstate`]
+               (CONV_RULE NUM_REDUCE_CONV MLD_BYTES_32_OF_HALVES)) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_TAC] THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  MLD_LAZY_UNBUF_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* The first column: the sampling of polynomial 0 of y into scratch, from    *)
+(* rho'' and the nonce kappa, and its NTT and the jump to loop2; the rows i  *)
+(* (entry (i,0) is sampled into row i of w and multiplied by scratch); and   *)
+(* the end of the column.                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let YVL65_COL0_INIT_TAC =
+  REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN FULL_INIT_TAC THEN
+  ARM_STEPS_TAC YVL65_EXEC (1--7) THEN
+  YVL65_CALL_TAC [] "H_G1"
+   [`read X0 s`; `read X1 s`; `RP:num`; `read X2 s`; `guard:int64`;
+    `pc:num`; `read SP s`; `read X30 s`] 8 THEN
+  MLD_LAZY_YVEC_Y_TAC YVL65_G 0 THEN
+  ARM_STEPS_TAC YVL65_EXEC (9--10) THEN
+  YVL65_CALL_TAC [] "H_NTT"
+   [`read X0 s`; MLD_LAZY_YVEC_Y YVL65_G 0; `pc:num`; `read X30 s`] 11 THEN
+  MLD_LAZY_YVEC_YHAT_TAC YVL65_G 0 THEN
+  ARM_STEPS_TAC YVL65_EXEC [12] THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; WORD_ADD_0] THEN
+  ASM_REWRITE_TAC[] THEN
+  MLD_LAZY_UNBUF_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let YVL65_COL0_BODY_TAC =
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+  FULL_INIT_TAC THEN
+  SUBGOAL_THEN `i < 256 /\ i < 4294967296 /\ i < 18446744073709551616 /\
+                i + 1 < 2 EXP 32`
+   STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THEN CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+    ALL_TAC] THEN
+  ARM_STEPS_TAC YVL65_EXEC (1--5) THEN
+  MLD_LAZY_YVEC_SEED_TAC `0` "s5" THEN
+  MLD_LAZY_TERM_TAC
+   `mld_rej_uniform_terminates
+     (mld_shake128_stream 34 (mld_matrix_seed r i 0))` THEN
+  ARM_STEPS_TAC YVL65_EXEC [6] THEN
+  YVL65_CALL_TAC [`i:num`] "H_UNIF"
+   [`read X0 s`; `read X1 s`; `mld_matrix_seed r i 0`; `guard:int64`;
+    `pc:num`; `read SP s`; `read X30 s`] 7 THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[GSYM mld_matrix_entry]) THEN
+  ARM_STEPS_TAC YVL65_EXEC (8--11) THEN
+  YVL65_CALL_TAC [`i:num`] "H_PW"
+   [`read X0 s`; `read X1 s`; `mld_matrix_entry r i 0`;
+    mk_comb(mk_comb(`mld_poly_of`,YVL65_YH),`0`);
+    `pc:num`; `read X30 s`] 12 THEN
+  ARM_STEPS_TAC YVL65_EXEC (13--15) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE
+   [MATCH_MP WORD_ZX_ADD_SMALL (ASSUME `i + 1 < 2 EXP 32`)]) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  W32_LOOP_TEST_TAC THEN LOOP_COND_TAC THEN
+  REPEAT CONJ_TAC THEN
+  TRY(COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC) THEN
+  TRY(REWRITE_TAC[COND_SWAP] THEN COND_CASES_TAC THEN REWRITE_TAC[] THEN
+      NO_TAC) THEN
+  TRY(CONV_TAC WORD_RULE THEN NO_TAC) THEN
+  TRY(MLD_LAZY_JOIN_TAC [mld_lazy_acc] THEN NO_TAC) THEN
+  REWRITE_TAC[NOT_LT] THEN
+  MLD_LAZY_UNBUF_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let YVL65_COL0_EXIT_TAC =
+  REWRITE_TAC[] THEN FULL_INIT_TAC THEN
+  RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
+  ARM_STEPS_TAC YVL65_EXEC (1--3) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[ADD_CLAUSES] THEN
+  MLD_LAZY_UNBUF_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* The other columns l + 1: the sampling of polynomial l + 1 of y, with the  *)
+(* nonce kappa + l + 1, and its NTT and the jump to loop2; the rows i (entry *)
+(* (i,l + 1) is sampled into cur, multiplied by scratch and added to row i   *)
+(* of w); and the end of the column with the test of the outer loop. The     *)
+(* events so far are generalized at the start of each part                   *)
+(* (MLD_LAZY_GEN_OLD_TAC).                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+let YVL65_COL_INIT_TAC =
+  let vars = [`l:num`; `old:(uarch_event)list`] in
+  REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN FULL_INIT_TAC THEN
+  ARM_STEPS_TAC YVL65_EXEC (1--7) THEN
+  YVL65_CALL_TAC vars "H_G1"
+   [`read X0 s`; `read X1 s`; `RP:num`; `read X2 s`; `guard:int64`;
+    `pc:num`; `read SP s`; `read X30 s`] 8 THEN
+  MLD_LAZY_YVEC_YJ_TAC YVL65_G `l + 1` THEN
+  ARM_STEPS_TAC YVL65_EXEC (9--10) THEN
+  YVL65_CALL_TAC vars "H_NTT"
+   [`read X0 s`;
+    `mld_poly_of (mld_sign_y mld_poly_uniform_gamma1_19 RP (val(kappa:int16)))
+                 (l + 1)`;
+    `pc:num`; `read X30 s`] 11 THEN
+  MLD_LAZY_YVEC_YHATJ_TAC YVL65_G `l + 1` THEN
+  ARM_STEPS_TAC YVL65_EXEC [12] THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[MULT_CLAUSES; CONJUNCT1 LT; LE_0; WORD_ADD_0] THEN
+  ASM_REWRITE_TAC[] THEN
+  MLD_LAZY_UNBUF_TAC THEN VERIF_EVENTS_TAC [`old:(uarch_event)list`];;
+
+let YVL65_COL_BODY_TAC =
+  let vars = [`i:num`; `l:num`; `old2:(uarch_event)list`] in
+  let yacc = mk_abs(`q:num`,list_mk_comb(`mld_lazy_acc`,
+                [`r:num`; `q:num`; YVL65_YH; `l:num`])) in
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
+  MLD_LAZY_GEN_OLD_TAC "old2" THEN FULL_INIT_TAC THEN
+  SUBGOAL_THEN `i < 256 /\ i < 4294967296 /\ i < 18446744073709551616 /\
+                i + 1 < 2 EXP 32 /\ l + 1 < 256 /\ l + 1 < 4294967296 /\
+                l + 1 < 18446744073709551616 /\ l + 1 < 2 EXP 32`
+   STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THEN CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC;
+    ALL_TAC] THEN
+  ARM_STEPS_TAC YVL65_EXEC (1--2) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP MLD_LAZY_VAL_ZX
+                               (ASSUME `l + 1 < 2 EXP 32`);
+                              ADD_EQ_0; ARITH_EQ]) THEN
+  ARM_STEPS_TAC YVL65_EXEC (3--5) THEN
+  MLD_LAZY_YVEC_SEED_TAC `l + 1` "s5" THEN
+  MLD_LAZY_TERM_TAC
+   `mld_rej_uniform_terminates
+     (mld_shake128_stream 34 (mld_matrix_seed r i (l + 1)))` THEN
+  ARM_STEPS_TAC YVL65_EXEC [6] THEN
+  YVL65_CALL_TAC vars "H_UNIF"
+   [`read X0 s`; `read X1 s`; `mld_matrix_seed r i (l + 1)`; `guard:int64`;
+    `pc:num`; `read SP s`; `read X30 s`] 7 THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[GSYM mld_matrix_entry]) THEN
+  ARM_STEPS_TAC YVL65_EXEC (8--10) THEN
+  YVL65_CALL_TAC vars "H_PW"
+   [`read X0 s`; `read X1 s`; `mld_matrix_entry r i (l + 1)`;
+    mk_comb(mk_comb(`mld_poly_of`,YVL65_YH),`l + 1`);
+    `pc:num`; `read X30 s`] 11 THEN
+  ARM_STEPS_TAC YVL65_EXEC (12--14) THEN
+  MLD_LAZY_ROW_TAC yacc
+   (subst [YVL65_YH,`yh:num->int32`]
+     `!c. c < 256
+          ==> read (memory :> bytes32 (word_add w (word(1024 * i + 4 * c))))
+                s14 =
+              mld_lazy_acc r i yh l c`) THEN
+  VEC_REST_TAC (subst [yacc,`f:num->num->int32`]
+   `!j. 256 * (i + 1) <= j /\ j < 1536
+        ==> read(memory :> bytes32(word_add w (word(4 * j)))) s14 =
+            mld_polyvec f j`) THEN
+  ARM_STEPS_TAC YVL65_EXEC [15] THEN
+  YVL65_CALL_TAC vars "H_ADD"
+   [`read X0 s`; `read X1 s`;
+    list_mk_comb(`mld_lazy_acc`,[`r:num`; `i:num`; YVL65_YH; `l:num`]);
+    list_mk_comb(`mld_poly_pointwise_montgomery`,
+      [`mld_matrix_entry r i (l + 1)`;
+       mk_comb(mk_comb(`mld_poly_of`,YVL65_YH),`l + 1`)]);
+    `pc:num`; `read X30 s`] 16 THEN
+  ARM_STEPS_TAC YVL65_EXEC (17--19) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE
+   [MATCH_MP WORD_ZX_ADD_SMALL (ASSUME `i + 1 < 2 EXP 32`)]) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  W32_LOOP_TEST_TAC THEN LOOP_COND_TAC THEN
+  REPEAT CONJ_TAC THEN
+  TRY(COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC) THEN
+  TRY(REWRITE_TAC[COND_SWAP] THEN COND_CASES_TAC THEN REWRITE_TAC[] THEN
+      NO_TAC) THEN
+  TRY(CONV_TAC WORD_RULE THEN NO_TAC) THEN
+  TRY(MLD_LAZY_JOIN_TAC [MLD_LAZY_ACC_ADD1] THEN NO_TAC) THEN
+  REWRITE_TAC[NOT_LT] THEN
+  MLD_LAZY_UNBUF_TAC THEN VERIF_EVENTS_TAC [`old2:(uarch_event)list`];;
+
+let YVL65_COL_EXIT_TAC =
+  REWRITE_TAC[] THEN MLD_LAZY_GEN_OLD_TAC "old2" THEN FULL_INIT_TAC THEN
+  RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
+  SUBGOAL_THEN `(l + 1) + 1 < 2 EXP 32` ASSUME_TAC THENL
+   [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  ARM_STEPS_TAC YVL65_EXEC (1--1) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE
+   [MATCH_MP WORD_ZX_ADD_SMALL (ASSUME `(l + 1) + 1 < 2 EXP 32`)]) THEN
+  ARM_STEPS_TAC YVL65_EXEC (2--3) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  W32_LOOP_TEST_TAC THEN
+  SUBGOAL_THEN `((l + 1) + 1 = 5) <=> ~(l + 1 < 4)` SUBST1_TAC THENL
+   [SIMPLE_ARITH_TAC; REWRITE_TAC[]] THEN
+  REPEAT CONJ_TAC THEN
+  TRY(COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC) THEN
+  MLD_LAZY_UNBUF_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* The epilogue: the zeroing of the buffer, the reduction of the vector of   *)
+(* the sums and its inverse NTT, which is the product                        *)
+(* (mld_polyvec_matrix_yvec_lazy), the check of the canary, and the          *)
+(* restoring of the registers and the return.                                *)
+(* ------------------------------------------------------------------------- *)
+
+let YVL65_EPILOGUE_TAC =
+  let wv = MLD_LAZY_YVEC_W YVL65_G 5 in
+  REWRITE_TAC[] THEN MLD_LAZY_GEN_OLD_TAC "old" THEN FULL_INIT_TAC THEN
+  ARM_STEPS_TAC YVL65_EXEC (1--5) THEN
+  YVL65_CALL_TAC [`old:(uarch_event)list`] "H_VRED"
+   [`read X0 s`; wv; `pc:num`; `read SP s`; `read X30 s`] 6 THEN
+  ARM_STEPS_TAC YVL65_EXEC (7--8) THEN
+  YVL65_CALL_TAC [`old:(uarch_event)list`] "H_VINV"
+   [`read X0 s`; mk_comb(`mld_polyvec_map mld_poly_reduce`,wv);
+    `pc:num`; `read SP s`; `read X30 s`] 9 THEN
+  ARM_STEPS_TAC YVL65_EXEC [10] THEN MLKEM_NATIVE_ADRP_TAC THEN
+  ARM_STEPS_TAC YVL65_EXEC (11--22) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [MLD_LAZY_YVEC_POST_TAC;
+    MLD_LAZY_UNBUF_TAC THEN VERIF_EVENTS_TAC [`old:(uarch_event)list`]];;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness, constant time and memory safety together: the loop over the  *)
+(* columns 1, ..., 4, after the prologue and the first column, each column   *)
+(* as the loop over the rows, whose initialization samples the polynomial of *)
+(* y for the column.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_NATIVE_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_YVEC_LAZY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL =
+  prove
+ (MLDSA_NATIVE_POLYVEC_MATRIX_POINTWISE_MONTGOMERY_YVEC_LAZY_65_GCC12_O2_REDUCED_RAM_IMAGE_SUBROUTINE_FULL_STMT,
+  YVL65_SETUP_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `4`
+   `pc + mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_loop1`
+   `pc + mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_loop1_exit`
+   YVL65_OUTER THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (*** The prologue and the first column ***)
+
+    REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN
+    ENSURES_EVENTS_SEQUENCE_TAC
+     `pc + mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_loop1`
+     YVL65_J1_0 THEN
+    CONJ_TAC THENL
+     [YVL65_PROLOGUE_TAC;
+      ENSURES_EVENTS_WHILE_UP2_TAC `6`
+       `pc + mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_loop2`
+       `pc + mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_join1`
+       YVL65_INNER0 THEN
+      REPEAT CONJ_TAC THENL
+       [ARITH_TAC; YVL65_COL0_INIT_TAC; YVL65_COL0_BODY_TAC;
+        YVL65_COL0_EXIT_TAC]];
+
+    (*** The other columns ***)
+
+    X_GEN_TAC `l:num` THEN STRIP_TAC THEN
+    REWRITE_TAC[ENUMERATEL_ADD1] THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+    MLD_LAZY_EVENTS_REASSOC_TAC (GSYM APPEND_ASSOC) THEN
+    MLD_LAZY_GEN_OLD_TAC "old" THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `6`
+     `pc + mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_loop2`
+     `pc + mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy_join1`
+     YVL65_INNER THEN
+    REPEAT CONJ_TAC THENL
+     [ARITH_TAC; YVL65_COL_INIT_TAC; YVL65_COL_BODY_TAC;
+      YVL65_COL_EXIT_TAC];
+
+    (*** The epilogue ***)
+
+    YVL65_EPILOGUE_TAC]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness, and constant time and memory safety alone.                   *)

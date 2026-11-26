@@ -69,27 +69,6 @@ let MLD_LAZY_ROW_SEED_TAC k buf j s =
     CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
     DISCH_TAC];;
 
-(* The vector w in state s before mld_polyveck_reduce, as the vector of the  *)
-(* sums of the rows, from the facts for its k polynomials.                   *)
-
-let MLD_LAZY_YVEC_JOIN_TAC g k l s =
-  let jth = CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-             (GEN `P:num->bool`
-               (SPECL [`P:num->bool`; `256`; mk_small_numeral k]
-                      VEC_JOIN_ALL)) in
-  let tm = subst [mk_small_numeral(256 * k),`n:num`;
-                  MLD_LAZY_YVEC_W g l,`W:num->int32`;
-                  mk_var(s,`:armstate`),`s:armstate`]
-    `!i. i < n
-         ==> read (memory :> bytes32 (word_add w (word (4 * i)))) s =
-             W i` in
-  SUBGOAL_THEN tm ASSUME_TAC THENL
-   [MATCH_MP_TAC jth THEN SIMP_TAC[MLD_POLYVEC_COEFF] THEN
-    CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC POLYVEC_INDEX_CONV THEN
-    CONV_TAC(ONCE_DEPTH_CONV MLD_LAZY_ACC_CONV) THEN
-    REWRITE_TAC[mld_matrix_entry] THEN REPEAT CONJ_TAC THEN ASM_SIMP_TAC[];
-    ALL_TAC];;
-
 (* ------------------------------------------------------------------------- *)
 (* The copy of rho into the structure of the matrix sampled on demand        *)
 (* (mld_polyvec_matrix_expand_lazy), whose contract gives the bytes:         *)
@@ -155,3 +134,131 @@ let MLD_LAZY_FULL_OF_FULL0_TAC full0 lemtac =
   TRY(EXISTS_TAC `e2:(uarch_event)list` THEN ASM_REWRITE_TAC[] THEN
       NO_TAC) THEN
   ASM_SIMP_TAC[];;
+
+(* ------------------------------------------------------------------------- *)
+(* The loops of the signing product (see                                     *)
+(* common/fips204/properties/mldsa_native_lazy_matrix.ml). The frame of 176  *)
+(* bytes is at stackpointer + 1392 (the 1392 bytes below it are those of     *)
+(* mldsa_poly_uniform), with the saved registers at stackpointer + 1392 and  *)
+(* the canary at stackpointer + 1560; MLD_LAZY_INV_FRAME breg is the part of *)
+(* the invariants for the frame, with the buffer buf of the seed in register *)
+(* breg, the arguments in X23-X26 and the facts of the precondition that the *)
+(* callees need. MLD_LAZY_BUFFER_SETUP_TAC n introduces the buffer, at       *)
+(* stackpointer + boff where the code puts it, with its bound and the facts  *)
+(* that it is apart from the other regions, for w of n bytes, and adds it to *)
+(* the frame of the goal, so that the simulation keeps the writes to it in   *)
+(* the frame; after the AND of the code, MLD_LAZY_BUFFER_REG_TAC breg puts   *)
+(* buf in the register. MLD_LAZY_YVEC_SEED_TAC jt s proves that the 34 bytes *)
+(* of the buffer in state s are the seed of entry (i,jt), from rho and the   *)
+(* two bytes after it.                                                       *)
+(* ------------------------------------------------------------------------- *)
+
+let MLD_LAZY_INV_FRAME breg =
+  "read SP s = word_add stackpointer (word 1392) /\\
+   read " ^ breg ^ " s = buf /\\
+   read X23 s = mat /\\ read X24 s = scratch /\\ read X25 s = y /\\
+   read X26 s = w /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1392))) s =
+   x19_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1400))) s =
+   x20_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1408))) s =
+   x21_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1416))) s =
+   x22_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1424))) s =
+   x23_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1432))) s =
+   x24_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1440))) s =
+   x25_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1448))) s =
+   x26_init /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1456))) s =
+   returnaddress /\\
+   read (memory :> bytes64 (word_add stackpointer (word 1560))) s =
+   canary /\\
+   read (memory :> bytes64 (word_add (word pc) (word got_stack_chk_guard)))
+    s = guard /\\
+   read (memory :> bytes64 guard) s = canary /\\
+   read (memory :> bytes64 (word(pc + got_memset))) s = mf /\\
+   read (memory :> bytes(ea,el)) s = ev /\\
+   read (memory :> bytes(buf,32)) s = r /\\
+   read (memory :> bytes64 y) s = rp /\\
+   read (memory :> bytes16 (word_add y (word 8))) s = kappa /\\
+   read (memory :> bytes(rp,64)) s = RP";;
+
+let MLD_LAZY_BUFFER_SETUP_TAC n =
+  let wr = mk_pair(`w:int64`,mk_small_numeral n) in
+  ABBREV_TAC
+   `boff = 1503 - val(word_add stackpointer (word 1503):int64) MOD 32` THEN
+  SUBGOAL_THEN `1472 <= boff /\ boff <= 1488` STRIP_ASSUME_TAC THENL
+   [EXPAND_TAC "boff" THEN
+    MP_TAC(MATCH_MP MLD_LAZY_BUFFER_BOUND
+            (ASSUME `aligned 16 (stackpointer:int64)`)) THEN
+    MP_TAC(SPECL [`val(word_add stackpointer (word 1503):int64)`; `32`]
+                 MOD_LT_EQ) THEN
+    ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `word_and (word_add stackpointer (word 1503)) (word 18446744073709551584) =
+    word_add stackpointer (word boff):int64`
+   ASSUME_TAC THENL
+   [EXPAND_TAC "boff" THEN MATCH_MP_TAC MLD_LAZY_BUFFER_AND THEN ARITH_TAC;
+    ALL_TAC] THEN
+  ABBREV_TAC `buf = word_add stackpointer (word boff):int64` THEN
+  MAP_EVERY (fun r ->
+    SUBGOAL_THEN
+     (mk_comb(mk_comb(`nonoverlapping:int64#num->int64#num->bool`,
+                      `buf:int64,64`),r))
+     ASSUME_TAC THENL
+     [EXPAND_TAC "buf" THEN NONOVERLAPPING_TAC; ALL_TAC])
+   [`stackpointer:int64,1464`; `word_add stackpointer (word 1560):int64,8`;
+    wr; `mat:int64,1024`; `scratch:int64,1024`;
+    `word_add mat (word 1024):int64,32`; `y:int64,16`; `rp:int64,64`;
+    `word pc:int64,libmldsa_size`;
+    `word_add (word pc) (word got_stack_chk_guard):int64,8`;
+    `guard:int64,8`; `word(pc + got_memset):int64,8`; `ea:int64,el:num`] THEN
+  W(fun (asl,w) ->
+    let c = rand w in
+    let c' = mk_comb(mk_comb(fst(strip_comb c),c),
+                     `MAYCHANGE [memory :> bytes(buf:int64,64)]`) in
+    MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN EXISTS_TAC c' THEN
+    CONJ_TAC THENL
+     [EXPAND_TAC "buf" THEN EXPAND_TAC "boff" THEN SUBSUMED_MAYCHANGE_TAC;
+      ALL_TAC]);;
+
+let MLD_LAZY_BUFFER_REG_TAC breg =
+  FIRST_ASSUM(fun th ->
+    if can (term_match [] `word_and (word_add stackpointer (word 1503))
+                            (word 18446744073709551584):int64 = x`)
+           (concl th)
+    then RULE_ASSUM_TAC(fun th' ->
+           if free_in breg (concl th') then REWRITE_RULE[th] th' else th')
+    else NO_TAC);;
+
+let MLD_LAZY_SEED = prove
+ (`!a:int64 r i j s:armstate.
+        read (memory :> bytes(a,32)) s = r /\
+        read (memory :> bytes(word_add a (word 32),2)) s = j + 256 * i
+        ==> read (memory :> bytes(a,34)) s = mld_matrix_seed r i j`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[mld_matrix_seed; ARITH_RULE `34 = 32 + 2`;
+              READ_COMPONENT_COMPOSE; READ_BYTES_COMBINE] THEN
+  REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+let MLD_LAZY_YVEC_SEED_TAC jt s =
+  let sv = mk_var(s,`:armstate`) in
+  SUBGOAL_THEN (subst [jt,`j:num`; sv,`s:armstate`]
+     `read (memory :> bytes(word_add buf (word 32),2)) s = j + 256 * i`)
+   ASSUME_TAC THENL
+   [REWRITE_TAC[CONJUNCT2 MLD_BYTES2] THEN
+    CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+    ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[VAL_WORD_ZX_GEN; VAL_WORD; DIMINDEX_8; DIMINDEX_32;
+                DIMINDEX_64] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN ASM_SIMP_TAC[MOD_LT];
+    ALL_TAC] THEN
+  MP_TAC(SPECL [`buf:int64`; `r:num`; `i:num`; jt; sv] MLD_LAZY_SEED) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_TAC;;
