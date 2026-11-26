@@ -18,6 +18,15 @@ runs:
         linux-packages: binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu
         apt-update-options: --allow-insecure-repositories
 
+    # Proof times depend on the host. Record what this runner provides, so
+    # that a timing comparison can be checked against it.
+    - name: Print runner CPUs and memory
+      shell: bash
+      run: |
+        echo "nproc: $(nproc)"
+        lscpu | grep -E '^(Model name|CPU\(s\)|Thread|Core|Socket|NUMA node\(s\))'
+        free -g
+
     - name: Build proof modules and run proofs and tutorials through hol-d
       id: proofs
       shell: bash
