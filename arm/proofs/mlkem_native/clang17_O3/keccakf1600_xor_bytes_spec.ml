@@ -421,7 +421,8 @@ let XOR_NORM_TAC =
   RULE_ASSUM_TAC(REWRITE_RULE[ADD_SUB2]) THEN
   W(fun (asl,w) ->
     let tms = setify(itlist (fun (_,th) acc ->
-      find_terms (fun t -> exists (fun (p,_) -> can (term_match [] p) t)
+      find_terms (fun t -> is_binary "word_and" t &&
+                           exists (fun (p,_) -> can (term_match [] p) t)
                                   mask_pats) (concl th) @ acc) asl []) in
     MAP_EVERY (fun t ->
       let lth = snd(find (fun (p,_) -> can (term_match [] p) t) mask_pats) in
@@ -431,7 +432,8 @@ let XOR_NORM_TAC =
           [CONV_TAC NUM_REDUCE_CONV THEN SIMPLE_ARITH_TAC; ALL_TAC])) tms) THEN
   W(fun (asl,w) ->
     let tms = setify(itlist (fun (_,th) acc ->
-      find_terms (fun t -> can (term_match [] `(m * n + p) DIV m`) t &&
+      find_terms (fun t -> is_binary "DIV" t &&
+                           can (term_match [] `(m * n + p) DIV m`) t &&
                            is_numeral(lhand(lhand(lhand t))))
         (concl th) @ acc) asl []) in
     MAP_EVERY (fun t ->
@@ -446,7 +448,8 @@ let XOR_TST_TAC =
   RULE_ASSUM_TAC(REWRITE_RULE[VAL_WORD_AND_15; VAL_WORD_AND_7]) THEN
   W(fun (asl,w) ->
     let tms = setify(itlist (fun (_,th) acc ->
-      find_terms (fun t -> can (term_match [] `n MOD 2 EXP 64`) t)
+      find_terms (fun t -> is_binary "MOD" t &&
+                           can (term_match [] `n MOD 2 EXP 64`) t)
         (concl th) @ acc) asl []) in
     MAP_EVERY (fun t ->
       TRY(SUBGOAL_THEN (mk_eq(t,lhand t))
