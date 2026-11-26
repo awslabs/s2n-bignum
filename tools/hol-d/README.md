@@ -273,6 +273,17 @@ Limits:
 - A command that leaves its process group, for example with `setsid`, is
   outside these guarantees.
 
+## Tutorial and tests
+
+[`tutorial/`](tutorial) walks through the commands above in numbered
+steps, from starting a daemon to sharing a project's imports and the
+lifetime guarantees. Each step's `run.sh` is commented and checks its own
+output. `make -C tutorial HOLDIR=...` runs them all, and
+`make -C tutorial 03-plugins` runs one. [`tests/`](tests) stress process
+cleanup and concurrency on Linux with `make -C tests HOLDIR=...`, with the
+HOL Light OCaml switch active. The [hol-d workflow](../../.github/workflows/hol-d.yml)
+runs both for pull requests that change hol-d.
+
 ## Integration with s2n-bignum
 
 From the s2n-bignum repository root, run a batch or build modules to
