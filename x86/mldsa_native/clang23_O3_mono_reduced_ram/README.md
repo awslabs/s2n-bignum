@@ -4,8 +4,8 @@ This directory is for mldsa-native's `libmldsa.so` built with clang 23 and
 `-O3`, in the monolithic layout and the reduced-RAM configuration
 `MLD_CONFIG_REDUCE_RAM`: the x86-64
 `binaries/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so` of the
-`binary` branch of mldsa-native, at commit `01be6a9` ("binaries: Rebuild
-x86-64 ML-DSA without stack protection"), the commit of the binaries of the
+`binary-v2.1` branch of mldsa-native, at commit `c817bc7df` ("binaries:
+Build the ML-DSA v2.1.0 matrices"), the commit of the binaries of the
 gcc12_O2 and gcc12_O2_reduced_ram builds (see `../README.md` and
 `../gcc12_O2_reduced_ram/README.md`). The C code is that of the
 gcc12_O2_reduced_ram build, and so are the statements, with the changes
@@ -17,7 +17,7 @@ build").
 The binary is from the same run of `scripts/build-binaries` as the gcc 12
 binaries of that commit: the linker recorded the same directory as
 `RUNPATH`
-(`/tmp/native-x86-no-stack-protector.16lXCUsN/mldsa-source/outputs/out/lib`).
+(`/tmp/native-binary-v2.1-single.ZcXVDkyZ/mldsa-source/outputs/out/lib`).
 In the monolithic layout (`multilevel-mono`), the script compiles the
 single translation unit
 `examples/monolithic_build_multilevel/mldsa_native_all.c`, which has the
@@ -34,7 +34,7 @@ The SHA-256 hash of the binary used is:
 
 ```
 reduced-ram/multilevel-mono/clang23/O3/libmldsa.so
-  38c2db03432e1f0384bb05a2fc3c0e85f612e3122c4a19773cbc0070b3ba8d49
+  51000a349489977f2cfaf399647f99742589e0b5f9f8e1268c065093192e935a
 ```
 
 `libmldsa.S` transcribes the image, from address 0 to the end of the
@@ -49,7 +49,7 @@ the definition of the image and the proofs.
 
 To regenerate the files of the build, in the `x86` directory, with
 `<build>` the `binaries` directory of a checkout of mldsa-native at commit
-`01be6a9` of the `binary` branch (see "Source of the code" in
+`c817bc7df` of the `binary-v2.1` branch (see "Source of the code" in
 `../README.md` for the x86-64 `as` that the first command needs):
 
 ```

@@ -2,18 +2,19 @@
 
 This directory is for mldsa-native's `libmldsa.so` built with gcc 12 and
 `-O2` in the reduced-RAM configuration, `MLD_CONFIG_REDUCE_RAM`: the x86-64
-`binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so` of the `binary`
-branch of mldsa-native, at commit `01be6a9` ("binaries: Rebuild x86-64
-ML-DSA without stack protection"). The gcc12_O2 build (see `../README.md`)
+`binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so` of the
+`binary-v2.1` branch of mldsa-native, at commit `c817bc7df` ("binaries:
+Build the ML-DSA v2.1.0 matrices"). The gcc12_O2 build (see `../README.md`)
 is the same sources and compiler in the default configuration.
 
 ## Source of the code
 
-As recorded in `binaries/builds.json` of the `binary` branch at that
-commit, the binary was built by `scripts/build-binaries` from mldsa-native
-commit `d38418ea3d4c`, as the one of the gcc12_O2 build (see "Source of the
-code" in `../README.md`), with `-DMLD_CONFIG_REDUCE_RAM` added to the
-flags, where `scripts/build-binaries` puts the defines of a configuration:
+As recorded in `binaries/builds.json` of the `binary-v2.1` branch at
+that commit, the binary was built by `scripts/build-binaries` from the
+v2.1.0 release of mldsa-native, commit `c9999d775`, as the one of the
+gcc12_O2 build (see "Source of the code" in `../README.md`), with
+`-DMLD_CONFIG_REDUCE_RAM` added to the flags, where
+`scripts/build-binaries` puts the defines of a configuration:
 
 ```
 -O2 -g -gdwarf-4 -gsplit-dwarf -fPIC -fno-stack-protector
@@ -26,16 +27,16 @@ configuration with inlined stores), so it imports only `memcpy` and
 `randombytes`.
 
 The SHA-256 hash of the binary used, which is that in
-`binaries/SHA256SUMS` of commit `01be6a9`, is:
+`binaries/SHA256SUMS` of commit `c817bc7df`, is:
 
 ```
 reduced-ram/multilevel/gcc12/O2/libmldsa.so
-  f71841a36d28e8ab6d445900dc5357310b26efa71a6a922fdbc048c18f6db458
+  c1df0b4681f295240a6a17da75b312b93a5f523f783e570170ac78ab7e47f0ad
 ```
 
 The image starts at address 0, so it includes the dynamic string table,
 where the linker records the directory of the build as `RUNPATH`
-(`/tmp/native-x86-no-stack-protector.16lXCUsN/mldsa-source/outputs/out/lib`
+(`/tmp/native-binary-v2.1-single.ZcXVDkyZ/mldsa-source/outputs/out/lib`
 for this binary). A binary built from the same source in another directory
 therefore differs there, and in the split debug information, but its code
 and read-only data are the same.
@@ -50,7 +51,7 @@ definition of the image and the proofs.
 
 To regenerate the files of the build, in the `x86` directory, with
 `<build>` the `binaries` directory of a checkout of mldsa-native at commit
-`01be6a9` of the `binary` branch (see "Source of the code" in
+`c817bc7df` of the `binary-v2.1` branch (see "Source of the code" in
 `../README.md` for the x86-64 `as` that the first command needs):
 
 ```

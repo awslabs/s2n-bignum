@@ -39,7 +39,7 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_clang23_O3_mono_reduced_ram):
         .quad   0x00000001003e0003
         .quad   0x0000000000000000
         .quad   0x0000000000000040
-        .quad   0x000000000004b098
+        .quad   0x000000000004b090
         .quad   0x0038004000000000
         .quad   0x0019001a00400007
         .quad   0x0000000400000001
@@ -462,14 +462,14 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_clang23_O3_mono_reduced_ram):
         .quad   0x6c6d62696c006b73
         .quad   0x2f006f732e617364
         .quad   0x6974616e2f706d74
-        .quad   0x6e2d3638782d6576
-        .quad   0x2d6b636174732d6f
-        .quad   0x6f746365746f7270
-        .quad   0x5543586c36312e72
-        .quad   0x6173646c6d2f4e73
-        .quad   0x2f656372756f732d
-        .quad   0x2f7374757074756f
-        .quad   0x0062696c2f74756f
+        .quad   0x72616e69622d6576
+        .quad   0x732d312e32762d79
+        .quad   0x635a2e656c676e69
+        .quad   0x6d2f5a796b445658
+        .quad   0x756f732d6173646c
+        .quad   0x7074756f2f656372
+        .quad   0x2f74756f2f737475
+        .quad   0x000000000062696c
         .quad   0x0000000000027df0
         .quad   0x0000000000000008
         .quad   0x00000000000258a0

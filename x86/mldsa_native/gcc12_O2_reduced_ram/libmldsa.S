@@ -46,8 +46,8 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2_reduced_ram):
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x0000000000000000
-        .quad   0x0000000000000e20
-        .quad   0x0000000000000e20
+        .quad   0x0000000000000e18
+        .quad   0x0000000000000e18
         .quad   0x0000000000001000
         .quad   0x0000000500000001
         .quad   0x0000000000001000
@@ -471,21 +471,20 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2_reduced_ram):
         .quad   0x6d62696c006b735f
         .quad   0x006f732e6173646c
         .quad   0x74616e2f706d742f
-        .quad   0x2d3638782d657669
-        .quad   0x6b636174732d6f6e
-        .quad   0x746365746f72702d
-        .quad   0x43586c36312e726f
-        .quad   0x73646c6d2f4e7355
-        .quad   0x656372756f732d61
-        .quad   0x7374757074756f2f
-        .quad   0x62696c2f74756f2f
-        .quad   0x0000000000000000
+        .quad   0x616e69622d657669
+        .quad   0x2d312e32762d7972
+        .quad   0x5a2e656c676e6973
+        .quad   0x2f5a796b44565863
+        .quad   0x6f732d6173646c6d
+        .quad   0x74756f2f65637275
+        .quad   0x74756f2f73747570
+        .quad   0x0000000062696c2f
         .quad   0x000000000000fff0
         .quad   0x0000000100000007
         .quad   0x0000000000000000
         .quad   0x000000000000fff8
         .quad   0x0000000200000007
-        .zero   488
+        .zero   496
 
 // The procedure linkage table (0x1000 to 0x1030)
 
