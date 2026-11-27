@@ -492,6 +492,7 @@ count printed by `relative_report` at the end of the link file, see
 | arm mldsa gcc12_O2 | 578 | 1898 s |
 | arm mldsa gcc12_O2_reduced_ram | 545 | 5955 s |
 | arm mldsa gcc12_Os | 629 | 1922 s |
+| arm mldsa clang23_O3_mono_reduced_ram | 212 | 8814 s (8 domains) |
 | x86 mlkem gcc12_O2 | 593 | 1853 s |
 | x86 mldsa gcc12_O2 | 578 | 1860 s |
 | x86 mldsa gcc12_O2_reduced_ram | 540 | 2233 s |
