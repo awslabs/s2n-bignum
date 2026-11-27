@@ -148,7 +148,7 @@ let MLDSA_NATIVE_SHAKE256X4_SQUEEZEBLOCKS_GCC12_OS_IMAGE_SUBROUTINE_FULL = prove
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `nblocks:num`
-   `pc + 5416`
+   `pc + 5400`
    `pc + mldsa_shake256x4_squeezeblocks_loop1_exit`
    `\i s. read X19 s = word(nblocks - i) /\
           read X20 s = word_add out0 (word(136 * i)) /\

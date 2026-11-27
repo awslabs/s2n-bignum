@@ -92,7 +92,7 @@ let MLDSA_NATIVE_CT_MEMCMP_3_GCC12_OS_IMAGE_SUBROUTINE_FULL = prove
        three instructions before it, which are also run before the first
        iteration, and the last iteration ends at the loop exit. ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + 34720`
+  ENSURES_EVENTS_WHILE_UP2_TAC `len:num` `pc + 34704`
    `pc + mld_ct_memcmp_3_loop1_exit`
    `\i s. read X0 s = a /\ read X1 s = b /\ read X2 s = word len /\
           read X30 s = returnaddress /\

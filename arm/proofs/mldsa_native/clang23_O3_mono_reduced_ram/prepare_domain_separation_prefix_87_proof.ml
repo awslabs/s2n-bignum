@@ -134,10 +134,10 @@ let MLD_PREFIX87_OID_IMAGE = prove
        mldsa_native_libmldsa_clang23_O3_mono_reduced_ram_mc
      ==> !j. j < 12
          ==> read (memory :> bytes64
-                    (word_add (word pc) (word (248620 + 16 * j)))) s =
+                    (word_add (word pc) (word (248604 + 16 * j)))) s =
              word 0x0365014886600906 /\
              read (memory :> bytes32
-                    (word_add (word pc) (word (248627 + 16 * j)))) s =
+                    (word_add (word pc) (word (248611 + 16 * j)))) s =
              word (0x20403 + 0x1000000 *
                              val(EL 10 (mld_prehash_oid (j + 1))))`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
@@ -151,12 +151,12 @@ let MLD_PREFIX87_OID_IMAGE = prove
 
 let MLD_PREFIX87_ADDR4 = prove
  (`!pc j. word_add (word(pc + (rodata_mld_get_hash_oid87_oid_map + 16 * j))) (word 4):int64 =
-          word_add (word pc) (word (248620 + 16 * j))`,
+          word_add (word pc) (word (248604 + 16 * j))`,
   REPEAT GEN_TAC THEN REWRITE_TAC[WORD_ADD] THEN CONV_TAC WORD_RULE);;
 
 let MLD_PREFIX87_ADDR11 = prove
  (`!pc j. word_add (word(pc + (rodata_mld_get_hash_oid87_oid_map + 16 * j))) (word 11):int64 =
-          word_add (word pc) (word (248627 + 16 * j))`,
+          word_add (word pc) (word (248611 + 16 * j))`,
   REPEAT GEN_TAC THEN REWRITE_TAC[WORD_ADD] THEN CONV_TAC WORD_RULE);;
 
 (*** The facts about the OID of entry hashalg - 1 at the state sN, with the

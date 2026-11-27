@@ -329,7 +329,7 @@ let MLDSA_NATIVE_KECCAK_ABSORB_GCC12_OS_IMAGE_SUBROUTINE_FULL = prove
 
     (*** The loop over the n full blocks ***)
 
-    ENSURES_EVENTS_WHILE_UP2_TAC `n:num` `pc + 3824`
+    ENSURES_EVENTS_WHILE_UP2_TAC `n:num` `pc + 3808`
      `pc + keccak_absorb_fn_loop1_exit` ABSORB_LOOP_INV THEN
     REPEAT CONJ_TAC THENL
      [ASM_REWRITE_TAC[];

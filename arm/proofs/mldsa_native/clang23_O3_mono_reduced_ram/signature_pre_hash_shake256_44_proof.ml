@@ -242,7 +242,7 @@ let SPHS44_LEN_TAC =
 
 let SPHS_OID_FACT sname =
   let s = mk_var(sname,`:armstate`) in
-  MP_TAC(SPECL [s; `pc:num`] (MLDSA_NATIVE_IMAGE_CONST_RULE 248796 64)) THEN
+  MP_TAC(SPECL [s; `pc:num`] (MLDSA_NATIVE_IMAGE_CONST_RULE 248780 64)) THEN
   ANTS_TAC THENL [FIRST_ASSUM ACCEPT_TAC; DISCH_TAC];;
 
 let SPHS_OID7_TAC sname a2 =

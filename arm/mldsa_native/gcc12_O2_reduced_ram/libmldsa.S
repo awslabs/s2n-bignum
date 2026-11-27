@@ -6,10 +6,10 @@
 // The code and read-only data of mldsa-native's libmldsa.so (gcc 12, -O2, reduced RAM)
 //
 // This is a transcription of the binary
-// binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so from the binary
-// branch of mldsa-native (see README.md), as loaded at an address that is a
-// multiple of 4096: the start of its first segment, from address 0 up to
-// the end of the read-only data. The ELF header and dynamic linking
+// binaries/aarch64/reduced-ram/multilevel/gcc12/O2/libmldsa.so from the
+// binary branch of mldsa-native (see README.md), as loaded at an address
+// that is a multiple of 4096: the start of its first segment, from address
+// 0 up to the end of the read-only data. The ELF header and dynamic linking
 // information at the start are given as data, as are the padding and the
 // read-only data at the end, while the procedure linkage table and the code
 // are given as instructions. The ADRP instructions, which compute addresses
@@ -26,22 +26,22 @@
 
 S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2_reduced_ram):
 
-// ELF header and dynamic linking information (0x0 to 0xe30)
+// ELF header and dynamic linking information (0x0 to 0xe20)
 
         .quad   0x00010102464c457f
         .quad   0x0000000000000000
         .quad   0x0000000100b70003
         .quad   0x0000000000000000
         .quad   0x0000000000000040
-        .quad   0x000000000002ec98
+        .quad   0x000000000002efb0
         .quad   0x0038004000000000
         .quad   0x0019001a00400005
         .quad   0x0000000500000001
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x0000000000000000
-        .quad   0x000000000000c830
-        .quad   0x000000000000c830
+        .quad   0x000000000000c820
+        .quad   0x000000000000c820
         .quad   0x0000000000010000
         .quad   0x0000000600000001
         .quad   0x000000000000fe38
@@ -165,7 +165,7 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2_reduced_ram):
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x0008000300000000
-        .quad   0x0000000000000e90
+        .quad   0x0000000000000e80
         .quad   0x0000000000000000
         .quad   0x0000001000000001
         .quad   0x0000000000000000
@@ -183,130 +183,130 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2_reduced_ram):
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x00080012000001ae
-        .quad   0x00000000000062b0
+        .quad   0x00000000000062a0
         .quad   0x00000000000002a0
         .quad   0x00080012000001f2
-        .quad   0x0000000000006ae0
+        .quad   0x0000000000006ad0
         .quad   0x00000000000000a8
         .quad   0x00080012000000f0
-        .quad   0x00000000000048e0
+        .quad   0x00000000000048d0
         .quad   0x000000000000010c
         .quad   0x000800120000007b
-        .quad   0x00000000000041f0
+        .quad   0x00000000000041e0
         .quad   0x00000000000000a8
         .quad   0x00080012000003f1
-        .quad   0x0000000000009e50
+        .quad   0x0000000000009e40
         .quad   0x00000000000000d0
         .quad   0x0008001200000060
-        .quad   0x0000000000003cf0
+        .quad   0x0000000000003ce0
         .quad   0x00000000000004f8
         .quad   0x000800120000037a
-        .quad   0x0000000000009630
+        .quad   0x0000000000009620
         .quad   0x0000000000000490
         .quad   0x0008001200000439
-        .quad   0x0000000000009fe0
+        .quad   0x0000000000009fd0
         .quad   0x00000000000000bc
         .quad   0x0008001200000347
-        .quad   0x0000000000009080
+        .quad   0x0000000000009070
         .quad   0x00000000000004f8
         .quad   0x000800120000020a
-        .quad   0x0000000000006b90
+        .quad   0x0000000000006b80
         .quad   0x00000000000004b4
         .quad   0x00080012000002a5
-        .quad   0x00000000000074a0
+        .quad   0x0000000000007490
         .quad   0x00000000000000bc
         .quad   0x000800120000031e
-        .quad   0x0000000000008cd0
+        .quad   0x0000000000008cc0
         .quad   0x000000000000031c
         .quad   0x00080012000002ea
-        .quad   0x0000000000007620
+        .quad   0x0000000000007610
         .quad   0x00000000000000ac
         .quad   0x0008001200000272
-        .quad   0x0000000000007310
+        .quad   0x0000000000007300
         .quad   0x00000000000000bc
         .quad   0x0008001200000044
-        .quad   0x0000000000003c60
+        .quad   0x0000000000003c50
         .quad   0x0000000000000088
         .quad   0x0008001200000111
-        .quad   0x0000000000004ab0
+        .quad   0x0000000000004aa0
         .quad   0x00000000000000d0
         .quad   0x0008001200000415
-        .quad   0x0000000000009f20
+        .quad   0x0000000000009f10
         .quad   0x00000000000000bc
         .quad   0x0008001200000392
-        .quad   0x0000000000009ac0
+        .quad   0x0000000000009ab0
         .quad   0x0000000000000018
         .quad   0x00080012000000ab
-        .quad   0x0000000000004720
+        .quad   0x0000000000004710
         .quad   0x0000000000000018
         .quad   0x0008001200000102
-        .quad   0x00000000000049f0
+        .quad   0x00000000000049e0
         .quad   0x00000000000000bc
         .quad   0x00080012000001d7
-        .quad   0x00000000000065e0
+        .quad   0x00000000000065d0
         .quad   0x00000000000004f8
         .quad   0x0008001200000159
-        .quad   0x0000000000004c40
+        .quad   0x0000000000004c30
         .quad   0x00000000000000bc
         .quad   0x00080012000003e2
-        .quad   0x0000000000009d90
+        .quad   0x0000000000009d80
         .quad   0x00000000000000bc
         .quad   0x00080012000003d0
-        .quad   0x0000000000009c80
+        .quad   0x0000000000009c70
         .quad   0x000000000000010c
         .quad   0x000800120000047b
-        .quad   0x000000000000a150
+        .quad   0x000000000000a140
         .quad   0x0000000000000320
         .quad   0x000800120000019b
-        .quad   0x0000000000004db0
+        .quad   0x0000000000004da0
         .quad   0x0000000000000320
         .quad   0x00080012000000c0
-        .quad   0x0000000000004740
+        .quad   0x0000000000004730
         .quad   0x000000000000019c
         .quad   0x0008001200000260
-        .quad   0x0000000000007200
+        .quad   0x00000000000071f0
         .quad   0x000000000000010c
         .quad   0x0008001200000237
-        .quad   0x0000000000007060
+        .quad   0x0000000000007050
         .quad   0x000000000000019c
         .quad   0x000800120000002b
-        .quad   0x0000000000003a10
+        .quad   0x0000000000003a00
         .quad   0x0000000000000248
         .quad   0x00080012000003a7
-        .quad   0x0000000000009ae0
+        .quad   0x0000000000009ad0
         .quad   0x000000000000019c
         .quad   0x0008001200000135
-        .quad   0x0000000000004b80
+        .quad   0x0000000000004b70
         .quad   0x00000000000000bc
         .quad   0x0008001200000337
-        .quad   0x0000000000008ff0
+        .quad   0x0000000000008fe0
         .quad   0x0000000000000088
         .quad   0x000800120000045a
-        .quad   0x000000000000a0a0
+        .quad   0x000000000000a090
         .quad   0x00000000000000ac
         .quad   0x0008001200000222
-        .quad   0x0000000000007044
+        .quad   0x0000000000007034
         .quad   0x0000000000000018
         .quad   0x00080012000002c9
-        .quad   0x0000000000007560
+        .quad   0x0000000000007550
         .quad   0x00000000000000bc
         .quad   0x00080012000001c7
-        .quad   0x0000000000006550
+        .quad   0x0000000000006540
         .quad   0x0000000000000088
         .quad   0x0008001200000281
-        .quad   0x00000000000073d0
+        .quad   0x00000000000073c0
         .quad   0x00000000000000d0
         .quad   0x000800120000030b
-        .quad   0x00000000000076d0
+        .quad   0x00000000000076c0
         .quad   0x0000000000000328
         .quad   0x0008001200000362
-        .quad   0x0000000000009580
+        .quad   0x0000000000009570
         .quad   0x00000000000000a8
         .quad   0x0008001200000093
-        .quad   0x00000000000042a0
+        .quad   0x0000000000004290
         .quad   0x0000000000000478
         .quad   0x000800120000017a
-        .quad   0x0000000000004d00
+        .quad   0x0000000000004cf0
         .quad   0x00000000000000ac
         .quad   0x6b636174735f5f00
         .quad   0x6175675f6b68635f
@@ -455,17 +455,15 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2_reduced_ram):
         .quad   0x72665f6b705f3738
         .quad   0x696c006b735f6d6f
         .quad   0x732e6173646c6d62
-        .quad   0x6c61636f6c2f006f
-        .quad   0x65622f656d6f682f
-        .quad   0x722f6e6168706b63
-        .quad   0x646c6d2f736f7065
-        .quad   0x766974616e2d6173
-        .quad   0x7972616e69622d65
-        .quad   0x646c69756265722d
-        .quad   0x2f554e507468542e
-        .quad   0x6f2f656372756f73
-        .quad   0x6f2f737475707475
-        .quad   0x000062696c2f7475
+        .quad   0x622f706d742f006f
+        .quad   0x32762d7972616e69
+        .quad   0x69756265722d312e
+        .quad   0x37446d76492e646c
+        .quad   0x2d6173646c6d2f45
+        .quad   0x762d65766974616e
+        .quad   0x756f2f302e312e32
+        .quad   0x756f2f7374757074
+        .quad   0x00000062696c2f74
         .quad   0x000000000001fff8
         .quad   0x0000000200000401
         .quad   0x0000000000000000
@@ -483,7 +481,7 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2_reduced_ram):
         .quad   0x0000000000000000
         .quad   0x0000000000000000
 
-// The procedure linkage table and the code (0xe30 to 0xa470)
+// The procedure linkage table and the code (0xe20 to 0xa460)
 // .plt
         stp     x16, x30, [sp, #-16]!
         .inst   0xf00000f0  // adrp x16, 0x1f000
@@ -493,29 +491,29 @@ S2N_BN_SYMBOL(mldsa_native_libmldsa_gcc12_O2_reduced_ram):
         nop
         nop
         nop
-L0e50:
+L0e40:
         .inst   0xf00000f0  // adrp x16, 0x1f000
         ldr     x17, [x16, #4048]
         add     x16, x16, #0xfd0
         br      x17
-L0e60:
+L0e50:
         .inst   0xf00000f0  // adrp x16, 0x1f000
         ldr     x17, [x16, #4056]
         add     x16, x16, #0xfd8
         br      x17
-L0e70:
+L0e60:
         .inst   0xf00000f0  // adrp x16, 0x1f000
         ldr     x17, [x16, #4064]
         add     x16, x16, #0xfe0
         br      x17
-L0e80:
+L0e70:
         .inst   0xf00000f0  // adrp x16, 0x1f000
         ldr     x17, [x16, #4072]
         add     x16, x16, #0xfe8
         br      x17
 
 // mldsa_shake128_init (0x28 bytes)
-L0e90:
+L0e80:
         movi    v0.4s, #0x0
         str     xzr, [x0, #192]
         str     wzr, [x0, #200]
@@ -530,7 +528,7 @@ L0e90:
         nop
 
 // mldsa_shake128_absorb (0x90 bytes)
-L0ec0:
+L0eb0:
         stp     x19, x20, [sp, #-64]!
         mov     x19, x2
         mov     w3, #0xa8
@@ -542,26 +540,26 @@ L0ec0:
         str     x30, [sp, #32]
         sub     w3, w3, w2
         cmp     x21, x19
-        b.hi    L0f20
-L0ef0:
+        b.hi    L0f10
+L0ee0:
         mov     x1, x20
         mov     x0, x22
-        bl      L15b0
+        bl      L15a0
         sub     x19, x19, x21
         mov     x0, x22
         add     x20, x20, x21
-        bl      L16f0
+        bl      L16e0
         mov     x21, #0xa8
         mov     w2, #0x0
         mov     w3, #0xa8
         cmp     x19, #0xa7
-        b.hi    L0ef0
-L0f20:
+        b.hi    L0ee0
+L0f10:
         mov     x1, x20
         mov     w3, w19
         mov     x0, x22
         str     w2, [sp, #60]
-        bl      L15b0
+        bl      L15a0
         ldr     w2, [sp, #60]
         ldr     x30, [sp, #32]
         add     w2, w2, w19
@@ -571,7 +569,7 @@ L0f20:
         ret
 
 // mldsa_shake128_finalize (0x80 bytes)
-L0f50:
+L0f40:
         stp     x19, x30, [sp, #-32]!
         mov     w5, #0x1f
         mov     w6, #0xffffff80
@@ -586,12 +584,12 @@ L0f50:
         mov     w3, #0x1
         strb    w6, [sp, #22]
         strb    w5, [sp, #23]
-        bl      L15b0
+        bl      L15a0
         mov     x0, x19
         add     x1, sp, #0x16
         mov     w2, #0xa7
         mov     w3, #0x1
-        bl      L15b0
+        bl      L15a0
         .inst   0xf00000e0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         mov     w1, #0xa8
@@ -600,58 +598,58 @@ L0f50:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L0fcc
+        b.ne    L0fbc
         ldp     x19, x30, [sp], #32
         ret
-L0fcc:
-        bl      L0e70
+L0fbc:
+        bl      L0e60
 
 // mldsa_shake128_squeeze (0xb0 bytes)
-L0fd0:
+L0fc0:
         stp     x19, x20, [sp, #-64]!
         stp     x21, x22, [sp, #16]
         ldr     w21, [x2, #200]
         stp     x23, x24, [sp, #32]
         mov     x23, x2
         str     x30, [sp, #56]
-        cbz     x1, L1068
+        cbz     x1, L1058
         mov     x19, x1
         mov     x22, #0x0
         mov     w24, #0xa8
         str     x25, [sp, #48]
         mov     x25, x0
-        b       L1044
-L1004:
+        b       L1034
+L0ff4:
         sub     w3, w24, w21
         sub     w20, w24, w21
         mov     w4, w21
-L1010:
+L1000:
         add     x1, x25, x22
         mov     w2, w4
         mov     x0, x23
         mov     w21, #0xa8
         cmp     x20, x19
-        b.ls    L1034
+        b.ls    L1024
         add     w21, w4, w19
         mov     w3, w19
         mov     x20, x19
-L1034:
-        bl      L1580
+L1024:
+        bl      L1570
         add     x22, x22, x20
         subs    x19, x19, x20
-        b.eq    L1064
-L1044:
+        b.eq    L1054
+L1034:
         cmp     w21, #0xa8
-        b.ne    L1004
+        b.ne    L0ff4
         mov     x0, x23
-        bl      L16f0
+        bl      L16e0
         mov     w3, w21
         mov     x20, #0xa8
         mov     w4, #0x0
-        b       L1010
-L1064:
+        b       L1000
+L1054:
         ldr     x25, [sp, #48]
-L1068:
+L1058:
         ldr     x30, [sp, #56]
         str     w21, [x23, #200]
         ldp     x21, x22, [sp, #16]
@@ -660,7 +658,7 @@ L1068:
         ret
 
 // mldsa_shake128_release (0x24 bytes)
-L1080:
+L1070:
         movi    v0.4s, #0x0
         stp     q0, q0, [x0]
         stp     q0, q0, [x0, #32]
@@ -672,7 +670,7 @@ L1080:
         ret
 
 // mldsa_shake256_init (0x28 bytes)
-L10a4:
+L1094:
         movi    v0.4s, #0x0
         str     xzr, [x0, #192]
         str     wzr, [x0, #200]
@@ -686,7 +684,7 @@ L10a4:
         nop
 
 // mldsa_shake256_absorb (0x90 bytes)
-L10d0:
+L10c0:
         stp     x19, x20, [sp, #-64]!
         mov     x19, x2
         mov     w3, #0x88
@@ -698,26 +696,26 @@ L10d0:
         str     x30, [sp, #32]
         sub     w3, w3, w2
         cmp     x21, x19
-        b.hi    L1130
-L1100:
+        b.hi    L1120
+L10f0:
         mov     x1, x20
         mov     x0, x22
-        bl      L15b0
+        bl      L15a0
         sub     x19, x19, x21
         mov     x0, x22
         add     x20, x20, x21
-        bl      L16f0
+        bl      L16e0
         mov     x21, #0x88
         mov     w2, #0x0
         mov     w3, #0x88
         cmp     x19, #0x87
-        b.hi    L1100
-L1130:
+        b.hi    L10f0
+L1120:
         mov     x1, x20
         mov     w3, w19
         mov     x0, x22
         str     w2, [sp, #60]
-        bl      L15b0
+        bl      L15a0
         ldr     w2, [sp, #60]
         ldr     x30, [sp, #32]
         add     w2, w2, w19
@@ -727,7 +725,7 @@ L1130:
         ret
 
 // mldsa_shake256_finalize (0x80 bytes)
-L1160:
+L1150:
         stp     x19, x30, [sp, #-32]!
         mov     w5, #0x1f
         mov     w6, #0xffffff80
@@ -742,12 +740,12 @@ L1160:
         mov     w3, #0x1
         strb    w6, [sp, #22]
         strb    w5, [sp, #23]
-        bl      L15b0
+        bl      L15a0
         mov     x0, x19
         add     x1, sp, #0x16
         mov     w2, #0x87
         mov     w3, #0x1
-        bl      L15b0
+        bl      L15a0
         .inst   0xd00000e0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         mov     w1, #0x88
@@ -756,58 +754,58 @@ L1160:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L11dc
+        b.ne    L11cc
         ldp     x19, x30, [sp], #32
         ret
-L11dc:
-        bl      L0e70
+L11cc:
+        bl      L0e60
 
 // mldsa_shake256_squeeze (0xb0 bytes)
-L11e0:
+L11d0:
         stp     x19, x20, [sp, #-64]!
         stp     x21, x22, [sp, #16]
         ldr     w21, [x2, #200]
         stp     x23, x24, [sp, #32]
         mov     x23, x2
         str     x30, [sp, #56]
-        cbz     x1, L1278
+        cbz     x1, L1268
         mov     x19, x1
         mov     x22, #0x0
         mov     w24, #0x88
         str     x25, [sp, #48]
         mov     x25, x0
-        b       L1254
-L1214:
+        b       L1244
+L1204:
         sub     w3, w24, w21
         sub     w20, w24, w21
         mov     w4, w21
-L1220:
+L1210:
         add     x1, x25, x22
         mov     w2, w4
         mov     x0, x23
         mov     w21, #0x88
         cmp     x20, x19
-        b.ls    L1244
+        b.ls    L1234
         add     w21, w4, w19
         mov     w3, w19
         mov     x20, x19
-L1244:
-        bl      L1580
+L1234:
+        bl      L1570
         add     x22, x22, x20
         subs    x19, x19, x20
-        b.eq    L1274
-L1254:
+        b.eq    L1264
+L1244:
         cmp     w21, #0x88
-        b.ne    L1214
+        b.ne    L1204
         mov     x0, x23
-        bl      L16f0
+        bl      L16e0
         mov     w3, w21
         mov     x20, #0x88
         mov     w4, #0x0
-        b       L1220
-L1274:
+        b       L1210
+L1264:
         ldr     x25, [sp, #48]
-L1278:
+L1268:
         ldr     x30, [sp, #56]
         str     w21, [x23, #200]
         ldp     x21, x22, [sp, #16]
@@ -816,7 +814,7 @@ L1278:
         ret
 
 // mldsa_shake256_release (0x24 bytes)
-L1290:
+L1280:
         movi    v0.4s, #0x0
         stp     q0, q0, [x0]
         stp     q0, q0, [x0, #32]
@@ -828,7 +826,7 @@ L1290:
         ret
 
 // mldsa_shake256 (0x9c bytes)
-L12b4:
+L12a4:
         stp     x19, x20, [sp, #-272]!
         mov     x20, x0
         .inst   0xd00000e4  // adrp x4, 0x1f000
@@ -843,35 +841,35 @@ L12b4:
         mov     x0, #0x0
         mov     x22, x2
         mov     x0, x19
-        bl      L10a4
+        bl      L1094
         mov     x2, x23
         mov     x1, x22
         mov     x0, x19
-        bl      L10d0
+        bl      L10c0
         mov     x0, x19
-        bl      L1160
+        bl      L1150
         mov     x2, x19
         mov     x1, x21
         mov     x0, x20
-        bl      L11e0
+        bl      L11d0
         mov     x0, x19
-        bl      L1290
+        bl      L1280
         .inst   0xd00000e0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #264]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L134c
+        b.ne    L133c
         ldp     x21, x22, [sp, #16]
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #272
         ret
-L134c:
-        bl      L0e70
+L133c:
+        bl      L0e60
 
 // mldsa_shake256x4_absorb_once (0x17c bytes)
-L1350:
+L1340:
         stp     x19, x20, [sp, #-80]!
         mov     x20, x1
         mov     x19, x5
@@ -888,13 +886,13 @@ L1350:
         ldr     x1, [x6]
         str     x1, [sp, #72]
         mov     x1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     w0, #0x1f
         strb    w0, [sp, #71]
         cmp     x19, #0x87
-        b.ls    L13ec
+        b.ls    L13dc
         nop
-L13a8:
+L1398:
         mov     x4, x23
         mov     x3, x22
         mov     x2, x21
@@ -902,20 +900,20 @@ L13a8:
         mov     w6, #0x88
         mov     w5, #0x0
         mov     x0, x24
-        bl      L1670
+        bl      L1660
         mov     x0, x24
         sub     x19, x19, #0x88
-        bl      L1cc0
+        bl      L1cb0
         add     x23, x23, #0x88
         add     x22, x22, #0x88
         add     x21, x21, #0x88
         add     x20, x20, #0x88
         cmp     x19, #0x87
-        b.hi    L13a8
-L13ec:
+        b.hi    L1398
+L13dc:
         mov     w25, w19
-        cbnz    x19, L1470
-L13f4:
+        cbnz    x19, L1460
+L13e4:
         add     x19, sp, #0x47
         mov     w5, w25
         mov     x4, x19
@@ -924,7 +922,7 @@ L13f4:
         mov     x1, x19
         mov     x0, x24
         mov     w6, #0x1
-        bl      L1670
+        bl      L1660
         mov     w7, #0xffffff80
         mov     x0, x24
         mov     x4, x19
@@ -934,21 +932,21 @@ L13f4:
         mov     w6, #0x1
         mov     w5, #0x87
         strb    w7, [sp, #71]
-        bl      L1670
-L1440:
+        bl      L1660
+L1430:
         .inst   0xd00000e0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #72]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L14c8
+        b.ne    L14b8
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x30, [sp, #48]
         ldp     x19, x20, [sp], #80
         ret
-L1470:
+L1460:
         mov     x4, x23
         mov     x3, x22
         mov     x2, x21
@@ -956,9 +954,9 @@ L1470:
         mov     w6, w19
         mov     x0, x24
         mov     w5, #0x0
-        bl      L1670
+        bl      L1660
         cmp     x19, #0x87
-        b.ne    L13f4
+        b.ne    L13e4
         ldrb    w7, [sp, #71]
         add     x4, sp, #0x47
         mov     w5, w19
@@ -969,15 +967,15 @@ L1470:
         mov     x1, x4
         mov     w6, #0x1
         strb    w7, [sp, #71]
-        bl      L1670
-        b       L1440
-L14c8:
-        bl      L0e70
+        bl      L1660
+        b       L1430
+L14b8:
+        bl      L0e60
         nop
 
 // mldsa_shake256x4_squeezeblocks (0x88 bytes)
-L14d0:
-        cbz     x4, L1554
+L14c0:
+        cbz     x4, L1544
         stp     x19, x20, [sp, #-64]!
         mov     x20, x2
         mov     x19, x3
@@ -989,9 +987,9 @@ L14d0:
         mov     x24, x5
         str     x30, [sp, #48]
         nop
-L1500:
+L14f0:
         mov     x0, x24
-        bl      L1cc0
+        bl      L1cb0
         mov     x4, x19
         mov     x3, x20
         mov     x2, x21
@@ -999,77 +997,77 @@ L1500:
         mov     x0, x24
         mov     w6, #0x88
         mov     w5, #0x0
-        bl      L15f0
+        bl      L15e0
         add     x19, x19, #0x88
         add     x20, x20, #0x88
         add     x21, x21, #0x88
         add     x22, x22, #0x88
         subs    x23, x23, #0x1
-        b.ne    L1500
+        b.ne    L14f0
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldr     x30, [sp, #48]
         ldp     x19, x20, [sp], #64
         ret
-L1554:
+L1544:
         ret
         nop
         nop
 
 // mldsa_shake256x4_init (0x4 bytes)
-L1560:
+L1550:
         ret
 
 // mldsa_shake256x4_release (0x1c bytes)
-L1564:
+L1554:
         stp     x19, x30, [sp, #-16]!
         mov     x2, #0x320
         mov     x19, x0
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldp     x19, x30, [sp], #16
         ret
 
 // mldsa_keccakf1600_extract_bytes (0x30 bytes)
-L1580:
+L1570:
         mov     w2, w2
-        cbz     w3, L15ac
+        cbz     w3, L159c
         mov     w3, w3
         add     x4, x0, x2
         mov     x0, #0x0
         nop
-L1598:
+L1588:
         ldrb    w2, [x4, x0]
         strb    w2, [x1, x0]
         add     x0, x0, #0x1
         cmp     x3, x0
-        b.ne    L1598
-L15ac:
+        b.ne    L1588
+L159c:
         ret
 
 // mldsa_keccakf1600_xor_bytes (0x38 bytes)
-L15b0:
+L15a0:
         mov     w2, w2
-        cbz     w3, L15e4
+        cbz     w3, L15d4
         mov     w5, w3
         add     x3, x0, x2
         mov     x0, #0x0
         nop
-L15c8:
+L15b8:
         ldrb    w2, [x3, x0]
         ldrb    w4, [x1, x0]
         eor     w2, w2, w4
         strb    w2, [x3, x0]
         add     x0, x0, #0x1
         cmp     x5, x0
-        b.ne    L15c8
-L15e4:
+        b.ne    L15b8
+L15d4:
         ret
         nop
         nop
 
 // mldsa_keccakf1600x4_extract_bytes (0x80 bytes)
-L15f0:
+L15e0:
         stp     x19, x20, [sp, #-64]!
         mov     w19, w5
         mov     w20, w6
@@ -1082,17 +1080,17 @@ L15f0:
         mov     w2, w5
         mov     w3, w6
         str     x30, [sp, #48]
-        bl      L1580
+        bl      L1570
         mov     w3, w20
         mov     w2, w19
         mov     x1, x24
         add     x0, x21, #0xc8
-        bl      L1580
+        bl      L1570
         mov     w3, w20
         mov     w2, w19
         mov     x1, x23
         add     x0, x21, #0x190
-        bl      L1580
+        bl      L1570
         ldp     x23, x24, [sp, #32]
         mov     w3, w20
         ldr     x30, [sp, #48]
@@ -1101,10 +1099,10 @@ L15f0:
         add     x0, x21, #0x258
         ldp     x21, x22, [sp, #16]
         ldp     x19, x20, [sp], #64
-        b       L1580
+        b       L1570
 
 // mldsa_keccakf1600x4_xor_bytes (0x80 bytes)
-L1670:
+L1660:
         stp     x19, x20, [sp, #-64]!
         mov     w19, w5
         mov     w20, w6
@@ -1117,17 +1115,17 @@ L1670:
         mov     w2, w5
         mov     w3, w6
         str     x30, [sp, #48]
-        bl      L15b0
+        bl      L15a0
         mov     w3, w20
         mov     w2, w19
         mov     x1, x24
         add     x0, x21, #0xc8
-        bl      L15b0
+        bl      L15a0
         mov     w3, w20
         mov     w2, w19
         mov     x1, x23
         add     x0, x21, #0x190
-        bl      L15b0
+        bl      L15a0
         ldp     x23, x24, [sp, #32]
         mov     w3, w20
         ldr     x30, [sp, #48]
@@ -1136,13 +1134,13 @@ L1670:
         add     x0, x21, #0x258
         ldp     x21, x22, [sp, #16]
         ldp     x19, x20, [sp], #64
-        b       L15b0
+        b       L15a0
 
 // mldsa_keccakf1600_permute (0x5d0 bytes)
-L16f0:
+L16e0:
         stp     x19, x20, [sp, #-192]!
         .inst   0xb0000041  // adrp x1, 0xa000
-        add     x1, x1, #0x470
+        add     x1, x1, #0x460
         ldp     x9, x4, [x0, #56]
         str     x1, [sp, #96]
         add     x1, x1, #0xc0
@@ -1184,7 +1182,7 @@ L16f0:
         mov     x25, x3
         str     x26, [sp, #128]
         str     x0, [sp, #184]
-L17a0:
+L1790:
         ldp     x11, x24, [sp, #128]
         eor     x12, x16, x6
         ldp     x0, x21, [sp, #104]
@@ -1483,7 +1481,7 @@ L17a0:
         eor     x4, x4, x7
         eor     x9, x9, x24
         cmp     x2, x0
-        b.ne    L17a0
+        b.ne    L1790
         ldr     x0, [sp, #184]
         mov     x7, x25
         ldr     x2, [sp, #104]
@@ -1515,30 +1513,30 @@ L17a0:
         ret
 
 // mldsa_keccakf1600x4_permute (0x28 bytes)
-L1cc0:
+L1cb0:
         stp     x19, x30, [sp, #-16]!
         mov     x19, x0
-        bl      L16f0
+        bl      L16e0
         add     x0, x19, #0xc8
-        bl      L16f0
+        bl      L16e0
         add     x0, x19, #0x190
-        bl      L16f0
+        bl      L16e0
         add     x0, x19, #0x258
         ldp     x19, x30, [sp], #16
-        b       L16f0
+        b       L16e0
         nop
         nop
 
 // mldsa44_unpack_pk_t1 (0x14 bytes)
-L1cf0:
+L1ce0:
         add     w2, w2, w2, lsl #2
         lsl     w2, w2, #6
         add     x2, x2, #0x20
         add     x1, x1, x2
-        b       L24e0
+        b       L24d0
 
 // mldsa44_pack_sk_rho_key_tr (0x28 bytes)
-L1d04:
+L1cf4:
         ldp     q0, q1, [x1]
         add     x4, x0, #0x40
         stp     q0, q1, [x0]
@@ -1552,7 +1550,7 @@ L1d04:
         nop
 
 // mldsa44_unpack_sk (0x40 bytes)
-L1d30:
+L1d20:
         ldp     q0, q1, [x6]
         add     x7, x6, #0x40
         add     x10, x6, #0x80
@@ -1571,14 +1569,14 @@ L1d30:
         ret
 
 // mldsa44_pack_sig_c (0xc bytes)
-L1d70:
+L1d60:
         ldp     q0, q1, [x1]
         stp     q0, q1, [x0]
         ret
         nop
 
 // mldsa44_pack_sig_h (0xf8 bytes)
-L1d80:
+L1d70:
         movi    v0.4s, #0x0
         stp     x19, x20, [sp, #-96]!
         mov     x20, x3
@@ -1603,44 +1601,44 @@ L1d80:
         stp     q0, q0, [x26]
         stp     q0, q0, [x26, #32]
         str     q0, [x26, #64]
-L1de0:
+L1dd0:
         mov     x1, x28
         mov     x0, x20
-        bl      L28a4
+        bl      L2894
         mov     x4, #0x0
-        b       L1e0c
-L1df4:
+        b       L1dfc
+L1de4:
         cmp     w7, #0x0
         ccmp    w5, w27, #0x0, ne
-        b.eq    L1e20
+        b.eq    L1e10
         add     x4, x4, #0x1
         cmp     x4, #0x100
-        b.eq    L1e3c
-L1e0c:
+        b.eq    L1e2c
+L1dfc:
         ldr     w5, [x21, x4, lsl #2]
         ldr     w7, [x20, x4, lsl #2]
         add     w6, w5, w25
         cmp     w6, w22
-        b.ls    L1df4
-L1e20:
+        b.ls    L1de4
+L1e10:
         cmp     w19, #0x50
-        b.eq    L1e58
+        b.eq    L1e48
         strb    w4, [x26, w19, uxtw]
         add     x4, x4, #0x1
         add     w19, w19, #0x1
         cmp     x4, #0x100
-        b.ne    L1e0c
-L1e3c:
+        b.ne    L1dfc
+L1e2c:
         add     x28, x28, #0xc0
         strb    w19, [x23], #1
         add     x21, x21, #0x400
         cmp     x28, x24
-        b.ne    L1de0
+        b.ne    L1dd0
         mov     w0, #0x0
-        b       L1e5c
-L1e58:
+        b       L1e4c
+L1e48:
         mov     w0, #0xffffffff
-L1e5c:
+L1e4c:
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x26, [sp, #48]
@@ -1652,15 +1650,15 @@ L1e5c:
         nop
 
 // mldsa44_pack_sig_z (0x14 bytes)
-L1e80:
+L1e70:
         add     w2, w2, w2, lsl #3
         lsl     w2, w2, #6
         add     x2, x2, #0x20
         add     x0, x0, x2
-        b       L3094
+        b       L3084
 
 // mldsa44_sig_unpack_hints (0x100 bytes)
-L1e94:
+L1e84:
         stp     x19, x20, [sp, #-48]!
         mov     x6, x0
         mov     x19, x1
@@ -1669,89 +1667,89 @@ L1e94:
         mov     w21, #0x0
         stp     x23, x30, [sp, #32]
         mov     w23, w2
-        cbz     w2, L1ec0
+        cbz     w2, L1eb0
         add     w0, w2, #0x4f
         ldrb    w21, [x22, w0, uxtw]
-L1ec0:
+L1eb0:
         add     w0, w23, #0x50
         ldrb    w20, [x22, w0, uxtw]
         cmp     w20, #0x50
         ccmp    w21, w20, #0x2, ls
-        b.hi    L1f34
+        b.hi    L1f24
         mov     x0, x6
         mov     w1, #0x0
         mov     x2, #0x400
-        bl      L0e80
+        bl      L0e70
         add     x3, x19, w21, uxtb
         mov     x6, x0
         mov     w1, w21
         mov     w7, #0x1
         cmp     w21, w20
-        b.cs    L1f48
+        b.cs    L1f38
         nop
-L1f00:
+L1ef0:
         ldrb    w4, [x3, #2336]
         mov     w5, w1
         add     w1, w1, #0x1
         add     x3, x3, #0x1
         str     w7, [x6, x4, lsl #2]
         cmp     w20, w1
-        b.ls    L1f48
+        b.ls    L1f38
         cmp     w21, w1
-        b.cs    L1f00
+        b.cs    L1ef0
         ldrb    w0, [x22, w5, uxtw]
         ldrb    w4, [x3, #2336]
         cmp     w4, w0
-        b.hi    L1f00
-L1f34:
+        b.hi    L1ef0
+L1f24:
         mov     w0, #0xffffffff
+L1f28:
+        ldp     x21, x22, [sp, #16]
+        ldp     x23, x30, [sp, #32]
+        ldp     x19, x20, [sp], #48
+        ret
 L1f38:
-        ldp     x21, x22, [sp, #16]
-        ldp     x23, x30, [sp, #32]
-        ldp     x19, x20, [sp], #48
-        ret
-L1f48:
         cmp     w23, #0x3
-        b.eq    L1f64
-L1f50:
+        b.eq    L1f54
+L1f40:
         mov     w0, #0x0
-L1f54:
+L1f44:
         ldp     x21, x22, [sp, #16]
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #48
         ret
-L1f64:
+L1f54:
         cmp     w20, #0x50
-        b.eq    L1f50
+        b.eq    L1f40
         ldrb    w0, [x22, x20]
         add     x20, x20, #0x1
-        cbnz    w0, L1f34
-L1f78:
+        cbnz    w0, L1f24
+L1f68:
         cmp     w20, #0x50
-        b.eq    L1f54
+        b.eq    L1f44
         ldrb    w0, [x22, x20]
         add     x20, x20, #0x1
-        cbz     w0, L1f78
+        cbz     w0, L1f68
         mov     w0, #0xffffffff
-        b       L1f38
+        b       L1f28
         nop
         nop
         nop
 
 // mld_rej_uniform_c.constprop.0 (0x6c bytes)
-L1fa0:
+L1f90:
         mov     x9, x0
         cmp     w1, #0xff
-        b.hi    L2004
+        b.hi    L1ff4
         mov     w8, #0x3
         sub     w8, w8, w2
-        b       L1fc4
-L1fb8:
+        b       L1fb4
+L1fa8:
         mov     w1, w0
-L1fbc:
+L1fac:
         cmp     w3, w7
-        b.cc    L2004
-L1fc4:
+        b.cc    L1ff4
+L1fb4:
         ldrb    w5, [x2, #2]
         add     x2, x2, #0x3
         ldurb   w4, [x2, #-2]
@@ -1763,39 +1761,39 @@ L1fc4:
         orr     w4, w4, w6
         and     w4, w4, #0x7fffff
         cmp     w4, #0x7fe, lsl #12
-        b.hi    L1fbc
+        b.hi    L1fac
         str     w4, [x9, w1, uxtw #2]
         cmp     w1, #0xff
-        b.ne    L1fb8
+        b.ne    L1fa8
         ret
-L2004:
+L1ff4:
         mov     w0, w1
         ret
         nop
 
 // mldsa_poly_reduce (0x30 bytes)
-L2010:
+L2000:
         .inst   0x90000042  // adrp x2, 0xa000
         add     x1, x0, #0x400
         movi    v3.4s, #0x40, lsl #16
-        ldr     q2, [x2, #1328]
-L2020:
+        ldr     q2, [x2, #1312]
+L2010:
         ldr     q0, [x0]
         add     v1.4s, v0.4s, v3.4s
         sshr    v1.4s, v1.4s, #23
         mla     v0.4s, v1.4s, v2.4s
         str     q0, [x0], #16
         cmp     x1, x0
-        b.ne    L2020
+        b.ne    L2010
         ret
 
 // mldsa_poly_caddq (0x3c bytes)
-L2040:
+L2030:
         mov     w5, #0xe001
         add     x4, x0, #0x400
         movk    w5, #0x7f, lsl #16
         nop
-L2050:
+L2040:
         ldr     w3, [x0]
         sxtw    x1, w3
         asr     x1, x1, #31
@@ -1805,83 +1803,83 @@ L2050:
         eor     w1, w1, w3
         str     w1, [x0], #4
         cmp     x0, x4
-        b.ne    L2050
+        b.ne    L2040
         ret
         nop
 
 // mldsa_poly_add (0x28 bytes)
-L2080:
+L2070:
         mov     x2, #0x0
         nop
-L2088:
+L2078:
         ldr     q0, [x0, x2]
         ldr     q1, [x1, x2]
         add     v0.4s, v0.4s, v1.4s
         str     q0, [x0, x2]
         add     x2, x2, #0x10
         cmp     x2, #0x400
-        b.ne    L2088
+        b.ne    L2078
         ret
         nop
         nop
 
 // mldsa_poly_sub (0x28 bytes)
-L20b0:
+L20a0:
         mov     x2, #0x0
         nop
-L20b8:
+L20a8:
         ldr     q0, [x0, x2]
         ldr     q1, [x1, x2]
         sub     v0.4s, v0.4s, v1.4s
         str     q0, [x0, x2]
         add     x2, x2, #0x10
         cmp     x2, #0x400
-        b.ne    L20b8
+        b.ne    L20a8
         ret
         nop
         nop
 
 // mldsa_poly_shiftl (0x20 bytes)
-L20e0:
+L20d0:
         add     x1, x0, #0x400
         nop
-L20e8:
+L20d8:
         ldr     q0, [x0]
         shl     v0.4s, v0.4s, #13
         str     q0, [x0], #16
         cmp     x0, x1
-        b.ne    L20e8
+        b.ne    L20d8
         ret
 
 // mldsa_poly_ntt (0xcc bytes)
-L2100:
+L20f0:
         .inst   0x90000049  // adrp x9, 0xa000
         mov     w15, #0x2001
         mov     x6, x0
-        add     x9, x9, #0x560
+        add     x9, x9, #0x550
         mov     w3, #0x0
         mov     w8, #0x64f7
         mov     w13, #0x1
         mov     w16, #0x100
         movk    w15, #0x380, lsl #16
         mov     w14, #0xff801fff
-L2128:
+L2118:
         add     w12, w3, #0x1
         mov     w0, #0x0
         lsl     w3, w13, w3
         lsr     w2, w16, w12
         lsl     w5, w2, #1
         nop
-L2140:
+L2130:
         add     w3, w3, #0x1
         cmp     w0, w2
-        b.cs    L2198
+        b.cs    L2188
         mov     w4, w0
         neg     x1, x4, lsl #2
         add     x1, x1, w2, uxtw #2
         add     x1, x6, x1
         nop
-L2160:
+L2150:
         ldr     w10, [x1, x4, lsl #2]
         ldr     w11, [x6, x4, lsl #2]
         smull   x10, w8, w10
@@ -1895,51 +1893,51 @@ L2160:
         str     w7, [x6, x4, lsl #2]
         add     x4, x4, #0x1
         cmp     w2, w4
-        b.hi    L2160
-L2198:
+        b.hi    L2150
+L2188:
         add     w0, w0, w5
         add     w2, w2, w5
         cmp     w0, #0xff
-        b.hi    L21b0
+        b.hi    L21a0
         ldr     w8, [x9, w3, uxtw #2]
-        b       L2140
-L21b0:
+        b       L2130
+L21a0:
         cmp     w12, #0x8
-        b.eq    L21c8
+        b.eq    L21b8
         lsl     w0, w13, w12
         mov     w3, w12
         ldr     w8, [x9, x0, lsl #2]
-        b       L2128
-L21c8:
+        b       L2118
+L21b8:
         ret
         nop
 
 // mldsa_poly_invntt_tomont (0x118 bytes)
-L21d0:
+L21c0:
         .inst   0x9000004a  // adrp x10, 0xa000
         mov     w14, #0x2001
         mov     x7, x0
-        add     x10, x10, #0x560
+        add     x10, x10, #0x550
         add     x11, x0, #0x4
         mov     w12, #0x8
         mov     w16, #0x100
         mov     w15, #0x1
         movk    w14, #0x380, lsl #16
         mov     w13, #0xff801fff
-L21f8:
+L21e8:
         lsr     w1, w16, w12
         mov     w2, #0x0
         lsl     w5, w15, w12
         lsl     w8, w1, #1
         sub     w5, w5, #0x1
         nop
-L2210:
+L2200:
         mov     w0, w5
         sub     w5, w5, #0x1
         ldr     w3, [x10, w0, uxtw #2]
         neg     w6, w3
         cmp     w1, w2
-        b.ls    L227c
+        b.ls    L226c
         sub     w0, w1, w2
         mov     w4, w1
         sub     w0, w0, #0x1
@@ -1948,7 +1946,7 @@ L2210:
         sub     x3, x3, x4
         add     x4, x7, w1, uxtw #2
         add     x0, x11, x0, lsl #2
-L2248:
+L2238:
         ldr     w9, [x4, x3, lsl #2]
         ldr     w17, [x4]
         add     w17, w17, w9
@@ -1961,24 +1959,24 @@ L2248:
         asr     x9, x9, #32
         str     w9, [x4], #4
         cmp     x4, x0
-        b.ne    L2248
-L227c:
+        b.ne    L2238
+L226c:
         add     w2, w2, w8
         add     w1, w1, w8
         cmp     w2, #0xff
-        b.ls    L2210
+        b.ls    L2200
         subs    w12, w12, #0x1
-        b.ne    L21f8
+        b.ne    L21e8
         .inst   0x90000042  // adrp x2, 0xa000
         .inst   0x90000041  // adrp x1, 0xa000
         mov     x0, x7
-        ldr     q5, [x2, #1360]
+        ldr     q5, [x2, #1344]
         .inst   0x90000042  // adrp x2, 0xa000
-        ldr     q4, [x1, #1344]
+        ldr     q4, [x1, #1328]
         add     x1, x7, #0x400
-        ldr     q3, [x2, #1328]
+        ldr     q3, [x2, #1312]
         nop
-L22b8:
+L22a8:
         ldr     q0, [x0]
         smull   v1.2d, v0.2s, v4.2s
         smull2  v0.2d, v0.4s, v4.4s
@@ -1989,20 +1987,20 @@ L22b8:
         uzp2    v1.4s, v1.4s, v0.4s
         str     q1, [x0], #16
         cmp     x1, x0
-        b.ne    L22b8
+        b.ne    L22a8
         ret
         nop
         nop
 
 // mldsa_poly_pointwise_montgomery (0x50 bytes)
-L22f0:
+L22e0:
         .inst   0x90000042  // adrp x2, 0xa000
-        ldr     q4, [x2, #1360]
+        ldr     q4, [x2, #1344]
         .inst   0x90000042  // adrp x2, 0xa000
-        ldr     q3, [x2, #1328]
+        ldr     q3, [x2, #1312]
         mov     x2, #0x0
         nop
-L2308:
+L22f8:
         ldr     q2, [x0, x2]
         ldr     q0, [x1, x2]
         smull   v1.2d, v0.2s, v2.2s
@@ -2015,16 +2013,16 @@ L2308:
         str     q1, [x0, x2]
         add     x2, x2, #0x10
         cmp     x2, #0x400
-        b.ne    L2308
+        b.ne    L22f8
         ret
 
 // mldsa_poly_power2round (0x3c bytes)
-L2340:
+L2330:
         movi    v4.4s, #0xf, msl #8
         mov     x3, #0x0
         mvni    v3.4s, #0x1f, msl #8
         nop
-L2350:
+L2340:
         ldr     q0, [x2, x3]
         add     v1.4s, v0.4s, v4.4s
         and     v2.16b, v1.16b, v3.16b
@@ -2034,12 +2032,12 @@ L2350:
         str     q0, [x1, x3]
         add     x3, x3, #0x10
         cmp     x3, #0x400
-        b.ne    L2350
+        b.ne    L2340
         ret
         nop
 
 // mldsa_poly_uniform (0x104 bytes)
-L2380:
+L2370:
         sub     sp, sp, #0x470
         .inst   0xb00000e2  // adrp x2, 0x1f000
         ldr     x2, [x2, #4088]
@@ -2055,64 +2053,64 @@ L2380:
         str     x0, [sp, #1128]
         mov     x0, #0x0
         mov     x0, x21
-        bl      L0e90
+        bl      L0e80
         mov     x1, x19
         mov     x2, #0x22
         mov     x0, x21
-        bl      L0ec0
+        bl      L0eb0
         mov     x0, x21
-        bl      L0f50
+        bl      L0f40
         mov     x2, x21
         mov     x0, x20
         mov     x1, #0x348
-        bl      L0fd0
+        bl      L0fc0
         mov     x2, x20
         mov     x0, x22
         mov     w3, #0x348
         mov     w1, #0x0
-        bl      L1fa0
+        bl      L1f90
         cmp     w0, #0xff
-        b.hi    L2438
+        b.hi    L2428
         mov     w19, w0
-L2408:
+L23f8:
         mov     x2, x21
         mov     x0, x20
         mov     x1, #0xa8
-        bl      L0fd0
+        bl      L0fc0
         mov     w1, w19
         mov     x2, x20
         mov     x0, x22
         mov     w3, #0xa8
-        bl      L1fa0
+        bl      L1f90
         mov     w19, w0
         cmp     w0, #0xff
-        b.ls    L2408
-L2438:
+        b.ls    L23f8
+L2428:
         mov     x0, x21
-        bl      L1080
+        bl      L1070
         mov     x0, x20
         mov     x2, #0x348
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xb00000e0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #1128]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L2480
+        b.ne    L2470
         ldp     x19, x20, [sp]
         ldp     x21, x22, [sp, #16]
         ldr     x30, [sp, #32]
         add     sp, sp, #0x470
         ret
-L2480:
-        bl      L0e70
+L2470:
+        bl      L0e60
 
 // mldsa_polyt1_pack (0x5c bytes)
-L2484:
+L2474:
         add     x4, x0, #0x140
-L2488:
+L2478:
         ldr     w2, [x1]
         add     x0, x0, #0x5
         sturb   w2, [x0, #-5]
@@ -2133,14 +2131,14 @@ L2488:
         asr     w2, w2, #2
         sturb   w2, [x0, #-1]
         cmp     x0, x4
-        b.ne    L2488
+        b.ne    L2478
         ret
 
 // mldsa_polyt1_unpack (0x74 bytes)
-L24e0:
+L24d0:
         add     x4, x1, #0x140
         nop
-L24e8:
+L24d8:
         ldrb    w3, [x1]
         add     x1, x1, #0x5
         ldurb   w2, [x1, #-4]
@@ -2166,11 +2164,11 @@ L24e8:
         orr     w2, w3, w2, lsr #6
         stur    w2, [x0, #-4]
         cmp     x4, x1
-        b.ne    L24e8
+        b.ne    L24d8
         ret
 
 // mldsa_polyt0_pack (0x128 bytes)
-L2554:
+L2544:
         .inst   0xb00000e2  // adrp x2, 0x1f000
         ldr     x2, [x2, #4088]
         str     x30, [sp, #-64]!
@@ -2180,7 +2178,7 @@ L2554:
         mov     x3, #0x0
         mov     w3, #0x1000
         nop
-L2578:
+L2568:
         ldp     w9, w6, [x1]
         add     x0, x0, #0xd
         ldp     w7, w4, [x1, #8]
@@ -2232,7 +2230,7 @@ L2578:
         mov     v0.b[7], v1.b[0]
         stur    d0, [x0, #-13]
         cmp     x0, x10
-        b.ne    L2578
+        b.ne    L2568
         add     x0, sp, #0x18
         stp     xzr, xzr, [sp, #24]
         stp     xzr, xzr, [sp, #40]
@@ -2242,18 +2240,18 @@ L2578:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L2678
+        b.ne    L2668
         ldr     x30, [sp], #64
         ret
-L2678:
-        bl      L0e70
+L2668:
+        bl      L0e60
         nop
 
 // mldsa_polyt0_unpack (0x154 bytes)
-L2680:
+L2670:
         add     x10, x1, #0x1a0
         mov     w9, #0x1000
-L2688:
+L2678:
         ldrb    w3, [x1]
         add     x1, x1, #0xd
         str     w3, [x0]
@@ -2335,17 +2333,17 @@ L2688:
         str     w6, [x0, #28]
         add     x0, x0, #0x20
         cmp     x10, x1
-        b.ne    L2688
+        b.ne    L2678
         ret
 
 // mldsa_poly_chknorm (0x4c bytes)
-L27d4:
+L27c4:
         sub     w5, w1, #0x1
         mov     x4, x0
         add     x6, x0, #0x400
         mov     w0, #0x0
         nop
-L27e8:
+L27d8:
         ldr     w3, [x4], #4
         sxtw    x2, w3
         asr     x2, x2, #31
@@ -2358,14 +2356,14 @@ L27e8:
         asr     x1, x1, #31
         orr     w0, w0, w1
         cmp     x4, x6
-        b.ne    L27e8
+        b.ne    L27d8
         ret
 
 // mldsa_polyw1_pack_88 (0x60 bytes)
-L2820:
+L2810:
         add     x4, x0, #0xc0
         nop
-L2828:
+L2818:
         ldrb    w3, [x1]
         add     x0, x0, #0x3
         sturb   w3, [x0, #-3]
@@ -2386,26 +2384,26 @@ L2828:
         orr     w2, w2, w3, lsl #2
         sturb   w2, [x0, #-1]
         cmp     x0, x4
-        b.ne    L2828
+        b.ne    L2818
         ret
 
 // mldsa_polyw1_pack_32 (0x24 bytes)
-L2880:
+L2870:
         add     x4, x1, #0x400
         nop
-L2888:
+L2878:
         ldr     w2, [x1, #4]
         ldr     w3, [x1], #8
         orr     w2, w3, w2, lsl #4
         strb    w2, [x0], #1
         cmp     x4, x1
-        b.ne    L2888
+        b.ne    L2878
         ret
 
 // mldsa_polyw1_unpack_88 (0x60 bytes)
-L28a4:
+L2894:
         add     x4, x1, #0xc0
-L28a8:
+L2898:
         ldrb    w2, [x1]
         add     x1, x1, #0x3
         add     x0, x0, #0x10
@@ -2427,13 +2425,13 @@ L28a8:
         lsr     w2, w2, #2
         stur    w2, [x0, #-4]
         cmp     x1, x4
-        b.ne    L28a8
+        b.ne    L2898
         ret
 
 // mldsa_polyw1_unpack_32 (0x2c bytes)
-L2904:
+L28f4:
         add     x3, x0, #0x400
-L2908:
+L28f8:
         ldrb    w2, [x1]
         add     x0, x0, #0x8
         and     w2, w2, #0xf
@@ -2442,27 +2440,27 @@ L2908:
         lsr     w2, w2, #4
         stur    w2, [x0, #-4]
         cmp     x0, x3
-        b.ne    L2908
+        b.ne    L28f8
         ret
 
 // mld_rej_eta_c44.constprop.0 (0xa8 bytes)
-L2930:
+L2920:
         mov     x8, x0
         mov     w0, w1
         cmp     w1, #0xff
-        b.hi    L29d4
+        b.hi    L29c4
         mov     w9, #0x1
         sub     w9, w9, w2
         mov     w7, #0xcd
         mov     w10, #0x2
-L2950:
+L2940:
         ldrb    w3, [x2]
         add     w5, w9, w2
         add     x2, x2, #0x1
         and     w4, w3, #0xf
         lsr     w3, w3, #4
         cmp     w4, #0xf
-        b.eq    L2988
+        b.eq    L2978
         mul     w1, w4, w7
         lsr     w1, w1, #10
         add     w1, w1, w1, lsl #2
@@ -2470,14 +2468,14 @@ L2950:
         sub     w4, w10, w4
         str     w4, [x8, w0, uxtw #2]
         add     w0, w0, #0x1
-L2988:
+L2978:
         cmp     w0, #0xff
         mul     w1, w3, w7
         cset    w4, ls
         add     w6, w0, #0x1
         cmp     w4, #0x0
         ccmp    w3, #0xe, #0x2, ne
-        b.hi    L29c4
+        b.hi    L29b4
         lsr     w1, w1, #10
         cmp     w6, #0xff
         cset    w4, ls
@@ -2486,18 +2484,18 @@ L2988:
         sub     w3, w10, w3
         str     w3, [x8, w0, uxtw #2]
         mov     w0, w6
-L29c4:
+L29b4:
         cmp     w5, #0x87
         cset    w1, ls
         tst     w4, w1
-        b.ne    L2950
-L29d4:
+        b.ne    L2940
+L29c4:
         ret
         nop
         nop
 
 // mldsa44_poly_decompose (0x80 bytes)
-L29e0:
+L29d0:
         mov     w8, #0x1800
         mov     x5, #0x0
         mov     w10, #0x2c0b
@@ -2506,7 +2504,7 @@ L29e0:
         mov     w7, #0x3ff000
         mov     w6, #0xff801fff
         nop
-L2a00:
+L29f0:
         ldr     w4, [x1, x5]
         add     w3, w4, #0x7f
         asr     w3, w3, #7
@@ -2529,11 +2527,11 @@ L2a00:
         str     w2, [x1, x5]
         add     x5, x5, #0x4
         cmp     x5, #0x400
-        b.ne    L2a00
+        b.ne    L29f0
         ret
 
 // mldsa44_poly_use_hint (0xb0 bytes)
-L2a60:
+L2a50:
         mov     w10, #0x1800
         mov     x6, #0x0
         mov     w11, #0x2c0b
@@ -2541,16 +2539,16 @@ L2a60:
         movk    w10, #0xfffd, lsl #16
         mov     w9, #0x3ff000
         mov     w8, #0xff801fff
-        b       L2a98
-L2a80:
+        b       L2a88
+L2a70:
         cmp     w2, #0x2b
         csinc   w2, wzr, w2, eq
-L2a88:
+L2a78:
         str     w2, [x0, x6]
         add     x6, x6, #0x4
         cmp     x6, #0x400
-        b.eq    L2b0c
-L2a98:
+        b.eq    L2afc
+L2a88:
         ldr     w4, [x0, x6]
         add     w3, w4, #0x7f
         asr     w3, w3, #7
@@ -2570,21 +2568,21 @@ L2a98:
         eor     w5, w5, w4
         and     w3, w5, w3
         eor     w3, w3, w4
-        cbz     w12, L2a88
+        cbz     w12, L2a78
         sub     w4, w2, #0x1
         cmp     w3, #0x0
-        b.gt    L2a80
+        b.gt    L2a70
         cmp     w2, #0x0
         csel    w2, w4, w7, ne
         str     w2, [x0, x6]
         add     x6, x6, #0x4
         cmp     x6, #0x400
-        b.ne    L2a98
-L2b0c:
+        b.ne    L2a88
+L2afc:
         ret
 
 // mldsa44_poly_uniform_eta_4x (0x268 bytes)
-L2b10:
+L2b00:
         sub     sp, sp, #0x7d0
         mov     x8, x4
         .inst   0xb00000e4  // adrp x4, 0x1f000
@@ -2633,40 +2631,40 @@ L2b10:
         strb    wzr, [x9, #257]
         strb    w4, [x9, #352]
         strb    wzr, [x9, #353]
-        bl      L1560
+        bl      L1550
         mov     x4, x21
         mov     x3, x20
         mov     x2, x19
         mov     x1, x28
         mov     x0, x26
         mov     x5, #0x42
-        bl      L1350
+        bl      L1340
         mov     x3, x23
         mov     x5, x26
         mov     x4, #0x1
         mov     x2, x24
         mov     x1, x25
         mov     x0, x22
-        bl      L14d0
+        bl      L14c0
         ldr     x0, [sp, #104]
         mov     x2, x22
         mov     w1, #0x0
-        bl      L2930
+        bl      L2920
         mov     w19, w0
         ldr     x0, [sp, #112]
         mov     x2, x25
         mov     w1, #0x0
-        bl      L2930
+        bl      L2920
         mov     w20, w0
         ldr     x0, [sp, #120]
         mov     x2, x24
         mov     w1, #0x0
-        bl      L2930
+        bl      L2920
         mov     w21, w0
         ldr     x0, [sp, #128]
         mov     w1, #0x0
         mov     x2, x23
-        bl      L2930
+        bl      L2920
         mov     w28, w0
         cmp     w21, w27
         ccmp    w0, w27, #0x0, hi
@@ -2675,35 +2673,35 @@ L2b10:
         ccmp    w19, w27, #0x0, hi
         cset    w1, ls
         orr     w0, w0, w1
-        cbz     w0, L2d0c
+        cbz     w0, L2cfc
         nop
-L2c80:
+L2c70:
         mov     x5, x26
         mov     x3, x23
         mov     x4, #0x1
         mov     x2, x24
         mov     x1, x25
         mov     x0, x22
-        bl      L14d0
+        bl      L14c0
         ldr     x0, [sp, #104]
         mov     w1, w19
         mov     x2, x22
-        bl      L2930
+        bl      L2920
         mov     w19, w0
         ldr     x0, [sp, #112]
         mov     w1, w20
         mov     x2, x25
-        bl      L2930
+        bl      L2920
         mov     w20, w0
         ldr     x0, [sp, #120]
         mov     w1, w21
         mov     x2, x24
-        bl      L2930
+        bl      L2920
         mov     w21, w0
         ldr     x0, [sp, #128]
         mov     w1, w28
         mov     x2, x23
-        bl      L2930
+        bl      L2920
         cmp     w0, #0xff
         ccmp    w21, w27, #0x0, hi
         mov     w28, w0
@@ -2712,26 +2710,26 @@ L2c80:
         ccmp    w20, w27, #0x0, hi
         cset    w1, ls
         orr     w0, w0, w1
-        cbnz    w0, L2c80
-L2d0c:
+        cbnz    w0, L2c70
+L2cfc:
         mov     x0, x26
-        bl      L1564
+        bl      L1554
         mov     x0, x22
         mov     x2, #0x280
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldr     x19, [sp, #136]
         mov     x2, #0x180
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
+        bl      L0e70
         .inst   0xb00000e0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #1992]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L2d74
+        b.ne    L2d64
         ldp     x19, x20, [sp]
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
@@ -2740,13 +2738,13 @@ L2d0c:
         ldr     x30, [sp, #80]
         add     sp, sp, #0x7d0
         ret
-L2d74:
-        bl      L0e70
+L2d64:
+        bl      L0e60
         nop
         nop
 
 // mldsa44_poly_challenge (0x168 bytes)
-L2d80:
+L2d70:
         stp     x19, x20, [sp, #-448]!
         mov     x19, x1
         .inst   0xb00000e3  // adrp x3, 0x1f000
@@ -2761,53 +2759,53 @@ L2d80:
         str     x0, [sp, #440]
         mov     x0, #0x0
         mov     x0, x21
-        bl      L10a4
+        bl      L1094
         mov     x1, x19
         mov     x2, #0x20
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x0, x20
         mov     x1, #0x88
-        bl      L11e0
+        bl      L11d0
         mov     x2, x20
         mov     w0, #0x0
         mov     x3, #0x0
-L2df0:
+L2de0:
         ldrb    w1, [x2], #1
         lsl     x1, x1, x0
         add     w0, w0, #0x8
         orr     x3, x3, x1
         cmp     w0, #0x40
-        b.ne    L2df0
+        b.ne    L2de0
         mov     x0, x23
         mov     x2, #0x400
         mov     w1, #0x0
         str     x3, [sp, #56]
-        bl      L0e80
+        bl      L0e70
         mov     x19, #0xd9
         mov     w22, #0x1
         mov     w0, #0x8
-        b       L2e3c
-L2e2c:
+        b       L2e2c
+L2e1c:
         ldrb    w1, [x20, w0, uxtw]
         add     w0, w0, #0x1
         cmp     w1, w19
-        b.ls    L2e64
-L2e3c:
+        b.ls    L2e54
+L2e2c:
         cmp     w0, #0x88
-        b.ne    L2e2c
+        b.ne    L2e1c
         mov     x0, x20
         mov     x1, #0x88
         mov     x2, x21
-        bl      L11e0
+        bl      L11d0
         ldrb    w1, [x20]
         mov     w0, #0x1
         cmp     w1, w19
-        b.hi    L2e2c
-L2e64:
+        b.hi    L2e1c
+L2e54:
         ldr     x2, [sp, #56]
         ldr     w4, [x23, x1, lsl #2]
         str     w4, [x23, x19, lsl #2]
@@ -2818,9 +2816,9 @@ L2e64:
         str     w3, [x23, x1, lsl #2]
         str     x2, [sp, #56]
         cmp     x19, #0x100
-        b.ne    L2e3c
+        b.ne    L2e2c
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         str     xzr, [x20, #128]
         stp     q0, q0, [x20]
@@ -2835,18 +2833,18 @@ L2e64:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L2ee4
+        b.ne    L2ed4
         ldp     x21, x22, [sp, #16]
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #448
         ret
-L2ee4:
-        bl      L0e70
+L2ed4:
+        bl      L0e60
         nop
         nop
 
 // mldsa44_polyeta_pack (0xdc bytes)
-L2ef0:
+L2ee0:
         .inst   0xb00000e2  // adrp x2, 0x1f000
         ldr     x2, [x2, #4088]
         str     x30, [sp, #-32]!
@@ -2855,7 +2853,7 @@ L2ef0:
         ldr     x3, [x2]
         str     x3, [sp, #24]
         mov     x3, #0x0
-L2f10:
+L2f00:
         ldp     w4, w2, [x1, #4]
         add     x0, x0, #0x3
         ldp     w6, w9, [x1, #12]
@@ -2890,7 +2888,7 @@ L2f10:
         sturb   w2, [x0, #-2]
         sturb   w3, [x0, #-1]
         cmp     x10, x1
-        b.ne    L2f10
+        b.ne    L2f00
         add     x0, sp, #0x10
         str     xzr, [sp, #16]
         .inst   0xb00000e0  // adrp x0, 0x1f000
@@ -2899,18 +2897,18 @@ L2f10:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L2fc8
+        b.ne    L2fb8
         ldr     x30, [sp], #32
         ret
-L2fc8:
-        bl      L0e70
+L2fb8:
+        bl      L0e60
         nop
 
 // mldsa44_polyeta_unpack (0xc4 bytes)
-L2fd0:
+L2fc0:
         movi    v2.4s, #0x2
         add     x5, x1, #0x60
-L2fd8:
+L2fc8:
         ldrb    w2, [x1]
         add     x1, x1, #0x3
         add     x0, x0, #0x20
@@ -2956,11 +2954,11 @@ L2fd8:
         sub     v0.4s, v2.4s, v0.4s
         stur    q0, [x0, #-16]
         cmp     x5, x1
-        b.ne    L2fd8
+        b.ne    L2fc8
         ret
 
 // mldsa44_polyz_pack (0xe0 bytes)
-L3094:
+L3084:
         .inst   0x900000e2  // adrp x2, 0x1f000
         ldr     x2, [x2, #4088]
         str     x30, [sp, #-48]!
@@ -2970,7 +2968,7 @@ L3094:
         str     x3, [sp, #40]
         mov     x3, #0x0
         nop
-L30b8:
+L30a8:
         ldp     w2, w4, [x1]
         add     x0, x0, #0x9
         ldp     w3, w5, [x1, #8]
@@ -3005,7 +3003,7 @@ L30b8:
         mov     v0.b[7], v1.b[0]
         stur    d0, [x0, #-9]
         cmp     x9, x1
-        b.ne    L30b8
+        b.ne    L30a8
         add     x0, sp, #0x18
         stp     xzr, xzr, [sp, #24]
         .inst   0x900000e0  // adrp x0, 0x1f000
@@ -3014,18 +3012,18 @@ L30b8:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L3170
+        b.ne    L3160
         ldr     x30, [sp], #48
         ret
-L3170:
-        bl      L0e70
+L3160:
+        bl      L0e60
 
 // mldsa44_polyz_unpack (0xd0 bytes)
-L3174:
+L3164:
         add     x8, x1, #0x240
         mov     w7, #0x20000
         nop
-L3180:
+L3170:
         ldrb    w2, [x1]
         add     x1, x1, #0x9
         str     w2, [x0]
@@ -3073,11 +3071,11 @@ L3180:
         sub     w2, w7, w3
         stur    w2, [x0, #-4]
         cmp     x8, x1
-        b.ne    L3180
+        b.ne    L3170
         ret
 
 // mldsa44_poly_uniform_gamma1 (0xe4 bytes)
-L3244:
+L3234:
         sub     sp, sp, #0x430
         .inst   0x900000e3  // adrp x3, 0x1f000
         ldr     x3, [x3, #4088]
@@ -3098,26 +3096,26 @@ L3244:
         stp     q2, q3, [x19]
         stp     q0, q1, [x19, #32]
         strh    w2, [x20, #768]
-        bl      L10a4
+        bl      L1094
         mov     x1, x19
         mov     x2, #0x42
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x0, x20
         mov     x1, #0x2a8
-        bl      L11e0
+        bl      L11d0
         mov     x1, x20
         mov     x0, x22
-        bl      L3174
+        bl      L3164
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         mov     x0, x20
         mov     x2, #0x2a8
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         movi    v0.4s, #0x0
         strh    wzr, [x19, #64]
         stp     q0, q0, [x19]
@@ -3128,34 +3126,34 @@ L3244:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L3324
+        b.ne    L3314
         ldp     x19, x20, [sp]
         ldp     x21, x22, [sp, #16]
         ldr     x30, [sp, #32]
         add     sp, sp, #0x430
         ret
-L3324:
-        bl      L0e70
+L3314:
+        bl      L0e60
         nop
         nop
 
 // mldsa44_polyvecl_ntt (0x28 bytes)
-L3330:
+L3320:
         stp     x19, x30, [sp, #-16]!
         mov     x19, x0
-        bl      L2100
+        bl      L20f0
         add     x0, x19, #0x400
-        bl      L2100
+        bl      L20f0
         add     x0, x19, #0x800
-        bl      L2100
+        bl      L20f0
         add     x0, x19, #0xc00
         ldp     x19, x30, [sp], #16
-        b       L2100
+        b       L20f0
         nop
         nop
 
 // mldsa44_polyvecl_chknorm (0x4c bytes)
-L3360:
+L3350:
         stp     x19, x20, [sp, #-48]!
         mov     x19, x0
         mov     w20, #0x0
@@ -3163,14 +3161,14 @@ L3360:
         mov     w21, w1
         add     x22, x0, #0x1, lsl #12
         str     x30, [sp, #32]
-L337c:
+L336c:
         mov     x0, x19
         mov     w1, w21
         add     x19, x19, #0x400
-        bl      L27d4
+        bl      L27c4
         orr     w20, w20, w0
         cmp     x19, x22
-        b.ne    L337c
+        b.ne    L336c
         ldp     x21, x22, [sp, #16]
         mov     w0, w20
         ldr     x30, [sp, #32]
@@ -3179,52 +3177,52 @@ L337c:
         nop
 
 // mldsa44_polyveck_reduce (0x28 bytes)
-L33b0:
+L33a0:
         stp     x19, x30, [sp, #-16]!
         mov     x19, x0
-        bl      L2010
+        bl      L2000
         add     x0, x19, #0x400
-        bl      L2010
+        bl      L2000
         add     x0, x19, #0x800
-        bl      L2010
+        bl      L2000
         add     x0, x19, #0xc00
         ldp     x19, x30, [sp], #16
-        b       L2010
+        b       L2000
         nop
         nop
 
 // mldsa44_polyveck_caddq (0x28 bytes)
-L33e0:
+L33d0:
         stp     x19, x30, [sp, #-16]!
         mov     x19, x0
-        bl      L2040
+        bl      L2030
         add     x0, x19, #0x400
-        bl      L2040
+        bl      L2030
         add     x0, x19, #0x800
-        bl      L2040
+        bl      L2030
         add     x0, x19, #0xc00
         ldp     x19, x30, [sp], #16
-        b       L2040
+        b       L2030
         nop
         nop
 
 // mldsa44_polyveck_invntt_tomont (0x28 bytes)
-L3410:
+L3400:
         stp     x19, x30, [sp, #-16]!
         mov     x19, x0
-        bl      L21d0
+        bl      L21c0
         add     x0, x19, #0x400
-        bl      L21d0
+        bl      L21c0
         add     x0, x19, #0x800
-        bl      L21d0
+        bl      L21c0
         add     x0, x19, #0xc00
         ldp     x19, x30, [sp], #16
-        b       L21d0
+        b       L21c0
         nop
         nop
 
 // mldsa44_polyveck_unpack_eta_chknorm (0x5c bytes)
-L3440:
+L3430:
         stp     x19, x20, [sp, #-48]!
         mov     x19, x0
         mov     x20, x2
@@ -3233,17 +3231,17 @@ L3440:
         mov     w21, #0x0
         stp     x23, x30, [sp, #32]
         add     x23, x0, #0x180
-L3460:
+L3450:
         mov     x1, x19
         mov     x0, x20
-        bl      L2fd0
+        bl      L2fc0
         mov     w1, w22
         mov     x0, x20
         add     x19, x19, #0x60
-        bl      L27d4
+        bl      L27c4
         orr     w21, w21, w0
         cmp     x19, x23
-        b.ne    L3460
+        b.ne    L3450
         ldp     x23, x30, [sp, #32]
         mov     w0, w21
         ldp     x21, x22, [sp, #16]
@@ -3252,7 +3250,7 @@ L3460:
         nop
 
 // mldsa44_polyveck_decompose_pack_w1 (0x54 bytes)
-L34a0:
+L3490:
         stp     x19, x20, [sp, #-48]!
         mov     x19, x0
         mov     x20, x1
@@ -3260,70 +3258,70 @@ L34a0:
         mov     x21, x2
         add     x22, x0, #0x300
         str     x30, [sp, #32]
-L34bc:
+L34ac:
         mov     x1, x20
         mov     x0, x21
-        bl      L29e0
+        bl      L29d0
         add     x20, x20, #0x400
         mov     x0, x19
         mov     x1, x21
         add     x19, x19, #0xc0
-        bl      L2820
+        bl      L2810
         cmp     x19, x22
-        b.ne    L34bc
+        b.ne    L34ac
         ldp     x21, x22, [sp, #16]
         ldr     x30, [sp, #32]
         ldp     x19, x20, [sp], #48
         ret
 
 // mldsa44_polyvecl_unpack_eta (0x3c bytes)
-L34f4:
+L34e4:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x1
         mov     x20, x0
         stp     x21, x30, [sp, #16]
         add     x21, x1, #0x180
-L3508:
+L34f8:
         mov     x1, x19
         mov     x0, x20
         add     x19, x19, #0x60
-        bl      L2fd0
+        bl      L2fc0
         add     x20, x20, #0x400
         cmp     x19, x21
-        b.ne    L3508
+        b.ne    L34f8
         ldp     x21, x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
 
 // mldsa44_polyvecl_unpack_z (0x3c bytes)
-L3530:
+L3520:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x1
         mov     x20, x0
         stp     x21, x30, [sp, #16]
         add     x21, x1, #0x900
-L3544:
+L3534:
         mov     x1, x19
         mov     x0, x20
         add     x19, x19, #0x240
-        bl      L3174
+        bl      L3164
         add     x20, x20, #0x400
         cmp     x19, x21
-        b.ne    L3544
+        b.ne    L3534
         ldp     x21, x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
         nop
 
 // mldsa44_polyvec_matrix_expand_lazy (0x10 bytes)
-L3570:
+L3560:
         ldp     q0, q1, [x1]
         add     x0, x0, #0x400
         stp     q0, q1, [x0]
         ret
 
 // mldsa44_polyvec_matrix_pointwise_montgomery_row_lazy (0xf0 bytes)
-L3580:
+L3570:
         stp     x19, x20, [sp, #-160]!
         mov     x20, x1
         stp     x21, x22, [sp, #16]
@@ -3347,28 +3345,28 @@ L3580:
         strb    w24, [x19, #33]
         mov     w21, #0x1
         stp     q0, q1, [x19]
-        bl      L2380
+        bl      L2370
         mov     x1, x25
         mov     x0, x23
-        bl      L22f0
-L35ec:
+        bl      L22e0
+L35dc:
         mov     x1, x19
         mov     x0, x20
         strb    w21, [x19, #32]
         add     w21, w21, #0x1
         strb    w24, [x19, #33]
-        bl      L2380
+        bl      L2370
         mov     x1, x22
         mov     x0, x20
-        bl      L22f0
+        bl      L22e0
         add     x22, x22, #0x400
         mov     x1, x20
         mov     x0, x23
-        bl      L2080
+        bl      L2070
         cmp     w21, #0x4
-        b.ne    L35ec
+        b.ne    L35dc
         mov     x0, x23
-        bl      L2010
+        bl      L2000
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -3378,17 +3376,17 @@ L35ec:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L366c
+        b.ne    L365c
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x30, [sp, #48]
         ldp     x19, x20, [sp], #160
         ret
-L366c:
-        bl      L0e70
+L365c:
+        bl      L0e60
 
 // mldsa44_polyvec_matrix_pointwise_montgomery_yvec_lazy (0x134 bytes)
-L3670:
+L3660:
         stp     x19, x20, [sp, #-176]!
         stp     x23, x24, [sp, #32]
         mov     x23, x1
@@ -3409,74 +3407,74 @@ L3670:
         mov     x1, #0x0
         ldr     q1, [x23, #1040]
         stp     q0, q1, [x20]
-L36c0:
+L36b0:
         ldrh    w2, [x25, #8]
         ldr     x1, [x25]
         add     w2, w22, w2
         mov     x0, x24
         mov     x21, x26
         mov     w19, #0x0
-        bl      L3244
+        bl      L3234
         mov     x0, x24
-        bl      L2100
-L36e4:
+        bl      L20f0
+L36d4:
         mov     x1, x20
-        cbz     w22, L3780
+        cbz     w22, L3770
         mov     x0, x23
         strb    w22, [x20, #32]
         strb    w19, [x20, #33]
-        bl      L2380
+        bl      L2370
         mov     x1, x24
         mov     x0, x23
-        bl      L22f0
+        bl      L22e0
         mov     x1, x23
         mov     x0, x21
-        bl      L2080
-L3714:
+        bl      L2070
+L3704:
         add     w19, w19, #0x1
         add     x21, x21, #0x400
         cmp     w19, #0x4
-        b.ne    L36e4
+        b.ne    L36d4
         add     w22, w22, #0x1
         cmp     w22, #0x4
-        b.ne    L36c0
+        b.ne    L36b0
         movi    v0.4s, #0x0
         stp     q0, q0, [x20]
         stp     q0, q0, [x20, #32]
         mov     x0, x26
-        bl      L33b0
+        bl      L33a0
         mov     x0, x26
-        bl      L3410
+        bl      L3400
         .inst   0x900000e0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #168]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L37a0
+        b.ne    L3790
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x26, [sp, #48]
         ldr     x30, [sp, #64]
         ldp     x19, x20, [sp], #176
         ret
-L3780:
+L3770:
         mov     x0, x21
         strb    wzr, [x20, #32]
         strb    w19, [x20, #33]
-        bl      L2380
+        bl      L2370
         mov     x1, x24
         mov     x0, x21
-        bl      L22f0
-        b       L3714
-L37a0:
-        bl      L0e70
+        bl      L22e0
+        b       L3704
+L3790:
+        bl      L0e60
         nop
         nop
         nop
 
 // mld_compute_pack_t0_t144 (0x150 bytes)
-L37b0:
+L37a0:
         sub     sp, sp, #0xc90
         stp     x21, x22, [sp, #16]
         mov     x22, x3
@@ -3499,60 +3497,60 @@ L37b0:
         mov     x2, #0x0
         mov     x1, x4
         mov     x0, x26
-        bl      L3570
-L380c:
+        bl      L3560
+L37fc:
         mov     w3, w21
         mov     x2, x23
         mov     x1, x26
         mov     x0, x19
-        bl      L3580
+        bl      L3570
         add     w21, w21, #0x1
         mov     x0, x19
-        bl      L21d0
+        bl      L21c0
         mov     x1, x22
         mov     x0, x20
-        bl      L2fd0
+        bl      L2fc0
         add     x22, x22, #0x60
         mov     x1, x20
         mov     x0, x19
-        bl      L2080
+        bl      L2070
         mov     x0, x19
-        bl      L2010
+        bl      L2000
         mov     x0, x19
-        bl      L2040
+        bl      L2030
         mov     x2, x19
         mov     x1, x19
         mov     x0, x20
-        bl      L2340
+        bl      L2330
         mov     x0, x25
         mov     x1, x20
-        bl      L2484
+        bl      L2474
         add     x25, x25, #0x140
         mov     x0, x24
         mov     x1, x19
-        bl      L2554
+        bl      L2544
         add     x24, x24, #0x1a0
         cmp     w21, #0x4
-        b.ne    L380c
+        b.ne    L37fc
         mov     x0, x20
         mov     x2, #0x400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x420
         mov     x0, x26
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0x900000e0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #3208]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L38fc
+        b.ne    L38ec
         ldp     x19, x20, [sp]
         mov     w0, #0x0
         ldp     x21, x22, [sp, #16]
@@ -3561,11 +3559,11 @@ L380c:
         ldr     x30, [sp, #64]
         add     sp, sp, #0xc90
         ret
-L38fc:
-        bl      L0e70
+L38ec:
+        bl      L0e60
 
 // mld_H44 (0x10c bytes)
-L3900:
+L38f0:
         stp     x19, x20, [sp, #-304]!
         mov     x20, x7
         .inst   0x900000e8  // adrp x8, 0x1f000
@@ -3586,22 +3584,22 @@ L3900:
         mov     x0, #0x0
         mov     x27, x6
         mov     x0, x19
-        bl      L10a4
+        bl      L1094
         mov     x2, x25
         mov     x1, x24
         mov     x0, x19
-        bl      L10d0
-        cbnz    x21, L39e0
-        cbnz    x20, L39f4
-L396c:
+        bl      L10c0
+        cbnz    x21, L39d0
+        cbnz    x20, L39e4
+L395c:
         mov     x0, x19
-        bl      L1160
+        bl      L1150
         mov     x2, x19
         mov     x1, x23
         mov     x0, x22
-        bl      L11e0
+        bl      L11d0
         mov     x0, x19
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -3616,31 +3614,31 @@ L396c:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L3a08
+        b.ne    L39f8
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x26, [sp, #48]
         ldp     x27, x30, [sp, #64]
         ldp     x19, x20, [sp], #304
         ret
-L39e0:
+L39d0:
         mov     x2, x21
         mov     x1, x26
         mov     x0, x19
-        bl      L10d0
-        cbz     x20, L396c
-L39f4:
+        bl      L10c0
+        cbz     x20, L395c
+L39e4:
         mov     x2, x20
         mov     x1, x27
         mov     x0, x19
-        bl      L10d0
-        b       L396c
-L3a08:
-        bl      L0e70
+        bl      L10c0
+        b       L395c
+L39f8:
+        bl      L0e60
         nop
 
 // mldsa44_keypair_internal (0x248 bytes)
-L3a10:
+L3a00:
         mov     x12, #0x1180
         sub     sp, sp, x12
         mov     x3, #0x10c0
@@ -3674,7 +3672,7 @@ L3a10:
         mov     x2, x22
         mov     x0, x20
         strh    w4, [x19, #4320]
-        bl      L12b4
+        bl      L12a4
         mov     x3, x24
         mov     x2, x25
         mov     x4, x28
@@ -3685,19 +3683,19 @@ L3a10:
         mov     w5, #0x4
         mov     x1, x26
         mov     x0, x19
-        bl      L2b10
+        bl      L2b00
         mov     x1, x19
         mov     x0, x27
-        bl      L2ef0
+        bl      L2ee0
         mov     x1, x26
         add     x0, x21, #0x260
-        bl      L2ef0
+        bl      L2ee0
         mov     x1, x25
         add     x0, x21, #0x2c0
-        bl      L2ef0
+        bl      L2ee0
         mov     x1, x24
         add     x0, x21, #0x320
-        bl      L2ef0
+        bl      L2ee0
         mov     x3, x24
         mov     x2, x25
         mov     x4, x28
@@ -3708,21 +3706,21 @@ L3a10:
         mov     w5, #0x0
         mov     x1, x26
         mov     x0, x19
-        bl      L2b10
+        bl      L2b00
         mov     x1, x19
         add     x0, x21, #0x80
-        bl      L2ef0
+        bl      L2ee0
         mov     x1, x26
         add     x0, x21, #0xe0
-        bl      L2ef0
+        bl      L2ee0
         mov     x1, x25
         add     x0, x21, #0x140
-        bl      L2ef0
+        bl      L2ee0
         mov     x1, x24
         add     x0, x21, #0x1a0
-        bl      L2ef0
+        bl      L2ee0
         mov     x0, x19
-        bl      L3330
+        bl      L3320
         ldp     q0, q1, [x20]
         mov     x4, x20
         mov     x3, x27
@@ -3730,26 +3728,26 @@ L3a10:
         add     x1, x21, #0x380
         add     x0, x23, #0x20
         stp     q0, q1, [x23]
-        bl      L37b0
+        bl      L37a0
         mov     x4, #0x1080
         mov     w25, w0
         add     x24, x19, x4
-        cbnz    w0, L3bb0
+        cbnz    w0, L3ba0
         mov     x0, x24
         mov     x2, x23
         mov     x3, #0x520
         mov     x1, #0x40
-        bl      L12b4
+        bl      L12a4
         mov     x2, x24
         add     x3, x20, #0x60
         mov     x1, x20
         mov     x0, x21
-        bl      L1d04
-L3bb0:
+        bl      L1cf4
+L3ba0:
         mov     x0, x19
         mov     x2, #0x1000
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         movi    v0.4s, #0x0
         stp     q0, q0, [x24]
         stp     q0, q0, [x24, #32]
@@ -3760,15 +3758,15 @@ L3bb0:
         stp     q0, q0, [x20, #32]
         stp     q0, q0, [x20, #64]
         stp     q0, q0, [x20, #96]
-        cbnz    w25, L3c30
-L3bec:
+        cbnz    w25, L3c20
+L3bdc:
         .inst   0x900000e0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #4472]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L3c54
+        b.ne    L3c44
         ldp     x19, x20, [sp, #16]
         mov     w0, w25
         ldp     x21, x22, [sp, #32]
@@ -3779,23 +3777,23 @@ L3bec:
         ldr     x30, [sp, #96]
         add     sp, sp, x12
         ret
-L3c30:
+L3c20:
         mov     x0, x23
         mov     x2, #0x520
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0xa00
         mov     x0, x21
         mov     w1, #0x0
-        bl      L0e80
-        b       L3bec
-L3c54:
         bl      L0e70
+        b       L3bdc
+L3c44:
+        bl      L0e60
         nop
         nop
 
 // mldsa44_keypair (0x88 bytes)
-L3c60:
+L3c50:
         stp     x19, x20, [sp, #-96]!
         mov     x20, x0
         .inst   0x900000e2  // adrp x2, 0x1f000
@@ -3809,13 +3807,13 @@ L3c60:
         mov     x1, #0x0
         mov     x0, x19
         mov     x1, #0x20
-        bl      L0e60
-        cbnz    w0, L3cdc
+        bl      L0e50
+        cbnz    w0, L3ccc
         mov     x1, x21
         mov     x0, x20
         mov     x2, x19
-        bl      L3a10
-L3cac:
+        bl      L3a00
+L3c9c:
         stp     xzr, xzr, [x19]
         stp     xzr, xzr, [x19, #16]
         .inst   0x900000e1  // adrp x1, 0x1f000
@@ -3824,20 +3822,20 @@ L3cac:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L3ce4
+        b.ne    L3cd4
         ldp     x21, x30, [sp, #16]
         ldp     x19, x20, [sp], #96
         ret
-L3cdc:
+L3ccc:
         mov     w0, #0xfffffffd
-        b       L3cac
-L3ce4:
-        bl      L0e70
+        b       L3c9c
+L3cd4:
+        bl      L0e60
         nop
         nop
 
 // mldsa44_signature_internal (0x4f8 bytes)
-L3cf0:
+L3ce0:
         mov     x12, #0x2650
         sub     sp, sp, x12
         mov     x11, #0x2320
@@ -3879,8 +3877,8 @@ L3cf0:
         ldr     x7, [x8]
         str     x7, [sp, #9800]
         mov     x7, #0x0
-        bl      L1d30
-        cbnz    w25, L41c8
+        bl      L1d20
+        cbnz    w25, L41b8
         mov     x3, #0x40
         mov     x7, x23
         mov     x6, x24
@@ -3889,8 +3887,8 @@ L3cf0:
         mov     x2, x26
         add     x0, x27, #0x80
         mov     x1, x3
-        bl      L3900
-L3dc0:
+        bl      L38f0
+L3db0:
         ldr     x23, [sp, #136]
         mov     x1, #0x1c20
         mov     x2, #0x2440
@@ -3918,14 +3916,14 @@ L3dc0:
         add     x20, x22, x9
         str     x1, [sp, #120]
         mov     x1, x7
-        bl      L3900
+        bl      L38f0
         add     x0, x22, #0x1, lsl #12
         mov     x1, x23
         str     wzr, [sp, #116]
         str     x0, [sp, #144]
-        bl      L3570
+        bl      L3560
         nop
-L3e48:
+L3e38:
         ldp     x2, x23, [sp, #128]
         mov     x3, x19
         ldr     x1, [sp, #144]
@@ -3934,32 +3932,32 @@ L3e48:
         str     x4, [x25, #64]
         ldrh    w4, [sp, #116]
         strh    w4, [x25, #72]
-        bl      L3670
+        bl      L3660
         mov     x0, x22
-        bl      L33e0
+        bl      L33d0
         ldr     x26, [sp, #120]
         mov     x2, x19
         mov     x1, x22
         mov     x0, x26
-        bl      L34a0
+        bl      L3490
         mov     x0, x21
-        bl      L10a4
+        bl      L1094
         add     x1, x23, #0x80
         mov     x0, x21
         mov     x2, #0x40
-        bl      L10d0
+        bl      L10c0
         mov     x1, x26
         mov     x2, #0x300
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x1, #0x20
         mov     x0, x28
-        bl      L11e0
+        bl      L11d0
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x21]
         stp     q0, q0, [x21, #32]
@@ -3970,151 +3968,151 @@ L3e48:
         str     q0, [x21, #192]
         mov     x1, x28
         mov     x0, x24
-        bl      L2d80
+        bl      L2d70
         mov     x26, #0x0
         mov     x0, x24
         mov     w23, #0x0
-        bl      L2100
-L3f0c:
+        bl      L20f0
+L3efc:
         ldr     x1, [x22, #9376]
         mov     x0, x20
         add     x1, x1, x26
-        bl      L2fd0
+        bl      L2fc0
         mov     x0, x20
-        bl      L2100
+        bl      L20f0
         mov     x1, x24
         mov     x0, x20
-        bl      L22f0
+        bl      L22e0
         mov     x0, x20
-        bl      L21d0
+        bl      L21c0
         ldr     x1, [x25, #64]
         mov     x0, x19
         ldrh    w2, [x25, #72]
         add     w2, w23, w2
-        bl      L3244
+        bl      L3234
         mov     x1, x19
         mov     x0, x20
-        bl      L2080
+        bl      L2070
         mov     x0, x20
-        bl      L2010
+        bl      L2000
         mov     w1, #0xffb2
         mov     x0, x20
         movk    w1, #0x1, lsl #16
-        bl      L27d4
-        cbnz    w0, L41c0
+        bl      L27c4
+        cbnz    w0, L41b0
         ldr     x0, [sp, #104]
         mov     w2, w23
         mov     x1, x20
         add     w23, w23, #0x1
         add     x26, x26, #0x60
-        bl      L1e80
+        bl      L1e70
         cmp     w23, #0x4
-        b.ne    L3f0c
+        b.ne    L3efc
         mov     x23, x22
         mov     x26, #0x0
         mov     x27, #0x0
-L3fa0:
+L3f90:
         ldr     x1, [x22, #9312]
         mov     x0, x19
         add     x1, x1, x27
-        bl      L2fd0
+        bl      L2fc0
         mov     x0, x19
-        bl      L2100
+        bl      L20f0
         mov     x1, x24
         mov     x0, x19
-        bl      L22f0
+        bl      L22e0
         mov     x0, x19
-        bl      L21d0
+        bl      L21c0
         mov     x1, x19
         mov     x0, x23
-        bl      L20b0
+        bl      L20a0
         mov     x0, x23
-        bl      L2010
+        bl      L2000
         mov     w1, #0x73b2
         mov     x0, x23
         movk    w1, #0x1, lsl #16
-        bl      L27d4
-        cbnz    w0, L41c0
+        bl      L27c4
+        cbnz    w0, L41b0
         ldr     x1, [x22, #9344]
         mov     x0, x19
         add     x1, x1, x26
-        bl      L2680
+        bl      L2670
         mov     x0, x19
-        bl      L2100
+        bl      L20f0
         mov     x1, x24
         mov     x0, x19
-        bl      L22f0
+        bl      L22e0
         mov     x0, x19
-        bl      L21d0
+        bl      L21c0
         mov     x0, x19
-        bl      L2010
+        bl      L2000
         mov     w1, #0x7400
         mov     x0, x19
         movk    w1, #0x1, lsl #16
-        bl      L27d4
-        cbnz    w0, L41c0
+        bl      L27c4
+        cbnz    w0, L41b0
         mov     x0, x23
         mov     x1, x19
         add     x26, x26, #0x1a0
-        bl      L2080
+        bl      L2070
         add     x27, x27, #0x60
         add     x23, x23, #0x400
         cmp     x26, #0x680
-        b.ne    L3fa0
+        b.ne    L3f90
         ldr     x23, [sp, #104]
         mov     x1, x28
         mov     x0, x23
-        bl      L1d70
+        bl      L1d60
         ldr     x2, [sp, #120]
         mov     x0, x23
         mov     x3, x19
         mov     x1, x22
-        bl      L1d80
+        bl      L1d70
         mov     w23, w0
-L4084:
+L4074:
         mov     x0, x20
         mov     x2, #0x400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x24
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x1000
         mov     x0, x22
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldr     x26, [sp, #120]
         mov     x2, #0x300
         mov     w1, #0x0
         mov     x0, x26
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldr     x0, [sp, #128]
         stp     xzr, xzr, [x0]
         stp     xzr, xzr, [x28]
         stp     xzr, xzr, [x28, #16]
-        cbz     w23, L4128
+        cbz     w23, L4118
         cmn     w23, #0x1
-        b.ne    L4114
+        b.ne    L4104
         ldr     w0, [sp, #116]
         mov     w1, #0xfff8
         add     w0, w0, #0x4
         and     w2, w0, #0xffff
         str     w2, [sp, #116]
         cmp     w1, w0, uxth
-        b.ne    L3e48
+        b.ne    L3e38
         mov     w23, #0xfffffffc
-L4114:
+L4104:
         ldr     x19, [sp, #104]
         mov     x2, #0x974
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
-L4128:
+        bl      L0e70
+L4118:
         ldr     x0, [sp, #160]
         str     xzr, [x22, #9312]
         ldr     x0, [sp, #168]
@@ -4125,7 +4123,7 @@ L4128:
         mov     x2, #0x420
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
+        bl      L0e70
         ldr     x0, [sp, #136]
         movi    v0.4s, #0x0
         stp     q0, q0, [x0]
@@ -4142,7 +4140,7 @@ L4128:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L41e4
+        b.ne    L41d4
         ldp     x19, x20, [sp]
         mov     w0, w23
         ldp     x21, x22, [sp, #16]
@@ -4153,24 +4151,24 @@ L4128:
         ldr     x30, [sp, #80]
         add     sp, sp, x12
         ret
-L41c0:
+L41b0:
         mov     w23, #0xffffffff
-        b       L4084
-L41c8:
+        b       L4074
+L41b8:
         ldr     x0, [sp, #136]
         ldp     q2, q3, [x24]
         add     x0, x0, #0x80
         ldp     q0, q1, [x24, #32]
         stp     q2, q3, [x0]
         stp     q0, q1, [x0, #32]
-        b       L3dc0
-L41e4:
-        bl      L0e70
+        b       L3db0
+L41d4:
+        bl      L0e60
         nop
         nop
 
 // mldsa44_signature_extmu (0xa8 bytes)
-L41f0:
+L41e0:
         stp     x19, x20, [sp, #-112]!
         mov     x20, x0
         .inst   0xf00000c3  // adrp x3, 0x1f000
@@ -4186,8 +4184,8 @@ L41f0:
         mov     x1, #0x0
         mov     x0, x19
         mov     x1, #0x20
-        bl      L0e60
-        cbnz    w0, L428c
+        bl      L0e50
+        cbnz    w0, L427c
         mov     x6, x22
         mov     x1, x21
         mov     x0, x20
@@ -4196,8 +4194,8 @@ L41f0:
         mov     x4, #0x0
         mov     x3, #0x0
         mov     x2, #0x40
-        bl      L3cf0
-L4258:
+        bl      L3ce0
+L4248:
         stp     xzr, xzr, [x19]
         stp     xzr, xzr, [x19, #16]
         .inst   0xf00000c1  // adrp x1, 0x1f000
@@ -4206,21 +4204,21 @@ L4258:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L4294
+        b.ne    L4284
         ldp     x21, x22, [sp, #16]
         ldr     x30, [sp, #32]
         ldp     x19, x20, [sp], #112
         ret
-L428c:
+L427c:
         mov     w0, #0xfffffffd
-        b       L4258
-L4294:
-        bl      L0e70
+        b       L4248
+L4284:
+        bl      L0e60
         nop
         nop
 
 // mldsa44_verify_internal (0x478 bytes)
-L42a0:
+L4290:
         mov     x12, #0x2510
         sub     sp, sp, x12
         stp     x25, x26, [sp, #48]
@@ -4249,14 +4247,14 @@ L42a0:
         add     x1, x25, #0x20
         mov     x0, x20
         stp     q0, q1, [x19, #-128]
-        bl      L3530
+        bl      L3520
         mov     w1, #0xffb2
         mov     x0, x20
         movk    w1, #0x1, lsl #16
-        bl      L3360
-        cbnz    w0, L46c8
+        bl      L3350
+        cbnz    w0, L46b8
         mov     w22, w0
-        cbz     w27, L4614
+        cbz     w27, L4604
         ldp     q2, q3, [x26]
         sub     x19, x19, #0xe0
         ldp     q0, q1, [x26, #32]
@@ -4266,7 +4264,7 @@ L42a0:
         add     x27, x20, x8
         stp     q2, q3, [x19]
         stp     q0, q1, [x19, #32]
-L4354:
+L4344:
         add     x1, x20, #0x1, lsl #12
         mov     x3, #0x1820
         mov     x4, #0x1c20
@@ -4275,7 +4273,7 @@ L4354:
         add     x21, x20, x3
         mov     x0, x20
         str     x1, [sp, #112]
-        bl      L3330
+        bl      L3320
         ldr     x1, [sp, #104]
         mov     x5, #0x2380
         add     x2, x20, x5
@@ -4283,78 +4281,78 @@ L4354:
         mov     x19, x2
         str     x2, [sp, #120]
         mov     x24, x28
-        bl      L3570
+        bl      L3560
         mov     x1, x19
         mov     x6, #0x1420
         mov     x0, x26
         add     x19, x20, x6
-        bl      L2d80
+        bl      L2d70
         mov     x0, x26
-        bl      L2100
-L43b4:
+        bl      L20f0
+L43a4:
         ldr     x1, [sp, #112]
         mov     w3, w22
         mov     x2, x20
         mov     x0, x21
-        bl      L3580
+        bl      L3570
         ldr     x1, [sp, #104]
         mov     w2, w22
         mov     x0, x19
-        bl      L1cf0
+        bl      L1ce0
         mov     x0, x19
-        bl      L20e0
+        bl      L20d0
         mov     x0, x19
-        bl      L2100
+        bl      L20f0
         mov     x1, x26
         mov     x0, x19
-        bl      L22f0
+        bl      L22e0
         mov     x1, x19
         mov     x0, x21
-        bl      L20b0
+        bl      L20a0
         mov     x0, x21
-        bl      L2010
+        bl      L2000
         mov     x0, x21
-        bl      L21d0
+        bl      L21c0
         mov     x0, x21
-        bl      L2040
+        bl      L2030
         mov     w2, w22
         mov     x1, x25
         mov     x0, x19
-        bl      L1e94
+        bl      L1e84
         mov     w23, w0
-        cbnz    w0, L46b8
+        cbnz    w0, L46a8
         mov     x1, x19
         mov     x0, x21
-        bl      L2a60
+        bl      L2a50
         add     w22, w22, #0x1
         mov     x0, x24
         mov     x1, x21
-        bl      L2820
+        bl      L2810
         add     x24, x24, #0xc0
         cmp     w22, #0x4
-        b.ne    L43b4
+        b.ne    L43a4
         mov     x1, #0x2360
         mov     x0, #0x2438
         add     x24, sp, x0
         add     x22, x20, x1
         mov     x0, x24
-        bl      L10a4
+        bl      L1094
         mov     x0, x24
         mov     x1, x27
         mov     x2, #0x40
-        bl      L10d0
+        bl      L10c0
         mov     x1, x28
         mov     x2, #0x300
         mov     x0, x24
-        bl      L10d0
+        bl      L10c0
         mov     x0, x24
-        bl      L1160
+        bl      L1150
         mov     x2, x24
         mov     x1, #0x20
         mov     x0, x22
-        bl      L11e0
+        bl      L11d0
         mov     x0, x24
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x24]
         stp     q0, q0, [x24, #32]
@@ -4393,29 +4391,29 @@ L43b4:
         asr     x1, x1, #32
         eor     w1, w0, w1
         cmp     w0, w1, uxtb
-        b.ne    L46c0
-L454c:
+        b.ne    L46b0
+L453c:
         mov     x0, x19
         mov     x2, #0x400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x21
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldr     x19, [sp, #112]
         mov     x2, #0x420
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x26
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x1000
         mov     x0, x20
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         stp     xzr, xzr, [x22]
         stp     xzr, xzr, [x22, #16]
         ldr     x0, [sp, #120]
@@ -4427,14 +4425,14 @@ L454c:
         mov     x2, #0x300
         mov     x0, x28
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xf00000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #9480]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L4714
+        b.ne    L4704
         ldp     x19, x20, [sp]
         mov     w0, w23
         ldp     x21, x22, [sp, #16]
@@ -4445,25 +4443,25 @@ L454c:
         ldr     x30, [sp, #80]
         add     sp, sp, x12
         ret
-L4614:
+L4604:
         mov     x9, #0x2438
         mov     x10, #0x2020
         add     x19, sp, x9
         add     x28, x20, x10
         mov     x0, x19
-        bl      L10a4
+        bl      L1094
         ldr     x1, [sp, #104]
         mov     x2, #0x520
         mov     x0, x19
-        bl      L10d0
+        bl      L10c0
         mov     x0, x19
-        bl      L1160
+        bl      L1150
         mov     x2, x19
         mov     x1, #0x40
         mov     x0, x28
-        bl      L11e0
+        bl      L11d0
         mov     x0, x19
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -4482,18 +4480,18 @@ L4614:
         mov     x0, x27
         mov     x2, x28
         mov     x1, x3
-        bl      L3900
+        bl      L38f0
         movi    v0.4s, #0x0
         stp     q0, q0, [x28]
         stp     q0, q0, [x28, #32]
-        b       L4354
-L46b8:
+        b       L4344
+L46a8:
         mov     x2, #0x2360
         add     x22, x20, x2
-L46c0:
+L46b0:
         mov     w23, #0xfffffffa
-        b       L454c
-L46c8:
+        b       L453c
+L46b8:
         add     x0, x20, #0x1, lsl #12
         mov     x12, #0x2020
         mov     x13, #0x2320
@@ -4512,116 +4510,116 @@ L46c8:
         str     x0, [sp, #112]
         add     x0, x20, x18
         str     x0, [sp, #120]
-        b       L454c
-L4714:
-        bl      L0e70
+        b       L453c
+L4704:
+        bl      L0e60
         nop
         nop
 
 // mldsa44_verify_extmu (0x18 bytes)
-L4720:
+L4710:
         mov     x5, x2
         mov     w6, #0x1
         mov     x4, #0x0
         mov     x3, #0x0
         mov     x2, #0x40
-        b       L42a0
+        b       L4290
         nop
         nop
 
 // mldsa44_prepare_domain_separation_prefix (0x19c bytes)
-L4740:
+L4730:
         cmp     x4, #0xff
-        b.hi    L47a0
+        b.hi    L4790
         stp     x19, x21, [sp, #-64]!
         mov     x19, x4
         mov     x21, x0
         str     x30, [sp, #32]
-        cbz     w5, L4784
+        cbz     w5, L4774
         stp     x22, x23, [sp, #16]
         mov     x23, x1
         sub     w1, w5, #0x1
         mov     x0, #0x0
         cmp     w1, #0xb
-        b.ls    L47a8
+        b.ls    L4798
         ldp     x22, x23, [sp, #16]
         ldr     x30, [sp, #32]
         ldp     x19, x21, [sp], #64
         ret
-L4784:
+L4774:
         strb    wzr, [x0]
         strb    w4, [x21, #1]
-        cbnz    x4, L47c4
-L4790:
+        cbnz    x4, L47b4
+L4780:
         add     x0, x19, #0x2
-L4794:
+L4784:
         ldr     x30, [sp, #32]
         ldp     x19, x21, [sp], #64
         ret
-L47a0:
+L4790:
         mov     x0, #0x0
         ret
-L47a8:
+L4798:
         .inst   0xd0000020  // adrp x0, 0xa000
         mov     x22, x2
-        add     x0, x0, #0x960
+        add     x0, x0, #0x950
         ldrb    w0, [x0, w1, uxtw]
-        .inst   0x10000061  // adr     x1, 47c4 <mldsa44_prepare_domain_separation_prefix+0x84>
+        .inst   0x10000061  // adr     x1, 47b4 <mldsa44_prepare_domain_separation_prefix+0x84>
         add     x0, x1, w0, sxtb #2
         br      x0
-L47c4:
+L47b4:
         mov     x1, x3
         mov     x2, x4
         add     x0, x0, #0x2
-        bl      L0e50
-        b       L4790
+        bl      L0e40
+        b       L4780
         cmp     x2, #0x20
-        b.ne    L4850
-L47e0:
+        b.ne    L4840
+L47d0:
         mov     w0, #0x1
         strb    w0, [x21]
         strb    w19, [x21, #1]
-        cbnz    x19, L48c0
-L47f0:
+        cbnz    x19, L48b0
+L47e0:
         .inst   0xd0000021  // adrp x1, 0xa000
-        add     x4, x1, #0x970
+        add     x4, x1, #0x960
         mov     w3, #0x0
         nop
-L4800:
+L47f0:
         ldr     w0, [x4]
         cmp     w5, w0
-        b.eq    L4874
+        b.eq    L4864
         add     w3, w3, #0x1
         add     x4, x4, #0x10
         cmp     w3, #0xc
-        b.ne    L4800
+        b.ne    L47f0
         add     x0, x19, #0xd
         mov     x1, x23
         mov     x2, x22
         add     x0, x21, x0
-        bl      L0e50
+        bl      L0e40
         add     x0, x22, #0xd
         ldp     x22, x23, [sp, #16]
         add     x0, x0, x19
-L483c:
+L482c:
         ldr     x30, [sp, #32]
         ldp     x19, x21, [sp], #64
         ret
         cmp     x2, #0x1c
-        b.eq    L47e0
-L4850:
+        b.eq    L47d0
+L4840:
         ldp     x22, x23, [sp, #16]
         mov     x0, #0x0
-        b       L4794
+        b       L4784
         cmp     x2, #0x40
-        b.eq    L47e0
-        b       L4850
+        b.eq    L47d0
+        b       L4840
         cmp     x2, #0x30
-        b.eq    L47e0
-        b       L4850
-L4874:
+        b.eq    L47d0
+        b       L4840
+L4864:
         mov     x0, #0x4
-        add     x1, x1, #0x970
+        add     x1, x1, #0x960
         add     x3, x0, w3, uxtw #4
         add     x0, x19, #0x2
         add     x4, x1, x3
@@ -4634,23 +4632,23 @@ L4874:
         add     x0, x19, #0xd
         mov     x2, x22
         add     x0, x21, x0
-        bl      L0e50
+        bl      L0e40
         add     x0, x22, #0xd
         ldp     x22, x23, [sp, #16]
         add     x0, x0, x19
-        b       L483c
-L48c0:
+        b       L482c
+L48b0:
         mov     x1, x3
         mov     x2, x19
         add     x0, x21, #0x2
         str     w5, [sp, #60]
-        bl      L0e50
+        bl      L0e40
         ldr     w5, [sp, #60]
-        b       L47f0
+        b       L47e0
         nop
 
 // mldsa44_signature (0x10c bytes)
-L48e0:
+L48d0:
         stp     x19, x20, [sp, #-496]!
         mov     x20, x0
         .inst   0xf00000c7  // adrp x7, 0x1f000
@@ -4670,29 +4668,29 @@ L48e0:
         ldr     x1, [x7]
         str     x1, [sp, #488]
         mov     x1, #0x0
-        bl      L4740
-        cbnz    x0, L499c
+        bl      L4730
+        cbnz    x0, L498c
         add     x22, x19, #0x160
         mov     w26, #0xfffffff7
-L493c:
+L492c:
         mov     x0, x20
         mov     x2, #0x974
         mov     w1, #0x0
-        bl      L0e80
-L494c:
+        bl      L0e70
+L493c:
         stp     xzr, xzr, [x19, #352]
         stp     xzr, xzr, [x22, #16]
         mov     x2, #0x14c
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xf00000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #488]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L49e8
+        b.ne    L49d8
         ldp     x21, x22, [sp, #16]
         mov     w0, w26
         ldp     x23, x24, [sp, #32]
@@ -4700,14 +4698,14 @@ L494c:
         ldr     x30, [sp, #64]
         ldp     x19, x20, [sp], #496
         ret
-L499c:
+L498c:
         add     x22, x19, #0x160
         mov     x21, x0
         mov     x1, #0x20
         mov     x0, x22
         mov     w26, #0xfffffffd
-        bl      L0e60
-        cbnz    w0, L493c
+        bl      L0e50
+        cbnz    w0, L492c
         mov     x6, x25
         mov     x4, x21
         mov     x2, x24
@@ -4716,16 +4714,16 @@ L499c:
         mov     x3, x19
         mov     x0, x20
         mov     w7, #0x0
-        bl      L3cf0
+        bl      L3ce0
         mov     w26, w0
-        cbz     w0, L494c
-        b       L493c
-L49e8:
-        bl      L0e70
+        cbz     w0, L493c
+        b       L492c
+L49d8:
+        bl      L0e60
         nop
 
 // mldsa44_verify (0xbc bytes)
-L49f0:
+L49e0:
         stp     x19, x20, [sp, #-416]!
         mov     x20, x0
         .inst   0xf00000c6  // adrp x6, 0x1f000
@@ -4743,8 +4741,8 @@ L49f0:
         mov     x1, #0x0
         mov     w5, #0x0
         mov     x2, #0x0
-        bl      L4740
-        cbz     x0, L4aa0
+        bl      L4730
+        cbz     x0, L4a90
         mov     x4, x0
         mov     x5, x22
         mov     x0, x20
@@ -4752,34 +4750,34 @@ L49f0:
         mov     x1, x21
         mov     x3, x19
         mov     w6, #0x0
-        bl      L42a0
+        bl      L4290
         mov     w20, w0
-L4a60:
+L4a50:
         mov     x0, x19
         mov     x2, #0x14c
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xf00000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #408]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L4aa8
+        b.ne    L4a98
         ldp     x21, x22, [sp, #16]
         mov     w0, w20
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #416
         ret
-L4aa0:
+L4a90:
         mov     w20, #0xfffffff7
-        b       L4a60
-L4aa8:
-        bl      L0e70
+        b       L4a50
+L4a98:
+        bl      L0e60
         nop
 
 // mldsa44_signature_pre_hash_internal (0xd0 bytes)
-L4ab0:
+L4aa0:
         stp     x19, x20, [sp, #-416]!
         mov     x20, x0
         .inst   0xf00000c8  // adrp x8, 0x1f000
@@ -4791,38 +4789,38 @@ L4ab0:
         ldr     x9, [x8]
         str     x9, [sp, #408]
         mov     x9, #0x0
-        cbnz    w7, L4b34
-L4ae0:
+        cbnz    w7, L4b24
+L4ad0:
         mov     w21, #0xfffffff7
-L4ae4:
+L4ad4:
         mov     x0, x20
         mov     x2, #0x974
         mov     w1, #0x0
-        bl      L0e80
-L4af4:
+        bl      L0e70
+L4ae4:
         mov     x0, x19
         mov     x2, #0x14c
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xf00000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #408]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L4b7c
+        b.ne    L4b6c
         ldr     x30, [sp, #32]
         mov     w0, w21
         ldp     x21, x22, [sp, #16]
         ldp     x19, x20, [sp], #416
         ret
-L4b34:
+L4b24:
         mov     x21, x5
         mov     x22, x6
         mov     w5, w7
         mov     x0, x19
-        bl      L4740
-        cbz     x0, L4ae0
+        bl      L4730
+        cbz     x0, L4ad0
         mov     x5, x21
         mov     x2, x0
         mov     x6, x22
@@ -4831,15 +4829,15 @@ L4b34:
         mov     w7, #0x0
         mov     x4, #0x0
         mov     x3, #0x0
-        bl      L3cf0
+        bl      L3ce0
         mov     w21, w0
-        cbz     w0, L4af4
-        b       L4ae4
-L4b7c:
-        bl      L0e70
+        cbz     w0, L4ae4
+        b       L4ad4
+L4b6c:
+        bl      L0e60
 
 // mldsa44_signature_pre_hash_shake256 (0xbc bytes)
-L4b80:
+L4b70:
         stp     x19, x20, [sp, #-160]!
         mov     x8, x2
         mov     x2, x1
@@ -4861,7 +4859,7 @@ L4b80:
         mov     x24, x6
         mov     x0, x19
         mov     x1, #0x40
-        bl      L12b4
+        bl      L12a4
         mov     x6, x24
         mov     x5, x23
         mov     x4, x22
@@ -4870,7 +4868,7 @@ L4b80:
         mov     x1, x19
         mov     w7, #0xc
         mov     x2, #0x40
-        bl      L4ab0
+        bl      L4aa0
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -4880,18 +4878,18 @@ L4b80:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L4c38
+        b.ne    L4c28
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldr     x30, [sp, #48]
         ldp     x19, x20, [sp], #160
         ret
-L4c38:
-        bl      L0e70
+L4c28:
+        bl      L0e60
         nop
 
 // mldsa44_verify_pre_hash_internal (0xbc bytes)
-L4c40:
+L4c30:
         stp     x19, x20, [sp, #-400]!
         .inst   0xf00000c7  // adrp x7, 0x1f000
         ldr     x7, [x7, #4088]
@@ -4901,52 +4899,52 @@ L4c40:
         str     x8, [sp, #392]
         mov     x8, #0x0
         and     x19, x19, #0xffffffffffffffe0
-        cbz     w6, L4cec
+        cbz     w6, L4cdc
         mov     x20, x0
         mov     x0, x19
         str     x21, [sp, #16]
         mov     x21, x5
         mov     w5, w6
-        bl      L4740
+        bl      L4730
         mov     x2, x0
-        cbz     x0, L4ce8
+        cbz     x0, L4cd8
         mov     x5, x21
         mov     x0, x20
         mov     x1, x19
         mov     w6, #0x0
         mov     x4, #0x0
         mov     x3, #0x0
-        bl      L42a0
+        bl      L4290
         mov     w20, w0
         ldr     x21, [sp, #16]
-L4cac:
+L4c9c:
         mov     x0, x19
         mov     x2, #0x14c
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xf00000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #392]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L4cf4
+        b.ne    L4ce4
         ldr     x30, [sp, #24]
         mov     w0, w20
         ldp     x19, x20, [sp], #400
         ret
-L4ce8:
+L4cd8:
         ldr     x21, [sp, #16]
-L4cec:
+L4cdc:
         mov     w20, #0xfffffff7
-        b       L4cac
-L4cf4:
+        b       L4c9c
+L4ce4:
         str     x21, [sp, #16]
-        bl      L0e70
+        bl      L0e60
         nop
 
 // mldsa44_verify_pre_hash_shake256 (0xac bytes)
-L4d00:
+L4cf0:
         stp     x19, x20, [sp, #-144]!
         mov     x7, x2
         mov     x2, x1
@@ -4966,7 +4964,7 @@ L4d00:
         mov     x23, x5
         mov     x0, x19
         mov     x1, #0x40
-        bl      L12b4
+        bl      L12a4
         mov     x5, x23
         mov     x4, x22
         mov     x3, x21
@@ -4974,7 +4972,7 @@ L4d00:
         mov     x1, x19
         mov     w6, #0xc
         mov     x2, #0x40
-        bl      L4c40
+        bl      L4c30
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -4984,17 +4982,17 @@ L4d00:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L4da8
+        b.ne    L4d98
         ldp     x21, x22, [sp, #16]
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #144
         ret
-L4da8:
-        bl      L0e70
+L4d98:
+        bl      L0e60
         nop
 
 // mldsa44_pk_from_sk (0x320 bytes)
-L4db0:
+L4da0:
         mov     x12, #0x1bd0
         sub     sp, sp, x12
         .inst   0xf00000c4  // adrp x4, 0x1f000
@@ -5033,18 +5031,18 @@ L4db0:
         stp     q2, q3, [x22]
         stp     q6, q7, [x3, #-256]
         stp     q0, q1, [x2, #32]
-        bl      L34f4
+        bl      L34e4
         mov     w1, #0x3
         mov     x0, x19
-        bl      L3360
+        bl      L3350
         mov     x2, x26
         mov     w1, #0x3
         mov     w25, w0
         mov     x0, x28
-        bl      L3440
+        bl      L3430
         mov     w27, w0
         mov     x0, x19
-        bl      L3330
+        bl      L3320
         ldp     q0, q1, [x22]
         mov     x3, x28
         mov     x4, x23
@@ -5052,31 +5050,31 @@ L4db0:
         mov     x2, x19
         add     x0, x21, #0x20
         stp     q0, q1, [x21]
-        bl      L37b0
+        bl      L37a0
         mov     w22, w0
-        cbz     w0, L4f60
+        cbz     w0, L4f50
         mov     x6, #0x1a80
         mov     x7, #0x1ac0
         add     x28, x19, x6
         add     x20, x19, x7
-L4eb0:
+L4ea0:
         mov     x0, x21
         mov     x2, #0x520
         mov     w1, #0x0
-        bl      L0e80
-L4ec0:
+        bl      L0e70
+L4eb0:
         mov     x0, x24
         mov     x2, #0x680
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x26
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x1000
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x0, #0x1b00
         add     x19, x19, x0
         stp     xzr, xzr, [x19]
@@ -5094,7 +5092,7 @@ L4ec0:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L50cc
+        b.ne    L50bc
         ldp     x19, x20, [sp]
         mov     w0, w22
         ldp     x21, x22, [sp, #16]
@@ -5105,21 +5103,21 @@ L4ec0:
         ldr     x30, [sp, #80]
         add     sp, sp, x12
         ret
-L4f60:
+L4f50:
         movi    v1.4s, #0x0
         add     x20, x20, #0x380
         mov     x0, x24
         add     x1, x24, #0x680
         mov     v2.16b, v1.16b
         nop
-L4f78:
+L4f68:
         ldr     q0, [x20], #16
         ldr     q3, [x0], #16
         eor     v0.16b, v0.16b, v3.16b
         orr     v2.16b, v2.16b, v0.16b
         eor     v1.16b, v1.16b, v0.16b
         cmp     x1, x0
-        b.ne    L4f78
+        b.ne    L4f68
         movi    v0.4s, #0x0
         ext     v4.16b, v2.16b, v0.16b, #8
         ext     v3.16b, v1.16b, v0.16b, #8
@@ -5153,21 +5151,21 @@ L4f78:
         mov     x1, #0x40
         mov     x3, #0x520
         str     w4, [sp, #108]
-        bl      L12b4
+        bl      L12a4
         movi    v0.4s, #0x0
         ldr     w4, [sp, #108]
         mov     x0, x28
         add     x2, x28, #0x40
         mov     x1, x20
         mov     v2.16b, v0.16b
-L5034:
+L5024:
         ldr     q1, [x0], #16
         ldr     q3, [x1], #16
         eor     v1.16b, v1.16b, v3.16b
         orr     v2.16b, v2.16b, v1.16b
         eor     v0.16b, v0.16b, v1.16b
         cmp     x0, x2
-        b.ne    L5034
+        b.ne    L5024
         movi    v1.4s, #0x0
         ext     v5.16b, v2.16b, v1.16b, #8
         ext     v3.16b, v0.16b, v1.16b, #8
@@ -5196,22 +5194,22 @@ L5034:
         orr     w0, w4, w0
         orr     w0, w0, w25
         tst     w0, #0xff
-        b.eq    L4ec0
+        b.eq    L4eb0
         mov     w22, #0xfffffff9
-        b       L4eb0
-L50cc:
-        bl      L0e70
+        b       L4ea0
+L50bc:
+        bl      L0e60
 
 // mldsa65_unpack_pk_t1 (0x14 bytes)
-L50d0:
+L50c0:
         add     w2, w2, w2, lsl #2
         lsl     w2, w2, #6
         add     x2, x2, #0x20
         add     x1, x1, x2
-        b       L24e0
+        b       L24d0
 
 // mldsa65_pack_sk_rho_key_tr (0x28 bytes)
-L50e4:
+L50d4:
         ldp     q0, q1, [x1]
         add     x4, x0, #0x40
         stp     q0, q1, [x0]
@@ -5225,7 +5223,7 @@ L50e4:
         nop
 
 // mldsa65_unpack_sk (0x40 bytes)
-L5110:
+L5100:
         ldp     q0, q1, [x6]
         add     x7, x6, #0x40
         add     x10, x6, #0x80
@@ -5244,7 +5242,7 @@ L5110:
         ret
 
 // mldsa65_pack_sig_c (0x14 bytes)
-L5150:
+L5140:
         ldp     q0, q1, [x1]
         stp     q0, q1, [x0]
         ldr     q0, [x1, #32]
@@ -5252,7 +5250,7 @@ L5150:
         ret
 
 // mldsa65_pack_sig_h (0xec bytes)
-L5164:
+L5154:
         movi    v0.4s, #0x0
         stp     x19, x20, [sp, #-96]!
         mov     x20, x3
@@ -5274,44 +5272,44 @@ L5164:
         str     q0, [x26, #32]
         stp     q0, q0, [x26]
         stur    q0, [x26, #45]
-L51b8:
+L51a8:
         mov     x1, x28
         mov     x0, x20
-        bl      L2904
+        bl      L28f4
         mov     x4, #0x0
-        b       L51e4
-L51cc:
+        b       L51d4
+L51bc:
         cmp     w7, #0x0
         ccmp    w5, w27, #0x0, ne
-        b.eq    L51f8
+        b.eq    L51e8
         add     x4, x4, #0x1
         cmp     x4, #0x100
-        b.eq    L5214
-L51e4:
+        b.eq    L5204
+L51d4:
         ldr     w5, [x21, x4, lsl #2]
         ldr     w7, [x20, x4, lsl #2]
         add     w6, w5, w25
         cmp     w6, w22
-        b.ls    L51cc
-L51f8:
+        b.ls    L51bc
+L51e8:
         cmp     w19, #0x37
-        b.eq    L5230
+        b.eq    L5220
         strb    w4, [x26, w19, uxtw]
         add     x4, x4, #0x1
         add     w19, w19, #0x1
         cmp     x4, #0x100
-        b.ne    L51e4
-L5214:
+        b.ne    L51d4
+L5204:
         add     x28, x28, #0x80
         strb    w19, [x23], #1
         add     x21, x21, #0x400
         cmp     x28, x24
-        b.ne    L51b8
+        b.ne    L51a8
         mov     w0, #0x0
-        b       L5234
-L5230:
+        b       L5224
+L5220:
         mov     w0, #0xffffffff
-L5234:
+L5224:
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x26, [sp, #48]
@@ -5321,15 +5319,15 @@ L5234:
         ret
 
 // mldsa65_pack_sig_z (0x14 bytes)
-L5250:
+L5240:
         add     w2, w2, w2, lsl #2
         lsl     w2, w2, #7
         add     x2, x2, #0x30
         add     x0, x0, x2
-        b       L5970
+        b       L5960
 
 // mldsa65_sig_unpack_hints (0x100 bytes)
-L5264:
+L5254:
         stp     x19, x20, [sp, #-48]!
         mov     x6, x0
         mov     x19, x1
@@ -5338,86 +5336,86 @@ L5264:
         mov     w21, #0x0
         stp     x23, x30, [sp, #32]
         mov     w23, w2
-        cbz     w2, L5290
+        cbz     w2, L5280
         add     w0, w2, #0x36
         ldrb    w21, [x22, w0, uxtw]
-L5290:
+L5280:
         add     w0, w23, #0x37
         ldrb    w20, [x22, w0, uxtw]
         cmp     w20, #0x37
         ccmp    w21, w20, #0x2, ls
-        b.hi    L5304
+        b.hi    L52f4
         mov     x0, x6
         mov     w1, #0x0
         mov     x2, #0x400
-        bl      L0e80
+        bl      L0e70
         add     x3, x19, w21, uxtb
         mov     x6, x0
         mov     w1, w21
         mov     w7, #0x1
         cmp     w21, w20
-        b.cs    L5318
+        b.cs    L5308
         nop
-L52d0:
+L52c0:
         ldrb    w4, [x3, #3248]
         mov     w5, w1
         add     w1, w1, #0x1
         add     x3, x3, #0x1
         str     w7, [x6, x4, lsl #2]
         cmp     w20, w1
-        b.ls    L5318
+        b.ls    L5308
         cmp     w21, w1
-        b.cs    L52d0
+        b.cs    L52c0
         ldrb    w0, [x22, w5, uxtw]
         ldrb    w4, [x3, #3248]
         cmp     w4, w0
-        b.hi    L52d0
-L5304:
+        b.hi    L52c0
+L52f4:
         mov     w0, #0xffffffff
+L52f8:
+        ldp     x21, x22, [sp, #16]
+        ldp     x23, x30, [sp, #32]
+        ldp     x19, x20, [sp], #48
+        ret
 L5308:
-        ldp     x21, x22, [sp, #16]
-        ldp     x23, x30, [sp, #32]
-        ldp     x19, x20, [sp], #48
-        ret
-L5318:
         cmp     w23, #0x5
-        b.eq    L5334
-L5320:
+        b.eq    L5324
+L5310:
         mov     w0, #0x0
-L5324:
+L5314:
         ldp     x21, x22, [sp, #16]
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #48
         ret
-L5334:
+L5324:
         cmp     w20, #0x37
-        b.eq    L5320
+        b.eq    L5310
         ldrb    w0, [x22, x20]
         add     x20, x20, #0x1
-        cbnz    w0, L5304
-L5348:
+        cbnz    w0, L52f4
+L5338:
         cmp     w20, #0x37
-        b.eq    L5324
+        b.eq    L5314
         ldrb    w0, [x22, x20]
         add     x20, x20, #0x1
-        cbz     w0, L5348
+        cbz     w0, L5338
         mov     w0, #0xffffffff
-        b       L5308
+        b       L52f8
         nop
         nop
         nop
 
 // mld_rej_eta_c65.constprop.0 (0x88 bytes)
-L5370:
+L5360:
         mov     x9, x0
         mov     w0, w1
         cmp     w1, #0xff
-        b.hi    L53f4
+        b.hi    L53e4
         mov     w10, #0x1
         sub     w10, w10, w2
         mov     w5, #0x4
         nop
-L5390:
+L5380:
         ldrb    w4, [x2]
         add     w6, w10, w2
         add     x2, x2, #0x1
@@ -5426,37 +5424,37 @@ L5390:
         sub     w7, w5, w1
         sub     w8, w5, w4
         cmp     w1, #0x8
-        b.hi    L53bc
+        b.hi    L53ac
         str     w7, [x9, w0, uxtw #2]
         add     w0, w0, #0x1
-L53bc:
+L53ac:
         cmp     w0, #0xff
         add     w7, w0, #0x1
         cset    w1, ls
         cmp     w1, #0x0
         ccmp    w4, #0x8, #0x2, ne
-        b.hi    L53e4
+        b.hi    L53d4
         cmp     w7, #0xff
         str     w8, [x9, w0, uxtw #2]
         cset    w1, ls
         mov     w0, w7
-L53e4:
+L53d4:
         cmp     w6, w3
         cset    w4, cc
         tst     w1, w4
-        b.ne    L5390
-L53f4:
+        b.ne    L5380
+L53e4:
         ret
         nop
         nop
 
 // mldsa65_poly_decompose (0x64 bytes)
-L5400:
+L53f0:
         mov     x5, #0x0
         mov     w7, #0x3ff000
         mov     w6, #0xff801fff
         nop
-L5410:
+L5400:
         ldr     w3, [x1, x5]
         add     w2, w3, #0x7f
         asr     w2, w2, #7
@@ -5476,15 +5474,15 @@ L5410:
         str     w2, [x1, x5]
         add     x5, x5, #0x4
         cmp     x5, #0x400
-        b.ne    L5410
+        b.ne    L5400
         ret
 
 // mldsa65_poly_use_hint (0x7c bytes)
-L5464:
+L5454:
         mov     x6, #0x0
         mov     w10, #0x3ff000
         mov     w9, #0xff801fff
-L5470:
+L5460:
         ldr     w3, [x0, x6]
         add     w2, w3, #0x7f
         asr     w2, w2, #7
@@ -5506,17 +5504,17 @@ L5470:
         and     w7, w7, #0xf
         cmp     w3, #0x0
         and     w8, w8, #0xf
-        cbz     w4, L54cc
+        cbz     w4, L54bc
         csel    w2, w8, w7, le
-L54cc:
+L54bc:
         str     w2, [x0, x6]
         add     x6, x6, #0x4
         cmp     x6, #0x400
-        b.ne    L5470
+        b.ne    L5460
         ret
 
 // mldsa65_poly_uniform_eta_4x (0x26c bytes)
-L54e0:
+L54d0:
         sub     sp, sp, #0x9d0
         mov     x8, x4
         .inst   0xd00000c4  // adrp x4, 0x1f000
@@ -5565,41 +5563,41 @@ L54e0:
         strb    wzr, [x9, #257]
         strb    w4, [x9, #352]
         strb    wzr, [x9, #353]
-        bl      L1560
+        bl      L1550
         mov     x4, x21
         mov     x3, x20
         mov     x2, x19
         mov     x1, x28
         mov     x0, x26
         mov     x5, #0x42
-        bl      L1350
+        bl      L1340
         mov     x5, x26
         mov     x4, #0x2
         mov     x3, x23
         mov     x2, x24
         mov     x1, x25
         mov     x0, x22
-        bl      L14d0
+        bl      L14c0
         ldr     x0, [sp, #104]
         mov     w3, #0x110
         mov     x2, x22
         mov     w1, #0x0
-        bl      L5370
+        bl      L5360
         mov     w19, w0
         ldr     x0, [sp, #112]
         mov     x2, x25
         mov     w1, #0x0
-        bl      L5370
+        bl      L5360
         mov     w20, w0
         ldr     x0, [sp, #120]
         mov     x2, x24
         mov     w1, #0x0
-        bl      L5370
+        bl      L5360
         mov     w21, w0
         ldr     x0, [sp, #128]
         mov     w1, #0x0
         mov     x2, x23
-        bl      L5370
+        bl      L5360
         mov     w28, w0
         cmp     w21, w27
         ccmp    w0, w27, #0x0, hi
@@ -5608,35 +5606,35 @@ L54e0:
         ccmp    w19, w27, #0x0, hi
         cset    w1, ls
         orr     w0, w0, w1
-        cbz     w0, L56e0
-L5650:
+        cbz     w0, L56d0
+L5640:
         mov     x5, x26
         mov     x4, #0x1
         mov     x3, x23
         mov     x2, x24
         mov     x1, x25
         mov     x0, x22
-        bl      L14d0
+        bl      L14c0
         ldr     x0, [sp, #104]
         mov     w3, #0x88
         mov     w1, w19
         mov     x2, x22
-        bl      L5370
+        bl      L5360
         mov     w19, w0
         ldr     x0, [sp, #112]
         mov     w1, w20
         mov     x2, x25
-        bl      L5370
+        bl      L5360
         mov     w20, w0
         ldr     x0, [sp, #120]
         mov     w1, w21
         mov     x2, x24
-        bl      L5370
+        bl      L5360
         mov     w21, w0
         ldr     x0, [sp, #128]
         mov     w1, w28
         mov     x2, x23
-        bl      L5370
+        bl      L5360
         cmp     w0, #0xff
         ccmp    w21, w27, #0x0, hi
         mov     w28, w0
@@ -5645,26 +5643,26 @@ L5650:
         ccmp    w20, w27, #0x0, hi
         cset    w1, ls
         orr     w0, w0, w1
-        cbnz    w0, L5650
-L56e0:
+        cbnz    w0, L5640
+L56d0:
         mov     x0, x26
-        bl      L1564
+        bl      L1554
         mov     x0, x22
         mov     x2, #0x480
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldr     x19, [sp, #136]
         mov     x2, #0x180
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
+        bl      L0e70
         .inst   0xd00000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #2504]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L5748
+        b.ne    L5738
         ldp     x19, x20, [sp]
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
@@ -5673,12 +5671,12 @@ L56e0:
         ldr     x30, [sp, #80]
         add     sp, sp, #0x9d0
         ret
-L5748:
-        bl      L0e70
+L5738:
+        bl      L0e60
         nop
 
 // mldsa65_poly_challenge (0x168 bytes)
-L5750:
+L5740:
         stp     x19, x20, [sp, #-448]!
         mov     x19, x1
         .inst   0xd00000c3  // adrp x3, 0x1f000
@@ -5693,53 +5691,53 @@ L5750:
         str     x0, [sp, #440]
         mov     x0, #0x0
         mov     x0, x21
-        bl      L10a4
+        bl      L1094
         mov     x1, x19
         mov     x2, #0x30
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x0, x20
         mov     x1, #0x88
-        bl      L11e0
+        bl      L11d0
         mov     x2, x20
         mov     w0, #0x0
         mov     x3, #0x0
-L57c0:
+L57b0:
         ldrb    w1, [x2], #1
         lsl     x1, x1, x0
         add     w0, w0, #0x8
         orr     x3, x3, x1
         cmp     w0, #0x40
-        b.ne    L57c0
+        b.ne    L57b0
         mov     x0, x23
         mov     x2, #0x400
         mov     w1, #0x0
         str     x3, [sp, #56]
-        bl      L0e80
+        bl      L0e70
         mov     x19, #0xcf
         mov     w22, #0x1
         mov     w0, #0x8
-        b       L580c
-L57fc:
+        b       L57fc
+L57ec:
         ldrb    w1, [x20, w0, uxtw]
         add     w0, w0, #0x1
         cmp     w1, w19
-        b.ls    L5834
-L580c:
+        b.ls    L5824
+L57fc:
         cmp     w0, #0x88
-        b.ne    L57fc
+        b.ne    L57ec
         mov     x0, x20
         mov     x1, #0x88
         mov     x2, x21
-        bl      L11e0
+        bl      L11d0
         ldrb    w1, [x20]
         mov     w0, #0x1
         cmp     w1, w19
-        b.hi    L57fc
-L5834:
+        b.hi    L57ec
+L5824:
         ldr     x2, [sp, #56]
         ldr     w4, [x23, x1, lsl #2]
         str     w4, [x23, x19, lsl #2]
@@ -5750,9 +5748,9 @@ L5834:
         str     w3, [x23, x1, lsl #2]
         str     x2, [sp, #56]
         cmp     x19, #0x100
-        b.ne    L580c
+        b.ne    L57fc
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         str     xzr, [x20, #128]
         stp     q0, q0, [x20]
@@ -5767,18 +5765,18 @@ L5834:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L58b4
+        b.ne    L58a4
         ldp     x21, x22, [sp, #16]
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #448
         ret
-L58b4:
-        bl      L0e70
+L58a4:
+        bl      L0e60
         nop
         nop
 
 // mldsa65_polyeta_pack (0x74 bytes)
-L58c0:
+L58b0:
         .inst   0xd00000c2  // adrp x2, 0x1f000
         ldr     x2, [x2, #4088]
         str     x30, [sp, #-32]!
@@ -5787,7 +5785,7 @@ L58c0:
         ldr     x3, [x2]
         str     x3, [sp, #24]
         mov     x3, #0x0
-L58e0:
+L58d0:
         ldr     w2, [x1, #4]
         ldr     w3, [x1], #8
         sub     w2, w4, w2
@@ -5796,7 +5794,7 @@ L58e0:
         orr     w2, w2, w3
         strb    w2, [x0], #1
         cmp     x5, x1
-        b.ne    L58e0
+        b.ne    L58d0
         add     x0, sp, #0x10
         str     xzr, [sp, #16]
         .inst   0xd00000c0  // adrp x0, 0x1f000
@@ -5805,18 +5803,18 @@ L58e0:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L5930
+        b.ne    L5920
         ldr     x30, [sp], #32
         ret
-L5930:
-        bl      L0e70
+L5920:
+        bl      L0e60
 
 // mldsa65_polyeta_unpack (0x3c bytes)
-L5934:
+L5924:
         add     x5, x0, #0x400
         mov     w4, #0x4
         nop
-L5940:
+L5930:
         ldrb    w2, [x1]
         add     x0, x0, #0x8
         and     w2, w2, #0xf
@@ -5827,11 +5825,11 @@ L5940:
         sub     w2, w4, w3, lsr #4
         stur    w2, [x0, #-4]
         cmp     x0, x5
-        b.ne    L5940
+        b.ne    L5930
         ret
 
 // mldsa65_polyz_pack (0x94 bytes)
-L5970:
+L5960:
         .inst   0xd00000c2  // adrp x2, 0x1f000
         ldr     x2, [x2, #4088]
         str     x30, [sp, #-48]!
@@ -5840,7 +5838,7 @@ L5970:
         ldr     x3, [x2]
         str     x3, [sp, #40]
         mov     x3, #0x0
-L5990:
+L5980:
         ldp     w3, w2, [x1]
         add     x0, x0, #0x5
         add     x1, x1, #0x8
@@ -5857,7 +5855,7 @@ L5990:
         sturb   w6, [x0, #-2]
         sturb   w2, [x0, #-1]
         cmp     x7, x0
-        b.ne    L5990
+        b.ne    L5980
         add     x0, sp, #0x18
         stp     xzr, xzr, [sp, #24]
         .inst   0xd00000c0  // adrp x0, 0x1f000
@@ -5866,18 +5864,18 @@ L5990:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L5a00
+        b.ne    L59f0
         ldr     x30, [sp], #48
         ret
-L5a00:
-        bl      L0e70
+L59f0:
+        bl      L0e60
 
 // mldsa65_polyz_unpack (0x74 bytes)
-L5a04:
+L59f4:
         add     x6, x1, #0x280
         mov     w5, #0x80000
         nop
-L5a10:
+L5a00:
         ldrb    w2, [x1]
         add     x1, x1, #0x5
         str     w2, [x0]
@@ -5902,13 +5900,13 @@ L5a10:
         sub     w2, w5, w2
         stur    w2, [x0, #-4]
         cmp     x6, x1
-        b.ne    L5a10
+        b.ne    L5a00
         ret
         nop
         nop
 
 // mldsa65_poly_uniform_gamma1 (0xe4 bytes)
-L5a80:
+L5a70:
         sub     sp, sp, #0x430
         .inst   0xd00000c3  // adrp x3, 0x1f000
         ldr     x3, [x3, #4088]
@@ -5929,26 +5927,26 @@ L5a80:
         stp     q2, q3, [x19]
         stp     q0, q1, [x19, #32]
         strh    w2, [x20, #768]
-        bl      L10a4
+        bl      L1094
         mov     x1, x19
         mov     x2, #0x42
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x0, x20
         mov     x1, #0x2a8
-        bl      L11e0
+        bl      L11d0
         mov     x1, x20
         mov     x0, x22
-        bl      L5a04
+        bl      L59f4
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         mov     x0, x20
         mov     x2, #0x2a8
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         movi    v0.4s, #0x0
         strh    wzr, [x19, #64]
         stp     q0, q0, [x19]
@@ -5959,32 +5957,32 @@ L5a80:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L5b60
+        b.ne    L5b50
         ldp     x19, x20, [sp]
         ldp     x21, x22, [sp, #16]
         ldr     x30, [sp, #32]
         add     sp, sp, #0x430
         ret
-L5b60:
-        bl      L0e70
+L5b50:
+        bl      L0e60
         nop
         nop
         nop
 
 // mldsa65_polyvecl_ntt (0x38 bytes)
-L5b70:
+L5b60:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x0
         mov     x0, #0x1400
         add     x20, x19, x0
         str     x30, [sp, #16]
         nop
-L5b88:
+L5b78:
         mov     x0, x19
         add     x19, x19, #0x400
-        bl      L2100
+        bl      L20f0
         cmp     x19, x20
-        b.ne    L5b88
+        b.ne    L5b78
         ldr     x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
@@ -5992,7 +5990,7 @@ L5b88:
         nop
 
 // mldsa65_polyvecl_chknorm (0x50 bytes)
-L5bb0:
+L5ba0:
         stp     x19, x20, [sp, #-48]!
         mov     x19, x0
         mov     x0, #0x1400
@@ -6001,14 +5999,14 @@ L5bb0:
         add     x22, x19, x0
         mov     w20, #0x0
         str     x30, [sp, #32]
-L5bd0:
+L5bc0:
         mov     x0, x19
         mov     w1, w21
         add     x19, x19, #0x400
-        bl      L27d4
+        bl      L27c4
         orr     w20, w20, w0
         cmp     x19, x22
-        b.ne    L5bd0
+        b.ne    L5bc0
         ldp     x21, x22, [sp, #16]
         mov     w0, w20
         ldr     x30, [sp, #32]
@@ -6016,19 +6014,19 @@ L5bd0:
         ret
 
 // mldsa65_polyveck_reduce (0x38 bytes)
-L5c00:
+L5bf0:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x0
         mov     x0, #0x1800
         add     x20, x19, x0
         str     x30, [sp, #16]
         nop
-L5c18:
+L5c08:
         mov     x0, x19
         add     x19, x19, #0x400
-        bl      L2010
+        bl      L2000
         cmp     x19, x20
-        b.ne    L5c18
+        b.ne    L5c08
         ldr     x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
@@ -6036,19 +6034,19 @@ L5c18:
         nop
 
 // mldsa65_polyveck_caddq (0x38 bytes)
-L5c40:
+L5c30:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x0
         mov     x0, #0x1800
         add     x20, x19, x0
         str     x30, [sp, #16]
         nop
-L5c58:
+L5c48:
         mov     x0, x19
         add     x19, x19, #0x400
-        bl      L2040
+        bl      L2030
         cmp     x19, x20
-        b.ne    L5c58
+        b.ne    L5c48
         ldr     x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
@@ -6056,19 +6054,19 @@ L5c58:
         nop
 
 // mldsa65_polyveck_invntt_tomont (0x38 bytes)
-L5c80:
+L5c70:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x0
         mov     x0, #0x1800
         add     x20, x19, x0
         str     x30, [sp, #16]
         nop
-L5c98:
+L5c88:
         mov     x0, x19
         add     x19, x19, #0x400
-        bl      L21d0
+        bl      L21c0
         cmp     x19, x20
-        b.ne    L5c98
+        b.ne    L5c88
         ldr     x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
@@ -6076,7 +6074,7 @@ L5c98:
         nop
 
 // mldsa65_polyveck_unpack_eta_chknorm (0x5c bytes)
-L5cc0:
+L5cb0:
         stp     x19, x20, [sp, #-48]!
         mov     x19, x0
         mov     x20, x2
@@ -6085,17 +6083,17 @@ L5cc0:
         mov     w21, #0x0
         stp     x23, x30, [sp, #32]
         add     x23, x0, #0x300
-L5ce0:
+L5cd0:
         mov     x1, x19
         mov     x0, x20
-        bl      L5934
+        bl      L5924
         mov     w1, w22
         mov     x0, x20
         add     x19, x19, #0x80
-        bl      L27d4
+        bl      L27c4
         orr     w21, w21, w0
         cmp     x19, x23
-        b.ne    L5ce0
+        b.ne    L5cd0
         ldp     x23, x30, [sp, #32]
         mov     w0, w21
         ldp     x21, x22, [sp, #16]
@@ -6104,7 +6102,7 @@ L5ce0:
         nop
 
 // mldsa65_polyveck_decompose_pack_w1 (0x58 bytes)
-L5d20:
+L5d10:
         stp     x19, x20, [sp, #-48]!
         mov     x20, x0
         mov     x19, x1
@@ -6113,17 +6111,17 @@ L5d20:
         mov     x21, x2
         add     x22, x1, x0
         str     x30, [sp, #32]
-L5d40:
+L5d30:
         mov     x1, x19
         mov     x0, x21
-        bl      L5400
+        bl      L53f0
         add     x19, x19, #0x400
         mov     x0, x20
         mov     x1, x21
-        bl      L2880
+        bl      L2870
         add     x20, x20, #0x80
         cmp     x19, x22
-        b.ne    L5d40
+        b.ne    L5d30
         ldp     x21, x22, [sp, #16]
         ldr     x30, [sp, #32]
         ldp     x19, x20, [sp], #48
@@ -6132,54 +6130,54 @@ L5d40:
         nop
 
 // mldsa65_polyvecl_unpack_eta (0x40 bytes)
-L5d80:
+L5d70:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x0
         mov     x20, x1
         mov     x0, #0x1400
         stp     x21, x30, [sp, #16]
         add     x21, x19, x0
-L5d98:
+L5d88:
         mov     x1, x20
         mov     x0, x19
         add     x19, x19, #0x400
-        bl      L5934
+        bl      L5924
         add     x20, x20, #0x80
         cmp     x19, x21
-        b.ne    L5d98
+        b.ne    L5d88
         ldp     x21, x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
 
 // mldsa65_polyvecl_unpack_z (0x40 bytes)
-L5dc0:
+L5db0:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x1
         mov     x20, x0
         stp     x21, x30, [sp, #16]
         add     x21, x1, #0xc80
         nop
-L5dd8:
+L5dc8:
         mov     x1, x19
         mov     x0, x20
         add     x19, x19, #0x280
-        bl      L5a04
+        bl      L59f4
         add     x20, x20, #0x400
         cmp     x19, x21
-        b.ne    L5dd8
+        b.ne    L5dc8
         ldp     x21, x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
 
 // mldsa65_polyvec_matrix_expand_lazy (0x10 bytes)
-L5e00:
+L5df0:
         ldp     q0, q1, [x1]
         add     x0, x0, #0x400
         stp     q0, q1, [x0]
         ret
 
 // mldsa65_polyvec_matrix_pointwise_montgomery_row_lazy (0xf0 bytes)
-L5e10:
+L5e00:
         stp     x19, x20, [sp, #-160]!
         mov     x20, x1
         stp     x21, x22, [sp, #16]
@@ -6203,28 +6201,28 @@ L5e10:
         strb    w24, [x19, #33]
         mov     w21, #0x1
         stp     q0, q1, [x19]
-        bl      L2380
+        bl      L2370
         mov     x1, x25
         mov     x0, x23
-        bl      L22f0
-L5e7c:
+        bl      L22e0
+L5e6c:
         mov     x1, x19
         mov     x0, x20
         strb    w21, [x19, #32]
         add     w21, w21, #0x1
         strb    w24, [x19, #33]
-        bl      L2380
+        bl      L2370
         mov     x1, x22
         mov     x0, x20
-        bl      L22f0
+        bl      L22e0
         add     x22, x22, #0x400
         mov     x1, x20
         mov     x0, x23
-        bl      L2080
+        bl      L2070
         cmp     w21, #0x5
-        b.ne    L5e7c
+        b.ne    L5e6c
         mov     x0, x23
-        bl      L2010
+        bl      L2000
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -6234,17 +6232,17 @@ L5e7c:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L5efc
+        b.ne    L5eec
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x30, [sp, #48]
         ldp     x19, x20, [sp], #160
         ret
-L5efc:
-        bl      L0e70
+L5eec:
+        bl      L0e60
 
 // mldsa65_polyvec_matrix_pointwise_montgomery_yvec_lazy (0x144 bytes)
-L5f00:
+L5ef0:
         stp     x19, x20, [sp, #-176]!
         stp     x23, x24, [sp, #32]
         mov     x23, x1
@@ -6265,78 +6263,78 @@ L5f00:
         mov     x1, #0x0
         ldr     q1, [x23, #1040]
         stp     q0, q1, [x21]
-L5f50:
+L5f40:
         ldrh    w2, [x25, #8]
         ldr     x1, [x25]
         add     w2, w22, w2
         mov     x0, x24
         mov     x20, x26
         mov     w19, #0x0
-        bl      L5a80
+        bl      L5a70
         mov     x0, x24
-        bl      L2100
-        b       L5fb0
-L5f78:
+        bl      L20f0
+        b       L5fa0
+L5f68:
         mov     x0, x23
         strb    w22, [x21, #32]
         strb    w19, [x21, #33]
-        bl      L2380
+        bl      L2370
         mov     x1, x24
         mov     x0, x23
-        bl      L22f0
+        bl      L22e0
         add     w19, w19, #0x1
         mov     x0, x20
         mov     x1, x23
-        bl      L2080
+        bl      L2070
         add     x20, x20, #0x400
         cmp     w19, #0x6
-        b.eq    L5fe4
-L5fb0:
+        b.eq    L5fd4
+L5fa0:
         mov     x1, x21
-        cbnz    w22, L5f78
+        cbnz    w22, L5f68
         mov     x0, x20
         strb    wzr, [x21, #32]
         strb    w19, [x21, #33]
-        bl      L2380
+        bl      L2370
         mov     x0, x20
         mov     x1, x24
         add     w19, w19, #0x1
-        bl      L22f0
+        bl      L22e0
         add     x20, x20, #0x400
         cmp     w19, #0x6
-        b.ne    L5fb0
-L5fe4:
+        b.ne    L5fa0
+L5fd4:
         add     w22, w22, #0x1
         cmp     w22, #0x5
-        b.ne    L5f50
+        b.ne    L5f40
         movi    v0.4s, #0x0
         stp     q0, q0, [x21]
         stp     q0, q0, [x21, #32]
         mov     x0, x26
-        bl      L5c00
+        bl      L5bf0
         mov     x0, x26
-        bl      L5c80
-        .inst   0xb00000c0  // adrp x0, 0x1f000
+        bl      L5c70
+        .inst   0xd00000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #168]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L6040
+        b.ne    L6030
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x26, [sp, #48]
         ldr     x30, [sp, #64]
         ldp     x19, x20, [sp], #176
         ret
-L6040:
-        bl      L0e70
+L6030:
+        bl      L0e60
         nop
         nop
         nop
 
 // mld_compute_pack_t0_t165 (0x154 bytes)
-L6050:
+L6040:
         sub     sp, sp, #0xc90
         stp     x21, x22, [sp, #16]
         mov     x22, x3
@@ -6359,61 +6357,61 @@ L6050:
         mov     x2, #0x0
         mov     x1, x4
         mov     x0, x26
-        bl      L5e00
+        bl      L5df0
         nop
-L60b0:
+L60a0:
         mov     w3, w21
         mov     x2, x23
         mov     x1, x26
         mov     x0, x19
-        bl      L5e10
+        bl      L5e00
         add     w21, w21, #0x1
         mov     x0, x19
-        bl      L21d0
+        bl      L21c0
         mov     x1, x22
         mov     x0, x20
-        bl      L5934
+        bl      L5924
         add     x22, x22, #0x80
         mov     x1, x20
         mov     x0, x19
-        bl      L2080
+        bl      L2070
         mov     x0, x19
-        bl      L2010
+        bl      L2000
         mov     x0, x19
-        bl      L2040
+        bl      L2030
         mov     x2, x19
         mov     x1, x19
         mov     x0, x20
-        bl      L2340
+        bl      L2330
         mov     x0, x25
         mov     x1, x20
-        bl      L2484
+        bl      L2474
         add     x25, x25, #0x140
         mov     x0, x24
         mov     x1, x19
-        bl      L2554
+        bl      L2544
         add     x24, x24, #0x1a0
         cmp     w21, #0x6
-        b.ne    L60b0
+        b.ne    L60a0
         mov     x0, x20
         mov     x2, #0x400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x420
         mov     x0, x26
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xb00000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #3208]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L61a0
+        b.ne    L6190
         ldp     x19, x20, [sp]
         mov     w0, #0x0
         ldp     x21, x22, [sp, #16]
@@ -6422,11 +6420,11 @@ L60b0:
         ldr     x30, [sp, #64]
         add     sp, sp, #0xc90
         ret
-L61a0:
-        bl      L0e70
+L6190:
+        bl      L0e60
 
 // mld_H65 (0x10c bytes)
-L61a4:
+L6194:
         stp     x19, x20, [sp, #-304]!
         mov     x20, x7
         .inst   0xb00000c8  // adrp x8, 0x1f000
@@ -6447,22 +6445,22 @@ L61a4:
         mov     x0, #0x0
         mov     x27, x6
         mov     x0, x19
-        bl      L10a4
+        bl      L1094
         mov     x2, x25
         mov     x1, x24
         mov     x0, x19
-        bl      L10d0
-        cbnz    x21, L6284
-        cbnz    x20, L6298
-L6210:
+        bl      L10c0
+        cbnz    x21, L6274
+        cbnz    x20, L6288
+L6200:
         mov     x0, x19
-        bl      L1160
+        bl      L1150
         mov     x2, x19
         mov     x1, x23
         mov     x0, x22
-        bl      L11e0
+        bl      L11d0
         mov     x0, x19
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -6477,30 +6475,30 @@ L6210:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L62ac
+        b.ne    L629c
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x26, [sp, #48]
         ldp     x27, x30, [sp, #64]
         ldp     x19, x20, [sp], #304
         ret
-L6284:
+L6274:
         mov     x2, x21
         mov     x1, x26
         mov     x0, x19
-        bl      L10d0
-        cbz     x20, L6210
-L6298:
+        bl      L10c0
+        cbz     x20, L6200
+L6288:
         mov     x2, x20
         mov     x1, x27
         mov     x0, x19
-        bl      L10d0
-        b       L6210
-L62ac:
-        bl      L0e70
+        bl      L10c0
+        b       L6200
+L629c:
+        bl      L0e60
 
 // mldsa65_keypair_internal (0x2a0 bytes)
-L62b0:
+L62a0:
         mov     x12, #0x1580
         sub     sp, sp, x12
         mov     x3, #0x14c0
@@ -6535,7 +6533,7 @@ L62b0:
         mov     x2, x22
         mov     x0, x21
         strh    w4, [x19, #5344]
-        bl      L12b4
+        bl      L12a4
         mov     x2, x25
         mov     x4, x27
         mov     x3, x26
@@ -6546,19 +6544,19 @@ L62b0:
         mov     w5, #0x7
         mov     x1, x24
         mov     x0, x19
-        bl      L54e0
+        bl      L54d0
         mov     x1, x19
         add     x0, x20, #0x400
-        bl      L58c0
+        bl      L58b0
         mov     x1, x24
         add     x0, x20, #0x480
-        bl      L58c0
+        bl      L58b0
         mov     x1, x25
         add     x0, x20, #0x500
-        bl      L58c0
+        bl      L58b0
         mov     x1, x26
         add     x0, x20, #0x580
-        bl      L58c0
+        bl      L58b0
         mov     x3, x25
         mov     x2, x24
         mov     x4, x27
@@ -6569,17 +6567,17 @@ L62b0:
         mov     w5, #0x4
         mov     x0, x28
         mov     x1, x19
-        bl      L54e0
+        bl      L54d0
         mov     x1, x28
         add     x0, x20, #0x280
         add     x28, x20, #0x300
-        bl      L58c0
+        bl      L58b0
         mov     x1, x19
         mov     x0, x28
-        bl      L58c0
+        bl      L58b0
         mov     x1, x24
         add     x0, x20, #0x380
-        bl      L58c0
+        bl      L58b0
         mov     x2, x25
         mov     x4, x27
         mov     x3, x26
@@ -6590,21 +6588,21 @@ L62b0:
         mov     w6, #0x1
         mov     x1, x24
         mov     x0, x19
-        bl      L54e0
+        bl      L54d0
         mov     x1, x19
         add     x0, x20, #0x80
-        bl      L58c0
+        bl      L58b0
         mov     x1, x24
         add     x0, x20, #0x100
-        bl      L58c0
+        bl      L58b0
         mov     x1, x25
         add     x0, x20, #0x180
-        bl      L58c0
+        bl      L58b0
         mov     x1, x26
         add     x0, x20, #0x200
-        bl      L58c0
+        bl      L58b0
         mov     x0, x19
-        bl      L5b70
+        bl      L5b60
         ldp     q0, q1, [x21]
         mov     x3, x28
         mov     x4, x21
@@ -6612,26 +6610,26 @@ L62b0:
         add     x1, x20, #0x600
         add     x0, x23, #0x20
         stp     q0, q1, [x23]
-        bl      L6050
+        bl      L6040
         mov     x5, #0x1480
         mov     w25, w0
         add     x24, x19, x5
-        cbnz    w0, L64a8
+        cbnz    w0, L6498
         mov     x0, x24
         mov     x2, x23
         mov     x3, #0x7a0
         mov     x1, #0x40
-        bl      L12b4
+        bl      L12a4
         mov     x2, x24
         add     x3, x21, #0x60
         mov     x1, x21
         mov     x0, x20
-        bl      L50e4
-L64a8:
+        bl      L50d4
+L6498:
         mov     x0, x19
         mov     x2, #0x1400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         movi    v0.4s, #0x0
         stp     q0, q0, [x24]
         stp     q0, q0, [x24, #32]
@@ -6642,15 +6640,15 @@ L64a8:
         stp     q0, q0, [x21, #32]
         stp     q0, q0, [x21, #64]
         stp     q0, q0, [x21, #96]
-        cbnz    w25, L6528
-L64e4:
+        cbnz    w25, L6518
+L64d4:
         .inst   0xb00000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #5496]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L654c
+        b.ne    L653c
         ldp     x19, x20, [sp, #16]
         mov     w0, w25
         ldp     x21, x22, [sp, #32]
@@ -6661,21 +6659,21 @@ L64e4:
         ldr     x30, [sp, #96]
         add     sp, sp, x12
         ret
-L6528:
+L6518:
         mov     x0, x23
         mov     x2, #0x7a0
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0xfc0
         mov     x0, x20
         mov     w1, #0x0
-        bl      L0e80
-        b       L64e4
-L654c:
         bl      L0e70
+        b       L64d4
+L653c:
+        bl      L0e60
 
 // mldsa65_keypair (0x88 bytes)
-L6550:
+L6540:
         stp     x19, x20, [sp, #-96]!
         mov     x20, x0
         .inst   0xb00000c2  // adrp x2, 0x1f000
@@ -6689,13 +6687,13 @@ L6550:
         mov     x1, #0x0
         mov     x0, x19
         mov     x1, #0x20
-        bl      L0e60
-        cbnz    w0, L65cc
+        bl      L0e50
+        cbnz    w0, L65bc
         mov     x1, x21
         mov     x0, x20
         mov     x2, x19
-        bl      L62b0
-L659c:
+        bl      L62a0
+L658c:
         stp     xzr, xzr, [x19]
         stp     xzr, xzr, [x19, #16]
         .inst   0xb00000c1  // adrp x1, 0x1f000
@@ -6704,20 +6702,20 @@ L659c:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L65d4
+        b.ne    L65c4
         ldp     x21, x30, [sp, #16]
         ldp     x19, x20, [sp], #96
         ret
-L65cc:
+L65bc:
         mov     w0, #0xfffffffd
-        b       L659c
-L65d4:
-        bl      L0e70
+        b       L658c
+L65c4:
+        bl      L0e60
         nop
         nop
 
 // mldsa65_signature_internal (0x4f8 bytes)
-L65e0:
+L65d0:
         mov     x12, #0x2e70
         sub     sp, sp, x12
         .inst   0xb00000c8  // adrp x8, 0x1f000
@@ -6759,8 +6757,8 @@ L65e0:
         ldr     x7, [x8]
         str     x7, [sp, #11880]
         mov     x7, #0x0
-        bl      L5110
-        cbnz    w25, L6ab8
+        bl      L5100
+        cbnz    w25, L6aa8
         mov     x3, #0x40
         mov     x7, x23
         mov     x6, x24
@@ -6769,8 +6767,8 @@ L65e0:
         mov     x2, x26
         add     x0, x27, #0x80
         mov     x1, x3
-        bl      L61a4
-L66b0:
+        bl      L6194
+L66a0:
         ldr     x23, [sp, #128]
         mov     x0, #0x2c00
         mov     x2, #0x2c60
@@ -6799,15 +6797,15 @@ L66b0:
         str     x0, [sp, #112]
         add     x0, x23, #0xc0
         str     x0, [sp, #144]
-        bl      L61a4
+        bl      L6194
         str     wzr, [sp, #108]
         mov     x11, #0x1800
         mov     x1, x23
         add     x0, x22, x11
         str     x0, [sp, #136]
-        bl      L5e00
+        bl      L5df0
         nop
-L6740:
+L6730:
         ldp     x1, x4, [sp, #136]
         str     x4, [x26, #96]
         ldr     x2, [sp, #120]
@@ -6815,33 +6813,33 @@ L6740:
         ldrh    w4, [sp, #108]
         mov     x0, x22
         strh    w4, [x26, #104]
-        bl      L5f00
+        bl      L5ef0
         mov     x0, x22
-        bl      L5c40
+        bl      L5c30
         ldr     x23, [sp, #112]
         mov     x2, x19
         mov     x1, x22
         mov     x0, x23
-        bl      L5d20
+        bl      L5d10
         mov     x0, x21
-        bl      L10a4
+        bl      L1094
         ldr     x0, [sp, #128]
         mov     x2, #0x40
         add     x1, x0, #0x80
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x1, x23
         mov     x2, #0x300
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x1, #0x30
         mov     x0, x28
-        bl      L11e0
+        bl      L11d0
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x21]
         stp     q0, q0, [x21, #32]
@@ -6852,149 +6850,149 @@ L6740:
         str     q0, [x21, #192]
         mov     x1, x28
         mov     x0, x24
-        bl      L5750
+        bl      L5740
         mov     x23, #0x0
         mov     x0, x24
-        bl      L2100
-L6800:
+        bl      L20f0
+L67f0:
         ldr     x1, [x22, #11456]
         mov     x0, x20
         add     x1, x1, x23, lsl #7
-        bl      L5934
+        bl      L5924
         mov     x0, x20
-        bl      L2100
+        bl      L20f0
         mov     x1, x24
         mov     x0, x20
-        bl      L22f0
+        bl      L22e0
         mov     x0, x20
-        bl      L21d0
+        bl      L21c0
         ldr     x1, [x26, #96]
         mov     x0, x19
         ldrh    w2, [x26, #104]
         add     w2, w2, w23
-        bl      L5a80
+        bl      L5a70
         mov     x1, x19
         mov     x0, x20
-        bl      L2080
+        bl      L2070
         mov     x0, x20
-        bl      L2010
+        bl      L2000
         mov     w1, #0xff3c
         mov     x0, x20
         movk    w1, #0x7, lsl #16
-        bl      L27d4
-        cbnz    w0, L6ab0
+        bl      L27c4
+        cbnz    w0, L6aa0
         ldr     x0, [sp, #96]
         mov     w2, w23
         mov     x1, x20
         add     x23, x23, #0x1
-        bl      L5250
+        bl      L5240
         cmp     x23, #0x5
-        b.ne    L6800
+        b.ne    L67f0
         mov     x23, x22
         mov     x25, #0x0
         mov     x27, #0x0
-L6890:
+L6880:
         ldr     x1, [x22, #11392]
         mov     x0, x19
         add     x1, x1, x27
-        bl      L5934
+        bl      L5924
         mov     x0, x19
-        bl      L2100
+        bl      L20f0
         mov     x1, x24
         mov     x0, x19
-        bl      L22f0
+        bl      L22e0
         mov     x0, x19
-        bl      L21d0
+        bl      L21c0
         mov     x1, x19
         mov     x0, x23
-        bl      L20b0
+        bl      L20a0
         mov     x0, x23
-        bl      L2010
+        bl      L2000
         mov     w1, #0xfe3c
         mov     x0, x23
         movk    w1, #0x3, lsl #16
-        bl      L27d4
-        cbnz    w0, L6ab0
+        bl      L27c4
+        cbnz    w0, L6aa0
         ldr     x1, [x22, #11424]
         mov     x0, x19
         add     x1, x1, x25
-        bl      L2680
+        bl      L2670
         mov     x0, x19
-        bl      L2100
+        bl      L20f0
         mov     x1, x24
         mov     x0, x19
-        bl      L22f0
+        bl      L22e0
         mov     x0, x19
-        bl      L21d0
+        bl      L21c0
         mov     x0, x19
-        bl      L2010
+        bl      L2000
         mov     x0, x19
         mov     w1, #0x3ff00
-        bl      L27d4
-        cbnz    w0, L6ab0
+        bl      L27c4
+        cbnz    w0, L6aa0
         mov     x0, x23
         mov     x1, x19
         add     x25, x25, #0x1a0
-        bl      L2080
+        bl      L2070
         add     x27, x27, #0x80
         add     x23, x23, #0x400
         cmp     x25, #0x9c0
-        b.ne    L6890
+        b.ne    L6880
         ldr     x23, [sp, #96]
         mov     x1, x28
         mov     x0, x23
-        bl      L5150
+        bl      L5140
         ldr     x2, [sp, #112]
         mov     x0, x23
         mov     x3, x19
         mov     x1, x22
-        bl      L5164
+        bl      L5154
         mov     w23, w0
-L6970:
+L6960:
         mov     x0, x20
         mov     x2, #0x400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x24
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x1800
         mov     x0, x22
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldr     x25, [sp, #112]
         mov     x2, #0x300
         mov     w1, #0x0
         mov     x0, x25
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldr     x0, [sp, #120]
         stp     xzr, xzr, [x0]
         stp     xzr, xzr, [x28]
         stp     xzr, xzr, [x28, #16]
         stp     xzr, xzr, [x28, #32]
-        cbz     w23, L6a18
+        cbz     w23, L6a08
         cmn     w23, #0x1
-        b.ne    L6a04
+        b.ne    L69f4
         ldr     w0, [sp, #108]
         mov     w1, #0xfffa
         add     w0, w0, #0x5
         and     w2, w0, #0xffff
         str     w2, [sp, #108]
         cmp     w1, w0, uxth
-        b.ne    L6740
+        b.ne    L6730
         mov     w23, #0xfffffffc
-L6a04:
+L69f4:
         ldr     x19, [sp, #96]
         mov     x2, #0xced
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
-L6a18:
+        bl      L0e70
+L6a08:
         ldr     x0, [sp, #168]
         str     xzr, [x22, #11392]
         ldr     x0, [sp, #152]
@@ -7005,7 +7003,7 @@ L6a18:
         mov     x2, #0x420
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
+        bl      L0e70
         ldr     x0, [sp, #128]
         movi    v0.4s, #0x0
         stp     q0, q0, [x0]
@@ -7022,7 +7020,7 @@ L6a18:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L6ad4
+        b.ne    L6ac4
         ldp     x19, x20, [sp]
         mov     w0, w23
         ldp     x21, x22, [sp, #16]
@@ -7033,24 +7031,24 @@ L6a18:
         ldr     x30, [sp, #80]
         add     sp, sp, x12
         ret
-L6ab0:
+L6aa0:
         mov     w23, #0xffffffff
-        b       L6970
-L6ab8:
+        b       L6960
+L6aa8:
         ldr     x0, [sp, #128]
         ldp     q2, q3, [x24]
         add     x0, x0, #0x80
         ldp     q0, q1, [x24, #32]
         stp     q2, q3, [x0]
         stp     q0, q1, [x0, #32]
-        b       L66b0
-L6ad4:
-        bl      L0e70
+        b       L66a0
+L6ac4:
+        bl      L0e60
         nop
         nop
 
 // mldsa65_signature_extmu (0xa8 bytes)
-L6ae0:
+L6ad0:
         stp     x19, x20, [sp, #-112]!
         mov     x20, x0
         .inst   0xb00000c3  // adrp x3, 0x1f000
@@ -7066,8 +7064,8 @@ L6ae0:
         mov     x1, #0x0
         mov     x0, x19
         mov     x1, #0x20
-        bl      L0e60
-        cbnz    w0, L6b7c
+        bl      L0e50
+        cbnz    w0, L6b6c
         mov     x6, x22
         mov     x1, x21
         mov     x0, x20
@@ -7076,8 +7074,8 @@ L6ae0:
         mov     x4, #0x0
         mov     x3, #0x0
         mov     x2, #0x40
-        bl      L65e0
-L6b48:
+        bl      L65d0
+L6b38:
         stp     xzr, xzr, [x19]
         stp     xzr, xzr, [x19, #16]
         .inst   0xb00000c1  // adrp x1, 0x1f000
@@ -7086,21 +7084,21 @@ L6b48:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L6b84
+        b.ne    L6b74
         ldp     x21, x22, [sp, #16]
         ldr     x30, [sp, #32]
         ldp     x19, x20, [sp], #112
         ret
-L6b7c:
+L6b6c:
         mov     w0, #0xfffffffd
-        b       L6b48
-L6b84:
-        bl      L0e70
+        b       L6b38
+L6b74:
+        bl      L0e60
         nop
         nop
 
 // mldsa65_verify_internal (0x4b4 bytes)
-L6b90:
+L6b80:
         mov     x12, #0x2940
         sub     sp, sp, x12
         stp     x19, x20, [sp]
@@ -7132,14 +7130,14 @@ L6b90:
         add     x1, x25, #0x30
         stp     q1, q2, [x7]
         str     q0, [x7, #32]
-        bl      L5dc0
+        bl      L5db0
         mov     w1, #0xff3c
         mov     x0, x22
         movk    w1, #0x7, lsl #16
-        bl      L5bb0
-        cbnz    w0, L6fec
+        bl      L5ba0
+        cbnz    w0, L6fdc
         mov     w26, w0
-        cbz     w27, L6f34
+        cbz     w27, L6f24
         ldp     q2, q3, [x24]
         sub     x0, x19, #0xe0
         ldp     q0, q1, [x24, #32]
@@ -7151,11 +7149,11 @@ L6b90:
         str     x1, [sp, #112]
         stp     q2, q3, [x0]
         stp     q0, q1, [x0, #32]
-L6c58:
+L6c48:
         mov     x3, #0x1400
         mov     x0, x22
         add     x28, x22, x3
-        bl      L5b70
+        bl      L5b60
         mov     w21, #0x0
         ldr     x1, [sp, #96]
         mov     x4, #0x27a0
@@ -7167,79 +7165,79 @@ L6c58:
         mov     x0, x28
         add     x20, x22, x5
         str     x2, [sp, #120]
-        bl      L5e00
+        bl      L5df0
         mov     x1, x19
         mov     x7, #0x1820
         ldr     x24, [sp, #104]
         mov     x0, x27
         add     x19, x22, x7
-        bl      L5750
+        bl      L5740
         mov     x0, x27
-        bl      L2100
-L6cb8:
+        bl      L20f0
+L6ca8:
         mov     w3, w21
         mov     x2, x22
         mov     x1, x28
         mov     x0, x20
-        bl      L5e10
+        bl      L5e00
         ldr     x1, [sp, #96]
         mov     w2, w21
         mov     x0, x19
-        bl      L50d0
+        bl      L50c0
         mov     x0, x19
-        bl      L20e0
+        bl      L20d0
         mov     x0, x19
-        bl      L2100
+        bl      L20f0
         mov     x1, x27
         mov     x0, x19
-        bl      L22f0
+        bl      L22e0
         mov     x1, x19
         mov     x0, x20
-        bl      L20b0
+        bl      L20a0
         mov     x0, x20
-        bl      L2010
+        bl      L2000
         mov     x0, x20
-        bl      L21d0
+        bl      L21c0
         mov     x0, x20
-        bl      L2040
+        bl      L2030
         mov     w2, w21
         mov     x1, x25
         mov     x0, x19
-        bl      L5264
+        bl      L5254
         mov     w23, w0
-        cbnz    w0, L6fdc
+        cbnz    w0, L6fcc
         mov     x1, x19
         mov     x0, x20
-        bl      L5464
+        bl      L5454
         add     w21, w21, #0x1
         mov     x0, x24
         mov     x1, x20
-        bl      L2880
+        bl      L2870
         add     x24, x24, #0x80
         cmp     w21, #0x6
-        b.ne    L6cb8
+        b.ne    L6ca8
         mov     x1, #0x2760
         mov     x0, #0x2868
         add     x21, sp, x0
         add     x24, x22, x1
         mov     x0, x21
-        bl      L10a4
+        bl      L1094
         ldr     x1, [sp, #112]
         mov     x0, x21
         mov     x2, #0x40
-        bl      L10d0
+        bl      L10c0
         ldr     x1, [sp, #104]
         mov     x2, #0x300
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x1, #0x30
         mov     x0, x24
-        bl      L11e0
+        bl      L11d0
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x21]
         stp     q0, q0, [x21, #32]
@@ -7251,7 +7249,7 @@ L6cb8:
         ldr     x0, [sp, #120]
         mov     x1, x24
         mov     v2.16b, v0.16b
-L6de0:
+L6dd0:
         ldr     q1, [x0], #16
         add     w26, w26, #0x1
         ldr     q3, [x1], #16
@@ -7259,7 +7257,7 @@ L6de0:
         orr     v2.16b, v2.16b, v1.16b
         eor     v0.16b, v0.16b, v1.16b
         cmp     w26, #0x3
-        b.ne    L6de0
+        b.ne    L6dd0
         movi    v1.4s, #0x0
         ext     v5.16b, v2.16b, v1.16b, #8
         ext     v3.16b, v0.16b, v1.16b, #8
@@ -7283,28 +7281,28 @@ L6de0:
         asr     x0, x0, #32
         eor     w0, w1, w0
         cmp     w1, w0, uxtb
-        b.ne    L6fe4
-L6e60:
+        b.ne    L6fd4
+L6e50:
         mov     x0, x19
         mov     x2, #0x400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x20
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x420
         mov     x0, x28
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x27
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x1400
         mov     x0, x22
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         stp     xzr, xzr, [x24]
         stp     xzr, xzr, [x24, #16]
         stp     xzr, xzr, [x24, #32]
@@ -7320,14 +7318,14 @@ L6e60:
         mov     x2, #0x300
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
+        bl      L0e70
         .inst   0xb00000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #10552]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L7040
+        b.ne    L7030
         ldp     x19, x20, [sp]
         mov     w0, w23
         ldp     x21, x22, [sp, #16]
@@ -7338,26 +7336,26 @@ L6e60:
         ldr     x30, [sp, #80]
         add     sp, sp, x12
         ret
-L6f34:
+L6f24:
         mov     x10, #0x2868
         mov     x11, #0x2420
         add     x19, sp, x10
         add     x27, x22, x11
         mov     x0, x19
         str     x27, [sp, #104]
-        bl      L10a4
+        bl      L1094
         ldr     x1, [sp, #96]
         mov     x2, #0x7a0
         mov     x0, x19
-        bl      L10d0
+        bl      L10c0
         mov     x0, x19
-        bl      L1160
+        bl      L1150
         mov     x2, x19
         mov     x1, #0x40
         mov     x0, x27
-        bl      L11e0
+        bl      L11d0
         mov     x0, x19
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -7376,18 +7374,18 @@ L6f34:
         mov     x2, x27
         mov     x1, x3
         str     x0, [sp, #112]
-        bl      L61a4
+        bl      L6194
         movi    v0.4s, #0x0
         stp     q0, q0, [x27]
         stp     q0, q0, [x27, #32]
-        b       L6c58
-L6fdc:
+        b       L6c48
+L6fcc:
         mov     x2, #0x2760
         add     x24, x22, x2
-L6fe4:
+L6fd4:
         mov     w23, #0xfffffffa
-        b       L6e60
-L6fec:
+        b       L6e50
+L6fdc:
         mov     x13, #0x2420
         add     x0, x22, x13
         mov     x23, #0x27a0
@@ -7408,113 +7406,113 @@ L6fec:
         add     x0, x22, x23
         mov     w23, #0xfffffffa
         str     x0, [sp, #120]
-        b       L6e60
-L7040:
-        bl      L0e70
+        b       L6e50
+L7030:
+        bl      L0e60
 
 // mldsa65_verify_extmu (0x18 bytes)
-L7044:
+L7034:
         mov     x5, x2
         mov     w6, #0x1
         mov     x4, #0x0
         mov     x3, #0x0
         mov     x2, #0x40
-        b       L6b90
+        b       L6b80
         nop
 
 // mldsa65_prepare_domain_separation_prefix (0x19c bytes)
-L7060:
+L7050:
         cmp     x4, #0xff
-        b.hi    L70c0
+        b.hi    L70b0
         stp     x19, x21, [sp, #-64]!
         mov     x19, x4
         mov     x21, x0
         str     x30, [sp, #32]
-        cbz     w5, L70a4
+        cbz     w5, L7094
         stp     x22, x23, [sp, #16]
         mov     x23, x1
         sub     w1, w5, #0x1
         mov     x0, #0x0
         cmp     w1, #0xb
-        b.ls    L70c8
+        b.ls    L70b8
         ldp     x22, x23, [sp, #16]
         ldr     x30, [sp, #32]
         ldp     x19, x21, [sp], #64
         ret
-L70a4:
+L7094:
         strb    wzr, [x0]
         strb    w4, [x21, #1]
-        cbnz    x4, L70e4
-L70b0:
+        cbnz    x4, L70d4
+L70a0:
         add     x0, x19, #0x2
-L70b4:
+L70a4:
         ldr     x30, [sp, #32]
         ldp     x19, x21, [sp], #64
         ret
-L70c0:
+L70b0:
         mov     x0, #0x0
         ret
-L70c8:
+L70b8:
         .inst   0xf0000000  // adrp x0, 0xa000
         mov     x22, x2
-        add     x0, x0, #0xa30
+        add     x0, x0, #0xa20
         ldrb    w0, [x0, w1, uxtw]
-        .inst   0x10000061  // adr     x1, 70e4 <mldsa65_prepare_domain_separation_prefix+0x84>
+        .inst   0x10000061  // adr     x1, 70d4 <mldsa65_prepare_domain_separation_prefix+0x84>
         add     x0, x1, w0, sxtb #2
         br      x0
-L70e4:
+L70d4:
         mov     x1, x3
         mov     x2, x4
         add     x0, x0, #0x2
-        bl      L0e50
-        b       L70b0
+        bl      L0e40
+        b       L70a0
         cmp     x2, #0x20
-        b.ne    L7170
-L7100:
+        b.ne    L7160
+L70f0:
         mov     w0, #0x1
         strb    w0, [x21]
         strb    w19, [x21, #1]
-        cbnz    x19, L71e0
-L7110:
+        cbnz    x19, L71d0
+L7100:
         .inst   0xf0000001  // adrp x1, 0xa000
-        add     x4, x1, #0xa40
+        add     x4, x1, #0xa30
         mov     w3, #0x0
         nop
-L7120:
+L7110:
         ldr     w0, [x4]
         cmp     w5, w0
-        b.eq    L7194
+        b.eq    L7184
         add     w3, w3, #0x1
         add     x4, x4, #0x10
         cmp     w3, #0xc
-        b.ne    L7120
+        b.ne    L7110
         add     x0, x19, #0xd
         mov     x1, x23
         mov     x2, x22
         add     x0, x21, x0
-        bl      L0e50
+        bl      L0e40
         add     x0, x22, #0xd
         ldp     x22, x23, [sp, #16]
         add     x0, x0, x19
-L715c:
+L714c:
         ldr     x30, [sp, #32]
         ldp     x19, x21, [sp], #64
         ret
         cmp     x2, #0x1c
-        b.eq    L7100
-L7170:
+        b.eq    L70f0
+L7160:
         ldp     x22, x23, [sp, #16]
         mov     x0, #0x0
-        b       L70b4
+        b       L70a4
         cmp     x2, #0x40
-        b.eq    L7100
-        b       L7170
+        b.eq    L70f0
+        b       L7160
         cmp     x2, #0x30
-        b.eq    L7100
-        b       L7170
-L7194:
+        b.eq    L70f0
+        b       L7160
+L7184:
         mov     x0, #0x4
-        add     x1, x1, #0xa40
+        add     x1, x1, #0xa30
         add     x3, x0, w3, uxtw #4
         add     x0, x19, #0x2
         add     x4, x1, x3
@@ -7527,23 +7525,23 @@ L7194:
         add     x0, x19, #0xd
         mov     x2, x22
         add     x0, x21, x0
-        bl      L0e50
+        bl      L0e40
         add     x0, x22, #0xd
         ldp     x22, x23, [sp, #16]
         add     x0, x0, x19
-        b       L715c
-L71e0:
+        b       L714c
+L71d0:
         mov     x1, x3
         mov     x2, x19
         add     x0, x21, #0x2
         str     w5, [sp, #60]
-        bl      L0e50
+        bl      L0e40
         ldr     w5, [sp, #60]
-        b       L7110
+        b       L7100
         nop
 
 // mldsa65_signature (0x10c bytes)
-L7200:
+L71f0:
         stp     x19, x20, [sp, #-496]!
         mov     x20, x0
         .inst   0x900000c7  // adrp x7, 0x1f000
@@ -7563,29 +7561,29 @@ L7200:
         ldr     x1, [x7]
         str     x1, [sp, #488]
         mov     x1, #0x0
-        bl      L7060
-        cbnz    x0, L72bc
+        bl      L7050
+        cbnz    x0, L72ac
         add     x22, x19, #0x160
         mov     w26, #0xfffffff7
-L725c:
+L724c:
         mov     x0, x20
         mov     x2, #0xced
         mov     w1, #0x0
-        bl      L0e80
-L726c:
+        bl      L0e70
+L725c:
         stp     xzr, xzr, [x19, #352]
         stp     xzr, xzr, [x22, #16]
         mov     x2, #0x14c
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0x900000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #488]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L7308
+        b.ne    L72f8
         ldp     x21, x22, [sp, #16]
         mov     w0, w26
         ldp     x23, x24, [sp, #32]
@@ -7593,14 +7591,14 @@ L726c:
         ldr     x30, [sp, #64]
         ldp     x19, x20, [sp], #496
         ret
-L72bc:
+L72ac:
         add     x22, x19, #0x160
         mov     x21, x0
         mov     x1, #0x20
         mov     x0, x22
         mov     w26, #0xfffffffd
-        bl      L0e60
-        cbnz    w0, L725c
+        bl      L0e50
+        cbnz    w0, L724c
         mov     x6, x25
         mov     x4, x21
         mov     x2, x24
@@ -7609,16 +7607,16 @@ L72bc:
         mov     x3, x19
         mov     x0, x20
         mov     w7, #0x0
-        bl      L65e0
+        bl      L65d0
         mov     w26, w0
-        cbz     w0, L726c
-        b       L725c
-L7308:
-        bl      L0e70
+        cbz     w0, L725c
+        b       L724c
+L72f8:
+        bl      L0e60
         nop
 
 // mldsa65_verify (0xbc bytes)
-L7310:
+L7300:
         stp     x19, x20, [sp, #-416]!
         mov     x20, x0
         .inst   0x900000c6  // adrp x6, 0x1f000
@@ -7636,8 +7634,8 @@ L7310:
         mov     x1, #0x0
         mov     w5, #0x0
         mov     x2, #0x0
-        bl      L7060
-        cbz     x0, L73c0
+        bl      L7050
+        cbz     x0, L73b0
         mov     x4, x0
         mov     x5, x22
         mov     x0, x20
@@ -7645,34 +7643,34 @@ L7310:
         mov     x1, x21
         mov     x3, x19
         mov     w6, #0x0
-        bl      L6b90
+        bl      L6b80
         mov     w20, w0
-L7380:
+L7370:
         mov     x0, x19
         mov     x2, #0x14c
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0x900000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #408]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L73c8
+        b.ne    L73b8
         ldp     x21, x22, [sp, #16]
         mov     w0, w20
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #416
         ret
-L73c0:
+L73b0:
         mov     w20, #0xfffffff7
-        b       L7380
-L73c8:
-        bl      L0e70
+        b       L7370
+L73b8:
+        bl      L0e60
         nop
 
 // mldsa65_signature_pre_hash_internal (0xd0 bytes)
-L73d0:
+L73c0:
         stp     x19, x20, [sp, #-416]!
         mov     x20, x0
         .inst   0x900000c8  // adrp x8, 0x1f000
@@ -7684,38 +7682,38 @@ L73d0:
         ldr     x9, [x8]
         str     x9, [sp, #408]
         mov     x9, #0x0
-        cbnz    w7, L7454
-L7400:
+        cbnz    w7, L7444
+L73f0:
         mov     w21, #0xfffffff7
-L7404:
+L73f4:
         mov     x0, x20
         mov     x2, #0xced
         mov     w1, #0x0
-        bl      L0e80
-L7414:
+        bl      L0e70
+L7404:
         mov     x0, x19
         mov     x2, #0x14c
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0x900000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #408]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L749c
+        b.ne    L748c
         ldr     x30, [sp, #32]
         mov     w0, w21
         ldp     x21, x22, [sp, #16]
         ldp     x19, x20, [sp], #416
         ret
-L7454:
+L7444:
         mov     x21, x5
         mov     x22, x6
         mov     w5, w7
         mov     x0, x19
-        bl      L7060
-        cbz     x0, L7400
+        bl      L7050
+        cbz     x0, L73f0
         mov     x5, x21
         mov     x2, x0
         mov     x6, x22
@@ -7724,15 +7722,15 @@ L7454:
         mov     w7, #0x0
         mov     x4, #0x0
         mov     x3, #0x0
-        bl      L65e0
+        bl      L65d0
         mov     w21, w0
-        cbz     w0, L7414
-        b       L7404
-L749c:
-        bl      L0e70
+        cbz     w0, L7404
+        b       L73f4
+L748c:
+        bl      L0e60
 
 // mldsa65_signature_pre_hash_shake256 (0xbc bytes)
-L74a0:
+L7490:
         stp     x19, x20, [sp, #-160]!
         mov     x8, x2
         mov     x2, x1
@@ -7754,7 +7752,7 @@ L74a0:
         mov     x24, x6
         mov     x0, x19
         mov     x1, #0x40
-        bl      L12b4
+        bl      L12a4
         mov     x6, x24
         mov     x5, x23
         mov     x4, x22
@@ -7763,7 +7761,7 @@ L74a0:
         mov     x1, x19
         mov     w7, #0xc
         mov     x2, #0x40
-        bl      L73d0
+        bl      L73c0
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -7773,18 +7771,18 @@ L74a0:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L7558
+        b.ne    L7548
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldr     x30, [sp, #48]
         ldp     x19, x20, [sp], #160
         ret
-L7558:
-        bl      L0e70
+L7548:
+        bl      L0e60
         nop
 
 // mldsa65_verify_pre_hash_internal (0xbc bytes)
-L7560:
+L7550:
         stp     x19, x20, [sp, #-400]!
         .inst   0x900000c7  // adrp x7, 0x1f000
         ldr     x7, [x7, #4088]
@@ -7794,52 +7792,52 @@ L7560:
         str     x8, [sp, #392]
         mov     x8, #0x0
         and     x19, x19, #0xffffffffffffffe0
-        cbz     w6, L760c
+        cbz     w6, L75fc
         mov     x20, x0
         mov     x0, x19
         str     x21, [sp, #16]
         mov     x21, x5
         mov     w5, w6
-        bl      L7060
+        bl      L7050
         mov     x2, x0
-        cbz     x0, L7608
+        cbz     x0, L75f8
         mov     x5, x21
         mov     x0, x20
         mov     x1, x19
         mov     w6, #0x0
         mov     x4, #0x0
         mov     x3, #0x0
-        bl      L6b90
+        bl      L6b80
         mov     w20, w0
         ldr     x21, [sp, #16]
-L75cc:
+L75bc:
         mov     x0, x19
         mov     x2, #0x14c
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0x900000c0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #392]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L7614
+        b.ne    L7604
         ldr     x30, [sp, #24]
         mov     w0, w20
         ldp     x19, x20, [sp], #400
         ret
-L7608:
+L75f8:
         ldr     x21, [sp, #16]
-L760c:
+L75fc:
         mov     w20, #0xfffffff7
-        b       L75cc
-L7614:
+        b       L75bc
+L7604:
         str     x21, [sp, #16]
-        bl      L0e70
+        bl      L0e60
         nop
 
 // mldsa65_verify_pre_hash_shake256 (0xac bytes)
-L7620:
+L7610:
         stp     x19, x20, [sp, #-144]!
         mov     x7, x2
         mov     x2, x1
@@ -7859,7 +7857,7 @@ L7620:
         mov     x23, x5
         mov     x0, x19
         mov     x1, #0x40
-        bl      L12b4
+        bl      L12a4
         mov     x5, x23
         mov     x4, x22
         mov     x3, x21
@@ -7867,7 +7865,7 @@ L7620:
         mov     x1, x19
         mov     w6, #0xc
         mov     x2, #0x40
-        bl      L7560
+        bl      L7550
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -7877,17 +7875,17 @@ L7620:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L76c8
+        b.ne    L76b8
         ldp     x21, x22, [sp, #16]
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #144
         ret
-L76c8:
-        bl      L0e70
+L76b8:
+        bl      L0e60
         nop
 
 // mldsa65_pk_from_sk (0x328 bytes)
-L76d0:
+L76c0:
         mov     x12, #0x2310
         sub     sp, sp, x12
         add     x4, x1, #0x40
@@ -7928,18 +7926,18 @@ L76d0:
         stp     q4, q5, [x28]
         stp     q2, q3, [x2]
         stp     q0, q1, [x3, #32]
-        bl      L5d80
+        bl      L5d70
         mov     w1, #0x5
         mov     x0, x19
-        bl      L5bb0
+        bl      L5ba0
         mov     x2, x26
         mov     w1, #0x5
         mov     w25, w0
         mov     x0, x22
-        bl      L5cc0
+        bl      L5cb0
         mov     w27, w0
         mov     x0, x19
-        bl      L5b70
+        bl      L5b60
         ldp     q0, q1, [x28]
         mov     x3, x22
         mov     x4, x23
@@ -7947,31 +7945,31 @@ L76d0:
         mov     x2, x19
         add     x0, x21, #0x20
         stp     q0, q1, [x21]
-        bl      L6050
+        bl      L6040
         mov     w22, w0
-        cbz     w0, L7888
+        cbz     w0, L7878
         mov     x6, #0x21c0
         mov     x7, #0x2200
         add     x28, x19, x6
         add     x20, x19, x7
-L77d8:
+L77c8:
         mov     x0, x21
         mov     x2, #0x7a0
         mov     w1, #0x0
-        bl      L0e80
-L77e8:
+        bl      L0e70
+L77d8:
         mov     x0, x24
         mov     x2, #0x9c0
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x26
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x1400
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x0, #0x2240
         add     x19, x19, x0
         stp     xzr, xzr, [x19]
@@ -7989,7 +7987,7 @@ L77e8:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L79f4
+        b.ne    L79e4
         ldp     x19, x20, [sp]
         mov     w0, w22
         ldp     x21, x22, [sp, #16]
@@ -8000,21 +7998,21 @@ L77e8:
         ldr     x30, [sp, #80]
         add     sp, sp, x12
         ret
-L7888:
+L7878:
         movi    v1.4s, #0x0
         add     x20, x20, #0x600
         mov     x0, x24
         add     x1, x24, #0x9c0
         mov     v2.16b, v1.16b
         nop
-L78a0:
+L7890:
         ldr     q0, [x20], #16
         ldr     q3, [x0], #16
         eor     v0.16b, v0.16b, v3.16b
         orr     v2.16b, v2.16b, v0.16b
         eor     v1.16b, v1.16b, v0.16b
         cmp     x1, x0
-        b.ne    L78a0
+        b.ne    L7890
         movi    v0.4s, #0x0
         ext     v4.16b, v2.16b, v0.16b, #8
         ext     v3.16b, v1.16b, v0.16b, #8
@@ -8048,21 +8046,21 @@ L78a0:
         mov     x1, #0x40
         mov     x3, #0x7a0
         str     w4, [sp, #108]
-        bl      L12b4
+        bl      L12a4
         movi    v0.4s, #0x0
         ldr     w4, [sp, #108]
         mov     x0, x28
         add     x2, x28, #0x40
         mov     x1, x20
         mov     v2.16b, v0.16b
-L795c:
+L794c:
         ldr     q1, [x0], #16
         ldr     q3, [x1], #16
         eor     v1.16b, v1.16b, v3.16b
         orr     v2.16b, v2.16b, v1.16b
         eor     v0.16b, v0.16b, v1.16b
         cmp     x0, x2
-        b.ne    L795c
+        b.ne    L794c
         movi    v1.4s, #0x0
         ext     v5.16b, v2.16b, v1.16b, #8
         ext     v3.16b, v0.16b, v1.16b, #8
@@ -8091,24 +8089,24 @@ L795c:
         orr     w0, w4, w0
         orr     w0, w0, w25
         tst     w0, #0xff
-        b.eq    L77e8
+        b.eq    L77d8
         mov     w22, #0xfffffff9
-        b       L77d8
-L79f4:
-        bl      L0e70
+        b       L77c8
+L79e4:
+        bl      L0e60
         nop
         nop
 
 // mldsa87_unpack_pk_t1 (0x14 bytes)
-L7a00:
+L79f0:
         add     w2, w2, w2, lsl #2
         lsl     w2, w2, #6
         add     x2, x2, #0x20
         add     x1, x1, x2
-        b       L24e0
+        b       L24d0
 
 // mldsa87_pack_sk_rho_key_tr (0x28 bytes)
-L7a14:
+L7a04:
         ldp     q0, q1, [x1]
         add     x4, x0, #0x40
         stp     q0, q1, [x0]
@@ -8122,7 +8120,7 @@ L7a14:
         nop
 
 // mldsa87_unpack_sk (0x40 bytes)
-L7a40:
+L7a30:
         ldp     q0, q1, [x6]
         add     x7, x6, #0x40
         add     x10, x6, #0x80
@@ -8141,7 +8139,7 @@ L7a40:
         ret
 
 // mldsa87_pack_sig_c (0x14 bytes)
-L7a80:
+L7a70:
         ldp     q0, q1, [x1]
         stp     q0, q1, [x0]
         ldp     q0, q1, [x1, #32]
@@ -8149,7 +8147,7 @@ L7a80:
         ret
 
 // mldsa87_pack_sig_h (0xf8 bytes)
-L7a94:
+L7a84:
         movi    v0.4s, #0x0
         stp     x19, x20, [sp, #-96]!
         mov     x20, x3
@@ -8174,44 +8172,44 @@ L7a94:
         stur    wzr, [x26, #79]
         stp     q0, q0, [x26]
         stp     q0, q0, [x26, #32]
-L7af4:
+L7ae4:
         mov     x1, x28
         mov     x0, x20
-        bl      L2904
+        bl      L28f4
         mov     x4, #0x0
-        b       L7b20
-L7b08:
+        b       L7b10
+L7af8:
         cmp     w7, #0x0
         ccmp    w5, w27, #0x0, ne
-        b.eq    L7b34
+        b.eq    L7b24
         add     x4, x4, #0x1
         cmp     x4, #0x100
-        b.eq    L7b50
-L7b20:
+        b.eq    L7b40
+L7b10:
         ldr     w5, [x21, x4, lsl #2]
         ldr     w7, [x20, x4, lsl #2]
         add     w6, w5, w25
         cmp     w6, w22
-        b.ls    L7b08
-L7b34:
+        b.ls    L7af8
+L7b24:
         cmp     w19, #0x4b
-        b.eq    L7b6c
+        b.eq    L7b5c
         strb    w4, [x26, w19, uxtw]
         add     x4, x4, #0x1
         add     w19, w19, #0x1
         cmp     x4, #0x100
-        b.ne    L7b20
-L7b50:
+        b.ne    L7b10
+L7b40:
         add     x28, x28, #0x80
         strb    w19, [x23], #1
         add     x21, x21, #0x400
         cmp     x28, x24
-        b.ne    L7af4
+        b.ne    L7ae4
         mov     w0, #0x0
-        b       L7b70
-L7b6c:
+        b       L7b60
+L7b5c:
         mov     w0, #0xffffffff
-L7b70:
+L7b60:
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x26, [sp, #48]
@@ -8222,15 +8220,15 @@ L7b70:
         nop
 
 // mldsa87_pack_sig_z (0x14 bytes)
-L7b90:
+L7b80:
         add     w2, w2, w2, lsl #2
         lsl     w2, w2, #7
         add     x2, x2, #0x40
         add     x0, x0, x2
-        b       L83c4
+        b       L83b4
 
 // mldsa87_sig_unpack_hints (0x108 bytes)
-L7ba4:
+L7b94:
         stp     x19, x20, [sp, #-48]!
         mov     x3, #0x11c0
         mov     x19, x1
@@ -8240,92 +8238,92 @@ L7ba4:
         stp     x23, x30, [sp, #32]
         mov     w21, #0x0
         mov     w23, w2
-        cbz     w2, L7bd4
+        cbz     w2, L7bc4
         add     w0, w2, #0x4a
         ldrb    w21, [x22, w0, uxtw]
-L7bd4:
+L7bc4:
         add     w0, w23, #0x4b
         ldrb    w20, [x22, w0, uxtw]
         cmp     w20, #0x4b
         ccmp    w21, w20, #0x2, ls
-        b.hi    L7c48
+        b.hi    L7c38
         mov     x0, x6
         mov     x2, #0x400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x6, x0
         cmp     w21, w20
-        b.cs    L7c5c
+        b.cs    L7c4c
         mov     w0, #0x11c0
         add     w0, w21, w0
         mov     w3, w21
         add     x1, x19, x0
         mov     w7, #0x1
-L7c18:
+L7c08:
         ldrb    w4, [x1], #1
         mov     w5, w3
         add     w3, w3, #0x1
         str     w7, [x6, x4, lsl #2]
         cmp     w20, w3
-        b.ls    L7c5c
+        b.ls    L7c4c
         cmp     w21, w3
-        b.cs    L7c18
+        b.cs    L7c08
         ldrb    w0, [x22, w5, uxtw]
         ldrb    w4, [x1]
         cmp     w4, w0
-        b.hi    L7c18
-L7c48:
+        b.hi    L7c08
+L7c38:
         mov     w0, #0xffffffff
+L7c3c:
+        ldp     x21, x22, [sp, #16]
+        ldp     x23, x30, [sp, #32]
+        ldp     x19, x20, [sp], #48
+        ret
 L7c4c:
-        ldp     x21, x22, [sp, #16]
-        ldp     x23, x30, [sp, #32]
-        ldp     x19, x20, [sp], #48
-        ret
-L7c5c:
         cmp     w23, #0x7
-        b.eq    L7c78
-L7c64:
+        b.eq    L7c68
+L7c54:
         mov     w0, #0x0
-L7c68:
+L7c58:
         ldp     x21, x22, [sp, #16]
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #48
         ret
-L7c78:
+L7c68:
         cmp     w20, #0x4b
-        b.eq    L7c64
+        b.eq    L7c54
         ldrb    w0, [x22, x20]
         add     x20, x20, #0x1
-        cbnz    w0, L7c48
+        cbnz    w0, L7c38
         nop
-L7c90:
+L7c80:
         cmp     w20, #0x4b
-        b.eq    L7c68
+        b.eq    L7c58
         ldrb    w0, [x22, x20]
         add     x20, x20, #0x1
-        cbz     w0, L7c90
+        cbz     w0, L7c80
         mov     w0, #0xffffffff
-        b       L7c4c
+        b       L7c3c
         nop
 
 // mld_rej_eta_c87.constprop.0 (0xa8 bytes)
-L7cb0:
+L7ca0:
         mov     x8, x0
         mov     w0, w1
         cmp     w1, #0xff
-        b.hi    L7d54
+        b.hi    L7d44
         mov     w9, #0x1
         sub     w9, w9, w2
         mov     w7, #0xcd
         mov     w10, #0x2
-L7cd0:
+L7cc0:
         ldrb    w3, [x2]
         add     w5, w9, w2
         add     x2, x2, #0x1
         and     w4, w3, #0xf
         lsr     w3, w3, #4
         cmp     w4, #0xf
-        b.eq    L7d08
+        b.eq    L7cf8
         mul     w1, w4, w7
         lsr     w1, w1, #10
         add     w1, w1, w1, lsl #2
@@ -8333,14 +8331,14 @@ L7cd0:
         sub     w4, w10, w4
         str     w4, [x8, w0, uxtw #2]
         add     w0, w0, #0x1
-L7d08:
+L7cf8:
         cmp     w0, #0xff
         mul     w1, w3, w7
         cset    w4, ls
         add     w6, w0, #0x1
         cmp     w4, #0x0
         ccmp    w3, #0xe, #0x2, ne
-        b.hi    L7d44
+        b.hi    L7d34
         lsr     w1, w1, #10
         cmp     w6, #0xff
         cset    w4, ls
@@ -8349,23 +8347,23 @@ L7d08:
         sub     w3, w10, w3
         str     w3, [x8, w0, uxtw #2]
         mov     w0, w6
-L7d44:
+L7d34:
         cmp     w5, #0x87
         cset    w1, ls
         tst     w4, w1
-        b.ne    L7cd0
-L7d54:
+        b.ne    L7cc0
+L7d44:
         ret
         nop
         nop
 
 // mldsa87_poly_decompose (0x64 bytes)
-L7d60:
+L7d50:
         mov     x5, #0x0
         mov     w7, #0x3ff000
         mov     w6, #0xff801fff
         nop
-L7d70:
+L7d60:
         ldr     w3, [x1, x5]
         add     w2, w3, #0x7f
         asr     w2, w2, #7
@@ -8385,15 +8383,15 @@ L7d70:
         str     w2, [x1, x5]
         add     x5, x5, #0x4
         cmp     x5, #0x400
-        b.ne    L7d70
+        b.ne    L7d60
         ret
 
 // mldsa87_poly_use_hint (0x7c bytes)
-L7dc4:
+L7db4:
         mov     x6, #0x0
         mov     w10, #0x3ff000
         mov     w9, #0xff801fff
-L7dd0:
+L7dc0:
         ldr     w3, [x0, x6]
         add     w2, w3, #0x7f
         asr     w2, w2, #7
@@ -8415,17 +8413,17 @@ L7dd0:
         and     w7, w7, #0xf
         cmp     w3, #0x0
         and     w8, w8, #0xf
-        cbz     w4, L7e2c
+        cbz     w4, L7e1c
         csel    w2, w8, w7, le
-L7e2c:
+L7e1c:
         str     w2, [x0, x6]
         add     x6, x6, #0x4
         cmp     x6, #0x400
-        b.ne    L7dd0
+        b.ne    L7dc0
         ret
 
 // mldsa87_poly_uniform_eta_4x (0x268 bytes)
-L7e40:
+L7e30:
         sub     sp, sp, #0x7d0
         mov     x8, x4
         .inst   0x900000c4  // adrp x4, 0x1f000
@@ -8474,40 +8472,40 @@ L7e40:
         strb    wzr, [x9, #257]
         strb    w4, [x9, #352]
         strb    wzr, [x9, #353]
-        bl      L1560
+        bl      L1550
         mov     x4, x21
         mov     x3, x20
         mov     x2, x19
         mov     x1, x28
         mov     x0, x26
         mov     x5, #0x42
-        bl      L1350
+        bl      L1340
         mov     x3, x23
         mov     x5, x26
         mov     x4, #0x1
         mov     x2, x24
         mov     x1, x25
         mov     x0, x22
-        bl      L14d0
+        bl      L14c0
         ldr     x0, [sp, #104]
         mov     x2, x22
         mov     w1, #0x0
-        bl      L7cb0
+        bl      L7ca0
         mov     w19, w0
         ldr     x0, [sp, #112]
         mov     x2, x25
         mov     w1, #0x0
-        bl      L7cb0
+        bl      L7ca0
         mov     w20, w0
         ldr     x0, [sp, #120]
         mov     x2, x24
         mov     w1, #0x0
-        bl      L7cb0
+        bl      L7ca0
         mov     w21, w0
         ldr     x0, [sp, #128]
         mov     w1, #0x0
         mov     x2, x23
-        bl      L7cb0
+        bl      L7ca0
         mov     w28, w0
         cmp     w21, w27
         ccmp    w0, w27, #0x0, hi
@@ -8516,35 +8514,35 @@ L7e40:
         ccmp    w19, w27, #0x0, hi
         cset    w1, ls
         orr     w0, w0, w1
-        cbz     w0, L803c
+        cbz     w0, L802c
         nop
-L7fb0:
+L7fa0:
         mov     x5, x26
         mov     x3, x23
         mov     x4, #0x1
         mov     x2, x24
         mov     x1, x25
         mov     x0, x22
-        bl      L14d0
+        bl      L14c0
         ldr     x0, [sp, #104]
         mov     w1, w19
         mov     x2, x22
-        bl      L7cb0
+        bl      L7ca0
         mov     w19, w0
         ldr     x0, [sp, #112]
         mov     w1, w20
         mov     x2, x25
-        bl      L7cb0
+        bl      L7ca0
         mov     w20, w0
         ldr     x0, [sp, #120]
         mov     w1, w21
         mov     x2, x24
-        bl      L7cb0
+        bl      L7ca0
         mov     w21, w0
         ldr     x0, [sp, #128]
         mov     w1, w28
         mov     x2, x23
-        bl      L7cb0
+        bl      L7ca0
         cmp     w0, #0xff
         ccmp    w21, w27, #0x0, hi
         mov     w28, w0
@@ -8553,26 +8551,26 @@ L7fb0:
         ccmp    w20, w27, #0x0, hi
         cset    w1, ls
         orr     w0, w0, w1
-        cbnz    w0, L7fb0
-L803c:
+        cbnz    w0, L7fa0
+L802c:
         mov     x0, x26
-        bl      L1564
+        bl      L1554
         mov     x0, x22
         mov     x2, #0x280
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldr     x19, [sp, #136]
         mov     x2, #0x180
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
+        bl      L0e70
         .inst   0xf00000a0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #1992]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L80a4
+        b.ne    L8094
         ldp     x19, x20, [sp]
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
@@ -8581,13 +8579,13 @@ L803c:
         ldr     x30, [sp, #80]
         add     sp, sp, #0x7d0
         ret
-L80a4:
-        bl      L0e70
+L8094:
+        bl      L0e60
         nop
         nop
 
 // mldsa87_poly_challenge (0x168 bytes)
-L80b0:
+L80a0:
         stp     x19, x20, [sp, #-448]!
         mov     x19, x1
         .inst   0xf00000a3  // adrp x3, 0x1f000
@@ -8602,53 +8600,53 @@ L80b0:
         str     x0, [sp, #440]
         mov     x0, #0x0
         mov     x0, x21
-        bl      L10a4
+        bl      L1094
         mov     x1, x19
         mov     x2, #0x40
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x0, x20
         mov     x1, #0x88
-        bl      L11e0
+        bl      L11d0
         mov     x2, x20
         mov     w0, #0x0
         mov     x3, #0x0
-L8120:
+L8110:
         ldrb    w1, [x2], #1
         lsl     x1, x1, x0
         add     w0, w0, #0x8
         orr     x3, x3, x1
         cmp     w0, #0x40
-        b.ne    L8120
+        b.ne    L8110
         mov     x0, x23
         mov     x2, #0x400
         mov     w1, #0x0
         str     x3, [sp, #56]
-        bl      L0e80
+        bl      L0e70
         mov     x19, #0xc4
         mov     w22, #0x1
         mov     w0, #0x8
-        b       L816c
-L815c:
+        b       L815c
+L814c:
         ldrb    w1, [x20, w0, uxtw]
         add     w0, w0, #0x1
         cmp     w1, w19
-        b.ls    L8194
-L816c:
+        b.ls    L8184
+L815c:
         cmp     w0, #0x88
-        b.ne    L815c
+        b.ne    L814c
         mov     x0, x20
         mov     x1, #0x88
         mov     x2, x21
-        bl      L11e0
+        bl      L11d0
         ldrb    w1, [x20]
         mov     w0, #0x1
         cmp     w1, w19
-        b.hi    L815c
-L8194:
+        b.hi    L814c
+L8184:
         ldr     x2, [sp, #56]
         ldr     w4, [x23, x1, lsl #2]
         str     w4, [x23, x19, lsl #2]
@@ -8659,9 +8657,9 @@ L8194:
         str     w3, [x23, x1, lsl #2]
         str     x2, [sp, #56]
         cmp     x19, #0x100
-        b.ne    L816c
+        b.ne    L815c
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         str     xzr, [x20, #128]
         stp     q0, q0, [x20]
@@ -8676,18 +8674,18 @@ L8194:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L8214
+        b.ne    L8204
         ldp     x21, x22, [sp, #16]
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #448
         ret
-L8214:
-        bl      L0e70
+L8204:
+        bl      L0e60
         nop
         nop
 
 // mldsa87_polyeta_pack (0xdc bytes)
-L8220:
+L8210:
         .inst   0xf00000a2  // adrp x2, 0x1f000
         ldr     x2, [x2, #4088]
         str     x30, [sp, #-32]!
@@ -8696,7 +8694,7 @@ L8220:
         ldr     x3, [x2]
         str     x3, [sp, #24]
         mov     x3, #0x0
-L8240:
+L8230:
         ldp     w4, w2, [x1, #4]
         add     x0, x0, #0x3
         ldp     w6, w9, [x1, #12]
@@ -8731,7 +8729,7 @@ L8240:
         sturb   w2, [x0, #-2]
         sturb   w3, [x0, #-1]
         cmp     x10, x1
-        b.ne    L8240
+        b.ne    L8230
         add     x0, sp, #0x10
         str     xzr, [sp, #16]
         .inst   0xf00000a0  // adrp x0, 0x1f000
@@ -8740,18 +8738,18 @@ L8240:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L82f8
+        b.ne    L82e8
         ldr     x30, [sp], #32
         ret
-L82f8:
-        bl      L0e70
+L82e8:
+        bl      L0e60
         nop
 
 // mldsa87_polyeta_unpack (0xc4 bytes)
-L8300:
+L82f0:
         movi    v2.4s, #0x2
         add     x5, x1, #0x60
-L8308:
+L82f8:
         ldrb    w2, [x1]
         add     x1, x1, #0x3
         add     x0, x0, #0x20
@@ -8797,11 +8795,11 @@ L8308:
         sub     v0.4s, v2.4s, v0.4s
         stur    q0, [x0, #-16]
         cmp     x5, x1
-        b.ne    L8308
+        b.ne    L82f8
         ret
 
 // mldsa87_polyz_pack (0x98 bytes)
-L83c4:
+L83b4:
         .inst   0xf00000a2  // adrp x2, 0x1f000
         ldr     x2, [x2, #4088]
         str     x30, [sp, #-48]!
@@ -8811,7 +8809,7 @@ L83c4:
         str     x3, [sp, #40]
         mov     x3, #0x0
         nop
-L83e8:
+L83d8:
         ldp     w3, w2, [x1]
         add     x0, x0, #0x5
         add     x1, x1, #0x8
@@ -8828,7 +8826,7 @@ L83e8:
         sturb   w6, [x0, #-2]
         sturb   w2, [x0, #-1]
         cmp     x7, x0
-        b.ne    L83e8
+        b.ne    L83d8
         add     x0, sp, #0x18
         stp     xzr, xzr, [sp, #24]
         .inst   0xf00000a0  // adrp x0, 0x1f000
@@ -8837,18 +8835,18 @@ L83e8:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L8458
+        b.ne    L8448
         ldr     x30, [sp], #48
         ret
-L8458:
-        bl      L0e70
+L8448:
+        bl      L0e60
         nop
 
 // mldsa87_polyz_unpack (0x70 bytes)
-L8460:
+L8450:
         add     x6, x1, #0x280
         mov     w5, #0x80000
-L8468:
+L8458:
         ldrb    w2, [x1]
         add     x1, x1, #0x5
         str     w2, [x0]
@@ -8873,11 +8871,11 @@ L8468:
         sub     w2, w5, w2
         stur    w2, [x0, #-4]
         cmp     x6, x1
-        b.ne    L8468
+        b.ne    L8458
         ret
 
 // mldsa87_poly_uniform_gamma1 (0xe4 bytes)
-L84d0:
+L84c0:
         sub     sp, sp, #0x430
         .inst   0xf00000a3  // adrp x3, 0x1f000
         ldr     x3, [x3, #4088]
@@ -8898,26 +8896,26 @@ L84d0:
         stp     q2, q3, [x19]
         stp     q0, q1, [x19, #32]
         strh    w2, [x20, #768]
-        bl      L10a4
+        bl      L1094
         mov     x1, x19
         mov     x2, #0x42
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x0, x20
         mov     x1, #0x2a8
-        bl      L11e0
+        bl      L11d0
         mov     x1, x20
         mov     x0, x22
-        bl      L8460
+        bl      L8450
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         mov     x0, x20
         mov     x2, #0x2a8
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         movi    v0.4s, #0x0
         strh    wzr, [x19, #64]
         stp     q0, q0, [x19]
@@ -8928,32 +8926,32 @@ L84d0:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L85b0
+        b.ne    L85a0
         ldp     x19, x20, [sp]
         ldp     x21, x22, [sp, #16]
         ldr     x30, [sp, #32]
         add     sp, sp, #0x430
         ret
-L85b0:
-        bl      L0e70
+L85a0:
+        bl      L0e60
         nop
         nop
         nop
 
 // mldsa87_polyvecl_ntt (0x38 bytes)
-L85c0:
+L85b0:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x0
         mov     x0, #0x1c00
         add     x20, x19, x0
         str     x30, [sp, #16]
         nop
-L85d8:
+L85c8:
         mov     x0, x19
         add     x19, x19, #0x400
-        bl      L2100
+        bl      L20f0
         cmp     x19, x20
-        b.ne    L85d8
+        b.ne    L85c8
         ldr     x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
@@ -8961,7 +8959,7 @@ L85d8:
         nop
 
 // mldsa87_polyvecl_chknorm (0x50 bytes)
-L8600:
+L85f0:
         stp     x19, x20, [sp, #-48]!
         mov     x19, x0
         mov     x0, #0x1c00
@@ -8970,14 +8968,14 @@ L8600:
         add     x22, x19, x0
         mov     w20, #0x0
         str     x30, [sp, #32]
-L8620:
+L8610:
         mov     x0, x19
         mov     w1, w21
         add     x19, x19, #0x400
-        bl      L27d4
+        bl      L27c4
         orr     w20, w20, w0
         cmp     x19, x22
-        b.ne    L8620
+        b.ne    L8610
         ldp     x21, x22, [sp, #16]
         mov     w0, w20
         ldr     x30, [sp, #32]
@@ -8985,55 +8983,55 @@ L8620:
         ret
 
 // mldsa87_polyveck_reduce (0x30 bytes)
-L8650:
+L8640:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x0
         add     x20, x0, #0x2, lsl #12
         str     x30, [sp, #16]
-L8660:
+L8650:
         mov     x0, x19
         add     x19, x19, #0x400
-        bl      L2010
+        bl      L2000
         cmp     x19, x20
-        b.ne    L8660
+        b.ne    L8650
         ldr     x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
 
 // mldsa87_polyveck_caddq (0x30 bytes)
-L8680:
+L8670:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x0
         add     x20, x0, #0x2, lsl #12
         str     x30, [sp, #16]
-L8690:
+L8680:
         mov     x0, x19
         add     x19, x19, #0x400
-        bl      L2040
+        bl      L2030
         cmp     x19, x20
-        b.ne    L8690
+        b.ne    L8680
         ldr     x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
 
 // mldsa87_polyveck_invntt_tomont (0x30 bytes)
-L86b0:
+L86a0:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x0
         add     x20, x0, #0x2, lsl #12
         str     x30, [sp, #16]
-L86c0:
+L86b0:
         mov     x0, x19
         add     x19, x19, #0x400
-        bl      L21d0
+        bl      L21c0
         cmp     x19, x20
-        b.ne    L86c0
+        b.ne    L86b0
         ldr     x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
 
 // mldsa87_polyveck_unpack_eta_chknorm (0x5c bytes)
-L86e0:
+L86d0:
         stp     x19, x20, [sp, #-48]!
         mov     x19, x0
         mov     x20, x2
@@ -9042,17 +9040,17 @@ L86e0:
         mov     w21, #0x0
         stp     x23, x30, [sp, #32]
         add     x23, x0, #0x300
-L8700:
+L86f0:
         mov     x1, x19
         mov     x0, x20
-        bl      L8300
+        bl      L82f0
         mov     w1, w22
         mov     x0, x20
         add     x19, x19, #0x60
-        bl      L27d4
+        bl      L27c4
         orr     w21, w21, w0
         cmp     x19, x23
-        b.ne    L8700
+        b.ne    L86f0
         ldp     x23, x30, [sp, #32]
         mov     w0, w21
         ldp     x21, x22, [sp, #16]
@@ -9061,7 +9059,7 @@ L8700:
         nop
 
 // mldsa87_polyveck_decompose_pack_w1 (0x58 bytes)
-L8740:
+L8730:
         stp     x19, x20, [sp, #-48]!
         mov     x19, x1
         mov     x20, x0
@@ -9070,17 +9068,17 @@ L8740:
         add     x22, x1, #0x2, lsl #12
         str     x30, [sp, #32]
         nop
-L8760:
+L8750:
         mov     x1, x19
         mov     x0, x21
-        bl      L7d60
+        bl      L7d50
         add     x19, x19, #0x400
         mov     x0, x20
         mov     x1, x21
-        bl      L2880
+        bl      L2870
         add     x20, x20, #0x80
         cmp     x19, x22
-        b.ne    L8760
+        b.ne    L8750
         ldp     x21, x22, [sp, #16]
         ldr     x30, [sp, #32]
         ldp     x19, x20, [sp], #48
@@ -9089,54 +9087,54 @@ L8760:
         nop
 
 // mldsa87_polyvecl_unpack_eta (0x40 bytes)
-L87a0:
+L8790:
         stp     x19, x20, [sp, #-32]!
         mov     x19, x1
         mov     x20, x0
         stp     x21, x30, [sp, #16]
         add     x21, x1, #0x2a0
         nop
-L87b8:
+L87a8:
         mov     x1, x19
         mov     x0, x20
         add     x19, x19, #0x60
-        bl      L8300
+        bl      L82f0
         add     x20, x20, #0x400
         cmp     x19, x21
-        b.ne    L87b8
+        b.ne    L87a8
         ldp     x21, x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
 
 // mldsa87_polyvecl_unpack_z (0x40 bytes)
-L87e0:
+L87d0:
         stp     x19, x20, [sp, #-32]!
         mov     x20, x0
         mov     x19, x1
         mov     x0, #0x1180
         stp     x21, x30, [sp, #16]
         add     x21, x1, x0
-L87f8:
+L87e8:
         mov     x1, x19
         mov     x0, x20
         add     x19, x19, #0x280
-        bl      L8460
+        bl      L8450
         add     x20, x20, #0x400
         cmp     x19, x21
-        b.ne    L87f8
+        b.ne    L87e8
         ldp     x21, x30, [sp, #16]
         ldp     x19, x20, [sp], #32
         ret
 
 // mldsa87_polyvec_matrix_expand_lazy (0x10 bytes)
-L8820:
+L8810:
         ldp     q0, q1, [x1]
         add     x0, x0, #0x400
         stp     q0, q1, [x0]
         ret
 
 // mldsa87_polyvec_matrix_pointwise_montgomery_row_lazy (0xf4 bytes)
-L8830:
+L8820:
         stp     x19, x20, [sp, #-160]!
         mov     w20, #0x1
         stp     x21, x22, [sp, #16]
@@ -9160,29 +9158,29 @@ L8830:
         strb    wzr, [x19, #32]
         strb    w24, [x19, #33]
         stp     q0, q1, [x19]
-        bl      L2380
+        bl      L2370
         mov     x1, x25
         mov     x0, x23
-        bl      L22f0
+        bl      L22e0
         nop
-L88a0:
+L8890:
         mov     x1, x19
         mov     x0, x21
         strb    w20, [x19, #32]
         add     w20, w20, #0x1
         strb    w24, [x19, #33]
-        bl      L2380
+        bl      L2370
         mov     x1, x22
         mov     x0, x21
-        bl      L22f0
+        bl      L22e0
         add     x22, x22, #0x400
         mov     x1, x21
         mov     x0, x23
-        bl      L2080
+        bl      L2070
         cmp     w20, #0x7
-        b.ne    L88a0
+        b.ne    L8890
         mov     x0, x23
-        bl      L2010
+        bl      L2000
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -9192,17 +9190,17 @@ L88a0:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L8920
+        b.ne    L8910
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x30, [sp, #48]
         ldp     x19, x20, [sp], #160
         ret
-L8920:
-        bl      L0e70
+L8910:
+        bl      L0e60
 
 // mldsa87_polyvec_matrix_pointwise_montgomery_yvec_lazy (0x148 bytes)
-L8924:
+L8914:
         stp     x19, x20, [sp, #-176]!
         stp     x23, x24, [sp, #32]
         mov     x23, x1
@@ -9224,76 +9222,76 @@ L8924:
         ldr     q1, [x23, #1040]
         stp     q0, q1, [x21]
         nop
-L8978:
+L8968:
         ldrh    w2, [x25, #8]
         ldr     x1, [x25]
         add     w2, w22, w2
         mov     x0, x24
         mov     x20, x26
         mov     w19, #0x0
-        bl      L84d0
+        bl      L84c0
         mov     x0, x24
-        bl      L2100
-        b       L89d8
-L89a0:
+        bl      L20f0
+        b       L89c8
+L8990:
         mov     x0, x23
         strb    w22, [x21, #32]
         strb    w19, [x21, #33]
-        bl      L2380
+        bl      L2370
         mov     x1, x24
         mov     x0, x23
-        bl      L22f0
+        bl      L22e0
         add     w19, w19, #0x1
         mov     x0, x20
         mov     x1, x23
-        bl      L2080
+        bl      L2070
         add     x20, x20, #0x400
         cmp     w19, #0x8
-        b.eq    L8a0c
-L89d8:
+        b.eq    L89fc
+L89c8:
         mov     x1, x21
-        cbnz    w22, L89a0
+        cbnz    w22, L8990
         mov     x0, x20
         strb    wzr, [x21, #32]
         strb    w19, [x21, #33]
-        bl      L2380
+        bl      L2370
         mov     x0, x20
         mov     x1, x24
         add     w19, w19, #0x1
-        bl      L22f0
+        bl      L22e0
         add     x20, x20, #0x400
         cmp     w19, #0x8
-        b.ne    L89d8
-L8a0c:
+        b.ne    L89c8
+L89fc:
         add     w22, w22, #0x1
         cmp     w22, #0x7
-        b.ne    L8978
+        b.ne    L8968
         movi    v0.4s, #0x0
         stp     q0, q0, [x21]
         stp     q0, q0, [x21, #32]
         mov     x0, x26
-        bl      L8650
+        bl      L8640
         mov     x0, x26
-        bl      L86b0
+        bl      L86a0
         .inst   0xf00000a0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #168]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L8a68
+        b.ne    L8a58
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x26, [sp, #48]
         ldr     x30, [sp, #64]
         ldp     x19, x20, [sp], #176
         ret
-L8a68:
-        bl      L0e70
+L8a58:
+        bl      L0e60
         nop
 
 // mld_compute_pack_t0_t187 (0x154 bytes)
-L8a70:
+L8a60:
         sub     sp, sp, #0xc90
         stp     x21, x22, [sp, #16]
         mov     x22, x3
@@ -9316,61 +9314,61 @@ L8a70:
         mov     x2, #0x0
         mov     x1, x4
         mov     x0, x26
-        bl      L8820
+        bl      L8810
         nop
-L8ad0:
+L8ac0:
         mov     w3, w21
         mov     x2, x23
         mov     x1, x26
         mov     x0, x19
-        bl      L8830
+        bl      L8820
         add     w21, w21, #0x1
         mov     x0, x19
-        bl      L21d0
+        bl      L21c0
         mov     x1, x22
         mov     x0, x20
-        bl      L8300
+        bl      L82f0
         add     x22, x22, #0x60
         mov     x1, x20
         mov     x0, x19
-        bl      L2080
+        bl      L2070
         mov     x0, x19
-        bl      L2010
+        bl      L2000
         mov     x0, x19
-        bl      L2040
+        bl      L2030
         mov     x2, x19
         mov     x1, x19
         mov     x0, x20
-        bl      L2340
+        bl      L2330
         mov     x0, x25
         mov     x1, x20
-        bl      L2484
+        bl      L2474
         add     x25, x25, #0x140
         mov     x0, x24
         mov     x1, x19
-        bl      L2554
+        bl      L2544
         add     x24, x24, #0x1a0
         cmp     w21, #0x8
-        b.ne    L8ad0
+        b.ne    L8ac0
         mov     x0, x20
         mov     x2, #0x400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x420
         mov     x0, x26
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xf00000a0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #3208]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L8bc0
+        b.ne    L8bb0
         ldp     x19, x20, [sp]
         mov     w0, #0x0
         ldp     x21, x22, [sp, #16]
@@ -9379,11 +9377,11 @@ L8ad0:
         ldr     x30, [sp, #64]
         add     sp, sp, #0xc90
         ret
-L8bc0:
-        bl      L0e70
+L8bb0:
+        bl      L0e60
 
 // mld_H87.constprop.0 (0x108 bytes)
-L8bc4:
+L8bb4:
         stp     x19, x20, [sp, #-304]!
         mov     x20, x6
         .inst   0xf00000a7  // adrp x7, 0x1f000
@@ -9403,22 +9401,22 @@ L8bc4:
         str     x0, [sp, #296]
         mov     x0, #0x0
         mov     x0, x19
-        bl      L10a4
+        bl      L1094
         mov     x2, x24
         mov     x1, x23
         mov     x0, x19
-        bl      L10d0
-        cbnz    x21, L8ca0
-        cbnz    x20, L8cb4
-L8c2c:
+        bl      L10c0
+        cbnz    x21, L8c90
+        cbnz    x20, L8ca4
+L8c1c:
         mov     x0, x19
-        bl      L1160
+        bl      L1150
         mov     x2, x19
         mov     x1, #0x40
         mov     x0, x22
-        bl      L11e0
+        bl      L11d0
         mov     x0, x19
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -9433,31 +9431,31 @@ L8c2c:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L8cc8
+        b.ne    L8cb8
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldp     x25, x26, [sp, #48]
         ldr     x30, [sp, #64]
         ldp     x19, x20, [sp], #304
         ret
-L8ca0:
+L8c90:
         mov     x2, x21
         mov     x1, x25
         mov     x0, x19
-        bl      L10d0
-        cbz     x20, L8c2c
-L8cb4:
+        bl      L10c0
+        cbz     x20, L8c1c
+L8ca4:
         mov     x2, x20
         mov     x1, x26
         mov     x0, x19
-        bl      L10d0
-        b       L8c2c
-L8cc8:
-        bl      L0e70
+        bl      L10c0
+        b       L8c1c
+L8cb8:
+        bl      L0e60
         nop
 
 // mldsa87_keypair_internal (0x31c bytes)
-L8cd0:
+L8cc0:
         mov     x12, #0x1da0
         sub     sp, sp, x12
         mov     x3, #0x1cc0
@@ -9491,7 +9489,7 @@ L8cd0:
         mov     x2, x27
         mov     x0, x21
         strh    w4, [x19, #7392]
-        bl      L12b4
+        bl      L12a4
         mov     x3, x23
         mov     x2, x24
         mov     x4, x26
@@ -9502,19 +9500,19 @@ L8cd0:
         mov     w5, #0xb
         mov     x1, x25
         mov     x0, x19
-        bl      L7e40
+        bl      L7e30
         mov     x1, x19
         add     x0, x20, #0x4a0
-        bl      L8220
+        bl      L8210
         mov     x1, x25
         add     x0, x20, #0x500
-        bl      L8220
+        bl      L8210
         mov     x1, x24
         add     x0, x20, #0x560
-        bl      L8220
+        bl      L8210
         mov     x1, x23
         add     x0, x20, #0x5c0
-        bl      L8220
+        bl      L8210
         mov     x3, x23
         mov     x2, x24
         mov     x4, x26
@@ -9527,22 +9525,22 @@ L8cd0:
         mov     x1, x25
         mov     x28, x0
         mov     x0, x19
-        bl      L7e40
+        bl      L7e30
         str     x28, [sp, #120]
         mov     x0, x28
         mov     x1, x19
-        bl      L8220
+        bl      L8210
         mov     x1, x25
         add     x0, x20, #0x380
-        bl      L8220
+        bl      L8210
         mov     x1, x24
         add     x0, x20, #0x3e0
-        bl      L8220
+        bl      L8210
         mov     x5, #0x1800
         mov     x1, x23
         add     x28, x19, x5
         add     x0, x20, #0x440
-        bl      L8220
+        bl      L8210
         mov     x6, #0x1400
         add     x9, x19, x6
         mov     w0, #0xffffffff
@@ -9556,18 +9554,18 @@ L8cd0:
         mov     x1, x9
         add     x0, x19, #0x1, lsl #12
         stp     x0, x9, [sp, #128]
-        bl      L7e40
+        bl      L7e30
         ldr     x0, [sp, #128]
         mov     x1, x0
         add     x0, x20, #0x200
-        bl      L8220
+        bl      L8210
         ldr     x9, [sp, #136]
         add     x0, x20, #0x260
         mov     x1, x9
-        bl      L8220
+        bl      L8210
         mov     x1, x28
         add     x0, x20, #0x2c0
-        bl      L8220
+        bl      L8210
         mov     x3, x23
         mov     x2, x24
         mov     x4, x26
@@ -9578,21 +9576,21 @@ L8cd0:
         mov     w5, #0x0
         mov     x1, x25
         mov     x0, x19
-        bl      L7e40
+        bl      L7e30
         mov     x1, x19
         add     x0, x20, #0x80
-        bl      L8220
+        bl      L8210
         mov     x1, x25
         add     x0, x20, #0xe0
-        bl      L8220
+        bl      L8210
         mov     x1, x24
         add     x0, x20, #0x140
-        bl      L8220
+        bl      L8210
         mov     x1, x23
         add     x0, x20, #0x1a0
-        bl      L8220
+        bl      L8210
         mov     x0, x19
-        bl      L85c0
+        bl      L85b0
         ldp     q0, q1, [x21]
         mov     x7, #0x1c80
         ldr     x3, [sp, #120]
@@ -9602,24 +9600,24 @@ L8cd0:
         add     x0, x22, #0x20
         add     x23, x19, x7
         stp     q0, q1, [x22]
-        bl      L8a70
+        bl      L8a60
         mov     w24, w0
-        cbnz    w0, L8f44
+        cbnz    w0, L8f34
         mov     x0, x23
         mov     x2, x22
         mov     x3, #0xa20
         mov     x1, #0x40
-        bl      L12b4
+        bl      L12a4
         mov     x2, x23
         add     x3, x21, #0x60
         mov     x1, x21
         mov     x0, x20
-        bl      L7a14
-L8f44:
+        bl      L7a04
+L8f34:
         mov     x0, x19
         mov     x2, #0x1c00
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         movi    v0.4s, #0x0
         stp     q0, q0, [x23]
         stp     q0, q0, [x23, #32]
@@ -9630,15 +9628,15 @@ L8f44:
         stp     q0, q0, [x21, #32]
         stp     q0, q0, [x21, #64]
         stp     q0, q0, [x21, #96]
-        cbnz    w24, L8fc4
-L8f80:
+        cbnz    w24, L8fb4
+L8f70:
         .inst   0xf00000a0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #7576]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L8fe8
+        b.ne    L8fd8
         ldp     x19, x20, [sp, #16]
         mov     w0, w24
         ldp     x21, x22, [sp, #32]
@@ -9649,22 +9647,22 @@ L8f80:
         ldr     x30, [sp, #96]
         add     sp, sp, x12
         ret
-L8fc4:
+L8fb4:
         mov     x0, x22
         mov     x2, #0xa20
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x1320
         mov     x0, x20
         mov     w1, #0x0
-        bl      L0e80
-        b       L8f80
-L8fe8:
         bl      L0e70
+        b       L8f70
+L8fd8:
+        bl      L0e60
         nop
 
 // mldsa87_keypair (0x88 bytes)
-L8ff0:
+L8fe0:
         stp     x19, x20, [sp, #-96]!
         mov     x20, x0
         .inst   0xf00000a2  // adrp x2, 0x1f000
@@ -9678,13 +9676,13 @@ L8ff0:
         mov     x1, #0x0
         mov     x0, x19
         mov     x1, #0x20
-        bl      L0e60
-        cbnz    w0, L906c
+        bl      L0e50
+        cbnz    w0, L905c
         mov     x1, x21
         mov     x0, x20
         mov     x2, x19
-        bl      L8cd0
-L903c:
+        bl      L8cc0
+L902c:
         stp     xzr, xzr, [x19]
         stp     xzr, xzr, [x19, #16]
         .inst   0xd00000a1  // adrp x1, 0x1f000
@@ -9693,20 +9691,20 @@ L903c:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L9074
+        b.ne    L9064
         ldp     x21, x30, [sp, #16]
         ldp     x19, x20, [sp], #96
         ret
-L906c:
+L905c:
         mov     w0, #0xfffffffd
-        b       L903c
-L9074:
-        bl      L0e70
+        b       L902c
+L9064:
+        bl      L0e60
         nop
         nop
 
 // mldsa87_signature_internal (0x4f8 bytes)
-L9080:
+L9070:
         mov     x12, #0x3770
         sub     sp, sp, x12
         mov     x11, #0x3420
@@ -9748,8 +9746,8 @@ L9080:
         ldr     x7, [x8]
         str     x7, [sp, #14184]
         mov     x7, #0x0
-        bl      L7a40
-        cbnz    w25, L9558
+        bl      L7a30
+        cbnz    w25, L9548
         mov     x6, x22
         mov     x5, x24
         mov     x4, x21
@@ -9757,8 +9755,8 @@ L9080:
         mov     x1, x26
         add     x0, x27, #0x80
         mov     x2, #0x40
-        bl      L8bc4
-L914c:
+        bl      L8bb4
+L913c:
         ldr     x22, [sp, #136]
         mov     x1, #0x3020
         mov     x5, #0x3560
@@ -9785,14 +9783,14 @@ L914c:
         add     x20, x23, x9
         str     x1, [sp, #120]
         add     x1, x22, #0x60
-        bl      L8bc4
+        bl      L8bb4
         str     wzr, [sp, #116]
         add     x0, x23, #0x2, lsl #12
         mov     x1, x22
         str     x0, [sp, #144]
-        bl      L8820
+        bl      L8810
         nop
-L91d0:
+L91c0:
         ldp     x2, x22, [sp, #128]
         mov     x3, x19
         ldr     x1, [sp, #144]
@@ -9801,32 +9799,32 @@ L91d0:
         stur    x4, [x26, #-160]
         ldrh    w4, [sp, #116]
         sturh   w4, [x26, #-152]
-        bl      L8924
+        bl      L8914
         mov     x0, x23
-        bl      L8680
+        bl      L8670
         ldr     x25, [sp, #120]
         mov     x2, x19
         mov     x1, x23
         mov     x0, x25
-        bl      L8740
+        bl      L8730
         mov     x0, x21
-        bl      L10a4
+        bl      L1094
         add     x1, x22, #0x80
         mov     x0, x21
         mov     x2, #0x40
-        bl      L10d0
+        bl      L10c0
         mov     x1, x25
         mov     x2, #0x400
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x1, #0x40
         mov     x0, x28
-        bl      L11e0
+        bl      L11d0
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x21]
         stp     q0, q0, [x21, #32]
@@ -9837,153 +9835,153 @@ L91d0:
         str     q0, [x21, #192]
         mov     x1, x28
         mov     x0, x24
-        bl      L80b0
+        bl      L80a0
         mov     x25, #0x0
         mov     x0, x24
         mov     w22, #0x0
-        bl      L2100
+        bl      L20f0
         nop
-L9298:
+L9288:
         ldr     x1, [x23, #13760]
         mov     x0, x20
         add     x1, x1, x25
-        bl      L8300
+        bl      L82f0
         mov     x0, x20
-        bl      L2100
+        bl      L20f0
         mov     x1, x24
         mov     x0, x20
-        bl      L22f0
+        bl      L22e0
         mov     x0, x20
-        bl      L21d0
+        bl      L21c0
         ldur    x1, [x26, #-160]
         mov     x0, x19
         ldurh   w2, [x26, #-152]
         add     w2, w22, w2
-        bl      L84d0
+        bl      L84c0
         mov     x1, x19
         mov     x0, x20
-        bl      L2080
+        bl      L2070
         mov     x0, x20
-        bl      L2010
+        bl      L2000
         mov     w1, #0xff88
         mov     x0, x20
         movk    w1, #0x7, lsl #16
-        bl      L27d4
-        cbnz    w0, L9550
+        bl      L27c4
+        cbnz    w0, L9540
         ldr     x0, [sp, #104]
         mov     w2, w22
         mov     x1, x20
         add     w22, w22, #0x1
         add     x25, x25, #0x60
-        bl      L7b90
+        bl      L7b80
         cmp     w22, #0x7
-        b.ne    L9298
+        b.ne    L9288
         mov     x22, x23
         mov     x25, #0x0
         mov     x27, #0x0
         nop
-L9330:
+L9320:
         ldr     x1, [x23, #13696]
         mov     x0, x19
         add     x1, x1, x27
-        bl      L8300
+        bl      L82f0
         mov     x0, x19
-        bl      L2100
+        bl      L20f0
         mov     x1, x24
         mov     x0, x19
-        bl      L22f0
+        bl      L22e0
         mov     x0, x19
-        bl      L21d0
+        bl      L21c0
         mov     x1, x19
         mov     x0, x22
-        bl      L20b0
+        bl      L20a0
         mov     x0, x22
-        bl      L2010
+        bl      L2000
         mov     w1, #0xfe88
         mov     x0, x22
         movk    w1, #0x3, lsl #16
-        bl      L27d4
-        cbnz    w0, L9550
+        bl      L27c4
+        cbnz    w0, L9540
         ldr     x1, [x23, #13728]
         mov     x0, x19
         add     x1, x1, x25
-        bl      L2680
+        bl      L2670
         mov     x0, x19
-        bl      L2100
+        bl      L20f0
         mov     x1, x24
         mov     x0, x19
-        bl      L22f0
+        bl      L22e0
         mov     x0, x19
-        bl      L21d0
+        bl      L21c0
         mov     x0, x19
-        bl      L2010
+        bl      L2000
         mov     x0, x19
         mov     w1, #0x3ff00
-        bl      L27d4
-        cbnz    w0, L9550
+        bl      L27c4
+        cbnz    w0, L9540
         mov     x0, x22
         mov     x1, x19
         add     x25, x25, #0x1a0
-        bl      L2080
+        bl      L2070
         add     x27, x27, #0x60
         add     x22, x22, #0x400
         cmp     x25, #0xd00
-        b.ne    L9330
+        b.ne    L9320
         ldr     x22, [sp, #104]
         mov     x1, x28
         mov     x0, x22
-        bl      L7a80
+        bl      L7a70
         ldr     x2, [sp, #120]
         mov     x0, x22
         mov     x3, x19
         mov     x1, x23
-        bl      L7a94
+        bl      L7a84
         mov     w22, w0
-L9410:
+L9400:
         mov     x0, x20
         mov     x2, #0x400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x24
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x2000
         mov     x0, x23
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldr     x25, [sp, #120]
         mov     x2, #0x400
         mov     w1, #0x0
         mov     x0, x25
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         ldr     x0, [sp, #128]
         stp     xzr, xzr, [x0]
         movi    v0.4s, #0x0
         stp     q0, q0, [x28]
         stp     q0, q0, [x28, #32]
-        cbz     w22, L94b8
+        cbz     w22, L94a8
         cmn     w22, #0x1
-        b.ne    L94a4
+        b.ne    L9494
         ldr     w0, [sp, #116]
         mov     w1, #0xfff7
         add     w0, w0, #0x7
         and     w2, w0, #0xffff
         str     w2, [sp, #116]
         cmp     w1, w0, uxth
-        b.ne    L91d0
+        b.ne    L91c0
         mov     w22, #0xfffffffc
-L94a4:
+L9494:
         ldr     x19, [sp, #104]
         mov     x2, #0x1213
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
-L94b8:
+        bl      L0e70
+L94a8:
         ldr     x0, [sp, #160]
         str     xzr, [x23, #13696]
         ldr     x0, [sp, #168]
@@ -9994,7 +9992,7 @@ L94b8:
         mov     x2, #0x420
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
+        bl      L0e70
         ldr     x0, [sp, #136]
         movi    v0.4s, #0x0
         stp     q0, q0, [x0]
@@ -10011,7 +10009,7 @@ L94b8:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L9574
+        b.ne    L9564
         ldp     x19, x20, [sp]
         mov     w0, w22
         ldp     x21, x22, [sp, #16]
@@ -10022,24 +10020,24 @@ L94b8:
         ldr     x30, [sp, #80]
         add     sp, sp, x12
         ret
-L9550:
+L9540:
         mov     w22, #0xffffffff
-        b       L9410
-L9558:
+        b       L9400
+L9548:
         ldr     x0, [sp, #136]
         ldp     q2, q3, [x24]
         add     x0, x0, #0x80
         ldp     q0, q1, [x24, #32]
         stp     q2, q3, [x0]
         stp     q0, q1, [x0, #32]
-        b       L914c
-L9574:
-        bl      L0e70
+        b       L913c
+L9564:
+        bl      L0e60
         nop
         nop
 
 // mldsa87_signature_extmu (0xa8 bytes)
-L9580:
+L9570:
         stp     x19, x20, [sp, #-112]!
         mov     x20, x0
         .inst   0xd00000a3  // adrp x3, 0x1f000
@@ -10055,8 +10053,8 @@ L9580:
         mov     x1, #0x0
         mov     x0, x19
         mov     x1, #0x20
-        bl      L0e60
-        cbnz    w0, L961c
+        bl      L0e50
+        cbnz    w0, L960c
         mov     x6, x22
         mov     x1, x21
         mov     x0, x20
@@ -10065,8 +10063,8 @@ L9580:
         mov     x4, #0x0
         mov     x3, #0x0
         mov     x2, #0x40
-        bl      L9080
-L95e8:
+        bl      L9070
+L95d8:
         stp     xzr, xzr, [x19]
         stp     xzr, xzr, [x19, #16]
         .inst   0xd00000a1  // adrp x1, 0x1f000
@@ -10075,21 +10073,21 @@ L95e8:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L9624
+        b.ne    L9614
         ldp     x21, x22, [sp, #16]
         ldr     x30, [sp, #32]
         ldp     x19, x20, [sp], #112
         ret
-L961c:
+L960c:
         mov     w0, #0xfffffffd
-        b       L95e8
-L9624:
-        bl      L0e70
+        b       L95d8
+L9614:
+        bl      L0e60
         nop
         nop
 
 // mldsa87_verify_internal (0x490 bytes)
-L9630:
+L9620:
         mov     x12, #0x3250
         sub     sp, sp, x12
         stp     x19, x20, [sp]
@@ -10120,14 +10118,14 @@ L9630:
         add     x1, x25, #0x40
         stp     q2, q3, [x7]
         stp     q0, q1, [x7, #32]
-        bl      L87e0
+        bl      L87d0
         mov     w1, #0xff88
         mov     x0, x22
         movk    w1, #0x7, lsl #16
-        bl      L8600
-        cbnz    w0, L9a6c
+        bl      L85f0
+        cbnz    w0, L9a5c
         mov     w21, w0
-        cbz     w27, L99b8
+        cbz     w27, L99a8
         ldp     q2, q3, [x26]
         add     x0, x19, #0xa0
         ldp     q0, q1, [x26, #32]
@@ -10139,11 +10137,11 @@ L9630:
         str     x1, [sp, #120]
         stp     q2, q3, [x0]
         stp     q0, q1, [x0, #32]
-L96f4:
+L96e4:
         mov     x3, #0x1c00
         mov     x0, x22
         add     x27, x22, x3
-        bl      L85c0
+        bl      L85b0
         ldr     x1, [sp, #104]
         mov     x4, #0x3060
         mov     x5, #0x2420
@@ -10154,77 +10152,77 @@ L96f4:
         mov     x0, x27
         add     x20, x22, x5
         add     x19, x22, x6
-        bl      L8820
+        bl      L8810
         mov     x1, x28
         mov     x0, x26
         ldr     x24, [sp, #112]
-        bl      L80b0
+        bl      L80a0
         mov     x0, x26
-        bl      L2100
-L9748:
+        bl      L20f0
+L9738:
         mov     w3, w21
         mov     x2, x22
         mov     x1, x27
         mov     x0, x20
-        bl      L8830
+        bl      L8820
         ldr     x1, [sp, #104]
         mov     w2, w21
         mov     x0, x19
-        bl      L7a00
+        bl      L79f0
         mov     x0, x19
-        bl      L20e0
+        bl      L20d0
         mov     x0, x19
-        bl      L2100
+        bl      L20f0
         mov     x1, x26
         mov     x0, x19
-        bl      L22f0
+        bl      L22e0
         mov     x1, x19
         mov     x0, x20
-        bl      L20b0
+        bl      L20a0
         mov     x0, x20
-        bl      L2010
+        bl      L2000
         mov     x0, x20
-        bl      L21d0
+        bl      L21c0
         mov     x0, x20
-        bl      L2040
+        bl      L2030
         mov     w2, w21
         mov     x1, x25
         mov     x0, x19
-        bl      L7ba4
+        bl      L7b94
         mov     w23, w0
-        cbnz    w0, L9a5c
+        cbnz    w0, L9a4c
         mov     x1, x19
         mov     x0, x20
-        bl      L7dc4
+        bl      L7db4
         add     w21, w21, #0x1
         mov     x0, x24
         mov     x1, x20
-        bl      L2880
+        bl      L2870
         add     x24, x24, #0x80
         cmp     w21, #0x8
-        b.ne    L9748
+        b.ne    L9738
         mov     x1, #0x3020
         mov     x0, #0x3178
         add     x21, sp, x0
         add     x24, x22, x1
         mov     x0, x21
-        bl      L10a4
+        bl      L1094
         ldr     x1, [sp, #120]
         mov     x0, x21
         mov     x2, #0x40
-        bl      L10d0
+        bl      L10c0
         ldr     x1, [sp, #112]
         mov     x2, #0x400
         mov     x0, x21
-        bl      L10d0
+        bl      L10c0
         mov     x0, x21
-        bl      L1160
+        bl      L1150
         mov     x2, x21
         mov     x1, #0x40
         mov     x0, x24
-        bl      L11e0
+        bl      L11d0
         mov     x0, x21
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x21]
         stp     q0, q0, [x21, #32]
@@ -10237,14 +10235,14 @@ L9748:
         mov     x0, x24
         mov     x1, x28
         add     x2, x24, #0x40
-L9874:
+L9864:
         ldr     q1, [x1], #16
         ldr     q3, [x0], #16
         eor     v1.16b, v1.16b, v3.16b
         orr     v2.16b, v2.16b, v1.16b
         eor     v0.16b, v0.16b, v1.16b
         cmp     x2, x0
-        b.ne    L9874
+        b.ne    L9864
         movi    v1.4s, #0x0
         ext     v5.16b, v2.16b, v1.16b, #8
         ext     v3.16b, v0.16b, v1.16b, #8
@@ -10268,28 +10266,28 @@ L9874:
         asr     x0, x0, #32
         eor     w0, w1, w0
         cmp     w1, w0, uxtb
-        b.ne    L9a64
-L98f0:
+        b.ne    L9a54
+L98e0:
         mov     x0, x19
         mov     x2, #0x400
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x20
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x420
         mov     x0, x27
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x26
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x1c00
         mov     x0, x22
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         movi    v0.4s, #0x0
         stp     q0, q0, [x24]
         stp     q0, q0, [x24, #32]
@@ -10302,14 +10300,14 @@ L98f0:
         mov     x2, #0x400
         mov     w1, #0x0
         mov     x0, x19
-        bl      L0e80
+        bl      L0e70
         .inst   0xd00000a0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #12872]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L9abc
+        b.ne    L9aac
         ldp     x19, x20, [sp]
         mov     w0, w23
         ldp     x21, x22, [sp, #16]
@@ -10320,26 +10318,26 @@ L98f0:
         ldr     x30, [sp, #80]
         add     sp, sp, x12
         ret
-L99b8:
+L99a8:
         mov     x10, #0x3178
         mov     x11, #0x2c20
         add     x19, sp, x10
         add     x27, x22, x11
         mov     x0, x19
         str     x27, [sp, #112]
-        bl      L10a4
+        bl      L1094
         ldr     x1, [sp, #104]
         mov     x2, #0xa20
         mov     x0, x19
-        bl      L10d0
+        bl      L10c0
         mov     x0, x19
-        bl      L1160
+        bl      L1150
         mov     x2, x19
         mov     x1, #0x40
         mov     x0, x27
-        bl      L11e0
+        bl      L11d0
         mov     x0, x19
-        bl      L1290
+        bl      L1280
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -10357,18 +10355,18 @@ L99b8:
         mov     x1, x27
         mov     x2, #0x40
         str     x0, [sp, #120]
-        bl      L8bc4
+        bl      L8bb4
         movi    v0.4s, #0x0
         stp     q0, q0, [x27]
         stp     q0, q0, [x27, #32]
-        b       L96f4
-L9a5c:
+        b       L96e4
+L9a4c:
         mov     x2, #0x3020
         add     x24, x22, x2
-L9a64:
+L9a54:
         mov     w23, #0xfffffffa
-        b       L98f0
-L9a6c:
+        b       L98e0
+L9a5c:
         mov     x23, #0x30a0
         mov     x13, #0x2c20
         add     x0, x22, x13
@@ -10388,114 +10386,114 @@ L9a6c:
         add     x0, x22, x23
         mov     w23, #0xfffffffa
         str     x0, [sp, #120]
-        b       L98f0
-L9abc:
-        bl      L0e70
+        b       L98e0
+L9aac:
+        bl      L0e60
 
 // mldsa87_verify_extmu (0x18 bytes)
-L9ac0:
+L9ab0:
         mov     x5, x2
         mov     w6, #0x1
         mov     x4, #0x0
         mov     x3, #0x0
         mov     x2, #0x40
-        b       L9630
+        b       L9620
         nop
         nop
 
 // mldsa87_prepare_domain_separation_prefix (0x19c bytes)
-L9ae0:
+L9ad0:
         cmp     x4, #0xff
-        b.hi    L9b40
+        b.hi    L9b30
         stp     x19, x21, [sp, #-64]!
         mov     x19, x4
         mov     x21, x0
         str     x30, [sp, #32]
-        cbz     w5, L9b24
+        cbz     w5, L9b14
         stp     x22, x23, [sp, #16]
         mov     x23, x1
         sub     w1, w5, #0x1
         mov     x0, #0x0
         cmp     w1, #0xb
-        b.ls    L9b48
+        b.ls    L9b38
         ldp     x22, x23, [sp, #16]
         ldr     x30, [sp, #32]
         ldp     x19, x21, [sp], #64
         ret
-L9b24:
+L9b14:
         strb    wzr, [x0]
         strb    w4, [x21, #1]
-        cbnz    x4, L9b64
-L9b30:
+        cbnz    x4, L9b54
+L9b20:
         add     x0, x19, #0x2
-L9b34:
+L9b24:
         ldr     x30, [sp, #32]
         ldp     x19, x21, [sp], #64
         ret
-L9b40:
+L9b30:
         mov     x0, #0x0
         ret
-L9b48:
+L9b38:
         .inst   0xb0000000  // adrp x0, 0xa000
         mov     x22, x2
-        add     x0, x0, #0xb00
+        add     x0, x0, #0xaf0
         ldrb    w0, [x0, w1, uxtw]
-        .inst   0x10000061  // adr     x1, 9b64 <mldsa87_prepare_domain_separation_prefix+0x84>
+        .inst   0x10000061  // adr     x1, 9b54 <mldsa87_prepare_domain_separation_prefix+0x84>
         add     x0, x1, w0, sxtb #2
         br      x0
-L9b64:
+L9b54:
         mov     x1, x3
         mov     x2, x4
         add     x0, x0, #0x2
-        bl      L0e50
-        b       L9b30
+        bl      L0e40
+        b       L9b20
         cmp     x2, #0x20
-        b.ne    L9bf0
-L9b80:
+        b.ne    L9be0
+L9b70:
         mov     w0, #0x1
         strb    w0, [x21]
         strb    w19, [x21, #1]
-        cbnz    x19, L9c60
-L9b90:
+        cbnz    x19, L9c50
+L9b80:
         .inst   0xb0000001  // adrp x1, 0xa000
-        add     x4, x1, #0xb10
+        add     x4, x1, #0xb00
         mov     w3, #0x0
         nop
-L9ba0:
+L9b90:
         ldr     w0, [x4]
         cmp     w5, w0
-        b.eq    L9c14
+        b.eq    L9c04
         add     w3, w3, #0x1
         add     x4, x4, #0x10
         cmp     w3, #0xc
-        b.ne    L9ba0
+        b.ne    L9b90
         add     x0, x19, #0xd
         mov     x1, x23
         mov     x2, x22
         add     x0, x21, x0
-        bl      L0e50
+        bl      L0e40
         add     x0, x22, #0xd
         ldp     x22, x23, [sp, #16]
         add     x0, x0, x19
-L9bdc:
+L9bcc:
         ldr     x30, [sp, #32]
         ldp     x19, x21, [sp], #64
         ret
         cmp     x2, #0x1c
-        b.eq    L9b80
-L9bf0:
+        b.eq    L9b70
+L9be0:
         ldp     x22, x23, [sp, #16]
         mov     x0, #0x0
-        b       L9b34
+        b       L9b24
         cmp     x2, #0x40
-        b.eq    L9b80
-        b       L9bf0
+        b.eq    L9b70
+        b       L9be0
         cmp     x2, #0x30
-        b.eq    L9b80
-        b       L9bf0
-L9c14:
+        b.eq    L9b70
+        b       L9be0
+L9c04:
         mov     x0, #0x4
-        add     x1, x1, #0xb10
+        add     x1, x1, #0xb00
         add     x3, x0, w3, uxtw #4
         add     x0, x19, #0x2
         add     x4, x1, x3
@@ -10508,23 +10506,23 @@ L9c14:
         add     x0, x19, #0xd
         mov     x2, x22
         add     x0, x21, x0
-        bl      L0e50
+        bl      L0e40
         add     x0, x22, #0xd
         ldp     x22, x23, [sp, #16]
         add     x0, x0, x19
-        b       L9bdc
-L9c60:
+        b       L9bcc
+L9c50:
         mov     x1, x3
         mov     x2, x19
         add     x0, x21, #0x2
         str     w5, [sp, #60]
-        bl      L0e50
+        bl      L0e40
         ldr     w5, [sp, #60]
-        b       L9b90
+        b       L9b80
         nop
 
 // mldsa87_signature (0x10c bytes)
-L9c80:
+L9c70:
         stp     x19, x20, [sp, #-496]!
         mov     x20, x0
         .inst   0xd00000a7  // adrp x7, 0x1f000
@@ -10544,29 +10542,29 @@ L9c80:
         ldr     x1, [x7]
         str     x1, [sp, #488]
         mov     x1, #0x0
-        bl      L9ae0
-        cbnz    x0, L9d3c
+        bl      L9ad0
+        cbnz    x0, L9d2c
         add     x22, x19, #0x160
         mov     w26, #0xfffffff7
-L9cdc:
+L9ccc:
         mov     x0, x20
         mov     x2, #0x1213
         mov     w1, #0x0
-        bl      L0e80
-L9cec:
+        bl      L0e70
+L9cdc:
         stp     xzr, xzr, [x19, #352]
         stp     xzr, xzr, [x22, #16]
         mov     x2, #0x14c
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xd00000a0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #488]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L9d88
+        b.ne    L9d78
         ldp     x21, x22, [sp, #16]
         mov     w0, w26
         ldp     x23, x24, [sp, #32]
@@ -10574,14 +10572,14 @@ L9cec:
         ldr     x30, [sp, #64]
         ldp     x19, x20, [sp], #496
         ret
-L9d3c:
+L9d2c:
         add     x22, x19, #0x160
         mov     x21, x0
         mov     x1, #0x20
         mov     x0, x22
         mov     w26, #0xfffffffd
-        bl      L0e60
-        cbnz    w0, L9cdc
+        bl      L0e50
+        cbnz    w0, L9ccc
         mov     x6, x25
         mov     x4, x21
         mov     x2, x24
@@ -10590,16 +10588,16 @@ L9d3c:
         mov     x3, x19
         mov     x0, x20
         mov     w7, #0x0
-        bl      L9080
+        bl      L9070
         mov     w26, w0
-        cbz     w0, L9cec
-        b       L9cdc
-L9d88:
-        bl      L0e70
+        cbz     w0, L9cdc
+        b       L9ccc
+L9d78:
+        bl      L0e60
         nop
 
 // mldsa87_verify (0xbc bytes)
-L9d90:
+L9d80:
         stp     x19, x20, [sp, #-416]!
         mov     x20, x0
         .inst   0xd00000a6  // adrp x6, 0x1f000
@@ -10617,8 +10615,8 @@ L9d90:
         mov     x1, #0x0
         mov     w5, #0x0
         mov     x2, #0x0
-        bl      L9ae0
-        cbz     x0, L9e40
+        bl      L9ad0
+        cbz     x0, L9e30
         mov     x4, x0
         mov     x5, x22
         mov     x0, x20
@@ -10626,34 +10624,34 @@ L9d90:
         mov     x1, x21
         mov     x3, x19
         mov     w6, #0x0
-        bl      L9630
+        bl      L9620
         mov     w20, w0
-L9e00:
+L9df0:
         mov     x0, x19
         mov     x2, #0x14c
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xd00000a0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #408]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L9e48
+        b.ne    L9e38
         ldp     x21, x22, [sp, #16]
         mov     w0, w20
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #416
         ret
-L9e40:
+L9e30:
         mov     w20, #0xfffffff7
-        b       L9e00
-L9e48:
-        bl      L0e70
+        b       L9df0
+L9e38:
+        bl      L0e60
         nop
 
 // mldsa87_signature_pre_hash_internal (0xd0 bytes)
-L9e50:
+L9e40:
         stp     x19, x20, [sp, #-416]!
         mov     x20, x0
         .inst   0xd00000a8  // adrp x8, 0x1f000
@@ -10665,38 +10663,38 @@ L9e50:
         ldr     x9, [x8]
         str     x9, [sp, #408]
         mov     x9, #0x0
-        cbnz    w7, L9ed4
-L9e80:
+        cbnz    w7, L9ec4
+L9e70:
         mov     w21, #0xfffffff7
-L9e84:
+L9e74:
         mov     x0, x20
         mov     x2, #0x1213
         mov     w1, #0x0
-        bl      L0e80
-L9e94:
+        bl      L0e70
+L9e84:
         mov     x0, x19
         mov     x2, #0x14c
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xd00000a0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #408]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    L9f1c
+        b.ne    L9f0c
         ldr     x30, [sp, #32]
         mov     w0, w21
         ldp     x21, x22, [sp, #16]
         ldp     x19, x20, [sp], #416
         ret
-L9ed4:
+L9ec4:
         mov     x21, x5
         mov     x22, x6
         mov     w5, w7
         mov     x0, x19
-        bl      L9ae0
-        cbz     x0, L9e80
+        bl      L9ad0
+        cbz     x0, L9e70
         mov     x5, x21
         mov     x2, x0
         mov     x6, x22
@@ -10705,15 +10703,15 @@ L9ed4:
         mov     w7, #0x0
         mov     x4, #0x0
         mov     x3, #0x0
-        bl      L9080
+        bl      L9070
         mov     w21, w0
-        cbz     w0, L9e94
-        b       L9e84
-L9f1c:
-        bl      L0e70
+        cbz     w0, L9e84
+        b       L9e74
+L9f0c:
+        bl      L0e60
 
 // mldsa87_signature_pre_hash_shake256 (0xbc bytes)
-L9f20:
+L9f10:
         stp     x19, x20, [sp, #-160]!
         mov     x8, x2
         mov     x2, x1
@@ -10735,7 +10733,7 @@ L9f20:
         mov     x24, x6
         mov     x0, x19
         mov     x1, #0x40
-        bl      L12b4
+        bl      L12a4
         mov     x6, x24
         mov     x5, x23
         mov     x4, x22
@@ -10744,7 +10742,7 @@ L9f20:
         mov     x1, x19
         mov     w7, #0xc
         mov     x2, #0x40
-        bl      L9e50
+        bl      L9e40
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -10754,18 +10752,18 @@ L9f20:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    L9fd8
+        b.ne    L9fc8
         ldp     x21, x22, [sp, #16]
         ldp     x23, x24, [sp, #32]
         ldr     x30, [sp, #48]
         ldp     x19, x20, [sp], #160
         ret
-L9fd8:
-        bl      L0e70
+L9fc8:
+        bl      L0e60
         nop
 
 // mldsa87_verify_pre_hash_internal (0xbc bytes)
-L9fe0:
+L9fd0:
         stp     x19, x20, [sp, #-400]!
         .inst   0xd00000a7  // adrp x7, 0x1f000
         ldr     x7, [x7, #4088]
@@ -10775,52 +10773,52 @@ L9fe0:
         str     x8, [sp, #392]
         mov     x8, #0x0
         and     x19, x19, #0xffffffffffffffe0
-        cbz     w6, La08c
+        cbz     w6, La07c
         mov     x20, x0
         mov     x0, x19
         str     x21, [sp, #16]
         mov     x21, x5
         mov     w5, w6
-        bl      L9ae0
+        bl      L9ad0
         mov     x2, x0
-        cbz     x0, La088
+        cbz     x0, La078
         mov     x5, x21
         mov     x0, x20
         mov     x1, x19
         mov     w6, #0x0
         mov     x4, #0x0
         mov     x3, #0x0
-        bl      L9630
+        bl      L9620
         mov     w20, w0
         ldr     x21, [sp, #16]
-La04c:
+La03c:
         mov     x0, x19
         mov     x2, #0x14c
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         .inst   0xb00000a0  // adrp x0, 0x1f000
         ldr     x0, [x0, #4088]
         ldr     x2, [sp, #392]
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    La094
+        b.ne    La084
         ldr     x30, [sp, #24]
         mov     w0, w20
         ldp     x19, x20, [sp], #400
         ret
-La088:
+La078:
         ldr     x21, [sp, #16]
-La08c:
+La07c:
         mov     w20, #0xfffffff7
-        b       La04c
-La094:
+        b       La03c
+La084:
         str     x21, [sp, #16]
-        bl      L0e70
+        bl      L0e60
         nop
 
 // mldsa87_verify_pre_hash_shake256 (0xac bytes)
-La0a0:
+La090:
         stp     x19, x20, [sp, #-144]!
         mov     x7, x2
         mov     x2, x1
@@ -10840,7 +10838,7 @@ La0a0:
         mov     x23, x5
         mov     x0, x19
         mov     x1, #0x40
-        bl      L12b4
+        bl      L12a4
         mov     x5, x23
         mov     x4, x22
         mov     x3, x21
@@ -10848,7 +10846,7 @@ La0a0:
         mov     x1, x19
         mov     w6, #0xc
         mov     x2, #0x40
-        bl      L9fe0
+        bl      L9fd0
         movi    v0.4s, #0x0
         stp     q0, q0, [x19]
         stp     q0, q0, [x19, #32]
@@ -10858,17 +10856,17 @@ La0a0:
         ldr     x2, [x1]
         subs    x3, x3, x2
         mov     x2, #0x0
-        b.ne    La148
+        b.ne    La138
         ldp     x21, x22, [sp, #16]
         ldp     x23, x30, [sp, #32]
         ldp     x19, x20, [sp], #144
         ret
-La148:
-        bl      L0e70
+La138:
+        bl      L0e60
         nop
 
 // mldsa87_pk_from_sk (0x320 bytes)
-La150:
+La140:
         mov     x12, #0x2e50
         sub     sp, sp, x12
         .inst   0xb00000a4  // adrp x4, 0x1f000
@@ -10908,18 +10906,18 @@ La150:
         stp     q4, q5, [x22]
         stp     q2, q3, [x3, #32]
         stp     q0, q1, [x2, #384]
-        bl      L87a0
+        bl      L8790
         mov     w1, #0x3
         mov     x0, x19
-        bl      L8600
+        bl      L85f0
         mov     x2, x26
         mov     w1, #0x3
         mov     w25, w0
         mov     x0, x28
-        bl      L86e0
+        bl      L86d0
         mov     w27, w0
         mov     x0, x19
-        bl      L85c0
+        bl      L85b0
         ldp     q0, q1, [x22]
         mov     x3, x28
         mov     x4, x23
@@ -10927,31 +10925,31 @@ La150:
         mov     x2, x19
         add     x0, x21, #0x20
         stp     q0, q1, [x21]
-        bl      L8a70
+        bl      L8a60
         mov     w22, w0
-        cbz     w0, La304
+        cbz     w0, La2f4
         mov     x6, #0x2d00
         mov     x7, #0x2d40
         add     x28, x19, x6
         add     x20, x19, x7
-La254:
+La244:
         mov     x0, x21
         mov     x2, #0xa20
         mov     w1, #0x0
-        bl      L0e80
-La264:
+        bl      L0e70
+La254:
         mov     x0, x24
         mov     x2, #0xd00
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x400
         mov     x0, x26
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x2, #0x1c00
         mov     x0, x19
         mov     w1, #0x0
-        bl      L0e80
+        bl      L0e70
         mov     x0, #0x2d80
         add     x19, x19, x0
         stp     xzr, xzr, [x19]
@@ -10969,7 +10967,7 @@ La264:
         ldr     x1, [x0]
         subs    x2, x2, x1
         mov     x1, #0x0
-        b.ne    La46c
+        b.ne    La45c
         ldp     x19, x20, [sp]
         mov     w0, w22
         ldp     x21, x22, [sp, #16]
@@ -10980,20 +10978,20 @@ La264:
         ldr     x30, [sp, #80]
         add     sp, sp, x12
         ret
-La304:
+La2f4:
         movi    v1.4s, #0x0
         add     x20, x20, #0x620
         mov     x0, x24
         add     x1, x24, #0xd00
         mov     v2.16b, v1.16b
-La318:
+La308:
         ldr     q0, [x20], #16
         ldr     q3, [x0], #16
         eor     v0.16b, v0.16b, v3.16b
         orr     v2.16b, v2.16b, v0.16b
         eor     v1.16b, v1.16b, v0.16b
         cmp     x1, x0
-        b.ne    La318
+        b.ne    La308
         movi    v0.4s, #0x0
         ext     v4.16b, v2.16b, v0.16b, #8
         ext     v3.16b, v1.16b, v0.16b, #8
@@ -11027,21 +11025,21 @@ La318:
         mov     x1, #0x40
         mov     x3, #0xa20
         str     w4, [sp, #108]
-        bl      L12b4
+        bl      L12a4
         movi    v0.4s, #0x0
         ldr     w4, [sp, #108]
         mov     x0, x28
         add     x2, x28, #0x40
         mov     x1, x20
         mov     v2.16b, v0.16b
-La3d4:
+La3c4:
         ldr     q1, [x0], #16
         ldr     q3, [x1], #16
         eor     v1.16b, v1.16b, v3.16b
         orr     v2.16b, v2.16b, v1.16b
         eor     v0.16b, v0.16b, v1.16b
         cmp     x0, x2
-        b.ne    La3d4
+        b.ne    La3c4
         movi    v1.4s, #0x0
         ext     v5.16b, v2.16b, v1.16b, #8
         ext     v3.16b, v0.16b, v1.16b, #8
@@ -11070,16 +11068,16 @@ La3d4:
         orr     w0, w4, w0
         orr     w0, w0, w25
         tst     w0, #0xff
-        b.eq    La264
+        b.eq    La254
         mov     w22, #0xfffffff9
-        b       La254
-La46c:
-        bl      L0e70
+        b       La244
+La45c:
+        bl      L0e60
 
-// Padding (0xa470 to 0xa470)
+// Padding (0xa460 to 0xa460)
 
 
-// The read-only data (0xa470 to 0xabd0)
+// The read-only data (0xa460 to 0xabc0)
 
 // mld_KeccakF_RoundConstants (0xc0 bytes)
         .quad   0x0000000000000001

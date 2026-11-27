@@ -68,10 +68,19 @@ AArch64 parts.
 ## Source of the code
 
 The code is transcribed from the disassembly of the pre-built binaries
-made by `scripts/build-binaries` of mldsa-native from its commit
-`d38418ea3d4c`, as recorded in `binaries/builds.json` of the `binary`
-branch there (commit `65f9995`, "binaries: Rebuild the AArch64 matrix from
-main"), which has the binaries of all three builds. We use the
+made by `scripts/build-binaries` of mldsa-native from its v2.1.0 release
+(commit `c9999d775`), as recorded in `binaries/builds.json` of the
+`binary-v2.1` branch there (commit `c817bc7df`, "binaries: Build the
+ML-DSA v2.1.0 matrices"), which has the AArch64 binaries of these builds
+in `binaries/aarch64`. Their code and read-only data are those of the
+binaries of commit `65f9995` of the `binary` branch, built from commit
+`d38418ea3d4c` shortly before the release, moved 16 bytes down in the
+image: the build directory, which the linker records as `RUNPATH` in the
+dynamic string table at the start of the image, is shorter. The
+PC-relative displacements from the code to the GOT and `.data.rel.ro`,
+which stay at the same addresses, change accordingly. v2.1.0 changes the
+C sources only in comments, and its other changes are to the native
+backends, which these builds do not use. We use the
 "multilevel" build (`examples/multilevel_build`), compiled with `CFLAGS`
 set to `-O<level> -g -gdwarf-4 -gsplit-dwarf -fPIC`, with `AUTO=0` and
 without the native backends. In this build the code shared by the three
@@ -79,31 +88,31 @@ parameter sets is compiled once, with the namespace `mldsa_`, and the
 rest once per parameter set, with the namespaces `mldsa44_`, `mldsa65_`
 and `mldsa87_`.
 
-| File                           | Compiler   | Binary                                   |
-|--------------------------------|------------|------------------------------------------|
-| gcc12_O2/libmldsa.S            | gcc 12.3.0 | binaries/multilevel/gcc12/O2/libmldsa.so |
-| gcc12_O2/keccakf1600_permute.S | gcc 12.3.0 | binaries/multilevel/gcc12/O2/libmldsa.so |
-| gcc12_O2_reduced_ram/libmldsa.S | gcc 12.3.0 | binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so |
-| gcc12_O2_reduced_ram/keccakf1600_permute.S | gcc 12.3.0 | binaries/reduced-ram/multilevel/gcc12/O2/libmldsa.so |
-| gcc12_Os/libmldsa.S            | gcc 12.3.0 | binaries/multilevel/gcc12/Os/libmldsa.so |
-| clang23_O3_mono_reduced_ram/libmldsa.S | clang 23.1.3 | binaries/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so |
+| File                                       | Compiler     | Binary                                                              |
+|--------------------------------------------|--------------|---------------------------------------------------------------------|
+| gcc12_O2/libmldsa.S                        | gcc 12.3.0   | binaries/aarch64/multilevel/gcc12/O2/libmldsa.so                    |
+| gcc12_O2/keccakf1600_permute.S             | gcc 12.3.0   | binaries/aarch64/multilevel/gcc12/O2/libmldsa.so                    |
+| gcc12_O2_reduced_ram/libmldsa.S            | gcc 12.3.0   | binaries/aarch64/reduced-ram/multilevel/gcc12/O2/libmldsa.so        |
+| gcc12_O2_reduced_ram/keccakf1600_permute.S | gcc 12.3.0   | binaries/aarch64/reduced-ram/multilevel/gcc12/O2/libmldsa.so        |
+| gcc12_Os/libmldsa.S                        | gcc 12.3.0   | binaries/aarch64/multilevel/gcc12/Os/libmldsa.so                    |
+| clang23_O3_mono_reduced_ram/libmldsa.S     | clang 23.1.3 | binaries/aarch64/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so |
 
 The reduced-RAM build is compiled with `-DMLD_CONFIG_REDUCE_RAM` in
-addition, from the same source and the same `binary` branch of
-mldsa-native; see
-`gcc12_O2_reduced_ram/README.md` for its source and how it differs.
-The clang23_O3_mono_reduced_ram build is the same configuration compiled
-by clang 23 with `-O3` as one translation unit (the monolithic layout,
-`examples/monolithic_build_multilevel`), from the same source and the same
-`binary` branch; see `clang23_O3_mono_reduced_ram/README.md` for its
-source, how it differs and how the inlined code is proved.
+addition, from the same source and the same `binary-v2.1` branch of
+mldsa-native; see `gcc12_O2_reduced_ram/README.md` for its source and
+how it differs. The clang23_O3_mono_reduced_ram build is the same
+configuration compiled by clang 23 with `-O3` as one translation unit
+(the monolithic layout, `examples/monolithic_build_multilevel`), from
+the same source and the same `binary-v2.1` branch; see
+`clang23_O3_mono_reduced_ram/README.md` for its source, how it differs
+and how the inlined code is proved.
 
-The gcc12_Os build is the default configuration compiled with `-Os`, from
-the `binary` branch of mldsa-native; see `gcc12_Os/README.md` for its
-source, how it differs and which functions it proves. It has no separate
-transcription of `mldsa_keccakf1600_permute`: that function is proved in
-the image itself, with the proof of the same code in the gcc12_Os image of
-mlkem-native.
+The gcc12_Os build is the default configuration compiled with `-Os`,
+from the `binary-v2.1` branch of mldsa-native; see `gcc12_Os/README.md`
+for its source, how it differs and which functions it proves. It has no
+separate transcription of `mldsa_keccakf1600_permute`: that function is
+proved in the image itself, with the proof of the same code in the
+gcc12_Os image of mlkem-native.
 
 `gcc12_O2/keccakf1600_permute.S` is the code of `mldsa_keccakf1600_permute`
 alone, with its table of round constants as a separate symbol: the code
@@ -119,7 +128,7 @@ separate object against the binary:
 python3 mlkem_native/check_transcription.py \
   mldsa_native/gcc12_O2/keccakf1600_permute.o \
   mldsa_native_keccakf1600_permute_gcc12_O2 \
-  <mldsa-native>/binaries/multilevel/gcc12/O2/libmldsa.so \
+  <mldsa-native>/binaries/aarch64/multilevel/gcc12/O2/libmldsa.so \
   mldsa_keccakf1600_permute \
   mldsa_native_keccakf1600_permute_gcc12_O2_rc mld_KeccakF_RoundConstants
 ```
@@ -128,21 +137,21 @@ The SHA-256 hash of the binary used, which matches that recorded in
 `binaries/SHA256SUMS` of mldsa-native, is:
 
 ```
-binaries/multilevel/gcc12/O2/libmldsa.so
-  37d12a5bf9ae1a5c8a06d8224147eaafcd78d42aad5d5ca242c9f461e907f69b
+binaries/aarch64/multilevel/gcc12/O2/libmldsa.so
+  ddc36fefee37a0124f635698ba4c5d8d490beacc8d259beec58c751a0697380a
 ```
 
 To regenerate the files of the build, in the `arm` directory:
 
 ```
 python3 mldsa_native/gen_libmldsa_s.py \
-  <mldsa-native>/binaries/multilevel/gcc12/O2/libmldsa.so \
+  <mldsa-native>/binaries/aarch64/multilevel/gcc12/O2/libmldsa.so \
   mldsa_native_libmldsa_gcc12_O2 "gcc 12, -O2" \
-  binaries/multilevel/gcc12/O2/libmldsa.so $PWD/../include \
+  binaries/aarch64/multilevel/gcc12/O2/libmldsa.so $PWD/../include \
   > mldsa_native/gcc12_O2/libmldsa.S
 python3 mldsa_native/gen_layout.py \
-  --name multilevel/gcc12/O2/libmldsa.so \
-  <mldsa-native>/binaries/multilevel/gcc12/O2/libmldsa.so \
+  --name aarch64/multilevel/gcc12/O2/libmldsa.so \
+  <mldsa-native>/binaries/aarch64/multilevel/gcc12/O2/libmldsa.so \
   > proofs/mldsa_native/gcc12_O2/layout.ml
 python3 ../tools/native_proofs_mk.py mldsa_native gcc12_O2 \
   > mldsa_native/gcc12_O2/proofs.mk

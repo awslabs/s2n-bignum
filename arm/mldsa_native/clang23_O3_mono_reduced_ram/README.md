@@ -1,16 +1,16 @@
 # The clang 23 -O3 monolithic reduced-RAM build
 
-This directory is for mldsa-native's `libmldsa.so` built with clang 23 and
-`-O3`, in the monolithic layout and the reduced-RAM configuration
+This directory is for mldsa-native's `libmldsa.so` built with clang 23
+and `-O3`, in the monolithic layout and the reduced-RAM configuration
 `MLD_CONFIG_REDUCE_RAM`:
-`binaries/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so` in the
-`binary` branch of mldsa-native (commit `65f9995`, "binaries: Rebuild the
-AArch64 matrix from main"), built from mldsa-native `d38418ea3d4c`, which
-is also the source of the gcc 12 builds (see `../README.md` and
-`../gcc12_O2_reduced_ram/README.md`). The C code is that of the
-gcc12_O2_reduced_ram build, and so are the statements, with the changes
-that the code forces (see "Compared with the gcc 12 -O2 reduced-RAM
-build").
+`binaries/aarch64/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so` in
+the `binary-v2.1` branch of mldsa-native (commit `c817bc7df`, "binaries:
+Build the ML-DSA v2.1.0 matrices"), built from the v2.1.0 release
+(commit `c9999d775`), which is also the source of the gcc 12 builds (see
+`../README.md` and `../gcc12_O2_reduced_ram/README.md`). The C code is
+that of the gcc12_O2_reduced_ram build, and so are the statements, with
+the changes that the code forces (see "Compared with the gcc 12 -O2
+reduced-RAM build").
 
 ## Source of the code
 
@@ -32,12 +32,12 @@ The SHA-256 hash of the binary, which matches that recorded in
 `binaries/SHA256SUMS` of mldsa-native, is:
 
 ```
-binaries/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so
-  ac8b3ba9260ccb2a222158edf5ec2f3dbb2b742b502e52275004c5d9ec9cfc72
+binaries/aarch64/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so
+  33b8313828fb15cc339144f5f90a8c7ae0d4fb6a5b78b6356f15bba0824a15de
 ```
 
 `libmldsa.S` transcribes the image, from address 0 to the end of the
-read-only data at `libmldsa_size` = 0x3cbf0. The 12 pointers to the
+read-only data at `libmldsa_size` = 0x3cbe0. The 12 pointers to the
 entries of the table `oid_map` of `mld_get_hash_oid`, which the dynamic
 loader relocates, are not in the image but in `.data.rel.ro` after it, at
 0x4fdd8: the statements of the functions that read them assume their
@@ -50,14 +50,14 @@ To regenerate the files of the build, in the `arm` directory:
 
 ```
 python3 mldsa_native/gen_libmldsa_s.py \
-  <mldsa-native>/binaries/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so \
+  <mldsa-native>/binaries/aarch64/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so \
   mldsa_native_libmldsa_clang23_O3_mono_reduced_ram \
   "clang 23, -O3, monolithic, reduced RAM" \
-  binaries/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so $PWD/../include \
+  binaries/aarch64/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so $PWD/../include \
   > mldsa_native/clang23_O3_mono_reduced_ram/libmldsa.S
 python3 mldsa_native/gen_layout.py --dwarf \
-  --name reduced-ram/multilevel-mono/clang23/O3/libmldsa.so \
-  <mldsa-native>/binaries/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so \
+  --name aarch64/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so \
+  <mldsa-native>/binaries/aarch64/reduced-ram/multilevel-mono/clang23/O3/libmldsa.so \
   > proofs/mldsa_native/clang23_O3_mono_reduced_ram/layout.ml
 python3 ../tools/native_proofs_mk.py mldsa_native clang23_O3_mono_reduced_ram \
   > mldsa_native/clang23_O3_mono_reduced_ram/proofs.mk
