@@ -109,18 +109,8 @@ let CONTAINED_EMPTY_64 = prove
   REWRITE_TAC[contained; contained_modulo; LT]);;
 
 (* ------------------------------------------------------------------------- *)
-(* ASSUME_CALLEE_SAFETY_TAILED_TAC with the arguments of the theorem rotated *)
-(* by specialization rather than by MESON, which is too slow for the general *)
-(* theorems for getnoise.                                                    *)
+(* The same as ASSUME_CALLEE_SAFETY_TAILED_TAC, of which this was a faster   *)
+(* version while that rotated the arguments of the theorem by MESON.         *)
 (* ------------------------------------------------------------------------- *)
 
-let ASSUME_CALLEE_SAFETY_TAILED_ALT_TAC =
-  let append_lemma = MESON[SAFETY_APPEND_EXISTS]
-    `(forall (e:((A)address_uarch_event)list). P e) <=>
-      (forall e_tail e. P (APPEND e_tail e))` in
-  fun (safety_th:thm) (name:string) ->
-    let safety_th' = ONCE_REWRITE_RULE[append_lemma] safety_th in
-    let safety_th'' = SAFE_EXISTS_RULE (fun bth ->
-      let args,_ = strip_forall(concl bth) in
-      GENL ((tl args) @ [hd args]) (SPECL args bth)) safety_th' in
-    ASSUME_CALLEE_SAFETY_TAC safety_th'' name;;
+let ASSUME_CALLEE_SAFETY_TAILED_ALT_TAC = ASSUME_CALLEE_SAFETY_TAILED_TAC;;

@@ -95,28 +95,18 @@ let IMAGE_RIPREL_CONST_TAC =
 (* ------------------------------------------------------------------------- *)
 (* The signing functions of sign.c, as in                                    *)
 (* arm/proofs/utils/mldsa_native_wrap.ml: the FULL theorem of a callee as an *)
-(* assumption with e_tail last, quickly for the many variables of            *)
-(* mldsa{44,65,87}_signature_internal (API_ASSUME_CALLEE_TAC); the arguments *)
-(* that are NULL with length 0 (API_NULL_TAC regs adds that each region of   *)
-(* regs does not overlap (word 0,0), and that the 0 bytes at word 0 are 0)   *)
-(* and the removal of the regions of length 0 from the readable regions of   *)
-(* the memaccess_inbounds assumptions (API_EMPTY_REGIONS_TAC); and the       *)
-(* results of signing, 0 or -4 (API_SIGN_RET), distinct from -3 and -9       *)
+(* assumption with e_tail last (API_ASSUME_CALLEE_TAC, which is              *)
+(* ASSUME_CALLEE_SAFETY_TAILED_TAC); the arguments that are NULL with        *)
+(* length 0 (API_NULL_TAC regs adds that each region of regs does not        *)
+(* overlap (word 0,0), and that the 0 bytes at word 0 are 0) and the removal *)
+(* of the regions of length 0 from the readable regions of the               *)
+(* memaccess_inbounds assumptions (API_EMPTY_REGIONS_TAC); and the results   *)
+(* of signing, 0 or -4 (API_SIGN_RET), distinct from -3 and -9               *)
 (* (API_SIGN_DISTINCT), for the CORRECT and SAFE theorems                    *)
 (* (API_SIGN_CORRECT_TAC and API_SIGN_SAFE_TAC).                             *)
 (* ------------------------------------------------------------------------- *)
 
-let API_ASSUME_CALLEE_TAC =
-  let append_lemma = MESON[SAFETY_APPEND_EXISTS]
-    `(forall (e:((A)address_uarch_event)list). P e) <=>
-      (forall e_tail e. P (APPEND e_tail e))` in
-  fun th name ->
-    let th' = ONCE_REWRITE_RULE[append_lemma] th in
-    let f,body = dest_exists(concl th') in
-    let args = fst(strip_forall body) in
-    let gth = GENL (tl args @ [hd args]) (SPECL args (ASSUME body)) in
-    let eth = EXISTS (mk_exists(f,concl gth),f) gth in
-    ASSUME_CALLEE_SAFETY_TAC (CHOOSE (f,th') eth) name;;
+let API_ASSUME_CALLEE_TAC = ASSUME_CALLEE_SAFETY_TAILED_TAC;;
 
 let API_NONOVERLAPPING_EMPTY = prove
  (`!(a:int64) n (b:int64). nonoverlapping (a,n) (b,0)`,

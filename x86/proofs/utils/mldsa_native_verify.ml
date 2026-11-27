@@ -308,31 +308,20 @@ let VERIF_SLICE_TAC tm =
 (* ------------------------------------------------------------------------- *)
 (* The external API functions that verify (sign.c), as in                    *)
 (* arm/proofs/utils/mldsa_native_wrap.ml: the FULL theorem of a callee as an *)
-(* assumption with e_tail last, quickly for the many variables of            *)
-(* mldsa{44,65,87}_verify_internal (VERIF_ASSUME_CALLEE_TAC); the arguments  *)
-(* that are NULL with length 0 (VERIF_NULL_TAC regs adds that each region of *)
-(* regs does not overlap (word 0,0), and that the 0 bytes at word 0 are 0)   *)
-(* and the removal of the regions of length 0 from the readable regions of   *)
-(* the memaccess_inbounds assumptions (VERIF_EMPTY_REGIONS_TAC); the         *)
-(* widening of readable regions by containment (VERIF_WIDEN_TAC cths); the   *)
-(* case facts and the postcondition of the prefix (VERIF_CASE_THMS,          *)
-(* VERIF_LET_TAC, VERIF_USE_CASE_TAC, VERIF_MP_TAC); the termination         *)
-(* hypothesis of a callee from the case facts (VERIF_TERMINATES_TAC); and    *)
-(* the lengths of the prefix (VERIF_PREFIX_LENGTH_LE,                        *)
-(* VERIF_PREFIX_LENGTH_SHAKE256).                                            *)
+(* assumption with e_tail last (VERIF_ASSUME_CALLEE_TAC, which is            *)
+(* ASSUME_CALLEE_SAFETY_TAILED_TAC); the arguments that are NULL with        *)
+(* length 0 (VERIF_NULL_TAC regs adds that each region of regs does not      *)
+(* overlap (word 0,0), and that the 0 bytes at word 0 are 0) and the removal *)
+(* of the regions of length 0 from the readable regions of the               *)
+(* memaccess_inbounds assumptions (VERIF_EMPTY_REGIONS_TAC); the widening of *)
+(* readable regions by containment (VERIF_WIDEN_TAC cths); the case facts    *)
+(* and the postcondition of the prefix (VERIF_CASE_THMS, VERIF_LET_TAC,      *)
+(* VERIF_USE_CASE_TAC, VERIF_MP_TAC); the termination hypothesis of a callee *)
+(* from the case facts (VERIF_TERMINATES_TAC); and the lengths of the prefix *)
+(* (VERIF_PREFIX_LENGTH_LE, VERIF_PREFIX_LENGTH_SHAKE256).                   *)
 (* ------------------------------------------------------------------------- *)
 
-let VERIF_ASSUME_CALLEE_TAC =
-  let append_lemma = MESON[SAFETY_APPEND_EXISTS]
-    `(forall (e:((A)address_uarch_event)list). P e) <=>
-      (forall e_tail e. P (APPEND e_tail e))` in
-  fun th name ->
-    let th' = ONCE_REWRITE_RULE[append_lemma] th in
-    let f,body = dest_exists(concl th') in
-    let args = fst(strip_forall body) in
-    let gth = GENL (tl args @ [hd args]) (SPECL args (ASSUME body)) in
-    let eth = EXISTS (mk_exists(f,concl gth),f) gth in
-    ASSUME_CALLEE_SAFETY_TAC (CHOOSE (f,th') eth) name;;
+let VERIF_ASSUME_CALLEE_TAC = ASSUME_CALLEE_SAFETY_TAILED_TAC;;
 
 let VERIF_NONOVERLAPPING_EMPTY = prove
  (`!(a:int64) n (b:int64). nonoverlapping (a,n) (b,0)`,

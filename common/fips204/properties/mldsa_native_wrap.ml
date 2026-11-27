@@ -20,24 +20,12 @@ needs "common/mldsa_native_prefix.ml";;
 needs "common/mldsa_native_sign.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* The FULL theorem of a callee as an assumption, as                         *)
-(* ASSUME_CALLEE_SAFETY_TAILED_TAC does it: e split as APPEND e_tail e and   *)
-(* e_tail quantified last. That proves the reordering of the quantifiers by  *)
-(* MESON, which takes too long with the 18 variables of the signing          *)
-(* functions; here it is by SPECL and GENL.                                  *)
+(* The FULL theorem of a callee as an assumption, by                         *)
+(* ASSUME_CALLEE_SAFETY_TAILED_TAC: e split as APPEND e_tail e and e_tail    *)
+(* quantified last.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-let MLD_WRAP_ASSUME_CALLEE_TAC =
-  let append_lemma = MESON[SAFETY_APPEND_EXISTS]
-    `(forall (e:((A)address_uarch_event)list). P e) <=>
-      (forall e_tail e. P (APPEND e_tail e))` in
-  fun th name ->
-    let th' = ONCE_REWRITE_RULE[append_lemma] th in
-    let f,body = dest_exists(concl th') in
-    let args = fst(strip_forall body) in
-    let gth = GENL (tl args @ [hd args]) (SPECL args (ASSUME body)) in
-    let eth = EXISTS (mk_exists(f,concl gth),f) gth in
-    ASSUME_CALLEE_SAFETY_TAC (CHOOSE (f,th') eth) name;;
+let MLD_WRAP_ASSUME_CALLEE_TAC = ASSUME_CALLEE_SAFETY_TAILED_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* A buffer in a stack frame aligned to 32 bytes, as gcc computes it from    *)

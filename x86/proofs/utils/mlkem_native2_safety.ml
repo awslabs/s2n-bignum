@@ -15,22 +15,11 @@ needs "x86/proofs/mlkem_native/asm/noise_spec.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* A callee's safety theorem |- ?f_events. !e x1 ... xn. P e as an           *)
-(* assumption in the form !e x1 ... xn e_tail. P (APPEND e_tail e), as by    *)
-(* ASSUME_CALLEE_SAFETY_TAILED_TAC but without its MESON call, which is too  *)
-(* deep for theorems with many variables (that of mlkem_getnoise).           *)
+(* assumption in the form !e x1 ... xn e_tail. P (APPEND e_tail e), by       *)
+(* ASSUME_CALLEE_SAFETY_TAILED_TAC.                                          *)
 (* ------------------------------------------------------------------------- *)
 
-let SAFETY_TAILED_RULE th =
-  let f,body = dest_exists(concl th) in
-  let vs = fst(strip_forall body) in
-  let e = hd vs and xs = tl vs in
-  let et = mk_var("e_tail",type_of e) in
-  let app = list_mk_icomb "APPEND" [et; e] in
-  let th1 = GENL (e::xs @ [et]) (SPECL (app::xs) (ASSUME body)) in
-  CHOOSE (f,th) (EXISTS (mk_exists(f,concl th1),f) th1);;
-
-let ASSUME_CALLEE_TAILED_TAC th name =
-  ASSUME_CALLEE_SAFETY_TAC (SAFETY_TAILED_RULE th) name;;
+let ASSUME_CALLEE_TAILED_TAC = ASSUME_CALLEE_SAFETY_TAILED_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* Unique names for the variables that become metavariables: e_tail of the   *)
