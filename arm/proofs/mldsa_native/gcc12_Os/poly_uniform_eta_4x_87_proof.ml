@@ -848,7 +848,7 @@ let ETA_4X_87_EXIT_TAC =
 let ETA_4X_87_LOOP_TAC =
   REWRITE_TAC[EQF_INTRO(ASSUME `~(k0 = 0)`)] THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `k0:num`
-   `pc + 31720`
+   `pc + mldsa87_poly_uniform_eta_4x_join1`
    `pc + 31656` ETA_4X_87_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];

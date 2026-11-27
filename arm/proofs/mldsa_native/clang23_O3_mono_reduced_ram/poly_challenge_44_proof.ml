@@ -44,7 +44,7 @@ let PC44_A_TM = parse_term
                 read (memory :> bytes64 guard) s = canary /\\
                 read (memory :> bytes(seed,32)) s = C /\\
                 read events s = e)
-           (\\s. read PC s = word (pc + 53644) /\\
+           (\\s. read PC s = word (pc + mldsa44_poly_challenge_in_shake256_absorb_end) /\\
                 read SP s = sp /\\ read X0 s = word_add sp (word 16) /\\
                 read X19 s = c /\\ read X20 s = word_add sp (word 16) /\\
                 read X21 s = word 136 /\\
@@ -109,7 +109,7 @@ let PC44_B_TM = parse_term
         ==> ensures arm
           (\\s. aligned_bytes_loaded s (word pc)
                   mldsa_native_libmldsa_clang23_O3_mono_reduced_ram_mc /\\
-                read PC s = word (pc + 53644) /\\
+                read PC s = word (pc + mldsa44_poly_challenge_in_shake256_absorb_end) /\\
                 read SP s = word_add fr (word 240) /\\
                 read X0 s = word_add fr (word 256) /\\
                 read X19 s = c /\\ read X20 s = word_add fr (word 256) /\\

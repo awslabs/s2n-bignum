@@ -150,12 +150,12 @@ let MLD_PREFIX65_OID_IMAGE = prove
   ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV);;
 
 let MLD_PREFIX65_ADDR4 = prove
- (`!pc j. word_add (word(pc + (248616 + 16 * j))) (word 4):int64 =
+ (`!pc j. word_add (word(pc + (rodata_mld_get_hash_oid87_oid_map + 16 * j))) (word 4):int64 =
           word_add (word pc) (word (248620 + 16 * j))`,
   REPEAT GEN_TAC THEN REWRITE_TAC[WORD_ADD] THEN CONV_TAC WORD_RULE);;
 
 let MLD_PREFIX65_ADDR11 = prove
- (`!pc j. word_add (word(pc + (248616 + 16 * j))) (word 11):int64 =
+ (`!pc j. word_add (word(pc + (rodata_mld_get_hash_oid87_oid_map + 16 * j))) (word 11):int64 =
           word_add (word pc) (word (248627 + 16 * j))`,
   REPEAT GEN_TAC THEN REWRITE_TAC[WORD_ADD] THEN CONV_TAC WORD_RULE);;
 

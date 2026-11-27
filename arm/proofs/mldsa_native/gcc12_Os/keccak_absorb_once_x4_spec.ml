@@ -654,7 +654,7 @@ let ABSX4_CS_MID = mk_abs(`s:armstate`,list_mk_conj
   `read (memory :> bytes(word_add st (word 600),200)) s =
    val(keccak_absorb r P3 (mlen DIV r))`]);;
 
-(*** The loop invariant at pc + 4884, with k blocks done ***)
+(*** The loop invariant at pc + mld_keccak_absorb_once_x4_join2, with k blocks done ***)
 
 let ABSX4_CS_INV = list_mk_abs([`k:num`; `s:armstate`],list_mk_conj
  [`read X19 s = word(mlen - r * k)`; `read X20 s = st`;
@@ -748,7 +748,7 @@ let ABSX4_CS_XOR_TAC off len ms vars n =
 
 let ABSX4_CS_LOOP_TAC =
   ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r`
-   `pc + 4884` `pc + 4768` ABSX4_CS_INV THEN
+   `pc + mld_keccak_absorb_once_x4_join2` `pc + 4768` ABSX4_CS_INV THEN
   REPEAT CONJ_TAC THENL
    [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
 

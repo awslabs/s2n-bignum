@@ -641,8 +641,8 @@ let INLINE_HINV = `\i s'. aligned_bytes_loaded s' (word pc) mldsa_native_libmlds
       (!j. j < 80 ==> read(memory :> bytes8(word_add a (word j))) s' = b j) /\
       (!q. q < 256 ==> read(memory :> bytes32(word_add h (word(4 * q)))) s' =
            inline_hset x b s (MIN (s + 1 + i) (inline_hrun b s w)) q) /\
-      read PC s' = word(if i < inline_hsteps b s w then pc + 52780
-                       else if inline_hrun b s w = w then pc + 52536 else pc + 52804)`;;
+      read PC s' = word(if i < inline_hsteps b s w then pc + mldsa44_verify_internal_loop13
+                       else if inline_hrun b s w = w then pc + mldsa44_verify_internal_join6 else pc + mldsa44_verify_internal_loop6_exit4)`;;
 
 let INLINE_HSTART_TAC =
   CONCRETIZE_F_EVENTS_TAC INLINE_HTPL THEN REPEAT META_EXISTS_TAC THEN

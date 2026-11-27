@@ -107,7 +107,7 @@ let MLDSA_NATIVE_KECCAK_ABSORB_ONCE_X4_GCC12_OS_IMAGE_SUBROUTINE_SAFE = time pro
       (*** Otherwise the loop over the whole blocks ***)
 
       ENSURES_EVENTS_WHILE_UP2_TAC `mlen DIV r`
-       `pc + 4884` `pc + 4768` ABSX4_SAFE_INV THEN
+       `pc + mld_keccak_absorb_once_x4_join2` `pc + 4768` ABSX4_SAFE_INV THEN
       REPEAT CONJ_TAC THENL
        [ASM_SIMP_TAC[DIV_EQ_0; ARITH_RULE `0 < r ==> ~(r = 0)`];
 

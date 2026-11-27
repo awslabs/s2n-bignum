@@ -590,13 +590,13 @@ let INV_V1_PRE =
     SUBGOAL_THEN `word (4 * (8 * i + k)):int64 = word (32 * i + 4 * k)` SUBST1_TAC THENL [AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
     DISCH_THEN ACCEPT_TAC; ALL_TAC] THEN
   FIRST_ASSUM(fun th -> ASSUME_TAC(MP (SPECL [`a:int64`; `m:num->int32`; `i:num`; `s0:armstate`] LD256) th)) THEN
-  SUBGOAL_THEN `!k. k < 4 ==> read (memory :> bytes32 (word_add (word (pc + 247592)) (word (4 * (252 - 4 * i) + 4 * k)))) s0 = mld_zeta ((252 - 4 * i) + k)` ASSUME_TAC THENL
+  SUBGOAL_THEN `!k. k < 4 ==> read (memory :> bytes32 (word_add (word (pc + rodata_mld_zetas)) (word (4 * (252 - 4 * i) + 4 * k)))) s0 = mld_zeta ((252 - 4 * i) + k)` ASSUME_TAC THENL
    [X_GEN_TAC `k:num` THEN DISCH_TAC THEN
     FIRST_ASSUM(MP_TAC o SPEC `(252 - 4 * i) + k` o check (fun th -> is_forall(concl th) && free_in `mld_zeta` (concl th) && not(free_in `m:num->int32` (concl th)))) THEN
     ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
     SUBGOAL_THEN `word (4 * ((252 - 4 * i) + k)):int64 = word (4 * (252 - 4 * i) + 4 * k)` SUBST1_TAC THENL [AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
     DISCH_THEN ACCEPT_TAC; ALL_TAC] THEN
-  FIRST_ASSUM(fun th -> ASSUME_TAC(MP (SPECL [`word (pc + 247592):int64`; `mld_zeta`; `252 - 4 * i`; `s0:armstate`] LDZ) th)) THEN
+  FIRST_ASSUM(fun th -> ASSUME_TAC(MP (SPECL [`word (pc + rodata_mld_zetas):int64`; `mld_zeta`; `252 - 4 * i`; `s0:armstate`] LDZ) th)) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ARITH_RULE `4 * (252 - 4 * i) = 1008 - 16 * i`; GSYM ADD_ASSOC]) THEN
   SUBGOAL_THEN `!j. j < 8 * i ==> read (memory :> bytes32 (word_add a (word (4 * j)))) s0 = mld_invntt_blocks 8 (4 * i) m j` ASSUME_TAC THENL
    [REPEAT STRIP_TAC THEN FIRST_ASSUM(MP_TAC o SPEC `j:num` o check (fun th -> is_forall(concl th) && free_in `mld_invntt_blocks` (concl th) && not(free_in `m:num->int32` (concl th) && false) && is_imp(snd(dest_forall(concl th))) && fst(dest_imp(snd(dest_forall(concl th)))) = `j:num < 256`)) THEN
@@ -853,13 +853,13 @@ let INV_V2_TAC =
       SUBGOAL_THEN `word (4 * (16 * i + k)):int64 = word (64 * i + 4 * k)` SUBST1_TAC THENL [AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
       DISCH_THEN ACCEPT_TAC; ALL_TAC] THEN
     FIRST_ASSUM(fun th -> STRIP_ASSUME_TAC(MP (SPECL [`a:int64`; `m:num->int32`; `i:num`; `s0:armstate`] LD4Q) th)) THEN
-    SUBGOAL_THEN `!k. k < 4 ==> read (memory :> bytes32 (word_add (word (pc + 247592)) (word (4 * (124 - 4 * i) + 4 * k)))) s0 = mld_zeta ((124 - 4 * i) + k)` ASSUME_TAC THENL
+    SUBGOAL_THEN `!k. k < 4 ==> read (memory :> bytes32 (word_add (word (pc + rodata_mld_zetas)) (word (4 * (124 - 4 * i) + 4 * k)))) s0 = mld_zeta ((124 - 4 * i) + k)` ASSUME_TAC THENL
      [X_GEN_TAC `k:num` THEN DISCH_TAC THEN
       FIRST_ASSUM(MP_TAC o SPEC `(124 - 4 * i) + k` o check (fun th -> is_forall(concl th) && free_in `mld_zeta` (concl th) && not(free_in `m:num->int32` (concl th)))) THEN
       ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
       SUBGOAL_THEN `word (4 * ((124 - 4 * i) + k)):int64 = word (4 * (124 - 4 * i) + 4 * k)` SUBST1_TAC THENL [AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
       DISCH_THEN ACCEPT_TAC; ALL_TAC] THEN
-    FIRST_ASSUM(fun th -> ASSUME_TAC(MP (SPECL [`word (pc + 247592):int64`; `mld_zeta`; `124 - 4 * i`; `s0:armstate`] LDZ) th)) THEN
+    FIRST_ASSUM(fun th -> ASSUME_TAC(MP (SPECL [`word (pc + rodata_mld_zetas):int64`; `mld_zeta`; `124 - 4 * i`; `s0:armstate`] LDZ) th)) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[ARITH_RULE `4 * (124 - 4 * i) = 496 - 16 * i`; GSYM ADD_ASSOC]) THEN
     SUBGOAL_THEN `!j. j < 16 * i ==> read (memory :> bytes32 (word_add a (word (4 * j)))) s0 = mld_invntt_blocks 7 (4 * i) m j` ASSUME_TAC THENL
      [REPEAT STRIP_TAC THEN FIRST_ASSUM(MP_TAC o SPEC `j:num` o check (fun th -> try free_in `mld_invntt_blocks` (concl th) && fst(dest_imp(snd(dest_forall(concl th)))) = `j:num < 256` with _ -> false)) THEN
@@ -1054,7 +1054,7 @@ let INV_BLOOP mc exec (p:inv_block_loop) =
      [FIRST_ASSUM(fun th -> if is_forall(concl th) && free_in `mld_zeta` (concl th) && not(free_in `m:num->int32` (concl th))
                             then MP_TAC(SPEC (pt zidx) th) else NO_TAC) THEN
       ANTS_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
-      SUBGOAL_THEN (pt (Printf.sprintf "word_add (word (pc + 247592)) (word (4 * (%s))):int64 = %s" zidx zaddr))
+      SUBGOAL_THEN (pt (Printf.sprintf "word_add (word (pc + rodata_mld_zetas)) (word (4 * (%s))):int64 = %s" zidx zaddr))
         SUBST1_TAC THENL
        [REWRITE_TAC[GSYM WORD_ADD] THEN AP_TERM_TAC THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
       DISCH_THEN ACCEPT_TAC;

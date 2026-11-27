@@ -66,7 +66,7 @@ let PU_COND_REWRITE_TAC ths =
         DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN
                              REWRITE_TAC[th])])) jobs);;
 
-let PU_PCS = [`word(pc + 239404):int64`; `word(pc + 239460):int64`];;
+let PU_PCS = [`word(pc + mldsa_poly_uniform_loop2):int64`; `word(pc + mldsa_poly_uniform_join3):int64`];;
 
 
 
@@ -463,7 +463,7 @@ let PU_S2_INV =
         (!k. k < c + LENGTH(mld_rej_uniform_list b i)
              ==> read (memory :> bytes32 (word_add a (word (4 * k)))) s =
                  (if k < c then f k else EL (k - c) (mld_rej_uniform_list b i)))`;;
-let PU_PCS2 = [`word(pc + 239608):int64`; `word(pc + 239488):int64`];;
+let PU_PCS2 = [`word(pc + mldsa_poly_uniform_loop5):int64`; `word(pc + mldsa_poly_uniform_join4):int64`];;
 
 let PU2_ITER_SETUP_TAC =
   X_GEN_TAC `i:num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN

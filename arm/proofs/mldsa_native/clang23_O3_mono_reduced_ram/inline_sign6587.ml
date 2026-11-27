@@ -1541,7 +1541,7 @@ let SG_ETA4C_TERM mc p =
                      e2 = f_events fp a i pc /\\
                      memaccess_inbounds e2
                       [word_add a (word (128 * i)),128; word_add fp (word %d),8;%s
-                       word (pc + 247232),64; %s]
+                       word (pc + mldsa65_pk_from_sk_consts),64; %s]
                       [%s]))
              (MAYCHANGE [PC; %s] ,,
               MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17] ,,
