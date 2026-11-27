@@ -170,10 +170,10 @@ The theorems depend on the following, which the proofs do not establish.
    proofs are about the code in `gcc12_O2/libmlkem.S` and in the `.S` files
    of single functions, as assembled into the `.o` files by `../Makefile`.
    `check_transcription.py` compares that code, byte for byte, with the
-   code of the `libmlkem.so` of mlkem-native's `binary` branch that this
-   directory is for (see "Checking a transcription"); it is run by hand,
-   and neither `make` nor CI runs it. "Source of the code" gives the commit
-   of the branch and the SHA-256 hash of the binary.
+   code of the `libmlkem.so` of mlkem-native's `binary-v2.1` branch that
+   this directory is for (see "Checking a transcription"); it is run by
+   hand, and neither `make` nor CI runs it. "Source of the code" gives
+   the commit of the branch and the SHA-256 hash of the binary.
  - The specifications of FIPS 202 and FIPS 203 in
    `../../common/fips202/fips202.ml` and `../../common/fips203/fips203.ml`,
    written by hand. The theorems for the API functions are stated with
@@ -262,10 +262,11 @@ functions that expand the matrix A, the `_IMAGE_SUBROUTINE_FIPS203` and
 ## Source of the code
 
 The code is transcribed from the disassembly of the pre-built binary
-`binaries/multilevel/gcc12/O2/libmlkem.so` on the `binary` branch of
-mlkem-native, at commit `e03d9d19` ("binaries: Rebuild x86-64 ML-KEM
-without stack protection"). As recorded in `binaries/builds.json` there, it
-was built from mlkem-native commit `3979073e2137` by `scripts/build-binaries`:
+`binaries/multilevel/gcc12/O2/libmlkem.so` on the `binary-v2.1` branch of
+mlkem-native, at commit `ce25e8a8d` ("binaries: Build the ML-KEM v2.1.0
+matrices"). As recorded in `binaries/builds.json` there, it was built from
+the v2.1.0 release of mlkem-native, commit `4d69d6b03`, by
+`scripts/build-binaries`:
 the "multilevel" build (`examples/multilevel_build`) was compiled in the
 nix shell `.#gcc12` (gcc 12.3.0 and binutils 2.41) on an x86-64 Linux
 machine with `CFLAGS` set to `-O2 -g -gdwarf-4 -gsplit-dwarf -fPIC
@@ -318,16 +319,24 @@ commit, is:
 
 ```
 multilevel/gcc12/O2/libmlkem.so
-  29d5e06f549b1fac8c28ea8c2cfdaa951623117cccc476119f1bbedfb898795c
+  f31ec0c19164846be00a40781b860a7e403333b2d2fc8ce21bea9a85696c3b0a
 ```
 
-A binary built in another directory has a different hash, since the split
-debug information records the paths of its files, but the contents of its
-loaded segments are the same.
+A binary built in another directory has a different hash: the linker
+records the directory of the build as `RUNPATH` in the dynamic string
+table, which is part of the image (here
+`/tmp/native-binary-v2.1-single.ZcXVDkyZ/mlkem-source/outputs/out/lib`),
+and the split debug information records the paths of its files. Its code
+and read-only data are the same. The binary of commit `e03d9d19` of the
+`binary` branch, built from mlkem-native commit `3979073e2137` shortly
+before the release, differs from this one only in these places: v2.1.0
+changes the C sources only in comments, and its other changes are to the
+native backends, which this build does not use.
 
 Unlike the AArch64 binaries, this one is built without gcc's stack
 protector, which the nix shell otherwise enables, by `-fno-stack-protector`
-(the commit rebuilt all x86-64 binaries of the branch with it). On x86-64
+(commit `e03d9d19` of the `binary` branch rebuilt the x86-64 binaries
+with it, and the v2.1.0 binaries are built the same way). On x86-64
 Linux, the stack protector reads the guard at offset 0x28 from the base of
 the FS segment, in thread-local storage, rather than through the global
 offset table as on AArch64, and the x86 model has no segment bases.
@@ -343,8 +352,8 @@ ciphertexts are equal.
 
 After building the object file, `check_transcription.py` checks that its
 code is byte-for-byte identical to the function in the binary, e.g. in the
-`x86` directory, with `<build>` the `binaries` directory of the `binary`
-branch of mlkem-native at the commit named above:
+`x86` directory, with `<build>` the `binaries` directory of the
+`binary-v2.1` branch of mlkem-native at the commit named above:
 
 ```
 make mlkem_native/gcc12_O2/poly_reduce.o

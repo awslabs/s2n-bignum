@@ -35,8 +35,8 @@
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x0000000000000000
-        .quad   0x00000000000007b8
-        .quad   0x00000000000007b8
+        .quad   0x00000000000007b0
+        .quad   0x00000000000007b0
         .quad   0x0000000000001000
         .quad   0x0000000500000001
         .quad   0x0000000000001000
@@ -258,18 +258,17 @@
         .quad   0x62696c006365645f
         .quad   0x6f732e6d656b6c6d
         .quad   0x616e2f706d742f00
-        .quad   0x3638782d65766974
-        .quad   0x636174732d6f6e2d
-        .quad   0x6365746f72702d6b
-        .quad   0x586c36312e726f74
-        .quad   0x6b6c6d2f4e735543
-        .quad   0x6372756f732d6d65
-        .quad   0x74757074756f2f65
-        .quad   0x696c2f74756f2f73
-        .quad   0x0000000000000062
+        .quad   0x6e69622d65766974
+        .quad   0x312e32762d797261
+        .quad   0x2e656c676e69732d
+        .quad   0x5a796b445658635a
+        .quad   0x732d6d656b6c6d2f
+        .quad   0x756f2f656372756f
+        .quad   0x756f2f7374757074
+        .quad   0x00000062696c2f74
         .quad   0x000000000000aff8
         .quad   0x0000000100000007
-        .zero   2128
+        .zero   2136
 
 // The procedure linkage table (0x1000 to 0x1020)
 
