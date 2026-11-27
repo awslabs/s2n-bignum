@@ -1,6 +1,0 @@
-{
-  "arithmetic": {
-    "source": "lib/numbers.ml",
-    "children": {"parity": {"source": "lib/parity.ml"}}
-  }
-}

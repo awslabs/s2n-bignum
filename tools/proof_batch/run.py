@@ -9,13 +9,13 @@ from contextlib import contextmanager
 import os
 from pathlib import Path
 import signal
-import shutil
 import subprocess
 import sys
 import tempfile
 import time
 
-from runner import HOL_D, BuildError, build_batch, run, run_batch
+from compiler import BuildError, build_batch
+from runner import build_worker, run_batch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -28,36 +28,21 @@ def positive(value):
     return n
 
 
-def source_path(arch, name):
-    arch_root = ROOT / arch
-    path = Path(name)
-    if not path.is_absolute() and path.parts[0] == arch:
-        path = path.relative_to(arch)
-    path = (arch_root / path).resolve().relative_to(arch_root)
-    if not (arch_root / path).is_file():
-        raise ValueError(f"missing proof source: {arch}/{path}")
-    return path
-
-
-def select_targets(arch, make, requested):
-    """Resolve source names or Make targets to canonical .correct log paths."""
-    manifest = [Path(p) for p in subprocess.check_output([*make, "batch-targets"], text=True).splitlines()]
+def select_targets(make, requested):
+    """Return the requested Make targets, or all of them if none are given."""
+    manifest = subprocess.check_output([*make, "batch-targets"], text=True).splitlines()
     if not manifest or len(manifest) != len(set(manifest)):
         raise ValueError("empty or duplicate Make proof targets")
     if not requested:
-        return manifest
-    by_source = {proof_source(target): target for target in manifest}
+        return [Path(t) for t in manifest]
     selected = []
     for target in requested:
-        if target.endswith(".ml"):
-            name = by_source.get(source_path(arch, target))
-        else:
-            name = Path(target.removesuffix(".correct") + ".correct")
+        name = target.removesuffix(".correct") + ".correct"
         if name not in manifest:
             raise ValueError(f"unknown target {target!r}; use an architecture-relative Make target")
-        if name in selected:
+        if Path(name) in selected:
             raise ValueError(f"duplicate target {target!r}")
-        selected.append(name)
+        selected.append(Path(name))
     return selected
 
 
@@ -65,18 +50,6 @@ def proof_source(target):
     if target.parts[0] in ("proofs", "tutorial"):
         return target.with_suffix(".ml")
     return Path("proofs") / target.with_suffix(".ml").name
-
-
-def module_sources(arch, make, requested):
-    """Accept Make targets or proof source paths, including new .ml files."""
-    names = [name for name in requested if not name.endswith(".ml")]
-    targets = dict(zip(names, select_targets(arch, make, names))) if names else {}
-    sources = []
-    for name in requested:
-        path = proof_source(targets[name]) if name in targets else source_path(arch, name)
-        if path != Path("proofs/base.ml"):
-            sources.append(path)
-    return sources
 
 
 @contextmanager
@@ -103,29 +76,9 @@ def check(args):
     out = args.output.resolve() if args.output else None
     os.chdir(ROOT)
     make = ["make", "-s", "--no-print-directory", "-C", args.arch]
+    targets = select_targets(make, args.targets)
+    sources = [str(proof_source(t)) for t in targets]
     jobs = args.build_jobs or args.jobs
-    inputs = [*make, "-j", str(jobs), "batch-inputs"]
-    if args.modules:
-        sources = module_sources(args.arch, make, args.targets)
-        subprocess.run(inputs, check=True)
-        if out:
-            out.mkdir(parents=True)
-        else:
-            out = Path(tempfile.mkdtemp(prefix=f"{args.arch}-modules-"))
-        try:
-            plan = build_batch(args.arch, sources, out, holdir, jobs, sessions=args.session)
-            plan.write(out / "plan.json")
-        except BaseException:
-            shutil.rmtree(out)
-            raise
-        for path in plan.layers.values():
-            print(out / path)
-        for module in plan.proofs.values():
-            print(out / module.path)
-        print(out / "plan.json")
-        return 0
-    targets = select_targets(args.arch, make, args.targets)
-    sources = [proof_source(t) for t in targets]
     if out:
         out.mkdir(parents=True)  # Each invocation owns a fresh directory.
     else:
@@ -134,21 +87,19 @@ def check(args):
     # Keep the shared base and its plugins together for exactly this invocation.
     with tempfile.TemporaryDirectory(prefix="proof-build-") as scratch:
         with phase("build"):
-            subprocess.run(inputs, check=True)
+            subprocess.run([*make, "-j", str(jobs), "batch-inputs"], check=True)
             build_dir = Path(scratch)
-            plan = build_batch(args.arch, sources, build_dir, holdir, jobs,
-                               names=[str(t.with_suffix("")) for t in targets])
-            run("hol-d", ["make", "-C", build_dir, "-f", HOL_D / "Makefile", f"HOLDIR={holdir}"])
-            plan.write(out / "plan.json")
-            artifacts = list(plan.proofs.values())
-            shared = sum(a.parent != "/" for a in artifacts)
-            print(f"Built {shared} shared-base and {len(targets) - shared} bare-root proof modules.", flush=True)
+            artifacts = build_batch(args.arch, sources, build_dir, holdir, jobs,
+                                    names=[str(t.with_suffix("")) for t in targets])
+            shared = sum(a.suffix == ".cmxs" for a in artifacts)
+            worker = build_worker(build_dir, holdir)
+            print(f"Built {shared} shared proofs and {len(targets) - shared} standalone proofs.", flush=True)
             for target, artifact in zip(targets, artifacts):
-                if artifact.parent == "/":
-                    print(f"Bare HOL root: {target}", flush=True)
+                if artifact.suffix == ".native":
+                    print(f"Standalone: {target}", flush=True)
         with phase("proof"):
             tasks = [(a, out / args.arch / t) for a, t in zip(artifacts, targets)]
-            if not run_batch(build_dir, plan.layers, tasks, args.jobs, out / "base.log"):
+            if not run_batch(worker, tasks, args.jobs, out / "base.log"):
                 return 1
             if not args.targets:
                 subprocess.run(["tools/count-proofs.sh", args.arch, out / args.arch], check=True)
@@ -160,20 +111,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("arch", choices=("arm", "x86"))
     parser.add_argument("targets", nargs="*",
-                        help="Make target or source such as generic/word_min or proofs/word_min.ml (default: all, "
+                        help="Make target such as generic/word_min[.correct] (default: all, "
                              "including tutorials, followed by the theorem inventory check)")
     parser.add_argument("-j", "--jobs", type=positive, default=2, help="concurrent proofs (default 2)")
     parser.add_argument("--build-jobs", type=positive, help="concurrent compilations (defaults to --jobs)")
     parser.add_argument("--holdir", type=Path, default=Path(os.environ.get("HOLDIR", "~/hol-light")).expanduser())
-    parser.add_argument("--modules", action="store_true",
-                        help="build loadable modules only (accepts .ml sources; defaults to the architecture base)")
-    parser.add_argument("--session", action="append", default=[],
-                        help="also build this named session and its ancestors with --modules (repeatable)")
-    parser.add_argument("--output", type=Path, help="new directory for logs or modules (default: temporary directory)")
+    parser.add_argument("--output", type=Path, help="new directory for logs (default: temporary directory)")
     args = parser.parse_intermixed_args()
-    if args.session and not args.modules:
-        parser.error("--session requires --modules")
-    # Unwind the batch and stop its private daemon if Make or CI cancels it.
+    # Turn SIGTERM and SIGHUP into exceptions, so runner.run_worker kills the worker group.
     for sig in (signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, lambda signum, _: sys.exit(128 + signum))
     try:
