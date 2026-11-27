@@ -281,19 +281,26 @@ functions that expand the matrix A, the `_IMAGE_SUBROUTINE_FIPS203` and
 
 ## Source of the code
 
-The code is transcribed from the disassembly of the pre-built binaries in
-the `binary` branch of mlkem-native (commit `f6988e31`). These were built
-from mlkem-native commit `3979073e` by its `scripts/build-binaries`, as
-recorded in `binaries/builds.json` there. All six binaries are in that
-commit of the `binary` branch, built with the same script from the same
-source commit. We use the
-"multilevel" builds (`examples/multilevel_build`), compiled with `CFLAGS`
-set to `-O<level> -g -gdwarf-4 -gsplit-dwarf -fPIC`. The file
+The code is transcribed from the disassembly of the pre-built AArch64
+binaries in `binaries/aarch64` of the `binary-v2.1` branch of
+mlkem-native (commit `ce25e8a8d`, "binaries: Build the ML-KEM v2.1.0
+matrices"). These were built from the v2.1.0 release of mlkem-native
+(commit `4d69d6b03`) by its `scripts/build-binaries`, as recorded in
+`binaries/builds.json` there. All six binaries are in that commit of the
+branch, built with the same script from the same source commit. Their
+code and read-only data are byte for byte those of the binaries of
+commit `f6988e31` of the `binary` branch, built from commit `3979073e`
+shortly before the release: v2.1.0 changes the C sources only in
+comments, and its other changes are to the native backends, which these
+builds do not use. Only the build directory, which the linker records as
+`RUNPATH` in the dynamic string table of each image, differs. We use the
+"multilevel" builds (`examples/multilevel_build`), compiled with
+`CFLAGS` set to `-O<level> -g -gdwarf-4 -gsplit-dwarf -fPIC`. The file
 `<compiler>_<level>/<function>.S`, with the symbol
 `mlkem_native_<function>_<compiler>_<level>`, contains the code of the
 function `mlkem_<function>` in the binary
-`binaries/multilevel/<compiler>/<level>/libmlkem.so`, except that the
-`basemul_k2`, `basemul_k3` and `basemul_k4` files are for
+`binaries/aarch64/multilevel/<compiler>/<level>/libmlkem.so`, except
+that the `basemul_k2`, `basemul_k3` and `basemul_k4` files are for
 `mlkem512_polyvec_basemul_acc_montgomery_cached`,
 `mlkem768_polyvec_basemul_acc_montgomery_cached` and
 `mlkem1024_polyvec_basemul_acc_montgomery_cached` respectively, and the
@@ -343,18 +350,18 @@ The SHA-256 hashes of the binaries used, which match those recorded in
 `binaries/builds.json`, are:
 
 ```
-binaries/multilevel/clang17/O2/libmlkem.so
-  86aa349a9199f2c6a6b9c3910bade867974d4e5b767269423186c514c4472082
-binaries/multilevel/clang17/O3/libmlkem.so
-  c7ae93a088a992ae6c8887c99d0bb9dcac06ae7b66cd7316c07c1f6b45205a02
-binaries/multilevel/gcc12/O2/libmlkem.so
-  c926029cccbe71c97b0e2339e959ceb3473507c820f39fb62eed16a05751be10
-binaries/multilevel/gcc12/O3/libmlkem.so
-  34e148dbc5318e8b46579ebb647416884b106f33855b2c0b2ece7f4368ffc9fa
-binaries/multilevel/gcc12/Os/libmlkem.so
-  92813b241fb6b2a5847773221dda8f858ea89cae7b912292fab7e00e09c1bbf8
-binaries/multilevel-mono/gcc12/O2/libmlkem.so
-  9bc12b37fe915c89b1b6fe76aa619130fa755b1bac8daeb1af8cee442065cc5e
+binaries/aarch64/multilevel/clang17/O2/libmlkem.so
+  fae3cc937a9362a6d79e9471c0e40d3bb78fc684232895313ac05cd11fe066f6
+binaries/aarch64/multilevel/clang17/O3/libmlkem.so
+  f4d751e60aedc63608866f04b1bc10c8e83ebb0c2909173e6ab2c97830ce30a7
+binaries/aarch64/multilevel/gcc12/O2/libmlkem.so
+  0445068f22c0315c2659efca702719c97d9acc67bcf7627ce531c13d9db18143
+binaries/aarch64/multilevel/gcc12/O3/libmlkem.so
+  2f42e5926c08984e2f1dafd4184a6001d4dfc0eb027a89cee684464f59c41244
+binaries/aarch64/multilevel/gcc12/Os/libmlkem.so
+  118cef71ac3d5b0ccd9d3d0edc6e7ded072d5cf9fab3f3c1b37d61719e26139c
+binaries/aarch64/multilevel-mono/gcc12/O2/libmlkem.so
+  baaeb9de1cb8f45d2c9aee3c127993b31af706356df499b29648fe8fe3515196
 ```
 
 ## Checking a transcription
@@ -368,7 +375,7 @@ make mlkem_native/gcc12_O2/poly_reduce.o
 python3 mlkem_native/check_transcription.py \
   mlkem_native/gcc12_O2/poly_reduce.o \
   mlkem_native_poly_reduce_gcc12_O2 \
-  <mlkem-native>/binaries/multilevel/gcc12/O2/libmlkem.so \
+  <mlkem-native>/binaries/aarch64/multilevel/gcc12/O2/libmlkem.so \
   mlkem_poly_reduce
 ```
 
@@ -403,7 +410,7 @@ symbol is given as `-` and the binary symbol as the address 0x0:
 make mlkem_native/gcc12_O2/libmlkem.o
 python3 mlkem_native/check_transcription.py \
   mlkem_native/gcc12_O2/libmlkem.o - \
-  <mlkem-native>/binaries/multilevel/gcc12/O2/libmlkem.so 0x0
+  <mlkem-native>/binaries/aarch64/multilevel/gcc12/O2/libmlkem.so 0x0
 ```
 
 `gen_libmlkem_s.py BINARY SYMBOL TITLE BINPATH INCLUDE_DIR > libmlkem.S`
@@ -451,8 +458,8 @@ toolchain on a host that is not AArch64). For example, in the `arm`
 directory:
 
 ```
-python3 mlkem_native/gen_layout.py --name multilevel/gcc12/O2/libmlkem.so \
-  <mlkem-native>/binaries/multilevel/gcc12/O2/libmlkem.so \
+python3 mlkem_native/gen_layout.py --name aarch64/multilevel/gcc12/O2/libmlkem.so \
+  <mlkem-native>/binaries/aarch64/multilevel/gcc12/O2/libmlkem.so \
   > proofs/mlkem_native/gcc12_O2/layout.ml
 ```
 

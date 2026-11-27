@@ -6,15 +6,15 @@
 // The code and read-only data of mlkem-native's libmlkem.so (clang 17, -O3)
 //
 // This is a transcription of the binary
-// binaries/multilevel/clang17/O3/libmlkem.so from the binary branch of
-// mlkem-native (see README.md), as loaded at an address that is a multiple
-// of 4096: the start of its first segment, from address 0 up to the end of
-// the read-only data. The ELF header and dynamic linking information at the
-// start are given as data, as are the padding and the read-only data at the
-// end, while the procedure linkage table and the code are given as
-// instructions. The ADRP instructions, which compute addresses of pages
-// relative to that of the instruction, are given as words. The labels are
-// named after the addresses in the binary.
+// binaries/aarch64/multilevel/clang17/O3/libmlkem.so from the binary branch
+// of mlkem-native (see README.md), as loaded at an address that is a
+// multiple of 4096: the start of its first segment, from address 0 up to
+// the end of the read-only data. The ELF header and dynamic linking
+// information at the start are given as data, as are the padding and the
+// read-only data at the end, while the procedure linkage table and the code
+// are given as instructions. The ADRP instructions, which compute addresses
+// of pages relative to that of the instruction, are given as words. The
+// labels are named after the addresses in the binary.
 // ----------------------------------------------------------------------------
 
 #include "_internal_s2n_bignum_arm.h"
@@ -33,7 +33,7 @@ S2N_BN_SYMBOL(mlkem_native_libmlkem_clang17_O3):
         .quad   0x0000000100b70003
         .quad   0x0000000000000000
         .quad   0x0000000000000040
-        .quad   0x000000000003f0a0
+        .quad   0x000000000003f208
         .quad   0x0038004000000000
         .quad   0x0018001900400005
         .quad   0x0000000500000001
@@ -258,14 +258,15 @@ S2N_BN_SYMBOL(mlkem_native_libmlkem_clang17_O3):
         .quad   0x36376d656b6c6d00
         .quad   0x696c006365645f38
         .quad   0x732e6d656b6c6d62
-        .quad   0x6d2f706d742f006f
-        .quad   0x69616d2d6d656b6c
-        .quad   0x6972616e69622d6e
-        .quad   0x52353174382e7365
-        .quad   0x72756f732f584167
-        .quad   0x757074756f2f6563
-        .quad   0x6c2f74756f2f7374
-        .quad   0x0000000000006269
+        .quad   0x622f706d742f006f
+        .quad   0x32762d7972616e69
+        .quad   0x69756265722d312e
+        .quad   0x37446d76492e646c
+        .quad   0x2d6d656b6c6d2f45
+        .quad   0x762d65766974616e
+        .quad   0x756f2f302e312e32
+        .quad   0x756f2f7374757074
+        .quad   0x00000062696c2f74
         .quad   0x000000000002fff8
         .quad   0x0000000200000401
         .quad   0x0000000000000000
@@ -280,7 +281,6 @@ S2N_BN_SYMBOL(mlkem_native_libmlkem_clang17_O3):
         .quad   0x0000000000000000
         .quad   0x000000000002ffe8
         .quad   0x0000000600000402
-        .quad   0x0000000000000000
         .quad   0x0000000000000000
 
 // The procedure linkage table and the code (0x7f0 to 0xf180)

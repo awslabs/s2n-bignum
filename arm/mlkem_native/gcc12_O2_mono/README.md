@@ -2,17 +2,18 @@
 
 This directory is for mlkem-native's `libmlkem.so` built with gcc 12 and
 `-O2` as one translation unit:
-`binaries/multilevel-mono/gcc12/O2/libmlkem.so` in the `binary` branch of
-mlkem-native, compiled from
-`examples/monolithic_build_multilevel/mlkem_native_all.c`, which includes
-all of mlkem-native for the three parameter sets (see
+`binaries/aarch64/multilevel-mono/gcc12/O2/libmlkem.so` in the
+`binary-v2.1` branch of mlkem-native, compiled from
+`examples/monolithic_build_multilevel/mlkem_native_all.c`, which
+includes all of mlkem-native for the three parameter sets (see
 `binaries/builds.json` there). The gcc12_O2 build is the same source and
 compiler, but compiles each source file separately.
 
-The binary is the one in commit `f6988e31` of the `binary` branch, built
-from mlkem-native commit `3979073e`, with SHA-256
-`9bc12b37fe915c89b1b6fe76aa619130fa755b1bac8daeb1af8cee442065cc5e`
-(see "Source of the code" in `../README.md`).
+The binary is the one in commit `ce25e8a8d` of the `binary-v2.1` branch,
+built from the v2.1.0 release of mlkem-native (commit `4d69d6b03`), with
+SHA-256
+`baaeb9de1cb8f45d2c9aee3c127993b31af706356df499b29648fe8fe3515196` (see
+"Source of the code" in `../README.md`).
 
 `libmlkem.S` transcribes the image, from address 0 to the end of the
 read-only data at `libmlkem_size` = 0x5f00, and is the same as the binary
