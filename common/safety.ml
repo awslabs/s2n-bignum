@@ -339,20 +339,16 @@ let ASSUME_CALLEE_SAFETY_TAC =
   |- exists f_events. forall e x y ... . P e,
   split e into e_tail and e, and push e_tail into the innermost place.
   |- exists f_events. forall e x y ... e_tail. P (APPEND e_tail e)
+  This is by specialization and generalization (proving the equivalence of
+  the two forms by MESON took seconds for contracts with many variables).
 *)
-let ASSUME_CALLEE_SAFETY_TAILED_TAC =
-  let append_lemma = MESON[SAFETY_APPEND_EXISTS]
-    `(forall (e:((A)address_uarch_event)list). P e) <=>
-      (forall e_tail e. P (APPEND e_tail e))` in
-  fun (safety_th:thm) (name:string) ->
-    let safety_th' = ONCE_REWRITE_RULE[append_lemma] safety_th in
-    (* push e_tail to the innermost location *)
-    let exarg,body = dest_exists (concl safety_th') in
-    let args,body = strip_forall body in
-    let args_rotated = (tl args) @ [hd args] in
-    let eqth = MESON[](mk_eq(
-        concl safety_th',
-        mk_exists(exarg,list_mk_forall(args_rotated,body))))
-      in
-    let safety_th'' = ONCE_REWRITE_RULE[eqth] safety_th' in
-    ASSUME_CALLEE_SAFETY_TAC safety_th'' name;;
+let ASSUME_CALLEE_SAFETY_TAILED_TAC (safety_th:thm) (name:string) =
+  let f,body = dest_exists (concl safety_th) in
+  let vs = fst (strip_forall body) in
+  let e = hd vs and xs = tl vs in
+  let e_tail =
+    variant (vs @ thm_frees safety_th) (mk_var("e_tail",type_of e)) in
+  let th = GENL (e::xs @ [e_tail])
+    (SPECL (list_mk_icomb "APPEND" [e_tail; e] :: xs) (ASSUME body)) in
+  ASSUME_CALLEE_SAFETY_TAC
+    (CHOOSE (f,safety_th) (EXISTS (mk_exists(f,concl th),f) th)) name;;
