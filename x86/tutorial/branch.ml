@@ -118,3 +118,23 @@ let branch_SPEC = prove(
     (* Let ARITH_TAC deal with reasoning on relational equations. *)
     ARITH_TAC;
   ]);;
+
+(* RIP is already at pc + 2 when JZ executes. With a zero displacement,
+   both outcomes reach that address and the event records ZF. *)
+let branch_next_mc = define_word_list "branch_next_mc"
+ `[word 0x74; word 0x00]:byte list`;;
+
+let BRANCH_NEXT_EXEC = X86_MK_EXEC_RULE branch_next_mc;;
+
+let BRANCH_NEXT_EVENT = prove
+ (`!pc z e.
+    ensures x86
+      (\s. bytes_loaded s (word pc) branch_next_mc /\
+           read RIP s = word pc /\ read ZF s = z /\ read events s = e)
+      (\s. read RIP s = word (pc + 2) /\
+           read events s =
+           CONS (EventJump (word (pc + 2),word (pc + 2),z)) e)
+      (MAYCHANGE [RIP] ,, MAYCHANGE [events])`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[fst BRANCH_NEXT_EXEC] THEN
+  ENSURES_INIT_TAC "s0" THEN X86_STEPS_TAC BRANCH_NEXT_EXEC [1] THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[COND_ID]);;

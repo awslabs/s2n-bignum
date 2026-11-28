@@ -255,7 +255,7 @@ let riscv_mulh = new_definition
       (word_mul (word_sx x:int64) (word_sx y:int64))
       (32,32):int32`;;
 
-(* Record the architectural address or target observed by constant-time
+(* Record memory accesses and branch outcomes observed by constant-time
    proofs. Each is a state relation (an `events := ...` update) so it composes
    with `,,` alongside the register/PC/memory update, as in the ARM and x86
    models. Arithmetic instructions do not add an event. *)
@@ -269,8 +269,8 @@ let riscv_event_store = new_definition
     events := CONS (EventStore (addr,sz)) (read events s)`;;
 
 let riscv_event_jump = new_definition
- `riscv_event_jump (src:int32) (dst:int32) s =
-    events := CONS (EventJump (src,dst)) (read events s)`;;
+ `riscv_event_jump (src:int32) (dst:int32) taken s =
+    events := CONS (EventJump (src,dst,taken)) (read events s)`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Instruction semantics.                                                    *)
@@ -355,13 +355,12 @@ let riscv_SW = define
 let riscv_BNE = define
  `riscv_BNE rs1 rs2 imm =
     \s:riscvstate.
-        let src = riscv_instruction_pc s in
-        let dst = if read rs1 s = read rs2 s
-                  then read PC s
-                  else riscv_branch_target imm s in
+        let src = riscv_instruction_pc s
+        and taken = ~(read rs1 s = read rs2 s) in
+        let dst = if taken then riscv_branch_target imm s else read PC s in
         (if aligned 4 dst then
            PC := dst ,,
-           riscv_event_jump src dst s
+           riscv_event_jump src dst taken s
          else ASSIGNS entirety) s`;;
 
 let riscv_JALR = define
@@ -373,5 +372,5 @@ let riscv_JALR = define
         (if aligned 4 dst then
            rd := link ,,
            PC := dst ,,
-           riscv_event_jump src dst s
+           riscv_event_jump src dst T s
          else ASSIGNS entirety) s`;;

@@ -260,7 +260,7 @@ let bignum_mux_4_subroutine_safe = time prove
   (* Leaves the following subgoal, which is derived from the 'exists e2. ...'
      clause in the postcondition:
       `exists e2.
-        CONS (EventJump (word (pc + 68),returnaddress))
+        CONS (EventJump (word (pc + 68),returnaddress,T))
           (APPEND (f_events_callee1 x y z pc) (APPEND [] e)) =
           APPEND e2 e /\
         e2 = f_events x y z pc returnaddress /\

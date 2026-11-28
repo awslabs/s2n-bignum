@@ -38,8 +38,9 @@ let address_uarch_event_INDUCT, address_uarch_event_RECURSION = define_type
     EventLoad (A word#num)
     // (address, byte length)
     | EventStore (A word#num)
-    // (src pc, destination pc)
-    | EventJump (A word#A word)
+    // (src pc, destination pc, branch taken). The condition is observable
+    // even when the target is the next instruction. Unconditional jumps use T.
+    | EventJump (A word#A word#bool)
 
     // Instructions in X86 that are not in the DOIT list
     // (Data Operand Independent Timing Instructions)
@@ -81,11 +82,11 @@ overload_interface
  ("EventStore",`EventStore:int64#num->(64)address_uarch_event`);;
 
 make_overloadable "EventJump"
- `:A word#A word->(A)address_uarch_event`;;
+ `:A word#A word#bool->(A)address_uarch_event`;;
 overload_interface
- ("EventJump",`EventJump:A word#A word->(A)address_uarch_event`);;
+ ("EventJump",`EventJump:A word#A word#bool->(A)address_uarch_event`);;
 overload_interface
- ("EventJump",`EventJump:int64#int64->(64)address_uarch_event`);;
+ ("EventJump",`EventJump:int64#int64#bool->(64)address_uarch_event`);;
 
 make_overloadable "EventX86PEXT"
  `:int64#int64#num->(A)address_uarch_event`;;

@@ -30,7 +30,8 @@ let BRANCH_CORRECT = prove
            read A2 s = (if a = b then word 1 else word 2) /\
            read events s =
            CONS (EventJump
-             (word pc,if a = b then word (pc + 4) else word (pc + 8))) e)
+             (word pc,(if a = b then word (pc + 4) else word (pc + 8)),
+              ~(a = b))) e)
       (MAYCHANGE [PC] ,, MAYCHANGE [A2; A3] ,, MAYCHANGE [events])`,
   REWRITE_TAC[fst BRANCH_EXEC] THEN
   REPEAT GEN_TAC THEN
@@ -38,8 +39,8 @@ let BRANCH_CORRECT = prove
   RISCV_STEPS_TAC BRANCH_EXEC [1] THEN
   FIRST_X_ASSUM MP_TAC THEN
   COND_CASES_TAC THEN DISCH_TAC THENL
-   [RISCV_STEPS_TAC BRANCH_EXEC (2--3);
-    RISCV_STEPS_TAC BRANCH_EXEC [2]] THEN
+   [RISCV_STEPS_TAC BRANCH_EXEC [2];
+    RISCV_STEPS_TAC BRANCH_EXEC (2--3)] THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[]);;
 
@@ -59,7 +60,7 @@ let JALR_EVENT_CORRECT = prove
            read events s = e)
       (\s. read PC s = returnaddress /\
            read events s =
-           CONS (EventJump (word pc,returnaddress)) e)
+           CONS (EventJump (word pc,returnaddress,T)) e)
       (MAYCHANGE [PC] ,, MAYCHANGE [events])`,
   REWRITE_TAC[fst JALR_EXEC] THEN
   REPEAT STRIP_TAC THEN
