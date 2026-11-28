@@ -10338,7 +10338,7 @@ let MLDSA_REJ_UNIFORM_ETA2_NOIBT_WINDOWS_SUBROUTINE_SAFE =
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     CONJ_TAC THENL
      [EXISTS_TAC
-       `CONS (EventJump (word (pc + 622),returnaddress))
+       `CONS (EventJump (word (pc + 622),returnaddress,T))
         (CONS (EventLoad (word_add stackpointer (word 80),8))
         (CONS (EventLoad (word_add stackpointer (word 72),8))
         (CONS (EventLoad (word_add stackpointer (word 64),8))

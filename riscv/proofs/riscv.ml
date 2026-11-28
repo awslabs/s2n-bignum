@@ -219,16 +219,27 @@ let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
    REWRITE_CONV
     [riscv_execute; riscv_ADD; riscv_ADDI; riscv_SUB; riscv_SLLI;
      riscv_SRAI; riscv_LUI; riscv_MUL; riscv_MULH; riscv_LW; riscv_SW;
-     riscv_BNE; riscv_JALR; riscv_addr;
-     riscv_instruction_pc; riscv_branch_target; riscv_mulh;
-     riscv_event_load; riscv_event_store; riscv_event_jump; SEQ] THENC
+     riscv_BNE; riscv_JALR;
+     riscv_SLL; riscv_SLT; riscv_SLTU; riscv_XOR; riscv_SRL; riscv_SRA;
+     riscv_OR; riscv_AND; riscv_SLTI; riscv_SLTIU; riscv_XORI; riscv_ORI;
+     riscv_ANDI; riscv_SRLI; riscv_AUIPC;
+     riscv_LB; riscv_LH; riscv_LBU; riscv_LHU; riscv_SB; riscv_SH;
+     riscv_BEQ; riscv_BLT; riscv_BGE; riscv_BLTU; riscv_BGEU; riscv_JAL;
+     riscv_MULHSU; riscv_MULHU; riscv_DIV; riscv_DIVU; riscv_REM; riscv_REMU;
+     riscv_FENCE; riscv_ECALL; riscv_EBREAK;
+     riscv_addr;
+     riscv_instruction_pc; riscv_branch_target; riscv_mulh; riscv_mulhsu;
+     riscv_mulhu;
+     riscv_event_load; riscv_event_store; riscv_event_jump;
+     riscv_event_div; SEQ] THENC
    REWRITE_CONV[LET_DEF; LET_END_DEF] THENC
    TOP_DEPTH_CONV BETA_CONV THENC
    ALIGNED_WORD_EXTENDED_CONV aligned_ths THENC
-   (* The guarded instruction bodies (LW/SW/BNE/JALR) hide a `,,` behind the
-      alignment `if`; once ALIGNED_WORD_EXTENDED_CONV has resolved the guard,
-      run SEQ again to collapse that composition before unfolding `assign`, as
-      ARM_CONV does. *)
+   (* The guarded instruction bodies (halfword and word accesses, branches,
+      and jumps) hide a `,,` behind the alignment `if`; once
+      ALIGNED_WORD_EXTENDED_CONV has resolved the guard, run SEQ again to
+      collapse that composition before unfolding `assign`, as ARM_CONV
+      does. *)
    REWRITE_CONV[SEQ] THENC
    GEN_REWRITE_CONV TOP_DEPTH_CONV [assign] THENC
    REWRITE_CONV[] THENC

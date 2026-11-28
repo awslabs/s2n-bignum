@@ -804,7 +804,7 @@ let arm_B = define
     \s. let pc = word_sub (read PC s) (word 4) in
         let pc_next = word_add pc (word_sx off) in
         (PC := pc_next ,,
-         events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+         events := CONS (EventJump (pc,pc_next,T)) (read events s)) s`;;
 
 let arm_BFM = define
  `arm_BFM Rd Rn immr imms =
@@ -881,7 +881,7 @@ let arm_BL = define
         let pc_next = word_add pc (word_sx off) in
         (X30 := pc_incr ,,
          PC := pc_next ,,
-         events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+         events := CONS (EventJump (pc,pc_next,T)) (read events s)) s`;;
 
 let arm_BL_ABSOLUTE = define
  `arm_BL_ABSOLUTE (target:64 word) =
@@ -889,7 +889,7 @@ let arm_BL_ABSOLUTE = define
         let pc = word_sub pc_incr (word 4) in
         (X30 := pc_incr ,,
          PC := target ,,
-         events := CONS (EventJump (pc,target)) (read events s)) s`;;
+         events := CONS (EventJump (pc,target,T)) (read events s)) s`;;
 
 (*** For conditional branches, including CBZ and CBNZ the offset is       ***)
 (*** encoded as a 19-bit word that's turned into a 21-bit word multiplied ***)
@@ -898,29 +898,32 @@ let arm_BL_ABSOLUTE = define
 let arm_Bcond = define
  `arm_Bcond cc (off:21 word) =
         \s. let pc = word_sub (read PC s) (word 4) in
-            let pc_next = if condition_semantics cc s
+            let taken = condition_semantics cc s in
+            let pc_next = if taken
                    then word_add pc (word_sx off)
                    else read PC s in
             (PC := pc_next ,,
-             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+             events := CONS (EventJump (pc,pc_next,taken)) (read events s)) s`;;
 
 let arm_CBNZ = define
  `arm_CBNZ Rt (off:21 word) =
         \s. let pc = word_sub (read PC s) (word 4) in
-            let pc_next = if ~(read Rt s = word 0)
+            let taken = ~(read Rt s = word 0) in
+            let pc_next = if taken
                    then word_add pc (word_sx off)
                    else read PC s in
             (PC := pc_next ,,
-             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+             events := CONS (EventJump (pc,pc_next,taken)) (read events s)) s`;;
 
 let arm_CBZ = define
  `arm_CBZ Rt (off:21 word)  =
         \s. let pc = word_sub (read PC s) (word 4) in
-            let pc_next = if read Rt s = word 0
+            let taken = (read Rt s = word 0) in
+            let pc_next = if taken
                    then word_add pc (word_sx off)
                    else read PC s in
             (PC := pc_next ,,
-             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+             events := CONS (EventJump (pc,pc_next,taken)) (read events s)) s`;;
 
 (*** TBZ/TBNZ test a single bit (bit n) of the operand register and branch ***)
 (*** to a PC-relative target. The offset is encoded as a signed 14-bit      ***)
@@ -930,20 +933,22 @@ let arm_CBZ = define
 let arm_TBNZ = define
  `arm_TBNZ Rt (n:num) (off:16 word) =
         \s. let pc = word_sub (read PC s) (word 4) in
-            let pc_next = if bit n (read Rt s)
+            let taken = bit n (read Rt s) in
+            let pc_next = if taken
                    then word_add pc (word_sx off)
                    else read PC s in
             (PC := pc_next ,,
-             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+             events := CONS (EventJump (pc,pc_next,taken)) (read events s)) s`;;
 
 let arm_TBZ = define
  `arm_TBZ Rt (n:num) (off:16 word) =
         \s. let pc = word_sub (read PC s) (word 4) in
-            let pc_next = if ~(bit n (read Rt s))
+            let taken = ~(bit n (read Rt s)) in
+            let pc_next = if taken
                    then word_add pc (word_sx off)
                    else read PC s in
             (PC := pc_next ,,
-             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+             events := CONS (EventJump (pc,pc_next,taken)) (read events s)) s`;;
 
 let arm_CCMN = define
  `arm_CCMN Rm Rn (nzcv:4 word) cc =
@@ -1397,7 +1402,7 @@ let arm_RET = define
     \s. let pc = word_sub (read PC s) (word 4) in
         let pc_next = read Rn s in
         (PC := pc_next ,,
-         events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+         events := CONS (EventJump (pc,pc_next,T)) (read events s)) s`;;
 
 let arm_REV = define
  `arm_REV Rd Rn =
@@ -3989,12 +3994,13 @@ let arm_SUBS_ALT = prove
 
 let arm_CBNZ_ALT = prove
  (`arm_CBNZ Rt (off:21 word) =
-        \s. let pc_next = if ~(val(read Rt s) = 0)
+        \s. let taken = ~(val(read Rt s) = 0) in
+            let pc_next = if taken
                    then word_add (word_sub (read PC s) (word 4)) (word_sx off)
                    else read PC s in
             (PC := pc_next ,,
              events := CONS (EventJump
-                (word_sub (read PC s) (word 4),pc_next))
+                (word_sub (read PC s) (word 4),pc_next,taken))
                 (read events s)) s`,
   REWRITE_TAC[VAL_EQ_0; arm_CBNZ] THEN
   CONV_TAC (DEPTH_CONV let_CONV) THEN
@@ -4002,12 +4008,13 @@ let arm_CBNZ_ALT = prove
 
 let arm_CBZ_ALT = prove
  (`arm_CBZ Rt (off:21 word) =
-        \s. let pc_next = if val(read Rt s) = 0
+        \s. let taken = (val(read Rt s) = 0) in
+            let pc_next = if taken
                    then word_add (word_sub (read PC s) (word 4)) (word_sx off)
                    else read PC s in
             (PC := pc_next ,,
              events := CONS (EventJump
-                (word_sub (read PC s) (word 4),pc_next))
+                (word_sub (read PC s) (word 4),pc_next,taken))
                 (read events s)) s`,
   REWRITE_TAC[VAL_EQ_0; arm_CBZ] THEN
   CONV_TAC (DEPTH_CONV let_CONV) THEN
@@ -4015,12 +4022,13 @@ let arm_CBZ_ALT = prove
 
 let arm_TBNZ_ALT = prove
  (`arm_TBNZ Rt (n:num) (off:16 word) =
-        \s. let pc_next = if bit n (read Rt s)
+        \s. let taken = bit n (read Rt s) in
+            let pc_next = if taken
                    then word_add (word_sub (read PC s) (word 4)) (word_sx off)
                    else read PC s in
             (PC := pc_next ,,
              events := CONS (EventJump
-                (word_sub (read PC s) (word 4),pc_next))
+                (word_sub (read PC s) (word 4),pc_next,taken))
                 (read events s)) s`,
   REWRITE_TAC[arm_TBNZ] THEN
   CONV_TAC (DEPTH_CONV let_CONV) THEN
@@ -4028,12 +4036,13 @@ let arm_TBNZ_ALT = prove
 
 let arm_TBZ_ALT = prove
  (`arm_TBZ Rt (n:num) (off:16 word) =
-        \s. let pc_next = if ~(bit n (read Rt s))
+        \s. let taken = ~(bit n (read Rt s)) in
+            let pc_next = if taken
                    then word_add (word_sub (read PC s) (word 4)) (word_sx off)
                    else read PC s in
             (PC := pc_next ,,
              events := CONS (EventJump
-                (word_sub (read PC s) (word 4),pc_next))
+                (word_sub (read PC s) (word 4),pc_next,taken))
                 (read events s)) s`,
   REWRITE_TAC[arm_TBZ] THEN
   CONV_TAC (DEPTH_CONV let_CONV) THEN

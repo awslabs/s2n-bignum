@@ -1534,7 +1534,7 @@ let x86_PXOR = new_definition
 
 let x86_CALL = new_definition
  `x86_CALL target s =
-    (events := CONS (EventJump (read RIP s, target)) (read events s) ,,
+    (events := CONS (EventJump (read RIP s, target, T)) (read events s) ,,
      x86_PUSH RIP ,,
      RIP := target) s`;;
 
@@ -1546,7 +1546,7 @@ let x86_RET = new_definition
         let p = read RSP s in
         let p' = word_add p (word 8)
         and ip' = read (memory :> bytes64 p) s in
-        (events := CONS (EventJump (read RIP s, ip'))
+        (events := CONS (EventJump (read RIP s, ip', T))
             (CONS (EventLoad (p,8)) (read events s)) ,,
          RSP := p' ,, RIP := ip') s`;;
 
@@ -3400,19 +3400,11 @@ let x86_execute = define
          | 16 -> x86_INC (OPERAND16 dest s)
          | 8 -> x86_INC (OPERAND8 dest s)) s)) s
     | JUMP cc off ->
-        (events := CONS
-          (EventJump
-            (read RIP s,
-              (if condition_semantics cc s
-               then word_add (read RIP s)
-                             (read (OPERAND64 off s) s)
-               else read RIP s)))
-          (read events s) ,,
-         RIP :=
-           if condition_semantics cc s
-           then word_add (read RIP s)
-                         (read (OPERAND64 off s) s)
-           else read RIP s) s
+        let ip = read RIP s and taken = condition_semantics cc s in
+        let ip' = if taken then word_add ip (read (OPERAND64 off s) s)
+                  else ip in
+        (events := CONS (EventJump (ip, ip', taken)) (read events s) ,,
+         RIP := ip') s
     | LEA dest bsid ->
         (add_store_event dest s ,,
         (\s. (match operand_size dest with
@@ -5505,7 +5497,7 @@ let x86_CALL_ALT = prove
         and x = read RIP s
         and e0 = read events s in
         let p' = word_sub p (word 8) in
-        (events := CONS (EventStore (p', 8)) (CONS (EventJump (x, target)) e0) ,,
+        (events := CONS (EventStore (p', 8)) (CONS (EventJump (x, target, T)) e0) ,,
          RSP := p' ,,
          memory :> bytes64 p' := x ,,
          RIP := target) s`,
