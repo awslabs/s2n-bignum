@@ -7651,11 +7651,11 @@ let wrapper_witness_template =
    (ivec_p:int64) (len_bits:int64) (pc:num) (sp:int64) (ra:int64).
      if val len_bits MOD 128 = 0 then
        if val len_bits = 0 then
-         [EventJump (word (pc + 3736),ra);
-          EventJump (word pc,word (pc + 3732))]
+         [EventJump (word (pc + 3736),ra,T);
+          EventJump (word pc,word (pc + 3732),T)]
        else
          APPEND
-           [EventJump (word (pc + 3728),ra); EventLoad (sp,16);
+           [EventJump (word (pc + 3728),ra,T); EventLoad (sp,16);
             EventLoad (word_add sp (word 48),16);
             EventLoad (word_add sp (word 32),16);
             EventLoad (word_add sp (word 16),16)]
@@ -7665,12 +7665,12 @@ let wrapper_witness_template =
              [EventStore (word_add sp (word 48),16);
               EventStore (word_add sp (word 32),16);
               EventStore (word_add sp (word 16),16); EventStore (sp,16);
-              EventJump (word (pc + 8),word (pc + 12));
-              EventJump (word pc,word (pc + 4))])
+              EventJump (word (pc + 8),word (pc + 12),F);
+              EventJump (word pc,word (pc + 4),F)])
      else
-       [EventJump (word (pc + 3736),ra);
-        EventJump (word (pc + 8),word (pc + 3732));
-        EventJump (word pc,word (pc + 4))]:(uarch_event)list`;;
+       [EventJump (word (pc + 3736),ra,T);
+        EventJump (word (pc + 8),word (pc + 3732),T);
+        EventJump (word pc,word (pc + 4),F)]:(uarch_event)list`;;
 
 let f_events_core_placeholder =
   find_term (fun t -> is_var t && name_of t = "f_events_core")

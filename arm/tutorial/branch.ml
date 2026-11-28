@@ -117,3 +117,21 @@ let branch_SPEC = prove(
     (* Let ARITH_TAC deal with reasoning on relational equations. *)
     ARITH_TAC;
   ]);;
+
+(* b.eq .+4 reaches the next instruction for either value of ZF. *)
+let branch_next_mc = define_word_list "branch_next_mc"
+ `[word 0x20; word 0x00; word 0x00; word 0x54]:byte list`;;
+
+let BRANCH_NEXT_EXEC = ARM_MK_EXEC_RULE branch_next_mc;;
+
+let BRANCH_NEXT_EVENT = prove
+ (`!pc z e.
+    ensures arm
+      (\s. aligned_bytes_loaded s (word pc) branch_next_mc /\
+           read PC s = word pc /\ read ZF s = z /\ read events s = e)
+      (\s. read PC s = word (pc + 4) /\
+           read events s = CONS (EventJump (word pc,word (pc + 4),z)) e)
+      (MAYCHANGE [PC] ,, MAYCHANGE [events])`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[fst BRANCH_NEXT_EXEC] THEN
+  ENSURES_INIT_TAC "s0" THEN ARM_STEPS_TAC BRANCH_NEXT_EXEC [1] THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[COND_ID]);;

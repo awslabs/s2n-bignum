@@ -1578,7 +1578,7 @@ let SCALAR_BODY_LEMMA = prove
                     GSYM INT_OF_NUM_EQ] THEN INT_ARITH_TAC;
         INT_ARITH_TAC]; ALL_TAC] THEN
     DISCARD_MATCHING_ASSUMPTIONS [`read RIP s47 = (if p then (a:int64) else b)`] THEN
-    DISCARD_MATCHING_ASSUMPTIONS [`read events s47 = CONS (EventJump (a, b)) c`] THEN
+    DISCARD_MATCHING_ASSUMPTIONS [`read events s47 = CONS (EventJump (a, b, taken)) c`] THEN
     X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC [48] THEN
     (* Convert the MOV store's bytes32 equation at s48 into a bytes(_,4)
        equation, which VSTEPS can propagate through s49 (ADD) and s50 (JMP). *)
@@ -1775,7 +1775,7 @@ let SCALAR_BODY_LEMMA = prove
           CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC INT_REDUCE_CONV;
           ALL_TAC] THEN
         DISCARD_MATCHING_ASSUMPTIONS [`read RIP s52 = (if p then (a:int64) else b)`] THEN
-        DISCARD_MATCHING_ASSUMPTIONS [`read events s52 = CONS (EventJump (a, b)) c`] THEN
+        DISCARD_MATCHING_ASSUMPTIONS [`read events s52 = CONS (EventJump (a, b, taken)) c`] THEN
         ENSURES_FINAL_STATE_TAC THEN
         REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
         REPEAT CONJ_TAC THEN
@@ -1853,7 +1853,7 @@ let SCALAR_BODY_LEMMA = prove
             CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC INT_REDUCE_CONV;
             ALL_TAC] THEN
           DISCARD_MATCHING_ASSUMPTIONS [`read RIP s52 = (if p then (a:int64) else b)`] THEN
-          DISCARD_MATCHING_ASSUMPTIONS [`read events s52 = CONS (EventJump (a, b)) c`] THEN
+          DISCARD_MATCHING_ASSUMPTIONS [`read events s52 = CONS (EventJump (a, b, taken)) c`] THEN
           ENSURES_FINAL_STATE_TAC THEN
           REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
           REPEAT CONJ_TAC THEN
@@ -1933,7 +1933,7 @@ let SCALAR_BODY_LEMMA = prove
             REWRITE_TAC[GSYM INT_OF_NUM_LE] THEN INT_ARITH_TAC;
             ALL_TAC] THEN
           DISCARD_MATCHING_ASSUMPTIONS [`read RIP s52 = (if p then (a:int64) else b)`] THEN
-          DISCARD_MATCHING_ASSUMPTIONS [`read events s52 = CONS (EventJump (a, b)) c`] THEN
+          DISCARD_MATCHING_ASSUMPTIONS [`read events s52 = CONS (EventJump (a, b, taken)) c`] THEN
           (* Abbreviate word_and sub-expression as `wa` to preserve r8val def *)
           (fun (asl,g) ->
             let rec findit = function
@@ -1991,7 +1991,7 @@ let SCALAR_BODY_LEMMA = prove
           DISCARD_MATCHING_ASSUMPTIONS
             [`read RIP s54 = (if p then (a:int64) else b)`] THEN
           DISCARD_MATCHING_ASSUMPTIONS
-            [`read events s54 = CONS (EventJump (a, b)) c`] THEN
+            [`read events s54 = CONS (EventJump (a, b, taken)) c`] THEN
           (* Pre-establish augmented memory invariant via MEMORY_CONJUNCT_CLOSURE *)
           SUBGOAL_THEN `val(word curlen:int64) = curlen`
             (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
@@ -2096,7 +2096,7 @@ let SCALAR_BODY_LEMMA = prove
         REWRITE_TAC[GSYM INT_OF_NUM_LE; GSYM INT_OF_NUM_EQ] THEN
         INT_ARITH_TAC]; ALL_TAC] THEN
     DISCARD_MATCHING_ASSUMPTIONS [`read RIP s47 = (if p then (a:int64) else b)`] THEN
-    DISCARD_MATCHING_ASSUMPTIONS [`read events s47 = CONS (EventJump (a, b)) c`] THEN
+    DISCARD_MATCHING_ASSUMPTIONS [`read events s47 = CONS (EventJump (a, b, taken)) c`] THEN
     SUBGOAL_THEN
       `REJ_SAMPLE(SUB_LIST(0, 8*N + i + 1) (inlist:(24 word)list)) =
        APPEND curlist (REJ_SAMPLE(SUB_LIST(8*N + i, 1) inlist))`
@@ -2201,7 +2201,7 @@ let SCALAR_BODY_LEMMA = prove
       DISCARD_MATCHING_ASSUMPTIONS
         [`read RIP s49 = (if p then (a:int64) else b)`] THEN
       DISCARD_MATCHING_ASSUMPTIONS
-        [`read events s49 = CONS (EventJump (a, b)) c`] THEN
+        [`read events s49 = CONS (EventJump (a, b, taken)) c`] THEN
       X86_STEPS_TAC MLDSA_REJ_UNIFORM_EXEC [50] THEN
       X86_STEPS_TAC MLDSA_REJ_UNIFORM_EXEC [51] THEN
       FIRST_ASSUM(DISJ_CASES_TAC o check (fun th -> is_disj (concl th))) THENL
@@ -2253,7 +2253,7 @@ let SCALAR_BODY_LEMMA = prove
         DISCARD_MATCHING_ASSUMPTIONS
           [`read RIP s51 = (if p then (a:int64) else b)`] THEN
         DISCARD_MATCHING_ASSUMPTIONS
-          [`read events s51 = CONS (EventJump (a, b)) c`] THEN
+          [`read events s51 = CONS (EventJump (a, b, taken)) c`] THEN
         ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
         CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
         REWRITE_TAC[APPEND_NIL] THEN ASM_REWRITE_TAC[] THEN
