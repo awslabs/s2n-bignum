@@ -46,8 +46,28 @@ let iclasses =
   "xx0100010xxxxxxxxxxxxxxxx0xxx0xx";
   "xx0100010xxxxxxxxxxxxxxxx0xx0xxx";
   "xx0100010xxxxxxxxxxxxxxxx0xxxxx0";
+  "xx0100010xxxxxxxxxxxxx0xxxxxxxx0"; (* e.g. add x16, x15, #2 *)
   "10010001000000001000001100110110"; (* unmatched case... *)
   "1001000100xxxxxxxxxxxx1110100010"; (* another: add x2, x29, #xxx *)
+  "xx0100010xxxxxxxxxxxxxx0xxxxxx0x"; (* e.g. add x25, x22, #32 *)
+  (*** ADD, SUB immediate: the remaining pairs of registers, that is,
+   *** every pair of a bit position of Rn and one of Rd that are both
+   *** forced to 0, so that no register is SP. ***)
+  "xx0100010xxxxxxxxxxxxxxxxx0xxx0x";
+  "xx0100010xxxxxxxxxxxxxxxxx0xx0xx";
+  "xx0100010xxxxxxxxxxxxxxxxx0x0xxx";
+  "xx0100010xxxxxxxxxxxxxxxxx00xxxx";
+  "xx0100010xxxxxxxxxxxxxxxx0x0xxxx";
+  "xx0100010xxxxxxxxxxxxxxx0xxxxxx0";
+  "xx0100010xxxxxxxxxxxxxxx0xxxxx0x";
+  "xx0100010xxxxxxxxxxxxxxx0xxx0xxx";
+  "xx0100010xxxxxxxxxxxxxxx0xx0xxxx";
+  "xx0100010xxxxxxxxxxxxxx0xxxxxxx0";
+  "xx0100010xxxxxxxxxxxxxx0xxxxx0xx";
+  "xx0100010xxxxxxxxxxxxxx0xxx0xxxx";
+  "xx0100010xxxxxxxxxxxxx0xxxxxxx0x";
+  "xx0100010xxxxxxxxxxxxx0xxxxxx0xx";
+  "xx0100010xxxxxxxxxxxxx0xxxxx0xxx";
   (*** Rd of ADDS/SUBS cannot be SP *)
   "xx1100010xxxxxxxxxxxxxxxxx0xxxxx";
   "xx1100010xxxxxxxxxxxxxxxx0xxxxxx";
@@ -78,6 +98,65 @@ let iclasses =
   "10001011001xxxxx010000xx0xxxx0xx"; (* uxtw *)
   "10001011001xxxxx010000x0xxxx0xxx"; (* uxtw *)
   "10001011001xxxxx0100000xxxx0xxxx"; (* uxtw *)
+  (*** ADD, ADDS, SUB, SUBS, extended registers. No SP registers ***)
+  "xxx01011001xxxxxxxx0xxxxxx0xxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxx0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx100xxxx0xxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxx0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxx0xxxx"; (* shift 4 *)
+  (*** ADD, SUB, extended registers: the remaining pairs of registers,
+   *** as for the immediate operand above. ***)
+  "xxx01011001xxxxxxxx0xxxxxx0xxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxxx0xx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxxx0x0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxxx00xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0xx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxxx0x0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xxx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxxx0xx0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxxxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xxx0xxx0xxxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxxxxx0"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxxxx0x"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxxx0xx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx0xx0xxxxx0xxx"; (* shift 0-3 *)
+  "xxx01011001xxxxxxxx100xxxx0xxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxxx0xx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxxx0x0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxxx00xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0xx0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xxx0x0xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xxx0xxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100xx0xx0xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxxxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx100x0xxx0xxxx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxxxxx0"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxxxx0x"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxxx0xx"; (* shift 4 *)
+  "xxx01011001xxxxxxxx1000xxxxx0xxx"; (* shift 4 *)
+  (*** CMP, CMN, extended registers: Rd is ZR, Rn is not SP ***)
+  "xx101011001xxxxxxxx0xxxxxx011111"; (* shift 0-3 *)
+  "xx101011001xxxxxxxx0xxxxx0x11111"; (* shift 0-3 *)
+  "xx101011001xxxxxxxx0xxxx0xx11111"; (* shift 0-3 *)
+  "xx101011001xxxxxxxx0xxx0xxx11111"; (* shift 0-3 *)
+  "xx101011001xxxxxxxx0xx0xxxx11111"; (* shift 0-3 *)
 
   (*** ADD, ADDS, SUB, SUBS, extended registers: both sizes, every extend
    *** option and the shifts 0-4 (5-7 are unallocated). A zero bit keeps Rn,
@@ -148,11 +227,24 @@ let iclasses =
   (*** LSLV, LSRV ***)
   "x0011010110xxxxx0010xxxxxxxxxxxx";
 
+  (*** UDIV ***)
+  "x0011010110xxxxx000010xxxxxxxxxx";
+
   (*** UBFM, SBFM ***)
   "xx0100110xxxxxxxxxxxxxxxxxxxxxxx";
 
   (*** CLZ ***)
   "x101101011000000000100xxxxxxxxxx";
+
+  (*** RBIT ***)
+  "x101101011000000000000xxxxxxxxxx";
+
+  (*** PRFM (immediate), PRFUM, PRFM (literal), all prefetch operations.
+   *** They have no architectural effect and do not fault, so they are
+   *** run with the random register values as base addresses. ***)
+  "1111100110xxxxxxxxxxxxxxxxxxxxxx";
+  "11111000100xxxxxxxxx00xxxxxxxxxx";
+  "11011000xxxxxxxxxxxxxxxxxxxxxxxx";
 
   (*** MADD, MSUB ***)
   "x0011011000xxxxxxxxxxxxxxxxxxxxx";
@@ -169,6 +261,9 @@ let iclasses =
   (*** UMADDL, UMSUBL ***)
   "10011011101xxxxxxxxxxxxxxxxxxxxx";
 
+  (*** SMADDL, SMSUBL ***)
+  "10011011001xxxxxxxxxxxxxxxxxxxxx";
+
   (****** NEON INSTRUCTIONS *****)
   (*** ADD ***)
   "0x001110xx1xxxxx100001xxxxxxxxxx";
@@ -182,8 +277,9 @@ let iclasses =
   (*** BIC (vector registers) ***)
   "0x001110011xxxxx000111xxxxxxxxxx";
 
-  (*** BIC (vector immediate, 8h) ***)
-  "0x10111100000xxx10x101xxxxxxxxxx"; (* 8h, cmode=10x1 *)
+  (*** BIC (vector immediate, 2s, 4s and 4h, 8h) ***)
+  "0x10111100000xxx0xx101xxxxxxxxxx"; (* 2s, 4s, cmode=0xx1 *)
+  "0x10111100000xxx10x101xxxxxxxxxx"; (* 4h, 8h, cmode=10x1 *)
 
   (*** BIT ***)
   "0x101110101xxxxx000111xxxxxxxxxx";
@@ -191,11 +287,20 @@ let iclasses =
   (*** BIF ***)
   "0x101110111xxxxx000111xxxxxxxxxx";
 
+  (*** BSL ***)
+  "0x101110011xxxxx000111xxxxxxxxxx";
+
   (*** CMGT, vector, register, signed ***)
   "0x001110xx1xxxxx001101xxxxxxxxxx";
 
   (*** CMHI, vector ***)
   "0x101110xx1xxxxx001101xxxxxxxxxx";
+
+  (*** CMHS, vector ***)
+  "0x101110xx1xxxxx001111xxxxxxxxxx";
+
+  (*** CMTST, vector ***)
+  "0x001110xx1xxxxx100011xxxxxxxxxx";
 
   (*** CMGE, vector ***)
   "0x001110xx1xxxxx001111xxxxxxxxxx";
@@ -232,8 +337,8 @@ let iclasses =
   "100111101010111x000000xxxxxxxxxx";
   "100111100110011x000000xxxxxxxxxx";
 
-  (*** FMOV to general, single ***)
-  "0001111000100110000000xxxxxxxxxx";
+  (*** FMOV to and from general, single ***)
+  "000111100010011x000000xxxxxxxxxx";
 
   (*** INS, or MOV (element) ***)
   "01101110000xxxx10xxxx1xxxxxxxxxx";
@@ -266,22 +371,22 @@ let iclasses =
   "0x001110xx1xxxxx100101xxxxxxxxxx";
 
   (*** MOVI ***)
-  "0110111100000xxx111001xxxxxxxxxx"; (* q=1, cmode=1110, 64-bit *)
-  "0x00111100000xxx000001xxxxxxxxxx"; (* 32-bit MOVI, immh=0 *)
-  "0100111100000xxx010001xxxxxxxxxx"; (* q=1, op=0, cmode=0100, LSL #16 *)
-  "0100111100000xxx110101xxxxxxxxxx"; (* q=1, op=0, cmode=1101, MSL #16 *)
+  "0x10111100000xxx111001xxxxxxxxxx"; (* op=1, cmode=1110, 64-bit *)
+  "0x00111100000xxx0xx001xxxxxxxxxx"; (* op=0, 32-bit shifted *)
+  "0x00111100000xxx10x001xxxxxxxxxx"; (* op=0, 16-bit shifted *)
+  "0x00111100000xxx110x01xxxxxxxxxx"; (* op=0, 32-bit shifting ones *)
+  "0x00111100000xxx111001xxxxxxxxxx"; (* op=0, cmode=1110, byte *)
 
-  (*** MOVI (op=0, cmode=1110, byte) ***)
-  "0x00111100000xxx111001xxxxxxxxxx";
-
-  (*** MOVI (op=0, cmode=1000, 16-bit, q=1 only) -- shares opcode with SHRN ***)
-  "0100111100000xxx100001xxxxxxxxxx";
-
-  (*** MOVI (op=0, cmode=1010, 16-bit shifted, q=1 only) -- shares opcode with SSHLL ***)
-  "0100111100000xxx101001xxxxxxxxxx";
+  (*** MVNI (32-bit shifted, 16-bit shifted, 32-bit shifting ones) ***)
+  "0x10111100000xxx0xx001xxxxxxxxxx";
+  "0x10111100000xxx10x001xxxxxxxxxx";
+  "0x10111100000xxx110x01xxxxxxxxxx";
 
   (*** ORR (vector, immediate, 32-bit) ***)
   "0x00111100000xxx000101xxxxxxxxxx"; (* 32-bit ORR imm, immh=0 *)
+
+  (*** ORR (vector, immediate, 16-bit, cmode=10x1) ***)
+  "0x00111100000xxx10x101xxxxxxxxxx";
 
   (*** MUL (by element; focus on defined sizes) ***)
   "0x00111101xxxxxx1000x0xxxxxxxxxx";
@@ -317,7 +422,7 @@ let iclasses =
   "1101101011000000000011xxxxxxxxxx";
 
   (*** REV64 ***)
-  "01001110xx100000000010xxxxxxxxxx";
+  "0x001110xx100000000010xxxxxxxxxx";
 
   (*** REV32 ***)
   "01101110xx100000000010xxxxxxxxxx";
@@ -339,6 +444,21 @@ let iclasses =
 
   (*** SSUBW2 ***)
   "01001110xx1xxxxx001100xxxxxxxxxx";
+
+  (*** ADDHN ***)
+  "00001110xx1xxxxx010000xxxxxxxxxx";
+
+  (*** ADDHN2 ***)
+  "01001110xx1xxxxx010000xxxxxxxxxx";
+
+  (*** ADDP (vector) ***)
+  "0x001110xx1xxxxx101111xxxxxxxxxx";
+
+  (*** RADDHN ***)
+  "00101110xx1xxxxx010000xxxxxxxxxx";
+
+  (*** RADDHN2 ***)
+  "01101110xx1xxxxx010000xxxxxxxxxx";
 
   (*** USUBL ***)
   "00101110xx1xxxxx001000xxxxxxxxxx";
@@ -490,6 +610,9 @@ let iclasses =
   (*** TBL3 (3-register table, len = 2) ***)
   "0x001110000xxxxx010000xxxxxxxxxx";
 
+  (*** TBL4 (4-register table, len = 3) ***)
+  "0x001110000xxxxx011000xxxxxxxxxx";
+
   (*** TRN1 and TRN2 ***)
   "0x001110xx0xxxxx0x1010xxxxxxxxxx";
 
@@ -514,9 +637,11 @@ let iclasses =
   (*** UMIN, vector ***)
   "0x101110xx1xxxxx011011xxxxxxxxxx";
 
-  (*** UMOV (.d, .s) ***)
+  (*** UMOV (.d, .s, .h, .b) ***)
   "01001110000x1000001111xxxxxxxxxx";
   "00001110000xx100001111xxxxxxxxxx";
+  "00001110000xxx10001111xxxxxxxxxx";
+  "00001110000xxxx1001111xxxxxxxxxx";
 
   (*** UMADDL, UMSUBL ***)
   "10011011101xxxxxxxxxxxxxxxxxxxxx";
@@ -548,6 +673,9 @@ let iclasses =
   "0x1011110001xxxx101001xxxxxxxxxx";
   "0x10111100001xxx101001xxxxxxxxxx";
 
+  (*** SHLL / SHLL2, including the reserved size 11 ***)
+  "0x101110xx100001001110xxxxxxxxxx";
+
   (*** SSHLL (make sure immh is nonzero) ***)
   "0x001111001xxxxx101001xxxxxxxxxx";
   "0x0011110001xxxx101001xxxxxxxxxx";
@@ -559,6 +687,12 @@ let iclasses =
   "0x1011110001xxxx000001xxxxxxxxxx";
   "0x10111100001xxx000001xxxxxxxxxx";
 
+  (*** URSHR (make sure immh is nonzero) ***)
+  "0x10111101xxxxxx001001xxxxxxxxxx";
+  "0x101111001xxxxx001001xxxxxxxxxx";
+  "0x1011110001xxxx001001xxxxxxxxxx";
+  "0x10111100001xxx001001xxxxxxxxxx";
+
   (*** USRA ***)
   "0110111101xxxxxx000101xxxxxxxxxx"; (* q=1 *)
   "01101111001xxxxx000101xxxxxxxxxx"; (* q=1 *)
@@ -568,11 +702,11 @@ let iclasses =
   "001011110001xxxx000101xxxxxxxxxx"; (* q=0 *)
   "0010111100001xxx000101xxxxxxxxxx"; (* q=0 *)
 
-  (*** UZP1 ***)
-  "01001110xx0xxxxx000110xxxxxxxxxx";
+  (*** UZP1, 64-bit and 128-bit ***)
+  "0x001110xx0xxxxx000110xxxxxxxxxx";
 
-  (*** UZP2 ***)
-  "01001110xx0xxxxx010110xxxxxxxxxx";
+  (*** UZP2, 64-bit and 128-bit ***)
+  "0x001110xx0xxxxx010110xxxxxxxxxx";
 
   (*** XTN (q=0, low half) ***)
   "00001110xx100001001010xxxxxxxxxx";
@@ -647,8 +781,8 @@ let check_insns () =
     "01010100xxxxxxxxxxxxxxxxxxx0xxxx";
 
     (*** cbz, cbnz ***)
-    "10110100xxxxxxxxxxxxxxxxxxxxxxxx";
-    "10110101xxxxxxxxxxxxxxxxxxxxxxxx";
+    "x0110100xxxxxxxxxxxxxxxxxxxxxxxx";
+    "x0110101xxxxxxxxxxxxxxxxxxxxxxxx";
 
     (*** tbz, tbnz ***)
     "x0110110xxxxxxxxxxxxxxxxxxxxxxxx";
@@ -679,6 +813,11 @@ let check_insns () =
     (*** ldr / str, shifted register, size 128 no extensions ***)
     "001111001x1xxxxx011x10xxxxxxxxxx";
 
+    (*** ldr / str, register (LSL, UXTW, SXTW, SXTX), sizes 64 and 32 ***)
+    (*** (SIMD & FP)                                                   ***)
+    "111111000x1xxxxxx1xx10xxxxxxxxxx";
+    "101111000x1xxxxxx1xx10xxxxxxxxxx";
+
     (*** ldrb (immediate ofs) ***)
     "00111000010xxxxxxxxx01xxxxxxxxxx";
     "00111000010xxxxxxxxx11xxxxxxxxxx";
@@ -686,6 +825,23 @@ let check_insns () =
 
     (*** ldrb / strb (shifted register, no shift S = 0) ***)
     "001110000x1xxxxxxxx010xxxxxxxxxx";
+
+    (*** ldrb / strb (LSL #0 written explicitly with S = 1, and SXTX) ***)
+    "001110000x1xxxxxx11110xxxxxxxxxx";
+
+    (*** ldrh / strh / ldrsh (SXTX register offset, optionally scaled) ***)
+    "01111000xx1xxxxx111x10xxxxxxxxxx";
+
+    (*** ldrsb (SXTX register offset) ***)
+    "001110001x1xxxxx111x10xxxxxxxxxx";
+
+    (*** ldrsw (immediate ofs, including unscaled) ***)
+    "10111000100xxxxxxxxx00xxxxxxxxxx";
+    "10111000100xxxxxxxxxx1xxxxxxxxxx";
+    "1011100110xxxxxxxxxxxxxxxxxxxxxx";
+
+    (*** ldrsw (register, including extended register) ***)
+    "10111000101xxxxxxxxx10xxxxxxxxxx";
 
     (*** ldrb / strb (UXTW/SXTW register offset) ***)
     "001110000x1xxxxxx10x10xxxxxxxxxx";
@@ -813,18 +969,52 @@ let check_insns () =
     (*** ld1 / st1 (single lane, .s) post-index ***)
     "0x0011011x0xxxxx100x00xxxxxxxxxx";
 
-    (*** ldur / stur (SIMD & FP), unscaled, sizes 64 and 32 ***)
+    (*** ldur / stur (SIMD & FP), unscaled, sizes 64, 32, 16 and 8 ***)
     "111111000x0xxxxxxxxx00xxxxxxxxxx";
     "101111000x0xxxxxxxxx00xxxxxxxxxx";
+    "011111000x0xxxxxxxxx00xxxxxxxxxx";
+    "001111000x0xxxxxxxxx00xxxxxxxxxx";
 
-    (*** ld1r (post immediate ofs) ***)
-    "0x001101110111111100xxxxxxxxxxxx";
+    (*** ld1 (single structure) of one lane: no offset, post-immediate and ***)
+    (*** post-register ofs, for bytes, halfwords and doublewords          ***)
+    "0x00110101000000000xxxxxxxxxxxxx";
+    "0x001101110xxxxx000xxxxxxxxxxxxx";
+    "0x00110101000000010xx0xxxxxxxxxx";
+    "0x001101110xxxxx010xx0xxxxxxxxxx";
+    "0x00110101000000100001xxxxxxxxxx";
+    "0x001101110xxxxx100001xxxxxxxxxx";
+
+    (*** st1 (single structure) of one lane, with the same addressing ***)
+    (*** modes and element sizes as ld1 of one lane above              ***)
+    "0x00110100000000000xxxxxxxxxxxxx";
+    "0x001101100xxxxx000xxxxxxxxxxxxx";
+    "0x00110100000000010xx0xxxxxxxxxx";
+    "0x001101100xxxxx010xx0xxxxxxxxxx";
+    "0x00110100000000100001xxxxxxxxxx";
+    "0x001101100xxxxx100001xxxxxxxxxx";
+
+    (*** ld1r (no offset, post-immediate and post-register ofs) ***)
+    "0x001101010000001100xxxxxxxxxxxx";
+    "0x001101110xxxxx1100xxxxxxxxxxxx";
 
     (*** ldur / stur, immediate, size 128 only ***)
     "001111001x0xxxxxxxxx00xxxxxxxxxx";
 
+    (*** ldur / stur for 32-bit and 64-bit values, and ldurb / sturb ***)
+    "1x1110000x0xxxxxxxxx00xxxxxxxxxx";
+    "001110000x0xxxxxxxxx00xxxxxxxxxx";
+
     (*** ld3 / st3, multiple structures, 3 reg, post-imm and register ***)
     "0x0011001x0xxxxx0100xxxxxxxxxxxx";
+
+    (*** ld3 / st3, multiple structures, 3 reg, no offset ***)
+    "0x0011000x0000000100xxxxxxxxxxxx";
+
+    (*** ld4 / st4, multiple structures, 4 reg, post-imm and register ***)
+    "0x0011001x0xxxxx0000xxxxxxxxxxxx";
+
+    (*** ld4 / st4, multiple structures, 4 reg, no offset ***)
+    "0x0011000x0000000000xxxxxxxxxxxx";
 
     (*** stp ***)
     "x010100010xxxxxxxxxxxxxxxxxxxxxx";
@@ -858,9 +1048,20 @@ let check_insns () =
     "xx0100010xxxxxxxxxxxxxxxxxx11111";
     "xx0100010xxxxxxxxxxxxx11111xxxxx";
     "11001011001xxxxxxxxxxx11111xxxxx";
+    "10001011001xxxxxxxxxxx11111xxxxx";
 
-    (*** ret ***)
+    (*** and, orr, eor (immediate) with SP as the destination: the      ***)
+    (*** simulation runs on the stack and cannot change SP, as for the  ***)
+    (*** add and sub with SP above. E.g. and sp, x9, #0xffffffffffffffe0 ***)
+    (*** which aligns the stack down to 32 bytes.                       ***)
+    "x00100100xxxxxxxxxxxxxxxxxx11111";
+    "x01100100xxxxxxxxxxxxxxxxxx11111";
+    "x10100100xxxxxxxxxxxxxxxxxx11111";
+
+    (*** ret, br, blr ***)
     "1101011001011111000000xxxxx00000";
+    "1101011000011111000000xxxxx00000";
+    "1101011000111111000000xxxxx00000";
 
     (*** bti c: the BTI landing pad at the head of an indirectly-called   ***)
     (*** subroutine.  A hint with no register or memory effect, so there  ***)

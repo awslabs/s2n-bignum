@@ -871,6 +871,18 @@ let arm_BIF = define
           let out':(64)word = word_subword out (0,64) in
           (Rd := word_zx out':(128)word) s`;;
 
+let arm_BSL = define
+ `arm_BSL Rd Rn Rm datasize =
+    \s. let m = read Rm s
+        and n = read Rn s
+        and d = read Rd s in
+        let out:(128)word = word_or (word_and n d) (word_and m (word_not d)) in
+        if datasize = 128 then
+          (Rd := out) s
+        else
+          let out':(64)word = word_subword out (0,64) in
+          (Rd := word_zx out':(128)word) s`;;
+
 (*** As with x86, we have relative and absolute versions of branch & link ***)
 (*** The absolute one gives a natural way of handling linker-insertions.  ***)
 
@@ -890,6 +902,19 @@ let arm_BL_ABSOLUTE = define
         (X30 := pc_incr ,,
          PC := target ,,
          events := CONS (EventJump (pc,target)) (read events s)) s`;;
+
+(*** BLR, branch with link to the address in a register. As in the Arm    ***)
+(*** ARM, the target is read before X30 is written, so BLR X30 branches to ***)
+(*** the old value of X30.                                                 ***)
+
+let arm_BLR = define
+ `arm_BLR Rn =
+    \s. let pc_incr = read PC s in
+        let pc = word_sub pc_incr (word 4) in
+        let pc_next = read Rn s in
+        (X30 := pc_incr ,,
+         PC := pc_next ,,
+         events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
 (*** For conditional branches, including CBZ and CBNZ the offset is       ***)
 (*** encoded as a 19-bit word that's turned into a 21-bit word multiplied ***)
@@ -991,6 +1016,54 @@ let arm_CMHI_VEC = define
             if esize = 32 then simd2 (masking word_ugt) n m
             else if esize = 16 then simd4 (masking word_ugt) n m
             else simd8 (masking word_ugt) n m in
+          (Rd := word_zx d:(128)word) s`;;
+
+let arm_CMHS_VEC = define
+ `arm_CMHS_VEC Rd Rn Rm esize datasize =
+    \s:armstate.
+        let n = read Rn s in
+        let m = read Rm s in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then simd2 (masking word_uge) n m
+            else if esize = 32 then simd4 (masking word_uge) n m
+            else if esize = 16 then simd8 (masking word_uge) n m
+            else simd16 (masking word_uge) n m in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          let d:(64)word =
+            if esize = 32 then simd2 (masking word_uge) n m
+            else if esize = 16 then simd4 (masking word_uge) n m
+            else simd8 (masking word_uge) n m in
+          (Rd := word_zx d:(128)word) s`;;
+
+(*** CMTST sets a lane to all ones if the lanes of Rn and Rm have a 1 bit ***)
+(*** in common, i.e. their AND is nonzero, and to zero otherwise.         ***)
+
+let word_tst = new_definition
+ `(word_tst:N word->N word->bool) x y = ~(word_and x y = word 0)`;;
+
+let arm_CMTST_VEC = define
+ `arm_CMTST_VEC Rd Rn Rm esize datasize =
+    \s:armstate.
+        let n = read Rn s in
+        let m = read Rm s in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then simd2 (masking word_tst) n m
+            else if esize = 32 then simd4 (masking word_tst) n m
+            else if esize = 16 then simd8 (masking word_tst) n m
+            else simd16 (masking word_tst) n m in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          let d:(64)word =
+            if esize = 32 then simd2 (masking word_tst) n m
+            else if esize = 16 then simd4 (masking word_tst) n m
+            else simd8 (masking word_tst) n m in
           (Rd := word_zx d:(128)word) s`;;
 
 let arm_CMGE_VEC = define
@@ -1302,8 +1375,8 @@ let arm_FMOV_FtoI = define
     `;;
 
 let arm_FMOV_ItoF = define
- `arm_FMOV_ItoF Rd Rn (part:num) =
-    \s. let fltval:(64)word = read Rn s in
+ `arm_FMOV_ItoF Rd (Rn:(armstate,N word)component) (part:num) =
+    \s. let fltval:N word = read Rn s in
         let d:(128)word = read Rd s in
         if part = 0
         then (Rd := word_zx fltval:(128)word) s
@@ -1365,6 +1438,23 @@ let arm_NOP = new_definition
 let arm_BTI = new_definition
   `arm_BTI = \s s':armstate. s = s'`;;
 
+(*** PRFM and PRFUM, prefetch of memory. In the Arm ARM, the execution of
+ *** these is only Prefetch(address, prfop), a hint which has no effect on
+ *** the architectural state: it writes no register (there is no writeback
+ *** form) and no memory, does not check the alignment of SP, and never
+ *** causes a synchronous abort, whatever the address. So it is modelled as
+ *** a no-op, and it emits no event: an EventLoad would make memory safety
+ *** require the prefetched address to be readable, which the architecture
+ *** does not, and compiled code does prefetch beyond the end of its
+ *** buffers. The prefetch can still change the cache, so a theorem of
+ *** constant time says nothing about the address of a prefetch in the
+ *** code. As for arm_BTI, it is its own constant so that decoded code
+ *** shows the prefetches.
+ ***)
+
+let arm_PRFM = new_definition
+  `arm_PRFM = \s s':armstate. s = s'`;;
+
 let arm_ORN = define
  `arm_ORN Rd Rm Rn =
     \s. let m = read Rm s
@@ -1399,6 +1489,22 @@ let arm_RET = define
         (PC := pc_next ,,
          events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
+(*** BR is the same as RET except for the hint to branch prediction ***)
+
+let arm_BR = define
+ `arm_BR Rn =
+    \s. let pc = word_sub (read PC s) (word 4) in
+        let pc_next = read Rn s in
+        (PC := pc_next ,,
+         events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+
+(*** RBIT: Rd := the bits of Rn in reverse order ***)
+
+let arm_RBIT = define
+ `arm_RBIT Rd Rn =
+    \s. let n:N word = read Rn s in
+        (Rd := word_reversefields 1 n) s`;;
+
 let arm_REV = define
  `arm_REV Rd Rn =
     \s. let n = read Rn s in
@@ -1406,20 +1512,23 @@ let arm_REV = define
         (Rd := d) s`;;
 
 let arm_REV64_VEC = define
- `arm_REV64_VEC Rd Rn esize =
+ `arm_REV64_VEC Rd Rn esize datasize =
     \s. let n:(128)word = read Rn (s:armstate) in
         let n_reversed32 = usimd2 (\x. word_join
           (word_subword x (0,32):(32)word) (word_subword x (32,32):(32)word)
           : (64)word) n in
-        if esize = 32 then (Rd := n_reversed32) s else
         let n_reversed16 = usimd4 (\x. word_join
           (word_subword x (0,16):(16)word) (word_subword x (16,16):(16)word)
           : (32)word) n_reversed32 in
-        if esize = 16 then (Rd := n_reversed16) s else
         let n_reversed8 = usimd8 (\x. word_join
           (word_subword x (0,8):(8)word) (word_subword x (8,8):(8)word)
           : (16)word) n_reversed16 in
-        (Rd := n_reversed8) s`;;
+        let d:(128)word =
+          if esize = 32 then n_reversed32
+          else if esize = 16 then n_reversed16
+          else n_reversed8 in
+        if datasize = 128 then (Rd := d) s
+        else (Rd := word_zx (word_subword d (0,64):(64)word):(128)word) s`;;
 
 let arm_REV32_VEC = define
  `arm_REV32_VEC Rd Rn esize =
@@ -1508,6 +1617,28 @@ let arm_SRSHR_VEC = define
             if esize = 32 then usimd2 (\x. word_ishr_round x amt) n
             else if esize = 16 then usimd4 (\x. word_ishr_round x amt) n
             else usimd8 (\x. word_ishr_round x amt) n in
+          (Rd := word_zx d:(128)word) s`;;
+
+let word_ushr_round = new_definition
+ `(word_ushr_round:N word->num->N word) x n =
+  word((val x + 2 EXP n DIV 2) DIV 2 EXP n)`;;
+
+let arm_URSHR_VEC = define
+ `arm_URSHR_VEC Rd Rn amt esize datasize =
+    \s. let n = read Rn (s:armstate) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then usimd2 (\x. word_ushr_round x amt) n
+            else if esize = 32 then usimd4 (\x. word_ushr_round x amt) n
+            else if esize = 16 then usimd8 (\x. word_ushr_round x amt) n
+            else usimd16 (\x. word_ushr_round x amt) n in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let d:(64)word =
+            if esize = 32 then usimd2 (\x. word_ushr_round x amt) n
+            else if esize = 16 then usimd4 (\x. word_ushr_round x amt) n
+            else usimd8 (\x. word_ushr_round x amt) n in
           (Rd := word_zx d:(128)word) s`;;
 
 let arm_SSHR_VEC = define
@@ -1736,6 +1867,22 @@ let arm_RSHRN2 = define
           else // esize = 8
             usimd8 (\(x:(16)word). word_rshrn x amnt:(8)word) n in
         (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
+let arm_SMADDL = define
+ `arm_SMADDL Rd Rn Rm Ra =
+    \s. let n:int32 = read Rn (s:armstate)
+        and m:int32 = read Rm s
+        and a:int64 = read Ra s in
+        let d:int64 = iword(ival a + ival n * ival m) in
+        (Rd := d) s`;;
+
+let arm_SMSUBL = define
+ `arm_SMSUBL Rd Rn Rm Ra =
+    \s. let n:int32 = read Rn (s:armstate)
+        and m:int32 = read Rm s
+        and a:int64 = read Ra s in
+        let d:int64 = iword(ival a - ival n * ival m) in
+        (Rd := d) s`;;
 
 let arm_SMULH = define
  `arm_SMULH Rd Rn Rm =
@@ -2116,6 +2263,13 @@ let arm_UMOV = define
    \s. let n = read Rn (s:armstate) in
        let d:N word = word_subword n (idx*size*8,size*8) in
        (Rd := d) s`;;
+
+let arm_UDIV = define
+ `arm_UDIV Rd Rn Rm =
+    \s. let n:N word = read Rn (s:armstate)
+        and m:N word = read Rm s in
+        let d:N word = word(val n DIV val m) in
+        (Rd := d) s`;;
 
 let arm_UMULH = define
  `arm_UMULH Rd Rn Rm =
@@ -2656,46 +2810,78 @@ let arm_USRA_VEC = define
           (Rd := word_zx d:(128)word) s`;;
 
 let arm_UZP1 = define
- `arm_UZP1 Rd Rn Rm esize =
+ `arm_UZP1 Rd Rn Rm esize datasize =
     \s. let n:(128)word = read Rn (s:armstate) in
         let m:(128)word = read Rm (s:armstate) in
-        if esize = 64 then
-          let neven:(64)word = word_subword n (0,64) in
-          let meven:(64)word = word_subword m (0,64) in
-          (Rd := (word_join meven neven:(128)word)) s
-        else if esize = 32 then
-          let neven:(64)word = usimd2 (\x. word_subword x (0,32): (32)word) n in
-          let meven:(64)word = usimd2 (\x. word_subword x (0,32): (32)word) m in
-          (Rd := (word_join meven neven:(128)word)) s
-        else if esize = 16 then
-          let neven:(64)word = usimd4 (\x. word_subword x (0,16): (16)word) n in
-          let meven:(64)word = usimd4 (\x. word_subword x (0,16): (16)word) m in
-          (Rd := (word_join meven neven:(128)word)) s
-        else // esize=8
-          let neven:(64)word = usimd8 (\x. word_subword x (0,8): (8)word) n in
-          let meven:(64)word = usimd8 (\x. word_subword x (0,8): (8)word) m in
-          (Rd := (word_join meven neven:(128)word)) s`;;
+        if datasize = 128 then
+          if esize = 64 then
+            let neven:(64)word = word_subword n (0,64) in
+            let meven:(64)word = word_subword m (0,64) in
+            (Rd := (word_join meven neven:(128)word)) s
+          else if esize = 32 then
+            let neven:(64)word = usimd2 (\x. word_subword x (0,32): (32)word) n in
+            let meven:(64)word = usimd2 (\x. word_subword x (0,32): (32)word) m in
+            (Rd := (word_join meven neven:(128)word)) s
+          else if esize = 16 then
+            let neven:(64)word = usimd4 (\x. word_subword x (0,16): (16)word) n in
+            let meven:(64)word = usimd4 (\x. word_subword x (0,16): (16)word) m in
+            (Rd := (word_join meven neven:(128)word)) s
+          else // esize=8
+            let neven:(64)word = usimd8 (\x. word_subword x (0,8): (8)word) n in
+            let meven:(64)word = usimd8 (\x. word_subword x (0,8): (8)word) m in
+            (Rd := (word_join meven neven:(128)word)) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          if esize = 32 then
+            let neven:(32)word = word_subword n (0,32) in
+            let meven:(32)word = word_subword m (0,32) in
+            (Rd := (word_zx (word_join meven neven:(64)word):(128)word)) s
+          else if esize = 16 then
+            let neven:(32)word = usimd2 (\x. word_subword x (0,16): (16)word) n in
+            let meven:(32)word = usimd2 (\x. word_subword x (0,16): (16)word) m in
+            (Rd := (word_zx (word_join meven neven:(64)word):(128)word)) s
+          else // esize=8
+            let neven:(32)word = usimd4 (\x. word_subword x (0,8): (8)word) n in
+            let meven:(32)word = usimd4 (\x. word_subword x (0,8): (8)word) m in
+            (Rd := (word_zx (word_join meven neven:(64)word):(128)word)) s`;;
 
 let arm_UZP2 = define
- `arm_UZP2 Rd Rn Rm esize =
+ `arm_UZP2 Rd Rn Rm esize datasize =
     \s. let n:(128)word = read Rn (s:armstate) in
         let m:(128)word = read Rm (s:armstate) in
-        if esize = 64 then
-          let nodd:(64)word = word_subword n (64,64) in
-          let modd:(64)word = word_subword m (64,64) in
-          (Rd := (word_join modd nodd:(128)word)) s
-        else if esize = 32 then
-          let nodd:(64)word = usimd2 (\x. word_subword x (32,32): (32)word) n in
-          let modd:(64)word = usimd2 (\x. word_subword x (32,32): (32)word) m in
-          (Rd := (word_join modd nodd:(128)word)) s
-        else if esize = 16 then
-          let nodd:(64)word = usimd4 (\x. word_subword x (16,16): (16)word) n in
-          let modd:(64)word = usimd4 (\x. word_subword x (16,16): (16)word) m in
-          (Rd := (word_join modd nodd:(128)word)) s
-        else // esize=8
-          let nodd:(64)word = usimd8 (\x. word_subword x (8,8): (8)word) n in
-          let modd:(64)word = usimd8 (\x. word_subword x (8,8): (8)word) m in
-          (Rd := (word_join modd nodd:(128)word)) s`;;
+        if datasize = 128 then
+          if esize = 64 then
+            let nodd:(64)word = word_subword n (64,64) in
+            let modd:(64)word = word_subword m (64,64) in
+            (Rd := (word_join modd nodd:(128)word)) s
+          else if esize = 32 then
+            let nodd:(64)word = usimd2 (\x. word_subword x (32,32): (32)word) n in
+            let modd:(64)word = usimd2 (\x. word_subword x (32,32): (32)word) m in
+            (Rd := (word_join modd nodd:(128)word)) s
+          else if esize = 16 then
+            let nodd:(64)word = usimd4 (\x. word_subword x (16,16): (16)word) n in
+            let modd:(64)word = usimd4 (\x. word_subword x (16,16): (16)word) m in
+            (Rd := (word_join modd nodd:(128)word)) s
+          else // esize=8
+            let nodd:(64)word = usimd8 (\x. word_subword x (8,8): (8)word) n in
+            let modd:(64)word = usimd8 (\x. word_subword x (8,8): (8)word) m in
+            (Rd := (word_join modd nodd:(128)word)) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          if esize = 32 then
+            let nodd:(32)word = word_subword n (32,32) in
+            let modd:(32)word = word_subword m (32,32) in
+            (Rd := (word_zx (word_join modd nodd:(64)word):(128)word)) s
+          else if esize = 16 then
+            let nodd:(32)word = usimd2 (\x. word_subword x (16,16): (16)word) n in
+            let modd:(32)word = usimd2 (\x. word_subword x (16,16): (16)word) m in
+            (Rd := (word_zx (word_join modd nodd:(64)word):(128)word)) s
+          else // esize=8
+            let nodd:(32)word = usimd4 (\x. word_subword x (8,8): (8)word) n in
+            let modd:(32)word = usimd4 (\x. word_subword x (8,8): (8)word) m in
+            (Rd := (word_zx (word_join modd nodd:(64)word):(128)word)) s`;;
 
 let arm_XTN = define
  `arm_XTN Rd Rn esize =
@@ -2725,6 +2911,140 @@ let arm_XTN2 = define
           else // esize=8
             usimd8 (\x. word_subword x (0,8): (8)word) n in
         (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
+(*** ADDHN: add the 2*esize-bit lanes of Vn and Vm and narrow each sum to  ***)
+(*** its high esize bits, in the low 64 bits of Vd (the rest cleared).     ***)
+(*** ADDHN2 writes them to the high 64 bits, keeping the low 64 bits of Vd ***)
+(*** (Q=1 form). esize is Rd's (destination, narrow) element size.         ***)
+let arm_ADDHN = define
+ `arm_ADDHN Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\x. word_subword x (32,32): (32)word)
+                   (simd2 word_add n m)
+          else if esize = 16 then
+            usimd4 (\x. word_subword x (16,16): (16)word)
+                   (simd4 word_add n m)
+          else // esize=8
+            usimd8 (\x. word_subword x (8,8): (8)word)
+                   (simd8 word_add n m) in
+        (Rd := (word_zx res:(128)word)) s`;;
+
+let arm_ADDHN2 = define
+ `arm_ADDHN2 Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\x. word_subword x (32,32): (32)word)
+                   (simd2 word_add n m)
+          else if esize = 16 then
+            usimd4 (\x. word_subword x (16,16): (16)word)
+                   (simd4 word_add n m)
+          else // esize=8
+            usimd8 (\x. word_subword x (8,8): (8)word)
+                   (simd8 word_add n m) in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
+(*** RADDHN and RADDHN2 are ADDHN and ADDHN2 with rounding: 2^(esize-1) is ***)
+(*** added to each 2*esize-bit sum (modulo 2^(2*esize)) before narrowing.  ***)
+let arm_RADDHN = define
+ `arm_RADDHN Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\x. word_subword (word_add x (word(2 EXP 31))) (32,32)
+                           :(32)word)
+                   (simd2 word_add n m)
+          else if esize = 16 then
+            usimd4 (\x. word_subword (word_add x (word(2 EXP 15))) (16,16)
+                           :(16)word)
+                   (simd4 word_add n m)
+          else // esize=8
+            usimd8 (\x. word_subword (word_add x (word(2 EXP 7))) (8,8)
+                           :(8)word)
+                   (simd8 word_add n m) in
+        (Rd := (word_zx res:(128)word)) s`;;
+
+let arm_RADDHN2 = define
+ `arm_RADDHN2 Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\x. word_subword (word_add x (word(2 EXP 31))) (32,32)
+                           :(32)word)
+                   (simd2 word_add n m)
+          else if esize = 16 then
+            usimd4 (\x. word_subword (word_add x (word(2 EXP 15))) (16,16)
+                           :(16)word)
+                   (simd4 word_add n m)
+          else // esize=8
+            usimd8 (\x. word_subword (word_add x (word(2 EXP 7))) (8,8)
+                           :(8)word)
+                   (simd8 word_add n m) in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
+(*** ADDP (vector): the pairwise sums of the lanes of the concatenation    ***)
+(*** Rm:Rn, so the lower half of the result has the sums of adjacent lanes ***)
+(*** of Rn and the upper half those of Rm.                                 ***)
+let arm_ADDP_VEC = define
+ `arm_ADDP_VEC Rd Rn Rm esize datasize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        if datasize = 128 then
+          let pn:(64)word =
+            if esize = 64 then
+              word_add (word_subword n (0,64)) (word_subword n (64,64))
+            else if esize = 32 then
+              usimd2 (\x. word_add (word_subword x (0,32):(32)word)
+                                   (word_subword x (32,32))) n
+            else if esize = 16 then
+              usimd4 (\x. word_add (word_subword x (0,16):(16)word)
+                                   (word_subword x (16,16))) n
+            else
+              usimd8 (\x. word_add (word_subword x (0,8):(8)word)
+                                   (word_subword x (8,8))) n
+          and pm:(64)word =
+            if esize = 64 then
+              word_add (word_subword m (0,64)) (word_subword m (64,64))
+            else if esize = 32 then
+              usimd2 (\x. word_add (word_subword x (0,32):(32)word)
+                                   (word_subword x (32,32))) m
+            else if esize = 16 then
+              usimd4 (\x. word_add (word_subword x (0,16):(16)word)
+                                   (word_subword x (16,16))) m
+            else
+              usimd8 (\x. word_add (word_subword x (0,8):(8)word)
+                                   (word_subword x (8,8))) m in
+          (Rd := (word_join pm pn:(128)word)) s
+        else
+          let n:(64)word = word_subword n (0,64)
+          and m:(64)word = word_subword m (0,64) in
+          let pn:(32)word =
+            if esize = 32 then
+              word_add (word_subword n (0,32)) (word_subword n (32,32))
+            else if esize = 16 then
+              usimd2 (\x. word_add (word_subword x (0,16):(16)word)
+                                   (word_subword x (16,16))) n
+            else
+              usimd4 (\x. word_add (word_subword x (0,8):(8)word)
+                                   (word_subword x (8,8))) n
+          and pm:(32)word =
+            if esize = 32 then
+              word_add (word_subword m (0,32)) (word_subword m (32,32))
+            else if esize = 16 then
+              usimd2 (\x. word_add (word_subword x (0,16):(16)word)
+                                   (word_subword x (16,16))) m
+            else
+              usimd4 (\x. word_add (word_subword x (0,8):(8)word)
+                                   (word_subword x (8,8))) m in
+          (Rd := (word_zx (word_join pm pn:(64)word):(128)word)) s`;;
 
 
 let word_split_lohi = new_definition
@@ -2922,6 +3242,26 @@ let arm_TBL3 = define
              usimd8 (\x. word_subword table (8 * val x,8):byte) (word_zx m:int64) in
           (Rd := word_zx d:(128)word) s`;;
 
+(*** TBL (4-register table, len = 3): the lookup table is the concatenation   ***)
+(*** of four consecutive 128-bit registers (64 bytes); indices >= 64 read 0.  ***)
+let arm_TBL4 = define
+ `arm_TBL4 Rd Rn1 Rn2 Rn3 Rn4 Rm datasize =
+    \s:armstate.
+        let n1:int128 = read Rn1 s in
+        let n2:int128 = read Rn2 s in
+        let n3:int128 = read Rn3 s in
+        let n4:int128 = read Rn4 s in
+        let table:(512)word =
+          word_join (word_join n4 n3:(256)word) (word_join n2 n1:(256)word) in
+        let m = read Rm s in
+        if datasize = 128 then
+          let d = usimd16 (\x. word_subword table (8 * val x,8):byte) m in
+          (Rd := d) s
+        else
+          let d =
+             usimd8 (\x. word_subword table (8 * val x,8):byte) (word_zx m:int64) in
+          (Rd := word_zx d:(128)word) s`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Load and store instructions.                                              *)
 (* ------------------------------------------------------------------------- *)
@@ -3051,6 +3391,24 @@ let arm_LDRSH = define
          then
            Rt := word_sx (read (memory :> bytes16 addr) s) ,,
            events := CONS (EventLoad (addr,2)) (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add base (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+(*** LDRSW loads a word and sign-extends it; the decoder always supplies
+ *** an X register Rt.
+ ***)
+
+let arm_LDRSW = define
+ `arm_LDRSW (Rt:(armstate,N word)component) Rn off =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           Rt := word_sx (read (memory :> bytes32 addr) s) ,,
+           events := CONS (EventLoad (addr,4)) (read events s) ,,
            (if offset_writesback off
             then Rn := word_add base (offset_writeback off s)
             else (=))
@@ -3400,6 +3758,60 @@ let arm_ST3 = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+(*** LD4/ST4 are the analogs of LD3/ST3 for four consecutive registers:    ***)
+(*** element i of the j-th register is element 4 * i + j of the memory.    ***)
+
+let arm_LD4 = define
+ `arm_LD4 [Rt1;Rt2;Rt3;Rt4] Rn off datasize esize =
+    \s:armstate.
+        let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if Rn = SP ==> aligned 16 address then
+          (if datasize = 128 then
+             let raw:512 word = read (memory :> wbytes eaddr) s in
+             let [il1;il2;il3;il4]:int128 list =
+               word_deinterleave 4 esize raw in
+             (Rt1 := il1) ,, (Rt2 := il2) ,, (Rt3 := il3) ,, (Rt4 := il4)
+           else
+             let raw:256 word = read (memory :> wbytes eaddr) s in
+             let [il1;il2;il3;il4]:int64 list =
+               word_deinterleave 4 esize raw in
+             (Rt1 := word_zx il1) ,,
+             (Rt2 := word_zx il2) ,,
+             (Rt3 := word_zx il3) ,,
+             (Rt4 := word_zx il4)) ,,
+           events := CONS (EventLoad (eaddr,4 * datasize DIV 8))
+                          (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add address (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+let arm_ST4 = define
+ `arm_ST4 [Rt1;Rt2;Rt3;Rt4] Rn off datasize esize =
+    \s:armstate.
+        let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if Rn = SP ==> aligned 16 address then
+           let raw1:int128 = read Rt1 s
+           and raw2 = read Rt2 s
+           and raw3 = read Rt3 s
+           and raw4 = read Rt4 s in
+           (if datasize = 128 then
+             let ilv:512 word = word_interleave esize [raw1;raw2;raw3;raw4] in
+             (memory :> wbytes eaddr) := ilv
+           else
+             let ilv:256 word = word_interleave esize
+                [word_zx raw1:int64; word_zx raw2; word_zx raw3;
+                 word_zx raw4] in
+             (memory :> wbytes eaddr) := ilv) ,,
+           events := CONS (EventStore (eaddr,4 * datasize DIV 8))
+                          (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add address (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
 (* Three-register contiguous load/store for little-endian LD1/ST1. *)
 
 let arm_LDP3 = define
@@ -3716,6 +4128,9 @@ let arm_ROR = define `arm_ROR Rd Rs lsb = arm_EXTR Rd Rs Rs lsb`;;
 
 let arm_TST = define `arm_TST Rm Rn = arm_ANDS ZR Rm Rn`;;
 
+let arm_SMNEGL = define `arm_SMNEGL Rd Rn Rm = arm_SMSUBL Rd Rn Rm XZR`;;
+let arm_SMULL = define `arm_SMULL Rd Rn Rm = arm_SMADDL Rd Rn Rm XZR`;;
+
 let arm_UMNEGL = define `arm_UMNEGL Rd Rn Rm = arm_UMSUBL Rd Rn Rm XZR`;;
 let arm_UMULL = define `arm_UMULL Rd Rn Rm = arm_UMADDL Rd Rn Rm XZR`;;
 
@@ -3728,7 +4143,7 @@ let ARM_INSTRUCTION_ALIASES =
   arm_MOV; arm_MOV_VEC;
   arm_MNEG; arm_MUL; arm_MVN; arm_NEG;
   arm_NEGS; arm_NGC; arm_NGCS; arm_ROR; arm_TST;
-  arm_UMNEGL; arm_UMULL];;
+  arm_SMNEGL; arm_SMULL; arm_UMNEGL; arm_UMULL];;
 
 (* ------------------------------------------------------------------------- *)
 (* These three are treated by ARM as aliases, but since they are such        *)
@@ -4084,10 +4499,16 @@ let EXPAND_SIMD_RULE =
   CONV_RULE (DEPTH_CONV DIMINDEX_CONV) o REWRITE_RULE all_simd_rules;;
 
 let arm_ADD_VEC_ALT =    EXPAND_SIMD_RULE arm_ADD_VEC;;
+let arm_ADDHN_ALT =      EXPAND_SIMD_RULE arm_ADDHN;;
+let arm_ADDHN2_ALT =     EXPAND_SIMD_RULE arm_ADDHN2;;
+let arm_ADDP_VEC_ALT =   EXPAND_SIMD_RULE arm_ADDP_VEC;;
 let arm_ABS_VEC_ALT =    EXPAND_SIMD_RULE arm_ABS_VEC;;
 let arm_CMGE_VEC_ALT =   EXPAND_SIMD_RULE arm_CMGE_VEC;;
 let arm_CMGT_VEC_ALT =   EXPAND_SIMD_RULE arm_CMGT_VEC;;
 let arm_CMHI_VEC_ALT =   EXPAND_SIMD_RULE arm_CMHI_VEC;;
+let arm_CMHS_VEC_ALT =   EXPAND_SIMD_RULE arm_CMHS_VEC;;
+let arm_CMTST_VEC_ALT =
+  REWRITE_RULE[word_tst] (EXPAND_SIMD_RULE arm_CMTST_VEC);;
 let arm_CMLE_VEC_ZERO_ALT = EXPAND_SIMD_RULE arm_CMLE_VEC_ZERO;;
 let arm_CNT_ALT =        EXPAND_SIMD_RULE arm_CNT;;
 let arm_DUP_ELEM_ALT =   EXPAND_SIMD_RULE arm_DUP_ELEM;;
@@ -4111,6 +4532,8 @@ let arm_SQRSHRUN_ALT =   REWRITE_RULE[word_uqrshrun] (EXPAND_SIMD_RULE arm_SQRSH
 let arm_SQRSHRUN2_ALT =  REWRITE_RULE[word_uqrshrun] (EXPAND_SIMD_RULE arm_SQRSHRUN2);;
 let arm_RSHRN_ALT =      REWRITE_RULE[word_rshrn] (EXPAND_SIMD_RULE arm_RSHRN);;
 let arm_RSHRN2_ALT =     REWRITE_RULE[word_rshrn] (EXPAND_SIMD_RULE arm_RSHRN2);;
+let arm_RADDHN_ALT =     EXPAND_SIMD_RULE arm_RADDHN;;
+let arm_RADDHN2_ALT =    EXPAND_SIMD_RULE arm_RADDHN2;;
 let arm_SLI_VEC_ALT =    EXPAND_SIMD_RULE arm_SLI_VEC;;
 let arm_SMLAL_VEC_ALT =  EXPAND_SIMD_RULE arm_SMLAL_VEC;;
 let arm_SMLAL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMLAL2_VEC;;
@@ -4133,6 +4556,7 @@ let arm_SUB_VEC_ALT =    EXPAND_SIMD_RULE arm_SUB_VEC;;
 let arm_TBL_ALT =        EXPAND_SIMD_RULE arm_TBL;;
 let arm_TBL2_ALT =       EXPAND_SIMD_RULE arm_TBL2;;
 let arm_TBL3_ALT =       EXPAND_SIMD_RULE arm_TBL3;;
+let arm_TBL4_ALT =       EXPAND_SIMD_RULE arm_TBL4;;
 let arm_TRN1_ALT =       EXPAND_SIMD_RULE arm_TRN1;;
 let arm_TRN2_ALT =       EXPAND_SIMD_RULE arm_TRN2;;
 let arm_UADDLP_ALT =     EXPAND_SIMD_RULE arm_UADDLP;;
@@ -4165,18 +4589,21 @@ let arm_ZIP2_ALT =       EXPAND_SIMD_RULE arm_ZIP2;;
 let arm_LD2_ALT =        EXPAND_SIMD_RULE arm_LD2;;
 let arm_ST2_ALT =        EXPAND_SIMD_RULE arm_ST2;;
 
-(*** Single-lane LD1/ST1: specialise the esize cascade to the 32-bit (.s)
- *** form actually decoded, leaving the lane index ix symbolic. ***)
-let arm_LD1_LANE_ALT =
-  (CONV_RULE(TOP_DEPTH_CONV let_CONV) o
-   CONV_RULE NUM_REDUCE_CONV o
-   GEN_REWRITE_CONV I [arm_LD1_LANE])
-  `arm_LD1_LANE Rt Rn off 32 ix`;;
-let arm_ST1_LANE_ALT =
-  (CONV_RULE(TOP_DEPTH_CONV let_CONV) o
-   CONV_RULE NUM_REDUCE_CONV o
-   GEN_REWRITE_CONV I [arm_ST1_LANE])
-  `arm_ST1_LANE Rt Rn off 32 ix`;;
+(*** Single-lane LD1/ST1: specialise the esize cascade to the forms
+ *** actually decoded, leaving the lane index ix symbolic. LD1 is decoded
+ *** for all four element sizes, ST1 only for the 32-bit (.s) form. ***)
+let arm_LD1_LANE_ALT = end_itlist CONJ
+ (map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+       CONV_RULE NUM_REDUCE_CONV o
+       GEN_REWRITE_CONV I [arm_LD1_LANE])
+      [`arm_LD1_LANE Rt Rn off 8 ix`; `arm_LD1_LANE Rt Rn off 16 ix`;
+       `arm_LD1_LANE Rt Rn off 32 ix`; `arm_LD1_LANE Rt Rn off 64 ix`]);;
+let arm_ST1_LANE_ALT = end_itlist CONJ
+ (map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+       CONV_RULE NUM_REDUCE_CONV o
+       GEN_REWRITE_CONV I [arm_ST1_LANE])
+      [`arm_ST1_LANE Rt Rn off 8 ix`; `arm_ST1_LANE Rt Rn off 16 ix`;
+       `arm_ST1_LANE Rt Rn off 32 ix`; `arm_ST1_LANE Rt Rn off 64 ix`]);;
 
 let arm_SQDMULH_VEC_ALT =
   REWRITE_RULE[word_2smulh] (EXPAND_SIMD_RULE arm_SQDMULH_VEC);;
@@ -4186,6 +4613,9 @@ let arm_SQRDMULH_VEC_ALT =
 
 let arm_SRSHR_VEC_ALT =
   REWRITE_RULE[word_ishr_round] (EXPAND_SIMD_RULE arm_SRSHR_VEC);;
+
+let arm_URSHR_VEC_ALT =
+  REWRITE_RULE[word_ushr_round] (EXPAND_SIMD_RULE arm_URSHR_VEC);;
 
 let arm_UADDLV_ALT =
   (end_itlist CONJ o
@@ -4263,6 +4693,106 @@ let arm_ST3_ALT = end_itlist CONJ
       [`arm_ST3 [Rt1; Rt2; Rt3] Rn off 128 esize`;
        `arm_ST3 [Rt1; Rt2; Rt3] Rn off 64 esize`]);;
 
+let WORD_DEINTERLEAVE_4 = prove
+ (`(word_deinterleave:num->num->M word->(N word)list) 4 n z =
+   [word_subdeinterleave 4 n z 0; word_subdeinterleave 4 n z 1;
+    word_subdeinterleave 4 n z 2; word_subdeinterleave 4 n z 3]`,
+  REWRITE_TAC[word_deinterleave; LIST_OF_SEQ_CLAUSES]);;
+
+let READ_MEMORY_QUADS_SPLIT = prove
+ (`(!m (x:A word) s:S.
+        read (m :> wbytes x) s :256 word =
+        word_join (word_join (read (m :> bytes64 (word_add x (word 24))) s)
+                             (read (m :> bytes64 (word_add x (word 16))) s)
+                             :int128)
+                  (word_join (read (m :> bytes64 (word_add x (word 8))) s)
+                             (read (m :> bytes64 x) s):int128)) /\
+   (!m (x:A word) s:S.
+        read (m :> wbytes x) s :512 word =
+        word_join (word_join (read (m :> bytes128 (word_add x (word 48))) s)
+                             (read (m :> bytes128 (word_add x (word 32))) s)
+                             :int256)
+                  (word_join (read (m :> bytes128 (word_add x (word 16))) s)
+                             (read (m :> bytes128 x) s):int256))`,
+  REWRITE_TAC[GSYM VAL_EQ] THEN
+  SIMP_TAC[VAL_WORD_JOIN_SIMPLE; DIMINDEX_64; DIMINDEX_128; DIMINDEX_256;
+           ARITH; DIMINDEX_CONV `dimindex(:512)`] THEN
+  REWRITE_TAC[BYTES64_WBYTES; BYTES128_WBYTES] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; VAL_READ_WBYTES] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[ARITH_RULE `32 = 8 + 8 + 8 + 8 /\ 64 = 16 + 16 + 16 + 16`] THEN
+  REWRITE_TAC[READ_BYTES_COMBINE; WORD_ADD_ASSOC_CONSTS] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC);;
+
+let WRITE_MEMORY_QUADS_SPLIT = prove
+ (`(!m (x:A word) y s:S.
+     valid_component m
+      ==>  write (m :> wbytes x) (y:256 word) s =
+           write (m :> bytes64 x) (word_subword y (0,64))
+            (write (m :> bytes64 (word_add x (word 8)))
+                   (word_subword y (64,64))
+             (write (m :> bytes64 (word_add x (word 16)))
+                    (word_subword y (128,64))
+              (write (m :> bytes64 (word_add x (word 24)))
+                     (word_subword y (192,64)) s)))) /\
+   (!m (x:A word) y s:S.
+     valid_component m
+      ==>  write (m :> wbytes x) (y:512 word) s =
+           write (m :> bytes128 x) (word_subword y (0,128))
+            (write (m :> bytes128 (word_add x (word 16)))
+                   (word_subword y (128,128))
+             (write (m :> bytes128 (word_add x (word 32)))
+                    (word_subword y (256,128))
+              (write (m :> bytes128 (word_add x (word 48)))
+                     (word_subword y (384,128)) s))))`,
+  REWRITE_TAC[WRITE_COMPONENT_COMPOSE] THEN
+  REWRITE_TAC[valid_component] THEN REPEAT STRIP_TAC THEN
+  ASM_REWRITE_TAC[bytes128; bytes64; wbytes; WRITE_COMPONENT_COMPOSE;
+                  asword; through; read; write] THEN
+  REWRITE_TAC[GSYM WRITE_BYTES_COMBINE; ARITH_ADD; ARITH_SUC] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  CONV_TAC(ONCE_DEPTH_CONV(NUM_MULT_CONV ORELSEC NUM_DIV_CONV)) THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+  SIMP_TAC[VAL_BOUND_64; VAL_BOUND_128; MOD_LT; ARITH_RULE
+   `(h < 2 EXP 64 /\ l < 2 EXP 64 ==> l + 2 EXP 64 * h < 2 EXP 128) /\
+    (h < 2 EXP 64 /\ l < 2 EXP 128 ==> l + 2 EXP 128 * h < 2 EXP 192) /\
+    (h < 2 EXP 128 /\ l < 2 EXP 128 ==> l + 2 EXP 128 * h < 2 EXP 256) /\
+    (h < 2 EXP 128 /\ l < 2 EXP 256 ==> l + 2 EXP 256 * h < 2 EXP 384)`] THEN
+  CONV_TAC WORD_BLAST);;
+
+let ASSIGN_MEMORY_QUADS_SPLIT = prove
+ (`(memory :> wbytes x) := (y:256 word) =
+   (memory :> bytes64 (word_add x (word 24))) := word_subword y (192,64) ,,
+   (memory :> bytes64 (word_add x (word 16))) := word_subword y (128,64) ,,
+   (memory :> bytes64 (word_add x (word 8))) := word_subword y (64,64) ,,
+   (memory :> bytes64 x) := word_subword y (0,64) /\
+   (memory :> wbytes x) := (z:512 word) =
+   (memory :> bytes128 (word_add x (word 48))) := word_subword z (384,128) ,,
+   (memory :> bytes128 (word_add x (word 32))) := word_subword z (256,128) ,,
+   (memory :> bytes128 (word_add x (word 16))) := word_subword z (128,128) ,,
+   (memory :> bytes128 x) := word_subword z (0,128)`,
+  REWRITE_TAC[FUN_EQ_THM; assign; seq; UNWIND_THM1] THEN
+  SIMP_TAC[WRITE_MEMORY_QUADS_SPLIT;
+           VALID_COMPONENT_CONV `valid_component memory`]);;
+
+let arm_LD4_ALT = end_itlist CONJ
+ (map (REWRITE_RULE[GSYM SEQ_ASSOC] o
+       CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+       REWRITE_RULE[WORD_DEINTERLEAVE_4; READ_MEMORY_QUADS_SPLIT] o
+       CONV_RULE NUM_REDUCE_CONV o
+       GEN_REWRITE_CONV I [arm_LD4])
+      [`arm_LD4 [Rt1; Rt2; Rt3; Rt4] Rn off 128 esize`;
+       `arm_LD4 [Rt1; Rt2; Rt3; Rt4] Rn off 64 esize`]);;
+
+let arm_ST4_ALT = end_itlist CONJ
+  (map (REWRITE_RULE[GSYM SEQ_ASSOC] o
+        REWRITE_RULE[ASSIGN_MEMORY_QUADS_SPLIT] o
+        CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+        CONV_RULE NUM_REDUCE_CONV o
+        GEN_REWRITE_CONV I [arm_ST4])
+      [`arm_ST4 [Rt1; Rt2; Rt3; Rt4] Rn off 128 esize`;
+       `arm_ST4 [Rt1; Rt2; Rt3; Rt4] Rn off 64 esize`]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Collection of standard forms of non-aliased instructions                  *)
 (* We separate the load/store instructions for a different treatment.        *)
@@ -4271,12 +4801,13 @@ let arm_ST3_ALT = end_itlist CONJ
 let ARM_OPERATION_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
     (*** Alphabetically sorted, new alphabet appears in the next line ***)
-      [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDV_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
+      [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDHN_ALT; arm_ADDHN2_ALT; arm_ADDP_VEC_ALT; arm_ADDV_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
        arm_ADRP; arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
-       arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIF; arm_BIT;
-       arm_BL; arm_BL_ABSOLUTE; arm_Bcond;
+       arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIF; arm_BIT; arm_BSL;
+       arm_BL; arm_BL_ABSOLUTE; arm_BLR; arm_BR; arm_Bcond;
        arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ;
-       arm_CMGE_VEC_ALT; arm_CMGT_VEC_ALT; arm_CMHI_VEC_ALT; arm_CMLE_VEC_ZERO_ALT; arm_CNT_ALT;
+       arm_CMGE_VEC_ALT; arm_CMGT_VEC_ALT; arm_CMHI_VEC_ALT; arm_CMHS_VEC_ALT; arm_CMLE_VEC_ZERO_ALT;
+       arm_CMTST_VEC_ALT; arm_CNT_ALT;
        arm_CSEL; arm_CSINC; arm_CSINV; arm_CSNEG;
        arm_DUP_ELEM_ALT; arm_DUP_ELEM_SCALAR; arm_DUP_GEN_ALT;
        arm_EON; arm_EOR; arm_EOR_VEC; arm_EOR3; arm_EXT; arm_EXTR;
@@ -4291,9 +4822,9 @@ let ARM_OPERATION_CLAUSES =
        arm_NOP;
        arm_ORN; arm_ORR; arm_ORR_VEC;
        arm_PMUL_VEC_ALT;
-       arm_PMULL_VEC_ALT; arm_PMULL2_VEC_ALT;
-       arm_RET; arm_REV; arm_REV32_VEC_ALT; arm_REV64_VEC_ALT; arm_RORV;
-       arm_RSHRN_ALT; arm_RSHRN2_ALT;
+       arm_PMULL_VEC_ALT; arm_PMULL2_VEC_ALT; arm_PRFM;
+       arm_RBIT; arm_RET; arm_REV; arm_REV32_VEC_ALT; arm_REV64_VEC_ALT; arm_RORV;
+       arm_RADDHN_ALT; arm_RADDHN2_ALT; arm_RSHRN_ALT; arm_RSHRN2_ALT;
        arm_SADDW_ALT; arm_SADDW2_ALT;
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT; arm_SHRN2_ALT;
        arm_SRSHR_VEC_ALT;
@@ -4304,23 +4835,24 @@ let ARM_OPERATION_CLAUSES =
        arm_SMLSL_VEC_ALT; arm_SMLSL2_VEC_ALT;
        arm_SMULL_VEC_ALT; arm_SMULL2_VEC_ALT;
        arm_SSHLL_VEC_ALT; arm_SSHLL2_VEC_ALT;
-       arm_SMULH;
+       arm_SMADDL; arm_SMSUBL; arm_SMULH;
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
        arm_SQRSHRUN_ALT; arm_SQRSHRUN2_ALT;
        arm_SQSHRUN_ALT; arm_SQSHRUN2_ALT;
        arm_SSUBL_ALT; arm_SSUBL2_ALT; arm_SSUBW_ALT; arm_SSUBW2_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
-       arm_TBL_ALT; arm_TBL2_ALT; arm_TBL3_ALT; arm_TBNZ_ALT; arm_TBZ_ALT;
+       arm_TBL_ALT; arm_TBL2_ALT; arm_TBL3_ALT; arm_TBL4_ALT; arm_TBNZ_ALT; arm_TBZ_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
        arm_UADALP_ALT; arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UMAX_VEC_ALT; arm_UMAXV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
        arm_UMLSL_VEC_ALT; arm_UMLSL2_VEC_ALT;
        arm_UMSUBL;
        arm_UMULL_VEC_ALT; arm_UMULL2_VEC_ALT;
+       arm_UDIV;
        arm_UMULH;
        arm_UMIN_VEC_ALT;
-       arm_URHADD_VEC_ALT;
+       arm_URHADD_VEC_ALT; arm_URSHR_VEC_ALT;
        arm_USHL_VEC_ALT;
        arm_USHLL_VEC_ALT; arm_USHLL2_VEC_ALT;
        arm_USHR_VEC_ALT; arm_USRA_VEC_ALT;
@@ -4353,9 +4885,10 @@ let ARM_OPERATION_CLAUSES =
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB;
-       arm_LDRH; arm_STRH; arm_LDRSB; arm_LDRSH;
+       arm_LDRH; arm_STRH; arm_LDRSB; arm_LDRSH; arm_LDRSW;
        arm_LDP; arm_STP;
        arm_LDP3; arm_STP3;
        arm_LDP4; arm_STP4;
        arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT;
+       arm_LD4_ALT; arm_ST4_ALT;
        arm_LD1_LANE_ALT; arm_ST1_LANE_ALT];;
